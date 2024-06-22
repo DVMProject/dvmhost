@@ -88,7 +88,7 @@ namespace network
             bool m_debug;
 
             /// <summary>Helper to route rewrite the network data buffer.</summary>
-            void routeRewrite(uint8_t* buffer, uint32_t peerId, dmr::data::Data& dmrData, uint8_t dataType, uint32_t dstId, uint32_t slotNo, bool outbound = true);
+            void routeRewrite(uint8_t* buffer, uint32_t peerId, dmr::data::Data& dmrData, DMRDEF::DataType::E dataType, uint32_t dstId, uint32_t slotNo, bool outbound = true);
             /// <summary>Helper to route rewrite destination ID and slot.</summary>
             bool peerRewrite(uint32_t peerId, uint32_t& dstId, uint32_t& slotNo, bool outbound = true);
 

@@ -7,7 +7,7 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2017-2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
@@ -18,8 +18,9 @@
 #include "Log.h"
 #include "Utils.h"
 
-using namespace p25::lc;
 using namespace p25;
+using namespace p25::defines;
+using namespace p25::lc;
 
 #include <cassert>
 
@@ -76,17 +77,17 @@ TSBK::TSBK(LC* lc) : TSBK()
 /// <remarks>This should never be used.</remarks>
 TSBK::TSBK() :
     m_protect(false),
-    m_lco(LC_GROUP),
-    m_mfId(P25_MFG_STANDARD),
+    m_lco(TSBKO::IOSP_GRP_VCH),
+    m_mfId(MFG_STANDARD),
     m_srcId(0U),
     m_dstId(0U),
     m_lastBlock(false),
     m_aivFlag(true),
     m_extendedAddrFlag(false),
     m_service(0U),
-    m_response(P25_RSP_ACCEPT),
-    m_netId(P25_WACN_STD_DEFAULT),
-    m_sysId(P25_SID_STD_DEFAULT),
+    m_response(ResponseCode::ACCEPT),
+    m_netId(WACN_STD_DEFAULT),
+    m_sysId(SID_STD_DEFAULT),
     m_grpVchId(0U),
     m_grpVchNo(0U),
     m_emergency(false),
@@ -99,8 +100,8 @@ TSBK::TSBK() :
     m_raw(nullptr)
 {
     if (m_siteCallsign == nullptr) {
-        m_siteCallsign = new uint8_t[P25_MOT_CALLSIGN_LENGTH_BYTES];
-        ::memset(m_siteCallsign, 0x00U, P25_MOT_CALLSIGN_LENGTH_BYTES);
+        m_siteCallsign = new uint8_t[MOT_CALLSIGN_LENGTH_BYTES];
+        ::memset(m_siteCallsign, 0x00U, MOT_CALLSIGN_LENGTH_BYTES);
     }
 
 #if FORCE_TSBK_CRC_WARN
@@ -124,7 +125,7 @@ TSBK::~TSBK()
 /// <returns></returns>
 std::string TSBK::toString(bool isp)
 {
-    return std::string("TSBK_IOSP_UNKWN (Unknown TSBK)");
+    return std::string("TSBKO, UNKNOWN (Unknown TSBK)");
 }
 
 /// <summary>
@@ -144,16 +145,16 @@ uint8_t* TSBK::getDecodedRaw() const
 void TSBK::setCallsign(std::string callsign)
 {
     if (m_siteCallsign == nullptr) {
-        m_siteCallsign = new uint8_t[P25_MOT_CALLSIGN_LENGTH_BYTES];
-        ::memset(m_siteCallsign, 0x00U, P25_MOT_CALLSIGN_LENGTH_BYTES);
+        m_siteCallsign = new uint8_t[MOT_CALLSIGN_LENGTH_BYTES];
+        ::memset(m_siteCallsign, 0x00U, MOT_CALLSIGN_LENGTH_BYTES);
     }
 
     uint32_t idLength = callsign.length();
     if (idLength > 0) {
-        ::memset(m_siteCallsign, 0x20U, P25_MOT_CALLSIGN_LENGTH_BYTES);
+        ::memset(m_siteCallsign, 0x20U, MOT_CALLSIGN_LENGTH_BYTES);
 
-        if (idLength > P25_MOT_CALLSIGN_LENGTH_BYTES)
-            idLength = P25_MOT_CALLSIGN_LENGTH_BYTES;
+        if (idLength > MOT_CALLSIGN_LENGTH_BYTES)
+            idLength = MOT_CALLSIGN_LENGTH_BYTES;
         for (uint32_t i = 0; i < idLength; i++)
             m_siteCallsign[i] = callsign[i];
     }

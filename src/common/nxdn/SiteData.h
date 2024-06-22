@@ -7,7 +7,7 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #if !defined(__NXDN_SITE_DATA_H__)
@@ -30,7 +30,7 @@ namespace nxdn
             m_locId(1U),
             m_channelId(1U),
             m_channelNo(1U),
-            m_serviceClass(NXDN_SIF1_VOICE_CALL_SVC | NXDN_SIF1_DATA_CALL_SVC),
+            m_serviceClass(defines::SiteInformation1::VOICE_CALL_SVC | defines::SiteInformation1::DATA_CALL_SVC),
             m_isAdjSite(false),
             m_callsign("CHANGEME"),
             m_requireReg(false),
@@ -48,7 +48,7 @@ namespace nxdn
             m_locId(locId),
             m_channelId(channelId),
             m_channelNo(channelNo),
-            m_serviceClass(NXDN_SIF1_VOICE_CALL_SVC | NXDN_SIF1_DATA_CALL_SVC),
+            m_serviceClass(defines::SiteInformation1::VOICE_CALL_SVC | defines::SiteInformation1::DATA_CALL_SVC),
             m_isAdjSite(false),
             m_callsign("CHANGEME"),
             m_requireReg(requireReq),

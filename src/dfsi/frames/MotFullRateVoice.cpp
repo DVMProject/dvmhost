@@ -14,6 +14,7 @@
 */
 
 #include "frames/MotFullRateVoice.h"
+#include "common/p25/P25Defines.h"
 #include "common/p25/dfsi/DFSIDefines.h"
 #include "common/Utils.h"
 #include "common/Log.h"
@@ -22,7 +23,9 @@
 #include <cstring>
 
 using namespace p25;
+using namespace p25::defines;
 using namespace p25::dfsi;
+using namespace p25::dfsi::defines;
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -34,11 +37,11 @@ using namespace p25::dfsi;
 MotFullRateVoice::MotFullRateVoice() :
     imbeData(nullptr),
     additionalData(nullptr),
-    m_frameType(P25_DFSI_LDU1_VOICE1),
-    m_source(SOURCE_QUANTAR)
+    m_frameType(DFSIFrameType::LDU1_VOICE1),
+    m_source(SourceFlag::QUANTAR)
 {
-    imbeData = new uint8_t[IMBE_BUF_LEN];
-    ::memset(imbeData, 0x00U, IMBE_BUF_LEN);
+    imbeData = new uint8_t[RAW_IMBE_LENGTH_BYTES];
+    ::memset(imbeData, 0x00U, RAW_IMBE_LENGTH_BYTES);
 }
 
 /// <summary>
@@ -100,18 +103,18 @@ bool MotFullRateVoice::decode(const uint8_t* data, bool shortened)
 
     if (imbeData != nullptr)
         delete imbeData;
-    imbeData = new uint8_t[IMBE_BUF_LEN];
-    ::memset(imbeData, 0x00U, IMBE_BUF_LEN);
+    imbeData = new uint8_t[RAW_IMBE_LENGTH_BYTES];
+    ::memset(imbeData, 0x00U, RAW_IMBE_LENGTH_BYTES);
 
-    m_frameType = data[0U];
+    m_frameType = (DFSIFrameType::E)data[0U];
 
     if (isVoice2or11()) {
         shortened = true;
     }
         
     if (shortened) {
-        ::memcpy(imbeData, data + 1U, IMBE_BUF_LEN);
-        m_source = (SourceFlag)data[12U];
+        ::memcpy(imbeData, data + 1U, RAW_IMBE_LENGTH_BYTES);
+        m_source = (SourceFlag::E)data[12U];
         // Forgot to set this originally and left additionalData uninitialized, whoops!
         additionalData = nullptr;
     } else {
@@ -128,9 +131,9 @@ bool MotFullRateVoice::decode(const uint8_t* data, bool shortened)
         ::memcpy(additionalData, data + 1U, ADDITIONAL_LENGTH);
 
         // copy IMBE data based on our imbe start position
-        ::memcpy(imbeData, data + imbeStart, IMBE_BUF_LEN);
+        ::memcpy(imbeData, data + imbeStart, RAW_IMBE_LENGTH_BYTES);
 
-        m_source = (SourceFlag)data[IMBE_BUF_LEN + imbeStart];
+        m_source = (SourceFlag::E)data[RAW_IMBE_LENGTH_BYTES + imbeStart];
     }
 
     return true;
@@ -154,7 +157,7 @@ void MotFullRateVoice::encode(uint8_t* data, bool shortened)
 
     // copy based on shortened frame or not
     if (shortened) {
-        ::memcpy(data + 1U, imbeData, IMBE_BUF_LEN);
+        ::memcpy(data + 1U, imbeData, RAW_IMBE_LENGTH_BYTES);
         data[12U] = (uint8_t)m_source;
     } 
     // if not shortened, our IMBE data start position depends on frame type
@@ -171,7 +174,7 @@ void MotFullRateVoice::encode(uint8_t* data, bool shortened)
         }
 
         // Copy rest of data
-        ::memcpy(data + imbeStart, imbeData, IMBE_BUF_LEN);
+        ::memcpy(data + imbeStart, imbeData, RAW_IMBE_LENGTH_BYTES);
 
         // Source byte at the end
         data[11U + imbeStart] = (uint8_t)m_source;
@@ -188,7 +191,8 @@ void MotFullRateVoice::encode(uint8_t* data, bool shortened)
 /// <returns></returns>
 bool MotFullRateVoice::isVoice1or2or10or11()
 {
-    if ( (m_frameType == P25_DFSI_LDU1_VOICE1) || (m_frameType == P25_DFSI_LDU1_VOICE2) || (m_frameType == P25_DFSI_LDU2_VOICE10) || (m_frameType == P25_DFSI_LDU2_VOICE11) ) {
+    if ( (m_frameType == DFSIFrameType::LDU1_VOICE1) || (m_frameType == DFSIFrameType::LDU1_VOICE2) || 
+         (m_frameType == DFSIFrameType::LDU2_VOICE10) || (m_frameType == DFSIFrameType::LDU2_VOICE11) ) {
         return true;
     } else {
         return false;
@@ -201,7 +205,7 @@ bool MotFullRateVoice::isVoice1or2or10or11()
 /// <returns></returns>
 bool MotFullRateVoice::isVoice2or11()
 {
-    if ( (m_frameType == P25_DFSI_LDU1_VOICE2) || (m_frameType == P25_DFSI_LDU2_VOICE11) ) {
+    if ( (m_frameType == DFSIFrameType::LDU1_VOICE2) || (m_frameType == DFSIFrameType::LDU2_VOICE11) ) {
         return true;
     } else {
         return false;
@@ -214,7 +218,7 @@ bool MotFullRateVoice::isVoice2or11()
 /// <returns></returns>
 bool MotFullRateVoice::isVoice9or18()
 {
-    if ( (m_frameType == P25_DFSI_LDU1_VOICE9) || (m_frameType == P25_DFSI_LDU2_VOICE18) ) {
+    if ( (m_frameType == DFSIFrameType::LDU1_VOICE9) || (m_frameType == DFSIFrameType::LDU2_VOICE18) ) {
         return true;
     } else {
         return false;

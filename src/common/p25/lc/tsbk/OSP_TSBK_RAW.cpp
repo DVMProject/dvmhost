@@ -7,15 +7,16 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2023 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2023,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
 #include "p25/lc/tsbk/OSP_TSBK_RAW.h"
 
-using namespace p25::lc::tsbk;
-using namespace p25::lc;
 using namespace p25;
+using namespace p25::defines;
+using namespace p25::lc;
+using namespace p25::lc::tsbk;
 
 #include <cassert>
 
@@ -29,7 +30,7 @@ using namespace p25;
 OSP_TSBK_RAW::OSP_TSBK_RAW() : TSBK(),
     m_tsbk(nullptr)
 {
-    m_lco = TSBK_IOSP_ACK_RSP;
+    m_lco = TSBKO::IOSP_ACK_RSP;
 }
 
 /// <summary>

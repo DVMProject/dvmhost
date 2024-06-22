@@ -13,9 +13,10 @@
 #include "Defines.h"
 #include "p25/lc/tsbk/mbt/MBT_IOSP_GRP_AFF.h"
 
-using namespace p25::lc::tsbk;
-using namespace p25::lc;
 using namespace p25;
+using namespace p25::defines;
+using namespace p25::lc;
+using namespace p25::lc::tsbk;
 
 #include <cassert>
 
@@ -27,9 +28,9 @@ using namespace p25;
 /// Initializes a new instance of the MBT_IOSP_GRP_AFF class.
 /// </summary>
 MBT_IOSP_GRP_AFF::MBT_IOSP_GRP_AFF() : AMBT(),
-    m_announceGroup(P25_WUID_ALL)
+    m_announceGroup(WUID_ALL)
 {
-    m_lco = TSBK_IOSP_GRP_AFF;
+    m_lco = TSBKO::IOSP_GRP_AFF;
 }
 
 /// <summary>
@@ -95,6 +96,6 @@ void MBT_IOSP_GRP_AFF::encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUserD
 /// <returns></returns>
 std::string MBT_IOSP_GRP_AFF::toString(bool isp)
 {
-    if (isp) return std::string("TSBK_IOSP_GRP_AFF (Group Affiliation Request)");
-    else return std::string("TSBK_IOSP_GRP_AFF (Group Affiliation Response)");
+    return (isp) ? std::string("TSBKO, IOSP_GRP_AFF (Group Affiliation Request)") :
+        std::string("TSBKO, IOSP_GRP_AFF (Group Affiliation Response)");
 }

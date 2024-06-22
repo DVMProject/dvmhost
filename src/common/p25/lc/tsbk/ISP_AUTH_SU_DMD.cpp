@@ -7,15 +7,16 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
 #include "p25/lc/tsbk/ISP_AUTH_SU_DMD.h"
 
-using namespace p25::lc::tsbk;
-using namespace p25::lc;
 using namespace p25;
+using namespace p25::defines;
+using namespace p25::lc;
+using namespace p25::lc::tsbk;
 
 #include <cassert>
 
@@ -28,7 +29,7 @@ using namespace p25;
 /// </summary>
 ISP_AUTH_SU_DMD::ISP_AUTH_SU_DMD() : TSBK()
 {
-    m_lco = TSBK_ISP_AUTH_SU_DMD;
+    m_lco = TSBKO::ISP_AUTH_SU_DMD;
 }
 
 /// <summary>
@@ -75,5 +76,5 @@ void ISP_AUTH_SU_DMD::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 /// <returns></returns>
 std::string ISP_AUTH_SU_DMD::toString(bool isp)
 {
-    return std::string("TSBK_ISP_AUTH_SU_DMD (Authentication SU Demand)");
+    return std::string("TSBKO, ISP_AUTH_SU_DMD (Authentication SU Demand)");
 }

@@ -27,6 +27,7 @@
 #include "ActivityLog.h"
 
 using namespace dmr;
+using namespace dmr::defines;
 using namespace dmr::lc::csbk;
 using namespace dmr::packet;
 
@@ -54,7 +55,7 @@ using namespace dmr::packet;
 #define IS_SUPPORT_CONTROL_CHECK(_PCKT_STR, _PCKT, _SRCID)                              \
     if (!m_slot->m_dmr->getTSCCSlot()->m_enableTSCC) {                                  \
         LogWarning(LOG_RF, "DMR Slot %u, %s denial, unsupported service, srcId = %u", m_slot->m_slotNo, _PCKT_STR.c_str(), _SRCID); \
-        writeRF_CSBK_ACK_RSP(_SRCID, TS_DENY_RSN_SYS_UNSUPPORTED_SVC, 0U);              \
+        writeRF_CSBK_ACK_RSP(_SRCID, ReasonCode::TS_DENY_RSN_SYS_UNSUPPORTED_SVC, 0U);  \
         return false;                                                                   \
     }
 
@@ -62,7 +63,7 @@ using namespace dmr::packet;
 #define VALID_SRCID(_PCKT_STR, _PCKT, _SRCID)                                           \
     if (!acl::AccessControl::validateSrcId(_SRCID)) {                                   \
         LogWarning(LOG_RF, "DMR Slot %u, %s denial, RID rejection, srcId = %u", m_slot->m_slotNo, _PCKT_STR.c_str(), _SRCID); \
-        writeRF_CSBK_ACK_RSP(_SRCID, TS_DENY_RSN_PERM_USER_REFUSED, 0U);                \
+        writeRF_CSBK_ACK_RSP(_SRCID, ReasonCode::TS_DENY_RSN_PERM_USER_REFUSED, 0U);    \
         return false;                                                                   \
     }
 
@@ -70,7 +71,7 @@ using namespace dmr::packet;
 #define VALID_DSTID(_PCKT_STR, _PCKT, _SRCID, _DSTID)                                   \
     if (!acl::AccessControl::validateSrcId(_DSTID)) {                                   \
         LogWarning(LOG_RF, "DMR Slot %u, %s denial, RID rejection, dstId = %u", m_slot->m_slotNo, _PCKT_STR.c_str(), _DSTID); \
-        writeRF_CSBK_ACK_RSP(_SRCID, TS_DENY_RSN_TEMP_USER_REFUSED, 0U);                \
+        writeRF_CSBK_ACK_RSP(_SRCID, ReasonCode::TS_DENY_RSN_TEMP_USER_REFUSED, 0U);    \
         return false;                                                                   \
     }
 
@@ -78,7 +79,7 @@ using namespace dmr::packet;
 #define VALID_TGID(_PCKT_STR, _PCKT, _SRCID, _DSTID)                                    \
     if (!acl::AccessControl::validateTGId(0U, _DSTID)) {                                \
         LogWarning(LOG_RF, "DMR Slot %u, %s denial, TGID rejection, dstId = %u", m_slot->m_slotNo, _PCKT_STR.c_str(), _DSTID); \
-        writeRF_CSBK_ACK_RSP(_SRCID, TS_DENY_RSN_TGT_GROUP_NOT_VALID, 0U);              \
+        writeRF_CSBK_ACK_RSP(_SRCID, ReasonCode::TS_DENY_RSN_TGT_GROUP_NOT_VALID, 0U);  \
         return false;                                                                   \
     }
 
@@ -86,32 +87,32 @@ using namespace dmr::packet;
 #define VERIFY_SRCID_REG(_PCKT_STR, _PCKT, _SRCID)                                      \
     if (!m_slot->m_affiliations->isUnitReg(_SRCID) && m_slot->m_verifyReg) {            \
         LogWarning(LOG_RF, "DMR Slot %u, %s denial, RID not registered, srcId = %u", m_slot->m_slotNo, _PCKT_STR.c_str(), _SRCID); \
-        writeRF_CSBK_ACK_RSP(_SRCID, TS_DENY_RSN_PERM_USER_REFUSED, 0U);                \
+        writeRF_CSBK_ACK_RSP(_SRCID, ReasonCode::TS_DENY_RSN_PERM_USER_REFUSED, 0U);    \
         return false;                                                                   \
     }
 
 // Macro helper to verbose log a generic CSBK.
 #define VERBOSE_LOG_CSBK(_PCKT_STR, _SRCID, _DSTID)                                     \
     if (m_verbose) {                                                                    \
-        LogMessage(LOG_RF, "DMR Slot %u, DT_CSBK, %s, srcId = %u, dstId = %u", m_slot->m_slotNo, _PCKT_STR.c_str(), _SRCID, _DSTID); \
+        LogMessage(LOG_RF, "DMR Slot %u, CSBK, %s, srcId = %u, dstId = %u", m_slot->m_slotNo, _PCKT_STR.c_str(), _SRCID, _DSTID); \
     }
 
 // Macro helper to verbose log a generic CSBK.
 #define VERBOSE_LOG_CSBK_DST(_PCKT_STR, _DSTID)                                         \
     if (m_verbose) {                                                                    \
-        LogMessage(LOG_RF, "DMR Slot %u, DT_CSBK, %s, dstId = %u", m_slot->m_slotNo, _PCKT_STR.c_str(), _DSTID);   \
+        LogMessage(LOG_RF, "DMR Slot %u, CSBK, %s, dstId = %u", m_slot->m_slotNo, _PCKT_STR.c_str(), _DSTID);   \
     }
 
 // Macro helper to verbose log a generic network CSBK.
 #define VERBOSE_LOG_CSBK_NET(_PCKT_STR, _SRCID, _DSTID)                                 \
     if (m_verbose) {                                                                    \
-        LogMessage(LOG_NET, "DMR Slot %u, DT_CSBK, %s, srcId = %u, dstId = %u", m_slot->m_slotNo, _PCKT_STR.c_str(), _SRCID, _DSTID); \
+        LogMessage(LOG_NET, "DMR Slot %u, CSBK, %s, srcId = %u, dstId = %u", m_slot->m_slotNo, _PCKT_STR.c_str(), _SRCID, _DSTID); \
     }
 
 // Macro helper to verbose log a generic network CSBK.
 #define DEBUG_LOG_CSBK(_PCKT_STR)                                                       \
     if (m_debug) {                                                                      \
-        LogMessage(LOG_RF, "DMR Slot %u, DT_CSBK, %s", m_slot->m_slotNo, _PCKT_STR.c_str());    \
+        LogMessage(LOG_RF, "DMR Slot %u, CSBK, %s", m_slot->m_slotNo, _PCKT_STR.c_str());    \
     }
 
 // ---------------------------------------------------------------------------
@@ -135,21 +136,21 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len)
 {
     assert(data != nullptr);
 
-    // Get the type from the packet metadata
-    uint8_t dataType = data[1U] & 0x0FU;
+    // get the type from the packet metadata
+    DataType::E dataType = (DataType::E)(data[1U] & 0x0FU);
 
     SlotType slotType;
     slotType.setColorCode(m_slot->m_colorCode);
     slotType.setDataType(dataType);
 
-    if (dataType == DT_CSBK) {
+    if (dataType == DataType::CSBK) {
         // generate a new CSBK and check validity
         std::unique_ptr<lc::CSBK> csbk = CSBKFactory::createCSBK(data + 2U, dataType);
         if (csbk == nullptr)
             return false;
 
         uint8_t csbko = csbk->getCSBKO();
-        if (csbko == CSBKO_BSDWNACT)
+        if (csbko == CSBKO::BSDWNACT)
             return false;
 
         bool gi = csbk->getGI();
@@ -163,7 +164,7 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len)
 
             // validate the source RID
             if (!acl::AccessControl::validateSrcId(srcId)) {
-                LogWarning(LOG_RF, "DMR Slot %u, DT_CSBK denial, RID rejection, srcId = %u", m_slot->m_slotNo, srcId);
+                LogWarning(LOG_RF, "DMR Slot %u, DataType::CSBK denial, RID rejection, srcId = %u", m_slot->m_slotNo, srcId);
                 m_slot->m_rfState = RS_RF_REJECTED;
                 return false;
             }
@@ -171,7 +172,7 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len)
             // validate the target ID
             if (gi) {
                 if (!acl::AccessControl::validateTGId(m_slot->m_slotNo, dstId)) {
-                    LogWarning(LOG_RF, "DMR Slot %u, DT_CSBK denial, TGID rejection, srcId = %u, dstId = %u", m_slot->m_slotNo, srcId, dstId);
+                    LogWarning(LOG_RF, "DMR Slot %u, DataType::CSBK denial, TGID rejection, srcId = %u, dstId = %u", m_slot->m_slotNo, srcId, dstId);
                     m_slot->m_rfState = RS_RF_REJECTED;
                     return false;
                 }
@@ -180,17 +181,17 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len)
 
         bool handled = false;
         switch (csbko) {
-        case CSBKO_UU_V_REQ:
+        case CSBKO::UU_V_REQ:
             VERBOSE_LOG_CSBK(csbk->toString(), srcId, dstId);
             break;
-        case CSBKO_UU_ANS_RSP:
+        case CSBKO::UU_ANS_RSP:
             VERBOSE_LOG_CSBK(csbk->toString(), srcId, dstId);
             break;
-        case CSBKO_RAND:
+        case CSBKO::RAND:
         {
             if (csbk->getFID() == FID_DMRA) {
                 if (m_verbose) {
-                    LogMessage(LOG_RF, "DMR Slot %u, DT_CSBK, %s, srcId = %u, dstId = %u",
+                    LogMessage(LOG_RF, "DMR Slot %u, CSBK, %s, srcId = %u, dstId = %u",
                         m_slot->m_slotNo, csbk->toString().c_str(), srcId, dstId);
                 }
 
@@ -200,25 +201,25 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len)
 
                 CSBK_RAND* isp = static_cast<CSBK_RAND*>(csbk.get());
                 if (m_verbose) {
-                    LogMessage(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), serviceKind = $%02X, serviceOptions = $%02X, serviceExtra = $%02X, srcId = %u, dstId = %u",
+                    LogMessage(LOG_RF, "DMR Slot %u, , CSBK, RAND (Random Access), serviceKind = $%02X, serviceOptions = $%02X, serviceExtra = $%02X, srcId = %u, dstId = %u",
                         m_slot->m_slotNo, isp->getServiceKind(), isp->getServiceOptions(), isp->getServiceExtra(), isp->getSrcId(), isp->getDstId());
                 }
 
                 switch (isp->getServiceKind()) {
-                case SVC_KIND_IND_VOICE_CALL:
+                case ServiceKind::IND_VOICE_CALL:
                     // make sure control data is supported
-                    IS_SUPPORT_CONTROL_CHECK(csbk->toString(), SVC_KIND_IND_VOICE_CALL, srcId);
+                    IS_SUPPORT_CONTROL_CHECK(csbk->toString(), ServiceKind::IND_VOICE_CALL, srcId);
 
                     // validate the source RID
-                    VALID_SRCID(csbk->toString(), SVC_KIND_IND_VOICE_CALL, srcId);
+                    VALID_SRCID(csbk->toString(), ServiceKind::IND_VOICE_CALL, srcId);
 
                     // validate the target RID
-                    VALID_DSTID(csbk->toString(), SVC_KIND_IND_VOICE_CALL, srcId, dstId);
+                    VALID_DSTID(csbk->toString(), ServiceKind::IND_VOICE_CALL, srcId, dstId);
 
                     // verify the source RID is registered
-                    VERIFY_SRCID_REG(csbk->toString(), SVC_KIND_IND_VOICE_CALL, srcId);
+                    VERIFY_SRCID_REG(csbk->toString(), ServiceKind::IND_VOICE_CALL, srcId);
 
-                    writeRF_CSBK_ACK_RSP(srcId, TS_WAIT_RSN, 1U);
+                    writeRF_CSBK_ACK_RSP(srcId, ReasonCode::TS_WAIT_RSN, 1U);
 
                     if (m_slot->m_authoritative) {
                         writeRF_CSBK_Grant(srcId, dstId, isp->getServiceOptions(), false);
@@ -227,17 +228,17 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len)
                             m_slot->m_network->writeGrantReq(modem::DVM_STATE::STATE_DMR, srcId, dstId, m_slot->m_slotNo, true);
                     }
                     break;
-                case SVC_KIND_GRP_VOICE_CALL:
+                case ServiceKind::GRP_VOICE_CALL:
                     // make sure control data is supported
-                    IS_SUPPORT_CONTROL_CHECK(csbk->toString(), SVC_KIND_GRP_VOICE_CALL, srcId);
+                    IS_SUPPORT_CONTROL_CHECK(csbk->toString(), ServiceKind::GRP_VOICE_CALL, srcId);
 
                     // validate the source RID
-                    VALID_SRCID(csbk->toString(), SVC_KIND_GRP_VOICE_CALL, srcId);
+                    VALID_SRCID(csbk->toString(), ServiceKind::GRP_VOICE_CALL, srcId);
 
                     // validate the talkgroup ID
-                    VALID_TGID(csbk->toString(), SVC_KIND_GRP_VOICE_CALL, srcId, dstId);
+                    VALID_TGID(csbk->toString(), ServiceKind::GRP_VOICE_CALL, srcId, dstId);
 
-                    writeRF_CSBK_ACK_RSP(srcId, TS_WAIT_RSN, 1U);
+                    writeRF_CSBK_ACK_RSP(srcId, ReasonCode::TS_WAIT_RSN, 1U);
 
                     if (m_slot->m_authoritative) {
                         writeRF_CSBK_Grant(srcId, dstId, isp->getServiceOptions(), true);
@@ -246,117 +247,117 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len)
                             m_slot->m_network->writeGrantReq(modem::DVM_STATE::STATE_DMR, srcId, dstId, m_slot->m_slotNo, false);
                     }
                     break;
-                case SVC_KIND_IND_DATA_CALL:
-                case SVC_KIND_IND_UDT_DATA_CALL:
+                case ServiceKind::IND_DATA_CALL:
+                case ServiceKind::IND_UDT_DATA_CALL:
                     // make sure control data is supported
-                    IS_SUPPORT_CONTROL_CHECK(csbk->toString(), SVC_KIND_IND_VOICE_CALL, srcId);
+                    IS_SUPPORT_CONTROL_CHECK(csbk->toString(), ServiceKind::IND_VOICE_CALL, srcId);
 
                     // validate the source RID
-                    VALID_SRCID(csbk->toString(), SVC_KIND_IND_VOICE_CALL, srcId);
+                    VALID_SRCID(csbk->toString(), ServiceKind::IND_VOICE_CALL, srcId);
 
                     // validate the target RID
-                    VALID_DSTID(csbk->toString(), SVC_KIND_IND_VOICE_CALL, srcId, dstId);
+                    VALID_DSTID(csbk->toString(), ServiceKind::IND_VOICE_CALL, srcId, dstId);
 
                     // verify the source RID is registered
-                    VERIFY_SRCID_REG(csbk->toString(), SVC_KIND_IND_VOICE_CALL, srcId);
+                    VERIFY_SRCID_REG(csbk->toString(), ServiceKind::IND_VOICE_CALL, srcId);
 
-                    writeRF_CSBK_ACK_RSP(srcId, TS_WAIT_RSN, 0U);
+                    writeRF_CSBK_ACK_RSP(srcId, ReasonCode::TS_WAIT_RSN, 0U);
 
                     writeRF_CSBK_Data_Grant(srcId, dstId, isp->getServiceOptions(), false);
                     break;
-                case SVC_KIND_GRP_DATA_CALL:
-                case SVC_KIND_GRP_UDT_DATA_CALL:
+                case ServiceKind::GRP_DATA_CALL:
+                case ServiceKind::GRP_UDT_DATA_CALL:
                     // make sure control data is supported
-                    IS_SUPPORT_CONTROL_CHECK(csbk->toString(), SVC_KIND_GRP_VOICE_CALL, srcId);
+                    IS_SUPPORT_CONTROL_CHECK(csbk->toString(), ServiceKind::GRP_VOICE_CALL, srcId);
 
                     // validate the source RID
-                    VALID_SRCID(csbk->toString(), SVC_KIND_GRP_VOICE_CALL, srcId);
+                    VALID_SRCID(csbk->toString(), ServiceKind::GRP_VOICE_CALL, srcId);
 
                     // validate the talkgroup ID
-                    VALID_TGID(csbk->toString(), SVC_KIND_GRP_VOICE_CALL, srcId, dstId);
+                    VALID_TGID(csbk->toString(), ServiceKind::GRP_VOICE_CALL, srcId, dstId);
 
-                    writeRF_CSBK_ACK_RSP(srcId, TS_WAIT_RSN, 0U);
+                    writeRF_CSBK_ACK_RSP(srcId, ReasonCode::TS_WAIT_RSN, 0U);
 
                     writeRF_CSBK_Data_Grant(srcId, dstId, isp->getServiceOptions(), true);
                     break;
-                case SVC_KIND_REG_SVC:
+                case ServiceKind::REG_SVC:
                     // make sure control data is supported
-                    IS_SUPPORT_CONTROL_CHECK(csbk->toString(), SVC_KIND_REG_SVC, srcId);
+                    IS_SUPPORT_CONTROL_CHECK(csbk->toString(), ServiceKind::REG_SVC, srcId);
 
                     writeRF_CSBK_U_Reg_Rsp(srcId, isp->getServiceOptions());
                     break;
                 default:
-                    LogWarning(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), unhandled service, serviceKind = %02X", m_slot->m_slotNo, isp->getServiceKind());
+                    LogWarning(LOG_RF, "DMR Slot %u, , CSBK, RAND (Random Access), unhandled service, serviceKind = %02X", m_slot->m_slotNo, isp->getServiceKind());
                     // should we drop the CSBK and not repeat it?
                     break;
                 }
             }
         }
         break;
-        case CSBKO_ACK_RSP:
+        case CSBKO::ACK_RSP:
         {
             VERBOSE_LOG_CSBK(csbk->toString(), srcId, dstId);
             ::ActivityLog("DMR", true, "Slot %u ack response from %u to %u", m_slot->m_slotNo, srcId, dstId);
         }
         break;
-        case CSBKO_EXT_FNCT:
+        case CSBKO::EXT_FNCT:
         {
             CSBK_EXT_FNCT* isp = static_cast<CSBK_EXT_FNCT*>(csbk.get());
             if (m_verbose) {
-                LogMessage(LOG_RF, "DMR Slot %u, DT_CSBK, %s, op = $%02X, arg = %u, tgt = %u",
+                LogMessage(LOG_RF, "DMR Slot %u, CSBK, %s, op = $%02X, arg = %u, tgt = %u",
                     m_slot->m_slotNo, csbk->toString().c_str(), isp->getExtendedFunction(), dstId, srcId);
             }
 
             // generate activity log entry
             switch (isp->getExtendedFunction()) {
-            case DMR_EXT_FNCT_CHECK:
+            case ExtendedFunctions::CHECK:
                 ::ActivityLog("DMR", true, "Slot %u radio check request from %u to %u", m_slot->m_slotNo, dstId, srcId);
                 break;
-            case DMR_EXT_FNCT_INHIBIT:
+            case ExtendedFunctions::INHIBIT:
                 ::ActivityLog("DMR", true, "Slot %u radio inhibit request from %u to %u", m_slot->m_slotNo, dstId, srcId);
                 break;
-            case DMR_EXT_FNCT_UNINHIBIT:
+            case ExtendedFunctions::UNINHIBIT:
                 ::ActivityLog("DMR", true, "Slot %u radio uninhibit request from %u to %u", m_slot->m_slotNo, dstId, srcId);
                 break;
-            case DMR_EXT_FNCT_CHECK_ACK:
+            case ExtendedFunctions::CHECK_ACK:
                 ::ActivityLog("DMR", true, "Slot %u radio check response from %u to %u", m_slot->m_slotNo, dstId, srcId);
                 break;
-            case DMR_EXT_FNCT_INHIBIT_ACK:
+            case ExtendedFunctions::INHIBIT_ACK:
                 ::ActivityLog("DMR", true, "Slot %u radio inhibit response from %u to %u", m_slot->m_slotNo, dstId, srcId);
                 break;
-            case DMR_EXT_FNCT_UNINHIBIT_ACK:
+            case ExtendedFunctions::UNINHIBIT_ACK:
                 ::ActivityLog("DMR", true, "Slot %u radio uninhibit response from %u to %u", m_slot->m_slotNo, dstId, srcId);
                 break;
             default:
-                LogWarning(LOG_RF, "DMR Slot %u, DT_CSBK, %s, unhandled op, op = $%02X", m_slot->m_slotNo, csbk->toString().c_str(), isp->getExtendedFunction());
+                LogWarning(LOG_RF, "DMR Slot %u, CSBK, %s, unhandled op, op = $%02X", m_slot->m_slotNo, csbk->toString().c_str(), isp->getExtendedFunction());
                 break;
             }
         }
         break;
-        case CSBKO_NACK_RSP:
+        case CSBKO::NACK_RSP:
         {
             VERBOSE_LOG_CSBK(csbk->toString(), srcId, dstId);
         }
         break;
-        case CSBKO_MAINT:
+        case CSBKO::MAINT:
         {
             CSBK_MAINT* isp = static_cast<CSBK_MAINT*>(csbk.get());
             if (m_verbose) {
-                LogMessage(LOG_RF, "DMR Slot %u, DT_CSBK, %s, kind = $%02X, srcId = %u",
+                LogMessage(LOG_RF, "DMR Slot %u, CSBK, %s, kind = $%02X, srcId = %u",
                     m_slot->m_slotNo, csbk->toString().c_str(), isp->getMaintKind(), srcId);
             }
         }
         break;
-        case CSBKO_PRECCSBK:
+        case CSBKO::PRECCSBK:
         {
             if (m_verbose) {
-                LogMessage(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_PRECCSBK (%s Preamble CSBK), toFollow = %u, srcId = %u, dstId = %u",
+                LogMessage(LOG_RF, "DMR Slot %u, , CSBK, PRECCSBK (%s Preamble CSBK), toFollow = %u, srcId = %u, dstId = %u",
                     m_slot->m_slotNo, csbk->getDataContent() ? "Data" : "CSBK", csbk->getCBF(), srcId, dstId);
             }
         }
         break;
         default:
-            LogWarning(LOG_RF, "DMR Slot %u, DT_CSBK, unhandled CSBK, csbko = $%02X, fid = $%02X", m_slot->m_slotNo, csbko, csbk->getFID());
+            LogWarning(LOG_RF, "DMR Slot %u, CSBK, unhandled CSBK, csbko = $%02X, fid = $%02X", m_slot->m_slotNo, csbko, csbk->getFID());
             // should we drop the CSBK and not repeat it?
             break;
         }
@@ -379,7 +380,7 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len)
             if (m_slot->m_duplex)
                 m_slot->addFrame(data);
 
-            m_slot->writeNetwork(data, DT_CSBK, gi ? FLCO_GROUP : FLCO_PRIVATE, srcId, dstId, 0U, true);
+            m_slot->writeNetwork(data, DataType::CSBK, gi ? FLCO::GROUP : FLCO::PRIVATE, srcId, dstId, 0U, true);
         }
 
         return true;
@@ -394,26 +395,26 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len)
 /// <param name="dmrData"></param>
 void ControlSignaling::processNetwork(const data::Data & dmrData)
 {
-    uint8_t dataType = dmrData.getDataType();
+    DataType::E dataType = dmrData.getDataType();
 
     uint8_t data[DMR_FRAME_LENGTH_BYTES + 2U];
     dmrData.getData(data + 2U);
 
-    if (dataType == DT_CSBK) {
+    if (dataType == DataType::CSBK) {
         std::unique_ptr<lc::CSBK> csbk = CSBKFactory::createCSBK(data + 2U, dataType);
         if (csbk == nullptr) {
-            LogError(LOG_NET, "DMR Slot %u, DT_CSBK, unable to decode the network CSBK", m_slot->m_slotNo);
+            LogError(LOG_NET, "DMR Slot %u, CSBK, unable to decode the network CSBK", m_slot->m_slotNo);
             return;
         }
 
         uint8_t csbko = csbk->getCSBKO();
-        if (csbko == CSBKO_BSDWNACT)
+        if (csbko == CSBKO::BSDWNACT)
             return;
 
         // handle updating internal adjacent site information
-        if (csbko == CSBKO_BROADCAST) {
+        if (csbko == CSBKO::BROADCAST) {
             CSBK_BROADCAST* osp = static_cast<CSBK_BROADCAST*>(csbk.get());
-            if (osp->getAnncType() == BCAST_ANNC_ANN_WD_TSCC) {
+            if (osp->getAnncType() == BroadcastAnncType::ANN_WD_TSCC) {
                 if (!m_slot->m_enableTSCC) {
                     return;
                 }
@@ -428,7 +429,7 @@ void ControlSignaling::processNetwork(const data::Data & dmrData)
                     }
 
                     if (m_verbose) {
-                        LogMessage(LOG_NET, "DMR Slot %u, DT_CSBK, %s, sysId = $%03X, chNo = %u", m_slot->m_slotNo, csbk->toString().c_str(),
+                        LogMessage(LOG_NET, "DMR Slot %u, CSBK, %s, sysId = $%03X, chNo = %u", m_slot->m_slotNo, csbk->toString().c_str(),
                             osp->getSystemId(), osp->getLogicalCh1());
                     }
 
@@ -451,21 +452,21 @@ void ControlSignaling::processNetwork(const data::Data & dmrData)
 
         bool handled = false;
         switch (csbko) {
-        case CSBKO_UU_V_REQ:
+        case CSBKO::UU_V_REQ:
         {
             VERBOSE_LOG_CSBK_NET(csbk->toString(), srcId, dstId);
         }
         break;
-        case CSBKO_UU_ANS_RSP:
+        case CSBKO::UU_ANS_RSP:
         {
             VERBOSE_LOG_CSBK_NET(csbk->toString(), srcId, dstId);
         }
         break;
-        case CSBKO_RAND:
+        case CSBKO::RAND:
         {
             if (csbk->getFID() == FID_DMRA) {
                 if (m_verbose) {
-                    LogMessage(LOG_NET, "DMR Slot %u, DT_CSBK, %s, srcId = %u, dstId = %u",
+                    LogMessage(LOG_NET, "DMR Slot %u, CSBK, %s, srcId = %u, dstId = %u",
                         m_slot->m_slotNo, csbk->toString().c_str(), srcId, dstId);
                 }
 
@@ -473,41 +474,41 @@ void ControlSignaling::processNetwork(const data::Data & dmrData)
             } else {
                 CSBK_RAND* isp = static_cast<CSBK_RAND*>(csbk.get());
                 if (m_verbose) {
-                    LogMessage(LOG_NET, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), serviceKind = $%02X, serviceOptions = $%02X, serviceExtra = $%02X, srcId = %u, dstId = %u",
+                    LogMessage(LOG_NET, "DMR Slot %u, , CSBK, RAND (Random Access), serviceKind = $%02X, serviceOptions = $%02X, serviceExtra = $%02X, srcId = %u, dstId = %u",
                         m_slot->m_slotNo, isp->getServiceKind(), isp->getServiceOptions(), isp->getServiceExtra(), isp->getSrcId(), isp->getDstId());
                 }
 
                 switch (isp->getServiceKind()) {
-                case SVC_KIND_IND_VOICE_CALL:
-                    writeRF_CSBK_ACK_RSP(srcId, TS_WAIT_RSN, 1U);
+                case ServiceKind::IND_VOICE_CALL:
+                    writeRF_CSBK_ACK_RSP(srcId, ReasonCode::TS_WAIT_RSN, 1U);
 
                     if (!m_slot->m_affiliations->isGranted(dstId)) {
                         writeRF_CSBK_Grant(srcId, dstId, isp->getServiceOptions(), false, true);
                     }
                     break;
-                case SVC_KIND_GRP_VOICE_CALL:
-                    writeRF_CSBK_ACK_RSP(srcId, TS_WAIT_RSN, 1U);
+                case ServiceKind::GRP_VOICE_CALL:
+                    writeRF_CSBK_ACK_RSP(srcId, ReasonCode::TS_WAIT_RSN, 1U);
 
                     if (!m_slot->m_affiliations->isGranted(dstId)) {
                         writeRF_CSBK_Grant(srcId, dstId, isp->getServiceOptions(), true, true);
                     }
                     break;
-                case SVC_KIND_IND_DATA_CALL:
-                case SVC_KIND_IND_UDT_DATA_CALL:
-                    writeRF_CSBK_ACK_RSP(srcId, TS_WAIT_RSN, 0U);
+                case ServiceKind::IND_DATA_CALL:
+                case ServiceKind::IND_UDT_DATA_CALL:
+                    writeRF_CSBK_ACK_RSP(srcId, ReasonCode::TS_WAIT_RSN, 0U);
 
                     writeRF_CSBK_Data_Grant(srcId, dstId, isp->getServiceOptions(), false, true);
                     break;
-                case SVC_KIND_GRP_DATA_CALL:
-                case SVC_KIND_GRP_UDT_DATA_CALL:
-                    writeRF_CSBK_ACK_RSP(srcId, TS_WAIT_RSN, 0U);
+                case ServiceKind::GRP_DATA_CALL:
+                case ServiceKind::GRP_UDT_DATA_CALL:
+                    writeRF_CSBK_ACK_RSP(srcId, ReasonCode::TS_WAIT_RSN, 0U);
 
                     writeRF_CSBK_Data_Grant(srcId, dstId, isp->getServiceOptions(), true, true);
                     break;
-                case SVC_KIND_REG_SVC:
+                case ServiceKind::REG_SVC:
                     break;
                 default:
-                    LogWarning(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), unhandled service, serviceKind = %02X", m_slot->m_slotNo, isp->getServiceKind());
+                    LogWarning(LOG_RF, "DMR Slot %u, , CSBK, RAND (Random Access), unhandled service, serviceKind = %02X", m_slot->m_slotNo, isp->getServiceKind());
                     // should we drop the CSBK and not repeat it?
                     break;
                 }
@@ -516,61 +517,61 @@ void ControlSignaling::processNetwork(const data::Data & dmrData)
             }
         }
         break;
-        case CSBKO_ACK_RSP:
+        case CSBKO::ACK_RSP:
         {
             VERBOSE_LOG_CSBK_NET(csbk->toString(), srcId, dstId);
             ::ActivityLog("DMR", false, "Slot %u ack response from %u to %u", m_slot->m_slotNo, srcId, dstId);
         }
         break;
-        case CSBKO_EXT_FNCT:
+        case CSBKO::EXT_FNCT:
         {
             CSBK_EXT_FNCT* isp = static_cast<CSBK_EXT_FNCT*>(csbk.get());
             if (m_verbose) {
-                LogMessage(LOG_NET, "DMR Slot %u, DT_CSBK, %s, op = $%02X, arg = %u, tgt = %u",
+                LogMessage(LOG_NET, "DMR Slot %u, CSBK, %s, op = $%02X, arg = %u, tgt = %u",
                     m_slot->m_slotNo, csbk->toString().c_str(), isp->getExtendedFunction(), dstId, srcId);
             }
 
             // generate activity log entry
             switch (isp->getExtendedFunction()) {
-            case DMR_EXT_FNCT_CHECK:
+            case ExtendedFunctions::CHECK:
                 ::ActivityLog("DMR", false, "Slot %u radio check request from %u to %u", m_slot->m_slotNo, dstId, srcId);
                 break;
-            case DMR_EXT_FNCT_INHIBIT:
+            case ExtendedFunctions::INHIBIT:
                 ::ActivityLog("DMR", false, "Slot %u radio inhibit request from %u to %u", m_slot->m_slotNo, dstId, srcId);
                 break;
-            case DMR_EXT_FNCT_UNINHIBIT:
+            case ExtendedFunctions::UNINHIBIT:
                 ::ActivityLog("DMR", false, "Slot %u radio uninhibit request from %u to %u", m_slot->m_slotNo, dstId, srcId);
                 break;
-            case DMR_EXT_FNCT_CHECK_ACK:
+            case ExtendedFunctions::CHECK_ACK:
                 ::ActivityLog("DMR", false, "Slot %u radio check response from %u to %u", m_slot->m_slotNo, dstId, srcId);
                 break;
-            case DMR_EXT_FNCT_INHIBIT_ACK:
+            case ExtendedFunctions::INHIBIT_ACK:
                 ::ActivityLog("DMR", false, "Slot %u radio inhibit response from %u to %u", m_slot->m_slotNo, dstId, srcId);
                 break;
-            case DMR_EXT_FNCT_UNINHIBIT_ACK:
+            case ExtendedFunctions::UNINHIBIT_ACK:
                 ::ActivityLog("DMR", false, "Slot %u radio uninhibit response from %u to %u", m_slot->m_slotNo, dstId, srcId);
                 break;
             default:
-                LogWarning(LOG_NET, "DMR Slot %u, DT_CSBK, %s, unhandled op, op = $%02X", m_slot->m_slotNo, csbk->toString().c_str(), isp->getExtendedFunction());
+                LogWarning(LOG_NET, "DMR Slot %u, CSBK, %s, unhandled op, op = $%02X", m_slot->m_slotNo, csbk->toString().c_str(), isp->getExtendedFunction());
                 break;
             }
         }
         break;
-        case CSBKO_NACK_RSP:
+        case CSBKO::NACK_RSP:
         {
             VERBOSE_LOG_CSBK_NET(csbk->toString(), srcId, dstId);
         }
         break;
-        case CSBKO_PRECCSBK:
+        case CSBKO::PRECCSBK:
         {
             if (m_verbose) {
-                LogMessage(LOG_NET, "DMR Slot %u, DT_CSBK, CSBKO_PRECCSBK (%s Preamble CSBK), toFollow = %u, srcId = %u, dstId = %u",
+                LogMessage(LOG_NET, "DMR Slot %u, , CSBK, PRECCSBK (%s Preamble CSBK), toFollow = %u, srcId = %u, dstId = %u",
                     m_slot->m_slotNo, csbk->getDataContent() ? "Data" : "CSBK", csbk->getCBF(), srcId, dstId);
             }
         }
         break;
         default:
-            LogWarning(LOG_NET, "DMR Slot %u, DT_CSBK, unhandled network CSBK, csbko = $%02X, fid = $%02X", m_slot->m_slotNo, csbko, csbk->getFID());
+            LogWarning(LOG_NET, "DMR Slot %u, CSBK, unhandled network CSBK, csbko = $%02X, fid = $%02X", m_slot->m_slotNo, csbko, csbk->getFID());
             // should we drop the CSBK and not repeat it?
             break;
         }
@@ -591,7 +592,7 @@ void ControlSignaling::processNetwork(const data::Data & dmrData)
             data[0U] = modem::TAG_DATA;
             data[1U] = 0x00U;
 
-            if (csbko == CSBKO_PRECCSBK && csbk->getDataContent()) {
+            if (csbko == CSBKO::PRECCSBK && csbk->getDataContent()) {
                 uint32_t cbf = NO_PREAMBLE_CSBK + csbk->getCBF() - 1U;
                 for (uint32_t i = 0U; i < NO_PREAMBLE_CSBK; i++, cbf--) {
                     // change blocks to follow
@@ -636,14 +637,14 @@ void ControlSignaling::writeAdjSSNetwork()
         std::unique_ptr<CSBK_BROADCAST> csbk = std::make_unique<CSBK_BROADCAST>();
         csbk->siteIdenEntry(m_slot->m_idenEntry);
         csbk->setCdef(false);
-        csbk->setAnncType(BCAST_ANNC_ANN_WD_TSCC);
+        csbk->setAnncType(BroadcastAnncType::ANN_WD_TSCC);
         csbk->setLogicalCh1(m_slot->m_channelNo);
         csbk->setAnnWdCh1(true);
         csbk->setSystemId(m_slot->m_siteData.systemIdentity());
         csbk->setRequireReg(m_slot->m_siteData.requireReg());
 
         if (m_verbose) {
-            LogMessage(LOG_NET, "DMR Slot %u, DT_CSBK, %s, network announce, sysId = $%03X, chNo = %u", m_slot->m_slotNo, csbk->toString().c_str(),
+            LogMessage(LOG_NET, "DMR Slot %u, CSBK, %s, network announce, sysId = $%03X, chNo = %u", m_slot->m_slotNo, csbk->toString().c_str(),
                 m_slot->m_siteData.systemIdentity(), m_slot->m_channelNo);
         }
 
@@ -666,18 +667,18 @@ void ControlSignaling::writeRF_Ext_Func(uint32_t func, uint32_t arg, uint32_t ds
     csbk->setDstId(dstId);
 
     if (m_verbose) {
-        LogMessage(LOG_RF, "DMR Slot %u, DT_CSBK, %s, op = $%02X, arg = %u, tgt = %u",
+        LogMessage(LOG_RF, "DMR Slot %u, CSBK, %s, op = $%02X, arg = %u, tgt = %u",
             m_slot->m_slotNo, csbk->toString().c_str(), func, arg, dstId);
     }
 
     // generate activity log entry
-    if (func == DMR_EXT_FNCT_CHECK) {
+    if (func == ExtendedFunctions::CHECK) {
         ::ActivityLog("DMR", true, "Slot %u radio check request from %u to %u", m_slot->m_slotNo, arg, dstId);
     }
-    else if (func == DMR_EXT_FNCT_INHIBIT) {
+    else if (func == ExtendedFunctions::INHIBIT) {
         ::ActivityLog("DMR", true, "Slot %u radio inhibit request from %u to %u", m_slot->m_slotNo, arg, dstId);
     }
-    else if (func == DMR_EXT_FNCT_UNINHIBIT) {
+    else if (func == ExtendedFunctions::UNINHIBIT) {
         ::ActivityLog("DMR", true, "Slot %u radio uninhibit request from %u to %u", m_slot->m_slotNo, arg, dstId);
     }
 
@@ -751,7 +752,7 @@ void ControlSignaling::writeRF_CSBK(lc::CSBK* csbk, bool imm)
 
     SlotType slotType;
     slotType.setColorCode(m_slot->m_colorCode);
-    slotType.setDataType(DT_CSBK);
+    slotType.setDataType(DataType::CSBK);
 
     // Regenerate the CSBK data
     csbk->encode(data + 2U);
@@ -782,7 +783,7 @@ void ControlSignaling::writeNet_CSBK(lc::CSBK* csbk)
 
     SlotType slotType;
     slotType.setColorCode(m_slot->m_colorCode);
-    slotType.setDataType(DT_CSBK);
+    slotType.setDataType(DataType::CSBK);
 
     // Regenerate the CSBK data
     csbk->encode(data + 2U);
@@ -801,7 +802,7 @@ void ControlSignaling::writeNet_CSBK(lc::CSBK* csbk)
     if (m_slot->m_duplex)
         m_slot->addFrame(data);
 
-    m_slot->writeNetwork(data, DT_CSBK, csbk->getGI() ? FLCO_GROUP : FLCO_PRIVATE, csbk->getSrcId(), csbk->getDstId(), 0U, true);
+    m_slot->writeNetwork(data, DataType::CSBK, csbk->getGI() ? FLCO::GROUP : FLCO::PRIVATE, csbk->getSrcId(), csbk->getDstId(), 0U, true);
 }
 
 /*
@@ -819,7 +820,7 @@ void ControlSignaling::writeRF_CSBK_ACK_RSP(uint32_t dstId, uint8_t reason, uint
     std::unique_ptr<CSBK_ACK_RSP> csbk = std::make_unique<CSBK_ACK_RSP>();
     csbk->setResponse(responseInfo);
     csbk->setReason(reason);
-    csbk->setSrcId(DMR_WUID_ALL); // hmmm...
+    csbk->setSrcId(WUID_ALL); // hmmm...
     csbk->setDstId(dstId);
 
     writeRF_CSBK_Imm(csbk.get());
@@ -836,7 +837,7 @@ void ControlSignaling::writeRF_CSBK_NACK_RSP(uint32_t dstId, uint8_t reason, uin
     std::unique_ptr<CSBK_NACK_RSP> csbk = std::make_unique<CSBK_NACK_RSP>();
     csbk->setServiceKind(service);
     csbk->setReason(reason);
-    csbk->setSrcId(DMR_WUID_ALL); // hmmm...
+    csbk->setSrcId(WUID_ALL); // hmmm...
     csbk->setDstId(dstId);
 
     writeRF_CSBK_Imm(csbk.get());
@@ -864,7 +865,7 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
     bool broadcast = ((serviceOptions & 0xFFU) & 0x10U) == 0x10U;           // Broadcast Flag
     uint8_t priority = ((serviceOptions & 0xFFU) & 0x03U);                  // Priority
 
-    if (dstId == DMR_WUID_ALL) {
+    if (dstId == WUID_ALL || dstId == WUID_ALLZ || dstId == WUID_ALLL) {
         return true; // do not generate grant packets for $FFFF (All Call) TGID
     }
 
@@ -872,8 +873,8 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
     if (!skip) {
         if (m_slot->m_rfState != RS_RF_LISTENING && m_slot->m_rfState != RS_RF_DATA) {
             if (!net) {
-                LogWarning(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), SVC_KIND_VOICE_CALL (Voice Call) denied, traffic in progress, dstId = %u", m_tscc->m_slotNo, dstId);
-                writeRF_CSBK_ACK_RSP(srcId, TS_DENY_RSN_TGT_BUSY, (grp) ? 1U : 0U);
+                LogWarning(LOG_RF, "DMR Slot %u, , CSBK, RAND (Random Access, VOICE_CALL (Voice Call) denied, traffic in progress, dstId = %u", m_tscc->m_slotNo, dstId);
+                writeRF_CSBK_ACK_RSP(srcId, ReasonCode::TS_DENY_RSN_TGT_BUSY, (grp) ? 1U : 0U);
 
                 ::ActivityLog("DMR", true, "Slot %u group grant request %u to TG %u denied", m_tscc->m_slotNo, srcId, dstId);
                 m_slot->m_rfState = RS_RF_REJECTED;
@@ -884,8 +885,8 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
 
         if (m_slot->m_netState != RS_NET_IDLE && dstId == m_slot->m_netLastDstId) {
             if (!net) {
-                LogWarning(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), SVC_KIND_VOICE_CALL (Voice Call) denied, traffic in progress, dstId = %u", m_tscc->m_slotNo, dstId);
-                writeRF_CSBK_ACK_RSP(srcId, TS_DENY_RSN_TGT_BUSY, (grp) ? 1U : 0U);
+                LogWarning(LOG_RF, "DMR Slot %u, , CSBK, RAND (Random Access, VOICE_CALL (Voice Call) denied, traffic in progress, dstId = %u", m_tscc->m_slotNo, dstId);
+                writeRF_CSBK_ACK_RSP(srcId, ReasonCode::TS_DENY_RSN_TGT_BUSY, (grp) ? 1U : 0U);
 
                 ::ActivityLog("DMR", true, "Slot %u group grant request %u to TG %u denied", m_tscc->m_slotNo, srcId, dstId);
                 m_slot->m_rfState = RS_RF_REJECTED;
@@ -898,7 +899,7 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
         if (m_slot->m_rfLastDstId != 0U) {
             if (m_slot->m_rfLastDstId != dstId && (m_slot->m_rfTGHang.isRunning() && !m_slot->m_rfTGHang.hasExpired())) {
                 if (!net) {
-                    writeRF_CSBK_ACK_RSP(srcId, TS_DENY_RSN_TGT_BUSY, (grp) ? 1U : 0U);
+                    writeRF_CSBK_ACK_RSP(srcId, ReasonCode::TS_DENY_RSN_TGT_BUSY, (grp) ? 1U : 0U);
                     m_slot->m_rfState = RS_RF_REJECTED;
                 }
 
@@ -910,8 +911,8 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
             if (!m_tscc->m_affiliations->rfCh()->isRFChAvailable()) {
                 if (grp) {
                     if (!net) {
-                        LogWarning(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), SVC_KIND_GRP_VOICE_CALL (Group Voice Call) queued, no channels available, dstId = %u", m_tscc->m_slotNo, dstId);
-                        writeRF_CSBK_ACK_RSP(srcId, TS_QUEUED_RSN_NO_RESOURCE, (grp) ? 1U : 0U);
+                        LogWarning(LOG_RF, "DMR Slot %u, , CSBK, RAND (Random Access, GRP_VOICE_CALL (Group Voice Call) queued, no channels available, dstId = %u", m_tscc->m_slotNo, dstId);
+                        writeRF_CSBK_ACK_RSP(srcId, ReasonCode::TS_QUEUED_RSN_NO_RESOURCE, (grp) ? 1U : 0U);
 
                         ::ActivityLog("DMR", true, "Slot %u group grant request %u to TG %u queued", m_tscc->m_slotNo, srcId, dstId);
                         m_slot->m_rfState = RS_RF_REJECTED;
@@ -921,8 +922,8 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
                 }
                 else {
                     if (!net) {
-                        LogWarning(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), SVC_KIND_IND_VOICE_CALL (Individual Voice Call) queued, no channels available, dstId = %u", m_tscc->m_slotNo, dstId);
-                        writeRF_CSBK_ACK_RSP(srcId, TS_QUEUED_RSN_NO_RESOURCE, (grp) ? 1U : 0U);
+                        LogWarning(LOG_RF, "DMR Slot %u, , CSBK, RAND (Random Access, IND_VOICE_CALL (Individual Voice Call) queued, no channels available, dstId = %u", m_tscc->m_slotNo, dstId);
+                        writeRF_CSBK_ACK_RSP(srcId, ReasonCode::TS_QUEUED_RSN_NO_RESOURCE, (grp) ? 1U : 0U);
 
                         ::ActivityLog("DMR", true, "Slot %u group grant request %u to TG %u queued", m_tscc->m_slotNo, srcId, dstId);
                         m_slot->m_rfState = RS_RF_REJECTED;
@@ -946,8 +947,8 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
                 uint32_t grantedSrcId = m_tscc->m_affiliations->getGrantedSrcId(dstId);
                 if (srcId != grantedSrcId) {
                     if (!net) {
-                        LogWarning(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), SVC_KIND_VOICE_CALL (Voice Call) denied, traffic in progress, dstId = %u", m_tscc->m_slotNo, dstId);
-                        writeRF_CSBK_ACK_RSP(srcId, TS_DENY_RSN_TGT_BUSY, (grp) ? 1U : 0U);
+                        LogWarning(LOG_RF, "DMR Slot %u, , CSBK, RAND (Random Access, VOICE_CALL (Voice Call) denied, traffic in progress, dstId = %u", m_tscc->m_slotNo, dstId);
+                        writeRF_CSBK_ACK_RSP(srcId, ReasonCode::TS_DENY_RSN_TGT_BUSY, (grp) ? 1U : 0U);
 
                         ::ActivityLog("DMR", true, "Slot %u group grant request %u to TG %u denied", m_tscc->m_slotNo, srcId, dstId);
                         m_slot->m_rfState = RS_RF_REJECTED;
@@ -994,10 +995,10 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
                 int ret = RESTClient::send(voiceChData.address(), voiceChData.port(), voiceChData.password(),
                     HTTP_PUT, PUT_PERMIT_TG, req, voiceChData.ssl(), REST_QUICK_WAIT, m_tscc->m_debug);
                 if (ret != network::rest::http::HTTPPayload::StatusType::OK) {
-                    ::LogError(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), failed to permit TG for use, chNo = %u, slot = %u", m_tscc->m_slotNo, chNo, slot);
+                    ::LogError(LOG_RF, "DMR Slot %u, , CSBK, RAND (Random Access), failed to permit TG for use, chNo = %u, slot = %u", m_tscc->m_slotNo, chNo, slot);
                     m_tscc->m_affiliations->releaseGrant(dstId, false);
                     if (!net) {
-                        writeRF_CSBK_ACK_RSP(srcId, TS_DENY_RSN_TGT_BUSY, (grp) ? 1U : 0U);
+                        writeRF_CSBK_ACK_RSP(srcId, ReasonCode::TS_DENY_RSN_TGT_BUSY, (grp) ? 1U : 0U);
                         m_slot->m_rfState = RS_RF_REJECTED;
                     }
 
@@ -1005,20 +1006,20 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
                 }
             }
             else {
-                ::LogError(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), failed to permit TG for use, chNo = %u, slot = %u", m_tscc->m_slotNo, chNo, slot);
+                ::LogError(LOG_RF, "DMR Slot %u, , CSBK, RAND (Random Access), failed to permit TG for use, chNo = %u, slot = %u", m_tscc->m_slotNo, chNo, slot);
             }
         }
 
-        writeRF_CSBK_ACK_RSP(srcId, TS_ACK_RSN_MSG, (grp) ? 1U : 0U);
+        writeRF_CSBK_ACK_RSP(srcId, ReasonCode::TS_ACK_RSN_MSG, (grp) ? 1U : 0U);
 
         std::unique_ptr<CSBK_TV_GRANT> csbk = std::make_unique<CSBK_TV_GRANT>();
         if (broadcast)
-            csbk->setCSBKO(CSBKO_BTV_GRANT);
+            csbk->setCSBKO(CSBKO::BTV_GRANT);
         csbk->setLogicalCh1(chNo);
         csbk->setSlotNo(slot);
 
         if (m_verbose) {
-            LogMessage((net) ? LOG_NET : LOG_RF, "DMR Slot %u, DT_CSBK, %s, emerg = %u, privacy = %u, broadcast = %u, prio = %u, chNo = %u, slot = %u, srcId = %u, dstId = %u",
+            LogMessage((net) ? LOG_NET : LOG_RF, "DMR Slot %u, CSBK, %s, emerg = %u, privacy = %u, broadcast = %u, prio = %u, chNo = %u, slot = %u, srcId = %u, dstId = %u",
                 m_tscc->m_slotNo, csbk->toString().c_str(), emergency, privacy, broadcast, priority, csbk->getLogicalCh1(), csbk->getSlotNo(), srcId, dstId);
         }
 
@@ -1046,7 +1047,7 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
                                  HTTP_PUT, PUT_DMR_TSCC_PAYLOAD_ACT, req, voiceChData.ssl(), REST_QUICK_WAIT, m_tscc->m_debug);
             }
             else {
-                ::LogError(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), failed to activate payload channel, chNo = %u, slot = %u", m_tscc->m_slotNo, chNo, slot);
+                ::LogError(LOG_RF, "DMR Slot %u, , CSBK, RAND (Random Access), failed to activate payload channel, chNo = %u, slot = %u", m_tscc->m_slotNo, chNo, slot);
             }
         }
         else {
@@ -1072,10 +1073,10 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
                 int ret = RESTClient::send(voiceChData.address(), voiceChData.port(), voiceChData.password(),
                     HTTP_PUT, PUT_PERMIT_TG, req, voiceChData.ssl(), REST_QUICK_WAIT, m_tscc->m_debug);
                 if (ret != network::rest::http::HTTPPayload::StatusType::OK) {
-                    ::LogError(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), failed to permit TG for use, chNo = %u, slot = %u", m_tscc->m_slotNo, chNo, slot);
+                    ::LogError(LOG_RF, "DMR Slot %u, , CSBK, RAND (Random Access), failed to permit TG for use, chNo = %u, slot = %u", m_tscc->m_slotNo, chNo, slot);
                     m_tscc->m_affiliations->releaseGrant(dstId, false);
                     if (!net) {
-                        writeRF_CSBK_ACK_RSP(srcId, TS_DENY_RSN_TGT_BUSY, (grp) ? 1U : 0U);
+                        writeRF_CSBK_ACK_RSP(srcId, ReasonCode::TS_DENY_RSN_TGT_BUSY, (grp) ? 1U : 0U);
                         m_slot->m_rfState = RS_RF_REJECTED;
                     }
 
@@ -1083,18 +1084,18 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
                 }
             }
             else {
-                ::LogError(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), failed to permit TG for use, chNo = %u, slot = %u", m_tscc->m_slotNo, chNo, slot);
+                ::LogError(LOG_RF, "DMR Slot %u, , CSBK, RAND (Random Access), failed to permit TG for use, chNo = %u, slot = %u", m_tscc->m_slotNo, chNo, slot);
             }
         }
 
-        writeRF_CSBK_ACK_RSP(srcId, TS_ACK_RSN_MSG, (grp) ? 1U : 0U);
+        writeRF_CSBK_ACK_RSP(srcId, ReasonCode::TS_ACK_RSN_MSG, (grp) ? 1U : 0U);
 
         std::unique_ptr<CSBK_PV_GRANT> csbk = std::make_unique<CSBK_PV_GRANT>();
         csbk->setLogicalCh1(chNo);
         csbk->setSlotNo(slot);
 
         if (m_verbose) {
-            LogMessage((net) ? LOG_NET : LOG_RF, "DMR Slot %u, DT_CSBK, %s, emerg = %u, privacy = %u, broadcast = %u, prio = %u, chNo = %u, slot = %u, srcId = %u, dstId = %u",
+            LogMessage((net) ? LOG_NET : LOG_RF, "DMR Slot %u, CSBK, %s, emerg = %u, privacy = %u, broadcast = %u, prio = %u, chNo = %u, slot = %u, srcId = %u, dstId = %u",
                 m_tscc->m_slotNo, csbk->toString().c_str(), emergency, privacy, broadcast, priority, csbk->getLogicalCh1(), csbk->getSlotNo(), srcId, dstId);
         }
 
@@ -1122,7 +1123,7 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
                     HTTP_PUT, PUT_DMR_TSCC_PAYLOAD_ACT, req, voiceChData.ssl(), REST_QUICK_WAIT, m_tscc->m_debug);
             }
             else {
-                ::LogError(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), failed to activate payload channel, chNo = %u, slot = %u", m_tscc->m_slotNo, chNo, slot);
+                ::LogError(LOG_RF, "DMR Slot %u, , CSBK, RAND (Random Access), failed to activate payload channel, chNo = %u, slot = %u", m_tscc->m_slotNo, chNo, slot);
             }
         }
         else {
@@ -1155,7 +1156,7 @@ bool ControlSignaling::writeRF_CSBK_Data_Grant(uint32_t srcId, uint32_t dstId, u
     bool broadcast = ((serviceOptions & 0xFFU) & 0x10U) == 0x10U;           // Broadcast Flag
     uint8_t priority = ((serviceOptions & 0xFFU) & 0x03U);                  // Priority
 
-    if (dstId == DMR_WUID_ALL) {
+    if (dstId == WUID_ALL || dstId == WUID_ALLZ || dstId == WUID_ALLL) {
         return true; // do not generate grant packets for $FFFF (All Call) TGID
     }
 
@@ -1163,8 +1164,8 @@ bool ControlSignaling::writeRF_CSBK_Data_Grant(uint32_t srcId, uint32_t dstId, u
     if (!skip) {
         if (m_slot->m_rfState != RS_RF_LISTENING && m_slot->m_rfState != RS_RF_DATA) {
             if (!net) {
-                LogWarning(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), SVC_KIND_DATA_CALL (Data Call) denied, traffic in progress, dstId = %u", m_tscc->m_slotNo, dstId);
-                writeRF_CSBK_ACK_RSP(srcId, TS_DENY_RSN_TGT_BUSY, (grp) ? 1U : 0U);
+                LogWarning(LOG_RF, "DMR Slot %u, , CSBK, RAND (Random Access, DATA_CALL (Data Call) denied, traffic in progress, dstId = %u", m_tscc->m_slotNo, dstId);
+                writeRF_CSBK_ACK_RSP(srcId, ReasonCode::TS_DENY_RSN_TGT_BUSY, (grp) ? 1U : 0U);
 
                 ::ActivityLog("DMR", true, "Slot %u group grant request %u to TG %u denied", m_tscc->m_slotNo, srcId, dstId);
                 m_slot->m_rfState = RS_RF_REJECTED;
@@ -1175,8 +1176,8 @@ bool ControlSignaling::writeRF_CSBK_Data_Grant(uint32_t srcId, uint32_t dstId, u
 
         if (m_slot->m_netState != RS_NET_IDLE && dstId == m_slot->m_netLastDstId) {
             if (!net) {
-                LogWarning(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), SVC_KIND_DATA_CALL (Data Call) denied, traffic in progress, dstId = %u", m_tscc->m_slotNo, dstId);
-                writeRF_CSBK_ACK_RSP(srcId, TS_DENY_RSN_TGT_BUSY, (grp) ? 1U : 0U);
+                LogWarning(LOG_RF, "DMR Slot %u, , CSBK, RAND (Random Access, DATA_CALL (Data Call) denied, traffic in progress, dstId = %u", m_tscc->m_slotNo, dstId);
+                writeRF_CSBK_ACK_RSP(srcId, ReasonCode::TS_DENY_RSN_TGT_BUSY, (grp) ? 1U : 0U);
 
                 ::ActivityLog("DMR", true, "Slot %u group grant request %u to TG %u denied", m_tscc->m_slotNo, srcId, dstId);
                 m_slot->m_rfState = RS_RF_REJECTED;
@@ -1189,7 +1190,7 @@ bool ControlSignaling::writeRF_CSBK_Data_Grant(uint32_t srcId, uint32_t dstId, u
         if (m_slot->m_rfLastDstId != 0U) {
             if (m_slot->m_rfLastDstId != dstId && (m_slot->m_rfTGHang.isRunning() && !m_slot->m_rfTGHang.hasExpired())) {
                 if (!net) {
-                    writeRF_CSBK_ACK_RSP(srcId, TS_DENY_RSN_TGT_BUSY, (grp) ? 1U : 0U);
+                    writeRF_CSBK_ACK_RSP(srcId, ReasonCode::TS_DENY_RSN_TGT_BUSY, (grp) ? 1U : 0U);
                     m_slot->m_rfState = RS_RF_REJECTED;
                 }
 
@@ -1201,8 +1202,8 @@ bool ControlSignaling::writeRF_CSBK_Data_Grant(uint32_t srcId, uint32_t dstId, u
             if (!m_tscc->m_affiliations->rfCh()->isRFChAvailable()) {
                 if (grp) {
                     if (!net) {
-                        LogWarning(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), SVC_KIND_GRP_DATA_CALL (Group Data Call) queued, no channels available, dstId = %u", m_tscc->m_slotNo, dstId);
-                        writeRF_CSBK_ACK_RSP(srcId, TS_QUEUED_RSN_NO_RESOURCE, (grp) ? 1U : 0U);
+                        LogWarning(LOG_RF, "DMR Slot %u, , CSBK, RAND (Random Access, GRP_DATA_CALL (Group Data Call) queued, no channels available, dstId = %u", m_tscc->m_slotNo, dstId);
+                        writeRF_CSBK_ACK_RSP(srcId, ReasonCode::TS_QUEUED_RSN_NO_RESOURCE, (grp) ? 1U : 0U);
 
                         ::ActivityLog("DMR", true, "Slot %u group grant request %u to TG %u queued", m_tscc->m_slotNo, srcId, dstId);
                         m_slot->m_rfState = RS_RF_REJECTED;
@@ -1212,8 +1213,8 @@ bool ControlSignaling::writeRF_CSBK_Data_Grant(uint32_t srcId, uint32_t dstId, u
                 }
                 else {
                     if (!net) {
-                        LogWarning(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), SVC_KIND_IND_DATA_CALL (Individual Data Call) queued, no channels available, dstId = %u", m_tscc->m_slotNo, dstId);
-                        writeRF_CSBK_ACK_RSP(srcId, TS_QUEUED_RSN_NO_RESOURCE, (grp) ? 1U : 0U);
+                        LogWarning(LOG_RF, "DMR Slot %u, , CSBK, RAND (Random Access, IND_DATA_CALL (Individual Data Call) queued, no channels available, dstId = %u", m_tscc->m_slotNo, dstId);
+                        writeRF_CSBK_ACK_RSP(srcId, ReasonCode::TS_QUEUED_RSN_NO_RESOURCE, (grp) ? 1U : 0U);
 
                         ::ActivityLog("DMR", true, "Slot %u group grant request %u to TG %u queued", m_tscc->m_slotNo, srcId, dstId);
                         m_slot->m_rfState = RS_RF_REJECTED;
@@ -1245,14 +1246,14 @@ bool ControlSignaling::writeRF_CSBK_Data_Grant(uint32_t srcId, uint32_t dstId, u
             ::ActivityLog("DMR", true, "Slot %u group grant request from %u to TG %u", m_tscc->m_slotNo, srcId, dstId);
         }
 
-        writeRF_CSBK_ACK_RSP(srcId, TS_ACK_RSN_MSG, (grp) ? 1U : 0U);
+        writeRF_CSBK_ACK_RSP(srcId, ReasonCode::TS_ACK_RSN_MSG, (grp) ? 1U : 0U);
 
         std::unique_ptr<CSBK_TD_GRANT> csbk = std::make_unique<CSBK_TD_GRANT>();
         csbk->setLogicalCh1(chNo);
         csbk->setSlotNo(slot);
 
         if (m_verbose) {
-            LogMessage((net) ? LOG_NET : LOG_RF, "DMR Slot %u, DT_CSBK, %s, emerg = %u, privacy = %u, broadcast = %u, prio = %u, chNo = %u, slot = %u, srcId = %u, dstId = %u",
+            LogMessage((net) ? LOG_NET : LOG_RF, "DMR Slot %u, CSBK, %s, emerg = %u, privacy = %u, broadcast = %u, prio = %u, chNo = %u, slot = %u, srcId = %u, dstId = %u",
                 m_tscc->m_slotNo, csbk->toString().c_str(), emergency, privacy, broadcast, priority, csbk->getLogicalCh1(), csbk->getSlotNo(), srcId, dstId);
         }
 
@@ -1280,7 +1281,7 @@ bool ControlSignaling::writeRF_CSBK_Data_Grant(uint32_t srcId, uint32_t dstId, u
                     HTTP_PUT, PUT_DMR_TSCC_PAYLOAD_ACT, req, voiceChData.ssl(), REST_QUICK_WAIT, m_tscc->m_debug);
             }
             else {
-                ::LogError(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), failed to activate payload channel, chNo = %u, slot = %u", m_tscc->m_slotNo, chNo, slot);
+                ::LogError(LOG_RF, "DMR Slot %u, , CSBK, RAND (Random Access), failed to activate payload channel, chNo = %u, slot = %u", m_tscc->m_slotNo, chNo, slot);
             }
         }
         else {
@@ -1292,14 +1293,14 @@ bool ControlSignaling::writeRF_CSBK_Data_Grant(uint32_t srcId, uint32_t dstId, u
             ::ActivityLog("DMR", true, "Slot %u individual grant request from %u to TG %u", m_tscc->m_slotNo, srcId, dstId);
         }
 
-        writeRF_CSBK_ACK_RSP(srcId, TS_ACK_RSN_MSG, (grp) ? 1U : 0U);
+        writeRF_CSBK_ACK_RSP(srcId, ReasonCode::TS_ACK_RSN_MSG, (grp) ? 1U : 0U);
 
         std::unique_ptr<CSBK_PD_GRANT> csbk = std::make_unique<CSBK_PD_GRANT>();
         csbk->setLogicalCh1(chNo);
         csbk->setSlotNo(slot);
 
         if (m_verbose) {
-            LogMessage((net) ? LOG_NET : LOG_RF, "DMR Slot %u, DT_CSBK, %s, emerg = %u, privacy = %u, broadcast = %u, prio = %u, chNo = %u, slot = %u, srcId = %u, dstId = %u",
+            LogMessage((net) ? LOG_NET : LOG_RF, "DMR Slot %u, CSBK, %s, emerg = %u, privacy = %u, broadcast = %u, prio = %u, chNo = %u, slot = %u, srcId = %u, dstId = %u",
                 m_tscc->m_slotNo, csbk->toString().c_str(), emergency, privacy, broadcast, priority, csbk->getLogicalCh1(), csbk->getSlotNo(), srcId, dstId);
         }
 
@@ -1327,7 +1328,7 @@ bool ControlSignaling::writeRF_CSBK_Data_Grant(uint32_t srcId, uint32_t dstId, u
                     HTTP_PUT, PUT_DMR_TSCC_PAYLOAD_ACT, req, voiceChData.ssl(), REST_QUICK_WAIT, m_tscc->m_debug);
             }
             else {
-                ::LogError(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), failed to activate payload channel, chNo = %u, slot = %u", m_tscc->m_slotNo, chNo, slot);
+                ::LogError(LOG_RF, "DMR Slot %u, , CSBK, RAND (Random Access), failed to activate payload channel, chNo = %u, slot = %u", m_tscc->m_slotNo, chNo, slot);
             }
         }
         else {
@@ -1353,7 +1354,7 @@ void ControlSignaling::writeRF_CSBK_U_Reg_Rsp(uint32_t srcId, uint8_t serviceOpt
 
     if (!dereg) {
         if (m_verbose) {
-            LogMessage(LOG_RF, "DMR Slot %u, DT_CSBK, %s, srcId = %u, serviceOptions = $%02X", m_tscc->m_slotNo, csbk->toString().c_str(), srcId, serviceOptions);
+            LogMessage(LOG_RF, "DMR Slot %u, CSBK, %s, srcId = %u, serviceOptions = $%02X", m_tscc->m_slotNo, csbk->toString().c_str(), srcId, serviceOptions);
         }
 
         // remove dynamic unit registration table entry
@@ -1362,22 +1363,22 @@ void ControlSignaling::writeRF_CSBK_U_Reg_Rsp(uint32_t srcId, uint8_t serviceOpt
 //        if (m_slot->m_network != nullptr)
 //            m_slot->m_network->announceUnitDeregistration(srcId);
 
-        csbk->setReason(TS_ACK_RSN_REG);
+        csbk->setReason(ReasonCode::TS_ACK_RSN_REG);
     }
     else
     {
-        csbk->setReason(TS_ACK_RSN_REG);
+        csbk->setReason(ReasonCode::TS_ACK_RSN_REG);
 
         // validate the source RID
         if (!acl::AccessControl::validateSrcId(srcId)) {
-            LogWarning(LOG_RF, "DMR Slot %u, DT_CSBK, %s, denial, RID rejection, srcId = %u", m_tscc->m_slotNo, csbk->toString().c_str(), srcId);
+            LogWarning(LOG_RF, "DMR Slot %u, CSBK, %s, denial, RID rejection, srcId = %u", m_tscc->m_slotNo, csbk->toString().c_str(), srcId);
             ::ActivityLog("DMR", true, "unit registration request from %u denied", srcId);
-            csbk->setReason(TS_DENY_RSN_REG_DENIED);
+            csbk->setReason(ReasonCode::TS_DENY_RSN_REG_DENIED);
         }
 
-        if (csbk->getReason() == TS_ACK_RSN_REG) {
+        if (csbk->getReason() == ReasonCode::TS_ACK_RSN_REG) {
             if (m_verbose) {
-                LogMessage(LOG_RF, "DMR Slot %u, DT_CSBK, %s, srcId = %u, serviceOptions = $%02X", m_tscc->m_slotNo, csbk->toString().c_str(), srcId, serviceOptions);
+                LogMessage(LOG_RF, "DMR Slot %u, CSBK, %s, srcId = %u, serviceOptions = $%02X", m_tscc->m_slotNo, csbk->toString().c_str(), srcId, serviceOptions);
             }
 
             ::ActivityLog("DMR", true, "unit registration request from %u", srcId);
@@ -1392,7 +1393,7 @@ void ControlSignaling::writeRF_CSBK_U_Reg_Rsp(uint32_t srcId, uint8_t serviceOpt
         }
     }
 
-    csbk->setSrcId(DMR_WUID_REGI);
+    csbk->setSrcId(WUID_REGI);
     csbk->setDstId(srcId);
 
     writeRF_CSBK_Imm(csbk.get());
@@ -1450,18 +1451,18 @@ void ControlSignaling::writeRF_CSBK_Payload_Activate(uint32_t dstId, uint32_t sr
     std::unique_ptr<CSBK_P_GRANT> csbk = std::make_unique<CSBK_P_GRANT>();
     if (voice) {
         if (grp) {
-            csbk->setCSBKO(CSBKO_TV_GRANT);
+            csbk->setCSBKO(CSBKO::TV_GRANT);
         }
         else {
-            csbk->setCSBKO(CSBKO_PV_GRANT);
+            csbk->setCSBKO(CSBKO::PV_GRANT);
         }
     }
     else {
         if (grp) {
-            csbk->setCSBKO(CSBKO_TD_GRANT);
+            csbk->setCSBKO(CSBKO::TD_GRANT);
         }
         else {
-            csbk->setCSBKO(CSBKO_PD_GRANT);
+            csbk->setCSBKO(CSBKO::PD_GRANT);
         }
     }
 
@@ -1474,7 +1475,7 @@ void ControlSignaling::writeRF_CSBK_Payload_Activate(uint32_t dstId, uint32_t sr
     csbk->setDstId(dstId);
 
     if (m_verbose) {
-        LogMessage(LOG_RF, "DMR Slot %u, DT_CSBK, %s, csbko = $%02X, chNo = %u, slot = %u, srcId = %u, dstId = %u",
+        LogMessage(LOG_RF, "DMR Slot %u, CSBK, %s, csbko = $%02X, chNo = %u, slot = %u, srcId = %u, dstId = %u",
             m_slot->m_slotNo, csbk->toString().c_str(), csbk->getCSBKO(), csbk->getLogicalCh1(), csbk->getSlotNo(), srcId, dstId);
     }
 
@@ -1505,7 +1506,7 @@ void ControlSignaling::writeRF_CSBK_Payload_Clear(uint32_t dstId, uint32_t srcId
     csbk->setDstId(dstId);
 
     if (m_verbose) {
-        LogMessage(LOG_RF, "DMR Slot %u, DT_CSBK, %s, group = %u, chNo = %u, slot = %u, srcId = %u, dstId = %u",
+        LogMessage(LOG_RF, "DMR Slot %u, CSBK, %s, group = %u, chNo = %u, slot = %u, srcId = %u, dstId = %u",
             m_slot->m_slotNo, csbk->toString().c_str(), csbk->getGI(), csbk->getLogicalCh1(), csbk->getSlotNo(), srcId, dstId);
     }
 
@@ -1540,14 +1541,14 @@ void ControlSignaling::writeRF_TSCC_Bcast_Ann_Wd(uint32_t channelNo, bool annWd,
     std::unique_ptr<CSBK_BROADCAST> csbk = std::make_unique<CSBK_BROADCAST>();
     csbk->siteIdenEntry(m_slot->m_idenEntry);
     csbk->setCdef(false);
-    csbk->setAnncType(BCAST_ANNC_ANN_WD_TSCC);
+    csbk->setAnncType(BroadcastAnncType::ANN_WD_TSCC);
     csbk->setLogicalCh1(channelNo);
     csbk->setAnnWdCh1(annWd);
     csbk->setSystemId(systemIdentity);
     csbk->setRequireReg(requireReg);
 
     if (m_debug) {
-        LogMessage(LOG_RF, "DMR Slot %u, DT_CSBK, %s, channelNo = %u, annWd = %u",
+        LogMessage(LOG_RF, "DMR Slot %u, CSBK, %s, channelNo = %u, annWd = %u",
             m_slot->m_slotNo, csbk->toString().c_str(), channelNo, annWd);
     }
 
@@ -1561,7 +1562,7 @@ void ControlSignaling::writeRF_TSCC_Bcast_Sys_Parm()
 {
     std::unique_ptr<CSBK_BROADCAST> csbk = std::make_unique<CSBK_BROADCAST>();
     DEBUG_LOG_CSBK(csbk->toString());
-    csbk->setAnncType(BCAST_ANNC_SITE_PARMS);
+    csbk->setAnncType(BroadcastAnncType::SITE_PARMS);
 
     writeRF_CSBK(csbk.get());
 }

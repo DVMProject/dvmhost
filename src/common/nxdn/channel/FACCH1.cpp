@@ -19,6 +19,7 @@
 #include "Utils.h"
 
 using namespace nxdn;
+using namespace nxdn::defines;
 using namespace nxdn::channel;
 
 #include <cassert>

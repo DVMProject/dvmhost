@@ -7,15 +7,16 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
 #include "dmr/lc/csbk/CSBK_EXT_FNCT.h"
 
-using namespace dmr::lc::csbk;
-using namespace dmr::lc;
 using namespace dmr;
+using namespace dmr::defines;
+using namespace dmr::lc;
+using namespace dmr::lc::csbk;
 
 #include <cassert>
 
@@ -27,9 +28,9 @@ using namespace dmr;
 /// Initializes a new instance of the CSBK_EXT_FNCT class.
 /// </summary>
 CSBK_EXT_FNCT::CSBK_EXT_FNCT() : CSBK(),
-    m_extendedFunction(DMR_EXT_FNCT_CHECK)
+    m_extendedFunction(ExtendedFunctions::CHECK)
 {
-    m_CSBKO = CSBKO_EXT_FNCT;
+    m_CSBKO = CSBKO::EXT_FNCT;
     m_FID = FID_DMRA;
 }
 
@@ -86,7 +87,7 @@ void CSBK_EXT_FNCT::encode(uint8_t* data)
 /// <returns></returns>
 std::string CSBK_EXT_FNCT::toString()
 {
-    return std::string("CSBKO_EXT_FNCT (Extended Function)");
+    return std::string("CSBKO, EXT_FNCT (Extended Function)");
 }
 
 // ---------------------------------------------------------------------------

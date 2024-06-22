@@ -26,8 +26,10 @@
 #include "p25/packet/Voice.h"
 #include "ActivityLog.h"
 
-using namespace p25;
 using namespace p25::packet;
+using namespace p25::dfsi::defines;
+using namespace p25::defines;
+using namespace p25;
 
 #include <cassert>
 #include <cstring>
@@ -97,19 +99,19 @@ bool Voice::process(uint8_t* data, uint32_t len)
         return false;
     }
 
-    uint8_t duid = m_p25->m_nid.getDUID();
+    DUID::E duid = m_p25->m_nid.getDUID();
 
     if (m_p25->m_rfState != RS_RF_LISTENING) {
         m_p25->m_rfTGHang.start();
     }
 
-    if (duid == P25_DUID_HDU && m_lastDUID == P25_DUID_HDU) {
-        duid = P25_DUID_LDU1;
+    if (duid == DUID::HDU && m_lastDUID == DUID::HDU) {
+        duid = DUID::LDU1;
     }
 
     // handle individual DUIDs
-    if (duid == P25_DUID_HDU) {
-        m_lastDUID = P25_DUID_HDU;
+    if (duid == DUID::HDU) {
+        m_lastDUID = DUID::HDU;
 
         if (m_p25->m_rfState == RS_RF_LISTENING || m_p25->m_rfState == RS_RF_AUDIO) {
             resetRF();
@@ -123,10 +125,11 @@ bool Voice::process(uint8_t* data, uint32_t len)
             }
 
             if (m_verbose && m_debug) {
-                uint8_t mi[P25_MI_LENGTH_BYTES];
-                ::memset(mi, 0x00U, p25::P25_MI_LENGTH_BYTES);
+                uint8_t mi[MI_LENGTH_BYTES];
+                ::memset(mi, 0x00U, MI_LENGTH_BYTES);
                 lc.getMI(mi);
-                Utils::dump(1U, "P25 HDU MI read from RF", mi, P25_MI_LENGTH_BYTES);
+
+                Utils::dump(1U, "P25 HDU MI read from RF", mi, MI_LENGTH_BYTES);
             }
 
             if (m_verbose) {
@@ -187,15 +190,15 @@ bool Voice::process(uint8_t* data, uint32_t len)
 
         return true;
     }
-    else if (duid == P25_DUID_LDU1) {
+    else if (duid == DUID::LDU1) {
         // prevent two xDUs of the same type from being sent consecutively
-        if (m_lastDUID == P25_DUID_LDU1) {
+        if (m_lastDUID == DUID::LDU1) {
             return false;
         }
-        m_lastDUID = P25_DUID_LDU1;
+        m_lastDUID = DUID::LDU1;
 
         bool alreadyDecoded = false;
-        uint8_t frameType = P25_FT_DATA_UNIT;
+        FrameType::E frameType = FrameType::DATA_UNIT;
         if (m_p25->m_rfState == RS_RF_LISTENING) {
             lc::LC lc = lc::LC();
             bool ret = lc.decodeLDU1(data + 2U);
@@ -286,7 +289,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 if (m_lastRejectId == 0U || m_lastRejectId != srcId) {
                     LogWarning(LOG_RF, P25_HDU_STR " denial, RID rejection, srcId = %u", srcId);
                     if (m_p25->m_enableControl) {
-                        m_p25->m_control->writeRF_TSDU_Deny(srcId, dstId, P25_DENY_RSN_REQ_UNIT_NOT_VALID, (group ? TSBK_IOSP_GRP_VCH : TSBK_IOSP_UU_VCH), group, true);
+                        m_p25->m_control->writeRF_TSDU_Deny(srcId, dstId, ReasonCode::DENY_REQ_UNIT_NOT_VALID, (group ? TSBKO::IOSP_GRP_VCH : TSBKO::IOSP_UU_VCH), group, true);
                         m_p25->m_control->denialInhibit(srcId);
                     }
 
@@ -308,7 +311,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
                     if (m_lastRejectId == 0 || m_lastRejectId != dstId) {
                         LogWarning(LOG_RF, P25_HDU_STR " denial, RID rejection, dstId = %u", dstId);
                         if (m_p25->m_enableControl) {
-                            m_p25->m_control->writeRF_TSDU_Deny(srcId, dstId, P25_DENY_RSN_TGT_UNIT_NOT_VALID, TSBK_IOSP_UU_VCH, false, true);
+                            m_p25->m_control->writeRF_TSDU_Deny(srcId, dstId, ReasonCode::DENY_TGT_UNIT_NOT_VALID, TSBKO::IOSP_UU_VCH, false, true);
                         }
 
                         ::ActivityLog("P25", true, "RF voice rejection from %u to %s%u ", srcId, group ? "TG " : "", dstId);
@@ -328,7 +331,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
                     if (m_lastRejectId == 0 || m_lastRejectId != dstId) {
                         LogWarning(LOG_RF, P25_HDU_STR " denial, TGID rejection, dstId = %u", dstId);
                         if (m_p25->m_enableControl) {
-                            m_p25->m_control->writeRF_TSDU_Deny(srcId, dstId, P25_DENY_RSN_TGT_GROUP_NOT_VALID, TSBK_IOSP_GRP_VCH, true, true);
+                            m_p25->m_control->writeRF_TSDU_Deny(srcId, dstId, ReasonCode::DENY_TGT_GROUP_NOT_VALID, TSBKO::IOSP_GRP_VCH, true, true);
                         }
 
                         ::ActivityLog("P25", true, "RF voice rejection from %u to %s%u ", srcId, group ? "TG " : "", dstId);
@@ -349,7 +352,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 if (!m_p25->m_affiliations.isGroupAff(srcId, dstId) && m_p25->m_control->m_verifyAff) {
                     if (m_lastRejectId == 0 || m_lastRejectId != srcId) {
                         LogWarning(LOG_RF, P25_HDU_STR " denial, RID not affiliated to TGID, srcId = %u, dstId = %u", srcId, dstId);
-                        m_p25->m_control->writeRF_TSDU_Deny(srcId, dstId, P25_DENY_RSN_REQ_UNIT_NOT_AUTH, TSBK_IOSP_GRP_VCH, true, true);
+                        m_p25->m_control->writeRF_TSDU_Deny(srcId, dstId, ReasonCode::DENY_REQ_UNIT_NOT_AUTH, TSBKO::IOSP_GRP_VCH, true, true);
                         m_p25->m_control->writeRF_TSDU_U_Reg_Cmd(srcId);
 
                         ::ActivityLog("P25", true, "RF voice rejection from %u to %s%u ", srcId, group ? "TG " : "", dstId);
@@ -432,7 +435,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
                         osp = std::make_unique<lc::tsbk::OSP_GRP_VCH_GRANT_UPD>();
 
                         // transmit group voice grant update
-                        osp->setLCO(TSBK_OSP_GRP_VCH_GRANT_UPD);
+                        osp->setLCO(TSBKO::OSP_GRP_VCH_GRANT_UPD);
                         osp->setDstId(dstId);
                         osp->setGrpVchId(voiceChData.chId());
                         osp->setGrpVchNo(chNo);
@@ -443,7 +446,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
                         osp = std::make_unique<lc::tsbk::OSP_UU_VCH_GRANT_UPD>();
 
                         // transmit group voice grant update
-                        osp->setLCO(TSBK_OSP_UU_VCH_GRANT_UPD);
+                        osp->setLCO(TSBKO::OSP_UU_VCH_GRANT_UPD);
                         osp->setSrcId(srcId);
                         osp->setDstId(dstId);
                         osp->setGrpVchId(voiceChData.chId());
@@ -484,7 +487,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 m_rfLC.setAlgId(m_rfLastHDU.getAlgId());
                 m_rfLC.setKId(m_rfLastHDU.getKId());
 
-                uint8_t mi[P25_MI_LENGTH_BYTES];
+                uint8_t mi[MI_LENGTH_BYTES];
                 m_rfLastHDU.getMI(mi);
                 m_rfLC.setMI(mi);
 
@@ -495,7 +498,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 Sync::addP25Sync(buffer + 2U);
 
                 // Generate NID
-                m_p25->m_nid.encode(buffer + 2U, P25_DUID_HDU);
+                m_p25->m_nid.encode(buffer + 2U, DUID::HDU);
 
                 // Generate HDU
                 m_rfLC.encodeHDU(buffer + 2U);
@@ -503,7 +506,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 // Add busy bits
                 P25Utils::addBusyBits(buffer + 2U, P25_HDU_FRAME_LENGTH_BITS, false, true);
 
-                writeNetwork(buffer, P25_DUID_HDU);
+                writeNetwork(buffer, DUID::HDU);
 
                 if (m_p25->m_duplex) {
                     buffer[0U] = modem::TAG_DATA;
@@ -512,14 +515,14 @@ bool Voice::process(uint8_t* data, uint32_t len)
                     m_p25->addFrame(buffer, P25_HDU_FRAME_LENGTH_BYTES + 2U);
                 }
 
-                frameType = P25_FT_HDU_VALID;
+                frameType = FrameType::HDU_VALID;
 
                 if (m_verbose) {
                     LogMessage(LOG_RF, P25_HDU_STR ", dstId = %u, algo = $%02X, kid = $%04X", m_rfLC.getDstId(), m_rfLC.getAlgId(), m_rfLC.getKId());
                 }
             }
             else {
-                frameType = P25_FT_HDU_LATE_ENTRY;
+                frameType = FrameType::HDU_LATE_ENTRY;
                 LogWarning(LOG_RF, P25_HDU_STR ", not transmitted; possible late entry, dstId = %u, algo = $%02X, kid = $%04X", m_rfLastHDU.getDstId(), m_rfLastHDU.getAlgId(), m_rfLastHDU.getKId());
             }
 
@@ -535,7 +538,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
                     osp = std::make_unique<lc::tsbk::OSP_GRP_VCH_GRANT_UPD>();
 
                     // transmit group voice grant update
-                    osp->setLCO(TSBK_OSP_GRP_VCH_GRANT_UPD);
+                    osp->setLCO(TSBKO::OSP_GRP_VCH_GRANT_UPD);
                     osp->setDstId(dstId);
                     osp->setGrpVchId(voiceChData.chId());
                     osp->setGrpVchNo(chNo);
@@ -546,7 +549,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
                     osp = std::make_unique<lc::tsbk::OSP_UU_VCH_GRANT_UPD>();
 
                     // transmit group voice grant update
-                    osp->setLCO(TSBK_OSP_UU_VCH_GRANT_UPD);
+                    osp->setLCO(TSBKO::OSP_UU_VCH_GRANT_UPD);
                     osp->setSrcId(srcId);
                     osp->setDstId(dstId);
                     osp->setGrpVchId(voiceChData.chId());
@@ -569,7 +572,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
             m_vocLDU1Count = 0U;
             m_roamLDU1Count = 0U;
             m_p25->m_rfTimeout.start();
-            m_lastDUID = P25_DUID_HDU;
+            m_lastDUID = DUID::HDU;
 
             m_rfLastHDU = lc::LC();
         }
@@ -657,7 +660,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 m_vocLDU1Count++;
                 if (m_vocLDU1Count > VOC_LDU1_COUNT) {
                     m_vocLDU1Count = 0U;
-                    m_rfLC.setLCO(LC_RFSS_STS_BCAST);
+                    m_rfLC.setLCO(LCO::RFSS_STS_BCAST);
                 }
             }
 
@@ -665,7 +668,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
             Sync::addP25Sync(data + 2U);
 
             // generate NID
-            m_p25->m_nid.encode(data + 2U, P25_DUID_LDU1);
+            m_p25->m_nid.encode(data + 2U, DUID::LDU1);
 
             // generate LDU1 Data
             m_rfLC.encodeLDU1(data + 2U);
@@ -711,7 +714,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
             // add busy bits
             P25Utils::addBusyBits(data + 2U, P25_LDU_FRAME_LENGTH_BITS, false, true);
 
-            writeNetwork(data + 2U, P25_DUID_LDU1, frameType);
+            writeNetwork(data + 2U, DUID::LDU1, frameType);
 
             if (m_p25->m_duplex) {
                 data[0U] = modem::TAG_DATA;
@@ -728,12 +731,12 @@ bool Voice::process(uint8_t* data, uint32_t len)
             return true;
         }
     }
-    else if (duid == P25_DUID_LDU2) {
+    else if (duid == DUID::LDU2) {
         // prevent two xDUs of the same type from being sent consecutively
-        if (m_lastDUID == P25_DUID_LDU2) {
+        if (m_lastDUID == DUID::LDU2) {
             return false;
         }
-        m_lastDUID = P25_DUID_LDU2;
+        m_lastDUID = DUID::LDU2;
 
         if (m_p25->m_rfState == RS_RF_LISTENING) {
             return false;
@@ -746,18 +749,18 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 m_rfUndecodableLC++;
 
                 // regenerate the MI using LFSR
-                uint8_t lastMI[P25_MI_LENGTH_BYTES];
-                ::memset(lastMI, 0x00U, P25_MI_LENGTH_BYTES);
+                uint8_t lastMI[MI_LENGTH_BYTES];
+                ::memset(lastMI, 0x00U, MI_LENGTH_BYTES);
 
-                uint8_t nextMI[P25_MI_LENGTH_BYTES];
-                ::memset(nextMI, 0x00U, P25_MI_LENGTH_BYTES);
+                uint8_t nextMI[MI_LENGTH_BYTES];
+                ::memset(nextMI, 0x00U, MI_LENGTH_BYTES);
 
                 m_rfLastLDU2.getMI(lastMI);
                 getNextMI(lastMI, nextMI);
 
                 if (m_verbose && m_debug) {
-                    Utils::dump(1U, "Previous P25 HDU MI", lastMI, P25_MI_LENGTH_BYTES);
-                    Utils::dump(1U, "Calculated next P25 HDU MI", nextMI, P25_MI_LENGTH_BYTES);
+                    Utils::dump(1U, "Previous P25 HDU MI", lastMI, MI_LENGTH_BYTES);
+                    Utils::dump(1U, "Calculated next P25 HDU MI", nextMI, MI_LENGTH_BYTES);
                 }
 
                 m_rfLC.setMI(nextMI);
@@ -771,7 +774,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
             Sync::addP25Sync(data + 2U);
 
             // generate NID
-            m_p25->m_nid.encode(data + 2U, P25_DUID_LDU2);
+            m_p25->m_nid.encode(data + 2U, DUID::LDU2);
 
             // generate LDU2 data
             m_rfLC.encodeLDU2(data + 2U);
@@ -817,7 +820,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
             // add busy bits
             P25Utils::addBusyBits(data + 2U, P25_LDU_FRAME_LENGTH_BITS, false, true);
 
-            writeNetwork(data + 2U, P25_DUID_LDU2);
+            writeNetwork(data + 2U, DUID::LDU2);
 
             if (m_p25->m_duplex) {
                 data[0U] = modem::TAG_DATA;
@@ -834,12 +837,12 @@ bool Voice::process(uint8_t* data, uint32_t len)
             return true;
         }
     }
-    else if (duid == P25_DUID_VSELP1) {
+    else if (duid == DUID::VSELP1) {
         // prevent two xDUs of the same type from being sent consecutively
-        if (m_lastDUID == P25_DUID_VSELP1) {
+        if (m_lastDUID == DUID::VSELP1) {
             return false;
         }
-        m_lastDUID = P25_DUID_VSELP1;
+        m_lastDUID = DUID::VSELP1;
 
         // VSELP has no decoding -- its just passed transparently
 
@@ -885,7 +888,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 m_rfLC.setAlgId(m_rfLastHDU.getAlgId());
                 m_rfLC.setKId(m_rfLastHDU.getKId());
 
-                uint8_t mi[P25_MI_LENGTH_BYTES];
+                uint8_t mi[MI_LENGTH_BYTES];
                 m_rfLastHDU.getMI(mi);
                 m_rfLC.setMI(mi);
 
@@ -896,7 +899,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 Sync::addP25Sync(buffer + 2U);
 
                 // Generate NID
-                m_p25->m_nid.encode(buffer + 2U, P25_DUID_HDU);
+                m_p25->m_nid.encode(buffer + 2U, DUID::HDU);
 
                 // Generate HDU
                 m_rfLC.encodeHDU(buffer + 2U);
@@ -904,7 +907,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 // Add busy bits
                 P25Utils::addBusyBits(buffer + 2U, P25_HDU_FRAME_LENGTH_BITS, false, true);
 
-                writeNetwork(buffer, P25_DUID_HDU);
+                writeNetwork(buffer, DUID::HDU);
 
                 if (m_p25->m_duplex) {
                     buffer[0U] = modem::TAG_DATA;
@@ -928,7 +931,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
             m_vocLDU1Count = 0U;
             m_roamLDU1Count = 0U;
             m_p25->m_rfTimeout.start();
-            m_lastDUID = P25_DUID_HDU;
+            m_lastDUID = DUID::HDU;
 
             m_rfLastHDU = lc::LC();
         }
@@ -940,12 +943,12 @@ bool Voice::process(uint8_t* data, uint32_t len)
             Sync::addP25Sync(data + 2U);
 
             // generate NID
-            m_p25->m_nid.encode(data + 2U, P25_DUID_VSELP1);
+            m_p25->m_nid.encode(data + 2U, DUID::VSELP1);
 
             // add busy bits
             P25Utils::addBusyBits(data + 2U, P25_LDU_FRAME_LENGTH_BITS, false, true);
 
-            writeNetwork(data + 2U, P25_DUID_VSELP1);
+            writeNetwork(data + 2U, DUID::VSELP1);
 
             if (m_p25->m_duplex) {
                 data[0U] = modem::TAG_DATA;
@@ -961,12 +964,12 @@ bool Voice::process(uint8_t* data, uint32_t len)
             return true;
         }
     }
-    else if (duid == P25_DUID_VSELP2) {
+    else if (duid == DUID::VSELP2) {
         // prevent two xDUs of the same type from being sent consecutively
-        if (m_lastDUID == P25_DUID_VSELP2) {
+        if (m_lastDUID == DUID::VSELP2) {
             return false;
         }
-        m_lastDUID = P25_DUID_VSELP2;
+        m_lastDUID = DUID::VSELP2;
 
         // VSELP has no decoding -- its just passed transparently
 
@@ -980,12 +983,12 @@ bool Voice::process(uint8_t* data, uint32_t len)
             Sync::addP25Sync(data + 2U);
 
             // generate NID
-            m_p25->m_nid.encode(data + 2U, P25_DUID_VSELP2);
+            m_p25->m_nid.encode(data + 2U, DUID::VSELP2);
 
             // add busy bits
             P25Utils::addBusyBits(data + 2U, P25_LDU_FRAME_LENGTH_BITS, false, true);
 
-            writeNetwork(data + 2U, P25_DUID_VSELP2);
+            writeNetwork(data + 2U, DUID::VSELP2);
 
             if (m_p25->m_duplex) {
                 data[0U] = modem::TAG_DATA;
@@ -1001,7 +1004,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
             return true;
         }
     }
-    else if (duid == P25_DUID_TDU || duid == P25_DUID_TDULC) {
+    else if (duid == DUID::TDU || duid == DUID::TDULC) {
         if (!m_p25->m_enableControl) {
             m_p25->m_affiliations.releaseGrant(m_rfLC.getDstId(), false);
         }
@@ -1010,7 +1013,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
             m_p25->notifyCC_ReleaseGrant(m_rfLC.getDstId());
         }
 
-        if (duid == P25_DUID_TDU) {
+        if (duid == DUID::TDU) {
             m_p25->writeRF_TDU(false);
 
             m_lastDUID = duid;
@@ -1077,7 +1080,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
 /// <param name="duid">Data Unit ID.</param>
 /// <param name="frameType">Network Frame Type.</param>
 /// <returns></returns>
-bool Voice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::LowSpeedData& lsd, uint8_t& duid, uint8_t& frameType)
+bool Voice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::LowSpeedData& lsd, defines::DUID::E& duid, defines::FrameType::E& frameType)
 {
     uint32_t dstId = control.getDstId();
     uint32_t srcId = control.getSrcId();
@@ -1099,7 +1102,7 @@ bool Voice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
     // perform authoritative network TG hangtimer and traffic preemption
     if (m_p25->m_authoritative) {
         // don't process network frames if the destination ID's don't match and the network TG hang timer is running
-        if (m_p25->m_netLastDstId != 0U && dstId != 0U && (duid == P25_DUID_LDU1 || duid == P25_DUID_LDU2)) {
+        if (m_p25->m_netLastDstId != 0U && dstId != 0U && (duid == DUID::LDU1 || duid == DUID::LDU2)) {
             if (m_p25->m_netLastDstId != dstId && (m_p25->m_netTGHang.isRunning() && !m_p25->m_netTGHang.hasExpired())) {
                 return false;
             }
@@ -1141,50 +1144,50 @@ bool Voice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
 
     uint32_t count = 0U;
     switch (duid) {
-        case P25_DUID_LDU1:
-            if ((data[0U] == dfsi::P25_DFSI_LDU1_VOICE1) && (data[22U] == dfsi::P25_DFSI_LDU1_VOICE2) &&
-                (data[36U] == dfsi::P25_DFSI_LDU1_VOICE3) && (data[53U] == dfsi::P25_DFSI_LDU1_VOICE4) &&
-                (data[70U] == dfsi::P25_DFSI_LDU1_VOICE5) && (data[87U] == dfsi::P25_DFSI_LDU1_VOICE6) &&
-                (data[104U] == dfsi::P25_DFSI_LDU1_VOICE7) && (data[121U] == dfsi::P25_DFSI_LDU1_VOICE8) &&
-                (data[138U] == dfsi::P25_DFSI_LDU1_VOICE9)) {
+        case DUID::LDU1:
+            if ((data[0U] == DFSIFrameType::LDU1_VOICE1) && (data[22U] == DFSIFrameType::LDU1_VOICE2) &&
+                (data[36U] == DFSIFrameType::LDU1_VOICE3) && (data[53U] == DFSIFrameType::LDU1_VOICE4) &&
+                (data[70U] == DFSIFrameType::LDU1_VOICE5) && (data[87U] == DFSIFrameType::LDU1_VOICE6) &&
+                (data[104U] == DFSIFrameType::LDU1_VOICE7) && (data[121U] == DFSIFrameType::LDU1_VOICE8) &&
+                (data[138U] == DFSIFrameType::LDU1_VOICE9)) {
 
                 m_dfsiLC = dfsi::LC(control, lsd);
 
-                m_dfsiLC.setFrameType(dfsi::P25_DFSI_LDU1_VOICE1);
+                m_dfsiLC.setFrameType(DFSIFrameType::LDU1_VOICE1);
                 m_dfsiLC.decodeLDU1(data + count, m_netLDU1 + 10U);
-                count += dfsi::P25_DFSI_LDU1_VOICE1_FRAME_LENGTH_BYTES;
+                count += DFSI_LDU1_VOICE1_FRAME_LENGTH_BYTES;
 
-                m_dfsiLC.setFrameType(dfsi::P25_DFSI_LDU1_VOICE2);
+                m_dfsiLC.setFrameType(DFSIFrameType::LDU1_VOICE2);
                 m_dfsiLC.decodeLDU1(data + count, m_netLDU1 + 26U);
-                count += dfsi::P25_DFSI_LDU1_VOICE2_FRAME_LENGTH_BYTES;
+                count += DFSI_LDU1_VOICE2_FRAME_LENGTH_BYTES;
 
-                m_dfsiLC.setFrameType(dfsi::P25_DFSI_LDU1_VOICE3);
+                m_dfsiLC.setFrameType(DFSIFrameType::LDU1_VOICE3);
                 m_dfsiLC.decodeLDU1(data + count, m_netLDU1 + 55U);
-                count += dfsi::P25_DFSI_LDU1_VOICE3_FRAME_LENGTH_BYTES;
+                count += DFSI_LDU1_VOICE3_FRAME_LENGTH_BYTES;
 
-                m_dfsiLC.setFrameType(dfsi::P25_DFSI_LDU1_VOICE4);
+                m_dfsiLC.setFrameType(DFSIFrameType::LDU1_VOICE4);
                 m_dfsiLC.decodeLDU1(data + count, m_netLDU1 + 80U);
-                count += dfsi::P25_DFSI_LDU1_VOICE4_FRAME_LENGTH_BYTES;
+                count += DFSI_LDU1_VOICE4_FRAME_LENGTH_BYTES;
 
-                m_dfsiLC.setFrameType(dfsi::P25_DFSI_LDU1_VOICE5);
+                m_dfsiLC.setFrameType(DFSIFrameType::LDU1_VOICE5);
                 m_dfsiLC.decodeLDU1(data + count, m_netLDU1 + 105U);
-                count += dfsi::P25_DFSI_LDU1_VOICE5_FRAME_LENGTH_BYTES;
+                count += DFSI_LDU1_VOICE5_FRAME_LENGTH_BYTES;
 
-                m_dfsiLC.setFrameType(dfsi::P25_DFSI_LDU1_VOICE6);
+                m_dfsiLC.setFrameType(DFSIFrameType::LDU1_VOICE6);
                 m_dfsiLC.decodeLDU1(data + count, m_netLDU1 + 130U);
-                count += dfsi::P25_DFSI_LDU1_VOICE6_FRAME_LENGTH_BYTES;
+                count += DFSI_LDU1_VOICE6_FRAME_LENGTH_BYTES;
 
-                m_dfsiLC.setFrameType(dfsi::P25_DFSI_LDU1_VOICE7);
+                m_dfsiLC.setFrameType(DFSIFrameType::LDU1_VOICE7);
                 m_dfsiLC.decodeLDU1(data + count, m_netLDU1 + 155U);
-                count += dfsi::P25_DFSI_LDU1_VOICE7_FRAME_LENGTH_BYTES;
+                count += DFSI_LDU1_VOICE7_FRAME_LENGTH_BYTES;
 
-                m_dfsiLC.setFrameType(dfsi::P25_DFSI_LDU1_VOICE8);
+                m_dfsiLC.setFrameType(DFSIFrameType::LDU1_VOICE8);
                 m_dfsiLC.decodeLDU1(data + count, m_netLDU1 + 180U);
-                count += dfsi::P25_DFSI_LDU1_VOICE8_FRAME_LENGTH_BYTES;
+                count += DFSI_LDU1_VOICE8_FRAME_LENGTH_BYTES;
 
-                m_dfsiLC.setFrameType(dfsi::P25_DFSI_LDU1_VOICE9);
+                m_dfsiLC.setFrameType(DFSIFrameType::LDU1_VOICE9);
                 m_dfsiLC.decodeLDU1(data + count, m_netLDU1 + 204U);
-                count += dfsi::P25_DFSI_LDU1_VOICE9_FRAME_LENGTH_BYTES;
+                count += DFSI_LDU1_VOICE9_FRAME_LENGTH_BYTES;
 
                 // these aren't set by the DFSI decoder, so we'll manually
                 // reset them
@@ -1224,47 +1227,47 @@ bool Voice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
                 }
             }
             break;
-        case P25_DUID_LDU2:
-            if ((data[0U] == dfsi::P25_DFSI_LDU2_VOICE10) && (data[22U] == dfsi::P25_DFSI_LDU2_VOICE11) &&
-                (data[36U] == dfsi::P25_DFSI_LDU2_VOICE12) && (data[53U] == dfsi::P25_DFSI_LDU2_VOICE13) &&
-                (data[70U] == dfsi::P25_DFSI_LDU2_VOICE14) && (data[87U] == dfsi::P25_DFSI_LDU2_VOICE15) &&
-                (data[104U] == dfsi::P25_DFSI_LDU2_VOICE16) && (data[121U] == dfsi::P25_DFSI_LDU2_VOICE17) &&
-                (data[138U] == dfsi::P25_DFSI_LDU2_VOICE18)) {
-                m_dfsiLC.setFrameType(dfsi::P25_DFSI_LDU2_VOICE10);
+        case DUID::LDU2:
+            if ((data[0U] == DFSIFrameType::LDU2_VOICE10) && (data[22U] == DFSIFrameType::LDU2_VOICE11) &&
+                (data[36U] == DFSIFrameType::LDU2_VOICE12) && (data[53U] == DFSIFrameType::LDU2_VOICE13) &&
+                (data[70U] == DFSIFrameType::LDU2_VOICE14) && (data[87U] == DFSIFrameType::LDU2_VOICE15) &&
+                (data[104U] == DFSIFrameType::LDU2_VOICE16) && (data[121U] == DFSIFrameType::LDU2_VOICE17) &&
+                (data[138U] == DFSIFrameType::LDU2_VOICE18)) {
+                m_dfsiLC.setFrameType(DFSIFrameType::LDU2_VOICE10);
                 m_dfsiLC.decodeLDU2(data + count, m_netLDU2 + 10U);
-                count += dfsi::P25_DFSI_LDU2_VOICE10_FRAME_LENGTH_BYTES;
+                count += DFSI_LDU2_VOICE10_FRAME_LENGTH_BYTES;
 
-                m_dfsiLC.setFrameType(dfsi::P25_DFSI_LDU2_VOICE11);
+                m_dfsiLC.setFrameType(DFSIFrameType::LDU2_VOICE11);
                 m_dfsiLC.decodeLDU2(data + count, m_netLDU2 + 26U);
-                count += dfsi::P25_DFSI_LDU2_VOICE11_FRAME_LENGTH_BYTES;
+                count += DFSI_LDU2_VOICE11_FRAME_LENGTH_BYTES;
 
-                m_dfsiLC.setFrameType(dfsi::P25_DFSI_LDU2_VOICE12);
+                m_dfsiLC.setFrameType(DFSIFrameType::LDU2_VOICE12);
                 m_dfsiLC.decodeLDU2(data + count, m_netLDU2 + 55U);
-                count += dfsi::P25_DFSI_LDU2_VOICE12_FRAME_LENGTH_BYTES;
+                count += DFSI_LDU2_VOICE12_FRAME_LENGTH_BYTES;
 
-                m_dfsiLC.setFrameType(dfsi::P25_DFSI_LDU2_VOICE13);
+                m_dfsiLC.setFrameType(DFSIFrameType::LDU2_VOICE13);
                 m_dfsiLC.decodeLDU2(data + count, m_netLDU2 + 80U);
-                count += dfsi::P25_DFSI_LDU2_VOICE13_FRAME_LENGTH_BYTES;
+                count += DFSI_LDU2_VOICE13_FRAME_LENGTH_BYTES;
 
-                m_dfsiLC.setFrameType(dfsi::P25_DFSI_LDU2_VOICE14);
+                m_dfsiLC.setFrameType(DFSIFrameType::LDU2_VOICE14);
                 m_dfsiLC.decodeLDU2(data + count, m_netLDU2 + 105U);
-                count += dfsi::P25_DFSI_LDU2_VOICE14_FRAME_LENGTH_BYTES;
+                count += DFSI_LDU2_VOICE14_FRAME_LENGTH_BYTES;
 
-                m_dfsiLC.setFrameType(dfsi::P25_DFSI_LDU2_VOICE15);
+                m_dfsiLC.setFrameType(DFSIFrameType::LDU2_VOICE15);
                 m_dfsiLC.decodeLDU2(data + count, m_netLDU2 + 130U);
-                count += dfsi::P25_DFSI_LDU2_VOICE15_FRAME_LENGTH_BYTES;
+                count += DFSI_LDU2_VOICE15_FRAME_LENGTH_BYTES;
 
-                m_dfsiLC.setFrameType(dfsi::P25_DFSI_LDU2_VOICE16);
+                m_dfsiLC.setFrameType(DFSIFrameType::LDU2_VOICE16);
                 m_dfsiLC.decodeLDU2(data + count, m_netLDU2 + 155U);
-                count += dfsi::P25_DFSI_LDU2_VOICE16_FRAME_LENGTH_BYTES;
+                count += DFSI_LDU2_VOICE16_FRAME_LENGTH_BYTES;
 
-                m_dfsiLC.setFrameType(dfsi::P25_DFSI_LDU2_VOICE17);
+                m_dfsiLC.setFrameType(DFSIFrameType::LDU2_VOICE17);
                 m_dfsiLC.decodeLDU2(data + count, m_netLDU2 + 180U);
-                count += dfsi::P25_DFSI_LDU2_VOICE17_FRAME_LENGTH_BYTES;
+                count += DFSI_LDU2_VOICE17_FRAME_LENGTH_BYTES;
 
-                m_dfsiLC.setFrameType(dfsi::P25_DFSI_LDU2_VOICE18);
+                m_dfsiLC.setFrameType(DFSIFrameType::LDU2_VOICE18);
                 m_dfsiLC.decodeLDU2(data + count, m_netLDU2 + 204U);
-                count += dfsi::P25_DFSI_LDU2_VOICE18_FRAME_LENGTH_BYTES;
+                count += DFSI_LDU2_VOICE18_FRAME_LENGTH_BYTES;
 
                 if (m_p25->m_enableControl) {
                     lc::LC control = lc::LC(*m_dfsiLC.control());
@@ -1298,12 +1301,12 @@ bool Voice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
                 }
             }
             break;
-        case P25_DUID_VSELP1:
-        case P25_DUID_VSELP2:
+        case DUID::VSELP1:
+        case DUID::VSELP2:
             // currently ignored -- this is a TODO
             break;
-        case P25_DUID_TDU:
-        case P25_DUID_TDULC:
+        case DUID::TDU:
+        case DUID::TDULC:
             // ignore a TDU that doesn't contain our destination ID
             if (control.getDstId() != m_p25->m_netLastDstId) {
                 return false;
@@ -1324,11 +1327,14 @@ bool Voice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
             }
 
             if (m_p25->m_netState != RS_NET_IDLE) {
-                if (duid == P25_DUID_TDU)
+                if (duid == DUID::TDU)
                     writeNet_TDU();
 
                 resetNet();
             }
+            break;
+
+        default:
             break;
     }
 
@@ -1360,13 +1366,13 @@ Voice::Voice(Control* p25, bool debug, bool verbose) :
     m_rfLastLDU2(),
     m_netLC(),
     m_netLastLDU1(),
-    m_netLastFrameType(P25_FT_DATA_UNIT),
+    m_netLastFrameType(FrameType::DATA_UNIT),
     m_rfLSD(),
     m_netLSD(),
     m_dfsiLC(),
     m_netLDU1(nullptr),
     m_netLDU2(nullptr),
-    m_lastDUID(P25_DUID_TDU),
+    m_lastDUID(DUID::TDU),
     m_lastIMBE(nullptr),
     m_lastMI(nullptr),
     m_hadVoice(false),
@@ -1383,11 +1389,11 @@ Voice::Voice(Control* p25, bool debug, bool verbose) :
     ::memset(m_netLDU1, 0x00U, 9U * 25U);
     ::memset(m_netLDU2, 0x00U, 9U * 25U);
 
-    m_lastIMBE = new uint8_t[11U];
-    ::memcpy(m_lastIMBE, P25_NULL_IMBE, 11U);
+    m_lastIMBE = new uint8_t[RAW_IMBE_LENGTH_BYTES];
+    ::memcpy(m_lastIMBE, NULL_IMBE, RAW_IMBE_LENGTH_BYTES);
 
-    m_lastMI = new uint8_t[P25_MI_LENGTH_BYTES];
-    ::memset(m_lastMI, 0x00U, P25_MI_LENGTH_BYTES);
+    m_lastMI = new uint8_t[MI_LENGTH_BYTES];
+    ::memset(m_lastMI, 0x00U, MI_LENGTH_BYTES);
 }
 
 /// <summary>
@@ -1407,7 +1413,7 @@ Voice::~Voice()
 /// <param name="data"></param>
 /// <param name="duid"></param>
 /// <param name="frameType"></param>
-void Voice::writeNetwork(const uint8_t *data, uint8_t duid, uint8_t frameType)
+void Voice::writeNetwork(const uint8_t *data, defines::DUID::E duid, defines::FrameType::E frameType)
 {
     assert(data != nullptr);
 
@@ -1418,17 +1424,17 @@ void Voice::writeNetwork(const uint8_t *data, uint8_t duid, uint8_t frameType)
         return;
 
     switch (duid) {
-        case P25_DUID_HDU:
+        case DUID::HDU:
             // ignore HDU
             break;
-        case P25_DUID_LDU1:
+        case DUID::LDU1:
             m_p25->m_network->writeP25LDU1(m_rfLC, m_rfLSD, data, frameType);
             break;
-        case P25_DUID_LDU2:
+        case DUID::LDU2:
             m_p25->m_network->writeP25LDU2(m_rfLC, m_rfLSD, data);
             break;
-        case P25_DUID_TDU:
-        case P25_DUID_TDULC:
+        case DUID::TDU:
+        case DUID::TDULC:
             m_p25->m_network->writeP25TDU(m_rfLC, m_rfLSD);
             break;
         default:
@@ -1473,7 +1479,7 @@ void Voice::writeNet_TDU()
     Sync::addP25Sync(buffer + 2U);
 
     // Generate NID
-    m_p25->m_nid.encode(buffer + 2U, P25_DUID_TDU);
+    m_p25->m_nid.encode(buffer + 2U, DUID::TDU);
 
     // Add busy bits
     P25Utils::addBusyBits(buffer + 2U, P25_TDU_FRAME_LENGTH_BITS, true, true);
@@ -1544,7 +1550,7 @@ void Voice::writeNet_LDU1()
 
     uint32_t dstId = control.getDstId();
     uint32_t srcId = control.getSrcId();
-    bool group = control.getLCO() == LC_GROUP;
+    bool group = control.getLCO() == LCO::GROUP;
 
     // ensure our dstId are sane from the last LDU1
     if (m_netLastLDU1.getDstId() != 0U) {
@@ -1597,19 +1603,19 @@ void Voice::writeNet_LDU1()
 
     // if we are idle lets generate HDU data
     if (m_p25->m_netState == RS_NET_IDLE) {
-        uint8_t mi[P25_MI_LENGTH_BYTES];
-        ::memset(mi, 0x00U, P25_MI_LENGTH_BYTES);
+        uint8_t mi[MI_LENGTH_BYTES];
+        ::memset(mi, 0x00U, MI_LENGTH_BYTES);
 
-        if (m_netLastLDU1.getAlgId() != P25_ALGO_UNENCRYPT && m_netLastLDU1.getKId() != 0) {
+        if (m_netLastLDU1.getAlgId() != ALGO_UNENCRYPT && m_netLastLDU1.getKId() != 0) {
             control.setAlgId(m_netLastLDU1.getAlgId());
             control.setKId(m_netLastLDU1.getKId());
         }
 
         // restore MI from member variable
-        ::memcpy(mi, m_lastMI, P25_MI_LENGTH_BYTES);
+        ::memcpy(mi, m_lastMI, MI_LENGTH_BYTES);
 
         if (m_verbose && m_debug) {
-            Utils::dump(1U, "P25 HDU MI from network to RF", mi, P25_MI_LENGTH_BYTES);
+            Utils::dump(1U, "P25 HDU MI from network to RF", mi, MI_LENGTH_BYTES);
         }
 
         m_netLC.setMI(mi);
@@ -1667,7 +1673,7 @@ void Voice::writeNet_LDU1()
 
                     m_netLC = lc::LC();
                     m_netLastLDU1 = lc::LC();
-                    m_netLastFrameType = P25_FT_DATA_UNIT;
+                    m_netLastFrameType = FrameType::DATA_UNIT;
 
                     m_p25->m_netState = RS_NET_IDLE;
                     m_p25->m_netLastDstId = 0U;
@@ -1695,7 +1701,7 @@ void Voice::writeNet_LDU1()
                     osp = std::make_unique<lc::tsbk::OSP_GRP_VCH_GRANT_UPD>();
 
                     // transmit group voice grant update
-                    osp->setLCO(TSBK_OSP_GRP_VCH_GRANT_UPD);
+                    osp->setLCO(TSBKO::OSP_GRP_VCH_GRANT_UPD);
                     osp->setDstId(dstId);
                     osp->setGrpVchId(voiceChData.chId());
                     osp->setGrpVchNo(chNo);
@@ -1706,7 +1712,7 @@ void Voice::writeNet_LDU1()
                     osp = std::make_unique<lc::tsbk::OSP_UU_VCH_GRANT_UPD>();
 
                     // transmit group voice grant update
-                    osp->setLCO(TSBK_OSP_UU_VCH_GRANT_UPD);
+                    osp->setLCO(TSBKO::OSP_UU_VCH_GRANT_UPD);
                     osp->setSrcId(srcId);
                     osp->setDstId(dstId);
                     osp->setGrpVchId(voiceChData.chId());
@@ -1735,7 +1741,7 @@ void Voice::writeNet_LDU1()
         m_roamLDU1Count = 0U;
 
         if (!m_p25->m_disableNetworkHDU) {
-            if (m_netLastFrameType != P25_FT_HDU_LATE_ENTRY) {
+            if (m_netLastFrameType != FrameType::HDU_LATE_ENTRY) {
                 uint8_t buffer[P25_HDU_FRAME_LENGTH_BYTES + 2U];
                 ::memset(buffer, 0x00U, P25_HDU_FRAME_LENGTH_BYTES + 2U);
 
@@ -1743,7 +1749,7 @@ void Voice::writeNet_LDU1()
                 Sync::addP25Sync(buffer + 2U);
 
                 // Generate NID
-                m_p25->m_nid.encode(buffer + 2U, P25_DUID_HDU);
+                m_p25->m_nid.encode(buffer + 2U, DUID::HDU);
 
                 // Generate header
                 m_netLC.encodeHDU(buffer + 2U);
@@ -1796,11 +1802,11 @@ void Voice::writeNet_LDU1()
                 m_roamLDU1Count = 0U;
                 m_netLC.setNetId(netId);
                 m_netLC.setSysId(sysId);
-                m_netLC.setLCO(LC_EXPLICIT_SOURCE_ID);
+                m_netLC.setLCO(LCO::EXPLICIT_SOURCE_ID);
             }
             else {
                 // flag explicit block to follow in next LDU1
-                if (m_netLC.getLCO() == LC_GROUP) {
+                if (m_netLC.getLCO() == LCO::GROUP) {
                     m_netLC.setExplicitId(true);
                 }
             }
@@ -1817,7 +1823,7 @@ void Voice::writeNet_LDU1()
         m_vocLDU1Count++;
         if (m_vocLDU1Count > VOC_LDU1_COUNT) {
             m_vocLDU1Count = 0U;
-            m_netLC.setLCO(LC_RFSS_STS_BCAST);
+            m_netLC.setLCO(LCO::RFSS_STS_BCAST);
         }
     }
 
@@ -1830,7 +1836,7 @@ void Voice::writeNet_LDU1()
     Sync::addP25Sync(buffer + 2U);
 
     // Generate NID
-    m_p25->m_nid.encode(buffer + 2U, P25_DUID_LDU1);
+    m_p25->m_nid.encode(buffer + 2U, DUID::LDU1);
 
     // Generate LDU1 data
     m_netLC.encodeLDU1(buffer + 2U);
@@ -1906,11 +1912,11 @@ void Voice::writeNet_LDU2()
         return;
     }
 
-    uint8_t mi[P25_MI_LENGTH_BYTES];
+    uint8_t mi[MI_LENGTH_BYTES];
     control.getMI(mi);
 
     if (m_verbose && m_debug) {
-        Utils::dump(1U, "Network LDU2 MI", mi, P25_MI_LENGTH_BYTES);
+        Utils::dump(1U, "Network LDU2 MI", mi, MI_LENGTH_BYTES);
     }
 
     m_netLC.setMI(mi);
@@ -1926,7 +1932,7 @@ void Voice::writeNet_LDU2()
     Sync::addP25Sync(buffer + 2U);
 
     // Generate NID
-    m_p25->m_nid.encode(buffer + 2U, P25_DUID_LDU2);
+    m_p25->m_nid.encode(buffer + 2U, DUID::LDU2);
 
     // Generate LDU2 data
     m_netLC.encodeLDU2(buffer + 2U);
@@ -2050,39 +2056,39 @@ void Voice::insertMissingAudio(uint8_t *data)
 void Voice::insertNullAudio(uint8_t *data)
 {
     if (data[0U] == 0x00U) {
-        ::memcpy(data + 10U, P25_NULL_IMBE, 11U);
+        ::memcpy(data + 10U, NULL_IMBE, 11U);
     }
 
     if (data[25U] == 0x00U) {
-        ::memcpy(data + 26U, P25_NULL_IMBE, 11U);
+        ::memcpy(data + 26U, NULL_IMBE, 11U);
     }
 
     if (data[50U] == 0x00U) {
-        ::memcpy(data + 55U, P25_NULL_IMBE, 11U);
+        ::memcpy(data + 55U, NULL_IMBE, 11U);
     }
 
     if (data[75U] == 0x00U) {
-        ::memcpy(data + 80U, P25_NULL_IMBE, 11U);
+        ::memcpy(data + 80U, NULL_IMBE, 11U);
     }
 
     if (data[100U] == 0x00U) {
-        ::memcpy(data + 105U, P25_NULL_IMBE, 11U);
+        ::memcpy(data + 105U, NULL_IMBE, 11U);
     }
 
     if (data[125U] == 0x00U) {
-        ::memcpy(data + 130U, P25_NULL_IMBE, 11U);
+        ::memcpy(data + 130U, NULL_IMBE, 11U);
     }
 
     if (data[150U] == 0x00U) {
-        ::memcpy(data + 155U, P25_NULL_IMBE, 11U);
+        ::memcpy(data + 155U, NULL_IMBE, 11U);
     }
 
     if (data[175U] == 0x00U) {
-        ::memcpy(data + 180U, P25_NULL_IMBE, 11U);
+        ::memcpy(data + 180U, NULL_IMBE, 11U);
     }
 
     if (data[200U] == 0x00U) {
-        ::memcpy(data + 204U, P25_NULL_IMBE, 11U);
+        ::memcpy(data + 204U, NULL_IMBE, 11U);
     }
 }
 
@@ -2093,39 +2099,39 @@ void Voice::insertNullAudio(uint8_t *data)
 void Voice::insertEncryptedNullAudio(uint8_t *data)
 {
     if (data[0U] == 0x00U) {
-        ::memcpy(data + 10U, P25_ENCRYPTED_NULL_IMBE, 11U);
+        ::memcpy(data + 10U, ENCRYPTED_NULL_IMBE, 11U);
     }
 
     if (data[25U] == 0x00U) {
-        ::memcpy(data + 26U, P25_ENCRYPTED_NULL_IMBE, 11U);
+        ::memcpy(data + 26U, ENCRYPTED_NULL_IMBE, 11U);
     }
 
     if (data[50U] == 0x00U) {
-        ::memcpy(data + 55U, P25_ENCRYPTED_NULL_IMBE, 11U);
+        ::memcpy(data + 55U, ENCRYPTED_NULL_IMBE, 11U);
     }
 
     if (data[75U] == 0x00U) {
-        ::memcpy(data + 80U, P25_ENCRYPTED_NULL_IMBE, 11U);
+        ::memcpy(data + 80U, ENCRYPTED_NULL_IMBE, 11U);
     }
 
     if (data[100U] == 0x00U) {
-        ::memcpy(data + 105U, P25_ENCRYPTED_NULL_IMBE, 11U);
+        ::memcpy(data + 105U, ENCRYPTED_NULL_IMBE, 11U);
     }
 
     if (data[125U] == 0x00U) {
-        ::memcpy(data + 130U, P25_ENCRYPTED_NULL_IMBE, 11U);
+        ::memcpy(data + 130U, ENCRYPTED_NULL_IMBE, 11U);
     }
 
     if (data[150U] == 0x00U) {
-        ::memcpy(data + 155U, P25_ENCRYPTED_NULL_IMBE, 11U);
+        ::memcpy(data + 155U, ENCRYPTED_NULL_IMBE, 11U);
     }
 
     if (data[175U] == 0x00U) {
-        ::memcpy(data + 180U, P25_ENCRYPTED_NULL_IMBE, 11U);
+        ::memcpy(data + 180U, ENCRYPTED_NULL_IMBE, 11U);
     }
 
     if (data[200U] == 0x00U) {
-        ::memcpy(data + 204U, P25_ENCRYPTED_NULL_IMBE, 11U);
+        ::memcpy(data + 204U, ENCRYPTED_NULL_IMBE, 11U);
     }
 }
 

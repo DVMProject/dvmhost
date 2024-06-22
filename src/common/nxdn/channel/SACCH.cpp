@@ -9,7 +9,7 @@
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
 *   Copyright (C) 2018 Jonathan Naylor, G4KLX
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "nxdn/channel/SACCH.h"
@@ -20,6 +20,7 @@
 #include "Utils.h"
 
 using namespace nxdn;
+using namespace nxdn::defines;
 using namespace nxdn::channel;
 
 #include <cassert>
@@ -48,7 +49,7 @@ const uint32_t PUNCTURE_LIST[] = { 5U, 11U, 17U, 23U, 29U, 35U, 41U, 47U, 53U, 5
 /// </summary>
 SACCH::SACCH() :
     m_ran(0U),
-    m_structure(NXDN_SR_SINGLE),
+    m_structure(ChStructure::SR_SINGLE),
     m_data(nullptr)
 {
     m_data = new uint8_t[NXDN_SACCH_CRC_LENGTH_BYTES];
@@ -61,7 +62,7 @@ SACCH::SACCH() :
 /// <param name="data"></param>
 SACCH::SACCH(const SACCH& data) :
     m_ran(0U),
-    m_structure(NXDN_SR_SINGLE),
+    m_structure(ChStructure::SR_SINGLE),
     m_data(nullptr)
 {
     copy(data);
@@ -86,7 +87,7 @@ SACCH& SACCH::operator=(const SACCH& data)
         ::memcpy(m_data, data.m_data, NXDN_SACCH_CRC_LENGTH_BYTES);
 
         m_ran = m_data[0U] & 0x3FU;
-        m_structure = (m_data[0U] >> 6) & 0x03U;
+        m_structure = (ChStructure::E)((m_data[0U] >> 6) & 0x03U);
     }
 
     return *this;
@@ -163,7 +164,7 @@ bool SACCH::decode(const uint8_t* data)
     }
 
     m_ran = m_data[0U] & 0x3FU;
-    m_structure = (m_data[0U] >> 6) & 0x03U;
+    m_structure = (ChStructure::E)((m_data[0U] >> 6) & 0x03U);
 
     return true;
 }
@@ -274,5 +275,5 @@ void SACCH::copy(const SACCH& data)
     ::memcpy(m_data, data.m_data, NXDN_SACCH_CRC_LENGTH_BYTES);
 
     m_ran = m_data[0U] & 0x3FU;
-    m_structure = (m_data[0U] >> 6) & 0x03U;
+    m_structure = (ChStructure::E)((m_data[0U] >> 6) & 0x03U);
 }

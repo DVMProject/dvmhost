@@ -63,7 +63,7 @@ namespace p25
             /// <remarks>This simple boolean marks this header as either IANA standard, or profile specific.</remarks>
             __PROPERTY(bool, payloadType, PayloadType);
             /// <summary>Block type.</summary>
-            __PROPERTY(BlockType, blockType, BlockType);
+            __PROPERTY(BlockType::E, blockType, BlockType);
             /// <summary>Timestamp Offset.</summary>
             __PROPERTY(uint16_t, timestampOffset, TimestampOffset);
             /// <summary>Block length.</summary>

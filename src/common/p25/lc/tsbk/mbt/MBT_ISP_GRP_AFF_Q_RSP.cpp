@@ -13,9 +13,10 @@
 #include "Defines.h"
 #include "p25/lc/tsbk/mbt/MBT_ISP_GRP_AFF_Q_RSP.h"
 
-using namespace p25::lc::tsbk;
-using namespace p25::lc;
 using namespace p25;
+using namespace p25::defines;
+using namespace p25::lc;
+using namespace p25::lc::tsbk;
 
 #include <cassert>
 
@@ -28,7 +29,7 @@ using namespace p25;
 /// </summary>
 MBT_ISP_GRP_AFF_Q_RSP::MBT_ISP_GRP_AFF_Q_RSP() : AMBT()
 {
-    m_lco = TSBK_ISP_GRP_AFF_Q_RSP;
+    m_lco = TSBKO::ISP_GRP_AFF_Q_RSP;
 }
 
 /// <summary>
@@ -79,5 +80,5 @@ void MBT_ISP_GRP_AFF_Q_RSP::encodeMBT(data::DataHeader& dataHeader, uint8_t* pdu
 /// <returns></returns>
 std::string MBT_ISP_GRP_AFF_Q_RSP::toString(bool isp)
 {
-    return std::string("TSBK_ISP_GRP_AFF_Q_RSP (Group Affiliation Query Response)");
+    return std::string("TSBKO, ISP_GRP_AFF_Q_RSP (Group Affiliation Query Response)");
 }

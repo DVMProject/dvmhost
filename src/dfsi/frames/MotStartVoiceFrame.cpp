@@ -23,6 +23,7 @@
 
 using namespace p25;
 using namespace p25::dfsi;
+using namespace p25::dfsi::defines;
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -34,9 +35,9 @@ using namespace p25::dfsi;
 MotStartVoiceFrame::MotStartVoiceFrame() :
     startOfStream(nullptr),
     fullRateVoice(nullptr),
-    m_icw(ICW_DIU),
+    m_icw(ICWFlag::DIU),
     m_rssi(0U),
-    m_rssiValidity(INVALID),
+    m_rssiValidity(RssiValidityFlag::INVALID),
     m_nRssi(0U),
     m_adjMM(0U)
 {
@@ -51,9 +52,9 @@ MotStartVoiceFrame::MotStartVoiceFrame() :
 MotStartVoiceFrame::MotStartVoiceFrame(uint8_t* data) :
     startOfStream(nullptr),
     fullRateVoice(nullptr),
-    m_icw(ICW_DIU),
+    m_icw(ICWFlag::DIU),
     m_rssi(0U),
-    m_rssiValidity(INVALID),
+    m_rssiValidity(RssiValidityFlag::INVALID),
     m_nRssi(0U),
     m_adjMM(0U)
 {
@@ -105,9 +106,9 @@ bool MotStartVoiceFrame::decode(const uint8_t* data)
     fullRateVoice->decode(voiceBuffer, true);
 
     // get rest of data
-    m_icw = (ICWFlag)data[5U];
+    m_icw = (ICWFlag::E)data[5U];
     m_rssi = data[6U];
-    m_rssiValidity = (RssiValidityFlag)data[7U];
+    m_rssiValidity = (RssiValidityFlag::E)data[7U];
     m_nRssi = data[8U];
     m_adjMM = data[9U];
 
@@ -143,9 +144,9 @@ void MotStartVoiceFrame::encode(uint8_t* data)
     }
 
     // Copy the rest
-    data[5U] = (uint8_t)m_icw;
+    data[5U] = m_icw;
     data[6U] = m_rssi;
-    data[7U] = (uint8_t)m_rssiValidity;
+    data[7U] = m_rssiValidity;
     data[8U] = m_nRssi;
     data[9U] = m_adjMM;
 }

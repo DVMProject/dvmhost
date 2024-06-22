@@ -9,13 +9,14 @@
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
 *   Copyright (C) 2018 Jonathan Naylor, G4KLX
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #if !defined(__NXDN_CHANNEL__LICH_H__)
 #define  __NXDN_CHANNEL__LICH_H__
 
 #include "common/Defines.h"
+#include "common/nxdn/NXDNDefines.h"
 
 namespace nxdn
 {
@@ -46,11 +47,11 @@ namespace nxdn
         public:
             /** Common Data */
             /// <summary>RF Channel Type</summary>
-            __PROPERTY(uint8_t, rfct, RFCT);
+            __PROPERTY(defines::RFChannelType::E, rfct, RFCT);
             /// <summary>Functional Channel Type</summary>
-            __PROPERTY(uint8_t, fct, FCT);
+            __PROPERTY(defines::FuncChannelType::E, fct, FCT);
             /// <summary>Channel Options</summary>
-            __PROPERTY(uint8_t, option, Option);
+            __PROPERTY(defines::ChOption::E, option, Option);
             /// <summary>Flag indicating outbound traffic direction</summary>
             __PROPERTY(bool, outbound, Outbound);
 

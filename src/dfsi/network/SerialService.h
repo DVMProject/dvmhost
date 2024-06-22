@@ -146,7 +146,7 @@ namespace network
         int writeSerial();
 
         uint32_t readP25Frame(uint8_t* data);
-        void writeP25Frame(uint8_t duid, dfsi::LC& lc, uint8_t* ldu);
+        void writeP25Frame(P25DEF::DUID::E duid, dfsi::LC& lc, uint8_t* ldu);
 
         // Helpers for TX stream data
         void startOfStream(const LC& lc);

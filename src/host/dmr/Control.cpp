@@ -9,7 +9,7 @@
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
 *   Copyright (C) 2015,2016,2017 Jonathan Naylor, G4KLX
-*   Copyright (C) 2017-2023 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
@@ -20,6 +20,7 @@
 #include "dmr/Control.h"
 
 using namespace dmr;
+using namespace dmr::defines;
 
 #include <cassert>
 #include <algorithm>
@@ -125,7 +126,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, ::lookups::VoiceChDa
 
     Slot::m_verifyReg = dmrProtocol["verifyReg"].as<bool>(false);
 
-    uint8_t nRandWait = (uint8_t)dmrProtocol["nRandWait"].as<uint32_t>(dmr::DEFAULT_NRAND_WAIT);
+    uint8_t nRandWait = (uint8_t)dmrProtocol["nRandWait"].as<uint32_t>(DEFAULT_NRAND_WAIT);
     if (nRandWait > 15U)
         nRandWait = 15U;
     uint8_t backOff = (uint8_t)dmrProtocol["backOff"].as<uint32_t>(1U);
@@ -181,28 +182,28 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, ::lookups::VoiceChDa
     /*
     ** Voice Silence and Frame Loss Thresholds
     */
-    uint32_t silenceThreshold = dmrProtocol["silenceThreshold"].as<uint32_t>(dmr::DEFAULT_SILENCE_THRESHOLD);
+    uint32_t silenceThreshold = dmrProtocol["silenceThreshold"].as<uint32_t>(DEFAULT_SILENCE_THRESHOLD);
     if (silenceThreshold > MAX_DMR_VOICE_ERRORS) {
-        LogWarning(LOG_DMR, "Silence threshold > %u, defaulting to %u", dmr::MAX_DMR_VOICE_ERRORS, dmr::DEFAULT_SILENCE_THRESHOLD);
-        silenceThreshold = dmr::DEFAULT_SILENCE_THRESHOLD;
+        LogWarning(LOG_DMR, "Silence threshold > %u, defaulting to %u", MAX_DMR_VOICE_ERRORS, DEFAULT_SILENCE_THRESHOLD);
+        silenceThreshold = DEFAULT_SILENCE_THRESHOLD;
     }
 
     // either MAX_DMR_VOICE_ERRORS or 0 will disable the threshold logic
     if (silenceThreshold == 0U) {
-        LogWarning(LOG_DMR, "Silence threshold set to zero, defaulting to %u", dmr::MAX_DMR_VOICE_ERRORS);
-        silenceThreshold = dmr::MAX_DMR_VOICE_ERRORS;
+        LogWarning(LOG_DMR, "Silence threshold set to zero, defaulting to %u", MAX_DMR_VOICE_ERRORS);
+        silenceThreshold = MAX_DMR_VOICE_ERRORS;
     }
 
     m_slot1->setSilenceThreshold(silenceThreshold);
     m_slot2->setSilenceThreshold(silenceThreshold);
 
-    uint8_t frameLossThreshold = (uint8_t)dmrProtocol["frameLossThreshold"].as<uint32_t>(dmr::DEFAULT_FRAME_LOSS_THRESHOLD);
+    uint8_t frameLossThreshold = (uint8_t)dmrProtocol["frameLossThreshold"].as<uint32_t>(DEFAULT_FRAME_LOSS_THRESHOLD);
     if (frameLossThreshold == 0U) {
         frameLossThreshold = 1U;
     }
 
-    if (frameLossThreshold > dmr::DEFAULT_FRAME_LOSS_THRESHOLD * 2U) {
-        LogWarning(LOG_DMR, "Frame loss threshold may be excessive, default is %u, configured is %u", dmr::DEFAULT_FRAME_LOSS_THRESHOLD, frameLossThreshold);
+    if (frameLossThreshold > DEFAULT_FRAME_LOSS_THRESHOLD * 2U) {
+        LogWarning(LOG_DMR, "Frame loss threshold may be excessive, default is %u, configured is %u", DEFAULT_FRAME_LOSS_THRESHOLD, frameLossThreshold);
     }
 
     m_slot1->setFrameLossThreshold(frameLossThreshold);
@@ -286,16 +287,16 @@ bool Control::processWakeup(const uint8_t* data)
     assert(data != nullptr);
 
     // wakeups always come in on slot 1
-    if (data[0U] != modem::TAG_DATA || data[1U] != (DMR_IDLE_RX | DMR_SYNC_DATA | DT_CSBK))
+    if (data[0U] != modem::TAG_DATA || data[1U] != (IDLE_RX | SYNC_DATA | DataType::CSBK))
         return false;
 
     // generate a new CSBK and check validity
-    std::unique_ptr<lc::CSBK> csbk = lc::csbk::CSBKFactory::createCSBK(data + 2U, DT_CSBK);
+    std::unique_ptr<lc::CSBK> csbk = lc::csbk::CSBKFactory::createCSBK(data + 2U, DataType::CSBK);
     if (csbk == nullptr)
         return false;
 
     uint8_t csbko = csbk->getCSBKO();
-    if (csbko != CSBKO_BSDWNACT)
+    if (csbko != CSBKO::BSDWNACT)
         return false;
 
     uint32_t srcId = csbk->getSrcId();
@@ -303,12 +304,12 @@ bool Control::processWakeup(const uint8_t* data)
     // check the srcId against the ACL control
     bool ret = acl::AccessControl::validateSrcId(srcId);
     if (!ret) {
-        LogError(LOG_RF, "DMR, invalid CSBKO_BSDWNACT, srcId = %u", srcId);
+        LogError(LOG_RF, "DMR, invalid CSBKO, BSDWNACT, srcId = %u", srcId);
         return false;
     }
 
     if (m_verbose) {
-        LogMessage(LOG_RF, "DMR, CSBKO_BSDWNACT, srcId = %u", srcId);
+        LogMessage(LOG_RF, "DMR, CSBKO, BSDWNACT, srcId = %u", srcId);
     }
 
     return true;
@@ -743,7 +744,7 @@ void Control::processNetwork()
     uint32_t srcId = __GET_UINT16(buffer, 5U);
     uint32_t dstId = __GET_UINT16(buffer, 8U);
 
-    uint8_t flco = (buffer[15U] & 0x40U) == 0x40U ? dmr::FLCO_PRIVATE : dmr::FLCO_GROUP;
+    FLCO::E flco = (buffer[15U] & 0x40U) == 0x40U ? FLCO::PRIVATE : FLCO::GROUP;
 
     uint32_t slotNo = (buffer[15U] & 0x80U) == 0x80U ? 2U : 1U;
 
@@ -783,20 +784,20 @@ void Control::processNetwork()
 
     // process raw DMR data bytes
     if (dataSync) {
-        uint8_t dataType = buffer[15U] & 0x0FU;
+        DataType::E dataType = (DataType::E)(buffer[15U] & 0x0FU);
         data.setData(buffer.get() + 20U);
         data.setDataType(dataType);
         data.setN(0U);
     }
     else if (voiceSync) {
         data.setData(buffer.get() + 20U);
-        data.setDataType(dmr::DT_VOICE_SYNC);
+        data.setDataType(DataType::VOICE_SYNC);
         data.setN(0U);
     }
     else {
         uint8_t n = buffer[15U] & 0x0FU;
         data.setData(buffer.get() + 20U);
-        data.setDataType(dmr::DT_VOICE);
+        data.setDataType(DataType::VOICE);
         data.setN(n);
     }
 

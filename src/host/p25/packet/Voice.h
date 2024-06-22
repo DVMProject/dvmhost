@@ -9,7 +9,7 @@
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
 *   Copyright (C) 2016,2017 Jonathan Naylor, G4KLX
-*   Copyright (C) 2017-2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
 *
 */
 #if !defined(__P25_PACKET_VOICE_H__)
@@ -51,7 +51,7 @@ namespace p25
             /// <summary>Process a data frame from the RF interface.</summary>
             bool process(uint8_t* data, uint32_t len);
             /// <summary>Process a data frame from the network.</summary>
-            bool processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::LowSpeedData& lsd, uint8_t& duid, uint8_t& frameType);
+            bool processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::LowSpeedData& lsd, defines::DUID::E& duid, defines::FrameType::E& frameType);
 
         protected:
             friend class packet::ControlSignaling;
@@ -74,7 +74,7 @@ namespace p25
 
             lc::LC m_netLC;
             lc::LC m_netLastLDU1;
-            uint8_t m_netLastFrameType;
+            defines::FrameType::E m_netLastFrameType;
 
             data::LowSpeedData m_rfLSD;
             data::LowSpeedData m_netLSD;
@@ -83,7 +83,7 @@ namespace p25
             uint8_t* m_netLDU1;
             uint8_t* m_netLDU2;
 
-            uint8_t m_lastDUID;
+            defines::DUID::E m_lastDUID;
             uint8_t* m_lastIMBE;
             uint8_t* m_lastMI;
 
@@ -104,7 +104,7 @@ namespace p25
             ~Voice();
 
             /// <summary>Write data processed from RF to the network.</summary>
-            void writeNetwork(const uint8_t* data, uint8_t duid, uint8_t frameType = P25_FT_DATA_UNIT);
+            void writeNetwork(const uint8_t* data, defines::DUID::E duid, defines::FrameType::E frameType = defines::FrameType::DATA_UNIT);
 
             /// <summary>Helper to write end of voice frame data.</summary>
             void writeRF_EndOfVoice();

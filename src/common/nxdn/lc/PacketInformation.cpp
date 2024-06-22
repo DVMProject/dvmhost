@@ -7,7 +7,7 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
@@ -15,8 +15,9 @@
 #include "nxdn/lc/PacketInformation.h"
 #include "Log.h"
 
-using namespace nxdn::lc;
 using namespace nxdn;
+using namespace nxdn::defines;
+using namespace nxdn::lc;
 
 #include <cassert>
 #include <cstring>
@@ -36,7 +37,7 @@ PacketInformation::PacketInformation() :
     m_start(true),
     m_circular(false),
     m_fragmentCount(0U),
-    m_rspClass(DATA_RSP_CLASS_ACK),
+    m_rspClass(PDUResponseClass::ACK),
     m_rspType(1U),
     m_rspErrorBlock(0U)
 {
@@ -60,7 +61,7 @@ bool PacketInformation::decode(const uint8_t messageType, const uint8_t* data)
 
     switch (messageType)
     {
-    case RTCH_MESSAGE_TYPE_DCALL_HDR:
+    case MessageType::RTCH_DCALL_HDR:
         m_delivery = (data[0U] & 0x80U) == 0x80U;                                   // Delivery
         m_selectiveRetry = (data[0U] & 0x20U) == 0x20U;                             // Selective Retry
         m_blockCount = (data[0U] & 0x0FU);                                          // Block Count
@@ -71,12 +72,12 @@ bool PacketInformation::decode(const uint8_t messageType, const uint8_t* data)
 
         m_fragmentCount = ((data[1U] & 0x01U) << 8) + data[2U];                     // Fragment Count
         break;
-    case RTCH_MESSAGE_TYPE_DCALL_ACK:
+    case MessageType::RTCH_DCALL_ACK:
         m_rspClass = (data[0U] >> 4) & 0x03U;                                       // Response Class
         m_rspType = (data[0U] >> 1) & 0x07U;                                        // Response Type
         m_fragmentCount = ((data[0U] & 0x01U) << 8) + data[1U];                     // Fragment Count
         break;
-    case RTCH_MESSAGE_TYPE_SDCALL_REQ_HDR:
+    case MessageType::RTCH_SDCALL_REQ_HDR:
         m_delivery = (data[0U] & 0x80U) == 0x80U;                                   // Delivery
         m_selectiveRetry = (data[0U] & 0x20U) == 0x20U;                             // Selective Retry
         m_blockCount = (data[0U] & 0x0FU);                                          // Block Count
@@ -104,9 +105,9 @@ void PacketInformation::encode(const uint8_t messageType, uint8_t* data)
 
     switch (messageType)
     {
-    case RTCH_MESSAGE_TYPE_DCALL_HDR:
+    case MessageType::RTCH_DCALL_HDR:
     {
-        ::memset(data, 0x00U, NXDN_PCKT_INFO_LENGTH_BYTES);
+        ::memset(data, 0x00U, PCKT_INFO_LENGTH_BYTES);
 
         data[0U] = (m_delivery ? 0x80U : 0x00U) +                                   // Delivery
             (m_selectiveRetry ? 0x20U : 0x00U) +                                    // Selective Retry
@@ -121,7 +122,7 @@ void PacketInformation::encode(const uint8_t messageType, uint8_t* data)
         data[2U] = m_fragmentCount & 0xFFU;                                         // Fragment Count - bit 0 - 7
     }
     break;
-    case RTCH_MESSAGE_TYPE_DCALL_ACK:
+    case MessageType::RTCH_DCALL_ACK:
     {
         data[0U] = (m_rspClass & 0x03U << 4) +                                      // Response Class
             (m_rspType & 0x07U << 1);                                               // Response Type
@@ -131,8 +132,8 @@ void PacketInformation::encode(const uint8_t messageType, uint8_t* data)
         data[1U] = m_fragmentCount & 0xFFU;                                         // Fragment Count - bit 0 - 7
     }
     break;
-    case RTCH_MESSAGE_TYPE_SDCALL_REQ_HDR:
-        ::memset(data, 0x00U, NXDN_PCKT_INFO_LENGTH_BYTES);
+    case MessageType::RTCH_SDCALL_REQ_HDR:
+        ::memset(data, 0x00U, PCKT_INFO_LENGTH_BYTES);
 
         data[0U] = (m_delivery ? 0x80U : 0x00U) +                                   // Delivery
             (m_selectiveRetry ? 0x20U : 0x00U) +                                    // Selective Retry
@@ -163,7 +164,7 @@ void PacketInformation::reset()
 
     m_fragmentCount = 0U;
 
-    m_rspClass = DATA_RSP_CLASS_ACK;
+    m_rspClass = PDUResponseClass::ACK;
     m_rspType = 0U;
     m_rspErrorBlock = 0U;
 }

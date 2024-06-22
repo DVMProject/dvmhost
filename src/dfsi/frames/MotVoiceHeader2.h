@@ -68,7 +68,7 @@ namespace p25
             uint8_t* header; // ?? - this should probably be a private with getters/setters
 
             /// <summary></summary>
-            __PROPERTY(SourceFlag, source, Source);
+            __PROPERTY(SourceFlag::E, source, Source);
         };
     } // namespace dfsi
 } // namespace p25

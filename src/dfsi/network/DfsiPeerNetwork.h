@@ -9,6 +9,7 @@
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
 *   Copyright (C) 2024 Patrick McDonnell, W3AXL
+*   Copyright (C) 2024 Bryan Biedenkapp, N2PLL
 *
 */
 #if !defined(__DFSI_PEER_NETWORK_H__)
@@ -35,7 +36,7 @@ namespace network
 
         /// <summary>Writes P25 LDU1 frame data to the network.</summary>
         bool writeP25LDU1(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, const uint8_t* data, 
-            uint8_t frameType) override;
+            P25DEF::FrameType::E frameType) override;
         /// <summary>Writes P25 LDU2 frame data to the network.</summary>
         bool writeP25LDU2(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, const uint8_t* data) override;
 
@@ -46,7 +47,7 @@ namespace network
     private:
         /// <summary>Creates an P25 LDU1 frame message.</summary>
         UInt8Array createP25_LDU1Message_Raw(uint32_t& length, const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, 
-            const uint8_t* data, uint8_t frameType);
+            const uint8_t* data, P25DEF::FrameType::E frameType);
         /// <summary>Creates an P25 LDU2 frame message.</summary>
         UInt8Array createP25_LDU2Message_Raw(uint32_t& length, const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, 
             const uint8_t* data);

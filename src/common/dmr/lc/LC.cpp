@@ -9,7 +9,7 @@
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
 *   Copyright (C) 2015,2016 Jonathan Naylor, G4KLX
-*   Copyright (C) 2020-2021 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2020-2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
@@ -17,8 +17,9 @@
 #include "dmr/lc/LC.h"
 #include "Utils.h"
 
-using namespace dmr::lc;
 using namespace dmr;
+using namespace dmr::defines;
+using namespace dmr::lc;
 
 #include <cassert>
 
@@ -32,7 +33,7 @@ using namespace dmr;
 /// <param name="flco">Full-link Control Opcode.</param>
 /// <param name="srcId">Source ID.</param>
 /// <param name="dstId">Destination ID.</param>
-LC::LC(uint8_t flco, uint32_t srcId, uint32_t dstId) :
+LC::LC(FLCO::E flco, uint32_t srcId, uint32_t dstId) :
     m_PF(false),
     m_FLCO(flco),
     m_FID(FID_ETSI),
@@ -47,13 +48,14 @@ LC::LC(uint8_t flco, uint32_t srcId, uint32_t dstId) :
 {
     /* stub */
 }
+
 /// <summary>
 /// Initializes a new instance of the LC class.
 /// </summary>
 /// <param name="data"></param>
 LC::LC(const uint8_t* data) :
     m_PF(false),
-    m_FLCO(FLCO_GROUP),
+    m_FLCO(FLCO::GROUP),
     m_FID(FID_ETSI),
     m_srcId(0U),
     m_dstId(0U),
@@ -69,7 +71,7 @@ LC::LC(const uint8_t* data) :
     m_PF = (data[0U] & 0x80U) == 0x80U;
     m_R = (data[0U] & 0x40U) == 0x40U;
 
-    m_FLCO = data[0U] & 0x3FU;
+    m_FLCO = (FLCO::E)(data[0U] & 0x3FU);
 
     m_FID = data[1U];
 
@@ -82,13 +84,14 @@ LC::LC(const uint8_t* data) :
     m_dstId = data[3U] << 16 | data[4U] << 8 | data[5U];                        // Destination Address
     m_srcId = data[6U] << 16 | data[7U] << 8 | data[8U];                        // Source Address
 }
+
 /// <summary>
 /// Initializes a new instance of the LC class.
 /// </summary>
 /// <param name="bits"></param>
 LC::LC(const bool* bits) :
     m_PF(false),
-    m_FLCO(FLCO_GROUP),
+    m_FLCO(FLCO::GROUP),
     m_FID(FID_ETSI),
     m_srcId(0U),
     m_dstId(0U),
@@ -106,7 +109,7 @@ LC::LC(const bool* bits) :
 
     uint8_t temp1, temp2, temp3;
     Utils::bitsToByteBE(bits + 0U, temp1);
-    m_FLCO = temp1 & 0x3FU;
+    m_FLCO = (FLCO::E)(temp1 & 0x3FU);
 
     Utils::bitsToByteBE(bits + 8U, temp2);
     m_FID = temp2;
@@ -137,7 +140,7 @@ LC::LC(const bool* bits) :
 /// </summary>
 LC::LC() :
     m_PF(false),
-    m_FLCO(FLCO_GROUP),
+    m_FLCO(FLCO::GROUP),
     m_FID(FID_ETSI),
     m_srcId(0U),
     m_dstId(0U),
@@ -164,7 +167,7 @@ void LC::getData(uint8_t* data) const
 {
     assert(data != nullptr);
 
-    data[0U] = (uint8_t)m_FLCO;
+    data[0U] = m_FLCO;
 
     if (m_PF)
         data[0U] |= 0x80U;

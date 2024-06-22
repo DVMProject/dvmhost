@@ -7,7 +7,7 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "nxdn/channel/CAC.h"
@@ -18,6 +18,7 @@
 #include "Utils.h"
 
 using namespace nxdn;
+using namespace nxdn::defines;
 using namespace nxdn::channel;
 
 #include <cassert>
@@ -101,7 +102,7 @@ const uint32_t PUNCTURE_LIST_OUT[] = {
 /// </summary>
 CAC::CAC() :
     m_ran(0U),
-    m_structure(NXDN_SR_RCCH_SINGLE),
+    m_structure(ChStructure::SR_RCCH_SINGLE),
     m_idleBusy(true),
     m_txContinuous(false),
     m_receive(true),
@@ -118,7 +119,7 @@ CAC::CAC() :
 /// <param name="data"></param>
 CAC::CAC(const CAC& data) :
     m_ran(0U),
-    m_structure(NXDN_SR_RCCH_SINGLE),
+    m_structure(ChStructure::SR_RCCH_SINGLE),
     m_idleBusy(true),
     m_txContinuous(false),
     m_receive(true),
@@ -147,7 +148,7 @@ CAC& CAC::operator=(const CAC& data)
         ::memcpy(m_data, data.m_data, NXDN_CAC_CRC_LENGTH_BYTES);
 
         m_ran = m_data[0U] & 0x3FU;
-        m_structure = (m_data[0U] >> 6) & 0x03U;
+        m_structure = (ChStructure::E)((m_data[0U] >> 6) & 0x03U);
 
         m_idleBusy = data.m_idleBusy;
         m_txContinuous = data.m_txContinuous;
@@ -217,7 +218,7 @@ bool CAC::decode(const uint8_t* data)
     ::memset(crc, 0x00U, 2U);
 
     m_ran = m_data[0U] & 0x3FU;
-    m_structure = (m_data[0U] >> 6) & 0x03U;
+    m_structure = (ChStructure::E)((m_data[0U] >> 6) & 0x03U);
 
     uint32_t offset = NXDN_CAC_SHORT_CRC_LENGTH_BITS - 20U;
     for (uint32_t i = 0U; i < 16U; i++, offset++) {
@@ -362,7 +363,7 @@ void CAC::copy(const CAC& data)
     ::memcpy(m_data, data.m_data, NXDN_CAC_CRC_LENGTH_BYTES);
 
     m_ran = m_data[0U] & 0x3FU;
-    m_structure = (m_data[0U] >> 6) & 0x03U;
+    m_structure = (ChStructure::E)((m_data[0U] >> 6) & 0x03U);
 
     m_idleBusy = data.m_idleBusy;
     m_txContinuous = data.m_txContinuous;

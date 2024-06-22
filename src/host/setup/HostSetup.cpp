@@ -10,7 +10,7 @@
 *
 *   Copyright (C) 2015,2016,2017 Jonathan Naylor, G4KLX
 *   Copyright (C) 2017,2018 Andy Uribe, CA6JAU
-*   Copyright (C) 2021-2023 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2021-2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "common/dmr/DMRDefines.h"
@@ -331,7 +331,7 @@ bool HostSetup::portModemHandler(Modem* modem, uint32_t ms, RESP_TYPE_DVM rspTyp
                 m_queue.peek(&dataLen, 1U);
 
                 if (!m_queue.isEmpty() && m_modem->m_p25Space >= dataLen) {
-                    uint8_t data[p25::P25_LDU_FRAME_LENGTH_BYTES + 2U];
+                    uint8_t data[p25::defines::P25_LDU_FRAME_LENGTH_BYTES + 2U];
 
                     dataLen = 0U;
                     m_queue.get(&dataLen, 1U);
@@ -508,10 +508,10 @@ bool HostSetup::portModemHandler(Modem* modem, uint32_t ms, RESP_TYPE_DVM rspTyp
             bool dacOverflow = (buffer[5U] & 0x20U) == 0x20U;
 
             // spaces from the modem are returned in "logical" frame count, not raw byte size
-            m_modem->m_dmrSpace1 = buffer[7U] * (dmr::DMR_FRAME_LENGTH_BYTES + 2U);
-            m_modem->m_dmrSpace2 = buffer[8U] * (dmr::DMR_FRAME_LENGTH_BYTES + 2U);
-            m_modem->m_p25Space = buffer[10U] * (p25::P25_LDU_FRAME_LENGTH_BYTES);
-            m_modem->m_nxdnSpace = buffer[11U] * (nxdn::NXDN_FRAME_LENGTH_BYTES);
+            m_modem->m_dmrSpace1 = buffer[7U] * (dmr::defines::DMR_FRAME_LENGTH_BYTES + 2U);
+            m_modem->m_dmrSpace2 = buffer[8U] * (dmr::defines::DMR_FRAME_LENGTH_BYTES + 2U);
+            m_modem->m_p25Space = buffer[10U] * (p25::defines::P25_PDU_FRAME_LENGTH_BYTES);
+            m_modem->m_nxdnSpace = buffer[11U] * (nxdn::defines::NXDN_FRAME_LENGTH_BYTES);
 
             if (m_hasFetchedStatus && m_requestedStatus) {
                 LogMessage(LOG_CAL, "Diagnostic Values [Modem State: %u, Transmitting: %d, ADC Overflow: %d, Rx Overflow: %d, Tx Overflow: %d, DAC Overflow: %d, HS: %u]",
@@ -1111,6 +1111,7 @@ void HostSetup::processDMR1KBER(const uint8_t* buffer, uint8_t seq)
 /// <param name="buffer">Buffer containing P25 data</param>
 void HostSetup::processP25BER(const uint8_t* buffer)
 {
+    using namespace p25::defines;
     using namespace p25;
 
     uint8_t sync[P25_SYNC_LENGTH_BYTES];
@@ -1125,14 +1126,14 @@ void HostSetup::processP25BER(const uint8_t* buffer)
 
     uint8_t nid[P25_NID_LENGTH_BYTES];
     P25Utils::decode(buffer, nid, 48U, 114U);
-    uint8_t duid = nid[1U] & 0x0FU;
+    DUID::E duid = (DUID::E)(nid[1U] & 0x0FU);
 
     uint32_t errs = 0U;
     uint8_t imbe[18U];
     lc::LC lc = lc::LC();
     data::DataHeader dataHeader = data::DataHeader();
 
-    if (duid == P25_DUID_HDU) {
+    if (duid == DUID::HDU) {
         timerStart();
 
         bool ret = lc.decodeHDU(buffer);
@@ -1150,7 +1151,7 @@ void HostSetup::processP25BER(const uint8_t* buffer)
         m_berUndecodableLC = 0U;
         m_berUncorrectable = 0U;
     }
-    else if (duid == P25_DUID_TDU) {
+    else if (duid == DUID::TDU) {
         if (m_berFrames != 0U) {
             LogMessage(LOG_CAL, P25_TDU_STR ", total frames: %d, bits: %d, uncorrectable frames: %d, undecodable LC: %d, errors: %d, BER: %.4f%%", m_berFrames, m_berBits, m_berUncorrectable, m_berUndecodableLC, m_berErrs, float(m_berErrs * 100U) / float(m_berBits));
         }
@@ -1168,7 +1169,7 @@ void HostSetup::processP25BER(const uint8_t* buffer)
         m_berUncorrectable = 0U;
         return;
     }
-    else if (duid == P25_DUID_LDU1) {
+    else if (duid == DUID::LDU1) {
         timerStart();
 
         bool ret = lc.decodeLDU1(buffer);
@@ -1223,7 +1224,7 @@ void HostSetup::processP25BER(const uint8_t* buffer)
         m_berErrs += errs;
         m_berFrames++;
     }
-    else if (duid == P25_DUID_LDU2) {
+    else if (duid == DUID::LDU2) {
         timerStart();
 
         bool ret = lc.decodeLDU2(buffer);
@@ -1278,7 +1279,7 @@ void HostSetup::processP25BER(const uint8_t* buffer)
         m_berErrs += errs;
         m_berFrames++;
     }
-    else if (duid == P25_DUID_PDU) {
+    else if (duid == DUID::PDU) {
         timerStop();
 
         // note: for the calibrator we will only process the PDU header -- and not the PDU data
@@ -1308,7 +1309,7 @@ void HostSetup::processP25BER(const uint8_t* buffer)
 
         delete[] rfPDU;
     }
-    else if (duid == P25_DUID_TSDU) {
+    else if (duid == DUID::TSDU) {
         timerStop();
 
         std::unique_ptr<lc::TSBK> tsbk = lc::tsbk::TSBKFactory::createTSBK(buffer);
@@ -1332,16 +1333,17 @@ void HostSetup::processP25BER(const uint8_t* buffer)
 /// <param name="buffer">Buffer containing P25 data</param>
 void HostSetup::processP251KBER(const uint8_t* buffer)
 {
+    using namespace p25::defines;
     using namespace p25;
 
     uint8_t nid[P25_NID_LENGTH_BYTES];
     P25Utils::decode(buffer, nid, 48U, 114U);
-    uint8_t duid = nid[1U] & 0x0FU;
+    DUID::E duid = (DUID::E)(nid[1U] & 0x0FU);
 
     uint32_t errs = 0U;
     lc::LC lc = lc::LC();
 
-    if (duid == P25_DUID_HDU) {
+    if (duid == DUID::HDU) {
         timerStart();
 
         bool ret = lc.decodeHDU(buffer);
@@ -1359,7 +1361,7 @@ void HostSetup::processP251KBER(const uint8_t* buffer)
         m_berUndecodableLC = 0U;
         m_berUncorrectable = 0U;
     }
-    else if (duid == P25_DUID_TDU) {
+    else if (duid == DUID::TDU) {
         if (m_berFrames != 0U) {
             LogMessage(LOG_CAL, P25_TDU_STR ", total frames: %d, bits: %d, uncorrectable frames: %d, undecodable LC: %d, errors: %d, BER: %.4f%%", m_berFrames, m_berBits, m_berUncorrectable, m_berUndecodableLC, m_berErrs, float(m_berErrs * 100U) / float(m_berBits));
         }
@@ -1377,7 +1379,7 @@ void HostSetup::processP251KBER(const uint8_t* buffer)
         m_berUncorrectable = 0U;
         return;
     }
-    else if (duid == P25_DUID_LDU1) {
+    else if (duid == DUID::LDU1) {
         timerStart();
 
         bool ret = lc.decodeLDU1(buffer);
@@ -1408,7 +1410,7 @@ void HostSetup::processP251KBER(const uint8_t* buffer)
         m_berErrs += errs;
         m_berFrames++;
     }
-    else if (duid == P25_DUID_LDU2) {
+    else if (duid == DUID::LDU2) {
         timerStart();
 
         bool ret = lc.decodeLDU2(buffer);
@@ -1447,6 +1449,7 @@ void HostSetup::processP251KBER(const uint8_t* buffer)
 /// <param name="buffer">Buffer containing NXDN data</param>
 void HostSetup::processNXDNBER(const uint8_t* buffer)
 {
+    using namespace nxdn::defines;
     using namespace nxdn;
 
     uint8_t data[NXDN_FRAME_LENGTH_BYTES];
@@ -1457,10 +1460,10 @@ void HostSetup::processNXDNBER(const uint8_t* buffer)
     bool valid = lich.decode(data);
 
     if (valid) {
-        uint8_t usc = lich.getFCT();
-        uint8_t opt = lich.getOption();
+        FuncChannelType::E usc = lich.getFCT();
+        ChOption::E opt = lich.getOption();
 
-        if (usc == NXDN_LICH_USC_SACCH_NS) {
+        if (usc == FuncChannelType::USC_SACCH_NS) {
             if (m_berFrames == 0U) {
                 LogMessage(LOG_CAL, "NXDN VCALL (Voice Call), BER Start");
 
@@ -1482,7 +1485,7 @@ void HostSetup::processNXDNBER(const uint8_t* buffer)
                 m_berFrames = 0U;
                 return;
             }
-        } else if (opt == NXDN_LICH_STEAL_NONE) {
+        } else if (opt == ChOption::STEAL_NONE) {
             timerStart();
 
             uint32_t errors = 0U;

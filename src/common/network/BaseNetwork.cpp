@@ -14,6 +14,7 @@
 */
 #include "Defines.h"
 #include "common/dmr/DMRDefines.h"
+#include "common/p25/P25Defines.h"
 #include "common/nxdn/NXDNDefines.h"
 #include "common/p25/dfsi/DFSIDefines.h"
 #include "common/p25/dfsi/LC.h"
@@ -434,6 +435,7 @@ UInt8Array BaseNetwork::readDMR(bool& ret, uint32_t& frameLength)
 /// <returns></returns>
 bool BaseNetwork::writeDMR(const dmr::data::Data& data, bool noSequence)
 {
+    using namespace dmr::defines;
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
         return false;
 
@@ -445,17 +447,17 @@ bool BaseNetwork::writeDMR(const dmr::data::Data& data, bool noSequence)
     if (slotNo == 2U && !m_slot2)
         return false;
 
-    uint8_t dataType = data.getDataType();
+    DataType::E dataType = data.getDataType();
 
     uint32_t slotIndex = slotNo - 1U;
 
     bool resetSeq = false;
-    if (dataType == dmr::DT_VOICE_LC_HEADER) {
+    if (dataType == DataType::VOICE_LC_HEADER) {
         resetSeq = true;
         m_dmrStreamId[slotIndex] = createStreamId();
     }
 
-    if (dataType == dmr::DT_CSBK || dataType == dmr::DT_DATA_HEADER) {
+    if (dataType == DataType::CSBK || dataType == DataType::DATA_HEADER) {
         resetSeq = true;
         m_dmrStreamId[slotIndex] = createStreamId();
     }
@@ -467,7 +469,7 @@ bool BaseNetwork::writeDMR(const dmr::data::Data& data, bool noSequence)
     }
 
     uint16_t seq = pktSeq(resetSeq);
-    if (dataType == dmr::DT_TERMINATOR_WITH_LC) {
+    if (dataType == DataType::TERMINATOR_WITH_LC) {
         seq = RTP_END_OF_CALL_SEQ;
     }
 
@@ -531,7 +533,7 @@ UInt8Array BaseNetwork::readP25(bool& ret, uint32_t& frameLength)
 /// <param name="data"></param>
 /// <param name="frameType"></param>
 /// <returns></returns>
-bool BaseNetwork::writeP25LDU1(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, const uint8_t* data, uint8_t frameType)
+bool BaseNetwork::writeP25LDU1(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, const uint8_t* data, p25::defines::FrameType::E frameType)
 {
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
         return false;
@@ -724,6 +726,7 @@ UInt8Array BaseNetwork::readNXDN(bool& ret, uint32_t& frameLength)
 /// <returns></returns>
 bool BaseNetwork::writeNXDN(const nxdn::lc::RTCH& lc, const uint8_t* data, const uint32_t len, bool noSequence)
 {
+    using namespace nxdn::defines;
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
         return false;
 
@@ -740,8 +743,8 @@ bool BaseNetwork::writeNXDN(const nxdn::lc::RTCH& lc, const uint8_t* data, const
     }
 
     uint16_t seq = pktSeq(resetSeq);
-    if (lc.getMessageType() == nxdn::RTCH_MESSAGE_TYPE_TX_REL ||
-        lc.getMessageType() == nxdn::RTCH_MESSAGE_TYPE_TX_REL_EX) {
+    if (lc.getMessageType() == MessageType::RTCH_TX_REL ||
+        lc.getMessageType() == MessageType::RTCH_TX_REL_EX) {
         seq = RTP_END_OF_CALL_SEQ;
     }
 
@@ -797,6 +800,7 @@ uint16_t BaseNetwork::pktSeq(bool reset)
 /// <returns></returns>
 UInt8Array BaseNetwork::createDMR_Message(uint32_t& length, const uint32_t streamId, const dmr::data::Data& data)
 {
+    using namespace dmr::defines;
     uint8_t* buffer = new uint8_t[DMR_PACKET_LENGTH + PACKET_PAD];
     ::memset(buffer, 0x00U, DMR_PACKET_LENGTH + PACKET_PAD);
 
@@ -821,14 +825,14 @@ UInt8Array BaseNetwork::createDMR_Message(uint32_t& length, const uint32_t strea
 
     buffer[15U] = slotNo == 1U ? 0x00U : 0x80U;                                     // Slot Number
 
-    uint8_t flco = data.getFLCO();
-    buffer[15U] |= flco == dmr::FLCO_GROUP ? 0x00U : 0x40U;                         // Group
+    FLCO::E flco = data.getFLCO();
+    buffer[15U] |= flco == FLCO::GROUP ? 0x00U : 0x40U;                             // Group
 
     uint8_t dataType = data.getDataType();
-    if (dataType == dmr::DT_VOICE_SYNC) {
+    if (dataType == DataType::VOICE_SYNC) {
         buffer[15U] |= 0x10U;
     }
-    else if (dataType == dmr::DT_VOICE) {
+    else if (dataType == DataType::VOICE) {
         buffer[15U] |= data.getN();
     }
     else {
@@ -858,9 +862,10 @@ UInt8Array BaseNetwork::createDMR_Message(uint32_t& length, const uint32_t strea
 /// <param name="control"></param>
 /// <param name="lsd"></param>
 /// <param name="frameType"></param>
-void BaseNetwork::createP25_MessageHdr(uint8_t* buffer, uint8_t duid, const p25::lc::LC& control, const p25::data::LowSpeedData& lsd,
-    uint8_t frameType)
+void BaseNetwork::createP25_MessageHdr(uint8_t* buffer, p25::defines::DUID::E duid, const p25::lc::LC& control, const p25::data::LowSpeedData& lsd,
+    p25::defines::FrameType::E frameType)
 {
+    using namespace p25::defines;
     assert(buffer != nullptr);
 
     // construct P25 message header
@@ -889,27 +894,27 @@ void BaseNetwork::createP25_MessageHdr(uint8_t* buffer, uint8_t duid, const p25:
 
     buffer[22U] = duid;                                                             // DUID
 
-    if (frameType != p25::P25_FT_TERMINATOR) {
+    if (frameType != FrameType::TERMINATOR) {
         buffer[180U] = frameType;                                                   // DVM Frame Type
     }
 
     // is this the first frame of a call?
-    if (frameType == p25::P25_FT_HDU_VALID) {
+    if (frameType == FrameType::HDU_VALID) {
         buffer[181U] = control.getAlgId();                                          // Algorithm ID
 
         uint32_t kid = control.getKId();
         __SET_UINT16B(kid, buffer, 182U);                                           // Key ID
 
         // copy MI data
-        uint8_t mi[p25::P25_MI_LENGTH_BYTES];
-        ::memset(mi, 0x00U, p25::P25_MI_LENGTH_BYTES);
+        uint8_t mi[MI_LENGTH_BYTES];
+        ::memset(mi, 0x00U, MI_LENGTH_BYTES);
         control.getMI(mi);
 
         if (m_debug) {
-            Utils::dump(1U, "P25 HDU MI written to network", mi, p25::P25_MI_LENGTH_BYTES);
+            Utils::dump(1U, "P25 HDU MI written to network", mi, MI_LENGTH_BYTES);
         }
 
-        for (uint8_t i = 0; i < p25::P25_MI_LENGTH_BYTES; i++) {
+        for (uint8_t i = 0; i < MI_LENGTH_BYTES; i++) {
             buffer[184U + i] = mi[i];                                               // Message Indicator
         }
     }
@@ -925,8 +930,10 @@ void BaseNetwork::createP25_MessageHdr(uint8_t* buffer, uint8_t duid, const p25:
 /// <param name="frameType"></param>
 /// <returns></returns>
 UInt8Array BaseNetwork::createP25_LDU1Message(uint32_t& length, const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, 
-    const uint8_t* data, uint8_t frameType)
+    const uint8_t* data, p25::defines::FrameType::E frameType)
 {
+    using namespace p25::defines;
+    using namespace p25::dfsi::defines;
     assert(data != nullptr);
 
     p25::dfsi::LC dfsiLC = p25::dfsi::LC(control, lsd);
@@ -935,56 +942,56 @@ UInt8Array BaseNetwork::createP25_LDU1Message(uint32_t& length, const p25::lc::L
     ::memset(buffer, 0x00U, P25_LDU1_PACKET_LENGTH + PACKET_PAD);
 
     // construct P25 message header
-    createP25_MessageHdr(buffer, p25::P25_DUID_LDU1, control, lsd, frameType);
+    createP25_MessageHdr(buffer, DUID::LDU1, control, lsd, frameType);
 
     // pack DFSI data
     uint32_t count = MSG_HDR_SIZE;
-    uint8_t imbe[p25::P25_RAW_IMBE_LENGTH_BYTES];
+    uint8_t imbe[RAW_IMBE_LENGTH_BYTES];
 
-    dfsiLC.setFrameType(p25::dfsi::P25_DFSI_LDU1_VOICE1);
+    dfsiLC.setFrameType(DFSIFrameType::LDU1_VOICE1);
     m_audio.decode(data, imbe, 0U);
     dfsiLC.encodeLDU1(buffer + 24U, imbe);
-    count += p25::dfsi::P25_DFSI_LDU1_VOICE1_FRAME_LENGTH_BYTES;
+    count += DFSI_LDU1_VOICE1_FRAME_LENGTH_BYTES;
 
-    dfsiLC.setFrameType(p25::dfsi::P25_DFSI_LDU1_VOICE2);
+    dfsiLC.setFrameType(DFSIFrameType::LDU1_VOICE2);
     m_audio.decode(data, imbe, 1U);
     dfsiLC.encodeLDU1(buffer + 46U, imbe);
-    count += p25::dfsi::P25_DFSI_LDU1_VOICE2_FRAME_LENGTH_BYTES;
+    count += DFSI_LDU1_VOICE2_FRAME_LENGTH_BYTES;
 
-    dfsiLC.setFrameType(p25::dfsi::P25_DFSI_LDU1_VOICE3);
+    dfsiLC.setFrameType(DFSIFrameType::LDU1_VOICE3);
     m_audio.decode(data, imbe, 2U);
     dfsiLC.encodeLDU1(buffer + 60U, imbe);
-    count += p25::dfsi::P25_DFSI_LDU1_VOICE3_FRAME_LENGTH_BYTES;
+    count += DFSI_LDU1_VOICE3_FRAME_LENGTH_BYTES;
 
-    dfsiLC.setFrameType(p25::dfsi::P25_DFSI_LDU1_VOICE4);
+    dfsiLC.setFrameType(DFSIFrameType::LDU1_VOICE4);
     m_audio.decode(data, imbe, 3U);
     dfsiLC.encodeLDU1(buffer + 77U, imbe);
-    count += p25::dfsi::P25_DFSI_LDU1_VOICE4_FRAME_LENGTH_BYTES;
+    count += DFSI_LDU1_VOICE4_FRAME_LENGTH_BYTES;
 
-    dfsiLC.setFrameType(p25::dfsi::P25_DFSI_LDU1_VOICE5);
+    dfsiLC.setFrameType(DFSIFrameType::LDU1_VOICE5);
     m_audio.decode(data, imbe, 4U);
     dfsiLC.encodeLDU1(buffer + 94U, imbe);
-    count += p25::dfsi::P25_DFSI_LDU1_VOICE5_FRAME_LENGTH_BYTES;
+    count += DFSI_LDU1_VOICE5_FRAME_LENGTH_BYTES;
 
-    dfsiLC.setFrameType(p25::dfsi::P25_DFSI_LDU1_VOICE6);
+    dfsiLC.setFrameType(DFSIFrameType::LDU1_VOICE6);
     m_audio.decode(data, imbe, 5U);
     dfsiLC.encodeLDU1(buffer + 111U, imbe);
-    count += p25::dfsi::P25_DFSI_LDU1_VOICE6_FRAME_LENGTH_BYTES;
+    count += DFSI_LDU1_VOICE6_FRAME_LENGTH_BYTES;
 
-    dfsiLC.setFrameType(p25::dfsi::P25_DFSI_LDU1_VOICE7);
+    dfsiLC.setFrameType(DFSIFrameType::LDU1_VOICE7);
     m_audio.decode(data, imbe, 6U);
     dfsiLC.encodeLDU1(buffer + 128U, imbe);
-    count += p25::dfsi::P25_DFSI_LDU1_VOICE7_FRAME_LENGTH_BYTES;
+    count += DFSI_LDU1_VOICE7_FRAME_LENGTH_BYTES;
 
-    dfsiLC.setFrameType(p25::dfsi::P25_DFSI_LDU1_VOICE8);
+    dfsiLC.setFrameType(DFSIFrameType::LDU1_VOICE8);
     m_audio.decode(data, imbe, 7U);
     dfsiLC.encodeLDU1(buffer + 145U, imbe);
-    count += p25::dfsi::P25_DFSI_LDU1_VOICE8_FRAME_LENGTH_BYTES;
+    count += DFSI_LDU1_VOICE8_FRAME_LENGTH_BYTES;
 
-    dfsiLC.setFrameType(p25::dfsi::P25_DFSI_LDU1_VOICE9);
+    dfsiLC.setFrameType(DFSIFrameType::LDU1_VOICE9);
     m_audio.decode(data, imbe, 8U);
     dfsiLC.encodeLDU1(buffer + 162U, imbe);
-    count += p25::dfsi::P25_DFSI_LDU1_VOICE9_FRAME_LENGTH_BYTES;
+    count += DFSI_LDU1_VOICE9_FRAME_LENGTH_BYTES;
 
     buffer[23U] = count;
 
@@ -1006,6 +1013,8 @@ UInt8Array BaseNetwork::createP25_LDU1Message(uint32_t& length, const p25::lc::L
 UInt8Array BaseNetwork::createP25_LDU2Message(uint32_t& length, const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, 
     const uint8_t* data)
 {
+    using namespace p25::defines;
+    using namespace p25::dfsi::defines;
     assert(data != nullptr);
 
     p25::dfsi::LC dfsiLC = p25::dfsi::LC(control, lsd);
@@ -1014,56 +1023,56 @@ UInt8Array BaseNetwork::createP25_LDU2Message(uint32_t& length, const p25::lc::L
     ::memset(buffer, 0x00U, P25_LDU2_PACKET_LENGTH + PACKET_PAD);
 
     // construct P25 message header
-    createP25_MessageHdr(buffer, p25::P25_DUID_LDU2, control, lsd, p25::P25_FT_DATA_UNIT);
+    createP25_MessageHdr(buffer, DUID::LDU2, control, lsd, FrameType::DATA_UNIT);
 
     // pack DFSI data
     uint32_t count = MSG_HDR_SIZE;
-    uint8_t imbe[p25::P25_RAW_IMBE_LENGTH_BYTES];
+    uint8_t imbe[RAW_IMBE_LENGTH_BYTES];
 
-    dfsiLC.setFrameType(p25::dfsi::P25_DFSI_LDU2_VOICE10);
+    dfsiLC.setFrameType(DFSIFrameType::LDU2_VOICE10);
     m_audio.decode(data, imbe, 0U);
     dfsiLC.encodeLDU2(buffer + 24U, imbe);
-    count += p25::dfsi::P25_DFSI_LDU2_VOICE10_FRAME_LENGTH_BYTES;
+    count += DFSI_LDU2_VOICE10_FRAME_LENGTH_BYTES;
 
-    dfsiLC.setFrameType(p25::dfsi::P25_DFSI_LDU2_VOICE11);
+    dfsiLC.setFrameType(DFSIFrameType::LDU2_VOICE11);
     m_audio.decode(data, imbe, 1U);
     dfsiLC.encodeLDU2(buffer + 46U, imbe);
-    count += p25::dfsi::P25_DFSI_LDU2_VOICE11_FRAME_LENGTH_BYTES;
+    count += DFSI_LDU2_VOICE11_FRAME_LENGTH_BYTES;
 
-    dfsiLC.setFrameType(p25::dfsi::P25_DFSI_LDU2_VOICE12);
+    dfsiLC.setFrameType(DFSIFrameType::LDU2_VOICE12);
     m_audio.decode(data, imbe, 2U);
     dfsiLC.encodeLDU2(buffer + 60U, imbe);
-    count += p25::dfsi::P25_DFSI_LDU2_VOICE12_FRAME_LENGTH_BYTES;
+    count += DFSI_LDU2_VOICE12_FRAME_LENGTH_BYTES;
 
-    dfsiLC.setFrameType(p25::dfsi::P25_DFSI_LDU2_VOICE13);
+    dfsiLC.setFrameType(DFSIFrameType::LDU2_VOICE13);
     m_audio.decode(data, imbe, 3U);
     dfsiLC.encodeLDU2(buffer + 77U, imbe);
-    count += p25::dfsi::P25_DFSI_LDU2_VOICE13_FRAME_LENGTH_BYTES;
+    count += DFSI_LDU2_VOICE13_FRAME_LENGTH_BYTES;
 
-    dfsiLC.setFrameType(p25::dfsi::P25_DFSI_LDU2_VOICE14);
+    dfsiLC.setFrameType(DFSIFrameType::LDU2_VOICE14);
     m_audio.decode(data, imbe, 4U);
     dfsiLC.encodeLDU2(buffer + 94U, imbe);
-    count += p25::dfsi::P25_DFSI_LDU2_VOICE14_FRAME_LENGTH_BYTES;
+    count += DFSI_LDU2_VOICE14_FRAME_LENGTH_BYTES;
 
-    dfsiLC.setFrameType(p25::dfsi::P25_DFSI_LDU2_VOICE15);
+    dfsiLC.setFrameType(DFSIFrameType::LDU2_VOICE15);
     m_audio.decode(data, imbe, 5U);
     dfsiLC.encodeLDU2(buffer + 111U, imbe);
-    count += p25::dfsi::P25_DFSI_LDU2_VOICE15_FRAME_LENGTH_BYTES;
+    count += DFSI_LDU2_VOICE15_FRAME_LENGTH_BYTES;
 
-    dfsiLC.setFrameType(p25::dfsi::P25_DFSI_LDU2_VOICE16);
+    dfsiLC.setFrameType(DFSIFrameType::LDU2_VOICE16);
     m_audio.decode(data, imbe, 6U);
     dfsiLC.encodeLDU2(buffer + 128U, imbe);
-    count += p25::dfsi::P25_DFSI_LDU2_VOICE16_FRAME_LENGTH_BYTES;
+    count += DFSI_LDU2_VOICE16_FRAME_LENGTH_BYTES;
 
-    dfsiLC.setFrameType(p25::dfsi::P25_DFSI_LDU2_VOICE17);
+    dfsiLC.setFrameType(DFSIFrameType::LDU2_VOICE17);
     m_audio.decode(data, imbe, 7U);
     dfsiLC.encodeLDU2(buffer + 145U, imbe);
-    count += p25::dfsi::P25_DFSI_LDU2_VOICE17_FRAME_LENGTH_BYTES;
+    count += DFSI_LDU2_VOICE17_FRAME_LENGTH_BYTES;
 
-    dfsiLC.setFrameType(p25::dfsi::P25_DFSI_LDU2_VOICE18);
+    dfsiLC.setFrameType(DFSIFrameType::LDU2_VOICE18);
     m_audio.decode(data, imbe, 8U);
     dfsiLC.encodeLDU2(buffer + 162U, imbe);
-    count += p25::dfsi::P25_DFSI_LDU2_VOICE18_FRAME_LENGTH_BYTES;
+    count += DFSI_LDU2_VOICE18_FRAME_LENGTH_BYTES;
 
     buffer[23U] = count;
 
@@ -1084,11 +1093,12 @@ UInt8Array BaseNetwork::createP25_LDU2Message(uint32_t& length, const p25::lc::L
 /// <returns></returns>
 UInt8Array BaseNetwork::createP25_TDUMessage(uint32_t& length, const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, const uint8_t controlByte)
 {
+    using namespace p25::defines;
     uint8_t* buffer = new uint8_t[MSG_HDR_SIZE + PACKET_PAD];
     ::memset(buffer, 0x00U, MSG_HDR_SIZE + PACKET_PAD);
 
     // construct P25 message header
-    createP25_MessageHdr(buffer, p25::P25_DUID_TDU, control, lsd, p25::P25_FT_TERMINATOR);
+    createP25_MessageHdr(buffer, DUID::TDU, control, lsd, FrameType::TERMINATOR);
 
     buffer[14U] = controlByte;
     buffer[23U] = MSG_HDR_SIZE;
@@ -1109,6 +1119,7 @@ UInt8Array BaseNetwork::createP25_TDUMessage(uint32_t& length, const p25::lc::LC
 /// <returns></returns>
 UInt8Array BaseNetwork::createP25_TSDUMessage(uint32_t& length, const p25::lc::LC& control, const uint8_t* data)
 {
+    using namespace p25::defines;
     assert(data != nullptr);
 
     uint8_t* buffer = new uint8_t[P25_TSDU_PACKET_LENGTH + PACKET_PAD];
@@ -1116,13 +1127,13 @@ UInt8Array BaseNetwork::createP25_TSDUMessage(uint32_t& length, const p25::lc::L
 
     // construct P25 message header
     p25::data::LowSpeedData lsd = p25::data::LowSpeedData();
-    createP25_MessageHdr(buffer, p25::P25_DUID_TSDU, control, lsd, p25::P25_FT_TERMINATOR);
+    createP25_MessageHdr(buffer, DUID::TSDU, control, lsd, FrameType::TERMINATOR);
 
     // pack raw P25 TSDU bytes
     uint32_t count = MSG_HDR_SIZE;
 
-    ::memcpy(buffer + 24U, data, p25::P25_TSDU_FRAME_LENGTH_BYTES);
-    count += p25::P25_TSDU_FRAME_LENGTH_BYTES;
+    ::memcpy(buffer + 24U, data, P25_TSDU_FRAME_LENGTH_BYTES);
+    count += P25_TSDU_FRAME_LENGTH_BYTES;
 
     buffer[23U] = count;
 
@@ -1145,6 +1156,7 @@ UInt8Array BaseNetwork::createP25_TSDUMessage(uint32_t& length, const p25::lc::L
 UInt8Array BaseNetwork::createP25_PDUMessage(uint32_t& length, const p25::data::DataHeader& header,
     const uint8_t currentBlock, const uint8_t* data, const uint32_t len)
 {
+    using namespace p25::defines;
     assert(data != nullptr);
 
     uint8_t* buffer = new uint8_t[DATA_PACKET_LENGTH];
@@ -1159,7 +1171,7 @@ UInt8Array BaseNetwork::createP25_PDUMessage(uint32_t& length, const p25::data::
     ::memcpy(buffer + 0U, TAG_P25_DATA, 4U);
 
     buffer[4U] = header.getSAP();                                                   // Service Access Point
-    if (header.getFormat() == p25::PDU_FMT_CONFIRMED) {
+    if (header.getFormat() == PDUFormatType::CONFIRMED) {
         buffer[4U] |= 0x80U;
     }
 
@@ -1170,7 +1182,7 @@ UInt8Array BaseNetwork::createP25_PDUMessage(uint32_t& length, const p25::data::
     buffer[20U] = header.getBlocksToFollow();                                       // Blocks To Follow
     buffer[21U] = currentBlock;                                                     // Current Block
 
-    buffer[22U] = p25::P25_DUID_PDU;                                                // DUID
+    buffer[22U] = DUID::PDU;                                                        // DUID
 
     // pack raw P25 PDU bytes
     uint32_t count = MSG_HDR_SIZE;

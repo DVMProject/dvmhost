@@ -9,12 +9,14 @@
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
 *   Copyright (C) 2015,2016,2017 Jonathan Naylor, G4KLX
+*   Copyright (C) 2024 Bryan Biedenkap, N2PLL
 *
 */
 #if !defined(__DMR_DATA__EMBEDDED_DATA_H__)
 #define __DMR_DATA__EMBEDDED_DATA_H__
 
 #include "common/Defines.h"
+#include "common/dmr/DMRDefines.h"
 #include "common/dmr/lc/LC.h"
 
 namespace dmr
@@ -64,7 +66,7 @@ namespace dmr
             /// <summary>Flag indicating whether or not the embedded data is valid.</summary>
             __READONLY_PROPERTY_PLAIN(bool, valid);
             /// <summary>Full-link control opcode.</summary>
-            __READONLY_PROPERTY(uint8_t, FLCO, FLCO);
+            __READONLY_PROPERTY(defines::FLCO::E, FLCO, FLCO);
 
         private:
             LC_STATE m_state;

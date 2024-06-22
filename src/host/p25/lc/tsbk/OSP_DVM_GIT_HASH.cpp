@@ -7,16 +7,17 @@
 * @package DVM / Modem Host Software
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
 #include "p25/lc/tsbk/OSP_DVM_GIT_HASH.h"
 #include "HostMain.h"
 
-using namespace p25::lc::tsbk;
-using namespace p25::lc;
 using namespace p25;
+using namespace p25::defines;
+using namespace p25::lc;
+using namespace p25::lc::tsbk;
 
 #include <cassert>
 
@@ -29,8 +30,7 @@ using namespace p25;
 /// </summary>
 OSP_DVM_GIT_HASH::OSP_DVM_GIT_HASH() : TSBK()
 {
-    m_lco = TSBK_OSP_DVM_GIT_HASH;
-    m_mfId = P25_MFG_DVM_OCS;
+    m_lco = TSBKO::OSP_DVM_GIT_HASH;
 }
 
 /// <summary>
@@ -60,6 +60,8 @@ void OSP_DVM_GIT_HASH::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 
     ulong64_t tsbkValue = 0U;
 
+    m_mfId = MFG_DVM_OCS;
+
     tsbkValue = g_gitHashBytes[0];                                                  // ...
     tsbkValue = (tsbkValue << 8) + (g_gitHashBytes[1U]);                            // ...
     tsbkValue = (tsbkValue << 8) + (g_gitHashBytes[2U]);                            // ...
@@ -79,5 +81,5 @@ void OSP_DVM_GIT_HASH::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 /// <returns></returns>
 std::string OSP_DVM_GIT_HASH::toString(bool isp)
 {
-    return std::string("TSBK_OSP_DVM_GIT_HASH (DVM Git Hash Identifier)");
+    return std::string("TSBKO, OSP_DVM_GIT_HASH (DVM Git Hash Identifier)");
 }

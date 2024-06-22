@@ -9,12 +9,14 @@
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
 *   Copyright (C) 2015,2016 Jonathan Naylor, G4KLX
+*   Copyright (C) 2024 Bryan Biedenkapp, N2PLL
 *
 */
 #if !defined(__DMR_SLOT_TYPE_H__)
 #define __DMR_SLOT_TYPE_H__
 
 #include "common/Defines.h"
+#include "common/dmr/DMRDefines.h"
 
 namespace dmr
 {
@@ -40,7 +42,7 @@ namespace dmr
         __PROPERTY(uint8_t, colorCode, ColorCode);
 
         /// <summary>Slot data type.</summary>
-        __PROPERTY(uint8_t, dataType, DataType);
+        __PROPERTY(defines::DataType::E, dataType, DataType);
     };
 } // namespace dmr
 

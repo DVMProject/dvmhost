@@ -7,15 +7,16 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2023 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2023,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
 #include "p25/lc/tdulc/LC_FAILSOFT.h"
 
-using namespace p25::lc::tdulc;
-using namespace p25::lc;
 using namespace p25;
+using namespace p25::defines;
+using namespace p25::lc;
+using namespace p25::lc::tdulc;
 
 #include <cassert>
 
@@ -28,8 +29,8 @@ using namespace p25;
 /// </summary>
 LC_FAILSOFT::LC_FAILSOFT() : TDULC()
 {
-    m_lco = p25::LC_FAILSOFT;
-    m_mfId = p25::P25_MFG_MOT;
+    m_lco = LCO::FAILSOFT;
+    m_mfId = MFG_MOT;
 }
 
 /// <summary>

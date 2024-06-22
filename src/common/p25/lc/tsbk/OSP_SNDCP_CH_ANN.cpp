@@ -7,15 +7,16 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
 #include "p25/lc/tsbk/OSP_SNDCP_CH_ANN.h"
 
-using namespace p25::lc::tsbk;
-using namespace p25::lc;
 using namespace p25;
+using namespace p25::defines;
+using namespace p25::lc;
+using namespace p25::lc::tsbk;
 
 #include <cassert>
 
@@ -30,7 +31,7 @@ OSP_SNDCP_CH_ANN::OSP_SNDCP_CH_ANN() : TSBK(),
     m_sndcpAutoAccess(true),
     m_sndcpDAC(1U)
 {
-    m_lco = TSBK_OSP_SNDCP_CH_ANN;
+    m_lco = TSBKO::OSP_SNDCP_CH_ANN;
 }
 
 /// <summary>
@@ -92,7 +93,7 @@ void OSP_SNDCP_CH_ANN::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 /// <returns></returns>
 std::string OSP_SNDCP_CH_ANN::toString(bool isp)
 {
-    return std::string("TSBK_OSP_SNDCP_CH_ANN (SNDCP Data Channel Announcement)");
+    return std::string("TSBKO, OSP_SNDCP_CH_ANN (SNDCP Data Channel Announcement)");
 }
 
 // ---------------------------------------------------------------------------

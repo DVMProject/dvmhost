@@ -73,11 +73,11 @@ namespace p25
             MotStartOfStream* startOfStream; // ?? - this should probably be private with getters/setters
 
             /// <summary></summary>
-            __PROPERTY(ICWFlag, icw, ICW);
+            __PROPERTY(ICWFlag::E, icw, ICW);
             /// <summary></summary>
             __PROPERTY(uint8_t, rssi, RSSI);
             /// <summary></summary>
-            __PROPERTY(RssiValidityFlag, rssiValidity, RSSIValidity);
+            __PROPERTY(RssiValidityFlag::E, rssiValidity, RSSIValidity);
             /// <summary></summary>
             __PROPERTY(uint8_t, nRssi, NRSSI);
         };

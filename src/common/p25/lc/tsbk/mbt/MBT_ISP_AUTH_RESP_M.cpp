@@ -7,16 +7,17 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
 #include "p25/lc/tsbk/mbt/MBT_ISP_AUTH_RESP_M.h"
 #include "Log.h"
 
-using namespace p25::lc::tsbk;
-using namespace p25::lc;
 using namespace p25;
+using namespace p25::defines;
+using namespace p25::lc;
+using namespace p25::lc::tsbk;
 
 #include <cassert>
 
@@ -30,12 +31,12 @@ using namespace p25;
 MBT_ISP_AUTH_RESP_M::MBT_ISP_AUTH_RESP_M() : AMBT(),
     m_authStandalone(false)
 {
-    m_lco = TSBK_ISP_AUTH_RESP_M;
+    m_lco = TSBKO::ISP_AUTH_RESP_M;
 
-    m_authRes = new uint8_t[P25_AUTH_RES_LENGTH_BYTES];
-    ::memset(m_authRes, 0x00U, P25_AUTH_RES_LENGTH_BYTES);
-    m_authRC = new uint8_t[P25_AUTH_RAND_CHLNG_LENGTH_BYTES];
-    ::memset(m_authRC, 0x00U, P25_AUTH_RAND_CHLNG_LENGTH_BYTES);
+    m_authRes = new uint8_t[AUTH_RES_LENGTH_BYTES];
+    ::memset(m_authRes, 0x00U, AUTH_RES_LENGTH_BYTES);
+    m_authRC = new uint8_t[AUTH_RAND_CHLNG_LENGTH_BYTES];
+    ::memset(m_authRC, 0x00U, AUTH_RAND_CHLNG_LENGTH_BYTES);
 }
 
 /// <summary>
@@ -120,7 +121,7 @@ void MBT_ISP_AUTH_RESP_M::encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUs
 /// <returns></returns>
 std::string MBT_ISP_AUTH_RESP_M::toString(bool isp)
 {
-    return std::string("TSBK_ISP_AUTH_RESP_M (Authentication Response Mutual)");
+    return std::string("TSBKO, ISP_AUTH_RESP_M (Authentication Response Mutual)");
 }
 
 /// <summary>Gets the authentication result.</summary>
@@ -129,7 +130,7 @@ void MBT_ISP_AUTH_RESP_M::getAuthRes(uint8_t* res) const
 {
     assert(res != nullptr);
 
-    ::memcpy(res, m_authRes, P25_AUTH_RES_LENGTH_BYTES);
+    ::memcpy(res, m_authRes, AUTH_RES_LENGTH_BYTES);
 }
 
 /// <summary>Sets the authentication random challenge.</summary>
@@ -138,7 +139,7 @@ void MBT_ISP_AUTH_RESP_M::setAuthRC(const uint8_t* rc)
 {
     assert(rc != nullptr);
 
-    ::memcpy(m_authRC, rc, P25_AUTH_RAND_CHLNG_LENGTH_BYTES);
+    ::memcpy(m_authRC, rc, AUTH_RAND_CHLNG_LENGTH_BYTES);
 }
 
 /// <summary>Gets the authentication random challenge.</summary>
@@ -147,7 +148,7 @@ void MBT_ISP_AUTH_RESP_M::getAuthRC(uint8_t* rc) const
 {
     assert(rc != nullptr);
 
-    ::memcpy(rc, m_authRC, P25_AUTH_RAND_CHLNG_LENGTH_BYTES);
+    ::memcpy(rc, m_authRC, AUTH_RAND_CHLNG_LENGTH_BYTES);
 }
 
 // ---------------------------------------------------------------------------
@@ -168,13 +169,13 @@ void MBT_ISP_AUTH_RESP_M::copy(const MBT_ISP_AUTH_RESP_M& data)
         delete[] m_authRes;
     }
 
-    m_authRes = new uint8_t[P25_AUTH_RES_LENGTH_BYTES];
-    ::memcpy(m_authRes, data.m_authRes, P25_AUTH_RES_LENGTH_BYTES);
+    m_authRes = new uint8_t[AUTH_RES_LENGTH_BYTES];
+    ::memcpy(m_authRes, data.m_authRes, AUTH_RES_LENGTH_BYTES);
 
     if (m_authRC != nullptr) {
         delete[] m_authRC;
     }
 
-    m_authRC = new uint8_t[P25_AUTH_RAND_CHLNG_LENGTH_BYTES];
-    ::memcpy(m_authRC, data.m_authRC, P25_AUTH_RAND_CHLNG_LENGTH_BYTES);
+    m_authRC = new uint8_t[AUTH_RAND_CHLNG_LENGTH_BYTES];
+    ::memcpy(m_authRC, data.m_authRC, AUTH_RAND_CHLNG_LENGTH_BYTES);
 }

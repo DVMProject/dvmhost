@@ -17,9 +17,10 @@
 #include "Log.h"
 #include "Utils.h"
 
-using namespace dmr::lc::csbk;
-using namespace dmr::lc;
 using namespace dmr;
+using namespace dmr::defines;
+using namespace dmr::lc;
+using namespace dmr::lc::csbk;
 
 #include <cassert>
 
@@ -43,7 +44,7 @@ CSBKFactory::~CSBKFactory() = default;
 /// <param name="data"></param>
 /// <param name="dataType"></param>
 /// <returns>True, if CSBK was decoded, otherwise false.</returns>
-std::unique_ptr<CSBK> CSBKFactory::createCSBK(const uint8_t* data, uint8_t dataType)
+std::unique_ptr<CSBK> CSBKFactory::createCSBK(const uint8_t* data, DataType::E dataType)
 {
     assert(data != nullptr);
 
@@ -55,31 +56,37 @@ std::unique_ptr<CSBK> CSBKFactory::createCSBK(const uint8_t* data, uint8_t dataT
 
     // validate the CRC-CCITT 16
     switch (dataType) {
-        case DT_CSBK:
+        case DataType::CSBK:
             csbk[10U] ^= CSBK_CRC_MASK[0U];
             csbk[11U] ^= CSBK_CRC_MASK[1U];
             break;
-        case DT_MBC_HEADER:
+        case DataType::MBC_HEADER:
             csbk[10U] ^= CSBK_MBC_CRC_MASK[0U];
             csbk[11U] ^= CSBK_MBC_CRC_MASK[1U];
+            break;
+        default:
+            LogError(LOG_DMR, "CSBKFactory::createCSBK(), unhandled dataType = $%02X", dataType);
             break;
     }
 
     bool valid = edac::CRC::checkCCITT162(csbk, DMR_CSBK_LENGTH_BYTES);
     if (!valid) {
-        LogError(LOG_DMR, "CSBK::decode(), failed CRC CCITT-162 check");
+        LogError(LOG_DMR, "CSBKFactory::createCSBK(), failed CRC CCITT-162 check");
         return nullptr;
     }
 
     // restore the checksum
     switch (dataType) {
-        case DT_CSBK:
+        case DataType::CSBK:
             csbk[10U] ^= CSBK_CRC_MASK[0U];
             csbk[11U] ^= CSBK_CRC_MASK[1U];
             break;
-        case DT_MBC_HEADER:
+        case DataType::MBC_HEADER:
             csbk[10U] ^= CSBK_MBC_CRC_MASK[0U];
             csbk[11U] ^= CSBK_MBC_CRC_MASK[1U];
+            break;
+        default:
+            LogError(LOG_DMR, "CSBKFactory::createCSBK(), unhandled dataType = $%02X", dataType);
             break;
     }
 
@@ -87,15 +94,15 @@ std::unique_ptr<CSBK> CSBKFactory::createCSBK(const uint8_t* data, uint8_t dataT
     uint8_t FID = csbk[1U];                                                         // Feature ID
 
     switch (CSBKO) {
-    case CSBKO_BSDWNACT:
+    case CSBKO::BSDWNACT:
         return decode(new CSBK_BSDWNACT(), data);
-    case CSBKO_UU_V_REQ:
+    case CSBKO::UU_V_REQ:
         return decode(new CSBK_UU_V_REQ(), data);
-    case CSBKO_UU_ANS_RSP:
+    case CSBKO::UU_ANS_RSP:
         return decode(new CSBK_UU_ANS_RSP(), data);
-    case CSBKO_PRECCSBK:
+    case CSBKO::PRECCSBK:
         return decode(new CSBK_PRECCSBK(), data);
-    case CSBKO_RAND: // CSBKO_CALL_ALRT when FID == FID_DMRA
+    case CSBKO::RAND: // CSBKO::CALL_ALRT when FID == FID_DMRA
         switch (FID)
         {
         case FID_DMRA:
@@ -104,17 +111,17 @@ std::unique_ptr<CSBK> CSBKFactory::createCSBK(const uint8_t* data, uint8_t dataT
         default:
             return decode(new CSBK_RAND(), data);
         }
-    case CSBKO_EXT_FNCT:
+    case CSBKO::EXT_FNCT:
         return decode(new CSBK_EXT_FNCT(), data);
-    case CSBKO_NACK_RSP:
+    case CSBKO::NACK_RSP:
         return decode(new CSBK_NACK_RSP(), data);
 
     /** Tier 3 */
-    case CSBKO_ACK_RSP:
+    case CSBKO::ACK_RSP:
         return decode(new CSBK_ACK_RSP(), data);
-    case CSBKO_BROADCAST:
+    case CSBKO::BROADCAST:
         return decode(new CSBK_BROADCAST(), data);
-    case CSBKO_MAINT:
+    case CSBKO::MAINT:
         return decode(new CSBK_MAINT(), data);
 
     default:

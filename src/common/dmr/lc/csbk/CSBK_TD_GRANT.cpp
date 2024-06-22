@@ -7,15 +7,16 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
 #include "dmr/lc/csbk/CSBK_TD_GRANT.h"
 
-using namespace dmr::lc::csbk;
-using namespace dmr::lc;
 using namespace dmr;
+using namespace dmr::defines;
+using namespace dmr::lc;
+using namespace dmr::lc::csbk;
 
 #include <cassert>
 
@@ -28,7 +29,7 @@ using namespace dmr;
 /// </summary>
 CSBK_TD_GRANT::CSBK_TD_GRANT() : CSBK()
 {
-    m_CSBKO = CSBKO_TD_GRANT;
+    m_CSBKO = CSBKO::TD_GRANT;
 }
 
 /// <summary>
@@ -73,5 +74,5 @@ void CSBK_TD_GRANT::encode(uint8_t* data)
 /// <returns></returns>
 std::string CSBK_TD_GRANT::toString()
 {
-    return std::string("CSBKO_TD_GRANT (Talkgroup Data Channel Grant)");
+    return std::string("CSBKO, TD_GRANT (Talkgroup Data Channel Grant)");
 }

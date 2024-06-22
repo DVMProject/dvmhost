@@ -7,15 +7,16 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
 #include "p25/lc/tsbk/IOSP_GRP_AFF.h"
 
-using namespace p25::lc::tsbk;
-using namespace p25::lc;
 using namespace p25;
+using namespace p25::defines;
+using namespace p25::lc;
+using namespace p25::lc::tsbk;
 
 #include <cassert>
 
@@ -27,9 +28,9 @@ using namespace p25;
 /// Initializes a new instance of the IOSP_GRP_AFF class.
 /// </summary>
 IOSP_GRP_AFF::IOSP_GRP_AFF() : TSBK(),
-    m_announceGroup(P25_WUID_ALL)
+    m_announceGroup(WUID_ALL)
 {
-    m_lco = TSBK_IOSP_GRP_AFF;
+    m_lco = TSBKO::IOSP_GRP_AFF;
 }
 
 /// <summary>
@@ -87,8 +88,8 @@ void IOSP_GRP_AFF::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 /// <returns></returns>
 std::string IOSP_GRP_AFF::toString(bool isp)
 {
-    if (isp) return std::string("TSBK_IOSP_GRP_AFF (Group Affiliation Request)");
-    else return std::string("TSBK_IOSP_GRP_AFF (Group Affiliation Response)");
+    return (isp) ? std::string("TSBKO, IOSP_GRP_AFF (Group Affiliation Request)") :
+        std::string("TSBKO, IOSP_GRP_AFF (Group Affiliation Response)");
 }
 
 // ---------------------------------------------------------------------------

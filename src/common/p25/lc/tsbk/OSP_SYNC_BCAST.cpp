@@ -7,15 +7,16 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
 #include "p25/lc/tsbk/OSP_SYNC_BCAST.h"
 
-using namespace p25::lc::tsbk;
-using namespace p25::lc;
 using namespace p25;
+using namespace p25::defines;
+using namespace p25::lc;
+using namespace p25::lc::tsbk;
 
 #include <cassert>
 #include <cmath>
@@ -32,7 +33,7 @@ using namespace p25;
 OSP_SYNC_BCAST::OSP_SYNC_BCAST() : TSBK(),
     m_microslotCount(0U)
 {
-    m_lco = TSBK_OSP_SYNC_BCAST;
+    m_lco = TSBKO::OSP_SYNC_BCAST;
 }
 
 /// <summary>
@@ -70,7 +71,7 @@ void OSP_SYNC_BCAST::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
     uint32_t tmY = (local_tm.tm_year + 1900) - 2000;
 
 #if DEBUG_P25_TSBK
-    LogDebug(LOG_P25, "TSBK_OSP_SYNC_BCAST, tmM = %u / %u, tmY = %u / %u", local_tm.tm_mon, tmM, local_tm.tm_year, tmY);
+    LogDebug(LOG_P25, "TSBKO, OSP_SYNC_BCAST, tmM = %u / %u, tmY = %u / %u", local_tm.tm_mon, tmM, local_tm.tm_year, tmY);
 #endif
 
     // determine LTO and direction (positive or negative)
@@ -120,7 +121,7 @@ void OSP_SYNC_BCAST::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 /// <returns></returns>
 std::string OSP_SYNC_BCAST::toString(bool isp)
 {
-    return std::string("TSBK_OSP_SYNC_BCAST (Synchronization Broadcast)");
+    return std::string("TSBKO, OSP_SYNC_BCAST (Synchronization Broadcast)");
 }
 
 // ---------------------------------------------------------------------------

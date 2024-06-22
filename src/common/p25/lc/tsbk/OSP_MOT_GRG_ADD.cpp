@@ -7,16 +7,17 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
 #include "p25/lc/tsbk/OSP_MOT_GRG_ADD.h"
 #include "Log.h"
 
-using namespace p25::lc::tsbk;
-using namespace p25::lc;
 using namespace p25;
+using namespace p25::defines;
+using namespace p25::lc;
+using namespace p25::lc::tsbk;
 
 #include <cassert>
 
@@ -33,7 +34,7 @@ OSP_MOT_GRG_ADD::OSP_MOT_GRG_ADD() : TSBK(),
     m_patchGroup2Id(0U),
     m_patchGroup3Id(0U)
 {
-    m_lco = TSBK_OSP_MOT_GRG_ADD;
+    m_lco = TSBKO::OSP_MOT_GRG_ADD;
 }
 
 /// <summary>
@@ -63,7 +64,7 @@ void OSP_MOT_GRG_ADD::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 
     ulong64_t tsbkValue = 0U;
 
-    m_mfId = P25_MFG_MOT;
+    m_mfId = MFG_MOT;
 
     if ((m_patchSuperGroupId != 0U)) {
         tsbkValue = m_patchSuperGroupId;                                            // Patch Super Group Address
@@ -84,7 +85,7 @@ void OSP_MOT_GRG_ADD::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
         }
     }
     else {
-        LogError(LOG_P25, "OSP_MOT_GRG_ADD::encode(), invalid values for TSBK_OSP_MOT_GRG_DEL, patchSuperGroupId = $%02X, patchGroup1Id = $%02X",
+        LogError(LOG_P25, "OSP_MOT_GRG_ADD::encode(), invalid values for TSBKO::OSP_MOT_GRG_DEL, patchSuperGroupId = $%02X, patchGroup1Id = $%02X",
                  m_patchSuperGroupId, m_patchGroup1Id);
         return; // blatantly ignore creating this TSBK
     }
@@ -100,7 +101,7 @@ void OSP_MOT_GRG_ADD::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 /// <returns></returns>
 std::string OSP_MOT_GRG_ADD::toString(bool isp)
 {
-    return std::string("TSBK_OSP_MOT_GRG_ADD (Motorola / Group Regroup Add)");
+    return std::string("TSBKO, OSP_MOT_GRG_ADD (Motorola / Group Regroup Add)");
 }
 
 // ---------------------------------------------------------------------------

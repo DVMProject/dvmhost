@@ -19,18 +19,19 @@
 using namespace network;
 using namespace modem;
 using namespace p25;
+using namespace p25::defines;
 using namespace dfsi;
 
 VoiceCallData::VoiceCallData() :
     srcId(0U),
     dstId(0U),
     lco(0U),
-    mfId(P25_MFG_STANDARD),
+    mfId(MFG_STANDARD),
     serviceOptions(0U),
     lsd1(0U),
     lsd2(0U),
     mi(),
-    algoId(P25_ALGO_UNENCRYPT),
+    algoId(ALGO_UNENCRYPT),
     kId(0U),
     VHDR1(),
     VHDR2(),
@@ -40,7 +41,7 @@ VoiceCallData::VoiceCallData() :
     n(0U),
     streamId(0U)
 {
-    mi = new uint8_t[P25_MI_LENGTH_BYTES];
+    mi = new uint8_t[MI_LENGTH_BYTES];
     VHDR1 = new uint8_t[MotVoiceHeader1::HCW_LENGTH];
     VHDR2 = new uint8_t[MotVoiceHeader2::HCW_LENGTH];
     netLDU1 = new uint8_t[9U * 25U];
@@ -62,14 +63,14 @@ void VoiceCallData::resetCallData() {
     srcId = 0U;
     dstId = 0U;
     lco = 0U;
-    mfId = P25_MFG_STANDARD;
+    mfId = MFG_STANDARD;
     serviceOptions = 0U;
     lsd1 = 0U;
     lsd2 = 0U;
 
-    ::memset(mi, 0x00U, P25_MI_LENGTH_BYTES);
+    ::memset(mi, 0x00U, MI_LENGTH_BYTES);
 
-    algoId = P25_ALGO_UNENCRYPT;
+    algoId = ALGO_UNENCRYPT;
     kId = 0U;
 
     ::memset(VHDR1, 0x00U, MotVoiceHeader1::HCW_LENGTH);

@@ -9,7 +9,7 @@
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
 *   Copyright (C) 2016 Jonathan Naylor, G4KLX
-*   Copyright (C) 2017-2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
 *
 */
 #if !defined(__P25_DEFINES_H__)
@@ -17,371 +17,497 @@
 
 #include "common/Defines.h"
 
+// Shorthand macro to p25::defines -- keeps source code that doesn't use "using" concise
+#define P25DEF p25::defines
 namespace p25
 {
-    // ---------------------------------------------------------------------------
-    //  Constants
-    // ---------------------------------------------------------------------------
+    namespace defines
+    {
+        // ---------------------------------------------------------------------------
+        //  Constants
+        // ---------------------------------------------------------------------------
 
-    const uint32_t  P25_HDU_FRAME_LENGTH_BYTES = 99U;
-    const uint32_t  P25_HDU_FRAME_LENGTH_BITS = P25_HDU_FRAME_LENGTH_BYTES * 8U;
+        const uint32_t  P25_HDU_FRAME_LENGTH_BYTES = 99U;
+        const uint32_t  P25_HDU_FRAME_LENGTH_BITS = P25_HDU_FRAME_LENGTH_BYTES * 8U;
 
-    const uint32_t  P25_TDU_FRAME_LENGTH_BYTES = 18U;
-    const uint32_t  P25_TDU_FRAME_LENGTH_BITS = P25_TDU_FRAME_LENGTH_BYTES * 8U;
+        const uint32_t  P25_TDU_FRAME_LENGTH_BYTES = 18U;
+        const uint32_t  P25_TDU_FRAME_LENGTH_BITS = P25_TDU_FRAME_LENGTH_BYTES * 8U;
 
-    const uint32_t  P25_LDU_FRAME_LENGTH_BYTES = 216U;
-    const uint32_t  P25_LDU_FRAME_LENGTH_BITS = P25_LDU_FRAME_LENGTH_BYTES * 8U;
+        const uint32_t  P25_LDU_FRAME_LENGTH_BYTES = 216U;
+        const uint32_t  P25_LDU_FRAME_LENGTH_BITS = P25_LDU_FRAME_LENGTH_BYTES * 8U;
 
-    const uint32_t  P25_TSDU_FRAME_LENGTH_BYTES = 45U;
-    const uint32_t  P25_TSDU_FRAME_LENGTH_BITS = P25_TSDU_FRAME_LENGTH_BYTES * 8U;
+        const uint32_t  P25_TSDU_FRAME_LENGTH_BYTES = 45U;
+        const uint32_t  P25_TSDU_FRAME_LENGTH_BITS = P25_TSDU_FRAME_LENGTH_BYTES * 8U;
 
-    const uint32_t  P25_TSDU_DOUBLE_FRAME_LENGTH_BYTES = 72U;
-    const uint32_t  P25_TSDU_DOUBLE_FRAME_LENGTH_BITS = P25_TSDU_DOUBLE_FRAME_LENGTH_BYTES * 8U;
+        const uint32_t  P25_TSDU_DOUBLE_FRAME_LENGTH_BYTES = 72U;
+        const uint32_t  P25_TSDU_DOUBLE_FRAME_LENGTH_BITS = P25_TSDU_DOUBLE_FRAME_LENGTH_BYTES * 8U;
 
-    const uint32_t  P25_TSDU_TRIPLE_FRAME_LENGTH_BYTES = 90U;
-    const uint32_t  P25_TSDU_TRIPLE_FRAME_LENGTH_BITS = P25_TSDU_TRIPLE_FRAME_LENGTH_BYTES * 8U;
-
-    const uint32_t  P25_PDU_FRAME_LENGTH_BYTES = 512U;
-    const uint32_t  P25_PDU_FRAME_LENGTH_BITS = P25_PDU_FRAME_LENGTH_BYTES * 8U;
-
-    const uint32_t  P25_TDULC_FRAME_LENGTH_BYTES = 54U;
-    const uint32_t  P25_TDULC_FRAME_LENGTH_BITS = P25_TDULC_FRAME_LENGTH_BYTES * 8U;
-
-    const uint32_t  P25_NID_LENGTH_BYTES = 8U;
-    const uint32_t  P25_NID_LENGTH_BITS = P25_NID_LENGTH_BYTES * 8U;
-
-    const uint8_t   P25_SYNC_BYTES[] = { 0x55U, 0x75U, 0xF5U, 0xFFU, 0x77U, 0xFFU };
-    const uint32_t  P25_SYNC_LENGTH_BYTES = 6U;
-    const uint32_t  P25_SYNC_LENGTH_BITS = P25_SYNC_LENGTH_BYTES * 8U;
-    const uint8_t   P25_START_SYNC = 0x5FU;
-
-    const uint32_t  P25_PREAMBLE_LENGTH_BYTES = P25_SYNC_LENGTH_BYTES + P25_NID_LENGTH_BYTES;
-    const uint32_t  P25_PREAMBLE_LENGTH_BITS = P25_SYNC_LENGTH_BITS + P25_NID_LENGTH_BITS;
-
-    const uint32_t  P25_LDU_FRAME_TIME = 180U;
-
-    const uint32_t  P25_HDU_LENGTH_BYTES = 81U;
-    const uint32_t  P25_LDU_LC_FEC_LENGTH_BYTES = 18U;
-
-    const uint32_t  P25_TDULC_FEC_LENGTH_BYTES = 36U;
-    const uint32_t  P25_TDULC_LENGTH_BYTES = 18U;
-    const uint32_t  P25_TDULC_PAYLOAD_LENGTH_BYTES = 8U;
-
-    const uint32_t  P25_TSBK_FEC_LENGTH_BYTES = 25U;
-    const uint32_t  P25_TSBK_FEC_LENGTH_BITS = P25_TSBK_FEC_LENGTH_BYTES * 8U - 4U; // Trellis is actually 196 bits
-    const uint32_t  P25_TSBK_LENGTH_BYTES = 12U;
-
-    const uint32_t  P25_MAX_PDU_BLOCKS = 42U;
-
-    const uint32_t  P25_PDU_HEADER_LENGTH_BYTES = 12U;
-    const uint32_t  P25_PDU_CONFIRMED_LENGTH_BYTES = 18U;
-    const uint32_t  P25_PDU_CONFIRMED_DATA_LENGTH_BYTES = 16U;
-    const uint32_t  P25_PDU_UNCONFIRMED_LENGTH_BYTES = 12U;
-
-    const uint32_t  P25_PDU_FEC_LENGTH_BYTES = 25U;
-    const uint32_t  P25_PDU_FEC_LENGTH_BITS = P25_PDU_FEC_LENGTH_BYTES * 8U - 4U; // Trellis is actually 196 bits
-
-    const uint32_t  P25_MI_LENGTH_BYTES = 9U;
-    const uint32_t  P25_RAW_IMBE_LENGTH_BYTES = 11U;
-
-    const uint32_t  P25_SS0_START = 70U;
-    const uint32_t  P25_SS1_START = 71U;
-    const uint32_t  P25_SS_INCREMENT = 72U;
-
-    const uint8_t   P25_NULL_IMBE[] = { 0x04U, 0x0CU, 0xFDU, 0x7BU, 0xFBU, 0x7DU, 0xF2U, 0x7BU, 0x3DU, 0x9EU, 0x45U };
-    const uint8_t   P25_ENCRYPTED_NULL_IMBE[] = { 0xFCU, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U };
-
-    const uint8_t   P25_MFG_STANDARD = 0x00U;
-    const uint8_t   P25_MFG_STANDARD_ALT = 0x01U;
-
-    const uint8_t   P25_MFG_MOT = 0x90U;
-    const uint8_t   P25_MFG_DVM_OCS = 0x9CU;                // P25 MFId used for internal signalling; Omaha Communication Systems, LLC ($9C)
-
-    const uint8_t   P25_MOT_CALLSIGN_LENGTH_BYTES = 8U;
-
-    const uint8_t   P25_AUTH_RES_LENGTH_BYTES = 4U;
-    const uint8_t   P25_AUTH_RAND_SEED_LENGTH_BYTES = 10U;
-    const uint8_t   P25_AUTH_RAND_CHLNG_LENGTH_BYTES = 5U;
-    const uint8_t   P25_AUTH_KEY_LENGTH_BYTES = 16U;
-
-    const uint8_t   P25_ALGO_UNENCRYPT = 0x80U;
-
-    const uint8_t   P25_IDEN_UP_VU_BW_625K = 0x04U;
-    const uint8_t   P25_IDEN_UP_VU_BW_125K = 0x05U;
-
-    const uint8_t   P25_SVC_CLS_INVALID = 0x00U;
-    const uint8_t   P25_SVC_CLS_COMPOSITE = 0x01U;
-    const uint8_t   P25_SVC_CLS_VOICE = 0x10U;
-    const uint8_t   P25_SVC_CLS_DATA = 0x20U;
-    const uint8_t   P25_SVC_CLS_REG = 0x40U;
-    const uint8_t   P25_SVC_CLS_AUTH = 0x80U;
-
-    const uint32_t  P25_SYS_SRV_NET_ACTIVE = 0x0200000U;
-    const uint32_t  P25_SYS_SRV_GROUP_VOICE = 0x0080000U;
-    const uint32_t  P25_SYS_SRV_IND_VOICE = 0x0040000U;
-    const uint32_t  P25_SYS_SRV_PSTN_UNIT_VOICE = 0x0020000U;
-    const uint32_t  P25_SYS_SRV_UNIT_PSTN_VOICE = 0x0010000U;
-    const uint32_t  P25_SYS_SRV_GROUP_DATA = 0x0004000U;
-    const uint32_t  P25_SYS_SRV_IND_DATA = 0x0002000U;
-    const uint32_t  P25_SYS_SRV_UNIT_REG = 0x0000800U;
-    const uint32_t  P25_SYS_SRV_GROUP_AFF = 0x0000400U;
-    const uint32_t  P25_SYS_SRV_GROUP_AFF_Q = 0x0000200U;
-    const uint32_t  P25_SYS_SRV_USER_STS = 0x0000040U;
-    const uint32_t  P25_SYS_SRV_USER_MSG = 0x0000020U;
-    const uint32_t  P25_SYS_SRV_UNIT_STS = 0x0000010U;
-    const uint32_t  P25_SYS_SRV_USER_STS_Q = 0x0000008U;
-    const uint32_t  P25_SYS_SRV_UNIT_STS_Q = 0x0000004U;
-    const uint32_t  P25_SYS_SRV_CALL_ALRT = 0x0000002U;
-    const uint32_t  P25_SYS_SRV_EMERGENCY = 0x0000001U;
-
-    const uint32_t  P25_SYS_SRV_DEFAULT = P25_SYS_SRV_EMERGENCY | P25_SYS_SRV_CALL_ALRT | P25_SYS_SRV_USER_MSG |
-        P25_SYS_SRV_UNIT_STS_Q | P25_SYS_SRV_USER_STS_Q | P25_SYS_SRV_UNIT_STS | P25_SYS_SRV_USER_STS |
-        P25_SYS_SRV_IND_DATA | P25_SYS_SRV_IND_VOICE | P25_SYS_SRV_GROUP_DATA | P25_SYS_SRV_GROUP_VOICE;
-    const uint32_t  P25_SYS_SRV_TRUNK = P25_SYS_SRV_DEFAULT | P25_SYS_SRV_GROUP_AFF | P25_SYS_SRV_UNIT_REG | P25_SYS_SRV_GROUP_AFF_Q;
-
-    const uint8_t   P25_CFVA_CONV = 0x08U;
-    const uint8_t   P25_CFVA_FAILURE = 0x04U;
-    const uint8_t   P25_CFVA_VALID = 0x02U;
-    const uint8_t   P25_CFVA_NETWORK = 0x01U;
-
-    const uint8_t   P25_RSP_ACCEPT = 0x00U;
-    const uint8_t   P25_RSP_FAIL = 0x01U;
-    const uint8_t   P25_RSP_DENY = 0x02U;
-    const uint8_t   P25_RSP_REFUSED = 0x03U;
-
-    const uint8_t   P25_ANS_RSP_PROCEED = 0x20U;
-    const uint8_t   P25_ANS_RSP_DENY = 0x21U;
-    const uint8_t   P25_ANS_RSP_WAIT = 0x22U;
-
-    const uint8_t   P25_CAN_SRV_NONE = 0x00U;
-    const uint8_t   P25_CAN_SRV_TERM_QUE = 0x10U;
-    const uint8_t   P25_CAN_SRV_TERM_RSRC_ASSIGN = 0x20U;
-
-    const uint32_t  P25_DENY_RSN_REQ_UNIT_NOT_VALID = 0x10U;
-    const uint32_t  P25_DENY_RSN_REQ_UNIT_NOT_AUTH = 0x11U;
-
-    const uint32_t  P25_DENY_RSN_TGT_UNIT_NOT_VALID = 0x20U;
-    const uint32_t  P25_DENY_RSN_TGT_UNIT_NOT_AUTH = 0x21U;
-    const uint32_t  P25_DENY_RSN_SU_FAILED_AUTH = 0x22U;
-    const uint32_t  P25_DENY_RSN_TGT_UNIT_REFUSED = 0x2FU;
-
-    const uint32_t  P25_DENY_RSN_TGT_GROUP_NOT_VALID = 0x30U;
-    const uint32_t  P25_DENY_RSN_TGT_GROUP_NOT_AUTH = 0x31U;
-
-    const uint32_t  P25_DENY_RSN_NO_NET_RSRC_AVAIL = 0x53U;
-    const uint32_t  P25_DENY_RSN_NO_RF_RSRC_AVAIL = 0x54U;
-    const uint32_t  P25_DENY_RSN_SVC_IN_USE = 0x55U;
-
-    const uint32_t  P25_DENY_RSN_SITE_ACCESS_DENIAL = 0x60U;
-
-    const uint32_t  P25_DENY_RSN_PTT_COLLIDE = 0x67U;
-    const uint32_t  P25_DENY_RSN_PTT_BONK = 0x77U;
-
-    const uint32_t  P25_DENY_RSN_SYS_UNSUPPORTED_SVC = 0xFFU;
-
-    const uint32_t  P25_QUE_RSN_REQ_ACTIVE_SERVICE = 0x10U;
-    const uint32_t  P25_QUE_RSN_TGT_ACTIVE_SERVICE = 0x20U;
-
-    const uint32_t  P25_QUE_RSN_TGT_UNIT_QUEUED = 0x2FU;
-
-    const uint32_t  P25_QUE_RSN_CHN_RESOURCE_NOT_AVAIL = 0x40U;
-
-    const uint32_t  P25_EXT_FNCT_CHECK = 0x0000U;           // Radio Check
-    const uint32_t  P25_EXT_FNCT_UNINHIBIT = 0x007EU;       // Radio Uninhibit
-    const uint32_t  P25_EXT_FNCT_INHIBIT = 0x007FU;         // Radio Inhibit
-    const uint32_t  P25_EXT_FNCT_CHECK_ACK = 0x0080U;       // Radio Check Ack
-    const uint32_t  P25_EXT_FNCT_UNINHIBIT_ACK = 0x00FEU;   // Radio Uninhibit Ack
-    const uint32_t  P25_EXT_FNCT_INHIBIT_ACK = 0x00FFU;     // Radio Inhibit Ack
-
-    const uint32_t  P25_WACN_STD_DEFAULT = 0xBB800U;
-
-    const uint32_t  P25_SID_STD_DEFAULT = 0x001U;
-
-    const uint32_t  P25_NAC_DIGITAL_SQ = 0xF7EU;
-    const uint32_t  P25_NAC_REUSE_RX_NAC = 0xF7FU;
-    const uint32_t  P25_DEFAULT_NAC = 0x293U;
-
-    const uint32_t  P25_WUID_FNE = 0xFFFFFCU;
-    const uint32_t  P25_WUID_REG = 0xFFFFFEU;
-    const uint32_t  P25_WUID_ALL = 0xFFFFFFU;
-
-    const uint32_t  P25_TGID_ALL = 0xFFFFU;
-
-    const uint32_t  DEFAULT_SILENCE_THRESHOLD = 124U;
-    const uint32_t  DEFAULT_FRAME_LOSS_THRESHOLD = 6U;
-    const uint32_t  MAX_P25_VOICE_ERRORS = 1233U;
-
-    const uint8_t   P25_FT_HDU_VALID = 0x01U;
-    const uint8_t   P25_FT_HDU_LATE_ENTRY = 0x02U;
-    const uint8_t   P25_FT_TERMINATOR = 0x03U;
-    const uint8_t   P25_FT_DATA_UNIT = 0x00U;
-
-    // PDU Format Type(s)
-    const uint8_t   PDU_FMT_RSP = 0x03U;
-    const uint8_t   PDU_FMT_UNCONFIRMED = 0x15U;
-    const uint8_t   PDU_FMT_CONFIRMED = 0x16U;
-    const uint8_t   PDU_FMT_AMBT = 0x17U;
-
-    // PDU SAP
-    const uint8_t   PDU_SAP_USER_DATA = 0x00U;
-    const uint8_t   PDU_SAP_ENC_USER_DATA = 0x01U;
-
-    const uint8_t   PDU_SAP_PACKET_DATA = 0x04U;
-
-    const uint8_t   PDU_SAP_ARP = 0x05U;
-
-    const uint8_t   PDU_SAP_SNDCP_CTRL_DATA = 0x06U;
-
-    const uint8_t   PDU_SAP_EXT_ADDR = 0x1FU;
-
-    const uint8_t   PDU_SAP_REG = 0x20U;
-
-    const uint8_t   PDU_SAP_UNENC_KMM = 0x28U;
-    const uint8_t   PDU_SAP_ENC_KMM = 0x29U;
-
-    const uint8_t   PDU_SAP_TRUNK_CTRL = 0x3DU;
-
-    // PDU ACK Class
-    const uint8_t   PDU_ACK_CLASS_ACK = 0x00U;
-    const uint8_t   PDU_ACK_CLASS_NACK = 0x01U;
-    const uint8_t   PDU_ACK_CLASS_ACK_RETRY = 0x02U;
-
-    // PDU ACK Type(s)
-    const uint8_t   PDU_ACK_TYPE_RETRY = 0x00U;
-
-    const uint8_t   PDU_ACK_TYPE_ACK = 0x01U;
-
-    const uint8_t   PDU_ACK_TYPE_NACK_ILLEGAL = 0x00U;      // Illegal Format
-    const uint8_t   PDU_ACK_TYPE_NACK_PACKET_CRC = 0x01U;   // Packet CRC
-    const uint8_t   PDU_ACK_TYPE_NACK_MEMORY_FULL = 0x02U;  // Memory Full
-    const uint8_t   PDU_ACK_TYPE_NACK_SEQ = 0x03U;          // Out of logical sequence FSN
-    const uint8_t   PDU_ACK_TYPE_NACK_UNDELIVERABLE = 0x04U;// Undeliverable
-    const uint8_t   PDU_ACK_TYPE_NACK_OUT_OF_SEQ = 0x05U;   // Out of sequence, N(S) != V(R) or V(R) + 1
-    const uint8_t   PDU_ACK_TYPE_NACK_INVL_USER = 0x06U;    // Invalid User disallowed by the system
-
-    // PDU Registration Type(s)
-    const uint8_t   PDU_REG_TYPE_REQ_CNCT = 0x00U;
-    const uint8_t   PDU_REG_TYPE_REQ_DISCNCT = 0x01U;
-    const uint8_t   PDU_REG_TYPE_RSP_ACCPT = 0x04U;
-    const uint8_t   PDU_REG_TYPE_RSP_DENY = 0x05U;
-
-    // PDU SNDCP Type(s)
-    const uint8_t   PDU_TYPE_SNDCP_ACT_TDS_CTX_ACCPT = 0x00U;
-    const uint8_t   PDU_TYPE_SNDCP_DEACT_TDS_CTX_ACCPT = 0x01U;
-    const uint8_t   PDU_TYPE_SNDCP_DEACT_TDS_CTX_REQ = 0x02U;
-    const uint8_t   PDU_TYPE_SNDCP_ACT_TDS_CTX_REJECT = 0x03U;
-    const uint8_t   PDU_TYPE_SNDCP_RF_UNCONFIRMED = 0x04U;
-    const uint8_t   PDU_TYPE_SNDCP_RF_CONFIRMED = 0x05U;
-
-    const uint8_t   LC_SVC_OPT_EMERGENCY = 0x80U;
-    const uint8_t   LC_SVC_OPT_ENCRYPTION = 0x40U;
-
-    // LDUx/TDULC Link Control Opcode(s)
-    const uint8_t   LC_GROUP = 0x00U;                   // GRP VCH USER - Group Voice Channel User
-    const uint8_t   LC_GROUP_UPDT = 0x02U;              // GRP VCH UPDT - Group Voice Channel Update
-    const uint8_t   LC_PRIVATE = 0x03U;                 // UU VCH USER - Unit-to-Unit Voice Channel User
-    const uint8_t   LC_UU_ANS_REQ = 0x05U;              // UU ANS REQ - Unit to Unit Answer Request
-    const uint8_t   LC_TEL_INT_VCH_USER = 0x06U;        // TEL INT VCH USER - Telephone Interconnect Voice Channel User / MOT GPS DATA - Motorola In-Band GPS Data
-    const uint8_t   LC_TEL_INT_ANS_RQST = 0x07U;        // TEL INT ANS RQST - Telephone Interconnect Answer Request
-    const uint8_t   LC_EXPLICIT_SOURCE_ID = 0x09U;      // EXPLICIT SOURCE ID - Explicit Source ID
-    const uint8_t   LC_CALL_TERM = 0x0FU;               // CALL TERM - Call Termination or Cancellation
-    const uint8_t   LC_IDEN_UP = 0x18U;                 // IDEN UP - Channel Identifier Update
-    const uint8_t   LC_SYS_SRV_BCAST = 0x20U;           // SYS SRV BCAST - System Service Broadcast
-    const uint8_t   LC_ADJ_STS_BCAST = 0x22U;           // ADJ STS BCAST - Adjacent Site Status Broadcast
-    const uint8_t   LC_RFSS_STS_BCAST = 0x23U;          // RFSS STS BCAST - RFSS Status Broadcast
-    const uint8_t   LC_NET_STS_BCAST = 0x24U;           // NET STS BCAST - Network Status Broadcast
-    const uint8_t   LC_CONV_FALLBACK = 0x2AU;           // CONV FALLBACK - Conventional Fallback
-
-    // LDUx/TDULC Motorola Link Control Opcode(s)
-    const uint8_t   LC_FAILSOFT = 0x02U;                // FAILSOFT - Failsoft
-
-    // TSBK ISP/OSP Shared Opcode(s)
-    const uint8_t   TSBK_IOSP_GRP_VCH = 0x00U;          // GRP VCH REQ - Group Voice Channel Request (ISP), GRP VCH GRANT - Group Voice Channel Grant (OSP)
-    const uint8_t   TSBK_IOSP_UU_VCH = 0x04U;           // UU VCH REQ - Unit-to-Unit Voice Channel Request (ISP), UU VCH GRANT - Unit-to-Unit Voice Channel Grant (OSP)
-    const uint8_t   TSBK_IOSP_UU_ANS = 0x05U;           // UU ANS RSP - Unit-to-Unit Answer Response (ISP), UU ANS REQ - Unit-to-Unit Answer Request (OSP)
-    const uint8_t   TSBK_IOSP_TELE_INT_DIAL = 0x08U;    // TELE INT DIAL REQ - Telephone Interconnect Request - Explicit (ISP), TELE INT DIAL GRANT - Telephone Interconnect Grant (OSP)
-    const uint8_t   TSBK_IOSP_TELE_INT_ANS = 0x0AU;     // TELE INT ANS RSP - Telephone Interconnect Answer Response (ISP), TELE INT ANS REQ - Telephone Interconnect Answer Request (OSP)
-    const uint8_t   TSBK_IOSP_STS_UPDT = 0x18U;         // STS UPDT REQ - Status Update Request (ISP), STS UPDT - Status Update (OSP)
-    const uint8_t   TSBK_IOSP_STS_Q = 0x1AU;            // STS Q REQ - Status Query Request (ISP), STS Q - Status Query (OSP)
-    const uint8_t   TSBK_IOSP_MSG_UPDT = 0x1CU;         // MSG UPDT REQ - Message Update Request (ISP), MSG UPDT - Message Update (OSP)
-    const uint8_t   TSBK_IOSP_RAD_MON = 0x1DU;          // RAD MON REQ - Radio Unit Monitor Request (ISP), RAD MON CMD - Radio Monitor Command (OSP)
-    const uint8_t   TSBK_IOSP_RAD_MON_ENH = 0x1EU;      // RAD MON ENH REQ - Radio Unit Monitor Enhanced Request (ISP), RAD MON ENH CMD - Radio Unit Monitor Enhanced Command (OSP)
-    const uint8_t   TSBK_IOSP_CALL_ALRT = 0x1FU;        // CALL ALRT REQ - Call Alert Request (ISP), CALL ALRT - Call Alert (OSP)
-    const uint8_t   TSBK_IOSP_ACK_RSP = 0x20U;          // ACK RSP U - Acknowledge Response - Unit (ISP), ACK RSP FNE - Acknowledge Response - FNE (OSP)
-    const uint8_t   TSBK_IOSP_EXT_FNCT = 0x24U;         // EXT FNCT RSP - Extended Function Response (ISP), EXT FNCT CMD - Extended Function Command (OSP)
-    const uint8_t   TSBK_IOSP_GRP_AFF = 0x28U;          // GRP AFF REQ - Group Affiliation Request (ISP), GRP AFF RSP - Group Affiliation Response (OSP)
-    const uint8_t   TSBK_IOSP_U_REG = 0x2CU;            // U REG REQ - Unit Registration Request (ISP), U REG RSP - Unit Registration Response (OSP)
-
-    // TSBK Inbound Signalling Packet (ISP) Opcode(s)
-    const uint8_t   TSBK_ISP_TELE_INT_PSTN_REQ = 0x09U; // TELE INT PSTN REQ - Telephone Interconnect Request - Implicit
-    const uint8_t   TSBK_ISP_SNDCP_CH_REQ = 0x12U;      // SNDCP CH REQ - SNDCP Data Channel Request
-    const uint8_t   TSBK_ISP_STS_Q_RSP = 0x19U;         // STS Q RSP - Status Query Response
-    const uint8_t   TSBK_ISP_STS_Q_REQ = 0x1CU;         // STS Q REQ - Status Query Request
-    const uint8_t   TSBK_ISP_CAN_SRV_REQ = 0x23U;       // CAN SRV REQ - Cancel Service Request
-    const uint8_t   TSBK_ISP_EMERG_ALRM_REQ = 0x27U;    // EMERG ALRM REQ - Emergency Alarm Request
-    const uint8_t   TSBK_ISP_GRP_AFF_Q_RSP = 0x29U;     // GRP AFF Q RSP - Group Affiliation Query Response
-    const uint8_t   TSBK_ISP_U_DEREG_REQ = 0x2BU;       // U DE REG REQ - Unit De-Registration Request
-    const uint8_t   TSBK_ISP_LOC_REG_REQ = 0x2DU;       // LOC REG REQ - Location Registration Request
-    const uint8_t   TSBK_ISP_AUTH_RESP = 0x38U;         // AUTH RESP - Authentication Response
-    const uint8_t   TSBK_ISP_AUTH_RESP_M = 0x39U;       // AUTH RESP M - Authentication Response Mutual
-    const uint8_t   TSBK_ISP_AUTH_FNE_RST = 0x3AU;      // AUTH FNE RST - Authentication FNE Result
-    const uint8_t   TSBK_ISP_AUTH_SU_DMD = 0x3BU;       // AUTH SU DMD - Authentication SU Demand
-
-    // TSBK Outbound Signalling Packet (OSP) Opcode(s)
-    const uint8_t   TSBK_OSP_GRP_VCH_GRANT_UPD = 0x02U; // GRP VCH GRANT UPD - Group Voice Channel Grant Update
-    const uint8_t   TSBK_OSP_UU_VCH_GRANT_UPD = 0x06U;  // UU VCH GRANT UPD - Unit-to-Unit Voice Channel Grant Update
-    const uint8_t   TSBK_OSP_SNDCP_CH_GNT = 0x14U;      // SNDCP CH GNT - SNDCP Data Channel Grant
-    const uint8_t   TSBK_OSP_SNDCP_CH_ANN = 0x16U;      // SNDCP CH ANN - SNDCP Data Channel Announcement
-    const uint8_t   TSBK_OSP_STS_Q = 0x1AU;             // STS Q - Status Query
-    const uint8_t   TSBK_OSP_DENY_RSP = 0x27U;          // DENY RSP - Deny Response
-    const uint8_t   TSBK_OSP_SCCB_EXP = 0x29U;          // SCCB - Secondary Control Channel Broadcast - Explicit
-    const uint8_t   TSBK_OSP_GRP_AFF_Q = 0x2AU;         // GRP AFF Q - Group Affiliation Query
-    const uint8_t   TSBK_OSP_LOC_REG_RSP = 0x2BU;       // LOC REG RSP - Location Registration Response
-    const uint8_t   TSBK_OSP_U_REG_CMD = 0x2DU;         // U REG CMD - Unit Registration Command
-    const uint8_t   TSBK_OSP_U_DEREG_ACK = 0x2FU;       // U DE REG ACK - Unit De-Registration Acknowledge
-    const uint8_t   TSBK_OSP_SYNC_BCAST = 0x30U;        // SYNC BCAST - Synchronization Broadcast
-    const uint8_t   TSBK_OSP_AUTH_DMD = 0x31U;          // AUTH DMD - Authentication Demand
-    const uint8_t   TSBK_OSP_AUTH_FNE_RESP = 0x32U;     // AUTH FNE RESP - Authentication FNE Response
-    const uint8_t   TSBK_OSP_QUE_RSP = 0x33U;           // QUE RSP - Queued Response
-    const uint8_t   TSBK_OSP_IDEN_UP_VU = 0x34U;        // IDEN UP VU - Channel Identifier Update for VHF/UHF Bands
-    const uint8_t   TSBK_OSP_TIME_DATE_ANN = 0x35U;     // TIME DATE ANN - Time and Date Announcement
-    const uint8_t   TSBK_OSP_SYS_SRV_BCAST = 0x38U;     // SYS SRV BCAST - System Service Broadcast
-    const uint8_t   TSBK_OSP_SCCB = 0x39U;              // SCCB - Secondary Control Channel Broadcast
-    const uint8_t   TSBK_OSP_RFSS_STS_BCAST = 0x3AU;    // RFSS STS BCAST - RFSS Status Broadcast
-    const uint8_t   TSBK_OSP_NET_STS_BCAST = 0x3BU;     // NET STS BCAST - Network Status Broadcast
-    const uint8_t   TSBK_OSP_ADJ_STS_BCAST = 0x3CU;     // ADJ STS BCAST - Adjacent Site Status Broadcast
-    const uint8_t   TSBK_OSP_IDEN_UP = 0x3DU;           // IDEN UP - Channel Identifier Update
-
-    // TSBK Motorola Outbound Signalling Packet (OSP) Opcode(s)
-    const uint8_t   TSBK_OSP_MOT_GRG_ADD = 0x00U;       // MOT GRG ADD - Motorola / Group Regroup Add (Patch Supergroup)
-    const uint8_t   TSBK_OSP_MOT_GRG_DEL = 0x01U;       // MOT GRG DEL - Motorola / Group Regroup Delete (Unpatch Supergroup)
-    const uint8_t   TSBK_OSP_MOT_GRG_VCH_GRANT = 0x02U; // MOT GRG GROUP VCH GRANT / Group Regroup Voice Channel Grant
-    const uint8_t   TSBK_OSP_MOT_GRG_VCH_UPD = 0x03U;   // MOT GRG GROUP VCH GRANT UPD / Group Regroup Voice Channel Grant Update
-    const uint8_t   TSBK_OSP_MOT_CC_BSI = 0x0BU;        // MOT CC BSI - Motorola / Control Channel Base Station Identifier
-    const uint8_t   TSBK_OSP_MOT_PSH_CCH = 0x0EU;       // MOT PSH CCH - Motorola / Planned Control Channel Shutdown
-
-    // TSBK DVM Outbound Signalling Packet (OSP) Opcode(s)
-    const uint8_t   TSBK_OSP_DVM_GIT_HASH = 0x3FU;      //
-
-    // Data Unit ID(s)
-    const uint8_t   P25_DUID_HDU = 0x00U;               // Header Data Unit
-#define P25_HDU_STR "P25_DUID_HDU (Header Data Unit)"
-    const uint8_t   P25_DUID_TDU = 0x03U;               // Simple Terminator Data Unit
-#define P25_TDU_STR "P25_DUID_TDU (Simple Terminator Data Unit)"
-    const uint8_t   P25_DUID_LDU1 = 0x05U;              // Logical Link Data Unit 1
-#define P25_LDU1_STR "P25_DUID_LDU1 (Logical Link Data Unit 1)"
-    const uint8_t   P25_DUID_VSELP1 = 0x06U;            // Motorola VSELP 1
-#define P25_VSELP1_STR "P25_DUID_VSELP1 (VSELP Data Unit 1)"
-    const uint8_t   P25_DUID_TSDU = 0x07U;              // Trunking System Data Unit
-#define P25_TSDU_STR "P25_DUID_TSDU (Trunking System Data Unit)"
-    const uint8_t   P25_DUID_VSELP2 = 0x09U;            // Motorola VSELP 2
-#define P25_VSELP2_STR "P25_DUID_VSELP2 (VSELP Data Unit 2)"
-    const uint8_t   P25_DUID_LDU2 = 0x0AU;              // Logical Link Data Unit 2
-#define P25_LDU2_STR "P25_DUID_LDU2 (Logical Link Data Unit 2)"
-    const uint8_t   P25_DUID_PDU = 0x0CU;               // Packet Data Unit
-#define P25_PDU_STR "P25_DUID_PDU (Packet Data Unit)"
-    const uint8_t   P25_DUID_TDULC = 0x0FU;             // Terminator Data Unit with Link Control
-#define P25_TDULC_STR "P25_DUID_TDULC (Terminator Data Unit with Link Control)"
+        const uint32_t  P25_TSDU_TRIPLE_FRAME_LENGTH_BYTES = 90U;
+        const uint32_t  P25_TSDU_TRIPLE_FRAME_LENGTH_BITS = P25_TSDU_TRIPLE_FRAME_LENGTH_BYTES * 8U;
+
+        const uint32_t  P25_PDU_FRAME_LENGTH_BYTES = 512U;
+        const uint32_t  P25_PDU_FRAME_LENGTH_BITS = P25_PDU_FRAME_LENGTH_BYTES * 8U;
+
+        const uint32_t  P25_TDULC_FRAME_LENGTH_BYTES = 54U;
+        const uint32_t  P25_TDULC_FRAME_LENGTH_BITS = P25_TDULC_FRAME_LENGTH_BYTES * 8U;
+
+        const uint32_t  P25_NID_LENGTH_BYTES = 8U;
+        const uint32_t  P25_NID_LENGTH_BITS = P25_NID_LENGTH_BYTES * 8U;
+
+        const uint8_t   P25_SYNC_BYTES[] = { 0x55U, 0x75U, 0xF5U, 0xFFU, 0x77U, 0xFFU };
+        const uint32_t  P25_SYNC_LENGTH_BYTES = 6U;
+        const uint32_t  P25_SYNC_LENGTH_BITS = P25_SYNC_LENGTH_BYTES * 8U;
+        const uint8_t   P25_START_SYNC = 0x5FU;
+
+        const uint32_t  P25_PREAMBLE_LENGTH_BYTES = P25_SYNC_LENGTH_BYTES + P25_NID_LENGTH_BYTES;
+        const uint32_t  P25_PREAMBLE_LENGTH_BITS = P25_SYNC_LENGTH_BITS + P25_NID_LENGTH_BITS;
+
+        const uint32_t  P25_LDU_FRAME_TIME = 180U;
+
+        const uint32_t  P25_HDU_LENGTH_BYTES = 81U;
+        const uint32_t  P25_LDU_LC_FEC_LENGTH_BYTES = 18U;
+
+        const uint32_t  P25_TDULC_FEC_LENGTH_BYTES = 36U;
+        const uint32_t  P25_TDULC_LENGTH_BYTES = 18U;
+        const uint32_t  P25_TDULC_PAYLOAD_LENGTH_BYTES = 8U;
+
+        const uint32_t  P25_TSBK_FEC_LENGTH_BYTES = 25U;
+        const uint32_t  P25_TSBK_FEC_LENGTH_BITS = P25_TSBK_FEC_LENGTH_BYTES * 8U - 4U; // Trellis is actually 196 bits
+        const uint32_t  P25_TSBK_LENGTH_BYTES = 12U;
+
+        const uint32_t  P25_MAX_PDU_BLOCKS = 42U;
+
+        const uint32_t  P25_PDU_HEADER_LENGTH_BYTES = 12U;
+        const uint32_t  P25_PDU_CONFIRMED_LENGTH_BYTES = 18U;
+        const uint32_t  P25_PDU_CONFIRMED_DATA_LENGTH_BYTES = 16U;
+        const uint32_t  P25_PDU_UNCONFIRMED_LENGTH_BYTES = 12U;
+
+        const uint32_t  P25_PDU_FEC_LENGTH_BYTES = 25U;
+        const uint32_t  P25_PDU_FEC_LENGTH_BITS = P25_PDU_FEC_LENGTH_BYTES * 8U - 4U; // Trellis is actually 196 bits
+
+        const uint32_t  MI_LENGTH_BYTES = 9U;
+        const uint32_t  RAW_IMBE_LENGTH_BYTES = 11U;
+
+        const uint32_t  P25_SS0_START = 70U;
+        const uint32_t  P25_SS1_START = 71U;
+        const uint32_t  P25_SS_INCREMENT = 72U;
+
+        const uint8_t   NULL_IMBE[] = { 0x04U, 0x0CU, 0xFDU, 0x7BU, 0xFBU, 0x7DU, 0xF2U, 0x7BU, 0x3DU, 0x9EU, 0x45U };
+        const uint8_t   ENCRYPTED_NULL_IMBE[] = { 0xFCU, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U };
+
+        const uint8_t   MOT_CALLSIGN_LENGTH_BYTES = 8U;
+
+        const uint8_t   AUTH_RES_LENGTH_BYTES = 4U;
+        const uint8_t   AUTH_RAND_SEED_LENGTH_BYTES = 10U;
+        const uint8_t   AUTH_RAND_CHLNG_LENGTH_BYTES = 5U;
+        const uint8_t   AUTH_KEY_LENGTH_BYTES = 16U;
+
+        /** Thresholds */
+        const uint32_t  DEFAULT_SILENCE_THRESHOLD = 124U;
+        const uint32_t  DEFAULT_FRAME_LOSS_THRESHOLD = 6U;
+        const uint32_t  MAX_P25_VOICE_ERRORS = 1233U;
+
+        /** Manufacturer IDs */
+        const uint8_t   MFG_STANDARD = 0x00U;                   // Standard MFId
+        const uint8_t   MFG_STANDARD_ALT = 0x01U;               // Alternate Standard MFId
+
+        const uint8_t   MFG_MOT = 0x90U;                        // Motorola
+        const uint8_t   MFG_DVM_OCS = 0x9CU;                    // DVM; Omaha Communication Systems, LLC ($9C)
+
+        /** Encryption Algorithms */
+        const uint8_t   ALGO_UNENCRYPT = 0x80U;                 // Unencrypted
+
+        /** IDEN Table Bandwidth Sizes */
+        const uint8_t   IDEN_UP_VU_BW_625K = 0x04U;
+        const uint8_t   IDEN_UP_VU_BW_125K = 0x05U;
+
+        /// <summary>
+        /// Station Service Classes
+        /// </summary>
+        namespace ServiceClass {
+            enum : uint8_t {
+                INVALID = 0x00U,                        // Invalid Service Class
+                COMPOSITE = 0x01U,                      // Composite Control Channel
+                VOICE = 0x10U,                          // Voice
+                DATA = 0x20U,                           // Data
+                REG = 0x40U,                            // Registration
+                AUTH = 0x80U                            // Authentication
+            };
+        }
+
+        /// <summary>
+        /// System Service Types
+        /// </summary>
+        namespace SystemService {
+            enum : uint32_t {
+                NET_ACTIVE = 0x0200000U,                // Network Active
+                GROUP_VOICE = 0x0080000U,               // Group Voice
+                IND_VOICE = 0x0040000U,                 // Individual Voice
+                PSTN_UNIT_VOICE = 0x0020000U,           // PSTN Unit Voice
+                UNIT_PSTN_VOICE = 0x0010000U,           // Unit PSTN Voice
+                GROUP_DATA = 0x0004000U,                // Group Data
+                IND_DATA = 0x0002000U,                  // Individual Data
+                UNIT_REG = 0x0000800U,                  // Unit Registration
+                GROUP_AFF = 0x0000400U,                 // Group Affiliation
+                GROUP_AFF_Q = 0x0000200U,               // Group Affiliation Query
+                USER_STS = 0x0000040U,                  // User Status
+                USER_MSG = 0x0000020U,                  // User Message
+                UNIT_STS = 0x0000010U,                  // Unit Status
+                USER_STS_Q = 0x0000008U,                // User Status Query
+                UNIT_STS_Q = 0x0000004U,                // Unit Status Query
+                CALL_ALRT = 0x0000002U,                 // Call Alert
+                EMERGENCY = 0x0000001U                  // Emergency
+            };
+        }
+
+        const uint32_t  SYS_SRV_DEFAULT = SystemService::EMERGENCY  | SystemService::CALL_ALRT  | SystemService::USER_MSG   |
+                                          SystemService::UNIT_STS_Q | SystemService::USER_STS_Q | SystemService::UNIT_STS   | SystemService::USER_STS |
+                                          SystemService::IND_DATA   | SystemService::IND_VOICE  | SystemService::GROUP_DATA | SystemService::GROUP_VOICE;
+        const uint32_t  SYS_SRV_TRUNK   = SYS_SRV_DEFAULT           | SystemService::GROUP_AFF  | SystemService::UNIT_REG   | SystemService::GROUP_AFF_Q;
+
+        /// <summary>
+        /// 
+        /// </summary>
+        namespace CFVA {
+            enum : uint8_t {
+                CONV = 0x08U,                           // Conventional
+                FAILURE = 0x04U,                        // Failure
+                VALID = 0x02U,                          // Valid
+                NETWORK = 0x01U                         // Networked
+            };
+        }
+
+        /// <summary>
+        /// Response Codes
+        /// </summary>
+        namespace ResponseCode {
+            enum : uint8_t {
+            // General Codes
+                ACCEPT = 0x00U,                         // Accept
+                FAIL = 0x01U,                           // Fail
+                DENY = 0x02U,                           // Deny
+                REFUSED = 0x03U,                        // Refused
+
+            // Answer Codes
+                ANS_PROCEED = 0x20U,                    // Proceed
+                ANS_DENY = 0x21U,                       // Deny
+                ANS_WAIT = 0x22U                        // Wait
+            };
+        }
+
+        /// <summary>
+        /// Cancel Service Codes
+        /// </summary>
+        namespace CancelService {
+            enum : uint8_t {
+                NONE = 0x00U,                           // None
+                TERM_QUE = 0x10U,                       // Terminate Queued
+                TERM_RSRC_ASSIGN = 0x20U                // Terminate Resource Assigned
+            };
+        }
+
+        /// <summary>
+        /// Reason Codes
+        /// </summary>
+        namespace ReasonCode {
+            enum : uint8_t {
+            // Denial Codes
+                DENY_REQ_UNIT_NOT_VALID = 0x10U,        // Requesting Unit Not Valid
+                DENY_REQ_UNIT_NOT_AUTH = 0x11U,         // Requesting Unit Not Authenticated
+
+                DENY_TGT_UNIT_NOT_VALID = 0x20U,        // Target Unit Not Vaild
+                DENY_TGT_UNIT_NOT_AUTH = 0x21U,         // Target Unit Not Authenticated
+                DENY_SU_FAILED_AUTH = 0x22U,            // Subscriber Failed Authentication
+                DENY_TGT_UNIT_REFUSED = 0x2FU,          // Target Unit Refused
+
+                DENY_TGT_GROUP_NOT_VALID = 0x30U,       // Target Group Not Valid
+                DENY_TGT_GROUP_NOT_AUTH = 0x31U,        // Target Group Not Authenticated
+
+                DENY_NO_NET_RSRC_AVAIL = 0x53U,         // No Network Resources Available
+                DENY_NO_RF_RSRC_AVAIL = 0x54U,          // No RF Resources Available
+                DENY_SVC_IN_USE = 0x55U,                // Service In Use
+
+                DENY_SITE_ACCESS_DENIAL = 0x60U,        // Site Access Denial
+
+                DENY_PTT_COLLIDE = 0x67U,               // Push-to-Talk Collision
+                DENY_PTT_BONK = 0x77U,                  // Push-to-Talk Denial/Bonk
+
+                DENY_SYS_UNSUPPORTED_SVC = 0xFFU,       // Service Unsupported
+            
+            // Queue Codes
+                QUE_REQ_ACTIVE_SERVICE = 0x10U,         // Requested Service Active
+                QUE_TGT_ACTIVE_SERVICE = 0x20U,         // Target Service Active
+
+                QUE_TGT_UNIT_QUEUED = 0x2FU,            // Target Unit Queued
+
+                QUE_CHN_RESOURCE_NOT_AVAIL = 0x40U      // Channel Resource Not Available
+            };
+        }
+
+        /// <summary>
+        /// Extended Functions
+        /// </summary>
+        namespace ExtendedFunctions {
+            enum : uint16_t {
+                CHECK = 0x0000U,                        // Radio Check
+                UNINHIBIT = 0x007EU,                    // Radio Uninhibit
+                INHIBIT = 0x007FU,                      // Radio Inhibit
+                CHECK_ACK = 0x0080U,                    // Radio Check Ack
+                UNINHIBIT_ACK = 0x00FEU,                // Radio Uninhibit Ack
+                INHIBIT_ACK = 0x00FFU                   // Radio Inhibit Ack
+            };
+        }
+
+        /** Default Values */
+        const uint32_t  NAC_DIGITAL_SQ = 0xF7EU;        // Digital Squelch NAC
+        const uint32_t  NAC_REUSE_RX_NAC = 0xF7FU;      // Reuse RX NAC
+        const uint32_t  DEFAULT_NAC = 0x293U;           // Default NAC
+
+        const uint32_t  WACN_STD_DEFAULT = 0xBB800U;    // Default WACN
+        const uint32_t  SID_STD_DEFAULT = 0x001U;       // Default System ID
+
+        const uint32_t  WUID_FNE = 0xFFFFFCU;           // FNE Working Unit ID
+        const uint32_t  WUID_REG = 0xFFFFFEU;           // Registration Working Unit ID
+        const uint32_t  WUID_ALL = 0xFFFFFFU;           // All-call Working Unit ID
+
+        const uint32_t  TGID_ALL = 0xFFFFU;             // All-call Talkgroup ID
+
+        /// <summary>
+        /// DVM Network Frame Types
+        /// </summary>
+        namespace FrameType {
+            // DVM Network Frame Types Enumeration
+            enum E : uint8_t {
+                HDU_VALID = 0x01U,                      // HDU Valid
+                HDU_LATE_ENTRY = 0x02U,                 // HDU Late Entry
+                TERMINATOR = 0x03U,                     // TDU/TDULC Terminator
+                DATA_UNIT = 0x00U                       // Standard Data Unit
+            };
+        }
+        /// <summary>
+        /// Data Format Type
+        /// </summary>
+        namespace PDUFormatType {
+            enum : uint8_t {
+                RSP = 0x03U,                            // Response
+                UNCONFIRMED = 0x15U,                    // Unconfirmed PDU
+                CONFIRMED = 0x16U,                      // Confirmed PDU
+                AMBT = 0x17U                            // Alternate Multi Block Trunking
+            };
+        }
+
+        /// <summary>
+        /// Service Access Point
+        /// </summary>
+        namespace PDUSAP {
+            enum : uint8_t {
+                USER_DATA = 0x00U,                      // User Data
+                ENC_USER_DATA = 0x01U,                  // Encrypted User Data
+
+                PACKET_DATA = 0x04U,                    // Packet Data
+
+                ARP = 0x05U,                            // ARP
+                
+                SNDCP_CTRL_DATA = 0x06U,                // SNDCP Control Data
+
+                EXT_ADDR = 0x1FU,                       // Extended Addressing
+
+                REG = 0x20U,                            // Registration
+
+                UNENC_KMM = 0x28U,                      // Unencrypted KMM
+                ENC_KMM = 0x29U,                        // Encrypted KMM
+
+                TRUNK_CTRL = 0x3DU                      // Trunking Control
+            };
+        }
+
+        /// <summary>
+        /// Acknowledgement Class
+        /// </summary>
+        namespace PDUAckClass {
+            enum : uint8_t {
+                ACK = 0x00U,                            // Acknowledge
+                NACK = 0x01U,                           // Negative Acknowledge
+                ACK_RETRY = 0x02U                       // Acknowledge Retry
+            };
+        }
+
+        /// <summary>
+        /// Acknowledgement Type
+        /// </summary>
+        namespace PDUAckType {
+            enum : uint8_t {
+                RETRY = 0x00U,                          // Retry
+
+                ACK = 0x01U,                            // Acknowledge
+
+                NACK_ILLEGAL = 0x00U,                   // Illegal Format
+                NACK_PACKET_CRC = 0x01U,                // Packet CRC
+                NACK_MEMORY_FULL = 0x02U,               // Memory Full
+                NACK_SEQ = 0x03U,                       // Out of logical sequence FSN
+                NACK_UNDELIVERABLE = 0x04U,             // Undeliverable
+                NACK_OUT_OF_SEQ = 0x05U,                // Out of sequence, N(S) != V(R) or V(R) + 1
+                NACK_INVL_USER = 0x06U                  // Invalid User disallowed by the system
+            };
+        }
+
+        /// <summary>
+        /// Registration Type
+        /// </summary>
+        namespace PDURegType {
+            enum : uint8_t {
+                CNCT = 0x00U,                           // Connect
+                DISCNCT = 0x01U,                        // Disconnect
+                ACCPT = 0x04U,                          // Accept
+                DENY = 0x05U                            // Deny
+            };
+        }
+
+        /// <summary>
+        /// SNDCP Type
+        /// </summary>
+        namespace PDUSNDCPType {
+            enum : uint8_t {
+                ACT_TDS_CTX_ACCPT = 0x00U,              // Activate Context Accept
+                DEACT_TDS_CTX_ACCPT = 0x01U,            // Deactivate Context Accept
+                DEACT_TDS_CTX_REQ = 0x02U,              // Deactivate Context Request
+                ACT_TDS_CTX_REJECT = 0x03U,             // Activate Context Reject
+                RF_UNCONFIRMED = 0x04U,                 // RF Unconfirmed
+                RF_CONFIRMED = 0x05U                    // RF Confirmed
+            };
+        }
+
+        const uint8_t   LC_SVC_OPT_EMERGENCY = 0x80U;
+        const uint8_t   LC_SVC_OPT_ENCRYPTION = 0x40U;
+
+        /// <summary>
+        /// LDUx/TDULC Link Control Opcode(s)
+        /// </summary>
+        namespace LCO {
+            enum : uint8_t {
+                GROUP = 0x00U,                          // GRP VCH USER - Group Voice Channel User
+                GROUP_UPDT = 0x02U,                     // GRP VCH UPDT - Group Voice Channel Update
+                PRIVATE = 0x03U,                        // UU VCH USER - Unit-to-Unit Voice Channel User
+                UU_ANS_REQ = 0x05U,                     // UU ANS REQ - Unit to Unit Answer Request
+                TEL_INT_VCH_USER = 0x06U,               // TEL INT VCH USER - Telephone Interconnect Voice Channel User / MOT GPS DATA - Motorola In-Band GPS Data
+                TEL_INT_ANS_RQST = 0x07U,               // TEL INT ANS RQST - Telephone Interconnect Answer Request
+                EXPLICIT_SOURCE_ID = 0x09U,             // EXPLICIT SOURCE ID - Explicit Source ID
+                CALL_TERM = 0x0FU,                      // CALL TERM - Call Termination or Cancellation
+                IDEN_UP = 0x18U,                        // IDEN UP - Channel Identifier Update
+                SYS_SRV_BCAST = 0x20U,                  // SYS SRV BCAST - System Service Broadcast
+                ADJ_STS_BCAST = 0x22U,                  // ADJ STS BCAST - Adjacent Site Status Broadcast
+                RFSS_STS_BCAST = 0x23U,                 // RFSS STS BCAST - RFSS Status Broadcast
+                NET_STS_BCAST = 0x24U,                  // NET STS BCAST - Network Status Broadcast
+                CONV_FALLBACK = 0x2AU,                  // CONV FALLBACK - Conventional Fallback
+
+            // LDUx/TDULC Motorola Link Control Opcode(s)
+                FAILSOFT = 0x02U                        // FAILSOFT - Failsoft
+            };
+        }
+
+        /// <summary>
+        /// TSBK Control Opcode(s)
+        /// </summary>
+        namespace TSBKO {
+            enum : uint8_t {
+            // TSBK ISP/OSP Shared Opcode(s)
+                IOSP_GRP_VCH = 0x00U,                   // GRP VCH REQ - Group Voice Channel Request (ISP), GRP VCH GRANT - Group Voice Channel Grant (OSP)
+                IOSP_UU_VCH = 0x04U,                    // UU VCH REQ - Unit-to-Unit Voice Channel Request (ISP), UU VCH GRANT - Unit-to-Unit Voice Channel Grant (OSP)
+                IOSP_UU_ANS = 0x05U,                    // UU ANS RSP - Unit-to-Unit Answer Response (ISP), UU ANS REQ - Unit-to-Unit Answer Request (OSP)
+                IOSP_TELE_INT_DIAL = 0x08U,             // TELE INT DIAL REQ - Telephone Interconnect Request - Explicit (ISP), TELE INT DIAL GRANT - Telephone Interconnect Grant (OSP)
+                IOSP_TELE_INT_ANS = 0x0AU,              // TELE INT ANS RSP - Telephone Interconnect Answer Response (ISP), TELE INT ANS REQ - Telephone Interconnect Answer Request (OSP)
+                IOSP_STS_UPDT = 0x18U,                  // STS UPDT REQ - Status Update Request (ISP), STS UPDT - Status Update (OSP)
+                IOSP_STS_Q = 0x1AU,                     // STS Q REQ - Status Query Request (ISP), STS Q - Status Query (OSP)
+                IOSP_MSG_UPDT = 0x1CU,                  // MSG UPDT REQ - Message Update Request (ISP), MSG UPDT - Message Update (OSP)
+                IOSP_RAD_MON = 0x1DU,                   // RAD MON REQ - Radio Unit Monitor Request (ISP), RAD MON CMD - Radio Monitor Command (OSP)
+                IOSP_RAD_MON_ENH = 0x1EU,               // RAD MON ENH REQ - Radio Unit Monitor Enhanced Request (ISP), RAD MON ENH CMD - Radio Unit Monitor Enhanced Command (OSP)
+                IOSP_CALL_ALRT = 0x1FU,                 // CALL ALRT REQ - Call Alert Request (ISP), CALL ALRT - Call Alert (OSP)
+                IOSP_ACK_RSP = 0x20U,                   // ACK RSP U - Acknowledge Response - Unit (ISP), ACK RSP FNE - Acknowledge Response - FNE (OSP)
+                IOSP_EXT_FNCT = 0x24U,                  // EXT FNCT RSP - Extended Function Response (ISP), EXT FNCT CMD - Extended Function Command (OSP)
+                IOSP_GRP_AFF = 0x28U,                   // GRP AFF REQ - Group Affiliation Request (ISP), GRP AFF RSP - Group Affiliation Response (OSP)
+                IOSP_U_REG = 0x2CU,                     // U REG REQ - Unit Registration Request (ISP), U REG RSP - Unit Registration Response (OSP)
+
+            // TSBK Inbound Signalling Packet (ISP) Opcode(s)
+                ISP_TELE_INT_PSTN_REQ = 0x09U,          // TELE INT PSTN REQ - Telephone Interconnect Request - Implicit
+                ISP_SNDCP_CH_REQ = 0x12U,               // SNDCP CH REQ - SNDCP Data Channel Request
+                ISP_STS_Q_RSP = 0x19U,                  // STS Q RSP - Status Query Response
+                ISP_STS_Q_REQ = 0x1CU,                  // STS Q REQ - Status Query Request
+                ISP_CAN_SRV_REQ = 0x23U,                // CAN SRV REQ - Cancel Service Request
+                ISP_EMERG_ALRM_REQ = 0x27U,             // EMERG ALRM REQ - Emergency Alarm Request
+                ISP_GRP_AFF_Q_RSP = 0x29U,              // GRP AFF Q RSP - Group Affiliation Query Response
+                ISP_U_DEREG_REQ = 0x2BU,                // U DE REG REQ - Unit De-Registration Request
+                ISP_LOC_REG_REQ = 0x2DU,                // LOC REG REQ - Location Registration Request
+                ISP_AUTH_RESP = 0x38U,                  // AUTH RESP - Authentication Response
+                ISP_AUTH_RESP_M = 0x39U,                // AUTH RESP M - Authentication Response Mutual
+                ISP_AUTH_FNE_RST = 0x3AU,               // AUTH FNE RST - Authentication FNE Result
+                ISP_AUTH_SU_DMD = 0x3BU,                // AUTH SU DMD - Authentication SU Demand
+
+            // TSBK Outbound Signalling Packet (OSP) Opcode(s)
+                OSP_GRP_VCH_GRANT_UPD = 0x02U,          // GRP VCH GRANT UPD - Group Voice Channel Grant Update
+                OSP_UU_VCH_GRANT_UPD = 0x06U,           // UU VCH GRANT UPD - Unit-to-Unit Voice Channel Grant Update
+                OSP_SNDCP_CH_GNT = 0x14U,               // SNDCP CH GNT - SNDCP Data Channel Grant
+                OSP_SNDCP_CH_ANN = 0x16U,               // SNDCP CH ANN - SNDCP Data Channel Announcement
+                OSP_STS_Q = 0x1AU,                      // STS Q - Status Query
+                OSP_DENY_RSP = 0x27U,                   // DENY RSP - Deny Response
+                OSP_SCCB_EXP = 0x29U,                   // SCCB - Secondary Control Channel Broadcast - Explicit
+                OSP_GRP_AFF_Q = 0x2AU,                  // GRP AFF Q - Group Affiliation Query
+                OSP_LOC_REG_RSP = 0x2BU,                // LOC REG RSP - Location Registration Response
+                OSP_U_REG_CMD = 0x2DU,                  // U REG CMD - Unit Registration Command
+                OSP_U_DEREG_ACK = 0x2FU,                // U DE REG ACK - Unit De-Registration Acknowledge
+                OSP_SYNC_BCAST = 0x30U,                 // SYNC BCAST - Synchronization Broadcast
+                OSP_AUTH_DMD = 0x31U,                   // AUTH DMD - Authentication Demand
+                OSP_AUTH_FNE_RESP = 0x32U,              // AUTH FNE RESP - Authentication FNE Response
+                OSP_QUE_RSP = 0x33U,                    // QUE RSP - Queued Response
+                OSP_IDEN_UP_VU = 0x34U,                 // IDEN UP VU - Channel Identifier Update for VHF/UHF Bands
+                OSP_TIME_DATE_ANN = 0x35U,              // TIME DATE ANN - Time and Date Announcement
+                OSP_SYS_SRV_BCAST = 0x38U,              // SYS SRV BCAST - System Service Broadcast
+                OSP_SCCB = 0x39U,                       // SCCB - Secondary Control Channel Broadcast
+                OSP_RFSS_STS_BCAST = 0x3AU,             // RFSS STS BCAST - RFSS Status Broadcast
+                OSP_NET_STS_BCAST = 0x3BU,              // NET STS BCAST - Network Status Broadcast
+                OSP_ADJ_STS_BCAST = 0x3CU,              // ADJ STS BCAST - Adjacent Site Status Broadcast
+                OSP_IDEN_UP = 0x3DU,                    // IDEN UP - Channel Identifier Update
+
+            // TSBK Motorola Outbound Signalling Packet (OSP) Opcode(s)
+                OSP_MOT_GRG_ADD = 0x00U,                // MOT GRG ADD - Motorola / Group Regroup Add (Patch Supergroup)
+                OSP_MOT_GRG_DEL = 0x01U,                // MOT GRG DEL - Motorola / Group Regroup Delete (Unpatch Supergroup)
+                OSP_MOT_GRG_VCH_GRANT = 0x02U,          // MOT GRG GROUP VCH GRANT / Group Regroup Voice Channel Grant
+                OSP_MOT_GRG_VCH_UPD = 0x03U,            // MOT GRG GROUP VCH GRANT UPD / Group Regroup Voice Channel Grant Update
+                OSP_MOT_CC_BSI = 0x0BU,                 // MOT CC BSI - Motorola / Control Channel Base Station Identifier
+                OSP_MOT_PSH_CCH = 0x0EU,                // MOT PSH CCH - Motorola / Planned Control Channel Shutdown
+
+            // TSBK DVM Outbound Signalling Packet (OSP) Opcode(s)
+                OSP_DVM_GIT_HASH = 0x3FU,               //
+            };
+        }
+
+        /// <summary>
+        /// Data Unit ID(s)
+        /// </summary>
+        namespace DUID {
+            // Data Unit ID Enumeration
+            enum E : uint8_t {
+                HDU = 0x00U,                            // Header Data Unit
+                TDU = 0x03U,                            // Simple Terminator Data Unit
+                LDU1 = 0x05U,                           // Logical Link Data Unit 1
+                VSELP1 = 0x06U,                         // Motorola VSELP 1
+                TSDU = 0x07U,                           // Trunking System Data Unit
+                VSELP2 = 0x09U,                         // Motorola VSELP 2
+                LDU2 = 0x0AU,                           // Logical Link Data Unit 2
+                PDU = 0x0CU,                            // Packet Data Unit
+                TDULC = 0x0FU                           // Terminator Data Unit with Link Control
+            };
+        }
+
+    #define P25_HDU_STR     "P25, HDU (Header Data Unit)"
+    #define P25_TDU_STR     "P25, TDU (Simple Terminator Data Unit)"
+    #define P25_LDU1_STR    "P25, LDU1 (Logical Link Data Unit 1)"
+    #define P25_VSELP1_STR  "P25, VSELP1 (VSELP Data Unit 1)"
+    #define P25_TSDU_STR    "P25, TSDU (Trunking System Data Unit)"
+    #define P25_VSELP2_STR  "P25, VSELP2 (VSELP Data Unit 2)"
+    #define P25_LDU2_STR    "P25, LDU2 (Logical Link Data Unit 2)"
+    #define P25_PDU_STR     "P25, PDU (Packet Data Unit)"
+    #define P25_TDULC_STR   "P25, TDULC (Terminator Data Unit with Link Control)"
+    } // namespace defines
 } // namespace p25
 
 #endif // __P25_DEFINES_H__

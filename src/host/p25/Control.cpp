@@ -25,8 +25,9 @@
 #include "ActivityLog.h"
 #include "HostMain.h"
 
-using namespace p25;
 using namespace p25::packet;
+using namespace p25::defines;
+using namespace p25;
 
 #include <cassert>
 #include <cstring>
@@ -163,9 +164,9 @@ Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t q
     m_random = mt;
 
     m_llaK = nullptr;
-    m_llaRS = new uint8_t[P25_AUTH_KEY_LENGTH_BYTES];
-    m_llaCRS = new uint8_t[P25_AUTH_KEY_LENGTH_BYTES];
-    m_llaKS = new uint8_t[P25_AUTH_KEY_LENGTH_BYTES];
+    m_llaRS = new uint8_t[AUTH_KEY_LENGTH_BYTES];
+    m_llaCRS = new uint8_t[AUTH_KEY_LENGTH_BYTES];
+    m_llaKS = new uint8_t[AUTH_KEY_LENGTH_BYTES];
 }
 
 /// <summary>
@@ -241,10 +242,10 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
         if (key.size() == 32) {
             if ((key.find_first_not_of("0123456789abcdefABCDEF", 2) == std::string::npos)) {
                 const char* keyPtr = key.c_str();
-                m_llaK = new uint8_t[P25_AUTH_KEY_LENGTH_BYTES];
-                ::memset(m_llaK, 0x00U, P25_AUTH_KEY_LENGTH_BYTES);
+                m_llaK = new uint8_t[AUTH_KEY_LENGTH_BYTES];
+                ::memset(m_llaK, 0x00U, AUTH_KEY_LENGTH_BYTES);
 
-                for (uint8_t i = 0; i < P25_AUTH_KEY_LENGTH_BYTES; i++) {
+                for (uint8_t i = 0; i < AUTH_KEY_LENGTH_BYTES; i++) {
                     char t[4] = {keyPtr[0], keyPtr[1], 0};
                     m_llaK[i] = (uint8_t)::strtoul(t, NULL, 16);
                     keyPtr += 2 * sizeof(char);
@@ -336,24 +337,24 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
     /*
     ** Voice Silence and Frame Loss Thresholds
     */
-    m_voice->m_silenceThreshold = p25Protocol["silenceThreshold"].as<uint32_t>(p25::DEFAULT_SILENCE_THRESHOLD);
+    m_voice->m_silenceThreshold = p25Protocol["silenceThreshold"].as<uint32_t>(DEFAULT_SILENCE_THRESHOLD);
     if (m_voice->m_silenceThreshold > MAX_P25_VOICE_ERRORS) {
-        LogWarning(LOG_P25, "Silence threshold > %u, defaulting to %u", p25::MAX_P25_VOICE_ERRORS, p25::DEFAULT_SILENCE_THRESHOLD);
-        m_voice->m_silenceThreshold = p25::DEFAULT_SILENCE_THRESHOLD;
+        LogWarning(LOG_P25, "Silence threshold > %u, defaulting to %u", MAX_P25_VOICE_ERRORS, DEFAULT_SILENCE_THRESHOLD);
+        m_voice->m_silenceThreshold = DEFAULT_SILENCE_THRESHOLD;
     }
 
     // either MAX_P25_VOICE_ERRORS or 0 will disable the threshold logic
     if (m_voice->m_silenceThreshold == 0) {
-        LogWarning(LOG_P25, "Silence threshold set to zero, defaulting to %u", p25::MAX_P25_VOICE_ERRORS);
-        m_voice->m_silenceThreshold = p25::MAX_P25_VOICE_ERRORS;
+        LogWarning(LOG_P25, "Silence threshold set to zero, defaulting to %u", MAX_P25_VOICE_ERRORS);
+        m_voice->m_silenceThreshold = MAX_P25_VOICE_ERRORS;
     }
-    m_frameLossThreshold = (uint8_t)p25Protocol["frameLossThreshold"].as<uint32_t>(p25::DEFAULT_FRAME_LOSS_THRESHOLD);
+    m_frameLossThreshold = (uint8_t)p25Protocol["frameLossThreshold"].as<uint32_t>(DEFAULT_FRAME_LOSS_THRESHOLD);
     if (m_frameLossThreshold == 0U) {
         m_frameLossThreshold = 1U;
     }
 
-    if (m_frameLossThreshold > p25::DEFAULT_FRAME_LOSS_THRESHOLD * 2U) {
-        LogWarning(LOG_P25, "Frame loss threshold may be excessive, default is %u, configured is %u", p25::DEFAULT_FRAME_LOSS_THRESHOLD, m_frameLossThreshold);
+    if (m_frameLossThreshold > DEFAULT_FRAME_LOSS_THRESHOLD * 2U) {
+        LogWarning(LOG_P25, "Frame loss threshold may be excessive, default is %u, configured is %u", DEFAULT_FRAME_LOSS_THRESHOLD, m_frameLossThreshold);
     }
 
     /*
@@ -380,9 +381,9 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
     /*
     ** CC Service Class
     */
-    uint8_t serviceClass = P25_SVC_CLS_VOICE | P25_SVC_CLS_DATA;
+    uint8_t serviceClass = ServiceClass::VOICE | ServiceClass::DATA;
     if (m_enableControl) {
-        serviceClass |= P25_SVC_CLS_REG;
+        serviceClass |= ServiceClass::REG;
     }
 
     /*
@@ -435,7 +436,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
                     HTTP_PUT, PUT_PERMIT_TG, req, voiceChData.ssl(), REST_DEFAULT_WAIT, m_debug);
             }
             else {
-                ::LogError(LOG_P25, P25_TSDU_STR ", TSBK_IOSP_GRP_VCH (Group Voice Channel Grant), failed to clear TG permit, chNo = %u", chNo);
+                ::LogError(LOG_P25, P25_TSDU_STR ", TSBKO, IOSP_GRP_VCH (Group Voice Channel Grant), failed to clear TG permit, chNo = %u", chNo);
             }
         }
     });
@@ -507,7 +508,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
 
     // are we overriding the NAC for split NAC operations?
     uint32_t txNAC = (uint32_t)::strtoul(systemConf["config"]["txNAC"].as<std::string>("F7E").c_str(), NULL, 16);
-    if (txNAC != P25_NAC_DIGITAL_SQ && txNAC != m_nac) {
+    if (txNAC != NAC_DIGITAL_SQ && txNAC != m_nac) {
         LogMessage(LOG_P25, "Split NAC operations, setting Tx NAC to $%03X", txNAC);
         m_txNAC = txNAC;
         m_nid.setTxNAC(m_txNAC);
@@ -600,7 +601,7 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
     if (!valid && m_rfState == RS_RF_LISTENING)
         return false;
 
-    uint8_t duid = m_nid.getDUID();
+    DUID::E duid = m_nid.getDUID();
 
     // Have we got RSSI bytes on the end of a P25 LDU?
     if (len == (P25_LDU_FRAME_LENGTH_BYTES + 4U)) {
@@ -632,7 +633,7 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
 
     // are we interrupting a running CC?
     if (m_ccRunning) {
-        if (duid != P25_DUID_TSDU) {
+        if (duid != DUID::TSDU) {
             m_ccHalted = true;
         }
     }
@@ -641,11 +642,11 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
 
     // handle individual DUIDs
     switch (duid) {
-        case P25_DUID_HDU:
-        case P25_DUID_LDU1:
-        case P25_DUID_VSELP1:
-        case P25_DUID_VSELP2:
-        case P25_DUID_LDU2:
+        case DUID::HDU:
+        case DUID::LDU1:
+        case DUID::VSELP1:
+        case DUID::VSELP2:
+        case DUID::LDU2:
             if (m_controlOnly) {
                 if (m_debug) {
                     LogDebug(LOG_RF, "CC only mode, ignoring HDU/LDU from RF");
@@ -661,17 +662,17 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
             }
             break;
 
-        case P25_DUID_TDU:
-        case P25_DUID_TDULC:
+        case DUID::TDU:
+        case DUID::TDULC:
             m_frameLossCnt = 0U;
             ret = m_voice->process(data, len);
             break;
 
-        case P25_DUID_PDU:
+        case DUID::PDU:
             ret = m_data->process(data, len);
             break;
 
-        case P25_DUID_TSDU:
+        case DUID::TSDU:
             ret = m_control->process(data, len);
             break;
 
@@ -1249,13 +1250,13 @@ void Control::processNetwork()
     bool unitToUnit = (buffer[14U] & 0x01U) == 0x01U;
 
     // process network message header
-    uint8_t duid = buffer[22U];
+    DUID::E duid = (DUID::E)buffer[22U];
     uint8_t MFId = buffer[15U];
 
     // process raw P25 data bytes
     UInt8Array data;
     uint8_t frameLength = buffer[23U];
-    if (duid == p25::P25_DUID_PDU) {
+    if (duid == DUID::PDU) {
         frameLength = length;
         data = std::unique_ptr<uint8_t[]>(new uint8_t[length]);
         ::memset(data.get(), 0x00U, length);
@@ -1274,7 +1275,7 @@ void Control::processNetwork()
     }
 
     // is this a PDU?
-    if (duid == P25_DUID_PDU) {
+    if (duid == DUID::PDU) {
         if (m_controlOnly) {
             if (m_debug) {
                 LogDebug(LOG_NET, "CC only mode, ignoring PDU from network");
@@ -1307,7 +1308,7 @@ void Control::processNetwork()
     uint8_t lsd1 = buffer[20U];
     uint8_t lsd2 = buffer[21U];
 
-    uint8_t frameType = p25::P25_FT_DATA_UNIT;
+    FrameType::E frameType = FrameType::DATA_UNIT;
 
     // if the netId or sysId is missing; default to our netId and sysId
     if (netId == 0U) {
@@ -1326,28 +1327,28 @@ void Control::processNetwork()
     data::LowSpeedData lsd;
 
     // is this a LDU1, is this the first of a call?
-    if (duid == p25::P25_DUID_LDU1) {
-        frameType = buffer[180U];
+    if (duid == DUID::LDU1) {
+        frameType = (FrameType::E)buffer[180U];
 
         if (m_debug) {
             LogDebug(LOG_NET, "P25, frameType = $%02X", frameType);
         }
 
-        if (frameType == p25::P25_FT_HDU_VALID) {
+        if (frameType == FrameType::HDU_VALID) {
             uint8_t algId = buffer[181U];
             uint32_t kid = (buffer[182U] << 8) | (buffer[183U] << 0);
 
             // copy MI data
-            uint8_t mi[p25::P25_MI_LENGTH_BYTES];
-            ::memset(mi, 0x00U, p25::P25_MI_LENGTH_BYTES);
+            uint8_t mi[MI_LENGTH_BYTES];
+            ::memset(mi, 0x00U, MI_LENGTH_BYTES);
 
-            for (uint8_t i = 0; i < p25::P25_MI_LENGTH_BYTES; i++) {
+            for (uint8_t i = 0; i < MI_LENGTH_BYTES; i++) {
                 mi[i] = buffer[184U + i];
             }
 
             if (m_debug) {
                 LogDebug(LOG_NET, "P25, HDU algId = $%02X, kId = $%02X", algId, kid);
-                Utils::dump(1U, "P25 HDU Network MI", mi, p25::P25_MI_LENGTH_BYTES);
+                Utils::dump(1U, "P25 HDU Network MI", mi, MI_LENGTH_BYTES);
             }
 
             control.setAlgId(algId);
@@ -1375,11 +1376,11 @@ void Control::processNetwork()
 
     // forward onto the specific processor for final processing and delivery
     switch (duid) {
-        case P25_DUID_HDU:
-        case P25_DUID_LDU1:
-        case P25_DUID_VSELP1:
-        case P25_DUID_VSELP2:
-        case P25_DUID_LDU2:
+        case DUID::HDU:
+        case DUID::LDU1:
+        case DUID::VSELP1:
+        case DUID::VSELP2:
+        case DUID::LDU2:
             if (m_controlOnly) {
                 if (m_debug) {
                     LogDebug(LOG_NET, "CC only mode, ignoring HDU/LDU from network");
@@ -1390,10 +1391,10 @@ void Control::processNetwork()
             ret = m_voice->processNetwork(data.get(), frameLength, control, lsd, duid, frameType);
             break;
 
-        case P25_DUID_TDU:
-        case P25_DUID_TDULC:
+        case DUID::TDU:
+        case DUID::TDULC:
             // is this an TDU with a grant demand?
-            if (duid == P25_DUID_TDU && m_enableControl && grantDemand) {
+            if (duid == DUID::TDU && m_enableControl && grantDemand) {
                 if (m_disableNetworkGrant) {
                     return;
                 }
@@ -1418,7 +1419,7 @@ void Control::processNetwork()
 
                 // are we denying the grant?
                 if (grantDenial) {
-                    m_control->writeRF_TSDU_Deny(srcId, dstId, P25_DENY_RSN_PTT_COLLIDE, (!unitToUnit) ? TSBK_IOSP_GRP_VCH : TSBK_IOSP_UU_VCH);
+                    m_control->writeRF_TSDU_Deny(srcId, dstId, ReasonCode::DENY_PTT_COLLIDE, (!unitToUnit) ? TSBKO::IOSP_GRP_VCH : TSBKO::IOSP_UU_VCH);
                     return;
                 }
 
@@ -1435,10 +1436,13 @@ void Control::processNetwork()
             m_voice->processNetwork(data.get(), frameLength, control, lsd, duid, frameType);
             break;
 
-        case P25_DUID_TSDU:
+        case DUID::TSDU:
             m_control->processNetwork(data.get(), frameLength, control, lsd, duid);
             break;
-    }
+
+        default:
+            break;
+        }
 }
 
 /// <summary>
@@ -1466,7 +1470,7 @@ void Control::processFrameLoss()
         m_control->writeNet_TSDU_Call_Term(m_voice->m_rfLC.getSrcId(), m_voice->m_rfLC.getDstId());
 
         writeRF_TDU(false);
-        m_voice->m_lastDUID = P25_DUID_TDU;
+        m_voice->m_lastDUID = DUID::TDU;
         m_voice->writeNet_TDU();
 
         m_rfState = RS_RF_LISTENING;
@@ -1634,7 +1638,7 @@ bool Control::writeRF_ControlEnd()
 
     if (m_netState == RS_NET_IDLE && m_rfState == RS_RF_LISTENING) {
         for (uint32_t i = 0; i < TSBK_PCH_CCH_CNT; i++) {
-            m_control->queueRF_TSBK_Ctrl(TSBK_OSP_MOT_PSH_CCH);
+            m_control->queueRF_TSBK_Ctrl(TSBKO::OSP_MOT_PSH_CCH);
         }
 
         writeRF_Nulls();
@@ -1710,13 +1714,13 @@ void Control::writeRF_TDU(bool noNetwork)
     Sync::addP25Sync(data + 2U);
 
     // Generate NID
-    m_nid.encode(data + 2U, P25_DUID_TDU);
+    m_nid.encode(data + 2U, DUID::TDU);
 
     // Add busy bits
     P25Utils::addBusyBits(data + 2U, P25_TDU_FRAME_LENGTH_BITS, true, true);
 
     if (!noNetwork)
-        m_voice->writeNetwork(data + 2U, P25_DUID_TDU);
+        m_voice->writeNetwork(data + 2U, DUID::TDU);
 
     if (m_duplex) {
         data[0U] = modem::TAG_EOT;
@@ -1731,9 +1735,9 @@ void Control::writeRF_TDU(bool noNetwork)
 /// </summary>
 void Control::generateLLA_AM1_Parameters()
 {
-    ::memset(m_llaRS, 0x00U, P25_AUTH_KEY_LENGTH_BYTES);
-    ::memset(m_llaCRS, 0x00U, P25_AUTH_KEY_LENGTH_BYTES);
-    ::memset(m_llaKS, 0x00U, P25_AUTH_KEY_LENGTH_BYTES);
+    ::memset(m_llaRS, 0x00U, AUTH_KEY_LENGTH_BYTES);
+    ::memset(m_llaCRS, 0x00U, AUTH_KEY_LENGTH_BYTES);
+    ::memset(m_llaKS, 0x00U, AUTH_KEY_LENGTH_BYTES);
 
     if (m_llaK == nullptr) {
         return;
@@ -1742,7 +1746,7 @@ void Control::generateLLA_AM1_Parameters()
     crypto::AES* aes = new crypto::AES(crypto::AESKeyLength::AES_128);
 
     // generate new RS
-    uint8_t RS[P25_AUTH_RAND_SEED_LENGTH_BYTES];
+    uint8_t RS[AUTH_RAND_SEED_LENGTH_BYTES];
     std::uniform_int_distribution<uint32_t> dist(DVM_RAND_MIN, DVM_RAND_MAX);
     uint32_t rnd = dist(m_random);
     __SET_UINT32(rnd, RS, 0U);
@@ -1754,16 +1758,16 @@ void Control::generateLLA_AM1_Parameters()
     RS[9U] = (uint8_t)(rnd & 0xFFU);
 
     // expand RS to 16 bytes
-    for (uint32_t i = 0; i < P25_AUTH_RAND_SEED_LENGTH_BYTES; i++)
+    for (uint32_t i = 0; i < AUTH_RAND_SEED_LENGTH_BYTES; i++)
         m_llaRS[i] = RS[i];
 
     // complement RS
-    for (uint32_t i = 0; i < P25_AUTH_KEY_LENGTH_BYTES; i++)
+    for (uint32_t i = 0; i < AUTH_KEY_LENGTH_BYTES; i++)
         m_llaCRS[i] = ~m_llaRS[i];
 
     // perform crypto
-    uint8_t* KS = aes->encryptECB(m_llaRS, P25_AUTH_KEY_LENGTH_BYTES * sizeof(uint8_t), m_llaK);
-    ::memcpy(m_llaKS, KS, P25_AUTH_KEY_LENGTH_BYTES);
+    uint8_t* KS = aes->encryptECB(m_llaRS, AUTH_KEY_LENGTH_BYTES * sizeof(uint8_t), m_llaK);
+    ::memcpy(m_llaKS, KS, AUTH_KEY_LENGTH_BYTES);
 
     if (m_verbose) {
         LogMessage(LOG_P25, "P25, generated LLA AM1 parameters");

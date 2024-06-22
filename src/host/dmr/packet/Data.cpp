@@ -9,7 +9,7 @@
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
 *   Copyright (C) 2015,2016,2017,2018 Jonathan Naylor, G4KLX
-*   Copyright (C) 2017-2023 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
@@ -27,6 +27,7 @@
 #include "ActivityLog.h"
 
 using namespace dmr;
+using namespace dmr::defines;
 using namespace dmr::packet;
 
 #include <cassert>
@@ -84,20 +85,20 @@ bool Data::process(uint8_t* data, uint32_t len)
 {
     assert(data != nullptr);
 
-    // Get the type from the packet metadata
-    uint8_t dataType = data[1U] & 0x0FU;
+    // get the type from the packet metadata
+    DataType::E dataType = (DataType::E)(data[1U] & 0x0FU);
 
     SlotType slotType;
     slotType.setColorCode(m_slot->m_colorCode);
     slotType.setDataType(dataType);
 
-    if (dataType == DT_TERMINATOR_WITH_LC) {
+    if (dataType == DataType::TERMINATOR_WITH_LC) {
         if (m_slot->m_rfState != RS_RF_AUDIO)
             return false;
 
         // Regenerate the LC data
         lc::FullLC fullLC;
-        fullLC.encode(*m_slot->m_rfLC, data + 2U, DT_TERMINATOR_WITH_LC);
+        fullLC.encode(*m_slot->m_rfLC, data + 2U, DataType::TERMINATOR_WITH_LC);
 
         // Regenerate the Slot Type
         slotType.encode(data + 2U);
@@ -109,7 +110,7 @@ bool Data::process(uint8_t* data, uint32_t len)
             data[0U] = modem::TAG_EOT;
             data[1U] = 0x00U;
 
-            m_slot->writeNetwork(data, DT_TERMINATOR_WITH_LC);
+            m_slot->writeNetwork(data, DataType::TERMINATOR_WITH_LC);
 
             if (m_slot->m_duplex) {
                 for (uint32_t i = 0U; i < m_slot->m_hangCount; i++)
@@ -154,7 +155,7 @@ bool Data::process(uint8_t* data, uint32_t len)
             return true;
         }
     }
-    else if (dataType == DT_DATA_HEADER) {
+    else if (dataType == DataType::DATA_HEADER) {
         if (m_slot->m_rfState == RS_RF_DATA)
             return true;
 
@@ -178,7 +179,7 @@ bool Data::process(uint8_t* data, uint32_t len)
 
         // validate the source RID
         if (!acl::AccessControl::validateSrcId(srcId)) {
-            LogWarning(LOG_RF, "DMR Slot %u, DT_DATA_HEADER denial, RID rejection, srcId = %u", m_slot->m_slotNo, srcId);
+            LogWarning(LOG_RF, "DMR Slot %u, DATA_HEADER denial, RID rejection, srcId = %u", m_slot->m_slotNo, srcId);
             m_slot->m_rfState = RS_RF_REJECTED;
             return false;
         }
@@ -186,7 +187,7 @@ bool Data::process(uint8_t* data, uint32_t len)
         // validate the target ID
         if (gi) {
             if (!acl::AccessControl::validateTGId(m_slot->m_slotNo, dstId)) {
-                LogWarning(LOG_RF, "DMR Slot %u, DT_DATA_HEADER denial, TGID rejection, srcId = %u, dstId = %u", m_slot->m_slotNo, srcId, dstId);
+                LogWarning(LOG_RF, "DMR Slot %u, DATA_HEADER denial, TGID rejection, srcId = %u, dstId = %u", m_slot->m_slotNo, srcId, dstId);
                 m_slot->m_rfState = RS_RF_REJECTED;
                 return false;
             }
@@ -194,7 +195,7 @@ bool Data::process(uint8_t* data, uint32_t len)
 
         m_slot->m_rfFrames = dataHeader->getBlocks();
         m_slot->m_rfSeqNo = 0U;
-        m_slot->m_rfLC = std::make_unique<lc::LC>(gi ? FLCO_GROUP : FLCO_PRIVATE, srcId, dstId);
+        m_slot->m_rfLC = std::make_unique<lc::LC>(gi ? FLCO::GROUP : FLCO::PRIVATE, srcId, dstId);
 
         // Regenerate the data header
         dataHeader->encode(data + 2U);
@@ -211,14 +212,14 @@ bool Data::process(uint8_t* data, uint32_t len)
         if (m_slot->m_duplex && m_repeatDataPacket)
             m_slot->addFrame(data);
 
-        m_slot->writeNetwork(data, DT_DATA_HEADER);
+        m_slot->writeNetwork(data, DataType::DATA_HEADER);
 
         m_slot->m_rfState = RS_RF_DATA;
         m_slot->m_rfLastDstId = dstId;
         m_slot->m_rfLastSrcId = srcId;
 
         if (m_slot->m_netState == RS_NET_IDLE) {
-            m_slot->setShortLC(m_slot->m_slotNo, dstId, gi ? FLCO_GROUP : FLCO_PRIVATE, false);
+            m_slot->setShortLC(m_slot->m_slotNo, dstId, gi ? FLCO::GROUP : FLCO::PRIVATE, false);
         }
 
         if (m_verbose) {
@@ -229,7 +230,7 @@ bool Data::process(uint8_t* data, uint32_t len)
 
         ::ActivityLog("DMR", true, "Slot %u RF data header from %u to %s%u, %u blocks", m_slot->m_slotNo, srcId, gi ? "TG " : "", dstId, m_slot->m_rfFrames);
 
-        ::memset(m_pduUserData, 0x00U, DMR_MAX_PDU_COUNT * DMR_MAX_PDU_LENGTH + 2U);
+        ::memset(m_pduUserData, 0x00U, MAX_PDU_COUNT * MAX_PDU_LENGTH + 2U);
         m_pduDataOffset = 0U;
 
         if (m_slot->m_rfFrames == 0U) {
@@ -239,7 +240,7 @@ bool Data::process(uint8_t* data, uint32_t len)
 
         return true;
     }
-    else if (dataType == DT_RATE_12_DATA || dataType == DT_RATE_34_DATA || dataType == DT_RATE_1_DATA) {
+    else if (dataType == DataType::RATE_12_DATA || dataType == DataType::RATE_34_DATA || dataType == DataType::RATE_1_DATA) {
         if (m_slot->m_rfState != RS_RF_DATA || m_slot->m_rfFrames == 0U)
             return false;
 
@@ -247,7 +248,7 @@ bool Data::process(uint8_t* data, uint32_t len)
         edac::Trellis trellis;
 
         // decode the rate 1/2 payload
-        if (dataType == DT_RATE_12_DATA) {
+        if (dataType == DataType::RATE_12_DATA) {
             // decode the BPTC (196,96) FEC
             uint8_t payload[12U];
             bptc.decode(data + 2U, payload);
@@ -259,7 +260,7 @@ bool Data::process(uint8_t* data, uint32_t len)
             // encode the BPTC (196,96) FEC
             bptc.encode(payload, data + 2U);
         }
-        else if (dataType == DT_RATE_34_DATA) {
+        else if (dataType == DataType::RATE_34_DATA) {
             // decode the Trellis 3/4 rate FEC
             uint8_t payload[18U];
             bool ret = trellis.decode34(data + 2U, payload);
@@ -271,7 +272,7 @@ bool Data::process(uint8_t* data, uint32_t len)
                 trellis.encode34(payload, data + 2U);
             }
             else {
-                LogWarning(LOG_RF, "DMR Slot %u, DT_RATE_34_DATA, unfixable RF rate 3/4 data", m_slot->m_slotNo);
+                LogWarning(LOG_RF, "DMR Slot %u, RATE_34_DATA, unfixable RF rate 3/4 data", m_slot->m_slotNo);
                 Utils::dump(1U, "Unfixable PDU Data", data + 2U, DMR_FRAME_LENGTH_BYTES);
             }
 
@@ -300,15 +301,15 @@ bool Data::process(uint8_t* data, uint32_t len)
                 Utils::dump(1U, "PDU Packet", m_pduUserData, m_pduDataOffset);
             }
 
-            LogMessage(LOG_RF, "DMR Slot %u, DT_RATE_12/34_DATA, ended data transmission", m_slot->m_slotNo);
+            LogMessage(LOG_RF, "DMR Slot %u, RATE_12/34_DATA, ended data transmission", m_slot->m_slotNo);
             m_slot->writeEndRF();
         }
 
         if (m_verbose) {
-            if (dataType == DT_RATE_12_DATA) {
+            if (dataType == DataType::RATE_12_DATA) {
                 LogMessage(LOG_RF, DMR_DT_RATE_12_DATA ", block = %u", m_slot->m_rfFrames + 1);
             }
-            else if (dataType == DT_RATE_34_DATA) {
+            else if (dataType == DataType::RATE_34_DATA) {
                 LogMessage(LOG_RF, DMR_DT_RATE_34_DATA ", block = %u", m_slot->m_rfFrames + 1);
             }
             else {
@@ -333,18 +334,18 @@ void Data::processNetwork(const data::Data& dmrData)
     uint8_t data[DMR_FRAME_LENGTH_BYTES + 2U];
     dmrData.getData(data + 2U);
 
-    if (dataType == DT_TERMINATOR_WITH_LC) {
+    if (dataType == DataType::TERMINATOR_WITH_LC) {
         if (m_slot->m_netState != RS_NET_AUDIO)
             return;
 
         // Regenerate the LC data
         lc::FullLC fullLC;
-        fullLC.encode(*m_slot->m_netLC, data + 2U, DT_TERMINATOR_WITH_LC);
+        fullLC.encode(*m_slot->m_netLC, data + 2U, DataType::TERMINATOR_WITH_LC);
 
         // Regenerate the Slot Type
         SlotType slotType;
         slotType.setColorCode(m_slot->m_colorCode);
-        slotType.setDataType(DT_TERMINATOR_WITH_LC);
+        slotType.setDataType(DataType::TERMINATOR_WITH_LC);
         slotType.encode(data + 2U);
 
         // Convert the Data Sync to be from the BS or MS as needed
@@ -386,14 +387,14 @@ void Data::processNetwork(const data::Data& dmrData)
 
         m_slot->writeEndNet();
     }
-    else if (dataType == DT_DATA_HEADER) {
+    else if (dataType == DataType::DATA_HEADER) {
         if (m_slot->m_netState == RS_NET_DATA)
             return;
 
         data::DataHeader* dataHeader = new data::DataHeader();
         bool valid = dataHeader->decode(data + 2U);
         if (!valid) {
-            LogError(LOG_NET, "DMR Slot %u, DT_DATA_HEADER, unable to decode the network data header", m_slot->m_slotNo);
+            LogError(LOG_NET, "DMR Slot %u, DataType::DATA_HEADER, unable to decode the network data header", m_slot->m_slotNo);
             return;
         }
 
@@ -411,7 +412,7 @@ void Data::processNetwork(const data::Data& dmrData)
         }
 
         m_slot->m_netFrames = dataHeader->getBlocks();
-        m_slot->m_netLC = std::make_unique<lc::LC>(gi ? FLCO_GROUP : FLCO_PRIVATE, srcId, dstId);
+        m_slot->m_netLC = std::make_unique<lc::LC>(gi ? FLCO::GROUP : FLCO::PRIVATE, srcId, dstId);
 
         // Regenerate the data header
         dataHeader->encode(data + 2U);
@@ -419,7 +420,7 @@ void Data::processNetwork(const data::Data& dmrData)
         // Regenerate the Slot Type
         SlotType slotType;
         slotType.setColorCode(m_slot->m_colorCode);
-        slotType.setDataType(DT_DATA_HEADER);
+        slotType.setDataType(DataType::DATA_HEADER);
         slotType.encode(data + 2U);
 
         // Convert the Data Sync to be from the BS or MS as needed
@@ -438,7 +439,7 @@ void Data::processNetwork(const data::Data& dmrData)
         m_slot->m_netLastDstId = dstId;
         m_slot->m_netLastSrcId = srcId;
 
-        m_slot->setShortLC(m_slot->m_slotNo, dstId, gi ? FLCO_GROUP : FLCO_PRIVATE, false);
+        m_slot->setShortLC(m_slot->m_slotNo, dstId, gi ? FLCO::GROUP : FLCO::PRIVATE, false);
 
         if (m_verbose) {
             LogMessage(LOG_NET, DMR_DT_DATA_HEADER ", slot = %u, dpf = $%02X, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padCount = %u, seqNo = %u, dstId = %u, srcId = %u, group = %u",
@@ -449,7 +450,7 @@ void Data::processNetwork(const data::Data& dmrData)
         ::ActivityLog("DMR", false, "Slot %u network data header from %u to %s%u, %u blocks",
             m_slot->m_slotNo, srcId, gi ? "TG " : "", dstId, m_slot->m_netFrames);
 
-        ::memset(m_pduUserData, 0x00U, DMR_MAX_PDU_COUNT * DMR_MAX_PDU_LENGTH + 2U);
+        ::memset(m_pduUserData, 0x00U, MAX_PDU_COUNT * MAX_PDU_LENGTH + 2U);
         m_pduDataOffset = 0U;
 
         if (m_slot->m_netFrames == 0U) {
@@ -457,14 +458,14 @@ void Data::processNetwork(const data::Data& dmrData)
             m_slot->writeEndNet();
         }
     }
-    else if (dataType == DT_RATE_12_DATA || dataType == DT_RATE_34_DATA || dataType == DT_RATE_1_DATA) {
+    else if (dataType == DataType::RATE_12_DATA || dataType == DataType::RATE_34_DATA || dataType == DataType::RATE_1_DATA) {
         if (m_slot->m_netState != RS_NET_DATA || m_slot->m_netFrames == 0U) {
             m_slot->writeEndNet();
             return;
         }
 
         // regenerate the rate 1/2 payload
-        if (dataType == DT_RATE_12_DATA) {
+        if (dataType == DataType::RATE_12_DATA) {
             // decode the BPTC (196,96) FEC
             edac::BPTC19696 bptc;
             uint8_t payload[12U];
@@ -477,7 +478,7 @@ void Data::processNetwork(const data::Data& dmrData)
             // encode the BPTC (196,96) FEC
             bptc.encode(payload, data + 2U);
         }
-        else if (dataType == DT_RATE_34_DATA) {
+        else if (dataType == DataType::RATE_34_DATA) {
             // decode the Trellis 3/4 rate FEC
             edac::Trellis trellis;
             uint8_t payload[18U];
@@ -490,7 +491,7 @@ void Data::processNetwork(const data::Data& dmrData)
                 trellis.encode34(payload, data + 2U);
             }
             else {
-                LogWarning(LOG_NET, "DMR Slot %u, DT_RATE_34_DATA, unfixable network rate 3/4 data", m_slot->m_slotNo);
+                LogWarning(LOG_NET, "DMR Slot %u, RATE_34_DATA, unfixable network rate 3/4 data", m_slot->m_slotNo);
                 Utils::dump(1U, "Data", data + 2U, DMR_FRAME_LENGTH_BYTES);
             }
 
@@ -515,10 +516,10 @@ void Data::processNetwork(const data::Data& dmrData)
             m_slot->addFrame(data, true);
 
             if (m_verbose) {
-                if (dataType == DT_RATE_12_DATA) {
+                if (dataType == DataType::RATE_12_DATA) {
                     LogMessage(LOG_RF, DMR_DT_RATE_12_DATA ", block = %u", m_slot->m_netFrames + 1);
                 }
-                else if (dataType == DT_RATE_34_DATA) {
+                else if (dataType == DataType::RATE_34_DATA) {
                     LogMessage(LOG_RF, DMR_DT_RATE_34_DATA ", block = %u", m_slot->m_netFrames + 1);
                 }
                 else {
@@ -532,7 +533,7 @@ void Data::processNetwork(const data::Data& dmrData)
                 Utils::dump(1U, "PDU Packet", m_pduUserData, m_pduDataOffset);
             }
 
-            LogMessage(LOG_NET, "DMR Slot %u, DT_RATE_12/34_DATA, ended data transmission", m_slot->m_slotNo);
+            LogMessage(LOG_NET, "DMR Slot %u, RATE_12/34_DATA, ended data transmission", m_slot->m_slotNo);
             m_slot->writeEndNet();
         }
     }
@@ -565,8 +566,8 @@ Data::Data(Slot* slot, network::BaseNetwork* network, bool dumpDataPacket, bool 
     m_verbose(verbose),
     m_debug(debug)
 {
-    m_pduUserData = new uint8_t[DMR_MAX_PDU_COUNT * DMR_MAX_PDU_LENGTH + 2U];
-    ::memset(m_pduUserData, 0x00U, DMR_MAX_PDU_COUNT * DMR_MAX_PDU_LENGTH + 2U);
+    m_pduUserData = new uint8_t[MAX_PDU_COUNT * MAX_PDU_LENGTH + 2U];
+    ::memset(m_pduUserData, 0x00U, MAX_PDU_COUNT * MAX_PDU_LENGTH + 2U);
 }
 
 /// <summary>

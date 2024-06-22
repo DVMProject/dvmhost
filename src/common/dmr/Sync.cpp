@@ -16,6 +16,7 @@
 #include "dmr/Sync.h"
 
 using namespace dmr;
+using namespace dmr::defines;
 
 #include <cassert>
 

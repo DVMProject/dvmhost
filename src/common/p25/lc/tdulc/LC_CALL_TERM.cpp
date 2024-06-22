@@ -7,15 +7,16 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
 #include "p25/lc/tdulc/LC_CALL_TERM.h"
 
-using namespace p25::lc::tdulc;
-using namespace p25::lc;
 using namespace p25;
+using namespace p25::defines;
+using namespace p25::lc;
+using namespace p25::lc::tdulc;
 
 #include <cassert>
 
@@ -28,7 +29,7 @@ using namespace p25;
 /// </summary>
 LC_CALL_TERM::LC_CALL_TERM() : TDULC()
 {
-    m_lco = p25::LC_CALL_TERM;
+    m_lco = LCO::CALL_TERM;
 }
 
 /// <summary>
@@ -58,7 +59,7 @@ void LC_CALL_TERM::encode(uint8_t* data)
     m_implicit = true;
 
     rsValue = 0U;
-    rsValue = (rsValue << 24) + P25_WUID_FNE;                                       // System Radio Address
+    rsValue = (rsValue << 24) + WUID_FNE;                                           // System Radio Address
 
     std::unique_ptr<uint8_t[]> rs = TDULC::fromValue(rsValue);
     TDULC::encode(data, rs.get());

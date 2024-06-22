@@ -7,7 +7,7 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2023 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2023,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
@@ -16,9 +16,10 @@
 #include "Log.h"
 #include "Utils.h"
 
-using namespace p25::lc::tdulc;
-using namespace p25::lc;
 using namespace p25;
+using namespace p25::defines;
+using namespace p25::lc;
+using namespace p25::lc::tdulc;
 
 #include <cassert>
 
@@ -80,11 +81,11 @@ std::unique_ptr<TDULC> TDULCFactory::createTDULC(const uint8_t* data)
 
     // standard P25 reference opcodes
     switch (lco) {
-    case p25::LC_GROUP:
+    case LCO::GROUP:
         return decode(new LC_GROUP(), data);
-    case p25::LC_PRIVATE:
+    case LCO::PRIVATE:
         return decode(new LC_PRIVATE(), data);
-    case p25::LC_TEL_INT_VCH_USER:
+    case LCO::TEL_INT_VCH_USER:
         return decode(new LC_TEL_INT_VCH_USER(), data);
     default:
         LogError(LOG_P25, "TDULCFactory::create(), unknown TDULC LCO value, lco = $%02X", lco);

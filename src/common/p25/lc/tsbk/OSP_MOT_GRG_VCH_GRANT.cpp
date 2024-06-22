@@ -7,16 +7,17 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
 #include "p25/lc/tsbk/OSP_MOT_GRG_VCH_GRANT.h"
 #include "Log.h"
 
-using namespace p25::lc::tsbk;
-using namespace p25::lc;
 using namespace p25;
+using namespace p25::defines;
+using namespace p25::lc;
+using namespace p25::lc::tsbk;
 
 #include <cassert>
 
@@ -30,7 +31,7 @@ using namespace p25;
 OSP_MOT_GRG_VCH_GRANT::OSP_MOT_GRG_VCH_GRANT() : TSBK(),
     m_patchSuperGroupId(0U)
 {
-    m_lco = TSBK_OSP_MOT_GRG_VCH_GRANT;
+    m_lco = TSBKO::OSP_MOT_GRG_VCH_GRANT;
 }
 
 /// <summary>
@@ -60,7 +61,7 @@ void OSP_MOT_GRG_VCH_GRANT::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 
     ulong64_t tsbkValue = 0U;
 
-    m_mfId = P25_MFG_MOT;
+    m_mfId = MFG_MOT;
 
     if (m_patchSuperGroupId != 0U) {
         tsbkValue = 0U;                                                             // Priority
@@ -70,7 +71,7 @@ void OSP_MOT_GRG_VCH_GRANT::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
         tsbkValue = (tsbkValue << 24) + m_srcId;                                    // Source Radio Address
     }
     else {
-        LogError(LOG_P25, "OSP_MOT_GRG_VCH_GRANT::encode(), invalid values for TSBK_OSP_MOT_GRG_VCH_GRANT, patchSuperGroupId = $%02X", m_patchSuperGroupId);
+        LogError(LOG_P25, "OSP_MOT_GRG_VCH_GRANT::encode(), invalid values for TSBKO::OSP_MOT_GRG_VCH_GRANT, patchSuperGroupId = $%02X", m_patchSuperGroupId);
         return; // blatantly ignore creating this TSBK
     }
 
@@ -85,7 +86,7 @@ void OSP_MOT_GRG_VCH_GRANT::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 /// <returns></returns>
 std::string OSP_MOT_GRG_VCH_GRANT::toString(bool isp)
 {
-    return std::string("TSBK_OSP_MOT_GRG_VCH_GRANT (Group Regroup Voice Channel Grant)");
+    return std::string("TSBKO, OSP_MOT_GRG_VCH_GRANT (Group Regroup Voice Channel Grant)");
 }
 
 // ---------------------------------------------------------------------------

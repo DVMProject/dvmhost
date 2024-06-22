@@ -7,16 +7,17 @@
 * @package DVM / Modem Host Software
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
 #include "dmr/lc/csbk/CSBK_DVM_GIT_HASH.h"
 #include "HostMain.h"
 
-using namespace dmr::lc::csbk;
-using namespace dmr::lc;
 using namespace dmr;
+using namespace dmr::defines;
+using namespace dmr::lc;
+using namespace dmr::lc::csbk;
 
 #include <cassert>
 
@@ -29,8 +30,8 @@ using namespace dmr;
 /// </summary>
 CSBK_DVM_GIT_HASH::CSBK_DVM_GIT_HASH() : CSBK()
 {
-    m_CSBKO = CSBKO_DVM_GIT_HASH;
-    m_FID = FID_OCS_DVM;
+    m_CSBKO = CSBKO::DVM_GIT_HASH;
+    m_FID = FID_DVM_OCS;
 }
 
 /// <summary>
@@ -75,5 +76,5 @@ void CSBK_DVM_GIT_HASH::encode(uint8_t* data)
 /// <returns></returns>
 std::string CSBK_DVM_GIT_HASH::toString()
 {
-    return std::string("CSBKO_DVM_GIT_HASH (DVM Git Hash Identifier)");
+    return std::string("CSBKO, DVM_GIT_HASH (DVM Git Hash Identifier)");
 }

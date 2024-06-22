@@ -7,7 +7,7 @@
 * @package DVM / Modem Host Software
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2022-2023 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2022-2024 Bryan Biedenkapp, N2PLL
 *
 */
 #if !defined(__NXDN_PACKET_CONTROL_SIGNALING_H__)
@@ -40,9 +40,9 @@ namespace nxdn
         class HOST_SW_API ControlSignaling {
         public:
             /// <summary>Process a data frame from the RF interface.</summary>
-            bool process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len);
+            bool process(defines::FuncChannelType::E fct, defines::ChOption::E option, uint8_t* data, uint32_t len);
             /// <summary>Process a data frame from the network.</summary>
-            bool processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t* data, uint32_t len);
+            bool processNetwork(defines::FuncChannelType::E fct, defines::ChOption::E option, lc::RTCH& netLC, uint8_t* data, uint32_t len);
 
         protected:
             friend class nxdn::packet::Data;

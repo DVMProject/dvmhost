@@ -7,7 +7,7 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2017-2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
@@ -18,8 +18,9 @@
 #include "Log.h"
 #include "Utils.h"
 
-using namespace p25::lc;
 using namespace p25;
+using namespace p25::defines;
+using namespace p25::lc;
 
 #include <cassert>
 #include <cstring>
@@ -74,8 +75,8 @@ TDULC::TDULC(LC* lc) : TDULC()
 /// </summary>
 TDULC::TDULC() :
     m_protect(false),
-    m_lco(LC_GROUP),
-    m_mfId(P25_MFG_STANDARD),
+    m_lco(LCO::GROUP),
+    m_mfId(MFG_STANDARD),
     m_srcId(0U),
     m_dstId(0U),
     m_grpVchNo(0U),

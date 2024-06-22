@@ -59,11 +59,11 @@ namespace p25
             /// <summary></summary>
             __PROPERTY(uint8_t, marker, Marker);
             /// <summary></summary>
-            __PROPERTY(RTFlag, rt, RT);
+            __PROPERTY(RTFlag::E, rt, RT);
             /// <summary></summary>
-            __PROPERTY(StartStopFlag, startStop, StartStop);
+            __PROPERTY(StartStopFlag::E, startStop, StartStop);
             /// <summary></summary>
-            __PROPERTY(StreamTypeFlag, streamType, StreamType);
+            __PROPERTY(StreamTypeFlag::E, streamType, StreamType);
         };
     } // namespace dfsi
 } // namespace p25

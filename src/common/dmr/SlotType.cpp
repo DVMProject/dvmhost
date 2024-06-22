@@ -9,12 +9,14 @@
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
 *   Copyright (C) 2015,2016 Jonathan Naylor, G4KLX
+*   Copyright (C) 2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "common/dmr/SlotType.h"
 #include "common/edac/Golay2087.h"
 
 using namespace dmr;
+using namespace dmr::defines;
 
 #include <cassert>
 
@@ -27,7 +29,7 @@ using namespace dmr;
 /// </summary>
 SlotType::SlotType() :
     m_colorCode(0U),
-    m_dataType(0U)
+    m_dataType(DataType::IDLE)
 {
     /* stub */
 }
@@ -45,20 +47,20 @@ void SlotType::decode(const uint8_t* data)
 {
     assert(data != nullptr);
 
-    uint8_t DMRSlotType[3U];
-    DMRSlotType[0U] = (data[12U] << 2) & 0xFCU;
-    DMRSlotType[0U] |= (data[13U] >> 6) & 0x03U;
+    uint8_t slotType[3U];
+    slotType[0U] = (data[12U] << 2) & 0xFCU;
+    slotType[0U] |= (data[13U] >> 6) & 0x03U;
 
-    DMRSlotType[1U] = (data[13U] << 2) & 0xC0U;
-    DMRSlotType[1U] |= (data[19U] << 2) & 0x3CU;
-    DMRSlotType[1U] |= (data[20U] >> 6) & 0x03U;
+    slotType[1U] = (data[13U] << 2) & 0xC0U;
+    slotType[1U] |= (data[19U] << 2) & 0x3CU;
+    slotType[1U] |= (data[20U] >> 6) & 0x03U;
 
-    DMRSlotType[2U] = (data[20U] << 2) & 0xF0U;
+    slotType[2U] = (data[20U] << 2) & 0xF0U;
 
-    uint8_t code = edac::Golay2087::decode(DMRSlotType);
+    uint8_t code = edac::Golay2087::decode(slotType);
 
     m_colorCode = (code >> 4) & 0x0FU;
-    m_dataType = (code >> 0) & 0x0FU;
+    m_dataType = (DataType::E)((code >> 0) & 0x0FU);
 }
 
 /// <summary>
@@ -69,16 +71,16 @@ void SlotType::encode(uint8_t* data) const
 {
     assert(data != nullptr);
 
-    uint8_t DMRSlotType[3U];
-    DMRSlotType[0U] = (m_colorCode << 4) & 0xF0U;
-    DMRSlotType[0U] |= (m_dataType << 0) & 0x0FU;
-    DMRSlotType[1U] = 0x00U;
-    DMRSlotType[2U] = 0x00U;
+    uint8_t slotType[3U];
+    slotType[0U] = (m_colorCode << 4) & 0xF0U;
+    slotType[0U] |= (m_dataType << 0) & 0x0FU;
+    slotType[1U] = 0x00U;
+    slotType[2U] = 0x00U;
 
-    edac::Golay2087::encode(DMRSlotType);
+    edac::Golay2087::encode(slotType);
 
-    data[12U] = (data[12U] & 0xC0U) | ((DMRSlotType[0U] >> 2) & 0x3FU);
-    data[13U] = (data[13U] & 0x0FU) | ((DMRSlotType[0U] << 6) & 0xC0U) | ((DMRSlotType[1U] >> 2) & 0x30U);
-    data[19U] = (data[19U] & 0xF0U) | ((DMRSlotType[1U] >> 2) & 0x0FU);
-    data[20U] = (data[20U] & 0x03U) | ((DMRSlotType[1U] << 6) & 0xC0U) | ((DMRSlotType[2U] >> 2) & 0x3CU);
+    data[12U] = (data[12U] & 0xC0U) | ((slotType[0U] >> 2) & 0x3FU);
+    data[13U] = (data[13U] & 0x0FU) | ((slotType[0U] << 6) & 0xC0U) | ((slotType[1U] >> 2) & 0x30U);
+    data[19U] = (data[19U] & 0xF0U) | ((slotType[1U] >> 2) & 0x0FU);
+    data[20U] = (data[20U] & 0x03U) | ((slotType[1U] << 6) & 0xC0U) | ((slotType[2U] >> 2) & 0x3CU);
 }

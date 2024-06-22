@@ -13,9 +13,10 @@
 #include "Defines.h"
 #include "dmr/lc/csbk/CSBK_BROADCAST.h"
 
-using namespace dmr::lc::csbk;
-using namespace dmr::lc;
 using namespace dmr;
+using namespace dmr::defines;
+using namespace dmr::lc;
+using namespace dmr::lc::csbk;
 
 #include <cassert>
 
@@ -27,7 +28,7 @@ using namespace dmr;
 /// Initializes a new instance of the CSBK_BROADCAST class.
 /// </summary>
 CSBK_BROADCAST::CSBK_BROADCAST() : CSBK(),
-    m_anncType(BCAST_ANNC_SITE_PARMS),
+    m_anncType(BroadcastAnncType::SITE_PARMS),
     m_hibernating(false),
     m_annWdCh1(false),
     m_annWdCh2(false),
@@ -35,7 +36,7 @@ CSBK_BROADCAST::CSBK_BROADCAST() : CSBK(),
     m_systemId(0U),
     m_backoffNo(1U)
 {
-    m_CSBKO = CSBKO_BROADCAST;
+    m_CSBKO = CSBKO::BROADCAST;
 }
 
 /// <summary>
@@ -60,7 +61,7 @@ bool CSBK_BROADCAST::decode(const uint8_t* data)
 
     switch (m_anncType)
     {
-    case BCAST_ANNC_ANN_WD_TSCC:
+    case BroadcastAnncType::ANN_WD_TSCC:
         // Broadcast Params 1
         m_colorCode = (uint8_t)((csbkValue >> 51) & 0x0FU);                         // Color Code 1
         m_annWdCh1 = ((csbkValue >> 44) & 0x04U) == 0x04U;                          // Announce/Withdraw Channel 1
@@ -95,7 +96,7 @@ void CSBK_BROADCAST::encode(uint8_t* data)
 
     switch (m_anncType)
     {
-    case BCAST_ANNC_ANN_WD_TSCC:
+    case BroadcastAnncType::ANN_WD_TSCC:
         // Broadcast Params 1
         csbkValue = (csbkValue << 4) + 0U;                                          // Reserved
         csbkValue = (csbkValue << 4) + (m_colorCode & 0x0FU);                       // Color Code 1
@@ -111,7 +112,7 @@ void CSBK_BROADCAST::encode(uint8_t* data)
         csbkValue = (csbkValue << 12) + (m_logicalCh1 & 0xFFFU);                    // Logical Channel 1
         csbkValue = (csbkValue << 12) + (m_logicalCh2 & 0xFFFU);                    // Logical Channel 2
         break;
-    case BCAST_ANNC_CHAN_FREQ:
+    case BroadcastAnncType::CHAN_FREQ:
     {
         uint32_t calcSpace = (uint32_t)(m_siteIdenEntry.chSpaceKhz() / 0.125);
         float calcTxOffset = m_siteIdenEntry.txOffsetMhz() * 1000000;
@@ -148,7 +149,7 @@ void CSBK_BROADCAST::encode(uint8_t* data)
         csbkValue = (csbkValue << 13) + (rxFreqKhz & 0x3FFFU);                      // Receive Freq Khz
     }
     break;
-    case BCAST_ANNC_SITE_PARMS:
+    case BroadcastAnncType::SITE_PARMS:
         // Broadcast Params 1
         csbkValue = (csbkValue << 14) + m_siteData.systemIdentity(true);            // Site Identity (Broadcast Params 1)
 
@@ -174,10 +175,10 @@ void CSBK_BROADCAST::encode(uint8_t* data)
 std::string CSBK_BROADCAST::toString()
 {
     switch (m_anncType) {
-    case BCAST_ANNC_ANN_WD_TSCC:    return std::string("CSBKO_BROADCAST (Announcement PDU), BCAST_ANNC_ANN_WD_TSCC (Announce-WD TSCC Channel)");
-    case BCAST_ANNC_CHAN_FREQ:      return std::string("CSBKO_BROADCAST (Announcement PDU), BCAST_ANNC_CHAN_FREQ (Logical Channel/Frequency)");
-    case BCAST_ANNC_SITE_PARMS:     return std::string("CSBKO_BROADCAST (Announcement PDU), BCAST_ANNC_SITE_PARMS (General Site Parameters)");
-    default:                        return std::string("CSBKO_BROADCAST (Announcement PDU)");
+    case BroadcastAnncType::ANN_WD_TSCC:    return std::string("CSBKO, BROADCAST (Announcement PDU), BroadcastAnncType::ANN_WD_TSCC (Announce-WD TSCC Channel)");
+    case BroadcastAnncType::CHAN_FREQ:      return std::string("CSBKO, BROADCAST (Announcement PDU), BroadcastAnncType::CHAN_FREQ (Logical Channel/Frequency)");
+    case BroadcastAnncType::SITE_PARMS:     return std::string("CSBKO, BROADCAST (Announcement PDU), BroadcastAnncType::SITE_PARMS (General Site Parameters)");
+    default:                                return std::string("CSBKO, BROADCAST (Announcement PDU)");
     }
 }
 

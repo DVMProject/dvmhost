@@ -7,15 +7,16 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
 #include "p25/lc/tsbk/OSP_SCCB.h"
 
-using namespace p25::lc::tsbk;
-using namespace p25::lc;
 using namespace p25;
+using namespace p25::defines;
+using namespace p25::lc;
+using namespace p25::lc::tsbk;
 
 #include <cassert>
 
@@ -30,7 +31,7 @@ OSP_SCCB::OSP_SCCB() : TSBK(),
     m_sccbChannelId1(0U),
     m_sccbChannelId2(0U)
 {
-    m_lco = TSBK_OSP_SCCB;
+    m_lco = TSBKO::OSP_SCCB;
 }
 
 /// <summary>
@@ -67,14 +68,14 @@ void OSP_SCCB::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
         tsbkValue = (tsbkValue << 8) + m_siteData.serviceClass();                   // System Service Class
     }
     else {
-        tsbkValue = (tsbkValue << 8) + (P25_SVC_CLS_INVALID);                       // System Service Class
+        tsbkValue = (tsbkValue << 8) + (ServiceClass::INVALID);                     // System Service Class
     }
     tsbkValue = (tsbkValue << 16) + m_sccbChannelId2;                               // SCCB Channel ID 2
     if (m_sccbChannelId2 > 0) {
         tsbkValue = (tsbkValue << 8) + m_siteData.serviceClass();                   // System Service Class
     }
     else {
-        tsbkValue = (tsbkValue << 8) + (P25_SVC_CLS_INVALID);                       // System Service Class
+        tsbkValue = (tsbkValue << 8) + (ServiceClass::INVALID);                     // System Service Class
     }
 
     std::unique_ptr<uint8_t[]> tsbk = TSBK::fromValue(tsbkValue);
@@ -88,7 +89,7 @@ void OSP_SCCB::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 /// <returns></returns>
 std::string OSP_SCCB::toString(bool isp)
 {
-    return std::string("TSBK_OSP_SCCB (Secondary Control Channel Broadcast)");
+    return std::string("TSBKO, OSP_SCCB (Secondary Control Channel Broadcast)");
 }
 
 // ---------------------------------------------------------------------------

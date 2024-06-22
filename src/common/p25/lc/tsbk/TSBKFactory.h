@@ -17,6 +17,7 @@
 
 #include "common/edac/Trellis.h"
 
+// TSBK
 #include "common/p25/lc/TSBK.h"
 #include "common/p25/lc/tsbk/IOSP_ACK_RSP.h"
 #include "common/p25/lc/tsbk/IOSP_CALL_ALRT.h"
@@ -68,6 +69,7 @@
 #include "common/p25/lc/tsbk/OSP_U_REG_CMD.h"
 #include "common/p25/lc/tsbk/OSP_UU_VCH_GRANT_UPD.h"
 
+// AMBT
 #include "common/p25/lc/AMBT.h"
 #include "common/p25/lc/tsbk/mbt/MBT_IOSP_ACK_RSP.h"
 #include "common/p25/lc/tsbk/mbt/MBT_IOSP_CALL_ALRT.h"

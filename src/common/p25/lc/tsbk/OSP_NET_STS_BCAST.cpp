@@ -7,15 +7,16 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
 #include "p25/lc/tsbk/OSP_NET_STS_BCAST.h"
 
-using namespace p25::lc::tsbk;
-using namespace p25::lc;
 using namespace p25;
+using namespace p25::defines;
+using namespace p25::lc;
+using namespace p25::lc::tsbk;
 
 #include <cassert>
 
@@ -28,7 +29,7 @@ using namespace p25;
 /// </summary>
 OSP_NET_STS_BCAST::OSP_NET_STS_BCAST() : TSBK()
 {
-    m_lco = TSBK_OSP_NET_STS_BCAST;
+    m_lco = TSBKO::OSP_NET_STS_BCAST;
 }
 
 /// <summary>
@@ -76,5 +77,5 @@ void OSP_NET_STS_BCAST::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 /// <returns></returns>
 std::string OSP_NET_STS_BCAST::toString(bool isp)
 {
-    return std::string("TSBK_OSP_NET_STS_BCAST (Network Status Broadcast)");
+    return std::string("TSBKO, OSP_NET_STS_BCAST (Network Status Broadcast)");
 }

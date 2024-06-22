@@ -23,6 +23,7 @@
 
 using namespace p25;
 using namespace p25::dfsi;
+using namespace p25::dfsi::defines;
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -33,7 +34,7 @@ using namespace p25::dfsi;
 /// </summary>
 MotVoiceHeader2::MotVoiceHeader2() :
     header(nullptr),
-    m_source(SOURCE_QUANTAR)
+    m_source(SourceFlag::QUANTAR)
 {
     header = new uint8_t[HCW_LENGTH];
     ::memset(header, 0x00U, HCW_LENGTH);
@@ -45,7 +46,7 @@ MotVoiceHeader2::MotVoiceHeader2() :
 /// <param name="data"></param>
 MotVoiceHeader2::MotVoiceHeader2(uint8_t* data) :
     header(nullptr),
-    m_source(SOURCE_QUANTAR)
+    m_source(SourceFlag::QUANTAR)
 {
     decode(data);
 }
@@ -68,7 +69,7 @@ bool MotVoiceHeader2::decode(const uint8_t* data)
 {
     assert(data != nullptr);
 
-    m_source = (SourceFlag)data[21];
+    m_source = (SourceFlag::E)data[21];
 
     if (header != nullptr) {
         delete[] header;
@@ -89,7 +90,7 @@ void MotVoiceHeader2::encode(uint8_t* data)
 {
     assert(data != nullptr);
 
-    data[0U] = P25_DFSI_MOT_VHDR_2;
+    data[0U] = DFSIFrameType::MOT_VHDR_2;
 
     if (header != nullptr) {
         ::memcpy(data + 1U, header, HCW_LENGTH);

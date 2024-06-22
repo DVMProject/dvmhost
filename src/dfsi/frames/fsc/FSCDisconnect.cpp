@@ -32,7 +32,7 @@ using namespace p25::dfsi::fsc;
 /// </summary>
 FSCDisconnect::FSCDisconnect() : FSCMessage()
 {
-    m_messageId = FSC_DISCONNECT;
+    m_messageId = FSCMessageType::FSC_DISCONNECT;
 }
 
 /// <summary>

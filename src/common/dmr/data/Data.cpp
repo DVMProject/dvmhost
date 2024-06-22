@@ -9,14 +9,16 @@
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
 *   Copyright (C) 2015,2016 Jonathan Naylor, G4KLX
+*   Copyright (C) 2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
 #include "dmr/DMRDefines.h"
 #include "dmr/data/Data.h"
 
-using namespace dmr::data;
 using namespace dmr;
+using namespace dmr::defines;
+using namespace dmr::data;
 
 #include <cstring>
 #include <cassert>
@@ -52,10 +54,10 @@ Data::Data() :
     m_slotNo(1U),
     m_srcId(0U),
     m_dstId(0U),
-    m_flco(FLCO_GROUP),
+    m_flco(FLCO::GROUP),
     m_n(0U),
     m_seqNo(0U),
-    m_dataType(0U),
+    m_dataType(DataType::IDLE),
     m_ber(0U),
     m_rssi(0U),
     m_data(nullptr)

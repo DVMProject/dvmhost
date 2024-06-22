@@ -9,7 +9,7 @@
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
 *   Copyright (C) 2016,2017 Jonathan Naylor, G4KLX
-*   Copyright (C) 2017-2023 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
@@ -21,8 +21,9 @@
 #include "Log.h"
 #include "Utils.h"
 
-using namespace p25::lc;
 using namespace p25;
+using namespace p25::defines;
+using namespace p25::lc;
 
 #include <cstdio>
 #include <cassert>
@@ -41,24 +42,23 @@ SiteData LC::m_siteData = SiteData();
 /// <summary>
 /// Initializes a new instance of the LC class.
 /// </summary>
-/// <param name="siteData"></param>
 LC::LC() :
     m_protect(false),
-    m_lco(LC_GROUP),
-    m_mfId(P25_MFG_STANDARD),
+    m_lco(LCO::GROUP),
+    m_mfId(MFG_STANDARD),
     m_srcId(0U),
     m_dstId(0U),
     m_grpVchNo(0U),
     m_grpVchNoB(0U),
     m_dstIdB(0U),
     m_explicitId(false),
-    m_netId(P25_WACN_STD_DEFAULT),
-    m_sysId(P25_SID_STD_DEFAULT),
+    m_netId(WACN_STD_DEFAULT),
+    m_sysId(SID_STD_DEFAULT),
     m_emergency(false),
     m_encrypted(false),
     m_priority(4U),
     m_group(true),
-    m_algId(P25_ALGO_UNENCRYPT),
+    m_algId(ALGO_UNENCRYPT),
     m_kId(0U),
     m_rs(),
     m_encryptOverride(false),
@@ -67,8 +67,8 @@ LC::LC() :
     m_rsValue(0U),
     m_mi(nullptr)
 {
-    m_mi = new uint8_t[P25_MI_LENGTH_BYTES];
-    ::memset(m_mi, 0x00U, P25_MI_LENGTH_BYTES);
+    m_mi = new uint8_t[MI_LENGTH_BYTES];
+    ::memset(m_mi, 0x00U, MI_LENGTH_BYTES);
 }
 
 /// <summary>
@@ -145,10 +145,10 @@ bool LC::decodeHDU(const uint8_t* data)
 
     m_mfId = rs[9U];                                                                // Mfg Id.
     m_algId = rs[10U];                                                              // Algorithm ID
-    if (m_algId != P25_ALGO_UNENCRYPT) {
-        m_mi = new uint8_t[P25_MI_LENGTH_BYTES];
-        ::memset(m_mi, 0x00U, P25_MI_LENGTH_BYTES);
-        ::memcpy(m_mi, rs, P25_MI_LENGTH_BYTES);                                    // Message Indicator
+    if (m_algId != ALGO_UNENCRYPT) {
+        m_mi = new uint8_t[MI_LENGTH_BYTES];
+        ::memset(m_mi, 0x00U, MI_LENGTH_BYTES);
+        ::memcpy(m_mi, rs, MI_LENGTH_BYTES);                                        // Message Indicator
 
         m_kId = (rs[11U] << 8) + rs[12U];                                           // Key ID
         if (!m_encrypted) {
@@ -157,8 +157,8 @@ bool LC::decodeHDU(const uint8_t* data)
         }
     }
     else {
-        m_mi = new uint8_t[P25_MI_LENGTH_BYTES];
-        ::memset(m_mi, 0x00U, P25_MI_LENGTH_BYTES);
+        m_mi = new uint8_t[MI_LENGTH_BYTES];
+        ::memset(m_mi, 0x00U, MI_LENGTH_BYTES);
 
         m_kId = 0x0000U;
         if (m_encrypted) {
@@ -191,7 +191,7 @@ void LC::encodeHDU(uint8_t* data)
     uint8_t rs[P25_HDU_LENGTH_BYTES];
     ::memset(rs, 0x00U, P25_HDU_LENGTH_BYTES);
 
-    for (uint32_t i = 0; i < P25_MI_LENGTH_BYTES; i++)
+    for (uint32_t i = 0; i < MI_LENGTH_BYTES; i++)
         rs[i] = m_mi[i];                                                            // Message Indicator
 
     rs[9U] = m_mfId;                                                                // Mfg Id.
@@ -383,10 +383,10 @@ bool LC::decodeLDU2(const uint8_t* data)
 #endif
 
     m_algId = rs[9U];                                                               // Algorithm ID
-    if (m_algId != P25_ALGO_UNENCRYPT) {
-        m_mi = new uint8_t[P25_MI_LENGTH_BYTES];
-        ::memset(m_mi, 0x00U, P25_MI_LENGTH_BYTES);
-        ::memcpy(m_mi, rs, P25_MI_LENGTH_BYTES);                                    // Message Indicator
+    if (m_algId != ALGO_UNENCRYPT) {
+        m_mi = new uint8_t[MI_LENGTH_BYTES];
+        ::memset(m_mi, 0x00U, MI_LENGTH_BYTES);
+        ::memcpy(m_mi, rs, MI_LENGTH_BYTES);                                        // Message Indicator
 
         m_kId = (rs[10U] << 8) + rs[11U];                                           // Key ID
         if (!m_encrypted) {
@@ -395,8 +395,8 @@ bool LC::decodeLDU2(const uint8_t* data)
         }
     }
     else {
-        m_mi = new uint8_t[P25_MI_LENGTH_BYTES];
-        ::memset(m_mi, 0x00U, P25_MI_LENGTH_BYTES);
+        m_mi = new uint8_t[MI_LENGTH_BYTES];
+        ::memset(m_mi, 0x00U, MI_LENGTH_BYTES);
 
         m_kId = 0x0000U;
         if (m_encrypted) {
@@ -420,7 +420,7 @@ void LC::encodeLDU2(uint8_t* data)
     uint8_t rs[P25_LDU_LC_FEC_LENGTH_BYTES];
     ::memset(rs, 0x00U, P25_LDU_LC_FEC_LENGTH_BYTES);
 
-    for (uint32_t i = 0; i < P25_MI_LENGTH_BYTES; i++)
+    for (uint32_t i = 0; i < MI_LENGTH_BYTES; i++)
         rs[i] = m_mi[i];                                                            // Message Indicator
 
     rs[9U] = m_algId;                                                               // Algorithm ID
@@ -470,7 +470,7 @@ void LC::setMI(const uint8_t* mi)
 {
     assert(mi != nullptr);
 
-    ::memcpy(m_mi, mi, P25_MI_LENGTH_BYTES);
+    ::memcpy(m_mi, mi, MI_LENGTH_BYTES);
 }
 
 /// <summary>Gets the encryption message indicator.</summary>
@@ -479,7 +479,7 @@ void LC::getMI(uint8_t* mi) const
 {
     assert(mi != nullptr);
 
-    ::memcpy(mi, m_mi, P25_MI_LENGTH_BYTES);
+    ::memcpy(mi, m_mi, MI_LENGTH_BYTES);
 }
 
 // ---------------------------------------------------------------------------
@@ -519,11 +519,11 @@ void LC::copy(const LC& data)
     m_rsValue = data.m_rsValue;
 
     m_algId = data.m_algId;
-    if (m_algId != P25_ALGO_UNENCRYPT) {
+    if (m_algId != ALGO_UNENCRYPT) {
         delete[] m_mi;
 
-        m_mi = new uint8_t[P25_MI_LENGTH_BYTES];
-        ::memcpy(m_mi, data.m_mi, P25_MI_LENGTH_BYTES);
+        m_mi = new uint8_t[MI_LENGTH_BYTES];
+        ::memcpy(m_mi, data.m_mi, MI_LENGTH_BYTES);
 
         m_kId = data.m_kId;
         if (!m_encrypted) {
@@ -534,8 +534,8 @@ void LC::copy(const LC& data)
     else {
         delete[] m_mi;
 
-        m_mi = new uint8_t[P25_MI_LENGTH_BYTES];
-        ::memset(m_mi, 0x00U, P25_MI_LENGTH_BYTES);
+        m_mi = new uint8_t[MI_LENGTH_BYTES];
+        ::memset(m_mi, 0x00U, MI_LENGTH_BYTES);
 
         m_kId = 0x0000U;
         if (m_encrypted) {
@@ -572,14 +572,14 @@ bool LC::decodeLC(const uint8_t* rs)
     m_mfId = rs[1U];                                                                // Mfg Id.
 
     // non-standard P25 vendor opcodes (these are just detected for passthru)
-    if ((m_mfId != P25_MFG_STANDARD) && (m_mfId != P25_MFG_STANDARD_ALT)) {
+    if ((m_mfId != MFG_STANDARD) && (m_mfId != MFG_STANDARD_ALT)) {
         m_rsValue = rsValue;
         return true;
     }
 
     // standard P25 reference opcodes
     switch (m_lco) {
-    case LC_GROUP:
+    case LCO::GROUP:
         m_mfId = rs[1U];                                                            // Mfg Id.
         m_group = true;
         m_emergency = (rs[2U] & 0x80U) == 0x80U;                                    // Emergency Flag
@@ -591,7 +591,7 @@ bool LC::decodeLC(const uint8_t* rs)
         m_dstId = (uint32_t)((rsValue >> 24) & 0xFFFFU);                            // Talkgroup Address
         m_srcId = (uint32_t)(rsValue & 0xFFFFFFU);                                  // Source Radio Address
         break;
-    case LC_PRIVATE:
+    case LCO::PRIVATE:
         m_mfId = rs[1U];                                                            // Mfg Id.
         m_group = false;
         m_emergency = (rs[2U] & 0x80U) == 0x80U;                                    // Emergency Flag
@@ -602,7 +602,7 @@ bool LC::decodeLC(const uint8_t* rs)
         m_dstId = (uint32_t)((rsValue >> 24) & 0xFFFFFFU);                          // Target Radio Address
         m_srcId = (uint32_t)(rsValue & 0xFFFFFFU);                                  // Source Radio Address
         break;
-    case LC_TEL_INT_VCH_USER:
+    case LCO::TEL_INT_VCH_USER:
         m_emergency = (rs[2U] & 0x80U) == 0x80U;                                    // Emergency Flag
         if (!m_encryptOverride) {
             m_encrypted = (rs[2U] & 0x40U) == 0x40U;                                // Encryption Flag
@@ -613,7 +613,7 @@ bool LC::decodeLC(const uint8_t* rs)
             m_srcId = (uint32_t)(rsValue & 0xFFFFFFU);                              // Source/Target Address
         }
         break;
-    case LC_EXPLICIT_SOURCE_ID:
+    case LCO::EXPLICIT_SOURCE_ID:
         m_netId = (uint32_t)((rsValue >> 36) & 0xFFFFFU);                           // Network ID
         m_sysId = (uint32_t)((rsValue >> 24) & 0xFFFU);                             // System ID
         m_srcId = (uint32_t)(rsValue & 0xFFFFFFU);                                  // Source Radio Address
@@ -642,7 +642,7 @@ void LC::encodeLC(uint8_t* rs)
 
     // standard P25 reference opcodes
     switch (m_lco) {
-    case LC_GROUP:
+    case LCO::GROUP:
         rsValue = m_mfId;
         rsValue = (rsValue << 8) +
             (m_emergency ? 0x80U : 0x00U) +                                         // Emergency Flag
@@ -651,7 +651,7 @@ void LC::encodeLC(uint8_t* rs)
         rsValue = (rsValue << 24) + m_dstId;                                        // Talkgroup Address
         rsValue = (rsValue << 24) + m_srcId;                                        // Source Radio Address
         break;
-    case LC_GROUP_UPDT:
+    case LCO::GROUP_UPDT:
         rs[0U] |= 0x40U;                                                            // Implicit Operation
         rsValue = m_siteData.channelId();                                           // Group A - Channel ID
         rsValue = (rsValue << 12) + m_grpVchNo;                                     // Group A - Channel Number
@@ -660,7 +660,7 @@ void LC::encodeLC(uint8_t* rs)
         rsValue = (rsValue << 12) + m_grpVchNoB;                                    // Group B - Channel Number
         rsValue = (rsValue << 16) + m_dstIdB;                                       // Group B - Talkgroup Address
         break;
-    case LC_PRIVATE:
+    case LCO::PRIVATE:
         rsValue = m_mfId;
         rsValue = (rsValue << 8) +
             (m_emergency ? 0x80U : 0x00U) +                                         // Emergency Flag
@@ -669,7 +669,7 @@ void LC::encodeLC(uint8_t* rs)
         rsValue = (rsValue << 24) + m_dstId;                                        // Target Radio Address
         rsValue = (rsValue << 24) + m_srcId;                                        // Source Radio Address
         break;
-    case LC_TEL_INT_VCH_USER:
+    case LCO::TEL_INT_VCH_USER:
         rs[0U] |= 0x40U;                                                            // Implicit Operation
         rsValue = (rsValue << 8) +
             (m_emergency ? 0x80U : 0x00U) +                                         // Emergency Flag
@@ -678,12 +678,12 @@ void LC::encodeLC(uint8_t* rs)
         rsValue = (rsValue << 16) + m_callTimer;                                    // Call Timer
         rsValue = (rsValue << 24) + m_srcId;                                        // Source/Target Radio Address
         break;
-    case LC_EXPLICIT_SOURCE_ID:
+    case LCO::EXPLICIT_SOURCE_ID:
         rsValue = m_netId;                                                          // Network ID
         rsValue = (rsValue << 12) + (m_sysId & 0xFFFU);                             // System ID
         rsValue = (rsValue << 24) + m_srcId;                                        // Source Radio Address
         break;
-    case LC_RFSS_STS_BCAST:
+    case LCO::RFSS_STS_BCAST:
         rs[0U] |= 0x40U;                                                            // Implicit Operation
         rsValue = m_siteData.lra();                                                 // Location Registration Area
         rsValue = (rsValue << 12) + m_siteData.sysId();                             // System ID
@@ -699,7 +699,7 @@ void LC::encodeLC(uint8_t* rs)
     }
 
     // non-standard P25 vendor opcodes (these are just detected for passthru)
-    if ((m_mfId != P25_MFG_STANDARD) && (m_mfId != P25_MFG_STANDARD_ALT)) {
+    if ((m_mfId != MFG_STANDARD) && (m_mfId != MFG_STANDARD_ALT)) {
         rsValue = 0U;
         rsValue = m_rsValue;
     }

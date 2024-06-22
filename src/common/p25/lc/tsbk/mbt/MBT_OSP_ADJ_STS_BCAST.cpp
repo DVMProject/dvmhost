@@ -7,16 +7,17 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
 #include "p25/lc/tsbk/mbt/MBT_OSP_ADJ_STS_BCAST.h"
 #include "Log.h"
 
-using namespace p25::lc::tsbk;
-using namespace p25::lc;
 using namespace p25;
+using namespace p25::defines;
+using namespace p25::lc;
+using namespace p25::lc::tsbk;
 
 #include <cassert>
 
@@ -28,15 +29,15 @@ using namespace p25;
 /// Initializes a new instance of the MBT_OSP_ADJ_STS_BCAST class.
 /// </summary>
 MBT_OSP_ADJ_STS_BCAST::MBT_OSP_ADJ_STS_BCAST() : AMBT(),
-    m_adjCFVA(P25_CFVA_FAILURE),
+    m_adjCFVA(CFVA::FAILURE),
     m_adjSysId(0U),
     m_adjRfssId(0U),
     m_adjSiteId(0U),
     m_adjChannelId(0U),
     m_adjChannelNo(0U),
-    m_adjServiceClass(P25_SVC_CLS_INVALID)
+    m_adjServiceClass(ServiceClass::INVALID)
 {
-    m_lco = TSBK_OSP_ADJ_STS_BCAST;
+    m_lco = TSBKO::OSP_ADJ_STS_BCAST;
 }
 
 /// <summary>
@@ -105,7 +106,7 @@ void MBT_OSP_ADJ_STS_BCAST::encodeMBT(data::DataHeader& dataHeader, uint8_t* pdu
 /// <returns></returns>
 std::string MBT_OSP_ADJ_STS_BCAST::toString(bool isp)
 {
-    return std::string("TSBK_OSP_ADJ_STS_BCAST (Adjacent Site Status Broadcast - Explicit)");
+    return std::string("TSBKO, OSP_ADJ_STS_BCAST (Adjacent Site Status Broadcast - Explicit)");
 }
 
 // ---------------------------------------------------------------------------

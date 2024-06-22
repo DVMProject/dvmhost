@@ -9,7 +9,7 @@
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
 *   Copyright (C) 2018 Jonathan Naylor, G4KLX
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "nxdn/NXDNDefines.h"
@@ -18,6 +18,7 @@
 #include "Utils.h"
 
 using namespace nxdn;
+using namespace nxdn::defines;
 using namespace nxdn::channel;
 
 #include <cassert>
@@ -31,9 +32,9 @@ using namespace nxdn::channel;
 /// Initializes a new instance of the LICH class.
 /// </summary>
 LICH::LICH() :
-    m_rfct(NXDN_LICH_RFCT_RCCH),
-    m_fct(NXDN_LICH_USC_SACCH_NS),
-    m_option(0U),
+    m_rfct(RFChannelType::RCCH),
+    m_fct(FuncChannelType::USC_SACCH_NS),
+    m_option(ChOption::DATA_NORMAL),
     m_outbound(true),
     m_lich(0U)
 {
@@ -45,9 +46,9 @@ LICH::LICH() :
 /// </summary>
 /// <param name="data"></param>
 LICH::LICH(const LICH& data) :
-    m_rfct(NXDN_LICH_RFCT_RCCH),
-    m_fct(NXDN_LICH_USC_SACCH_NS),
-    m_option(0U),
+    m_rfct(RFChannelType::RCCH),
+    m_fct(FuncChannelType::USC_SACCH_NS),
+    m_option(ChOption::DATA_NORMAL),
     m_outbound(true),
     m_lich(0U)
 {
@@ -108,9 +109,9 @@ bool LICH::decode(const uint8_t* data)
     bool newParity = getParity();
     bool origParity = (m_lich & 0x01U) == 0x01U;
 
-    m_rfct = (m_lich >> 6) & 0x03U;
-    m_fct = (m_lich >> 4) & 0x03U;
-    m_option = (m_lich >> 2) & 0x03U;
+    m_rfct = (RFChannelType::E)((m_lich >> 6) & 0x03U);
+    m_fct = (FuncChannelType::E)((m_lich >> 4) & 0x03U);
+    m_option = (ChOption::E)((m_lich >> 2) & 0x03U);
     m_outbound = ((m_lich >> 1) & 0x01U) == 0x01U;
 
     return origParity == newParity;
@@ -175,9 +176,9 @@ void LICH::copy(const LICH& data)
 {
     m_lich = data.m_lich;
 
-    m_rfct = (m_lich >> 6) & 0x03U;
-    m_fct = (m_lich >> 4) & 0x03U;
-    m_option = (m_lich >> 2) & 0x03U;
+    m_rfct = (RFChannelType::E)((m_lich >> 6) & 0x03U);
+    m_fct = (FuncChannelType::E)((m_lich >> 4) & 0x03U);
+    m_option = (ChOption::E)((m_lich >> 2) & 0x03U);
     m_outbound = ((m_lich >> 1) & 0x01U) == 0x01U;
 }
 

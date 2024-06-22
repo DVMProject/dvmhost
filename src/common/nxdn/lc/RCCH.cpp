@@ -7,7 +7,7 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2022,204 Bryan Biedenkapp, N2PLL
 *
 */
 #include "nxdn/NXDNDefines.h"
@@ -15,6 +15,7 @@
 #include "Utils.h"
 
 using namespace nxdn;
+using namespace nxdn::defines;
 using namespace nxdn::lc;
 
 #include <cassert>
@@ -26,7 +27,7 @@ using namespace nxdn::lc;
 
 bool RCCH::m_verbose = false;
 
-uint8_t *RCCH::m_siteCallsign = nullptr;
+uint8_t* RCCH::m_siteCallsign = nullptr;
 SiteData RCCH::m_siteData = SiteData();
 
 // ---------------------------------------------------------------------------
@@ -46,26 +47,26 @@ RCCH::RCCH(const RCCH& data) : RCCH()
 /// Initializes a new instance of the RCCH class.
 /// </summary>
 RCCH::RCCH() :
-    m_messageType(MESSAGE_TYPE_IDLE),
+    m_messageType(MessageType::IDLE),
     m_srcId(0U),
     m_dstId(0U),
     m_locId(0U),
     m_regOption(0U),
     m_version(0U),
-    m_causeRsp(NXDN_CAUSE_MM_REG_ACCEPTED),
+    m_causeRsp(CauseResponse::MM_REG_ACCEPTED),
     m_grpVchNo(0U),
-    m_callType(CALL_TYPE_UNSPECIFIED),
+    m_callType(CallType::UNSPECIFIED),
     m_emergency(false),
     m_encrypted(false),
     m_priority(false),
     m_group(true),
     m_duplex(false),
-    m_transmissionMode(TRANSMISSION_MODE_4800),
+    m_transmissionMode(TransmissionMode::MODE_4800),
     m_siteIdenEntry()
 {
     if (m_siteCallsign == nullptr) {
-        m_siteCallsign = new uint8_t[NXDN_CALLSIGN_LENGTH_BYTES];
-        ::memset(m_siteCallsign, 0x00U, NXDN_CALLSIGN_LENGTH_BYTES);
+        m_siteCallsign = new uint8_t[CALLSIGN_LENGTH_BYTES];
+        ::memset(m_siteCallsign, 0x00U, CALLSIGN_LENGTH_BYTES);
     }
 }
 
@@ -94,16 +95,16 @@ std::string RCCH::toString(bool isp)
 void RCCH::setCallsign(std::string callsign)
 {
     if (m_siteCallsign == nullptr) {
-        m_siteCallsign = new uint8_t[NXDN_CALLSIGN_LENGTH_BYTES];
-        ::memset(m_siteCallsign, 0x00U, NXDN_CALLSIGN_LENGTH_BYTES);
+        m_siteCallsign = new uint8_t[CALLSIGN_LENGTH_BYTES];
+        ::memset(m_siteCallsign, 0x00U, CALLSIGN_LENGTH_BYTES);
     }
 
     uint32_t idLength = callsign.length();
     if (idLength > 0) {
-        ::memset(m_siteCallsign, 0x20U, NXDN_CALLSIGN_LENGTH_BYTES);
+        ::memset(m_siteCallsign, 0x20U, CALLSIGN_LENGTH_BYTES);
 
-        if (idLength > NXDN_CALLSIGN_LENGTH_BYTES)
-            idLength = NXDN_CALLSIGN_LENGTH_BYTES;
+        if (idLength > CALLSIGN_LENGTH_BYTES)
+            idLength = CALLSIGN_LENGTH_BYTES;
         for (uint32_t i = 0; i < idLength; i++)
             m_siteCallsign[i] = callsign[i];
     }

@@ -8,15 +8,16 @@
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
 *   Copyright (C) 2022 by Jason-UWU
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
 #include "p25/lc/tsbk/OSP_TIME_DATE_ANN.h"
 
-using namespace p25::lc::tsbk;
-using namespace p25::lc;
 using namespace p25;
+using namespace p25::defines;
+using namespace p25::lc;
+using namespace p25::lc::tsbk;
 
 #include <cassert>
 #include <cmath>
@@ -32,7 +33,7 @@ using namespace p25;
 /// </summary>
 OSP_TIME_DATE_ANN::OSP_TIME_DATE_ANN() : TSBK()
 {
-    m_lco = TSBK_OSP_TIME_DATE_ANN;
+    m_lco = TSBKO::OSP_TIME_DATE_ANN;
 }
 
 /// <summary>
@@ -78,7 +79,7 @@ void OSP_TIME_DATE_ANN::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
     }
 
 #if DEBUG_P25_TSBK
-    LogDebug(LOG_P25, "TSBK_OSP_TIME_DATE_ANN, tmM = %u / %u, tmY = %u / %u", local_tm.tm_mon, tmM, local_tm.tm_year, tmY);
+    LogDebug(LOG_P25, "TSBKO, OSP_TIME_DATE_ANN, tmM = %u / %u, tmY = %u / %u", local_tm.tm_mon, tmM, local_tm.tm_year, tmY);
 #endif
 
     uint8_t lto = fabs(m_siteData.lto()) * 2U; // this will cause a bug for half-hour timezone intervals...
@@ -106,7 +107,7 @@ void OSP_TIME_DATE_ANN::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
     tsbkValue = (tsbkValue << 7);                                               // Reserved
 
 #if DEBUG_P25_TSBK
-    LogDebug(LOG_P25, "TSBK_OSP_TIME_DATE_ANN, tmM = %u, tmMDAY = %u, tmY = %u, tmH = %u, tmMin = %u, tmS = %u", tmM, tmMDAY, tmY, tmH, tmMin, tmS);
+    LogDebug(LOG_P25, "TSBKO, OSP_TIME_DATE_ANN, tmM = %u, tmMDAY = %u, tmY = %u, tmH = %u, tmMin = %u, tmS = %u", tmM, tmMDAY, tmY, tmH, tmMin, tmS);
 #endif
 
     std::unique_ptr<uint8_t[]> tsbk = TSBK::fromValue(tsbkValue);
@@ -120,5 +121,5 @@ void OSP_TIME_DATE_ANN::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 /// <returns></returns>
 std::string OSP_TIME_DATE_ANN::toString(bool isp)
 {
-    return std::string("TSBK_OSP_TIME_DATE_ANN (Time and Date Announcement)");
+    return std::string("TSBKO, OSP_TIME_DATE_ANN (Time and Date Announcement)");
 }

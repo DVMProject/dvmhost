@@ -32,7 +32,7 @@ using namespace p25::dfsi::fsc;
 /// </summary>
 FSCHeartbeat::FSCHeartbeat() : FSCMessage()
 {
-    m_messageId = FSC_HEARTBEAT;
+    m_messageId = FSCMessageType::FSC_HEARTBEAT;
 }
 
 /// <summary>

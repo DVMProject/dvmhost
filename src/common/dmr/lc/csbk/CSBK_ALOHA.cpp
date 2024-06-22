@@ -7,15 +7,16 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
 #include "dmr/lc/csbk/CSBK_ALOHA.h"
 
-using namespace dmr::lc::csbk;
-using namespace dmr::lc;
 using namespace dmr;
+using namespace dmr::defines;
+using namespace dmr::lc;
+using namespace dmr::lc::csbk;
 
 #include <cassert>
 
@@ -32,7 +33,7 @@ CSBK_ALOHA::CSBK_ALOHA() : CSBK(),
     m_backoffNo(1U),
     m_nRandWait(DEFAULT_NRAND_WAIT)
 {
-    m_CSBKO = CSBKO_ALOHA;
+    m_CSBKO = CSBKO::ALOHA;
 }
 
 /// <summary>
@@ -82,7 +83,7 @@ void CSBK_ALOHA::encode(uint8_t* data)
 /// <returns></returns>
 std::string CSBK_ALOHA::toString()
 {
-    return std::string("CSBKO_ALOHA (Aloha PDU)");
+    return std::string("CSBKO, ALOHA (Aloha PDU)");
 }
 
 // ---------------------------------------------------------------------------

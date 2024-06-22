@@ -7,15 +7,16 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
 #include "dmr/lc/csbk/CSBK_RAND.h"
 
-using namespace dmr::lc::csbk;
-using namespace dmr::lc;
 using namespace dmr;
+using namespace dmr::defines;
+using namespace dmr::lc;
+using namespace dmr::lc::csbk;
 
 #include <cassert>
 
@@ -31,7 +32,7 @@ CSBK_RAND::CSBK_RAND() : CSBK(),
     m_serviceExtra(0U),
     m_serviceKind(0U)
 {
-    m_CSBKO = CSBKO_RAND;
+    m_CSBKO = CSBKO::RAND;
 }
 
 /// <summary>
@@ -90,20 +91,20 @@ void CSBK_RAND::encode(uint8_t* data)
 std::string CSBK_RAND::toString()
 {
     switch (m_serviceKind) {
-    case SVC_KIND_IND_VOICE_CALL:       return std::string("CSBKO_RAND (Random Access), SVC_KIND_IND_VOICE_CALL (Individual Voice Call)");
-    case SVC_KIND_GRP_VOICE_CALL:       return std::string("CSBKO_RAND (Random Access), SVC_KIND_GRP_VOICE_CALL (Group Voice Call)");
-    case SVC_KIND_IND_DATA_CALL:        return std::string("CSBKO_RAND (Random Access), SVC_KIND_IND_DATA_CALL (Individual Data Call)");
-    case SVC_KIND_GRP_DATA_CALL:        return std::string("CSBKO_RAND (Random Access), SVC_KIND_GRP_DATA_CALL (Group Data Call)");
-    case SVC_KIND_IND_UDT_DATA_CALL:    return std::string("CSBKO_RAND (Random Access), SVC_KIND_IND_UDT_DATA_CALL (Individual UDT Short Data Call)");
-    case SVC_KIND_GRP_UDT_DATA_CALL:    return std::string("CSBKO_RAND (Random Access), SVC_KIND_GRP_UDT_DATA_CALL (Group UDT Short Data Call)");
-    case SVC_KIND_UDT_SHORT_POLL:       return std::string("CSBKO_RAND (Random Access), SVC_KIND_UDT_SHORT_POLL (UDT Short Data Polling Service)");
-    case SVC_KIND_STATUS_TRANSPORT:     return std::string("CSBKO_RAND (Random Access), SVC_KIND_STATUS_TRANSPORT (Status Transport Service)");
-    case SVC_KIND_CALL_DIVERSION:       return std::string("CSBKO_RAND (Random Access), SVC_KIND_CALL_DIVERSION (Call Diversion Service)");
-    case SVC_KIND_CALL_ANSWER:          return std::string("CSBKO_RAND (Random Access), SVC_KIND_CALL_ANSWER (Call Answer Service)");
-    case SVC_KIND_SUPPLEMENTARY_SVC:    return std::string("CSBKO_RAND (Random Access), SVC_KIND_SUPPLEMENTARY_SVC (Supplementary Service)");
-    case SVC_KIND_REG_SVC:              return std::string("CSBKO_RAND (Random Access), SVC_KIND_REG_SVC (Registration Service)");
-    case SVC_KIND_CANCEL_CALL:          return std::string("CSBKO_RAND (Random Access), SVC_KIND_CANCEL_CALL (Cancel Call Service)");
-    default:                            return std::string("CSBKO_RAND (Random Access)");
+    case ServiceKind::IND_VOICE_CALL:       return std::string("CSBKO, RAND (Random Access), IND_VOICE_CALL (Individual Voice Call)");
+    case ServiceKind::GRP_VOICE_CALL:       return std::string("CSBKO, RAND (Random Access), GRP_VOICE_CALL (Group Voice Call)");
+    case ServiceKind::IND_DATA_CALL:        return std::string("CSBKO, RAND (Random Access), IND_DATA_CALL (Individual Data Call)");
+    case ServiceKind::GRP_DATA_CALL:        return std::string("CSBKO, RAND (Random Access), GRP_DATA_CALL (Group Data Call)");
+    case ServiceKind::IND_UDT_DATA_CALL:    return std::string("CSBKO, RAND (Random Access), IND_UDT_DATA_CALL (Individual UDT Short Data Call)");
+    case ServiceKind::GRP_UDT_DATA_CALL:    return std::string("CSBKO, RAND (Random Access), GRP_UDT_DATA_CALL (Group UDT Short Data Call)");
+    case ServiceKind::UDT_SHORT_POLL:       return std::string("CSBKO, RAND (Random Access), UDT_SHORT_POLL (UDT Short Data Polling Service)");
+    case ServiceKind::STATUS_TRANSPORT:     return std::string("CSBKO, RAND (Random Access), STATUS_TRANSPORT (Status Transport Service)");
+    case ServiceKind::CALL_DIVERSION:       return std::string("CSBKO, RAND (Random Access), CALL_DIVERSION (Call Diversion Service)");
+    case ServiceKind::CALL_ANSWER:          return std::string("CSBKO, RAND (Random Access), CALL_ANSWER (Call Answer Service)");
+    case ServiceKind::SUPPLEMENTARY_SVC:    return std::string("CSBKO, RAND (Random Access), SUPPLEMENTARY_SVC (Supplementary Service)");
+    case ServiceKind::REG_SVC:              return std::string("CSBKO, RAND (Random Access), REG_SVC (Registration Service)");
+    case ServiceKind::CANCEL_CALL:          return std::string("CSBKO, RAND (Random Access), CANCEL_CALL (Cancel Call Service)");
+    default:                                return std::string("CSBKO, RAND (Random Access)");
     }
 }
 

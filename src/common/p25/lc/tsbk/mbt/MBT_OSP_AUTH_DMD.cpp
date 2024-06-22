@@ -7,16 +7,17 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
 #include "p25/lc/tsbk/mbt/MBT_OSP_AUTH_DMD.h"
 #include "Utils.h"
 
-using namespace p25::lc::tsbk;
-using namespace p25::lc;
 using namespace p25;
+using namespace p25::defines;
+using namespace p25::lc;
+using namespace p25::lc::tsbk;
 
 #include <cassert>
 
@@ -29,12 +30,12 @@ using namespace p25;
 /// </summary>
 MBT_OSP_AUTH_DMD::MBT_OSP_AUTH_DMD() : AMBT()
 {
-    m_lco = TSBK_OSP_AUTH_DMD;
+    m_lco = TSBKO::OSP_AUTH_DMD;
 
-    m_authRS = new uint8_t[P25_AUTH_RAND_SEED_LENGTH_BYTES];
-    ::memset(m_authRS, 0x00U, P25_AUTH_RAND_SEED_LENGTH_BYTES);
-    m_authRC = new uint8_t[P25_AUTH_RAND_CHLNG_LENGTH_BYTES];
-    ::memset(m_authRC, 0x00U, P25_AUTH_RAND_CHLNG_LENGTH_BYTES);
+    m_authRS = new uint8_t[AUTH_RAND_SEED_LENGTH_BYTES];
+    ::memset(m_authRS, 0x00U, AUTH_RAND_SEED_LENGTH_BYTES);
+    m_authRC = new uint8_t[AUTH_RAND_CHLNG_LENGTH_BYTES];
+    ::memset(m_authRC, 0x00U, AUTH_RAND_CHLNG_LENGTH_BYTES);
 }
 
 /// <summary>
@@ -117,7 +118,7 @@ void MBT_OSP_AUTH_DMD::encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUserD
 /// <returns></returns>
 std::string MBT_OSP_AUTH_DMD::toString(bool isp)
 {
-    return std::string("TSBK_OSP_AUTH_DMD (Authentication Demand)");
+    return std::string("TSBKO, OSP_AUTH_DMD (Authentication Demand)");
 }
 
 /// <summary>Sets the authentication random seed.</summary>
@@ -126,7 +127,7 @@ void MBT_OSP_AUTH_DMD::setAuthRS(const uint8_t* rs)
 {
     assert(rs != nullptr);
 
-    ::memcpy(m_authRS, rs, P25_AUTH_RAND_SEED_LENGTH_BYTES);
+    ::memcpy(m_authRS, rs, AUTH_RAND_SEED_LENGTH_BYTES);
 }
 
 /// <summary>Gets the authentication random seed.</summary>
@@ -135,7 +136,7 @@ void MBT_OSP_AUTH_DMD::getAuthRS(uint8_t* rs) const
 {
     assert(rs != nullptr);
 
-    ::memcpy(rs, m_authRS, P25_AUTH_RAND_SEED_LENGTH_BYTES);
+    ::memcpy(rs, m_authRS, AUTH_RAND_SEED_LENGTH_BYTES);
 }
 
 /// <summary>Sets the authentication random challenge.</summary>
@@ -144,7 +145,7 @@ void MBT_OSP_AUTH_DMD::setAuthRC(const uint8_t* rc)
 {
     assert(rc != nullptr);
 
-    ::memcpy(m_authRC, rc, P25_AUTH_RAND_CHLNG_LENGTH_BYTES);
+    ::memcpy(m_authRC, rc, AUTH_RAND_CHLNG_LENGTH_BYTES);
 }
 
 /// <summary>Gets the authentication random challenge.</summary>
@@ -153,7 +154,7 @@ void MBT_OSP_AUTH_DMD::getAuthRC(uint8_t* rc) const
 {
     assert(rc != nullptr);
 
-    ::memcpy(rc, m_authRC, P25_AUTH_RAND_CHLNG_LENGTH_BYTES);
+    ::memcpy(rc, m_authRC, AUTH_RAND_CHLNG_LENGTH_BYTES);
 }
 
 // ---------------------------------------------------------------------------
@@ -172,13 +173,13 @@ void MBT_OSP_AUTH_DMD::copy(const MBT_OSP_AUTH_DMD& data)
         delete[] m_authRS;
     }
 
-    m_authRS = new uint8_t[P25_AUTH_RAND_SEED_LENGTH_BYTES];
-    ::memcpy(m_authRS, data.m_authRS, P25_AUTH_RAND_SEED_LENGTH_BYTES);
+    m_authRS = new uint8_t[AUTH_RAND_SEED_LENGTH_BYTES];
+    ::memcpy(m_authRS, data.m_authRS, AUTH_RAND_SEED_LENGTH_BYTES);
 
     if (m_authRC != nullptr) {
         delete[] m_authRC;
     }
 
-    m_authRC = new uint8_t[P25_AUTH_RAND_CHLNG_LENGTH_BYTES];
-    ::memcpy(m_authRC, data.m_authRC, P25_AUTH_RAND_CHLNG_LENGTH_BYTES);
+    m_authRC = new uint8_t[AUTH_RAND_CHLNG_LENGTH_BYTES];
+    ::memcpy(m_authRC, data.m_authRC, AUTH_RAND_CHLNG_LENGTH_BYTES);
 }

@@ -9,7 +9,7 @@
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
 *   Copyright (C) 2015-2020 Jonathan Naylor, G4KLX
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2022-2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
@@ -23,6 +23,7 @@
 #include "ActivityLog.h"
 
 using namespace nxdn;
+using namespace nxdn::defines;
 using namespace nxdn::packet;
 
 #include <cassert>
@@ -162,7 +163,7 @@ void Data::resetNet()
 /// <param name="data">Buffer containing data frame.</param>
 /// <param name="len">Length of data frame.</param>
 /// <returns></returns>
-bool Data::process(uint8_t option, uint8_t* data, uint32_t len)
+bool Data::process(ChOption::E option, uint8_t* data, uint32_t len)
 {
     assert(data != nullptr);
 
@@ -190,7 +191,7 @@ bool Data::process(uint8_t option, uint8_t* data, uint32_t len)
 
     if (m_nxdn->m_rfState == RS_RF_LISTENING) {
         uint8_t type = lc.getMessageType();
-        if (type != RTCH_MESSAGE_TYPE_DCALL_HDR)
+        if (type != MessageType::RTCH_DCALL_HDR)
             return false;
 
         CHECK_TRAFFIC_COLLISION(srcId, dstId);
@@ -220,18 +221,18 @@ bool Data::process(uint8_t option, uint8_t* data, uint32_t len)
     Sync::addNXDNSync(data + 2U);
 
     channel::LICH lich;
-    lich.setRFCT(NXDN_LICH_RFCT_RDCH);
-    lich.setFCT(NXDN_LICH_USC_UDCH);
+    lich.setRFCT(RFChannelType::RDCH);
+    lich.setFCT(FuncChannelType::USC_UDCH);
     lich.setOption(option);
     lich.setOutbound(!m_nxdn->m_duplex ? false : true);
     lich.encode(data + 2U);
 
     lich.setOutbound(false);
 
-    uint8_t type = RTCH_MESSAGE_TYPE_DCALL_DATA;
+    uint8_t type = MessageType::RTCH_DCALL_DATA;
     if (validUDCH) {
         type = lc.getMessageType();
-        data[0U] = type == RTCH_MESSAGE_TYPE_TX_REL ? modem::TAG_EOT : modem::TAG_DATA;
+        data[0U] = type == MessageType::RTCH_TX_REL ? modem::TAG_EOT : modem::TAG_DATA;
 
         udch.setRAN(m_nxdn->m_ran);
         udch.encode(data + 2U);
@@ -270,7 +271,7 @@ bool Data::process(uint8_t option, uint8_t* data, uint32_t len)
 /// <param name="data">Buffer containing data frame.</param>
 /// <param name="len">Length of data frame.</param>
 /// <returns></returns>
-bool Data::processNetwork(uint8_t option, lc::RTCH& netLC, uint8_t* data, uint32_t len)
+bool Data::processNetwork(ChOption::E option, lc::RTCH& netLC, uint8_t* data, uint32_t len)
 {
     assert(data != nullptr);
 
@@ -306,7 +307,7 @@ bool Data::processNetwork(uint8_t option, lc::RTCH& netLC, uint8_t* data, uint32
 
     if (m_nxdn->m_netState == RS_NET_IDLE) {
         uint8_t type = lc.getMessageType();
-        if (type != RTCH_MESSAGE_TYPE_DCALL_HDR)
+        if (type != MessageType::RTCH_DCALL_HDR)
             return false;
 
         CHECK_NET_TRAFFIC_COLLISION(lc, srcId, dstId);
@@ -336,16 +337,16 @@ bool Data::processNetwork(uint8_t option, lc::RTCH& netLC, uint8_t* data, uint32
     Sync::addNXDNSync(data + 2U);
 
     channel::LICH lich;
-    lich.setRFCT(NXDN_LICH_RFCT_RDCH);
-    lich.setFCT(NXDN_LICH_USC_UDCH);
+    lich.setRFCT(RFChannelType::RDCH);
+    lich.setFCT(FuncChannelType::USC_UDCH);
     lich.setOption(option);
     lich.setOutbound(true);
     lich.encode(data + 2U);
 
-    uint8_t type = RTCH_MESSAGE_TYPE_DCALL_DATA;
+    uint8_t type = MessageType::RTCH_DCALL_DATA;
     if (validUDCH) {
         type = lc.getMessageType();
-        data[0U] = type == RTCH_MESSAGE_TYPE_TX_REL ? modem::TAG_EOT : modem::TAG_DATA;
+        data[0U] = type == MessageType::RTCH_TX_REL ? modem::TAG_EOT : modem::TAG_DATA;
 
         udch.setRAN(m_nxdn->m_ran);
         udch.encode(data + 2U);

@@ -7,15 +7,16 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
 #include "p25/lc/tsbk/OSP_SNDCP_CH_GNT.h"
 
-using namespace p25::lc::tsbk;
-using namespace p25::lc;
 using namespace p25;
+using namespace p25::defines;
+using namespace p25::lc;
+using namespace p25::lc::tsbk;
 
 #include <cassert>
 
@@ -30,7 +31,7 @@ OSP_SNDCP_CH_GNT::OSP_SNDCP_CH_GNT() : TSBK(),
     m_dataServiceOptions(0U),
     m_dataChannelNo(0U)
 {
-    m_lco = TSBK_OSP_SNDCP_CH_GNT;
+    m_lco = TSBKO::OSP_SNDCP_CH_GNT;
 }
 
 /// <summary>
@@ -98,7 +99,7 @@ void OSP_SNDCP_CH_GNT::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 /// <returns></returns>
 std::string OSP_SNDCP_CH_GNT::toString(bool isp)
 {
-    return std::string("TSBK_OSP_SNDCP_CH_GNT (SNDCP Data Channel Grant)");
+    return std::string("TSBKO, OSP_SNDCP_CH_GNT (SNDCP Data Channel Grant)");
 }
 
 // ---------------------------------------------------------------------------

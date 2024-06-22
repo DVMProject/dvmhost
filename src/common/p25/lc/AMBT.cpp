@@ -7,7 +7,7 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
@@ -17,8 +17,9 @@
 #include "Log.h"
 #include "Utils.h"
 
-using namespace p25::lc;
 using namespace p25;
+using namespace p25::defines;
+using namespace p25::lc;
 
 #include <cassert>
 
@@ -101,7 +102,7 @@ bool AMBT::decode(const data::DataHeader& dataHeader, const data::DataBlock* blo
     assert(blocks != nullptr);
     assert(pduUserData != nullptr);
 
-    if (dataHeader.getFormat() != PDU_FMT_AMBT) {
+    if (dataHeader.getFormat() != PDUFormatType::AMBT) {
         LogError(LOG_P25, "AMBT::decode(), PDU is not a AMBT PDU");
         return false;
     }
@@ -150,11 +151,11 @@ void AMBT::encode(data::DataHeader& dataHeader, uint8_t* pduUserData)
 {
     assert(pduUserData != nullptr);
 
-    dataHeader.setFormat(PDU_FMT_AMBT);
+    dataHeader.setFormat(PDUFormatType::AMBT);
     dataHeader.setMFId(m_mfId);                                                     // Mfg Id.
     dataHeader.setAckNeeded(false);
     dataHeader.setOutbound(true);
-    dataHeader.setSAP(PDU_SAP_TRUNK_CTRL);
+    dataHeader.setSAP(PDUSAP::TRUNK_CTRL);
     dataHeader.setLLId(m_srcId);
     dataHeader.setFullMessage(true);
 

@@ -50,7 +50,7 @@ namespace p25
             /// <summary>Process a data frame from the RF interface.</summary>
             bool process(uint8_t* data, uint32_t len, std::unique_ptr<lc::TSBK> preDecodedTSBK = nullptr);
             /// <summary>Process a data frame from the network.</summary>
-            bool processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::LowSpeedData& lsd, uint8_t& duid);
+            bool processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::LowSpeedData& lsd, defines::DUID::E& duid);
 
             /// <summary>Helper used to process AMBTs from PDU data.</summary>
             bool processMBT(data::DataHeader& dataHeader, data::DataBlock* blocks);

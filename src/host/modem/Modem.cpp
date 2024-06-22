@@ -651,7 +651,7 @@ void Modem::clock(uint32_t ms)
                 uint8_t data = m_length - 2U;
                 m_rxDMRQueue1.addData(&data, 1U);
 
-                if (m_buffer[3U] == (dmr::DMR_SYNC_DATA | dmr::DT_TERMINATOR_WITH_LC))
+                if (m_buffer[3U] == (DMRDEF::SYNC_DATA | DMRDEF::DataType::TERMINATOR_WITH_LC))
                     data = TAG_EOT;
                 else
                     data = TAG_DATA;
@@ -676,7 +676,7 @@ void Modem::clock(uint32_t ms)
                 uint8_t data = m_length - 2U;
                 m_rxDMRQueue2.addData(&data, 1U);
 
-                if (m_buffer[3U] == (dmr::DMR_SYNC_DATA | dmr::DT_TERMINATOR_WITH_LC))
+                if (m_buffer[3U] == (DMRDEF::SYNC_DATA | DMRDEF::DataType::TERMINATOR_WITH_LC))
                     data = TAG_EOT;
                 else
                     data = TAG_DATA;
@@ -897,10 +897,10 @@ void Modem::clock(uint32_t ms)
             m_cd = (m_buffer[5U] & 0x40U) == 0x40U;
 
             // spaces from the modem are returned in "logical" frame count, not raw byte size
-            m_dmrSpace1 = m_buffer[7U] * (dmr::DMR_FRAME_LENGTH_BYTES + 2U);
-            m_dmrSpace2 = m_buffer[8U] * (dmr::DMR_FRAME_LENGTH_BYTES + 2U);
-            m_p25Space = m_buffer[10U] * (p25::P25_LDU_FRAME_LENGTH_BYTES);
-            m_nxdnSpace = m_buffer[11U] * (nxdn::NXDN_FRAME_LENGTH_BYTES);
+            m_dmrSpace1 = m_buffer[7U] * (DMRDEF::DMR_FRAME_LENGTH_BYTES + 2U);
+            m_dmrSpace2 = m_buffer[8U] * (DMRDEF::DMR_FRAME_LENGTH_BYTES + 2U);
+            m_p25Space = m_buffer[10U] * (P25DEF::P25_LDU_FRAME_LENGTH_BYTES);//(P25DEF::P25_PDU_FRAME_LENGTH_BYTES);
+            m_nxdnSpace = m_buffer[11U] * (NXDDEF::NXDN_FRAME_LENGTH_BYTES);
 
             if (m_dumpModemStatus) {
                 LogDebug(LOG_MODEM, "Modem::clock(), CMD_GET_STATUS, isHotspot = %u, dmr = %u / %u, p25 = %u / %u, nxdn = %u / %u, modemState = %u, tx = %u, adcOverflow = %u, rxOverflow = %u, txOverflow = %u, dacOverflow = %u, dmrSpace1 = %u, dmrSpace2 = %u, p25Space = %u, nxdnSpace = %u",
@@ -1099,7 +1099,7 @@ uint32_t Modem::readNXDNFrame(uint8_t* data)
 /// <returns>True, if the DMR Slot 1 ring buffer has free space, otherwise false.</returns>
 bool Modem::hasDMRSpace1() const
 {
-    return m_dmrSpace1 >= (dmr::DMR_FRAME_LENGTH_BYTES + 2U);
+    return m_dmrSpace1 >= (DMRDEF::DMR_FRAME_LENGTH_BYTES + 2U);
 }
 
 /// <summary>
@@ -1108,7 +1108,7 @@ bool Modem::hasDMRSpace1() const
 /// <returns>True, if the DMR Slot 2 ring buffer has free space, otherwise false.</returns>
 bool Modem::hasDMRSpace2() const
 {
-    return m_dmrSpace2 >= (dmr::DMR_FRAME_LENGTH_BYTES + 2U);
+    return m_dmrSpace2 >= (DMRDEF::DMR_FRAME_LENGTH_BYTES + 2U);
 }
 
 /// <summary>
@@ -1127,7 +1127,7 @@ bool Modem::hasP25Space(uint32_t length) const
 /// <returns>True, if the NXDN ring buffer has free space, otherwise false.</returns>
 bool Modem::hasNXDNSpace() const
 {
-    return m_nxdnSpace >= nxdn::NXDN_FRAME_LENGTH_BYTES;
+    return m_nxdnSpace >= NXDDEF::NXDN_FRAME_LENGTH_BYTES;
 }
 
 /// <summary>
@@ -1271,7 +1271,7 @@ void Modem::injectDMRFrame1(const uint8_t* data, uint32_t length)
 
         val = TAG_DATA;
         m_rxDMRQueue1.addData(&val, 1U);
-        val = dmr::DMR_SYNC_VOICE & dmr::DMR_SYNC_DATA;    // valid sync
+        val = DMRDEF::SYNC_VOICE & DMRDEF::SYNC_DATA; // valid sync
         m_rxDMRQueue1.addData(&val, 1U);
 
         m_rxDMRQueue1.addData(data, length);
@@ -1297,7 +1297,7 @@ void Modem::injectDMRFrame2(const uint8_t* data, uint32_t length)
 
         val = TAG_DATA;
         m_rxDMRQueue2.addData(&val, 1U);
-        val = dmr::DMR_SYNC_VOICE & dmr::DMR_SYNC_DATA;    // valid sync
+        val = DMRDEF::SYNC_VOICE & DMRDEF::SYNC_DATA; // valid sync
         m_rxDMRQueue2.addData(&val, 1U);
 
         m_rxDMRQueue2.addData(data, length);

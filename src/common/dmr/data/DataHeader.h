@@ -45,8 +45,8 @@ namespace dmr
             /// <summary>Flag indicating whether the CSBK is group or individual.</summary>
             __PROPERTY(bool, GI, GI);
 
-            /// <summary></summary>
-            __PROPERTY(uint8_t, DPF, DPF);
+            /// <summary>Data packet format.</summary>
+            __PROPERTY(defines::DPF::E, DPF, DPF);
 
             /// <summary>Service access point.</summary>
             __PROPERTY(uint8_t, sap, SAP);

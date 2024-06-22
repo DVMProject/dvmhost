@@ -7,15 +7,16 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
 #include "p25/lc/tsbk/ISP_AUTH_RESP.h"
 
-using namespace p25::lc::tsbk;
-using namespace p25::lc;
 using namespace p25;
+using namespace p25::defines;
+using namespace p25::lc;
+using namespace p25::lc::tsbk;
 
 #include <cassert>
 
@@ -30,10 +31,10 @@ ISP_AUTH_RESP::ISP_AUTH_RESP() : TSBK(),
     m_authStandalone(false),
     m_authRes(nullptr)
 {
-    m_lco = TSBK_ISP_AUTH_RESP;
+    m_lco = TSBKO::ISP_AUTH_RESP;
 
-    m_authRes = new uint8_t[P25_AUTH_RES_LENGTH_BYTES];
-    ::memset(m_authRes, 0x00U, P25_AUTH_RES_LENGTH_BYTES);
+    m_authRes = new uint8_t[AUTH_RES_LENGTH_BYTES];
+    ::memset(m_authRes, 0x00U, AUTH_RES_LENGTH_BYTES);
 }
 
 /// <summary>
@@ -97,7 +98,7 @@ void ISP_AUTH_RESP::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 /// <returns></returns>
 std::string ISP_AUTH_RESP::toString(bool isp)
 {
-    return std::string("TSBK_ISP_AUTH_RESP (Authentication Response)");
+    return std::string("TSBKO, ISP_AUTH_RESP (Authentication Response)");
 }
 
 /// <summary>Gets the authentication result.</summary>
@@ -106,7 +107,7 @@ void ISP_AUTH_RESP::getAuthRes(uint8_t* res) const
 {
     assert(res != nullptr);
 
-    ::memcpy(res, m_authRes, P25_AUTH_RES_LENGTH_BYTES);
+    ::memcpy(res, m_authRes, AUTH_RES_LENGTH_BYTES);
 }
 
 // ---------------------------------------------------------------------------
@@ -127,6 +128,6 @@ void ISP_AUTH_RESP::copy(const ISP_AUTH_RESP& data)
         delete[] m_authRes;
     }
 
-    m_authRes = new uint8_t[P25_AUTH_RES_LENGTH_BYTES];
-    ::memcpy(m_authRes, data.m_authRes, P25_AUTH_RES_LENGTH_BYTES);
+    m_authRes = new uint8_t[AUTH_RES_LENGTH_BYTES];
+    ::memcpy(m_authRes, data.m_authRes, AUTH_RES_LENGTH_BYTES);
 }

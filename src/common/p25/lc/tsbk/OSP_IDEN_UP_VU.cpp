@@ -7,16 +7,17 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
 #include "p25/lc/tsbk/OSP_IDEN_UP_VU.h"
 #include "Log.h"
 
-using namespace p25::lc::tsbk;
-using namespace p25::lc;
 using namespace p25;
+using namespace p25::defines;
+using namespace p25::lc;
+using namespace p25::lc::tsbk;
 
 #include <cassert>
 #include <cmath>
@@ -30,7 +31,7 @@ using namespace p25;
 /// </summary>
 OSP_IDEN_UP_VU::OSP_IDEN_UP_VU() : TSBK()
 {
-    m_lco = TSBK_OSP_IDEN_UP_VU;
+    m_lco = TSBKO::OSP_IDEN_UP_VU;
 }
 
 /// <summary>
@@ -70,7 +71,7 @@ void OSP_IDEN_UP_VU::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
             uCalcTxOffset |= 0x2000U; // this sets a positive offset ...
 
         uint32_t calcBaseFreq = (uint32_t)(m_siteIdenEntry.baseFrequency() / 5);
-        uint8_t chanBw = (m_siteIdenEntry.chBandwidthKhz() >= 12.5F) ? P25_IDEN_UP_VU_BW_125K : P25_IDEN_UP_VU_BW_625K;
+        uint8_t chanBw = (m_siteIdenEntry.chBandwidthKhz() >= 12.5F) ? IDEN_UP_VU_BW_125K : IDEN_UP_VU_BW_625K;
 
         tsbkValue = m_siteIdenEntry.channelId();                                    // Channel ID
         tsbkValue = (tsbkValue << 4) + chanBw;                                      // Channel Bandwidth
@@ -79,7 +80,7 @@ void OSP_IDEN_UP_VU::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
         tsbkValue = (tsbkValue << 32) + calcBaseFreq;                               // Base Frequency
     }
     else {
-        LogError(LOG_P25, "OSP_IDEN_UP_VU::encode(), invalid values for TSBK_OSP_IDEN_UP_VU, baseFrequency = %uHz, txOffsetMhz = %fMHz, chBandwidthKhz = %fKHz, chSpaceKhz = %fKHz",
+        LogError(LOG_P25, "OSP_IDEN_UP_VU::encode(), invalid values for TSBKO::OSP_IDEN_UP_VU, baseFrequency = %uHz, txOffsetMhz = %fMHz, chBandwidthKhz = %fKHz, chSpaceKhz = %fKHz",
             m_siteIdenEntry.baseFrequency(), m_siteIdenEntry.txOffsetMhz(), m_siteIdenEntry.chBandwidthKhz(),
             m_siteIdenEntry.chSpaceKhz());
         return; // blatantly ignore creating this TSBK
@@ -96,5 +97,5 @@ void OSP_IDEN_UP_VU::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 /// <returns></returns>
 std::string OSP_IDEN_UP_VU::toString(bool isp)
 {
-    return std::string("TSBK_OSP_IDEN_UP_VU (Channel Identifier Update for VHF/UHF Bands)");
+    return std::string("TSBKO, OSP_IDEN_UP_VU (Channel Identifier Update for VHF/UHF Bands)");
 }

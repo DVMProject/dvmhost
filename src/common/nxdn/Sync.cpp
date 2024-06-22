@@ -9,6 +9,7 @@
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
 *   Copyright (C) 2020 Jonathan Naylor, G4KLX
+*   Copyright (C) 2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
@@ -16,6 +17,7 @@
 #include "nxdn/Sync.h"
 
 using namespace nxdn;
+using namespace nxdn::defines;
 
 #include <cassert>
 

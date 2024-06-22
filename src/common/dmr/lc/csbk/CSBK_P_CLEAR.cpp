@@ -7,15 +7,16 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2023 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2023,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
 #include "dmr/lc/csbk/CSBK_P_CLEAR.h"
 
-using namespace dmr::lc::csbk;
-using namespace dmr::lc;
 using namespace dmr;
+using namespace dmr::defines;
+using namespace dmr::lc;
+using namespace dmr::lc::csbk;
 
 #include <cassert>
 
@@ -28,7 +29,7 @@ using namespace dmr;
 /// </summary>
 CSBK_P_CLEAR::CSBK_P_CLEAR() : CSBK()
 {
-    m_CSBKO = CSBKO_P_CLEAR;
+    m_CSBKO = CSBKO::P_CLEAR;
 }
 
 /// <summary>
@@ -72,5 +73,5 @@ void CSBK_P_CLEAR::encode(uint8_t* data)
 /// <returns></returns>
 std::string CSBK_P_CLEAR::toString()
 {
-    return std::string("CSBKO_P_CLEAR (Payload Channel Clear)");
+    return std::string("CSBKO, P_CLEAR (Payload Channel Clear)");
 }

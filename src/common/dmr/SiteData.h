@@ -7,7 +7,7 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2021 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2021,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #if !defined(__DMR_SITE_DATA_H__)
@@ -28,7 +28,7 @@ namespace dmr
     public:
         /// <summary>Initializes a new instance of the SiteData class.</summary>
         SiteData() :
-            m_siteModel(SITE_MODEL_SMALL),
+            m_siteModel(defines::SiteModel::SMALL),
             m_netId(1U),
             m_siteId(1U),
             m_parId(3U),
@@ -43,7 +43,7 @@ namespace dmr
         /// <param name="siteId">DMR Site ID.</param>
         /// <param name="parId">DMR partition ID.</param>
         /// <param name="requireReg"></param>
-        SiteData(uint8_t siteModel, uint16_t netId, uint16_t siteId, uint8_t parId, bool requireReq) :
+        SiteData(defines::SiteModel::E siteModel, uint16_t netId, uint16_t siteId, uint8_t parId, bool requireReq) :
             m_siteModel(siteModel),
             m_netId(netId),
             m_siteId(siteId),
@@ -51,9 +51,10 @@ namespace dmr
             m_requireReg(requireReq),
             m_netActive(false)
         {
+            using namespace dmr::defines;
             // siteModel clamping
-            if (siteModel > SITE_MODEL_HUGE)
-                siteModel = SITE_MODEL_SMALL;
+            if (siteModel > SiteModel::HUGE)
+                siteModel = SiteModel::SMALL;
 
             // netId clamping
             m_netId = DMRUtils::netId(netId, siteModel);
@@ -80,29 +81,30 @@ namespace dmr
         /// <returns></returns>
         const uint32_t systemIdentity(bool msb = false)
         {
+            using namespace dmr::defines;
             uint32_t value = m_siteModel;
 
             switch (m_siteModel)
             {
-            case SITE_MODEL_TINY:
+            case SiteModel::TINY:
             {
                 value = (value << 9) + (m_netId & 0x1FFU);
                 value = (value << 3) + (m_siteId & 0x07U);
             }
             break;
-            case SITE_MODEL_SMALL:
+            case SiteModel::SMALL:
             {
                 value = (value << 7) + (m_netId & 0x7FU);
                 value = (value << 5) + (m_siteId & 0x1FU);
             }
             break;
-            case SITE_MODEL_LARGE:
+            case SiteModel::LARGE:
             {
                 value = (value << 5) + (m_netId & 0x1FU);
                 value = (value << 7) + (m_siteId & 0x7FU);
             }
             break;
-            case SITE_MODEL_HUGE:
+            case SiteModel::HUGE:
             {
                 value = (value << 2) + (m_netId & 0x03U);
                 value = (value << 10) + (m_siteId & 0x3FFU);
@@ -138,7 +140,7 @@ namespace dmr
 
     public:
         /// <summary>DMR site model type.</summary>
-        __READONLY_PROPERTY_PLAIN(uint8_t, siteModel);
+        __READONLY_PROPERTY_PLAIN(defines::SiteModel::E, siteModel);
         /// <summary>DMR site network ID.</summary>
         __READONLY_PROPERTY_PLAIN(uint16_t, netId);
         /// <summary>DMR site ID.</summary>

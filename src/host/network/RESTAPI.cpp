@@ -149,7 +149,7 @@ RESTAPI::RESTAPI(const std::string& address, uint16_t port, const std::string& p
     m_enableSSL(enableSSL),
 #endif // ENABLE_TCP_SSL
     m_random(),
-    m_p25MFId(p25::P25_MFG_STANDARD),
+    m_p25MFId(P25DEF::MFG_STANDARD),
     m_password(password),
     m_passwordHash(nullptr),
     m_debug(debug),
@@ -1475,6 +1475,7 @@ void RESTAPI::restAPI_GetDMRDumpCSBK(const HTTPPayload& request, HTTPPayload& re
 /// <param name="match"></param>
 void RESTAPI::restAPI_PutDMRRID(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
+    using namespace dmr::defines;
     if (!validateAuth(request, reply)) {
         return;
     }
@@ -1523,16 +1524,16 @@ void RESTAPI::restAPI_PutDMRRID(const HTTPPayload& request, HTTPPayload& reply, 
     errorPayload(reply, "OK", HTTPPayload::OK);
     std::string command = req["command"].get<std::string>();
     if (::strtolower(command) == RID_CMD_PAGE) {
-        m_dmr->writeRF_Call_Alrt(slot, p25::P25_WUID_FNE, dstId);
+        m_dmr->writeRF_Call_Alrt(slot, WUID_ALL, dstId);
     }
     else if (::strtolower(command) == RID_CMD_CHECK) {
-        m_dmr->writeRF_Ext_Func(slot, dmr::DMR_EXT_FNCT_CHECK, p25::P25_WUID_FNE, dstId);
+        m_dmr->writeRF_Ext_Func(slot, ExtendedFunctions::CHECK, WUID_ALL, dstId);
     }
     else if (::strtolower(command) == RID_CMD_INHIBIT) {
-        m_dmr->writeRF_Ext_Func(slot, dmr::DMR_EXT_FNCT_INHIBIT, p25::P25_WUID_FNE, dstId);
+        m_dmr->writeRF_Ext_Func(slot, ExtendedFunctions::INHIBIT, WUID_STUNI, dstId);
     }
     else if (::strtolower(command) == RID_CMD_UNINHIBIT) {
-        m_dmr->writeRF_Ext_Func(slot, dmr::DMR_EXT_FNCT_UNINHIBIT, p25::P25_WUID_FNE, dstId);
+        m_dmr->writeRF_Ext_Func(slot, ExtendedFunctions::UNINHIBIT, WUID_STUNI, dstId);
     }
     else {
         errorPayload(reply, "invalid command");
@@ -1840,7 +1841,9 @@ void RESTAPI::restAPI_GetP25DumpTSBK(const HTTPPayload& request, HTTPPayload& re
 /// <param name="match"></param>
 void RESTAPI::restAPI_PutP25RID(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
-    if (!validateAuth(request, reply)) {
+    using namespace p25::defines;
+    if (!validateAuth(request, reply))
+    {
         return;
     }
 
@@ -1891,16 +1894,16 @@ void RESTAPI::restAPI_PutP25RID(const HTTPPayload& request, HTTPPayload& reply, 
         m_p25->control()->setLastMFId(mfId);
     }
     else if (::strtolower(command) == RID_CMD_PAGE) {
-        m_p25->control()->writeRF_TSDU_Call_Alrt(p25::P25_WUID_FNE, dstId);
+        m_p25->control()->writeRF_TSDU_Call_Alrt(WUID_FNE, dstId);
     }
     else if (::strtolower(command) == RID_CMD_CHECK) {
-        m_p25->control()->writeRF_TSDU_Ext_Func(p25::P25_EXT_FNCT_CHECK, p25::P25_WUID_FNE, dstId);
+        m_p25->control()->writeRF_TSDU_Ext_Func(ExtendedFunctions::CHECK, WUID_FNE, dstId);
     }
     else if (::strtolower(command) == RID_CMD_INHIBIT) {
-        m_p25->control()->writeRF_TSDU_Ext_Func(p25::P25_EXT_FNCT_INHIBIT, p25::P25_WUID_FNE, dstId);
+        m_p25->control()->writeRF_TSDU_Ext_Func(ExtendedFunctions::INHIBIT, WUID_FNE, dstId);
     }
     else if (::strtolower(command) == RID_CMD_UNINHIBIT) {
-        m_p25->control()->writeRF_TSDU_Ext_Func(p25::P25_EXT_FNCT_UNINHIBIT, p25::P25_WUID_FNE, dstId);
+        m_p25->control()->writeRF_TSDU_Ext_Func(ExtendedFunctions::UNINHIBIT, WUID_FNE, dstId);
     }
     else if (::strtolower(command) == RID_CMD_GAQ) {
         m_p25->control()->writeRF_TSDU_Grp_Aff_Q(dstId);
@@ -2018,7 +2021,9 @@ void RESTAPI::restAPI_GetP25CCBroadcast(const HTTPPayload& request, HTTPPayload&
 /// <param name="match"></param>
 void RESTAPI::restAPI_PutP25RawTSBK(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
-    if (!validateAuth(request, reply)) {
+    using namespace p25::defines;
+    if (!validateAuth(request, reply))
+    {
         return;
     }
 
@@ -2051,17 +2056,17 @@ void RESTAPI::restAPI_PutP25RawTSBK(const HTTPPayload& request, HTTPPayload& rep
     }
 
     const char* tsbkPtr = tsbkBytes.c_str();
-    uint8_t* tsbk = new uint8_t[p25::P25_TSBK_LENGTH_BYTES];
-    ::memset(tsbk, 0x00U, p25::P25_TSBK_LENGTH_BYTES);
+    uint8_t* tsbk = new uint8_t[P25_TSBK_LENGTH_BYTES];
+    ::memset(tsbk, 0x00U, P25_TSBK_LENGTH_BYTES);
 
-    for (uint8_t i = 0; i < p25::P25_TSBK_LENGTH_BYTES; i++) {
+    for (uint8_t i = 0; i < P25_TSBK_LENGTH_BYTES; i++) {
         char t[4] = {tsbkPtr[0], tsbkPtr[1], 0};
         tsbk[i] = (uint8_t)::strtoul(t, NULL, 16);
         tsbkPtr += 2 * sizeof(char);
     }
 
     if (m_debug) {
-        Utils::dump("Raw TSBK", tsbk, p25::P25_TSBK_LENGTH_BYTES);
+        Utils::dump("Raw TSBK", tsbk, P25_TSBK_LENGTH_BYTES);
     }
 
     m_p25->control()->writeRF_TSDU_Raw(tsbk);

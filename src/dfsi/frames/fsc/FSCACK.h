@@ -50,13 +50,13 @@ namespace p25
                 uint8_t* responseData; // ?? - this should probably be private with getters/setters
 
                 /// <summary>Acknowledged Message ID.</summary>
-                __PROPERTY(FSCMessageType, ackMessageId, AckMessageId);
+                __PROPERTY(FSCMessageType::E, ackMessageId, AckMessageId);
                 /// <summary>Acknowledged Message Version.</summary>
                 __READONLY_PROPERTY(uint8_t, ackVersion, AckVersion);
                 /// <summary></summary>
                 __READONLY_PROPERTY(uint8_t, ackCorrelationTag, AckCorrelationTag);
                 /// <summary>Response code.</summary>
-                __PROPERTY(FSCAckResponseCode, responseCode, ResponseCode);
+                __PROPERTY(FSCAckResponseCode::E, responseCode, ResponseCode);
                 /// <summary>Response Data Length.</summary>
                 __PROPERTY(uint8_t, respLength, ResponseLength);
             };

@@ -7,7 +7,7 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #if !defined(__DMR_LC__CSBK_FACTORY_H__)
@@ -15,6 +15,7 @@
 
 #include "common/Defines.h"
 
+#include "common/dmr/DMRDefines.h"
 #include "common/dmr/lc/CSBK.h"
 #include "common/dmr/lc/csbk/CSBK_ACK_RSP.h"
 #include "common/dmr/lc/csbk/CSBK_ALOHA.h"
@@ -55,7 +56,7 @@ namespace dmr
                 ~CSBKFactory();
 
                 /// <summary>Create an instance of a CSBK.</summary>
-                static std::unique_ptr<CSBK> createCSBK(const uint8_t* data, uint8_t dataType);
+                static std::unique_ptr<CSBK> createCSBK(const uint8_t* data, defines::DataType::E dataType);
 
             private:
                 /// <summary></summary>

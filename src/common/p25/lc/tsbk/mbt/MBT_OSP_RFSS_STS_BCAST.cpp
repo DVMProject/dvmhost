@@ -7,15 +7,16 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
 #include "p25/lc/tsbk/mbt/MBT_OSP_RFSS_STS_BCAST.h"
 
-using namespace p25::lc::tsbk;
-using namespace p25::lc;
 using namespace p25;
+using namespace p25::defines;
+using namespace p25::lc;
+using namespace p25::lc::tsbk;
 
 #include <cassert>
 
@@ -28,7 +29,7 @@ using namespace p25;
 /// </summary>
 MBT_OSP_RFSS_STS_BCAST::MBT_OSP_RFSS_STS_BCAST() : AMBT()
 {
-    m_lco = TSBK_OSP_RFSS_STS_BCAST;
+    m_lco = TSBKO::OSP_RFSS_STS_BCAST;
 }
 
 /// <summary>
@@ -84,5 +85,5 @@ void MBT_OSP_RFSS_STS_BCAST::encodeMBT(data::DataHeader& dataHeader, uint8_t* pd
 /// <returns></returns>
 std::string MBT_OSP_RFSS_STS_BCAST::toString(bool isp)
 {
-    return std::string("TSBK_OSP_RFSS_STS_BCAST (RFSS Status Broadcast)");
+    return std::string("TSBKO, OSP_RFSS_STS_BCAST (RFSS Status Broadcast)");
 }

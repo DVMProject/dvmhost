@@ -7,15 +7,16 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
 #include "p25/lc/tsbk/IOSP_UU_ANS.h"
 
-using namespace p25::lc::tsbk;
-using namespace p25::lc;
 using namespace p25;
+using namespace p25::defines;
+using namespace p25::lc;
+using namespace p25::lc::tsbk;
 
 #include <cassert>
 
@@ -28,7 +29,7 @@ using namespace p25;
 /// </summary>
 IOSP_UU_ANS::IOSP_UU_ANS() : TSBK()
 {
-    m_lco = TSBK_IOSP_UU_ANS;
+    m_lco = TSBKO::IOSP_UU_ANS;
 }
 
 /// <summary>
@@ -90,6 +91,6 @@ void IOSP_UU_ANS::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 /// <returns></returns>
 std::string IOSP_UU_ANS::toString(bool isp)
 {
-    if (isp) return std::string("TSBK_IOSP_UU_ANS (Unit-to-Unit Answer Response)");
-    else return std::string("TSBK_IOSP_UU_ANS (Unit-to-Unit Answer Request)");
+    return (isp) ? std::string("TSBKO, IOSP_UU_ANS (Unit-to-Unit Answer Response)") :
+        std::string("TSBKO, IOSP_UU_ANS (Unit-to-Unit Answer Request)");
 }

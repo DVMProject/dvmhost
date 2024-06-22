@@ -25,6 +25,7 @@ using namespace system_clock;
 using namespace network;
 using namespace network::callhandler;
 using namespace p25;
+using namespace p25::defines;
 
 #include <cassert>
 #include <chrono>
@@ -88,8 +89,8 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
     uint8_t lsd1 = data[20U];
     uint8_t lsd2 = data[21U];
 
-    uint8_t duid = data[22U];
-    uint8_t frameType = P25_FT_DATA_UNIT;
+    DUID::E duid = (DUID::E)data[22U];
+    FrameType::E frameType = FrameType::DATA_UNIT;
 
     // perform TGID route rewrites if configured
     routeRewrite(buffer, peerId, duid, dstId, false);
@@ -99,28 +100,28 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
     data::LowSpeedData lsd;
 
     // is this a LDU1, is this the first of a call?
-    if (duid == P25_DUID_LDU1) {
-        frameType = data[180U];
+    if (duid == DUID::LDU1) {
+        frameType = (FrameType::E)data[180U];
 
         if (m_debug) {
             LogDebug(LOG_NET, "P25, frameType = $%02X", frameType);
         }
 
-        if (frameType == P25_FT_HDU_VALID) {
+        if (frameType == FrameType::HDU_VALID) {
             uint8_t algId = data[181U];
             uint32_t kid = (data[182U] << 8) | (data[183U] << 0);
 
             // copy MI data
-            uint8_t mi[P25_MI_LENGTH_BYTES];
-            ::memset(mi, 0x00U, P25_MI_LENGTH_BYTES);
+            uint8_t mi[MI_LENGTH_BYTES];
+            ::memset(mi, 0x00U, MI_LENGTH_BYTES);
 
-            for (uint8_t i = 0; i < P25_MI_LENGTH_BYTES; i++) {
+            for (uint8_t i = 0; i < MI_LENGTH_BYTES; i++) {
                 mi[i] = data[184U + i];
             }
 
             if (m_debug) {
                 LogDebug(LOG_NET, "P25, HDU algId = $%02X, kId = $%02X", algId, kid);
-                Utils::dump(1U, "P25 HDU Network MI", mi, P25_MI_LENGTH_BYTES);
+                Utils::dump(1U, "P25 HDU Network MI", mi, MI_LENGTH_BYTES);
             }
 
             control.setAlgId(algId);
@@ -141,7 +142,7 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
 
     // process a TSBK out into a class literal if possible
     std::unique_ptr<lc::TSBK> tsbk;
-    if (duid == P25_DUID_TSDU) {
+    if (duid == DUID::TSDU) {
         UInt8Array data = std::unique_ptr<uint8_t[]>(new uint8_t[frameLength]);
         ::memset(data.get(), 0x00U, frameLength);
         ::memcpy(data.get(), buffer + 24U, frameLength);
@@ -157,9 +158,9 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
         }
 
         // specifically only check the following logic for end of call or voice frames
-        if (duid != P25_DUID_TSDU && duid != P25_DUID_PDU) {
+        if (duid != DUID::TSDU && duid != DUID::PDU) {
             // is this the end of the call stream?
-            if ((duid == P25_DUID_TDU) || (duid == P25_DUID_TDULC)) {
+            if ((duid == DUID::TDU) || (duid == DUID::TDULC)) {
                 if (srcId == 0U && dstId == 0U) {
                     LogWarning(LOG_NET, "P25, invalid TDU, peer = %u, srcId = %u, dstId = %u, streamId = %u, external = %u", peerId, srcId, dstId, streamId, external);
                     return false;
@@ -213,7 +214,7 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
             }
 
             // is this a new call stream?
-            if ((duid != P25_DUID_TDU) && (duid != P25_DUID_TDULC)) {
+            if ((duid != DUID::TDU) && (duid != DUID::TDULC)) {
                 if (srcId == 0U && dstId == 0U) {
                     LogWarning(LOG_NET, "P25, invalid call, peer = %u, srcId = %u, dstId = %u, streamId = %u, external = %u", peerId, srcId, dstId, streamId, external);
                     return false;
@@ -222,7 +223,7 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                 auto it = std::find_if(m_status.begin(), m_status.end(), [&](StatusMapPair x) { return x.second.dstId == dstId; });
                 if (it != m_status.end()) {
                     RxStatus status = m_status[dstId];
-                    if (streamId != status.streamId && ((duid != P25_DUID_TDU) && (duid != P25_DUID_TDULC))) {
+                    if (streamId != status.streamId && ((duid != DUID::TDU) && (duid != DUID::TDULC))) {
                         if (status.srcId != 0U && status.srcId != srcId) {
                             LogWarning(LOG_NET, "P25, Call Collision, peer = %u, srcId = %u, dstId = %u, streamId = %u, rxPeer = %u, rxSrcId = %u, rxDstId = %u, rxStreamId = %u, external = %u",
                                 peerId, srcId, dstId, streamId, status.peerId, status.srcId, status.dstId, status.streamId, external);
@@ -565,7 +566,7 @@ void TagP25Data::write_TSDU_Ext_Func(uint32_t peerId, uint32_t func, uint32_t ar
 void TagP25Data::write_TSDU_Grp_Aff_Q(uint32_t peerId, uint32_t dstId)
 {
     std::unique_ptr<lc::tsbk::OSP_GRP_AFF_Q> osp = std::make_unique<lc::tsbk::OSP_GRP_AFF_Q>();
-    osp->setSrcId(P25_WUID_FNE);
+    osp->setSrcId(WUID_FNE);
     osp->setDstId(dstId);
 
     LogMessage(LOG_NET, P25_TSDU_STR ", %s, dstId = %u", osp->toString().c_str(), dstId);
@@ -581,7 +582,7 @@ void TagP25Data::write_TSDU_Grp_Aff_Q(uint32_t peerId, uint32_t dstId)
 void TagP25Data::write_TSDU_U_Reg_Cmd(uint32_t peerId, uint32_t dstId)
 {
     std::unique_ptr<lc::tsbk::OSP_U_REG_CMD> osp = std::make_unique<lc::tsbk::OSP_U_REG_CMD>();
-    osp->setSrcId(P25_WUID_FNE);
+    osp->setSrcId(WUID_FNE);
     osp->setDstId(dstId);
 
     LogMessage(LOG_NET, P25_TSDU_STR ", %s, dstId = %u", osp->toString().c_str(), dstId);
@@ -614,7 +615,7 @@ void TagP25Data::routeRewrite(uint8_t* buffer, uint32_t peerId, uint8_t duid, ui
         __SET_UINT16(rewriteDstId, buffer, 8U);
 
         // are we receiving a TSDU?
-        if (duid == P25_DUID_TSDU) {
+        if (duid == DUID::TSDU) {
             UInt8Array data = std::unique_ptr<uint8_t[]>(new uint8_t[frameLength]);
             ::memset(data.get(), 0x00U, frameLength);
             ::memcpy(data.get(), buffer + 24U, frameLength);
@@ -623,7 +624,7 @@ void TagP25Data::routeRewrite(uint8_t* buffer, uint32_t peerId, uint8_t duid, ui
             if (tsbk != nullptr) {
                 // handle standard P25 reference opcodes
                 switch (tsbk->getLCO()) {
-                    case TSBK_IOSP_GRP_VCH:
+                    case TSBKO::IOSP_GRP_VCH:
                     {
                         LogMessage(LOG_NET, P25_TSDU_STR ", %s, emerg = %u, encrypt = %u, prio = %u, chNo = %u, srcId = %u, dstId = %u",
                             tsbk->toString(true).c_str(), tsbk->getEmergency(), tsbk->getEncrypted(), tsbk->getPriority(), tsbk->getGrpVchNo(), srcId, rewriteDstId);
@@ -652,7 +653,7 @@ void TagP25Data::routeRewrite(uint8_t* buffer, uint32_t peerId, uint8_t duid, ui
                     Utils::dump(1U, "!!! *TSDU (SBF) TSBK Block Data", data + P25_PREAMBLE_LENGTH_BYTES + 2U, P25_TSBK_FEC_LENGTH_BYTES);
                 }
 
-                ::memcpy(buffer + 24U, data + 2U, p25::P25_TSDU_FRAME_LENGTH_BYTES);
+                ::memcpy(buffer + 24U, data + 2U, P25_TSDU_FRAME_LENGTH_BYTES);
             }
         }
     }
@@ -701,7 +702,7 @@ bool TagP25Data::peerRewrite(uint32_t peerId, uint32_t& dstId, bool outbound)
 bool TagP25Data::processTSDUFrom(uint8_t* buffer, uint32_t peerId, uint8_t duid)
 {
     // are we receiving a TSDU?
-    if (duid == P25_DUID_TSDU) {
+    if (duid == DUID::TSDU) {
         uint32_t frameLength = buffer[23U];
 
         UInt8Array data = std::unique_ptr<uint8_t[]>(new uint8_t[frameLength]);
@@ -733,14 +734,14 @@ bool TagP25Data::processTSDUFrom(uint8_t* buffer, uint32_t peerId, uint8_t duid)
 
             // handle standard P25 reference opcodes
             switch (tsbk->getLCO()) {
-            case TSBK_IOSP_UU_VCH:
-            case TSBK_IOSP_UU_ANS:
+            case TSBKO::IOSP_UU_VCH:
+            case TSBKO::IOSP_UU_ANS:
                 {
                     if (m_network->checkU2UDroppedPeer(peerId))
                         return false;
                 }
                 break;
-            case TSBK_OSP_ADJ_STS_BCAST:
+            case TSBKO::OSP_ADJ_STS_BCAST:
                 {
                     if (m_network->m_disallowAdjStsBcast) {
                         // LogWarning(LOG_NET, "PEER %u, passing ADJ_STS_BCAST to internal peers is prohibited, dropping", peerId);
@@ -776,7 +777,7 @@ bool TagP25Data::processTSDUFrom(uint8_t* buffer, uint32_t peerId, uint8_t duid)
 bool TagP25Data::processTSDUTo(uint8_t* buffer, uint32_t peerId, uint8_t duid)
 {
     // are we receiving a TSDU?
-    if (duid == P25_DUID_TSDU) {
+    if (duid == DUID::TSDU) {
         uint32_t frameLength = buffer[23U];
 
         UInt8Array data = std::unique_ptr<uint8_t[]>(new uint8_t[frameLength]);
@@ -795,7 +796,7 @@ bool TagP25Data::processTSDUTo(uint8_t* buffer, uint32_t peerId, uint8_t duid)
 
             // handle standard P25 reference opcodes
             switch (tsbk->getLCO()) {
-            case TSBK_IOSP_GRP_VCH:
+            case TSBKO::IOSP_GRP_VCH:
                 {
                     if (m_network->m_restrictGrantToAffOnly) {
                         lookups::TalkgroupRuleGroupVoice tg = m_network->m_tidLookup->find(dstId);
@@ -848,7 +849,7 @@ bool TagP25Data::processTSDUTo(uint8_t* buffer, uint32_t peerId, uint8_t duid)
 bool TagP25Data::processTSDUToExternal(uint8_t* buffer, uint32_t srcPeerId, uint32_t dstPeerId, uint8_t duid)
 {
     // are we receiving a TSDU?
-    if (duid == P25_DUID_TSDU) {
+    if (duid == DUID::TSDU) {
         uint32_t frameLength = buffer[23U];
 
         UInt8Array data = std::unique_ptr<uint8_t[]>(new uint8_t[frameLength]);
@@ -859,7 +860,7 @@ bool TagP25Data::processTSDUToExternal(uint8_t* buffer, uint32_t srcPeerId, uint
         if (tsbk != nullptr) {
             // handle standard P25 reference opcodes
             switch (tsbk->getLCO()) {
-            case TSBK_OSP_ADJ_STS_BCAST:
+            case TSBKO::OSP_ADJ_STS_BCAST:
                 {
                     if (m_network->m_disallowExtAdjStsBcast) {
                         // LogWarning(LOG_NET, "PEER %u, passing ADJ_STS_BCAST to external peers is prohibited, dropping", dstPeerId);
@@ -895,19 +896,19 @@ bool TagP25Data::processTSDUToExternal(uint8_t* buffer, uint32_t srcPeerId, uint
 /// <param name="streamId">Stream ID</param>
 /// <param name="external"></param>
 /// <returns></returns>
-bool TagP25Data::isPeerPermitted(uint32_t peerId, lc::LC& control, uint8_t duid, uint32_t streamId, bool external)
+bool TagP25Data::isPeerPermitted(uint32_t peerId, lc::LC& control, DUID::E duid, uint32_t streamId, bool external)
 {
-    if (control.getLCO() == LC_PRIVATE) {
+    if (control.getLCO() == LCO::PRIVATE) {
         if (!m_network->checkU2UDroppedPeer(peerId))
             return true;
         return false;
     }
 
     // always permit a TSDU or PDU
-    if (duid == P25_DUID_TSDU || duid == P25_DUID_PDU)
+    if (duid == DUID::TSDU || duid == DUID::PDU)
         return true;
 
-    if (duid == P25_DUID_HDU) {
+    if (duid == DUID::HDU) {
         if (m_network->m_filterHeaders) {
             if (control.getSrcId() != 0U && control.getDstId() != 0U) {
                 // is this a group call?
@@ -935,12 +936,12 @@ bool TagP25Data::isPeerPermitted(uint32_t peerId, lc::LC& control, uint8_t duid,
         return true;
     }
 
-    if (duid == P25_DUID_TDULC) {
+    if (duid == DUID::TDULC) {
         // always permit a terminator
         return true;
     }
 
-    if (duid == P25_DUID_TDU) {
+    if (duid == DUID::TDU) {
         if (m_network->m_filterTerminators) {
             if (control.getSrcId() != 0U && control.getDstId() != 0U) {
                 // is this a group call?
@@ -1049,7 +1050,7 @@ bool TagP25Data::isPeerPermitted(uint32_t peerId, lc::LC& control, uint8_t duid,
 /// <param name="tsbk"></param>
 /// <param name="streamId">Stream ID</param>
 /// <returns></returns>
-bool TagP25Data::validate(uint32_t peerId, lc::LC& control, uint8_t duid, const p25::lc::TSBK* tsbk, uint32_t streamId)
+bool TagP25Data::validate(uint32_t peerId, lc::LC& control, DUID::E duid, const p25::lc::TSBK* tsbk, uint32_t streamId)
 {
     // is the source ID a blacklisted ID?
     lookups::RadioId rid = m_network->m_ridLookup->find(control.getSrcId());
@@ -1073,15 +1074,15 @@ bool TagP25Data::validate(uint32_t peerId, lc::LC& control, uint8_t duid, const 
     }
 
     // always validate a PDU if the source is valid
-    if (duid == P25_DUID_PDU)
+    if (duid == DUID::PDU)
         return true;
 
     // always validate a terminator if the source is valid
-    if (duid == P25_DUID_TDU || duid == P25_DUID_TDULC)
+    if (duid == DUID::TDU || duid == DUID::TDULC)
         return true;
 
     // is this a private call?
-    if (control.getLCO() == LC_PRIVATE) {
+    if (control.getLCO() == LCO::PRIVATE) {
         // is the destination ID a blacklisted ID?
         lookups::RadioId rid = m_network->m_ridLookup->find(control.getDstId());
         if (!rid.radioDefault()) {
@@ -1107,11 +1108,11 @@ bool TagP25Data::validate(uint32_t peerId, lc::LC& control, uint8_t duid, const 
     }
 
     // always validate a TSDU or PDU if the source is valid
-    if (duid == P25_DUID_TSDU) {
+    if (duid == DUID::TSDU) {
         if (tsbk != nullptr) {
             // handle standard P25 reference opcodes
             switch (tsbk->getLCO()) {
-                case TSBK_IOSP_GRP_VCH:
+                case TSBKO::IOSP_GRP_VCH:
                 {
                     lookups::TalkgroupRuleGroupVoice tg = m_network->m_tidLookup->find(tsbk->getDstId());
 
@@ -1185,7 +1186,7 @@ bool TagP25Data::write_TSDU_Grant(uint32_t peerId, uint32_t srcId, uint32_t dstI
     bool encryption = ((serviceOptions & 0xFFU) & 0x40U) == 0x40U;          // Encryption Flag
     uint8_t priority = ((serviceOptions & 0xFFU) & 0x07U);                  // Priority
 
-    if (dstId == P25_TGID_ALL) {
+    if (dstId == TGID_ALL) {
         return true; // do not generate grant packets for $FFFF (All Call) TGID
     }
 

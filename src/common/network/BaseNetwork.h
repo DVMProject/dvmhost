@@ -196,7 +196,7 @@ namespace network
         virtual UInt8Array readP25(bool& ret, uint32_t& frameLength);
         /// <summary>Writes P25 LDU1 frame data to the network.</summary>
         virtual bool writeP25LDU1(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, const uint8_t* data, 
-            uint8_t frameType);
+            p25::defines::FrameType::E frameType);
         /// <summary>Writes P25 LDU2 frame data to the network.</summary>
         virtual bool writeP25LDU2(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, const uint8_t* data);
         /// <summary>Writes P25 TDU frame data to the network.</summary>
@@ -269,12 +269,12 @@ namespace network
         UInt8Array createDMR_Message(uint32_t& length, const uint32_t streamId, const dmr::data::Data& data);
 
         /// <summary>Creates an P25 frame message header.</summary>
-        void createP25_MessageHdr(uint8_t* buffer, uint8_t duid, const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, 
-            uint8_t frameType = p25::P25_FT_DATA_UNIT);
+        void createP25_MessageHdr(uint8_t* buffer, p25::defines::DUID::E duid, const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, 
+            p25::defines::FrameType::E frameType = p25::defines::FrameType::DATA_UNIT);
 
         /// <summary>Creates an P25 LDU1 frame message.</summary>
         UInt8Array createP25_LDU1Message(uint32_t& length, const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, 
-            const uint8_t* data, uint8_t frameType);
+            const uint8_t* data, p25::defines::FrameType::E frameType);
         /// <summary>Creates an P25 LDU2 frame message.</summary>
         UInt8Array createP25_LDU2Message(uint32_t& length, const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, 
             const uint8_t* data);

@@ -17,6 +17,7 @@
 #include "Utils.h"
 
 using namespace p25;
+using namespace p25::defines;
 
 #include <cassert>
 

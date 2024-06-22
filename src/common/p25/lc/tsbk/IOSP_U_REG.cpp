@@ -7,15 +7,16 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
 #include "p25/lc/tsbk/IOSP_U_REG.h"
 
-using namespace p25::lc::tsbk;
-using namespace p25::lc;
 using namespace p25;
+using namespace p25::defines;
+using namespace p25::lc;
+using namespace p25::lc::tsbk;
 
 #include <cassert>
 
@@ -28,7 +29,7 @@ using namespace p25;
 /// </summary>
 IOSP_U_REG::IOSP_U_REG() : TSBK()
 {
-    m_lco = TSBK_IOSP_U_REG;
+    m_lco = TSBKO::IOSP_U_REG;
 }
 
 /// <summary>
@@ -85,6 +86,6 @@ void IOSP_U_REG::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 /// <returns></returns>
 std::string IOSP_U_REG::toString(bool isp)
 {
-    if (isp) return std::string("TSBK_IOSP_U_REG (Unit Registration Request)");
-    else return std::string("TSBK_IOSP_U_REG (Unit Registration Response)");
+    return (isp) ? std::string("TSBKO, IOSP_U_REG (Unit Registration Request)") :
+        std::string("TSBKO, IOSP_U_REG (Unit Registration Response)");
 }

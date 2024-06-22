@@ -7,7 +7,7 @@
 * @package DVM / Modem Host Software
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2023 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2023,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #if !defined(__SETUP_APPLICATION_H__)
@@ -45,25 +45,26 @@ protected:
     /// </summary>
     void processExternalUserEvent() override
     {
+        using namespace p25::defines;
         if (m_setup->m_isConnected) {
-            if (m_setup->m_p25TduTest && m_setup->m_queue.hasSpace(p25::P25_TDU_FRAME_LENGTH_BYTES + 2U)) {
-                uint8_t data[p25::P25_TDU_FRAME_LENGTH_BYTES + 2U];
-                ::memset(data + 2U, 0x00U, p25::P25_TDU_FRAME_LENGTH_BYTES);
+            if (m_setup->m_p25TduTest && m_setup->m_queue.hasSpace(P25_TDU_FRAME_LENGTH_BYTES + 2U)) {
+                uint8_t data[P25_TDU_FRAME_LENGTH_BYTES + 2U];
+                ::memset(data + 2U, 0x00U, P25_TDU_FRAME_LENGTH_BYTES);
 
                 // Generate Sync
                 p25::Sync::addP25Sync(data + 2U);
 
                 // Generate NID
                 std::unique_ptr<p25::NID> nid = std::make_unique<p25::NID>(1U);
-                nid->encode(data + 2U, p25::P25_DUID_TDU);
+                nid->encode(data + 2U, DUID::TDU);
 
                 // Add busy bits
-                p25::P25Utils::addBusyBits(data + 2U, p25::P25_TDU_FRAME_LENGTH_BITS, true, true);
+                p25::P25Utils::addBusyBits(data + 2U, P25_TDU_FRAME_LENGTH_BITS, true, true);
 
                 data[0U] = modem::TAG_EOT;
                 data[1U] = 0x00U;
 
-                m_setup->addFrame(data, p25::P25_TDU_FRAME_LENGTH_BYTES + 2U, p25::P25_LDU_FRAME_LENGTH_BYTES);
+                m_setup->addFrame(data, P25_TDU_FRAME_LENGTH_BYTES + 2U, P25_LDU_FRAME_LENGTH_BYTES);
             }
 
             // ------------------------------------------------------

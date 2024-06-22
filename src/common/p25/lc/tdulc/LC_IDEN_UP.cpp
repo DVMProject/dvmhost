@@ -7,16 +7,17 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
 #include "p25/lc/tdulc/LC_IDEN_UP.h"
 #include "Log.h"
 
-using namespace p25::lc::tdulc;
-using namespace p25::lc;
 using namespace p25;
+using namespace p25::defines;
+using namespace p25::lc;
+using namespace p25::lc::tdulc;
 
 #include <cassert>
 #include <cmath>
@@ -30,7 +31,7 @@ using namespace p25;
 /// </summary>
 LC_IDEN_UP::LC_IDEN_UP() : TDULC()
 {
-    m_lco = p25::LC_IDEN_UP;
+    m_lco = LCO::IDEN_UP;
 }
 
 /// <summary>
@@ -70,7 +71,7 @@ void LC_IDEN_UP::encode(uint8_t* data)
                 uCalcTxOffset |= 0x2000U; // this sets a positive offset ...
 
             uint32_t calcBaseFreq = (uint32_t)(m_siteIdenEntry.baseFrequency() / 5);
-            uint8_t chanBw = (m_siteIdenEntry.chBandwidthKhz() >= 12.5F) ? P25_IDEN_UP_VU_BW_125K : P25_IDEN_UP_VU_BW_625K;
+            uint8_t chanBw = (m_siteIdenEntry.chBandwidthKhz() >= 12.5F) ? IDEN_UP_VU_BW_125K : IDEN_UP_VU_BW_625K;
 
             rsValue = m_siteIdenEntry.channelId();                                  // Channel ID
             rsValue = (rsValue << 4) + chanBw;                                      // Channel Bandwidth

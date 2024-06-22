@@ -27,6 +27,7 @@ using namespace system_clock;
 using namespace network;
 using namespace network::callhandler;
 using namespace dmr;
+using namespace dmr::defines;
 
 #include <cassert>
 #include <chrono>
@@ -78,11 +79,11 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
     uint32_t srcId = __GET_UINT16(data, 5U);
     uint32_t dstId = __GET_UINT16(data, 8U);
 
-    uint8_t flco = (data[15U] & 0x40U) == 0x40U ? FLCO_PRIVATE : FLCO_GROUP;
+    FLCO::E flco = (data[15U] & 0x40U) == 0x40U ? FLCO::PRIVATE : FLCO::GROUP;
 
     uint32_t slotNo = (data[15U] & 0x80U) == 0x80U ? 2U : 1U;
 
-    uint8_t dataType = data[15U] & 0x0FU;
+    DataType::E dataType = (DataType::E)(data[15U] & 0x0FU);
 
     data::Data dmrData;
     dmrData.setSeqNo(seqNo);
@@ -101,13 +102,13 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
     }
     else if (voiceSync) {
         dmrData.setData(data + 20U);
-        dmrData.setDataType(DT_VOICE_SYNC);
+        dmrData.setDataType(DataType::VOICE_SYNC);
         dmrData.setN(0U);
     }
     else {
         uint8_t n = data[15U] & 0x0FU;
         dmrData.setData(data + 20U);
-        dmrData.setDataType(DT_VOICE);
+        dmrData.setDataType(DataType::VOICE);
         dmrData.setN(n);
     }
 
@@ -123,7 +124,7 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
         }
 
         // is this the end of the call stream?
-        if (dataSync && (dataType == DT_TERMINATOR_WITH_LC)) {
+        if (dataSync && (dataType == DataType::TERMINATOR_WITH_LC)) {
             if (srcId == 0U && dstId == 0U) {
                 LogWarning(LOG_NET, "DMR, invalid TERMINATOR, peer = %u, srcId = %u, dstId = %u, streamId = %u, external = %u", peerId, srcId, dstId, streamId, external);
                 return false;
@@ -177,7 +178,7 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
         }
 
         // is this a new call stream?
-        if (dataSync && (dataType == DT_VOICE_LC_HEADER)) {
+        if (dataSync && (dataType == DataType::VOICE_LC_HEADER)) {
             if (srcId == 0U && dstId == 0U) {
                 LogWarning(LOG_NET, "DMR, invalid call, peer = %u, srcId = %u, dstId = %u, streamId = %u, external = %u", peerId, srcId, dstId, streamId, external);
                 return false;
@@ -481,7 +482,7 @@ void TagDMRData::write_Call_Alrt(uint32_t peerId, uint8_t slot, uint32_t srcId, 
 /// <param name="dstId"></param>
 /// <param name="slotNo"></param>
 /// <param name="outbound"></param>
-void TagDMRData::routeRewrite(uint8_t* buffer, uint32_t peerId, dmr::data::Data& dmrData, uint8_t dataType, uint32_t dstId, uint32_t slotNo, bool outbound)
+void TagDMRData::routeRewrite(uint8_t* buffer, uint32_t peerId, dmr::data::Data& dmrData, DataType::E dataType, uint32_t dstId, uint32_t slotNo, bool outbound)
 {
     uint32_t rewriteDstId = dstId;
     uint32_t rewriteSlotNo = slotNo;
@@ -500,8 +501,8 @@ void TagDMRData::routeRewrite(uint8_t* buffer, uint32_t peerId, dmr::data::Data&
         uint8_t data[DMR_FRAME_LENGTH_BYTES + 2U];
         dmrData.getData(data + 2U);
 
-        if (dataType == DT_VOICE_LC_HEADER ||
-            dataType == DT_TERMINATOR_WITH_LC) {
+        if (dataType == DataType::VOICE_LC_HEADER ||
+            dataType == DataType::TERMINATOR_WITH_LC) {
             // decode and reconstruct embedded DMR data
             lc::FullLC fullLC;
             std::unique_ptr<lc::LC> lc = fullLC.decode(data + 2U, dataType);
@@ -516,7 +517,7 @@ void TagDMRData::routeRewrite(uint8_t* buffer, uint32_t peerId, dmr::data::Data&
             fullLC.encode(*lc, data + 2U, dataType);
             dmrData.setData(data + 2U);
         }
-        else if (dataType == DT_VOICE_PI_HEADER) {
+        else if (dataType == DataType::VOICE_PI_HEADER) {
             // decode and reconstruct embedded DMR data
             lc::FullLC fullLC;
             std::unique_ptr<lc::PrivacyLC> lc = fullLC.decodePI(data + 2U);
@@ -584,11 +585,11 @@ bool TagDMRData::peerRewrite(uint32_t peerId, uint32_t& dstId, uint32_t& slotNo,
 bool TagDMRData::processCSBK(uint8_t* buffer, uint32_t peerId, dmr::data::Data& dmrData)
 {
     // are we receiving a CSBK?
-    if (dmrData.getDataType() == DT_CSBK) {
+    if (dmrData.getDataType() == DataType::CSBK) {
         uint8_t data[DMR_FRAME_LENGTH_BYTES + 2U];
         dmrData.getData(data + 2U);
 
-        std::unique_ptr<lc::CSBK> csbk = lc::csbk::CSBKFactory::createCSBK(data + 2U, DT_CSBK);
+        std::unique_ptr<lc::CSBK> csbk = lc::csbk::CSBKFactory::createCSBK(data + 2U, DataType::CSBK);
         if (csbk != nullptr) {
             // report csbk event to InfluxDB
             if (m_network->m_enableInfluxDB && m_network->m_influxLogRawData) {
@@ -612,12 +613,12 @@ bool TagDMRData::processCSBK(uint8_t* buffer, uint32_t peerId, dmr::data::Data& 
             }
 
             switch (csbk->getCSBKO()) {
-            case CSBKO_BROADCAST:
+            case CSBKO::BROADCAST:
                 {
                     lc::csbk::CSBK_BROADCAST* osp = static_cast<lc::csbk::CSBK_BROADCAST*>(csbk.get());
-                    if (osp->getAnncType() == BCAST_ANNC_ANN_WD_TSCC) {
+                    if (osp->getAnncType() == BroadcastAnncType::ANN_WD_TSCC) {
                         if (m_network->m_disallowAdjStsBcast) {
-                            // LogWarning(LOG_NET, "PEER %u, passing BCAST_ANNC_ANN_WD_TSCC to internal peers is prohibited, dropping", peerId);
+                            // LogWarning(LOG_NET, "PEER %u, passing BroadcastAnncType::ANN_WD_TSCC to internal peers is prohibited, dropping", peerId);
                             return false;
                         } else {
                             if (m_network->m_verbose) {
@@ -650,14 +651,14 @@ bool TagDMRData::processCSBK(uint8_t* buffer, uint32_t peerId, dmr::data::Data& 
 /// <returns></returns>
 bool TagDMRData::isPeerPermitted(uint32_t peerId, data::Data& data, uint32_t streamId, bool external)
 {
-    if (data.getDataType() == FLCO_PRIVATE) {
+    if (data.getFLCO() == FLCO::PRIVATE) {
         if (!m_network->checkU2UDroppedPeer(peerId))
             return true;
         return false;
     }
 
     // is this a group call?
-    if (data.getDataType() == FLCO_GROUP) {
+    if (data.getFLCO() == FLCO::GROUP) {
         lookups::TalkgroupRuleGroupVoice tg = m_network->m_tidLookup->find(data.getDstId(), data.getSlotNo());
 
         std::vector<uint32_t> inclusion = tg.config().inclusion();
@@ -762,11 +763,11 @@ bool TagDMRData::validate(uint32_t peerId, data::Data& data, uint32_t streamId)
     }
 
     // always validate a terminator if the source is valid
-    if (data.getDataType() == DT_TERMINATOR_WITH_LC)
+    if (data.getDataType() == DataType::TERMINATOR_WITH_LC)
         return true;
 
     // is this a private call?
-    if (data.getDataType() == FLCO_PRIVATE) {
+    if (data.getFLCO() == FLCO::PRIVATE) {
         // is the destination ID a blacklisted ID?
         lookups::RadioId rid = m_network->m_ridLookup->find(data.getDstId());
         if (!rid.radioDefault()) {
@@ -791,7 +792,7 @@ bool TagDMRData::validate(uint32_t peerId, data::Data& data, uint32_t streamId)
     }
 
     // is this a group call?
-    if (data.getDataType() == FLCO_GROUP) {
+    if (data.getFLCO() == FLCO::GROUP) {
         lookups::TalkgroupRuleGroupVoice tg = m_network->m_tidLookup->find(data.getDstId());
         if (tg.isInvalid()) {
             // report error event to InfluxDB
@@ -870,7 +871,7 @@ bool TagDMRData::write_CSBK_Grant(uint32_t peerId, uint32_t srcId, uint32_t dstI
     bool broadcast = ((serviceOptions & 0xFFU) & 0x10U) == 0x10U;           // Broadcast Flag
     uint8_t priority = ((serviceOptions & 0xFFU) & 0x03U);                  // Priority
 
-    if (dstId == DMR_WUID_ALL) {
+    if (dstId == WUID_ALL || dstId == WUID_ALLZ || dstId == WUID_ALLL) {
         return true; // do not generate grant packets for $FFFF (All Call) TGID
     }
 
@@ -890,12 +891,12 @@ bool TagDMRData::write_CSBK_Grant(uint32_t peerId, uint32_t srcId, uint32_t dstI
     if (grp) {
         std::unique_ptr<lc::csbk::CSBK_TV_GRANT> csbk = std::make_unique<lc::csbk::CSBK_TV_GRANT>();
         if (broadcast)
-            csbk->setCSBKO(CSBKO_BTV_GRANT);
+            csbk->setCSBKO(CSBKO::BTV_GRANT);
         csbk->setLogicalCh1(0U);
         csbk->setSlotNo(slot);
 
         if (m_network->m_verbose) {
-            LogMessage(LOG_NET, "DMR, DT_CSBK, %s, emerg = %u, privacy = %u, broadcast = %u, prio = %u, chNo = %u, slot = %u, srcId = %u, dstId = %u, peerId = %u",
+            LogMessage(LOG_NET, "DMR, CSBK, %s, emerg = %u, privacy = %u, broadcast = %u, prio = %u, chNo = %u, slot = %u, srcId = %u, dstId = %u, peerId = %u",
                 csbk->toString().c_str(), emergency, privacy, broadcast, priority, csbk->getLogicalCh1(), csbk->getSlotNo(), srcId, dstId, peerId);
         }
 
@@ -911,7 +912,7 @@ bool TagDMRData::write_CSBK_Grant(uint32_t peerId, uint32_t srcId, uint32_t dstI
         csbk->setSlotNo(slot);
 
         if (m_network->m_verbose) {
-            LogMessage(LOG_NET, "DMR, DT_CSBK, %s, emerg = %u, privacy = %u, broadcast = %u, prio = %u, chNo = %u, slot = %u, srcId = %u, dstId = %u, peerId = %u",
+            LogMessage(LOG_NET, "DMR, CSBK, %s, emerg = %u, privacy = %u, broadcast = %u, prio = %u, chNo = %u, slot = %u, srcId = %u, dstId = %u, peerId = %u",
                 csbk->toString().c_str(), emergency, privacy, broadcast, priority, csbk->getLogicalCh1(), csbk->getSlotNo(), srcId, dstId, peerId);
         }
 
@@ -937,7 +938,7 @@ void TagDMRData::write_CSBK_NACK_RSP(uint32_t peerId, uint32_t dstId, uint8_t re
     std::unique_ptr<lc::csbk::CSBK_NACK_RSP> csbk = std::make_unique<lc::csbk::CSBK_NACK_RSP>();
     csbk->setServiceKind(service);
     csbk->setReason(reason);
-    csbk->setSrcId(DMR_WUID_ALL); // hmmm...
+    csbk->setSrcId(WUID_ALL); // hmmm...
     csbk->setDstId(dstId);
 
     write_CSBK(peerId, 1U, csbk.get());
@@ -956,7 +957,7 @@ void TagDMRData::write_CSBK(uint32_t peerId, uint8_t slot, lc::CSBK* csbk)
 
     SlotType slotType;
     slotType.setColorCode(0U);
-    slotType.setDataType(DT_CSBK);
+    slotType.setDataType(DataType::CSBK);
 
     // Regenerate the CSBK data
     csbk->encode(data + 2U);
@@ -969,10 +970,10 @@ void TagDMRData::write_CSBK(uint32_t peerId, uint8_t slot, lc::CSBK* csbk)
 
     data::Data dmrData;
     dmrData.setSlotNo(slot);
-    dmrData.setDataType(DT_CSBK);
+    dmrData.setDataType(DataType::CSBK);
     dmrData.setSrcId(csbk->getSrcId());
     dmrData.setDstId(csbk->getDstId());
-    dmrData.setFLCO(csbk->getGI() ? FLCO_GROUP : FLCO_PRIVATE);
+    dmrData.setFLCO(csbk->getGI() ? FLCO::GROUP : FLCO::PRIVATE);
     dmrData.setN(0U);
     dmrData.setSeqNo(0U);
     dmrData.setBER(0U);

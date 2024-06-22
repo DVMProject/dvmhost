@@ -9,6 +9,7 @@
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
 *   Copyright (C) 2015,2016,2017 Jonathan Naylor, G4KLX
+*   Copyright (C) 2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
@@ -18,8 +19,9 @@
 #include "edac/CRC.h"
 #include "Utils.h"
 
-using namespace dmr::data;
 using namespace dmr;
+using namespace dmr::defines;
+using namespace dmr::data;
 
 #include <cassert>
 #include <cstring>
@@ -34,7 +36,7 @@ using namespace dmr;
 /// </summary>
 EmbeddedData::EmbeddedData() :
     m_valid(false),
-    m_FLCO(FLCO_GROUP),
+    m_FLCO(FLCO::GROUP),
     m_state(LCS_NONE),
     m_data(nullptr),
     m_raw(nullptr)
@@ -195,7 +197,7 @@ std::unique_ptr<lc::LC> EmbeddedData::getLC() const
     if (!m_valid)
         return nullptr;
 
-    if (m_FLCO != FLCO_GROUP && m_FLCO != FLCO_PRIVATE)
+    if (m_FLCO != FLCO::GROUP && m_FLCO != FLCO::PRIVATE)
         return nullptr;
 
     return std::make_unique<lc::LC>(m_data);
@@ -303,7 +305,7 @@ void EmbeddedData::decodeEmbeddedData()
     // extract the FLCO
     uint8_t flco;
     Utils::bitsToByteBE(m_data + 0U, flco);
-    m_FLCO = flco & 0x3FU;
+    m_FLCO = (FLCO::E)(flco & 0x3FU);
 }
 
 /// <summary>

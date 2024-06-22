@@ -7,7 +7,7 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
@@ -16,9 +16,10 @@
 #include "Log.h"
 #include "Utils.h"
 
-using namespace p25::lc::tsbk;
-using namespace p25::lc;
 using namespace p25;
+using namespace p25::defines;
+using namespace p25::lc;
+using namespace p25::lc::tsbk;
 
 #include <cassert>
 
@@ -118,34 +119,34 @@ std::unique_ptr<TSBK> TSBKFactory::createTSBK(const uint8_t* data, bool rawTSBK)
     uint8_t mfId = tsbk[1U];                                                        // Mfg Id.
 
     // Motorola P25 vendor opcodes
-    if (mfId == P25_MFG_MOT) {
+    if (mfId == MFG_MOT) {
         switch (lco) {
-        case TSBK_IOSP_GRP_VCH:
-        case TSBK_IOSP_UU_VCH:
-        case TSBK_IOSP_UU_ANS:
-        case TSBK_IOSP_TELE_INT_ANS:
-        case TSBK_IOSP_STS_UPDT:
-        case TSBK_IOSP_STS_Q:
-        case TSBK_IOSP_MSG_UPDT:
-        case TSBK_IOSP_CALL_ALRT:
-        case TSBK_IOSP_ACK_RSP:
-        case TSBK_IOSP_GRP_AFF:
-        case TSBK_IOSP_U_REG:
-        case TSBK_ISP_CAN_SRV_REQ:
-        case TSBK_ISP_GRP_AFF_Q_RSP:
-        case TSBK_OSP_DENY_RSP:
-        case TSBK_OSP_QUE_RSP:
-        case TSBK_ISP_U_DEREG_REQ:
-        case TSBK_OSP_U_DEREG_ACK:
-        case TSBK_ISP_LOC_REG_REQ:
-            mfId = P25_MFG_STANDARD;
+        case TSBKO::IOSP_GRP_VCH:
+        case TSBKO::IOSP_UU_VCH:
+        case TSBKO::IOSP_UU_ANS:
+        case TSBKO::IOSP_TELE_INT_ANS:
+        case TSBKO::IOSP_STS_UPDT:
+        case TSBKO::IOSP_STS_Q:
+        case TSBKO::IOSP_MSG_UPDT:
+        case TSBKO::IOSP_CALL_ALRT:
+        case TSBKO::IOSP_ACK_RSP:
+        case TSBKO::IOSP_GRP_AFF:
+        case TSBKO::IOSP_U_REG:
+        case TSBKO::ISP_CAN_SRV_REQ:
+        case TSBKO::ISP_GRP_AFF_Q_RSP:
+        case TSBKO::OSP_DENY_RSP:
+        case TSBKO::OSP_QUE_RSP:
+        case TSBKO::ISP_U_DEREG_REQ:
+        case TSBKO::OSP_U_DEREG_ACK:
+        case TSBKO::ISP_LOC_REG_REQ:
+            mfId = MFG_STANDARD;
             break;
         default:
             LogError(LOG_P25, "TSBKFactory::createTSBK(), unknown TSBK LCO value, mfId = $%02X, lco = $%02X", mfId, lco);
             break;
         }
 
-        if (mfId == P25_MFG_MOT) {
+        if (mfId == MFG_MOT) {
             return nullptr;
         }
         else {
@@ -154,16 +155,16 @@ std::unique_ptr<TSBK> TSBKFactory::createTSBK(const uint8_t* data, bool rawTSBK)
     }
 
     // internal / Omaha Communication Systems P25 vendor opcodes
-    if (mfId == P25_MFG_DVM_OCS) {
+    if (mfId == MFG_DVM_OCS) {
         switch (lco) {
-        case LC_CALL_TERM:
+        case LCO::CALL_TERM:
             return decode(new OSP_DVM_LC_CALL_TERM(), data, rawTSBK);
         default:
-            mfId = P25_MFG_STANDARD;
+            mfId = MFG_STANDARD;
             break;
         }
 
-        if (mfId == P25_MFG_DVM_OCS) {
+        if (mfId == MFG_DVM_OCS) {
             return nullptr;
         }
         else {
@@ -173,55 +174,55 @@ std::unique_ptr<TSBK> TSBKFactory::createTSBK(const uint8_t* data, bool rawTSBK)
 
     // standard P25 reference opcodes
     switch (lco) {
-    case TSBK_IOSP_GRP_VCH:
+    case TSBKO::IOSP_GRP_VCH:
         return decode(new IOSP_GRP_VCH(), data, rawTSBK);
-    case TSBK_OSP_GRP_VCH_GRANT_UPD:
+    case TSBKO::OSP_GRP_VCH_GRANT_UPD:
         return decode(new OSP_GRP_VCH_GRANT_UPD(), data, rawTSBK);
-    case TSBK_IOSP_UU_VCH:
+    case TSBKO::IOSP_UU_VCH:
         return decode(new IOSP_UU_VCH(), data, rawTSBK);
-    case TSBK_OSP_UU_VCH_GRANT_UPD:
+    case TSBKO::OSP_UU_VCH_GRANT_UPD:
         return decode(new OSP_UU_VCH_GRANT_UPD(), data, rawTSBK);
-    case TSBK_IOSP_UU_ANS:
+    case TSBKO::IOSP_UU_ANS:
         return decode(new IOSP_UU_ANS(), data, rawTSBK);
-    case TSBK_ISP_SNDCP_CH_REQ:
+    case TSBKO::ISP_SNDCP_CH_REQ:
         return decode(new ISP_SNDCP_CH_REQ(), data, rawTSBK);
-    case TSBK_IOSP_STS_UPDT:
+    case TSBKO::IOSP_STS_UPDT:
         return decode(new IOSP_STS_UPDT(), data, rawTSBK);
-    case TSBK_IOSP_MSG_UPDT:
+    case TSBKO::IOSP_MSG_UPDT:
         return decode(new IOSP_MSG_UPDT(), data, rawTSBK);
-    case TSBK_IOSP_RAD_MON:
+    case TSBKO::IOSP_RAD_MON:
         return decode(new IOSP_RAD_MON(), data, rawTSBK);
-    case TSBK_IOSP_CALL_ALRT:
+    case TSBKO::IOSP_CALL_ALRT:
         return decode(new IOSP_CALL_ALRT(), data, rawTSBK);
-    case TSBK_IOSP_ACK_RSP:
+    case TSBKO::IOSP_ACK_RSP:
         return decode(new IOSP_ACK_RSP(), data, rawTSBK);
-    case TSBK_ISP_EMERG_ALRM_REQ:
+    case TSBKO::ISP_EMERG_ALRM_REQ:
         return decode(new ISP_EMERG_ALRM_REQ(), data, rawTSBK);
-    case TSBK_IOSP_EXT_FNCT:
+    case TSBKO::IOSP_EXT_FNCT:
         return decode(new IOSP_EXT_FNCT(), data, rawTSBK);
-    case TSBK_IOSP_GRP_AFF:
+    case TSBKO::IOSP_GRP_AFF:
         return decode(new IOSP_GRP_AFF(), data, rawTSBK);
-    case TSBK_IOSP_U_REG:
+    case TSBKO::IOSP_U_REG:
         return decode(new IOSP_U_REG(), data, rawTSBK);
-    case TSBK_ISP_CAN_SRV_REQ:
+    case TSBKO::ISP_CAN_SRV_REQ:
         return decode(new ISP_CAN_SRV_REQ(), data, rawTSBK);
-    case TSBK_ISP_GRP_AFF_Q_RSP:
+    case TSBKO::ISP_GRP_AFF_Q_RSP:
         return decode(new ISP_GRP_AFF_Q_RSP(), data, rawTSBK);
-    case TSBK_OSP_QUE_RSP:
+    case TSBKO::OSP_QUE_RSP:
         return decode(new OSP_QUE_RSP(), data, rawTSBK);
-    case TSBK_ISP_U_DEREG_REQ:
+    case TSBKO::ISP_U_DEREG_REQ:
         return decode(new ISP_U_DEREG_REQ(), data, rawTSBK);
-    case TSBK_OSP_U_DEREG_ACK:
+    case TSBKO::OSP_U_DEREG_ACK:
         return decode(new OSP_U_DEREG_ACK(), data, rawTSBK);
-    case TSBK_ISP_LOC_REG_REQ:
+    case TSBKO::ISP_LOC_REG_REQ:
         return decode(new ISP_LOC_REG_REQ(), data, rawTSBK);
-    case TSBK_ISP_AUTH_RESP:
+    case TSBKO::ISP_AUTH_RESP:
         return decode(new ISP_AUTH_RESP(), data, rawTSBK);
-    case TSBK_ISP_AUTH_FNE_RST:
+    case TSBKO::ISP_AUTH_FNE_RST:
         return decode(new ISP_AUTH_FNE_RST(), data, rawTSBK);
-    case TSBK_ISP_AUTH_SU_DMD:
+    case TSBKO::ISP_AUTH_SU_DMD:
         return decode(new ISP_AUTH_SU_DMD(), data, rawTSBK);
-    case TSBK_OSP_ADJ_STS_BCAST:
+    case TSBKO::OSP_ADJ_STS_BCAST:
         return decode(new OSP_ADJ_STS_BCAST(), data, rawTSBK);
     default:
         LogError(LOG_P25, "TSBKFactory::create(), unknown TSBK LCO value, mfId = $%02X, lco = $%02X", mfId, lco);
@@ -241,7 +242,7 @@ std::unique_ptr<AMBT> TSBKFactory::createAMBT(const data::DataHeader& dataHeader
 {
     assert(blocks != nullptr);
 
-    if (dataHeader.getFormat() != PDU_FMT_AMBT) {
+    if (dataHeader.getFormat() != PDUFormatType::AMBT) {
         LogError(LOG_P25, "TSBKFactory::createAMBT(), PDU is not a AMBT PDU");
         return nullptr;
     }
@@ -255,35 +256,35 @@ std::unique_ptr<AMBT> TSBKFactory::createAMBT(const data::DataHeader& dataHeader
     uint8_t mfId = dataHeader.getMFId();                                            // Mfg Id.
 
     // Motorola P25 vendor opcodes
-    if (mfId == P25_MFG_MOT) {
+    if (mfId == MFG_MOT) {
         switch (lco) {
-        case TSBK_IOSP_GRP_VCH:
-        case TSBK_IOSP_UU_VCH:
-        case TSBK_IOSP_UU_ANS:
-        case TSBK_IOSP_TELE_INT_ANS:
-        case TSBK_IOSP_STS_UPDT:
-        case TSBK_IOSP_STS_Q:
-        case TSBK_IOSP_MSG_UPDT:
-        case TSBK_IOSP_CALL_ALRT:
-        case TSBK_IOSP_ACK_RSP:
-        case TSBK_IOSP_GRP_AFF:
-        case TSBK_IOSP_U_REG:
-        case TSBK_ISP_CAN_SRV_REQ:
-        case TSBK_OSP_DENY_RSP:
-        case TSBK_OSP_QUE_RSP:
-        case TSBK_ISP_U_DEREG_REQ:
-        case TSBK_OSP_U_DEREG_ACK:
-        case TSBK_ISP_LOC_REG_REQ:
-            mfId = P25_MFG_STANDARD;
+        case TSBKO::IOSP_GRP_VCH:
+        case TSBKO::IOSP_UU_VCH:
+        case TSBKO::IOSP_UU_ANS:
+        case TSBKO::IOSP_TELE_INT_ANS:
+        case TSBKO::IOSP_STS_UPDT:
+        case TSBKO::IOSP_STS_Q:
+        case TSBKO::IOSP_MSG_UPDT:
+        case TSBKO::IOSP_CALL_ALRT:
+        case TSBKO::IOSP_ACK_RSP:
+        case TSBKO::IOSP_GRP_AFF:
+        case TSBKO::IOSP_U_REG:
+        case TSBKO::ISP_CAN_SRV_REQ:
+        case TSBKO::OSP_DENY_RSP:
+        case TSBKO::OSP_QUE_RSP:
+        case TSBKO::ISP_U_DEREG_REQ:
+        case TSBKO::OSP_U_DEREG_ACK:
+        case TSBKO::ISP_LOC_REG_REQ:
+            mfId = MFG_STANDARD;
             break;
-        case TSBK_ISP_GRP_AFF_Q_RSP:
+        case TSBKO::ISP_GRP_AFF_Q_RSP:
             return decode(new MBT_ISP_GRP_AFF_Q_RSP(), dataHeader, blocks);
         default:
             LogError(LOG_P25, "TSBKFactory::createAMBT(), unknown TSBK LCO value, mfId = $%02X, lco = $%02X", mfId, lco);
             break;
         }
 
-        if (mfId == P25_MFG_MOT) {
+        if (mfId == MFG_MOT) {
             return nullptr;
         }
         else {
@@ -293,23 +294,23 @@ std::unique_ptr<AMBT> TSBKFactory::createAMBT(const data::DataHeader& dataHeader
 
     // standard P25 reference opcodes
     switch (lco) {
-    case TSBK_IOSP_STS_UPDT:
+    case TSBKO::IOSP_STS_UPDT:
         return decode(new MBT_IOSP_STS_UPDT(), dataHeader, blocks);
-    case TSBK_IOSP_MSG_UPDT:
+    case TSBKO::IOSP_MSG_UPDT:
         return decode(new MBT_IOSP_MSG_UPDT(), dataHeader, blocks);
-    case TSBK_IOSP_CALL_ALRT:
+    case TSBKO::IOSP_CALL_ALRT:
         return decode(new MBT_IOSP_CALL_ALRT(), dataHeader, blocks);
-    case TSBK_IOSP_ACK_RSP:
+    case TSBKO::IOSP_ACK_RSP:
         return decode(new MBT_IOSP_ACK_RSP(), dataHeader, blocks);
-    case TSBK_IOSP_GRP_AFF:
+    case TSBKO::IOSP_GRP_AFF:
         return decode(new MBT_IOSP_GRP_AFF(), dataHeader, blocks);
-    case TSBK_ISP_CAN_SRV_REQ:
+    case TSBKO::ISP_CAN_SRV_REQ:
         return decode(new MBT_ISP_CAN_SRV_REQ(), dataHeader, blocks);
-    case TSBK_IOSP_EXT_FNCT:
+    case TSBKO::IOSP_EXT_FNCT:
         return decode(new MBT_IOSP_EXT_FNCT(), dataHeader, blocks);
-    case TSBK_ISP_AUTH_RESP_M:
+    case TSBKO::ISP_AUTH_RESP_M:
         return decode(new MBT_ISP_AUTH_RESP_M(), dataHeader, blocks);
-    case TSBK_ISP_AUTH_SU_DMD:
+    case TSBKO::ISP_AUTH_SU_DMD:
         return decode(new MBT_ISP_AUTH_SU_DMD(), dataHeader, blocks);
     default:
         LogError(LOG_P25, "TSBKFactory::createAMBT(), unknown TSBK LCO value, mfId = $%02X, lco = $%02X", mfId, lco);

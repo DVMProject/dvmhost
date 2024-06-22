@@ -7,7 +7,7 @@
 * @package DVM / Modem Host Software
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2023 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2023,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #if !defined(__SITE_PARAM_SET_WND_H__)
@@ -180,7 +180,7 @@ private:
             m_dmrNetId.setInputFilter("[[:xdigit:]]");
             m_dmrNetId.addCallback("changed", [&]() {
                 uint32_t id = (uint32_t)::strtoul(std::string(m_dmrNetId.getText().toString()).c_str(), NULL, 16);
-                id = dmr::DMRUtils::netId(id, dmr::SITE_MODEL_TINY);
+                id = dmr::DMRUtils::netId(id, dmr::defines::SiteModel::TINY);
 
                 m_setup->m_conf["system"]["config"]["dmrNetId"] = __INT_HEX_STR(id);
             });

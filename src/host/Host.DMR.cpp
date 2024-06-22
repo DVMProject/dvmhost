@@ -7,7 +7,7 @@
 * @package DVM / Modem Host Software
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2017-2023 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
@@ -58,7 +58,7 @@ void Host::interruptDMRBeacon(dmr::Control* control)
 /// <param name="afterReadCallback"></param>
 void Host::readFramesDMR1(dmr::Control* control, std::function<void()>&& afterReadCallback)
 {
-    uint8_t data[dmr::DMR_FRAME_LENGTH_BYTES * 2U];
+    uint8_t data[DMRDEF::DMR_FRAME_LENGTH_BYTES * 2U];
 
     if (control != nullptr) {
         // read DMR slot 1 frames from the modem, and if there is any
@@ -131,7 +131,7 @@ void Host::readFramesDMR1(dmr::Control* control, std::function<void()>&& afterRe
 /// <param name="afterWriteCallback"></param>
 void Host::writeFramesDMR1(dmr::Control* control, std::function<void()>&& afterWriteCallback)
 {
-    uint8_t data[dmr::DMR_FRAME_LENGTH_BYTES * 2U];
+    uint8_t data[DMRDEF::DMR_FRAME_LENGTH_BYTES * 2U];
 
     if (control != nullptr) {
         // check if there is space on the modem for DMR slot 1 frames,
@@ -191,7 +191,7 @@ void Host::writeFramesDMR1(dmr::Control* control, std::function<void()>&& afterW
 /// <param name="afterReadCallback"></param>
 void Host::readFramesDMR2(dmr::Control* control, std::function<void()>&& afterReadCallback)
 {
-     uint8_t data[dmr::DMR_FRAME_LENGTH_BYTES * 2U];
+     uint8_t data[DMRDEF::DMR_FRAME_LENGTH_BYTES * 2U];
 
     if (control != nullptr) {
         // read DMR slot 2 frames from the modem, and if there is any
@@ -263,7 +263,7 @@ void Host::readFramesDMR2(dmr::Control* control, std::function<void()>&& afterRe
 /// <param name="afterWriteCallback"></param>
 void Host::writeFramesDMR2(dmr::Control* control, std::function<void()>&& afterWriteCallback)
 {
-    uint8_t data[dmr::DMR_FRAME_LENGTH_BYTES * 2U];
+    uint8_t data[DMRDEF::DMR_FRAME_LENGTH_BYTES * 2U];
 
     if (control != nullptr) {
         // check if there is space on the modem for DMR slot 2 frames,

@@ -7,15 +7,16 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
 #include "p25/lc/tsbk/OSP_SYS_SRV_BCAST.h"
 
-using namespace p25::lc::tsbk;
-using namespace p25::lc;
 using namespace p25;
+using namespace p25::defines;
+using namespace p25::lc;
+using namespace p25::lc::tsbk;
 
 #include <cassert>
 
@@ -28,7 +29,7 @@ using namespace p25;
 /// </summary>
 OSP_SYS_SRV_BCAST::OSP_SYS_SRV_BCAST() : TSBK()
 {
-    m_lco = TSBK_OSP_SYS_SRV_BCAST;
+    m_lco = TSBKO::OSP_SYS_SRV_BCAST;
 }
 
 /// <summary>
@@ -56,7 +57,7 @@ void OSP_SYS_SRV_BCAST::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 {
     assert(data != nullptr);
 
-    const uint32_t services = (m_siteData.netActive()) ? P25_SYS_SRV_NET_ACTIVE : 0U | P25_SYS_SRV_DEFAULT;
+    const uint32_t services = (m_siteData.netActive()) ? SystemService::NET_ACTIVE : 0U | SYS_SRV_DEFAULT;
 
     ulong64_t tsbkValue = 0U;
 
@@ -74,5 +75,5 @@ void OSP_SYS_SRV_BCAST::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 /// <returns></returns>
 std::string OSP_SYS_SRV_BCAST::toString(bool isp)
 {
-    return std::string("TSBK_OSP_SYS_SRV_BCAST (System Service Broadcast)");
+    return std::string("TSBKO, OSP_SYS_SRV_BCAST (System Service Broadcast)");
 }

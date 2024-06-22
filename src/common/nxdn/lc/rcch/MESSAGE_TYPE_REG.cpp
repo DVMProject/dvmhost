@@ -7,15 +7,16 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
 #include "nxdn/lc/rcch/MESSAGE_TYPE_REG.h"
 
-using namespace nxdn::lc::rcch;
-using namespace nxdn::lc;
 using namespace nxdn;
+using namespace nxdn::defines;
+using namespace nxdn::lc;
+using namespace nxdn::lc::rcch;
 
 #include <cassert>
 
@@ -28,7 +29,7 @@ using namespace nxdn;
 /// </summary>
 MESSAGE_TYPE_REG::MESSAGE_TYPE_REG() : RCCH()
 {
-    m_messageType = RCCH_MESSAGE_TYPE_REG;
+    m_messageType = MessageType::RCCH_REG;
 }
 
 /// <summary>
@@ -85,6 +86,6 @@ void MESSAGE_TYPE_REG::encode(uint8_t* data, uint32_t length, uint32_t offset)
 /// <returns></returns>
 std::string MESSAGE_TYPE_REG::toString(bool isp)
 {
-    if (isp) return std::string("RCCH_MESSAGE_TYPE_REG (Registration Request)");
-    else return std::string("RCCH_MESSAGE_TYPE_REG (Registration Response)");
+    return (isp) ? std::string("RCCH_REG (Registration Request)") :
+        std::string("RCCH_REG (Registration Response)");
 }

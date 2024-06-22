@@ -9,7 +9,7 @@
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
 *   Copyright (C) 2015,2016,2017,2018 Jonathan Naylor, G4KLX
-*   Copyright (C) 2017-2023 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
@@ -26,6 +26,7 @@
 #include "ActivityLog.h"
 
 using namespace dmr;
+using namespace dmr::defines;
 using namespace dmr::packet;
 
 #include <cassert>
@@ -90,28 +91,28 @@ bool Voice::process(uint8_t* data, uint32_t len)
 {
     assert(data != nullptr);
 
-    bool dataSync = (data[1U] & DMR_SYNC_DATA) == DMR_SYNC_DATA;
-    bool voiceSync = (data[1U] & DMR_SYNC_VOICE) == DMR_SYNC_VOICE;
+    bool dataSync = (data[1U] & SYNC_DATA) == SYNC_DATA;
+    bool voiceSync = (data[1U] & SYNC_VOICE) == SYNC_VOICE;
 
     if (dataSync) {
-        uint8_t dataType = data[1U] & 0x0FU;
+        DataType::E dataType = (DataType::E)(data[1U] & 0x0FU);
 
         SlotType slotType;
         slotType.setColorCode(m_slot->m_colorCode);
         slotType.setDataType(dataType);
 
-        if (dataType == DT_VOICE_LC_HEADER) {
+        if (dataType == DataType::VOICE_LC_HEADER) {
             if (m_slot->m_rfState == RS_RF_AUDIO)
                 return true;
 
             lc::FullLC fullLC;
-            std::unique_ptr<lc::LC> lc = fullLC.decode(data + 2U, DT_VOICE_LC_HEADER);
+            std::unique_ptr<lc::LC> lc = fullLC.decode(data + 2U, DataType::VOICE_LC_HEADER);
             if (lc == nullptr)
                 return false;
 
             uint32_t srcId = lc->getSrcId();
             uint32_t dstId = lc->getDstId();
-            uint8_t flco = lc->getFLCO();
+            FLCO::E flco = lc->getFLCO();
 
             CHECK_AUTHORITATIVE(dstId);
             CHECK_TRAFFIC_COLLISION(dstId);
@@ -123,8 +124,8 @@ bool Voice::process(uint8_t* data, uint32_t len)
             // validate source RID
             if (!acl::AccessControl::validateSrcId(srcId)) {
                 if (m_slot->m_data->m_lastRejectId == 0U || m_slot->m_data->m_lastRejectId == srcId) {
-                    LogWarning(LOG_RF, "DMR Slot %u, DT_VOICE_LC_HEADER denial, RID rejection, srcId = %u", m_slot->m_slotNo, srcId);
-                    ::ActivityLog("DMR", true, "Slot %u RF voice rejection from %u to %s%u ", m_slot->m_slotNo, srcId, flco == FLCO_GROUP ? "TG " : "", dstId);
+                    LogWarning(LOG_RF, "DMR Slot %u, VOICE_LC_HEADER denial, RID rejection, srcId = %u", m_slot->m_slotNo, srcId);
+                    ::ActivityLog("DMR", true, "Slot %u RF voice rejection from %u to %s%u ", m_slot->m_slotNo, srcId, flco == FLCO::GROUP ? "TG " : "", dstId);
                 }
 
                 m_slot->m_rfLastDstId = 0U;
@@ -136,10 +137,10 @@ bool Voice::process(uint8_t* data, uint32_t len)
             }
 
             // validate target TID, if the target is a talkgroup
-            if (flco == FLCO_GROUP) {
+            if (flco == FLCO::GROUP) {
                 if (!acl::AccessControl::validateTGId(m_slot->m_slotNo, dstId)) {
                     if (m_slot->m_data->m_lastRejectId == 0U || m_slot->m_data->m_lastRejectId == dstId) {
-                        LogWarning(LOG_RF, "DMR Slot %u, DT_VOICE_LC_HEADER denial, TGID rejection, srcId = %u, dstId = %u", m_slot->m_slotNo, srcId, dstId);
+                        LogWarning(LOG_RF, "DMR Slot %u, VOICE_LC_HEADER denial, TGID rejection, srcId = %u, dstId = %u", m_slot->m_slotNo, srcId, dstId);
                         ::ActivityLog("DMR", true, "Slot %u RF voice rejection from %u to TG %u ", m_slot->m_slotNo, srcId, dstId);
                     }
 
@@ -168,7 +169,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
             m_slot->m_voice->m_rfEmbeddedData[1U].setLC(*m_slot->m_rfLC);
 
             // Regenerate the LC data
-            fullLC.encode(*m_slot->m_rfLC, data + 2U, DT_VOICE_LC_HEADER);
+            fullLC.encode(*m_slot->m_rfLC, data + 2U, DataType::VOICE_LC_HEADER);
 
             // Regenerate the Slot Type
             slotType.encode(data + 2U);
@@ -189,7 +190,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
 
             m_slot->m_voice->m_rfEmbeddedReadN = 0U;
             m_slot->m_voice->m_rfEmbeddedWriteN = 1U;
-            m_slot->m_voice->m_rfTalkerId = TALKER_ID_NONE;
+            m_slot->m_voice->m_rfTalkerId = TalkerID::NONE;
 
             m_slot->m_minRSSI = m_slot->m_rssi;
             m_slot->m_maxRSSI = m_slot->m_rssi;
@@ -204,7 +205,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
                     m_slot->addFrame(data);
             }
 
-            m_slot->writeNetwork(data, DT_VOICE_LC_HEADER);
+            m_slot->writeNetwork(data, DataType::VOICE_LC_HEADER);
 
             m_slot->m_rfState = RS_RF_AUDIO;
             m_slot->m_rfLastDstId = dstId;
@@ -219,17 +220,17 @@ bool Voice::process(uint8_t* data, uint32_t len)
                     m_slot->m_rfLC->getSrcId(), m_slot->m_rfLC->getDstId(), m_slot->m_rfLC->getFLCO(), m_slot->m_rfLC->getFID(), m_slot->m_rfLC->getPF());
             }
 
-            ::ActivityLog("DMR", true, "Slot %u RF %svoice header from %u to %s%u", m_slot->m_slotNo, encrypted ? "encrypted " : "", srcId, flco == FLCO_GROUP ? "TG " : "", dstId);
+            ::ActivityLog("DMR", true, "Slot %u RF %svoice header from %u to %s%u", m_slot->m_slotNo, encrypted ? "encrypted " : "", srcId, flco == FLCO::GROUP ? "TG " : "", dstId);
             return true;
         }
-        else if (dataType == DT_VOICE_PI_HEADER) {
+        else if (dataType == DataType::VOICE_PI_HEADER) {
             if (m_slot->m_rfState != RS_RF_AUDIO)
                 return false;
 
             lc::FullLC fullLC;
             std::unique_ptr<lc::PrivacyLC> lc = fullLC.decodePI(data + 2U);
             if (lc == nullptr) {
-                LogWarning(LOG_RF, "DMR Slot %u, DT_VOICE_PI_HEADER, bad LC received, replacing", m_slot->m_slotNo);
+                LogWarning(LOG_RF, "DMR Slot %u, VOICE_PI_HEADER, bad LC received, replacing", m_slot->m_slotNo);
                 lc = std::make_unique<lc::PrivacyLC>();
                 lc->setDstId(m_slot->m_rfLC->getDstId());
             }
@@ -251,7 +252,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
             if (m_slot->m_duplex)
                 m_slot->addFrame(data);
 
-            m_slot->writeNetwork(data, DT_VOICE_PI_HEADER);
+            m_slot->writeNetwork(data, DataType::VOICE_PI_HEADER);
 
             if (m_verbose) {
                 LogMessage(LOG_RF, DMR_DT_VOICE_PI_HEADER ", slot = %u, algId = %u, kId = %u, dstId = %u", m_slot->m_slotNo,
@@ -309,7 +310,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 if (m_slot->m_duplex)
                     m_slot->addFrame(data);
 
-                m_slot->writeNetwork(data, DT_VOICE_SYNC, errors);
+                m_slot->writeNetwork(data, DataType::VOICE_SYNC, errors);
                 return true;
             }
 
@@ -382,13 +383,13 @@ bool Voice::process(uint8_t* data, uint32_t len)
 
                 char text[80U];
                 switch (flco) {
-                case FLCO_GROUP:
-                case FLCO_PRIVATE:
+                case FLCO::GROUP:
+                case FLCO::PRIVATE:
                     break;
 
-                case FLCO_GPS_INFO:
+                case FLCO::GPS_INFO:
                     if (m_dumpTAData) {
-                        ::sprintf(text, "DMR Slot %u, FLCO_GPS_INFO (Embedded GPS Info)", m_slot->m_slotNo);
+                        ::sprintf(text, "DMR Slot %u, GPS_INFO (Embedded GPS Info)", m_slot->m_slotNo);
                         Utils::dump(2U, text, data, 9U);
                     }
 
@@ -397,47 +398,47 @@ bool Voice::process(uint8_t* data, uint32_t len)
                     }
                     break;
 
-                case FLCO_TALKER_ALIAS_HEADER:
-                    if (!(m_rfTalkerId & TALKER_ID_HEADER)) {
+                case FLCO::TALKER_ALIAS_HEADER:
+                    if (!(m_rfTalkerId & TalkerID::HEADER)) {
                         if (m_dumpTAData) {
-                            ::sprintf(text, "DMR Slot %u, FLCO_TALKER_ALIAS_HEADER (Embedded Talker Alias Header)", m_slot->m_slotNo);
+                            ::sprintf(text, "DMR Slot %u, TALKER_ALIAS_HEADER (Embedded Talker Alias Header)", m_slot->m_slotNo);
                             Utils::dump(2U, text, data, 9U);
                         }
 
-                        m_rfTalkerId |= TALKER_ID_HEADER;
+                        m_rfTalkerId |= TalkerID::HEADER;
                     }
                     break;
 
-                case FLCO_TALKER_ALIAS_BLOCK1:
-                    if (!(m_rfTalkerId & TALKER_ID_BLOCK1)) {
+                case FLCO::TALKER_ALIAS_BLOCK1:
+                    if (!(m_rfTalkerId & TalkerID::BLOCK1)) {
                         if (m_dumpTAData) {
-                            ::sprintf(text, "DMR Slot %u, FLCO_TALKER_ALIAS_BLOCK1 (Embedded Talker Alias Block 1)", m_slot->m_slotNo);
+                            ::sprintf(text, "DMR Slot %u, TALKER_ALIAS_BLOCK1 (Embedded Talker Alias Block 1)", m_slot->m_slotNo);
                             Utils::dump(2U, text, data, 9U);
                         }
 
-                        m_rfTalkerId |= TALKER_ID_BLOCK1;
+                        m_rfTalkerId |= TalkerID::BLOCK1;
                     }
                     break;
 
-                case FLCO_TALKER_ALIAS_BLOCK2:
-                    if (!(m_rfTalkerId & TALKER_ID_BLOCK2)) {
+                case FLCO::TALKER_ALIAS_BLOCK2:
+                    if (!(m_rfTalkerId & TalkerID::BLOCK2)) {
                         if (m_dumpTAData) {
-                            ::sprintf(text, "DMR Slot %u, FLCO_TALKER_ALIAS_BLOCK2 (Embedded Talker Alias Block 2)", m_slot->m_slotNo);
+                            ::sprintf(text, "DMR Slot %u, TALKER_ALIAS_BLOCK2 (Embedded Talker Alias Block 2)", m_slot->m_slotNo);
                             Utils::dump(2U, text, data, 9U);
                         }
 
-                        m_rfTalkerId |= TALKER_ID_BLOCK2;
+                        m_rfTalkerId |= TalkerID::BLOCK2;
                     }
                     break;
 
-                case FLCO_TALKER_ALIAS_BLOCK3:
-                    if (!(m_rfTalkerId & TALKER_ID_BLOCK3)) {
+                case FLCO::TALKER_ALIAS_BLOCK3:
+                    if (!(m_rfTalkerId & TalkerID::BLOCK3)) {
                         if (m_dumpTAData) {
-                            ::sprintf(text, "DMR Slot %u, FLCO_TALKER_ALIAS_BLOCK3 (Embedded Talker Alias Block 3)", m_slot->m_slotNo);
+                            ::sprintf(text, "DMR Slot %u, TALKER_ALIAS_BLOCK3 (Embedded Talker Alias Block 3)", m_slot->m_slotNo);
                             Utils::dump(2U, text, data, 9U);
                         }
 
-                        m_rfTalkerId |= TALKER_ID_BLOCK3;
+                        m_rfTalkerId |= TalkerID::BLOCK3;
                     }
                     break;
 
@@ -463,7 +464,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 data[0U] = modem::TAG_DATA;
                 data[1U] = 0x00U;
 
-                m_slot->writeNetwork(data, DT_VOICE, errors);
+                m_slot->writeNetwork(data, DataType::VOICE, errors);
 
                 if (m_embeddedLCOnly) {
                     // Only send the previously received LC
@@ -497,22 +498,22 @@ bool Voice::process(uint8_t* data, uint32_t len)
             if (lc != nullptr) {
                 uint32_t srcId = lc->getSrcId();
                 uint32_t dstId = lc->getDstId();
-                uint8_t flco = lc->getFLCO();
+                FLCO::E flco = lc->getFLCO();
 
                 CHECK_AUTHORITATIVE(dstId);
                 CHECK_TRAFFIC_COLLISION(dstId);
 
                 // validate the source RID
                 if (!acl::AccessControl::validateSrcId(srcId)) {
-                    LogWarning(LOG_RF, "DMR Slot %u, DT_VOICE denial, RID rejection, srcId = %u", m_slot->m_slotNo, srcId);
+                    LogWarning(LOG_RF, "DMR Slot %u, VOICE denial, RID rejection, srcId = %u", m_slot->m_slotNo, srcId);
                     m_slot->m_rfState = RS_RF_REJECTED;
                     return false;
                 }
 
                 // validate the target ID, if the target is a talkgroup
-                if (flco == FLCO_GROUP) {
+                if (flco == FLCO::GROUP) {
                     if (!acl::AccessControl::validateTGId(m_slot->m_slotNo, dstId)) {
-                        LogWarning(LOG_RF, "DMR Slot %u, DT_VOICE denial, TGID rejection, srcId = %u, dstId = %u", m_slot->m_slotNo, srcId, dstId);
+                        LogWarning(LOG_RF, "DMR Slot %u, VOICE denial, TGID rejection, srcId = %u, dstId = %u", m_slot->m_slotNo, srcId, dstId);
                         m_slot->m_rfState = RS_RF_REJECTED;
                         return false;
                     }
@@ -531,11 +532,11 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 Sync::addDMRDataSync(start + 2U, m_slot->m_duplex);
 
                 lc::FullLC fullLC;
-                fullLC.encode(*m_slot->m_rfLC, start + 2U, DT_VOICE_LC_HEADER);
+                fullLC.encode(*m_slot->m_rfLC, start + 2U, DataType::VOICE_LC_HEADER);
 
                 SlotType slotType;
                 slotType.setColorCode(m_slot->m_colorCode);
-                slotType.setDataType(DT_VOICE_LC_HEADER);
+                slotType.setDataType(DataType::VOICE_LC_HEADER);
                 slotType.encode(start + 2U);
 
                 start[0U] = modem::TAG_DATA;
@@ -551,7 +552,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
 
                 m_rfEmbeddedReadN = 0U;
                 m_rfEmbeddedWriteN = 1U;
-                m_rfTalkerId = TALKER_ID_NONE;
+                m_rfTalkerId = TalkerID::NONE;
 
                 m_slot->m_minRSSI = m_slot->m_rssi;
                 m_slot->m_maxRSSI = m_slot->m_rssi;
@@ -566,7 +567,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
                         m_slot->addFrame(start);
                 }
 
-                m_slot->writeNetwork(start, DT_VOICE_LC_HEADER);
+                m_slot->writeNetwork(start, DataType::VOICE_LC_HEADER);
 
                 m_rfN = data[1U] & 0x0FU;
 
@@ -615,7 +616,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 if (m_slot->m_duplex)
                     m_slot->addFrame(data);
 
-                m_slot->writeNetwork(data, DT_VOICE, errors);
+                m_slot->writeNetwork(data, DataType::VOICE, errors);
 
                 m_slot->m_rfState = RS_RF_AUDIO;
 
@@ -628,7 +629,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
                     m_slot->setShortLC(m_slot->m_slotNo, dstId, flco, true);
                 }
 
-                ::ActivityLog("DMR", true, "Slot %u RF late entry from %u to %s%u", m_slot->m_slotNo, srcId, flco == FLCO_GROUP ? "TG " : "", dstId);
+                ::ActivityLog("DMR", true, "Slot %u RF late entry from %u to %s%u", m_slot->m_slotNo, srcId, flco == FLCO::GROUP ? "TG " : "", dstId);
                 return true;
             }
         }
@@ -648,20 +649,20 @@ void Voice::processNetwork(const data::Data& dmrData)
     uint8_t data[DMR_FRAME_LENGTH_BYTES + 2U];
     dmrData.getData(data + 2U);
 
-    if (dataType == DT_VOICE_LC_HEADER) {
+    if (dataType == DataType::VOICE_LC_HEADER) {
         if (m_slot->m_netState == RS_NET_AUDIO)
             return;
 
         lc::FullLC fullLC;
-        std::unique_ptr<lc::LC> lc = fullLC.decode(data + 2U, DT_VOICE_LC_HEADER);
+        std::unique_ptr<lc::LC> lc = fullLC.decode(data + 2U, DataType::VOICE_LC_HEADER);
         if (lc == nullptr) {
-            LogWarning(LOG_NET, "DMR Slot %u, DT_VOICE_LC_HEADER, bad LC received from the network, replacing", m_slot->m_slotNo);
+            LogWarning(LOG_NET, "DMR Slot %u, VOICE_LC_HEADER, bad LC received from the network, replacing", m_slot->m_slotNo);
             lc = std::make_unique<lc::LC>(dmrData.getFLCO(), dmrData.getSrcId(), dmrData.getDstId());
         }
 
         uint32_t srcId = lc->getSrcId();
         uint32_t dstId = lc->getDstId();
-        uint8_t flco = lc->getFLCO();
+        FLCO::E flco = lc->getFLCO();
 
         CHECK_NET_AUTHORITATIVE(dstId);
         CHECK_NET_TRAFFIC_COLLISION(dstId);
@@ -671,12 +672,12 @@ void Voice::processNetwork(const data::Data& dmrData)
         }
 
         if (dstId != dmrData.getDstId() || srcId != dmrData.getSrcId() || flco != dmrData.getFLCO())
-            LogWarning(LOG_NET, "DMR Slot %u, DT_VOICE_LC_HEADER, header doesn't match the DMR RF header: %u->%s%u %u->%s%u", m_slot->m_slotNo,
-                dmrData.getSrcId(), dmrData.getFLCO() == FLCO_GROUP ? "TG" : "", dmrData.getDstId(),
-                srcId, flco == FLCO_GROUP ? "TG" : "", dstId);
+            LogWarning(LOG_NET, "DMR Slot %u, VOICE_LC_HEADER, header doesn't match the DMR RF header: %u->%s%u %u->%s%u", m_slot->m_slotNo,
+                dmrData.getSrcId(), dmrData.getFLCO() == FLCO::GROUP ? "TG" : "", dmrData.getDstId(),
+                srcId, flco == FLCO::GROUP ? "TG" : "", dstId);
 
         if (m_verbose) {
-            LogMessage(LOG_NET, "DMR Slot %u, DT_VOICE_LC_HEADER, srcId = %u, dstId = %u, FLCO = $%02X, FID = $%02X, PF = %u", m_slot->m_slotNo, lc->getSrcId(), lc->getDstId(), lc->getFLCO(), lc->getFID(), lc->getPF());
+            LogMessage(LOG_NET, "DMR Slot %u, VOICE_LC_HEADER, srcId = %u, dstId = %u, FLCO = $%02X, FID = $%02X, PF = %u", m_slot->m_slotNo, lc->getSrcId(), lc->getDstId(), lc->getFLCO(), lc->getFID(), lc->getPF());
         }
 
         m_slot->m_netLC = std::move(lc);
@@ -687,12 +688,12 @@ void Voice::processNetwork(const data::Data& dmrData)
         m_slot->m_voice->m_netEmbeddedData[1U].setLC(*m_slot->m_netLC);
 
         // Regenerate the LC data
-        fullLC.encode(*m_slot->m_netLC, data + 2U, DT_VOICE_LC_HEADER);
+        fullLC.encode(*m_slot->m_netLC, data + 2U, DataType::VOICE_LC_HEADER);
 
         // Regenerate the Slot Type
         SlotType slotType;
         slotType.setColorCode(m_slot->m_colorCode);
-        slotType.setDataType(DT_VOICE_LC_HEADER);
+        slotType.setDataType(DataType::VOICE_LC_HEADER);
         slotType.encode(data + 2U);
 
         // Convert the Data Sync to be from the BS or MS as needed
@@ -713,7 +714,7 @@ void Voice::processNetwork(const data::Data& dmrData)
 
         m_slot->m_voice->m_netEmbeddedReadN = 0U;
         m_slot->m_voice->m_netEmbeddedWriteN = 1U;
-        m_slot->m_voice->m_netTalkerId = TALKER_ID_NONE;
+        m_slot->m_voice->m_netTalkerId = TalkerID::NONE;
 
         if (m_slot->m_duplex) {
             m_slot->m_txQueue.clear();
@@ -744,9 +745,9 @@ void Voice::processNetwork(const data::Data& dmrData)
                 m_slot->m_netLC->getSrcId(), m_slot->m_netLC->getDstId(), m_slot->m_netLC->getFLCO(), m_slot->m_netLC->getFID(), m_slot->m_netLC->getPF());
         }
 
-        ::ActivityLog("DMR", false, "Slot %u network voice header from %u to %s%u", m_slot->m_slotNo, srcId, flco == FLCO_GROUP ? "TG " : "", dstId);
+        ::ActivityLog("DMR", false, "Slot %u network voice header from %u to %s%u", m_slot->m_slotNo, srcId, flco == FLCO::GROUP ? "TG " : "", dstId);
     }
-    else if (dataType == DT_VOICE_PI_HEADER) {
+    else if (dataType == DataType::VOICE_PI_HEADER) {
         if (m_slot->m_netState != RS_NET_AUDIO) {
             std::unique_ptr<lc::LC> lc = std::make_unique<lc::LC>(dmrData.getFLCO(), dmrData.getSrcId(), dmrData.getDstId());
 
@@ -777,11 +778,11 @@ void Voice::processNetwork(const data::Data& dmrData)
             Sync::addDMRDataSync(start + 2U, m_slot->m_duplex);
 
             lc::FullLC fullLC;
-            fullLC.encode(*m_slot->m_netLC, start + 2U, DT_VOICE_LC_HEADER);
+            fullLC.encode(*m_slot->m_netLC, start + 2U, DataType::VOICE_LC_HEADER);
 
             SlotType slotType;
             slotType.setColorCode(m_slot->m_colorCode);
-            slotType.setDataType(DT_VOICE_LC_HEADER);
+            slotType.setDataType(DataType::VOICE_LC_HEADER);
             slotType.encode(start + 2U);
 
             start[0U] = modem::TAG_DATA;
@@ -809,13 +810,13 @@ void Voice::processNetwork(const data::Data& dmrData)
             m_slot->setShortLC(m_slot->m_slotNo, dstId, m_slot->m_netLC->getFLCO(), true);
 
             ::ActivityLog("DMR", false, "Slot %u network late entry from %u to %s%u",
-                m_slot->m_slotNo, srcId, m_slot->m_netLC->getFLCO() == FLCO_GROUP ? "TG " : "", dstId);
+                m_slot->m_slotNo, srcId, m_slot->m_netLC->getFLCO() == FLCO::GROUP ? "TG " : "", dstId);
         }
 
         lc::FullLC fullLC;
         std::unique_ptr<lc::PrivacyLC> lc = fullLC.decodePI(data + 2U);
         if (lc == nullptr) {
-            LogWarning(LOG_NET, "DMR Slot %u, DT_VOICE_PI_HEADER, bad LC received, replacing", m_slot->m_slotNo);
+            LogWarning(LOG_NET, "DMR Slot %u, VOICE_PI_HEADER, bad LC received, replacing", m_slot->m_slotNo);
             lc = std::make_unique<lc::PrivacyLC>();
             lc->setDstId(dmrData.getDstId());
         }
@@ -828,7 +829,7 @@ void Voice::processNetwork(const data::Data& dmrData)
         // Regenerate the Slot Type
         SlotType slotType;
         slotType.setColorCode(m_slot->m_colorCode);
-        slotType.setDataType(DT_VOICE_PI_HEADER);
+        slotType.setDataType(DataType::VOICE_PI_HEADER);
         slotType.encode(data + 2U);
 
         // Convert the Data Sync to be from the BS or MS as needed
@@ -844,7 +845,7 @@ void Voice::processNetwork(const data::Data& dmrData)
                 m_slot->m_netPrivacyLC->getAlgId(), m_slot->m_netPrivacyLC->getKId(), m_slot->m_netPrivacyLC->getDstId());
         }
     }
-    else if (dataType == DT_VOICE_SYNC) {
+    else if (dataType == DataType::VOICE_SYNC) {
         if (m_slot->m_netState == RS_NET_IDLE) {
             std::unique_ptr<lc::LC> lc = std::make_unique<lc::LC>(dmrData.getFLCO(), dmrData.getSrcId(), dmrData.getDstId());
 
@@ -879,11 +880,11 @@ void Voice::processNetwork(const data::Data& dmrData)
             Sync::addDMRDataSync(start + 2U, m_slot->m_duplex);
 
             lc::FullLC fullLC;
-            fullLC.encode(*m_slot->m_netLC, start + 2U, DT_VOICE_LC_HEADER);
+            fullLC.encode(*m_slot->m_netLC, start + 2U, DataType::VOICE_LC_HEADER);
 
             SlotType slotType;
             slotType.setColorCode(m_slot->m_colorCode);
-            slotType.setDataType(DT_VOICE_LC_HEADER);
+            slotType.setDataType(DataType::VOICE_LC_HEADER);
             slotType.encode(start + 2U);
 
             start[0U] = modem::TAG_DATA;
@@ -905,7 +906,7 @@ void Voice::processNetwork(const data::Data& dmrData)
 
             m_netEmbeddedReadN = 0U;
             m_netEmbeddedWriteN = 1U;
-            m_netTalkerId = TALKER_ID_NONE;
+            m_netTalkerId = TalkerID::NONE;
 
             m_slot->m_netState = RS_NET_AUDIO;
             m_slot->m_netLastDstId = dstId;
@@ -915,7 +916,7 @@ void Voice::processNetwork(const data::Data& dmrData)
             m_slot->setShortLC(m_slot->m_slotNo, dstId, m_slot->m_netLC->getFLCO(), true);
 
             ::ActivityLog("DMR", false, "Slot %u network late entry from %u to %s%u",
-                m_slot->m_slotNo, srcId, m_slot->m_netLC->getFLCO() == FLCO_GROUP ? "TG " : "", dstId);
+                m_slot->m_slotNo, srcId, m_slot->m_netLC->getFLCO() == FLCO::GROUP ? "TG " : "", dstId);
         }
 
         if (m_slot->m_netState == RS_NET_AUDIO) {
@@ -923,7 +924,7 @@ void Voice::processNetwork(const data::Data& dmrData)
             if (fid == FID_ETSI || fid == FID_DMRA) {
                 m_slot->m_netErrs += m_fec.regenerateDMR(data + 2U);
                 if (m_verbose) {
-                    LogMessage(LOG_NET, "DMR Slot %u, DT_VOICE_SYNC audio, sequence no = %u, errs = %u/141 (%.1f%%)",
+                    LogMessage(LOG_NET, "DMR Slot %u, VOICE_SYNC audio, sequence no = %u, errs = %u/141 (%.1f%%)",
                         m_slot->m_slotNo, m_netN, m_slot->m_netErrs, float(m_slot->m_netErrs) / 1.41F);
                 }
             }
@@ -965,7 +966,7 @@ void Voice::processNetwork(const data::Data& dmrData)
             m_netN = dmrData.getN();
         }
     }
-    else if (dataType == DT_VOICE) {
+    else if (dataType == DataType::VOICE) {
         if (m_slot->m_netState != RS_NET_AUDIO)
             return;
 
@@ -995,55 +996,55 @@ void Voice::processNetwork(const data::Data& dmrData)
 
             char text[80U];
             switch (flco) {
-            case FLCO_GROUP:
-            case FLCO_PRIVATE:
+            case FLCO::GROUP:
+            case FLCO::PRIVATE:
                 break;
-            case FLCO_GPS_INFO:
+            case FLCO::GPS_INFO:
                 if (m_dumpTAData) {
-                    ::sprintf(text, "DMR Slot %u, FLCO_GPS_INFO (Embedded GPS Info)", m_slot->m_slotNo);
+                    ::sprintf(text, "DMR Slot %u, GPS_INFO (Embedded GPS Info)", m_slot->m_slotNo);
                     Utils::dump(2U, text, data, 9U);
                 }
 
                 logGPSPosition(m_slot->m_netLC->getSrcId(), data);
                 break;
-            case FLCO_TALKER_ALIAS_HEADER:
-                if (!(m_netTalkerId & TALKER_ID_HEADER)) {
+            case FLCO::TALKER_ALIAS_HEADER:
+                if (!(m_netTalkerId & TalkerID::HEADER)) {
                     if (m_dumpTAData) {
-                        ::sprintf(text, "DMR Slot %u, FLCO_TALKER_ALIAS_HEADER (Embedded Talker Alias Header)", m_slot->m_slotNo);
+                        ::sprintf(text, "DMR Slot %u, TALKER_ALIAS_HEADER (Embedded Talker Alias Header)", m_slot->m_slotNo);
                         Utils::dump(2U, text, data, 9U);
                     }
 
-                    m_netTalkerId |= TALKER_ID_HEADER;
+                    m_netTalkerId |= TalkerID::HEADER;
                 }
                 break;
-            case FLCO_TALKER_ALIAS_BLOCK1:
-                if (!(m_netTalkerId & TALKER_ID_BLOCK1)) {
+            case FLCO::TALKER_ALIAS_BLOCK1:
+                if (!(m_netTalkerId & TalkerID::BLOCK1)) {
                     if (m_dumpTAData) {
-                        ::sprintf(text, "DMR Slot %u, FLCO_TALKER_ALIAS_BLOCK1 (Embedded Talker Alias Block 1)", m_slot->m_slotNo);
+                        ::sprintf(text, "DMR Slot %u, TALKER_ALIAS_BLOCK1 (Embedded Talker Alias Block 1)", m_slot->m_slotNo);
                         Utils::dump(2U, text, data, 9U);
                     }
 
-                    m_netTalkerId |= TALKER_ID_BLOCK1;
+                    m_netTalkerId |= TalkerID::BLOCK1;
                 }
                 break;
-            case FLCO_TALKER_ALIAS_BLOCK2:
-                if (!(m_netTalkerId & TALKER_ID_BLOCK2)) {
+            case FLCO::TALKER_ALIAS_BLOCK2:
+                if (!(m_netTalkerId & TalkerID::BLOCK2)) {
                     if (m_dumpTAData) {
-                        ::sprintf(text, "DMR Slot %u, FLCO_TALKER_ALIAS_BLOCK2 (Embedded Talker Alias Block 2)", m_slot->m_slotNo);
+                        ::sprintf(text, "DMR Slot %u, TALKER_ALIAS_BLOCK2 (Embedded Talker Alias Block 2)", m_slot->m_slotNo);
                         Utils::dump(2U, text, data, 9U);
                     }
 
-                    m_netTalkerId |= TALKER_ID_BLOCK2;
+                    m_netTalkerId |= TalkerID::BLOCK2;
                 }
                 break;
-            case FLCO_TALKER_ALIAS_BLOCK3:
-                if (!(m_netTalkerId & TALKER_ID_BLOCK3)) {
+            case FLCO::TALKER_ALIAS_BLOCK3:
+                if (!(m_netTalkerId & TalkerID::BLOCK3)) {
                     if (m_dumpTAData) {
-                        ::sprintf(text, "DMR Slot %u, FLCO_TALKER_ALIAS_BLOCK3 (Embedded Talker Alias Block 3)", m_slot->m_slotNo);
+                        ::sprintf(text, "DMR Slot %u, TALKER_ALIAS_BLOCK3 (Embedded Talker Alias Block 3)", m_slot->m_slotNo);
                         Utils::dump(2U, text, data, 9U);
                     }
 
-                    m_netTalkerId |= TALKER_ID_BLOCK3;
+                    m_netTalkerId |= TalkerID::BLOCK3;
                 }
                 break;
             default:
@@ -1128,8 +1129,8 @@ Voice::Voice(Slot* slot, network::BaseNetwork* network, bool embeddedLCOnly, boo
     m_netEmbeddedData(nullptr),
     m_netEmbeddedReadN(0U),
     m_netEmbeddedWriteN(1U),
-    m_rfTalkerId(TALKER_ID_NONE),
-    m_netTalkerId(TALKER_ID_NONE),
+    m_rfTalkerId(TalkerID::NONE),
+    m_netTalkerId(TalkerID::NONE),
     m_fec(),
     m_embeddedLCOnly(embeddedLCOnly),
     m_dumpTAData(dumpTAData),
@@ -1211,11 +1212,11 @@ void Voice::logGPSPosition(const uint32_t srcId, const uint8_t* data)
 /// <param name="data"></param>
 void Voice::insertNullAudio(uint8_t* data)
 {
-    uint8_t* ambeBuffer = new uint8_t[dmr::DMR_AMBE_LENGTH_BYTES];
-    ::memset(ambeBuffer, 0x00U, dmr::DMR_AMBE_LENGTH_BYTES);
+    uint8_t* ambeBuffer = new uint8_t[DMR_AMBE_LENGTH_BYTES];
+    ::memset(ambeBuffer, 0x00U, DMR_AMBE_LENGTH_BYTES);
 
     for (uint32_t i = 0; i < 3U; i++) {
-        ::memcpy(ambeBuffer + (i * 9U), DMR_NULL_AMBE, 9U);
+        ::memcpy(ambeBuffer + (i * 9U), NULL_AMBE, 9U);
     }
 
     ::memcpy(data, ambeBuffer, 13U);
@@ -1276,7 +1277,7 @@ void Voice::insertSilence(uint32_t count)
     }
     else {
         // Not sure what to do if this isn't AMBE audio
-        ::memcpy(data, DMR_SILENCE_DATA, DMR_FRAME_LENGTH_BYTES + 2U);
+        ::memcpy(data, SILENCE_DATA, DMR_FRAME_LENGTH_BYTES + 2U);
     }
 
     uint8_t n = (m_netN + 1U) % 6U;
@@ -1290,7 +1291,7 @@ void Voice::insertSilence(uint32_t count)
         // only use our silence frame if its AMBE audio data
         if (fid == FID_ETSI || fid == FID_DMRA) {
             if (i > 0U) {
-                ::memcpy(data, DMR_SILENCE_DATA, DMR_FRAME_LENGTH_BYTES + 2U);
+                ::memcpy(data, SILENCE_DATA, DMR_FRAME_LENGTH_BYTES + 2U);
                 m_lastFrameValid = false;
             }
         }

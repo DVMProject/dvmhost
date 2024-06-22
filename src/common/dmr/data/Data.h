@@ -9,12 +9,14 @@
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
 *   Copyright (C) 2015,2016 Jonathan Naylor, G4KLX
+*   Copyright (C) 2024 Bryan Biedenkapp, N2PLL
 *
 */
 #if !defined(__DMR_DATA__DATA_H__)
 #define __DMR_DATA__DATA_H__
 
 #include "common/Defines.h"
+#include "common/dmr/DMRDefines.h"
 
 namespace dmr
 {
@@ -52,7 +54,7 @@ namespace dmr
             __PROPERTY(uint32_t, dstId, DstId);
 
             /// <summary>Sets the full-link control opcode.</summary>
-            __PROPERTY(uint8_t, flco, FLCO);
+            __PROPERTY(defines::FLCO::E, flco, FLCO);
 
             /// <summary></summary>
             __PROPERTY(uint8_t, n, N);
@@ -61,7 +63,7 @@ namespace dmr
             __PROPERTY(uint8_t, seqNo, SeqNo);
 
             /// <summary>Embedded data type.</summary>
-            __PROPERTY(uint8_t, dataType, DataType);
+            __PROPERTY(defines::DataType::E, dataType, DataType);
 
             /// <summary>Bit Error Rate.</summary>
             __PROPERTY(uint8_t, ber, BER);

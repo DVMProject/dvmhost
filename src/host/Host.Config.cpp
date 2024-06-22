@@ -271,7 +271,7 @@ bool Host::readParams()
         m_dmrColorCode = dmr::DMRUtils::colorCode(m_dmrColorCode);
 
         m_dmrNetId = (uint32_t)::strtoul(rfssConfig["dmrNetId"].as<std::string>("1").c_str(), NULL, 16);
-        m_dmrNetId = dmr::DMRUtils::netId(m_dmrNetId, dmr::SITE_MODEL_SMALL);
+        m_dmrNetId = dmr::DMRUtils::netId(m_dmrNetId, dmr::defines::SiteModel::SMALL);
 
         m_p25NAC = (uint32_t)::strtoul(rfssConfig["nac"].as<std::string>("F7E").c_str(), NULL, 16);
         m_p25NAC = p25::P25Utils::nac(m_p25NAC);
@@ -318,7 +318,7 @@ bool Host::readParams()
         LogInfo("    DMR Network Id: $%05X", m_dmrNetId);
         LogInfo("    P25 NAC: $%03X", m_p25NAC);
 
-        if (p25TxNAC != p25::P25_NAC_DIGITAL_SQ && p25TxNAC != m_p25NAC) {
+        if (p25TxNAC != p25::defines::NAC_DIGITAL_SQ && p25TxNAC != m_p25NAC) {
             LogInfo("    P25 Tx NAC: $%03X", p25TxNAC);
         }
 
@@ -361,7 +361,7 @@ bool Host::createModem()
         LogWarning(LOG_HOST, "DMR queue size is excessive, >60 frames!");
     }
 
-    m_dmrQueueSizeBytes = dmrQueueSize * (dmr::DMR_FRAME_LENGTH_BYTES * 5U);
+    m_dmrQueueSizeBytes = dmrQueueSize * (dmr::defines::DMR_FRAME_LENGTH_BYTES * 5U);
 
     yaml::Node p25Protocol = protocolConf["p25"];
     uint32_t p25QueueSize = p25Protocol["queueSize"].as<uint16_t>(12U);
@@ -379,7 +379,7 @@ bool Host::createModem()
         LogWarning(LOG_HOST, "P25 queue size is excessive, >30 frames!");
     }
 
-    m_p25QueueSizeBytes = p25QueueSize * p25::P25_LDU_FRAME_LENGTH_BYTES;
+    m_p25QueueSizeBytes = p25QueueSize * p25::defines::P25_LDU_FRAME_LENGTH_BYTES;
 
     yaml::Node nxdnProtocol = protocolConf["nxdn"];
     uint32_t nxdnQueueSize = nxdnProtocol["queueSize"].as<uint32_t>(31U);
@@ -394,7 +394,7 @@ bool Host::createModem()
         nxdnQueueSize = 50U;
     }
 
-    m_nxdnQueueSizeBytes = nxdnQueueSize * nxdn::NXDN_FRAME_LENGTH_BYTES;
+    m_nxdnQueueSizeBytes = nxdnQueueSize * nxdn::defines::NXDN_FRAME_LENGTH_BYTES;
 
     yaml::Node modemConf = m_conf["system"]["modem"];
 
@@ -630,8 +630,8 @@ bool Host::createModem()
             p25PostBWAdj, nxdnPostBWAdj, adfGainMode, afcEnable, afcKI, afcKP, afcRange);
         m_modem->setSoftPot(rxCoarse, rxFine, txCoarse, txFine, rssiCoarse, rssiFine);
         m_modem->setDMRColorCode(m_dmrColorCode);
-        if (m_p25NAC == p25::P25_NAC_REUSE_RX_NAC)
-            m_modem->setP25NAC(p25::P25_NAC_DIGITAL_SQ);
+        if (m_p25NAC == p25::defines::NAC_REUSE_RX_NAC)
+            m_modem->setP25NAC(p25::defines::NAC_DIGITAL_SQ);
         else
             m_modem->setP25NAC(m_p25NAC);
     }

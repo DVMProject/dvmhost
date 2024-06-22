@@ -7,15 +7,16 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
 #include "p25/lc/tsbk/OSP_MOT_PSH_CCH.h"
 
-using namespace p25::lc::tsbk;
-using namespace p25::lc;
 using namespace p25;
+using namespace p25::defines;
+using namespace p25::lc;
+using namespace p25::lc::tsbk;
 
 #include <cassert>
 
@@ -28,8 +29,7 @@ using namespace p25;
 /// </summary>
 OSP_MOT_PSH_CCH::OSP_MOT_PSH_CCH() : TSBK()
 {
-    m_lco = TSBK_OSP_MOT_PSH_CCH;
-    m_mfId = P25_MFG_MOT;
+    m_lco = TSBKO::OSP_MOT_PSH_CCH;
 }
 
 /// <summary>
@@ -59,6 +59,8 @@ void OSP_MOT_PSH_CCH::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 
     ulong64_t tsbkValue = 0U;
 
+    m_mfId = MFG_MOT;
+
     std::unique_ptr<uint8_t[]> tsbk = TSBK::fromValue(tsbkValue);
     TSBK::encode(data, tsbk.get(), rawTSBK, noTrellis);
 }
@@ -70,5 +72,5 @@ void OSP_MOT_PSH_CCH::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 /// <returns></returns>
 std::string OSP_MOT_PSH_CCH::toString(bool isp)
 {
-    return std::string("TSBK_OSP_MOT_PSH_CCH (Motorola / Planned Control Channel Shutdown)");
+    return std::string("TSBKO, OSP_MOT_PSH_CCH (Motorola / Planned Control Channel Shutdown)");
 }

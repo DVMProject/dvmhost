@@ -47,7 +47,7 @@ namespace p25
             
             public:
                 /// <summary>Message ID.</summary>
-                __PROTECTED_PROPERTY(FSCMessageType, messageId, MessageId);
+                __PROTECTED_PROPERTY(FSCMessageType::E, messageId, MessageId);
                 /// <summary>Message Version.</summary>
                 __PROTECTED_READONLY_PROPERTY(uint8_t, version, Version);
                 /// <summary></summary>

@@ -36,7 +36,7 @@ FSCConnect::FSCConnect() : FSCMessage(),
     m_fsHeartbeatPeriod(5U),
     m_hostHeartbeatPeriod(5U)
 {
-    m_messageId = FSC_CONNECT;
+    m_messageId = FSCMessageType::FSC_CONNECT;
 }
 
 /// <summary>

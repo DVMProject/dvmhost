@@ -9,7 +9,7 @@
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
 *   Copyright (C) 2015,2016 Jonathan Naylor, G4KLX
-*   Copyright (C) 2019-2023 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2019-2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
@@ -19,8 +19,9 @@
 #include "Log.h"
 #include "Utils.h"
 
-using namespace dmr::lc;
 using namespace dmr;
+using namespace dmr::defines;
+using namespace dmr::lc;
 
 #include <cassert>
 
@@ -52,14 +53,14 @@ CSBK::CSBK() :
     m_colorCode(0U),
     m_lastBlock(true),
     m_Cdef(false),
-    m_CSBKO(CSBKO_NONE),
+    m_CSBKO(CSBKO::NONE),
     m_FID(0x00U),
     m_GI(false),
     m_srcId(0U),
     m_dstId(0U),
     m_dataContent(false),
     m_CBF(0U),
-    m_dataType(DT_CSBK),
+    m_dataType(DataType::CSBK),
     m_emergency(false),
     m_privacy(false),
     m_supplementData(false),
@@ -93,7 +94,7 @@ CSBK::~CSBK()
 /// <returns></returns>
 std::string CSBK::toString()
 {
-    return std::string("CSBKO_UNKWN (Unknown CSBK)");
+    return std::string("CSBKO, UNKNOWN (Unknown CSBK)");
 }
 
 /// <summary>
@@ -123,56 +124,68 @@ bool CSBK::regenerate(uint8_t* data, uint8_t dataType)
 
     // validate the CRC-CCITT 16
     switch (dataType) {
-        case DT_CSBK:
+        case DataType::CSBK:
             csbk[10U] ^= CSBK_CRC_MASK[0U];
             csbk[11U] ^= CSBK_CRC_MASK[1U];
             break;
-        case DT_MBC_HEADER:
+        case DataType::MBC_HEADER:
             csbk[10U] ^= CSBK_MBC_CRC_MASK[0U];
             csbk[11U] ^= CSBK_MBC_CRC_MASK[1U];
+            break;
+        default:
+            LogError(LOG_DMR, "CSBK::regenerate(), unhandled dataType = $%02X", dataType);
             break;
     }
 
     bool valid = edac::CRC::checkCCITT162(csbk, DMR_CSBK_LENGTH_BYTES);
     if (!valid) {
-        LogError(LOG_DMR, "CSBK::decode(), failed CRC CCITT-162 check");
+        LogError(LOG_DMR, "CSBK::regenerate(), failed CRC CCITT-162 check");
         return false;
     }
 
     // restore the checksum
     switch (dataType) {
-        case DT_CSBK:
+        case DataType::CSBK:
             csbk[10U] ^= CSBK_CRC_MASK[0U];
             csbk[11U] ^= CSBK_CRC_MASK[1U];
             break;
-        case DT_MBC_HEADER:
+        case DataType::MBC_HEADER:
             csbk[10U] ^= CSBK_MBC_CRC_MASK[0U];
             csbk[11U] ^= CSBK_MBC_CRC_MASK[1U];
+            break;
+        default:
+            LogError(LOG_DMR, "CSBK::regenerate(), unhandled dataType = $%02X", dataType);
             break;
     }
 
     // calculate checksum
     switch (dataType) {
-        case DT_CSBK:
+        case DataType::CSBK:
             csbk[10U] ^= CSBK_CRC_MASK[0U];
             csbk[11U] ^= CSBK_CRC_MASK[1U];
             break;
-        case DT_MBC_HEADER:
+        case DataType::MBC_HEADER:
             csbk[10U] ^= CSBK_MBC_CRC_MASK[0U];
             csbk[11U] ^= CSBK_MBC_CRC_MASK[1U];
+            break;
+        default:
+            LogError(LOG_DMR, "CSBK::regenerate(), unhandled dataType = $%02X", dataType);
             break;
     }
 
     edac::CRC::addCCITT162(csbk, 12U);
 
     switch (dataType) {
-        case DT_CSBK:
+        case DataType::CSBK:
             csbk[10U] ^= CSBK_CRC_MASK[0U];
             csbk[11U] ^= CSBK_CRC_MASK[1U];
             break;
-        case DT_MBC_HEADER:
+        case DataType::MBC_HEADER:
             csbk[10U] ^= CSBK_MBC_CRC_MASK[0U];
             csbk[11U] ^= CSBK_MBC_CRC_MASK[1U];
+            break;
+        default:
+            LogError(LOG_DMR, "CSBK::regenerate(), unhandled dataType = $%02X", dataType);
             break;
     }
 
@@ -251,13 +264,16 @@ bool CSBK::decode(const uint8_t* data, uint8_t* payload)
 
     // validate the CRC-CCITT 16
     switch (m_dataType) {
-        case DT_CSBK:
+        case DataType::CSBK:
             csbk[10U] ^= CSBK_CRC_MASK[0U];
             csbk[11U] ^= CSBK_CRC_MASK[1U];
             break;
-        case DT_MBC_HEADER:
+        case DataType::MBC_HEADER:
             csbk[10U] ^= CSBK_MBC_CRC_MASK[0U];
             csbk[11U] ^= CSBK_MBC_CRC_MASK[1U];
+            break;
+        default:
+            LogError(LOG_DMR, "CSBK::decode(), unhandled dataType = $%02X", m_dataType);
             break;
     }
 
@@ -269,13 +285,16 @@ bool CSBK::decode(const uint8_t* data, uint8_t* payload)
 
     // restore the checksum
     switch (m_dataType) {
-        case DT_CSBK:
+        case DataType::CSBK:
             csbk[10U] ^= CSBK_CRC_MASK[0U];
             csbk[11U] ^= CSBK_CRC_MASK[1U];
             break;
-        case DT_MBC_HEADER:
+        case DataType::MBC_HEADER:
             csbk[10U] ^= CSBK_MBC_CRC_MASK[0U];
             csbk[11U] ^= CSBK_MBC_CRC_MASK[1U];
+            break;
+        default:
+            LogError(LOG_DMR, "CSBK::decode(), unhandled dataType = $%02X", m_dataType);
             break;
     }
 
@@ -321,26 +340,32 @@ void CSBK::encode(uint8_t* data, const uint8_t* payload)
     }
 
     switch (m_dataType) {
-        case DT_CSBK:
+        case DataType::CSBK:
             csbk[10U] ^= CSBK_CRC_MASK[0U];
             csbk[11U] ^= CSBK_CRC_MASK[1U];
             break;
-        case DT_MBC_HEADER:
+        case DataType::MBC_HEADER:
             csbk[10U] ^= CSBK_MBC_CRC_MASK[0U];
             csbk[11U] ^= CSBK_MBC_CRC_MASK[1U];
+            break;
+        default:
+            LogError(LOG_DMR, "CSBK::encoded(), unhandled dataType = $%02X", m_dataType);
             break;
     }
 
     edac::CRC::addCCITT162(csbk, 12U);
 
     switch (m_dataType) {
-        case DT_CSBK:
+        case DataType::CSBK:
             csbk[10U] ^= CSBK_CRC_MASK[0U];
             csbk[11U] ^= CSBK_CRC_MASK[1U];
             break;
-        case DT_MBC_HEADER:
+        case DataType::MBC_HEADER:
             csbk[10U] ^= CSBK_MBC_CRC_MASK[0U];
             csbk[11U] ^= CSBK_MBC_CRC_MASK[1U];
+            break;
+        default:
+            LogError(LOG_DMR, "CSBK::encode(), unhandled dataType = $%02X", m_dataType);
             break;
     }
 

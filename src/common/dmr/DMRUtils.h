@@ -7,7 +7,7 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2021 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2021,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #if !defined(__DMR_UTILS_H__)
@@ -26,6 +26,8 @@ namespace dmr
     class HOST_SW_API DMRUtils {
     public:
         /// <summary>Helper to test and clamp a DMR color code.</summary>
+        /// <param name="colorCode">Color Code</param>
+        /// <returns>Clamped color code.</returns>
         static uint32_t colorCode(uint32_t colorCode)
         {
             if (colorCode < 0U) { // clamp to 0
@@ -39,36 +41,40 @@ namespace dmr
         }
 
         /// <summary>Helper to test and clamp a DMR site ID.</summary>
-        static uint32_t siteId(uint32_t id, uint8_t siteModel)
+        /// <param name="id">Site ID</param>
+        /// <param name="siteModel">Site Model</param>
+        /// <returns>Clamped site ID.</returns>
+        static uint32_t siteId(uint32_t id, defines::SiteModel::E siteModel)
         {
+            using namespace dmr::defines;
             if (id > 0U) {
                 id--;
             }
 
             switch (siteModel)
             {
-            case SITE_MODEL_TINY:
+            case SiteModel::TINY:
             {
                 if (id > 0x07U) { // clamp to $7
                     id = 0x07U;
                 }
             }
             break;
-            case SITE_MODEL_SMALL:
+            case SiteModel::SMALL:
             {
                 if (id > 0x1FU) { // clamp to $1F
                     id = 0x1FU;
                 }
             }
             break;
-            case SITE_MODEL_LARGE:
+            case SiteModel::LARGE:
             {
                 if (id > 0x7FU) { // clamp to $7F
                     id = 0x7FU;
                 }
             }
             break;
-            case SITE_MODEL_HUGE:
+            case SiteModel::HUGE:
             {
                 if (id > 0x3FFU) { // clamp to $3FF
                     id = 0x3FFU;
@@ -81,31 +87,35 @@ namespace dmr
         }
 
         /// <summary>Helper to test and clamp a DMR network ID.</summary>
-        static uint32_t netId(uint32_t id, uint8_t siteModel)
+        /// <param name="id">Network ID</param>
+        /// <param name="siteModel">Site Model</param>
+        /// <returns>Clamped network ID.</returns>
+        static uint32_t netId(uint32_t id, defines::SiteModel::E siteModel)
         {
+            using namespace dmr::defines;
             switch (siteModel) {
-            case SITE_MODEL_TINY:
+            case SiteModel::TINY:
             {
                 if (id > 0x1FFU) { // clamp to $1FF
                     id = 0x1FFU;
                 }
             }
             break;
-            case SITE_MODEL_SMALL:
+            case SiteModel::SMALL:
             {
                 if (id > 0x7FU) { // clamp to $7F
                     id = 0x7FU;
                 }
             }
             break;
-            case SITE_MODEL_LARGE:
+            case SiteModel::LARGE:
             {
                 if (id > 0x1FU) { // clamp to $1F
                     id = 0x1FU;
                 }
             }
             break;
-            case SITE_MODEL_HUGE:
+            case SiteModel::HUGE:
             {
                 if (id > 0x03U) { // clamp to $3
                     id = 0x03U;

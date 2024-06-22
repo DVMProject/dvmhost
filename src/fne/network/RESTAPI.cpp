@@ -1494,6 +1494,7 @@ void RESTAPI::restAPI_GetAffList(const HTTPPayload& request, HTTPPayload& reply,
 /// <param name="match"></param>
 void RESTAPI::restAPI_PutDMRRID(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
+    using namespace dmr::defines;
     if (!validateAuth(request, reply)) {
         return;
     }
@@ -1549,16 +1550,16 @@ void RESTAPI::restAPI_PutDMRRID(const HTTPPayload& request, HTTPPayload& reply, 
     errorPayload(reply, "OK", HTTPPayload::OK);
     std::string command = req["command"].get<std::string>();
     if (::strtolower(command) == RID_CMD_PAGE) {
-        m_network->m_tagDMR->write_Call_Alrt(peerId, slot, p25::P25_WUID_FNE, dstId);
+        m_network->m_tagDMR->write_Call_Alrt(peerId, slot, WUID_ALL, dstId);
     }
     else if (::strtolower(command) == RID_CMD_CHECK) {
-        m_network->m_tagDMR->write_Ext_Func(peerId, slot, dmr::DMR_EXT_FNCT_CHECK, p25::P25_WUID_FNE, dstId);
+        m_network->m_tagDMR->write_Ext_Func(peerId, slot, ExtendedFunctions::CHECK, WUID_ALL, dstId);
     }
     else if (::strtolower(command) == RID_CMD_INHIBIT) {
-        m_network->m_tagDMR->write_Ext_Func(peerId, slot, dmr::DMR_EXT_FNCT_INHIBIT, p25::P25_WUID_FNE, dstId);
+        m_network->m_tagDMR->write_Ext_Func(peerId, slot, ExtendedFunctions::INHIBIT, WUID_STUNI, dstId);
     }
     else if (::strtolower(command) == RID_CMD_UNINHIBIT) {
-        m_network->m_tagDMR->write_Ext_Func(peerId, slot, dmr::DMR_EXT_FNCT_UNINHIBIT, p25::P25_WUID_FNE, dstId);
+        m_network->m_tagDMR->write_Ext_Func(peerId, slot, ExtendedFunctions::UNINHIBIT, WUID_STUNI, dstId);
     }
     else {
         errorPayload(reply, "invalid command");
@@ -1578,6 +1579,7 @@ void RESTAPI::restAPI_PutDMRRID(const HTTPPayload& request, HTTPPayload& reply, 
 /// <param name="match"></param>
 void RESTAPI::restAPI_PutP25RID(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
+    using namespace p25::defines;
     if (!validateAuth(request, reply)) {
         return;
     }
@@ -1622,16 +1624,16 @@ void RESTAPI::restAPI_PutP25RID(const HTTPPayload& request, HTTPPayload& reply, 
 
     errorPayload(reply, "OK", HTTPPayload::OK);
     if (::strtolower(command) == RID_CMD_PAGE) {
-        m_network->m_tagP25->write_TSDU_Call_Alrt(peerId, p25::P25_WUID_FNE, dstId);
+        m_network->m_tagP25->write_TSDU_Call_Alrt(peerId, WUID_FNE, dstId);
     }
     else if (::strtolower(command) == RID_CMD_CHECK) {
-        m_network->m_tagP25->write_TSDU_Ext_Func(peerId, p25::P25_EXT_FNCT_CHECK, p25::P25_WUID_FNE, dstId);
+        m_network->m_tagP25->write_TSDU_Ext_Func(peerId, ExtendedFunctions::CHECK, WUID_FNE, dstId);
     }
     else if (::strtolower(command) == RID_CMD_INHIBIT) {
-        m_network->m_tagP25->write_TSDU_Ext_Func(peerId, p25::P25_EXT_FNCT_INHIBIT, p25::P25_WUID_FNE, dstId);
+        m_network->m_tagP25->write_TSDU_Ext_Func(peerId, ExtendedFunctions::INHIBIT, WUID_FNE, dstId);
     }
     else if (::strtolower(command) == RID_CMD_UNINHIBIT) {
-        m_network->m_tagP25->write_TSDU_Ext_Func(peerId, p25::P25_EXT_FNCT_UNINHIBIT, p25::P25_WUID_FNE, dstId);
+        m_network->m_tagP25->write_TSDU_Ext_Func(peerId, ExtendedFunctions::UNINHIBIT, WUID_FNE, dstId);
     }
     else if (::strtolower(command) == RID_CMD_GAQ) {
         m_network->m_tagP25->write_TSDU_Grp_Aff_Q(peerId, dstId);

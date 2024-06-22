@@ -7,16 +7,17 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
 #include "p25/lc/tdulc/LC_ADJ_STS_BCAST.h"
 #include "Log.h"
 
-using namespace p25::lc::tdulc;
-using namespace p25::lc;
 using namespace p25;
+using namespace p25::defines;
+using namespace p25::lc;
+using namespace p25::lc::tdulc;
 
 #include <cassert>
 
@@ -28,15 +29,15 @@ using namespace p25;
 /// Initializes a new instance of the LC_ADJ_STS_BCAST class.
 /// </summary>
 LC_ADJ_STS_BCAST::LC_ADJ_STS_BCAST() : TDULC(),
-    m_adjCFVA(P25_CFVA_FAILURE),
+    m_adjCFVA(CFVA::FAILURE),
     m_adjSysId(0U),
     m_adjRfssId(0U),
     m_adjSiteId(0U),
     m_adjChannelId(0U),
     m_adjChannelNo(0U),
-    m_adjServiceClass(P25_SVC_CLS_INVALID)
+    m_adjServiceClass(ServiceClass::INVALID)
 {
-    m_lco = p25::LC_ADJ_STS_BCAST;
+    m_lco = LCO::ADJ_STS_BCAST;
 }
 
 /// <summary>
@@ -79,7 +80,7 @@ void LC_ADJ_STS_BCAST::encode(uint8_t* data)
         rsValue = (rsValue << 8) + m_adjServiceClass;                               // System Service Class
     }
     else {
-        LogError(LOG_P25, "LC_ADJ_STS_BCAST::encodeLC(), invalid values for LC_ADJ_STS_BCAST, tsbkAdjSiteRFSSId = $%02X, tsbkAdjSiteId = $%02X, tsbkAdjSiteChannel = $%02X",
+        LogError(LOG_P25, "LC_ADJ_STS_BCAST::encodeLC(), invalid values for LC_ADJ_STS_BCAST, adjSiteRFSSId = $%02X, adjSiteId = $%02X, adjSiteChannel = $%02X",
             m_adjRfssId, m_adjSiteId, m_adjChannelNo);
         return; // blatantly ignore creating this TSBK
     }

@@ -9,6 +9,7 @@
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
 *   Copyright (C) 2015,2016 Jonathan Naylor, G4KLX
+*   Copyright (C) 2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
@@ -16,6 +17,7 @@
 #include "p25/Sync.h"
 
 using namespace p25;
+using namespace p25::defines;
 
 #include <cassert>
 #include <cstring>

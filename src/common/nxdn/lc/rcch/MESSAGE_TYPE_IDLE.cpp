@@ -7,15 +7,16 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
 #include "nxdn/lc/rcch/MESSAGE_TYPE_IDLE.h"
 
-using namespace nxdn::lc::rcch;
-using namespace nxdn::lc;
 using namespace nxdn;
+using namespace nxdn::defines;
+using namespace nxdn::lc;
+using namespace nxdn::lc::rcch;
 
 #include <cassert>
 
@@ -28,7 +29,7 @@ using namespace nxdn;
 /// </summary>
 MESSAGE_TYPE_IDLE::MESSAGE_TYPE_IDLE() : RCCH()
 {
-    m_messageType = nxdn::MESSAGE_TYPE_IDLE;
+    m_messageType = MessageType::IDLE;
 }
 
 /// <summary>
@@ -70,5 +71,5 @@ void MESSAGE_TYPE_IDLE::encode(uint8_t* data, uint32_t length, uint32_t offset)
 /// <returns></returns>
 std::string MESSAGE_TYPE_IDLE::toString(bool isp)
 {
-    return std::string("MESSAGE_TYPE_IDLE (Idle)");
+    return std::string("IDLE (Idle)");
 }

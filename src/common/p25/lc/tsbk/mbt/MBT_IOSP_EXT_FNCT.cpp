@@ -7,15 +7,16 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
 #include "p25/lc/tsbk/mbt/MBT_IOSP_EXT_FNCT.h"
 
-using namespace p25::lc::tsbk;
-using namespace p25::lc;
 using namespace p25;
+using namespace p25::defines;
+using namespace p25::lc;
+using namespace p25::lc::tsbk;
 
 #include <cassert>
 
@@ -27,9 +28,9 @@ using namespace p25;
 /// Initializes a new instance of the MBT_IOSP_EXT_FNCT class.
 /// </summary>
 MBT_IOSP_EXT_FNCT::MBT_IOSP_EXT_FNCT() : AMBT(),
-    m_extendedFunction(P25_EXT_FNCT_CHECK)
+    m_extendedFunction(ExtendedFunctions::CHECK)
 {
-    m_lco = TSBK_IOSP_EXT_FNCT;
+    m_lco = TSBKO::IOSP_EXT_FNCT;
 }
 
 /// <summary>
@@ -81,8 +82,8 @@ void MBT_IOSP_EXT_FNCT::encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUser
 /// <returns></returns>
 std::string MBT_IOSP_EXT_FNCT::toString(bool isp)
 {
-    if (isp) return std::string("TSBK_IOSP_EXT_FNCT (Extended Function Response)");
-    else return std::string("TSBK_IOSP_EXT_FNCT (Extended Function Command)");
+    return (isp) ? std::string("TSBKO, IOSP_EXT_FNCT (Extended Function Response)") :
+        std::string("TSBKO, IOSP_EXT_FNCT (Extended Function Command)");
 }
 
 // ---------------------------------------------------------------------------

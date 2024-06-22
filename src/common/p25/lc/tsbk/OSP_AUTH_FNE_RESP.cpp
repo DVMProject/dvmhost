@@ -7,15 +7,16 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
 #include "p25/lc/tsbk/OSP_AUTH_FNE_RESP.h"
 
-using namespace p25::lc::tsbk;
-using namespace p25::lc;
 using namespace p25;
+using namespace p25::defines;
+using namespace p25::lc;
+using namespace p25::lc::tsbk;
 
 #include <cassert>
 
@@ -29,10 +30,10 @@ using namespace p25;
 OSP_AUTH_FNE_RESP::OSP_AUTH_FNE_RESP() : TSBK(),
     m_authRes(nullptr)
 {
-    m_lco = TSBK_OSP_AUTH_FNE_RESP;
+    m_lco = TSBKO::OSP_AUTH_FNE_RESP;
 
-    m_authRes = new uint8_t[P25_AUTH_RES_LENGTH_BYTES];
-    ::memset(m_authRes, 0x00U, P25_AUTH_RES_LENGTH_BYTES);
+    m_authRes = new uint8_t[AUTH_RES_LENGTH_BYTES];
+    ::memset(m_authRes, 0x00U, AUTH_RES_LENGTH_BYTES);
 }
 
 /// <summary>
@@ -90,7 +91,7 @@ void OSP_AUTH_FNE_RESP::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 /// <returns></returns>
 std::string OSP_AUTH_FNE_RESP::toString(bool isp)
 {
-    return std::string("TSBK_OSP_AUTH_FNE_RESP (Authentication FNE Response)");
+    return std::string("TSBKO, OSP_AUTH_FNE_RESP (Authentication FNE Response)");
 }
 
 /// <summary>Sets the authentication result.</summary>
@@ -103,8 +104,8 @@ void OSP_AUTH_FNE_RESP::setAuthRes(const uint8_t* res)
         delete[] m_authRes;
     }
 
-    m_authRes = new uint8_t[P25_AUTH_RES_LENGTH_BYTES];
-    ::memcpy(m_authRes, res, P25_AUTH_RES_LENGTH_BYTES);
+    m_authRes = new uint8_t[AUTH_RES_LENGTH_BYTES];
+    ::memcpy(m_authRes, res, AUTH_RES_LENGTH_BYTES);
 }
 
 // ---------------------------------------------------------------------------
@@ -123,6 +124,6 @@ void OSP_AUTH_FNE_RESP::copy(const OSP_AUTH_FNE_RESP& data)
         delete[] m_authRes;
     }
 
-    m_authRes = new uint8_t[P25_AUTH_RES_LENGTH_BYTES];
-    ::memcpy(m_authRes, data.m_authRes, P25_AUTH_RES_LENGTH_BYTES);
+    m_authRes = new uint8_t[AUTH_RES_LENGTH_BYTES];
+    ::memcpy(m_authRes, data.m_authRes, AUTH_RES_LENGTH_BYTES);
 }

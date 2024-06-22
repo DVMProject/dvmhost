@@ -16,8 +16,8 @@
 #include "p25/data/LowSpeedData.h"
 #include "p25/P25Utils.h"
 
-using namespace p25::data;
 using namespace p25;
+using namespace p25::data;
 
 #include <cassert>
 

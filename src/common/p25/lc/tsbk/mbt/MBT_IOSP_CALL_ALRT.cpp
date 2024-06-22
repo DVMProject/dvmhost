@@ -7,15 +7,16 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
 #include "p25/lc/tsbk/mbt/MBT_IOSP_CALL_ALRT.h"
 
-using namespace p25::lc::tsbk;
-using namespace p25::lc;
 using namespace p25;
+using namespace p25::defines;
+using namespace p25::lc;
+using namespace p25::lc::tsbk;
 
 #include <cassert>
 
@@ -28,7 +29,7 @@ using namespace p25;
 /// </summary>
 MBT_IOSP_CALL_ALRT::MBT_IOSP_CALL_ALRT() : AMBT()
 {
-    m_lco = TSBK_IOSP_CALL_ALRT;
+    m_lco = TSBKO::IOSP_CALL_ALRT;
 }
 
 /// <summary>
@@ -79,6 +80,6 @@ void MBT_IOSP_CALL_ALRT::encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUse
 /// <returns></returns>
 std::string MBT_IOSP_CALL_ALRT::toString(bool isp)
 {
-    if (isp) return std::string("TSBK_IOSP_CALL_ALRT (Call Alert Request)");
-    else return std::string("TSBK_IOSP_CALL_ALRT (Call Alert)");
+    return (isp) ? std::string("TSBKO, IOSP_CALL_ALRT (Call Alert Request)") :
+        std::string("TSBKO, IOSP_CALL_ALRT (Call Alert)");
 }

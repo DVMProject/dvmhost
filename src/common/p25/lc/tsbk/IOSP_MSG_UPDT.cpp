@@ -7,15 +7,16 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
 #include "p25/lc/tsbk/IOSP_MSG_UPDT.h"
 
-using namespace p25::lc::tsbk;
-using namespace p25::lc;
 using namespace p25;
+using namespace p25::defines;
+using namespace p25::lc;
+using namespace p25::lc::tsbk;
 
 #include <cassert>
 
@@ -29,7 +30,7 @@ using namespace p25;
 IOSP_MSG_UPDT::IOSP_MSG_UPDT() : TSBK(),
     m_messageValue(0U)
 {
-    m_lco = TSBK_IOSP_MSG_UPDT;
+    m_lco = TSBKO::IOSP_MSG_UPDT;
 }
 
 /// <summary>
@@ -85,8 +86,8 @@ void IOSP_MSG_UPDT::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 /// <returns></returns>
 std::string IOSP_MSG_UPDT::toString(bool isp)
 {
-    if (isp) return std::string("TSBK_IOSP_MSG_UPDT (Message Update Request)");
-    else return std::string("TSBK_IOSP_MSG_UPDT (Message Update)");
+    return (isp) ? std::string("TSBKO, IOSP_MSG_UPDT (Message Update Request)") :
+        std::string("TSBKO, IOSP_MSG_UPDT (Message Update)");
 }
 
 // ---------------------------------------------------------------------------

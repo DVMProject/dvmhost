@@ -16,6 +16,7 @@
 
 #include "Defines.h"
 #include "common/Defines.h"
+#include "common/p25/dfsi/DFSIDefines.h"
 #include "common/Log.h"
 #include "common/Utils.h"
 #include "frames/FrameDefines.h"
@@ -189,7 +190,7 @@ namespace p25
             uint8_t* additionalData; // ?? - this should probably be private with getters/setters
 
             /// <summary>Frame Type.</summary>
-            __PROPERTY(uint8_t, frameType, FrameType);
+            __PROPERTY(defines::DFSIFrameType::E, frameType, FrameType);
             /// <summary>Total errors detected in the frame.</summary>
             __PROPERTY(uint8_t, totalErrors, TotalErrors);
             /// <summary>Flag indicating the frame should be muted.</summary>

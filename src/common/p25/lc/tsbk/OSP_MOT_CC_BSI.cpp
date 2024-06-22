@@ -7,15 +7,16 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
 #include "p25/lc/tsbk/OSP_MOT_CC_BSI.h"
 
-using namespace p25::lc::tsbk;
-using namespace p25::lc;
 using namespace p25;
+using namespace p25::defines;
+using namespace p25::lc;
+using namespace p25::lc::tsbk;
 
 #include <cassert>
 
@@ -28,8 +29,7 @@ using namespace p25;
 /// </summary>
 OSP_MOT_CC_BSI::OSP_MOT_CC_BSI() : TSBK()
 {
-    m_lco = TSBK_OSP_MOT_CC_BSI;
-    m_mfId = P25_MFG_MOT;
+    m_lco = TSBKO::OSP_MOT_CC_BSI;
 }
 
 /// <summary>
@@ -59,8 +59,10 @@ void OSP_MOT_CC_BSI::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 
     ulong64_t tsbkValue = 0U;
 
+    m_mfId = MFG_MOT;
+
     tsbkValue = (m_siteCallsign[0] - 43U) & 0x3F;                                   // Character 0
-    for (uint8_t i = 1; i < P25_MOT_CALLSIGN_LENGTH_BYTES; i++) {
+    for (uint8_t i = 1; i < MOT_CALLSIGN_LENGTH_BYTES; i++) {
         tsbkValue = (tsbkValue << 6) + ((m_siteCallsign[i] - 43U) & 0x3F);          // Character 1 - 7
     }
     tsbkValue = (tsbkValue << 4) + m_siteData.channelId();                          // Channel ID
@@ -77,5 +79,5 @@ void OSP_MOT_CC_BSI::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 /// <returns></returns>
 std::string OSP_MOT_CC_BSI::toString(bool isp)
 {
-    return std::string("TSBK_OSP_MOT_CC_BSI (Motorola / Control Channel Base Station Identifier)");
+    return std::string("TSBKO, OSP_MOT_CC_BSI (Motorola / Control Channel Base Station Identifier)");
 }

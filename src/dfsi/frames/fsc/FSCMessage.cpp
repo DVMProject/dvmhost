@@ -31,7 +31,7 @@ using namespace p25::dfsi::fsc;
 /// Initializes a instance of the FSCMessage class.
 /// </summary>
 FSCMessage::FSCMessage() :
-    m_messageId(FSC_INVALID),
+    m_messageId(FSCMessageType::FSC_INVALID),
     m_version(1U),
     m_correlationTag(0U)
 {
@@ -43,7 +43,7 @@ FSCMessage::FSCMessage() :
 /// </summary>
 /// <param name="data"></param>
 FSCMessage::FSCMessage(uint8_t* data) :
-    m_messageId(FSC_INVALID),
+    m_messageId(FSCMessageType::FSC_INVALID),
     m_version(1U),
     m_correlationTag(0U)
 {
@@ -59,7 +59,7 @@ bool FSCMessage::decode(const uint8_t* data)
 {
     assert(data != nullptr);
 
-    m_messageId = (FSCMessageType)(data[0U]);                   // Message ID
+    m_messageId = (FSCMessageType::E)(data[0U]);                // Message ID
     m_version = data[1U];                                       // Message Version
 
     if (m_messageId != FSCMessageType::FSC_HEARTBEAT && m_messageId != FSCMessageType::FSC_ACK)

@@ -74,7 +74,7 @@ void RadioIdLookup::toggleEntry(uint32_t id, bool enabled)
 /// <param name="alias">Alias for the radio ID</param>
 void RadioIdLookup::addEntry(uint32_t id, bool enabled, const std::string& alias)
 {
-    if ((id == p25::P25_WUID_ALL) || (id == p25::P25_WUID_FNE)) {
+    if ((id == p25::defines::WUID_ALL) || (id == p25::defines::WUID_FNE)) {
         return;
     }
 
@@ -121,7 +121,7 @@ RadioId RadioIdLookup::find(uint32_t id)
 {
     RadioId entry;
 
-    if ((id == p25::P25_WUID_ALL) || (id == p25::P25_WUID_FNE)) {
+    if ((id == p25::defines::WUID_ALL) || (id == p25::defines::WUID_FNE)) {
         return RadioId(true, false);
     }
 

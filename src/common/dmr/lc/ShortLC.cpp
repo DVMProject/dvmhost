@@ -16,8 +16,8 @@
 #include "edac/Hamming.h"
 #include "Utils.h"
 
-using namespace dmr::lc;
 using namespace dmr;
+using namespace dmr::lc;
 
 #include <cassert>
 

@@ -7,7 +7,7 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
@@ -15,9 +15,10 @@
 #include "Log.h"
 #include "Utils.h"
 
-using namespace nxdn::lc::rcch;
-using namespace nxdn::lc;
 using namespace nxdn;
+using namespace nxdn::defines;
+using namespace nxdn::lc;
+using namespace nxdn::lc::rcch;
 
 #include <cassert>
 
@@ -58,18 +59,18 @@ std::unique_ptr<RCCH> RCCHFactory::createRCCH(const uint8_t* data, uint32_t leng
 
     // message type opcodes
     switch (messageType) {
-    case RTCH_MESSAGE_TYPE_VCALL:
-    case RCCH_MESSAGE_TYPE_VCALL_CONN:
+    case MessageType::RTCH_VCALL:
+    case MessageType::RCCH_VCALL_CONN:
         return decode(new MESSAGE_TYPE_VCALL_CONN(), data, length, offset);
-    case RTCH_MESSAGE_TYPE_DCALL_HDR:
+    case MessageType::RTCH_DCALL_HDR:
         return decode(new MESSAGE_TYPE_DCALL_HDR(), data, length, offset);
-    case nxdn::MESSAGE_TYPE_IDLE:
+    case MessageType::IDLE:
         return decode(new MESSAGE_TYPE_IDLE(), data, length, offset);
-    case RCCH_MESSAGE_TYPE_REG:
+    case MessageType::RCCH_REG:
         return decode(new MESSAGE_TYPE_REG(), data, length, offset);
-    case RCCH_MESSAGE_TYPE_REG_C:
+    case MessageType::RCCH_REG_C:
         return decode(new MESSAGE_TYPE_REG_C(), data, length, offset);
-    case RCCH_MESSAGE_TYPE_GRP_REG:
+    case MessageType::RCCH_GRP_REG:
         return decode(new MESSAGE_TYPE_GRP_REG(), data, length, offset);
     default:
         LogError(LOG_NXDN, "RCCH::decodeRCCH(), unknown RCCH value, messageType = $%02X", messageType);

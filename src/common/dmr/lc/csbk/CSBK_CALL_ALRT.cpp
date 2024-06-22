@@ -7,15 +7,16 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
 #include "dmr/lc/csbk/CSBK_CALL_ALRT.h"
 
-using namespace dmr::lc::csbk;
-using namespace dmr::lc;
 using namespace dmr;
+using namespace dmr::defines;
+using namespace dmr::lc;
+using namespace dmr::lc::csbk;
 
 #include <cassert>
 
@@ -28,7 +29,7 @@ using namespace dmr;
 /// </summary>
 CSBK_CALL_ALRT::CSBK_CALL_ALRT() : CSBK()
 {
-    m_CSBKO = CSBKO_RAND;
+    m_CSBKO = CSBKO::RAND;
     m_FID = FID_DMRA;
 }
 
@@ -81,5 +82,5 @@ void CSBK_CALL_ALRT::encode(uint8_t* data)
 /// <returns></returns>
 std::string CSBK_CALL_ALRT::toString()
 {
-    return std::string("CSBKO_RAND (Call Alert)");
+    return std::string("CSBKO, RAND (Call Alert)");
 }

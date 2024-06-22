@@ -9,13 +9,14 @@
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
 *   Copyright (C) 2016 Jonathan Naylor, G4KLX
-*   Copyright (C) 2017,2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2017,2022,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #if !defined(__P25_NID_H__)
 #define  __P25_NID_H__
 
 #include "common/Defines.h"
+#include "common/p25/P25Defines.h"
 
 namespace p25
 {
@@ -34,14 +35,14 @@ namespace p25
         /// <summary>Decodes P25 network identifier data.</summary>
         bool decode(const uint8_t* data);
         /// <summary>Encodes P25 network identifier data.</summary>
-        void encode(uint8_t* data, uint8_t duid);
+        void encode(uint8_t* data, defines::DUID::E duid);
 
         /// <summary>Helper to configure a separate Tx NAC.</summary>
         void setTxNAC(uint32_t nac);
 
     public:
         /// <summary>Data unit ID.</summary>
-        __READONLY_PROPERTY(uint8_t, duid, DUID);
+        __READONLY_PROPERTY(defines::DUID::E, duid, DUID);
 
     private:
         uint32_t m_nac;

@@ -90,10 +90,10 @@ typedef unsigned long long  ulong64_t;
 
 #define VERSION_MAJOR       "04"
 #define VERSION_MINOR       "01"
-#define VERSION_REV         "A"
+#define VERSION_REV         "B"
 
 #define __NETVER__ "DVM_R" VERSION_MAJOR VERSION_REV VERSION_MINOR
-#define __VER__ VERSION_MAJOR "." VERSION_MINOR " (R" VERSION_MAJOR VERSION_REV VERSION_MINOR " " __GIT_VER__ ")"
+#define __VER__ VERSION_MAJOR "." VERSION_MINOR VERSION_REV " (R" VERSION_MAJOR VERSION_REV VERSION_MINOR " " __GIT_VER__ ")"
 
 #define __BUILD__ __DATE__ " " __TIME__
 

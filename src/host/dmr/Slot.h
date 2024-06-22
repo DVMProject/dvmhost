@@ -278,11 +278,11 @@ namespace dmr
 
         static uint8_t* m_idle;
 
-        static uint8_t m_flco1;
+        static defines::FLCO::E m_flco1;
         static uint8_t m_id1;
         static bool m_voice1;
 
-        static uint8_t m_flco2;
+        static defines::FLCO::E m_flco2;
         static uint8_t m_id2;
         static bool m_voice2;
 
@@ -303,9 +303,9 @@ namespace dmr
         void notifyCC_TouchGrant(uint32_t dstId);
 
         /// <summary>Write data frame to the network.</summary>
-        void writeNetwork(const uint8_t* data, uint8_t dataType, uint8_t errors = 0U, bool noSequence = false);
+        void writeNetwork(const uint8_t* data, defines::DataType::E dataType, uint8_t errors = 0U, bool noSequence = false);
         /// <summary>Write data frame to the network.</summary>
-        void writeNetwork(const uint8_t* data, uint8_t dataType, uint8_t flco, uint32_t srcId,
+        void writeNetwork(const uint8_t* data, defines::DataType::E dataType, defines::FLCO::E flco, uint32_t srcId,
             uint32_t dstId, uint8_t errors = 0U, bool noSequence = false);
 
         /// <summary>Helper to write RF end of frame data.</summary>
@@ -320,7 +320,7 @@ namespace dmr
         void clearTSCCActivated();
 
         /// <summary>Helper to set the DMR short LC.</summary>
-        static void setShortLC(uint32_t slotNo, uint32_t id, uint8_t flco = FLCO_GROUP, bool voice = true);
+        static void setShortLC(uint32_t slotNo, uint32_t id, defines::FLCO::E flco = defines::FLCO::GROUP, bool voice = true);
         /// <summary>Helper to set the DMR short LC for TSCC.</summary>
         static void setShortLC_TSCC(SiteData siteData, uint16_t counter);
         /// <summary>Helper to set the DMR short LC for payload.</summary>

@@ -7,15 +7,16 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
 #include "p25/lc/tsbk/ISP_CAN_SRV_REQ.h"
 
-using namespace p25::lc::tsbk;
-using namespace p25::lc;
 using namespace p25;
+using namespace p25::defines;
+using namespace p25::lc;
+using namespace p25::lc::tsbk;
 
 #include <cassert>
 
@@ -28,7 +29,7 @@ using namespace p25;
 /// </summary>
 ISP_CAN_SRV_REQ::ISP_CAN_SRV_REQ() : TSBK()
 {
-    m_lco = TSBK_ISP_CAN_SRV_REQ;
+    m_lco = TSBKO::ISP_CAN_SRV_REQ;
 }
 
 /// <summary>
@@ -79,5 +80,5 @@ void ISP_CAN_SRV_REQ::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 /// <returns></returns>
 std::string ISP_CAN_SRV_REQ::toString(bool isp)
 {
-    return std::string("TSBK_ISP_CAN_SRV_REQ (Cancel Service Request)");
+    return std::string("TSBKO, ISP_CAN_SRV_REQ (Cancel Service Request)");
 }

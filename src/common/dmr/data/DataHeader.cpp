@@ -10,7 +10,7 @@
 *
 *   Copyright (C) 2012 Ian Wraith
 *   Copyright (C) 2015,2016,2017 Jonathan Naylor, G4KLX
-*   Copyright (C) 2021,2023 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2021,2023,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
@@ -20,8 +20,9 @@
 #include "edac/CRC.h"
 #include "Utils.h"
 
-using namespace dmr::data;
 using namespace dmr;
+using namespace dmr::defines;
+using namespace dmr::data;
 
 #include <cassert>
 #include <cstring>
@@ -41,7 +42,7 @@ const uint8_t UDTF_NMEA = 0x05U;
 /// </summary>
 DataHeader::DataHeader() :
     m_GI(false),
-    m_DPF(DPF_UDT),
+    m_DPF(DPF::UDT),
     m_sap(0U),
     m_fsn(0U),
     m_Ns(0U),
@@ -52,8 +53,8 @@ DataHeader::DataHeader() :
     m_srcId(0U),
     m_dstId(0U),
     m_blocks(0U),
-    m_rspClass(PDU_ACK_CLASS_NACK),
-    m_rspType(PDU_ACK_TYPE_NACK_ILLEGAL),
+    m_rspClass(PDUResponseClass::NACK),
+    m_rspType(PDUResponseType::NACK_ILLEGAL),
     m_rspStatus(0U),
     m_srcPort(0U),
     m_dstPort(0U),
@@ -141,15 +142,15 @@ bool DataHeader::decode(const uint8_t* data)
     m_GI = (m_data[0U] & 0x80U) == 0x80U;                                       // Group/Individual Flag
     m_A = (m_data[0U] & 0x40U) == 0x40U;
 
-    m_DPF = m_data[0U] & 0x0FU;                                                 // Data Packet Format
-    if (m_DPF == DPF_PROPRIETARY)
+    m_DPF = (DPF::E)(m_data[0U] & 0x0FU);                                       // Data Packet Format
+    if (m_DPF == DPF::PROPRIETARY)
         return true;
 
     m_dstId = m_data[2U] << 16 | m_data[3U] << 8 | m_data[4U];                  // Destination ID
     m_srcId = m_data[5U] << 16 | m_data[6U] << 8 | m_data[7U];                  // Source ID
 
     switch (m_DPF) {
-    case DPF_UDT:
+    case DPF::UDT:
 #if DEBUG_DMR_PDU_DATA
         Utils::dump(1U, "DMR, DataHeader::decode(), Unified Data Transport Header", m_data, DMR_LC_HEADER_LENGTH_BYTES);
 #endif
@@ -162,7 +163,7 @@ bool DataHeader::decode(const uint8_t* data)
         m_UDTO = m_data[9U] & 0x3FU;                                            // UDT Opcode
         break;
 
-    case DPF_UNCONFIRMED_DATA:
+    case DPF::UNCONFIRMED_DATA:
 #if DEBUG_DMR_PDU_DATA
         Utils::dump(1U, "DMR, DataHeader::decode(), Unconfirmed Data Header", m_data, DMR_LC_HEADER_LENGTH_BYTES);
 #endif
@@ -173,7 +174,7 @@ bool DataHeader::decode(const uint8_t* data)
         m_fsn = m_data[9U] & 0x0FU;                                             // Fragment Sequence Number
         break;
 
-    case DPF_CONFIRMED_DATA:
+    case DPF::CONFIRMED_DATA:
 #if DEBUG_DMR_PDU_DATA
         Utils::dump(1U, "DMR, DataHeader::decode(), Confirmed Data Header", m_data, DMR_LC_HEADER_LENGTH_BYTES);
 #endif
@@ -186,7 +187,7 @@ bool DataHeader::decode(const uint8_t* data)
         m_fsn = m_data[9U] & 0x0FU;                                             // Fragement Sequence Number
         break;
 
-    case DPF_RESPONSE:
+    case DPF::RESPONSE:
 #if DEBUG_DMR_PDU_DATA
         Utils::dump(1U, "DMR, DataHeader::decode(), Response Data Header", m_data, DMR_LC_HEADER_LENGTH_BYTES);
 #endif
@@ -197,7 +198,7 @@ bool DataHeader::decode(const uint8_t* data)
         m_rspStatus = m_data[9U] & 0x07U;                                       // Response Status
         break;
 
-    case DPF_DEFINED_SHORT:
+    case DPF::DEFINED_SHORT:
 #if DEBUG_DMR_PDU_DATA
         Utils::dump(1U, "DMR, DataHeader::decode(), Defined Short Data Header", m_data, DMR_LC_HEADER_LENGTH_BYTES);
 #endif
@@ -209,7 +210,7 @@ bool DataHeader::decode(const uint8_t* data)
         m_padCount = m_data[9U];                                                // Bit Padding
         break;
 
-    case DPF_DEFINED_RAW:
+    case DPF::DEFINED_RAW:
 #if DEBUG_DMR_PDU_DATA
         Utils::dump(1U, "DMR, DataHeader::decode(), Raw Data Header", m_data, DMR_LC_HEADER_LENGTH_BYTES);
 #endif
@@ -238,7 +239,7 @@ void DataHeader::encode(uint8_t* data) const
     assert(data != nullptr);
 
     // perform no processing other then regenerating FEC
-    if (m_DPF == DPF_PROPRIETARY) {
+    if (m_DPF == DPF::PROPRIETARY) {
         m_data[10U] = m_data[11U] = 0x00U;
 
         // compute CRC-CCITT 16
@@ -272,7 +273,7 @@ void DataHeader::encode(uint8_t* data) const
     m_data[7U] = (m_srcId >> 0) & 0xFFU;
 
     switch (m_DPF) {
-    case DPF_UDT:
+    case DPF::UDT:
         m_data[1U] = ((m_sap & 0x0FU) << 4) +                                   // Service Access Point
             (m_dataFormat & 0x0FU);                                             // UDT Format
         m_data[8U] = ((m_padCount & 0x1FU) << 3) +                              // Pad Nibble
@@ -285,7 +286,7 @@ void DataHeader::encode(uint8_t* data) const
 #endif
         break;
 
-    case DPF_UNCONFIRMED_DATA:
+    case DPF::UNCONFIRMED_DATA:
         m_data[0U] = m_data[0U] + (m_padCount & 0x10U);                         // Octet Pad Count MSB
         m_data[1U] = ((m_sap & 0x0FU) << 4) +                                   // Service Access Point
             (m_padCount & 0x0FU);                                               // Octet Pad Count LSB
@@ -297,7 +298,7 @@ void DataHeader::encode(uint8_t* data) const
 #endif
         break;
 
-    case DPF_CONFIRMED_DATA:
+    case DPF::CONFIRMED_DATA:
         m_data[0U] = m_data[0U] + (m_padCount & 0x10U);                         // Octet Pad Count MSB
         m_data[1U] = ((m_sap & 0x0FU) << 4) +                                   // Service Access Point
             (m_padCount & 0x0FU);                                               // Octet Pad Count LSB
@@ -311,7 +312,7 @@ void DataHeader::encode(uint8_t* data) const
 #endif
         break;
 
-    case DPF_RESPONSE:
+    case DPF::RESPONSE:
         m_data[1U] = ((m_sap & 0x0FU) << 4);                                    // Service Access Point
         m_data[8U] = m_blocks & 0x7FU;                                          // Blocks To Follow
         m_data[9U] = ((m_rspClass & 0x03U) << 6) +                              // Response Class
@@ -322,7 +323,7 @@ void DataHeader::encode(uint8_t* data) const
 #endif
         break;
 
-    case DPF_DEFINED_SHORT:
+    case DPF::DEFINED_SHORT:
         m_data[0U] = m_data[0U] + (m_blocks & 0x30U);                           // Blocks To Follow MSB
         m_data[1U] = ((m_sap & 0x0FU) << 4) +                                   // Service Access Point
             (m_blocks & 0x0FU);                                                 // Blocks To Follow LSB
@@ -335,7 +336,7 @@ void DataHeader::encode(uint8_t* data) const
 #endif
         break;
 
-    case DPF_DEFINED_RAW:
+    case DPF::DEFINED_RAW:
         m_data[0U] = m_data[0U] + (m_blocks & 0x30U);                           // Blocks To Follow MSB
         m_data[1U] = ((m_sap & 0x0FU) << 4) +                                   // Service Access Point
             (m_blocks & 0x0FU);                                                 // Blocks To Follow LSB
@@ -353,7 +354,7 @@ void DataHeader::encode(uint8_t* data) const
         break;
     }
 
-    if (m_DPF == DPF_UDT) {
+    if (m_DPF == DPF::UDT) {
         m_data[9U] &= 0xFEU;
 
         edac::CRC::addCCITT162(m_data, DMR_LC_HEADER_LENGTH_BYTES);

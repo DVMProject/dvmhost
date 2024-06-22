@@ -7,15 +7,16 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
 #include "nxdn/lc/rcch/MESSAGE_TYPE_DCALL_HDR.h"
 
-using namespace nxdn::lc::rcch;
-using namespace nxdn::lc;
 using namespace nxdn;
+using namespace nxdn::defines;
+using namespace nxdn::lc;
+using namespace nxdn::lc::rcch;
 
 #include <cassert>
 
@@ -28,7 +29,7 @@ using namespace nxdn;
 /// </summary>
 MESSAGE_TYPE_DCALL_HDR::MESSAGE_TYPE_DCALL_HDR() : RCCH()
 {
-    m_messageType = RTCH_MESSAGE_TYPE_DCALL_HDR;
+    m_messageType = MessageType::RTCH_DCALL_HDR;
 }
 
 /// <summary>
@@ -93,5 +94,5 @@ void MESSAGE_TYPE_DCALL_HDR::encode(uint8_t* data, uint32_t length, uint32_t off
 /// <returns></returns>
 std::string MESSAGE_TYPE_DCALL_HDR::toString(bool isp)
 {
-    return std::string("RTCH_MESSAGE_TYPE_DCALL_HDR (Data Call Header)");
+    return std::string("RTCH_DCALL_HDR (Data Call Header)");
 }

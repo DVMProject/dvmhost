@@ -7,15 +7,16 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
 #include "p25/lc/tsbk/OSP_MOT_GRG_VCH_UPD.h"
 
-using namespace p25::lc::tsbk;
-using namespace p25::lc;
 using namespace p25;
+using namespace p25::defines;
+using namespace p25::lc;
+using namespace p25::lc::tsbk;
 
 #include <cassert>
 
@@ -30,7 +31,7 @@ OSP_MOT_GRG_VCH_UPD::OSP_MOT_GRG_VCH_UPD() : TSBK(),
     m_patchGroup1Id(0U),
     m_patchGroup2Id(0U)
 {
-    m_lco = TSBK_OSP_MOT_GRG_VCH_UPD;
+    m_lco = TSBKO::OSP_MOT_GRG_VCH_UPD;
 }
 
 /// <summary>
@@ -60,7 +61,7 @@ void OSP_MOT_GRG_VCH_UPD::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 
     ulong64_t tsbkValue = 0U;
 
-    m_mfId = P25_MFG_MOT;
+    m_mfId = MFG_MOT;
 
     tsbkValue = m_siteData.channelId();                                             // Channel ID
     tsbkValue = (tsbkValue << 4) + m_siteData.channelNo();                          // Channel Number
@@ -80,7 +81,7 @@ void OSP_MOT_GRG_VCH_UPD::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 /// <returns></returns>
 std::string OSP_MOT_GRG_VCH_UPD::toString(bool isp)
 {
-    return std::string("TSBK_OSP_MOT_GRG_VCH_UPD (Group Regroup Voice Channel Grant Update)");
+    return std::string("TSBKO, OSP_MOT_GRG_VCH_UPD (Group Regroup Voice Channel Grant Update)");
 }
 
 // ---------------------------------------------------------------------------

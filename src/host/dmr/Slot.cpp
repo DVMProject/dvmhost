@@ -27,6 +27,7 @@
 #include "ActivityLog.h"
 
 using namespace dmr;
+using namespace dmr::defines;
 using namespace dmr::packet;
 
 #include <cassert>
@@ -71,10 +72,10 @@ uint32_t Slot::m_jitterSlots = 6U;
 
 uint8_t* Slot::m_idle = nullptr;
 
-uint8_t Slot::m_flco1;
+FLCO::E Slot::m_flco1;
 uint8_t Slot::m_id1 = 0U;
 bool Slot::m_voice1 = true;
-uint8_t Slot::m_flco2;
+FLCO::E Slot::m_flco2;
 uint8_t Slot::m_id2 = 0U;
 bool Slot::m_voice2 = true;
 
@@ -270,8 +271,8 @@ bool Slot::processFrame(uint8_t *data, uint32_t len)
         m_rssiCount++;
     }
 
-    bool dataSync = (data[1U] & DMR_SYNC_DATA) == DMR_SYNC_DATA;
-    bool voiceSync = (data[1U] & DMR_SYNC_VOICE) == DMR_SYNC_VOICE;
+    bool dataSync = (data[1U] & SYNC_DATA) == SYNC_DATA;
+    bool voiceSync = (data[1U] & SYNC_VOICE) == SYNC_VOICE;
 
     if (!(dataSync || voiceSync) && m_rfState == RS_RF_LISTENING) {
         uint8_t sync[DMR_SYNC_LENGTH_BYTES];
@@ -280,12 +281,12 @@ bool Slot::processFrame(uint8_t *data, uint32_t len)
         // count data sync errors
         uint8_t dataErrs = 0U;
         for (uint8_t i = 0U; i < DMR_SYNC_LENGTH_BYTES; i++)
-            dataErrs += Utils::countBits8(sync[i] ^ DMR_MS_DATA_SYNC_BYTES[i]);
+            dataErrs += Utils::countBits8(sync[i] ^ MS_DATA_SYNC_BYTES[i]);
 
         // count voice sync errors
         uint8_t voiceErrs = 0U;
         for (uint8_t i = 0U; i < DMR_SYNC_LENGTH_BYTES; i++)
-            voiceErrs += Utils::countBits8(sync[i] ^ DMR_MS_VOICE_SYNC_BYTES[i]);
+            voiceErrs += Utils::countBits8(sync[i] ^ MS_VOICE_SYNC_BYTES[i]);
 
         LogWarning(LOG_RF, "DMR, possible sync word rejected, dataErrs = %u, voiceErrs = %u, sync word = %02X %02X %02X %02X %02X %02X", dataErrs, voiceErrs,
             sync[0U], sync[1U], sync[2U], sync[3U], sync[4U], sync[5U]);
@@ -299,9 +300,9 @@ bool Slot::processFrame(uint8_t *data, uint32_t len)
         m_rfTGHang.start();
 
     if (dataSync) {
-        uint8_t dataType = data[1U] & 0x0FU;
+        DataType::E dataType = (DataType::E)(data[1U] & 0x0FU);
 
-        if (dataType == DT_CSBK) {
+        if (dataType == DataType::CSBK) {
             return m_control->process(data, len);
         }
 
@@ -310,15 +311,15 @@ bool Slot::processFrame(uint8_t *data, uint32_t len)
 
         switch (dataType)
         {
-        case DT_VOICE_LC_HEADER:
-        case DT_VOICE_PI_HEADER:
+        case DataType::VOICE_LC_HEADER:
+        case DataType::VOICE_PI_HEADER:
             return m_voice->process(data, len);
-        case DT_TERMINATOR_WITH_LC:
+        case DataType::TERMINATOR_WITH_LC:
             m_frameLossCnt = 0U;
-        case DT_DATA_HEADER:
-        case DT_RATE_12_DATA:
-        case DT_RATE_34_DATA:
-        case DT_RATE_1_DATA:
+        case DataType::DATA_HEADER:
+        case DataType::RATE_12_DATA:
+        case DataType::RATE_34_DATA:
+        case DataType::RATE_1_DATA:
         default:
             return m_data->process(data, len);
         }
@@ -420,30 +421,30 @@ void Slot::processNetwork(const data::Data& dmrData)
 
     m_networkWatchdog.start();
 
-    uint8_t dataType = dmrData.getDataType();
+    DataType::E dataType = dmrData.getDataType();
 
     // ignore non-CSBK data destined for the TSCC slot
     if (m_enableTSCC && m_dedicatedTSCC && m_slotNo == m_dmr->m_tsccSlotNo &&
-        dataType != DT_CSBK) {
+        dataType != DataType::CSBK) {
         return;
     }
 
     switch (dataType)
     {
-    case DT_CSBK:
+    case DataType::CSBK:
         m_control->processNetwork(dmrData);
         break;
-    case DT_VOICE_LC_HEADER:
-    case DT_VOICE_PI_HEADER:
-    case DT_VOICE_SYNC:
-    case DT_VOICE:
+    case DataType::VOICE_LC_HEADER:
+    case DataType::VOICE_PI_HEADER:
+    case DataType::VOICE_SYNC:
+    case DataType::VOICE:
         m_voice->processNetwork(dmrData);
         break;
-    case DT_TERMINATOR_WITH_LC:
-    case DT_DATA_HEADER:
-    case DT_RATE_12_DATA:
-    case DT_RATE_34_DATA:
-    case DT_RATE_1_DATA:
+    case DataType::TERMINATOR_WITH_LC:
+    case DataType::DATA_HEADER:
+    case DataType::RATE_12_DATA:
+    case DataType::RATE_34_DATA:
+    case DataType::RATE_1_DATA:
     default:
         m_data->processNetwork(dmrData);
         break;
@@ -542,7 +543,7 @@ void Slot::clock()
                 }
 
                 if ((m_dmr->m_tsccCnt % 2) > 0) {
-                    setShortLC(m_slotNo, m_tsccPayloadDstId, m_tsccPayloadGroup ? FLCO_GROUP : FLCO_PRIVATE, m_tsccPayloadVoice);
+                    setShortLC(m_slotNo, m_tsccPayloadDstId, m_tsccPayloadGroup ? FLCO::GROUP : FLCO::PRIVATE, m_tsccPayloadVoice);
                 }
             }
         }
@@ -971,7 +972,7 @@ void Slot::init(Control* dmr, bool authoritative, uint32_t colorCode, SiteData s
                     HTTP_PUT, PUT_DMR_TSCC_PAYLOAD_ACT, req, voiceChData.ssl(), REST_QUICK_WAIT, tscc->m_debug);
             }
             else {
-                ::LogError(LOG_DMR, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), failed to clear payload channel, chNo = %u, slot = %u", tscc->m_slotNo, chNo, slot);
+                ::LogError(LOG_DMR, "DMR Slot %u, CSBK, RAND (Random Access), failed to clear payload channel, chNo = %u, slot = %u", tscc->m_slotNo, chNo, slot);
             }
 
             // callback REST API to clear TG permit for the granted TG on the specified voice channel
@@ -988,7 +989,7 @@ void Slot::init(Control* dmr, bool authoritative, uint32_t colorCode, SiteData s
                         HTTP_PUT, PUT_PERMIT_TG, req, voiceChData.ssl(), REST_QUICK_WAIT, m_dmr->m_debug);
                 }
                 else {
-                    ::LogError(LOG_DMR, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), failed to clear TG permit, chNo = %u, slot = %u", tscc->m_slotNo, chNo, slot);
+                    ::LogError(LOG_DMR, "DMR Slot %u, CSBK, RAND (Random Access), failed to clear TG permit, chNo = %u, slot = %u", tscc->m_slotNo, chNo, slot);
                 }
             }
         }
@@ -1010,12 +1011,12 @@ void Slot::init(Control* dmr, bool authoritative, uint32_t colorCode, SiteData s
     m_jitterSlots = (uint32_t)(std::ceil(jitter_tmp) * 6.0F);
 
     m_idle = new uint8_t[DMR_FRAME_LENGTH_BYTES + 2U];
-    ::memcpy(m_idle, DMR_IDLE_DATA, DMR_FRAME_LENGTH_BYTES + 2U);
+    ::memcpy(m_idle, IDLE_DATA, DMR_FRAME_LENGTH_BYTES + 2U);
 
     // Generate the Slot Type for the Idle frame
     SlotType slotType;
     slotType.setColorCode(colorCode);
-    slotType.setDataType(DT_IDLE);
+    slotType.setDataType(DataType::IDLE);
     slotType.encode(m_idle + 2U);
 }
 
@@ -1030,7 +1031,7 @@ void Slot::init(Control* dmr, bool authoritative, uint32_t colorCode, SiteData s
 /// <param name="requireReg"></param>
 void Slot::setSiteData(::lookups::VoiceChData controlChData, uint32_t netId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, bool requireReg)
 {
-    m_siteData = SiteData(SITE_MODEL_SMALL, netId, siteId, 3U, requireReg);
+    m_siteData = SiteData(SiteModel::SMALL, netId, siteId, 3U, requireReg);
     m_channelNo = channelNo;
 
     std::vector<::lookups::IdenTable> entries = m_idenTable->list();
@@ -1254,7 +1255,7 @@ void Slot::notifyCC_TouchGrant(uint32_t dstId)
 /// <param name="dataType"></param>
 /// <param name="errors"></param>
 /// <param name="noSequence"></param>
-void Slot::writeNetwork(const uint8_t* data, uint8_t dataType, uint8_t errors, bool noSequence)
+void Slot::writeNetwork(const uint8_t* data, DataType::E dataType, uint8_t errors, bool noSequence)
 {
     assert(data != nullptr);
     assert(m_rfLC != nullptr);
@@ -1272,7 +1273,7 @@ void Slot::writeNetwork(const uint8_t* data, uint8_t dataType, uint8_t errors, b
 /// <param name="dstId"></param>
 /// <param name="errors"></param>
 /// <param name="noSequence"></param>
-void Slot::writeNetwork(const uint8_t* data, uint8_t dataType, uint8_t flco, uint32_t srcId,
+void Slot::writeNetwork(const uint8_t* data, DataType::E dataType, FLCO::E flco, uint32_t srcId,
     uint32_t dstId, uint8_t errors, bool noSequence)
 {
     assert(data != nullptr);
@@ -1324,11 +1325,11 @@ void Slot::writeEndRF(bool writeEnd)
             Sync::addDMRDataSync(data + 2U, m_duplex);
 
             lc::FullLC fullLC;
-            fullLC.encode(*m_rfLC, data + 2U, DT_TERMINATOR_WITH_LC);
+            fullLC.encode(*m_rfLC, data + 2U, DataType::TERMINATOR_WITH_LC);
 
             SlotType slotType;
             slotType.setColorCode(m_colorCode);
-            slotType.setDataType(DT_TERMINATOR_WITH_LC);
+            slotType.setDataType(DataType::TERMINATOR_WITH_LC);
             slotType.encode(data + 2U);
 
             data[0U] = modem::TAG_EOT;
@@ -1375,11 +1376,11 @@ void Slot::writeEndNet(bool writeEnd)
         Sync::addDMRDataSync(data + 2U, m_duplex);
 
         lc::FullLC fullLC;
-        fullLC.encode(*m_netLC, data + 2U, DT_TERMINATOR_WITH_LC);
+        fullLC.encode(*m_netLC, data + 2U, DataType::TERMINATOR_WITH_LC);
 
         SlotType slotType;
         slotType.setColorCode(m_colorCode);
-        slotType.setDataType(DT_TERMINATOR_WITH_LC);
+        slotType.setDataType(DataType::TERMINATOR_WITH_LC);
         slotType.encode(data + 2U);
 
         data[0U] = modem::TAG_EOT;
@@ -1568,7 +1569,7 @@ void Slot::clearTSCCActivated()
 /// <param name="id"></param>
 /// <param name="flco"></param>
 /// <param name="voice"></param>
-void Slot::setShortLC(uint32_t slotNo, uint32_t id, uint8_t flco, bool voice)
+void Slot::setShortLC(uint32_t slotNo, uint32_t id, FLCO::E flco, bool voice)
 {
     assert(m_modem != nullptr);
 
@@ -1607,7 +1608,7 @@ void Slot::setShortLC(uint32_t slotNo, uint32_t id, uint8_t flco, bool voice)
         return;
 
     uint8_t lc[5U];
-    lc[0U] = SLCO_ACT;
+    lc[0U] = SLCO::ACT;
     lc[1U] = 0x00U;
     lc[2U] = 0x00U;
     lc[3U] = 0x00U;
@@ -1615,13 +1616,13 @@ void Slot::setShortLC(uint32_t slotNo, uint32_t id, uint8_t flco, bool voice)
     if (m_id1 != 0U) {
         lc[2U] = m_id1;
         if (m_voice1) {
-            if (m_flco1 == FLCO_GROUP)
+            if (m_flco1 == FLCO::GROUP)
                 lc[1U] |= 0x80U;
             else
                 lc[1U] |= 0x90U;
         }
         else {
-            if (m_flco1 == FLCO_GROUP)
+            if (m_flco1 == FLCO::GROUP)
                 lc[1U] |= 0xB0U;
             else
                 lc[1U] |= 0xA0U;
@@ -1631,13 +1632,13 @@ void Slot::setShortLC(uint32_t slotNo, uint32_t id, uint8_t flco, bool voice)
     if (m_id2 != 0U) {
         lc[3U] = m_id2;
         if (m_voice2) {
-            if (m_flco2 == FLCO_GROUP)
+            if (m_flco2 == FLCO::GROUP)
                 lc[1U] |= 0x08U;
             else
                 lc[1U] |= 0x09U;
         }
         else {
-            if (m_flco2 == FLCO_GROUP)
+            if (m_flco2 == FLCO::GROUP)
                 lc[1U] |= 0x0BU;
             else
                 lc[1U] |= 0x0AU;
@@ -1665,30 +1666,30 @@ void Slot::setShortLC_TSCC(SiteData siteData, uint16_t counter)
 
     uint8_t lc[5U];
     uint32_t lcValue = 0U;
-    lcValue = SLCO_TSCC;
+    lcValue = SLCO::TSCC;
     lcValue = (lcValue << 2) + siteData.siteModel();
 
     switch (siteData.siteModel())
     {
-    case SITE_MODEL_TINY:
+    case SiteModel::TINY:
     {
         lcValue = (lcValue << 9) + siteData.netId();
         lcValue = (lcValue << 3) + siteData.siteId();
     }
     break;
-    case SITE_MODEL_SMALL:
+    case SiteModel::SMALL:
     {
         lcValue = (lcValue << 7) + siteData.netId();
         lcValue = (lcValue << 5) + siteData.siteId();
     }
     break;
-    case SITE_MODEL_LARGE:
+    case SiteModel::LARGE:
     {
         lcValue = (lcValue << 5) + siteData.netId();
         lcValue = (lcValue << 7) + siteData.siteId();
     }
     break;
-    case SITE_MODEL_HUGE:
+    case SiteModel::HUGE:
     {
         lcValue = (lcValue << 2) + siteData.netId();
         lcValue = (lcValue << 10) + siteData.siteId();
@@ -1728,30 +1729,30 @@ void Slot::setShortLC_Payload(SiteData siteData, uint16_t counter)
 
     uint8_t lc[5U];
     uint32_t lcValue = 0U;
-    lcValue = SLCO_PAYLOAD;
+    lcValue = SLCO::PAYLOAD;
     lcValue = (lcValue << 2) + siteData.siteModel();
 
     switch (siteData.siteModel())
     {
-    case SITE_MODEL_TINY:
+    case SiteModel::TINY:
     {
         lcValue = (lcValue << 9) + siteData.netId();
         lcValue = (lcValue << 3) + siteData.siteId();
     }
     break;
-    case SITE_MODEL_SMALL:
+    case SiteModel::SMALL:
     {
         lcValue = (lcValue << 7) + siteData.netId();
         lcValue = (lcValue << 5) + siteData.siteId();
     }
     break;
-    case SITE_MODEL_LARGE:
+    case SiteModel::LARGE:
     {
         lcValue = (lcValue << 5) + siteData.netId();
         lcValue = (lcValue << 7) + siteData.siteId();
     }
     break;
-    case SITE_MODEL_HUGE:
+    case SiteModel::HUGE:
     {
         lcValue = (lcValue << 2) + siteData.netId();
         lcValue = (lcValue << 10) + siteData.siteId();

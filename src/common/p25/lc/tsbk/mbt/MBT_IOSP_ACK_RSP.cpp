@@ -7,15 +7,16 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
 #include "p25/lc/tsbk/mbt/MBT_IOSP_ACK_RSP.h"
 
-using namespace p25::lc::tsbk;
-using namespace p25::lc;
 using namespace p25;
+using namespace p25::defines;
+using namespace p25::lc;
+using namespace p25::lc::tsbk;
 
 #include <cassert>
 
@@ -28,7 +29,7 @@ using namespace p25;
 /// </summary>
 MBT_IOSP_ACK_RSP::MBT_IOSP_ACK_RSP() : AMBT()
 {
-    m_lco = TSBK_IOSP_ACK_RSP;
+    m_lco = TSBKO::IOSP_ACK_RSP;
 }
 
 /// <summary>
@@ -81,6 +82,6 @@ void MBT_IOSP_ACK_RSP::encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUserD
 /// <returns></returns>
 std::string MBT_IOSP_ACK_RSP::toString(bool isp)
 {
-    if (isp) return std::string("TSBK_IOSP_ACK_RSP (Acknowledge Response - Unit)");
-    else return std::string("TSBK_IOSP_ACK_RSP (Acknowledge Response - FNE)");
+    return (isp) ? std::string("TSBKO, IOSP_ACK_RSP (Acknowledge Response - Unit)") :
+        std::string("TSBKO, IOSP_ACK_RSP (Acknowledge Response - FNE)");
 }

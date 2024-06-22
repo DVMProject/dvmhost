@@ -28,6 +28,8 @@ namespace p25
     class HOST_SW_API P25Utils {
     public:
         /// <summary>Helper to test and clamp a P25 NAC.</summary>
+        /// <param name="nac">Network Access Code</param>
+        /// <returns>Clamped network access code.</returns>
         static uint32_t nac(uint32_t nac)
         {
             if (nac < 0U) { // clamp to $000
@@ -41,6 +43,8 @@ namespace p25
         }
 
         /// <summary>Helper to test and clamp a P25 site ID.</summary>
+        /// <param name="id">Site ID</param>
+        /// <returns>Clamped site ID.</returns>
         static uint8_t siteId(uint8_t id)
         {
             if (id == 0U) { // clamp to 1
@@ -54,6 +58,8 @@ namespace p25
         }
 
         /// <summary>Helper to test and clamp a P25 network ID.</summary>
+        /// <param name="id">Network ID</param>
+        /// <returns>Clamped network ID.</returns>
         static uint32_t netId(uint32_t id)
         {
             if (id == 0U) { // clamp to 1
@@ -67,6 +73,8 @@ namespace p25
         }
 
         /// <summary>Helper to test and clamp a P25 system ID.</summary>
+        /// <param name="id">System ID</param>
+        /// <returns>Clamped system ID.</returns>
         static uint32_t sysId(uint32_t id)
         {
             if (id == 0U) { // clamp to 1
@@ -80,6 +88,8 @@ namespace p25
         }
 
         /// <summary>Helper to test and clamp a P25 RFSS ID.</summary>
+        /// <param name="id">RFSS ID</param>
+        /// <returns>Clamped RFSS ID.</returns>
         static uint8_t rfssId(uint8_t id)
         {
             if (id == 0U) { // clamp to 1

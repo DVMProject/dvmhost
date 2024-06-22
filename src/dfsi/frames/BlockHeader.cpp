@@ -32,7 +32,7 @@ using namespace p25::dfsi;
 /// </summary>
 BlockHeader::BlockHeader() :
     m_payloadType(false),
-    m_blockLength(UNDEFINED)
+    m_blockLength(BlockType::UNDEFINED)
 {
     /* stub */
 }
@@ -44,7 +44,7 @@ BlockHeader::BlockHeader() :
 /// <param name="verbose"></param>
 BlockHeader::BlockHeader(uint8_t* data, bool verbose) :
     m_payloadType(false),
-    m_blockLength(UNDEFINED)
+    m_blockLength(BlockType::UNDEFINED)
 {
     decode(data, verbose);
 }
@@ -68,7 +68,7 @@ bool BlockHeader::decode(const uint8_t* data, bool verbose)
     value = (value << 8) + data[3U];
 
     m_payloadType = (data[0U] & 0x80U) == 0x80U;                // Payload Type
-    m_blockType = (BlockType)(data[0U] & 0x7FU);                // Block Type
+    m_blockType = (BlockType::E)(data[0U] & 0x7FU);             // Block Type
 
     if (verbose) {
         m_timestampOffset = (uint32_t)((value >> 10) & 0x3FFU); // Timestamp Offset

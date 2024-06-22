@@ -7,7 +7,7 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2018,2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2018,2022,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
@@ -17,8 +17,9 @@
 #include "Log.h"
 #include "Utils.h"
 
-using namespace p25::data;
 using namespace p25;
+using namespace p25::defines;
+using namespace p25::data;
 
 #include <cassert>
 #include <cstring>
@@ -43,9 +44,9 @@ bool DataHeader::m_warnCRC = false;
 DataHeader::DataHeader() :
     m_ackNeeded(false),
     m_outbound(false),
-    m_fmt(PDU_FMT_CONFIRMED),
+    m_fmt(PDUFormatType::CONFIRMED),
     m_sap(0U),
-    m_mfId(P25_MFG_STANDARD),
+    m_mfId(MFG_STANDARD),
     m_llId(0U),
     m_blocksToFollow(0U),
     m_padLength(0U),
@@ -56,8 +57,8 @@ DataHeader::DataHeader() :
     m_lastFragment(true),
     m_headerOffset(0U),
     m_srcLlId(0U),
-    m_rspClass(PDU_ACK_CLASS_NACK),
-    m_rspType(PDU_ACK_TYPE_NACK_ILLEGAL),
+    m_rspClass(PDUAckClass::NACK),
+    m_rspType(PDUAckType::NACK_ILLEGAL),
     m_rspStatus(0U),
     m_ambtOpcode(0U),
     m_ambtField8(0U),
@@ -136,12 +137,12 @@ bool DataHeader::decode(const uint8_t* data, bool noTrellis)
     m_blocksToFollow = m_data[6U] & 0x7FU;                                      // Block Frames to Follow
 
     m_padLength = m_data[7U] & 0x1FU;                                           // Pad Byte Count
-    if (m_fmt == PDU_FMT_RSP || m_fmt == PDU_FMT_AMBT) {
+    if (m_fmt == PDUFormatType::RSP || m_fmt == PDUFormatType::AMBT) {
         m_padLength = 0U;
     }
 
     switch (m_fmt) {
-    case PDU_FMT_CONFIRMED:
+    case PDUFormatType::CONFIRMED:
         m_S = (m_data[8U] & 0x80U) == 0x80U;                                    // Re-synchronize Flag
 
         m_Ns = (m_data[8U] >> 4) & 0x07U;                                       // Packet Sequence No.
@@ -150,9 +151,9 @@ bool DataHeader::decode(const uint8_t* data, bool noTrellis)
 
         m_headerOffset = m_data[9U] & 0x3FU;                                    // Data Header Offset
         break;
-    case PDU_FMT_RSP:
+    case PDUFormatType::RSP:
         m_ackNeeded = false;
-        m_sap = PDU_SAP_USER_DATA;
+        m_sap = PDUSAP::USER_DATA;
         m_rspClass = (m_data[1U] >> 6) & 0x03U;                                 // Response Class
         m_rspType = (m_data[1U] >> 3) & 0x07U;                                  // Response Type
         m_rspStatus = m_data[1U] & 0x07U;                                       // Response Status
@@ -160,12 +161,12 @@ bool DataHeader::decode(const uint8_t* data, bool noTrellis)
             m_srcLlId = (m_data[7U] << 16) + (m_data[8U] << 8) + m_data[9U];    // Source Logical Link ID
         }
         break;
-    case PDU_FMT_AMBT:
+    case PDUFormatType::AMBT:
         m_ambtOpcode = m_data[7U] & 0x3FU;                                      // AMBT Opcode
         m_ambtField8 = m_data[8U];                                              // AMBT Field 8
         m_ambtField9 = m_data[9U];                                              // AMBT Field 9
         // fall-thru
-    case PDU_FMT_UNCONFIRMED:
+    case PDUFormatType::UNCONFIRMED:
     default:
         m_ackNeeded = false;
         m_S = false;
@@ -190,12 +191,12 @@ void DataHeader::encode(uint8_t* data, bool noTrellis)
     uint8_t header[P25_PDU_HEADER_LENGTH_BYTES];
     ::memset(header, 0x00U, P25_PDU_HEADER_LENGTH_BYTES);
 
-    if (m_fmt == PDU_FMT_UNCONFIRMED || m_fmt == PDU_FMT_RSP) {
+    if (m_fmt == PDUFormatType::UNCONFIRMED || m_fmt == PDUFormatType::RSP) {
         m_ackNeeded = false;
     }
 
-    if (m_fmt == PDU_FMT_CONFIRMED && !m_ackNeeded) {
-        LogWarning(LOG_P25, "DataHeader::encode(), invalid values for PDU_FMT_CONFIRMED, ackNeeded = %u", m_ackNeeded);
+    if (m_fmt == PDUFormatType::CONFIRMED && !m_ackNeeded) {
+        LogWarning(LOG_P25, "DataHeader::encode(), invalid values for confirmed PDU, ackNeeded = %u", m_ackNeeded);
         m_ackNeeded = true; // force set this to true
     }
 
@@ -216,7 +217,7 @@ void DataHeader::encode(uint8_t* data, bool noTrellis)
         (m_blocksToFollow & 0x7FU);                                             // Blocks Frames to Follow
 
     switch (m_fmt) {
-    case PDU_FMT_CONFIRMED:
+    case PDUFormatType::CONFIRMED:
         header[7U] = (m_padLength & 0x1FU);                                     // Pad Byte Count
         header[8U] = (m_S ? 0x80U : 0x00U) +                                    // Re-synchronize Flag
             ((m_Ns & 0x07U) << 4) +                                             // Packet Sequence No.
@@ -225,7 +226,7 @@ void DataHeader::encode(uint8_t* data, bool noTrellis)
 
         header[9U] = m_headerOffset & 0x3FU;                                    // Data Header Offset
         break;
-    case PDU_FMT_RSP:
+    case PDUFormatType::RSP:
         header[1U] = ((m_rspClass & 0x03U) << 6) +                              // Response Class
             ((m_rspType & 0x07U) << 3) +                                        // Response Type
             ((m_rspStatus & 0x07U));                                            // Response Status
@@ -235,12 +236,12 @@ void DataHeader::encode(uint8_t* data, bool noTrellis)
             header[9U] = (m_srcLlId >> 0) & 0xFFU;
         }
         break;
-    case PDU_FMT_AMBT:
+    case PDUFormatType::AMBT:
         header[7U] = (m_ambtOpcode & 0x3FU);                                    // AMBT Opcode
         header[8U] = m_ambtField8;                                              // AMBT Field 8
         header[9U] = m_ambtField9;                                              // AMBT Field 9
         break;
-    case PDU_FMT_UNCONFIRMED:
+    case PDUFormatType::UNCONFIRMED:
     default:
         header[7U] = (m_padLength & 0x1FU);                                     // Pad Byte Count
         header[8U] = 0x00U;
@@ -271,10 +272,10 @@ void DataHeader::reset()
     m_ackNeeded = false;
     m_outbound = false;
 
-    m_fmt = PDU_FMT_CONFIRMED;
+    m_fmt = PDUFormatType::CONFIRMED;
 
-    m_sap = PDU_SAP_USER_DATA;
-    m_mfId = P25_MFG_STANDARD;
+    m_sap = PDUSAP::USER_DATA;
+    m_mfId = MFG_STANDARD;
     m_llId = 0U;
 
     m_F = true;
@@ -290,8 +291,8 @@ void DataHeader::reset()
     m_headerOffset = 0U;
 
     m_srcLlId = 0U;
-    m_rspClass = PDU_ACK_CLASS_NACK;
-    m_rspType = PDU_ACK_TYPE_NACK_ILLEGAL;
+    m_rspClass = PDUAckClass::NACK;
+    m_rspType = PDUAckType::NACK_ILLEGAL;
     m_rspStatus = 0U;
 
     m_ambtOpcode = 0U;
@@ -307,7 +308,7 @@ void DataHeader::reset()
 /// <returns></returns>
 uint32_t DataHeader::getPacketLength() const
 {
-    if (m_fmt == PDU_FMT_CONFIRMED) {
+    if (m_fmt == PDUFormatType::CONFIRMED) {
         return P25_PDU_CONFIRMED_DATA_LENGTH_BYTES * m_blocksToFollow - 4 - m_padLength;
     }
     else {
@@ -336,7 +337,7 @@ uint32_t DataHeader::getData(uint8_t* buffer) const
 uint32_t DataHeader::calculatePadLength(uint8_t fmt, uint32_t packetLength)
 {
     uint32_t len = packetLength + 4;
-    if (fmt == PDU_FMT_CONFIRMED) {
+    if (fmt == PDUFormatType::CONFIRMED) {
         return P25_PDU_CONFIRMED_DATA_LENGTH_BYTES - (len % P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
     }
     else {

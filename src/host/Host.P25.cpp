@@ -7,7 +7,7 @@
 * @package DVM / Modem Host Software
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2017-2023 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
@@ -43,7 +43,7 @@ void Host::interruptP25Control(p25::Control* control)
 /// <param name="afterReadCallback"></param>
 void Host::readFramesP25(p25::Control* control, std::function<void()>&& afterReadCallback)
 {
-    uint8_t data[p25::P25_PDU_FRAME_LENGTH_BYTES * 2U];
+    uint8_t data[P25DEF::P25_PDU_FRAME_LENGTH_BYTES * 2U];
 
     // read P25 frames from modem, and if there are frames
     // write those frames to the P25 controller
@@ -124,7 +124,7 @@ void Host::readFramesP25(p25::Control* control, std::function<void()>&& afterRea
 /// <param name="afterWriteCallback"></param>
 void Host::writeFramesP25(p25::Control* control, std::function<void()>&& afterWriteCallback)
 {
-    uint8_t data[p25::P25_PDU_FRAME_LENGTH_BYTES * 2U];
+    uint8_t data[P25DEF::P25_PDU_FRAME_LENGTH_BYTES * 2U];
 
     // check if there is space on the modem for P25 frames,
     // if there is read frames from the P25 controller and write it

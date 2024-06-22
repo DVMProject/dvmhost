@@ -17,6 +17,7 @@
 
 #include "Defines.h"
 #include "common/Defines.h"
+#include "common/p25/dfsi/DFSIDefines.h"
 #include "common/Log.h"
 #include "common/Utils.h"
 #include "frames/FrameDefines.h"
@@ -49,7 +50,6 @@ namespace p25
             static const uint8_t LENGTH = 17;
             static const uint8_t SHORTENED_LENGTH = 13;
             static const uint8_t ADDITIONAL_LENGTH = 4;
-            static const uint8_t IMBE_BUF_LEN = 11;
 
             /// <summary>Initializes a copy instance of the MotFullRateVoice class.</summary>
             MotFullRateVoice();
@@ -70,9 +70,9 @@ namespace p25
             uint8_t* additionalData; // ?? - this should probably be private with getters/setters
 
             /// <summary>Frame Type.</summary>
-            __PROPERTY(uint8_t, frameType, FrameType);
+            __PROPERTY(defines::DFSIFrameType::E, frameType, FrameType);
             /// <summary></summary>
-            __PROPERTY(uint8_t, source, Source);
+            __PROPERTY(SourceFlag::E, source, Source);
 
         private:
             /// <summary></summary>

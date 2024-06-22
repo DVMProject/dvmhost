@@ -22,6 +22,7 @@
 
 using namespace p25;
 using namespace p25::dfsi;
+using namespace p25::dfsi::defines;
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -33,7 +34,7 @@ using namespace p25::dfsi;
 FullRateVoice::FullRateVoice() :
     imbeData(nullptr),
     additionalData(nullptr),
-    m_frameType(P25_DFSI_LDU1_VOICE1),
+    m_frameType(DFSIFrameType::LDU1_VOICE1),
     m_totalErrors(0U),
     m_muteFrame(false),
     m_lostFrame(false),
@@ -51,7 +52,7 @@ FullRateVoice::FullRateVoice() :
 FullRateVoice::FullRateVoice(uint8_t* data) :
     imbeData(nullptr),
     additionalData(nullptr),
-    m_frameType(P25_DFSI_LDU1_VOICE1),
+    m_frameType(DFSIFrameType::LDU1_VOICE1),
     m_totalErrors(0U),
     m_muteFrame(false),
     m_lostFrame(false),
@@ -86,7 +87,7 @@ bool FullRateVoice::decode(const uint8_t* data)
     imbeData = new uint8_t[IMBE_BUF_LEN];
     ::memset(imbeData, 0x00U, IMBE_BUF_LEN);
 
-    m_frameType = data[0U];                                     // Frame Type
+    m_frameType = (DFSIFrameType::E)data[0U];                   // Frame Type
     ::memcpy(imbeData, data + 1U, IMBE_BUF_LEN);                // IMBE
 
     m_totalErrors = (uint8_t)((data[12U] >> 5) & 0x07U);        // Total Errors
@@ -155,8 +156,8 @@ void FullRateVoice::encode(uint8_t* data)
 /// <returns></returns>
 bool FullRateVoice::isVoice3thru8()
 {
-    if ( (m_frameType == P25_DFSI_LDU1_VOICE3) || (m_frameType == P25_DFSI_LDU1_VOICE4) || (m_frameType == P25_DFSI_LDU1_VOICE5) || 
-         (m_frameType == P25_DFSI_LDU1_VOICE6) || (m_frameType == P25_DFSI_LDU1_VOICE7) || (m_frameType == P25_DFSI_LDU1_VOICE8) ) {
+    if ( (m_frameType == DFSIFrameType::LDU1_VOICE3) || (m_frameType == DFSIFrameType::LDU1_VOICE4) || (m_frameType == DFSIFrameType::LDU1_VOICE5) || 
+         (m_frameType == DFSIFrameType::LDU1_VOICE6) || (m_frameType == DFSIFrameType::LDU1_VOICE7) || (m_frameType == DFSIFrameType::LDU1_VOICE8) ) {
         return true;
     } else {
         return false;
@@ -169,8 +170,8 @@ bool FullRateVoice::isVoice3thru8()
 /// <returns></returns>
 bool FullRateVoice::isVoice12thru17()
 {
-    if ( (m_frameType == P25_DFSI_LDU2_VOICE12) || (m_frameType == P25_DFSI_LDU2_VOICE13) || (m_frameType == P25_DFSI_LDU2_VOICE14) ||
-         (m_frameType == P25_DFSI_LDU2_VOICE15) || (m_frameType == P25_DFSI_LDU2_VOICE16) || (m_frameType == P25_DFSI_LDU2_VOICE17) ) {
+    if ( (m_frameType == DFSIFrameType::LDU2_VOICE12) || (m_frameType == DFSIFrameType::LDU2_VOICE13) || (m_frameType == DFSIFrameType::LDU2_VOICE14) ||
+         (m_frameType == DFSIFrameType::LDU2_VOICE15) || (m_frameType == DFSIFrameType::LDU2_VOICE16) || (m_frameType == DFSIFrameType::LDU2_VOICE17) ) {
         return true;
     } else {
         return false;
@@ -183,7 +184,7 @@ bool FullRateVoice::isVoice12thru17()
 /// <returns></returns>
 bool FullRateVoice::isVoice9or10()
 {
-    if ( (m_frameType == P25_DFSI_LDU1_VOICE9) || (m_frameType == P25_DFSI_LDU2_VOICE10) ) {
+    if ( (m_frameType == DFSIFrameType::LDU1_VOICE9) || (m_frameType == DFSIFrameType::LDU2_VOICE10) ) {
         return true;
     } else {
         return false;

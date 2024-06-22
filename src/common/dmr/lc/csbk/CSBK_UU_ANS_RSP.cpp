@@ -7,15 +7,16 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
 #include "dmr/lc/csbk/CSBK_UU_ANS_RSP.h"
 
-using namespace dmr::lc::csbk;
-using namespace dmr::lc;
 using namespace dmr;
+using namespace dmr::defines;
+using namespace dmr::lc;
+using namespace dmr::lc::csbk;
 
 #include <cassert>
 
@@ -28,7 +29,7 @@ using namespace dmr;
 /// </summary>
 CSBK_UU_ANS_RSP::CSBK_UU_ANS_RSP() : CSBK()
 {
-    m_CSBKO = CSBKO_UU_ANS_RSP;
+    m_CSBKO = CSBKO::UU_ANS_RSP;
 }
 
 /// <summary>
@@ -72,5 +73,5 @@ void CSBK_UU_ANS_RSP::encode(uint8_t* data)
 /// <returns></returns>
 std::string CSBK_UU_ANS_RSP::toString()
 {
-    return std::string("CSBKO_UU_ANS_RSP (Unit-to-Unit Answer Response)");
+    return std::string("CSBKO, UU_ANS_RSP (Unit-to-Unit Answer Response)");
 }

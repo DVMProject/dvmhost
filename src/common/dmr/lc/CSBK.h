@@ -9,13 +9,14 @@
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
 *   Copyright (C) 2015,2016 Jonathan Naylor, G4KLX
-*   Copyright (C) 2019-2023 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2019-2024 Bryan Biedenkapp, N2PLL
 *
 */
 #if !defined(__DMR_LC__CSBK_H__)
 #define __DMR_LC__CSBK_H__
 
 #include "common/Defines.h"
+#include "common/dmr/DMRDefines.h"
 #include "common/dmr/SiteData.h"
 #include "common/lookups/IdenTableLookup.h"
 #include "common/Utils.h"
@@ -95,7 +96,7 @@ namespace dmr
             __PROTECTED_PROPERTY(uint8_t, CBF, CBF);
 
             /// <summary>Data type for this CSBK.</summary>
-            __PROTECTED_PROPERTY(uint8_t, dataType, DataType);
+            __PROTECTED_PROPERTY(defines::DataType::E, dataType, DataType);
 
             /** Common Service Options */
             /// <summary>Flag indicating the emergency bits are set.</summary>

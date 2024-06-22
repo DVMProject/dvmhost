@@ -7,15 +7,16 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
 #include "dmr/lc/csbk/CSBK_TV_GRANT.h"
 
-using namespace dmr::lc::csbk;
-using namespace dmr::lc;
 using namespace dmr;
+using namespace dmr::defines;
+using namespace dmr::lc;
+using namespace dmr::lc::csbk;
 
 #include <cassert>
 
@@ -29,7 +30,7 @@ using namespace dmr;
 CSBK_TV_GRANT::CSBK_TV_GRANT() : CSBK(),
     m_lateEntry(false)
 {
-    m_CSBKO = CSBKO_TV_GRANT;
+    m_CSBKO = CSBKO::TV_GRANT;
 }
 
 /// <summary>
@@ -74,7 +75,7 @@ void CSBK_TV_GRANT::encode(uint8_t* data)
 /// <returns></returns>
 std::string CSBK_TV_GRANT::toString()
 {
-    return std::string("CSBKO_TV_GRANT (Talkgroup Voice Channel Grant)");
+    return std::string("CSBKO, TV_GRANT (Talkgroup Voice Channel Grant)");
 }
 
 // ---------------------------------------------------------------------------

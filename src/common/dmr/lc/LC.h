@@ -9,13 +9,14 @@
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
 *   Copyright (C) 2015,2016 Jonathan Naylor, G4KLX
-*   Copyright (C) 2020-2021 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2020-2024 Bryan Biedenkapp, N2PLL
 *
 */
 #if !defined(__DMR_LC__LC_H__)
 #define __DMR_LC__LC_H__
 
 #include "common/Defines.h"
+#include "common/dmr/DMRDefines.h"
 
 namespace dmr
 {
@@ -29,7 +30,7 @@ namespace dmr
         class HOST_SW_API LC {
         public:
             /// <summary>Initializes a new instance of the LC class.</summary>
-            LC(uint8_t flco, uint32_t srcId, uint32_t dstId);
+            LC(defines::FLCO::E flco, uint32_t srcId, uint32_t dstId);
             /// <summary>Initializes a new instance of the LC class.</summary>
             LC(const uint8_t* data);
             /// <summary>Initializes a new instance of the LC class.</summary>
@@ -49,7 +50,7 @@ namespace dmr
             __PROPERTY(bool, PF, PF);
 
             /// <summary>Full-link control opcode.</summary>
-            __PROPERTY(uint8_t, FLCO, FLCO);
+            __PROPERTY(defines::FLCO::E, FLCO, FLCO);
 
             /// <summary>Feature ID.</summayr>
             __PROPERTY(uint8_t, FID, FID);

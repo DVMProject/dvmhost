@@ -7,15 +7,16 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
 #include "p25/lc/tsbk/ISP_GRP_AFF_Q_RSP.h"
 
-using namespace p25::lc::tsbk;
-using namespace p25::lc;
 using namespace p25;
+using namespace p25::defines;
+using namespace p25::lc;
+using namespace p25::lc::tsbk;
 
 #include <cassert>
 
@@ -27,9 +28,9 @@ using namespace p25;
 /// Initializes a new instance of the ISP_GRP_AFF_Q_RSP class.
 /// </summary>
 ISP_GRP_AFF_Q_RSP::ISP_GRP_AFF_Q_RSP() : TSBK(),
-    m_announceGroup(P25_WUID_ALL)
+    m_announceGroup(WUID_ALL)
 {
-    m_lco = TSBK_ISP_GRP_AFF_Q_RSP;
+    m_lco = TSBKO::ISP_GRP_AFF_Q_RSP;
 }
 
 /// <summary>
@@ -78,7 +79,7 @@ void ISP_GRP_AFF_Q_RSP::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 /// <returns></returns>
 std::string ISP_GRP_AFF_Q_RSP::toString(bool isp)
 {
-    return std::string("TSBK_ISP_GRP_AFF_Q_RSP (Group Affiliation Query Response)");
+    return std::string("TSBKO, ISP_GRP_AFF_Q_RSP (Group Affiliation Query Response)");
 }
 
 // ---------------------------------------------------------------------------

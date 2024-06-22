@@ -7,16 +7,17 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
 #include "p25/lc/tsbk/OSP_QUE_RSP.h"
 #include "Log.h"
 
-using namespace p25::lc::tsbk;
-using namespace p25::lc;
 using namespace p25;
+using namespace p25::defines;
+using namespace p25::lc;
+using namespace p25::lc::tsbk;
 
 #include <cassert>
 
@@ -29,7 +30,7 @@ using namespace p25;
 /// </summary>
 OSP_QUE_RSP::OSP_QUE_RSP() : TSBK()
 {
-    m_lco = TSBK_OSP_QUE_RSP;
+    m_lco = TSBKO::OSP_QUE_RSP;
 }
 
 /// <summary>
@@ -73,7 +74,7 @@ void OSP_QUE_RSP::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
     ulong64_t tsbkValue = 0U;
 
     if (m_response == 0U) {
-        LogError(LOG_P25, "OSP_QUE_RSP::encode(), invalid values for TSBK_OSP_QUE_RSP, reason = %u", m_response);
+        LogError(LOG_P25, "OSP_QUE_RSP::encode(), invalid values for TSBKO::OSP_QUE_RSP, reason = %u", m_response);
         return; // blatantly ignore creating this TSBK
     }
 
@@ -106,5 +107,5 @@ void OSP_QUE_RSP::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 /// <returns></returns>
 std::string OSP_QUE_RSP::toString(bool isp)
 {
-    return std::string("TSBK_OSP_QUE_RSP (Queued Response)");
+    return std::string("TSBKO, OSP_QUE_RSP (Queued Response)");
 }

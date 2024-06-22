@@ -7,7 +7,7 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2018,2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2018,2022,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
@@ -17,8 +17,9 @@
 #include "Log.h"
 #include "Utils.h"
 
-using namespace p25::data;
 using namespace p25;
+using namespace p25::defines;
+using namespace p25::data;
 
 #include <cassert>
 #include <cstring>
@@ -36,7 +37,7 @@ DataBlock::DataBlock() :
     m_llId(0U),
     m_sap(0U),
     m_trellis(),
-    m_fmt(PDU_FMT_CONFIRMED),
+    m_fmt(PDUFormatType::CONFIRMED),
     m_headerSap(0U),
     m_data(nullptr)
 {
@@ -73,7 +74,7 @@ bool DataBlock::decode(const uint8_t* data, const DataHeader& header)
     m_lastBlock = false;
     m_llId = 0U;
 
-    if (m_fmt == PDU_FMT_CONFIRMED) {
+    if (m_fmt == PDUFormatType::CONFIRMED) {
         // decode 3/4 rate Trellis
         try {
             bool valid = m_trellis.decode34(data, buffer);
@@ -92,7 +93,7 @@ bool DataBlock::decode(const uint8_t* data, const DataHeader& header)
             ::memset(m_data, 0x00U, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
 
             // if this is extended addressing and the first block decode the SAP and LLId
-            if (m_headerSap == PDU_SAP_EXT_ADDR && m_serialNo == 0U) {
+            if (m_headerSap == PDUSAP::EXT_ADDR && m_serialNo == 0U) {
                 m_sap = buffer[5U] & 0x3FU;                                                 // Service Access Point
                 m_llId = (buffer[2U] << 16) + (buffer[3U] << 8) + buffer[4U];               // Logical Link ID
 
@@ -118,11 +119,11 @@ bool DataBlock::decode(const uint8_t* data, const DataHeader& header)
             // compute CRC-9 for the packet
             uint16_t calculated = edac::CRC::createCRC9(crcBuffer, 135U);
             if ((crc ^ calculated) != 0) {
-                LogWarning(LOG_P25, "P25_DUID_PDU, fmt = $%02X, invalid crc = $%04X != $%04X (computed)", m_fmt, crc, calculated);
+                LogWarning(LOG_P25, "PDU, fmt = $%02X, invalid crc = $%04X != $%04X (computed)", m_fmt, crc, calculated);
             }
 
 #if DEBUG_P25_PDU_DATA
-            LogDebug(LOG_P25, "P25_DUID_PDU, fmt = $%02X, crc = $%04X, calculated = $%04X", m_fmt, crc, calculated);
+            LogDebug(LOG_P25, "PDU, fmt = $%02X, crc = $%04X, calculated = $%04X", m_fmt, crc, calculated);
             Utils::dump(1U, "P25, DataBlock::decode(), Confirmed PDU Block Data", m_data, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
 #endif
         }
@@ -131,7 +132,7 @@ bool DataBlock::decode(const uint8_t* data, const DataHeader& header)
             return false;
         }
     }
-    else if ((m_fmt == PDU_FMT_UNCONFIRMED) || (m_fmt == PDU_FMT_RSP) || (m_fmt == PDU_FMT_AMBT)) {
+    else if ((m_fmt == PDUFormatType::UNCONFIRMED) || (m_fmt == PDUFormatType::RSP) || (m_fmt == PDUFormatType::AMBT)) {
         // decode 1/2 rate Trellis
         try {
             bool valid = m_trellis.decode12(data, buffer);
@@ -154,7 +155,7 @@ bool DataBlock::decode(const uint8_t* data, const DataHeader& header)
         }
     }
     else {
-        LogError(LOG_P25, "unknown FMT value in P25_DUID_PDU, fmt = $%02X", m_fmt);
+        LogError(LOG_P25, "unknown FMT value in PDU, fmt = $%02X", m_fmt);
     }
 
     return true;
@@ -169,14 +170,14 @@ void DataBlock::encode(uint8_t* data)
     assert(data != nullptr);
     assert(m_data != nullptr);
 
-    if (m_fmt == PDU_FMT_CONFIRMED) {
+    if (m_fmt == PDUFormatType::CONFIRMED) {
         uint8_t buffer[P25_PDU_CONFIRMED_LENGTH_BYTES];
         ::memset(buffer, 0x00U, P25_PDU_CONFIRMED_LENGTH_BYTES);
 
         buffer[0U] = ((m_serialNo << 1) & 0xFEU);                                           // Confirmed Data Serial No.
 
         // if this is extended addressing and the first block decode the SAP and LLId
-        if (m_headerSap == PDU_SAP_EXT_ADDR && m_serialNo == 0U) {
+        if (m_headerSap == PDUSAP::EXT_ADDR && m_serialNo == 0U) {
             buffer[5U] = m_sap & 0x3FU;                                                     // Service Access Point
 
             buffer[2U] = (m_llId >> 16) & 0xFFU;                                            // Logical Link ID
@@ -212,7 +213,7 @@ void DataBlock::encode(uint8_t* data)
 
         m_trellis.encode34(buffer, data);
     }
-    else if (m_fmt == PDU_FMT_UNCONFIRMED || m_fmt == PDU_FMT_RSP || m_fmt == PDU_FMT_AMBT) {
+    else if (m_fmt == PDUFormatType::UNCONFIRMED || m_fmt == PDUFormatType::RSP || m_fmt == PDUFormatType::AMBT) {
         uint8_t buffer[P25_PDU_UNCONFIRMED_LENGTH_BYTES];
         ::memset(buffer, 0x00U, P25_PDU_UNCONFIRMED_LENGTH_BYTES);
 
@@ -225,7 +226,7 @@ void DataBlock::encode(uint8_t* data)
         m_trellis.encode12(buffer, data);
     }
     else {
-        LogError(LOG_P25, "unknown FMT value in P25_DUID_PDU, fmt = $%02X", m_fmt);
+        LogError(LOG_P25, "unknown FMT value in PDU, fmt = $%02X", m_fmt);
         return;
     }
 }
@@ -266,14 +267,14 @@ void DataBlock::setData(const uint8_t* buffer)
     assert(buffer != nullptr);
     assert(m_data != nullptr);
 
-    if (m_fmt == PDU_FMT_CONFIRMED) {
+    if (m_fmt == PDUFormatType::CONFIRMED) {
         ::memcpy(m_data, buffer, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
     }
-    else if (m_fmt == PDU_FMT_UNCONFIRMED || m_fmt == PDU_FMT_RSP || m_fmt == PDU_FMT_AMBT) {
+    else if (m_fmt == PDUFormatType::UNCONFIRMED || m_fmt == PDUFormatType::RSP || m_fmt == PDUFormatType::AMBT) {
         ::memcpy(m_data, buffer, P25_PDU_UNCONFIRMED_LENGTH_BYTES);
     }
     else {
-        LogError(LOG_P25, "unknown FMT value in P25_DUID_PDU, fmt = $%02X", m_fmt);
+        LogError(LOG_P25, "unknown FMT value in PDU, fmt = $%02X", m_fmt);
     }
 }
 
@@ -286,16 +287,16 @@ uint32_t DataBlock::getData(uint8_t* buffer) const
     assert(buffer != nullptr);
     assert(m_data != nullptr);
 
-    if (m_fmt == PDU_FMT_CONFIRMED) {
+    if (m_fmt == PDUFormatType::CONFIRMED) {
         ::memcpy(buffer, m_data, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
         return P25_PDU_CONFIRMED_DATA_LENGTH_BYTES;
     }
-    else if (m_fmt == PDU_FMT_UNCONFIRMED || m_fmt == PDU_FMT_RSP || m_fmt == PDU_FMT_AMBT) {
+    else if (m_fmt == PDUFormatType::UNCONFIRMED || m_fmt == PDUFormatType::RSP || m_fmt == PDUFormatType::AMBT) {
         ::memcpy(buffer, m_data, P25_PDU_UNCONFIRMED_LENGTH_BYTES);
         return P25_PDU_UNCONFIRMED_LENGTH_BYTES;
     }
     else {
-        LogError(LOG_P25, "unknown FMT value in P25_DUID_PDU, fmt = $%02X", m_fmt);
+        LogError(LOG_P25, "unknown FMT value in PDU, fmt = $%02X", m_fmt);
         return 0U;
     }
 }

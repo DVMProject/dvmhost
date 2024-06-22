@@ -10,7 +10,7 @@
 *
 *   Copyright (C) 2012 Ian Wraith
 *   Copyright (C) 2015,2016 Jonathan Naylor, G4KLX
-*   Copyright (C) 2021 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2021,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
@@ -20,8 +20,9 @@
 #include "edac/CRC.h"
 #include "Log.h"
 
-using namespace dmr::lc;
 using namespace dmr;
+using namespace dmr::defines;
+using namespace dmr::lc;
 
 #include <cassert>
 #include <memory>
@@ -50,7 +51,7 @@ FullLC::~FullLC() = default;
 /// <param name="data"></param>
 /// <param name="type"></param>
 /// <returns></returns>
-std::unique_ptr<LC> FullLC::decode(const uint8_t* data, uint8_t type)
+std::unique_ptr<LC> FullLC::decode(const uint8_t* data, DataType::E type)
 {
     assert(data != nullptr);
 
@@ -59,13 +60,13 @@ std::unique_ptr<LC> FullLC::decode(const uint8_t* data, uint8_t type)
     m_bptc.decode(data, lcData);
 
     switch (type) {
-        case DT_VOICE_LC_HEADER:
+        case DataType::VOICE_LC_HEADER:
             lcData[9U] ^= VOICE_LC_HEADER_CRC_MASK[0U];
             lcData[10U] ^= VOICE_LC_HEADER_CRC_MASK[1U];
             lcData[11U] ^= VOICE_LC_HEADER_CRC_MASK[2U];
             break;
 
-        case DT_TERMINATOR_WITH_LC:
+        case DataType::TERMINATOR_WITH_LC:
             lcData[9U] ^= TERMINATOR_WITH_LC_CRC_MASK[0U];
             lcData[10U] ^= TERMINATOR_WITH_LC_CRC_MASK[1U];
             lcData[11U] ^= TERMINATOR_WITH_LC_CRC_MASK[2U];
@@ -89,7 +90,7 @@ std::unique_ptr<LC> FullLC::decode(const uint8_t* data, uint8_t type)
 /// <param name="lc"></param>
 /// <param name="data"></param>
 /// <param name="type"></param>
-void FullLC::encode(const LC& lc, uint8_t* data, uint8_t type)
+void FullLC::encode(const LC& lc, uint8_t* data, DataType::E type)
 {
     assert(data != nullptr);
 
@@ -101,13 +102,13 @@ void FullLC::encode(const LC& lc, uint8_t* data, uint8_t type)
     edac::RS129::encode(lcData, 9U, parity);
 
     switch (type) {
-        case DT_VOICE_LC_HEADER:
+        case DataType::VOICE_LC_HEADER:
             lcData[9U] = parity[2U] ^ VOICE_LC_HEADER_CRC_MASK[0U];
             lcData[10U] = parity[1U] ^ VOICE_LC_HEADER_CRC_MASK[1U];
             lcData[11U] = parity[0U] ^ VOICE_LC_HEADER_CRC_MASK[2U];
             break;
 
-        case DT_TERMINATOR_WITH_LC:
+        case DataType::TERMINATOR_WITH_LC:
             lcData[9U] = parity[2U] ^ TERMINATOR_WITH_LC_CRC_MASK[0U];
             lcData[10U] = parity[1U] ^ TERMINATOR_WITH_LC_CRC_MASK[1U];
             lcData[11U] = parity[0U] ^ TERMINATOR_WITH_LC_CRC_MASK[2U];

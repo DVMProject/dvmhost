@@ -23,6 +23,7 @@
 
 using namespace p25;
 using namespace p25::dfsi;
+using namespace p25::dfsi::defines;
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -34,9 +35,9 @@ using namespace p25::dfsi;
 MotVoiceHeader1::MotVoiceHeader1() :
     header(nullptr),
     startOfStream(nullptr),
-    m_icw(ICW_DIU),
+    m_icw(ICWFlag::DIU),
     m_rssi(0U),
-    m_rssiValidity(INVALID),
+    m_rssiValidity(RssiValidityFlag::INVALID),
     m_nRssi(0U)
 {
     startOfStream = new MotStartOfStream();
@@ -52,9 +53,9 @@ MotVoiceHeader1::MotVoiceHeader1() :
 MotVoiceHeader1::MotVoiceHeader1(uint8_t* data) :
     header(nullptr),
     startOfStream(nullptr),
-    m_icw(ICW_DIU),
+    m_icw(ICWFlag::DIU),
     m_rssi(0U),
-    m_rssiValidity(INVALID),
+    m_rssiValidity(RssiValidityFlag::INVALID),
     m_nRssi(0U)
 {
     decode(data);
@@ -93,9 +94,9 @@ bool MotVoiceHeader1::decode(const uint8_t* data)
     startOfStream->decode(buffer);
 
     // decode the other stuff
-    m_icw = (ICWFlag)data[5U];
+    m_icw = (ICWFlag::E)data[5U];
     m_rssi = data[6U];
-    m_rssiValidity = (RssiValidityFlag)data[7U];
+    m_rssiValidity = (RssiValidityFlag::E)data[7U];
     m_nRssi = data[8U];
 
     // our header includes the trailing source and check bytes
@@ -117,7 +118,7 @@ void MotVoiceHeader1::encode(uint8_t* data)
     assert(data != nullptr);
     assert(startOfStream != nullptr);
 
-    data[0U] = P25_DFSI_MOT_VHDR_1;
+    data[0U] = DFSIFrameType::MOT_VHDR_1;
 
     // scope is intentional
     {
@@ -129,9 +130,9 @@ void MotVoiceHeader1::encode(uint8_t* data)
         ::memcpy(data + 1U, buffer + 1U, 4U);
     }
 
-    data[5U] = (uint8_t)m_icw;
+    data[5U] = m_icw;
     data[6U] = m_rssi;
-    data[7U] = (uint8_t)m_rssiValidity;
+    data[7U] = m_rssiValidity;
     data[8U] = m_nRssi;
 
     // our header includes the trailing source and check bytes

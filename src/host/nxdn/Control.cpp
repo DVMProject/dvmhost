@@ -28,6 +28,7 @@
 #include "ActivityLog.h"
 
 using namespace nxdn;
+using namespace nxdn::defines;
 using namespace nxdn::packet;
 
 #include <cassert>
@@ -237,39 +238,39 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
     /*
     ** Voice Silence and Frame Loss Thresholds
     */
-    m_voice->m_silenceThreshold = nxdnProtocol["silenceThreshold"].as<uint32_t>(nxdn::DEFAULT_SILENCE_THRESHOLD);
+    m_voice->m_silenceThreshold = nxdnProtocol["silenceThreshold"].as<uint32_t>(DEFAULT_SILENCE_THRESHOLD);
     if (m_voice->m_silenceThreshold > MAX_NXDN_VOICE_ERRORS) {
-        LogWarning(LOG_NXDN, "Silence threshold > %u, defaulting to %u", nxdn::MAX_NXDN_VOICE_ERRORS, nxdn::DEFAULT_SILENCE_THRESHOLD);
-        m_voice->m_silenceThreshold = nxdn::DEFAULT_SILENCE_THRESHOLD;
+        LogWarning(LOG_NXDN, "Silence threshold > %u, defaulting to %u", MAX_NXDN_VOICE_ERRORS, DEFAULT_SILENCE_THRESHOLD);
+        m_voice->m_silenceThreshold = DEFAULT_SILENCE_THRESHOLD;
     }
 
     // either MAX_NXDN_VOICE_ERRORS or 0 will disable the threshold logic
     if (m_voice->m_silenceThreshold == 0) {
-        LogWarning(LOG_NXDN, "Silence threshold set to zero, defaulting to %u", nxdn::MAX_NXDN_VOICE_ERRORS);
-        m_voice->m_silenceThreshold = nxdn::MAX_NXDN_VOICE_ERRORS;
+        LogWarning(LOG_NXDN, "Silence threshold set to zero, defaulting to %u", MAX_NXDN_VOICE_ERRORS);
+        m_voice->m_silenceThreshold = MAX_NXDN_VOICE_ERRORS;
     }
-    m_frameLossThreshold = (uint8_t)nxdnProtocol["frameLossThreshold"].as<uint32_t>(nxdn::DEFAULT_FRAME_LOSS_THRESHOLD);
+    m_frameLossThreshold = (uint8_t)nxdnProtocol["frameLossThreshold"].as<uint32_t>(DEFAULT_FRAME_LOSS_THRESHOLD);
     if (m_frameLossThreshold == 0U) {
         m_frameLossThreshold = 1U;
     }
 
-    if (m_frameLossThreshold > nxdn::DEFAULT_FRAME_LOSS_THRESHOLD * 2U) {
-        LogWarning(LOG_NXDN, "Frame loss threshold may be excessive, default is %u, configured is %u", nxdn::DEFAULT_FRAME_LOSS_THRESHOLD, m_frameLossThreshold);
+    if (m_frameLossThreshold > DEFAULT_FRAME_LOSS_THRESHOLD * 2U) {
+        LogWarning(LOG_NXDN, "Frame loss threshold may be excessive, default is %u, configured is %u", DEFAULT_FRAME_LOSS_THRESHOLD, m_frameLossThreshold);
     }
 
     /*
     ** CC Service Class
     */
-    uint8_t serviceClass = NXDN_SIF1_VOICE_CALL_SVC | NXDN_SIF1_DATA_CALL_SVC;
+    uint8_t serviceClass = SiteInformation1::VOICE_CALL_SVC | SiteInformation1::DATA_CALL_SVC;
     if (m_enableControl) {
-        serviceClass |= NXDN_SIF1_GRP_REG_SVC;
+        serviceClass |= SiteInformation1::GRP_REG_SVC;
     }
 
     /*
     ** Site Data
     */
     // calculate the NXDN location ID
-    uint32_t locId = NXDN_LOC_CAT_GLOBAL; // DVM is currently fixed to "global" category
+    uint32_t locId = LocationCategory::GLOBAL; // DVM is currently fixed to "global" category
     locId = (locId << 10) + (sysId & 0x3FFU);
     locId = (locId << 12) + (siteId & 0xFFFU);
 
@@ -460,9 +461,9 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
         return false;
     }
 
-    uint8_t rfct = m_rfLastLICH.getRFCT();
-    uint8_t fct = m_rfLastLICH.getFCT();
-    uint8_t option = m_rfLastLICH.getOption();
+    RFChannelType::E rfct = m_rfLastLICH.getRFCT();
+    FuncChannelType::E fct = m_rfLastLICH.getFCT();
+    ChOption::E option = m_rfLastLICH.getOption();
 
     if (m_debug) {
         LogDebug(LOG_RF, "NXDN, valid LICH, rfState = %u, netState = %u, rfct = %u, fct = %u", m_rfState, m_netState, rfct, fct);
@@ -470,19 +471,19 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
 
     // are we interrupting a running CC?
     if (m_ccRunning) {
-        if ((fct != NXDN_LICH_CAC_INBOUND_SHORT) || (fct != NXDN_LICH_CAC_INBOUND_LONG)) {
+        if ((fct != FuncChannelType::CAC_INBOUND_SHORT) || (fct != FuncChannelType::CAC_INBOUND_LONG)) {
             m_ccHalted = true;
         }
     }
 
     bool ret = false;
 
-    if (rfct == NXDN_LICH_RFCT_RCCH) {
+    if (rfct == RFChannelType::RCCH) {
         ret = m_control->process(fct, option, data, len);
     }
-    else if (rfct == NXDN_LICH_RFCT_RTCH || rfct == NXDN_LICH_RFCT_RDCH) {
+    else if (rfct == RFChannelType::RTCH || rfct == RFChannelType::RDCH) {
         switch (fct) {
-            case NXDN_LICH_USC_UDCH:
+            case FuncChannelType::USC_UDCH:
                 if (!m_dedicatedControl)
                     ret = m_data->process(option, data, len);
                 break;
@@ -1016,12 +1017,12 @@ void Control::processNetwork()
     if (valid)
         m_rfLastLICH = lich;
 
-    uint8_t usc = m_rfLastLICH.getFCT();
-    uint8_t option = m_rfLastLICH.getOption();
+    FuncChannelType::E usc = m_rfLastLICH.getFCT();
+    ChOption::E option = m_rfLastLICH.getOption();
 
     // forward onto the specific processor for final processing and delivery
     switch (usc) {
-        case NXDN_LICH_USC_UDCH:
+        case FuncChannelType::USC_UDCH:
             ret = m_data->processNetwork(option, lc, data.get(), frameLength);
             break;
         default:
@@ -1190,23 +1191,23 @@ void Control::writeRF_Message_Tx_Rel(bool noNetwork)
 
     // generate the LICH
     channel::LICH lich;
-    lich.setRFCT(NXDN_LICH_RFCT_RTCH);
-    lich.setFCT(NXDN_LICH_USC_SACCH_NS);
-    lich.setOption(NXDN_LICH_STEAL_FACCH);
+    lich.setRFCT(RFChannelType::RTCH);
+    lich.setFCT(FuncChannelType::USC_SACCH_NS);
+    lich.setOption(ChOption::STEAL_FACCH);
     lich.setOutbound(true);
     lich.encode(data + 2U);
 
     uint8_t buffer[NXDN_RTCH_LC_LENGTH_BYTES];
     ::memset(buffer, 0x00U, NXDN_RTCH_LC_LENGTH_BYTES);
 
-    m_rfLC.setMessageType(RTCH_MESSAGE_TYPE_TX_REL);
+    m_rfLC.setMessageType(MessageType::RTCH_TX_REL);
     m_rfLC.encode(buffer, NXDN_UDCH_LENGTH_BITS);
 
     // generate the SACCH
     channel::SACCH sacch;
     sacch.setData(SACCH_IDLE);
     sacch.setRAN(m_ran);
-    sacch.setStructure(NXDN_SR_SINGLE);
+    sacch.setStructure(ChStructure::SR_SINGLE);
     sacch.encode(data + 2U);
 
     // generate the FACCH1

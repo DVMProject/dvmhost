@@ -7,7 +7,7 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2021 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2021,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
@@ -15,8 +15,9 @@
 #include "dmr/lc/PrivacyLC.h"
 #include "Utils.h"
 
-using namespace dmr::lc;
 using namespace dmr;
+using namespace dmr::defines;
+using namespace dmr::lc;
 
 #include <cassert>
 
@@ -38,7 +39,7 @@ PrivacyLC::PrivacyLC(const uint8_t* data) :
 {
     assert(data != nullptr);
 
-    m_mi = new uint8_t[DMR_MI_LENGTH_BYTES];
+    m_mi = new uint8_t[MI_LENGTH_BYTES];
 
     m_group = (data[0U] & 0x20U) == 0x20U;
     m_algId = data[0U] & 7;                                                     // Algorithm ID
@@ -67,7 +68,7 @@ PrivacyLC::PrivacyLC(const bool* bits) :
 {
     assert(bits != nullptr);
 
-    m_mi = new uint8_t[DMR_MI_LENGTH_BYTES];
+    m_mi = new uint8_t[MI_LENGTH_BYTES];
 
     uint8_t temp1, temp2, temp3;
     Utils::bitsToByteBE(bits + 0U, temp1);
@@ -110,7 +111,7 @@ PrivacyLC::PrivacyLC() :
     m_kId(0U),
     m_mi(nullptr)
 {
-    m_mi = new uint8_t[DMR_MI_LENGTH_BYTES];
+    m_mi = new uint8_t[MI_LENGTH_BYTES];
 }
 
 /// <summary>

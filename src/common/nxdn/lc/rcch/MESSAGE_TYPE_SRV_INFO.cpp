@@ -7,15 +7,16 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
 #include "nxdn/lc/rcch/MESSAGE_TYPE_SRV_INFO.h"
 
-using namespace nxdn::lc::rcch;
-using namespace nxdn::lc;
 using namespace nxdn;
+using namespace nxdn::defines;
+using namespace nxdn::lc;
+using namespace nxdn::lc::rcch;
 
 #include <cassert>
 
@@ -28,7 +29,7 @@ using namespace nxdn;
 /// </summary>
 MESSAGE_TYPE_SRV_INFO::MESSAGE_TYPE_SRV_INFO() : RCCH()
 {
-    m_messageType = nxdn::MESSAGE_TYPE_SRV_INFO;
+    m_messageType = MessageType::SRV_INFO;
 }
 
 /// <summary>
@@ -64,7 +65,7 @@ void MESSAGE_TYPE_SRV_INFO::encode(uint8_t* data, uint32_t length, uint32_t offs
     rcch[2U] = (m_siteData.locId() >> 8) & 0xFFU;                                   // ...
     rcch[3U] = (m_siteData.locId() >> 0) & 0xFFU;                                   // ...
     rcch[4U] = m_siteData.serviceClass();                                           // Service Information
-    rcch[5U] = (m_siteData.netActive() ? NXDN_SIF2_IP_NETWORK : 0x00U);             // ...
+    rcch[5U] = (m_siteData.netActive() ? SiteInformation2::IP_NETWORK : 0x00U);     // ...
 
     // bryanb: this is currently fixed -- maybe dynamic in the future
     rcch[8U] = 0U;                                                                  // Restriction Information - No access restriction / No cycle restriction
@@ -81,5 +82,5 @@ void MESSAGE_TYPE_SRV_INFO::encode(uint8_t* data, uint32_t length, uint32_t offs
 /// <returns></returns>
 std::string MESSAGE_TYPE_SRV_INFO::toString(bool isp)
 {
-    return std::string("MESSAGE_TYPE_SRV_INFO (Service Information)");
+    return std::string("SRV_INFO (Service Information)");
 }

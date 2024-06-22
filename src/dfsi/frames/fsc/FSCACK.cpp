@@ -31,13 +31,13 @@ using namespace p25::dfsi::fsc;
 /// Initializes a instance of the FSCACK class.
 /// </summary>
 FSCACK::FSCACK() : FSCMessage(),
-    m_ackMessageId(FSC_INVALID),
+    m_ackMessageId(FSCMessageType::FSC_INVALID),
     m_ackVersion(1U),
     m_ackCorrelationTag(0U),
-    m_responseCode(CONTROL_ACK),
+    m_responseCode(FSCAckResponseCode::CONTROL_ACK),
     m_respLength(0U)
 {
-    m_messageId = FSC_ACK;
+    m_messageId = FSCMessageType::FSC_ACK;
 }
 
 /// <summary>
@@ -45,10 +45,10 @@ FSCACK::FSCACK() : FSCMessage(),
 /// </summary>
 /// <param name="data"></param>
 FSCACK::FSCACK(uint8_t* data) : FSCMessage(data),
-    m_ackMessageId(FSC_INVALID),
+    m_ackMessageId(FSCMessageType::FSC_INVALID),
     m_ackVersion(1U),
     m_ackCorrelationTag(0U),
-    m_responseCode(CONTROL_ACK),
+    m_responseCode(FSCAckResponseCode::CONTROL_ACK),
     m_respLength(0U)
 {
     decode(data);
@@ -64,10 +64,10 @@ bool FSCACK::decode(const uint8_t* data)
     assert(data != nullptr);
     FSCMessage::decode(data);
 
-    m_ackMessageId = (FSCMessageType)(data[2U]);                // Ack Message ID
+    m_ackMessageId = (FSCMessageType::E)(data[2U]);             // Ack Message ID
     m_ackVersion = data[3U];                                    // Ack Message Version
     m_ackCorrelationTag = data[4U];                             // Ack Message Correlation Tag
-    m_responseCode = (FSCAckResponseCode)(data[5U]);            // Response Code
+    m_responseCode = (FSCAckResponseCode::E)(data[5U]);         // Response Code
     m_respLength = data[6U];                                    // Response Data Length
 
     if (m_respLength > 0) {

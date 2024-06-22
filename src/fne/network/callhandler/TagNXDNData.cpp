@@ -29,6 +29,7 @@ using namespace system_clock;
 using namespace network;
 using namespace network::callhandler;
 using namespace nxdn;
+using namespace nxdn::defines;
 
 #include <cassert>
 #include <chrono>
@@ -101,11 +102,11 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
         }
 
         // specifically only check the following logic for end of call, voice or data frames
-        if ((messageType == RTCH_MESSAGE_TYPE_TX_REL || messageType == RTCH_MESSAGE_TYPE_TX_REL_EX) ||
-            (messageType == RTCH_MESSAGE_TYPE_VCALL || messageType == RTCH_MESSAGE_TYPE_DCALL_HDR ||
-             messageType == RTCH_MESSAGE_TYPE_DCALL_DATA)) {
+        if ((messageType == MessageType::RTCH_TX_REL || messageType == MessageType::RTCH_TX_REL_EX) ||
+            (messageType == MessageType::RTCH_VCALL || messageType == MessageType::RTCH_DCALL_HDR ||
+             messageType == MessageType::RTCH_DCALL_DATA)) {
             // is this the end of the call stream?
-            if (messageType == RTCH_MESSAGE_TYPE_TX_REL || messageType == RTCH_MESSAGE_TYPE_TX_REL_EX) {
+            if (messageType == MessageType::RTCH_TX_REL || messageType == MessageType::RTCH_TX_REL_EX) {
                 if (srcId == 0U && dstId == 0U) {
                     LogWarning(LOG_NET, "NXDN, invalid TX_REL, peer = %u, srcId = %u, dstId = %u, streamId = %u, external = %u", peerId, srcId, dstId, streamId, external);
                     return false;
@@ -149,7 +150,7 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
             }
 
             // is this a new call stream?
-            if ((messageType != RTCH_MESSAGE_TYPE_TX_REL && messageType != RTCH_MESSAGE_TYPE_TX_REL_EX)) {
+            if ((messageType != MessageType::RTCH_TX_REL && messageType != MessageType::RTCH_TX_REL_EX)) {
                 if (srcId == 0U && dstId == 0U) {
                     LogWarning(LOG_NET, "NXDN, invalid call, peer = %u, srcId = %u, dstId = %u, streamId = %u, external = %u", peerId, srcId, dstId, streamId, external);
                     return false;
@@ -571,7 +572,7 @@ bool TagNXDNData::validate(uint32_t peerId, lc::RTCH& lc, uint8_t messageType, u
     }
 
     // always validate a terminator if the source is valid
-    if (messageType == RTCH_MESSAGE_TYPE_TX_REL || messageType == RTCH_MESSAGE_TYPE_TX_REL_EX)
+    if (messageType == MessageType::RTCH_TX_REL || messageType == MessageType::RTCH_TX_REL_EX)
         return true;
 
     // is this a private call?
@@ -670,7 +671,7 @@ bool TagNXDNData::write_Message_Grant(uint32_t peerId, uint32_t srcId, uint32_t 
         }
     }
 
-    rcch->setMessageType(RTCH_MESSAGE_TYPE_VCALL);
+    rcch->setMessageType(MessageType::RTCH_VCALL);
     rcch->setGrpVchNo(0U);
     rcch->setGroup(grp);
     rcch->setSrcId(srcId);
@@ -702,9 +703,9 @@ void TagNXDNData::write_Message_Deny(uint32_t peerId, uint32_t srcId, uint32_t d
     std::unique_ptr<lc::RCCH> rcch = nullptr;
 
     switch (service) {
-    case RTCH_MESSAGE_TYPE_VCALL:
+    case MessageType::RTCH_VCALL:
         rcch = std::make_unique<lc::rcch::MESSAGE_TYPE_VCALL_CONN>();
-        rcch->setMessageType(RTCH_MESSAGE_TYPE_VCALL);
+        rcch->setMessageType(MessageType::RTCH_VCALL);
     default:
         return;
     }
@@ -735,9 +736,9 @@ void TagNXDNData::write_Message(uint32_t peerId, lc::RCCH* rcch)
 
     // generate the LICH
     channel::LICH lich;
-    lich.setRFCT(NXDN_LICH_RFCT_RCCH);
-    lich.setFCT(NXDN_LICH_CAC_OUTBOUND);
-    lich.setOption(NXDN_LICH_DATA_COMMON);
+    lich.setRFCT(RFChannelType::RCCH);
+    lich.setFCT(FuncChannelType::CAC_OUTBOUND);
+    lich.setOption(ChOption::DATA_COMMON);
     lich.setOutbound(true);
     lich.encode(data + 2U);
 
@@ -749,7 +750,7 @@ void TagNXDNData::write_Message(uint32_t peerId, lc::RCCH* rcch)
     // generate the CAC
     channel::CAC cac;
     cac.setRAN(0U);
-    cac.setStructure(NXDN_SR_RCCH_SINGLE);
+    cac.setStructure(ChStructure::SR_RCCH_SINGLE);
     cac.setData(buffer);
     cac.encode(data + 2U);
 

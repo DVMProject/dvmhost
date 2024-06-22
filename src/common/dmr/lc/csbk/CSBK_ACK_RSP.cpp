@@ -7,15 +7,16 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
 #include "dmr/lc/csbk/CSBK_ACK_RSP.h"
 
-using namespace dmr::lc::csbk;
-using namespace dmr::lc;
 using namespace dmr;
+using namespace dmr::defines;
+using namespace dmr::lc;
+using namespace dmr::lc::csbk;
 
 #include <cassert>
 
@@ -28,7 +29,7 @@ using namespace dmr;
 /// </summary>
 CSBK_ACK_RSP::CSBK_ACK_RSP() : CSBK()
 {
-    m_CSBKO = CSBKO_ACK_RSP;
+    m_CSBKO = CSBKO::ACK_RSP;
 }
 
 /// <summary>
@@ -67,7 +68,7 @@ void CSBK_ACK_RSP::encode(uint8_t* data)
 
     ulong64_t csbkValue = 0U;
 
-    if (m_reason == TS_ACK_RSN_REG) {
+    if (m_reason == ReasonCode::TS_ACK_RSN_REG) {
         csbkValue = 0U;
     } else {
         csbkValue = (m_GI ? 0x40U : 0x00U) +                                        // Source Type
@@ -88,5 +89,5 @@ void CSBK_ACK_RSP::encode(uint8_t* data)
 /// <returns></returns>
 std::string CSBK_ACK_RSP::toString()
 {
-    return std::string("CSBKO_ACK_RSP (Acknowledge Response)");
+    return std::string("CSBKO, ACK_RSP (Acknowledge Response)");
 }

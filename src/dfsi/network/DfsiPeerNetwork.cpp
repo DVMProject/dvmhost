@@ -9,6 +9,7 @@
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
 *   Copyright (C) 2024 Patrick McDonnell, W3AXL
+*   Copyright (C) 2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "dfsi/Defines.h"
@@ -61,7 +62,7 @@ DfsiPeerNetwork::DfsiPeerNetwork(const std::string& address, uint16_t port, uint
 /// <param name="data"></param>
 /// <param name="frameType"></param>
 /// <returns></returns>
-bool DfsiPeerNetwork::writeP25LDU1(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, const uint8_t* data, uint8_t frameType)
+bool DfsiPeerNetwork::writeP25LDU1(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, const uint8_t* data, P25DEF::FrameType::E frameType)
 {
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
         return false;
@@ -187,8 +188,10 @@ bool DfsiPeerNetwork::writeConfig()
 /// <param name="frameType"></param>
 /// <returns></returns>
 UInt8Array DfsiPeerNetwork::createP25_LDU1Message_Raw(uint32_t& length, const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, 
-    const uint8_t* data, uint8_t frameType)
+    const uint8_t* data, P25DEF::FrameType::E frameType)
 {
+    using namespace p25::dfsi::defines;
+    using namespace p25::defines;
     assert(data != nullptr);
 
     p25::dfsi::LC dfsiLC = p25::dfsi::LC(control, lsd);
@@ -197,56 +200,56 @@ UInt8Array DfsiPeerNetwork::createP25_LDU1Message_Raw(uint32_t& length, const p2
     ::memset(buffer, 0x00U, P25_LDU1_PACKET_LENGTH + PACKET_PAD);
 
     // construct P25 message header
-    createP25_MessageHdr(buffer, p25::P25_DUID_LDU1, control, lsd, frameType);
+    createP25_MessageHdr(buffer, DUID::LDU1, control, lsd, frameType);
 
     // pack DFSI data
     uint32_t count = MSG_HDR_SIZE;
-    uint8_t imbe[p25::P25_RAW_IMBE_LENGTH_BYTES];
+    uint8_t imbe[RAW_IMBE_LENGTH_BYTES];
 
-    dfsiLC.setFrameType(p25::dfsi::P25_DFSI_LDU1_VOICE1);
-    ::memcpy(imbe, data + 10U, p25::P25_RAW_IMBE_LENGTH_BYTES);
+    dfsiLC.setFrameType(DFSIFrameType::LDU1_VOICE1);
+    ::memcpy(imbe, data + 10U, RAW_IMBE_LENGTH_BYTES);
     dfsiLC.encodeLDU1(buffer + 24U, imbe);
-    count += p25::dfsi::P25_DFSI_LDU1_VOICE1_FRAME_LENGTH_BYTES;
+    count += DFSI_LDU1_VOICE1_FRAME_LENGTH_BYTES;
 
-    dfsiLC.setFrameType(p25::dfsi::P25_DFSI_LDU1_VOICE2);
-    ::memcpy(imbe, data + 26U, p25::P25_RAW_IMBE_LENGTH_BYTES);
+    dfsiLC.setFrameType(DFSIFrameType::LDU1_VOICE2);
+    ::memcpy(imbe, data + 26U, RAW_IMBE_LENGTH_BYTES);
     dfsiLC.encodeLDU1(buffer + 46U, imbe);
-    count += p25::dfsi::P25_DFSI_LDU1_VOICE2_FRAME_LENGTH_BYTES;
+    count += DFSI_LDU1_VOICE2_FRAME_LENGTH_BYTES;
 
-    dfsiLC.setFrameType(p25::dfsi::P25_DFSI_LDU1_VOICE3);
-    ::memcpy(imbe, data + 55U, p25::P25_RAW_IMBE_LENGTH_BYTES);
+    dfsiLC.setFrameType(DFSIFrameType::LDU1_VOICE3);
+    ::memcpy(imbe, data + 55U, RAW_IMBE_LENGTH_BYTES);
     dfsiLC.encodeLDU1(buffer + 60U, imbe);
-    count += p25::dfsi::P25_DFSI_LDU1_VOICE3_FRAME_LENGTH_BYTES;
+    count += DFSI_LDU1_VOICE3_FRAME_LENGTH_BYTES;
 
-    dfsiLC.setFrameType(p25::dfsi::P25_DFSI_LDU1_VOICE4);
-    ::memcpy(imbe, data + 80U, p25::P25_RAW_IMBE_LENGTH_BYTES);
+    dfsiLC.setFrameType(DFSIFrameType::LDU1_VOICE4);
+    ::memcpy(imbe, data + 80U, RAW_IMBE_LENGTH_BYTES);
     dfsiLC.encodeLDU1(buffer + 77U, imbe);
-    count += p25::dfsi::P25_DFSI_LDU1_VOICE4_FRAME_LENGTH_BYTES;
+    count += DFSI_LDU1_VOICE4_FRAME_LENGTH_BYTES;
 
-    dfsiLC.setFrameType(p25::dfsi::P25_DFSI_LDU1_VOICE5);
-    ::memcpy(imbe, data + 105U, p25::P25_RAW_IMBE_LENGTH_BYTES);
+    dfsiLC.setFrameType(DFSIFrameType::LDU1_VOICE5);
+    ::memcpy(imbe, data + 105U, RAW_IMBE_LENGTH_BYTES);
     dfsiLC.encodeLDU1(buffer + 94U, imbe);
-    count += p25::dfsi::P25_DFSI_LDU1_VOICE5_FRAME_LENGTH_BYTES;
+    count += DFSI_LDU1_VOICE5_FRAME_LENGTH_BYTES;
 
-    dfsiLC.setFrameType(p25::dfsi::P25_DFSI_LDU1_VOICE6);
-    ::memcpy(imbe, data + 130U, p25::P25_RAW_IMBE_LENGTH_BYTES);
+    dfsiLC.setFrameType(DFSIFrameType::LDU1_VOICE6);
+    ::memcpy(imbe, data + 130U, RAW_IMBE_LENGTH_BYTES);
     dfsiLC.encodeLDU1(buffer + 111U, imbe);
-    count += p25::dfsi::P25_DFSI_LDU1_VOICE6_FRAME_LENGTH_BYTES;
+    count += DFSI_LDU1_VOICE6_FRAME_LENGTH_BYTES;
 
-    dfsiLC.setFrameType(p25::dfsi::P25_DFSI_LDU1_VOICE7);
-    ::memcpy(imbe, data + 155U, p25::P25_RAW_IMBE_LENGTH_BYTES);
+    dfsiLC.setFrameType(DFSIFrameType::LDU1_VOICE7);
+    ::memcpy(imbe, data + 155U, RAW_IMBE_LENGTH_BYTES);
     dfsiLC.encodeLDU1(buffer + 128U, imbe);
-    count += p25::dfsi::P25_DFSI_LDU1_VOICE7_FRAME_LENGTH_BYTES;
+    count += DFSI_LDU1_VOICE7_FRAME_LENGTH_BYTES;
 
-    dfsiLC.setFrameType(p25::dfsi::P25_DFSI_LDU1_VOICE8);
-    ::memcpy(imbe, data + 180U, p25::P25_RAW_IMBE_LENGTH_BYTES);
+    dfsiLC.setFrameType(DFSIFrameType::LDU1_VOICE8);
+    ::memcpy(imbe, data + 180U, RAW_IMBE_LENGTH_BYTES);
     dfsiLC.encodeLDU1(buffer + 145U, imbe);
-    count += p25::dfsi::P25_DFSI_LDU1_VOICE8_FRAME_LENGTH_BYTES;
+    count += DFSI_LDU1_VOICE8_FRAME_LENGTH_BYTES;
 
-    dfsiLC.setFrameType(p25::dfsi::P25_DFSI_LDU1_VOICE9);
-    ::memcpy(imbe, data + 204U, p25::P25_RAW_IMBE_LENGTH_BYTES);
+    dfsiLC.setFrameType(DFSIFrameType::LDU1_VOICE9);
+    ::memcpy(imbe, data + 204U, RAW_IMBE_LENGTH_BYTES);
     dfsiLC.encodeLDU1(buffer + 162U, imbe);
-    count += p25::dfsi::P25_DFSI_LDU1_VOICE9_FRAME_LENGTH_BYTES;
+    count += DFSI_LDU1_VOICE9_FRAME_LENGTH_BYTES;
 
     buffer[23U] = count;
 
@@ -268,6 +271,8 @@ UInt8Array DfsiPeerNetwork::createP25_LDU1Message_Raw(uint32_t& length, const p2
 UInt8Array DfsiPeerNetwork::createP25_LDU2Message_Raw(uint32_t& length, const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, 
     const uint8_t* data)
 {
+    using namespace p25::dfsi::defines;
+    using namespace p25::defines;
     assert(data != nullptr);
 
     p25::dfsi::LC dfsiLC = p25::dfsi::LC(control, lsd);
@@ -276,56 +281,56 @@ UInt8Array DfsiPeerNetwork::createP25_LDU2Message_Raw(uint32_t& length, const p2
     ::memset(buffer, 0x00U, P25_LDU2_PACKET_LENGTH + PACKET_PAD);
 
     // construct P25 message header
-    createP25_MessageHdr(buffer, p25::P25_DUID_LDU2, control, lsd, p25::P25_FT_DATA_UNIT);
+    createP25_MessageHdr(buffer, DUID::LDU2, control, lsd, FrameType::DATA_UNIT);
 
     // pack DFSI data
     uint32_t count = MSG_HDR_SIZE;
-    uint8_t imbe[p25::P25_RAW_IMBE_LENGTH_BYTES];
+    uint8_t imbe[RAW_IMBE_LENGTH_BYTES];
 
-    dfsiLC.setFrameType(p25::dfsi::P25_DFSI_LDU2_VOICE10);
-    ::memcpy(imbe, data + 10U, p25::P25_RAW_IMBE_LENGTH_BYTES);
+    dfsiLC.setFrameType(DFSIFrameType::LDU2_VOICE10);
+    ::memcpy(imbe, data + 10U, RAW_IMBE_LENGTH_BYTES);
     dfsiLC.encodeLDU2(buffer + 24U, imbe);
-    count += p25::dfsi::P25_DFSI_LDU2_VOICE10_FRAME_LENGTH_BYTES;
+    count += DFSI_LDU2_VOICE10_FRAME_LENGTH_BYTES;
 
-    dfsiLC.setFrameType(p25::dfsi::P25_DFSI_LDU2_VOICE11);
-    ::memcpy(imbe, data + 26U, p25::P25_RAW_IMBE_LENGTH_BYTES);
+    dfsiLC.setFrameType(DFSIFrameType::LDU2_VOICE11);
+    ::memcpy(imbe, data + 26U, RAW_IMBE_LENGTH_BYTES);
     dfsiLC.encodeLDU2(buffer + 46U, imbe);
-    count += p25::dfsi::P25_DFSI_LDU2_VOICE11_FRAME_LENGTH_BYTES;
+    count += DFSI_LDU2_VOICE11_FRAME_LENGTH_BYTES;
 
-    dfsiLC.setFrameType(p25::dfsi::P25_DFSI_LDU2_VOICE12);
-    ::memcpy(imbe, data + 55U, p25::P25_RAW_IMBE_LENGTH_BYTES);
+    dfsiLC.setFrameType(DFSIFrameType::LDU2_VOICE12);
+    ::memcpy(imbe, data + 55U, RAW_IMBE_LENGTH_BYTES);
     dfsiLC.encodeLDU2(buffer + 60U, imbe);
-    count += p25::dfsi::P25_DFSI_LDU2_VOICE12_FRAME_LENGTH_BYTES;
+    count += DFSI_LDU2_VOICE12_FRAME_LENGTH_BYTES;
 
-    dfsiLC.setFrameType(p25::dfsi::P25_DFSI_LDU2_VOICE13);
-    ::memcpy(imbe, data + 80U, p25::P25_RAW_IMBE_LENGTH_BYTES);
+    dfsiLC.setFrameType(DFSIFrameType::LDU2_VOICE13);
+    ::memcpy(imbe, data + 80U, RAW_IMBE_LENGTH_BYTES);
     dfsiLC.encodeLDU2(buffer + 77U, imbe);
-    count += p25::dfsi::P25_DFSI_LDU2_VOICE13_FRAME_LENGTH_BYTES;
+    count += DFSI_LDU2_VOICE13_FRAME_LENGTH_BYTES;
 
-    dfsiLC.setFrameType(p25::dfsi::P25_DFSI_LDU2_VOICE14);
-    ::memcpy(imbe, data + 105U, p25::P25_RAW_IMBE_LENGTH_BYTES);
+    dfsiLC.setFrameType(DFSIFrameType::LDU2_VOICE14);
+    ::memcpy(imbe, data + 105U, RAW_IMBE_LENGTH_BYTES);
     dfsiLC.encodeLDU2(buffer + 94U, imbe);
-    count += p25::dfsi::P25_DFSI_LDU2_VOICE14_FRAME_LENGTH_BYTES;
+    count += DFSI_LDU2_VOICE14_FRAME_LENGTH_BYTES;
 
-    dfsiLC.setFrameType(p25::dfsi::P25_DFSI_LDU2_VOICE15);
-    ::memcpy(imbe, data + 130U, p25::P25_RAW_IMBE_LENGTH_BYTES);
+    dfsiLC.setFrameType(DFSIFrameType::LDU2_VOICE15);
+    ::memcpy(imbe, data + 130U, RAW_IMBE_LENGTH_BYTES);
     dfsiLC.encodeLDU2(buffer + 111U, imbe);
-    count += p25::dfsi::P25_DFSI_LDU2_VOICE15_FRAME_LENGTH_BYTES;
+    count += DFSI_LDU2_VOICE15_FRAME_LENGTH_BYTES;
 
-    dfsiLC.setFrameType(p25::dfsi::P25_DFSI_LDU2_VOICE16);
-    ::memcpy(imbe, data + 155U, p25::P25_RAW_IMBE_LENGTH_BYTES);
+    dfsiLC.setFrameType(DFSIFrameType::LDU2_VOICE16);
+    ::memcpy(imbe, data + 155U, RAW_IMBE_LENGTH_BYTES);
     dfsiLC.encodeLDU2(buffer + 128U, imbe);
-    count += p25::dfsi::P25_DFSI_LDU2_VOICE16_FRAME_LENGTH_BYTES;
+    count += DFSI_LDU2_VOICE16_FRAME_LENGTH_BYTES;
 
-    dfsiLC.setFrameType(p25::dfsi::P25_DFSI_LDU2_VOICE17);
-    ::memcpy(imbe, data + 180U, p25::P25_RAW_IMBE_LENGTH_BYTES);
+    dfsiLC.setFrameType(DFSIFrameType::LDU2_VOICE17);
+    ::memcpy(imbe, data + 180U, RAW_IMBE_LENGTH_BYTES);
     dfsiLC.encodeLDU2(buffer + 145U, imbe);
-    count += p25::dfsi::P25_DFSI_LDU2_VOICE17_FRAME_LENGTH_BYTES;
+    count += DFSI_LDU2_VOICE17_FRAME_LENGTH_BYTES;
 
-    dfsiLC.setFrameType(p25::dfsi::P25_DFSI_LDU2_VOICE18);
-    ::memcpy(imbe, data + 204U, p25::P25_RAW_IMBE_LENGTH_BYTES);
+    dfsiLC.setFrameType(DFSIFrameType::LDU2_VOICE18);
+    ::memcpy(imbe, data + 204U, RAW_IMBE_LENGTH_BYTES);
     dfsiLC.encodeLDU2(buffer + 162U, imbe);
-    count += p25::dfsi::P25_DFSI_LDU2_VOICE18_FRAME_LENGTH_BYTES;
+    count += DFSI_LDU2_VOICE18_FRAME_LENGTH_BYTES;
 
     buffer[23U] = count;
 

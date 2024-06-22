@@ -9,7 +9,7 @@
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
 *   Copyright (C) 2015-2020 Jonathan Naylor, G4KLX
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2022-2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
@@ -24,6 +24,7 @@
 #include "ActivityLog.h"
 
 using namespace nxdn;
+using namespace nxdn::defines;
 using namespace nxdn::packet;
 
 #include <cassert>
@@ -205,7 +206,7 @@ void Voice::resetNet()
 /// <param name="data">Buffer containing data frame.</param>
 /// <param name="len">Length of data frame.</param>
 /// <returns></returns>
-bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
+bool Voice::process(FuncChannelType::E fct, ChOption::E option, uint8_t* data, uint32_t len)
 {
     assert(data != nullptr);
 
@@ -219,7 +220,7 @@ bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
         return false;
     }
 
-    if (fct == NXDN_LICH_USC_SACCH_NS) {
+    if (fct == FuncChannelType::USC_SACCH_NS) {
         // the SACCH on a non-superblock frame is usually an idle and not interesting apart from the RAN.
         channel::FACCH1 facch;
         bool valid = facch.decode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS);
@@ -250,7 +251,7 @@ bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
         }
 
         uint8_t type = lc.getMessageType();
-        if (type == RTCH_MESSAGE_TYPE_TX_REL) {
+        if (type == MessageType::RTCH_TX_REL) {
             if (m_nxdn->m_rfState != RS_RF_AUDIO) {
                 m_nxdn->m_rfState = RS_RF_LISTENING;
                 m_nxdn->m_rfMask  = 0x00U;
@@ -258,7 +259,7 @@ bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
                 m_nxdn->m_frameLossCnt = 0U;
                 return false;
             }
-        } else if (type == RTCH_MESSAGE_TYPE_VCALL) {
+        } else if (type == MessageType::RTCH_VCALL) {
             CHECK_TRAFFIC_COLLISION(srcId, dstId);
 
             // validate source RID
@@ -280,9 +281,9 @@ bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
 
         // generate the LICH
         channel::LICH lich;
-        lich.setRFCT(NXDN_LICH_RFCT_RDCH);
-        lich.setFCT(NXDN_LICH_USC_SACCH_NS);
-        lich.setOption(NXDN_LICH_STEAL_FACCH);
+        lich.setRFCT(RFChannelType::RDCH);
+        lich.setFCT(FuncChannelType::USC_SACCH_NS);
+        lich.setOption(ChOption::STEAL_FACCH);
         lich.setOutbound(!m_nxdn->m_duplex ? false : true);
         lich.encode(data + 2U);
 
@@ -290,7 +291,7 @@ bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
         channel::SACCH sacch;
         sacch.setData(SACCH_IDLE);
         sacch.setRAN(m_nxdn->m_ran);
-        sacch.setStructure(NXDN_SR_SINGLE);
+        sacch.setStructure(ChStructure::SR_SINGLE);
         sacch.encode(data + 2U);
 
         uint8_t lcBuffer[NXDN_RTCH_LC_LENGTH_BYTES];
@@ -305,7 +306,7 @@ bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
         writeNetwork(data, NXDN_FRAME_LENGTH_BYTES + 2U);
 
         if (m_nxdn->m_duplex) {
-            data[0U] = type == RTCH_MESSAGE_TYPE_TX_REL ? modem::TAG_EOT : modem::TAG_DATA;
+            data[0U] = type == MessageType::RTCH_TX_REL ? modem::TAG_EOT : modem::TAG_DATA;
             data[1U] = 0x00U;
 
             m_nxdn->addFrame(data, NXDN_FRAME_LENGTH_BYTES + 2U);
@@ -353,15 +354,15 @@ bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
             channel::FACCH1 facch;
             bool valid = false;
             switch (option) {
-            case NXDN_LICH_STEAL_FACCH:
+            case ChOption::STEAL_FACCH:
                 valid = facch.decode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS);
                 if (!valid)
                     valid = facch.decode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_LENGTH_BITS + NXDN_FACCH1_FEC_LENGTH_BITS);
                 break;
-            case NXDN_LICH_STEAL_FACCH1_1:
+            case ChOption::STEAL_FACCH1_1:
                 valid = facch.decode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS);
                 break;
-            case NXDN_LICH_STEAL_FACCH1_2:
+            case ChOption::STEAL_FACCH1_2:
                 valid = facch.decode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS + NXDN_FACCH1_FEC_LENGTH_BITS);
                 break;
             default:
@@ -376,7 +377,7 @@ bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
                 lc::RTCH lc;
                 lc.decode(buffer, NXDN_FACCH1_FEC_LENGTH_BITS);
 
-                hasInfo = lc.getMessageType() == RTCH_MESSAGE_TYPE_VCALL;
+                hasInfo = lc.getMessageType() == MessageType::RTCH_VCALL;
                 if (!hasInfo)
                     return false;
 
@@ -389,22 +390,22 @@ bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
 
                 uint8_t structure = sacch.getStructure();
                 switch (structure) {
-                case NXDN_SR_1_4:
+                case ChStructure::SR_1_4:
                     m_nxdn->m_rfLC.decode(message, 18U, 0U);
-                    if(m_nxdn->m_rfLC.getMessageType() == RTCH_MESSAGE_TYPE_VCALL)
+                    if(m_nxdn->m_rfLC.getMessageType() == MessageType::RTCH_VCALL)
                         m_nxdn->m_rfMask = 0x01U;
                     else
                         m_nxdn->m_rfMask = 0x00U;
                     break;
-                case NXDN_SR_2_4:
+                case ChStructure::SR_2_4:
                     m_nxdn->m_rfMask |= 0x02U;
                     m_nxdn->m_rfLC.decode(message, 18U, 18U);
                     break;
-                case NXDN_SR_3_4:
+                case ChStructure::SR_3_4:
                     m_nxdn->m_rfMask |= 0x04U;
                     m_nxdn->m_rfLC.decode(message, 18U, 36U);
                     break;
-                case NXDN_SR_4_4:
+                case ChStructure::SR_4_4:
                     m_nxdn->m_rfMask |= 0x08U;
                     m_nxdn->m_rfLC.decode(message, 18U, 54U);
                     break;
@@ -416,7 +417,7 @@ bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
                     return false;
 
                 uint8_t type = m_nxdn->m_rfLC.getMessageType();
-                if (type != RTCH_MESSAGE_TYPE_VCALL)
+                if (type != MessageType::RTCH_VCALL)
                     return false;
             }
 
@@ -464,9 +465,9 @@ bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
 
             // generate the LICH
             channel::LICH lich;
-            lich.setRFCT(NXDN_LICH_RFCT_RDCH);
-            lich.setFCT(NXDN_LICH_USC_SACCH_NS);
-            lich.setOption(NXDN_LICH_STEAL_FACCH);
+            lich.setRFCT(RFChannelType::RDCH);
+            lich.setFCT(FuncChannelType::USC_SACCH_NS);
+            lich.setOption(ChOption::STEAL_FACCH);
             lich.setOutbound(!m_nxdn->m_duplex ? false : true);
             lich.encode(start + 2U);
 
@@ -476,7 +477,7 @@ bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
             channel::SACCH sacch;
             sacch.setData(SACCH_IDLE);
             sacch.setRAN(m_nxdn->m_ran);
-            sacch.setStructure(NXDN_SR_SINGLE);
+            sacch.setStructure(ChStructure::SR_SINGLE);
             sacch.encode(start + 2U);
 
             uint8_t buffer[NXDN_RTCH_LC_LENGTH_BYTES];
@@ -505,8 +506,8 @@ bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
 
         // regenerate the LICH
         channel::LICH lich;
-        lich.setRFCT(NXDN_LICH_RFCT_RDCH);
-        lich.setFCT(NXDN_LICH_USC_SACCH_SS);
+        lich.setRFCT(RFChannelType::RDCH);
+        lich.setFCT(FuncChannelType::USC_SACCH_SS);
         lich.setOption(option);
         lich.setOutbound(!m_nxdn->m_duplex ? false : true);
         lich.encode(data + 2U);
@@ -525,7 +526,7 @@ bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
         m_nxdn->m_rfLC.encode(lcBuffer, NXDN_RTCH_LC_LENGTH_BITS);
 
         // regenerate the audio and interpret the FACCH1 data
-        if (option == NXDN_LICH_STEAL_NONE) {
+        if (option == ChOption::STEAL_NONE) {
             edac::AMBEFEC ambe;
 
             uint32_t errors = 0U;
@@ -540,10 +541,10 @@ bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
             if (errors > m_silenceThreshold) {
                 // bryanb: this is probably the wrong way to go about this...
                 // generate null audio
-                ::memcpy(data + 2U + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 0U, NXDN_NULL_AMBE, 9U);
-                ::memcpy(data + 2U + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 9U, NXDN_NULL_AMBE, 9U);
-                ::memcpy(data + 2U + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 18U, NXDN_NULL_AMBE, 9U);
-                ::memcpy(data + 2U + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 27U, NXDN_NULL_AMBE, 9U);
+                ::memcpy(data + 2U + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 0U, NULL_AMBE, 9U);
+                ::memcpy(data + 2U + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 9U, NULL_AMBE, 9U);
+                ::memcpy(data + 2U + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 18U, NULL_AMBE, 9U);
+                ::memcpy(data + 2U + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 27U, NULL_AMBE, 9U);
 
                 LogWarning(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL ", exceeded lost audio threshold, filling in");
             }
@@ -554,7 +555,7 @@ bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
             if (m_verbose) {
                 LogMessage(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL ", audio, srcId = %u, dstId = %u, errs = %u/188 (%.1f%%)", m_nxdn->m_rfLC.getSrcId(), m_nxdn->m_rfLC.getDstId(), errors, float(errors) / 1.88F);
             }
-        } else if (option == NXDN_LICH_STEAL_FACCH1_1) {
+        } else if (option == ChOption::STEAL_FACCH1_1) {
             channel::FACCH1 facch11;
             bool valid = facch11.decode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS);
             if (valid)
@@ -572,8 +573,8 @@ bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
             if (errors > (m_silenceThreshold / 2U)) {
                 // bryanb: this is probably the wrong way to go about this...
                 // generate null audio
-                ::memcpy(data + 2U + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 18U, NXDN_NULL_AMBE, 9U);
-                ::memcpy(data + 2U + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 27U, NXDN_NULL_AMBE, 9U);
+                ::memcpy(data + 2U + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 18U, NULL_AMBE, 9U);
+                ::memcpy(data + 2U + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 27U, NULL_AMBE, 9U);
 
                 LogWarning(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL ", exceeded lost audio threshold, filling in");
             }
@@ -584,7 +585,7 @@ bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
             if (m_verbose) {
                 LogMessage(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL ", audio, srcId = %u, dstId = %u, errs = %u/94 (%.1f%%)", m_nxdn->m_rfLC.getSrcId(), m_nxdn->m_rfLC.getDstId(), errors, float(errors) / 0.94F);
             }
-        } else if (option == NXDN_LICH_STEAL_FACCH1_2) {
+        } else if (option == ChOption::STEAL_FACCH1_2) {
             edac::AMBEFEC ambe;
 
             uint32_t errors = 0U;
@@ -597,8 +598,8 @@ bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
             if (errors > (m_silenceThreshold / 2U)) {
                 // bryanb: this is probably the wrong way to go about this...
                 // generate null audio
-                ::memcpy(data + 2U + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 0U, NXDN_NULL_AMBE, 9U);
-                ::memcpy(data + 2U + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 9U, NXDN_NULL_AMBE, 9U);
+                ::memcpy(data + 2U + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 0U, NULL_AMBE, 9U);
+                ::memcpy(data + 2U + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 9U, NULL_AMBE, 9U);
 
                 LogWarning(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL ", exceeded lost audio threshold, filling in");
             }
@@ -655,7 +656,7 @@ bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
 /// <param name="data">Buffer containing data frame.</param>
 /// <param name="len">Length of data frame.</param>
 /// <returns></returns>
-bool Voice::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t *data, uint32_t len)
+bool Voice::processNetwork(FuncChannelType::E fct, ChOption::E option, lc::RTCH& netLC, uint8_t *data, uint32_t len)
 {
     assert(data != nullptr);
 
@@ -669,7 +670,7 @@ bool Voice::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t
     channel::SACCH sacch;
     sacch.decode(data + 2U);
 
-    if (fct == NXDN_LICH_USC_SACCH_NS) {
+    if (fct == FuncChannelType::USC_SACCH_NS) {
         // the SACCH on a non-superblock frame is usually an idle and not interesting apart from the RAN.
         channel::FACCH1 facch;
         bool valid = facch.decode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS);
@@ -708,7 +709,7 @@ bool Voice::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t
         }
 
         uint8_t type = lc.getMessageType();
-        if (type == RTCH_MESSAGE_TYPE_TX_REL) {
+        if (type == MessageType::RTCH_TX_REL) {
             if (m_nxdn->m_netState != RS_NET_AUDIO) {
                 m_nxdn->m_netState = RS_NET_IDLE;
                 m_nxdn->m_netMask  = 0x00U;
@@ -717,7 +718,7 @@ bool Voice::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t
                 m_nxdn->m_netLastSrcId = 0U;
                 return false;
             }
-        } else if (type == RTCH_MESSAGE_TYPE_VCALL) {
+        } else if (type == MessageType::RTCH_VCALL) {
             CHECK_NET_TRAFFIC_COLLISION(lc, srcId, dstId);
 
             // validate source RID
@@ -738,9 +739,9 @@ bool Voice::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t
 
         // generate the LICH
         channel::LICH lich;
-        lich.setRFCT(NXDN_LICH_RFCT_RDCH);
-        lich.setFCT(NXDN_LICH_USC_SACCH_NS);
-        lich.setOption(NXDN_LICH_STEAL_FACCH);
+        lich.setRFCT(RFChannelType::RDCH);
+        lich.setFCT(FuncChannelType::USC_SACCH_NS);
+        lich.setOption(ChOption::STEAL_FACCH);
         lich.setOutbound(true);
         lich.encode(data + 2U);
 
@@ -748,7 +749,7 @@ bool Voice::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t
         channel::SACCH sacch;
         sacch.setData(SACCH_IDLE);
         sacch.setRAN(m_nxdn->m_ran);
-        sacch.setStructure(NXDN_SR_SINGLE);
+        sacch.setStructure(ChStructure::SR_SINGLE);
         sacch.encode(data + 2U);
 
         facch.encode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS);
@@ -757,7 +758,7 @@ bool Voice::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t
         NXDNUtils::scrambler(data + 2U);
 
         if (m_nxdn->m_duplex) {
-            data[0U] = type == RTCH_MESSAGE_TYPE_TX_REL ? modem::TAG_EOT : modem::TAG_DATA;
+            data[0U] = type == MessageType::RTCH_TX_REL ? modem::TAG_EOT : modem::TAG_DATA;
             data[1U] = 0x00U;
 
             m_nxdn->addFrame(data, NXDN_FRAME_LENGTH_BYTES + 2U, true);
@@ -790,15 +791,15 @@ bool Voice::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t
             channel::FACCH1 facch;
             bool valid = false;
             switch (option) {
-            case NXDN_LICH_STEAL_FACCH:
+            case ChOption::STEAL_FACCH:
                 valid = facch.decode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS);
                 if (!valid)
                     valid = facch.decode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS + NXDN_FACCH1_FEC_LENGTH_BITS);
                 break;
-            case NXDN_LICH_STEAL_FACCH1_1:
+            case ChOption::STEAL_FACCH1_1:
                 valid = facch.decode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS);
                 break;
-            case NXDN_LICH_STEAL_FACCH1_2:
+            case ChOption::STEAL_FACCH1_2:
                 valid = facch.decode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS + NXDN_FACCH1_FEC_LENGTH_BITS);
                 break;
             default:
@@ -813,7 +814,7 @@ bool Voice::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t
                 lc::RTCH lc;
                 lc.decode(buffer, NXDN_FACCH1_FEC_LENGTH_BITS);
 
-                hasInfo = lc.getMessageType() == RTCH_MESSAGE_TYPE_VCALL;
+                hasInfo = lc.getMessageType() == MessageType::RTCH_VCALL;
                 if (!hasInfo)
                     return false;
 
@@ -826,22 +827,22 @@ bool Voice::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t
 
                 uint8_t structure = sacch.getStructure();
                 switch (structure) {
-                case NXDN_SR_1_4:
+                case ChStructure::SR_1_4:
                     m_nxdn->m_netLC.decode(message, 18U, 0U);
-                    if(m_nxdn->m_netLC.getMessageType() == RTCH_MESSAGE_TYPE_VCALL)
+                    if(m_nxdn->m_netLC.getMessageType() == MessageType::RTCH_VCALL)
                         m_nxdn->m_netMask = 0x01U;
                     else
                         m_nxdn->m_netMask = 0x00U;
                     break;
-                case NXDN_SR_2_4:
+                case ChStructure::SR_2_4:
                     m_nxdn->m_netMask |= 0x02U;
                     m_nxdn->m_netLC.decode(message, 18U, 18U);
                     break;
-                case NXDN_SR_3_4:
+                case ChStructure::SR_3_4:
                     m_nxdn->m_netMask |= 0x04U;
                     m_nxdn->m_netLC.decode(message, 18U, 36U);
                     break;
-                case NXDN_SR_4_4:
+                case ChStructure::SR_4_4:
                     m_nxdn->m_netMask |= 0x08U;
                     m_nxdn->m_netLC.decode(message, 18U, 54U);
                     break;
@@ -853,7 +854,7 @@ bool Voice::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t
                     return false;
 
                 uint8_t type = m_nxdn->m_netLC.getMessageType();
-                if (type != RTCH_MESSAGE_TYPE_VCALL)
+                if (type != MessageType::RTCH_VCALL)
                     return false;
             }
 
@@ -895,9 +896,9 @@ bool Voice::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t
 
             // generate the LICH
             channel::LICH lich;
-            lich.setRFCT(NXDN_LICH_RFCT_RDCH);
-            lich.setFCT(NXDN_LICH_USC_SACCH_NS);
-            lich.setOption(NXDN_LICH_STEAL_FACCH);
+            lich.setRFCT(RFChannelType::RDCH);
+            lich.setFCT(FuncChannelType::USC_SACCH_NS);
+            lich.setOption(ChOption::STEAL_FACCH);
             lich.setOutbound(true);
             lich.encode(start + 2U);
 
@@ -905,7 +906,7 @@ bool Voice::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t
             channel::SACCH sacch;
             sacch.setData(SACCH_IDLE);
             sacch.setRAN(m_nxdn->m_ran);
-            sacch.setStructure(NXDN_SR_SINGLE);
+            sacch.setStructure(ChStructure::SR_SINGLE);
             sacch.encode(start + 2U);
 
             uint8_t buffer[NXDN_RTCH_LC_LENGTH_BYTES];
@@ -932,8 +933,8 @@ bool Voice::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t
 
         // regenerate the LICH
         channel::LICH lich;
-        lich.setRFCT(NXDN_LICH_RFCT_RDCH);
-        lich.setFCT(NXDN_LICH_USC_SACCH_SS);
+        lich.setRFCT(RFChannelType::RDCH);
+        lich.setFCT(FuncChannelType::USC_SACCH_SS);
         lich.setOption(option);
         lich.setOutbound(true);
         lich.encode(data + 2U);
@@ -947,7 +948,7 @@ bool Voice::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t
         }
 
         // regenerate the audio and interpret the FACCH1 data
-        if (option == NXDN_LICH_STEAL_NONE) {
+        if (option == ChOption::STEAL_NONE) {
             edac::AMBEFEC ambe;
 
             uint32_t errors = 0U;
@@ -963,7 +964,7 @@ bool Voice::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t
             if (m_verbose) {
                 LogMessage(LOG_NET, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL ", audio, srcId = %u, dstId = %u, errs = %u/141 (%.1f%%)", m_nxdn->m_netLC.getSrcId(), m_nxdn->m_netLC.getDstId(), errors, float(errors) / 1.88F);
             }
-        } else if (option == NXDN_LICH_STEAL_FACCH1_1) {
+        } else if (option == ChOption::STEAL_FACCH1_1) {
             channel::FACCH1 facch1;
             bool valid = facch1.decode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS);
             if (valid)
@@ -982,7 +983,7 @@ bool Voice::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t
             if (m_verbose) {
                 LogMessage(LOG_NET, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL ", audio, srcId = %u, dstId = %u, errs = %u/94 (%.1f%%)", m_nxdn->m_netLC.getSrcId(), m_nxdn->m_netLC.getDstId(), errors, float(errors) / 0.94F);
             }
-        } else if (option == NXDN_LICH_STEAL_FACCH1_2) {
+        } else if (option == ChOption::STEAL_FACCH1_2) {
             edac::AMBEFEC ambe;
 
             uint32_t errors = 0U;

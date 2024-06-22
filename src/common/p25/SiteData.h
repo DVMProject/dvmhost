@@ -7,7 +7,7 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2018 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2018,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #if !defined(__P25_SITE_DATA_H__)
@@ -31,13 +31,13 @@ namespace p25
         /// <summary>Initializes a new instance of the SiteData class.</summary>
         SiteData() :
             m_lra(0U),
-            m_netId(P25_WACN_STD_DEFAULT),
-            m_sysId(P25_SID_STD_DEFAULT),
+            m_netId(defines::WACN_STD_DEFAULT),
+            m_sysId(defines::SID_STD_DEFAULT),
             m_rfssId(1U),
             m_siteId(1U),
             m_channelId(1U),
             m_channelNo(1U),
-            m_serviceClass(P25_SVC_CLS_VOICE | P25_SVC_CLS_DATA),
+            m_serviceClass(defines::ServiceClass::VOICE | defines::ServiceClass::DATA),
             m_isAdjSite(false),
             m_callsign("CHANGEME"),
             m_chCnt(0U),
@@ -58,13 +58,13 @@ namespace p25
         /// <param name="lto">Local time offset.</param>
         SiteData(uint32_t netId, uint32_t sysId, uint8_t rfssId, uint8_t siteId, uint8_t lra, uint8_t channelId, uint32_t channelNo, uint8_t serviceClass, int8_t lto) :
             m_lra(0U),
-            m_netId(P25_WACN_STD_DEFAULT),
-            m_sysId(P25_SID_STD_DEFAULT),
+            m_netId(defines::WACN_STD_DEFAULT),
+            m_sysId(defines::SID_STD_DEFAULT),
             m_rfssId(1U),
             m_siteId(1U),
             m_channelId(1U),
             m_channelNo(1U),
-            m_serviceClass(P25_SVC_CLS_VOICE | P25_SVC_CLS_DATA),
+            m_serviceClass(defines::ServiceClass::VOICE | defines::ServiceClass::DATA),
             m_isAdjSite(false),
             m_callsign("CHANGEME"),
             m_chCnt(0U),
@@ -110,7 +110,7 @@ namespace p25
                 std::random_device rd;
                 std::mt19937 mt(rd());
 
-                std::uniform_int_distribution<uint32_t> dist(0x01, P25_WACN_STD_DEFAULT);
+                std::uniform_int_distribution<uint32_t> dist(0x01, defines::WACN_STD_DEFAULT);
                 m_netId = dist(mt);
 
                 // netId clamping
