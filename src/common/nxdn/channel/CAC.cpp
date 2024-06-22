@@ -120,6 +120,7 @@ CAC::CAC() :
 CAC::CAC(const CAC& data) :
     m_ran(0U),
     m_structure(ChStructure::SR_RCCH_SINGLE),
+    m_longInbound(false),
     m_idleBusy(true),
     m_txContinuous(false),
     m_receive(true),
@@ -149,6 +150,8 @@ CAC& CAC::operator=(const CAC& data)
 
         m_ran = m_data[0U] & 0x3FU;
         m_structure = (ChStructure::E)((m_data[0U] >> 6) & 0x03U);
+
+        m_longInbound = data.m_longInbound;
 
         m_idleBusy = data.m_idleBusy;
         m_txContinuous = data.m_txContinuous;
@@ -185,9 +188,11 @@ bool CAC::decode(const uint8_t* data, bool longInbound)
 #endif
 
     if (longInbound) {
+        m_longInbound = longInbound;
+
         // depuncture
-        uint8_t puncture[324U];
-        ::memset(puncture, 0x00U, 324U);
+        uint8_t puncture[322U];
+        ::memset(puncture, 0x00U, 322U);
 
         uint32_t n = 0U, index = 0U;
         for (uint32_t i = 0U; i < NXDN_CAC_IN_FEC_LENGTH_BITS; i++) {
@@ -214,7 +219,7 @@ bool CAC::decode(const uint8_t* data, bool longInbound)
             uint8_t s1 = puncture[n++];
 
             if (!conv.decode(s0, s1)) {
-                LogError(LOG_NXDN, "CAC::decode(), failed to decode convolution");
+                LogError(LOG_NXDN, "CAC::decode(longInbound), failed to decode convolution, i = %u, n = %u", i);
                 return false;
             }
         }
@@ -222,13 +227,13 @@ bool CAC::decode(const uint8_t* data, bool longInbound)
         conv.chainback(m_data, NXDN_CAC_LONG_CRC_LENGTH_BITS);
 
 #if DEBUG_NXDN_CAC
-        Utils::dump(2U, "Decoded CAC", m_data, (NXDN_CAC_LONG_CRC_LENGTH_BITS / 8U) + 1U);
+        Utils::dump(2U, "Decoded Long CAC", m_data, (NXDN_CAC_LONG_CRC_LENGTH_BITS / 8U) + 1U);
 #endif
 
         // check CRC-16
         bool ret = edac::CRC::checkCRC16(m_data, NXDN_CAC_LONG_LENGTH_BITS);
         if (!ret) {
-            LogError(LOG_NXDN, "CAC::decode(), failed CRC-6 check");
+            LogError(LOG_NXDN, "CAC::decode(longInbound), failed CRC-16 check");
             return false;
         }
 
@@ -248,17 +253,31 @@ bool CAC::decode(const uint8_t* data, bool longInbound)
         m_rxCRC = (crc[0U] << 8) | (crc[1U] << 0);
     }
     else {
+        // generate pass-thru bit buffer (no puncturing for short CAC)
+        uint8_t pass[322U];
+        ::memset(pass, 0x00U, 322U);
+
+        uint32_t n = 0U;
+        for (uint32_t i = 0U; i < NXDN_CAC_IN_FEC_LENGTH_BITS; i++) {
+            bool b = READ_BIT(buffer, i);
+            pass[n++] = b ? 2U : 0U;
+        }
+
+        for (uint32_t i = 0U; i < 8U; i++) {
+            pass[n++] = 0U;
+        }
+
         // decode convolution
         edac::Convolution conv;
         conv.start();
 
-        uint32_t n = 0U;
+        n = 0U;
         for (uint32_t i = 0U; i < (NXDN_CAC_SHORT_CRC_LENGTH_BITS + 4U); i++) {
-            uint8_t s0 = buffer[n++];
-            uint8_t s1 = buffer[n++];
+            uint8_t s0 = pass[n++];
+            uint8_t s1 = pass[n++];
 
             if (!conv.decode(s0, s1)) {
-                LogError(LOG_NXDN, "CAC::decode(), failed to decode convolution");
+                LogError(LOG_NXDN, "CAC::decode(), failed to decode convolution, i = %u, n = %u", i);
                 return false;
             }
         }
@@ -272,7 +291,7 @@ bool CAC::decode(const uint8_t* data, bool longInbound)
         // check CRC-16
         bool ret = edac::CRC::checkCRC16(m_data, NXDN_CAC_SHORT_LENGTH_BITS);
         if (!ret) {
-            LogError(LOG_NXDN, "CAC::decode(), failed CRC-6 check");
+            LogError(LOG_NXDN, "CAC::decode(), failed CRC-16 check");
             return false;
         }
 
@@ -390,9 +409,16 @@ void CAC::getData(uint8_t* data) const
     assert(data != nullptr);
 
     uint32_t offset = 8U;
-    for (uint32_t i = 0U; i < (NXDN_CAC_SHORT_LENGTH_BITS - 10); i++, offset++) {
-        bool b = READ_BIT(m_data, offset);
-        WRITE_BIT(data, i, b);
+    if (m_longInbound) {
+        for (uint32_t i = 0U; i < (NXDN_CAC_LONG_LENGTH_BITS - 8U); i++, offset++) {
+            bool b = READ_BIT(m_data, offset);
+            WRITE_BIT(data, i, b);
+        }
+    } else {
+        for (uint32_t i = 0U; i < (NXDN_CAC_SHORT_LENGTH_BITS - 10U); i++, offset++) {
+            bool b = READ_BIT(m_data, offset);
+            WRITE_BIT(data, i, b);
+        }
     }
 }
 
@@ -428,6 +454,8 @@ void CAC::copy(const CAC& data)
 
     m_ran = m_data[0U] & 0x3FU;
     m_structure = (ChStructure::E)((m_data[0U] >> 6) & 0x03U);
+
+    m_longInbound = data.m_longInbound;
 
     m_idleBusy = data.m_idleBusy;
     m_txContinuous = data.m_txContinuous;

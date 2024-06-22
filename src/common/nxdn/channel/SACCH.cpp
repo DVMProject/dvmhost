@@ -145,7 +145,7 @@ bool SACCH::decode(const uint8_t* data)
         uint8_t s1 = puncture[n++];
 
         if (!conv.decode(s0, s1)) {
-            LogError(LOG_NXDN, "SACCH::decode(), failed to decode convolution");
+            LogError(LOG_NXDN, "SACCH::decode(), failed to decode convolution, i = %u, n = %u", i);
             return false;
         }
     }

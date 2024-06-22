@@ -47,14 +47,6 @@ std::unique_ptr<RCCH> RCCHFactory::createRCCH(const uint8_t* data, uint32_t leng
 {
     assert(data != nullptr);
 
-    uint8_t rcch[22U];
-    ::memset(rcch, 0x00U, NXDN_RCCH_LC_LENGTH_BYTES + 4U);
-
-    for (uint32_t i = 0U; i < length; i++, offset++) {
-        bool b = READ_BIT(data, offset);
-        WRITE_BIT(rcch, i, b);
-    }
-
     uint8_t messageType = data[0U] & 0x3FU;                                         // Message Type
 
     // message type opcodes

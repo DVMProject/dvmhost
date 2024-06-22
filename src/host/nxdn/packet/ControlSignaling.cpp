@@ -138,8 +138,9 @@ bool ControlSignaling::process(FuncChannelType::E fct, ChOption::E option, uint8
 
     channel::CAC cac;
     bool validCAC = cac.decode(data + 2U, (fct == FuncChannelType::CAC_INBOUND_LONG));
-    if (m_nxdn->m_rfState == RS_RF_LISTENING && !validCAC)
+    if (m_nxdn->m_rfState == RS_RF_LISTENING && !validCAC) {
         return false;
+    }
 
     if (validCAC) {
         uint8_t ran = cac.getRAN();
@@ -367,7 +368,7 @@ void ControlSignaling::writeRF_Message(RCCH* rcch, bool noNetwork, bool imm)
     channel::LICH lich;
     lich.setRFCT(RFChannelType::RCCH);
     lich.setFCT(FuncChannelType::CAC_OUTBOUND);
-    lich.setOption(ChOption::DATA_COMMON);
+    lich.setOption(ChOption::DATA_NORMAL);
     lich.setOutbound(true);
     lich.encode(data + 2U);
 
@@ -379,7 +380,7 @@ void ControlSignaling::writeRF_Message(RCCH* rcch, bool noNetwork, bool imm)
     // generate the CAC
     channel::CAC cac;
     cac.setRAN(m_nxdn->m_ran);
-    cac.setStructure(ChStructure::SR_SINGLE);
+    cac.setStructure(ChStructure::SR_RCCH_SINGLE);
     cac.setData(buffer);
     cac.encode(data + 2U);
 
@@ -592,7 +593,7 @@ bool ControlSignaling::writeRF_Message_Grant(uint32_t srcId, uint32_t dstId, uin
             req["dstId"].set<uint32_t>(dstId);
 
             int ret = RESTClient::send(voiceChData.address(), voiceChData.port(), voiceChData.password(),
-                HTTP_PUT, PUT_PERMIT_TG, req, voiceChData.ssl(), REST_QUICK_WAIT, m_nxdn->m_debug);
+                HTTP_PUT, PUT_PERMIT_TG, req, voiceChData.ssl(), REST_QUICK_WAIT / 2, m_nxdn->m_debug);
             if (ret != network::rest::http::HTTPPayload::StatusType::OK) {
                 ::LogError((net) ? LOG_NET : LOG_RF, "NXDN, %s, failed to permit TG for use, chNo = %u", rcch->toString().c_str(), chNo);
                 m_nxdn->m_affiliations.releaseGrant(dstId, false);

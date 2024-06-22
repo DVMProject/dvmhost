@@ -53,6 +53,8 @@ namespace nxdn
             __PROPERTY(uint8_t, ran, RAN);
             /// <summary></summary>
             __PROPERTY(defines::ChStructure::E, structure, Structure);
+            /// <summary></summary>
+            __PROPERTY(bool, longInbound, LongInbound);
 
             /** Collision Control Field */
             /// <summary>Idle/Busy.</summary>

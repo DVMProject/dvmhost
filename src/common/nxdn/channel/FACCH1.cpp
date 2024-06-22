@@ -143,7 +143,7 @@ bool FACCH1::decode(const uint8_t* data, uint32_t offset)
         uint8_t s1 = puncture[n++];
 
         if (!conv.decode(s0, s1)) {
-            LogError(LOG_NXDN, "FACCH1::decode(), failed to decode convolution");
+            LogError(LOG_NXDN, "FACCH1::decode(), failed to decode convolution, i = %u, n = %u", i);
             return false;
         }
     }

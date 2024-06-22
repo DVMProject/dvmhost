@@ -38,7 +38,7 @@ using namespace nxdn::packet;
 //  Constants
 // ---------------------------------------------------------------------------
 
-const uint8_t MAX_SYNC_BYTES_ERRS = 0U;
+const uint8_t MAX_SYNC_BYTES_ERRS = 3U;
 
 const uint8_t SCRAMBLER[] = {
     0x00U, 0x00U, 0x00U, 0x82U, 0xA0U, 0x88U, 0x8AU, 0x00U, 0xA2U, 0xA8U, 0x82U, 0x8AU, 0x82U, 0x02U,
@@ -428,6 +428,10 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
         for (uint8_t i = 0U; i < NXDN_FSW_BYTES_LENGTH; i++)
             errs += Utils::countBits8(syncBytes[i] ^ NXDN_FSW_BYTES[i]);
 
+        // silently ignore frames with errors greater then 2 times the maximum
+        if (errs > MAX_SYNC_BYTES_ERRS * 2U)
+            return false;
+
         if (errs >= MAX_SYNC_BYTES_ERRS) {
             LogWarning(LOG_RF, "NXDN, possible sync word rejected, errs = %u, sync word = %02X %02X %02X", errs,
                 syncBytes[0U], syncBytes[1U], syncBytes[2U]);
@@ -470,15 +474,7 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
         LogDebug(LOG_RF, "NXDN, valid LICH, rfState = %u, netState = %u, rfct = %u, fct = %u", m_rfState, m_netState, rfct, fct);
     }
 
-    // are we interrupting a running CC?
-    if (m_ccRunning) {
-        if ((fct != FuncChannelType::CAC_INBOUND_SHORT) || (fct != FuncChannelType::CAC_INBOUND_LONG)) {
-            m_ccHalted = true;
-        }
-    }
-
     bool ret = false;
-
     if (rfct == RFChannelType::RCCH) {
         ret = m_control->process(fct, option, data, len);
     }
@@ -492,14 +488,6 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
                 if (!m_dedicatedControl)
                     ret = m_voice->process(fct, option, data, len);
                 break;
-        }
-
-        if (m_ccRunning) {
-            m_ccHalted = false;
-        }
-    } else {
-        if (m_ccRunning) {
-            m_ccHalted = false;
         }
     }
 
