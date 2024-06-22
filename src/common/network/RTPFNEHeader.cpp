@@ -21,6 +21,7 @@ using namespace network::frame;
 // ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
+
 /// <summary>
 /// Initializes a new instance of the RTPFNEHeader class.
 /// </summary>

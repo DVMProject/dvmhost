@@ -205,8 +205,21 @@ bool BaseNetwork::writePeerStatus(json::object obj)
 /// <summary>
 /// Writes a group affiliation to the network.
 /// </summary>
+/// <remarks>
+/// Below is the representation of the data layout for the group affiliation
+/// announcement message. The message is 6 bytes in length.
+///
+/// Byte 0               1               2               3
+/// Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 
+///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+///     | Source ID                                     | Dest ID       |
+///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+///     |                             |
+///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+/// </remarks>
 /// <param name="srcId"></param>
 /// <param name="dstId"></param>
+/// <returns></returns>
 bool BaseNetwork::announceGroupAffiliation(uint32_t srcId, uint32_t dstId)
 {
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
@@ -224,6 +237,18 @@ bool BaseNetwork::announceGroupAffiliation(uint32_t srcId, uint32_t dstId)
 /// Writes a unit registration to the network.
 /// </summary>
 /// <param name="srcId"></param>
+/// <remarks>
+/// Below is the representation of the data layout for the unit registration
+/// announcement message. The message is 3 bytes in length.
+///
+/// Byte 0               1               2
+/// Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 
+///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+///     | Source ID                                     |
+///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+/// </remarks>
+/// <param name="srcId"></param>
+/// <returns></returns>
 bool BaseNetwork::announceUnitRegistration(uint32_t srcId)
 {
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
@@ -256,6 +281,7 @@ bool BaseNetwork::announceUnitDeregistration(uint32_t srcId)
 /// Writes a complete update of the peer affiliation list to the network.
 /// </summary>
 /// <param name="affs"></param>
+/// <returns></returns>
 bool BaseNetwork::announceAffiliationUpdate(const std::unordered_map<uint32_t, uint32_t> affs)
 {
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
@@ -281,6 +307,7 @@ bool BaseNetwork::announceAffiliationUpdate(const std::unordered_map<uint32_t, u
 /// Writes a complete update of the peer's voice channel list to the network.
 /// </summary>
 /// <param name="affs"></param>
+/// <returns></returns>
 bool BaseNetwork::announceSiteVCs(const std::vector<uint32_t> peers)
 {
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
@@ -794,6 +821,34 @@ uint16_t BaseNetwork::pktSeq(bool reset)
 /// <summary>
 /// Creates an DMR frame message.
 /// </summary>
+/// <remarks>
+/// Below is the representation of the data layout for the DMR frame
+/// message header. The header is 20 bytes in length.
+///
+/// Byte 0               1               2               3
+/// Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 
+///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+///     | Protocol Tag (DMRD)                                           |
+///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+///     | Seq No.       | Source ID                                     |
+///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+///     | Destination ID                                | Reserved      |
+///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+///     | Reserved                      | Control Flags |S|G| Data Type |
+///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+///     | Reserved                                                      |
+///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+///
+/// The data starting at offset 20 for 33 bytes if the raw DMR frame.
+///
+/// DMR frame message has 2 trailing bytes:
+///
+/// Byte 53              54               
+/// Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0
+///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+///     | BER           | RSSI          |
+///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+/// </remarks>
 /// <param name="length"></param>
 /// <param name="streamId"></param>
 /// <param name="data"></param>
@@ -828,7 +883,7 @@ UInt8Array BaseNetwork::createDMR_Message(uint32_t& length, const uint32_t strea
     FLCO::E flco = data.getFLCO();
     buffer[15U] |= flco == FLCO::GROUP ? 0x00U : 0x40U;                             // Group
 
-    uint8_t dataType = data.getDataType();
+    DataType::E dataType = data.getDataType();
     if (dataType == DataType::VOICE_SYNC) {
         buffer[15U] |= 0x10U;
     }
@@ -857,6 +912,44 @@ UInt8Array BaseNetwork::createDMR_Message(uint32_t& length, const uint32_t strea
 /// <summary>
 /// Creates an P25 frame message header.
 /// </summary>
+/// <remarks>
+/// Below is the representation of the data layout for the P25 frame
+/// message header. The header is 24 bytes in length.
+///
+/// Byte 0               1               2               3
+/// Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 
+///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+///     | Protocol Tag (P25D)                                           |
+///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+///     | LCO           | Source ID                                     |
+///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+///     | Destination ID                                | System ID     |
+///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+///     | System ID     | Reserved      | Control Flags | MFId          |
+///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+///     | Network ID                                    | Reserved      |
+///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+///     | LSD1          | LSD2          | DUID          | Frame Length  |
+///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+///
+/// The data starting at offset 20 for variable number of bytes (DUID dependant) 
+/// is the P25 frame.
+///
+/// If the P25 frame message is a LDU1, it contains 13 trailing bytes that
+/// contain the frame type, and encryption data.
+///
+/// Byte 180             181             182             183
+/// Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 
+///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+///     | Frame Type    | Algorithm ID  | Key ID                        |
+///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+///     | Message Indicator                                             |
+///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+///     |                                                               |
+///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+///     |               |
+///     +-+-+-+-+-+-+-+-+
+/// </remarks>
 /// <param name="buffer"></param>
 /// <param name="duid"></param>
 /// <param name="control"></param>
@@ -923,6 +1016,10 @@ void BaseNetwork::createP25_MessageHdr(uint8_t* buffer, p25::defines::DUID::E du
 /// <summary>
 /// Creates an P25 LDU1 frame message.
 /// </summary>
+/// <remarks>
+/// The data packed into a P25 LDU1 frame message is near standard DFSI messaging, just instead of
+/// 9 individual frames, they are packed into a single message one right after another. 
+/// </remarks>
 /// <param name="length"></param>
 /// <param name="control"></param>
 /// <param name="lsd"></param>
@@ -1005,6 +1102,10 @@ UInt8Array BaseNetwork::createP25_LDU1Message(uint32_t& length, const p25::lc::L
 /// <summary>
 /// Creates an P25 LDU2 frame message.
 /// </summary>
+/// <remarks>
+/// The data packed into a P25 LDU2 frame message is near standard DFSI messaging, just instead of
+/// 9 individual frames, they are packed into a single message one right after another. 
+/// </remarks>
 /// <param name="length"></param>
 /// <param name="control"></param>
 /// <param name="lsd"></param>
@@ -1086,6 +1187,10 @@ UInt8Array BaseNetwork::createP25_LDU2Message(uint32_t& length, const p25::lc::L
 /// <summary>
 /// Creates an P25 TDU frame message.
 /// </summary>
+/// <remarks>
+/// The data packed into a P25 TDU frame message is essentially just a message header with control bytes
+/// set. 
+/// </remarks>
 /// <param name="length"></param>
 /// <param name="control"></param>
 /// <param name="lsd"></param>
@@ -1113,6 +1218,10 @@ UInt8Array BaseNetwork::createP25_TDUMessage(uint32_t& length, const p25::lc::LC
 /// <summary>
 /// Creates an P25 TSDU frame message.
 /// </summary>
+/// <remarks>
+/// The data packed into a P25 TSDU frame message is essentially just a message header with the FEC encoded
+/// raw TSDU data.
+/// </remarks>
 /// <param name="length"></param>
 /// <param name="control"></param>
 /// <param name="data"></param>
@@ -1147,6 +1256,29 @@ UInt8Array BaseNetwork::createP25_TSDUMessage(uint32_t& length, const p25::lc::L
 /// <summary>
 /// Writes P25 PDU frame data to the network.
 /// </summary>
+/// <remarks>
+/// Below is the representation of the data layout for the P25 frame
+/// message header used for a PDU. The header is 24 bytes in length.
+///
+/// Byte 0               1               2               3
+/// Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 
+///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+///     | Protocol Tag (P25D)                                           |
+///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+///     |C| SAP         | PDU Length (Bytes)                            |
+///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+///     | Reserved                                                      |
+///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+///     |                                               | MFId          |
+///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+///     | Reserved                                                      |
+///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+///     | Blk to Flw    | Current Block | DUID          | Frame Length  |
+///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+///
+/// The data starting at offset 24 for variable number of bytes (DUID dependant) 
+/// is the P25 frame.
+/// </remarks>
 /// <param name="length"></param>
 /// <param name="header"></param>
 /// <param name="currentBlock"></param>
@@ -1202,6 +1334,28 @@ UInt8Array BaseNetwork::createP25_PDUMessage(uint32_t& length, const p25::data::
 /// <summary>
 /// Writes NXDN frame data to the network.
 /// </summary>
+/// <remarks>
+/// Below is the representation of the data layout for the NXDN frame
+/// message header. The header is 24 bytes in length.
+///
+/// Byte 0               1               2               3
+/// Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 
+///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+///     | Protocol Tag (NXDD)                                           |
+///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+///     | Message Type  | Source ID                                     |
+///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+///     | Destination ID                                | Reserved      |
+///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+///     | Reserved                      | Control Flags |R|G| Reserved  |
+///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+///     | Reserved                                                      |
+///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+///     |                                               | Frame Length  |
+///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+///
+/// The data starting at offset 24 for 48 bytes if the raw NXDN frame.
+/// </remarks>
 /// <param name="length"></param>
 /// <param name="lc"></param>
 /// <param name="data"></param>

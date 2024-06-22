@@ -29,6 +29,7 @@ hrc::hrc_t RTPHeader::m_wcStart = hrc::hrc_t();
 // ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
+
 /// <summary>
 /// Initializes a new instance of the RTPHeader class.
 /// </summary>

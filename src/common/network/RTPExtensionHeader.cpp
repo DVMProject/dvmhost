@@ -20,6 +20,7 @@ using namespace network::frame;
 // ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
+
 /// <summary>
 /// Initializes a new instance of the RTPExtensionHeader class.
 /// </summary>
