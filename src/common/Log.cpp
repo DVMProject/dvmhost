@@ -99,7 +99,7 @@ static bool LogOpen()
         time_t now;
         ::time(&now);
 
-        struct tm* tm = ::gmtime(&now);
+        struct tm* tm = ::localtime(&now);
 
         if (tm->tm_mday == m_tm.tm_mday && tm->tm_mon == m_tm.tm_mon && tm->tm_year == m_tm.tm_year) {
             if (m_fpLog != nullptr)
@@ -223,16 +223,18 @@ void Log(uint32_t level, const char *module, const char* fmt, ...)
 #endif
     char buffer[LOG_BUFFER_LEN];
     if (!g_disableTimeDisplay && !g_useSyslog) {
-        struct timeval now;
-        ::gettimeofday(&now, NULL);
+        time_t now;
+        ::time(&now);
+        struct tm* tm = ::localtime(&now);
 
-        struct tm* tm = ::gmtime(&now.tv_sec);
+        struct timeval nowMillis;
+        ::gettimeofday(&nowMillis, NULL);
 
         if (module != nullptr) {
-            ::sprintf(buffer, "%c: %04d-%02d-%02d %02d:%02d:%02d.%03lu (%s) ", LEVELS[level], tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec, now.tv_usec / 1000U, module);
+            ::sprintf(buffer, "%c: %04d-%02d-%02d %02d:%02d:%02d.%03lu (%s) ", LEVELS[level], tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec, nowMillis.tv_usec / 1000U, module);
         }
         else {
-            ::sprintf(buffer, "%c: %04d-%02d-%02d %02d:%02d:%02d.%03lu ", LEVELS[level], tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec, now.tv_usec / 1000U);
+            ::sprintf(buffer, "%c: %04d-%02d-%02d %02d:%02d:%02d.%03lu ", LEVELS[level], tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec, nowMillis.tv_usec / 1000U);
         }
     }
     else {

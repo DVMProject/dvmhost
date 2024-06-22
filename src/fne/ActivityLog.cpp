@@ -57,7 +57,7 @@ static bool ActivityLogOpen()
     time_t now;
     ::time(&now);
 
-    struct tm* tm = ::gmtime(&now);
+    struct tm* tm = ::localtime(&now);
 
     if (tm->tm_mday == m_actTm.tm_mday && tm->tm_mon == m_actTm.tm_mon && tm->tm_year == m_actTm.tm_year) {
         if (m_actFpLog != nullptr)
