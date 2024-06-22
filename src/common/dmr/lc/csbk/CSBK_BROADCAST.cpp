@@ -175,9 +175,9 @@ void CSBK_BROADCAST::encode(uint8_t* data)
 std::string CSBK_BROADCAST::toString()
 {
     switch (m_anncType) {
-    case BroadcastAnncType::ANN_WD_TSCC:    return std::string("CSBKO, BROADCAST (Announcement PDU), BroadcastAnncType::ANN_WD_TSCC (Announce-WD TSCC Channel)");
-    case BroadcastAnncType::CHAN_FREQ:      return std::string("CSBKO, BROADCAST (Announcement PDU), BroadcastAnncType::CHAN_FREQ (Logical Channel/Frequency)");
-    case BroadcastAnncType::SITE_PARMS:     return std::string("CSBKO, BROADCAST (Announcement PDU), BroadcastAnncType::SITE_PARMS (General Site Parameters)");
+    case BroadcastAnncType::ANN_WD_TSCC:    return std::string("CSBKO, BROADCAST (Announcement PDU), ANN_WD_TSCC (Announce-WD TSCC Channel)");
+    case BroadcastAnncType::CHAN_FREQ:      return std::string("CSBKO, BROADCAST (Announcement PDU), CHAN_FREQ (Logical Channel/Frequency)");
+    case BroadcastAnncType::SITE_PARMS:     return std::string("CSBKO, BROADCAST (Announcement PDU), SITE_PARMS (General Site Parameters)");
     default:                                return std::string("CSBKO, BROADCAST (Announcement PDU)");
     }
 }
