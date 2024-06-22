@@ -135,7 +135,7 @@ namespace nxdn
                 CAC_INBOUND_LONG = 1U,                  // Common Access Channel - Inbound Long
                 CAC_INBOUND_SHORT = 3U,                 // Common Access Channel - Inbound Short
 
-            // Slow Associated Control Channel / User Data Channel
+            // Slow Associated Control Channel / User Specific Channel
                 USC_SACCH_NS = 0U,                      //
                 USC_UDCH = 1U,                          //
                 USC_SACCH_SS = 2U,                      //

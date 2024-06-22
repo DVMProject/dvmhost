@@ -63,6 +63,10 @@ void MESSAGE_TYPE_SITE_INFO::encode(uint8_t* data, uint32_t length, uint32_t off
 {
     assert(data != nullptr);
 
+    uint8_t siteInfo2 = m_siteData.siteInfo2();
+    if ((siteInfo2 & SiteInformation2::IP_NETWORK) == SiteInformation2::IP_NETWORK)
+        siteInfo2 &= ~SiteInformation2::IP_NETWORK; // clear the IP_NETWORK bit -- that will be provided by netActive()
+
     uint8_t rcch[NXDN_RCCH_LC_LENGTH_BYTES + 4U];
     ::memset(rcch, 0x00U, NXDN_RCCH_LC_LENGTH_BYTES + 4U);
 
@@ -76,16 +80,19 @@ void MESSAGE_TYPE_SITE_INFO::encode(uint8_t* data, uint32_t length, uint32_t off
         ((m_ccchMultiCnt & 0x07U) << 4) +                                           // ...               - Number of Multipurpose Frames
         ((m_rcchIterateCnt & 0x0FU) << 0);                                          // ...               - Number of Iteration
 
-    rcch[6U] = m_siteData.serviceClass();                                           // Service Information
-    rcch[7U] = (m_siteData.netActive() ? SiteInformation2::IP_NETWORK : 0x00U);     // ...
+    rcch[6U] = m_siteData.siteInfo1();                                              // Site Information 1
+    rcch[7U] = (m_siteData.netActive() ? SiteInformation2::IP_NETWORK : 0x00U) +    // Site Information 2
+        siteInfo2;
 
     // bryanb: this is currently fixed -- maybe dynamic in the future
     rcch[8U] = 0U;                                                                  // Restriction Information - No access restriction / No cycle restriction
     rcch[9U] = 0U;                                                                  // ...                     - No group restriction / No Location Registration Restriction
-    rcch[10U] = (!m_siteData.netActive() ? 0x01U : 0x00U);                          // ...                     - No group ratio restriction / No delay time extension / ISO
+    //rcch[10U] = (!m_siteData.netActive() ? 0x01U : 0x00U);                        // ...                     - No group ratio restriction / No delay time extension / ISO
+    rcch[10U] = 0U;
 
     // bryanb: this is currently fixed -- maybe dynamic in the future
-    rcch[11U] = ChAccessBase::FREQ_SYS_DEFINED << 2;                                // Channel Access Information - Channel Version / Sys Defined Step / Sys Defined Base Freq
+    //rcch[11U] = ChAccessBase::FREQ_SYS_DEFINED << 2;                              // Channel Access Information - Channel Version / Sys Defined Step / Sys Defined Base Freq
+    rcch[11U] = 0U;
 
     rcch[14U] = 1U;                                                                 // Version
 

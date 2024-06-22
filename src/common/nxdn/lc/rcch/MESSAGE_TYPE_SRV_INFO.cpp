@@ -58,14 +58,19 @@ void MESSAGE_TYPE_SRV_INFO::encode(uint8_t* data, uint32_t length, uint32_t offs
 {
     assert(data != nullptr);
 
+    uint8_t siteInfo2 = m_siteData.siteInfo2();
+    if ((siteInfo2 & SiteInformation2::IP_NETWORK) == SiteInformation2::IP_NETWORK)
+        siteInfo2 &= ~SiteInformation2::IP_NETWORK; // clear the IP_NETWORK bit -- that will be provided by netActive()
+
     uint8_t rcch[NXDN_RCCH_LC_LENGTH_BYTES + 4U];
     ::memset(rcch, 0x00U, NXDN_RCCH_LC_LENGTH_BYTES + 4U);
 
     rcch[1U] = (m_siteData.locId() >> 16) & 0xFFU;                                  // Location ID
     rcch[2U] = (m_siteData.locId() >> 8) & 0xFFU;                                   // ...
     rcch[3U] = (m_siteData.locId() >> 0) & 0xFFU;                                   // ...
-    rcch[4U] = m_siteData.serviceClass();                                           // Service Information
-    rcch[5U] = (m_siteData.netActive() ? SiteInformation2::IP_NETWORK : 0x00U);     // ...
+    rcch[4U] = m_siteData.siteInfo1();                                              // Site Information 1
+    rcch[5U] = (m_siteData.netActive() ? SiteInformation2::IP_NETWORK : 0x00U) +    // Site Information 2
+        siteInfo2;
 
     // bryanb: this is currently fixed -- maybe dynamic in the future
     rcch[8U] = 0U;                                                                  // Restriction Information - No access restriction / No cycle restriction

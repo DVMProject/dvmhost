@@ -38,7 +38,7 @@ namespace nxdn
             CAC& operator=(const CAC& data);
 
             /// <summary>Decode a common access channel.</summary>
-            bool decode(const uint8_t* data);
+            bool decode(const uint8_t* data, bool longInbound = false);
             /// <summary>Encode a common access channel.</summary>
             void encode(uint8_t* data) const;
 

@@ -259,11 +259,12 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
     }
 
     /*
-    ** CC Service Class
+    ** CC Site Info
     */
-    uint8_t serviceClass = SiteInformation1::VOICE_CALL_SVC | SiteInformation1::DATA_CALL_SVC;
+    uint8_t siteInfo1 = SiteInformation1::VOICE_CALL_SVC | SiteInformation1::DATA_CALL_SVC;
+    uint8_t siteInfo2 = SiteInformation2::SHORT_DATA_CALL_SVC;
     if (m_enableControl) {
-        serviceClass |= SiteInformation1::GRP_REG_SVC;
+        siteInfo1 |= SiteInformation1::LOC_REG_SVC;//| SiteInformation1::GRP_REG_SVC;
     }
 
     /*
@@ -274,7 +275,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
     locId = (locId << 10) + (sysId & 0x3FFU);
     locId = (locId << 12) + (siteId & 0xFFFU);
 
-    m_siteData = SiteData(locId, channelId, (channelNo & 0x3FF), serviceClass, false);
+    m_siteData = SiteData(locId, channelId, (channelNo & 0x3FF), siteInfo1, siteInfo2, false);
     m_siteData.setCallsign(cwCallsign);
 
     m_controlChData = controlChData;
@@ -491,6 +492,14 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
                 if (!m_dedicatedControl)
                     ret = m_voice->process(fct, option, data, len);
                 break;
+        }
+
+        if (m_ccRunning) {
+            m_ccHalted = false;
+        }
+    } else {
+        if (m_ccRunning) {
+            m_ccHalted = false;
         }
     }
 

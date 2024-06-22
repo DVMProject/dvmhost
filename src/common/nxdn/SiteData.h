@@ -30,7 +30,8 @@ namespace nxdn
             m_locId(1U),
             m_channelId(1U),
             m_channelNo(1U),
-            m_serviceClass(defines::SiteInformation1::VOICE_CALL_SVC | defines::SiteInformation1::DATA_CALL_SVC),
+            m_siteInfo1(defines::SiteInformation1::VOICE_CALL_SVC | defines::SiteInformation1::DATA_CALL_SVC),
+            m_siteInfo2(0U),
             m_isAdjSite(false),
             m_callsign("CHANGEME"),
             m_requireReg(false),
@@ -42,13 +43,15 @@ namespace nxdn
         /// <param name="locId">NXDN Location ID.</param>
         /// <param name="channelId">Channel ID.</param>
         /// <param name="channelNo">Channel Number.</param>
-        /// <param name="serviceClass">Service class.</param>
+        /// <param name="siteInfo1">Site Information 1.</param>
+        /// <param name="siteInfo2">Site Information 2.</param>
         /// <param name="requireReg"></param>
-        SiteData(uint32_t locId, uint8_t channelId, uint32_t channelNo, uint8_t serviceClass, bool requireReq) :
+        SiteData(uint32_t locId, uint8_t channelId, uint32_t channelNo, uint8_t siteInfo1, uint8_t siteInfo2, bool requireReq) :
             m_locId(locId),
             m_channelId(channelId),
             m_channelNo(channelNo),
-            m_serviceClass(defines::SiteInformation1::VOICE_CALL_SVC | defines::SiteInformation1::DATA_CALL_SVC),
+            m_siteInfo1(defines::SiteInformation1::VOICE_CALL_SVC | defines::SiteInformation1::DATA_CALL_SVC),
+            m_siteInfo2(0U),
             m_isAdjSite(false),
             m_callsign("CHANGEME"),
             m_requireReg(requireReq),
@@ -69,7 +72,8 @@ namespace nxdn
                 m_channelNo = 1023U;
             }
 
-            m_serviceClass = serviceClass;
+            m_siteInfo1 = siteInfo1;
+            m_siteInfo2 = siteInfo2;
         }
 
         /// <summary>Helper to set the site callsign.</summary>
@@ -90,8 +94,9 @@ namespace nxdn
         /// <param name="locId">NXDN Location ID.</param>
         /// <param name="channelId">Channel ID.</param>
         /// <param name="channelNo">Channel Number.</param>
-        /// <param name="serviceClass">Service class.</param>
-        void setAdjSite(uint32_t locId, uint8_t rfssId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, uint8_t serviceClass)
+        /// <param name="siteInfo1">Site Information 1.</param>
+        /// <param name="siteInfo2">Site Information 2.</param>
+        void setAdjSite(uint32_t locId, uint8_t rfssId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, uint8_t siteInfo1, uint8_t siteInfo2)
         {
             if (m_locId > 0xFFFFFFU)
                 m_locId = 0xFFFFFFU;
@@ -113,7 +118,8 @@ namespace nxdn
             m_channelId = channelId;
             m_channelNo = channelNo;
 
-            m_serviceClass = serviceClass;
+            m_siteInfo1 = siteInfo1;
+            m_siteInfo2 = siteInfo2;
 
             m_isAdjSite = true;
 
@@ -132,7 +138,8 @@ namespace nxdn
                 m_channelId = data.m_channelId;
                 m_channelNo = data.m_channelNo;
 
-                m_serviceClass = data.m_serviceClass;
+                m_siteInfo1 = data.m_siteInfo1;
+                m_siteInfo2 = data.m_siteInfo2;
 
                 m_isAdjSite = data.m_isAdjSite;
 
@@ -153,8 +160,10 @@ namespace nxdn
         __READONLY_PROPERTY_PLAIN(uint8_t, channelId);
         /// <summary>Channel number.</summary>
         __READONLY_PROPERTY_PLAIN(uint32_t, channelNo);
-        /// <summary>Service class.</summary>
-        __READONLY_PROPERTY_PLAIN(uint8_t, serviceClass);
+        /// <summary>Site Information 1.</summary>
+        __READONLY_PROPERTY_PLAIN(uint8_t, siteInfo1);
+        /// <summary>Site Information 2.</summary>
+        __READONLY_PROPERTY_PLAIN(uint8_t, siteInfo2);
         /// <summary>Flag indicating whether this site data is for an adjacent site.</summary>
         __READONLY_PROPERTY_PLAIN(bool, isAdjSite);
         /// <summary>Callsign.</summary>

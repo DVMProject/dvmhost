@@ -137,7 +137,7 @@ bool ControlSignaling::process(FuncChannelType::E fct, ChOption::E option, uint8
     assert(data != nullptr);
 
     channel::CAC cac;
-    bool validCAC = cac.decode(data + 2U);
+    bool validCAC = cac.decode(data + 2U, (fct == FuncChannelType::CAC_INBOUND_LONG));
     if (m_nxdn->m_rfState == RS_RF_LISTENING && !validCAC)
         return false;
 
