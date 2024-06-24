@@ -9,7 +9,7 @@
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
 *   Copyright (C) 2016 Jonathan Naylor, G4KLX
-*   Copyright (C) 2017-2023 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
 *
 */
 #if !defined(__P25_LC__LC_H__)
@@ -65,6 +65,9 @@ namespace p25
             bool decodeLDU2(const uint8_t* data);
             /// <summary>Encode a logical link data unit 2.</summary>
             void encodeLDU2(uint8_t* data);
+
+            /// <summary>Helper to determine if the MFId is a standard MFId.</summary>
+            bool isStandardMFId() const;
 
             /** Encryption data */
             /// <summary>Sets the encryption message indicator.</summary>
@@ -124,6 +127,10 @@ namespace p25
             /// <summary>Encryption key ID.</summary>
             __PROPERTY(uint32_t, kId, KId);
 
+            /** Packed RS Data */
+            /// <summary>Packed RS Data.</summary>
+            __PROPERTY(ulong64_t, rsValue, RS);
+
         private:
             friend class TSBK;
             friend class TDULC;
@@ -132,8 +139,6 @@ namespace p25
             bool m_tsbkVendorSkip;
 
             uint32_t m_callTimer;
-
-            ulong64_t m_rsValue; // used for certain transparent passthru LCOs
 
             /** Encryption data */
             uint8_t* m_mi;

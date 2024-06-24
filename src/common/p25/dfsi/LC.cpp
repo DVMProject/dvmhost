@@ -33,14 +33,19 @@ using namespace p25::dfsi::defines;
 /// Initializes a new instance of the LC class.
 /// </summary>
 LC::LC() :
+    m_frameType(DFSIFrameType::LDU1_VOICE1),
     m_rssi(0U),
     m_control(nullptr),
     m_lsd(nullptr),
     m_rs(),
+    m_rsBuffer(nullptr),
     m_mi(nullptr)
 {
     m_mi = new uint8_t[MI_LENGTH_BYTES];
     ::memset(m_mi, 0x00U, MI_LENGTH_BYTES);
+
+    m_rsBuffer = new uint8_t[P25_LDU_LC_FEC_LENGTH_BYTES];
+    ::memset(m_rsBuffer, 0x00U, P25_LDU_LC_FEC_LENGTH_BYTES);
 
     m_control = new lc::LC();
     m_lsd = new data::LowSpeedData();
@@ -76,6 +81,9 @@ LC::~LC()
         delete m_lsd;
     }
     delete[] m_mi;
+    if (m_rsBuffer != nullptr) {
+        delete[] m_rsBuffer;
+    }
 }
 
 /// <summary>
@@ -115,7 +123,7 @@ bool LC::decodeLDU1(const uint8_t* data, uint8_t* imbe)
     assert(data != nullptr);
     assert(imbe != nullptr);
 
-    m_frameType = data[0U];                                                         // Frame Type
+    m_frameType = (DFSIFrameType::E)data[0U];                                       // Frame Type
 
     // different frame types mean different things
     switch (m_frameType)
@@ -131,6 +139,12 @@ bool LC::decodeLDU1(const uint8_t* data, uint8_t* imbe)
                     m_lsd = new data::LowSpeedData();
                 }
 
+                if (m_rsBuffer != nullptr) {
+                    delete m_rsBuffer;
+                }
+                m_rsBuffer = new uint8_t[P25_LDU_LC_FEC_LENGTH_BYTES];
+                ::memset(m_rsBuffer, 0x00U, P25_LDU_LC_FEC_LENGTH_BYTES);
+
                 m_rssi = data[6U];                                                  // RSSI
                 ::memcpy(imbe, data + 10U, RAW_IMBE_LENGTH_BYTES);                  // IMBE
             }
@@ -142,41 +156,69 @@ bool LC::decodeLDU1(const uint8_t* data, uint8_t* imbe)
             break;
         case DFSIFrameType::LDU1_VOICE3:
             {
-                m_control->setLCO(data[1U]);                                        // LCO
-                m_control->setMFId(data[2U]);                                       // MFId
-                uint8_t serviceOptions = (uint8_t)(data[3U]);                       // Service Options
-                m_control->setEmergency((serviceOptions & 0x80U) == 0x80U);
-                m_control->setEncrypted((serviceOptions & 0x40U) == 0x40U);
-                m_control->setPriority((serviceOptions & 0x07U));
-                ::memcpy(imbe, data + 5U, RAW_IMBE_LENGTH_BYTES);                   // IMBE
+                m_rsBuffer[0U] = data[1U];                                          // LCO
+                m_control->setLCO(data[1U]);
+                m_rsBuffer[1U] = data[2U];                                          // MFId
+                m_control->setMFId(data[2U]);
+
+                m_rsBuffer[2U] = data[3U];
+                if (m_control->isStandardMFId()) {
+                    uint8_t serviceOptions = (uint8_t)(data[3U]);                   // Service Options
+                    m_control->setEmergency((serviceOptions & 0x80U) == 0x80U);
+                    m_control->setEncrypted((serviceOptions & 0x40U) == 0x40U);
+                    m_control->setPriority((serviceOptions & 0x07U));
+                }
+
+                ::memcpy(imbe, data + 5U, RAW_IMBE_LENGTH_BYTES); // IMBE
             }
             break;
         case DFSIFrameType::LDU1_VOICE4:
             {
-                uint32_t dstId = (data[1U] << 16) | (data[2U] << 8) | (data[3U] << 0);
-                m_control->setDstId(dstId);                                         // Talkgroup Address
+                m_rsBuffer[3U] = data[1U];
+                m_rsBuffer[4U] = data[2U];
+                m_rsBuffer[5U] = data[3U];
+                if (m_control->isStandardMFId()) {
+                    uint32_t dstId = (data[1U] << 16) | (data[2U] << 8) | (data[3U] << 0);
+                    m_control->setDstId(dstId);                                     // Talkgroup Address
+                }
+
                 ::memcpy(imbe, data + 5U, RAW_IMBE_LENGTH_BYTES);                   // IMBE
             }
             break;
         case DFSIFrameType::LDU1_VOICE5:
             {
-                uint32_t srcId = (data[1U] << 16) | (data[2U] << 8) | (data[3U] << 0);
-                m_control->setSrcId(srcId);                                         // Source Address
+                m_rsBuffer[6U] = data[1U];
+                m_rsBuffer[7U] = data[2U];
+                m_rsBuffer[8U] = data[3U];
+                if (m_control->isStandardMFId()) {
+                    uint32_t srcId = (data[1U] << 16) | (data[2U] << 8) | (data[3U] << 0);
+                    m_control->setSrcId(srcId);                                     // Source Address
+                }
+
                 ::memcpy(imbe, data + 5U, RAW_IMBE_LENGTH_BYTES);                   // IMBE
             }
             break;
         case DFSIFrameType::LDU1_VOICE6:
             {
+                m_rsBuffer[9U] = data[1U];                                          // RS (24,12,13)
+                m_rsBuffer[10U] = data[2U];                                         // RS (24,12,13)
+                m_rsBuffer[11U] = data[3U];                                         // RS (24,12,13)
                 ::memcpy(imbe, data + 5U, RAW_IMBE_LENGTH_BYTES);                   // IMBE
             }
             break;
         case DFSIFrameType::LDU1_VOICE7:
             {
+                m_rsBuffer[12U] = data[1U];                                         // RS (24,12,13)
+                m_rsBuffer[13U] = data[2U];                                         // RS (24,12,13)
+                m_rsBuffer[14U] = data[3U];                                         // RS (24,12,13)
                 ::memcpy(imbe, data + 5U, RAW_IMBE_LENGTH_BYTES);                   // IMBE
             }
             break;
         case DFSIFrameType::LDU1_VOICE8:
             {
+                m_rsBuffer[15U] = data[1U];                                         // RS (24,12,13)
+                m_rsBuffer[16U] = data[2U];                                         // RS (24,12,13)
+                m_rsBuffer[17U] = data[3U];                                         // RS (24,12,13)
                 ::memcpy(imbe, data + 5U, RAW_IMBE_LENGTH_BYTES);                   // IMBE
             }
             break;
@@ -193,6 +235,22 @@ bool LC::decodeLDU1(const uint8_t* data, uint8_t* imbe)
                 return false;
             }
             break;
+    }
+
+    // by LDU1_VOICE8 we should have all the pertinant RS bytes
+    if (m_frameType == DFSIFrameType::LDU1_VOICE8) {
+        ulong64_t rsValue = 0U;
+
+        // combine bytes into ulong64_t (8 byte) value
+        rsValue = m_rsBuffer[1U];
+        rsValue = (rsValue << 8) + m_rsBuffer[2U];
+        rsValue = (rsValue << 8) + m_rsBuffer[3U];
+        rsValue = (rsValue << 8) + m_rsBuffer[4U];
+        rsValue = (rsValue << 8) + m_rsBuffer[5U];
+        rsValue = (rsValue << 8) + m_rsBuffer[6U];
+        rsValue = (rsValue << 8) + m_rsBuffer[7U];
+        rsValue = (rsValue << 8) + m_rsBuffer[8U];
+        m_control->setRS(rsValue);
     }
 
     return true;
@@ -256,17 +314,31 @@ void LC::encodeLDU1(uint8_t* data, const uint8_t* imbe)
     uint8_t rs[P25_LDU_LC_FEC_LENGTH_BYTES];
     ::memset(rs, 0x00U, P25_LDU_LC_FEC_LENGTH_BYTES);
 
-    rs[0U] = m_control->getLCO();                                                   // LCO
-    rs[1U] = m_control->getMFId();                                                  // MFId
-    rs[2U] = serviceOptions;                                                        // Service Options
-    uint32_t dstId = m_control->getDstId();
-    rs[3U] = (dstId >> 16) & 0xFFU;                                                 // Target Address
-    rs[4U] = (dstId >> 8) & 0xFFU;
-    rs[5U] = (dstId >> 0) & 0xFFU;
-    uint32_t srcId = m_control->getSrcId();
-    rs[6U] = (srcId >> 16) & 0xFFU;                                                 // Source Address
-    rs[7U] = (srcId >> 8) & 0xFFU;
-    rs[8U] = (srcId >> 0) & 0xFFU;
+    if (m_control->isStandardMFId()) {
+        rs[0U] = m_control->getLCO();                                               // LCO
+        rs[1U] = m_control->getMFId();                                              // MFId
+        rs[2U] = serviceOptions;                                                    // Service Options
+        uint32_t dstId = m_control->getDstId();
+        rs[3U] = (dstId >> 16) & 0xFFU;                                             // Target Address
+        rs[4U] = (dstId >> 8) & 0xFFU;
+        rs[5U] = (dstId >> 0) & 0xFFU;
+        uint32_t srcId = m_control->getSrcId();
+        rs[6U] = (srcId >> 16) & 0xFFU;                                             // Source Address
+        rs[7U] = (srcId >> 8) & 0xFFU;
+        rs[8U] = (srcId >> 0) & 0xFFU;
+    } else {
+        rs[0U] = m_control->getLCO();                                               // LCO
+
+        // split ulong64_t (8 byte) value into bytes
+        rs[1U] = (uint8_t)((m_control->getRS() >> 56) & 0xFFU);
+        rs[2U] = (uint8_t)((m_control->getRS() >> 48) & 0xFFU);
+        rs[3U] = (uint8_t)((m_control->getRS() >> 40) & 0xFFU);
+        rs[4U] = (uint8_t)((m_control->getRS() >> 32) & 0xFFU);
+        rs[5U] = (uint8_t)((m_control->getRS() >> 24) & 0xFFU);
+        rs[6U] = (uint8_t)((m_control->getRS() >> 16) & 0xFFU);
+        rs[7U] = (uint8_t)((m_control->getRS() >> 8) & 0xFFU);
+        rs[8U] = (uint8_t)((m_control->getRS() >> 0) & 0xFFU);
+    }
 
     // encode RS (24,12,13) FEC
     m_rs.encode241213(rs);
@@ -368,7 +440,7 @@ bool LC::decodeLDU2(const uint8_t* data, uint8_t* imbe)
     assert(imbe != nullptr);
     assert(m_control != nullptr);
 
-    m_frameType = data[0U];                                                         // Frame Type
+    m_frameType = (DFSIFrameType::E)data[0U];                                       // Frame Type
 
     // different frame types mean different things
     switch (m_frameType)

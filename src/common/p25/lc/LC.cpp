@@ -60,11 +60,11 @@ LC::LC() :
     m_group(true),
     m_algId(ALGO_UNENCRYPT),
     m_kId(0U),
+    m_rsValue(0U),
     m_rs(),
     m_encryptOverride(false),
     m_tsbkVendorSkip(false),
     m_callTimer(0U),
-    m_rsValue(0U),
     m_mi(nullptr)
 {
     m_mi = new uint8_t[MI_LENGTH_BYTES];
@@ -463,6 +463,17 @@ void LC::encodeLDU2(uint8_t* data)
 #endif
 }
 
+/// <summary>
+/// Helper to determine if the MFId is a standard MFId.
+/// </summary>
+/// <returns></returns>
+bool LC::isStandardMFId() const
+{
+    if ((m_mfId == MFG_STANDARD) || (m_mfId == MFG_STANDARD_ALT))
+        return true;
+    return false;
+}
+
 /** Encryption data */
 /// <summary>Sets the encryption message indicator.</summary>
 /// <param name="mi"></param>
@@ -492,6 +503,8 @@ void LC::getMI(uint8_t* mi) const
 /// <param name="data"></param>
 void LC::copy(const LC& data)
 {
+    m_lco = data.m_lco;
+
     m_protect = data.m_protect;
     m_mfId = data.m_mfId;
 
@@ -565,15 +578,17 @@ bool LC::decodeLC(const uint8_t* rs)
     rsValue = (rsValue << 8) + rs[6U];
     rsValue = (rsValue << 8) + rs[7U];
     rsValue = (rsValue << 8) + rs[8U];
+    m_rsValue = rsValue;
 
     m_protect = (rs[0U] & 0x80U) == 0x80U;                                          // Protect Flag
     m_lco = rs[0U] & 0x3FU;                                                         // LCO
 
     m_mfId = rs[1U];                                                                // Mfg Id.
 
-    // non-standard P25 vendor opcodes (these are just detected for passthru)
+    // non-standard P25 vendor opcodes (these are just detected for passthru, and stored
+    // as the packed RS value)
     if ((m_mfId != MFG_STANDARD) && (m_mfId != MFG_STANDARD_ALT)) {
-        m_rsValue = rsValue;
+        //Utils::dump(1U, "Decoded P25 Non-Standard RS", rs, P25_LDU_LC_FEC_LENGTH_BYTES);
         return true;
     }
 
@@ -640,67 +655,70 @@ void LC::encodeLC(uint8_t* rs)
     ulong64_t rsValue = 0U;
     rs[0U] = m_lco;                                                                 // LCO
 
-    // standard P25 reference opcodes
-    switch (m_lco) {
-    case LCO::GROUP:
-        rsValue = m_mfId;
-        rsValue = (rsValue << 8) +
-            (m_emergency ? 0x80U : 0x00U) +                                         // Emergency Flag
-            (m_encrypted ? 0x40U : 0x00U) +                                         // Encrypted Flag
-            (m_priority & 0x07U);                                                   // Priority
-        rsValue = (rsValue << 24) + m_dstId;                                        // Talkgroup Address
-        rsValue = (rsValue << 24) + m_srcId;                                        // Source Radio Address
-        break;
-    case LCO::GROUP_UPDT:
-        rs[0U] |= 0x40U;                                                            // Implicit Operation
-        rsValue = m_siteData.channelId();                                           // Group A - Channel ID
-        rsValue = (rsValue << 12) + m_grpVchNo;                                     // Group A - Channel Number
-        rsValue = (rsValue << 16) + m_dstId;                                        // Group A - Talkgroup Address
-        rsValue = (rsValue << 4) + m_siteData.channelId();                          // Group B - Channel ID
-        rsValue = (rsValue << 12) + m_grpVchNoB;                                    // Group B - Channel Number
-        rsValue = (rsValue << 16) + m_dstIdB;                                       // Group B - Talkgroup Address
-        break;
-    case LCO::PRIVATE:
-        rsValue = m_mfId;
-        rsValue = (rsValue << 8) +
-            (m_emergency ? 0x80U : 0x00U) +                                         // Emergency Flag
-            (m_encrypted ? 0x40U : 0x00U) +                                         // Encrypted Flag
-            (m_priority & 0x07U);                                                   // Priority
-        rsValue = (rsValue << 24) + m_dstId;                                        // Target Radio Address
-        rsValue = (rsValue << 24) + m_srcId;                                        // Source Radio Address
-        break;
-    case LCO::TEL_INT_VCH_USER:
-        rs[0U] |= 0x40U;                                                            // Implicit Operation
-        rsValue = (rsValue << 8) +
-            (m_emergency ? 0x80U : 0x00U) +                                         // Emergency Flag
-            (m_encrypted ? 0x40U : 0x00U) +                                         // Encrypted Flag
-            (m_priority & 0x07U);                                                   // Priority
-        rsValue = (rsValue << 16) + m_callTimer;                                    // Call Timer
-        rsValue = (rsValue << 24) + m_srcId;                                        // Source/Target Radio Address
-        break;
-    case LCO::EXPLICIT_SOURCE_ID:
-        rsValue = m_netId;                                                          // Network ID
-        rsValue = (rsValue << 12) + (m_sysId & 0xFFFU);                             // System ID
-        rsValue = (rsValue << 24) + m_srcId;                                        // Source Radio Address
-        break;
-    case LCO::RFSS_STS_BCAST:
-        rs[0U] |= 0x40U;                                                            // Implicit Operation
-        rsValue = m_siteData.lra();                                                 // Location Registration Area
-        rsValue = (rsValue << 12) + m_siteData.sysId();                             // System ID
-        rsValue = (rsValue << 8) + m_siteData.rfssId();                             // RF Sub-System ID
-        rsValue = (rsValue << 8) + m_siteData.siteId();                             // Site ID
-        rsValue = (rsValue << 4) + m_siteData.channelId();                          // Channel ID
-        rsValue = (rsValue << 12) + m_siteData.channelNo();                         // Channel Number
-        rsValue = (rsValue << 8) + m_siteData.serviceClass();                       // System Service Class
-        break;
-    default:
-        LogError(LOG_P25, "LC::encodeLC(), unknown LC value, mfId = $%02X, lco = $%02X", m_mfId, m_lco);
-        break;
-    }
+    if ((m_mfId == MFG_STANDARD) || (m_mfId == MFG_STANDARD_ALT)) {
+        // standard P25 reference opcodes
+        switch (m_lco) {
+        case LCO::GROUP:
+            rsValue = m_mfId;
+            rsValue = (rsValue << 8) +
+                (m_emergency ? 0x80U : 0x00U) +                                     // Emergency Flag
+                (m_encrypted ? 0x40U : 0x00U) +                                     // Encrypted Flag
+                (m_priority & 0x07U);                                               // Priority
+            rsValue = (rsValue << 24) + m_dstId;                                    // Talkgroup Address
+            rsValue = (rsValue << 24) + m_srcId;                                    // Source Radio Address
+            break;
+        case LCO::GROUP_UPDT:
+            rs[0U] |= 0x40U;                                                        // Implicit Operation
+            rsValue = m_siteData.channelId();                                       // Group A - Channel ID
+            rsValue = (rsValue << 12) + m_grpVchNo;                                 // Group A - Channel Number
+            rsValue = (rsValue << 16) + m_dstId;                                    // Group A - Talkgroup Address
+            rsValue = (rsValue << 4) + m_siteData.channelId();                      // Group B - Channel ID
+            rsValue = (rsValue << 12) + m_grpVchNoB;                                // Group B - Channel Number
+            rsValue = (rsValue << 16) + m_dstIdB;                                   // Group B - Talkgroup Address
+            break;
+        case LCO::PRIVATE:
+            rsValue = m_mfId;
+            rsValue = (rsValue << 8) +
+                (m_emergency ? 0x80U : 0x00U) +                                     // Emergency Flag
+                (m_encrypted ? 0x40U : 0x00U) +                                     // Encrypted Flag
+                (m_priority & 0x07U);                                               // Priority
+            rsValue = (rsValue << 24) + m_dstId;                                    // Target Radio Address
+            rsValue = (rsValue << 24) + m_srcId;                                    // Source Radio Address
+            break;
+        case LCO::TEL_INT_VCH_USER:
+            rs[0U] |= 0x40U;                                                        // Implicit Operation
+            rsValue = (rsValue << 8) +
+                (m_emergency ? 0x80U : 0x00U) +                                     // Emergency Flag
+                (m_encrypted ? 0x40U : 0x00U) +                                     // Encrypted Flag
+                (m_priority & 0x07U);                                               // Priority
+            rsValue = (rsValue << 16) + m_callTimer;                                // Call Timer
+            rsValue = (rsValue << 24) + m_srcId;                                    // Source/Target Radio Address
+            break;
+        case LCO::EXPLICIT_SOURCE_ID:
+            rsValue = m_netId;                                                      // Network ID
+            rsValue = (rsValue << 12) + (m_sysId & 0xFFFU);                         // System ID
+            rsValue = (rsValue << 24) + m_srcId;                                    // Source Radio Address
+            break;
+        case LCO::RFSS_STS_BCAST:
+            rs[0U] |= 0x40U;                                                        // Implicit Operation
+            rsValue = m_siteData.lra();                                             // Location Registration Area
+            rsValue = (rsValue << 12) + m_siteData.sysId();                         // System ID
+            rsValue = (rsValue << 8) + m_siteData.rfssId();                         // RF Sub-System ID
+            rsValue = (rsValue << 8) + m_siteData.siteId();                         // Site ID
+            rsValue = (rsValue << 4) + m_siteData.channelId();                      // Channel ID
+            rsValue = (rsValue << 12) + m_siteData.channelNo();                     // Channel Number
+            rsValue = (rsValue << 8) + m_siteData.serviceClass();                   // System Service Class
+            break;
+        default:
+            LogError(LOG_P25, "LC::encodeLC(), unknown LC value, mfId = $%02X, lco = $%02X", m_mfId, m_lco);
+            break;
+        }
+    } else {
+        if (m_rsValue == 0U) {
+            LogError(LOG_P25, "LC::encodeLC(), zero packed value, mfId = $%02X, lco = $%02X", m_mfId, m_lco);
+        }
 
-    // non-standard P25 vendor opcodes (these are just detected for passthru)
-    if ((m_mfId != MFG_STANDARD) && (m_mfId != MFG_STANDARD_ALT)) {
-        rsValue = 0U;
+        // non-standard P25 vendor opcodes (these are just passed from the packed RS)
         rsValue = m_rsValue;
     }
 
@@ -713,6 +731,11 @@ void LC::encodeLC(uint8_t* rs)
     rs[6U] = (uint8_t)((rsValue >> 16) & 0xFFU);
     rs[7U] = (uint8_t)((rsValue >> 8) & 0xFFU);
     rs[8U] = (uint8_t)((rsValue >> 0) & 0xFFU);
+/*
+    if ((m_mfId != MFG_STANDARD) && (m_mfId != MFG_STANDARD_ALT)) {
+        Utils::dump(1U, "Encoded P25 Non-Standard RS", rs, P25_LDU_LC_FEC_LENGTH_BYTES);
+    }
+*/
 }
 
 /// <summary>

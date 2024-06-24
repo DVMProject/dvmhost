@@ -7,7 +7,7 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #if !defined(__P25_DFSI__LC_H__)
@@ -15,6 +15,7 @@
 
 #include "common/Defines.h"
 #include "common/p25/data/LowSpeedData.h"
+#include "common/p25/dfsi/DFSIDefines.h"
 #include "common/p25/lc/LC.h"
 #include "common/edac/RS634717.h"
 
@@ -59,7 +60,7 @@ namespace p25
         public:
             /** Common Data */
             /// <summary>Frame Type.</summary>
-            __PROPERTY(uint8_t, frameType, FrameType);
+            __PROPERTY(defines::DFSIFrameType::E, frameType, FrameType);
 
             /// <summary>RSSI.</summary>
             __PROPERTY(uint8_t, rssi, RSSI);
@@ -71,6 +72,8 @@ namespace p25
 
         private:
             edac::RS634717 m_rs;
+
+            uint8_t* m_rsBuffer;
 
             /** Encryption data */
             uint8_t* m_mi;

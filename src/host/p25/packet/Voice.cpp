@@ -199,12 +199,15 @@ bool Voice::process(uint8_t* data, uint32_t len)
 
         bool alreadyDecoded = false;
         FrameType::E frameType = FrameType::DATA_UNIT;
+        ulong64_t rsValue = 0U;
         if (m_p25->m_rfState == RS_RF_LISTENING) {
             lc::LC lc = lc::LC();
             bool ret = lc.decodeLDU1(data + 2U);
             if (!ret) {
                 return false;
             }
+
+            rsValue = lc.getRS();
 
             uint32_t srcId = lc.getSrcId();
             uint32_t dstId = lc.getDstId();
@@ -644,6 +647,8 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 }
             }
 
+            rsValue = m_rfLC.getRS();
+
             alreadyDecoded = false;
 
             if (m_p25->m_enableControl) {
@@ -660,6 +665,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 m_vocLDU1Count++;
                 if (m_vocLDU1Count > VOC_LDU1_COUNT) {
                     m_vocLDU1Count = 0U;
+                    m_rfLC.setMFId(MFG_STANDARD);
                     m_rfLC.setLCO(LCO::RFSS_STS_BCAST);
                 }
             }
@@ -671,6 +677,13 @@ bool Voice::process(uint8_t* data, uint32_t len)
             m_p25->m_nid.encode(data + 2U, DUID::LDU1);
 
             // generate LDU1 Data
+            if (!m_rfLC.isStandardMFId()) {
+                if (m_debug) {
+                    LogDebug(LOG_RF, "P25, LDU1 LC, non-standard payload, lco = $%02X, mfId = $%02X", m_rfLC.getLCO(), m_rfLC.getMFId());
+                }
+                m_rfLC.setRS(rsValue);
+            }
+
             m_rfLC.encodeLDU1(data + 2U);
 
             // generate Low Speed Data
@@ -724,8 +737,8 @@ bool Voice::process(uint8_t* data, uint32_t len)
             }
 
             if (m_verbose) {
-                LogMessage(LOG_RF, P25_LDU1_STR ", audio, srcId = %u, dstId = %u, group = %u, emerg = %u, encrypt = %u, prio = %u, errs = %u/1233 (%.1f%%)",
-                    m_rfLC.getSrcId(), m_rfLC.getDstId(), m_rfLC.getGroup(), m_rfLC.getEmergency(), m_rfLC.getEncrypted(), m_rfLC.getPriority(), errors, float(errors) / 12.33F);
+                LogMessage(LOG_RF, P25_LDU1_STR ", audio, mfId = $%02X srcId = %u, dstId = %u, group = %u, emerg = %u, encrypt = %u, prio = %u, errs = %u/1233 (%.1f%%)",
+                    m_rfLC.getMFId(), m_rfLC.getSrcId(), m_rfLC.getDstId(), m_rfLC.getGroup(), m_rfLC.getEmergency(), m_rfLC.getEncrypted(), m_rfLC.getPriority(), errors, float(errors) / 12.33F);
             }
 
             return true;
@@ -1554,7 +1567,7 @@ void Voice::writeNet_LDU1()
 
     // ensure our dstId are sane from the last LDU1
     if (m_netLastLDU1.getDstId() != 0U) {
-        if (dstId != m_netLastLDU1.getDstId()) {
+        if (dstId != m_netLastLDU1.getDstId() && control.isStandardMFId()) {
             if (m_verbose) {
                 LogMessage(LOG_NET, P25_LDU1_STR ", dstId = %u doesn't match last LDU1 dstId = %u, fixing",
                     dstId, m_netLastLDU1.getDstId());
@@ -1565,7 +1578,7 @@ void Voice::writeNet_LDU1()
 
     // ensure our srcId are sane from the last LDU1
     if (m_netLastLDU1.getSrcId() != 0U) {
-        if (srcId != m_netLastLDU1.getSrcId()) {
+        if (srcId != m_netLastLDU1.getSrcId() && control.isStandardMFId()) {
             if (m_verbose) {
                 LogMessage(LOG_NET, P25_LDU1_STR ", srcId = %u doesn't match last LDU1 srcId = %u, fixing",
                     srcId, m_netLastLDU1.getSrcId());
@@ -1590,6 +1603,7 @@ void Voice::writeNet_LDU1()
     m_netLC.setEmergency(control.getEmergency());
     m_netLC.setEncrypted(control.getEncrypted());
     m_netLC.setPriority(control.getPriority());
+    ulong64_t rsValue = control.getRS();
 
     m_rfLC = lc::LC();
     m_rfLC.setLCO(control.getLCO());
@@ -1823,6 +1837,7 @@ void Voice::writeNet_LDU1()
         m_vocLDU1Count++;
         if (m_vocLDU1Count > VOC_LDU1_COUNT) {
             m_vocLDU1Count = 0U;
+            m_netLC.setMFId(MFG_STANDARD);
             m_netLC.setLCO(LCO::RFSS_STS_BCAST);
         }
     }
@@ -1839,6 +1854,13 @@ void Voice::writeNet_LDU1()
     m_p25->m_nid.encode(buffer + 2U, DUID::LDU1);
 
     // Generate LDU1 data
+    if (!m_netLC.isStandardMFId()) {
+        if (m_debug) {
+            LogDebug(LOG_NET, "P25, LDU1 LC, non-standard payload, lco = $%02X, mfId = $%02X", m_netLC.getLCO(), m_netLC.getMFId());
+        }
+        m_netLC.setRS(rsValue);
+    }
+
     m_netLC.encodeLDU1(buffer + 2U);
 
     // Add the Audio
@@ -1866,8 +1888,8 @@ void Voice::writeNet_LDU1()
     m_p25->addFrame(buffer, P25_LDU_FRAME_LENGTH_BYTES + 2U, true);
 
     if (m_verbose) {
-        LogMessage(LOG_NET, P25_LDU1_STR " audio, srcId = %u, dstId = %u, group = %u, emerg = %u, encrypt = %u, prio = %u, sysId = $%03X, netId = $%05X",
-            m_netLC.getSrcId(), m_netLC.getDstId(), m_netLC.getGroup(), m_netLC.getEmergency(), m_netLC.getEncrypted(), m_netLC.getPriority(),
+        LogMessage(LOG_NET, P25_LDU1_STR " audio, mfId = $%02X, srcId = %u, dstId = %u, group = %u, emerg = %u, encrypt = %u, prio = %u, sysId = $%03X, netId = $%05X",
+            m_netLC.getMFId(), m_netLC.getSrcId(), m_netLC.getDstId(), m_netLC.getGroup(), m_netLC.getEmergency(), m_netLC.getEncrypted(), m_netLC.getPriority(),
             sysId, netId);
     }
 

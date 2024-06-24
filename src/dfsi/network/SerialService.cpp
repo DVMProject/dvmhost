@@ -9,6 +9,7 @@
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
 *   Copyright (C) 2024 Patrick McDonnell, W3AXL
+*   Copyright (C) 2024 Bryan Biedenkapp, N2PLL
 *
 */
 
@@ -442,8 +443,8 @@ void SerialService::processP25FromNet(UInt8Array p25Buffer, uint32_t length)
                     control.setSrcId(srcId);
                     control.setDstId(dstId);
 
-                    LogInfoEx(LOG_NET, P25_LDU1_STR " audio, srcId = %u, dstId = %u, group = %u, emerg = %u, encrypt = %u, prio = %u",
-                        control.getSrcId(), control.getDstId(), control.getGroup(), control.getEmergency(), control.getEncrypted(), control.getPriority());
+                    LogInfoEx(LOG_NET, P25_LDU1_STR " audio, mfId = $%02X, srcId = %u, dstId = %u, group = %u, emerg = %u, encrypt = %u, prio = %u",
+                        control.getMFId(), control.getSrcId(), control.getDstId(), control.getGroup(), control.getEmergency(), control.getEncrypted(), control.getPriority());
 
                     //Utils::dump("P25 LDU1 from net", netLDU1, 9U * 25U);
 
@@ -501,7 +502,7 @@ void SerialService::processP25FromNet(UInt8Array p25Buffer, uint32_t length)
                     count += DFSI_LDU2_VOICE18_FRAME_LENGTH_BYTES;
 
                     control = lc::LC(*dfsiLC.control());
-                    LogInfoEx(LOG_SERIAL, P25_LDU2_STR " audio, algo = $%02X, kid = $%04X", control.getAlgId(), control.getKId());
+                    LogInfoEx(LOG_NET, P25_LDU2_STR " audio, algo = $%02X, kid = $%04X", control.getAlgId(), control.getKId());
 
                     //Utils::dump("P25 LDU2 from net", netLDU2, 9U * 25U);
 
@@ -906,9 +907,13 @@ void SerialService::processP25ToNet()
     // Get LC & LSD data if we're ready for either LDU1 or LDU2 (don't do this every frame to be more efficient)
 
     if (m_rxVoiceCallData->n == 9U || m_rxVoiceCallData->n == 18U) {
+        m_rxVoiceControl->setLCO(m_rxVoiceCallData->lco);
+        m_rxVoiceControl->setMFId(m_rxVoiceCallData->mfId);
+
         // Create LC
         m_rxVoiceControl->setSrcId(m_rxVoiceCallData->srcId);
         m_rxVoiceControl->setDstId(m_rxVoiceCallData->dstId);
+
         // Get service options
         bool emergency = ((m_rxVoiceCallData->serviceOptions & 0xFFU) & 0x80U) == 0x80U;    // Emergency Flag
         bool encryption = ((m_rxVoiceCallData->serviceOptions & 0xFFU) & 0x40U) == 0x40U;   // Encryption Flag
@@ -916,13 +921,49 @@ void SerialService::processP25ToNet()
         m_rxVoiceControl->setEmergency(emergency);
         m_rxVoiceControl->setEncrypted(encryption);
         m_rxVoiceControl->setPriority(priority);
+
         // Get more data
         m_rxVoiceControl->setMI(m_rxVoiceCallData->mi);
         m_rxVoiceControl->setAlgId(m_rxVoiceCallData->algoId);
         m_rxVoiceControl->setKId(m_rxVoiceCallData->kId);
+
         // Get LSD
         m_rxVoiceLsd->setLSD1(m_rxVoiceCallData->lsd1);
         m_rxVoiceLsd->setLSD2(m_rxVoiceCallData->lsd2);
+
+        // is this an LDU1 frame?
+        if (m_rxVoiceCallData->n == 9U) {
+            // is it a non-standard MFId for the LC?
+            if (!m_rxVoiceControl->isStandardMFId()) {
+                uint8_t rsBuffer[P25_LDU_LC_FEC_LENGTH_BYTES];
+                ::memset(rsBuffer, 0x00U, P25_LDU_LC_FEC_LENGTH_BYTES);
+
+                rsBuffer[0U] = m_rxVoiceCallData->lco;
+                rsBuffer[1U] = m_rxVoiceCallData->mfId;
+                rsBuffer[2U] = m_rxVoiceCallData->serviceOptions;
+                rsBuffer[3U] = 0U;
+                rsBuffer[4U] = (m_rxVoiceCallData->dstId >> 8) & 0xFFU;
+                rsBuffer[5U] = (m_rxVoiceCallData->dstId >> 0) & 0xFFU;
+                rsBuffer[6U] = (m_rxVoiceCallData->srcId >> 16) & 0xFFU;
+                rsBuffer[7U] = (m_rxVoiceCallData->srcId >> 8) & 0xFFU;
+                rsBuffer[8U] = (m_rxVoiceCallData->srcId >> 0) & 0xFFU;
+
+                m_rs.decode241213(rsBuffer);
+
+                ulong64_t rsValue = 0U;
+
+                // combine bytes into ulong64_t (8 byte) value
+                rsValue = rsBuffer[1U];
+                rsValue = (rsValue << 8) + rsBuffer[2U];
+                rsValue = (rsValue << 8) + rsBuffer[3U];
+                rsValue = (rsValue << 8) + rsBuffer[4U];
+                rsValue = (rsValue << 8) + rsBuffer[5U];
+                rsValue = (rsValue << 8) + rsBuffer[6U];
+                rsValue = (rsValue << 8) + rsBuffer[7U];
+                rsValue = (rsValue << 8) + rsBuffer[8U];
+                m_rxVoiceControl->setRS(rsValue);
+            }
+        }
     }
 
     // Send LDU1 if ready
@@ -930,7 +971,8 @@ void SerialService::processP25ToNet()
         // Send (TODO: dynamically set HDU_VALID or DATA_VALID depending on start of call or not)
         bool ret = m_network->writeP25LDU1(*m_rxVoiceControl, *m_rxVoiceLsd, m_rxVoiceCallData->netLDU1, FrameType::HDU_VALID);
         // Print
-        LogInfoEx(LOG_NET, P25_LDU1_STR " audio, srcId = %u, dstId = %u", m_rxVoiceCallData->srcId, m_rxVoiceCallData->dstId);
+        LogInfoEx(LOG_SERIAL, P25_LDU1_STR " audio, mfId = $%02X, srcId = %u, dstId = %u, group = %u, emerg = %u, encrypt = %u, prio = %u",
+            m_rxVoiceControl->getMFId(), m_rxVoiceControl->getSrcId(), m_rxVoiceControl->getDstId(), m_rxVoiceControl->getGroup(), m_rxVoiceControl->getEmergency(), m_rxVoiceControl->getEncrypted(), m_rxVoiceControl->getPriority());
         // Optional Debug
         if (ret) {
             if (m_debug)
@@ -1291,17 +1333,31 @@ void SerialService::writeP25Frame(DUID::E duid, dfsi::LC& lc, uint8_t* ldu)
     switch(duid) {
         case DUID::LDU1:
         {
-            rs[0U] = control.getLCO();                                  // LCO
-            rs[1U] = control.getMFId();                                 // MFId
-            rs[2U] = serviceOptions;                                    // Service Options
-            uint32_t dstId = control.getDstId();
-            rs[3U] = (dstId >> 16) & 0xFFU;                             // Target Address
-            rs[4U] = (dstId >> 8) & 0xFFU;
-            rs[5U] = (dstId >> 0) & 0xFFU;
-            uint32_t srcId = control.getSrcId();
-            rs[6U] = (srcId >> 16) & 0xFFU;                             // Source Address
-            rs[7U] = (srcId >> 8) & 0xFFU;
-            rs[8U] = (srcId >> 0) & 0xFFU;
+            if (control.isStandardMFId()) {
+                rs[0U] = control.getLCO();                              // LCO
+                rs[1U] = control.getMFId();                             // MFId
+                rs[2U] = serviceOptions;                                // Service Options
+                uint32_t dstId = control.getDstId();
+                rs[3U] = (dstId >> 16) & 0xFFU;                         // Target Address
+                rs[4U] = (dstId >> 8) & 0xFFU;
+                rs[5U] = (dstId >> 0) & 0xFFU;
+                uint32_t srcId = control.getSrcId();
+                rs[6U] = (srcId >> 16) & 0xFFU;                         // Source Address
+                rs[7U] = (srcId >> 8) & 0xFFU;
+                rs[8U] = (srcId >> 0) & 0xFFU;
+            } else {
+                rs[0U] = control.getLCO();                              // LCO
+
+                // split ulong64_t (8 byte) value into bytes
+                rs[1U] = (uint8_t)((control.getRS() >> 56) & 0xFFU);
+                rs[2U] = (uint8_t)((control.getRS() >> 48) & 0xFFU);
+                rs[3U] = (uint8_t)((control.getRS() >> 40) & 0xFFU);
+                rs[4U] = (uint8_t)((control.getRS() >> 32) & 0xFFU);
+                rs[5U] = (uint8_t)((control.getRS() >> 24) & 0xFFU);
+                rs[6U] = (uint8_t)((control.getRS() >> 16) & 0xFFU);
+                rs[7U] = (uint8_t)((control.getRS() >> 8) & 0xFFU);
+                rs[8U] = (uint8_t)((control.getRS() >> 0) & 0xFFU);
+            }
 
             // encode RS (24,12,13) FEC
             m_rs.encode241213(rs);
@@ -1355,7 +1411,7 @@ void SerialService::writeP25Frame(DUID::E duid, dfsi::LC& lc, uint8_t* ldu)
         m_sequences[control.getDstId()] = ++sequence;
 
         // Log
-        LogInfoEx(LOG_SERIAL, "CALL START: %svoice call from %u to TG %u", (control.getAlgId() != ALGO_UNENCRYPT) ? "encrypted " : "", control.getSrcId(), control.getDstId());
+        LogInfoEx(LOG_NET, "CALL START: %svoice call from %u to TG %u", (control.getAlgId() != ALGO_UNENCRYPT) ? "encrypted " : "", control.getSrcId(), control.getDstId());
 
         ActivityLog("network %svoice transmission call from %u to TG %u", (control.getAlgId() != ALGO_UNENCRYPT) ? "encrypted " : "", control.getSrcId(), control.getDstId());
     } else {
@@ -1366,7 +1422,7 @@ void SerialService::writeP25Frame(DUID::E duid, dfsi::LC& lc, uint8_t* ldu)
             m_lastHeard[control.getDstId()] = now;
             m_sequences[control.getDstId()] = ++sequence;
 
-            LogInfoEx(LOG_SERIAL, "LATE CALL START: %svoice call from %u to TG %u", (control.getAlgId() != ALGO_UNENCRYPT) ? "encrypted " : "", control.getSrcId(), control.getDstId());
+            LogInfoEx(LOG_NET, "LATE CALL START: %svoice call from %u to TG %u", (control.getAlgId() != ALGO_UNENCRYPT) ? "encrypted " : "", control.getSrcId(), control.getDstId());
             ActivityLog("network %svoice transmission late entry from %u to TG %u", (control.getAlgId() != ALGO_UNENCRYPT) ? "encrypted " : "", control.getSrcId(), control.getDstId());
         }
     }
@@ -1376,7 +1432,7 @@ void SerialService::writeP25Frame(DUID::E duid, dfsi::LC& lc, uint8_t* ldu)
         // Stop
         endOfStream();
         // Log
-        LogInfoEx(LOG_SERIAL, "CALL END: %svoice call from %u to TG %u", (control.getAlgId() != ALGO_UNENCRYPT) ? "encrypted " : "", control.getSrcId(), control.getDstId());
+        LogInfoEx(LOG_NET, "CALL END: %svoice call from %u to TG %u", (control.getAlgId() != ALGO_UNENCRYPT) ? "encrypted " : "", control.getSrcId(), control.getDstId());
         // Clear our counters
         m_sequences[control.getDstId()] = RTP_END_OF_CALL_SEQ;
     }
@@ -1397,18 +1453,24 @@ void SerialService::writeP25Frame(DUID::E duid, dfsi::LC& lc, uint8_t* ldu)
             {
                 // Set frametype
                 voice.setFrameType((duid == DUID::LDU1) ? DFSIFrameType::LDU1_VOICE1 : DFSIFrameType::LDU2_VOICE10);
+
                 // Create the new frame objects
                 MotStartVoiceFrame svf = MotStartVoiceFrame();
+
                 // Set values appropriately
                 svf.startOfStream->setStartStop(StartStopFlag::START);
                 svf.startOfStream->setRT(m_rtrt ? RTFlag::ENABLED : RTFlag::DISABLED);
+
                 // Set frame type
                 svf.fullRateVoice->setFrameType(voice.getFrameType());
+
                 // Set source flag & ICW flag
                 svf.fullRateVoice->setSource(m_diu ? SourceFlag::DIU : SourceFlag::QUANTAR);
                 svf.setICW(m_diu ? ICWFlag::DIU : ICWFlag::QUANTAR);
+
                 // Copy data
                 ::memcpy(svf.fullRateVoice->imbeData, ldu + 10U, RAW_IMBE_LENGTH_BYTES);
+
                 // Encode
                 buffer = new uint8_t[svf.LENGTH];
                 ::memset(buffer, 0x00U, svf.LENGTH);
@@ -1428,16 +1490,18 @@ void SerialService::writeP25Frame(DUID::E duid, dfsi::LC& lc, uint8_t* ldu)
             {
                 voice.setFrameType((duid == DUID::LDU1) ? DFSIFrameType::LDU1_VOICE3 : DFSIFrameType::LDU2_VOICE12);
                 ::memcpy(voice.imbeData, ldu + 55U, RAW_IMBE_LENGTH_BYTES);
+
                 // Create the additional data array
                 voice.additionalData = new uint8_t[voice.ADDITIONAL_LENGTH];
                 ::memset(voice.additionalData, 0x00U, voice.ADDITIONAL_LENGTH);
+
                 // Copy additional data
                 if (voice.getFrameType() == DFSIFrameType::LDU1_VOICE3) {
-                    voice.additionalData[0U] = control.getLCO();
-                    voice.additionalData[1U] = control.getMFId();
-                    voice.additionalData[2U] = serviceOptions;
+                    voice.additionalData[0U] = control.getLCO();                        // LCO
+                    voice.additionalData[1U] = rs[1U];                                  // MFId
+                    voice.additionalData[2U] = rs[2U];                                  // Service Options
                 } else {
-                    voice.additionalData[0U] = mi[0U];
+                    voice.additionalData[0U] = mi[0U];                                  // MI
                     voice.additionalData[1U] = mi[1U];
                     voice.additionalData[2U] = mi[2U];
                 }
@@ -1447,21 +1511,23 @@ void SerialService::writeP25Frame(DUID::E duid, dfsi::LC& lc, uint8_t* ldu)
             {
                 voice.setFrameType((duid == DUID::LDU1) ? DFSIFrameType::LDU1_VOICE4 : DFSIFrameType::LDU2_VOICE13);
                 ::memcpy(voice.imbeData, ldu + 80U, RAW_IMBE_LENGTH_BYTES);
+
                 // Create the additional data array
                 voice.additionalData = new uint8_t[voice.ADDITIONAL_LENGTH];
                 ::memset(voice.additionalData, 0x00U, voice.ADDITIONAL_LENGTH);
+
                 // We set the additional data based on LDU1/2
                 switch (duid) {
                     case DUID::LDU1:
                     {
-                        // Destination address (3 bytes)
-                        __SET_UINT16(control.getDstId(), voice.additionalData, 0U);
+                        voice.additionalData[0U] = rs[3U];                              // Destination ID
+                        voice.additionalData[1U] = rs[4U];
+                        voice.additionalData[2U] = rs[5U];
                     }
                     break;
                     case DUID::LDU2:
                     {
-                        // Message Indicator
-                        voice.additionalData[0U] = mi[3U];
+                        voice.additionalData[0U] = mi[3U];                              // MI
                         voice.additionalData[1U] = mi[4U];
                         voice.additionalData[2U] = mi[5U];
                     }
@@ -1482,14 +1548,14 @@ void SerialService::writeP25Frame(DUID::E duid, dfsi::LC& lc, uint8_t* ldu)
                 switch (duid) {
                     case DUID::LDU1:
                     {
-                        // Source address (3 bytes)
-                        __SET_UINT16(control.getSrcId(), voice.additionalData, 0U);
+                        voice.additionalData[0U] = rs[6U];                              // Source ID
+                        voice.additionalData[1U] = rs[7U];
+                        voice.additionalData[2U] = rs[8U];
                     }
                     break;
                     case DUID::LDU2:
                     {
-                        // Message Indicator
-                        voice.additionalData[0U] = mi[6U];
+                        voice.additionalData[0U] = mi[6U];                              // MI
                         voice.additionalData[1U] = mi[7U];
                         voice.additionalData[2U] = mi[8U];
                     }

@@ -22,6 +22,13 @@ using namespace p25;
 using namespace p25::defines;
 using namespace dfsi;
 
+// ---------------------------------------------------------------------------
+//  Public Class Members
+// ---------------------------------------------------------------------------
+
+/// <summary>
+/// Initializes a new instance of the VoiceCallData class.
+/// </summary>
 VoiceCallData::VoiceCallData() :
     srcId(0U),
     dstId(0U),
@@ -51,7 +58,11 @@ VoiceCallData::VoiceCallData() :
     ::memset(netLDU2, 0x00U, 9U * 25U);
 }
 
-VoiceCallData::~VoiceCallData() {
+/// <summary>
+/// Finalizes a instance of the VoiceCallData class.
+/// </summary>
+VoiceCallData::~VoiceCallData() 
+{
     delete[] mi;
     delete[] VHDR1;
     delete[] VHDR2;
@@ -59,7 +70,11 @@ VoiceCallData::~VoiceCallData() {
     delete[] netLDU2;
 }
 
-void VoiceCallData::resetCallData() {
+/// <summary>
+/// Reset call data to defaults.
+/// </summary>
+void VoiceCallData::resetCallData() 
+{
     srcId = 0U;
     dstId = 0U;
     lco = 0U;
@@ -84,7 +99,11 @@ void VoiceCallData::resetCallData() {
     streamId = 0U;
 }
 
-void VoiceCallData::newStreamId() {
+/// <summary>
+/// Generate a new stream ID for a call.
+/// </summary>
+void VoiceCallData::newStreamId() 
+{
     std::uniform_int_distribution<uint32_t> dist(DVM_RAND_MIN, DVM_RAND_MAX);
     streamId = dist(random);
 }

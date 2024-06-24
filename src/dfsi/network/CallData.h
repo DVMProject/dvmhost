@@ -37,16 +37,23 @@
 // CPP includes
 #include <random>
 
-namespace network {
+namespace network 
+{
+    // ---------------------------------------------------------------------------
+    //  Class Declaration
+    //     Represents an on-going call.
+    // ---------------------------------------------------------------------------
 
     class HOST_SW_API VoiceCallData {
-    
     public:
+        /// <summary>Initializes a new instance of the VoiceCallData class.</summary>
         VoiceCallData();
+        /// <summary>Initializes a new instance of the VoiceCallData class.</summary>
         ~VoiceCallData();
 
+        /// <summary>Reset call data to defaults.</summary>
         void resetCallData();
-
+        /// <summary>Generate a new stream ID for a call.</summary>
         void newStreamId();
 
         // Call Data
