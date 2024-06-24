@@ -2519,10 +2519,10 @@ bool ControlSignaling::writeRF_TSDU_SNDCP_Grant(uint32_t srcId, uint32_t dstId, 
     }
 
     // transmit group grant
-    writeRF_TSDU_SBF_Imm(osp.get(), net);
+    writeRF_TSDU_SBF_Imm(osp.get(), true/*net*/);
     if (m_redundantGrant) {
         for (int i = 0; i < 3; i++)
-            writeRF_TSDU_SBF(osp.get(), net);
+            writeRF_TSDU_SBF(osp.get(), true/*net*/);
     }
 
     return true;
