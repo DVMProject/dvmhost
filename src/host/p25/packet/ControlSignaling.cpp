@@ -927,6 +927,8 @@ bool ControlSignaling::processNetwork(uint8_t* data, uint32_t len, lc::LC& contr
                         break; // the FNE may explicitly send these
                     case TSBKO::OSP_QUE_RSP:
                         break; // the FNE may explicitly send these
+                    case TSBKO::OSP_SNDCP_CH_GNT:
+                        return true; // don't allow this to write to the air
                     default:
                         LogError(LOG_NET, P25_TSDU_STR ", unhandled LCO, mfId = $%02X, lco = $%02X", tsbk->getMFId(), tsbk->getLCO());
                         return false;
