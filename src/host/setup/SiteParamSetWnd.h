@@ -180,7 +180,7 @@ private:
             m_dmrNetId.setInputFilter("[[:xdigit:]]");
             m_dmrNetId.addCallback("changed", [&]() {
                 uint32_t id = (uint32_t)::strtoul(std::string(m_dmrNetId.getText().toString()).c_str(), NULL, 16);
-                id = dmr::DMRUtils::netId(id, dmr::defines::SiteModel::TINY);
+                id = dmr::DMRUtils::netId(id, dmr::defines::SiteModel::SM_TINY);
 
                 m_setup->m_conf["system"]["config"]["dmrNetId"] = __INT_HEX_STR(id);
             });

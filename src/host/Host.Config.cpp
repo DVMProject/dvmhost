@@ -271,7 +271,7 @@ bool Host::readParams()
         m_dmrColorCode = dmr::DMRUtils::colorCode(m_dmrColorCode);
 
         m_dmrNetId = (uint32_t)::strtoul(rfssConfig["dmrNetId"].as<std::string>("1").c_str(), NULL, 16);
-        m_dmrNetId = dmr::DMRUtils::netId(m_dmrNetId, dmr::defines::SiteModel::SMALL);
+        m_dmrNetId = dmr::DMRUtils::netId(m_dmrNetId, dmr::defines::SiteModel::SM_SMALL);
 
         m_p25NAC = (uint32_t)::strtoul(rfssConfig["nac"].as<std::string>("F7E").c_str(), NULL, 16);
         m_p25NAC = p25::P25Utils::nac(m_p25NAC);

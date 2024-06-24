@@ -1031,7 +1031,7 @@ void Slot::init(Control* dmr, bool authoritative, uint32_t colorCode, SiteData s
 /// <param name="requireReg"></param>
 void Slot::setSiteData(::lookups::VoiceChData controlChData, uint32_t netId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, bool requireReg)
 {
-    m_siteData = SiteData(SiteModel::SMALL, netId, siteId, 3U, requireReg);
+    m_siteData = SiteData(SiteModel::SM_SMALL, netId, siteId, 3U, requireReg);
     m_channelNo = channelNo;
 
     std::vector<::lookups::IdenTable> entries = m_idenTable->list();
@@ -1671,25 +1671,25 @@ void Slot::setShortLC_TSCC(SiteData siteData, uint16_t counter)
 
     switch (siteData.siteModel())
     {
-    case SiteModel::TINY:
+    case SiteModel::SM_TINY:
     {
         lcValue = (lcValue << 9) + siteData.netId();
         lcValue = (lcValue << 3) + siteData.siteId();
     }
     break;
-    case SiteModel::SMALL:
+    case SiteModel::SM_SMALL:
     {
         lcValue = (lcValue << 7) + siteData.netId();
         lcValue = (lcValue << 5) + siteData.siteId();
     }
     break;
-    case SiteModel::LARGE:
+    case SiteModel::SM_LARGE:
     {
         lcValue = (lcValue << 5) + siteData.netId();
         lcValue = (lcValue << 7) + siteData.siteId();
     }
     break;
-    case SiteModel::HUGE:
+    case SiteModel::SM_HUGE:
     {
         lcValue = (lcValue << 2) + siteData.netId();
         lcValue = (lcValue << 10) + siteData.siteId();
@@ -1734,25 +1734,25 @@ void Slot::setShortLC_Payload(SiteData siteData, uint16_t counter)
 
     switch (siteData.siteModel())
     {
-    case SiteModel::TINY:
+    case SiteModel::SM_TINY:
     {
         lcValue = (lcValue << 9) + siteData.netId();
         lcValue = (lcValue << 3) + siteData.siteId();
     }
     break;
-    case SiteModel::SMALL:
+    case SiteModel::SM_SMALL:
     {
         lcValue = (lcValue << 7) + siteData.netId();
         lcValue = (lcValue << 5) + siteData.siteId();
     }
     break;
-    case SiteModel::LARGE:
+    case SiteModel::SM_LARGE:
     {
         lcValue = (lcValue << 5) + siteData.netId();
         lcValue = (lcValue << 7) + siteData.siteId();
     }
     break;
-    case SiteModel::HUGE:
+    case SiteModel::SM_HUGE:
     {
         lcValue = (lcValue << 2) + siteData.netId();
         lcValue = (lcValue << 10) + siteData.siteId();

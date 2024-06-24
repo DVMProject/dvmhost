@@ -28,7 +28,7 @@ namespace dmr
     public:
         /// <summary>Initializes a new instance of the SiteData class.</summary>
         SiteData() :
-            m_siteModel(defines::SiteModel::SMALL),
+            m_siteModel(defines::SiteModel::SM_SMALL),
             m_netId(1U),
             m_siteId(1U),
             m_parId(3U),
@@ -53,8 +53,8 @@ namespace dmr
         {
             using namespace dmr::defines;
             // siteModel clamping
-            if (siteModel > SiteModel::HUGE)
-                siteModel = SiteModel::SMALL;
+            if (siteModel > SiteModel::SM_HUGE)
+                siteModel = SiteModel::SM_SMALL;
 
             // netId clamping
             m_netId = DMRUtils::netId(netId, siteModel);
@@ -86,25 +86,25 @@ namespace dmr
 
             switch (m_siteModel)
             {
-            case SiteModel::TINY:
+            case SiteModel::SM_TINY:
             {
                 value = (value << 9) + (m_netId & 0x1FFU);
                 value = (value << 3) + (m_siteId & 0x07U);
             }
             break;
-            case SiteModel::SMALL:
+            case SiteModel::SM_SMALL:
             {
                 value = (value << 7) + (m_netId & 0x7FU);
                 value = (value << 5) + (m_siteId & 0x1FU);
             }
             break;
-            case SiteModel::LARGE:
+            case SiteModel::SM_LARGE:
             {
                 value = (value << 5) + (m_netId & 0x1FU);
                 value = (value << 7) + (m_siteId & 0x7FU);
             }
             break;
-            case SiteModel::HUGE:
+            case SiteModel::SM_HUGE:
             {
                 value = (value << 2) + (m_netId & 0x03U);
                 value = (value << 10) + (m_siteId & 0x3FFU);

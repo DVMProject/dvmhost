@@ -282,23 +282,16 @@ namespace dmr
     #define DMR_DT_VOICE_SYNC           "DMR, VOICE_SYNC (Voice Data with Sync)"
     #define DMR_DT_VOICE                "DMR, VOICE (Voice Data)"
 
-    // HACK: make GCC 4.9.3 happy...
-    #if (__GNUC__ == 4 && (__GNUC_MINOR__ == 9 && __GNUC_PATCHLEVEL__ >= 3)) && __arm__
-        // because the idiot GCC 4.9.3 compiler on ARMHF has a define for "HUGE" and because we utilize this
-        // as a enumeration below, lets just ... undefine it because thats smart
-        #undef HUGE
-    #endif
-
         /// <summary>
         /// Site Models
         /// </summary>
         namespace SiteModel {
             // Site Model Enumeration
             enum E : uint8_t {
-                TINY = 0x00U,                           // Tiny
-                SMALL = 0x01U,                          // Small
-                LARGE = 0x02U,                          // Large
-                HUGE = 0x03U                            // Huge
+                SM_TINY = 0x00U,                        // Tiny
+                SM_SMALL = 0x01U,                       // Small
+                SM_LARGE = 0x02U,                       // Large
+                SM_HUGE = 0x03U                         // Huge
             };
         }
 

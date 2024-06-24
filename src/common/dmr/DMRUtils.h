@@ -53,28 +53,28 @@ namespace dmr
 
             switch (siteModel)
             {
-            case SiteModel::TINY:
+            case SiteModel::SM_TINY:
             {
                 if (id > 0x07U) { // clamp to $7
                     id = 0x07U;
                 }
             }
             break;
-            case SiteModel::SMALL:
+            case SiteModel::SM_SMALL:
             {
                 if (id > 0x1FU) { // clamp to $1F
                     id = 0x1FU;
                 }
             }
             break;
-            case SiteModel::LARGE:
+            case SiteModel::SM_LARGE:
             {
                 if (id > 0x7FU) { // clamp to $7F
                     id = 0x7FU;
                 }
             }
             break;
-            case SiteModel::HUGE:
+            case SiteModel::SM_HUGE:
             {
                 if (id > 0x3FFU) { // clamp to $3FF
                     id = 0x3FFU;
@@ -94,28 +94,28 @@ namespace dmr
         {
             using namespace dmr::defines;
             switch (siteModel) {
-            case SiteModel::TINY:
+            case SiteModel::SM_TINY:
             {
                 if (id > 0x1FFU) { // clamp to $1FF
                     id = 0x1FFU;
                 }
             }
             break;
-            case SiteModel::SMALL:
+            case SiteModel::SM_SMALL:
             {
                 if (id > 0x7FU) { // clamp to $7F
                     id = 0x7FU;
                 }
             }
             break;
-            case SiteModel::LARGE:
+            case SiteModel::SM_LARGE:
             {
                 if (id > 0x1FU) { // clamp to $1F
                     id = 0x1FU;
                 }
             }
             break;
-            case SiteModel::HUGE:
+            case SiteModel::SM_HUGE:
             {
                 if (id > 0x03U) { // clamp to $3
                     id = 0x03U;
