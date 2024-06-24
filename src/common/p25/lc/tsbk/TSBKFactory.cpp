@@ -224,6 +224,8 @@ std::unique_ptr<TSBK> TSBKFactory::createTSBK(const uint8_t* data, bool rawTSBK)
         return decode(new ISP_AUTH_SU_DMD(), data, rawTSBK);
     case TSBKO::OSP_ADJ_STS_BCAST:
         return decode(new OSP_ADJ_STS_BCAST(), data, rawTSBK);
+    case TSBKO::OSP_SNDCP_CH_GNT:
+        return decode(new OSP_SNDCP_CH_GNT(), data, rawTSBK);
     default:
         LogError(LOG_P25, "TSBKFactory::create(), unknown TSBK LCO value, mfId = $%02X, lco = $%02X", mfId, lco);
         break;
