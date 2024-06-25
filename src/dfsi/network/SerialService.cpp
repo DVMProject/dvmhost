@@ -941,7 +941,7 @@ void SerialService::processP25ToNet()
                 rsBuffer[0U] = m_rxVoiceCallData->lco;
                 rsBuffer[1U] = m_rxVoiceCallData->mfId;
                 rsBuffer[2U] = m_rxVoiceCallData->serviceOptions;
-                rsBuffer[6U] = (m_rxVoiceCallData->dstId >> 16) & 0xFFU;
+                rsBuffer[3U] = (m_rxVoiceCallData->dstId >> 16) & 0xFFU;
                 rsBuffer[4U] = (m_rxVoiceCallData->dstId >> 8) & 0xFFU;
                 rsBuffer[5U] = (m_rxVoiceCallData->dstId >> 0) & 0xFFU;
                 rsBuffer[6U] = (m_rxVoiceCallData->srcId >> 16) & 0xFFU;
@@ -962,6 +962,10 @@ void SerialService::processP25ToNet()
                 rsValue = (rsValue << 8) + rsBuffer[7U];
                 rsValue = (rsValue << 8) + rsBuffer[8U];
                 m_rxVoiceControl->setRS(rsValue);
+
+                // Optional LC dump
+                if (m_debug)
+                    LogDebug(LOG_SERIAL, "Got non-standard LC: MFID = $%02X, LC = $%llX", m_rxVoiceControl->getMFId(), rsValue);
             }
         }
     }
@@ -971,13 +975,14 @@ void SerialService::processP25ToNet()
         // Send (TODO: dynamically set HDU_VALID or DATA_VALID depending on start of call or not)
         bool ret = m_network->writeP25LDU1(*m_rxVoiceControl, *m_rxVoiceLsd, m_rxVoiceCallData->netLDU1, FrameType::HDU_VALID);
         // Print
-        LogInfoEx(LOG_SERIAL, P25_LDU1_STR " audio, mfId = $%02X, srcId = %u, dstId = %u, group = %u, emerg = %u, encrypt = %u, prio = %u",
-            m_rxVoiceControl->getMFId(), m_rxVoiceControl->getSrcId(), m_rxVoiceControl->getDstId(), m_rxVoiceControl->getGroup(), m_rxVoiceControl->getEmergency(), m_rxVoiceControl->getEncrypted(), m_rxVoiceControl->getPriority());
+        LogInfoEx(LOG_SERIAL, P25_LDU1_STR " audio, mfId = $%02X, srcId = %u, dstId = %u, group = %u, emerg = %u, encrypt = %u, prio = %u, lsd = $%02X%02X",
+            m_rxVoiceControl->getMFId(), m_rxVoiceControl->getSrcId(), m_rxVoiceControl->getDstId(), m_rxVoiceControl->getGroup(), 
+            m_rxVoiceControl->getEmergency(), m_rxVoiceControl->getEncrypted(), m_rxVoiceControl->getPriority(), m_rxVoiceLsd->getLSD1(), m_rxVoiceLsd->getLSD2());
         // Optional Debug
         if (ret) {
-            if (m_debug)
+            /*if (m_debug)
                 LogDebug(LOG_SERIAL, "V24 LDU1 [STREAM ID %u, SRC %u, DST %u]", m_rxVoiceCallData->streamId, m_rxVoiceCallData->srcId, m_rxVoiceCallData->dstId);
-            /*if (m_trace)
+            if (m_trace)
                 Utils::dump(1U, "LDU1 to net", m_rxVoiceCallData->netLDU1, 9U * 25U);*/
         }
         else {
@@ -990,12 +995,12 @@ void SerialService::processP25ToNet()
         // Send
         bool ret = m_network->writeP25LDU2(*m_rxVoiceControl, *m_rxVoiceLsd, m_rxVoiceCallData->netLDU2);
         // Print
-        LogInfoEx(LOG_SERIAL, P25_LDU2_STR " audio, algo = $%02X, kid = $%04X", m_rxVoiceCallData->algoId, m_rxVoiceCallData->kId);
+        LogInfoEx(LOG_SERIAL, P25_LDU2_STR " audio, algo = $%02X, kid = $%04X, lsd = $%02X%02X", m_rxVoiceCallData->algoId, m_rxVoiceCallData->kId, m_rxVoiceLsd->getLSD1(), m_rxVoiceLsd->getLSD2());
         // Optional Debug
         if (ret) {
-            if (m_debug)
+            /*if (m_debug)
                 LogDebug(LOG_SERIAL, "V24 LDU2 [STREAM ID %u, SRC %u, DST %u]", m_rxVoiceCallData->streamId, m_rxVoiceCallData->srcId, m_rxVoiceCallData->dstId);
-            /*if (m_trace)
+            if (m_trace)
                 Utils::dump(1U, "LDU2 to net", m_rxVoiceCallData->netLDU2, 9U * 25U);*/
         }
         else {
