@@ -2053,6 +2053,7 @@ void ControlSignaling::queueRF_TSBK_Ctrl(uint8_t lco)
         case TSBKO::OSP_SNDCP_CH_ANN:
             // transmit SNDCP announcement
             tsbk = std::make_unique<OSP_SNDCP_CH_ANN>();
+            tsbk->siteIdenEntry(m_p25->m_idenEntry);
             DEBUG_LOG_TSBK(tsbk->toString());
             break;
         case TSBKO::OSP_SYNC_BCAST:
@@ -2477,6 +2478,7 @@ bool ControlSignaling::writeRF_TSDU_SNDCP_Grant(uint32_t srcId, bool skip, uint3
 
     std::unique_ptr<OSP_SNDCP_CH_GNT> osp = std::make_unique<OSP_SNDCP_CH_GNT>();
     osp->setMFId(m_lastMFID);
+    osp->siteIdenEntry(m_p25->m_idenEntry);
     osp->setSrcId(srcId);
     osp->setDstId(srcId);
 
