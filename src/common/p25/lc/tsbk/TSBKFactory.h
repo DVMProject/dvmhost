@@ -38,6 +38,7 @@
 #include "common/p25/lc/tsbk/ISP_GRP_AFF_Q_RSP.h"
 #include "common/p25/lc/tsbk/ISP_LOC_REG_REQ.h"
 #include "common/p25/lc/tsbk/ISP_SNDCP_CH_REQ.h"
+#include "common/p25/lc/tsbk/ISP_SNDCP_REC_REQ.h"
 #include "common/p25/lc/tsbk/ISP_U_DEREG_REQ.h"
 #include "common/p25/lc/tsbk/OSP_ADJ_STS_BCAST.h"
 #include "common/p25/lc/tsbk/OSP_AUTH_FNE_RESP.h"

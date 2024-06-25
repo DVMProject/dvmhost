@@ -15,6 +15,7 @@
 #include "Defines.h"
 #include "common/p25/P25Defines.h"
 #include "common/p25/acl/AccessControl.h"
+#include "common/p25/lc/tdulc/TDULCFactory.h"
 #include "common/p25/P25Utils.h"
 #include "common/p25/Sync.h"
 #include "common/edac/CRC.h"
@@ -36,6 +37,7 @@ using namespace p25;
 // ---------------------------------------------------------------------------
 
 const uint32_t CONN_WAIT_TIMEOUT = 1U;
+const uint32_t SNDCP_READY_TIMEOUT = 10U;
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -407,6 +409,16 @@ bool Data::process(uint8_t* data, uint32_t len)
                         }
                     }
                     break;
+                    case PDUSAP::SNDCP_CTRL_DATA:
+                    {
+                        if (m_verbose) {
+                            LogMessage(LOG_RF, P25_PDU_STR ", SNDCP_CTRL_DATA (SNDCP Control Data), lco = $%02X, blocksToFollow = %u",
+                                m_rfDataHeader.getAMBTOpcode(), m_rfDataHeader.getBlocksToFollow());
+                        }
+
+                        processSNDCP();
+                    }
+                    break;
                     case PDUSAP::TRUNK_CTRL:
                     {
                         if (m_verbose) {
@@ -713,8 +725,10 @@ bool Data::hasLLIdFNEReg(uint32_t llId) const
 /// Helper to write user data as a P25 PDU packet.
 /// </summary>
 /// <param name="dataHeader"></param>
+/// <param name="secondHeader"></param>
+/// <param name="useSecondHeader"></param>
 /// <param name="pduUserData"></param>
-void Data::writeRF_PDU_User(data::DataHeader& dataHeader, const uint8_t* pduUserData)
+void Data::writeRF_PDU_User(data::DataHeader& dataHeader, data::DataHeader& secondHeader, bool useSecondHeader, uint8_t* pduUserData)
 {
     assert(pduUserData != nullptr);
 
@@ -726,24 +740,90 @@ void Data::writeRF_PDU_User(data::DataHeader& dataHeader, const uint8_t* pduUser
     uint8_t block[P25_PDU_FEC_LENGTH_BYTES];
     ::memset(block, 0x00U, P25_PDU_FEC_LENGTH_BYTES);
 
-    // Generate the PDU header and 1/2 rate Trellis
+    uint32_t blocksToFollow = dataHeader.getBlocksToFollow();
+
+    if (m_verbose) {
+        LogMessage(LOG_RF, P25_PDU_STR ", OSP, ack = %u, outbound = %u, fmt = $%02X, mfId = $%02X, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padLength = %u, n = %u, seqNo = %u, lastFragment = %u, hdrOffset = %u, llId = %u",
+            dataHeader.getAckNeeded(), dataHeader.getOutbound(), dataHeader.getFormat(), dataHeader.getMFId(), dataHeader.getSAP(), dataHeader.getFullMessage(),
+            dataHeader.getBlocksToFollow(), dataHeader.getPadLength(), dataHeader.getNs(), dataHeader.getFSN(), dataHeader.getLastFragment(),
+            dataHeader.getHeaderOffset(), dataHeader.getLLId());
+    }
+
+    // generate the PDU header and 1/2 rate Trellis
     dataHeader.encode(block);
     Utils::setBitRange(block, data, offset, P25_PDU_FEC_LENGTH_BITS);
     offset += P25_PDU_FEC_LENGTH_BITS;
 
-    // Generate the PDU data
-    DataBlock rspBlock = DataBlock();
     uint32_t dataOffset = 0U;
-    for (uint8_t i = 0; i < dataHeader.getBlocksToFollow(); i++) {
-        rspBlock.setFormat(PDUFormatType::UNCONFIRMED);
-        rspBlock.setSerialNo(0U);
-        rspBlock.setData(pduUserData + dataOffset);
+
+    // generate the second PDU header
+    if (useSecondHeader) {
+        secondHeader.encode(m_pduUserData, true);
 
         ::memset(block, 0x00U, P25_PDU_FEC_LENGTH_BYTES);
-        rspBlock.encode(block);
+        secondHeader.encode(block);
         Utils::setBitRange(block, data, offset, P25_PDU_FEC_LENGTH_BITS);
+
+        bitLength += P25_PDU_FEC_LENGTH_BITS;
         offset += P25_PDU_FEC_LENGTH_BITS;
-        dataOffset += P25_PDU_UNCONFIRMED_LENGTH_BYTES;
+        dataOffset += P25_PDU_HEADER_LENGTH_BYTES;
+        blocksToFollow--;
+
+        if (m_verbose) {
+            LogMessage(LOG_RF, P25_PDU_STR ", OSP, fmt = $%02X, mfId = $%02X, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padLength = %u, n = %u, seqNo = %u, lastFragment = %u, hdrOffset = %u, llId = %u",
+                secondHeader.getFormat(), secondHeader.getMFId(), secondHeader.getSAP(), secondHeader.getFullMessage(),
+                secondHeader.getBlocksToFollow(), secondHeader.getPadLength(), secondHeader.getNs(), secondHeader.getFSN(), secondHeader.getLastFragment(),
+                secondHeader.getHeaderOffset(), secondHeader.getLLId());
+        }
+    }
+
+    if (dataHeader.getFormat() != PDUFormatType::AMBT) {
+        edac::CRC::addCRC32(pduUserData, m_pduUserDataLength);
+    }
+
+    // generate the PDU data
+    for (uint32_t i = 0U; i < blocksToFollow; i++) {
+        DataBlock dataBlock = DataBlock();
+        dataBlock.setFormat((useSecondHeader) ? secondHeader : dataHeader);
+        dataBlock.setSerialNo(i);
+        dataBlock.setData(pduUserData + dataOffset);
+
+        // are we processing extended address data from the first block?
+        if (dataHeader.getSAP() == PDUSAP::EXT_ADDR && dataHeader.getFormat() == PDUFormatType::CONFIRMED &&
+            dataBlock.getSerialNo() == 0U) {
+            if (m_verbose) {
+                LogMessage(LOG_RF, P25_PDU_STR ", OSP, block %u, fmt = $%02X, lastBlock = %u, sap = $%02X, llId = %u",
+                    dataBlock.getSerialNo(), dataBlock.getFormat(), dataBlock.getLastBlock(), dataBlock.getSAP(), dataBlock.getLLId());
+
+                if (m_dumpPDUData) {
+                    uint8_t rawDataBlock[P25_PDU_CONFIRMED_DATA_LENGTH_BYTES];
+                    ::memset(rawDataBlock, 0xAAU, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
+                    dataBlock.getData(rawDataBlock);
+                    Utils::dump(2U, "Data Block", rawDataBlock, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
+                }
+            }
+        }
+        else {
+            if (m_verbose) {
+                LogMessage(LOG_RF, P25_PDU_STR ", OSP, block %u, fmt = $%02X, lastBlock = %u",
+                    (dataHeader.getFormat() == PDUFormatType::CONFIRMED) ? dataBlock.getSerialNo() : i, dataBlock.getFormat(),
+                    dataBlock.getLastBlock());
+
+                if (m_dumpPDUData) {
+                    uint8_t rawDataBlock[P25_PDU_CONFIRMED_DATA_LENGTH_BYTES];
+                    ::memset(rawDataBlock, 0xAAU, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
+                    dataBlock.getData(rawDataBlock);
+                    Utils::dump(2U, "Data Block", rawDataBlock, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
+                }
+            }
+        }
+
+        ::memset(block, 0x00U, P25_PDU_FEC_LENGTH_BYTES);
+        dataBlock.encode(block);
+        Utils::setBitRange(block, data, offset, P25_PDU_FEC_LENGTH_BITS);
+
+        offset += P25_PDU_FEC_LENGTH_BITS;
+        dataOffset += (dataHeader.getFormat() == PDUFormatType::CONFIRMED) ? P25_PDU_CONFIRMED_DATA_LENGTH_BYTES : P25_PDU_UNCONFIRMED_LENGTH_BYTES;
     }
 
     writeRF_PDU(data, bitLength);
@@ -790,6 +870,96 @@ void Data::clock(uint32_t ms)
 
         m_connQueueTable.erase(llId);
     }
+
+    if (m_p25->m_sndcpSupport) {
+        // clock all the SNDCP ready timers
+        std::vector<uint32_t> sndcpReadyExpired = std::vector<uint32_t>();
+        for (auto entry : m_sndcpReadyTimers) {
+            uint32_t llId = entry.first;
+
+            m_sndcpReadyTimers[llId].clock(ms);
+            if (m_sndcpReadyTimers[llId].isRunning() && m_sndcpReadyTimers[llId].hasExpired()) {
+                sndcpReadyExpired.push_back(llId);
+            }
+        }
+
+        // process and SNDCP enabled LLIDs
+        for (auto entry : m_sndcpStateTable) {
+            uint32_t llId = entry.first;
+            SNDCPState::E state = entry.second;
+
+            switch (state) {
+            case SNDCPState::CLOSED:
+                break;
+            case SNDCPState::IDLE:
+                {
+                    if (m_p25->m_permittedDstId == llId) {
+                        m_sndcpReadyTimers[llId].start();
+                        m_sndcpStateTable[llId] = SNDCPState::READY_S;
+                        if (m_verbose) {
+                            LogMessage(LOG_RF, P25_PDU_STR ", SNDCP, llId = %u, state = %u", llId, (uint8_t)state);
+                        }
+                    }
+                }
+                break;
+            case SNDCPState::READY_S:
+                {
+                    // has the LLID reached ready state expiration?
+                    if (std::find(sndcpReadyExpired.begin(), sndcpReadyExpired.end(), llId) != sndcpReadyExpired.end()) {
+                        m_sndcpStateTable[llId] = SNDCPState::IDLE;
+
+                        if (m_verbose) {
+                            LogMessage(LOG_RF, P25_TDULC_STR ", CALL_TERM (Call Termination), llId = %u", llId);
+                        }
+
+                        std::unique_ptr<lc::TDULC> lc = std::make_unique<lc::tdulc::LC_CALL_TERM>();
+                        m_p25->m_control->writeRF_TDULC(lc.get(), true);
+
+                        if (m_p25->m_notifyCC) {
+                            m_p25->notifyCC_ReleaseGrant(llId);
+                        }
+                    }
+                }
+                break;
+            case SNDCPState::READY:
+                break;
+            default:
+                break;
+            }
+        }
+    }
+}
+
+/// <summary>
+/// Helper to initialize the SNDCP state for a logical link ID.
+/// </summary>
+/// <param name="llId"></param>
+void Data::sndcpInitialize(uint32_t llId)
+{
+    if (!isSNDCPInitialized(llId)) {
+        m_sndcpStateTable[llId] = SNDCPState::IDLE;
+        m_sndcpReadyTimers[llId] = Timer(1000U, SNDCP_READY_TIMEOUT);
+        m_sndcpStandyTimers[llId] = Timer(1000U, 1000U);
+
+        if (m_verbose) {
+            LogMessage(LOG_RF, P25_PDU_STR ", SNDCP, first initialize, llId = %u, state = %u", llId, (uint8_t)SNDCPState::IDLE);
+        }
+    }
+}
+
+/// <summary>
+/// Helper to determine if the logical link ID has been SNDCP initialized.
+/// </summary>
+/// <param name="llId"></param>
+/// <returns></returns>
+bool Data::isSNDCPInitialized(uint32_t llId) const
+{
+    // lookup dynamic affiliation table entry
+    if (m_sndcpStateTable.find(llId) != m_sndcpStateTable.end()) {
+        return true;
+    }
+
+    return false;
 }
 
 // ---------------------------------------------------------------------------
@@ -830,6 +1000,9 @@ Data::Data(Control* p25, bool dumpPDUData, bool repeatPDU, bool debug, bool verb
     m_fneRegTable(),
     m_connQueueTable(),
     m_connTimerTable(),
+    m_sndcpStateTable(),
+    m_sndcpReadyTimers(),
+    m_sndcpStandyTimers(),
     m_dumpPDUData(dumpPDUData),
     m_repeatPDU(repeatPDU),
     m_verbose(verbose),
@@ -851,6 +1024,10 @@ Data::Data(Control* p25, bool dumpPDUData, bool repeatPDU, bool debug, bool verb
     m_fneRegTable.clear();
     m_connQueueTable.clear();
     m_connTimerTable.clear();
+
+    m_sndcpStateTable.clear();
+    m_sndcpReadyTimers.clear();
+    m_sndcpStandyTimers.clear();
 }
 
 /// <summary>
@@ -863,6 +1040,20 @@ Data::~Data()
     delete[] m_rfPDU;
     delete[] m_netPDU;
     delete[] m_pduUserData;
+}
+
+/// <summary>
+/// Helper used to process SNDCP control data from PDU data.
+/// </summary>
+/// <param name="dataHeader"></param>
+/// <param name="dataBlock"></param>
+bool Data::processSNDCP()
+{
+    if (!m_p25->m_sndcpSupport) {
+        return false;
+    }
+
+    return true;
 }
 
 /// <summary>

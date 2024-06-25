@@ -363,17 +363,122 @@ namespace p25
             };
         }
 
+        const uint8_t   SNDCP_VERSION_1 = 0x01U;        // SNDCP Version 1
+        const uint8_t   SNDCP_MTU_510 = 2U;             // 510 byte MTU
+
         /// <summary>
-        /// SNDCP Type
+        /// SNDCP PDU Message Type
         /// </summary>
-        namespace PDUSNDCPType {
+        namespace SNDCP_PDUType {
             enum : uint8_t {
-                ACT_TDS_CTX_ACCPT = 0x00U,              // Activate Context Accept
-                DEACT_TDS_CTX_ACCPT = 0x01U,            // Deactivate Context Accept
+                ACT_TDS_CTX = 0x00U,                    // Context Activation Request (ISP) / Context Activation Accept (OSP)
+
                 DEACT_TDS_CTX_REQ = 0x02U,              // Deactivate Context Request
                 ACT_TDS_CTX_REJECT = 0x03U,             // Activate Context Reject
-                RF_UNCONFIRMED = 0x04U,                 // RF Unconfirmed
-                RF_CONFIRMED = 0x05U                    // RF Confirmed
+
+                RF_UNCONFIRMED = 0x04U,                 // Data Unconfirmed
+                RF_CONFIRMED = 0x05U                    // Data Confirmed
+            };
+        }
+
+        /// <summary>
+        /// SNDCP Activation TDS States
+        /// </summary.
+        namespace SNDCPState {
+            // SNDCP Activation TDS State
+            enum E : uint8_t {
+                IDLE = 0U,                              // Idle - Waiting for SU Registration
+                READY_S = 1U,                           // Ready* - Waiting for SU Activation
+                STANDBY = 2U,                           // Standby - SU Activated
+                READY = 3U,                             // Ready - SU Activated and Rx/Tx Data
+                CLOSED = 4U,                            // Closed - SU not yet Registered or Deregistered
+
+                ILLEGAL = 255U,                         // Illegal/Unknown
+            };
+        }
+
+        /// <summary>
+        /// SNDCP Data Subscriber Unit Type
+        /// </summary>
+        namespace SNDCP_DSUT {
+            enum : uint8_t {
+                TRUNKED_DATA_ONLY = 0U,                 // Trunked Data Only
+                ALTERNATING_TRUNKED_DATA_VOICE = 1U,    // Alternating Trunked Voice & Data
+                CONV_DATA_ONLY = 2U,                    // Conventional Data Only
+                ALTERNATING_CONV_DATA_VOICE = 3U,       // Alternating Conventional Voice & Data
+                TRUNKED_CONV_DATA_ONLY = 4U,            // Trunked and Conventional Data Only
+            };
+        }
+
+        /// <summary>
+        /// SNDCP Ready Timer
+        /// </summary>
+        namespace SNDCPReadyTimer {
+            enum : uint8_t {
+                NOT_ALLOWED = 0U,                       // Not Allowed
+                ONE_SECOND = 1U,                        // 1 Second
+                TWO_SECONDS = 2U,                       // 2 Seconds
+                FOUR_SECONDS = 3U,                      // 4 Seconds
+                SIX_SECONDS = 4U,                       // 6 Seconds
+                EIGHT_SECONDS = 5U,                     // 8 Seconds
+                TEN_SECONDS = 6U,                       // 10 Seconds
+                FIFTEEN_SECONDS = 7U,                   // 15 Seconds
+                TWENTY_SECONDS = 8U,                    // 20 Seconds
+                TWENTYFIVE_SECONDS = 9U,                // 25 Seconds
+                THIRTY_SECONDS = 10U,                   // 30 Seconds
+                SIXTY_SECONDS = 11U,                    // 60 Seconds
+                ONE_TWENTY_SECONDS = 12U,               // 120 Seconds
+                ONE_EIGHT_SECONDS = 13U,                // 180 Seconds
+                THREE_HUNDRED_SECONDS = 14U,            // 300 Seconds
+                ALWAYS = 15U                            // Always
+            };
+        }
+
+        /// <summary>
+        /// SNDCP Standby Timer
+        /// </summary>
+        namespace SNDCPStandbyTimer {
+            enum : uint8_t {
+                NOT_ALLOWED = 0U,                       // Not Allowed
+                TEN_SECONDS = 1U,                       // 10 Seconds
+                THIRTY_SECONDS = 2U,                    // 30 Seconds
+                ONE_MINUTE = 3U,                        // 1 Minute
+                FIVE_MINUTES = 4U,                      // 5 Minutes
+                TEN_MINUTES = 5U,                       // 10 Minutes
+                THIRTY_MINUTES = 6U,                    // 30 Minutes
+                ONE_HOUR = 7U,                          // 1 Hour
+                TWO_HOURS = 8U,                         // 2 Hours
+                FOUR_HOURS = 9U,                        // 4 Hours
+                EIGHT_HOURS = 10U,                      // 8 Hours
+                TWELVE_HOURS = 11U,                     // 12 Hours
+                TWENTY_FOUR_HOURS = 12U,                // 24 Hours
+                FORTY_EIGHT_HOURS = 13U,                // 48 Hours
+                SEVENTY_TWO_HOURS = 14U,                // 72 Hours
+                ALWAYS = 15U                            // Always
+            };
+        }
+
+        /// <summary>
+        /// SNDCP Reject Reasons
+        /// </summary>
+        namespace SNDCPRejectReason {
+            enum : uint8_t {
+                ANY_REASON = 0U,                        // Any Reason
+                SU_NOT_PROVISIONED = 1U,                // Subscriber Not Provisioned
+                SU_DSUT_NOT_SUPPORTED = 2U,             // Subscriber Data Unit Type Not Supported
+                MAX_TDS_CTX_EXCEEDED = 3U,              // Maximum Number of TDS Contexts Exceeded
+                SNDCP_VER_NOT_SUPPORTED = 4U,           // SNDCP Version Not Supported
+                PDS_NOT_SUPPORTED_SITE = 5U,            // Packet Data Service Not Supported on Site
+                PDS_NOT_SUPPORTED_SYSTEM = 6U,          // Packet Data Service Not Supported on System
+
+                STATIC_IP_NOT_CORRECT = 7U,             // Static IP Address Not Correct
+                STATIC_IP_ALLOCATION_UNSUPPORTED = 8U,  // Static IP Address Allocation Unsupported
+                STATIC_IP_IN_USE = 9U,                  // Static IP In Use
+
+                IPV4_NOT_SUPPORTED = 10U,               // IPv4 Not Supported
+
+                DYN_IP_POOL_EMPTY = 11U,                // Dynamic IP Address Pool Empty
+                DYN_IP_ALLOCATION_UNSUPPORTED = 12U     // Dynamic IP Address Allocation Unsupported
             };
         }
 
@@ -430,6 +535,7 @@ namespace p25
             // TSBK Inbound Signalling Packet (ISP) Opcode(s)
                 ISP_TELE_INT_PSTN_REQ = 0x09U,          // TELE INT PSTN REQ - Telephone Interconnect Request - Implicit
                 ISP_SNDCP_CH_REQ = 0x12U,               // SNDCP CH REQ - SNDCP Data Channel Request
+                ISP_SNDCP_REC_REQ = 0x14U,              // SNDCP REC REQ - SNDCP Reconnect Request
                 ISP_STS_Q_RSP = 0x19U,                  // STS Q RSP - Status Query Response
                 ISP_STS_Q_REQ = 0x1CU,                  // STS Q REQ - Status Query Request
                 ISP_CAN_SRV_REQ = 0x23U,                // CAN SRV REQ - Cancel Service Request

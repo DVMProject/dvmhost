@@ -838,7 +838,14 @@ void RESTAPI::restAPI_PutPermitTG(const HTTPPayload& request, HTTPPayload& reply
     case STATE_P25:
     {
         if (m_p25 != nullptr) {
-            m_p25->permittedTG(dstId);
+            bool dataPermit = false;
+
+            // validate destination ID is a integer within the JSON blob
+            if (req["dataPermit"].is<bool>()) {
+                dataPermit = (bool)req["dataPermit"].get<bool>();
+            }
+
+            m_p25->permittedTG(dstId, dataPermit);
         }
         else {
           errorPayload(reply, "P25 mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);

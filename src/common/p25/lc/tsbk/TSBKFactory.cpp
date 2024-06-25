@@ -186,6 +186,8 @@ std::unique_ptr<TSBK> TSBKFactory::createTSBK(const uint8_t* data, bool rawTSBK)
         return decode(new IOSP_UU_ANS(), data, rawTSBK);
     case TSBKO::ISP_SNDCP_CH_REQ:
         return decode(new ISP_SNDCP_CH_REQ(), data, rawTSBK);
+    case TSBKO::ISP_SNDCP_REC_REQ:
+        return decode(new ISP_SNDCP_REC_REQ(), data, rawTSBK);
     case TSBKO::IOSP_STS_UPDT:
         return decode(new IOSP_STS_UPDT(), data, rawTSBK);
     case TSBKO::IOSP_MSG_UPDT:
@@ -224,8 +226,6 @@ std::unique_ptr<TSBK> TSBKFactory::createTSBK(const uint8_t* data, bool rawTSBK)
         return decode(new ISP_AUTH_SU_DMD(), data, rawTSBK);
     case TSBKO::OSP_ADJ_STS_BCAST:
         return decode(new OSP_ADJ_STS_BCAST(), data, rawTSBK);
-    case TSBKO::OSP_SNDCP_CH_GNT:
-        return decode(new OSP_SNDCP_CH_GNT(), data, rawTSBK);
     default:
         LogError(LOG_P25, "TSBKFactory::create(), unknown TSBK LCO value, mfId = $%02X, lco = $%02X", mfId, lco);
         break;

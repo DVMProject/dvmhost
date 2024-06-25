@@ -341,11 +341,33 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
                         tsbk->toString(true).c_str(), isp->getDataServiceOptions(), isp->getDataAccessControl(), srcId);
                 }
 
-                if (m_sndcpChGrant) {
-                    writeRF_TSDU_SNDCP_Grant(false, false);
+                if (m_p25->m_sndcpSupport) {
+                    writeRF_TSDU_SNDCP_Grant(srcId, false);
                 }
                 else {
                     writeRF_TSDU_Deny(srcId, WUID_FNE, ReasonCode::DENY_SYS_UNSUPPORTED_SVC, TSBKO::ISP_SNDCP_CH_REQ);
+                }
+            }
+            break;
+            case TSBKO::ISP_SNDCP_REC_REQ:
+            {
+                // make sure control data is supported
+                IS_SUPPORT_CONTROL_CHECK(tsbk->toString(true), TSBKO::ISP_SNDCP_CH_REQ, srcId);
+
+                // validate the source RID
+                VALID_SRCID(tsbk->toString(true), TSBKO::ISP_SNDCP_CH_REQ, srcId);
+
+                ISP_SNDCP_CH_REQ* isp = static_cast<ISP_SNDCP_CH_REQ*>(tsbk.get());
+                if (m_verbose) {
+                    LogMessage(LOG_RF, P25_TSDU_STR ", %s, dataServiceOptions = $%02X, dataAccessControl = %u, srcId = %u",
+                        tsbk->toString(true).c_str(), isp->getDataServiceOptions(), isp->getDataAccessControl(), srcId);
+                }
+
+                if (m_p25->m_sndcpSupport) {
+                    writeRF_TSDU_SNDCP_Grant(srcId, false);
+                }
+                else {
+                    writeRF_TSDU_Deny(srcId, WUID_FNE, ReasonCode::DENY_SYS_UNSUPPORTED_SVC, TSBKO::ISP_SNDCP_REC_REQ);
                 }
             }
             break;
@@ -1225,7 +1247,6 @@ ControlSignaling::ControlSignaling(Control* p25, bool dumpTSBKData, bool debug, 
     m_microslotCount(0U),
     m_ctrlTimeDateAnn(false),
     m_ctrlTSDUMBF(true),
-    m_sndcpChGrant(false),
     m_disableGrantSrcIdCheck(false),
     m_redundantImmediate(true),
     m_redundantGrant(false),
@@ -1661,7 +1682,7 @@ void ControlSignaling::writeRF_TSDU_AMBT(lc::AMBT* ambt)
         Utils::dump(1U, "!!! *PDU (AMBT) TSBK Block Data", pduUserData, P25_PDU_UNCONFIRMED_LENGTH_BYTES * header.getBlocksToFollow());
     }
 
-    m_p25->m_data->writeRF_PDU_User(header, pduUserData);
+    m_p25->m_data->writeRF_PDU_User(header, header, false, pduUserData);
 }
 
 /*
@@ -2446,50 +2467,43 @@ void ControlSignaling::writeRF_TSDU_Grant_Update()
 /// Helper to write a SNDCP grant packet.
 /// </summary>
 /// <param name="srcId"></param>
-/// <param name="dstId"></param>
 /// <param name="skip"></param>
-/// <param name="net"></param>
+/// <param name="chNo"></param>
 /// <returns></returns>
-bool ControlSignaling::writeRF_TSDU_SNDCP_Grant(uint32_t srcId, uint32_t dstId, bool skip, bool net)
+bool ControlSignaling::writeRF_TSDU_SNDCP_Grant(uint32_t srcId, bool skip, uint32_t chNo)
 {
+    if (!m_p25->m_sndcpSupport)
+        return false;
+
     std::unique_ptr<OSP_SNDCP_CH_GNT> osp = std::make_unique<OSP_SNDCP_CH_GNT>();
     osp->setMFId(m_lastMFID);
     osp->setSrcId(srcId);
-    osp->setDstId(dstId);
-
-    if (dstId == TGID_ALL) {
-        return true; // do not generate grant packets for $FFFF (All Call) TGID
-    }
+    osp->setDstId(srcId);
 
     // are we skipping checking?
     if (!skip) {
         if (m_p25->m_rfState != RS_RF_LISTENING && m_p25->m_rfState != RS_RF_DATA) {
-            if (!net) {
-                LogWarning(LOG_RF, P25_TSDU_STR ", TSBKO, ISP_SNDCP_CH_REQ (SNDCP Data Channel Request) denied, traffic in progress, srcId = %u", srcId);
-                writeRF_TSDU_Deny(srcId, dstId, ReasonCode::DENY_PTT_COLLIDE, TSBKO::ISP_SNDCP_CH_REQ, false, true);
+            LogWarning(LOG_RF, P25_TSDU_STR ", TSBKO, ISP_SNDCP_CH_REQ (SNDCP Data Channel Request) denied, traffic in progress, srcId = %u", srcId);
+            writeRF_TSDU_Deny(WUID_FNE, srcId, ReasonCode::DENY_PTT_COLLIDE, TSBKO::ISP_SNDCP_CH_REQ, false, true);
 
-                ::ActivityLog("P25", true, "SNDCP grant request from %u denied", srcId);
-                m_p25->m_rfState = RS_RF_REJECTED;
-            }
+            ::ActivityLog("P25", true, "SNDCP grant request from %u denied", srcId);
+            m_p25->m_rfState = RS_RF_REJECTED;
 
             return false;
         }
 
         if (!m_p25->m_affiliations.isGranted(srcId)) {
             if (!m_p25->m_affiliations.rfCh()->isRFChAvailable()) {
-                if (!net) {
-                    LogWarning(LOG_RF, P25_TSDU_STR ", TSBKO, ISP_SNDCP_CH_REQ (SNDCP Data Channel Request) denied, no channels available, srcId = %u", srcId);
-                    writeRF_TSDU_Deny(srcId, dstId, ReasonCode::DENY_NO_RF_RSRC_AVAIL, TSBKO::ISP_SNDCP_CH_REQ, false, true);
+                LogWarning(LOG_RF, P25_TSDU_STR ", TSBKO, ISP_SNDCP_CH_REQ (SNDCP Data Channel Request) denied, no channels available, srcId = %u", srcId);
+                writeRF_TSDU_Deny(WUID_FNE, srcId, ReasonCode::DENY_NO_RF_RSRC_AVAIL, TSBKO::ISP_SNDCP_CH_REQ, false, true);
 
-                    ::ActivityLog("P25", true, "SNDCP grant request from %u denied", srcId);
-                    m_p25->m_rfState = RS_RF_REJECTED;
-                }
-
+                ::ActivityLog("P25", true, "SNDCP grant request from %u denied", srcId);
+                m_p25->m_rfState = RS_RF_REJECTED;
                 return false;
             }
             else {
-                if (m_p25->m_affiliations.grantCh(srcId, srcId, GRANT_TIMER_TIMEOUT, false, net)) {
-                    uint32_t chNo = m_p25->m_affiliations.getGrantedCh(srcId);
+                if (m_p25->m_affiliations.grantCh(srcId, srcId, GRANT_TIMER_TIMEOUT, false, false)) {
+                    chNo = m_p25->m_affiliations.getGrantedCh(srcId);
                     ::lookups::VoiceChData voiceChData = m_p25->m_affiliations.rfCh()->getRFChData(chNo);
 
                     osp->setGrpVchId(voiceChData.chId());
@@ -2500,7 +2514,7 @@ bool ControlSignaling::writeRF_TSDU_SNDCP_Grant(uint32_t srcId, uint32_t dstId, 
             }
         }
         else {
-            uint32_t chNo = m_p25->m_affiliations.getGrantedCh(srcId);
+            chNo = m_p25->m_affiliations.getGrantedCh(srcId);
             ::lookups::VoiceChData voiceChData = m_p25->m_affiliations.rfCh()->getRFChData(chNo);
 
             osp->setGrpVchId(voiceChData.chId());
@@ -2511,20 +2525,49 @@ bool ControlSignaling::writeRF_TSDU_SNDCP_Grant(uint32_t srcId, uint32_t dstId, 
         }
     }
 
-    if (!net) {
+    if (chNo > 0U) {
+        ::lookups::VoiceChData voiceChData = m_p25->m_affiliations.rfCh()->getRFChData(chNo);
+
+        // callback REST API to permit the granted TG on the specified voice channel
+        if (m_p25->m_authoritative && m_p25->m_supervisor) {
+            if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0 &&
+                chNo != m_p25->m_siteData.channelNo()) {
+                json::object req = json::object();
+                int state = modem::DVM_STATE::STATE_P25;
+                req["state"].set<int>(state);
+                req["dstId"].set<uint32_t>(srcId);
+                bool dataCh = true;
+                req["dataPermit"].set<bool>(dataCh);
+
+                int ret = RESTClient::send(voiceChData.address(), voiceChData.port(), voiceChData.password(),
+                    HTTP_PUT, PUT_PERMIT_TG, req, voiceChData.ssl(), REST_QUICK_WAIT, m_p25->m_debug);
+                if (ret != network::rest::http::HTTPPayload::StatusType::OK) {
+                    ::LogError(LOG_RF, P25_TSDU_STR ", TSBKO, ISP_SNDCP_CH_REQ (SNDCP Data Channel Request), failed to permit for use, chNo = %u", chNo);
+                    m_p25->m_affiliations.releaseGrant(srcId, false);
+                    writeRF_TSDU_Deny(srcId, srcId, ReasonCode::DENY_PTT_BONK, TSBKO::ISP_SNDCP_CH_REQ, false, true);
+                    m_p25->m_rfState = RS_RF_REJECTED;
+
+                    return false;
+                }
+            }
+            else {
+                ::LogError(LOG_RF, P25_TSDU_STR ", TSBKO, ISP_SNDCP_CH_REQ (SNDCP Data Channel Request), failed to permit for use, chNo = %u", chNo);
+            }
+        }
+
         ::ActivityLog("P25", true, "SNDCP grant request from %u", srcId);
-    }
 
-    if (m_verbose) {
-        LogMessage((net) ? LOG_NET : LOG_RF, P25_TSDU_STR ", %s, chNo = %u, dstId = %u",
-            osp->toString().c_str(), osp->getDataChnNo(), osp->getSrcId());
-    }
+        if (m_verbose) {
+            LogMessage(LOG_RF, P25_TSDU_STR ", %s, chNo = %u, srcId = %u",
+                osp->toString().c_str(), osp->getDataChnNo(), osp->getSrcId());
+        }
 
-    // transmit group grant
-    writeRF_TSDU_SBF_Imm(osp.get(), true/*net*/);
-    if (m_redundantGrant) {
-        for (int i = 0; i < 3; i++)
-            writeRF_TSDU_SBF(osp.get(), true/*net*/);
+        // transmit group grant
+        writeRF_TSDU_SBF_Imm(osp.get(), true);
+        if (m_redundantGrant) {
+            for (int i = 0; i < 3; i++)
+                writeRF_TSDU_SBF(osp.get(), true);
+        }
     }
 
     return true;

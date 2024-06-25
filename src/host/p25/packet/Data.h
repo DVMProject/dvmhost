@@ -57,10 +57,16 @@ namespace p25
             bool hasLLIdFNEReg(uint32_t llId) const;
 
             /// <summary>Helper to write user data as a P25 PDU packet.</summary>
-            void writeRF_PDU_User(data::DataHeader& dataHeader, const uint8_t* pduUserData);
+            void writeRF_PDU_User(data::DataHeader& dataHeader, data::DataHeader& secondHeader, bool useSecondHeader, uint8_t* pduUserData);
 
             /// <summary>Updates the processor by the passed number of milliseconds.</summary>
             void clock(uint32_t ms);
+
+            /** SNDCP */
+            /// <summary>Helper to initialize the SNDCP state for a logical link ID.</summary>
+            virtual void sndcpInitialize(uint32_t srcId);
+            /// <summary>Helper to determine if the logical link ID has been SNDCP initialized.</summary>
+            virtual bool isSNDCPInitialized(uint32_t srcId) const;
 
         private:
             friend class p25::Control;
@@ -96,6 +102,10 @@ namespace p25
             std::unordered_map<uint32_t, std::tuple<uint8_t, ulong64_t>> m_connQueueTable;
             std::unordered_map<uint32_t, Timer> m_connTimerTable;
 
+            std::unordered_map<uint32_t, defines::SNDCPState::E> m_sndcpStateTable;
+            std::unordered_map<uint32_t, Timer> m_sndcpReadyTimers;
+            std::unordered_map<uint32_t, Timer> m_sndcpStandyTimers;
+
             bool m_dumpPDUData;
             bool m_repeatPDU;
 
@@ -106,6 +116,9 @@ namespace p25
             Data(Control* p25, bool dumpPDUData, bool repeatPDU, bool debug, bool verbose);
             /// <summary>Finalizes a instance of the Data class.</summary>
             ~Data();
+
+            /// <summary>Helper used to process SNDCP control data from PDU data.</summary>
+            bool processSNDCP();
 
             /// <summary>Write data processed from RF to the network.</summary>
             void writeNetwork(const uint8_t currentBlock, const uint8_t* data, uint32_t len, bool lastBlock);

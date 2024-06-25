@@ -132,7 +132,6 @@ namespace p25
 
             bool m_ctrlTSDUMBF;
 
-            bool m_sndcpChGrant;
             bool m_disableGrantSrcIdCheck;
             bool m_redundantImmediate;
             bool m_redundantGrant;
@@ -190,7 +189,7 @@ namespace p25
             /// <summary>Helper to write a grant update packet.</summary>
             void writeRF_TSDU_Grant_Update();
             /// <summary>Helper to write a SNDCP grant packet.</summary>
-            bool writeRF_TSDU_SNDCP_Grant(uint32_t srcId, uint32_t dstId, bool skip = false, bool net = false);
+            bool writeRF_TSDU_SNDCP_Grant(uint32_t srcId, bool skip = false, uint32_t chNo = 0U);
             /// <summary>Helper to write a unit to unit answer request packet.</summary>
             void writeRF_TSDU_UU_Ans_Req(uint32_t srcId, uint32_t dstId);
             /// <summary>Helper to write a acknowledge packet.</summary>

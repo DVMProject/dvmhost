@@ -98,7 +98,7 @@ namespace p25
         /// <summary>Sets a flag indicating whether P25 has supervisory functions and can send permit TG to voice channels.</summary>
         void setSupervisor(bool supervisor) { m_supervisor = supervisor; }
         /// <summary>Permits a TGID on a non-authoritative host.</summary>
-        void permittedTG(uint32_t dstId);
+        void permittedTG(uint32_t dstId, bool dataPermit = false);
         /// <summary>Grants a TGID on a non-authoritative host.</summary>
         void grantTG(uint32_t srcId, uint32_t dstId, bool grp);
         /// <summary>Releases a granted TG.</summary>
@@ -161,6 +161,7 @@ namespace p25
         bool m_disableNetworkHDU;
         bool m_allowExplicitSourceId;
         bool m_convNetGrantDemand;
+        bool m_sndcpSupport;
 
         ::lookups::IdenTableLookup* m_idenTable;
         ::lookups::RadioIdLookup* m_ridLookup;

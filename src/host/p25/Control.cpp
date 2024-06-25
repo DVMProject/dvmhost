@@ -92,6 +92,7 @@ Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t q
     m_disableNetworkHDU(false),
     m_allowExplicitSourceId(true),
     m_convNetGrantDemand(false),
+    m_sndcpSupport(false),
     m_idenTable(idenTable),
     m_ridLookup(ridLookup),
     m_tidLookup(tidLookup),
@@ -281,7 +282,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
     m_control->m_noMessageAck = p25Protocol["noMessageAck"].as<bool>(true);
     m_control->m_unitToUnitAvailCheck = p25Protocol["unitToUnitAvailCheck"].as<bool>(true);
 
-    m_control->m_sndcpChGrant = p25Protocol["sndcpGrant"].as<bool>(false);
+    m_sndcpSupport = p25Protocol["sndcpSupport"].as<bool>(false);
 
     yaml::Node control = p25Protocol["control"];
     m_enableControl = control["enable"].as<bool>(false);
@@ -488,7 +489,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
         LogInfo("    Verify Registration: %s", m_control->m_verifyReg ? "yes" : "no");
         LogInfo("    Require LLA for Registration: %s", m_control->m_requireLLAForReg ? "yes" : "no");
 
-        LogInfo("    SNDCP Channel Grant: %s", m_control->m_sndcpChGrant ? "yes" : "no");
+        LogInfo("    SNDCP Support: %s", m_sndcpSupport ? "yes" : "no");
 
         LogInfo("    No Status ACK: %s", m_control->m_noStatusAck ? "yes" : "no");
         LogInfo("    No Message ACK: %s", m_control->m_noMessageAck ? "yes" : "no");
@@ -1019,7 +1020,8 @@ void Control::clockSiteData(uint32_t ms)
 /// Permits a TGID on a non-authoritative host.
 /// </summary>
 /// <param name="dstId"></param>
-void Control::permittedTG(uint32_t dstId)
+/// <param name="dataPermit"></param>
+void Control::permittedTG(uint32_t dstId, bool dataPermit)
 {
     if (m_authoritative) {
         return;
@@ -1030,6 +1032,11 @@ void Control::permittedTG(uint32_t dstId)
     }
 
     m_permittedDstId = dstId;
+
+    // is this a data permit?
+    if (dataPermit && m_sndcpSupport) {
+        m_data->sndcpInitialize(dstId);
+    }
 }
 
 /// <summary>
