@@ -941,7 +941,7 @@ void SerialService::processP25ToNet()
                 rsBuffer[0U] = m_rxVoiceCallData->lco;
                 rsBuffer[1U] = m_rxVoiceCallData->mfId;
                 rsBuffer[2U] = m_rxVoiceCallData->serviceOptions;
-                rsBuffer[3U] = 0U;
+                rsBuffer[6U] = (m_rxVoiceCallData->dstId >> 16) & 0xFFU;
                 rsBuffer[4U] = (m_rxVoiceCallData->dstId >> 8) & 0xFFU;
                 rsBuffer[5U] = (m_rxVoiceCallData->dstId >> 0) & 0xFFU;
                 rsBuffer[6U] = (m_rxVoiceCallData->srcId >> 16) & 0xFFU;
