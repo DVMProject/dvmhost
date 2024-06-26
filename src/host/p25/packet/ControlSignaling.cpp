@@ -2051,11 +2051,17 @@ void ControlSignaling::queueRF_TSBK_Ctrl(uint8_t lco)
             }
             break;
         case TSBKO::OSP_SNDCP_CH_ANN:
+        {
             // transmit SNDCP announcement
-            tsbk = std::make_unique<OSP_SNDCP_CH_ANN>();
-            tsbk->siteIdenEntry(m_p25->m_idenEntry);
+            std::unique_ptr<OSP_SNDCP_CH_ANN> osp = std::make_unique<OSP_SNDCP_CH_ANN>();
+            osp->siteIdenEntry(m_p25->m_idenEntry);
+            if (!m_p25->m_sndcpSupport) {
+                osp->setImplicitChannel(true);
+            }
+            tsbk = std::move(osp);
             DEBUG_LOG_TSBK(tsbk->toString());
-            break;
+        }
+        break;
         case TSBKO::OSP_SYNC_BCAST:
         {
             // transmit sync broadcast

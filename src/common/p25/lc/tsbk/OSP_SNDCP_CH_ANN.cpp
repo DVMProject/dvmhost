@@ -28,6 +28,7 @@ using namespace p25::lc::tsbk;
 /// Initializes a new instance of the OSP_SNDCP_CH_ANN class.
 /// </summary>
 OSP_SNDCP_CH_ANN::OSP_SNDCP_CH_ANN() : TSBK(),
+    m_implicitChannel(false),
     m_sndcpAutoAccess(true),
     m_sndcpDAC(1U)
 {
@@ -76,10 +77,21 @@ void OSP_SNDCP_CH_ANN::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
     tsbkValue = (tsbkValue << 8) +
         (m_sndcpAutoAccess ? 0x80U : 0x00U) +                                       // Autonomous Access
         (m_sndcpAutoAccess ? 0x40U : 0x00U);                                        // Requested Access
-    tsbkValue = (tsbkValue << 4) + m_siteData.channelId();                          // Channel (T) ID
-    tsbkValue = (tsbkValue << 12) + m_siteData.channelNo();                         // Channel (T) Number
-    tsbkValue = (tsbkValue << 4) + m_siteData.channelId();                          // Channel (R) ID
-    tsbkValue = (tsbkValue << 12) + (rxChNo & 0xFFFU);                              // Channel (R) Number
+
+    if (m_implicitChannel) {
+        tsbkValue = (tsbkValue << 16) + 0xFFFFU;
+    } else {
+        tsbkValue = (tsbkValue << 4) + m_siteData.channelId();                      // Channel (T) ID
+        tsbkValue = (tsbkValue << 12) + m_siteData.channelNo();                     // Channel (T) Number
+    }
+
+    if (m_implicitChannel) {
+        tsbkValue = (tsbkValue << 16) + 0xFFFFU;
+    } else {
+        tsbkValue = (tsbkValue << 4) + m_siteData.channelId();                      // Channel (R) ID
+        tsbkValue = (tsbkValue << 12) + (rxChNo & 0xFFFU);                          // Channel (R) Number
+    }
+
     tsbkValue = (tsbkValue << 16) + m_sndcpDAC;                                     // Data Access Control
 
     std::unique_ptr<uint8_t[]> tsbk = TSBK::fromValue(tsbkValue);

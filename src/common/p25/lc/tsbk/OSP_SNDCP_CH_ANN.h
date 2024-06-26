@@ -7,7 +7,7 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #if !defined(__P25_LC_TSBK__OSP_SNDCP_CH_ANN_H__)
@@ -39,6 +39,10 @@ namespace p25
 
                 /// <summary>Returns a string that represents the current TSBK.</summary>
                 std::string toString(bool isp = false) override;
+
+            public:
+                /// <summary>Flag indicating explicit channel frequncies should not be transmitted.</summary>
+                __PROPERTY(bool, implicitChannel, ImplicitChannel);
 
             private:
                 bool m_sndcpAutoAccess;
