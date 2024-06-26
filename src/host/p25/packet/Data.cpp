@@ -1156,7 +1156,7 @@ bool Data::processSNDCPControl()
                 {
                     std::unique_ptr<SNDCPCtxActReject> osp = std::make_unique<SNDCPCtxActReject>();
                     osp->setNSAPI(packet->getNSAPI());
-                    osp->setRejectCode(SNDCPRejectReason::DYN_IP_ALLOCATION_UNSUPPORTED);
+                    osp->setRejectCode(SNDCPRejectReason::STATIC_IP_ALLOCATION_UNSUPPORTED);
 
                     osp->encode(data);
                     writeRF_PDU_User(rspHeader, rspHeader, false, data);
@@ -1171,7 +1171,7 @@ bool Data::processSNDCPControl()
                 {
                     std::unique_ptr<SNDCPCtxActReject> osp = std::make_unique<SNDCPCtxActReject>();
                     osp->setNSAPI(packet->getNSAPI());
-                    osp->setRejectCode(SNDCPRejectReason::STATIC_IP_ALLOCATION_UNSUPPORTED);
+                    osp->setRejectCode(SNDCPRejectReason::DYN_IP_ALLOCATION_UNSUPPORTED);
 
                     osp->encode(data);
                     writeRF_PDU_User(rspHeader, rspHeader, false, data);
