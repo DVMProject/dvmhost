@@ -16,6 +16,7 @@
 #include "common/p25/P25Defines.h"
 #include "common/p25/acl/AccessControl.h"
 #include "common/p25/lc/tdulc/TDULCFactory.h"
+#include "common/p25/sndcp/SNDCPFactory.h"
 #include "common/p25/P25Utils.h"
 #include "common/p25/Sync.h"
 #include "common/edac/CRC.h"
@@ -24,10 +25,11 @@
 #include "p25/packet/Data.h"
 #include "ActivityLog.h"
 
-using namespace p25::packet;
-using namespace p25::data;
-using namespace p25::defines;
 using namespace p25;
+using namespace p25::defines;
+using namespace p25::data;
+using namespace p25::sndcp;
+using namespace p25::packet;
 
 #include <cassert>
 #include <cstring>
@@ -38,6 +40,7 @@ using namespace p25;
 
 const uint32_t CONN_WAIT_TIMEOUT = 1U;
 const uint32_t SNDCP_READY_TIMEOUT = 10U;
+const uint32_t SNDCP_STANDBY_TIMEOUT = 60U;
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -224,6 +227,12 @@ bool Data::process(uint8_t* data, uint32_t len)
                 // process all blocks in the data stream
                 uint32_t dataOffset = 0U;
 
+                // if the primary header has a header offset ensure data if offset by that amount 
+                if (m_rfDataHeader.getHeaderOffset() > 0U) {
+                    offset += m_rfDataHeader.getHeaderOffset() * 8;
+                    m_pduUserDataLength -= m_rfDataHeader.getHeaderOffset();
+                }
+
                 // if we are using a secondary header place it in the PDU user data buffer
                 if (m_rfUseSecondHeader) {
                     m_rfSecondHeader.getData(m_pduUserData + dataOffset);
@@ -349,6 +358,36 @@ bool Data::process(uint8_t* data, uint32_t len)
                         LogMessage(LOG_RF, P25_PDU_STR ", ISP, response, fmt = $%02X, rspClass = $%02X, rspType = $%02X, rspStatus = $%02X, llId = %u, srcLlId = %u",
                                 m_rfDataHeader.getFormat(), m_rfDataHeader.getResponseClass(), m_rfDataHeader.getResponseType(), m_rfDataHeader.getResponseStatus(),
                                 m_rfDataHeader.getLLId(), m_rfDataHeader.getSrcLLId());
+
+                        if (m_rfDataHeader.getResponseClass() == PDUAckClass::ACK && m_rfDataHeader.getResponseType() == PDUAckType::ACK) {
+                            LogMessage(LOG_RF, P25_PDU_STR ", ISP, response, OSP ACK, llId = %u",
+                                m_rfDataHeader.getLLId());
+                        } else {
+                            if (m_rfDataHeader.getResponseClass() == PDUAckClass::NACK) {
+                                switch (m_rfDataHeader.getResponseType()) {
+                                    case PDUAckType::NACK_ILLEGAL:
+                                        LogMessage(LOG_RF, P25_PDU_STR ", ISP, response, OSP NACK, illegal format, llId = %u",
+                                            m_rfDataHeader.getLLId());
+                                        break;
+                                    case PDUAckType::NACK_PACKET_CRC:
+                                        LogMessage(LOG_RF, P25_PDU_STR ", ISP, response, OSP NACK, packet CRC error, llId = %u",
+                                            m_rfDataHeader.getLLId());
+                                        break;
+                                    case PDUAckType::NACK_SEQ:
+                                    case PDUAckType::NACK_OUT_OF_SEQ:
+                                        LogMessage(LOG_RF, P25_PDU_STR ", ISP, response, OSP NACK, packet out of sequence, llId = %u",
+                                            m_rfDataHeader.getLLId());
+                                        break;
+                                    case PDUAckType::NACK_UNDELIVERABLE:
+                                        LogMessage(LOG_RF, P25_PDU_STR ", ISP, response, OSP NACK, packet undeliverable, llId = %u",
+                                            m_rfDataHeader.getLLId());
+                                        break;
+
+                                    default:
+                                        break;
+                                    }
+                            }
+                        }
                     }
 
                     if (m_repeatPDU) {
@@ -367,14 +406,14 @@ bool Data::process(uint8_t* data, uint32_t len)
                     {
                         uint8_t regType = (m_pduUserData[0] >> 4) & 0x0F;
                         switch (regType) {
-                        case PDURegType::CNCT:
+                        case PDURegType::CONNECT:
                         {
                             uint32_t llId = (m_pduUserData[1U] << 16) + (m_pduUserData[2U] << 8) + m_pduUserData[3U];
                             ulong64_t ipAddr = (m_pduUserData[8U] << 24) + (m_pduUserData[9U] << 16) +
                                 (m_pduUserData[10U] << 8) + m_pduUserData[11U];
 
                             if (m_verbose) {
-                                LogMessage(LOG_RF, P25_PDU_STR ", CNCT (Registration Request Connect), llId = %u, ipAddr = %s", llId, __IP_FROM_ULONG(ipAddr).c_str());
+                                LogMessage(LOG_RF, P25_PDU_STR ", CONNECT (Registration Request Connect), llId = %u, ipAddr = %s", llId, __IP_FROM_ULONG(ipAddr).c_str());
                             }
 
                             m_connQueueTable[llId] = std::make_tuple(m_rfDataHeader.getMFId(), ipAddr);
@@ -383,12 +422,12 @@ bool Data::process(uint8_t* data, uint32_t len)
                             m_connTimerTable[llId].start();
                         }
                         break;
-                        case PDURegType::DISCNCT:
+                        case PDURegType::DISCONNECT:
                         {
                             uint32_t llId = (m_pduUserData[1U] << 16) + (m_pduUserData[2U] << 8) + m_pduUserData[3U];
 
                             if (m_verbose) {
-                                LogMessage(LOG_RF, P25_PDU_STR ", DISCNCT (Registration Request Disconnect), llId = %u", llId);
+                                LogMessage(LOG_RF, P25_PDU_STR ", DISCONNECT (Registration Request Disconnect), llId = %u", llId);
                             }
 
                             if (hasLLIdFNEReg(llId)) {
@@ -416,7 +455,7 @@ bool Data::process(uint8_t* data, uint32_t len)
                                 m_rfDataHeader.getAMBTOpcode(), m_rfDataHeader.getBlocksToFollow());
                         }
 
-                        processSNDCP();
+                        processSNDCPControl();
                     }
                     break;
                     case PDUSAP::TRUNK_CTRL:
@@ -939,7 +978,7 @@ void Data::sndcpInitialize(uint32_t llId)
     if (!isSNDCPInitialized(llId)) {
         m_sndcpStateTable[llId] = SNDCPState::IDLE;
         m_sndcpReadyTimers[llId] = Timer(1000U, SNDCP_READY_TIMEOUT);
-        m_sndcpStandyTimers[llId] = Timer(1000U, 1000U);
+        m_sndcpStandbyTimers[llId] = Timer(1000U, SNDCP_STANDBY_TIMEOUT);
 
         if (m_verbose) {
             LogMessage(LOG_RF, P25_PDU_STR ", SNDCP, first initialize, llId = %u, state = %u", llId, (uint8_t)SNDCPState::IDLE);
@@ -960,6 +999,37 @@ bool Data::isSNDCPInitialized(uint32_t llId) const
     }
 
     return false;
+}
+
+/// <summary>
+/// Helper to reset the SNDCP state for a logical link ID.
+/// </summary>
+/// <param name="llId"></param>
+/// <param name="callTerm"></param>
+void Data::sndcpReset(uint32_t llId, bool callTerm)
+{
+    if (isSNDCPInitialized(llId)) {
+        if (m_verbose) {
+            LogMessage(LOG_RF, P25_PDU_STR ", SNDCP, reset, llId = %u, state = %u", llId, (uint8_t)m_sndcpStateTable[llId]);
+        }
+
+        m_sndcpStateTable[llId] = SNDCPState::CLOSED;
+        m_sndcpReadyTimers[llId].stop();
+        m_sndcpStandbyTimers[llId].stop();
+
+        if (callTerm) {
+            if (m_verbose) {
+                LogMessage(LOG_RF, P25_TDULC_STR ", CALL_TERM (Call Termination), llId = %u", llId);
+            }
+
+            std::unique_ptr<lc::TDULC> lc = std::make_unique<lc::tdulc::LC_CALL_TERM>();
+            m_p25->m_control->writeRF_TDULC(lc.get(), true);
+
+            if (m_p25->m_notifyCC) {
+                m_p25->notifyCC_ReleaseGrant(llId);
+            }
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -1002,7 +1072,7 @@ Data::Data(Control* p25, bool dumpPDUData, bool repeatPDU, bool debug, bool verb
     m_connTimerTable(),
     m_sndcpStateTable(),
     m_sndcpReadyTimers(),
-    m_sndcpStandyTimers(),
+    m_sndcpStandbyTimers(),
     m_dumpPDUData(dumpPDUData),
     m_repeatPDU(repeatPDU),
     m_verbose(verbose),
@@ -1027,7 +1097,7 @@ Data::Data(Control* p25, bool dumpPDUData, bool repeatPDU, bool debug, bool verb
 
     m_sndcpStateTable.clear();
     m_sndcpReadyTimers.clear();
-    m_sndcpStandyTimers.clear();
+    m_sndcpStandbyTimers.clear();
 }
 
 /// <summary>
@@ -1045,13 +1115,109 @@ Data::~Data()
 /// <summary>
 /// Helper used to process SNDCP control data from PDU data.
 /// </summary>
-/// <param name="dataHeader"></param>
-/// <param name="dataBlock"></param>
-bool Data::processSNDCP()
+bool Data::processSNDCPControl()
 {
     if (!m_p25->m_sndcpSupport) {
         return false;
     }
+
+    uint8_t data[P25_PDU_UNCONFIRMED_LENGTH_BYTES];
+    ::memset(data, 0x00U, P25_PDU_UNCONFIRMED_LENGTH_BYTES);
+
+    std::unique_ptr<sndcp::SNDCPPacket> packet = SNDCPFactory::create(m_pduUserData);
+    if (packet == nullptr) {
+        LogWarning(LOG_RF, P25_PDU_STR ", undecodable SNDCP packet");
+        return false;
+    }
+
+    uint32_t llId = m_rfDataHeader.getLLId();
+
+    switch (packet->getPDUType()) {
+        case SNDCP_PDUType::ACT_TDS_CTX:
+        {
+            SNDCPCtxActRequest* isp = static_cast<SNDCPCtxActRequest*>(packet.get());
+            if (m_verbose) {
+                LogMessage(LOG_RF, P25_PDU_STR ", SNDCP context activation request, llId = %u, ipAddr = %08lX, nat = $%02X, dsut = $%02X", llId,
+                    isp->getIPAddress(), isp->getNAT(), isp->getDSUT());
+            }
+
+            DataHeader rspHeader = DataHeader();
+            rspHeader.setFormat(PDUFormatType::CONFIRMED);
+            rspHeader.setMFId(MFG_STANDARD);
+            rspHeader.setAckNeeded(true);
+            rspHeader.setOutbound(true);
+            rspHeader.setSAP(PDUSAP::SNDCP_CTRL_DATA);
+            rspHeader.setLLId(llId);
+            rspHeader.setBlocksToFollow(1U);
+
+            // which network address type is this?
+            switch (isp->getNAT()) {
+                case SNDCPNAT::IPV4_STATIC_ADDR:
+                {
+                    std::unique_ptr<SNDCPCtxActReject> osp = std::make_unique<SNDCPCtxActReject>();
+                    osp->setNSAPI(packet->getNSAPI());
+                    osp->setRejectCode(SNDCPRejectReason::DYN_IP_ALLOCATION_UNSUPPORTED);
+
+                    osp->encode(data);
+                    writeRF_PDU_User(rspHeader, rspHeader, false, data);
+
+                    sndcpReset(llId, true);
+
+                    // TODO TODO TODO
+                }
+                break;
+
+                case SNDCPNAT::IPV4_DYN_ADDR:
+                {
+                    std::unique_ptr<SNDCPCtxActReject> osp = std::make_unique<SNDCPCtxActReject>();
+                    osp->setNSAPI(packet->getNSAPI());
+                    osp->setRejectCode(SNDCPRejectReason::STATIC_IP_ALLOCATION_UNSUPPORTED);
+
+                    osp->encode(data);
+                    writeRF_PDU_User(rspHeader, rspHeader, false, data);
+
+                    sndcpReset(llId, true);
+
+                    // TODO TODO TODO
+                }
+                break;
+
+                default:
+                {
+                    std::unique_ptr<SNDCPCtxActReject> osp = std::make_unique<SNDCPCtxActReject>();
+                    osp->setNSAPI(packet->getNSAPI());
+                    osp->setRejectCode(SNDCPRejectReason::ANY_REASON);
+
+                    osp->encode(data);
+                    writeRF_PDU_User(rspHeader, rspHeader, false, data);
+
+                    sndcpReset(llId, true);
+                }
+                break;
+            }
+        }
+        break;
+
+        case SNDCP_PDUType::DEACT_TDS_CTX_REQ:
+        {
+            SNDCPCtxDeactivation* isp = static_cast<SNDCPCtxDeactivation*>(packet.get());
+            if (m_verbose) {
+                LogMessage(LOG_RF, P25_PDU_STR ", SNDCP context deactivation request, llId = %u, deactType = %02X", llId,
+                    isp->getDeactType());
+            }
+
+            writeRF_PDU_Ack_Response(PDUAckClass::ACK, PDUAckType::ACK, 0U, llId);
+            sndcpReset(llId, true);
+        }
+        break;
+
+        default:
+        {
+            LogError(LOG_RF, P25_PDU_STR ", unhandled SNDCP PDU Type, pduType = $%02X", packet->getPDUType());
+            sndcpReset(llId, true);
+        }
+        break;
+    } // switch (packet->getPDUType())
 
     return true;
 }

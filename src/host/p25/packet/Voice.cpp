@@ -26,10 +26,10 @@
 #include "p25/packet/Voice.h"
 #include "ActivityLog.h"
 
-using namespace p25::packet;
-using namespace p25::dfsi::defines;
-using namespace p25::defines;
 using namespace p25;
+using namespace p25::defines;
+using namespace p25::dfsi::defines;
+using namespace p25::packet;
 
 #include <cassert>
 #include <cstring>

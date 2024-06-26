@@ -356,8 +356,8 @@ namespace p25
         /// </summary>
         namespace PDURegType {
             enum : uint8_t {
-                CNCT = 0x00U,                           // Connect
-                DISCNCT = 0x01U,                        // Disconnect
+                CONNECT = 0x00U,                        // Connect
+                DISCONNECT = 0x01U,                     // Disconnect
                 ACCPT = 0x04U,                          // Accept
                 DENY = 0x05U                            // Deny
             };
@@ -393,7 +393,18 @@ namespace p25
                 READY = 3U,                             // Ready - SU Activated and Rx/Tx Data
                 CLOSED = 4U,                            // Closed - SU not yet Registered or Deregistered
 
-                ILLEGAL = 255U,                         // Illegal/Unknown
+                ILLEGAL = 255U                          // Illegal/Unknown
+            };
+        }
+
+        /// <summary>
+        /// SNDCP Network Address Type
+        /// </summary>
+        namespace SNDCPNAT {
+            enum : uint8_t {
+                IPV4_STATIC_ADDR = 0U,                  // IPv4 Static Address
+                IPV4_DYN_ADDR = 1U,                     // IPv4 Dynamic Address
+                IPV4_NO_ADDRESS = 15U                   // No Address
             };
         }
 
@@ -407,6 +418,7 @@ namespace p25
                 CONV_DATA_ONLY = 2U,                    // Conventional Data Only
                 ALTERNATING_CONV_DATA_VOICE = 3U,       // Alternating Conventional Voice & Data
                 TRUNKED_CONV_DATA_ONLY = 4U,            // Trunked and Conventional Data Only
+                ALT_T_AND_C_DATA_VOICE = 5U             // Alternating Trunked and Conventional Voice & Data
             };
         }
 
@@ -479,6 +491,16 @@ namespace p25
 
                 DYN_IP_POOL_EMPTY = 11U,                // Dynamic IP Address Pool Empty
                 DYN_IP_ALLOCATION_UNSUPPORTED = 12U     // Dynamic IP Address Allocation Unsupported
+            };
+        }
+
+        /// <summary>
+        /// SNDCP Deactivation Types
+        /// </summary>
+        namespace SNDCPDeactivationType {
+            enum : uint8_t {
+                DEACT_ALL = 0U,                         // Deactivate all NSAPIs
+                DEACT_THIS_PDU = 1U                     // Deactivate NSAPI in this PDU
             };
         }
 

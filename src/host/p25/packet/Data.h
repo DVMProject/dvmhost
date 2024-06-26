@@ -64,9 +64,11 @@ namespace p25
 
             /** SNDCP */
             /// <summary>Helper to initialize the SNDCP state for a logical link ID.</summary>
-            virtual void sndcpInitialize(uint32_t srcId);
+            void sndcpInitialize(uint32_t llId);
             /// <summary>Helper to determine if the logical link ID has been SNDCP initialized.</summary>
-            virtual bool isSNDCPInitialized(uint32_t srcId) const;
+            bool isSNDCPInitialized(uint32_t llId) const;
+            /// <summary>Helper to reset the SNDCP state for a logical link ID.</summary>
+            void sndcpReset(uint32_t llId, bool callTerm = false);
 
         private:
             friend class p25::Control;
@@ -104,7 +106,7 @@ namespace p25
 
             std::unordered_map<uint32_t, defines::SNDCPState::E> m_sndcpStateTable;
             std::unordered_map<uint32_t, Timer> m_sndcpReadyTimers;
-            std::unordered_map<uint32_t, Timer> m_sndcpStandyTimers;
+            std::unordered_map<uint32_t, Timer> m_sndcpStandbyTimers;
 
             bool m_dumpPDUData;
             bool m_repeatPDU;
@@ -118,7 +120,7 @@ namespace p25
             ~Data();
 
             /// <summary>Helper used to process SNDCP control data from PDU data.</summary>
-            bool processSNDCP();
+            bool processSNDCPControl();
 
             /// <summary>Write data processed from RF to the network.</summary>
             void writeNetwork(const uint8_t currentBlock, const uint8_t* data, uint32_t len, bool lastBlock);
