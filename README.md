@@ -1,11 +1,12 @@
 # Digital Voice Modem Host
 
-The DVM Host (dvmhost) software suite, provides the primary host computer implementation of a mixed-mode DMR, P25 and/or NXDN or dedicated-mode DMR, P25 or NXDN repeater system that talks to the actual modem hardware, and the networking core (dvmfne) that provides a centralized network service that interconnects DVM Host (dvmhost) and other endpoint applications allowing networked communications.
+The DVM Host (dvmhost) software suite, provides the a set of applications that, act as a primary host computer implementation of a mixed-mode DMR, P25 and/or NXDN or dedicated-mode DMR, P25 or NXDN repeater system that talks to the actual modem hardware, a TIA/V.24 standard interface (dvmdfsi) allowing communications to commercial P25 hardware, and the networking core (dvmfne) that provides a centralized network service that interconnects various DVM endpoint applications allowing networked communications.
 
 Please feel free to reach out to us for help, comments or otherwise, on our Discord: https://discord.gg/3pBe8xgrEz
 
 This project generates a few executables:
-- `dvmhost` the main executable, this is the host software that connects to the DVM modems (both repeater and hotspot) and is the primary data processing application for digital modes. [See configuration](#dvmhost-configuration) to configure and calibrate.
+- `dvmhost` host software that connects to the DVM modems (both repeater and hotspot) and is the primary data processing application for digital modes. [See configuration](#dvmhost-configuration) to configure and calibrate.
+- `dvmdfsi` TIA/V.24 standard interface application that connects to a V.24 interface board or UDP to allow for P25 DFSI communications with commercial P25 hardware.
 - `dvmfne` a network "core", this provides a central server for `dvmhost` instances to connect to and be networked with, allowing relay of traffic and other data between `dvmhost` instances and other `dvmfne` instances. [See configuration](#dvmfne-configuration) to configure.
 - `dvmcmd` a simple command-line utility to send remote control commands to a `dvmhost` or `dvmfne` instance with REST API configured.
 - `dvmmon` a TUI utility that allows semi-realtime console-based monitoring of `dvmhost` instances (this tool is only available when project wide TUI support is enabled!).
@@ -155,13 +156,16 @@ There is no other real configuration for a `dvmfne` instance other then setting 
 ### dvmhost Command Line Parameters
 
 ```
-usage: ./dvmhost [-vhf] [--setup] [-c <configuration file>] [--remote [-a <address>] [-p <port>]]
+usage: ./dvmhost [-vhdf][--syslog][--setup][-c <configuration file>][--remote [-a <address>] [-p <port>]]
 
   -v        show version information
   -h        show this screen
+  -d        force modem debug
   -f        foreground mode
 
-  --setup   setup mode
+  --syslog  force logging to syslog
+
+  --setup   setup and calibration mode
 
   -c <file> specifies the configuration file to use
 
@@ -172,14 +176,31 @@ usage: ./dvmhost [-vhf] [--setup] [-c <configuration file>] [--remote [-a <addre
   --        stop handling options
 ```
 
-### dvmfne Command Line Parameters
-
+### dvmdfsi Command Line Parameters
 ```
-usage: ./dvmfne [-vhf][-c <configuration file>]
+usage: ./dvmdfsi [-vhf][--syslog][-c <configuration file>]
 
   -v        show version information
   -h        show this screen
   -f        foreground mode
+
+  --syslog  force logging to syslog
+
+  -c <file> specifies the configuration file to use
+
+  --        stop handling options
+```
+
+### dvmfne Command Line Parameters
+
+```
+usage: ./dvmfne [-vhf][--syslog][-c <configuration file>]
+
+  -v        show version information
+  -h        show this screen
+  -f        foreground mode
+
+  --syslog  force logging to syslog
 
   -c <file> specifies the configuration file to use
 
@@ -189,7 +210,7 @@ usage: ./dvmfne [-vhf][-c <configuration file>]
 ### dvmcmd Command Line Parameters
 
 ```
-usage: ./dvmcmd [-dvh][-a <address>][-p <port>][-P <password>] <command> <arguments ...>
+usage: ./dvmcmd [-dvhs][-a <address>][-p <port>][-P <password>] <command> <arguments ...>
 
   -d                          enable debug
   -v                          show version information
@@ -198,6 +219,8 @@ usage: ./dvmcmd [-dvh][-a <address>][-p <port>][-P <password>] <command> <argume
   -a                          remote modem command address
   -p                          remote modem command port
   -P                          remote modem authentication password
+
+  -s                          use HTTPS/SSL
 
   --                          stop handling options
 ```
