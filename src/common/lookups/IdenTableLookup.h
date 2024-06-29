@@ -1,16 +1,23 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2018-2022,2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (c) 2024 Patrick McDonnell, W3AXL
+ *
+ */
 /**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2018-2022,2024 Bryan Biedenkapp, N2PLL
-*   Copyright (c) 2024 Patrick McDonnell, W3AXL
-*
-*/
+ * @defgroup lookups_iden Channel Identity Table Lookups
+ * @brief Implementation for channel identity lookup tables.
+ * @ingroup lookups
+ * 
+ * @file IdenTableLookup.h
+ * @ingroup lookups_iden
+ * @file IdenTableLookup.cpp
+ * @ingroup lookups_iden
+ */
 #if !defined(__IDEN_TABLE_LOOKUP_H__)
 #define __IDEN_TABLE_LOOKUP_H__
 
@@ -25,12 +32,17 @@ namespace lookups
 {
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //      Represents an individual entry in the bandplan identity table.
     // ---------------------------------------------------------------------------
 
+    /**
+     * @brief Represents an individual entry in the bandplan identity table.
+     * @ingroup lookups_iden
+     */
     class HOST_SW_API IdenTable {
     public:
-        /// <summary>Initializes a new instance of the IdenTable class.</summary>
+        /**
+         * @brief Initializes a new instance of the IdenTable class.
+         */
         IdenTable() :
             m_channelId(0U),
             m_baseFrequency(0U),
@@ -40,12 +52,14 @@ namespace lookups
         {
             /* stub */
         }
-        /// <summary>Initializes a new instance of the IdenTable class.</summary>
-        /// <param name="channelId"></param>
-        /// <param name="baseFrequency"></param>
-        /// <param name="chSpaceKhz"></param>
-        /// <param name="txOffsetMhz"></param>
-        /// <param name="chBandwidthKhz"></param>
+        /**
+         * @brief Initializes a new instance of the IdenTable class.
+         * @param channelId Channel ID.
+         * @param baseFrequency Base Frequency.
+         * @param chSpaceKhz Channel Spacing in kHz.
+         * @param txOffsetMhz Transmit Offset in MHz.
+         * @param chBandwidthKhz Channel Bandwidth in kHz.
+         */
         IdenTable(uint8_t channelId, uint32_t baseFrequency, float chSpaceKhz, float txOffsetMhz, float chBandwidthKhz) :
             m_channelId(channelId),
             m_baseFrequency(baseFrequency),
@@ -56,9 +70,10 @@ namespace lookups
             /* stub */
         }
 
-        /// <summary>Equals operator.</summary>
-        /// <param name="data"></param>
-        /// <returns></returns>
+        /**
+         * @brief Equals operator.
+         * @param data Instance of IdenTable to copy.
+         */
         IdenTable& operator=(const IdenTable& data)
         {
             if (this != &data) {
@@ -73,44 +88,74 @@ namespace lookups
         }
 
     public:
-        /// <summary>Channel ID for this entry.</summary>
+        /**
+         * @brief Channel ID for this entry.
+         */
         __READONLY_PROPERTY_PLAIN(uint8_t, channelId);
-        /// <summary>Base frequency for this entry.</summary>
+        /**
+         * @brief Base frequency for this entry.
+         */
         __READONLY_PROPERTY_PLAIN(uint32_t, baseFrequency);
-        /// <summary>Channel spacing in kHz for this entry.</summary>
+        /**
+         * @brief Channel spacing in kHz for this entry.
+         */
         __READONLY_PROPERTY_PLAIN(float, chSpaceKhz);
-        /// <summary>Channel transmit offset in MHz for this entry.</summary>
+        /**
+         * @brief Channel transmit offset in MHz for this entry.
+         */
         __READONLY_PROPERTY_PLAIN(float, txOffsetMhz);
-        /// <summary>Channel bandwith in kHz for this entry.</summary>
+        /**
+         * @brief Channel bandwith in kHz for this entry.
+         */
         __READONLY_PROPERTY_PLAIN(float, chBandwidthKhz);
     };
 
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //      Implements a threading lookup table class that contains the bandplan
-    //      identity table.
-    // ---------------------------------------------------------------------------
+   // ---------------------------------------------------------------------------
 
+    /**
+     * @brief Implements a threading lookup table class that contains the bandplan
+     *  identity table.
+     * @ingroup lookups_iden
+     */
     class HOST_SW_API IdenTableLookup : public LookupTable<IdenTable> {
     public:
-        /// <summary>Initializes a new instance of the IdenTableLookup class.</summary>
+        /**
+         * @brief Initializes a new instance of the IdenTableLookup class.
+         * @param filename Full-path to the channel identity table file.
+         * @param reloadTime Interval of time to reload the channel identity table.
+         */
         IdenTableLookup(const std::string& filename, uint32_t reloadTime);
 
-        /// <summary>Clears all entries from the lookup table.</summary>
+        /**
+         * @brief Clears all entries from the lookup table.
+         */
         void clear() override;
 
-        /// <summary>Finds a table entry in this lookup table.</summary>
+        /**
+         * @brief Finds a table entry in this lookup table.
+         * @param id Unique identifier for table entry.
+         * @returns IdenTable Table entry.
+         */
         IdenTable find(uint32_t id) override;
-        /// <summary>Returns the list of entries in this lookup table.</summary>
+        /**
+         * @brief Returns the list of entries in this lookup table.
+         * @returns std::vector<IdenTable> List of all entries in the lookup table.
+         */
         std::vector<IdenTable> list();
 
     protected:
-        /// <summary>Loads the table from the passed lookup table file.</summary>
-        /// <returns>True, if lookup table was loaded, otherwise false.</returns>
+        /**
+         * @brief Loads the table from the passed lookup table file.
+         * @returns bool True, if lookup table was loaded, otherwise false.
+         */
         bool load() override;
 
-        /// <summary>Saves the table to the passed lookup table file.</summary>
-        /// <returns>True, if lookup table was saved, otherwise false.</returns>
+        /**
+         * @brief Saves the table to the passed lookup table file.
+         * @returns bool True, if lookup table was saved, otherwise false.
+         */
         bool save() override;
 
     private:

@@ -1,16 +1,18 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2015 Jonathan Naylor, G4KLX
+ *
+ */
 /**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2015 Jonathan Naylor, G4KLX
-*
-*/
+ * @file BPTC19696.h
+ * @ingroup edac
+ * @file BPTC19696.cpp
+ * @ingroup edac
+ */
 #if !defined(__BPTC19696_H__)
 #define __BPTC19696_H__
 
@@ -20,41 +22,75 @@ namespace edac
 {
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //      Implements Block Product Turbo Code (196,96) FEC.
     // ---------------------------------------------------------------------------
 
+    /**
+     * @brief Implements Block Product Turbo Code (196,96) FEC.
+     * @ingroup edac
+     */
     class HOST_SW_API BPTC19696 {
     public:
-        /// <summary>Initializes a new instance of the BPTC19696 class.</summary>
+        /**
+         * @brief Initializes a new instance of the BPTC19696 class.
+         */
         BPTC19696();
-        /// <summary>Finalizes a instance of the BPTC19696 class.</summary>
+        /**
+         * @brief Finalizes a instance of the BPTC19696 class.
+         */
         ~BPTC19696();
 
-        /// <summary>Decode BPTC (196,96) FEC.</summary>
+        /**
+         * @brief Decode BPTC (196,96) FEC.
+         * @param[in] in Input data to decode.
+         * @param[out] out Decoded data.
+         */
         void decode(const uint8_t* in, uint8_t* out);
-        /// <summary>Encode BPTC (196,96) FEC.</summary>
+        /**
+         * @brief Encode BPTC (196,96) FEC.
+         * @param[in] in Input data to encode.
+         * @param[out] out Encoded data.
+         */
         void encode(const uint8_t* in, uint8_t* out);
 
     private:
         bool* m_rawData;
         bool* m_deInterData;
 
-        /// <summary></summary>
+        /**
+         * @brief 
+         * @param in
+         */
         void decodeExtractBinary(const uint8_t* in);
-        /// <summary></summary>
+        /**
+         * @brief 
+         */
         void decodeErrorCheck();
-        /// <summary></summary>
+        /**
+         * @brief 
+         */
         void decodeDeInterleave();
-        /// <summary></summary>
+        /**
+         * @brief 
+         * @param data 
+         */
         void decodeExtractData(uint8_t* data) const;
 
-        /// <summary></summary>
+        /**
+         * @brief 
+         */
         void encodeExtractData(const uint8_t* in) const;
-        /// <summary></summary>
+        /**
+         * @brief 
+         */
         void encodeInterleave();
-        /// <summary></summary>
+        /**
+         * @brief 
+         */
         void encodeErrorCheck();
-        /// <summary></summary>
+        /**
+         * @brief 
+         * @param data 
+         */
         void encodeExtractBinary(uint8_t* data);
     };
 } // namespace edac

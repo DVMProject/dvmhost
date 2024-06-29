@@ -1,17 +1,19 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2016 Jonathan Naylor, G4KLX
+ *  Copyright (C) 2021 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2016 Jonathan Naylor, G4KLX
-*   Copyright (C) 2021 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @file P25Utils.h
+ * @ingroup p25
+ * @file P25Utils.cpp
+ * @ingroup p25
+ */
 #if !defined(__P25_UTILS_H__)
 #define __P25_UTILS_H__
 
@@ -21,15 +23,20 @@ namespace p25
 {
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //      This class implements various helper functions for validating and
-    //      for interleaving P25 data.
     // ---------------------------------------------------------------------------
 
+    /**
+     * @brief This class implements various helper functions for validating and
+     *  for interleaving P25 data.
+     * @ingroup p25
+     */
     class HOST_SW_API P25Utils {
     public:
-        /// <summary>Helper to test and clamp a P25 NAC.</summary>
-        /// <param name="nac">Network Access Code</param>
-        /// <returns>Clamped network access code.</returns>
+        /**
+         * @brief Helper to test and clamp a P25 NAC.
+         * @param nac Network Access Code
+         * @returns uint32_t Clamped network access code.
+         */
         static uint32_t nac(uint32_t nac)
         {
             if (nac < 0U) { // clamp to $000
@@ -42,9 +49,11 @@ namespace p25
             return nac;
         }
 
-        /// <summary>Helper to test and clamp a P25 site ID.</summary>
-        /// <param name="id">Site ID</param>
-        /// <returns>Clamped site ID.</returns>
+        /**
+         * @brief Helper to test and clamp a P25 site ID.
+         * @param id Site ID
+         * @returns uint8_t Clamped site ID.
+         */
         static uint8_t siteId(uint8_t id)
         {
             if (id == 0U) { // clamp to 1
@@ -57,9 +66,11 @@ namespace p25
             return id;
         }
 
-        /// <summary>Helper to test and clamp a P25 network ID.</summary>
-        /// <param name="id">Network ID</param>
-        /// <returns>Clamped network ID.</returns>
+        /**
+         * @brief Helper to test and clamp a P25 network ID.
+         * @param id Network ID
+         * @returns uint32_t Clamped network ID.
+         */
         static uint32_t netId(uint32_t id)
         {
             if (id == 0U) { // clamp to 1
@@ -72,9 +83,11 @@ namespace p25
             return id;
         }
 
-        /// <summary>Helper to test and clamp a P25 system ID.</summary>
-        /// <param name="id">System ID</param>
-        /// <returns>Clamped system ID.</returns>
+        /**
+         * @brief Helper to test and clamp a P25 system ID.
+         * @param id System ID
+         * @returns uint32_t Clamped system ID.
+         */
         static uint32_t sysId(uint32_t id)
         {
             if (id == 0U) { // clamp to 1
@@ -87,9 +100,11 @@ namespace p25
             return id;
         }
 
-        /// <summary>Helper to test and clamp a P25 RFSS ID.</summary>
-        /// <param name="id">RFSS ID</param>
-        /// <returns>Clamped RFSS ID.</returns>
+        /**
+         * @brief Helper to test and clamp a P25 RFSS ID.
+         * @param id RFSS ID
+         * @returns uint8_t Clamped RFSS ID.
+         */
         static uint8_t rfssId(uint8_t id)
         {
             if (id == 0U) { // clamp to 1
@@ -102,21 +117,65 @@ namespace p25
             return id;
         }
 
-        /// <summary>Helper to set the busy status bits on P25 frame data.</summary>
+        /**
+         * @brief Helper to set the busy status bits on P25 frame data.
+         * @param data P25 frame data buffer.
+         * @param ssOffset 
+         * @param b1 Status Bit 1
+         * @param b2 Status Bit 2
+         */
         static void setBusyBits(uint8_t* data, uint32_t ssOffset, bool b1, bool b2);
-        /// <summary>Helper to add the busy status bits on P25 frame data.</summary>
+        /**
+         * @brief Helper to add the busy status bits on P25 frame data.
+         * @param data P25 frame data buffer.
+         * @param length 
+         * @param b1 Status Bit 1
+         * @param b2 Status Bit 2
+         */
         static void addBusyBits(uint8_t* data, uint32_t length, bool b1, bool b2);
-        /// <summary>Helper to add the idle status bits on P25 frame data.</summary>
+        /**
+         * @brief Helper to add the idle status bits on P25 frame data.
+         * @param data P25 frame data buffer.
+         * @param length 
+         * @param b1 Status Bit 1
+         * @param b2 Status Bit 2
+         */
         static void addIdleBits(uint8_t* data, uint32_t length, bool b1, bool b2);
 
-        /// <summary>Decode bit interleaving.</summary>
+        /**
+         * @brief Decode bit interleaving.
+         * @param in Input buffer to deinterleave/decode.
+         * @param out Output buffer to place deinterleaved/decoded data.
+         * @param start Start bit offset.
+         * @param stop Stop bit offset.
+         * @returns uint32_t 
+         */
         static uint32_t decode(const uint8_t* in, uint8_t* out, uint32_t start, uint32_t stop);
-        /// <summary>Encode bit interleaving.</summary>
+        /**
+         * @brief Encode bit interleaving.
+         * @param in Input buffer to interleave/encode.
+         * @param out Output buffer to place interleaved/encode data.
+         * @param start Start bit offset.
+         * @param stop Stop bit offset.
+         * @returns uint32_t 
+         */
         static uint32_t encode(const uint8_t* in, uint8_t* out, uint32_t start, uint32_t stop);
-        /// <summary>Encode bit interleaving for a given length.</summary>
+        /**
+         * @brief Encode bit interleaving for a given length.
+         * @param in Input buffer to interleave/encode.
+         * @param out Output buffer to place interleaved/encode data.
+         * @param length 
+         * @returns uint32_t 
+         */
         static uint32_t encode(const uint8_t* in, uint8_t* out, uint32_t length);
 
-        /// <summary>Compare two datasets for the given length.</summary>
+        /**
+         * @brief Compare two datasets for the given length.
+         * @param data1 
+         * @param data2 
+         * @param length 
+         * @returns uint32_t 
+         */
         static uint32_t compare(const uint8_t* data1, const uint8_t* data2, uint32_t length);
     };
 } // namespace p25

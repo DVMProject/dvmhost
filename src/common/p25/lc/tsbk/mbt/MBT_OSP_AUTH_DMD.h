@@ -1,15 +1,18 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @file MBT_OSP_AUTH_DMD.h
+ * @ingroup p25_ambt
+ * @file MBT_OSP_AUTH_DMD.cpp
+ * @ingroup p25_ambt
+ */
 #if !defined(__P25_LC_TSBK__MBT_OSP_AUTH_DMD_H__)
 #define  __P25_LC_TSBK__MBT_OSP_AUTH_DMD_H__
 
@@ -24,36 +27,67 @@ namespace p25
         {
             // ---------------------------------------------------------------------------
             //  Class Declaration
-            //      Implements AUTH DMD - Authentication Demand
             // ---------------------------------------------------------------------------
 
+            /**
+             * @brief Implements AUTH DMD - Authentication Demand
+             * @ingroup p25_ambt
+             */
             class HOST_SW_API MBT_OSP_AUTH_DMD : public AMBT {
             public:
-                /// <summary>Initializes a new instance of the MBT_OSP_AUTH_DMD class.</summary>
+                /**
+                 * @brief Initializes a new instance of the MBT_OSP_AUTH_DMD class.
+                 */
                 MBT_OSP_AUTH_DMD();
-                /// <summary>Finalizes a instance of the MBT_OSP_AUTH_DMD class.</summary>
+                /**
+                 * @brief Finalizes a instance of the MBT_OSP_AUTH_DMD class.
+                 */
                 ~MBT_OSP_AUTH_DMD() override;
 
-                /// <summary>Decode a alternate trunking signalling block.</summary>
+                /**
+                 * @brief Decode a alternate trunking signalling block.
+                 * @param[in] dataHeader P25 PDU data header
+                 * @param[in] blocks P25 PDU data blocks
+                 * @returns bool True, if AMBT decoded, otherwise false.
+                 */
                 bool decodeMBT(const data::DataHeader& dataHeader, const data::DataBlock* blocks) override;
-                /// <summary>Encode a alternate trunking signalling block.</summary>
+                /**
+                 * @brief Encode a alternate trunking signalling block.
+                 * @param[out] dataHeader P25 PDU data header
+                 * @param[out] pduUserData P25 PDU user data
+                 */
                 void encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUserData) override;
 
-                /// <summary>Returns a string that represents the current TSBK.</summary>
+                /**
+                 * @brief Returns a string that represents the current AMBT.
+                 * @returns std::string String representation of the AMBT.
+                 */
                 std::string toString(bool isp = false) override;
 
-                /// <summary>Sets the authentication random seed.</summary>
+                /**
+                 * @brief Sets the authentication random seed.
+                 * @param rs Buffer containing the random seed.
+                 */
                 void setAuthRS(const uint8_t* rs);
-                /// <summary>Gets the authentication random seed.</summary>
+                /**
+                 * @brief Gets the authentication random seed.
+                 * @param rs Buffer to copy the random seed.
+                 */
                 void getAuthRS(uint8_t* rs) const;
 
-                /// <summary>Sets the authentication random challenge.</summary>
+                /**
+                 * @brief Sets the authentication random challenge.
+                 * @param rc Buffer containing the random challenge.
+                 */
                 void setAuthRC(const uint8_t* rc);
-                /// <summary>Gets the authentication random challenge.</summary>
+                /**
+                 * @brief Gets the authentication random challenge.
+                 * @param rs Buffer to copy the random challenge.
+                 */
                 void getAuthRC(uint8_t* rc) const;
 
             private:
-                /** Authentication data */
+                // Authentication data
                 uint8_t* m_authRS;
                 uint8_t* m_authRC;
 

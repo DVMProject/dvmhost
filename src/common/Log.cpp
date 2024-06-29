@@ -1,17 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2015,2016 Jonathan Naylor, G4KLX
-*   Copyright (C) 2018-2024 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2015,2016 Jonathan Naylor, G4KLX
+ *  Copyright (C) 2018-2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "Log.h"
 #include "network/BaseNetwork.h"
 
@@ -65,28 +61,16 @@ static char LEVELS[] = " DMIWEF";
 //  Global Functions
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Helper to get the current log file level.
-/// </summary>
-/// <returns></returns>
+/* Helper to get the current log file level. */
 uint32_t CurrentLogFileLevel() { return m_fileLevel; }
 
-/// <summary>
-/// Helper to get the current log file path.
-/// </summary>
-/// <returns></returns>
+/* Helper to get the current log file path. */
 std::string LogGetFilePath() { return m_filePath; }
 
-/// <summary>
-/// Helper to get the current log file root.
-/// </summary>
-/// <returns></returns>
+/* Helper to get the current log file root. */
 std::string LogGetFileRoot() { return m_fileRoot; }
 
-/// <summary>
-/// Helper to open the detailed log file, file handle.
-/// </summary>
-/// <returns>True, if log file is opened, otherwise false.
+/* Helper to open the detailed log file, file handle. */
 static bool LogOpen()
 {
 #if defined(CATCH2_TEST_COMPILATION)
@@ -143,26 +127,20 @@ static bool LogOpen()
     }
 }
 
-/// <summary>
-/// Internal helper to set an output stream to direct logging to.
-/// </summary>
-/// <param name="stream"></param>
+/* Internal helper to set an output stream to direct logging to. */
 void __InternalOutputStream(std::ostream& stream)
 {
     m_outStream.rdbuf(stream.rdbuf());
 }
 
-/// <summary>Gets the instance of the Network class to transfer the activity log with.</summary>
+/* Gets the instance of the Network class to transfer the activity log with. */
 void* LogGetNetwork()
 {
     // NO GOOD, VERY BAD, TERRIBLE HACK
     return (void*)m_network;
 }
 
-/// <summary>
-/// Sets the instance of the Network class to transfer the activity log with.
-/// </summary>
-/// <param name="network">Instance of the Network class.</param>
+/* Sets the instance of the Network class to transfer the activity log with. */
 void LogSetNetwork(void* network)
 {
 #if defined(CATCH2_TEST_COMPILATION)
@@ -173,15 +151,7 @@ void LogSetNetwork(void* network)
     m_network = (network::BaseNetwork*)network;
 }
 
-/// <summary>
-/// Initializes the diagnostics log.
-/// </summary>
-/// <param name="filePath">Full-path to the detailed log file.</param>
-/// <param name="fileRoot">Prefix of the detailed log file name.</param>
-/// <param name="fileLevel">File logging level.</param>
-/// <param name="displayLevel">Console logging level.</param>
-/// <param name="disableTimeDisplay">Disable display of date/time on the console log.</param>
-/// <param name="useSyslog">Flag indicating whether or not logging should be sent to the syslog.</param>
+/* Initializes the diagnostics log. */
 bool LogInitialise(const std::string& filePath, const std::string& fileRoot, uint32_t fileLevel, uint32_t displayLevel, bool disableTimeDisplay, bool useSyslog)
 {
     m_filePath = filePath;
@@ -194,9 +164,7 @@ bool LogInitialise(const std::string& filePath, const std::string& fileRoot, uin
     return ::LogOpen();
 }
 
-/// <summary>
-/// Finalizes the diagnostics log.
-/// </summary>
+/* Finalizes the diagnostics log. */
 void LogFinalise()
 {
 #if defined(CATCH2_TEST_COMPILATION)
@@ -208,13 +176,7 @@ void LogFinalise()
         closelog();
 }
 
-/// <summary>
-/// Writes a new entry to the diagnostics log.
-/// </summary>
-/// <remarks>This is a variable argument function.</remarks>
-/// <param name="level">Log level.</param>
-/// <param name="module">Module name the log entry was genearted from.</param>
-/// <param name="fmt">Formatted string to write to the log.</param>
+/* Writes a new entry to the diagnostics log. */
 void Log(uint32_t level, const char *module, const char* fmt, ...)
 {
     assert(fmt != nullptr);

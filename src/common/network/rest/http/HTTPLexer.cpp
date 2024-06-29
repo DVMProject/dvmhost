@@ -1,17 +1,13 @@
 // SPDX-License-Identifier: BSL-1.0
-/**
-* Digital Voice Modem - Common Library
-* BSL-1.0 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @derivedfrom CRUD (https://github.com/venediktov/CRUD)
-* @license BSL-1.0 License (https://opensource.org/license/bsl1-0-html)
-*
-*   Copyright (c) 2003-2013 Christopher M. Kohlhoff
-*   Copyright (C) 2023-2024 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * BSL-1.0 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (c) 2003-2013 Christopher M. Kohlhoff
+ *  Copyright (C) 2023-2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "Defines.h"
 #include "network/rest/http/HTTPLexer.h"
 #include "network/rest/http/HTTPPayload.h"
@@ -25,10 +21,7 @@ using namespace network::rest::http;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the HTTPLexer class.
-/// </summary>
-/// <param name="clientLexer"></param>
+/* Initializes a new instance of the HTTPLexer class. */
 HTTPLexer::HTTPLexer(bool clientLexer) :
     m_headers(),
     m_clientLexer(clientLexer),
@@ -40,7 +33,7 @@ HTTPLexer::HTTPLexer(bool clientLexer) :
     }
 }
 
-/// <summary>Reset to initial parser state.</summary>
+/* Reset to initial parser state. */
 void HTTPLexer::reset()
 {
     m_state = METHOD_START;
@@ -55,12 +48,7 @@ void HTTPLexer::reset()
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Handle the next character of input.
-/// </summary>
-/// <param name="req"></param>
-/// <param name="input"></param>
-/// <returns></returns>
+/* Handle the next character of input. */
 HTTPLexer::ResultType HTTPLexer::consume(HTTPPayload& req, char input)
 {
     m_consumed++;
@@ -381,31 +369,19 @@ HTTPLexer::ResultType HTTPLexer::consume(HTTPPayload& req, char input)
     }
 }
 
-/// <summary>
-/// Check if a byte is an HTTP character.
-/// </summary>
-/// <param name="c"></param>
-/// <returns></returns>
+/* Check if a byte is an HTTP character. */
 bool HTTPLexer::isChar(int c)
 {
     return c >= 0 && c <= 127;
 }
 
-/// <summary>
-/// Check if a byte is an HTTP control character.
-/// </summary>
-/// <param name="c"></param>
-/// <returns></returns>
+/* Check if a byte is an HTTP control character. */
 bool HTTPLexer::isControl(int c)
 {
     return (c >= 0 && c <= 31) || (c == 127);
 }
 
-/// <summary>
-/// Check if a byte is an HTTP special character.
-/// </summary>
-/// <param name="c"></param>
-/// <returns></returns>
+/* Check if a byte is an HTTP special character. */
 bool HTTPLexer::isSpecial(int c)
 {
     switch (c)
@@ -420,11 +396,7 @@ bool HTTPLexer::isSpecial(int c)
     }
 }
 
-/// <summary>
-/// Check if a byte is an digit.
-/// </summary>
-/// <param name="c"></param>
-/// <returns></returns>
+/* Check if a byte is an digit. */
 bool HTTPLexer::isDigit(int c)
 {
     return c >= '0' && c <= '9';

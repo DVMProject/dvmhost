@@ -1,16 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2015,2016 Jonathan Naylor, G4KLX
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2015,2016 Jonathan Naylor, G4KLX
+ *
+ */
 #include "StopWatch.h"
 
 #include <cstdio>
@@ -20,27 +16,20 @@
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the StopWatch class.
-/// </summary>
+/* Initializes a new instance of the StopWatch class. */
 StopWatch::StopWatch() :
     m_startMS(0ULL)
 {
     /* stub */
 }
 
-/// <summary>
-/// Finalizes a instance of the StopWatch class.
-/// </summary>
+/* Finalizes a instance of the StopWatch class. */
 StopWatch::~StopWatch()
 {
     /* stub */
 }
 
-/// <summary>
-/// Gets the current running time.
-/// </summary>
-/// <returns></returns>
+/* Gets the current running time. */
 ulong64_t StopWatch::time() const
 {
     struct timeval now;
@@ -49,10 +38,7 @@ ulong64_t StopWatch::time() const
     return now.tv_sec * 1000ULL + now.tv_usec / 1000ULL;
 }
 
-/// <summary>
-/// Starts the stopwatch.
-/// </summary>
-/// <returns></returns>
+/* Starts the stopwatch. */
 ulong64_t StopWatch::start()
 {
     struct timespec now;
@@ -63,10 +49,7 @@ ulong64_t StopWatch::start()
     return m_startMS;
 }
 
-/// <summary>
-/// Gets the elapsed time since the stopwatch started.
-/// </summary>
-/// <returns></returns>
+/* Gets the elapsed time since the stopwatch started. */
 uint32_t StopWatch::elapsed()
 {
     struct timespec now;

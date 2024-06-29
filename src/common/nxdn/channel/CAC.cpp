@@ -1,15 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "nxdn/channel/CAC.h"
 #include "nxdn/edac/Convolution.h"
 #include "nxdn/NXDNDefines.h"
@@ -97,9 +94,7 @@ const uint32_t PUNCTURE_LIST_OUT[] = {
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the CAC class.
-/// </summary>
+/* Initializes a new instance of the CAC class. */
 CAC::CAC() :
     m_ran(0U),
     m_structure(ChStructure::SR_RCCH_SINGLE),
@@ -113,10 +108,7 @@ CAC::CAC() :
     ::memset(m_data, 0x00U, NXDN_CAC_CRC_LENGTH_BYTES);
 }
 
-/// <summary>
-/// Initializes a copy instance of the CAC class.
-/// </summary>
-/// <param name="data"></param>
+/* Initializes a copy instance of the CAC class. */
 CAC::CAC(const CAC& data) :
     m_ran(0U),
     m_structure(ChStructure::SR_RCCH_SINGLE),
@@ -130,19 +122,13 @@ CAC::CAC(const CAC& data) :
     copy(data);
 }
 
-/// <summary>
-/// Finalizes a instance of CAC class.
-/// </summary>
+/* Finalizes a instance of CAC class. */
 CAC::~CAC()
 {
     delete[] m_data;
 }
 
-/// <summary>
-/// Equals operator.
-/// </summary>
-/// <param name="data"></param>
-/// <returns></returns>
+/* Equals operator. */
 CAC& CAC::operator=(const CAC& data)
 {
     if (&data != this) {
@@ -163,12 +149,7 @@ CAC& CAC::operator=(const CAC& data)
     return *this;
 }
 
-/// <summary>
-/// Decode a common access channel.
-/// </summary>
-/// <param name="data"></param>
-/// <param name="longInbound"></param>
-/// <returns>True, if CAC was decoded, otherwise false.</returns>
+/* Decode a common access channel. */
 bool CAC::decode(const uint8_t* data, bool longInbound)
 {
     assert(data != nullptr);
@@ -318,10 +299,7 @@ bool CAC::decode(const uint8_t* data, bool longInbound)
     return true;
 }
 
-/// <summary>
-/// Encode a common access channel.
-/// </summary>
-/// <param name="data"></param>
+/* Encode a common access channel. */
 void CAC::encode(uint8_t* data) const
 {
     assert(data != nullptr);
@@ -400,10 +378,7 @@ void CAC::encode(uint8_t* data) const
 #endif
 }
 
-/// <summary>
-/// Gets the raw CAC data.
-/// </summary>
-/// <param name="data"></param>
+/* Gets the raw CAC data. */
 void CAC::getData(uint8_t* data) const
 {
     assert(data != nullptr);
@@ -422,10 +397,7 @@ void CAC::getData(uint8_t* data) const
     }
 }
 
-/// <summary>
-/// Sets the raw CAC data.
-/// </summary>
-/// <param name="data"></param>
+/* Sets the raw CAC data. */
 void CAC::setData(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -443,10 +415,7 @@ void CAC::setData(const uint8_t* data)
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Internal helper to copy the the class.
-/// </summary>
-/// <param name="data"></param>
+/* Internal helper to copy the the class. */
 void CAC::copy(const CAC& data)
 {
     m_data = new uint8_t[NXDN_CAC_CRC_LENGTH_BYTES];

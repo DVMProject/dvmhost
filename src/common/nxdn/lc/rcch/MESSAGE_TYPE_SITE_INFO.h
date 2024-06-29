@@ -1,15 +1,18 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @file MESSAGE_TYPE_SITE_INFO.h
+ * @ingroup nxdn_rcch
+ * @file MESSAGE_TYPE_SITE_INFO.cpp
+ * @ingroup nxdn_rcch
+ */
 #if !defined(__NXDN_LC_RCCH__MESSAGE_TYPE_SITE_INFO_H__)
 #define  __NXDN_LC_RCCH__MESSAGE_TYPE_SITE_INFO_H__
 
@@ -24,33 +27,61 @@ namespace nxdn
         {
             // ---------------------------------------------------------------------------
             //  Class Declaration
-            //      Implements SITE_INFO - Site Information
             // ---------------------------------------------------------------------------
 
+            /**
+             * @brief Implements SITE_INFO - Site Information
+             * @ingroup nxdn_rcch
+             */
             class HOST_SW_API MESSAGE_TYPE_SITE_INFO : public RCCH {
             public:
-                /// <summary>Initializes a new instance of the MESSAGE_TYPE_SITE_INFO class.</summary>
+                /**
+                 * @brief Initializes a new instance of the MESSAGE_TYPE_SITE_INFO class.
+                 */
                 MESSAGE_TYPE_SITE_INFO();
 
-                /// <summary>Decode layer 3 data.</summary>
+                /**
+                 * @brief Decode RCCH data.
+                 * @param[in] data Buffer containing a RCCH to decode.
+                 * @param length Length of data buffer.
+                 * @param offset Offset for RCCH in data buffer.
+                 */
                 void decode(const uint8_t* data, uint32_t length, uint32_t offset = 0U) override;
-                /// <summary>Encode layer 3 data.</summary>
+                /**
+                 * @brief Encode RCCH data.
+                 * @param[out] data Buffer to encode a RCCH.
+                 * @param length Length of data buffer.
+                 * @param offset Offset for RCCH in data buffer.
+                 */
                 void encode(uint8_t* data, uint32_t length, uint32_t offset = 0U) override;
 
-                /// <summary>Returns a string that represents the current RCCH.</summary>
+                /**
+                 * @brief Returns a string that represents the current RCCH.
+                 * @returns std::string String representation of the RCCH.
+                 */
                 std::string toString(bool isp = false) override;
 
             public:
-                /** Channel Structure Data */
-                /// <summary>Count of BCCH frames per RCCH superframe.</summary>
+                // Channel Structure Data
+                /**
+                 * @brief Count of BCCH frames per RCCH superframe.
+                 */
                 __PROPERTY(uint8_t, bcchCnt, BcchCnt);
-                /// <summary>Count of RCCH frame groupings per RCCH superframe.</summary>
+                /**
+                 * @brief Count of RCCH frame groupings per RCCH superframe.
+                 */
                 __PROPERTY(uint8_t, rcchGroupingCnt, RcchGroupingCnt);
-                /// <summary>Count of CCCH/UPCH paging frames per RCCH superframe.</summary>
+                /**
+                 * @brief Count of CCCH/UPCH paging frames per RCCH superframe.
+                 */
                 __PROPERTY(uint8_t, ccchPagingCnt, CcchPagingCnt);
-                /// <summary>Count of CCCH/UPCH multi-purpose frames per RCCH superframe.</summary>
+                /**
+                 * @brief Count of CCCH/UPCH multi-purpose frames per RCCH superframe.
+                 */
                 __PROPERTY(uint8_t, ccchMultiCnt, CcchMultiCnt);
-                /// <summary>Count of group iterations per RCCH superframe.</summary>
+                /**
+                 * @brief Count of group iterations per RCCH superframe.
+                 */
                 __PROPERTY(uint8_t, rcchIterateCnt, RcchIterateCount);
 
                 __COPY(MESSAGE_TYPE_SITE_INFO);

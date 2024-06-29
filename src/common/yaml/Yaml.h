@@ -1,17 +1,23 @@
 // SPDX-License-Identifier: MIT
+/*
+ * Digital Voice Modem - Common Library
+ * MIT Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2018 Jimmie Bergmann
+ *  Copyright (C) 2020 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Common Library
-* MIT Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @derivedfrom mini-yaml (https://github.com/jimmiebergmann/mini-yaml)
-* @license MIT License (https://opensource.org/license/MIT)
-*
-*   Copyright (C) 2018 Jimmie Bergmann
-*   Copyright (C) 2020 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @defgroup yaml YAML
+ * @brief Defines and implements the YAML file processor.
+ * @ingroup common
+ * 
+ * @file Yaml.h
+ * @ingroup yaml
+ * @file Yaml.cpp
+ * @ingroup yaml
+ */
 #if !defined(__YAML_H__)
 #define __YAML_H__
 
@@ -35,6 +41,7 @@ namespace yaml
     // ---------------------------------------------------------------------------
     //  Class Prototypes
     // ---------------------------------------------------------------------------
+
     class HOST_SW_API Node;
 
     // ---------------------------------------------------------------------------
@@ -44,15 +51,19 @@ namespace yaml
     {
         // ---------------------------------------------------------------------------
         //  Class Declaration
-        //      Helper functionality, converting string to any data type.
-        //      Strings are left untouched.
         // ---------------------------------------------------------------------------
 
+        /**
+         * @brief StringConverter Helper to converting string to any data type. Strings are left untouched.
+         * @tparam T Atomic type to convert.
+         */
         template<typename T>
         struct StringConverter {
-            /// <summary></summary>
-            /// <param name="data"></param>
-            /// <returns></returns>
+            /**
+             * @brief Return atomic type for given string.
+             * @param data String to convert to atomic type.
+             * @return T Atomic type value.
+             */
             static T get(const std::string& data)
             {
                 T type;
@@ -61,10 +72,12 @@ namespace yaml
                 return type;
             }
 
-            /// <summary></summary>
-            /// <param name="data"></param>
-            /// <param name="defaultValue"></param>
-            /// <returns></returns>
+            /**
+             * @brief Return atomic type for a given string, with a fallback default.
+             * @param data String to convert to atomic type.
+             * @param defaultValue Default atomic type value.
+             * @return T Atomic type value.
+             */
             static T get(const std::string& data, const T& defaultValue)
             {
                 T type;
@@ -81,23 +94,30 @@ namespace yaml
 
         // ---------------------------------------------------------------------------
         //  Class Declaration
-        //
         // ---------------------------------------------------------------------------
 
+        /**
+         * @brief StringConverter<std::string> Helper to convert a string to a string.
+         * (This is just a default converter.)
+         */
         template<>
         struct StringConverter<std::string> {
-            /// <summary></summary>
-            /// <param name="data"></param>
-            /// <returns></returns>
+            /**
+             * @brief Return string for the given string.
+             * @param data String.
+             * @return std::string String.
+             */
             static std::string get(const std::string& data)
             {
                 return data;
             }
 
-            /// <summary></summary>
-            /// <param name="data"></param>
-            /// <param name="defaultValue"></param>
-            /// <returns></returns>
+            /**
+             * @brief Return a string for the given string with a fallback default.
+             * @param data String.
+             * @param defaultValue Default string.
+             * @return std::string String.
+             */
             static std::string get(const std::string& data, const std::string& defaultValue)
             {
                 if (data.size() == 0) {
@@ -109,14 +129,19 @@ namespace yaml
 
         // ---------------------------------------------------------------------------
         //  Class Declaration
-        //
         // ---------------------------------------------------------------------------
 
+        /**
+         * @brief StringConverter<bool> Helper to convert a boolean to a string.
+         * (This is just a default converter.)
+         */
         template<>
         struct StringConverter<bool> {
-            /// <summary></summary>
-            /// <param name="data"></param>
-            /// <returns></returns>
+            /**
+             * @brief Return string for the given boolean.
+             * @param data String.
+             * @return bool Boolean value.
+             */
             static bool get(const std::string& data)
             {
                 std::string tmpData = data;
@@ -128,10 +153,12 @@ namespace yaml
                 return false;
             }
 
-            /// <summary></summary>
-            /// <param name="data"></param>
-            /// <param name="defaultValue"></param>
-            /// <returns></returns>
+            /**
+             * @brief Return a string for the given boolean with a fallback default.
+             * @param data String.
+             * @param defaultValue Default boolean.
+             * @return bool Boolean value.
+             */
             static bool get(const std::string& data, const bool& defaultValue)
             {
                 if (data.size() == 0) {
@@ -145,15 +172,17 @@ namespace yaml
 
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //      Exception class.
     // ---------------------------------------------------------------------------
 
+    /**
+     * @brief Exception General YAML Exception.
+     * @ingroup yaml
+     */
     class HOST_SW_API Exception : public std::runtime_error {
     public:
-
-        /// <summary>
-        /// Enumeration of exception types.
-        /// </summary>
+        /**
+         * @brief Enumeration of exception types.
+         */
         enum eType
         {
             InternalError,  // Internal error.
@@ -161,13 +190,23 @@ namespace yaml
             OperationError  // User operation error.
         };
 
-        /// <summary>Initializes a new instance of the Exception class.</summary>
+        /**
+         * @brief Initializes a new instance of the Exception class.
+         * @param message Exception message.
+         * @param type Exception type.
+         */
         Exception(const std::string & message, const eType type);
 
-        /// <summary>Get type of exception.</summary>
+        /**
+         * @brief Get type of exception.
+         * @returns Type of exception.
+         */
         eType type() const;
 
-        /// <summary>Get message of exception.</summary>
+        /**
+         * @brief Get message of exception.
+         * @returns Exception message.
+         */
         const char* message() const;
 
     private:
@@ -176,71 +215,113 @@ namespace yaml
 
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //      Internal exception class.
     // ---------------------------------------------------------------------------
 
+    /**
+     * @brief InternalException YAML Internal Exception.
+     * @ingroup yaml
+     */
     class HOST_SW_API InternalException : public Exception {
     public:
-        /// <summary>Initializes a new instance of the InternalException class.</summary>
+        /**
+         * @brief Initializes a new instance of the InternalException class.
+         * @param message Exception message.
+         */
         InternalException(const std::string& message);
-
     };
 
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //      Parsing exception class.
     // ---------------------------------------------------------------------------
 
+    /**
+     * @brief ParsingException YAML Parsing Exception.
+     * @ingroup yaml
+     */
     class HOST_SW_API ParsingException : public Exception {
     public:
-        /// <summary>Initializes a new instance of the ParsingException class.</summary>
-        ParsingException(const std::string & message);
+        /**
+         * @brief Initializes a new instance of the ParsingException class.
+         * @param message Exception message.
+         */
+        ParsingException(const std::string& message);
 
     };
 
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //      Parsing exception class.
     // ---------------------------------------------------------------------------
 
+    /**
+     * @brief OperationException YAML Operation Exception.
+     * @ingroup yaml
+     */
     class HOST_SW_API OperationException : public Exception {
     public:
-        /// <summary>Initializes a new instance of the OperationException class.</summary>
+        /**
+         * @brief Initializes a new instance of the OperationException class.
+         * @param message Exception message.
+         */
         OperationException(const std::string & message);
     };
 
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //      Iterator class.
     // ---------------------------------------------------------------------------
 
+    /**
+     * @brief Iterator Helper class used to iterate through YAML files.
+     * @ingroup yaml
+     */
     class HOST_SW_API Iterator {
     public:
         friend class Node;
 
-        /// <summary>Initializes a new instance of the Iterator class.</summary>
+        /**
+         * @brief Initializes a new instance of the Iterator class.
+         */
         Iterator();
-        /// <summary>Copies an instance of the Iterator class to a new instance of the Iterator class.</summary>
-        Iterator(const Iterator & it);
-        /// <summary>Finalizes a instance of the Iterator class.</summary>
+        /**
+         * @brief Copies an instance of the Iterator class to a new instance of the Iterator class.
+         * @param it Iterator instance to copy from.
+         */
+        Iterator(const Iterator& it);
+        /**
+         * @brief Finalizes a instance of the Iterator class.
+         */
         ~Iterator();
 
-        /// <summary>Assignment operator.</summary>
-        Iterator& operator = (const Iterator& it);
+        /**
+         * @brief Assignment operator.
+         * @param it Iterator instance to copy from.
+         */
+        Iterator& operator= (const Iterator& it);
 
-        /// <summary>Get node of iterator. First pair item is the key of map value, empty if type is sequence.</summary>
-        std::pair<const std::string&, Node&> operator *();
+        /**
+         * @brief Get node of iterator. First pair item is the key of map value, empty if type is sequence.
+         */
+        std::pair<const std::string&, Node&> operator* ();
 
-        /// <summary>Post-increment operator.</summary>
-        Iterator& operator ++ (int);
-        /// <summary>Post-decrement operator.</summary>
-        Iterator& operator -- (int);
+        /**
+         * @brief Post-increment operator.
+         */
+        Iterator& operator++ (int);
+        /**
+         * @brief Post-decrement operator.
+         */
+        Iterator& operator-- (int);
 
-        /// <summary>Check if iterator is equal to other iterator.</summary>
-        bool operator == (const Iterator& it);
+        /**
+         * @brief Check if iterator is equal to other iterator.
+         * @param it Iterator to check equality with.
+         */
+        bool operator== (const Iterator& it);
 
-        /// <summary>Check if iterator is not equal to other iterator.</summary>
-        bool operator != (const Iterator& it);
+        /**
+         * @brief Check if iterator is not equal to other iterator.
+         * @param it Iterator to check inequality with.
+         */
+        bool operator!= (const Iterator& it);
 
     private:
         enum eType
@@ -257,36 +338,61 @@ namespace yaml
 
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //      Constant iterator class.
     // ---------------------------------------------------------------------------
 
+    /**
+     * @brief ConstIterator Helper class used to iterate through YAML files.
+     * @ingroup yaml
+     */
     class HOST_SW_API ConstIterator {
     public:
         friend class Node;
 
-        /// <summary>Initializes a new instance of the ConstIterator class.</summary>
+        /**
+         * @brief Initializes a new instance of the ConstIterator class.
+         */
         ConstIterator();
-        /// <summary>Copies an instance of the ConstIterator class to a new instance of the ConstIterator class.</summary>
-        ConstIterator(const ConstIterator & it);
-        /// <summary>Finalizes a instance of the ConstIterator class.</summary>
+        /**
+         * @brief Copies an instance of the ConstIterator class to a new instance of the ConstIterator class.
+         * @param it Iterator instance to copy from.
+         */
+        ConstIterator(const ConstIterator& it);
+        /**
+         * @brief Finalizes a instance of the ConstIterator class.
+         */
         ~ConstIterator();
 
-        /// <summary>Assignment operator.</summary>
-        ConstIterator& operator = (const ConstIterator& it);
+        /**
+         * @brief Assignment operator.
+         * @param it Iterator instance to copy from.
+         */
+        ConstIterator& operator= (const ConstIterator& it);
 
-        /// <summary>Get node of iterator. First pair item is the key of map value, empty if type is sequence.</summary>
+        /**
+         * @brief Get node of iterator. First pair item is the key of map value, empty if type is sequence.
+         */
         std::pair<const std::string&, const Node&> operator *();
 
-        /// <summary>Post-increment operator.</summary>
-        ConstIterator& operator ++ (int);
-        /// <summary>Post-decrement operator.</summary>
-        ConstIterator& operator -- (int);
+        /**
+         * @brief Post-increment operator.
+         */
+        ConstIterator& operator++ (int);
+        /**
+         * @brief Post-decrement operator.
+         */
+        ConstIterator& operator-- (int);
 
-        /// <summary>Check if iterator is equal to other iterator.</summary>
-        bool operator == (const ConstIterator& it);
+        /**
+         * @brief Check if iterator is equal to other iterator.
+         * @param it Iterator to check equality with.
+         */
+        bool operator== (const ConstIterator& it);
 
-        /// <summary>Check if iterator is not equal to other iterator.</summary>
-        bool operator != (const ConstIterator& it);
+        /**
+         * @brief Check if iterator is not equal to other iterator.
+         * @param it Iterator to check inequality with.
+         */
+        bool operator!= (const ConstIterator& it);
 
     private:
         enum eType
@@ -302,14 +408,19 @@ namespace yaml
 
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //      Node class.
     // ---------------------------------------------------------------------------
 
+    /**
+     * @brief Node Represents a node/element within a YAML file.
+     * @ingroup yaml
+     */
     class HOST_SW_API Node {
     public:
         friend class Iterator;
 
-        /// <summary>Enumeration of node types.</summary>
+        /**
+         * @brief Enumeration of node types.
+         */
         enum eType
         {
             None,
@@ -318,80 +429,166 @@ namespace yaml
             ScalarType
         };
 
-        /// <summary>Initializes a new instance of the Node class.</summary>
+        /**
+         * @brief Initializes a new instance of the Node class.
+         */
         Node();
-        /// <summary>Copies an instance of the Node class to a new instance of the Node class.</summary>
+        /**
+         * @brief Copies an instance of the Node class to a new instance of the Node class.
+         * @param node Node instance to copy from.
+         */
         Node(const Node& node);
-        /// <summary>Initializes a new instance of the Node class.</summary>
+        /**
+         * @brief Initializes a new instance of the Node class.
+         * @param value String value to initialize node with.
+         */
         Node(const std::string& value);
-        /// <summary>Initializes a new instance of the Node class.</summary>
+        /**
+         * @brief Initializes a new instance of the Node class.
+         * @param value String value to initialize node with.
+         */
         Node(const char* value);
-        /// <summary>Finalizes a instance of the Node class.</summary>
+        /**
+         * @brief Finalizes a instance of the Node class.
+         */
         ~Node();
 
-        /// <summary>Gets the type of node.</summary>
+        /**
+         * @brief Gets the type of node.
+         * @returns eType Node type.
+         */
         eType type() const;
-        /// <summary>Checks if the node contains nothing.</summary>
+        /**
+         * @brief Checks if the node contains nothing.
+         * @returns bool True, if node is empty, otherwise false.
+         */
         bool isNone() const;
-        /// <summary>Checks if the node is a sequence node.</summary>
+        /**
+         * @brief Checks if the node is a sequence node.
+         * @returns bool True, if node is a sequence node, otherwise false.
+         */
         bool isSequence() const;
-        /// <summary>Checks if the node is a map node.</summary>
+        /**
+         * @brief Checks if the node is a map node.
+         * @returns bool True, if node is a map node, otherwise false.
+         */
         bool isMap() const;
-        /// <summary>Checks if the node is a scalar node.</summary>
+        /**
+         * @brief Checks if the node is a scalar node.
+         * @returns bool True, if node is a scalar node, otherwise false.
+         */
         bool isScalar() const;
 
-        /// <summary>Completely clear node.</summary>
+        /**
+         * @brief Completely clear node.
+         */
         void clear();
 
-        /// <summary>Get node as given template type.</summary>
+        /**
+         * @brief Get node as given template type.
+         * @tparam T Atomic Type.
+         * @returns T Node converted to specified atomic type.
+         */
         template<typename T>
         T as() const
         {
             return impl::StringConverter<T>::get(asString());
         }
-        /// <summary>Get node as given template type with a default value if no value is found.</summary>
+        /**
+         * @brief Get node as given template type with a default value if no value is found.
+         * @tparam T Atomic Type.
+         * @param defaultValue Default value for atomic type T.
+         * @returns T Node converted to specified atomic type.
+         */
         template<typename T>
         T as(const T& defaultValue) const
         {
             return impl::StringConverter<T>::get(asString(), defaultValue);
         }
 
-        /// <summary>Get size of node. Nodes of type None or Scalar will return 0.</summary>
+        /**
+         * @brief Get size of node. Nodes of type None or Scalar will return 0.
+         * @returns size_t Size of node.
+         */
         size_t size() const;
 
         // Sequence operators
-        /// <summary>Insert sequence item at given index. Converts node to sequence type if needed.
-        /// Adding new item to end of sequence if index is larger than sequence size.</summary>
+        /**
+         * @brief Inserts a node in the sequence at the given index.
+         * @param index Index to insert node.
+         * @returns Node Added node. 
+         */
         Node& insert(const size_t index);
-        /// <summary>Add new sequence index to back. Converts node to sequence type if needed.</summary>
+        /**
+         * @brief Add new sequence index to back. Converts node to sequence type if needed.
+         * @returns Node Added node. 
+         */
         Node& push_front();
-        /// <summary>Add new sequence index to front. Converts node to sequence type if needed.</summary>
+        /**
+         * @brief Add new sequence index to front. Converts node to sequence type if needed.
+         * @returns Node Added node. 
+         */
         Node& push_back();
-        /// <summary>Get sequence/map item. Converts node to sequence/map type if needed.</summary>
-        Node& operator [] (const size_t index);
-        /// <summary>Get sequence/map item. Converts node to sequence/map type if needed.</summary>
-        Node& operator [] (const std::string& key);
+        /**
+         * @brief Get sequence/map item. Converts node to sequence/map type if needed.
+         * @param index Index to get node.
+         * @returns Node Node at specified index.
+         */
+        Node& operator[] (const size_t index);
+        /**
+         * @brief Get sequence/map item. Converts node to sequence/map type if needed.
+         * @param key Key name.
+         * @returns Node Node specified by key.
+         */
+        Node& operator[] (const std::string& key);
 
-        /// <summary>Erase item. No action if node is not a sequence or map.</summary>
+        /**
+         * @brief Erase item. No action if node is not a sequence or map.
+         * @param index Index to erase node.
+         */
         void erase(const size_t index);
-        /// <summary>Erase item. No action if node is not a sequence or map.</summary>
+        /**
+         * @brief Erase item. No action if node is not a sequence or map.
+         * @param key Key Name.
+         */
         void erase(const std::string& key);
 
-        /// <summary>Assignment operator.</summary>
-        Node& operator = (const Node& node);
-        /// <summary>Assignment operator.</summary>
-        Node& operator = (const std::string& value);
-        /// <summary>Assignment operator.</summary>
-        Node& operator = (const char* value);
+        /**
+         * @brief Assignment operator.
+         * @param node Node instance to copy from.
+         */
+        Node& operator= (const Node& node);
+        /**
+         * @brief Assignment operator.
+         * @param value String value to initialize node with.
+         */
+        Node& operator= (const std::string& value);
+        /**
+         * @brief Assignment operator.
+         * @param value String value to initialize node with.
+         */
+        Node& operator= (const char* value);
 
-        /// <summary>Get start iterator.</summary>
+        /**
+         * @brief Get start iterator.
+         * @returns Iterator Start iterator for sequence.
+         */
         Iterator begin();
-        /// <summary>Get start constant iterator.</summary>
+        /**
+         * @brief Get start constant iterator.
+         * @returns ConstIterator Start iterator for sequence.
+         */
         ConstIterator begin() const;
 
-        /// <summary>Get end iterator.</summary>
+        /**
+         * @brief Get end iterator.
+         * @returns Iterator End iterator for sequence.
+         */
         Iterator end();
-        /// <summary>Get end constant iterator.</summary>
+        /**
+         * @brief Get end constant iterator.
+         * @returns ConstIterator End iterator for sequence.
+         */
         ConstIterator end() const;
 
     private:
@@ -399,34 +596,51 @@ namespace yaml
         void* m_pImp;
     };
 
-    /// <summary>Populate given root node with deserialized data.</summary>
-    /// <param name="root">Root node to populate.</param>
-    /// <param name="filename">Path of input file.</param>
+    /**
+     * @brief Populate given root node with deserialized data.
+     * @ingroup yaml
+     * @param root Root node to populate.
+     * @param filename Path of input file.
+     */
     bool Parse(Node& root, const char* filename);
-    /// <summary>Populate given root node with deserialized data.</summary>
-    /// <param name="root">Root node to populate.</param>
-    /// <param name="stream">Input stream.</param>
+    /**
+     * @brief Populate given root node with deserialized data.
+     * @ingroup yaml
+     * @param root Root node to populate.
+     * @param stream Input stream.
+     */
     bool Parse(Node& root, std::iostream& stream);
-    /// <summary>Populate given root node with deserialized data.</summary>
-    /// <param name="root">Root node to populate.</param>
-    /// <param name="string">String of input data.</param>
+    /**
+     * @brief Populate given root node with deserialized data.
+     * @ingroup yaml
+     * @param root Root node to populate.
+     * @param string String of input data.
+     */
     bool Parse(Node& root, const std::string& string);
-    /// <summary>Populate given root node with deserialized data.</summary>
-    /// <param name="buffer">Character array of input data.</param>
-    /// <param name="size">Buffer size.</param>
+    /**
+     * @brief Populate given root node with deserialized data.
+     * @ingroup yaml
+     * @param buffer Character array of input data.
+     * @param size Buffer size.
+     */
     bool Parse(Node& root, const char* buffer, const size_t size);
 
     // ---------------------------------------------------------------------------
     //  Structure Declaration
-    //      Serialization configuration structure, describing output behavior.
     // ---------------------------------------------------------------------------
 
+    /**
+     * @brief Serialization configuration structure, describing output behavior.
+     * @ingroup yaml
+     */
     struct SerializeConfig {
-        /// <summary>Initializes a new instance of the SerializeConfig struct.</summary>
-        /// <param name="spaceIndentation">Number of spaces per indentation.</param>
-        /// <param name="scalarMaxLength">Maximum length of scalars. Serialized as folder scalars if exceeded. Ignored if equal to 0.</param>
-        /// <param name="sequenceMapNewline">Put maps on a new line if parent node is a sequence.</param>
-        /// <param name="mapScalarNewline">Put scalars on a new line if parent node is a map.</param>
+        /**
+         * @brief Initializes a new instance of the SerializeConfig struct.
+         * @param spaceIndentation Number of spaces per indentation.
+         * @param scalarMaxLength Maximum length of scalars. Serialized as folder scalars if exceeded. Ignored if equal to 0.
+         * @param sequenceMapNewline Put maps on a new line if parent node is a sequence.
+         * @param mapScalarNewline Put scalars on a new line if parent node is a map.
+         */
         SerializeConfig(const size_t spaceIndentation = 2, const size_t scalarMaxLength = 64, const bool sequenceMapNewline = false,
                         const bool mapScalarNewline = false);
 
@@ -436,20 +650,29 @@ namespace yaml
         bool MapScalarNewline;      // Put scalars on a new line if parent node is a map.
     };
 
-    /// <summary>Serialize node data.</summary>
-    /// <param name="root">Root node to serialize.</param>
-    /// <param name="filename">Path of output file.</param>
-    /// <param name="config">Serialization configuration.</param>
+    /**
+     * @brief Serialize node data.
+     * @ingroup yaml
+     * @param root Root node to serialize.
+     * @param filename Path of output file.
+     * @param config Serialization configuration.
+     */
     void Serialize(const Node& root, const char* filename, const SerializeConfig& config = {2, 64, false, false});
-    /// <summary>Serialize node data.</summary>
-    /// <param name="root">Root node to serialize.</param>
-    /// <param name="stream">Output stream.</param>
-    /// <param name="config">Serialization configuration.</param>
+    /**
+     * @brief Serialize node data.
+     * @ingroup yaml
+     * @param root Root node to serialize.
+     * @param stream Output stream.
+     * @param config Serialization configuration.
+     */
     void Serialize(const Node& root, std::iostream& stream, const SerializeConfig& config = {2, 64, false, false});
-    /// <summary>Serialize node data.</summary>
-    /// <param name="root">Root node to serialize.</param>
-    /// <param name="string">String of output data.</param>
-    /// <param name="config">Serialization configuration.</param>
+    /**
+     * @brief Serialize node data.
+     * @ingroup yaml
+     * @param root Root node to serialize.
+     * @param string String of output data.
+     * @param config Serialization configuration.
+     */
     void Serialize(const Node& root, std::string& string, const SerializeConfig& config = {2, 64, false, false});
 } // namespace yaml
 

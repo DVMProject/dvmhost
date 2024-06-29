@@ -1,15 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "Defines.h"
 #include "nxdn/NXDNDefines.h"
 #include "nxdn/lc/PacketInformation.h"
@@ -26,9 +23,7 @@ using namespace nxdn::lc;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the PacketInformation class.
-/// </summary>
+/* Initializes a new instance of the PacketInformation class. */
 PacketInformation::PacketInformation() :
     m_delivery(false),
     m_selectiveRetry(false),
@@ -44,17 +39,10 @@ PacketInformation::PacketInformation() :
     /* stub */
 }
 
-/// <summary>
-/// Finalizes a instance of the PacketInformation class.
-/// </summary>
+/* Finalizes a instance of the PacketInformation class. */
 PacketInformation::~PacketInformation() = default;
 
-/// <summary>
-/// Decodes packet information.
-/// </summary>
-/// <param name="messageType"></param>
-/// <param name="data"></param>
-/// <returns>True, if packet information was decoded, otherwise false.</returns>
+/* Decodes packet information. */
 bool PacketInformation::decode(const uint8_t messageType, const uint8_t* data)
 {
     assert(data != nullptr);
@@ -94,11 +82,7 @@ bool PacketInformation::decode(const uint8_t messageType, const uint8_t* data)
     return true;
 }
 
-/// <summary>
-/// Encodes packet information.
-/// </summary>
-/// <param name="messageType"></param>
-/// <param name="data"></param>
+/* Encodes packet information. */
 void PacketInformation::encode(const uint8_t messageType, uint8_t* data)
 {
     assert(data != nullptr);
@@ -149,9 +133,7 @@ void PacketInformation::encode(const uint8_t messageType, uint8_t* data)
     }
 }
 
-/// <summary>
-/// Helper to reset data values to defaults.
-/// </summary>
+/* Helper to reset data values to defaults. */
 void PacketInformation::reset()
 {
     m_delivery = false;

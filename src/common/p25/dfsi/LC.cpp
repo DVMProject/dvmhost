@@ -1,15 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "Defines.h"
 #include "p25/P25Defines.h"
 #include "p25/dfsi/DFSIDefines.h"
@@ -29,9 +26,7 @@ using namespace p25::dfsi::defines;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the LC class.
-/// </summary>
+/* Initializes a new instance of the LC class. */
 LC::LC() :
     m_frameType(DFSIFrameType::LDU1_VOICE1),
     m_rssi(0U),
@@ -51,27 +46,20 @@ LC::LC() :
     m_lsd = new data::LowSpeedData();
 }
 
-/// <summary>
-/// Initializes a copy instance of the LC class.
-/// </summary>
-/// <param name="data"></param>
+/* Initializes a copy instance of the LC class. */
 LC::LC(const LC& data) : LC()
 {
     copy(data);
 }
 
-/// <summary>
-/// Initializes a new instance of the LC class.
-/// </summary>
+/* Initializes a new instance of the LC class from OTA link control. */
 LC::LC(const lc::LC& control, const data::LowSpeedData& lsd) : LC()
 {
     m_control = new lc::LC(control);
     m_lsd = new data::LowSpeedData(lsd);
 }
 
-/// <summary>
-/// Finalizes a instance of LC class.
-/// </summary>
+/* Finalizes a instance of LC class. */
 LC::~LC()
 {
     if (m_control != nullptr) {
@@ -86,11 +74,7 @@ LC::~LC()
     }
 }
 
-/// <summary>
-/// Equals operator.
-/// </summary>
-/// <param name="data"></param>
-/// <returns></returns>
+/* Equals operator. */
 LC& LC::operator=(const LC& data)
 {
     if (this != &data) {
@@ -100,10 +84,7 @@ LC& LC::operator=(const LC& data)
     return *this;
 }
 
-/// <summary>
-/// Helper to set the LC data.
-/// </summary>
-/// <param name="data"></param>
+/* Helper to set the LC data. */
 void LC::setControl(const lc::LC& data)
 {
     if (m_control != nullptr) {
@@ -112,12 +93,7 @@ void LC::setControl(const lc::LC& data)
     m_control = new lc::LC(data);
 }
 
-/// <summary>
-/// Decode a logical link data unit 1.
-/// </summary>
-/// <param name="data"></param>
-/// <param name="imbe"></param>
-/// <returns>True, if decoded, otherwise false.</returns>
+/* Decode a logical link data unit 1. */
 bool LC::decodeLDU1(const uint8_t* data, uint8_t* imbe)
 {
     assert(data != nullptr);
@@ -256,11 +232,7 @@ bool LC::decodeLDU1(const uint8_t* data, uint8_t* imbe)
     return true;
 }
 
-/// <summary>
-/// Encode a logical link data unit 1.
-/// </summary>
-/// <param name="data"></param>
-/// <param name="imbe"></param>
+/* Encode a logical link data unit 1. */
 void LC::encodeLDU1(uint8_t* data, const uint8_t* imbe)
 {
     assert(data != nullptr);
@@ -428,12 +400,7 @@ void LC::encodeLDU1(uint8_t* data, const uint8_t* imbe)
     ::memcpy(data, dfsiFrame, frameLength);
 }
 
-/// <summary>
-/// Decode a logical link data unit 2.
-/// </summary>
-/// <param name="data"></param>
-/// <param name="imbe"></param>
-/// <returns>True, if decoded, otherwise false.</returns>
+/* Decode a logical link data unit 2. */
 bool LC::decodeLDU2(const uint8_t* data, uint8_t* imbe)
 {
     assert(data != nullptr);
@@ -523,11 +490,7 @@ bool LC::decodeLDU2(const uint8_t* data, uint8_t* imbe)
     return true;
 }
 
-/// <summary>
-/// Encode a logical link data unit 2.
-/// </summary>
-/// <param name="data"></param>
-/// <param name="imbe"></param>
+/* Encode a logical link data unit 2. */
 void LC::encodeLDU2(uint8_t* data, const uint8_t* imbe)
 {
     assert(data != nullptr);
@@ -680,10 +643,7 @@ void LC::encodeLDU2(uint8_t* data, const uint8_t* imbe)
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Internal helper to copy the the class.
-/// </summary>
-/// <param name="data"></param>
+/* Internal helper to copy the the class. */
 void LC::copy(const LC& data)
 {
     m_frameType = data.m_frameType;

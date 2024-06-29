@@ -1,15 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2024 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "Defines.h"
 #include "p25/P25Defines.h"
 #include "p25/sndcp/SNDCPCtxActAccept.h"
@@ -25,9 +22,7 @@ using namespace p25::sndcp;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the SNDCPCtxActAccept class.
-/// </summary>
+/* Initializes a new instance of the SNDCPCtxActAccept class. */
 SNDCPCtxActAccept::SNDCPCtxActAccept() : SNDCPPacket(),
     m_priority(4U),
     m_readyTimer(SNDCPReadyTimer::TEN_SECONDS),
@@ -39,11 +34,7 @@ SNDCPCtxActAccept::SNDCPCtxActAccept() : SNDCPPacket(),
     m_pduType = SNDCP_PDUType::ACT_TDS_CTX;
 }
 
-/// <summary>
-/// Decode a SNDCP context activation response.
-/// </summary>
-/// <param name="data"></param>
-/// <returns>True, if packet was decoded, otherwise false.</returns>
+/* Decode a SNDCP context activation response. */
 bool SNDCPCtxActAccept::decode(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -66,10 +57,7 @@ bool SNDCPCtxActAccept::decode(const uint8_t* data)
     return true;
 }
 
-/// <summary>
-/// Encode a SNDCP context activation response.
-/// </summary>
-/// <param name="data"></param>
+/* Encode a SNDCP context activation response. */
 void SNDCPCtxActAccept::encode(uint8_t* data)
 {
     assert(data != nullptr);
@@ -93,10 +81,7 @@ void SNDCPCtxActAccept::encode(uint8_t* data)
 //  Protected Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Internal helper to copy the the class.
-/// </summary>
-/// <param name="data"></param>
+/* Internal helper to copy the the class. */
 void SNDCPCtxActAccept::copy(const SNDCPCtxActAccept& data)
 {
     m_priority = data.m_priority;

@@ -1,15 +1,18 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @file LC_ADJ_STS_BCAST.h
+ * @ingroup p25_lc
+ * @file LC_ADJ_STS_BCAST.cpp
+ * @ingroup p25_lc
+ */
 #if !defined(__P25_LC_TSBK__LC_ADJ_STS_BCAST_H__)
 #define  __P25_LC_TSBK__LC_ADJ_STS_BCAST_H__
 
@@ -24,33 +27,59 @@ namespace p25
         {
             // ---------------------------------------------------------------------------
             //  Class Declaration
-            //      Implements ADJ STS BCAST - Adjacent Site Status Broadcast
             // ---------------------------------------------------------------------------
 
+            /**
+             * @brief Implements ADJ STS BCAST - Adjacent Site Status Broadcast
+             * @ingroup p25_lc
+             */
             class HOST_SW_API LC_ADJ_STS_BCAST : public TDULC {
             public:
-                /// <summary>Initializes a new instance of the LC_ADJ_STS_BCAST class.</summary>
+                /**
+                 * @brief Initializes a new instance of the LC_ADJ_STS_BCAST class.
+                 */
                 LC_ADJ_STS_BCAST();
 
-                /// <summary>Decode a terminator data unit w/ link control.</summary>
+                /**
+                 * @brief Decode a terminator data unit w/ link control.
+                 * @param[in] data Buffer containing a TDULC to decode.
+                 * @returns bool True, if TDULC decoded, otherwise false.
+                 */
                 bool decode(const uint8_t* data) override;
-                /// <summary>Encode a terminator data unit w/ link control.</summary>
+                /**
+                 * @brief Encode a terminator data unit w/ link control.
+                 * @param[out] data Buffer to encode a TDULC.
+                 */
                 void encode(uint8_t* data) override;
 
             public:
-                /// <summary>Adjacent site CFVA flags.</summary>
+                /**
+                 * @brief Adjacent site CFVA flags.
+                 */
                 __PROPERTY(uint8_t, adjCFVA, AdjSiteCFVA);
-                /// <summary>Adjacent site system ID.</summary>
+                /**
+                 * @brief Adjacent site system ID.
+                 */
                 __PROPERTY(uint32_t, adjSysId, AdjSiteSysId);
-                /// <summary>Adjacent site RFSS ID.</summary>
+                /**
+                 * @brief Adjacent site RFSS ID.
+                 */
                 __PROPERTY(uint8_t, adjRfssId, AdjSiteRFSSId);
-                /// <summary>Adjacent site ID.</summary>
+                /**
+                 * @brief Adjacent site ID.
+                 */
                 __PROPERTY(uint8_t, adjSiteId, AdjSiteId);
-                /// <summary>Adjacent site channel ID.</summary>
+                /**
+                 * @brief Adjacent site channel ID.
+                 */
                 __PROPERTY(uint8_t, adjChannelId, AdjSiteChnId);
-                /// <summary>Adjacent site channel number.</summary>
+                /**
+                 * @brief Adjacent site channel number.
+                 */
                 __PROPERTY(uint32_t, adjChannelNo, AdjSiteChnNo);
-                /// <summary>Adjacent site service class.</summary>
+                /**
+                 * @brief Adjacent site service class.
+                 */
                 __PROPERTY(uint8_t, adjServiceClass, AdjSiteSvcClass);
 
                 __COPY(LC_ADJ_STS_BCAST);

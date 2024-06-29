@@ -1,15 +1,18 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
-*
-*/
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+ *
+ */
+/**
+ * @file LC_IDEN_UP.h
+ * @ingroup p25_lc
+ * @file LC_IDEN_UP.cpp
+ * @ingroup p25_lc
+ */
 #if !defined(__P25_LC_TSBK__LC_IDEN_UP_H__)
 #define  __P25_LC_TSBK__LC_IDEN_UP_H__
 
@@ -24,17 +27,29 @@ namespace p25
         {
             // ---------------------------------------------------------------------------
             //  Class Declaration
-            //      Implements IDEN UP - Channel Identifier Update
             // ---------------------------------------------------------------------------
 
+            /**
+             * @brief Implements IDEN UP - Channel Identifier Update
+             * @ingroup p25_lc
+             */
             class HOST_SW_API LC_IDEN_UP : public TDULC {
             public:
-                /// <summary>Initializes a new instance of the LC_IDEN_UP class.</summary>
+                /**
+                 * @brief Initializes a new instance of the LC_IDEN_UP class.
+                 */
                 LC_IDEN_UP();
 
-                /// <summary>Decode a terminator data unit w/ link control.</summary>
+                /**
+                 * @brief Decode a terminator data unit w/ link control.
+                 * @param[in] data Buffer containing a TDULC to decode.
+                 * @returns bool True, if TDULC decoded, otherwise false.
+                 */
                 bool decode(const uint8_t* data) override;
-                /// <summary>Encode a terminator data unit w/ link control.</summary>
+                /**
+                 * @brief Encode a terminator data unit w/ link control.
+                 * @param[out] data Buffer to encode a TDULC.
+                 */
                 void encode(uint8_t* data) override;
             };
         } // namespace tdulc

@@ -1,15 +1,18 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2018,2022 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2018,2022 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @file DataBlock.h
+ * @ingroup p25_pdu
+ * @file DataBlock.cpp
+ * @ingroup p25_pdu
+ */
 #if !defined(__P25_DATA__DATA_BLOCK_H__)
 #define  __P25_DATA__DATA_BLOCK_H__
 
@@ -25,43 +28,82 @@ namespace p25
     {
         // ---------------------------------------------------------------------------
         //  Class Declaration
-        //      Represents a data block for PDU P25 packets.
         // ---------------------------------------------------------------------------
 
+        /**
+         * @brief Represents a data block for PDU P25 packets.
+         * @ingroup p25_pdu
+         */
         class HOST_SW_API DataBlock {
         public:
-            /// <summary>Initializes a new instance of the DataBlock class.</summary>
+            /**
+             * @brief Initializes a new instance of the DataBlock class.
+             */
             DataBlock();
-            /// <summary>Finalizes a instance of the DataBlock class.</summary>
+            /**
+             * @brief Finalizes a instance of the DataBlock class.
+             */
             ~DataBlock();
 
-            /// <summary>Decodes P25 PDU data block.</summary>
+            /**
+             * @brief Decodes P25 PDU data block.
+             * @param[in] data Buffer containing a PDU data block to decode.
+             * @param header P25 PDU data header.
+             * @returns bool True, if PDU data block decoded, otherwise false.
+             */
             bool decode(const uint8_t* data, const DataHeader& header);
-            /// <summary>Encodes a P25 PDU data block.</summary>
+            /**
+             * @brief Encodes a P25 PDU data block.
+             * @param[out] data Buffer to encode a PDU data block.
+             */
             void encode(uint8_t* data);
 
-            /// <summary>Sets the data format.</summary>
+            /**
+             * @brief Sets the data format.
+             * @param fmt PDU data foramt.
+             */
             void setFormat(const uint8_t fmt);
-            /// <summary>Sets the data format from the data header.</summary>
+            /**
+             * @brief Sets the data format from the data header.
+             * @param header P25 PDU data header.
+             */
             void setFormat(const DataHeader& header);
-            /// <summary>Gets the data format.</summary>
+            /**
+             * @brief Gets the data format.
+             * @returns uint8_t PDU data format.
+             */
             uint8_t getFormat() const;
 
-            /// <summary>Sets the raw data stored in the data block.</summary>
+            /**
+             * @brief Sets the raw data stored in the data block.
+             * @param[in] buffer Buffer containing bytes to store in data block.
+             */
             void setData(const uint8_t* buffer);
-            /// <summary>Gets the raw data stored in the data block.</summary>
+            /**
+             * @brief Gets the raw data stored in the data block.
+             * @param[out] buffer Buffer to copy bytes in data block to.
+             * @returns uint32_t Number of bytes copied.
+             */
             uint32_t getData(uint8_t* buffer) const;
 
         public:
-            /// <summary>Sets the data block serial number.</summary>
+            /**
+             * @brief Sets the data block serial number.
+             */
             __PROPERTY(uint8_t, serialNo, SerialNo);
 
-            /// <summary>Flag indicating this is the last block in a sequence of block.</summary>
+            /**
+             * @brief Flag indicating this is the last block in a sequence of block.
+             */
             __PROPERTY(bool, lastBlock, LastBlock);
 
-            /// <summary>Logical link ID.</summary>
+            /**
+             * @brief Logical link ID.
+             */
             __PROPERTY(uint32_t, llId, LLId);
-            /// <summary>Service access point.</summary>
+            /**
+             * @brief Service access point.
+             */
             __PROPERTY(uint8_t, sap, SAP);
 
         private:

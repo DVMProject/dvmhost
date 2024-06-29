@@ -1,16 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2015,2016 Jonathan Naylor, G4KLX
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2015,2016 Jonathan Naylor, G4KLX
+ *
+ */
 #include "Defines.h"
 #include "dmr/lc/ShortLC.h"
 #include "edac/Hamming.h"
@@ -25,9 +21,7 @@ using namespace dmr::lc;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the ShortLC class.
-/// </summary>
+/* Initializes a new instance of the ShortLC class. */
 ShortLC::ShortLC() :
     m_rawData(nullptr),
     m_deInterData(nullptr)
@@ -36,21 +30,14 @@ ShortLC::ShortLC() :
     m_deInterData = new bool[68U];
 }
 
-/// <summary>
-/// Finalizes a instance of the ShortLC class.
-/// </summary>
+/* Finalizes a instance of the ShortLC class. */
 ShortLC::~ShortLC()
 {
     delete[] m_rawData;
     delete[] m_deInterData;
 }
 
-/// <summary>
-/// Decode DMR short-link control data.
-/// </summary>
-/// <param name="in"></param>
-/// <param name="out"></param>
-/// <returns></returns>
+/* Decode DMR short-link control data. */
 bool ShortLC::decode(const uint8_t* in, uint8_t* out)
 {
     assert(in != nullptr);
@@ -73,11 +60,7 @@ bool ShortLC::decode(const uint8_t* in, uint8_t* out)
     return true;
 }
 
-/// <summary>
-/// Encode DMR short-link control data.
-/// </summary>
-/// <param name="in"></param>
-/// <param name="out"></param>
+/* Encode DMR short-link control data. */
 void ShortLC::encode(const uint8_t* in, uint8_t* out)
 {
     assert(in != nullptr);
@@ -100,10 +83,7 @@ void ShortLC::encode(const uint8_t* in, uint8_t* out)
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-///
-/// </summary>
-/// <param name="in"></param>
+/* */
 void ShortLC::decodeExtractBinary(const uint8_t* in)
 {
     assert(in != nullptr);
@@ -119,9 +99,7 @@ void ShortLC::decodeExtractBinary(const uint8_t* in)
     Utils::byteToBitsBE(in[8U], m_rawData + 64U);
 }
 
-/// <summary>
-///
-/// </summary>
+/* */
 void ShortLC::decodeDeInterleave()
 {
     for (uint32_t i = 0U; i < 68U; i++)
@@ -137,10 +115,7 @@ void ShortLC::decodeDeInterleave()
     m_deInterData[67U] = m_rawData[67U];
 }
 
-/// <summary>
-///
-/// </summary>
-/// <returns></returns>
+/* */
 bool ShortLC::decodeErrorCheck()
 {
     // run through each of the 3 rows containing data
@@ -158,10 +133,7 @@ bool ShortLC::decodeErrorCheck()
     return true;
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="data"></param>
+/* */
 void ShortLC::decodeExtractData(uint8_t* data) const
 {
     assert(data != nullptr);
@@ -188,10 +160,7 @@ void ShortLC::decodeExtractData(uint8_t* data) const
     Utils::bitsToByteBE(bData + 32U, data[4U]);
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="in"></param>
+/* */
 void ShortLC::encodeExtractData(const uint8_t* in) const
 {
     assert(in != nullptr);
@@ -217,9 +186,7 @@ void ShortLC::encodeExtractData(const uint8_t* in) const
         m_deInterData[a] = bData[pos];
 }
 
-/// <summary>
-///
-/// </summary>
+/* */
 void ShortLC::encodeErrorCheck()
 {
     // run through each of the 3 rows containing data
@@ -232,9 +199,7 @@ void ShortLC::encodeErrorCheck()
         m_deInterData[c + 51U] = m_deInterData[c + 0U] ^ m_deInterData[c + 17U] ^ m_deInterData[c + 34U];
 }
 
-/// <summary>
-///
-/// </summary>
+/* */
 void ShortLC::encodeInterleave()
 {
     for (uint32_t i = 0U; i < 72U; i++)
@@ -251,10 +216,7 @@ void ShortLC::encodeInterleave()
     m_rawData[67U] = m_deInterData[67U];
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="data"></param>
+/* */
 void ShortLC::encodeExtractBinary(uint8_t* data)
 {
     assert(data != nullptr);

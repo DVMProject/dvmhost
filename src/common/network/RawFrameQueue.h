@@ -1,15 +1,18 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2024 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @file RawFrameQueue.h
+ * @ingroup network_core
+ * @file RawFrameQueue.cpp
+ * @ingroup network_core
+ */
 #if !defined(__RAW_FRAME_QUEUE_H__)
 #define __RAW_FRAME_QUEUE_H__
 
@@ -29,29 +32,59 @@ namespace network
 
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //      Implements the network frame queuing logic.
     // ---------------------------------------------------------------------------
 
+    /**
+     * @brief Implements the network frame queuing logic.
+     * @ingroup network_core
+     */
     class HOST_SW_API RawFrameQueue {
     public:
         auto operator=(RawFrameQueue&) -> RawFrameQueue& = delete;
         auto operator=(RawFrameQueue&&) -> RawFrameQueue& = delete;
         RawFrameQueue(RawFrameQueue&) = delete;
 
-        /// <summary>Initializes a new instance of the RawFrameQueue class.</summary>
+        /**
+         * @brief Initializes a new instance of the RawFrameQueue class.
+         * @param socket Local port used to listen for incoming data.
+         * @param debug Flag indicating debug logging should be enabled.
+         */
         RawFrameQueue(udp::Socket* socket, bool debug);
-        /// <summary>Finalizes a instance of the RawFrameQueue class.</summary>
+        /**
+         * @brief Finalizes a instance of the RawFrameQueue class.
+         */
         virtual ~RawFrameQueue();
 
-        /// <summary>Read message from the received UDP packet.</summary>
+        /**
+         * @brief Read message from the received UDP packet.
+         * @param[out] messageLength Actual length of message read from packet.
+         * @param[out] address IP address data read from.
+         * @param[out] addrLen 
+         * @return UInt8Array Buffer containing message read.
+         */
         UInt8Array read(int& messageLength, sockaddr_storage& address, uint32_t& addrLen);
-        /// <summary>Write message to the UDP socket.</summary>
+        /**
+         * @brief Write message to the UDP socket.
+         * @param[in] message Message buffer to frame and queue.
+         * @param length Length of message.
+         * @param addr IP address to write data to.
+         * @param addrLen 
+         * @returns bool True, if message was sent, otherwise false.
+         */
         bool write(const uint8_t* message, uint32_t length, sockaddr_storage& addr, uint32_t addrLen);
 
-        /// <summary>Cache message to frame queue.</summary>
+        /**
+         * @brief Cache message to frame queue.
+         * @param[in] message Message buffer to frame and queue.
+         * @param length Length of message.
+         * @param addr IP address to write data to.
+         * @param addrLen 
+         */
         void enqueueMessage(const uint8_t* message, uint32_t length, sockaddr_storage& addr, uint32_t addrLen);
 
-        /// <summary>Flush the message queue.</summary>
+        /**
+         * @brief Flush the message queue.
+         */
         bool flushQueue();
 
     protected:
@@ -65,7 +98,9 @@ namespace network
         bool m_debug;
 
     private:
-        /// <summary>Helper to ensure buffers are deleted.</summary>
+        /**
+         * @brief Helper to ensure buffers are deleted.
+         */
         void deleteBuffers();
     };
 } // namespace network

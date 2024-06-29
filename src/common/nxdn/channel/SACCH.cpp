@@ -1,17 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2018 Jonathan Naylor, G4KLX
-*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2018 Jonathan Naylor, G4KLX
+ *  Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "nxdn/channel/SACCH.h"
 #include "nxdn/edac/Convolution.h"
 #include "nxdn/NXDNDefines.h"
@@ -44,9 +40,7 @@ const uint32_t PUNCTURE_LIST[] = { 5U, 11U, 17U, 23U, 29U, 35U, 41U, 47U, 53U, 5
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the SACCH class.
-/// </summary>
+/* Initializes a new instance of the SACCH class. */
 SACCH::SACCH() :
     m_ran(0U),
     m_structure(ChStructure::SR_SINGLE),
@@ -56,10 +50,7 @@ SACCH::SACCH() :
     ::memset(m_data, 0x00U, NXDN_SACCH_CRC_LENGTH_BYTES);
 }
 
-/// <summary>
-/// Initializes a copy instance of the SACCH class.
-/// </summary>
-/// <param name="data"></param>
+/* Initializes a copy instance of the SACCH class. */
 SACCH::SACCH(const SACCH& data) :
     m_ran(0U),
     m_structure(ChStructure::SR_SINGLE),
@@ -68,19 +59,13 @@ SACCH::SACCH(const SACCH& data) :
     copy(data);
 }
 
-/// <summary>
-/// Finalizes a instance of SACCH class.
-/// </summary>
+/* Finalizes a instance of SACCH class. */
 SACCH::~SACCH()
 {
     delete[] m_data;
 }
 
-/// <summary>
-/// Equals operator.
-/// </summary>
-/// <param name="data"></param>
-/// <returns></returns>
+/* Equals operator. */
 SACCH& SACCH::operator=(const SACCH& data)
 {
     if (&data != this) {
@@ -93,11 +78,7 @@ SACCH& SACCH::operator=(const SACCH& data)
     return *this;
 }
 
-/// <summary>
-/// Decode a slow associated control channel.
-/// </summary>
-/// <param name="data"></param>
-/// <returns>True, if SACCH was decoded, otherwise false.</returns>
+/* Decode a slow associated control channel. */
 bool SACCH::decode(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -169,10 +150,7 @@ bool SACCH::decode(const uint8_t* data)
     return true;
 }
 
-/// <summary>
-/// Encode a slow associated control channel.
-/// </summary>
-/// <param name="data"></param>
+/* Encode a slow associated control channel. */
 void SACCH::encode(uint8_t* data) const
 {
     assert(data != nullptr);
@@ -231,10 +209,7 @@ void SACCH::encode(uint8_t* data) const
 #endif
 }
 
-/// <summary>
-/// Gets the raw SACCH data.
-/// </summary>
-/// <param name="data"></param>
+/* Gets the raw SACCH data. */
 void SACCH::getData(uint8_t* data) const
 {
     assert(data != nullptr);
@@ -246,10 +221,7 @@ void SACCH::getData(uint8_t* data) const
     }
 }
 
-/// <summary>
-/// Sets the raw SACCH data.
-/// </summary>
-/// <param name="data"></param>
+/* Sets the raw SACCH data. */
 void SACCH::setData(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -265,10 +237,7 @@ void SACCH::setData(const uint8_t* data)
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Internal helper to copy the the class.
-/// </summary>
-/// <param name="data"></param>
+/* Internal helper to copy the the class. */
 void SACCH::copy(const SACCH& data)
 {
     m_data = new uint8_t[NXDN_SACCH_CRC_LENGTH_BYTES];

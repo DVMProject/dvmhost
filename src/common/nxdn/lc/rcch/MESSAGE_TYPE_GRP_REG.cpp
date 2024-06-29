@@ -1,15 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "Defines.h"
 #include "nxdn/lc/rcch/MESSAGE_TYPE_GRP_REG.h"
 
@@ -24,20 +21,13 @@ using namespace nxdn::lc::rcch;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the MESSAGE_TYPE_GRP_REG class.
-/// </summary>
+/* Initializes a new instance of the MESSAGE_TYPE_GRP_REG class. */
 MESSAGE_TYPE_GRP_REG::MESSAGE_TYPE_GRP_REG() : RCCH()
 {
     m_messageType = MessageType::RCCH_GRP_REG;
 }
 
-/// <summary>
-/// Decode layer 3 data.
-/// </summary>
-/// <param name="data"></param>
-/// <param name="length"></param>
-/// <param name="offset"></param>
+/* Decode RCCH data. */
 void MESSAGE_TYPE_GRP_REG::decode(const uint8_t* data, uint32_t length, uint32_t offset)
 {
     assert(data != nullptr);
@@ -52,12 +42,7 @@ void MESSAGE_TYPE_GRP_REG::decode(const uint8_t* data, uint32_t length, uint32_t
     m_dstId = (uint16_t)((rcch[4U] << 8) | rcch[5U]) & 0xFFFFU;                     // Target Radio Address
 }
 
-/// <summary>
-/// Encode a control signalling block.
-/// </summary>
-/// <param name="data"></param>
-/// <param name="length"></param>
-/// <param name="offset"></param>
+/* Encode RCCH data. */
 void MESSAGE_TYPE_GRP_REG::encode(uint8_t* data, uint32_t length, uint32_t offset)
 {
     assert(data != nullptr);
@@ -76,11 +61,7 @@ void MESSAGE_TYPE_GRP_REG::encode(uint8_t* data, uint32_t length, uint32_t offse
     RCCH::encode(data, rcch, length, offset);
 }
 
-/// <summary>
-/// Returns a string that represents the current RCCH.
-/// </summary>
-/// <param name="isp"></param>
-/// <returns></returns>
+/* Returns a string that represents the current RCCH. */
 std::string MESSAGE_TYPE_GRP_REG::toString(bool isp)
 {
     return (isp) ? std::string("RCCH_GRP_REG (Group Registration Request)") :

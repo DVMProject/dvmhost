@@ -1,15 +1,18 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2023 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2023 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @file CSBK_P_CLEAR.h
+ * @ingroup dmr_csbk
+ * @file CSBK_P_CLEAR.cpp
+ * @ingroup dmr_csbk
+ */
 #if !defined(__DMR_LC_CSBK__CSBK_P_CLEAR_H__)
 #define  __DMR_LC_CSBK__CSBK_P_CLEAR_H__
 
@@ -24,20 +27,34 @@ namespace dmr
         {
             // ---------------------------------------------------------------------------
             //  Class Declaration
-            //      Implements P_CLEAR - Payload Channel Clear
             // ---------------------------------------------------------------------------
 
+            /**
+             * @brief Implements P_CLEAR - Payload Channel Clear
+             * @ingroup dmr_csbk
+             */
             class HOST_SW_API CSBK_P_CLEAR : public CSBK {
             public:
-                /// <summary>Initializes a new instance of the CSBK_P_CLEAR class.</summary>
+                /**
+                 * @brief Initializes a new instance of the CSBK_P_CLEAR class.
+                 */
                 CSBK_P_CLEAR();
 
-                /// <summary>Decode a control signalling block.</summary>
+                /**
+                 * @brief Decodes a control signalling block.
+                 * @param[in] data Buffer containing a CSBK to decode.
+                 */
                 bool decode(const uint8_t* data) override;
-                /// <summary>Encode a control signalling block.</summary>
+                /**
+                 * @brief Encodes a control signalling block.
+                 * @param[out] data Buffer to encode a CSBK.
+                 */
                 void encode(uint8_t* data) override;
 
-                /// <summary>Returns a string that represents the current CSBK.</summary>
+                /**
+                 * @brief Returns a string that represents the current CSBK.
+                 * @returns std::string String representation of the CSBK.
+                 */
                 std::string toString() override;
             };
         } // namespace csbk

@@ -1,17 +1,23 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2015,2016 Jonathan Naylor, G4KLX
+ *  Copyright (C) 2020-2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2015,2016 Jonathan Naylor, G4KLX
-*   Copyright (C) 2020-2024 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @defgroup dmr_lc Link Control
+ * @brief Implementation for the data handling of ETSI TS-102 link control data.
+ * @ingroup dmr
+ * 
+ * @file LC.h
+ * @ingroup dmr_lc
+ * @file LC.cpp
+ * @ingroup dmr_lc
+ */
 #if !defined(__DMR_LC__LC_H__)
 #define __DMR_LC__LC_H__
 
@@ -24,53 +30,100 @@ namespace dmr
     {
         // ---------------------------------------------------------------------------
         //  Class Declaration
-        //      Represents DMR link control data.
         // ---------------------------------------------------------------------------
 
+        /**
+         * @brief Represents DMR link control data.
+         * @ingroup dmr_lc
+         */
         class HOST_SW_API LC {
         public:
-            /// <summary>Initializes a new instance of the LC class.</summary>
+            /**
+             * @brief Initializes a new instance of the LC class.
+             * @param flco Full-link Control Opcode.
+             * @param srcId Source ID.
+             * @param dstId Destination ID.
+             */
             LC(defines::FLCO::E flco, uint32_t srcId, uint32_t dstId);
-            /// <summary>Initializes a new instance of the LC class.</summary>
+            /**
+             * @brief Initializes a new instance of the LC class.
+             * @param data Buffer containing LC data.
+             */
             LC(const uint8_t* data);
-            /// <summary>Initializes a new instance of the LC class.</summary>
+            /**
+             * @brief Initializes a new instance of the LC class.
+             * @param bits Boolean bit buffer containing LC data.
+             */
             LC(const bool* bits);
-            /// <summary>Initializes a new instance of the LC class.</summary>
+            /**
+             * @brief Initializes a new instance of the LC class.
+             */
             LC();
-            /// <summary>Finalizes a instance of the LC class.</summary>
+            /**
+             * @brief Finalizes a instance of the LC class.
+             */
             ~LC();
 
-            /// <summary>Gets LC data as bytes.</summary>
+            /**
+             * @brief Gets LC data as bytes.
+             * @param[out] data Buffer containing LC data.
+             */
             void getData(uint8_t* data) const;
-            /// <summary>Gets LC data as bits.</summary>
+            /**
+             * @brief Gets LC data as bits.
+             * @param[out] bits Boolean bit buffer containing LC data.
+             */
             void getData(bool* bits) const;
 
         public:
-            /// <summary>Flag indicating whether link protection is enabled.</summary>
+            /** @name Common Data */
+            /**
+             * @brief Flag indicating whether link protection is enabled.
+             */
             __PROPERTY(bool, PF, PF);
 
-            /// <summary>Full-link control opcode.</summary>
+            /**
+             * @brief Full-link control opcode.
+             */
             __PROPERTY(defines::FLCO::E, FLCO, FLCO);
 
-            /// <summary>Feature ID.</summayr>
+            /**
+             * @brief Feature ID
+             */
             __PROPERTY(uint8_t, FID, FID);
 
-            /// <summary>Source ID.</summary>
+            /**
+             * @brief Source ID.
+             */
             __PROPERTY(uint32_t, srcId, SrcId);
-            /// <summary>Destination ID.</summary>
+            /**
+             * @brief Destination ID.
+             */
             __PROPERTY(uint32_t, dstId, DstId);
+            /** @} */
 
-            /** Service Options */
-            /// <summary>Flag indicating the emergency bits are set.</summary>
+            /** @name Service Options */
+            /**
+             * @brief Flag indicating the emergency bits are set.
+             */
             __PROPERTY(bool, emergency, Emergency);
-            /// <summary>Flag indicating that encryption is enabled.</summary>
+            /**
+             * @brief Flag indicating that encryption is enabled.
+             */
             __PROPERTY(bool, encrypted, Encrypted);
-            /// <summary>Flag indicating broadcast operation.</summary>
+            /**
+             * @brief Flag indicating broadcast operation.
+             */
             __PROPERTY(bool, broadcast, Broadcast);
-            /// <summary>Flag indicating OVCM operation.</summary>
+            /**
+             * @brief Flag indicating OVCM operation.
+             */
             __PROPERTY(bool, ovcm, OVCM);
-            /// <summary>Priority level for the traffic.</summary>
+            /**
+             * @brief Priority level for the traffic.
+             */
             __PROPERTY(uint8_t, priority, Priority);
+            /** @} */
 
         private:
             bool m_R;

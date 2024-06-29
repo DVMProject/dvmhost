@@ -1,18 +1,24 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2016 Jonathan Naylor, G4KLX
+ *  Copyright (C) 2017-2022,2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (c) 2024 Patrick McDonnell, W3AXL
+ *
+ */
 /**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2016 Jonathan Naylor, G4KLX
-*   Copyright (C) 2017-2022,2024 Bryan Biedenkapp, N2PLL
-*   Copyright (c) 2024 Patrick McDonnell, W3AXL
-*
-*/
+ * @defgroup lookups_rid Radio ID Lookups
+ * @brief Implementation for radio ID lookup tables.
+ * @ingroup lookups
+ * 
+ * @file RadioIdLookup.h
+ * @ingroup lookups_rid
+ * @file RadioIdLookup.cpp
+ * @ingroup lookups_rid
+ */
 #if !defined(__RADIO_ID_LOOKUP_H__)
 #define __RADIO_ID_LOOKUP_H__
 
@@ -26,12 +32,17 @@ namespace lookups
 {
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //      Represents an individual entry in the radio ID table.
     // ---------------------------------------------------------------------------
 
+    /**
+     * @brief Represents an individual entry in the radio ID table.
+     * @ingroup lookups_rid
+     */
     class HOST_SW_API RadioId {
     public:
-        /// <summary>Initializes a new instance of the RadioId class.</summary>
+        /**
+         * @brief Initializes a new instance of the RadioId class.
+         */
         RadioId() :
             m_radioEnabled(false),
             m_radioDefault(false),
@@ -39,9 +50,11 @@ namespace lookups
         {
             /* stub */
         }
-        /// <summary>Initializes a new instance of the RadioId class.</summary>
-        /// <param name="radioEnabled"></param>
-        /// <param name="radioDefault"></param>
+        /**
+         * @brief Initializes a new instance of the RadioId class.
+         * @param radioEnabled Flag indicating radio is enabled.
+         * @param radioDefault Flag indicating this is a "default" (i.e. undefined) radio.
+         */
         RadioId(bool radioEnabled, bool radioDefault) :
             m_radioEnabled(radioEnabled),
             m_radioDefault(radioDefault),
@@ -50,10 +63,12 @@ namespace lookups
             /* stub */
         }
 
-        /// <summary>Initializes a new instance of the RadioId class.</summary>
-        /// <param name="radioEnabled"></param>
-        /// <param name="radioDefault"></param>
-        /// <param name="radioAlias"></param>
+        /**
+         * @brief Initializes a new instance of the RadioId class.
+         * @param radioEnabled Flag indicating radio is enabled.
+         * @param radioDefault Flag indicating this is a "default" (i.e. undefined) radio.
+         * @param radioAlias Textual alias for the radio.
+         */
         RadioId(bool radioEnabled, bool radioDefault, const std::string& radioAlias) :
             m_radioEnabled(radioEnabled),
             m_radioDefault(radioDefault),
@@ -62,7 +77,10 @@ namespace lookups
             /* stub */
         }
 
-        /// <summary>Equals operator. Copies this RadioId to another RadioId.</summary>
+        /**
+         * @brief Equals operator. Copies this RadioId to another RadioId.
+         * @param data Instance of RadioId to copy.
+         */
         RadioId& operator=(const RadioId& data)
         {
             if (this != &data) {
@@ -74,19 +92,23 @@ namespace lookups
             return *this;
         }
 
-        /// <summary>Sets flag values.</summary>
-        /// <param name="radioEnabled">Radio enabled.</param>
-        /// <param name="radioDefault">Radio default.</param>
+        /**
+         * @brief Sets flag values.
+         * @param radioEnabled Flag indicating radio is enabled.
+         * @param radioDefault Flag indicating this is a "default" (i.e. undefined) radio.
+         */
         void set(bool radioEnabled, bool radioDefault)
         {
             m_radioEnabled = radioEnabled;
             m_radioDefault = radioDefault;
         }
 
-        /// <summary>Sets flag values.</summary>
-        /// <param name="radioEnabled">Radio enabled.</param>
-        /// <param name="radioDefault">Radio default.</param>
-        /// <param name="radioAlias"></param>
+        /**
+         * @brief Sets flag values.
+         * @param radioEnabled Flag indicating radio is enabled.
+         * @param radioDefault Flag indicating this is a "default" (i.e. undefined) radio.
+         * @param radioAlias Textual alias for the radio.
+         */
         void set(bool radioEnabled, bool radioDefault, const std::string& radioAlias)
         {
             m_radioEnabled = radioEnabled;
@@ -95,53 +117,93 @@ namespace lookups
         }
 
     public:
-        /// <summary>Flag indicating if the radio is enabled.</summary>
+        /**
+         * @brief Flag indicating if the radio is enabled.
+         */
         __READONLY_PROPERTY_PLAIN(bool, radioEnabled);
-        /// <summary>Flag indicating if the radio is default.</summary>
+        /**
+         * @brief Flag indicating if the radio is default.
+         */
         __READONLY_PROPERTY_PLAIN(bool, radioDefault);
-        /// <summary>Alias for the radio.</summary>
+        /**
+         * @brief Alias for the radio.
+         */
         __READONLY_PROPERTY_PLAIN(std::string, radioAlias);
     };
 
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //      Implements a threading lookup table class that contains a radio ID
-    //      lookup table.
     // ---------------------------------------------------------------------------
 
+    /**
+     * @brief Implements a threading lookup table class that contains a radio ID
+     *  lookup table.
+     * @ingroup lookups_rid
+     */
     class HOST_SW_API RadioIdLookup : public LookupTable<RadioId> {
     public:
-        /// <summary>Initializes a new instance of the RadioIdLookup class.</summary>
+        /**
+         * @brief Initializes a new instance of the RadioIdLookup class.
+         * @param filename Full-path to the radio ID table file.
+         * @param reloadTime Interval of time to reload the radio ID table.
+         * @param ridAcl Flag indicating whether radio ID access control is enabled.
+         */
         RadioIdLookup(const std::string& filename, uint32_t reloadTime, bool ridAcl);
 
-        /// <summary>Clears all entries from the lookup table.</summary>
+        /**
+         * @brief Clears all entries from the lookup table.
+         */
         void clear() override;
 
-        /// <summary>Toggles the specified radio ID enabled or disabled.</summary>
+        /**
+         * @brief Toggles the specified radio ID enabled or disabled.
+         * @param id Unique ID to toggle.
+         * @param enabled Flag indicating if radio ID is enabled or not.
+         */
         void toggleEntry(uint32_t id, bool enabled);
 
-        /// <summary>Adds a new entry to the lookup table by the specified unique ID, with an alias.</summary>
+        /**
+         * @brief Adds a new entry to the lookup table by the specified unique ID, with an alias.
+         * @param id Unique ID to add.
+         * @param enabled Flag indicating if radio ID is enabled or not.
+         * @param alias Alias for the radio ID
+         */
         void addEntry(uint32_t id, bool enabled, const std::string& alias);
-        /// <summary>Erases an existing entry from the lookup table by the specified unique ID.</summary>
+        /**
+         * @brief Erases an existing entry from the lookup table by the specified unique ID.
+         * @param id Unique ID to erase.
+         */
         void eraseEntry(uint32_t id);
-        /// <summary>Finds a table entry in this lookup table.</summary>
+        /**
+         * @brief Finds a table entry in this lookup table.
+         * @param id Unique identifier for table entry.
+         * @returns RadioId Table entry.
+         */
         RadioId find(uint32_t id) override;
 
-        /// <summary>Saves loaded radio ID lookups.</summary>
+        /**
+         * @brief Saves loaded radio ID lookups.
+         */
         void commit();
 
-        /// <summary>Flag indicating whether radio ID access control is enabled or not.</summary>
+        /**
+         * @brief Flag indicating whether radio ID access control is enabled or not.
+         */
         bool getACL();
 
     protected:
         bool m_acl;
 
-        /// <summary>Loads the table from the passed lookup table file.</summary>
-        /// <returns>True, if lookup table was loaded, otherwise false.</returns>
+        /**
+         * @brief Loads the table from the passed lookup table file.
+         * @return True, if lookup table was loaded, otherwise false.
+         */
         bool load() override;
 
-        /// <summary>Saves the table to the passed lookup table file.</summary>
-        /// <returns>True, if lookup table was saved, otherwise false.</returns>
+        /**
+         * @brief Saves the table to the passed lookup table file.
+         * @return True, if lookup table was saved, otherwise false.
+         */
         bool save() override;
 
     private:

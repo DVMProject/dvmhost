@@ -1,17 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2015,2016 Jonathan Naylor, G4KLX
-*   Copyright (C) 2020-2024 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2015,2016 Jonathan Naylor, G4KLX
+ *  Copyright (C) 2020-2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "Defines.h"
 #include "dmr/DMRDefines.h"
 #include "dmr/lc/LC.h"
@@ -27,12 +23,7 @@ using namespace dmr::lc;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the LC class.
-/// </summary>
-/// <param name="flco">Full-link Control Opcode.</param>
-/// <param name="srcId">Source ID.</param>
-/// <param name="dstId">Destination ID.</param>
+/* Initializes a new instance of the LC class. */
 LC::LC(FLCO::E flco, uint32_t srcId, uint32_t dstId) :
     m_PF(false),
     m_FLCO(flco),
@@ -49,10 +40,7 @@ LC::LC(FLCO::E flco, uint32_t srcId, uint32_t dstId) :
     /* stub */
 }
 
-/// <summary>
-/// Initializes a new instance of the LC class.
-/// </summary>
-/// <param name="data"></param>
+/* Initializes a new instance of the LC class. */
 LC::LC(const uint8_t* data) :
     m_PF(false),
     m_FLCO(FLCO::GROUP),
@@ -85,10 +73,7 @@ LC::LC(const uint8_t* data) :
     m_srcId = data[6U] << 16 | data[7U] << 8 | data[8U];                        // Source Address
 }
 
-/// <summary>
-/// Initializes a new instance of the LC class.
-/// </summary>
-/// <param name="bits"></param>
+/* Initializes a new instance of the LC class. */
 LC::LC(const bool* bits) :
     m_PF(false),
     m_FLCO(FLCO::GROUP),
@@ -135,9 +120,7 @@ LC::LC(const bool* bits) :
     m_srcId = s1 << 16 | s2 << 8 | s3;                                          // Source Address
     m_dstId = d1 << 16 | d2 << 8 | d3;                                          // Destination Address
 }
-/// <summary>
-/// Initializes a new instance of the LC class.
-/// </summary>
+/* Initializes a new instance of the LC class. */
 LC::LC() :
     m_PF(false),
     m_FLCO(FLCO::GROUP),
@@ -154,15 +137,10 @@ LC::LC() :
     /* stub */
 }
 
-/// <summary>
-/// Finalizes a instance of the LC class.
-/// </summary>
+/* Finalizes a instance of the LC class. */
 LC::~LC() = default;
 
-/// <summary>
-///
-/// </summary>
-/// <param name="data"></param>
+/* Gets LC data as bytes. */
 void LC::getData(uint8_t* data) const
 {
     assert(data != nullptr);
@@ -192,10 +170,7 @@ void LC::getData(uint8_t* data) const
     data[8U] = m_srcId >> 0;                                                    // ..
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="bits"></param>
+/* Gets LC data as bits. */
 void LC::getData(bool* bits) const
 {
     assert(bits != nullptr);

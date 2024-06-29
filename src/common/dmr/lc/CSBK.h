@@ -8,10 +8,16 @@
 * @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2015,2016 Jonathan Naylor, G4KLX
-*   Copyright (C) 2019-2024 Bryan Biedenkapp, N2PLL
+*  Copyright (C) 2015,2016 Jonathan Naylor, G4KLX
+*  Copyright (C) 2019-2024 Bryan Biedenkapp, N2PLL
 *
 */
+/**
+ * @file CSBK.h
+ * @ingroup dmr_lc
+ * @file CSBK.cpp
+ * @ingroup dmr_lc
+ */
 #if !defined(__DMR_LC__CSBK_H__)
 #define __DMR_LC__CSBK_H__
 
@@ -27,125 +33,232 @@ namespace dmr
     {
         // ---------------------------------------------------------------------------
         //  Class Declaration
-        //      Represents DMR control signalling block data.
         // ---------------------------------------------------------------------------
 
+        /**
+         * @brief Represents DMR control signalling block data.
+         * @ingroup dmr_lc
+         */
         class HOST_SW_API CSBK {
         public:
-            /// <summary>Initializes a copy instance of the CSBK class.</summary>
+            /**
+             * @brief Initializes a copy instance of the CSBK class.
+             * @param data Instance of CSBK to copy.
+             */
             CSBK(const CSBK& data);
-            /// <summary>Initializes a new instance of the CSBK class.</summary>
+            /**
+             * @brief Initializes a new instance of the CSBK class.
+             */
             CSBK();
-            /// <summary>Finalizes a instance of the CSBK class.</summary>
+            /**
+             * @brief Finalizes a instance of the CSBK class.
+             */
             virtual ~CSBK();
 
-            /// <summary>Decodes a DMR CSBK.</summary>
+            /**
+             * @brief Decodes a DMR CSBK.
+             * @param[in] data Buffer containing a CSBK to decode.
+             */
             virtual bool decode(const uint8_t* data) = 0;
-            /// <summary>Encodes a DMR CSBK.</summary>
+            /**
+             * @brief Encodes a DMR CSBK.
+             * @param[out] data Buffer to encode a CSBK.
+             */
             virtual void encode(uint8_t* data) = 0;
 
-            /// <summary>Returns a string that represents the current CSBK.</summary>
+            /**
+             * @brief Returns a string that represents the current CSBK.
+             * @returns std::string String representation of the CSBK.
+             */
             virtual std::string toString();
 
-            /// <summary>Returns a copy of the raw decoded CSBK bytes.</summary>
-            /// <remarks>This will only return data for a *decoded* CSBK, not a created or copied CSBK.</remarks>
+            /**
+             * @brief Returns a copy of the raw decoded CSBK bytes.
+             * This will only return data for a *decoded* CSBK, not a created or copied CSBK.
+             * @returns uint8_t* Raw decoded CSBK bytes.
+             */
             uint8_t* getDecodedRaw() const;
 
-            /// <summary>Regenerate a DMR CSBK without decoding.</summary>
-            /// <remarks>This is because the DMR architecture allows fall-thru of unsupported CSBKs.</remarks>
+            /**
+             * @brief Regenerate a DMR CSBK without decoding.
+             *  This is because the DMR architecture allows fall-thru of unsupported CSBKs.
+             * @param data Buffer containing DMR CSBK to regenerate.
+             * @param dataType Data Type
+             * @returns bool True, if CSBK is regenerated, otherwise false.
+             */
             static bool regenerate(uint8_t* data, uint8_t dataType);
 
-            /// <summary>Gets the flag indicating verbose log output.</summary>
+            /**
+             * @brief Gets the flag indicating verbose log output.
+             * @returns bool True, if the CSBK is verbose logging, otherwise false.
+             */
             static bool getVerbose() { return m_verbose; }
-            /// <summary>Sets the flag indicating verbose log output.</summary>
+            /**
+             * @brief Sets the flag indicating verbose log output.
+             * @param verbose Flag indicating verbose log output.
+             */
             static void setVerbose(bool verbose) { m_verbose = verbose; }
 
-            /** Local Site data */
-            /// <summary>Gets the local site data.</summary>
+            /** @name Local Site data */
+            /**
+             * @brief Gets the local site data.
+             * @returns SiteData Currently set site data for the CSBK class.
+             */
             static SiteData getSiteData() { return m_siteData; }
-            /// <summary>Sets the local site data.</summary>
+            /**
+             * @brief Sets the local site data.
+             * @param siteData Site data to set for the CSBK class.
+             */
             static void setSiteData(SiteData siteData) { m_siteData = siteData; }
+            /** @} */
 
         public:
-            /** Common Data */
-            /// <summary>DMR access color code.</summary>
+            /** @name Common Data */
+            /**
+             * @brief DMR access color code.
+             */
             __PROTECTED_PROPERTY(uint8_t, colorCode, ColorCode);
 
-            /// <summary>Flag indicating this is the last CSBK in a sequence of CSBKs.</summary>
+            /**
+             * @brief Flag indicating this is the last CSBK in a sequence of CSBKs.
+             */
             __PROTECTED_PROPERTY(bool, lastBlock, LastBlock);
-            /// <summary>Flag indicating whether the CSBK is a Cdef block.</summary>
+            /**
+             * @brief Flag indicating whether the CSBK is a Cdef block.
+             */
             __PROTECTED_PROPERTY(bool, Cdef, Cdef);
 
-            /// <summary>CSBK opcode.</summary>
+            /**
+             * @brief CSBK opcode.
+             */
             __PROTECTED_PROPERTY(uint8_t, CSBKO, CSBKO);
-            /// <summary>CSBK feature ID.</summayr>
+            /**
+             * @brief             */
             __PROTECTED_PROPERTY(uint8_t, FID, FID);
 
-            /// <summary>Flag indicating whether the CSBK is group or individual.</summary>
+            /**
+             * @brief Flag indicating whether the CSBK is group or individual.
+             */
             __PROTECTED_PROPERTY(bool, GI, GI);
 
-            /// <summary>Source ID.</summary>
+            /**
+             * @brief Source ID.
+             */
             __PROTECTED_PROPERTY(uint32_t, srcId, SrcId);
-            /// <summary>Destination ID.</summary>
+            /**
+             * @brief Destination ID.
+             */
             __PROTECTED_PROPERTY(uint32_t, dstId, DstId);
 
-            /// <summary></summary>
+            /**
+             * @brief 
+             */
             __PROTECTED_READONLY_PROPERTY(bool, dataContent, DataContent);
 
-            /// <summary>Number of blocks to follow.</summary>
+            /**
+             * @brief Number of blocks to follow.
+             */
             __PROTECTED_PROPERTY(uint8_t, CBF, CBF);
 
-            /// <summary>Data type for this CSBK.</summary>
+            /**
+             * @brief Data type for this CSBK.
+             */
             __PROTECTED_PROPERTY(defines::DataType::E, dataType, DataType);
+            /** @} */
 
-            /** Common Service Options */
-            /// <summary>Flag indicating the emergency bits are set.</summary>
+            /** @name Common Service Options */
+            /**
+             * @brief Flag indicating the emergency bits are set.
+             */
             __PROTECTED_PROPERTY(bool, emergency, Emergency);
-            /// <summary>Flag indicating that privacy is enabled.</summary>
+            /**
+             * @brief Flag indicating that privacy is enabled.
+             */
             __PROTECTED_PROPERTY(bool, privacy, Privacy);
-            /// <summary>Flag indicating that supplementary data is required.</summary>
+            /**
+             * @brief Flag indicating that supplementary data is required.
+             */
             __PROTECTED_PROPERTY(bool, supplementData, SupplementData);
-            /// <summary>Priority level for the traffic.</summary>
+            /**
+             * @brief Priority level for the traffic.
+             */
             __PROTECTED_PROPERTY(uint8_t, priority, Priority);
-            /// <summary>Flag indicating a broadcast service.</summary>
+            /**
+             * @brief Flag indicating a broadcast service.
+             */
             __PROTECTED_PROPERTY(bool, broadcast, Broadcast);
-            /// <summary>Flag indicating a proxy.</summary>
+            /**
+             * @brief Flag indicating a proxy.
+             */
             __PROTECTED_PROPERTY(bool, proxy, Proxy);
 
-            /// <summary>Response information.</summary>
+            /**
+             * @brief Response information.
+             */
             __PROTECTED_PROPERTY(uint8_t, response, Response);
-            /// <summary>Reason type.</summary>
+            /**
+             * @brief Reason type.
+             */
             __PROTECTED_PROPERTY(uint8_t, reason, Reason);
+            /** @} */
 
-            /** Tier 3 */
-            /// <summary>Site offset timing.</summary>
+            /** @name Tier 3 */
+            /**
+             * @brief Site offset timing.
+             */
             __PROTECTED_PROPERTY(bool, siteOffsetTiming, SiteOffsetTiming);
 
-            /// <summary>Broadcast Logical Channel ID 1.</summary>
+            /**
+             * @brief Broadcast Logical Channel ID 1.
+             */
             __PROTECTED_PROPERTY(uint16_t, logicalCh1, LogicalCh1);
-            /// <summary>Broadcast Logical Channel ID 2.</summary>
+            /**
+             * @brief Broadcast Logical Channel ID 2.
+             */
             __PROTECTED_PROPERTY(uint16_t, logicalCh2, LogicalCh2);
-            /// <summary>Logical Channel Slot Number.</summary>
+            /**
+             * @brief Logical Channel Slot Number.
+             */
             __PROTECTED_PROPERTY(uint8_t, slotNo, SlotNo);
+            /** @} */
 
-            /** Local Site data */
-            /// <summary>Local Site Identity Entry.</summary>
+            /** @name Local Site data */
+            /**
+             * @brief Local Site Identity Entry.
+             */
             __PROTECTED_PROPERTY_PLAIN(::lookups::IdenTable, siteIdenEntry);
+            /** @} */
 
         protected:
             static bool m_verbose;
 
-            /** Local Site data */
+            // Local Site data
             static SiteData m_siteData;
 
-            /// <summary>Internal helper to convert payload bytes to a 64-bit long value.</summary>
+            /**
+             * @brief Internal helper to convert payload bytes to a 64-bit long value.
+             * @param[in] payload Buffer containing payload to convert.
+             * @returns ulong64_t 64-bit packed value containing the buffer.
+             */
             static ulong64_t toValue(const uint8_t* payload);
-            /// <summary>Internal helper to convert a 64-bit long value to payload bytes.</summary>
+            /**
+             * @brief Internal helper to convert a 64-bit long value to payload bytes.
+             * @param[in] value 64-bit packed value.
+             * @returns UInt8Array Buffer containing the unpacked payload.
+             */
             static UInt8Array fromValue(const ulong64_t value);
 
-            /// <summary>Internal helper to decode a control signalling block.</summary>
+            /**
+             * @brief Internal helper to decode a control signalling block.
+             * @param[in] data Raw data.
+             * @param[out] payload CSBK payload buffer.
+             */
             bool decode(const uint8_t* data, uint8_t* payload);
-            /// <summary>Internal helper to encode a control signalling block.</summary>
+            /**
+             * @brief Internal helper to encode a control signalling block.
+             * @param[out] data Raw data.
+             * @param[in] payload CSBK payload buffer.
+             */
             void encode(uint8_t* data, const uint8_t* payload);
 
             __PROTECTED_COPY(CSBK);

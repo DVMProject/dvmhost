@@ -1,15 +1,18 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2023 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2023 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @file RTPHeader.h
+ * @ingroup network_core
+ * @file RTPHeader.cpp
+ * @ingroup network_core
+ */
 #if !defined(__RTP_HEADER_H__)
 #define __RTP_HEADER_H__
 
@@ -33,52 +36,86 @@ namespace network
     {
         // ---------------------------------------------------------------------------
         //  Class Declaration
-        //      Represents an RTP header.
-        //
-        // Byte 0               1               2               3
-        // Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 
-        //     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-        //     |Ver|P|E| CSRC  |M| Payload Type| Sequence                      |
-        //     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-        //     | Timestamp                                                     |
-        //     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-        //     | SSRC                                                          |
-        //     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
         // ---------------------------------------------------------------------------
 
+        /**
+         * @brief Represents an RTP header.
+         * \code{.unparsed}
+         * Byte 0               1               2               3
+         * Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 
+         *     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *     |Ver|P|E| CSRC  |M| Payload Type| Sequence                      |
+         *     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *     | Timestamp                                                     |
+         *     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *     | SSRC                                                          |
+         *     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         * \endcode
+         * @ingroup network_core
+         */
         class HOST_SW_API RTPHeader {
         public:
-            /// <summary>Initializes a new instance of the RTPHeader class.</summary>
+            /**
+             * @brief Initializes a new instance of the RTPHeader class.
+             */
             RTPHeader();
-            /// <summary>Finalizes a instance of the RTPHeader class.</summary>
+            /**
+             * @brief Finalizes a instance of the RTPHeader class.
+             */
             ~RTPHeader();
 
-            /// <summary>Decode a RTP header.</summary>
+            /**
+             * @brief Decode a RTP header.
+             * @param[in] data Buffer containing RTP header to decode.
+             */
             virtual bool decode(const uint8_t* data);
-            /// <summary>Encode a RTP header.</summary>
+            /**
+             * @brief Encode a RTP header.
+             * @param[out] data Buffer to encode an RTP header.
+             */
             virtual void encode(uint8_t* data);
 
-            /// <summary>Helper to reset the start timestamp.</summary>
+            /**
+             * @brief Helper to reset the start timestamp.
+             */
             static void resetStartTime();
 
         public:
-            /// <summary>RTP Protocol Version.</summary>
+            /**
+             * @brief RTP Protocol Version.
+             */
             __READONLY_PROPERTY(uint8_t, version, Version);
-            /// <summary>Flag indicating if the packet has trailing padding.</summary>
+            /**
+             * @brief Flag indicating if the packet has trailing padding.
+             */
             __READONLY_PROPERTY(bool, padding, Padding);
-            /// <summary>Flag indicating the presence of an extension header.</summary>
+            /**
+             * @brief Flag indicating the presence of an extension header.
+             */
             __PROPERTY(bool, extension, Extension);
-            /// <summary>Count of contributing source IDs that follow the SSRC.</summary>
+            /**
+             * @brief Count of contributing source IDs that follow the SSRC.
+             */
             __READONLY_PROPERTY(uint8_t, cc, CSRCCount);
-            /// <summary>Flag indicating application-specific behavior.</summary>
+            /**
+             * @brief Flag indicating application-specific behavior.
+             */
             __PROPERTY(bool, marker, Marker);
-            /// <summary>Format of the payload contained within the packet.</summary>
+            /**
+             * @brief Format of the payload contained within the packet.
+             */
             __PROPERTY(uint8_t, payloadType, PayloadType);
-            /// <summary>Sequence number for the RTP packet.</summary>
+            /**
+             * @brief Sequence number for the RTP packet.
+             */
             __PROPERTY(uint16_t, seq, Sequence);
-            /// <summary>RTP packet timestamp.</summary>
+            /**
+             * @brief RTP packet timestamp.
+             */
             __PROPERTY(uint32_t, timestamp, Timestamp);
-            /// <summary>Synchronization Source ID.</summary>
+            /**
+             * @brief Synchronization Source ID.
+             */
             __PROPERTY(uint32_t, ssrc, SSRC);
         
         private:

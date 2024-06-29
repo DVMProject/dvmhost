@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2024 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @file TcpListener.h
+ * @ingroup tcp_socket
+ */
 #if !defined(__TCP_LISTENER_H__)
 #define __TCP_LISTENER_H__
 
@@ -24,9 +25,12 @@ namespace network
     {
         // ---------------------------------------------------------------------------
         //  Class Declaration
-        //      Implements a TCP server listener.
         // ---------------------------------------------------------------------------
 
+        /**
+         * @brief Implements a TCP server listener.
+         * @ingroup tcp_socket
+         */
         class HOST_SW_API TcpListener : public Socket
         {
         public:
@@ -35,7 +39,9 @@ namespace network
             auto operator=(TcpListener&&) -> TcpListener& = delete;
             TcpListener(TcpListener&) = delete;
 
-            /// <summary>Initializes a new instance of the TcpListener class.</summary>
+            /**
+             * @brief Initializes a new instance of the TcpListener class.
+             */
             TcpListener() noexcept(false) : Socket(AF_INET, SOCK_STREAM, 0)
             {
                 int reuse = 1;
@@ -44,20 +50,24 @@ namespace network
                     throw std::runtime_error("Cannot set the TCP socket option");
                 }
             }
-            /// <summary>Initializes a new instance of the TcpListener class.</summary>
-            /// <param name="port"></param>
-            /// <param name="ipAddr"></param>
-            explicit TcpListener(const uint16_t port, const std::string& ipAddr = "0.0.0.0") noexcept(false) : TcpListener()
+            /**
+             * @brief Initializes a new instance of the TcpListener class.
+             * @param port Port to listen on.
+             * @param address Address to listen on.
+             */
+            explicit TcpListener(const uint16_t port, const std::string& address = "0.0.0.0") noexcept(false) : TcpListener()
             {
-                if (!bind(ipAddr, port)) {
+                if (!bind(address, port)) {
                     LogError(LOG_NET, "Cannot to bind TCP server, err: %d", errno);
                     throw std::runtime_error("Cannot to bind TCP server");
                 }
             }
-            /// <summary>Initializes a new instance of the TcpListener class.</summary>
-            /// <param name="ipAddr"></param>
-            /// <param name="port"></param>
-            /// <param name="backlog"></param>
+            /**
+             * @brief Initializes a new instance of the TcpListener class.
+             * @param ipAddr IP address.
+             * @param port Port.
+             * @param backlog 
+             */
             TcpListener(const std::string& ipAddr, const uint16_t port, const int backlog) noexcept(false) : TcpListener(port, ipAddr)
             {
                 if (listen(ipAddr, port, backlog) < 0) {
@@ -66,10 +76,10 @@ namespace network
                 }
             }
 
-            /// <summary>
-            /// Accept a new TCP connection either secure or unsecure.
-            /// </summary>
-            /// <returns>Newly accepted TCP connection</returns>
+            /**
+             * @brief Accept a new TCP connection either secure or unsecure.
+             * @returns TcpClient* Newly accepted TCP connection.
+             */
             [[nodiscard]] TcpClient* accept() noexcept(false)
             {
                 sockaddr_in client = {};

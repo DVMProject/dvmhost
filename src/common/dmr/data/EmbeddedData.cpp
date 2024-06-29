@@ -1,17 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2015,2016,2017 Jonathan Naylor, G4KLX
-*   Copyright (C) 2024 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2015,2016,2017 Jonathan Naylor, G4KLX
+ *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "Defines.h"
 #include "dmr/DMRDefines.h"
 #include "dmr/data/EmbeddedData.h"
@@ -31,9 +27,7 @@ using namespace dmr::data;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the EmbeddedData class.
-/// </summary>
+/* Initializes a new instance of the EmbeddedData class. */
 EmbeddedData::EmbeddedData() :
     m_valid(false),
     m_FLCO(FLCO::GROUP),
@@ -45,21 +39,14 @@ EmbeddedData::EmbeddedData() :
     m_data = new bool[72U];
 }
 
-/// <summary>
-/// Finalizes a instance of the EmbeddedData class.
-/// </summary>
+/* Finalizes a instance of the EmbeddedData class. */
 EmbeddedData::~EmbeddedData()
 {
     delete[] m_raw;
     delete[] m_data;
 }
 
-/// <summary>
-/// Add LC data (which may consist of 4 blocks) to the data store.
-/// </summary>
-/// <param name="data"></param>
-/// <param name="lcss"></param>
-/// <returns></returns>
+/* Add LC data (which may consist of 4 blocks) to the data store. */
 bool EmbeddedData::addData(const uint8_t* data, uint8_t lcss)
 {
     assert(data != nullptr);
@@ -124,12 +111,7 @@ bool EmbeddedData::addData(const uint8_t* data, uint8_t lcss)
     return false;
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="data"></param>
-/// <param name="n"></param>
-/// <returns></returns>
+/* Get LC data from the data store. */
 uint8_t EmbeddedData::getData(uint8_t* data, uint8_t n) const
 {
     assert(data != nullptr);
@@ -174,10 +156,7 @@ uint8_t EmbeddedData::getData(uint8_t* data, uint8_t n) const
     }
 }
 
-/// <summary>
-/// Sets link control data.
-/// </summary>
-/// <param name="lc"></param>
+/* Sets link control data. */
 void EmbeddedData::setLC(const lc::LC& lc)
 {
     lc.getData(m_data);
@@ -188,10 +167,7 @@ void EmbeddedData::setLC(const lc::LC& lc)
     encodeEmbeddedData();
 }
 
-/// <summary>
-/// Gets link control data.
-/// </summary>
-/// <returns></returns>
+/* Gets link control data. */
 std::unique_ptr<lc::LC> EmbeddedData::getLC() const
 {
     if (!m_valid)
@@ -203,11 +179,7 @@ std::unique_ptr<lc::LC> EmbeddedData::getLC() const
     return std::make_unique<lc::LC>(m_data);
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="data"></param>
-/// <returns></returns>
+/* Get raw embedded data buffer. */
 bool EmbeddedData::getRawData(uint8_t* data) const
 {
     assert(data != nullptr);
@@ -228,9 +200,7 @@ bool EmbeddedData::getRawData(uint8_t* data) const
     return true;
 }
 
-/// <summary>
-/// Helper to reset data values to defaults.
-/// </summary>
+/* Helper to reset data values to defaults. */
 void EmbeddedData::reset()
 {
     m_state = LCS_NONE;
@@ -241,9 +211,7 @@ void EmbeddedData::reset()
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Unpack and error check an embedded LC.
-/// </summary>
+/* Unpack and error check an embedded LC. */
 void EmbeddedData::decodeEmbeddedData()
 {
     // the data is unpacked downwards in columns
@@ -308,9 +276,7 @@ void EmbeddedData::decodeEmbeddedData()
     m_FLCO = (FLCO::E)(flco & 0x3FU);
 }
 
-/// <summary>
-/// Pack and FEC for an embedded LC.
-/// </summary>
+/* Pack and FEC for an embedded LC. */
 void EmbeddedData::encodeEmbeddedData()
 {
     uint32_t crc;

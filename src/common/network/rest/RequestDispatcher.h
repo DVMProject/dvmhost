@@ -1,15 +1,23 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2023 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2023 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @defgroup rest REST Services
+ * @brief Implementation for REST services.
+ * @ingroup network_core
+ * @defgroup http Embedded HTTP Core
+ * @brief Implementation for basic HTTP services.
+ * @ingroup rest
+ * 
+ * @file RequestDispatcher.h
+ * @ingroup tcp_socket
+ */
 #if !defined(__REST__DISPATCHER_H__)
 #define __REST__DISPATCHER_H__
 
@@ -29,13 +37,18 @@ namespace network
     {
         // ---------------------------------------------------------------------------
         //  Structure Declaration
-        //
         // ---------------------------------------------------------------------------
 
+        /**
+         * @brief Structure representing a REST API request match.
+         * @ingroup rest
+         */
         struct RequestMatch : std::smatch {
-            /// <summary>Initializes a new instance of the RequestMatch structure.</summary>
-            /// <param name="m"></param>
-            /// <param name="c"></param>
+            /**
+             * @brief Initializes a new instance of the RequestMatch structure.
+             * @param m String matcher.
+             * @param c Content.
+             */
             RequestMatch(const std::smatch& m, const std::string& c) : std::smatch(m), content(c) { /* stub */ }
 
             std::string content;
@@ -43,64 +56,85 @@ namespace network
 
         // ---------------------------------------------------------------------------
         //  Structure Declaration
-        //
         // ---------------------------------------------------------------------------
 
+        /**
+         * @brief Structure representing a request matcher.
+         * @ingroup rest
+         */
         template<typename Request, typename Reply>
         struct RequestMatcher {
             typedef std::function<void(const Request&, Reply&, const RequestMatch&)> RequestHandlerType;
 
-            /// <summary>Initializes a new instance of the RequestMatcher structure.</summary>
-            /// <param name="expression"></param>
+            /**
+             * @brief Initializes a new instance of the RequestMatcher structure.
+             * @param expression Matching expression.
+             */
             explicit RequestMatcher(const std::string& expression) : m_expression(expression), m_isRegEx(false) { /* stub */ }
 
-            /// <summary></summary>
-            /// <param name="handler"></param>
-            /// <returns></returns>
+            /**
+             * @brief Handler for GET requests.
+             * @param handler GET request handler.
+             * @return RequestMatcher* Instance of a RequestMatcher.
+             */
             RequestMatcher<Request, Reply>& get(RequestHandlerType handler) {
                 m_handlers[HTTP_GET] = handler;
                 return *this;
             }
-            /// <summary></summary>
-            /// <param name="handler"></param>
-            /// <returns></returns>
+            /**
+             * @brief Handler for POST requests.
+             * @param handler POST request handler.
+             * @return RequestMatcher* Instance of a RequestMatcher.
+             */
             RequestMatcher<Request, Reply>& post(RequestHandlerType handler) {
                 m_handlers[HTTP_POST] = handler;
                 return *this;
             }
-            /// <summary></summary>
-            /// <param name="handler"></param>
-            /// <returns></returns>
+            /**
+             * @brief Handler for PUT requests.
+             * @param handler PUT request handler.
+             * @return RequestMatcher* Instance of a RequestMatcher.
+             */
             RequestMatcher<Request, Reply>& put(RequestHandlerType handler) {
                 m_handlers[HTTP_PUT] = handler;
                 return *this;
             }
-            /// <summary></summary>
-            /// <param name="handler"></param>
-            /// <returns></returns>
+            /**
+             * @brief Handler for DELETE requests.
+             * @param handler DELETE request handler.
+             * @return RequestMatcher* Instance of a RequestMatcher.
+             */
             RequestMatcher<Request, Reply>& del(RequestHandlerType handler) {
                 m_handlers[HTTP_DELETE] = handler;
                 return *this;
             }
-            /// <summary></summary>
-            /// <param name="handler"></param>
-            /// <returns></returns>
+            /**
+             * @brief Handler for OPTIONS requests.
+             * @param handler OPTIONS request handler.
+             * @return RequestMatcher* Instance of a RequestMatcher.
+             */
             RequestMatcher<Request, Reply>& options(RequestHandlerType handler) {
                 m_handlers[HTTP_OPTIONS] = handler;
                 return *this;
             }
 
-            /// <summary></summary>
-            /// <returns></returns>
+            /**
+             * @brief Helper to determine if the request matcher is a regular expression.
+             * @returns bool True, if request matcher is a regular expression, otherwise false.
+             */
             bool regex() const { return m_isRegEx; }
-            /// <summary></summary>
-            /// <param name="regEx"></param>
+            /**
+             * @brief Helper to set the regular expression flag.
+             * @param regEx Flag indicating whether or not the request matcher is a regular expression.
+             */
             void setRegEx(bool regEx) { m_isRegEx = regEx; }
 
-            /// <summary></summary>
-            /// <param name="request"></param>
-            /// <param name="reply"></param>
-            /// <param name="what"></param>
+            /**
+             * @brief Helper to handle the actual request.
+             * @param request HTTP request.
+             * @param reply HTTP reply.
+             * @param what What matched.
+             */
             void handleRequest(const Request& request, Reply& reply, const std::smatch &what) {
                 // dispatching to matching based on handler
                 RequestMatch match(what, request.content);
@@ -118,27 +152,39 @@ namespace network
 
         // ---------------------------------------------------------------------------
         //  Class Declaration
-        //      This class implements RESTful web request dispatching.
         // ---------------------------------------------------------------------------
 
+        /**
+         * @brief This class implements RESTful web request dispatching.
+         * @tparam Request HTTP request.
+         * @tparam Reply HTTP reply.
+         */
         template<typename Request = http::HTTPPayload, typename Reply = http::HTTPPayload>
         class RequestDispatcher {
             typedef RequestMatcher<Request, Reply> MatcherType;
         public:
-            /// <summary>Initializes a new instance of the RequestDispatcher class.</summary>
+            /**
+             * @brief Initializes a new instance of the RequestDispatcher class.
+             */
             RequestDispatcher() : m_basePath(), m_debug(false) { /* stub */ }
-            /// <summary>Initializes a new instance of the RequestDispatcher class.</summary>
-            /// <param name="debug"></param>
+            /**
+             * @brief Initializes a new instance of the RequestDispatcher class.
+             * @param debug Flag indicating whether or not verbose logging should be enabled.
+             */
             RequestDispatcher(bool debug) : m_basePath(), m_debug(debug) { /* stub */ }
-            /// <summary>Initializes a new instance of the RequestDispatcher class.</summary>
-            /// <param name="basePath"></param>
-            /// <param name="debug"></param>
+            /**
+             * @brief Initializes a new instance of the RequestDispatcher class.
+             * @param basePath 
+             * @param debug Flag indicating whether or not verbose logging should be enabled.
+             */
             RequestDispatcher(const std::string& basePath, bool debug) : m_basePath(basePath), m_debug(debug) { /* stub */ }
 
-            /// <summary></summary>
-            /// <param name="expression"></param>
-            /// <param name="regex"></param>
-            /// <returns></returns>
+            /**
+             * @brief Helper to match a request patch.
+             * @param expression Matching expression.
+             * @param regex Flag indicating whether or not this match is a regular expression.
+             * @returns MatcherType Instance of a request matcher.
+             */
             MatcherType& match(const std::string& expression, bool regex = false)
             {
                 MatcherTypePtr& p = m_matchers[expression];
@@ -157,9 +203,11 @@ namespace network
                 return *p;
             }
 
-            /// <summary></summary>
-            /// <param name="request"></param>
-            /// <param name="reply"></param>
+            /**
+             * @brief Helper to handle HTTP request.
+             * @param request HTTP request.
+             * @param reply HTTP reply.
+             */
             void handleRequest(const Request& request, Reply& reply)
             {
                 for (const auto& matcher : m_matchers) {
@@ -211,23 +259,33 @@ namespace network
 
         // ---------------------------------------------------------------------------
         //  Class Declaration
-        //      This class implements a generic basic request dispatcher.
         // ---------------------------------------------------------------------------
 
+        /**
+         * @brief This class implements a generic basic request dispatcher.
+         * @tparam Request HTTP request.
+         * @tparam Reply HTTP reply.
+         */
         template<typename Request = http::HTTPPayload, typename Reply = http::HTTPPayload>
         class BasicRequestDispatcher {
         public:
             typedef std::function<void(const Request&, Reply&)> RequestHandlerType;
 
-            /// <summary>Initializes a new instance of the DebugRequestDispatcher class.</summary>
+            /**
+             * @brief Initializes a new instance of the DebugRequestDispatcher class.
+             */
             BasicRequestDispatcher() { /* stub */ }
-            /// <summary>Initializes a new instance of the BasicRequestDispatcher class.</summary>
-            /// <param name="handler"></param>
+            /**
+             * @brief Initializes a new instance of the BasicRequestDispatcher class.
+             * @param handler Instance of a RequestHandlerType for this dispatcher.
+             */
             BasicRequestDispatcher(RequestHandlerType handler) : m_handler(handler) { /* stub */ }
 
-            /// <summary></summary>
-            /// <param name="request"></param>
-            /// <param name="reply"></param>
+            /**
+             * @brief Helper to handle HTTP request.
+             * @param request HTTP request.
+             * @param reply HTTP reply.
+             */
             void handleRequest(const Request& request, Reply& reply)
             {
                 if (m_handler) {
@@ -241,18 +299,26 @@ namespace network
 
         // ---------------------------------------------------------------------------
         //  Class Declaration
-        //      This class implements a generic debug request dispatcher.
         // ---------------------------------------------------------------------------
 
+        /**
+         * @brief This class implements a generic debug request dispatcher.
+         * @tparam Request HTTP request.
+         * @tparam Reply HTTP reply.
+         */
         template<typename Request = http::HTTPPayload, typename Reply = http::HTTPPayload>
         class DebugRequestDispatcher {
         public:
-            /// <summary>Initializes a new instance of the DebugRequestDispatcher class.</summary>
+            /**
+             * @brief Initializes a new instance of the DebugRequestDispatcher class.
+             */
             DebugRequestDispatcher() { /* stub */ }
 
-            /// <summary></summary>
-            /// <param name="request"></param>
-            /// <param name="reply"></param>
+            /**
+             * @brief Helper to handle HTTP request.
+             * @param request HTTP request.
+             * @param reply HTTP reply.
+             */
             void handleRequest(const Request& request, Reply& reply)
             {
                 for (auto header : request.headers.headers())

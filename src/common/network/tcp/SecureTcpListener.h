@@ -7,9 +7,13 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+*  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
 *
 */
+/**
+ * @file SecureTcpListener.h
+ * @ingroup tcp_socket
+ */
 #if !defined(__SECURE_TCP_SERVER_H__)
 #define __SECURE_TCP_SERVER_H__
 
@@ -31,9 +35,12 @@ namespace network
     {
         // ---------------------------------------------------------------------------
         //  Class Declaration
-        //      Implements a secure TCP server listener.
         // ---------------------------------------------------------------------------
 
+        /**
+         * @brief Implements a secure TCP server listener.
+         * @ingroup tcp_socket
+         */
         class HOST_SW_API SecureTcpListener : public Socket
         {
         public:
@@ -41,9 +48,11 @@ namespace network
             auto operator=(SecureTcpListener&&) -> SecureTcpListener& = delete;
             SecureTcpListener(SecureTcpListener&) = delete;
 
-            /// <summary>Initializes a new instance of the SecureTcpListener class.</summary>
-            /// <param name="keyFile"></param>
-            /// <param name="certFile"></param>
+            /**
+             * @brief Initializes a new instance of the SecureTcpListener class.
+             * @param keyFile SSL certificate private key.
+             * @param certFile SSL certificate.
+             */
             SecureTcpListener(const std::string& keyFile, const std::string& certFile) : 
                 m_pSSLCtx(nullptr), 
                 m_keyFile(keyFile), 
@@ -75,11 +84,13 @@ namespace network
 
                 initSecureFiles();
             }
-            /// <summary>Initializes a new instance of the SecureTcpListener class.</summary>
-            /// <param name="keyFile"></param>
-            /// <param name="certFile"></param>
-            /// <param name="port"></param>
-            /// <param name="address"></param>
+            /**
+             * @brief Initializes a new instance of the SecureTcpListener class.
+             * @param keyFile SSL certificate private key.
+             * @param certFile SSL certificate.
+             * @param port Port to listen on.
+             * @param address Address to listen on.
+             */
             SecureTcpListener(const std::string& keyFile, const std::string& certFile, const uint16_t port, const std::string& address = "0.0.0.0") : SecureTcpListener(keyFile, certFile)
             {
                 if (!bind(address, port)) {
@@ -87,17 +98,19 @@ namespace network
                     throw std::runtime_error("Cannot to bind secure TCP server");
                 }
             }
-            /// <summary>Finalizes a instance of the SecureTcpListener class.</summary>
+            /**
+             * @brief Finalizes a instance of the SecureTcpListener class.
+             */
             ~SecureTcpListener() override
             {
                 if (m_pSSLCtx != nullptr)
                     SSL_CTX_free(m_pSSLCtx);
             }
 
-            /// <summary>
-            /// Accept a new TCP connection either secure or unsecure.
-            /// </summary>
-            /// <returns>Newly accepted TCP connection</returns>
+            /**
+             * @brief Accept a new TCP connection either secure or unsecure.
+             * @returns SecureTcpClient* Newly accepted TCP connection.
+             */
             [[nodiscard]] SecureTcpClient* accept()
             {
                 sockaddr_in client = {};
@@ -115,9 +128,9 @@ namespace network
             const std::string m_keyFile;
             const std::string m_certFile;
             
-            /// <summary>
-            /// 
-            /// </summary>
+            /**
+             * @brief Internal helper to initialize the SSL certificate.
+             */
             void initSecureFiles()
             {
                 if (SSL_CTX_use_certificate_file(m_pSSLCtx, m_certFile.c_str(), SSL_FILETYPE_PEM) != 1) {

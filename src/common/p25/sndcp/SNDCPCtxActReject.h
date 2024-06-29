@@ -1,15 +1,18 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2024 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @file SNDCPCtxActReject.h
+ * @ingroup p25_sndcp
+ * @file SNDCPCtxActReject.cpp
+ * @ingroup p25_sndcp
+ */
 #if !defined(__P25_SNDCP__SNDCPCTXACTREJECT_H__)
 #define  __P25_SNDCP__SNDCPCTXACTREJECT_H__
 
@@ -25,21 +28,35 @@ namespace p25
     {
         // ---------------------------------------------------------------------------
         //  Class Declaration
-        //      Represents a SNDCP PDU context activation reject response.
         // ---------------------------------------------------------------------------
 
+        /**
+         * @brief Represents a SNDCP PDU context activation reject response.
+         * @ingroup p25_sndcp
+         */
         class HOST_SW_API SNDCPCtxActReject : public SNDCPPacket {
         public:
-            /// <summary>Initializes a new instance of the SNDCPCtxActReject class.</summary>
+            /**
+             * @brief Initializes a new instance of the SNDCPCtxActReject class.
+             */
             SNDCPCtxActReject();
 
-            /// <summary>Decode a SNDCP context activation reject packet.</summary>
+            /**
+             * @brief Decode a SNDCP context activation reject packet.
+             * @param[in] data Buffer containing SNDCP packet data to decode.
+             * @returns bool True, if decoded, otherwise false.
+             */
             bool decode(const uint8_t* data);
-            /// <summary>Encode a SNDCP context activation reject packet.</summary>
+            /**
+             * @brief Encode a SNDCP context activation reject packet.
+             * @param[out] data Buffer to encode SNDCP packet data to.
+             */
             void encode(uint8_t* data);
 
         public:
-            /// <summary>Reject Code</summary>
+            /**
+             * @brief Reject Code
+             */
             __PROPERTY(uint8_t, rejectCode, RejectCode);
 
             __COPY(SNDCPCtxActReject);

@@ -1,15 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2024 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "Defines.h"
 #include "p25/P25Defines.h"
 #include "p25/sndcp/SNDCPPacket.h"
@@ -25,18 +22,13 @@ using namespace p25::sndcp;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a copy instance of the SNDCPPacket class.
-/// </summary>
-/// <param name="data"></param>
+/* Initializes a copy instance of the SNDCPPacket class. */
 SNDCPPacket::SNDCPPacket(const SNDCPPacket& data) : SNDCPPacket()
 {
     copy(data);
 }
 
-/// <summary>
-/// Initializes a new instance of the SNDCPPacket class.
-/// </summary>
+/* Initializes a new instance of the SNDCPPacket class. */
 SNDCPPacket::SNDCPPacket() :
     m_pduType(SNDCP_PDUType::ACT_TDS_CTX),
     m_sndcpVersion(SNDCP_VERSION_1),
@@ -45,21 +37,14 @@ SNDCPPacket::SNDCPPacket() :
     /* stub */
 }
 
-/// <summary>
-/// Finalizes a instance of SNDCPPacket class.
-/// </summary>
+/* Finalizes a instance of the SNDCPPacket class. */
 SNDCPPacket::~SNDCPPacket() = default;
 
 // ---------------------------------------------------------------------------
 //  Protected Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Internal helper to decode a SNDCP header.
-/// </summary>
-/// <param name="data"></param>
-/// <param name="outbound"></param>
-/// <returns>True, if header was decoded, otherwise false.</returns>
+/* Internal helper to decode a SNDCP header. */
 bool SNDCPPacket::decodeHeader(const uint8_t* data, bool outbound)
 {
     assert(data != nullptr);
@@ -75,11 +60,7 @@ bool SNDCPPacket::decodeHeader(const uint8_t* data, bool outbound)
     return true;
 }
 
-/// <summary>
-/// Internal helper to encode a SNDCP header.
-/// </summary>
-/// <param name="data"></param>
-/// <param name="outbound"></param>
+/* Internal helper to encode a SNDCP header. */
 void SNDCPPacket::encodeHeader(uint8_t* data, bool outbound)
 {
     assert(data != nullptr);
@@ -93,10 +74,7 @@ void SNDCPPacket::encodeHeader(uint8_t* data, bool outbound)
     }
 }
 
-/// <summary>
-/// Internal helper to copy the the class.
-/// </summary>
-/// <param name="data"></param>
+/* Internal helper to copy the the class. */
 void SNDCPPacket::copy(const SNDCPPacket& data)
 {
     m_pduType = data.m_pduType;

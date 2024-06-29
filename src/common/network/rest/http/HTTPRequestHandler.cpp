@@ -1,17 +1,13 @@
 // SPDX-License-Identifier: BSL-1.0
-/**
-* Digital Voice Modem - Common Library
-* BSL-1.0 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @derivedfrom CRUD (https://github.com/venediktov/CRUD)
-* @license BSL-1.0 License (https://opensource.org/license/bsl1-0-html)
-*
-*   Copyright (c) 2003-2013 Christopher M. Kohlhoff
-*   Copyright (C) 2023 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * BSL-1.0 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (c) 2003-2013 Christopher M. Kohlhoff
+ *  Copyright (C) 2023 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "Defines.h"
 #include "network/rest/http/HTTPRequestHandler.h"
 #include "network/rest/http/HTTPPayload.h"
@@ -26,19 +22,14 @@ using namespace network::rest::http;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the HTTPRequestHandler class.
-/// </summary>
-/// <param name="docRoot"></param>
+/* Initializes a new instance of the HTTPRequestHandler class. */
 HTTPRequestHandler::HTTPRequestHandler(const std::string& docRoot) :
     m_docRoot(docRoot)
 {
     /* stub */
 }
 
-/// <summary>
-/// Handle a request and produce a reply.
-/// </summary>
+/* Handle a request and produce a reply. */
 void HTTPRequestHandler::handleRequest(const HTTPPayload& request, HTTPPayload& reply)
 {
     // decode url to path
@@ -88,11 +79,11 @@ void HTTPRequestHandler::handleRequest(const HTTPPayload& request, HTTPPayload& 
     reply.headers.add("Content-Type", "application/octet-stream");
 }
 
-/// <summary>
-/// Perform URL-decoding on a string. Returns false if the encoding was invalid.
-/// </summary>
-/// <param name="in"></param>
-/// <param name="out"></param>
+// ---------------------------------------------------------------------------
+//  Private Members
+// ---------------------------------------------------------------------------
+
+/* Perform URL-decoding on a string. Returns false if the encoding was invalid. */
 bool HTTPRequestHandler::urlDecode(const std::string& in, std::string& out)
 {
     out.clear();

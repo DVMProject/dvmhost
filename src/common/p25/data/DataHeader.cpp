@@ -1,15 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2018,2022,2024 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2018,2022,2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "Defines.h"
 #include "p25/P25Defines.h"
 #include "p25/data/DataHeader.h"
@@ -38,9 +35,7 @@ bool DataHeader::m_warnCRC = false;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the DataHeader class.
-/// </summary>
+/* Initializes a new instance of the DataHeader class. */
 DataHeader::DataHeader() :
     m_ackNeeded(false),
     m_outbound(false),
@@ -70,20 +65,13 @@ DataHeader::DataHeader() :
     ::memset(m_data, 0x00U, P25_PDU_HEADER_LENGTH_BYTES);
 }
 
-/// <summary>
-/// Finalizes a instance of the DataHeader class.
-/// </summary>
+/* Finalizes a instance of the DataHeader class. */
 DataHeader::~DataHeader()
 {
     delete[] m_data;
 }
 
-/// <summary>
-/// Decodes P25 PDU data header.
-/// </summary>
-/// <param name="data"></param>
-/// <param name="noTrellis"></param>
-/// <returns>True, if PDU data header was decoded, otherwise false.</returns>
+/* Decodes P25 PDU data header. */
 bool DataHeader::decode(const uint8_t* data, bool noTrellis)
 {
     assert(data != nullptr);
@@ -180,10 +168,7 @@ bool DataHeader::decode(const uint8_t* data, bool noTrellis)
     return true;
 }
 
-/// <summary>
-/// Encodes P25 PDU data header.
-/// </summary>
-/// <param name="data"></param>
+/* Encodes P25 PDU data header. */
 void DataHeader::encode(uint8_t* data, bool noTrellis)
 {
     assert(data != nullptr);
@@ -264,9 +249,7 @@ void DataHeader::encode(uint8_t* data, bool noTrellis)
     }
 }
 
-/// <summary>
-/// Helper to reset data values to defaults.
-/// </summary>
+/* Helper to reset data values to defaults. */
 void DataHeader::reset()
 {
     m_ackNeeded = false;
@@ -302,10 +285,7 @@ void DataHeader::reset()
     ::memset(m_data, 0x00U, P25_PDU_HEADER_LENGTH_BYTES);
 }
 
-/// <summary>
-/// Gets the total length in bytes of enclosed packet data.
-/// </summary>
-/// <returns></returns>
+/* Gets the total length in bytes of enclosed packet data. */
 uint32_t DataHeader::getPacketLength() const
 {
     if (m_fmt == PDUFormatType::CONFIRMED) {
@@ -316,10 +296,7 @@ uint32_t DataHeader::getPacketLength() const
     }
 }
 
-/// <summary>
-/// Gets the raw header data.
-/// </summary>
-/// <returns></returns>
+/* Gets the raw header data. */
 uint32_t DataHeader::getData(uint8_t* buffer) const
 {
     assert(buffer != nullptr);
@@ -329,11 +306,7 @@ uint32_t DataHeader::getData(uint8_t* buffer) const
     return P25_PDU_HEADER_LENGTH_BYTES;
 }
 
-/// <summary>
-/// Helper to determine the pad length for a given packet length.
-/// </summary>
-/// <param name="fmt"></param>
-/// <param name="packetLength"></param>
+/* Helper to determine the pad length for a given packet length. */
 uint32_t DataHeader::calculatePadLength(uint8_t fmt, uint32_t packetLength)
 {
     uint32_t len = packetLength + 4;

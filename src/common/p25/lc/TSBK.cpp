@@ -1,15 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "Defines.h"
 #include "p25/P25Defines.h"
 #include "p25/lc/TSBK.h"
@@ -42,19 +39,13 @@ SiteData TSBK::m_siteData = SiteData();
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a copy instance of the TSBK class.
-/// </summary>
-/// <param name="data"></param>
+/* Initializes a copy instance of the TSBK class. */
 TSBK::TSBK(const TSBK& data) : TSBK()
 {
     copy(data);
 }
 
-/// <summary>
-/// Initializes a new instance of the TSBK class.
-/// </summary>
-/// <param name="lc"></param>
+/* Initializes a new instance of the TSBK class. */
 TSBK::TSBK(LC* lc) : TSBK()
 {
     m_protect = lc->m_protect;
@@ -71,10 +62,7 @@ TSBK::TSBK(LC* lc) : TSBK()
     m_group = lc->m_group;
 }
 
-/// <summary>
-/// Initializes a new instance of the TSBK class.
-/// </summary>
-/// <remarks>This should never be used.</remarks>
+/* Initializes a new instance of the TSBK class. */
 TSBK::TSBK() :
     m_protect(false),
     m_lco(TSBKO::IOSP_GRP_VCH),
@@ -109,39 +97,26 @@ TSBK::TSBK() :
 #endif
 }
 
-/// <summary>
-/// Finalizes a instance of TSBK class.
-/// </summary>
+/* Finalizes a instance of TSBK class. */
 TSBK::~TSBK()
 {
     if (m_raw != nullptr)
         delete[] m_raw;
 }
 
-/// <summary>
-/// Returns a string that represents the current TSBK.
-/// </summary>
-/// <param name="isp"></param>
-/// <returns></returns>
+/* Returns a string that represents the current TSBK. */
 std::string TSBK::toString(bool isp)
 {
     return std::string("TSBKO, UNKNOWN (Unknown TSBK)");
 }
 
-/// <summary>
-/// Returns a copy of the raw decoded TSBK bytes.
-/// </summary>
-/// <remarks>This will only return data for a *decoded* TSBK, not a created or copied TSBK.</remarks>
-/// <returns></returns>
+/* Returns a copy of the raw decoded TSBK bytes. */
 uint8_t* TSBK::getDecodedRaw() const
 {
     return m_raw;
 }
 
-/// <summary>
-/// Sets the callsign.
-/// </summary>
-/// <param name="callsign">Callsign.</param>
+/* Sets the callsign. */
 void TSBK::setCallsign(std::string callsign)
 {
     if (m_siteCallsign == nullptr) {
@@ -164,11 +139,7 @@ void TSBK::setCallsign(std::string callsign)
 //  Protected Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Internal helper to convert payload bytes to a 64-bit long value.
-/// </summary>
-/// <param name="tsbk"></param>
-/// <returns></returns>
+/* Internal helper to convert payload bytes to a 64-bit long value. */
 ulong64_t TSBK::toValue(const uint8_t* payload)
 {
     assert(payload != nullptr);
@@ -188,11 +159,7 @@ ulong64_t TSBK::toValue(const uint8_t* payload)
     return value;
 }
 
-/// <summary>
-/// Internal helper to convert a 64-bit long value to payload bytes.
-/// </summary>
-/// <param name="value"></param>
-/// <returns></returns>
+/* Internal helper to convert a 64-bit long value to payload bytes. */
 UInt8Array TSBK::fromValue(const ulong64_t value)
 {
     UInt8Array payload = std::unique_ptr<uint8_t[]>(new uint8_t[P25_TSBK_LENGTH_BYTES - 4U]);
@@ -211,13 +178,7 @@ UInt8Array TSBK::fromValue(const ulong64_t value)
     return payload;
 }
 
-/// <summary>
-/// Internal helper to decode a trunking signalling block.
-/// </summary>
-/// <param name="data"></param>
-/// <param name="payload"></param>
-/// <param name="rawTSBK"></param>
-/// <returns>True, if TSBK was decoded, otherwise false.</returns>
+/* Internal helper to decode a trunking signalling block. */
 bool TSBK::decode(const uint8_t* data, uint8_t* payload, bool rawTSBK)
 {
     assert(data != nullptr);
@@ -294,13 +255,7 @@ bool TSBK::decode(const uint8_t* data, uint8_t* payload, bool rawTSBK)
     return true;
 }
 
-/// <summary>
-/// Internal helper to eecode a trunking signalling block.
-/// </summary>
-/// <param name="data"></param>
-/// <param name="payload"></param>
-/// <param name="rawTSBK"></param>
-/// <param name="noTrellis"></param>
+/* Internal helper to eecode a trunking signalling block. */
 void TSBK::encode(uint8_t* data, const uint8_t* payload, bool rawTSBK, bool noTrellis)
 {
     assert(data != nullptr);
@@ -346,10 +301,7 @@ void TSBK::encode(uint8_t* data, const uint8_t* payload, bool rawTSBK, bool noTr
     }
 }
 
-/// <summary>
-/// Internal helper to copy the the class.
-/// </summary>
-/// <param name="data"></param>
+/* Internal helper to copy the the class. */
 void TSBK::copy(const TSBK& data)
 {
     m_protect = data.m_protect;

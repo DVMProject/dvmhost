@@ -1,15 +1,18 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2024 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @file SNDCPCtxActRequest.h
+ * @ingroup p25_sndcp
+ * @file SNDCPCtxActRequest.cpp
+ * @ingroup p25_sndcp
+ */
 #if !defined(__P25_SNDCP__SNDCPCTXACTREQUEST_H__)
 #define  __P25_SNDCP__SNDCPCTXACTREQUEST_H__
 
@@ -25,27 +28,45 @@ namespace p25
     {
         // ---------------------------------------------------------------------------
         //  Class Declaration
-        //      Represents a SNDCP PDU context activation request.
         // ---------------------------------------------------------------------------
 
+        /**
+         * @brief Represents a SNDCP PDU context activation request.
+         * @ingroup p25_sndcp
+         */
         class HOST_SW_API SNDCPCtxActRequest : public SNDCPPacket {
         public:
-            /// <summary>Initializes a new instance of the SNDCPCtxActRequest class.</summary>
+            /**
+             * @brief Initializes a new instance of the SNDCPCtxActRequest class.
+             */
             SNDCPCtxActRequest();
 
-            /// <summary>Decode a SNDCP context activation request.</summary>
+            /**
+             * @brief Decode a SNDCP context activation request.
+             * @param[in] data Buffer containing SNDCP packet data to decode.
+             * @returns bool True, if decoded, otherwise false.
+             */
             bool decode(const uint8_t* data);
-            /// <summary>Encode a SNDCP context activation request.</summary>
+            /**
+             * @brief Encode a SNDCP context activation request.
+             * @param[out] data Buffer to encode SNDCP packet data to.
+             */
             void encode(uint8_t* data);
 
         public:
-            /// <summary>Network Address Type</summary>
+            /**
+             * @brief Network Address Type
+             */
             __PROPERTY(uint8_t, nat, NAT);
             
-            /// <summary>IP Address</summary>
+            /**
+             * @brief IP Address
+             */
             __PROPERTY(ulong64_t, ipAddress, IPAddress);
 
-            /// <summary>Data Subscriber Unit Type</summary>
+            /**
+             * @brief Data Subscriber Unit Type
+             */
             __PROPERTY(uint8_t, dsut, DSUT);
 
             __COPY(SNDCPCtxActRequest);

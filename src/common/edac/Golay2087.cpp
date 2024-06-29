@@ -1,16 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2015,2016 Jonathan Naylor, G4KLX
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2015,2016 Jonathan Naylor, G4KLX
+ *
+ */
 #include "Defines.h"
 #include "edac/Golay2087.h"
 
@@ -216,11 +212,7 @@ const uint32_t DECODING_TABLE_1987[] = {
 //  Static Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Decode Golay (20,8,7) FEC.
-/// </summary>
-/// <param name="data">Golay FEC encoded data byte array</param>
-/// <returns></returns>
+/* Decode Golay (20,8,7) FEC. */
 uint8_t Golay2087::decode(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -235,10 +227,7 @@ uint8_t Golay2087::decode(const uint8_t* data)
     return code >> 11;
 }
 
-/// <summary>
-/// Encode Golay (20,8,7) FEC.
-/// </summary>
-/// <param name="data">Data to encode with Golay FEC.</param>
+/* Encode Golay (20,8,7) FEC. */
 void Golay2087::encode(uint8_t* data)
 {
     assert(data != nullptr);
@@ -255,20 +244,11 @@ void Golay2087::encode(uint8_t* data)
 //  Private Static Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-///
-/// </summary>
-/// <remarks>
-/// Compute the syndrome corresponding to the given pattern, i.e., the
-/// remainder after dividing the pattern (when considering it as the vector
-/// representation of a polynomial) by the generator polynomial, GENPOL.
-/// In the program this pattern has several meanings: (1) pattern = information
-/// bits, when constructing the encoding table; (2) pattern = error pattern,
-/// when constructing the decoding table; and (3) pattern = received vector, to
-/// obtain its syndrome in decoding.
-/// </remarks>
-/// <param name="pattern"></param>
-/// <returns></returns>
+/* Compute the syndrome corresponding to the given pattern, i.e., the remainder after dividing the 
+   pattern (when considering it as the vector representation of a polynomial) by the generator 
+   polynomial, GENPOL. In the program this pattern has several meanings: (1) pattern = information bits, 
+   when constructing the encoding table; (2) pattern = error pattern, when constructing the decoding 
+   table; and (3) pattern = received vector, to obtain its syndrome in decoding. */
 uint32_t Golay2087::getSyndrome1987(uint32_t pattern)
 {
     uint32_t aux = X18;

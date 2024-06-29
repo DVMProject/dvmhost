@@ -1,17 +1,19 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2015,2016,2017 Jonathan Naylor, G4KLX
+ *  Copyright (C) 2021 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2015,2016,2017 Jonathan Naylor, G4KLX
-*   Copyright (C) 2021 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @file DataHeader.h
+ * @ingroup dmr
+ * @file DataHeader.cpp
+ * @ingroup dmr
+ */
 #if !defined(__DMR_DATA__DATA_HEADER_H__)
 #define __DMR_DATA__DATA_HEADER_H__
 
@@ -23,67 +25,118 @@ namespace dmr
     {
         // ---------------------------------------------------------------------------
         //  Class Declaration
-        //      Represents a DMR data header.
         // ---------------------------------------------------------------------------
 
+        /**
+         * @brief Represents a DMR data header.
+         * @ingroup dmr
+         */
         class HOST_SW_API DataHeader {
         public:
-            /// <summary>Initializes a new instance of the DataHeader class.</summary>
+            /**
+             * @brief Initializes a new instance of the DataHeader class.
+             */
             DataHeader();
-            /// <summary>Finalizes a instance of the DataHeader class.</summary>
+            /**
+             * @brief Finalizes a instance of the DataHeader class.
+             */
             ~DataHeader();
 
-            /// <summary>Equals operator.</summary>
+            /**
+             * @brief Equals operator.
+             * @param header Instance of DataHeader class to copy from.
+             */
             DataHeader& operator=(const DataHeader& header);
 
-            /// <summary>Decodes a DMR data header.</summary>
+            /**
+             * @brief Decodes a DMR data header.
+             * @param[in] data Buffer containing DMR data header.
+             * @returns bool True, if DMR data header is decoded, otherwise false.
+             */
             bool decode(const uint8_t* data);
-            /// <summary>Encodes a DMR data header.</summary>
+            /**
+             * @brief Encodes a DMR data header.
+             * @param[out] data Buffer to encode a DMR data header.
+             */
             void encode(uint8_t* data) const;
 
         public:
-            /// <summary>Flag indicating whether the CSBK is group or individual.</summary>
+            /**
+             * @brief Flag indicating whether the CSBK is group or individual.
+             */
             __PROPERTY(bool, GI, GI);
 
-            /// <summary>Data packet format.</summary>
+            /**
+             * @brief Data packet format.
+             */
             __PROPERTY(defines::DPF::E, DPF, DPF);
 
-            /// <summary>Service access point.</summary>
+            /**
+             * @brief Service access point.
+             */
             __PROPERTY(uint8_t, sap, SAP);
-            /// <summary>Fragment Sequence Number.</summary>
+            /**
+             * @brief Fragment Sequence Number.
+             */
             __PROPERTY(uint8_t, fsn, FSN);
-            /// <summary>Send Sequence Number.</summary>
+            /**
+             * @brief Send Sequence Number.
+             */
             __PROPERTY(uint8_t, Ns, Ns);
 
-            /// <summary>Count of block padding.</summary>
+            /**
+             * @brief Count of block padding.
+             */
             __PROPERTY(uint8_t, padCount, PadCount);
 
-            /// <summary>Full Message Flag.</summary>
+            /**
+             * @brief Full Message Flag.
+             */
             __PROPERTY(bool, F, FullMesage);
-            /// <summary>Synchronize Flag.</summary>
+            /**
+             * @brief Synchronize Flag.
+             */
             __PROPERTY(bool, S, Synchronize);
 
-            /// <summary>Unified Data or Defined Data Format.</summary>
+            /**
+             * @brief Unified Data or Defined Data Format.
+             */
             __PROPERTY(uint8_t, dataFormat, DataFormat);
 
-            /// <summary>Source ID.</summary>
+            /**
+             * @brief Source ID.
+             */
             __PROPERTY(uint32_t, srcId, SrcId);
-            /// <summary>Destination ID.</summary>
+            /**
+             * @brief Destination ID.
+             */
             __PROPERTY(uint32_t, dstId, DstId);
 
-            /// <summary>Gets the number of data blocks following the header.</summary>
+            /**
+             * @brief Gets the number of data blocks following the header.
+             */
             __PROPERTY(uint32_t, blocks, Blocks);
 
-            /// <summary>Response class.</summary>
+            /**
+             * @brief Response class.
+             */
             __PROPERTY(uint8_t, rspClass, Class);
-            /// <summary>Response type.</summary>
+            /**
+             * @brief Response type.
+             */
             __PROPERTY(uint8_t, rspType, Type);
-            /// <summary>Response status.</summary>
+            /**
+             * @brief Response status.
+             */
             __PROPERTY(uint8_t, rspStatus, Status);
 
-            /// <summary>Source Port.</summary>
+            /**
+             * @brief Source Port.
+             */
             __PROPERTY(uint8_t, srcPort, SrcPort);
-            /// <summary>Destination Port.</summary>
+            /**
+             * @brief Destination Port.
+             */
             __PROPERTY(uint8_t, dstPort, DstPort);
 
         private:

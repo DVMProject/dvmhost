@@ -1,15 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2018,2022,2024 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2018,2022,2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "Defines.h"
 #include "p25/P25Defines.h"
 #include "p25/data/DataBlock.h"
@@ -28,9 +25,7 @@ using namespace p25::data;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the DataBlock class.
-/// </summary>
+/* Initializes a new instance of the DataBlock class. */
 DataBlock::DataBlock() :
     m_serialNo(0U),
     m_lastBlock(false),
@@ -44,20 +39,13 @@ DataBlock::DataBlock() :
     m_data = new uint8_t[P25_PDU_CONFIRMED_DATA_LENGTH_BYTES];
 }
 
-/// <summary>
-/// Finalizes a instance of the DataBlock class.
-/// </summary>
+/* Finalizes a instance of the DataBlock class. */
 DataBlock::~DataBlock()
 {
     delete[] m_data;
 }
 
-/// <summary>
-/// Decodes P25 PDU data block.
-/// </summary>
-/// <param name="data"></param>
-/// <param name="header">Instance of the DataHeader class.</param>
-/// <returns>True, if data block was decoded, otherwise false.</returns>
+/* Decodes P25 PDU data block. */
 bool DataBlock::decode(const uint8_t* data, const DataHeader& header)
 {
     assert(data != nullptr);
@@ -161,10 +149,7 @@ bool DataBlock::decode(const uint8_t* data, const DataHeader& header)
     return true;
 }
 
-/// <summary>
-/// Encodes a P25 PDU data block.
-/// </summary>
-/// <param name="data">Buffer to encode data block to.</param>
+/* Encodes a P25 PDU data block. */
 void DataBlock::encode(uint8_t* data)
 {
     assert(data != nullptr);
@@ -231,37 +216,25 @@ void DataBlock::encode(uint8_t* data)
     }
 }
 
-/// <summary>
-/// Sets the data format.
-/// </summary>
-/// <param name="fmt"></param>
+/* Sets the data format. */
 void DataBlock::setFormat(const uint8_t fmt)
 {
     m_fmt = fmt;
 }
 
-/// <summary>
-/// Sets the data format from the data header.
-/// </summary>
-/// <param name="header"></param>
+/* Sets the data format from the data header. */
 void DataBlock::setFormat(const DataHeader& header)
 {
     m_fmt = header.getFormat();
 }
 
-/// <summary>
-/// Gets the data format.
-/// </summary>
-/// <returns></returns>
+/* Gets the data format. */
 uint8_t DataBlock::getFormat() const
 {
     return m_fmt;
 }
 
-/// <summary>
-/// Sets the raw data stored in the data block.
-/// </summary>
-/// <param name="buffer"></param>
+/* Sets the raw data stored in the data block. */
 void DataBlock::setData(const uint8_t* buffer)
 {
     assert(buffer != nullptr);
@@ -278,10 +251,7 @@ void DataBlock::setData(const uint8_t* buffer)
     }
 }
 
-/// <summary>
-/// Gets the raw data stored in the data block.
-/// </summary>
-/// <returns></returns>
+/* Gets the raw data stored in the data block. */
 uint32_t DataBlock::getData(uint8_t* buffer) const
 {
     assert(buffer != nullptr);

@@ -1,15 +1,18 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @file RCCH.h
+ * @ingroup nxdn_lc
+ * @file RCCH.cpp
+ * @ingroup nxdn_lc
+ */
 #if !defined(__NXDN_LC__RCCH_H__)
 #define  __NXDN_LC__RCCH_H__
 
@@ -23,97 +26,184 @@ namespace nxdn
     {
         // ---------------------------------------------------------------------------
         //  Class Declaration
-        //      Represents link control data for control channel NXDN calls.
         // ---------------------------------------------------------------------------
 
+        /**
+         * @brief Represents link control data for control channel NXDN calls.
+         * @ingroup nxdn_lc
+         */
         class HOST_SW_API RCCH {
         public:
-            /// <summary>Initializes a copy instance of the RCCH class.</summary>
-            RCCH(const RCCH& data);
-            /// <summary>Initializes a new instance of the RCCH class.</summary>
+            /**
+             * @brief Initializes a new instance of the RCCH class.
+             */
             RCCH();
-            /// <summary>Finalizes a instance of the RCCH class.</summary>
+            /**
+             * @brief Initializes a copy instance of the RCCH class.
+             * @param data Instance of RCCH to copy.
+             */
+            RCCH(const RCCH& data);
+            /**
+             * @brief Finalizes a instance of the RCCH class.
+             */
             virtual ~RCCH();
 
-            /// <summary>Decode layer 3 data.</summary>
+            /**
+             * @brief Decode RCCH data.
+             * @param[in] data Buffer containing a RCCH to decode.
+             * @param length Length of data buffer.
+             * @param offset Offset for RCCH in data buffer.
+             */
             virtual void decode(const uint8_t* data, uint32_t length, uint32_t offset = 0U) = 0;
-            /// <summary>Encode layer 3 data.</summary>
+            /**
+             * @brief Encode RCCH data.
+             * @param[out] data Buffer to encode a RCCH.
+             * @param length Length of data buffer.
+             * @param offset Offset for RCCH in data buffer.
+             */
             virtual void encode(uint8_t* data, uint32_t length, uint32_t offset = 0U) = 0;
 
-            /// <summary>Returns a string that represents the current RCCH.</summary>
+            /**
+             * @brief Returns a string that represents the current RCCH.
+             * @returns std::string String representation of the RCCH.
+             */
             virtual std::string toString(bool isp = false);
 
-            /// <summary>Gets the flag indicating verbose log output.</summary>
+            /**
+             * @brief Gets the flag indicating verbose log output.
+             * @returns bool True, if the TSBK is verbose logging, otherwise false.
+             */
             static bool getVerbose() { return m_verbose; }
-            /// <summary>Sets the flag indicating verbose log output.</summary>
+            /**
+             * @brief Sets the flag indicating verbose log output.
+             * @param verbose Flag indicating verbose log output.
+             */
             static void setVerbose(bool verbose) { m_verbose = verbose; }
 
-            /** Local Site data */
-            /// <summary>Sets the callsign.</summary>
+            /** @name Local Site data */
+            /**
+             * @brief Sets the callsign.
+             * @param callsign Callsign.
+             */
             static void setCallsign(std::string callsign);
 
-            /// <summary>Gets the local site data.</summary>
+            /**
+             * @brief Gets the local site data.
+             * @returns SiteData Currently set site data for the RCCH class.
+             */
             static SiteData getSiteData() { return m_siteData; }
-            /// <summary>Sets the local site data.</summary>
+            /**
+             * @brief Sets the local site data.
+             * @param siteData Site data to set for the RCCH class.
+             */
             static void setSiteData(SiteData siteData) { m_siteData = siteData; }
+            /** @} */
 
         public:
-            /** Common Data */
-            /// <summary>Message Type</summary>
+            /** @name Common Data */
+            /**
+             * @brief Message Type
+             */
             __PROTECTED_PROPERTY(uint8_t, messageType, MessageType);
 
-            /// <summary>Source ID.</summary>
+            /**
+             * @brief Source ID.
+             */
             __PROTECTED_PROPERTY(uint16_t, srcId, SrcId);
-            /// <summary>Destination ID.</summary>
+            /**
+             * @brief Destination ID.
+             */
             __PROTECTED_PROPERTY(uint16_t, dstId, DstId);
 
-            /// <summary>Location ID.</summary>
+            /**
+             * @brief Location ID.
+             */
             __PROTECTED_PROPERTY(uint32_t, locId, LocId);
-            /// <summary>Registration Option.</summary>
+            /**
+             * @brief Registration Option.
+             */
             __PROTECTED_PROPERTY(uint8_t, regOption, RegOption);
 
-            /// <summary>Version Number.</summary>
+            /**
+             * @brief Version Number.
+             */
             __PROTECTED_PROPERTY(uint8_t, version, Version);
 
-            /// <summary>Cause Response.</summary>
+            /**
+             * @brief Cause Response.
+             */
             __PROTECTED_PROPERTY(uint8_t, causeRsp, CauseResponse);
 
-            /// <summary>Voice channel number.</summary>
+            /**
+             * @brief Voice channel number.
+             */
             __PROTECTED_PROPERTY(uint32_t, grpVchNo, GrpVchNo);
+            /** @} */
 
-            /** Call Data */
-            /// <summary>Call Type</summary>
+            /** @name Call Data */
+            /**
+             * @brief Call Type
+             */
             __PROTECTED_PROPERTY(uint8_t, callType, CallType);
+            /** @} */
 
-            /** Common Call Options */
-            /// <summary>Flag indicating the emergency bits are set.</summary>
+            /** @name Common Call Options */
+            /**
+             * @brief Flag indicating the emergency bits are set.
+             */
             __PROTECTED_PROPERTY(bool, emergency, Emergency);
-            /// <summary>Flag indicating that encryption is enabled.</summary>
+            /**
+             * @brief Flag indicating that encryption is enabled.
+             */
             __PROTECTED_PROPERTY(bool, encrypted, Encrypted);
-            /// <summary>Flag indicating priority paging.</summary>
+            /**
+             * @brief Flag indicating priority paging.
+             */
             __PROTECTED_PROPERTY(bool, priority, Priority);
-            /// <summary>Flag indicating a group/talkgroup operation.</summary>
+            /**
+             * @brief Flag indicating a group/talkgroup operation.
+             */
             __PROTECTED_PROPERTY(bool, group, Group);
-            /// <summary>Flag indicating a half/full duplex operation.</summary>
+            /**
+             * @brief Flag indicating a half/full duplex operation.
+             */
             __PROTECTED_PROPERTY(bool, duplex, Duplex);
 
-            /// <summary>Transmission mode.</summary>
+            /**
+             * @brief Transmission mode.
+             */
             __PROTECTED_PROPERTY(uint8_t, transmissionMode, TransmissionMode);
+            /** @} */
 
-            /** Local Site data */
-            /// <summary>Local Site Identity Entry.</summary>
+            /** @name Local Site data */
+            /**
+             * @brief Local Site Identity Entry.
+             */
             __PROTECTED_PROPERTY_PLAIN(lookups::IdenTable, siteIdenEntry);
+            /** @} */
 
         protected:
             static bool m_verbose;
 
-            /** Local Site data */
+            // Local Site data
             static uint8_t* m_siteCallsign;
             static SiteData m_siteData;
 
-            /// <summary>Internal helper to decode a RCCH.</summary>
+            /**
+             * @brief Internal helper to decode a RCCH link control message.
+             * @param[in] data Buffer containing a RCCH to decode.
+             * @param[out] rcch
+             * @param length Length of data buffer.
+             * @param offset Offset for RCCH in data buffer.
+             */
             void decode(const uint8_t* data, uint8_t* rcch, uint32_t length, uint32_t offset = 0U);
-            /// <summary>Internal helper to encode a RCCH.</summary>
+            /**
+             * @brief Internal helper to encode a RCCH link control message.
+             * @param[out] data Buffer to encode a RCCH.
+             * @param[in] rcch
+             * @param length Length of data buffer.
+             * @param offset Offset for RCCH in data buffer.
+             */
             void encode(uint8_t* data, const uint8_t* rcch, uint32_t length, uint32_t offset = 0U);
 
             __PROTECTED_COPY(RCCH);

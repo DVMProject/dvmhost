@@ -1,15 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2024 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "Defines.h"
 #include "network/RawFrameQueue.h"
 #include "network/udp/Socket.h"
@@ -31,11 +28,7 @@ std::mutex RawFrameQueue::m_flushMutex;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the RawFrameQueue class.
-/// </summary>
-/// <param name="socket">Local port used to listen for incoming data.</param>
-/// <param name="debug"></param>
+/* Initializes a new instance of the RawFrameQueue class. */
 RawFrameQueue::RawFrameQueue(udp::Socket* socket, bool debug) :
     m_socket(socket),
     m_buffers(),
@@ -44,21 +37,13 @@ RawFrameQueue::RawFrameQueue(udp::Socket* socket, bool debug) :
     /* stub */
 }
 
-/// <summary>
-/// Finalizes a instance of the RawFrameQueue class.
-/// </summary>
+/* Finalizes a instance of the RawFrameQueue class. */
 RawFrameQueue::~RawFrameQueue()
 {
     deleteBuffers();
 }
 
-/// <summary>
-/// Read message from the received UDP packet.
-/// </summary>
-/// <param name="messageLength">Actual length of message read from packet.</param>
-/// <param name="address">IP address data read from.</param>
-/// <param name="addrLen"></param>
-/// <returns>Buffer containing message read.</returns>
+/* Read message from the received UDP packet. */
 UInt8Array RawFrameQueue::read(int& messageLength, sockaddr_storage& address, uint32_t& addrLen)
 {
     messageLength = -1;
@@ -87,14 +72,7 @@ UInt8Array RawFrameQueue::read(int& messageLength, sockaddr_storage& address, ui
     return nullptr;
 }
 
-/// <summary>
-/// Write message to the UDP socket.
-/// </summary>
-/// <param name="message">Message buffer to frame and queue.</param>
-/// <param name="length">Length of message.</param>
-/// <param name="addr">IP address to write data to.</param>
-/// <param name="addrLen"></param>
-/// <returns></returns>
+/* Write message to the UDP socket. */
 bool RawFrameQueue::write(const uint8_t* message, uint32_t length, sockaddr_storage& addr, uint32_t addrLen)
 {
     assert(message != nullptr);
@@ -116,14 +94,7 @@ bool RawFrameQueue::write(const uint8_t* message, uint32_t length, sockaddr_stor
     return ret;
 }
 
-/// <summary>
-/// Cache message to frame queue.
-/// </summary>
-/// <param name="message">Message buffer to frame and queue.</param>
-/// <param name="length">Length of message.</param>
-/// <param name="addr">IP address to write data to.</param>
-/// <param name="addrLen"></param>
-/// <returns></returns>
+/* Cache message to frame queue. */
 void RawFrameQueue::enqueueMessage(const uint8_t* message, uint32_t length, sockaddr_storage& addr, uint32_t addrLen)
 {
     assert(message != nullptr);
@@ -145,10 +116,7 @@ void RawFrameQueue::enqueueMessage(const uint8_t* message, uint32_t length, sock
     m_buffers.push_back(dgram);
 }
 
-/// <summary>
-/// Flush the message queue.
-/// </summary>
-/// <returns></returns>
+/* Flush the message queue. */
 bool RawFrameQueue::flushQueue()
 {
     bool ret = true;
@@ -180,9 +148,7 @@ bool RawFrameQueue::flushQueue()
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Helper to ensure buffers are deleted.
-/// </summary>
+/* Helper to ensure buffers are deleted. */
 void RawFrameQueue::deleteBuffers()
 {
     for (auto& buffer : m_buffers) {

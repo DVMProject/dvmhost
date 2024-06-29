@@ -1,18 +1,14 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2002 by Robert H. Morelos-Zaragoza., All rights reserved.
-*   Copyright (C) 2010,2016 Jonathan Naylor, G4KLX
-*   Copyright (C) 2017 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2002 by Robert H. Morelos-Zaragoza., All rights reserved.
+ *  Copyright (C) 2010,2016 Jonathan Naylor, G4KLX
+ *  Copyright (C) 2017 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "Defines.h"
 #include "edac/Golay24128.h"
 #include "Utils.h"
@@ -1065,11 +1061,7 @@ static const uint32_t DECODING_TABLE_23127[] = {
 //  Static Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Decode Golay (23,12,7) FEC.
-/// </summary>
-/// <param name="code"></param>
-/// <returns></returns>
+/* Decode Golay (23,12,7) FEC. */
 uint32_t Golay24128::decode23127(uint32_t code)
 {
     uint32_t syndrome = getSyndrome23127(code);
@@ -1080,12 +1072,7 @@ uint32_t Golay24128::decode23127(uint32_t code)
     return code >> 11;
 }
 
-/// <summary>
-/// Decode Golay (24,12,8) FEC.
-/// </summary>
-/// <param name="code"></param>
-/// <param name="out"></param>
-/// <returns></returns>
+/* Decode Golay (24,12,8) FEC. */
 bool Golay24128::decode24128(uint32_t code, uint32_t& out)
 {
     uint32_t syndrome = getSyndrome23127(code >> 1);
@@ -1099,12 +1086,7 @@ bool Golay24128::decode24128(uint32_t code, uint32_t& out)
     return valid;
 }
 
-/// <summary>
-/// Decode Golay (24,12,8) FEC.
-/// </summary>
-/// <param name="bytes">Golay FEC encoded data byte array</param>
-/// <param name="out"></param>
-/// <returns></returns>
+/* Decode Golay (24,12,8) FEC. */
 bool Golay24128::decode24128(uint8_t* bytes, uint32_t& out)
 {
     assert(bytes != nullptr);
@@ -1113,13 +1095,7 @@ bool Golay24128::decode24128(uint8_t* bytes, uint32_t& out)
     return decode24128(code, out);
 }
 
-/// <summary>
-/// Decode Golay (24,12,8) FEC.
-/// </summary>
-/// <param name="data">Data decoded with Golay FEC.</param>
-/// <param name="raw">Raw data to decode.</param>
-/// <param name="msglen">Length of data to decode.</param>
-/// <returns></returns>
+/* Decode Golay (24,12,8) FEC. */
 void Golay24128::decode24128(uint8_t* data, const uint8_t* raw, uint32_t msglen)
 {
     uint32_t i = 0;                  // decoded byte counter
@@ -1176,32 +1152,19 @@ void Golay24128::decode24128(uint8_t* data, const uint8_t* raw, uint32_t msglen)
     }
 }
 
-/// <summary>
-/// Encode Golay (23,12,7) FEC.
-/// </summary>
-/// <param name="data">Data to encode with Golay FEC.</param>
-/// <returns></returns>
+/* Encode Golay (23,12,7) FEC. */
 uint32_t Golay24128::encode23127(uint32_t data)
 {
     return ENCODING_TABLE_23127[data];
 }
 
-/// <summary>
-/// Encode Golay (24,12,8) FEC.
-/// </summary>
-/// <param name="data">Data to encode with Golay FEC.</param>
-/// <returns></returns>
+/* Encode Golay (24,12,8) FEC. */
 uint32_t Golay24128::encode24128(uint32_t data)
 {
     return ENCODING_TABLE_24128[data];
 }
 
-/// <summary>
-/// Encode Golay (24,12,8) FEC.
-/// </summary>
-/// <param name="data">Data encoded with Golay FEC.</param>
-/// <param name="raw">Raw data to encode.</param>
-/// <param name="msglen">Length of data to encode.</param>
+/* Encode Golay (24,12,8) FEC. */
 void Golay24128::encode24128(uint8_t* data, const uint8_t* raw, uint32_t msglen)
 {
     uint32_t j = 0;
@@ -1263,20 +1226,11 @@ void Golay24128::encode24128(uint8_t* data, const uint8_t* raw, uint32_t msglen)
 //  Private Static Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-///
-/// </summary>
-/// <remarks>
-/// Compute the syndrome corresponding to the given pattern, i.e., the
-/// remainder after dividing the pattern (when considering it as the vector
-/// representation of a polynomial) by the generator polynomial, GENPOL.
-/// In the program this pattern has several meanings: (1) pattern = information
-/// bits, when constructing the encoding table; (2) pattern = error pattern,
-/// when constructing the decoding table; and (3) pattern = received vector, to
-/// obtain its syndrome in decoding.
-/// </remarks>
-/// <param name="pattern"></param>
-/// <returns></returns>
+/* Compute the syndrome corresponding to the given pattern, i.e., the remainder after dividing the 
+   pattern (when considering it as the vector representation of a polynomial) by the generator 
+   polynomial, GENPOL. In the program this pattern has several meanings: (1) pattern = information bits, 
+   when constructing the encoding table; (2) pattern = error pattern, when constructing the decoding 
+   table; and (3) pattern = received vector, to obtain its syndrome in decoding. */
 uint32_t Golay24128::getSyndrome23127(uint32_t pattern)
 {
     uint32_t aux = X22;

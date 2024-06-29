@@ -1,17 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2015,2016 Jonathan Naylor, G4KLX
-*   Copyright (C) 2024 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2015,2016 Jonathan Naylor, G4KLX
+ *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "common/dmr/SlotType.h"
 #include "common/edac/Golay2087.h"
 
@@ -24,9 +20,7 @@ using namespace dmr::defines;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the SlotType class.
-/// </summary>
+/* Initializes a new instance of the SlotType class. */
 SlotType::SlotType() :
     m_colorCode(0U),
     m_dataType(DataType::IDLE)
@@ -34,15 +28,10 @@ SlotType::SlotType() :
     /* stub */
 }
 
-/// <summary>
-/// Finalizes a instance of the SlotType class.
-/// </summary>
+/* Finalizes a instance of the SlotType class. */
 SlotType::~SlotType() = default;
 
-/// <summary>
-/// Decodes DMR slot type.
-/// </summary>
-/// <param name="data"></param>
+/* Decodes DMR slot type. */
 void SlotType::decode(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -63,10 +52,7 @@ void SlotType::decode(const uint8_t* data)
     m_dataType = (DataType::E)((code >> 0) & 0x0FU);
 }
 
-/// <summary>
-/// Encodes DMR slot type.
-/// </summary>
-/// <param name="data"></param>
+/* Encodes DMR slot type. */
 void SlotType::encode(uint8_t* data) const
 {
     assert(data != nullptr);

@@ -1,17 +1,23 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2015,2016 Jonathan Naylor, G4KLX
+ *  Copyright (C) 2018-2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2015,2016 Jonathan Naylor, G4KLX
-*   Copyright (C) 2018-2024 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @defgroup logging Logging Routines
+ * @brief Defines and implements logging routines.
+ * @ingroup common
+ * 
+ * @file Log.h
+ * @ingroup logging
+ * @file Log.cpp
+ * @ingroup logging
+ */
 #if !defined(__LOG_H__)
 #define __LOG_H__
 
@@ -19,9 +25,16 @@
 
 #include <string>
 
+/**
+ * @addtogroup logging
+ * @{
+ */
+
 // ---------------------------------------------------------------------------
 //  Constants
 // ---------------------------------------------------------------------------
+
+/** @cond */
 
 #define LOG_HOST    "HOST"
 #define LOG_REST    "RESTAPI"
@@ -35,51 +48,148 @@
 #define LOG_SETUP   "SETUP"
 #define LOG_SERIAL  "SERIAL"
 
+/** @endcond */
+
 // ---------------------------------------------------------------------------
 //  Macros
 // ---------------------------------------------------------------------------
 
+/**
+ * @brief Macro helper to create a debug log entry.
+ * @param _module Name of module generating log entry.
+ * @param fmt String format.
+ * 
+ * This is a variable argument function.
+ */
 #define LogDebug(_module, fmt, ...)     Log(1U, _module, fmt, ##__VA_ARGS__)
+/**
+ * @brief Macro helper to create a message log entry.
+ * @param _module Name of module generating log entry.
+ * @param fmt String format.
+ * 
+ * This is a variable argument function.
+ */
 #define LogMessage(_module, fmt, ...)   Log(2U, _module, fmt, ##__VA_ARGS__)
+/**
+ * @brief Macro helper to create a informational log entry.
+ * @param _module Name of module generating log entry.
+ * @param fmt String format.
+ * 
+ * This is a variable argument function. LogInfo() does not use a module
+ * name when creating a log entry.
+ */
 #define LogInfo(fmt, ...)               Log(3U, nullptr, fmt, ##__VA_ARGS__)
+/**
+ * @brief Macro helper to create a informational log entry with module name.
+ * @param _module Name of module generating log entry.
+ * @param fmt String format.
+ * 
+ * This is a variable argument function.
+ */
 #define LogInfoEx(_module, fmt, ...)    Log(3U, _module, fmt, ##__VA_ARGS__)
+/**
+ * @brief Macro helper to create a warning log entry.
+ * @param _module Name of module generating log entry.
+ * @param fmt String format.
+ * 
+ * This is a variable argument function.
+ */
 #define LogWarning(_module, fmt, ...)   Log(4U, _module, fmt, ##__VA_ARGS__)
+/**
+ * @brief Macro helper to create a error log entry.
+ * @param _module Name of module generating log entry.
+ * @param fmt String format.
+ * 
+ * This is a variable argument function.
+ */
 #define LogError(_module, fmt, ...)     Log(5U, _module, fmt, ##__VA_ARGS__)
+/**
+ * @brief Macro helper to create a fatal log entry.
+ * @param _module Name of module generating log entry.
+ * @param fmt String format.
+ * 
+ * This is a variable argument function.
+ */
 #define LogFatal(_module, fmt, ...)     Log(6U, _module, fmt, ##__VA_ARGS__)
 
 // ---------------------------------------------------------------------------
 //  Externs
 // ---------------------------------------------------------------------------
 
+/**
+ * @brief (Global) Display log level.
+ */
 extern uint32_t g_logDisplayLevel;
+/**
+ * @brief (Global) Flag for displaying timestamps on log entries (does not apply to syslog logging).
+ */
 extern bool g_disableTimeDisplay;
-
+/**
+ * @brief (Global) Flag indicating whether or not logging goes to the syslog.
+ */
 extern bool g_useSyslog;
 
 // ---------------------------------------------------------------------------
 //  Global Functions
 // ---------------------------------------------------------------------------
-/// <summary>Internal helper to set an output stream to direct logging to.</summary>
+/**
+ * @brief Internal helper to set an output stream to direct logging to.
+ * @param stream 
+ */
 extern HOST_SW_API void __InternalOutputStream(std::ostream& stream);
 
-/// <summary>Helper to get the current log file level.</summary>
+/**
+ * @brief Helper to get the current log file level.
+ * @returns uint32_t Current log file level.
+ */
 extern HOST_SW_API uint32_t CurrentLogFileLevel();
 
-/// <summary>Helper to get the current log file path.</summary>
+/**
+ * @brief Helper to get the current log file path.
+ * @returns std::string Current log file path.
+ */
 extern HOST_SW_API std::string LogGetFilePath();
-/// <summary>Helper to get the current log file root.</summary>
+/**
+ * @brief Helper to get the current log file root.
+ * @returns std::string Current log file root.
+ */
 extern HOST_SW_API std::string LogGetFileRoot();
 
-/// <summary>Gets the instance of the Network class to transfer the activity log with.</summary>
+/**
+ * @brief Gets the instance of the Network class to transfer the activity log with.
+ * @returns void* 
+ */
 extern HOST_SW_API void* LogGetNetwork();
-/// <summary>Sets the instance of the Network class to transfer the activity log with.</summary>
+/**
+ * @brief Sets the instance of the Network class to transfer the activity log with.
+ * @param network 
+ */
 extern HOST_SW_API void LogSetNetwork(void* network);
 
-/// <summary>Initializes the diagnostics log.</summary>
+/**
+ * @brief Initializes the diagnostics log.
+ * @param filePath File path for the log file.
+ * @param fileRoot Root name for log file.
+ * @param fileLevel File log level.
+ * @param displaylevel Display log level.
+ * @param displayTimeDisplay Flag to disable the date and time stamp for the log entries.
+ * @param syslog Flag indicating whether or not logs will be sent to syslog.
+ * @returns 
+ */
 extern HOST_SW_API bool LogInitialise(const std::string& filePath, const std::string& fileRoot, uint32_t fileLevel, uint32_t displayLevel, bool disableTimeDisplay = false, bool useSyslog = false);
-/// <summary>Finalizes the diagnostics log.</summary>
+/**
+ * @brief Finalizes the diagnostics log.
+ */
 extern HOST_SW_API void LogFinalise();
-/// <summary>Writes a new entry to the diagnostics log.</summary>
+/**
+ * @brief Writes a new entry to the diagnostics log.
+ * @param level Log level for entry.
+ * @param module Name of module generating log entry.
+ * @param fmt String format.
+ * 
+ * This is a variable argument function.
+ */
 extern HOST_SW_API void Log(uint32_t level, const char* module, const char* fmt, ...);
 
+/** @} */
 #endif // __LOG_H__

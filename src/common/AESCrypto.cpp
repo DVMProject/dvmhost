@@ -1,17 +1,13 @@
 // SPDX-License-Identifier: MIT
-/**
-* Digital Voice Modem - Common Library
-* MIT Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @derivedfrom C++ AES (https://github.com/SergeyBel/AES)
-* @license MIT License (https://opensource.org/license/MIT)
-*
-*   Copyright (C) 2019 SergeyBel
-*   Copyright (C) 2023 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * MIT Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2019 SergeyBel
+ *  Copyright (C) 2023 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "Defines.h"
 #include "AESCrypto.h"
 #include "Log.h"
@@ -246,9 +242,7 @@ static const uint8_t INV_CMDS[4][4] = { {14, 11, 13, 9}, {9, 14, 11, 13}, {13, 9
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the AES class.
-/// </summary>
+/* Initializes a new instance of the AES class. */
 AES::AES(const AESKeyLength keyLength) {
     switch (keyLength) {
     case AESKeyLength::AES_128:
@@ -266,13 +260,7 @@ AES::AES(const AESKeyLength keyLength) {
     }
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="in"></param>
-/// <param name="inLen"></param>
-/// <param name="key"></param>
-/// <returns></returns>
+/* Encrypt input buffer with given key in AES-ECB. */
 uint8_t* AES::encryptECB(const uint8_t in[], uint32_t inLen, const uint8_t key[])
 {
     if (inLen % BLOCK_BYTES_LEN != 0) {
@@ -294,13 +282,7 @@ uint8_t* AES::encryptECB(const uint8_t in[], uint32_t inLen, const uint8_t key[]
     return out;
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="in"></param>
-/// <param name="inLen"></param>
-/// <param name="key"></param>
-/// <returns></returns>
+/* Decrypt input buffer with given key in AES-ECB. */
 uint8_t* AES::decryptECB(const uint8_t in[], uint32_t inLen, const uint8_t key[]) 
 {
     if (inLen % BLOCK_BYTES_LEN != 0) {
@@ -322,14 +304,7 @@ uint8_t* AES::decryptECB(const uint8_t in[], uint32_t inLen, const uint8_t key[]
     return out;
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="in"></param>
-/// <param name="inLen"></param>
-/// <param name="key"></param>
-/// <param name="iv"></param>
-/// <returns></returns>
+/* Encrypt input buffer with given key and IV in AES-CBC. */
 uint8_t* AES::encryptCBC(const uint8_t in[], uint32_t inLen, const uint8_t key[], const uint8_t* iv) 
 {
     if (inLen % BLOCK_BYTES_LEN != 0) {
@@ -355,14 +330,7 @@ uint8_t* AES::encryptCBC(const uint8_t in[], uint32_t inLen, const uint8_t key[]
     return out;
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="in"></param>
-/// <param name="inLen"></param>
-/// <param name="key"></param>
-/// <param name="iv"></param>
-/// <returns></returns>
+/* Decrypt input buffer with given key and IV in AES-CBC. */
 uint8_t* AES::decryptCBC(const uint8_t in[], uint32_t inLen, const uint8_t key[], const uint8_t *iv) 
 {
     if (inLen % BLOCK_BYTES_LEN != 0) {
@@ -388,14 +356,7 @@ uint8_t* AES::decryptCBC(const uint8_t in[], uint32_t inLen, const uint8_t key[]
     return out;
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="in"></param>
-/// <param name="inLen"></param>
-/// <param name="key"></param>
-/// <param name="iv"></param>
-/// <returns></returns>
+/* Encrypt input buffer with given key and IV in AES-CFB. */
 uint8_t* AES::encryptCFB(const uint8_t in[], uint32_t inLen, const uint8_t key[], const uint8_t *iv) 
 {
     if (inLen % BLOCK_BYTES_LEN != 0) {
@@ -422,14 +383,7 @@ uint8_t* AES::encryptCFB(const uint8_t in[], uint32_t inLen, const uint8_t key[]
     return out;
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="in"></param>
-/// <param name="inLen"></param>
-/// <param name="key"></param>
-/// <param name="iv"></param>
-/// <returns></returns>
+/* Decrypt input buffer with given key and IV in AES-CFB. */
 uint8_t* AES::decryptCFB(const uint8_t in[], uint32_t inLen, const uint8_t key[], const uint8_t *iv) 
 {
     if (inLen % BLOCK_BYTES_LEN != 0) {
@@ -460,10 +414,7 @@ uint8_t* AES::decryptCFB(const uint8_t in[], uint32_t inLen, const uint8_t key[]
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-///
-/// </summary>
-/// <param name="state"></param>
+/* */
 void AES::subBytes(uint8_t state[4][AES_NB]) 
 {
     for (uint32_t i = 0; i < 4; i++) {
@@ -474,10 +425,7 @@ void AES::subBytes(uint8_t state[4][AES_NB])
     }
 }
 
-/// <summary>
-/// 
-/// </summary>
-/// <param name="state"></param>
+/* */
 void AES::invSubBytes(uint8_t state[4][AES_NB]) 
 {
     for (uint32_t i = 0; i < 4; i++) {
@@ -488,12 +436,7 @@ void AES::invSubBytes(uint8_t state[4][AES_NB])
     }
 }
 
-/// <summary>
-/// Shift row i on n positions.
-/// </summary>
-/// <param name="state"></param>
-/// <param name="i"></param>
-/// <param name="n"></param>
+/* Shift row i on n positions. */
 void AES::shiftRow(uint8_t state[4][AES_NB], uint32_t i, uint32_t n)
 {
     uint8_t tmp[AES_NB];
@@ -503,10 +446,7 @@ void AES::shiftRow(uint8_t state[4][AES_NB], uint32_t i, uint32_t n)
     memcpy(state[i], tmp, AES_NB * sizeof(uint8_t));
 }
 
-/// <summary>
-/// 
-/// </summary>
-/// <param name="state"></param>
+/* */
 void AES::shiftRows(uint8_t state[4][AES_NB]) 
 {
     shiftRow(state, 1, 1);
@@ -514,10 +454,7 @@ void AES::shiftRows(uint8_t state[4][AES_NB])
     shiftRow(state, 3, 3);
 }
 
-/// <summary>
-/// 
-/// </summary>
-/// <param name="state"></param>
+/* */
 void AES::invShiftRows(uint8_t state[4][AES_NB]) 
 {
     shiftRow(state, 1, AES_NB - 1);
@@ -525,10 +462,7 @@ void AES::invShiftRows(uint8_t state[4][AES_NB])
     shiftRow(state, 3, AES_NB - 3);
 }
 
-/// <summary>
-/// 
-/// </summary>
-/// <param name="state"></param>
+/* */
 void AES::mixColumns(uint8_t state[4][AES_NB]) {
     uint8_t tempState[4][AES_NB];
     for (size_t i = 0; i < 4; ++i) {
@@ -551,10 +485,7 @@ void AES::mixColumns(uint8_t state[4][AES_NB]) {
     }
 }
 
-/// <summary>
-/// 
-/// </summary>
-/// <param name="state"></param>
+/* */
 void AES::invMixColumns(uint8_t state[4][AES_NB]) {
     uint8_t tempState[4][AES_NB];
     for (size_t i = 0; i < 4; ++i) {
@@ -574,11 +505,7 @@ void AES::invMixColumns(uint8_t state[4][AES_NB]) {
     }
 }
 
-/// <summary>
-/// 
-/// </summary>
-/// <param name="state"></param>
-/// <param name="key"></param>
+/* */
 void AES::addRoundKey(uint8_t state[4][AES_NB], uint8_t* key) 
 {
     for (uint32_t i = 0; i < 4; i++) {
@@ -588,10 +515,7 @@ void AES::addRoundKey(uint8_t state[4][AES_NB], uint8_t* key)
     }
 }
 
-/// <summary>
-/// 
-/// </summary>
-/// <param name="a"></param>
+/* */
 void AES::subWord(uint8_t* a) 
 {
     for (uint32_t i = 0; i < 4; i++) {
@@ -599,10 +523,7 @@ void AES::subWord(uint8_t* a)
     }
 }
 
-/// <summary>
-/// 
-/// </summary>
-/// <param name="a"></param>
+/* */
 void AES::rotWord(uint8_t* a) 
 {
     uint8_t c = a[0];
@@ -612,12 +533,7 @@ void AES::rotWord(uint8_t* a)
     a[3] = c;
 }
 
-/// <summary>
-/// 
-/// </summary>
-/// <param name="a"></param>
-/// <param name="b"></param>
-/// <param name="c"></param>
+/* */
 void AES::xorWords(uint8_t* a, uint8_t* b, uint8_t* c) 
 {
     for (uint32_t i = 0; i < 4; i++) {
@@ -625,11 +541,7 @@ void AES::xorWords(uint8_t* a, uint8_t* b, uint8_t* c)
     }
 }
 
-/// <summary>
-/// 
-/// </summary>
-/// <param name="a"></param>
-/// <param name="n"></param>
+/* */
 void AES::rCon(uint8_t *a, uint32_t n) 
 {
     uint8_t c = 1;
@@ -641,11 +553,7 @@ void AES::rCon(uint8_t *a, uint32_t n)
     a[1] = a[2] = a[3] = 0;
 }
 
-/// <summary>
-/// 
-/// </summary>
-/// <param name="key"></param>
-/// <param name="w"></param>
+/* */
 void AES::keyExpansion(const uint8_t key[], uint8_t w[]) {
     uint8_t temp[4], rcon[4];
 
@@ -679,12 +587,7 @@ void AES::keyExpansion(const uint8_t key[], uint8_t w[]) {
     }
 }
 
-/// <summary>
-/// 
-/// </summary>
-/// <param name="in"></param>
-/// <param name="out"></param>
-/// <param name="roundKeys"></param>
+/* */
 void AES::encryptBlock(const uint8_t in[], uint8_t out[], uint8_t* roundKeys) 
 {
     uint8_t state[4][AES_NB];
@@ -714,12 +617,7 @@ void AES::encryptBlock(const uint8_t in[], uint8_t out[], uint8_t* roundKeys)
     }
 }
 
-/// <summary>
-/// 
-/// </summary>
-/// <param name="in"></param>
-/// <param name="out"></param>
-/// <param name="roundKeys"></param>
+/* */
 void AES::decryptBlock(const uint8_t in[], uint8_t out[], uint8_t* roundKeys) 
 {
     uint8_t state[4][AES_NB];
@@ -749,13 +647,7 @@ void AES::decryptBlock(const uint8_t in[], uint8_t out[], uint8_t* roundKeys)
     }
 }
 
-/// <summary>
-/// 
-/// </summary>
-/// <param name="a"></param>
-/// <param name="b"></param>
-/// <param name="c"></param>
-/// <param name="len"></param>
+/* */
 void AES::xorBlocks(const uint8_t *a, const uint8_t *b, uint8_t *c, uint32_t len) 
 {
     for (uint32_t i = 0; i < len; i++) {

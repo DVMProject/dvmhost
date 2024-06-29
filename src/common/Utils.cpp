@@ -1,17 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2009,2014,2015,2016 Jonathan Naylor, G4KLX
-*   Copyright (C) 2018-2019 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2009,2014,2015,2016 Jonathan Naylor, G4KLX
+ *  Copyright (C) 2018-2019 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "Utils.h"
 #include "Log.h"
 
@@ -33,12 +29,7 @@ const uint8_t BITS_TABLE[] = {
 //  Static Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-///
-/// </summary>
-/// <param name="title"></param>
-/// <param name="data"></param>
-/// <param name="length"></param>
+/* Helper to dump the input buffer and display the hexadecimal output in the log. */
 void Utils::dump(const std::string& title, const uint8_t* data, uint32_t length)
 {
     assert(data != nullptr);
@@ -46,13 +37,7 @@ void Utils::dump(const std::string& title, const uint8_t* data, uint32_t length)
     dump(2U, title, data, length);
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="level"></param>
-/// <param name="title"></param>
-/// <param name="data"></param>
-/// <param name="length"></param>
+/* Helper to dump the input buffer and display the hexadecimal output in the log. */
 void Utils::dump(int level, const std::string& title, const uint8_t* data, uint32_t length)
 {
     assert(data != nullptr);
@@ -99,12 +84,7 @@ void Utils::dump(int level, const std::string& title, const uint8_t* data, uint3
     }
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="title"></param>
-/// <param name="bits"></param>
-/// <param name="length"></param>
+/* Helper to dump the input boolean bit buffer and display the hexadecimal output in the log. */
 void Utils::dump(const std::string& title, const bool* bits, uint32_t length)
 {
     assert(bits != nullptr);
@@ -112,13 +92,7 @@ void Utils::dump(const std::string& title, const bool* bits, uint32_t length)
     dump(2U, title, bits, length);
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="level"></param>
-/// <param name="title"></param>
-/// <param name="bits"></param>
-/// <param name="length"></param>
+/* Helper to dump the input boolean bit buffer and display the hexadecimal output in the log. */
 void Utils::dump(int level, const std::string& title, const bool* bits, uint32_t length)
 {
     assert(bits != nullptr);
@@ -131,12 +105,7 @@ void Utils::dump(int level, const std::string& title, const bool* bits, uint32_t
     dump(level, title, bytes, nBytes);
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="title"></param>
-/// <param name="data"></param>
-/// <param name="length"></param>
+/* Helper to dump the input buffer and display the output as a symbolic microslot output. */
 void Utils::symbols(const std::string& title, const uint8_t* data, uint32_t length)
 {
     assert(data != nullptr);
@@ -198,11 +167,7 @@ void Utils::symbols(const std::string& title, const uint8_t* data, uint32_t leng
     }
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="byte"></param>
-/// <param name="bits"></param>
+/* Helper to convert the input byte to a boolean array of bits in big-endian. */
 void Utils::byteToBitsBE(uint8_t byte, bool* bits)
 {
     assert(bits != nullptr);
@@ -217,11 +182,7 @@ void Utils::byteToBitsBE(uint8_t byte, bool* bits)
     bits[7U] = (byte & 0x01U) == 0x01U;
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="byte"></param>
-/// <param name="bits"></param>
+/* Helper to convert the input byte to a boolean array of bits in little-endian. */
 void Utils::byteToBitsLE(uint8_t byte, bool* bits)
 {
     assert(bits != nullptr);
@@ -236,11 +197,7 @@ void Utils::byteToBitsLE(uint8_t byte, bool* bits)
     bits[7U] = (byte & 0x80U) == 0x80U;
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="bits"></param>
-/// <param name="byte"></param>
+/* Helper to convert the input boolean array of bits to a byte in big-endian. */
 void Utils::bitsToByteBE(const bool* bits, uint8_t& byte)
 {
     assert(bits != nullptr);
@@ -255,11 +212,7 @@ void Utils::bitsToByteBE(const bool* bits, uint8_t& byte)
     byte |= bits[7U] ? 0x01U : 0x00U;
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="bits"></param>
-/// <param name="byte"></param>
+/* Helper to convert the input boolean array of bits to a byte in little-endian. */
 void Utils::bitsToByteLE(const bool* bits, uint8_t& byte)
 {
     assert(bits != nullptr);
@@ -274,45 +227,26 @@ void Utils::bitsToByteLE(const bool* bits, uint8_t& byte)
     byte |= bits[7U] ? 0x80U : 0x00U;
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="value"></param>
-/// <returns></returns>
+/* Helper to reverse the endianness of the passed value. */
 uint16_t Utils::reverseEndian(uint16_t value)
 {
     return (value << 8 & 0xff00) | (value >> 8);
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="value"></param>
-/// <returns></returns>
+/* Helper to reverse the endianness of the passed value. */
 uint32_t Utils::reverseEndian(uint32_t value)
 {
     return (value << 24 | (value & 0xFF00U) << 8 | (value & 0xFF0000U) >> 8 | value >> 24);
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="value"></param>
-/// <returns></returns>
+/* Helper to reverse the endianness of the passed value. */
 uint64_t Utils::reverseEndian(uint64_t value)
 {
     return (value << 56 | (value & 0xFF00U) << 40 | (value & 0xFF0000U) << 24 | (value & 0xFF000000U) << 8 | 
            (value & 0xFF00000000U) >> 8 | (value & 0xFF0000000000U) >> 24 | (value & 0xFF000000000000U) >> 40 | value >> 56);
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="in"></param>
-/// <param name="out"></param>
-/// <param name="start"></param>
-/// <param name="stop"></param>
-/// <returns></returns>
+/* Helper to retreive arbitrary length of bits from an input buffer. */
 uint32_t Utils::getBits(const uint8_t* in, uint8_t* out, uint32_t start, uint32_t stop)
 {
     assert(in != nullptr);
@@ -327,27 +261,13 @@ uint32_t Utils::getBits(const uint8_t* in, uint8_t* out, uint32_t start, uint32_
     return n;
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="in"></param>
-/// <param name="out"></param>
-/// <param name="start"></param>
-/// <param name="length"></param>
-/// <returns></returns>
+/* Helper to retreive arbitrary length of bits from an input buffer. */
 uint32_t Utils::getBitRange(const uint8_t* in, uint8_t* out, uint32_t start, uint32_t length)
 {
     return getBits(in, out, start, start + length);
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="in"></param>
-/// <param name="out"></param>
-/// <param name="start"></param>
-/// <param name="stop"></param>
-/// <returns></returns>
+/* Helper to set an arbitrary length of bits from an input buffer. */
 uint32_t Utils::setBits(const uint8_t* in, uint8_t* out, uint32_t start, uint32_t stop)
 {
     assert(in != nullptr);
@@ -362,25 +282,13 @@ uint32_t Utils::setBits(const uint8_t* in, uint8_t* out, uint32_t start, uint32_
     return n;
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="in"></param>
-/// <param name="out"></param>
-/// <param name="start"></param>
-/// <param name="length"></param>
-/// <returns></returns>
+/* Helper to set an arbitrary length of bits from an input buffer. */
 uint32_t Utils::setBitRange(const uint8_t* in, uint8_t* out, uint32_t start, uint32_t length)
 {
     return setBits(in, out, start, start + length);
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="input"></param>
-/// <param name="offset"></param>
-/// <returns></returns>
+/* Helper to convert a binary input buffer into representative 6-bit byte. */
 uint8_t Utils::bin2Hex(const uint8_t* input, uint32_t offset)
 {
     uint8_t output = 0x00U;
@@ -395,13 +303,7 @@ uint8_t Utils::bin2Hex(const uint8_t* input, uint32_t offset)
     return output;
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="input"></param>
-/// <param name="output"></param>
-/// <param name="offset"></param>
-/// <returns></returns>
+/* Helper to convert 6-bit input byte into representative binary buffer. */
 void Utils::hex2Bin(const uint8_t input, uint8_t* output, uint32_t offset)
 {
     WRITE_BIT(output, offset + 0U, input & 0x20U);
@@ -412,21 +314,13 @@ void Utils::hex2Bin(const uint8_t input, uint8_t* output, uint32_t offset)
     WRITE_BIT(output, offset + 5U, input & 0x01U);
 }
 
-/// <summary>
-/// Returns the count of bits in the passed 8 byte value.
-/// </summary>
-/// <param name="bits"></param>
-/// <returns></returns>
+/* Returns the count of bits in the passed 8 byte value. */
 uint8_t Utils::countBits8(uint8_t bits)
 {
     return BITS_TABLE[bits];
 }
 
-/// <summary>
-/// Returns the count of bits in the passed 32 byte value.
-/// </summary>
-/// <param name="bits"></param>
-/// <returns></returns>
+/* Returns the count of bits in the passed 32 byte value. */
 uint8_t Utils::countBits32(uint32_t bits)
 {
     uint8_t* p = (uint8_t*)&bits;
@@ -438,11 +332,7 @@ uint8_t Utils::countBits32(uint32_t bits)
     return n;
 }
 
-/// <summary>
-/// Returns the count of bits in the passed 64 byte value.
-/// </summary>
-/// <param name="bits"></param>
-/// <returns></returns>
+/* Returns the count of bits in the passed 64 byte value. */
 uint8_t Utils::countBits64(ulong64_t bits)
 {
     uint8_t* p = (uint8_t*)&bits;

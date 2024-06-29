@@ -1,17 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2015,2016 Jonathan Naylor, G4KLX
-*   Copyright (C) 2024 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2015,2016 Jonathan Naylor, G4KLX
+ *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "Defines.h"
 #include "dmr/DMRDefines.h"
 #include "dmr/data/Data.h"
@@ -27,10 +23,7 @@ using namespace dmr::data;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the Data class.
-/// </summary>
-/// <param name="data"></param>
+/* Initializes a new instance of the Data class. */
 Data::Data(const Data& data) :
     m_slotNo(data.m_slotNo),
     m_srcId(data.m_srcId),
@@ -47,9 +40,7 @@ Data::Data(const Data& data) :
     ::memcpy(m_data, data.m_data, 2U * DMR_FRAME_LENGTH_BYTES);
 }
 
-/// <summary>
-/// Initializes a new instance of the Data class.
-/// </summary>
+/* Initializes a new instance of the Data class. */
 Data::Data() :
     m_slotNo(1U),
     m_srcId(0U),
@@ -65,19 +56,13 @@ Data::Data() :
     m_data = new uint8_t[2U * DMR_FRAME_LENGTH_BYTES];
 }
 
-/// <summary>
-/// Finalizes a instance of the Data class.
-/// </summary>
+/* Finalizes a instance of the Data class. */
 Data::~Data()
 {
     delete[] m_data;
 }
 
-/// <summary>
-/// Equals operator.
-/// </summary>
-/// <param name="data"></param>
-/// <returns></returns>
+/* Equals operator. */
 Data& Data::operator=(const Data& data)
 {
     if (this != &data) {
@@ -97,10 +82,7 @@ Data& Data::operator=(const Data& data)
     return *this;
 }
 
-/// <summary>
-/// Sets raw data.
-/// </summary>
-/// <param name="buffer">Data buffer.</param>
+/* Sets raw data. */
 void Data::setData(const uint8_t* buffer)
 {
     assert(buffer != nullptr);
@@ -108,10 +90,7 @@ void Data::setData(const uint8_t* buffer)
     ::memcpy(m_data, buffer, DMR_FRAME_LENGTH_BYTES);
 }
 
-/// <summary>
-/// Gets raw data.
-/// </summary>
-/// <param name="buffer">Data buffer.</param>
+/* Gets raw data. */
 uint32_t Data::getData(uint8_t* buffer) const
 {
     assert(buffer != nullptr);

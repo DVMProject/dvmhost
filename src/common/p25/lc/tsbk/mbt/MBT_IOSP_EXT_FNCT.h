@@ -1,15 +1,18 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @file MBT_IOSP_EXT_FNCT.h
+ * @ingroup p25_ambt
+ * @file MBT_IOSP_EXT_FNCT.cpp
+ * @ingroup p25_ambt
+ */
 #if !defined(__P25_LC_TSBK__MBT_IOSP_EXT_FNCT_H__)
 #define  __P25_LC_TSBK__MBT_IOSP_EXT_FNCT_H__
 
@@ -24,25 +27,45 @@ namespace p25
         {
             // ---------------------------------------------------------------------------
             //  Class Declaration
-            //      Implements EXT FNCT RSP - Extended Function Response (ISP) and
-            //          EXT FNCT CMD - Extended Function Command (OSP)
+            //      
             // ---------------------------------------------------------------------------
 
+            /**
+             * @brief Implements EXT FNCT RSP - Extended Function Response (ISP) and
+             *  EXT FNCT CMD - Extended Function Command (OSP)
+             * @ingroup p25_ambt
+             */
             class HOST_SW_API MBT_IOSP_EXT_FNCT : public AMBT {
             public:
-                /// <summary>Initializes a new instance of the MBT_IOSP_EXT_FNCT class.</summary>
+                /**
+                 * @brief Initializes a new instance of the MBT_IOSP_EXT_FNCT class.
+                 */
                 MBT_IOSP_EXT_FNCT();
 
-                /// <summary>Decode a alternate trunking signalling block.</summary>
+                /**
+                 * @brief Decode a alternate trunking signalling block.
+                 * @param[in] dataHeader P25 PDU data header
+                 * @param[in] blocks P25 PDU data blocks
+                 * @returns bool True, if AMBT decoded, otherwise false.
+                 */
                 bool decodeMBT(const data::DataHeader& dataHeader, const data::DataBlock* blocks) override;
-                /// <summary>Encode a alternate trunking signalling block.</summary>
+                /**
+                 * @brief Encode a alternate trunking signalling block.
+                 * @param[out] dataHeader P25 PDU data header
+                 * @param[out] pduUserData P25 PDU user data
+                 */
                 void encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUserData) override;
 
-                /// <summary>Returns a string that represents the current TSBK.</summary>
+                /**
+                 * @brief Returns a string that represents the current AMBT.
+                 * @returns std::string String representation of the AMBT.
+                 */
                 std::string toString(bool isp = false) override;
 
             public:
-                /// <summary>Extended function opcode.</summary>
+                /**
+                 * @brief Extended function opcode.
+                 */
                 __PROPERTY(uint32_t, extendedFunction, ExtendedFunction);
 
                 __COPY(MBT_IOSP_EXT_FNCT);

@@ -1,15 +1,18 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2023 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2023 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @file OSP_TSBK_RAW.h
+ * @ingroup p25_tsbk
+ * @file OSP_TSBK_RAW.cpp
+ * @ingroup p25_tsbk
+ */
 #if !defined(__P25_LC_TSBK__OSP_TSBK_RAW_H__)
 #define  __P25_LC_TSBK__OSP_TSBK_RAW_H__
 
@@ -24,22 +27,42 @@ namespace p25
         {
             // ---------------------------------------------------------------------------
             //  Class Declaration
-            //      Implements a mechanism to generate raw TSBK data from bytes.
             // ---------------------------------------------------------------------------
 
+            /**
+             * @brief Implements a mechanism to generate raw TSBK data from bytes.
+             * @ingroup p25_tsbk
+             */
             class HOST_SW_API OSP_TSBK_RAW : public TSBK {
             public:
-                /// <summary>Initializes a new instance of the OSP_TSBK_RAW class.</summary>
+                /**
+                 * @brief Initializes a new instance of the OSP_TSBK_RAW class.
+                 */
                 OSP_TSBK_RAW();
-                /// <summary>Finalizes a instance of the OSP_TSBK_RAW class.</summary>
+                /**
+                 * @brief Finalizes a instance of the OSP_TSBK_RAW class.
+                 */
                 ~OSP_TSBK_RAW();
 
-                /// <summary>Decode a trunking signalling block.</summary>
+                /**
+                 * @brief Decode a trunking signalling block.
+                 * @param[in] data Buffer containing a TSBK to decode.
+                 * @param rawTSBK Flag indicating whether or not the passed buffer is raw.
+                 * @returns bool True, if TSBK decoded, otherwise false.
+                 */
                 bool decode(const uint8_t* data, bool rawTSBK = false) override;
-                /// <summary>Encode a trunking signalling block.</summary>
+                /**
+                 * @brief Encode a trunking signalling block.
+                 * @param[out] data Buffer to encode a TSBK.
+                 * @param rawTSBK Flag indicating whether or not the output buffer is raw.
+                 * @param noTrellis Flag indicating whether or not the encoded data should be Trellis encoded.
+                 */
                 void encode(uint8_t* data, bool rawTSBK = false, bool noTrellis = false) override;
 
-                /// <summary>Sets the TSBK to encode.</summary>
+                /**
+                 * @brief Sets the TSBK to encode.
+                 * @param[in] tsbk Buffer containing TSBK to encode.
+                 */
                 void setTSBK(const uint8_t* tsbk);
 
             private:

@@ -1,14 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ */
 /*
 * File:    bch3.c
 * Title:   Encoder/decoder for binary BCH codes in C (Version 3.1)
@@ -103,20 +99,13 @@ const int g[] = {
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the BCH class.
-/// </summary>
+/* Initializes a new instance of the BCH class. */
 BCH::BCH() = default;
 
-/// <summary>
-/// Finalizes a instance of the BCH class.
-/// </summary>
+/* Finalizes a instance of the BCH class. */
 BCH::~BCH() = default;
 
-/// <summary>
-/// Encodes input data with BCH.
-/// </summary>
-/// <param name="nid">P25 NID data to encode with BCH.</param>
+/* Encodes input data with BCH. */
 void BCH::encode(uint8_t* nid)
 {
     assert(nid != nullptr);
@@ -138,16 +127,8 @@ void BCH::encode(uint8_t* nid)
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-///
-/// </summary>
-/// <remarks>
-/// Compute redundancy bb[], the coefficients of b(x). The redundancy
-/// polynomial b(x) is the remainder after dividing x^(length-k)*data(x)
-/// by the generator polynomial g(x).
-/// </remarks>
-/// <param name="data"></param>
-/// <param name="bb"></param>
+/* Compute redundancy bb[], the coefficients of b(x). The redundancy polynomial b(x) is the 
+   remainder after dividing x^(length-k)*data(x) by the generator polynomial g(x). */
 void BCH::encode(const int* data, int* bb)
 {
     for (int i = 0; i < length - k; i++)

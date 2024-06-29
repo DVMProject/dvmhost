@@ -1,17 +1,23 @@
 // SPDX-License-Identifier: MIT
+/*
+ * Digital Voice Modem - Common Library
+ * MIT Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2019 SergeyBel
+ *  Copyright (C) 2023 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Common Library
-* MIT Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @derivedfrom C++ AES (https://github.com/SergeyBel/AES)
-* @license MIT License (https://opensource.org/license/MIT)
-*
-*   Copyright (C) 2019 SergeyBel
-*   Copyright (C) 2023 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @defgroup crypto Cryptography
+ * @brief Defines and implements cryptography routines.
+ * @ingroup common
+ * 
+ * @file AESCrypto.h
+ * @ingroup crypto
+ * @file AESCrypto.cpp
+ * @ingroup crypto
+ */
 #if !defined(__AES_CRYPTO_H__)
 #define __AES_CRYPTO_H__
 
@@ -26,32 +32,80 @@ namespace crypto
     const uint8_t AES_NB = 4;
 
     /**
-    * AES Key Length
-    */
+     * @brief Enumeration of AES key lengths.
+     * @ingroup crypto
+     */
     enum class AESKeyLength { AES_128, AES_192, AES_256 };
 
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //      Implements the AES encryption algorithm.
     // ---------------------------------------------------------------------------
+
+    /**
+     * @brief Advanced Encryption Standard Algorithm.
+     * @ingroup crypto
+     */
     class HOST_SW_API AES {
     public:
-        /// <summary>Initializes a new instance of the AES class.</summary>
+        /**
+         * @brief Initializes a new instance of the AES class.
+         * @param keyLength Encryption key length from the AESKeyLength enumeration.
+         */
         explicit AES(const AESKeyLength keyLength = AESKeyLength::AES_256);
 
-        /// <summary></summary>
+        /**
+         * @brief Encrypt input buffer with given key in AES-ECB.
+         * @param in Input buffer.
+         * @param inLen Input buffer length.
+         * @param key Encryption key.
+         * @returns uint8_t* Encrypted input buffer.
+         */
         uint8_t* encryptECB(const uint8_t in[], uint32_t inLen, const uint8_t key[]);
-        /// <summary></summary>
+        /**
+         * @brief Decrypt input buffer with the given key in AES-ECB.
+         * @param in Input buffer.
+         * @param inLen Input buffer length.
+         * @param key Encryption key.
+         * @returns uint8_t* Decrypted input buffer.
+         */
         uint8_t* decryptECB(const uint8_t in[], uint32_t inLen, const uint8_t key[]);
 
-        /// <summary></summary>
+        /**
+         * @brief Encrypt input buffer with given key and IV in AES-CBC.
+         * @param in Input buffer.
+         * @param inLen Input buffer length.
+         * @param key Encryption key.
+         * @param iv Initialization Vector buffer.
+         * @return uint8_t* Encrypted input buffer.
+         */
         uint8_t* encryptCBC(const uint8_t in[], uint32_t inLen, const uint8_t key[], const uint8_t* iv);
-        /// <summary></summary>
+        /**
+         * @brief Decrypt input buffer with given key and IV in AES-CBC.
+         * @param in Input buffer.
+         * @param inLen Input buffer length.
+         * @param key Encryption key.
+         * @param iv Initialization Vector buffer.
+         * @return uint8_t* Decrypted input buffer.
+         */
         uint8_t* decryptCBC(const uint8_t in[], uint32_t inLen, const uint8_t key[], const uint8_t* iv);
 
-        /// <summary></summary>
+        /**
+         * @brief Encrypt input buffer with given key and IV in AES-CFB.
+         * @param in Input buffer.
+         * @param inLen Input buffer length.
+         * @param key Encryption key.
+         * @param iv Initialization Vector buffer.
+         * @return uint8_t* Encrypted input buffer.
+         */
         uint8_t* encryptCFB(const uint8_t in[], uint32_t inLen, const uint8_t key[], const uint8_t* iv);
-        /// <summary></summary>
+        /**
+         * @brief Decrypt input buffer with given key and IV in AES-CFB.
+         * @param in Input buffer.
+         * @param inLen Input buffer length.
+         * @param key Encryption key.
+         * @param iv Initialization Vector buffer.
+         * @return uint8_t* Decrypted input buffer.
+         */
         uint8_t* decryptCFB(const uint8_t in[], uint32_t inLen, const uint8_t key[], const uint8_t* iv);
 
         static constexpr uint32_t BLOCK_BYTES_LEN = 4 * AES_NB * sizeof(uint8_t);

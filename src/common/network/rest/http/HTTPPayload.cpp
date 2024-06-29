@@ -1,17 +1,13 @@
 // SPDX-License-Identifier: BSL-1.0
-/**
-* Digital Voice Modem - Common Library
-* BSL-1.0 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @derivedfrom CRUD (https://github.com/venediktov/CRUD)
-* @license BSL-1.0 License (https://opensource.org/license/bsl1-0-html)
-*
-*   Copyright (c) 2003-2013 Christopher M. Kohlhoff
-*   Copyright (C) 2023 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * BSL-1.0 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (c) 2003-2013 Christopher M. Kohlhoff
+ *  Copyright (C) 2023 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "Defines.h"
 #include "network/rest/http/HTTPPayload.h"
 #include "Log.h"
@@ -271,11 +267,7 @@ namespace stock_replies {
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Convert the reply into a vector of buffers. The buffers do not own the
-/// underlying memory blocks, therefore the reply object must remain valid and
-/// not be changed until the write operation has completed.
-/// </summary>
+/* Convert the reply into a vector of buffers. The buffers do not own the underlying memory blocks, therefore the reply object must remain valid and not be changed until the write operation has completed. */
 std::vector<asio::const_buffer> HTTPPayload::toBuffers()
 {
     std::vector<asio::const_buffer> buffers;
@@ -324,11 +316,7 @@ std::vector<asio::const_buffer> HTTPPayload::toBuffers()
     return buffers;
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="obj"></param>
-/// <param name="s"></param>
+/* Prepares payload for transmission by finalizing status and content type. */
 void HTTPPayload::payload(json::object& obj, HTTPPayload::StatusType s)
 {
     json::value v = json::value(obj);
@@ -336,12 +324,7 @@ void HTTPPayload::payload(json::object& obj, HTTPPayload::StatusType s)
     payload(json, s, "application/json");
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="c"></param>
-/// <param name="s"></param>
-/// <param name="contentType"></param>
+/* Prepares payload for transmission by finalizing status and content type. */
 void HTTPPayload::payload(std::string& c, HTTPPayload::StatusType s, const std::string& contentType)
 {
     content = c;
@@ -353,11 +336,7 @@ void HTTPPayload::payload(std::string& c, HTTPPayload::StatusType s, const std::
 //  Static Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Get a status payload.
-/// </summary>
-/// <param name="method"></param>
-/// <param name="uri"></param>
+/* Get a status payload. */
 HTTPPayload HTTPPayload::requestPayload(std::string method, std::string uri)
 {
     HTTPPayload rep;
@@ -367,11 +346,7 @@ HTTPPayload HTTPPayload::requestPayload(std::string method, std::string uri)
     return rep;
 }
 
-/// <summary>
-/// Get a status payload.
-/// </summary>
-/// <param name="status"></param>
-/// <param name="contentType"></param>
+/* Get a status payload. */
 HTTPPayload HTTPPayload::statusPayload(HTTPPayload::StatusType status, const std::string& contentType)
 {
     HTTPPayload rep;
@@ -387,10 +362,7 @@ HTTPPayload HTTPPayload::statusPayload(HTTPPayload::StatusType status, const std
 }
 
 
-/// <summary>
-///
-/// </summary>
-/// <param name="remoteEndpoint"></param>
+/* Helper to attach a host TCP stream reader. */
 void HTTPPayload::attachHostHeader(const asio::ip::tcp::endpoint remoteEndpoint)
 {
     headers.add("Host", std::string(remoteEndpoint.address().to_string() + ":" + std::to_string(remoteEndpoint.port())));
@@ -400,10 +372,7 @@ void HTTPPayload::attachHostHeader(const asio::ip::tcp::endpoint remoteEndpoint)
 //  Private Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-///
-/// </summary>
-/// <param name="contentType"></param>
+/* Internal helper to ensure the headers are of a default for the given content type. */
 void HTTPPayload::ensureDefaultHeaders(const std::string& contentType)
 {
     if (!isClientPayload) {

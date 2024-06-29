@@ -1,17 +1,13 @@
 // SPDX-License-Identifier: MIT
-/**
-* Digital Voice Modem - Common Library
-* MIT Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @derivedfrom mini-yaml (https://github.com/jimmiebergmann/mini-yaml)
-* @license MIT License (https://opensource.org/license/MIT)
-*
-*   Copyright (C) 2018 Jimmie Bergmann
-*   Copyright (C) 2020 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * MIT Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2018 Jimmie Bergmann
+ *  Copyright (C) 2020,2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "yaml/Yaml.h"
 
 #include <memory>
@@ -29,9 +25,20 @@
 
 namespace yaml
 {
+    // ---------------------------------------------------------------------------
+    //  Class Prototypes
+    // ---------------------------------------------------------------------------
+
     class ReaderLine;
 
+    // ---------------------------------------------------------------------------
+    //  Namespace Globals
+    // ---------------------------------------------------------------------------
+
+    static yaml::Node g_NoneNode;
+
     // Exception message definitions.
+
     static const std::string g_ErrorInvalidCharacter        = "Invalid character found.";
     static const std::string g_ErrorKeyMissing              = "Missing key.";
     static const std::string g_ErrorKeyIncorrect            = "Incorrect key.";
@@ -48,9 +55,8 @@ namespace yaml
     static const std::string g_ErrorInvalidQuote            = "Invalid quote.";
     static const std::string g_EmptyString                  = "";
 
-    static yaml::Node g_NoneNode;
-
     // Global function definitions. Implemented at end of this source file.
+
     static std::string ExceptionMessage(const std::string& message, ReaderLine& line);
     static std::string ExceptionMessage(const std::string& message, ReaderLine& line, const size_t errorPos);
     static std::string ExceptionMessage(const std::string& message, const size_t errorLine, const size_t errorPos);
@@ -69,11 +75,7 @@ namespace yaml
     //  Public Class Members
     // ---------------------------------------------------------------------------
 
-    /// <summary>
-    /// Initializes a new instance of the Exception class.
-    /// </summary>
-    /// <param name="message"></param>
-    /// <param name="type"></param>
+    /* Initializes a new instance of the Exception class. */
     Exception::Exception(const std::string& message, const eType type) :
         std::runtime_error(message),
         m_Type(type)
@@ -81,19 +83,13 @@ namespace yaml
         /* stub */
     }
 
-    /// <summary>
-    /// Get type of exception.
-    /// </summary>
-    /// <returns></returns>
+    /* Get type of exception. */
     Exception::eType Exception::type() const
     {
         return m_Type;
     }
 
-    /// <summary>
-    /// Get message of exception.
-    /// </summary>
-    /// <returns></returns>
+    /* Get message of exception. */
     const char* Exception::message() const
     {
         return what();
@@ -103,10 +99,7 @@ namespace yaml
     //  Public Class Members
     // ---------------------------------------------------------------------------
 
-    /// <summary>
-    /// Initializes a new instance of the InternalException class.
-    /// </summary>
-    /// <param name="message"></param>
+    /* Initializes a new instance of the InternalException class. */
     InternalException::InternalException(const std::string& message) :
         Exception(message, InternalError)
     {
@@ -117,10 +110,7 @@ namespace yaml
     //  Public Class Members
     // ---------------------------------------------------------------------------
 
-    /// <summary>
-    /// Initializes a new instance of the ParsingException class.
-    /// </summary>
-    /// <param name="message"></param>
+    /* Initializes a new instance of the ParsingException class. */
     ParsingException::ParsingException(const std::string& message) :
         Exception(message, ParsingError)
     {
@@ -131,78 +121,63 @@ namespace yaml
     //  Public Class Members
     // ---------------------------------------------------------------------------
 
-    /// <summary>
-    /// Initializes a new instance of the OperationException class.
-    /// </summary>
-    /// <param name="message"></param>
+    /* Initializes a new instance of the OperationException class. */
     OperationException::OperationException(const std::string & message) :
         Exception(message, OperationError)
     {
         /* stub */
     }
 
+    /*
+    ** Type implementations
+    */
+
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //
     // ---------------------------------------------------------------------------
 
+    /**
+     * @brief TypeImp YAML type implementation.
+     */
     class TypeImp {
     public:
-        /// <summary>
-        /// Finalizes a new instance of the TypeImp class.
-        /// </summary>
+        /* Finalizes a new instance of the TypeImp class. */
         virtual ~TypeImp() = default;
 
-        /// <summary></summary>
-        /// <returns></returns>
+        /*  */
         virtual const std::string& getData() const = 0;
-        /// <summary></summary>
-        /// <param name="data"></param>
-        /// <returns></returns>
+        /*  */
         virtual bool setData(const std::string& data) = 0;
 
-        /// <summary></summary>
-        /// <returns></returns>
+        /*  */
         virtual size_t size() const = 0;
 
-        /// <summary></summary>
-        /// <param name="index"></param>
-        /// <returns></returns>
+        /*  */
         virtual Node* getNode(const size_t index) = 0;
-        /// <summary></summary>
-        /// <param name="key"></param>
-        /// <returns></returns>
+        /*  */
         virtual Node* getNode(const std::string& key) = 0;
-        /// <summary></summary>
-        /// <param name="index"></param>
-        /// <returns></returns>
+        /*  */
         virtual Node* insert(const size_t index) = 0;
-        /// <summary></summary>
-        /// <returns></returns>
+        /*  */
         virtual Node* push_front() = 0;
-        /// <summary></summary>
-        /// <returns></returns>
+        /*  */
         virtual Node* push_back() = 0;
-        /// <summary></summary>
-        /// <param name="index"></param>
-        /// <returns></returns>
+        /*  */
         virtual void erase(const size_t index) = 0;
-        /// <summary></summary>
-        /// <param name="key"></param>
-        /// <returns></returns>
+        /*  */
         virtual void erase(const std::string& key) = 0;
     };
 
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //
     // ---------------------------------------------------------------------------
 
+    /**
+     * @brief SequenceImp YAML sequence implementation.
+     */
     class SequenceImp : public TypeImp {
     public:
-        /// <summary>
-        /// Finalizes a new instance of the SequenceImp class.
-        /// </summary>
+        /* Finalizes a new instance of the SequenceImp class. */
         ~SequenceImp() override
         {
             for (auto it = m_Sequence.begin(); it != m_Sequence.end(); it++) {
@@ -210,30 +185,15 @@ namespace yaml
             }
         }
 
-        /// <summary></summary>
-        /// <returns></returns>
-        virtual const std::string& getData() const
-        {
-            return g_EmptyString;
-        }
-        /// <summary></summary>
-        /// <param name="data"></param>
-        /// <returns></returns>
-        virtual bool setData(const std::string & data)
-        {
-            return false;
-        }
+        /*  */
+        virtual const std::string& getData() const { return g_EmptyString; }
+        /*  */
+        virtual bool setData(const std::string & data) { return false; }
 
-        /// <summary></summary>
-        /// <returns></returns>
-        virtual size_t size() const
-        {
-            return m_Sequence.size();
-        }
+        /*  */
+        virtual size_t size() const { return m_Sequence.size(); }
 
-        /// <summary></summary>
-        /// <param name="index"></param>
-        /// <returns></returns>
+        /*  */
         virtual Node* getNode(const size_t index)
         {
             auto it = m_Sequence.find(index);
@@ -242,16 +202,10 @@ namespace yaml
             }
             return nullptr;
         }
-        /// <summary></summary>
-        /// <param name="key"></param>
-        /// <returns></returns>
-        virtual Node* getNode(const std::string& key)
-        {
-            return nullptr;
-        }
-        /// <summary></summary>
-        /// <param name="index"></param>
-        /// <returns></returns>
+        /*  */
+        virtual Node* getNode(const std::string& key) { return nullptr; }
+
+        /*  */
         virtual Node* insert(const size_t index)
         {
             if (m_Sequence.size() == 0) {
@@ -280,8 +234,7 @@ namespace yaml
             m_Sequence.insert({ index, pNode });
             return pNode;
         }
-        /// <summary></summary>
-        /// <returns></returns>
+        /*  */
         virtual Node* push_front()
         {
             for (auto it = m_Sequence.cbegin(); it != m_Sequence.cend(); it++) {
@@ -292,8 +245,7 @@ namespace yaml
             m_Sequence.insert({ 0, pNode });
             return pNode;
         }
-        /// <summary></summary>
-        /// <returns></returns>
+        /*  */
         virtual Node* push_back()
         {
             size_t index = 0;
@@ -307,9 +259,8 @@ namespace yaml
             m_Sequence.insert({ index, pNode });
             return pNode;
         }
-        /// <summary></summary>
-        /// <param name="index"></param>
-        /// <returns></returns>
+
+        /*  */
         virtual void erase(const size_t index)
         {
             auto it = m_Sequence.find(index);
@@ -319,27 +270,23 @@ namespace yaml
             delete it->second;
             m_Sequence.erase(index);
         }
-        /// <summary></summary>
-        /// <param name="key"></param>
-        /// <returns></returns>
-        virtual void erase(const std::string& key)
-        {
-            /* stub */
-        }
+        /*  */
+        virtual void erase(const std::string& key) { /* stub */ }
 
+    public:
         std::map<size_t, Node*> m_Sequence;
     };
 
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //
     // ---------------------------------------------------------------------------
 
+    /**
+     * @brief MapImp YAML map implementation.
+     */
     class MapImp : public TypeImp {
     public:
-        /// <summary>
-        /// Finalizes a new instance of the SequenceImp class.
-        /// </summary>
+        /* Finalizes a new instance of the MapImp class. */
         ~MapImp() override
         {
             for (auto it = m_Map.begin(); it != m_Map.end(); it++) {
@@ -347,37 +294,17 @@ namespace yaml
             }
         }
 
-        /// <summary></summary>
-        /// <returns></returns>
-        virtual const std::string& getData() const
-        {
-            return g_EmptyString;
-        }
-        /// <summary></summary>
-        /// <param name="data"></param>
-        /// <returns></returns>
-        virtual bool setData(const std::string& data)
-        {
-            return false;
-        }
+        /*  */
+        virtual const std::string& getData() const { return g_EmptyString; }
+        /*  */
+        virtual bool setData(const std::string& data) { return false; }
 
-        /// <summary></summary>
-        /// <returns></returns>
-        virtual size_t size() const
-        {
-            return m_Map.size();
-        }
+        /*  */
+        virtual size_t size() const { return m_Map.size(); }
 
-        /// <summary></summary>
-        /// <param name="index"></param>
-        /// <returns></returns>
-        virtual Node* getNode(const size_t index)
-        {
-            return nullptr;
-        }
-        /// <summary></summary>
-        /// <param name="key"></param>
-        /// <returns></returns>
+        /*  */
+        virtual Node* getNode(const size_t index) { return nullptr; }
+        /*  */
         virtual Node* getNode(const std::string& key)
         {
             auto it = m_Map.find(key);
@@ -388,35 +315,17 @@ namespace yaml
             }
             return it->second;
         }
-        /// <summary></summary>
-        /// <param name="index"></param>
-        /// <returns></returns>
-        virtual Node* insert(const size_t index)
-        {
-            return nullptr;
-        }
-        /// <summary></summary>
-        /// <returns></returns>
-        virtual Node* push_front()
-        {
-            return nullptr;
-        }
-        /// <summary></summary>
-        /// <returns></returns>
-        virtual Node* push_back()
-        {
-            return nullptr;
-        }
-        /// <summary></summary>
-        /// <param name="index"></param>
-        /// <returns></returns>
-        virtual void erase(const size_t index)
-        {
-            /* stub */
-        }
-        /// <summary></summary>
-        /// <param name="key"></param>
-        /// <returns></returns>
+
+        /*  */
+        virtual Node* insert(const size_t index) { return nullptr; }
+        /*  */
+        virtual Node* push_front() { return nullptr; }
+        /*  */
+        virtual Node* push_back() { return nullptr; }
+        
+        /*  */
+        virtual void erase(const size_t index) { /* stub */ }
+        /*  */
         virtual void erase(const std::string& key)
         {
             auto it = m_Map.find(key);
@@ -427,122 +336,78 @@ namespace yaml
             m_Map.erase(key);
         }
 
+    public:
         std::map<std::string, Node*> m_Map;
     };
 
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //
     // ---------------------------------------------------------------------------
 
+    /**
+     * @brief MapImp YAML scalar implementation.
+     */
     class ScalarImp : public TypeImp {
     public:
-        /// <summary>
-        /// Finalizes a new instance of the ScalarImp class.
-        /// </summary>
-        ~ScalarImp() override
-        {
-            /* stub */
-        }
+        /* Finalizes a new instance of the ScalarImp class. */
+        ~ScalarImp() override { /* stub */ }
 
-        /// <summary></summary>
-        /// <returns></returns>
-        virtual const std::string& getData() const
-        {
-            return m_Value;
-        }
-        /// <summary></summary>
-        /// <param name="data"></param>
-        /// <returns></returns>
+        /*  */
+        virtual const std::string& getData() const { return m_Value; }
+        /*  */
         virtual bool setData(const std::string& data)
         {
             m_Value = data;
             return true;
         }
 
-        /// <summary></summary>
-        /// <returns></returns>
-        virtual size_t size() const
-        {
-            return 0;
-        }
+        /*  */
+        virtual size_t size() const { return 0; }
 
-        /// <summary></summary>
-        /// <param name="index"></param>
-        /// <returns></returns>
-        virtual Node* getNode(const size_t index)
-        {
-            return nullptr;
-        }
-        /// <summary></summary>
-        /// <param name="key"></param>
-        /// <returns></returns>
-        virtual Node* getNode(const std::string& key)
-        {
-            return nullptr;
-        }
-        /// <summary></summary>
-        /// <param name="index"></param>
-        /// <returns></returns>
-        virtual Node* insert(const size_t index)
-        {
-            return nullptr;
-        }
-        /// <summary></summary>
-        /// <returns></returns>
-        virtual Node* push_front()
-        {
-            return nullptr;
-        }
-        /// <summary></summary>
-        /// <returns></returns>
-        virtual Node* push_back()
-        {
-            return nullptr;
-        }
-        /// <summary></summary>
-        /// <param name="index"></param>
-        /// <returns></returns>
-        virtual void erase(const size_t index)
-        {
-            /* stub */
-        }
-        /// <summary></summary>
-        /// <param name="key"></param>
-        /// <returns></returns>
-        virtual void erase(const std::string& key)
-        {
-            /* stub */
-        }
+        /*  */
+        virtual Node* getNode(const size_t index) { return nullptr; }
+        /*  */
+        virtual Node* getNode(const std::string& key) { return nullptr; }
+    
+        /*  */
+        virtual Node* insert(const size_t index) { return nullptr; }
+        /*  */
+        virtual Node* push_front() { return nullptr; }
+        /*  */
+        virtual Node* push_back() { return nullptr; }
+        /*  */
+        virtual void erase(const size_t index) { /* stub */ }
+        /*  */
+        virtual void erase(const std::string& key) { /* stub */ }
 
+    public:
         std::string m_Value;
     };
 
+    /*
+    ** Node implementation
+    */
+
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //
     // ---------------------------------------------------------------------------
 
+    /**
+     * @brief NodeImp YAML node implementation.
+     */
     class NodeImp {
     public:
-        /// <summary>
-        /// Initializes a new instance of the NodeImp class.
-        /// </summary>
+        /* Initializes a new instance of the NodeImp class. */
         NodeImp() :
             m_Type(Node::None),
             m_pImp(nullptr)
         {
             /* stub */
         }
-        /// <summary>
-        /// Finalizes a new instance of the NodeImp class.
-        /// </summary>
-        ~NodeImp()
-        {
-            clear();
-        }
+        /* Finalizes a new instance of the NodeImp class. */
+        ~NodeImp() { clear(); }
 
-        /// <summary>Completely clear node.</summary>
+        /* Completely clear node. */
         void clear()
         {
             if (m_pImp != nullptr) {
@@ -552,7 +417,7 @@ namespace yaml
             m_Type = Node::None;
         }
 
-        /// <summary></summary>
+        /*  */
         void initSequence()
         {
             if (m_Type != Node::SequenceType || m_pImp == nullptr) {
@@ -563,7 +428,7 @@ namespace yaml
                 m_Type = Node::SequenceType;
             }
         }
-        /// <summary></summary>
+        /*  */
         void initMap()
         {
             if (m_Type != Node::MapType || m_pImp == nullptr) {
@@ -574,7 +439,7 @@ namespace yaml
                 m_Type = Node::MapType;
             }
         }
-        /// <summary></summary>
+        /*  */
         void initScalar()
         {
             if (m_Type != Node::ScalarType || m_pImp == nullptr) {
@@ -587,257 +452,170 @@ namespace yaml
 
         }
 
+    public:
         Node::eType m_Type;
         TypeImp* m_pImp;
     };
 
+    /*
+    ** Iterator implementations
+    */
+
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //
     // ---------------------------------------------------------------------------
 
+    /**
+     * @brief IteratorImp YAML iterator implementation.
+     */
     class IteratorImp {
     public:
-        /// <summary>
-        /// Finalizes a new instance of the IteratorImp class.
-        /// </summary>
+        /* Finalizes a new instance of the IteratorImp class. */
         virtual ~IteratorImp() = default;
 
-        /// <summary></summary>
-        /// <returns></returns>
+        /*  */
         virtual Node::eType type() const = 0;
-        /// <summary></summary>
-        /// <param name="pSequenceImp"></param>
+        /*  */
         virtual void initBegin(SequenceImp* pSequenceImp) = 0;
-        /// <summary></summary>
-        /// <param name="pSequenceImp"></param>
+        /*  */
         virtual void initEnd(SequenceImp* pSequenceImp) = 0;
-        /// <summary></summary>
-        /// <param name="pMapImp"></param>
+        /*  */
         virtual void initBegin(MapImp* pMapImp) = 0;
-        /// <summary></summary>
-        /// <param name="pMapImp"></param>
+        /*  */
         virtual void initEnd(MapImp* pMapImp) = 0;
     };
 
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //
     // ---------------------------------------------------------------------------
 
+    /**
+     * @brief SequenceIteratorImp YAML sequence iterator implementation.
+     */
     class SequenceIteratorImp : public IteratorImp {
     public:
-        /// <summary></summary>
-        /// <returns></returns>
-        Node::eType type() const override
-        {
-            return Node::SequenceType;
-        }
-        /// <summary></summary>
-        /// <param name="pSequenceImp"></param>
-        void initBegin(SequenceImp* pSequenceImp) override
-        {
-            m_Iterator = pSequenceImp->m_Sequence.begin();
-        }
-        /// <summary></summary>
-        /// <param name="pSequenceImp"></param>
-        void initEnd(SequenceImp* pSequenceImp) override
-        {
-            m_Iterator = pSequenceImp->m_Sequence.end();
-        }
-        /// <summary></summary>
-        /// <param name="pMapImp"></param>
-        void initBegin(MapImp* pMapImp) override
-        {
-            /* stub */
-        }
-        /// <summary></summary>
-        /// <param name="pMapImp"></param>
-        void initEnd(MapImp* pMapImp) override
-        {
-            /* stub */
-        }
+        /*  */
+        Node::eType type() const override { return Node::SequenceType; }
 
-        /// <summary></summary>
-        /// <param name="it"></param>
-        void copy(const SequenceIteratorImp& it)
-        {
-            m_Iterator = it.m_Iterator;
-        }
+        /*  */
+        void initBegin(SequenceImp* pSequenceImp) override { m_Iterator = pSequenceImp->m_Sequence.begin(); }
+        /*  */
+        void initEnd(SequenceImp* pSequenceImp) override { m_Iterator = pSequenceImp->m_Sequence.end(); }
+        /*  */
+        void initBegin(MapImp* pMapImp) override { /* stub */ }
+        /*  */
+        void initEnd(MapImp* pMapImp) override { /* stub */ }
 
-        std::map<size_t, Node *>::iterator m_Iterator;
+        /*  */
+        void copy(const SequenceIteratorImp& it) { m_Iterator = it.m_Iterator; }
+
+    public:
+        std::map<size_t, Node*>::iterator m_Iterator;
     };
 
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //
     // ---------------------------------------------------------------------------
 
+    /**
+     * @brief MapIteratorImp YAML map iterator implementation.
+     */
     class MapIteratorImp : public IteratorImp {
     public:
-        /// <summary></summary>
-        /// <returns></returns>
-        Node::eType type() const override
-        {
-            return Node::MapType;
-        }
-        /// <summary></summary>
-        /// <param name="pSequenceImp"></param>
-        void initBegin(SequenceImp* pSequenceImp) override
-        {
-            /* stub */
-        }
-        /// <summary></summary>
-        /// <param name="pSequenceImp"></param>
-        void initEnd(SequenceImp* pSequenceImp) override
-        {
-            /* stub */
-        }
-        /// <summary></summary>
-        /// <param name="pMapImp"></param>
-        void initBegin(MapImp* pMapImp) override
-        {
-            m_Iterator = pMapImp->m_Map.begin();
-        }
-        /// <summary></summary>
-        /// <param name="pMapImp"></param>
-        void initEnd(MapImp* pMapImp) override
-        {
-            m_Iterator = pMapImp->m_Map.end();
-        }
+        /*  */
+        Node::eType type() const override { return Node::MapType; }
 
-        /// <summary></summary>
-        /// <param name="it"></param>
-        void copy(const MapIteratorImp& it)
-        {
-            m_Iterator = it.m_Iterator;
-        }
+        /*  */
+        void initBegin(SequenceImp* pSequenceImp) override { /* stub */ }
+        /*  */
+        void initEnd(SequenceImp* pSequenceImp) override { /* stub */ }
+        /*  */
+        void initBegin(MapImp* pMapImp) override { m_Iterator = pMapImp->m_Map.begin(); }
+        /*  */
+        void initEnd(MapImp* pMapImp) override { m_Iterator = pMapImp->m_Map.end(); }
 
-        std::map<std::string, Node *>::iterator m_Iterator;
+        /*  */
+        void copy(const MapIteratorImp& it) { m_Iterator = it.m_Iterator; }
+
+    public:
+        std::map<std::string, Node*>::iterator m_Iterator;
     };
 
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //
     // ---------------------------------------------------------------------------
 
+    /**
+     * @brief SequenceConstIteratorImp YAML constant sequence iterator implementation.
+     */
     class SequenceConstIteratorImp : public IteratorImp {
     public:
-        /// <summary></summary>
-        /// <returns></returns>
-        Node::eType type() const override
-        {
-            return Node::SequenceType;
-        }
-        /// <summary></summary>
-        /// <param name="pSequenceImp"></param>
-        void initBegin(SequenceImp* pSequenceImp) override
-        {
-            m_Iterator = pSequenceImp->m_Sequence.begin();
-        }
-        /// <summary></summary>
-        /// <param name="pSequenceImp"></param>
-        void initEnd(SequenceImp* pSequenceImp) override
-        {
-            m_Iterator = pSequenceImp->m_Sequence.end();
-        }
-        /// <summary></summary>
-        /// <param name="pMapImp"></param>
-        void initBegin(MapImp* pMapImp) override
-        {
-            /* stub */
-        }
-        /// <summary></summary>
-        /// <param name="pMapImp"></param>
-        void initEnd(MapImp* pMapImp) override
-        {
-            /* stub */
-        }
+        /*  */
+        Node::eType type() const override { return Node::SequenceType; }
 
-        /// <summary></summary>
-        /// <param name="it"></param>
-        void copy(const SequenceConstIteratorImp & it)
-        {
-            m_Iterator = it.m_Iterator;
-        }
+        /*  */
+        void initBegin(SequenceImp* pSequenceImp) override { m_Iterator = pSequenceImp->m_Sequence.begin(); }
+        /*  */
+        void initEnd(SequenceImp* pSequenceImp) override { m_Iterator = pSequenceImp->m_Sequence.end(); }
+        /*  */
+        void initBegin(MapImp* pMapImp) override { /* stub */ }
+        /*  */
+        void initEnd(MapImp* pMapImp) override { /* stub */ }
 
-        std::map<size_t, Node *>::const_iterator m_Iterator;
+        /*  */
+        void copy(const SequenceConstIteratorImp& it) { m_Iterator = it.m_Iterator; }
+
+    public:
+        std::map<size_t, Node*>::const_iterator m_Iterator;
     };
 
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //
     // ---------------------------------------------------------------------------
 
+    /**
+     * @brief MapConstIteratorImp YAML constant map iterator implementation.
+     */
     class MapConstIteratorImp : public IteratorImp {
     public:
-        /// <summary></summary>
-        /// <returns></returns>
-        Node::eType type() const override
-        {
-            return Node::MapType;
-        }
-        /// <summary></summary>
-        /// <param name="pSequenceImp"></param>
-        void initBegin(SequenceImp* pSequenceImp) override
-        {
-            /* stub */
-        }
-        /// <summary></summary>
-        /// <param name="pSequenceImp"></param>
-        void initEnd(SequenceImp* pSequenceImp) override
-        {
-            /* stub */
-        }
-        /// <summary></summary>
-        /// <param name="pMapImp"></param>
-        void initBegin(MapImp* pMapImp) override
-        {
-            m_Iterator = pMapImp->m_Map.begin();
-        }
-        /// <summary></summary>
-        /// <param name="pMapImp"></param>
-        void initEnd(MapImp* pMapImp) override
-        {
-            m_Iterator = pMapImp->m_Map.end();
-        }
+        /*  */
+        Node::eType type() const override { return Node::MapType; }
 
-        /// <summary></summary>
-        /// <param name="it"></param>
-        void copy(const MapConstIteratorImp & it)
-        {
-            m_Iterator = it.m_Iterator;
-        }
+        /*  */
+        void initBegin(SequenceImp* pSequenceImp) override { /* stub */ }
+        /*  */
+        void initEnd(SequenceImp* pSequenceImp) override { /* stub */ }
+        /*  */
+        void initBegin(MapImp* pMapImp) override { m_Iterator = pMapImp->m_Map.begin(); }
+        /*  */
+        void initEnd(MapImp* pMapImp) override { m_Iterator = pMapImp->m_Map.end(); }
 
-        std::map<std::string, Node *>::const_iterator m_Iterator;
+        /*  */
+        void copy(const MapConstIteratorImp& it) { m_Iterator = it.m_Iterator; }
+
+    public:
+        std::map<std::string, Node*>::const_iterator m_Iterator;
     };
 
     // ---------------------------------------------------------------------------
     //  Public Class Members
     // ---------------------------------------------------------------------------
 
-    /// <summary>
-    /// Initializes a new instance of the Iterator class.
-    /// </summary>
+    /* Initializes a new instance of the Iterator class. */
     Iterator::Iterator() :
         m_Type(None),
         m_pImp(nullptr)
     {
         /* stub */
     }
-    /// <summary>
-    /// Copies an instance of the Iterator class to a new instance of the Iterator class.
-    /// </summary>
-    /// <param name="it"></param>
+    /* Copies an instance of the Iterator class to a new instance of the Iterator class. */
     Iterator::Iterator(const Iterator& it) :
         m_Type(None),
         m_pImp(nullptr)
     {
         *this = it;
     }
-    /// <summary>
-    /// Finalizes a instance of the Iterator class.
-    /// </summary>
+    /* Finalizes a instance of the Iterator class. */
     Iterator::~Iterator()
     {
         if (m_pImp) {
@@ -855,7 +633,7 @@ namespace yaml
         }
     }
 
-    /// <summary>Assignment operator.</summary>
+    /* Assignment operator. */
     Iterator& Iterator::operator= (const Iterator& it)
     {
         if (m_pImp) {
@@ -894,8 +672,8 @@ namespace yaml
         return *this;
     }
 
-    /// <summary>Get node of iterator. First pair item is the key of map value, empty if type is sequence.</summary>
-    std::pair<const std::string&, Node&> Iterator::operator *()
+    /* Get node of iterator. First pair item is the key of map value, empty if type is sequence. */
+    std::pair<const std::string&, Node&> Iterator::operator* ()
     {
         switch (m_Type) {
         case SequenceType:
@@ -913,7 +691,7 @@ namespace yaml
         return { g_EmptyString, g_NoneNode };
     }
 
-    /// <summary>Post-increment operator.</summary>
+    /* Post-increment operator. */
     Iterator& Iterator::operator++ (int dummy)
     {
         switch (m_Type) {
@@ -929,7 +707,7 @@ namespace yaml
         return *this;
     }
 
-    /// <summary>Post-decrement operator.</summary>
+    /* Post-decrement operator. */
     Iterator& Iterator::operator-- (int dummy)
     {
         switch(m_Type) {
@@ -945,7 +723,7 @@ namespace yaml
         return *this;
     }
 
-    /// <summary>Check if iterator is equal to other iterator.</summary>
+    /* Check if iterator is equal to other iterator. */
     bool Iterator::operator== (const Iterator& it)
     {
         if (m_Type != it.m_Type) {
@@ -966,7 +744,7 @@ namespace yaml
         return false;
     }
 
-    /// <summary>Check if iterator is not equal to other iterator.</summary>
+    /* Check if iterator is not equal to other iterator. */
     bool Iterator::operator!= (const Iterator& it)
     {
         return !(*this == it);
@@ -976,28 +754,21 @@ namespace yaml
     //  Public Class Members
     // ---------------------------------------------------------------------------
 
-    /// <summary>
-    /// Initializes a new instance of the ConstIterator class.
-    /// </summary>
+    /* Initializes a new instance of the ConstIterator class. */
     ConstIterator::ConstIterator() :
         m_Type(None),
         m_pImp(nullptr)
     {
         /* stub */
     }
-    /// <summary>
-    /// Copies an instance of the ConstIterator class to a new instance of the ConstIterator class.
-    /// </summary>
-    /// <param name="it"></param>
+    /* Copies an instance of the ConstIterator class to a new instance of the ConstIterator class. */
     ConstIterator::ConstIterator(const ConstIterator& it) :
         m_Type(None),
         m_pImp(nullptr)
     {
         *this = it;
     }
-    /// <summary>
-    /// Finalizes a instance of the ConstIterator class.
-    /// </summary>
+    /* Finalizes a instance of the ConstIterator class. */
     ConstIterator::~ConstIterator()
     {
         if (m_pImp) {
@@ -1015,7 +786,7 @@ namespace yaml
         }
     }
 
-    /// <summary>Assignment operator.</summary>
+    /* Assignment operator. */
     ConstIterator& ConstIterator::operator= (const ConstIterator& it)
     {
         if (m_pImp) {
@@ -1053,8 +824,8 @@ namespace yaml
         return *this;
     }
 
-    /// <summary>Get node of iterator. First pair item is the key of map value, empty if type is sequence.</summary>
-    std::pair<const std::string&, const Node&> ConstIterator::operator *()
+    /* Get node of iterator. First pair item is the key of map value, empty if type is sequence. */
+    std::pair<const std::string&, const Node&> ConstIterator::operator* ()
     {
         switch (m_Type) {
         case SequenceType:
@@ -1072,7 +843,7 @@ namespace yaml
         return { g_EmptyString, g_NoneNode };
     }
 
-    /// <summary>Post-increment operator.</summary>
+    /* Post-increment operator. */
     ConstIterator& ConstIterator::operator++ (int dummy)
     {
         switch (m_Type) {
@@ -1088,7 +859,7 @@ namespace yaml
         return *this;
     }
 
-    /// <summary>Post-decrement operator.</summary>
+    /* Post-decrement operator. */
     ConstIterator& ConstIterator::operator-- (int dummy)
     {
         switch (m_Type) {
@@ -1104,7 +875,7 @@ namespace yaml
         return *this;
     }
 
-    /// <summary>Check if iterator is equal to other iterator.</summary>
+    /* Check if iterator is equal to other iterator. */
     bool ConstIterator::operator== (const ConstIterator& it)
     {
         if (m_Type != it.m_Type) {
@@ -1125,7 +896,7 @@ namespace yaml
         return false;
     }
 
-    /// <summary>Check if iterator is not equal to other iterator.</summary>
+    /* Check if iterator is not equal to other iterator. */
     bool ConstIterator::operator!= (const ConstIterator & it)
     {
         return !(*this == it);
@@ -1135,91 +906,73 @@ namespace yaml
     //  Public Class Members
     // ---------------------------------------------------------------------------
 
-    /// <summary>
-    /// Initializes a new instance of the Node class.
-    /// </summary>
+    /* Initializes a new instance of the Node class. */
     Node::Node() :
         m_pImp(new NodeImp)
     {
         /* stub */
     }
-    /// <summary>
-    /// Copies an instance of the Node class to a new instance of the Node class.
-    /// </summary>
-    /// <param name="node"></param>
+    /* Copies an instance of the Node class to a new instance of the Node class. */
     Node::Node(const Node& node) :
         Node()
     {
         *this = node;
     }
-    /// <summary>
-    /// Initializes a new instance of the Node class.
-    /// </summary>
-    /// <param name="value"></param>
+    /* Initializes a new instance of the Node class. */
     Node::Node(const std::string& value) :
         Node()
     {
         *this = value;
     }
-    /// <summary>
-    /// Initializes a new instance of the Node class.
-    /// </summary>
+    /* Initializes a new instance of the Node class. */
     Node::Node(const char* value) :
         Node()
     {
         *this = value;
     }
-    /// <summary>
-    /// Finalizes a instance of the Node class.
-    /// </summary>
+    /* Finalizes a instance of the Node class. */
     Node::~Node()
     {
         delete static_cast<NodeImp*>(m_pImp);
     }
 
-    /// <summary>Gets the type of node.</summary>
-    /// <returns></returns>
+    /* Gets the type of node. */
     Node::eType Node::type() const
     {
         return NODE_IMP->m_Type;
     }
 
-    /// <summary>Checks if the node contains nothing.</summary>
-    /// <returns></returns>
+    /* Checks if the node contains nothing. */
     bool Node::isNone() const
     {
         return NODE_IMP->m_Type == Node::None;
     }
 
-    /// <summary>Checks if the node is a sequence node.</summary>
-    /// <returns></returns>
+    /* Checks if the node is a sequence node. */
     bool Node::isSequence() const
     {
         return NODE_IMP->m_Type == Node::SequenceType;
     }
 
-    /// <summary>Checks if the node is a map node.</summary>
-    /// <returns></returns>
+    /* Checks if the node is a map node. */
     bool Node::isMap() const
     {
         return NODE_IMP->m_Type == Node::MapType;
     }
 
-    /// <summary>Checks if the node is a scalar node.</summary>
-    /// <returns></returns>
+    /* Checks if the node is a scalar node. */
     bool Node::isScalar() const
     {
         return NODE_IMP->m_Type == Node::ScalarType;
     }
 
-    /// <summary>Completely clear node.</summary>
+    /* Completely clear node. */
     void Node::clear()
     {
         NODE_IMP->clear();
     }
 
-    /// <summary>Get size of node. Nodes of type None or Scalar will return 0.</summary>
-    /// <returns></returns>
+    /* Get size of node. Nodes of type None or Scalar will return 0. */
     size_t Node::size() const
     {
         if (TYPE_IMP == nullptr) {
@@ -1229,36 +982,27 @@ namespace yaml
         return TYPE_IMP->size();
     }
 
-    /// <summary>
-    /// Insert sequence item at given index. Converts node to sequence type if needed.
-    /// Adding new item to end of sequence if index is larger than sequence size.
-    /// </summary>
-    /// <param name="index"></param>
-    /// <returns></returns>
+    /* Insert sequence item at given index. Converts node to sequence type if needed. Adding new item to end of sequence if index is larger than sequence size. */
     Node& Node::insert(const size_t index)
     {
         NODE_IMP->initSequence();
         return *TYPE_IMP->insert(index);
     }
 
-    /// <summary>Add new sequence index to back. Converts node to sequence type if needed.</summary>
-    /// <returns></returns>
+    /* Add new sequence index to back. Converts node to sequence type if needed. */
     Node& Node::push_front()
     {
         NODE_IMP->initSequence();
         return *TYPE_IMP->push_front();
     }
-    /// <summary>Add new sequence index to front. Converts node to sequence type if needed.</summary>
-    /// <returns></returns>
+    /* Add new sequence index to front. Converts node to sequence type if needed. */
     Node& Node::push_back()
     {
         NODE_IMP->initSequence();
         return *TYPE_IMP->push_back();
     }
 
-    /// <summary>Get sequence/map item. Converts node to sequence/map type if needed.</summary>
-    /// <param name="index"></param>
-    /// <returns></returns>
+    /* Get sequence/map item. Converts node to sequence/map type if needed. */
     Node& Node::operator[](const size_t index)
     {
         NODE_IMP->initSequence();
@@ -1269,17 +1013,14 @@ namespace yaml
         }
         return *pNode;
     }
-    /// <summary>Get sequence/map item. Converts node to sequence/map type if needed.</summary>
-    /// <param name="key"></param>
-    /// <returns></returns>
+    /* Get sequence/map item. Converts node to sequence/map type if needed. */
     Node& Node::operator[](const std::string& key)
     {
         NODE_IMP->initMap();
         return *TYPE_IMP->getNode(key);
     }
 
-    /// <summary>Erase item. No action if node is not a sequence or map.</summary>
-    /// <param name="index"></param>
+    /* Erase item. No action if node is not a sequence or map. */
     void Node::erase(const size_t index)
     {
         if (TYPE_IMP == nullptr || NODE_IMP->m_Type != Node::SequenceType) {
@@ -1288,8 +1029,7 @@ namespace yaml
 
         return TYPE_IMP->erase(index);
     }
-    /// <summary>Erase item. No action if node is not a sequence or map.</summary>
-    /// <param name="key"></param>
+    /* Erase item. No action if node is not a sequence or map. */
     void Node::erase(const std::string& key)
     {
         if (TYPE_IMP == nullptr || NODE_IMP->m_Type != Node::MapType) {
@@ -1299,21 +1039,21 @@ namespace yaml
         return TYPE_IMP->erase(key);
     }
 
-    /// <summary>Assignment operator.</summary>
+    /* Assignment operator. */
     Node& Node::operator= (const Node& node)
     {
         NODE_IMP->clear();
         CopyNode(node, *this);
         return *this;
     }
-    /// <summary>Assignment operator.</summary>
+    /* Assignment operator. */
     Node& Node::operator= (const std::string& value)
     {
         NODE_IMP->initScalar();
         TYPE_IMP->setData(value);
         return *this;
     }
-    /// <summary>Assignment operator.</summary>
+    /* Assignment operator. */
     Node& Node::operator= (const char* value)
     {
         NODE_IMP->initScalar();
@@ -1321,8 +1061,7 @@ namespace yaml
         return *this;
     }
 
-    /// <summary>Get start iterator.</summary>
-    /// <returns></returns>
+    /* Get start iterator. */
     Iterator Node::begin()
     {
         Iterator it;
@@ -1348,8 +1087,7 @@ namespace yaml
 
         return it;
     }
-    /// <summary>Get start constant iterator.</summary>
-    /// <returns></returns>
+    /* Get start constant iterator. */
     ConstIterator Node::begin() const
     {
         ConstIterator it;
@@ -1376,8 +1114,7 @@ namespace yaml
         return it;
     }
 
-    /// <summary>Get end iterator.</summary>
-    /// <returns></returns>
+    /* Get end iterator. */
     Iterator Node::end()
     {
        Iterator it;
@@ -1403,8 +1140,7 @@ namespace yaml
 
         return it;
     }
-    /// <summary>Get end constant iterator.</summary>
-    /// <returns></returns>
+    /* Get end constant iterator. */
     ConstIterator Node::end() const
     {
         ConstIterator it;
@@ -1435,8 +1171,7 @@ namespace yaml
     //  Private Class Members
     // ---------------------------------------------------------------------------
 
-    /// <summary></summary>
-    /// <returns></returns>
+    /*  */
     const std::string& Node::asString() const
     {
         if (TYPE_IMP == nullptr) {
@@ -1446,24 +1181,22 @@ namespace yaml
         return TYPE_IMP->getData();
     }
 
-    // Reader implementations
+    /*
+    ** Reader implementations
+    */
+
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //
     // ---------------------------------------------------------------------------
 
+    /**
+     * @brief ReaderLine Text line reader.
+     */
     class ReaderLine {
     public:
-        /// <summary>
-        /// Initializes a new instance of the ReaderLine class.
-        /// </summary>
-        /// <param name="data"></param>
-        /// <param name="no"></param>
-        /// <param name="offset"></param>
-        /// <param name="type"></param>
-        /// <param name="flags"></param>
+        /* Initializes a new instance of the ReaderLine class. */
         ReaderLine(const std::string& data = "", const size_t no = 0, const size_t offset = 0,
-                   const Node::eType type = Node::None, const unsigned char flags = 0) :
+                   const Node::eType type = Node::None, const uint8_t flags = 0) :
             Data(data),
             No(no),
             Offset(offset),
@@ -1480,43 +1213,21 @@ namespace yaml
             ScalarNewlineFlag       // Scalar ends with a newline.
         };
 
-        /// <summary>Set flag.</summary>
-        /// <param name="flag"></param>
-        void setFlag(const eFlag flag)
-        {
-            Flags |= FlagMask[static_cast<size_t>(flag)];
-        }
-        /// <summary>Set flags by mask value.</summary>
-        /// <param name="flags"></param>
-        void setFlags(const unsigned char flags)
-        {
-            Flags |= flags;
-        }
+        /* Set flag. */
+        void setFlag(const eFlag flag) { Flags |= FlagMask[static_cast<size_t>(flag)]; }
+        /* Set flags by mask value. */
+        void setFlags(const uint8_t flags) { Flags |= flags; }
 
-        /// <summary>Unset flag.</summary>
-        /// <param name="flag"></param>
-        void unsetFlag(const eFlag flag)
-        {
-            Flags &= ~FlagMask[static_cast<size_t>(flag)];
-        }
-        /// <summary>Unset flags by mask value.</summary>
-        /// <param name="flags"></param>
-        void unsetFlags(const unsigned char flags)
-        {
-            Flags &= ~flags;
-        }
+        /* Unset flag. */
+        void unsetFlag(const eFlag flag) { Flags &= ~FlagMask[static_cast<size_t>(flag)]; }
+        /* Unset flags by mask value. */
+        void unsetFlags(const uint8_t flags) { Flags &= ~flags; }
 
-        /// <summary>Get flag value.</summary>
-        /// <param name="flag"></param>
-        /// <returns></returns>
-        bool getFlag(const eFlag flag) const
-        {
-            return Flags & FlagMask[static_cast<size_t>(flag)];
-        }
+        /* Get flag value. */
+        bool getFlag(const eFlag flag) const { return Flags & FlagMask[static_cast<size_t>(flag)]; }
 
-        /// <summary>Copy and replace scalar flags from another ReaderLine.</summary>
-        /// <param name="from"></param>
-        void copyScalarFlags(ReaderLine * from)
+        /* Copy and replace scalar flags from another ReaderLine. */
+        void copyScalarFlags(ReaderLine* from)
         {
             if (from == nullptr) {
                 return;
@@ -1526,6 +1237,7 @@ namespace yaml
             Flags |= newFlags;
         }
 
+    public:
         static const unsigned char FlagMask[3];
 
         std::string Data;       // Data of line.
@@ -1540,27 +1252,20 @@ namespace yaml
 
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //      Implementation class of Yaml parsing.
-    //      Parsing incoming stream and outputs a root node.
     // ---------------------------------------------------------------------------
 
+    /**
+     * @brief ParseImp YAML parser implementation.
+     * Parses an incoming stream and outputs a YAML root node.
+     */
     class ParseImp {
     public:
-        /// <summary>
-        /// Initializes a new instance of the ParseImp class.
-        /// </summary>
+        /* Initializes a new instance of the ParseImp class. */
         ParseImp() = default;
-        /// <summary>
-        /// Finalizes a new instance of the ParseImp class.
-        /// </summary>
-        ~ParseImp()
-        {
-            clearLines();
-        }
+        /* Finalizes a new instance of the ParseImp class. */
+        ~ParseImp() { clearLines(); }
 
-        /// <summary>Run full parsing procedure.</summary>
-        /// <param name="root"></param>
-        /// <param name="stream"></param>
+        /* Run full parsing procedure. */
         void parse(Node& root, std::iostream& stream)
         {
             try
@@ -1578,17 +1283,10 @@ namespace yaml
         }
 
     private:
-        /// <summary>
-        /// Copies a instance of the ParseImp class to new instance of the ParseImp class.
-        /// </summary>
-        /// <param name="copy"></param>
-        ParseImp(const ParseImp& copy)
-        {
-            /* stub */
-        }
+        /* Copies a instance of the ParseImp class to new instance of the ParseImp class. */
+        ParseImp(const ParseImp& copy) { /* stub */ }
 
-        /// <summary>Read all lines.</summary>
-        /// <param name="stream"></param>
+        /* Read all lines. */
         void readLines(std::iostream& stream)
         {
             std::string line = "";
@@ -1674,7 +1372,7 @@ namespace yaml
             }
         }
 
-        /// <summary>Run post-processing on all lines. Basically split lines into multiple lines if needed, to follow the parsing algorithm.</summary>
+        /* Run post-processing on all lines. Basically split lines into multiple lines if needed, to follow the parsing algorithm. */
         void postProcessLines()
         {
             for (auto it = m_Lines.begin(); it != m_Lines.end();) {
@@ -1712,9 +1410,7 @@ namespace yaml
             }
         }
 
-        /// <summary>Run post-processing and check for sequence. Split line into two lines if sequence token is not on it's own line.</summary>
-        /// <param name="it"></param>
-        /// <returns>True if line is sequence, else false.</returns>
+        /* Run post-processing and check for sequence. Split line into two lines if sequence token is not on it's own line. */
         bool postProcessSequenceLine(std::list<ReaderLine*>::iterator & it)
         {
             ReaderLine* pLine = *it;
@@ -1740,9 +1436,7 @@ namespace yaml
             return false;
         }
 
-        /// <summary>Run post-processing and check for mapping. Split line into two lines if mapping value is not on it's own line.</summary>
-        /// <param name="it"></param>
-        /// <returns>True if line is mapping, else move on to scalar parsing.</returns>
+        /* Run post-processing and check for mapping. Split line into two lines if mapping value is not on it's own line. */
         bool postProcessMappingLine(std::list<ReaderLine*>::iterator & it)
         {
             ReaderLine* pLine = *it;
@@ -1824,8 +1518,7 @@ namespace yaml
             return false;
         }
 
-        /// <summary>Run post-processing and check for scalar. Checking for multi-line scalars.</summary>
-        /// <param name="it"></param>
+        /* Run post-processing and check for scalar. Checking for multi-line scalars. */
         void postProcessScalarLine(std::list<ReaderLine*>::iterator & it)
         {
             ReaderLine* pLine = *it;
@@ -1858,9 +1551,8 @@ namespace yaml
             clearTrailingEmptyLines(++lastNotEmpty);
         }
 
-        /// <summary>Process root node and start of document.</summary>
-        /// <param name="root"></param>
-        void parseRoot(Node & root)
+        /* Process root node and start of document. */
+        void parseRoot(Node& root)
         {
             // get first line and start type
             auto it = m_Lines.begin();
@@ -1892,10 +1584,8 @@ namespace yaml
 
         }
 
-        /// <summary>Process sequence node.</summary>
-        /// <param name="node"></param>
-        /// <param name="it"></param>
-        void parseSequence(Node & node, std::list<ReaderLine*>::iterator & it)
+        /* Process sequence node. */
+        void parseSequence(Node& node, std::list<ReaderLine*>::iterator & it)
         {
             ReaderLine* pNextLine = nullptr;
             while (it != m_Lines.end()) {
@@ -1940,10 +1630,8 @@ namespace yaml
             }
         }
 
-        /// <summary>Process map node.</summary>
-        /// <param name="node"></param>
-        /// <param name="it"></param>
-        void parseMap(Node & node, std::list<ReaderLine*>::iterator & it)
+        /* Process map node. */
+        void parseMap(Node& node, std::list<ReaderLine*>::iterator & it)
         {
             ReaderLine* pNextLine = nullptr;
             while (it != m_Lines.end()) {
@@ -1988,9 +1676,7 @@ namespace yaml
             }
         }
 
-        /// <summary>Process scalar node.</summary>
-        /// <param name="node"></param>
-        /// <param name="it"></param>
+        /* Process scalar node. */
         void parseScalar(Node & node, std::list<ReaderLine*>::iterator & it)
         {
             std::string data = "";
@@ -2119,7 +1805,7 @@ namespace yaml
             node = data;
         }
 
-        /// <summary>Clear all read lines.</summary
+        /*  */
         void clearLines()
         {
             for (auto it = m_Lines.begin(); it != m_Lines.end(); it++) {
@@ -2128,8 +1814,7 @@ namespace yaml
             m_Lines.clear();
         }
 
-        /// <summary></summary>
-        /// <param name="it"></param>
+        /*  */
         void clearTrailingEmptyLines(std::list<ReaderLine*>::iterator & it)
         {
             while (it != m_Lines.end()) {
@@ -2145,9 +1830,7 @@ namespace yaml
             }
         }
 
-        /// <summary></summary>
-        /// <param name="data"></param>
-        /// <returns></returns>
+        /*  */
         static bool isSequenceStart(const std::string & data)
         {
             if (data.size() == 0 || data[0] != '-') {
@@ -2161,11 +1844,7 @@ namespace yaml
             return true;
         }
 
-        /// <summary></summary>
-        /// <param name="data"></param>
-        /// <param name="line></param>
-        /// <param name="flags"></param>
-        /// <returns></returns>
+        /*  */
         static bool isBlockScalar(const std::string & data, const size_t line, unsigned char& flags)
         {
             flags = 0;
@@ -2202,6 +1881,7 @@ namespace yaml
             return false;
         }
 
+    public:
         std::list<ReaderLine*> m_Lines;    // List of lines.
     };
 
@@ -2209,9 +1889,7 @@ namespace yaml
     //  Parsing Functions
     // ---------------------------------------------------------------------------
 
-    /// <summary>Populate given root node with deserialized data.</summary>
-    /// <param name="root">Root node to populate.</param>
-    /// <param name="filename">Path of input file.</param>
+    /* Populate given root node with deserialized data. */
     bool Parse(Node& root, const char* filename)
     {
         std::ifstream f(filename, std::ifstream::binary);
@@ -2229,9 +1907,7 @@ namespace yaml
 
         return Parse(root, data.get(), fileSize);
     }
-    /// <summary>Populate given root node with deserialized data.</summary>
-    /// <param name="root">Root node to populate.</param>
-    /// <param name="stream">Input stream.</param>
+    /* Populate given root node with deserialized data. */
     bool Parse(Node& root, std::iostream& stream)
     {
         ParseImp* pImp = nullptr;
@@ -2249,35 +1925,24 @@ namespace yaml
             return false;
         }
     }
-    /// <summary>Populate given root node with deserialized data.</summary>
-    /// <param name="root">Root node to populate.</param>
-    /// <param name="string">String of input data.</param>
+    /* Populate given root node with deserialized data. */
     bool Parse(Node& root, const std::string& string)
     {
         std::stringstream ss(string);
         return Parse(root, ss);
     }
-    /// <summary>Populate given root node with deserialized data.</summary>
-    /// <param name="buffer">Character array of input data.</param>
-    /// <param name="size">Buffer size.</param>
+    /* Populate given root node with deserialized data. */
     bool Parse(Node& root, const char* buffer, const size_t size)
     {
         std::stringstream ss(std::string(buffer, size));
         return Parse(root, ss);
     }
 
-
     // ---------------------------------------------------------------------------
     //  Public Class Members
     // ---------------------------------------------------------------------------
 
-    /// <summary>
-    /// Initializes a new instance of the SerializeConfig struct.
-    /// </summary>
-    /// <param name="spaceIndentation">Number of spaces per indentation.</param>
-    /// <param name="scalarMaxLength">Maximum length of scalars. Serialized as folder scalars if exceeded. Ignored if equal to 0.</param>
-    /// <param name="sequenceMapNewline">Put maps on a new line if parent node is a sequence.</param>
-    /// <param name="mapScalarNewline">Put scalars on a new line if parent node is a map.</param>
+    /* Initializes a new instance of the SerializeConfig struct. */
     SerializeConfig::SerializeConfig(const size_t spaceIndentation, const size_t scalarMaxLength,
         const bool sequenceMapNewline, const bool mapScalarNewline) :
         SpaceIndentation(spaceIndentation),
@@ -2292,10 +1957,7 @@ namespace yaml
     //  Serialization Functions
     // ---------------------------------------------------------------------------
 
-    /// <summary>Serialize node data.</summary>
-    /// <param name="root">Root node to serialize.</param>
-    /// <param name="filename">Path of output file.</param>
-    /// <param name="config">Serialization configuration.</param>
+    /* Serialize node data. */
     void Serialize(const Node& root, const char* filename, const SerializeConfig& config)
     {
         std::stringstream stream;
@@ -2310,11 +1972,7 @@ namespace yaml
         f.close();
     }
 
-    /// <summary></summary>
-    /// <param name="input"></param>
-    /// <param name="folded"></param>
-    /// <param name="maxLength"></param>
-    /// <returns></returns>
+    /*  */
     size_t LineFolding(const std::string& input, std::vector<std::string>& folded, const size_t maxLength)
     {
         folded.clear();
@@ -2349,12 +2007,7 @@ namespace yaml
         return folded.size();
     }
 
-    /// <summary></summary>
-    /// <param name="node"></param>
-    /// <param name="stream"></param>
-    /// <param name="useLevel"></param>
-    /// <param name="level"></param>
-    /// <param name="config"></param>
+    /*  */
     static void SerializeLoop(const Node& node, std::iostream& stream, bool useLevel, const size_t level, const SerializeConfig& config)
     {
         const size_t indention = config.SpaceIndentation;
@@ -2482,10 +2135,7 @@ namespace yaml
         }
     }
 
-    /// <summary>Serialize node data.</summary>
-    /// <param name="root">Root node to serialize.</param>
-    /// <param name="stream">Output stream.</param>
-    /// <param name="config">Serialization configuration.</param>
+    /* Serialize node data. */
     void Serialize(const Node& root, std::iostream& stream, const SerializeConfig& config)
     {
         if (config.SpaceIndentation < 2) {
@@ -2495,10 +2145,7 @@ namespace yaml
         SerializeLoop(root, stream, false, 0, config);
     }
 
-    /// <summary>Serialize node data.</summary>
-    /// <param name="root">Root node to serialize.</param>
-    /// <param name="string">String of output data.</param>
-    /// <param name="config">Serialization configuration.</param>
+    /* Serialize node data. */
     void Serialize(const Node& root, std::string& string, const SerializeConfig& config)
     {
         std::stringstream stream;
@@ -2510,26 +2157,39 @@ namespace yaml
     //  Global Functions
     // ---------------------------------------------------------------------------
 
-    std::string ExceptionMessage(const std::string& message, ReaderLine& line)
-    {
-        return message + std::string(" Line ") + std::to_string(line.No) + std::string(": ") + line.Data;
-    }
+    /**
+     * @brief Returns an exception message for a reader line with the given message.
+     * @param message Error message.
+     * @param line ReaderLine instance.
+     * @returns std::string Compiled exception meessage.
+     */
+    std::string ExceptionMessage(const std::string& message, ReaderLine& line) { return message + std::string(" Line ") + std::to_string(line.No) + std::string(": ") + line.Data; }
+    /**
+     * @brief Returns an exception message for a reader line with the given message.
+     * @param message Error message.
+     * @param line ReaderLine instance.
+     * @param errorPos Error position.
+     * @returns std::string Compiled exception meessage.
+     */
+    std::string ExceptionMessage(const std::string& message, ReaderLine& line, const size_t errorPos) { return message + std::string(" Line ") + std::to_string(line.No) + std::string(" column ") + std::to_string(errorPos + 1) + std::string(": ") + line.Data; }
+    /**
+     * @brief Returns an exception message for a reader line with the given message.
+     * @param message Error message.
+     * @param size_t Line number error occurred.
+     * @param errorPos Error position.
+     * @returns std::string Compiled exception meessage.
+     */
+    std::string ExceptionMessage(const std::string& message, const size_t errorLine, const size_t errorPos) { return message + std::string(" Line ") + std::to_string(errorLine) + std::string(" column ") + std::to_string(errorPos); }
+    /**
+     * @brief Returns an exception message for a reader line with the given message.
+     * @param message Error message.
+     * @param size_t Line number error occurred.
+     * @param data Error data.
+     * @returns std::string Compiled exception meessage.
+     */
+    std::string ExceptionMessage(const std::string& message, const size_t errorLine, const std::string& data) { return message + std::string(" Line ") + std::to_string(errorLine) + std::string(": ") + data; }
 
-    std::string ExceptionMessage(const std::string& message, ReaderLine& line, const size_t errorPos)
-    {
-        return message + std::string(" Line ") + std::to_string(line.No) + std::string(" column ") + std::to_string(errorPos + 1) + std::string(": ") + line.Data;
-    }
-
-    std::string ExceptionMessage(const std::string& message, const size_t errorLine, const size_t errorPos)
-    {
-        return message + std::string(" Line ") + std::to_string(errorLine) + std::string(" column ") + std::to_string(errorPos);
-    }
-
-    std::string ExceptionMessage(const std::string& message, const size_t errorLine, const std::string& data)
-    {
-        return message + std::string(" Line ") + std::to_string(errorLine) + std::string(": ") + data;
-    }
-
+    /*  */
     bool FindQuote(const std::string& input, size_t& start, size_t& end, size_t searchPos)
     {
         start = end = std::string::npos;
@@ -2567,6 +2227,7 @@ namespace yaml
         return false;
     }
 
+    /*  */
     size_t FindNotCited(const std::string& input, char token, size_t& preQuoteCount)
     {
         preQuoteCount = 0;
@@ -2621,12 +2282,14 @@ namespace yaml
         return tokenPos;
     }
 
+    /*  */
     size_t FindNotCited(const std::string& input, char token)
     {
         size_t dummy = 0;
         return FindNotCited(input, token, dummy);
     }
 
+    /*  */
     bool ValidateQuote(const std::string& input)
     {
         if (input.size() == 0) {
@@ -2669,6 +2332,7 @@ namespace yaml
         return token == 0;
     }
 
+    /*  */
     void CopyNode(const Node& from, Node& to)
     {
         const Node::eType type = from.type();
@@ -2696,11 +2360,10 @@ namespace yaml
         }
     }
 
-    bool ShouldBeCited(const std::string& key)
-    {
-        return key.find_first_of("\":{}[],&*#?|-<>=!%@") != std::string::npos;
-    }
+    /*  */
+    bool ShouldBeCited(const std::string& key) { return key.find_first_of("\":{}[],&*#?|-<>=!%@") != std::string::npos; }
 
+    /*  */
     void AddEscapeTokens(std::string& input, const std::string& tokens)
     {
         for (auto it = tokens.begin(); it != tokens.end(); it++) {
@@ -2714,6 +2377,7 @@ namespace yaml
         }
     }
 
+    /*  */
     void RemoveAllEscapeTokens(std::string & input)
     {
         size_t found = input.find_first_of("\\");

@@ -1,15 +1,26 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @defgroup p25_tsbk Trunk Signalling Block
+ * @brief Implementation for the data handling of the TIA-102.AABC Project 25 standard. (TSDU/TSBK)
+ * @ingroup p25_lc
+ *
+ * @defgroup p25_ambt Alternate Multiblock Trunking
+ * @brief Implementation for the data handling of the TIA-102.AABC Project 25 standard. (PDU)
+ * @ingroup p25_tsbk
+ * 
+ * @file TSBKFactory.h
+ * @ingroup p25_tsbk
+ * @file TSBKFactory.cpp
+ * @ingroup p25_tsbk
+ */
 #if !defined(__P25_LC__TSBK_FACTORY_H__)
 #define  __P25_LC__TSBK_FACTORY_H__
 
@@ -95,30 +106,62 @@ namespace p25
         {
             // ---------------------------------------------------------------------------
             //  Class Declaration
-            //      Helper class to instantiate an instance of a TSBK.
             // ---------------------------------------------------------------------------
 
+            /**
+             * @brief Helper class to instantiate an instance of a TSBK.
+             * @ingroup p25_tsbk
+             */
             class HOST_SW_API TSBKFactory {
             public:
-                /// <summary>Initializes a new instance of the TSBKFactory class.</summary>
+                /**
+                 * @brief Initializes a new instance of the TSBKFactory class.
+                 */
                 TSBKFactory();
-                /// <summary>Finalizes a instance of the TSBKFactory class.</summary>
+                /**
+                 * @brief Finalizes a instance of the TSBKFactory class.
+                 */
                 ~TSBKFactory();
 
-                /// <summary>Create an instance of a TSBK.</summary>
+                /**
+                 * @brief Create an instance of a TSBK.
+                 * @param[in] data Buffer containing TSBK packet data to decode.
+                 * @param rawTSBK Flag indicating whether or not the passed buffer is raw.
+                 * @returns TSBK* Instance of a TSBK representing the decoded data.
+                 */
                 static std::unique_ptr<TSBK> createTSBK(const uint8_t* data, bool rawTSBK = false);
-                /// <summary>Create an instance of a AMBT.</summary>
+                /**
+                 * @brief Create an instance of a AMBT.
+                 * @param[in] dataHeader P25 PDU data header
+                 * @param[in] blocks P25 PDU data blocks
+                 * @returns AMBT* Instance of a AMBT representing the decoded data.
+                 */
                 static std::unique_ptr<AMBT> createAMBT(const data::DataHeader& dataHeader, const data::DataBlock* blocks);
 
-                /// <summary>Sets the flag indicating CRC-errors should be warnings and not errors.</summary>
+                /**
+                 * @brief Sets the flag indicating CRC-errors should be warnings and not errors.
+                 * @param warnCRC Flag indicating CRC-errors should be treated as warnings.
+                 */
                 static void setWarnCRC(bool warnCRC) { m_warnCRC = warnCRC; }
 
             private:
                 static bool m_warnCRC;
 
-                /// <summary></summary>
+                /**
+                 * @brief Decode a TSBK.
+                 * @param tsbk Instance of a TSBK.
+                 * @param[in] data Buffer containing TSBK packet data to decode.
+                 * @param rawTSBK Flag indicating whether or not the passed buffer is raw.
+                 * @returns TSBK* Instance of a TSBK representing the decoded data.
+                 */
                 static std::unique_ptr<TSBK> decode(TSBK* tsbk, const uint8_t* data, bool rawTSBK = false);
-                /// <summary></summary>
+                /**
+                 * @brief Decode an AMBT.
+                 * @param tsbk Instance of a TSBK.
+                 * @param[in] dataHeader P25 PDU data header
+                 * @param[in] blocks P25 PDU data blocks
+                 * @returns AMBT* Instance of a AMBT representing the decoded data.
+                 */
                 static std::unique_ptr<AMBT> decode(AMBT* ambt, const data::DataHeader& dataHeader, const data::DataBlock* blocks);
             };
         } // namespace tsbk

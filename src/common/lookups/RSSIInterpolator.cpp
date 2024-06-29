@@ -1,16 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2016 Jonathan Naylor, G4KLX
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2016 Jonathan Naylor, G4KLX
+ *
+ */
 #include "lookups/RSSIInterpolator.h"
 #include "Log.h"
 
@@ -24,28 +20,20 @@ using namespace lookups;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the RSSIInterpolator class.
-/// </summary>
+/* Initializes a new instance of the RSSIInterpolator class. */
 RSSIInterpolator::RSSIInterpolator() :
     m_map()
 {
     /* stub */
 }
 
-/// <summary>
-/// Finalizes a instance of the RSSIInterpolator class.
-/// </summary>
+/* Finalizes a instance of the RSSIInterpolator class. */
 RSSIInterpolator::~RSSIInterpolator()
 {
     m_map.clear();
 }
 
-/// <summary>
-/// Loads the table from the passed RSSI mapping file.
-/// </summary>
-/// <param name="filename">Full-path to the RSSI mapping file.</param>
-/// <returns>True, if RSSI mapping was loaded, otherwise false.</returns>
+/* Loads the table from the passed RSSI mapping file. */
 bool RSSIInterpolator::load(const std::string& filename)
 {
     FILE* fp = ::fopen(filename.c_str(), "rt");
@@ -76,11 +64,7 @@ bool RSSIInterpolator::load(const std::string& filename)
     return true;
 }
 
-/// <summary>
-/// Interpolates the given raw RSSI value with the lookup map.
-/// </summary>
-/// <param name="val">Raw RSSI value from modem DSP.</param>
-/// <returns>Interpolated RSSI value.</returns>
+/* Interpolates the given raw RSSI value with the lookup map. */
 int RSSIInterpolator::interpolate(uint16_t val) const
 {
     if (m_map.empty())

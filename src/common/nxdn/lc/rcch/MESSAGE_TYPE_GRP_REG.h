@@ -1,15 +1,18 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @file MESSAGE_TYPE_GRP_REG.h
+ * @ingroup nxdn_rcch
+ * @file MESSAGE_TYPE_GRP_REG.cpp
+ * @ingroup nxdn_rcch
+ */
 #if !defined(__NXDN_LC_RCCH__MESSAGE_TYPE_GRP_REG_H__)
 #define  __NXDN_LC_RCCH__MESSAGE_TYPE_GRP_REG_H__
 
@@ -24,21 +27,39 @@ namespace nxdn
         {
             // ---------------------------------------------------------------------------
             //  Class Declaration
-            //      Implements GRP_REG - Group Registration Request (ISP) and
-            //          Group Registration Response (OSP)
             // ---------------------------------------------------------------------------
 
+            /**
+             * @brief Implements GRP_REG - Group Registration Request (ISP) and
+             *  Group Registration Response (OSP)
+             * @ingroup nxdn_rcch 
+             */
             class HOST_SW_API MESSAGE_TYPE_GRP_REG : public RCCH {
             public:
-                /// <summary>Initializes a new instance of the MESSAGE_TYPE_GRP_REG class.</summary>
+                /**
+                 * @brief Initializes a new instance of the MESSAGE_TYPE_GRP_REG class.
+                 */
                 MESSAGE_TYPE_GRP_REG();
 
-                /// <summary>Decode layer 3 data.</summary>
+                /**
+                 * @brief Decode RCCH data.
+                 * @param[in] data Buffer containing a RCCH to decode.
+                 * @param length Length of data buffer.
+                 * @param offset Offset for RCCH in data buffer.
+                 */
                 void decode(const uint8_t* data, uint32_t length, uint32_t offset = 0U) override;
-                /// <summary>Encode layer 3 data.</summary>
+                /**
+                 * @brief Encode RCCH data.
+                 * @param[out] data Buffer to encode a RCCH.
+                 * @param length Length of data buffer.
+                 * @param offset Offset for RCCH in data buffer.
+                 */
                 void encode(uint8_t* data, uint32_t length, uint32_t offset = 0U) override;
 
-                /// <summary>Returns a string that represents the current RCCH.</summary>
+                /**
+                 * @brief Returns a string that represents the current RCCH.
+                 * @returns std::string String representation of the RCCH.
+                 */
                 std::string toString(bool isp = false) override;
             };
         } // namespace rcch

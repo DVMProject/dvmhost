@@ -1,16 +1,18 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2016,2018 Jonathan Naylor, G4KLX
+ *
+ */
 /**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2016,2018 Jonathan Naylor, G4KLX
-*
-*/
+ * @file Trellis.h
+ * @ingroup edac
+ * @file Trellis.cpp
+ * @ingroup edac
+ */
 #if !defined(__EDAC__TRELLIS_H__)
 #define __EDAC__TRELLIS_H__
 
@@ -20,52 +22,131 @@ namespace edac
 {
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //      Implements 1/2 rate and 3/4 rate Trellis for DMR/P25.
     // ---------------------------------------------------------------------------
 
+    /**
+     * @brief Implements 1/2 rate and 3/4 rate Trellis for DMR/P25.
+     * @ingroup edac
+     */
     class HOST_SW_API Trellis {
     public:
-        /// <summary>Initializes a new instance of the Trellis class.</summary>
+        /**
+         * @brief Initializes a new instance of the Trellis class.
+         */
         Trellis();
-        /// <summary>Finalizes a instance of the Trellis class.</summary>
+        /**
+         * @brief Finalizes a instance of the Trellis class.
+         */
         ~Trellis();
 
-        /// <summary>Decodes 3/4 rate Trellis.</summary>
+        /**
+         * @brief Decodes 3/4 rate Trellis.
+         * @param[in] data Trellis symbol bytes.
+         * @param[out] payload Output bytes.
+         * @returns bool True, if Trellis decoded, otherwise false.
+         */
         bool decode34(const uint8_t* data, uint8_t* payload);
-        /// <summary>Encodes 3/4 rate Trellis.</summary>
+        /**
+         * @brief Encodes 3/4 rate Trellis.
+         * @param[in] payload Input bytes.
+         * @param[out] data Trellis symbol bytes.
+         */
         void encode34(const uint8_t* payload, uint8_t* data);
 
-        /// <summary>Decodes 1/2 rate Trellis.</summary>
+        /**
+         * @brief Decodes 1/2 rate Trellis.
+         * @param[in] data Trellis symbol bytes.
+         * @param[out] payload Output bytes.
+         * @returns bool True, if Trellis decoded, otherwise false.
+         */
         bool decode12(const uint8_t* data, uint8_t* payload);
-        /// <summary>Encodes 1/2 rate Trellis.</summary>
+        /**
+         * @brief Encodes 1/2 rate Trellis.
+         * @param[in] payload Input bytes.
+         * @param[out] data Trellis symbol bytes.
+         */
         void encode12(const uint8_t* payload, uint8_t* data);
 
     private:
-        /// <summary>Helper to deinterleave the input symbols into dibits.</summary>
+        /**
+         * @brief Helper to deinterleave the input symbols into dibits.
+         * @param[in] data Trellis symbol bytes.
+         * @param[out] dibits Dibits.
+         */
         void deinterleave(const uint8_t* in, int8_t* dibits) const;
-        /// <summary>Helper to interleave the input dibits into symbols.</summary>
+        /**
+         * @brief Helper to interleave the input dibits into symbols.
+         * @param[in] dibits Dibits.
+         * @param[out] data Trellis symbol bytes.
+         */
         void interleave(const int8_t* dibits, uint8_t* out) const;
-        /// <summary>Helper to map dibits to C4FM constellation points.</summary>
+        /**
+         * @brief Helper to map dibits to trellis constellation points.
+         * @param[in] dibits Dibits.
+         * @param[out] points Trellis constellation points.
+         */
         void dibitsToPoints(const int8_t* dibits, uint8_t* points) const;
-        /// <summary>Helper to map C4FM constellation points to dibits.</summary>
+        /**
+         * @brief Helper to map trellis constellation points to dibits.
+         * @param[in] points Trellis Constellation points.
+         * @param[out] dibits Dibits.
+         */
         void pointsToDibits(const uint8_t* points, int8_t* dibits) const;
-        /// <summary>Helper to convert a byte payload into tribits.</summary>
+        /**
+         * @brief Helper to convert a byte payload into tribits.
+         * @param[in] payload Byte payload.
+         * @param[out] tribits Tribits.
+         */
         void bitsToTribits(const uint8_t* payload, uint8_t* tribits) const;
-        /// <summary>Helper to convert a byte payload into dibits.</summary>
+        /**
+         * @brief Helper to convert a byte payload into dibits.
+         * @param[in] payload Byte payload.
+         * @param[out] dibits Dibits.
+         */
         void bitsToDibits(const uint8_t* payload, uint8_t* dibits) const;
-        /// <summary>Helper to convert tribits into a byte payload.</summary>
+        /**
+         * @brief Helper to convert tribits into a byte payload.
+         * @param[in] tribits Tribits.
+         * @param[out] payload Byte payload.
+         */
         void tribitsToBits(const uint8_t* tribits, uint8_t* payload) const;
-        /// <summary>Helper to convert dibits into a byte payload.</summary>
+        /**
+         * @brief Helper to convert dibits into a byte payload.
+         * @param[in] dibits Dibits.
+         * @param[out] payload Byte payload.
+         */
         void dibitsToBits(const uint8_t* dibits, uint8_t* payload) const;
 
-        /// <summary>Helper to fix errors in Trellis coding.</summary>
+        /**
+         * @brief Helper to fix errors in Trellis coding.
+         * @param points Trellis constellation points.
+         * @param failPos Failure position.
+         * @param payload Byte payload.
+         * @returns bool True, if error corrected, otherwise false.
+         */
         bool fixCode34(uint8_t* points, uint32_t failPos, uint8_t* payload) const;
-        /// <summary>Helper to detect errors in Trellis coding.</summary>
+        /**
+         * @brief Helper to detect errors in Trellis coding.
+         * @param points Trellis constellation points.
+         * @param tribits Tribits.
+         * @returns uint32_t Position.
+         */
         uint32_t checkCode34(const uint8_t* points, uint8_t* tribits) const;
 
-        /// <summary>Helper to fix errors in Trellis coding.</summary>
+        /**
+         * @brief Helper to fix errors in Trellis coding.
+         * @param points Trelli constellation points.
+         * @param failPos Failure position.
+         * @param payload Byte payload.
+         * @returns bool True, if error corrected, otherwise false.
+         */
         bool fixCode12(uint8_t* points, uint32_t failPos, uint8_t* payload) const;
-        /// <summary>Helper to detect errors in Trellis coding.</summary>
+        /**
+         * @brief Helper to detect errors in Trellis coding.
+         * @param points Trelli constellation points.
+         * @param dibits Dibits.
+         * @returns uint32_t Position.
+         */
         uint32_t checkCode12(const uint8_t* points, uint8_t* dibits) const;
     };
 } // namespace edac

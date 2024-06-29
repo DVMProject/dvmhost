@@ -1,17 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2009,2010,2015 Jonathan Naylor, G4KLX
-*   Copyright (C) 2017-2019 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2009,2010,2015 Jonathan Naylor, G4KLX
+ *  Copyright (C) 2017-2019 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "Defines.h"
 #include "Timer.h"
 
@@ -22,9 +18,7 @@
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the Timer class.
-/// </summary>
+/* Initializes a new instance of the Timer class. */
 Timer::Timer() :
     m_ticksPerSec(1000U),
     m_timeout(0U),
@@ -34,12 +28,7 @@ Timer::Timer() :
     /* stub */
 }
 
-/// <summary>
-/// Initializes a new instance of the Timer class.
-/// </summary>
-/// <param name="ticksPerSec"></param>
-/// <param name="secs"></param>
-/// <param name="msecs"></param>
+/* Initializes a new instance of the Timer class. */
 Timer::Timer(uint32_t ticksPerSec, uint32_t secs, uint32_t msecs) :
     m_ticksPerSec(ticksPerSec),
     m_timeout(0U),
@@ -55,16 +44,10 @@ Timer::Timer(uint32_t ticksPerSec, uint32_t secs, uint32_t msecs) :
     }
 }
 
-/// <summary>
-/// Finalizes a instance of the Timer class.
-/// </summary>
+/* Finalizes a instance of the Timer class. */
 Timer::~Timer() = default;
 
-/// <summary>
-/// Sets the timeout for the timer.
-/// </summary>
-/// <param name="secs"></param>
-/// <param name="msecs"></param>
+/* Sets the timeout for the timer. */
 void Timer::setTimeout(uint32_t secs, uint32_t msecs)
 {
     if (secs > 0U || msecs > 0U) {
@@ -78,10 +61,7 @@ void Timer::setTimeout(uint32_t secs, uint32_t msecs)
     }
 }
 
-/// <summary>
-/// Gets the timeout for the timer.
-/// </summary>
-/// <returns></returns>
+/* Gets the timeout for the timer. */
 uint32_t Timer::getTimeout() const
 {
     if (m_timeout == 0U)
@@ -90,10 +70,7 @@ uint32_t Timer::getTimeout() const
     return (m_timeout - 1U) / m_ticksPerSec;
 }
 
-/// <summary>
-/// Gets the current time for the timer.
-/// </summary>
-/// <returns></returns>
+/* Gets the current time for the timer. */
 uint32_t Timer::getTimer() const
 {
     if (m_timer == 0U)

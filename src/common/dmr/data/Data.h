@@ -1,17 +1,19 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2015,2016 Jonathan Naylor, G4KLX
+ *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2015,2016 Jonathan Naylor, G4KLX
-*   Copyright (C) 2024 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @file Data.h
+ * @ingroup dmr
+ * @file Data.cpp
+ * @ingroup dmr
+ */
 #if !defined(__DMR_DATA__DATA_H__)
 #define __DMR_DATA__DATA_H__
 
@@ -24,51 +26,88 @@ namespace dmr
     {
         // ---------------------------------------------------------------------------
         //  Class Declaration
-        //      Represents general DMR data.
         // ---------------------------------------------------------------------------
 
+        /**
+         * @brief Represents network DMR data.
+         * @ingroup dmr
+         */
         class HOST_SW_API Data {
         public:
-            /// <summary>Initializes a new instance of the Data class.</summary>
+            /**
+             * @brief Initializes a new instance of the Data class.
+             * @param data Instance of Data class to copy from.
+             */
             Data(const Data& data);
-            /// <summary>Initializes a new instance of the Data class.</summary>
+            /**
+             * @brief Initializes a new instance of the Data class.
+             */
             Data();
-            /// <summary>Finalizes a instance of the Data class.</summary>
+            /**
+             * @brief Finalizes a instance of the Data class.
+             */
             ~Data();
 
-            /// <summary>Equals operator.</summary>
+            /**
+             * @brief Equals operator.
+             * @param data Instance of Data class to copy from.
+             */
             Data& operator=(const Data& data);
 
-            /// <summary>Sets raw data.</summary>
+            /**
+             * @brief Sets raw data.
+             * @param[in] buffer Raw data buffer.
+             */
             void setData(const uint8_t* buffer);
-            /// <summary>Gets raw data.</summary>
+            /**
+             * @brief Gets raw data.
+             * @param[out] buffer Raw data buffer.
+             */
             uint32_t getData(uint8_t* buffer) const;
 
         public:
-            /// <summary>DMR slot number.</summary>
+            /**
+             * @brief DMR slot number.
+             */
             __PROPERTY(uint32_t, slotNo, SlotNo);
 
-            /// <summary>Source ID.</summary>
+            /**
+             * @brief Source ID.
+             */
             __PROPERTY(uint32_t, srcId, SrcId);
-            /// <summary>Destination ID.</summary>
+            /**
+             * @brief Destination ID.
+             */
             __PROPERTY(uint32_t, dstId, DstId);
 
-            /// <summary>Sets the full-link control opcode.</summary>
+            /**
+             * @brief Sets the full-link control opcode.
+             */
             __PROPERTY(defines::FLCO::E, flco, FLCO);
 
-            /// <summary></summary>
+            /**
+             * @brief 
+             */
             __PROPERTY(uint8_t, n, N);
 
-            /// <summary>Sequence number.</summary>
+            /**
+             * @brief Sequence number.
+             */
             __PROPERTY(uint8_t, seqNo, SeqNo);
 
-            /// <summary>Embedded data type.</summary>
+            /**
+             * @brief Embedded data type.
+             */
             __PROPERTY(defines::DataType::E, dataType, DataType);
 
-            /// <summary>Bit Error Rate.</summary>
+            /**
+             * @brief Bit Error Rate.
+             */
             __PROPERTY(uint8_t, ber, BER);
 
-            /// <summary>Received Signal Strength Indicator.</summary>
+            /**
+             * @brief Received Signal Strength Indicator.
+             */
             __PROPERTY(uint8_t, rssi, RSSI);
 
         private:

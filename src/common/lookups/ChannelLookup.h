@@ -7,9 +7,19 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+*  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
 *
 */
+/**
+ * @defgroup lookups_ch RF Channel Lookups
+ * @brief Implementation for RF channel lookup tables.
+ * @ingroup lookups
+ * 
+ * @file ChannelLookup.h
+ * @ingroup lookups_ch
+ * @file ChannelLookup.cpp
+ * @ingroup lookups_ch
+ */
 #if !defined(__CHANNEL_LOOKUP_H__)
 #define __CHANNEL_LOOKUP_H__
 
@@ -26,12 +36,17 @@ namespace lookups
 {
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //      Represents voice channel data.
     // ---------------------------------------------------------------------------
 
+    /**
+     * @brief Represents voice channel data.
+     * @ingroup lookups_ch
+     */
     class HOST_SW_API VoiceChData {
     public:
-        /// <summary>Initializes a new instance of the VoiceChData class.</summary>
+        /**
+         * @brief Initializes a new instance of the VoiceChData class.
+         */
         VoiceChData() :
             m_chId(0U),
             m_chNo(0U),
@@ -42,13 +57,15 @@ namespace lookups
         {
             /* stub */
         }
-        /// <summary>Initializes a new instance of the VoiceChData class.</summary>
-        /// <param name="chId">Voice Channel Identity.</param>
-        /// <param name="chNo">Voice Channel Number.</param>
-        /// <param name="address">REST API Address.</param>
-        /// <param name="port">REST API Port.</param>
-        /// <param name="password">REST API Password.</param>
-        /// <param name="ssl">Flag indicating REST is using SSL.</param>
+        /**
+         * @brief Initializes a new instance of the VoiceChData class.
+         * @param chId Voice Channel Identity.
+         * @param chNo Voice Channel Number.
+         * @param address REST API Address.
+         * @param port REST API Port.
+         * @param password REST API Password.
+         * @param ssl Flag indicating REST is using SSL.
+         */
         VoiceChData(uint8_t chId, uint32_t chNo, std::string address, uint16_t port, std::string password, bool ssl) :
             m_chId(chId),
             m_chNo(chNo),
@@ -60,10 +77,11 @@ namespace lookups
             /* stub */
         }
 
-        /// <summary>Equals operator.</summary>
-        /// <param name="data"></param>
-        /// <returns></returns>
-        VoiceChData & operator=(const VoiceChData & data)
+        /**
+         * @brief Equals operator.
+         * @param data Instance of VoiceChData to copy.
+         */
+        VoiceChData& operator=(const VoiceChData& data)
         {
             if (this != &data) {
                 m_chId = data.m_chId;
@@ -77,62 +95,125 @@ namespace lookups
             return *this;
         }
 
-        /// <summary>Helper to determine if the channel identity is valid.</summary>
+        /**
+         * @brief Helper to determine if the channel identity is valid.
+         * @returns True, if channel identity is valid, otherwise false.
+         */
         bool isValidChId() const { return m_chId != 0U; }
-        /// <summary>Helper to determine if the channel is valid.</summary>
+        /**
+         * @brief Helper to determine if the channel is valid.
+         * @returns True, if channel is valid, otherwise false.
+         */
         bool isValidCh() const { return m_chNo != 0U; }
 
     public:
-        /// <summary>Voice Channel Identity.</summary>
+        /**
+         * @brief Voice Channel Identity.
+         */
         __READONLY_PROPERTY_PLAIN(uint8_t, chId);
-        /// <summary>Voice Channel Number.</summary>
+        /**
+         * @brief Voice Channel Number.
+         */
         __READONLY_PROPERTY_PLAIN(uint32_t, chNo);
-        /// <summary>REST API Address.</summary>
+        /**
+         * @brief REST API Address.
+         */
         __PROPERTY_PLAIN(std::string, address);
-        /// <summary>REST API Port.</summary>
+        /**
+         * @brief REST API Port.
+         */
         __PROPERTY_PLAIN(uint16_t, port);
-        /// <summary>REST API Password.</summary>
+        /**
+         * @brief REST API Password.
+         */
         __READONLY_PROPERTY_PLAIN(std::string, password);
-        /// <summary>Flag indicating REST is using SSL.</summary>
+        /**
+         * @brief Flag indicating REST is using SSL.
+         */
         __PROPERTY_PLAIN(bool, ssl);
     };
 
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //      Implements a lookup table class that contains RF channel information.
     // ---------------------------------------------------------------------------
 
+    /**
+     * @brief Implements a lookup table class that contains RF channel information.
+     * @ingroup lookups_ch
+     */
     class HOST_SW_API ChannelLookup {
     public:
-        /// <summary>Initializes a new instance of the ChannelLookup class.</summary>
+        /**
+         * @brief Initializes a new instance of the ChannelLookup class.
+         */
         ChannelLookup();
-        /// <summary>Finalizes a instance of the ChannelLookup class.</summary>
+        /**
+         * @brief Finalizes a instance of the ChannelLookup class.
+         */
         virtual ~ChannelLookup();
 
-        /** RF Channel Data */
-        /// <summary>Gets the count of RF channel data.</summary>
+        /** @name RF Channel Data */
+        /**
+         * @brief Gets the count of RF channel data.
+         * @returns uint8_t Total count of RF channel data.
+         */
         uint8_t rfChDataSize() const { return m_rfChDataTable.size(); }
-        /// <summary>Gets the RF channel data table.</summary>
+        /**
+         * @brief Gets the RF channel data table.
+         * @returns std::unordered_map<uint32_t, VoiceChData> RF channel data table.
+         */
         std::unordered_map<uint32_t, VoiceChData> rfChDataTable() const { return m_rfChDataTable; }
-        /// <summary>Helper to set RF channel data.</summary>
+        /**
+         * @brief Helper to set RF channel data.
+         * @param chData RF Channel data table.
+         */
         void setRFChData(const std::unordered_map<uint32_t, VoiceChData>& chData) { m_rfChDataTable = chData; }
-        /// <summary>Helper to set RF channel data.</summary>
+        /**
+         * @brief Helper to set RF channel data.
+         * @param chNo Channel Number.
+         * @param chData Channel Data.
+         */
         void setRFChData(uint32_t chNo, VoiceChData chData) { m_rfChDataTable[chNo] = chData; }
-        /// <summary>Helper to get RF channel data.</summary>
+        /**
+         * @brief Helper to get RF channel data.
+         * @param chNo Channel Number.
+         * @returns VoiceChData Channel Data.
+         */
         VoiceChData getRFChData(uint32_t chNo) const;
-        /// <summary>Helper to get first available channel number.</summary>
+        /**
+         * @brief Helper to get first available channel number.
+         * @returns uint32_t First available channel number.
+         */
         uint32_t getFirstRFChannel() const { return m_rfChTable.at(0); }
 
-        /// <summary>Gets the count of RF channels.</summary>
+        /**
+         * @brief Gets the count of RF channels.
+         * @returns uint8_t Total count of RF channels.
+         */
         uint8_t rfChSize() const { return m_rfChTable.size(); }
-        /// <summary>Gets the RF channels table.</summary>
+        /**
+         * @brief Gets the RF channels table.
+         * @returns std::vector<uint32_t> RF channel table.
+         */
         std::vector<uint32_t> rfChTable() const { return m_rfChTable; }
-        /// <summary>Helper to add a RF channel.</summary>
+        /**
+         * @brief Helper to add a RF channel.
+         * @param chNo Channel Number.
+         * @param force Flag indicating the channel should be forcibly added.
+         * @returns bool True, if channel added, otherwise false.
+         */
         bool addRFCh(uint32_t chNo, bool force = false);
-        /// <summary>Helper to remove a RF channel.</summary>
+        /**
+         * @brief Helper to remove a RF channel.
+         * @param chNo Channel Number.
+         */
         void removeRFCh(uint32_t chNo);
-        /// <summary>Helper to determine if there are any RF channels available..</summary>
+        /**
+         * @brief Helper to determine if there are any RF channels available..
+         * @returns bool True, if any RF channels are available for use, otherwise false.
+         */
         bool isRFChAvailable() const { return !m_rfChTable.empty(); }
+        /** @} */
 
     private:
         std::vector<uint32_t> m_rfChTable;

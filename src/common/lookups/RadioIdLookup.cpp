@@ -1,18 +1,14 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2016 Jonathan Naylor, G4KLX
-*   Copyright (C) 2017-2022 Bryan Biedenkapp, N2PLL
-*   Copyright (c) 2024 Patrick McDonnell, W3AXL
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2016 Jonathan Naylor, G4KLX
+ *  Copyright (C) 2017-2022 Bryan Biedenkapp, N2PLL
+ *  Copyright (c) 2024 Patrick McDonnell, W3AXL
+ *
+ */
 #include "lookups/RadioIdLookup.h"
 #include "p25/P25Defines.h"
 #include "Log.h"
@@ -34,44 +30,28 @@ std::mutex RadioIdLookup::m_mutex;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the RadioIdLookup class.
-/// </summary>
-/// <param name="filename">Full-path to the radio ID table file.</param>
-/// <param name="reloadTime">Interval of time to reload the radio ID table.</param>
-/// <param name="ridAcl">Flag indicating whether radio ID access control is enabled.</param>
+/* Initializes a new instance of the RadioIdLookup class. */
 RadioIdLookup::RadioIdLookup(const std::string& filename, uint32_t reloadTime, bool ridAcl) : LookupTable(filename, reloadTime),
     m_acl(ridAcl)
 {
     /* stub */
 }
 
-/// <summary>
-/// Clears all entries from the lookup table.
-/// </summary>
+/* Clears all entries from the lookup table. */
 void RadioIdLookup::clear()
 {
     std::lock_guard<std::mutex> lock(m_mutex);
     m_table.clear();
 }
 
-/// <summary>
-/// Toggles the specified radio ID enabled or disabled.
-/// </summary>
-/// <param name="id">Unique ID to toggle.</param>
-/// <param name="enabled">Flag indicating if radio ID is enabled or not.</param>
+/* Toggles the specified radio ID enabled or disabled. */
 void RadioIdLookup::toggleEntry(uint32_t id, bool enabled)
 {
     RadioId rid = find(id);
     addEntry(id, enabled, rid.radioAlias());
 }
 
-/// <summary>
-/// Adds a new entry to the lookup table by the specified unique ID.
-/// </summary>
-/// <param name="id">Unique ID to add.</param>
-/// <param name="enabled">Flag indicating if radio ID is enabled or not.</param>
-/// <param name="alias">Alias for the radio ID</param>
+/* Adds a new entry to the lookup table by the specified unique ID. */
 void RadioIdLookup::addEntry(uint32_t id, bool enabled, const std::string& alias)
 {
     if ((id == p25::defines::WUID_ALL) || (id == p25::defines::WUID_FNE)) {
@@ -97,10 +77,7 @@ void RadioIdLookup::addEntry(uint32_t id, bool enabled, const std::string& alias
     }
 }
 
-/// <summary>
-/// Erases an existing entry from the lookup table by the specified unique ID.
-/// </summary>
-/// <param name="id">Unique ID to erase.</param>
+/* Erases an existing entry from the lookup table by the specified unique ID. */
 void RadioIdLookup::eraseEntry(uint32_t id)
 {
     std::lock_guard<std::mutex> lock(m_mutex);
@@ -112,11 +89,7 @@ void RadioIdLookup::eraseEntry(uint32_t id)
     }
 }
 
-/// <summary>
-/// Finds a table entry in this lookup table.
-/// </summary>
-/// <param name="id">Unique identifier for table entry.</param>
-/// <returns>Table entry.</returns>
+/* Finds a table entry in this lookup table. */
 RadioId RadioIdLookup::find(uint32_t id)
 {
     RadioId entry;
@@ -135,18 +108,13 @@ RadioId RadioIdLookup::find(uint32_t id)
     return entry;
 }
 
-/// <summary>
-/// Saves loaded talkgroup rules.
-/// </summary>
+/* Saves loaded talkgroup rules. */
 void RadioIdLookup::commit()
 {
     save();
 }
 
-/// <summary>
-/// Flag indicating whether radio ID access control is enabled or not.
-/// </summary>
-/// <returns>True, if radio ID access control is enabled, otherwise false.</returns>
+/* Flag indicating whether radio ID access control is enabled or not. */
 bool RadioIdLookup::getACL()
 {
     return m_acl;
@@ -156,10 +124,7 @@ bool RadioIdLookup::getACL()
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Loads the table from the passed lookup table file.
-/// </summary>
-/// <returns>True, if lookup table was loaded, otherwise false.</returns>
+/* Loads the table from the passed lookup table file. */
 bool RadioIdLookup::load()
 {
     if (m_filename.empty()) {
@@ -229,10 +194,7 @@ bool RadioIdLookup::load()
     return true;
 }
 
-/// <summary>
-/// Saves the table to the passed lookup table file.
-/// </summary>
-/// <returns>True, if lookup table was saved, otherwise false.</returns>
+/* Saves the table to the passed lookup table file. */
 bool RadioIdLookup::save()
 {
     LogDebug(LOG_HOST, "Saving RID lookup file to %s", m_filename.c_str());

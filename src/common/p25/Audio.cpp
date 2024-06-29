@@ -1,16 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2016 Jonathan Naylor, G4KLX
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2016 Jonathan Naylor, G4KLX
+ *
+ */
 #include "Defines.h"
 #include "p25/Audio.h"
 #include "p25/P25Utils.h"
@@ -26,25 +22,17 @@ using namespace p25;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the Audio class.
-/// </summary>
+/* Initializes a new instance of the Audio class. */
 Audio::Audio() :
     m_fec()
 {
     /* stub */
 }
 
-/// <summary>
-/// Finalizes a instance of the Audio class.
-/// </summary>
+/* Finalizes a instance of the Audio class. */
 Audio::~Audio() = default;
 
-/// <summary>
-/// Process P25 IMBE audio data.
-/// </summary>
-/// <param name="data"></param>
-/// <returns>Number of errors corrected.</returns>
+/* Process P25 IMBE audio data. */
 uint32_t Audio::process(uint8_t* data)
 {
     assert(data != nullptr);
@@ -92,12 +80,7 @@ uint32_t Audio::process(uint8_t* data)
     return errs;
 }
 
-/// <summary>
-/// Decode a P25 IMBE audio frame.
-/// </summary>
-/// <param name="data"></param>
-/// <param name="imbe"></param>
-/// <param name="n"></param>
+/* Decode a P25 IMBE audio frame. */
 void Audio::decode(const uint8_t* data, uint8_t* imbe, uint32_t n)
 {
     assert(data != nullptr);
@@ -141,7 +124,7 @@ void Audio::decode(const uint8_t* data, uint8_t* imbe, uint32_t n)
 
     bool bit[144U];
 
-    // De-interleave
+    // de-interleave
     for (uint32_t i = 0U; i < 144U; i++) {
         uint32_t n = edac::IMBE_INTERLEAVE[i];
         bit[i] = READ_BIT(temp, n);
@@ -179,14 +162,14 @@ void Audio::decode(const uint8_t* data, uint8_t* imbe, uint32_t n)
 
     bool prn[114U];
 
-    // Create the whitening vector and save it for future use
+    // create the whitening vector and save it for future use
     uint32_t p = 16U * c0data;
     for (uint32_t i = 0U; i < 114U; i++) {
         p = (173U * p + 13849U) % 65536U;
         prn[i] = p >= 32768U;
     }
 
-    // De-whiten some bits
+    // de-whiten some bits
     for (uint32_t i = 0U; i < 114U; i++)
         bit[i + 23U] ^= prn[i];
 
@@ -209,12 +192,7 @@ void Audio::decode(const uint8_t* data, uint8_t* imbe, uint32_t n)
         WRITE_BIT(imbe, offset, bit[i + 137U]);
 }
 
-/// <summary>
-/// Encode a P25 IMBE audio frame.
-/// </summary>
-/// <param name="data"></param>
-/// <param name="imbe"></param>
-/// <param name="n"></param>
+/* Encode a P25 IMBE audio frame. */
 void Audio::encode(uint8_t* data, const uint8_t* imbe, uint32_t n)
 {
     assert(data != nullptr);
@@ -299,20 +277,20 @@ void Audio::encode(uint8_t* data, const uint8_t* imbe, uint32_t n)
 
     bool prn[114U];
 
-    // Create the whitening vector and save it for future use
+    // create the whitening vector and save it for future use
     uint32_t p = 16U * c0;
     for (uint32_t i = 0U; i < 114U; i++) {
         p = (173U * p + 13849U) % 65536U;
         prn[i] = p >= 32768U;
     }
 
-    // Whiten some bits
+    // whiten some bits
     for (uint32_t i = 0U; i < 114U; i++)
         bTemp[i + 23U] ^= prn[i];
 
     uint8_t temp[18U];
 
-    // Interleave
+    // interleave
     for (uint32_t i = 0U; i < 144U; i++) {
         uint32_t n = edac::IMBE_INTERLEAVE[i];
         WRITE_BIT(temp, n, bTemp[i]);

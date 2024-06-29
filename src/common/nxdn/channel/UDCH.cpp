@@ -1,17 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2018 Jonathan Naylor, G4KLX
-*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2018 Jonathan Naylor, G4KLX
+ *  Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "nxdn/channel/UDCH.h"
 #include "nxdn/edac/Convolution.h"
 #include "nxdn/NXDNDefines.h"
@@ -73,9 +69,7 @@ const uint32_t PUNCTURE_LIST[] = {
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the UDCH class.
-/// </summary>
+/* Initializes a new instance of the UDCH class. */
 UDCH::UDCH() :
     m_ran(0U),
     m_data(nullptr)
@@ -84,10 +78,7 @@ UDCH::UDCH() :
     ::memset(m_data, 0x00U, NXDN_UDCH_CRC_LENGTH_BYTES);
 }
 
-/// <summary>
-/// Initializes a copy instance of the UDCH class.
-/// </summary>
-/// <param name="data"></param>
+/* Initializes a copy instance of the UDCH class. */
 UDCH::UDCH(const UDCH& data) :
     m_ran(0U),
     m_data(nullptr)
@@ -95,19 +86,13 @@ UDCH::UDCH(const UDCH& data) :
     copy(data);
 }
 
-/// <summary>
-/// Finalizes a instance of UDCH class.
-/// </summary>
+/* Finalizes a instance of UDCH class. */
 UDCH::~UDCH()
 {
     delete[] m_data;
 }
 
-/// <summary>
-/// Equals operator.
-/// </summary>
-/// <param name="data"></param>
-/// <returns></returns>
+/* Equals operator. */
 UDCH& UDCH::operator=(const UDCH& data)
 {
     if (&data != this) {
@@ -119,11 +104,7 @@ UDCH& UDCH::operator=(const UDCH& data)
     return *this;
 }
 
-/// <summary>
-/// Decode a user data channel.
-/// </summary>
-/// <param name="data"></param>
-/// <returns>True, if UDCH was decoded, otherwise false.</returns>
+/* Decode a user data channel. */
 bool UDCH::decode(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -192,10 +173,7 @@ bool UDCH::decode(const uint8_t* data)
     return true;
 }
 
-/// <summary>
-/// Encode a user data channel.
-/// </summary>
-/// <param name="data"></param>
+/* Encode a user data channel. */
 void UDCH::encode(uint8_t* data) const
 {
     assert(data != nullptr);
@@ -246,10 +224,7 @@ void UDCH::encode(uint8_t* data) const
 #endif
 }
 
-/// <summary>
-/// Gets the raw UDCH data.
-/// </summary>
-/// <param name="data"></param>
+/* Gets the raw UDCH data. */
 void UDCH::getData(uint8_t* data) const
 {
     assert(data != nullptr);
@@ -257,10 +232,7 @@ void UDCH::getData(uint8_t* data) const
     ::memcpy(data, m_data + 1U, NXDN_RTCH_LC_LENGTH_BYTES);
 }
 
-/// <summary>
-/// Sets the raw UDCH data.
-/// </summary>
-/// <param name="data"></param>
+/* Sets the raw UDCH data. */
 void UDCH::setData(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -272,10 +244,7 @@ void UDCH::setData(const uint8_t* data)
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Internal helper to copy the the class.
-/// </summary>
-/// <param name="data"></param>
+/* Internal helper to copy the the class. */
 void UDCH::copy(const UDCH& data)
 {
     m_data = new uint8_t[NXDN_UDCH_CRC_LENGTH_BYTES];

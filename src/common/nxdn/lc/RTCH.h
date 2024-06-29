@@ -1,17 +1,23 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2018 Jonathan Naylor, G4KLX
+ *  Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2018 Jonathan Naylor, G4KLX
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @defgroup nxdn_lc Link Control
+ * @brief Implementation for the data handling of NXDN traffic channel messages.
+ * @ingroup nxdn
+ * 
+ * @file RTCH.h
+ * @ingroup nxdn_lc
+ * @file RTCH.cpp
+ * @ingroup nxdn_lc
+ */
 #if !defined(__NXDN_LC__RTCH_H__)
 #define  __NXDN_LC__RTCH_H__
 
@@ -24,95 +30,173 @@ namespace nxdn
     {
         // ---------------------------------------------------------------------------
         //  Class Declaration
-        //      Represents link control data for traffic channel NXDN calls.
         // ---------------------------------------------------------------------------
 
+        /**
+         * @brief Represents link control data for traffic channel NXDN calls.
+         * @ingroup nxdn_lc
+         */
         class HOST_SW_API RTCH {
         public:
-            /// <summary>Initializes a new instance of the RTCH class.</summary>
+            /**
+             * @brief Initializes a new instance of the RTCH class.
+             */
             RTCH();
-            /// <summary>Initializes a copy instance of the RTCH class.</summary>
+            /**
+             * @brief Initializes a copy instance of the RTCH class.
+             * @param data Instance of RTCH to copy.
+             */
             RTCH(const RTCH& data);
-            /// <summary>Finalizes a instance of the RTCH class.</summary>
+            /**
+             * @brief Finalizes a instance of the RTCH class.
+             */
             ~RTCH();
 
-            /// <summary>Equals operator.</summary>
+            /**
+             * @brief Equals operator.
+             * @param data Instance of RTCH to copy.
+             */
             RTCH& operator=(const RTCH& data);
 
-            /// <summary>Decode layer 3 data.</summary>
+            /**
+             * @brief Decode RTCH data.
+             * @param[in] data Buffer containing a RTCH to decode.
+             * @param length Length of data buffer.
+             * @param offset Offset for RTCH in data buffer.
+             */
             void decode(const uint8_t* data, uint32_t length, uint32_t offset = 0U);
-            /// <summary>Encode layer 3 data.</summary>
+            /**
+             * @brief Encode RTCH data.
+             * @param[out] data Buffer to encode a RTCH.
+             * @param length Length of data buffer.
+             * @param offset Offset for RTCH in data buffer.
+             */
             void encode(uint8_t* data, uint32_t length, uint32_t offset = 0U);
 
-            /// <summary></summary>
+            /**
+             * @brief Helper to reset data values to defaults.
+             */
             void reset();
 
-            /// <summary>Sets the flag indicating verbose log output.</summary>
+            /**
+             * @brief Sets the flag indicating verbose log output.
+             * @param verbose Flag indicating verbose log output.
+             */
             static void setVerbose(bool verbose) { m_verbose = verbose; }
 
         public:
-            /** Common Data */
-            /// <summary>Message Type</summary>
+            /** @name Common Data */
+            /**
+             * @brief Message Type
+             */
             __PROPERTY(uint8_t, messageType, MessageType);
 
-            /// <summary>Call Type</summary>
+            /**
+             * @brief Call Type
+             */
             __PROPERTY(uint8_t, callType, CallType);
 
-            /// <summary>Source ID.</summary>
+            /**
+             * @brief Source ID.
+             */
             __PROPERTY(uint16_t, srcId, SrcId);
-            /// <summary>Destination ID.</summary>
+            /**
+             * @brief Destination ID.
+             */
             __PROPERTY(uint16_t, dstId, DstId);
+            /** @} */
 
-            /** Common Call Options */
-            /// <summary>Flag indicating the emergency bits are set.</summary>
+            /** @name Common Call Options */
+            /**
+             * @brief Flag indicating the emergency bits are set.
+             */
             __PROPERTY(bool, emergency, Emergency);
-            /// <summary>Flag indicating that encryption is enabled.</summary>
+            /**
+             * @brief Flag indicating that encryption is enabled.
+             */
             __PROPERTY(bool, encrypted, Encrypted);
-            /// <summary>Flag indicating priority paging.</summary>
+            /**
+             * @brief Flag indicating priority paging.
+             */
             __PROPERTY(bool, priority, Priority);
-            /// <summary>Flag indicating a group/talkgroup operation.</summary>
+            /**
+             * @brief Flag indicating a group/talkgroup operation.
+             */
             __PROPERTY(bool, group, Group);
-            /// <summary>Flag indicating a half/full duplex operation.</summary>
+            /**
+             * @brief Flag indicating a half/full duplex operation.
+             */
             __PROPERTY(bool, duplex, Duplex);
 
-            /// <summary>Transmission mode.</summary>
+            /**
+             * @brief Transmission mode.
+             */
             __PROPERTY(uint8_t, transmissionMode, TransmissionMode);
+            /** @} */
 
-            /** Data Call Data */
-            /// <summary>Data packet information.</summary>
+            /** @name Data Call Data */
+            /**
+             * @brief Data packet information.
+             */
             __PROPERTY(PacketInformation, packetInfo, PacketInfo);
-            /// <summary>Data packet information.</summary>
+            /**
+             * @brief Data packet information.
+             */
             __PROPERTY(PacketInformation, rsp, Response);
-            /// <summary>Data packet frame number.</summary>
+            /**
+             * @brief Data packet frame number.
+             */
             __PROPERTY(uint8_t, dataFrameNumber, DataFrameNumber);
-            /// <summary>Data packet block number.</summary>
+            /**
+             * @brief Data packet block number.
+             */
             __PROPERTY(uint8_t, dataBlockNumber, DataBlockNumber);
+            /** @} */
 
-            /** Header Delay Data */
-            /// <summary>Delay count.</summary>
+            /** @name Header Delay Data */
+            /**
+             * @brief Delay count.
+             */
             __PROPERTY(uint16_t, delayCount, DelayCount);
+            /** @} */
 
-            /** Encryption data */
-            /// <summary>Encryption algorithm ID.</summary>
+            /** @name Encryption data */
+            /**
+             * @brief Encryption algorithm ID.
+             */
             __PROPERTY(uint8_t, algId, AlgId);
-            /// <summary>Encryption key ID.</summary>
+            /**
+             * @brief Encryption key ID.
+             */
             __PROPERTY(uint8_t, kId, KId);
+            /** @} */
 
-            /// <summary>Cause Response.</summary>
+            /**
+             * @brief Cause Response.
+             */
             __PROPERTY(uint8_t, causeRsp, CauseResponse);
 
         private:
             static bool m_verbose;
 
-            /** Encryption data */
+            // Encryption data
             uint8_t* m_mi;
 
-            /// <summary>Decode link control.</summary>
+            /**
+             * @brief Internal helper to decode a RTCH link control message.
+             * @param[in] data Buffer containing a link control to decode.
+             */
             bool decodeLC(const uint8_t* data);
-            /// <summary>Encode link control.</summary>
+            /**
+             * @brief Internal helper to encode a RTCH link control message.
+             * @param[out] data Buffer to encode a link control.
+             */
             void encodeLC(uint8_t* data);
 
-            /// <summary>Internal helper to copy the class.</summary>
+            /**
+             * @brief Internal helper to copy the class.
+             * @param data Instance of RTCH to copy.
+             */
             void copy(const RTCH& data);
         };
     } // namespace lc

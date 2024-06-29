@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2006-2009,2012,2013,2015,2016 Jonathan Naylor, G4KLX
+ *
+ */
 /**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2006-2009,2012,2013,2015,2016 Jonathan Naylor, G4KLX
-*
-*/
+ * @file Ringbuffer.h
+ * @ingroup common
+ */
 #if !defined(__RING_BUFFER_H__)
 #define __RING_BUFFER_H__
 
@@ -23,15 +23,21 @@
 
 // ---------------------------------------------------------------------------
 //  Class Declaration
-//      Implements a circular buffer for storing data.
 // ---------------------------------------------------------------------------
 
+/**
+ * @brief Cirular buffer for storing data.
+ * @ingroup common
+ * @tparam T Type of data to store in RingBuffer.
+ */
 template<class T>
 class HOST_SW_API RingBuffer {
 public:
-    /// <summary>Initializes a new instance of the RingBuffer class.</summary>
-    /// <param name="length">Length of ring buffer.</param>
-    /// <param name="name">Name of buffer.</param>
+    /**
+     * @brief Initializes a new instance of the RingBuffer class.
+     * @param length Length of ring buffer.
+     * @param name Name of buffer.
+     */
     RingBuffer(uint32_t length, const char* name) :
         m_length(length),
         m_name(name),
@@ -45,16 +51,20 @@ public:
         ::memset(m_buffer, 0x00, m_length * sizeof(T));
     }
 
-    /// <summary>Finalizes a instance of the RingBuffer class.</summary>
+    /**
+     * @brief Finalizes a instance of the RingBuffer class.
+     */
     ~RingBuffer()
     {
         delete[] m_buffer;
     }
 
-    /// <summary>Adds data to the end of the ring buffer.</summary>
-    /// <param name="buffer">Data buffer.</param>
-    /// <param name="length">Length of data in buffer.</param>
-    /// <returns>True, if data is added to ring buffer, otherwise false.</returns>
+    /**
+     * @brief Adds data to the end of the ring buffer.
+     * @param buffer Data buffer.
+     * @param length Length of data in buffer.
+     * @return bool True, if data is added to ring buffer, otherwise false.
+     */
     bool addData(const T* buffer, uint32_t length)
     {
         if (length > freeSpace()) {
@@ -77,10 +87,12 @@ public:
         return true;
     }
 
-    /// <summary>Gets data from the ring buffer.</summary>
-    /// <param name="buffer">Buffer to write data to be retrieved.</param>
-    /// <param name="length">Length of data to retrieve.</param>
-    /// <returns>True, if data is read from ring buffer, otherwise false.</returns>
+    /**
+     * @brief Gets data from the ring buffer.
+     * @param buffer Buffer to write data to be retrieved.
+     * @param length Length of data to retrieve.
+     * @return bool True, if data is read from ring buffer, otherwise false.
+     */
     bool get(T* buffer, uint32_t length)
     {
         if (dataSize() < length) {
@@ -102,10 +114,12 @@ public:
         return true;
     }
 
-    /// <summary>Gets data from ring buffer without moving buffer pointers.</summary>
-    /// <param name="buffer">Buffer to write data to be retrieved.</param>
-    /// <param name="length">Length of data to retrieve.</param>
-    /// <returns>True, if data is read from ring buffer, otherwise false.</returns>
+    /**
+     * @brief Gets data from ring buffer without moving buffer pointers.
+     * @param buffer Buffer to write data to be retrieved.
+     * @param length Length of data to retrieve.
+     * @return bool True, if data is read from ring buffer, otherwise false.
+     */
     bool peek(T* buffer, uint32_t length)
     {
         if (dataSize() < length) {
@@ -124,7 +138,9 @@ public:
         return true;
     }
 
-    /// <summary>Clears ring buffer and resets data pointers.</summary>
+    /**
+     * @brief Clears ring buffer and resets data pointers.
+     */
     void clear()
     {
         m_iPtr = 0U;
@@ -133,8 +149,10 @@ public:
         ::memset(m_buffer, 0x00, m_length * sizeof(T));
     }
 
-    /// <summary>Resizes the ring buffer to the specified length.</summary>
-    /// <param name="length">New length of the ring buffer.</param>
+    /**
+     * @brief Resizes the ring buffer to the specified length.
+     * @param length New length of the ring buffer.
+     */
     void resize(uint32_t length)
     {
         clear();
@@ -147,8 +165,10 @@ public:
         clear();
     }
 
-    /// <summary>Returns the currently available space in the ring buffer.</summary>
-    /// <returns>Space free in the ring buffer.</returns>
+    /**
+     * @brief Returns the currently available space in the ring buffer.
+     * @return uint32_t Space free in the ring buffer.
+     */
     uint32_t freeSpace() const
     {
         uint32_t len = m_length;
@@ -164,36 +184,47 @@ public:
         return len;
     }
 
-    /// <summary>Returns the size of the data currently stored in the ring buffer.</summary>
-    /// <returns>Size of data stored in the ring buffer.</returns>
+    /**
+     * @brief Returns the size of the data currently stored in the ring buffer.
+     * @return uint32_t Size of data stored in the ring buffer.
+     */
     uint32_t dataSize() const
     {
         return m_length - freeSpace();
     }
 
-    /// <summary>Gets the length of the ring buffer.</summary>
-    /// <returns>Length of ring buffer.</returns>
+    /**
+     * @brief Gets the length of the ring buffer.
+     * @return uint32_t Length of ring buffer.
+     */
     uint32_t length() const
     {
         return m_length;
     }
 
-    /// <summary>Helper to test if the given length of data would fit in the ring buffer.</summary>
-    /// <returns>True, if specified length will fit in buffer, otherwise false.</returns>
+    /**
+     * @brief Helper to test if the given length of data would fit in the ring buffer.
+     * @param length Length to check.
+     * @return bool True, if specified length will fit in buffer, otherwise false.
+     */
     bool hasSpace(uint32_t length) const
     {
         return freeSpace() > length;
     }
 
-    /// <summary>Helper to return whether the ring buffer contains data.</summary>
-    /// <returns>True, if ring buffer contains data, otherwise false.</returns>
+    /**
+     * @brief Helper to return whether the ring buffer contains data.
+     * @return bool True, if ring buffer contains data, otherwise false.
+     */
     bool hasData() const
     {
         return m_oPtr != m_iPtr;
     }
 
-    /// <summary>Helper to return whether the ring buffer is empty or not.</summary>
-    /// <returns>True, if the ring buffer is empty, otherwise false.</returns>
+    /**
+     * @brief Helper to return whether the ring buffer is empty or not.
+     * @return bool True, if the ring buffer is empty, otherwise false.
+     */
     bool isEmpty() const
     {
         return m_oPtr == m_iPtr;

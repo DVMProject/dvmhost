@@ -1,16 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2016 Jonathan Naylor, G4KLX
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2016 Jonathan Naylor, G4KLX
+ *
+ */
 #include "Defines.h"
 #include "p25/P25Defines.h"
 #include "p25/P25Utils.h"
@@ -25,13 +21,7 @@ using namespace p25::defines;
 //  Static Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Helper to set the busy status bits on P25 frame data.
-/// </summary>
-/// <param name="data"></param>
-/// <param name="ssOffset"></param>
-/// <param name="b1"></param>
-/// <param name="b2"></param>
+/* Helper to set the busy status bits on P25 frame data. */
 void P25Utils::setBusyBits(uint8_t* data, uint32_t ssOffset, bool b1, bool b2)
 {
     assert(data != nullptr);
@@ -40,13 +30,7 @@ void P25Utils::setBusyBits(uint8_t* data, uint32_t ssOffset, bool b1, bool b2)
     WRITE_BIT(data, ssOffset + 1U, b2);
 }
 
-/// <summary>
-/// Helper to add the busy status bits on P25 frame data.
-/// </summary>
-/// <param name="data"></param>
-/// <param name="length"></param>
-/// <param name="b1"></param>
-/// <param name="b2"></param>
+/* Helper to add the busy status bits on P25 frame data. */
 void P25Utils::addBusyBits(uint8_t* data, uint32_t length, bool b1, bool b2)
 {
     assert(data != nullptr);
@@ -66,13 +50,7 @@ void P25Utils::addBusyBits(uint8_t* data, uint32_t length, bool b1, bool b2)
     }
 }
 
-/// <summary>
-/// Helper to add the idle status bits on P25 frame data.
-/// </summary>
-/// <param name="data"></param>
-/// <param name="length"></param>
-/// <param name="b1"></param>
-/// <param name="b2"></param>
+/* Helper to add the idle status bits on P25 frame data. */
 void P25Utils::addIdleBits(uint8_t* data, uint32_t length, bool b1, bool b2)
 {
     assert(data != nullptr);
@@ -84,14 +62,7 @@ void P25Utils::addIdleBits(uint8_t* data, uint32_t length, bool b1, bool b2)
     }
 }
 
-/// <summary>
-/// Decode bit interleaving.
-/// </summary>
-/// <param name="in"></param>
-/// <param name="out"></param>
-/// <param name="start"></param>
-/// <param name="stop"></param>
-/// <returns></returns>
+/* Decode bit interleaving. */
 uint32_t P25Utils::decode(const uint8_t* in, uint8_t* out, uint32_t start, uint32_t stop)
 {
     assert(in != nullptr);
@@ -124,14 +95,7 @@ uint32_t P25Utils::decode(const uint8_t* in, uint8_t* out, uint32_t start, uint3
     return n;
 }
 
-/// <summary>
-/// Encode bit interleaving.
-/// </summary>
-/// <param name="in"></param>
-/// <param name="out"></param>
-/// <param name="start"></param>
-/// <param name="stop"></param>
-/// <returns></returns>
+/* Encode bit interleaving. */
 uint32_t P25Utils::encode(const uint8_t* in, uint8_t* out, uint32_t start, uint32_t stop)
 {
     assert(in != nullptr);
@@ -164,13 +128,7 @@ uint32_t P25Utils::encode(const uint8_t* in, uint8_t* out, uint32_t start, uint3
     return n;
 }
 
-/// <summary>
-/// Encode bit interleaving.
-/// </summary>
-/// <param name="in"></param>
-/// <param name="out"></param>
-/// <param name="length"></param>
-/// <returns></returns>
+/* Encode bit interleaving. */
 uint32_t P25Utils::encode(const uint8_t* in, uint8_t* out, uint32_t length)
 {
     assert(in != nullptr);
@@ -204,13 +162,7 @@ uint32_t P25Utils::encode(const uint8_t* in, uint8_t* out, uint32_t length)
     return pos;
 }
 
-/// <summary>
-/// Compare two datasets for the given length.
-/// </summary>
-/// <param name="data1"></param>
-/// <param name="data2"></param>
-/// <param name="length"></param>
-/// <returns></returns>
+/* Compare two datasets for the given length. */
 uint32_t P25Utils::compare(const uint8_t* data1, const uint8_t* data2, uint32_t length)
 {
     assert(data1 != nullptr);

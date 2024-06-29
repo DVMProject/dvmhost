@@ -1,17 +1,19 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2018 Jonathan Naylor, G4KLX
+ *  Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2018 Jonathan Naylor, G4KLX
-*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @file SACCH.h
+ * @ingroup nxdn_ch
+ * @file SACCH.cpp
+ * @ingroup nxdn_ch
+ */
 #if !defined(__NXDN_CHANNEL__SACCH_H__)
 #define  __NXDN_CHANNEL__SACCH_H__
 
@@ -24,42 +26,75 @@ namespace nxdn
     {
         // ---------------------------------------------------------------------------
         //  Class Declaration
-        //      Implements NXDN Slow Associated Control Channel.
         // ---------------------------------------------------------------------------
 
+        /**
+         * @brief Implements NXDN Slow Associated Control Channel.
+         * @ingroup nxdn_ch
+         */
         class HOST_SW_API SACCH {
         public:
-            /// <summary>Initializes a new instance of the SACCH class.</summary>
+            /**
+             * @brief Initializes a new instance of the SACCH class.
+             */
             SACCH();
-            /// <summary>Initializes a copy instance of the SACCH class.</summary>
+            /**
+             * @brief Initializes a copy instance of the SACCH class.
+             * @param data Instance of SACCH to copy.
+             */
             SACCH(const SACCH& data);
-            /// <summary>Finalizes a instance of the SACCH class.</summary>
+            /**
+             * @brief Finalizes a instance of the SACCH class.
+             */
             ~SACCH();
 
-            /// <summary>Equals operator.</summary>
+            /**
+             * @brief Equals operator.
+             * @param data Instance of SACCH to copy.
+             */
             SACCH& operator=(const SACCH& data);
 
-            /// <summary>Decode a slow associated control channel.</summary>
+            /**
+             * @brief Decode a slow associated control channel.
+             * @param[in] data Buffer containing SACCH to decode.
+             * @returns bool True, if SACCH decoded, otherwise false.
+             */
             bool decode(const uint8_t* data);
-            /// <summary>Encode a slow associated control channel.</summary>
+            /**
+             * @brief Encode a slow associated control channel.
+             * @param[out] data Buffer to encode SACCH.
+             */
             void encode(uint8_t* data) const;
 
-            /// <summary>Gets the raw SACCH data.</summary>
+            /**
+             * @brief Gets the raw SACCH data.
+             * @param[out] data Buffer to copy raw SACCH data to.
+             */
             void getData(uint8_t* data) const;
-            /// <summary>Sets the raw SACCH data.</summary>
+            /**
+             * @brief Sets the raw SACCH data.
+             * @param[in] data Buffer to copy raw SACCH data from.
+             */
             void setData(const uint8_t* data);
 
         public:
-            /** Common Data */
-            /// <summary>Radio Access Number</summary>
+            // Common Data
+            /**
+             * @brief Radio Access Number
+             */
             __PROPERTY(uint8_t, ran, RAN);
-            /// <summary></summary>
+            /**
+             * @brief Channel Structure
+             */
             __PROPERTY(defines::ChStructure::E, structure, Structure);
 
         private:
             uint8_t* m_data;
 
-            /// <summary>Internal helper to copy the class.</summary>
+            /**
+             * @brief Internal helper to copy the class.
+             * @param data Instance of SACCH to copy.
+             */
             void copy(const SACCH& data);
         };
     } // namespace channel

@@ -1,15 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "Defines.h"
 #include "nxdn/lc/rcch/RCCHFactory.h"
 #include "Log.h"
@@ -26,23 +23,13 @@ using namespace nxdn::lc::rcch;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the RCCHFactory class.
-/// </summary>
+/* Initializes a new instance of the RCCHFactory class. */
 RCCHFactory::RCCHFactory() = default;
 
-/// <summary>
-/// Finalizes a instance of RCCHFactory class.
-/// </summary>
+/* Finalizes a instance of RCCHFactory class. */
 RCCHFactory::~RCCHFactory() = default;
 
-/// <summary>
-/// Create an instance of a RCCH.
-/// </summary>
-/// <param name="data"></param>
-/// <param name="length"></param>
-/// <param name="offset"></param>
-/// <returns>True, if RCCH was decoded, otherwise false.</returns>
+/* Create an instance of a RCCH. */
 std::unique_ptr<RCCH> RCCHFactory::createRCCH(const uint8_t* data, uint32_t length, uint32_t offset)
 {
     assert(data != nullptr);
@@ -76,14 +63,7 @@ std::unique_ptr<RCCH> RCCHFactory::createRCCH(const uint8_t* data, uint32_t leng
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-///
-/// </summary>
-/// <param name="rcch"></param>
-/// <param name="data"></param>
-/// <param name="length"></param>
-/// <param name="offset"></param>
-/// <returns></returns>
+/* Internal helper to decode a RCCH link control message. */
 std::unique_ptr<RCCH> RCCHFactory::decode(RCCH* rcch, const uint8_t* data, uint32_t length, uint32_t offset)
 {
     assert(rcch != nullptr);

@@ -1,17 +1,23 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2018 Jonathan Naylor, G4KLX
+ *  Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2018 Jonathan Naylor, G4KLX
-*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @defgroup nxdn_ch NXDN Channel Types
+ * @brief Implementation for the NXDN in-band data channel processing.
+ * @ingroup nxdn
+ * 
+ * @file LICH.h
+ * @ingroup nxdn_ch
+ * @file LICH.cpp
+ * @ingroup nxdn_ch
+ */
 #if !defined(__NXDN_CHANNEL__LICH_H__)
 #define  __NXDN_CHANNEL__LICH_H__
 
@@ -24,44 +30,78 @@ namespace nxdn
     {
         // ---------------------------------------------------------------------------
         //  Class Declaration
-        //      Implements NXDN Link Information Channel.
         // ---------------------------------------------------------------------------
 
+        /**
+         * @brief Implements NXDN Link Information Channel.
+         * @ingroup nxdn_ch
+         */
         class HOST_SW_API LICH {
         public:
-            /// <summary>Initializes a new instance of the LICH class.</summary>
+            /**
+             * @brief Initializes a new instance of the LICH class.
+             */
             LICH();
-            /// <summary>Initializes a copy instance of the LICH class.</summary>
+            /**
+             * @brief Initializes a copy instance of the LICH class.
+             * @param data Instance of LICH to copy.
+             */
             LICH(const LICH& lich);
-            /// <summary>Finalizes a instance of the LICH class.</summary>
+            /**
+             * @brief Finalizes a instance of the LICH class.
+             */
             ~LICH();
 
-            /// <summary>Equals operator.</summary>
+            /**
+             * @brief Equals operator.
+             * @param data Instance of LICH to copy.
+             */
             LICH& operator=(const LICH& lich);
 
-            /// <summary>Decode a link information channel.</summary>
+            /**
+             * @brief Decode a link information channel.
+             * @param[in] data Buffer containing LICH to decode.
+             * @returns bool True, if LICH decoded, otherwise false.
+             */
             bool decode(const uint8_t* data);
-            /// <summary>Encode a link information channel.</summary>
+            /**
+             * @brief Encode a link information channel.
+             * @param[out] data Buffer to encode LICH.
+             */
             void encode(uint8_t* data);
 
         public:
-            /** Common Data */
-            /// <summary>RF Channel Type</summary>
+            // Common Data
+            /**
+             * @brief RF Channel Type
+             */
             __PROPERTY(defines::RFChannelType::E, rfct, RFCT);
-            /// <summary>Functional Channel Type</summary>
+            /**
+             * @brief Functional Channel Type
+             */
             __PROPERTY(defines::FuncChannelType::E, fct, FCT);
-            /// <summary>Channel Options</summary>
+            /**
+             * @brief Channel Options
+             */
             __PROPERTY(defines::ChOption::E, option, Option);
-            /// <summary>Flag indicating outbound traffic direction</summary>
+            /**
+             * @brief Flag indicating outbound traffic direction
+             */
             __PROPERTY(bool, outbound, Outbound);
 
         private:
             uint8_t m_lich;
 
-            /// <summary>Internal helper to copy the class.</summary>
+            /**
+             * @brief Internal helper to copy the class.
+             * @param data Instance of LICH to copy.
+             */
             void copy(const LICH& data);
 
-            /// <summary></summary>
+            /**
+             * @brief Internal helper to generate the parity bit for the LICH.
+             * @returns bool Boolean flag based on whether the parity bit is set or not.
+             */
             bool getParity() const;
         };
     } // namespace channel

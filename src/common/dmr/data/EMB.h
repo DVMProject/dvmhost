@@ -1,16 +1,18 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2015,2016 Jonathan Naylor, G4KLX
+ *
+ */
 /**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2015,2016 Jonathan Naylor, G4KLX
-*
-*/
+ * @file EMB.h
+ * @ingroup dmr
+ * @file EMB.cpp
+ * @ingroup dmr
+ */
 #if !defined(__DMR_DATA__EMB_H__)
 #define __DMR_DATA__EMB_H__
 
@@ -22,29 +24,48 @@ namespace dmr
     {
         // ---------------------------------------------------------------------------
         //  Class Declaration
-        //      Represents a DMR embedded signalling data.
         // ---------------------------------------------------------------------------
 
+        /**
+         * @brief Represents a DMR embedded signalling data.
+         * @ingroup dmr
+         */
         class HOST_SW_API EMB {
         public:
-            /// <summary>Initializes a new instance of the EMB class.</summary>
+            /**
+             * @brief Initializes a new instance of the EMB class.
+             */
             EMB();
-            /// <summary>Finalizes a instance of the EMB class.</summary>
+            /**
+             * @brief Finalizes a instance of the EMB class.
+             */
             ~EMB();
 
-            /// <summary>Decodes DMR embedded signalling data.</summary>
+            /**
+             * @brief Decodes DMR embedded signalling data.
+             * @param[in] data Buffer containing embedded signalling data.
+             */
             void decode(const uint8_t* data);
-            /// <summary>Encodes DMR embedded signalling data.</summary>
+            /**
+             * @brief Encodes DMR embedded signalling data.
+             * @param[out] data Buffer to encode embedded signalling data.
+             */
             void encode(uint8_t* data) const;
 
         public:
-            /// <summary>DMR access color code.</summary>
+            /**
+             * @brief DMR access color code.
+             */
             __PROPERTY(uint8_t, colorCode, ColorCode);
 
-            /// <summary>Flag indicating whether the privacy indicator is set or not.</summary>
+            /**
+             * @brief Flag indicating whether the privacy indicator is set or not.
+             */
             __PROPERTY(bool, PI, PI);
 
-            /// <summary>Link control start/stop.</summary>
+            /**
+             * @brief Link control start/stop.
+             */
             __PROPERTY(uint8_t, LCSS, LCSS);
         };
     } // namespace data

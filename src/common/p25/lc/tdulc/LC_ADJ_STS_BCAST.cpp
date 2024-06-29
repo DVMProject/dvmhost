@@ -1,15 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "Defines.h"
 #include "p25/lc/tdulc/LC_ADJ_STS_BCAST.h"
 #include "Log.h"
@@ -25,9 +22,7 @@ using namespace p25::lc::tdulc;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the LC_ADJ_STS_BCAST class.
-/// </summary>
+/* Initializes a new instance of the LC_ADJ_STS_BCAST class. */
 LC_ADJ_STS_BCAST::LC_ADJ_STS_BCAST() : TDULC(),
     m_adjCFVA(CFVA::FAILURE),
     m_adjSysId(0U),
@@ -40,11 +35,7 @@ LC_ADJ_STS_BCAST::LC_ADJ_STS_BCAST() : TDULC(),
     m_lco = LCO::ADJ_STS_BCAST;
 }
 
-/// <summary>
-/// Decode a terminator data unit w/ link control.
-/// </summary>
-/// <param name="data"></param>
-/// <returns>True, if TDULC was decoded, otherwise false.</returns>
+/* Decode a terminator data unit w/ link control. */
 bool LC_ADJ_STS_BCAST::decode(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -54,10 +45,7 @@ bool LC_ADJ_STS_BCAST::decode(const uint8_t* data)
     return true;
 }
 
-/// <summary>
-/// Encode a terminator data unit w/ link control.
-/// </summary>
-/// <param name="data"></param>
+/* Encode a terminator data unit w/ link control. */
 void LC_ADJ_STS_BCAST::encode(uint8_t* data)
 {
     assert(data != nullptr);
@@ -93,10 +81,7 @@ void LC_ADJ_STS_BCAST::encode(uint8_t* data)
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Internal helper to copy the the class.
-/// </summary>
-/// <param name="data"></param>
+/* Internal helper to copy the the class. */
 void LC_ADJ_STS_BCAST::copy(const LC_ADJ_STS_BCAST& data)
 {
     TDULC::copy(data);

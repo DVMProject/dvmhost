@@ -1,17 +1,21 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *   Copyright (C) 2014 Hard Consulting Corporation
+ *   Copyright (C) 2023 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @derivedfrom EZPWD Reed-Solomon (https://github.com/pjkundert/ezpwd-reed-solomon)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2014 Hard Consulting Corporation
-*   Copyright (C) 2023 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @defgroup edac_rs Reed-Solomon Error Detection and Correction
+ * @brief Implementation for Reed-Solomon Error Detection and Correction methods.
+ * @ingroup edac
+ * 
+ * @file RS.h
+ * @ingroup edac_rs
+ */
 #if !defined(__RS_H__)
 #define __RS_H__
 
@@ -96,28 +100,31 @@ namespace edac
 
         // ---------------------------------------------------------------------------
         //  Class Declaration
-        //      Reed-Solomon codec generic base class.
         // ---------------------------------------------------------------------------
 
+        /**
+         * @brief Reed-Solomon codec generic base class.
+         * @ingroup edac_rs
+         */
         class reed_solomon_base {
         public:
-            /// <summary>A data element's bits.</summary>
+            /** @brief A data element's bits. */
             virtual size_t datum() const = 0;
-            /// <summary>A symbol's bits.</summary>
+            /** @brief A symbol's bits. */
             virtual size_t symbol()	const = 0;
-            /// <summary>R-S block size (maximum total symbols).</summary>
+            /** @brief R-S block size (maximum total symbols). */
             virtual int size() const = 0;
-            /// <summary>R-S roots (parity symbols).</summary>
+            /** @brief R-S roots (parity symbols). */
             virtual int	nroots() const = 0;
-            /// <summary>R-S net payload (data symbols).</summary>
+            /** @brief R-S net payload (data symbols). */
             virtual	int	load() const = 0;
 
-            /// <summary>Initializes a new instance of the reed_solomon_base class.</summary>
+            /** @brief Initializes a new instance of the reed_solomon_base class. */
             reed_solomon_base() = default;
-            /// <summary>Finalizes a instance of the reed_solomon_base class.</summary>
+            /** @brief Finalizes a instance of the reed_solomon_base class. */
             virtual ~reed_solomon_base() = default;
 
-            /// <summary></summary>
+            /** @brief */
             virtual std::ostream &output(std::ostream &lhs) const { return lhs << "RS(" << this->size() << "," << this->load() << ")"; }
 
             //
@@ -261,9 +268,14 @@ namespace edac
 
         // ---------------------------------------------------------------------------
         //  Structure Declaration
-        //      Default field polynomial generator functor.
         // ---------------------------------------------------------------------------
 
+        /**
+         * @brief Default field polynomial generator functor.
+         * @tparam SYM 
+         * @tparam PLY 
+         * @ingroup edac_rs
+         */
         template<int SYM, int PLY>
         struct gfpoly {
             int	operator() (int sr) const
@@ -282,16 +294,23 @@ namespace edac
 
         // ---------------------------------------------------------------------------
         //  Class Declaration
-        //      R-S tables common to all RS(NN,*) with same SYM, PRM and PLY.
         // ---------------------------------------------------------------------------
 
+        /**
+         * @brief R-S tables common to all RS(NN,*) with same SYM, PRM and PLY.
+         * @tparam TYP 
+         * @tparam SYM 
+         * @tparam PRM 
+         * @tparam PLY 
+         * @ingroup edac_rs
+         */
         template <typename TYP, int SYM, int PRM, class PLY>
         class reed_solomon_tabs : public reed_solomon_base {
         public:
             typedef TYP symbol_t;
-            /// <summary>Bits / TYP</summary>
+            /** @brief Bits / TYP */
             static const size_t	DATUM = 8 * sizeof TYP();
-            /// <summary>Bits / Symbol</summary>
+            /** @brief Bits / Symbol */
             static const size_t	SYMBOL = SYM;
             static const int MM	= SYM;
             static const int SIZE = (1 << SYM) - 1;	        // maximum symbols in field
@@ -308,7 +327,7 @@ namespace edac
             static std::array<TYP, NN + 1> index_of;
             static std::array<TYP, MODS> mod_of;
 
-            /// <summary>Initializes a new instance of the reed_solomon_tabs class.</summary>
+            /** @brief Initializes a new instance of the reed_solomon_tabs class. */
             reed_solomon_tabs() : reed_solomon_base()
             {
                 // Do init if not already done.  We check one value which is initialized to -1; this is
@@ -390,31 +409,40 @@ namespace edac
 
         // ---------------------------------------------------------------------------
         //  Class Declaration
-        //      Reed-Solomon codec.
-        //
-        // @TYP:            A symbol datum; {en,de}code operates on arrays of these
-        // @DATUM:          Bits per datum (a TYP())
-        // @SYM{BOL}, MM:   Bits per symbol
-        // @NN:             Symbols per block (== (1<<MM)-1)
-        // @alpha_to:       log lookup table
-        // @index_of:       Antilog lookup table
-        // @genpoly:        Generator polynomial
-        // @NROOTS:         Number of generator roots = number of parity symbols
-        // @FCR:            First consecutive root, index form
-        // @PRM:            Primitive element, index form
-        // @iprim:          prim-th root of 1, index form
-        // @PLY:            The primitive generator polynominal functor
-        //
-        //     All reed_solomon<T, ...> instances with the same template type parameters share a common
-        // (static) set of alpha_to, index_of and genpoly tables.  The first instance to be constructed
-        // initializes the tables.
-        //
-        //     Each specialized type of reed_solomon implements a specific encode/decode method
-        // appropriate to its datum 'TYP'.  When accessed via a generic reed_solomon_base pointer, only
-        // access via "safe" (size specifying) containers or iterators is available.
-        //
         // ---------------------------------------------------------------------------
 
+        /**
+         * @brief Reed-Solomon codec.
+         * @tparam TYP A symbol datum; {en,de}code operates on arrays of these
+         * @tparam SYM Bits per symbol
+         * @tparam RTS 
+         * @tparam FCR First consecutive root, index form
+         * @tparam PRM Primitive element, index form
+         * @tparam PLY The primitive generator polynominal functor
+         * @ingroup edac_rs
+         */
+        /*
+         * @TYP:            A symbol datum; {en,de}code operates on arrays of these
+         * @DATUM:          Bits per datum (a TYP())
+         * @SYM{BOL}, MM:   Bits per symbol
+         * @NN:             Symbols per block (== (1<<MM)-1)
+         * @alpha_to:       log lookup table
+         * @index_of:       Antilog lookup table
+         * @genpoly:        Generator polynomial
+         * @NROOTS:         Number of generator roots = number of parity symbols
+         * @FCR:            First consecutive root, index form
+         * @PRM:            Primitive element, index form
+         * @iprim:          prim-th root of 1, index form
+         * @PLY:            The primitive generator polynominal functor
+         *
+         *     All reed_solomon<T, ...> instances with the same template type parameters share a common
+         * (static) set of alpha_to, index_of and genpoly tables.  The first instance to be constructed
+         * initializes the tables.
+         *
+         *     Each specialized type of reed_solomon implements a specific encode/decode method
+         * appropriate to its datum 'TYP'.  When accessed via a generic reed_solomon_base pointer, only
+         * access via "safe" (size specifying) containers or iterators is available.
+         */
         template<typename TYP, int SYM, int RTS, int FCR, int PRM, class PLY>
         class reed_solomon : public reed_solomon_tabs<TYP, SYM, PRM, PLY> {
         public:
@@ -440,7 +468,7 @@ namespace edac
             static std::array<TYP, NROOTS + 1> genpoly;
 
         public:
-            /// <summary>Initializes a new instance of the reed_solomon class.</summary>
+            /** @brief Initializes a new instance of the reed_solomon class. */
             reed_solomon() : reed_solomon_tabs<TYP, SYM, PRM, PLY>()
             {
                 // We check one element of the array; this is safe, 'cause the value will not be
@@ -480,18 +508,18 @@ namespace edac
                     genpoly[i] = index_of[tmppoly[i]];
                 }
             }
-            /// <summary>Finalizes a instance of the reed_solomon class.</summary>
+            /** @brief Finalizes a instance of the reed_solomon class. */
             virtual ~reed_solomon() = default;
 
-            /// <summary>A data element's bits.</summary>
+            /** @brief A data element's bits. */
             virtual size_t datum() const { return DATUM; }
-            /// <summary>A symbol's bits.</summary>
+            /** @brief A symbol's bits. */
             virtual size_t symbol() const { return SYMBOL; }
-            /// <summary>R-S block size (maximum total symbols).</summary>
+            /** @brief R-S block size (maximum total symbols). */
             virtual int size() const { return SIZE; }
-            /// <summary>R-S roots (parity symbols).</summary>
+            /** @brief R-S roots (parity symbols). */
             virtual int nroots() const { return NROOTS; }
-            /// <summary>R-S net payload (data symbols).</summary>
+            /** @brief R-S net payload (data symbols). */
             virtual int load() const { return LOAD; }
 
             using reed_solomon_base::encode;

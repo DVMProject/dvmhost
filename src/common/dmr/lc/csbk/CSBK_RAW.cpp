@@ -1,15 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "Defines.h"
 #include "dmr/lc/csbk/CSBK_RAW.h"
 
@@ -24,18 +21,14 @@ using namespace dmr::lc::csbk;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the CSBK_RAW class.
-/// </summary>
+/* Initializes a new instance of the CSBK_RAW class. */
 CSBK_RAW::CSBK_RAW() : CSBK(),
     m_csbk(nullptr)
 {
     m_CSBKO = CSBKO::RAND;
 }
 
-/// <summary>
-/// Finalizes a new instance of the CSBK_RAW class.
-/// </summary>
+/* Finalizes a new instance of the CSBK_RAW class. */
 CSBK_RAW::~CSBK_RAW()
 {
     if (m_csbk != nullptr) {
@@ -43,11 +36,7 @@ CSBK_RAW::~CSBK_RAW()
     }
 }
 
-/// <summary>
-/// Decode a control signalling block.
-/// </summary>
-/// <param name="data"></param>
-/// <returns>True, if CSBK was decoded, otherwise false.</returns>
+/* Decode a control signalling block. */
 bool CSBK_RAW::decode(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -57,10 +46,7 @@ bool CSBK_RAW::decode(const uint8_t* data)
     return true;
 }
 
-/// <summary>
-/// Encode a control signalling block.
-/// </summary>
-/// <param name="data"></param>
+/* Encode a control signalling block. */
 void CSBK_RAW::encode(uint8_t* data)
 {
     assert(data != nullptr);
@@ -71,10 +57,7 @@ void CSBK_RAW::encode(uint8_t* data)
     CSBK::encode(data, m_csbk);
 }
 
-/// <summary>
-/// Sets the CSBK to encode.
-/// </summary>
-/// <param name="csbk"></param>
+/* Sets the CSBK to encode. */
 void CSBK_RAW::setCSBK(const uint8_t* csbk)
 {
     assert(csbk != nullptr);

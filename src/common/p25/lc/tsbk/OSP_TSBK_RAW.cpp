@@ -1,15 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2023,2024 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2023,2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "Defines.h"
 #include "p25/lc/tsbk/OSP_TSBK_RAW.h"
 
@@ -24,18 +21,14 @@ using namespace p25::lc::tsbk;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the OSP_TSBK_RAW class.
-/// </summary>
+/* Initializes a new instance of the OSP_TSBK_RAW class. */
 OSP_TSBK_RAW::OSP_TSBK_RAW() : TSBK(),
     m_tsbk(nullptr)
 {
     m_lco = TSBKO::IOSP_ACK_RSP;
 }
 
-/// <summary>
-/// Finalizes a new instance of the OSP_TSBK_RAW class.
-/// </summary>
+/* Finalizes a new instance of the OSP_TSBK_RAW class. */
 OSP_TSBK_RAW::~OSP_TSBK_RAW()
 {
     if (m_tsbk != nullptr) {
@@ -43,12 +36,7 @@ OSP_TSBK_RAW::~OSP_TSBK_RAW()
     }
 }
 
-/// <summary>
-/// Decode a trunking signalling block.
-/// </summary>
-/// <param name="data"></param>
-/// <param name="rawTSBK"></param>
-/// <returns>True, if TSBK was decoded, otherwise false.</returns>
+/* Decode a trunking signalling block. */
 bool OSP_TSBK_RAW::decode(const uint8_t* data, bool rawTSBK)
 {
     assert(data != nullptr);
@@ -58,12 +46,7 @@ bool OSP_TSBK_RAW::decode(const uint8_t* data, bool rawTSBK)
     return true;
 }
 
-/// <summary>
-/// Encode a trunking signalling block.
-/// </summary>
-/// <param name="data"></param>
-/// <param name="rawTSBK"></param>
-/// <param name="noTrellis"></param>
+/* Encode a trunking signalling block. */
 void OSP_TSBK_RAW::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 {
     assert(data != nullptr);
@@ -74,10 +57,7 @@ void OSP_TSBK_RAW::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
     TSBK::encode(data, m_tsbk, rawTSBK, noTrellis);
 }
 
-/// <summary>
-/// Sets the TSBK to encode.
-/// </summary>
-/// <param name="tsbk"></param>
+/* Sets the TSBK to encode. */
 void OSP_TSBK_RAW::setTSBK(const uint8_t* tsbk)
 {
     assert(tsbk != nullptr);

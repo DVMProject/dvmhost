@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: BSL-1.0
+/*
+ * Digital Voice Modem - Common Library
+ * BSL-1.0 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (c) 2003-2013 Christopher M. Kohlhoff
+ *  Copyright (C) 2023 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Common Library
-* BSL-1.0 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @derivedfrom CRUD (https://github.com/venediktov/CRUD)
-* @license BSL-1.0 License (https://opensource.org/license/bsl1-0-html)
-*
-*   Copyright (c) 2003-2013 Christopher M. Kohlhoff
-*   Copyright (C) 2023 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @file HTTPClient.h
+ * @ingroup http
+ */
 #if !defined(__REST_HTTP__HTTP_HEADERS_H__)
 #define __REST_HTTP__HTTP_HEADERS_H__
 
@@ -37,30 +37,64 @@ namespace network
 
             // ---------------------------------------------------------------------------
             //  Structure Declaration
-            //
             // ---------------------------------------------------------------------------
 
+            /**
+             * @brief Represents HTTP headers.
+             * @ingroup http
+             */
             struct HTTPHeaders {
+                /**
+                 * @brief Structure representing an individual HTTP header.
+                 * @ingroup http
+                 */
                 struct Header
                 {
+                    /**
+                     * @brief Header name.
+                     */
                     std::string name;
+                    /**
+                     * @brief Header value.
+                     */
                     std::string value;
 
+                    /**
+                     * @brief Initializes a new instance of the Header class.
+                     */
                     Header() : name{}, value{} { /* stub */}
+                    /**
+                     * @brief Initializes a new instance of the Header class
+                     * @param n Header name.
+                     * @param v Header value.
+                     */
                     Header(std::string n, std::string v) : name{n}, value{v} { /* stub */ }
                 };
 
-                /// <summary>Gets the list of HTTP headers.</summary>
+                /**
+                 * @brief Gets the list of HTTP headers.
+                 * @returns std::vector<Header> List of HTTP headers.
+                 */
                 std::vector<Header> headers() const { return m_headers; }
-                /// <summary>Returns true if the headers are empty.</summary>
+                /**
+                 * @brief Returns true if the headers are empty.
+                 * @returns bool True, if no HTTP headers are present, otherwise false.
+                 */
                 bool empty() const { return m_headers.empty(); }
-                /// <summary>Returns the number of headers.</summary>
+                /**
+                 * @brief Returns the number of headers.
+                 * @returns std::size_t Number of headers.
+                 */
                 std::size_t size() const { return m_headers.size(); }
-                /// <summary>Clears the list of HTTP headers.</summary>
+                /**
+                 * @brief Clears the list of HTTP headers.
+                 */
                 void clearHeaders() { m_headers = std::vector<Header>(); }
-                /// <summary>Helper to add a HTTP header.</summary>
-                /// <param name="name"></param>
-                /// <param name="value"></param>
+                /**
+                 * @brief Helper to add a HTTP header.
+                 * @param name Header name.
+                 * @param value Header value.
+                 */
                 void add(const std::string& name, const std::string& value)
                 {
                     //::LogDebug(LOG_REST, "HTTPHeaders::add(), header = %s, value = %s", name.c_str(), value.c_str());
@@ -75,8 +109,10 @@ namespace network
                     //for (auto header : m_headers)
                     //    ::LogDebug(LOG_REST, "HTTPHeaders::add() m_headers.header = %s, m_headers.value = %s", header.name.c_str(), header.value.c_str());
                 }
-                /// <summary>Helper to add a HTTP header.</summary>
-                /// <param name="headerName"></param>
+                /**
+                 * @brief Helper to remove a HTTP header.
+                 * @param headerName Header name.
+                 */
                 void remove(const std::string headerName)
                 {
                     auto header = std::find_if(m_headers.begin(), m_headers.end(), [&](const Header& h) {
@@ -87,8 +123,11 @@ namespace network
                         m_headers.erase(header);
                     }
                 }
-                /// <summary>Helper to find the named HTTP header.</summary>
-                /// <param name="headerName"></param>
+                /**
+                 * @brief Helper to find the named HTTP header.
+                 * @param headerName Header name.
+                 * @returns std::string Value of named header (if any).
+                 */
                 std::string find(const std::string headerName) const
                 {
                     auto header = std::find_if(m_headers.begin(), m_headers.end(), [&](const Header& h) {

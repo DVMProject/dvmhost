@@ -1,17 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2012 Ian Wraith
-*   Copyright (C) 2015 Jonathan Naylor, G4KLX
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2012 Ian Wraith
+ *  Copyright (C) 2015 Jonathan Naylor, G4KLX
+ *
+ */
 #include "Defines.h"
 #include "edac/BPTC19696.h"
 #include "edac/Hamming.h"
@@ -25,9 +21,7 @@ using namespace edac;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the BPTC19696 class.
-/// </summary>
+/* Initializes a new instance of the BPTC19696 class. */
 BPTC19696::BPTC19696() :
     m_rawData(nullptr),
     m_deInterData(nullptr)
@@ -36,20 +30,14 @@ BPTC19696::BPTC19696() :
     m_deInterData = new bool[196];
 }
 
-/// <summary>
-/// Finalizes a instance of the BPTC19696 class.
-/// </summary>
+/* Finalizes a instance of the BPTC19696 class. */
 BPTC19696::~BPTC19696()
 {
     delete[] m_rawData;
     delete[] m_deInterData;
 }
 
-/// <summary>
-/// Decode BPTC (196,96) FEC.
-/// </summary>
-/// <param name="in">Input data to decode.</param>
-/// <param name="out">Decoded data.</param>
+/* Decode BPTC (196,96) FEC. */
 void BPTC19696::decode(const uint8_t* in, uint8_t* out)
 {
     assert(in != nullptr);
@@ -68,11 +56,7 @@ void BPTC19696::decode(const uint8_t* in, uint8_t* out)
     decodeExtractData(out);
 }
 
-/// <summary>
-/// Encode BPTC (196,96) FEC.
-/// </summary>
-/// <param name="in">Input data to encode.</param>
-/// <param name="out">Encoded data.</param>
+/* Encode BPTC (196,96) FEC. */
 void BPTC19696::encode(const uint8_t* in, uint8_t* out)
 {
     assert(in != nullptr);
@@ -95,10 +79,7 @@ void BPTC19696::encode(const uint8_t* in, uint8_t* out)
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-///
-/// </summary>
-/// <param name="in"></param>
+/* */
 void BPTC19696::decodeExtractBinary(const uint8_t* in)
 {
     // first block
@@ -137,9 +118,7 @@ void BPTC19696::decodeExtractBinary(const uint8_t* in)
     Utils::byteToBitsBE(in[32U], m_rawData + 188U);
 }
 
-/// <summary>
-///
-/// </summary>
+/* */
 void BPTC19696::decodeDeInterleave()
 {
     for (uint32_t i = 0U; i < 196U; i++)
@@ -154,9 +133,7 @@ void BPTC19696::decodeDeInterleave()
     }
 }
 
-/// <summary>
-///
-/// </summary>
+/* */
 void BPTC19696::decodeErrorCheck()
 {
     bool fixing;
@@ -195,10 +172,7 @@ void BPTC19696::decodeErrorCheck()
     } while (fixing && count < 5U);
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="data"></param>
+/* */
 void BPTC19696::decodeExtractData(uint8_t* data) const
 {
     bool bData[96U];
@@ -244,10 +218,7 @@ void BPTC19696::decodeExtractData(uint8_t* data) const
     Utils::bitsToByteBE(bData + 88U, data[11U]);
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="in"></param>
+/* */
 void BPTC19696::encodeExtractData(const uint8_t* in) const
 {
     bool bData[96U];
@@ -296,9 +267,7 @@ void BPTC19696::encodeExtractData(const uint8_t* in) const
         m_deInterData[a] = bData[pos];
 }
 
-/// <summary>
-///
-/// </summary>
+/* */
 void BPTC19696::encodeErrorCheck()
 {
     // run through each of the 9 rows containing data
@@ -326,9 +295,7 @@ void BPTC19696::encodeErrorCheck()
     }
 }
 
-/// <summary>
-///
-/// </summary>
+/* */
 void BPTC19696::encodeInterleave()
 {
     for (uint32_t i = 0U; i < 196U; i++)
@@ -343,10 +310,7 @@ void BPTC19696::encodeInterleave()
     }
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="data"></param>
+/* */
 void BPTC19696::encodeExtractBinary(uint8_t* data)
 {
     // first block

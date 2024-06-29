@@ -1,16 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2015,2016 Jonathan Naylor, G4KLX
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2015,2016 Jonathan Naylor, G4KLX
+ *
+ */
 #include "Defines.h"
 #include "dmr/data/EMB.h"
 #include "edac/QR1676.h"
@@ -25,9 +21,7 @@ using namespace dmr;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the EMB class.
-/// </summary>
+/* Initializes a new instance of the EMB class. */
 EMB::EMB() :
     m_colorCode(0U),
     m_PI(false),
@@ -36,15 +30,10 @@ EMB::EMB() :
     /* stub */
 }
 
-/// <summary>
-/// Finalizes a instance of the EMB class.
-/// </summary>
+/* Finalizes a instance of the EMB class. */
 EMB::~EMB() = default;
 
-/// <summary>
-/// Decodes DMR embedded signalling data.
-/// </summary>
-/// <param name="data"></param>
+/* Decodes DMR embedded signalling data. */
 void EMB::decode(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -63,10 +52,7 @@ void EMB::decode(const uint8_t* data)
     m_LCSS = (DMREMB[0U] >> 1) & 0x03U;
 }
 
-/// <summary>
-/// Encodes DMR embedded signalling data.
-/// </summary>
-/// <param name="data"></param>
+/* Encodes DMR embedded signalling data. */
 void EMB::encode(uint8_t* data) const
 {
     assert(data != nullptr);

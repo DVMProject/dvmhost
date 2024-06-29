@@ -1,17 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2018 Jonathan Naylor, G4KLX
-*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2018 Jonathan Naylor, G4KLX
+ *  Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "nxdn/NXDNDefines.h"
 #include "nxdn/lc/RTCH.h"
 #include "Log.h"
@@ -34,9 +30,7 @@ bool RTCH::m_verbose = false;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the RTCH class.
-/// </summary>
+/* Initializes a new instance of the RTCH class. */
 RTCH::RTCH() :
     m_messageType(MessageType::IDLE),
     m_callType(CallType::UNSPECIFIED),
@@ -61,10 +55,7 @@ RTCH::RTCH() :
     ::memset(m_mi, 0x00U, MI_LENGTH_BYTES);
 }
 
-/// <summary>
-/// Initializes a copy instance of the RTCH class.
-/// </summary>
-/// <param name="data"></param>
+/* Initializes a copy instance of the RTCH class. */
 RTCH::RTCH(const RTCH& data) :
     m_messageType(MessageType::IDLE),
     m_callType(CallType::UNSPECIFIED),
@@ -88,19 +79,13 @@ RTCH::RTCH(const RTCH& data) :
     copy(data);
 }
 
-/// <summary>
-/// Finalizes a instance of RTCH class.
-/// </summary>
+/* Finalizes a instance of RTCH class. */
 RTCH::~RTCH()
 {
     delete[] m_mi;
 }
 
-/// <summary>
-/// Equals operator.
-/// </summary>
-/// <param name="data"></param>
-/// <returns></returns>
+/* Equals operator. */
 RTCH& RTCH::operator=(const RTCH& data)
 {
     if (&data != this) {
@@ -110,11 +95,7 @@ RTCH& RTCH::operator=(const RTCH& data)
     return *this;
 }
 
-/// <summary>
-/// Decode call link control data.
-/// </summary>
-/// <param name="data"></param>
-/// <returns>True, if RTCH was decoded, otherwise false.</returns>
+/* Decode call link control data. */
 void RTCH::decode(const uint8_t* data, uint32_t length, uint32_t offset)
 {
     assert(data != nullptr);
@@ -134,12 +115,7 @@ void RTCH::decode(const uint8_t* data, uint32_t length, uint32_t offset)
     decodeLC(rtch);
 }
 
-/// <summary>
-/// Encode call link control data.
-/// </summary>
-/// <param name="data"></param>
-/// <param name="length"></param>
-/// <param name="offset"></param>
+/* Encode call link control data. */
 void RTCH::encode(uint8_t* data, uint32_t length, uint32_t offset)
 {
     assert(data != nullptr);
@@ -159,9 +135,7 @@ void RTCH::encode(uint8_t* data, uint32_t length, uint32_t offset)
     }
 }
 
-/// <summary>
-///
-/// </summary>
+/* Helper to reset data values to defaults. */
 void RTCH::reset()
 {
     m_messageType = MessageType::IDLE;
@@ -194,11 +168,7 @@ void RTCH::reset()
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Decode link control.
-/// </summary>
-/// <param name="data"></param>
-/// <returns></returns>
+/* Internal helper to decode a RTCH link control message. */
 bool RTCH::decodeLC(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -311,10 +281,7 @@ bool RTCH::decodeLC(const uint8_t* data)
     return true;
 }
 
-/// <summary>
-/// Encode link control.
-/// </summary>
-/// <param name="rs"></param>
+/* Internal helper to encode a RTCH link control message. */
 void RTCH::encodeLC(uint8_t* data)
 {
     assert(data != nullptr);
@@ -431,10 +398,7 @@ void RTCH::encodeLC(uint8_t* data)
     }
 }
 
-// <summary>
-/// Internal helper to copy the the class.
-/// </summary>
-/// <param name="data"></param>
+/* Internal helper to copy the the class. */
 void RTCH::copy(const RTCH& data)
 {
     m_messageType = data.m_messageType;

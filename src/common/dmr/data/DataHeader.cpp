@@ -1,18 +1,14 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2012 Ian Wraith
-*   Copyright (C) 2015,2016,2017 Jonathan Naylor, G4KLX
-*   Copyright (C) 2021,2023,2024 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2012 Ian Wraith
+ *  Copyright (C) 2015,2016,2017 Jonathan Naylor, G4KLX
+ *  Copyright (C) 2021,2023,2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "Defines.h"
 #include "dmr/DMRDefines.h"
 #include "dmr/data/DataHeader.h"
@@ -37,9 +33,7 @@ const uint8_t UDTF_NMEA = 0x05U;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the DataHeader class.
-/// </summary>
+/* Initializes a new instance of the DataHeader class. */
 DataHeader::DataHeader() :
     m_GI(false),
     m_DPF(DPF::UDT),
@@ -67,19 +61,13 @@ DataHeader::DataHeader() :
     m_data = new uint8_t[DMR_LC_HEADER_LENGTH_BYTES];
 }
 
-/// <summary>
-/// Finalizes a instance of the DataHeader class.
-/// </summary>
+/* Finalizes a instance of the DataHeader class. */
 DataHeader::~DataHeader()
 {
     delete[] m_data;
 }
 
-/// <summary>
-/// Equals operator.
-/// </summary>
-/// <param name="header"></param>
-/// <returns></returns>
+/* Equals operator. */
 DataHeader& DataHeader::operator=(const DataHeader& header)
 {
     if (&header != this) {
@@ -111,11 +99,7 @@ DataHeader& DataHeader::operator=(const DataHeader& header)
     return *this;
 }
 
-/// <summary>
-/// Decodes a DMR data header.
-/// </summary>
-/// <param name="data"></param>
-/// <returns>True, if DMR data header was decoded, otherwise false.</returns>
+/* Decodes a DMR data header. */
 bool DataHeader::decode(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -230,10 +214,7 @@ bool DataHeader::decode(const uint8_t* data)
     return true;
 }
 
-/// <summary>
-/// Encodes a DMR data header.
-/// </summary>
-/// <param name="data"></param>
+/* Encodes a DMR data header. */
 void DataHeader::encode(uint8_t* data) const
 {
     assert(data != nullptr);

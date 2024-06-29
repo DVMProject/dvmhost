@@ -1,15 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "Defines.h"
 #include "p25/lc/tsbk/mbt/MBT_OSP_AUTH_DMD.h"
 #include "Utils.h"
@@ -25,9 +22,7 @@ using namespace p25::lc::tsbk;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the MBT_OSP_AUTH_DMD class.
-/// </summary>
+/* Initializes a new instance of the MBT_OSP_AUTH_DMD class. */
 MBT_OSP_AUTH_DMD::MBT_OSP_AUTH_DMD() : AMBT()
 {
     m_lco = TSBKO::OSP_AUTH_DMD;
@@ -38,9 +33,7 @@ MBT_OSP_AUTH_DMD::MBT_OSP_AUTH_DMD() : AMBT()
     ::memset(m_authRC, 0x00U, AUTH_RAND_CHLNG_LENGTH_BYTES);
 }
 
-/// <summary>
-/// Finalizes a instance of MBT_OSP_AUTH_DMD class.
-/// </summary>
+/* Finalizes a instance of MBT_OSP_AUTH_DMD class. */
 MBT_OSP_AUTH_DMD::~MBT_OSP_AUTH_DMD()
 {
     if (m_authRS != nullptr) {
@@ -54,12 +47,7 @@ MBT_OSP_AUTH_DMD::~MBT_OSP_AUTH_DMD()
     }
 }
 
-/// <summary>
-/// Decode a alternate trunking signalling block.
-/// </summary>
-/// <param name="dataHeader"></param>
-/// <param name="blocks"></param>
-/// <returns>True, if TSBK was decoded, otherwise false.</returns>
+/* Decode a alternate trunking signalling block. */
 bool MBT_OSP_AUTH_DMD::decodeMBT(const data::DataHeader& dataHeader, const data::DataBlock* blocks)
 {
     assert(blocks != nullptr);
@@ -69,11 +57,7 @@ bool MBT_OSP_AUTH_DMD::decodeMBT(const data::DataHeader& dataHeader, const data:
     return true;
 }
 
-/// <summary>
-/// Encode a alternate trunking signalling block.
-/// </summary>
-/// <param name="dataHeader"></param>
-/// <param name="pduUserData"></param>
+/* Encode a alternate trunking signalling block. */
 void MBT_OSP_AUTH_DMD::encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUserData)
 {
     assert(pduUserData != nullptr);
@@ -111,18 +95,13 @@ void MBT_OSP_AUTH_DMD::encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUserD
     AMBT::encode(dataHeader, pduUserData);
 }
 
-/// <summary>
-/// Returns a string that represents the current TSBK.
-/// </summary>
-/// <param name="isp"></param>
-/// <returns></returns>
+/* Returns a string that represents the current TSBK. */
 std::string MBT_OSP_AUTH_DMD::toString(bool isp)
 {
     return std::string("TSBKO, OSP_AUTH_DMD (Authentication Demand)");
 }
 
-/// <summary>Sets the authentication random seed.</summary>
-/// <param name="mi"></param>
+/* Sets the authentication random seed. */
 void MBT_OSP_AUTH_DMD::setAuthRS(const uint8_t* rs)
 {
     assert(rs != nullptr);
@@ -130,8 +109,7 @@ void MBT_OSP_AUTH_DMD::setAuthRS(const uint8_t* rs)
     ::memcpy(m_authRS, rs, AUTH_RAND_SEED_LENGTH_BYTES);
 }
 
-/// <summary>Gets the authentication random seed.</summary>
-/// <returns></returns>
+/* Gets the authentication random seed. */
 void MBT_OSP_AUTH_DMD::getAuthRS(uint8_t* rs) const
 {
     assert(rs != nullptr);
@@ -139,8 +117,7 @@ void MBT_OSP_AUTH_DMD::getAuthRS(uint8_t* rs) const
     ::memcpy(rs, m_authRS, AUTH_RAND_SEED_LENGTH_BYTES);
 }
 
-/// <summary>Sets the authentication random challenge.</summary>
-/// <param name="rc"></param>
+/* Sets the authentication random challenge. */
 void MBT_OSP_AUTH_DMD::setAuthRC(const uint8_t* rc)
 {
     assert(rc != nullptr);
@@ -148,8 +125,7 @@ void MBT_OSP_AUTH_DMD::setAuthRC(const uint8_t* rc)
     ::memcpy(m_authRC, rc, AUTH_RAND_CHLNG_LENGTH_BYTES);
 }
 
-/// <summary>Gets the authentication random challenge.</summary>
-/// <returns></returns>
+/* Gets the authentication random challenge. */
 void MBT_OSP_AUTH_DMD::getAuthRC(uint8_t* rc) const
 {
     assert(rc != nullptr);
@@ -161,10 +137,7 @@ void MBT_OSP_AUTH_DMD::getAuthRC(uint8_t* rc) const
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Internal helper to copy the the class.
-/// </summary>
-/// <param name="data"></param>
+/* Internal helper to copy the the class. */
 void MBT_OSP_AUTH_DMD::copy(const MBT_OSP_AUTH_DMD& data)
 {
     TSBK::copy(data);

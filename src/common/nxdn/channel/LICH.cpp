@@ -1,17 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2018 Jonathan Naylor, G4KLX
-*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2018 Jonathan Naylor, G4KLX
+ *  Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "nxdn/NXDNDefines.h"
 #include "nxdn/channel/LICH.h"
 #include "Log.h"
@@ -28,9 +24,7 @@ using namespace nxdn::channel;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the LICH class.
-/// </summary>
+/* Initializes a new instance of the LICH class. */
 LICH::LICH() :
     m_rfct(RFChannelType::RCCH),
     m_fct(FuncChannelType::USC_SACCH_NS),
@@ -41,10 +35,7 @@ LICH::LICH() :
     /* stub */
 }
 
-/// <summary>
-/// Initializes a copy instance of the LICH class.
-/// </summary>
-/// <param name="data"></param>
+/* Initializes a copy instance of the LICH class. */
 LICH::LICH(const LICH& data) :
     m_rfct(RFChannelType::RCCH),
     m_fct(FuncChannelType::USC_SACCH_NS),
@@ -55,19 +46,13 @@ LICH::LICH(const LICH& data) :
     copy(data);
 }
 
-/// <summary>
-/// Finalizes a instance of LICH class.
-/// </summary>
+/* Finalizes a instance of LICH class. */
 LICH::~LICH()
 {
     /* stub */
 }
 
-/// <summary>
-/// Equals operator.
-/// </summary>
-/// <param name="data"></param>
-/// <returns></returns>
+/* Equals operator. */
 LICH& LICH::operator=(const LICH& data)
 {
     if (&data != this) {
@@ -82,11 +67,7 @@ LICH& LICH::operator=(const LICH& data)
     return *this;
 }
 
-/// <summary>
-/// Decode a link information channel.
-/// </summary>
-/// <param name="data"></param>
-/// <returns>True, if LICH was decoded, otherwise false.</returns>
+/* Decode a link information channel. */
 bool LICH::decode(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -117,10 +98,7 @@ bool LICH::decode(const uint8_t* data)
     return origParity == newParity;
 }
 
-/// <summary>
-/// Encode a link information channel.
-/// </summary>
-/// <param name="data"></param>
+/* Encode a link information channel. */
 void LICH::encode(uint8_t* data)
 {
     assert(data != nullptr);
@@ -168,10 +146,7 @@ void LICH::encode(uint8_t* data)
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Internal helper to copy the the class.
-/// </summary>
-/// <param name="data"></param>
+/* Internal helper to copy the the class. */
 void LICH::copy(const LICH& data)
 {
     m_lich = data.m_lich;
@@ -182,10 +157,7 @@ void LICH::copy(const LICH& data)
     m_outbound = ((m_lich >> 1) & 0x01U) == 0x01U;
 }
 
-/// <summary>
-///
-/// </summary>
-/// <returns></returns>
+/* Internal helper to generate the parity bit for the LICH. */
 bool LICH::getParity() const
 {
     switch (m_lich & 0xF0U) {

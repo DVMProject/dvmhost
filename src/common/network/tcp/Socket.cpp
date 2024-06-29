@@ -1,15 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2024 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "Defines.h"
 #include "network/tcp/Socket.h"
 #include "Log.h"
@@ -26,9 +23,7 @@ using namespace network::tcp;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the Socket class.
-/// </summary>
+/* Initializes a new instance of the Socket class. */
 Socket::Socket() : 
     m_localAddress(),
     m_localPort(0U),
@@ -38,10 +33,7 @@ Socket::Socket() :
     /* stub */
 }
 
-/// <summary>
-/// Initializes a new instance of the Socket class.
-/// </summary>
-/// <param name="fd"></param>
+/* Initializes a new instance of the Socket class. */
 Socket::Socket(const int fd) noexcept :
     m_localAddress(),
     m_localPort(0U),
@@ -51,32 +43,20 @@ Socket::Socket(const int fd) noexcept :
     /* stub */
 }
 
-/// <summary>
-/// Initializes a new instance of the Socket class.
-/// </summary>
-/// <param name="domain"></param>
-/// <param name="type"></param>
-/// <param name="protocol"></param>
+/* Initializes a new instance of the Socket class. */
 Socket::Socket(const int domain, const int type, const int protocol) : Socket()
 {
     initSocket(domain, type, protocol);
 }
 
-/// <summary>
-/// Finalizes a instance of the Socket class.
-/// </summary>
+/* Finalizes a instance of the Socket class. */
 Socket::~Socket()
 {
     static_cast<void>(::shutdown(m_fd, SHUT_RDWR));
     static_cast<void>(::close(m_fd));
 }
 
-/// <summary>
-/// Accepts a pending connection request.
-/// </summary>
-/// <param name="address"></param>
-/// <param name="addrlen"></param>
-/// <returns></returns>
+/* Accepts a pending connection request. */
 int Socket::accept(sockaddr* address, socklen_t* addrlen) noexcept
 {
     // check that the accept() won't block
@@ -114,12 +94,7 @@ int Socket::accept(sockaddr* address, socklen_t* addrlen) noexcept
     return ::accept(pfd[index].fd, address, addrlen);
 }
 
-/// <summary>
-/// Connects the client to a remote TCP host using the specified host name and port number.
-/// </summary>
-/// <param name="ipAddr"></param>
-/// <param name="port"></param>
-/// <returns></returns>
+/* Connects the client to a remote TCP host using the specified host name and port number. */
 bool Socket::connect(const std::string& ipAddr, const uint16_t port)
 {
     sockaddr_in addr = {};
@@ -136,13 +111,7 @@ bool Socket::connect(const std::string& ipAddr, const uint16_t port)
     return retval;
 }
 
-/// <summary>
-/// Starts listening for incoming connection requests with a maximum number of pending connection.
-/// </summary>
-/// <param name="ipAddr"></param>
-/// <param name="port"></param>
-/// <param name="backlog"></param>
-/// <returns></returns>
+/* Starts listening for incoming connection requests with a maximum number of pending connection. */
 ssize_t Socket::listen(const std::string& ipAddr, const uint16_t port, int backlog) noexcept
 {
     m_localAddress = ipAddr;
@@ -156,12 +125,7 @@ ssize_t Socket::listen(const std::string& ipAddr, const uint16_t port, int backl
     return ::listen(m_fd, backlog);
 }
 
-/// <summary>
-/// Read data from the socket.
-/// </summary>
-/// <param name="buffer">Buffer to read data into.</param>
-/// <param name="length">Length of data to read.</param>
-/// <returns></returns>
+/* Read data from the socket. */
 [[nodiscard]] ssize_t Socket::read(uint8_t* buffer, size_t length) noexcept
 {
     assert(buffer != nullptr);
@@ -206,12 +170,7 @@ ssize_t Socket::listen(const std::string& ipAddr, const uint16_t port, int backl
     return ::read(pfd[index].fd, (char*)buffer, length);
 }
 
-/// <summary>
-/// Write data to the socket.
-/// </summary>
-/// <param name="buffer">Buffer containing data to write to socket.</param>
-/// <param name="length">Length of data to write.</param>
-/// <returns></returns>
+/* Write data to the socket. */
 ssize_t Socket::write(const uint8_t* buffer, size_t length) noexcept
 {
     assert(buffer != nullptr);
@@ -223,11 +182,7 @@ ssize_t Socket::write(const uint8_t* buffer, size_t length) noexcept
     return ::send(m_fd, buffer, length, 0);
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="addr"></param>
-/// <returns></returns>
+/* Gets the numeric representation of an address from a sockaddr_storage socket address structure. */
 uint32_t Socket::addr(const sockaddr_storage& addr)
 {
     switch (addr.ss_family) {
@@ -245,11 +200,7 @@ uint32_t Socket::addr(const sockaddr_storage& addr)
     }
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="addr"></param>
-/// <returns></returns>
+/* Gets the string representation of an address from a sockaddr_storage socket address structure. */
 std::string Socket::address(const sockaddr_storage& addr)
 {
     std::string address = std::string();
@@ -279,11 +230,7 @@ std::string Socket::address(const sockaddr_storage& addr)
     return address;
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="addr"></param>
-/// <returns></returns>
+/* Gets the port from a sockaddr_storage socket address structure. */
 uint16_t Socket::port(const sockaddr_storage& addr)
 {
     uint16_t port = 0U;
@@ -310,11 +257,7 @@ uint16_t Socket::port(const sockaddr_storage& addr)
     return port;
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="addr"></param>
-/// <returns></returns>
+/* Helper to check if the address stored in a sockaddr_storage socket address structure is INADDR_NONE. */
 bool Socket::isNone(const sockaddr_storage& addr)
 {
     struct sockaddr_in* in = (struct sockaddr_in*)& addr;
@@ -326,12 +269,7 @@ bool Socket::isNone(const sockaddr_storage& addr)
 //  Protected Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-///
-/// </summary>
-/// <param name="domain"></param>
-/// <param name="type"></param>
-/// <param name="protocol"></param>
+/* Internal helper to initialize the socket. */
 bool Socket::initSocket(const int domain, const int type, const int protocol)
 {
     m_fd = ::socket(domain, type, protocol);
@@ -343,12 +281,7 @@ bool Socket::initSocket(const int domain, const int type, const int protocol)
     return true;
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="ipAddr"></param>
-/// <param name="port"></param>
-/// <returns></returns>
+/* Internal helper to bind to a address and port. */
 bool Socket::bind(const std::string& ipAddr, const uint16_t port)
 {
     m_localAddress = std::string(ipAddr);
@@ -367,11 +300,7 @@ bool Socket::bind(const std::string& ipAddr, const uint16_t port)
     return retval;
 }
 
-/// <summary>
-/// Helper to lookup a hostname and resolve it to an IP address.
-/// </summary>
-/// <param name="inaddr">String containing hostname to resolve.</param>
-/// <returns></returns>
+/* Helper to lookup a hostname and resolve it to an IP address. */
 [[nodiscard]] std::string Socket::getIpAddress(const in_addr inaddr)
 {
     char* receivedAddr = ::inet_ntoa(inaddr);
@@ -381,12 +310,7 @@ bool Socket::bind(const std::string& ipAddr, const uint16_t port)
     return { receivedAddr };
 }
 
-/// <summary>
-/// Initialize the sockaddr_in structure with the provided IP and port
-/// </summary>
-/// <param name="ipAddr">IP address.</param>
-/// <param name="port">IP address.</param>
-/// <param name="addr"></param>
+/* Initialize the sockaddr_in structure with the provided IP and port */
 void Socket::initAddr(const std::string& ipAddr, const int port, sockaddr_in& addr) noexcept(false)
 {
     addr.sin_family = AF_INET;

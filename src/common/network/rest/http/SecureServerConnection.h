@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: BSL-1.0
+/*
+ * Digital Voice Modem - Common Library
+ * BSL-1.0 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (c) 2003-2013 Christopher M. Kohlhoff
+ *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Common Library
-* BSL-1.0 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @derivedfrom CRUD (https://github.com/venediktov/CRUD)
-* @license BSL-1.0 License (https://opensource.org/license/bsl1-0-html)
-*
-*   Copyright (c) 2003-2013 Christopher M. Kohlhoff
-*   Copyright (C) 2024 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @file SecureServerConnection.h
+ * @ingroup http
+ */
 #if !defined(__REST_HTTP__SECURE_SERVER_CONNECTION_H__)
 #define __REST_HTTP__SECURE_SERVER_CONNECTION_H__
 
@@ -44,9 +44,13 @@ namespace network
 
             // ---------------------------------------------------------------------------
             //  Class Declaration
-            //      This class represents a single connection from a client.
             // ---------------------------------------------------------------------------
 
+            /**
+             * @brief This class represents a single connection from a client.
+             * @tparam RequestHandlerType Type representing a request handler.
+             * @ingroup http
+             */
             template <typename RequestHandlerType>
             class SecureServerConnection : public std::enable_shared_from_this<SecureServerConnection<RequestHandlerType>> {
                 typedef SecureServerConnection<RequestHandlerType> selfType;
@@ -57,13 +61,15 @@ namespace network
                 auto operator=(SecureServerConnection&&) -> SecureServerConnection& = delete;
                 SecureServerConnection(SecureServerConnection&) = delete;
 
-                /// <summary>Initializes a new instance of the SecureServerConnection class.</summary>
-                /// <param name="socket"></param>
-                /// <param name="context"></param>
-                /// <param name="manager"></param>
-                /// <param name="handler"></param>
-                /// <param name="persistent"></param>
-                /// <param name="debug"></param>
+                /**
+                 * @brief Initializes a new instance of the SecureServerConnection class.
+                 * @param socket TCP socket for this connection.
+                 * @param context SSL context.
+                 * @param manager Connection manager for this connection.
+                 * @param handler Request handler for this connection.
+                 * @param persistent Flag indicating whether or not the connection is persistent.
+                 * @param debug Flag indicating whether or not verbose logging should be enabled.
+                 */
                 explicit SecureServerConnection(asio::ip::tcp::socket socket, asio::ssl::context& context, ConnectionManagerType& manager, RequestHandlerType& handler,
                     bool persistent = false, bool debug = false) :
                     m_socket(std::move(socket), context),
@@ -78,9 +84,13 @@ namespace network
                     /* stub */
                 }
 
-                /// <summary>Start the first asynchronous operation for the connection.</summary>
+                /**
+                 * @brief Start the first asynchronous operation for the connection.
+                 */
                 void start() { handshake(); }
-                /// <summary>Stop all asynchronous operations associated with the connection.</summary>
+                /**
+                 * @brief Stop all asynchronous operations associated with the connection.
+                 */
                 void stop()
                 {
                     try
@@ -93,7 +103,9 @@ namespace network
                 }
 
             private:
-                /// <summary>Perform an asynchronous SSL handshake.</summary>
+                /**
+                 * @brief Perform an asynchronous SSL handshake.
+                 */
                 void handshake()
                 {
                     if (!m_persistent) {
@@ -107,7 +119,9 @@ namespace network
                     });
                 }
 
-                /// <summary>Perform an asynchronous read operation.</summary>
+                /**
+                 * @brief Perform an asynchronous read operation.
+                 */
                 void read()
                 {
                     if (!m_persistent) {
@@ -205,7 +219,9 @@ namespace network
                     });
                 }
 
-                /// <summary>Perform an asynchronous write operation.</summary>
+                /**
+                 * @brief Perform an asynchronous write operation.
+                 */
                 void write()
                 {
                     if (!m_persistent) {

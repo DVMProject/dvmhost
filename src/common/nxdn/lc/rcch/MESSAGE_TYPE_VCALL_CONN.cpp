@@ -1,15 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "Defines.h"
 #include "nxdn/lc/rcch/MESSAGE_TYPE_VCALL_CONN.h"
 
@@ -24,20 +21,13 @@ using namespace nxdn::lc::rcch;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the MESSAGE_TYPE_VCALL_CONN class.
-/// </summary>
+/* Initializes a new instance of the MESSAGE_TYPE_VCALL_CONN class. */
 MESSAGE_TYPE_VCALL_CONN::MESSAGE_TYPE_VCALL_CONN() : RCCH()
 {
     m_messageType = MessageType::RCCH_VCALL_CONN;
 }
 
-/// <summary>
-/// Decode layer 3 data.
-/// </summary>
-/// <param name="data"></param>
-/// <param name="length"></param>
-/// <param name="offset"></param>
+/* Decode RCCH data. */
 void MESSAGE_TYPE_VCALL_CONN::decode(const uint8_t* data, uint32_t length, uint32_t offset)
 {
     assert(data != nullptr);
@@ -56,12 +46,7 @@ void MESSAGE_TYPE_VCALL_CONN::decode(const uint8_t* data, uint32_t length, uint3
     m_dstId = (uint16_t)((rcch[5U] << 8) | rcch[6U]) & 0xFFFFU;                     // Target Radio Address
 }
 
-/// <summary>
-/// Encode a control signalling block.
-/// </summary>
-/// <param name="data"></param>
-/// <param name="length"></param>
-/// <param name="offset"></param>
+/* Encode RCCH data. */
 void MESSAGE_TYPE_VCALL_CONN::encode(uint8_t* data, uint32_t length, uint32_t offset)
 {
     assert(data != nullptr);
@@ -87,11 +72,7 @@ void MESSAGE_TYPE_VCALL_CONN::encode(uint8_t* data, uint32_t length, uint32_t of
     RCCH::encode(data, rcch, length, offset);
 }
 
-/// <summary>
-/// Returns a string that represents the current RCCH.
-/// </summary>
-/// <param name="isp"></param>
-/// <returns></returns>
+/* Returns a string that represents the current RCCH. */
 std::string MESSAGE_TYPE_VCALL_CONN::toString(bool isp)
 {
     return (isp) ? std::string("RCCH_VCALL_CONN (Voice Call Connection Request)") :

@@ -1,16 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2023,2024 Bryan Biedenkapp, N2PLL
-*   Copyright (C) 2024 Patrick McDonnell, W3AXL
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2023,2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2024 Patrick McDonnell, W3AXL
+ *
+ */
 #include "lookups/TalkgroupRulesLookup.h"
 #include "Log.h"
 #include "Timer.h"
@@ -31,12 +28,7 @@ std::mutex TalkgroupRulesLookup::m_mutex;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the TalkgroupRulesLookup class.
-/// </summary>
-/// <param name="filename">Full-path to the routing rules file.</param>
-/// <param name="reloadTime">Interval of time to reload the routing rules.</param>
-/// <param name="acl"></param>
+/* Initializes a new instance of the TalkgroupRulesLookup class. */
 TalkgroupRulesLookup::TalkgroupRulesLookup(const std::string& filename, uint32_t reloadTime, bool acl) : Thread(),
     m_rulesFile(filename),
     m_reloadTime(reloadTime),
@@ -49,14 +41,10 @@ TalkgroupRulesLookup::TalkgroupRulesLookup(const std::string& filename, uint32_t
     /* stub */
 }
 
-/// <summary>
-/// Finalizes a instance of the TalkgroupRulesLookup class.
-/// </summary>
+/* Finalizes a instance of the TalkgroupRulesLookup class. */
 TalkgroupRulesLookup::~TalkgroupRulesLookup() = default;
 
-/// <summary>
-///
-/// </summary>
+/* Thread entry point. This function is provided to run the thread for the lookup table. */
 void TalkgroupRulesLookup::entry()
 {
     if (m_reloadTime == 0U) {
@@ -77,9 +65,7 @@ void TalkgroupRulesLookup::entry()
     }
 }
 
-/// <summary>
-/// Stops and unloads this lookup table.
-/// </summary>
+/* Stops and unloads this lookup table. */
 void TalkgroupRulesLookup::stop()
 {
     if (m_reloadTime == 0U) {
@@ -92,10 +78,7 @@ void TalkgroupRulesLookup::stop()
     wait();
 }
 
-/// <summary>
-/// Reads the lookup table from the specified lookup table file.
-/// </summary>
-/// <returns>True, if lookup table was read, otherwise false.</returns>
+/* Reads the lookup table from the specified lookup table file. */
 bool TalkgroupRulesLookup::read()
 {
     bool ret = load();
@@ -106,22 +89,14 @@ bool TalkgroupRulesLookup::read()
     return ret;
 }
 
-/// <summary>
-/// Clears all entries from the lookup table.
-/// </summary>
+/* Clears all entries from the lookup table. */
 void TalkgroupRulesLookup::clear()
 {
     std::lock_guard<std::mutex> lock(m_mutex);
     m_groupVoice.clear();
 }
 
-/// <summary>
-/// Adds a new entry to the lookup table by the specified unique ID.
-/// </summary>
-/// <param name="id">Unique ID to add.</param>
-/// <param name="slot">DMR slot this talkgroup is valid on.</param>
-/// <param name="enabled">Flag indicating if talkgroup ID is enabled or not.</param>
-/// <param name="nonPreferred">Flag indicating if the talkgroup ID is non-preferred.</param>
+/* Adds a new entry to the lookup table by the specified unique ID. */
 void TalkgroupRulesLookup::addEntry(uint32_t id, uint8_t slot, bool enabled, bool nonPreferred)
 {
     TalkgroupRuleGroupVoiceSource source;
@@ -165,10 +140,7 @@ void TalkgroupRulesLookup::addEntry(uint32_t id, uint8_t slot, bool enabled, boo
     }
 }
 
-/// <summary>
-/// Adds a new entry to the lookup table by the specified unique ID.
-/// </summary>
-/// <param name="groupVoice"></param>
+/* Adds a new entry to the lookup table by the specified unique ID. */
 void TalkgroupRulesLookup::addEntry(TalkgroupRuleGroupVoice groupVoice)
 {
     if (groupVoice.isInvalid())
@@ -196,11 +168,7 @@ void TalkgroupRulesLookup::addEntry(TalkgroupRuleGroupVoice groupVoice)
     }
 }
 
-/// <summary>
-/// Erases an existing entry from the lookup table by the specified unique ID.
-/// </summary>
-/// <param name="id">Unique ID to erase.</param>
-/// <param name="slot">DMR slot this talkgroup is valid on.</param>
+/* Erases an existing entry from the lookup table by the specified unique ID. */
 void TalkgroupRulesLookup::eraseEntry(uint32_t id, uint8_t slot)
 {
     std::lock_guard<std::mutex> lock(m_mutex);
@@ -210,12 +178,7 @@ void TalkgroupRulesLookup::eraseEntry(uint32_t id, uint8_t slot)
     }
 }
 
-/// <summary>
-/// Finds a table entry in this lookup table.
-/// </summary>
-/// <param name="id">Unique identifier for table entry.</param>
-/// <param name="slot">DMR slot this talkgroup is valid on.</param>
-/// <returns>Table entry.</returns>
+/* Finds a table entry in this lookup table. */
 TalkgroupRuleGroupVoice TalkgroupRulesLookup::find(uint32_t id, uint8_t slot)
 {
     TalkgroupRuleGroupVoice entry;
@@ -239,13 +202,7 @@ TalkgroupRuleGroupVoice TalkgroupRulesLookup::find(uint32_t id, uint8_t slot)
     return entry;
 }
 
-/// <summary>
-/// Finds a table entry in this lookup table.
-/// </summary>
-/// <param name="peerId">Unique identifier for table entry.</param>
-/// <param name="id">Unique identifier for table entry.</param>
-/// <param name="slot">DMR slot this talkgroup is valid on.</param>
-/// <returns>Table entry.</returns>
+/* Finds a table entry in this lookup table. */
 TalkgroupRuleGroupVoice TalkgroupRulesLookup::findByRewrite(uint32_t peerId, uint32_t id, uint8_t slot)
 {
     TalkgroupRuleGroupVoice entry;
@@ -281,18 +238,13 @@ TalkgroupRuleGroupVoice TalkgroupRulesLookup::findByRewrite(uint32_t peerId, uin
     return entry;
 }
 
-/// <summary>
-/// Saves loaded talkgroup rules.
-/// </summary>
+/* Saves loaded talkgroup rules. */
 bool TalkgroupRulesLookup::commit()
 {
     return save();
 }
 
-/// <summary>
-/// Flag indicating whether talkgroup ID access control is enabled or not.
-/// </summary>
-/// <returns>True, if talkgroup ID access control is enabled, otherwise false.</returns>
+/* Flag indicating whether talkgroup ID access control is enabled or not. */
 bool TalkgroupRulesLookup::getACL()
 {
     return m_acl;
@@ -302,10 +254,7 @@ bool TalkgroupRulesLookup::getACL()
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Loads the table from the passed lookup table file.
-/// </summary>
-/// <returns>True, if lookup table was loaded, otherwise false.</returns>
+/* Loads the table from the passed lookup table file. */
 bool TalkgroupRulesLookup::load()
 {
     if (m_rulesFile.length() <= 0) {
@@ -372,10 +321,7 @@ bool TalkgroupRulesLookup::load()
     return true;
 }
 
-/// <summary>
-/// Saves the table to the passed lookup table file.
-/// </summary>
-/// <returns>True, if lookup table was saved, otherwise false.</returns>
+/* Saves the table to the passed lookup table file. */
 bool TalkgroupRulesLookup::save()
 {
     // Make sure file is valid

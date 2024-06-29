@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2018,2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2018,2024 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @file SiteData.h
+ * @ingroup p25
+ */
 #if !defined(__P25_SITE_DATA_H__)
 #define  __P25_SITE_DATA_H__
 
@@ -23,12 +24,17 @@ namespace p25
 {
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //      Represents site data for P25.
     // ---------------------------------------------------------------------------
 
+    /**
+     * @brief Represents site data for P25.
+     * @ingroup p25
+     */
     class HOST_SW_API SiteData {
     public:
-        /// <summary>Initializes a new instance of the SiteData class.</summary>
+        /**
+         * @brief Initializes a new instance of the SiteData class.
+         */
         SiteData() :
             m_lra(0U),
             m_netId(defines::WACN_STD_DEFAULT),
@@ -46,16 +52,18 @@ namespace p25
         {
             /* stub */
         }
-        /// <summary>Initializes a new instance of the SiteData class.</summary>
-        /// <param name="netId">P25 Network ID.</param>
-        /// <param name="sysId">P25 System ID.</param>
-        /// <param name="rfssId">P25 RFSS ID.</param>
-        /// <param name="siteId">P25 Site ID.</param>
-        /// <param name="lra">P25 Location Resource Area.</param>
-        /// <param name="channelId">Channel ID.</param>
-        /// <param name="channelNo">Channel Number.</param>
-        /// <param name="serviceClass">Service class.</param>
-        /// <param name="lto">Local time offset.</param>
+        /**
+         * @brief Initializes a new instance of the SiteData class.
+         * @param netId P25 Network ID.
+         * @param sysId P25 System ID.
+         * @param rfssId P25 RFSS ID.
+         * @param siteId P25 Site ID.
+         * @param lra P25 Location Resource Area.
+         * @param channelId Channel ID.
+         * @param channelNo Channel Number.
+         * @param serviceClass Service class.
+         * @param lto Local time offset.
+         */
         SiteData(uint32_t netId, uint32_t sysId, uint8_t rfssId, uint8_t siteId, uint8_t lra, uint8_t channelId, uint32_t channelNo, uint8_t serviceClass, int8_t lto) :
             m_lra(0U),
             m_netId(defines::WACN_STD_DEFAULT),
@@ -134,34 +142,42 @@ namespace p25
             m_lto = lto;
         }
 
-        /// <summary>Helper to set the site callsign.</summary>
-        /// <param name="callsign">Callsign.</param>
+        /**
+         * @brief Helper to set the site callsign.
+         * @param callsign Callsign.
+         */
         void setCallsign(std::string callsign)
         {
             m_callsign = callsign;
         }
 
-        /// <summary>Helper to set the site channel count.</summary>
-        /// <param name="chCnt">Channel count.</param>
+        /**
+         * @brief Helper to set the site channel count.
+         * @param chCnt Channel count.
+         */
         void setChCnt(uint8_t chCnt)
         {
             m_chCnt = chCnt;
         }
 
-        /// <summary>Helper to set the site network active flag.</summary>
-        /// <param name="netActive">Network active.</param>
+        /**
+         * @brief Helper to set the site network active flag.
+         * @param netActive Network active.
+         */
         void setNetActive(bool netActive)
         {
             m_netActive = netActive;
         }
 
-        /// <summary>Helper to set adjacent site data.</summary>
-        /// <param name="sysId">P25 System ID.</param>
-        /// <param name="rfssId">P25 RFSS ID.</param>
-        /// <param name="siteId">P25 Site ID.</param>
-        /// <param name="channelId">Channel ID.</param>
-        /// <param name="channelNo">Channel Number.</param>
-        /// <param name="serviceClass">Service class.</param>
+        /**
+         * @brief Helper to set adjacent site data.
+         * @param sysId P25 System ID.
+         * @param rfssId P25 RFSS ID.
+         * @param siteId P25 Site ID.
+         * @param channelId Channel ID.
+         * @param channelNo Channel Number.
+         * @param serviceClass Service class.
+         */
         void setAdjSite(uint32_t sysId, uint8_t rfssId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, uint8_t serviceClass)
         {
             // sysId clamping
@@ -206,10 +222,11 @@ namespace p25
             m_lto = 0;
         }
 
-        /// <summary>Equals operator.</summary>
-        /// <param name="data"></param>
-        /// <returns></returns>
-        SiteData & operator=(const SiteData & data)
+        /**
+         * @brief Equals operator.
+         * @param data Instance of SiteData to copy.
+         */
+        SiteData& operator=(const SiteData& data)
         {
             if (this != &data) {
                 m_lra = data.m_lra;
@@ -239,32 +256,60 @@ namespace p25
         }
 
     public:
-        /// <summary>P25 location resource area.</summary>
+        /** @name Site Data */
+        /**
+         * @brief P25 location resource area.
+         */
         __READONLY_PROPERTY_PLAIN(uint8_t, lra);
-        /// <summary>P25 network ID.</summary>
+        /**
+         * @brief P25 network ID.
+         */
         __READONLY_PROPERTY_PLAIN(uint32_t, netId);
-        /// <summary>Gets the P25 system ID.</summary>
+        /**
+         * @brief Gets the P25 system ID.
+         */
         __READONLY_PROPERTY_PLAIN(uint32_t, sysId);
-        /// <summary>P25 RFSS ID.</summary>
+        /**
+         * @brief P25 RFSS ID.
+         */
         __READONLY_PROPERTY_PLAIN(uint8_t, rfssId);
-        /// <summary>P25 site ID.</summary>
+        /**
+         * @brief P25 site ID.
+         */
         __READONLY_PROPERTY_PLAIN(uint8_t, siteId);
-        /// <summary>Channel ID.</summary>
+        /**
+         * @brief Channel ID.
+         */
         __READONLY_PROPERTY_PLAIN(uint8_t, channelId);
-        /// <summary>Channel number.</summary>
+        /**
+         * @brief Channel number.
+         */
         __READONLY_PROPERTY_PLAIN(uint32_t, channelNo);
-        /// <summary>Service class.</summary>
+        /**
+         * @brief Service class.
+         */
         __READONLY_PROPERTY_PLAIN(uint8_t, serviceClass);
-        /// <summary>Flag indicating whether this site data is for an adjacent site.</summary>
+        /**
+         * @brief Flag indicating whether this site data is for an adjacent site.
+         */
         __READONLY_PROPERTY_PLAIN(bool, isAdjSite);
-        /// <summary>Callsign.</summary>
+        /**
+         * @brief Callsign.
+         */
         __READONLY_PROPERTY_PLAIN(std::string, callsign);
-        /// <summary>Count of available channels.</summary>
+        /**
+         * @brief Count of available channels.
+         */
         __READONLY_PROPERTY_PLAIN(uint8_t, chCnt);
-        /// <summary>Flag indicating whether this site is a linked active network member.</summary>
+        /**
+         * @brief Flag indicating whether this site is a linked active network member.
+         */
         __READONLY_PROPERTY_PLAIN(bool, netActive);
-        /// <summary>Local Time Offset.</summary>
+        /**
+         * @brief Local Time Offset.
+         */
         __READONLY_PROPERTY_PLAIN(int8_t, lto);
+        /** @} */
     };
 } // namespace p25
 

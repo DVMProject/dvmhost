@@ -1,17 +1,19 @@
 // SPDX-License-Identifier: BSL-1.0
+/*
+ * Digital Voice Modem - Common Library
+ * BSL-1.0 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (c) 2003-2013 Christopher M. Kohlhoff
+ *  Copyright (C) 2023-2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Common Library
-* BSL-1.0 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @derivedfrom CRUD (https://github.com/venediktov/CRUD)
-* @license BSL-1.0 License (https://opensource.org/license/bsl1-0-html)
-*
-*   Copyright (c) 2003-2013 Christopher M. Kohlhoff
-*   Copyright (C) 2023-2024 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @file HTTPPayload.h
+ * @ingroup http
+ * @file HTTPPayload.cpp
+ * @ingroup http
+ */
 #if !defined(__REST_HTTP__HTTP_REPLY_H__)
 #define __REST_HTTP__HTTP_REPLY_H__
 
@@ -43,31 +45,37 @@ namespace network
 
             // ---------------------------------------------------------------------------
             //  Structure Declaration
-            //      This struct implements a model of a payload to be sent to a
-            //      HTTP client/server.
             // ---------------------------------------------------------------------------
 
+            /**
+             * @brief This struct implements a model of a payload to be sent to a
+             *  HTTP client/server.
+             * @ingroup http
+             */
             struct HTTPPayload {
-                /// <summary>
-                /// HTTP Status/Response Codes
-                /// </summary>
+                /**
+                 * @brief HTTP Status/Response Codes
+                 */
                 enum StatusType {
-                    OK = 200,
-                    CREATED = 201,
-                    ACCEPTED = 202,
-                    NO_CONTENT = 204,
-                    MULTIPLE_CHOICES = 300,
-                    MOVED_PERMANENTLY = 301,
-                    MOVED_TEMPORARILY = 302,
-                    NOT_MODIFIED = 304,
-                    BAD_REQUEST = 400,
-                    UNAUTHORIZED = 401,
-                    FORBIDDEN = 403,
-                    NOT_FOUND = 404,
-                    INTERNAL_SERVER_ERROR = 500,
-                    NOT_IMPLEMENTED = 501,
-                    BAD_GATEWAY = 502,
-                    SERVICE_UNAVAILABLE = 503
+                    OK = 200,                       //! HTTP OK 200
+                    CREATED = 201,                  //! HTTP Created 201
+                    ACCEPTED = 202,                 //! HTTP Accepted 202
+                    NO_CONTENT = 204,               //! HTTP No Content 204
+                    
+                    MULTIPLE_CHOICES = 300,         //! HTTP Multiple Choices 300
+                    MOVED_PERMANENTLY = 301,        //! HTTP Moved Permenantly 301
+                    MOVED_TEMPORARILY = 302,        //! HTTP Moved Temporarily 302
+                    NOT_MODIFIED = 304,             //! HTTP Not Modified 304
+                    
+                    BAD_REQUEST = 400,              //! HTTP Bad Request 400
+                    UNAUTHORIZED = 401,             //! HTTP Unauthorized 401
+                    FORBIDDEN = 403,                //! HTTP Forbidden 403
+                    NOT_FOUND = 404,                //! HTTP Not Found 404
+                    
+                    INTERNAL_SERVER_ERROR = 500,    //! HTTP Internal Server Error 500
+                    NOT_IMPLEMENTED = 501,          //! HTTP Not Implemented 501
+                    BAD_GATEWAY = 502,              //! HTTP Bad Gateway 502
+                    SERVICE_UNAVAILABLE = 503       //! HTTP Service Unavailable 503
                 } status;
 
                 HTTPHeaders headers;
@@ -82,25 +90,52 @@ namespace network
 
                 bool isClientPayload = false;
 
-                /// <summary>Convert the payload into a vector of buffers. The buffers do not own the
-                /// underlying memory blocks, therefore the payload object must remain valid and
-                /// not be changed until the write operation has completed.</summary>
+                /**
+                 * @brief Convert the payload into a vector of buffers. The buffers do not own the
+                 *  underlying memory blocks, therefore the payload object must remain valid and
+                 *  not be changed until the write operation has completed.
+                 * @returns std::vector<asio::const_buffer> List of buffers representing the HTTP payload.
+                 */
                 std::vector<asio::const_buffer> toBuffers();
 
-                /// <summary>Prepares payload for transmission by finalizing status and content type.</summary>
+                /**
+                 * @brief Prepares payload for transmission by finalizing status and content type.
+                 * @param obj 
+                 * @param status HTTP status.
+                 */
                 void payload(json::object& obj, StatusType status = OK);
-                /// <summary>Prepares payload for transmission by finalizing status and content type.</summary>
+                /**
+                 * @brief Prepares payload for transmission by finalizing status and content type.
+                 * @param content 
+                 * @param status HTTP status.
+                 * @param contentType HTTP content type.
+                 */
                 void payload(std::string& content, StatusType status = OK, const std::string& contentType = "text/html");
 
-                /// <summary>Get a request payload.</summary>
+                /**
+                 * @brief Get a request payload.
+                 * @param method HTTP method.
+                 * @param uri HTTP uri.
+                 */
                 static HTTPPayload requestPayload(std::string method, std::string uri);
-                /// <summary>Get a status payload.</summary>
+                /**
+                 * @brief Get a status payload.
+                 * @param status HTTP status.
+                 * @param contentType HTTP content type.
+                 */
                 static HTTPPayload statusPayload(StatusType status, const std::string& contentType = "text/html");
 
-                /// <summary></summary>
+                /**
+                 * @brief Helper to attach a host TCP stream reader.
+                 * @param remoteEndpoint Endpoint.
+                 */
                 void attachHostHeader(const asio::ip::tcp::endpoint remoteEndpoint);
+
             private:
-                /// <summary></summary>
+                /**
+                 * @brief Internal helper to ensure the headers are of a default for the given content type.
+                 * @param contentType HTTP content type.
+                 */
                 void ensureDefaultHeaders(const std::string& contentType = "text/html");
             };
         } // namespace http

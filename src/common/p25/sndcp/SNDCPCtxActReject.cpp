@@ -1,15 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2024 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "Defines.h"
 #include "p25/P25Defines.h"
 #include "p25/sndcp/SNDCPCtxActReject.h"
@@ -25,20 +22,14 @@ using namespace p25::sndcp;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the SNDCPCtxActReject class.
-/// </summary>
+/* Initializes a new instance of the SNDCPCtxActReject class. */
 SNDCPCtxActReject::SNDCPCtxActReject() : SNDCPPacket(),
     m_rejectCode(SNDCPRejectReason::ANY_REASON)
 {
     m_pduType = SNDCP_PDUType::ACT_TDS_CTX_REJECT;
 }
 
-/// <summary>
-/// Decode a SNDCP context activation reject packet.
-/// </summary>
-/// <param name="data"></param>
-/// <returns>True, if packet was decoded, otherwise false.</returns>
+/* Decode a SNDCP context activation reject packet. */
 bool SNDCPCtxActReject::decode(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -50,10 +41,7 @@ bool SNDCPCtxActReject::decode(const uint8_t* data)
     return true;
 }
 
-/// <summary>
-/// Encode a SNDCP context activation reject packet.
-/// </summary>
-/// <param name="data"></param>
+/* Encode a SNDCP context activation reject packet. */
 void SNDCPCtxActReject::encode(uint8_t* data)
 {
     assert(data != nullptr);
@@ -63,10 +51,7 @@ void SNDCPCtxActReject::encode(uint8_t* data)
     data[1U] = m_rejectCode;                                                        // Reject Code
 }
 
-/// <summary>
-/// Internal helper to copy the the class.
-/// </summary>
-/// <param name="data"></param>
+/* Internal helper to copy the the class. */
 void SNDCPCtxActReject::copy(const SNDCPCtxActReject& data)
 {
     m_rejectCode = data.m_rejectCode;

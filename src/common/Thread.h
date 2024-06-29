@@ -1,17 +1,23 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2015,2016 Jonathan Naylor, G4KLX
+ *  Copyright (C) 2023 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2015,2016 Jonathan Naylor, G4KLX
-*   Copyright (C) 2023 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @defgroup threading Threading
+ * @brief Defines and implements threading routines.
+ * @ingroup common
+
+ * @file Thread.h
+ * @ingroup threading
+ * @file Thread.cpp
+ * @ingroup threading
+ */
 #if !defined(__THREAD_H__)
 #define __THREAD_H__
 
@@ -23,45 +29,71 @@
 
 // ---------------------------------------------------------------------------
 //  Class Declaration
-//      Implements a simple threading mechanism.
 // ---------------------------------------------------------------------------
 
+/**
+ * @brief Creates and controls a thread.
+ * @ingroup threading
+ */
 class HOST_SW_API Thread {
 public:
-    /// <summary>Initializes a new instance of the Thread class.</summary>
+    /**
+     * @brief Initializes a new instance of the Thread class.
+     */
     Thread();
-    /// <summary>Finalizes a instance of the Thread class.</summary>
+    /**
+     * @brief Finalizes a instance of the Thread class.
+     */
     virtual ~Thread();
 
-    /// <summary>Starts the thread execution.</summary>
+    /**
+     * @brief Starts the thread execution.
+     * @returns bool True, if thread started, otherwise false.
+     */
     virtual bool run();
 
-    /// <summary>User-defined function to run for the thread main.</summary>
+    /**
+     * @brief User-defined function to run for the thread main.
+     */
     virtual void entry() = 0;
 
-    /// <summary>Make calling thread wait for termination of the thread.</summary>
+    /**
+     * @brief Make calling thread wait for termination of the thread.
+     */
     virtual void wait();
 
-    /// <summary>Set thread name visible in the kernel and its interfaces.</summary>
+    /**
+     * @brief Set thread name visible in the kernel and its interfaces.
+     * @param name Textual name for thread.
+     */
     virtual void setName(std::string name);
 
-    /// <summary>Indicate that the thread is never to be joined with wait().
-    /// The resources of thread will therefore be freed immediately when it
-    /// terminates, instead of waiting for another thread to perform wait()
-    /// on it.</summary>
+    /**
+     * @brief The resources of thread will therefore be freed immediately when it
+     *  terminates, instead of waiting for another thread to perform wait()
+     */
     virtual void detach();
 
-    /// <summary></summary>
+    /**
+     * @brief Helper to sleep the current thread.
+     * @param ms Time in milliseconds to sleep.
+     */
     static void sleep(uint32_t ms);
 
 private:
     pthread_t m_thread;
 
-    /// <summary>Internal helper thats used as the entry point for the thread.</summary>
+    /**
+     * @brief Internal helper thats used as the entry point for the thread.
+     * @param arg 
+     * @returns void* 
+     */
     static void* helper(void* arg);
 
 public:
-    /// <summary>Flag indicating if the thread was started.</summary>
+    /**
+     * @brief Flag indicating if the thread was started.
+     */
     __PROTECTED_READONLY_PROPERTY_PLAIN(bool, started);
 };
 

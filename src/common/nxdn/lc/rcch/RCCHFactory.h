@@ -1,15 +1,22 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @defgroup nxdn_rcch Control Channel Messages
+ * @brief Implementation for the data handling of NXDN control channel messages.
+ * @ingroup nxdn_lc
+ * 
+ * @file RCCHFactory.h
+ * @ingroup nxdn_rcch
+ * @file RCCHFactory.cpp
+ * @ingroup nxdn_rcch
+ */
 #if !defined(__NXDN_LC__RCCH_FACTORY_H__)
 #define  __NXDN_LC__RCCH_FACTORY_H__
 
@@ -36,21 +43,39 @@ namespace nxdn
         {
             // ---------------------------------------------------------------------------
             //  Class Declaration
-            //      Helper class to instantiate an instance of a RCCH.
             // ---------------------------------------------------------------------------
 
+            /**
+             * @brief Helper class to instantiate an instance of a RCCH.
+             * @ingroup nxdn_rcch
+             */
             class HOST_SW_API RCCHFactory {
             public:
-                /// <summary>Initializes a new instance of the RCCHFactory class.</summary>
+                /**
+                 * @brief Initializes a new instance of the RCCHFactory class.
+                 */
                 RCCHFactory();
-                /// <summary>Finalizes a instance of the RCCHFactory class.</summary>
+                /**
+                 * @brief Finalizes a instance of the RCCHFactory class.
+                 */
                 ~RCCHFactory();
 
-                /// <summary>Create an instance of a RCCH.</summary>
+                /**
+                 * @brief Create an instance of a RCCH.
+                 * @param[in] data Buffer containing a RCCH to decode.
+                 * @param length Length of data buffer.
+                 * @param offset Offset for RCCH in data buffer.
+                 */
                 static std::unique_ptr<RCCH> createRCCH(const uint8_t* data, uint32_t length, uint32_t offset = 0U);
 
             private:
-                /// <summary></summary>
+                /**
+                 * @brief Internal helper to decode a RCCH link control message.
+                 * @param[out] rcch
+                 * @param[in] data Buffer containing a RCCH to decode.
+                 * @param length Length of data buffer.
+                 * @param offset Offset for RCCH in data buffer.
+                 */
                 static std::unique_ptr<RCCH> decode(RCCH* rcch, const uint8_t* data, uint32_t length, uint32_t offset = 0U);
             };
         } // namespace rcch

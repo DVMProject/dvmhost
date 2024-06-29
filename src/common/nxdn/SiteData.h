@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @file SiteData.h
+ * @ingroup nxdn
+ */
 #if !defined(__NXDN_SITE_DATA_H__)
 #define  __NXDN_SITE_DATA_H__
 
@@ -20,12 +21,17 @@ namespace nxdn
 {
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //      Represents site data for NXDN.
     // ---------------------------------------------------------------------------
 
+    /**
+     * @brief Represents site data for NXDN.
+     * @ingroup nxdn
+     */
     class HOST_SW_API SiteData {
     public:
-        /// <summary>Initializes a new instance of the SiteData class.</summary>
+        /**
+         * @brief Initializes a new instance of the SiteData class.
+         */
         SiteData() :
             m_locId(1U),
             m_channelId(1U),
@@ -39,13 +45,15 @@ namespace nxdn
         {
             /* stub */
         }
-        /// <summary>Initializes a new instance of the SiteData class.</summary>
-        /// <param name="locId">NXDN Location ID.</param>
-        /// <param name="channelId">Channel ID.</param>
-        /// <param name="channelNo">Channel Number.</param>
-        /// <param name="siteInfo1">Site Information 1.</param>
-        /// <param name="siteInfo2">Site Information 2.</param>
-        /// <param name="requireReg"></param>
+        /**
+         * @brief Initializes a new instance of the SiteData class.
+         * @param locId NXDN Location ID.
+         * @param channelId Channel ID.
+         * @param channelNo Channel Number.
+         * @param siteInfo1 Site Information 1.
+         * @param siteInfo2 Site Information 2.
+         * @param requireReg Flag indicating the site requires registration.
+         */
         SiteData(uint32_t locId, uint8_t channelId, uint32_t channelNo, uint8_t siteInfo1, uint8_t siteInfo2, bool requireReq) :
             m_locId(locId),
             m_channelId(channelId),
@@ -76,26 +84,32 @@ namespace nxdn
             m_siteInfo2 = siteInfo2;
         }
 
-        /// <summary>Helper to set the site callsign.</summary>
-        /// <param name="callsign">Callsign.</param>
+        /**
+         * @brief Helper to set the site callsign.
+         * @param callsign Callsign.
+         */
         void setCallsign(std::string callsign)
         {
             m_callsign = callsign;
         }
 
-        /// <summary>Helper to set the site network active flag.</summary>
-        /// <param name="netActive">Network active.</param>
+        /**
+         * @brief Helper to set the site network active flag.
+         * @param netActive Network active.
+         */
         void setNetActive(bool netActive)
         {
             m_netActive = netActive;
         }
 
-        /// <summary>Helper to set adjacent site data.</summary>
-        /// <param name="locId">NXDN Location ID.</param>
-        /// <param name="channelId">Channel ID.</param>
-        /// <param name="channelNo">Channel Number.</param>
-        /// <param name="siteInfo1">Site Information 1.</param>
-        /// <param name="siteInfo2">Site Information 2.</param>
+        /**
+         * @brief Helper to set adjacent site data.
+         * @param locId NXDN Location ID.
+         * @param channelId Channel ID.
+         * @param channelNo Channel Number.
+         * @param siteInfo1 Site Information 1.
+         * @param siteInfo2 Site Information 2.
+         */
         void setAdjSite(uint32_t locId, uint8_t rfssId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, uint8_t siteInfo1, uint8_t siteInfo2)
         {
             if (m_locId > 0xFFFFFFU)
@@ -127,10 +141,11 @@ namespace nxdn
             m_netActive = true; // adjacent sites are explicitly network active
         }
 
-        /// <summary>Equals operator.</summary>
-        /// <param name="data"></param>
-        /// <returns></returns>
-        SiteData & operator=(const SiteData & data)
+        /**
+         * @brief Equals operator.
+         * @param data Instance of SiteData to copy.
+         */
+        SiteData& operator=(const SiteData& data)
         {
             if (this != &data) {
                 m_locId = data.m_locId;
@@ -154,24 +169,44 @@ namespace nxdn
         }
 
     public:
-        /// <summary>NXDN location ID.</summary>
+        /** @name Site Data */
+        /**
+         * @brief NXDN location ID.
+         */
         __READONLY_PROPERTY_PLAIN(uint32_t, locId);
-        /// <summary>Channel ID.</summary>
+        /**
+         * @brief Channel ID.
+         */
         __READONLY_PROPERTY_PLAIN(uint8_t, channelId);
-        /// <summary>Channel number.</summary>
+        /**
+         * @brief Channel number.
+         */
         __READONLY_PROPERTY_PLAIN(uint32_t, channelNo);
-        /// <summary>Site Information 1.</summary>
+        /**
+         * @brief Site Information 1.
+         */
         __READONLY_PROPERTY_PLAIN(uint8_t, siteInfo1);
-        /// <summary>Site Information 2.</summary>
+        /**
+         * @brief Site Information 2.
+         */
         __READONLY_PROPERTY_PLAIN(uint8_t, siteInfo2);
-        /// <summary>Flag indicating whether this site data is for an adjacent site.</summary>
+        /**
+         * @brief Flag indicating whether this site data is for an adjacent site.
+         */
         __READONLY_PROPERTY_PLAIN(bool, isAdjSite);
-        /// <summary>Callsign.</summary>
+        /**
+         * @brief Callsign.
+         */
         __READONLY_PROPERTY_PLAIN(std::string, callsign);
-        /// <summary>NXDN require registration.</summary>
+        /**
+         * @brief NXDN require registration.
+         */
         __READONLY_PROPERTY_PLAIN(bool, requireReg);
-        /// <summary>Flag indicating whether this site is a linked active network member.</summary>
+        /**
+         * @brief Flag indicating whether this site is a linked active network member.
+         */
         __READONLY_PROPERTY_PLAIN(bool, netActive);
+        /** @} */
     };
 } // namespace nxdn
 

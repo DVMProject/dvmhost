@@ -1,16 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2022 by Jason-UWU
-*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2022 by Jason-UWU
+ *  Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "Defines.h"
 #include "p25/lc/tsbk/IOSP_RAD_MON.h"
 
@@ -25,21 +22,14 @@ using namespace p25::lc::tsbk;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the IOSP_RAD_MON class.
-/// </summary>
+/* Initializes a new instance of the IOSP_RAD_MON class. */
 IOSP_RAD_MON::IOSP_RAD_MON() : TSBK(),
     m_txMult(0U)
 {
     m_lco = TSBKO::IOSP_RAD_MON;
 }
 
-/// <summary>
-/// Decode a trunking signalling block.
-/// </summary>
-/// <param name="data"></param>
-/// <param name="rawTSBK"></param>
-/// <returns>True, if TSBK was decoded, otherwise false.</returns>
+/* Decode a trunking signalling block. */
 bool IOSP_RAD_MON::decode(const uint8_t* data, bool rawTSBK)
 {
     assert(data != nullptr);
@@ -60,12 +50,7 @@ bool IOSP_RAD_MON::decode(const uint8_t* data, bool rawTSBK)
     return true;
 }
 
-/// <summary>
-/// Encode a trunking signalling block.
-/// </summary>
-/// <param name="data"></param>
-/// <param name="rawTSBK"></param>
-/// <param name="noTrellis"></param>
+/* Encode a trunking signalling block. */
 void IOSP_RAD_MON::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 {
     assert(data != nullptr);
@@ -80,11 +65,7 @@ void IOSP_RAD_MON::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
     TSBK::encode(data, tsbk.get(), rawTSBK, noTrellis);
 }
 
-/// <summary>
-/// Returns a string that represents the current TSBK.
-/// </summary>
-/// <param name="isp"></param>
-/// <returns></returns>
+/* Returns a string that represents the current TSBK. */
 std::string IOSP_RAD_MON::toString(bool isp)
 {
     return (isp) ? std::string("TSBKO, IOSP_RAD_MON (Radio Unit Monitor Request)") :
@@ -95,10 +76,7 @@ std::string IOSP_RAD_MON::toString(bool isp)
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Internal helper to copy the the class.
-/// </summary>
-/// <param name="data"></param>
+/* Internal helper to copy the the class. */
 void IOSP_RAD_MON::copy(const IOSP_RAD_MON& data)
 {
     TSBK::copy(data);

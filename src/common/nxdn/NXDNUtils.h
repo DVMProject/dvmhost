@@ -1,17 +1,19 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2020 Jonathan Naylor, G4KLX
+ *  Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2020 Jonathan Naylor, G4KLX
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @file NXDNUtils.h
+ * @ingroup nxdn
+ * @file NXDNUtils.cpp
+ * @ingroup nxdn
+ */
 #if !defined(__NXDN_UTILS_H__)
 #define __NXDN_UTILS_H__
 
@@ -21,14 +23,23 @@ namespace nxdn
 {
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //      This class implements various helper functions for scrambling NXDN data.
     // ---------------------------------------------------------------------------
 
+    /**
+     * @brief This class implements various helper functions for scrambling NXDN data.
+     * @ingroup nxdn
+     */
     class HOST_SW_API NXDNUtils {
     public:
-        /// <summary>Helper to scramble the NXDN frame data.</summary>
+        /**
+         * @brief Helper to scramble the NXDN frame data.
+         * @param data Buffer to apply scrambling to.
+         */
         static void scrambler(uint8_t* data);
-        /// <summary>Helper to add the post field bits on NXDN frame data.</summary>
+        /**
+         * @brief Helper to add the post field bits on NXDN frame data.
+         * @param data Buffer to apply post field bits to.
+         */
         static void addPostBits(uint8_t* data);
     };
 } // namespace nxdn

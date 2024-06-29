@@ -1,15 +1,18 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2024 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @file SNDCPCtxDeactivation.h
+ * @ingroup p25_sndcp
+ * @file SNDCPCtxDeactivation.cpp
+ * @ingroup p25_sndcp
+ */
 #if !defined(__P25_SNDCP__SNDCPCTXDEACTIVATION_H__)
 #define  __P25_SNDCP__SNDCPCTXDEACTIVATION_H__
 
@@ -25,22 +28,35 @@ namespace p25
     {
         // ---------------------------------------------------------------------------
         //  Class Declaration
-        //      Represents a SNDCP PDU context deactivation.
         // ---------------------------------------------------------------------------
 
+        /**
+         * @brief Represents a SNDCP PDU context deactivation.
+         * @ingroup p25_sndcp
+         */
         class HOST_SW_API SNDCPCtxDeactivation : public SNDCPPacket {
         public:
-            /// <summary>Initializes a new instance of the SNDCPCtxDeactivation class.</summary>
+            /**
+             * @brief Initializes a new instance of the SNDCPCtxDeactivation class.
+             */
             SNDCPCtxDeactivation();
 
-            /// <summary>Decode a SNDCP context deactivation packet.</summary>
+            /**
+             * @brief Decode a SNDCP context deactivation packet.
+             * @param[in] data Buffer containing SNDCP packet data to decode.
+             * @returns bool True, if decoded, otherwise false.
+             */
             bool decode(const uint8_t* data);
-            /// <summary>Encode a SNDCP context deactivation packet.</summary>
+            /**
+             * @brief Encode a SNDCP context deactivation packet.
+             * @param[out] data Buffer to encode SNDCP packet data to.
+             */
             void encode(uint8_t* data);
 
         public:
-            /** Common Data */
-            /// <summary>Deactivation Type</summary>
+            /**
+             * @brief Deactivation Type
+             */
             __PROPERTY(uint8_t, deactType, DeactType);
 
             __COPY(SNDCPCtxDeactivation);

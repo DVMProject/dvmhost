@@ -1,15 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "Defines.h"
 #include "p25/P25Defines.h"
 #include "p25/lc/TDULC.h"
@@ -37,19 +34,13 @@ SiteData TDULC::m_siteData = SiteData();
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a copy instance of the TDULC class.
-/// </summary>
-/// <param name="data"></param>
+/* Initializes a copy instance of the TDULC class. */
 TDULC::TDULC(const TDULC& data) : TDULC()
 {
     copy(data);
 }
 
-/// <summary>
-/// Initializes a new instance of the TDULC class.
-/// </summary>
-/// <param name="lc"></param>
+/* Initializes a new instance of the TDULC class. */
 TDULC::TDULC(LC* lc) : TDULC()
 {
     m_protect = lc->m_protect;
@@ -70,9 +61,7 @@ TDULC::TDULC(LC* lc) : TDULC()
     m_callTimer = lc->m_callTimer;
 }
 
-/// <summary>
-/// Initializes a new instance of the TDULC class.
-/// </summary>
+/* Initializes a new instance of the TDULC class. */
 TDULC::TDULC() :
     m_protect(false),
     m_lco(LCO::GROUP),
@@ -92,9 +81,7 @@ TDULC::TDULC() :
     m_grpVchNo = m_siteData.channelNo();
 }
 
-/// <summary>
-/// Finalizes a instance of TDULC class.
-/// </summary>
+/* Finalizes a instance of TDULC class. */
 TDULC::~TDULC()
 {
     /* stub */
@@ -104,11 +91,7 @@ TDULC::~TDULC()
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Internal helper to convert payload bytes to a 64-bit long value.
-/// </summary>
-/// <param name="tsbk"></param>
-/// <returns></returns>
+/* Internal helper to convert payload bytes to a 64-bit long value. */
 ulong64_t TDULC::toValue(const uint8_t* payload)
 {
     assert(payload != nullptr);
@@ -128,11 +111,7 @@ ulong64_t TDULC::toValue(const uint8_t* payload)
     return value;
 }
 
-/// <summary>
-/// Internal helper to convert a 64-bit long value to payload bytes.
-/// </summary>
-/// <param name="rsValue"></param>
-/// <returns></returns>
+/* Internal helper to convert a 64-bit long value to payload bytes. */
 UInt8Array TDULC::fromValue(const ulong64_t value)
 {
     UInt8Array payload = std::unique_ptr<uint8_t[]>(new uint8_t[P25_TDULC_PAYLOAD_LENGTH_BYTES]);
@@ -151,12 +130,7 @@ UInt8Array TDULC::fromValue(const ulong64_t value)
     return payload;
 }
 
-/// <summary>
-/// Internal helper to decode a terminator data unit w/ link control.
-/// </summary>
-/// <param name="data"></param>
-/// <param name="payload"></param>
-/// <returns>True, if TDULC was decoded, otherwise false.</returns>
+/* Internal helper to decode a terminator data unit w/ link control. */
 bool TDULC::decode(const uint8_t* data, uint8_t* payload)
 {
     assert(data != nullptr);
@@ -197,11 +171,7 @@ bool TDULC::decode(const uint8_t* data, uint8_t* payload)
     return true;
 }
 
-/// <summary>
-/// Internal helper to encode a terminator data unit w/ link control.
-/// </summary>
-/// <param name="data"></param>
-/// <param name="payload"></param>
+/* Internal helper to encode a terminator data unit w/ link control. */
 void TDULC::encode(uint8_t* data, const uint8_t* payload)
 {
     assert(data != nullptr);
@@ -240,10 +210,7 @@ void TDULC::encode(uint8_t* data, const uint8_t* payload)
 #endif
 }
 
-/// <summary>
-/// Internal helper to copy the the class.
-/// </summary>
-/// <param name="data"></param>
+/* Internal helper to copy the the class. */
 void TDULC::copy(const TDULC& data)
 {
     m_verbose = data.m_verbose;

@@ -1,15 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "Defines.h"
 #include "p25/lc/tsbk/ISP_AUTH_FNE_RST.h"
 
@@ -24,9 +21,7 @@ using namespace p25::lc::tsbk;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the ISP_AUTH_FNE_RST class.
-/// </summary>
+/* Initializes a new instance of the ISP_AUTH_FNE_RST class. */
 ISP_AUTH_FNE_RST::ISP_AUTH_FNE_RST() : TSBK(),
     m_authSuccess(false),
     m_authStandalone(false)
@@ -34,12 +29,7 @@ ISP_AUTH_FNE_RST::ISP_AUTH_FNE_RST() : TSBK(),
     m_lco = TSBKO::ISP_AUTH_FNE_RST;
 }
 
-/// <summary>
-/// Decode a trunking signalling block.
-/// </summary>
-/// <param name="data"></param>
-/// <param name="rawTSBK"></param>
-/// <returns>True, if TSBK was decoded, otherwise false.</returns>
+/* Decode a trunking signalling block. */
 bool ISP_AUTH_FNE_RST::decode(const uint8_t* data, bool rawTSBK)
 {
     assert(data != nullptr);
@@ -60,12 +50,7 @@ bool ISP_AUTH_FNE_RST::decode(const uint8_t* data, bool rawTSBK)
     return true;
 }
 
-/// <summary>
-/// Encode a trunking signalling block.
-/// </summary>
-/// <param name="data"></param>
-/// <param name="rawTSBK"></param>
-/// <param name="noTrellis"></param>
+/* Encode a trunking signalling block. */
 void ISP_AUTH_FNE_RST::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 {
     assert(data != nullptr);
@@ -73,11 +58,7 @@ void ISP_AUTH_FNE_RST::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
     /* stub */
 }
 
-/// <summary>
-/// Returns a string that represents the current TSBK.
-/// </summary>
-/// <param name="isp"></param>
-/// <returns></returns>
+/* Returns a string that represents the current TSBK. */
 std::string ISP_AUTH_FNE_RST::toString(bool isp)
 {
     return std::string("TSBKO, ISP_AUTH_FNE_RST (Authentication FNE Result)");
@@ -87,10 +68,7 @@ std::string ISP_AUTH_FNE_RST::toString(bool isp)
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Internal helper to copy the the class.
-/// </summary>
-/// <param name="data"></param>
+/* Internal helper to copy the the class. */
 void ISP_AUTH_FNE_RST::copy(const ISP_AUTH_FNE_RST& data)
 {
     TSBK::copy(data);

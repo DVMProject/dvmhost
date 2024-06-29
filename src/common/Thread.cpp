@@ -1,17 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2015,2016 Jonathan Naylor, G4KLX
-*   Copyright (C) 2023 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2015,2016 Jonathan Naylor, G4KLX
+ *  Copyright (C) 2023 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "Thread.h"
 #include "Log.h"
 
@@ -23,9 +19,7 @@
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the Thread class.
-/// </summary>
+/* Initializes a new instance of the Thread class. */
 Thread::Thread() :
     m_thread(),
     m_started(false)
@@ -33,15 +27,10 @@ Thread::Thread() :
     /* stub */
 }
 
-/// <summary>
-/// Finalizes a instance of the Thread class.
-/// </summary>
+/* Finalizes a instance of the Thread class. */
 Thread::~Thread() = default;
 
-/// <summary>
-/// Starts the thread execution.
-/// </summary>
-/// <returns>True, if thread started, otherwise false.</returns>
+/* Starts the thread execution. */
 bool Thread::run()
 {
     if (m_started)
@@ -57,18 +46,13 @@ bool Thread::run()
     return true;
 }
 
-/// <summary>
-/// Make calling thread wait for termination of the thread.
-/// </summary>
+/* Make calling thread wait for termination of the thread. */
 void Thread::wait()
 {
     ::pthread_join(m_thread, NULL);
 }
 
-/// <summary>
-/// Set thread name visible in the kernel and its interfaces.
-/// </summary>
-/// <param name="name"></param>
+/* Set thread name visible in the kernel and its interfaces. */
 void Thread::setName(std::string name)
 {
     if (!m_started)
@@ -80,12 +64,11 @@ void Thread::setName(std::string name)
 #endif // _GNU_SOURCE
 }
 
-/// <summary>
-/// Indicate that the thread is never to be joined with wait().
-/// The resources of thread will therefore be freed immediately when it
-/// terminates, instead of waiting for another thread to perform wait()
-/// on it.
-/// </summary>
+/* 
+ * Indicate that the thread is never to be joined with wait(). 
+ * The resources of thread will therefore be freed immediately when it terminates, instead 
+ * of waiting for another thread to perform wait() on it. 
+ */
 void Thread::detach()
 {
     if (!m_started)
@@ -93,10 +76,7 @@ void Thread::detach()
     ::pthread_detach(m_thread);
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="ms"></param>
+/* */
 void Thread::sleep(uint32_t ms)
 {
     ::usleep(ms * 1000);
@@ -106,11 +86,7 @@ void Thread::sleep(uint32_t ms)
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Internal helper thats used as the entry point for the thread.
-/// </summary>
-/// <param name="arg"></param>
-/// <returns></returns>
+/* Internal helper thats used as the entry point for the thread. */
 void* Thread::helper(void* arg)
 {
     Thread* p = (Thread*)arg;

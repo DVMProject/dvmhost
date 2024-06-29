@@ -1,15 +1,19 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * @package DVM / Common Library
+ * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
+ *
+ *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2024 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @file SecureClientConnection.h
+ * @ingroup http
+ */
 #if !defined(__REST_HTTP__SECURE_CLIENT_CONNECTION_H__)
 #define __REST_HTTP__SECURE_CLIENT_CONNECTION_H__
 
@@ -36,9 +40,13 @@ namespace network
         {
             // ---------------------------------------------------------------------------
             //  Class Declaration
-            //      This class represents a single connection from a client.
             // ---------------------------------------------------------------------------
 
+            /**
+             * @brief This class represents a single connection from a client.
+             * @tparam RequestHandlerType Type representing a request handler.
+             * @ingroup http
+             */
             template <typename RequestHandlerType>
             class SecureClientConnection {
             public:
@@ -46,10 +54,12 @@ namespace network
                 auto operator=(SecureClientConnection&&) -> SecureClientConnection& = delete;
                 SecureClientConnection(SecureClientConnection&) = delete;
 
-                /// <summary>Initializes a new instance of the SecureClientConnection class.</summary>
-                /// <param name="socket"></param>
-                /// <param name="context"></param>
-                /// <param name="handler"></param>
+                /**
+                 * @brief Initializes a new instance of the SecureClientConnection class.
+                 * @param socket TCP socket for this connection.
+                 * @param context SSL context for this connection.
+                 * @param handler Request handler for this connection.
+                 */
                 explicit SecureClientConnection(asio::ip::tcp::socket socket, asio::ssl::context& context, RequestHandlerType& handler) :
                     m_socket(std::move(socket), context),
                     m_requestHandler(handler),
@@ -59,13 +69,17 @@ namespace network
                     m_socket.set_verify_callback(std::bind(&SecureClientConnection::verify_certificate, this, std::placeholders::_1, std::placeholders::_2));
                 }
 
-                /// <summary>Start the first asynchronous operation for the connection.</summary>
+                /**
+                 * @brief Start the first asynchronous operation for the connection.
+                 */
                 void start() 
                 { 
                     m_socket.handshake(asio::ssl::stream_base::client);                    
                     read(); 
                 }
-                /// <summary>Stop all asynchronous operations associated with the connection.</summary>
+                /**
+                 * @brief Stop all asynchronous operations associated with the connection.
+                 */
                 void stop()
                 {
                     try
@@ -78,7 +92,9 @@ namespace network
                     catch(const std::exception&) { /* ignore */ }
                 }
 
-                /// <summary>Helper to enable the SO_LINGER socket option during shutdown.</summary>
+                /**
+                 * @brief Helper to enable the SO_LINGER socket option during shutdown.
+                 */
                 void ensureNoLinger()
                 {
                     try
@@ -96,23 +112,30 @@ namespace network
                     }
                 }
 
-                /// <summary>Perform an synchronous write operation.</summary>
-                /// <param name="request"></param>
+                /**
+                 * @brief Perform an synchronous write operation.
+                 * @param request HTTP request.
+                 */
                 void send(HTTPPayload request)
                 {
                     request.attachHostHeader(m_socket.lowest_layer().remote_endpoint());
                     write(request);
                 }
             private:
-                /// <summary>Perform an SSL certificate verification.</summary>
-                /// <param name="preverified"></param>
-                /// <param name="context"></param>
+                /**
+                 * @brief Perform an SSL certificate verification.
+                 * @param preverified Flag indicating the SSL certificate was preverified.
+                 * @param context SSL verification context.
+                 * @returns True, if SSL certificate is valid, otherwise false.
+                 */
                 bool verify_certificate(bool preverified, asio::ssl::verify_context& context)
                 {
                     return true; // ignore always valid
                 }
 
-                /// <summary>Perform an asynchronous read operation.</summary>
+                /**
+                 * @brief Perform an asynchronous read operation.
+                 */
                 void read()
                 {
                     m_socket.async_read_some(asio::buffer(m_buffer), [=](asio::error_code ec, std::size_t bytes_transferred) {
@@ -153,8 +176,10 @@ namespace network
                     });
                 }
 
-                /// <summary>Perform an synchronous write operation.</summary>
-                /// <param name="request"></param>
+                /**
+                 * @brief Perform an synchronous write operation.
+                 * @param request HTTP request.
+                 */
                 void write(HTTPPayload request)
                 {
                     try

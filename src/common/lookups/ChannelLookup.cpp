@@ -1,15 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2024 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "lookups/ChannelLookup.h"
 #include "Log.h"
 
@@ -19,9 +16,7 @@ using namespace lookups;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the ChannelLookup class.
-/// </summary>
+/* Initializes a new instance of the ChannelLookup class. */
 ChannelLookup::ChannelLookup() :
     m_rfChTable(),
     m_rfChDataTable()
@@ -29,16 +24,10 @@ ChannelLookup::ChannelLookup() :
     m_rfChTable.clear();
 }
 
-/// <summary>
-/// Finalizes a instance of the ChannelLookup class.
-/// </summary>
+/* Finalizes a instance of the ChannelLookup class. */
 ChannelLookup::~ChannelLookup() = default;
 
-/// <summary>
-/// Helper to get RF channel data.
-/// </summary>
-/// <param name="chNo"></param>
-/// <returns></returns>
+/* Helper to get RF channel data. */
 VoiceChData ChannelLookup::getRFChData(uint32_t chNo) const
 {
     if (chNo == 0U) {
@@ -55,12 +44,7 @@ VoiceChData ChannelLookup::getRFChData(uint32_t chNo) const
     return data;
 }
 
-/// <summary>
-/// Helper to add a RF channel.
-/// </summary>
-/// <param name="chNo"></param>
-/// <param name="force"></param>
-/// <returns></returns>
+/* Helper to add a RF channel. */
 bool ChannelLookup::addRFCh(uint32_t chNo, bool force)
 { 
     if (chNo == 0U) {
@@ -81,11 +65,7 @@ bool ChannelLookup::addRFCh(uint32_t chNo, bool force)
     return false;
 }
 
-/// <summary>
-/// Helper to remove a RF channel.
-/// </summary>
-/// <param name="chNo"></param>
-/// <returns></returns>
+/* Helper to remove a RF channel. */
 void ChannelLookup::removeRFCh(uint32_t chNo)
 {
     if (chNo == 0U) {

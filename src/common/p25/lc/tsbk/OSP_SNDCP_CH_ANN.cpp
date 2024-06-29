@@ -1,15 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "Defines.h"
 #include "p25/lc/tsbk/OSP_SNDCP_CH_ANN.h"
 
@@ -24,9 +21,7 @@ using namespace p25::lc::tsbk;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the OSP_SNDCP_CH_ANN class.
-/// </summary>
+/* Initializes a new instance of the OSP_SNDCP_CH_ANN class. */
 OSP_SNDCP_CH_ANN::OSP_SNDCP_CH_ANN() : TSBK(),
     m_implicitChannel(false),
     m_sndcpAutoAccess(true),
@@ -35,12 +30,7 @@ OSP_SNDCP_CH_ANN::OSP_SNDCP_CH_ANN() : TSBK(),
     m_lco = TSBKO::OSP_SNDCP_CH_ANN;
 }
 
-/// <summary>
-/// Decode a trunking signalling block.
-/// </summary>
-/// <param name="data"></param>
-/// <param name="rawTSBK"></param>
-/// <returns>True, if TSBK was decoded, otherwise false.</returns>
+/* Decode a trunking signalling block. */
 bool OSP_SNDCP_CH_ANN::decode(const uint8_t* data, bool rawTSBK)
 {
     assert(data != nullptr);
@@ -50,12 +40,7 @@ bool OSP_SNDCP_CH_ANN::decode(const uint8_t* data, bool rawTSBK)
     return true;
 }
 
-/// <summary>
-/// Encode a trunking signalling block.
-/// </summary>
-/// <param name="data"></param>
-/// <param name="rawTSBK"></param>
-/// <param name="noTrellis"></param>
+/* Encode a trunking signalling block. */
 void OSP_SNDCP_CH_ANN::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 {
     assert(data != nullptr);
@@ -98,11 +83,7 @@ void OSP_SNDCP_CH_ANN::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
     TSBK::encode(data, tsbk.get(), rawTSBK, noTrellis);
 }
 
-/// <summary>
-/// Returns a string that represents the current TSBK.
-/// </summary>
-/// <param name="isp"></param>
-/// <returns></returns>
+/* Returns a string that represents the current TSBK. */
 std::string OSP_SNDCP_CH_ANN::toString(bool isp)
 {
     return std::string("TSBKO, OSP_SNDCP_CH_ANN (SNDCP Data Channel Announcement)");
@@ -112,10 +93,7 @@ std::string OSP_SNDCP_CH_ANN::toString(bool isp)
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Internal helper to copy the the class.
-/// </summary>
-/// <param name="data"></param>
+/* Internal helper to copy the the class. */
 void OSP_SNDCP_CH_ANN::copy(const OSP_SNDCP_CH_ANN& data)
 {
     TSBK::copy(data);

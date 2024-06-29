@@ -1,16 +1,18 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2016 Jonathan Naylor, G4KLX
+ *
+ */
 /**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2016 Jonathan Naylor, G4KLX
-*
-*/
+ * @file BCH.h
+ * @ingroup edac
+ * @file BCH.cpp
+ * @ingroup edac
+ */
 #if !defined(__BCH_H__)
 #define __BCH_H__
 
@@ -20,22 +22,37 @@ namespace edac
 {
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //      Implements Bose/Chaudhuri/Hocquenghem codes for protecting P25 NID
-    //      data.
     // ---------------------------------------------------------------------------
 
+    /**
+     * @brief Implements Bose/Chaudhuri/Hocquenghem codes for protecting P25 NID
+     *  data.
+     * @ingroup edac
+     */
     class HOST_SW_API BCH {
     public:
-        /// <summary>Initializes a new instance of the BCH class.</summary>
+        /**
+         * @brief Initializes a new instance of the BCH class.
+         */
         BCH();
-        /// <summary>Finalizes a instance of the BCH class.</summary>
+        /**
+         * @brief Finalizes a instance of the BCH class.
+         */
         ~BCH();
 
-        /// <summary>Encodes input data with BCH.</summary>
+        /**
+         * @brief Encodes input data with BCH.
+         * @param data Data to encode with BCH.
+         */
         void encode(uint8_t* data);
 
     private:
-        /// <summary></summary>
+        /**
+         * @brief Compute redundancy bb[], the coefficients of b(x). The redundancy polynomial b(x) is the 
+         *  remainder after dividing x^(length-k)*data(x) by the generator polynomial g(x).
+         * @param data 
+         * @param bb 
+         */
         void encode(const int* data, int* bb);
     };
 } // namespace edac

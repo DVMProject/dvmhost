@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2021,2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2021,2024 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @file SiteData.h
+ * @ingroup dmr
+ */
 #if !defined(__DMR_SITE_DATA_H__)
 #define  __DMR_SITE_DATA_H__
 
@@ -21,12 +22,17 @@ namespace dmr
 {
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //      Represents site data for DMR.
     // ---------------------------------------------------------------------------
 
+    /**
+     * @brief Represents site data for DMR.
+     * @ingroup dmr
+     */
     class HOST_SW_API SiteData {
     public:
-        /// <summary>Initializes a new instance of the SiteData class.</summary>
+        /**
+         * @brief Initializes a new instance of the SiteData class.
+         */
         SiteData() :
             m_siteModel(defines::SiteModel::SM_SMALL),
             m_netId(1U),
@@ -37,12 +43,14 @@ namespace dmr
         {
             /* stub */
         }
-        /// <summary>Initializes a new instance of the SiteData class.</summary>
-        /// <param name="siteModel">DMR site model.</param>
-        /// <param name="netId">DMR Network ID.</param>
-        /// <param name="siteId">DMR Site ID.</param>
-        /// <param name="parId">DMR partition ID.</param>
-        /// <param name="requireReg"></param>
+        /**
+         * @brief Initializes a new instance of the SiteData class.
+         * @param siteModel DMR site model.
+         * @param netId DMR Network ID.
+         * @param siteId DMR Site ID.
+         * @param parId DMR partition ID.
+         * @param requireReg Flag indicating the site requires registration.
+         */
         SiteData(defines::SiteModel::E siteModel, uint16_t netId, uint16_t siteId, uint8_t parId, bool requireReq) :
             m_siteModel(siteModel),
             m_netId(netId),
@@ -69,16 +77,20 @@ namespace dmr
                 parId = 3U;
         }
 
-        /// <summary>Helper to set the site network active flag.</summary>
-        /// <param name="netActive">Network active.</param>
+        /**
+         * @brief Helper to set the site network active flag.
+         * @param netActive Network active.
+         */
         void setNetActive(bool netActive)
         {
             m_netActive = netActive;
         }
 
-        /// <summary>Returns the DMR system identity value.</summary>
-        /// <param name="msb"></param>
-        /// <returns></returns>
+        /**
+         * @brief Returns the DMR system identity value.
+         * @param msb 
+         * @returns uint32_t System Identity Value.
+         */
         const uint32_t systemIdentity(bool msb = false)
         {
             using namespace dmr::defines;
@@ -119,10 +131,11 @@ namespace dmr
             return value & 0xFFFFU;
         }
 
-        /// <summary>Equals operator.</summary>
-        /// <param name="data"></param>
-        /// <returns></returns>
-        SiteData & operator=(const SiteData & data)
+        /**
+         * @brief Equals operator.
+         * @param data Instance of SiteData to copy.
+         */
+        SiteData& operator=(const SiteData& data)
         {
             if (this != &data) {
                 m_siteModel = data.m_siteModel;
@@ -139,18 +152,32 @@ namespace dmr
         }
 
     public:
-        /// <summary>DMR site model type.</summary>
+        /** @name Site Data */
+        /**
+         * @brief DMR site model type.
+         */
         __READONLY_PROPERTY_PLAIN(defines::SiteModel::E, siteModel);
-        /// <summary>DMR site network ID.</summary>
+        /**
+         * @brief DMR site network ID.
+         */
         __READONLY_PROPERTY_PLAIN(uint16_t, netId);
-        /// <summary>DMR site ID.</summary>
+        /**
+         * @brief DMR site ID.
+         */
         __READONLY_PROPERTY_PLAIN(uint16_t, siteId);
-        /// <summary>DMR partition ID.</summary>
+        /**
+         * @brief DMR partition ID.
+         */
         __READONLY_PROPERTY_PLAIN(uint8_t, parId);
-        /// <summary>DMR require registration.</summary>
+        /**
+         * @brief DMR require registration.
+         */
         __READONLY_PROPERTY_PLAIN(bool, requireReg);
-        /// <summary>Flag indicating whether this site is a linked active network member.</summary>
+        /**
+         * @brief Flag indicating whether this site is a linked active network member.
+         */
         __READONLY_PROPERTY_PLAIN(bool, netActive);
+        /** @} */
     };
 } // namespace dmr
 

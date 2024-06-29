@@ -1,17 +1,19 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2016 Jonathan Naylor, G4KLX
+ *  Copyright (C) 2017,2022,2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2016 Jonathan Naylor, G4KLX
-*   Copyright (C) 2017,2022,2024 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @file NID.h
+ * @ingroup p25
+ * @file NID.cpp
+ * @ingroup p25
+ */
 #if !defined(__P25_NID_H__)
 #define  __P25_NID_H__
 
@@ -22,26 +24,47 @@ namespace p25
 {
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //      Represents the P25 network identifier.
     // ---------------------------------------------------------------------------
 
+    /**
+     * @brief Represents the P25 network identifier.
+     * @ingroup p25
+     */
     class HOST_SW_API NID {
     public:
-        /// <summary>Initializes a new instance of the NID class.</summary>
+        /**
+         * @brief Initializes a new instance of the NID class.
+         * @param nac Network Access Code.
+         */
         NID(uint32_t nac);
-        /// <summary>Finalizes a instance of the NID class.</summary>
+        /**
+         * @brief Finalizes a instance of the NID class.
+         */
         ~NID();
 
-        /// <summary>Decodes P25 network identifier data.</summary>
+        /**
+         * @brief Decodes P25 network identifier data.
+         * @param data Buffer containing NID.
+         * @returns bool True, if NID decoded, otherwise false.
+         */
         bool decode(const uint8_t* data);
-        /// <summary>Encodes P25 network identifier data.</summary>
+        /**
+         * @brief Encodes P25 network identifier data.
+         * @param data Buffer to encode NID.
+         * @param duid Data Unit ID.
+         */
         void encode(uint8_t* data, defines::DUID::E duid);
 
-        /// <summary>Helper to configure a separate Tx NAC.</summary>
+        /**
+         * @brief Helper to configure a separate Tx NAC.
+         * @param nac Transmit Network Access Code
+         */
         void setTxNAC(uint32_t nac);
 
     public:
-        /// <summary>Data unit ID.</summary>
+        /**
+         * @brief Data unit ID.
+         */
         __READONLY_PROPERTY(defines::DUID::E, duid, DUID);
 
     private:
@@ -52,11 +75,19 @@ namespace p25
 
         bool m_splitNac;
 
-        /// <summary></summary>
+        /**
+         * @brief Cleanup NID arrays.
+         */
         void cleanupArrays();
-        /// <summary></summary>
+        /**
+         * @brief Internal helper to create the Rx/Tx NID.
+         * @param nac Network Access Code
+         */
         void createRxTxNID(uint32_t nac);
-        /// <summary></summary>
+        /**
+         * @brief Internal helper to create Tx NID.
+         * @param nac Network Access Code
+         */
         void createTxNID(uint32_t nac);
     };
 } // namespace p25

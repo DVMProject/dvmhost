@@ -1,15 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "Defines.h"
 #include "p25/lc/tsbk/mbt/MBT_OSP_ADJ_STS_BCAST.h"
 #include "Log.h"
@@ -25,9 +22,7 @@ using namespace p25::lc::tsbk;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the MBT_OSP_ADJ_STS_BCAST class.
-/// </summary>
+/* Initializes a new instance of the MBT_OSP_ADJ_STS_BCAST class. */
 MBT_OSP_ADJ_STS_BCAST::MBT_OSP_ADJ_STS_BCAST() : AMBT(),
     m_adjCFVA(CFVA::FAILURE),
     m_adjSysId(0U),
@@ -40,12 +35,7 @@ MBT_OSP_ADJ_STS_BCAST::MBT_OSP_ADJ_STS_BCAST() : AMBT(),
     m_lco = TSBKO::OSP_ADJ_STS_BCAST;
 }
 
-/// <summary>
-/// Decode a alternate trunking signalling block.
-/// </summary>
-/// <param name="dataHeader"></param>
-/// <param name="blocks"></param>
-/// <returns>True, if TSBK was decoded, otherwise false.</returns>
+/* Decode a alternate trunking signalling block. */
 bool MBT_OSP_ADJ_STS_BCAST::decodeMBT(const data::DataHeader& dataHeader, const data::DataBlock* blocks)
 {
     assert(blocks != nullptr);
@@ -55,11 +45,7 @@ bool MBT_OSP_ADJ_STS_BCAST::decodeMBT(const data::DataHeader& dataHeader, const 
     return true;
 }
 
-/// <summary>
-/// Encode a alternate trunking signalling block.
-/// </summary>
-/// <param name="dataHeader"></param>
-/// <param name="pduUserData"></param>
+/* Encode a alternate trunking signalling block. */
 void MBT_OSP_ADJ_STS_BCAST::encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUserData)
 {
     assert(pduUserData != nullptr);
@@ -99,11 +85,7 @@ void MBT_OSP_ADJ_STS_BCAST::encodeMBT(data::DataHeader& dataHeader, uint8_t* pdu
     AMBT::encode(dataHeader, pduUserData);
 }
 
-/// <summary>
-/// Returns a string that represents the current TSBK.
-/// </summary>
-/// <param name="isp"></param>
-/// <returns></returns>
+/* Returns a string that represents the current TSBK. */
 std::string MBT_OSP_ADJ_STS_BCAST::toString(bool isp)
 {
     return std::string("TSBKO, OSP_ADJ_STS_BCAST (Adjacent Site Status Broadcast - Explicit)");
@@ -113,10 +95,7 @@ std::string MBT_OSP_ADJ_STS_BCAST::toString(bool isp)
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Internal helper to copy the the class.
-/// </summary>
-/// <param name="data"></param>
+/* Internal helper to copy the the class. */
 void MBT_OSP_ADJ_STS_BCAST::copy(const MBT_OSP_ADJ_STS_BCAST& data)
 {
     TSBK::copy(data);

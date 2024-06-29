@@ -1,15 +1,18 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @file TSBK.h
+ * @ingroup p25_lc
+ * @file TSBK.cpp
+ * @ingroup p25_lc
+ */
 #if !defined(__P25_LC__TSBK_H__)
 #define  __P25_LC__TSBK_H__
 
@@ -46,97 +49,186 @@ namespace p25
 
         // ---------------------------------------------------------------------------
         //  Class Declaration
-        //      Represents link control data for TSDU packets.
         // ---------------------------------------------------------------------------
 
+        /**
+         * @brief Represents link control data for TSDU packets.
+         * @ingroup p25_lc
+         */
         class HOST_SW_API TSBK {
         public:
-            /// <summary>Initializes a copy instance of the TSBK class.</summary>
+            /**
+             * @brief Initializes a copy instance of the TSBK class.
+             * @param data Instance of TSBK to copy.
+             */
             TSBK(const TSBK& data);
-            /// <summary>Initializes a new instance of the TSBK class.</summary>
+            /**
+             * @brief Initializes a new instance of the TSBK class.
+             * @param lc Instance of LC to derive a TSBK from.
+             */
             TSBK(LC* lc);
-            /// <summary>Initializes a new instance of the TSBK class.</summary>
+            /**
+             * @brief Initializes a new instance of the TSBK class.
+             */
             TSBK();
-            /// <summary>Finalizes a instance of the TSBK class.</summary>
+            /**
+             * @brief Finalizes a instance of the TSBK class.
+             */
             virtual ~TSBK();
 
-            /// <summary>Decode a trunking signalling block.</summary>
+            /**
+             * @brief Decode a trunking signalling block.
+             * @param[in] data Buffer containing a TSBK to decode.
+             * @param rawTSBK Flag indicating whether or not the passed buffer is raw.
+             * @returns bool True, if TSBK decoded, otherwise false.
+             */
             virtual bool decode(const uint8_t* data, bool rawTSBK = false) = 0;
-            /// <summary>Encode a trunking signalling block.</summary>
+            /**
+             * @brief Encode a trunking signalling block.
+             * @param[out] data Buffer to encode a TSBK.
+             * @param rawTSBK Flag indicating whether or not the output buffer is raw.
+             * @param noTrellis Flag indicating whether or not the encoded data should be Trellis encoded.
+             */
             virtual void encode(uint8_t* data, bool rawTSBK = false, bool noTrellis = false) = 0;
 
-            /// <summary>Returns a string that represents the current TSBK.</summary>
+            /**
+             * @brief Returns a string that represents the current TSBK.
+             * @returns std::string String representation of the TSBK.
+             */
             virtual std::string toString(bool isp = false);
 
-            /// <summary>Returns a copy of the raw decoded TSBK bytes.</summary>
-            /// <remarks>This will only return data for a *decoded* TSBK, not a created or copied TSBK.</remarks>
+            /**
+             * @brief Returns a copy of the raw decoded TSBK bytes.
+             * This will only return data for a *decoded* TSBK, not a created or copied TSBK.
+             * @returns uint8_t* Raw decoded TSBK bytes.
+             */
             uint8_t* getDecodedRaw() const;
 
-            /// <summary>Gets the flag indicating verbose log output.</summary>
+            /**
+             * @brief Gets the flag indicating verbose log output.
+             * @returns bool True, if the TSBK is verbose logging, otherwise false.
+             */
             static bool getVerbose() { return m_verbose; }
-            /// <summary>Sets the flag indicating verbose log output.</summary>
+            /**
+             * @brief Sets the flag indicating verbose log output.
+             * @param verbose Flag indicating verbose log output.
+             */
             static void setVerbose(bool verbose) { m_verbose = verbose; }
-            /// <summary>Sets the flag indicating CRC-errors should be warnings and not errors.</summary>
+            /**
+             * @brief Sets the flag indicating CRC-errors should be warnings and not errors.
+             * @param warnCRC Flag indicating CRC-errors should be treated as warnings.
+             */
             static void setWarnCRC(bool warnCRC) { m_warnCRC = warnCRC; }
 
-            /** Local Site data */
-            /// <summary>Sets the callsign.</summary>
+            /** @name Local Site data */
+            /**
+             * @brief Sets the callsign.
+             * @param callsign Callsign.
+             */
             static void setCallsign(std::string callsign);
 
-            /// <summary>Gets the local site data.</summary>
+            /**
+             * @brief Gets the local site data.
+             * @returns SiteData Currently set site data for the TSBK class.
+             */
             static SiteData getSiteData() { return m_siteData; }
-            /// <summary>Sets the local site data.</summary>
+            /**
+             * @brief Sets the local site data.
+             * @param siteData Site data to set for the TSBK class.
+             */
             static void setSiteData(SiteData siteData) { m_siteData = siteData; }
+            /** @} */
 
         public:
-            /** Common Data */
-            /// <summary>Flag indicating the link control data is protected.</summary>
+            /** @name Common Data */
+            /**
+             * @brief Flag indicating the link control data is protected.
+             */
             __PROTECTED_PROPERTY(bool, protect, Protect);
-            /// <summary>Link control opcode.</summary>
+            /**
+             * @brief Link control opcode.
+             */
             __PROTECTED_PROPERTY(uint8_t, lco, LCO);
-            /// <summary>Manufacturer ID.</summary>
+            /**
+             * @brief Manufacturer ID.
+             */
             __PROTECTED_PROPERTY(uint8_t, mfId, MFId);
 
-            /// <summary>Source ID.</summary>
+            /**
+             * @brief Source ID.
+             */
             __PROTECTED_PROPERTY(uint32_t, srcId, SrcId);
-            /// <summary>Destination ID.</summary>
+            /**
+             * @brief Destination ID.
+             */
             __PROTECTED_PROPERTY(uint32_t, dstId, DstId);
 
-            /// <summary>Flag indicating this is the last TSBK in a sequence of TSBKs.</summary>
+            /**
+             * @brief Flag indicating this is the last TSBK in a sequence of TSBKs.
+             */
             __PROTECTED_PROPERTY(bool, lastBlock, LastBlock);
-            /// <summary>Flag indicating this TSBK contains additional information.</summary>
+            /**
+             * @brief Flag indicating this TSBK contains additional information.
+             */
             __PROTECTED_PROPERTY(bool, aivFlag, AIV);
-            /// <summary>Flag indicating this TSBK contains extended addressing.</summary>
+            /**
+             * @brief Flag indicating this TSBK contains extended addressing.
+             */
             __PROTECTED_PROPERTY(bool, extendedAddrFlag, EX);
 
-            /// <summary>Service type.</summary>
+            /**
+             * @brief Service type.
+             */
             __PROTECTED_PROPERTY(uint8_t, service, Service);
-            /// <summary>Response type.</summary>
+            /**
+             * @brief Response type.
+             */
             __PROTECTED_PROPERTY(uint8_t, response, Response);
 
-            /// <summary>Configured network ID.</summary>
+            /**
+             * @brief Configured network ID.
+             */
             __PROTECTED_READONLY_PROPERTY(uint32_t, netId, NetId);
-            /// <summary>Configured system ID.</summary>
+            /**
+             * @brief Configured system ID.
+             */
             __PROTECTED_READONLY_PROPERTY(uint32_t, sysId, SysId);
 
-            /// <summary>Voice channel ID.</summary>
+            /**
+             * @brief Voice channel ID.
+             */
             __PROTECTED_PROPERTY(uint8_t, grpVchId, GrpVchId);
-            /// <summary>Voice channel number.</summary>
+            /**
+             * @brief Voice channel number.
+             */
             __PROTECTED_PROPERTY(uint32_t, grpVchNo, GrpVchNo);
+            /** @} */
 
-            /** Common Service Options */
-            /// <summary>Flag indicating the emergency bits are set.</summary>
+            /** @name Common Service Options */
+            /**
+             * @brief Flag indicating the emergency bits are set.
+             */
             __PROTECTED_PROPERTY(bool, emergency, Emergency);
-            /// <summary>Flag indicating that encryption is enabled.</summary>
+            /**
+             * @brief Flag indicating that encryption is enabled.
+             */
             __PROTECTED_PROPERTY(bool, encrypted, Encrypted);
-            /// <summary>Priority level for the traffic.</summary>
+            /**
+             * @brief Priority level for the traffic.
+             */
             __PROTECTED_PROPERTY(uint8_t, priority, Priority);
-            /// <summary>Flag indicating a group/talkgroup operation.</summary>
+            /**
+             * @brief Flag indicating a group/talkgroup operation.
+             */
             __PROTECTED_PROPERTY(bool, group, Group);
+            /** @} */
 
-            /** Local Site data */
-            /// <summary>Local Site Identity Entry.</summary>
+            /** @name Local Site data */
+            /**
+             * @brief Local Site Identity Entry.
+             */
             __PROTECTED_PROPERTY_PLAIN(::lookups::IdenTable, siteIdenEntry);
+            /** @} */
 
         protected:
             friend class dfsi::LC;
@@ -148,18 +240,38 @@ namespace p25
             static bool m_verbose;
             static bool m_warnCRC;
 
-            /** Local Site data */
+            // Local Site data
             static uint8_t* m_siteCallsign;
             static SiteData m_siteData;
 
-            /// <summary>Internal helper to convert payload bytes to a 64-bit long value.</summary>
+            /**
+             * @brief Internal helper to convert payload bytes to a 64-bit long value.
+             * @param[in] payload Buffer containing payload to convert.
+             * @returns ulong64_t 64-bit packed value containing the buffer.
+             */
             static ulong64_t toValue(const uint8_t* payload);
-            /// <summary>Internal helper to convert a 64-bit long value to payload bytes.</summary>
+            /**
+             * @brief Internal helper to convert a 64-bit long value to payload bytes.
+             * @param[in] value 64-bit packed value.
+             * @returns UInt8Array Buffer containing the unpacked payload.
+             */
             static UInt8Array fromValue(const ulong64_t value);
 
-            /// <summary>Internal helper to decode a trunking signalling block.</summary>
+            /**
+             * @brief Internal helper to decode a trunking signalling block.
+             * @param[in] data Raw data.
+             * @param[out] payload TSBK payload buffer.
+             * @param rawTSBK Flag indicating whether or not the passed buffer is raw.
+             * @returns bool True, if TSBK decoded, otherwise false.
+             */
             bool decode(const uint8_t* data, uint8_t* payload, bool rawTSBK = false);
-            /// <summary>Internal helper to encode a trunking signalling block.</summary>
+            /**
+             * @brief Internal helper to encode a trunking signalling block.
+             * @param[out] data Raw data.
+             * @param[in] payload TSBK payload buffer.
+             * @param rawTSBK Flag indicating whether or not the output buffer is raw.
+             * @param noTrellis Flag indicating whether or not the encoded data should be Trellis encoded.
+             */
             void encode(uint8_t* data, const uint8_t* payload, bool rawTSBK = false, bool noTrellis = false);
 
             __PROTECTED_COPY(TSBK);

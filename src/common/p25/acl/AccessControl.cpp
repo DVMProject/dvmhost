@@ -1,18 +1,14 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2016 Simon Rune, G7RZU
-*   Copyright (C) 2016,2017 Jonathan Naylor, G4KLX
-*   Copyright (C) 2017,2019,2022,2024 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2016 Simon Rune, G7RZU
+ *  Copyright (C) 2016,2017 Jonathan Naylor, G4KLX
+ *  Copyright (C) 2017,2019,2022,2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "Defines.h"
 #include "p25/acl/AccessControl.h"
 
@@ -25,22 +21,14 @@ using namespace p25::acl;
 RadioIdLookup* AccessControl::m_ridLookup;
 TalkgroupRulesLookup* AccessControl::m_tidLookup;
 
-/// <summary>
-/// Initializes the P25 access control.
-/// </summary>
-/// <param name="ridLookup">Instance of the RadioIdLookup class.</param>
-/// <param name="tidLookup">Instance of the TalkgroupRulesLookup class.</param>
+/* Initializes the P25 access control. */
 void AccessControl::init(RadioIdLookup* ridLookup, TalkgroupRulesLookup* tidLookup)
 {
     m_ridLookup = ridLookup;
     m_tidLookup = tidLookup;
 }
 
-/// <summary>
-/// Helper to validate a source radio ID.
-/// </summary>
-/// <param name="id">Source Radio ID.</param>
-/// <returns>True, if source radio ID is valid, otherwise false.</returns>
+/* Helper to validate a source radio ID. */
 bool AccessControl::validateSrcId(uint32_t id)
 {
     // check if RID ACLs are enabled
@@ -61,11 +49,7 @@ bool AccessControl::validateSrcId(uint32_t id)
     return true;
 }
 
-/// <summary>
-/// Helper to validate a talkgroup ID.
-/// </summary>
-/// <param name="id">Talkgroup ID.</param>
-/// <returns>True, if talkgroup ID is valid, otherwise false.</returns>
+/* Helper to validate a talkgroup ID. */
 bool AccessControl::validateTGId(uint32_t id)
 {
     // TG0 is never valid
@@ -88,11 +72,7 @@ bool AccessControl::validateTGId(uint32_t id)
     return true;
 }
 
-/// <summary>
-/// Helper to determine if a talkgroup ID is non-preferred.
-/// </summary>
-/// <param name="id">Talkgroup ID.</param>
-/// <returns>True, if talkgroup ID is valid, otherwise false.</returns>
+/* Helper to determine if a talkgroup ID is non-preferred. */
 bool AccessControl::tgidNonPreferred(uint32_t id)
 {
     // TG0 is never valid

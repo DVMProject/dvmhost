@@ -1,15 +1,18 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2023 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2023 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @file TDULCFactory.h
+ * @ingroup p25_lc
+ * @file TDULCFactory.cpp
+ * @ingroup p25_lc
+ */
 #if !defined(__P25_LC__TDULC_FACTORY_H__)
 #define  __P25_LC__TDULC_FACTORY_H__
 
@@ -39,23 +42,39 @@ namespace p25
         {
             // ---------------------------------------------------------------------------
             //  Class Declaration
-            //      Helper class to instantiate an instance of a TDULC.
             // ---------------------------------------------------------------------------
 
+            /**
+             * @brief Helper class to instantiate an instance of a TDULC.
+             * @ingroup p25_lc
+             */
             class HOST_SW_API TDULCFactory {
             public:
-                /// <summary>Initializes a new instance of the TDULCFactory class.</summary>
+                /**
+                 * @brief Initializes a new instance of the TDULCFactory class.
+                 */
                 TDULCFactory();
-                /// <summary>Finalizes a instance of the TDULCFactory class.</summary>
+                /**
+                 * @brief Finalizes a instance of the TDULCFactory class.
+                 */
                 ~TDULCFactory();
 
-                /// <summary>Create an instance of a TDULC.</summary>
+                /**
+                 * @brief Create an instance of a TDULC.
+                 * @param[in] data Buffer containing TDULC packet data to decode.
+                 * @returns TDULC* Instance of a TDULC representing the decoded data.
+                 */
                 static std::unique_ptr<TDULC> createTDULC(const uint8_t* data);
 
             private:
                 static edac::RS634717 m_rs;
 
-                /// <summary></summary>
+                /**
+                 * @brief Decode a TDULC.
+                 * @param tdulc Instance of a TDULC.
+                 * @param[in] data Buffer containing TDULC packet data to decode.
+                 * @returns TDULC* Instance of a TDULC representing the decoded data.
+                 */
                 static std::unique_ptr<TDULC> decode(TDULC* tdulc, const uint8_t* data);
             };
         } // namespace tdulc

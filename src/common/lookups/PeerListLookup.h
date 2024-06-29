@@ -1,19 +1,25 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2016 Jonathan Naylor, G4KLX
+ *  Copyright (C) 2017-2022,2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (c) 2024 Patrick McDonnell, W3AXL
+ *  Copyright (c) 2024 Caleb, KO4UYJ
+ *
+ */
 /**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2016 Jonathan Naylor, G4KLX
-*   Copyright (C) 2017-2022,2024 Bryan Biedenkapp, N2PLL
-*   Copyright (c) 2024 Patrick McDonnell, W3AXL
-*   Copyright (c) 2024 Caleb, KO4UYJ
-*
-*/
+ * @defgroup lookups_peer Peer List Lookups
+ * @brief Implementation for peer list lookup tables.
+ * @ingroup lookups
+ * 
+ * @file PeerListLookup.h
+ * @ingroup lookups_peer
+ * @file PeerListLookup.cpp
+ * @ingroup lookups_peer
+ */
 #if !defined(__PEER_LIST_LOOKUP_H__)
 #define __PEER_LIST_LOOKUP_H__
 
@@ -28,12 +34,17 @@ namespace lookups
 {
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //      Represents an individual entry in the peer ID table.
     // ---------------------------------------------------------------------------
 
+    /**
+     * @brief Represents an individual entry in the peer ID table.
+     * @ingroup lookups_peer
+     */
     class HOST_SW_API PeerId {
     public:
-        /// <summary>Initializes a new instance of the PeerId class.</summary>
+        /**
+         * @brief Initializes a new instance of the PeerId class.
+         */
         PeerId() :
             m_peerId(0U),
             m_peerPassword(),
@@ -41,10 +52,12 @@ namespace lookups
         {
             /* stub */
         }
-        /// <summary>Initializes a new instance of the PeerId class.</summary>
-        /// <param name="peerId"></param>
-        /// <param name="peerPassword"></param>
-        /// <param name="peerDefault"></param>
+        /**
+         * @brief Initializes a new instance of the PeerId class.
+         * @param peerId Peer ID.
+         * @param peerPassword Per Peer Password.
+         * @param peerDefault Flag indicating this is a "default" (i.e. undefined) peer.
+         */
         PeerId(uint32_t peerId, const std::string& peerPassword, bool peerDefault) :
             m_peerId(peerId),
             m_peerPassword(peerPassword),
@@ -53,7 +66,10 @@ namespace lookups
             /* stub */
         }
 
-        /// <summary>Equals operator. Copies this PeerId to another PeerId.</summary>
+        /**
+         * @brief Equals operator. Copies this PeerId to another PeerId.
+         * @param data Instance of PeerId to copy.
+         */
         PeerId& operator=(const PeerId& data)
         {
             if (this != &data) {
@@ -65,10 +81,12 @@ namespace lookups
             return *this;
         }
 
-        /// <summary>Sets flag values.</summary>
-        /// <param name="peerId">Peer ID.</param>
-        /// <param name="peerPassword">Per Peer Password.</param>
-        /// <param name="peerDefault"></param>
+        /**
+         * @brief Sets flag values.
+         * @param peerId Peer ID.
+         * @param peerPassword Per Peer Password.
+         * @param peerDefault Flag indicating this is a "default" (i.e. undefined) peer.
+         */
         void set(uint32_t peerId, const std::string& peerPassword, bool peerDefault)
         {
             m_peerId = peerId;
@@ -77,65 +95,118 @@ namespace lookups
         }
 
     public:
-        /// <summary>Peer ID.</summary>
+        /**
+         * @brief Peer ID.
+         */
         __READONLY_PROPERTY_PLAIN(uint32_t, peerId);
-        /// <summary>Per Peer Password.</summary>
+        /**
+         * @brief Per Peer Password.
+         */
         __READONLY_PROPERTY_PLAIN(std::string, peerPassword);
-        /// <summary>Flag indicating if the peer is default.</summary>
+        /**
+         * @brief Flag indicating if the peer is default.
+         */
         __READONLY_PROPERTY_PLAIN(bool, peerDefault);
     };
 
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //      Implements a threading lookup table class that contains peer ID
-    //      lookup table.
     // ---------------------------------------------------------------------------
 
+    /**
+     * @brief Implements a threading lookup table class that contains peer ID
+     *  lookup table.
+     * @ingroup lookups_peer
+     */
     class HOST_SW_API PeerListLookup : public LookupTable<PeerId> {
     public:
+        /**
+         * @brief Peer List Mode
+         */
         enum Mode {
-            WHITELIST,
-            BLACKLIST
+            WHITELIST,      //! Peers listed are whitelisted
+            BLACKLIST       //! Peers listed are blacklisted
         };
 
-        /// <summary>Initializes a new instance of the PeerListLookup class.</summary>
+        /**
+         * @brief Initializes a new instance of the PeerListLookup class.
+         * @param filename Full-path to the list file.
+         * @param mode Mode to operate in (WHITELIST or BLACKLIST).
+         * @param peerAcl Flag indicating if the lookup is enabled.
+         */
         PeerListLookup(const std::string& filename, Mode mode, uint32_t reloadTime, bool peerAcl);
 
-        /// <summary>Clears all entries from the list.</summary>
+        /**
+         * @brief Clears all entries from the list.
+         */
         void clear() override;
 
-        /// <summary>Adds a new entry to the list.</summary>
+        /**
+         * @brief Adds a new entry to the list.
+         * @param peerId Unique peer ID to add.
+         * @param password Per Peer Password.
+         */
         void addEntry(uint32_t id, const std::string& password = "");
-        /// <summary>Removes an existing entry from the list.</summary>
+        /**
+         * @brief Removes an existing entry from the list.
+         * @param peerId Unique peer ID to remove.
+         */
         void eraseEntry(uint32_t id);
-        /// <summary>Finds a table entry in this lookup table.</summary>
+        /**
+         * @brief Finds a table entry in this lookup table.
+         * @param id Unique identifier for table entry.
+         * @returns PeerId Table entry.
+         */
         PeerId find(uint32_t id) override;
 
-        /// <summary>Commit the table.</summary>
+        /**
+         * @brief Commit the table.
+         */
         void commit();
 
-        /// <summary>Gets whether the lookup is enabled.</summary>
+        /**
+         * @brief Gets whether the lookup is enabled.
+         * @returns True, if this lookup table is enabled, otherwise false.
+         */
         bool getACL() const;
 
-        /// <summary>Checks if a peer ID is in the list.</summary>
+        /**
+         * @brief Checks if a peer ID is in the list.
+         * @param id Unique peer ID to check.
+         * @returns bool True, if the peer ID is in the list, otherwise false.
+         */
         bool isPeerInList(uint32_t id) const;
-        /// <summary>Checks if a peer ID is allowed based on the mode and enabled flag.</summary>
+        /**
+         * @brief Checks if a peer ID is allowed based on the mode and enabled flag.
+         * @param id Unique peer ID to check.
+         * @returns bool True, if the peer ID is allowed, otherwise false.
+         */
         bool isPeerAllowed(uint32_t id) const;
 
-        /// <summary>Sets the mode to either WHITELIST or BLACKLIST.</summary>
+        /**
+         * @brief Sets the mode to either WHITELIST or BLACKLIST.
+         * @param mode The mode to set.
+         */
         void setMode(Mode mode);
-        /// <summary>Gets the current mode.</summary>
+        /**
+         * @brief Gets the current mode.
+         * @returns Mode Current peer list operational mode.
+         */
         Mode getMode() const;
 
     protected:
         bool m_acl;
 
-        /// <summary>Loads the table from the passed lookup table file.</summary>
-        /// <returns>True, if lookup table was loaded, otherwise false.</returns>
+        /**
+         * @brief Loads the table from the passed lookup table file.
+         * @return True, if lookup table was loaded, otherwise false.
+         */
         bool load() override;
 
-        /// <summary>Saves the table to the passed lookup table file.</summary>
-        /// <returns>True, if lookup table was saved, otherwise false.</returns>
+        /**
+         * @brief Saves the table to the passed lookup table file.
+         * @return True, if lookup table was saved, otherwise false.
+         */
         bool save() override;
 
     private:

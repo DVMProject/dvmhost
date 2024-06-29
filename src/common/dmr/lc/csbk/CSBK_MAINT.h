@@ -7,9 +7,15 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2023 Bryan Biedenkapp, N2PLL
+*  Copyright (C) 2023 Bryan Biedenkapp, N2PLL
 *
 */
+/**
+ * @file CSBK_MAINT.h
+ * @ingroup dmr_csbk
+ * @file CSBK_MAINT.cpp
+ * @ingroup dmr_csbk
+ */
 #if !defined(__DMR_LC_CSBK__CSBK_MAINT_H__)
 #define  __DMR_LC_CSBK__CSBK_MAINT_H__
 
@@ -24,24 +30,40 @@ namespace dmr
         {
             // ---------------------------------------------------------------------------
             //  Class Declaration
-            //      Implements MAINT - Call Maintainence
             // ---------------------------------------------------------------------------
 
+            /**
+             * @brief Implements MAINT - Call Maintainence
+             * @ingroup dmr_csbk
+             */
             class HOST_SW_API CSBK_MAINT : public CSBK {
             public:
-                /// <summary>Initializes a new instance of the CSBK_MAINT class.</summary>
+                /**
+                 * @brief Initializes a new instance of the CSBK_MAINT class.
+                 */
                 CSBK_MAINT();
 
-                /// <summary>Decode a control signalling block.</summary>
+                /**
+                 * @brief Decodes a control signalling block.
+                 * @param[in] data Buffer containing a CSBK to decode.
+                 */
                 bool decode(const uint8_t* data) override;
-                /// <summary>Encode a control signalling block.</summary>
+                /**
+                 * @brief Encodes a control signalling block.
+                 * @param[out] data Buffer to encode a CSBK.
+                 */
                 void encode(uint8_t* data) override;
 
-                /// <summary>Returns a string that represents the current CSBK.</summary>
+                /**
+                 * @brief Returns a string that represents the current CSBK.
+                 * @returns std::string String representation of the CSBK.
+                 */
                 std::string toString() override;
             
             public:
-                /// <summary>Maintainence Kind.</summary>
+                /**
+                 * @brief Maintainence Kind.
+                 */
                 __PROPERTY(uint8_t, maintKind, MaintKind);
 
                 __COPY(CSBK_MAINT);

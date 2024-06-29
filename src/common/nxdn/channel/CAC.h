@@ -1,15 +1,18 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @file CAC.h
+ * @ingroup nxdn_ch
+ * @file CAC.cpp
+ * @ingroup nxdn_ch
+ */
 #if !defined(__NXDN_CHANNEL__CAC_H__)
 #define  __NXDN_CHANNEL__CAC_H__
 
@@ -22,53 +25,95 @@ namespace nxdn
     {
         // ---------------------------------------------------------------------------
         //  Class Declaration
-        //      Implements NXDN Common Access Channel.
         // ---------------------------------------------------------------------------
 
+        /**
+         * @brief Implements NXDN Common Access Channel.
+         * @ingroup nxdn_ch
+         */
         class HOST_SW_API CAC {
         public:
-            /// <summary>Initializes a new instance of the CAC class.</summary>
+            /**
+             * @brief Initializes a new instance of the CAC class.
+             */
             CAC();
-            /// <summary>Initializes a copy instance of the CAC class.</summary>
+            /**
+             * @brief Initializes a copy instance of the CAC class.
+             * @param data Instance of CAC to copy.
+             */
             CAC(const CAC& data);
-            /// <summary>Finalizes a instance of the CAC class.</summary>
+            /**
+             * @brief Finalizes a instance of the CAC class.
+             */
             ~CAC();
 
-            /// <summary>Equals operator.</summary>
+            /**
+             * @brief Equals operator.
+             * @param data Instance of CAC to copy.
+             */
             CAC& operator=(const CAC& data);
 
-            /// <summary>Decode a common access channel.</summary>
+            /**
+             * @brief Decode a common access channel.
+             * @param[in] data Buffer containing CAC to decode.
+             * @param longInbound Flag indicating whether the CAC is short (false) or long (true).
+             * @returns bool True, if CAC decoded, otherwise false.
+             */
             bool decode(const uint8_t* data, bool longInbound = false);
-            /// <summary>Encode a common access channel.</summary>
+            /**
+             * @brief Encode a common access channel.
+             * @param[out] data Buffer to encode CAC.
+             */
             void encode(uint8_t* data) const;
 
-            /// <summary>Gets the raw CAC data.</summary>
+            /**
+             * @brief Gets the raw CAC data.
+             * @param[out] data Buffer to copy raw CAC data to.
+             */
             void getData(uint8_t* data) const;
-            /// <summary>Sets the raw CAC data.</summary>
+            /**
+             * @brief Sets the raw CAC data.
+             * @param[in] data Buffer to copy raw CAC data from.
+             */
             void setData(const uint8_t* data);
 
         public:
-            /** Common Data */
-            /// <summary>Radio Access Number</summary>
+            // Common Data
+            /**
+             * @brief Radio Access Number
+             */
             __PROPERTY(uint8_t, ran, RAN);
-            /// <summary></summary>
+            /**
+             * @brief Channel Structure
+             */
             __PROPERTY(defines::ChStructure::E, structure, Structure);
-            /// <summary></summary>
+            /**
+             * @brief Flag indicating whether the inbound CAC is long or short.
+             */
             __PROPERTY(bool, longInbound, LongInbound);
 
-            /** Collision Control Field */
-            /// <summary>Idle/Busy.</summary>
+            // Collision Control Field
+            /**
+             * @brief Idle/Busy.
+             */
             __PROPERTY(bool, idleBusy, IdleBusy);
-            /// <summary>Tx Continuously.</summary>
+            /**
+             * @brief Tx Continuously.
+             */
             __PROPERTY(bool, txContinuous, TxContinuous);
-            /// <summary>Receive/No Receive.</summary>
+            /**
+             * @brief Receive/No Receive.
+             */
             __PROPERTY(bool, receive, Receive);
 
         private:
             uint8_t* m_data;
             uint16_t m_rxCRC;
 
-            /// <summary>Internal helper to copy the class.</summary>
+            /**
+             * @brief Internal helper to copy the class.
+             * @param data Instance of CAC to copy.
+             */
             void copy(const CAC& data);
         };
     } // namespace channel

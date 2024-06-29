@@ -1,16 +1,23 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2023,2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2024 Patrick McDonnell, W3AXL
+ *
+ */
 /**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2023,2024 Bryan Biedenkapp, N2PLL
-*   Copyright (C) 2024 Patrick McDonnell, W3AXL
-*
-*/
+ * @defgroup lookups_tgid Talkgroup Rules Lookups
+ * @brief Implementation for talkgroup rules lookup tables.
+ * @ingroup lookups
+ * 
+ * @file TalkgroupRulesLookup.h
+ * @ingroup lookups_tgid
+ * @file TalkgroupRulesLookup.cpp
+ * @ingroup lookups_tgid
+ */
 #if !defined(__TALKGROUP_RULES_LOOKUP_H__)
 #define __TALKGROUP_RULES_LOOKUP_H__
 
@@ -28,20 +35,27 @@ namespace lookups
 {
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //     Represents an source block for a routing rule.
     // ---------------------------------------------------------------------------
 
+    /**
+     * @brief Represents an source block for a routing rule.
+     * @ingroup lookups_tgid
+     */
     class HOST_SW_API TalkgroupRuleGroupVoiceSource {
     public:
-        /// <summary>Initializes a new instance of the TalkgroupRuleGroupVoiceSource class.</summary>
+        /**
+         * @brief Initializes a new instance of the TalkgroupRuleGroupVoiceSource class.
+         */
         TalkgroupRuleGroupVoiceSource() :
             m_tgId(0U),
             m_tgSlot(0U)
         {
             /* stub */
         }
-        /// <summary>Initializes a new instance of the TalkgroupRuleGroupVoiceSource class.</summary>
-        /// <param name="node"></param>
+        /**
+         * @brief Initializes a new instance of the TalkgroupRuleGroupVoiceSource class.
+         * @param node YAML node for this source block.
+         */
         TalkgroupRuleGroupVoiceSource(yaml::Node& node) :
             TalkgroupRuleGroupVoiceSource()
         {
@@ -49,7 +63,10 @@ namespace lookups
             m_tgSlot = (uint8_t)node["slot"].as<uint32_t>(0U);
         }
 
-        /// <summary>Equals operator. Copies this TalkgroupRuleGroupVoiceSource to another TalkgroupRuleGroupVoiceSource.</summary>
+        /**
+         * @brief Equals operator. Copies this TalkgroupRuleGroupVoiceSource to another TalkgroupRuleGroupVoiceSource.
+         * @param data Instance of TalkgroupRuleGroupVoiceSource to copy.
+         */
         virtual TalkgroupRuleGroupVoiceSource& operator= (const TalkgroupRuleGroupVoiceSource& data)
         {
             if (this != &data) {
@@ -60,7 +77,10 @@ namespace lookups
             return *this;
         }
 
-        /// <summary>Return the YAML structure for this TalkgroupRuleGroupVoiceSource.</summary>
+        /**
+         * @brief Return the YAML structure for this TalkgroupRuleGroupVoiceSource.
+         * @param[out] node YAML Node.
+         */
         void getYaml(yaml::Node &node)
         {
             node["tgid"] = __INT_STR(m_tgId);
@@ -68,20 +88,29 @@ namespace lookups
         }
 
     public:
-        /// <summary>Talkgroup ID.</summary>
+        /**
+         * @brief Talkgroup ID.
+         */
         __PROPERTY_PLAIN(uint32_t, tgId);
-        /// <summary>Talkgroup DMR slot.</summary>
+        /**
+         * @brief Talkgroup DMR slot.
+         */
         __PROPERTY_PLAIN(uint8_t, tgSlot);
     };
 
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //     Represents an rewrite block for a routing rule rewrites.
     // ---------------------------------------------------------------------------
 
+    /**
+     * @brief Represents an rewrite block for a routing rule rewrites.
+     * @ingroup lookups_tgid
+     */
     class HOST_SW_API TalkgroupRuleRewrite {
     public:
-        /// <summary>Initializes a new instance of the TalkgroupRuleRewrite class.</summary>
+        /**
+         * @brief Initializes a new instance of the TalkgroupRuleRewrite class.
+         */
         TalkgroupRuleRewrite() :
             m_peerId(0U),
             m_tgId(0U),
@@ -89,8 +118,10 @@ namespace lookups
         {
             /* stub */
         }
-        /// <summary>Initializes a new instance of the TalkgroupRuleRewrite class.</summary>
-        /// <param name="node"></param>
+        /**
+         * @brief Initializes a new instance of the TalkgroupRuleRewrite class.
+         * @param node YAML node for this rewrite block.
+         */
         TalkgroupRuleRewrite(yaml::Node& node) :
             TalkgroupRuleRewrite()
         {
@@ -99,7 +130,10 @@ namespace lookups
             m_tgSlot = (uint8_t)node["slot"].as<uint32_t>(0U);
         }
 
-        /// <summary>Equals operator. Copies this TalkgroupRuleRewrite to another TalkgroupRuleRewrite.</summary>
+        /**
+         * @brief Equals operator. Copies this TalkgroupRuleRewrite to another TalkgroupRuleRewrite.
+         * @param data Instance of TalkgroupRuleRewrite to copy.
+         */
         virtual TalkgroupRuleRewrite& operator= (const TalkgroupRuleRewrite& data)
         {
             if (this != &data) {
@@ -111,7 +145,10 @@ namespace lookups
             return *this;
         }
 
-        /// <summary>Return the YAML structure for this TalkgroupRuleRewrite.</summary>
+        /**
+         * @brief Return the YAML structure for this TalkgroupRuleRewrite.
+         * @param[out] node YAML node.
+         */
         void getYaml(yaml::Node &node)
         {
             node["peerid"] = __INT_STR(m_peerId);
@@ -120,22 +157,33 @@ namespace lookups
         }
 
     public:
-        /// <summary>Peer ID.</summary>
+        /**
+         * @brief Peer ID.
+         */
         __PROPERTY_PLAIN(uint32_t, peerId);
-        /// <summary>Talkgroup ID.</summary>
+        /**
+         * @brief Talkgroup ID.
+         */
         __PROPERTY_PLAIN(uint32_t, tgId);
-        /// <summary>Talkgroup DMR slot.</summary>
+        /**
+         * @brief Talkgroup DMR slot.
+         */
         __PROPERTY_PLAIN(uint8_t, tgSlot);
     };
 
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //     Represents an configuration block for a routing rule.
     // ---------------------------------------------------------------------------
 
+    /**
+     * @brief Represents an configuration block for a routing rule.
+     * @ingroup lookups_tgid
+     */
     class HOST_SW_API TalkgroupRuleConfig {
     public:
-        /// <summary>Initializes a new instance of the TalkgroupRuleConfig class.</summary>
+        /**
+         * @brief Initializes a new instance of the TalkgroupRuleConfig class.
+         */
         TalkgroupRuleConfig() :
             m_active(false),
             m_affiliated(false),
@@ -149,8 +197,10 @@ namespace lookups
         {
             /* stub */
         }
-        /// <summary>Initializes a new instance of the TalkgroupRuleConfig class.</summary>
-        /// <param name="node"></param>
+        /**
+         * @brief Initializes a new instance of the TalkgroupRuleConfig class.
+         * @param node YAML node for this configuration block.
+         */
         TalkgroupRuleConfig(yaml::Node& node) :
             TalkgroupRuleConfig()
         {
@@ -199,7 +249,10 @@ namespace lookups
             }
         }
 
-        /// <summary>Equals operator. Copies this TalkgroupRuleConfig to another TalkgroupRuleConfig.</summary>
+        /**
+         * @brief Equals operator. Copies this TalkgroupRuleConfig to another TalkgroupRuleConfig.
+         * @param data Instance of TalkgroupRuleConfig to copy.
+         */
         virtual TalkgroupRuleConfig& operator= (const TalkgroupRuleConfig& data)
         {
             if (this != &data) {
@@ -217,18 +270,36 @@ namespace lookups
             return *this;
         }
 
-        /// <summary>Gets the count of inclusions.</summary>
+        /**
+         * @brief Gets the count of inclusions.
+         * @returns uint8_t Total count of peer inclusions.
+         */
         uint8_t inclusionSize() const { return m_inclusion.size(); }
-        /// <summary>Gets the count of exclusions.</summary>
+        /**
+         * @brief Gets the count of exclusions.
+         * @returns uint8_t Total count of peer exclusions.
+         */
         uint8_t exclusionSize() const { return m_exclusion.size(); }
-        /// <summary>Gets the count of rewrites.</summary>
+        /**
+         * @brief Gets the count of rewrites.
+         * @returns uint8_t Total count of rewrite rules.
+         */
         uint8_t rewriteSize() const { return m_rewrite.size(); }
-        /// <summary>Gets the count of always send.</summary>
+        /**
+         * @brief Gets the count of always send.
+         * @returns uint8_t Total count of always send rules.
+         */
         uint8_t alwaysSendSize() const { return m_alwaysSend.size(); }
-        /// <summary>Gets the count of rewrites.</summary>
+        /**
+         * @brief Gets the count of preferred.
+         * @returns uint8_t Total count of preferred peer rules.
+         */
         uint8_t preferredSize() const { return m_preferred.size(); }
 
-        /// <summary>Return the YAML structure for this TalkgroupRuleConfig.</summary>
+        /**
+         * @brief Return the YAML structure for this TalkgroupRuleConfig.
+         * @param[out] node YAML node.
+         */
         void getYaml(yaml::Node &node)
         {
             // We have to convert the bools back to strings to pass to the yaml node
@@ -284,35 +355,58 @@ namespace lookups
         }
 
     public:
-        /// <summary>Flag indicating whether the rule is active.</summary>
+        /**
+         * @brief Flag indicating whether the rule is active.
+         */
         __PROPERTY_PLAIN(bool, active);
-        /// <summary>Flag indicating whether this talkgroup will only repeat with affiliations.</summary>
+        /**
+         * @brief Flag indicating whether this talkgroup will only repeat with affiliations.
+         */
         __PROPERTY_PLAIN(bool, affiliated);
-        /// <summary>Flag indicating whether or not the talkgroup is a parrot.</summary>
+        /**
+         * @brief Flag indicating whether or not the talkgroup is a parrot.
+         */
         __PROPERTY_PLAIN(bool, parrot);
-        /// <summary>List of peer IDs included by this rule.</summary>
+        /**
+         * @brief List of peer IDs included by this rule.
+         */
         __PROPERTY_PLAIN(std::vector<uint32_t>, inclusion);
-        /// <summary>List of peer IDs excluded by this rule.</summary>
+        /**
+         * @brief List of peer IDs excluded by this rule.
+         */
         __PROPERTY_PLAIN(std::vector<uint32_t>, exclusion);
-        /// <summary>List of rewrites performed by this rule.</summary>
+        /**
+         * @brief List of rewrites performed by this rule.
+         */
         __PROPERTY_PLAIN(std::vector<TalkgroupRuleRewrite>, rewrite);
-        /// <summary>List of always send performed by this rule.</summary>
+        /**
+         * @brief List of always send performed by this rule.
+         */
         __PROPERTY_PLAIN(std::vector<uint32_t>, alwaysSend);
-        /// <summary>List of peer IDs preferred by this rule.</summary>
+        /**
+         * @brief List of peer IDs preferred by this rule.
+         */
         __PROPERTY_PLAIN(std::vector<uint32_t>, preferred);
 
-        /// <summary>Flag indicating whether or not the talkgroup is a non-preferred.</summary>
+        /**
+         * @brief Flag indicating whether or not the talkgroup is a non-preferred.
+         */
         __PROPERTY_PLAIN(bool, nonPreferred);
     };
 
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //     Represents an group voice block for a routing rule.
     // ---------------------------------------------------------------------------
 
+    /**
+     * @brief Represents an group voice block for a routing rule.
+     * @ingroup lookups_tgid
+     */
     class HOST_SW_API TalkgroupRuleGroupVoice {
     public:
-        /// <summary>Initializes a new instance of the TalkgroupRuleGroupVoice class.</summary>
+        /**
+         * @brief Initializes a new instance of the TalkgroupRuleGroupVoice class.
+         */
         TalkgroupRuleGroupVoice() :
             m_name(),
             m_config(),
@@ -320,8 +414,10 @@ namespace lookups
         {
             /* stub */
         }
-        /// <summary>Initializes a new instance of the TalkgroupRuleGroupVoice class.</summary>
-        /// <param name="node"></param>
+        /**
+         * @brief Initializes a new instance of the TalkgroupRuleGroupVoice class.
+         * @param node YAML node for this group voice block.
+         */
         TalkgroupRuleGroupVoice(yaml::Node& node) :
             TalkgroupRuleGroupVoice()
         {
@@ -330,7 +426,10 @@ namespace lookups
             m_source = TalkgroupRuleGroupVoiceSource(node["source"]);
         }
 
-        /// <summary>Equals operator. Copies this TalkgroupRuleGroupVoice to another TalkgroupRuleGroupVoice.</summary>
+        /**
+         * @brief Equals operator. Copies this TalkgroupRuleGroupVoice to another TalkgroupRuleGroupVoice.
+         * @param data Instance of TalkgroupRuleGroupVoice to copy.
+         */
         virtual TalkgroupRuleGroupVoice& operator= (const TalkgroupRuleGroupVoice& data)
         {
             if (this != &data) {
@@ -342,7 +441,10 @@ namespace lookups
             return *this;
         }
 
-        /// <summary>Helper to quickly determine if a group voice entry is valid.</summary>
+        /**
+         * @brief Helper to quickly determine if a group voice entry is valid.
+         * @returns bool True, if group voice block is valid, otherwise false.
+         */
         bool isInvalid() const
         {
             if (m_source.tgId() == 0U)
@@ -350,7 +452,10 @@ namespace lookups
             return false;
         }
 
-        /// <summary>Return the YAML structure for this TalkgroupRuleGroupVoice.</summary>
+        /**
+         * @brief Return the YAML structure for this TalkgroupRuleGroupVoice.
+         * @param[out] node YAML node.
+         */
         void getYaml(yaml::Node &node)
         {
             // Get all the properties
@@ -366,56 +471,112 @@ namespace lookups
 
 
     public:
-        /// <summary>Textual name for the routing rule.</summary>
+        /**
+         * @brief Textual name for the routing rule.
+         */
         __PROPERTY_PLAIN(std::string, name);
-        /// <summary>Configuration for the routing rule.</summary>
+        /**
+         * @brief Configuration for the routing rule.
+         */
         __PROPERTY_PLAIN(TalkgroupRuleConfig, config);
-        /// <summary>Source talkgroup information for the routing rule.</summary>
+        /**
+         * @brief Source talkgroup information for the routing rule.
+         */
         __PROPERTY_PLAIN(TalkgroupRuleGroupVoiceSource, source);
     };
 
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //      Implements a threading lookup table class that contains routing
-    //      rules information.
     // ---------------------------------------------------------------------------
 
+    /**
+     * @brief Implements a threading lookup table class that contains routing
+     *  rules information.
+     * @ingroup lookups_tgid
+     */
     class HOST_SW_API TalkgroupRulesLookup : public Thread {
     public:
-        /// <summary>Initializes a new instance of the TalkgroupRulesLookup class.</summary>
+        /**
+         * @brief Initializes a new instance of the TalkgroupRulesLookup class.
+         * @param filename Full-path to the routing rules file.
+         * @param reloadTime Interval of time to reload the routing rules.
+         * @param acl Flag indicating these rules are enabled for enforcing access control.
+         */
         TalkgroupRulesLookup(const std::string& filename, uint32_t reloadTime, bool acl);
-        /// <summary>Finalizes a instance of the TalkgroupRulesLookup class.</summary>
+        /**
+         * @brief Finalizes a instance of the TalkgroupRulesLookup class.
+         */
         ~TalkgroupRulesLookup() override;
 
-        /// <summary></summary>
+        /**
+         * @brief Thread entry point. This function is provided to run the thread
+         *  for the lookup table.
+         */
         void entry() override;
 
-        /// <summary>Stops and unloads this lookup table.</summary>
+        /**
+         * @brief Stops and unloads this lookup table.
+         */
         void stop();
-        /// <summary>Reads the lookup table from the specified lookup table file.</summary>
-        /// <returns>True, if lookup table was read, otherwise false.</returns>
+        /**
+         * @brief Reads the lookup table from the specified lookup table file.
+         * @returns bool True, if lookup table was read, otherwise false.
+         */
         bool read();
-        /// <summary>Reads the lookup table from the specified lookup table file.</summary>
-        /// <returns>True, if lookup table was read, otherwise false.</returns>
+        /**
+         * @brief Reads the lookup table from the specified lookup table file.
+         * @returns bool True, if lookup table was read, otherwise false.
+         */
         bool reload() { return load(); }
-        /// <summary>Clears all entries from the lookup table.</summary>
+        /**
+         * @brief Clears all entries from the lookup table.
+         */
         void clear();
 
-        /// <summary>Adds a new entry to the lookup table.</summary>
+        /**
+         * @brief Adds a new entry to the lookup table.
+         * @param id Unique ID to add.
+         * @param slot DMR slot this talkgroup is valid on.
+         * @param enabled Flag indicating if talkgroup ID is enabled or not.
+         * @param nonPreferred Flag indicating if the talkgroup ID is non-preferred.
+         */
         void addEntry(uint32_t id, uint8_t slot, bool enabled, bool nonPreferred = false);
-        /// <summary>Adds a new entry to the lookup table.</summary>
+        /**
+         * @brief Adds a new entry to the lookup table.
+         * @param groupVoice Group Voice Configuration Block.
+         */
         void addEntry(TalkgroupRuleGroupVoice groupVoice);
-        /// <summary>Erases an existing entry from the lookup table by the specified unique ID.</summary>
+        /**
+         * @brief Erases an existing entry from the lookup table by the specified unique ID.
+         * @param id Unique ID to erase.
+         * @param slot DMR slot this talkgroup is valid on.
+         */
         void eraseEntry(uint32_t id, uint8_t slot);
-        /// <summary>Finds a table entry in this lookup table.</summary>
+        /**
+         * @brief Finds a table entry in this lookup table.
+         * @param id Unique identifier for table entry.
+         * @param slot DMR slot this talkgroup is valid on.
+         * @returns TalkgroupRuleGroupVoice Table entry.
+         */
         virtual TalkgroupRuleGroupVoice find(uint32_t id, uint8_t slot = 0U);
-        /// <summary>Finds a table entry in this lookup table by rewrite.</summary>
+        /**
+         * @brief Finds a table entry in this lookup table by rewrite.
+         * @param peerId Unique identifier for table entry.
+         * @param id Unique identifier for table entry.
+         * @param slot DMR slot this talkgroup is valid on.
+         * @return TalkgroupRuleGroupVoice Table entry.
+         */
         virtual TalkgroupRuleGroupVoice findByRewrite(uint32_t peerId, uint32_t id, uint8_t slot = 0U);
 
-        /// <summary>Saves loaded talkgroup rules.</summary>
+        /**
+         * @brief Saves loaded talkgroup rules.
+         */
         bool commit();
 
-        /// <summary>Flag indicating whether talkgroup ID access control is enabled or not.</summary>
+        /**
+         * @brief Flag indicating whether talkgroup ID access control is enabled or not.
+         * @returns bool True, if talkgroup ID access control is enabled, otherwise false.
+         */
         bool getACL();
 
     private:
@@ -428,19 +589,29 @@ namespace lookups
         static std::mutex m_mutex;
         bool m_stop;
 
-        /// <summary>Loads the table from the passed lookup table file.</summary>
-        /// <returns>True, if lookup table was loaded, otherwise false.</returns>
+        /**
+         * @brief Loads the table from the passed lookup table file.
+         * @return True, if lookup table was loaded, otherwise false.
+         */
         bool load();
-        /// <summary>Saves the table to the passed lookup table file.</summary>
-        /// <returns>True, if lookup table was saved, otherwise false.</returns>
+        /**
+         * @brief Saves the table to the passed lookup table file.
+         * @return True, if lookup table was saved, otherwise false.
+         */
         bool save();
 
     public:
-        /// <summary>Number indicating the number of seconds to hang on a talkgroup.</summary>
+        /**
+         * @brief Number indicating the number of seconds to hang on a talkgroup.
+         */
         __PROPERTY_PLAIN(uint32_t, groupHangTime);
-        /// <summary>Flag indicating whether or not the network layer should send the talkgroups to peers.</summary>
+        /**
+         * @brief Flag indicating whether or not the network layer should send the talkgroups to peers.
+         */
         __PROPERTY_PLAIN(bool, sendTalkgroups);
-        /// <summary>List of group voice rules.</summary>
+        /**
+         * @brief List of group voice rules.
+         */
         __PROPERTY_PLAIN(std::vector<TalkgroupRuleGroupVoice>, groupVoice);
     };
 } // namespace lookups

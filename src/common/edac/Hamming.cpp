@@ -1,16 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2015,2016 Jonathan Naylor, G4KLX
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2015,2016 Jonathan Naylor, G4KLX
+ *
+ */
 #include "edac/Hamming.h"
 
 using namespace edac;
@@ -21,11 +17,7 @@ using namespace edac;
 //  Static Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Decode Hamming (15,11,3).
-/// </summary>
-/// <param name="d">Boolean bit array.</param>
-/// <returns>True, if bit errors are detected, otherwise false.</returns>
+/* Decode Hamming (15,11,3). */
 bool Hamming::decode15113_1(bool* d)
 {
     assert(d != nullptr);
@@ -67,10 +59,7 @@ bool Hamming::decode15113_1(bool* d)
     }
 }
 
-/// <summary>
-/// Encode Hamming (15,11,3).
-/// </summary>
-/// <param name="d">Boolean bit array.</param>
+/* Encode Hamming (15,11,3). */
 void Hamming::encode15113_1(bool* d)
 {
     assert(d != nullptr);
@@ -82,11 +71,7 @@ void Hamming::encode15113_1(bool* d)
     d[14] = d[0] ^ d[2] ^ d[4] ^ d[6] ^ d[7] ^ d[9] ^ d[10];
 }
 
-/// <summary>
-/// Decode Hamming (15,11,3).
-/// </summary>
-/// <param name="d">Boolean bit array.</param>
-/// <returns>True, if bit errors are detected, otherwise false.</returns>
+/* Decode Hamming (15,11,3). */
 bool Hamming::decode15113_2(bool* d)
 {
     assert(d != nullptr);
@@ -128,10 +113,7 @@ bool Hamming::decode15113_2(bool* d)
     }
 }
 
-/// <summary>
-/// Encode Hamming (15,11,3).
-/// </summary>
-/// <param name="d">Boolean bit array.</param>
+/* Encode Hamming (15,11,3). */
 void Hamming::encode15113_2(bool* d)
 {
     assert(d != nullptr);
@@ -143,11 +125,7 @@ void Hamming::encode15113_2(bool* d)
     d[14] = d[0] ^ d[1] ^ d[2] ^ d[4] ^ d[6] ^ d[7] ^ d[10];
 }
 
-/// <summary>
-/// Decode Hamming (13,9,3).
-/// </summary>
-/// <param name="d">Boolean bit array.</param>
-/// <returns>True, if bit errors are detected, otherwise false.</returns>
+/* Decode Hamming (13,9,3). */
 bool Hamming::decode1393(bool* d)
 {
     assert(d != nullptr);
@@ -187,10 +165,7 @@ bool Hamming::decode1393(bool* d)
     }
 }
 
-/// <summary>
-/// Encode Hamming (13,9,3).
-/// </summary>
-/// <param name="d">Boolean bit array.</param>
+/* Encode Hamming (13,9,3). */
 void Hamming::encode1393(bool* d)
 {
     assert(d != nullptr);
@@ -202,11 +177,7 @@ void Hamming::encode1393(bool* d)
     d[12] = d[0] ^ d[2] ^ d[4] ^ d[5] ^ d[8];
 }
 
-/// <summary>
-/// Decode Hamming (10,6,3).
-/// </summary>
-/// <param name="d">Boolean bit array.</param>
-/// <returns>True, if bit errors are detected, otherwise false.</returns>
+/* Decode Hamming (10,6,3). */
 bool Hamming::decode1063(bool* d)
 {
     assert(d != nullptr);
@@ -243,10 +214,7 @@ bool Hamming::decode1063(bool* d)
     }
 }
 
-/// <summary>
-/// Encode Hamming (10,6,3).
-/// </summary>
-/// <param name="d">Boolean bit array.</param>
+/* Encode Hamming (10,6,3). */
 void Hamming::encode1063(bool* d)
 {
     assert(d != nullptr);
@@ -258,11 +226,7 @@ void Hamming::encode1063(bool* d)
     d[9] = d[1] ^ d[2] ^ d[3] ^ d[4];
 }
 
-/// <summary>
-/// Decode Hamming (16,11,4).
-/// </summary>
-/// <param name="d">Boolean bit array.</param>
-/// <returns>True, if bit errors are detected or no bit errors, otherwise false if unrecoverable errors are detected.</returns>
+/* Decode Hamming (16,11,4). */
 bool Hamming::decode16114(bool* d)
 {
     assert(d != nullptr);
@@ -311,10 +275,7 @@ bool Hamming::decode16114(bool* d)
     }
 }
 
-/// <summary>
-/// Encode Hamming (10,6,3).
-/// </summary>
-/// <param name="d">Boolean bit array.</param>
+/* Encode Hamming (10,6,3). */
 void Hamming::encode16114(bool* d)
 {
     assert(d != nullptr);
@@ -326,11 +287,7 @@ void Hamming::encode16114(bool* d)
     d[15] = d[0] ^ d[2] ^ d[5] ^ d[6] ^ d[8] ^ d[9] ^ d[10];
 }
 
-/// <summary>
-/// Decode Hamming (17,12,3).
-/// </summary>
-/// <param name="d">Boolean bit array.</param>
-/// <returns>True, if bit errors are detected or no bit errors, otherwise false if unrecoverable errors are detected.</returns>
+/* Decode Hamming (17,12,3). */
 bool Hamming::decode17123(bool* d)
 {
     assert(d != nullptr);
@@ -380,10 +337,7 @@ bool Hamming::decode17123(bool* d)
     }
 }
 
-/// <summary>
-/// Encode Hamming (17,12,3).
-/// </summary>
-/// <param name="d">Boolean bit array.</param>
+/* Encode Hamming (17,12,3). */
 void Hamming::encode17123(bool* d)
 {
     assert(d != nullptr);

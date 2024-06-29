@@ -1,18 +1,14 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2010,2014,2016,2021 Jonathan Naylor, G4KLX
-*   Copyright (C) 2016 Mathias Weyland, HB9FRV
-*   Copyright (C) 2018-2022 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2010,2014,2016,2021 Jonathan Naylor, G4KLX
+ *  Copyright (C) 2016 Mathias Weyland, HB9FRV
+ *  Copyright (C) 2018-2022 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "Defines.h"
 #include "edac/AMBEFEC.h"
 #include "edac/Golay24128.h"
@@ -29,21 +25,13 @@ using namespace edac;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the AMBEFEC class.
-/// </summary>
+/* Initializes a new instance of the AMBEFEC class. */
 AMBEFEC::AMBEFEC() = default;
 
-/// <summary>
-/// Finalizes a instance of the AMBEFEC class.
-/// </summary>
+/* Finalizes a instance of the AMBEFEC class. */
 AMBEFEC::~AMBEFEC() = default;
 
-/// <summary>
-/// Regenerates the DMR AMBE FEC for the input bytes.
-/// </summary>
-/// <param name="bytes"></param>
-/// <returns>Count of errors.</returns>
+/* Regenerates the DMR AMBE FEC for the input bytes. */
 uint32_t AMBEFEC::regenerateDMR(uint8_t* bytes) const
 {
     assert(bytes != nullptr);
@@ -146,11 +134,7 @@ uint32_t AMBEFEC::regenerateDMR(uint8_t* bytes) const
     return errors;
 }
 
-/// <summary>
-/// Returns the number of errors on the DMR BER input bytes.
-/// </summary>
-/// <param name="bytes"></param>
-/// <returns>Count of errors.</returns>
+/* Returns the number of errors on the DMR BER input bytes. */
 uint32_t AMBEFEC::measureDMRBER(const uint8_t* bytes) const
 {
     assert(bytes != nullptr);
@@ -214,11 +198,7 @@ uint32_t AMBEFEC::measureDMRBER(const uint8_t* bytes) const
     return errors;
 }
 
-/// <summary>
-/// Regenerates the P25 IMBE FEC for the input bytes.
-/// </summary>
-/// <param name="bytes"></param>
-/// <returns>Count of errors.</returns>
+/* Regenerates the P25 IMBE FEC for the input bytes. */
 uint32_t AMBEFEC::regenerateIMBE(uint8_t* bytes) const
 {
     assert(bytes != nullptr);
@@ -353,11 +333,7 @@ uint32_t AMBEFEC::regenerateIMBE(uint8_t* bytes) const
     return errors;
 }
 
-/// <summary>
-/// Returns the number of errors on the P25 BER input bytes.
-/// </summary>
-/// <param name="bytes"></param>
-/// <returns>Count of errors.</returns>
+/* Returns the number of errors on the P25 BER input bytes. */
 uint32_t AMBEFEC::measureP25BER(const uint8_t* bytes) const
 {
     assert(bytes != nullptr);
@@ -486,11 +462,7 @@ uint32_t AMBEFEC::measureP25BER(const uint8_t* bytes) const
     return errors;
 }
 
-/// <summary>
-/// Regenerates the NXDN AMBE FEC for the input bytes.
-/// </summary>
-/// <param name="bytes"></param>
-/// <returns>Count of errors.</returns>
+/* Regenerates the NXDN AMBE FEC for the input bytes. */
 uint32_t AMBEFEC::regenerateNXDN(uint8_t* bytes) const
 {
     assert(bytes != nullptr);
@@ -542,11 +514,7 @@ uint32_t AMBEFEC::regenerateNXDN(uint8_t* bytes) const
     return errors;
 }
 
-/// <summary>
-/// Returns the number of errors on the NXDN BER input bytes.
-/// </summary>
-/// <param name="bytes"></param>
-/// <returns>Count of errors.</returns>
+/* Returns the number of errors on the NXDN BER input bytes. */
 uint32_t AMBEFEC::measureNXDNBER(uint8_t* bytes) const
 {
     assert(bytes != nullptr);
@@ -583,13 +551,7 @@ uint32_t AMBEFEC::measureNXDNBER(uint8_t* bytes) const
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-///
-/// </summary>
-/// <param name="a"></param>
-/// <param name="b"></param>
-/// <param name="c"></param>
-/// <returns></returns>
+/* */
 uint32_t AMBEFEC::regenerate(uint32_t& a, uint32_t& b, uint32_t& c) const
 {
     uint32_t old_a = a;

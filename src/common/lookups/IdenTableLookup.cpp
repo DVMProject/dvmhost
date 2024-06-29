@@ -1,16 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2018-2022,2024 Bryan Biedenkapp, N2PLL
-*   Copyright (c) 2024 Patrick McDonnell, W3AXL
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2018-2022,2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (c) 2024 Patrick McDonnell, W3AXL
+ *
+ */
 #include "lookups/IdenTableLookup.h"
 #include "Log.h"
 
@@ -31,30 +28,20 @@ std::mutex IdenTableLookup::m_mutex;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the IdenTableLookup class.
-/// </summary>
-/// <param name="filename">Full-path to the channel identity table file.</param>
-/// <param name="reloadTime">Interval of time to reload the channel identity table.</param>
+/* Initializes a new instance of the IdenTableLookup class. */
 IdenTableLookup::IdenTableLookup(const std::string& filename, uint32_t reloadTime) : LookupTable(filename, reloadTime)
 {
     /* stub */
 }
 
-/// <summary>
-/// Clears all entries from the lookup table.
-/// </summary>
+/* Clears all entries from the lookup table. */
 void IdenTableLookup::clear()
 {
     std::lock_guard<std::mutex> lock(m_mutex);
     m_table.clear();
 }
 
-/// <summary>
-/// Finds a table entry in this lookup table.
-/// </summary>
-/// <param name="id">Unique identifier for table entry.</param>
-/// <returns>Table entry.</returns>
+/* Finds a table entry in this lookup table. */
 IdenTable IdenTableLookup::find(uint32_t id)
 {
     IdenTable entry;
@@ -78,10 +65,7 @@ IdenTable IdenTableLookup::find(uint32_t id)
     return IdenTable(entry.channelId(), entry.baseFrequency(), chSpaceKhz, entry.txOffsetMhz(), chBandwidthKhz);
 }
 
-/// <summary>
-/// Returns the list of entries in this lookup table.
-/// </summary>
-/// <returns>List of all entries in the lookup table.</returns>
+/* Returns the list of entries in this lookup table. */
 std::vector<IdenTable> IdenTableLookup::list()
 {
     std::vector<IdenTable> list = std::vector<IdenTable>();
@@ -98,10 +82,7 @@ std::vector<IdenTable> IdenTableLookup::list()
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Loads the table from the passed lookup table file.
-/// </summary>
-/// <returns>True, if lookup table was loaded, otherwise false.</returns>
+/* Loads the table from the passed lookup table file. */
 bool IdenTableLookup::load()
 {
     if (m_filename.empty()) {
@@ -178,10 +159,7 @@ bool IdenTableLookup::load()
     return true;
 }
 
-/// <summary>
-/// Saves the table to the passed lookup table file.
-/// </summary>
-/// <returns>True, if lookup table was saved, otherwise false.</returns>
+/* Saves the table to the passed lookup table file. */
 bool IdenTableLookup::save()
 {
     return false;

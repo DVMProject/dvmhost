@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2021,2024 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * @package DVM / Common Library
+ * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
+ *
+ *  Copyright (C) 2021,2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "Defines.h"
 #include "dmr/DMRDefines.h"
 #include "dmr/lc/PrivacyLC.h"
@@ -25,10 +25,7 @@ using namespace dmr::lc;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the PrivacyLC class.
-/// </summary>
-/// <param name="data"></param>
+/* Initializes a new instance of the PrivacyLC class. */
 PrivacyLC::PrivacyLC(const uint8_t* data) :
     m_FID(FID_ETSI),
     m_dstId(0U),
@@ -54,10 +51,7 @@ PrivacyLC::PrivacyLC(const uint8_t* data) :
 
     m_dstId = data[7U] << 16 | data[8U] << 8 | data[9U];                        // Destination Address
 }
-/// <summary>
-/// Initializes a new instance of the PrivacyLC class.
-/// </summary>
-/// <param name="bits"></param>
+/* Initializes a new instance of the PrivacyLC class. */
 PrivacyLC::PrivacyLC(const bool* bits) :
     m_FID(FID_ETSI),
     m_dstId(0U),
@@ -100,9 +94,7 @@ PrivacyLC::PrivacyLC(const bool* bits) :
 
     m_dstId = d1 << 16 | d2 << 8 | d3;                                          // Destination Address
 }
-/// <summary>
-/// Initializes a new instance of the PrivacyLC class.
-/// </summary>
+/* Initializes a new instance of the PrivacyLC class. */
 PrivacyLC::PrivacyLC() :
     m_FID(FID_ETSI),
     m_dstId(0U),
@@ -114,18 +106,13 @@ PrivacyLC::PrivacyLC() :
     m_mi = new uint8_t[MI_LENGTH_BYTES];
 }
 
-/// <summary>
-/// Finalizes a instance of the PrivacyLC class.
-/// </summary>
+/* Finalizes a instance of the PrivacyLC class. */
 PrivacyLC::~PrivacyLC()
 {
     delete m_mi;
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="data"></param>
+/* Gets LC data as bytes. */
 void PrivacyLC::getData(uint8_t* data) const
 {
     assert(data != nullptr);
@@ -146,10 +133,7 @@ void PrivacyLC::getData(uint8_t* data) const
     data[9U] = m_dstId >> 0;                                                    // ..
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="bits"></param>
+/* Gets LC data as bits. */
 void PrivacyLC::getData(bool* bits) const
 {
     assert(bits != nullptr);

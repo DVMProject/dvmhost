@@ -1,15 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "Defines.h"
 #include "p25/lc/tsbk/OSP_AUTH_FNE_RESP.h"
 
@@ -24,9 +21,7 @@ using namespace p25::lc::tsbk;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the OSP_AUTH_FNE_RESP class.
-/// </summary>
+/* Initializes a new instance of the OSP_AUTH_FNE_RESP class. */
 OSP_AUTH_FNE_RESP::OSP_AUTH_FNE_RESP() : TSBK(),
     m_authRes(nullptr)
 {
@@ -36,9 +31,7 @@ OSP_AUTH_FNE_RESP::OSP_AUTH_FNE_RESP() : TSBK(),
     ::memset(m_authRes, 0x00U, AUTH_RES_LENGTH_BYTES);
 }
 
-/// <summary>
-/// Finalizes a instance of OSP_AUTH_FNE_RESP class.
-/// </summary>
+/* Finalizes a instance of OSP_AUTH_FNE_RESP class. */
 OSP_AUTH_FNE_RESP::~OSP_AUTH_FNE_RESP()
 {
     if (m_authRes != nullptr) {
@@ -47,12 +40,7 @@ OSP_AUTH_FNE_RESP::~OSP_AUTH_FNE_RESP()
     }
 }
 
-/// <summary>
-/// Decode a trunking signalling block.
-/// </summary>
-/// <param name="data"></param>
-/// <param name="rawTSBK"></param>
-/// <returns>True, if TSBK was decoded, otherwise false.</returns>
+/* Decode a trunking signalling block. */
 bool OSP_AUTH_FNE_RESP::decode(const uint8_t* data, bool rawTSBK)
 {
     assert(data != nullptr);
@@ -62,12 +50,7 @@ bool OSP_AUTH_FNE_RESP::decode(const uint8_t* data, bool rawTSBK)
     return true;
 }
 
-/// <summary>
-/// Encode a trunking signalling block.
-/// </summary>
-/// <param name="data"></param>
-/// <param name="rawTSBK"></param>
-/// <param name="noTrellis"></param>
+/* Encode a trunking signalling block. */
 void OSP_AUTH_FNE_RESP::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 {
     assert(data != nullptr);
@@ -84,18 +67,13 @@ void OSP_AUTH_FNE_RESP::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
     TSBK::encode(data, tsbk.get(), rawTSBK, noTrellis);
 }
 
-/// <summary>
-/// Returns a string that represents the current TSBK.
-/// </summary>
-/// <param name="isp"></param>
-/// <returns></returns>
+/* Returns a string that represents the current TSBK. */
 std::string OSP_AUTH_FNE_RESP::toString(bool isp)
 {
     return std::string("TSBKO, OSP_AUTH_FNE_RESP (Authentication FNE Response)");
 }
 
-/// <summary>Sets the authentication result.</summary>
-/// <param name="mi"></param>
+/* Sets the authentication result. */
 void OSP_AUTH_FNE_RESP::setAuthRes(const uint8_t* res)
 {
     assert(res != nullptr);
@@ -112,10 +90,7 @@ void OSP_AUTH_FNE_RESP::setAuthRes(const uint8_t* res)
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Internal helper to copy the the class.
-/// </summary>
-/// <param name="data"></param>
+/* Internal helper to copy the the class. */
 void OSP_AUTH_FNE_RESP::copy(const OSP_AUTH_FNE_RESP& data)
 {
     TSBK::copy(data);

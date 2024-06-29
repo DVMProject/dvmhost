@@ -1,16 +1,18 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2016 Jonathan Naylor, G4KLX
+ *
+ */
 /**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2016 Jonathan Naylor, G4KLX
-*
-*/
+ * @file RSSIInterpolator.h
+ * @ingroup lookups
+ * @file RSSIInterpolator.cpp
+ * @ingroup lookups
+ */
 #if !defined(__RSSI_INTERPOLATOR_H__)
 #define __RSSI_INTERPOLATOR_H__
 
@@ -27,17 +29,33 @@ namespace lookups
     //
     // ---------------------------------------------------------------------------
 
+    /**
+     * @brief RSSI interpolated lookup for RSSI values returned from the modem.
+     * @ingroup lookups
+     */
     class HOST_SW_API RSSIInterpolator {
     public:
-        /// <summary>Initializes a new instance of the RSSIInterpolator class.</summary>
+        /**
+         * @brief Initializes a new instance of the RSSIInterpolator class.
+         */
         RSSIInterpolator();
-        /// <summary>Finalizes a instance of the RSSIInterpolator class.</summary>
+        /**
+         * @brief Finalizes a instance of the RSSIInterpolator class.
+         */
         ~RSSIInterpolator();
 
-        /// <summary>Loads the table from the passed RSSI mapping file.</summary>
+        /**
+         * @brief Loads the table from the passed RSSI mapping file.
+         * @param filename Full-path to the RSSI mapping file.
+         * @returns bool True, if RSSI mapping was loaded, otherwise false.
+         */
         bool load(const std::string& filename);
 
-        /// <summary>Interpolates the given raw RSSI value with the lookup map.</summary>
+        /**
+         * @brief Interpolates the given raw RSSI value with the lookup map.
+         * @param raw Raw RSSI value from modem DSP.
+         * @returns int Interpolated RSSI value.
+         */
         int interpolate(uint16_t raw) const;
 
     private:

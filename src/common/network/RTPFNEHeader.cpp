@@ -1,15 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2023 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2023 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "Defines.h"
 #include "network/RTPFNEHeader.h"
 #include "Utils.h"
@@ -22,9 +19,7 @@ using namespace network::frame;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the RTPFNEHeader class.
-/// </summary>
+/* Initializes a new instance of the RTPFNEHeader class. */
 RTPFNEHeader::RTPFNEHeader() :
     RTPExtensionHeader(),
     m_crc16(0U),
@@ -37,15 +32,10 @@ RTPFNEHeader::RTPFNEHeader() :
     /* stub */
 }
 
-/// <summary>
-/// Finalizes a instance of the RTPFNEHeader class.
-/// </summary>
+/* Finalizes a instance of the RTPFNEHeader class. */
 RTPFNEHeader::~RTPFNEHeader() = default;
 
-/// <summary>
-/// Decode a RTP header.
-/// </summary>
-/// <param name="data"></param>
+/* Decode a RTP header. */
 bool RTPFNEHeader::decode(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -69,10 +59,7 @@ bool RTPFNEHeader::decode(const uint8_t* data)
     return true;
 }
 
-/// <summary>
-/// Encode a RTP header.
-/// </summary>
-/// <param name="data"></param>
+/* Encode a RTP header. */
 void RTPFNEHeader::encode(uint8_t* data)
 {
     assert(data != nullptr);

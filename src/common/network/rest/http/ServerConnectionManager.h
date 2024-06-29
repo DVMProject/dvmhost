@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: BSL-1.0
+/*
+ * Digital Voice Modem - Common Library
+ * BSL-1.0 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (c) 2003-2013 Christopher M. Kohlhoff
+ *  Copyright (C) 2023 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Common Library
-* BSL-1.0 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @derivedfrom CRUD (https://github.com/venediktov/CRUD)
-* @license BSL-1.0 License (https://opensource.org/license/bsl1-0-html)
-*
-*   Copyright (c) 2003-2013 Christopher M. Kohlhoff
-*   Copyright (C) 2023 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @file ServerConnection.h
+ * @ingroup http
+ */
 #if !defined(__REST_HTTP__SERVER_CONNECTION_MANAGER_H__)
 #define __REST_HTTP__SERVER_CONNECTION_MANAGER_H__
 
@@ -29,10 +29,14 @@ namespace network
 
             // ---------------------------------------------------------------------------
             //  Class Declaration
-            //      Manages open connections so that they may be cleanly stopped when the server
-            //      needs to shut down.
             // ---------------------------------------------------------------------------
 
+            /**
+             * @brief Manages open connections so that they may be cleanly stopped when the server
+             *  needs to shut down.
+             * @tparam ConnectionPtr 
+             * @ingroup http
+             */
             template<typename ConnectionPtr>
             class ServerConnectionManager {
             public:
@@ -40,11 +44,15 @@ namespace network
                 auto operator=(ServerConnectionManager&&) -> ServerConnectionManager& = delete;
                 ServerConnectionManager(ServerConnectionManager&) = delete;
 
-                /// <summary>Initializes a new instance of the ServerConnectionManager class.</summary>
+                /**
+                 * @brief Initializes a new instance of the ServerConnectionManager class.
+                 */
                 ServerConnectionManager() = default;
 
-                /// <summary>Add the specified connection to the manager and start it.</summary>
-                /// <param name="c"></param>
+                /**
+                 * @brief Add the specified connection to the manager and start it.
+                 * @param c 
+                 */
                 void start(ConnectionPtr c)
                 {
                     std::lock_guard<std::mutex> guard(m_lock);
@@ -54,8 +62,10 @@ namespace network
                     c->start();
                 }
 
-                /// <summary>Stop the specified connection.</summary>
-                /// <param name="c"></param>
+                /**
+                 * @brief Stop the specified connection.
+                 * @param c 
+                 */
                 void stop(ConnectionPtr c)
                 {
                     std::lock_guard<std::mutex> guard(m_lock);
@@ -65,7 +75,9 @@ namespace network
                     c->stop();
                 }
 
-                /// <summary>Stop all connections.</summary>
+                /**
+                 * @brief Stop all connections.
+                 */
                 void stopAll()
                 {
                     for (auto c : m_connections)

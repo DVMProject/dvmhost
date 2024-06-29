@@ -1,15 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2023,2024 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2023,2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "Defines.h"
 #include "p25/lc/tdulc/TDULCFactory.h"
 #include "edac/Golay24128.h"
@@ -33,21 +30,13 @@ using namespace p25::lc::tdulc;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the TDULCFactory class.
-/// </summary>
+/* Initializes a new instance of the TDULCFactory class. */
 TDULCFactory::TDULCFactory() = default;
 
-/// <summary>
-/// Finalizes a instance of TDULCFactory class.
-/// </summary>
+/* Finalizes a instance of TDULCFactory class. */
 TDULCFactory::~TDULCFactory() = default;
 
-/// <summary>
-/// Create an instance of a TDULC.
-/// </summary>
-/// <param name="data"></param>
-/// <returns>True, if TDULC was decoded, otherwise false.</returns>
+/* Create an instance of a TDULC. */
 std::unique_ptr<TDULC> TDULCFactory::createTDULC(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -99,12 +88,7 @@ std::unique_ptr<TDULC> TDULCFactory::createTDULC(const uint8_t* data)
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-///
-/// </summary>
-/// <param name="tdulc"></param>
-/// <param name="data"></param>
-/// <returns></returns>
+/* Decode a TDULC. */
 std::unique_ptr<TDULC> TDULCFactory::decode(TDULC* tdulc, const uint8_t* data)
 {
     assert(tdulc != nullptr);

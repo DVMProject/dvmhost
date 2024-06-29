@@ -1,17 +1,26 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2015,2016,2017 Jonathan Naylor, G4KLX
+ *  Copyright (C) 2018-2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2015,2016,2017 Jonathan Naylor, G4KLX
-*   Copyright (C) 2018-2024 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @defgroup common Common Library
+ * @brief Digital Voice Modem - Common Library
+ * @details This library implements common core code used by the majority of dvmhost projects.
+ * @ingroup common
+ *
+ * @defgroup edac Error Detection and Correction
+ * @brief Implementation for various Error Detection and Correction methods.
+ * @ingroup common
+ *
+ * @file Defines.h
+ * @ingroup common
+ */
 #if !defined(__COMMON_DEFINES_H__)
 #define __COMMON_DEFINES_H__
 
@@ -74,6 +83,16 @@ typedef long long           long64_t;
 typedef unsigned long long  ulong64_t;
 #endif // __ULONG64_TYPE__
 
+#if defined(__GNUC__) || defined(__GNUG__)
+#define __forceinline __attribute__((always_inline))
+#endif
+
+#if defined(__MINGW32__) || defined(__MINGW64__) || defined(__GNUC__) || defined(__GNUG__)
+#define PACK(decl) decl __attribute__((__packed__))
+#else
+#define PACK(decl) __pragma(pack(push, 1)) decl __pragma(pack(pop))
+#endif
+
 // ---------------------------------------------------------------------------
 //  Constants
 // ---------------------------------------------------------------------------
@@ -112,18 +131,13 @@ typedef unsigned long long  ulong64_t;
 
 #define HOST_SW_API
 
+/**
+ * @addtogroup common
+ * @{
+ */
+
 #define DEFAULT_CONF_FILE "config.yml"
 #define DEFAULT_LOCK_FILE "/tmp/dvm.lock"
-
-#if defined(__GNUC__) || defined(__GNUG__)
-#define __forceinline __attribute__((always_inline))
-#endif
-
-#if defined(__MINGW32__) || defined(__MINGW64__) || defined(__GNUC__) || defined(__GNUG__)
-#define PACK(decl) decl __attribute__((__packed__))
-#else
-#define PACK(decl) __pragma(pack(push, 1)) decl __pragma(pack(pop))
-#endif
 
 #define NULL_PORT "null"
 #define UART_PORT "uart"
@@ -133,29 +147,36 @@ const uint32_t  REMOTE_MODEM_PORT = 3334;
 const uint32_t  TRAFFIC_DEFAULT_PORT = 62031;
 const uint32_t  REST_API_DEFAULT_PORT = 9990;
 
-const uint8_t   BIT_MASK_TABLE[] = { 0x80U, 0x40U, 0x20U, 0x10U, 0x08U, 0x04U, 0x02U, 0x01U };
-
+/**
+ * @brief Operational Host States
+ */
 enum HOST_STATE {
-    FNE_STATE = 240U,
+    FNE_STATE = 240U,                   //! FNE (only used by dvmfne)
 
-    HOST_STATE_LOCKOUT = 250U,
-    HOST_STATE_ERROR = 254U,
-    HOST_STATE_QUIT = 255U,
+    HOST_STATE_LOCKOUT = 250U,          //! Lockout (dvmhost traffic lockout state)
+    HOST_STATE_ERROR = 254U,            //! Error (dvmhost error state)
+    HOST_STATE_QUIT = 255U,             //! Quit (dvmhost quit state)
 };
 
+/**
+ * @brief Operational RF States
+ */
 enum RPT_RF_STATE {
-    RS_RF_LISTENING,
-    RS_RF_LATE_ENTRY,
-    RS_RF_AUDIO,
-    RS_RF_DATA,
-    RS_RF_REJECTED,
-    RS_RF_INVALID
+    RS_RF_LISTENING,                    //! Modem Listening
+    RS_RF_LATE_ENTRY,                   //! Traffic Late Entry
+    RS_RF_AUDIO,                        //! Audio
+    RS_RF_DATA,                         //! Data
+    RS_RF_REJECTED,                     //! Traffic Rejected
+    RS_RF_INVALID                       //! Traffic Invalid
 };
 
+/**
+ * @brief Operational Network States
+ */
 enum RPT_NET_STATE {
-    RS_NET_IDLE,
-    RS_NET_AUDIO,
-    RS_NET_DATA
+    RS_NET_IDLE,                        //! Idle
+    RS_NET_AUDIO,                       //! Audio
+    RS_NET_DATA                         //! Data
 };
 
 const uint8_t   UDP_COMPRESS_NONE = 0x00U;
@@ -171,8 +192,12 @@ const uint8_t   IP_COMPRESS_RFC1144_UNCOMPRESS = 0x02U;
 /**
  * Class Copy Code Pattern
  */
-/// <summary>Creates a private copy implementation.</summary>
-/// <remarks>This requires the copy(const type& data) to be declared in the class definition.</remarks>
+
+/**
+ * @brief Creates a private copy implementation.
+ * This requires the copy(const type& data) to be declared in the class definition.
+ * @param type Atomic type.
+ */
 #define __COPY(type)                                                                    \
         private: virtual void copy(const type& data);                                   \
         public: __forceinline type& operator=(const type& data) {                       \
@@ -181,8 +206,11 @@ const uint8_t   IP_COMPRESS_RFC1144_UNCOMPRESS = 0x02U;
             }                                                                           \
             return *this;                                                               \
         }
-/// <summary>Creates a protected copy implementation.</summary>
-/// <remarks>This requires the copy(const type& data) to be declared in the class definition.</remarks>
+/**
+ * @brief Creates a protected copy implementation.
+ * This requires the copy(const type& data) to be declared in the class definition.
+ * @param type Atomic type.
+ */
 #define __PROTECTED_COPY(type)                                                          \
         protected: virtual void copy(const type& data);                                 \
         public: __forceinline type& operator=(const type& data) {                       \
@@ -196,44 +224,82 @@ const uint8_t   IP_COMPRESS_RFC1144_UNCOMPRESS = 0x02U;
  * Property Creation
  *  These macros should always be used LAST in the "public" section of a class definition.
  */
-/// <summary>Creates a read-only get property.</summary>
+
+/**
+ * @brief Creates a read-only get property.
+ * @param type Atomic type for property.
+ * @param variableName Variable name for property.
+ * @param propName Property name.
+ */
 #define __READONLY_PROPERTY(type, variableName, propName)                               \
         private: type m_##variableName;                                                 \
         public: __forceinline type get##propName(void) const { return m_##variableName; }
-/// <summary>Creates a read-only get property.</summary>
+/**
+ * @brief Creates a read-only get property.
+ * @param type Atomic type for property.
+ * @param variableName Variable name for property.
+ * @param propName Property name.
+ */
 #define __PROTECTED_READONLY_PROPERTY(type, variableName, propName)                     \
         protected: type m_##variableName;                                               \
         public: __forceinline type get##propName(void) const { return m_##variableName; }
 
-/// <summary>Creates a read-only get property, does not use "get".</summary>
+/**
+ * @brief Creates a read-only get property, does not use "get".
+ * @param type Atomic type for property.
+ * @param variableName Variable name for property.
+ */
 #define __PROTECTED_READONLY_PROPERTY_PLAIN(type, variableName)                         \
         protected: type m_##variableName;                                               \
         public: __forceinline type variableName(void) const { return m_##variableName; }
-/// <summary>Creates a read-only get property, does not use "get".</summary>
+/**
+ * @brief Creates a read-only get property, does not use "get".
+ * @param type Atomic type for property.
+ * @param variableName Variable name for property.
+ */
 #define __READONLY_PROPERTY_PLAIN(type, variableName)                                   \
         private: type m_##variableName;                                                 \
         public: __forceinline type variableName(void) const { return m_##variableName; }
 
-/// <summary>Creates a get and set private property.</summary>
+/**
+ * @brief Creates a get and set private property.
+ * @param type Atomic type for property.
+ * @param variableName Variable name for property.
+ * @param propName Property name.
+ */
 #define __PROPERTY(type, variableName, propName)                                        \
         private: type m_##variableName;                                                 \
         public: __forceinline type get##propName(void) const { return m_##variableName; } \
                 __forceinline void set##propName(type val) { m_##variableName = val; }
-/// <summary>Creates a get and set protected property.</summary>
+/**
+ * @brief Creates a get and set protected property.
+ * @param type Atomic type for property.
+ * @param variableName Variable name for property.
+ * @param propName Property name.
+ */
 #define __PROTECTED_PROPERTY(type, variableName, propName)                              \
         protected: type m_##variableName;                                               \
         public: __forceinline type get##propName(void) const { return m_##variableName; } \
                 __forceinline void set##propName(type val) { m_##variableName = val; }
 
-/// <summary>Creates a get and set private property, does not use "get"/"set".</summary>
+/**
+ * @brief Creates a get and set private property, does not use "get"/"set".
+ * @param type Atomic type for property.
+ * @param variableName Variable name for property.
+ */
 #define __PROPERTY_PLAIN(type, variableName)                                            \
         private: type m_##variableName;                                                 \
         public: __forceinline type variableName(void) const { return m_##variableName; }\
                 __forceinline void variableName(type val) { m_##variableName = val; }
-/// <summary>Creates a get and set protected property, does not use "get"/"set".</summary>
+/**
+ * @brief Creates a get and set protected property, does not use "get"/"set".
+ * @param type Atomic type for property.
+ * @param variableName Variable name for property.
+ */
 #define __PROTECTED_PROPERTY_PLAIN(type, variableName)                                  \
         protected: type m_##variableName;                                               \
         public: __forceinline type variableName(void) const { return m_##variableName; }\
                 __forceinline void variableName(type val) { m_##variableName = val; }
 
+/** @} */
 #endif // __COMMON_DEFINES_H__

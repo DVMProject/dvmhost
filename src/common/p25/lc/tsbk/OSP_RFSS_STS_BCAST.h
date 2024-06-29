@@ -1,15 +1,18 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @file OSP_RFSS_STS_BCAST.h
+ * @ingroup p25_tsbk
+ * @file OSP_RFSS_STS_BCAST.cpp
+ * @ingroup p25_tsbk
+ */
 #if !defined(__P25_LC_TSBK__OSP_RFSS_STS_BCAST_H__)
 #define  __P25_LC_TSBK__OSP_RFSS_STS_BCAST_H__
 
@@ -24,24 +27,44 @@ namespace p25
         {
             // ---------------------------------------------------------------------------
             //  Class Declaration
-            //      Implements RFSS STS BCAST - RFSS Status Broadcast.
             // ---------------------------------------------------------------------------
 
+            /**
+             * @brief Implements RFSS STS BCAST - RFSS Status Broadcast
+             * @ingroup p25_tsbk
+             */
             class HOST_SW_API OSP_RFSS_STS_BCAST : public TSBK {
             public:
-                /// <summary>Initializes a new instance of the OSP_RFSS_STS_BCAST class.</summary>
+                /**
+                 * @brief Initializes a new instance of the OSP_RFSS_STS_BCAST class.
+                 */
                 OSP_RFSS_STS_BCAST();
 
-                /// <summary>Decode a trunking signalling block.</summary>
+                /**
+                 * @brief Decode a trunking signalling block.
+                 * @param[in] data Buffer containing a TSBK to decode.
+                 * @param rawTSBK Flag indicating whether or not the passed buffer is raw.
+                 * @returns bool True, if TSBK decoded, otherwise false.
+                 */
                 bool decode(const uint8_t* data, bool rawTSBK = false) override;
-                /// <summary>Encode a trunking signalling block.</summary>
+                /**
+                 * @brief Encode a trunking signalling block.
+                 * @param[out] data Buffer to encode a TSBK.
+                 * @param rawTSBK Flag indicating whether or not the output buffer is raw.
+                 * @param noTrellis Flag indicating whether or not the encoded data should be Trellis encoded.
+                 */
                 void encode(uint8_t* data, bool rawTSBK = false, bool noTrellis = false) override;
 
-                /// <summary>Returns a string that represents the current TSBK.</summary>
+                /**
+                 * @brief Returns a string that represents the current TSBK.
+                 * @returns std::string String representation of the TSBK.
+                 */
                 std::string toString(bool isp = false) override;
 
             public:
-                /// <summary>Roamer Reaccess Method.</summary>
+                /**
+                 * @brief Roamer Reaccess Method.
+                 */
                 __PROPERTY(bool, roamerReaccess, RoamerReaccess);
             };
         } // namespace tsbk

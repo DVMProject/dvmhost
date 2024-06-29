@@ -1,15 +1,18 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @file CSBK_RAW.h
+ * @ingroup dmr_csbk
+ * @file CSBK_RAW.cpp
+ * @ingroup dmr_csbk
+ */
 #if !defined(__DMR_LC_CSBK__CSBK_RAW_H__)
 #define  __DMR_LC_CSBK__CSBK_RAW_H__
 
@@ -24,22 +27,38 @@ namespace dmr
         {
             // ---------------------------------------------------------------------------
             //  Class Declaration
-            //      Implements a mechanism to generate raw CSBK data from bytes.
             // ---------------------------------------------------------------------------
 
+            /**
+             * @brief Implements a mechanism to generate raw CSBK data from bytes.
+             * @ingroup dmr_csbk
+             */
             class HOST_SW_API CSBK_RAW : public CSBK {
             public:
-                /// <summary>Initializes a new instance of the CSBK_RAW class.</summary>
+                /**
+                 * @brief Initializes a new instance of the CSBK_RAW class.
+                 */
                 CSBK_RAW();
-                /// <summary>Finalizes a instance of the CSBK_RAW class.</summary>
+                /**
+                 * @brief Finalizes a instance of the CSBK_RAW class.
+                 */
                 ~CSBK_RAW();
 
-                /// <summary>Decode a trunking signalling block.</summary>
+                /**
+                 * @brief Decodes a control signalling block.
+                 * @param[in] data Buffer containing a CSBK to decode.
+                 */
                 bool decode(const uint8_t* data) override;
-                /// <summary>Encode a trunking signalling block.</summary>
+                /**
+                 * @brief Encodes a control signalling block.
+                 * @param[out] data Buffer to encode a CSBK.
+                 */
                 void encode(uint8_t* data) override;
 
-                /// <summary>Sets the CSBK to encode.</summary>
+                /**
+                 * @brief Sets the CSBK to encode.
+                 * @param[in] csbk Buffer containing CSBK to encode.
+                 */
                 void setCSBK(const uint8_t* csbk);
 
             private:

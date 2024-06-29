@@ -1,15 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "Defines.h"
 #include "dmr/lc/csbk/CSBK_EXT_FNCT.h"
 
@@ -24,9 +21,7 @@ using namespace dmr::lc::csbk;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the CSBK_EXT_FNCT class.
-/// </summary>
+/* Initializes a new instance of the CSBK_EXT_FNCT class. */
 CSBK_EXT_FNCT::CSBK_EXT_FNCT() : CSBK(),
     m_extendedFunction(ExtendedFunctions::CHECK)
 {
@@ -34,11 +29,7 @@ CSBK_EXT_FNCT::CSBK_EXT_FNCT() : CSBK(),
     m_FID = FID_DMRA;
 }
 
-/// <summary>
-/// Decode a control signalling block.
-/// </summary>
-/// <param name="data"></param>
-/// <returns>True, if CSBK was decoded, otherwise false.</returns>
+/* Decode a control signalling block. */
 bool CSBK_EXT_FNCT::decode(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -60,10 +51,7 @@ bool CSBK_EXT_FNCT::decode(const uint8_t* data)
     return true;
 }
 
-/// <summary>
-/// Encode a control signalling block.
-/// </summary>
-/// <param name="data"></param>
+/* Encode a control signalling block. */
 void CSBK_EXT_FNCT::encode(uint8_t* data)
 {
     assert(data != nullptr);
@@ -81,10 +69,7 @@ void CSBK_EXT_FNCT::encode(uint8_t* data)
     CSBK::encode(data, csbk.get());
 }
 
-/// <summary>
-/// Returns a string that represents the current CSBK.
-/// </summary>
-/// <returns></returns>
+/* Returns a string that represents the current CSBK. */
 std::string CSBK_EXT_FNCT::toString()
 {
     return std::string("CSBKO, EXT_FNCT (Extended Function)");
@@ -94,10 +79,7 @@ std::string CSBK_EXT_FNCT::toString()
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Internal helper to copy the the class.
-/// </summary>
-/// <param name="data"></param>
+/* Internal helper to copy the the class. */
 void CSBK_EXT_FNCT::copy(const CSBK_EXT_FNCT& data)
 {
     CSBK::copy(data);

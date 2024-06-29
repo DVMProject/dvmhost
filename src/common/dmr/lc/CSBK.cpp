@@ -1,17 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2015,2016 Jonathan Naylor, G4KLX
-*   Copyright (C) 2019-2024 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2015,2016 Jonathan Naylor, G4KLX
+ *  Copyright (C) 2019-2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "Defines.h"
 #include "dmr/lc/CSBK.h"
 #include "edac/BPTC19696.h"
@@ -37,18 +33,13 @@ SiteData CSBK::m_siteData = SiteData();
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a copy instance of the CSBK class.
-/// </summary>
-/// <param name="data"></param>
+/* Initializes a copy instance of the CSBK class. */
 CSBK::CSBK(const CSBK& data) : CSBK()
 {
     copy(data);
 }
 
-/// <summary>
-/// Initializes a new instance of the CSBK class.
-/// </summary>
+/* Initializes a new instance of the CSBK class. */
 CSBK::CSBK() :
     m_colorCode(0U),
     m_lastBlock(true),
@@ -79,40 +70,26 @@ CSBK::CSBK() :
     /* stub */
 }
 
-/// <summary>
-/// Finalizes a instance of the CSBK class.
-/// </summary>
+/* Finalizes a instance of the CSBK class. */
 CSBK::~CSBK()
 {
     if (m_raw != nullptr)
         delete[] m_raw;
 }
 
-/// <summary>
-/// Returns a string that represents the current CSBK.
-/// </summary>
-/// <returns></returns>
+/* Returns a string that represents the current CSBK. */
 std::string CSBK::toString()
 {
     return std::string("CSBKO, UNKNOWN (Unknown CSBK)");
 }
 
-/// <summary>
-/// Returns a copy of the raw decoded CSBK bytes.
-/// </summary>
-/// <remarks>This will only return data for a *decoded* CSBK, not a created or copied CSBK.</remarks>
-/// <returns></returns>
+/* Returns a copy of the raw decoded CSBK bytes. */
 uint8_t* CSBK::getDecodedRaw() const
 {
     return m_raw;
 }
 
-/// <summary>
-/// Regenerate a DMR CSBK without decoding.
-/// </summary>
-/// <param name="data"></param>
-/// <param name="dataType"></param>
-/// <returns>True, if TSBK was decoded, otherwise false.</returns>
+/* Regenerate a DMR CSBK without decoding. */
 bool CSBK::regenerate(uint8_t* data, uint8_t dataType)
 {
     uint8_t csbk[DMR_CSBK_LENGTH_BYTES];
@@ -199,11 +176,7 @@ bool CSBK::regenerate(uint8_t* data, uint8_t dataType)
 //  Protected Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Internal helper to convert payload bytes to a 64-bit long value.
-/// </summary>
-/// <param name="payload"></param>
-/// <returns></returns>
+/* Internal helper to convert payload bytes to a 64-bit long value. */
 ulong64_t CSBK::toValue(const uint8_t* payload)
 {
     ulong64_t value = 0U;
@@ -221,11 +194,7 @@ ulong64_t CSBK::toValue(const uint8_t* payload)
     return value;
 }
 
-/// <summary>
-/// Internal helper to convert a 64-bit long value to payload bytes.
-/// </summary>
-/// <param name="value"></param>
-/// <returns></returns>
+/* Internal helper to convert a 64-bit long value to payload bytes. */
 UInt8Array CSBK::fromValue(const ulong64_t value)
 {
     UInt8Array payload = std::unique_ptr<uint8_t[]>(new uint8_t[DMR_CSBK_LENGTH_BYTES - 4U]);
@@ -244,12 +213,7 @@ UInt8Array CSBK::fromValue(const ulong64_t value)
     return payload;
 }
 
-/// <summary>
-/// Internal helper to decode a control signalling block.
-/// </summary>
-/// <param name="data"></param>
-/// <param name="payload"></param>
-/// <returns>True, if CSBK was decoded, otherwise false.</returns>
+/* Internal helper to decode a control signalling block. */
 bool CSBK::decode(const uint8_t* data, uint8_t* payload)
 {
     assert(data != nullptr);
@@ -316,11 +280,7 @@ bool CSBK::decode(const uint8_t* data, uint8_t* payload)
     return true;
 }
 
-/// <summary>
-/// Internal helper to encode a control signalling block.
-/// </summary>
-/// <param name="data"></param>
-/// <param name="payload"></param>
+/* Internal helper to encode a control signalling block. */
 void CSBK::encode(uint8_t* data, const uint8_t* payload)
 {
     assert(data != nullptr);
@@ -378,10 +338,7 @@ void CSBK::encode(uint8_t* data, const uint8_t* payload)
     bptc.encode(csbk, data);
 }
 
-/// <summary>
-/// Internal helper to copy the the class.
-/// </summary>
-/// <param name="data"></param>
+/* Internal helper to copy the the class. */
 void CSBK::copy(const CSBK& data)
 {
     m_colorCode = data.m_colorCode;

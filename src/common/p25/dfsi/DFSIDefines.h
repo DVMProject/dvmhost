@@ -1,15 +1,20 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2022-2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2022-2024 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @defgroup p25_dfsi Digital Fixed Station Interface
+ * @brief Implementation for the data handling of the TIA-102.BAHA Project 25 standard.
+ * @ingroup p25
+ * 
+ * @file DFSIDefines.h
+ * @ingroup p25_dfsi
+ */
 #if !defined(__DFSI_DEFINES_H__)
 #define  __DFSI_DEFINES_H__
 
@@ -35,21 +40,6 @@ namespace p25
             //  Constants
             // ---------------------------------------------------------------------------
 
-            const uint8_t   DFSI_STATUS_NO_ERROR = 0x00U;   //
-            const uint8_t   DFSI_STATUS_ERASE = 0x02U;      //
-
-            const uint8_t   DFSI_RT_ENABLED = 0x02U;        //
-            const uint8_t   DFSI_RT_DISABLED = 0x04U;       //
-
-            const uint8_t   DFSI_START_FLAG = 0x0CU;        //
-            const uint8_t   DFSI_STOP_FLAG = 0x25U;         //
-
-            const uint8_t   DFSI_TYPE_DATA_PAYLOAD = 0x06U; //
-            const uint8_t   DFSI_TYPE_VOICE = 0x0BU;        //
-
-            const uint8_t   DFSI_DEF_ICW_SOURCE = 0x00U;    // Infrastructure Source - Default Source
-            const uint8_t   DFSI_DEF_SOURCE = 0x00U;        //
-
             const uint32_t  DFSI_VHDR_RAW_LEN = 36U;
             const uint32_t  DFSI_VHDR_LEN = 27U;
 
@@ -73,11 +63,29 @@ namespace p25
             const uint32_t  DFSI_LDU2_VOICE17_FRAME_LENGTH_BYTES = 17U;
             const uint32_t  DFSI_LDU2_VOICE18_FRAME_LENGTH_BYTES = 16U;
 
-            /// <summary>
-            /// Frame Type
-            /// </summary>
+            /**
+             * @addtogroup p25_dfsi
+             * @{
+             */
+
+            const uint8_t   DFSI_STATUS_NO_ERROR = 0x00U;   //!
+            const uint8_t   DFSI_STATUS_ERASE = 0x02U;      //!
+
+            const uint8_t   DFSI_RT_ENABLED = 0x02U;        //!
+            const uint8_t   DFSI_RT_DISABLED = 0x04U;       //!
+
+            const uint8_t   DFSI_START_FLAG = 0x0CU;        //!
+            const uint8_t   DFSI_STOP_FLAG = 0x25U;         //!
+
+            const uint8_t   DFSI_TYPE_DATA_PAYLOAD = 0x06U; //!
+            const uint8_t   DFSI_TYPE_VOICE = 0x0BU;        //!
+
+            const uint8_t   DFSI_DEF_ICW_SOURCE = 0x00U;    //! Infrastructure Source - Default Source
+            const uint8_t   DFSI_DEF_SOURCE = 0x00U;        //!
+
+            /** @brief DFSI Frame Type */
             namespace DFSIFrameType {
-                // DFSI Frame Type
+                /** @brief DFSI Frame Type */
                 enum E : uint8_t {
                     MOT_START_STOP = 0x00U,     // Motorola Start/Stop
 
@@ -107,6 +115,8 @@ namespace p25
                     TSBK = 0xA1U                // TSBK
                 };
             }
+
+            /** @} */
         } // namespace defines
     } // namespace dfsi
 } // namespace p25

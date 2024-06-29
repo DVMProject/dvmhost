@@ -1,17 +1,19 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2016 Jonathan Naylor, G4KLX
+ *  Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2016 Jonathan Naylor, G4KLX
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @file LowSpeedData.h
+ * @ingroup p25
+ * @file LowSpeedData.cpp
+ * @ingroup p25
+ */
 #if !defined(__P25_DATA__LOW_SPEED_DATA_H__)
 #define __P25_DATA__LOW_SPEED_DATA_H__
 
@@ -23,32 +25,55 @@ namespace p25
     {
         // ---------------------------------------------------------------------------
         //  Class Declaration
-        //      Represents embedded low speed data in P25 LDUs.
         // ---------------------------------------------------------------------------
 
+        /**
+         * @brief Represents embedded low speed data in P25 LDUs.
+         * @ingroup p25
+         */
         class HOST_SW_API LowSpeedData {
         public:
-            /// <summary>Initializes a new instance of the LowSpeedData class.</summary>
+            /**
+             * @brief Initializes a new instance of the LowSpeedData class.
+             */
             LowSpeedData();
-            /// <summary>Finalizes a new instance of the LowSpeedData class.</summary>
+            /**
+             * @brief Finalizes a new instance of the LowSpeedData class.
+             */
             ~LowSpeedData();
 
-            /// <summary>Equals operator.</summary>
+            /**
+             * @brief Equals operator.
+             * @param data Instance of LowSpeedData class to copy from.
+             */
             LowSpeedData& operator=(const LowSpeedData& data);
 
-            /// <summary>Decodes embedded low speed data.</summary>
+            /**
+             * @brief Decodes embedded low speed data.
+             * @param[in] data Buffer containing low speed data to proces.
+             */
             void process(uint8_t* data);
-            /// <summary>Encode embedded low speed data.</summary>
+            /**
+             * @brief Encode embedded low speed data.
+             * @param[out] data Buffer to encode low speed data. 
+             */
             void encode(uint8_t* data) const;
 
         public:
-            /// <summary>Low speed data 1 value.</summary>
+            /**
+             * @brief Low speed data 1 value.
+             */
             __PROPERTY(uint8_t, lsd1, LSD1);
-            /// <summary>Low speed data 2 value.</summary>
+            /**
+             * @brief Low speed data 2 value.
+             */
             __PROPERTY(uint8_t, lsd2, LSD2);
 
         private:
-            /// <summary></summary>
+            /**
+             * @brief 
+             * @param in 
+             */
             uint8_t encode(const uint8_t in) const;
         };
     } // namespace data

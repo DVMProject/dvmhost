@@ -1,17 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2016 Jonathan Naylor, G4KLX
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2016 Jonathan Naylor, G4KLX
+ *  Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "Defines.h"
 #include "p25/data/LowSpeedData.h"
 #include "p25/P25Utils.h"
@@ -49,9 +45,7 @@ const uint32_t MAX_CCS_ERRS = 4U;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the LowSpeedData class.
-/// </summary>
+/* Initializes a new instance of the LowSpeedData class. */
 LowSpeedData::LowSpeedData() :
     m_lsd1(0x00U),
     m_lsd2(0x00U)
@@ -59,16 +53,10 @@ LowSpeedData::LowSpeedData() :
     /* stub */
 }
 
-/// <summary>
-/// Finalizes a new instance of the LowSpeedData class.
-/// </summary>
+/* Finalizes a new instance of the LowSpeedData class. */
 LowSpeedData::~LowSpeedData() = default;
 
-/// <summary>
-/// Equals operator.
-/// </summary>
-/// <param name="data"></param>
-/// <returns></returns>
+/* Equals operator. */
 LowSpeedData& LowSpeedData::operator=(const LowSpeedData& data)
 {
     if (this != &data) {
@@ -79,10 +67,7 @@ LowSpeedData& LowSpeedData::operator=(const LowSpeedData& data)
     return *this;
 }
 
-/// <summary>
-/// Decodes embedded low speed data.
-/// </summary>
-/// <param name="data"></param>
+/* Decodes embedded low speed data. */
 void LowSpeedData::process(uint8_t* data)
 {
     assert(data != nullptr);
@@ -122,10 +107,7 @@ void LowSpeedData::process(uint8_t* data)
     P25Utils::encode(lsd, data, 1546U, 1578U);
 }
 
-/// <summary>
-/// Encode embedded low speed data.
-/// </summary>
-/// <param name="data"></param>
+/* Encode embedded low speed data. */
 void LowSpeedData::encode(uint8_t* data) const
 {
     assert(data != nullptr);
@@ -143,10 +125,7 @@ void LowSpeedData::encode(uint8_t* data) const
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-///
-/// </summary>
-/// <param name="in"></param>
+/* */
 uint8_t LowSpeedData::encode(uint8_t in) const
 {
     return CCS_PARITY[in];

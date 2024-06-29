@@ -1,17 +1,19 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2010,2014,2016,2021 Jonathan Naylor, G4KLX
+ *  Copyright (C) 2018-2022 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2010,2014,2016,2021 Jonathan Naylor, G4KLX
-*   Copyright (C) 2018-2022 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @file AMBEFEC.h
+ * @ingroup edac
+ * @file AMBEFEC.cpp
+ * @ingroup edac
+ */
 #if !defined(__AMBE_FEC_H__)
 #define __AMBE_FEC_H__
 
@@ -455,34 +457,71 @@ namespace edac
 
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //      Implements routines to regenerate AMBE/IMBE data using forward error
-    //      correction.
     // ---------------------------------------------------------------------------
 
+    /**
+     * @brief Implements routines to regenerate AMBE/IMBE data using forward error
+     *  correction.
+     * @ingroup edac
+     */
     class HOST_SW_API AMBEFEC {
     public:
-        /// <summary>Initializes a new instance of the AMBEFEC class.</summary>
+        /**
+         * @brief Initializes a new instance of the AMBEFEC class.
+         */
         AMBEFEC();
-        /// <summary>Finalizes a instance of the AMBEFEC class.</summary>
+        /**
+         * @brief Finalizes a instance of the AMBEFEC class.
+         */
         ~AMBEFEC();
 
-        /// <summary>Regenerates the DMR AMBE FEC for the input bytes.</summary>
+        /**
+         * @brief Regenerates the DMR AMBE FEC for the input bytes.
+         * @param bytes AMBE bytes.
+         * @returns uint32_t Count of errors.
+         */
         uint32_t regenerateDMR(uint8_t* bytes) const;
-        /// <summary>Returns the number of errors on the DMR BER input bytes.</summary>
+        /**
+         * @brief Returns the number of errors on the DMR BER input bytes.
+         * @param[in] bytes AMBE bytes.
+         * @returns uint32_t Count of errors.
+         */
         uint32_t measureDMRBER(const uint8_t* bytes) const;
 
-        /// <summary>Regenerates the P25 IMBE FEC for the input bytes.</summary>
+        /**
+         * @brief Regenerates the P25 IMBE FEC for the input bytes.
+         * @param bytes IMBE bytes.
+         * @returns Count of errors.
+         */
         uint32_t regenerateIMBE(uint8_t* bytes) const;
-        /// <summary>Returns the number of errors on the P25 BER input bytes.</summary>
+        /**
+         * @brief Returns the number of errors on the P25 BER input bytes.
+         * @param[in] bytes AMBE bytes.
+         * @returns uint32_t Count of errors.
+         */
         uint32_t measureP25BER(const uint8_t* bytes) const;
 
-        /// <summary>Regenerates the NXDN AMBE FEC for the input bytes.</summary>
+        /**
+         * @brief Regenerates the NXDN AMBE FEC for the input bytes.
+         * @param bytes AMBE bytes.
+         * @returns uint32_t Count of errors.
+         */
     	uint32_t regenerateNXDN(uint8_t* bytes) const;
-        /// <summary>Returns the number of errors on the NXDN BER input bytes.</summary>
+        /**
+         * @brief Returns the number of errors on the NXDN BER input bytes.
+         * @param[in] bytes AMBE bytes.
+         * @returns uint32_t Count of errors.
+         */
         uint32_t measureNXDNBER(uint8_t* bytes) const;
 
     private:
-        /// <summary></summary>
+        /**
+         * @brief 
+         * @param a 
+         * @param b 
+         * @param c 
+         * @returns uint32_t Count of errors.
+         */
         uint32_t regenerate(uint32_t& a, uint32_t& b, uint32_t& c) const;
     };
 } // namespace edac

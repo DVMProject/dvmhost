@@ -1,18 +1,14 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2012 Ian Wraith
-*   Copyright (C) 2015,2016 Jonathan Naylor, G4KLX
-*   Copyright (C) 2021,2024 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2012 Ian Wraith
+ *  Copyright (C) 2015,2016 Jonathan Naylor, G4KLX
+ *  Copyright (C) 2021,2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "Defines.h"
 #include "dmr/DMRDefines.h"
 #include "dmr/lc/FullLC.h"
@@ -31,26 +27,17 @@ using namespace dmr::lc;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initialize a new instance of the FullLC class.
-/// </summary>
+/* Initialize a new instance of the FullLC class. */
 FullLC::FullLC() :
     m_bptc()
 {
     /* stub */
 }
 
-/// <summary>
-/// Finalizes a instance of the FullLC class.
-/// </summary>
+/* Finalizes a instance of the FullLC class. */
 FullLC::~FullLC() = default;
 
-/// <summary>
-/// Decode DMR full-link control data.
-/// </summary>
-/// <param name="data"></param>
-/// <param name="type"></param>
-/// <returns></returns>
+/* Decode DMR full-link control data. */
 std::unique_ptr<LC> FullLC::decode(const uint8_t* data, DataType::E type)
 {
     assert(data != nullptr);
@@ -84,12 +71,7 @@ std::unique_ptr<LC> FullLC::decode(const uint8_t* data, DataType::E type)
     return std::make_unique<LC>(lcData);
 }
 
-/// <summary>
-/// Encode DMR full-link control data.
-/// </summary>
-/// <param name="lc"></param>
-/// <param name="data"></param>
-/// <param name="type"></param>
+/* Encode DMR full-link control data. */
 void FullLC::encode(const LC& lc, uint8_t* data, DataType::E type)
 {
     assert(data != nullptr);
@@ -123,12 +105,7 @@ void FullLC::encode(const LC& lc, uint8_t* data, DataType::E type)
     m_bptc.encode(lcData, data);
 }
 
-/// <summary>
-/// Decode DMR privacy control data.
-/// </summary>
-/// <param name="data"></param>
-/// <param name="type"></param>
-/// <returns></returns>
+/* Decode DMR privacy control data. */
 std::unique_ptr<PrivacyLC> FullLC::decodePI(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -154,12 +131,7 @@ std::unique_ptr<PrivacyLC> FullLC::decodePI(const uint8_t* data)
     return std::make_unique<PrivacyLC>(lcData);
 }
 
-/// <summary>
-/// Encode DMR privacy control data.
-/// </summary>
-/// <param name="lc"></param>
-/// <param name="data"></param>
-/// <param name="type"></param>
+/* Encode DMR privacy control data. */
 void FullLC::encodePI(const PrivacyLC& lc, uint8_t* data)
 {
     assert(data != nullptr);

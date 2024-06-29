@@ -1,15 +1,18 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2017-2022 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2017-2022 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @file TDULC.h
+ * @ingroup p25_lc
+ * @file TDULC.cpp
+ * @ingroup p25_lc
+ */
 #if !defined(__P25_LC__TDULC_H__)
 #define  __P25_LC__TDULC_H__
 
@@ -37,64 +40,119 @@ namespace p25
 
         // ---------------------------------------------------------------------------
         //  Class Declaration
-        //      Represents link control data for TDULC packets.
         // ---------------------------------------------------------------------------
 
+        /**
+         * @brief Represents link control data for TDULC packets.
+         * @ingroup p25_lc
+         */
         class HOST_SW_API TDULC {
         public:
-            /// <summary>Initializes a copy instance of the TDULC class.</summary>
+            /**
+             * @brief Initializes a copy instance of the TDULC class.
+             * @param data Instance of TDULC to copy.
+             */
             TDULC(const TDULC& data);
-            /// <summary>Initializes a new instance of the TDULC class.</summary>
+            /**
+             * @brief Initializes a new instance of the TDULC class.
+             * @param lc Instance of LC to derive a TDULC from.
+             */
             TDULC(LC* lc);
-            /// <summary>Initializes a new instance of the TDULC class.</summary>
+            /**
+             * @brief Initializes a new instance of the TDULC class.
+             */
             TDULC();
-            /// <summary>Finalizes a instance of the TDULC class.</summary>
+            /**
+             * @brief Finalizes a instance of the TDULC class.
+             */
             virtual ~TDULC();
 
-            /// <summary>Decode a terminator data unit w/ link control.</summary>
+            /**
+             * @brief Decode a terminator data unit w/ link control.
+             * @param[in] data Buffer containing a TDULC to decode.
+             * @returns bool True, if TDULC decoded, otherwise false.
+             */
             virtual bool decode(const uint8_t* data) = 0;
-            /// <summary>Encode a terminator data unit w/ link control.</summary>
+            /**
+             * @brief Encode a terminator data unit w/ link control.
+             * @param[out] data Buffer to encode a TDULC.
+             */
             virtual void encode(uint8_t* data) = 0;
 
-            /// <summary>Sets the flag indicating verbose log output.</summary>
+            /**
+             * @brief Sets the flag indicating verbose log output.
+             * @param verbose Flag indicating verbose log output.
+             */
             static void setVerbose(bool verbose) { m_verbose = verbose; }
 
-            /** Local Site data */
-            /// <summary>Gets the local site data.</summary>
+            /** @name Local Site data */
+            /**
+             * @brief Gets the local site data.
+             * @returns SiteData Currently set site data for the TDULC class.
+             */
             static SiteData getSiteData() { return m_siteData; }
-            /// <summary>Sets the local site data.</summary>
+            /**
+             * @brief Sets the local site data.
+             * @param siteData Site data to set for the TDULC class.
+             */
             static void setSiteData(SiteData siteData) { m_siteData = siteData; }
+            /** @} */
 
         public:
-            /** Common Data */
-            /// <summary>Flag indicating the link control data is protected.</summary>
+            /** @name Common Data */
+            /**
+             * @brief Flag indicating the link control data is protected.
+             */
             __PROTECTED_PROPERTY(bool, protect, Protect);
-            /// <summary>Link control opcode.</summary>
+            /**
+             * @brief Link control opcode.
+             */
             __PROTECTED_PROPERTY(uint8_t, lco, LCO);
-            /// <summary>Manufacturer ID.</summary>
+            /**
+             * @brief Manufacturer ID.
+             */
             __PROTECTED_PROPERTY(uint8_t, mfId, MFId);
 
-            /// <summary>Source ID.</summary>
+            /**
+             * @brief Source ID.
+             */
             __PROTECTED_PROPERTY(uint32_t, srcId, SrcId);
-            /// <summary>Destination ID.</summary>
+            /**
+             * @brief Destination ID.
+             */
             __PROTECTED_PROPERTY(uint32_t, dstId, DstId);
 
-            /// <summary>Voice channel number.</summary>
+            /**
+             * @brief Voice channel number.
+             */
             __PROTECTED_PROPERTY(uint32_t, grpVchNo, GrpVchNo);
+            /** @} */
 
-            /** Service Options */
-            /// <summary>Flag indicating the emergency bits are set.</summary>
+            /** @name Service Options */
+            /**
+             * @brief Flag indicating the emergency bits are set.
+             */
             __PROTECTED_PROPERTY(bool, emergency, Emergency);
-            /// <summary>Flag indicating that encryption is enabled.</summary>
+            /**
+             * @brief Flag indicating that encryption is enabled.
+             */
             __PROTECTED_PROPERTY(bool, encrypted, Encrypted);
-            /// <summary>Priority level for the traffic.</summary>
+            /**
+             * @brief Priority level for the traffic.
+             */
             __PROTECTED_PROPERTY(uint8_t, priority, Priority);
-            /// <summary>Flag indicating a group/talkgroup operation.</summary>
+            /**
+             * @brief Flag indicating a group/talkgroup operation.
+             */
             __PROTECTED_PROPERTY(bool, group, Group);
+            /** @} */
 
-            /** Local Site data */
-            /// <summary>Local Site Identity Entry.</summary>
+            /** @name Local Site data */
+            /**
+             * @brief Local Site Identity Entry.
+             */
             __PROTECTED_PROPERTY_PLAIN(::lookups::IdenTable, siteIdenEntry);
+            /** @} */
 
         protected:
             friend class LC;
@@ -106,17 +164,33 @@ namespace p25
 
             static bool m_verbose;
 
-            /** Local Site data */
+            // Local Site data
             static SiteData m_siteData;
 
-            /// <summary>Internal helper to convert payload bytes to a 64-bit long value.</summary>
+            /**
+             * @brief Internal helper to convert payload bytes to a 64-bit long value.
+             * @param[in] payload Buffer containing payload to convert.
+             * @returns ulong64_t 64-bit packed value containing the buffer.
+             */
             static ulong64_t toValue(const uint8_t* payload);
-            /// <summary>Internal helper to convert a 64-bit long value to payload bytes.</summary>
+            /**
+             * @brief Internal helper to convert a 64-bit long value to payload bytes.
+             * @param[in] value 64-bit packed value.
+             * @returns UInt8Array Buffer containing the unpacked payload.
+             */
             static UInt8Array fromValue(const ulong64_t value);
 
-            /// <summary>Internal helper to decode terminator data unit w/ link control.</summary>
+            /**
+             * @brief Internal helper to decode terminator data unit w/ link control.
+             * @param[in] data Raw data.
+             * @param[out] payload TDULC payload buffer.
+             */
             bool decode(const uint8_t* data, uint8_t* payload);
-            /// <summary>Internal helper to encode terminator data unit w/ link control.</summary>
+            /**
+             * @brief Internal helper to encode terminator data unit w/ link control.
+             * @param[out] data Raw data.
+             * @param[in] payload TDULC payload buffer.
+             */
             void encode(uint8_t* data, const uint8_t* payload);
 
             __PROTECTED_COPY(TDULC);

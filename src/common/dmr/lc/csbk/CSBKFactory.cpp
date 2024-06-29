@@ -1,15 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2022-2024 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2022-2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "Defines.h"
 #include "dmr/lc/csbk/CSBKFactory.h"
 #include "edac/BPTC19696.h"
@@ -28,22 +25,13 @@ using namespace dmr::lc::csbk;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the CSBKFactory class.
-/// </summary>
+/* Initializes a new instance of the CSBKFactory class. */
 CSBKFactory::CSBKFactory() = default;
 
-/// <summary>
-/// Finalizes a instance of CSBKFactory class.
-/// </summary>
+/* Finalizes a instance of CSBKFactory class. */
 CSBKFactory::~CSBKFactory() = default;
 
-/// <summary>
-/// Create an instance of a CSBK.
-/// </summary>
-/// <param name="data"></param>
-/// <param name="dataType"></param>
-/// <returns>True, if CSBK was decoded, otherwise false.</returns>
+/* Create an instance of a CSBK. */
 std::unique_ptr<CSBK> CSBKFactory::createCSBK(const uint8_t* data, DataType::E dataType)
 {
     assert(data != nullptr);
@@ -136,12 +124,7 @@ std::unique_ptr<CSBK> CSBKFactory::createCSBK(const uint8_t* data, DataType::E d
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-///
-/// </summary>
-/// <param name="csbk"></param>
-/// <param name="data"></param>
-/// <returns></returns>
+/* Decode a CSBK. */
 std::unique_ptr<CSBK> CSBKFactory::decode(CSBK* csbk, const uint8_t* data)
 {
     assert(csbk != nullptr);

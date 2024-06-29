@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2023 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2023 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @file HTTPClient.h
+ * @ingroup http
+ */
 #if !defined(__REST_HTTP__HTTP_CLIENT_H__)
 #define __REST_HTTP__HTTP_CLIENT_H__
 
@@ -36,9 +37,14 @@ namespace network
 
             // ---------------------------------------------------------------------------
             //  Class Declaration
-            //      This class implements top-level routines of the HTTP client.
             // ---------------------------------------------------------------------------
 
+            /**
+             * @brief This class implements top-level routines of the HTTP client.
+             * @tparam RequestHandlerType Type representing a request handler.
+             * @tparam ConnectionImpl Type representing the connection implementation.
+             * @ingroup http
+             */
             template<typename RequestHandlerType, template<class> class ConnectionImpl = ClientConnection>
             class HTTPClient : private Thread {
             public:
@@ -46,9 +52,11 @@ namespace network
                 auto operator=(HTTPClient&&) -> HTTPClient& = delete;
                 HTTPClient(HTTPClient&) = delete;
 
-                /// <summary>Initializes a new instance of the HTTPClient class.</summary>
-                /// <param name="address"></param>
-                /// <param name="port"></param>
+                /**
+                 * @brief Initializes a new instance of the HTTPClient class.
+                 * @param address Hostname/IP Address.
+                 * @param port Port.
+                 */
                 HTTPClient(const std::string& address, uint16_t port) :
                     m_address(address),
                     m_port(port),
@@ -59,7 +67,9 @@ namespace network
                 {
                     /* stub */
                 }
-                /// <summary>Finalizes a instance of the HTTPClient class.</summary>
+                /**
+                 * @brief Finalizes a instance of the HTTPClient class.
+                 */
                 ~HTTPClient() override
                 {
                     if (m_connection != nullptr) {
@@ -67,18 +77,22 @@ namespace network
                     }
                 }
 
-                /// <summary>Helper to set the HTTP request handlers.</summary>
-                /// <typeparam name="Handler"></typeparam>
-                /// <param name="handler"></param>
+                /**
+                 * @brief Helper to set the HTTP request handlers.
+                 * @tparam Handler Type representing the request handler.
+                 * @param handler Request handler.
+                 */
                 template<typename Handler>
                 void setHandler(Handler&& handler)
                 {
                     m_requestHandler = RequestHandlerType(std::forward<Handler>(handler));
                 }
 
-                /// <summary>Send HTTP request to HTTP server.</summary>
-                /// <param name="request"></param>
-                /// <returns></returns>
+                /**
+                 * @brief Send HTTP request to HTTP server.
+                 * @param request HTTP request.
+                 * @returns True, if request was completed, otherwise false.
+                 */
                 bool request(HTTPPayload& request)
                 {
                     if (m_completed) {
@@ -97,7 +111,9 @@ namespace network
                     return true;
                 }
 
-                /// <summary>Opens connection to the network.</summary>
+                /**
+                 * @brief Opens connection to the network.
+                 */
                 bool open()
                 {
                     if (m_completed) {
@@ -107,7 +123,9 @@ namespace network
                     return run();
                 }
 
-                /// <summary>Closes connection to the network.</summary>
+                /**
+                 * @brief Closes connection to the network.
+                 */
                 void close()
                 {
                     if (m_completed) {
@@ -121,7 +139,9 @@ namespace network
                 }
 
             private:
-                /// <summary></summary>
+                /**
+                 * @brief Internal entry point for the ASIO IO context thread.
+                 */
                 void entry() override
                 {
                     if (m_completed) {
@@ -145,8 +165,10 @@ namespace network
                     }
                 }
 
-                /// <summary>Perform an asynchronous connect operation.</summary>
-                /// <param name="endpoints"></param>
+                /**
+                 * @brief Perform an asynchronous connect operation.
+                 * @param endpoints TCP endpoint to connect to.
+                 */
                 void connect(asio::ip::basic_resolver_results<asio::ip::tcp>& endpoints)
                 {
                     asio::connect(m_socket, endpoints);

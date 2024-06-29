@@ -7,9 +7,15 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2021 Bryan Biedenkapp, N2PLL
+*  Copyright (C) 2021 Bryan Biedenkapp, N2PLL
 *
 */
+/**
+ * @file PrivacyLC.h
+ * @ingroup dmr_lc
+ * @file PrivacyLC.cpp
+ * @ingroup dmr_lc
+ */
 #if !defined(__DMR_LC__PRIVACY_LC_H__)
 #define __DMR_LC__PRIVACY_LC_H__
 
@@ -21,44 +27,77 @@ namespace dmr
     {
         // ---------------------------------------------------------------------------
         //  Class Declaration
-        //      Represents DMR privacy indicator link control data.
         // ---------------------------------------------------------------------------
 
+        /**
+         * @brief Represents DMR privacy indicator link control data.
+         * @ingroup dmr_lc
+         */
         class HOST_SW_API PrivacyLC {
         public:
-            /// <summary>Initializes a new instance of the PrivacyLC class.</summary>
+            /**
+             * @brief Initializes a new instance of the PrivacyLC class.
+             * @param data Buffer containing PrivacyLC data.
+             */
             PrivacyLC(const uint8_t* data);
-            /// <summary>Initializes a new instance of the PrivacyLC class.</summary>
+            /**
+             * @brief Initializes a new instance of the PrivacyLC class.
+             * @param bits Boolean bit buffer containing PrivacyLC data.
+             */
             PrivacyLC(const bool* bits);
-            /// <summary>Initializes a new instance of the PrivacyLC class.</summary>
+            /**
+             * @brief Initializes a new instance of the PrivacyLC class.
+             */
             PrivacyLC();
-            /// <summary>Finalizes a instance of the PrivacyLC class.</summary>
+            /**
+             * @brief Finalizes a instance of the PrivacyLC class.
+             */
             ~PrivacyLC();
 
-            /// <summary>Gets LC data as bytes.</summary>
+            /**
+             * @brief Gets LC data as bytes.
+             * @param[out] data Buffer containing LC data.
+             */
             void getData(uint8_t* data) const;
-            /// <summary>Gets LC data as bits.</summary>
+            /**
+             * @brief Gets LC data as bits.
+             * @param[out] bits Boolean bit buffer containing LC data.
+             */
             void getData(bool* bits) const;
 
         public:
-            /// <summary>Feature ID.</summayr>
+            /** @name Common Data */
+            /**
+             * @brief Feature ID
+             */
             __PROPERTY(uint8_t, FID, FID);
 
-            /// <summary>Destination ID.</summary>
+            /**
+             * @brief Destination ID.
+             */
             __PROPERTY(uint32_t, dstId, DstId);
+            /** @} */
 
-            /** Service Options */
-            /// <summary>Flag indicating a group/talkgroup operation.</summary>
+            /** @name Service Options */
+            /**
+             * @brief Flag indicating a group/talkgroup operation.
+             */
             __PROPERTY(bool, group, Group);
+            /** @} */
 
-            /** Encryption data */
-            /// <summary>Encryption algorithm ID.</summary>
+            /** @name Encryption data */
+            /**
+             * @brief Encryption algorithm ID.
+             */
             __PROPERTY(uint8_t, algId, AlgId);
-            /// <summary>Encryption key ID.</summary>
+            /**
+             * @brief Encryption key ID.
+             */
             __PROPERTY(uint32_t, kId, KId);
+            /** @} */
 
         private:
-            /** Encryption data */
+            // Encryption data
             uint8_t* m_mi;
         };
     } // namespace lc

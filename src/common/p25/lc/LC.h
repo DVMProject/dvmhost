@@ -1,17 +1,23 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2016 Jonathan Naylor, G4KLX
+ *  Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2016 Jonathan Naylor, G4KLX
-*   Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @defgroup p25_lc Link Control
+ * @brief Implementation for the data handling of the TIA-102.BAAA Project 25 standard.
+ * @ingroup p25
+ * 
+ * @file LC.h
+ * @ingroup p25_lc
+ * @file LC.cpp
+ * @ingroup p25_lc
+ */
 #if !defined(__P25_LC__LC_H__)
 #define  __P25_LC__LC_H__
 
@@ -36,100 +42,191 @@ namespace p25
 
         // ---------------------------------------------------------------------------
         //  Class Declaration
-        //      Represents link control data for HDU, LDU1 and 2 packets.
         // ---------------------------------------------------------------------------
 
+        /**
+         * @brief Represents link control data for HDU, LDU1 and 2 packets.
+         * @ingroup p25_lc
+         */
         class HOST_SW_API LC {
         public:
-            /// <summary>Initializes a new instance of the LC class.</summary>
-            LC();
-            /// <summary>Initializes a copy instance of the LC class.</summary>
+            /**
+             * @brief Initializes a copy instance of the LC class.
+             * @param data Instance of LC class to copy from.
+             */
             LC(const LC& data);
-            /// <summary>Finalizes a instance of the LC class.</summary>
+            /**
+             * @brief Initializes a new instance of the LC class.
+             */
+            LC();
+            /**
+             * @brief Finalizes a instance of the LC class.
+             */
             ~LC();
 
-            /// <summary>Equals operator.</summary>
+            /**
+             * @brief Equals operator.
+             * @param data Instance of LC class to copy from.
+             */
             LC& operator=(const LC& data);
 
-            /// <summary>Decode a header data unit.</summary>
+            /**
+             * @brief Decode a header data unit.
+             * @param[in] data Buffer containing the HDU to decode.
+             * @returns True, if HDU decoded, otherwise false.
+             */
             bool decodeHDU(const uint8_t* data);
-            /// <summary>Encode a header data unit.</summary>
+            /**
+             * @brief Encode a header data unit.
+             * @param[out] data Buffer to encode an HDU.
+             */
             void encodeHDU(uint8_t* data);
 
-            /// <summary>Decode a logical link data unit 1.</summary>
+            /**
+             * @brief Decode a logical link data unit 1.
+             * @param[in] data Buffer containing an LDU1 to decode.
+             * @returns True, if LDU1 decoded, otherwise false.
+             */
             bool decodeLDU1(const uint8_t* data);
-            /// <summary>Encode a logical link data unit 1.</summary>
+            /**
+             * @brief Encode a logical link data unit 1.
+             * @param[out] data Buffer to encode an LDU1.
+             */
             void encodeLDU1(uint8_t* data);
 
-            /// <summary>Decode a logical link data unit 2.</summary>
+            /**
+             * @brief Decode a logical link data unit 2.
+             * @param[in] data Buffer containing an LDU2 to decode.
+             * @returns True, if LDU2 decoded, otherwise false.
+             */
             bool decodeLDU2(const uint8_t* data);
-            /// <summary>Encode a logical link data unit 2.</summary>
+            /**
+             * @brief Encode a logical link data unit 2.
+             * @param[out] data Buffer to encode an LDU2.
+             */
             void encodeLDU2(uint8_t* data);
 
-            /// <summary>Helper to determine if the MFId is a standard MFId.</summary>
+            /**
+             * @brief Helper to determine if the MFId is a standard MFId.
+             * @returns bool True, if the MFId contained for this LC is standard, otherwise false.
+             */
             bool isStandardMFId() const;
 
-            /** Encryption data */
-            /// <summary>Sets the encryption message indicator.</summary>
+            /** @name Encryption data */
+            /**
+             * @brief Sets the encryption message indicator.
+             * @param[in] mi Buffer containing the 9-byte Message Indicator.
+             */
             void setMI(const uint8_t* mi);
-            /// <summary>Gets the encryption message indicator.</summary>
+            /**
+             * @brief Gets the encryption message indicator.
+             * @param[out] mi Buffer containing the 9-byte Message Indicator.
+             */
             void getMI(uint8_t* mi) const;
+            /** @} */
 
-            /** Local Site data */
-            /// <summary>Gets the local site data.</summary>
+            /** @name Local Site data */
+            /**
+             * @brief Gets the local site data.
+             * @returns SiteData Currently set site data for the LC class.
+             */
             static SiteData getSiteData() { return m_siteData; }
-            /// <summary>Sets the local site data.</summary>
+            /**
+             * @brief Sets the local site data.
+             * @param siteData Site data to set for the LC class.
+             */
             static void setSiteData(SiteData siteData) { m_siteData = siteData; }
+            /** @} */
 
         public:
-            /** Common Data */
-            /// <summary>Flag indicating the link control data is protected.</summary>
+            /** @name Common Data */
+            /**
+             * @brief Flag indicating the link control data is protected.
+             */
             __PROPERTY(bool, protect, Protect);
-            /// <summary>Link control opcode.</summary>
+            /**
+             * @brief Link control opcode.
+             */
             __PROPERTY(uint8_t, lco, LCO);
-            /// <summary>Manufacturer ID.</summary>
+            /**
+             * @brief Manufacturer ID.
+             */
             __PROPERTY(uint8_t, mfId, MFId);
 
-            /// <summary>Source ID.</summary>
+            /**
+             * @brief Source ID.
+             */
             __PROPERTY(uint32_t, srcId, SrcId);
-            /// <summary>Destination ID.</summary>
+            /**
+             * @brief Destination ID.
+             */
             __PROPERTY(uint32_t, dstId, DstId);
 
-            /// <summary>Voice channel number.</summary>
+            /**
+             * @brief Voice channel number.
+             */
             __PROPERTY(uint32_t, grpVchNo, GrpVchNo);
 
-            /// <summary>Voice channel number.</summary>
+            /**
+             * @brief Voice channel number.
+             */
             __PROPERTY(uint32_t, grpVchNoB, GrpVchNoB);
-            /// <summary>Destination ID.</summary>
+            /**
+             * @brief Destination ID.
+             */
             __PROPERTY(uint32_t, dstIdB, DstIdB);
 
-            /// <summary>Flag indicating explicit addressing.</summary>
+            /**
+             * @brief Flag indicating explicit addressing.
+             */
             __PROPERTY(bool, explicitId, ExplicitId);
 
-            /// <summary>Network ID.</summary>
+            /**
+             * @brief Network ID.
+             */
             __PROPERTY(uint32_t, netId, NetId);
-            /// <summary>System ID.</summary>
+            /**
+             * @brief System ID.
+             */
             __PROPERTY(uint32_t, sysId, SysId);
+            /** @} */
 
-            /** Service Options */
-            /// <summary>Flag indicating the emergency bits are set.</summary>
+            /** @name Service Options */
+            /**
+             * @brief Flag indicating the emergency bits are set.
+             */
             __PROPERTY(bool, emergency, Emergency);
-            /// <summary>Flag indicating that encryption is enabled.</summary>
+            /**
+             * @brief Flag indicating that encryption is enabled.
+             */
             __PROPERTY(bool, encrypted, Encrypted);
-            /// <summary>Priority level for the traffic.</summary>
+            /**
+             * @brief Priority level for the traffic.
+             */
             __PROPERTY(uint8_t, priority, Priority);
-            /// <summary>Flag indicating a group/talkgroup operation.</summary>
+            /**
+             * @brief Flag indicating a group/talkgroup operation.
+             */
             __PROPERTY(bool, group, Group);
+            /** @} */
 
-            /** Encryption data */
-            /// <summary>Encryption algorithm ID.</summary>
+            /** @name Encryption data */
+            /**
+             * @brief Encryption algorithm ID.
+             */
             __PROPERTY(uint8_t, algId, AlgId);
-            /// <summary>Encryption key ID.</summary>
+            /**
+             * @brief Encryption key ID.
+             */
             __PROPERTY(uint32_t, kId, KId);
+            /** @} */
 
-            /** Packed RS Data */
-            /// <summary>Packed RS Data.</summary>
+            /** @name Packed RS Data */
+            /**
+             * @brief Packed RS Data.
+             */
             __PROPERTY(ulong64_t, rsValue, RS);
+            /** @} */
 
         private:
             friend class TSBK;
@@ -140,28 +237,53 @@ namespace p25
 
             uint32_t m_callTimer;
 
-            /** Encryption data */
+            // Encryption data
             uint8_t* m_mi;
 
-            /** Local Site data */
+            // Local Site data
             static SiteData m_siteData;
 
-            /// <summary>Internal helper to copy the class.</summary>
+            /**
+             * @brief Internal helper to copy the class.
+             */
             void copy(const LC& data);
 
-            /// <summary>Decode link control.</summary>
+            /**
+             * @brief Decode link control.
+             * @param[in] rs Buffer containing the decoded Reed-Solomon LC data.
+             * @returns bool True, if LC is decoded, otherwise false.
+             */
             bool decodeLC(const uint8_t* rs);
-            /// <summary>Encode link control.</summary>
+            /**
+             * @brief Encode link control.
+             * @param[out] rs Buffer to encode LC data.
+             */
             void encodeLC(uint8_t* rs);
 
-            /// <summary>Decode LDU hamming FEC.</summary>
+            /**
+             * @brief Decode LDU hamming FEC.
+             * @param[in] raw 
+             * @param[out] data 
+             */
             void decodeLDUHamming(const uint8_t* raw, uint8_t* data);
-            /// <summary>Encode LDU hamming FEC.</summary>
+            /**
+             * @brief Encode LDU hamming FEC.
+             * @param[out] data 
+             * @param[in] raw 
+             */
             void encodeLDUHamming(uint8_t* data, const uint8_t* raw);
 
-            /// <summary>Decode HDU Golay FEC.</summary>
+            /**
+             * @brief Decode HDU Golay FEC.
+             * @param[in] raw 
+             * @param[out] data 
+             */
             void decodeHDUGolay(const uint8_t* raw, uint8_t* data);
-            /// <summary>Encode HDU Golay FEC.</summary>
+            /**
+             * @brief Encode HDU Golay FEC.
+             * @param[out] data 
+             * @param[in] raw 
+             */
             void encodeHDUGolay(uint8_t* data, const uint8_t* raw);
         };
     } // namespace lc

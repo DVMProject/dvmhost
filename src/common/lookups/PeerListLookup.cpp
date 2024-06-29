@@ -1,19 +1,15 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2016 Jonathan Naylor, G4KLX
-*   Copyright (C) 2017-2022,2024 Bryan Biedenkapp, N2PLL
-*   Copyright (c) 2024 Patrick McDonnell, W3AXL
-*   Copyright (c) 2024 Caleb, KO4UYJ
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2016 Jonathan Naylor, G4KLX
+ *  Copyright (C) 2017-2022,2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (c) 2024 Patrick McDonnell, W3AXL
+ *  Copyright (c) 2024 Caleb, KO4UYJ
+ *
+ */
 #include "PeerListLookup.h"
 #include "Log.h"
 
@@ -32,32 +28,21 @@ std::mutex PeerListLookup::m_mutex;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the PeerListLookup class.
-/// </summary>
-/// <param name="filename">Full-path to the list file.</param>
-/// <param name="mode">Mode to operate in (WHITELIST or BLACKLIST).</param>
-/// <param name="peerAcl">Flag indicating if the lookup is enabled.</param>
+/* Initializes a new instance of the PeerListLookup class. */
 PeerListLookup::PeerListLookup(const std::string& filename, Mode mode, uint32_t reloadTime, bool peerAcl) : LookupTable(filename, reloadTime),
     m_acl(peerAcl), m_mode(mode)
 {
     /* stub */
 }
 
-/// <summary>
-/// Clears all entries from the list.
-/// </summary>
+/* Clears all entries from the list. */
 void PeerListLookup::clear()
 {
     std::lock_guard<std::mutex> lock(m_mutex);
     m_table.clear();
 }
 
-/// <summary>
-/// Adds a new entry to the list.
-/// </summary>
-/// <param name="peerId">Unique peer ID to add.</param>
-/// <param name="password"></param>
+/* Adds a new entry to the list. */
 void PeerListLookup::addEntry(uint32_t id, const std::string& password)
 {
     PeerId entry = PeerId(id, password, false);
@@ -75,10 +60,7 @@ void PeerListLookup::addEntry(uint32_t id, const std::string& password)
     }
 }
 
-/// <summary>
-/// Removes an existing entry from the list.
-/// </summary>
-/// <param name="peerId">Unique peer ID to remove.</param>
+/* Removes an existing entry from the list. */
 void PeerListLookup::eraseEntry(uint32_t id)
 {
     std::lock_guard<std::mutex> lock(m_mutex);
@@ -90,11 +72,7 @@ void PeerListLookup::eraseEntry(uint32_t id)
     }
 }
 
-/// <summary>
-/// Finds a table entry in this lookup table.
-/// </summary>
-/// <param name="id">Unique identifier for table entry.</param>
-/// <returns>Table entry.</returns>
+/* Finds a table entry in this lookup table. */
 PeerId PeerListLookup::find(uint32_t id)
 {
     PeerId entry;
@@ -109,28 +87,19 @@ PeerId PeerListLookup::find(uint32_t id)
     return entry;
 }
 
-/// <summary>
-/// Commit the table.
-/// </summary>
-/// <param name="mode">The mode to set.</param>
+/* Commit the table. */
 void PeerListLookup::commit()
 {
     save();
 }
 
-/// <summary>
-/// Gets whether the lookup is enabled.
-/// </summary>
+/* Gets whether the lookup is enabled. */
 bool PeerListLookup::getACL() const
 {
     return m_acl;
 }
 
-/// <summary>
-/// Checks if a peer ID is in the list.
-/// </summary>
-/// <param name="id">Unique peer ID to check.</param>
-/// <returns>True if the peer ID is in the list, otherwise false.</returns>
+/* Checks if a peer ID is in the list. */
 bool PeerListLookup::isPeerInList(uint32_t id) const
 {
     std::lock_guard<std::mutex> lock(m_mutex);
@@ -141,11 +110,7 @@ bool PeerListLookup::isPeerInList(uint32_t id) const
     return false;
 }
 
-/// <summary>
-/// Checks if a peer ID is allowed based on the mode and enabled flag.
-/// </summary>
-/// <param name="id">Unique peer ID to check.</param>
-/// <returns>True if the peer ID is allowed, otherwise false.</returns>
+/* Checks if a peer ID is allowed based on the mode and enabled flag. */
 bool PeerListLookup::isPeerAllowed(uint32_t id) const
 {
     if (!m_acl) {
@@ -162,19 +127,14 @@ bool PeerListLookup::isPeerAllowed(uint32_t id) const
     return allowed;
 }
 
-/// <summary>
-/// Sets the mode to either WHITELIST or BLACKLIST.
-/// </summary>
-/// <param name="mode">The mode to set.</param>
+/* Sets the mode to either WHITELIST or BLACKLIST. */
 void PeerListLookup::setMode(Mode mode)
 {
     std::lock_guard<std::mutex> lock(m_mutex);
     m_mode = mode;
 }
 
-/// <summary>
-/// Gets the current mode.
-/// </summary>
+/* Gets the current mode. */
 PeerListLookup::Mode PeerListLookup::getMode() const 
 {
     return m_mode;
@@ -184,10 +144,7 @@ PeerListLookup::Mode PeerListLookup::getMode() const
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Loads the table from the passed lookup table file.
-/// </summary>
-/// <returns>True, if lookup table was loaded, otherwise false.</returns>
+/* Loads the table from the passed lookup table file. */
 bool PeerListLookup::load()
 {
     if (m_filename.empty()) {
@@ -253,10 +210,7 @@ bool PeerListLookup::load()
     return true;
 }
 
-/// <summary>
-/// Saves the table to the passed lookup table file.
-/// </summary>
-/// <returns>True, if lookup table was saved, otherwise false.</returns>
+/* Saves the table to the passed lookup table file. */
 bool PeerListLookup::save()
 {
     LogDebug(LOG_HOST, "Saving peer lookup file to %s", m_filename.c_str());

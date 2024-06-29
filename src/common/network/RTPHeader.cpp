@@ -1,15 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2023,2024 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2023,2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "Defines.h"
 #include "network/RTPHeader.h"
 #include "Clock.h"
@@ -30,9 +27,7 @@ hrc::hrc_t RTPHeader::m_wcStart = hrc::hrc_t();
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the RTPHeader class.
-/// </summary>
+/* Initializes a new instance of the RTPHeader class. */
 RTPHeader::RTPHeader() :
     m_version(2U),
     m_padding(false),
@@ -47,15 +42,10 @@ RTPHeader::RTPHeader() :
     /* stub */
 }
 
-/// <summary>
-/// Finalizes a instance of the RTPHeader class.
-/// </summary>
+/* Finalizes a instance of the RTPHeader class. */
 RTPHeader::~RTPHeader() = default;
 
-/// <summary>
-/// Decode a RTP header.
-/// </summary>
-/// <param name="data"></param>
+/* Decode a RTP header. */
 bool RTPHeader::decode(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -79,10 +69,7 @@ bool RTPHeader::decode(const uint8_t* data)
     return true;
 }
 
-/// <summary>
-/// Encode a RTP header.
-/// </summary>
-/// <param name="data"></param>
+/* Encode a RTP header. */
 void RTPHeader::encode(uint8_t* data)
 {
     assert(data != nullptr);
@@ -106,9 +93,7 @@ void RTPHeader::encode(uint8_t* data)
     __SET_UINT32(m_ssrc, data, 8U);                                             // Synchronization Source Identifier
 }
 
-/// <summary>
-/// Helper to reset the start timestamp.
-/// </summary>
+/* Helper to reset the start timestamp. */
 void RTPHeader::resetStartTime()
 {
     m_wcStart = hrc::hrc_t();

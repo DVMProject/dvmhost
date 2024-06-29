@@ -7,9 +7,19 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
+*  Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
 *
 */
+/**
+ * @defgroup dmr_csbk Control Signalling Block
+ * @brief Implementation for the data handling of the ETSI TS-102 control signalling block (CSBK).
+ * @ingroup dmr_lc
+ * 
+ * @file CSBKFactory.h
+ * @ingroup dmr_csbk
+ * @file CSBKFactory.cpp
+ * @ingroup dmr_csbk
+ */
 #if !defined(__DMR_LC__CSBK_FACTORY_H__)
 #define  __DMR_LC__CSBK_FACTORY_H__
 
@@ -45,21 +55,38 @@ namespace dmr
         {
             // ---------------------------------------------------------------------------
             //  Class Declaration
-            //      Helper class to instantiate an instance of a CSBK.
             // ---------------------------------------------------------------------------
 
+            /**
+             * @brief Helper class to instantiate an instance of a CSBK.
+             * @ingroup dmr_csbk
+             */
             class HOST_SW_API CSBKFactory {
             public:
-                /// <summary>Initializes a new instance of the CSBKFactory class.</summary>
+                /**
+                 * @brief Initializes a new instance of the CSBKFactory class.
+                 */
                 CSBKFactory();
-                /// <summary>Finalizes a instance of the CSBKFactory class.</summary>
+                /**
+                 * @brief Finalizes a instance of the CSBKFactory class.
+                 */
                 ~CSBKFactory();
 
-                /// <summary>Create an instance of a CSBK.</summary>
+                /**
+                 * @brief Create an instance of a CSBK.
+                 * @param[in] data Buffer containing CSBK packet data to decode.
+                 * @param dataType Data Type.
+                 * @returns CSBK* Instance of a CSBK representing the decoded data.
+                 */
                 static std::unique_ptr<CSBK> createCSBK(const uint8_t* data, defines::DataType::E dataType);
 
             private:
-                /// <summary></summary>
+                /**
+                 * @brief Decode a CSBK.
+                 * @param csbk Instance of a CSBK.
+                 * @param[in] data Buffer containing CSBK packet data to decode.
+                 * @returns CSBK* Instance of a CSBK representing the decoded data.
+                 */
                 static std::unique_ptr<CSBK> decode(CSBK* csbk, const uint8_t* data);
             };
         } // namespace csbk

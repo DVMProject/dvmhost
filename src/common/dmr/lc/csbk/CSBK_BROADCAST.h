@@ -1,15 +1,18 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2022-2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2022-2024 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @file CSBK_BROADCAST.h
+ * @ingroup dmr_csbk
+ * @file CSBK_BROADCAST.cpp
+ * @ingroup dmr_csbk
+ */
 #if !defined(__DMR_LC_CSBK__CSBK_BROADCAST_H__)
 #define  __DMR_LC_CSBK__CSBK_BROADCAST_H__
 
@@ -24,39 +27,67 @@ namespace dmr
         {
             // ---------------------------------------------------------------------------
             //  Class Declaration
-            //      Implements BCAST - Announcement PDUs
             // ---------------------------------------------------------------------------
 
+            /**
+             * @brief Implements BCAST - Announcement PDUs
+             * @ingroup dmr_csbk
+             */
             class HOST_SW_API CSBK_BROADCAST : public CSBK {
             public:
-                /// <summary>Initializes a new instance of the CSBK_BROADCAST class.</summary>
+                /**
+                 * @brief Initializes a new instance of the CSBK_BROADCAST class.
+                 */
                 CSBK_BROADCAST();
 
-                /// <summary>Decode a control signalling block.</summary>
+                /**
+                 * @brief Decodes a control signalling block.
+                 * @param[in] data Buffer containing a CSBK to decode.
+                 */
                 bool decode(const uint8_t* data) override;
-                /// <summary>Encode a control signalling block.</summary>
+                /**
+                 * @brief Encodes a control signalling block.
+                 * @param[out] data Buffer to encode a CSBK.
+                 */
                 void encode(uint8_t* data) override;
 
-                /// <summary>Returns a string that represents the current CSBK.</summary>
+                /**
+                 * @brief Returns a string that represents the current CSBK.
+                 * @returns std::string String representation of the CSBK.
+                 */
                 std::string toString() override;
 
             public:
-                /// <summary>Broadcast Announcment Type.</summary>
+                /**
+                 * @brief Broadcast Announcment Type.
+                 */
                 __PROPERTY(uint8_t, anncType, AnncType);
-                /// <summary>Broadcast Hibernation Flag.</summary>
+                /**
+                 * @brief Broadcast Hibernation Flag.
+                 */
                 __PROPERTY(bool, hibernating, Hibernating);
 
-                /// <summary>Broadcast Announce/Withdraw Channel 1 Flag.</summary>
+                /**
+                 * @brief Broadcast Announce/Withdraw Channel 1 Flag.
+                 */
                 __PROPERTY(bool, annWdCh1, AnnWdCh1);
-                /// <summary>Broadcast Announce/Withdraw Channel 2 Flag.</summary>
+                /**
+                 * @brief Broadcast Announce/Withdraw Channel 2 Flag.
+                 */
                 __PROPERTY(bool, annWdCh2, AnnWdCh2);
 
-                /// <summary>Require Registration.</summary>
+                /**
+                 * @brief Require Registration.
+                 */
                 __PROPERTY(bool, requireReg, RequireReg);
-                /// <summary>System Identity.</summary>
+                /**
+                 * @brief System Identity.
+                 */
                 __PROPERTY(uint32_t, systemId, SystemId);
 
-                /// <summary>Backoff Number.</summary>
+                /**
+                 * @brief Backoff Number.
+                 */
                 __PROPERTY(uint8_t, backoffNo, BackoffNo);
 
                 __COPY(CSBK_BROADCAST);

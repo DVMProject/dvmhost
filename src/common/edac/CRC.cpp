@@ -1,17 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2015,2016 Jonathan Naylor, G4KLX
-*   Copyright (C) 2018,2022,2024 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2015,2016 Jonathan Naylor, G4KLX
+ *  Copyright (C) 2018,2022,2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "Defines.h"
 #include "edac/CRC.h"
 #include "Log.h"
@@ -155,12 +151,7 @@ const uint32_t CRC32_TABLE[] = {
 //  Static Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Check 5-bit CRC.
-/// </summary>
-/// <param name="in">Boolean bit array.</param>
-/// <param name="tcrc">Computed CRC to check.</param>
-/// <returns>True, if CRC is valid, otherwise false.</returns>
+/* Check 5-bit CRC. */
 bool CRC::checkFiveBit(bool* in, uint32_t tcrc)
 {
     assert(in != nullptr);
@@ -171,11 +162,7 @@ bool CRC::checkFiveBit(bool* in, uint32_t tcrc)
     return crc == tcrc;
 }
 
-/// <summary>
-/// Encode 5-bit CRC.
-/// </summary>
-/// <param name="in">Boolean bit array.</param>
-/// <param name="tcrc">Computed CRC.</param>
+/* Encode 5-bit CRC. */
 void CRC::encodeFiveBit(const bool* in, uint32_t& tcrc)
 {
     assert(in != nullptr);
@@ -192,13 +179,7 @@ void CRC::encodeFiveBit(const bool* in, uint32_t& tcrc)
     tcrc = total;
 }
 
-/// <summary>
-/// Check 16-bit CRC CCITT-162.
-/// </summary>
-/// <remarks>This uses polynomial 0x1021.</remarks>
-/// <param name="in">Input byte array.</param>
-/// <param name="length">Length of byte array.</param>
-/// <returns>True, if CRC is valid, otherwise false.</returns>
+/* Check 16-bit CRC CCITT-162. */
 bool CRC::checkCCITT162(const uint8_t *in, uint32_t length)
 {
     assert(in != nullptr);
@@ -224,12 +205,7 @@ bool CRC::checkCCITT162(const uint8_t *in, uint32_t length)
     return crc8[0U] == in[length - 1U] && crc8[1U] == in[length - 2U];
 }
 
-/// <summary>
-/// Encode 16-bit CRC CCITT-162.
-/// </summary>
-/// <remarks>This uses polynomial 0x1021.</remarks>
-/// <param name="in">Input byte array.</param>
-/// <param name="length">Length of byte array.</param>
+/* Encode 16-bit CRC CCITT-162. */
 void CRC::addCCITT162(uint8_t* in, uint32_t length)
 {
     assert(in != nullptr);
@@ -255,13 +231,7 @@ void CRC::addCCITT162(uint8_t* in, uint32_t length)
     in[length - 2U] = crc8[1U];
 }
 
-/// <summary>
-/// Check 16-bit CRC CCITT-161.
-/// </summary>
-/// <remarks>This uses polynomial 0x1189.</remarks>
-/// <param name="in">Input byte array.</param>
-/// <param name="length">Length of byte array.</param>
-/// <returns>True, if CRC is valid, otherwise false.</returns>
+/* Check 16-bit CRC CCITT-161. */
 bool CRC::checkCCITT161(const uint8_t *in, uint32_t length)
 {
     assert(in != nullptr);
@@ -287,12 +257,7 @@ bool CRC::checkCCITT161(const uint8_t *in, uint32_t length)
     return crc8[0U] == in[length - 2U] && crc8[1U] == in[length - 1U];
 }
 
-/// <summary>
-/// Encode 16-bit CRC CCITT-161.
-/// </summary>
-/// <remarks>This uses polynomial 0x1189.</remarks>
-/// <param name="in">Input byte array.</param>
-/// <param name="length">Length of byte array.</param>
+/* Encode 16-bit CRC CCITT-161. */
 void CRC::addCCITT161(uint8_t* in, uint32_t length)
 {
     assert(in != nullptr);
@@ -318,12 +283,7 @@ void CRC::addCCITT161(uint8_t* in, uint32_t length)
     in[length - 1U] = crc8[1U];
 }
 
-/// <summary>
-/// Check 32-bit CRC.
-/// </summary>
-/// <param name="in">Input byte array.</param>
-/// <param name="length">Length of byte array.</param>
-/// <returns>True, if CRC is valid, otherwise false.</returns>
+/* Check 32-bit CRC. */
 bool CRC::checkCRC32(const uint8_t *in, uint32_t length)
 {
     assert(in != nullptr);
@@ -353,11 +313,7 @@ bool CRC::checkCRC32(const uint8_t *in, uint32_t length)
     return crc8[0U] == in[length - 1U] && crc8[1U] == in[length - 2U] && crc8[2U] == in[length - 3U] && crc8[3U] == in[length - 4U];
 }
 
-/// <summary>
-/// Encode 32-bit CRC.
-/// </summary>
-/// <param name="in">Input byte array.</param>
-/// <param name="length">Length of byte array.</param>
+/* Encode 32-bit CRC. */
 void CRC::addCRC32(uint8_t* in, uint32_t length)
 {
     assert(in != nullptr);
@@ -389,12 +345,7 @@ void CRC::addCRC32(uint8_t* in, uint32_t length)
     in[length - 4U] = crc8[3U];
 }
 
-/// <summary>
-/// Generate 8-bit CRC.
-/// </summary>
-/// <param name="in">Input byte array.</param>
-/// <param name="length">Length of byte array.</param>
-/// <returns>Calculated 8-bit CRC value.</returns>
+/* Generate 8-bit CRC. */
 uint8_t CRC::crc8(const uint8_t *in, uint32_t length)
 {
     assert(in != nullptr);
@@ -411,12 +362,7 @@ uint8_t CRC::crc8(const uint8_t *in, uint32_t length)
     return crc;
 }
 
-/// <summary>
-/// Check 6-bit CRC.
-/// </summary>
-/// <param name="in">Input byte array.</param>
-/// <param name="bitLength">Length of byte array in bits.</param>
-/// <returns>True, if CRC is valid, otherwise false.</returns>
+/* Check 6-bit CRC. */
 bool CRC::checkCRC6(const uint8_t* in, uint32_t bitLength)
 {
     assert(in != nullptr);
@@ -439,12 +385,7 @@ bool CRC::checkCRC6(const uint8_t* in, uint32_t bitLength)
     return crc == temp[0U];
 }
 
-/// <summary>
-/// Encode 6-bit CRC.
-/// </summary>
-/// <param name="in">Input byte array.</param>
-/// <param name="bitLength">Length of byte array in bits.</param>
-/// <returns>6-bit CRC.</returns>
+/* Encode 6-bit CRC. */
 uint8_t CRC::addCRC6(uint8_t* in, uint32_t bitLength)
 {
     assert(in != nullptr);
@@ -464,12 +405,7 @@ uint8_t CRC::addCRC6(uint8_t* in, uint32_t bitLength)
     return crc[0U];
 }
 
-/// <summary>
-/// Check 12-bit CRC.
-/// </summary>
-/// <param name="in">Input byte array.</param>
-/// <param name="bitLength">Length of byte array in bits.</param>
-/// <returns>True, if CRC is valid, otherwise false.</returns>
+/* Check 12-bit CRC. */
 bool CRC::checkCRC12(const uint8_t* in, uint32_t bitLength)
 {
     assert(in != nullptr);
@@ -496,12 +432,7 @@ bool CRC::checkCRC12(const uint8_t* in, uint32_t bitLength)
     return temp1[0U] == temp2[0U] && temp1[1U] == temp2[1U];
 }
 
-/// <summary>
-/// Encode 12-bit CRC.
-/// </summary>
-/// <param name="in">Input byte array.</param>
-/// <param name="bitLength">Length of byte array in bits.</param>
-/// <returns>12-bit CRC.</returns>
+/* Encode 12-bit CRC. */
 uint16_t CRC::addCRC12(uint8_t* in, uint32_t bitLength)
 {
     assert(in != nullptr);
@@ -524,12 +455,7 @@ uint16_t CRC::addCRC12(uint8_t* in, uint32_t bitLength)
     return crc;
 }
 
-/// <summary>
-/// Check 15-bit CRC.
-/// </summary>
-/// <param name="in">Input byte array.</param>
-/// <param name="bitLength">Length of byte array in bits.</param>
-/// <returns>True, if CRC is valid, otherwise false.</returns>
+/* Check 15-bit CRC. */
 bool CRC::checkCRC15(const uint8_t* in, uint32_t bitLength)
 {
     assert(in != nullptr);
@@ -556,12 +482,7 @@ bool CRC::checkCRC15(const uint8_t* in, uint32_t bitLength)
     return temp1[0U] == temp2[0U] && temp1[1U] == temp2[1U];
 }
 
-/// <summary>
-/// Encode 15-bit CRC.
-/// </summary>
-/// <param name="in">Input byte array.</param>
-/// <param name="bitLength">Length of byte array in bits.</param>
-/// <returns>15-bit CRC.</returns>
+/* Encode 15-bit CRC. */
 uint16_t CRC::addCRC15(uint8_t* in, uint32_t bitLength)
 {
     assert(in != nullptr);
@@ -584,12 +505,7 @@ uint16_t CRC::addCRC15(uint8_t* in, uint32_t bitLength)
     return crc;
 }
 
-/// <summary>
-/// Check 16-bit CRC CCITT-162 w/ initial generator of 1.
-/// </summary>
-/// <param name="in">Input byte array.</param>
-/// <param name="bitLength">Length of byte array in bits.</param>
-/// <returns>True, if CRC is valid, otherwise false.</returns>
+/* Check 16-bit CRC CCITT-162 w/ initial generator of 1. */
 bool CRC::checkCRC16(const uint8_t* in, uint32_t bitLength)
 {
     assert(in != nullptr);
@@ -616,13 +532,7 @@ bool CRC::checkCRC16(const uint8_t* in, uint32_t bitLength)
     return temp1[0U] == temp2[0U] && temp1[1U] == temp2[1U];
 }
 
-/// <summary>
-/// Encode 16-bit CRC CCITT-162 w/ initial generator of 1.
-/// </summary>
-/// <param name="in">Input byte array.</param>
-/// <param name="bitLength">Length of byte array in bits.</param>
-/// <param name="offset">Offset in bits to write CRC.</param>
-/// <returns>16-bit CRC.</returns>
+/* Encode 16-bit CRC CCITT-162 w/ initial generator of 1. */
 uint16_t CRC::addCRC16(uint8_t* in, uint32_t bitLength)
 {
     assert(in != nullptr);
@@ -645,12 +555,7 @@ uint16_t CRC::addCRC16(uint8_t* in, uint32_t bitLength)
     return crc;
 }
 
-/// <summary>
-/// Generate 9-bit CRC.
-/// </summary>
-/// <param name="in">Input byte array.</param>
-/// <param name="bitLength">Length of byte array in bits.</param>
-/// <returns></returns>
+/* Generate 9-bit CRC. */
 uint16_t CRC::createCRC9(const uint8_t* in, uint32_t bitLength)
 {
     uint16_t crc = 0U;
@@ -669,12 +574,7 @@ uint16_t CRC::createCRC9(const uint8_t* in, uint32_t bitLength)
     return crc & 0x1FFU;
 }
 
-/// <summary>
-/// Generate 16-bit CRC.
-/// </summary>
-/// <param name="in">Input byte array.</param>
-/// <param name="bitLength">Length of byte array in bits.</param>
-/// <returns></returns>
+/* Generate 16-bit CRC. */
 uint16_t CRC::createCRC16(const uint8_t* in, uint32_t bitLength)
 {
     uint16_t crc = 0xFFFFU;
@@ -696,12 +596,7 @@ uint16_t CRC::createCRC16(const uint8_t* in, uint32_t bitLength)
 //  Private Static Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-///
-/// </summary>
-/// <param name="in">Input byte array.</param>
-/// <param name="bitLength">Length of byte array in bits.</param>
-/// <returns></returns>
+/* Generate 6-bit CRC. */
 uint8_t CRC::createCRC6(const uint8_t* in, uint32_t bitLength)
 {
     uint8_t crc = 0x3FU;
@@ -719,12 +614,7 @@ uint8_t CRC::createCRC6(const uint8_t* in, uint32_t bitLength)
     return crc & 0x3FU;
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="in">Input byte array.</param>
-/// <param name="bitLength">Length of byte array in bits.</param>
-/// <returns></returns>
+/* Generate 12-bit CRC. */
 uint16_t CRC::createCRC12(const uint8_t* in, uint32_t bitLength)
 {
     uint16_t crc = 0x0FFFU;
@@ -742,12 +632,7 @@ uint16_t CRC::createCRC12(const uint8_t* in, uint32_t bitLength)
     return crc & 0x0FFFU;
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="in">Input byte array.</param>
-/// <param name="bitLength">Length of byte array in bits.</param>
-/// <returns></returns>
+/* Generate 15-bit CRC. */
 uint16_t CRC::createCRC15(const uint8_t* in, uint32_t bitLength)
 {
     uint16_t crc = 0x7FFFU;

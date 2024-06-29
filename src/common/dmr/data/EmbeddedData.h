@@ -1,17 +1,19 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2015,2016,2017 Jonathan Naylor, G4KLX
+ *  Copyright (C) 2024 Bryan Biedenkap, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2015,2016,2017 Jonathan Naylor, G4KLX
-*   Copyright (C) 2024 Bryan Biedenkap, N2PLL
-*
-*/
+ * @file EmbeddedData.h
+ * @ingroup dmr
+ * @file EmbeddedData.cpp
+ * @ingroup dmr
+ */
 #if !defined(__DMR_DATA__EMBEDDED_DATA_H__)
 #define __DMR_DATA__EMBEDDED_DATA_H__
 
@@ -36,36 +38,68 @@ namespace dmr
 
         // ---------------------------------------------------------------------------
         //  Class Declaration
-        //      Represents a DMR embedded data.
         // ---------------------------------------------------------------------------
 
+        /**
+         * @brief Represents a DMR embedded data.
+         * @ingroup dmr
+         */
         class HOST_SW_API EmbeddedData {
         public:
-            /// <summary>Initializes a new instance of the EmbeddedData class.</summary>
+            /**
+             * @brief Initializes a new instance of the EmbeddedData class.
+             */
             EmbeddedData();
-            /// <summary>Finalizes a instance of the EmbeddedData class.</summary>
+            /**
+             * @brief Finalizes a instance of the EmbeddedData class.
+             */
             ~EmbeddedData();
 
-            /// <summary>Add LC data (which may consist of 4 blocks) to the data store.</summary>
+            /**
+             * @brief Add LC data (which may consist of 4 blocks) to the data store.
+             * @param[in] data 
+             * @param lcss
+             * @returns bool True, if LC data is decoded, otherwise false.
+             */
             bool addData(const uint8_t* data, uint8_t lcss);
-            /// <summary>Get LC data from the data store.</summary>
+            /**
+             * @brief Get LC data from the data store.
+             * @param[out] data
+             * @param n 
+             * @returns uint8_t 
+             */
             uint8_t getData(uint8_t* data, uint8_t n) const;
 
-            /// <summary>Sets link control data.</summary>
+            /**
+             * @brief Sets link control data.
+             * @param lc Instance of the LC class.
+             */
             void setLC(const lc::LC& lc);
-            /// <summary>Gets link control data.</summary>
+            /**
+             * @brief Gets link control data.
+             * @returns lc::LC* LC class.
+             */
             std::unique_ptr<lc::LC> getLC() const;
 
-            /// <summary>Get raw embedded data buffer.</summary>
+            /**
+             * @brief Get raw embedded data buffer.
+             * @param[in] data 
+             */
             bool getRawData(uint8_t* data) const;
 
-            /// <summary>Helper to reset data values to defaults.</summary>
+            /**
+             * @brief Helper to reset data values to defaults.
+             */
             void reset();
 
         public:
-            /// <summary>Flag indicating whether or not the embedded data is valid.</summary>
+            /**
+             * @brief Flag indicating whether or not the embedded data is valid.
+             */
             __READONLY_PROPERTY_PLAIN(bool, valid);
-            /// <summary>Full-link control opcode.</summary>
+            /**
+             * @brief Full-link control opcode.
+             */
             __READONLY_PROPERTY(defines::FLCO::E, FLCO, FLCO);
 
         private:
@@ -74,9 +108,13 @@ namespace dmr
 
             bool* m_raw;
 
-            /// <summary>Unpack and error check an embedded LC.</summary>
+            /**
+             * @brief Unpack and error check an embedded LC.
+             */
             void decodeEmbeddedData();
-            /// <summary>Pack and FEC for an embedded LC.</summary>
+            /**
+             * @brief Pack and FEC for an embedded LC.
+             */
             void encodeEmbeddedData();
         };
     } // namespace data

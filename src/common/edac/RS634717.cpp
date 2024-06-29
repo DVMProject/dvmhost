@@ -1,17 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2016 Jonathan Naylor, G4KLX
-*   Copyright (C) 2017,2023 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2016 Jonathan Naylor, G4KLX
+ *  Copyright (C) 2017,2023 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "Defines.h"
 #include "edac/RS634717.h"
 #include "edac/rs/RS.h"
@@ -81,39 +77,52 @@ const uint8_t ENCODE_MATRIX_362017[20U][36U] = {
     { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 002, 001, 053, 074, 002, 014, 052, 074, 012, 057, 024, 063, 015, 042, 052, 033 },
     { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 034, 035, 002, 023, 021, 027, 022, 033, 064, 042, 005, 073, 051, 046, 073, 060 } };
 
-/// <summary>Define a reed-solomon codec.</summary>
-/// <param name="TYPE">Data type primitive</param>
-/// <param name="SYMBOLS">Total number of symbols; must be a power of 2 minus 1, eg 2^8-1 == 255</param>
-/// <param name="PAYLOAD">The maximum number of non-parity symbols, eg 253 ==> 2 parity symbols</param>
-/// <param name="POLY">A primitive polynomial appropriate to the SYMBOLS size</param>
-/// <param name="FCR">The first consecutive root of the Reed-Solomon generator polynomial</param>
-/// <param name="PRIM">The primitive root of the generator polynomial</param>
+/**
+ * @brief Define a reed-solomon codec.
+ * @param TYPE Data type primitive
+ * @param SYMBOLS Total number of symbols; must be a power of 2 minus 1, eg 2^8-1 == 255
+ * @param PAYLOAD The maximum number of non-parity symbols, eg 253 ==> 2 parity symbols
+ * @param POLY A primitive polynomial appropriate to the SYMBOLS size
+ * @param FCR The first consecutive root of the Reed-Solomon generator polynomial
+ * @param PRIM The primitive root of the generator polynomial
+ */
 #define __RS(TYPE, SYMBOLS, PAYLOAD, POLY, FCR, PRIM)                           \
             edac::rs::reed_solomon<TYPE,                                        \
             edac::rs::log_<(SYMBOLS) + 1>::value,                               \
             (SYMBOLS) - (PAYLOAD), FCR, PRIM,                                   \
             edac::rs::gfpoly<edac::rs::log_<(SYMBOLS) + 1>::value, POLY>>
 
-/// <summary>Define a 63-symbol reed-solomon codec.</summary>
-/// <param name="PAYLOAD">The maximum number of non-parity symbols, eg 253 ==> 2 parity symbols</param>
+/**
+ * @brief Define a 63-symbol reed-solomon codec.
+ * @param PAYLOAD The maximum number of non-parity symbols, eg 253 ==> 2 parity symbols
+ */
 #define __RS_63(PAYLOAD) __RS(uint8_t, 63, PAYLOAD, 0x43, 1, 1)
 
 // ---------------------------------------------------------------------------
 //  Global Variables
 // ---------------------------------------------------------------------------
 
+/**
+ * @brief Implements Reed-Solomon (63,47,17)
+ */
 class RS6347 : public __RS_63(47) {
 public:
     RS6347() : __RS_63(47)() { /* stub */ }
 };
 RS6347 rs634717;    // 16 bit / 8 bit corrections max / 5 bytes total
 
+/**
+ * @brief Implements Reed-Solomon (24,12,13)
+ */
 class RS6351 : public __RS_63(51) {
 public:
     RS6351() : __RS_63(51)() { /* stub */ }
 };
 RS6351 rs241213;    // 12 bit / 6 bit corrections max / 3 bytes total
 
+/**
+ * @brief Implements Reed-Solomon (24,16,9)
+ */
 class RS6355 : public __RS_63(55) {
 public:
     RS6355() : __RS_63(55)() { /* stub */ }
@@ -124,21 +133,13 @@ RS6355 rs24169;     // 8 bit / 4 bit corrections max / 2 bytes total
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the RS634717 class.
-/// </summary>
+/* Initializes a new instance of the RS634717 class. */
 RS634717::RS634717() = default;
 
-/// <summary>
-/// Finalizes a instance of the RS634717 class.
-/// </summary>
+/* Finalizes a instance of the RS634717 class. */
 RS634717::~RS634717() = default;
 
-/// <summary>
-/// Decode RS (24,12,13) FEC.
-/// </summary>
-/// <param name="data">Reed-Solomon FEC encoded data to decode.</param>
-/// <returns>True, if data was decoded, otherwise false.</returns>
+/* Decode RS (24,12,13) FEC. */
 bool RS634717::decode241213(uint8_t* data)
 {
     assert(data != nullptr);
@@ -164,10 +165,7 @@ bool RS634717::decode241213(uint8_t* data)
     return true;
 }
 
-/// <summary>
-/// Encode RS (24,12,13) FEC.
-/// </summary>
-/// <param name="data">Raw data to encode with Reed-Solomon FEC.</param>
+/* Encode RS (24,12,13) FEC. */
 void RS634717::encode241213(uint8_t* data)
 {
     assert(data != nullptr);
@@ -189,11 +187,7 @@ void RS634717::encode241213(uint8_t* data)
         Utils::hex2Bin(codeword[i], data, offset);
 }
 
-/// <summary>
-/// Decode RS (24,16,9) FEC.
-/// </summary>
-/// <param name="data">Reed-Solomon FEC encoded data to decode.</param>
-/// <returns>True, if data was decoded, otherwise false.</returns>
+/* Decode RS (24,16,9) FEC. */
 bool RS634717::decode24169(uint8_t* data)
 {
     assert(data != nullptr);
@@ -219,10 +213,7 @@ bool RS634717::decode24169(uint8_t* data)
     return true;
 }
 
-/// <summary>
-/// Encode RS (24,16,9) FEC.
-/// </summary>
-/// <param name="data">Raw data to encode with Reed-Solomon FEC.</param>
+/* Encode RS (24,16,9) FEC. */
 void RS634717::encode24169(uint8_t* data)
 {
     assert(data != nullptr);
@@ -244,11 +235,7 @@ void RS634717::encode24169(uint8_t* data)
         Utils::hex2Bin(codeword[i], data, offset);
 }
 
-/// <summary>
-/// Decode RS (36,20,17) FEC.
-/// </summary>
-/// <param name="data">Reed-Solomon FEC encoded data to decode.</param>
-/// <returns>True, if data was decoded, otherwise false.</returns>
+/* Decode RS (36,20,17) FEC. */
 bool RS634717::decode362017(uint8_t* data)
 {
     assert(data != nullptr);
@@ -274,10 +261,7 @@ bool RS634717::decode362017(uint8_t* data)
     return true;
 }
 
-/// <summary>
-/// Encode RS (36,20,17) FEC.
-/// </summary>
-/// <param name="data">Raw data to encode with Reed-Solomon FEC.</param>
+/* Encode RS (36,20,17) FEC. */
 void RS634717::encode362017(uint8_t* data)
 {
     assert(data != nullptr);
@@ -303,13 +287,7 @@ void RS634717::encode362017(uint8_t* data)
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-///
-/// </summary>
-/// <remarks>GF(2 ^ 6) multiply (for Reed-Solomon encoder).</remarks>
-/// <param name="a"></param>
-/// <param name="b"></param>
-/// <returns></returns>
+/* GF(2 ^ 6) multiply (for Reed-Solomon encoder). */
 uint8_t RS634717::gf6Mult(uint8_t a, uint8_t b) const
 {
     uint8_t p = 0x00U;

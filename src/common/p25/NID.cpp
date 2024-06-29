@@ -1,17 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2016 Jonathan Naylor, G4KLX
-*   Copyright (C) 2017,2022,2024 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2016 Jonathan Naylor, G4KLX
+ *  Copyright (C) 2017,2022,2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "Defines.h"
 #include "common/Utils.h"
 #include "p25/P25Defines.h"
@@ -34,10 +30,7 @@ const uint32_t MAX_NID_ERRS = 7U;//5U;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the NID class.
-/// </summary>
-/// <param name="nac">P25 Network Access Code.</param>
+/* Initializes a new instance of the NID class. */
 NID::NID(uint32_t nac) :
     m_duid(DUID::HDU),
     m_nac(nac),
@@ -56,9 +49,7 @@ NID::NID(uint32_t nac) :
     createRxTxNID(nac);
 }
 
-/// <summary>
-/// Finalizes a instance of the NID class.
-/// </summary>
+/* Finalizes a instance of the NID class. */
 NID::~NID()
 {
     cleanupArrays();
@@ -66,11 +57,7 @@ NID::~NID()
     delete[] m_tx;
 }
 
-/// <summary>
-/// Decodes P25 network identifier data.
-/// </summary>
-/// <param name="data"></param>
-/// <returns></returns>
+/* Decodes P25 network identifier data. */
 bool NID::decode(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -130,11 +117,7 @@ bool NID::decode(const uint8_t* data)
     return false;
 }
 
-/// <summary>
-/// Encodes P25 network identifier data.
-/// </summary>
-/// <param name="data"></param>
-/// <param name="duid"></param>
+/* Encodes P25 network identifier data. */
 void NID::encode(uint8_t* data, defines::DUID::E duid)
 {
     assert(data != nullptr);
@@ -177,10 +160,7 @@ void NID::encode(uint8_t* data, defines::DUID::E duid)
     }
 }
 
-/// <summary>
-/// Helper to configure a separate Tx NAC.
-/// </summary>
-/// <param name="nac"></param>
+/* Helper to configure a separate Tx NAC. */
 void NID::setTxNAC(uint32_t nac)
 {
     if (nac == m_nac) {
@@ -195,9 +175,7 @@ void NID::setTxNAC(uint32_t nac)
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-///
-/// </summary>
+/* Cleanup NID arrays. */
 void NID::cleanupArrays()
 {
     for (uint8_t i = 0; i < 16U; i++)
@@ -212,10 +190,7 @@ void NID::cleanupArrays()
     }
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="nac"></param>
+/* Internal helper to create the Rx/Tx NID. */
 void NID::createRxTxNID(uint32_t nac)
 {
     edac::BCH bch;
@@ -270,10 +245,7 @@ void NID::createRxTxNID(uint32_t nac)
     m_rxTx[DUID::TDULC][7U] &= 0xFEU;                        // Clear the parity bit
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="nac"></param>
+/* Internal helper to create Tx NID. */
 void NID::createTxNID(uint32_t nac)
 {
     edac::BCH bch;

@@ -1,17 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2015,2016,2018,2021 Jonathan Naylor, G4KLX
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2015,2016,2018,2021 Jonathan Naylor, G4KLX
+ *  Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "nxdn/edac/Convolution.h"
 #include "Utils.h"
 
@@ -37,9 +33,7 @@ const uint32_t K = 5U;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the Convolution class.
-/// </summary>
+/* Initializes a new instance of the Convolution class. */
 Convolution::Convolution() :
     m_metrics1(nullptr),
     m_metrics2(nullptr),
@@ -53,9 +47,7 @@ Convolution::Convolution() :
     m_decisions = new uint64_t[300U];
 }
 
-/// <summary>
-/// Finalizes a instance of the Convolution class.
-/// </summary>
+/* Finalizes a instance of the Convolution class. */
 Convolution::~Convolution()
 {
     delete[] m_metrics1;
@@ -63,9 +55,7 @@ Convolution::~Convolution()
     delete[] m_decisions;
 }
 
-/// <summary>
-///
-/// </summary>
+/* Starts convolution processing. */
 void Convolution::start()
 {
     ::memset(m_metrics1, 0x00U, NUM_OF_STATES * sizeof(uint16_t));
@@ -76,11 +66,7 @@ void Convolution::start()
     m_dp = m_decisions;
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="out"></param>
-/// <param name="nBits"></param>
+/* */
 uint32_t Convolution::chainback(uint8_t* out, uint32_t nBits)
 {
     assert(out != nullptr);
@@ -107,11 +93,7 @@ uint32_t Convolution::chainback(uint8_t* out, uint32_t nBits)
     return minCost / (M >> 1);
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="s0"></param>
-/// <param name="s1"></param>
+/* */
 bool Convolution::decode(uint8_t s0, uint8_t s1)
 {
     *m_dp = 0U;
@@ -147,12 +129,7 @@ bool Convolution::decode(uint8_t s0, uint8_t s1)
     return true;
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="in"></param>
-/// <param name="out"></param>
-/// <param name="nBits"></param>
+/* */
 void Convolution::encode(const uint8_t* in, uint8_t* out, uint32_t nBits) const
 {
     assert(in != nullptr);

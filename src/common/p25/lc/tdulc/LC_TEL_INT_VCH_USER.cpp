@@ -1,15 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "Defines.h"
 #include "p25/lc/tdulc/LC_TEL_INT_VCH_USER.h"
 
@@ -24,19 +21,13 @@ using namespace p25::lc::tdulc;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the LC_TEL_INT_VCH_USER class.
-/// </summary>
+/* Initializes a new instance of the LC_TEL_INT_VCH_USER class. */
 LC_TEL_INT_VCH_USER::LC_TEL_INT_VCH_USER() : TDULC()
 {
     m_lco = LCO::TEL_INT_VCH_USER;
 }
 
-/// <summary>
-/// Decode a terminator data unit w/ link control.
-/// </summary>
-/// <param name="data"></param>
-/// <returns>True, if TDULC was decoded, otherwise false.</returns>
+/* Decode a terminator data unit w/ link control. */
 bool LC_TEL_INT_VCH_USER::decode(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -61,10 +52,7 @@ bool LC_TEL_INT_VCH_USER::decode(const uint8_t* data)
     return true;
 }
 
-/// <summary>
-/// Encode a terminator data unit w/ link control.
-/// </summary>
-/// <param name="data"></param>
+/* Encode a terminator data unit w/ link control. */
 void LC_TEL_INT_VCH_USER::encode(uint8_t* data)
 {
     assert(data != nullptr);

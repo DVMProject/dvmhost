@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2021,2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2021,2024 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @file DMRUtils.h
+ * @ingroup dmr
+ */
 #if !defined(__DMR_UTILS_H__)
 #define __DMR_UTILS_H__
 
@@ -20,14 +21,19 @@ namespace dmr
 {
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //      This class implements various helper functions for validating DMR data.
     // ---------------------------------------------------------------------------
 
+    /**
+     * @brief This class implements various helper functions for validating DMR data.
+     * @ingroup dmr
+     */
     class HOST_SW_API DMRUtils {
     public:
-        /// <summary>Helper to test and clamp a DMR color code.</summary>
-        /// <param name="colorCode">Color Code</param>
-        /// <returns>Clamped color code.</returns>
+        /**
+         * @brief Helper to test and clamp a DMR color code.
+         * @param colorCode Color Code
+         * @returns uint32_t Clamped color code.
+         */
         static uint32_t colorCode(uint32_t colorCode)
         {
             if (colorCode < 0U) { // clamp to 0
@@ -40,10 +46,12 @@ namespace dmr
             return colorCode;
         }
 
-        /// <summary>Helper to test and clamp a DMR site ID.</summary>
-        /// <param name="id">Site ID</param>
-        /// <param name="siteModel">Site Model</param>
-        /// <returns>Clamped site ID.</returns>
+        /**
+         * @brief Helper to test and clamp a DMR site ID.
+         * @param id Site ID
+         * @param siteModel Site Model
+         * @returns uint32_t Clamped site ID.
+         */
         static uint32_t siteId(uint32_t id, defines::SiteModel::E siteModel)
         {
             using namespace dmr::defines;
@@ -86,10 +94,12 @@ namespace dmr
             return id;
         }
 
-        /// <summary>Helper to test and clamp a DMR network ID.</summary>
-        /// <param name="id">Network ID</param>
-        /// <param name="siteModel">Site Model</param>
-        /// <returns>Clamped network ID.</returns>
+        /**
+         * @brief Helper to test and clamp a DMR network ID.
+         * @param id Network ID
+         * @param siteModel Site Model
+         * @returns uint32_t Clamped network ID.
+         */
         static uint32_t netId(uint32_t id, defines::SiteModel::E siteModel)
         {
             using namespace dmr::defines;

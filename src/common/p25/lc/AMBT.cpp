@@ -1,15 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "Defines.h"
 #include "p25/P25Defines.h"
 #include "p25/lc/AMBT.h"
@@ -27,20 +24,13 @@ using namespace p25::lc;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the AMBT class.
-/// </summary>
+/* Initializes a new instance of the AMBT class. */
 AMBT::AMBT() : TSBK()
 {
     /* stub */
 }
 
-/// <summary>
-/// Decode a trunking signalling block.
-/// </summary>
-/// <param name="data"></param>
-/// <param name="rawTSBK"></param>
-/// <returns>True, if TSBK was decoded, otherwise false.</returns>
+/* Decode a trunking signalling block. */
 bool AMBT::decode(const uint8_t* data, bool rawTSBK)
 {
     assert(data != nullptr);
@@ -50,12 +40,7 @@ bool AMBT::decode(const uint8_t* data, bool rawTSBK)
     return true;
 }
 
-/// <summary>
-/// Encode a trunking signalling block.
-/// </summary>
-/// <param name="data"></param>
-/// <param name="rawTSBK"></param>
-/// <param name="noTrellis"></param>
+/* Encode a trunking signalling block. */
 void AMBT::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 {
     assert(data != nullptr);
@@ -67,12 +52,7 @@ void AMBT::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Internal helper to convert AMBT bytes to a 64-bit long value.
-/// </summary>
-/// <param name="dataHeader"></param>
-/// <param name="pduUserData"></param>
-/// <returns></returns>
+/* Internal helper to convert AMBT bytes to a 64-bit long value. */
 ulong64_t AMBT::toValue(const data::DataHeader& dataHeader, const uint8_t* pduUserData)
 {
     ulong64_t tsbkValue = 0U;
@@ -90,13 +70,7 @@ ulong64_t AMBT::toValue(const data::DataHeader& dataHeader, const uint8_t* pduUs
     return tsbkValue;
 }
 
-/// <summary>
-/// Internal helper to decode a trunking signalling block.
-/// </summary>
-/// <param name="dataHeader"></param>
-/// <param name="blocks"></param>
-/// <param name="pduUserData"></param>
-/// <returns>True, if TSBK was decoded, otherwise false.</returns>
+/* Internal helper to decode a trunking signalling block. */
 bool AMBT::decode(const data::DataHeader& dataHeader, const data::DataBlock* blocks, uint8_t* pduUserData)
 {
     assert(blocks != nullptr);
@@ -142,11 +116,7 @@ bool AMBT::decode(const data::DataHeader& dataHeader, const data::DataBlock* blo
     return true;
 }
 
-/// <summary>
-/// Internal helper to encode a trunking signalling block.
-/// </summary>
-/// <param name="data"></param>
-/// <param name="pduUserData"></param>
+/* Internal helper to encode a trunking signalling block. */
 void AMBT::encode(data::DataHeader& dataHeader, uint8_t* pduUserData)
 {
     assert(pduUserData != nullptr);

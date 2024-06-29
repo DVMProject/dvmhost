@@ -1,15 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "Defines.h"
 #include "p25/lc/tsbk/TSBKFactory.h"
 #include "edac/CRC.h"
@@ -37,22 +34,13 @@ bool TSBKFactory::m_warnCRC = false;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the TSBKFactory class.
-/// </summary>
+/* Initializes a new instance of the TSBKFactory class. */
 TSBKFactory::TSBKFactory() = default;
 
-/// <summary>
-/// Finalizes a instance of TSBKFactory class.
-/// </summary>
+/* Finalizes a instance of TSBKFactory class. */
 TSBKFactory::~TSBKFactory() = default;
 
-/// <summary>
-/// Create an instance of a TSBK.
-/// </summary>
-/// <param name="data"></param>
-/// <param name="rawTSBK"></param>
-/// <returns>True, if TSBK was decoded, otherwise false.</returns>
+/* Create an instance of a TSBK. */
 std::unique_ptr<TSBK> TSBKFactory::createTSBK(const uint8_t* data, bool rawTSBK)
 {
     assert(data != nullptr);
@@ -234,12 +222,7 @@ std::unique_ptr<TSBK> TSBKFactory::createTSBK(const uint8_t* data, bool rawTSBK)
     return nullptr;
 }
 
-/// <summary>
-/// Create an instance of a AMBT.
-/// </summary>
-/// <param name="dataHeader"></param>
-/// <param name="blocks"></param>
-/// <returns></returns>
+/* Create an instance of a AMBT. */
 std::unique_ptr<AMBT> TSBKFactory::createAMBT(const data::DataHeader& dataHeader, const data::DataBlock* blocks)
 {
     assert(blocks != nullptr);
@@ -326,13 +309,7 @@ std::unique_ptr<AMBT> TSBKFactory::createAMBT(const data::DataHeader& dataHeader
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-///
-/// </summary>
-/// <param name="tsbk"></param>
-/// <param name="data"></param>
-/// <param name="rawTSBK"></param>
-/// <returns></returns>
+/* Decode a TSBK. */
 std::unique_ptr<TSBK> TSBKFactory::decode(TSBK* tsbk, const uint8_t* data, bool rawTSBK)
 {
     assert(tsbk != nullptr);
@@ -345,13 +322,7 @@ std::unique_ptr<TSBK> TSBKFactory::decode(TSBK* tsbk, const uint8_t* data, bool 
     return std::unique_ptr<TSBK>(tsbk);
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="ambt"></param>
-/// <param name="dataHeader"></param>
-/// <param name="blocks"></param>
-/// <returns></returns>
+/* Decode an AMBT. */
 std::unique_ptr<AMBT> TSBKFactory::decode(AMBT* ambt, const data::DataHeader& dataHeader, const data::DataBlock* blocks)
 {
     assert(ambt != nullptr);

@@ -1,16 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2018 Jonathan Naylor, G4KLX
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2018 Jonathan Naylor, G4KLX
+ *
+ */
 #include "nxdn/channel/FACCH1.h"
 #include "nxdn/edac/Convolution.h"
 #include "nxdn/NXDNDefines.h"
@@ -51,9 +47,7 @@ const uint32_t PUNCTURE_LIST[] = {
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the FACCH1 class.
-/// </summary>
+/* Initializes a new instance of the FACCH1 class. */
 FACCH1::FACCH1() :
     m_data(nullptr)
 {
@@ -61,29 +55,20 @@ FACCH1::FACCH1() :
     ::memset(m_data, 0x00U, NXDN_FACCH1_CRC_LENGTH_BYTES);
 }
 
-/// <summary>
-/// Initializes a copy instance of the FACCH1 class.
-/// </summary>
-/// <param name="data"></param>
+/* Initializes a copy instance of the FACCH1 class. */
 FACCH1::FACCH1(const FACCH1& data) :
     m_data(nullptr)
 {
     copy(data);
 }
 
-/// <summary>
-/// Finalizes a instance of FACCH1 class.
-/// </summary>
+/* Finalizes a instance of FACCH1 class. */
 FACCH1::~FACCH1()
 {
     delete[] m_data;
 }
 
-/// <summary>
-/// Equals operator.
-/// </summary>
-/// <param name="data"></param>
-/// <returns></returns>
+/* Equals operator. */
 FACCH1& FACCH1::operator=(const FACCH1& data)
 {
     if (&data != this) {
@@ -93,11 +78,7 @@ FACCH1& FACCH1::operator=(const FACCH1& data)
     return *this;
 }
 
-/// <summary>
-/// Decode a fast associated control channel 1.
-/// </summary>
-/// <param name="data"></param>
-/// <returns>True, if FACCH1 was decoded, otherwise false.</returns>
+/* Decode a fast associated control channel 1. */
 bool FACCH1::decode(const uint8_t* data, uint32_t offset)
 {
     assert(data != nullptr);
@@ -164,11 +145,7 @@ bool FACCH1::decode(const uint8_t* data, uint32_t offset)
     return true;
 }
 
-/// <summary>
-/// Encode a fast associated control channel 1.
-/// </summary>
-/// <param name="data"></param>
-/// <returns>True, if LICH was decoded, otherwise false.</returns>
+/* Encode a fast associated control channel 1. */
 void FACCH1::encode(uint8_t* data, uint32_t offset) const
 {
     assert(data != nullptr);
@@ -217,10 +194,7 @@ void FACCH1::encode(uint8_t* data, uint32_t offset) const
 #endif
 }
 
-/// <summary>
-/// Gets the raw FACCH1 data.
-/// </summary>
-/// <param name="data"></param>
+/* Gets the raw FACCH1 data. */
 void FACCH1::getData(uint8_t* data) const
 {
     assert(data != nullptr);
@@ -228,10 +202,7 @@ void FACCH1::getData(uint8_t* data) const
     ::memcpy(data, m_data, NXDN_FACCH1_CRC_LENGTH_BYTES - 2U);
 }
 
-/// <summary>
-/// Sets the raw FACCH1 data.
-/// </summary>
-/// <param name="data"></param>
+/* Sets the raw FACCH1 data. */
 void FACCH1::setData(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -243,10 +214,7 @@ void FACCH1::setData(const uint8_t* data)
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Internal helper to copy the the class.
-/// </summary>
-/// <param name="data"></param>
+/* Internal helper to copy the the class. */
 void FACCH1::copy(const FACCH1& data)
 {
     m_data = new uint8_t[NXDN_FACCH1_CRC_LENGTH_BYTES];

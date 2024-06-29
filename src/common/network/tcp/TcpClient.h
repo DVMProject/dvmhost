@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2024 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @file TcpClient.h
+ * @ingroup tcp_socket
+ */
 #if !defined(__TCP_CLIENT_H__)
 #define __TCP_CLIENT_H__
 
@@ -26,9 +27,12 @@ namespace network
     {
         // ---------------------------------------------------------------------------
         //  Class Declaration
-        //      Implements a TCP client.
         // ---------------------------------------------------------------------------
 
+        /**
+         * @brief Implements a TCP client. 
+         * @ingroup tcp_socket
+         */
         class HOST_SW_API TcpClient : public Socket
         {
         public:
@@ -36,23 +40,29 @@ namespace network
             auto operator=(TcpClient&&) -> TcpClient& = delete;
             TcpClient(TcpClient&) = delete;
 
-            /// <summary>Initializes a new instance of the TcpClient class.</summary>
+            /**
+             * @brief Initializes a new instance of the TcpClient class.
+             */
             TcpClient() noexcept(false) : Socket(AF_INET, SOCK_STREAM, 0)
             {
                 init();
             }
-            /// <summary>Initializes a new instance of the TcpClient class.</summary>
-            /// <param name="fd"></param>
-            /// <param name="client"></param>
-            /// <param name="clientLen"></param>
+            /**
+             * @brief Initializes a new instance of the TcpClient class.
+             * @param fd File Descriptor for existing socket.
+             * @param client Address for client.
+             * @param clientLen Length of sockaddr_in structure.
+             */
             TcpClient(const int fd, sockaddr_in& client, int clientLen) noexcept(false) : Socket(fd),
                 m_sockaddr()
             {
                 ::memcpy(reinterpret_cast<char*>(&m_sockaddr), reinterpret_cast<char*>(&client), clientLen);
             }
-            /// <summary>Initializes a new instance of the TcpClient class.</summary>
-            /// <param name="address"></param>
-            /// <param name="port"></param>
+            /**
+             * @brief Initializes a new instance of the TcpClient class.
+             * @param address IP Address.
+             * @param port Port.
+             */
             TcpClient(const std::string& address, const uint16_t port) noexcept(false) : TcpClient()
             {
                 assert(!address.empty());
@@ -69,16 +79,18 @@ namespace network
                 }
             }
 
-            /// <summary></summary>
-            /// <returns></returns>
+            /**
+             * @brief Helper to get an IP address from the sockaddr_storage.
+             * @returns sockaddr_storage sockaddr_storage structure.
+             */
             sockaddr_storage getAddress() const { return m_sockaddr; }
 
         protected:
             sockaddr_storage m_sockaddr;
 
-            /// <summary>
-            /// 
-            /// </summary>
+            /**
+             * @brief Internal helper to initialize the TCP socket.
+             */
             void init() noexcept(false)
             {
                 int reuse = 1;

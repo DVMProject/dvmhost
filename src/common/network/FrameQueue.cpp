@@ -1,15 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2023,2024 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2023,2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "Defines.h"
 #include "edac/CRC.h"
 #include "network/BaseNetwork.h"
@@ -30,11 +27,7 @@ using namespace network::frame;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the FrameQueue class.
-/// </FrameQueue>
-/// <param name="socket">Local port used to listen for incoming data.</param>
-/// <param name="peerId">Unique ID of this modem on the network.</param>
+/* Initializes a new instance of the FrameQueue class. */
 FrameQueue::FrameQueue(udp::Socket* socket, uint32_t peerId, bool debug) : RawFrameQueue(socket, debug),
     m_peerId(peerId),
     m_streamTimestamps()
@@ -42,15 +35,7 @@ FrameQueue::FrameQueue(udp::Socket* socket, uint32_t peerId, bool debug) : RawFr
     assert(peerId < 999999999U);
 }
 
-/// <summary>
-/// Read message from the received UDP packet.
-/// </summary>
-/// <param name="messageLength">Actual length of message read from packet.</param>
-/// <param name="address">IP address data read from.</param>
-/// <param name="addrLen"></param>
-/// <param name="rtpHeader">RTP Header.</param>
-/// <param name="fneHeader">FNE Header.</param>
-/// <returns>Buffer containing message read.</returns>
+/* Read message from the received UDP packet. */
 UInt8Array FrameQueue::read(int& messageLength, sockaddr_storage& address, uint32_t& addrLen,
     RTPHeader* rtpHeader, RTPFNEHeader* fneHeader)
 {
@@ -130,19 +115,7 @@ UInt8Array FrameQueue::read(int& messageLength, sockaddr_storage& address, uint3
     return nullptr;
 }
 
-/// <summary>
-/// Write message to the UDP socket.
-/// </summary>
-/// <param name="message">Message buffer to frame and queue.</param>
-/// <param name="length">Length of message.</param>
-/// <param name="streamId">Message stream ID.</param>
-/// <param name="peerId">Peer ID.</param>
-/// <param name="ssrc">RTP SSRC ID.</param>
-/// <param name="opcode">Opcode.</param>
-/// <param name="rtpSeq">RTP Sequence.</param>
-/// <param name="addr">IP address to write data to.</param>
-/// <param name="addrLen"></param>
-/// <returns></returns>
+/* Write message to the UDP socket. */
 bool FrameQueue::write(const uint8_t* message, uint32_t length, uint32_t streamId, uint32_t peerId,
     uint32_t ssrc, OpcodePair opcode, uint16_t rtpSeq, sockaddr_storage& addr, uint32_t addrLen)
 {
@@ -162,37 +135,14 @@ bool FrameQueue::write(const uint8_t* message, uint32_t length, uint32_t streamI
     return ret;
 }
 
-/// <summary>
-/// Cache message to frame queue.
-/// </summary>
-/// <param name="message">Message buffer to frame and queue.</param>
-/// <param name="length">Length of message.</param>
-/// <param name="streamId">Message stream ID.</param>
-/// <param name="peerId">Peer ID.</param>
-/// <param name="opcode">Opcode.</param>
-/// <param name="rtpSeq">RTP Sequence.</param>
-/// <param name="addr">IP address to write data to.</param>
-/// <param name="addrLen"></param>
-/// <returns></returns>
+/* Cache message to frame queue. */
 void FrameQueue::enqueueMessage(const uint8_t* message, uint32_t length, uint32_t streamId, uint32_t peerId,
     OpcodePair opcode, uint16_t rtpSeq, sockaddr_storage& addr, uint32_t addrLen)
 {
     enqueueMessage(message, length, streamId, peerId, peerId, opcode, rtpSeq, addr, addrLen);
 }
 
-/// <summary>
-/// Cache message to frame queue.
-/// </summary>
-/// <param name="message">Message buffer to frame and queue.</param>
-/// <param name="length">Length of message.</param>
-/// <param name="streamId">Message stream ID.</param>
-/// <param name="peerId">Peer ID.</param>
-/// <param name="ssrc">RTP SSRC ID.</param>
-/// <param name="opcode">Opcode.</param>
-/// <param name="rtpSeq">RTP Sequence.</param>
-/// <param name="addr">IP address to write data to.</param>
-/// <param name="addrLen"></param>
-/// <returns></returns>
+/* Cache message to frame queue. */
 void FrameQueue::enqueueMessage(const uint8_t* message, uint32_t length, uint32_t streamId, uint32_t peerId,
     uint32_t ssrc, OpcodePair opcode, uint16_t rtpSeq, sockaddr_storage& addr, uint32_t addrLen)
 {
@@ -211,9 +161,7 @@ void FrameQueue::enqueueMessage(const uint8_t* message, uint32_t length, uint32_
     m_buffers.push_back(dgram);
 }
 
-/// <summary>
-/// Helper method to clear any tracked stream timestamps.
-/// </summary>
+/* Helper method to clear any tracked stream timestamps. */
 void FrameQueue::clearTimestamps()
 {
     m_streamTimestamps.clear();
@@ -223,18 +171,7 @@ void FrameQueue::clearTimestamps()
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Generate RTP message for the frame queue.
-/// </summary>
-/// <param name="message">Message buffer to frame and queue.</param>
-/// <param name="length">Length of message.</param>
-/// <param name="streamId">Message stream ID.</param>
-/// <param name="peerId">Peer ID.</param>
-/// <param name="ssrc">RTP SSRC ID.</param>
-/// <param name="opcode">Opcode.</param>
-/// <param name="rtpSeq">RTP Sequence.</param>
-/// <param name="outBufferLen"></param>
-/// <returns></returns>
+/* Generate RTP message for the frame queue. */
 uint8_t* FrameQueue::generateMessage(const uint8_t* message, uint32_t length, uint32_t streamId, uint32_t peerId,
     uint32_t ssrc, OpcodePair opcode, uint16_t rtpSeq, uint32_t* outBufferLen)
 {

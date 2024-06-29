@@ -1,15 +1,18 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @file AMBT.h
+ * @ingroup p25_lc
+ * @file AMBT.cpp
+ * @ingroup p25_lc
+ */
 #if !defined(__P25_LC__AMBT_H__)
 #define  __P25_LC__AMBT_H__
 
@@ -24,31 +27,70 @@ namespace p25
     {
         // ---------------------------------------------------------------------------
         //  Class Declaration
-        //      Represents link control data for Alternate Trunking packets.
         // ---------------------------------------------------------------------------
 
+        /**
+         * @brief Represents link control data for Alternate Trunking packets.
+         * @ingroup p25_lc
+         */
         class HOST_SW_API AMBT : public TSBK {
         public:
-            /// <summary>Initializes a new instance of the AMBT class.</summary>
+            /**
+             * @brief Initializes a new instance of the AMBT class.
+             */
             AMBT();
 
-            /// <summary>Decode a alternate trunking signalling block.</summary>
+            /**
+             * @brief Decode a alternate trunking signalling block.
+             * @param[in] dataHeader P25 PDU data header
+             * @param[in] blocks P25 PDU data blocks
+             * @returns bool True, if AMBT decoded, otherwise false.
+             */
             virtual bool decodeMBT(const data::DataHeader& dataHeader, const data::DataBlock* blocks) = 0;
-            /// <summary>Encode a alternate trunking signalling block.</summary>
+            /**
+             * @brief Encode a alternate trunking signalling block.
+             * @param[out] dataHeader P25 PDU data header
+             * @param[out] pduUserData P25 PDU user data
+             */
             virtual void encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUserData) = 0;
 
-            /// <summary>Decode a trunking signalling block.</summary>
+            /**
+             * @brief Decode a trunking signalling block.
+             * @param[in] data Buffer containing a TSBK to decode.
+             * @param rawTSBK Flag indicating whether or not the passed buffer is raw.
+             * @returns bool True, if TSBK decoded, otherwise false.
+             */
             bool decode(const uint8_t* data, bool rawTSBK = false);
-            /// <summary>Encode a trunking signalling block.</summary>
+            /**
+             * @brief Encode a trunking signalling block.
+             * @param[out] data Buffer to encode a TSBK.
+             * @param rawTSBK Flag indicating whether or not the output buffer is raw.
+             * @param noTrellis Flag indicating whether or not the encoded data should be Trellis encoded.
+             */
             void encode(uint8_t* data, bool rawTSBK = false, bool noTrellis = false);
 
         protected:
-            /// <summary>Internal helper to convert AMBT bytes to a 64-bit long value.</summary>
+            /**
+             * @brief Internal helper to convert AMBT bytes to a 64-bit long value.
+             * @param[in] dataHeader P25 PDU data header
+             * @param[in] blocks P25 PDU data blocks
+             * @returns ulong64_t 64-bit packed value containing the buffer.
+             */
             static ulong64_t toValue(const data::DataHeader& dataHeader, const uint8_t* pduUserData);
 
-            /// <summary>Internal helper to decode a trunking signalling block.</summary>
+            /**
+             * @brief Internal helper to decode a trunking signalling block.
+             * @param[in] dataHeader P25 PDU data header
+             * @param[in] blocks P25 PDU data blocks
+             * @param[out] pduUserData P25 PDU user data
+             * @returns bool True, if AMBT decoded, otherwise false.
+             */
             bool decode(const data::DataHeader& dataHeader, const data::DataBlock* blocks, uint8_t* pduUserData);
-            /// <summary>Internal helper to encode a trunking signalling block.</summary>
+            /**
+             * @brief Internal helper to encode a trunking signalling block.
+             * @param[out] dataHeader P25 PDU data header
+             * @param[out] pduUserData P25 PDU user data
+             */
             void encode(data::DataHeader& dataHeader, uint8_t* pduUserData);
         };
     } // namespace lc

@@ -1,15 +1,18 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2024 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @file SecureTcpClient.h
+ * @ingroup tcp_socket
+ * @file SecureTcpClient.cpp
+ * @ingroup tcp_socket
+ */
 #if !defined(__SECURE_TCP_CLIENT_H__)
 #define __SECURE_TCP_CLIENT_H__
 
@@ -32,9 +35,12 @@ namespace network
     {
         // ---------------------------------------------------------------------------
         //  Class Declaration
-        //      Implements a secure TCP client.
         // ---------------------------------------------------------------------------
 
+        /**
+         * @brief Implements a secure TCP client.
+         * @ingroup tcp_socket
+         */
         class HOST_SW_API SecureTcpClient : public Socket
         {
         public:
@@ -42,11 +48,13 @@ namespace network
             auto operator=(SecureTcpClient&&) -> SecureTcpClient& = delete;
             SecureTcpClient(SecureTcpClient&) = delete;
 
-            /// <summary>Initializes a new instance of the SecureTcpClient class.</summary>
-            /// <param name="fd"></param>
-            /// <param name="sslCtx"></param>
-            /// <param name="client"></param>
-            /// <param name="clientLen"></param>
+            /**
+             * @brief Initializes a new instance of the SecureTcpClient class.
+             * @param fd File Descriptor for existing socket.
+             * @param sslCtx Instance of the OpenSSL context.
+             * @param client Address for client.
+             * @param clientLen Length of sockaddr_in structure.
+             */
             SecureTcpClient(const int fd, SSL_CTX* sslCtx, sockaddr_in& client, int clientLen) : Socket(fd),
                 m_sockaddr(),
                 m_pSSL(nullptr),
@@ -60,9 +68,11 @@ namespace network
                     throw std::runtime_error("Cannot accept SSL client");
                 }
             }
-            /// <summary>Initializes a new instance of the SecureTcpClient class.</summary>
-            /// <param name="address"></param>
-            /// <param name="port"></param>
+            /**
+             * @brief Initializes a new instance of the SecureTcpClient class.
+             * @param address IP Address.
+             * @param port Port.
+             */
             SecureTcpClient(const std::string& address, const uint16_t port) : 
                 m_pSSL(nullptr),
                 m_pSSLCtx(nullptr)
@@ -93,7 +103,9 @@ namespace network
                     throw std::runtime_error("Failed to SSL connect to server");
                 }
             }
-            /// <summary>Finalizes a instance of the SecureTcpClient class.</summary>
+            /**
+             * @brief Finalizes a instance of the SecureTcpClient class.
+             */
             ~SecureTcpClient() override
             {
                 if (m_pSSL != nullptr) {
@@ -105,34 +117,37 @@ namespace network
                     SSL_CTX_free(m_pSSLCtx);
             }
 
-            /// <summary>
-            /// Read data from the socket.
-            /// </summary>
-            /// <param name="buffer">Buffer to read data into.</param>
-            /// <param name="length">Length of data to read.</param>
-            /// <returns></returns>
+            /**
+             * @brief Read data from the socket.
+             * @param[out] buffer Buffer to read data into.
+             * @param[out] length Length of data to read.
+             * @returns ssize_t Actual length of data read from remote TCP socket.
+             */
             [[nodiscard]] ssize_t read(uint8_t* buffer, size_t len) noexcept override
             {
                 return SSL_read(m_pSSL, buffer, (int)len);
             }
-
-            /// <summary>
-            /// Write data to the socket.
-            /// </summary>
-            /// <param name="buffer">Buffer containing data to write to socket.</param>
-            /// <param name="length">Length of data to write.</param>
-            /// <returns></returns>
+            /**
+             * @brief Write data to the socket.
+             * @param[in] buffer Buffer containing data to write to socket.
+             * @param length Length of data to write.
+             * @returns ssize_t Length of data written.
+             */
             ssize_t write(const uint8_t* buffer, size_t len) noexcept override
             {
                 return SSL_write(m_pSSL, buffer, (int)len);
             }
 
-            /// <summary></summary>
-            /// <returns></returns>
+            /**
+             * @brief Helper to get an IP address from the sockaddr_storage.
+             * @returns sockaddr_storage sockaddr_storage structure.
+             */
             sockaddr_storage getAddress() const { return m_sockaddr; }
 
-            /// <summary></summary>
-            /// <param name="hostname"></param>
+            /**
+             * @brief Sets the hostname for the SSL certificate.
+             * @param hostname Hostname.
+             */
             static void setHostname(std::string hostname) { m_sslHostname = hostname; }
 
         private:
@@ -142,9 +157,9 @@ namespace network
             SSL* m_pSSL;
             SSL_CTX* m_pSSLCtx;
 
-            /// <summary>
-            /// 
-            /// </summary>
+            /**
+             * @brief Internal helper to initialize the TCP socket.
+             */
             void init() noexcept(false)
             {
                 m_fd = ::socket(AF_INET, SOCK_STREAM, 0);
@@ -160,10 +175,10 @@ namespace network
                 }
             }
 
-            /// <summary>
-            /// 
-            /// </summary>
-            /// <param name="sslCtx"></param>
+            /**
+             * @brief Internal helper to initialize SSL.
+             * @param sslCtx Instance of the OpenSSL context.
+             */
             void initSsl(SSL_CTX* sslCtx) noexcept(false)
             {
                 m_pSSL = SSL_new(sslCtx);

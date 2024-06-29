@@ -1,15 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2022,204 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *   Copyright (C) 2022,204 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "nxdn/NXDNDefines.h"
 #include "nxdn/lc/RCCH.h"
 #include "Utils.h"
@@ -34,18 +31,7 @@ SiteData RCCH::m_siteData = SiteData();
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a copy instance of the RCCH class.
-/// </summary>
-/// <param name="data"></param>
-RCCH::RCCH(const RCCH& data) : RCCH()
-{
-    copy(data);
-}
-
-/// <summary>
-/// Initializes a new instance of the RCCH class.
-/// </summary>
+/* Initializes a new instance of the RCCH class. */
 RCCH::RCCH() :
     m_messageType(MessageType::IDLE),
     m_srcId(0U),
@@ -70,28 +56,25 @@ RCCH::RCCH() :
     }
 }
 
-/// <summary>
-/// Finalizes a instance of RCCH class.
-/// </summary>
+/* Initializes a copy instance of the RCCH class. */
+RCCH::RCCH(const RCCH& data) : RCCH()
+{
+    copy(data);
+}
+
+/* Finalizes a instance of RCCH class. */
 RCCH::~RCCH()
 {
     /* stub */
 }
 
-/// <summary>
-/// Returns a string that represents the current RCCH.
-/// </summary>
-/// <param name="isp"></param>
-/// <returns></returns>
+/* Returns a string that represents the current RCCH. */
 std::string RCCH::toString(bool isp)
 {
     return std::string("MESSAGE_TYPE_UNKWN (Unknown RCCH)");
 }
 
-/// <summary>
-/// Sets the callsign.
-/// </summary>
-/// <param name="callsign">Callsign.</param>
+/* Sets the callsign. */
 void RCCH::setCallsign(std::string callsign)
 {
     if (m_siteCallsign == nullptr) {
@@ -110,18 +93,11 @@ void RCCH::setCallsign(std::string callsign)
     }
 }
 
-/// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
 //  Protected Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Internal helper to decode a trunking signalling block.
-/// </summary>
-/// <param name="data"></param>
-/// <param name="rcch"></param>
-/// <param name="length"></param>
-/// <param name="offset"></param>
-/// <returns>True, if RCCH was decoded, otherwise false.</returns>
+/* Internal helper to decode a RCCH link control message. */
 void RCCH::decode(const uint8_t* data, uint8_t* rcch, uint32_t length, uint32_t offset)
 {
     assert(data != nullptr);
@@ -139,13 +115,7 @@ void RCCH::decode(const uint8_t* data, uint8_t* rcch, uint32_t length, uint32_t 
     m_messageType = data[0U] & 0x3FU;                                               // Message Type
 }
 
-/// <summary>
-/// Internal helper to encode a RCCH.
-/// </summary>
-/// <param name="data"></param>
-/// <param name="rcch"></param>
-/// <param name="length"></param>
-/// <param name="offset"></param>
+/* Internal helper to encode a RCCH link control message. */
 void RCCH::encode(uint8_t* data, const uint8_t* rcch, uint32_t length, uint32_t offset)
 {
     assert(data != nullptr);
@@ -165,10 +135,7 @@ void RCCH::encode(uint8_t* data, const uint8_t* rcch, uint32_t length, uint32_t 
     }
 }
 
-// <summary>
-/// Internal helper to copy the the class.
-/// </summary>
-/// <param name="data"></param>
+/* Internal helper to copy the the class. */
 void RCCH::copy(const RCCH& data)
 {
     m_messageType = data.m_messageType;

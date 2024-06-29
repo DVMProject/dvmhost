@@ -1,15 +1,18 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2024 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @file SNDCPFactory.h
+ * @ingroup p25_sndcp
+ * @file SNDCPFactory.cpp
+ * @ingroup p25_sndcp
+ */
 #if !defined(__P25_SNDCP__SNDCP_FACTORY_H__)
 #define  __P25_SNDCP__SNDCP_FACTORY_H__
 
@@ -27,21 +30,37 @@ namespace p25
     {
         // ---------------------------------------------------------------------------
         //  Class Declaration
-        //      Helper class to instantiate an instance of a SNDCP packet.
         // ---------------------------------------------------------------------------
 
+        /**
+         * @brief Helper class to instantiate an instance of a SNDCP packet.
+         * @ingroup p25_sndcp
+         */
         class HOST_SW_API SNDCPFactory {
         public:
-            /// <summary>Initializes a new instance of the SNDCPFactory class.</summary>
+            /**
+             * @brief Initializes a new instance of the SNDCPFactory class.
+             */
             SNDCPFactory();
-            /// <summary>Finalizes a instance of the SNDCPFactory class.</summary>
+            /**
+             * @brief Finalizes a instance of the SNDCPFactory class.
+             */
             ~SNDCPFactory();
 
-            /// <summary>Create an instance of a SNDCPPacket.</summary>
+            /**
+             * @brief Create an instance of a SNDCPPacket.
+             * @param[in] data Buffer containing SNDCP packet data to decode.
+             * @returns SNDCPPacket* Instance of a SNDCPPacket representing the decoded data.
+             */
             static std::unique_ptr<SNDCPPacket> create(const uint8_t* data);
 
         private:
-            /// <summary></summary>
+            /**
+             * @brief Decode a SNDCP packet.
+             * @param packet Instance of SNDCPPacket.
+             * @param[in] data Buffer containing SNDCP packet data to decode.
+             * @returns SNDCPPacket* Instance of a SNDCPPacket representing the decoded data.
+             */
             static std::unique_ptr<SNDCPPacket> decode(SNDCPPacket* packet, const uint8_t* data);
         };
     } // namespace sndcp

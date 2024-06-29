@@ -1,17 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Common Library
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2015,2016,2017 Jonathan Naylor, G4KLX
-*   Copyright (C) 2020-2024 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2015,2016,2017 Jonathan Naylor, G4KLX
+ *  Copyright (C) 2020-2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "Defines.h"
 #include "common/dmr/DMRDefines.h"
 #include "common/p25/P25Defines.h"
@@ -30,17 +26,7 @@ using namespace network::frame;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the BaseNetwork class.
-/// </summary>
-/// <param name="peerId">Unique ID of this modem on the network.</param>
-/// <param name="duplex">Flag indicating full-duplex operation.</param>
-/// <param name="debug">Flag indicating whether network debug is enabled.</param>
-/// <param name="slot1">Flag indicating whether DMR slot 1 is enabled for network traffic.</param>
-/// <param name="slot2">Flag indicating whether DMR slot 2 is enabled for network traffic.</param>
-/// <param name="allowActivityTransfer">Flag indicating that the system activity logs will be sent to the network.</param>
-/// <param name="allowDiagnosticTransfer">Flag indicating that the system diagnostic logs will be sent to the network.</param>
-/// <param name="localPort">Local port used to listen for incoming data.</param>
+/* Initializes a new instance of the BaseNetwork class. */
 BaseNetwork::BaseNetwork(uint32_t peerId, bool duplex, bool debug, bool slot1, bool slot2, bool allowActivityTransfer, bool allowDiagnosticTransfer, uint16_t localPort) :
     m_peerId(peerId),
     m_status(NET_STAT_INVALID),
@@ -81,9 +67,7 @@ BaseNetwork::BaseNetwork(uint32_t peerId, bool duplex, bool debug, bool slot1, b
     m_nxdnStreamId = createStreamId();
 }
 
-/// <summary>
-/// Finalizes a instance of the BaseNetwork class.
-/// </summary>
+/* Finalizes a instance of the BaseNetwork class. */
 BaseNetwork::~BaseNetwork()
 {
     if (m_frameQueue != nullptr) {
@@ -97,15 +81,7 @@ BaseNetwork::~BaseNetwork()
     delete[] m_dmrStreamId;
 }
 
-/// <summary>
-/// Writes grant request to the network.
-/// </summary>
-/// <param name="mode"></param>
-/// <param name="srcId"></param>
-/// <param name="dstId"></param>
-/// <param name="slot"></param>
-/// <param name="unitToUnit"></param>
-/// <returns></returns>
+/* Writes grant request to the network. */
 bool BaseNetwork::writeGrantReq(const uint8_t mode, const uint32_t srcId, const uint32_t dstId, const uint8_t slot, const bool unitToUnit)
 {
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
@@ -126,11 +102,7 @@ bool BaseNetwork::writeGrantReq(const uint8_t mode, const uint32_t srcId, const 
     return writeMaster({ NET_FUNC::GRANT_REQ, NET_SUBFUNC::NOP }, buffer, MSG_HDR_SIZE, 0U, 0U);
 }
 
-/// <summary>
-/// Writes the local activity log to the network.
-/// </summary>
-/// <param name="message"></param>
-/// <returns></returns>
+/* Writes the local activity log to the network. */
 bool BaseNetwork::writeActLog(const char* message)
 {
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
@@ -150,11 +122,7 @@ bool BaseNetwork::writeActLog(const char* message)
         0U, 0U, false, m_useAlternatePortForDiagnostics);
 }
 
-/// <summary>
-/// Writes the local diagnostics log to the network.
-/// </summary>
-/// <param name="message"></param>
-/// <returns></returns>
+/* Writes the local diagnostics log to the network. */
 bool BaseNetwork::writeDiagLog(const char* message)
 {
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
@@ -174,11 +142,7 @@ bool BaseNetwork::writeDiagLog(const char* message)
         0U, 0U, false, m_useAlternatePortForDiagnostics);
 }
 
-/// <summary>
-/// Writes the local status to the network.
-/// </summary>
-/// <param name="obj"></param>
-/// <returns></returns>
+/* Writes the local status to the network. */
 bool BaseNetwork::writePeerStatus(json::object obj)
 {
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
@@ -202,24 +166,7 @@ bool BaseNetwork::writePeerStatus(json::object obj)
         0U, 0U, false, m_useAlternatePortForDiagnostics);
 }
 
-/// <summary>
-/// Writes a group affiliation to the network.
-/// </summary>
-/// <remarks>
-/// Below is the representation of the data layout for the group affiliation
-/// announcement message. The message is 6 bytes in length.
-///
-/// Byte 0               1               2               3
-/// Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 
-///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-///     | Source ID                                     | Dest ID       |
-///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-///     |                             |
-///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-/// </remarks>
-/// <param name="srcId"></param>
-/// <param name="dstId"></param>
-/// <returns></returns>
+/* Writes a group affiliation to the network. */
 bool BaseNetwork::announceGroupAffiliation(uint32_t srcId, uint32_t dstId)
 {
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
@@ -233,22 +180,7 @@ bool BaseNetwork::announceGroupAffiliation(uint32_t srcId, uint32_t dstId)
     return writeMaster({ NET_FUNC::ANNOUNCE, NET_SUBFUNC::ANNC_SUBFUNC_GRP_AFFIL }, buffer, MSG_ANNC_GRP_AFFIL, 0U, 0U);
 }
 
-/// <summary>
-/// Writes a unit registration to the network.
-/// </summary>
-/// <param name="srcId"></param>
-/// <remarks>
-/// Below is the representation of the data layout for the unit registration
-/// announcement message. The message is 3 bytes in length.
-///
-/// Byte 0               1               2
-/// Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 
-///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-///     | Source ID                                     |
-///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-/// </remarks>
-/// <param name="srcId"></param>
-/// <returns></returns>
+/* Writes a unit registration to the network. */
 bool BaseNetwork::announceUnitRegistration(uint32_t srcId)
 {
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
@@ -261,10 +193,7 @@ bool BaseNetwork::announceUnitRegistration(uint32_t srcId)
     return writeMaster({ NET_FUNC::ANNOUNCE, NET_SUBFUNC::ANNC_SUBFUNC_UNIT_REG }, buffer, MSG_ANNC_UNIT_REG, 0U, 0U);
 }
 
-/// <summary>
-/// Writes a unit deregistration to the network.
-/// </summary>
-/// <param name="srcId"></param>
+/* Writes a unit deregistration to the network. */
 bool BaseNetwork::announceUnitDeregistration(uint32_t srcId)
 {
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
@@ -277,11 +206,7 @@ bool BaseNetwork::announceUnitDeregistration(uint32_t srcId)
     return writeMaster({ NET_FUNC::ANNOUNCE, NET_SUBFUNC::ANNC_SUBFUNC_UNIT_DEREG }, buffer, MSG_ANNC_UNIT_REG, 0U, 0U);
 }
 
-/// <summary>
-/// Writes a complete update of the peer affiliation list to the network.
-/// </summary>
-/// <param name="affs"></param>
-/// <returns></returns>
+/* Writes a complete update of the peer affiliation list to the network. */
 bool BaseNetwork::announceAffiliationUpdate(const std::unordered_map<uint32_t, uint32_t> affs)
 {
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
@@ -303,11 +228,7 @@ bool BaseNetwork::announceAffiliationUpdate(const std::unordered_map<uint32_t, u
     return writeMaster({ NET_FUNC::ANNOUNCE, NET_SUBFUNC::ANNC_SUBFUNC_AFFILS }, buffer, 4U + (affs.size() * 8U), 0U, 0U);
 }
 
-/// <summary>
-/// Writes a complete update of the peer's voice channel list to the network.
-/// </summary>
-/// <param name="affs"></param>
-/// <returns></returns>
+/* Writes a complete update of the peer's voice channel list to the network. */
 bool BaseNetwork::announceSiteVCs(const std::vector<uint32_t> peers)
 {
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
@@ -328,10 +249,7 @@ bool BaseNetwork::announceSiteVCs(const std::vector<uint32_t> peers)
     return writeMaster({ NET_FUNC::ANNOUNCE, NET_SUBFUNC::ANNC_SUBFUNC_SITE_VC }, buffer, 4U + (peers.size() * 4U), 0U, 0U);
 }
 
-/// <summary>
-/// Resets the DMR ring buffer for the given slot.
-/// </summary>
-/// <param name="slotNo">DMR slot ring buffer to reset.</param>
+/* Resets the DMR ring buffer for the given slot. */
 void BaseNetwork::resetDMR(uint32_t slotNo)
 {
     assert(slotNo == 1U || slotNo == 2U);
@@ -347,9 +265,7 @@ void BaseNetwork::resetDMR(uint32_t slotNo)
     m_rxDMRData.clear();
 }
 
-/// <summary>
-/// Resets the P25 ring buffer.
-/// </summary>
+/* Resets the P25 ring buffer. */
 void BaseNetwork::resetP25()
 {
     m_p25StreamId = createStreamId();
@@ -357,9 +273,7 @@ void BaseNetwork::resetP25()
     m_rxP25Data.clear();
 }
 
-/// <summary>
-/// Resets the NXDN ring buffer.
-/// </summary>
+/* Resets the NXDN ring buffer. */
 void BaseNetwork::resetNXDN()
 {
     m_nxdnStreamId = createStreamId();
@@ -367,11 +281,7 @@ void BaseNetwork::resetNXDN()
     m_rxNXDNData.clear();
 }
 
-/// <summary>
-/// Gets the current DMR stream ID.
-/// </summary>
-/// <param name="slotNo">DMR slot to get stream ID for.</param>
-/// <returns>Stream ID for the given DMR slot.<returns>
+/* Gets the current DMR stream ID. */
 uint32_t BaseNetwork::getDMRStreamId(uint32_t slotNo) const
 {
     assert(slotNo == 1U || slotNo == 2U);
@@ -384,16 +294,7 @@ uint32_t BaseNetwork::getDMRStreamId(uint32_t slotNo) const
     }
 }
 
-/// <summary>
-/// Helper to send a data message to the master.
-/// </summary>
-/// <param name="opcode">Opcode.</param>
-/// <param name="data">Buffer to write to the network.</param>
-/// <param name="length">Length of buffer to write.</param>
-/// <param name="pktSeq"></param>
-/// <param name="streamId"></param>
-/// <param name="queueOnly"></param>
-/// <param name="useAlternatePort"></param>
+/* Helper to send a data message to the master. */
 bool BaseNetwork::writeMaster(FrameQueue::OpcodePair opcode, const uint8_t* data, uint32_t length, uint16_t pktSeq, uint32_t streamId, 
     bool queueOnly, bool useAlternatePort)
 {
@@ -421,12 +322,7 @@ bool BaseNetwork::writeMaster(FrameQueue::OpcodePair opcode, const uint8_t* data
     return true;
 }
 
-/// <summary>
-/// Reads DMR raw frame data from the DMR ring buffer.
-/// </summary>
-/// <param name="ret"></param>
-/// <param name="length"></param>
-/// <returns></returns>
+/* Reads DMR raw frame data from the DMR ring buffer. */
 UInt8Array BaseNetwork::readDMR(bool& ret, uint32_t& frameLength)
 {
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
@@ -454,12 +350,7 @@ UInt8Array BaseNetwork::readDMR(bool& ret, uint32_t& frameLength)
     return buffer;
 }
 
-/// <summary>
-/// Writes DMR frame data to the network.
-/// </summary>
-/// <param name="data"></param>
-/// <param name="noSequence"></param>
-/// <returns></returns>
+/* Writes DMR frame data to the network. */
 bool BaseNetwork::writeDMR(const dmr::data::Data& data, bool noSequence)
 {
     using namespace dmr::defines;
@@ -507,10 +398,7 @@ bool BaseNetwork::writeDMR(const dmr::data::Data& data, bool noSequence)
     return writeMaster({ NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR }, message.get(), messageLength, seq, m_dmrStreamId[slotIndex]);
 }
 
-/// <summary>
-/// Helper to test if the DMR ring buffer has data.
-/// </summary>
-/// <returns>True if ring buffer contains data, otherwise false.</returns>
+/* Helper to test if the DMR ring buffer has data. */
 bool BaseNetwork::hasDMRData() const
 {
     if (m_rxDMRData.isEmpty())
@@ -519,12 +407,7 @@ bool BaseNetwork::hasDMRData() const
     return true;
 }
 
-/// <summary>
-/// Reads P25 raw frame data from the P25 ring buffer.
-/// </summary>
-/// <param name="ret"></param>
-/// <param name="length"></param>
-/// <returns></returns>
+/* Reads P25 raw frame data from the P25 ring buffer. */
 UInt8Array BaseNetwork::readP25(bool& ret, uint32_t& frameLength)
 {
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
@@ -552,14 +435,7 @@ UInt8Array BaseNetwork::readP25(bool& ret, uint32_t& frameLength)
     return buffer;
 }
 
-/// <summary>
-/// Writes P25 LDU1 frame data to the network.
-/// </summary>
-/// <param name="control"></param>
-/// <param name="lsd"></param>
-/// <param name="data"></param>
-/// <param name="frameType"></param>
-/// <returns></returns>
+/* Writes P25 LDU1 frame data to the network. */
 bool BaseNetwork::writeP25LDU1(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, const uint8_t* data, p25::defines::FrameType::E frameType)
 {
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
@@ -580,13 +456,7 @@ bool BaseNetwork::writeP25LDU1(const p25::lc::LC& control, const p25::data::LowS
     return writeMaster({ NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25 }, message.get(), messageLength, pktSeq(resetSeq), m_p25StreamId);
 }
 
-/// <summary>
-/// Writes P25 LDU2 frame data to the network.
-/// </summary>
-/// <param name="control"></param>
-/// <param name="lsd"></param>
-/// <param name="data"></param>
-/// <returns></returns>
+/* Writes P25 LDU2 frame data to the network. */
 bool BaseNetwork::writeP25LDU2(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, const uint8_t* data)
 {
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
@@ -607,13 +477,7 @@ bool BaseNetwork::writeP25LDU2(const p25::lc::LC& control, const p25::data::LowS
     return writeMaster({ NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25 }, message.get(), messageLength, pktSeq(resetSeq), m_p25StreamId);
 }
 
-/// <summary>
-/// Writes P25 TDU frame data to the network.
-/// </summary>
-/// <param name="control"></param>
-/// <param name="lsd"></param>
-/// <param name="controlByte"></param>
-/// <returns></returns>
+/* Writes P25 TDU frame data to the network. */
 bool BaseNetwork::writeP25TDU(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, const uint8_t controlByte)
 {
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
@@ -639,12 +503,7 @@ bool BaseNetwork::writeP25TDU(const p25::lc::LC& control, const p25::data::LowSp
     return writeMaster({ NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25 }, message.get(), messageLength, seq, m_p25StreamId);
 }
 
-/// <summary>
-/// Writes P25 TSDU frame data to the network.
-/// </summary>
-/// <param name="control"></param>
-/// <param name="data"></param>
-/// <returns></returns>
+/* Writes P25 TSDU frame data to the network. */
 bool BaseNetwork::writeP25TSDU(const p25::lc::LC& control, const uint8_t* data)
 {
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
@@ -663,15 +522,7 @@ bool BaseNetwork::writeP25TSDU(const p25::lc::LC& control, const uint8_t* data)
     return writeMaster({ NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25 }, message.get(), messageLength, RTP_END_OF_CALL_SEQ, m_p25StreamId);
 }
 
-/// <summary>
-/// Writes P25 PDU frame data to the network.
-/// </summary>
-/// <param name="header"></param>
-/// <param name="currentBlock"></param>
-/// <param name="data"></param>
-/// <param name="len"></param>
-/// <param name="lastBlock"></param>
-/// <returns></returns>
+/* Writes P25 PDU frame data to the network. */
 bool BaseNetwork::writeP25PDU(const p25::data::DataHeader& header, const uint8_t currentBlock, const uint8_t* data,
     const uint32_t len, bool lastBlock)
 {
@@ -698,10 +549,7 @@ bool BaseNetwork::writeP25PDU(const p25::data::DataHeader& header, const uint8_t
     return writeMaster({ NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25 }, message.get(), messageLength, seq, m_p25StreamId);
 }
 
-/// <summary>
-/// Helper to test if the P25 ring buffer has data.
-/// </summary>
-/// <returns>True if ring buffer contains data, otherwise false.</returns>
+/* Helper to test if the P25 ring buffer has data. */
 bool BaseNetwork::hasP25Data() const
 {
     if (m_rxP25Data.isEmpty())
@@ -710,12 +558,7 @@ bool BaseNetwork::hasP25Data() const
     return true;
 }
 
-/// <summary>
-/// Reads NXDN raw frame data from the NXDN ring buffer.
-/// </summary>
-/// <param name="ret"></param>
-/// <param name="length"></param>
-/// <returns></returns>
+/* Reads NXDN raw frame data from the NXDN ring buffer. */
 UInt8Array BaseNetwork::readNXDN(bool& ret, uint32_t& frameLength)
 {
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
@@ -743,14 +586,7 @@ UInt8Array BaseNetwork::readNXDN(bool& ret, uint32_t& frameLength)
     return buffer;
 }
 
-/// <summary>
-/// Writes NXDN frame data to the network.
-/// </summary>
-/// <param name="lc"></param>
-/// <param name="data"></param>
-/// <param name="len"></param>
-/// <param name="noSequence"></param>
-/// <returns></returns>
+/* Writes NXDN frame data to the network. */
 bool BaseNetwork::writeNXDN(const nxdn::lc::RTCH& lc, const uint8_t* data, const uint32_t len, bool noSequence)
 {
     using namespace nxdn::defines;
@@ -782,10 +618,7 @@ bool BaseNetwork::writeNXDN(const nxdn::lc::RTCH& lc, const uint8_t* data, const
     return writeMaster({ NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_NXDN }, message.get(), messageLength, seq, m_nxdnStreamId);
 }
 
-/// <summary>
-/// Helper to test if the NXDN ring buffer has data.
-/// </summary>
-/// <returns>True if ring buffer contains data, otherwise false.</returns>
+/* Helper to test if the NXDN ring buffer has data. */
 bool BaseNetwork::hasNXDNData() const
 {
     if (m_rxNXDNData.isEmpty())
@@ -798,11 +631,7 @@ bool BaseNetwork::hasNXDNData() const
 //  Protected Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Helper to update the RTP packet sequence.
-/// </summary>
-/// <param name="reset"></param>
-/// <returns>RTP packet sequence.</returns>
+/* Helper to update the RTP packet sequence. */
 uint16_t BaseNetwork::pktSeq(bool reset)
 {
     if (reset) {
@@ -818,41 +647,7 @@ uint16_t BaseNetwork::pktSeq(bool reset)
     return curr;
 }
 
-/// <summary>
-/// Creates an DMR frame message.
-/// </summary>
-/// <remarks>
-/// Below is the representation of the data layout for the DMR frame
-/// message header. The header is 20 bytes in length.
-///
-/// Byte 0               1               2               3
-/// Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 
-///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-///     | Protocol Tag (DMRD)                                           |
-///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-///     | Seq No.       | Source ID                                     |
-///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-///     | Destination ID                                | Reserved      |
-///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-///     | Reserved                      | Control Flags |S|G| Data Type |
-///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-///     | Reserved                                                      |
-///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-///
-/// The data starting at offset 20 for 33 bytes if the raw DMR frame.
-///
-/// DMR frame message has 2 trailing bytes:
-///
-/// Byte 53              54               
-/// Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0
-///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-///     | BER           | RSSI          |
-///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-/// </remarks>
-/// <param name="length"></param>
-/// <param name="streamId"></param>
-/// <param name="data"></param>
-/// <returns></returns>
+/* Creates an DMR frame message. */
 UInt8Array BaseNetwork::createDMR_Message(uint32_t& length, const uint32_t streamId, const dmr::data::Data& data)
 {
     using namespace dmr::defines;
@@ -909,52 +704,7 @@ UInt8Array BaseNetwork::createDMR_Message(uint32_t& length, const uint32_t strea
     return UInt8Array(buffer);
 }
 
-/// <summary>
-/// Creates an P25 frame message header.
-/// </summary>
-/// <remarks>
-/// Below is the representation of the data layout for the P25 frame
-/// message header. The header is 24 bytes in length.
-///
-/// Byte 0               1               2               3
-/// Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 
-///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-///     | Protocol Tag (P25D)                                           |
-///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-///     | LCO           | Source ID                                     |
-///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-///     | Destination ID                                | System ID     |
-///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-///     | System ID     | Reserved      | Control Flags | MFId          |
-///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-///     | Network ID                                    | Reserved      |
-///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-///     | LSD1          | LSD2          | DUID          | Frame Length  |
-///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-///
-/// The data starting at offset 20 for variable number of bytes (DUID dependant) 
-/// is the P25 frame.
-///
-/// If the P25 frame message is a LDU1, it contains 13 trailing bytes that
-/// contain the frame type, and encryption data.
-///
-/// Byte 180             181             182             183
-/// Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 
-///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-///     | Frame Type    | Algorithm ID  | Key ID                        |
-///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-///     | Message Indicator                                             |
-///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-///     |                                                               |
-///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-///     |               |
-///     +-+-+-+-+-+-+-+-+
-/// </remarks>
-/// <param name="buffer"></param>
-/// <param name="duid"></param>
-/// <param name="control"></param>
-/// <param name="lsd"></param>
-/// <param name="frameType"></param>
+/* Creates an P25 frame message header. */
 void BaseNetwork::createP25_MessageHdr(uint8_t* buffer, p25::defines::DUID::E duid, const p25::lc::LC& control, const p25::data::LowSpeedData& lsd,
     p25::defines::FrameType::E frameType)
 {
@@ -1013,19 +763,7 @@ void BaseNetwork::createP25_MessageHdr(uint8_t* buffer, p25::defines::DUID::E du
     }
 }
 
-/// <summary>
-/// Creates an P25 LDU1 frame message.
-/// </summary>
-/// <remarks>
-/// The data packed into a P25 LDU1 frame message is near standard DFSI messaging, just instead of
-/// 9 individual frames, they are packed into a single message one right after another. 
-/// </remarks>
-/// <param name="length"></param>
-/// <param name="control"></param>
-/// <param name="lsd"></param>
-/// <param name="data"></param>
-/// <param name="frameType"></param>
-/// <returns></returns>
+/* Creates an P25 LDU1 frame message. */
 UInt8Array BaseNetwork::createP25_LDU1Message(uint32_t& length, const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, 
     const uint8_t* data, p25::defines::FrameType::E frameType)
 {
@@ -1099,18 +837,7 @@ UInt8Array BaseNetwork::createP25_LDU1Message(uint32_t& length, const p25::lc::L
     return UInt8Array(buffer);
 }
 
-/// <summary>
-/// Creates an P25 LDU2 frame message.
-/// </summary>
-/// <remarks>
-/// The data packed into a P25 LDU2 frame message is near standard DFSI messaging, just instead of
-/// 9 individual frames, they are packed into a single message one right after another. 
-/// </remarks>
-/// <param name="length"></param>
-/// <param name="control"></param>
-/// <param name="lsd"></param>
-/// <param name="data"></param>
-/// <returns></returns>
+/* Creates an P25 LDU2 frame message. */
 UInt8Array BaseNetwork::createP25_LDU2Message(uint32_t& length, const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, 
     const uint8_t* data)
 {
@@ -1184,18 +911,7 @@ UInt8Array BaseNetwork::createP25_LDU2Message(uint32_t& length, const p25::lc::L
     return UInt8Array(buffer);
 }
 
-/// <summary>
-/// Creates an P25 TDU frame message.
-/// </summary>
-/// <remarks>
-/// The data packed into a P25 TDU frame message is essentially just a message header with control bytes
-/// set. 
-/// </remarks>
-/// <param name="length"></param>
-/// <param name="control"></param>
-/// <param name="lsd"></param>
-/// <param name="controlByte"></param>
-/// <returns></returns>
+/* Creates an P25 TDU frame message. */
 UInt8Array BaseNetwork::createP25_TDUMessage(uint32_t& length, const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, const uint8_t controlByte)
 {
     using namespace p25::defines;
@@ -1215,17 +931,7 @@ UInt8Array BaseNetwork::createP25_TDUMessage(uint32_t& length, const p25::lc::LC
     return UInt8Array(buffer);
 }
 
-/// <summary>
-/// Creates an P25 TSDU frame message.
-/// </summary>
-/// <remarks>
-/// The data packed into a P25 TSDU frame message is essentially just a message header with the FEC encoded
-/// raw TSDU data.
-/// </remarks>
-/// <param name="length"></param>
-/// <param name="control"></param>
-/// <param name="data"></param>
-/// <returns></returns>
+/* Creates an P25 TSDU frame message. */
 UInt8Array BaseNetwork::createP25_TSDUMessage(uint32_t& length, const p25::lc::LC& control, const uint8_t* data)
 {
     using namespace p25::defines;
@@ -1253,38 +959,7 @@ UInt8Array BaseNetwork::createP25_TSDUMessage(uint32_t& length, const p25::lc::L
     return UInt8Array(buffer);
 }
 
-/// <summary>
-/// Writes P25 PDU frame data to the network.
-/// </summary>
-/// <remarks>
-/// Below is the representation of the data layout for the P25 frame
-/// message header used for a PDU. The header is 24 bytes in length.
-///
-/// Byte 0               1               2               3
-/// Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 
-///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-///     | Protocol Tag (P25D)                                           |
-///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-///     |C| SAP         | PDU Length (Bytes)                            |
-///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-///     | Reserved                                                      |
-///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-///     |                                               | MFId          |
-///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-///     | Reserved                                                      |
-///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-///     | Blk to Flw    | Current Block | DUID          | Frame Length  |
-///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-///
-/// The data starting at offset 24 for variable number of bytes (DUID dependant) 
-/// is the P25 frame.
-/// </remarks>
-/// <param name="length"></param>
-/// <param name="header"></param>
-/// <param name="currentBlock"></param>
-/// <param name="data"></param>
-/// <param name="len"></param>
-/// <returns></returns>
+/* Writes P25 PDU frame data to the network. */
 UInt8Array BaseNetwork::createP25_PDUMessage(uint32_t& length, const p25::data::DataHeader& header,
     const uint8_t currentBlock, const uint8_t* data, const uint32_t len)
 {
@@ -1331,36 +1006,7 @@ UInt8Array BaseNetwork::createP25_PDUMessage(uint32_t& length, const p25::data::
     return UInt8Array(buffer);
 }
 
-/// <summary>
-/// Writes NXDN frame data to the network.
-/// </summary>
-/// <remarks>
-/// Below is the representation of the data layout for the NXDN frame
-/// message header. The header is 24 bytes in length.
-///
-/// Byte 0               1               2               3
-/// Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 
-///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-///     | Protocol Tag (NXDD)                                           |
-///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-///     | Message Type  | Source ID                                     |
-///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-///     | Destination ID                                | Reserved      |
-///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-///     | Reserved                      | Control Flags |R|G| Reserved  |
-///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-///     | Reserved                                                      |
-///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-///     |                                               | Frame Length  |
-///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-///
-/// The data starting at offset 24 for 48 bytes if the raw NXDN frame.
-/// </remarks>
-/// <param name="length"></param>
-/// <param name="lc"></param>
-/// <param name="data"></param>
-/// <param name="len"></param>
-/// <returns></returns>
+/* Writes NXDN frame data to the network. */
 UInt8Array BaseNetwork::createNXDN_Message(uint32_t& length, const nxdn::lc::RTCH& lc, const uint8_t* data, const uint32_t len)
 {
     assert(data != nullptr);
