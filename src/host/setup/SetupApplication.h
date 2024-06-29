@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Modem Host Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2023,2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Modem Host Software
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Modem Host Software
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2023,2024 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @file SetupApplication.h
+ * @ingroup setup
+ */
 #if !defined(__SETUP_APPLICATION_H__)
 #define __SETUP_APPLICATION_H__
 
@@ -22,17 +23,20 @@ using namespace finalcut;
 
 // ---------------------------------------------------------------------------
 //  Class Declaration
-//      This class implements the finalcut application.
 // ---------------------------------------------------------------------------
 
+/**
+ * @brief This class implements the finalcut application.
+ * @ingroup setup
+ */
 class HOST_SW_API SetupApplication final : public finalcut::FApplication {
 public:
-    /// <summary>
-    /// Initializes a new instance of the SetupApplication class.
-    /// </summary>
-    /// <param name="setup"></param>
-    /// <param name="argc"></param>
-    /// <param name="argv"></param>
+    /**
+     * @brief Initializes a new instance of the SetupApplication class.
+     * @param setup Instance of the HostSetup class.
+     * @param argc Passed argc.
+     * @param argv Passed argv.
+     */
     explicit SetupApplication(HostSetup* setup, const int& argc, char** argv) : FApplication{argc, argv},
         m_setup(setup)
     {
@@ -40,9 +44,9 @@ public:
     }
 
 protected:
-    /// <summary>
-    ///
-    /// </summary>
+    /**
+     * @brief Process external user events.
+     */
     void processExternalUserEvent() override
     {
         using namespace p25::defines;
@@ -87,10 +91,10 @@ protected:
     ** Event Handlers
     */
 
-    /// <summary>
-    ///
-    /// </summary>
-    /// <param name="timer"></param>
+    /**
+     * @brief Event that occurs on interval by timer.
+     * @param timer Timer Event
+     */
     void onTimer(FTimerEvent* timer) override
     {
         if (timer != nullptr) {

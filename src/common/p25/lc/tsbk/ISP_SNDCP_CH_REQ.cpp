@@ -22,6 +22,7 @@ using namespace p25::lc::tsbk;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the ISP_SNDCP_CH_REQ class. */
+
 ISP_SNDCP_CH_REQ::ISP_SNDCP_CH_REQ() : TSBK(),
     m_dataServiceOptions(0U),
     m_dataAccessControl(0U)
@@ -30,6 +31,7 @@ ISP_SNDCP_CH_REQ::ISP_SNDCP_CH_REQ() : TSBK(),
 }
 
 /* Decode a trunking signalling block. */
+
 bool ISP_SNDCP_CH_REQ::decode(const uint8_t* data, bool rawTSBK)
 {
     assert(data != nullptr);
@@ -51,6 +53,7 @@ bool ISP_SNDCP_CH_REQ::decode(const uint8_t* data, bool rawTSBK)
 }
 
 /* Encode a trunking signalling block. */
+
 void ISP_SNDCP_CH_REQ::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 {
     assert(data != nullptr);
@@ -59,6 +62,7 @@ void ISP_SNDCP_CH_REQ::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 }
 
 /* Returns a string that represents the current TSBK. */
+
 std::string ISP_SNDCP_CH_REQ::toString(bool isp)
 {
     return std::string("TSBKO, ISP_SNDCP_CH_REQ (SNDCP Data Channel Request)");
@@ -69,6 +73,7 @@ std::string ISP_SNDCP_CH_REQ::toString(bool isp)
 // ---------------------------------------------------------------------------
 
 /* Internal helper to copy the the class. */
+
 void ISP_SNDCP_CH_REQ::copy(const ISP_SNDCP_CH_REQ& data)
 {
     TSBK::copy(data);

@@ -22,12 +22,14 @@ using namespace p25::lc::tsbk;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the OSP_LOC_REG_RSP class. */
+
 OSP_LOC_REG_RSP::OSP_LOC_REG_RSP() : TSBK()
 {
     m_lco = TSBKO::OSP_LOC_REG_RSP;
 }
 
 /* Decode a trunking signalling block. */
+
 bool OSP_LOC_REG_RSP::decode(const uint8_t* data, bool rawTSBK)
 {
     assert(data != nullptr);
@@ -38,6 +40,7 @@ bool OSP_LOC_REG_RSP::decode(const uint8_t* data, bool rawTSBK)
 }
 
 /* Encode a trunking signalling block. */
+
 void OSP_LOC_REG_RSP::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 {
     assert(data != nullptr);
@@ -55,6 +58,7 @@ void OSP_LOC_REG_RSP::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 }
 
 /* Returns a string that represents the current TSBK. */
+
 std::string OSP_LOC_REG_RSP::toString(bool isp)
 {
     return std::string("TSBKO, OSP_LOC_REG_RSP (Location Registration Response)");

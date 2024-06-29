@@ -23,6 +23,7 @@ using namespace p25::lc::tdulc;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the LC_ADJ_STS_BCAST class. */
+
 LC_ADJ_STS_BCAST::LC_ADJ_STS_BCAST() : TDULC(),
     m_adjCFVA(CFVA::FAILURE),
     m_adjSysId(0U),
@@ -36,6 +37,7 @@ LC_ADJ_STS_BCAST::LC_ADJ_STS_BCAST() : TDULC(),
 }
 
 /* Decode a terminator data unit w/ link control. */
+
 bool LC_ADJ_STS_BCAST::decode(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -46,6 +48,7 @@ bool LC_ADJ_STS_BCAST::decode(const uint8_t* data)
 }
 
 /* Encode a terminator data unit w/ link control. */
+
 void LC_ADJ_STS_BCAST::encode(uint8_t* data)
 {
     assert(data != nullptr);
@@ -82,6 +85,7 @@ void LC_ADJ_STS_BCAST::encode(uint8_t* data)
 // ---------------------------------------------------------------------------
 
 /* Internal helper to copy the the class. */
+
 void LC_ADJ_STS_BCAST::copy(const LC_ADJ_STS_BCAST& data)
 {
     TDULC::copy(data);

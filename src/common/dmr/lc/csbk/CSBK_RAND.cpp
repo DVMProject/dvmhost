@@ -22,6 +22,7 @@ using namespace dmr::lc::csbk;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the CSBK_RAND class. */
+
 CSBK_RAND::CSBK_RAND() : CSBK(),
     m_serviceOptions(0U),
     m_serviceExtra(0U),
@@ -31,6 +32,7 @@ CSBK_RAND::CSBK_RAND() : CSBK(),
 }
 
 /* Decode a control signalling block. */
+
 bool CSBK_RAND::decode(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -55,6 +57,7 @@ bool CSBK_RAND::decode(const uint8_t* data)
 }
 
 /* Encode a control signalling block. */
+
 void CSBK_RAND::encode(uint8_t* data)
 {
     assert(data != nullptr);
@@ -73,6 +76,7 @@ void CSBK_RAND::encode(uint8_t* data)
 }
 
 /* Returns a string that represents the current CSBK. */
+
 std::string CSBK_RAND::toString()
 {
     switch (m_serviceKind) {
@@ -98,6 +102,7 @@ std::string CSBK_RAND::toString()
 // ---------------------------------------------------------------------------
 
 /* Internal helper to copy the the class. */
+
 void CSBK_RAND::copy(const CSBK_RAND& data)
 {
     CSBK::copy(data);

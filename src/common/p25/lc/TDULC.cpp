@@ -35,12 +35,14 @@ SiteData TDULC::m_siteData = SiteData();
 // ---------------------------------------------------------------------------
 
 /* Initializes a copy instance of the TDULC class. */
+
 TDULC::TDULC(const TDULC& data) : TDULC()
 {
     copy(data);
 }
 
 /* Initializes a new instance of the TDULC class. */
+
 TDULC::TDULC(LC* lc) : TDULC()
 {
     m_protect = lc->m_protect;
@@ -62,6 +64,7 @@ TDULC::TDULC(LC* lc) : TDULC()
 }
 
 /* Initializes a new instance of the TDULC class. */
+
 TDULC::TDULC() :
     m_protect(false),
     m_lco(LCO::GROUP),
@@ -82,6 +85,7 @@ TDULC::TDULC() :
 }
 
 /* Finalizes a instance of TDULC class. */
+
 TDULC::~TDULC()
 {
     /* stub */
@@ -92,6 +96,7 @@ TDULC::~TDULC()
 // ---------------------------------------------------------------------------
 
 /* Internal helper to convert payload bytes to a 64-bit long value. */
+
 ulong64_t TDULC::toValue(const uint8_t* payload)
 {
     assert(payload != nullptr);
@@ -112,6 +117,7 @@ ulong64_t TDULC::toValue(const uint8_t* payload)
 }
 
 /* Internal helper to convert a 64-bit long value to payload bytes. */
+
 UInt8Array TDULC::fromValue(const ulong64_t value)
 {
     UInt8Array payload = std::unique_ptr<uint8_t[]>(new uint8_t[P25_TDULC_PAYLOAD_LENGTH_BYTES]);
@@ -131,6 +137,7 @@ UInt8Array TDULC::fromValue(const ulong64_t value)
 }
 
 /* Internal helper to decode a terminator data unit w/ link control. */
+
 bool TDULC::decode(const uint8_t* data, uint8_t* payload)
 {
     assert(data != nullptr);
@@ -172,6 +179,7 @@ bool TDULC::decode(const uint8_t* data, uint8_t* payload)
 }
 
 /* Internal helper to encode a terminator data unit w/ link control. */
+
 void TDULC::encode(uint8_t* data, const uint8_t* payload)
 {
     assert(data != nullptr);
@@ -211,6 +219,7 @@ void TDULC::encode(uint8_t* data, const uint8_t* payload)
 }
 
 /* Internal helper to copy the the class. */
+
 void TDULC::copy(const TDULC& data)
 {
     m_verbose = data.m_verbose;

@@ -1,16 +1,18 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Modem Host Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2015,2016 Jonathan Naylor, G4KLX
+ *
+ */
 /**
-* Digital Voice Modem - Modem Host Software
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Modem Host Software
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2015,2016 Jonathan Naylor, G4KLX
-*
-*/
+ * @file Console.h
+ * @ingroup host
+ * @file Console.cpp
+ * @ingroup host
+ */
 #if !defined(__CONSOLE_H__)
 #define __CONSOLE_H__
 
@@ -20,28 +22,49 @@
 
 // ---------------------------------------------------------------------------
 //  Class Declaration
-//      Implements cross-platform handling of the terminal console. This is
-//      mainly used for the calibration mode.
 // ---------------------------------------------------------------------------
 
+/**
+ * @brief Implements cross-platform handling of the terminal console. This is
+ *  mainly used for the calibration mode.
+ * @ingroup host
+ */
 class HOST_SW_API Console {
 public:
-    /// <summary>Initializes a new instance of the Console class.</summary>
+    /**
+     * @brief Initializes a new instance of the Console class.
+     */
     Console();
-    /// <summary>Finalizes a instance of the Console class.</summary>
+    /**
+     * @brief Finalizes a instance of the Console class.
+     */
     ~Console();
 
-    /// <summary>Opens the terminal console.</summary>
+    /**
+     * @brief Opens the terminal console.
+     * @returns bool True, if the console was opened, otherwise false.
+     */
     bool open();
 
-    /// <summary>Retrieves a character input on the keyboard.</summary>
+    /**
+     * @brief Closes the terminal console.
+     */
+    void close();
+
+    /**
+     * @brief Retrieves a character input on the keyboard.
+     * @returns int Character input on the keyboard.
+     */
     int getChar();
 
-    /// <summary>Retrieves an array of characters input on the keyboard.</summary>
+    /**
+     * @brief Retrieves an array of characters input on the keyboard.
+     * @param line 
+     * @param max 
+     * @param mask 
+     * @returns int 
+     */
     int getLine(char line[], int max, char mask);
-
-    /// <summary>Closes the terminal console.</summary>
-    void close();
 
 private:
     termios m_termios;

@@ -22,6 +22,7 @@ using namespace p25::lc::tsbk;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the OSP_SCCB_EXP class. */
+
 OSP_SCCB_EXP::OSP_SCCB_EXP() : TSBK(),
     m_sccbChannelId1(0U),
     m_sccbChannelNo(0U)
@@ -30,6 +31,7 @@ OSP_SCCB_EXP::OSP_SCCB_EXP() : TSBK(),
 }
 
 /* Decode a trunking signalling block. */
+
 bool OSP_SCCB_EXP::decode(const uint8_t* data, bool rawTSBK)
 {
     assert(data != nullptr);
@@ -40,6 +42,7 @@ bool OSP_SCCB_EXP::decode(const uint8_t* data, bool rawTSBK)
 }
 
 /* Encode a trunking signalling block. */
+
 void OSP_SCCB_EXP::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 {
     assert(data != nullptr);
@@ -66,6 +69,7 @@ void OSP_SCCB_EXP::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 }
 
 /* Returns a string that represents the current TSBK. */
+
 std::string OSP_SCCB_EXP::toString(bool isp)
 {
     return std::string("TSBKO, OSP_SCCB_EXP (Secondary Control Channel Broadcast - Explicit)");
@@ -76,6 +80,7 @@ std::string OSP_SCCB_EXP::toString(bool isp)
 // ---------------------------------------------------------------------------
 
 /* Internal helper to copy the the class. */
+
 void OSP_SCCB_EXP::copy(const OSP_SCCB_EXP& data)
 {
     TSBK::copy(data);

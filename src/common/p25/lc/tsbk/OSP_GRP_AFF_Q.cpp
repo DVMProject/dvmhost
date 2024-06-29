@@ -22,12 +22,14 @@ using namespace p25::lc::tsbk;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the OSP_GRP_AFF_Q class. */
+
 OSP_GRP_AFF_Q::OSP_GRP_AFF_Q() : TSBK()
 {
     m_lco = TSBKO::OSP_GRP_AFF_Q;
 }
 
 /* Decode a trunking signalling block. */
+
 bool OSP_GRP_AFF_Q::decode(const uint8_t* data, bool rawTSBK)
 {
     assert(data != nullptr);
@@ -38,6 +40,7 @@ bool OSP_GRP_AFF_Q::decode(const uint8_t* data, bool rawTSBK)
 }
 
 /* Encode a trunking signalling block. */
+
 void OSP_GRP_AFF_Q::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 {
     assert(data != nullptr);
@@ -52,6 +55,7 @@ void OSP_GRP_AFF_Q::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 }
 
 /* Returns a string that represents the current TSBK. */
+
 std::string OSP_GRP_AFF_Q::toString(bool isp)
 {
     return std::string("TSBKO, OSP_GRP_AFF_Q (Group Affiliation Query)");

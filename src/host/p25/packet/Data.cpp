@@ -1,17 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Modem Host Software
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Modem Host Software
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2016,2017,2018 Jonathan Naylor, G4KLX
-*   Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Modem Host Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2016,2017,2018 Jonathan Naylor, G4KLX
+ *  Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "Defines.h"
 #include "common/p25/P25Defines.h"
 #include "common/p25/acl/AccessControl.h"
@@ -46,9 +42,8 @@ const uint32_t SNDCP_STANDBY_TIMEOUT = 60U;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Resets the data states for the RF interface.
-/// </summary>
+/* Resets the data states for the RF interface. */
+
 void Data::resetRF()
 {
     m_rfDataBlockCnt = 0U;
@@ -58,12 +53,8 @@ void Data::resetRF()
     m_rfDataHeader.reset();
 }
 
-/// <summary>
-/// Process a data frame from the RF interface.
-/// </summary>
-/// <param name="data">Buffer containing data frame.</param>
-/// <param name="len">Length of data frame.</param>
-/// <returns></returns>
+/* Process a data frame from the RF interface. */
+
 bool Data::process(uint8_t* data, uint32_t len)
 {
     assert(data != nullptr);
@@ -505,13 +496,8 @@ bool Data::process(uint8_t* data, uint32_t len)
     return false;
 }
 
-/// <summary>
-/// Process a data frame from the network.
-/// </summary>
-/// <param name="data">Buffer containing data frame.</param>
-/// <param name="len">Length of data frame.</param>
-/// <param name="blockLength"></param>
-/// <returns></returns>
+/* Process a data frame from the network. */
+
 bool Data::processNetwork(uint8_t* data, uint32_t len, uint32_t blockLength)
 {
     if (m_p25->m_rfState != RS_RF_LISTENING && m_p25->m_netState == RS_NET_IDLE)
@@ -739,11 +725,8 @@ bool Data::processNetwork(uint8_t* data, uint32_t len, uint32_t blockLength)
     return true;
 }
 
-/// <summary>
-/// Helper to check if a logical link ID has registered with data services.
-/// </summary>
-/// <param name="llId">Logical Link ID.</param>
-/// <returns>True, if ID has registered, otherwise false.</returns>
+/* Helper to check if a logical link ID has registered with data services. */
+
 bool Data::hasLLIdFNEReg(uint32_t llId) const
 {
     // lookup dynamic FNE registration table entry
@@ -760,13 +743,8 @@ bool Data::hasLLIdFNEReg(uint32_t llId) const
     }
 }
 
-/// <summary>
-/// Helper to write user data as a P25 PDU packet.
-/// </summary>
-/// <param name="dataHeader"></param>
-/// <param name="secondHeader"></param>
-/// <param name="useSecondHeader"></param>
-/// <param name="pduUserData"></param>
+/* Helper to write user data as a P25 PDU packet. */
+
 void Data::writeRF_PDU_User(data::DataHeader& dataHeader, data::DataHeader& secondHeader, bool useSecondHeader, uint8_t* pduUserData)
 {
     assert(pduUserData != nullptr);
@@ -868,10 +846,8 @@ void Data::writeRF_PDU_User(data::DataHeader& dataHeader, data::DataHeader& seco
     writeRF_PDU(data, bitLength);
 }
 
-/// <summary>
-/// Updates the processor by the passed number of milliseconds.
-/// </summary>
-/// <param name="ms"></param>
+/* Updates the processor by the passed number of milliseconds. */
+
 void Data::clock(uint32_t ms)
 {
     // clock all the connect timers
@@ -969,10 +945,8 @@ void Data::clock(uint32_t ms)
     }
 }
 
-/// <summary>
-/// Helper to initialize the SNDCP state for a logical link ID.
-/// </summary>
-/// <param name="llId"></param>
+/* Helper to initialize the SNDCP state for a logical link ID. */
+
 void Data::sndcpInitialize(uint32_t llId)
 {
     if (!isSNDCPInitialized(llId)) {
@@ -986,11 +960,8 @@ void Data::sndcpInitialize(uint32_t llId)
     }
 }
 
-/// <summary>
-/// Helper to determine if the logical link ID has been SNDCP initialized.
-/// </summary>
-/// <param name="llId"></param>
-/// <returns></returns>
+/* Helper to determine if the logical link ID has been SNDCP initialized. */
+
 bool Data::isSNDCPInitialized(uint32_t llId) const
 {
     // lookup dynamic affiliation table entry
@@ -1001,11 +972,8 @@ bool Data::isSNDCPInitialized(uint32_t llId) const
     return false;
 }
 
-/// <summary>
-/// Helper to reset the SNDCP state for a logical link ID.
-/// </summary>
-/// <param name="llId"></param>
-/// <param name="callTerm"></param>
+/* Helper to reset the SNDCP state for a logical link ID. */
+
 void Data::sndcpReset(uint32_t llId, bool callTerm)
 {
     if (isSNDCPInitialized(llId)) {
@@ -1036,14 +1004,8 @@ void Data::sndcpReset(uint32_t llId, bool callTerm)
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the Data class.
-/// </summary>
-/// <param name="p25">Instance of the Control class.</param>
-/// <param name="dumpPDUData"></param>
-/// <param name="repeatPDU"></param>
-/// <param name="debug">Flag indicating whether P25 debug is enabled.</param>
-/// <param name="verbose">Flag indicating whether P25 verbose logging is enabled.</param>
+/* Initializes a new instance of the Data class. */
+
 Data::Data(Control* p25, bool dumpPDUData, bool repeatPDU, bool debug, bool verbose) :
     m_p25(p25),
     m_prevRfState(RS_RF_LISTENING),
@@ -1100,9 +1062,8 @@ Data::Data(Control* p25, bool dumpPDUData, bool repeatPDU, bool debug, bool verb
     m_sndcpStandbyTimers.clear();
 }
 
-/// <summary>
-/// Finalizes a instance of the Data class.
-/// </summary>
+/* Finalizes a instance of the Data class. */
+
 Data::~Data()
 {
     delete[] m_rfData;
@@ -1112,9 +1073,8 @@ Data::~Data()
     delete[] m_pduUserData;
 }
 
-/// <summary>
-/// Helper used to process SNDCP control data from PDU data.
-/// </summary>
+/* Helper used to process SNDCP control data from PDU data. */
+
 bool Data::processSNDCPControl()
 {
     if (!m_p25->m_sndcpSupport) {
@@ -1222,13 +1182,8 @@ bool Data::processSNDCPControl()
     return true;
 }
 
-/// <summary>
-/// Write data processed from RF to the network.
-/// </summary>
-/// <param name="currentBlock"></param>
-/// <param name="data"></param>
-/// <param name="len"></param>
-/// <param name="lastBlock"></param>
+/* Write data processed from RF to the network. */
+
 void Data::writeNetwork(const uint8_t currentBlock, const uint8_t *data, uint32_t len, bool lastBlock)
 {
     assert(data != nullptr);
@@ -1242,12 +1197,8 @@ void Data::writeNetwork(const uint8_t currentBlock, const uint8_t *data, uint32_
     m_p25->m_network->writeP25PDU(m_rfDataHeader, currentBlock, data, len, lastBlock);
 }
 
-/// <summary>
-/// Helper to write a P25 PDU packet.
-/// </summary>
-/// <param name="pdu"></param>
-/// <param name="bitlength"></param>
-/// <param name="noNulls"></param>
+/* Helper to write a P25 PDU packet. */
+
 void Data::writeRF_PDU(const uint8_t* pdu, uint32_t bitLength, bool noNulls)
 {
     assert(pdu != nullptr);
@@ -1287,10 +1238,8 @@ void Data::writeRF_PDU(const uint8_t* pdu, uint32_t bitLength, bool noNulls)
     }
 }
 
-/// <summary>
-/// Helper to write a network P25 PDU packet.
-/// </summary>
-/// <remarks>This will take buffered network PDU data and repeat it over the air.</remarks>
+/* Helper to write a network P25 PDU packet. */
+
 void Data::writeNet_PDU_Buffered()
 {
     uint32_t bitLength = ((m_netDataHeader.getBlocksToFollow() + 1U) * P25_PDU_FEC_LENGTH_BITS) + P25_PREAMBLE_LENGTH_BITS;
@@ -1387,10 +1336,8 @@ void Data::writeNet_PDU_Buffered()
     writeRF_PDU(data, bitLength);
 }
 
-/// <summary>
-/// Helper to re-write a received P25 PDU packet.
-/// </summary>
-/// <remarks>This will take buffered received PDU data and repeat it over the air.</remarks>
+/* Helper to re-write a received P25 PDU packet. */
+
 void Data::writeRF_PDU_Buffered()
 {
     uint32_t bitLength = ((m_rfDataHeader.getBlocksToFollow() + 1U) * P25_PDU_FEC_LENGTH_BITS) + P25_PREAMBLE_LENGTH_BITS;
@@ -1487,13 +1434,8 @@ void Data::writeRF_PDU_Buffered()
     writeRF_PDU(data, bitLength);
 }
 
-/// <summary>
-/// Helper to write a PDU registration response.
-/// </summary>
-/// <param name="regType"></param>
-/// <param name="mfId"></param>
-/// <param name="llId"></param>
-/// <param name="ipAddr"></param>
+/* Helper to write a PDU registration response. */
+
 void Data::writeRF_PDU_Reg_Response(uint8_t regType, uint8_t mfId, uint32_t llId, ulong64_t ipAddr)
 {
     if ((regType != PDURegType::ACCPT) && (regType != PDURegType::DENY))
@@ -1551,15 +1493,8 @@ void Data::writeRF_PDU_Reg_Response(uint8_t regType, uint8_t mfId, uint32_t llId
     writeRF_PDU(data, bitLength);
 }
 
-/// <summary>
-/// Helper to write a PDU acknowledge response.
-/// </summary>
-/// <param name="ackClass"></param>
-/// <param name="ackType"></param>
-/// <param name="ackStatus"></param>
-/// <param name="llId"></param>
-/// <param name="srcLlId"></param>
-/// <param name="noNulls"></param>
+/* Helper to write a PDU acknowledge response. */
+
 void Data::writeRF_PDU_Ack_Response(uint8_t ackClass, uint8_t ackType, uint8_t ackStatus, uint32_t llId, uint32_t srcLlId, bool noNulls)
 {
     if (ackClass == PDUAckClass::ACK && ackType != PDUAckType::ACK)

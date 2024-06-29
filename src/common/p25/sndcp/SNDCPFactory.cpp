@@ -24,12 +24,15 @@ using namespace p25::sndcp;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the SNDCPFactory class. */
+
 SNDCPFactory::SNDCPFactory() = default;
 
 /* Finalizes a instance of SNDCPFactory class. */
+
 SNDCPFactory::~SNDCPFactory() = default;
 
 /* Create an instance of a SNDCPPacket. */
+
 std::unique_ptr<SNDCPPacket> SNDCPFactory::create(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -59,7 +62,8 @@ std::unique_ptr<SNDCPPacket> SNDCPFactory::create(const uint8_t* data)
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/* */
+/* Decode a SNDCP packet. */
+
 std::unique_ptr<SNDCPPacket> SNDCPFactory::decode(SNDCPPacket* packet, const uint8_t* data)
 {
     assert(packet != nullptr);

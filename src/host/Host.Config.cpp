@@ -7,7 +7,7 @@
 * @package DVM / Modem Host Software
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
+*  Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
@@ -27,9 +27,8 @@ using namespace lookups;
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Reads basic configuration parameters from the YAML configuration file.
-/// </summary>
+/* Reads basic configuration parameters from the YAML configuration file. */
+
 bool Host::readParams()
 {
     yaml::Node modemConf = m_conf["system"]["modem"];
@@ -338,9 +337,8 @@ bool Host::readParams()
     return true;
 }
 
-/// <summary>
-/// Initializes the modem DSP.
-/// </summary>
+/* Initializes the modem DSP. */
+
 bool Host::createModem()
 {
     yaml::Node protocolConf = m_conf["protocols"];
@@ -662,9 +660,8 @@ bool Host::createModem()
     return true;
 }
 
-/// <summary>
-/// Initializes network connectivity.
-/// </summary>
+/* Initializes network connectivity. */
+
 bool Host::createNetwork()
 {
     yaml::Node networkConf = m_conf["network"];

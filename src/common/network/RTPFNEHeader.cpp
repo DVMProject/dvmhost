@@ -20,6 +20,7 @@ using namespace network::frame;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the RTPFNEHeader class. */
+
 RTPFNEHeader::RTPFNEHeader() :
     RTPExtensionHeader(),
     m_crc16(0U),
@@ -33,9 +34,11 @@ RTPFNEHeader::RTPFNEHeader() :
 }
 
 /* Finalizes a instance of the RTPFNEHeader class. */
+
 RTPFNEHeader::~RTPFNEHeader() = default;
 
 /* Decode a RTP header. */
+
 bool RTPFNEHeader::decode(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -60,6 +63,7 @@ bool RTPFNEHeader::decode(const uint8_t* data)
 }
 
 /* Encode a RTP header. */
+
 void RTPFNEHeader::encode(uint8_t* data)
 {
     assert(data != nullptr);

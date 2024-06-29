@@ -24,12 +24,14 @@ using namespace p25::lc::tsbk;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the OSP_IDEN_UP class. */
+
 OSP_IDEN_UP::OSP_IDEN_UP() : TSBK()
 {
     m_lco = TSBKO::OSP_IDEN_UP;
 }
 
 /* Decode a trunking signalling block. */
+
 bool OSP_IDEN_UP::decode(const uint8_t* data, bool rawTSBK)
 {
     assert(data != nullptr);
@@ -40,6 +42,7 @@ bool OSP_IDEN_UP::decode(const uint8_t* data, bool rawTSBK)
 }
 
 /* Encode a trunking signalling block. */
+
 void OSP_IDEN_UP::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 {
     assert(data != nullptr);
@@ -82,6 +85,7 @@ void OSP_IDEN_UP::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 }
 
 /* Returns a string that represents the current TSBK. */
+
 std::string OSP_IDEN_UP::toString(bool isp)
 {
     return std::string("TSBKO, OSP_IDEN_UP (Channel Identifier Update)");

@@ -22,6 +22,7 @@ using namespace edac;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the BPTC19696 class. */
+
 BPTC19696::BPTC19696() :
     m_rawData(nullptr),
     m_deInterData(nullptr)
@@ -31,6 +32,7 @@ BPTC19696::BPTC19696() :
 }
 
 /* Finalizes a instance of the BPTC19696 class. */
+
 BPTC19696::~BPTC19696()
 {
     delete[] m_rawData;
@@ -38,6 +40,7 @@ BPTC19696::~BPTC19696()
 }
 
 /* Decode BPTC (196,96) FEC. */
+
 void BPTC19696::decode(const uint8_t* in, uint8_t* out)
 {
     assert(in != nullptr);
@@ -57,6 +60,7 @@ void BPTC19696::decode(const uint8_t* in, uint8_t* out)
 }
 
 /* Encode BPTC (196,96) FEC. */
+
 void BPTC19696::encode(const uint8_t* in, uint8_t* out)
 {
     assert(in != nullptr);
@@ -80,6 +84,7 @@ void BPTC19696::encode(const uint8_t* in, uint8_t* out)
 // ---------------------------------------------------------------------------
 
 /* */
+
 void BPTC19696::decodeExtractBinary(const uint8_t* in)
 {
     // first block
@@ -119,6 +124,7 @@ void BPTC19696::decodeExtractBinary(const uint8_t* in)
 }
 
 /* */
+
 void BPTC19696::decodeDeInterleave()
 {
     for (uint32_t i = 0U; i < 196U; i++)
@@ -134,6 +140,7 @@ void BPTC19696::decodeDeInterleave()
 }
 
 /* */
+
 void BPTC19696::decodeErrorCheck()
 {
     bool fixing;
@@ -173,6 +180,7 @@ void BPTC19696::decodeErrorCheck()
 }
 
 /* */
+
 void BPTC19696::decodeExtractData(uint8_t* data) const
 {
     bool bData[96U];
@@ -219,6 +227,7 @@ void BPTC19696::decodeExtractData(uint8_t* data) const
 }
 
 /* */
+
 void BPTC19696::encodeExtractData(const uint8_t* in) const
 {
     bool bData[96U];
@@ -268,6 +277,7 @@ void BPTC19696::encodeExtractData(const uint8_t* in) const
 }
 
 /* */
+
 void BPTC19696::encodeErrorCheck()
 {
     // run through each of the 9 rows containing data
@@ -296,6 +306,7 @@ void BPTC19696::encodeErrorCheck()
 }
 
 /* */
+
 void BPTC19696::encodeInterleave()
 {
     for (uint32_t i = 0U; i < 196U; i++)
@@ -311,6 +322,7 @@ void BPTC19696::encodeInterleave()
 }
 
 /* */
+
 void BPTC19696::encodeExtractBinary(uint8_t* data)
 {
     // first block

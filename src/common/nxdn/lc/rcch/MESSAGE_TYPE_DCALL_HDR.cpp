@@ -22,12 +22,14 @@ using namespace nxdn::lc::rcch;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the MESSAGE_TYPE_DCALL_HDR class. */
+
 MESSAGE_TYPE_DCALL_HDR::MESSAGE_TYPE_DCALL_HDR() : RCCH()
 {
     m_messageType = MessageType::RTCH_DCALL_HDR;
 }
 
 /* Decode RCCH data. */
+
 void MESSAGE_TYPE_DCALL_HDR::decode(const uint8_t* data, uint32_t length, uint32_t offset)
 {
     assert(data != nullptr);
@@ -47,6 +49,7 @@ void MESSAGE_TYPE_DCALL_HDR::decode(const uint8_t* data, uint32_t length, uint32
 }
 
 /* Encode RCCH data. */
+
 void MESSAGE_TYPE_DCALL_HDR::encode(uint8_t* data, uint32_t length, uint32_t offset)
 {
     assert(data != nullptr);
@@ -73,6 +76,7 @@ void MESSAGE_TYPE_DCALL_HDR::encode(uint8_t* data, uint32_t length, uint32_t off
 }
 
 /* Returns a string that represents the current RCCH. */
+
 std::string MESSAGE_TYPE_DCALL_HDR::toString(bool isp)
 {
     return std::string("RTCH_DCALL_HDR (Data Call Header)");

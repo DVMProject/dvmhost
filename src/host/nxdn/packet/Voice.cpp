@@ -1,17 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Modem Host Software
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Modem Host Software
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2015-2020 Jonathan Naylor, G4KLX
-*   Copyright (C) 2022-2024 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Modem Host Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2015-2020 Jonathan Naylor, G4KLX
+ *  Copyright (C) 2022-2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "Defines.h"
 #include "common/nxdn/NXDNDefines.h"
 #include "common/nxdn/channel/FACCH1.h"
@@ -178,9 +174,8 @@ using namespace nxdn::packet;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Resets the data states for the RF interface.
-/// </summary>
+/* Resets the data states for the RF interface. */
+
 void Voice::resetRF()
 {
     m_rfFrames = 0U;
@@ -189,23 +184,16 @@ void Voice::resetRF()
     m_rfUndecodableLC = 0U;
 }
 
-/// <summary>
-/// Resets the data states for the network.
-/// </summary>
+/* Resets the data states for the network. */
+
 void Voice::resetNet()
 {
     m_netFrames = 0U;
     m_netLost = 0U;
 }
 
-/// <summary>
-/// Process a data frame from the RF interface.
-/// </summary>
-/// <param name="fct">Functional channel type.</param>
-/// <param name="option">Channel options.</param>
-/// <param name="data">Buffer containing data frame.</param>
-/// <param name="len">Length of data frame.</param>
-/// <returns></returns>
+/* Process a data frame from the RF interface. */
+
 bool Voice::process(FuncChannelType::E fct, ChOption::E option, uint8_t* data, uint32_t len)
 {
     assert(data != nullptr);
@@ -647,15 +635,8 @@ bool Voice::process(FuncChannelType::E fct, ChOption::E option, uint8_t* data, u
     return true;
 }
 
-/// <summary>
-/// Process a data frame from the network.
-/// </summary>
-/// <param name="fct">Functional channel type.</param>
-/// <param name="option">Channel options.</param>
-/// <param name="netLC"></param>
-/// <param name="data">Buffer containing data frame.</param>
-/// <param name="len">Length of data frame.</param>
-/// <returns></returns>
+/* Process a data frame from the network. */
+
 bool Voice::processNetwork(FuncChannelType::E fct, ChOption::E option, lc::RTCH& netLC, uint8_t *data, uint32_t len)
 {
     assert(data != nullptr);
@@ -1035,12 +1016,8 @@ bool Voice::processNetwork(FuncChannelType::E fct, ChOption::E option, lc::RTCH&
 //  Protected Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the Voice class.
-/// </summary>
-/// <param name="nxdn">Instance of the Control class.</param>
-/// <param name="debug">Flag indicating whether NXDN debug is enabled.</param>
-/// <param name="verbose">Flag indicating whether NXDN verbose logging is enabled.</param>
+/* Initializes a new instance of the Voice class. */
+
 Voice::Voice(Control* nxdn, bool debug, bool verbose) :
     m_nxdn(nxdn),
     m_rfFrames(0U),
@@ -1057,16 +1034,12 @@ Voice::Voice(Control* nxdn, bool debug, bool verbose) :
     /* stub */
 }
 
-/// <summary>
-/// Finalizes a instance of the Voice class.
-/// </summary>
+/* Finalizes a instance of the Voice class. */
+
 Voice::~Voice() = default;
 
-/// <summary>
-/// Write data processed from RF to the network.
-/// </summary>
-/// <param name="data"></param>
-/// <param name="len"></param>
+/* Write data processed from RF to the network. */
+
 void Voice::writeNetwork(const uint8_t *data, uint32_t len)
 {
     assert(data != nullptr);

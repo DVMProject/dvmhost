@@ -1,17 +1,19 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Modem Host Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2016,2017 Jonathan Naylor, G4KLX
+ *  Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Modem Host Software
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Modem Host Software
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2016,2017 Jonathan Naylor, G4KLX
-*   Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @file Data.h
+ * @ingroup host_p25
+ * @file Data.cpp
+ * @ingroup host_p25
+ */
 #if !defined(__P25_PACKET_DATA_H__)
 #define __P25_PACKET_DATA_H__
 
@@ -40,35 +42,77 @@ namespace p25
     {
         // ---------------------------------------------------------------------------
         //  Class Declaration
-        //      This class implements handling logic for P25 data packets.
         // ---------------------------------------------------------------------------
 
+        /**
+         * @brief This class implements handling logic for P25 data packets.
+         * @ingroup host_p25
+         */
         class HOST_SW_API Data {
         public:
-            /// <summary>Resets the data states for the RF interface.</summary>
+            /**
+             * @brief Resets the data states for the RF interface.
+             */
             void resetRF();
 
-            /// <summary>Process a data frame from the RF interface.</summary>
+            /** @name Frame Processing */
+            /**
+             * @brief Process a data frame from the RF interface.
+             * @param data Buffer containing data frame.
+             * @param len Length of data frame.
+             * @returns bool True, if data frame is processed, otherwise false.
+             */
             bool process(uint8_t* data, uint32_t len);
-            /// <summary>Process a data frame from the network.</summary>
+            /**
+             * @brief Process a data frame from the network.
+             * @param data Buffer containing data frame.
+             * @param len Length of data frame.
+             * @param blockLength 
+             * @returns bool True, if data frame is processed, otherwise false.
+             */
             bool processNetwork(uint8_t* data, uint32_t len, uint32_t blockLength);
+            /** @} */
 
-            /// <summary>Helper to check if a logical link ID has registered with data services.</summary>
+            /**
+             * @brief Helper to check if a logical link ID has registered with data services.
+             * @param llId Logical Link ID.
+             * @returns bool True, if ID has registered, otherwise false.
+             */
             bool hasLLIdFNEReg(uint32_t llId) const;
 
-            /// <summary>Helper to write user data as a P25 PDU packet.</summary>
+            /**
+             * @brief Helper to write user data as a P25 PDU packet.
+             * @param dataHeader Instance of a PDU data header.
+             * @param secondHeader Instance of a PDU data header.
+             * @param useSecondHeader Flag indicating whether or not to use a second data header.
+             * @param pduUserData Buffer containing user data to transmit.
+             */
             void writeRF_PDU_User(data::DataHeader& dataHeader, data::DataHeader& secondHeader, bool useSecondHeader, uint8_t* pduUserData);
 
-            /// <summary>Updates the processor by the passed number of milliseconds.</summary>
+            /**
+             * @brief Updates the processor by the passed number of milliseconds.
+             * @param ms Number of milliseconds.
+             */
             void clock(uint32_t ms);
 
-            /** SNDCP */
-            /// <summary>Helper to initialize the SNDCP state for a logical link ID.</summary>
+            /** @name SNDCP Helper Routines */
+            /**
+             * @brief Helper to initialize the SNDCP state for a logical link ID.
+             * @param llId Logical Link ID.
+             */
             void sndcpInitialize(uint32_t llId);
-            /// <summary>Helper to determine if the logical link ID has been SNDCP initialized.</summary>
+            /**
+             * @brief Helper to determine if the logical link ID has been SNDCP initialized.
+             * @param llId Logical Link ID.
+             */
             bool isSNDCPInitialized(uint32_t llId) const;
-            /// <summary>Helper to reset the SNDCP state for a logical link ID.</summary>
+            /**
+             * @brief Helper to reset the SNDCP state for a logical link ID.
+             * @param llId Logical Link ID.
+             * @param callTerm Flag indicating call termination should be transmitted.
+             */
             void sndcpReset(uint32_t llId, bool callTerm = false);
+            /** @} */
 
         private:
             friend class p25::Control;
@@ -114,26 +158,69 @@ namespace p25
             bool m_verbose;
             bool m_debug;
 
-            /// <summary>Initializes a new instance of the Data class.</summary>
+            /**
+             * @brief Initializes a new instance of the Data class.
+             * @param p25 Instance of the Control class.
+             * @param dumpPDUData Flag indicating whether PDU data is dumped to the log.
+             * @param repeatPDU Flag indicating whether incoming PDUs will be repeated automatically.
+             * @param debug Flag indicating whether P25 debug is enabled.
+             * @param verbose Flag indicating whether P25 verbose logging is enabled.
+             */
             Data(Control* p25, bool dumpPDUData, bool repeatPDU, bool debug, bool verbose);
-            /// <summary>Finalizes a instance of the Data class.</summary>
+            /**
+             * @brief Finalizes a instance of the Data class.
+             */
             ~Data();
 
-            /// <summary>Helper used to process SNDCP control data from PDU data.</summary>
+            /**
+             * @brief Helper used to process SNDCP control data from PDU data.
+             * @returns bool True, if SNDCP control data was processed, otherwise false.
+             */
             bool processSNDCPControl();
 
-            /// <summary>Write data processed from RF to the network.</summary>
+            /**
+             * @brief Write data processed from RF to the network.
+             * @param currentBlock Current Block ID.
+             * @param data Buffer containing block data.
+             * @param len Length of buffer.
+             * @param lastBlock Flag indicating whether or not this is the last block.
+             */
             void writeNetwork(const uint8_t currentBlock, const uint8_t* data, uint32_t len, bool lastBlock);
 
-            /// <summary>Helper to write a P25 PDU packet.</summary>
+            /**
+             * @brief Helper to write a P25 PDU packet.
+             * @param[in] pdu Constructed PDU to transmit.
+             * @param bitlength Length of PDU in bits.
+             * @param noNulls Flag indicating no trailing nulls should be transmitted.
+             */
             void writeRF_PDU(const uint8_t* pdu, uint32_t bitLength, bool noNulls = false);
-            /// <summary>Helper to write a network P25 PDU packet.</summary>
+            /**
+             * @brief Helper to write a network P25 PDU packet.
+             * This will take buffered network PDU data and repeat it over the air.
+             */
             void writeNet_PDU_Buffered();
-            /// <summary>Helper to re-write a received P25 PDU packet.</summary>
+            /**
+             * @brief Helper to re-write a received P25 PDU packet.
+             * This will take buffered received PDU data and repeat it over the air.
+             */
             void writeRF_PDU_Buffered();
-            /// <summary>Helper to write a PDU registration response.</summary>
+            /**
+             * @brief Helper to write a PDU registration response.
+             * @param regType Registration Response.
+             * @param mfId Manufacturer ID.
+             * @param llId Logical Link ID.
+             * @param ipAddr 
+             */
             void writeRF_PDU_Reg_Response(uint8_t regType, uint8_t mfId, uint32_t llId, ulong64_t ipAddr);
-            /// <summary>Helper to write a PDU acknowledge response.</summary>
+            /**
+             * @brief Helper to write a PDU acknowledge response.
+             * @param ackClass Acknowledgement Class.
+             * @param ackType Acknowledgement Type.
+             * @param ackStatus 
+             * @param llId Logical Link ID.
+             * @param srcLlId Source Logical Link ID.
+             * @param noNulls Flag indicating no trailing nulls should be transmitted.
+             */
             void writeRF_PDU_Ack_Response(uint8_t ackClass, uint8_t ackType, uint8_t ackStatus, uint32_t llId, uint32_t srcLlId = 0U, bool noNulls = false);
         };
     } // namespace packet

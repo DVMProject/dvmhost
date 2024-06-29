@@ -23,6 +23,7 @@ using namespace p25::sndcp;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the SNDCPCtxDeactivation class. */
+
 SNDCPCtxDeactivation::SNDCPCtxDeactivation() : SNDCPPacket(),
     m_deactType(SNDCPDeactivationType::DEACT_ALL)
 {
@@ -30,6 +31,7 @@ SNDCPCtxDeactivation::SNDCPCtxDeactivation() : SNDCPPacket(),
 }
 
 /* Decode a SNDCP context deactivation packet. */
+
 bool SNDCPCtxDeactivation::decode(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -42,6 +44,7 @@ bool SNDCPCtxDeactivation::decode(const uint8_t* data)
 }
 
 /* Encode a SNDCP context deactivation packet. */
+
 void SNDCPCtxDeactivation::encode(uint8_t* data)
 {
     assert(data != nullptr);
@@ -52,6 +55,7 @@ void SNDCPCtxDeactivation::encode(uint8_t* data)
 }
 
 /* Internal helper to copy the the class. */
+
 void SNDCPCtxDeactivation::copy(const SNDCPCtxDeactivation& data)
 {
     m_deactType = data.m_deactType;

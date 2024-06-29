@@ -40,12 +40,14 @@ SiteData TSBK::m_siteData = SiteData();
 // ---------------------------------------------------------------------------
 
 /* Initializes a copy instance of the TSBK class. */
+
 TSBK::TSBK(const TSBK& data) : TSBK()
 {
     copy(data);
 }
 
 /* Initializes a new instance of the TSBK class. */
+
 TSBK::TSBK(LC* lc) : TSBK()
 {
     m_protect = lc->m_protect;
@@ -63,6 +65,7 @@ TSBK::TSBK(LC* lc) : TSBK()
 }
 
 /* Initializes a new instance of the TSBK class. */
+
 TSBK::TSBK() :
     m_protect(false),
     m_lco(TSBKO::IOSP_GRP_VCH),
@@ -98,6 +101,7 @@ TSBK::TSBK() :
 }
 
 /* Finalizes a instance of TSBK class. */
+
 TSBK::~TSBK()
 {
     if (m_raw != nullptr)
@@ -105,18 +109,21 @@ TSBK::~TSBK()
 }
 
 /* Returns a string that represents the current TSBK. */
+
 std::string TSBK::toString(bool isp)
 {
     return std::string("TSBKO, UNKNOWN (Unknown TSBK)");
 }
 
 /* Returns a copy of the raw decoded TSBK bytes. */
+
 uint8_t* TSBK::getDecodedRaw() const
 {
     return m_raw;
 }
 
 /* Sets the callsign. */
+
 void TSBK::setCallsign(std::string callsign)
 {
     if (m_siteCallsign == nullptr) {
@@ -140,6 +147,7 @@ void TSBK::setCallsign(std::string callsign)
 // ---------------------------------------------------------------------------
 
 /* Internal helper to convert payload bytes to a 64-bit long value. */
+
 ulong64_t TSBK::toValue(const uint8_t* payload)
 {
     assert(payload != nullptr);
@@ -160,6 +168,7 @@ ulong64_t TSBK::toValue(const uint8_t* payload)
 }
 
 /* Internal helper to convert a 64-bit long value to payload bytes. */
+
 UInt8Array TSBK::fromValue(const ulong64_t value)
 {
     UInt8Array payload = std::unique_ptr<uint8_t[]>(new uint8_t[P25_TSBK_LENGTH_BYTES - 4U]);
@@ -179,6 +188,7 @@ UInt8Array TSBK::fromValue(const ulong64_t value)
 }
 
 /* Internal helper to decode a trunking signalling block. */
+
 bool TSBK::decode(const uint8_t* data, uint8_t* payload, bool rawTSBK)
 {
     assert(data != nullptr);
@@ -256,6 +266,7 @@ bool TSBK::decode(const uint8_t* data, uint8_t* payload, bool rawTSBK)
 }
 
 /* Internal helper to eecode a trunking signalling block. */
+
 void TSBK::encode(uint8_t* data, const uint8_t* payload, bool rawTSBK, bool noTrellis)
 {
     assert(data != nullptr);
@@ -302,6 +313,7 @@ void TSBK::encode(uint8_t* data, const uint8_t* payload, bool rawTSBK, bool noTr
 }
 
 /* Internal helper to copy the the class. */
+
 void TSBK::copy(const TSBK& data)
 {
     m_protect = data.m_protect;

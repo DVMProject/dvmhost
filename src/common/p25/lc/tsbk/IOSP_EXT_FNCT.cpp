@@ -22,6 +22,7 @@ using namespace p25::lc::tsbk;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the IOSP_EXT_FNCT class. */
+
 IOSP_EXT_FNCT::IOSP_EXT_FNCT() : TSBK(),
     m_extendedFunction(ExtendedFunctions::CHECK)
 {
@@ -29,6 +30,7 @@ IOSP_EXT_FNCT::IOSP_EXT_FNCT() : TSBK(),
 }
 
 /* Decode a trunking signalling block. */
+
 bool IOSP_EXT_FNCT::decode(const uint8_t* data, bool rawTSBK)
 {
     assert(data != nullptr);
@@ -50,6 +52,7 @@ bool IOSP_EXT_FNCT::decode(const uint8_t* data, bool rawTSBK)
 }
 
 /* Encode a trunking signalling block. */
+
 void IOSP_EXT_FNCT::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 {
     assert(data != nullptr);
@@ -65,6 +68,7 @@ void IOSP_EXT_FNCT::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 }
 
 /* Returns a string that represents the current TSBK. */
+
 std::string IOSP_EXT_FNCT::toString(bool isp)
 {
     return (isp) ? std::string("TSBKO, IOSP_EXT_FNCT (Extended Function Response)") :
@@ -76,6 +80,7 @@ std::string IOSP_EXT_FNCT::toString(bool isp)
 // ---------------------------------------------------------------------------
 
 /* Internal helper to copy the the class. */
+
 void IOSP_EXT_FNCT::copy(const IOSP_EXT_FNCT& data)
 {
     TSBK::copy(data);

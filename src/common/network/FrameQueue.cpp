@@ -28,6 +28,7 @@ using namespace network::frame;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the FrameQueue class. */
+
 FrameQueue::FrameQueue(udp::Socket* socket, uint32_t peerId, bool debug) : RawFrameQueue(socket, debug),
     m_peerId(peerId),
     m_streamTimestamps()
@@ -36,6 +37,7 @@ FrameQueue::FrameQueue(udp::Socket* socket, uint32_t peerId, bool debug) : RawFr
 }
 
 /* Read message from the received UDP packet. */
+
 UInt8Array FrameQueue::read(int& messageLength, sockaddr_storage& address, uint32_t& addrLen,
     RTPHeader* rtpHeader, RTPFNEHeader* fneHeader)
 {
@@ -116,6 +118,7 @@ UInt8Array FrameQueue::read(int& messageLength, sockaddr_storage& address, uint3
 }
 
 /* Write message to the UDP socket. */
+
 bool FrameQueue::write(const uint8_t* message, uint32_t length, uint32_t streamId, uint32_t peerId,
     uint32_t ssrc, OpcodePair opcode, uint16_t rtpSeq, sockaddr_storage& addr, uint32_t addrLen)
 {
@@ -136,6 +139,7 @@ bool FrameQueue::write(const uint8_t* message, uint32_t length, uint32_t streamI
 }
 
 /* Cache message to frame queue. */
+
 void FrameQueue::enqueueMessage(const uint8_t* message, uint32_t length, uint32_t streamId, uint32_t peerId,
     OpcodePair opcode, uint16_t rtpSeq, sockaddr_storage& addr, uint32_t addrLen)
 {
@@ -143,6 +147,7 @@ void FrameQueue::enqueueMessage(const uint8_t* message, uint32_t length, uint32_
 }
 
 /* Cache message to frame queue. */
+
 void FrameQueue::enqueueMessage(const uint8_t* message, uint32_t length, uint32_t streamId, uint32_t peerId,
     uint32_t ssrc, OpcodePair opcode, uint16_t rtpSeq, sockaddr_storage& addr, uint32_t addrLen)
 {
@@ -162,6 +167,7 @@ void FrameQueue::enqueueMessage(const uint8_t* message, uint32_t length, uint32_
 }
 
 /* Helper method to clear any tracked stream timestamps. */
+
 void FrameQueue::clearTimestamps()
 {
     m_streamTimestamps.clear();
@@ -172,6 +178,7 @@ void FrameQueue::clearTimestamps()
 // ---------------------------------------------------------------------------
 
 /* Generate RTP message for the frame queue. */
+
 uint8_t* FrameQueue::generateMessage(const uint8_t* message, uint32_t length, uint32_t streamId, uint32_t peerId,
     uint32_t ssrc, OpcodePair opcode, uint16_t rtpSeq, uint32_t* outBufferLen)
 {

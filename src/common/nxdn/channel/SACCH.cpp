@@ -41,6 +41,7 @@ const uint32_t PUNCTURE_LIST[] = { 5U, 11U, 17U, 23U, 29U, 35U, 41U, 47U, 53U, 5
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the SACCH class. */
+
 SACCH::SACCH() :
     m_ran(0U),
     m_structure(ChStructure::SR_SINGLE),
@@ -51,6 +52,7 @@ SACCH::SACCH() :
 }
 
 /* Initializes a copy instance of the SACCH class. */
+
 SACCH::SACCH(const SACCH& data) :
     m_ran(0U),
     m_structure(ChStructure::SR_SINGLE),
@@ -60,12 +62,14 @@ SACCH::SACCH(const SACCH& data) :
 }
 
 /* Finalizes a instance of SACCH class. */
+
 SACCH::~SACCH()
 {
     delete[] m_data;
 }
 
 /* Equals operator. */
+
 SACCH& SACCH::operator=(const SACCH& data)
 {
     if (&data != this) {
@@ -79,6 +83,7 @@ SACCH& SACCH::operator=(const SACCH& data)
 }
 
 /* Decode a slow associated control channel. */
+
 bool SACCH::decode(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -151,6 +156,7 @@ bool SACCH::decode(const uint8_t* data)
 }
 
 /* Encode a slow associated control channel. */
+
 void SACCH::encode(uint8_t* data) const
 {
     assert(data != nullptr);
@@ -210,6 +216,7 @@ void SACCH::encode(uint8_t* data) const
 }
 
 /* Gets the raw SACCH data. */
+
 void SACCH::getData(uint8_t* data) const
 {
     assert(data != nullptr);
@@ -222,6 +229,7 @@ void SACCH::getData(uint8_t* data) const
 }
 
 /* Sets the raw SACCH data. */
+
 void SACCH::setData(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -238,6 +246,7 @@ void SACCH::setData(const uint8_t* data)
 // ---------------------------------------------------------------------------
 
 /* Internal helper to copy the the class. */
+
 void SACCH::copy(const SACCH& data)
 {
     m_data = new uint8_t[NXDN_SACCH_CRC_LENGTH_BYTES];

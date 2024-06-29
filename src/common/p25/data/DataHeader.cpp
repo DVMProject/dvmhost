@@ -36,6 +36,7 @@ bool DataHeader::m_warnCRC = false;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the DataHeader class. */
+
 DataHeader::DataHeader() :
     m_ackNeeded(false),
     m_outbound(false),
@@ -66,12 +67,14 @@ DataHeader::DataHeader() :
 }
 
 /* Finalizes a instance of the DataHeader class. */
+
 DataHeader::~DataHeader()
 {
     delete[] m_data;
 }
 
 /* Decodes P25 PDU data header. */
+
 bool DataHeader::decode(const uint8_t* data, bool noTrellis)
 {
     assert(data != nullptr);
@@ -169,6 +172,7 @@ bool DataHeader::decode(const uint8_t* data, bool noTrellis)
 }
 
 /* Encodes P25 PDU data header. */
+
 void DataHeader::encode(uint8_t* data, bool noTrellis)
 {
     assert(data != nullptr);
@@ -250,6 +254,7 @@ void DataHeader::encode(uint8_t* data, bool noTrellis)
 }
 
 /* Helper to reset data values to defaults. */
+
 void DataHeader::reset()
 {
     m_ackNeeded = false;
@@ -286,6 +291,7 @@ void DataHeader::reset()
 }
 
 /* Gets the total length in bytes of enclosed packet data. */
+
 uint32_t DataHeader::getPacketLength() const
 {
     if (m_fmt == PDUFormatType::CONFIRMED) {
@@ -297,6 +303,7 @@ uint32_t DataHeader::getPacketLength() const
 }
 
 /* Gets the raw header data. */
+
 uint32_t DataHeader::getData(uint8_t* buffer) const
 {
     assert(buffer != nullptr);
@@ -307,6 +314,7 @@ uint32_t DataHeader::getData(uint8_t* buffer) const
 }
 
 /* Helper to determine the pad length for a given packet length. */
+
 uint32_t DataHeader::calculatePadLength(uint8_t fmt, uint32_t packetLength)
 {
     uint32_t len = packetLength + 4;

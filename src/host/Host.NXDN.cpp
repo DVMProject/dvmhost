@@ -7,7 +7,7 @@
 * @package DVM / Modem Host Software
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
+*  Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
@@ -19,10 +19,8 @@ using namespace modem;
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Helper to interrupt a running NXDN control channel.
-/// </summary>
-/// <param name="control"></param>
+/* Helper to interrupt a running NXDN control channel. */
+
 void Host::interruptNXDNControl(nxdn::Control* control)
 {
     if (control != nullptr) {
@@ -35,11 +33,8 @@ void Host::interruptNXDNControl(nxdn::Control* control)
     }
 }
 
-/// <summary>
-/// Helper to read NXDN frames from modem.
-/// </summary>
-/// <param name="control"></param>
-/// <param name="afterReadCallback"></param>
+/* Helper to read NXDN frames from modem. */
+
 void Host::readFramesNXDN(nxdn::Control* control, std::function<void()>&& afterReadCallback)
 {
     uint8_t data[NXDDEF::NXDN_FRAME_LENGTH_BYTES * 2U];
@@ -73,11 +68,8 @@ void Host::readFramesNXDN(nxdn::Control* control, std::function<void()>&& afterR
     }
 }
 
-/// <summary>
-/// Helper to write NXDN frames to modem.
-/// </summary>
-/// <param name="control"></param>
-/// <param name="afterWriteCallback"></param>
+/* Helper to write NXDN frames to modem. */
+
 void Host::writeFramesNXDN(nxdn::Control* control, std::function<void()>&& afterWriteCallback)
 {
     uint8_t data[NXDDEF::NXDN_FRAME_LENGTH_BYTES * 2U];

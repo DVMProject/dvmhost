@@ -100,12 +100,15 @@ const int g[] = {
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the BCH class. */
+
 BCH::BCH() = default;
 
 /* Finalizes a instance of the BCH class. */
+
 BCH::~BCH() = default;
 
 /* Encodes input data with BCH. */
+
 void BCH::encode(uint8_t* nid)
 {
     assert(nid != nullptr);
@@ -129,6 +132,7 @@ void BCH::encode(uint8_t* nid)
 
 /* Compute redundancy bb[], the coefficients of b(x). The redundancy polynomial b(x) is the 
    remainder after dividing x^(length-k)*data(x) by the generator polynomial g(x). */
+
 void BCH::encode(const int* data, int* bb)
 {
     for (int i = 0; i < length - k; i++)

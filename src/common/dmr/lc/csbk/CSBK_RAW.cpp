@@ -22,6 +22,7 @@ using namespace dmr::lc::csbk;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the CSBK_RAW class. */
+
 CSBK_RAW::CSBK_RAW() : CSBK(),
     m_csbk(nullptr)
 {
@@ -29,6 +30,7 @@ CSBK_RAW::CSBK_RAW() : CSBK(),
 }
 
 /* Finalizes a new instance of the CSBK_RAW class. */
+
 CSBK_RAW::~CSBK_RAW()
 {
     if (m_csbk != nullptr) {
@@ -37,6 +39,7 @@ CSBK_RAW::~CSBK_RAW()
 }
 
 /* Decode a control signalling block. */
+
 bool CSBK_RAW::decode(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -47,6 +50,7 @@ bool CSBK_RAW::decode(const uint8_t* data)
 }
 
 /* Encode a control signalling block. */
+
 void CSBK_RAW::encode(uint8_t* data)
 {
     assert(data != nullptr);
@@ -58,6 +62,7 @@ void CSBK_RAW::encode(uint8_t* data)
 }
 
 /* Sets the CSBK to encode. */
+
 void CSBK_RAW::setCSBK(const uint8_t* csbk)
 {
     assert(csbk != nullptr);

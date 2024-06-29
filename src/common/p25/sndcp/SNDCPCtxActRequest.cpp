@@ -23,6 +23,7 @@ using namespace p25::sndcp;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the SNDCPCtxActRequest class. */
+
 SNDCPCtxActRequest::SNDCPCtxActRequest() : SNDCPPacket(),
     m_nat(SNDCPNAT::IPV4_NO_ADDRESS),
     m_ipAddress(0U),
@@ -32,6 +33,7 @@ SNDCPCtxActRequest::SNDCPCtxActRequest() : SNDCPPacket(),
 }
 
 /* Decode a SNDCP context activation request. */
+
 bool SNDCPCtxActRequest::decode(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -53,6 +55,7 @@ bool SNDCPCtxActRequest::decode(const uint8_t* data)
 }
 
 /* Encode a SNDCP context activation request. */
+
 void SNDCPCtxActRequest::encode(uint8_t* data)
 {
     assert(data != nullptr);
@@ -71,6 +74,7 @@ void SNDCPCtxActRequest::encode(uint8_t* data)
 }
 
 /* Internal helper to copy the the class. */
+
 void SNDCPCtxActRequest::copy(const SNDCPCtxActRequest& data)
 {
     m_nsapi = data.m_nsapi;

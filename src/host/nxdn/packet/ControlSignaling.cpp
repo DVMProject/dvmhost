@@ -1,15 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Modem Host Software
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Modem Host Software
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2022-2024 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Modem Host Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2022-2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "Defines.h"
 #include "common/nxdn/NXDNDefines.h"
 #include "common/nxdn/channel/CAC.h"
@@ -124,14 +121,8 @@ const uint32_t GRANT_TIMER_TIMEOUT = 15U;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Process a data frame from the RF interface.
-/// </summary>
-/// <param name="fct">Functional channel type.</param>
-/// <param name="option">Channel options.</param>
-/// <param name="data">Buffer containing data frame.</param>
-/// <param name="len">Length of data frame.</param>
-/// <returns></returns>
+/* Process a data frame from the RF interface. */
+
 bool ControlSignaling::process(FuncChannelType::E fct, ChOption::E option, uint8_t* data, uint32_t len)
 {
     assert(data != nullptr);
@@ -230,15 +221,8 @@ bool ControlSignaling::process(FuncChannelType::E fct, ChOption::E option, uint8
     return true;
 }
 
-/// <summary>
-/// Process a data frame from the RF interface.
-/// </summary>
-/// <param name="fct">Functional channel type.</param>
-/// <param name="option">Channel options.</param>
-/// <param name="netLC"></param>
-/// <param name="data">Buffer containing data frame.</param>
-/// <param name="len">Length of data frame.</param>
-/// <returns></returns>
+/* Process a data frame from the RF interface. */
+
 bool ControlSignaling::processNetwork(FuncChannelType::E fct, ChOption::E option, lc::RTCH& netLC, uint8_t* data, uint32_t len)
 {
     assert(data != nullptr);
@@ -298,12 +282,8 @@ bool ControlSignaling::processNetwork(FuncChannelType::E fct, ChOption::E option
 //  Protected Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the ControlSignaling class.
-/// </summary>
-/// <param name="nxdn">Instance of the Control class.</param>
-/// <param name="debug">Flag indicating whether NXDN debug is enabled.</param>
-/// <param name="verbose">Flag indicating whether NXDN verbose logging is enabled.</param>
+/* Initializes a new instance of the ControlSignaling class. */
+
 ControlSignaling::ControlSignaling(Control* nxdn, bool debug, bool verbose) :
     m_nxdn(nxdn),
     m_bcchCnt(1U),
@@ -321,16 +301,12 @@ ControlSignaling::ControlSignaling(Control* nxdn, bool debug, bool verbose) :
     /* stub */
 }
 
-/// <summary>
-/// Finalizes a instance of the ControlSignaling class.
-/// </summary>
+/* Finalizes a instance of the ControlSignaling class. */
+
 ControlSignaling::~ControlSignaling() = default;
 
-/// <summary>
-/// Write data processed from RF to the network.
-/// </summary>
-/// <param name="data"></param>
-/// <param name="len"></param>
+/* Write data processed from RF to the network. */
+
 void ControlSignaling::writeNetwork(const uint8_t *data, uint32_t len)
 {
     assert(data != nullptr);
@@ -348,12 +324,8 @@ void ControlSignaling::writeNetwork(const uint8_t *data, uint32_t len)
 ** Modem Frame Queuing
 */
 
-/// <summary>
-/// Helper to write a single-block RCCH packet.
-/// </summary>
-/// <param name="rcch"></param>
-/// <param name="noNetwork"></param>
-/// <param name="imm"></param>
+/* Helper to write a single-block RCCH packet. */
+
 void ControlSignaling::writeRF_Message(RCCH* rcch, bool noNetwork, bool imm)
 {
     if (!m_nxdn->m_enableControl)
@@ -402,12 +374,8 @@ void ControlSignaling::writeRF_Message(RCCH* rcch, bool noNetwork, bool imm)
 ** Control Signalling Logic
 */
 
-/// <summary>
-/// Helper to write control channel packet data.
-/// </summary>
-/// <param name="frameCnt"></param>
-/// <param name="n"></param>
-/// <param name="adjSS"></param>
+/* Helper to write control channel packet data. */
+
 void ControlSignaling::writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adjSS)
 {
     uint8_t i = 0U, seqCnt = 0U;
@@ -451,17 +419,8 @@ void ControlSignaling::writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adj
     lc::RCCH::setVerbose(rcchVerbose);
 }
 
-/// <summary>
-/// Helper to write a grant packet.
-/// </summary>
-/// <param name="srcId"></param>
-/// <param name="dstId"></param>
-/// <param name="serviceOptions"></param>
-/// <param name="grp"></param>
-/// <param name="net"></param>
-/// <param name="skip"></param>
-/// <param name="chNo"></param>
-/// <returns></returns>
+/* Helper to write a grant packet. */
+
 bool ControlSignaling::writeRF_Message_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOptions, bool grp, bool net, bool skip, uint32_t chNo)
 {
     bool emergency = ((serviceOptions & 0xFFU) & 0x80U) == 0x80U;           // Emergency Flag
@@ -630,13 +589,8 @@ bool ControlSignaling::writeRF_Message_Grant(uint32_t srcId, uint32_t dstId, uin
     return true;
 }
 
-/// <summary>
-/// Helper to write a deny packet.
-/// </summary>
-/// <param name="srcId"></param>
-/// <param name="dstId"></param>
-/// <param name="reason"></param>
-/// <param name="service"></param>
+/* Helper to write a deny packet. */
+
 void ControlSignaling::writeRF_Message_Deny(uint32_t srcId, uint32_t dstId, uint8_t reason, uint8_t service)
 {
     std::unique_ptr<RCCH> rcch = nullptr;
@@ -661,12 +615,8 @@ void ControlSignaling::writeRF_Message_Deny(uint32_t srcId, uint32_t dstId, uint
     writeRF_Message_Imm(rcch.get(), false);
 }
 
-/// <summary>
-/// Helper to write a group registration response packet.
-/// </summary>
-/// <param name="srcId"></param>
-/// <param name="dstId"></param>
-/// <param name="locId"></param>
+/* Helper to write a group registration response packet. */
+
 bool ControlSignaling::writeRF_Message_Grp_Reg_Rsp(uint32_t srcId, uint32_t dstId, uint32_t locId)
 {
     bool ret = false;
@@ -724,10 +674,8 @@ bool ControlSignaling::writeRF_Message_Grp_Reg_Rsp(uint32_t srcId, uint32_t dstI
     return ret;
 }
 
-/// <summary>
-/// Helper to write a unit registration response packet.
-/// </summary>
-/// <param name="srcId"></param>
+/* Helper to write a unit registration response packet. */
+
 void ControlSignaling::writeRF_Message_U_Reg_Rsp(uint32_t srcId, uint32_t locId)
 {
     std::unique_ptr<rcch::MESSAGE_TYPE_REG> rcch = std::make_unique<rcch::MESSAGE_TYPE_REG>();
@@ -770,9 +718,8 @@ void ControlSignaling::writeRF_Message_U_Reg_Rsp(uint32_t srcId, uint32_t locId)
     writeRF_Message_Imm(rcch.get(), true);
 }
 
-/// <summary>
-/// Helper to write a CC SITE_INFO broadcast packet on the RF interface.
-/// </summary>
+/* Helper to write a CC SITE_INFO broadcast packet on the RF interface. */
+
 void ControlSignaling::writeRF_CC_Message_Site_Info()
 {
     uint8_t data[NXDN_FRAME_LENGTH_BYTES + 2U];
@@ -819,9 +766,8 @@ void ControlSignaling::writeRF_CC_Message_Site_Info()
     }
 }
 
-/// <summary>
-/// Helper to write a CC SRV_INFO broadcast packet on the RF interface.
-/// </summary>
+/* Helper to write a CC SRV_INFO broadcast packet on the RF interface. */
+
 void ControlSignaling::writeRF_CC_Message_Service_Info()
 {
     uint8_t data[NXDN_FRAME_LENGTH_BYTES + 2U];

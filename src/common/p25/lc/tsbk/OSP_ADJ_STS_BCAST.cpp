@@ -22,6 +22,7 @@ using namespace p25::lc::tsbk;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the OSP_ADJ_STS_BCAST class. */
+
 OSP_ADJ_STS_BCAST::OSP_ADJ_STS_BCAST() : TSBK(),
     m_adjCFVA(CFVA::FAILURE),
     m_adjSysId(0U),
@@ -35,6 +36,7 @@ OSP_ADJ_STS_BCAST::OSP_ADJ_STS_BCAST() : TSBK(),
 }
 
 /* Decode a trunking signalling block. */
+
 bool OSP_ADJ_STS_BCAST::decode(const uint8_t* data, bool rawTSBK)
 {
     assert(data != nullptr);
@@ -59,6 +61,7 @@ bool OSP_ADJ_STS_BCAST::decode(const uint8_t* data, bool rawTSBK)
 }
 
 /* Encode a trunking signalling block. */
+
 void OSP_ADJ_STS_BCAST::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 {
     assert(data != nullptr);
@@ -79,6 +82,7 @@ void OSP_ADJ_STS_BCAST::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 }
 
 /* Returns a string that represents the current TSBK. */
+
 std::string OSP_ADJ_STS_BCAST::toString(bool isp)
 {
     return std::string("TSBKO, OSP_ADJ_STS_BCAST (Adjacent Site Status Broadcast)");
@@ -89,6 +93,7 @@ std::string OSP_ADJ_STS_BCAST::toString(bool isp)
 // ---------------------------------------------------------------------------
 
 /* Internal helper to copy the the class. */
+
 void OSP_ADJ_STS_BCAST::copy(const OSP_ADJ_STS_BCAST& data)
 {
     TSBK::copy(data);

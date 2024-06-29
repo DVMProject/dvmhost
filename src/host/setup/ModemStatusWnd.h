@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Modem Host Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2023 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Modem Host Software
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Modem Host Software
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2023 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @file ModemStatusWnd.h
+ * @ingroup setup
+ */
 #if !defined(__MODEM_STATUS_WND_H__)
 #define __MODEM_STATUS_WND_H__
 
@@ -20,41 +21,61 @@ using namespace finalcut;
 
 // ---------------------------------------------------------------------------
 //  Class Declaration
-//      This class implements the modem status display window.
 // ---------------------------------------------------------------------------
 
+/**
+ * @brief This class implements the modem status display window.
+ * @ingroup setup
+ */
 class HOST_SW_API ModemStatusWnd final : public finalcut::FDialog {
 public:
-    /// <summary>
-    /// Initializes a new instance of the ModemStatusWnd class.
-    /// </summary>
-    /// <param name="widget"></param>
+    /**
+     * @brief Initializes a new instance of the ModemStatusWnd class.
+     * @param widget 
+     */
     explicit ModemStatusWnd(FWidget* widget = nullptr) : FDialog{widget}
     {
         m_scrollText.ignorePadding();
     }
-    /// <summary>Copy constructor.</summary>
+    /**
+     * @brief Copy constructor.
+     */
     ModemStatusWnd(const ModemStatusWnd&) = delete;
-    /// <summary>Move constructor.</summary>
+    /**
+     * @brief Move constructor.
+     */
     ModemStatusWnd(ModemStatusWnd&&) noexcept = delete;
-    /// <summary>Finalizes an instance of the ModemStatusWnd class.</summary>
+    /**
+     * @brief Finalizes an instance of the ModemStatusWnd class.
+     */
     ~ModemStatusWnd() noexcept override = default;
 
-    /// <summary>Disable copy assignment operator (=).</summary>
+    /**
+     * @brief Disable copy assignment operator (=).
+     */
     auto operator= (const ModemStatusWnd&) -> ModemStatusWnd& = delete;
-    /// <summary>Disable move assignment operator (=).</summary>
+    /**
+     * @brief Disable move assignment operator (=).
+     */
     auto operator= (ModemStatusWnd&&) noexcept -> ModemStatusWnd& = delete;
 
-    /// <summary>Disable set X coordinate.</summary>
+    /**
+     * @brief Disable set X coordinate.
+     */
     void setX(int, bool = true) override { }
-    /// <summary>Disable set Y coordinate.</summary>
+    /**
+     * @brief Disable set Y coordinate.
+     */
     void setY(int, bool = true) override { }
-    /// <summary>Disable set position.</summary>
+    /**
+     * @brief Disable set position.
+     */
     void setPos(const FPoint&, bool = true) override { }
 
-    /// <summary>
-    /// Helper to append text.
-    /// </summary>
+    /**
+     * @brief Helper to append text.
+     * @param str Text to append.
+     */
     void append(std::string str) 
     {
         if (str.empty()) {
@@ -66,17 +87,17 @@ public:
         redraw();
     }
 
-    /// <summary>
-    /// Helper to clear the text.
-    /// </summary>
+    /**
+     * @brief Helper to clear the text.
+     */
     void clear() { m_scrollText.clear(); }
 
 private:
     FTextView m_scrollText{this};
 
-    /// <summary>
-    ///
-    /// </summary>
+    /**
+     * @brief Initializes the window layout.
+     */
     void initLayout() override
     {
         FDialog::setText("Modem Status (update every 1s)");

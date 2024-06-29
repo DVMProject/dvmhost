@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Modem Host Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2023 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Modem Host Software
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Modem Host Software
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2023 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @file SystemConfigSetWnd.h
+ * @ingroup setup
+ */
 #if !defined(__SYSTEM_CONFIG_SET_WND_H__)
 #define __SYSTEM_CONFIG_SET_WND_H__
 
@@ -23,16 +24,19 @@ using namespace finalcut;
 
 // ---------------------------------------------------------------------------
 //  Class Declaration
-//      This class implements the system configuration window.
 // ---------------------------------------------------------------------------
 
+/**
+ * @brief This class implements the system configuration window.
+ * @ingroup setup
+ */
 class HOST_SW_API SystemConfigSetWnd final : public CloseWndBase {
 public:
-    /// <summary>
-    /// Initializes a new instance of the SystemConfigSetWnd class.
-    /// </summary>
-    /// <param name="setup"></param>
-    /// <param name="widget"></param>
+    /**
+     * @brief Initializes a new instance of the SystemConfigSetWnd class.
+     * @param setup Instance of the HostSetup class.
+     * @param widget 
+     */
     explicit SystemConfigSetWnd(HostSetup* setup, FWidget* widget = nullptr) : CloseWndBase{setup, widget}
     {
         /* stub */
@@ -64,9 +68,9 @@ private:
     FCheckBox m_p25Enabled{"P25", this};
     FCheckBox m_nxdnEnabled{"NXDN", this};
 
-    /// <summary>
-    ///
-    /// </summary>
+    /**
+     * @brief Initializes the window layout.
+     */
     void initLayout() override
     {
         FDialog::setText("System Configuration");
@@ -76,9 +80,9 @@ private:
         CloseWndBase::initLayout();
     }
 
-    /// <summary>
-    ///
-    /// </summary>
+    /**
+     * @brief Initializes window controls.
+     */
     void initControls() override
     {
         yaml::Node modemConfig = m_setup->m_conf["system"]["modem"];

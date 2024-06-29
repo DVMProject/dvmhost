@@ -1,16 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Modem Host Software
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Modem Host Software
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2015,2016 Jonathan Naylor, G4KLX
-*
-*/
+/*
+ * Digital Voice Modem - Modem Host Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2015,2016 Jonathan Naylor, G4KLX
+ *
+ */
 #include "host/Console.h"
 
 #include <cstdio>
@@ -24,23 +20,20 @@
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the Console class.
-/// </summary>
+/* Initializes a new instance of the Console class. */
+
 Console::Console() :
     m_termios()
 {
     ::memset(&m_termios, 0x00U, sizeof(termios));
 }
 
-/// <summary>
-/// Finalizes a instance of the Console class.
-/// </summary>
+/* Finalizes a instance of the Console class. */
+
 Console::~Console() = default;
 
-/// <summary>
-/// Opens the terminal console.
-/// </summary>
+/* Opens the terminal console. */
+
 bool Console::open()
 {
     termios tios;
@@ -48,7 +41,7 @@ bool Console::open()
     int n = ::tcgetattr(STDIN_FILENO, &tios);
     if (n != 0) {
         ::fprintf(stderr, "tcgetattr: returned %d\r\n", n);
-        return -1;
+        return false;
     }
 
     m_termios = tios;
@@ -58,16 +51,23 @@ bool Console::open()
     n = ::tcsetattr(STDIN_FILENO, TCSANOW, &tios);
     if (n != 0) {
         ::fprintf(stderr, "tcsetattr: returned %d\r\n", n);
-        return -1;
+        return false;
     }
 
     return true;
 }
 
-/// <summary>
-/// Retrieves a character input on the keyboard.
-/// </summary>
-/// <returns></returns>
+/* Closes the terminal console. */
+
+void Console::close()
+{
+    int n = ::tcsetattr(STDIN_FILENO, TCSANOW, &m_termios);
+    if (n != 0)
+        ::fprintf(stderr, "tcsetattr: returned %d\r\n", n);
+}
+
+/* Retrieves a character input on the keyboard. */
+
 int Console::getChar()
 {
     fd_set fds;
@@ -96,23 +96,8 @@ int Console::getChar()
     return c;
 }
 
-/// <summary>
-/// Closes the terminal console.
-/// </summary>
-void Console::close()
-{
-    int n = ::tcsetattr(STDIN_FILENO, TCSANOW, &m_termios);
-    if (n != 0)
-        ::fprintf(stderr, "tcsetattr: returned %d\r\n", n);
-}
+/* Retrieves an array of characters input on the keyboard. */
 
-/// <summary>
-/// Retrieves an array of characters input on the keyboard.
-/// </summary>
-/// <param name="line"></param>
-/// <param name="max"></param>
-/// <param name="mask"></param>
-/// <returns></returns>
 int Console::getLine(char line[], int max, char mask)
 {
     int nch = 0;

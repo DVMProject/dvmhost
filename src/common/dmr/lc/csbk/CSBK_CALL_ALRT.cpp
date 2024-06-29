@@ -22,6 +22,7 @@ using namespace dmr::lc::csbk;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the CSBK_CALL_ALRT class. */
+
 CSBK_CALL_ALRT::CSBK_CALL_ALRT() : CSBK()
 {
     m_CSBKO = CSBKO::RAND;
@@ -29,6 +30,7 @@ CSBK_CALL_ALRT::CSBK_CALL_ALRT() : CSBK()
 }
 
 /* Decode a control signalling block. */
+
 bool CSBK_CALL_ALRT::decode(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -50,6 +52,7 @@ bool CSBK_CALL_ALRT::decode(const uint8_t* data)
 }
 
 /* Encode a control signalling block. */
+
 void CSBK_CALL_ALRT::encode(uint8_t* data)
 {
     assert(data != nullptr);
@@ -65,6 +68,7 @@ void CSBK_CALL_ALRT::encode(uint8_t* data)
 }
 
 /* Returns a string that represents the current CSBK. */
+
 std::string CSBK_CALL_ALRT::toString()
 {
     return std::string("CSBKO, RAND (Call Alert)");

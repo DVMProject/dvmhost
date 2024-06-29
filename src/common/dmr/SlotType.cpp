@@ -21,6 +21,7 @@ using namespace dmr::defines;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the SlotType class. */
+
 SlotType::SlotType() :
     m_colorCode(0U),
     m_dataType(DataType::IDLE)
@@ -29,9 +30,11 @@ SlotType::SlotType() :
 }
 
 /* Finalizes a instance of the SlotType class. */
+
 SlotType::~SlotType() = default;
 
 /* Decodes DMR slot type. */
+
 void SlotType::decode(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -53,6 +56,7 @@ void SlotType::decode(const uint8_t* data)
 }
 
 /* Encodes DMR slot type. */
+
 void SlotType::encode(uint8_t* data) const
 {
     assert(data != nullptr);

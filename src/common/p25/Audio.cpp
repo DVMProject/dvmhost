@@ -23,6 +23,7 @@ using namespace p25;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the Audio class. */
+
 Audio::Audio() :
     m_fec()
 {
@@ -30,9 +31,11 @@ Audio::Audio() :
 }
 
 /* Finalizes a instance of the Audio class. */
+
 Audio::~Audio() = default;
 
 /* Process P25 IMBE audio data. */
+
 uint32_t Audio::process(uint8_t* data)
 {
     assert(data != nullptr);
@@ -81,6 +84,7 @@ uint32_t Audio::process(uint8_t* data)
 }
 
 /* Decode a P25 IMBE audio frame. */
+
 void Audio::decode(const uint8_t* data, uint8_t* imbe, uint32_t n)
 {
     assert(data != nullptr);
@@ -193,6 +197,7 @@ void Audio::decode(const uint8_t* data, uint8_t* imbe, uint32_t n)
 }
 
 /* Encode a P25 IMBE audio frame. */
+
 void Audio::encode(uint8_t* data, const uint8_t* imbe, uint32_t n)
 {
     assert(data != nullptr);

@@ -1,15 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Converged FNE Software
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Converged FNE Software
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2023-2024 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Converged FNE Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2023-2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "fne/Defines.h"
 #include "common/p25/lc/tsbk/TSBKFactory.h"
 #include "common/p25/Sync.h"
@@ -40,11 +37,8 @@ const uint32_t GRANT_TIMER_TIMEOUT = 15U;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the TagP25Data class.
-/// </summary>
-/// <param name="network"></param>
-/// <param name="debug"></param>
+/* Initializes a new instance of the TagP25Data class. */
+
 TagP25Data::TagP25Data(FNENetwork* network, bool debug) :
     m_network(network),
     m_parrotFrames(),
@@ -56,21 +50,12 @@ TagP25Data::TagP25Data(FNENetwork* network, bool debug) :
     assert(network != nullptr);
 }
 
-/// <summary>
-/// Finalizes a instance of the TagP25Data class.
-/// </summary>
+/* Finalizes a instance of the TagP25Data class. */
+
 TagP25Data::~TagP25Data() = default;
 
-/// <summary>
-/// Process a data frame from the network.
-/// </summary>
-/// <param name="data">Network data buffer.</param>
-/// <param name="len">Length of data.</param>
-/// <param name="peerId">Peer ID</param>
-/// <param name="pktSeq"></param>
-/// <param name="streamId">Stream ID</param>
-/// <param name="external">Flag indicating traffic is from an external peer.</param>
-/// <returns></returns>
+/* Process a data frame from the network. */
+
 bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint16_t pktSeq, uint32_t streamId, bool external)
 {
     hrc::hrc_t pktTime = hrc::now();
@@ -383,16 +368,8 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
     return false;
 }
 
-/// <summary>
-/// Process a grant request frame from the network.
-/// </summary>
-/// <param name="srcId"></param>
-/// <param name="dstId"></param>
-/// <param name="unitToUnit"></param>
-/// <param name="peerId">Peer ID</param>
-/// <param name="pktSeq"></param>
-/// <param name="streamId">Stream ID</param>
-/// <returns></returns>
+/* Process a grant request frame from the network. */
+
 bool TagP25Data::processGrantReq(uint32_t srcId, uint32_t dstId, bool unitToUnit, uint32_t peerId, uint16_t pktSeq, uint32_t streamId)
 {
     // if we have an Rx status for the destination deny the grant
@@ -431,9 +408,8 @@ bool TagP25Data::processGrantReq(uint32_t srcId, uint32_t dstId, bool unitToUnit
     return true;
 }
 
-/// <summary>
-/// Helper to playback a parrot frame to the network.
-/// </summary>
+/* Helper to playback a parrot frame to the network. */
+
 void TagP25Data::playbackParrot()
 {
     if (m_parrotFrames.size() == 0) {
@@ -502,12 +478,8 @@ void TagP25Data::playbackParrot()
     m_parrotFrames.pop_front();
 }
 
-/// <summary>
-/// Helper to write a call alert packet.
-/// </summary>
-/// <param name="peerId"></param>
-/// <param name="srcId"></param>
-/// <param name="dstId"></param>
+/* Helper to write a call alert packet. */
+
 void TagP25Data::write_TSDU_Call_Alrt(uint32_t peerId, uint32_t srcId, uint32_t dstId)
 {
     std::unique_ptr<lc::tsbk::IOSP_CALL_ALRT> iosp = std::make_unique<lc::tsbk::IOSP_CALL_ALRT>();
@@ -519,13 +491,8 @@ void TagP25Data::write_TSDU_Call_Alrt(uint32_t peerId, uint32_t srcId, uint32_t 
     write_TSDU(peerId, iosp.get());
 }
 
-/// <summary>
-/// Helper to write a radio monitor packet.
-/// </summary>
-/// <param name="peerId"></param>
-/// <param name="srcId"></param>
-/// <param name="dstId"></param>
-/// <param name="txMult"></param>
+/* Helper to write a radio monitor packet. */
+
 void TagP25Data::write_TSDU_Radio_Mon(uint32_t peerId, uint32_t srcId, uint32_t dstId, uint8_t txMult)
 {
     std::unique_ptr<lc::tsbk::IOSP_RAD_MON> iosp = std::make_unique<lc::tsbk::IOSP_RAD_MON>();
@@ -538,13 +505,8 @@ void TagP25Data::write_TSDU_Radio_Mon(uint32_t peerId, uint32_t srcId, uint32_t 
     write_TSDU(peerId, iosp.get());
 }
 
-/// <summary>
-/// Helper to write a extended function packet.
-/// </summary>
-/// <param name="peerId"></param>
-/// <param name="func"></param>
-/// <param name="arg"></param>
-/// <param name="dstId"></param>
+/* Helper to write a extended function packet. */
+
 void TagP25Data::write_TSDU_Ext_Func(uint32_t peerId, uint32_t func, uint32_t arg, uint32_t dstId)
 {
     std::unique_ptr<lc::tsbk::IOSP_EXT_FNCT> iosp = std::make_unique<lc::tsbk::IOSP_EXT_FNCT>();
@@ -558,11 +520,8 @@ void TagP25Data::write_TSDU_Ext_Func(uint32_t peerId, uint32_t func, uint32_t ar
     write_TSDU(peerId, iosp.get());
 }
 
-/// <summary>
-/// Helper to write a group affiliation query packet.
-/// </summary>
-/// <param name="peerId"></param>
-/// <param name="dstId"></param>
+/* Helper to write a group affiliation query packet. */
+
 void TagP25Data::write_TSDU_Grp_Aff_Q(uint32_t peerId, uint32_t dstId)
 {
     std::unique_ptr<lc::tsbk::OSP_GRP_AFF_Q> osp = std::make_unique<lc::tsbk::OSP_GRP_AFF_Q>();
@@ -574,11 +533,8 @@ void TagP25Data::write_TSDU_Grp_Aff_Q(uint32_t peerId, uint32_t dstId)
     write_TSDU(peerId, osp.get());
 }
 
-/// <summary>
-/// Helper to write a unit registration command packet.
-/// </summary>
-/// <param name="peerId"></param>
-/// <param name="dstId"></param>
+/* Helper to write a unit registration command packet. */
+
 void TagP25Data::write_TSDU_U_Reg_Cmd(uint32_t peerId, uint32_t dstId)
 {
     std::unique_ptr<lc::tsbk::OSP_U_REG_CMD> osp = std::make_unique<lc::tsbk::OSP_U_REG_CMD>();
@@ -594,14 +550,8 @@ void TagP25Data::write_TSDU_U_Reg_Cmd(uint32_t peerId, uint32_t dstId)
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Helper to route rewrite the network data buffer.
-/// </summary>
-/// <param name="buffer"></param>
-/// <param name="peerId">Peer ID</param>
-/// <param name="duid"></param>
-/// <param name="dstId"></param>
-/// <param name="outbound"></param>
+/* Helper to route rewrite the network data buffer. */
+
 void TagP25Data::routeRewrite(uint8_t* buffer, uint32_t peerId, uint8_t duid, uint32_t dstId, bool outbound)
 {
     uint32_t srcId = __GET_UINT16(buffer, 5U);
@@ -659,12 +609,8 @@ void TagP25Data::routeRewrite(uint8_t* buffer, uint32_t peerId, uint8_t duid, ui
     }
 }
 
-/// <summary>
-/// Helper to route rewrite destination ID.
-/// </summary>
-/// <param name="peerId">Peer ID</param>
-/// <param name="dstId"></param>
-/// <param name="outbound"></param>
+/* Helper to route rewrite destination ID. */
+
 bool TagP25Data::peerRewrite(uint32_t peerId, uint32_t& dstId, bool outbound)
 {
     lookups::TalkgroupRuleGroupVoice tg;
@@ -693,12 +639,8 @@ bool TagP25Data::peerRewrite(uint32_t peerId, uint32_t& dstId, bool outbound)
     return false;
 }
 
-/// <summary>
-/// Helper to process TSDUs being passed from a peer.
-/// </summary>
-/// <param name="buffer"></param>
-/// <param name="peerId">Peer ID</param>
-/// <param name="duid"></param>
+/* Helper to process TSDUs being passed from a peer. */
+
 bool TagP25Data::processTSDUFrom(uint8_t* buffer, uint32_t peerId, uint8_t duid)
 {
     // are we receiving a TSDU?
@@ -768,12 +710,8 @@ bool TagP25Data::processTSDUFrom(uint8_t* buffer, uint32_t peerId, uint8_t duid)
     return true;
 }
 
-/// <summary>
-/// Helper to process TSDUs being passed to a peer.
-/// </summary>
-/// <param name="buffer"></param>
-/// <param name="peerId">Peer ID</param>
-/// <param name="duid"></param>
+/* Helper to process TSDUs being passed to a peer. */
+
 bool TagP25Data::processTSDUTo(uint8_t* buffer, uint32_t peerId, uint8_t duid)
 {
     // are we receiving a TSDU?
@@ -839,13 +777,8 @@ bool TagP25Data::processTSDUTo(uint8_t* buffer, uint32_t peerId, uint8_t duid)
     return true;
 }
 
-/// <summary>
-/// Helper to process TSDUs being passed to an external peer.
-/// </summary>
-/// <param name="buffer"></param>
-/// <param name="srcPeerId">Source Peer ID</param>
-/// <param name="dstPeerId">Destination Peer ID</param>
-/// <param name="duid"></param>
+/* Helper to process TSDUs being passed to an external peer. */
+
 bool TagP25Data::processTSDUToExternal(uint8_t* buffer, uint32_t srcPeerId, uint32_t dstPeerId, uint8_t duid)
 {
     // are we receiving a TSDU?
@@ -887,15 +820,8 @@ bool TagP25Data::processTSDUToExternal(uint8_t* buffer, uint32_t srcPeerId, uint
     return true;
 }
 
-/// <summary>
-/// Helper to determine if the peer is permitted for traffic.
-/// </summary>
-/// <param name="peerId">Peer ID</param>
-/// <param name="control"></param>
-/// <param name="duid"></param>
-/// <param name="streamId">Stream ID</param>
-/// <param name="external"></param>
-/// <returns></returns>
+/* Helper to determine if the peer is permitted for traffic. */
+
 bool TagP25Data::isPeerPermitted(uint32_t peerId, lc::LC& control, DUID::E duid, uint32_t streamId, bool external)
 {
     if (control.getLCO() == LCO::PRIVATE) {
@@ -1041,15 +967,8 @@ bool TagP25Data::isPeerPermitted(uint32_t peerId, lc::LC& control, DUID::E duid,
     return true;
 }
 
-/// <summary>
-/// Helper to validate the P25 call stream.
-/// </summary>
-/// <param name="peerId">Peer ID</param>
-/// <param name="control"></param>
-/// <param name="duid"></param>
-/// <param name="tsbk"></param>
-/// <param name="streamId">Stream ID</param>
-/// <returns></returns>
+/* Helper to validate the P25 call stream. */
+
 bool TagP25Data::validate(uint32_t peerId, lc::LC& control, DUID::E duid, const p25::lc::TSBK* tsbk, uint32_t streamId)
 {
     // is the source ID a blacklisted ID?
@@ -1172,14 +1091,8 @@ bool TagP25Data::validate(uint32_t peerId, lc::LC& control, DUID::E duid, const 
 }
 
 
-/// <summary>
-/// Helper to write a grant packet.
-/// </summary>
-/// <param name="peerId"></param>
-/// <param name="srcId"></param>
-/// <param name="dstId"></param>
-/// <param name="grp"></param>
-/// <returns></returns>
+/* Helper to write a grant packet. */
+
 bool TagP25Data::write_TSDU_Grant(uint32_t peerId, uint32_t srcId, uint32_t dstId, uint8_t serviceOptions, bool grp)
 {
     bool emergency = ((serviceOptions & 0xFFU) & 0x80U) == 0x80U;           // Emergency Flag
@@ -1241,15 +1154,8 @@ bool TagP25Data::write_TSDU_Grant(uint32_t peerId, uint32_t srcId, uint32_t dstI
     return true;
 }
 
-/// <summary>
-/// Helper to write a deny packet.
-/// </summary>
-/// <param name="peerId"></param>
-/// <param name="dstId"></param>
-/// <param name="reason"></param>
-/// <param name="service"></param>
-/// <param name="grp"></param>
-/// <param name="aiv"></param>
+/* Helper to write a deny packet. */
+
 void TagP25Data::write_TSDU_Deny(uint32_t peerId, uint32_t srcId, uint32_t dstId, uint8_t reason, uint8_t service, bool grp, bool aiv)
 {
     std::unique_ptr<lc::tsbk::OSP_DENY_RSP> osp = std::make_unique<lc::tsbk::OSP_DENY_RSP>();
@@ -1268,15 +1174,8 @@ void TagP25Data::write_TSDU_Deny(uint32_t peerId, uint32_t srcId, uint32_t dstId
     write_TSDU(peerId, osp.get());
 }
 
-/// <summary>
-/// Helper to write a queue packet.
-/// </summary>
-/// <param name="peerId"></param>
-/// <param name="dstId"></param>
-/// <param name="reason"></param>
-/// <param name="service"></param>
-/// <param name="grp"></param>
-/// <param name="aiv"></param>
+/* Helper to write a queue packet. */
+
 void TagP25Data::write_TSDU_Queue(uint32_t peerId, uint32_t srcId, uint32_t dstId, uint8_t reason, uint8_t service, bool grp, bool aiv)
 {
     std::unique_ptr<lc::tsbk::OSP_QUE_RSP> osp = std::make_unique<lc::tsbk::OSP_QUE_RSP>();
@@ -1295,11 +1194,8 @@ void TagP25Data::write_TSDU_Queue(uint32_t peerId, uint32_t srcId, uint32_t dstI
     write_TSDU(peerId, osp.get());
 }
 
-/// <summary>
-/// Helper to write a network TSDU.
-/// </summary>
-/// <param name="peerId"></param>
-/// <param name="tsbk"></param>
+/* Helper to write a network TSDU. */
+
 void TagP25Data::write_TSDU(uint32_t peerId, lc::TSBK* tsbk)
 {
     uint8_t data[P25_TSDU_FRAME_LENGTH_BYTES];

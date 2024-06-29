@@ -22,12 +22,14 @@ using namespace p25::lc::tdulc;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the LC_GROUP class. */
+
 LC_GROUP::LC_GROUP() : TDULC()
 {
     m_lco = LCO::GROUP;
 }
 
 /* Decode a terminator data unit w/ link control. */
+
 bool LC_GROUP::decode(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -53,6 +55,7 @@ bool LC_GROUP::decode(const uint8_t* data)
 }
 
 /* Encode a terminator data unit w/ link control. */
+
 void LC_GROUP::encode(uint8_t* data)
 {
     assert(data != nullptr);

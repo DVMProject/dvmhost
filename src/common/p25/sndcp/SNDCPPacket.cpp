@@ -23,12 +23,14 @@ using namespace p25::sndcp;
 // ---------------------------------------------------------------------------
 
 /* Initializes a copy instance of the SNDCPPacket class. */
+
 SNDCPPacket::SNDCPPacket(const SNDCPPacket& data) : SNDCPPacket()
 {
     copy(data);
 }
 
 /* Initializes a new instance of the SNDCPPacket class. */
+
 SNDCPPacket::SNDCPPacket() :
     m_pduType(SNDCP_PDUType::ACT_TDS_CTX),
     m_sndcpVersion(SNDCP_VERSION_1),
@@ -38,6 +40,7 @@ SNDCPPacket::SNDCPPacket() :
 }
 
 /* Finalizes a instance of the SNDCPPacket class. */
+
 SNDCPPacket::~SNDCPPacket() = default;
 
 // ---------------------------------------------------------------------------
@@ -45,6 +48,7 @@ SNDCPPacket::~SNDCPPacket() = default;
 // ---------------------------------------------------------------------------
 
 /* Internal helper to decode a SNDCP header. */
+
 bool SNDCPPacket::decodeHeader(const uint8_t* data, bool outbound)
 {
     assert(data != nullptr);
@@ -61,6 +65,7 @@ bool SNDCPPacket::decodeHeader(const uint8_t* data, bool outbound)
 }
 
 /* Internal helper to encode a SNDCP header. */
+
 void SNDCPPacket::encodeHeader(uint8_t* data, bool outbound)
 {
     assert(data != nullptr);
@@ -75,6 +80,7 @@ void SNDCPPacket::encodeHeader(uint8_t* data, bool outbound)
 }
 
 /* Internal helper to copy the the class. */
+
 void SNDCPPacket::copy(const SNDCPPacket& data)
 {
     m_pduType = data.m_pduType;

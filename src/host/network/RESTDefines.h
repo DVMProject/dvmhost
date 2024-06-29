@@ -1,19 +1,29 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Modem Host Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2023-2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Modem Host Software
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Modem Host Software
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2023-2024 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @defgroup host_rest Host REST API
+ * @brief Implementation for the host REST API.
+ * @ingroup host
+ * 
+ * @file RESTDefines.h
+ * @ingroup host_rest
+ */
 #if !defined(__REST_DEFINES_H__)
 #define __REST_DEFINES_H__
 
 #include "Defines.h"
+
+/**
+ * @addtogroup host_rest
+ * @{
+ */
 
 // ---------------------------------------------------------------------------
 //  Constants
@@ -91,5 +101,7 @@
 #define GET_NXDN_DUMP_RCCH              GET_NXDN_DUMP_RCCH_BASE"(\\d+)"
 #define GET_NXDN_CC_DEDICATED           "/nxdn/cc-enable"
 #define GET_NXDN_AFFILIATIONS           "/nxdn/report-affiliations"
+
+/** @} */
 
 #endif // __REST_DEFINES_H__

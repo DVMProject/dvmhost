@@ -1,16 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Modem Host Software
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Modem Host Software
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
-*   Copyright (C) 2022 Jason-UWU
-*
-*/
+/*
+ * Digital Voice Modem - Modem Host Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2022 Jason-UWU
+ *
+ */
 #include "Defines.h"
 #include "common/p25/P25Defines.h"
 #include "common/p25/acl/AccessControl.h"
@@ -160,13 +157,8 @@ const uint8_t CONV_FALLBACK_PACKET_DELAY = 8U;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Process a data frame from the RF interface.
-/// </summary>
-/// <param name="data">Buffer containing data frame.</param>
-/// <param name="len">Length of data frame.</param>
-/// <param name="preDecodedTSBK">Pre-decoded TSBK.</param>
-/// <returns></returns>
+/* Process a data frame from the RF interface. */
+
 bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::TSBK> preDecodedTSBK)
 {
     assert(data != nullptr);
@@ -684,15 +676,8 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
     return false;
 }
 
-/// <summary>
-/// Process a data frame from the network.
-/// </summary>
-/// <param name="data">Buffer containing data frame.</param>
-/// <param name="len">Length of data frame.</param>
-/// <param name="control"></param>
-/// <param name="lsd"></param>
-/// <param name="duid"></param>
-/// <returns></returns>
+/* Process a data frame from the network. */
+
 bool ControlSignaling::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::LowSpeedData& lsd, DUID::E& duid)
 {
     if (!m_p25->m_enableControl)
@@ -966,11 +951,8 @@ bool ControlSignaling::processNetwork(uint8_t* data, uint32_t len, lc::LC& contr
     return true;
 }
 
-/// <summary>
-/// Helper used to process AMBTs from PDU data.
-/// </summary>
-/// <param name="dataHeader"></param>
-/// <param name="dataBlock"></param>
+/* Helper used to process AMBTs from PDU data. */
+
 bool ControlSignaling::processMBT(DataHeader& dataHeader, DataBlock* blocks)
 {
     if (!m_p25->m_enableControl) {
@@ -990,9 +972,7 @@ bool ControlSignaling::processMBT(DataHeader& dataHeader, DataBlock* blocks)
     return ret;
 }
 
-/// <summary>
-/// Helper to write P25 adjacent site information to the network.
-/// </summary>
+/* Helper to write P25 adjacent site information to the network. */
 void ControlSignaling::writeAdjSSNetwork()
 {
     if (!m_p25->m_enableControl) {
@@ -1025,11 +1005,8 @@ void ControlSignaling::writeAdjSSNetwork()
     }
 }
 
-/// <summary>
-/// Helper to write a call alert packet.
-/// </summary>
-/// <param name="srcId"></param>
-/// <param name="dstId"></param>
+/* Helper to write a call alert packet. */
+
 void ControlSignaling::writeRF_TSDU_Call_Alrt(uint32_t srcId, uint32_t dstId)
 {
     std::unique_ptr<IOSP_CALL_ALRT> iosp = std::make_unique<IOSP_CALL_ALRT>();
@@ -1047,12 +1024,8 @@ void ControlSignaling::writeRF_TSDU_Call_Alrt(uint32_t srcId, uint32_t dstId)
     writeRF_TSDU_SBF(iosp.get(), false);
 }
 
-/// <summary>
-/// Helper to write a radio monitor packet.
-/// </summary>
-/// <param name="srcId"></param>
-/// <param name="dstId"></param>
-/// <param name="txMult"></param>
+/* Helper to write a radio monitor packet. */
+
 void ControlSignaling::writeRF_TSDU_Radio_Mon(uint32_t srcId, uint32_t dstId, uint8_t txMult)
 {
     std::unique_ptr<IOSP_RAD_MON> iosp = std::make_unique<IOSP_RAD_MON>();
@@ -1069,12 +1042,8 @@ void ControlSignaling::writeRF_TSDU_Radio_Mon(uint32_t srcId, uint32_t dstId, ui
     writeRF_TSDU_SBF(iosp.get(), false);
 }
 
-/// <summary>
-/// Helper to write a extended function packet.
-/// </summary>
-/// <param name="func"></param>
-/// <param name="arg"></param>
-/// <param name="dstId"></param>
+/* Helper to write a extended function packet. */
+
 void ControlSignaling::writeRF_TSDU_Ext_Func(uint32_t func, uint32_t arg, uint32_t dstId)
 {
     std::unique_ptr<IOSP_EXT_FNCT> iosp = std::make_unique<IOSP_EXT_FNCT>();
@@ -1106,10 +1075,8 @@ void ControlSignaling::writeRF_TSDU_Ext_Func(uint32_t func, uint32_t arg, uint32
     writeRF_TSDU_SBF(iosp.get(), false);
 }
 
-/// <summary>
-/// Helper to write a group affiliation query packet.
-/// </summary>
-/// <param name="dstId"></param>
+/* Helper to write a group affiliation query packet. */
+
 void ControlSignaling::writeRF_TSDU_Grp_Aff_Q(uint32_t dstId)
 {
     std::unique_ptr<OSP_GRP_AFF_Q> osp = std::make_unique<OSP_GRP_AFF_Q>();
@@ -1127,10 +1094,8 @@ void ControlSignaling::writeRF_TSDU_Grp_Aff_Q(uint32_t dstId)
     writeRF_TSDU_SBF(osp.get(), true);
 }
 
-/// <summary>
-/// Helper to write a unit registration command packet.
-/// </summary>
-/// <param name="dstId"></param>
+/* Helper to write a unit registration command packet. */
+
 void ControlSignaling::writeRF_TSDU_U_Reg_Cmd(uint32_t dstId)
 {
     std::unique_ptr<OSP_U_REG_CMD> osp = std::make_unique<OSP_U_REG_CMD>();
@@ -1148,11 +1113,8 @@ void ControlSignaling::writeRF_TSDU_U_Reg_Cmd(uint32_t dstId)
     writeRF_TSDU_SBF(osp.get(), true);
 }
 
-/// <summary>
-/// Helper to write a emergency alarm packet.
-/// </summary>
-/// <param name="srcId"></param>
-/// <param name="dstId"></param>
+/* Helper to write a emergency alarm packet. */
+
 void ControlSignaling::writeRF_TSDU_Emerg_Alrm(uint32_t srcId, uint32_t dstId)
 {
     std::unique_ptr<ISP_EMERG_ALRM_REQ> isp = std::make_unique<ISP_EMERG_ALRM_REQ>();
@@ -1163,10 +1125,8 @@ void ControlSignaling::writeRF_TSDU_Emerg_Alrm(uint32_t srcId, uint32_t dstId)
     writeRF_TSDU_SBF(isp.get(), true);
 }
 
-/// <summary>
-/// Helper to write a raw TSBK.
-/// </summary>
-/// <param name="tsbk"></param>
+/* Helper to write a raw TSBK. */
+
 void ControlSignaling::writeRF_TSDU_Raw(const uint8_t* tsbk)
 {
     if (tsbk == nullptr) {
@@ -1179,10 +1139,8 @@ void ControlSignaling::writeRF_TSDU_Raw(const uint8_t* tsbk)
     writeRF_TSDU_SBF(osp.get(), true);
 }
 
-/// <summary>
-/// Helper to change the conventional fallback state.
-/// </summary>
-/// <param name="verbose">Flag indicating whether conventional fallback is enabled.</param>
+/* Helper to change the conventional fallback state. */
+
 void ControlSignaling::setConvFallback(bool fallback)
 {
     m_convFallback = fallback;
@@ -1196,10 +1154,8 @@ void ControlSignaling::setConvFallback(bool fallback)
     }
 }
 
-/// <summary>
-/// Helper to change the TSBK verbose state.
-/// </summary>
-/// <param name="verbose">Flag indicating whether TSBK dumping is enabled.</param>
+/* Helper to change the TSBK verbose state. */
+
 void ControlSignaling::setTSBKVerbose(bool verbose)
 {
     m_dumpTSBK = verbose;
@@ -1211,13 +1167,8 @@ void ControlSignaling::setTSBKVerbose(bool verbose)
 //  Protected Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the ControlSignaling class.
-/// </summary>
-/// <param name="p25">Instance of the Control class.</param>
-/// <param name="dumpTSBKData">Flag indicating whether TSBK data is dumped to the log.</param>
-/// <param name="debug">Flag indicating whether P25 debug is enabled.</param>
-/// <param name="verbose">Flag indicating whether P25 verbose logging is enabled.</param>
+/* Initializes a new instance of the ControlSignaling class. */
+
 ControlSignaling::ControlSignaling(Control* p25, bool dumpTSBKData, bool debug, bool verbose) :
     m_p25(p25),
     m_patchSuperGroup(0xFFFEU),
@@ -1273,20 +1224,15 @@ ControlSignaling::ControlSignaling(Control* p25, bool dumpTSBKData, bool debug, 
     lc::TDULC::setVerbose(dumpTSBKData);
 }
 
-/// <summary>
-/// Finalizes a instance of the ControlSignaling class.
-/// </summary>
+/* Finalizes a instance of the ControlSignaling class. */
+
 ControlSignaling::~ControlSignaling()
 {
     delete[] m_rfMBF;
 }
 
-/// <summary>
-/// Write data processed from RF to the network.
-/// </summary>
-/// <param name="tsbk"></param>
-/// <param name="data"></param>
-/// <param name="autoReset"></param>
+/* Write data processed from RF to the network. */
+
 void ControlSignaling::writeNetworkRF(lc::TSBK* tsbk, const uint8_t* data, bool autoReset)
 {
     assert(tsbk != nullptr);
@@ -1309,12 +1255,8 @@ void ControlSignaling::writeNetworkRF(lc::TSBK* tsbk, const uint8_t* data, bool 
         m_p25->m_network->resetP25();
 }
 
-/// <summary>
-/// Write data processed from RF to the network.
-/// </summary>
-/// <param name="tduLc"></param>
-/// <param name="data"></param>
-/// <param name="autoReset"></param>
+/* Write data processed from RF to the network. */
+
 void ControlSignaling::writeNetworkRF(lc::TDULC* tduLc, const uint8_t* data, bool autoReset)
 {
     assert(data != nullptr);
@@ -1340,11 +1282,8 @@ void ControlSignaling::writeNetworkRF(lc::TDULC* tduLc, const uint8_t* data, boo
 ** Modem Frame Queuing
 */
 
-/// <summary>
-/// Helper to write a P25 TDU w/ link control packet.
-/// </summary>
-/// <param name="lc"></param>
-/// <param name="noNetwork"></param>
+/* Helper to write a P25 TDU w/ link control packet. */
+
 void ControlSignaling::writeRF_TDULC(lc::TDULC* lc, bool noNetwork)
 {
     uint8_t data[P25_TDULC_FRAME_LENGTH_BYTES + 2U];
@@ -1379,10 +1318,8 @@ void ControlSignaling::writeRF_TDULC(lc::TDULC* lc, bool noNetwork)
     //}
 }
 
-/// <summary>
-/// Helper to write a network P25 TDU w/ link control packet.
-/// </summary>
-/// <param name="lc"></param>
+/* Helper to write a network P25 TDU w/ link control packet. */
+
 void ControlSignaling::writeNet_TDULC(lc::TDULC* lc)
 {
     uint8_t buffer[P25_TDULC_FRAME_LENGTH_BYTES + 2U];
@@ -1426,13 +1363,8 @@ void ControlSignaling::writeNet_TDULC(lc::TDULC* lc)
     m_p25->m_tailOnIdle = true;
 }
 
-/// <summary>
-/// Helper to write a single-block P25 TSDU packet.
-/// </summary>
-/// <param name="tsbk"></param>
-/// <param name="noNetwork"></param>
-/// <param name="forceSingle"></param>
-/// <param name="imm"></param>
+/* Helper to write a single-block P25 TSDU packet. */
+
 void ControlSignaling::writeRF_TSDU_SBF(lc::TSBK* tsbk, bool noNetwork, bool forceSingle, bool imm)
 {
     if (!m_p25->m_enableControl)
@@ -1500,10 +1432,8 @@ void ControlSignaling::writeRF_TSDU_SBF(lc::TSBK* tsbk, bool noNetwork, bool for
     }
 }
 
-/// <summary>
-/// Helper to write a network single-block P25 TSDU packet.
-/// </summary>
-/// <param name="tsbk"></param>
+/* Helper to write a network single-block P25 TSDU packet. */
+
 void ControlSignaling::writeNet_TSDU(lc::TSBK* tsbk)
 {
     assert(tsbk != nullptr);
@@ -1536,10 +1466,8 @@ void ControlSignaling::writeNet_TSDU(lc::TSBK* tsbk)
         m_p25->m_network->resetP25();
 }
 
-/// <summary>
-/// Helper to write a multi-block (3-block) P25 TSDU packet.
-/// </summary>
-/// <param name="tsbk"></param>
+/* Helper to write a multi-block (3-block) P25 TSDU packet. */
+
 void ControlSignaling::writeRF_TSDU_MBF(lc::TSBK* tsbk)
 {
     if (!m_p25->m_enableControl) {
@@ -1651,10 +1579,8 @@ void ControlSignaling::writeRF_TSDU_MBF(lc::TSBK* tsbk)
     m_mbfCnt++;
 }
 
-/// <summary>
-/// Helper to write a alternate multi-block trunking PDU packet.
-/// </summary>
-/// <param name="ambt"></param>
+/* Helper to write a alternate multi-block trunking PDU packet. */
+
 void ControlSignaling::writeRF_TSDU_AMBT(lc::AMBT* ambt)
 {
     if (!m_p25->m_enableControl)
@@ -1689,12 +1615,8 @@ void ControlSignaling::writeRF_TSDU_AMBT(lc::AMBT* ambt)
 ** Control Signalling Logic
 */
 
-/// <summary>
-/// Helper to write a P25 TDU w/ link control channel release packet.
-/// </summary>
-/// <param name="grp"></param>
-/// <param name="srcId"></param>
-/// <param name="dstId"></param>
+/* Helper to write a P25 TDU w/ link control channel release packet. */
+
 void ControlSignaling::writeRF_TDULC_ChanRelease(bool grp, uint32_t srcId, uint32_t dstId)
 {
     if (!m_p25->m_duplex) {
@@ -1742,12 +1664,8 @@ void ControlSignaling::writeRF_TDULC_ChanRelease(bool grp, uint32_t srcId, uint3
     }
 }
 
-/// <summary>
-/// Helper to write control channel packet data.
-/// </summary>
-/// <param name="frameCnt"></param>
-/// <param name="n"></param>
-/// <param name="adjSS"></param>
+/* Helper to write control channel packet data. */
+
 void ControlSignaling::writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adjSS)
 {
     if (!m_p25->m_enableControl)
@@ -1902,10 +1820,8 @@ void ControlSignaling::writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adj
     lc::TSBK::setVerbose(tsbkVerbose);
 }
 
-/// <summary>
-/// Helper to generate the given control TSBK into the TSDU frame queue.
-/// </summary>
-/// <param name="lco"></param>
+/* Helper to generate the given control TSBK into the TSDU frame queue. */
+
 void ControlSignaling::queueRF_TSBK_Ctrl(uint8_t lco)
 {
     if (!m_p25->m_enableControl)
@@ -2115,16 +2031,8 @@ void ControlSignaling::queueRF_TSBK_Ctrl(uint8_t lco)
     }
 }
 
-/// <summary>
-/// Helper to write a grant packet.
-/// </summary>
-/// <param name="srcId"></param>
-/// <param name="dstId"></param>
-/// <param name="grp"></param>
-/// <param name="net"></param>
-/// <param name="skip"></param>
-/// <param name="chNo"></param>
-/// <returns></returns>
+/* Helper to write a grant packet. */
+
 bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOptions, bool grp, bool net, bool skip, uint32_t chNo)
 {
     bool emergency = ((serviceOptions & 0xFFU) & 0x80U) == 0x80U;           // Emergency Flag
@@ -2390,9 +2298,8 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
     return true;
 }
 
-/// <summary>
-/// Helper to write a grant update packet.
-/// </summary>
+/* Helper to write a grant update packet. */
+
 void ControlSignaling::writeRF_TSDU_Grant_Update()
 {
     if (m_p25->m_voiceOnControl)
@@ -2470,13 +2377,8 @@ void ControlSignaling::writeRF_TSDU_Grant_Update()
     }
 }
 
-/// <summary>
-/// Helper to write a SNDCP grant packet.
-/// </summary>
-/// <param name="srcId"></param>
-/// <param name="skip"></param>
-/// <param name="chNo"></param>
-/// <returns></returns>
+/* Helper to write a SNDCP grant packet. */
+
 bool ControlSignaling::writeRF_TSDU_SNDCP_Grant(uint32_t srcId, bool skip, uint32_t chNo)
 {
     if (!m_p25->m_sndcpSupport)
@@ -2581,11 +2483,8 @@ bool ControlSignaling::writeRF_TSDU_SNDCP_Grant(uint32_t srcId, bool skip, uint3
     return true;
 }
 
-/// <summary>
-/// Helper to write a unit to unit answer request packet.
-/// </summary>
-/// <param name="srcId"></param>
-/// <param name="dstId"></param>
+/* Helper to write a unit to unit answer request packet. */
+
 void ControlSignaling::writeRF_TSDU_UU_Ans_Req(uint32_t srcId, uint32_t dstId)
 {
     std::unique_ptr<IOSP_UU_ANS> iosp = std::make_unique<IOSP_UU_ANS>();
@@ -2597,12 +2496,8 @@ void ControlSignaling::writeRF_TSDU_UU_Ans_Req(uint32_t srcId, uint32_t dstId)
     writeRF_TSDU_SBF_Imm(iosp.get(), false);
 }
 
-/// <summary>
-/// Helper to write a acknowledge packet.
-/// </summary>
-/// <param name="srcId"></param>
-/// <param name="service"></param>
-/// <param name="noNetwork"></param>
+/* Helper to write a acknowledge packet. */
+
 void ControlSignaling::writeRF_TSDU_ACK_FNE(uint32_t srcId, uint32_t service, bool extended, bool noNetwork)
 {
     std::unique_ptr<IOSP_ACK_RSP> iosp = std::make_unique<IOSP_ACK_RSP>();
@@ -2622,14 +2517,8 @@ void ControlSignaling::writeRF_TSDU_ACK_FNE(uint32_t srcId, uint32_t service, bo
     writeRF_TSDU_SBF_Imm(iosp.get(), noNetwork);
 }
 
-/// <summary>
-/// Helper to write a deny packet.
-/// </summary>
-/// <param name="dstId"></param>
-/// <param name="reason"></param>
-/// <param name="service"></param>
-/// <param name="grp"></param>
-/// <param name="aiv"></param>
+/* Helper to write a deny packet. */
+
 void ControlSignaling::writeRF_TSDU_Deny(uint32_t srcId, uint32_t dstId, uint8_t reason, uint8_t service, bool grp, bool aiv)
 {
     std::unique_ptr<OSP_DENY_RSP> osp = std::make_unique<OSP_DENY_RSP>();
@@ -2648,11 +2537,8 @@ void ControlSignaling::writeRF_TSDU_Deny(uint32_t srcId, uint32_t dstId, uint8_t
     writeRF_TSDU_SBF_Imm(osp.get(), false);
 }
 
-/// <summary>
-/// Helper to write a group affiliation response packet.
-/// </summary>
-/// <param name="srcId"></param>
-/// <param name="dstId"></param>
+/* Helper to write a group affiliation response packet. */
+
 bool ControlSignaling::writeRF_TSDU_Grp_Aff_Rsp(uint32_t srcId, uint32_t dstId)
 {
     bool ret = false;
@@ -2743,11 +2629,8 @@ bool ControlSignaling::writeRF_TSDU_Grp_Aff_Rsp(uint32_t srcId, uint32_t dstId)
     return ret;
 }
 
-/// <summary>
-/// Helper to write a unit registration response packet.
-/// </summary>
-/// <param name="srcId"></param>
-/// <param name="sysId"></param>
+/* Helper to write a unit registration response packet. */
+
 void ControlSignaling::writeRF_TSDU_U_Reg_Rsp(uint32_t srcId, uint32_t sysId)
 {
     std::unique_ptr<IOSP_U_REG> iosp = std::make_unique<IOSP_U_REG>();
@@ -2794,10 +2677,8 @@ void ControlSignaling::writeRF_TSDU_U_Reg_Rsp(uint32_t srcId, uint32_t sysId)
     }
 }
 
-/// <summary>
-/// Helper to write a unit de-registration acknowledge packet.
-/// </summary>
-/// <param name="srcId"></param>
+/* Helper to write a unit de-registration acknowledge packet. */
+
 void ControlSignaling::writeRF_TSDU_U_Dereg_Ack(uint32_t srcId)
 {
     bool dereged = false;
@@ -2824,14 +2705,8 @@ void ControlSignaling::writeRF_TSDU_U_Dereg_Ack(uint32_t srcId)
     }
 }
 
-/// <summary>
-/// Helper to write a queue packet.
-/// </summary>
-/// <param name="dstId"></param>
-/// <param name="reason"></param>
-/// <param name="service"></param>
-/// <param name="grp"></param>
-/// <param name="aiv"></param>
+/* Helper to write a queue packet. */
+
 void ControlSignaling::writeRF_TSDU_Queue(uint32_t srcId, uint32_t dstId, uint8_t reason, uint8_t service, bool grp, bool aiv)
 {
     std::unique_ptr<OSP_QUE_RSP> osp = std::make_unique<OSP_QUE_RSP>();
@@ -2850,12 +2725,8 @@ void ControlSignaling::writeRF_TSDU_Queue(uint32_t srcId, uint32_t dstId, uint8_
     writeRF_TSDU_SBF_Imm(osp.get(), false);
 }
 
-/// <summary>
-/// Helper to write a location registration response packet.
-/// </summary>
-/// <param name="srcId"></param>
-/// <param name="dstId"></param>
-/// <param name="group"></param>
+/* Helper to write a location registration response packet. */
+
 bool ControlSignaling::writeRF_TSDU_Loc_Reg_Rsp(uint32_t srcId, uint32_t dstId, bool grp)
 {
     bool ret = false;
@@ -2912,10 +2783,8 @@ bool ControlSignaling::writeRF_TSDU_Loc_Reg_Rsp(uint32_t srcId, uint32_t dstId, 
     return ret;
 }
 
-/// <summary>
-/// Helper to write a LLA demand.
-/// </summary>
-/// <param name="srcId"></param>
+/* Helper to write a LLA demand. */
+
 void ControlSignaling::writeRF_TSDU_Auth_Dmd(uint32_t srcId)
 {
     std::unique_ptr<MBT_OSP_AUTH_DMD> osp = std::make_unique<MBT_OSP_AUTH_DMD>();
@@ -2946,11 +2815,8 @@ void ControlSignaling::writeRF_TSDU_Auth_Dmd(uint32_t srcId)
     writeRF_TSDU_AMBT(osp.get());
 }
 
-/// <summary>
-/// Helper to write a call termination packet.
-/// </summary>
-/// <param name="srcId"></param>
-/// <param name="dstId"></param>
+/* Helper to write a call termination packet. */
+
 bool ControlSignaling::writeNet_TSDU_Call_Term(uint32_t srcId, uint32_t dstId)
 {
     // is the specified channel granted?
@@ -2968,11 +2834,8 @@ bool ControlSignaling::writeNet_TSDU_Call_Term(uint32_t srcId, uint32_t dstId)
     return true;
 }
 
-/// <summary>
-/// Helper to write a network TSDU from the RF data queue.
-/// </summary>
-/// <paran name="tsbk"></param>
-/// <param name="data"></param>
+/* Helper to write a network TSDU from the RF data queue. */
+
 void ControlSignaling::writeNet_TSDU_From_RF(lc::TSBK* tsbk, uint8_t* data)
 {
     assert(tsbk != nullptr);
@@ -2997,10 +2860,8 @@ void ControlSignaling::writeNet_TSDU_From_RF(lc::TSBK* tsbk, uint8_t* data)
     P25Utils::setBusyBits(data, P25_SS0_START, true, true);
 }
 
-/// <summary>
-/// Helper to automatically inhibit a source ID on a denial.
-/// </summary>
-/// <param name="srcId"></param>
+/* Helper to automatically inhibit a source ID on a denial. */
+
 void ControlSignaling::denialInhibit(uint32_t srcId)
 {
     if (!m_p25->m_inhibitUnauth) {

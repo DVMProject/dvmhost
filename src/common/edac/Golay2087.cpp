@@ -213,6 +213,7 @@ const uint32_t DECODING_TABLE_1987[] = {
 // ---------------------------------------------------------------------------
 
 /* Decode Golay (20,8,7) FEC. */
+
 uint8_t Golay2087::decode(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -228,6 +229,7 @@ uint8_t Golay2087::decode(const uint8_t* data)
 }
 
 /* Encode Golay (20,8,7) FEC. */
+
 void Golay2087::encode(uint8_t* data)
 {
     assert(data != nullptr);
@@ -249,6 +251,7 @@ void Golay2087::encode(uint8_t* data)
    polynomial, GENPOL. In the program this pattern has several meanings: (1) pattern = information bits, 
    when constructing the encoding table; (2) pattern = error pattern, when constructing the decoding 
    table; and (3) pattern = received vector, to obtain its syndrome in decoding. */
+
 uint32_t Golay2087::getSyndrome1987(uint32_t pattern)
 {
     uint32_t aux = X18;

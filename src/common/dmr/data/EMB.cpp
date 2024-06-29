@@ -22,6 +22,7 @@ using namespace dmr;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the EMB class. */
+
 EMB::EMB() :
     m_colorCode(0U),
     m_PI(false),
@@ -31,9 +32,11 @@ EMB::EMB() :
 }
 
 /* Finalizes a instance of the EMB class. */
+
 EMB::~EMB() = default;
 
 /* Decodes DMR embedded signalling data. */
+
 void EMB::decode(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -53,6 +56,7 @@ void EMB::decode(const uint8_t* data)
 }
 
 /* Encodes DMR embedded signalling data. */
+
 void EMB::encode(uint8_t* data) const
 {
     assert(data != nullptr);

@@ -22,12 +22,14 @@ using namespace nxdn::lc::rcch;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the MESSAGE_TYPE_REG_C class. */
+
 MESSAGE_TYPE_REG_C::MESSAGE_TYPE_REG_C() : RCCH()
 {
     m_messageType = MessageType::RCCH_REG_C;
 }
 
 /* Decode RCCH data. */
+
 void MESSAGE_TYPE_REG_C::decode(const uint8_t* data, uint32_t length, uint32_t offset)
 {
     assert(data != nullptr);
@@ -43,6 +45,7 @@ void MESSAGE_TYPE_REG_C::decode(const uint8_t* data, uint32_t length, uint32_t o
 }
 
 /* Encode RCCH data. */
+
 void MESSAGE_TYPE_REG_C::encode(uint8_t* data, uint32_t length, uint32_t offset)
 {
     assert(data != nullptr);
@@ -60,6 +63,7 @@ void MESSAGE_TYPE_REG_C::encode(uint8_t* data, uint32_t length, uint32_t offset)
 }
 
 /* Returns a string that represents the current RCCH. */
+
 std::string MESSAGE_TYPE_REG_C::toString(bool isp)
 {
     return (isp) ? std::string("RCCH_REG_C (Registration Clear Request)") :

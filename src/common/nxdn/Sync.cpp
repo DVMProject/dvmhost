@@ -22,6 +22,7 @@ using namespace nxdn::defines;
 // ---------------------------------------------------------------------------
 
 /* Helper to append NXDN sync bytes to the passed buffer. */
+
 void Sync::addNXDNSync(uint8_t* data)
 {
     assert(data != nullptr);

@@ -26,12 +26,15 @@ using namespace dmr::lc::csbk;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the CSBKFactory class. */
+
 CSBKFactory::CSBKFactory() = default;
 
 /* Finalizes a instance of CSBKFactory class. */
+
 CSBKFactory::~CSBKFactory() = default;
 
 /* Create an instance of a CSBK. */
+
 std::unique_ptr<CSBK> CSBKFactory::createCSBK(const uint8_t* data, DataType::E dataType)
 {
     assert(data != nullptr);
@@ -125,6 +128,7 @@ std::unique_ptr<CSBK> CSBKFactory::createCSBK(const uint8_t* data, DataType::E d
 // ---------------------------------------------------------------------------
 
 /* Decode a CSBK. */
+
 std::unique_ptr<CSBK> CSBKFactory::decode(CSBK* csbk, const uint8_t* data)
 {
     assert(csbk != nullptr);

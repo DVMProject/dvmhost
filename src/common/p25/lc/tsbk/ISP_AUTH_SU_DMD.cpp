@@ -22,12 +22,14 @@ using namespace p25::lc::tsbk;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the ISP_AUTH_SU_DMD class. */
+
 ISP_AUTH_SU_DMD::ISP_AUTH_SU_DMD() : TSBK()
 {
     m_lco = TSBKO::ISP_AUTH_SU_DMD;
 }
 
 /* Decode a trunking signalling block. */
+
 bool ISP_AUTH_SU_DMD::decode(const uint8_t* data, bool rawTSBK)
 {
     assert(data != nullptr);
@@ -47,6 +49,7 @@ bool ISP_AUTH_SU_DMD::decode(const uint8_t* data, bool rawTSBK)
 }
 
 /* Encode a trunking signalling block. */
+
 void ISP_AUTH_SU_DMD::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 {
     assert(data != nullptr);
@@ -55,6 +58,7 @@ void ISP_AUTH_SU_DMD::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 }
 
 /* Returns a string that represents the current TSBK. */
+
 std::string ISP_AUTH_SU_DMD::toString(bool isp)
 {
     return std::string("TSBKO, ISP_AUTH_SU_DMD (Authentication SU Demand)");

@@ -1,17 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Modem Host Software
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Modem Host Software
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2015,2016,2017 Jonathan Naylor, G4KLX
-*   Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Modem Host Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2015,2016,2017 Jonathan Naylor, G4KLX
+ *  Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "Defines.h"
 #include "common/dmr/acl/AccessControl.h"
 #include "common/dmr/lc/CSBK.h"
@@ -29,31 +25,8 @@ using namespace dmr::defines;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the Control class.
-/// </summary>
-/// <param name="authoritative">Flag indicating whether or not the DVM is grant authoritative.</param>
-/// <param name="colorCode">DMR access color code.</param>
-/// <param name="callHang">Amount of hangtime for a DMR call.</param>
-/// <param name="queueSize">Size of DMR data frame ring buffer.</param>
-/// <param name="embeddedLCOnly"></param>
-/// <param name="dumpTAData"></param>
-/// <param name="timeout">Transmit timeout.</param>
-/// <param name="tgHang">Amount of time to hang on the last talkgroup mode from RF.</param>
-/// <param name="modem">Instance of the Modem class.</param>
-/// <param name="network">Instance of the BaseNetwork class.</param>
-/// <param name="duplex">Flag indicating full-duplex operation.</param>
-/// <param name="chLookup">Instance of the ChannelLookup class.</param>
-/// <param name="ridLookup">Instance of the RadioIdLookup class.</param>
-/// <param name="tidLookup">Instance of the TalkgroupRulesLookup class.</param>
-/// <param name="idenTable">Instance of the IdenTableLookup class.</param>
-/// <param name="rssiMapper">Instance of the RSSIInterpolator class.</param>
-/// <param name="jitter"></param>
-/// <param name="dumpDataPacket"></param>
-/// <param name="repeatDataPacket"></param>
-/// <param name="dumpCSBKData"></param>
-/// <param name="debug">Flag indicating whether DMR debug is enabled.</param>
-/// <param name="verbose">Flag indicating whether DMR verbose logging is enabled.</param>
+/* Initializes a new instance of the Control class. */
+
 Control::Control(bool authoritative, uint32_t colorCode, uint32_t callHang, uint32_t queueSize, bool embeddedLCOnly,
     bool dumpTAData, uint32_t timeout, uint32_t tgHang, modem::Modem* modem, network::Network* network, bool duplex, ::lookups::ChannelLookup* chLookup,
     ::lookups::RadioIdLookup* ridLookup, ::lookups::TalkgroupRulesLookup* tidLookup, ::lookups::IdenTableLookup* idenTable, ::lookups::RSSIInterpolator* rssiMapper,
@@ -96,26 +69,16 @@ Control::Control(bool authoritative, uint32_t colorCode, uint32_t callHang, uint
     m_tsccCntInterval.start();
 }
 
-/// <summary>
-/// Finalizes a instance of the Control class.
-/// </summary>
+/* Finalizes a instance of the Control class. */
+
 Control::~Control()
 {
     delete m_slot2;
     delete m_slot1;
 }
 
-/// <summary>
-/// Helper to set DMR configuration options.
-/// </summary>
-/// <param name="conf">Instance of the ConfigINI class.</param>
-/// <param name="supervisor">Flag indicating whether the DMR has supervisory functions.</param>
-/// <param name="controlChData">Control Channel data.</param>
-/// <param name="netId">DMR Network ID.</param>
-/// <param name="siteId">DMR Site ID.</param>
-/// <param name="channelId">Channel ID.</param>
-/// <param name="channelNo">Channel Number.</param>
-/// <param name="printOptions"></param>
+/* Helper to set DMR configuration options. */
+
 void Control::setOptions(yaml::Node& conf, bool supervisor, ::lookups::VoiceChData controlChData, 
     uint32_t netId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, bool printOptions)
 {
@@ -227,10 +190,8 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, ::lookups::VoiceChDa
     }
 }
 
-/// <summary>
-/// Sets a flag indicating whether the DMR control channel is running.
-/// </summary>
-/// <param name="ccRunning"></param>
+/* Sets a flag indicating whether the DMR control channel is running. */
+
 void Control::setCCRunning(bool ccRunning)
 {
     if (!m_enableTSCC) {
@@ -252,10 +213,8 @@ void Control::setCCRunning(bool ccRunning)
     }
 }
 
-/// <summary>
-/// Sets a flag indicating whether the DMR control channel is halted.
-/// </summary>
-/// <param name="ccHalted"></param>
+/* Sets a flag indicating whether the DMR control channel is halted. */
+
 void Control::setCCHalted(bool ccHalted)
 {
     if (!m_enableTSCC) {
@@ -277,11 +236,8 @@ void Control::setCCHalted(bool ccHalted)
     }
 }
 
-/// <summary>
-/// Helper to process wakeup frames from the RF interface.
-/// </summary>
-/// <param name="data">DMR wakeup frame data.</param>
-/// <returns>True, if wakeup frames were processed, otherwise false.</returns>
+/* Helper to process wakeup frames from the RF interface. */
+
 bool Control::processWakeup(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -315,12 +271,8 @@ bool Control::processWakeup(const uint8_t* data)
     return true;
 }
 
-/// <summary>
-/// Process a data frame for slot, from the RF interface.
-/// </summary>
-/// <param name="data">DMR data frame buffer.</param>
-/// <param name="len">Length of data frame buffer.</param>
-/// <returns>True, if data frame was processed, otherwise false.</returns>
+/* Process a data frame for slot, from the RF interface. */
+
 bool Control::processFrame(uint32_t slotNo, uint8_t *data, uint32_t len)
 {
     assert(data != nullptr);
@@ -336,11 +288,8 @@ bool Control::processFrame(uint32_t slotNo, uint8_t *data, uint32_t len)
     }
 }
 
-/// <summary>
-/// Get the frame data length for the next frame in the data ring buffer.
-/// </summary>
-/// <param name="slotNo"></param>
-/// <returns>Length of frame data retrieved.</returns>
+/* Get the frame data length for the next frame in the data ring buffer. */
+
 uint32_t Control::peekFrameLength(uint32_t slotNo)
 {
     switch (slotNo) {
@@ -354,12 +303,8 @@ uint32_t Control::peekFrameLength(uint32_t slotNo)
     }
 }
 
-/// <summary>
-/// Get a data frame for slot, from data ring buffer.
-/// </summary>
-/// <param name="slotNo"></param>
-/// <param name="data">Buffer to put retrieved DMR data frame data.</param>
-/// <returns>Length of data retrieved from DMR ring buffer.</returns>
+/* Get a data frame for slot, from data ring buffer. */
+
 uint32_t Control::getFrame(uint32_t slotNo, uint8_t* data)
 {
     assert(data != nullptr);
@@ -375,9 +320,8 @@ uint32_t Control::getFrame(uint32_t slotNo, uint8_t* data)
     }
 }
 
-/// <summary>
-/// Updates the processor.
-/// </summary>
+/* Updates the processor. */
+
 void Control::clock()
 {
     if (m_network != nullptr) {
@@ -388,20 +332,16 @@ void Control::clock()
     m_slot2->clock();
 }
 
-/// <summary>
-/// Updates the adj. site tables.
-/// </summary>
-/// <param name="ms"></param>
+/* Updates the adj. site tables. */
+
 void Control::clockSiteData(uint32_t ms)
 {
     m_slot1->clockSiteData(ms);
     m_slot2->clockSiteData(ms);
 }
 
-/// <summary>
-/// Sets a flag indicating whether DMR has supervisory functions and can send permit TG to voice channels.
-/// </summary>
-/// <param name="supervisor"></param>
+/* Sets a flag indicating whether DMR has supervisory functions and can send permit TG to voice channels. */
+
 void Control::setSupervisor(bool supervisor)
 {
     if (!m_enableTSCC) {
@@ -421,11 +361,8 @@ void Control::setSupervisor(bool supervisor)
     }
 }
 
-/// <summary>
-/// Permits a TGID on a non-authoritative host.
-/// </summary>
-/// <param name="dstId"></param>
-/// <paran name="slot"></param>
+/* Permits a TGID on a non-authoritative host. */
+
 void Control::permittedTG(uint32_t dstId, uint8_t slot)
 {
     switch (slot) {
@@ -441,11 +378,8 @@ void Control::permittedTG(uint32_t dstId, uint8_t slot)
     }
 }
 
-/// <summary>
-/// Grants a TGID on a non-authoritative host.
-/// </summary>
-/// <param name="dstId"></param>
-/// <paran name="slot"></param>
+/* Grants a TGID on a non-authoritative host. */
+
 void Control::grantTG(uint32_t srcId, uint32_t dstId, uint8_t slot, bool grp)
 {
     switch (slot) {
@@ -461,11 +395,8 @@ void Control::grantTG(uint32_t srcId, uint32_t dstId, uint8_t slot, bool grp)
     }
 }
 
-/// <summary>
-/// Releases a granted TG.
-/// </summary>
-/// <param name="dstId"></param>
-/// <paran name="slot"></param>
+/* Releases a granted TG. */
+
 void Control::releaseGrantTG(uint32_t dstId, uint8_t slot)
 {
     switch (slot) {
@@ -481,11 +412,8 @@ void Control::releaseGrantTG(uint32_t dstId, uint8_t slot)
     }
 }
 
-/// <summary>
-/// Touchs a granted TG to keep a channel grant alive.
-/// </summary>
-/// <param name="dstId"></param>
-/// <paran name="slot"></param>
+/* Touchs a granted TG to keep a channel grant alive. */
+
 void Control::touchGrantTG(uint32_t dstId, uint8_t slot)
 {
     switch (slot) {
@@ -501,9 +429,8 @@ void Control::touchGrantTG(uint32_t dstId, uint8_t slot)
     }
 }
 
-/// <summary>
-/// Gets instance of the AffiliationLookup class.
-/// </summary>
+/* Gets instance of the AffiliationLookup class. */
+
 dmr::lookups::DMRAffiliationLookup* Control::affiliations()
 {
     switch (m_tsccSlotNo) {
@@ -519,10 +446,8 @@ dmr::lookups::DMRAffiliationLookup* Control::affiliations()
     return nullptr;
 }
 
-/// <summary>
-/// Helper to return the slot carrying the TSCC.
-/// </summary>
-/// <returns>Pointer to the TSCC slot instance.</returns>
+/* Helper to return the slot carrying the TSCC. */
+
 Slot* Control::getTSCCSlot() const
 {
     switch (m_tsccSlotNo) {
@@ -537,14 +462,8 @@ Slot* Control::getTSCCSlot() const
     }
 }
 
-/// <summary>
-/// Helper to payload activate the slot carrying granted payload traffic.
-/// </summary>
-/// <param name="slotNo">DMR slot number.</param>
-/// <param name="dstId"></param>
-/// <param name="srcId"></param>
-/// <param name="group"></param>
-/// <param name="voice"></param>
+/* Helper to payload activate the slot carrying granted payload traffic. */
+
 void Control::tsccActivateSlot(uint32_t slotNo, uint32_t dstId, uint32_t srcId, bool group, bool voice)
 {
     if (m_verbose) {
@@ -573,10 +492,8 @@ void Control::tsccActivateSlot(uint32_t slotNo, uint32_t dstId, uint32_t srcId, 
     }
 }
 
-/// <summary>
-/// Helper to clear an activated payload slot.
-/// </summary>
-/// <param name="slotNo">DMR slot number.</param>
+/* Helper to clear an activated payload slot. */
+
 void Control::tsccClearActivatedSlot(uint32_t slotNo)
 {
     if (m_verbose) {
@@ -600,13 +517,8 @@ void Control::tsccClearActivatedSlot(uint32_t slotNo)
     }
 }
 
-/// <summary>
-/// Helper to write a DMR extended function packet on the RF interface.
-/// </summary>
-/// <param name="slotNo">DMR slot number.</param>
-/// <param name="func">Extended function opcode.</param>
-/// <param name="arg">Extended function argument.</param>
-/// <param name="dstId">Destination radio ID.</param>
+/* Helper to write a DMR extended function packet on the RF interface. */
+
 void Control::writeRF_Ext_Func(uint32_t slotNo, uint32_t func, uint32_t arg, uint32_t dstId)
 {
     switch (slotNo) {
@@ -622,12 +534,8 @@ void Control::writeRF_Ext_Func(uint32_t slotNo, uint32_t func, uint32_t arg, uin
     }
 }
 
-/// <summary>
-/// Helper to write a DMR call alert packet on the RF interface.
-/// </summary>
-/// <param name="slotNo">DMR slot number.</param>
-/// <param name="srcId">Source radio ID.</param>
-/// <param name="dstId">Destination radio ID.</param>
+/* Helper to write a DMR call alert packet on the RF interface. */
+
 void Control::writeRF_Call_Alrt(uint32_t slotNo, uint32_t srcId, uint32_t dstId)
 {
     switch (slotNo) {
@@ -643,21 +551,16 @@ void Control::writeRF_Call_Alrt(uint32_t slotNo, uint32_t srcId, uint32_t dstId)
     }
 }
 
-/// <summary>
-/// Flag indicating whether the processor or is busy or not.
-/// </summary>
-/// <returns>True, if processor is busy, otherwise false.</returns>
+/* Flag indicating whether the processor or is busy or not. */
+
 bool Control::isBusy() const
 {
     return (m_slot1->m_rfState != RS_RF_LISTENING || m_slot1->m_netState != RS_NET_IDLE) &&
         (m_slot2->m_rfState != RS_RF_LISTENING || m_slot2->m_netState != RS_NET_IDLE);
 }
 
-/// <summary>
-/// Helper to change the debug and verbose state.
-/// </summary>
-/// <param name="debug">Flag indicating whether DMR debug is enabled.</param>
-/// <param name="verbose">Flag indicating whether DMR verbose logging is enabled.</param>
+/* Helper to change the debug and verbose state. */
+
 void Control::setDebugVerbose(bool debug, bool verbose)
 {
     m_debug = debug;
@@ -666,21 +569,16 @@ void Control::setDebugVerbose(bool debug, bool verbose)
     m_slot2->setDebugVerbose(debug, verbose);
 }
 
-/// <summary>
-/// Helper to change the CSBK verbose state.
-/// </summary>
-/// <param name="verbose">Flag indicating whether CSBK dumping is enabled.</param>
+/* Helper to change the CSBK verbose state. */
+
 void Control::setCSBKVerbose(bool verbose)
 {
     m_dumpCSBKData = verbose;
     lc::CSBK::setVerbose(verbose);
 }
 
-/// <summary>
-/// Helper to get the last transmitted destination ID.
-/// </summary>
-/// <param name="slotNo">DMR slot number.</param>
-/// <returns></returns>
+/* Helper to get the last transmitted destination ID. */
+
 uint32_t Control::getLastDstId(uint32_t slotNo) const
 {
     switch (slotNo) {
@@ -696,11 +594,8 @@ uint32_t Control::getLastDstId(uint32_t slotNo) const
     return 0U;
 }
 
-/// <summary>
-/// Helper to get the last transmitted source ID.
-/// </summary>
-/// <param name="slotNo">DMR slot number.</param>
-/// <returns></returns>
+/* Helper to get the last transmitted source ID. */
+
 uint32_t Control::getLastSrcId(uint32_t slotNo) const
 {
     switch (slotNo) {
@@ -720,9 +615,8 @@ uint32_t Control::getLastSrcId(uint32_t slotNo) const
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Process a data frames from the network.
-/// </summary>
+/* Process a data frames from the network. */
+
 void Control::processNetwork()
 {
     uint32_t length = 0U;

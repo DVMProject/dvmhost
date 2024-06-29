@@ -19,6 +19,7 @@ using namespace network::frame;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the RTPExtensionHeader class. */
+
 RTPExtensionHeader::RTPExtensionHeader() :
     m_payloadType(0U),
     m_payloadLength(0U)
@@ -27,9 +28,11 @@ RTPExtensionHeader::RTPExtensionHeader() :
 }
 
 /* Finalizes a instance of the RTPExtensionHeader class. */
+
 RTPExtensionHeader::~RTPExtensionHeader() = default;
 
 /* Decode a RTP header. */
+
 bool RTPExtensionHeader::decode(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -41,6 +44,7 @@ bool RTPExtensionHeader::decode(const uint8_t* data)
 }
 
 /* Encode a RTP header. */
+
 void RTPExtensionHeader::encode(uint8_t* data)
 {
     assert(data != nullptr);

@@ -24,6 +24,7 @@ using namespace dmr::data;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the Data class. */
+
 Data::Data(const Data& data) :
     m_slotNo(data.m_slotNo),
     m_srcId(data.m_srcId),
@@ -41,6 +42,7 @@ Data::Data(const Data& data) :
 }
 
 /* Initializes a new instance of the Data class. */
+
 Data::Data() :
     m_slotNo(1U),
     m_srcId(0U),
@@ -57,12 +59,14 @@ Data::Data() :
 }
 
 /* Finalizes a instance of the Data class. */
+
 Data::~Data()
 {
     delete[] m_data;
 }
 
 /* Equals operator. */
+
 Data& Data::operator=(const Data& data)
 {
     if (this != &data) {
@@ -83,6 +87,7 @@ Data& Data::operator=(const Data& data)
 }
 
 /* Sets raw data. */
+
 void Data::setData(const uint8_t* buffer)
 {
     assert(buffer != nullptr);
@@ -91,6 +96,7 @@ void Data::setData(const uint8_t* buffer)
 }
 
 /* Gets raw data. */
+
 uint32_t Data::getData(uint8_t* buffer) const
 {
     assert(buffer != nullptr);

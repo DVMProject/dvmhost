@@ -22,12 +22,14 @@ using namespace p25::lc::tsbk;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the MBT_OSP_NET_STS_BCAST class. */
+
 MBT_OSP_NET_STS_BCAST::MBT_OSP_NET_STS_BCAST() : AMBT()
 {
     m_lco = TSBKO::OSP_NET_STS_BCAST;
 }
 
 /* Decode a alternate trunking signalling block. */
+
 bool MBT_OSP_NET_STS_BCAST::decodeMBT(const data::DataHeader& dataHeader, const data::DataBlock* blocks)
 {
     assert(blocks != nullptr);
@@ -38,6 +40,7 @@ bool MBT_OSP_NET_STS_BCAST::decodeMBT(const data::DataHeader& dataHeader, const 
 }
 
 /* Encode a alternate trunking signalling block. */
+
 void MBT_OSP_NET_STS_BCAST::encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUserData)
 {
     assert(pduUserData != nullptr);
@@ -63,6 +66,7 @@ void MBT_OSP_NET_STS_BCAST::encodeMBT(data::DataHeader& dataHeader, uint8_t* pdu
 }
 
 /* Returns a string that represents the current TSBK. */
+
 std::string MBT_OSP_NET_STS_BCAST::toString(bool isp)
 {
     return std::string("TSBKO, OSP_NET_STS_BCAST (Network Status Broadcast - Explicit)");

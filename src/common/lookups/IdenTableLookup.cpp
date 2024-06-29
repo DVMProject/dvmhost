@@ -29,12 +29,14 @@ std::mutex IdenTableLookup::m_mutex;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the IdenTableLookup class. */
+
 IdenTableLookup::IdenTableLookup(const std::string& filename, uint32_t reloadTime) : LookupTable(filename, reloadTime)
 {
     /* stub */
 }
 
 /* Clears all entries from the lookup table. */
+
 void IdenTableLookup::clear()
 {
     std::lock_guard<std::mutex> lock(m_mutex);
@@ -42,6 +44,7 @@ void IdenTableLookup::clear()
 }
 
 /* Finds a table entry in this lookup table. */
+
 IdenTable IdenTableLookup::find(uint32_t id)
 {
     IdenTable entry;
@@ -66,6 +69,7 @@ IdenTable IdenTableLookup::find(uint32_t id)
 }
 
 /* Returns the list of entries in this lookup table. */
+
 std::vector<IdenTable> IdenTableLookup::list()
 {
     std::vector<IdenTable> list = std::vector<IdenTable>();
@@ -83,6 +87,7 @@ std::vector<IdenTable> IdenTableLookup::list()
 // ---------------------------------------------------------------------------
 
 /* Loads the table from the passed lookup table file. */
+
 bool IdenTableLookup::load()
 {
     if (m_filename.empty()) {
@@ -160,6 +165,7 @@ bool IdenTableLookup::load()
 }
 
 /* Saves the table to the passed lookup table file. */
+
 bool IdenTableLookup::save()
 {
     return false;

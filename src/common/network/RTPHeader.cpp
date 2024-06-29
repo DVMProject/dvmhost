@@ -28,6 +28,7 @@ hrc::hrc_t RTPHeader::m_wcStart = hrc::hrc_t();
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the RTPHeader class. */
+
 RTPHeader::RTPHeader() :
     m_version(2U),
     m_padding(false),
@@ -43,9 +44,11 @@ RTPHeader::RTPHeader() :
 }
 
 /* Finalizes a instance of the RTPHeader class. */
+
 RTPHeader::~RTPHeader() = default;
 
 /* Decode a RTP header. */
+
 bool RTPHeader::decode(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -70,6 +73,7 @@ bool RTPHeader::decode(const uint8_t* data)
 }
 
 /* Encode a RTP header. */
+
 void RTPHeader::encode(uint8_t* data)
 {
     assert(data != nullptr);
@@ -94,6 +98,7 @@ void RTPHeader::encode(uint8_t* data)
 }
 
 /* Helper to reset the start timestamp. */
+
 void RTPHeader::resetStartTime()
 {
     m_wcStart = hrc::hrc_t();

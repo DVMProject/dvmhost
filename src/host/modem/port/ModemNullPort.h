@@ -1,17 +1,19 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Modem Host Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2021 Jonathan Naylor, G4KLX
+ *  Copyright (C) 2021 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Modem Host Software
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Modem Host Software
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2021 Jonathan Naylor, G4KLX
-*   Copyright (C) 2021 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @file ModemNullPort.h
+ * @ingroup port
+ * @file ModemNullPort.cpp
+ * @ingroup port
+ */
 #if !defined(__MODEM_NULL_PORT_H__)
 #define __MODEM_NULL_PORT_H__
 
@@ -25,38 +27,72 @@ namespace modem
     {
         // ---------------------------------------------------------------------------
         //  Class Declaration
-        //      This class implements low-level routines that represent a "null"
-        //      modem port.
+        //      
         // ---------------------------------------------------------------------------
 
+        /**
+         * @brief This class implements low-level routines that represent a "null"
+         *  modem port.
+         * @ingroup port
+         */
         class HOST_SW_API ModemNullPort : public IModemPort {
         public:
-            /// <summary>Initializes a new instance of the ModemNullPort class.</summary>
+            /**
+             * @brief Initializes a new instance of the ModemNullPort class.
+             */
             ModemNullPort();
-            /// <summary>Finalizes a instance of the ModemNullPort class.</summary>
+            /**
+             * @brief Finalizes a instance of the ModemNullPort class.
+             */
             ~ModemNullPort() override;
 
-            /// <summary>Opens a connection to the port.</summary>
+            /**
+             * @brief Opens a connection to the port.
+             * @returns bool True, if connection is opened, otherwise false.
+             */
             bool open() override;
 
-            /// <summary>Reads data from the port.</summary>
+            /**
+             * @brief Reads data from the port.
+             * @param[out] buffer Buffer to read data from the port to.
+             * @param length Length of data to read from the port.
+             * @returns int Actual length of data read from serial port.
+             */
             int read(uint8_t* buffer, uint32_t length) override;
-            /// <summary>Writes data to the port.</summary>
+            /**
+             * @brief Writes data to the port.
+             * @param[in] buffer Buffer containing data to write to port.
+             * @param length Length of data to write to port.
+             * @returns int Actual length of data written to the port.
+             */
             int write(const uint8_t* buffer, uint32_t length) override;
 
-            /// <summary>Closes the connection to the port.</summary>
+            /**
+             * @brief Closes the connection to the port.
+             */
             void close() override;
 
         private:
             RingBuffer<unsigned char> m_buffer;
 
-            /// <summary>Helper to return a faked modem version.</summary>
+            /**
+             * @brief Helper to return a faked modem version.
+             */
             void getVersion();
-            /// <summary>Helper to return a faked modem status.</summary>
+            /**
+             * @brief Helper to return a faked modem status.
+             */
             void getStatus();
-            /// <summary>Helper to write a faked modem acknowledge.</summary>
+            /**
+             * @brief Helper to write a faked modem acknowledge.
+             * @param type  
+             */
             void writeAck(uint8_t type);
-            /// <summary>Helper to write a faked modem negative acknowledge.</summary>
+            /**
+             * @brief Helper to write a faked modem negative acknowledge.
+             * @param opcode 
+             * @param err 
+             */
             void writeNAK(uint8_t opcode, uint8_t err);
         };
     } // namespace port

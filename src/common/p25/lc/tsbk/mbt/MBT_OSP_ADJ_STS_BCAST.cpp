@@ -23,6 +23,7 @@ using namespace p25::lc::tsbk;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the MBT_OSP_ADJ_STS_BCAST class. */
+
 MBT_OSP_ADJ_STS_BCAST::MBT_OSP_ADJ_STS_BCAST() : AMBT(),
     m_adjCFVA(CFVA::FAILURE),
     m_adjSysId(0U),
@@ -36,6 +37,7 @@ MBT_OSP_ADJ_STS_BCAST::MBT_OSP_ADJ_STS_BCAST() : AMBT(),
 }
 
 /* Decode a alternate trunking signalling block. */
+
 bool MBT_OSP_ADJ_STS_BCAST::decodeMBT(const data::DataHeader& dataHeader, const data::DataBlock* blocks)
 {
     assert(blocks != nullptr);
@@ -46,6 +48,7 @@ bool MBT_OSP_ADJ_STS_BCAST::decodeMBT(const data::DataHeader& dataHeader, const 
 }
 
 /* Encode a alternate trunking signalling block. */
+
 void MBT_OSP_ADJ_STS_BCAST::encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUserData)
 {
     assert(pduUserData != nullptr);
@@ -86,6 +89,7 @@ void MBT_OSP_ADJ_STS_BCAST::encodeMBT(data::DataHeader& dataHeader, uint8_t* pdu
 }
 
 /* Returns a string that represents the current TSBK. */
+
 std::string MBT_OSP_ADJ_STS_BCAST::toString(bool isp)
 {
     return std::string("TSBKO, OSP_ADJ_STS_BCAST (Adjacent Site Status Broadcast - Explicit)");
@@ -96,6 +100,7 @@ std::string MBT_OSP_ADJ_STS_BCAST::toString(bool isp)
 // ---------------------------------------------------------------------------
 
 /* Internal helper to copy the the class. */
+
 void MBT_OSP_ADJ_STS_BCAST::copy(const MBT_OSP_ADJ_STS_BCAST& data)
 {
     TSBK::copy(data);

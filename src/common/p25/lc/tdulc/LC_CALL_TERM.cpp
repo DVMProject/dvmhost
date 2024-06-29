@@ -22,12 +22,14 @@ using namespace p25::lc::tdulc;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the LC_CALL_TERM class. */
+
 LC_CALL_TERM::LC_CALL_TERM() : TDULC()
 {
     m_lco = LCO::CALL_TERM;
 }
 
 /* Decode a terminator data unit w/ link control. */
+
 bool LC_CALL_TERM::decode(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -38,6 +40,7 @@ bool LC_CALL_TERM::decode(const uint8_t* data)
 }
 
 /* Encode a terminator data unit w/ link control. */
+
 void LC_CALL_TERM::encode(uint8_t* data)
 {
     assert(data != nullptr);

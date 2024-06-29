@@ -1,17 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Modem Host Software
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Modem Host Software
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2015,2016,2017 Jonathan Naylor, G4KLX
-*   Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Modem Host Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2015,2016,2017 Jonathan Naylor, G4KLX
+ *  Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "Defines.h"
 #include "common/edac/SHA256.h"
 #include "common/network/RTPHeader.h"
@@ -30,24 +26,8 @@ using namespace network;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the Network class.
-/// </summary>
-/// <param name="address">Network Hostname/IP address to connect to.</param>
-/// <param name="port">Network port number.</param>
-/// <param name="localPort"></param>
-/// <param name="peerId">Unique ID on the network.</param>
-/// <param name="password">Network authentication password.</param>
-/// <param name="duplex">Flag indicating full-duplex operation.</param>
-/// <param name="debug">Flag indicating whether network debug is enabled.</param>
-/// <param name="dmr">Flag indicating whether DMR is enabled.</param>
-/// <param name="p25">Flag indicating whether P25 is enabled.</param>
-/// <param name="nxdn">Flag indicating whether NXDN is enabled.</param>
-/// <param name="slot1">Flag indicating whether DMR slot 1 is enabled for network traffic.</param>
-/// <param name="slot2">Flag indicating whether DMR slot 2 is enabled for network traffic.</param>
-/// <param name="allowActivityTransfer">Flag indicating that the system activity logs will be sent to the network.</param>
-/// <param name="allowDiagnosticTransfer">Flag indicating that the system diagnostic logs will be sent to the network.</param>
-/// <param name="updateLookup">Flag indicating that the system will accept radio ID and talkgroup ID lookups from the network.</param>
+/* Initializes a new instance of the Network class. */
+
 Network::Network(const std::string& address, uint16_t port, uint16_t localPort, uint32_t peerId, const std::string& password,
     bool duplex, bool debug, bool dmr, bool p25, bool nxdn, bool slot1, bool slot2, bool allowActivityTransfer, bool allowDiagnosticTransfer, bool updateLookup, bool saveLookup) :
     BaseNetwork(peerId, duplex, debug, slot1, slot2, allowActivityTransfer, allowDiagnosticTransfer, localPort),
@@ -98,19 +78,16 @@ Network::Network(const std::string& address, uint16_t port, uint16_t localPort, 
     m_rxNXDNStreamId = 0U;
 }
 
-/// <summary>
-/// Finalizes a instance of the Network class.
-/// </summary>
+/* Finalizes a instance of the Network class. */
+
 Network::~Network()
 {
     delete[] m_salt;
     delete[] m_rxDMRStreamId;
 }
 
-/// <summary>
-/// Resets the DMR ring buffer for the given slot.
-/// </summary>
-/// <param name="slotNo">DMR slot ring buffer to reset.</param>
+/* Resets the DMR ring buffer for the given slot. */
+
 void Network::resetDMR(uint32_t slotNo)
 {
     assert(slotNo == 1U || slotNo == 2U);
@@ -124,50 +101,32 @@ void Network::resetDMR(uint32_t slotNo)
     }
 }
 
-/// <summary>
-/// Resets the P25 ring buffer.
-/// </summary>
+/* Resets the P25 ring buffer. */
+
 void Network::resetP25()
 {
     BaseNetwork::resetP25();
     m_rxP25StreamId = 0U;
 }
 
-/// <summary>
-/// Resets the NXDN ring buffer.
-/// </summary>
+/* Resets the NXDN ring buffer. */
+
 void Network::resetNXDN()
 {
     BaseNetwork::resetNXDN();
     m_rxNXDNStreamId = 0U;
 }
 
-/// <summary>
-/// Sets the instances of the Radio ID and Talkgroup ID lookup tables.
-/// </summary>
-/// <param name="ridLookup">Radio ID Lookup Table Instance</param>
-/// <param name="tidLookup">Talkgroup Rules Lookup Table Instance</param>
+/* Sets the instances of the Radio ID and Talkgroup ID lookup tables. */
+
 void Network::setLookups(lookups::RadioIdLookup* ridLookup, lookups::TalkgroupRulesLookup* tidLookup)
 {
     m_ridLookup = ridLookup;
     m_tidLookup = tidLookup;
 }
 
-/// <summary>
-/// Sets metadata configuration settings from the modem.
-/// </summary>
-/// <param name="identity"></param>
-/// <param name="rxFrequency"></param>
-/// <param name="txFrequency"></param>
-/// <param name="txOffsetMhz"></param>
-/// <param name="chBandwidthKhz"></param>
-/// <param name="channelId"></param>
-/// <param name="channelNo"></param>
-/// <param name="power"></param>
-/// <param name="latitude"></param>
-/// <param name="longitude"></param>
-/// <param name="height"></param>
-/// <param name="location"></param>
+/* Sets metadata configuration settings from the modem. */
+
 void Network::setMetadata(const std::string& identity, uint32_t rxFrequency, uint32_t txFrequency, float txOffsetMhz, float chBandwidthKhz,
     uint8_t channelId, uint32_t channelNo, uint32_t power, float latitude, float longitude, int height, const std::string& location)
 {
@@ -187,29 +146,23 @@ void Network::setMetadata(const std::string& identity, uint32_t rxFrequency, uin
     m_location = location;
 }
 
-/// <summary>
-/// Sets REST API configuration settings from the modem.
-/// </summary>
-/// <param name="password"></param>
-/// <param name="port"></param>
+/* Sets REST API configuration settings from the modem. */
+
 void Network::setRESTAPIData(const std::string& password, uint16_t port)
 {
     m_restApiPassword = password;
     m_restApiPort = port;
 }
 
-/// <summary>
-/// Sets endpoint preshared encryption key.
-/// </summary>
+/* Sets endpoint preshared encryption key. */
+
 void Network::setPresharedKey(const uint8_t* presharedKey)
 {
     m_socket->setPresharedKey(presharedKey);
 }
 
-/// <summary>
-/// Updates the timer by the passed number of milliseconds.
-/// </summary>
-/// <param name="ms"></param>
+/* Updates the timer by the passed number of milliseconds. */
+
 void Network::clock(uint32_t ms)
 {
     if (m_status == NET_STAT_WAITING_CONNECT) {
@@ -664,10 +617,8 @@ void Network::clock(uint32_t ms)
     }
 }
 
-/// <summary>
-/// Opens connection to the network.
-/// </summary>
-/// <returns></returns>
+/* Opens connection to the network. */
+
 bool Network::open()
 {
     if (!m_enabled)
@@ -687,9 +638,8 @@ bool Network::open()
     return true;
 }
 
-/// <summary>
-/// Closes connection to the network.
-/// </summary>
+/* Closes connection to the network. */
+
 void Network::close()
 {
     if (m_debug)
@@ -710,10 +660,8 @@ void Network::close()
     m_status = NET_STAT_WAITING_CONNECT;
 }
 
-/// <summary>
-/// Sets flag enabling network communication.
-/// </summary>
-/// <param name="enabled"></param>
+/* Sets flag enabling network communication. */
+
 void Network::enable(bool enabled)
 {
     m_enabled = enabled;
@@ -723,10 +671,8 @@ void Network::enable(bool enabled)
 //  Protected Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Writes login request to the network.
-/// </summary>
-/// <returns></returns>
+/* Writes login request to the network. */
+
 bool Network::writeLogin()
 {
     if (!m_enabled) {
@@ -745,10 +691,8 @@ bool Network::writeLogin()
     return writeMaster({ NET_FUNC::RPTL, NET_SUBFUNC::NOP }, buffer, 8U, pktSeq(true), m_loginStreamId);
 }
 
-/// <summary>
-/// Writes network authentication challenge.
-/// </summary>
-/// <returns></returns>
+/* Writes network authentication challenge. */
+
 bool Network::writeAuthorisation()
 {
     if (m_loginStreamId == 0U) {
@@ -778,10 +722,8 @@ bool Network::writeAuthorisation()
     return writeMaster({ NET_FUNC::RPTK, NET_SUBFUNC::NOP }, out, 40U, pktSeq(), m_loginStreamId);
 }
 
-/// <summary>
-/// Writes modem configuration to the network.
-/// </summary>
-/// <returns></returns>
+/* Writes modem configuration to the network. */
+
 bool Network::writeConfig()
 {
     if (m_loginStreamId == 0U) {
@@ -840,9 +782,8 @@ bool Network::writeConfig()
     return writeMaster({ NET_FUNC::RPTC, NET_SUBFUNC::NOP }, (uint8_t*)buffer, json.length() + 8U, RTP_END_OF_CALL_SEQ, m_loginStreamId);
 }
 
-/// <summary>
-/// Writes a network stay-alive ping.
-/// </summary>
+/* Writes a network stay-alive ping. */
+
 bool Network::writePing()
 {
     uint8_t buffer[1U];

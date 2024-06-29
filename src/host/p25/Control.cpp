@@ -1,17 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Modem Host Software
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Modem Host Software
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2016,2017,2018 Jonathan Naylor, G4KLX
-*   Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Modem Host Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2016,2017,2018 Jonathan Naylor, G4KLX
+ *  Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "Defines.h"
 #include "common/p25/P25Defines.h"
 #include "common/p25/acl/AccessControl.h"
@@ -44,28 +40,8 @@ const uint32_t MAX_PREAMBLE_TDU_CNT = 64U;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the Control class.
-/// </summary>
-/// <param name="authoritative">Flag indicating whether or not the DVM is grant authoritative.</param>
-/// <param name="nac">P25 Network Access Code.</param>
-/// <param name="callHang">Amount of hangtime for a P25 call.</param>
-/// <param name="queueSize">Modem frame buffer queue size (bytes).</param>
-/// <param name="modem">Instance of the Modem class.</param>
-/// <param name="network">Instance of the BaseNetwork class.</param>
-/// <param name="timeout">Transmit timeout.</param>
-/// <param name="tgHang">Amount of time to hang on the last talkgroup mode from RF.</param>
-/// <param name="duplex">Flag indicating full-duplex operation.</param>
-/// <param name="chLookup">Instance of the ChannelLookup class.</param>
-/// <param name="ridLookup">Instance of the RadioIdLookup class.</param>
-/// <param name="tidLookup">Instance of the TalkgroupRulesLookup class.</param>
-/// <param name="idenTable">Instance of the IdenTableLookup class.</param>
-/// <param name="rssi">Instance of the RSSIInterpolator class.</param>
-/// <param name="dumpPDUData"></param>
-/// <param name="repeatPDU"></param>
-/// <param name="dumpTSBKData">Flag indicating whether TSBK data is dumped to the log.</param>
-/// <param name="debug">Flag indicating whether P25 debug is enabled.</param>
-/// <param name="verbose">Flag indicating whether P25 verbose logging is enabled.</param>
+/* Initializes a new instance of the Control class. */
+
 Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t queueSize, modem::Modem* modem, network::Network* network,
     uint32_t timeout, uint32_t tgHang, bool duplex, ::lookups::ChannelLookup* chLookup, ::lookups::RadioIdLookup* ridLookup,
     ::lookups::TalkgroupRulesLookup* tidLookup, ::lookups::IdenTableLookup* idenTable, ::lookups::RSSIInterpolator* rssiMapper,
@@ -170,9 +146,8 @@ Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t q
     m_llaKS = new uint8_t[AUTH_KEY_LENGTH_BYTES];
 }
 
-/// <summary>
-/// Finalizes a instance of the Control class.
-/// </summary>
+/* Finalizes a instance of the Control class. */
+
 Control::~Control()
 {
     if (m_voice != nullptr) {
@@ -188,9 +163,8 @@ Control::~Control()
     }
 }
 
-/// <summary>
-/// Resets the data states for the RF interface.
-/// </summary>
+/* Resets the data states for the RF interface. */
+
 void Control::reset()
 {
     m_rfState = RS_RF_LISTENING;
@@ -208,21 +182,8 @@ void Control::reset()
     m_txQueue.clear();
 }
 
-/// <summary>
-/// Helper to set P25 configuration options.
-/// </summary>
-/// <param name="conf">Instance of the yaml::Node class.</param>
-/// <param name="supervisor">Flag indicating whether the DMR has supervisory functions.</param>
-/// <param name="cwCallsign">CW callsign of this host.</param>
-/// <param name="controlChData">Control Channel data.</param>
-/// <param name="pSuperGroup"></param>
-/// <param name="netId">P25 Network ID.</param>
-/// <param name="sysId">P25 System ID.</param>
-/// <param name="rfssId">P25 RFSS ID.</param>
-/// <param name="siteId">P25 Site ID.</param>
-/// <param name="channelId">Channel ID.</param>
-/// <param name="channelNo">Channel Number.</param>
-/// <param name="printOptions"></param>
+/* Helper to set P25 configuration options. */
+
 void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cwCallsign, const ::lookups::VoiceChData controlChData,
     uint32_t netId, uint32_t sysId, uint8_t rfssId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, bool printOptions)
 {
@@ -525,12 +486,8 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
     }
 }
 
-/// <summary>
-/// Process a data frame from the RF interface.
-/// </summary>
-/// <param name="data">Buffer containing data frame.</param>
-/// <param name="len">Length of data frame.</param>
-/// <returns></returns>
+/* Process a data frame from the RF interface. */
+
 bool Control::processFrame(uint8_t* data, uint32_t len)
 {
     assert(data != nullptr);
@@ -685,10 +642,8 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
     return ret;
 }
 
-/// <summary>
-/// Get the frame data length for the next frame in the data ring buffer.
-/// </summary>
-/// <returns>Length of frame data retrieved.</returns>
+/* Get the frame data length for the next frame in the data ring buffer. */
+
 uint32_t Control::peekFrameLength()
 {
     if (m_txQueue.isEmpty() && m_txImmQueue.isEmpty())
@@ -707,11 +662,8 @@ uint32_t Control::peekFrameLength()
     return len;
 }
 
-/// <summary>
-/// Get frame data from data ring buffer.
-/// </summary>
-/// <param name="data">Buffer to store frame data.</param>
-/// <returns>Length of frame data retrieved.</returns>
+/* Get frame data from data ring buffer. */
+
 uint32_t Control::getFrame(uint8_t* data)
 {
     assert(data != nullptr);
@@ -734,10 +686,8 @@ uint32_t Control::getFrame(uint8_t* data)
     return len;
 }
 
-/// <summary>
-/// Helper to write end of voice call frame data.
-/// </summary>
-/// <returns></returns>
+/* Helper to write end of voice call frame data. */
+
 bool Control::writeRF_VoiceEnd()
 {
     if (m_netState == RS_NET_IDLE && m_rfState == RS_RF_LISTENING) {
@@ -770,9 +720,8 @@ bool Control::writeRF_VoiceEnd()
     return false;
 }
 
-/// <summary>
-/// Updates the processor.
-/// </summary>
+/* Updates the processor. */
+
 void Control::clock()
 {
     uint32_t ms = m_interval.elapsed();
@@ -935,10 +884,8 @@ void Control::clock()
     }
 }
 
-/// <summary>
-/// Updates the adj. site tables and affiliations.
-/// </summary>
-/// <param name="ms"></param>
+/* Updates the adj. site tables and affiliations. */
+
 void Control::clockSiteData(uint32_t ms)
 {
     if (m_enableControl) {
@@ -1016,11 +963,8 @@ void Control::clockSiteData(uint32_t ms)
     }
 }
 
-/// <summary>
-/// Permits a TGID on a non-authoritative host.
-/// </summary>
-/// <param name="dstId"></param>
-/// <param name="dataPermit"></param>
+/* Permits a TGID on a non-authoritative host. */
+
 void Control::permittedTG(uint32_t dstId, bool dataPermit)
 {
     if (m_authoritative) {
@@ -1039,12 +983,8 @@ void Control::permittedTG(uint32_t dstId, bool dataPermit)
     }
 }
 
-/// <summary>
-/// Grants a TGID on a non-authoritative host.
-/// </summary>
-/// <param name="srcId"></param>
-/// <param name="dstId"></param>
-/// <param name="grp"></param>
+/* Grants a TGID on a non-authoritative host. */
+
 void Control::grantTG(uint32_t srcId, uint32_t dstId, bool grp)
 {
     if (!m_enableControl) {
@@ -1058,10 +998,8 @@ void Control::grantTG(uint32_t srcId, uint32_t dstId, bool grp)
     m_control->writeRF_TSDU_Grant(srcId, dstId, 4U, grp);
 }
 
-/// <summary>
-/// Releases a granted TG.
-/// </summary>
-/// <param name="dstId"></param>
+/* Releases a granted TG. */
+
 void Control::releaseGrantTG(uint32_t dstId)
 {
     if (!m_enableControl) {
@@ -1085,10 +1023,8 @@ void Control::releaseGrantTG(uint32_t dstId)
     }
 }
 
-/// <summary>
-/// Touches a granted TG to keep a channel grant alive.
-/// </summary>
-/// <param name="dstId"></param>
+/* Touches a granted TG to keep a channel grant alive. */
+
 void Control::touchGrantTG(uint32_t dstId)
 {
     if (!m_enableControl) {
@@ -1108,30 +1044,23 @@ void Control::touchGrantTG(uint32_t dstId)
     }
 }
 
-/// <summary>
-/// Flag indicating whether the processor or is busy or not.
-/// </summary>
-/// <returns>True, if processor is busy, otherwise false.</returns>
+/* Flag indicating whether the processor or is busy or not. */
+
 bool Control::isBusy() const
 {
     return m_rfState != RS_RF_LISTENING || m_netState != RS_NET_IDLE;
 }
 
-/// <summary>
-/// Helper to change the debug and verbose state.
-/// </summary>
-/// <param name="debug">Flag indicating whether P25 debug is enabled.</param>
-/// <param name="verbose">Flag indicating whether P25 verbose logging is enabled.</param>
+/* Helper to change the debug and verbose state. */
+
 void Control::setDebugVerbose(bool debug, bool verbose)
 {
     m_debug = m_voice->m_debug = m_data->m_debug = m_control->m_debug = debug;
     m_verbose = m_voice->m_verbose = m_data->m_verbose = m_control->m_verbose = verbose;
 }
 
-/// <summary>
-/// Helper to get the last transmitted destination ID.
-/// </summary>
-/// <returns></returns>
+/* Helper to get the last transmitted destination ID. */
+
 uint32_t Control::getLastDstId() const
 {
     if (m_rfLastDstId != 0U) {
@@ -1145,10 +1074,8 @@ uint32_t Control::getLastDstId() const
     return 0U;
 }
 
-/// <summary>
-/// Helper to get the last transmitted source ID.
-/// </summary>
-/// <returns></returns>
+/* Helper to get the last transmitted source ID. */
+
 uint32_t Control::getLastSrcId() const
 {
     if (m_rfLastSrcId != 0U) {
@@ -1166,13 +1093,8 @@ uint32_t Control::getLastSrcId() const
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Add data frame to the data ring buffer.
-/// </summary>
-/// <param name="data">Frame data to add to Tx queue.</param>
-/// <param name="length">Length of data to add.</param>
-/// <param name="net">Flag indicating whether the data came from the network or not</param>
-/// <param name="imm">Flag indicating whether or not the data is priority and is added to the immediate queue.</param>
+/* Add data frame to the data ring buffer. */
+
 void Control::addFrame(const uint8_t* data, uint32_t length, bool net, bool imm)
 {
     assert(data != nullptr);
@@ -1232,9 +1154,8 @@ void Control::addFrame(const uint8_t* data, uint32_t length, bool net, bool imm)
     m_txQueue.addData(data, len);
 }
 
-/// <summary>
-/// Process a data frames from the network.
-/// </summary>
+/* Process a data frames from the network. */
+
 void Control::processNetwork()
 {
     if (m_rfState != RS_RF_LISTENING && m_netState == RS_NET_IDLE)
@@ -1452,9 +1373,8 @@ void Control::processNetwork()
         }
 }
 
-/// <summary>
-/// Helper to process loss of frame stream from modem.
-/// </summary>
+/* Helper to process loss of frame stream from modem. */
+
 void Control::processFrameLoss()
 {
     if (m_rfState == RS_RF_AUDIO) {
@@ -1518,10 +1438,8 @@ void Control::processFrameLoss()
     }
 }
 
-/// <summary>
-/// Helper to send a REST API request to the CC to release a channel grant at the end of a call.
-/// </summary>
-/// <param name="dstId"></param>
+/* Helper to send a REST API request to the CC to release a channel grant at the end of a call. */
+
 void Control::notifyCC_ReleaseGrant(uint32_t dstId)
 {
     if (m_controlChData.address().empty()) {
@@ -1558,10 +1476,8 @@ void Control::notifyCC_ReleaseGrant(uint32_t dstId)
     m_netLastSrcId = 0U;
 }
 
-/// <summary>
-/// Helper to send a REST API request to the CC to "touch" a channel grant to refresh grant timers.
-/// </summary>
-/// <param name="dstId"></param>
+/* Helper to send a REST API request to the CC to "touch" a channel grant to refresh grant timers. */
+
 void Control::notifyCC_TouchGrant(uint32_t dstId)
 {
     if (m_controlChData.address().empty()) {
@@ -1589,10 +1505,8 @@ void Control::notifyCC_TouchGrant(uint32_t dstId)
     }
 }
 
-/// <summary>
-/// Helper to write control channel frame data.
-/// </summary>
-/// <returns></returns>
+/* Helper to write control channel frame data. */
+
 bool Control::writeRF_ControlData()
 {
     if (!m_enableControl)
@@ -1630,10 +1544,8 @@ bool Control::writeRF_ControlData()
     return true;
 }
 
-/// <summary>
-/// Helper to write end of control channel frame data.
-/// </summary>
-/// <returns></returns>
+/* Helper to write end of control channel frame data. */
+
 bool Control::writeRF_ControlEnd()
 {
     if (!m_enableControl)
@@ -1655,9 +1567,8 @@ bool Control::writeRF_ControlEnd()
     return false;
 }
 
-/// <summary>
-/// Helper to write data nulls.
-/// </summary>
+/* Helper to write data nulls. */
+
 void Control::writeRF_Nulls()
 {
     const uint8_t NULLS_LENGTH_BYTES = 25U;
@@ -1676,11 +1587,8 @@ void Control::writeRF_Nulls()
     addFrame(data, NULLS_LENGTH_BYTES + 2U);
 }
 
-/// <summary>
-/// Helper to write TDU preamble packet burst.
-/// </summary>
-/// <param name="preambleCount"></param>
-/// <param name="force"></param>
+/* Helper to write TDU preamble packet burst. */
+
 void Control::writeRF_Preamble(uint32_t preambleCount, bool force)
 {
     if (preambleCount == 0) {
@@ -1708,10 +1616,8 @@ void Control::writeRF_Preamble(uint32_t preambleCount, bool force)
     }
 }
 
-/// <summary>
-/// Helper to write a P25 TDU packet.
-/// </summary>
-/// <param name="noNetwork"></param>
+/* Helper to write a P25 TDU packet. */
+
 void Control::writeRF_TDU(bool noNetwork)
 {
     uint8_t data[P25_TDU_FRAME_LENGTH_BYTES + 2U];
@@ -1737,9 +1643,8 @@ void Control::writeRF_TDU(bool noNetwork)
     }
 }
 
-/// <summary>
-/// Helper to setup and generate LLA AM1 parameters.
-/// </summary>
+/* Helper to setup and generate LLA AM1 parameters. */
+
 void Control::generateLLA_AM1_Parameters()
 {
     ::memset(m_llaRS, 0x00U, AUTH_KEY_LENGTH_BYTES);

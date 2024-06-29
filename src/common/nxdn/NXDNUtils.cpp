@@ -33,6 +33,7 @@ const uint8_t SCRAMBLER[] = {
 // ---------------------------------------------------------------------------
 
 /* Helper to scramble the NXDN frame data. */
+
 void NXDNUtils::scrambler(uint8_t* data)
 {
     assert(data != nullptr);
@@ -42,6 +43,7 @@ void NXDNUtils::scrambler(uint8_t* data)
 }
 
 /* Helper to add the post field bits on NXDN frame data. */
+
 void NXDNUtils::addPostBits(uint8_t* data)
 {
     assert(data != nullptr);

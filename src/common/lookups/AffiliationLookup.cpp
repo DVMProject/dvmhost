@@ -25,6 +25,7 @@ const uint32_t UNIT_REG_TIMEOUT = 43200U; // 12 hours
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the AffiliationLookup class. */
+
 AffiliationLookup::AffiliationLookup(const std::string name, ChannelLookup* channelLookup, bool verbose) :
     m_rfGrantChCnt(0U),
     m_unitRegTable(),
@@ -55,9 +56,11 @@ AffiliationLookup::AffiliationLookup(const std::string name, ChannelLookup* chan
 }
 
 /* Finalizes a instance of the AffiliationLookup class. */
+
 AffiliationLookup::~AffiliationLookup() = default;
 
 /* Helper to group affiliate a source ID. */
+
 void AffiliationLookup::unitReg(uint32_t srcId)
 {
     if (isUnitReg(srcId)) {
@@ -110,6 +113,7 @@ bool AffiliationLookup::unitDereg(uint32_t srcId)
 }
 
 /* Helper to start the source ID registration timer. */
+
 void AffiliationLookup::touchUnitReg(uint32_t srcId)
 {
     if (srcId == 0U) {
@@ -122,6 +126,7 @@ void AffiliationLookup::touchUnitReg(uint32_t srcId)
 }
 
 /* Gets the current timer timeout for this unit registration. */
+
 uint32_t AffiliationLookup::unitRegTimeout(uint32_t srcId)
 {
     if (srcId == 0U) {
@@ -136,6 +141,7 @@ uint32_t AffiliationLookup::unitRegTimeout(uint32_t srcId)
 }
 
 /* Gets the current timer value for this unit registration. */
+
 uint32_t AffiliationLookup::unitRegTimer(uint32_t srcId)
 {
     if (srcId == 0U) {
@@ -150,6 +156,7 @@ uint32_t AffiliationLookup::unitRegTimer(uint32_t srcId)
 }
 
 /* Helper to determine if the source ID has unit registered. */
+
 bool AffiliationLookup::isUnitReg(uint32_t srcId) const
 {
     // lookup dynamic unit registration table entry
@@ -162,6 +169,7 @@ bool AffiliationLookup::isUnitReg(uint32_t srcId) const
 }
 
 /* Helper to release unit registrations. */
+
 void AffiliationLookup::clearUnitReg()
 {
     std::vector<uint32_t> srcToRel = std::vector<uint32_t>();
@@ -170,6 +178,7 @@ void AffiliationLookup::clearUnitReg()
 }
 
 /* Helper to group affiliate a source ID. */
+
 void AffiliationLookup::groupAff(uint32_t srcId, uint32_t dstId)
 {
     if (!isGroupAff(srcId, dstId)) {
@@ -184,6 +193,7 @@ void AffiliationLookup::groupAff(uint32_t srcId, uint32_t dstId)
 }
 
 /* Helper to group unaffiliate a source ID. */
+
 bool AffiliationLookup::groupUnaff(uint32_t srcId)
 {
     // lookup dynamic affiliation table entry
@@ -209,6 +219,7 @@ bool AffiliationLookup::groupUnaff(uint32_t srcId)
 }
 
 /* Helper to determine if the group destination ID has any affiations. */
+
 bool AffiliationLookup::hasGroupAff(uint32_t dstId) const
 {
     for (auto entry : m_grpAffTable) {
@@ -221,6 +232,7 @@ bool AffiliationLookup::hasGroupAff(uint32_t dstId) const
 }
 
 /* Helper to determine if the source ID has affiliated to the group destination ID. */
+
 bool AffiliationLookup::isGroupAff(uint32_t srcId, uint32_t dstId) const
 {
     // lookup dynamic affiliation table entry
@@ -238,6 +250,7 @@ bool AffiliationLookup::isGroupAff(uint32_t srcId, uint32_t dstId) const
 }
 
 /* Helper to release group affiliations. */
+
 std::vector<uint32_t> AffiliationLookup::clearGroupAff(uint32_t dstId, bool releaseAll)
 {
     std::vector<uint32_t> srcToRel = std::vector<uint32_t>();
@@ -271,6 +284,7 @@ std::vector<uint32_t> AffiliationLookup::clearGroupAff(uint32_t dstId, bool rele
 }
 
 /* Helper to grant a channel. */
+
 bool AffiliationLookup::grantCh(uint32_t dstId, uint32_t srcId, uint32_t grantTimeout, bool grp, bool netGranted)
 {
     if (dstId == 0U) {
@@ -303,6 +317,7 @@ bool AffiliationLookup::grantCh(uint32_t dstId, uint32_t srcId, uint32_t grantTi
 }
 
 /* Helper to start the destination ID grant timer. */
+
 void AffiliationLookup::touchGrant(uint32_t dstId)
 {
     if (dstId == 0U) {
@@ -315,6 +330,7 @@ void AffiliationLookup::touchGrant(uint32_t dstId)
 }
 
 /* Helper to release the channel grant for the destination ID. */
+
 bool AffiliationLookup::releaseGrant(uint32_t dstId, bool releaseAll)
 {
     if (dstId == 0U && !releaseAll) {
@@ -372,6 +388,7 @@ bool AffiliationLookup::releaseGrant(uint32_t dstId, bool releaseAll)
 }
 
 /* Helper to determine if the channel number is busy. */
+
 bool AffiliationLookup::isChBusy(uint32_t chNo) const
 {
     if (chNo == 0U) {
@@ -389,6 +406,7 @@ bool AffiliationLookup::isChBusy(uint32_t chNo) const
 }
 
 /* Helper to determine if the destination ID is already granted. */
+
 bool AffiliationLookup::isGranted(uint32_t dstId) const
 {
     if (dstId == 0U) {
@@ -410,6 +428,7 @@ bool AffiliationLookup::isGranted(uint32_t dstId) const
 }
 
 /* Helper to determine if the destination ID is network granted. */
+
 bool AffiliationLookup::isGroup(uint32_t dstId) const
 {
     if (dstId == 0U) {
@@ -426,6 +445,7 @@ bool AffiliationLookup::isGroup(uint32_t dstId) const
 }
 
 /* Helper to determine if the destination ID is network granted. */
+
 bool AffiliationLookup::isNetGranted(uint32_t dstId) const
 {
     if (dstId == 0U) {
@@ -442,6 +462,7 @@ bool AffiliationLookup::isNetGranted(uint32_t dstId) const
 }
 
 /* Helper to get the channel granted for the given destination ID. */
+
 uint32_t AffiliationLookup::getGrantedCh(uint32_t dstId)
 {
     if (dstId == 0U) {
@@ -456,6 +477,7 @@ uint32_t AffiliationLookup::getGrantedCh(uint32_t dstId)
 }
 
 /* Helper to get the destination ID granted to the given source ID. */
+
 uint32_t AffiliationLookup::getGrantedBySrcId(uint32_t srcId)
 {
     if (srcId == 0U) {
@@ -473,6 +495,7 @@ uint32_t AffiliationLookup::getGrantedBySrcId(uint32_t srcId)
 }
 
 /* Helper to get the source ID granted for the given destination ID. */
+
 uint32_t AffiliationLookup::getGrantedSrcId(uint32_t dstId)
 {
     if (dstId == 0U) {
@@ -487,6 +510,7 @@ uint32_t AffiliationLookup::getGrantedSrcId(uint32_t dstId)
 }
 
 /* Updates the processor by the passed number of milliseconds. */
+
 void AffiliationLookup::clock(uint32_t ms)
 {
     // clock all the grant timers

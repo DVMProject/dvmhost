@@ -22,12 +22,14 @@ using namespace p25::lc::tsbk;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the OSP_UU_VCH_GRANT_UPD class. */
+
 OSP_UU_VCH_GRANT_UPD::OSP_UU_VCH_GRANT_UPD() : TSBK()
 {
     m_lco = TSBKO::OSP_UU_VCH_GRANT_UPD;
 }
 
 /* Decode a trunking signalling block. */
+
 bool OSP_UU_VCH_GRANT_UPD::decode(const uint8_t* data, bool rawTSBK)
 {
     assert(data != nullptr);
@@ -50,6 +52,7 @@ bool OSP_UU_VCH_GRANT_UPD::decode(const uint8_t* data, bool rawTSBK)
 }
 
 /* Encode a trunking signalling block. */
+
 void OSP_UU_VCH_GRANT_UPD::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 {
     assert(data != nullptr);
@@ -71,6 +74,7 @@ void OSP_UU_VCH_GRANT_UPD::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 }
 
 /* Returns a string that represents the current TSBK. */
+
 std::string OSP_UU_VCH_GRANT_UPD::toString(bool isp)
 {
     return std::string("TSBKO, OSP_UU_VCH_GRANT_UPD (Unit-to-Unit Voice Channel Grant Update)");

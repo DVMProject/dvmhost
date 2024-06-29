@@ -1,16 +1,18 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Modem Host Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2018 Jonathan Naylor, G4KLX
+ *
+ */
 /**
-* Digital Voice Modem - Modem Host Software
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Modem Host Software
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2018 Jonathan Naylor, G4KLX
-*
-*/
+ * @file Audio.h
+ * @ingroup host_nxdn
+ * @file Audio.cpp
+ * @ingroup host_nxdn
+ */
 #if !defined(__NXDN_AUDIO_H__)
 #define  __NXDN_AUDIO_H__
 
@@ -446,25 +448,50 @@ namespace nxdn
 
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //      Implements NXDN audio processing and interleaving.
     // ---------------------------------------------------------------------------
 
+    /**
+     * @brief Implements NXDN audio processing and interleaving.
+     * @ingroup host_nxdn
+     */
     class HOST_SW_API Audio {
     public:
-        /// <summary>Initializes a new instance of the Audio class.</summary>
+        /**
+         * @brief Initializes a new instance of the Audio class.
+         */
         Audio();
-        /// <summary>Finalizes a instance of the Audio class.</summary>
+        /**
+         * @brief Finalizes a instance of the Audio class.
+         */
         ~Audio();
 
-        /// <summary>Decode a NXDN AMBE audio frame.</summary>
+        /**
+         * @brief Decode a NXDN AMBE audio frame.
+         * @param[in] in Buffer containing FEC encoded NXDN audio frames.
+         * @param[out] out Decoded AMBE audio frame.
+         */
         void decode(const uint8_t* in, uint8_t* out) const;
-        /// <summary>Encode a NXDN AMBE audio frame.</summary>
+        /**
+         * @brief Encode a NXDN AMBE audio frame.
+         * @param[in] in Buffer containing raw NXDN audio frames.
+         * @param[out] out FEC encoded NXDN AMBE audio frame.
+         */
         void encode(const uint8_t* in, uint8_t* out) const;
 
     private:
-        /// <summary></summary>
+        /**
+         * @brief Decode a NXDN AMBE audio frame.
+         * @param[in] in Buffer containing FEC encoded NXDN audio frames.
+         * @param[out] out Decoded AMBE audio frame.
+         * @param offset Offset to start processing within in buffer.
+         */
         void decode(const uint8_t* in, uint8_t* out, uint32_t offset) const;
-        /// <summary></summary>
+        /**
+         * @brief Encode a NXDN AMBE audio frame.
+         * @param[in] in Buffer containing raw NXDN audio frames.
+         * @param[out] out FEC encoded NXDN AMBE audio frame.
+         * @param offset Offset to start processing within in buffer.
+         */
         void encode(const uint8_t* in, uint8_t* out, uint32_t offset) const;
     };
 } // namespace nxdn

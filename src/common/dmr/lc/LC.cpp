@@ -24,6 +24,7 @@ using namespace dmr::lc;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the LC class. */
+
 LC::LC(FLCO::E flco, uint32_t srcId, uint32_t dstId) :
     m_PF(false),
     m_FLCO(flco),
@@ -41,6 +42,7 @@ LC::LC(FLCO::E flco, uint32_t srcId, uint32_t dstId) :
 }
 
 /* Initializes a new instance of the LC class. */
+
 LC::LC(const uint8_t* data) :
     m_PF(false),
     m_FLCO(FLCO::GROUP),
@@ -74,6 +76,7 @@ LC::LC(const uint8_t* data) :
 }
 
 /* Initializes a new instance of the LC class. */
+
 LC::LC(const bool* bits) :
     m_PF(false),
     m_FLCO(FLCO::GROUP),
@@ -120,7 +123,9 @@ LC::LC(const bool* bits) :
     m_srcId = s1 << 16 | s2 << 8 | s3;                                          // Source Address
     m_dstId = d1 << 16 | d2 << 8 | d3;                                          // Destination Address
 }
+
 /* Initializes a new instance of the LC class. */
+
 LC::LC() :
     m_PF(false),
     m_FLCO(FLCO::GROUP),
@@ -138,9 +143,11 @@ LC::LC() :
 }
 
 /* Finalizes a instance of the LC class. */
+
 LC::~LC() = default;
 
 /* Gets LC data as bytes. */
+
 void LC::getData(uint8_t* data) const
 {
     assert(data != nullptr);
@@ -171,6 +178,7 @@ void LC::getData(uint8_t* data) const
 }
 
 /* Gets LC data as bits. */
+
 void LC::getData(bool* bits) const
 {
     assert(bits != nullptr);

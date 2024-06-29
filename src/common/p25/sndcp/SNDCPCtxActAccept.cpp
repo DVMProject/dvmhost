@@ -23,6 +23,7 @@ using namespace p25::sndcp;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the SNDCPCtxActAccept class. */
+
 SNDCPCtxActAccept::SNDCPCtxActAccept() : SNDCPPacket(),
     m_priority(4U),
     m_readyTimer(SNDCPReadyTimer::TEN_SECONDS),
@@ -35,6 +36,7 @@ SNDCPCtxActAccept::SNDCPCtxActAccept() : SNDCPPacket(),
 }
 
 /* Decode a SNDCP context activation response. */
+
 bool SNDCPCtxActAccept::decode(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -58,6 +60,7 @@ bool SNDCPCtxActAccept::decode(const uint8_t* data)
 }
 
 /* Encode a SNDCP context activation response. */
+
 void SNDCPCtxActAccept::encode(uint8_t* data)
 {
     assert(data != nullptr);
@@ -82,6 +85,7 @@ void SNDCPCtxActAccept::encode(uint8_t* data)
 // ---------------------------------------------------------------------------
 
 /* Internal helper to copy the the class. */
+
 void SNDCPCtxActAccept::copy(const SNDCPCtxActAccept& data)
 {
     m_priority = data.m_priority;

@@ -22,12 +22,14 @@ using namespace dmr::lc::csbk;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the CSBK_PD_GRANT class. */
+
 CSBK_PD_GRANT::CSBK_PD_GRANT() : CSBK()
 {
     m_CSBKO = CSBKO::PD_GRANT;
 }
 
 /* Decode a control signalling block. */
+
 bool CSBK_PD_GRANT::decode(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -38,6 +40,7 @@ bool CSBK_PD_GRANT::decode(const uint8_t* data)
 }
 
 /* Encode a control signalling block. */
+
 void CSBK_PD_GRANT::encode(uint8_t* data)
 {
     assert(data != nullptr);
@@ -57,6 +60,7 @@ void CSBK_PD_GRANT::encode(uint8_t* data)
 }
 
 /* Returns a string that represents the current CSBK. */
+
 std::string CSBK_PD_GRANT::toString()
 {
     return std::string("CSBKO, PD_GRANT (Private Data Channel Grant)");

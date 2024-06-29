@@ -1,17 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Modem Host Software
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Modem Host Software
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2015,2016,2017,2018 Jonathan Naylor, G4KLX
-*   Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Modem Host Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2015,2016,2017,2018 Jonathan Naylor, G4KLX
+ *  Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "Defines.h"
 #include "common/dmr/lc/FullLC.h"
 #include "common/dmr/lc/ShortLC.h"
@@ -95,18 +91,8 @@ const uint32_t ADJ_SITE_UPDATE_CNT = 5U;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the Slot class.
-/// </summary>
-/// <param name="slotNo">DMR slot number.</param>
-/// <param name="queueSize">Modem frame buffer queue size (bytes).</param>
-/// <param name="timeout">Transmit timeout.</param>
-/// <param name="tgHang">Amount of time to hang on the last talkgroup mode from RF.</param>
-/// <param name="dumpDataPacket"></param>
-/// <param name="repeatDataPacket"></param>
-/// <param name="dumpCSBKData"></param>
-/// <param name="debug">Flag indicating whether DMR debug is enabled.</param>
-/// <param name="verbose">Flag indicating whether DMR verbose logging is enabled.</param>
+/* Initializes a new instance of the Slot class. */
+
 Slot::Slot(uint32_t slotNo, uint32_t timeout, uint32_t tgHang, uint32_t queueSize, bool dumpDataPacket, bool repeatDataPacket,
     bool dumpCSBKData, bool debug, bool verbose) :
     m_slotNo(slotNo),
@@ -192,9 +178,8 @@ Slot::Slot(uint32_t slotNo, uint32_t timeout, uint32_t tgHang, uint32_t queueSiz
     m_control = new ControlSignaling(this, m_network, dumpCSBKData, debug, verbose);
 }
 
-/// <summary>
-/// Finalizes a instance of the Slot class.
-/// </summary>
+/* Finalizes a instance of the Slot class. */
+
 Slot::~Slot()
 {
     delete m_voice;
@@ -202,12 +187,8 @@ Slot::~Slot()
     delete m_control;
 }
 
-/// <summary>
-/// Process DMR data frame from the RF interface.
-/// </summary>
-/// <param name="data">Buffer containing data frame.</param>
-/// <param name="len">Length of data frame.</param>
-/// <returns></returns>
+/* Process DMR data frame from the RF interface. */
+
 bool Slot::processFrame(uint8_t *data, uint32_t len)
 {
     assert(data != nullptr);
@@ -328,10 +309,8 @@ bool Slot::processFrame(uint8_t *data, uint32_t len)
     return m_voice->process(data, len);
 }
 
-/// <summary>
-/// Get the frame data length for the next frame in the data ring buffer.
-/// </summary>
-/// <returns>Length of frame data retrieved.</returns>
+/* Get the frame data length for the next frame in the data ring buffer. */
+
 uint32_t Slot::peekFrameLength()
 {
     if (m_txQueue.isEmpty() && m_txImmQueue.isEmpty())
@@ -350,11 +329,8 @@ uint32_t Slot::peekFrameLength()
     return len;
 }
 
-/// <summary>
-/// Get frame data from data ring buffer.
-/// </summary>
-/// <param name="data">Buffer to store frame data.</param>
-/// <returns>Length of frame data retreived.</returns>
+/* Get frame data from data ring buffer. */
+
 uint32_t Slot::getFrame(uint8_t* data)
 {
     assert(data != nullptr);
@@ -377,10 +353,8 @@ uint32_t Slot::getFrame(uint8_t* data)
     return len;
 }
 
-/// <summary>
-/// Process a data frame from the network.
-/// </summary>
-/// <param name="dmrData"></param>
+/* Process a data frame from the network. */
+
 void Slot::processNetwork(const data::Data& dmrData)
 {
     // don't process network frames if the RF modem isn't in a listening state
@@ -451,9 +425,8 @@ void Slot::processNetwork(const data::Data& dmrData)
     }
 }
 
-/// <summary>
-/// Updates the DMR slot processor.
-/// </summary>
+/* Updates the DMR slot processor. */
+
 void Slot::clock()
 {
     uint32_t ms = m_interval.elapsed();
@@ -673,10 +646,8 @@ void Slot::clock()
     }
 }
 
-/// <summary>
-/// Updates the adj. site tables.
-/// </summary>
-/// <param name="ms"></param>
+/* Updates the adj. site tables. */
+
 void Slot::clockSiteData(uint32_t ms)
 {
     if (m_enableTSCC) {
@@ -729,10 +700,8 @@ void Slot::clockSiteData(uint32_t ms)
     }
 }
 
-/// <summary>
-/// Permits a TGID on a non-authoritative host.
-/// </summary>
-/// <param name="dstId"></param>
+/* Permits a TGID on a non-authoritative host. */
+
 void Slot::permittedTG(uint32_t dstId)
 {
     if (m_authoritative) {
@@ -746,12 +715,8 @@ void Slot::permittedTG(uint32_t dstId)
     m_permittedDstId = dstId;
 }
 
-/// <summary>
-/// Grants a TGID on a non-authoritative host.
-/// </summary>
-/// <param name="srcId"></param>
-/// <param name="dstId"></param>
-/// <param name="grp"></param>
+/* Grants a TGID on a non-authoritative host. */
+
 void Slot::grantTG(uint32_t srcId, uint32_t dstId, bool grp)
 {
     if (!m_control) {
@@ -765,10 +730,8 @@ void Slot::grantTG(uint32_t srcId, uint32_t dstId, bool grp)
     m_control->writeRF_CSBK_Grant(srcId, dstId, 4U, grp);
 }
 
-/// <summary>
-/// Releases a granted TG.
-/// </summary>
-/// <param name="dstId"></param>
+/* Releases a granted TG. */
+
 void Slot::releaseGrantTG(uint32_t dstId)
 {
     if (!m_control) {
@@ -792,10 +755,8 @@ void Slot::releaseGrantTG(uint32_t dstId)
     }
 }
 
-/// <summary>
-/// Touches a granted TG to keep a channel grant alive.
-/// </summary>
-/// <param name="dstId"></param>
+/* Touches a granted TG to keep a channel grant alive. */
+
 void Slot::touchGrantTG(uint32_t dstId)
 {
     if (!m_control) {
@@ -815,22 +776,16 @@ void Slot::touchGrantTG(uint32_t dstId)
     }
 }
 
-/// <summary>
-/// Helper to change the debug and verbose state.
-/// </summary>
-/// <param name="debug">Flag indicating whether DMR debug is enabled.</param>
-/// <param name="verbose">Flag indicating whether DMR verbose logging is enabled.</param>
+/* Helper to change the debug and verbose state. */
+
 void Slot::setDebugVerbose(bool debug, bool verbose)
 {
     m_debug = m_voice->m_debug = m_data->m_debug = debug = m_control->m_debug;
     m_verbose = m_voice->m_verbose = m_data->m_verbose = verbose = m_control->m_verbose;
 }
 
-/// <summary>
-/// Helper to enable and configure TSCC support for this slot.
-/// </summary>
-/// <param name="enable">Flag indicating whether DMR TSCC is enabled on this slot.</param>
-/// <param name="enable">Flag indicating whether DMR TSCC is dedicated on this slot.</param>
+/* Helper to enable and configure TSCC support for this slot. */
+
 void Slot::setTSCC(bool enable, bool dedicated)
 {
     m_enableTSCC = enable;
@@ -841,13 +796,8 @@ void Slot::setTSCC(bool enable, bool dedicated)
     }
 }
 
-/// <summary>
-/// Helper to activate a TSCC payload slot.
-/// </summary>
-/// <param name="dstId"></param>
-/// <param name="srcId"></param>
-/// <param name="group"></param>
-/// <param name="voice"></param>
+/* Helper to activate a TSCC payload slot. */
+
 void Slot::setTSCCActivated(uint32_t dstId, uint32_t srcId, bool group, bool voice)
 {
     m_tsccPayloadDstId = dstId;
@@ -865,10 +815,8 @@ void Slot::setTSCCActivated(uint32_t dstId, uint32_t srcId, bool group, bool voi
     }
 }
 
-/// <summary>
-/// Helper to get the last transmitted destination ID.
-/// </summary>
-/// <returns></returns>
+/* Helper to get the last transmitted destination ID. */
+
 uint32_t Slot::getLastDstId() const
 {
     if (m_rfLastDstId != 0U) {
@@ -882,10 +830,8 @@ uint32_t Slot::getLastDstId() const
     return 0U;
 }
 
-/// <summary>
-/// Helper to get the last transmitted source ID.
-/// </summary>
-/// <returns></returns>
+/* Helper to get the last transmitted source ID. */
+
 uint32_t Slot::getLastSrcId() const
 {
     if (m_rfLastSrcId != 0U) {
@@ -899,26 +845,8 @@ uint32_t Slot::getLastSrcId() const
     return 0U;
 }
 
-/// <summary>
-/// Helper to initialize the DMR slot processor.
-/// </summary>
-/// <param name="dmr">Instance of the Control class.</param>
-/// <param name="authoritative">Flag indicating whether or not the DVM is grant authoritative.</param>
-/// <param name="colorCode">DMR access color code.</param>
-/// <param name="siteData">DMR site data.</param>
-/// <param name="embeddedLCOnly"></param>
-/// <param name="dumpTAData"></param>
-/// <param name="callHang">Amount of hangtime for a DMR call.</param>
-/// <param name="modem">Instance of the Modem class.</param>
-/// <param name="network">Instance of the BaseNetwork class.</param>
-/// <param name="duplex">Flag indicating full-duplex operation.</param>
-/// <param name="chLookup">Instance of the ChannelLookup class.</param>
-/// <param name="ridLookup">Instance of the RadioIdLookup class.</param>
-/// <param name="tidLookup">Instance of the TalkgroupRulesLookup class.</param>
-/// <param name="idenTable">Instance of the IdenTableLookup class.</param>
-/// <param name="rssi">Instance of the RSSIInterpolator class.</param>
-/// <param name="jitter"></param>
-/// <param name="verbose"></param>
+/* Helper to initialize the DMR slot processor. */
+
 void Slot::init(Control* dmr, bool authoritative, uint32_t colorCode, SiteData siteData, bool embeddedLCOnly, bool dumpTAData, uint32_t callHang, modem::Modem* modem,
     network::Network* network, bool duplex, ::lookups::ChannelLookup* chLookup, ::lookups::RadioIdLookup* ridLookup, ::lookups::TalkgroupRulesLookup* tidLookup,
     ::lookups::IdenTableLookup* idenTable, ::lookups::RSSIInterpolator* rssiMapper, uint32_t jitter, bool verbose)
@@ -1020,15 +948,8 @@ void Slot::init(Control* dmr, bool authoritative, uint32_t colorCode, SiteData s
     slotType.encode(m_idle + 2U);
 }
 
-/// <summary>
-/// Sets local configured site data.
-/// </summary>
-/// <param name="controlChData">Control Channel data.</param>
-/// <param name="netId">DMR Network ID.</param>
-/// <param name="siteId">DMR Site ID.</param>
-/// <param name="channelId">Channel ID.</param>
-/// <param name="channelNo">Channel Number.</param>
-/// <param name="requireReg"></param>
+/* Sets local configured site data. */
+
 void Slot::setSiteData(::lookups::VoiceChData controlChData, uint32_t netId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, bool requireReg)
 {
     m_siteData = SiteData(SiteModel::SM_SMALL, netId, siteId, 3U, requireReg);
@@ -1047,11 +968,8 @@ void Slot::setSiteData(::lookups::VoiceChData controlChData, uint32_t netId, uin
     lc::CSBK::setSiteData(m_siteData);
 }
 
-/// <summary>
-/// Sets TSCC Aloha configuration.
-/// </summary>
-/// <param name="nRandWait"></param>
-/// <param name="backOff"></param>
+/* Sets TSCC Aloha configuration. */
+
 void Slot::setAlohaConfig(uint8_t nRandWait, uint8_t backOff)
 {
     m_alohaNRandWait = nRandWait;
@@ -1062,12 +980,8 @@ void Slot::setAlohaConfig(uint8_t nRandWait, uint8_t backOff)
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Add data frame to the data ring buffer.
-/// </summary>
-/// <param name="data">Frame data to add to Tx queue.</param>
-/// <param name="net">Flag indicating whether the data came from the network or not</param>
-/// <param name="imm">Flag indicating whether or not the data is priority and is added to the immediate queue.</param>
+/* Add data frame to the data ring buffer. */
+
 void Slot::addFrame(const uint8_t *data, bool net, bool imm)
 {
     assert(data != nullptr);
@@ -1122,9 +1036,8 @@ void Slot::addFrame(const uint8_t *data, bool net, bool imm)
     m_txQueue.addData(data, len);
 }
 
-/// <summary>
-/// Helper to process loss of frame stream from modem.
-/// </summary>
+/* Helper to process loss of frame stream from modem. */
+
 void Slot::processFrameLoss()
 {
     if (m_rfState == RS_RF_AUDIO) {
@@ -1173,10 +1086,8 @@ void Slot::processFrameLoss()
     m_rfTGHang.stop();
 }
 
-/// <summary>
-/// Helper to send a REST API request to the CC to release a channel grant at the end of a call.
-/// </summary>
-/// <param name="dstId"></param>
+/* Helper to send a REST API request to the CC to release a channel grant at the end of a call. */
+
 void Slot::notifyCC_ReleaseGrant(uint32_t dstId)
 {
     if (m_controlChData.address().empty()) {
@@ -1215,10 +1126,8 @@ void Slot::notifyCC_ReleaseGrant(uint32_t dstId)
     m_netLastSrcId = 0U;
 }
 
-/// <summary>
-/// Helper to send a REST API request to the CC to "touch" a channel grant to refresh grant timers.
-/// </summary>
-/// <param name="dstId"></param>
+/* Helper to send a REST API request to the CC to "touch" a channel grant to refresh grant timers. */
+
 void Slot::notifyCC_TouchGrant(uint32_t dstId)
 {
     if (m_controlChData.address().empty()) {
@@ -1248,13 +1157,8 @@ void Slot::notifyCC_TouchGrant(uint32_t dstId)
     }
 }
 
-/// <summary>
-/// Write data frame to the network.
-/// </summary>
-/// <param name="data"></param>
-/// <param name="dataType"></param>
-/// <param name="errors"></param>
-/// <param name="noSequence"></param>
+/* Write data frame to the network. */
+
 void Slot::writeNetwork(const uint8_t* data, DataType::E dataType, uint8_t errors, bool noSequence)
 {
     assert(data != nullptr);
@@ -1263,16 +1167,8 @@ void Slot::writeNetwork(const uint8_t* data, DataType::E dataType, uint8_t error
     writeNetwork(data, dataType, m_rfLC->getFLCO(), m_rfLC->getSrcId(), m_rfLC->getDstId(), errors);
 }
 
-/// <summary>
-/// Write data frame to the network.
-/// </summary>
-/// <param name="data"></param>
-/// <param name="dataType"></param>
-/// <param name="flco"></param>
-/// <param name="srcId"></param>
-/// <param name="dstId"></param>
-/// <param name="errors"></param>
-/// <param name="noSequence"></param>
+/* Write data frame to the network. */
+
 void Slot::writeNetwork(const uint8_t* data, DataType::E dataType, FLCO::E flco, uint32_t srcId,
     uint32_t dstId, uint8_t errors, bool noSequence)
 {
@@ -1302,10 +1198,8 @@ void Slot::writeNetwork(const uint8_t* data, DataType::E dataType, FLCO::E flco,
     m_network->writeDMR(dmrData, noSequence);
 }
 
-/// <summary>
-/// Helper to write RF end of frame data.
-/// </summary>
-/// <param name="writeEnd"></param>
+/* Helper to write RF end of frame data. */
+
 void Slot::writeEndRF(bool writeEnd)
 {
     m_rfState = RS_RF_LISTENING;
@@ -1357,10 +1251,8 @@ void Slot::writeEndRF(bool writeEnd)
     m_rfDataHeader = nullptr;
 }
 
-/// <summary>
-/// Helper to write network end of frame data.
-/// </summary>
-/// <param name="writeEnd"></param>
+/* Helper to write network end of frame data. */
+
 void Slot::writeEndNet(bool writeEnd)
 {
     m_netState = RS_NET_IDLE;
@@ -1417,11 +1309,8 @@ void Slot::writeEndNet(bool writeEnd)
     m_netDataHeader = nullptr;
 }
 
-/// <summary>
-/// Helper to write control channel packet data.
-/// </summary>
-/// <param name="frameCnt"></param>
-/// <param name="n"></param>
+/* Helper to write control channel packet data. */
+
 void Slot::writeRF_ControlData(uint16_t frameCnt, uint8_t n)
 {
     uint8_t i = 0U, seqCnt = 0U;
@@ -1545,9 +1434,8 @@ void Slot::writeRF_ControlData(uint16_t frameCnt, uint8_t n)
     lc::CSBK::setVerbose(csbkVerbose);
 }
 
-/// <summary>
-/// Clears the flag indicating whether the slot is a TSCC payload slot.
-/// </summary>
+/* Clears the flag indicating whether the slot is a TSCC payload slot. */
+
 void Slot::clearTSCCActivated() 
 {
     if (m_tsccPayloadDstId != 0U && m_tsccPayloadSrcId != 0U) {
@@ -1562,13 +1450,8 @@ void Slot::clearTSCCActivated()
     m_tsccPayloadActRetry.stop();
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="slotNo"></param>
-/// <param name="id"></param>
-/// <param name="flco"></param>
-/// <param name="voice"></param>
+/* Helper to set the DMR short LC. */
+
 void Slot::setShortLC(uint32_t slotNo, uint32_t id, FLCO::E flco, bool voice)
 {
     assert(m_modem != nullptr);
@@ -1655,11 +1538,8 @@ void Slot::setShortLC(uint32_t slotNo, uint32_t id, FLCO::E flco, bool voice)
     m_modem->writeDMRShortLC(sLC);
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="siteData"></param>
-/// <param name="counter"></param>
+/* Helper to set the DMR short LC for TSCC. */
+
 void Slot::setShortLC_TSCC(SiteData siteData, uint16_t counter)
 {
     assert(m_modem != nullptr);
@@ -1718,11 +1598,8 @@ void Slot::setShortLC_TSCC(SiteData siteData, uint16_t counter)
     m_modem->writeDMRShortLC(sLC);
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="siteData"></param>
-/// <param name="counter"></param>
+/* Helper to set the DMR short LC for payload. */
+
 void Slot::setShortLC_Payload(SiteData siteData, uint16_t counter)
 {
     assert(m_modem != nullptr);

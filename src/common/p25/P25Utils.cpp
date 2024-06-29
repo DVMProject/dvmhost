@@ -22,6 +22,7 @@ using namespace p25::defines;
 // ---------------------------------------------------------------------------
 
 /* Helper to set the busy status bits on P25 frame data. */
+
 void P25Utils::setBusyBits(uint8_t* data, uint32_t ssOffset, bool b1, bool b2)
 {
     assert(data != nullptr);
@@ -31,6 +32,7 @@ void P25Utils::setBusyBits(uint8_t* data, uint32_t ssOffset, bool b1, bool b2)
 }
 
 /* Helper to add the busy status bits on P25 frame data. */
+
 void P25Utils::addBusyBits(uint8_t* data, uint32_t length, bool b1, bool b2)
 {
     assert(data != nullptr);
@@ -51,6 +53,7 @@ void P25Utils::addBusyBits(uint8_t* data, uint32_t length, bool b1, bool b2)
 }
 
 /* Helper to add the idle status bits on P25 frame data. */
+
 void P25Utils::addIdleBits(uint8_t* data, uint32_t length, bool b1, bool b2)
 {
     assert(data != nullptr);
@@ -63,6 +66,7 @@ void P25Utils::addIdleBits(uint8_t* data, uint32_t length, bool b1, bool b2)
 }
 
 /* Decode bit interleaving. */
+
 uint32_t P25Utils::decode(const uint8_t* in, uint8_t* out, uint32_t start, uint32_t stop)
 {
     assert(in != nullptr);
@@ -96,6 +100,7 @@ uint32_t P25Utils::decode(const uint8_t* in, uint8_t* out, uint32_t start, uint3
 }
 
 /* Encode bit interleaving. */
+
 uint32_t P25Utils::encode(const uint8_t* in, uint8_t* out, uint32_t start, uint32_t stop)
 {
     assert(in != nullptr);
@@ -129,6 +134,7 @@ uint32_t P25Utils::encode(const uint8_t* in, uint8_t* out, uint32_t start, uint3
 }
 
 /* Encode bit interleaving. */
+
 uint32_t P25Utils::encode(const uint8_t* in, uint8_t* out, uint32_t length)
 {
     assert(in != nullptr);
@@ -163,6 +169,7 @@ uint32_t P25Utils::encode(const uint8_t* in, uint8_t* out, uint32_t length)
 }
 
 /* Compare two datasets for the given length. */
+
 uint32_t P25Utils::compare(const uint8_t* data1, const uint8_t* data2, uint32_t length)
 {
     assert(data1 != nullptr);

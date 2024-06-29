@@ -134,12 +134,15 @@ RS6355 rs24169;     // 8 bit / 4 bit corrections max / 2 bytes total
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the RS634717 class. */
+
 RS634717::RS634717() = default;
 
 /* Finalizes a instance of the RS634717 class. */
+
 RS634717::~RS634717() = default;
 
 /* Decode RS (24,12,13) FEC. */
+
 bool RS634717::decode241213(uint8_t* data)
 {
     assert(data != nullptr);
@@ -166,6 +169,7 @@ bool RS634717::decode241213(uint8_t* data)
 }
 
 /* Encode RS (24,12,13) FEC. */
+
 void RS634717::encode241213(uint8_t* data)
 {
     assert(data != nullptr);
@@ -188,6 +192,7 @@ void RS634717::encode241213(uint8_t* data)
 }
 
 /* Decode RS (24,16,9) FEC. */
+
 bool RS634717::decode24169(uint8_t* data)
 {
     assert(data != nullptr);
@@ -214,6 +219,7 @@ bool RS634717::decode24169(uint8_t* data)
 }
 
 /* Encode RS (24,16,9) FEC. */
+
 void RS634717::encode24169(uint8_t* data)
 {
     assert(data != nullptr);
@@ -236,6 +242,7 @@ void RS634717::encode24169(uint8_t* data)
 }
 
 /* Decode RS (36,20,17) FEC. */
+
 bool RS634717::decode362017(uint8_t* data)
 {
     assert(data != nullptr);
@@ -262,6 +269,7 @@ bool RS634717::decode362017(uint8_t* data)
 }
 
 /* Encode RS (36,20,17) FEC. */
+
 void RS634717::encode362017(uint8_t* data)
 {
     assert(data != nullptr);
@@ -288,6 +296,7 @@ void RS634717::encode362017(uint8_t* data)
 // ---------------------------------------------------------------------------
 
 /* GF(2 ^ 6) multiply (for Reed-Solomon encoder). */
+
 uint8_t RS634717::gf6Mult(uint8_t a, uint8_t b) const
 {
     uint8_t p = 0x00U;

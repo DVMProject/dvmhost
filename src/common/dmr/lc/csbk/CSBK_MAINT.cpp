@@ -22,6 +22,7 @@ using namespace dmr::lc::csbk;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the CSBK_MAINT class. */
+
 CSBK_MAINT::CSBK_MAINT() : CSBK(),
     m_maintKind(0U)
 {
@@ -29,6 +30,7 @@ CSBK_MAINT::CSBK_MAINT() : CSBK(),
 }
 
 /* Decode a control signalling block. */
+
 bool CSBK_MAINT::decode(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -50,6 +52,7 @@ bool CSBK_MAINT::decode(const uint8_t* data)
 }
 
 /* Encode a control signalling block. */
+
 void CSBK_MAINT::encode(uint8_t* data)
 {
     assert(data != nullptr);
@@ -65,6 +68,7 @@ void CSBK_MAINT::encode(uint8_t* data)
 }
 
 /* Returns a string that represents the current CSBK. */
+
 std::string CSBK_MAINT::toString()
 {
     return std::string("CSBKO, MAINT (Call Maintainence)");
@@ -75,6 +79,7 @@ std::string CSBK_MAINT::toString()
 // ---------------------------------------------------------------------------
 
 /* Internal helper to copy the the class. */
+
 void CSBK_MAINT::copy(const CSBK_MAINT& data)
 {
     CSBK::copy(data);

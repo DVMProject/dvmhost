@@ -1,18 +1,14 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Modem Host Software
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Modem Host Software
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2015,2016,2017 Jonathan Naylor, G4KLX
-*   Copyright (C) 2017-2023 Bryan Biedenkapp, N2PLL
-*   Copyright (C) 2021 Nat Moore
-*
-*/
+/*
+ * Digital Voice Modem - Modem Host Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2015,2016,2017 Jonathan Naylor, G4KLX
+ *  Copyright (C) 2017-2023 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2021 Nat Moore
+ *
+ */
 #include "Defines.h"
 #include "common/lookups/RSSIInterpolator.h"
 #include "common/network/udp/Socket.h"
@@ -48,10 +44,8 @@ using namespace lookups;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the Host class.
-/// </summary>
-/// <param name="confFile">Full-path to the configuration file.</param>
+/* Initializes a new instance of the Host class. */
+
 Host::Host(const std::string& confFile) :
     m_confFile(confFile),
     m_conf(),
@@ -145,15 +139,12 @@ Host::Host(const std::string& confFile) :
     /* stub */
 }
 
-/// <summary>
-/// Finalizes a instance of the Host class.
-/// </summary>
+/* Finalizes a instance of the Host class. */
+
 Host::~Host() = default;
 
-/// <summary>
-/// Executes the main modem host processing loop.
-/// </summary>
-/// <returns>Zero if successful, otherwise error occurred.</returns>
+/* Executes the main modem host processing loop. */
+
 int Host::run()
 {
     bool ret = false;
@@ -1695,9 +1686,8 @@ int Host::run()
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Helper to generate the status of the host in JSON format.
-/// </summary>
+/* Helper to generate the status of the host in JSON format. */
+
 json::object Host::getStatus()
 {
     json::object response = json::object();
@@ -1830,10 +1820,8 @@ json::object Host::getStatus()
     return response;
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="modem"></param>
+/* Modem port open callback. */
+
 bool Host::rmtPortModemOpen(Modem* modem)
 {
     assert(m_modemRemotePort != nullptr);
@@ -1848,10 +1836,8 @@ bool Host::rmtPortModemOpen(Modem* modem)
     return true;
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="modem"></param>
+/* Modem port close callback. */
+
 bool Host::rmtPortModemClose(Modem* modem)
 {
     assert(m_modemRemotePort != nullptr);
@@ -1862,16 +1848,8 @@ bool Host::rmtPortModemClose(Modem* modem)
     return true;
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="modem"></param>
-/// <param name="ms"></param>
-/// <param name="rspType"></param>
-/// <param name="rspDblLen"></param>
-/// <param name="data"></param>
-/// <param name="len"></param>
-/// <returns></returns>
+/* Modem clock callback. */
+
 bool Host::rmtPortModemHandler(Modem* modem, uint32_t ms, modem::RESP_TYPE_DVM rspType, bool rspDblLen, const uint8_t* buffer, uint16_t len)
 {
     assert(m_modemRemotePort != nullptr);
@@ -1911,10 +1889,8 @@ bool Host::rmtPortModemHandler(Modem* modem, uint32_t ms, modem::RESP_TYPE_DVM r
     return true;
 }
 
-/// <summary>
-/// Helper to set the host/modem running state.
-/// </summary>
-/// <param name="state">Mode enumeration to switch the host/modem state to.</param>
+/* Helper to set the host/modem running state. */
+
 void Host::setState(uint8_t state)
 {
     assert(m_modem != nullptr);
@@ -2045,10 +2021,8 @@ void Host::setState(uint8_t state)
     }
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="state"></param>
+/* Helper to create the state lock file. */
+
 void Host::createLockFile(const char* mode) const
 {
     FILE* fp = ::fopen(g_lockFile.c_str(), "wt");
@@ -2058,9 +2032,8 @@ void Host::createLockFile(const char* mode) const
     }
 }
 
-/// <summary>
-///
-/// </summary>
+/* Helper to remove the state lock file. */
+
 void Host::removeLockFile() const
 {
     ::remove(g_lockFile.c_str());

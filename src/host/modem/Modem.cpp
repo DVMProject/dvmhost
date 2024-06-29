@@ -1,18 +1,14 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Modem Host Software
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Modem Host Software
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2011-2021 Jonathan Naylor, G4KLX
-*   Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
-*   Copyright (C) 2021 Nat Moore
-*
-*/
+/*
+ * Digital Voice Modem - Modem Host Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2011-2021 Jonathan Naylor, G4KLX
+ *  Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2021 Nat Moore
+ *
+ */
 #include "Defines.h"
 #include "common/dmr/DMRDefines.h"
 #include "common/p25/P25Defines.h"
@@ -65,27 +61,8 @@ using namespace modem;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the Modem class.
-/// </summary>
-/// <param name="port">Port the air interface modem is connected to.</param>
-/// <param name="duplex">Flag indicating the modem is operating in duplex mode.</param>
-/// <param name="rxInvert">Flag indicating the Rx polarity should be inverted.</param>
-/// <param name="txInvert">Flag indicating the Tx polarity should be inverted.</param>
-/// <param name="pttInvert">Flag indicating the PTT polarity should be inverted.</param>
-/// <param name="dcBlocker">Flag indicating whether the DSP DC-level blocking should be enabled.</param>
-/// <param name="cosLockout">Flag indicating whether the COS signal should be used to lockout the modem.</param>
-/// <param name="fdmaPreamble">Count of FDMA preambles to transmit before data. (P25/DMR DMO)</param>
-/// <param name="dmrRxDelay">Compensate for delay in receiver audio chain in ms. Usually DSP based.</param>
-/// <param name="p25CorrCount">P25 Correlation Countdown.</param>
-/// <param name="dmrQueueSize">Modem DMR frame buffer queue size (bytes).</param>
-/// <param name="p25QueueSize">Modem P25 frame buffer queue size (bytes).</param>
-/// <param name="nxdnQueueSize">Modem NXDN frame buffer queue size (bytes).</param>
-/// <param name="disableOFlowReset">Flag indicating whether the ADC/DAC overflow reset logic is disabled.</param>
-/// <param name="ignoreModemConfigArea">Flag indicating whether the modem configuration area is ignored.</param>
-/// <param name="dumpModemStatus">Flag indicating whether the modem status is dumped to the log.</param>
-/// <param name="trace">Flag indicating whether air interface modem trace is enabled.</param>
-/// <param name="debug">Flag indicating whether air interface modem debug is enabled.</param>
+/* Initializes a new instance of the Modem class. */
+
 Modem::Modem(port::IModemPort* port, bool duplex, bool rxInvert, bool txInvert, bool pttInvert, bool dcBlocker, bool cosLockout,
     uint8_t fdmaPreamble, uint8_t dmrRxDelay, uint8_t p25CorrCount, uint32_t dmrQueueSize, uint32_t p25QueueSize, uint32_t nxdnQueueSize,
     bool disableOFlowReset, bool ignoreModemConfigArea, bool dumpModemStatus, bool trace, bool debug) :
@@ -184,32 +161,24 @@ Modem::Modem(port::IModemPort* port, bool duplex, bool rxInvert, bool txInvert, 
     m_buffer = new uint8_t[BUFFER_LENGTH];
 }
 
-/// <summary>
-/// Finalizes a instance of the Modem class.
-/// </summary>
+/* Finalizes a instance of the Modem class. */
+
 Modem::~Modem()
 {
     delete m_port;
     delete[] m_buffer;
 }
 
-/// <summary>
-/// Sets the RF DC offset parameters.
-/// </summary>
-/// <param name="txDCOffset"></param>
-/// <param name="rxDCOffset"></param>
+/* Sets the RF DC offset parameters. */
+
 void Modem::setDCOffsetParams(int txDCOffset, int rxDCOffset)
 {
     m_txDCOffset = txDCOffset;
     m_rxDCOffset = rxDCOffset;
 }
 
-/// <summary>
-/// Sets the enabled modes.
-/// </summary>
-/// <param name="dmrEnabled"></param>
-/// <param name="p25Enabled"></param>
-/// <param name="nxdnEnabled"></param>
+/* Sets the enabled modes. */
+
 void Modem::setModeParams(bool dmrEnabled, bool p25Enabled, bool nxdnEnabled)
 {
     m_dmrEnabled = dmrEnabled;
@@ -217,14 +186,8 @@ void Modem::setModeParams(bool dmrEnabled, bool p25Enabled, bool nxdnEnabled)
     m_nxdnEnabled = nxdnEnabled;
 }
 
-/// <summary>
-/// Sets the RF deviation levels.
-/// </summary>
-/// <param name="rxLevel"></param>
-/// <param name="cwIdTXLevel"></param>
-/// <param name="dmrTXLevel"></param>
-/// <param name="p25TXLevel"></param>
-/// <param name="nxdnTXLevel"></param>
+/* Sets the RF deviation levels. */
+
 void Modem::setLevels(float rxLevel, float cwIdTXLevel, float dmrTXLevel, float p25TXLevel, float nxdnTXLevel)
 {
     m_rxLevel = rxLevel;
@@ -234,15 +197,8 @@ void Modem::setLevels(float rxLevel, float cwIdTXLevel, float dmrTXLevel, float 
     m_nxdnTXLevel = nxdnTXLevel;
 }
 
-/// <summary>
-/// Sets the symbol adjustment levels
-/// </summary>
-/// <param name="dmrSymLevel3Adj"></param>
-/// <param name="dmrSymLevel1Adj"></param>
-/// <param name="p25SymLevel3Adj"></param>
-/// <param name="p25SymLevel1Adj"></param>
-/// <param name="nxdnSymLevel3Adj"></param>
-/// <param name="nxdnSymLevel1Adj"></param>
+/* Sets the symbol adjustment levels */
+
 void Modem::setSymbolAdjust(int dmrSymLevel3Adj, int dmrSymLevel1Adj, int p25SymLevel3Adj, int p25SymLevel1Adj, int nxdnSymLevel3Adj, int nxdnSymLevel1Adj)
 {
     m_dmrSymLevel3Adj = dmrSymLevel3Adj;
@@ -282,23 +238,8 @@ void Modem::setSymbolAdjust(int dmrSymLevel3Adj, int dmrSymLevel1Adj, int p25Sym
         m_nxdnSymLevel1Adj = 0;
 }
 
-/// <summary>
-/// Sets the RF parameters.
-/// </summary>
-/// <param name="rxFreq"></param>
-/// <param name="txFreq"></param>
-/// <param name="rfPower"></param>
-/// <param name="dmrDiscBWAdj"></param>
-/// <param name="p25DiscBWAdj"></param>
-/// <param name="nxdnDiscBWAdj"></param>
-/// <param name="dmrPostBWAdj"></param>
-/// <param name="p25PostBWAdj"></param>
-/// <param name="nxdnPostBWAdj"></param>
-/// <param name="gainMode"></param>
-/// <param name="afcEnable"></param>
-/// <param name="afcKI"></param>
-/// <param name="afcKP"></param>
-/// <param name="afcRange"></param>
+/* Sets the RF parameters. */
+
 void Modem::setRFParams(uint32_t rxFreq, uint32_t txFreq, int rxTuning, int txTuning, uint8_t rfPower,
     int8_t dmrDiscBWAdj, int8_t p25DiscBWAdj, int8_t nxdnDiscBWAdj,
     int8_t dmrPostBWAdj, int8_t p25PostBWAdj, int8_t nxdnPostBWAdj,
@@ -325,15 +266,8 @@ void Modem::setRFParams(uint32_t rxFreq, uint32_t txFreq, int rxTuning, int txTu
     m_afcRange = afcRange;
 }
 
-/// <summary>
-/// Sets the softpot parameters.
-/// </summary>
-/// <param name="rxCoarse"></param>
-/// <param name="rxFine"></param>
-/// <param name="txCoarse"></param>
-/// <param name="txFine"></param>
-/// <param name="rssiCoarse"></param>
-/// <param name="rssiFine"></param>
+/* Sets the softpot parameters. */
+
 void Modem::setSoftPot(uint8_t rxCoarse, uint8_t rxFine, uint8_t txCoarse, uint8_t txFine, uint8_t rssiCoarse, uint8_t rssiFine)
 {
     m_rxCoarsePot = rxCoarse;
@@ -346,10 +280,8 @@ void Modem::setSoftPot(uint8_t rxCoarse, uint8_t rxFine, uint8_t txCoarse, uint8
     m_rssiFinePot = rssiFine;
 }
 
-/// <summary>
-/// Sets the DMR color code.
-/// </summary>
-/// <param name="colorCode"></param>
+/* Sets the DMR color code. */
+
 void Modem::setDMRColorCode(uint32_t colorCode)
 {
     assert(colorCode < 16U);
@@ -357,10 +289,8 @@ void Modem::setDMRColorCode(uint32_t colorCode)
     m_dmrColorCode = colorCode;
 }
 
-/// <summary>
-/// Sets the P25 NAC.
-/// </summary>
-/// <param name="nac"></param>
+/* Sets the P25 NAC. */
+
 void Modem::setP25NAC(uint32_t nac)
 {
     assert(nac < 0xFFFU);
@@ -368,10 +298,8 @@ void Modem::setP25NAC(uint32_t nac)
     m_p25NAC = nac;
 }
 
-/// <summary>
-/// Sets the RF receive deviation levels.
-/// </summary>
-/// <param name="rxLevel"></param>
+/* Sets the RF receive deviation levels. */
+
 void Modem::setRXLevel(float rxLevel)
 {
     m_rxLevel = rxLevel;
@@ -412,12 +340,8 @@ void Modem::setRXLevel(float rxLevel)
     }
 }
 
-/// <summary>
-/// Sets the modem transmit FIFO buffer lengths.
-/// </summary>
-/// <param name="dmrLength"></param>
-/// <param name="p25Length"></param>
-/// <param name="nxdnLength"></param>
+/* Sets the modem transmit FIFO buffer lengths. */
+
 void Modem::setFifoLength(uint16_t dmrLength, uint16_t p25Length, uint16_t nxdnLength)
 {
     m_dmrFifoLength = dmrLength;
@@ -478,13 +402,9 @@ void Modem::setFifoLength(uint16_t dmrLength, uint16_t p25Length, uint16_t nxdnL
     }
 }
 
-/// <summary>
-/// Sets a custom modem response handler.
-/// </summary>
-/// <remarks>
-/// If the response handler returns true, processing will stop, otherwise it will continue.
-/// </remarks>
-/// <param name="handler"></param>
+/* Sets a custom modem response handler. */
+/* If the response handler returns true, processing will stop, otherwise it will continue. */
+
 void Modem::setResponseHandler(std::function<MODEM_RESP_HANDLER> handler)
 {
     assert(handler != nullptr);
@@ -492,14 +412,10 @@ void Modem::setResponseHandler(std::function<MODEM_RESP_HANDLER> handler)
     m_rspHandler = handler;
 }
 
-/// <summary>
-/// Sets a custom modem open port handler.
-/// </summary>
-/// <remarks>
-/// If the open handler is set, it is the responsibility of the handler to complete air interface
-/// initialization (i.e. write configuration, etc).
-/// </remarks>
-/// <param name="handler"></param>
+/* Sets a custom modem open port handler. */
+/* If the open handler is set, it is the responsibility of the handler to complete air interface 
+   initialization (i.e. write configuration, etc). */
+
 void Modem::setOpenHandler(std::function<MODEM_OC_PORT_HANDLER> handler)
 {
     assert(handler != nullptr);
@@ -507,10 +423,8 @@ void Modem::setOpenHandler(std::function<MODEM_OC_PORT_HANDLER> handler)
     m_openPortHandler = handler;
 }
 
-/// <summary>
-/// Sets a custom modem close port handler.
-/// </summary>
-/// <param name="handler"></param>
+/* Sets a custom modem close port handler. */
+
 void Modem::setCloseHandler(std::function<MODEM_OC_PORT_HANDLER> handler)
 {
     assert(handler != nullptr);
@@ -518,10 +432,8 @@ void Modem::setCloseHandler(std::function<MODEM_OC_PORT_HANDLER> handler)
     m_closePortHandler = handler;
 }
 
-/// <summary>
-/// Opens connection to the air interface modem.
-/// </summary>
-/// <returns>True, if connection to modem is established, otherwise false.</returns>
+/* Opens connection to the air interface modem. */
+
 bool Modem::open()
 {
     LogMessage(LOG_MODEM, "Initializing modem");
@@ -591,10 +503,8 @@ bool Modem::open()
     return true;
 }
 
-/// <summary>
-/// Updates the timer by the passed number of milliseconds.
-/// </summary>
-/// <param name="ms"></param>
+/* Updates the timer by the passed number of milliseconds. */
+
 void Modem::clock(uint32_t ms)
 {
     // poll the modem status every 250ms
@@ -970,9 +880,8 @@ void Modem::clock(uint32_t ms)
     }
 }
 
-/// <summary>
-/// Closes connection to the air interface modem.
-/// </summary>
+/* Closes connection to the air interface modem. */
+
 void Modem::close()
 {
     LogDebug(LOG_MODEM, "Closing the modem");
@@ -986,11 +895,8 @@ void Modem::close()
     }
 }
 
-/// <summary>
-/// Reads DMR Slot 1 frame data from the DMR Slot 1 ring buffer.
-/// </summary>
-/// <param name="data">Buffer to write frame data to.</param>
-/// <returns>Length of data read from ring buffer.</returns>
+/* Reads DMR Slot 1 frame data from the DMR Slot 1 ring buffer. */
+
 uint32_t Modem::readDMRFrame1(uint8_t* data)
 {
     assert(data != nullptr);
@@ -1010,11 +916,8 @@ uint32_t Modem::readDMRFrame1(uint8_t* data)
     return 0U;
 }
 
-/// <summary>
-/// Reads DMR Slot 2 frame data from the DMR Slot 2 ring buffer.
-/// </summary>
-/// <param name="data">Buffer to write frame data to.</param>
-/// <returns>Length of data read from ring buffer.</returns>
+/* Reads DMR Slot 2 frame data from the DMR Slot 2 ring buffer. */
+
 uint32_t Modem::readDMRFrame2(uint8_t* data)
 {
     assert(data != nullptr);
@@ -1034,11 +937,8 @@ uint32_t Modem::readDMRFrame2(uint8_t* data)
     return 0U;
 }
 
-/// <summary>
-/// Reads P25 frame data from the P25 ring buffer.
-/// </summary>
-/// <param name="data">Buffer to write frame data to.</param>
-/// <returns>Length of data read from ring buffer.</returns>
+/* Reads P25 frame data from the P25 ring buffer. */
+
 uint32_t Modem::readP25Frame(uint8_t* data)
 {
     assert(data != nullptr);
@@ -1069,11 +969,8 @@ uint32_t Modem::readP25Frame(uint8_t* data)
     return 0U;
 }
 
-/// <summary>
-/// Reads NXDN frame data from the NXDN ring buffer.
-/// </summary>
-/// <param name="data">Buffer to write frame data to.</param>
-/// <returns>Length of data read from ring buffer.</returns>
+/* Reads NXDN frame data from the NXDN ring buffer. */
+
 uint32_t Modem::readNXDNFrame(uint8_t* data)
 {
     assert(data != nullptr);
@@ -1093,100 +990,78 @@ uint32_t Modem::readNXDNFrame(uint8_t* data)
     return 0U;
 }
 
-/// <summary>
-/// Helper to test if the DMR Slot 1 ring buffer has free space.
-/// </summary>
-/// <returns>True, if the DMR Slot 1 ring buffer has free space, otherwise false.</returns>
+/* Helper to test if the DMR Slot 1 ring buffer has free space. */
+
 bool Modem::hasDMRSpace1() const
 {
     return m_dmrSpace1 >= (DMRDEF::DMR_FRAME_LENGTH_BYTES + 2U);
 }
 
-/// <summary>
-/// Helper to test if the DMR Slot 2 ring buffer has free space.
-/// </summary>
-/// <returns>True, if the DMR Slot 2 ring buffer has free space, otherwise false.</returns>
+/* Helper to test if the DMR Slot 2 ring buffer has free space. */
+
 bool Modem::hasDMRSpace2() const
 {
     return m_dmrSpace2 >= (DMRDEF::DMR_FRAME_LENGTH_BYTES + 2U);
 }
 
-/// <summary>
-/// Helper to test if the P25 ring buffer has free space.
-/// </summary>
-/// <param name="length"></param>
-/// <returns>True, if the P25 ring buffer has free space, otherwise false.</returns>
+/* Helper to test if the P25 ring buffer has free space. */
+
 bool Modem::hasP25Space(uint32_t length) const
 {
     return m_p25Space >= length;
 }
 
-/// <summary>
-/// Helper to test if the NXDN ring buffer has free space.
-/// </summary>
-/// <returns>True, if the NXDN ring buffer has free space, otherwise false.</returns>
+/* Helper to test if the NXDN ring buffer has free space. */
+
 bool Modem::hasNXDNSpace() const
 {
     return m_nxdnSpace >= NXDDEF::NXDN_FRAME_LENGTH_BYTES;
 }
 
-/// <summary>
-/// Helper to test if the modem is a hotspot.
-/// </summary>
-/// <returns>True, if the modem is a hotspot, otherwise false.</returns>
+/* Helper to test if the modem is a hotspot. */
+
 bool Modem::isHotspot() const
 {
     return m_isHotspot;
 }
 
-/// <summary>
-/// Flag indicating whether or not the air interface modem is transmitting.
-/// </summary>
-/// <returns>True, if air interface modem is transmitting, otherwise false.</returns>
+/* Flag indicating whether or not the air interface modem is transmitting. */
+
 bool Modem::hasTX() const
 {
     return m_tx;
 }
 
-/// <summary>
-/// Flag indicating whether or not the air interface modem has carrier detect.
-/// </summary>
-/// <returns>True, if air interface modem has carrier detect, otherwise false.</returns>
+/* Flag indicating whether or not the air interface modem has carrier detect. */
+
 bool Modem::hasCD() const
 {
     return m_cd;
 }
 
-/// <summary>
-/// Flag indicating whether or not the air interface modem is currently locked out.
-/// </summary>
-/// <returns>True, if air interface modem is currently locked out, otherwise false.</returns>
+/* Flag indicating whether or not the air interface modem is currently locked out. */
+
 bool Modem::hasLockout() const
 {
     return m_lockout;
 }
 
-/// <summary>
-/// Flag indicating whether or not the air interface modem is currently in an error condition.
-/// </summary>
-/// <returns>True, if the air interface modem is current in an error condition, otherwise false.</returns>
+/* Flag indicating whether or not the air interface modem is currently in an error condition. */
+
 bool Modem::hasError() const
 {
     return m_error;
 }
 
-/// <summary>
-/// Flag indicating whether or not the air interface modem has sent the initial modem status.
-/// </summary>
-/// <returns>True, if the air interface modem has sent the initial status, otherwise false.</returns>
+/* Flag indicating whether or not the air interface modem has sent the initial modem status. */
+
 bool Modem::gotModemStatus() const
 {
     return m_gotModemStatus;
 }
 
-/// <summary>
-/// Clears any buffered DMR Slot 1 frame data to be sent to the air interface modem.
-/// </summary>
+/* Clears any buffered DMR Slot 1 frame data to be sent to the air interface modem. */
+
 void Modem::clearDMRFrame1()
 {
     uint8_t buffer[3U];
@@ -1201,9 +1076,8 @@ void Modem::clearDMRFrame1()
     Thread::sleep(5); // 5ms delay
 }
 
-/// <summary>
-/// Clears any buffered DMR Slot 2 frame data to be sent to the air interface modem.
-/// </summary>
+/* Clears any buffered DMR Slot 2 frame data to be sent to the air interface modem. */
+
 void Modem::clearDMRFrame2()
 {
     uint8_t buffer[3U];
@@ -1218,9 +1092,8 @@ void Modem::clearDMRFrame2()
     Thread::sleep(5); // 5ms delay
 }
 
-/// <summary>
-/// Clears any buffered P25 frame data to be sent to the air interface modem.
-/// </summary>
+/* Clears any buffered P25 frame data to be sent to the air interface modem. */
+
 void Modem::clearP25Frame()
 {
     uint8_t buffer[3U];
@@ -1235,9 +1108,8 @@ void Modem::clearP25Frame()
     Thread::sleep(5); // 5ms delay
 }
 
-/// <summary>
-/// Clears any buffered NXDN frame data to be sent to the air interface modem.
-/// </summary>
+/* Clears any buffered NXDN frame data to be sent to the air interface modem. */
+
 void Modem::clearNXDNFrame()
 {
     uint8_t buffer[3U];
@@ -1252,11 +1124,8 @@ void Modem::clearNXDNFrame()
     Thread::sleep(5); // 5ms delay
 }
 
-/// <summary>
-/// Internal helper to inject DMR Slot 1 frame data as if it came from the air interface modem.
-/// </summary>
-/// <param name="data">Data to write to ring buffer.</param>
-/// <param name="length">Length of data to write.</param>
+/* Internal helper to inject DMR Slot 1 frame data as if it came from the air interface modem. */
+
 void Modem::injectDMRFrame1(const uint8_t* data, uint32_t length)
 {
     assert(data != nullptr);
@@ -1278,11 +1147,8 @@ void Modem::injectDMRFrame1(const uint8_t* data, uint32_t length)
     }
 }
 
-/// <summary>
-/// Internal helper to inject DMR Slot 2 frame data as if it came from the air interface modem.
-/// </summary>
-/// <param name="data">Data to write to ring buffer.</param>
-/// <param name="length">Length of data to write.</param>
+/* Internal helper to inject DMR Slot 2 frame data as if it came from the air interface modem. */
+
 void Modem::injectDMRFrame2(const uint8_t* data, uint32_t length)
 {
     assert(data != nullptr);
@@ -1304,11 +1170,8 @@ void Modem::injectDMRFrame2(const uint8_t* data, uint32_t length)
     }
 }
 
-/// <summary>
-/// Internal helper to inject P25 frame data as if it came from the air interface modem.
-/// </summary>
-/// <param name="data">Data to write to ring buffer.</param>
-/// <param name="length">Length of data to write.</param>
+/* Internal helper to inject P25 frame data as if it came from the air interface modem. */
+
 void Modem::injectP25Frame(const uint8_t* data, uint32_t length)
 {
     assert(data != nullptr);
@@ -1330,11 +1193,8 @@ void Modem::injectP25Frame(const uint8_t* data, uint32_t length)
     }
 }
 
-/// <summary>
-/// Internal helper to inject NXDN frame data as if it came from the air interface modem.
-/// </summary>
-/// <param name="data">Data to write to ring buffer.</param>
-/// <param name="length">Length of data to write.</param>
+/* Internal helper to inject NXDN frame data as if it came from the air interface modem. */
+
 void Modem::injectNXDNFrame(const uint8_t* data, uint32_t length)
 {
     assert(data != nullptr);
@@ -1356,12 +1216,8 @@ void Modem::injectNXDNFrame(const uint8_t* data, uint32_t length)
     }
 }
 
-/// <summary>
-/// Writes DMR Slot 1 frame data to the DMR Slot 1 ring buffer.
-/// </summary>
-/// <param name="data">Data to write to ring buffer.</param>
-/// <param name="length">Length of data to write.</param>
-/// <returns>True, if data is written, otherwise false.</returns>
+/* Writes DMR Slot 1 frame data to the DMR Slot 1 ring buffer. */
+
 bool Modem::writeDMRFrame1(const uint8_t* data, uint32_t length)
 {
     assert(data != nullptr);
@@ -1414,12 +1270,8 @@ bool Modem::writeDMRFrame1(const uint8_t* data, uint32_t length)
     }
 }
 
-/// <summary>
-/// Writes DMR Slot 2 frame data to the DMR Slot 2 ring buffer.
-/// </summary>
-/// <param name="data">Data to write to ring buffer.</param>
-/// <param name="length">Length of data to write.</param>
-/// <returns>True, if data is written, otherwise false.</returns>
+/* Writes DMR Slot 2 frame data to the DMR Slot 2 ring buffer. */
+
 bool Modem::writeDMRFrame2(const uint8_t* data, uint32_t length)
 {
     assert(data != nullptr);
@@ -1472,12 +1324,8 @@ bool Modem::writeDMRFrame2(const uint8_t* data, uint32_t length)
     }
 }
 
-/// <summary>
-/// Writes P25 frame data to the P25 ring buffer.
-/// </summary>
-/// <param name="data">Data to write to ring buffer.</param>
-/// <param name="length">Length of data to write.</param>
-/// <returns>True, if data is written, otherwise false.</returns>
+/* Writes P25 frame data to the P25 ring buffer. */
+
 bool Modem::writeP25Frame(const uint8_t* data, uint32_t length)
 {
     assert(data != nullptr);
@@ -1541,12 +1389,8 @@ bool Modem::writeP25Frame(const uint8_t* data, uint32_t length)
     }
 }
 
-/// <summary>
-/// Writes NXDN frame data to the NXDN ring buffer.
-/// </summary>
-/// <param name="data">Data to write to ring buffer.</param>
-/// <param name="length">Length of data to write.</param>
-/// <returns>True, if data is written, otherwise false.</returns>
+/* Writes NXDN frame data to the NXDN ring buffer. */
+
 bool Modem::writeNXDNFrame(const uint8_t* data, uint32_t length)
 {
     assert(data != nullptr);
@@ -1599,11 +1443,8 @@ bool Modem::writeNXDNFrame(const uint8_t* data, uint32_t length)
     }
 }
 
-/// <summary>
-/// Triggers the start of DMR transmit.
-/// </summary>
-/// <param name="tx"></param>
-/// <returns>True, if DMR transmit started, otherwise false.</returns>
+/* Triggers the start of DMR transmit. */
+
 bool Modem::writeDMRStart(bool tx)
 {
     if (m_dmrEnabled) {
@@ -1628,11 +1469,8 @@ bool Modem::writeDMRStart(bool tx)
     }
 }
 
-/// <summary>
-/// Writes a DMR short LC to the air interface modem.
-/// </summary>
-/// <param name="lc"></param>
-/// <returns>True, if DMR LC is written, otherwise false.</returns>
+/* Writes a DMR short LC to the air interface modem. */
+
 bool Modem::writeDMRShortLC(const uint8_t* lc)
 {
     assert(lc != nullptr);
@@ -1662,11 +1500,8 @@ bool Modem::writeDMRShortLC(const uint8_t* lc)
     }
 }
 
-/// <summary>
-/// Writes a DMR abort message for the given slot to the air interface modem.
-/// </summary>
-/// <param name="slotNo">DMR slot to write abort for.</param>
-/// <returns>True, if DMR abort is written, otherwise false.</returns>
+/* Writes a DMR abort message for the given slot to the air interface modem. */
+
 bool Modem::writeDMRAbort(uint32_t slotNo)
 {
     if (m_dmrEnabled) {
@@ -1686,11 +1521,8 @@ bool Modem::writeDMRAbort(uint32_t slotNo)
     }
 }
 
-/// <summary>
-/// Sets the ignore flags for setting the CACH Access Type bit on the air interface modem.
-/// </summary>
-/// <param name="slotNo">DMR slot to set ignore CACH AT flag for.</param>
-/// <returns>True, if set flag is written, otherwise false.</returns>
+/* Sets the ignore flags for setting the CACH Access Type bit on the air interface modem. */
+
 bool Modem::setDMRIgnoreCACH_AT(uint8_t slotNo)
 {
     if (m_dmrEnabled) {
@@ -1717,31 +1549,22 @@ bool Modem::setDMRIgnoreCACH_AT(uint8_t slotNo)
     }
 }
 
-/// <summary>
-/// Writes raw data to the air interface modem.
-/// </summary>
-/// <param name="data"></param>
-/// <param name="length"></param>
-/// <returns></returns>
+/* Writes raw data to the air interface modem. */
+
 int Modem::write(const uint8_t* data, uint32_t length)
 {
     return m_port->write(data, length);
 }
 
-/// <summary>
-/// Gets the current operating state for the air interface modem.
-/// </summary>
-/// <returns></returns>
+/* Gets the current operating state for the air interface modem. */
+
 DVM_STATE Modem::getState() const
 {
     return m_modemState;
 }
 
-/// <summary>
-/// Sets the current operating state for the air interface modem.
-/// </summary>
-/// <param name="state"></param>
-/// <returns></returns>
+/* Sets the current operating state for the air interface modem. */
+
 bool Modem::setState(DVM_STATE state)
 {
     uint8_t buffer[4U];
@@ -1756,11 +1579,8 @@ bool Modem::setState(DVM_STATE state)
     return write(buffer, 4U) == 4;
 }
 
-/// <summary>
-/// Transmits the given string as CW morse.
-/// </summary>
-/// <param name="callsign"></param>
-/// <returns></returns>
+/* Transmits the given string as CW morse. */
+
 bool Modem::sendCWId(const std::string& callsign)
 {
     LogDebug(LOG_MODEM, "sending CW ID");
@@ -1784,10 +1604,8 @@ bool Modem::sendCWId(const std::string& callsign)
     return write(buffer, length + 3U) == int(length + 3U);
 }
 
-/// <summary>
-/// Returns the protocol version of the connected modem.
-/// </param>
-/// <returns></returns>
+/* Returns the protocol version of the connected modem. */
+
 uint8_t Modem::getVersion() const
 {
     return m_protoVer;
@@ -1797,9 +1615,8 @@ uint8_t Modem::getVersion() const
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Internal helper to warm reset the connection to the modem.
-/// </summary>
+/* Internal helper to warm reset the connection to the modem. */
+
 void Modem::reset()
 {
     m_error = true;
@@ -1820,10 +1637,8 @@ void Modem::reset()
     setState(m_modemState);
 }
 
-/// <summary>
-/// Retrieve the air interface modem version.
-/// </summary>
-/// <returns></returns>
+/* Retrieve the air interface modem version. */
+
 bool Modem::getFirmwareVersion()
 {
     Thread::sleep(2000U);    // 2s
@@ -1891,10 +1706,8 @@ bool Modem::getFirmwareVersion()
     return false;
 }
 
-/// <summary>
-/// Retrieve the current status from the air interface modem.
-/// </summary>
-/// <returns></returns>
+/* Retrieve the current status from the air interface modem. */
+
 bool Modem::getStatus()
 {
     uint8_t buffer[3U];
@@ -1908,10 +1721,8 @@ bool Modem::getStatus()
     return write(buffer, 3U) == 3;
 }
 
-/// <summary>
-/// Write configuration to the air interface modem.
-/// </summary>
-/// <returns></returns>
+/* Write configuration to the air interface modem. */
+
 bool Modem::writeConfig()
 {
     uint8_t buffer[25U];
@@ -2024,10 +1835,8 @@ bool Modem::writeConfig()
     return true;
 }
 
-/// <summary>
-/// Write symbol level adjustments to the air interface modem.
-/// </summary>
-/// <returns>True, if level adjustments are written, otherwise false.</returns>
+/* Write symbol level adjustments to the air interface modem. */
+
 bool Modem::writeSymbolAdjust()
 {
     uint8_t buffer[20U];
@@ -2080,10 +1889,8 @@ bool Modem::writeSymbolAdjust()
     return true;
 }
 
-/// <summary>
-/// Write RF parameters to the air interface modem.
-/// </summary>
-/// <returns></returns>
+/* Write RF parameters to the air interface modem. */
+
 bool Modem::writeRFParams()
 {
     uint8_t buffer[22U];
@@ -2160,10 +1967,8 @@ bool Modem::writeRFParams()
     return true;
 }
 
-/// <summary>
-/// Retrieve the data from the configuration area on the air interface modem.
-/// </summary>
-/// <returns></returns>
+/* Retrieve the data from the configuration area on the air interface modem. */
+
 bool Modem::readFlash()
 {
     Thread::sleep(2000U);    // 2s
@@ -2237,10 +2042,8 @@ bool Modem::readFlash()
     return false;
 }
 
-/// <summary>
-/// Process the configuration data from the air interface modem.
-/// </summary>
-/// <param name="buffer"></param>
+/* Process the configuration data from the air interface modem. */
+
 void Modem::processFlashConfig(const uint8_t *buffer)
 {
     if (m_ignoreModemConfigArea) {
@@ -2350,11 +2153,8 @@ void Modem::processFlashConfig(const uint8_t *buffer)
     }
 }
 
-/// <summary>
-/// Print debug air interface messages to the host log.
-/// </summary>
-/// <param name="buffer"></param>
-/// <param name="len"></param>
+/* Print debug air interface messages to the host log. */
+
 void Modem::printDebug(const uint8_t* buffer, uint16_t len)
 {
     if (m_rspDoubleLength && buffer[3U] == CMD_DEBUG_DUMP) {
@@ -2406,10 +2206,8 @@ void Modem::printDebug(const uint8_t* buffer, uint16_t len)
     }
 }
 
-/// <summary>
-/// Helper to get the raw response packet from modem.
-/// </summary>
-/// <returns>Response type from modem.</returns>
+/* Helper to get the raw response packet from modem. */
+
 RESP_TYPE_DVM Modem::getResponse()
 {
     m_rspDoubleLength = false;
@@ -2552,9 +2350,8 @@ RESP_TYPE_DVM Modem::getResponse()
     return RTM_OK;
 }
 
-/// <summary>
-/// Helper to convert a serial opcode to a string.
-/// </summary>
+/* Helper to convert a serial opcode to a string. */
+
 std::string Modem::cmdToString(uint8_t opcode)
 {
     switch (opcode) {
@@ -2635,9 +2432,8 @@ std::string Modem::cmdToString(uint8_t opcode)
     }
 }
 
-/// <summary>
-/// Helper to convert a serial reason code to a string.
-/// </summary>
+/* Helper to convert a serial reason code to a string. */
+
 std::string Modem::rsnToString(uint8_t reason)
 {
     switch (reason) {

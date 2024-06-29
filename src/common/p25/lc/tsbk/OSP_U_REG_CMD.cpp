@@ -25,12 +25,14 @@ using namespace p25::lc::tsbk;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the OSP_U_REG_CMD class. */
+
 OSP_U_REG_CMD::OSP_U_REG_CMD() : TSBK()
 {
     m_lco = TSBKO::OSP_U_REG_CMD;
 }
 
 /* Decode a trunking signalling block. */
+
 bool OSP_U_REG_CMD::decode(const uint8_t* data, bool rawTSBK)
 {
     assert(data != nullptr);
@@ -41,6 +43,7 @@ bool OSP_U_REG_CMD::decode(const uint8_t* data, bool rawTSBK)
 }
 
 /* Encode a trunking signalling block. */
+
 void OSP_U_REG_CMD::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 {
     assert(data != nullptr);
@@ -55,6 +58,7 @@ void OSP_U_REG_CMD::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 }
 
 /* Returns a string that represents the current TSBK. */
+
 std::string OSP_U_REG_CMD::toString(bool isp)
 {
     return std::string("TSBKO, OSP_U_REG_CMD (Unit Registration Command)");

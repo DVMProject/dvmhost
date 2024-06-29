@@ -22,12 +22,14 @@ using namespace p25::lc::tsbk;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the IOSP_U_REG class. */
+
 IOSP_U_REG::IOSP_U_REG() : TSBK()
 {
     m_lco = TSBKO::IOSP_U_REG;
 }
 
 /* Decode a trunking signalling block. */
+
 bool IOSP_U_REG::decode(const uint8_t* data, bool rawTSBK)
 {
     assert(data != NULL);
@@ -49,6 +51,7 @@ bool IOSP_U_REG::decode(const uint8_t* data, bool rawTSBK)
 }
 
 /* Encode a trunking signalling block. */
+
 void IOSP_U_REG::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 {
     assert(data != NULL);
@@ -65,6 +68,7 @@ void IOSP_U_REG::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 }
 
 /* Returns a string that represents the current TSBK. */
+
 std::string IOSP_U_REG::toString(bool isp)
 {
     return (isp) ? std::string("TSBKO, IOSP_U_REG (Unit Registration Request)") :

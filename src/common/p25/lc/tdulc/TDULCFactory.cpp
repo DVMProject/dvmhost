@@ -31,12 +31,15 @@ using namespace p25::lc::tdulc;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the TDULCFactory class. */
+
 TDULCFactory::TDULCFactory() = default;
 
 /* Finalizes a instance of TDULCFactory class. */
+
 TDULCFactory::~TDULCFactory() = default;
 
 /* Create an instance of a TDULC. */
+
 std::unique_ptr<TDULC> TDULCFactory::createTDULC(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -89,6 +92,7 @@ std::unique_ptr<TDULC> TDULCFactory::createTDULC(const uint8_t* data)
 // ---------------------------------------------------------------------------
 
 /* Decode a TDULC. */
+
 std::unique_ptr<TDULC> TDULCFactory::decode(TDULC* tdulc, const uint8_t* data)
 {
     assert(tdulc != nullptr);

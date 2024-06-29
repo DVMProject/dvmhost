@@ -29,6 +29,7 @@ std::mutex RawFrameQueue::m_flushMutex;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the RawFrameQueue class. */
+
 RawFrameQueue::RawFrameQueue(udp::Socket* socket, bool debug) :
     m_socket(socket),
     m_buffers(),
@@ -38,12 +39,14 @@ RawFrameQueue::RawFrameQueue(udp::Socket* socket, bool debug) :
 }
 
 /* Finalizes a instance of the RawFrameQueue class. */
+
 RawFrameQueue::~RawFrameQueue()
 {
     deleteBuffers();
 }
 
 /* Read message from the received UDP packet. */
+
 UInt8Array RawFrameQueue::read(int& messageLength, sockaddr_storage& address, uint32_t& addrLen)
 {
     messageLength = -1;
@@ -73,6 +76,7 @@ UInt8Array RawFrameQueue::read(int& messageLength, sockaddr_storage& address, ui
 }
 
 /* Write message to the UDP socket. */
+
 bool RawFrameQueue::write(const uint8_t* message, uint32_t length, sockaddr_storage& addr, uint32_t addrLen)
 {
     assert(message != nullptr);
@@ -95,6 +99,7 @@ bool RawFrameQueue::write(const uint8_t* message, uint32_t length, sockaddr_stor
 }
 
 /* Cache message to frame queue. */
+
 void RawFrameQueue::enqueueMessage(const uint8_t* message, uint32_t length, sockaddr_storage& addr, uint32_t addrLen)
 {
     assert(message != nullptr);
@@ -117,6 +122,7 @@ void RawFrameQueue::enqueueMessage(const uint8_t* message, uint32_t length, sock
 }
 
 /* Flush the message queue. */
+
 bool RawFrameQueue::flushQueue()
 {
     bool ret = true;
@@ -149,6 +155,7 @@ bool RawFrameQueue::flushQueue()
 // ---------------------------------------------------------------------------
 
 /* Helper to ensure buffers are deleted. */
+
 void RawFrameQueue::deleteBuffers()
 {
     for (auto& buffer : m_buffers) {

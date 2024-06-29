@@ -9,11 +9,11 @@
  */
 /**
  * @defgroup p25_tsbk Trunk Signalling Block
- * @brief Implementation for the data handling of the TIA-102.AABC Project 25 standard. (TSDU/TSBK)
+ * @brief Implementation for the data handling of the TIA-102.AABC Project 25 standard (TSDU/TSBK)
  * @ingroup p25_lc
  *
  * @defgroup p25_ambt Alternate Multiblock Trunking
- * @brief Implementation for the data handling of the TIA-102.AABC Project 25 standard. (PDU)
+ * @brief Implementation for the data handling of the TIA-102.AABC Project 25 standard (PDU)
  * @ingroup p25_tsbk
  * 
  * @file TSBKFactory.h

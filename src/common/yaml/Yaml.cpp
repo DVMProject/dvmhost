@@ -76,6 +76,7 @@ namespace yaml
     // ---------------------------------------------------------------------------
 
     /* Initializes a new instance of the Exception class. */
+
     Exception::Exception(const std::string& message, const eType type) :
         std::runtime_error(message),
         m_Type(type)
@@ -84,12 +85,14 @@ namespace yaml
     }
 
     /* Get type of exception. */
+
     Exception::eType Exception::type() const
     {
         return m_Type;
     }
 
     /* Get message of exception. */
+
     const char* Exception::message() const
     {
         return what();
@@ -100,6 +103,7 @@ namespace yaml
     // ---------------------------------------------------------------------------
 
     /* Initializes a new instance of the InternalException class. */
+
     InternalException::InternalException(const std::string& message) :
         Exception(message, InternalError)
     {
@@ -111,6 +115,7 @@ namespace yaml
     // ---------------------------------------------------------------------------
 
     /* Initializes a new instance of the ParsingException class. */
+
     ParsingException::ParsingException(const std::string& message) :
         Exception(message, ParsingError)
     {
@@ -122,6 +127,7 @@ namespace yaml
     // ---------------------------------------------------------------------------
 
     /* Initializes a new instance of the OperationException class. */
+    
     OperationException::OperationException(const std::string & message) :
         Exception(message, OperationError)
     {
@@ -602,20 +608,25 @@ namespace yaml
     // ---------------------------------------------------------------------------
 
     /* Initializes a new instance of the Iterator class. */
+    
     Iterator::Iterator() :
         m_Type(None),
         m_pImp(nullptr)
     {
         /* stub */
     }
+    
     /* Copies an instance of the Iterator class to a new instance of the Iterator class. */
+
     Iterator::Iterator(const Iterator& it) :
         m_Type(None),
         m_pImp(nullptr)
     {
         *this = it;
     }
+    
     /* Finalizes a instance of the Iterator class. */
+
     Iterator::~Iterator()
     {
         if (m_pImp) {
@@ -634,6 +645,7 @@ namespace yaml
     }
 
     /* Assignment operator. */
+
     Iterator& Iterator::operator= (const Iterator& it)
     {
         if (m_pImp) {
@@ -673,6 +685,7 @@ namespace yaml
     }
 
     /* Get node of iterator. First pair item is the key of map value, empty if type is sequence. */
+
     std::pair<const std::string&, Node&> Iterator::operator* ()
     {
         switch (m_Type) {
@@ -692,6 +705,7 @@ namespace yaml
     }
 
     /* Post-increment operator. */
+
     Iterator& Iterator::operator++ (int dummy)
     {
         switch (m_Type) {
@@ -708,6 +722,7 @@ namespace yaml
     }
 
     /* Post-decrement operator. */
+
     Iterator& Iterator::operator-- (int dummy)
     {
         switch(m_Type) {
@@ -724,6 +739,7 @@ namespace yaml
     }
 
     /* Check if iterator is equal to other iterator. */
+
     bool Iterator::operator== (const Iterator& it)
     {
         if (m_Type != it.m_Type) {
@@ -745,6 +761,7 @@ namespace yaml
     }
 
     /* Check if iterator is not equal to other iterator. */
+
     bool Iterator::operator!= (const Iterator& it)
     {
         return !(*this == it);
@@ -755,20 +772,25 @@ namespace yaml
     // ---------------------------------------------------------------------------
 
     /* Initializes a new instance of the ConstIterator class. */
+
     ConstIterator::ConstIterator() :
         m_Type(None),
         m_pImp(nullptr)
     {
         /* stub */
     }
+
     /* Copies an instance of the ConstIterator class to a new instance of the ConstIterator class. */
+
     ConstIterator::ConstIterator(const ConstIterator& it) :
         m_Type(None),
         m_pImp(nullptr)
     {
         *this = it;
     }
+    
     /* Finalizes a instance of the ConstIterator class. */
+
     ConstIterator::~ConstIterator()
     {
         if (m_pImp) {
@@ -787,6 +809,7 @@ namespace yaml
     }
 
     /* Assignment operator. */
+
     ConstIterator& ConstIterator::operator= (const ConstIterator& it)
     {
         if (m_pImp) {
@@ -825,6 +848,7 @@ namespace yaml
     }
 
     /* Get node of iterator. First pair item is the key of map value, empty if type is sequence. */
+
     std::pair<const std::string&, const Node&> ConstIterator::operator* ()
     {
         switch (m_Type) {
@@ -844,6 +868,7 @@ namespace yaml
     }
 
     /* Post-increment operator. */
+
     ConstIterator& ConstIterator::operator++ (int dummy)
     {
         switch (m_Type) {
@@ -860,6 +885,7 @@ namespace yaml
     }
 
     /* Post-decrement operator. */
+
     ConstIterator& ConstIterator::operator-- (int dummy)
     {
         switch (m_Type) {
@@ -876,6 +902,7 @@ namespace yaml
     }
 
     /* Check if iterator is equal to other iterator. */
+
     bool ConstIterator::operator== (const ConstIterator& it)
     {
         if (m_Type != it.m_Type) {
@@ -897,6 +924,7 @@ namespace yaml
     }
 
     /* Check if iterator is not equal to other iterator. */
+
     bool ConstIterator::operator!= (const ConstIterator & it)
     {
         return !(*this == it);
@@ -907,72 +935,88 @@ namespace yaml
     // ---------------------------------------------------------------------------
 
     /* Initializes a new instance of the Node class. */
+    
     Node::Node() :
         m_pImp(new NodeImp)
     {
         /* stub */
     }
+
     /* Copies an instance of the Node class to a new instance of the Node class. */
+
     Node::Node(const Node& node) :
         Node()
     {
         *this = node;
     }
+    
     /* Initializes a new instance of the Node class. */
+
     Node::Node(const std::string& value) :
         Node()
     {
         *this = value;
     }
+    
     /* Initializes a new instance of the Node class. */
+
     Node::Node(const char* value) :
         Node()
     {
         *this = value;
     }
+    
     /* Finalizes a instance of the Node class. */
+
     Node::~Node()
     {
         delete static_cast<NodeImp*>(m_pImp);
     }
 
     /* Gets the type of node. */
+
     Node::eType Node::type() const
     {
         return NODE_IMP->m_Type;
     }
 
     /* Checks if the node contains nothing. */
+
     bool Node::isNone() const
     {
         return NODE_IMP->m_Type == Node::None;
     }
 
     /* Checks if the node is a sequence node. */
+
     bool Node::isSequence() const
     {
         return NODE_IMP->m_Type == Node::SequenceType;
     }
 
     /* Checks if the node is a map node. */
+
     bool Node::isMap() const
     {
         return NODE_IMP->m_Type == Node::MapType;
     }
 
     /* Checks if the node is a scalar node. */
+
     bool Node::isScalar() const
     {
         return NODE_IMP->m_Type == Node::ScalarType;
     }
 
     /* Completely clear node. */
+
     void Node::clear()
     {
         NODE_IMP->clear();
     }
 
     /* Get size of node. Nodes of type None or Scalar will return 0. */
+
     size_t Node::size() const
     {
         if (TYPE_IMP == nullptr) {
@@ -983,6 +1027,7 @@ namespace yaml
     }
 
     /* Insert sequence item at given index. Converts node to sequence type if needed. Adding new item to end of sequence if index is larger than sequence size. */
+
     Node& Node::insert(const size_t index)
     {
         NODE_IMP->initSequence();
@@ -990,12 +1035,15 @@ namespace yaml
     }
 
     /* Add new sequence index to back. Converts node to sequence type if needed. */
+
     Node& Node::push_front()
     {
         NODE_IMP->initSequence();
         return *TYPE_IMP->push_front();
     }
+
     /* Add new sequence index to front. Converts node to sequence type if needed. */
+
     Node& Node::push_back()
     {
         NODE_IMP->initSequence();
@@ -1003,6 +1051,7 @@ namespace yaml
     }
 
     /* Get sequence/map item. Converts node to sequence/map type if needed. */
+
     Node& Node::operator[](const size_t index)
     {
         NODE_IMP->initSequence();
@@ -1013,7 +1062,9 @@ namespace yaml
         }
         return *pNode;
     }
+    
     /* Get sequence/map item. Converts node to sequence/map type if needed. */
+
     Node& Node::operator[](const std::string& key)
     {
         NODE_IMP->initMap();
@@ -1021,6 +1072,7 @@ namespace yaml
     }
 
     /* Erase item. No action if node is not a sequence or map. */
+
     void Node::erase(const size_t index)
     {
         if (TYPE_IMP == nullptr || NODE_IMP->m_Type != Node::SequenceType) {
@@ -1029,7 +1081,9 @@ namespace yaml
 
         return TYPE_IMP->erase(index);
     }
+    
     /* Erase item. No action if node is not a sequence or map. */
+
     void Node::erase(const std::string& key)
     {
         if (TYPE_IMP == nullptr || NODE_IMP->m_Type != Node::MapType) {
@@ -1040,20 +1094,25 @@ namespace yaml
     }
 
     /* Assignment operator. */
+
     Node& Node::operator= (const Node& node)
     {
         NODE_IMP->clear();
         CopyNode(node, *this);
         return *this;
     }
+    
     /* Assignment operator. */
+
     Node& Node::operator= (const std::string& value)
     {
         NODE_IMP->initScalar();
         TYPE_IMP->setData(value);
         return *this;
     }
+
     /* Assignment operator. */
+
     Node& Node::operator= (const char* value)
     {
         NODE_IMP->initScalar();
@@ -1062,6 +1121,7 @@ namespace yaml
     }
 
     /* Get start iterator. */
+
     Iterator Node::begin()
     {
         Iterator it;
@@ -1087,7 +1147,9 @@ namespace yaml
 
         return it;
     }
+    
     /* Get start constant iterator. */
+
     ConstIterator Node::begin() const
     {
         ConstIterator it;
@@ -1115,6 +1177,7 @@ namespace yaml
     }
 
     /* Get end iterator. */
+
     Iterator Node::end()
     {
        Iterator it;
@@ -1140,7 +1203,9 @@ namespace yaml
 
         return it;
     }
+
     /* Get end constant iterator. */
+
     ConstIterator Node::end() const
     {
         ConstIterator it;
@@ -1890,6 +1955,7 @@ namespace yaml
     // ---------------------------------------------------------------------------
 
     /* Populate given root node with deserialized data. */
+    
     bool Parse(Node& root, const char* filename)
     {
         std::ifstream f(filename, std::ifstream::binary);
@@ -1907,7 +1973,9 @@ namespace yaml
 
         return Parse(root, data.get(), fileSize);
     }
+    
     /* Populate given root node with deserialized data. */
+
     bool Parse(Node& root, std::iostream& stream)
     {
         ParseImp* pImp = nullptr;
@@ -1925,13 +1993,17 @@ namespace yaml
             return false;
         }
     }
+    
     /* Populate given root node with deserialized data. */
+
     bool Parse(Node& root, const std::string& string)
     {
         std::stringstream ss(string);
         return Parse(root, ss);
     }
+    
     /* Populate given root node with deserialized data. */
+
     bool Parse(Node& root, const char* buffer, const size_t size)
     {
         std::stringstream ss(std::string(buffer, size));
@@ -1943,6 +2015,7 @@ namespace yaml
     // ---------------------------------------------------------------------------
 
     /* Initializes a new instance of the SerializeConfig struct. */
+
     SerializeConfig::SerializeConfig(const size_t spaceIndentation, const size_t scalarMaxLength,
         const bool sequenceMapNewline, const bool mapScalarNewline) :
         SpaceIndentation(spaceIndentation),
@@ -1958,6 +2031,7 @@ namespace yaml
     // ---------------------------------------------------------------------------
 
     /* Serialize node data. */
+
     void Serialize(const Node& root, const char* filename, const SerializeConfig& config)
     {
         std::stringstream stream;
@@ -1973,6 +2047,7 @@ namespace yaml
     }
 
     /*  */
+
     size_t LineFolding(const std::string& input, std::vector<std::string>& folded, const size_t maxLength)
     {
         folded.clear();
@@ -2008,6 +2083,7 @@ namespace yaml
     }
 
     /*  */
+
     static void SerializeLoop(const Node& node, std::iostream& stream, bool useLevel, const size_t level, const SerializeConfig& config)
     {
         const size_t indention = config.SpaceIndentation;
@@ -2136,6 +2212,7 @@ namespace yaml
     }
 
     /* Serialize node data. */
+
     void Serialize(const Node& root, std::iostream& stream, const SerializeConfig& config)
     {
         if (config.SpaceIndentation < 2) {
@@ -2146,6 +2223,7 @@ namespace yaml
     }
 
     /* Serialize node data. */
+    
     void Serialize(const Node& root, std::string& string, const SerializeConfig& config)
     {
         std::stringstream stream;
@@ -2190,6 +2268,7 @@ namespace yaml
     std::string ExceptionMessage(const std::string& message, const size_t errorLine, const std::string& data) { return message + std::string(" Line ") + std::to_string(errorLine) + std::string(": ") + data; }
 
     /*  */
+
     bool FindQuote(const std::string& input, size_t& start, size_t& end, size_t searchPos)
     {
         start = end = std::string::npos;
@@ -2228,6 +2307,7 @@ namespace yaml
     }
 
     /*  */
+
     size_t FindNotCited(const std::string& input, char token, size_t& preQuoteCount)
     {
         preQuoteCount = 0;
@@ -2283,6 +2363,7 @@ namespace yaml
     }
 
     /*  */
+
     size_t FindNotCited(const std::string& input, char token)
     {
         size_t dummy = 0;
@@ -2290,6 +2371,7 @@ namespace yaml
     }
 
     /*  */
+
     bool ValidateQuote(const std::string& input)
     {
         if (input.size() == 0) {
@@ -2333,6 +2415,7 @@ namespace yaml
     }
 
     /*  */
+
     void CopyNode(const Node& from, Node& to)
     {
         const Node::eType type = from.type();
@@ -2361,9 +2444,11 @@ namespace yaml
     }
 
     /*  */
+
     bool ShouldBeCited(const std::string& key) { return key.find_first_of("\":{}[],&*#?|-<>=!%@") != std::string::npos; }
 
     /*  */
+
     void AddEscapeTokens(std::string& input, const std::string& tokens)
     {
         for (auto it = tokens.begin(); it != tokens.end(); it++) {
@@ -2378,6 +2463,7 @@ namespace yaml
     }
 
     /*  */
+    
     void RemoveAllEscapeTokens(std::string & input)
     {
         size_t found = input.find_first_of("\\");

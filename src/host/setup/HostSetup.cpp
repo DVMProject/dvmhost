@@ -1,18 +1,14 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Modem Host Software
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Modem Host Software
-* @derivedfrom MMDVMCal (https://github.com/g4klx/MMDVMCal)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2015,2016,2017 Jonathan Naylor, G4KLX
-*   Copyright (C) 2017,2018 Andy Uribe, CA6JAU
-*   Copyright (C) 2021-2024 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Modem Host Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2015,2016,2017 Jonathan Naylor, G4KLX
+ *  Copyright (C) 2017,2018 Andy Uribe, CA6JAU
+ *  Copyright (C) 2021-2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "common/dmr/DMRDefines.h"
 #include "common/p25/P25Defines.h"
 #include "common/p25/data/DataHeader.h"
@@ -105,10 +101,8 @@ const uint8_t LDU2_1K[] = {
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the HostSetup class.
-/// </summary>
-/// <param name="confFile">Full-path to the configuration file.</param>
+/* Initializes a new instance of the HostSetup class. */
+
 HostSetup::HostSetup(const std::string& confFile) :
     m_confFile(confFile),
     m_conf(),
@@ -150,21 +144,16 @@ HostSetup::HostSetup(const std::string& confFile) :
     /* stub */
 }
 
-/// <summary>
-/// Finalizes a instance of the HostSetup class.
-/// </summary>
+/* Finalizes a instance of the HostSetup class. */
+
 HostSetup::~HostSetup()
 {
     delete m_modem;
 }
 
 #if defined(ENABLE_SETUP_TUI)
-/// <summary>
-/// Executes the processing loop.
-/// </summary>
-/// <param name="argc"></param>
-/// <param name="argv"></param>
-/// <returns>Zero if successful, otherwise error occurred.</returns>
+/* Executes the processing loop. */
+
 int HostSetup::run(int argc, char** argv)
 {
     bool ret = false;
@@ -265,10 +254,8 @@ int HostSetup::run(int argc, char** argv)
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-///
-/// </summary>
-/// <param name="modem"></param>
+/* Modem port open callback. */
+
 bool HostSetup::portModemOpen(Modem* modem)
 {
     sleep(2000U);
@@ -301,26 +288,16 @@ bool HostSetup::portModemOpen(Modem* modem)
     return true;
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="modem"></param>
+/* Modem port close callback. */
+
 bool HostSetup::portModemClose(Modem* modem)
 {
     // handled modem close
     return true;
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="modem"></param>
-/// <param name="ms"></param>
-/// <param name="rspType"></param>
-/// <param name="rspDblLen"></param>
-/// <param name="data"></param>
-/// <param name="len"></param>
-/// <returns></returns>
+/* Modem clock callback. */
+
 bool HostSetup::portModemHandler(Modem* modem, uint32_t ms, RESP_TYPE_DVM rspType, bool rspDblLen, const uint8_t* buffer, uint16_t len)
 {
     switch (m_mode) {
@@ -592,9 +569,8 @@ bool HostSetup::portModemHandler(Modem* modem, uint32_t ms, RESP_TYPE_DVM rspTyp
     return true;
 }
 
-/// <summary>
-/// Helper to save configuration.
-/// </summary>
+/* Helper to save configuration. */
+
 void HostSetup::saveConfig()
 {
     if (m_isConnected) {
@@ -616,11 +592,8 @@ void HostSetup::saveConfig()
     }
 }
 
-/// <summary>
-/// Helper to calculate the Rx/Tx frequencies.
-/// </summary>
-/// <param name="consoleDisplay"></param>
-/// <returns></returns>
+/* Helper to calculate the Rx/Tx frequencies. */
+
 bool HostSetup::calculateRxTxFreq(bool consoleDisplay)
 {
     IdenTable entry = m_idenTable->find(m_channelId);
@@ -675,9 +648,8 @@ bool HostSetup::calculateRxTxFreq(bool consoleDisplay)
     return true;
 }
 
-/// <summary>
-/// Helper to log the system configuration parameters.
-/// </summary>
+/* Helper to log the system configuration parameters. */
+
 void HostSetup::displayConfigParams()
 {
     IdenTable entry = m_idenTable->find(m_channelId);
@@ -688,11 +660,8 @@ void HostSetup::displayConfigParams()
     LogInfo("    TX Offset: %fMHz", entry.txOffsetMhz());
 }
 
-/// <summary>
-/// Initializes the modem DSP.
-/// </summary>
-/// <param name="consoleDisplay"></param>
-/// <returns></returns>
+/* Initializes the modem DSP. */
+
 bool HostSetup::createModem(bool consoleDisplay)
 {
     if (g_remoteModemMode) {
@@ -894,10 +863,8 @@ bool HostSetup::createModem(bool consoleDisplay)
     return true;
 }
 
-/// <summary>
-/// Helper to toggle modem transmit mode.
-/// </summary>
-/// <returns>True, if setting was applied, otherwise false.</returns>
+/* Helper to toggle modem transmit mode. */
+
 bool HostSetup::setTransmit()
 {
     if (m_dmrEnabled || (m_p25Enabled && !m_p25TduTest) || m_nxdnEnabled) {
@@ -940,10 +907,8 @@ bool HostSetup::setTransmit()
     return true;
 }
 
-/// <summary>
-/// Helper to update BER display window.
-/// </summary>
-/// <param name="ber">Bit Error Rate Percentage</param>
+/* Helper to update BER display window. */
+
 void HostSetup::updateTUIBER(float ber)
 {
 #if defined(ENABLE_SETUP_TUI)
@@ -968,11 +933,8 @@ void HostSetup::updateTUIBER(float ber)
 #endif // defined(ENABLE_SETUP_TUI)
 }
 
-/// <summary>
-/// Process DMR Rx BER.
-/// </summary>
-/// <param name="buffer">Buffer containing DMR data</param>
-/// <param name="seq">DMR Audio Sequence</param>
+/* Process DMR Rx BER. */
+
 void HostSetup::processDMRBER(const uint8_t* buffer, uint8_t seq)
 {
     if (seq == 65U) {
@@ -1026,11 +988,8 @@ void HostSetup::processDMRBER(const uint8_t* buffer, uint8_t seq)
     m_berFrames++;
 }
 
-/// <summary>
-/// Process DMR Rx 1011hz BER.
-/// </summary>
-/// <param name="buffer">Buffer containing DMR data</param>
-/// <param name="seq">DMR Audio Sequence</param>
+/* Process DMR Rx 1011hz BER. */
+
 void HostSetup::processDMR1KBER(const uint8_t* buffer, uint8_t seq)
 {
     uint32_t errs = 0U;
@@ -1105,10 +1064,8 @@ void HostSetup::processDMR1KBER(const uint8_t* buffer, uint8_t seq)
     updateTUIBER(ber);
 }
 
-/// <summary>
-/// Process P25 Rx BER.
-/// </summary>
-/// <param name="buffer">Buffer containing P25 data</param>
+/* Process P25 Rx BER. */
+
 void HostSetup::processP25BER(const uint8_t* buffer)
 {
     using namespace p25::defines;
@@ -1327,10 +1284,8 @@ void HostSetup::processP25BER(const uint8_t* buffer)
     }
 }
 
-/// <summary>
-/// Process P25 Rx 1011hz BER.
-/// </summary>
-/// <param name="buffer">Buffer containing P25 data</param>
+/* Process P25 Rx 1011hz BER. */
+
 void HostSetup::processP251KBER(const uint8_t* buffer)
 {
     using namespace p25::defines;
@@ -1443,10 +1398,8 @@ void HostSetup::processP251KBER(const uint8_t* buffer)
     }
 }
 
-/// <summary>
-/// Process NXDN Rx BER.
-/// </summary>
-/// <param name="buffer">Buffer containing NXDN data</param>
+/* Process NXDN Rx BER. */
+
 void HostSetup::processNXDNBER(const uint8_t* buffer)
 {
     using namespace nxdn::defines;
@@ -1508,20 +1461,15 @@ void HostSetup::processNXDNBER(const uint8_t* buffer)
     }
 }
 
-/// <summary>
-/// Write configuration to the modem DSP.
-/// </summary>
-/// <returns>True, if configuration is written, otherwise false.</returns>
+/* Write configuration to the modem DSP. */
+
 bool HostSetup::writeConfig()
 {
     return writeConfig(m_mode);
 }
 
-/// <summary>
-/// Write configuration to the modem DSP.
-/// </summary>
-/// <param name="modeOverride"></param>
-/// <returns>True, if configuration is written, otherwise false.</returns>
+/* Write configuration to the modem DSP. */
+
 bool HostSetup::writeConfig(uint8_t modeOverride)
 {
     if (m_isHotspot && m_transmit) {
@@ -1633,10 +1581,8 @@ bool HostSetup::writeConfig(uint8_t modeOverride)
     return true;
 }
 
-/// <summary>
-/// Write RF parameters to the air interface modem.
-/// </summary>
-/// <returns></returns>
+/* Write RF parameters to the air interface modem. */
+
 bool HostSetup::writeRFParams()
 {
     uint8_t buffer[22U];
@@ -1703,10 +1649,8 @@ bool HostSetup::writeRFParams()
     return true;
 }
 
-/// <summary>
-/// Write symbol level adjustments to the modem DSP.
-/// </summary>
-/// <returns>True, if level adjustments are written, otherwise false.</returns>
+/* Write symbol level adjustments to the modem DSP. */
+
 bool HostSetup::writeSymbolAdjust()
 {
     uint8_t buffer[20U];
@@ -1748,10 +1692,8 @@ bool HostSetup::writeSymbolAdjust()
     return true;
 }
 
-/// <summary>
-/// Write transmit FIFO buffer lengths.
-/// </summary>
-/// <returns>True, if level adjustments are written, otherwise false.</returns>
+/* Write transmit FIFO buffer lengths. */
+
 bool HostSetup::writeFifoLength()
 {
     uint8_t buffer[9U];
@@ -1781,18 +1723,15 @@ bool HostSetup::writeFifoLength()
     return true;
 }
 
-/// <summary>
-/// Helper to sleep the calibration thread.
-/// </summary>
-/// <param name="ms">Milliseconds to sleep.</param>
+/* Helper to sleep the calibration thread. */
+
 void HostSetup::sleep(uint32_t ms)
 {
     ::usleep(ms * 1000);
 }
 
-/// <summary>
-/// Read the configuration area on the air interface modem.
-/// </summary>
+/* Read the configuration area on the air interface modem. */
+
 bool HostSetup::readFlash()
 {
     if (m_modem->m_flashDisabled) {
@@ -1816,10 +1755,8 @@ bool HostSetup::readFlash()
     return true;
 }
 
-/// <summary>
-/// Process the configuration data from the air interface modem.
-/// </summary>
-/// <param name="buffer"></param>
+/* Process the configuration data from the air interface modem. */
+
 void HostSetup::processFlashConfig(const uint8_t *buffer)
 {
     if (m_updateConfigFromModem) {
@@ -1932,9 +1869,8 @@ void HostSetup::processFlashConfig(const uint8_t *buffer)
     }
 }
 
-/// <summary>
-/// Erase the configuration area on the air interface modem.
-/// </summary>
+/* Erase the configuration area on the air interface modem. */
+
 bool HostSetup::eraseFlash()
 {
     if (m_modem->m_flashDisabled) {
@@ -1966,9 +1902,8 @@ bool HostSetup::eraseFlash()
     return true;
 }
 
-/// <summary>
-/// Write the configuration area on the air interface modem.
-/// </summary>
+/* Write the configuration area on the air interface modem. */
+
 bool HostSetup::writeFlash()
 {
     if (m_modem->m_flashDisabled) {
@@ -2076,9 +2011,9 @@ bool HostSetup::writeFlash()
     m_modem->clock(0U);
     return true;
 }
-/// <summary>
-/// Helper to clock the calibration BER timer.
-/// </summary>
+
+/* Helper to clock the calibration BER timer. */
+
 void HostSetup::timerClock()
 {
     if (m_timer > 0U && m_timeout > 0U) {
@@ -2098,26 +2033,23 @@ void HostSetup::timerClock()
     }
 }
 
-/// <summary>
-/// Helper to start the calibration BER timer.
-/// </summary>
+/* Helper to start the calibration BER timer. */
+
 void HostSetup::timerStart()
 {
     if (m_timeout > 0U)
         m_timer = 1U;
 }
 
-/// <summary>
-/// Helper to stop the calibration BER timer.
-/// </summary>
+/* Helper to stop the calibration BER timer. */
+
 void HostSetup::timerStop()
 {
     m_timer = 0U;
 }
 
-/// <summary>
-/// Retrieve the current status from the air interface modem.
-/// </summary>
+/* Retrieve the current status from the air interface modem. */
+
 void HostSetup::getStatus()
 {
     uint8_t buffer[50U];
@@ -2137,9 +2069,8 @@ void HostSetup::getStatus()
 }
 
 #if defined(ENABLE_SETUP_TUI)
-/// <summary>
-/// Prints the current status of the calibration.
-/// </summary>
+/* Prints the current status of the calibration. */
+
 void HostSetup::printStatus()
 {
     if (m_setupWnd->m_statusWnd.isShown()) {
@@ -2307,12 +2238,8 @@ void HostSetup::printStatus()
 }
 #endif // defined(ENABLE_SETUP_TUI)
 
-/// <summary>
-/// Add data frame to the data ring buffer.
-/// </summary>
-/// <param name="data"></param>
-/// <param name="length"></param>
-/// <param name="maxFrameSize"></param>
+/* Add data frame to the data ring buffer. */
+
 void HostSetup::addFrame(const uint8_t* data, uint32_t length, uint32_t maxFrameSize)
 {
     assert(data != nullptr);
@@ -2330,12 +2257,8 @@ void HostSetup::addFrame(const uint8_t* data, uint32_t length, uint32_t maxFrame
     m_queue.addData(data, len);
 }
 
-/// <summary>
-/// Counts the total number of bit errors between bytes.
-/// </summary>
-/// <param name="a"></param>
-/// <param name="b"></param>
-/// <returns></returns>
+/* Counts the total number of bit errors between bytes. */
+
 uint8_t HostSetup::countErrs(uint8_t a, uint8_t b)
 {
     int cnt = 0;

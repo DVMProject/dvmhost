@@ -22,6 +22,7 @@ using namespace p25::lc::tsbk;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the OSP_TSBK_RAW class. */
+
 OSP_TSBK_RAW::OSP_TSBK_RAW() : TSBK(),
     m_tsbk(nullptr)
 {
@@ -29,6 +30,7 @@ OSP_TSBK_RAW::OSP_TSBK_RAW() : TSBK(),
 }
 
 /* Finalizes a new instance of the OSP_TSBK_RAW class. */
+
 OSP_TSBK_RAW::~OSP_TSBK_RAW()
 {
     if (m_tsbk != nullptr) {
@@ -37,6 +39,7 @@ OSP_TSBK_RAW::~OSP_TSBK_RAW()
 }
 
 /* Decode a trunking signalling block. */
+
 bool OSP_TSBK_RAW::decode(const uint8_t* data, bool rawTSBK)
 {
     assert(data != nullptr);
@@ -47,6 +50,7 @@ bool OSP_TSBK_RAW::decode(const uint8_t* data, bool rawTSBK)
 }
 
 /* Encode a trunking signalling block. */
+
 void OSP_TSBK_RAW::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 {
     assert(data != nullptr);
@@ -58,6 +62,7 @@ void OSP_TSBK_RAW::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 }
 
 /* Sets the TSBK to encode. */
+
 void OSP_TSBK_RAW::setTSBK(const uint8_t* tsbk)
 {
     assert(tsbk != nullptr);

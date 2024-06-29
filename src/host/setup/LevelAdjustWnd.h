@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Modem Host Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2023 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Modem Host Software
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Modem Host Software
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2023 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @file LevelAdjustWnd.h
+ * @ingroup setup
+ */
 #if !defined(__LEVEL_ADJUST_WND_H__)
 #define __LEVEL_ADJUST_WND_H__
 
@@ -23,16 +24,19 @@ using namespace finalcut;
 
 // ---------------------------------------------------------------------------
 //  Class Declaration
-//      This class implements the modem level adjustment window.
 // ---------------------------------------------------------------------------
 
+/**
+ * @brief This class implements the modem level adjustment window.
+ * @ingroup setup
+ */
 class HOST_SW_API LevelAdjustWnd final : public AdjustWndBase {
 public:
-    /// <summary>
-    /// Initializes a new instance of the LevelAdjustWnd class.
-    /// </summary>
-    /// <param name="setup"></param>
-    /// <param name="widget"></param>
+    /**
+     * @brief Initializes a new instance of the LevelAdjustWnd class.
+     * @param setup Instance of the HostSetup class.
+     * @param widget 
+     */
     explicit LevelAdjustWnd(HostSetup* setup, FWidget* widget = nullptr) : AdjustWndBase{setup, widget}
     {
         /* stub */
@@ -77,9 +81,9 @@ private:
     FSpinBox m_rxTuning{this};
     FSpinBox m_txTuning{this};
 
-    /// <summary>
-    ///
-    /// </summary>
+    /**
+     * @brief Initializes the window layout.
+     */
     void initLayout() override
     {
         FDialog::setText("Modem Level Adjustment");
@@ -88,9 +92,9 @@ private:
         AdjustWndBase::initLayout();
     }
 
-    /// <summary>
-    ///
-    /// </summary>
+    /**
+     * @brief Initializes window controls.
+     */
     void initControls() override
     {
         // software levels

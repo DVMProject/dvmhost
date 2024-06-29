@@ -28,6 +28,7 @@ using namespace dmr::lc;
 // ---------------------------------------------------------------------------
 
 /* Initialize a new instance of the FullLC class. */
+
 FullLC::FullLC() :
     m_bptc()
 {
@@ -35,9 +36,11 @@ FullLC::FullLC() :
 }
 
 /* Finalizes a instance of the FullLC class. */
+
 FullLC::~FullLC() = default;
 
 /* Decode DMR full-link control data. */
+
 std::unique_ptr<LC> FullLC::decode(const uint8_t* data, DataType::E type)
 {
     assert(data != nullptr);
@@ -72,6 +75,7 @@ std::unique_ptr<LC> FullLC::decode(const uint8_t* data, DataType::E type)
 }
 
 /* Encode DMR full-link control data. */
+
 void FullLC::encode(const LC& lc, uint8_t* data, DataType::E type)
 {
     assert(data != nullptr);
@@ -106,6 +110,7 @@ void FullLC::encode(const LC& lc, uint8_t* data, DataType::E type)
 }
 
 /* Decode DMR privacy control data. */
+
 std::unique_ptr<PrivacyLC> FullLC::decodePI(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -132,6 +137,7 @@ std::unique_ptr<PrivacyLC> FullLC::decodePI(const uint8_t* data)
 }
 
 /* Encode DMR privacy control data. */
+
 void FullLC::encodePI(const PrivacyLC& lc, uint8_t* data)
 {
     assert(data != nullptr);

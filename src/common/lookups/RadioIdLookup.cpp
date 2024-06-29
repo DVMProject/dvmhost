@@ -31,6 +31,7 @@ std::mutex RadioIdLookup::m_mutex;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the RadioIdLookup class. */
+
 RadioIdLookup::RadioIdLookup(const std::string& filename, uint32_t reloadTime, bool ridAcl) : LookupTable(filename, reloadTime),
     m_acl(ridAcl)
 {
@@ -38,6 +39,7 @@ RadioIdLookup::RadioIdLookup(const std::string& filename, uint32_t reloadTime, b
 }
 
 /* Clears all entries from the lookup table. */
+
 void RadioIdLookup::clear()
 {
     std::lock_guard<std::mutex> lock(m_mutex);
@@ -45,6 +47,7 @@ void RadioIdLookup::clear()
 }
 
 /* Toggles the specified radio ID enabled or disabled. */
+
 void RadioIdLookup::toggleEntry(uint32_t id, bool enabled)
 {
     RadioId rid = find(id);
@@ -52,6 +55,7 @@ void RadioIdLookup::toggleEntry(uint32_t id, bool enabled)
 }
 
 /* Adds a new entry to the lookup table by the specified unique ID. */
+
 void RadioIdLookup::addEntry(uint32_t id, bool enabled, const std::string& alias)
 {
     if ((id == p25::defines::WUID_ALL) || (id == p25::defines::WUID_FNE)) {
@@ -78,6 +82,7 @@ void RadioIdLookup::addEntry(uint32_t id, bool enabled, const std::string& alias
 }
 
 /* Erases an existing entry from the lookup table by the specified unique ID. */
+
 void RadioIdLookup::eraseEntry(uint32_t id)
 {
     std::lock_guard<std::mutex> lock(m_mutex);
@@ -90,6 +95,7 @@ void RadioIdLookup::eraseEntry(uint32_t id)
 }
 
 /* Finds a table entry in this lookup table. */
+
 RadioId RadioIdLookup::find(uint32_t id)
 {
     RadioId entry;
@@ -109,12 +115,14 @@ RadioId RadioIdLookup::find(uint32_t id)
 }
 
 /* Saves loaded talkgroup rules. */
+
 void RadioIdLookup::commit()
 {
     save();
 }
 
 /* Flag indicating whether radio ID access control is enabled or not. */
+
 bool RadioIdLookup::getACL()
 {
     return m_acl;
@@ -125,6 +133,7 @@ bool RadioIdLookup::getACL()
 // ---------------------------------------------------------------------------
 
 /* Loads the table from the passed lookup table file. */
+
 bool RadioIdLookup::load()
 {
     if (m_filename.empty()) {
@@ -195,6 +204,7 @@ bool RadioIdLookup::load()
 }
 
 /* Saves the table to the passed lookup table file. */
+
 bool RadioIdLookup::save()
 {
     LogDebug(LOG_HOST, "Saving RID lookup file to %s", m_filename.c_str());

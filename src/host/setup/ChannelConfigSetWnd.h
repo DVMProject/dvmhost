@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Modem Host Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2023 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Modem Host Software
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Modem Host Software
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2023 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @file ChannelConfigSetWnd.h
+ * @ingroup setup
+ */
 #if !defined(__CHANNEL_CONFIG_SET_WND_H__)
 #define __CHANNEL_CONFIG_SET_WND_H__
 
@@ -23,16 +24,20 @@ using namespace finalcut;
 
 // ---------------------------------------------------------------------------
 //  Class Declaration
-//      This class implements the channel configuration window.
 // ---------------------------------------------------------------------------
 
+/**
+ * @brief This class implements the channel configuration window.
+ * @ingroup setup
+ */
 class HOST_SW_API ChannelConfigSetWnd final : public CloseWndBase {
 public:
-    /// <summary>
-    /// Initializes a new instance of the ChannelConfigSetWnd class.
-    /// </summary>
-    /// <param name="setup"></param>
-    /// <param name="widget"></param>
+    /**
+     * @brief Initializes a new instance of the ChannelConfigSetWnd class.
+     * 
+     * @param setup 
+     * @param widget 
+     */
     explicit ChannelConfigSetWnd(HostSetup* setup, FWidget* widget = nullptr) : CloseWndBase{setup, widget}
     {
         /* stub */
@@ -59,9 +64,9 @@ private:
 
     FLabel m_hzLabel{"Hz", this};
 
-    /// <summary>
-    ///
-    /// </summary>
+    /**
+     * @brief Initializes the window layout.
+     */
     void initLayout() override
     {
         FDialog::setText("Channel Configuration");
@@ -71,9 +76,9 @@ private:
         CloseWndBase::initLayout();
     }
 
-    /// <summary>
-    ///
-    /// </summary>
+    /**
+     * @brief Initializes window controls.
+     */
     void initControls() override
     {
         yaml::Node rfssConfig = m_setup->m_conf["system"]["config"];
@@ -198,9 +203,9 @@ private:
         CloseWndBase::initControls();
     }
 
-    /// <summary>
-    /// 
-    /// </summary>
+    /**
+     * @brief Helper to update control visibility.
+     */
     void updateVisibleControls()
     {
         if (m_displayChannelFreq) {

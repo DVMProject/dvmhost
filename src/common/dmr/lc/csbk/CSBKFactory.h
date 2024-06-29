@@ -12,7 +12,7 @@
 */
 /**
  * @defgroup dmr_csbk Control Signalling Block
- * @brief Implementation for the data handling of the ETSI TS-102 control signalling block (CSBK).
+ * @brief Implementation for the data handling of the ETSI TS-102 control signalling block (CSBK)
  * @ingroup dmr_lc
  * 
  * @file CSBKFactory.h

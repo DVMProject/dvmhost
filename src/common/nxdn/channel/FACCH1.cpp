@@ -48,6 +48,7 @@ const uint32_t PUNCTURE_LIST[] = {
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the FACCH1 class. */
+
 FACCH1::FACCH1() :
     m_data(nullptr)
 {
@@ -56,6 +57,7 @@ FACCH1::FACCH1() :
 }
 
 /* Initializes a copy instance of the FACCH1 class. */
+
 FACCH1::FACCH1(const FACCH1& data) :
     m_data(nullptr)
 {
@@ -63,12 +65,14 @@ FACCH1::FACCH1(const FACCH1& data) :
 }
 
 /* Finalizes a instance of FACCH1 class. */
+
 FACCH1::~FACCH1()
 {
     delete[] m_data;
 }
 
 /* Equals operator. */
+
 FACCH1& FACCH1::operator=(const FACCH1& data)
 {
     if (&data != this) {
@@ -79,6 +83,7 @@ FACCH1& FACCH1::operator=(const FACCH1& data)
 }
 
 /* Decode a fast associated control channel 1. */
+
 bool FACCH1::decode(const uint8_t* data, uint32_t offset)
 {
     assert(data != nullptr);
@@ -146,6 +151,7 @@ bool FACCH1::decode(const uint8_t* data, uint32_t offset)
 }
 
 /* Encode a fast associated control channel 1. */
+
 void FACCH1::encode(uint8_t* data, uint32_t offset) const
 {
     assert(data != nullptr);
@@ -195,6 +201,7 @@ void FACCH1::encode(uint8_t* data, uint32_t offset) const
 }
 
 /* Gets the raw FACCH1 data. */
+
 void FACCH1::getData(uint8_t* data) const
 {
     assert(data != nullptr);
@@ -203,6 +210,7 @@ void FACCH1::getData(uint8_t* data) const
 }
 
 /* Sets the raw FACCH1 data. */
+
 void FACCH1::setData(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -215,6 +223,7 @@ void FACCH1::setData(const uint8_t* data)
 // ---------------------------------------------------------------------------
 
 /* Internal helper to copy the the class. */
+
 void FACCH1::copy(const FACCH1& data)
 {
     m_data = new uint8_t[NXDN_FACCH1_CRC_LENGTH_BYTES];

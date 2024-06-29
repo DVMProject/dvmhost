@@ -22,12 +22,14 @@ using namespace p25::lc::tdulc;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the LC_PRIVATE class. */
+
 LC_PRIVATE::LC_PRIVATE() : TDULC()
 {
     m_lco = LCO::PRIVATE;
 }
 
 /* Decode a terminator data unit w/ link control. */
+
 bool LC_PRIVATE::decode(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -53,6 +55,7 @@ bool LC_PRIVATE::decode(const uint8_t* data)
 }
 
 /* Encode a terminator data unit w/ link control. */
+
 void LC_PRIVATE::encode(uint8_t* data)
 {
     assert(data != nullptr);

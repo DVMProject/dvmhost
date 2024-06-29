@@ -17,6 +17,7 @@
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the StopWatch class. */
+
 StopWatch::StopWatch() :
     m_startMS(0ULL)
 {
@@ -24,12 +25,14 @@ StopWatch::StopWatch() :
 }
 
 /* Finalizes a instance of the StopWatch class. */
+
 StopWatch::~StopWatch()
 {
     /* stub */
 }
 
 /* Gets the current running time. */
+
 ulong64_t StopWatch::time() const
 {
     struct timeval now;
@@ -39,6 +42,7 @@ ulong64_t StopWatch::time() const
 }
 
 /* Starts the stopwatch. */
+
 ulong64_t StopWatch::start()
 {
     struct timespec now;
@@ -50,6 +54,7 @@ ulong64_t StopWatch::start()
 }
 
 /* Gets the elapsed time since the stopwatch started. */
+
 uint32_t StopWatch::elapsed()
 {
     struct timespec now;

@@ -22,6 +22,7 @@ using namespace dmr::lc::csbk;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the CSBK_TV_GRANT class. */
+
 CSBK_TV_GRANT::CSBK_TV_GRANT() : CSBK(),
     m_lateEntry(false)
 {
@@ -29,6 +30,7 @@ CSBK_TV_GRANT::CSBK_TV_GRANT() : CSBK(),
 }
 
 /* Decode a control signalling block. */
+
 bool CSBK_TV_GRANT::decode(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -39,6 +41,7 @@ bool CSBK_TV_GRANT::decode(const uint8_t* data)
 }
 
 /* Encode a control signalling block. */
+
 void CSBK_TV_GRANT::encode(uint8_t* data)
 {
     assert(data != nullptr);
@@ -58,6 +61,7 @@ void CSBK_TV_GRANT::encode(uint8_t* data)
 }
 
 /* Returns a string that represents the current CSBK. */
+
 std::string CSBK_TV_GRANT::toString()
 {
     return std::string("CSBKO, TV_GRANT (Talkgroup Voice Channel Grant)");
@@ -68,6 +72,7 @@ std::string CSBK_TV_GRANT::toString()
 // ---------------------------------------------------------------------------
 
 /* Internal helper to copy the the class. */
+
 void CSBK_TV_GRANT::copy(const CSBK_TV_GRANT& data)
 {
     CSBK::copy(data);

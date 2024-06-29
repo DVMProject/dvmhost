@@ -31,6 +31,7 @@ bool RTCH::m_verbose = false;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the RTCH class. */
+
 RTCH::RTCH() :
     m_messageType(MessageType::IDLE),
     m_callType(CallType::UNSPECIFIED),
@@ -56,6 +57,7 @@ RTCH::RTCH() :
 }
 
 /* Initializes a copy instance of the RTCH class. */
+
 RTCH::RTCH(const RTCH& data) :
     m_messageType(MessageType::IDLE),
     m_callType(CallType::UNSPECIFIED),
@@ -80,12 +82,14 @@ RTCH::RTCH(const RTCH& data) :
 }
 
 /* Finalizes a instance of RTCH class. */
+
 RTCH::~RTCH()
 {
     delete[] m_mi;
 }
 
 /* Equals operator. */
+
 RTCH& RTCH::operator=(const RTCH& data)
 {
     if (&data != this) {
@@ -96,6 +100,7 @@ RTCH& RTCH::operator=(const RTCH& data)
 }
 
 /* Decode call link control data. */
+
 void RTCH::decode(const uint8_t* data, uint32_t length, uint32_t offset)
 {
     assert(data != nullptr);
@@ -116,6 +121,7 @@ void RTCH::decode(const uint8_t* data, uint32_t length, uint32_t offset)
 }
 
 /* Encode call link control data. */
+
 void RTCH::encode(uint8_t* data, uint32_t length, uint32_t offset)
 {
     assert(data != nullptr);
@@ -136,6 +142,7 @@ void RTCH::encode(uint8_t* data, uint32_t length, uint32_t offset)
 }
 
 /* Helper to reset data values to defaults. */
+
 void RTCH::reset()
 {
     m_messageType = MessageType::IDLE;
@@ -169,6 +176,7 @@ void RTCH::reset()
 // ---------------------------------------------------------------------------
 
 /* Internal helper to decode a RTCH link control message. */
+
 bool RTCH::decodeLC(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -282,6 +290,7 @@ bool RTCH::decodeLC(const uint8_t* data)
 }
 
 /* Internal helper to encode a RTCH link control message. */
+
 void RTCH::encodeLC(uint8_t* data)
 {
     assert(data != nullptr);
@@ -399,6 +408,7 @@ void RTCH::encodeLC(uint8_t* data)
 }
 
 /* Internal helper to copy the the class. */
+
 void RTCH::copy(const RTCH& data)
 {
     m_messageType = data.m_messageType;

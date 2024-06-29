@@ -24,12 +24,15 @@ using namespace nxdn::lc::rcch;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the RCCHFactory class. */
+
 RCCHFactory::RCCHFactory() = default;
 
 /* Finalizes a instance of RCCHFactory class. */
+
 RCCHFactory::~RCCHFactory() = default;
 
 /* Create an instance of a RCCH. */
+
 std::unique_ptr<RCCH> RCCHFactory::createRCCH(const uint8_t* data, uint32_t length, uint32_t offset)
 {
     assert(data != nullptr);
@@ -64,6 +67,7 @@ std::unique_ptr<RCCH> RCCHFactory::createRCCH(const uint8_t* data, uint32_t leng
 // ---------------------------------------------------------------------------
 
 /* Internal helper to decode a RCCH link control message. */
+
 std::unique_ptr<RCCH> RCCHFactory::decode(RCCH* rcch, const uint8_t* data, uint32_t length, uint32_t offset)
 {
     assert(rcch != nullptr);

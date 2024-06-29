@@ -22,12 +22,14 @@ using namespace dmr::lc::csbk;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the CSBK_P_CLEAR class. */
+
 CSBK_P_CLEAR::CSBK_P_CLEAR() : CSBK()
 {
     m_CSBKO = CSBKO::P_CLEAR;
 }
 
 /* Decode a control signalling block. */
+
 bool CSBK_P_CLEAR::decode(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -38,6 +40,7 @@ bool CSBK_P_CLEAR::decode(const uint8_t* data)
 }
 
 /* Encode a control signalling block. */
+
 void CSBK_P_CLEAR::encode(uint8_t* data)
 {
     assert(data != nullptr);
@@ -56,6 +59,7 @@ void CSBK_P_CLEAR::encode(uint8_t* data)
 }
 
 /* Returns a string that represents the current CSBK. */
+
 std::string CSBK_P_CLEAR::toString()
 {
     return std::string("CSBKO, P_CLEAR (Payload Channel Clear)");

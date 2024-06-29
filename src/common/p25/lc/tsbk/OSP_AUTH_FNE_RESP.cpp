@@ -22,6 +22,7 @@ using namespace p25::lc::tsbk;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the OSP_AUTH_FNE_RESP class. */
+
 OSP_AUTH_FNE_RESP::OSP_AUTH_FNE_RESP() : TSBK(),
     m_authRes(nullptr)
 {
@@ -32,6 +33,7 @@ OSP_AUTH_FNE_RESP::OSP_AUTH_FNE_RESP() : TSBK(),
 }
 
 /* Finalizes a instance of OSP_AUTH_FNE_RESP class. */
+
 OSP_AUTH_FNE_RESP::~OSP_AUTH_FNE_RESP()
 {
     if (m_authRes != nullptr) {
@@ -41,6 +43,7 @@ OSP_AUTH_FNE_RESP::~OSP_AUTH_FNE_RESP()
 }
 
 /* Decode a trunking signalling block. */
+
 bool OSP_AUTH_FNE_RESP::decode(const uint8_t* data, bool rawTSBK)
 {
     assert(data != nullptr);
@@ -51,6 +54,7 @@ bool OSP_AUTH_FNE_RESP::decode(const uint8_t* data, bool rawTSBK)
 }
 
 /* Encode a trunking signalling block. */
+
 void OSP_AUTH_FNE_RESP::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 {
     assert(data != nullptr);
@@ -68,12 +72,14 @@ void OSP_AUTH_FNE_RESP::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 }
 
 /* Returns a string that represents the current TSBK. */
+
 std::string OSP_AUTH_FNE_RESP::toString(bool isp)
 {
     return std::string("TSBKO, OSP_AUTH_FNE_RESP (Authentication FNE Response)");
 }
 
 /* Sets the authentication result. */
+
 void OSP_AUTH_FNE_RESP::setAuthRes(const uint8_t* res)
 {
     assert(res != nullptr);
@@ -91,6 +97,7 @@ void OSP_AUTH_FNE_RESP::setAuthRes(const uint8_t* res)
 // ---------------------------------------------------------------------------
 
 /* Internal helper to copy the the class. */
+
 void OSP_AUTH_FNE_RESP::copy(const OSP_AUTH_FNE_RESP& data)
 {
     TSBK::copy(data);

@@ -22,6 +22,7 @@ using namespace network::rest::http;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the HTTPLexer class. */
+
 HTTPLexer::HTTPLexer(bool clientLexer) :
     m_headers(),
     m_clientLexer(clientLexer),
@@ -34,6 +35,7 @@ HTTPLexer::HTTPLexer(bool clientLexer) :
 }
 
 /* Reset to initial parser state. */
+
 void HTTPLexer::reset()
 {
     m_state = METHOD_START;
@@ -49,6 +51,7 @@ void HTTPLexer::reset()
 // ---------------------------------------------------------------------------
 
 /* Handle the next character of input. */
+
 HTTPLexer::ResultType HTTPLexer::consume(HTTPPayload& req, char input)
 {
     m_consumed++;
@@ -370,18 +373,21 @@ HTTPLexer::ResultType HTTPLexer::consume(HTTPPayload& req, char input)
 }
 
 /* Check if a byte is an HTTP character. */
+
 bool HTTPLexer::isChar(int c)
 {
     return c >= 0 && c <= 127;
 }
 
 /* Check if a byte is an HTTP control character. */
+
 bool HTTPLexer::isControl(int c)
 {
     return (c >= 0 && c <= 31) || (c == 127);
 }
 
 /* Check if a byte is an HTTP special character. */
+
 bool HTTPLexer::isSpecial(int c)
 {
     switch (c)
@@ -397,6 +403,7 @@ bool HTTPLexer::isSpecial(int c)
 }
 
 /* Check if a byte is an digit. */
+
 bool HTTPLexer::isDigit(int c)
 {
     return c >= '0' && c <= '9';

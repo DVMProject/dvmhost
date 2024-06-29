@@ -21,6 +21,7 @@ using namespace lookups;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the RSSIInterpolator class. */
+
 RSSIInterpolator::RSSIInterpolator() :
     m_map()
 {
@@ -28,12 +29,14 @@ RSSIInterpolator::RSSIInterpolator() :
 }
 
 /* Finalizes a instance of the RSSIInterpolator class. */
+
 RSSIInterpolator::~RSSIInterpolator()
 {
     m_map.clear();
 }
 
 /* Loads the table from the passed RSSI mapping file. */
+
 bool RSSIInterpolator::load(const std::string& filename)
 {
     FILE* fp = ::fopen(filename.c_str(), "rt");
@@ -65,6 +68,7 @@ bool RSSIInterpolator::load(const std::string& filename)
 }
 
 /* Interpolates the given raw RSSI value with the lookup map. */
+
 int RSSIInterpolator::interpolate(uint16_t val) const
 {
     if (m_map.empty())

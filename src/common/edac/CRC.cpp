@@ -152,6 +152,7 @@ const uint32_t CRC32_TABLE[] = {
 // ---------------------------------------------------------------------------
 
 /* Check 5-bit CRC. */
+
 bool CRC::checkFiveBit(bool* in, uint32_t tcrc)
 {
     assert(in != nullptr);
@@ -163,6 +164,7 @@ bool CRC::checkFiveBit(bool* in, uint32_t tcrc)
 }
 
 /* Encode 5-bit CRC. */
+
 void CRC::encodeFiveBit(const bool* in, uint32_t& tcrc)
 {
     assert(in != nullptr);
@@ -180,6 +182,7 @@ void CRC::encodeFiveBit(const bool* in, uint32_t& tcrc)
 }
 
 /* Check 16-bit CRC CCITT-162. */
+
 bool CRC::checkCCITT162(const uint8_t *in, uint32_t length)
 {
     assert(in != nullptr);
@@ -206,6 +209,7 @@ bool CRC::checkCCITT162(const uint8_t *in, uint32_t length)
 }
 
 /* Encode 16-bit CRC CCITT-162. */
+
 void CRC::addCCITT162(uint8_t* in, uint32_t length)
 {
     assert(in != nullptr);
@@ -232,6 +236,7 @@ void CRC::addCCITT162(uint8_t* in, uint32_t length)
 }
 
 /* Check 16-bit CRC CCITT-161. */
+
 bool CRC::checkCCITT161(const uint8_t *in, uint32_t length)
 {
     assert(in != nullptr);
@@ -258,6 +263,7 @@ bool CRC::checkCCITT161(const uint8_t *in, uint32_t length)
 }
 
 /* Encode 16-bit CRC CCITT-161. */
+
 void CRC::addCCITT161(uint8_t* in, uint32_t length)
 {
     assert(in != nullptr);
@@ -284,6 +290,7 @@ void CRC::addCCITT161(uint8_t* in, uint32_t length)
 }
 
 /* Check 32-bit CRC. */
+
 bool CRC::checkCRC32(const uint8_t *in, uint32_t length)
 {
     assert(in != nullptr);
@@ -314,6 +321,7 @@ bool CRC::checkCRC32(const uint8_t *in, uint32_t length)
 }
 
 /* Encode 32-bit CRC. */
+
 void CRC::addCRC32(uint8_t* in, uint32_t length)
 {
     assert(in != nullptr);
@@ -346,6 +354,7 @@ void CRC::addCRC32(uint8_t* in, uint32_t length)
 }
 
 /* Generate 8-bit CRC. */
+
 uint8_t CRC::crc8(const uint8_t *in, uint32_t length)
 {
     assert(in != nullptr);
@@ -363,6 +372,7 @@ uint8_t CRC::crc8(const uint8_t *in, uint32_t length)
 }
 
 /* Check 6-bit CRC. */
+
 bool CRC::checkCRC6(const uint8_t* in, uint32_t bitLength)
 {
     assert(in != nullptr);
@@ -386,6 +396,7 @@ bool CRC::checkCRC6(const uint8_t* in, uint32_t bitLength)
 }
 
 /* Encode 6-bit CRC. */
+
 uint8_t CRC::addCRC6(uint8_t* in, uint32_t bitLength)
 {
     assert(in != nullptr);
@@ -406,6 +417,7 @@ uint8_t CRC::addCRC6(uint8_t* in, uint32_t bitLength)
 }
 
 /* Check 12-bit CRC. */
+
 bool CRC::checkCRC12(const uint8_t* in, uint32_t bitLength)
 {
     assert(in != nullptr);
@@ -433,6 +445,7 @@ bool CRC::checkCRC12(const uint8_t* in, uint32_t bitLength)
 }
 
 /* Encode 12-bit CRC. */
+
 uint16_t CRC::addCRC12(uint8_t* in, uint32_t bitLength)
 {
     assert(in != nullptr);
@@ -456,6 +469,7 @@ uint16_t CRC::addCRC12(uint8_t* in, uint32_t bitLength)
 }
 
 /* Check 15-bit CRC. */
+
 bool CRC::checkCRC15(const uint8_t* in, uint32_t bitLength)
 {
     assert(in != nullptr);
@@ -483,6 +497,7 @@ bool CRC::checkCRC15(const uint8_t* in, uint32_t bitLength)
 }
 
 /* Encode 15-bit CRC. */
+
 uint16_t CRC::addCRC15(uint8_t* in, uint32_t bitLength)
 {
     assert(in != nullptr);
@@ -506,6 +521,7 @@ uint16_t CRC::addCRC15(uint8_t* in, uint32_t bitLength)
 }
 
 /* Check 16-bit CRC CCITT-162 w/ initial generator of 1. */
+
 bool CRC::checkCRC16(const uint8_t* in, uint32_t bitLength)
 {
     assert(in != nullptr);
@@ -533,6 +549,7 @@ bool CRC::checkCRC16(const uint8_t* in, uint32_t bitLength)
 }
 
 /* Encode 16-bit CRC CCITT-162 w/ initial generator of 1. */
+
 uint16_t CRC::addCRC16(uint8_t* in, uint32_t bitLength)
 {
     assert(in != nullptr);
@@ -556,6 +573,7 @@ uint16_t CRC::addCRC16(uint8_t* in, uint32_t bitLength)
 }
 
 /* Generate 9-bit CRC. */
+
 uint16_t CRC::createCRC9(const uint8_t* in, uint32_t bitLength)
 {
     uint16_t crc = 0U;
@@ -575,6 +593,7 @@ uint16_t CRC::createCRC9(const uint8_t* in, uint32_t bitLength)
 }
 
 /* Generate 16-bit CRC. */
+
 uint16_t CRC::createCRC16(const uint8_t* in, uint32_t bitLength)
 {
     uint16_t crc = 0xFFFFU;
@@ -597,6 +616,7 @@ uint16_t CRC::createCRC16(const uint8_t* in, uint32_t bitLength)
 // ---------------------------------------------------------------------------
 
 /* Generate 6-bit CRC. */
+
 uint8_t CRC::createCRC6(const uint8_t* in, uint32_t bitLength)
 {
     uint8_t crc = 0x3FU;
@@ -615,6 +635,7 @@ uint8_t CRC::createCRC6(const uint8_t* in, uint32_t bitLength)
 }
 
 /* Generate 12-bit CRC. */
+
 uint16_t CRC::createCRC12(const uint8_t* in, uint32_t bitLength)
 {
     uint16_t crc = 0x0FFFU;
@@ -633,6 +654,7 @@ uint16_t CRC::createCRC12(const uint8_t* in, uint32_t bitLength)
 }
 
 /* Generate 15-bit CRC. */
+
 uint16_t CRC::createCRC15(const uint8_t* in, uint32_t bitLength)
 {
     uint16_t crc = 0x7FFFU;

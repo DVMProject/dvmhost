@@ -23,6 +23,7 @@ using namespace p25::lc::tsbk;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the IOSP_RAD_MON class. */
+
 IOSP_RAD_MON::IOSP_RAD_MON() : TSBK(),
     m_txMult(0U)
 {
@@ -30,6 +31,7 @@ IOSP_RAD_MON::IOSP_RAD_MON() : TSBK(),
 }
 
 /* Decode a trunking signalling block. */
+
 bool IOSP_RAD_MON::decode(const uint8_t* data, bool rawTSBK)
 {
     assert(data != nullptr);
@@ -51,6 +53,7 @@ bool IOSP_RAD_MON::decode(const uint8_t* data, bool rawTSBK)
 }
 
 /* Encode a trunking signalling block. */
+
 void IOSP_RAD_MON::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 {
     assert(data != nullptr);
@@ -66,6 +69,7 @@ void IOSP_RAD_MON::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 }
 
 /* Returns a string that represents the current TSBK. */
+
 std::string IOSP_RAD_MON::toString(bool isp)
 {
     return (isp) ? std::string("TSBKO, IOSP_RAD_MON (Radio Unit Monitor Request)") :
@@ -77,6 +81,7 @@ std::string IOSP_RAD_MON::toString(bool isp)
 // ---------------------------------------------------------------------------
 
 /* Internal helper to copy the the class. */
+
 void IOSP_RAD_MON::copy(const IOSP_RAD_MON& data)
 {
     TSBK::copy(data);

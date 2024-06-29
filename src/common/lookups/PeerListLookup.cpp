@@ -29,6 +29,7 @@ std::mutex PeerListLookup::m_mutex;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the PeerListLookup class. */
+
 PeerListLookup::PeerListLookup(const std::string& filename, Mode mode, uint32_t reloadTime, bool peerAcl) : LookupTable(filename, reloadTime),
     m_acl(peerAcl), m_mode(mode)
 {
@@ -36,6 +37,7 @@ PeerListLookup::PeerListLookup(const std::string& filename, Mode mode, uint32_t 
 }
 
 /* Clears all entries from the list. */
+
 void PeerListLookup::clear()
 {
     std::lock_guard<std::mutex> lock(m_mutex);
@@ -43,6 +45,7 @@ void PeerListLookup::clear()
 }
 
 /* Adds a new entry to the list. */
+
 void PeerListLookup::addEntry(uint32_t id, const std::string& password)
 {
     PeerId entry = PeerId(id, password, false);
@@ -61,6 +64,7 @@ void PeerListLookup::addEntry(uint32_t id, const std::string& password)
 }
 
 /* Removes an existing entry from the list. */
+
 void PeerListLookup::eraseEntry(uint32_t id)
 {
     std::lock_guard<std::mutex> lock(m_mutex);
@@ -73,6 +77,7 @@ void PeerListLookup::eraseEntry(uint32_t id)
 }
 
 /* Finds a table entry in this lookup table. */
+
 PeerId PeerListLookup::find(uint32_t id)
 {
     PeerId entry;
@@ -88,18 +93,21 @@ PeerId PeerListLookup::find(uint32_t id)
 }
 
 /* Commit the table. */
+
 void PeerListLookup::commit()
 {
     save();
 }
 
 /* Gets whether the lookup is enabled. */
+
 bool PeerListLookup::getACL() const
 {
     return m_acl;
 }
 
 /* Checks if a peer ID is in the list. */
+
 bool PeerListLookup::isPeerInList(uint32_t id) const
 {
     std::lock_guard<std::mutex> lock(m_mutex);
@@ -111,6 +119,7 @@ bool PeerListLookup::isPeerInList(uint32_t id) const
 }
 
 /* Checks if a peer ID is allowed based on the mode and enabled flag. */
+
 bool PeerListLookup::isPeerAllowed(uint32_t id) const
 {
     if (!m_acl) {
@@ -128,6 +137,7 @@ bool PeerListLookup::isPeerAllowed(uint32_t id) const
 }
 
 /* Sets the mode to either WHITELIST or BLACKLIST. */
+
 void PeerListLookup::setMode(Mode mode)
 {
     std::lock_guard<std::mutex> lock(m_mutex);
@@ -135,6 +145,7 @@ void PeerListLookup::setMode(Mode mode)
 }
 
 /* Gets the current mode. */
+
 PeerListLookup::Mode PeerListLookup::getMode() const 
 {
     return m_mode;
@@ -145,6 +156,7 @@ PeerListLookup::Mode PeerListLookup::getMode() const
 // ---------------------------------------------------------------------------
 
 /* Loads the table from the passed lookup table file. */
+
 bool PeerListLookup::load()
 {
     if (m_filename.empty()) {
@@ -211,6 +223,7 @@ bool PeerListLookup::load()
 }
 
 /* Saves the table to the passed lookup table file. */
+
 bool PeerListLookup::save()
 {
     LogDebug(LOG_HOST, "Saving peer lookup file to %s", m_filename.c_str());

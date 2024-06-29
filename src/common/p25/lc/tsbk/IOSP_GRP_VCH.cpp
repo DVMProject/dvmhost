@@ -22,6 +22,7 @@ using namespace p25::lc::tsbk;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the IOSP_GRP_VCH class. */
+
 IOSP_GRP_VCH::IOSP_GRP_VCH() : TSBK(),
     m_forceChannelId(false)
 {
@@ -29,6 +30,7 @@ IOSP_GRP_VCH::IOSP_GRP_VCH() : TSBK(),
 }
 
 /* Decode a trunking signalling block. */
+
 bool IOSP_GRP_VCH::decode(const uint8_t* data, bool rawTSBK)
 {
     assert(data != nullptr);
@@ -54,6 +56,7 @@ bool IOSP_GRP_VCH::decode(const uint8_t* data, bool rawTSBK)
 }
 
 /* Encode a trunking signalling block. */
+
 void IOSP_GRP_VCH::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 {
     assert(data != nullptr);
@@ -79,6 +82,7 @@ void IOSP_GRP_VCH::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 }
 
 /* Returns a string that represents the current TSBK. */
+
 std::string IOSP_GRP_VCH::toString(bool isp)
 {
     return (isp) ? std::string("TSBKO, IOSP_GRP_VCH (Group Voice Channel Request)") :

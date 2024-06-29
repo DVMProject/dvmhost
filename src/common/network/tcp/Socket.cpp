@@ -24,6 +24,7 @@ using namespace network::tcp;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the Socket class. */
+
 Socket::Socket() : 
     m_localAddress(),
     m_localPort(0U),
@@ -34,6 +35,7 @@ Socket::Socket() :
 }
 
 /* Initializes a new instance of the Socket class. */
+
 Socket::Socket(const int fd) noexcept :
     m_localAddress(),
     m_localPort(0U),
@@ -44,12 +46,14 @@ Socket::Socket(const int fd) noexcept :
 }
 
 /* Initializes a new instance of the Socket class. */
+
 Socket::Socket(const int domain, const int type, const int protocol) : Socket()
 {
     initSocket(domain, type, protocol);
 }
 
 /* Finalizes a instance of the Socket class. */
+
 Socket::~Socket()
 {
     static_cast<void>(::shutdown(m_fd, SHUT_RDWR));
@@ -57,6 +61,7 @@ Socket::~Socket()
 }
 
 /* Accepts a pending connection request. */
+
 int Socket::accept(sockaddr* address, socklen_t* addrlen) noexcept
 {
     // check that the accept() won't block
@@ -95,6 +100,7 @@ int Socket::accept(sockaddr* address, socklen_t* addrlen) noexcept
 }
 
 /* Connects the client to a remote TCP host using the specified host name and port number. */
+
 bool Socket::connect(const std::string& ipAddr, const uint16_t port)
 {
     sockaddr_in addr = {};
@@ -112,6 +118,7 @@ bool Socket::connect(const std::string& ipAddr, const uint16_t port)
 }
 
 /* Starts listening for incoming connection requests with a maximum number of pending connection. */
+
 ssize_t Socket::listen(const std::string& ipAddr, const uint16_t port, int backlog) noexcept
 {
     m_localAddress = ipAddr;
@@ -126,6 +133,7 @@ ssize_t Socket::listen(const std::string& ipAddr, const uint16_t port, int backl
 }
 
 /* Read data from the socket. */
+
 [[nodiscard]] ssize_t Socket::read(uint8_t* buffer, size_t length) noexcept
 {
     assert(buffer != nullptr);
@@ -171,6 +179,7 @@ ssize_t Socket::listen(const std::string& ipAddr, const uint16_t port, int backl
 }
 
 /* Write data to the socket. */
+
 ssize_t Socket::write(const uint8_t* buffer, size_t length) noexcept
 {
     assert(buffer != nullptr);
@@ -183,6 +192,7 @@ ssize_t Socket::write(const uint8_t* buffer, size_t length) noexcept
 }
 
 /* Gets the numeric representation of an address from a sockaddr_storage socket address structure. */
+
 uint32_t Socket::addr(const sockaddr_storage& addr)
 {
     switch (addr.ss_family) {
@@ -201,6 +211,7 @@ uint32_t Socket::addr(const sockaddr_storage& addr)
 }
 
 /* Gets the string representation of an address from a sockaddr_storage socket address structure. */
+
 std::string Socket::address(const sockaddr_storage& addr)
 {
     std::string address = std::string();
@@ -231,6 +242,7 @@ std::string Socket::address(const sockaddr_storage& addr)
 }
 
 /* Gets the port from a sockaddr_storage socket address structure. */
+
 uint16_t Socket::port(const sockaddr_storage& addr)
 {
     uint16_t port = 0U;
@@ -258,6 +270,7 @@ uint16_t Socket::port(const sockaddr_storage& addr)
 }
 
 /* Helper to check if the address stored in a sockaddr_storage socket address structure is INADDR_NONE. */
+
 bool Socket::isNone(const sockaddr_storage& addr)
 {
     struct sockaddr_in* in = (struct sockaddr_in*)& addr;
@@ -270,6 +283,7 @@ bool Socket::isNone(const sockaddr_storage& addr)
 // ---------------------------------------------------------------------------
 
 /* Internal helper to initialize the socket. */
+
 bool Socket::initSocket(const int domain, const int type, const int protocol)
 {
     m_fd = ::socket(domain, type, protocol);
@@ -282,6 +296,7 @@ bool Socket::initSocket(const int domain, const int type, const int protocol)
 }
 
 /* Internal helper to bind to a address and port. */
+
 bool Socket::bind(const std::string& ipAddr, const uint16_t port)
 {
     m_localAddress = std::string(ipAddr);
@@ -301,6 +316,7 @@ bool Socket::bind(const std::string& ipAddr, const uint16_t port)
 }
 
 /* Helper to lookup a hostname and resolve it to an IP address. */
+
 [[nodiscard]] std::string Socket::getIpAddress(const in_addr inaddr)
 {
     char* receivedAddr = ::inet_ntoa(inaddr);
@@ -311,6 +327,7 @@ bool Socket::bind(const std::string& ipAddr, const uint16_t port)
 }
 
 /* Initialize the sockaddr_in structure with the provided IP and port */
+
 void Socket::initAddr(const std::string& ipAddr, const int port, sockaddr_in& addr) noexcept(false)
 {
     addr.sin_family = AF_INET;

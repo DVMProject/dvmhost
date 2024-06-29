@@ -1,15 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Remote Command Client
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Remote Command Client
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2023,2024 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Remote Command Client
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2023,2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "remote/RESTClient.h"
 #include "host/network/RESTDefines.h"
 #include "fne/network/RESTDefines.h"
@@ -149,21 +146,16 @@ static bool g_debug = false;
 //	Global Functions
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Helper to print a fatal error message and exit.
-/// </summary>
-/// <param name="msg">Message.</param>
+/* Helper to print a fatal error message and exit. */
+
 void fatal(const char* message)
 {
     ::fprintf(stderr, "%s: %s\n", g_progExe.c_str(), message);
     exit(EXIT_FAILURE);
 }
 
-/// <summary>
-/// Helper to pring usage the command line arguments. (And optionally an error.)
-/// </summary>
-/// <param name="message">Error message.</param>
-/// <param name="arg">Error message arguments.</param>
+/* Helper to pring usage the command line arguments. (And optionally an error.) */
+
 void usage(const char* message, const char* arg)
 {
     ::fprintf(stdout, __PROG_NAME__ " %s (built %s)\r\n", __VER__, __BUILD__);
@@ -278,12 +270,8 @@ void usage(const char* message, const char* arg)
     exit(EXIT_FAILURE);
 }
 
-/// <summary>
-/// Helper to validate the command line arguments.
-/// </summary>
-/// <param name="argc">Argument count.</param>
-/// <param name="argv">Array of argument strings.</param>
-/// <returns>Count of remaining unprocessed arguments.</returns>
+/* Helper to validate the command line arguments. */
+
 int checkArgs(int argc, char* argv[])
 {
     int i, p = 0;
@@ -364,7 +352,8 @@ int checkArgs(int argc, char* argv[])
     return ++p;
 }
 
-/// <summary></summary>
+/*  */
+
 std::string getArgString(std::vector<std::string> args, uint32_t n)
 {
     n += 1;
@@ -374,19 +363,26 @@ std::string getArgString(std::vector<std::string> args, uint32_t n)
     return args.at(n);
 }
 
-/// <summary></summary>
+/*  */
+
 uint64_t getArgUInt64(std::vector<std::string> args, uint32_t n) { return (uint64_t)::atol(getArgString(args, n).c_str()); }
-/// <summary></summary>
+/*  */
+
 uint32_t getArgUInt32(std::vector<std::string> args, uint32_t n) { return (uint32_t)::atoi(getArgString(args, n).c_str()); }
-/// <summary></summary>
+/*  */
+
 int32_t getArgInt32(std::vector<std::string> args, uint32_t n) { return ::atoi(getArgString(args, n).c_str()); }
-/// <summary></summary>
+/*  */
+
 uint16_t getArgUInt16(std::vector<std::string> args, uint32_t n) { return (uint16_t)::atoi(getArgString(args, n).c_str()); }
-/// <summary></summary>
+/*  */
+
 int16_t getArgInt16(std::vector<std::string> args, uint32_t n) { return (int16_t)::atoi(getArgString(args, n).c_str()); }
-/// <summary></summary>
+/*  */
+
 uint8_t getArgUInt8(std::vector<std::string> args, uint32_t n) { return (uint8_t)::atoi(getArgString(args, n).c_str()); }
-/// <summary></summary>
+/*  */
+
 int8_t getArgInt8(std::vector<std::string> args, uint32_t n) { return (int8_t)::atoi(getArgString(args, n).c_str()); }
 
 // ---------------------------------------------------------------------------

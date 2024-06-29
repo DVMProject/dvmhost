@@ -22,12 +22,14 @@ using namespace p25::lc::tsbk;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the IOSP_CALL_ALRT class. */
+
 IOSP_CALL_ALRT::IOSP_CALL_ALRT() : TSBK()
 {
     m_lco = TSBKO::IOSP_CALL_ALRT;
 }
 
 /* Decode a trunking signalling block. */
+
 bool IOSP_CALL_ALRT::decode(const uint8_t* data, bool rawTSBK)
 {
     assert(data != nullptr);
@@ -48,6 +50,7 @@ bool IOSP_CALL_ALRT::decode(const uint8_t* data, bool rawTSBK)
 }
 
 /* Encode a trunking signalling block. */
+
 void IOSP_CALL_ALRT::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 {
     assert(data != nullptr);
@@ -62,6 +65,7 @@ void IOSP_CALL_ALRT::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 }
 
 /* Returns a string that represents the current TSBK. */
+
 std::string IOSP_CALL_ALRT::toString(bool isp)
 {
     return (isp) ? std::string("TSBKO, IOSP_CALL_ALRT (Call Alert Request)") :

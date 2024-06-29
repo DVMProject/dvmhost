@@ -23,6 +23,7 @@ using namespace network::rest::http;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the HTTPRequestHandler class. */
+
 HTTPRequestHandler::HTTPRequestHandler(const std::string& docRoot) :
     m_docRoot(docRoot)
 {
@@ -30,6 +31,7 @@ HTTPRequestHandler::HTTPRequestHandler(const std::string& docRoot) :
 }
 
 /* Handle a request and produce a reply. */
+
 void HTTPRequestHandler::handleRequest(const HTTPPayload& request, HTTPPayload& reply)
 {
     // decode url to path
@@ -84,6 +86,7 @@ void HTTPRequestHandler::handleRequest(const HTTPPayload& request, HTTPPayload& 
 // ---------------------------------------------------------------------------
 
 /* Perform URL-decoding on a string. Returns false if the encoding was invalid. */
+
 bool HTTPRequestHandler::urlDecode(const std::string& in, std::string& out)
 {
     out.clear();

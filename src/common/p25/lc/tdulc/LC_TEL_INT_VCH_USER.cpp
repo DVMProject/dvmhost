@@ -22,12 +22,14 @@ using namespace p25::lc::tdulc;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the LC_TEL_INT_VCH_USER class. */
+
 LC_TEL_INT_VCH_USER::LC_TEL_INT_VCH_USER() : TDULC()
 {
     m_lco = LCO::TEL_INT_VCH_USER;
 }
 
 /* Decode a terminator data unit w/ link control. */
+
 bool LC_TEL_INT_VCH_USER::decode(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -53,6 +55,7 @@ bool LC_TEL_INT_VCH_USER::decode(const uint8_t* data)
 }
 
 /* Encode a terminator data unit w/ link control. */
+
 void LC_TEL_INT_VCH_USER::encode(uint8_t* data)
 {
     assert(data != nullptr);

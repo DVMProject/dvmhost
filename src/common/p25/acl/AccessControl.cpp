@@ -22,6 +22,7 @@ RadioIdLookup* AccessControl::m_ridLookup;
 TalkgroupRulesLookup* AccessControl::m_tidLookup;
 
 /* Initializes the P25 access control. */
+
 void AccessControl::init(RadioIdLookup* ridLookup, TalkgroupRulesLookup* tidLookup)
 {
     m_ridLookup = ridLookup;
@@ -29,6 +30,7 @@ void AccessControl::init(RadioIdLookup* ridLookup, TalkgroupRulesLookup* tidLook
 }
 
 /* Helper to validate a source radio ID. */
+
 bool AccessControl::validateSrcId(uint32_t id)
 {
     // check if RID ACLs are enabled
@@ -50,6 +52,7 @@ bool AccessControl::validateSrcId(uint32_t id)
 }
 
 /* Helper to validate a talkgroup ID. */
+
 bool AccessControl::validateTGId(uint32_t id)
 {
     // TG0 is never valid
@@ -73,6 +76,7 @@ bool AccessControl::validateTGId(uint32_t id)
 }
 
 /* Helper to determine if a talkgroup ID is non-preferred. */
+
 bool AccessControl::tgidNonPreferred(uint32_t id)
 {
     // TG0 is never valid

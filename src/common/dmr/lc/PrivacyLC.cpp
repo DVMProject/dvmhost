@@ -26,6 +26,7 @@ using namespace dmr::lc;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the PrivacyLC class. */
+
 PrivacyLC::PrivacyLC(const uint8_t* data) :
     m_FID(FID_ETSI),
     m_dstId(0U),
@@ -51,7 +52,9 @@ PrivacyLC::PrivacyLC(const uint8_t* data) :
 
     m_dstId = data[7U] << 16 | data[8U] << 8 | data[9U];                        // Destination Address
 }
+
 /* Initializes a new instance of the PrivacyLC class. */
+
 PrivacyLC::PrivacyLC(const bool* bits) :
     m_FID(FID_ETSI),
     m_dstId(0U),
@@ -94,7 +97,9 @@ PrivacyLC::PrivacyLC(const bool* bits) :
 
     m_dstId = d1 << 16 | d2 << 8 | d3;                                          // Destination Address
 }
+
 /* Initializes a new instance of the PrivacyLC class. */
+
 PrivacyLC::PrivacyLC() :
     m_FID(FID_ETSI),
     m_dstId(0U),
@@ -107,12 +112,14 @@ PrivacyLC::PrivacyLC() :
 }
 
 /* Finalizes a instance of the PrivacyLC class. */
+
 PrivacyLC::~PrivacyLC()
 {
     delete m_mi;
 }
 
 /* Gets LC data as bytes. */
+
 void PrivacyLC::getData(uint8_t* data) const
 {
     assert(data != nullptr);
@@ -134,6 +141,7 @@ void PrivacyLC::getData(uint8_t* data) const
 }
 
 /* Gets LC data as bits. */
+
 void PrivacyLC::getData(bool* bits) const
 {
     assert(bits != nullptr);

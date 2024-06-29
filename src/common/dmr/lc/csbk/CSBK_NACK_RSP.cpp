@@ -22,6 +22,7 @@ using namespace dmr::lc::csbk;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the CSBK_NACK_RSP class. */
+
 CSBK_NACK_RSP::CSBK_NACK_RSP() : CSBK(),
     m_serviceKind(0U)
 {
@@ -29,6 +30,7 @@ CSBK_NACK_RSP::CSBK_NACK_RSP() : CSBK(),
 }
 
 /* Decode a control signalling block. */
+
 bool CSBK_NACK_RSP::decode(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -52,6 +54,7 @@ bool CSBK_NACK_RSP::decode(const uint8_t* data)
 }
 
 /* Encode a control signalling block. */
+
 void CSBK_NACK_RSP::encode(uint8_t* data)
 {
     assert(data != nullptr);
@@ -70,6 +73,7 @@ void CSBK_NACK_RSP::encode(uint8_t* data)
 }
 
 /* Returns a string that represents the current CSBK. */
+
 std::string CSBK_NACK_RSP::toString()
 {
     return std::string("CSBKO, NACK_RSP (Negative Acknowledgement Response)");
@@ -80,6 +84,7 @@ std::string CSBK_NACK_RSP::toString()
 // ---------------------------------------------------------------------------
 
 /* Internal helper to copy the the class. */
+
 void CSBK_NACK_RSP::copy(const CSBK_NACK_RSP& data)
 {
     CSBK::copy(data);

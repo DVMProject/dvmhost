@@ -1,17 +1,19 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Modem Host Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2015,2016,2017 Jonathan Naylor, G4KLX
+ *  Copyright (C) 2017-2022 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Modem Host Software
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Modem Host Software
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2015,2016,2017 Jonathan Naylor, G4KLX
-*   Copyright (C) 2017-2022 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @file Data.h
+ * @ingroup host_dmr
+ * @file Data.cpp
+ * @ingroup host_dmr
+ */
 #if !defined(__DMR_PACKET_DATA_H__)
 #define __DMR_PACKET_DATA_H__
 
@@ -43,15 +45,29 @@ namespace dmr
     {
         // ---------------------------------------------------------------------------
         //  Class Declaration
-        //      This class implements core logic for handling DMR data packets.
         // ---------------------------------------------------------------------------
 
+        /**
+         * @brief This class implements core logic for handling DMR data packets.
+         * @ingroup host_dmr
+         */
         class HOST_SW_API Data {
         public:
-            /// <summary>Process a data frame from the RF interface.</summary>
+            /** @name Frame Processing */
+            /**
+             * @brief Process a data frame from the RF interface.
+             * @param data Buffer containing data frame.
+             * @param len Length of data frame.
+             * @returns bool True, if data frame is processed, otherwise false.
+             */
             bool process(uint8_t* data, uint32_t len);
-            /// <summary>Process a data frame from the network.</summary>
+            /**
+             * @brief Process a data frame from the network.
+             * @param[in] data Instance of data::Data DMR data container class.
+             * @returns bool True, if data frame is processed, otherwise false.
+             */
             void processNetwork(const data::Data& dmrData);
+            /** @} */
 
         private:
             friend class packet::Voice;
@@ -69,9 +85,19 @@ namespace dmr
             bool m_verbose;
             bool m_debug;
 
-            /// <summary>Initializes a new instance of the Data class.</summary>
+            /**
+             * @brief Initializes a new instance of the Data class.
+             * @param slot DMR slot.
+             * @param network Instance of the BaseNetwork class.
+             * @param dumpDataPacket Flag indicating whether data packets are dumped to the log.
+             * @param repeatDataPacket Flag indicating whether incoming data packets will be repeated automatically.
+             * @param debug Flag indicating whether DMR debug is enabled.
+             * @param verbose Flag indicating whether DMR verbose logging is enabled.
+             */
             Data(Slot* slot, network::BaseNetwork* network, bool dumpDataPacket, bool repeatDataPacket, bool debug, bool verbose);
-            /// <summary>Finalizes a instance of the Data class.</summary>
+            /**
+             * @brief Finalizes a instance of the Data class.
+             */
             ~Data();
         };
     } // namespace packet

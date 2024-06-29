@@ -22,6 +22,7 @@ using namespace p25::lc::tsbk;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the MBT_IOSP_GRP_AFF class. */
+
 MBT_IOSP_GRP_AFF::MBT_IOSP_GRP_AFF() : AMBT(),
     m_announceGroup(WUID_ALL)
 {
@@ -29,6 +30,7 @@ MBT_IOSP_GRP_AFF::MBT_IOSP_GRP_AFF() : AMBT(),
 }
 
 /* Decode a alternate trunking signalling block. */
+
 bool MBT_IOSP_GRP_AFF::decodeMBT(const data::DataHeader& dataHeader, const data::DataBlock* blocks)
 {
     assert(blocks != nullptr);
@@ -51,6 +53,7 @@ bool MBT_IOSP_GRP_AFF::decodeMBT(const data::DataHeader& dataHeader, const data:
 }
 
 /* Encode a alternate trunking signalling block. */
+
 void MBT_IOSP_GRP_AFF::encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUserData)
 {
     assert(pduUserData != nullptr);
@@ -76,6 +79,7 @@ void MBT_IOSP_GRP_AFF::encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUserD
 }
 
 /* Returns a string that represents the current TSBK. */
+
 std::string MBT_IOSP_GRP_AFF::toString(bool isp)
 {
     return (isp) ? std::string("TSBKO, IOSP_GRP_AFF (Group Affiliation Request)") :

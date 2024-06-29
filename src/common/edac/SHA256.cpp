@@ -92,6 +92,7 @@ static inline void set_uint32(uint8_t* cp, uint32_t v)
 /* Takes a pointer to a 256 bit block of data (eight 32 bit ints) and initializes it to the start 
    constants of the SHA256 algorithm.  This must be called before using hash in the call to 
    sha256_hash */
+
 SHA256::SHA256() :
     m_state(nullptr),
     m_total(nullptr),
@@ -106,6 +107,7 @@ SHA256::SHA256() :
 }
 
 /* Finalizes a instance of the SHA256 class. */
+
 SHA256::~SHA256()
 {
     delete[] m_state;
@@ -118,6 +120,7 @@ SHA256::~SHA256()
    of 64!!! */
 /* Process LEN bytes of BUFFER, accumulating context into CTX. It is assumed that LEN % 64 == 0. Most 
    of this code comes from GnuPG's cipher/sha1.c. */
+
 void SHA256::processBlock(const uint8_t* buffer, uint32_t len)
 {
     assert(buffer != nullptr);
@@ -243,6 +246,7 @@ void SHA256::processBlock(const uint8_t* buffer, uint32_t len)
 /* Starting with the result of former calls of this function (or the initialization function update 
    the context for the next LEN bytes starting at BUFFER. It is NOT required that LEN is a multiple of
    64. */
+
 void SHA256::processBytes(const uint8_t* buffer, uint32_t len)
 {
     assert(buffer != nullptr);
@@ -296,6 +300,7 @@ void SHA256::processBytes(const uint8_t* buffer, uint32_t len)
 /* Process the remaining bytes in the buffer and put result from context in first 32 bytes following 
    buffer. The result is always in little endian byte order, so that a byte - wise output yields to 
    the wanted ASCII representation of the message digest. */
+
 uint8_t* SHA256::finish(uint8_t* buffer)
 {
     assert(buffer != nullptr);
@@ -308,6 +313,7 @@ uint8_t* SHA256::finish(uint8_t* buffer)
 /* Put result from context in first 32 bytes following buffer. The result is always in little endian 
    byte order, so that a byte - wise output yields to the wanted ASCII representation of the message 
    digest. */
+
 uint8_t* SHA256::read(uint8_t* buffer)
 {
     assert(buffer != nullptr);
@@ -321,6 +327,7 @@ uint8_t* SHA256::read(uint8_t* buffer)
 /* Compute SHA256 message digest for the length bytes beginning at buffer. The result is always in 
    little endian byte order, so that a byte-wise output yields to the wanted ASCII representation of 
    the message digest. */
+
 uint8_t* SHA256::buffer(const uint8_t* buffer, uint32_t len, uint8_t* resblock)
 {
     assert(buffer != nullptr);
@@ -341,6 +348,7 @@ uint8_t* SHA256::buffer(const uint8_t* buffer, uint32_t len, uint8_t* resblock)
 // ---------------------------------------------------------------------------
 
 /* Initialize SHA256 machine states. */
+
 void SHA256::init()
 {
     m_state[0] = 0x6a09e667UL;
@@ -358,6 +366,7 @@ void SHA256::init()
 
 /* Process the remaining bytes in the internal buffer and the usual prolog according to the standard 
    and write the result to the buffer. */
+
 void SHA256::conclude()
 {
     // Take yet unprocessed bytes into account.

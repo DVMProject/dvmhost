@@ -7,7 +7,7 @@
 * @package DVM / Modem Host Software
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
+*  Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
@@ -32,10 +32,8 @@ using namespace modem;
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Helper to interrupt a running DMR beacon.
-/// </summary>
-/// <param name="control"></param>
+/* Helper to interrupt a running DMR beacon. */
+
 void Host::interruptDMRBeacon(dmr::Control* control)
 {
     if (control != nullptr) {
@@ -51,11 +49,8 @@ void Host::interruptDMRBeacon(dmr::Control* control)
     }
 }
 
-/// <summary>
-/// Helper to read DMR slot 1 frames from modem.
-/// </summary>
-/// <param name="control"></param>
-/// <param name="afterReadCallback"></param>
+/* Helper to read DMR slot 1 frames from modem. */
+
 void Host::readFramesDMR1(dmr::Control* control, std::function<void()>&& afterReadCallback)
 {
     uint8_t data[DMRDEF::DMR_FRAME_LENGTH_BYTES * 2U];
@@ -124,11 +119,8 @@ void Host::readFramesDMR1(dmr::Control* control, std::function<void()>&& afterRe
     }
 }
 
-/// <summary>
-/// Helper to write DMR slot 1 frames to modem.
-/// </summary>
-/// <param name="control"></param>
-/// <param name="afterWriteCallback"></param>
+/* Helper to write DMR slot 1 frames to modem. */
+
 void Host::writeFramesDMR1(dmr::Control* control, std::function<void()>&& afterWriteCallback)
 {
     uint8_t data[DMRDEF::DMR_FRAME_LENGTH_BYTES * 2U];
@@ -184,11 +176,8 @@ void Host::writeFramesDMR1(dmr::Control* control, std::function<void()>&& afterW
     }
 }
 
-/// <summary>
-/// Helper to read DMR slot 2 frames from modem.
-/// </summary>
-/// <param name="control"></param>
-/// <param name="afterReadCallback"></param>
+/* Helper to read DMR slot 2 frames from modem. */
+
 void Host::readFramesDMR2(dmr::Control* control, std::function<void()>&& afterReadCallback)
 {
      uint8_t data[DMRDEF::DMR_FRAME_LENGTH_BYTES * 2U];
@@ -256,11 +245,8 @@ void Host::readFramesDMR2(dmr::Control* control, std::function<void()>&& afterRe
     }
 }
 
-/// <summary>
-/// Helper to write DMR slot 2 frames to modem.
-/// </summary>
-/// <param name="control"></param>
-/// <param name="afterWriteCallback"></param>
+/* Helper to write DMR slot 2 frames to modem. */
+
 void Host::writeFramesDMR2(dmr::Control* control, std::function<void()>&& afterWriteCallback)
 {
     uint8_t data[DMRDEF::DMR_FRAME_LENGTH_BYTES * 2U];

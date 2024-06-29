@@ -31,6 +31,7 @@ const uint32_t MAX_NID_ERRS = 7U;//5U;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the NID class. */
+
 NID::NID(uint32_t nac) :
     m_duid(DUID::HDU),
     m_nac(nac),
@@ -50,6 +51,7 @@ NID::NID(uint32_t nac) :
 }
 
 /* Finalizes a instance of the NID class. */
+
 NID::~NID()
 {
     cleanupArrays();
@@ -58,6 +60,7 @@ NID::~NID()
 }
 
 /* Decodes P25 network identifier data. */
+
 bool NID::decode(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -118,6 +121,7 @@ bool NID::decode(const uint8_t* data)
 }
 
 /* Encodes P25 network identifier data. */
+
 void NID::encode(uint8_t* data, defines::DUID::E duid)
 {
     assert(data != nullptr);
@@ -161,6 +165,7 @@ void NID::encode(uint8_t* data, defines::DUID::E duid)
 }
 
 /* Helper to configure a separate Tx NAC. */
+
 void NID::setTxNAC(uint32_t nac)
 {
     if (nac == m_nac) {
@@ -176,6 +181,7 @@ void NID::setTxNAC(uint32_t nac)
 // ---------------------------------------------------------------------------
 
 /* Cleanup NID arrays. */
+
 void NID::cleanupArrays()
 {
     for (uint8_t i = 0; i < 16U; i++)
@@ -191,6 +197,7 @@ void NID::cleanupArrays()
 }
 
 /* Internal helper to create the Rx/Tx NID. */
+
 void NID::createRxTxNID(uint32_t nac)
 {
     edac::BCH bch;
@@ -246,6 +253,7 @@ void NID::createRxTxNID(uint32_t nac)
 }
 
 /* Internal helper to create Tx NID. */
+
 void NID::createTxNID(uint32_t nac)
 {
     edac::BCH bch;

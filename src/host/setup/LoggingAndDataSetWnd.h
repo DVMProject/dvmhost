@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Modem Host Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2023 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Modem Host Software
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Modem Host Software
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2023 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @file LoggingAndDataSetWnd.h
+ * @ingroup setup
+ */
 #if !defined(__LOGGING_AND_DATA_SET_WND_H__)
 #define __LOGGING_AND_DATA_SET_WND_H__
 
@@ -23,16 +24,19 @@ using namespace finalcut;
 
 // ---------------------------------------------------------------------------
 //  Class Declaration
-//      This class implements the logging and data configuration window.
 // ---------------------------------------------------------------------------
 
+/**
+ * @brief This class implements the logging and data configuration window.
+ * @ingroup setup
+ */
 class HOST_SW_API LoggingAndDataSetWnd final : public CloseWndBase {
 public:
-    /// <summary>
-    /// Initializes a new instance of the LoggingAndDataSetWnd class.
-    /// </summary>
-    /// <param name="setup"></param>
-    /// <param name="widget"></param>
+    /**
+     * @brief Initializes a new instance of the LoggingAndDataSetWnd class.
+     * @param setup Instance of the HostSetup class.
+     * @param widget 
+     */
     explicit LoggingAndDataSetWnd(HostSetup* setup, FWidget* widget = nullptr) : CloseWndBase{setup, widget}
     {
         /* stub */
@@ -56,9 +60,9 @@ private:
     FLabel m_tgIdPathLabel{"Talkgroup ACL File Path: ", this};
     FLineEdit m_tgIdPath{this};
 
-    /// <summary>
-    ///
-    /// </summary>
+    /**
+     * @brief Initializes the window layout.
+     */
     void initLayout() override
     {
         FDialog::setText("Logging and Data Configuration");
@@ -68,9 +72,9 @@ private:
         CloseWndBase::initLayout();
     }
 
-    /// <summary>
-    ///
-    /// </summary>
+    /**
+     * @brief Initializes window controls.
+     */
     void initControls() override
     {
         yaml::Node logConf = m_setup->m_conf["log"];

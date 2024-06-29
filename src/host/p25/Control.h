@@ -1,17 +1,27 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Modem Host Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2016,2017 Jonathan Naylor, G4KLX
+ *  Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Modem Host Software
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Modem Host Software
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2016,2017 Jonathan Naylor, G4KLX
-*   Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @defgroup host_p25 Project 25
+ * @brief Implementation for the TIA-102 Project 25 standard.
+ * @ingroup host
+ *
+ * @defgroup host_p25_tsbk Trunk Signalling Block
+ * @brief Implementation for the data handling for the Project 25 standard (TSDU/TSBK)
+ * @ingroup host_p25
+ * 
+ * @file Control.h
+ * @ingroup host_p25
+ * @file Control.cpp
+ * @ingroup host_p25
+ */
 #if !defined(__P25_CONTROL_H__)
 #define __P25_CONTROL_H__
 
@@ -51,81 +61,209 @@ namespace p25
 
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //      This class implements core logic for handling P25.
     // ---------------------------------------------------------------------------
 
+    /**
+     * @brief This class implements core logic for handling P25.
+     * @ingroup host_p25
+     */
     class HOST_SW_API Control {
     public:
-        /// <summary>Initializes a new instance of the Control class.</summary>
+        /**
+         * @brief Initializes a new instance of the Control class.
+         * @param authoritative Flag indicating whether or not the DVM is grant authoritative.
+         * @param nac P25 Network Access Code.
+         * @param callHang Amount of hangtime for a P25 call.
+         * @param queueSize Modem frame buffer queue size (bytes).
+         * @param modem Instance of the Modem class.
+         * @param network Instance of the BaseNetwork class.
+         * @param timeout Transmit timeout.
+         * @param tgHang Amount of time to hang on the last talkgroup mode from RF.
+         * @param duplex Flag indicating full-duplex operation.
+         * @param chLookup Instance of the ChannelLookup class.
+         * @param ridLookup Instance of the RadioIdLookup class.
+         * @param tidLookup Instance of the TalkgroupRulesLookup class.
+         * @param idenTable Instance of the IdenTableLookup class.
+         * @param rssi Instance of the RSSIInterpolator class.
+         * @param dumpPDUData Flag indicating whether PDU data is dumped to the log.
+         * @param repeatPDU Flag indicating whether incoming PDUs will be repeated automatically.
+         * @param dumpTSBKData Flag indicating whether TSBK data is dumped to the log.
+         * @param debug Flag indicating whether P25 debug is enabled.
+         * @param verbose Flag indicating whether P25 verbose logging is enabled.
+         */
         Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t queueSize, modem::Modem* modem, network::Network* network,
             uint32_t timeout, uint32_t tgHang, bool duplex, ::lookups::ChannelLookup* chLookup, ::lookups::RadioIdLookup* ridLookup,
             ::lookups::TalkgroupRulesLookup* tidLookup, ::lookups::IdenTableLookup* idenTable, ::lookups::RSSIInterpolator* rssiMapper,
             bool dumpPDUData, bool repeatPDU, bool dumpTSBKData, bool debug, bool verbose);
-        /// <summary>Finalizes a instance of the Control class.</summary>
+        /**
+         * @brief Finalizes a instance of the Control class.
+         */
         ~Control();
 
-        /// <summary>Resets the data states for the RF interface.</summary>
+        /**
+         * @brief Resets the data states for the RF interface.
+         */
         void reset();
 
-        /// <summary>Helper to set P25 configuration options.</summary>
+        /**
+         * @brief Helper to set P25 configuration options.
+         * @param conf Instance of the yaml::Node class.
+         * @param supervisor Flag indicating whether the DMR has supervisory functions.
+         * @param cwCallsign CW callsign of this host.
+         * @param controlChData Control Channel data.
+         * @param pSuperGroup 
+         * @param netId P25 Network ID.
+         * @param sysId P25 System ID.
+         * @param rfssId P25 RFSS ID.
+         * @param siteId P25 Site ID.
+         * @param channelId Channel ID.
+         * @param channelNo Channel Number.
+         * @param printOptions Flag indicating whether or not options should be printed to log.
+         */
         void setOptions(yaml::Node& conf, bool supervisor, const std::string cwCallsign, const ::lookups::VoiceChData controlChData,
             uint32_t netId, uint32_t sysId, uint8_t rfssId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, bool printOptions);
 
-        /// <summary>Gets a flag indicating whether the P25 control channel is running.</summary>
+        /** @name CC Control */
+        /**
+         * @brief Gets a flag indicating whether the control channel is running.
+         * @returns bool Flag indicating whether the control channel is running.
+         */
         bool getCCRunning() const { return m_ccRunning; }
-        /// <summary>Sets a flag indicating whether the P25 control channel is running.</summary>
+        /**
+         * @brief Sets a flag indicating whether the control channel is running.
+         * @param ccRunning Flag indicating whether the control channel is running.
+         */
         void setCCRunning(bool ccRunning) { m_ccPrevRunning = m_ccRunning; m_ccRunning = ccRunning; }
-        /// <summary>Gets a flag indicating whether the P25 control channel is running.</summary>
+        /**
+         * @brief Gets a flag indicating whether the control channel is running.
+         * @returns bool Flag indicating whether the control channel is running.
+         */
         bool getCCHalted() const { return m_ccHalted; }
-        /// <summary>Sets a flag indicating whether the P25 control channel is halted.</summary>
+        /**
+         * @brief Sets a flag indicating whether the control channel is halted.
+         * @param ccHalted Flag indicating whether the control channel is halted.
+         */
         void setCCHalted(bool ccHalted) { m_ccHalted = ccHalted; }
+        /** @} */
 
-        /// <summary>Process a data frame from the RF interface.</summary>
+        /** @name Frame Processing */
+        /**
+         * @brief Process a data frame from the RF interface.
+         * @param data Buffer containing data frame.
+         * @param len Length of data frame.
+         * @returns bool True, if frame was successfully processed, otherwise false.
+         */
         bool processFrame(uint8_t* data, uint32_t len);
-        /// <summary>Get the frame data length for the next frame in the data ring buffer.</summary>
+        /**
+         * @brief Get the frame data length for the next frame in the data ring buffer.
+         * @returns uint32_t Length of frame data retrieved.
+         */
         uint32_t peekFrameLength();
-        /// <summary>Get frame data from data ring buffer.</summary>
+        /**
+         * @brief Get frame data from data ring buffer.
+         * @param[out] data Buffer to store frame data.
+         * @returns uint32_t Length of frame data retrieved.
+         */
         uint32_t getFrame(uint8_t* data);
+        /** @} */
 
-        /// <summary>Helper to write end of voice call frame data.</summary>
+        /**
+         * @brief Helper to write end of voice call frame data.
+         * @returns bool True, if end of voice call was written, otherwise false.
+         */
         bool writeRF_VoiceEnd();
 
-        /// <summary>Updates the processor.</summary>
+        /** @name Data Clocking */
+        /**
+         * @brief Updates the processor.
+         */
         void clock();
-        /// <summary>Updates the adj. site tables and affiliations.</summary>
+        /**
+         * @brief Updates the adj. site tables and affiliations.
+         * @param ms Number of milliseconds.
+         */
         void clockSiteData(uint32_t ms);
+        /** @} */
 
-        /// <summary>Sets a flag indicating whether P25 has supervisory functions and can send permit TG to voice channels.</summary>
+        /** @name Supervisory Control */
+        /**
+         * @brief Sets a flag indicating whether control has supervisory functions and can send permit TG to voice channels.
+         * @param supervisor Flag indicating whether control has supervisory functions.
+         */
         void setSupervisor(bool supervisor) { m_supervisor = supervisor; }
-        /// <summary>Permits a TGID on a non-authoritative host.</summary>
+        /**
+         * @brief Permits a TGID on a non-authoritative host.
+         * @param dstId Destination ID.
+         * @param dataPermit Flag indicating this permit is for data.
+         */
         void permittedTG(uint32_t dstId, bool dataPermit = false);
-        /// <summary>Grants a TGID on a non-authoritative host.</summary>
+        /**
+         * @brief Grants a TGID on a non-authoritative host.
+         * @param srcId Source Radio ID.
+         * @param dstId Destination ID.
+         * @param grp Flag indicating group grant.
+         */
         void grantTG(uint32_t srcId, uint32_t dstId, bool grp);
-        /// <summary>Releases a granted TG.</summary>
+        /**
+         * @brief Releases a granted TG.
+         * @param dstId Destination ID.
+         */
         void releaseGrantTG(uint32_t dstId);
-        /// <summary>Touches a granted TG to keep a channel grant alive.</summary>
+        /**
+         * @brief Touches a granted TG to keep a channel grant alive.
+         * @param dstId Destination ID.
+         */
         void touchGrantTG(uint32_t dstId);
+        /** @} */
 
-        /// <summary>Gets instance of the NID class.</summary>
+        /**
+         * @brief Gets instance of the NID class.
+         * @returns NID Instance of the NID class.
+         */
         NID nid() { return m_nid; }
-        /// <summary>Gets instance of the ControlSignaling class.</summary>
+        /**
+         * @brief Gets instance of the ControlSignaling class.
+         * @returns ControlSignaling* Instance of the ControlSignaling class.
+         */
         packet::ControlSignaling* control() { return m_control; }
-        /// <summary>Gets instance of the P25AffiliationLookup class.</summary>
+        /**
+         * @brief Gets instance of the P25AffiliationLookup class.
+         * @returns P25AffiliationLookup Instance of the P25AffiliationLookup class.
+         */
         lookups::P25AffiliationLookup affiliations() { return m_affiliations; }
 
-        /// <summary>Flag indicating whether the processor or is busy or not.</summary>
+        /**
+         * @brief Flag indicating whether the processor or is busy or not.
+         * @returns bool True, if processor is busy, otherwise false.
+         */
         bool isBusy() const;
 
-        /// <summary>Flag indicating whether P25 debug is enabled or not.</summary>
+        /**
+         * @brief Flag indicating whether debug is enabled or not.
+         * @returns bool True, if debugging is enabled, otherwise false.
+         */
         bool getDebug() const { return m_debug; };
-        /// <summary>Flag indicating whether P25 verbosity is enabled or not.</summary>
+        /**
+         * @brief Flag indicating whether verbosity is enabled or not.
+         * @returns bool True, if verbose logging is enabled, otherwise false.
+         */
         bool getVerbose() const { return m_verbose; };
-        /// <summary>Helper to change the debug and verbose state.</summary>
+        /**
+         * @brief Helper to change the debug and verbose state.
+         * @param debug Flag indicating whether debug is enabled or not.
+         * @param verbose Flag indicating whether verbosity is enabled or not.
+         */
         void setDebugVerbose(bool debug, bool verbose);
 
-        /// <summary>Helper to get the last transmitted destination ID.</summary>
+        /**
+         * @brief Helper to get the last transmitted destination ID.
+         * @returns uint32_t Last transmitted Destination ID.
+         */
         uint32_t getLastDstId() const;
-        /// <summary>Helper to get the last transmitted source ID.</summary>
+        /**
+         * @brief Helper to get the last transmitted source ID.
+         * @returns uint32_t Last transmitted source radio ID.
+         */
         uint32_t getLastSrcId() const;
 
     private:
@@ -233,32 +371,65 @@ namespace p25
         bool m_verbose;
         bool m_debug;
 
-        /// <summary>Add data frame to the data ring buffer.</summary>
+        /**
+         * @brief Add data frame to the data ring buffer.
+         * @param data Frame data to add to Tx queue.
+         * @param length Length of data to add.
+         * @param net Flag indicating whether the data came from the network or not
+         * @param imm Flag indicating whether or not the data is priority and is added to the immediate queue.
+         */
         void addFrame(const uint8_t* data, uint32_t length, bool net = false, bool imm = false);
 
-        /// <summary>Process a data frames from the network.</summary>
+        /**
+         * @brief Process a data frames from the network.
+         */
         void processNetwork();
-        /// <summary>Helper to process loss of frame stream from modem.</summary>
+        /**
+         * @brief Helper to process loss of frame stream from modem.
+         */
         void processFrameLoss();
 
-        /// <summary>Helper to send a REST API request to the CC to release a channel grant at the end of a call.</summary>
+        /**
+         * @brief Helper to send a REST API request to the CC to release a channel grant at the end of a call.
+         * @param dstId Destination ID.
+         */
         void notifyCC_ReleaseGrant(uint32_t dstId);
-        /// <summary>Helper to send a REST API request to the CC to "touch" a channel grant to refresh grant timers.</summary>
+        /**
+         * @brief Helper to send a REST API request to the CC to "touch" a channel grant to refresh grant timers.
+         * @param dstId Destination ID.
+         */
         void notifyCC_TouchGrant(uint32_t dstId);
 
-        /// <summary>Helper to write control channel frame data.</summary>
+        /**
+         * @brief Helper to write control channel frame data.
+         * @returns bool True, if control data is written, otherwise false.
+         */
         bool writeRF_ControlData();
-        /// <summary>Helper to write end of control channel frame data.</summary>
+        /**
+         * @brief Helper to write end of control channel frame data.
+         * @returns bool True, if end of control channel is written, otherwise false.
+         */
         bool writeRF_ControlEnd();
 
-        /// <summary>Helper to write data nulls.</summary>
+        /**
+         * @brief Helper to write data nulls.
+         */
         void writeRF_Nulls();
-        /// <summary>Helper to write TDU preamble packet burst.</summary>
+        /**
+         * @brief Helper to write TDU preamble packet burst.
+         * @param preambleCount Number of preamble TDUs to transmit.
+         * @param force Force transmitting preamble TDUs.
+         */
         void writeRF_Preamble(uint32_t preambleCount = 0, bool force = false);
-        /// <summary>Helper to write a P25 TDU packet.</summary>
+        /**
+         * @brief Helper to write a P25 TDU packet.
+         * @param noNetwork Flag indicating this TDU shouldn't be written to the network.
+         */
         void writeRF_TDU(bool noNetwork);
 
-        /// <summary>Helper to setup and generate LLA AM1 parameters.</summary>
+        /**
+         * @brief Helper to setup and generate LLA AM1 parameters.
+         */
         void generateLLA_AM1_Parameters();
     };
 } // namespace p25

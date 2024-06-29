@@ -1,17 +1,19 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Modem Host Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2015,2016,2017 Jonathan Naylor, G4KLX
+ *  Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Modem Host Software
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Modem Host Software
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2015,2016,2017 Jonathan Naylor, G4KLX
-*   Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @file Slot.h
+ * @ingroup host_dmr
+ * @file Slot.cpp
+ * @ingroup host_dmr
+ */
 #if !defined(__DMR_SLOT_H__)
 #define __DMR_SLOT_H__
 
@@ -47,99 +49,249 @@ namespace dmr
 
     // ---------------------------------------------------------------------------
     //  Structure Declaration
-    //      This structure contains shortened data for adjacent sites.
     // ---------------------------------------------------------------------------
 
+    /**
+     * @brief This structure contains shortened data for adjacent sites.
+     * @ingroup host_dmr
+     */
     struct AdjSiteData 
     {
         public:
-            /// <summary>Channel Number.</summary>
+            /**
+             * @brief Channel Number.
+             */
             uint32_t channelNo;
-            /// <summary>System Identity.</summary>
+            /**
+             * @brief System Identity.
+             */
             uint32_t systemIdentity;
-            /// <summary>DMR require registration.</summary>
+            /**
+             * @brief DMR require registration.
+             */
             bool requireReg;
     };
 
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //      This class implements core logic for handling DMR slots.
     // ---------------------------------------------------------------------------
 
+    /**
+     * @brief This class implements core logic for handling DMR slots.
+     * @ingroup host_dmr
+     */
     class HOST_SW_API Slot {
     public:
-        /// <summary>Initializes a new instance of the Slot class.</summary>
+        /**
+         * @brief Initializes a new instance of the Slot class.
+         * @param slotNo DMR slot number.
+         * @param queueSize Modem frame buffer queue size (bytes).
+         * @param timeout Transmit timeout.
+         * @param tgHang Amount of time to hang on the last talkgroup mode from RF.
+         * @param dumpDataPacket Flag indicating whether data packets are dumped to the log.
+         * @param repeatDataPacket Flag indicating whether incoming data packets will be repeated automatically.
+         * @param dumpCSBKData Flag indicating whether CSBK data is dumped to the log.
+         * @param debug Flag indicating whether DMR debug is enabled.
+         * @param verbose Flag indicating whether DMR verbose logging is enabled.
+         */
         Slot(uint32_t slotNo, uint32_t timeout, uint32_t tgHang, uint32_t queueSize, bool dumpDataPacket, bool repeatDataPacket,
             bool dumpCSBKData, bool debug, bool verbose);
-        /// <summary>Finalizes a instance of the Slot class.</summary>
+        /**
+         * @brief Finalizes a instance of the Slot class.
+         */
         ~Slot();
 
-        /// <summary>Gets a flag indicating whether the P25 control channel is running.</summary>
+        /** @name CC Control */
+        /**
+         * @brief Gets a flag indicating whether the control channel is running.
+         * @returns bool Flag indicating whether the control channel is running.
+         */
         bool getCCRunning() const { return m_ccRunning; }
-        /// <summary>Sets a flag indicating whether the P25 control channel is running.</summary>
+        /**
+         * @brief Sets a flag indicating whether the control channel is running.
+         * @param ccRunning Flag indicating whether the control channel is running.
+         */
         void setCCRunning(bool ccRunning) { m_ccPrevRunning = m_ccRunning; m_ccRunning = ccRunning; }
-        /// <summary>Gets a flag indicating whether the DMR control channel is running.</summary>
+        /**
+         * @brief Gets a flag indicating whether the control channel is running.
+         * @returns bool Flag indicating whether the control channel is running.
+         */
         bool getCCHalted() const { return m_ccHalted; }
-        /// <summary>Sets a flag indicating whether the DMR control channel is halted.</summary>
+        /**
+         * @brief Sets a flag indicating whether the control channel is halted.
+         * @param ccHalted Flag indicating whether the control channel is halted.
+         */
         void setCCHalted(bool ccHalted) { m_ccHalted = ccHalted; }
+        /** @} */
 
-        /// <summary>Process a data frame from the RF interface.</summary>
+        /** @name Frame Processing */
+        /**
+         * @brief Process a data frame from the RF interface.
+         * @param data Buffer containing data frame.
+         * @param len Length of data frame.
+         * @returns bool True, if frame was successfully processed, otherwise false.
+         */
         bool processFrame(uint8_t* data, uint32_t len);
-        /// <summary>Get the frame data length for the next frame in the data ring buffer.</summary>
+        /**
+         * @brief Get the frame data length for the next frame in the data ring buffer.
+         * @returns uint32_t Length of frame data retrieved.
+         */
         uint32_t peekFrameLength();
-        /// <summary>Get data frame from data ring buffer.</summary>
+        /**
+         * @brief Get frame data from data ring buffer.
+         * @param[out] data Buffer to store frame data.
+         * @returns uint32_t Length of frame data retrieved.
+         */
         uint32_t getFrame(uint8_t* data);
 
-        /// <summary>Process a data frames from the network.</summary>
+        /**
+         * @brief Process a data frames from the network.
+         * @param[in] data Instance of data::Data DMR data container class.
+         */
         void processNetwork(const data::Data& data);
+        /** @} */
 
-        /// <summary>Updates the DMR slot processor.</summary>
+        /** @name Data Clocking */
+        /**
+         * @brief Updates the processor.
+         */
         void clock();
-        /// <summary>Updates the adj. site tables.</summary>
+        /**
+         * @brief Updates the adj. site tables and affiliations.
+         * @param ms Number of milliseconds.
+         */
         void clockSiteData(uint32_t ms);
+        /** @} */
 
-        /// <summary>Permits a TGID on a non-authoritative host.</summary>
+        /** @name Supervisory Control */
+        /**
+         * @brief Sets a flag indicating whether control has supervisory functions and can send permit TG to voice channels.
+         * @param supervisor Flag indicating whether control has supervisory functions.
+         */
+        void setSupervisor(bool supervisor) { m_supervisor = supervisor; }
+        /**
+         * @brief Permits a TGID on a non-authoritative host.
+         * @param dstId Destination ID.
+         */
         void permittedTG(uint32_t dstId);
-        /// <summary>Grants a TGID on a non-authoritative host.</summary>
+        /**
+         * @brief Grants a TGID on a non-authoritative host.
+         * @param srcId Source Radio ID.
+         * @param dstId Destination ID.
+         * @param grp Flag indicating group grant.
+         */
         void grantTG(uint32_t srcId, uint32_t dstId, bool grp);
-        /// <summary>Releases a granted TG.</summary>
+        /**
+         * @brief Releases a granted TG.
+         * @param dstId Destination ID.
+         */
         void releaseGrantTG(uint32_t dstId);
-        /// <summary>Touches a granted TG to keep a channel grant alive.</summary>
+        /**
+         * @brief Touches a granted TG to keep a channel grant alive.
+         * @param dstId Destination ID.
+         */
         void touchGrantTG(uint32_t dstId);
+        /** @} */
 
-        /// <summary>Gets instance of the ControlSignaling class.</summary>
+        /**
+         * @brief Gets instance of the ControlSignaling class.
+         * @returns ControlSignaling* Instance of the ControlSignaling class.
+         */
         packet::ControlSignaling* control() { return m_control; }
 
-        /// <summary>Helper to change the debug and verbose state.</summary>
+        /**
+         * @brief Helper to change the debug and verbose state.
+         * @param debug Flag indicating whether debug is enabled or not.
+         * @param verbose Flag indicating whether verbosity is enabled or not.
+         */
         void setDebugVerbose(bool debug, bool verbose);
 
-        /// <summary>Helper to enable and configure TSCC support for this slot.</summary>
+        /**
+         * @brief Helper to enable and configure TSCC support for this slot.
+         * @param enable Flag indicating TSCC support is enabled for this slot.
+         * @param dedicated Flag indicating this slot is the dedicated TSCC.
+         */
         void setTSCC(bool enable, bool dedicated);
-        /// <summary>Helper to activate a TSCC payload slot.</summary>
+        /**
+         * @brief Helper to activate a TSCC payload slot.
+         * @param dstId Destination ID.
+         * @param srcId Source Radio ID.
+         * @param group Flag indicating group grant.
+         * @param voice Flag indicating if the payload traffic is voice.
+         */
         void setTSCCActivated(uint32_t dstId, uint32_t srcId, bool group, bool voice);
-        /// <summary>Sets a flag indicating whether the slot has supervisory functions and can send permit TG to voice channels.</summary>
-        void setSupervisor(bool supervisor) { m_supervisor = supervisor; }
-        /// <summary>Sets a flag indicating whether the slot has will perform source ID checks before issuing a grant.</summary>
+
+        /**
+         * @brief Sets a flag indicating whether the slot has will perform source ID checks before issuing a grant.
+         * @param disableSourceIdGrant Flag indicating whether the slot has will perform source ID checks before issuing a grant.
+         */
         void setDisableSourceIDGrantCheck(bool disableSourceIdGrant) { m_disableGrantSrcIdCheck = disableSourceIdGrant; }
-        /// <summary>Sets a flag indicating whether the voice channels will notify the TSCC of traffic channel changes.</summary>
+        /**
+         * @brief Sets a flag indicating whether the voice channels will notify the TSCC of traffic channel changes.
+         * @param notifyCC Flag indicating whether the voice channels will notify the TSCC of traffic channel changes.
+         */
         void setNotifyCC(bool notifyCC) { m_notifyCC = notifyCC; }
-        /// <summary>Helper to set the voice error silence threshold.</summary>
+
+        /**
+         * @brief Helper to set the voice error silence threshold.
+         * @param threshold Voice error silence threshold.
+         */
         void setSilenceThreshold(uint32_t threshold) { m_silenceThreshold = threshold; }
-        /// <summary>Helper to set the frame loss threshold.</summary>
+        /**
+         * @brief Helper to set the frame loss threshold.
+         * @param threshold Frame loss threashold.
+         */
         void setFrameLossThreshold(uint32_t threshold) { m_frameLossThreshold = threshold; }
 
-        /// <summary>Helper to get the last transmitted destination ID.</summary>
+        /**
+         * @brief Helper to get the last transmitted destination ID.
+         * @returns uint32_t Last transmitted Destination ID.
+         */
         uint32_t getLastDstId() const;
-        /// <summary>Helper to get the last transmitted source ID.</summary>
+        /**
+         * @brief Helper to get the last transmitted source ID.
+         * @returns uint32_t Last transmitted source radio ID.
+         */
         uint32_t getLastSrcId() const;
 
-        /// <summary>Helper to initialize the slot processor.</summary>
+        /**
+         * @brief Helper to initialize the slot processor.
+         * @param dmr Instance of the Control class.
+         * @param authoritative Flag indicating whether or not the DVM is grant authoritative.
+         * @param colorCode DMR access color code.
+         * @param siteData DMR site data.
+         * @param embeddedLCOnly 
+         * @param dumpTAData 
+         * @param callHang Amount of hangtime for a DMR call.
+         * @param modem Instance of the Modem class.
+         * @param network Instance of the BaseNetwork class.
+         * @param duplex Flag indicating full-duplex operation.
+         * @param chLookup Instance of the ChannelLookup class.
+         * @param ridLookup Instance of the RadioIdLookup class.
+         * @param tidLookup Instance of the TalkgroupRulesLookup class.
+         * @param idenTable Instance of the IdenTableLookup class.
+         * @param rssi Instance of the RSSIInterpolator class.
+         * @param jitter 
+         * @param verbose Flag indicating whether DMR verbose logging is enabled.
+         */
         static void init(Control* dmr, bool authoritative, uint32_t colorCode, SiteData siteData, bool embeddedLCOnly, bool dumpTAData, uint32_t callHang, modem::Modem* modem,
             network::Network* network, bool duplex, ::lookups::ChannelLookup* chLookup, ::lookups::RadioIdLookup* ridLookup, ::lookups::TalkgroupRulesLookup* tidLookup,
             ::lookups::IdenTableLookup* idenTable, ::lookups::RSSIInterpolator* rssiMapper, uint32_t jitter, bool verbose);
-        /// <summary>Sets local configured site data.</summary>
+        /**
+         * @brief Sets local configured site data.
+         * @param controlChData ::lookups::VoiceChData instance representing the control channel.
+         * @param netId DMR Network ID.
+         * @param siteId DMR Site ID.
+         * @param channelId Channel ID.
+         * @param channelNo Channel Number.
+         * @param requireReq Flag indicating this site requires registration.
+         */
         static void setSiteData(::lookups::VoiceChData controlChData, uint32_t netId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, bool requireReq);
-        /// <summary>Sets TSCC Aloha configuration.</summary>
+        /**
+         * @brief Sets TSCC Aloha configuration.
+         * @param nRandWait Random Access Wait Period
+         * @param backOff 
+         */
         static void setAlohaConfig(uint8_t nRandWait, uint8_t backOff);
 
     private:
@@ -291,39 +443,94 @@ namespace dmr
         static uint8_t m_alohaNRandWait;
         static uint8_t m_alohaBackOff;
 
-        /// <summary>Add data frame to the data ring buffer.</summary>
+        /**
+         * @brief Add data frame to the data ring buffer.
+         * @param data Frame data to add to Tx queue.
+         * @param length Length of data to add.
+         * @param net Flag indicating whether the data came from the network or not
+         * @param imm Flag indicating whether or not the data is priority and is added to the immediate queue.
+         */
         void addFrame(const uint8_t* data, bool net = false, bool imm = false);
 
-        /// <summary>Helper to process loss of frame stream from modem.</summary>
+        /**
+         * @brief Helper to process loss of frame stream from modem.
+         */
         void processFrameLoss();
 
-        /// <summary>Helper to send a REST API request to the CC to release a channel grant at the end of a call.</summary>
+        /**
+         * @brief Helper to send a REST API request to the CC to release a channel grant at the end of a call.
+         * @param dstId Destination ID.
+         */
         void notifyCC_ReleaseGrant(uint32_t dstId);
-        /// <summary>Helper to send a REST API request to the CC to "touch" a channel grant to refresh grant timers.</summary>
+        /**
+         * @brief Helper to send a REST API request to the CC to "touch" a channel grant to refresh grant timers.
+         * @param dstId Destination ID.
+         */
         void notifyCC_TouchGrant(uint32_t dstId);
 
-        /// <summary>Write data frame to the network.</summary>
+        /**
+         * @brief Write data frame to the network.
+         * @param[in] data Buffer containing frame data to write to the network.
+         * @param dataType DMR Data Type for this frame.
+         * @param errors Number of bit errors detected for this frame.
+         * @param noSequence Flag indicating this frame carries no sequence number.
+         */
         void writeNetwork(const uint8_t* data, defines::DataType::E dataType, uint8_t errors = 0U, bool noSequence = false);
-        /// <summary>Write data frame to the network.</summary>
+        /**
+         * @brief Write data frame to the network.
+         * @param[in] data Buffer containing frame data to write to the network.
+         * @param dataType DMR Data Type for this frame.
+         * @param flco Full-Link Control Opcode.
+         * @param srcId Source Radio ID.
+         * @param dstId Destination ID.
+         * @param errors Number of bit errors detected for this frame.
+         * @param noSequence Flag indicating this frame carries no sequence number.
+         */
         void writeNetwork(const uint8_t* data, defines::DataType::E dataType, defines::FLCO::E flco, uint32_t srcId,
             uint32_t dstId, uint8_t errors = 0U, bool noSequence = false);
 
-        /// <summary>Helper to write RF end of frame data.</summary>
+        /**
+         * @brief Helper to write RF end of frame data.
+         * @param writeEnd Flag indicating end of transmission should be written to air.
+         */
         void writeEndRF(bool writeEnd = false);
-        /// <summary>Helper to write network end of frame data.</summary>
+        /**
+         * @brief Helper to write network end of frame data.
+         * @param writeEnd Flag indicating end of transmission should be written to air.
+         */
         void writeEndNet(bool writeEnd = false);
 
-        /// <summary>Helper to write control channel packet data.</summary>
+        /**
+         * @brief Helper to write control channel packet data.
+         * @param frameCnt Frame counter.
+         * @param n 
+         */
         void writeRF_ControlData(uint16_t frameCnt, uint8_t n);
 
-        /// <summary>Clears the flag indicating whether the slot is a TSCC payload slot.</summary>
+        /**
+         * @brief Clears the flag indicating whether the slot is a TSCC payload slot.
+         */
         void clearTSCCActivated();
 
-        /// <summary>Helper to set the DMR short LC.</summary>
+        /**
+         * @brief Helper to set the DMR short LC.
+         * @param slotNo DMR slot number.
+         * @param id ID.
+         * @param flco Full-Link Control Opcode.
+         * @param voice Flag indicating this is for a voice frame.
+         */
         static void setShortLC(uint32_t slotNo, uint32_t id, defines::FLCO::E flco = defines::FLCO::GROUP, bool voice = true);
-        /// <summary>Helper to set the DMR short LC for TSCC.</summary>
+        /**
+         * @brief Helper to set the DMR short LC for TSCC.
+         * @param siteData Instance of the dmr::SiteData class.
+         * @param counter TSCC CSC counter.
+         */
         static void setShortLC_TSCC(SiteData siteData, uint16_t counter);
-        /// <summary>Helper to set the DMR short LC for payload.</summary>
+        /**
+         * @brief Helper to set the DMR short LC for payload.
+         * @param siteData Instance of the dmr::SiteData class.
+         * @param counter TSCC CSC counter.
+         */
         static void setShortLC_Payload(SiteData siteData, uint16_t counter);
     };
 } // namespace dmr

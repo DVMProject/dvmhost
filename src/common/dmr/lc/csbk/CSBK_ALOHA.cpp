@@ -22,6 +22,7 @@ using namespace dmr::lc::csbk;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the CSBK_ALOHA class. */
+
 CSBK_ALOHA::CSBK_ALOHA() : CSBK(),
     m_siteTSSync(false),
     m_alohaMask(0U),
@@ -32,6 +33,7 @@ CSBK_ALOHA::CSBK_ALOHA() : CSBK(),
 }
 
 /* Decode a control signalling block. */
+
 bool CSBK_ALOHA::decode(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -42,6 +44,7 @@ bool CSBK_ALOHA::decode(const uint8_t* data)
 }
 
 /* Encode a control signalling block. */
+
 void CSBK_ALOHA::encode(uint8_t* data)
 {
     assert(data != nullptr);
@@ -66,6 +69,7 @@ void CSBK_ALOHA::encode(uint8_t* data)
 }
 
 /* Returns a string that represents the current CSBK. */
+
 std::string CSBK_ALOHA::toString()
 {
     return std::string("CSBKO, ALOHA (Aloha PDU)");
@@ -76,6 +80,7 @@ std::string CSBK_ALOHA::toString()
 // ---------------------------------------------------------------------------
 
 /* Internal helper to copy the the class. */
+
 void CSBK_ALOHA::copy(const CSBK_ALOHA& data)
 {
     CSBK::copy(data);

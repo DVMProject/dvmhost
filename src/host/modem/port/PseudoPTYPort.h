@@ -1,16 +1,18 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Modem Host Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2020,2021 Jonathan Naylor, G4KLX
+ *
+ */
 /**
-* Digital Voice Modem - Modem Host Software
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Modem Host Software
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2020,2021 Jonathan Naylor, G4KLX
-*
-*/
+ * @file PseudoPTYPort.h
+ * @ingroup port
+ * @file PseudoPTYPort.cpp
+ * @ingroup port
+ */
 #if !defined(__PSEUDO_PTY_PORT_H__)
 #define __PSEUDO_PTY_PORT_H__
 
@@ -25,22 +27,37 @@ namespace modem
     {
         // ---------------------------------------------------------------------------
         //  Class Declaration
-        //      This class implements low-level routines to communicate via a Linux
-        //      PTY serial port.
         // ---------------------------------------------------------------------------
 
+        /**
+         * @brief This class implements low-level routines to communicate via a Linux
+         *  PTY serial port.
+         * @ingroup port
+         */
         class HOST_SW_API PseudoPTYPort : public UARTPort
         {
         public:
-            /// <summary>Initializes a new instance of the PseudoPTYPort class.</summary>
+            /**
+             * @brief Initializes a new instance of the PseudoPTYPort class.
+             * @param device Serial port device.
+             * @param speed Serial port speed.
+             * @param assertRTS 
+             */
             PseudoPTYPort(const std::string& symlink, SERIAL_SPEED speed, bool assertRTS = false);
-            /// <summary>Finalizes a instance of the PseudoPTYPort class.</summary>
+            /**
+             * @brief Finalizes a instance of the PseudoPTYPort class.
+             */
             ~PseudoPTYPort() override;
 
-            /// <summary>Opens a connection to the serial port.</summary>
+            /**
+             * @brief Opens a connection to the serial port.
+             * @returns bool True, if connection is opened, otherwise false.
+             */
             bool open() override;
 
-            /// <summary>Closes the connection to the serial port.</summary>
+            /**
+             * @brief Closes the connection to the serial port.
+             */
             void close() override;
 
         protected:

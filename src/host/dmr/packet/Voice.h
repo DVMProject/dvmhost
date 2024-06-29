@@ -1,17 +1,19 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Modem Host Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2015,2016,2017 Jonathan Naylor, G4KLX
+ *  Copyright (C) 2017-2022 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Modem Host Software
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Modem Host Software
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2015,2016,2017 Jonathan Naylor, G4KLX
-*   Copyright (C) 2017-2022 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @file Voice.h
+ * @ingroup host_dmr
+ * @file Voice.cpp
+ * @ingroup host_dmr
+ */
 #if !defined(__DMR_PACKET_VOICE_H__)
 #define __DMR_PACKET_VOICE_H__
 
@@ -38,15 +40,29 @@ namespace dmr
     {
         // ---------------------------------------------------------------------------
         //  Class Declaration
-        //      This class implements core logic for handling DMR voice packets.
         // ---------------------------------------------------------------------------
 
+        /**
+         * @brief This class implements core logic for handling DMR voice packets.
+         * @ingroup host_dmr
+         */
         class HOST_SW_API Voice {
         public:
-            /// <summary>Process a voice frame from the RF interface.</summary>
+            /** @name Frame Processing */
+            /**
+             * @brief Process a data frame from the RF interface.
+             * @param data Buffer containing data frame.
+             * @param len Length of data frame.
+             * @returns bool True, if data frame is processed, otherwise false.
+             */
             bool process(uint8_t* data, uint32_t len);
-            /// <summary>Process a voice frame from the network.</summary>
+            /**
+             * @brief Process a data frame from the network.
+             * @param[in] data Instance of data::Data DMR data container class.
+             * @returns bool True, if data frame is processed, otherwise false.
+             */
             void processNetwork(const data::Data& dmrData);
+            /** @} */
 
         private:
             friend class packet::Data;
@@ -81,19 +97,43 @@ namespace dmr
             bool m_verbose;
             bool m_debug;
 
-            /// <summary>Initializes a new instance of the Voice class.</summary>
+            /**
+             * @brief Initializes a new instance of the Voice class.
+             * @param slot DMR slot.
+             * @param network Instance of the BaseNetwork class.
+             * @param embeddedLCOnly 
+             * @param dumpTAData 
+             * @param debug Flag indicating whether DMR debug is enabled.
+             * @param verbose Flag indicating whether DMR verbose logging is enabled.
+             */
             Voice(Slot* slot, network::BaseNetwork* network, bool embeddedLCOnly, bool dumpTAData, bool debug, bool verbose);
-            /// <summary>Finalizes a instance of the Voice class.</summary>
+            /**
+             * @brief Finalizes a instance of the Voice class.
+             */
             ~Voice();
 
-            /// <summary></summary>
+            /**
+             * @brief Log GPS information.
+             * @param srcId Source radio ID.
+             * @param[in] data Buffer containing GPS data.
+             */
             void logGPSPosition(const uint32_t srcId, const uint8_t* data);
 
-            /// <summary>Helper to insert AMBE null frames for missing audio.</summary>
+            /**
+             * @brief Helper to insert AMBE null frames for missing audio.
+             * @param data Buffer containing frame data.
+             */
             void insertNullAudio(uint8_t* data);
-            /// <summary>Helper to insert DMR AMBE silence frames.</summary>
+            /**
+             * @brief Helper to insert DMR AMBE silence frames.
+             * @param[in] data Buffer containing frame data.
+             * @param seqNo DMR AMBE sequence number.
+             */
             bool insertSilence(const uint8_t* data, uint8_t seqNo);
-            /// <summary>Helper to insert DMR AMBE silence frames.</summary>
+            /**
+             * @brief Helper to insert DMR AMBE silence frames.
+             * @param count 
+             */
             void insertSilence(uint32_t count);
         };
     } // namespace packet

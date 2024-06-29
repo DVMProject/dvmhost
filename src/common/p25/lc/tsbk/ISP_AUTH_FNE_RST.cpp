@@ -22,6 +22,7 @@ using namespace p25::lc::tsbk;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the ISP_AUTH_FNE_RST class. */
+
 ISP_AUTH_FNE_RST::ISP_AUTH_FNE_RST() : TSBK(),
     m_authSuccess(false),
     m_authStandalone(false)
@@ -30,6 +31,7 @@ ISP_AUTH_FNE_RST::ISP_AUTH_FNE_RST() : TSBK(),
 }
 
 /* Decode a trunking signalling block. */
+
 bool ISP_AUTH_FNE_RST::decode(const uint8_t* data, bool rawTSBK)
 {
     assert(data != nullptr);
@@ -51,6 +53,7 @@ bool ISP_AUTH_FNE_RST::decode(const uint8_t* data, bool rawTSBK)
 }
 
 /* Encode a trunking signalling block. */
+
 void ISP_AUTH_FNE_RST::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 {
     assert(data != nullptr);
@@ -59,6 +62,7 @@ void ISP_AUTH_FNE_RST::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 }
 
 /* Returns a string that represents the current TSBK. */
+
 std::string ISP_AUTH_FNE_RST::toString(bool isp)
 {
     return std::string("TSBKO, ISP_AUTH_FNE_RST (Authentication FNE Result)");
@@ -69,6 +73,7 @@ std::string ISP_AUTH_FNE_RST::toString(bool isp)
 // ---------------------------------------------------------------------------
 
 /* Internal helper to copy the the class. */
+
 void ISP_AUTH_FNE_RST::copy(const ISP_AUTH_FNE_RST& data)
 {
     TSBK::copy(data);

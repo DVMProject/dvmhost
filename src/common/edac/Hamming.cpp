@@ -18,6 +18,7 @@ using namespace edac;
 // ---------------------------------------------------------------------------
 
 /* Decode Hamming (15,11,3). */
+
 bool Hamming::decode15113_1(bool* d)
 {
     assert(d != nullptr);
@@ -60,6 +61,7 @@ bool Hamming::decode15113_1(bool* d)
 }
 
 /* Encode Hamming (15,11,3). */
+
 void Hamming::encode15113_1(bool* d)
 {
     assert(d != nullptr);
@@ -72,6 +74,7 @@ void Hamming::encode15113_1(bool* d)
 }
 
 /* Decode Hamming (15,11,3). */
+
 bool Hamming::decode15113_2(bool* d)
 {
     assert(d != nullptr);
@@ -114,6 +117,7 @@ bool Hamming::decode15113_2(bool* d)
 }
 
 /* Encode Hamming (15,11,3). */
+
 void Hamming::encode15113_2(bool* d)
 {
     assert(d != nullptr);
@@ -126,6 +130,7 @@ void Hamming::encode15113_2(bool* d)
 }
 
 /* Decode Hamming (13,9,3). */
+
 bool Hamming::decode1393(bool* d)
 {
     assert(d != nullptr);
@@ -166,6 +171,7 @@ bool Hamming::decode1393(bool* d)
 }
 
 /* Encode Hamming (13,9,3). */
+
 void Hamming::encode1393(bool* d)
 {
     assert(d != nullptr);
@@ -178,6 +184,7 @@ void Hamming::encode1393(bool* d)
 }
 
 /* Decode Hamming (10,6,3). */
+
 bool Hamming::decode1063(bool* d)
 {
     assert(d != nullptr);
@@ -215,6 +222,7 @@ bool Hamming::decode1063(bool* d)
 }
 
 /* Encode Hamming (10,6,3). */
+
 void Hamming::encode1063(bool* d)
 {
     assert(d != nullptr);
@@ -227,6 +235,7 @@ void Hamming::encode1063(bool* d)
 }
 
 /* Decode Hamming (16,11,4). */
+
 bool Hamming::decode16114(bool* d)
 {
     assert(d != nullptr);
@@ -276,6 +285,7 @@ bool Hamming::decode16114(bool* d)
 }
 
 /* Encode Hamming (10,6,3). */
+
 void Hamming::encode16114(bool* d)
 {
     assert(d != nullptr);
@@ -288,6 +298,7 @@ void Hamming::encode16114(bool* d)
 }
 
 /* Decode Hamming (17,12,3). */
+
 bool Hamming::decode17123(bool* d)
 {
     assert(d != nullptr);
@@ -338,6 +349,7 @@ bool Hamming::decode17123(bool* d)
 }
 
 /* Encode Hamming (17,12,3). */
+
 void Hamming::encode17123(bool* d)
 {
     assert(d != nullptr);

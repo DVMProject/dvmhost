@@ -21,6 +21,7 @@ using namespace dmr::defines;
 // ---------------------------------------------------------------------------
 
 /* Helper to append DMR data sync bytes to the passed buffer. */
+
 void Sync::addDMRDataSync(uint8_t* data, bool duplex)
 {
     assert(data != nullptr);
@@ -36,6 +37,7 @@ void Sync::addDMRDataSync(uint8_t* data, bool duplex)
 }
 
 /* Helper to append DMR voice sync bytes to the passed buffer. */
+
 void Sync::addDMRAudioSync(uint8_t* data, bool duplex)
 {
     assert(data != nullptr);

@@ -1,17 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Modem Host Software
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Modem Host Software
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2015,2016,2017,2018 Jonathan Naylor, G4KLX
-*   Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Modem Host Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2015,2016,2017,2018 Jonathan Naylor, G4KLX
+ *  Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "Defines.h"
 #include "common/dmr/acl/AccessControl.h"
 #include "common/dmr/lc/FullLC.h"
@@ -75,12 +71,8 @@ using namespace dmr::packet;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Process DMR data frame from the RF interface.
-/// </summary>
-/// <param name="data">Buffer containing data frame.</param>
-/// <param name="len">Length of data frame.</param>
-/// <returns></returns>
+/* Process DMR data frame from the RF interface. */
+
 bool Data::process(uint8_t* data, uint32_t len)
 {
     assert(data != nullptr);
@@ -323,10 +315,8 @@ bool Data::process(uint8_t* data, uint32_t len)
     return false;
 }
 
-/// <summary>
-/// Process a data frame from the network.
-/// </summary>
-/// <param name="dmrData"></param>
+/* Process a data frame from the network. */
+
 void Data::processNetwork(const data::Data& dmrData)
 {
     uint8_t dataType = dmrData.getDataType();
@@ -547,15 +537,8 @@ void Data::processNetwork(const data::Data& dmrData)
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the Data class.
-/// </summary>
-/// <param name="slot">DMR slot.</param>
-/// <param name="network">Instance of the BaseNetwork class.</param>
-/// <param name="dumpDataPacket"></param>
-/// <param name="repeatDataPacket"></param>
-/// <param name="debug">Flag indicating whether DMR debug is enabled.</param>
-/// <param name="verbose">Flag indicating whether DMR verbose logging is enabled.</param>
+/* Initializes a new instance of the Data class. */
+
 Data::Data(Slot* slot, network::BaseNetwork* network, bool dumpDataPacket, bool repeatDataPacket, bool debug, bool verbose) :
     m_slot(slot),
     m_pduUserData(nullptr),
@@ -570,9 +553,8 @@ Data::Data(Slot* slot, network::BaseNetwork* network, bool dumpDataPacket, bool 
     ::memset(m_pduUserData, 0x00U, MAX_PDU_COUNT * MAX_PDU_LENGTH + 2U);
 }
 
-/// <summary>
-/// Finalizes a instance of the Data class.
-/// </summary>
+/* Finalizes a instance of the Data class. */
+
 Data::~Data()
 {
     delete[] m_pduUserData;

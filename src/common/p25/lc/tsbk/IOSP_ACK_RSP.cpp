@@ -22,12 +22,14 @@ using namespace p25::lc::tsbk;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the IOSP_ACK_RSP class. */
+
 IOSP_ACK_RSP::IOSP_ACK_RSP() : TSBK()
 {
     m_lco = TSBKO::IOSP_ACK_RSP;
 }
 
 /* Decode a trunking signalling block. */
+
 bool IOSP_ACK_RSP::decode(const uint8_t* data, bool rawTSBK)
 {
     assert(data != nullptr);
@@ -50,6 +52,7 @@ bool IOSP_ACK_RSP::decode(const uint8_t* data, bool rawTSBK)
 }
 
 /* Encode a trunking signalling block. */
+
 void IOSP_ACK_RSP::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 {
     assert(data != nullptr);
@@ -73,6 +76,7 @@ void IOSP_ACK_RSP::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 }
 
 /* Returns a string that represents the current TSBK. */
+
 std::string IOSP_ACK_RSP::toString(bool isp)
 {
     return (isp) ? std::string("TSBKO, IOSP_ACK_RSP (Acknowledge Response - Unit)") :

@@ -34,6 +34,7 @@ const uint8_t UDTF_NMEA = 0x05U;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the DataHeader class. */
+
 DataHeader::DataHeader() :
     m_GI(false),
     m_DPF(DPF::UDT),
@@ -62,12 +63,14 @@ DataHeader::DataHeader() :
 }
 
 /* Finalizes a instance of the DataHeader class. */
+
 DataHeader::~DataHeader()
 {
     delete[] m_data;
 }
 
 /* Equals operator. */
+
 DataHeader& DataHeader::operator=(const DataHeader& header)
 {
     if (&header != this) {
@@ -100,6 +103,7 @@ DataHeader& DataHeader::operator=(const DataHeader& header)
 }
 
 /* Decodes a DMR data header. */
+
 bool DataHeader::decode(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -215,6 +219,7 @@ bool DataHeader::decode(const uint8_t* data)
 }
 
 /* Encodes a DMR data header. */
+
 void DataHeader::encode(uint8_t* data) const
 {
     assert(data != nullptr);

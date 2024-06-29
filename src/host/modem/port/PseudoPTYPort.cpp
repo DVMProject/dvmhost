@@ -1,16 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Modem Host Software
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Modem Host Software
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2020,2021 Jonathan Naylor, G4KLX
-*
-*/
+/*
+ * Digital Voice Modem - Modem Host Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2020,2021 Jonathan Naylor, G4KLX
+ *
+ */
 #include "common/Log.h"
 #include "modem/port/PseudoPTYPort.h"
 
@@ -31,27 +27,20 @@ using namespace modem::port;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the PseudoPTYPort class.
-/// </summary>
-/// <param name="device">Serial port device.</param>
-/// <param name="speed">Serial port speed.</param>
-/// <param name="assertRTS"></param>
+/* Initializes a new instance of the PseudoPTYPort class. */
+
 PseudoPTYPort::PseudoPTYPort(const std::string& symlink, SERIAL_SPEED speed, bool assertRTS) : UARTPort(speed, assertRTS),
     m_symlink(symlink)
 {
     /* stub */
 }
 
-/// <summary>
-/// Finalizes a instance of the PseudoPTYPort class.
-/// </summary>
+/* Finalizes a instance of the PseudoPTYPort class. */
+
 PseudoPTYPort::~PseudoPTYPort() = default;
 
-/// <summary>
-/// Opens a connection to the serial port.
-/// </summary>
-/// <returns>True, if connection is opened, otherwise false.</returns>
+/* Opens a connection to the serial port. */
+
 bool PseudoPTYPort::open()
 {
     assert(m_fd == -1);
@@ -79,9 +68,8 @@ bool PseudoPTYPort::open()
     return setTermios();
 }
 
-/// <summary>
-/// Closes the connection to the serial port.
-/// </summary>
+/* Closes the connection to the serial port. */
+
 void PseudoPTYPort::close()
 {
     UARTPort::close();

@@ -7,9 +7,19 @@
 * @package DVM / Remote Command Client
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2023,2024 Bryan Biedenkapp, N2PLL
+*  Copyright (C) 2023,2024 Bryan Biedenkapp, N2PLL
 *
 */
+/**
+ * @defgroup remote_rest REST Client
+ * @brief Implementation for the remote command REST client.
+ * @ingroup remote
+ * 
+ * @file RESTClient.h
+ * @ingroup remote_rest
+ * @file RESTClient.cpp
+ * @ingroup remote_rest
+ */
 #if !defined(__REST_CLIENT_H__)
 #define __REST_CLIENT_H__
 
@@ -24,35 +34,91 @@
 
 // ---------------------------------------------------------------------------
 //  Class Declaration
-//      This class implements the REST client logic.
 // ---------------------------------------------------------------------------
 
+/**
+ * @brief This class implements the REST client logic.
+ * @ingroup remote_rest
+ */
 class HOST_SW_API RESTClient
 {
 public:
-    /// <summary>Initializes a new instance of the RESTClient class.</summary>
+    /**
+     * @brief Initializes a new instance of the RESTClient class.
+     * @param address Network Hostname/IP address to connect to.
+     * @param port Network port number.
+     * @param password Authentication password.
+     * @param enableSSL Flag indicating whether or not HTTPS is enabled.
+     * @param debug Flag indicating whether debug is enabled.
+     */
     RESTClient(const std::string& address, uint32_t port, const std::string& password, bool enableSSL, bool debug);
-    /// <summary>Finalizes a instance of the RESTClient class.</summary>
+    /**
+     * @brief Finalizes a instance of the RESTClient class.
+     */
     ~RESTClient();
 
-    /// <summary>Sends remote control command to the specified modem.</summary>
+    /**
+     * @brief Sends remote control command to the specified modem.
+     * @param method REST API method.
+     * @param endpoint REST API endpoint.
+     * @param payload REST API endpoint payload.
+     * @return EXIT_SUCCESS, if command was sent, otherwise EXIT_FAILURE.
+     */
     int send(const std::string method, const std::string endpoint, json::object payload);
-    /// <summary>Sends remote control command to the specified modem.</summary>
+    /**
+     * @brief Sends remote control command to the specified modem.
+     * @param method REST API method.
+     * @param endpoint REST API endpoint.
+     * @param payload REST API endpoint payload.
+     * @param response REST API endpoint response.
+     * @returns EXIT_SUCCESS, if command was sent, otherwise EXIT_FAILURE.
+     */
     int send(const std::string method, const std::string endpoint, json::object payload, json::object& response);
 
-    /// <summary>Sends remote control command to the specified modem.</summary>
+    /**
+     * @brief Sends remote control command to the specified modem.
+     * @param address Network Hostname/IP address to connect to.
+     * @param port Network port number.
+     * @param password Authentication password.
+     * @param method REST API method.
+     * @param endpoint REST API endpoint.
+     * @param payload REST API endpoint payload.
+     * @param enableSSL Flag indicating whether or not HTTPS is enabled.
+     * @param debug Flag indicating whether debug is enabled.
+     * @returns EXIT_SUCCESS, if command was sent, otherwise EXIT_FAILURE.
+     */
     static int send(const std::string& address, uint32_t port, const std::string& password, const std::string method,
         const std::string endpoint, json::object payload, bool enableSSL, int timeout = REST_DEFAULT_WAIT, bool debug = false);
-    /// <summary>Sends remote control command to the specified modem.</summary>
+    /**
+     * @brief Sends remote control command to the specified modem.
+     * @param address Network Hostname/IP address to connect to.
+     * @param port Network port number.
+     * @param password Authentication password.
+     * @param method REST API method.
+     * @param endpoint REST API endpoint.
+     * @param payload REST API endpoint payload.
+     * @param response REST API endpoint response.
+     * @param enableSSL Flag indicating whether or not HTTPS is enabled.
+     * @param timeout REST response wait timeout.
+     * @param debug Flag indicating whether debug is enabled.
+     * @returns EXIT_SUCCESS, if command was sent, otherwise EXIT_FAILURE.
+     */
     static int send(const std::string& address, uint32_t port, const std::string& password, const std::string method,
         const std::string endpoint, json::object payload, json::object& response, bool enableSSL, int timeout, bool debug = false);
 
 private:
     typedef network::rest::http::HTTPPayload HTTPPayload;
-    /// <summary></summary>
+    /**
+     * @brief HTTP response handler.
+     * @param request HTTP request.
+     * @param reply HTTP reply.
+     */
     static void responseHandler(const HTTPPayload& request, HTTPPayload& reply);
 
-    /// <summary></summary>
+    /**
+     * @brief Helper to wait for a HTTP response.
+     * @returns True, if timed out, otherwise false.
+     */
     static bool wait(const int t = REST_DEFAULT_WAIT);
 
     std::string m_address;

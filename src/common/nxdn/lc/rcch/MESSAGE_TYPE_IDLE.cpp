@@ -22,12 +22,14 @@ using namespace nxdn::lc::rcch;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the MESSAGE_TYPE_IDLE class. */
+
 MESSAGE_TYPE_IDLE::MESSAGE_TYPE_IDLE() : RCCH()
 {
     m_messageType = MessageType::IDLE;
 }
 
 /* Decode RCCH data. */
+
 void MESSAGE_TYPE_IDLE::decode(const uint8_t* data, uint32_t length, uint32_t offset)
 {
     assert(data != nullptr);
@@ -39,6 +41,7 @@ void MESSAGE_TYPE_IDLE::decode(const uint8_t* data, uint32_t length, uint32_t of
 }
 
 /* Encode RCCH data. */
+
 void MESSAGE_TYPE_IDLE::encode(uint8_t* data, uint32_t length, uint32_t offset)
 {
     assert(data != nullptr);
@@ -50,6 +53,7 @@ void MESSAGE_TYPE_IDLE::encode(uint8_t* data, uint32_t length, uint32_t offset)
 }
 
 /* Returns a string that represents the current RCCH. */
+
 std::string MESSAGE_TYPE_IDLE::toString(bool isp)
 {
     return std::string("IDLE (Idle)");

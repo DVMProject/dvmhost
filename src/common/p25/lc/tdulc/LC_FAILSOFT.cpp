@@ -22,6 +22,7 @@ using namespace p25::lc::tdulc;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the LC_FAILSOFT class. */
+
 LC_FAILSOFT::LC_FAILSOFT() : TDULC()
 {
     m_lco = LCO::FAILSOFT;
@@ -29,6 +30,7 @@ LC_FAILSOFT::LC_FAILSOFT() : TDULC()
 }
 
 /* Decode a terminator data unit w/ link control. */
+
 bool LC_FAILSOFT::decode(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -39,6 +41,7 @@ bool LC_FAILSOFT::decode(const uint8_t* data)
 }
 
 /* Encode a terminator data unit w/ link control. */
+
 void LC_FAILSOFT::encode(uint8_t* data)
 {
     assert(data != nullptr);

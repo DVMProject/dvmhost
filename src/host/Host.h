@@ -1,17 +1,27 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Modem Host Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2015,2016,2017 Jonathan Naylor, G4KLX
+ *  Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Modem Host Software
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Modem Host Software
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2015,2016,2017 Jonathan Naylor, G4KLX
-*   Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @file Host.h
+ * @ingroup host
+ * @file Host.cpp
+ * @ingroup host
+ * @file Host.Config.cpp
+ * @ingroup host
+ * @file Host.DMR.cpp
+ * @ingroup host
+ * @file Host.P25.cpp
+ * @ingroup host
+ * @file Host.NXDN.cpp
+ * @ingroup host
+ */
 #if !defined(__HOST_H__)
 #define __HOST_H__
 
@@ -43,20 +53,34 @@ class HOST_SW_API RESTAPI;
 
 // ---------------------------------------------------------------------------
 //  Class Declaration
-//      This class implements the core host service logic.
 // ---------------------------------------------------------------------------
 
+/**
+ * @brief This class implements the core host service logic.
+ * @ingroup host
+ */
 class HOST_SW_API Host {
 public:
-    /// <summary>Initializes a new instance of the Host class.</summary>
+    /**
+     * @brief Initializes a new instance of the Host class.
+     * @param confFile Full-path to the configuration file.
+     */
     Host(const std::string& confFile);
-    /// <summary>Finalizes a instance of the Host class.</summary>
+    /**
+     * @brief Finalizes a instance of the Host class.
+     */
     ~Host();
 
-    /// <summary>Executes the main modem host processing loop.</summary>
+    /**
+     * @brief Executes the main modem host processing loop.
+     * @returns int Zero if successful, otherwise error occurred.
+     */
     int run();
 
-    /// <summary>Gets the RF channel lookup class.</summary>
+    /**
+     * @brief Gets the RF channel lookup class.
+     * @returns lookups::ChannelLookup* RF channel lookup.
+     */
     lookups::ChannelLookup* rfCh() const { return m_channelLookup; }
 
 private:
@@ -174,61 +198,139 @@ private:
     uint16_t m_restPort;
     RESTAPI *m_RESTAPI;
 
-    /// <summary>Helper to generate the status of the host in JSON format.</summary>
+    /**
+     * @brief Helper to generate the status of the host in JSON format.
+     * @returns json::object Host status as a JSON object.
+     */
     json::object getStatus();
 
-    /// <summary>Modem port open callback.</summary>
+    /**
+     * @brief Modem port open callback.
+     * @param modem Instance of the Modem class.
+     * @returns bool True, if the modem is opened, otherwise false.
+     */
     bool rmtPortModemOpen(modem::Modem* modem);
-    /// <summary>Modem port close callback.</summary>
+    /**
+     * @brief Modem port close callback.
+     * @param modem Instance of the Modem class.
+     * @returns bool True, if the modem is closed, otherwise false.
+     */
     bool rmtPortModemClose(modem::Modem* modem);
-    /// <summary>Modem clock callback.</summary>
+    /**
+     * @brief Modem clock callback.
+     * @param modem Instance of the Modem class.
+     * @param ms 
+     * @param rspType Modem message response type.
+     * @param rspDblLen Flag indicating whether or not this message is a double length message.
+     * @param[in] buffer Buffer containing modem message.
+     * @param len Length of buffer.
+     * @returns bool True, if the modem response was handled, otherwise false.
+     */
     bool rmtPortModemHandler(modem::Modem* modem, uint32_t ms, modem::RESP_TYPE_DVM rspType, bool rspDblLen, const uint8_t* buffer, uint16_t len);
 
-    /// <summary>Helper to set the host/modem running state.</summary>
+    /**
+     * @brief Helper to set the host/modem running state.
+     * @param state Host running state.
+     */
     void setState(uint8_t state);
 
-    /// <summary>Helper to create the state lock file.</summary>
+    /**
+     * @brief Helper to create the state lock file.
+     * @param state 
+     */
     void createLockFile(const char* state) const;
-    /// <summary>Helper to remove the state lock file.</summary>
+    /**
+     * @brief Helper to remove the state lock file.
+     */
     void removeLockFile() const;
 
-    /** (Host.Config.cpp) */
-    /// <summary>Reads basic configuration parameters from the INI.</summary>
+    // Configuration (Host.Config.cpp)
+    /**
+     * @brief Reads basic configuration parameters from the INI.
+     * @returns bool True, if configuration was read successfully, otherwise false.
+     */
     bool readParams();
-    /// <summary>Initializes the modem DSP.</summary>
+    /**
+     * @brief Initializes the modem DSP.
+     * @returns bool True, if the modem was initialized, otherwise false.
+     */
     bool createModem();
-    /// <summary>Initializes network connectivity.</summary>
+    /**
+     * @brief Initializes network connectivity.
+     * @returns bool True, if network connectivity was initialized, otherwise false.
+     */
     bool createNetwork();
 
-    /** Digital Mobile Radio (Host.DMR.cpp) */
-    /// <summary>Helper to interrupt a running DMR beacon.</summary>
+    // Digital Mobile Radio (Host.DMR.cpp)
+    /**
+     * @brief Helper to interrupt a running DMR beacon.
+     * @param control Instance of the dmr::Control class.
+     */
     void interruptDMRBeacon(dmr::Control* control);
 
-    /// <summary>Helper to read DMR slot 1 frames from modem.</summary>
+    /**
+     * @brief Helper to read DMR slot 1 frames from modem.
+     * @param control Instance of the dmr::Control class.
+     * @param afterReadCallback Function callback after reading frames.
+     */
     void readFramesDMR1(dmr::Control* control, std::function<void()>&& afterReadCallback);
-    /// <summary>Helper to write DMR slot 1 frames to modem.</summary>
+    /**
+     * @brief Helper to write DMR slot 1 frames to modem.
+     * @param control Instance of the dmr::Control class.
+     * @param afterWriteCallback Function callback writing reading frames.
+     */
     void writeFramesDMR1(dmr::Control* control, std::function<void()>&& afterWriteCallback);
-    /// <summary>Helper to read DMR slot 2 frames from modem.</summary>
+    /**
+     * @brief Helper to read DMR slot 2 frames from modem.
+     * @param control Instance of the dmr::Control class.
+     * @param afterReadCallback Function callback after reading frames.
+     */
     void readFramesDMR2(dmr::Control* control, std::function<void()>&& afterReadCallback);
-    /// <summary>Helper to write DMR slot 2 frames to modem.</summary>
+    /**
+     * @brief Helper to write DMR slot 2 frames to modem.
+     * @param control Instance of the dmr::Control class.
+     * @param afterWriteCallback Function callback writing reading frames.
+     */
     void writeFramesDMR2(dmr::Control* control, std::function<void()>&& afterWriteCallback);
 
-    /** Project 25 (Host.P25.cpp) */
-    /// <summary>Helper to interrupt a running P25 control channel.</summary>
+    // Project 25 (Host.P25.cpp)
+    /**
+     * @brief Helper to interrupt a running P25 control channel.
+     * @param control Instance of the p25::Control class.
+     */
     void interruptP25Control(p25::Control* control);
 
-    /// <summary>Helper to read P25 frames from modem.</summary>
+    /**
+     * @brief Helper to read P25 frames from modem.
+     * @param control Instance of the p25::Control class.
+     * @param afterReadCallback Function callback after reading frames.
+     */
     void readFramesP25(p25::Control* control, std::function<void()>&& afterReadCallback);
-    /// <summary>Helper to write P25 frames to modem.</summary>
+    /**
+     * @brief Helper to write P25 frames to modem.
+     * @param control Instance of the p25::Control class.
+     * @param afterWriteCallback Function callback writing reading frames.
+     */
     void writeFramesP25(p25::Control* control, std::function<void()>&& afterWriteCallback);
 
-    /** Next Generation Digital Narrowband (Host.NXDN.cpp) */
-    /// <summary>Helper to interrupt a running NXDN control channel.</summary>
+    // Next Generation Digital Narrowband (Host.NXDN.cpp)
+    /**
+     * @brief Helper to interrupt a running NXDN control channel.
+     * @param control Instance of the nxdn::Control class.
+     */
     void interruptNXDNControl(nxdn::Control* control);
 
-    /// <summary>Helper to read NXDN frames from modem.</summary>
+    /**
+     * @brief Helper to read NXDN frames from modem.
+     * @param control Instance of the nxdn::Control class.
+     * @param afterReadCallback Function callback after reading frames.
+     */
     void readFramesNXDN(nxdn::Control* control, std::function<void()>&& afterReadCallback);
-    /// <summary>Helper to write NXDN frames to modem.</summary>
+    /**
+     * @brief Helper to write NXDN frames to modem.
+     * @param control Instance of the nxdn::Control class.
+     * @param afterWriteCallback Function callback writing reading frames.
+     */
     void writeFramesNXDN(nxdn::Control* control, std::function<void()>&& afterWriteCallback);
 };
 

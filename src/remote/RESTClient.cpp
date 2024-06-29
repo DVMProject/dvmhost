@@ -1,15 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Remote Command Client
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Remote Command Client
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2023,2024 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Remote Command Client
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2023,2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "Defines.h"
 #include "common/edac/SHA256.h"
 #include "common/network/json/json.h"
@@ -58,12 +55,8 @@ bool RESTClient::m_debug = false;
 //  Global Functions
 // ---------------------------------------------------------------------------
 
-/// <summary>
-///
-/// </summary>
-/// <param name="response"></param>
-/// <param name="obj"></param>
-/// <returns></returns>
+/* */
+
 bool parseResponseBody(const HTTPPayload& response, json::object& obj)
 {
     std::string contentType = response.headers.find("Content-Type");
@@ -91,14 +84,8 @@ bool parseResponseBody(const HTTPPayload& response, json::object& obj)
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the RESTClient class.
-/// </summary>
-/// <param name="address">Network Hostname/IP address to connect to.</param>
-/// <param name="port">Network port number.</param>
-/// <param name="password">Authentication password.</param>
-/// <param name="enableSSL">Flag indicating whether or not HTTPS is enabled.</param>
-/// <param name="debug">Flag indicating whether debug is enabled.</param>
+/* Initializes a new instance of the RESTClient class. */
+
 RESTClient::RESTClient(const std::string& address, uint32_t port, const std::string& password, bool enableSSL, bool debug) :
     m_address(address),
     m_port(port),
@@ -112,49 +99,27 @@ RESTClient::RESTClient(const std::string& address, uint32_t port, const std::str
     m_debug = debug;
 }
 
-/// <summary>
-/// Finalizes a instance of the RESTClient class.
-/// </summary>
+/* Finalizes a instance of the RESTClient class. */
+
 RESTClient::~RESTClient() = default;
 
-/// <summary>
-/// Sends remote control command to the specified modem.
-/// </summary>
-/// <param name="method">REST API method.</param>
-/// <param name="endpoint">REST API endpoint.</param>
-/// <param name="payload">REST API endpoint payload.</param>
-/// <returns>EXIT_SUCCESS, if command was sent, otherwise EXIT_FAILURE.</returns>
+/* Sends remote control command to the specified modem. */
+
 int RESTClient::send(const std::string method, const std::string endpoint, json::object payload)
 {
     json::object rsp = json::object();
     return send(method, endpoint, payload, rsp);
 }
 
-/// <summary>
-/// Sends remote control command to the specified modem.
-/// </summary>
-/// <param name="method">REST API method.</param>
-/// <param name="endpoint">REST API endpoint.</param>
-/// <param name="payload">REST API endpoint payload.</param>
-/// <param name="response">REST API endpoint response.</param>
-/// <returns>EXIT_SUCCESS, if command was sent, otherwise EXIT_FAILURE.</returns>
+/* Sends remote control command to the specified modem. */
+
 int RESTClient::send(const std::string method, const std::string endpoint, json::object payload, json::object& response)
 {
     return send(m_address, m_port, m_password, method, endpoint, payload, response, m_enableSSL, m_debug);
 }
 
-/// <summary>
-/// Sends remote control command to the specified modem.
-/// </summary>
-/// <param name="address">Network Hostname/IP address to connect to.</param>
-/// <param name="port">Network port number.</param>
-/// <param name="password">Authentication password.</param>
-/// <param name="method">REST API method.</param>
-/// <param name="endpoint">REST API endpoint.</param>
-/// <param name="payload">REST API endpoint payload.</param>
-/// <param name="enableSSL">Flag indicating whether or not HTTPS is enabled.</param>
-/// <param name="debug">Flag indicating whether debug is enabled.</param>
-/// <returns>EXIT_SUCCESS, if command was sent, otherwise EXIT_FAILURE.</returns>
+/* Sends remote control command to the specified modem. */
+
 int RESTClient::send(const std::string& address, uint32_t port, const std::string& password, const std::string method,
     const std::string endpoint, json::object payload, bool enableSSL, int timeout, bool debug)
 {
@@ -162,20 +127,8 @@ int RESTClient::send(const std::string& address, uint32_t port, const std::strin
     return send(address, port, password, method, endpoint, payload, rsp, enableSSL, timeout, debug);
 }
 
-/// <summary>
-/// Sends remote control command to the specified modem.
-/// </summary>
-/// <param name="address">Network Hostname/IP address to connect to.</param>
-/// <param name="port">Network port number.</param>
-/// <param name="password">Authentication password.</param>
-/// <param name="method">REST API method.</param>
-/// <param name="endpoint">REST API endpoint.</param>
-/// <param name="payload">REST API endpoint payload.</param>
-/// <param name="response">REST API endpoint response.</param>
-/// <param name="enableSSL">Flag indicating whether or not HTTPS is enabled.</param>
-/// <param name="timeout">REST response wait timeout.</param>
-/// <param name="debug">Flag indicating whether debug is enabled.</param>
-/// <returns>EXIT_SUCCESS, if command was sent, otherwise EXIT_FAILURE.</returns>
+/* Sends remote control command to the specified modem. */
+
 int RESTClient::send(const std::string& address, uint32_t port, const std::string& password, const std::string method,
     const std::string endpoint, json::object payload, json::object& response, bool enableSSL, int timeout, bool debug)
 {
@@ -419,21 +372,16 @@ int RESTClient::send(const std::string& address, uint32_t port, const std::strin
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-///
-/// </summary>
-/// <param name="request"></param>
-/// <param name="reply"></param>
+/* HTTP response handler. */
+
 void RESTClient::responseHandler(const HTTPPayload& request, HTTPPayload& reply)
 {
     m_responseAvailable = true;
     m_response = request;
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="t"></param>
+/* Helper to wait for a HTTP response. */
+
 bool RESTClient::wait(const int t)
 {
     m_responseAvailable = false;

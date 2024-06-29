@@ -1,15 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Modem Host Software
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Modem Host Software
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2023-2024 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Modem Host Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2023-2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "Defines.h"
 #include "common/edac/SHA256.h"
 #include "common/lookups/AffiliationLookup.h"
@@ -48,6 +45,14 @@ using namespace modem;
 //  Global Functions
 // ---------------------------------------------------------------------------
 
+/**
+ * @brief Helper to format string.
+ * 
+ * @tparam FormatArgs 
+ * @param format String format.
+ * @param args 
+ * @returns std::string Output string.
+ */
 template<typename ... FormatArgs>
 std::string string_format(const std::string& format, FormatArgs ... args)
 {
@@ -62,22 +67,22 @@ std::string string_format(const std::string& format, FormatArgs ... args)
     return std::string(buf.get(), buf.get() + size - 1);
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="obj"></param>
+/**
+ * @brief Helper to set the default response status.
+ * @param obj JSON object to fill with default status.
+ */
 void setResponseDefaultStatus(json::object& obj)
 {
     int s = (int)HTTPPayload::OK;
     obj["status"].set<int>(s);
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="reply"></param>
-/// <param name="message"></param>
-/// <param name="status"></param>
+/**
+ * @brief Helper to generate a error payload.
+ * @param reply HTTP reply.
+ * @param message Textual error message to send.
+ * @param status HTTP status to send.
+ */
 void errorPayload(HTTPPayload& reply, std::string message, HTTPPayload::StatusType status = HTTPPayload::BAD_REQUEST)
 {
     HTTPPayload rep;
@@ -92,13 +97,13 @@ void errorPayload(HTTPPayload& reply, std::string message, HTTPPayload::StatusTy
     reply.payload(response);
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="request"></param>
-/// <param name="reply"></param>
-/// <param name="obj"></param>
-/// <returns></returns>
+/**
+ * @brief Helper to parse the request body as a JSON object.
+ * @param request HTTP request.
+ * @param reply HTTP reply.
+ * @param obj JSON object to fille with parsed request body.
+ * @returns bool True, if request body was parsed, otherwise false.
+ */
 bool parseRequestBody(const HTTPPayload& request, HTTPPayload& reply, json::object& obj)
 {
     std::string contentType = request.headers.find("Content-Type");
@@ -129,17 +134,8 @@ bool parseRequestBody(const HTTPPayload& request, HTTPPayload& reply, json::obje
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the RESTAPI class.
-/// </summary>
-/// <param name="address">Network Hostname/IP address to connect to.</param>
-/// <param name="port">Network port number.</param>
-/// <param name="password">Authentication password.</param>
-/// <param name="keyFile"></param>
-/// <param name="certFile"></param>
-/// <param name="enableSSL"></param>
-/// <param name="host">Instance of the Host class.</param>
-/// <param name="debug"></param>
+/* Initializes a new instance of the RESTAPI class. */
+
 RESTAPI::RESTAPI(const std::string& address, uint16_t port, const std::string& password,
     const std::string& keyFile, const std::string& certFile, bool enableSSL, Host* host, bool debug) :
     m_dispatcher(debug),
@@ -197,28 +193,20 @@ RESTAPI::RESTAPI(const std::string& address, uint16_t port, const std::string& p
     m_random = mt;
 }
 
-/// <summary>
-/// Finalizes a instance of the RESTAPI class.
-/// </summary>
+/* Finalizes a instance of the RESTAPI class. */
+
 RESTAPI::~RESTAPI() = default;
 
-/// <summary>
-/// Sets the instances of the Radio ID and Talkgroup ID lookup tables.
-/// </summary>
-/// <param name="ridLookup">Radio ID Lookup Table Instance</param>
-/// <param name="tidLookup">Talkgroup Rules Lookup Table Instance</param>
+/* Sets the instances of the Radio ID and Talkgroup ID lookup tables. */
+
 void RESTAPI::setLookups(lookups::RadioIdLookup* ridLookup, lookups::TalkgroupRulesLookup* tidLookup)
 {
     m_ridLookup = ridLookup;
     m_tidLookup = tidLookup;
 }
 
-/// <summary>
-/// Sets the instances of the digital radio protocols.
-/// </summary>
-/// <param name="dmr">Instance of the DMR Control class.</param>
-/// <param name="p25">Instance of the P25 Control class.</param>
-/// <param name="nxdn">Instance of the NXDN Control class.</param>
+/* Sets the instances of the digital radio protocols. */
+
 void RESTAPI::setProtocols(dmr::Control* dmr, p25::Control* p25, nxdn::Control* nxdn)
 {
     m_dmr = dmr;
@@ -226,10 +214,8 @@ void RESTAPI::setProtocols(dmr::Control* dmr, p25::Control* p25, nxdn::Control* 
     m_nxdn = nxdn;
 }
 
-/// <summary>
-/// Opens connection to the network.
-/// </summary>
-/// <returns></returns>
+/* Opens connection to the network. */
+
 bool RESTAPI::open()
 {
     initializeEndpoints();
@@ -248,9 +234,8 @@ bool RESTAPI::open()
     return run();
 }
 
-/// <summary>
-/// Closes connection to the network.
-/// </summary>
+/* Closes connection to the network. */
+
 void RESTAPI::close()
 {
 #if defined(ENABLE_TCP_SSL)
@@ -269,9 +254,8 @@ void RESTAPI::close()
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-///
-/// </summary>
+/* Thread entry point. This function is provided to run the thread for the REST API services.*/
+
 void RESTAPI::entry()
 {
 #if defined(ENABLE_TCP_SSL)
@@ -285,9 +269,8 @@ void RESTAPI::entry()
 #endif // ENABLE_TCP_SSL
 }
 
-/// <summary>
-/// Helper to initialize REST API endpoints.
-/// </summary>
+/* Helper to initialize REST API endpoints. */
+
 void RESTAPI::initializeEndpoints()
 {
     m_dispatcher.match(PUT_AUTHENTICATE).put(REST_API_BIND(RESTAPI::restAPI_PutAuth, this));
@@ -349,10 +332,8 @@ void RESTAPI::initializeEndpoints()
     m_dispatcher.match(GET_NXDN_AFFILIATIONS).get(REST_API_BIND(RESTAPI::restAPI_GetNXDNAffList, this));
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="host"></param>
+/* Helper to invalidate a host token. */
+
 void RESTAPI::invalidateHostToken(const std::string host)
 {
     auto token = std::find_if(m_authTokens.begin(), m_authTokens.end(), [&](const AuthTokenValueType& tok) { return tok.first == host; });
@@ -361,10 +342,8 @@ void RESTAPI::invalidateHostToken(const std::string host)
     }
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="request"></param>
+/* Helper to validate authentication for REST API. */
+
 bool RESTAPI::validateAuth(const HTTPPayload& request, HTTPPayload& reply)
 {
     std::string host = request.headers.find("RemoteHost");
@@ -399,12 +378,8 @@ bool RESTAPI::validateAuth(const HTTPPayload& request, HTTPPayload& reply)
     return false;
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="request"></param>
-/// <param name="reply"></param>
-/// <param name="match"></param>
+/* REST API endpoint; implements authentication request. */
+
 void RESTAPI::restAPI_PutAuth(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     std::string host = request.headers.find("RemoteHost");
@@ -478,12 +453,8 @@ void RESTAPI::restAPI_PutAuth(const HTTPPayload& request, HTTPPayload& reply, co
     reply.payload(response);
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="request"></param>
-/// <param name="reply"></param>
-/// <param name="match"></param>
+/* REST API endpoint; implements get version request. */
+
 void RESTAPI::restAPI_GetVersion(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
@@ -497,12 +468,8 @@ void RESTAPI::restAPI_GetVersion(const HTTPPayload& request, HTTPPayload& reply,
     reply.payload(response);
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="request"></param>
-/// <param name="reply"></param>
-/// <param name="match"></param>
+/* REST API endpoint; implements get status request. */
+
 void RESTAPI::restAPI_GetStatus(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
@@ -524,12 +491,8 @@ void RESTAPI::restAPI_GetStatus(const HTTPPayload& request, HTTPPayload& reply, 
     reply.payload(response);
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="request"></param>
-/// <param name="reply"></param>
-/// <param name="match"></param>
+/* REST API endpoint; implements get voice channels request. */
+
 void RESTAPI::restAPI_GetVoiceCh(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
@@ -561,12 +524,8 @@ void RESTAPI::restAPI_GetVoiceCh(const HTTPPayload& request, HTTPPayload& reply,
     reply.payload(response);
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="request"></param>
-/// <param name="reply"></param>
-/// <param name="match"></param>
+/* REST API endpoint; implements put/set modem mode request. */
+
 void RESTAPI::restAPI_PutModemMode(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
@@ -659,12 +618,8 @@ void RESTAPI::restAPI_PutModemMode(const HTTPPayload& request, HTTPPayload& repl
     }
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="request"></param>
-/// <param name="reply"></param>
-/// <param name="match"></param>
+/* REST API endpoint; implements put/request modem kill request. */
+
 void RESTAPI::restAPI_PutModemKill(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
@@ -694,12 +649,8 @@ void RESTAPI::restAPI_PutModemKill(const HTTPPayload& request, HTTPPayload& repl
     }
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="request"></param>
-/// <param name="reply"></param>
-/// <param name="match"></param>
+/* REST API endpoint; implements set supervisory mode request. */
+
 void RESTAPI::restAPI_PutSetSupervisor(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
@@ -771,12 +722,8 @@ void RESTAPI::restAPI_PutSetSupervisor(const HTTPPayload& request, HTTPPayload& 
     }
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="request"></param>
-/// <param name="reply"></param>
-/// <param name="match"></param>
+/* REST API endpoint; implements permit TG request. */
+
 void RESTAPI::restAPI_PutPermitTG(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
@@ -868,12 +815,8 @@ void RESTAPI::restAPI_PutPermitTG(const HTTPPayload& request, HTTPPayload& reply
     }
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="request"></param>
-/// <param name="reply"></param>
-/// <param name="match"></param>
+/* REST API endpoint; implements grant TG request. */
+
 void RESTAPI::restAPI_PutGrantTG(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
@@ -981,12 +924,8 @@ void RESTAPI::restAPI_PutGrantTG(const HTTPPayload& request, HTTPPayload& reply,
     }
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="request"></param>
-/// <param name="reply"></param>
-/// <param name="match"></param>
+/* REST API endpoint; implements release grants request. */
+
 void RESTAPI::restAPI_GetReleaseGrants(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
@@ -1008,12 +947,8 @@ void RESTAPI::restAPI_GetReleaseGrants(const HTTPPayload& request, HTTPPayload& 
     }
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="request"></param>
-/// <param name="reply"></param>
-/// <param name="match"></param>
+/* REST API endpoint; implements release affiliations request. */
+
 void RESTAPI::restAPI_GetReleaseAffs(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
@@ -1035,12 +970,8 @@ void RESTAPI::restAPI_GetReleaseAffs(const HTTPPayload& request, HTTPPayload& re
     }
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="request"></param>
-/// <param name="reply"></param>
-/// <param name="match"></param>
+/* REST API endpoint; implements register CC/VC request. */
+
 void RESTAPI::restAPI_PutRegisterCCVC(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
@@ -1115,12 +1046,8 @@ void RESTAPI::restAPI_PutRegisterCCVC(const HTTPPayload& request, HTTPPayload& r
     }
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="request"></param>
-/// <param name="reply"></param>
-/// <param name="match"></param>
+/* REST API endpoint; implements release grant request. */
+
 void RESTAPI::restAPI_PutReleaseGrant(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
@@ -1211,12 +1138,8 @@ void RESTAPI::restAPI_PutReleaseGrant(const HTTPPayload& request, HTTPPayload& r
     }
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="request"></param>
-/// <param name="reply"></param>
-/// <param name="match"></param>
+/* REST API endpoint; implements touch grant request. */
+
 void RESTAPI::restAPI_PutTouchGrant(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
@@ -1307,12 +1230,8 @@ void RESTAPI::restAPI_PutTouchGrant(const HTTPPayload& request, HTTPPayload& rep
     }
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="request"></param>
-/// <param name="reply"></param>
-/// <param name="match"></param>
+/* REST API endpoint; implements get RID whitelist request. */
+
 void RESTAPI::restAPI_GetRIDWhitelist(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
@@ -1335,12 +1254,8 @@ void RESTAPI::restAPI_GetRIDWhitelist(const HTTPPayload& request, HTTPPayload& r
     }
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="request"></param>
-/// <param name="reply"></param>
-/// <param name="match"></param>
+/* REST API endpoint; implements get RID blacklist request. */
+
 void RESTAPI::restAPI_GetRIDBlacklist(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
@@ -1367,12 +1282,8 @@ void RESTAPI::restAPI_GetRIDBlacklist(const HTTPPayload& request, HTTPPayload& r
 ** Digital Mobile Radio
 */
 
-/// <summary>
-///
-/// </summary>
-/// <param name="request"></param>
-/// <param name="reply"></param>
-/// <param name="match"></param>
+/* REST API endpoint; implements fire DMR beacon request. */
+
 void RESTAPI::restAPI_GetDMRBeacon(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
@@ -1395,12 +1306,8 @@ void RESTAPI::restAPI_GetDMRBeacon(const HTTPPayload& request, HTTPPayload& repl
     }
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="request"></param>
-/// <param name="reply"></param>
-/// <param name="match"></param>
+/* REST API endpoint; implements get DMR debug state request. */
+
 void RESTAPI::restAPI_GetDMRDebug(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
@@ -1436,12 +1343,8 @@ void RESTAPI::restAPI_GetDMRDebug(const HTTPPayload& request, HTTPPayload& reply
     }
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="request"></param>
-/// <param name="reply"></param>
-/// <param name="match"></param>
+/* REST API endpoint; implements get DMR dump CSBK state request. */
+
 void RESTAPI::restAPI_GetDMRDumpCSBK(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
@@ -1474,12 +1377,8 @@ void RESTAPI::restAPI_GetDMRDumpCSBK(const HTTPPayload& request, HTTPPayload& re
     }
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="request"></param>
-/// <param name="reply"></param>
-/// <param name="match"></param>
+/* REST API endpoint; implements DMR RID operations request. */
+
 void RESTAPI::restAPI_PutDMRRID(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     using namespace dmr::defines;
@@ -1548,12 +1447,8 @@ void RESTAPI::restAPI_PutDMRRID(const HTTPPayload& request, HTTPPayload& reply, 
     }
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="request"></param>
-/// <param name="reply"></param>
-/// <param name="match"></param>
+/* REST API endpoint; implements toggle DMR CC enable request. */
+
 void RESTAPI::restAPI_GetDMRCCEnable(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
@@ -1585,12 +1480,8 @@ void RESTAPI::restAPI_GetDMRCCEnable(const HTTPPayload& request, HTTPPayload& re
     }
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="request"></param>
-/// <param name="reply"></param>
-/// <param name="match"></param>
+/* REST API endpoint; implements toggle DMR CC broadcast request. */
+
 void RESTAPI::restAPI_GetDMRCCBroadcast(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
@@ -1608,12 +1499,8 @@ void RESTAPI::restAPI_GetDMRCCBroadcast(const HTTPPayload& request, HTTPPayload&
     }
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="request"></param>
-/// <param name="reply"></param>
-/// <param name="match"></param>
+/* REST API endpoint; implements trigger TSCC payload channel activation request. */
+
 void RESTAPI::restAPI_PutTSCCPayloadActivate(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
@@ -1693,12 +1580,8 @@ void RESTAPI::restAPI_PutTSCCPayloadActivate(const HTTPPayload& request, HTTPPay
     }
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="request"></param>
-/// <param name="reply"></param>
-/// <param name="match"></param>
+/* REST API endpoint; implements get DMR affiliations request. */
+
 void RESTAPI::restAPI_GetDMRAffList(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
@@ -1733,12 +1616,8 @@ void RESTAPI::restAPI_GetDMRAffList(const HTTPPayload& request, HTTPPayload& rep
 ** Project 25
 */
 
-/// <summary>
-///
-/// </summary>
-/// <param name="request"></param>
-/// <param name="reply"></param>
-/// <param name="match"></param>
+/* REST API endpoint; implements fire P25 CC request. */
+
 void RESTAPI::restAPI_GetP25CC(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
@@ -1761,12 +1640,8 @@ void RESTAPI::restAPI_GetP25CC(const HTTPPayload& request, HTTPPayload& reply, c
     }
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="request"></param>
-/// <param name="reply"></param>
-/// <param name="match"></param>
+/* REST API endpoint; implements P25 debug state request. */
+
 void RESTAPI::restAPI_GetP25Debug(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
@@ -1802,12 +1677,8 @@ void RESTAPI::restAPI_GetP25Debug(const HTTPPayload& request, HTTPPayload& reply
     }
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="request"></param>
-/// <param name="reply"></param>
-/// <param name="match"></param>
+/* REST API endpoint; implements P25 dump TSBK state request. */
+
 void RESTAPI::restAPI_GetP25DumpTSBK(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
@@ -1840,12 +1711,8 @@ void RESTAPI::restAPI_GetP25DumpTSBK(const HTTPPayload& request, HTTPPayload& re
     }
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="request"></param>
-/// <param name="reply"></param>
-/// <param name="match"></param>
+/* REST API endpoint; implements P25 RID operation request. */
+
 void RESTAPI::restAPI_PutP25RID(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     using namespace p25::defines;
@@ -1940,12 +1807,8 @@ void RESTAPI::restAPI_PutP25RID(const HTTPPayload& request, HTTPPayload& reply, 
     }
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="request"></param>
-/// <param name="reply"></param>
-/// <param name="match"></param>
+/* REST API endpoint; implements toggle P25 CC request. */
+
 void RESTAPI::restAPI_GetP25CCEnable(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
@@ -1982,12 +1845,8 @@ void RESTAPI::restAPI_GetP25CCEnable(const HTTPPayload& request, HTTPPayload& re
     }
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="request"></param>
-/// <param name="reply"></param>
-/// <param name="match"></param>
+/* REST API endpoint; implements toggle P25 broadcast request. */
+
 void RESTAPI::restAPI_GetP25CCBroadcast(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
@@ -2020,12 +1879,8 @@ void RESTAPI::restAPI_GetP25CCBroadcast(const HTTPPayload& request, HTTPPayload&
     }
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="request"></param>
-/// <param name="reply"></param>
-/// <param name="match"></param>
+/* REST API endpoint; implements transmitting raw TSBK request. */
+
 void RESTAPI::restAPI_PutP25RawTSBK(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     using namespace p25::defines;
@@ -2079,12 +1934,8 @@ void RESTAPI::restAPI_PutP25RawTSBK(const HTTPPayload& request, HTTPPayload& rep
     m_p25->control()->writeRF_TSDU_Raw(tsbk);
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="request"></param>
-/// <param name="reply"></param>
-/// <param name="match"></param>
+/* REST API endpoint; implements get P25 affiliations request. */
+
 void RESTAPI::restAPI_GetP25AffList(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
@@ -2117,12 +1968,8 @@ void RESTAPI::restAPI_GetP25AffList(const HTTPPayload& request, HTTPPayload& rep
 ** Next Generation Digital Narrowband
 */
 
-/// <summary>
-///
-/// </summary>
-/// <param name="request"></param>
-/// <param name="reply"></param>
-/// <param name="match"></param>
+/* REST API endpoint; implements fire NXDN CC request. */
+
 void RESTAPI::restAPI_GetNXDNCC(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
@@ -2145,12 +1992,8 @@ void RESTAPI::restAPI_GetNXDNCC(const HTTPPayload& request, HTTPPayload& reply, 
     }
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="request"></param>
-/// <param name="reply"></param>
-/// <param name="match"></param>
+/* REST API endpoint; implements NXDN debug state request. */
+
 void RESTAPI::restAPI_GetNXDNDebug(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
@@ -2186,12 +2029,8 @@ void RESTAPI::restAPI_GetNXDNDebug(const HTTPPayload& request, HTTPPayload& repl
     }
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="request"></param>
-/// <param name="reply"></param>
-/// <param name="match"></param>
+/* REST API endpoint; implements NXDN dump RCCH state request. */
+
 void RESTAPI::restAPI_GetNXDNDumpRCCH(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
@@ -2224,12 +2063,8 @@ void RESTAPI::restAPI_GetNXDNDumpRCCH(const HTTPPayload& request, HTTPPayload& r
     }
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="request"></param>
-/// <param name="reply"></param>
-/// <param name="match"></param>
+/* REST API endpoint; implements toggle NXDN CC request. */
+
 void RESTAPI::restAPI_GetNXDNCCEnable(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
@@ -2266,12 +2101,8 @@ void RESTAPI::restAPI_GetNXDNCCEnable(const HTTPPayload& request, HTTPPayload& r
     }
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="request"></param>
-/// <param name="reply"></param>
-/// <param name="match"></param>
+/* REST API endpoint; implements get NXDN affiliations request. */
+
 void RESTAPI::restAPI_GetNXDNAffList(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {

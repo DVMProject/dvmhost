@@ -19,6 +19,7 @@
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the Timer class. */
+
 Timer::Timer() :
     m_ticksPerSec(1000U),
     m_timeout(0U),
@@ -29,6 +30,7 @@ Timer::Timer() :
 }
 
 /* Initializes a new instance of the Timer class. */
+
 Timer::Timer(uint32_t ticksPerSec, uint32_t secs, uint32_t msecs) :
     m_ticksPerSec(ticksPerSec),
     m_timeout(0U),
@@ -45,9 +47,11 @@ Timer::Timer(uint32_t ticksPerSec, uint32_t secs, uint32_t msecs) :
 }
 
 /* Finalizes a instance of the Timer class. */
+
 Timer::~Timer() = default;
 
 /* Sets the timeout for the timer. */
+
 void Timer::setTimeout(uint32_t secs, uint32_t msecs)
 {
     if (secs > 0U || msecs > 0U) {
@@ -62,6 +66,7 @@ void Timer::setTimeout(uint32_t secs, uint32_t msecs)
 }
 
 /* Gets the timeout for the timer. */
+
 uint32_t Timer::getTimeout() const
 {
     if (m_timeout == 0U)
@@ -71,6 +76,7 @@ uint32_t Timer::getTimeout() const
 }
 
 /* Gets the current time for the timer. */
+
 uint32_t Timer::getTimer() const
 {
     if (m_timer == 0U)

@@ -1062,6 +1062,7 @@ static const uint32_t DECODING_TABLE_23127[] = {
 // ---------------------------------------------------------------------------
 
 /* Decode Golay (23,12,7) FEC. */
+
 uint32_t Golay24128::decode23127(uint32_t code)
 {
     uint32_t syndrome = getSyndrome23127(code);
@@ -1073,6 +1074,7 @@ uint32_t Golay24128::decode23127(uint32_t code)
 }
 
 /* Decode Golay (24,12,8) FEC. */
+
 bool Golay24128::decode24128(uint32_t code, uint32_t& out)
 {
     uint32_t syndrome = getSyndrome23127(code >> 1);
@@ -1087,6 +1089,7 @@ bool Golay24128::decode24128(uint32_t code, uint32_t& out)
 }
 
 /* Decode Golay (24,12,8) FEC. */
+
 bool Golay24128::decode24128(uint8_t* bytes, uint32_t& out)
 {
     assert(bytes != nullptr);
@@ -1096,6 +1099,7 @@ bool Golay24128::decode24128(uint8_t* bytes, uint32_t& out)
 }
 
 /* Decode Golay (24,12,8) FEC. */
+
 void Golay24128::decode24128(uint8_t* data, const uint8_t* raw, uint32_t msglen)
 {
     uint32_t i = 0;                  // decoded byte counter
@@ -1153,18 +1157,21 @@ void Golay24128::decode24128(uint8_t* data, const uint8_t* raw, uint32_t msglen)
 }
 
 /* Encode Golay (23,12,7) FEC. */
+
 uint32_t Golay24128::encode23127(uint32_t data)
 {
     return ENCODING_TABLE_23127[data];
 }
 
 /* Encode Golay (24,12,8) FEC. */
+
 uint32_t Golay24128::encode24128(uint32_t data)
 {
     return ENCODING_TABLE_24128[data];
 }
 
 /* Encode Golay (24,12,8) FEC. */
+
 void Golay24128::encode24128(uint8_t* data, const uint8_t* raw, uint32_t msglen)
 {
     uint32_t j = 0;
@@ -1231,6 +1238,7 @@ void Golay24128::encode24128(uint8_t* data, const uint8_t* raw, uint32_t msglen)
    polynomial, GENPOL. In the program this pattern has several meanings: (1) pattern = information bits, 
    when constructing the encoding table; (2) pattern = error pattern, when constructing the decoding 
    table; and (3) pattern = received vector, to obtain its syndrome in decoding. */
+
 uint32_t Golay24128::getSyndrome23127(uint32_t pattern)
 {
     uint32_t aux = X22;

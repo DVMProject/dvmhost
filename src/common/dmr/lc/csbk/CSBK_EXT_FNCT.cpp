@@ -22,6 +22,7 @@ using namespace dmr::lc::csbk;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the CSBK_EXT_FNCT class. */
+
 CSBK_EXT_FNCT::CSBK_EXT_FNCT() : CSBK(),
     m_extendedFunction(ExtendedFunctions::CHECK)
 {
@@ -30,6 +31,7 @@ CSBK_EXT_FNCT::CSBK_EXT_FNCT() : CSBK(),
 }
 
 /* Decode a control signalling block. */
+
 bool CSBK_EXT_FNCT::decode(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -52,6 +54,7 @@ bool CSBK_EXT_FNCT::decode(const uint8_t* data)
 }
 
 /* Encode a control signalling block. */
+
 void CSBK_EXT_FNCT::encode(uint8_t* data)
 {
     assert(data != nullptr);
@@ -70,6 +73,7 @@ void CSBK_EXT_FNCT::encode(uint8_t* data)
 }
 
 /* Returns a string that represents the current CSBK. */
+
 std::string CSBK_EXT_FNCT::toString()
 {
     return std::string("CSBKO, EXT_FNCT (Extended Function)");
@@ -80,6 +84,7 @@ std::string CSBK_EXT_FNCT::toString()
 // ---------------------------------------------------------------------------
 
 /* Internal helper to copy the the class. */
+
 void CSBK_EXT_FNCT::copy(const CSBK_EXT_FNCT& data)
 {
     CSBK::copy(data);

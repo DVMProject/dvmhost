@@ -268,6 +268,7 @@ namespace stock_replies {
 // ---------------------------------------------------------------------------
 
 /* Convert the reply into a vector of buffers. The buffers do not own the underlying memory blocks, therefore the reply object must remain valid and not be changed until the write operation has completed. */
+
 std::vector<asio::const_buffer> HTTPPayload::toBuffers()
 {
     std::vector<asio::const_buffer> buffers;
@@ -317,6 +318,7 @@ std::vector<asio::const_buffer> HTTPPayload::toBuffers()
 }
 
 /* Prepares payload for transmission by finalizing status and content type. */
+
 void HTTPPayload::payload(json::object& obj, HTTPPayload::StatusType s)
 {
     json::value v = json::value(obj);
@@ -325,6 +327,7 @@ void HTTPPayload::payload(json::object& obj, HTTPPayload::StatusType s)
 }
 
 /* Prepares payload for transmission by finalizing status and content type. */
+
 void HTTPPayload::payload(std::string& c, HTTPPayload::StatusType s, const std::string& contentType)
 {
     content = c;
@@ -337,6 +340,7 @@ void HTTPPayload::payload(std::string& c, HTTPPayload::StatusType s, const std::
 // ---------------------------------------------------------------------------
 
 /* Get a status payload. */
+
 HTTPPayload HTTPPayload::requestPayload(std::string method, std::string uri)
 {
     HTTPPayload rep;
@@ -347,6 +351,7 @@ HTTPPayload HTTPPayload::requestPayload(std::string method, std::string uri)
 }
 
 /* Get a status payload. */
+
 HTTPPayload HTTPPayload::statusPayload(HTTPPayload::StatusType status, const std::string& contentType)
 {
     HTTPPayload rep;
@@ -363,6 +368,7 @@ HTTPPayload HTTPPayload::statusPayload(HTTPPayload::StatusType status, const std
 
 
 /* Helper to attach a host TCP stream reader. */
+
 void HTTPPayload::attachHostHeader(const asio::ip::tcp::endpoint remoteEndpoint)
 {
     headers.add("Host", std::string(remoteEndpoint.address().to_string() + ":" + std::to_string(remoteEndpoint.port())));
@@ -373,6 +379,7 @@ void HTTPPayload::attachHostHeader(const asio::ip::tcp::endpoint remoteEndpoint)
 // ---------------------------------------------------------------------------
 
 /* Internal helper to ensure the headers are of a default for the given content type. */
+
 void HTTPPayload::ensureDefaultHeaders(const std::string& contentType)
 {
     if (!isClientPayload) {

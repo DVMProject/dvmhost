@@ -22,6 +22,7 @@ using namespace p25::lc::tsbk;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the OSP_SNDCP_CH_ANN class. */
+
 OSP_SNDCP_CH_ANN::OSP_SNDCP_CH_ANN() : TSBK(),
     m_implicitChannel(false),
     m_sndcpAutoAccess(true),
@@ -31,6 +32,7 @@ OSP_SNDCP_CH_ANN::OSP_SNDCP_CH_ANN() : TSBK(),
 }
 
 /* Decode a trunking signalling block. */
+
 bool OSP_SNDCP_CH_ANN::decode(const uint8_t* data, bool rawTSBK)
 {
     assert(data != nullptr);
@@ -41,6 +43,7 @@ bool OSP_SNDCP_CH_ANN::decode(const uint8_t* data, bool rawTSBK)
 }
 
 /* Encode a trunking signalling block. */
+
 void OSP_SNDCP_CH_ANN::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 {
     assert(data != nullptr);
@@ -84,6 +87,7 @@ void OSP_SNDCP_CH_ANN::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 }
 
 /* Returns a string that represents the current TSBK. */
+
 std::string OSP_SNDCP_CH_ANN::toString(bool isp)
 {
     return std::string("TSBKO, OSP_SNDCP_CH_ANN (SNDCP Data Channel Announcement)");
@@ -94,6 +98,7 @@ std::string OSP_SNDCP_CH_ANN::toString(bool isp)
 // ---------------------------------------------------------------------------
 
 /* Internal helper to copy the the class. */
+
 void OSP_SNDCP_CH_ANN::copy(const OSP_SNDCP_CH_ANN& data)
 {
     TSBK::copy(data);

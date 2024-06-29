@@ -22,12 +22,14 @@ using namespace p25::lc::tsbk;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the OSP_DVM_LC_CALL_TERM class. */
+
 OSP_DVM_LC_CALL_TERM::OSP_DVM_LC_CALL_TERM() : TSBK()
 {
     m_lco = LCO::CALL_TERM;
 }
 
 /* Decode a trunking signalling block. */
+
 bool OSP_DVM_LC_CALL_TERM::decode(const uint8_t* data, bool rawTSBK)
 {
     assert(data != nullptr);
@@ -50,6 +52,7 @@ bool OSP_DVM_LC_CALL_TERM::decode(const uint8_t* data, bool rawTSBK)
 }
 
 /* Encode a trunking signalling block. */
+
 void OSP_DVM_LC_CALL_TERM::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 {
     assert(data != nullptr);
@@ -68,6 +71,7 @@ void OSP_DVM_LC_CALL_TERM::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 }
 
 /* Returns a string that represents the current TSBK. */
+
 std::string OSP_DVM_LC_CALL_TERM::toString(bool isp)
 {
     return std::string("LC_CALL_TERM (Call Termination or Cancellation)");

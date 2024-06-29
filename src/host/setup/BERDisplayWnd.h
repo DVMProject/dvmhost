@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Modem Host Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2023 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Modem Host Software
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Modem Host Software
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2023 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @file BERDisplayWnd.h
+ * @ingroup setup
+ */
 #if !defined(__BER_DISPLAY_WND_H__)
 #define __BER_DISPLAY_WND_H__
 
@@ -24,15 +25,18 @@ using namespace finalcut;
 
 // ---------------------------------------------------------------------------
 //  Class Declaration
-//      This class implements the bit error rate display window.
 // ---------------------------------------------------------------------------
 
+/**
+ * @brief This class implements the bit error rate display window.
+ * @ingroup setup
+ */
 class HOST_SW_API BERDisplayWnd final : public finalcut::FDialog {
 public:
-    /// <summary>
-    /// Initializes a new instance of the BERDisplayWnd class.
-    /// </summary>
-    /// <param name="widget"></param>
+    /**
+     * @brief Initializes a new instance of the BERDisplayWnd class.
+     * @param widget 
+     */
     explicit BERDisplayWnd(FWidget* widget = nullptr) : FDialog{widget}
     {
         m_code = {
@@ -63,28 +67,45 @@ public:
             { 'F', Segment{1, 0, 0, 0, 1, 1, 1, 1, 2} }
         };
     }
-    /// <summary>Copy constructor.</summary>
+    /**
+     * @brief Copy constructor.
+     */
     BERDisplayWnd(const BERDisplayWnd&) = delete;
-    /// <summary>Move constructor.</summary>
+    /**
+     * @brief Move constructor.
+     */
     BERDisplayWnd(BERDisplayWnd&&) noexcept = delete;
-    /// <summary>Finalizes an instance of the ModemStatusWnd class.</summary>
+    /**
+     * @brief Finalizes an instance of the ModemStatusWnd class.
+     */
     ~BERDisplayWnd() noexcept override = default;
 
-    /// <summary>Disable copy assignment operator (=).</summary>
+    /**
+     * @brief Disable copy assignment operator (=).
+     */
     auto operator= (const BERDisplayWnd&) -> BERDisplayWnd& = delete;
-    /// <summary>Disable move assignment operator (=).</summary>
+    /**
+     * @brief Disable move assignment operator (=).
+     */
     auto operator= (BERDisplayWnd&&) noexcept -> BERDisplayWnd& = delete;
 
-    /// <summary>Disable set X coordinate.</summary>
+    /**
+     * @brief Disable set X coordinate.
+     */
     void setX(int, bool = true) override { }
-    /// <summary>Disable set Y coordinate.</summary>
+    /**
+     * @brief Disable set Y coordinate.
+     */
     void setY(int, bool = true) override { }
-    /// <summary>Disable set position.</summary>
+    /**
+     * @brief Disable set position.
+     */
     void setPos(const FPoint&, bool = true) override { }
 
-    /// <summary>
-    /// Helper to set the BER text.
-    /// </summary>
+    /**
+     * @brief Helper to set the BER text.
+     * @param str BER text to set.
+     */
     void ber(std::string str) 
     {
         if (str.empty()) {
@@ -96,12 +117,18 @@ public:
         redraw();
     }
 
-    /// <summary>Helper to set the segment color.</summary>
+    /**
+     * @brief Helper to set the segment color.
+     * @param color Segment color.
+     */
     void segmentColor(FColor color) { m_segmentColor = color; }
 
 private:
     std::string m_ber;
 
+    /**
+     * @brief Represents each segment.
+     */
     struct Segment
     {
         unsigned char a : 2;
@@ -120,9 +147,9 @@ private:
 
     FColor m_segmentColor{FColor::LightRed};
 
-    /// <summary>
-    ///
-    /// </summary>
+    /**
+     * @brief Initializes the window layout.
+     */
     void initLayout() override
     {
         FDialog::setText("Receive BER");
@@ -140,9 +167,9 @@ private:
         FDialog::initLayout();
     }
 
-    /// <summary>
-    ///
-    /// </summary>
+    /**
+     * @brief Draws the window.
+     */
     void draw() override
     {
         std::vector<FVTermBuffer> vtbuffer(3);
@@ -167,10 +194,10 @@ private:
                 << FPoint{2, 6} << FString{23, ' '};
     }
 
-    /// <summary>
-    ///
-    /// </summary>
-    /// <param name="c"></param>
+    /**
+     * @brief Helper to generate 7-segment like display based on input character.
+     * @param c Character.
+     */
     void get7Segment(const wchar_t c)
     {
         for (std::size_t i = 0; i < 3; i++)

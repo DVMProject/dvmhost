@@ -8,10 +8,16 @@
 * @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2016,2017 Jonathan Naylor, G4KLX
-*   Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
+*  Copyright (C) 2016,2017 Jonathan Naylor, G4KLX
+*  Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
 *
 */
+/**
+ * @file Voice.h
+ * @ingroup host_p25
+ * @file Voice.cpp
+ * @ingroup host_p25
+ */
 #if !defined(__P25_PACKET_VOICE_H__)
 #define __P25_PACKET_VOICE_H__
 
@@ -38,20 +44,43 @@ namespace p25
     {
         // ---------------------------------------------------------------------------
         //  Class Declaration
-        //      This class implements handling logic for P25 voice packets.
         // ---------------------------------------------------------------------------
 
+        /**
+         * @brief This class implements handling logic for P25 voice packets.
+         * @ingroup host_p25
+         */
         class HOST_SW_API Voice {
         public:
-            /// <summary>Resets the data states for the RF interface.</summary>
+            /**
+             * @brief Resets the data states for the RF interface.
+             */
             void resetRF();
-            /// <summary>Resets the data states for the network.</summary>
+            /**
+             * @brief Resets the data states for the network.
+             */
             void resetNet();
 
-            /// <summary>Process a data frame from the RF interface.</summary>
+            /** @name Frame Processing */
+            /**
+             * @brief Process a data frame from the RF interface.
+             * @param data Buffer containing data frame.
+             * @param len Length of data frame.
+             * @returns bool True, if data frame is processed, otherwise false.
+             */
             bool process(uint8_t* data, uint32_t len);
-            /// <summary>Process a data frame from the network.</summary>
+            /**
+             * @brief Process a data frame from the network.
+             * @param data Buffer containing data frame.
+             * @param len Length of data frame.
+             * @param control Link Control Data.
+             * @param lsd Low Speed Data.
+             * @param duid Data Unit ID.
+             * @param frameType Network Frame Type.
+             * @returns bool True, if data frame is processed, otherwise false.
+             */
             bool processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::LowSpeedData& lsd, defines::DUID::E& duid, defines::FrameType::E& frameType);
+            /** @} */
 
         protected:
             friend class packet::ControlSignaling;
@@ -98,35 +127,72 @@ namespace p25
             bool m_verbose;
             bool m_debug;
 
-            /// <summary>Initializes a new instance of the Voice class.</summary>
+            /**
+             * @brief Initializes a new instance of the Voice class.
+             * @param p25 Instance of the Control class.
+             * @param debug Flag indicating whether P25 debug is enabled.
+             * @param verbose Flag indicating whether P25 verbose logging is enabled.
+             */
             Voice(Control* p25, bool debug, bool verbose);
-            /// <summary>Finalizes a instance of the Voice class.</summary>
+            /**
+             * @brief Finalizes a instance of the Voice class.
+             */
             ~Voice();
 
-            /// <summary>Write data processed from RF to the network.</summary>
+            /**
+             * @brief Write data processed from RF to the network.
+             * @param[in] data Buffer to write to the network.
+             * @param duid DUID.
+             * @param frameType Frame Type.
+             */
             void writeNetwork(const uint8_t* data, defines::DUID::E duid, defines::FrameType::E frameType = defines::FrameType::DATA_UNIT);
 
-            /// <summary>Helper to write end of voice frame data.</summary>
+            /**
+             * @brief Helper to write end of voice frame data.
+             */
             void writeRF_EndOfVoice();
 
-            /// <summary>Helper to write a network P25 TDU packet.</summary>
+            /**
+             * @brief Helper to write a network P25 TDU packet.
+             */
             void writeNet_TDU();
-            /// <summary>Helper to check for an unflushed LDU1 packet.</summary>
+            /**
+             * @brief Helper to check for an unflushed LDU1 packet.
+             */
             void checkNet_LDU1();
-            /// <summary>Helper to write a network P25 LDU1 packet.</summary>
+            /**
+             * @brief Helper to write a network P25 LDU1 packet.
+             */
             void writeNet_LDU1();
-            /// <summary>Helper to check for an unflushed LDU2 packet.</summary>
+            /**
+             * @brief Helper to check for an unflushed LDU2 packet.
+             */
             void checkNet_LDU2();
-            /// <summary>Helper to write a network P25 LDU1 packet.</summary>
+            /**
+             * @brief Helper to write a network P25 LDU1 packet.
+             */
             void writeNet_LDU2();
 
-            /// <summary>Helper to insert IMBE silence frames for missing audio.</summary>
+            /**
+             * @brief Helper to insert IMBE silence frames for missing audio.
+             * @param data Buffer containing frame data.
+             */
             void insertMissingAudio(uint8_t* data);
-            /// <summary>Helper to insert IMBE null frames for missing audio.</summary>
+            /**
+             * @brief Helper to insert IMBE null frames for missing audio.
+             * @param data Buffer containing frame data.
+             */
             void insertNullAudio(uint8_t* data);
-            /// <summary>Helper to insert encrypted IMBE null frames for missing audio.</summary>
+            /**
+             * @brief Helper to insert encrypted IMBE null frames for missing audio.
+             * @param data Buffer containing frame data.
+             */
             void insertEncryptedNullAudio(uint8_t* data);
-            /// <summary>Given the last MI, generate the next MI using LFSR.</summary>
+            /**
+             * @brief Given the last MI, generate the next MI using LFSR.
+             * @param lastMI Last MI received.
+             * @param nextMI Next MI.
+             */
             void getNextMI(uint8_t lastMI[9U], uint8_t nextMI[9U]);
         };
     } // namespace packet

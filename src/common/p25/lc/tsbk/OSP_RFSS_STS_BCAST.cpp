@@ -22,6 +22,7 @@ using namespace p25::lc::tsbk;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the OSP_RFSS_STS_BCAST class. */
+
 OSP_RFSS_STS_BCAST::OSP_RFSS_STS_BCAST() : TSBK(),
     m_roamerReaccess(false)
 {
@@ -29,6 +30,7 @@ OSP_RFSS_STS_BCAST::OSP_RFSS_STS_BCAST() : TSBK(),
 }
 
 /* Decode a trunking signalling block. */
+
 bool OSP_RFSS_STS_BCAST::decode(const uint8_t* data, bool rawTSBK)
 {
     assert(data != nullptr);
@@ -39,6 +41,7 @@ bool OSP_RFSS_STS_BCAST::decode(const uint8_t* data, bool rawTSBK)
 }
 
 /* Encode a trunking signalling block. */
+
 void OSP_RFSS_STS_BCAST::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 {
     assert(data != nullptr);
@@ -61,6 +64,7 @@ void OSP_RFSS_STS_BCAST::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 }
 
 /* Returns a string that represents the current TSBK. */
+
 std::string OSP_RFSS_STS_BCAST::toString(bool isp)
 {
     return std::string("TSBKO, OSP_RFSS_STS_BCAST (RFSS Status Broadcast)");

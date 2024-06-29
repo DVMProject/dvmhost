@@ -1,17 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Modem Host Software
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Modem Host Software
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2015,2016,2017,2018 Jonathan Naylor, G4KLX
-*   Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Modem Host Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2015,2016,2017,2018 Jonathan Naylor, G4KLX
+ *  Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "Defines.h"
 #include "common/dmr/acl/AccessControl.h"
 #include "common/dmr/data/EMB.h"
@@ -81,12 +77,8 @@ using namespace dmr::packet;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Process DMR voice frame from the RF interface.
-/// </summary>
-/// <param name="data">Buffer containing data frame.</param>
-/// <param name="len">Length of data frame.</param>
-/// <returns></returns>
+/* Process DMR voice frame from the RF interface. */
+
 bool Voice::process(uint8_t* data, uint32_t len)
 {
     assert(data != nullptr);
@@ -638,10 +630,8 @@ bool Voice::process(uint8_t* data, uint32_t len)
     return false;
 }
 
-/// <summary>
-/// Process a voice frame from the network.
-/// </summary>
-/// <param name="dmrData"></param>
+/* Process a voice frame from the network. */
+
 void Voice::processNetwork(const data::Data& dmrData)
 {
     uint8_t dataType = dmrData.getDataType();
@@ -1105,15 +1095,8 @@ void Voice::processNetwork(const data::Data& dmrData)
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the Voice class.
-/// </summary>
-/// <param name="slot">DMR slot.</param>
-/// <param name="network">Instance of the BaseNetwork class.</param>
-/// <param name="embeddedLCOnly"></param>
-/// <param name="dumpTAData"></param>
-/// <param name="debug">Flag indicating whether DMR debug is enabled.</param>
-/// <param name="verbose">Flag indicating whether DMR verbose logging is enabled.</param>
+/* Initializes a new instance of the Voice class. */
+
 Voice::Voice(Slot* slot, network::BaseNetwork* network, bool embeddedLCOnly, bool dumpTAData, bool debug, bool verbose) :
     m_slot(slot),
     m_lastFrame(nullptr),
@@ -1143,9 +1126,8 @@ Voice::Voice(Slot* slot, network::BaseNetwork* network, bool embeddedLCOnly, boo
     m_netEmbeddedData = new data::EmbeddedData[2U];
 }
 
-/// <summary>
-/// Finalizes a instance of the Voice class.
-/// </summary>
+/* Finalizes a instance of the Voice class. */
+
 Voice::~Voice()
 {
     delete[] m_lastFrame;
@@ -1154,11 +1136,8 @@ Voice::~Voice()
     delete[] m_netEmbeddedData;
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="srcId">Source radio ID.</param>
-/// <param name="data"></param>
+/* */
+
 void Voice::logGPSPosition(const uint32_t srcId, const uint8_t* data)
 {
     uint32_t errorVal = (data[2U] & 0x0E) >> 1U;
@@ -1206,10 +1185,8 @@ void Voice::logGPSPosition(const uint32_t srcId, const uint8_t* data)
     LogMessage(LOG_DMR, "GPS position for %u [lat %f, long %f] (Position error %s)", srcId, latitude, longitude, error);
 }
 
-/// <summary>
-/// Helper to insert AMBE null frames for missing audio.
-/// </summary>
-/// <param name="data"></param>
+/* Helper to insert AMBE null frames for missing audio. */
+
 void Voice::insertNullAudio(uint8_t* data)
 {
     uint8_t* ambeBuffer = new uint8_t[DMR_AMBE_LENGTH_BYTES];
@@ -1227,12 +1204,8 @@ void Voice::insertNullAudio(uint8_t* data)
     delete[] ambeBuffer;
 }
 
-/// <summary>
-/// Helper to insert DMR AMBE silence frames.
-/// </summary>
-/// <param name="data"></param>
-/// <param name="seqNo"></param>
-/// <returns></returns>
+/* Helper to insert DMR AMBE silence frames. */
+
 bool Voice::insertSilence(const uint8_t* data, uint8_t seqNo)
 {
     assert(data != nullptr);
@@ -1260,10 +1233,8 @@ bool Voice::insertSilence(const uint8_t* data, uint8_t seqNo)
     return true;
 }
 
-/// <summary>
-/// Helper to insert DMR AMBE silence frames.
-/// </summary>
-/// <param name="count"></param>
+/* Helper to insert DMR AMBE silence frames. */
+
 void Voice::insertSilence(uint32_t count)
 {
     uint8_t data[DMR_FRAME_LENGTH_BYTES + 2U];

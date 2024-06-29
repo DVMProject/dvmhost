@@ -22,6 +22,7 @@ using namespace p25::lc::tsbk;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the MBT_IOSP_STS_UPDT class. */
+
 MBT_IOSP_STS_UPDT::MBT_IOSP_STS_UPDT() : AMBT(),
     m_statusValue(0U)
 {
@@ -29,6 +30,7 @@ MBT_IOSP_STS_UPDT::MBT_IOSP_STS_UPDT() : AMBT(),
 }
 
 /* Decode a alternate trunking signalling block. */
+
 bool MBT_IOSP_STS_UPDT::decodeMBT(const data::DataHeader& dataHeader, const data::DataBlock* blocks)
 {
     assert(blocks != nullptr);
@@ -52,6 +54,7 @@ bool MBT_IOSP_STS_UPDT::decodeMBT(const data::DataHeader& dataHeader, const data
 }
 
 /* Encode a alternate trunking signalling block. */
+
 void MBT_IOSP_STS_UPDT::encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUserData)
 {
     assert(pduUserData != nullptr);
@@ -62,6 +65,7 @@ void MBT_IOSP_STS_UPDT::encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUser
 }
 
 /* Returns a string that represents the current TSBK. */
+
 std::string MBT_IOSP_STS_UPDT::toString(bool isp)
 {
     return (isp) ? std::string("TSBKO, IOSP_STS_UPDT (Status Update Request)") :
@@ -73,6 +77,7 @@ std::string MBT_IOSP_STS_UPDT::toString(bool isp)
 // ---------------------------------------------------------------------------
 
 /* Internal helper to copy the the class. */
+
 void MBT_IOSP_STS_UPDT::copy(const MBT_IOSP_STS_UPDT& data)
 {
     TSBK::copy(data);

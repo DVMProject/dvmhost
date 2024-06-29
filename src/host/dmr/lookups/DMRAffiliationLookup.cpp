@@ -1,15 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Modem Host Software
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Modem Host Software
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2023-2024 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Modem Host Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2023-2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "common/Log.h"
 #include "dmr/lookups/DMRAffiliationLookup.h"
 
@@ -21,11 +18,8 @@ using namespace dmr::lookups;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the DMRAffiliationLookup class.
-/// </summary>
-/// <param name="channelLookup">Instance of the channel lookup class.</param>
-/// <param name="verbose">Flag indicating whether verbose logging is enabled.</param>
+/* Initializes a new instance of the DMRAffiliationLookup class. */
+
 DMRAffiliationLookup::DMRAffiliationLookup(::lookups::ChannelLookup* chLookup, bool verbose) : ::lookups::AffiliationLookup("DMR Affiliation", chLookup, verbose),
     m_grantChSlotTable(),
     m_tsccChNo(0U),
@@ -34,20 +28,12 @@ DMRAffiliationLookup::DMRAffiliationLookup(::lookups::ChannelLookup* chLookup, b
     /* stub */
 }
 
-/// <summary>
-/// Finalizes a instance of the DMRAffiliationLookup class.
-/// </summary>
+/* Finalizes a instance of the DMRAffiliationLookup class. */
+
 DMRAffiliationLookup::~DMRAffiliationLookup() = default;
 
-/// <summary>
-/// Helper to grant a channel.
-/// </summary>
-/// <param name="dstId"></param>
-/// <param name="srcId"></param>
-/// <param name="grantTimeout"></param>
-/// <param name="grp"></param>
-/// <param name="netGranted"></param>
-/// <returns></returns>
+/* Helper to grant a channel. */
+
 bool DMRAffiliationLookup::grantCh(uint32_t dstId, uint32_t srcId, uint32_t grantTimeout, bool grp, bool netGranted)
 {
     uint32_t chNo = m_chLookup->getFirstRFChannel();
@@ -60,16 +46,8 @@ bool DMRAffiliationLookup::grantCh(uint32_t dstId, uint32_t srcId, uint32_t gran
     return grantChSlot(dstId, srcId, slot, grantTimeout, grp, netGranted);
 }
 
-/// <summary>
-/// Helper to grant a channel and slot.
-/// </summary>
-/// <param name="dstId"></param>
-/// <param name="srcId"></param>
-/// <param name="slot"></param>
-/// <param name="grantTimeout"></param>
-/// <param name="grp"></param>
-/// <param name="netGranted"></param>
-/// <returns></returns>
+/* Helper to grant a channel and slot. */
+
 bool DMRAffiliationLookup::grantChSlot(uint32_t dstId, uint32_t srcId, uint8_t slot, uint32_t grantTimeout, bool grp, bool netGranted)
 {
     if (dstId == 0U) {
@@ -108,11 +86,8 @@ bool DMRAffiliationLookup::grantChSlot(uint32_t dstId, uint32_t srcId, uint8_t s
     return true;
 }
 
-/// <summary>
-/// Helper to release the channel grant for the destination ID.
-/// </summary>
-/// <param name="dstId"></param>
-/// <param name="releaseAll"></param>
+/* Helper to release the channel grant for the destination ID. */
+
 bool DMRAffiliationLookup::releaseGrant(uint32_t dstId, bool releaseAll)
 {
     if (dstId == 0U && !releaseAll) {
@@ -172,11 +147,8 @@ bool DMRAffiliationLookup::releaseGrant(uint32_t dstId, bool releaseAll)
     return false;
 }
 
-/// <summary>
-/// Helper to determine if the channel number is busy.
-/// </summary>
-/// <param name="chNo"></param>
-/// <returns></returns>
+/* Helper to determine if the channel number is busy. */
+
 bool DMRAffiliationLookup::isChBusy(uint32_t chNo) const
 {
     if (chNo == 0U) {
@@ -208,11 +180,8 @@ bool DMRAffiliationLookup::isChBusy(uint32_t chNo) const
     return false;
 }
 
-/// <summary>
-/// Helper to get the slot granted for the given destination ID.
-/// </summary>
-/// <param name="dstId"></param>
-/// <returns></returns>
+/* Helper to get the slot granted for the given destination ID. */
+
 uint8_t DMRAffiliationLookup::getGrantedSlot(uint32_t dstId) const
 {
     if (dstId == 0U) {
@@ -230,12 +199,8 @@ uint8_t DMRAffiliationLookup::getGrantedSlot(uint32_t dstId) const
     return 0U;
 }
 
-/// <summary>
-/// Helper to set a slot for the given channel as being the TSCC.
-/// </summary>
-/// <param name="chNo"></param>
-/// <param name="slot"></param>
-/// <returns></returns>
+/* Helper to set a slot for the given channel as being the TSCC. */
+
 void DMRAffiliationLookup::setSlotForChannelTSCC(uint32_t chNo, uint8_t slot)
 {
     assert(chNo != 0U);
@@ -247,11 +212,8 @@ void DMRAffiliationLookup::setSlotForChannelTSCC(uint32_t chNo, uint8_t slot)
     m_tsccSlot = slot;
 }
 
-/// <summary>
-/// Helper to determine the first available slot for given the channel number.
-/// </summary>
-/// <param name="chNo"></param>
-/// <returns></returns>
+/* Helper to determine the first available slot for given the channel number. */
+
 uint8_t DMRAffiliationLookup::getAvailableSlotForChannel(uint32_t chNo) const
 {
     if (chNo == 0U) {

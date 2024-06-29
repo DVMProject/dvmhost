@@ -22,6 +22,7 @@ using namespace p25::lc::tsbk;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the OSP_MOT_GRG_VCH_UPD class. */
+
 OSP_MOT_GRG_VCH_UPD::OSP_MOT_GRG_VCH_UPD() : TSBK(),
     m_patchGroup1Id(0U),
     m_patchGroup2Id(0U)
@@ -30,6 +31,7 @@ OSP_MOT_GRG_VCH_UPD::OSP_MOT_GRG_VCH_UPD() : TSBK(),
 }
 
 /* Decode a trunking signalling block. */
+
 bool OSP_MOT_GRG_VCH_UPD::decode(const uint8_t* data, bool rawTSBK)
 {
     assert(data != nullptr);
@@ -40,6 +42,7 @@ bool OSP_MOT_GRG_VCH_UPD::decode(const uint8_t* data, bool rawTSBK)
 }
 
 /* Encode a trunking signalling block. */
+
 void OSP_MOT_GRG_VCH_UPD::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 {
     assert(data != nullptr);
@@ -60,6 +63,7 @@ void OSP_MOT_GRG_VCH_UPD::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 }
 
 /* Returns a string that represents the current TSBK. */
+
 std::string OSP_MOT_GRG_VCH_UPD::toString(bool isp)
 {
     return std::string("TSBKO, OSP_MOT_GRG_VCH_UPD (Group Regroup Voice Channel Grant Update)");
@@ -70,6 +74,7 @@ std::string OSP_MOT_GRG_VCH_UPD::toString(bool isp)
 // ---------------------------------------------------------------------------
 
 /* Internal helper to copy the the class. */
+
 void OSP_MOT_GRG_VCH_UPD::copy(const OSP_MOT_GRG_VCH_UPD& data)
 {
     TSBK::copy(data);

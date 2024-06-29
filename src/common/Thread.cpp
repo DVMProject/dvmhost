@@ -20,6 +20,7 @@
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the Thread class. */
+
 Thread::Thread() :
     m_thread(),
     m_started(false)
@@ -28,9 +29,11 @@ Thread::Thread() :
 }
 
 /* Finalizes a instance of the Thread class. */
+
 Thread::~Thread() = default;
 
 /* Starts the thread execution. */
+
 bool Thread::run()
 {
     if (m_started)
@@ -47,12 +50,14 @@ bool Thread::run()
 }
 
 /* Make calling thread wait for termination of the thread. */
+
 void Thread::wait()
 {
     ::pthread_join(m_thread, NULL);
 }
 
 /* Set thread name visible in the kernel and its interfaces. */
+
 void Thread::setName(std::string name)
 {
     if (!m_started)
@@ -69,6 +74,7 @@ void Thread::setName(std::string name)
  * The resources of thread will therefore be freed immediately when it terminates, instead 
  * of waiting for another thread to perform wait() on it. 
  */
+
 void Thread::detach()
 {
     if (!m_started)
@@ -76,7 +82,8 @@ void Thread::detach()
     ::pthread_detach(m_thread);
 }
 
-/* */
+/* Helper to sleep the current thread. */
+
 void Thread::sleep(uint32_t ms)
 {
     ::usleep(ms * 1000);
@@ -87,6 +94,7 @@ void Thread::sleep(uint32_t ms)
 // ---------------------------------------------------------------------------
 
 /* Internal helper thats used as the entry point for the thread. */
+
 void* Thread::helper(void* arg)
 {
     Thread* p = (Thread*)arg;

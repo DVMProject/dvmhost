@@ -22,12 +22,14 @@ using namespace p25::lc::tsbk;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the IOSP_UU_VCH class. */
+
 IOSP_UU_VCH::IOSP_UU_VCH() : TSBK()
 {
     m_lco = TSBKO::IOSP_UU_VCH;
 }
 
 /* Decode a trunking signalling block. */
+
 bool IOSP_UU_VCH::decode(const uint8_t* data, bool rawTSBK)
 {
     assert(data != nullptr);
@@ -53,6 +55,7 @@ bool IOSP_UU_VCH::decode(const uint8_t* data, bool rawTSBK)
 }
 
 /* Encode a trunking signalling block. */
+
 void IOSP_UU_VCH::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 {
     assert(data != nullptr);
@@ -78,6 +81,7 @@ void IOSP_UU_VCH::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 }
 
 /* Returns a string that represents the current TSBK. */
+
 std::string IOSP_UU_VCH::toString(bool isp)
 {
     return (isp) ? std::string("TSBKO, IOSP_UU_VCH (Unit-to-Unit Voice Channel Request)") :

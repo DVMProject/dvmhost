@@ -1,17 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Modem Host Software
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Modem Host Software
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2016,2017,2018 Jonathan Naylor, G4KLX
-*   Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Modem Host Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2016,2017,2018 Jonathan Naylor, G4KLX
+ *  Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "Defines.h"
 #include "common/p25/P25Defines.h"
 #include "common/p25/acl/AccessControl.h"
@@ -45,9 +41,8 @@ const uint32_t ROAM_LDU1_COUNT = 1U;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Resets the data states for the RF interface.
-/// </summary>
+/* Resets the data states for the RF interface. */
+
 void Voice::resetRF()
 {
     lc::LC lc = lc::LC();
@@ -65,9 +60,8 @@ void Voice::resetRF()
     m_roamLDU1Count = 0U;
 }
 
-/// <summary>
-/// Resets the data states for the network.
-/// </summary>
+/* Resets the data states for the network. */
+
 void Voice::resetNet()
 {
     lc::LC lc = lc::LC();
@@ -83,12 +77,8 @@ void Voice::resetNet()
     m_p25->m_networkWatchdog.stop();
 }
 
-/// <summary>
-/// Process a data frame from the RF interface.
-/// </summary>
-/// <param name="data">Buffer containing data frame.</param>
-/// <param name="len">Length of data frame.</param>
-/// <returns></returns>
+/* Process a data frame from the RF interface. */
+
 bool Voice::process(uint8_t* data, uint32_t len)
 {
     assert(data != nullptr);
@@ -1083,16 +1073,8 @@ bool Voice::process(uint8_t* data, uint32_t len)
     return false;
 }
 
-/// <summary>
-/// Process a data frame from the network.
-/// </summary>
-/// <param name="data">Buffer containing data frame.</param>
-/// <param name="len">Length of data frame.</param>
-/// <param name="control">Link Control Data.</param>
-/// <param name="lsd">Low Speed Data.</param>
-/// <param name="duid">Data Unit ID.</param>
-/// <param name="frameType">Network Frame Type.</param>
-/// <returns></returns>
+/* Process a data frame from the network. */
+
 bool Voice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::LowSpeedData& lsd, defines::DUID::E& duid, defines::FrameType::E& frameType)
 {
     uint32_t dstId = control.getDstId();
@@ -1358,12 +1340,8 @@ bool Voice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
 //  Protected Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the Voice class.
-/// </summary>
-/// <param name="p25">Instance of the Control class.</param>
-/// <param name="debug">Flag indicating whether P25 debug is enabled.</param>
-/// <param name="verbose">Flag indicating whether P25 verbose logging is enabled.</param>
+/* Initializes a new instance of the Voice class. */
+
 Voice::Voice(Control* p25, bool debug, bool verbose) :
     m_p25(p25),
     m_rfFrames(0U),
@@ -1409,9 +1387,8 @@ Voice::Voice(Control* p25, bool debug, bool verbose) :
     ::memset(m_lastMI, 0x00U, MI_LENGTH_BYTES);
 }
 
-/// <summary>
-/// Finalizes a instance of the Voice class.
-/// </summary>
+/* Finalizes a instance of the Voice class. */
+
 Voice::~Voice()
 {
     delete[] m_netLDU1;
@@ -1420,12 +1397,8 @@ Voice::~Voice()
     delete[] m_lastMI;
 }
 
-/// <summary>
-/// Write data processed from RF to the network.
-/// </summary>
-/// <param name="data"></param>
-/// <param name="duid"></param>
-/// <param name="frameType"></param>
+/* Write data processed from RF to the network. */
+
 void Voice::writeNetwork(const uint8_t *data, defines::DUID::E duid, defines::FrameType::E frameType)
 {
     assert(data != nullptr);
@@ -1456,10 +1429,8 @@ void Voice::writeNetwork(const uint8_t *data, defines::DUID::E duid, defines::Fr
     }
 }
 
-/// <summary>
-/// Helper to write end of frame data.
-/// </summary>
-/// <returns></returns>
+/* Helper to write end of frame data. */
+
 void Voice::writeRF_EndOfVoice()
 {
     if (!m_hadVoice) {
@@ -1477,9 +1448,8 @@ void Voice::writeRF_EndOfVoice()
     m_p25->m_control->writeRF_TDULC_ChanRelease(grp, srcId, dstId);
 }
 
-/// <summary>
-/// Helper to write a network P25 TDU packet.
-/// </summary>
+/* Helper to write a network P25 TDU packet. */
+
 void Voice::writeNet_TDU()
 {
     uint8_t buffer[P25_TDU_FRAME_LENGTH_BYTES + 2U];
@@ -1530,11 +1500,8 @@ void Voice::writeNet_TDU()
     }
 }
 
-/// <summary>
-/// Helper to check for an unflushed LDU1 packet.
-/// </summary>
-/// <param name="control"></param>
-/// <param name="lsd"></param>
+/* Helper to check for an unflushed LDU1 packet. */
+
 void Voice::checkNet_LDU1()
 {
     if (m_p25->m_netState == RS_NET_IDLE)
@@ -1547,11 +1514,8 @@ void Voice::checkNet_LDU1()
         writeNet_LDU1();
 }
 
-/// <summary>
-/// Helper to write a network P25 LDU1 packet.
-/// </summary>
-/// <param name="control"></param>
-/// <param name="lsd"></param>
+/* Helper to write a network P25 LDU1 packet. */
+
 void Voice::writeNet_LDU1()
 {
     lc::LC control = lc::LC(*m_dfsiLC.control());
@@ -1898,11 +1862,8 @@ void Voice::writeNet_LDU1()
     m_netFrames += 9U;
 }
 
-/// <summary>
-/// Helper to check for an unflushed LDU2 packet.
-/// </summary>
-/// <param name="control"></param>
-/// <param name="lsd"></param>
+/* Helper to check for an unflushed LDU2 packet. */
+
 void Voice::checkNet_LDU2()
 {
     if (m_p25->m_netState == RS_NET_IDLE)
@@ -1915,11 +1876,8 @@ void Voice::checkNet_LDU2()
         writeNet_LDU2();
 }
 
-/// <summary>
-/// Helper to write a network P25 LDU2 packet.
-/// </summary>
-/// <param name="control"></param>
-/// <param name="lsd"></param>
+/* Helper to write a network P25 LDU2 packet. */
+
 void Voice::writeNet_LDU2()
 {
     lc::LC control = lc::LC(*m_dfsiLC.control());
@@ -1992,10 +1950,8 @@ void Voice::writeNet_LDU2()
     m_netFrames += 9U;
 }
 
-/// <summary>
-/// Helper to insert IMBE silence frames for missing audio.
-/// </summary>
-/// <param name="data"></param>
+/* Helper to insert IMBE silence frames for missing audio. */
+
 void Voice::insertMissingAudio(uint8_t *data)
 {
     if (data[10U] == 0x00U) {
@@ -2071,10 +2027,8 @@ void Voice::insertMissingAudio(uint8_t *data)
     }
 }
 
-/// <summary>
-/// Helper to insert IMBE null frames for missing audio.
-/// </summary>
-/// <param name="data"></param>
+/* Helper to insert IMBE null frames for missing audio. */
+
 void Voice::insertNullAudio(uint8_t *data)
 {
     if (data[0U] == 0x00U) {
@@ -2114,10 +2068,8 @@ void Voice::insertNullAudio(uint8_t *data)
     }
 }
 
-/// <summary>
-/// Helper to insert encrypted IMBE null frames for missing audio.
-/// </summary>
-/// <param name="data"></param>
+/* Helper to insert encrypted IMBE null frames for missing audio. */
+
 void Voice::insertEncryptedNullAudio(uint8_t *data)
 {
     if (data[0U] == 0x00U) {
@@ -2157,11 +2109,8 @@ void Voice::insertEncryptedNullAudio(uint8_t *data)
     }
 }
 
-/// <summary>
-/// Given the last MI, generate the next MI using LFSR.
-/// </summary>
-/// <param name="lastMI"></param>
-/// <param name="nextMI"></param>
+/* Given the last MI, generate the next MI using LFSR. */
+
 void Voice::getNextMI(uint8_t lastMI[9U], uint8_t nextMI[9U])
 {
     uint8_t carry, i;

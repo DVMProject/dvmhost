@@ -22,12 +22,14 @@ using namespace p25::lc::tdulc;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the LC_CONV_FALLBACK class. */
+
 LC_CONV_FALLBACK::LC_CONV_FALLBACK() : TDULC()
 {
     m_lco = LCO::CONV_FALLBACK;
 }
 
 /* Decode a terminator data unit w/ link control. */
+
 bool LC_CONV_FALLBACK::decode(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -38,6 +40,7 @@ bool LC_CONV_FALLBACK::decode(const uint8_t* data)
 }
 
 /* Encode a terminator data unit w/ link control. */
+
 void LC_CONV_FALLBACK::encode(uint8_t* data)
 {
     assert(data != nullptr);

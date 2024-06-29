@@ -22,6 +22,7 @@ using namespace p25::lc::tsbk;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the ISP_LOC_REG_REQ class. */
+
 ISP_LOC_REG_REQ::ISP_LOC_REG_REQ() : TSBK(),
     m_lra(0U)
 {
@@ -29,6 +30,7 @@ ISP_LOC_REG_REQ::ISP_LOC_REG_REQ() : TSBK(),
 }
 
 /* Decode a trunking signalling block. */
+
 bool ISP_LOC_REG_REQ::decode(const uint8_t* data, bool rawTSBK)
 {
     assert(data != nullptr);
@@ -50,6 +52,7 @@ bool ISP_LOC_REG_REQ::decode(const uint8_t* data, bool rawTSBK)
 }
 
 /* Encode a trunking signalling block. */
+
 void ISP_LOC_REG_REQ::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 {
     assert(data != nullptr);
@@ -58,6 +61,7 @@ void ISP_LOC_REG_REQ::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 }
 
 /* Returns a string that represents the current TSBK. */
+
 std::string ISP_LOC_REG_REQ::toString(bool isp)
 {
     return std::string("TSBKO, ISP_LOC_REG_REQ (Location Registration Request)");
@@ -68,6 +72,7 @@ std::string ISP_LOC_REG_REQ::toString(bool isp)
 // ---------------------------------------------------------------------------
 
 /* Internal helper to copy the the class. */
+
 void ISP_LOC_REG_REQ::copy(const ISP_LOC_REG_REQ& data)
 {
     TSBK::copy(data);

@@ -22,12 +22,14 @@ using namespace nxdn::lc::rcch;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the MESSAGE_TYPE_VCALL_ASSGN class. */
+
 MESSAGE_TYPE_VCALL_ASSGN::MESSAGE_TYPE_VCALL_ASSGN() : RCCH()
 {
     m_messageType = MessageType::RCCH_VCALL_ASSGN;
 }
 
 /* Decode RCCH data. */
+
 void MESSAGE_TYPE_VCALL_ASSGN::decode(const uint8_t* data, uint32_t length, uint32_t offset)
 {
     assert(data != nullptr);
@@ -39,6 +41,7 @@ void MESSAGE_TYPE_VCALL_ASSGN::decode(const uint8_t* data, uint32_t length, uint
 }
 
 /* Encode RCCH data. */
+
 void MESSAGE_TYPE_VCALL_ASSGN::encode(uint8_t* data, uint32_t length, uint32_t offset)
 {
     assert(data != nullptr);
@@ -67,6 +70,7 @@ void MESSAGE_TYPE_VCALL_ASSGN::encode(uint8_t* data, uint32_t length, uint32_t o
 }
 
 /* Returns a string that represents the current RCCH. */
+
 std::string MESSAGE_TYPE_VCALL_ASSGN::toString(bool isp)
 {
     return std::string("RCCH_VCALL_ASSGN (Voice Call Assignment)");

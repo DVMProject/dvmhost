@@ -1,18 +1,14 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Modem Host Software
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Modem Host Software
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2002-2004,2007-2009,2011-2013,2015-2017,2020,2021 Jonathan Naylor, G4KLX
-*   Copyright (C) 1999-2001 Thomas Sailor, HB9JNX
-*   Copyright (C) 2020-2021 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Modem Host Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2002-2004,2007-2009,2011-2013,2015-2017,2020,2021 Jonathan Naylor, G4KLX
+ *  Copyright (C) 1999-2001 Thomas Sailor, HB9JNX
+ *  Copyright (C) 2020-2021 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "Defines.h"
 #include "common/Log.h"
 #include "modem/port/UARTPort.h"
@@ -34,12 +30,8 @@ using namespace modem::port;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the UARTPort class.
-/// </summary>
-/// <param name="device">Serial port device.</param>
-/// <param name="speed">Serial port speed.</param>
-/// <param name="assertRTS"></param>
+/* Initializes a new instance of the UARTPort class. */
+
 UARTPort::UARTPort(const std::string& device, SERIAL_SPEED speed, bool assertRTS) :
     m_isOpen(false),
     m_device(device),
@@ -50,15 +42,12 @@ UARTPort::UARTPort(const std::string& device, SERIAL_SPEED speed, bool assertRTS
     assert(!device.empty());
 }
 
-/// <summary>
-/// Finalizes a instance of the UARTPort class.
-/// </summary>
+/* Finalizes a instance of the UARTPort class. */
+
 UARTPort::~UARTPort() = default;
 
-/// <summary>
-/// Opens a connection to the serial port.
-/// </summary>
-/// <returns>True, if connection is opened, otherwise false.</returns>
+/* Opens a connection to the serial port. */
+
 bool UARTPort::open()
 {
     if (m_isOpen)
@@ -85,12 +74,8 @@ bool UARTPort::open()
     return setTermios();
 }
 
-/// <summary>
-/// Reads data from the serial port.
-/// </summary>
-/// <param name="buffer">Buffer to read data from the serial port to.</param>
-/// <param name="length">Length of data to read from the serial port.</param>
-/// <returns>Actual length of data read from serial port.</returns>
+/* Reads data from the serial port. */
+
 int UARTPort::read(uint8_t* buffer, uint32_t length)
 {
     assert(buffer != nullptr);
@@ -142,12 +127,8 @@ int UARTPort::read(uint8_t* buffer, uint32_t length)
     return length;
 }
 
-/// <summary>
-/// Writes data to the serial port.
-/// </summary>
-/// <param name="buffer">Buffer containing data to write to serial port.</param>
-/// <param name="length">Length of data to write to serial port.</param>
-/// <returns>Actual length of data written to the serial port.</returns>
+/* Writes data to the serial port. */
+
 int UARTPort::write(const uint8_t* buffer, uint32_t length)
 {
     assert(buffer != nullptr);
@@ -179,9 +160,8 @@ int UARTPort::write(const uint8_t* buffer, uint32_t length)
     return length;
 }
 
-/// <summary>
-/// Closes the connection to the serial port.
-/// </summary>
+/* Closes the connection to the serial port. */
+
 void UARTPort::close()
 {
     if (!m_isOpen && m_fd == -1)
@@ -195,10 +175,8 @@ void UARTPort::close()
 }
 
 #if defined(__APPLE__)
-/// <summary>
-///
-/// </summary>
-/// <returns></returns>
+/* Helper on Apple to set serial port to non-blocking. */
+
 int UARTPort::setNonblock(bool nonblock)
 {
     int flag = ::fcntl(m_fd, F_GETFL, 0);
@@ -216,11 +194,8 @@ int UARTPort::setNonblock(bool nonblock)
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the UARTPort class.
-/// </summary>
-/// <param name="speed">Serial port speed.</param>
-/// <param name="assertRTS"></param>
+/* Initializes a new instance of the UARTPort class. */
+
 UARTPort::UARTPort(SERIAL_SPEED speed, bool assertRTS) :
     m_isOpen(false),
     m_speed(speed),
@@ -230,10 +205,8 @@ UARTPort::UARTPort(SERIAL_SPEED speed, bool assertRTS) :
     /* stub */
 }
 
-/// <summary>
-///
-/// </summary>
-/// <returns></returns>
+/* Checks it the serial port can be written to. */
+
 bool UARTPort::canWrite()
 {
 #if defined(__APPLE__)
@@ -255,10 +228,8 @@ bool UARTPort::canWrite()
 #endif
 }
 
-/// <summary>
-///
-/// </summary>
-/// <returns></returns>
+/* Sets the termios setings on the serial port. */
+
 bool UARTPort::setTermios()
 {
     termios termios;

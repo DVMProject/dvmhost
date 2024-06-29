@@ -36,12 +36,14 @@ SiteData LC::m_siteData = SiteData();
 // ---------------------------------------------------------------------------
 
 /* Initializes a copy instance of the LC class. */
+
 LC::LC(const LC& data) : LC()
 {
     copy(data);
 }
 
 /* Initializes a new instance of the LC class. */
+
 LC::LC() :
     m_protect(false),
     m_lco(LCO::GROUP),
@@ -72,6 +74,7 @@ LC::LC() :
 }
 
 /* Finalizes a instance of LC class. */
+
 LC::~LC()
 {
     if (m_mi != nullptr) {
@@ -81,6 +84,7 @@ LC::~LC()
 }
 
 /* Equals operator. */
+
 LC& LC::operator=(const LC& data)
 {
     if (this != &data) {
@@ -91,6 +95,7 @@ LC& LC::operator=(const LC& data)
 }
 
 /* Decode a header data unit. */
+
 bool LC::decodeHDU(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -161,6 +166,7 @@ bool LC::decodeHDU(const uint8_t* data)
 }
 
 /* Encode a header data unit. */
+
 void LC::encodeHDU(uint8_t* data)
 {
     assert(data != nullptr);
@@ -205,6 +211,7 @@ void LC::encodeHDU(uint8_t* data)
 }
 
 /* Decode a logical link data unit 1. */
+
 bool LC::decodeLDU1(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -256,6 +263,7 @@ bool LC::decodeLDU1(const uint8_t* data)
 }
 
 /* Encode a logical link data unit 1. */
+
 void LC::encodeLDU1(uint8_t* data)
 {
     assert(data != nullptr);
@@ -302,6 +310,7 @@ void LC::encodeLDU1(uint8_t* data)
 }
 
 /* Decode a logical link data unit 2. */
+
 bool LC::decodeLDU2(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -376,6 +385,7 @@ bool LC::decodeLDU2(const uint8_t* data)
 }
 
 /* Encode a logical link data unit 2. */
+
 void LC::encodeLDU2(uint8_t* data)
 {
     assert(data != nullptr);
@@ -428,6 +438,7 @@ void LC::encodeLDU2(uint8_t* data)
 }
 
 /* Helper to determine if the MFId is a standard MFId. */
+
 bool LC::isStandardMFId() const
 {
     if ((m_mfId == MFG_STANDARD) || (m_mfId == MFG_STANDARD_ALT))
@@ -435,8 +446,12 @@ bool LC::isStandardMFId() const
     return false;
 }
 
-/* Encryption data */
+/*
+** Encryption data 
+*/
+
 /* Sets the encryption message indicator. */
+
 void LC::setMI(const uint8_t* mi)
 {
     assert(mi != nullptr);
@@ -445,6 +460,7 @@ void LC::setMI(const uint8_t* mi)
 }
 
 /* Gets the encryption message indicator. */
+
 void LC::getMI(uint8_t* mi) const
 {
     assert(mi != nullptr);
@@ -457,6 +473,7 @@ void LC::getMI(uint8_t* mi) const
 // ---------------------------------------------------------------------------
 
 /* Internal helper to copy the the class. */
+
 void LC::copy(const LC& data)
 {
     m_lco = data.m_lco;
@@ -517,6 +534,7 @@ void LC::copy(const LC& data)
 }
 
 /* Decode link control. */
+
 bool LC::decodeLC(const uint8_t* rs)
 {
     ulong64_t rsValue = 0U;
@@ -599,6 +617,7 @@ bool LC::decodeLC(const uint8_t* rs)
 }
 
 /* Encode link control. */
+
 void LC::encodeLC(uint8_t* rs)
 {
     ulong64_t rsValue = 0U;
@@ -688,6 +707,7 @@ void LC::encodeLC(uint8_t* rs)
 }
 
 /* Decode LDU hamming FEC. */
+
 void LC::decodeLDUHamming(const uint8_t* data, uint8_t* raw)
 {
     uint32_t n = 0U;
@@ -710,6 +730,7 @@ void LC::decodeLDUHamming(const uint8_t* data, uint8_t* raw)
 }
 
 /* Encode LDU hamming FEC. */
+
 void LC::encodeLDUHamming(uint8_t* data, const uint8_t* raw)
 {
     uint32_t n = 0U;
@@ -732,6 +753,7 @@ void LC::encodeLDUHamming(uint8_t* data, const uint8_t* raw)
 }
 
 /* Decode HDU Golay FEC. */
+
 void LC::decodeHDUGolay(const uint8_t* data, uint8_t* raw)
 {
     // shortened Golay (18,6,8) decode
@@ -764,6 +786,7 @@ void LC::decodeHDUGolay(const uint8_t* data, uint8_t* raw)
 }
 
 /* Encode HDU Golay FEC. */
+
 void LC::encodeHDUGolay(uint8_t* data, const uint8_t* raw)
 {
     // shortened Golay (18,6,8) encode

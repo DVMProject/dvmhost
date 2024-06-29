@@ -22,12 +22,14 @@ using namespace p25::lc::tsbk;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the IOSP_UU_ANS class. */
+
 IOSP_UU_ANS::IOSP_UU_ANS() : TSBK()
 {
     m_lco = TSBKO::IOSP_UU_ANS;
 }
 
 /* Decode a trunking signalling block. */
+
 bool IOSP_UU_ANS::decode(const uint8_t* data, bool rawTSBK)
 {
     assert(data != nullptr);
@@ -52,6 +54,7 @@ bool IOSP_UU_ANS::decode(const uint8_t* data, bool rawTSBK)
 }
 
 /* Encode a trunking signalling block. */
+
 void IOSP_UU_ANS::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 {
     assert(data != nullptr);
@@ -70,6 +73,7 @@ void IOSP_UU_ANS::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 }
 
 /* Returns a string that represents the current TSBK. */
+
 std::string IOSP_UU_ANS::toString(bool isp)
 {
     return (isp) ? std::string("TSBKO, IOSP_UU_ANS (Unit-to-Unit Answer Response)") :

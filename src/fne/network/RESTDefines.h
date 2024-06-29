@@ -1,15 +1,20 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Converged FNE Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Converged FNE Software
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Converged FNE Software
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2024 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @defgroup fne_rest FNE REST API
+ * @brief Implementation for the FNE REST API.
+ * @ingroup fne
+ * 
+ * @file RESTDefines.h
+ * @ingroup fne_rest
+ */
 #if !defined(__FNE_REST_DEFINES_H__)
 #define __FNE_REST_DEFINES_H__
 

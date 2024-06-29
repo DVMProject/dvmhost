@@ -22,12 +22,14 @@ using namespace p25::lc::tsbk;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the ISP_CAN_SRV_REQ class. */
+
 ISP_CAN_SRV_REQ::ISP_CAN_SRV_REQ() : TSBK()
 {
     m_lco = TSBKO::ISP_CAN_SRV_REQ;
 }
 
 /* Decode a trunking signalling block. */
+
 bool ISP_CAN_SRV_REQ::decode(const uint8_t* data, bool rawTSBK)
 {
     assert(data != nullptr);
@@ -51,6 +53,7 @@ bool ISP_CAN_SRV_REQ::decode(const uint8_t* data, bool rawTSBK)
 }
 
 /* Encode a trunking signalling block. */
+
 void ISP_CAN_SRV_REQ::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 {
     assert(data != nullptr);
@@ -59,6 +62,7 @@ void ISP_CAN_SRV_REQ::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 }
 
 /* Returns a string that represents the current TSBK. */
+
 std::string ISP_CAN_SRV_REQ::toString(bool isp)
 {
     return std::string("TSBKO, ISP_CAN_SRV_REQ (Cancel Service Request)");

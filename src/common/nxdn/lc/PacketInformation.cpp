@@ -24,6 +24,7 @@ using namespace nxdn::lc;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the PacketInformation class. */
+
 PacketInformation::PacketInformation() :
     m_delivery(false),
     m_selectiveRetry(false),
@@ -40,9 +41,11 @@ PacketInformation::PacketInformation() :
 }
 
 /* Finalizes a instance of the PacketInformation class. */
+
 PacketInformation::~PacketInformation() = default;
 
 /* Decodes packet information. */
+
 bool PacketInformation::decode(const uint8_t messageType, const uint8_t* data)
 {
     assert(data != nullptr);
@@ -83,6 +86,7 @@ bool PacketInformation::decode(const uint8_t messageType, const uint8_t* data)
 }
 
 /* Encodes packet information. */
+
 void PacketInformation::encode(const uint8_t messageType, uint8_t* data)
 {
     assert(data != nullptr);
@@ -134,6 +138,7 @@ void PacketInformation::encode(const uint8_t messageType, uint8_t* data)
 }
 
 /* Helper to reset data values to defaults. */
+
 void PacketInformation::reset()
 {
     m_delivery = false;

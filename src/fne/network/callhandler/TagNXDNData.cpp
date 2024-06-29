@@ -1,15 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Converged FNE Software
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Converged FNE Software
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2023-2024 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Converged FNE Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2023-2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "fne/Defines.h"
 #include "common/nxdn/NXDNDefines.h"
 #include "common/nxdn/channel/LICH.h"
@@ -38,11 +35,8 @@ using namespace nxdn::defines;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the TagNXDNData class.
-/// </summary>
-/// <param name="network"></param>
-/// <param name="debug"></param>
+/* Initializes a new instance of the TagNXDNData class. */
+
 TagNXDNData::TagNXDNData(FNENetwork* network, bool debug) :
     m_network(network),
     m_parrotFrames(),
@@ -53,21 +47,12 @@ TagNXDNData::TagNXDNData(FNENetwork* network, bool debug) :
     assert(network != nullptr);
 }
 
-/// <summary>
-/// Finalizes a instance of the TagNXDNData class.
-/// </summary>
+/* Finalizes a instance of the TagNXDNData class. */
+
 TagNXDNData::~TagNXDNData() = default;
 
-/// <summary>
-/// Process a data frame from the network.
-/// </summary>
-/// <param name="data">Network data buffer.</param>
-/// <param name="len">Length of data.</param>
-/// <param name="peerId">Peer ID</param>
-/// <param name="pktSeq"></param>
-/// <param name="streamId">Stream ID</param>
-/// <param name="external">Flag indicating traffic is from an external peer.</param>
-/// <returns></returns>
+/* Process a data frame from the network. */
+
 bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint16_t pktSeq, uint32_t streamId, bool external)
 {
     hrc::hrc_t pktTime = hrc::now();
@@ -306,16 +291,8 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
     return false;
 }
 
-/// <summary>
-/// Process a grant request frame from the network.
-/// </summary>
-/// <param name="srcId"></param>
-/// <param name="dstId"></param>
-/// <param name="unitToUnit"></param>
-/// <param name="peerId">Peer ID</param>
-/// <param name="pktSeq"></param>
-/// <param name="streamId">Stream ID</param>
-/// <returns></returns>
+/* Process a grant request frame from the network. */
+
 bool TagNXDNData::processGrantReq(uint32_t srcId, uint32_t dstId, bool unitToUnit, uint32_t peerId, uint16_t pktSeq, uint32_t streamId)
 {
     // if we have an Rx status for the destination deny the grant
@@ -354,9 +331,8 @@ bool TagNXDNData::processGrantReq(uint32_t srcId, uint32_t dstId, bool unitToUni
     return true;
 }
 
-/// <summary>
-/// Helper to playback a parrot frame to the network.
-/// </summary>
+/* Helper to playback a parrot frame to the network. */
+
 void TagNXDNData::playbackParrot()
 {
     if (m_parrotFrames.size() == 0) {
@@ -394,14 +370,8 @@ void TagNXDNData::playbackParrot()
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Helper to route rewrite the network data buffer.
-/// </summary>
-/// <param name="buffer"></param>
-/// <param name="peerId">Peer ID</param>
-/// <param name="duid"></param>
-/// <param name="dstId"></param>
-/// <param name="outbound"></param>
+/* Helper to route rewrite the network data buffer. */
+
 void TagNXDNData::routeRewrite(uint8_t* buffer, uint32_t peerId, uint8_t messageType, uint32_t dstId, bool outbound)
 {
     uint32_t rewriteDstId = dstId;
@@ -413,12 +383,8 @@ void TagNXDNData::routeRewrite(uint8_t* buffer, uint32_t peerId, uint8_t message
     }
 }
 
-/// <summary>
-/// Helper to route rewrite destination ID.
-/// </summary>
-/// <param name="peerId">Peer ID</param>
-/// <param name="dstId"></param>
-/// <param name="outbound"></param>
+/* Helper to route rewrite destination ID. */
+
 bool TagNXDNData::peerRewrite(uint32_t peerId, uint32_t& dstId, bool outbound)
 {
     lookups::TalkgroupRuleGroupVoice tg;
@@ -449,15 +415,8 @@ bool TagNXDNData::peerRewrite(uint32_t peerId, uint32_t& dstId, bool outbound)
     return rewrote;
 }
 
-/// <summary>
-/// Helper to determine if the peer is permitted for traffic.
-/// </summary>
-/// <param name="peerId">Peer ID</param>
-/// <param name="lc"></param>
-/// <param name="messageType"></param>
-/// <param name="streamId">Stream ID</param>
-/// <param name="external"></param>
-/// <returns></returns>
+/* Helper to determine if the peer is permitted for traffic. */
+
 bool TagNXDNData::isPeerPermitted(uint32_t peerId, lc::RTCH& lc, uint8_t messageType, uint32_t streamId, bool external)
 {
     if (!lc.getGroup()) {
@@ -540,14 +499,8 @@ bool TagNXDNData::isPeerPermitted(uint32_t peerId, lc::RTCH& lc, uint8_t message
     return true;
 }
 
-/// <summary>
-/// Helper to validate the DMR call stream.
-/// </summary>
-/// <param name="peerId">Peer ID</param>
-/// <param name="lc"></param>
-/// <param name="messageType"></param>
-/// <param name="streamId">Stream ID</param>
-/// <returns></returns>
+/* Helper to validate the DMR call stream. */
+
 bool TagNXDNData::validate(uint32_t peerId, lc::RTCH& lc, uint8_t messageType, uint32_t streamId)
 {
     // is the source ID a blacklisted ID?
@@ -641,15 +594,8 @@ bool TagNXDNData::validate(uint32_t peerId, lc::RTCH& lc, uint8_t messageType, u
     return true;
 }
 
-/// <summary>
-/// Helper to write a grant packet.
-/// </summary>
-/// <param name="peerId"></param>
-/// <param name="srcId"></param>
-/// <param name="dstId"></param>
-/// <param name="serviceOptions"></param>
-/// <param name="grp"></param>
-/// <returns></returns>
+/* Helper to write a grant packet. */
+
 bool TagNXDNData::write_Message_Grant(uint32_t peerId, uint32_t srcId, uint32_t dstId, uint8_t serviceOptions, bool grp)
 {
     bool emergency = ((serviceOptions & 0xFFU) & 0x80U) == 0x80U;           // Emergency Flag
@@ -690,14 +636,8 @@ bool TagNXDNData::write_Message_Grant(uint32_t peerId, uint32_t srcId, uint32_t 
     return true;
 }
 
-/// <summary>
-/// Helper to write a deny packet.
-/// </summary>
-/// <param name="peerId"></param>
-/// <param name="srcId"></param>
-/// <param name="dstId"></param>
-/// <param name="reason"></param>
-/// <param name="service"></param>
+/* Helper to write a deny packet. */
+
 void TagNXDNData::write_Message_Deny(uint32_t peerId, uint32_t srcId, uint32_t dstId, uint8_t reason, uint8_t service)
 {
     std::unique_ptr<lc::RCCH> rcch = nullptr;
@@ -722,11 +662,8 @@ void TagNXDNData::write_Message_Deny(uint32_t peerId, uint32_t srcId, uint32_t d
     write_Message(peerId, rcch.get());
 }
 
-/// <summary>
-/// Helper to write a network RCCH.
-/// </summary>
-/// <param name="peerId"></param>
-/// <param name="rcch"></param>
+/* Helper to write a network RCCH. */
+
 void TagNXDNData::write_Message(uint32_t peerId, lc::RCCH* rcch)
 {
     uint8_t data[NXDN_FRAME_LENGTH_BYTES + 2U];

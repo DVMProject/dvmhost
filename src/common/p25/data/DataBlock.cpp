@@ -26,6 +26,7 @@ using namespace p25::data;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the DataBlock class. */
+
 DataBlock::DataBlock() :
     m_serialNo(0U),
     m_lastBlock(false),
@@ -40,12 +41,14 @@ DataBlock::DataBlock() :
 }
 
 /* Finalizes a instance of the DataBlock class. */
+
 DataBlock::~DataBlock()
 {
     delete[] m_data;
 }
 
 /* Decodes P25 PDU data block. */
+
 bool DataBlock::decode(const uint8_t* data, const DataHeader& header)
 {
     assert(data != nullptr);
@@ -150,6 +153,7 @@ bool DataBlock::decode(const uint8_t* data, const DataHeader& header)
 }
 
 /* Encodes a P25 PDU data block. */
+
 void DataBlock::encode(uint8_t* data)
 {
     assert(data != nullptr);
@@ -217,24 +221,28 @@ void DataBlock::encode(uint8_t* data)
 }
 
 /* Sets the data format. */
+
 void DataBlock::setFormat(const uint8_t fmt)
 {
     m_fmt = fmt;
 }
 
 /* Sets the data format from the data header. */
+
 void DataBlock::setFormat(const DataHeader& header)
 {
     m_fmt = header.getFormat();
 }
 
 /* Gets the data format. */
+
 uint8_t DataBlock::getFormat() const
 {
     return m_fmt;
 }
 
 /* Sets the raw data stored in the data block. */
+
 void DataBlock::setData(const uint8_t* buffer)
 {
     assert(buffer != nullptr);
@@ -252,6 +260,7 @@ void DataBlock::setData(const uint8_t* buffer)
 }
 
 /* Gets the raw data stored in the data block. */
+
 uint32_t DataBlock::getData(uint8_t* buffer) const
 {
     assert(buffer != nullptr);

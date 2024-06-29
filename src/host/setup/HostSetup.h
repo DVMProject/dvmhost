@@ -1,18 +1,24 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Modem Host Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2015,2016,2017 Jonathan Naylor, G4KLX
+ *  Copyright (C) 2017,2018 Andy Uribe, CA6JAU
+ *  Copyright (C) 2021-2023 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Modem Host Software
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Modem Host Software
-* @derivedfrom MMDVMCal (https://github.com/g4klx/MMDVMCal)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2015,2016,2017 Jonathan Naylor, G4KLX
-*   Copyright (C) 2017,2018 Andy Uribe, CA6JAU
-*   Copyright (C) 2021-2023 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @defgroup setup Host Setup
+ * @brief Implementation for the interactive host setup TUI.
+ * @ingroup host
+ * 
+ * @file HostSetup.h
+ * @ingroup setup
+ * @file HostSetup.cpp
+ * @ingroup setup
+ */
 #if !defined(__HOST_SETUP_H__)
 #define __HOST_SETUP_H__
 
@@ -72,21 +78,39 @@ class HOST_SW_API ChannelConfigSetWnd;
 
 // ---------------------------------------------------------------------------
 //  Class Declaration
-//      This class implements an interactive session to setup the DVM.
 // ---------------------------------------------------------------------------
 
+/**
+ * @brief This class implements an interactive session to setup the DVM.
+ * @ingroup setup
+ */
 class HOST_SW_API HostSetup {
 public:
-    /// <summary>Initializes a new instance of the HostSetup class.</summary>
+    /**
+     * @brief Initializes a new instance of the HostSetup class.
+     * @param confFile Full-path to the configuration file.
+     */
     HostSetup(const std::string& confFile);
-    /// <summary>Finalizes a instance of the HostSetup class.</summary>
+    /**
+     * @brief Finalizes a instance of the HostSetup class.
+     */
     virtual ~HostSetup();
 
 #if defined(ENABLE_SETUP_TUI)
-    /// <summary>Executes the processing loop.</summary>
+    /**
+     * @brief Executes the processing loop.
+     * @param argc main() argc. 
+     * @param argv main() argv.
+     * @returns int Exit code.
+     */
     virtual int run(int argc, char** argv);
 #else
-    /// <summary>Executes the processing loop.</summary>
+    /**
+     * @brief Executes the processing loop.
+     * @param argc main() argc. 
+     * @param argv main() argv.
+     * @returns int Exit code.
+     */
     virtual int run(int argc, char **argv) = 0;
 #endif // defined(ENABLE_SETUP_TUI)
 
@@ -161,80 +185,184 @@ protected:
     bool m_hasFetchedStatus;
     bool m_requestedStatus;
 
-    /// <summary>Modem port open callback.</summary>
+    /**
+     * @brief Modem port open callback.
+     * @param modem Instance of the Modem class.
+     * @returns bool True, if the modem is opened, otherwise false.
+     */
     bool portModemOpen(modem::Modem* modem);
-    /// <summary>Modem port close callback.</summary>
+    /**
+     * @brief Modem port close callback.
+     * @param modem Instance of the Modem class.
+     * @returns bool True, if the modem is closed, otherwise false.
+     */
     bool portModemClose(modem::Modem* modem);
-    /// <summary>Modem clock callback.</summary>
+    /**
+     * @brief Modem clock callback.
+     * @param modem Instance of the Modem class.
+     * @param ms 
+     * @param rspType Modem message response type.
+     * @param rspDblLen Flag indicating whether or not this message is a double length message.
+     * @param[in] buffer Buffer containing modem message.
+     * @param len Length of buffer.
+     * @returns bool True, if the modem response was handled, otherwise false.
+     */
     bool portModemHandler(modem::Modem* modem, uint32_t ms, modem::RESP_TYPE_DVM rspType, bool rspDblLen, const uint8_t* buffer, uint16_t len);
 
-    /// <summary>Helper to save configuration.</summary>
+    /**
+     * @brief Helper to save configuration.
+     */
     void saveConfig();
-    /// <summary>Helper to calculate the Rx/Tx frequencies.</summary>
+    /**
+     * @brief Helper to calculate the Rx/Tx frequencies.
+     * @param consoleDisplay Flag indicating output should goto the console log.
+     * @returns bool True, if Rx/Tx frequencies are calculated, otherwise false.
+     */
     bool calculateRxTxFreq(bool consoleDisplay = false);
-    /// <summary>Helper to log the system configuration parameters.</summary>
+    /**
+     * @brief Helper to log the system configuration parameters.
+     */
     void displayConfigParams();
-    /// <summary>Initializes the modem DSP.</summary>
+    /**
+     * @brief Initializes the modem DSP.
+     * @param consoleDisplay Flag indicating output should goto the console log.
+     * @returns bool True, if modem is initialized, otherwise false.
+     */
     bool createModem(bool consoleDisplay = false);
-    /// <summary>Helper to toggle modem transmit mode.</summary>
+    /**
+     * @brief Helper to toggle modem transmit mode.
+     * @returns bool True, if setting was applied, otherwise false.
+     */
     bool setTransmit();
 
-    /// <summary>Helper to update BER display window.</summary>
+    /**
+     * @brief Helper to update BER display window.
+     * @param ber Bit Error Rate.
+     */
     void updateTUIBER(float ber);
-    /// <summary>Process DMR Rx BER.</summary>
+    /**
+     * @brief Process DMR Rx BER.
+     * @param[in] buffer DMR data to measure for BER.
+     * @param seq Sequence Number.
+     */
     void processDMRBER(const uint8_t* buffer, uint8_t seq);
-    /// <summary>Process DMR Tx 1011hz BER.</summary>
+    /**
+     * @brief Process DMR Tx 1011hz BER.
+     * @param[in] buffer DMR data to measure for BER.
+     * @param seq Sequence Number.
+     */
     void processDMR1KBER(const uint8_t* buffer, uint8_t seq);
-    /// <summary>Process P25 Rx BER.</summary>
+    /**
+     * @brief Process P25 Rx BER.
+     * @param[in] buffer P25 data to measure for BER.
+     */
     void processP25BER(const uint8_t* buffer);
-    /// <summary>Process P25 Tx 1011hz BER.</summary>
+    /**
+     * @brief Process P25 Tx 1011hz BER.
+     * @param[in] buffer P25 data to measure for BER.
+     */
     void processP251KBER(const uint8_t* buffer);
-    /// <summary>Process NXDN Rx BER.</summary>
+    /**
+     * @brief Process NXDN Rx BER.
+     * @param[in] buffer NXDN data to measure for BER.
+     */
     void processNXDNBER(const uint8_t* buffer);
 
-    /// <summary>Write configuration to the modem DSP.</summary>
+    /**
+     * @brief Write configuration to the modem DSP.
+     * @returns bool True, if configuration is written, otherwise false.
+     */
     bool writeConfig();
-    /// <summary>Write configuration to the modem DSP.</summary>
+    /**
+     * @brief Write configuration to the modem DSP.
+     * @param modeOverride Forced modem mode override.
+     * @returns bool True, if configuration is written, otherwise false.
+     */
     bool writeConfig(uint8_t modeOverride);
-    /// <summary>Write RF parameters to the air interface modem.</summary>
+    /**
+     * @brief Write RF parameters to the air interface modem.
+     * @returns bool True, if parameters are written, otherwise false.
+     */
     bool writeRFParams();
-    /// <summary>Write symbol level adjustments to the modem DSP.</summary>
+    /**
+     * @brief Write symbol level adjustments to the modem DSP.
+     * @returns bool True, if adjustments are written, otherwise false.
+     */
     bool writeSymbolAdjust();
-    /// <summary>Write transmit FIFO buffer lengths.</summary>
+    /**
+     * @brief Write transmit FIFO buffer lengths.
+     * @returns bool True, if FIFO buffer lengths are written, otherwise false.
+     */
     bool writeFifoLength();
-    /// <summary>Helper to sleep the calibration thread.</summary>
+    /**
+     * @brief Helper to sleep the calibration thread.
+     */
     void sleep(uint32_t ms);
 
-    /// <summary>Read the configuration area on the air interface modem.</summary>
+    /**
+     * @brief Read the configuration area on the air interface modem.
+     * @returns bool True, if modem flash was read, otherwise false.
+     */
     bool readFlash();
-    /// <summary>Process the configuration data from the air interface modem.</summary>
+    /**
+     * @brief Process the configuration data from the air interface modem.
+     * @param[in] buffer Buffer containing configuration data from modem.
+     */
     void processFlashConfig(const uint8_t *buffer);
-    /// <summary>Erase the configuration area on the air interface modem.</summary>
+    /**
+     * @brief Erase the configuration area on the air interface modem.
+     * @returns bool True, if modem coonfiguration area was erased, otherwise false.
+     */
     bool eraseFlash();
-    /// <summary>Write the configuration area on the air interface modem.</summary>
+    /**
+     * @brief Write the configuration area on the air interface modem.
+     * @returns bool True, if modem coonfiguration area was written, otherwise false.
+     */
     bool writeFlash();
 
-    /// <summary>Helper to clock the calibration BER timer.</summary>
+    /**
+     * @brief Helper to clock the calibration BER timer.
+     */
     void timerClock();
-    /// <summary>Helper to start the calibration BER timer.</summary>
+    /**
+     * @brief Helper to start the calibration BER timer.
+     */
     void timerStart();
-    /// <summary>Helper to stop the calibration BER timer.</summary>
+    /**
+     * @brief Helper to stop the calibration BER timer.
+     */
     void timerStop();
 
-    /// <summary>Retrieve the current status from the air interface modem.</summary>
+    /**
+     * @brief Retrieve the current status from the air interface modem.
+     */
     void getStatus();
 #if defined(ENABLE_SETUP_TUI)
-    /// <summary>Prints the current status.</summary>
+    /**
+     * @brief Prints the current status.
+     */
     virtual void printStatus();
 #else
-    /// <summary>Prints the current status.</summary>
+    /**
+     * @brief Prints the current status.
+     */
     virtual void printStatus() = 0;
 #endif // defined(ENABLE_SETUP_TUI)
 
-    /// <summary>Add data frame to the data ring buffer.</summary>
+    /**
+     * @brief Add data frame to the data ring buffer.
+     * @param[in] data Data to add to ring buffer.
+     * @param length Length of data.
+     * @param maxFrameSize 
+     */
     void addFrame(const uint8_t* data, uint32_t length, uint32_t maxFrameSize);
 
-    /// <summary>Counts the total number of bit errors between bytes.</summary>
+    /**
+     * @brief Counts the total number of bit errors between bytes.
+     * @param a Byte 1.
+     * @param b Byte 2.
+     * @returns uint8_t Number of bit errors between bytes.
+     */
     uint8_t countErrs(uint8_t a, uint8_t b);
 };
 

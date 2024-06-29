@@ -62,15 +62,19 @@ static char LEVELS[] = " DMIWEF";
 // ---------------------------------------------------------------------------
 
 /* Helper to get the current log file level. */
+
 uint32_t CurrentLogFileLevel() { return m_fileLevel; }
 
 /* Helper to get the current log file path. */
+
 std::string LogGetFilePath() { return m_filePath; }
 
 /* Helper to get the current log file root. */
+
 std::string LogGetFileRoot() { return m_fileRoot; }
 
 /* Helper to open the detailed log file, file handle. */
+
 static bool LogOpen()
 {
 #if defined(CATCH2_TEST_COMPILATION)
@@ -128,12 +132,14 @@ static bool LogOpen()
 }
 
 /* Internal helper to set an output stream to direct logging to. */
+
 void __InternalOutputStream(std::ostream& stream)
 {
     m_outStream.rdbuf(stream.rdbuf());
 }
 
 /* Gets the instance of the Network class to transfer the activity log with. */
+
 void* LogGetNetwork()
 {
     // NO GOOD, VERY BAD, TERRIBLE HACK
@@ -141,6 +147,7 @@ void* LogGetNetwork()
 }
 
 /* Sets the instance of the Network class to transfer the activity log with. */
+
 void LogSetNetwork(void* network)
 {
 #if defined(CATCH2_TEST_COMPILATION)
@@ -152,6 +159,7 @@ void LogSetNetwork(void* network)
 }
 
 /* Initializes the diagnostics log. */
+
 bool LogInitialise(const std::string& filePath, const std::string& fileRoot, uint32_t fileLevel, uint32_t displayLevel, bool disableTimeDisplay, bool useSyslog)
 {
     m_filePath = filePath;
@@ -165,6 +173,7 @@ bool LogInitialise(const std::string& filePath, const std::string& fileRoot, uin
 }
 
 /* Finalizes the diagnostics log. */
+
 void LogFinalise()
 {
 #if defined(CATCH2_TEST_COMPILATION)
@@ -177,6 +186,7 @@ void LogFinalise()
 }
 
 /* Writes a new entry to the diagnostics log. */
+
 void Log(uint32_t level, const char *module, const char* fmt, ...)
 {
     assert(fmt != nullptr);

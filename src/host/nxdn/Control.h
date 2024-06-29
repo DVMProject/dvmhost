@@ -1,17 +1,23 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Modem Host Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2015-2020 Jonathan Naylor, G4KLX
+ *  Copyright (C) 2022-2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Modem Host Software
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Modem Host Software
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2015-2020 Jonathan Naylor, G4KLX
-*   Copyright (C) 2022-2024 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @defgroup host_nxdn Next Generation Digital Narrowband
+ * @brief Implementation for the NXDN standard.
+ * @ingroup host
+ * 
+ * @file Control.h
+ * @ingroup host_nxdn
+ * @file Control.cpp
+ * @ingroup host_nxdn
+ */
 #if !defined(__NXDN_CONTROL_H__)
 #define __NXDN_CONTROL_H__
 
@@ -50,78 +56,197 @@ namespace nxdn
 
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //      This class implements core logic for handling NXDN.
     // ---------------------------------------------------------------------------
 
+    /**
+     * @brief This class implements core logic for handling NXDN.
+     * @ingroup host_nxdn
+     */
     class HOST_SW_API Control {
     public:
-        /// <summary>Initializes a new instance of the Control class.</summary>
+        /**
+         * @brief Initializes a new instance of the Control class.
+         * @param authoritative Flag indicating whether or not the DVM is grant authoritative.
+         * @param ran NXDN Radio Access Number.
+         * @param callHang Amount of hangtime for a NXDN call.
+         * @param queueSize Modem frame buffer queue size (bytes).
+         * @param timeout Transmit timeout.
+         * @param tgHang Amount of time to hang on the last talkgroup mode from RF.
+         * @param modem Instance of the Modem class.
+         * @param network Instance of the BaseNetwork class.
+         * @param duplex Flag indicating full-duplex operation.
+         * @param chLookup Instance of the ChannelLookup class.
+         * @param ridLookup Instance of the RadioIdLookup class.
+         * @param tidLookup Instance of the TalkgroupRulesLookup class.
+         * @param idenTable Instance of the IdenTableLookup class.
+         * @param rssi Instance of the RSSIInterpolator class.
+         * @param dumpRCCHData Flag indicating whether RCCH data is dumped to the log.
+         * @param debug Flag indicating whether P25 debug is enabled.
+         * @param verbose Flag indicating whether P25 verbose logging is enabled.
+         */
         Control(bool authoritative, uint32_t ran, uint32_t callHang, uint32_t queueSize, uint32_t timeout, uint32_t tgHang,
             modem::Modem* modem, network::Network* network, bool duplex, lookups::ChannelLookup* chLookup, lookups::RadioIdLookup* ridLookup,
             lookups::TalkgroupRulesLookup* tidLookup, lookups::IdenTableLookup* idenTable, lookups::RSSIInterpolator* rssiMapper,
             bool dumpRCCHData, bool debug, bool verbose);
-        /// <summary>Finalizes a instance of the Control class.</summary>
+        /**
+         * @brief Finalizes a instance of the Control class.
+         */
         ~Control();
 
-        /// <summary>Resets the data states for the RF interface.</summary>
+        /**
+         * @brief Resets the data states for the RF interface.
+         */
         void reset();
 
-        /// <summary>Helper to set NXDN configuration options.</summary>
+        /**
+         * @brief Helper to set NXDN configuration options.
+         * @param conf Instance of the yaml::Node class.
+         * @param supervisor Flag indicating whether the DMR has supervisory functions.
+         * @param cwCallsign CW callsign of this host.
+         * @param controlChData Control Channel data.
+         * @param siteId NXDN Site Code.
+         * @param sysId NXDN System Code.
+         * @param channelId Channel ID.
+         * @param channelNo Channel Number.
+         * @param printOptions Flag indicating whether or not options should be printed to log.
+         */
         void setOptions(yaml::Node& conf, bool supervisor, const std::string cwCallsign, lookups::VoiceChData controlChData,
             uint16_t siteId, uint32_t sysId, uint8_t channelId, uint32_t channelNo, bool printOptions);
 
-        /// <summary>Gets a flag indicating whether the NXDN control channel is running.</summary>
+        /** @name CC Control */
+        /**
+         * @brief Gets a flag indicating whether the control channel is running.
+         * @returns bool Flag indicating whether the control channel is running.
+         */
         bool getCCRunning() const { return m_ccRunning; }
-        /// <summary>Sets a flag indicating whether the NXDN control channel is running.</summary>
+        /**
+         * @brief Sets a flag indicating whether the control channel is running.
+         * @param ccRunning Flag indicating whether the control channel is running.
+         */
         void setCCRunning(bool ccRunning) { m_ccPrevRunning = m_ccRunning; m_ccRunning = ccRunning; }
-        /// <summary>Gets a flag indicating whether the NXDN control channel is running.</summary>
+        /**
+         * @brief Gets a flag indicating whether the control channel is running.
+         * @returns bool Flag indicating whether the control channel is running.
+         */
         bool getCCHalted() const { return m_ccHalted; }
-        /// <summary>Sets a flag indicating whether the NXDN control channel is halted.</summary>
+        /**
+         * @brief Sets a flag indicating whether the control channel is halted.
+         * @param ccHalted Flag indicating whether the control channel is halted.
+         */
         void setCCHalted(bool ccHalted) { m_ccHalted = ccHalted; }
+        /** @} */
 
-        /// <summary>Process a data frame from the RF interface.</summary>
+        /** @name Frame Processing */
+        /**
+         * @brief Process a data frame from the RF interface.
+         * @param data Buffer containing data frame.
+         * @param len Length of data frame.
+         * @returns bool True, if frame was successfully processed, otherwise false.
+         */
         bool processFrame(uint8_t* data, uint32_t len);
-        /// <summary>Get the frame data length for the next frame in the data ring buffer.</summary>
+        /**
+         * @brief Get the frame data length for the next frame in the data ring buffer.
+         * @returns uint32_t Length of frame data retrieved.
+         */
         uint32_t peekFrameLength();
-        /// <summary>Get frame data from data ring buffer.</summary>
+        /**
+         * @brief Get frame data from data ring buffer.
+         * @param[out] data Buffer to store frame data.
+         * @returns uint32_t Length of frame data retrieved.
+         */
         uint32_t getFrame(uint8_t* data);
+        /** @} */
 
-        /// <summary>Updates the processor.</summary>
+        /** @name Data Clocking */
+        /**
+         * @brief Updates the processor.
+         */
         void clock();
-        /// <summary>Updates the adj. site tables and affiliations.</summary>
+        /**
+         * @brief Updates the adj. site tables and affiliations.
+         * @param ms Number of milliseconds.
+         */
         void clockSiteData(uint32_t ms);
+        /** @} */
 
-        /// <summary>Sets a flag indicating whether NXDN has supervisory functions and can send permit TG to voice channels.</summary>
+        /** @name Supervisory Control */
+        /**
+         * @brief Sets a flag indicating whether control has supervisory functions and can send permit TG to voice channels.
+         * @param supervisor Flag indicating whether control has supervisory functions.
+         */
         void setSupervisor(bool supervisor) { m_supervisor = supervisor; }
-        /// <summary>Permits a TGID on a non-authoritative host.</summary>
+        /**
+         * @brief Permits a TGID on a non-authoritative host.
+         * @param dstId Destination ID.
+         */
         void permittedTG(uint32_t dstId);
-        /// <summary>Grants a TGID on a non-authoritative host.</summary>
+        /**
+         * @brief Grants a TGID on a non-authoritative host.
+         * @param srcId Source Radio ID.
+         * @param dstId Destination ID.
+         * @param grp Flag indicating group grant.
+         */
         void grantTG(uint32_t srcId, uint32_t dstId, bool grp);
-        /// <summary>Releases a granted TG.</summary>
+        /**
+         * @brief Releases a granted TG.
+         * @param dstId Destination ID.
+         */
         void releaseGrantTG(uint32_t dstId);
-        /// <summary>Touches a granted TG to keep a channel grant alive.</summary>
+        /**
+         * @brief Touches a granted TG to keep a channel grant alive.
+         * @param dstId Destination ID.
+         */
         void touchGrantTG(uint32_t dstId);
+        /** @} */
 
-        /// <summary>Gets instance of the AffiliationLookup class.</summary>
+        /**
+         * @brief Gets instance of the AffiliationLookup class.
+         * @returns AffiliationLookup Instance of the AffiliationLookup class.
+         */
         lookups::AffiliationLookup affiliations() { return m_affiliations; }
 
-        /// <summary>Flag indicating whether the processor or is busy or not.</summary>
+        /**
+         * @brief Flag indicating whether the processor or is busy or not.
+         * @returns bool True, if processor is busy, otherwise false.
+         */
         bool isBusy() const;
 
-        /// <summary>Flag indicating whether NXDN debug is enabled or not.</summary>
+        /**
+         * @brief Flag indicating whether debug is enabled or not.
+         * @returns bool True, if debugging is enabled, otherwise false.
+         */
         bool getDebug() const { return m_debug; };
-        /// <summary>Flag indicating whether NXDN verbosity is enabled or not.</summary>
+        /**
+         * @brief Flag indicating whether verbosity is enabled or not.
+         * @returns bool True, if verbose logging is enabled, otherwise false.
+         */
         bool getVerbose() const { return m_verbose; };
-        /// <summary>Helper to change the debug and verbose state.</summary>
+        /**
+         * @brief Helper to change the debug and verbose state.
+         * @param debug Flag indicating whether debug is enabled or not.
+         * @param verbose Flag indicating whether verbosity is enabled or not.
+         */
         void setDebugVerbose(bool debug, bool verbose);
-        /// <summary>Flag indicating whether NXDN RCCH verbosity is enabled or not.</summary>
+        /**
+         * @brief Flag indicating whether NXDN RCCH verbosity is enabled or not.
+         * @returns bool True, if RCCH verbose logging is enabled, otherwise false.
+         */
         bool getRCCHVerbose() const { return m_dumpRCCH; };
-        /// <summary>Helper to change the RCCH verbose state.</summary>
+        /**
+         * @brief Helper to change the RCCH verbose state.
+         * @param verbose Flag indicating whether RCCH verbose logging is enabled or not.
+         */
         void setRCCHVerbose(bool verbose);
 
-        /// <summary>Helper to get the last transmitted destination ID.</summary>
+        /**
+         * @brief Helper to get the last transmitted destination ID.
+         * @returns uint32_t Last transmitted Destination ID.
+         */
         uint32_t getLastDstId() const;
-        /// <summary>Helper to get the last transmitted source ID.</summary>
+        /**
+         * @brief Helper to get the last transmitted source ID.
+         * @returns uint32_t Last transmitted source radio ID.
+         */
         uint32_t getLastSrcId() const;
 
     private:
@@ -211,28 +336,54 @@ namespace nxdn
         bool m_verbose;
         bool m_debug;
 
-        /// <summary>Add data frame to the data ring buffer.</summary>
+        /**
+         * @brief Add data frame to the data ring buffer.
+         * @param data Frame data to add to Tx queue.
+         * @param length Length of data to add.
+         * @param net Flag indicating whether the data came from the network or not
+         * @param imm Flag indicating whether or not the data is priority and is added to the immediate queue.
+         */
         void addFrame(const uint8_t* data, bool net = false, bool imm = false);
 
-        /// <summary>Process a data frames from the network.</summary>
+        /**
+         * @brief Process a data frames from the network.
+         */
         void processNetwork();
-        /// <summary>Helper to process loss of frame stream from modem.</summary>
+        /**
+         * @brief Helper to process loss of frame stream from modem.
+         */
         void processFrameLoss();
 
-        /// <summary>Helper to send a REST API request to the CC to release a channel grant at the end of a call.</summary>
+        /**
+         * @brief Helper to send a REST API request to the CC to release a channel grant at the end of a call.
+         * @param dstId Destination ID.
+         */
         void notifyCC_ReleaseGrant(uint32_t dstId);
-        /// <summary>Helper to send a REST API request to the CC to "touch" a channel grant to refresh grant timers.</summary>
+        /**
+         * @brief Helper to send a REST API request to the CC to "touch" a channel grant to refresh grant timers.
+         * @param dstId Destination ID.
+         */
         void notifyCC_TouchGrant(uint32_t dstId);
 
-        /// <summary>Helper to write control channel frame data.</summary>
+        /**
+         * @brief Helper to write control channel frame data.
+         * @returns bool True, if control data is written, otherwise false.
+         */
         bool writeRF_ControlData();
 
-        /// <summary>Helper to write a Tx release packet.</summary>
+        /**
+         * @brief Helper to write a Tx release packet.
+         * @param noNetwork Flag indicating this Tx release packet shouldn't be written to the network.
+         */
         void writeRF_Message_Tx_Rel(bool noNetwork);
 
-        /// <summary>Helper to write RF end of frame data.</summary>
+        /**
+         * @brief Helper to write RF end of frame data.
+         */
         void writeEndRF();
-        /// <summary>Helper to write network end of frame data.</summary>
+        /**
+         * @brief Helper to write network end of frame data.
+         */
         void writeEndNet();
     };
 } // namespace nxdn

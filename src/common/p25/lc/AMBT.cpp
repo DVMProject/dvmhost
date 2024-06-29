@@ -25,12 +25,14 @@ using namespace p25::lc;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the AMBT class. */
+
 AMBT::AMBT() : TSBK()
 {
     /* stub */
 }
 
 /* Decode a trunking signalling block. */
+
 bool AMBT::decode(const uint8_t* data, bool rawTSBK)
 {
     assert(data != nullptr);
@@ -41,6 +43,7 @@ bool AMBT::decode(const uint8_t* data, bool rawTSBK)
 }
 
 /* Encode a trunking signalling block. */
+
 void AMBT::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 {
     assert(data != nullptr);
@@ -53,6 +56,7 @@ void AMBT::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 // ---------------------------------------------------------------------------
 
 /* Internal helper to convert AMBT bytes to a 64-bit long value. */
+
 ulong64_t AMBT::toValue(const data::DataHeader& dataHeader, const uint8_t* pduUserData)
 {
     ulong64_t tsbkValue = 0U;
@@ -71,6 +75,7 @@ ulong64_t AMBT::toValue(const data::DataHeader& dataHeader, const uint8_t* pduUs
 }
 
 /* Internal helper to decode a trunking signalling block. */
+
 bool AMBT::decode(const data::DataHeader& dataHeader, const data::DataBlock* blocks, uint8_t* pduUserData)
 {
     assert(blocks != nullptr);
@@ -117,6 +122,7 @@ bool AMBT::decode(const data::DataHeader& dataHeader, const data::DataBlock* blo
 }
 
 /* Internal helper to encode a trunking signalling block. */
+
 void AMBT::encode(data::DataHeader& dataHeader, uint8_t* pduUserData)
 {
     assert(pduUserData != nullptr);

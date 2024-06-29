@@ -8,10 +8,20 @@
 * @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2015,2016,2017,2018 Jonathan Naylor, G4KLX
-*   Copyright (C) 2017-2023 Bryan Biedenkapp, N2PLL
+*  Copyright (C) 2015,2016,2017,2018 Jonathan Naylor, G4KLX
+*  Copyright (C) 2017-2023 Bryan Biedenkapp, N2PLL
 *
 */
+/**
+ * @defgroup network Host Networking
+ * @brief Implementation for the host networking.
+ * @ingroup host
+ * 
+ * @file Network.h
+ * @ingroup network
+ * @file Network.cpp
+ * @ingroup network
+ */
 #if !defined(__NETWORK_H__)
 #define __NETWORK_H__
 
@@ -27,52 +37,125 @@ namespace network
 {
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //      Implements the core peer networking logic.
     // ---------------------------------------------------------------------------
 
+    /**
+     * @brief Implements the core peer networking logic.
+     * @ingroup network
+     */
     class HOST_SW_API Network : public BaseNetwork {
     public:
-        /// <summary>Initializes a new instance of the Network class.</summary>
+        /**
+         * @brief Initializes a new instance of the Network class.
+         * @param address Network Hostname/IP address to connect to.
+         * @param port Network port number.
+         * @param localPort 
+         * @param peerId Unique ID on the network.
+         * @param password Network authentication password.
+         * @param duplex Flag indicating full-duplex operation.
+         * @param debug Flag indicating whether network debug is enabled.
+         * @param dmr Flag indicating whether DMR is enabled.
+         * @param p25 Flag indicating whether P25 is enabled.
+         * @param nxdn Flag indicating whether NXDN is enabled.
+         * @param slot1 Flag indicating whether DMR slot 1 is enabled for network traffic.
+         * @param slot2 Flag indicating whether DMR slot 2 is enabled for network traffic.
+         * @param allowActivityTransfer Flag indicating that the system activity logs will be sent to the network.
+         * @param allowDiagnosticTransfer Flag indicating that the system diagnostic logs will be sent to the network.
+         * @param updateLookup Flag indicating that the system will accept radio ID and talkgroup ID lookups from the network.
+         */
         Network(const std::string& address, uint16_t port, uint16_t localPort, uint32_t peerId, const std::string& password,
             bool duplex, bool debug, bool dmr, bool p25, bool nxdn, bool slot1, bool slot2, bool allowActivityTransfer, bool allowDiagnosticTransfer, bool updateLookup, bool saveLookup);
-        /// <summary>Finalizes a instance of the Network class.</summary>
+        /**
+         * @brief Finalizes a instance of the Network class.
+         */
         ~Network() override;
 
-        /// <summary>Resets the DMR ring buffer for the given slot.</summary>
+        /**
+         * @brief Resets the DMR ring buffer for the given slot.
+         * @param slotNo DMR slot ring buffer to reset.
+         */
         void resetDMR(uint32_t slotNo) override;
-        /// <summary>Resets the P25 ring buffer.</summary>
+        /**
+         * @brief Resets the P25 ring buffer.
+         */
         void resetP25() override;
-        /// <summary>Resets the NXDN ring buffer.</summary>
+        /**
+         * @brief Resets the NXDN ring buffer.
+         */
         void resetNXDN() override;
 
-        /// <summary>Sets the instances of the Radio ID and Talkgroup ID lookup tables.</summary>
+        /**
+         * @brief Sets the instances of the Radio ID and Talkgroup ID lookup tables.
+         * @param ridLookup Radio ID Lookup Table Instance
+         * @param tidLookup Talkgroup Rules Lookup Table Instance
+         */
         void setLookups(lookups::RadioIdLookup* ridLookup, lookups::TalkgroupRulesLookup* tidLookup);
-        /// <summary>Sets metadata configuration settings from the modem.</summary>
-        void setMetadata(const std::string& callsign, uint32_t rxFrequency, uint32_t txFrequency, float txOffsetMhz, float chBandwidthKhz,
+        /**
+         * @brief Sets metadata configuration settings from the modem.
+         * @param identity Peer Identity.
+         * @param rxFrequency Rx Frequency (Informational Only).
+         * @param txFrequency Tx Frequency (Informational Only).
+         * @param txOffsetMhz Tx Offset in MHz (Informational Only).
+         * @param chBandwidthKhz Channel Bandwidth in kHz (Informational Only).
+         * @param channelId Channel ID (Informational Only).
+         * @param channelNo Channel Number (Informational Only).
+         * @param power RF Power Level (Informational Only).
+         * @param latitude Geographic Latitude (Informational Only).
+         * @param longitude Geographic Longitude (Informational Only).
+         * @param height Station Height in Meters (Informational Only).
+         * @param location Textual Location (Informational Only).
+         */
+        void setMetadata(const std::string& identity, uint32_t rxFrequency, uint32_t txFrequency, float txOffsetMhz, float chBandwidthKhz,
             uint8_t channelId, uint32_t channelNo, uint32_t power, float latitude, float longitude, int height, const std::string& location);
-        /// <summary>Sets REST API configuration settings from the modem.</summary>
+        /**
+         * @brief Sets REST API configuration settings from the modem.
+         * @param password REST API Password.
+         * @param port REST API Port.
+         */
         void setRESTAPIData(const std::string& password, uint16_t port);
-        /// <summary>Sets a flag indicating whether the conventional option is sent to the FNE.</summary>
+        /**
+         * @brief Sets a flag indicating whether the conventional option is sent to the FNE.
+         * @param conv Flag indicating conventional operation.
+         */
         void setConventional(bool conv) { m_conventional = conv; }
-        /// <summary>Sets endpoint preshared encryption key.</summary>
+        /**
+         * @brief Sets endpoint preshared encryption key.
+         * @param presharedKey Encryption preshared key for networking.
+         */
         void setPresharedKey(const uint8_t* presharedKey);
 
-        /// <summary>Updates the timer by the passed number of milliseconds.</summary>
+        /**
+         * @brief Updates the timer by the passed number of milliseconds.
+         * @param ms Number of milliseconds.
+         */
         void clock(uint32_t ms) override;
 
-        /// <summary>Opens connection to the network.</summary>
+        /**
+         * @brief Opens connection to the network.
+         * @returns bool True, if networking has started, otherwise false.
+         */
         bool open() override;
 
-        /// <summary>Closes connection to the network.</summary>
+        /**
+         * @brief Closes connection to the network.
+         */
         void close() override;
 
-        /// <summary>Flat indicating if this network connection enabled.</summary>
+        /**
+         * @brief Flag indicating if this network connection enabled.
+         * @returns bool Flag indicating if this network connection enabled.
+         */
         bool isEnabled() const { return m_enabled; }
-        /// <summary>Sets flag enabling network communication.</summary>
+        /**
+         * @brief Sets flag enabling network communication.
+         * @param enabled Flag indicating if this network connection enabled.
+         */
         void enable(bool enabled);
 
     public:
-        /// <summary>Last received RTP sequence number.</summary>
+        /**
+         * @brief Last received RTP sequence number.
+         */
         __READONLY_PROPERTY_PLAIN(uint16_t, pktLastSeq);
 
     protected:
@@ -128,13 +211,25 @@ namespace network
 
         uint32_t m_remotePeerId;
 
-        /// <summary>Writes login request to the network.</summary>
+        /**
+         * @brief Writes login request to the network.
+         * @returns bool True, if login request was sent, otherwise false.
+         */
         bool writeLogin();
-        /// <summary>Writes network authentication challenge.</summary>
+        /**
+         * @brief Writes network authentication challenge.
+         * @returns bool True, if authorization response was sent, otherwise false.
+         */
         bool writeAuthorisation();
-        /// <summary>Writes modem configuration to the network.</summary>
+        /**
+         * @brief Writes modem configuration to the network.
+         * @returns bool True, if configuration response was sent, otherwise false.
+         */
         virtual bool writeConfig();
-        /// <summary>Writes a network stay-alive ping.</summary>
+        /**
+         * @brief Writes a network stay-alive ping.
+         * @returns bool True, if stay-alive ping was sent, otherwise false.
+         */
         bool writePing();
     };
 } // namespace network

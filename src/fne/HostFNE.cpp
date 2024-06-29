@@ -1,15 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Converged FNE Software
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Converged FNE Software
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2023,2024 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Converged FNE Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2023,2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "Defines.h"
 #include "common/network/udp/Socket.h"
 #include "common/Log.h"
@@ -43,10 +40,8 @@ using namespace lookups;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the HostFNE class.
-/// </summary>
-/// <param name="confFile">Full-path to the configuration file.</param>
+/* Initializes a new instance of the HostFNE class. */
+
 HostFNE::HostFNE(const std::string& confFile) :
     m_confFile(confFile),
     m_conf(),
@@ -70,15 +65,12 @@ HostFNE::HostFNE(const std::string& confFile) :
     /* stub */
 }
 
-/// <summary>
-/// Finalizes a instance of the HostFNE class.
-/// </summary>
+/* Finalizes a instance of the HostFNE class. */
+
 HostFNE::~HostFNE() = default;
 
-/// <summary>
-/// Executes the main FNE processing loop.
-/// </summary>
-/// <returns>Zero if successful, otherwise error occurred.</returns>
+/* Executes the main FNE processing loop. */
+
 int HostFNE::run()
 {
     bool ret = false;
@@ -302,10 +294,8 @@ int HostFNE::run()
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Reads basic configuration parameters from the YAML configuration file.
-/// </summary>
-/// <returns></returns>
+/* Reads basic configuration parameters from the YAML configuration file. */
+
 bool HostFNE::readParams()
 {
     yaml::Node systemConf = m_conf["system"];
@@ -382,10 +372,8 @@ bool HostFNE::readParams()
     return true;
 }
 
-/// <summary>
-/// Initializes REST API serivces.
-/// </summary>
-/// <returns></returns>
+/* Initializes REST API serivces. */
+
 bool HostFNE::initializeRESTAPI()
 {
     yaml::Node systemConf = m_conf["system"];
@@ -460,10 +448,8 @@ bool HostFNE::initializeRESTAPI()
     return true;
 }
 
-/// <summary>
-/// Initializes master FNE network connectivity.
-/// </summary>
-/// <returns></returns>
+/* Initializes master FNE network connectivity. */
+
 bool HostFNE::createMasterNetwork()
 {
     yaml::Node masterConf = m_conf["master"];
@@ -589,10 +575,8 @@ bool HostFNE::createMasterNetwork()
     return true;
 }
 
-/// <summary>
-/// Initializes peer FNE network connectivity.
-/// </summary>
-/// <returns></returns>
+/* Initializes peer FNE network connectivity. */
+
 bool HostFNE::createPeerNetworks()
 {
     yaml::Node& peerList = m_conf["peers"];
@@ -692,10 +676,8 @@ bool HostFNE::createPeerNetworks()
     return true;
 }
 
-/// <summary>
-/// Processes any peer network traffic.
-/// </summary>
-/// <param name="peerNetwork"></param>
+/* Processes any peer network traffic. */
+
 void HostFNE::processPeer(network::PeerNetwork* peerNetwork)
 {
     if (peerNetwork == nullptr)

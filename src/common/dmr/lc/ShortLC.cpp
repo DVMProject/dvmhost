@@ -22,6 +22,7 @@ using namespace dmr::lc;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the ShortLC class. */
+
 ShortLC::ShortLC() :
     m_rawData(nullptr),
     m_deInterData(nullptr)
@@ -31,6 +32,7 @@ ShortLC::ShortLC() :
 }
 
 /* Finalizes a instance of the ShortLC class. */
+
 ShortLC::~ShortLC()
 {
     delete[] m_rawData;
@@ -38,6 +40,7 @@ ShortLC::~ShortLC()
 }
 
 /* Decode DMR short-link control data. */
+
 bool ShortLC::decode(const uint8_t* in, uint8_t* out)
 {
     assert(in != nullptr);
@@ -61,6 +64,7 @@ bool ShortLC::decode(const uint8_t* in, uint8_t* out)
 }
 
 /* Encode DMR short-link control data. */
+
 void ShortLC::encode(const uint8_t* in, uint8_t* out)
 {
     assert(in != nullptr);
@@ -84,6 +88,7 @@ void ShortLC::encode(const uint8_t* in, uint8_t* out)
 // ---------------------------------------------------------------------------
 
 /* */
+
 void ShortLC::decodeExtractBinary(const uint8_t* in)
 {
     assert(in != nullptr);
@@ -100,6 +105,7 @@ void ShortLC::decodeExtractBinary(const uint8_t* in)
 }
 
 /* */
+
 void ShortLC::decodeDeInterleave()
 {
     for (uint32_t i = 0U; i < 68U; i++)
@@ -116,6 +122,7 @@ void ShortLC::decodeDeInterleave()
 }
 
 /* */
+
 bool ShortLC::decodeErrorCheck()
 {
     // run through each of the 3 rows containing data
@@ -134,6 +141,7 @@ bool ShortLC::decodeErrorCheck()
 }
 
 /* */
+
 void ShortLC::decodeExtractData(uint8_t* data) const
 {
     assert(data != nullptr);
@@ -161,6 +169,7 @@ void ShortLC::decodeExtractData(uint8_t* data) const
 }
 
 /* */
+
 void ShortLC::encodeExtractData(const uint8_t* in) const
 {
     assert(in != nullptr);
@@ -187,6 +196,7 @@ void ShortLC::encodeExtractData(const uint8_t* in) const
 }
 
 /* */
+
 void ShortLC::encodeErrorCheck()
 {
     // run through each of the 3 rows containing data
@@ -200,6 +210,7 @@ void ShortLC::encodeErrorCheck()
 }
 
 /* */
+
 void ShortLC::encodeInterleave()
 {
     for (uint32_t i = 0U; i < 72U; i++)
@@ -217,6 +228,7 @@ void ShortLC::encodeInterleave()
 }
 
 /* */
+
 void ShortLC::encodeExtractBinary(uint8_t* data)
 {
     assert(data != nullptr);

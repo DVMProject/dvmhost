@@ -22,12 +22,14 @@ using namespace nxdn::lc::rcch;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the MESSAGE_TYPE_VCALL_CONN class. */
+
 MESSAGE_TYPE_VCALL_CONN::MESSAGE_TYPE_VCALL_CONN() : RCCH()
 {
     m_messageType = MessageType::RCCH_VCALL_CONN;
 }
 
 /* Decode RCCH data. */
+
 void MESSAGE_TYPE_VCALL_CONN::decode(const uint8_t* data, uint32_t length, uint32_t offset)
 {
     assert(data != nullptr);
@@ -47,6 +49,7 @@ void MESSAGE_TYPE_VCALL_CONN::decode(const uint8_t* data, uint32_t length, uint3
 }
 
 /* Encode RCCH data. */
+
 void MESSAGE_TYPE_VCALL_CONN::encode(uint8_t* data, uint32_t length, uint32_t offset)
 {
     assert(data != nullptr);
@@ -73,6 +76,7 @@ void MESSAGE_TYPE_VCALL_CONN::encode(uint8_t* data, uint32_t length, uint32_t of
 }
 
 /* Returns a string that represents the current RCCH. */
+
 std::string MESSAGE_TYPE_VCALL_CONN::toString(bool isp)
 {
     return (isp) ? std::string("RCCH_VCALL_CONN (Voice Call Connection Request)") :

@@ -32,6 +32,7 @@ SiteData RCCH::m_siteData = SiteData();
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the RCCH class. */
+
 RCCH::RCCH() :
     m_messageType(MessageType::IDLE),
     m_srcId(0U),
@@ -57,24 +58,28 @@ RCCH::RCCH() :
 }
 
 /* Initializes a copy instance of the RCCH class. */
+
 RCCH::RCCH(const RCCH& data) : RCCH()
 {
     copy(data);
 }
 
 /* Finalizes a instance of RCCH class. */
+
 RCCH::~RCCH()
 {
     /* stub */
 }
 
 /* Returns a string that represents the current RCCH. */
+
 std::string RCCH::toString(bool isp)
 {
     return std::string("MESSAGE_TYPE_UNKWN (Unknown RCCH)");
 }
 
 /* Sets the callsign. */
+
 void RCCH::setCallsign(std::string callsign)
 {
     if (m_siteCallsign == nullptr) {
@@ -98,6 +103,7 @@ void RCCH::setCallsign(std::string callsign)
 // ---------------------------------------------------------------------------
 
 /* Internal helper to decode a RCCH link control message. */
+
 void RCCH::decode(const uint8_t* data, uint8_t* rcch, uint32_t length, uint32_t offset)
 {
     assert(data != nullptr);
@@ -116,6 +122,7 @@ void RCCH::decode(const uint8_t* data, uint8_t* rcch, uint32_t length, uint32_t 
 }
 
 /* Internal helper to encode a RCCH link control message. */
+
 void RCCH::encode(uint8_t* data, const uint8_t* rcch, uint32_t length, uint32_t offset)
 {
     assert(data != nullptr);
@@ -136,6 +143,7 @@ void RCCH::encode(uint8_t* data, const uint8_t* rcch, uint32_t length, uint32_t 
 }
 
 /* Internal helper to copy the the class. */
+
 void RCCH::copy(const RCCH& data)
 {
     m_messageType = data.m_messageType;

@@ -1,17 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Modem Host Software
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Modem Host Software
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2015,2016,2017,2018 Jonathan Naylor, G4KLX
-*   Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Modem Host Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2015,2016,2017,2018 Jonathan Naylor, G4KLX
+ *  Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "Defines.h"
 #include "common/dmr/acl/AccessControl.h"
 #include "common/dmr/lc/CSBK.h"
@@ -126,12 +122,8 @@ const uint32_t GRANT_TIMER_TIMEOUT = 15U;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Process DMR data frame from the RF interface.
-/// </summary>
-/// <param name="data">Buffer containing data frame.</param>
-/// <param name="len">Length of data frame.</param>
-/// <returns></returns>
+/* Process DMR data frame from the RF interface. */
+
 bool ControlSignaling::process(uint8_t* data, uint32_t len)
 {
     assert(data != nullptr);
@@ -389,10 +381,8 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len)
     return false;
 }
 
-/// <summary>
-/// Process a data frame from the network.
-/// </summary>
-/// <param name="dmrData"></param>
+/* Process a data frame from the network. */
+
 void ControlSignaling::processNetwork(const data::Data & dmrData)
 {
     DataType::E dataType = dmrData.getDataType();
@@ -623,9 +613,8 @@ void ControlSignaling::processNetwork(const data::Data & dmrData)
     }
 }
 
-/// <summary>
-/// Helper to write DMR adjacent site information to the network.
-/// </summary>
+/* Helper to write DMR adjacent site information to the network. */
+
 void ControlSignaling::writeAdjSSNetwork()
 {
     if (!m_slot->m_enableTSCC) {
@@ -652,12 +641,8 @@ void ControlSignaling::writeAdjSSNetwork()
     }
 }
 
-/// <summary>
-/// Helper to write a extended function packet on the RF interface.
-/// </summary>
-/// <param name="func">Extended function opcode.</param>
-/// <param name="arg">Extended function argument.</param>
-/// <param name="dstId">Destination radio ID.</param>
+/* Helper to write a extended function packet on the RF interface. */
+
 void ControlSignaling::writeRF_Ext_Func(uint32_t func, uint32_t arg, uint32_t dstId)
 {
     std::unique_ptr<CSBK_EXT_FNCT> csbk = std::make_unique<CSBK_EXT_FNCT>();
@@ -685,11 +670,8 @@ void ControlSignaling::writeRF_Ext_Func(uint32_t func, uint32_t arg, uint32_t ds
     writeRF_CSBK(csbk.get());
 }
 
-/// <summary>
-/// Helper to write a call alert packet on the RF interface.
-/// </summary>
-/// <param name="srcId">Source radio ID.</param>
-/// <param name="dstId">Destination radio ID.</param>
+/* Helper to write a call alert packet on the RF interface. */
+
 void ControlSignaling::writeRF_Call_Alrt(uint32_t srcId, uint32_t dstId)
 {
     std::unique_ptr<CSBK_CALL_ALRT> csbk = std::make_unique<CSBK_CALL_ALRT>();
@@ -707,14 +689,8 @@ void ControlSignaling::writeRF_Call_Alrt(uint32_t srcId, uint32_t dstId)
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the ControlSignaling class.
-/// </summary>
-/// <param name="slot">DMR slot.</param>
-/// <param name="network">Instance of the BaseNetwork class.</param>
-/// <param name="dumpCSBKData"></param>
-/// <param name="debug">Flag indicating whether DMR debug is enabled.</param>
-/// <param name="verbose">Flag indicating whether DMR verbose logging is enabled.</param>
+/* Initializes a new instance of the ControlSignaling class. */
+
 ControlSignaling::ControlSignaling(Slot * slot, network::BaseNetwork * network, bool dumpCSBKData, bool debug, bool verbose) :
     m_slot(slot),
     m_dumpCSBKData(dumpCSBKData),
@@ -724,20 +700,16 @@ ControlSignaling::ControlSignaling(Slot * slot, network::BaseNetwork * network, 
     /* stub */
 }
 
-/// <summary>
-/// Finalizes a instance of the ControlSignaling class.
-/// </summary>
+/* Finalizes a instance of the ControlSignaling class. */
+
 ControlSignaling::~ControlSignaling() = default;
 
 /*
 ** Modem Frame Queuing
 */
 
-/// <summary>
-/// Helper to write a CSBK packet.
-/// </summary>
-/// <param name="csbk"></param>
-/// <param name="imm"></param>
+/* Helper to write a CSBK packet. */
+
 void ControlSignaling::writeRF_CSBK(lc::CSBK* csbk, bool imm)
 {
     // don't add any frames if the queue is full
@@ -772,10 +744,8 @@ void ControlSignaling::writeRF_CSBK(lc::CSBK* csbk, bool imm)
         m_slot->addFrame(data, false, imm);
 }
 
-/// <summary>
-/// Helper to write a network CSBK.
-/// </summary>
-/// <param name="csbk"></param>
+/* Helper to write a network CSBK. */
+
 void ControlSignaling::writeNet_CSBK(lc::CSBK* csbk)
 {
     uint8_t data[DMR_FRAME_LENGTH_BYTES + 2U];
@@ -809,12 +779,8 @@ void ControlSignaling::writeNet_CSBK(lc::CSBK* csbk)
 ** Control Signalling Logic
 */
 
-/// <summary>
-/// Helper to write a ACK RSP packet.
-/// </summary>
-/// <param name="dstId"></param>
-/// <param name="reason"></param>
-/// <param name="responseInfo"></param>
+/* Helper to write a ACK RSP packet. */
+
 void ControlSignaling::writeRF_CSBK_ACK_RSP(uint32_t dstId, uint8_t reason, uint8_t responseInfo)
 {
     std::unique_ptr<CSBK_ACK_RSP> csbk = std::make_unique<CSBK_ACK_RSP>();
@@ -826,12 +792,8 @@ void ControlSignaling::writeRF_CSBK_ACK_RSP(uint32_t dstId, uint8_t reason, uint
     writeRF_CSBK_Imm(csbk.get());
 }
 
-/// <summary>
-/// Helper to write a NACK RSP packet.
-/// </summary>
-/// <param name="dstId"></param>
-/// <param name="reason"></param>
-/// <param name="service"></param>
+/* Helper to write a NACK RSP packet. */
+
 void ControlSignaling::writeRF_CSBK_NACK_RSP(uint32_t dstId, uint8_t reason, uint8_t service)
 {
     std::unique_ptr<CSBK_NACK_RSP> csbk = std::make_unique<CSBK_NACK_RSP>();
@@ -843,17 +805,8 @@ void ControlSignaling::writeRF_CSBK_NACK_RSP(uint32_t dstId, uint8_t reason, uin
     writeRF_CSBK_Imm(csbk.get());
 }
 
-/// <summary>
-/// Helper to write a grant packet.
-/// </summary>
-/// <param name="srcId"></param>
-/// <param name="dstId"></param>
-/// <param name="serviceOptions"></param>
-/// <param name="grp"></param>
-/// <param name="net"></param>
-/// <param name="skip"></param>
-/// <param name="chNo"></param>
-/// <returns></returns>
+/* Helper to write a grant packet. */
+
 bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOptions, bool grp, bool net, bool skip, uint32_t chNo)
 {
     Slot *m_tscc = m_slot->m_dmr->getTSCCSlot();
@@ -1134,17 +1087,8 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
     return true;
 }
 
-/// <summary>
-/// Helper to write a data grant packet.
-/// </summary>
-/// <param name="srcId"></param>
-/// <param name="dstId"></param>
-/// <param name="serviceOptions"></param>
-/// <param name="grp"></param>
-/// <param name="net"></param>
-/// <param name="skip"></param>
-/// <param name="chNo"></param>
-/// <returns></returns>
+/* Helper to write a data grant packet. */
+
 bool ControlSignaling::writeRF_CSBK_Data_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOptions, bool grp, bool net, bool skip, uint32_t chNo)
 {
     Slot *m_tscc = m_slot->m_dmr->getTSCCSlot();
@@ -1339,11 +1283,8 @@ bool ControlSignaling::writeRF_CSBK_Data_Grant(uint32_t srcId, uint32_t dstId, u
     return true;
 }
 
-/// <summary>
-/// Helper to write a unit registration response packet.
-/// </summary>
-/// <param name="srcId"></param>
-/// <param name="serviceOptions"></param>
+/* Helper to write a unit registration response packet. */
+
 void ControlSignaling::writeRF_CSBK_U_Reg_Rsp(uint32_t srcId, uint8_t serviceOptions)
 {
     Slot *m_tscc = m_slot->m_dmr->getTSCCSlot();
@@ -1399,12 +1340,8 @@ void ControlSignaling::writeRF_CSBK_U_Reg_Rsp(uint32_t srcId, uint8_t serviceOpt
     writeRF_CSBK_Imm(csbk.get());
 }
 
-/// <summary>
-/// Helper to write a TSCC late entry channel grant packet on the RF interface.
-/// </summary>
-/// <param name="dstId"></param>
-/// <param name="srcId"></param>
-/// <param name="grp"></param>
+/* Helper to write a TSCC late entry channel grant packet on the RF interface. */
+
 void ControlSignaling::writeRF_CSBK_Grant_LateEntry(uint32_t dstId, uint32_t srcId, bool grp)
 {
     Slot *m_tscc = m_slot->m_dmr->getTSCCSlot();
@@ -1438,14 +1375,8 @@ void ControlSignaling::writeRF_CSBK_Grant_LateEntry(uint32_t dstId, uint32_t src
     }
 }
 
-/// <summary>
-/// Helper to write a payload activation to a TSCC payload channel on the RF interface.
-/// </summary>
-/// <param name="dstId"></param>
-/// <param name="srcId"></param>
-/// <param name="grp"></param>
-/// <param name="voice"></param>
-/// <param name="imm"></param>
+/* Helper to write a payload activation to a TSCC payload channel on the RF interface. */
+
 void ControlSignaling::writeRF_CSBK_Payload_Activate(uint32_t dstId, uint32_t srcId, bool grp, bool voice, bool imm)
 {
     std::unique_ptr<CSBK_P_GRANT> csbk = std::make_unique<CSBK_P_GRANT>();
@@ -1484,13 +1415,8 @@ void ControlSignaling::writeRF_CSBK_Payload_Activate(uint32_t dstId, uint32_t sr
         writeRF_CSBK(csbk.get(), imm);
 }
 
-/// <summary>
-/// Helper to write a payload clear to a TSCC payload channel on the RF interface.
-/// </summary>
-/// <param name="dstId"></param>
-/// <param name="srcId"></param>
-/// <param name="grp"></param>
-/// <param name="imm"></param>
+/* Helper to write a payload clear to a TSCC payload channel on the RF interface. */
+
 void ControlSignaling::writeRF_CSBK_Payload_Clear(uint32_t dstId, uint32_t srcId, bool grp, bool imm)
 {
     std::unique_ptr<CSBK_P_CLEAR> csbk = std::make_unique<CSBK_P_CLEAR>();
@@ -1514,9 +1440,8 @@ void ControlSignaling::writeRF_CSBK_Payload_Clear(uint32_t dstId, uint32_t srcId
         writeRF_CSBK(csbk.get(), imm);
 }
 
-/// <summary>
-/// Helper to write a TSCC Aloha broadcast packet on the RF interface.
-/// </summary>
+/* Helper to write a TSCC Aloha broadcast packet on the RF interface. */
+
 void ControlSignaling::writeRF_TSCC_Aloha()
 {
     std::unique_ptr<CSBK_ALOHA> csbk = std::make_unique<CSBK_ALOHA>();
@@ -1527,13 +1452,8 @@ void ControlSignaling::writeRF_TSCC_Aloha()
     writeRF_CSBK(csbk.get());
 }
 
-/// <summary>
-/// Helper to write a TSCC Ann-Wd broadcast packet on the RF interface.
-/// </summary>
-/// <param name="channelNo"></param>
-/// <param name="annWd"></param>
-/// <param name="systemIdentity"></param>
-/// <param name="requireReg"></param>
+/* Helper to write a TSCC Ann-Wd broadcast packet on the RF interface. */
+
 void ControlSignaling::writeRF_TSCC_Bcast_Ann_Wd(uint32_t channelNo, bool annWd, uint32_t systemIdentity, bool requireReg)
 {
     m_slot->m_rfSeqNo = 0U;
@@ -1555,9 +1475,8 @@ void ControlSignaling::writeRF_TSCC_Bcast_Ann_Wd(uint32_t channelNo, bool annWd,
     writeRF_CSBK(csbk.get());
 }
 
-/// <summary>
-/// Helper to write a TSCC Sys_Parm broadcast packet on the RF interface.
-/// </summary>
+/* Helper to write a TSCC Sys_Parm broadcast packet on the RF interface. */
+
 void ControlSignaling::writeRF_TSCC_Bcast_Sys_Parm()
 {
     std::unique_ptr<CSBK_BROADCAST> csbk = std::make_unique<CSBK_BROADCAST>();
@@ -1567,9 +1486,8 @@ void ControlSignaling::writeRF_TSCC_Bcast_Sys_Parm()
     writeRF_CSBK(csbk.get());
 }
 
-/// <summary>
-/// Helper to write a TSCC Git Hash broadcast packet on the RF interface.
-/// </summary>
+/* Helper to write a TSCC Git Hash broadcast packet on the RF interface. */
+
 void ControlSignaling::writeRF_TSCC_Git_Hash()
 {
     std::unique_ptr<CSBK_DVM_GIT_HASH> csbk = std::make_unique<CSBK_DVM_GIT_HASH>();

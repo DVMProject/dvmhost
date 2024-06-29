@@ -26,12 +26,15 @@ using namespace edac;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the AMBEFEC class. */
+
 AMBEFEC::AMBEFEC() = default;
 
 /* Finalizes a instance of the AMBEFEC class. */
+
 AMBEFEC::~AMBEFEC() = default;
 
 /* Regenerates the DMR AMBE FEC for the input bytes. */
+
 uint32_t AMBEFEC::regenerateDMR(uint8_t* bytes) const
 {
     assert(bytes != nullptr);
@@ -135,6 +138,7 @@ uint32_t AMBEFEC::regenerateDMR(uint8_t* bytes) const
 }
 
 /* Returns the number of errors on the DMR BER input bytes. */
+
 uint32_t AMBEFEC::measureDMRBER(const uint8_t* bytes) const
 {
     assert(bytes != nullptr);
@@ -199,6 +203,7 @@ uint32_t AMBEFEC::measureDMRBER(const uint8_t* bytes) const
 }
 
 /* Regenerates the P25 IMBE FEC for the input bytes. */
+
 uint32_t AMBEFEC::regenerateIMBE(uint8_t* bytes) const
 {
     assert(bytes != nullptr);
@@ -334,6 +339,7 @@ uint32_t AMBEFEC::regenerateIMBE(uint8_t* bytes) const
 }
 
 /* Returns the number of errors on the P25 BER input bytes. */
+
 uint32_t AMBEFEC::measureP25BER(const uint8_t* bytes) const
 {
     assert(bytes != nullptr);
@@ -463,6 +469,7 @@ uint32_t AMBEFEC::measureP25BER(const uint8_t* bytes) const
 }
 
 /* Regenerates the NXDN AMBE FEC for the input bytes. */
+
 uint32_t AMBEFEC::regenerateNXDN(uint8_t* bytes) const
 {
     assert(bytes != nullptr);
@@ -515,6 +522,7 @@ uint32_t AMBEFEC::regenerateNXDN(uint8_t* bytes) const
 }
 
 /* Returns the number of errors on the NXDN BER input bytes. */
+
 uint32_t AMBEFEC::measureNXDNBER(uint8_t* bytes) const
 {
     assert(bytes != nullptr);
@@ -552,6 +560,7 @@ uint32_t AMBEFEC::measureNXDNBER(uint8_t* bytes) const
 // ---------------------------------------------------------------------------
 
 /* */
+
 uint32_t AMBEFEC::regenerate(uint32_t& a, uint32_t& b, uint32_t& c) const
 {
     uint32_t old_a = a;

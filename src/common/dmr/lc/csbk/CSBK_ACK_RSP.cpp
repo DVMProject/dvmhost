@@ -22,12 +22,14 @@ using namespace dmr::lc::csbk;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the CSBK_ACK_RSP class. */
+
 CSBK_ACK_RSP::CSBK_ACK_RSP() : CSBK()
 {
     m_CSBKO = CSBKO::ACK_RSP;
 }
 
 /* Decode a control signalling block. */
+
 bool CSBK_ACK_RSP::decode(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -50,6 +52,7 @@ bool CSBK_ACK_RSP::decode(const uint8_t* data)
 }
 
 /* Encode a control signalling block. */
+
 void CSBK_ACK_RSP::encode(uint8_t* data)
 {
     assert(data != nullptr);
@@ -72,6 +75,7 @@ void CSBK_ACK_RSP::encode(uint8_t* data)
 }
 
 /* Returns a string that represents the current CSBK. */
+
 std::string CSBK_ACK_RSP::toString()
 {
     return std::string("CSBKO, ACK_RSP (Acknowledge Response)");

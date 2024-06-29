@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Modem Host Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2023 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Modem Host Software
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Modem Host Software
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2023 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @file AdjustWndBase.h
+ * @ingroup setup
+ */
 #if !defined(__ADJUST_WND_BASE_H__)
 #define __ADJUST_WND_BASE_H__
 
@@ -21,16 +22,19 @@ using namespace finalcut;
 
 // ---------------------------------------------------------------------------
 //  Class Declaration
-//      This class implements the base class for adjustment windows.
 // ---------------------------------------------------------------------------
 
+/**
+ * @brief This class implements the base class for adjustment windows.
+ * @ingroup setup
+ */
 class HOST_SW_API AdjustWndBase : public finalcut::FDialog {
 public:
-    /// <summary>
-    /// Initializes a new instance of the AdjustWndBase class.
-    /// </summary>
-    /// <param name="setup"></param>
-    /// <param name="widget"></param>
+    /**
+     * @brief Initializes a new instance of the AdjustWndBase class.
+     * @param setup Instance of the HostSetup class.
+     * @param widget 
+     */
     explicit AdjustWndBase(HostSetup* setup, FWidget* widget = nullptr) : FDialog{widget},
         m_setup(setup)
     {
@@ -40,9 +44,9 @@ public:
 protected:
     HostSetup *m_setup;
 
-    /// <summary>
-    ///
-    /// </summary>
+    /**
+     * @brief Initializes the window layout.
+     */
     void initLayout() override
     {
         FDialog::setMinimizable(true);
@@ -76,9 +80,9 @@ protected:
         redraw();
     }
 
-    /// <summary>
-    ///
-    /// </summary>
+    /**
+     * @brief Initializes window controls.
+     */
     virtual void initControls()
     {
         // transmit button and close button logic
@@ -119,9 +123,9 @@ protected:
         focusFirstChild();
     }
 
-    /// <summary>
-    ///
-    /// </summary>
+    /**
+     * @brief Adjusts window size.
+     */
     void adjustSize() override
     {
         FDialog::adjustSize();
@@ -131,10 +135,10 @@ protected:
     ** Event Handlers
     */
 
-    /// <summary>
-    /// 
-    /// </summary>
-    /// <param name="e"></param>
+    /**
+     * @brief Event that occurs on keyboard key press.
+     * @param e Keyboard Event.
+     */
     void onKeyPress(finalcut::FKeyEvent* e) override
     {
         const auto key = e->key();
@@ -146,10 +150,10 @@ protected:
         }
     }
 
-    /// <summary>
-    /// 
-    /// </summary>
-    /// <param name="e"></param>
+    /**
+     * @brief Event that occurs when the window is closed.
+     * @param e Close event.
+     */
     void onClose(FCloseEvent* e) override
     {
         hide();
@@ -161,9 +165,9 @@ private:
     FButton m_txButton{"Transmit", this};
     FButton m_closeButton{"Close", this};
 
-    /// <summary>
-    ///
-    /// </summary>
+    /**
+     * @brief Helper to set transmit mode on the modem.
+     */
     void setTransmit() 
     {
         if (!m_setup->setTransmit()) {

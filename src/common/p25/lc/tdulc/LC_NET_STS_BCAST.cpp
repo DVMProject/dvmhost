@@ -22,12 +22,14 @@ using namespace p25::lc::tdulc;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the LC_NET_STS_BCAST class. */
+
 LC_NET_STS_BCAST::LC_NET_STS_BCAST() : TDULC()
 {
     m_lco = LCO::NET_STS_BCAST;
 }
 
 /* Decode a terminator data unit w/ link control. */
+
 bool LC_NET_STS_BCAST::decode(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -38,6 +40,7 @@ bool LC_NET_STS_BCAST::decode(const uint8_t* data)
 }
 
 /* Encode a terminator data unit w/ link control. */
+
 void LC_NET_STS_BCAST::encode(uint8_t* data)
 {
     assert(data != nullptr);

@@ -22,12 +22,14 @@ using namespace p25::lc::tsbk;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the OSP_MOT_PSH_CCH class. */
+
 OSP_MOT_PSH_CCH::OSP_MOT_PSH_CCH() : TSBK()
 {
     m_lco = TSBKO::OSP_MOT_PSH_CCH;
 }
 
 /* Decode a trunking signalling block. */
+
 bool OSP_MOT_PSH_CCH::decode(const uint8_t* data, bool rawTSBK)
 {
     assert(data != nullptr);
@@ -38,6 +40,7 @@ bool OSP_MOT_PSH_CCH::decode(const uint8_t* data, bool rawTSBK)
 }
 
 /* Encode a trunking signalling block. */
+
 void OSP_MOT_PSH_CCH::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 {
     assert(data != nullptr);
@@ -51,6 +54,7 @@ void OSP_MOT_PSH_CCH::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 }
 
 /* Returns a string that represents the current TSBK. */
+
 std::string OSP_MOT_PSH_CCH::toString(bool isp)
 {
     return std::string("TSBKO, OSP_MOT_PSH_CCH (Motorola / Planned Control Channel Shutdown)");

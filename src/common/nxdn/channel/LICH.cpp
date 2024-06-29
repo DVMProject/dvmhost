@@ -25,6 +25,7 @@ using namespace nxdn::channel;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the LICH class. */
+
 LICH::LICH() :
     m_rfct(RFChannelType::RCCH),
     m_fct(FuncChannelType::USC_SACCH_NS),
@@ -36,6 +37,7 @@ LICH::LICH() :
 }
 
 /* Initializes a copy instance of the LICH class. */
+
 LICH::LICH(const LICH& data) :
     m_rfct(RFChannelType::RCCH),
     m_fct(FuncChannelType::USC_SACCH_NS),
@@ -47,12 +49,11 @@ LICH::LICH(const LICH& data) :
 }
 
 /* Finalizes a instance of LICH class. */
-LICH::~LICH()
-{
-    /* stub */
-}
+
+LICH::~LICH() = default;
 
 /* Equals operator. */
+
 LICH& LICH::operator=(const LICH& data)
 {
     if (&data != this) {
@@ -68,6 +69,7 @@ LICH& LICH::operator=(const LICH& data)
 }
 
 /* Decode a link information channel. */
+
 bool LICH::decode(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -99,6 +101,7 @@ bool LICH::decode(const uint8_t* data)
 }
 
 /* Encode a link information channel. */
+
 void LICH::encode(uint8_t* data)
 {
     assert(data != nullptr);
@@ -147,6 +150,7 @@ void LICH::encode(uint8_t* data)
 // ---------------------------------------------------------------------------
 
 /* Internal helper to copy the the class. */
+
 void LICH::copy(const LICH& data)
 {
     m_lich = data.m_lich;
@@ -158,6 +162,7 @@ void LICH::copy(const LICH& data)
 }
 
 /* Internal helper to generate the parity bit for the LICH. */
+
 bool LICH::getParity() const
 {
     switch (m_lich & 0xF0U) {

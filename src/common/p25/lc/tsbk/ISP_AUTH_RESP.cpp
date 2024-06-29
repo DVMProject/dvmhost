@@ -22,6 +22,7 @@ using namespace p25::lc::tsbk;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the ISP_AUTH_RESP class. */
+
 ISP_AUTH_RESP::ISP_AUTH_RESP() : TSBK(),
     m_authStandalone(false),
     m_authRes(nullptr)
@@ -33,6 +34,7 @@ ISP_AUTH_RESP::ISP_AUTH_RESP() : TSBK(),
 }
 
 /* Finalizes a instance of ISP_AUTH_RESP class. */
+
 ISP_AUTH_RESP::~ISP_AUTH_RESP()
 {
     if (m_authRes != nullptr) {
@@ -42,6 +44,7 @@ ISP_AUTH_RESP::~ISP_AUTH_RESP()
 }
 
 /* Decode a trunking signalling block. */
+
 bool ISP_AUTH_RESP::decode(const uint8_t* data, bool rawTSBK)
 {
     assert(data != nullptr);
@@ -67,6 +70,7 @@ bool ISP_AUTH_RESP::decode(const uint8_t* data, bool rawTSBK)
 }
 
 /* Encode a trunking signalling block. */
+
 void ISP_AUTH_RESP::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 {
     assert(data != nullptr);
@@ -75,12 +79,14 @@ void ISP_AUTH_RESP::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 }
 
 /* Returns a string that represents the current TSBK. */
+
 std::string ISP_AUTH_RESP::toString(bool isp)
 {
     return std::string("TSBKO, ISP_AUTH_RESP (Authentication Response)");
 }
 
 /* Gets the authentication result. */
+
 void ISP_AUTH_RESP::getAuthRes(uint8_t* res) const
 {
     assert(res != nullptr);
@@ -93,6 +99,7 @@ void ISP_AUTH_RESP::getAuthRes(uint8_t* res) const
 // ---------------------------------------------------------------------------
 
 /* Internal helper to copy the the class. */
+
 void ISP_AUTH_RESP::copy(const ISP_AUTH_RESP& data)
 {
     TSBK::copy(data);

@@ -22,6 +22,7 @@ using namespace nxdn::lc::rcch;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the MESSAGE_TYPE_SITE_INFO class. */
+
 MESSAGE_TYPE_SITE_INFO::MESSAGE_TYPE_SITE_INFO() : RCCH(),
     m_bcchCnt(1U),
     m_rcchGroupingCnt(1U),
@@ -33,6 +34,7 @@ MESSAGE_TYPE_SITE_INFO::MESSAGE_TYPE_SITE_INFO() : RCCH(),
 }
 
 /* Decode RCCH data. */
+
 void MESSAGE_TYPE_SITE_INFO::decode(const uint8_t* data, uint32_t length, uint32_t offset)
 {
     assert(data != nullptr);
@@ -44,6 +46,7 @@ void MESSAGE_TYPE_SITE_INFO::decode(const uint8_t* data, uint32_t length, uint32
 }
 
 /* Encode RCCH data. */
+
 void MESSAGE_TYPE_SITE_INFO::encode(uint8_t* data, uint32_t length, uint32_t offset)
 {
     assert(data != nullptr);
@@ -89,6 +92,7 @@ void MESSAGE_TYPE_SITE_INFO::encode(uint8_t* data, uint32_t length, uint32_t off
 }
 
 /* Returns a string that represents the current RCCH. */
+
 std::string MESSAGE_TYPE_SITE_INFO::toString(bool isp)
 {
     return std::string("RCCH_SITE_INFO (Site Information)");
@@ -99,6 +103,7 @@ std::string MESSAGE_TYPE_SITE_INFO::toString(bool isp)
 // ---------------------------------------------------------------------------
 
 /* Internal helper to copy the the class. */
+
 void MESSAGE_TYPE_SITE_INFO::copy(const MESSAGE_TYPE_SITE_INFO& data)
 {
     RCCH::copy(data);

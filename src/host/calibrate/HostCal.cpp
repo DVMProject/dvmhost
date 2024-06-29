@@ -1,18 +1,14 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Modem Host Software
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Modem Host Software
-* @derivedfrom MMDVMCal (https://github.com/g4klx/MMDVMCal)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2015,2016,2017 Jonathan Naylor, G4KLX
-*   Copyright (C) 2017,2018 Andy Uribe, CA6JAU
-*   Copyright (C) 2021-2023 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Modem Host Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2015,2016,2017 Jonathan Naylor, G4KLX
+ *  Copyright (C) 2017,2018 Andy Uribe, CA6JAU
+ *  Copyright (C) 2021-2023 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "calibrate/HostCal.h"
 #include "modem/Modem.h"
 #include "HostMain.h"
@@ -27,30 +23,20 @@ using namespace lookups;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the HostCal class.
-/// </summary>
-/// <param name="confFile">Full-path to the configuration file.</param>
+/* Initializes a new instance of the HostCal class. */
+
 HostCal::HostCal(const std::string& confFile) : HostSetup(confFile),
     m_console()
 {
     /* stub */
 }
 
-/// <summary>
-/// Finalizes a instance of the HostCal class.
-/// </summary>
-HostCal::~HostCal()
-{
-    /* stub */
-}
+/* Finalizes a instance of the HostCal class. */
 
-/// <summary>
-/// Executes the calibration processing loop.
-/// </summary>
-/// <param name="argc"></param>
-/// <param name="argv"></param>
-/// <returns>Zero if successful, otherwise error occurred.</returns>
+HostCal::~HostCal() = default;
+
+/* Executes the calibration processing loop. */
+
 int HostCal::run(int argc, char **argv)
 {
     bool ret = false;
@@ -695,9 +681,8 @@ int HostCal::run(int argc, char **argv)
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Helper to print the calibration help to the console.
-/// </summary>
+/* Helper to print the calibration help to the console. */
+
 void HostCal::displayHelp()
 {
     LogMessage(LOG_CAL, "General Commands:");
@@ -760,11 +745,8 @@ void HostCal::displayHelp()
     LogMessage(LOG_CAL, "    x        %s", RSSI_CAL_STR);
 }
 
-/// <summary>
-/// Helper to change the Rx level.
-/// </summary>
-/// <param name="incr">Amount to change.</param>
-/// <returns>True, if setting was applied, otherwise false.</returns>
+/* Helper to change the Rx level. */
+
 bool HostCal::setTXLevel(int incr)
 {
     if (incr > 0 && m_modem->m_cwIdTXLevel < 100.0F) {
@@ -792,11 +774,8 @@ bool HostCal::setTXLevel(int incr)
     return true;
 }
 
-/// <summary>
-/// Helper to change the Rx level.
-/// </summary>
-/// <param name="incr">Amount to change.</param>
-/// <returns>True, if setting was applied, otherwise false.</returns>
+/* Helper to change the Rx level. */
+
 bool HostCal::setRXLevel(int incr)
 {
     if (incr > 0 && m_modem->m_rxLevel < 100.0F) {
@@ -824,11 +803,8 @@ bool HostCal::setRXLevel(int incr)
     return true;
 }
 
-/// <summary>
-/// Helper to change the Tx DC offset.
-/// </summary>
-/// <param name="incr">Amount to change.</param>
-/// <returns>True, if setting was applied, otherwise false.</returns>
+/* Helper to change the Tx DC offset. */
+
 bool HostCal::setTXDCOffset(int incr)
 {
     if (incr > 0 && m_modem->m_txDCOffset < 127) {
@@ -846,11 +822,8 @@ bool HostCal::setTXDCOffset(int incr)
     return true;
 }
 
-/// <summary>
-/// Helper to change the Rx DC offset.
-/// </summary>
-/// <param name="incr">Amount to change.</param>
-/// <returns>True, if setting was applied, otherwise false.</returns>
+/* Helper to change the Rx DC offset. */
+
 bool HostCal::setRXDCOffset(int incr)
 {
     if (incr > 0 && m_modem->m_rxDCOffset < 127) {
@@ -868,11 +841,8 @@ bool HostCal::setRXDCOffset(int incr)
     return true;
 }
 
-/// <summary>
-/// Helper to change the Rx coarse level.
-/// </summary>
-/// <param name="incr">Amount to change.</param>
-/// <returns>True, if setting was applied, otherwise false.</returns>
+/* Helper to change the Rx coarse level. */
+
 bool HostCal::setRXCoarseLevel(int incr)
 {
     if (incr > 0 && m_modem->m_rxCoarsePot < 255U) {
@@ -896,11 +866,8 @@ bool HostCal::setRXCoarseLevel(int incr)
     return true;
 }
 
-/// <summary>
-/// Helper to change the Rx fine level.
-/// </summary>
-/// <param name="incr">Amount to change.</param>
-/// <returns>True, if setting was applied, otherwise false.</returns>
+/* Helper to change the Rx fine level. */
+
 bool HostCal::setRXFineLevel(int incr)
 {
     if (incr > 0 && m_modem->m_rxFinePot < 255U) {
@@ -924,11 +891,8 @@ bool HostCal::setRXFineLevel(int incr)
     return true;
 }
 
-/// <summary>
-/// Helper to change the Tx coarse level.
-/// </summary>
-/// <param name="incr">Amount to change.</param>
-/// <returns>True, if setting was applied, otherwise false.</returns>
+/* Helper to change the Tx coarse level. */
+
 bool HostCal::setTXCoarseLevel(int incr)
 {
     if (incr > 0 && m_modem->m_txCoarsePot < 255U) {
@@ -952,11 +916,8 @@ bool HostCal::setTXCoarseLevel(int incr)
     return true;
 }
 
-/// <summary>
-/// Helper to change the RSSI coarse level.
-/// </summary>
-/// <param name="incr">Amount to change.</param>
-/// <returns>True, if setting was applied, otherwise false.</returns>
+/* Helper to change the RSSI coarse level. */
+
 bool HostCal::setRSSICoarseLevel(int incr)
 {
     if (incr > 0 && m_modem->m_rssiCoarsePot < 255U) {
@@ -980,10 +941,8 @@ bool HostCal::setRSSICoarseLevel(int incr)
     return true;
 }
 
-/// <summary>
-/// Prints the current status of the calibration.
-/// </summary>
-/// <param name="status">Flag indicating that the current modem status should be fetched.</param>
+/* Prints the current status of the calibration. */
+
 void HostCal::printStatus()
 {
     yaml::Node systemConf = m_conf["system"];

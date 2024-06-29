@@ -23,6 +23,7 @@ using namespace p25::defines;
 // ---------------------------------------------------------------------------
 
 /* Helper to append P25 sync bytes to the passed buffer. */
+
 void Sync::addP25Sync(uint8_t* data)
 {
     assert(data != nullptr);

@@ -27,6 +27,7 @@ using namespace p25::dfsi::defines;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the LC class. */
+
 LC::LC() :
     m_frameType(DFSIFrameType::LDU1_VOICE1),
     m_rssi(0U),
@@ -47,12 +48,14 @@ LC::LC() :
 }
 
 /* Initializes a copy instance of the LC class. */
+
 LC::LC(const LC& data) : LC()
 {
     copy(data);
 }
 
 /* Initializes a new instance of the LC class from OTA link control. */
+
 LC::LC(const lc::LC& control, const data::LowSpeedData& lsd) : LC()
 {
     m_control = new lc::LC(control);
@@ -60,6 +63,7 @@ LC::LC(const lc::LC& control, const data::LowSpeedData& lsd) : LC()
 }
 
 /* Finalizes a instance of LC class. */
+
 LC::~LC()
 {
     if (m_control != nullptr) {
@@ -75,6 +79,7 @@ LC::~LC()
 }
 
 /* Equals operator. */
+
 LC& LC::operator=(const LC& data)
 {
     if (this != &data) {
@@ -85,6 +90,7 @@ LC& LC::operator=(const LC& data)
 }
 
 /* Helper to set the LC data. */
+
 void LC::setControl(const lc::LC& data)
 {
     if (m_control != nullptr) {
@@ -94,6 +100,7 @@ void LC::setControl(const lc::LC& data)
 }
 
 /* Decode a logical link data unit 1. */
+
 bool LC::decodeLDU1(const uint8_t* data, uint8_t* imbe)
 {
     assert(data != nullptr);
@@ -233,6 +240,7 @@ bool LC::decodeLDU1(const uint8_t* data, uint8_t* imbe)
 }
 
 /* Encode a logical link data unit 1. */
+
 void LC::encodeLDU1(uint8_t* data, const uint8_t* imbe)
 {
     assert(data != nullptr);
@@ -401,6 +409,7 @@ void LC::encodeLDU1(uint8_t* data, const uint8_t* imbe)
 }
 
 /* Decode a logical link data unit 2. */
+
 bool LC::decodeLDU2(const uint8_t* data, uint8_t* imbe)
 {
     assert(data != nullptr);
@@ -491,6 +500,7 @@ bool LC::decodeLDU2(const uint8_t* data, uint8_t* imbe)
 }
 
 /* Encode a logical link data unit 2. */
+
 void LC::encodeLDU2(uint8_t* data, const uint8_t* imbe)
 {
     assert(data != nullptr);
@@ -644,6 +654,7 @@ void LC::encodeLDU2(uint8_t* data, const uint8_t* imbe)
 // ---------------------------------------------------------------------------
 
 /* Internal helper to copy the the class. */
+
 void LC::copy(const LC& data)
 {
     m_frameType = data.m_frameType;

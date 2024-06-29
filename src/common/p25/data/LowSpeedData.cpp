@@ -46,6 +46,7 @@ const uint32_t MAX_CCS_ERRS = 4U;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the LowSpeedData class. */
+
 LowSpeedData::LowSpeedData() :
     m_lsd1(0x00U),
     m_lsd2(0x00U)
@@ -54,9 +55,11 @@ LowSpeedData::LowSpeedData() :
 }
 
 /* Finalizes a new instance of the LowSpeedData class. */
+
 LowSpeedData::~LowSpeedData() = default;
 
 /* Equals operator. */
+
 LowSpeedData& LowSpeedData::operator=(const LowSpeedData& data)
 {
     if (this != &data) {
@@ -68,6 +71,7 @@ LowSpeedData& LowSpeedData::operator=(const LowSpeedData& data)
 }
 
 /* Decodes embedded low speed data. */
+
 void LowSpeedData::process(uint8_t* data)
 {
     assert(data != nullptr);
@@ -108,6 +112,7 @@ void LowSpeedData::process(uint8_t* data)
 }
 
 /* Encode embedded low speed data. */
+
 void LowSpeedData::encode(uint8_t* data) const
 {
     assert(data != nullptr);
@@ -126,6 +131,7 @@ void LowSpeedData::encode(uint8_t* data) const
 // ---------------------------------------------------------------------------
 
 /* */
+
 uint8_t LowSpeedData::encode(uint8_t in) const
 {
     return CCS_PARITY[in];

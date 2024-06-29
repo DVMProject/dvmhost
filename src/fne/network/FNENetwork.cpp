@@ -1,15 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Converged FNE Software
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Converged FNE Software
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2023-2024 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Converged FNE Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2023-2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "fne/Defines.h"
 #include "common/edac/SHA256.h"
 #include "common/network/json/json.h"
@@ -47,26 +44,8 @@ std::mutex FNENetwork::m_peerMutex;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the FNENetwork class.
-/// </summary>
-/// <param name="host"></param>
-/// <param name="address">Network Hostname/IP address to listen on.</param>
-/// <param name="port">Network port number.</param>
-/// <param name="peerId">Unique ID on the network.</param>
-/// <param name="password">Network authentication password.</param>
-/// <param name="debug">Flag indicating whether network debug is enabled.</param>
-/// <param name="verbose">Flag indicating whether network verbose logging is enabled.</param>
-/// <param name="reportPeerPing">Flag indicating whether peer pinging is reported.</param>
-/// <param name="dmr">Flag indicating whether DMR is enabled.</param>
-/// <param name="p25">Flag indicating whether P25 is enabled.</param>
-/// <param name="nxdn">Flag indicating whether NXDN is enabled.</param>
-/// <param name="parrotDelay">Delay for end of call to parrot TG playback.</param>
-/// <param name="parrotGrantDemand">Flag indicating whether a parrot TG will generate a grant demand.</param>
-/// <param name="allowActivityTransfer">Flag indicating that the system activity logs will be sent to the network.</param>
-/// <param name="allowDiagnosticTransfer">Flag indicating that the system diagnostic logs will be sent to the network.</param>
-/// <param name="pingTime"></param>
-/// <param name="updateLookupTime"></param>
+/* Initializes a new instance of the FNENetwork class. */
+
 FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port, uint32_t peerId, const std::string& password,
     bool debug, bool verbose, bool reportPeerPing, bool dmr, bool p25, bool nxdn, uint32_t parrotDelay, bool parrotGrantDemand,
     bool allowActivityTransfer, bool allowDiagnosticTransfer, uint32_t pingTime, uint32_t updateLookupTime) :
@@ -123,9 +102,8 @@ FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port,
     m_tagNXDN = new TagNXDNData(this, debug);
 }
 
-/// <summary>
-/// Finalizes a instance of the FNENetwork class.
-/// </summary>
+/* Finalizes a instance of the FNENetwork class. */
+
 FNENetwork::~FNENetwork()
 {
     delete m_tagDMR;
@@ -133,11 +111,8 @@ FNENetwork::~FNENetwork()
     delete m_tagNXDN;
 }
 
-/// <summary>
-/// Helper to set configuration options.
-/// </summary>
-/// <param name="conf">Instance of the yaml::Node class.</param>
-/// <param name="printOptions"></param>
+/* Helper to set configuration options. */
+
 void FNENetwork::setOptions(yaml::Node& conf, bool printOptions)
 {
     m_disallowAdjStsBcast = conf["disallowAdjStsBcast"].as<bool>(false);
@@ -208,11 +183,8 @@ void FNENetwork::setOptions(yaml::Node& conf, bool printOptions)
     }
 }
 
-/// <summary>
-/// Sets the instances of the Radio ID, Talkgroup Rules, and Peer List lookup tables.
-/// </summary>
-/// <param name="ridLookup">Radio ID Lookup Table Instance</param>
-/// <param name="tidLookup">Talkgroup Rules Lookup Table Instance</param>
+/* Sets the instances of the Radio ID, Talkgroup Rules, and Peer List lookup tables. */
+
 void FNENetwork::setLookups(lookups::RadioIdLookup* ridLookup, lookups::TalkgroupRulesLookup* tidLookup, lookups::PeerListLookup* peerListLookup)
 {
     m_ridLookup = ridLookup;
@@ -220,17 +192,15 @@ void FNENetwork::setLookups(lookups::RadioIdLookup* ridLookup, lookups::Talkgrou
     m_peerListLookup = peerListLookup;
 }
 
-/// <summary>
-/// Sets endpoint preshared encryption key.
-/// </summary>
+/* Sets endpoint preshared encryption key. */
+
 void FNENetwork::setPresharedKey(const uint8_t* presharedKey)
 {
     m_socket->setPresharedKey(presharedKey);
 }
 
-/// <summary>
-/// Process a data frames from the network.
-/// </summary>
+/* Process a data frames from the network. */
+
 void FNENetwork::processNetwork()
 {
     if (m_status != NET_STAT_MST_RUNNING) {
@@ -272,10 +242,8 @@ void FNENetwork::processNetwork()
     }
 }
 
-/// <summary>
-/// Updates the timer by the passed number of milliseconds.
-/// </summary>
-/// <param name="ms"></param>
+/* Updates the timer by the passed number of milliseconds. */
+
 void FNENetwork::clock(uint32_t ms)
 {
     if (m_status != NET_STAT_MST_RUNNING) {
@@ -354,10 +322,8 @@ void FNENetwork::clock(uint32_t ms)
     }
 }
 
-/// <summary>
-/// Opens connection to the network.
-/// </summary>
-/// <returns></returns>
+/* Opens connection to the network. */
+
 bool FNENetwork::open()
 {
     if (m_debug)
@@ -382,9 +348,8 @@ bool FNENetwork::open()
     return ret;
 }
 
-/// <summary>
-/// Closes connection to the network.
-/// </summary>
+/* Closes connection to the network. */
+
 void FNENetwork::close()
 {
     if (m_debug)
@@ -410,9 +375,8 @@ void FNENetwork::close()
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Process a data frames from the network.
-/// </summary>
+/* Process a data frames from the network. */
+
 void* FNENetwork::threadedNetworkRx(void* arg)
 {
     NetPacketRequest* req = (NetPacketRequest*)arg;
@@ -1203,10 +1167,8 @@ void* FNENetwork::threadedNetworkRx(void* arg)
     return nullptr;
 }
 
-/// <summary>
-/// Checks if the passed peer ID is blocked from unit-to-unit traffic.
-/// </summary>
-/// <param name="peerId"></param>
+/* Checks if the passed peer ID is blocked from unit-to-unit traffic. */
+
 bool FNENetwork::checkU2UDroppedPeer(uint32_t peerId)
 {
     if (m_dropU2UPeerTable.empty())
@@ -1219,12 +1181,8 @@ bool FNENetwork::checkU2UDroppedPeer(uint32_t peerId)
     return false;
 }
 
-/// <summary>
-/// Helper to create a peer on the peers affiliations list.
-/// </summary>
-/// <param name="peerId"></param>
-/// <param name="peerName"></param>
-/// <returns></returns>
+/* Helper to create a peer on the peers affiliations list. */
+
 void FNENetwork::createPeerAffiliations(uint32_t peerId, std::string peerName)
 {
     erasePeerAffiliations(peerId);
@@ -1235,11 +1193,8 @@ void FNENetwork::createPeerAffiliations(uint32_t peerId, std::string peerName)
     m_peerAffiliations[peerId]->setDisableUnitRegTimeout(true); // FNE doesn't allow unit registration timeouts (notification must come from the peers)
 }
 
-/// <summary>
-/// Helper to erase the peer from the peers affiliations list.
-/// </summary>
-/// <param name="peerId"></param>
-/// <returns></returns>
+/* Helper to erase the peer from the peers affiliations list. */
+
 bool FNENetwork::erasePeerAffiliations(uint32_t peerId)
 {
     std::lock_guard<std::mutex> lock(m_peerMutex);
@@ -1260,11 +1215,8 @@ bool FNENetwork::erasePeerAffiliations(uint32_t peerId)
     return false;
 }
 
-/// <summary>
-/// Helper to erase the peer from the peers list.
-/// </summary>
-/// <param name="peerId"></param>
-/// <returns></returns>
+/* Helper to erase the peer from the peers list. */
+
 bool FNENetwork::erasePeer(uint32_t peerId)
 {
     std::lock_guard<std::mutex> lock(m_peerMutex);
@@ -1288,11 +1240,8 @@ bool FNENetwork::erasePeer(uint32_t peerId)
     return false;
 }
 
-/// <summary>
-/// Helper to reset a peer connection.
-/// </summary>
-/// <param name="peerId"></param>
-/// <returns></returns>
+/* Helper to reset a peer connection. */
+
 bool FNENetwork::resetPeer(uint32_t peerId)
 {
     if (peerId > 0 && (m_peers.find(peerId) != m_peers.end())) {
@@ -1316,11 +1265,8 @@ bool FNENetwork::resetPeer(uint32_t peerId)
     return false;
 }
 
-/// <summary>
-/// Helper to resolve the peer ID to its identity string.
-/// </summary>
-/// <param name="peerId"></param>
-/// <returns></returns>
+/* Helper to resolve the peer ID to its identity string. */
+
 std::string FNENetwork::resolvePeerIdentity(uint32_t peerId)
 {
     std::lock_guard<std::mutex> lock(m_peerMutex);
@@ -1335,11 +1281,8 @@ std::string FNENetwork::resolvePeerIdentity(uint32_t peerId)
     return std::string();
 }
 
-/// <summary>
-/// Helper to complete setting up a repeater login request.
-/// </summary>
-/// <param name="peerId"></param>
-/// <param name="connection"></param>
+/* Helper to complete setting up a repeater login request. */
+
 void FNENetwork::setupRepeaterLogin(uint32_t peerId, FNEPeerConnection* connection)
 {
     std::uniform_int_distribution<uint32_t> dist(DVM_RAND_MIN, DVM_RAND_MAX);
@@ -1359,10 +1302,8 @@ void FNENetwork::setupRepeaterLogin(uint32_t peerId, FNEPeerConnection* connecti
     LogInfoEx(LOG_NET, "PEER %u RPTL ACK, challenge response sent for login", peerId);
 }
 
-/// <summary>
-/// Helper to send the ACL lists to the specified peer in a separate thread.
-/// </summary>
-/// <param name="peerId"></param>
+/* Helper to send the ACL lists to the specified peer in a separate thread. */
+
 void FNENetwork::peerACLUpdate(uint32_t peerId)
 {
     ACLUpdateRequest* req = new ACLUpdateRequest();
@@ -1383,10 +1324,8 @@ void FNENetwork::peerACLUpdate(uint32_t peerId)
     }
 }
 
-/// <summary>
-/// Helper to send the ACL lists to the specified peer in a separate thread.
-/// </summary>
-/// <param name="arg"></param>
+/* Helper to send the ACL lists to the specified peer in a separate thread. */
+
 void* FNENetwork::threadedACLUpdate(void* arg)
 {
     ACLUpdateRequest* req = (ACLUpdateRequest*)arg;
@@ -1407,10 +1346,8 @@ void* FNENetwork::threadedACLUpdate(void* arg)
     return nullptr;
 }
 
-/// <summary>
-/// Helper to send the list of whitelisted RIDs to the specified peer.
-/// </summary>
-/// <param name="peerId"></param>
+/* Helper to send the list of whitelisted RIDs to the specified peer. */
+
 void FNENetwork::writeWhitelistRIDs(uint32_t peerId)
 {
     uint64_t now = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
@@ -1482,10 +1419,8 @@ void FNENetwork::writeWhitelistRIDs(uint32_t peerId)
     }
 }
 
-/// <summary>
-/// Helper to send the list of whitelisted RIDs to the specified peer.
-/// </summary>
-/// <param name="peerId"></param>
+/* Helper to send the list of whitelisted RIDs to the specified peer. */
+
 void FNENetwork::writeBlacklistRIDs(uint32_t peerId)
 {
     uint64_t now = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
@@ -1557,10 +1492,8 @@ void FNENetwork::writeBlacklistRIDs(uint32_t peerId)
     }
 }
 
-/// <summary>
-/// Helper to send the list of active TGIDs to the specified peer.
-/// </summary>
-/// <param name="peerId"></param>
+/* Helper to send the list of active TGIDs to the specified peer. */
+
 void FNENetwork::writeTGIDs(uint32_t peerId)
 {
     if (!m_tidLookup->sendTalkgroups()) {
@@ -1636,10 +1569,8 @@ void FNENetwork::writeTGIDs(uint32_t peerId)
         payload, 4U + (tgidList.size() * 5U), true);
 }
 
-/// <summary>
-/// Helper to send the list of deactivated TGIDs to the specified peer.
-/// </summary>
-/// <param name="peerId"></param>
+/* Helper to send the list of deactivated TGIDs to the specified peer. */
+
 void FNENetwork::writeDeactiveTGIDs(uint32_t peerId)
 {
     if (!m_tidLookup->sendTalkgroups()) {
@@ -1698,16 +1629,8 @@ void FNENetwork::writeDeactiveTGIDs(uint32_t peerId)
         payload, 4U + (tgidList.size() * 5U), true);
 }
 
-/// <summary>
-/// Helper to send a data message to the specified peer.
-/// </summary>
-/// <param name="peerId">Peer ID.</param>
-/// <param name="opcode">Opcode.</param>
-/// <param name="data">Buffer to write to the network.</param>
-/// <param name="length">Length of buffer to write.</param>
-/// <param name="pktSeq"></param>
-/// <param name="streamId"></param>
-/// <param name="queueOnly"></param>
+/* Helper to send a data message to the specified peer. */
+
 bool FNENetwork::writePeer(uint32_t peerId, FrameQueue::OpcodePair opcode, const uint8_t* data,
     uint32_t length, uint16_t pktSeq, uint32_t streamId, bool queueOnly, bool directWrite) const
 {
@@ -1736,17 +1659,8 @@ bool FNENetwork::writePeer(uint32_t peerId, FrameQueue::OpcodePair opcode, const
     return false;
 }
 
-/// <summary>
-/// Helper to send a data message to the specified peer.
-/// </summary>
-/// <param name="peerId">Peer ID.</param>
-/// <param name="opcode">Opcode.</param>
-/// <param name="data">Buffer to write to the network.</param>
-/// <param name="length">Length of buffer to write.</param>
-/// <param name="streamId"></param>
-/// <param name="queueOnly"></param>
-/// <param name="incPktSeq"></param>
-/// <param name="directWrite"></param>
+/* Helper to send a data message to the specified peer. */
+
 bool FNENetwork::writePeer(uint32_t peerId, FrameQueue::OpcodePair opcode, const uint8_t* data,
     uint32_t length, uint32_t streamId, bool queueOnly, bool incPktSeq, bool directWrite) const
 {
@@ -1766,14 +1680,8 @@ bool FNENetwork::writePeer(uint32_t peerId, FrameQueue::OpcodePair opcode, const
     return false;
 }
 
-/// <summary>
-/// Helper to send a command message to the specified peer.
-/// </summary>
-/// <param name="peerId">Peer ID.</param>
-/// <param name="opcode">Opcode.</param>
-/// <param name="data">Buffer to write to the network.</param>
-/// <param name="length">Length of buffer to write.</param>
-/// <param name="incPktSeq"></param>
+/* Helper to send a command message to the specified peer. */
+
 bool FNENetwork::writePeerCommand(uint32_t peerId, FrameQueue::OpcodePair opcode,
     const uint8_t* data, uint32_t length, bool incPktSeq) const
 {
@@ -1790,12 +1698,8 @@ bool FNENetwork::writePeerCommand(uint32_t peerId, FrameQueue::OpcodePair opcode
     return writePeer(peerId, opcode, buffer, len, 0U, false, incPktSeq, true);
 }
 
-/// <summary>
-/// Helper to send a ACK response to the specified peer.
-/// </summary>
-/// <param name="peerId"></param>
-/// <param name="data">Buffer to write to the network.</param>
-/// <param name="length">Length of buffer to write.</param>
+/* Helper to send a ACK response to the specified peer. */
+
 bool FNENetwork::writePeerACK(uint32_t peerId, const uint8_t* data, uint32_t length)
 {
     uint8_t buffer[DATA_PACKET_LENGTH];
@@ -1810,12 +1714,8 @@ bool FNENetwork::writePeerACK(uint32_t peerId, const uint8_t* data, uint32_t len
     return writePeer(peerId, { NET_FUNC::ACK, NET_SUBFUNC::NOP }, buffer, length + 10U, RTP_END_OF_CALL_SEQ, false, true);
 }
 
-/// <summary>
-/// Helper to log a warning specifying which NAK reason is being sent a peer.
-/// </summary>
-/// <param name="peerId"></param>
-/// <param name="tag"></param>
-/// <param name="reason"></param>
+/* Helper to log a warning specifying which NAK reason is being sent a peer. */
+
 void FNENetwork::logPeerNAKReason(uint32_t peerId, const char* tag, NET_CONN_NAK_REASON reason)
 {
     switch (reason) {
@@ -1851,12 +1751,8 @@ void FNENetwork::logPeerNAKReason(uint32_t peerId, const char* tag, NET_CONN_NAK
     }
 }
 
-/// <summary>
-/// Helper to send a NAK response to the specified peer.
-/// </summary>
-/// <param name="peerId"></param>
-/// <param name="tag"></param>
-/// <param name="reason"></param>
+/* Helper to send a NAK response to the specified peer. */
+
 bool FNENetwork::writePeerNAK(uint32_t peerId, const char* tag, NET_CONN_NAK_REASON reason)
 {
     assert(peerId > 0);
@@ -1872,14 +1768,8 @@ bool FNENetwork::writePeerNAK(uint32_t peerId, const char* tag, NET_CONN_NAK_REA
     return writePeer(peerId, { NET_FUNC::NAK, NET_SUBFUNC::NOP }, buffer, 10U, RTP_END_OF_CALL_SEQ, false, true);
 }
 
-/// <summary>
-/// Helper to send a NAK response to the specified peer.
-/// </summary>
-/// <param name="peerId"></param>
-/// <param name="tag"></param>
-/// <param name="reason"></param>
-/// <param name="addr"></param>
-/// <param name="addrLen"></param>
+/* Helper to send a NAK response to the specified peer. */
+
 bool FNENetwork::writePeerNAK(uint32_t peerId, const char* tag, NET_CONN_NAK_REASON reason, sockaddr_storage& addr, uint32_t addrLen)
 {
     assert(peerId > 0);

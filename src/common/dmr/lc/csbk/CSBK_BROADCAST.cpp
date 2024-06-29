@@ -22,6 +22,7 @@ using namespace dmr::lc::csbk;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the CSBK_BROADCAST class. */
+
 CSBK_BROADCAST::CSBK_BROADCAST() : CSBK(),
     m_anncType(BroadcastAnncType::SITE_PARMS),
     m_hibernating(false),
@@ -35,6 +36,7 @@ CSBK_BROADCAST::CSBK_BROADCAST() : CSBK(),
 }
 
 /* Decode a control signalling block. */
+
 bool CSBK_BROADCAST::decode(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -72,6 +74,7 @@ bool CSBK_BROADCAST::decode(const uint8_t* data)
 }
 
 /* Encode a control signalling block. */
+
 void CSBK_BROADCAST::encode(uint8_t* data)
 {
     assert(data != nullptr);
@@ -157,6 +160,7 @@ void CSBK_BROADCAST::encode(uint8_t* data)
 }
 
 /* Returns a string that represents the current CSBK. */
+
 std::string CSBK_BROADCAST::toString()
 {
     switch (m_anncType) {
@@ -172,6 +176,7 @@ std::string CSBK_BROADCAST::toString()
 // ---------------------------------------------------------------------------
 
 /* Internal helper to copy the the class. */
+
 void CSBK_BROADCAST::copy(const CSBK_BROADCAST& data)
 {
     CSBK::copy(data);

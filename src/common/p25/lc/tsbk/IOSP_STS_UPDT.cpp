@@ -22,6 +22,7 @@ using namespace p25::lc::tsbk;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the IOSP_STS_UPDT class. */
+
 IOSP_STS_UPDT::IOSP_STS_UPDT() : TSBK(),
     m_statusValue(0U)
 {
@@ -29,6 +30,7 @@ IOSP_STS_UPDT::IOSP_STS_UPDT() : TSBK(),
 }
 
 /* Decode a trunking signalling block. */
+
 bool IOSP_STS_UPDT::decode(const uint8_t* data, bool rawTSBK)
 {
     assert(data != nullptr);
@@ -50,6 +52,7 @@ bool IOSP_STS_UPDT::decode(const uint8_t* data, bool rawTSBK)
 }
 
 /* Encode a trunking signalling block. */
+
 void IOSP_STS_UPDT::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 {
     assert(data != nullptr);
@@ -65,6 +68,7 @@ void IOSP_STS_UPDT::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 }
 
 /* Returns a string that represents the current TSBK. */
+
 std::string IOSP_STS_UPDT::toString(bool isp)
 {
     return (isp) ? std::string("TSBKO, IOSP_STS_UPDT (Status Update Request)") :
@@ -76,6 +80,7 @@ std::string IOSP_STS_UPDT::toString(bool isp)
 // ---------------------------------------------------------------------------
 
 /* Internal helper to copy the the class. */
+
 void IOSP_STS_UPDT::copy(const IOSP_STS_UPDT& data)
 {
     TSBK::copy(data);

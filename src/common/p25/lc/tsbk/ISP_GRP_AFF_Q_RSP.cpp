@@ -22,6 +22,7 @@ using namespace p25::lc::tsbk;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the ISP_GRP_AFF_Q_RSP class. */
+
 ISP_GRP_AFF_Q_RSP::ISP_GRP_AFF_Q_RSP() : TSBK(),
     m_announceGroup(WUID_ALL)
 {
@@ -29,6 +30,7 @@ ISP_GRP_AFF_Q_RSP::ISP_GRP_AFF_Q_RSP() : TSBK(),
 }
 
 /* Decode a trunking signalling block. */
+
 bool ISP_GRP_AFF_Q_RSP::decode(const uint8_t* data, bool rawTSBK)
 {
     assert(data != nullptr);
@@ -50,6 +52,7 @@ bool ISP_GRP_AFF_Q_RSP::decode(const uint8_t* data, bool rawTSBK)
 }
 
 /* Encode a trunking signalling block. */
+
 void ISP_GRP_AFF_Q_RSP::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 {
     assert(data != nullptr);
@@ -58,6 +61,7 @@ void ISP_GRP_AFF_Q_RSP::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 }
 
 /* Returns a string that represents the current TSBK. */
+
 std::string ISP_GRP_AFF_Q_RSP::toString(bool isp)
 {
     return std::string("TSBKO, ISP_GRP_AFF_Q_RSP (Group Affiliation Query Response)");
@@ -68,6 +72,7 @@ std::string ISP_GRP_AFF_Q_RSP::toString(bool isp)
 // ---------------------------------------------------------------------------
 
 /* Internal helper to copy the the class. */
+
 void ISP_GRP_AFF_Q_RSP::copy(const ISP_GRP_AFF_Q_RSP& data)
 {
     TSBK::copy(data);

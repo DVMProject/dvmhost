@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Modem Host Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2023 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Modem Host Software
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Modem Host Software
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2023 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @file HSBandwidthAdjustWnd.h
+ * @ingroup setup
+ */
 #if !defined(__HS_GAIN_ADJUST_WND_H__)
 #define __HS_GAIN_ADJUST_WND_H__
 
@@ -23,16 +24,19 @@ using namespace finalcut;
 
 // ---------------------------------------------------------------------------
 //  Class Declaration
-//      This class implements the hotspot gain adjustment window.
 // ---------------------------------------------------------------------------
 
+/**
+ * @brief This class implements the hotspot gain adjustment window.
+ * @ingroup setup
+ */
 class HOST_SW_API HSGainAdjustWnd final : public AdjustWndBase {
 public:
-    /// <summary>
-    /// Initializes a new instance of the HSGainAdjustWnd class.
-    /// </summary>
-    /// <param name="setup"></param>
-    /// <param name="widget"></param>
+    /**
+     * @brief Initializes a new instance of the HSGainAdjustWnd class.
+     * @param setup Instance of the HostSetup class.
+     * @param widget 
+     */
     explicit HSGainAdjustWnd(HostSetup* setup, FWidget* widget = nullptr) : AdjustWndBase{setup, widget}
     {
         /* stub */
@@ -57,9 +61,9 @@ private:
     FLabel m_afcKPLabel{"KP: ", this};
     FSpinBox m_afcKP{this};
 
-    /// <summary>
-    ///
-    /// </summary>
+    /**
+     * @brief Initializes the window layout.
+     */
     void initLayout() override
     {
         FDialog::setText("Hotspot Gain & AFC Adjustment");
@@ -68,9 +72,9 @@ private:
         AdjustWndBase::initLayout();
     }
 
-    /// <summary>
-    ///
-    /// </summary>
+    /**
+     * @brief Initializes window controls.
+     */
     void initControls() override
     {
         // gain

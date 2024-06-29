@@ -17,6 +17,7 @@ using namespace lookups;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the ChannelLookup class. */
+
 ChannelLookup::ChannelLookup() :
     m_rfChTable(),
     m_rfChDataTable()
@@ -25,9 +26,11 @@ ChannelLookup::ChannelLookup() :
 }
 
 /* Finalizes a instance of the ChannelLookup class. */
+
 ChannelLookup::~ChannelLookup() = default;
 
 /* Helper to get RF channel data. */
+
 VoiceChData ChannelLookup::getRFChData(uint32_t chNo) const
 {
     if (chNo == 0U) {
@@ -45,6 +48,7 @@ VoiceChData ChannelLookup::getRFChData(uint32_t chNo) const
 }
 
 /* Helper to add a RF channel. */
+
 bool ChannelLookup::addRFCh(uint32_t chNo, bool force)
 { 
     if (chNo == 0U) {
@@ -66,6 +70,7 @@ bool ChannelLookup::addRFCh(uint32_t chNo, bool force)
 }
 
 /* Helper to remove a RF channel. */
+
 void ChannelLookup::removeRFCh(uint32_t chNo)
 {
     if (chNo == 0U) {

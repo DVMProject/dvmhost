@@ -83,6 +83,7 @@ const uint8_t LOG_TABLE[] = {
 // ---------------------------------------------------------------------------
 
 /* Check RS (12,9) FEC. */
+
 bool RS129::check(const uint8_t* in)
 {
     assert(in != nullptr);
@@ -96,6 +97,7 @@ bool RS129::check(const uint8_t* in)
 /* Encode RS (12,9) FEC. */
 /* Simulate a LFSR with generator polynomial for n byte RS code. Pass in a pointer to the data 
    array, and amount of data. The parity bytes are deposited into parity. */
+
 void RS129::encode(const uint8_t* msg, uint32_t nbytes, uint8_t* parity)
 {
     assert(msg != nullptr);
@@ -119,6 +121,7 @@ void RS129::encode(const uint8_t* msg, uint32_t nbytes, uint8_t* parity)
 // ---------------------------------------------------------------------------
 
 /* */
+
 uint8_t RS129::gmult(uint8_t a, uint8_t b)
 {
     if (a == 0U || b == 0U)

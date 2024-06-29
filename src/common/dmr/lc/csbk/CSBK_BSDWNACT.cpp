@@ -22,6 +22,7 @@ using namespace dmr::lc::csbk;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the CSBK_BSDWNACT class. */
+
 CSBK_BSDWNACT::CSBK_BSDWNACT() : CSBK(),
     m_bsId(0U)
 {
@@ -29,6 +30,7 @@ CSBK_BSDWNACT::CSBK_BSDWNACT() : CSBK(),
 }
 
 /* Decode a control signalling block. */
+
 bool CSBK_BSDWNACT::decode(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -49,6 +51,7 @@ bool CSBK_BSDWNACT::decode(const uint8_t* data)
 }
 
 /* Encode a control signalling block. */
+
 void CSBK_BSDWNACT::encode(uint8_t* data)
 {
     assert(data != nullptr);
@@ -57,6 +60,7 @@ void CSBK_BSDWNACT::encode(uint8_t* data)
 }
 
 /* Returns a string that represents the current CSBK. */
+
 std::string CSBK_BSDWNACT::toString()
 {
     return std::string("CSBKO, BSDWNACT (BS Outbound Activation)");
@@ -67,6 +71,7 @@ std::string CSBK_BSDWNACT::toString()
 // ---------------------------------------------------------------------------
 
 /* Internal helper to copy the the class. */
+
 void CSBK_BSDWNACT::copy(const CSBK_BSDWNACT& data)
 {
     CSBK::copy(data);

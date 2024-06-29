@@ -1,15 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Converged FNE Software
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Converged FNE Software
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2023-2024 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Converged FNE Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2023-2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "fne/Defines.h"
 #include "common/dmr/lc/csbk/CSBKFactory.h"
 #include "common/dmr/lc/LC.h"
@@ -36,11 +33,8 @@ using namespace dmr::defines;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the TagDMRData class.
-/// </summary>
-/// <param name="network"></param>
-/// <param name="debug"></param>
+/* Initializes a new instance of the TagDMRData class. */
+
 TagDMRData::TagDMRData(FNENetwork* network, bool debug) :
     m_network(network),
     m_parrotFrames(),
@@ -51,21 +45,12 @@ TagDMRData::TagDMRData(FNENetwork* network, bool debug) :
     assert(network != nullptr);
 }
 
-/// <summary>
-/// Finalizes a instance of the TagDMRData class.
-/// </summary>
+/* Finalizes a instance of the TagDMRData class. */
+
 TagDMRData::~TagDMRData() = default;
 
-/// <summary>
-/// Process a data frame from the network.
-/// </summary>
-/// <param name="data">Network data buffer.</param>
-/// <param name="len">Length of data.</param>
-/// <param name="peerId">Peer ID</param>
-/// <param name="pktSeq"></param>
-/// <param name="streamId">Stream ID</param>
-/// <param name="external">Flag indicating traffic is from an external peer.</param>
-/// <returns></returns>
+/* Process a data frame from the network. */
+
 bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint16_t pktSeq, uint32_t streamId, bool external)
 {
     hrc::hrc_t pktTime = hrc::now();
@@ -341,17 +326,8 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
     return false;
 }
 
-/// <summary>
-/// Process a grant request frame from the network.
-/// </summary>
-/// <param name="srcId"></param>
-/// <param name="dstId"></param>
-/// <param name="slot"></param>
-/// <param name="unitToUnit"></param>
-/// <param name="peerId">Peer ID</param>
-/// <param name="pktSeq"></param>
-/// <param name="streamId">Stream ID</param>
-/// <returns></returns>
+/* Process a grant request frame from the network. */
+
 bool TagDMRData::processGrantReq(uint32_t srcId, uint32_t dstId, uint8_t slot, bool unitToUnit, uint32_t peerId, uint16_t pktSeq, uint32_t streamId)
 {
     // if we have an Rx status for the destination deny the grant
@@ -390,9 +366,8 @@ bool TagDMRData::processGrantReq(uint32_t srcId, uint32_t dstId, uint8_t slot, b
     return true;
 }
 
-/// <summary>
-/// Helper to playback a parrot frame to the network.
-/// </summary>
+/* Helper to playback a parrot frame to the network. */
+
 void TagDMRData::playbackParrot()
 {
     if (m_parrotFrames.size() == 0) {
@@ -426,14 +401,8 @@ void TagDMRData::playbackParrot()
     m_parrotFrames.pop_front();
 }
 
-/// <summary>
-/// Helper to write a extended function packet on the RF interface.
-/// </summary>
-/// <param name="peerId"></param>
-/// <param name="slot"></param>
-/// <param name="func">Extended function opcode.</param>
-/// <param name="arg">Extended function argument.</param>
-/// <param name="dstId">Destination radio ID.</param>
+/* Helper to write a extended function packet on the RF interface. */
+
 void TagDMRData::write_Ext_Func(uint32_t peerId, uint8_t slot, uint32_t func, uint32_t arg, uint32_t dstId)
 {
     std::unique_ptr<lc::csbk::CSBK_EXT_FNCT> csbk = std::make_unique<lc::csbk::CSBK_EXT_FNCT>();
@@ -448,13 +417,8 @@ void TagDMRData::write_Ext_Func(uint32_t peerId, uint8_t slot, uint32_t func, ui
     write_CSBK(peerId, slot, csbk.get());
 }
 
-/// <summary>
-/// Helper to write a call alert packet on the RF interface.
-/// </summary>
-/// <param name="peerId"></param>
-/// <param name="slot"></param>
-/// <param name="srcId">Source radio ID.</param>
-/// <param name="dstId">Destination radio ID.</param>
+/* Helper to write a call alert packet on the RF interface. */
+
 void TagDMRData::write_Call_Alrt(uint32_t peerId, uint8_t slot, uint32_t srcId, uint32_t dstId)
 {
     std::unique_ptr<lc::csbk::CSBK_CALL_ALRT> csbk = std::make_unique<lc::csbk::CSBK_CALL_ALRT>();
@@ -472,16 +436,8 @@ void TagDMRData::write_Call_Alrt(uint32_t peerId, uint8_t slot, uint32_t srcId, 
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Helper to route rewrite the network data buffer.
-/// </summary>
-/// <param name="buffer"></param>
-/// <param name="peerId">Peer ID</param>
-/// <param name="dmrData"></param>
-/// <param name="dataType"></param>
-/// <param name="dstId"></param>
-/// <param name="slotNo"></param>
-/// <param name="outbound"></param>
+/* Helper to route rewrite the network data buffer. */
+
 void TagDMRData::routeRewrite(uint8_t* buffer, uint32_t peerId, dmr::data::Data& dmrData, DataType::E dataType, uint32_t dstId, uint32_t slotNo, bool outbound)
 {
     uint32_t rewriteDstId = dstId;
@@ -537,13 +493,8 @@ void TagDMRData::routeRewrite(uint8_t* buffer, uint32_t peerId, dmr::data::Data&
     }
 }
 
-/// <summary>
-/// Helper to route rewrite destination ID and slot.
-/// </summary>
-/// <param name="peerId">Peer ID</param>
-/// <param name="dstId"></param>
-/// <param name="slotNo"></param>
-/// <param name="outbound"></param>
+/* Helper to route rewrite destination ID and slot. */
+
 bool TagDMRData::peerRewrite(uint32_t peerId, uint32_t& dstId, uint32_t& slotNo, bool outbound)
 {
     lookups::TalkgroupRuleGroupVoice tg;
@@ -576,12 +527,8 @@ bool TagDMRData::peerRewrite(uint32_t peerId, uint32_t& dstId, uint32_t& slotNo,
     return rewrote;
 }
 
-/// <summary>
-/// Helper to process CSBKs being passed from a peer.
-/// </summary>
-/// <param name="buffer"></param>
-/// <param name="peerId">Peer ID</param>
-/// <param name="data"></param>
+/* Helper to process CSBKs being passed from a peer. */
+
 bool TagDMRData::processCSBK(uint8_t* buffer, uint32_t peerId, dmr::data::Data& dmrData)
 {
     // are we receiving a CSBK?
@@ -641,14 +588,8 @@ bool TagDMRData::processCSBK(uint8_t* buffer, uint32_t peerId, dmr::data::Data& 
     return true;
 }
 
-/// <summary>
-/// Helper to determine if the peer is permitted for traffic.
-/// </summary>
-/// <param name="peerId">Peer ID</param>
-/// <param name="data"></param>
-/// <param name="streamId">Stream ID</param>
-/// <param name="external"></param>
-/// <returns></returns>
+/* Helper to determine if the peer is permitted for traffic. */
+
 bool TagDMRData::isPeerPermitted(uint32_t peerId, data::Data& data, uint32_t streamId, bool external)
 {
     if (data.getFLCO() == FLCO::PRIVATE) {
@@ -731,13 +672,8 @@ bool TagDMRData::isPeerPermitted(uint32_t peerId, data::Data& data, uint32_t str
     return true;
 }
 
-/// <summary>
-/// Helper to validate the DMR call stream.
-/// </summary>
-/// <param name="peerId">Peer ID</param>
-/// <param name="data"></param>
-/// <param name="streamId">Stream ID</param>
-/// <returns></returns>
+/* Helper to validate the DMR call stream. */
+
 bool TagDMRData::validate(uint32_t peerId, data::Data& data, uint32_t streamId)
 {
     // is the source ID a blacklisted ID?
@@ -853,15 +789,8 @@ bool TagDMRData::validate(uint32_t peerId, data::Data& data, uint32_t streamId)
     return true;
 }
 
-/// <summary>
-/// Helper to write a grant packet.
-/// </summary>
-/// <param name="peerId"></param>
-/// <param name="srcId"></param>
-/// <param name="dstId"></param>
-/// <param name="serviceOptions"></param>
-/// <param name="grp"></param>
-/// <returns></returns>
+/* Helper to write a grant packet. */
+
 bool TagDMRData::write_CSBK_Grant(uint32_t peerId, uint32_t srcId, uint32_t dstId, uint8_t serviceOptions, bool grp)
 {
     uint8_t slot = 0U;
@@ -926,13 +855,8 @@ bool TagDMRData::write_CSBK_Grant(uint32_t peerId, uint32_t srcId, uint32_t dstI
     return true;
 }
 
-/// <summary>
-/// Helper to write a NACK RSP packet.
-/// </summary>
-/// <param name="peerId"></param>
-/// <param name="dstId"></param>
-/// <param name="reason"></param>
-/// <param name="service"></param>
+/* Helper to write a NACK RSP packet. */
+
 void TagDMRData::write_CSBK_NACK_RSP(uint32_t peerId, uint32_t dstId, uint8_t reason, uint8_t service)
 {
     std::unique_ptr<lc::csbk::CSBK_NACK_RSP> csbk = std::make_unique<lc::csbk::CSBK_NACK_RSP>();
@@ -944,12 +868,8 @@ void TagDMRData::write_CSBK_NACK_RSP(uint32_t peerId, uint32_t dstId, uint8_t re
     write_CSBK(peerId, 1U, csbk.get());
 }
 
-/// <summary>
-/// Helper to write a network CSBK.
-/// </summary>
-/// <param name="peerId"></param>
-/// <param name="slot"></param>
-/// <param name="csbk"></param>
+/* Helper to write a network CSBK. */
+
 void TagDMRData::write_CSBK(uint32_t peerId, uint8_t slot, lc::CSBK* csbk)
 {
     uint8_t data[DMR_FRAME_LENGTH_BYTES + 2U];

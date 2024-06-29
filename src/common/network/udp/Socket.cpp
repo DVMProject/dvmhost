@@ -33,6 +33,7 @@ using namespace network::udp;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the Socket class. */
+
 Socket::Socket(const std::string& address, uint16_t port) :
     m_localAddress(address),
     m_localPort(port),
@@ -48,6 +49,7 @@ Socket::Socket(const std::string& address, uint16_t port) :
 }
 
 /* Initializes a new instance of the Socket class. */
+
 Socket::Socket(uint16_t port) :
     m_localAddress(),
     m_localPort(port),
@@ -63,6 +65,7 @@ Socket::Socket(uint16_t port) :
 }
 
 /* Finalizes a instance of the Socket class. */
+
 Socket::~Socket()
 {
     if (m_aes != nullptr)
@@ -72,18 +75,21 @@ Socket::~Socket()
 }
 
 /* Opens UDP socket connection. */
+
 bool Socket::open(const sockaddr_storage& address) noexcept
 {
     return open(address.ss_family);
 }
 
 /* Opens UDP socket connection. */
+
 bool Socket::open(uint32_t af) noexcept
 {
     return open(af, m_localAddress, m_localPort);
 }
 
 /* Opens UDP socket connection. */
+
 bool Socket::open(const uint32_t af, const std::string& address, const uint16_t port) noexcept
 {
     sockaddr_storage addr;
@@ -124,6 +130,7 @@ bool Socket::open(const uint32_t af, const std::string& address, const uint16_t 
 }
 
 /* Closes the UDP socket connection. */
+
 void Socket::close()
 {
     if (m_fd >= 0) {
@@ -133,6 +140,7 @@ void Socket::close()
 }
 
 /* Read data from the UDP socket. */
+
 ssize_t Socket::read(uint8_t* buffer, uint32_t length, sockaddr_storage& address, uint32_t& addrLen) noexcept
 {
     assert(buffer != nullptr);
@@ -241,6 +249,7 @@ ssize_t Socket::read(uint8_t* buffer, uint32_t length, sockaddr_storage& address
 }
 
 /* Write data to the UDP socket. */
+
 bool Socket::write(const uint8_t* buffer, uint32_t length, const sockaddr_storage& address, uint32_t addrLen, ssize_t* lenWritten) noexcept
 {
     assert(buffer != nullptr);
@@ -327,6 +336,7 @@ bool Socket::write(const uint8_t* buffer, uint32_t length, const sockaddr_storag
 }
 
 /* Write data to the UDP socket. */
+
 bool Socket::write(BufferVector& buffers, ssize_t* lenWritten) noexcept
 {
     bool result = false;
@@ -509,6 +519,7 @@ bool Socket::write(BufferVector& buffers, ssize_t* lenWritten) noexcept
 }
 
 /* Sets the preshared encryption key. */
+
 void Socket::setPresharedKey(const uint8_t* presharedKey)
 {
     if (presharedKey != nullptr) {
@@ -522,6 +533,7 @@ void Socket::setPresharedKey(const uint8_t* presharedKey)
 }
 
 /* Helper to lookup a hostname and resolve it to an IP address. */
+
 int Socket::lookup(const std::string& hostname, uint16_t port, sockaddr_storage& address, uint32_t& addrLen)
 {
     struct addrinfo hints;
@@ -531,6 +543,7 @@ int Socket::lookup(const std::string& hostname, uint16_t port, sockaddr_storage&
 }
 
 /* Helper to lookup a hostname and resolve it to an IP address. */
+
 int Socket::lookup(const std::string& hostname, uint16_t port, sockaddr_storage& address, uint32_t& addrLen, struct addrinfo& hints)
 {
     std::string portstr = std::to_string(port);
@@ -558,6 +571,7 @@ int Socket::lookup(const std::string& hostname, uint16_t port, sockaddr_storage&
 }
 
 /* Helper to return the local address of the machine the socket is running on. */
+
 std::string Socket::getLocalAddress()
 {
     struct ifaddrs *ifaddr, *ifa;
@@ -598,6 +612,7 @@ std::string Socket::getLocalAddress()
 }
 
 /* */
+
 bool Socket::match(const sockaddr_storage& addr1, const sockaddr_storage& addr2, IPMATCHTYPE type)
 {
     if (addr1.ss_family != addr2.ss_family)
@@ -641,6 +656,7 @@ bool Socket::match(const sockaddr_storage& addr1, const sockaddr_storage& addr2,
 }
 
 /* Gets the string representation of an address from a sockaddr_storage socket address structure. */
+
 std::string Socket::address(const sockaddr_storage& addr)
 {
     std::string address = std::string();
@@ -671,6 +687,7 @@ std::string Socket::address(const sockaddr_storage& addr)
 }
 
 /* Gets the port from a sockaddr_storage socket address structure. */
+
 uint16_t Socket::port(const sockaddr_storage& addr)
 {
     uint16_t port = 0U;
@@ -698,6 +715,7 @@ uint16_t Socket::port(const sockaddr_storage& addr)
 }
 
 /* Helper to check if the address stored in a sockaddr_storage socket address structure is INADDR_NONE. */
+
 bool Socket::isNone(const sockaddr_storage& addr)
 {
     struct sockaddr_in* in = (struct sockaddr_in*)& addr;
@@ -710,6 +728,7 @@ bool Socket::isNone(const sockaddr_storage& addr)
 // ---------------------------------------------------------------------------
 
 /* Internal helper to initialize the socket. */
+
 bool Socket::initSocket(const int domain, const int type, const int protocol) noexcept(false)
 {
     m_fd = ::socket(domain, type, protocol);
@@ -723,6 +742,7 @@ bool Socket::initSocket(const int domain, const int type, const int protocol) no
 }
 
 /* Internal helper to bind to a address and port. */
+
 bool Socket::bind(const std::string& ipAddr, const uint16_t port) noexcept(false)
 {
     m_localAddress = std::string(ipAddr);
@@ -742,6 +762,7 @@ bool Socket::bind(const std::string& ipAddr, const uint16_t port) noexcept(false
 }
 
 /* Initialize the sockaddr_in structure with the provided IP and port */
+
 void Socket::initAddr(const std::string& ipAddr, const int port, sockaddr_in& addr) noexcept(false)
 {
     addr.sin_family = AF_INET;

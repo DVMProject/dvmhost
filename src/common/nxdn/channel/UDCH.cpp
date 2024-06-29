@@ -70,6 +70,7 @@ const uint32_t PUNCTURE_LIST[] = {
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the UDCH class. */
+
 UDCH::UDCH() :
     m_ran(0U),
     m_data(nullptr)
@@ -79,6 +80,7 @@ UDCH::UDCH() :
 }
 
 /* Initializes a copy instance of the UDCH class. */
+
 UDCH::UDCH(const UDCH& data) :
     m_ran(0U),
     m_data(nullptr)
@@ -87,12 +89,14 @@ UDCH::UDCH(const UDCH& data) :
 }
 
 /* Finalizes a instance of UDCH class. */
+
 UDCH::~UDCH()
 {
     delete[] m_data;
 }
 
 /* Equals operator. */
+
 UDCH& UDCH::operator=(const UDCH& data)
 {
     if (&data != this) {
@@ -105,6 +109,7 @@ UDCH& UDCH::operator=(const UDCH& data)
 }
 
 /* Decode a user data channel. */
+
 bool UDCH::decode(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -174,6 +179,7 @@ bool UDCH::decode(const uint8_t* data)
 }
 
 /* Encode a user data channel. */
+
 void UDCH::encode(uint8_t* data) const
 {
     assert(data != nullptr);
@@ -225,6 +231,7 @@ void UDCH::encode(uint8_t* data) const
 }
 
 /* Gets the raw UDCH data. */
+
 void UDCH::getData(uint8_t* data) const
 {
     assert(data != nullptr);
@@ -233,6 +240,7 @@ void UDCH::getData(uint8_t* data) const
 }
 
 /* Sets the raw UDCH data. */
+
 void UDCH::setData(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -245,6 +253,7 @@ void UDCH::setData(const uint8_t* data)
 // ---------------------------------------------------------------------------
 
 /* Internal helper to copy the the class. */
+
 void UDCH::copy(const UDCH& data)
 {
     m_data = new uint8_t[NXDN_UDCH_CRC_LENGTH_BYTES];

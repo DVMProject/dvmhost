@@ -22,12 +22,14 @@ using namespace dmr::lc::csbk;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the CSBK_UU_V_REQ class. */
+
 CSBK_UU_V_REQ::CSBK_UU_V_REQ() : CSBK()
 {
     m_CSBKO = CSBKO::UU_V_REQ;
 }
 
 /* Decode a control signalling block. */
+
 bool CSBK_UU_V_REQ::decode(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -48,6 +50,7 @@ bool CSBK_UU_V_REQ::decode(const uint8_t* data)
 }
 
 /* Encode a control signalling block. */
+
 void CSBK_UU_V_REQ::encode(uint8_t* data)
 {
     assert(data != nullptr);
@@ -56,6 +59,7 @@ void CSBK_UU_V_REQ::encode(uint8_t* data)
 }
 
 /* Returns a string that represents the current CSBK. */
+
 std::string CSBK_UU_V_REQ::toString()
 {
     return std::string("CSBKO, UU_V_REQ (Unit-to-Unit Voice Channel Request)");

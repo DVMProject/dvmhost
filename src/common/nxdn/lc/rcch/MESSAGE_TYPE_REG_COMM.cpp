@@ -22,12 +22,14 @@ using namespace nxdn::lc::rcch;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the MESSAGE_TYPE_REG_COMM class. */
+
 MESSAGE_TYPE_REG_COMM::MESSAGE_TYPE_REG_COMM() : RCCH()
 {
     m_messageType = MessageType::RCCH_REG_COMM;
 }
 
 /* Decode RCCH data. */
+
 void MESSAGE_TYPE_REG_COMM::decode(const uint8_t* data, uint32_t length, uint32_t offset)
 {
     assert(data != nullptr);
@@ -39,6 +41,7 @@ void MESSAGE_TYPE_REG_COMM::decode(const uint8_t* data, uint32_t length, uint32_
 }
 
 /* Encode RCCH data. */
+
 void MESSAGE_TYPE_REG_COMM::encode(uint8_t* data, uint32_t length, uint32_t offset)
 {
     assert(data != nullptr);
@@ -55,6 +58,7 @@ void MESSAGE_TYPE_REG_COMM::encode(uint8_t* data, uint32_t length, uint32_t offs
 }
 
 /* Returns a string that represents the current RCCH. */
+
 std::string MESSAGE_TYPE_REG_COMM::toString(bool isp)
 {
     return std::string("RCCH_REG_COMM (Registration Command)");

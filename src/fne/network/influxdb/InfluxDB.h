@@ -1,17 +1,21 @@
 // SPDX-License-Identifier: MIT-only
+/*
+ * Digital Voice Modem - Converged FNE Software
+ * MIT Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (c) 2010-2018 <http://ez8.co> <orca.zhang@yahoo.com>
+ *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Converged FNE Software
-* MIT Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Converged FNE Software
-* @derivedfrom influxdb-cpp (https://github.com/orca-zhang/influxdb-cpp)
-* @license MIT License (https://opensource.org/licenses/MIT)
-*
-*   Copyright (c) 2010-2018 <http://ez8.co> <orca.zhang@yahoo.com>
-*   Copyright (C) 2024 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @defgroup fne_influx FNE InfluxDB
+ * @brief Implementation for the FNE InfluxDB support.
+ * @ingroup fne
+ * 
+ * @file InfluxDB.h
+ * @ingroup fne_influx
+ */
 #if !defined(__INFLUXDB_H__)
 #define __INFLUXDB_H__
 
@@ -54,12 +58,17 @@ namespace network
     {
         // ---------------------------------------------------------------------------
         //  Class Declaration
-        //      Implements the diagnostic/activity log networking logic.
         // ---------------------------------------------------------------------------
 
+        /**
+         * @brief Implements the diagnostic/activity log networking logic.
+         * @ingroup fne_influx
+         */
         class HOST_SW_API ServerInfo {
         public:
-            /// <summary>Initializes a new instance of the ServerInfo class.</summary>
+            /**
+             * @brief Initializes a new instance of the ServerInfo class.
+             */
             ServerInfo() :
                 m_host(),
                 m_port(8086U),
@@ -70,12 +79,14 @@ namespace network
                 /* stub */
             }
 
-            /// <summary>Initializes a new instance of the ServerInfo class.</summary>
-            /// <param name="host"></param>
-            /// <param name="port"></param>
-            /// <param name="org"></param>
-            /// <param name="token"></param>
-            /// <param name="bucket"></param>
+            /**
+             * @brief Initializes a new instance of the ServerInfo class.
+             * @param host Hostname/IP Address.
+             * @param port Port number.
+             * @param org Organization.
+             * @param token Token.
+             * @param bucket Bucket.
+             */
             ServerInfo(const std::string& host, uint16_t port, const std::string& org, const std::string& token, const std::string& bucket = "") :
                 m_host(host),
                 m_port(port),
@@ -87,15 +98,25 @@ namespace network
             }
 
         public:
-            /// <summary></summary>
+            /**
+             * @brief Hostname/IP Address.
+             */
             __PROPERTY_PLAIN(std::string, host);
-            /// <summary></summary>
+            /**
+             * @brief Port.
+             */
             __PROPERTY_PLAIN(uint16_t, port);
-            /// <summary></summary>
+            /**
+             * @brief Organization.
+             */
             __PROPERTY_PLAIN(std::string, org);
-            /// <summary></summary>
+            /**
+             * @brief Bucket.
+             */
             __PROPERTY_PLAIN(std::string, bucket);
-            /// <summary></summary>
+            /**
+             * @brief Token.
+             */
             __PROPERTY_PLAIN(std::string, token);
         };
 
@@ -105,18 +126,22 @@ namespace network
             struct TagCaller;
             struct FieldCaller;
             struct TSCaller;
-            
+
+            /**
+             * @brief 
+             * @ingroup fne_influx
+             */
             struct HOST_SW_API inner {
-                /// <summary>
-                /// 
-                /// </summary>
-                /// <param name="method"></param>
-                /// <param name="uri"></param>
-                /// <param name="queryString"></param>
-                /// <param name="body"></param>
-                /// <param name="si"></param>
-                /// <param name="resp"></param>
-                /// <returns></returns>
+                /**
+                 * @brief Generates a InfluxDB REST API request.
+                 * @param method HTTP Method.
+                 * @param uri URI.
+                 * @param queryString Query.
+                 * @param body Content body.
+                 * @param si 
+                 * @param resp 
+                 * @returns int 
+                 */
                 static int request(const char* method, const char* uri, const std::string& queryString, const std::string& body, 
                     const ServerInfo& si, std::string* resp) 
                 {
@@ -272,18 +297,18 @@ namespace network
                 }
             
             private:
-                /// <summary>
-                /// 
-                /// </summary>
-                /// <param name="x"></param>
-                /// <returns></returns>
+                /**
+                 * @brief Helper to convert a value to hexadecimal.
+                 * @param x 
+                 * @returns uint8_t 
+                 */
                 static inline uint8_t toHex(uint8_t x) { return  x > 9 ? x + 55 : x + 48; }
 
-                /// <summary>
-                /// 
-                /// </summary>
-                /// <param name="out"></param>
-                /// <param name="src"></param>
+                /**
+                 * @brief Helper to properly HTTP encode a URL.
+                 * @param out 
+                 * @param src 
+                 */
                 static void urlEncode(std::string& out, const std::string& src)
                 {
                     size_t pos = 0, start = 0;
@@ -305,12 +330,12 @@ namespace network
                 }
             };
 
-            /// <summary>
-            ///
-            /// </summary>
-            /// <param name="resp"></param>
-            /// <param name="query"></param>
-            /// <param name="si"></param>
+            /**
+             * @brief Helper to generate a InfluxDB query.
+             * @param resp 
+             * @param query 
+             * @param si 
+             */
             inline int fluxQL(std::string& resp, const std::string& query, const ServerInfo& si) 
             {
                 // query JSON body
@@ -325,16 +350,19 @@ namespace network
 
         // ---------------------------------------------------------------------------
         //  Structure Declaration
-        //      
         // ---------------------------------------------------------------------------
 
+        /**
+         * @brief 
+         * @ingroup fne_influx
+         */
         struct HOST_SW_API QueryBuilder {
         public:
-            /// <summary>
-            /// 
-            /// </summary>
-            /// <param name="m"></param>
-            /// <returns></returns>
+            /**
+             * @brief
+             * @param m 
+             * @return 
+             */
             detail::TagCaller& meas(const std::string& m) {
                 m_lines.imbue(std::locale("C"));
                 m_lines.clear();
@@ -342,22 +370,22 @@ namespace network
             }
 
         protected:
-            /// <summary>
-            /// 
-            /// </summary>
-            /// <param name="m"></param>
-            /// <returns></returns>
+            /**
+             * @brief
+             * @param m 
+             * @return 
+             */
             detail::TagCaller& m(const std::string& m) {
                 escape(m, ", ");
                 return (detail::TagCaller&)*this;
             }
 
-            /// <summary>
-            /// 
-            /// </summary>
-            /// <param name="k"></param>
-            /// <param name="v"></param>
-            /// <returns></returns>
+            /**
+             * @brief
+             * @param k 
+             * @param v 
+             * @return 
+             */
             detail::TagCaller& t(const std::string& k, const std::string& v) {
                 m_lines << ",";
 
@@ -368,13 +396,13 @@ namespace network
                 return (detail::TagCaller&)*this;
             }
 
-            /// <summary>
-            /// 
-            /// </summary>
-            /// <param name="delim"></param>
-            /// <param name="k"></param>
-            /// <param name="v"></param>
-            /// <returns></returns>
+            /**
+             * @brief
+             * @param delim 
+             * @param k 
+             * @param v 
+             * @return 
+             */
             detail::FieldCaller& f_s(char delim, const std::string& k, const std::string& v) {
                 m_lines << delim;
                 m_lines << std::fixed;
@@ -387,13 +415,13 @@ namespace network
                 return (detail::FieldCaller&)*this;
             }
 
-            /// <summary>
-            /// 
-            /// </summary>
-            /// <param name="delim"></param>
-            /// <param name="k"></param>
-            /// <param name="v"></param>
-            /// <returns></returns>
+            /**
+             * @brief
+             * @param delim 
+             * @param k 
+             * @param v 
+             * @return 
+             */
             detail::FieldCaller& f_i(char delim, const std::string& k, long long v) {
                 m_lines << delim;
                 m_lines << std::fixed;
@@ -405,13 +433,13 @@ namespace network
                 return (detail::FieldCaller&)*this;
             }
 
-            /// <summary>
-            /// 
-            /// </summary>
-            /// <param name="delim"></param>
-            /// <param name="k"></param>
-            /// <param name="v"></param>
-            /// <returns></returns>
+            /**
+             * @brief
+             * @param delim 
+             * @param k 
+             * @param v 
+             * @return 
+             */
             detail::FieldCaller& f_ui(char delim, const std::string& k, unsigned long long v) {
                 m_lines << delim;
                 m_lines << std::fixed;
@@ -423,14 +451,14 @@ namespace network
                 return (detail::FieldCaller&)*this;
             }
 
-            /// <summary>
-            /// 
-            /// </summary>
-            /// <param name="delim"></param>
-            /// <param name="k"></param>
-            /// <param name="v"></param>
-            /// <param name="prec"></param>
-            /// <returns></returns>
+            /**
+             * @brief
+             * @param delim 
+             * @param k 
+             * @param v 
+             * @param prec 
+             * @return 
+             */
             detail::FieldCaller& f_f(char delim, const std::string& k, double v, int prec) {
                 m_lines << delim;
 
@@ -442,13 +470,13 @@ namespace network
                 return (detail::FieldCaller&)*this;
             }
 
-            /// <summary>
-            /// 
-            /// </summary>
-            /// <param name="delim"></param>
-            /// <param name="k"></param>
-            /// <param name="v"></param>
-            /// <returns></returns>
+            /**
+             * @brief
+             * @param delim 
+             * @param k 
+             * @param v 
+             * @return 
+             */
             detail::FieldCaller& f_b(char delim, const std::string& k, bool v) {
                 m_lines << delim;
 
@@ -459,21 +487,21 @@ namespace network
                 return (detail::FieldCaller&)*this;
             }
 
-            /// <summary>
-            /// 
-            /// </summary>
-            /// <param name="ts"></param>
-            /// <returns></returns>
+            /**
+             * @brief
+             * @param ts 
+             * @return 
+             */
             detail::TSCaller& ts(uint64_t ts) {
                 m_lines << " " << ts;
                 return (detail::TSCaller&)*this;
             }
 
-            /// <summary>
-            ///
-            /// </summary>
-            /// <param name="src"></param>
-            /// <param name="escapeSeq"></param>
+            /**
+             * @brief
+             * @param src 
+             * @param escapeSeq 
+             */
             void escape(const std::string& src, const char* escapeSeq) 
             {
                 size_t pos = 0, start = 0;
@@ -493,9 +521,12 @@ namespace network
         namespace detail {
             // ---------------------------------------------------------------------------
             //  Structure Declaration
-            //      
             // ---------------------------------------------------------------------------
 
+            /**
+             * @brief 
+             * @ingroup fne_influx
+             */
             struct HOST_SW_API TagCaller : public QueryBuilder 
             {
                 detail::TagCaller& tag(const std::string& k, const std::string& v)       { return t(k, v); }
@@ -516,9 +547,12 @@ namespace network
 
             // ---------------------------------------------------------------------------
             //  Structure Declaration
-            //      
             // ---------------------------------------------------------------------------
 
+            /**
+             * @brief 
+             * @ingroup fne_influx
+             */
             struct HOST_SW_API TSCaller : public QueryBuilder
             {
                 detail::TagCaller& meas(const std::string& m)                            { m_lines << '\n'; return this->m(m); }
@@ -527,8 +561,12 @@ namespace network
 
             // ---------------------------------------------------------------------------
             //  Structure Declaration
-            //      
             // ---------------------------------------------------------------------------
+
+            /**
+             * @brief 
+             * @ingroup fne_influx
+             */
 
             struct HOST_SW_API FieldCaller : public TSCaller 
             {

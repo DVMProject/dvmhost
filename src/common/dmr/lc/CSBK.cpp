@@ -34,12 +34,14 @@ SiteData CSBK::m_siteData = SiteData();
 // ---------------------------------------------------------------------------
 
 /* Initializes a copy instance of the CSBK class. */
+
 CSBK::CSBK(const CSBK& data) : CSBK()
 {
     copy(data);
 }
 
 /* Initializes a new instance of the CSBK class. */
+
 CSBK::CSBK() :
     m_colorCode(0U),
     m_lastBlock(true),
@@ -71,6 +73,7 @@ CSBK::CSBK() :
 }
 
 /* Finalizes a instance of the CSBK class. */
+
 CSBK::~CSBK()
 {
     if (m_raw != nullptr)
@@ -78,18 +81,21 @@ CSBK::~CSBK()
 }
 
 /* Returns a string that represents the current CSBK. */
+
 std::string CSBK::toString()
 {
     return std::string("CSBKO, UNKNOWN (Unknown CSBK)");
 }
 
 /* Returns a copy of the raw decoded CSBK bytes. */
+
 uint8_t* CSBK::getDecodedRaw() const
 {
     return m_raw;
 }
 
 /* Regenerate a DMR CSBK without decoding. */
+
 bool CSBK::regenerate(uint8_t* data, uint8_t dataType)
 {
     uint8_t csbk[DMR_CSBK_LENGTH_BYTES];
@@ -177,6 +183,7 @@ bool CSBK::regenerate(uint8_t* data, uint8_t dataType)
 // ---------------------------------------------------------------------------
 
 /* Internal helper to convert payload bytes to a 64-bit long value. */
+
 ulong64_t CSBK::toValue(const uint8_t* payload)
 {
     ulong64_t value = 0U;
@@ -195,6 +202,7 @@ ulong64_t CSBK::toValue(const uint8_t* payload)
 }
 
 /* Internal helper to convert a 64-bit long value to payload bytes. */
+
 UInt8Array CSBK::fromValue(const ulong64_t value)
 {
     UInt8Array payload = std::unique_ptr<uint8_t[]>(new uint8_t[DMR_CSBK_LENGTH_BYTES - 4U]);
@@ -214,6 +222,7 @@ UInt8Array CSBK::fromValue(const ulong64_t value)
 }
 
 /* Internal helper to decode a control signalling block. */
+
 bool CSBK::decode(const uint8_t* data, uint8_t* payload)
 {
     assert(data != nullptr);
@@ -281,6 +290,7 @@ bool CSBK::decode(const uint8_t* data, uint8_t* payload)
 }
 
 /* Internal helper to encode a control signalling block. */
+
 void CSBK::encode(uint8_t* data, const uint8_t* payload)
 {
     assert(data != nullptr);
@@ -339,6 +349,7 @@ void CSBK::encode(uint8_t* data, const uint8_t* payload)
 }
 
 /* Internal helper to copy the the class. */
+
 void CSBK::copy(const CSBK& data)
 {
     m_colorCode = data.m_colorCode;

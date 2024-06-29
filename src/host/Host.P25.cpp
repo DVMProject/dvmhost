@@ -7,7 +7,7 @@
 * @package DVM / Modem Host Software
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
+*  Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
@@ -20,10 +20,8 @@ using namespace modem;
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Helper to interrupt a running P25 control channel.
-/// </summary>
-/// <param name="control"></param>
+/* Helper to interrupt a running P25 control channel. */
+
 void Host::interruptP25Control(p25::Control* control)
 {
     if (control != nullptr) {
@@ -36,11 +34,8 @@ void Host::interruptP25Control(p25::Control* control)
     }
 }
 
-/// <summary>
-/// Helper to read P25 frames from modem.
-/// </summary>
-/// <param name="control"></param>
-/// <param name="afterReadCallback"></param>
+/* Helper to read P25 frames from modem. */
+
 void Host::readFramesP25(p25::Control* control, std::function<void()>&& afterReadCallback)
 {
     uint8_t data[P25DEF::P25_PDU_FRAME_LENGTH_BYTES * 2U];
@@ -117,11 +112,8 @@ void Host::readFramesP25(p25::Control* control, std::function<void()>&& afterRea
     }
 }
 
-/// <summary>
-/// Helper to write P25 frames to modem.
-/// </summary>
-/// <param name="control"></param>
-/// <param name="afterWriteCallback"></param>
+/* Helper to write P25 frames to modem. */
+
 void Host::writeFramesP25(p25::Control* control, std::function<void()>&& afterWriteCallback)
 {
     uint8_t data[P25DEF::P25_PDU_FRAME_LENGTH_BYTES * 2U];

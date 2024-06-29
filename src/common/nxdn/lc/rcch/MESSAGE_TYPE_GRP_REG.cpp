@@ -22,12 +22,14 @@ using namespace nxdn::lc::rcch;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the MESSAGE_TYPE_GRP_REG class. */
+
 MESSAGE_TYPE_GRP_REG::MESSAGE_TYPE_GRP_REG() : RCCH()
 {
     m_messageType = MessageType::RCCH_GRP_REG;
 }
 
 /* Decode RCCH data. */
+
 void MESSAGE_TYPE_GRP_REG::decode(const uint8_t* data, uint32_t length, uint32_t offset)
 {
     assert(data != nullptr);
@@ -43,6 +45,7 @@ void MESSAGE_TYPE_GRP_REG::decode(const uint8_t* data, uint32_t length, uint32_t
 }
 
 /* Encode RCCH data. */
+
 void MESSAGE_TYPE_GRP_REG::encode(uint8_t* data, uint32_t length, uint32_t offset)
 {
     assert(data != nullptr);
@@ -62,6 +65,7 @@ void MESSAGE_TYPE_GRP_REG::encode(uint8_t* data, uint32_t length, uint32_t offse
 }
 
 /* Returns a string that represents the current RCCH. */
+
 std::string MESSAGE_TYPE_GRP_REG::toString(bool isp)
 {
     return (isp) ? std::string("RCCH_GRP_REG (Group Registration Request)") :

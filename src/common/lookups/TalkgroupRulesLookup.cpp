@@ -29,6 +29,7 @@ std::mutex TalkgroupRulesLookup::m_mutex;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the TalkgroupRulesLookup class. */
+
 TalkgroupRulesLookup::TalkgroupRulesLookup(const std::string& filename, uint32_t reloadTime, bool acl) : Thread(),
     m_rulesFile(filename),
     m_reloadTime(reloadTime),
@@ -42,9 +43,11 @@ TalkgroupRulesLookup::TalkgroupRulesLookup(const std::string& filename, uint32_t
 }
 
 /* Finalizes a instance of the TalkgroupRulesLookup class. */
+
 TalkgroupRulesLookup::~TalkgroupRulesLookup() = default;
 
 /* Thread entry point. This function is provided to run the thread for the lookup table. */
+
 void TalkgroupRulesLookup::entry()
 {
     if (m_reloadTime == 0U) {
@@ -66,6 +69,7 @@ void TalkgroupRulesLookup::entry()
 }
 
 /* Stops and unloads this lookup table. */
+
 void TalkgroupRulesLookup::stop()
 {
     if (m_reloadTime == 0U) {
@@ -79,6 +83,7 @@ void TalkgroupRulesLookup::stop()
 }
 
 /* Reads the lookup table from the specified lookup table file. */
+
 bool TalkgroupRulesLookup::read()
 {
     bool ret = load();
@@ -90,6 +95,7 @@ bool TalkgroupRulesLookup::read()
 }
 
 /* Clears all entries from the lookup table. */
+
 void TalkgroupRulesLookup::clear()
 {
     std::lock_guard<std::mutex> lock(m_mutex);
@@ -97,6 +103,7 @@ void TalkgroupRulesLookup::clear()
 }
 
 /* Adds a new entry to the lookup table by the specified unique ID. */
+
 void TalkgroupRulesLookup::addEntry(uint32_t id, uint8_t slot, bool enabled, bool nonPreferred)
 {
     TalkgroupRuleGroupVoiceSource source;
@@ -141,6 +148,7 @@ void TalkgroupRulesLookup::addEntry(uint32_t id, uint8_t slot, bool enabled, boo
 }
 
 /* Adds a new entry to the lookup table by the specified unique ID. */
+
 void TalkgroupRulesLookup::addEntry(TalkgroupRuleGroupVoice groupVoice)
 {
     if (groupVoice.isInvalid())
@@ -169,6 +177,7 @@ void TalkgroupRulesLookup::addEntry(TalkgroupRuleGroupVoice groupVoice)
 }
 
 /* Erases an existing entry from the lookup table by the specified unique ID. */
+
 void TalkgroupRulesLookup::eraseEntry(uint32_t id, uint8_t slot)
 {
     std::lock_guard<std::mutex> lock(m_mutex);
@@ -179,6 +188,7 @@ void TalkgroupRulesLookup::eraseEntry(uint32_t id, uint8_t slot)
 }
 
 /* Finds a table entry in this lookup table. */
+
 TalkgroupRuleGroupVoice TalkgroupRulesLookup::find(uint32_t id, uint8_t slot)
 {
     TalkgroupRuleGroupVoice entry;
@@ -203,6 +213,7 @@ TalkgroupRuleGroupVoice TalkgroupRulesLookup::find(uint32_t id, uint8_t slot)
 }
 
 /* Finds a table entry in this lookup table. */
+
 TalkgroupRuleGroupVoice TalkgroupRulesLookup::findByRewrite(uint32_t peerId, uint32_t id, uint8_t slot)
 {
     TalkgroupRuleGroupVoice entry;
@@ -239,12 +250,14 @@ TalkgroupRuleGroupVoice TalkgroupRulesLookup::findByRewrite(uint32_t peerId, uin
 }
 
 /* Saves loaded talkgroup rules. */
+
 bool TalkgroupRulesLookup::commit()
 {
     return save();
 }
 
 /* Flag indicating whether talkgroup ID access control is enabled or not. */
+
 bool TalkgroupRulesLookup::getACL()
 {
     return m_acl;
@@ -255,6 +268,7 @@ bool TalkgroupRulesLookup::getACL()
 // ---------------------------------------------------------------------------
 
 /* Loads the table from the passed lookup table file. */
+
 bool TalkgroupRulesLookup::load()
 {
     if (m_rulesFile.length() <= 0) {
@@ -322,6 +336,7 @@ bool TalkgroupRulesLookup::load()
 }
 
 /* Saves the table to the passed lookup table file. */
+
 bool TalkgroupRulesLookup::save()
 {
     // Make sure file is valid

@@ -34,6 +34,7 @@ const uint32_t K = 5U;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the Convolution class. */
+
 Convolution::Convolution() :
     m_metrics1(nullptr),
     m_metrics2(nullptr),
@@ -48,6 +49,7 @@ Convolution::Convolution() :
 }
 
 /* Finalizes a instance of the Convolution class. */
+
 Convolution::~Convolution()
 {
     delete[] m_metrics1;
@@ -56,6 +58,7 @@ Convolution::~Convolution()
 }
 
 /* Starts convolution processing. */
+
 void Convolution::start()
 {
     ::memset(m_metrics1, 0x00U, NUM_OF_STATES * sizeof(uint16_t));
@@ -67,6 +70,7 @@ void Convolution::start()
 }
 
 /* */
+
 uint32_t Convolution::chainback(uint8_t* out, uint32_t nBits)
 {
     assert(out != nullptr);
@@ -94,6 +98,7 @@ uint32_t Convolution::chainback(uint8_t* out, uint32_t nBits)
 }
 
 /* */
+
 bool Convolution::decode(uint8_t s0, uint8_t s1)
 {
     *m_dp = 0U;
@@ -130,6 +135,7 @@ bool Convolution::decode(uint8_t s0, uint8_t s1)
 }
 
 /* */
+
 void Convolution::encode(const uint8_t* in, uint8_t* out, uint32_t nBits) const
 {
     assert(in != nullptr);

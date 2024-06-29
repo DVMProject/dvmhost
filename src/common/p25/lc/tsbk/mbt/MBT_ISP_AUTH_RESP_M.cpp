@@ -23,6 +23,7 @@ using namespace p25::lc::tsbk;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the MBT_ISP_AUTH_RESP_M class. */
+
 MBT_ISP_AUTH_RESP_M::MBT_ISP_AUTH_RESP_M() : AMBT(),
     m_authStandalone(false)
 {
@@ -35,6 +36,7 @@ MBT_ISP_AUTH_RESP_M::MBT_ISP_AUTH_RESP_M() : AMBT(),
 }
 
 /* Finalizes a instance of MBT_ISP_AUTH_RESP_M class. */
+
 MBT_ISP_AUTH_RESP_M::~MBT_ISP_AUTH_RESP_M()
 {
     if (m_authRes != nullptr) {
@@ -49,6 +51,7 @@ MBT_ISP_AUTH_RESP_M::~MBT_ISP_AUTH_RESP_M()
 }
 
 /* Decode a alternate trunking signalling block. */
+
 bool MBT_ISP_AUTH_RESP_M::decodeMBT(const data::DataHeader& dataHeader, const data::DataBlock* blocks)
 {
     assert(blocks != nullptr);
@@ -89,6 +92,7 @@ bool MBT_ISP_AUTH_RESP_M::decodeMBT(const data::DataHeader& dataHeader, const da
 }
 
 /* Encode a alternate trunking signalling block. */
+
 void MBT_ISP_AUTH_RESP_M::encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUserData)
 {
     assert(pduUserData != nullptr);
@@ -99,12 +103,14 @@ void MBT_ISP_AUTH_RESP_M::encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUs
 }
 
 /* Returns a string that represents the current TSBK. */
+
 std::string MBT_ISP_AUTH_RESP_M::toString(bool isp)
 {
     return std::string("TSBKO, ISP_AUTH_RESP_M (Authentication Response Mutual)");
 }
 
 /* Gets the authentication result. */
+
 void MBT_ISP_AUTH_RESP_M::getAuthRes(uint8_t* res) const
 {
     assert(res != nullptr);
@@ -113,6 +119,7 @@ void MBT_ISP_AUTH_RESP_M::getAuthRes(uint8_t* res) const
 }
 
 /* Sets the authentication random challenge. */
+
 void MBT_ISP_AUTH_RESP_M::setAuthRC(const uint8_t* rc)
 {
     assert(rc != nullptr);
@@ -121,6 +128,7 @@ void MBT_ISP_AUTH_RESP_M::setAuthRC(const uint8_t* rc)
 }
 
 /* Gets the authentication random challenge. */
+
 void MBT_ISP_AUTH_RESP_M::getAuthRC(uint8_t* rc) const
 {
     assert(rc != nullptr);
@@ -133,6 +141,7 @@ void MBT_ISP_AUTH_RESP_M::getAuthRC(uint8_t* rc) const
 // ---------------------------------------------------------------------------
 
 /* Internal helper to copy the the class. */
+
 void MBT_ISP_AUTH_RESP_M::copy(const MBT_ISP_AUTH_RESP_M& data)
 {
     TSBK::copy(data);

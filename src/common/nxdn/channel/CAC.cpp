@@ -95,6 +95,7 @@ const uint32_t PUNCTURE_LIST_OUT[] = {
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the CAC class. */
+
 CAC::CAC() :
     m_ran(0U),
     m_structure(ChStructure::SR_RCCH_SINGLE),
@@ -109,6 +110,7 @@ CAC::CAC() :
 }
 
 /* Initializes a copy instance of the CAC class. */
+
 CAC::CAC(const CAC& data) :
     m_ran(0U),
     m_structure(ChStructure::SR_RCCH_SINGLE),
@@ -123,12 +125,14 @@ CAC::CAC(const CAC& data) :
 }
 
 /* Finalizes a instance of CAC class. */
+
 CAC::~CAC()
 {
     delete[] m_data;
 }
 
 /* Equals operator. */
+
 CAC& CAC::operator=(const CAC& data)
 {
     if (&data != this) {
@@ -150,6 +154,7 @@ CAC& CAC::operator=(const CAC& data)
 }
 
 /* Decode a common access channel. */
+
 bool CAC::decode(const uint8_t* data, bool longInbound)
 {
     assert(data != nullptr);
@@ -300,6 +305,7 @@ bool CAC::decode(const uint8_t* data, bool longInbound)
 }
 
 /* Encode a common access channel. */
+
 void CAC::encode(uint8_t* data) const
 {
     assert(data != nullptr);
@@ -379,6 +385,7 @@ void CAC::encode(uint8_t* data) const
 }
 
 /* Gets the raw CAC data. */
+
 void CAC::getData(uint8_t* data) const
 {
     assert(data != nullptr);
@@ -398,6 +405,7 @@ void CAC::getData(uint8_t* data) const
 }
 
 /* Sets the raw CAC data. */
+
 void CAC::setData(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -416,6 +424,7 @@ void CAC::setData(const uint8_t* data)
 // ---------------------------------------------------------------------------
 
 /* Internal helper to copy the the class. */
+
 void CAC::copy(const CAC& data)
 {
     m_data = new uint8_t[NXDN_CAC_CRC_LENGTH_BYTES];

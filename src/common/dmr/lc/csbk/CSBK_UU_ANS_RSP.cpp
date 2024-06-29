@@ -22,12 +22,14 @@ using namespace dmr::lc::csbk;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the CSBK_UU_ANS_RSP class. */
+
 CSBK_UU_ANS_RSP::CSBK_UU_ANS_RSP() : CSBK()
 {
     m_CSBKO = CSBKO::UU_ANS_RSP;
 }
 
 /* Decode a control signalling block. */
+
 bool CSBK_UU_ANS_RSP::decode(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -48,6 +50,7 @@ bool CSBK_UU_ANS_RSP::decode(const uint8_t* data)
 }
 
 /* Encode a control signalling block. */
+
 void CSBK_UU_ANS_RSP::encode(uint8_t* data)
 {
     assert(data != nullptr);
@@ -56,6 +59,7 @@ void CSBK_UU_ANS_RSP::encode(uint8_t* data)
 }
 
 /* Returns a string that represents the current CSBK. */
+
 std::string CSBK_UU_ANS_RSP::toString()
 {
     return std::string("CSBKO, UU_ANS_RSP (Unit-to-Unit Answer Response)");

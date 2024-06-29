@@ -1,17 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Modem Host Software
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Modem Host Software
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2021 Jonathan Naylor, G4KLX
-*   Copyright (C) 2021 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Modem Host Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2021 Jonathan Naylor, G4KLX
+ *  Copyright (C) 2021 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "Defines.h"
 #include "common/Log.h"
 #include "modem/port/UDPPort.h"
@@ -32,12 +28,8 @@ const uint32_t BUFFER_LENGTH = 2000U;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the UDPPort class.
-/// </summary>
-/// <param name="address">Hostname/IP address to connect to.</param>
-/// <param name="modemPort">Port number.</param>
-/// <param name="master"></param>
+/* Initializes a new instance of the UDPPort class. */
+
 UDPPort::UDPPort(const std::string& address, uint16_t modemPort) :
     m_socket(modemPort),
     m_addr(),
@@ -56,15 +48,12 @@ UDPPort::UDPPort(const std::string& address, uint16_t modemPort) :
     }
 }
 
-/// <summary>
-/// Finalizes a instance of the UDPPort class.
-/// </summary>
+/* Finalizes a instance of the UDPPort class. */
+
 UDPPort::~UDPPort() = default;
 
-/// <summary>
-/// Opens a connection to the port.
-/// </summary>
-/// <returns>True, if connection is opened, otherwise false.</returns>
+/* Opens a connection to the port. */
+
 bool UDPPort::open()
 {
     if (m_addrLen == 0U) {
@@ -75,12 +64,8 @@ bool UDPPort::open()
     return m_socket.open(m_addr);
 }
 
-/// <summary>
-/// Reads data from the port.
-/// </summary>
-/// <param name="buffer">Buffer to read data from the port to.</param>
-/// <param name="length">Length of data to read from the port.</param>
-/// <returns>Actual length of data read from serial port.</returns>
+/* Reads data from the port. */
+
 int UDPPort::read(uint8_t* buffer, uint32_t length)
 {
     assert(buffer != nullptr);
@@ -119,12 +104,8 @@ int UDPPort::read(uint8_t* buffer, uint32_t length)
     return int(length);
 }
 
-/// <summary>
-/// Writes data to the port.
-/// </summary>
-/// <param name="buffer">Buffer containing data to write to port.</param>
-/// <param name="length">Length of data to write to port.</param>
-/// <returns>Actual length of data written to the port.</returns>
+/* Writes data to the port. */
+
 int UDPPort::write(const uint8_t* buffer, uint32_t length)
 {
     assert(buffer != nullptr);
@@ -133,9 +114,8 @@ int UDPPort::write(const uint8_t* buffer, uint32_t length)
     return m_socket.write(buffer, length, m_addr, m_addrLen) ? int(length) : -1;
 }
 
-/// <summary>
-/// Closes the connection to the port.
-/// </summary>
+/* Closes the connection to the port. */
+
 void UDPPort::close()
 {
     m_socket.close();

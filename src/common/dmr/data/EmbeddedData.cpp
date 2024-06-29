@@ -28,6 +28,7 @@ using namespace dmr::data;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the EmbeddedData class. */
+
 EmbeddedData::EmbeddedData() :
     m_valid(false),
     m_FLCO(FLCO::GROUP),
@@ -40,6 +41,7 @@ EmbeddedData::EmbeddedData() :
 }
 
 /* Finalizes a instance of the EmbeddedData class. */
+
 EmbeddedData::~EmbeddedData()
 {
     delete[] m_raw;
@@ -47,6 +49,7 @@ EmbeddedData::~EmbeddedData()
 }
 
 /* Add LC data (which may consist of 4 blocks) to the data store. */
+
 bool EmbeddedData::addData(const uint8_t* data, uint8_t lcss)
 {
     assert(data != nullptr);
@@ -112,6 +115,7 @@ bool EmbeddedData::addData(const uint8_t* data, uint8_t lcss)
 }
 
 /* Get LC data from the data store. */
+
 uint8_t EmbeddedData::getData(uint8_t* data, uint8_t n) const
 {
     assert(data != nullptr);
@@ -157,6 +161,7 @@ uint8_t EmbeddedData::getData(uint8_t* data, uint8_t n) const
 }
 
 /* Sets link control data. */
+
 void EmbeddedData::setLC(const lc::LC& lc)
 {
     lc.getData(m_data);
@@ -168,6 +173,7 @@ void EmbeddedData::setLC(const lc::LC& lc)
 }
 
 /* Gets link control data. */
+
 std::unique_ptr<lc::LC> EmbeddedData::getLC() const
 {
     if (!m_valid)
@@ -180,6 +186,7 @@ std::unique_ptr<lc::LC> EmbeddedData::getLC() const
 }
 
 /* Get raw embedded data buffer. */
+
 bool EmbeddedData::getRawData(uint8_t* data) const
 {
     assert(data != nullptr);
@@ -201,6 +208,7 @@ bool EmbeddedData::getRawData(uint8_t* data) const
 }
 
 /* Helper to reset data values to defaults. */
+
 void EmbeddedData::reset()
 {
     m_state = LCS_NONE;
@@ -212,6 +220,7 @@ void EmbeddedData::reset()
 // ---------------------------------------------------------------------------
 
 /* Unpack and error check an embedded LC. */
+
 void EmbeddedData::decodeEmbeddedData()
 {
     // the data is unpacked downwards in columns
@@ -277,6 +286,7 @@ void EmbeddedData::decodeEmbeddedData()
 }
 
 /* Pack and FEC for an embedded LC. */
+
 void EmbeddedData::encodeEmbeddedData()
 {
     uint32_t crc;

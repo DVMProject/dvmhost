@@ -1,16 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Converged FNE Software
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Converged FNE Software
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2024 Bryan Biedenkapp, N2PLL
-*   Copyright (C) 2024 Patrick McDonnell, W3AXL
-*
-*/
+/*
+ * Digital Voice Modem - Converged FNE Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2024 Patrick McDonnell, W3AXL
+ *
+ */
 #include "fne/Defines.h"
 #include "common/edac/SHA256.h"
 #include "common/lookups/AffiliationLookup.h"
@@ -47,6 +44,14 @@ using namespace lookups;
 //  Global Functions
 // ---------------------------------------------------------------------------
 
+/**
+ * @brief Helper to format string.
+ * 
+ * @tparam FormatArgs 
+ * @param format String format.
+ * @param args 
+ * @returns std::string Output string.
+ */
 template<typename ... FormatArgs>
 std::string string_format(const std::string& format, FormatArgs ... args)
 {
@@ -61,22 +66,22 @@ std::string string_format(const std::string& format, FormatArgs ... args)
     return std::string(buf.get(), buf.get() + size - 1);
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="obj"></param>
+/**
+ * @brief Helper to set the default response status.
+ * @param obj JSON object to fill with default status.
+ */
 void setResponseDefaultStatus(json::object& obj)
 {
     int s = (int)HTTPPayload::OK;
     obj["status"].set<int>(s);
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="reply"></param>
-/// <param name="message"></param>
-/// <param name="status"></param>
+/**
+ * @brief Helper to generate a error payload.
+ * @param reply HTTP reply.
+ * @param message Textual error message to send.
+ * @param status HTTP status to send.
+ */
 void errorPayload(HTTPPayload& reply, std::string message, HTTPPayload::StatusType status = HTTPPayload::BAD_REQUEST)
 {
     HTTPPayload rep;
@@ -91,13 +96,13 @@ void errorPayload(HTTPPayload& reply, std::string message, HTTPPayload::StatusTy
     reply.payload(response);
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="request"></param>
-/// <param name="reply"></param>
-/// <param name="obj"></param>
-/// <returns></returns>
+/**
+ * @brief Helper to parse the request body as a JSON object.
+ * @param request HTTP request.
+ * @param reply HTTP reply.
+ * @param obj JSON object to fille with parsed request body.
+ * @returns bool True, if request body was parsed, otherwise false.
+ */
 bool parseRequestBody(const HTTPPayload& request, HTTPPayload& reply, json::object& obj)
 {
     std::string contentType = request.headers.find("Content-Type");
@@ -124,11 +129,11 @@ bool parseRequestBody(const HTTPPayload& request, HTTPPayload& reply, json::obje
     return true;
 }
 
-/// <summary>
-/// Helper to convert a <see cref="TalkgroupRuleGroupVoice"/> to JSON.
-/// </summary>
-/// <param name="groupVoice"></param>
-/// <returns></returns>
+/**
+ * @brief Helper to convert a TalkgroupRuleGroupVoice to JSON.
+ * @param groupVoice Instance of TalkgroupRuleGroupVoice to convert to JSON.
+ * @returns json::object JSON object.
+ */
 json::object tgToJson(const TalkgroupRuleGroupVoice& groupVoice) 
 {
     json::object tg = json::object();
@@ -211,11 +216,12 @@ json::object tgToJson(const TalkgroupRuleGroupVoice& groupVoice)
     return tg;
 }
 
-/// <summary>
-/// Helper to convert JSON to a <see cref="TalkgroupRuleGroupVoice"/>.
-/// </summary>
-/// <param name="req"></param>
-/// <returns></returns>
+/**
+ * @brief Helper to convert JSON to a TalkgroupRuleGroupVoice.
+ * @param req JSON request.
+ * @param reply HTTP reply.
+ * @returns TalkgroupRuleGroupVoice TalkgroupRuleGroupVoice object.
+ */
 TalkgroupRuleGroupVoice jsonToTG(json::object& req, HTTPPayload& reply) 
 {
     TalkgroupRuleGroupVoice groupVoice = TalkgroupRuleGroupVoice();
@@ -408,17 +414,8 @@ TalkgroupRuleGroupVoice jsonToTG(json::object& req, HTTPPayload& reply)
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the RESTAPI class.
-/// </summary>
-/// <param name="address">Network Hostname/IP address to connect to.</param>
-/// <param name="port">Network port number.</param>
-/// <param name="password">Authentication password.</param>
-/// <param name="keyFile"></param>
-/// <param name="certFile"></param>
-/// <param name="enableSSL"></param>
-/// <param name="host">Instance of the HostFNE class.</param>
-/// <param name="debug"></param>
+/* Initializes a new instance of the RESTAPI class. */
+
 RESTAPI::RESTAPI(const std::string& address, uint16_t port, const std::string& password,
     const std::string& keyFile, const std::string& certFile, bool enableSSL, HostFNE* host, bool debug) :
     m_dispatcher(debug),
@@ -474,16 +471,12 @@ RESTAPI::RESTAPI(const std::string& address, uint16_t port, const std::string& p
     m_random = mt;
 }
 
-/// <summary>
-/// Finalizes a instance of the RESTAPI class.
-/// </summary>
+/* Finalizes a instance of the RESTAPI class. */
+
 RESTAPI::~RESTAPI() = default;
 
-/// <summary>
-/// Sets the instances of the Radio ID and Talkgroup ID lookup tables.
-/// </summary>
-/// <param name="ridLookup">Radio ID Lookup Table Instance</param>
-/// <param name="tidLookup">Talkgroup Rules Lookup Table Instance</param>
+/* Sets the instances of the Radio ID and Talkgroup ID lookup tables. */
+
 void RESTAPI::setLookups(lookups::RadioIdLookup* ridLookup, lookups::TalkgroupRulesLookup* tidLookup, ::lookups::PeerListLookup* peerListLookup)
 {
     m_ridLookup = ridLookup;
@@ -491,19 +484,15 @@ void RESTAPI::setLookups(lookups::RadioIdLookup* ridLookup, lookups::TalkgroupRu
     m_peerListLookup = peerListLookup;
 }
 
-/// <summary>
-/// Sets the instance of the FNE network.
-/// </summary>
-/// <param name="network">FNE Network Instance</param>
+/* Sets the instance of the FNE network. */
+
 void RESTAPI::setNetwork(network::FNENetwork* network)
 {
     m_network = network;
 }
 
-/// <summary>
-/// Opens connection to the network.
-/// </summary>
-/// <returns></returns>
+/* Opens connection to the network. */
+
 bool RESTAPI::open()
 {
     initializeEndpoints();
@@ -522,9 +511,8 @@ bool RESTAPI::open()
     return run();
 }
 
-/// <summary>
-/// Closes connection to the network.
-/// </summary>
+/* Closes connection to the network. */
+
 void RESTAPI::close()
 {
 #if defined(ENABLE_TCP_SSL)
@@ -543,9 +531,8 @@ void RESTAPI::close()
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-///
-/// </summary>
+/* Thread entry point. This function is provided to run the thread for the REST API services. */
+
 void RESTAPI::entry()
 {
 #if defined(ENABLE_TCP_SSL)
@@ -559,9 +546,8 @@ void RESTAPI::entry()
 #endif // ENABLE_TCP_SSL
 }
 
-/// <summary>
-/// Helper to initialize REST API endpoints.
-/// </summary>
+/* Helper to initialize REST API endpoints. */
+
 void RESTAPI::initializeEndpoints()
 {
     m_dispatcher.match(PUT_AUTHENTICATE).put(REST_API_BIND(RESTAPI::restAPI_PutAuth, this));
@@ -609,10 +595,8 @@ void RESTAPI::initializeEndpoints()
     m_dispatcher.match(PUT_P25_RID).put(REST_API_BIND(RESTAPI::restAPI_PutP25RID, this));
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="host"></param>
+/* Helper to invalidate a host token. */
+
 void RESTAPI::invalidateHostToken(const std::string host)
 {
     auto token = std::find_if(m_authTokens.begin(), m_authTokens.end(), [&](const AuthTokenValueType& tok) { return tok.first == host; });
@@ -621,10 +605,8 @@ void RESTAPI::invalidateHostToken(const std::string host)
     }
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="request"></param>
+/* Helper to validate authentication for REST API. */
+
 bool RESTAPI::validateAuth(const HTTPPayload& request, HTTPPayload& reply)
 {
     std::string host = request.headers.find("RemoteHost");
@@ -659,12 +641,8 @@ bool RESTAPI::validateAuth(const HTTPPayload& request, HTTPPayload& reply)
     return false;
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="request"></param>
-/// <param name="reply"></param>
-/// <param name="match"></param>
+/* REST API endpoint; implements authentication request. */
+
 void RESTAPI::restAPI_PutAuth(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     std::string host = request.headers.find("RemoteHost");
@@ -738,12 +716,8 @@ void RESTAPI::restAPI_PutAuth(const HTTPPayload& request, HTTPPayload& reply, co
     reply.payload(response);
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="request"></param>
-/// <param name="reply"></param>
-/// <param name="match"></param>
+/* REST API endpoint; implements get version request. */
+
 void RESTAPI::restAPI_GetVersion(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
@@ -757,12 +731,8 @@ void RESTAPI::restAPI_GetVersion(const HTTPPayload& request, HTTPPayload& reply,
     reply.payload(response);
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="request"></param>
-/// <param name="reply"></param>
-/// <param name="match"></param>
+/* REST API endpoint; implements get status request. */
+
 void RESTAPI::restAPI_GetStatus(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
@@ -788,12 +758,8 @@ void RESTAPI::restAPI_GetStatus(const HTTPPayload& request, HTTPPayload& reply, 
     reply.payload(response);
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="request"></param>
-/// <param name="reply"></param>
-/// <param name="match"></param>
+/* REST API endpoint; implements get peer query request. */
+
 void RESTAPI::restAPI_GetPeerQuery(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
@@ -863,12 +829,8 @@ void RESTAPI::restAPI_GetPeerQuery(const HTTPPayload& request, HTTPPayload& repl
     reply.payload(response);
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="request"></param>
-/// <param name="reply"></param>
-/// <param name="match"></param>
+/* REST API endpoint; implements get peer count request. */
+
 void RESTAPI::restAPI_GetPeerCount(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
@@ -887,12 +849,8 @@ void RESTAPI::restAPI_GetPeerCount(const HTTPPayload& request, HTTPPayload& repl
     reply.payload(response);
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="request"></param>
-/// <param name="reply"></param>
-/// <param name="match"></param>
+/* REST API endpoint; implements get peer reset request. */
+
 void RESTAPI::restAPI_PutPeerReset(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
@@ -916,12 +874,8 @@ void RESTAPI::restAPI_PutPeerReset(const HTTPPayload& request, HTTPPayload& repl
     m_network->resetPeer(peerId);
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="request"></param>
-/// <param name="reply"></param>
-/// <param name="match"></param>
+/* REST API endpoint; implements get radio ID query request. */
+
 void RESTAPI::restAPI_GetRIDQuery(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
@@ -953,12 +907,8 @@ void RESTAPI::restAPI_GetRIDQuery(const HTTPPayload& request, HTTPPayload& reply
     reply.payload(response);
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="request"></param>
-/// <param name="reply"></param>
-/// <param name="match"></param>
+/* REST API endpoint; implements put radio ID add request. */
+
 void RESTAPI::restAPI_PutRIDAdd(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
@@ -1001,12 +951,8 @@ void RESTAPI::restAPI_PutRIDAdd(const HTTPPayload& request, HTTPPayload& reply, 
 */    
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="request"></param>
-/// <param name="reply"></param>
-/// <param name="match"></param>
+/* REST API endpoint; implements put radio ID delete request. */
+
 void RESTAPI::restAPI_PutRIDDelete(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
@@ -1041,12 +987,8 @@ void RESTAPI::restAPI_PutRIDDelete(const HTTPPayload& request, HTTPPayload& repl
 */    
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="request"></param>
-/// <param name="reply"></param>
-/// <param name="match"></param>
+/* REST API endpoint; implements put radio ID commit request. */
+
 void RESTAPI::restAPI_GetRIDCommit(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
@@ -1061,12 +1003,8 @@ void RESTAPI::restAPI_GetRIDCommit(const HTTPPayload& request, HTTPPayload& repl
     reply.payload(response);
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="request"></param>
-/// <param name="reply"></param>
-/// <param name="match"></param>
+/* REST API endpoint; implements get talkgroup ID query request. */
+
 void RESTAPI::restAPI_GetTGQuery(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
@@ -1090,12 +1028,8 @@ void RESTAPI::restAPI_GetTGQuery(const HTTPPayload& request, HTTPPayload& reply,
     reply.payload(response);
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="request"></param>
-/// <param name="reply"></param>
-/// <param name="match"></param>
+/* REST API endpoint; implements put talkgroup ID add request. */
+
 void RESTAPI::restAPI_PutTGAdd(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
@@ -1140,12 +1074,8 @@ void RESTAPI::restAPI_PutTGAdd(const HTTPPayload& request, HTTPPayload& reply, c
 */    
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="request"></param>
-/// <param name="reply"></param>
-/// <param name="match"></param>
+/* REST API endpoint; implements put talkgroup ID delete request. */
+
 void RESTAPI::restAPI_PutTGDelete(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
@@ -1187,12 +1117,8 @@ void RESTAPI::restAPI_PutTGDelete(const HTTPPayload& request, HTTPPayload& reply
 */    
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="request"></param>
-/// <param name="reply"></param>
-/// <param name="match"></param>
+/* REST API endpoint; implements put talkgroup ID commit request. */
+
 void RESTAPI::restAPI_GetTGCommit(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
@@ -1210,12 +1136,8 @@ void RESTAPI::restAPI_GetTGCommit(const HTTPPayload& request, HTTPPayload& reply
     reply.payload(response);
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="request"></param>
-/// <param name="reply"></param>
-/// <param name="match"></param>
+/* REST API endpoint; implements get peer list query request. */
+
 void RESTAPI::restAPI_GetPeerList(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
@@ -1243,12 +1165,8 @@ void RESTAPI::restAPI_GetPeerList(const HTTPPayload& request, HTTPPayload& reply
     reply.payload(response);
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="request"></param>
-/// <param name="reply"></param>
-/// <param name="match"></param>
+/* REST API endpoint; implements put peer add request. */
+
 void RESTAPI::restAPI_PutPeerAdd(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
@@ -1272,12 +1190,8 @@ void RESTAPI::restAPI_PutPeerAdd(const HTTPPayload& request, HTTPPayload& reply,
     m_peerListLookup->addEntry(peerId);
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="request"></param>
-/// <param name="reply"></param>
-/// <param name="match"></param>
+/* REST API endpoint; implements put peer delete request. */
+
 void RESTAPI::restAPI_PutPeerDelete(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
@@ -1301,12 +1215,8 @@ void RESTAPI::restAPI_PutPeerDelete(const HTTPPayload& request, HTTPPayload& rep
     m_peerListLookup->eraseEntry(peerId);
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="request"></param>
-/// <param name="reply"></param>
-/// <param name="match"></param>
+/* REST API endpoint; implements put peer list commit request. */
+
 void RESTAPI::restAPI_GetPeerCommit(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
@@ -1321,12 +1231,8 @@ void RESTAPI::restAPI_GetPeerCommit(const HTTPPayload& request, HTTPPayload& rep
     reply.payload(response);
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="request"></param>
-/// <param name="reply"></param>
-/// <param name="match"></param>
+/* */
+
 void RESTAPI::restAPI_GetPeerMode(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
@@ -1362,12 +1268,8 @@ void RESTAPI::restAPI_GetPeerMode(const HTTPPayload& request, HTTPPayload& reply
     reply.payload(response);
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="request"></param>
-/// <param name="reply"></param>
-/// <param name="match"></param>
+/* */
+
 void RESTAPI::restAPI_GetForceUpdate(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
@@ -1384,12 +1286,8 @@ void RESTAPI::restAPI_GetForceUpdate(const HTTPPayload& request, HTTPPayload& re
     reply.payload(response);
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="request"></param>
-/// <param name="reply"></param>
-/// <param name="match"></param>
+/* REST API endpoint; implements get reload talkgroup ID list request. */
+
 void RESTAPI::restAPI_GetReloadTGs(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
@@ -1406,12 +1304,8 @@ void RESTAPI::restAPI_GetReloadTGs(const HTTPPayload& request, HTTPPayload& repl
     reply.payload(response);
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="request"></param>
-/// <param name="reply"></param>
-/// <param name="match"></param>
+/* REST API endpoint; implements get reload radio ID list request. */
+
 void RESTAPI::restAPI_GetReloadRIDs(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
@@ -1428,12 +1322,8 @@ void RESTAPI::restAPI_GetReloadRIDs(const HTTPPayload& request, HTTPPayload& rep
     reply.payload(response);
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="request"></param>
-/// <param name="reply"></param>
-/// <param name="match"></param>
+/* REST API endpoint; implements get affiliation list request. */
+
 void RESTAPI::restAPI_GetAffList(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
@@ -1486,12 +1376,8 @@ void RESTAPI::restAPI_GetAffList(const HTTPPayload& request, HTTPPayload& reply,
 ** Digital Mobile Radio
 */
 
-/// <summary>
-///
-/// </summary>
-/// <param name="request"></param>
-/// <param name="reply"></param>
-/// <param name="match"></param>
+/* REST API endpoint; implements DMR RID operations request. */
+
 void RESTAPI::restAPI_PutDMRRID(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     using namespace dmr::defines;
@@ -1571,12 +1457,8 @@ void RESTAPI::restAPI_PutDMRRID(const HTTPPayload& request, HTTPPayload& reply, 
 ** Project 25
 */
 
-/// <summary>
-///
-/// </summary>
-/// <param name="request"></param>
-/// <param name="reply"></param>
-/// <param name="match"></param>
+/* REST API endpoint; implements P25 RID operation request. */
+
 void RESTAPI::restAPI_PutP25RID(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     using namespace p25::defines;

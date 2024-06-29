@@ -23,6 +23,7 @@ using namespace p25::lc::tsbk;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the MBT_OSP_AUTH_DMD class. */
+
 MBT_OSP_AUTH_DMD::MBT_OSP_AUTH_DMD() : AMBT()
 {
     m_lco = TSBKO::OSP_AUTH_DMD;
@@ -34,6 +35,7 @@ MBT_OSP_AUTH_DMD::MBT_OSP_AUTH_DMD() : AMBT()
 }
 
 /* Finalizes a instance of MBT_OSP_AUTH_DMD class. */
+
 MBT_OSP_AUTH_DMD::~MBT_OSP_AUTH_DMD()
 {
     if (m_authRS != nullptr) {
@@ -48,6 +50,7 @@ MBT_OSP_AUTH_DMD::~MBT_OSP_AUTH_DMD()
 }
 
 /* Decode a alternate trunking signalling block. */
+
 bool MBT_OSP_AUTH_DMD::decodeMBT(const data::DataHeader& dataHeader, const data::DataBlock* blocks)
 {
     assert(blocks != nullptr);
@@ -58,6 +61,7 @@ bool MBT_OSP_AUTH_DMD::decodeMBT(const data::DataHeader& dataHeader, const data:
 }
 
 /* Encode a alternate trunking signalling block. */
+
 void MBT_OSP_AUTH_DMD::encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUserData)
 {
     assert(pduUserData != nullptr);
@@ -96,12 +100,14 @@ void MBT_OSP_AUTH_DMD::encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUserD
 }
 
 /* Returns a string that represents the current TSBK. */
+
 std::string MBT_OSP_AUTH_DMD::toString(bool isp)
 {
     return std::string("TSBKO, OSP_AUTH_DMD (Authentication Demand)");
 }
 
 /* Sets the authentication random seed. */
+
 void MBT_OSP_AUTH_DMD::setAuthRS(const uint8_t* rs)
 {
     assert(rs != nullptr);
@@ -110,6 +116,7 @@ void MBT_OSP_AUTH_DMD::setAuthRS(const uint8_t* rs)
 }
 
 /* Gets the authentication random seed. */
+
 void MBT_OSP_AUTH_DMD::getAuthRS(uint8_t* rs) const
 {
     assert(rs != nullptr);
@@ -118,6 +125,7 @@ void MBT_OSP_AUTH_DMD::getAuthRS(uint8_t* rs) const
 }
 
 /* Sets the authentication random challenge. */
+
 void MBT_OSP_AUTH_DMD::setAuthRC(const uint8_t* rc)
 {
     assert(rc != nullptr);
@@ -126,6 +134,7 @@ void MBT_OSP_AUTH_DMD::setAuthRC(const uint8_t* rc)
 }
 
 /* Gets the authentication random challenge. */
+
 void MBT_OSP_AUTH_DMD::getAuthRC(uint8_t* rc) const
 {
     assert(rc != nullptr);
@@ -138,6 +147,7 @@ void MBT_OSP_AUTH_DMD::getAuthRC(uint8_t* rc) const
 // ---------------------------------------------------------------------------
 
 /* Internal helper to copy the the class. */
+
 void MBT_OSP_AUTH_DMD::copy(const MBT_OSP_AUTH_DMD& data)
 {
     TSBK::copy(data);

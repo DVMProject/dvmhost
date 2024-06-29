@@ -22,12 +22,14 @@ using namespace p25::lc::tsbk;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the ISP_EMERG_ALRM_REQ class. */
+
 ISP_EMERG_ALRM_REQ::ISP_EMERG_ALRM_REQ() : TSBK()
 {
     m_lco = TSBKO::ISP_EMERG_ALRM_REQ;
 }
 
 /* Decode a trunking signalling block. */
+
 bool ISP_EMERG_ALRM_REQ::decode(const uint8_t* data, bool rawTSBK)
 {
     assert(data != nullptr);
@@ -62,6 +64,7 @@ bool ISP_EMERG_ALRM_REQ::decode(const uint8_t* data, bool rawTSBK)
 }
 
 /* Encode a trunking signalling block. */
+
 void ISP_EMERG_ALRM_REQ::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 {
     assert(data != nullptr);
@@ -70,6 +73,7 @@ void ISP_EMERG_ALRM_REQ::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 }
 
 /* Returns a string that represents the current TSBK. */
+
 std::string ISP_EMERG_ALRM_REQ::toString(bool isp)
 {
     return std::string("TSBKO, ISP_EMERG_ALRM_REQ (Emergency Alarm Request)");

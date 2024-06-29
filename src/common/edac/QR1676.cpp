@@ -65,6 +65,7 @@ const uint32_t DECODING_TABLE_1576[] = {
 // ---------------------------------------------------------------------------
 
 /* Decode QR (16,7,6) FEC. */
+
 uint8_t QR1676::decode(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -79,6 +80,7 @@ uint8_t QR1676::decode(const uint8_t* data)
 }
 
 /* Encode QR (16,7,6) FEC. */
+
 void QR1676::encode(uint8_t* data)
 {
     assert(data != nullptr);
@@ -99,6 +101,7 @@ void QR1676::encode(uint8_t* data)
    polynomial, GENPOL. In the program this pattern has several meanings: (1) pattern = information bits, 
    when constructing the encoding table; (2) pattern = error pattern, when constructing the decoding 
    table; and (3) pattern = received vector, to obtain its syndrome in decoding. */
+
 uint32_t QR1676::getSyndrome1576(uint32_t pattern)
 {
     uint32_t aux = X14;

@@ -23,6 +23,7 @@ using namespace p25::lc::tsbk;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the OSP_MOT_GRG_ADD class. */
+
 OSP_MOT_GRG_ADD::OSP_MOT_GRG_ADD() : TSBK(),
     m_patchSuperGroupId(0U),
     m_patchGroup1Id(0U),
@@ -33,6 +34,7 @@ OSP_MOT_GRG_ADD::OSP_MOT_GRG_ADD() : TSBK(),
 }
 
 /* Decode a trunking signalling block. */
+
 bool OSP_MOT_GRG_ADD::decode(const uint8_t* data, bool rawTSBK)
 {
     assert(data != nullptr);
@@ -43,6 +45,7 @@ bool OSP_MOT_GRG_ADD::decode(const uint8_t* data, bool rawTSBK)
 }
 
 /* Encode a trunking signalling block. */
+
 void OSP_MOT_GRG_ADD::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 {
     assert(data != nullptr);
@@ -80,6 +83,7 @@ void OSP_MOT_GRG_ADD::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 }
 
 /* Returns a string that represents the current TSBK. */
+
 std::string OSP_MOT_GRG_ADD::toString(bool isp)
 {
     return std::string("TSBKO, OSP_MOT_GRG_ADD (Motorola / Group Regroup Add)");
@@ -90,6 +94,7 @@ std::string OSP_MOT_GRG_ADD::toString(bool isp)
 // ---------------------------------------------------------------------------
 
 /* Internal helper to copy the the class. */
+
 void OSP_MOT_GRG_ADD::copy(const OSP_MOT_GRG_ADD& data)
 {
     TSBK::copy(data);

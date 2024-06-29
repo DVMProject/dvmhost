@@ -1,16 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Modem Host Software
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Modem Host Software
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2018 Jonathan Naylor, G4KLX
-*
-*/
+/*
+ * Digital Voice Modem - Modem Host Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2018 Jonathan Naylor, G4KLX
+ *
+ */
 #include "nxdn/Audio.h"
 #include "common/edac/Golay24128.h"
 #include "common/Utils.h"
@@ -24,21 +20,16 @@ using namespace edac;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the Audio class.
-/// </summary>
+/* Initializes a new instance of the Audio class. */
+
 Audio::Audio() = default;
 
-/// <summary>
-/// Finalizes a instance of the Audio class.
-/// </summary>
+/* Finalizes a instance of the Audio class. */
+
 Audio::~Audio() = default;
 
-/// <summary>
-/// Decode a NXDN AMBE audio frame.
-/// </summary>
-/// <param name="in"></param>
-/// <param name="out"></param>
+/* Decode a NXDN AMBE audio frame. */
+
 void Audio::decode(const uint8_t* in, uint8_t* out) const
 {
     assert(in != nullptr);
@@ -48,11 +39,8 @@ void Audio::decode(const uint8_t* in, uint8_t* out) const
     decode(in + 9U, out, 49U);
     }
 
-/// <summary>
-/// Encode a NXDN AMBE audio frame.
-/// </summary>
-/// <param name="in"></param>
-/// <param name="out"></param>
+/* Encode a NXDN AMBE audio frame. */
+
 void Audio::encode(const uint8_t* in, uint8_t* out) const
 {
     assert(in != nullptr);
@@ -66,12 +54,8 @@ void Audio::encode(const uint8_t* in, uint8_t* out) const
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-///
-/// </summary>
-/// <param name="in"></param>
-/// <param name="out"></param>
-/// <param name="offset"></param>
+/* Decode a NXDN AMBE audio frame. */
+
 void Audio::decode(const uint8_t* in, uint8_t* out, uint32_t offset) const
 {
     assert(in != nullptr);
@@ -122,12 +106,8 @@ void Audio::decode(const uint8_t* in, uint8_t* out, uint32_t offset) const
     }
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="in"></param>
-/// <param name="out"></param>
-/// <param name="offset"></param>
+/* Encode a NXDN AMBE audio frame. */
+
 void Audio::encode(const uint8_t* in, uint8_t* out, uint32_t offset) const
 {
     assert(in != nullptr);

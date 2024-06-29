@@ -22,12 +22,14 @@ using namespace dmr::lc::csbk;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the CSBK_PRECCSBK class. */
+
 CSBK_PRECCSBK::CSBK_PRECCSBK() : CSBK()
 {
     m_CSBKO = CSBKO::PRECCSBK;
 }
 
 /* Decode a control signalling block. */
+
 bool CSBK_PRECCSBK::decode(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -51,6 +53,7 @@ bool CSBK_PRECCSBK::decode(const uint8_t* data)
 }
 
 /* Encode a control signalling block. */
+
 void CSBK_PRECCSBK::encode(uint8_t* data)
 {
     assert(data != nullptr);
@@ -59,6 +62,7 @@ void CSBK_PRECCSBK::encode(uint8_t* data)
 }
 
 /* Returns a string that represents the current CSBK. */
+
 std::string CSBK_PRECCSBK::toString()
 {
     return std::string("CSBKO, PRECCSBK (Preamble CSBK)");

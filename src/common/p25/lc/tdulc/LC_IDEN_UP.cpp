@@ -24,12 +24,14 @@ using namespace p25::lc::tdulc;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the LC_IDEN_UP class. */
+
 LC_IDEN_UP::LC_IDEN_UP() : TDULC()
 {
     m_lco = LCO::IDEN_UP;
 }
 
 /* Decode a terminator data unit w/ link control. */
+
 bool LC_IDEN_UP::decode(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -40,6 +42,7 @@ bool LC_IDEN_UP::decode(const uint8_t* data)
 }
 
 /* Encode a terminator data unit w/ link control. */
+
 void LC_IDEN_UP::encode(uint8_t* data)
 {
     assert(data != nullptr);

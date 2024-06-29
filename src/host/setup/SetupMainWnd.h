@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Modem Host Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2023 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Modem Host Software
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Modem Host Software
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2023 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @file SetupMainWnd.h
+ * @ingroup setup
+ */
 #if !defined(__SETUP_WND_H__)
 #define __SETUP_WND_H__
 
@@ -46,16 +47,19 @@ class HOST_SW_API SetupApplication;
 
 // ---------------------------------------------------------------------------
 //  Class Declaration
-//      This class implements the root window control.
 // ---------------------------------------------------------------------------
 
+/**
+ * @brief This class implements the root window control.
+ * @ingroup setup
+ */
 class HOST_SW_API SetupMainWnd final : public finalcut::FWidget {
 public:
-    /// <summary>
-    /// Initializes a new instance of the SetupMainWnd class.
-    /// </summary>
-    /// <param name="setup"></param>
-    /// <param name="widget"></param>
+    /**
+     * @brief Initializes a new instance of the SetupMainWnd class.
+     * @param setup Instance of the HostSetup class.
+     * @param widget 
+     */
     explicit SetupMainWnd(HostSetup* setup, FWidget* widget = nullptr) : FWidget{widget},
         m_setup(setup)
     {
@@ -475,9 +479,9 @@ public:
         });
     }
 
-    /// <summary>
-    /// Helper to set menu states.
-    /// </summary>
+    /**
+     * @brief Helper to set menu states.
+     */
     void setMenuStates() 
     {
         m_dmrCal.setChecked();
@@ -505,9 +509,9 @@ public:
         updateMenuStates();
     }
 
-    /// <summary>
-    /// Helper to update duplex toggle menu state.
-    /// </summary>
+    /**
+     * @brief Helper to update duplex toggle menu state.
+     */
     void updateDuplexState()
     {
         if (m_setup->m_duplex) {
@@ -515,9 +519,9 @@ public:
         }
     }
 
-    /// <summary>
-    /// Helper to update menu states.
-    /// </summary>
+    /**
+     * @brief Helper to update menu states.
+     */
     void updateMenuStates()
     {
         if (!m_setup->m_isConnected) {
@@ -557,7 +561,10 @@ public:
         }
     }
 
-    /// <summary>Gets the instance of HostSetup.</summary>
+    /**
+     * @brief Gets the instance of HostSetup.
+     * @returns HostSetup* Instance of HostSetup.
+     */
     const HostSetup* setup() { return m_setup; };
 
 private:
@@ -638,9 +645,9 @@ private:
     FStatusKey m_keyF8{FKey::F8, "Connect to Modem", &m_statusBar};
     FStatusKey m_keyF12{FKey::F12, "Transmit", &m_statusBar};
 
-    /// <summary>
-    /// Helper to reset the BER window to a default state.
-    /// </summary>
+    /**
+     * @brief Helper to reset the BER window to a default state.
+     */
     void resetBERWnd(bool show = false)
     {
         if (show) {
@@ -657,10 +664,10 @@ private:
     ** Event Handlers
     */
 
-    /// <summary>
-    /// 
-    /// </summary>
-    /// <param name="e"></param>
+    /**
+     * @brief Event that occurs when the window is closed.
+     * @param e Close Event
+     */
     void onClose(FCloseEvent* e) override
     {
         // if we are saving on close -- fire off the file save event
@@ -684,9 +691,9 @@ private:
     ** Callbacks
     */
 
-    /// <summary>
-    /// "Save Settings" menu item click callback.
-    /// </summary>
+    /**
+     * @brief "Save Settings" menu item click callback.
+     */
     void cb_connectToModemClick()
     {
         if (!m_setup->m_isConnected) {

@@ -23,6 +23,7 @@ using namespace p25::sndcp;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the SNDCPCtxActReject class. */
+
 SNDCPCtxActReject::SNDCPCtxActReject() : SNDCPPacket(),
     m_rejectCode(SNDCPRejectReason::ANY_REASON)
 {
@@ -30,6 +31,7 @@ SNDCPCtxActReject::SNDCPCtxActReject() : SNDCPPacket(),
 }
 
 /* Decode a SNDCP context activation reject packet. */
+
 bool SNDCPCtxActReject::decode(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -42,6 +44,7 @@ bool SNDCPCtxActReject::decode(const uint8_t* data)
 }
 
 /* Encode a SNDCP context activation reject packet. */
+
 void SNDCPCtxActReject::encode(uint8_t* data)
 {
     assert(data != nullptr);
@@ -52,6 +55,7 @@ void SNDCPCtxActReject::encode(uint8_t* data)
 }
 
 /* Internal helper to copy the the class. */
+
 void SNDCPCtxActReject::copy(const SNDCPCtxActReject& data)
 {
     m_rejectCode = data.m_rejectCode;

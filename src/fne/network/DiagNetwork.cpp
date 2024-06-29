@@ -1,15 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Converged FNE Software
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Converged FNE Software
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2023-2024 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - Converged FNE Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2023-2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "fne/Defines.h"
 #include "common/Log.h"
 #include "common/Utils.h"
@@ -26,13 +23,8 @@ using namespace network::callhandler;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the DiagNetwork class.
-/// </summary>
-/// <param name="host"></param>
-/// <param name="network"></param>
-/// <param name="address">Network Hostname/IP address to listen on.</param>
-/// <param name="port">Network port number.</param>
+/* Initializes a new instance of the DiagNetwork class. */
+
 DiagNetwork::DiagNetwork(HostFNE* host, FNENetwork* fneNetwork, const std::string& address, uint16_t port) :
     BaseNetwork(fneNetwork->m_peerId, true, fneNetwork->m_debug, true, true, fneNetwork->m_allowActivityTransfer, fneNetwork->m_allowDiagnosticTransfer),
     m_fneNetwork(fneNetwork),
@@ -46,22 +38,19 @@ DiagNetwork::DiagNetwork(HostFNE* host, FNENetwork* fneNetwork, const std::strin
     assert(port > 0U);
 }
 
-/// <summary>
-/// Finalizes a instance of the DiagNetwork class.
-/// </summary>
+/* Finalizes a instance of the DiagNetwork class. */
+
 DiagNetwork::~DiagNetwork() = default;
 
-/// <summary>
-/// Sets endpoint preshared encryption key.
-/// </summary>
+/* Sets endpoint preshared encryption key. */
+
 void DiagNetwork::setPresharedKey(const uint8_t* presharedKey)
 {
     m_socket->setPresharedKey(presharedKey);
 }
 
-/// <summary>
-/// Process a data frames from the network.
-/// </summary>
+/* Process a data frames from the network. */
+
 void DiagNetwork::processNetwork()
 {
     if (m_status != NET_STAT_MST_RUNNING) {
@@ -103,10 +92,8 @@ void DiagNetwork::processNetwork()
     }
 }
 
-/// <summary>
-/// Updates the timer by the passed number of milliseconds.
-/// </summary>
-/// <param name="ms"></param>
+/* Updates the timer by the passed number of milliseconds. */
+
 void DiagNetwork::clock(uint32_t ms)
 {
     if (m_status != NET_STAT_MST_RUNNING) {
@@ -114,10 +101,8 @@ void DiagNetwork::clock(uint32_t ms)
     }
 }
 
-/// <summary>
-/// Opens connection to the network.
-/// </summary>
-/// <returns></returns>
+/* Opens connection to the network. */
+
 bool DiagNetwork::open()
 {
     if (m_debug)
@@ -141,9 +126,8 @@ bool DiagNetwork::open()
     return ret;
 }
 
-/// <summary>
-/// Closes connection to the network.
-/// </summary>
+/* Closes connection to the network. */
+
 void DiagNetwork::close()
 {
     if (m_debug)
@@ -158,9 +142,8 @@ void DiagNetwork::close()
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Process a data frames from the network.
-/// </summary>
+/* Process a data frames from the network. */
+
 void* DiagNetwork::threadedNetworkRx(void* arg)
 {
     NetPacketRequest* req = (NetPacketRequest*)arg;

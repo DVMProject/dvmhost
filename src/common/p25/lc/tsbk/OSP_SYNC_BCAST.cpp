@@ -25,6 +25,7 @@ using namespace p25::lc::tsbk;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the OSP_SYNC_BCAST class. */
+
 OSP_SYNC_BCAST::OSP_SYNC_BCAST() : TSBK(),
     m_microslotCount(0U)
 {
@@ -32,6 +33,7 @@ OSP_SYNC_BCAST::OSP_SYNC_BCAST() : TSBK(),
 }
 
 /* Decode a trunking signalling block. */
+
 bool OSP_SYNC_BCAST::decode(const uint8_t* data, bool rawTSBK)
 {
     assert(data != nullptr);
@@ -42,6 +44,7 @@ bool OSP_SYNC_BCAST::decode(const uint8_t* data, bool rawTSBK)
 }
 
 /* Encode a trunking signalling block. */
+
 void OSP_SYNC_BCAST::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 {
     assert(data != nullptr);
@@ -100,6 +103,7 @@ void OSP_SYNC_BCAST::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 }
 
 /* Returns a string that represents the current TSBK. */
+
 std::string OSP_SYNC_BCAST::toString(bool isp)
 {
     return std::string("TSBKO, OSP_SYNC_BCAST (Synchronization Broadcast)");
@@ -110,6 +114,7 @@ std::string OSP_SYNC_BCAST::toString(bool isp)
 // ---------------------------------------------------------------------------
 
 /* Internal helper to copy the the class. */
+
 void OSP_SYNC_BCAST::copy(const OSP_SYNC_BCAST& data)
 {
     TSBK::copy(data);
