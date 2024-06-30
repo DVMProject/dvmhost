@@ -1,17 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Modem Host Software
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / DFSI peer application
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2024 Patrick McDonnell, W3AXL
-*   Copyright (C) 2024 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - DFSI V.24/UDP Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2024 Patrick McDonnell, W3AXL
+ *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "Defines.h"
 #include "common/Log.h"
 #include "dfsi/ActivityLog.h"
@@ -57,10 +53,8 @@ uint8_t* g_gitHashBytes = nullptr;
 // ---------------------------------------------------------------------------
 
 #if !defined(CATCH2_TEST_COMPILATION)
-/// <summary>
-/// Internal signal handler.
-/// </summary>
-/// <param name="signum"></param>
+/* Internal signal handler. */
+
 static void sigHandler(int signum)
 {
     g_signal = signum;
@@ -68,11 +62,8 @@ static void sigHandler(int signum)
 }
 #endif
 
-/// <summary>
-/// Helper to print a fatal error message and exit.
-/// </summary>
-/// <remarks>This is a variable argument function.</remarks>
-/// <param name="msg">Message.</param>
+/* Helper to print a fatal error message and exit. */
+
 void fatal(const char* msg, ...)
 {
     char buffer[400U];
@@ -89,11 +80,8 @@ void fatal(const char* msg, ...)
     exit(EXIT_FAILURE);
 }
 
-/// <summary>
-/// Helper to pring usage the command line arguments. (And optionally an error.)
-/// </summary>
-/// <param name="message">Error message.</param>
-/// <param name="arg">Error message arguments.</param>
+/* Helper to pring usage the command line arguments. (And optionally an error.) */
+
 void usage(const char* message, const char* arg)
 {
     ::fprintf(stdout, __PROG_NAME__ " %s (built %s)\r\n", __VER__, __BUILD__);
@@ -122,12 +110,8 @@ void usage(const char* message, const char* arg)
     exit(EXIT_FAILURE);
 }
 
-/// <summary>
-/// Helper to validate the command line arguments.
-/// </summary>
-/// <param name="argc">Argument count.</param>
-/// <param name="argv">Array of argument strings.</param>
-/// <returns>Count of remaining unprocessed arguments.</returns>
+/* Helper to validate the command line arguments. */
+
 int checkArgs(int argc, char* argv[])
 {
     int i, p = 0;

@@ -1,17 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - DFSI Peer Application
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / DFSI Peer Application
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2024 Bryan Biedenkapp, N2PLL
-*
-*/
-
+/*
+ * Digital Voice Modem - DFSI V.24/UDP Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "frames/BlockHeader.h"
 #include "common/p25/dfsi/DFSIDefines.h"
 #include "common/Utils.h"
@@ -27,9 +22,8 @@ using namespace p25::dfsi;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a instance of the BlockHeader class.
-/// </summary>
+/* Initializes a instance of the BlockHeader class. */
+
 BlockHeader::BlockHeader() :
     m_payloadType(false),
     m_blockLength(BlockType::UNDEFINED)
@@ -37,11 +31,8 @@ BlockHeader::BlockHeader() :
     /* stub */
 }
 
-/// <summary>
-/// Initializes a instance of the BlockHeader class.
-/// </summary>
-/// <param name="data"></param>
-/// <param name="verbose"></param>
+/* Initializes a instance of the BlockHeader class. */
+
 BlockHeader::BlockHeader(uint8_t* data, bool verbose) :
     m_payloadType(false),
     m_blockLength(BlockType::UNDEFINED)
@@ -49,12 +40,8 @@ BlockHeader::BlockHeader(uint8_t* data, bool verbose) :
     decode(data, verbose);
 }
 
-/// <summary>
-/// Decode a block header frame.
-/// </summary>
-/// <param name="data"></param>
-/// <param name="verbose"></param>
-/// <returns></returns>
+/* Decode a block header frame. */
+
 bool BlockHeader::decode(const uint8_t* data, bool verbose)
 {
     assert(data != nullptr);
@@ -78,11 +65,8 @@ bool BlockHeader::decode(const uint8_t* data, bool verbose)
     return true;
 }
 
-/// <summary>
-/// Encode a block header frame.
-/// </summary>
-/// <param name="data"></param>
-/// <param name="verbose"></param>
+/* Encode a block header frame. */
+
 void BlockHeader::encode(uint8_t* data, bool verbose)
 {
     assert(data != nullptr);

@@ -1,16 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Modem Host Software
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / DFSI peer application
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2024 Patrick McDonnell, W3AXL
-*
-*/
+/*
+ * Digital Voice Modem - DFSI V.24/UDP Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2024 Patrick McDonnell, W3AXL
+ *
+ */
 #include "ActivityLog.h"
 #include "common/network/BaseNetwork.h"
 #include "common/Log.h" // for CurrentLogFileLevel() and LogGetNetwork()
@@ -51,10 +47,8 @@ static struct tm m_actTm;
 //  Global Functions
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Helper to open the activity log file, file handle.
-/// </summary>
-/// <returns>True, if log file is opened, otherwise false.
+/* Helper to open the activity log file, file handle. */
+
 static bool ActivityLogOpen()
 {
     if (CurrentLogFileLevel() == 0U)
@@ -83,11 +77,8 @@ static bool ActivityLogOpen()
     return m_actFpLog != nullptr;
 }
 
-/// <summary>
-/// Initializes the activity log.
-/// </summary>
-/// <param name="filePath">Full-path to the activity log file.</param>
-/// <param name="fileRoot">Prefix of the activity log file name.</param>
+/* Initializes the activity log. */
+
 bool ActivityLogInitialise(const std::string& filePath, const std::string& fileRoot)
 {
 #if defined(CATCH2_TEST_COMPILATION)
@@ -99,9 +90,8 @@ bool ActivityLogInitialise(const std::string& filePath, const std::string& fileR
     return ::ActivityLogOpen();
 }
 
-/// <summary>
-/// Finalizes the activity log.
-/// </summary>
+/* Finalizes the activity log. */
+
 void ActivityLogFinalise()
 {
 #if defined(CATCH2_TEST_COMPILATION)
@@ -111,11 +101,8 @@ void ActivityLogFinalise()
         ::fclose(m_actFpLog);
 }
 
-/// <summary>
-/// Writes a new entry to the activity log.
-/// </summary>
-/// <remarks>This is a variable argument function.</remarks>
-/// <param name="msg">Formatted string to write to activity log.</param>
+/* Writes a new entry to the activity log. */
+
 void ActivityLog(const char* msg, ...)
 {
 #if defined(CATCH2_TEST_COMPILATION)

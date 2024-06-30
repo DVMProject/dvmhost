@@ -1,19 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Modem Host Software
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / DFSI peer application
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2024 Patrick McDonnell, W3AXL
-*
-*   Borrowed from work by Bryan Biedenkapp, N2PLL
-*
-*/
-
+/*
+ * Digital Voice Modem - DFSI V.24/UDP Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2024 Patrick McDonnell, W3AXL
+ * 
+ */
 #include "CallData.h"
 
 using namespace network;
@@ -26,9 +19,8 @@ using namespace dfsi;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the VoiceCallData class.
-/// </summary>
+/* Initializes a new instance of the VoiceCallData class. */
+
 VoiceCallData::VoiceCallData() :
     srcId(0U),
     dstId(0U),
@@ -58,9 +50,8 @@ VoiceCallData::VoiceCallData() :
     ::memset(netLDU2, 0x00U, 9U * 25U);
 }
 
-/// <summary>
-/// Finalizes a instance of the VoiceCallData class.
-/// </summary>
+/* Finalizes a instance of the VoiceCallData class. */
+
 VoiceCallData::~VoiceCallData() 
 {
     delete[] mi;
@@ -70,9 +61,8 @@ VoiceCallData::~VoiceCallData()
     delete[] netLDU2;
 }
 
-/// <summary>
-/// Reset call data to defaults.
-/// </summary>
+/* Reset call data to defaults. */
+
 void VoiceCallData::resetCallData() 
 {
     srcId = 0U;
@@ -99,9 +89,8 @@ void VoiceCallData::resetCallData()
     streamId = 0U;
 }
 
-/// <summary>
-/// Generate a new stream ID for a call.
-/// </summary>
+/* Generate a new stream ID for a call. */
+
 void VoiceCallData::newStreamId() 
 {
     std::uniform_int_distribution<uint32_t> dist(DVM_RAND_MIN, DVM_RAND_MAX);

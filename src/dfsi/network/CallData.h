@@ -1,22 +1,21 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - DFSI V.24/UDP Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2024 Patrick McDonnell, W3AXL
+ *
+ */
 /**
-* Digital Voice Modem - Modem Host Software
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / DFSI peer application
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2024 Patrick McDonnell, W3AXL
-*
-*   Borrowed from work by Bryan Biedenkapp, N2PLL
-*
-*/
+ * @file CallData.h
+ * @ingroup dfsi_network
+ * @file CallData.cpp
+ * @ingroup dfsi_network
+ */
 #if !defined(__DFSI_CALL_DATA_H__)
 #define __DFSI_CALL_DATA_H__
 
-// DVM Includes
 #include "Defines.h"
 #include "common/edac/RS634717.h"
 #include "common/network/RawFrameQueue.h"
@@ -34,53 +33,115 @@
 #include "host/modem/port/IModemPort.h"
 #include "host/modem/port/UARTPort.h"
 
-// CPP includes
 #include <random>
 
 namespace network 
 {
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //     Represents an on-going call.
     // ---------------------------------------------------------------------------
 
+    /**
+     * @brief Represents an on-going call.
+     * @ingroup dfsi_network
+     */
     class HOST_SW_API VoiceCallData {
     public:
-        /// <summary>Initializes a new instance of the VoiceCallData class.</summary>
+        /**
+         * @brief Initializes a new instance of the VoiceCallData class.
+         */
         VoiceCallData();
-        /// <summary>Initializes a new instance of the VoiceCallData class.</summary>
+        /**
+         * @brief Initializes a new instance of the VoiceCallData class.
+         */
         ~VoiceCallData();
 
-        /// <summary>Reset call data to defaults.</summary>
+        /**
+         * @brief Reset call data to defaults.
+         */
         void resetCallData();
-        /// <summary>Generate a new stream ID for a call.</summary>
+        /**
+         * @brief Generate a new stream ID for a call.
+         */
         void newStreamId();
 
-        // Call Data
+        /** @name Call Data */
+        /** 
+         * @brief Source Radio ID.
+         */
         uint32_t srcId;
+        /** 
+         * @brief Destination ID.
+         */
         uint32_t dstId;
 
+        /**
+         * @brief Link Control Opcode.
+         */
         uint8_t lco;
+        /**
+         * @brief Manufacturer ID.
+         */
         uint8_t mfId;
+        /**
+         * @brief Call Service Options.
+         */
         uint8_t serviceOptions;
 
+        /**
+         * @brief Low Speed Data 1.
+         */
         uint8_t lsd1;
+        /**
+         * @brief Low Speed Data 2.
+         */
         uint8_t lsd2;
 
+        /**
+         * @brief Encryption Message Indicator.
+         */
         uint8_t* mi;
+        /**
+         * @brief Encryption Algorithm ID.
+         */
         uint8_t algoId;
+        /**
+         * @brief Encryption Key ID.
+         */
         uint32_t kId;
 
+        /**
+         * @brief Voice Header 1.
+         */
         uint8_t* VHDR1;
+        /**
+         * @brief Voice Header 2.
+         */
         uint8_t* VHDR2;
 
+        /**
+         * @brief FNE Network LDU1 Buffer.
+         */
         uint8_t* netLDU1;
+        /**
+         * @brief FNE Network LDU2 Buffer.
+         */
         uint8_t* netLDU2;
 
+        /**
+         * @brief Sequence Number.
+         */
         uint32_t seqNo;
+        /**
+         * @brief 
+         */
         uint8_t n;
 
+        /**
+         * @brief Stream ID.
+         */
         uint32_t streamId;
+        /** @} */
     
     private:
         // Used for stream ID generation

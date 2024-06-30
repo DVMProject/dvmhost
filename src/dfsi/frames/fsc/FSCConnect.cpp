@@ -1,17 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - DFSI Peer Application
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / DFSI Peer Application
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2024 Bryan Biedenkapp, N2PLL
-*
-*/
-
+/*
+ * Digital Voice Modem - DFSI V.24/UDP Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "frames/fsc/FSCConnect.h"
 #include "common/p25/dfsi/DFSIDefines.h"
 #include "common/Utils.h"
@@ -27,9 +22,8 @@ using namespace p25::dfsi::fsc;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a instance of the FSCConnect class.
-/// </summary>
+/* Initializes a instance of the FSCConnect class. */
+
 FSCConnect::FSCConnect() : FSCMessage(),
     m_vcBasePort(0U),
     m_vcSSRC(0U),
@@ -39,10 +33,8 @@ FSCConnect::FSCConnect() : FSCMessage(),
     m_messageId = FSCMessageType::FSC_CONNECT;
 }
 
-/// <summary>
-/// Initializes a instance of the FSCConnect class.
-/// </summary>
-/// <param name="data"></param>
+/* Initializes a instance of the FSCConnect class. */
+
 FSCConnect::FSCConnect(uint8_t* data) : FSCMessage(data),
     m_vcBasePort(0U),
     m_vcSSRC(0U),
@@ -52,11 +44,8 @@ FSCConnect::FSCConnect(uint8_t* data) : FSCMessage(data),
     decode(data);
 }
 
-/// <summary>
-/// Decode a FSC connect frame.
-/// </summary>
-/// <param name="data"></param>
-/// <returns></returns>
+/* Decode a FSC connect frame. */
+
 bool FSCConnect::decode(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -70,10 +59,8 @@ bool FSCConnect::decode(const uint8_t* data)
     return true;
 }
 
-/// <summary>
-/// Encode a FSC connect frame.
-/// </summary>
-/// <param name="data"></param>
+/* Encode a FSC connect frame. */
+
 void FSCConnect::encode(uint8_t* data)
 {
     assert(data != nullptr);

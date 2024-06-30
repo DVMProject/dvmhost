@@ -1,16 +1,18 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - DFSI V.24/UDP Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2024 Patrick McDonnell, W3AXL
+ *
+ */
 /**
-* Digital Voice Modem - Modem Host Software
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / DFSI peer application
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2024 Patrick McDonnell, W3AXL
-*
-*/
+ * @file Dfsi.h
+ * @ingroup dfsi
+ * @file Dfsi.cpp
+ * @ingroup dfsi
+ */
 #if !defined(__DFSI_H__)
 #define __DFSI_H__
 
@@ -28,17 +30,28 @@
 
 // ---------------------------------------------------------------------------
 //  Class Declaration
-//      This class implements the core service logic.
 // ---------------------------------------------------------------------------
 
+/**
+ * @brief This class implements the core service logic.
+ * @ingroup dfsi
+ */
 class HOST_SW_API Dfsi {
 public:
-    /// <summary>Initializes a new instance of the HostTest class.</summary>
+    /**
+     * @brief Initializes a new instance of the HostTest class.
+     * @param confFile Full-path to the configuration file.
+     */
     Dfsi(const std::string& confFile);
-    /// <summary>Finalizes a instance of the HostTest class.</summary>
+    /**
+     * @brief Finalizes a instance of the HostTest class.
+     */
     ~Dfsi();
 
-    /// <summary>Executes the main host processing loop.</summary>
+    /**
+     * @brief Executes the main host processing loop.
+     * @returns int Zero if successful, otherwise error occurred.
+     */
     int run();
 
 private:
@@ -61,11 +74,20 @@ private:
 
     network::SerialService* m_serial;
 
-    /// <summary>Reads basic configuration parameters from the INI.</summary>
+    /**
+     * @brief Reads basic configuration parameters from the INI.
+     * @returns bool True, if configuration was read successfully, otherwise false.
+     */
     bool readParams();
-    /// <summary>Initializes peer network connectivity.</summary>
+    /**
+     * @brief Initializes peer network connectivity.
+     * @returns bool True, if network connectivity was initialized, otherwise false.
+     */
     bool createPeerNetwork();
-    /// <summary>Initializes serial V24 network.</summary>
+    /**
+     * @brief Initializes serial V.24 network.
+     * @returns bool True, if serial connectivity was initialized, otherwise false.
+     */
     bool createSerialNetwork(uint32_t p25BufferSize, uint16_t callTimeout);
 };
 

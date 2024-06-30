@@ -1,21 +1,25 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - DFSI V.24/UDP Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2024 Patrick McDonnell, W3AXL
+ *
+ */
 /**
-* Digital Voice Modem - Modem Host Software
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / DFSI peer application
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2024 Patrick McDonnell, W3AXL
-*
-*/
-
+ * @defgroup dfsi_network DFSI Networking/Serial Communications
+ * @brief Implementation for the DFSI networking and serial communications.
+ * @ingroup dfsi
+ *
+ * @file SerialService.h
+ * @ingroup dfsi_network
+ * @file SerialService.cpp
+ * @ingroup dfsi_network
+ */
 #if !defined(__SERIAL_SERVICE_H__)
 #define __SERIAL_SERVICE_H__
 
-// DVM Includes
 #include "Defines.h"
 #include "common/edac/RS634717.h"
 #include "common/network/RawFrameQueue.h"
@@ -35,7 +39,6 @@
 #include "host/modem/port/UARTPort.h"
 #include "host/modem/port/ModemNullPort.h"
 
-// System Includes
 #include <string>
 #include <cstdint>
 #include <map>
@@ -49,7 +52,10 @@ using namespace dfsi;
 
 namespace network
 {
-    // DFSI serial tx flags used to determine proper jitter handling of data in ringbuffer
+    /**
+     * @brief DFSI serial tx flags used to determine proper jitter handling of data in ringbuffer.
+     * @ingroup dfsi_network
+     */
     enum SERIAL_TX_TYPE {
         NONIMBE,
         IMBE
@@ -57,29 +63,65 @@ namespace network
 
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //      Serial V24 service
     // ---------------------------------------------------------------------------
 
+    /**
+     * @brief Implements the serial V.24 communications service.
+     * @ingroup dfsi_network
+     */
     class HOST_SW_API SerialService {
     public:
-        /// <summary>Initializes an instance of the SerialService class.</summary>
+        /**
+         * @brief Initializes an instance of the SerialService class.
+         * @param portType Serial port type.
+         * @param portName Serial port device name.
+         * @param baudrate Baud rate.
+         * @param rtrt Flag indicating whether or not RT/RT is enabled.
+         * @param diu Flag indicating whether or not V.24 communications are to a DIU.
+         * @param jitter 
+         * @param network Instance of the DfsiPeerNetwork class.
+         * @param p25TxQueueSize Ringbuffer size for the P25 transmit queue.
+         * @param p25RxQueueSize Ringbuffer size for the P24 receive queue.
+         * @param callTimeout 
+         * @param debug Flag indicating whether verbose debug logging is enabled.
+         * @param trace Flag indicating whether verbose trace logging is enabled.
+         */
         SerialService(std::string& portType, const std::string& portName, uint32_t baudrate, bool rtrt, bool diu, uint16_t jitter, DfsiPeerNetwork* network, uint32_t p25TxQueueSize, uint32_t p25RxQueueSize, uint16_t callTimeout, bool debug, bool trace);
-        /// <summary>Finalizes an instance of the SerialService class.</summary>
+        /**
+         * @brief Finalizes an instance of the SerialService class.
+         */
         ~SerialService();
 
-        /// <summary>Updates the serial interface by the passed number of milliseconds.</summary>
+        /**
+         * @brief Updates the serial interface by the passed number of milliseconds.
+         * @param ms Number of milliseconds.
+         */
         void clock(uint32_t ms);
 
-        /// <summary>Opens connection to the serial interface.</summary>
+        /**
+         * @brief Opens connection to the serial interface.
+         * @returns bool True, if serial interface has started, otherwise false.
+         */
         bool open();
 
-        /// <summary>Closes connection to the serial interface.</summary>
+        /**
+         * @brief Closes connection to the serial interface.
+         */
         void close();
 
-        // Handle P25 data from network to V24
+        /**
+         * @brief Process data frames from the network.
+         * @param p25Buffer Buffer containing the network frame.
+         * @param length Length of the buffer.
+         */
         void processP25FromNet(UInt8Array p25Buffer, uint32_t length);
 
-        // Handle P25 data from V24 to network
+        /**
+         * @brief Process data frames from the V.24 serial interface.
+         * 
+         *  This function pieces together LDU1/LDU2 messages from individual DFSI frames received over the serial port. It's 
+         *  called multiple times before an LDU is sent, and each time adds more data pieces to the LDUs.
+         */
         void processP25ToNet();
 
     private:
@@ -142,22 +184,66 @@ namespace network
         VoiceCallData* m_rxVoiceCallData;
 
         // Functions called by clock() to read/write from/to the serial port
+        /**
+         * @brief Read a data message from the serial interface.
+         * @return RESP_TYPE_DVM 
+         */
         RESP_TYPE_DVM readSerial();
+        /**
+         * @brief Helper to write data from the P25 Tx queue to the serial interface.
+         * 
+         * Very similar to the readP25Frame function. 
+         * 
+         * Note: the length encoded at the start does not include the length, tag, or timestamp bytes.
+         * 
+         * @return int Actual number of bytes written to the serial interface.
+         */
         int writeSerial();
 
+        /**
+         * @brief Gets a frame of P25 data from the RX queue.
+         * @param data Buffer containing P25 data.
+         * @return uint32_t Size of the P25 data buffer, including leading data tag.
+         */
         uint32_t readP25Frame(uint8_t* data);
+        /**
+         * @brief Process a P25 LDU and add to the TX queue, timed appropriately.
+         * @param duid DUID.
+         * @param lc Instance of the dfsi::LC class.
+         * @param ldu Buffer containing LDU data.
+         */
         void writeP25Frame(P25DEF::DUID::E duid, dfsi::LC& lc, uint8_t* ldu);
 
-        // Helpers for TX stream data
+        /**
+         * @brief Send a start of stream sequence (HDU, etc) to the connected serial V24 device.
+         * @param lc Instance of the p25::LC class.
+         */
         void startOfStream(const LC& lc);
+        /**
+         * @brief Send an end of stream sequence (TDU, etc) to the connected serial V24 device.
+         */
         void endOfStream();
 
-        // Helper for timing TX data appropriately based on frame type
+        /**
+         * @brief Helper to add a V.24 dataframe to the P25 Tx queue with the proper timestamp and formatting.
+         * @param data Buffer containing V.24 data frame to send.
+         * @param len Length of buffer.
+         * @param msgType Type of message to send (used for proper jitter clocking).
+         */
         void addTxToQueue(uint8_t* data, uint16_t length, SERIAL_TX_TYPE msgType);
 
-        /// <summary>Helper to insert IMBE silence frames for missing audio.</summary>
+        /**
+         * @brief Helper to insert IMBE silence frames for missing audio.
+         * @param data Buffer containing frame data.
+         * @param[out] lost Count of lost IMBE frames.
+         */
         void insertMissingAudio(uint8_t* data, uint32_t& lost);
 
+        /**
+         * @brief 
+         * @param buffer 
+         * @param length 
+         */
         void printDebug(const uint8_t* buffer, uint16_t length);
     };
 } // namespace network

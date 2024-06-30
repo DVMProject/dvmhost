@@ -1,17 +1,19 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - DFSI V.24/UDP Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2024 Patrick McDonnell, W3AXL
+ *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Modem Host Software
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / DFSI peer application
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2024 Patrick McDonnell, W3AXL
-*   Copyright (C) 2024 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @file DfsiPeerNetwork.h
+ * @ingroup dfsi_network
+ * @file DfsiPeerNetwork.cpp
+ * @ingroup dfsi_network
+ */
 #if !defined(__DFSI_PEER_NETWORK_H__)
 #define __DFSI_PEER_NETWORK_H__
 
@@ -25,30 +27,89 @@ namespace network
 {
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //      Implements the core peer networking logic.
     // ---------------------------------------------------------------------------
 
+    /**
+     * @brief Implements the core peer networking logic.
+     * @ingroup dfsi_network
+     */
     class HOST_SW_API DfsiPeerNetwork : public Network {
     public:
-        /// <summary>Initializes a new instance of the PeerNetwork class.</summary>
+        /**
+         * @brief Initializes a new instance of the PeerNetwork class.
+         * @param address Network Hostname/IP address to connect to.
+         * @param port Network port number.
+         * @param local 
+         * @param peerId Unique ID on the network.
+         * @param password Network authentication password.
+         * @param duplex Flag indicating full-duplex operation.
+         * @param debug Flag indicating whether network debug is enabled.
+         * @param dmr Flag indicating whether DMR is enabled.
+         * @param p25 Flag indicating whether P25 is enabled.
+         * @param nxdn Flag indicating whether NXDN is enabled.
+         * @param slot1 Flag indicating whether DMR slot 1 is enabled for network traffic.
+         * @param slot2 Flag indicating whether DMR slot 2 is enabled for network traffic.
+         * @param allowActivityTransfer Flag indicating that the system activity logs will be sent to the network.
+         * @param allowDiagnosticTransfer Flag indicating that the system diagnostic logs will be sent to the network.
+         * @param updateLookup Flag indicating that the system will accept radio ID and talkgroup ID lookups from the network.
+         */
         DfsiPeerNetwork(const std::string& address, uint16_t port, uint16_t localPort, uint32_t peerId, const std::string& password,
             bool duplex, bool debug, bool dmr, bool p25, bool nxdn, bool slot1, bool slot2, bool allowActivityTransfer, bool allowDiagnosticTransfer, bool updateLookup, bool saveLookup);
 
-        /// <summary>Writes P25 LDU1 frame data to the network.</summary>
+        /**
+         * @brief Writes P25 LDU1 frame data to the network.
+         * @param[in] control Instance of p25::lc::LC containing link control data.
+         * @param[in] lsd Instance of p25::data::LowSpeedData containing low speed data.
+         * @param[in] data Buffer containing P25 LDU1 data to send.
+         * @param[in] frameType DVM P25 frame type.
+         * @returns bool True, if message was sent, otherwise false.
+         */
         bool writeP25LDU1(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, const uint8_t* data, 
             P25DEF::FrameType::E frameType) override;
-        /// <summary>Writes P25 LDU2 frame data to the network.</summary>
+        /**
+         * @brief Writes P25 LDU2 frame data to the network.
+         * @param[in] control Instance of p25::lc::LC containing link control data.
+         * @param[in] lsd Instance of p25::data::LowSpeedData containing low speed data.
+         * @param[in] data Buffer containing P25 LDU2 data to send.
+         * @returns bool True, if message was sent, otherwise false.
+         */
         bool writeP25LDU2(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, const uint8_t* data) override;
 
     protected:
-        /// <summary>Writes configuration to the network.</summary>
+        /**
+         * @brief Writes configuration to the network.
+         * @returns bool True, if configuration was sent, otherwise false.
+         */
         bool writeConfig() override;
 
     private:
-        /// <summary>Creates an P25 LDU1 frame message.</summary>
+        /**
+         * @brief Creates an P25 LDU1 frame message.
+         * 
+         *  The data packed into a P25 LDU1 frame message is near standard DFSI messaging, just instead of
+         *  9 individual frames, they are packed into a single message one right after another.
+         * 
+         * @param[out] length Length of network message buffer.
+         * @param[in] control Instance of p25::lc::LC containing link control data.
+         * @param[in] lsd Instance of p25::data::LowSpeedData containing low speed data.
+         * @param[in] data Buffer containing P25 LDU1 data to send.
+         * @param[in] frameType DVM P25 frame type.
+         * @returns UInt8Array Buffer containing the built network message.
+         */
         UInt8Array createP25_LDU1Message_Raw(uint32_t& length, const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, 
             const uint8_t* data, P25DEF::FrameType::E frameType);
-        /// <summary>Creates an P25 LDU2 frame message.</summary>
+        /**
+         * @brief Creates an P25 LDU2 frame message.
+         * 
+         *  The data packed into a P25 LDU2 frame message is near standard DFSI messaging, just instead of
+         *  9 individual frames, they are packed into a single message one right after another.
+         * 
+         * @param[out] length Length of network message buffer.
+         * @param[in] control Instance of p25::lc::LC containing link control data.
+         * @param[in] lsd Instance of p25::data::LowSpeedData containing low speed data.
+         * @param[in] data Buffer containing P25 LDU2 data to send.
+         * @returns UInt8Array Buffer containing the built network message.
+         */
         UInt8Array createP25_LDU2Message_Raw(uint32_t& length, const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, 
             const uint8_t* data);
     };

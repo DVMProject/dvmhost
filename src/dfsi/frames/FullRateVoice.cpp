@@ -1,17 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - DFSI Peer Application
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / DFSI Peer Application
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2024 Bryan Biedenkapp, N2PLL
-*
-*/
-
+/*
+ * Digital Voice Modem - DFSI V.24/UDP Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "frames/FullRateVoice.h"
 #include "common/p25/dfsi/DFSIDefines.h"
 #include "common/Utils.h"
@@ -28,9 +23,8 @@ using namespace p25::dfsi::defines;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a instance of the FullRateVoice class.
-/// </summary>
+/* Initializes a instance of the FullRateVoice class. */
+
 FullRateVoice::FullRateVoice() :
     imbeData(nullptr),
     additionalData(nullptr),
@@ -45,10 +39,8 @@ FullRateVoice::FullRateVoice() :
     ::memset(imbeData, 0x00U, IMBE_BUF_LEN);
 }
 
-/// <summary>
-/// Initializes a instance of the FullRateVoice class.
-/// </summary>
-/// <param name="data"></param>
+/* Initializes a instance of the FullRateVoice class. */
+
 FullRateVoice::FullRateVoice(uint8_t* data) :
     imbeData(nullptr),
     additionalData(nullptr),
@@ -62,9 +54,8 @@ FullRateVoice::FullRateVoice(uint8_t* data) :
     decode(data);
 }
 
-/// <summary>
-/// Finalizes a instance of the FullRateVoice class.
-/// </summary>
+/* Finalizes a instance of the FullRateVoice class. */
+
 FullRateVoice::~FullRateVoice()
 {
     if (imbeData != nullptr)
@@ -73,11 +64,8 @@ FullRateVoice::~FullRateVoice()
         delete[] additionalData;
 }
 
-/// <summary>
-/// Decode a full rate voice frame.
-/// </summary>
-/// <param name="data"></param>
-/// <returns></returns>
+/* Decode a full rate voice frame. */
+
 bool FullRateVoice::decode(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -117,10 +105,8 @@ bool FullRateVoice::decode(const uint8_t* data)
     return true;
 }
 
-/// <summary>
-/// Encode a full rate voice frame.
-/// </summary>
-/// <param name="data"></param>
+/* Encode a full rate voice frame. */
+
 void FullRateVoice::encode(uint8_t* data)
 {
     assert(data != nullptr);
@@ -150,10 +136,8 @@ void FullRateVoice::encode(uint8_t* data)
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-///
-/// </summary>
-/// <returns></returns>
+/* Helper indicating if the frame is voice 3 through 8. */
+
 bool FullRateVoice::isVoice3thru8()
 {
     if ( (m_frameType == DFSIFrameType::LDU1_VOICE3) || (m_frameType == DFSIFrameType::LDU1_VOICE4) || (m_frameType == DFSIFrameType::LDU1_VOICE5) || 
@@ -164,10 +148,8 @@ bool FullRateVoice::isVoice3thru8()
     }
 }
 
-/// <summary>
-///
-/// </summary>
-/// <returns></returns>
+/* Helper indicating if the frame is voice 12 through 17. */
+
 bool FullRateVoice::isVoice12thru17()
 {
     if ( (m_frameType == DFSIFrameType::LDU2_VOICE12) || (m_frameType == DFSIFrameType::LDU2_VOICE13) || (m_frameType == DFSIFrameType::LDU2_VOICE14) ||
@@ -178,10 +160,8 @@ bool FullRateVoice::isVoice12thru17()
     }
 }
 
-/// <summary>
-///
-/// </summary>
-/// <returns></returns>
+/* Helper indicating if the frame is voice 9 or 10. */
+
 bool FullRateVoice::isVoice9or10()
 {
     if ( (m_frameType == DFSIFrameType::LDU1_VOICE9) || (m_frameType == DFSIFrameType::LDU2_VOICE10) ) {

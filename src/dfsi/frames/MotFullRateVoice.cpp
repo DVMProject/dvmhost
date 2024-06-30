@@ -1,18 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - DFSI Peer Application
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / DFSI Peer Application
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2024 Patrick McDonnell, W3AXL
-*   Copyright (C) 2024 Bryan Biedenkapp, N2PLL
-*
-*/
-
+/*
+ * Digital Voice Modem - DFSI V.24/UDP Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2024 Patrick McDonnell, W3AXL
+ *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "frames/MotFullRateVoice.h"
 #include "common/p25/P25Defines.h"
 #include "common/p25/dfsi/DFSIDefines.h"
@@ -31,9 +26,8 @@ using namespace p25::dfsi::defines;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a instance of the MotFullRateVoice class.
-/// </summary>
+/* Initializes a instance of the MotFullRateVoice class. */
+
 MotFullRateVoice::MotFullRateVoice() :
     imbeData(nullptr),
     additionalData(nullptr),
@@ -44,10 +38,8 @@ MotFullRateVoice::MotFullRateVoice() :
     ::memset(imbeData, 0x00U, RAW_IMBE_LENGTH_BYTES);
 }
 
-/// <summary>
-/// Initializes a instance of the MotFullRateVoice class.
-/// </summary>
-/// <param name="data"></param>
+/* Initializes a instance of the MotFullRateVoice class. */
+
 MotFullRateVoice::MotFullRateVoice(uint8_t* data)
 {
     // set our pointers to null since it doesn't get initialized otherwise
@@ -57,9 +49,8 @@ MotFullRateVoice::MotFullRateVoice(uint8_t* data)
     decode(data);
 }
 
-/// <summary>
-/// Finalizes a instance of the MotFullRateVoice class.
-/// </summary>
+/* Finalizes a instance of the MotFullRateVoice class. */
+
 MotFullRateVoice::~MotFullRateVoice()
 {
     if (imbeData != nullptr)
@@ -68,10 +59,8 @@ MotFullRateVoice::~MotFullRateVoice()
         delete[] additionalData;
 }
 
-/// <summary>
-///
-/// </summary>
-/// <returns></returns>
+/* */
+
 uint32_t MotFullRateVoice::size()
 {
     uint32_t length = 0;
@@ -91,12 +80,8 @@ uint32_t MotFullRateVoice::size()
     return length;
 }
 
-/// <summary>
-/// Decode a full rate voice frame.
-/// </summary>
-/// <param name="data"></param>
-/// <param name="shortened"></param>
-/// <returns></returns>
+/* Decode a full rate voice frame. */
+
 bool MotFullRateVoice::decode(const uint8_t* data, bool shortened)
 {
     assert(data != nullptr);
@@ -139,11 +124,8 @@ bool MotFullRateVoice::decode(const uint8_t* data, bool shortened)
     return true;
 }
 
-/// <summary>
-/// Encode a full rate voice frame.
-/// </summary>
-/// <param name="data"></param>
-/// <param name="shortened"></param>
+/* Encode a full rate voice frame. */
+
 void MotFullRateVoice::encode(uint8_t* data, bool shortened)
 {
     assert(data != nullptr);
@@ -185,10 +167,8 @@ void MotFullRateVoice::encode(uint8_t* data, bool shortened)
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-///
-/// </summary>
-/// <returns></returns>
+/* Helper indicating if the frame is voice 1, 2, 10 or 11. */
+
 bool MotFullRateVoice::isVoice1or2or10or11()
 {
     if ( (m_frameType == DFSIFrameType::LDU1_VOICE1) || (m_frameType == DFSIFrameType::LDU1_VOICE2) || 
@@ -199,10 +179,8 @@ bool MotFullRateVoice::isVoice1or2or10or11()
     }
 }
 
-/// <summary>
-///
-/// </summary>
-/// <returns></returns>
+/* Helper indicating if the frame is voice 2 or 11. */
+
 bool MotFullRateVoice::isVoice2or11()
 {
     if ( (m_frameType == DFSIFrameType::LDU1_VOICE2) || (m_frameType == DFSIFrameType::LDU2_VOICE11) ) {
@@ -212,10 +190,8 @@ bool MotFullRateVoice::isVoice2or11()
     }
 }
 
-/// <summary>
-///
-/// </summary>
-/// <returns></returns>
+/* Helper indicating if the frame is voice 9 or 18. */
+
 bool MotFullRateVoice::isVoice9or18()
 {
     if ( (m_frameType == DFSIFrameType::LDU1_VOICE9) || (m_frameType == DFSIFrameType::LDU2_VOICE18) ) {

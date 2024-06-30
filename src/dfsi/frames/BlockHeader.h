@@ -1,16 +1,18 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - DFSI V.24/UDP Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - DFSI Peer Application
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / DFSI Peer Application
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2024 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @file BlockHeader.h
+ * @ingroup dfsi_frames
+ * @file BlockHeader.cpp
+ * @ingroup dfsi_frames
+ */
 #if !defined(__BLOCK_HEADER_H__)
 #define __BLOCK_HEADER_H__
 
@@ -26,47 +28,73 @@ namespace p25
     {
         // ---------------------------------------------------------------------------
         //  Class Declaration
-        //      Implements a DFSI block header packet.
-        // 
-        // Compact Form
-        // Byte 0
-        // Bit  7 6 5 4 3 2 1 0
-        //     +-+-+-+-+-+-+-+-+
-        //     |E|      BT     |
-        //     +-+-+-+-+-+-+-+-+
-        // 
-        // Verbose Form
-        // Byte 0               1               2               3
-        // Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 
-        //     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-        //     |E|      BT     |             TSO           |         BL        |
-        //     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
         // ---------------------------------------------------------------------------
 
+        /**
+         * @brief Implements a DFSI block header packet.
+         * \code{.unparsed}
+         * Compact Form
+         * Byte 0
+         * Bit  7 6 5 4 3 2 1 0
+         *     +-+-+-+-+-+-+-+-+
+         *     |E|      BT     |
+         *     +-+-+-+-+-+-+-+-+
+         * 
+         * Verbose Form
+         * Byte 0               1               2               3
+         * Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 
+         *     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *     |E|      BT     |             TSO           |         BL        |
+         *     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         * \endcode
+         * @ingroup dfsi_frames
+         */
         class HOST_SW_API BlockHeader {
         public:
             static const uint8_t LENGTH = 1;
             static const uint8_t VERBOSE_LENGTH = 4;
 
-            /// <summary>Initializes a copy instance of the BlockHeader class.</summary>
+            /**
+             * @brief Initializes a copy instance of the BlockHeader class.
+             */
             BlockHeader();
-            /// <summary>Initializes a copy instance of the BlockHeader class.</summary>
+            /**
+             * @brief Initializes a copy instance of the BlockHeader class.
+             * @param data Buffer to containing BlockHeader to decode.
+             * @param verbose Flag indicating verbose form of BlockHeader.
+             */
             BlockHeader(uint8_t* data, bool verbose = false);
 
-            /// <summary>Decode a block header frame.</summary>
+            /**
+             * @brief Decode a block header frame.
+             * @param[in] data Buffer to containing BlockHeader to decode.
+             * @param verbose Flag indicating verbose form of BlockHeader.
+             */
             bool decode(const uint8_t* data, bool verbose = false);
-            /// <summary>Encode a block header frame.</summary>
+            /**
+             * @brief Encode a block header frame.
+             * @param[out] data Buffer to encode a BlockHeader.
+             * @param verbose Flag indicating verbose form of BlockHeader.
+             */
             void encode(uint8_t *data, bool verbose = false);
 
         public:
-            /// <summary>Payload type.</summary>
-            /// <remarks>This simple boolean marks this header as either IANA standard, or profile specific.</remarks>
+            /**
+             * @brief Payload type.
+             * This simple boolean marks this header as either IANA standard, or profile specific.
+             */
             __PROPERTY(bool, payloadType, PayloadType);
-            /// <summary>Block type.</summary>
+            /**
+             * @brief Block type.
+             */
             __PROPERTY(BlockType::E, blockType, BlockType);
-            /// <summary>Timestamp Offset.</summary>
+            /**
+             * @brief Timestamp Offset.
+             */
             __PROPERTY(uint16_t, timestampOffset, TimestampOffset);
-            /// <summary>Block length.</summary>
+            /**
+             * @brief Block length.
+             */
             __PROPERTY(uint16_t, blockLength, BlockLength);
         };
     } // namespace dfsi

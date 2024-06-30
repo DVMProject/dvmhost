@@ -1,16 +1,18 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - DFSI V.24/UDP Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - DFSI Peer Application
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / DFSI Peer Application
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2024 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @file FSCDisconnect.h
+ * @ingroup dfsi_fsc_frames
+ * @file FSCDisconnect.cpp
+ * @ingroup dfsi_fsc_frames
+ */
 #if !defined(__FSC_DISCONNECT_H__)
 #define __FSC_DISCONNECT_H__
 
@@ -29,16 +31,24 @@ namespace p25
         {
             // ---------------------------------------------------------------------------
             //  Class Declaration
-            //
             // ---------------------------------------------------------------------------
 
+            /**
+             * @brief Implements the FSC Disconnect Message.
+             * @ingroup dfsi_fsc_frames
+             */
             class HOST_SW_API FSCDisconnect : public FSCMessage {
             public:
                 static const uint8_t LENGTH = 3;
 
-                /// <summary>Initializes a copy instance of the FSCDisconnect class.</summary>
+                /**
+                 * @brief Initializes a copy instance of the FSCDisconnect class.
+                 */
                 FSCDisconnect();
-                /// <summary>Initializes a copy instance of the FSCDisconnect class.</summary>
+                /**
+                 * @brief Initializes a copy instance of the FSCDisconnect class.
+                 * @param data Buffer to containing FSCDisconnect to decode.
+                 */
                 FSCDisconnect(uint8_t* data);
             };
         } // namespace fsc

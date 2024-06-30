@@ -1,18 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - DFSI Peer Application
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / DFSI Peer Application
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2024 Patrick McDonnell, W3AXL
-*   Copyright (C) 2024 Bryan Biedenkapp, N2PLL
-*
-*/
-
+/*
+ * Digital Voice Modem - DFSI V.24/UDP Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2024 Patrick McDonnell, W3AXL
+ *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "frames/MotVoiceHeader1.h"
 #include "common/p25/dfsi/DFSIDefines.h"
 #include "common/Utils.h"
@@ -29,9 +24,8 @@ using namespace p25::dfsi::defines;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a instance of the MotVoiceHeader1 class.
-/// </summary>
+/* Initializes a instance of the MotVoiceHeader1 class. */
+
 MotVoiceHeader1::MotVoiceHeader1() :
     header(nullptr),
     startOfStream(nullptr),
@@ -46,10 +40,8 @@ MotVoiceHeader1::MotVoiceHeader1() :
     ::memset(header, 0x00U, HCW_LENGTH);
 }
 
-/// <summary>
-/// Initializes a instance of the MotVoiceHeader1 class.
-/// </summary>
-/// <param name="data"></param>
+/* Initializes a instance of the MotVoiceHeader1 class. */
+
 MotVoiceHeader1::MotVoiceHeader1(uint8_t* data) :
     header(nullptr),
     startOfStream(nullptr),
@@ -61,9 +53,8 @@ MotVoiceHeader1::MotVoiceHeader1(uint8_t* data) :
     decode(data);
 }
 
-/// <summary>
-/// Finalizes a instance of the MotVoiceHeader1 class.
-/// </summary>
+/* Finalizes a instance of the MotVoiceHeader1 class. */
+
 MotVoiceHeader1::~MotVoiceHeader1()
 {
     if (startOfStream != nullptr)
@@ -72,11 +63,8 @@ MotVoiceHeader1::~MotVoiceHeader1()
         delete[] header;
 }
 
-/// <summary>
-/// Decode a voice header 1 frame.
-/// </summary>
-/// <param name="data"></param>
-/// <returns></returns>
+/* Decode a voice header 1 frame. */
+
 bool MotVoiceHeader1::decode(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -109,10 +97,8 @@ bool MotVoiceHeader1::decode(const uint8_t* data)
     return true;
 }
 
-/// <summary>
-/// Encode a voice header 1 frame.
-/// </summary>
-/// <param name="data"></param>
+/* Encode a voice header 1 frame. */
+
 void MotVoiceHeader1::encode(uint8_t* data)
 {
     assert(data != nullptr);

@@ -1,18 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - DFSI Peer Application
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / DFSI Peer Application
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2024 Patrick McDonnell, W3AXL
-*   Copyright (C) 2024 Bryan Biedenkapp, N2PLL
-*
-*/
-
+/*
+ * Digital Voice Modem - DFSI V.24/UDP Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2024 Patrick McDonnell, W3AXL
+ *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "frames/MotStartVoiceFrame.h"
 #include "common/p25/dfsi/DFSIDefines.h"
 #include "common/Utils.h"
@@ -29,9 +24,8 @@ using namespace p25::dfsi::defines;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a instance of the MotStartVoiceFrame class.
-/// </summary>
+/* Initializes a instance of the MotStartVoiceFrame class. */
+
 MotStartVoiceFrame::MotStartVoiceFrame() :
     startOfStream(nullptr),
     fullRateVoice(nullptr),
@@ -45,10 +39,8 @@ MotStartVoiceFrame::MotStartVoiceFrame() :
     fullRateVoice = new MotFullRateVoice();
 }
 
-/// <summary>
-/// Initializes a instance of the MotStartVoiceFrame class.
-/// </summary>
-/// <param name="data"></param>
+/* Initializes a instance of the MotStartVoiceFrame class. */
+
 MotStartVoiceFrame::MotStartVoiceFrame(uint8_t* data) :
     startOfStream(nullptr),
     fullRateVoice(nullptr),
@@ -61,9 +53,8 @@ MotStartVoiceFrame::MotStartVoiceFrame(uint8_t* data) :
     decode(data);
 }
 
-/// <summary>
-/// Finalizes a instance of the MotStartVoiceFrame class.
-/// </summary>
+/* Finalizes a instance of the MotStartVoiceFrame class. */
+
 MotStartVoiceFrame::~MotStartVoiceFrame()
 {
     if (startOfStream != nullptr)
@@ -72,11 +63,8 @@ MotStartVoiceFrame::~MotStartVoiceFrame()
         delete fullRateVoice;
 }
 
-/// <summary>
-/// Decode a start voice frame.
-/// </summary>
-/// <param name="data"></param>
-/// <returns></returns>
+/* Decode a start voice frame. */
+
 bool MotStartVoiceFrame::decode(const uint8_t* data)
 {
     assert(data != nullptr);
@@ -115,10 +103,8 @@ bool MotStartVoiceFrame::decode(const uint8_t* data)
     return true;
 }
 
-/// <summary>
-/// Encode a start voice frame.
-/// </summary>
-/// <param name="data"></param>
+/* Encode a start voice frame. */
+
 void MotStartVoiceFrame::encode(uint8_t* data)
 {
     assert(data != nullptr);

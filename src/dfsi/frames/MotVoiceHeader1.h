@@ -1,17 +1,19 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - DFSI V.24/UDP Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2024 Patrick McDonnell, W3AXL
+ *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - DFSI Peer Application
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / DFSI Peer Application
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2024 Patrick McDonnell, W3AXL
-*   Copyright (C) 2024 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @file MotVoiceHeader1.h
+ * @ingroup dfsi_frames
+ * @file MotVoiceHeader1.cpp
+ * @ingroup dfsi_frames
+ */
 #if !defined(__MOT_VOICE_HEADER_1_H__)
 #define __MOT_VOICE_HEADER_1_H__
 
@@ -28,57 +30,82 @@ namespace p25
     {
         // ---------------------------------------------------------------------------
         //  Class Declaration
-        //      Implements a P25 Motorola voice header frame 1.
-        // 
-        // Byte 0               1               2               3
-        // Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 
-        //     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-        //     |   Encoded Motorola Start of Stream                            |
-        //     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-        //     |   ICW Flag ?  |     RSSI      |  RSSI Valid   |     RSSI      |
-        //     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-        //     |   Header Control Word                                         |
-        //     +                                                               +
-        //     |                                                               |
-        //     +                                                               +
-        //     |                                                               |
-        //     +                                                               +
-        //     |                                                               |
-        //     +                                                               +
-        //     |                                                               |
-        //     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-        //     | Src Flag      |
-        //     +-+-+-+-+-+-+-+-+
         // ---------------------------------------------------------------------------
 
+        /**
+         * @brief Implements a P25 Motorola voice header frame 1.
+         * \code{.unparsed}
+         * Byte 0               1               2               3
+         * Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 
+         *     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *     |   Encoded Motorola Start of Stream                            |
+         *     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *     |   ICW Flag ?  |     RSSI      |  RSSI Valid   |     RSSI      |
+         *     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *     |   Header Control Word                                         |
+         *     +                                                               +
+         *     |                                                               |
+         *     +                                                               +
+         *     |                                                               |
+         *     +                                                               +
+         *     |                                                               |
+         *     +                                                               +
+         *     |                                                               |
+         *     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *     | Src Flag      |
+         *     +-+-+-+-+-+-+-+-+
+         * \endcode 
+         * @ingroup dfsi_frames
+         */
         class HOST_SW_API MotVoiceHeader1 {
         public:
             static const uint8_t LENGTH = 30;
             static const uint8_t HCW_LENGTH = 21;
 
-            /// <summary>Initializes a copy instance of the MotVoiceHeader1 class.</summary>
+            /**
+             * @brief Initializes a copy instance of the MotVoiceHeader1 class.
+             */
             MotVoiceHeader1();
-            /// <summary>Initializes a copy instance of the MotVoiceHeader1 class.</summary>
+            /**
+             * @brief Initializes a copy instance of the MotVoiceHeader1 class.
+             * @param data Buffer to containing MotVoiceHeader1 to decode.
+             */
             MotVoiceHeader1(uint8_t* data);
-            /// <summary>Finalizes a instance of the MotVoiceHeader1 class.</summary>
+            /**
+             * @brief Finalizes a instance of the MotVoiceHeader1 class.
+             */
             ~MotVoiceHeader1();
 
-            /// <summary>Decode a voice header 1 frame.</summary>
+            /**
+             * @brief Decode a voice header 1 frame.
+             * @param[in] data Buffer to containing MotVoiceHeader1 to decode.
+             */
             bool decode(const uint8_t* data);
-            /// <summary>Encode a voice header 1 frame.</summary>
+            /**
+             * @brief Encode a voice header 1 frame.
+             * @param[out] data Buffer to encode a MotVoiceHeader1.
+             */
             void encode(uint8_t* data);
         
         public:
             uint8_t* header; // ?? - this should probably be private with getters/setters
             MotStartOfStream* startOfStream; // ?? - this should probably be private with getters/setters
 
-            /// <summary></summary>
+            /**
+             * @brief 
+             */
             __PROPERTY(ICWFlag::E, icw, ICW);
-            /// <summary></summary>
+            /**
+             * @brief RSSI Value.
+             */
             __PROPERTY(uint8_t, rssi, RSSI);
-            /// <summary></summary>
+            /**
+             * @brief Flag indicating whether or not the RSSI field is valid.
+             */
             __PROPERTY(RssiValidityFlag::E, rssiValidity, RSSIValidity);
-            /// <summary></summary>
+            /**
+             * @brief 
+             */
             __PROPERTY(uint8_t, nRssi, NRSSI);
         };
     } // namespace dfsi

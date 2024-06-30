@@ -1,22 +1,15 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Modem Host Software
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / DFSI peer application
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2024 Patrick McDonnell, W3AXL
-*   Copyright (C) 2024 Bryan Biedenkapp, N2PLL
-*
-*/
-
+/*
+ * Digital Voice Modem - DFSI V.24/UDP Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2024 Patrick McDonnell, W3AXL
+ *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "common/p25/lc/tdulc/TDULCFactory.h"
-
 #include "network/SerialService.h"
-
 #include "dfsi/ActivityLog.h"
 
 using namespace network;
@@ -30,21 +23,8 @@ using namespace dfsi;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the SerialService class.
-/// </summary>
-/// <param name="portType"></param>
-/// <param name="portName"></param>
-/// <param name="baudrate"></param>
-/// <param name="rtrt"></param>
-/// <param name="diu"></param>
-/// <param name="jitter"></param>
-/// <param name="network"></param>
-/// <param name="p25TxQueueSize"></param>
-/// <param name="p25RxQueueSize"></param>
-/// <param name="callTimeout"></param>
-/// <param name="debug"></param>
-/// <param name="trace"></param>
+/* Initializes a new instance of the SerialService class. */
+
 SerialService::SerialService(std::string& portType, const std::string& portName, uint32_t baudrate, bool rtrt, bool diu, uint16_t jitter, DfsiPeerNetwork* network, 
     uint32_t p25TxQueueSize, uint32_t p25RxQueueSize, uint16_t callTimeout, bool debug, bool trace) :
     m_portName(portName),
@@ -99,9 +79,8 @@ SerialService::SerialService(std::string& portType, const std::string& portName,
     m_msgBuffer = new uint8_t[BUFFER_LENGTH];
 }
 
-/// <summary>
-/// Finalizes a instance of the SerialService class.
-/// </summary>
+/* Finalizes a instance of the SerialService class. */
+
 SerialService::~SerialService()
 {
     if (m_port != nullptr) {
@@ -118,10 +97,8 @@ SerialService::~SerialService()
     delete m_rxVoiceCallData;
 }
 
-/// <summary>
-/// Updates the timer by the passed number of milliseconds.
-/// </summary>
-/// <param name="ms"></param>
+/* Updates the timer by the passed number of milliseconds. */
+
 void SerialService::clock(uint32_t ms)
 {
     // Get now
@@ -229,10 +206,8 @@ void SerialService::clock(uint32_t ms)
     }
 }
 
-/// <summary>
-/// Opens connection to the serial interface.
-/// </summary>
-/// <returns>True, if connection is established, otherwise false.</returns>
+/* Opens connection to the serial interface. */
+
 bool SerialService::open()
 {
     LogInfoEx(LOG_SERIAL, "Opening port %s at %u baud", m_portName.c_str(), m_baudrate);
@@ -249,18 +224,16 @@ bool SerialService::open()
     return true;
 }
 
-/// <summary>
-/// Closes connection to the serial interface.
-/// </summary>
+/* Closes connection to the serial interface. */
+
 void SerialService::close()
 {
     LogInfoEx(LOG_SERIAL, "Closing port");
     m_port->close();
 }
 
-/// <summary>
-/// Process P25 data from the peer network and send to writeP25Frame()
-/// </summary>
+/* Process P25 data from the peer network and send to writeP25Frame() */
+
 void SerialService::processP25FromNet(UInt8Array p25Buffer, uint32_t length)
 {
     // If there's a local call in progress, ignore the frames
@@ -550,11 +523,8 @@ void SerialService::processP25FromNet(UInt8Array p25Buffer, uint32_t length)
     }
 }
 
-/// <summary>
-/// Retrieve and process a P25 frame from the rx P25 queue
-/// </summary>
-/// This function pieces together LDU1/LDU2 messages from individual DFSI frames received over the serial port
-/// It's called multiple times before an LDU is sent, and each time adds more data pieces to the LDUs
+/* Retrieve and process a P25 frame from the rx P25 queue */
+
 void SerialService::processP25ToNet()
 {
 
@@ -1015,9 +985,8 @@ void SerialService::processP25ToNet()
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>Read a data message from the serial port</summary>
-/// This is borrowed from the Modem::getResponse() function
-/// <returns>Response type</returns>
+/* Read a data message from the serial port */
+
 RESP_TYPE_DVM SerialService::readSerial()
 {
     // Flag for a 16-bit (i.e. 2-byte) length
@@ -1180,10 +1149,8 @@ RESP_TYPE_DVM SerialService::readSerial()
     return RTM_OK;
 }
 
-/// <summary>Called from clock thread, checks for an available P25 frame to write and sends it based on jitter timing requirements</summary>
-/// Very similar to the readP25Frame function below
-///
-/// Note: the length encoded at the start does not include the length, tag, or timestamp bytes
+/* Called from clock thread, checks for an available P25 frame to write and sends it based on jitter timing requirements */
+
 int SerialService::writeSerial()
 {
     /**
@@ -1255,11 +1222,8 @@ int SerialService::writeSerial()
     return 0U;
 }
 
-/// <summary>
-/// Gets a frame of P25 data from the RX queue 
-/// <summary>
-/// <param name="*data">The data buffer to populate</param>
-/// <returns>The size of the P25 data retreived, including the leading data tag
+/* Gets a frame of P25 data from the RX queue */
+
 uint32_t SerialService::readP25Frame(uint8_t* data)
 {
 
@@ -1301,15 +1265,8 @@ uint32_t SerialService::readP25Frame(uint8_t* data)
     return 0U;
 }
 
-/// <summary>
-/// Break apart a P25 LDU and add to the TX queue, timed appropriately
-/// </summary>
-/// <param name="duid">DUID flag for the LDU</param>
-/// <param name="lc">Link Control data</param>
-/// <param name="ldu">LDU data</param>
-///
-/// This is very similar to the C# Mot_DFSISendFrame functions, we don't implement the TIA DFSI sendframe in serial
-/// because the only devices we connect to over serial V24 are Moto
+/* Break apart a P25 LDU and add to the TX queue, timed appropriately */
+
 void SerialService::writeP25Frame(DUID::E duid, dfsi::LC& lc, uint8_t* ldu)
 {
     // Sanity check
@@ -1659,10 +1616,8 @@ void SerialService::writeP25Frame(DUID::E duid, dfsi::LC& lc, uint8_t* ldu)
     }
 }
 
-/// <summary>
-/// Send a start of stream sequence (HDU, etc) to the connected serial V24 device
-/// </summary>
-/// <param name="lc">Link control data object</param>
+/* Send a start of stream sequence (HDU, etc) to the connected serial V.24 device */
+
 void SerialService::startOfStream(const LC& lc)
 {
     // Flag that we have a network call in progress
@@ -1759,10 +1714,8 @@ void SerialService::startOfStream(const LC& lc)
     addTxToQueue(buffer2, vhdr2.LENGTH, SERIAL_TX_TYPE::NONIMBE);
 }
 
-/// <summary>
-/// Send an end of stream sequence (TDU, etc) to the connected serial V24 device
-/// </summary>
-/// <param name="lc">Link control data object</param>
+/* Send an end of stream sequence (TDU, etc) to the connected serial V.24 device */
+
 void SerialService::endOfStream()
 {
     // Create the new end of stream (which looks like a start of stream with the stop flag)
@@ -1786,16 +1739,13 @@ void SerialService::endOfStream()
     m_netCallInProgress = false;
 }
 
-/// <summary>
-/// Helper to add a V24 dataframe to the P25 TX queue with the proper timestamp and formatting
-/// </summary>
-/// <param name="data">Data array to send</param>
-/// <param name="len">Length of data in array</param>
-/// <param name="msgType">Type of message to send (used for proper jitter clocking)</param>
+/* Helper to add a V24 dataframe to the P25 TX queue with the proper timestamp and formatting */
+
 void SerialService::addTxToQueue(uint8_t* data, uint16_t len, SERIAL_TX_TYPE msgType)
 {
     // If the port isn't connected, just return
-    if (m_port == nullptr) { return; }
+    if (m_port == nullptr)
+        return;
 
     // Get current time in ms
     uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
@@ -1865,11 +1815,8 @@ void SerialService::addTxToQueue(uint8_t* data, uint16_t len, SERIAL_TX_TYPE msg
     m_lastP25Tx = msgTime;
 }
 
-/// <summary>
-/// Helper to insert IMBE silence frames for missing audio.
-/// </summary>
-/// <param name="data"></param>
-/// <param name="lost"></param>
+/* Helper to insert IMBE silence frames for missing audio. */
+
 void SerialService::insertMissingAudio(uint8_t *data, uint32_t& lost)
 {
     if (data[10U] == 0x00U) {
@@ -1944,6 +1891,8 @@ void SerialService::insertMissingAudio(uint8_t *data, uint32_t& lost)
         ::memcpy(m_lastIMBE, data + 204U, 11U);
     }
 }
+
+/* */
 
 void SerialService::printDebug(const uint8_t* buffer, uint16_t len)
 {

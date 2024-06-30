@@ -1,16 +1,18 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - DFSI V.24/UDP Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - DFSI Peer Application
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / DFSI Peer Application
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2024 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @file ControlOctet.h
+ * @ingroup dfsi_frames
+ * @file ControlOctet.cpp
+ * @ingroup dfsi_frames
+ */
 #if !defined(__CONTROL_OCTET_H__)
 #define __CONTROL_OCTET_H__
 
@@ -26,35 +28,56 @@ namespace p25
     {
         // ---------------------------------------------------------------------------
         //  Class Declaration
-        //      Implements a DFSI control octet packet.
-        // 
-        // Byte 0
-        // Bit  7 6 5 4 3 2 1 0
-        //     +-+-+-+-+-+-+-+-+
-        //     |S|C|   BHC     |
-        //     +-+-+-+-+-+-+-+-+
         // ---------------------------------------------------------------------------
 
+        /**
+         * @brief Implements a DFSI control octet packet.
+         * \code{.unparsed}
+         * Byte 0
+         * Bit  7 6 5 4 3 2 1 0
+         *     +-+-+-+-+-+-+-+-+
+         *     |S|C|   BHC     |
+         *     +-+-+-+-+-+-+-+-+
+         * \endcode
+         * @ingroup dfsi_frames
+         */
         class HOST_SW_API ControlOctet {
         public:
             static const uint8_t LENGTH = 1;
 
-            /// <summary>Initializes a copy instance of the ControlOctet class.</summary>
+            /**
+             * @brief Initializes a copy instance of the ControlOctet class.
+             */
             ControlOctet();
-            /// <summary>Initializes a copy instance of the ControlOctet class.</summary>
+            /**
+             * @brief Initializes a copy instance of the ControlOctet class.
+             * @param data Buffer to containing ControlOctet to decode.
+             */
             ControlOctet(uint8_t* data);
 
-            /// <summary>Decode a control octet frame.</summary>
+            /**
+             * @brief Decode a control octet frame.
+             * @param[in] data Buffer to containing ControlOctet to decode.
+             */
             bool decode(const uint8_t* data);
-            /// <summary>Encode a control octet frame.</summary>
+            /**
+             * @brief Encode a control octet frame.
+             * @param[out] data Buffer to encode a ControlOctet.
+             */
             void encode(uint8_t* data);
         
         public:
-            /// <summary></summary>
+            /**
+             * @brief 
+             */
             __PROPERTY(bool, signal, Signal);
-            /// <summary>Indicates a compact (1) or verbose (0) block header.</summary>
+            /**
+             * @brief Indicates a compact (1) or verbose (0) block header.
+             */
             __PROPERTY(bool, compact, Compact);
-            /// <summary>Number of block headers following this control octet.</summary>
+            /**
+             * @brief Number of block headers following this control octet.
+             */
             __PROPERTY(uint8_t, blockHeaderCnt, BlockHeaderCnt);
         };
     } // namespace dfsi

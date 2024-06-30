@@ -1,17 +1,19 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - DFSI V.24/UDP Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2024 Patrick McDonnell, W3AXL
+ *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - DFSI Peer Application
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / DFSI Peer Application
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2024 Patrick McDonnell, W3AXL
-*   Copyright (C) 2024 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @file MotStartVoiceFrame.h
+ * @ingroup dfsi_frames
+ * @file MotStartVoiceFrame.cpp
+ * @ingroup dfsi_frames
+ */
 #if !defined(__MOT_START_VOICE_FRAME_H__)
 #define __MOT_START_VOICE_FRAME_H__
 
@@ -29,54 +31,81 @@ namespace p25
     {
         // ---------------------------------------------------------------------------
         //  Class Declaration
-        //      Implements a P25 Motorola voice frame 1/10 start.
-        // 
-        // Byte 0               1               2               3
-        // Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 
-        //     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-        //     |   Encoded Motorola Start of Stream                            |
-        //     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-        //     |   ICW Flag ?  |     RSSI      |  RSSI Valid   |     RSSI      |
-        //     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-        //     |   Adj MM ?    |    Full Rate Voice Frame                      |
-        //     +-+-+-+-+-+-+-+-+                                               +
-        //     |                                                               |
-        //     +                                                               +
-        //     |                                                               |
-        //     +               +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-        //     |               |
-        //     +=+=+=+=+=+=+=+=+
         // ---------------------------------------------------------------------------
 
+        /**
+         * @brief Implements a P25 Motorola voice frame 1/10 start.
+         * \code{.unparsed}
+         * Byte 0               1               2               3
+         * Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 
+         *     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *     |   Encoded Motorola Start of Stream                            |
+         *     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *     |   ICW Flag ?  |     RSSI      |  RSSI Valid   |     RSSI      |
+         *     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *     |   Adj MM ?    |    Full Rate Voice Frame                      |
+         *     +-+-+-+-+-+-+-+-+                                               +
+         *     |                                                               |
+         *     +                                                               +
+         *     |                                                               |
+         *     +               +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *     |               |
+         *     +=+=+=+=+=+=+=+=+
+         * \endcode
+         * @ingroup dfsi_frames
+         */
         class HOST_SW_API MotStartVoiceFrame {
         public:
             static const uint8_t LENGTH = 22;
 
-            /// <summary>Initializes a copy instance of the MotStartVoiceFrame class.</summary>
+            /**
+             * @brief Initializes a copy instance of the MotStartVoiceFrame class.
+             */
             MotStartVoiceFrame();
-            /// <summary>Initializes a copy instance of the MotStartVoiceFrame class.</summary>
+            /**
+             * @brief Initializes a copy instance of the MotStartVoiceFrame class.
+             * @param data Buffer to containing MotStartVoiceFrame to decode.
+             */
             MotStartVoiceFrame(uint8_t* data);
-            /// <summary>Finalizes a instance of the MotStartVoiceFrame class.</summary>
+            /**
+             * @brief Finalizes a instance of the MotStartVoiceFrame class.
+             */
             ~MotStartVoiceFrame();
 
-            /// <summary>Decode a start voice frame.</summary>
+            /**
+             * @brief Decode a start voice frame.
+             * @param[in] data Buffer to containing MotStartVoiceFrame to decode.
+             */
             bool decode(const uint8_t* data);
-            /// <summary>Encode a start voice frame.</summary>
+            /**
+             * @brief Encode a start voice frame.
+             * @param[out] data Buffer to encode a MotStartVoiceFrame.
+             */
             void encode(uint8_t* data);
         
         public:
             MotStartOfStream* startOfStream; // ?? - this should probably be private with getters/setters
             MotFullRateVoice* fullRateVoice; // ?? - this should probably be private with getters/setters
 
-            /// <summary></summary>
+            /**
+             * @brief 
+             */
             __PROPERTY(ICWFlag::E, icw, ICW);
-            /// <summary></summary>
+            /**
+             * @brief RSSI Value.
+             */
             __PROPERTY(uint8_t, rssi, RSSI);
-            /// <summary></summary>
+            /**
+             * @brief Flag indicating whether or not the RSSI field is valid.
+             */
             __PROPERTY(RssiValidityFlag::E, rssiValidity, RSSIValidity);
-            /// <summary></summary>
+            /**
+             * @brief 
+             */
             __PROPERTY(uint8_t, nRssi, NRSSI);
-            /// <summary></summary>
+            /**
+             * @brief 
+             */
             __PROPERTY(uint8_t, adjMM, AdjMM);
         };
     } // namespace dfsi

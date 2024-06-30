@@ -1,17 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
-* Digital Voice Modem - Modem Host Software
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / DFSI peer application
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2024 Patrick McDonnell, W3AXL
-*   Copyright (C) 2024 Bryan Biedenkapp, N2PLL
-*
-*/
+/*
+ * Digital Voice Modem - DFSI V.24/UDP Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2024 Patrick McDonnell, W3AXL
+ *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *
+ */
 #include "Defines.h"
 #include "common/dmr/DMRDefines.h"
 #include "common/p25/P25Utils.h"
@@ -45,10 +41,8 @@ using namespace lookups;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Initializes a new instance of the HostTest class.
-/// </summary>
-/// <param name="confFile">Full-path to the configuration file.</param>
+/* Initializes a new instance of the HostTest class. */
+
 Dfsi::Dfsi(const std::string& confFile) :
     m_confFile(confFile),
     m_conf(),
@@ -65,15 +59,12 @@ Dfsi::Dfsi(const std::string& confFile) :
     /* stub */
 }
 
-/// <summary>
-/// Finalizes a instance of the HostTest class.
-/// </summary>
+/* Finalizes a instance of the HostTest class. */
+
 Dfsi::~Dfsi() = default;
 
-/// <summary>
-/// Executes the main FNE processing loop.
-/// </summary>
-/// <returns>Zero if successful, otherwise error occurred.</returns>
+/* Executes the main FNE processing loop. */
+
 int Dfsi::run()
 {
     bool ret = false;
@@ -204,9 +195,7 @@ int Dfsi::run()
     StopWatch stopWatch;
     stopWatch.start();
 
-    ///
-    /// main execution loop
-    ///
+    // main execution loop
     while (!g_killed) {
         uint32_t ms = stopWatch.elapsed();
 
@@ -279,10 +268,8 @@ int Dfsi::run()
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Reads basic configuration parameters from the YAML configuration file.
-/// </summary>
-/// <returns></returns>
+/* Reads basic configuration parameters from the YAML configuration file. */
+
 bool Dfsi::readParams()
 {
     // No basic config params right now
@@ -290,10 +277,8 @@ bool Dfsi::readParams()
     return true;
 }
 
-/// <summary>
-/// Initializes peer network connectivity.
-/// </summary>
-/// <returns></returns>
+/* Initializes peer network connectivity. */
+
 bool Dfsi::createPeerNetwork()
 {
     yaml::Node networkConf = m_conf["network"];
@@ -376,12 +361,8 @@ bool Dfsi::createPeerNetwork()
     return true;
 }
 
-/// <summary>
-/// Initializes serial V24 network.
-/// </summary>
-/// <param name="p25BufferSize"></param>
-/// <param name="callTimeout"></param>
-/// <returns></returns>
+/* Initializes serial V.24 network. */
+
 bool Dfsi::createSerialNetwork(uint32_t p25BufferSize, uint16_t callTimeout)
 {
     // Read serial config

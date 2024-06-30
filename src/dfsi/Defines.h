@@ -1,16 +1,21 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - DFSI V.24/UDP Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2024 Patrick McDonnell, W3AXL
+ *
+ */
 /**
-* Digital Voice Modem - Modem Host Software
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / DFSI peer application
-* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2024 Patrick McDonnell, W3AXL
-*
-*/
+ * @defgroup dfsi DFSI V.24/UDP Software (dvmdfsi)
+ * @brief Digital Voice Modem - DFSI V.24/UDP Software
+ * @details TIA/V.24 standard interface application that connects to a V.24 interface board or UDP to allow for P25 DFSI communications with commercial P25 hardware.
+ * @ingroup dfsi
+ * 
+ * @file Defines.h
+ * @ingroup dfsi
+ */
 #if !defined(__DEFINES_H__)
 #define __DEFINES_H__
 
@@ -21,7 +26,7 @@
 // ---------------------------------------------------------------------------
 
 #undef __PROG_NAME__
-#define __PROG_NAME__ "Digital Voice Modem (DVM) DFSI Peer"
+#define __PROG_NAME__ "Digital Voice Modem (DVM) DFSI V.24/UDP Peer"
 #undef __EXE_NAME__ 
 #define __EXE_NAME__ "dvmdfsi"
 

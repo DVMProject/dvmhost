@@ -361,7 +361,7 @@ namespace network
         void setPresharedKey(const uint8_t* presharedKey);
 
         /**
-         * @brief Process a data frames from the network.
+         * @brief Process data frames from the network.
          */
         void processNetwork();
 
