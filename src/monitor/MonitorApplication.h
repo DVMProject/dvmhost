@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Host Monitor Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2023 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Host Monitor Software
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Host Monitor Software
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2023 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @file MonitorApplication.h
+ * @ingroup monitor
+ */
 #if !defined(__MONITOR_APPLICATION_H__)
 #define __MONITOR_APPLICATION_H__
 
@@ -22,25 +23,28 @@ using namespace finalcut;
 
 // ---------------------------------------------------------------------------
 //  Class Declaration
-//      This class implements the finalcut application.
 // ---------------------------------------------------------------------------
 
+/**
+ * @brief This class implements the finalcut application.
+ * @ingroup monitor
+ */
 class HOST_SW_API MonitorApplication final : public finalcut::FApplication {
 public:
-    /// <summary>
-    /// Initializes a new instance of the MonitorApplication class.
-    /// </summary>
-    /// <param name="argc"></param>
-    /// <param name="argv"></param>
+    /**
+     * @brief Initializes a new instance of the MonitorApplication class.
+     * @param argc Passed argc.
+     * @param argv Passed argv.
+     */
     explicit MonitorApplication(const int& argc, char** argv) : FApplication{argc, argv}
     {
         m_statusRefreshTimer = addTimer(1000);
     }
 
 protected:
-    /// <summary>
-    ///
-    /// </summary>
+    /**
+     * @brief Process external user events.
+     */
     void processExternalUserEvent() override
     {
         /* stub */
@@ -50,10 +54,10 @@ protected:
     ** Event Handlers
     */
 
-    /// <summary>
-    ///
-    /// </summary>
-    /// <param name="timer"></param>
+    /**
+     * @brief Event that occurs on interval by timer.
+     * @param timer Timer Event
+     */
     void onTimer(FTimerEvent* timer) override
     {
         if (timer != nullptr) {

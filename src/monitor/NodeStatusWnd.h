@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Host Monitor Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2023 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Host Monitor Software
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Host Monitor Software
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2023,2024 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @file NodeStatusWnd.h
+ * @ingroup monitor
+ */
 #if !defined(__NODE_STATUS_WND_H__)
 #define __NODE_STATUS_WND_H__
 
@@ -33,48 +34,82 @@ using namespace finalcut;
 
 // ---------------------------------------------------------------------------
 //  Class Declaration
-//      This class implements the node status display window.
 // ---------------------------------------------------------------------------
 
+/**
+ * @brief This class implements the node status display window.
+ * @ingroup monitor
+ */
 class HOST_SW_API NodeStatusWnd final : public finalcut::FDialog {
 public:
-    /// <summary>
-    /// Initializes a new instance of the NodeStatusWnd class.
-    /// </summary>
-    /// <param name="widget"></param>
+    /**
+     * @brief Initializes a new instance of the NodeStatusWnd class.
+     * @param widget 
+     */
     explicit NodeStatusWnd(FWidget* widget = nullptr) : FDialog{widget}
     {
         m_timerId = addTimer(250); // starts the timer every 250 milliseconds
         m_reconnectTimerId = addTimer(15000); // starts the timer every 10 seconds
     }
-    /// <summary>Copy constructor.</summary>
+    /**
+     * @brief Copy constructor.
+     */
     NodeStatusWnd(const NodeStatusWnd&) = delete;
-    /// <summary>Move constructor.</summary>
+    /**
+     * @brief Move constructor.
+     */
     NodeStatusWnd(NodeStatusWnd&&) noexcept = delete;
-    /// <summary>Finalizes an instance of the NodeStatusWnd class.</summary>
+    /**
+     * @brief Finalizes an instance of the NodeStatusWnd class.
+     */
     ~NodeStatusWnd() noexcept override = default;
 
-    /// <summary>Disable copy assignment operator (=).</summary>
+    /**
+     * @brief Disable copy assignment operator (=).
+     */
     auto operator= (const NodeStatusWnd&) -> NodeStatusWnd& = delete;
-    /// <summary>Disable move assignment operator (=).</summary>
+    /**
+     * @brief Disable move assignment operator (=).
+     */
     auto operator= (NodeStatusWnd&&) noexcept -> NodeStatusWnd& = delete;
 
-    /// <summary>Disable set X coordinate.</summary>
+    /**
+     * @brief Disable set X coordinate.
+     */
     void setX(int, bool = true) override { }
-    /// <summary>Disable set Y coordinate.</summary>
+    /**
+     * @brief Disable set Y coordinate.
+     */
     void setY(int, bool = true) override { }
-    /// <summary>Disable set position.</summary>
+    /**
+     * @brief Disable set position.
+     */
     void setPos(const FPoint&, bool = true) override { }
 
-    /// <summary>Gets the channel ID.</summary>
+    /**
+     * @brief Gets the channel ID.
+     * @returns uint8_t Channel ID.
+     */
     uint8_t getChannelId() const { return m_channelId; }
-    /// <summary>Gets the channel number.</summary>
+    /**
+     * @brief Gets the channel number.
+     * @returns uint32_t Channel Number.
+     */
     uint32_t getChannelNo() const { return m_channelNo; }
-    /// <summary>Gets the channel data.</summary>
+    /**
+     * @brief Gets the channel data.
+     * @returns lookups::VoiceChData Channel Data.
+     */
     lookups::VoiceChData getChData() { return m_chData; }
-    /// <summary>Sets the channel data.</summary>
+    /**
+     * @brief Sets the channel data.
+     * @param chData Channel Data.
+     */
     void setChData(lookups::VoiceChData chData) { m_chData = chData; }
-    /// <summary>Gets the peer ID.</summary>
+    /**
+     * @brief Gets the peer ID.
+     * @param uint32_t Peer ID.
+     */
     uint32_t getPeerId() const { return m_peerId; }
 
 private:
@@ -107,9 +142,9 @@ private:
     FLabel m_lastSrcLabel{"Last Src: ", this};
     FLabel m_lastSrc{this};
 
-    /// <summary>
-    ///
-    /// </summary>
+    /**
+     * @brief Initializes the window layout.
+     */
     void initLayout() override
     {
         FDialog::setMinimumSize(FSize{NODE_STATUS_WIDTH, NODE_STATUS_HEIGHT});
@@ -127,9 +162,9 @@ private:
         FDialog::initLayout();
     }
 
-    /// <summary>
-    ///
-    /// </summary>
+    /**
+     * @brief Draws the window.
+     */
     void draw() override
     {
         FDialog::draw();
@@ -150,9 +185,9 @@ private:
         finalcut::drawBorder(this, FRect(FPoint{1, 2}, FPoint{NODE_STATUS_WIDTH, NODE_STATUS_HEIGHT}));
     }
 
-    /// <summary>
-    ///
-    /// </summary>
+    /**
+     * @brief Initializes window controls.
+     */
     void initControls()
     {
         m_modeStr.setGeometry(FPoint(22, 1), FSize(4, 1));
@@ -198,9 +233,9 @@ private:
         }
     }
 
-    /// <summary>
-    ///
-    /// </summary>
+    /**
+     * @brief Helper to calculate the Tx/Rx frequencies of a channel.
+     */
     void calculateRxTx()
     {
         IdenTable entry = g_idenTable->find(m_channelId);
@@ -239,20 +274,20 @@ private:
     ** Event Handlers
     */
 
-    /// <summary>
-    ///
-    /// </summary>
-    /// <param name="e"></param>
+    /**
+     * @brief Event that occurs when the window is raised.
+     * @param e Event.
+     */
     void onWindowRaised(FEvent* e) override
     {
         FDialog::onWindowLowered(e);
         emitCallback("update-selected");
     }
 
-    /// <summary>
-    ///
-    /// </summary>
-    /// <param name="timer"></param>
+    /**
+     * @brief Event that occurs on interval by timer.
+     * @param timer Timer Event
+     */
     void onTimer(FTimerEvent* timer) override
     {
         if (timer != nullptr) {

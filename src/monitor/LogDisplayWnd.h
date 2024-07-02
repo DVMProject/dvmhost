@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Host Monitor Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2023 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Host Monitor Software
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Host Monitor Software
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2023 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @file LogDisplayWnd.h
+ * @ingroup monitor
+ */
 #if !defined(__LOG_DISPLAY_WND_H__)
 #define __LOG_DISPLAY_WND_H__
 
@@ -18,40 +19,53 @@ using namespace finalcut;
 
 // ---------------------------------------------------------------------------
 //  Class Declaration
-//      This class implements the log display window.
 // ---------------------------------------------------------------------------
 
+/**
+ * @brief This class implements the log display window.
+ * @ingroup monitor
+ */
 class HOST_SW_API LogDisplayWnd final : public finalcut::FDialog, public std::ostringstream {
 public:
-    /// <summary>
-    /// Initializes a new instance of the LogDisplayWnd class.
-    /// </summary>
-    /// <param name="widget"></param>
+    /**
+     * @brief Initializes a new instance of the LogDisplayWnd class.
+     * @param widget 
+     */
     explicit LogDisplayWnd(FWidget* widget = nullptr) : FDialog{widget}
     {
         m_scrollText.ignorePadding();
 
         m_timerId = addTimer(250); // starts the timer every 250 milliseconds
     }
-    /// <summary>Copy constructor.</summary>
+    /**
+     * @brief Copy constructor.
+     */
     LogDisplayWnd(const LogDisplayWnd&) = delete;
-    /// <summary>Move constructor.</summary>
+    /**
+     * @brief Move constructor.
+     */
     LogDisplayWnd(LogDisplayWnd&&) noexcept = delete;
-    /// <summary>Finalizes an instance of the LogDisplayWnd class.</summary>
+    /**
+     * @brief Finalizes an instance of the LogDisplayWnd class.
+     */
     ~LogDisplayWnd() noexcept override = default;
 
-    /// <summary>Disable copy assignment operator (=).</summary>
+    /**
+     * @brief Disable copy assignment operator (=).
+     */
     auto operator= (const LogDisplayWnd&) -> LogDisplayWnd& = delete;
-    /// <summary>Disable move assignment operator (=).</summary>
+    /**
+     * @brief Disable move assignment operator (=).
+     */
     auto operator= (LogDisplayWnd&&) noexcept -> LogDisplayWnd& = delete;
 
 private:
     FTextView m_scrollText{this};
     int m_timerId;
 
-    /// <summary>
-    ///
-    /// </summary>
+    /**
+     * @brief Initializes the window layout.
+     */
     void initLayout() override
     {
         using namespace std::string_literals;
@@ -74,9 +88,9 @@ private:
         FDialog::initLayout();
     }
 
-    /// <summary>
-    ///
-    /// </summary>
+    /**
+     * @brief Adjusts window size.
+     */
     void adjustSize() override
     {
         FDialog::adjustSize();
@@ -88,19 +102,19 @@ private:
     ** Event Handlers
     */
 
-    /// <summary>
-    /// 
-    /// </summary>
-    /// <param name="e"></param>
+    /**
+     * @brief Event that occurs when the window is closed.
+     * @param e Close Event
+     */
     void onClose(FCloseEvent* e) override
     {
         minimizeWindow();
     }
 
-    /// <summary>
-    ///
-    /// </summary>
-    /// <param name="timer"></param>
+    /**
+     * @brief Event that occurs on interval by timer.
+     * @param timer Timer Event
+     */
     void onTimer(FTimerEvent* timer) override
     {
         if (timer != nullptr) {

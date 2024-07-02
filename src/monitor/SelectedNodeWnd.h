@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Host Monitor Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2023 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Host Monitor Software
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Host Monitor Software
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2023 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @file SelectedNodeWnd.h
+ * @ingroup monitor
+ */
 #if !defined(__SELECTED_NODE_WND_H__)
 #define __SELECTED_NODE_WND_H__
 
@@ -20,39 +21,61 @@ using namespace finalcut;
 
 // ---------------------------------------------------------------------------
 //  Class Declaration
-//      This class implements the selected node display window.
 // ---------------------------------------------------------------------------
 
+/**
+ * @brief This class implements the selected node display window.
+ * @ingroup monitor
+ */
 class HOST_SW_API SelectedNodeWnd final : public finalcut::FDialog {
 public:
-    /// <summary>
-    /// Initializes a new instance of the SelectedNodeWnd class.
-    /// </summary>
-    /// <param name="widget"></param>
+    /**
+     * @brief Initializes a new instance of the SelectedNodeWnd class.
+     * @param widget 
+     */
     explicit SelectedNodeWnd(FWidget* widget = nullptr) : FDialog{widget}
     {
         /* stub */
     }
-    /// <summary>Copy constructor.</summary>
+    /**
+     * @brief Copy constructor.
+     */
     SelectedNodeWnd(const SelectedNodeWnd&) = delete;
-    /// <summary>Move constructor.</summary>
+    /**
+     * @brief Move constructor.
+     */
     SelectedNodeWnd(SelectedNodeWnd&&) noexcept = delete;
-    /// <summary>Finalizes an instance of the SelectedNodeWnd class.</summary>
+    /**
+     * @brief Finalizes an instance of the SelectedNodeWnd class.
+     */
     ~SelectedNodeWnd() noexcept override = default;
 
-    /// <summary>Disable copy assignment operator (=).</summary>
+    /**
+     * @brief Disable copy assignment operator (=).
+     */
     auto operator= (const SelectedNodeWnd&) -> SelectedNodeWnd& = delete;
-    /// <summary>Disable move assignment operator (=).</summary>
+    /**
+     * @brief Disable move assignment operator (=).
+     */
     auto operator= (SelectedNodeWnd&&) noexcept -> SelectedNodeWnd& = delete;
 
-    /// <summary>Disable set X coordinate.</summary>
+    /**
+     * @brief Disable set X coordinate.
+     */
     void setX(int, bool = true) override { }
-    /// <summary>Disable set Y coordinate.</summary>
+    /**
+     * @brief Disable set Y coordinate.
+     */
     void setY(int, bool = true) override { }
-    /// <summary>Disable set position.</summary>
+    /**
+     * @brief Disable set position.
+     */
     void setPos(const FPoint&, bool = true) override { }
 
-    /// <summary></summary>
+    /**
+     * @brief Helper to set the selected host text.
+     * @param str Text.
+     */
     void setSelectedText(std::string str) 
     {
         m_selectedHost.setText(str);
@@ -63,9 +86,9 @@ private:
     FLabel m_selectedHostLabel{"Selected Host: ", this};
     FLabel m_selectedHost{this};
 
-    /// <summary>
-    ///
-    /// </summary>
+    /**
+     * @brief Initializes the window layout.
+     */
     void initLayout() override
     {
         std::size_t maxWidth;
@@ -93,9 +116,9 @@ private:
         FDialog::initLayout();
     }
 
-    /// <summary>
-    ///
-    /// </summary>
+    /**
+     * @brief Draws the window.
+     */
     void draw() override
     {
         setColor();

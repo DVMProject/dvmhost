@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Host Monitor Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2023 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Host Monitor Software
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Host Monitor Software
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2023,2024 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @file InhibitSubscriberWnd.h
+ * @ingroup monitor
+ */
 #if !defined(__INHIBIT_SUBSCRIBER_WND_H__)
 #define __INHIBIT_SUBSCRIBER_WND_H__
 
@@ -20,16 +21,19 @@ using namespace finalcut;
 
 // ---------------------------------------------------------------------------
 //  Class Declaration
-//      This class implements the inhibit subscriber window.
 // ---------------------------------------------------------------------------
 
+/**
+ * @brief This class implements the inhibit subscriber window.
+ * @ingroup monitor
+ */
 class HOST_SW_API InhibitSubscriberWnd final : public TransmitWndBase {
 public:
-    /// <summary>
-    /// Initializes a new instance of the InhibitSubscriberWnd class.
-    /// </summary>
-    /// <param name="channel"></param>
-    /// <param name="widget"></param>
+    /**
+     * @brief Initializes a new instance of the InhibitSubscriberWnd class.
+     * @param channel Channel data.
+     * @param widget 
+     */
     explicit InhibitSubscriberWnd(lookups::VoiceChData channel, FWidget* widget = nullptr) : TransmitWndBase{channel, widget}
     {
         /* stub */
@@ -41,9 +45,9 @@ private:
     FLabel m_subscriberLabel{"Subscriber ID: ", this};
     FSpinBox m_subscriber{this};
 
-    /// <summary>
-    ///
-    /// </summary>
+    /**
+     * @brief Initializes the window layout.
+     */
     void initLayout() override
     {
         FDialog::setText("Inhibit Subscriber");
@@ -52,9 +56,9 @@ private:
         TransmitWndBase::initLayout();
     }
 
-    /// <summary>
-    ///
-    /// </summary>
+    /**
+     * @brief Initializes window controls.
+     */
     void initControls() override
     {
         TransmitWndBase::initControls();
@@ -103,9 +107,9 @@ private:
         redraw();
     }
 
-    /// <summary>
-    ///
-    /// </summary>
+    /**
+     * @brief Helper to transmit.
+     */
     void setTransmit() override
     {
         std::string method = PUT_DMR_RID;

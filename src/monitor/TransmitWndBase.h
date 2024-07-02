@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Host Monitor Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2023 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Host Monitor Software
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Host Monitor Software
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2023,2024 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @file TransmitWndBase.h
+ * @ingroup monitor
+ */
 #if !defined(__TRANSMIT_WND_BASE_H__)
 #define __TRANSMIT_WND_BASE_H__
 
@@ -24,16 +25,19 @@ using namespace finalcut;
 
 // ---------------------------------------------------------------------------
 //  Class Declaration
-//      This class implements the base class for transmit windows.
 // ---------------------------------------------------------------------------
 
+/**
+ * @brief This class implements the base class for transmit windows.
+ * @ingroup monitor
+ */
 class HOST_SW_API TransmitWndBase : public finalcut::FDialog {
 public:
-    /// <summary>
-    /// Initializes a new instance of the TransmitWndBase class.
-    /// </summary>
-    /// <param name="channel"></param>
-    /// <param name="widget"></param>
+    /**
+     * @brief Initializes a new instance of the TransmitWndBase class.
+     * @param channel Channel data.
+     * @param widget 
+     */
     explicit TransmitWndBase(lookups::VoiceChData channel, FWidget* widget = nullptr) : FDialog{widget},
         m_selectedCh(channel)
     {
@@ -46,9 +50,9 @@ protected:
 
     uint8_t m_mode = modem::STATE_DMR;
 
-    /// <summary>
-    ///
-    /// </summary>
+    /**
+     * @brief Initializes the window layout.
+     */
     void initLayout() override
     {
         FDialog::setMinimizable(true);
@@ -82,9 +86,9 @@ protected:
         redraw();
     }
 
-    /// <summary>
-    ///
-    /// </summary>
+    /**
+     * @brief Initializes window controls.
+     */
     virtual void initControls()
     {
         resizeControls();
@@ -202,9 +206,9 @@ protected:
         focusFirstChild();
     }
 
-    /// <summary>
-    ///
-    /// </summary>
+    /**
+     * @brief
+     */
     void resizeControls()
     {
         // transmit button and close button logic
@@ -215,9 +219,9 @@ protected:
         m_closeButton.addCallback("clicked", [&]() { hide(); });
     }
 
-    /// <summary>
-    ///
-    /// </summary>
+    /**
+     * @brief Adjusts window size.
+     */
     void adjustSize() override
     {
         FDialog::adjustSize();
@@ -227,10 +231,10 @@ protected:
     ** Event Handlers
     */
 
-    /// <summary>
-    /// 
-    /// </summary>
-    /// <param name="e"></param>
+    /**
+     * @brief Event that occurs on keyboard key press.
+     * @param e Keyboard Event.
+     */
     void onKeyPress(finalcut::FKeyEvent* e) override
     {
         const auto key = e->key();
@@ -239,19 +243,19 @@ protected:
         }
     }
 
-    /// <summary>
-    /// 
-    /// </summary>
-    /// <param name="e"></param>
+    /**
+     * @brief Event that occurs when the window is closed.
+     * @param e Close Event
+     */
     void onClose(FCloseEvent* e) override
     {
         hide();
     }
 
 protected:
-    /// <summary>
-    ///
-    /// </summary>
+    /**
+     * @brief Helper to transmit.
+     */
     virtual void setTransmit()
     {
         /* stub */

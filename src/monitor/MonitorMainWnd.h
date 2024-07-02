@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Host Monitor Software
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2023 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
-* Digital Voice Modem - Host Monitor Software
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* @package DVM / Host Monitor Software
-* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-*
-*   Copyright (C) 2023 Bryan Biedenkapp, N2PLL
-*
-*/
+ * @file MonitorMainWnd.h
+ * @ingroup monitor
+ */
 #if !defined(__MONITOR_WND_H__)
 #define __MONITOR_WND_H__
 
@@ -43,15 +44,18 @@ class HOST_SW_API MonitorApplication;
 
 // ---------------------------------------------------------------------------
 //  Class Declaration
-//      This class implements the root window control.
 // ---------------------------------------------------------------------------
 
+/**
+ * @brief This class implements the root window control.
+ * @ingroup monitor
+ */
 class HOST_SW_API MonitorMainWnd final : public finalcut::FWidget {
 public:
-    /// <summary>
-    /// Initializes a new instance of the MonitorMainWnd class.
-    /// </summary>
-    /// <param name="widget"></param>
+    /**
+     * @brief Initializes a new instance of the MonitorMainWnd class.
+     * @param widget 
+     */
     explicit MonitorMainWnd(FWidget* widget = nullptr) : FWidget{widget}
     {
         __InternalOutputStream(m_logWnd);
@@ -106,7 +110,10 @@ public:
         });
     }
 
-    /// <summary></summary>
+    /**
+     * @brief Helper to get the currently selected channel.
+     * @returns lookups::VoiceChData Currently selected channel.
+     */
     lookups::VoiceChData getSelectedCh() { return m_selectedCh; }
 
 private:
@@ -142,9 +149,9 @@ private:
     FStatusKey m_keyF7{FKey::F7, "Inhibit Subscriber", &m_statusBar};
     FStatusKey m_keyF8{FKey::F8, "Uninhibit Subscriber", &m_statusBar};
 
-    /// <summary>
-    /// 
-    /// </summary>
+    /**
+     * @brief Helper to initialize the individual channel display elements.
+     */
     void intializeNodeDisplay()
     {
         const auto& rootWidget = getRootWidget();
@@ -226,10 +233,10 @@ private:
     ** Event Handlers
     */
 
-    /// <summary>
-    /// 
-    /// </summary>
-    /// <param name="e"></param>
+    /**
+     * @brief Event that occurs on keyboard key press.
+     * @param e Keyboard Event.
+     */
     void onKeyPress(finalcut::FKeyEvent* e) override
     {
         const FKey key = e->key();
@@ -249,10 +256,10 @@ private:
         }
     }
 
-    /// <summary>
-    /// 
-    /// </summary>
-    /// <param name="e"></param>
+    /**
+     * @brief Event that occurs when the window is shown.
+     * @param e Show Event
+     */
     void onShow(FShowEvent* e) override
     {
         intializeNodeDisplay();
@@ -264,10 +271,10 @@ private:
         }
     }
 
-    /// <summary>
-    /// 
-    /// </summary>
-    /// <param name="e"></param>
+    /**
+     * @brief Event that occurs when the window is closed.
+     * @param e Close Event
+     */
     void onClose(FCloseEvent* e) override
     {
         FApplication::closeConfirmationDialog(this, e);
