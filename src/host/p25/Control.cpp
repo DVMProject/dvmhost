@@ -407,6 +407,11 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
     m_affiliations.setUnitDeregCallback([=](uint32_t srcId) {
         if (m_network != nullptr)
             m_network->announceUnitDeregistration(srcId);
+
+        // fire off a U_REG_CMD to get the SU to re-affiliate
+        if (m_enableControl) {
+            m_control->writeRF_TSDU_U_Reg_Cmd(srcId);
+        }
     });
 
     if (printOptions) {
