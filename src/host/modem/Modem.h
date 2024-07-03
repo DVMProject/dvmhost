@@ -552,28 +552,28 @@ namespace modem
 
         /**
          * @brief Writes DMR Slot 1 frame data to the DMR Slot 1 ring buffer.
-         * @param data Data to write to ring buffer.
+         * @param[in] data Data to write to ring buffer.
          * @param length Length of data to write.
          * @returns bool True, if data is written, otherwise false.
          */
         bool writeDMRFrame1(const uint8_t* data, uint32_t length);
         /**
          * @brief Writes DMR Slot 2 frame data to the DMR Slot 2 ring buffer.
-         * @param data Data to write to ring buffer.
+         * @param[in] data Data to write to ring buffer.
          * @param length Length of data to write.
          * @returns bool True, if data is written, otherwise false.
          */
         bool writeDMRFrame2(const uint8_t* data, uint32_t length);
         /**
          * @brief Writes P25 frame data to the P25 ring buffer.
-         * @param data Data to write to ring buffer.
+         * @param[in] data Data to write to ring buffer.
          * @param length Length of data to write.
          * @returns bool True, if data is written, otherwise false.
          */
         bool writeP25Frame(const uint8_t* data, uint32_t length);
         /**
          * @brief Writes NXDN frame data to the NXDN ring buffer.
-         * @param data Data to write to ring buffer.
+         * @param[in] data Data to write to ring buffer.
          * @param length Length of data to write.
          * @returns bool True, if data is written, otherwise false.
          */
