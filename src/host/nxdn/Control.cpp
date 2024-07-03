@@ -272,7 +272,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
     });
 
     // set the unit deregistration callback
-    m_affiliations.setUnitDeregCallback([=](uint32_t srcId) {
+    m_affiliations.setUnitDeregCallback([=](uint32_t srcId, bool automatic) {
         if (m_network != nullptr)
             m_network->announceUnitDeregistration(srcId);
     });

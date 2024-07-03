@@ -74,9 +74,10 @@ namespace lookups
         /**
          * @brief Helper to deregister a source ID.
          * @param srcId Source Radio ID.
+         * @param automatic Flag indicating the deregistration is a result of an automated timer.
          * @returns bool True, if source ID is deregistered, otherwise false.
          */
-        virtual bool unitDereg(uint32_t srcId);
+        virtual bool unitDereg(uint32_t srcId, bool automatic = false);
         /**
          * @brief Helper to start the source ID registration timer.
          * @param srcId Source Radio ID.
@@ -265,7 +266,7 @@ namespace lookups
          * @brief Helper to set the unit deregistration callback.
          * @param callback Unit deregistration function callback.
          */
-        void setUnitDeregCallback(std::function<void(uint32_t)>&& callback) { m_unitDereg = callback; }
+        void setUnitDeregCallback(std::function<void(uint32_t, bool)>&& callback) { m_unitDereg = callback; }
 
     protected:
         uint8_t m_rfGrantChCnt;
@@ -282,8 +283,8 @@ namespace lookups
 
         //                 chNo      dstId     slot
         std::function<void(uint32_t, uint32_t, uint8_t)> m_releaseGrant;
-        //                 srcId
-        std::function<void(uint32_t)> m_unitDereg;
+        //                 srcId     auto
+        std::function<void(uint32_t, bool)> m_unitDereg;
 
         std::string m_name;
         ChannelLookup* m_chLookup;

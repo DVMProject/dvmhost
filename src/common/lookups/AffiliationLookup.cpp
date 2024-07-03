@@ -79,7 +79,8 @@ void AffiliationLookup::unitReg(uint32_t srcId)
 }
 
 /* Helper to group unaffiliate a source ID. */
-bool AffiliationLookup::unitDereg(uint32_t srcId)
+
+bool AffiliationLookup::unitDereg(uint32_t srcId, bool automatic)
 {
     bool ret = false;
 
@@ -105,7 +106,7 @@ bool AffiliationLookup::unitDereg(uint32_t srcId)
 
     if (ret) {
         if (m_unitDereg != nullptr) {
-            m_unitDereg(srcId);
+            m_unitDereg(srcId, automatic);
         }
     }
 
@@ -541,7 +542,7 @@ void AffiliationLookup::clock(uint32_t ms)
 
         // release units registrations that have timed out
         for (uint32_t srcId : unitsToDereg) {
-            unitDereg(srcId);
+            unitDereg(srcId, true);
         }
     }
 }
