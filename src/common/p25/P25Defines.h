@@ -341,7 +341,7 @@ namespace p25
 
                 EXT_ADDR = 0x1FU,                       //! Extended Addressing
 
-                REG = 0x20U,                            //! Registration
+                CONV_DATA_REG = 0x20U,                  //! Registration
 
                 UNENC_KMM = 0x28U,                      //! Unencrypted KMM
                 ENC_KMM = 0x29U,                        //! Encrypted KMM
@@ -384,7 +384,7 @@ namespace p25
             enum : uint8_t {
                 CONNECT = 0x00U,                        //! Connect
                 DISCONNECT = 0x01U,                     //! Disconnect
-                ACCPT = 0x04U,                          //! Accept
+                ACCEPT = 0x04U,                         //! Accept
                 DENY = 0x05U                            //! Deny
             };
         }
@@ -395,6 +395,9 @@ namespace p25
         const uint8_t   SNDCP_MTU_296 = 1U;
         /** @brief 510 byte MTU */
         const uint8_t   SNDCP_MTU_510 = 2U;
+
+        /** @brief Default NSAPI */
+        const uint8_t   DEFAULT_NSAPI = 1U;
 
         /** @brief SNDCP PDU Message Type */
         namespace SNDCP_PDUType {

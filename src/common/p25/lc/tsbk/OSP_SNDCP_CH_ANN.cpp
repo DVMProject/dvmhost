@@ -26,6 +26,7 @@ using namespace p25::lc::tsbk;
 OSP_SNDCP_CH_ANN::OSP_SNDCP_CH_ANN() : TSBK(),
     m_implicitChannel(false),
     m_sndcpAutoAccess(true),
+    m_sndcpRequestedAccess(true),
     m_sndcpDAC(1U)
 {
     m_lco = TSBKO::OSP_SNDCP_CH_ANN;
@@ -64,7 +65,7 @@ void OSP_SNDCP_CH_ANN::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
         (m_encrypted ? 0x40U : 0x00U);                                              // Encrypted Flag
     tsbkValue = (tsbkValue << 8) +
         (m_sndcpAutoAccess ? 0x80U : 0x00U) +                                       // Autonomous Access
-        (m_sndcpAutoAccess ? 0x40U : 0x00U);                                        // Requested Access
+        (m_sndcpRequestedAccess ? 0x40U : 0x00U);                                   // Requested Access
 
     if (m_implicitChannel) {
         tsbkValue = (tsbkValue << 16) + 0xFFFFU;

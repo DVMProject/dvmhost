@@ -141,13 +141,17 @@ namespace p25
             uint8_t* m_netPDU;
             uint32_t m_netPDUCount;
 
+            uint8_t* m_retryPDUData;
+            uint32_t m_retryPDUBitLength;
+            uint8_t m_retryCount;
+
             uint8_t* m_pduUserData;
             uint32_t m_pduUserDataLength;
 
-            std::unordered_map<uint32_t, ulong64_t> m_fneRegTable;
+            std::unordered_map<uint32_t, uint32_t> m_fneRegTable;
 
-            std::unordered_map<uint32_t, std::tuple<uint8_t, ulong64_t>> m_connQueueTable;
-            std::unordered_map<uint32_t, Timer> m_connTimerTable;
+            std::unordered_map<uint32_t, uint32_t> m_convRegQueueTable;
+            std::unordered_map<uint32_t, Timer> m_convRegTimerTable;
 
             std::unordered_map<uint32_t, defines::SNDCPState::E> m_sndcpStateTable;
             std::unordered_map<uint32_t, Timer> m_sndcpReadyTimers;
@@ -174,6 +178,11 @@ namespace p25
             ~Data();
 
             /**
+             * @brief Helper used to process conventional data registration from PDU data.
+             * @returns bool True, if SNDCP control data was processed, otherwise false.
+             */
+            bool processConvDataReg();
+            /**
              * @brief Helper used to process SNDCP control data from PDU data.
              * @returns bool True, if SNDCP control data was processed, otherwise false.
              */
@@ -194,8 +203,9 @@ namespace p25
              * @param bitlength Length of PDU in bits.
              * @param noNulls Flag indicating no trailing nulls should be transmitted.
              * @param imm Flag indicating the PDU should be written to the immediate queue.
+             * @param ackRetry Flag indicating the PDU is being sent as an acknowledged retry.
              */
-            void writeRF_PDU(const uint8_t* pdu, uint32_t bitLength, bool noNulls = false, bool imm = false);
+            void writeRF_PDU(const uint8_t* pdu, uint32_t bitLength, bool noNulls = false, bool imm = false, bool ackRetry = false);
             /**
              * @brief Helper to write a network P25 PDU packet.
              * This will take buffered network PDU data and repeat it over the air.
@@ -209,11 +219,10 @@ namespace p25
             /**
              * @brief Helper to write a PDU registration response.
              * @param regType Registration Response.
-             * @param mfId Manufacturer ID.
              * @param llId Logical Link ID.
              * @param ipAddr 
              */
-            void writeRF_PDU_Reg_Response(uint8_t regType, uint8_t mfId, uint32_t llId, uint32_t ipAddr);
+            void writeRF_PDU_Reg_Response(uint8_t regType, uint32_t llId, uint32_t ipAddr);
             /**
              * @brief Helper to write a PDU acknowledge response.
              * @param ackClass Acknowledgement Class.

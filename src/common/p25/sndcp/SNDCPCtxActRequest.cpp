@@ -63,19 +63,7 @@ void SNDCPCtxActRequest::encode(uint8_t* data)
 {
     assert(data != nullptr);
 
-    SNDCPPacket::encodeHeader(data, true);
-
-    data[1U] = ((m_nsapi << 4U) & 0xF0U) +                                          // NSAPI
-        (m_nat & 0x0FU);                                                            // NAT
-
-    data[2U] = (uint8_t)((m_ipAddress >> 24) & 0xFFU);                              // IP Address
-    data[3U] = (uint8_t)((m_ipAddress >> 16) & 0xFFU);
-    data[4U] = (uint8_t)((m_ipAddress >> 8) & 0xFFU);
-    data[5U] = (uint8_t)((m_ipAddress >> 0) & 0xFFU);
-
-    data[6U] = ((m_dsut << 4U) & 0xF0U);                                            // Data Subscriber Unit Type
-
-    data[9U] = (m_mdpco & 0x0FU);                                                   // MDPCO
+    /* stub */
 }
 
 /* Internal helper to copy the the class. */

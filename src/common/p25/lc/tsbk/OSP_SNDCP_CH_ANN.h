@@ -72,6 +72,7 @@ namespace p25
 
             private:
                 bool m_sndcpAutoAccess;
+                bool m_sndcpRequestedAccess;
                 uint16_t m_sndcpDAC;
 
                 __COPY(OSP_SNDCP_CH_ANN);

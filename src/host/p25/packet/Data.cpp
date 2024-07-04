@@ -34,7 +34,8 @@ using namespace p25::packet;
 //  Constants
 // ---------------------------------------------------------------------------
 
-const uint32_t CONN_WAIT_TIMEOUT = 1U;
+const uint8_t MAX_PDU_RETRY_CNT = 2U;
+const uint32_t CONV_REG_WAIT_TIMEOUT = 750U; // ms
 const uint32_t SNDCP_READY_TIMEOUT = 10U;
 const uint32_t SNDCP_STANDBY_TIMEOUT = 60U;
 
@@ -159,7 +160,7 @@ bool Data::process(uint8_t* data, uint32_t len)
             // an RSP or a registration service
             if ((m_rfDataHeader.getFormat() != PDUFormatType::AMBT) &&
                 (m_rfDataHeader.getFormat() != PDUFormatType::RSP) &&
-                (m_rfDataHeader.getSAP() != PDUSAP::REG)) {
+                (m_rfDataHeader.getSAP() != PDUSAP::CONV_DATA_REG)) {
                 writeNetwork(0U, buffer, P25_PDU_FEC_LENGTH_BYTES, false);
             }
         }
@@ -199,7 +200,7 @@ bool Data::process(uint8_t* data, uint32_t len)
                 // an RSP or a registration service
                 if ((m_rfDataHeader.getFormat() != PDUFormatType::AMBT) &&
                     (m_rfDataHeader.getFormat() != PDUFormatType::RSP) &&
-                    (m_rfDataHeader.getSAP() != PDUSAP::REG)) {
+                    (m_rfDataHeader.getSAP() != PDUSAP::CONV_DATA_REG)) {
                     writeNetwork(1U, buffer, P25_PDU_FEC_LENGTH_BYTES, false);
                 }
 
@@ -291,7 +292,7 @@ bool Data::process(uint8_t* data, uint32_t len)
                         // an RSP or a registration service
                         if ((m_rfDataHeader.getFormat() != PDUFormatType::AMBT) &&
                             (m_rfDataHeader.getFormat() != PDUFormatType::RSP) &&
-                            (m_rfDataHeader.getSAP() != PDUSAP::REG)) {
+                            (m_rfDataHeader.getSAP() != PDUSAP::CONV_DATA_REG)) {
                             writeNetwork(m_rfDataBlockCnt, buffer, P25_PDU_FEC_LENGTH_BYTES, m_rfData[i].getLastBlock());
                         }
 
@@ -353,6 +354,13 @@ bool Data::process(uint8_t* data, uint32_t len)
                         if (m_rfDataHeader.getResponseClass() == PDUAckClass::ACK && m_rfDataHeader.getResponseType() == PDUAckType::ACK) {
                             LogMessage(LOG_RF, P25_PDU_STR ", ISP, response, OSP ACK, llId = %u",
                                 m_rfDataHeader.getLLId());
+                            if (m_retryPDUData != nullptr && m_retryPDUBitLength > 0U) {
+                                delete m_retryPDUData;
+                                m_retryPDUData = nullptr;
+
+                                m_retryPDUBitLength = 0U;
+                                m_retryCount = 0U;
+                            }
                         } else {
                             if (m_rfDataHeader.getResponseClass() == PDUAckClass::NACK) {
                                 switch (m_rfDataHeader.getResponseType()) {
@@ -377,6 +385,31 @@ bool Data::process(uint8_t* data, uint32_t len)
                                     default:
                                         break;
                                     }
+                            } else if (m_rfDataHeader.getResponseClass() == PDUAckClass::ACK_RETRY) {
+                                LogMessage(LOG_RF, P25_PDU_STR ", ISP, response, OSP ACK RETRY, llId = %u",
+                                    m_rfDataHeader.getLLId());
+
+                                // really this is supposed to check the bit field in the included response 
+                                // and only return those bits -- but we're responding with the entire previous packet...
+                                if (m_retryPDUData != nullptr && m_retryPDUBitLength > 0U) {
+                                    if (m_retryCount < MAX_PDU_RETRY_CNT) {
+                                        m_p25->writeRF_Preamble();
+                                        writeRF_PDU(m_retryPDUData, m_retryPDUBitLength, false, false, true);
+                                        m_retryCount++;
+                                    }
+                                    else {
+                                        delete m_retryPDUData;
+                                        m_retryPDUData = nullptr;
+
+                                        m_retryPDUBitLength = 0U;
+                                        m_retryCount = 0U;
+
+                                        LogMessage(LOG_RF, P25_PDU_STR ", ISP, response, OSP ACK RETRY, llId = %u, exceeded retries, undeliverable",
+                                            m_rfDataHeader.getLLId());
+
+                                        writeRF_PDU_Ack_Response(PDUAckClass::NACK, PDUAckType::NACK_UNDELIVERABLE, 0U, m_rfDataHeader.getLLId());
+                                    }
+                                }
                             }
                         }
                     }
@@ -394,57 +427,21 @@ bool Data::process(uint8_t* data, uint32_t len)
                 else {
                     // handle standard P25 service access points
                     switch (m_rfDataHeader.getSAP()) {
-                    case PDUSAP::REG:
+                    case PDUSAP::CONV_DATA_REG:
                     {
-                        uint8_t regType = (m_pduUserData[0] >> 4) & 0x0F;
-                        switch (regType) {
-                        case PDURegType::CONNECT:
-                        {
-                            uint32_t llId = (m_pduUserData[1U] << 16) + (m_pduUserData[2U] << 8) + m_pduUserData[3U];
-                            ulong64_t ipAddr = (m_pduUserData[8U] << 24) + (m_pduUserData[9U] << 16) +
-                                (m_pduUserData[10U] << 8) + m_pduUserData[11U];
-
-                            if (m_verbose) {
-                                LogMessage(LOG_RF, P25_PDU_STR ", CONNECT (Registration Request Connect), llId = %u, ipAddr = %s", llId, __IP_FROM_UINT(ipAddr).c_str());
-                            }
-
-                            m_connQueueTable[llId] = std::make_tuple(m_rfDataHeader.getMFId(), ipAddr);
-
-                            m_connTimerTable[llId] = Timer(1000U, CONN_WAIT_TIMEOUT);
-                            m_connTimerTable[llId].start();
+                        if (m_verbose) {
+                            LogMessage(LOG_RF, P25_PDU_STR ", CONV_DATA_REG (Conventional Data Registration), blocksToFollow = %u",
+                                m_rfDataHeader.getBlocksToFollow());
                         }
-                        break;
-                        case PDURegType::DISCONNECT:
-                        {
-                            uint32_t llId = (m_pduUserData[1U] << 16) + (m_pduUserData[2U] << 8) + m_pduUserData[3U];
 
-                            if (m_verbose) {
-                                LogMessage(LOG_RF, P25_PDU_STR ", DISCONNECT (Registration Request Disconnect), llId = %u", llId);
-                            }
-
-                            if (hasLLIdFNEReg(llId)) {
-                                // remove dynamic FNE registration table entry
-                                try {
-                                    m_fneRegTable.at(llId);
-                                    m_fneRegTable.erase(llId);
-                                }
-                                catch (...) {
-                                    // stub
-                                }
-                            }
-                        }
-                        break;
-                        default:
-                            LogError(LOG_RF, "P25 unhandled PDU registration type, regType = $%02X", regType);
-                            break;
-                        }
+                        processConvDataReg();
                     }
                     break;
                     case PDUSAP::SNDCP_CTRL_DATA:
                     {
                         if (m_verbose) {
-                            LogMessage(LOG_RF, P25_PDU_STR ", SNDCP_CTRL_DATA (SNDCP Control Data), lco = $%02X, blocksToFollow = %u",
-                                m_rfDataHeader.getAMBTOpcode(), m_rfDataHeader.getBlocksToFollow());
+                            LogMessage(LOG_RF, P25_PDU_STR ", SNDCP_CTRL_DATA (SNDCP Control Data), blocksToFollow = %u",
+                                m_rfDataHeader.getBlocksToFollow());
                         }
 
                         processSNDCPControl();
@@ -763,10 +760,10 @@ void Data::writeRF_PDU_User(data::DataHeader& dataHeader, data::DataHeader& seco
     uint32_t blocksToFollow = dataHeader.getBlocksToFollow();
 
     if (m_verbose) {
-        LogMessage(LOG_RF, P25_PDU_STR ", OSP, ack = %u, outbound = %u, fmt = $%02X, mfId = $%02X, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padLength = %u, packetLength = %u, n = %u, seqNo = %u, lastFragment = %u, hdrOffset = %u, llId = %u",
+        LogMessage(LOG_RF, P25_PDU_STR ", OSP, ack = %u, outbound = %u, fmt = $%02X, mfId = $%02X, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padLength = %u, packetLength = %u, n = %u, seqNo = %u, lastFragment = %u, hdrOffset = %u, bitLength = %u, llId = %u",
             dataHeader.getAckNeeded(), dataHeader.getOutbound(), dataHeader.getFormat(), dataHeader.getMFId(), dataHeader.getSAP(), dataHeader.getFullMessage(),
             dataHeader.getBlocksToFollow(), dataHeader.getPadLength(), dataHeader.getPacketLength(), dataHeader.getNs(), dataHeader.getFSN(), dataHeader.getLastFragment(),
-            dataHeader.getHeaderOffset(), dataHeader.getLLId());
+            dataHeader.getHeaderOffset(), bitLength, dataHeader.getLLId());
     }
 
     // generate the PDU header and 1/2 rate Trellis
@@ -790,10 +787,10 @@ void Data::writeRF_PDU_User(data::DataHeader& dataHeader, data::DataHeader& seco
         blocksToFollow--;
 
         if (m_verbose) {
-            LogMessage(LOG_RF, P25_PDU_STR ", OSP, fmt = $%02X, mfId = $%02X, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padLength = %u, n = %u, seqNo = %u, lastFragment = %u, hdrOffset = %u, llId = %u",
+            LogMessage(LOG_RF, P25_PDU_STR ", OSP, fmt = $%02X, mfId = $%02X, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padLength = %u, n = %u, seqNo = %u, lastFragment = %u, hdrOffset = %u, bitLength = %u, llId = %u",
                 secondHeader.getFormat(), secondHeader.getMFId(), secondHeader.getSAP(), secondHeader.getFullMessage(),
                 secondHeader.getBlocksToFollow(), secondHeader.getPadLength(), secondHeader.getNs(), secondHeader.getFSN(), secondHeader.getLastFragment(),
-                secondHeader.getHeaderOffset(), secondHeader.getLLId());
+                secondHeader.getHeaderOffset(), bitLength, secondHeader.getLLId());
         }
     }
 
@@ -853,25 +850,28 @@ void Data::writeRF_PDU_User(data::DataHeader& dataHeader, data::DataHeader& seco
 
 void Data::clock(uint32_t ms)
 {
-    // clock all the connect timers
+    // clock all the conventional registration timers
     std::vector<uint32_t> connToClear = std::vector<uint32_t>();
-    for (auto entry : m_connQueueTable) {
+    for (auto entry : m_convRegTimerTable) {
         uint32_t llId = entry.first;
 
-        m_connTimerTable[llId].clock(ms);
-        if (m_connTimerTable[llId].isRunning() && m_connTimerTable[llId].hasExpired()) {
+        m_convRegTimerTable[llId].clock(ms);
+        if (m_convRegTimerTable[llId].isRunning() && m_convRegTimerTable[llId].hasExpired()) {
             connToClear.push_back(llId);
         }
     }
 
-    // handle PDU connection registration
+    if (connToClear.size() > 0) {
+        m_p25->writeRF_Preamble();
+    }
+
+    // handle PDU conventional connection registration
     for (uint32_t llId : connToClear) {
-        uint8_t mfId = std::get<0>(m_connQueueTable[llId]);
-        uint64_t ipAddr = std::get<1>(m_connQueueTable[llId]);
+        uint32_t ipAddr = m_convRegQueueTable[llId];
 
         if (!acl::AccessControl::validateSrcId(llId)) {
             LogWarning(LOG_RF, P25_PDU_STR ", DENY (Registration Response Deny), llId = %u, ipAddr = %s", llId, __IP_FROM_UINT(ipAddr).c_str());
-            writeRF_PDU_Reg_Response(PDURegType::DENY, mfId, llId, ipAddr);
+            writeRF_PDU_Reg_Response(PDURegType::DENY, llId, ipAddr);
         }
         else {
             if (!hasLLIdFNEReg(llId)) {
@@ -880,13 +880,14 @@ void Data::clock(uint32_t ms)
             }
 
             if (m_verbose) {
-                LogMessage(LOG_RF, P25_PDU_STR ", ACCPT (Registration Response Accept), llId = %u, ipAddr = %s", llId, __IP_FROM_UINT(ipAddr).c_str());
+                LogMessage(LOG_RF, P25_PDU_STR ", ACCEPT (Registration Response Accept), llId = %u, ipAddr = %s", llId, __IP_FROM_UINT(ipAddr).c_str());
             }
 
-            writeRF_PDU_Reg_Response(PDURegType::ACCPT, mfId, llId, ipAddr);
+            writeRF_PDU_Reg_Response(PDURegType::ACCEPT, llId, ipAddr);
         }
 
-        m_connQueueTable.erase(llId);
+        m_convRegQueueTable.erase(llId);
+        m_convRegTimerTable.erase(llId);
     }
 
     if (m_p25->m_sndcpSupport) {
@@ -1017,9 +1018,7 @@ void Data::sndcpReset(uint32_t llId, bool callTerm)
 
             std::unique_ptr<lc::TDULC> lc = std::make_unique<lc::tdulc::LC_CALL_TERM>();
             m_p25->m_control->writeRF_TDULC(lc.get(), true);
-            for (uint8_t i = 0U; i < 8U; i++) {
-                m_p25->writeRF_TDU(true);
-            }
+            m_p25->writeRF_Preamble();
 
             if (m_p25->m_notifyCC) {
                 m_p25->notifyCC_ReleaseGrant(llId);
@@ -1055,11 +1054,14 @@ Data::Data(Control* p25, bool dumpPDUData, bool repeatPDU, bool debug, bool verb
     m_netDataBlockCnt(0U),
     m_netPDU(nullptr),
     m_netPDUCount(0U),
+    m_retryPDUData(nullptr),
+    m_retryPDUBitLength(0U),
+    m_retryCount(0U),
     m_pduUserData(nullptr),
     m_pduUserDataLength(0U),
     m_fneRegTable(),
-    m_connQueueTable(),
-    m_connTimerTable(),
+    m_convRegQueueTable(),
+    m_convRegTimerTable(),
     m_sndcpStateTable(),
     m_sndcpReadyTimers(),
     m_sndcpStandbyTimers(),
@@ -1082,8 +1084,9 @@ Data::Data(Control* p25, bool dumpPDUData, bool repeatPDU, bool debug, bool verb
     ::memset(m_pduUserData, 0x00U, P25_MAX_PDU_BLOCKS * P25_PDU_CONFIRMED_LENGTH_BYTES + 2U);
 
     m_fneRegTable.clear();
-    m_connQueueTable.clear();
-    m_connTimerTable.clear();
+
+    m_convRegQueueTable.clear();
+    m_convRegTimerTable.clear();
 
     m_sndcpStateTable.clear();
     m_sndcpReadyTimers.clear();
@@ -1098,7 +1101,66 @@ Data::~Data()
     delete[] m_netData;
     delete[] m_rfPDU;
     delete[] m_netPDU;
+
+    if (m_retryPDUData != nullptr)
+        delete m_retryPDUData;
+
     delete[] m_pduUserData;
+}
+
+/* Helper used to process conventional data registration from PDU data. */
+
+bool Data::processConvDataReg()
+{
+    uint8_t regType = (m_pduUserData[0] >> 4) & 0x0F;
+    switch (regType) {
+    case PDURegType::CONNECT:
+    {
+        uint32_t llId = (m_pduUserData[1U] << 16) + (m_pduUserData[2U] << 8) + m_pduUserData[3U];
+        uint32_t ipAddr = (m_pduUserData[8U] << 24) + (m_pduUserData[9U] << 16) + (m_pduUserData[10U] << 8) + m_pduUserData[11U];
+
+        if (m_verbose) {
+            LogMessage(LOG_RF, P25_PDU_STR ", CONNECT (Registration Request Connect), llId = %u, ipAddr = %s", llId, __IP_FROM_UINT(ipAddr).c_str());
+        }
+
+        m_convRegQueueTable[llId] = ipAddr;
+
+        m_convRegTimerTable[llId] = Timer(1000U, 0U, CONV_REG_WAIT_TIMEOUT);
+        m_convRegTimerTable[llId].start();
+
+        // acknowledge
+        writeRF_PDU_Ack_Response(PDUAckClass::ACK, PDUAckType::ACK, 0U, llId);
+    }
+    break;
+    case PDURegType::DISCONNECT:
+    {
+        uint32_t llId = (m_pduUserData[1U] << 16) + (m_pduUserData[2U] << 8) + m_pduUserData[3U];
+
+        if (m_verbose) {
+            LogMessage(LOG_RF, P25_PDU_STR ", DISCONNECT (Registration Request Disconnect), llId = %u", llId);
+        }
+
+        // acknowledge
+        writeRF_PDU_Ack_Response(PDUAckClass::ACK, PDUAckType::ACK, 0U, llId);
+
+        if (hasLLIdFNEReg(llId)) {
+            // remove dynamic FNE registration table entry
+            try {
+                m_fneRegTable.at(llId);
+                m_fneRegTable.erase(llId);
+            }
+            catch (...) {
+                // stub
+            }
+        }
+    }
+    break;
+    default:
+        LogError(LOG_RF, "P25 unhandled PDU registration type, regType = $%02X", regType);
+        break;
+    }
+
+    return true;
 }
 
 /* Helper used to process SNDCP control data from PDU data. */
@@ -1125,14 +1187,16 @@ bool Data::processSNDCPControl()
         {
             SNDCPCtxActRequest* isp = static_cast<SNDCPCtxActRequest*>(packet.get());
             if (m_verbose) {
-                LogMessage(LOG_RF, P25_PDU_STR ", SNDCP context activation request, llId = %u, ipAddr = %s, nat = $%02X, dsut = $%02X, mdpco = $%02X", llId,
-                    __IP_FROM_UINT(isp->getIPAddress()).c_str(), isp->getNAT(), isp->getDSUT(), isp->getMDPCO());
+                LogMessage(LOG_RF, P25_PDU_STR ", SNDCP context activation request, llId = %u, nsapi = %u, ipAddr = %s, nat = $%02X, dsut = $%02X, mdpco = $%02X", llId,
+                    isp->getNSAPI(), __IP_FROM_UINT(isp->getIPAddress()).c_str(), isp->getNAT(), isp->getDSUT(), isp->getMDPCO());
             }
+
+            m_p25->writeRF_Preamble();
 
             DataHeader rspHeader = DataHeader();
             rspHeader.setFormat(PDUFormatType::CONFIRMED);
             rspHeader.setMFId(MFG_STANDARD);
-            rspHeader.setAckNeeded(true);
+            rspHeader.setAckNeeded(false);
             rspHeader.setOutbound(true);
             rspHeader.setSAP(PDUSAP::SNDCP_CTRL_DATA);
             rspHeader.setNs(m_rfDataHeader.getNs());
@@ -1141,7 +1205,7 @@ bool Data::processSNDCPControl()
 
             if (!isSNDCPInitialized(llId)) {
                 std::unique_ptr<SNDCPCtxActReject> osp = std::make_unique<SNDCPCtxActReject>();
-                osp->setNSAPI(packet->getNSAPI());
+                osp->setNSAPI(DEFAULT_NSAPI);
                 osp->setRejectCode(SNDCPRejectReason::SU_NOT_PROVISIONED);
 
                 osp->encode(pduUserData);
@@ -1156,7 +1220,7 @@ bool Data::processSNDCPControl()
                 case SNDCPNAT::IPV4_STATIC_ADDR:
                 {
                     std::unique_ptr<SNDCPCtxActReject> osp = std::make_unique<SNDCPCtxActReject>();
-                    osp->setNSAPI(packet->getNSAPI());
+                    osp->setNSAPI(DEFAULT_NSAPI);
                     osp->setRejectCode(SNDCPRejectReason::STATIC_IP_ALLOCATION_UNSUPPORTED);
 
                     osp->encode(pduUserData);
@@ -1171,7 +1235,7 @@ bool Data::processSNDCPControl()
                 case SNDCPNAT::IPV4_DYN_ADDR:
                 {
                     std::unique_ptr<SNDCPCtxActReject> osp = std::make_unique<SNDCPCtxActReject>();
-                    osp->setNSAPI(packet->getNSAPI());
+                    osp->setNSAPI(DEFAULT_NSAPI);
                     osp->setRejectCode(SNDCPRejectReason::DYN_IP_ALLOCATION_UNSUPPORTED);
 
                     osp->encode(pduUserData);
@@ -1180,14 +1244,34 @@ bool Data::processSNDCPControl()
                     writeRF_PDU_User(rspHeader, rspHeader, false, pduUserData);
 
                     sndcpReset(llId, true);
+
                     // TODO TODO TODO
+/*
+                    std::unique_ptr<SNDCPCtxActAccept> osp = std::make_unique<SNDCPCtxActAccept>();
+                    osp->setNSAPI(DEFAULT_NSAPI);
+                    osp->setReadyTimer(SNDCPReadyTimer::TEN_SECONDS);
+                    osp->setStandbyTimer(SNDCPStandbyTimer::ONE_MINUTE);
+                    osp->setNAT(SNDCPNAT::IPV4_DYN_ADDR);
+                    osp->setIPAddress(__IP_FROM_STR(std::string("10.10.1.10")));
+                    osp->setMTU(SNDCP_MTU_510);
+                    osp->setMDPCO(isp->getMDPCO());
+
+                    osp->encode(pduUserData);
+
+                    rspHeader.calculateLength(13U);
+                    writeRF_PDU_User(rspHeader, rspHeader, false, pduUserData);
+
+                    m_sndcpStateTable[llId] = SNDCPState::STANDBY;
+                    m_sndcpReadyTimers[llId].stop();
+                    m_sndcpStandbyTimers[llId].start();
+*/
                 }
                 break;
 
                 default:
                 {
                     std::unique_ptr<SNDCPCtxActReject> osp = std::make_unique<SNDCPCtxActReject>();
-                    osp->setNSAPI(packet->getNSAPI());
+                    osp->setNSAPI(DEFAULT_NSAPI);
                     osp->setRejectCode(SNDCPRejectReason::ANY_REASON);
 
                     osp->encode(pduUserData);
@@ -1243,10 +1327,28 @@ void Data::writeNetwork(const uint8_t currentBlock, const uint8_t *data, uint32_
 
 /* Helper to write a P25 PDU packet. */
 
-void Data::writeRF_PDU(const uint8_t* pdu, uint32_t bitLength, bool noNulls, bool imm)
+void Data::writeRF_PDU(const uint8_t* pdu, uint32_t bitLength, bool noNulls, bool imm, bool ackRetry)
 {
     assert(pdu != nullptr);
     assert(bitLength > 0U);
+
+    if (!ackRetry) {
+        if (m_retryPDUData != nullptr)
+            delete m_retryPDUData;
+
+        // store PDU for ACK RETRY logic
+        m_retryCount = 0U;
+        m_retryPDUBitLength = bitLength;
+        uint32_t retryByteLength = bitLength / 8U;
+        if ((retryByteLength % 8U) > 0U)
+            retryByteLength++;
+
+        m_retryPDUData = new uint8_t[retryByteLength];
+        ::memcpy(m_retryPDUData, pdu, retryByteLength);
+    } else {
+        LogMessage(LOG_RF, P25_PDU_STR ", OSP, ack retry, bitLength = %u",
+                   m_retryPDUBitLength);
+    }
 
     uint8_t data[P25_PDU_FRAME_LENGTH_BYTES + 2U];
     ::memset(data, 0x00U, P25_PDU_FRAME_LENGTH_BYTES + 2U);
@@ -1283,9 +1385,7 @@ void Data::writeRF_PDU(const uint8_t* pdu, uint32_t bitLength, bool noNulls, boo
 
     // transmit TDUs; only if control data isn't being transmitted
     if (!m_p25->m_ccRunning) {
-        for (uint8_t i = 0U; i < 8U; i++) {
-            m_p25->writeRF_TDU(true);
-        }
+        m_p25->writeRF_Preamble();
     }
 }
 
@@ -1304,10 +1404,10 @@ void Data::writeNet_PDU_Buffered()
     uint32_t blocksToFollow = m_netDataHeader.getBlocksToFollow();
 
     if (m_verbose) {
-        LogMessage(LOG_NET, P25_PDU_STR ", OSP, ack = %u, outbound = %u, fmt = $%02X, mfId = $%02X, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padLength = %u, n = %u, seqNo = %u, lastFragment = %u, hdrOffset = %u, llId = %u",
+        LogMessage(LOG_NET, P25_PDU_STR ", OSP, ack = %u, outbound = %u, fmt = $%02X, mfId = $%02X, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padLength = %u, n = %u, seqNo = %u, lastFragment = %u, hdrOffset = %u, bitLength = %u, llId = %u",
             m_netDataHeader.getAckNeeded(), m_netDataHeader.getOutbound(), m_netDataHeader.getFormat(), m_netDataHeader.getMFId(), m_netDataHeader.getSAP(), m_netDataHeader.getFullMessage(),
             m_netDataHeader.getBlocksToFollow(), m_netDataHeader.getPadLength(), m_netDataHeader.getNs(), m_netDataHeader.getFSN(), m_netDataHeader.getLastFragment(),
-            m_netDataHeader.getHeaderOffset(), m_netDataHeader.getLLId());
+            m_netDataHeader.getHeaderOffset(), bitLength, m_netDataHeader.getLLId());
     }
 
     // generate the PDU header and 1/2 rate Trellis
@@ -1402,10 +1502,10 @@ void Data::writeRF_PDU_Buffered()
     uint32_t blocksToFollow = m_rfDataHeader.getBlocksToFollow();
 
     if (m_verbose) {
-        LogMessage(LOG_RF, P25_PDU_STR ", OSP, ack = %u, outbound = %u, fmt = $%02X, mfId = $%02X, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padLength = %u, n = %u, seqNo = %u, lastFragment = %u, hdrOffset = %u, llId = %u",
+        LogMessage(LOG_RF, P25_PDU_STR ", OSP, ack = %u, outbound = %u, fmt = $%02X, mfId = $%02X, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padLength = %u, n = %u, seqNo = %u, lastFragment = %u, hdrOffset = %u, bitLength = %u, llId = %u",
             m_rfDataHeader.getAckNeeded(), m_rfDataHeader.getOutbound(), m_rfDataHeader.getFormat(), m_rfDataHeader.getMFId(), m_rfDataHeader.getSAP(), m_rfDataHeader.getFullMessage(),
             m_rfDataHeader.getBlocksToFollow(), m_rfDataHeader.getPadLength(), m_rfDataHeader.getNs(), m_rfDataHeader.getFSN(), m_rfDataHeader.getLastFragment(),
-            m_rfDataHeader.getHeaderOffset(), m_rfDataHeader.getLLId());
+            m_rfDataHeader.getHeaderOffset(), bitLength, m_rfDataHeader.getLLId());
     }
 
     // generate the PDU header and 1/2 rate Trellis
@@ -1429,10 +1529,10 @@ void Data::writeRF_PDU_Buffered()
         blocksToFollow--;
 
         if (m_verbose) {
-            LogMessage(LOG_RF, P25_PDU_STR ", OSP, fmt = $%02X, mfId = $%02X, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padLength = %u, n = %u, seqNo = %u, lastFragment = %u, hdrOffset = %u, llId = %u",
+            LogMessage(LOG_RF, P25_PDU_STR ", OSP, fmt = $%02X, mfId = $%02X, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padLength = %u, n = %u, seqNo = %u, lastFragment = %u, hdrOffset = %u, bitLength = %u, llId = %u",
                 m_rfSecondHeader.getFormat(), m_rfSecondHeader.getMFId(), m_rfSecondHeader.getSAP(), m_rfSecondHeader.getFullMessage(),
                 m_rfSecondHeader.getBlocksToFollow(), m_rfSecondHeader.getPadLength(), m_rfSecondHeader.getNs(), m_rfSecondHeader.getFSN(), m_rfSecondHeader.getLastFragment(),
-                m_rfSecondHeader.getHeaderOffset(), m_rfSecondHeader.getLLId());
+                m_rfSecondHeader.getHeaderOffset(), bitLength, m_rfSecondHeader.getLLId());
         }
     }
 
@@ -1487,9 +1587,9 @@ void Data::writeRF_PDU_Buffered()
 
 /* Helper to write a PDU registration response. */
 
-void Data::writeRF_PDU_Reg_Response(uint8_t regType, uint8_t mfId, uint32_t llId, uint32_t ipAddr)
+void Data::writeRF_PDU_Reg_Response(uint8_t regType, uint32_t llId, uint32_t ipAddr)
 {
-    if ((regType != PDURegType::ACCPT) && (regType != PDURegType::DENY))
+    if ((regType != PDURegType::ACCEPT) && (regType != PDURegType::DENY))
         return;
 
     uint8_t pduUserData[P25_MAX_PDU_BLOCKS * P25_PDU_UNCONFIRMED_LENGTH_BYTES];
@@ -1497,10 +1597,9 @@ void Data::writeRF_PDU_Reg_Response(uint8_t regType, uint8_t mfId, uint32_t llId
 
     DataHeader rspHeader = DataHeader();
     rspHeader.setFormat(PDUFormatType::CONFIRMED);
-    rspHeader.setMFId(mfId);
     rspHeader.setAckNeeded(true);
     rspHeader.setOutbound(true);
-    rspHeader.setSAP(PDUSAP::REG);
+    rspHeader.setSAP(PDUSAP::CONV_DATA_REG);
     rspHeader.setLLId(llId);
     rspHeader.setBlocksToFollow(1U);
 
@@ -1508,7 +1607,7 @@ void Data::writeRF_PDU_Reg_Response(uint8_t regType, uint8_t mfId, uint32_t llId
     pduUserData[1U] = (llId >> 16) & 0xFFU;                                     // Logical Link ID
     pduUserData[2U] = (llId >> 8) & 0xFFU;
     pduUserData[3U] = (llId >> 0) & 0xFFU;
-    if (regType == PDURegType::ACCPT) {
+    if (regType == PDURegType::ACCEPT) {
         pduUserData[8U] = (ipAddr >> 24) & 0xFFU;                               // IP Address
         pduUserData[9U] = (ipAddr >> 16) & 0xFFU;
         pduUserData[10U] = (ipAddr >> 8) & 0xFFU;

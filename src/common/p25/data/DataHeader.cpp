@@ -322,13 +322,14 @@ uint32_t DataHeader::getData(uint8_t* buffer) const
 
 void DataHeader::calculateLength(uint32_t packetLength)
 {
-    uint32_t len = packetLength + 4; // packet length + CRC32
+    uint32_t len = packetLength + 4U; // packet length + CRC32
     uint32_t blockLen = (m_fmt == PDUFormatType::CONFIRMED) ? P25_PDU_CONFIRMED_DATA_LENGTH_BYTES : P25_PDU_UNCONFIRMED_LENGTH_BYTES;
-    m_padLength = blockLen - (len % blockLen);
 
     if (len > blockLen) {
+        m_padLength = blockLen - (len % blockLen);
         m_blocksToFollow = (uint8_t)ceilf((float)len / (float)blockLen);
     } else {
+        m_padLength = 0U;
         m_blocksToFollow = 1U;
     }
 }
@@ -337,7 +338,7 @@ void DataHeader::calculateLength(uint32_t packetLength)
 
 uint32_t DataHeader::calculatePadLength(uint8_t fmt, uint32_t packetLength)
 {
-    uint32_t len = packetLength + 4; // packet length + CRC32
+    uint32_t len = packetLength + 4U; // packet length + CRC32
     if (fmt == PDUFormatType::CONFIRMED) {
         return P25_PDU_CONFIRMED_DATA_LENGTH_BYTES - (len % P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
     }

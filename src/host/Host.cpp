@@ -453,7 +453,7 @@ int Host::run()
         bool p25Verbose = p25Protocol["verbose"].as<bool>(true);
         bool p25Debug = p25Protocol["debug"].as<bool>(false);
 
-        LogInfo("    TDU Preamble before Voice: %u", tduPreambleCount);
+        LogInfo("    TDU Preamble before Voice/Data: %u", tduPreambleCount);
         LogInfo("    Dump Packet Data: %s", p25DumpDataPacket ? "yes" : "no");
         LogInfo("    Repeat Packet Data: %s", p25RepeatDataPacket ? "yes" : "no");
         LogInfo("    Dump TSBK Data: %s", p25DumpTsbkData ? "yes" : "no");

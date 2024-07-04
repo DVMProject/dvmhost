@@ -69,7 +69,7 @@ namespace p25
                 /**
                  * @brief SNDCP Data Access Control
                  */
-                __PROPERTY(uint32_t, dataAccessControl, DataAccessControl);
+                __PROPERTY(uint16_t, dataAccessControl, DataAccessControl);
 
                 __COPY(ISP_SNDCP_CH_REQ);
             };

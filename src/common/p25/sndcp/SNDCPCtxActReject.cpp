@@ -36,9 +36,7 @@ bool SNDCPCtxActReject::decode(const uint8_t* data)
 {
     assert(data != nullptr);
 
-    SNDCPPacket::decodeHeader(data, false);
-
-    m_rejectCode = data[1U];                                                        // Reject Code
+    /* stub */
 
     return true;
 }

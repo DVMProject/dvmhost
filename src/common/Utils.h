@@ -23,6 +23,7 @@
 
 #include "common/Defines.h"
 
+#include <cstring>
 #include <string>
 
 #include <arpa/inet.h>
@@ -110,7 +111,16 @@ inline std::string __IP_FROM_UINT(const uint32_t& value) {
 inline uint32_t __IP_FROM_STR(const std::string& value) {
     struct sockaddr_in sa;
     inet_pton(AF_INET, value.c_str(), &(sa.sin_addr));
-    return (uint32_t)sa.sin_addr.s_addr;
+
+    uint8_t ip[4U];
+    ::memset(ip, 0x00U, 4U);
+
+    ip[3U] = ((uint32_t)sa.sin_addr.s_addr >> 24) & 0xFFU;
+    ip[2U] = ((uint32_t)sa.sin_addr.s_addr >> 16) & 0xFFU;
+    ip[1U] = ((uint32_t)sa.sin_addr.s_addr >> 8) & 0xFFU;
+    ip[0U] = ((uint32_t)sa.sin_addr.s_addr >> 0) & 0xFFU;
+
+    return (ip[0U] << 24) | (ip[1U] << 16) | (ip[2U] << 8)  | (ip[3U] << 0);
 }
 
 /**
