@@ -50,6 +50,7 @@ namespace lookups
         {
             /* stub */
         }
+
         /**
          * @brief Initializes a new instance of the RadioId class.
          * @param radioEnabled Flag indicating radio is enabled.
@@ -58,7 +59,8 @@ namespace lookups
         RadioId(bool radioEnabled, bool radioDefault) :
             m_radioEnabled(radioEnabled),
             m_radioDefault(radioDefault),
-            m_radioAlias("")
+            m_radioAlias(""),
+            m_radioIPAddress("")
         {
             /* stub */
         }
@@ -68,11 +70,13 @@ namespace lookups
          * @param radioEnabled Flag indicating radio is enabled.
          * @param radioDefault Flag indicating this is a "default" (i.e. undefined) radio.
          * @param radioAlias Textual alias for the radio.
+         * @param ipAddress Textual IP Address for the radio.
          */
-        RadioId(bool radioEnabled, bool radioDefault, const std::string& radioAlias) :
+        RadioId(bool radioEnabled, bool radioDefault, const std::string& radioAlias, const std::string& ipAddress = "") :
             m_radioEnabled(radioEnabled),
             m_radioDefault(radioDefault),
-            m_radioAlias(radioAlias)
+            m_radioAlias(radioAlias),
+            m_radioIPAddress(ipAddress)
         {
             /* stub */
         }
@@ -87,6 +91,7 @@ namespace lookups
                 m_radioEnabled = data.m_radioEnabled;
                 m_radioDefault = data.m_radioDefault;
                 m_radioAlias = data.m_radioAlias;
+                m_radioIPAddress = data.m_radioIPAddress;
             }
 
             return *this;
@@ -96,24 +101,15 @@ namespace lookups
          * @brief Sets flag values.
          * @param radioEnabled Flag indicating radio is enabled.
          * @param radioDefault Flag indicating this is a "default" (i.e. undefined) radio.
-         */
-        void set(bool radioEnabled, bool radioDefault)
-        {
-            m_radioEnabled = radioEnabled;
-            m_radioDefault = radioDefault;
-        }
-
-        /**
-         * @brief Sets flag values.
-         * @param radioEnabled Flag indicating radio is enabled.
-         * @param radioDefault Flag indicating this is a "default" (i.e. undefined) radio.
          * @param radioAlias Textual alias for the radio.
+         * @param ipAddress Textual IP Address for the radio.
          */
-        void set(bool radioEnabled, bool radioDefault, const std::string& radioAlias)
+        void set(bool radioEnabled, bool radioDefault, const std::string& radioAlias, const std::string& ipAddress = "")
         {
             m_radioEnabled = radioEnabled;
             m_radioDefault = radioDefault;
             m_radioAlias = radioAlias;
+            m_radioIPAddress = ipAddress;
         }
 
     public:
@@ -129,6 +125,10 @@ namespace lookups
          * @brief Alias for the radio.
          */
         __READONLY_PROPERTY_PLAIN(std::string, radioAlias);
+        /**
+         * @brief IP Address for the radio.
+         */
+        __READONLY_PROPERTY_PLAIN(std::string, radioIPAddress);
     };
 
     // ---------------------------------------------------------------------------
@@ -167,8 +167,9 @@ namespace lookups
          * @param id Unique ID to add.
          * @param enabled Flag indicating if radio ID is enabled or not.
          * @param alias Alias for the radio ID
+         * @param ipAddress IP Address for Radio
          */
-        void addEntry(uint32_t id, bool enabled, const std::string& alias);
+        void addEntry(uint32_t id, bool enabled, const std::string& alias, const std::string& ipAddress = "");
         /**
          * @brief Erases an existing entry from the lookup table by the specified unique ID.
          * @param id Unique ID to erase.

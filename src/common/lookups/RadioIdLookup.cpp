@@ -56,13 +56,13 @@ void RadioIdLookup::toggleEntry(uint32_t id, bool enabled)
 
 /* Adds a new entry to the lookup table by the specified unique ID. */
 
-void RadioIdLookup::addEntry(uint32_t id, bool enabled, const std::string& alias)
+void RadioIdLookup::addEntry(uint32_t id, bool enabled, const std::string& alias, const std::string& ipAddress)
 {
     if ((id == p25::defines::WUID_ALL) || (id == p25::defines::WUID_FNE)) {
         return;
     }
 
-    RadioId entry = RadioId(enabled, false, alias);
+    RadioId entry = RadioId(enabled, false, alias, ipAddress);
 
     std::lock_guard<std::mutex> lock(m_mutex);
     try {
@@ -70,7 +70,7 @@ void RadioIdLookup::addEntry(uint32_t id, bool enabled, const std::string& alias
         // if either the alias or the enabled flag doesn't match, update the entry
         if (_entry.radioEnabled() != enabled || _entry.radioAlias() != alias) {
             //LogDebug(LOG_HOST, "Updating existing RID %d (%s) in ACL", id, alias.c_str());
-            _entry = RadioId(enabled, false, alias);
+            _entry = RadioId(enabled, false, alias, ipAddress);
             m_table[id] = _entry;
         } else {
             //LogDebug(LOG_HOST, "No changes made to RID %d (%s) in ACL", id, alias.c_str());
@@ -180,13 +180,23 @@ bool RadioIdLookup::load()
             // parse tokenized line
             uint32_t id = ::atoi(parsed[0].c_str());
             bool radioEnabled = ::atoi(parsed[1].c_str()) == 1;
+            std::string alias = "";
+            std::string ipAddress = "";
 
-            // Check for an optional alias field
+            // check for an optional alias field
             if (parsed.size() >= 3) {
-                m_table[id] = RadioId(radioEnabled, false, parsed[2]);
+                alias = parsed[2];
+            }
+
+            // check for an optional IP address field
+            if (parsed.size() >= 4) {
+                ipAddress = parsed[3];
+            }
+
+            m_table[id] = RadioId(radioEnabled, false, alias, ipAddress);
+            if (alias != "") {
                 LogDebug(LOG_HOST, "Loaded RID %u (%s) into RID lookup table", id, parsed[2].c_str());
             } else {
-                m_table[id] = RadioId(radioEnabled, false);
                 LogDebug(LOG_HOST, "Loaded RID %u into RID lookup table", id);
             }
         }
@@ -226,23 +236,36 @@ bool RadioIdLookup::save()
 
     // String for writing
     std::string line;
+
     // iterate over each entry in the RID lookup and write it to the open file
     for (auto& entry: m_table) {
         // Get the parameters
         uint32_t rid = entry.first;
         bool enabled = entry.second.radioEnabled();
         std::string alias = entry.second.radioAlias();
+        std::string ipAddress = entry.second.radioIPAddress();
+
         // Format into a string
         line = std::to_string(rid) + "," + std::to_string(enabled) + ",";
+
         // Add the alias if we have one
         if (alias.length() > 0) {
             line += alias;
             line += ",";
         }
+
+        // Add the IP address if we have one
+        if (ipAddress.length() > 0) {
+            line += ipAddress;
+            line += ",";
+        }
+
         // Add the newline
         line += "\n";
+
         // Write to file
         file << line;
+
         // Increment
         lines++;
     }
