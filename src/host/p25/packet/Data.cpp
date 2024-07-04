@@ -1196,7 +1196,7 @@ bool Data::processSNDCPControl()
             DataHeader rspHeader = DataHeader();
             rspHeader.setFormat(PDUFormatType::CONFIRMED);
             rspHeader.setMFId(MFG_STANDARD);
-            rspHeader.setAckNeeded(false);
+            rspHeader.setAckNeeded(true);
             rspHeader.setOutbound(true);
             rspHeader.setSAP(PDUSAP::SNDCP_CTRL_DATA);
             rspHeader.setNs(m_rfDataHeader.getNs());
