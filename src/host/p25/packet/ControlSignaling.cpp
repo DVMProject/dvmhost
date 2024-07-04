@@ -1581,7 +1581,7 @@ void ControlSignaling::writeRF_TSDU_MBF(lc::TSBK* tsbk)
 
 /* Helper to write a alternate multi-block trunking PDU packet. */
 
-void ControlSignaling::writeRF_TSDU_AMBT(lc::AMBT* ambt)
+void ControlSignaling::writeRF_TSDU_AMBT(lc::AMBT* ambt, bool imm)
 {
     if (!m_p25->m_enableControl)
         return;
@@ -1608,7 +1608,7 @@ void ControlSignaling::writeRF_TSDU_AMBT(lc::AMBT* ambt)
         Utils::dump(1U, "!!! *PDU (AMBT) TSBK Block Data", pduUserData, P25_PDU_UNCONFIRMED_LENGTH_BYTES * header.getBlocksToFollow());
     }
 
-    m_p25->m_data->writeRF_PDU_User(header, header, false, pduUserData, true);
+    m_p25->m_data->writeRF_PDU_User(header, header, false, pduUserData, imm);
 }
 
 /*
@@ -2812,7 +2812,7 @@ void ControlSignaling::writeRF_TSDU_Auth_Dmd(uint32_t srcId)
         LogMessage(LOG_RF, P25_TSDU_STR ", %s, srcId = %u, RC = %X", osp->toString().c_str(), srcId, challenge);
     }
 
-    writeRF_TSDU_AMBT(osp.get());
+    writeRF_TSDU_AMBT(osp.get(), true);
 }
 
 /* Helper to write a call termination packet. */

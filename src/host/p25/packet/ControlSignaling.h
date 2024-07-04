@@ -281,8 +281,9 @@ namespace p25
             /**
              * @brief Helper to write a alternate multi-block PDU packet.
              * @param tsbk AMBT to write to the modem.
+             * @param imm Flag indicating the AMBT should be written to the immediate queue.
              */
-            void writeRF_TSDU_AMBT(lc::AMBT* ambt);
+            void writeRF_TSDU_AMBT(lc::AMBT* ambt, bool imm = false);
 
             /*
             ** Control Signalling Logic
