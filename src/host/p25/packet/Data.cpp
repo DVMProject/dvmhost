@@ -1382,11 +1382,6 @@ void Data::writeRF_PDU(const uint8_t* pdu, uint32_t bitLength, bool noNulls, boo
     if (!m_p25->m_ccRunning && !noNulls) {
         m_p25->writeRF_Nulls();
     }
-
-    // transmit TDUs; only if control data isn't being transmitted
-    if (!m_p25->m_ccRunning) {
-        m_p25->writeRF_Preamble();
-    }
 }
 
 /* Helper to write a network P25 PDU packet. */
