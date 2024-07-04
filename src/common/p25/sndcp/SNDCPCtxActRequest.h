@@ -69,6 +69,11 @@ namespace p25
              */
             __PROPERTY(uint8_t, dsut, DSUT);
 
+            /**
+             * @brief MDPCO
+             */
+            __PROPERTY(uint8_t, mdpco, MDPCO);
+
             __COPY(SNDCPCtxActRequest);
         };
     } // namespace sndcp

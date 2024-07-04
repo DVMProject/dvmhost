@@ -20,6 +20,7 @@ using namespace p25::data;
 
 #include <cassert>
 #include <cstring>
+#include <cmath>
 
 // ---------------------------------------------------------------------------
 //  Static Class Members
@@ -294,6 +295,10 @@ void DataHeader::reset()
 
 uint32_t DataHeader::getPacketLength() const
 {
+    if (m_fmt == PDUFormatType::RSP) {
+        return 0U; // responses have no packet length as they are header only
+    }
+
     if (m_fmt == PDUFormatType::CONFIRMED) {
         return P25_PDU_CONFIRMED_DATA_LENGTH_BYTES * m_blocksToFollow - 4 - m_padLength;
     }
@@ -313,11 +318,26 @@ uint32_t DataHeader::getData(uint8_t* buffer) const
     return P25_PDU_HEADER_LENGTH_BYTES;
 }
 
+/* Helper to calculate the number of blocks to follow and padding length for a PDU. */
+
+void DataHeader::calculateLength(uint32_t packetLength)
+{
+    uint32_t len = packetLength + 4; // packet length + CRC32
+    uint32_t blockLen = (m_fmt == PDUFormatType::CONFIRMED) ? P25_PDU_CONFIRMED_DATA_LENGTH_BYTES : P25_PDU_UNCONFIRMED_LENGTH_BYTES;
+    m_padLength = blockLen - (len % blockLen);
+
+    if (len > blockLen) {
+        m_blocksToFollow = (uint8_t)ceilf((float)len / (float)blockLen);
+    } else {
+        m_blocksToFollow = 1U;
+    }
+}
+
 /* Helper to determine the pad length for a given packet length. */
 
 uint32_t DataHeader::calculatePadLength(uint8_t fmt, uint32_t packetLength)
 {
-    uint32_t len = packetLength + 4;
+    uint32_t len = packetLength + 4; // packet length + CRC32
     if (fmt == PDUFormatType::CONFIRMED) {
         return P25_PDU_CONFIRMED_DATA_LENGTH_BYTES - (len % P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
     }

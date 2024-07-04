@@ -1623,7 +1623,7 @@ void Control::writeRF_Preamble(uint32_t preambleCount, bool force)
 
 /* Helper to write a P25 TDU packet. */
 
-void Control::writeRF_TDU(bool noNetwork)
+void Control::writeRF_TDU(bool noNetwork, bool imm)
 {
     uint8_t data[P25_TDU_FRAME_LENGTH_BYTES + 2U];
     ::memset(data + 2U, 0x00U, P25_TDU_FRAME_LENGTH_BYTES);
@@ -1644,7 +1644,7 @@ void Control::writeRF_TDU(bool noNetwork)
         data[0U] = modem::TAG_EOT;
         data[1U] = 0x00U;
 
-        addFrame(data, P25_TDU_FRAME_LENGTH_BYTES + 2U);
+        addFrame(data, P25_TDU_FRAME_LENGTH_BYTES + 2U, false, imm);
     }
 }
 

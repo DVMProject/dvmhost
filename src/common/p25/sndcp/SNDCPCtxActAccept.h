@@ -74,14 +74,22 @@ namespace p25
             /**
              * @brief IP Address
              */
-            __PROPERTY(ulong64_t, ipAddress, IPAddress);
+            __PROPERTY(uint32_t, ipAddress, IPAddress);
 
             /**
              * @brief MTU
              */
             __PROPERTY(uint8_t, mtu, MTU);
 
+            /**
+             * @brief MDPCO
+             */
+            __PROPERTY(uint8_t, mdpco, MDPCO);
+
             __COPY(SNDCPCtxActAccept);
+
+        private:
+            uint16_t m_sndcpDAC;
         };
     } // namespace sndcp
 } // namespace p25

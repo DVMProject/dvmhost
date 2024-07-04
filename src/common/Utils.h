@@ -25,6 +25,8 @@
 
 #include <string>
 
+#include <arpa/inet.h>
+
 // ---------------------------------------------------------------------------
 //  Constants
 // ---------------------------------------------------------------------------
@@ -88,15 +90,27 @@ inline std::string __FLOAT_STR(const float& value) {
 }
 
 /**
- * @brief IP address from ulong64_t value.
+ * @brief IP address from uint32_t value.
  * @ingroup utils
  * @param value Packed IP address.
  * @return std::string String representation of the packed IP address.
  */
-inline std::string __IP_FROM_ULONG(const ulong64_t& value) {
+inline std::string __IP_FROM_UINT(const uint32_t& value) {
     std::stringstream ss;
     ss << ((value >> 24) & 0xFFU) << "." << ((value >> 16) & 0xFFU) << "." << ((value >> 8) & 0xFFU) << "." << (value & 0xFFU);
     return ss.str();
+}
+
+/**
+ * @brief IP address from uint32_t value.
+ * @ingroup utils
+ * @param value String representation of the IP address.
+ * @return uint32_t Packed IP address.
+ */
+inline uint32_t __IP_FROM_STR(const std::string& value) {
+    struct sockaddr_in sa;
+    inet_pton(AF_INET, value.c_str(), &(sa.sin_addr));
+    return (uint32_t)sa.sin_addr.s_addr;
 }
 
 /**

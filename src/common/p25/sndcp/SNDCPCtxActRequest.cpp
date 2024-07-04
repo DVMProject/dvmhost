@@ -27,7 +27,8 @@ using namespace p25::sndcp;
 SNDCPCtxActRequest::SNDCPCtxActRequest() : SNDCPPacket(),
     m_nat(SNDCPNAT::IPV4_NO_ADDRESS),
     m_ipAddress(0U),
-    m_dsut(SNDCP_DSUT::ALT_T_AND_C_DATA_VOICE)
+    m_dsut(SNDCP_DSUT::ALT_T_AND_C_DATA_VOICE),
+    m_mdpco(0U)
 {
     m_pduType = SNDCP_PDUType::ACT_TDS_CTX;
 }
@@ -51,6 +52,8 @@ bool SNDCPCtxActRequest::decode(const uint8_t* data)
 
     m_dsut = (uint8_t)((data[6U] >> 4) & 0x0FU);                                    // Data Subscriber Unit Type
 
+    m_mdpco = (uint8_t)(data[9U] & 0x0FU);                                          // MDPCO
+
     return true;
 }
 
@@ -71,6 +74,8 @@ void SNDCPCtxActRequest::encode(uint8_t* data)
     data[5U] = (uint8_t)((m_ipAddress >> 0) & 0xFFU);
 
     data[6U] = ((m_dsut << 4U) & 0xF0U);                                            // Data Subscriber Unit Type
+
+    data[9U] = (m_mdpco & 0x0FU);                                                   // MDPCO
 }
 
 /* Internal helper to copy the the class. */

@@ -473,7 +473,7 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
 
                 ::ActivityLog("P25", true, "cancel service request from %u", srcId);
 
-                writeRF_TSDU_ACK_FNE(srcId, TSBKO::ISP_CAN_SRV_REQ, false, true);
+                writeRF_TSDU_ACK_FNE(srcId, isp->getService(), false, true);
             }
             break;
             case TSBKO::IOSP_EXT_FNCT:
@@ -1608,7 +1608,7 @@ void ControlSignaling::writeRF_TSDU_AMBT(lc::AMBT* ambt)
         Utils::dump(1U, "!!! *PDU (AMBT) TSBK Block Data", pduUserData, P25_PDU_UNCONFIRMED_LENGTH_BYTES * header.getBlocksToFollow());
     }
 
-    m_p25->m_data->writeRF_PDU_User(header, header, false, pduUserData);
+    m_p25->m_data->writeRF_PDU_User(header, header, false, pduUserData, true);
 }
 
 /*

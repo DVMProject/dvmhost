@@ -424,8 +424,9 @@ namespace p25
         /**
          * @brief Helper to write a P25 TDU packet.
          * @param noNetwork Flag indicating this TDU shouldn't be written to the network.
+         * @param imm Flag indicating the TDU should be written to the immediate queue.
          */
-        void writeRF_TDU(bool noNetwork);
+        void writeRF_TDU(bool noNetwork, bool imm = false);
 
         /**
          * @brief Helper to setup and generate LLA AM1 parameters.

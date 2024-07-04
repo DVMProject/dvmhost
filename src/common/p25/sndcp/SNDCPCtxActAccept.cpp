@@ -30,7 +30,9 @@ SNDCPCtxActAccept::SNDCPCtxActAccept() : SNDCPPacket(),
     m_standbyTimer(SNDCPStandbyTimer::ONE_MINUTE),
     m_nat(SNDCPNAT::IPV4_STATIC_ADDR),
     m_ipAddress(0U),
-    m_mtu(SNDCP_MTU_510)
+    m_mtu(SNDCP_MTU_510),
+    m_mdpco(0U),
+    m_sndcpDAC(1U)
 {
     m_pduType = SNDCP_PDUType::ACT_TDS_CTX;
 }
@@ -41,20 +43,7 @@ bool SNDCPCtxActAccept::decode(const uint8_t* data)
 {
     assert(data != nullptr);
 
-    SNDCPPacket::decodeHeader(data, false);
-
-    m_priority = (uint8_t)((data[1U] >> 4) & 0x0FU);                                // Priority
-    m_readyTimer = (uint8_t)(data[1U] & 0x0FU);                                     // Ready Timer
-    m_standbyTimer = (uint8_t)((data[2U] >> 4) & 0x0FU);                            // Standby Timer
-    m_nat = (uint8_t)(data[2U] & 0x0FU);                                            // NAT
-
-    m_ipAddress = 0U;                                                               // IP Address
-    m_ipAddress = data[3U];
-    m_ipAddress = (m_ipAddress << 8) + data[4U];
-    m_ipAddress = (m_ipAddress << 8) + data[5U];
-    m_ipAddress = (m_ipAddress << 8) + data[6U];
-
-    m_mtu = (uint8_t)((data[9U] >> 4) & 0x0FU);                                     // MTU
+    /* stub */
 
     return true;
 }
@@ -78,6 +67,10 @@ void SNDCPCtxActAccept::encode(uint8_t* data)
     data[6U] = (uint8_t)((m_ipAddress >> 0) & 0xFFU);
 
     data[9U] = ((m_mtu << 4U) & 0xF0U);                                             // MTU
+
+    data[10U] = (m_mdpco & 0x0FU);                                                  // MDPCO
+
+    __SET_UINT16B(m_sndcpDAC, data, 11U);                                           // Data Access Control
 }
 
 // ---------------------------------------------------------------------------

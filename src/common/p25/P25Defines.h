@@ -391,6 +391,8 @@ namespace p25
 
         /** @brief SNDCP version 1 */
         const uint8_t   SNDCP_VERSION_1 = 0x01U;
+        /** @brief 296 byte MTU */
+        const uint8_t   SNDCP_MTU_296 = 1U;
         /** @brief 510 byte MTU */
         const uint8_t   SNDCP_MTU_510 = 2U;
 

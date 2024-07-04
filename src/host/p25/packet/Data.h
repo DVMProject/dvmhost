@@ -86,8 +86,9 @@ namespace p25
              * @param secondHeader Instance of a PDU data header.
              * @param useSecondHeader Flag indicating whether or not to use a second data header.
              * @param pduUserData Buffer containing user data to transmit.
+             * @param imm Flag indicating the PDU should be written to the immediate queue.
              */
-            void writeRF_PDU_User(data::DataHeader& dataHeader, data::DataHeader& secondHeader, bool useSecondHeader, uint8_t* pduUserData);
+            void writeRF_PDU_User(data::DataHeader& dataHeader, data::DataHeader& secondHeader, bool useSecondHeader, uint8_t* pduUserData, bool imm = false);
 
             /**
              * @brief Updates the processor by the passed number of milliseconds.
@@ -192,8 +193,9 @@ namespace p25
              * @param[in] pdu Constructed PDU to transmit.
              * @param bitlength Length of PDU in bits.
              * @param noNulls Flag indicating no trailing nulls should be transmitted.
+             * @param imm Flag indicating the PDU should be written to the immediate queue.
              */
-            void writeRF_PDU(const uint8_t* pdu, uint32_t bitLength, bool noNulls = false);
+            void writeRF_PDU(const uint8_t* pdu, uint32_t bitLength, bool noNulls = false, bool imm = false);
             /**
              * @brief Helper to write a network P25 PDU packet.
              * This will take buffered network PDU data and repeat it over the air.
@@ -211,7 +213,7 @@ namespace p25
              * @param llId Logical Link ID.
              * @param ipAddr 
              */
-            void writeRF_PDU_Reg_Response(uint8_t regType, uint8_t mfId, uint32_t llId, ulong64_t ipAddr);
+            void writeRF_PDU_Reg_Response(uint8_t regType, uint8_t mfId, uint32_t llId, uint32_t ipAddr);
             /**
              * @brief Helper to write a PDU acknowledge response.
              * @param ackClass Acknowledgement Class.

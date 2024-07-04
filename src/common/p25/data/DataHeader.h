@@ -81,6 +81,12 @@ namespace p25
             uint32_t getData(uint8_t* buffer) const;
 
             /**
+             * @brief Helper to calculate the number of blocks to follow and padding length for a PDU.
+             * @param packetLength Length of PDU.
+             */
+            void calculateLength(uint32_t packetLength);
+
+            /**
              * @brief Sets the flag indicating CRC-errors should be warnings and not errors.
              * @param warnCRC Flag indicating CRC-errors should be treated as warnings.
              */
