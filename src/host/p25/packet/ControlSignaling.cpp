@@ -1021,7 +1021,7 @@ void ControlSignaling::writeRF_TSDU_Call_Alrt(uint32_t srcId, uint32_t dstId)
     VERBOSE_LOG_TSBK(iosp->toString(), srcId, dstId);
     ::ActivityLog("P25", true, "call alert request from %u to %u", srcId, dstId);
 
-    writeRF_TSDU_SBF(iosp.get(), false);
+    writeRF_TSDU_SBF_Imm(iosp.get(), false);
 }
 
 /* Helper to write a radio monitor packet. */
@@ -1039,7 +1039,7 @@ void ControlSignaling::writeRF_TSDU_Radio_Mon(uint32_t srcId, uint32_t dstId, ui
 
     ::ActivityLog("P25", true, "Radio Unit Monitor request from %u to %u", srcId, dstId);
 
-    writeRF_TSDU_SBF(iosp.get(), false);
+    writeRF_TSDU_SBF_Imm(iosp.get(), false);
 }
 
 /* Helper to write a extended function packet. */
@@ -1072,7 +1072,7 @@ void ControlSignaling::writeRF_TSDU_Ext_Func(uint32_t func, uint32_t arg, uint32
         ::ActivityLog("P25", true, "radio uninhibit request from %u to %u", arg, dstId);
     }
 
-    writeRF_TSDU_SBF(iosp.get(), false);
+    writeRF_TSDU_SBF_Imm(iosp.get(), false);
 }
 
 /* Helper to write a group affiliation query packet. */
@@ -1091,7 +1091,7 @@ void ControlSignaling::writeRF_TSDU_Grp_Aff_Q(uint32_t dstId)
     VERBOSE_LOG_TSBK_DST(osp->toString(), dstId);
     ::ActivityLog("P25", true, "group affiliation query command from %u to %u", WUID_FNE, dstId);
 
-    writeRF_TSDU_SBF(osp.get(), true);
+    writeRF_TSDU_SBF_Imm(osp.get(), true);
 }
 
 /* Helper to write a unit registration command packet. */
@@ -1110,7 +1110,7 @@ void ControlSignaling::writeRF_TSDU_U_Reg_Cmd(uint32_t dstId)
     VERBOSE_LOG_TSBK_DST(osp->toString(), dstId);
     ::ActivityLog("P25", true, "unit registration command from %u to %u", WUID_FNE, dstId);
 
-    writeRF_TSDU_SBF(osp.get(), true);
+    writeRF_TSDU_SBF_Imm(osp.get(), true);
 }
 
 /* Helper to write a emergency alarm packet. */
