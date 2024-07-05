@@ -21,6 +21,7 @@
 using namespace system_clock;
 using namespace network;
 using namespace network::callhandler;
+using namespace network::callhandler::packetdata;
 using namespace p25;
 using namespace p25::defines;
 
@@ -45,14 +46,20 @@ TagP25Data::TagP25Data(FNENetwork* network, bool debug) :
     m_parrotFramesReady(false),
     m_parrotFirstFrame(true),
     m_status(),
+    m_packetData(nullptr),
     m_debug(debug)
 {
     assert(network != nullptr);
+
+    m_packetData = new P25PacketData(network, debug);
 }
 
 /* Finalizes a instance of the TagP25Data class. */
 
-TagP25Data::~TagP25Data() = default;
+TagP25Data::~TagP25Data()
+{
+    delete m_packetData;
+}
 
 /* Process a data frame from the network. */
 
@@ -76,6 +83,10 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
 
     DUID::E duid = (DUID::E)data[22U];
     FrameType::E frameType = FrameType::DATA_UNIT;
+
+    if (duid == DUID::PDU) {
+        return m_packetData->processFrame(data, len, peerId, pktSeq, streamId, external);
+    }
 
     // perform TGID route rewrites if configured
     routeRewrite(buffer, peerId, duid, dstId, false);
@@ -394,7 +405,7 @@ bool TagP25Data::processGrantReq(uint32_t srcId, uint32_t dstId, bool unitToUnit
 
     if (!tg.config().active()) {
         return false;
-    }
+    } 
 
     // repeat traffic to the connected peers
     if (m_network->m_peers.size() > 0U) {

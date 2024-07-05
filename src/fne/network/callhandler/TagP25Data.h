@@ -27,6 +27,7 @@
 #include "common/p25/lc/TSBK.h"
 #include "common/p25/lc/TDULC.h"
 #include "network/FNENetwork.h"
+#include "network/callhandler/packetdata/P25PacketData.h"
 
 #include <deque>
 
@@ -36,7 +37,6 @@ namespace network
     {
         // ---------------------------------------------------------------------------
         //  Class Declaration
-        //      
         // ---------------------------------------------------------------------------
 
         /**
@@ -160,6 +160,8 @@ namespace network
             };
             typedef std::pair<const uint32_t, RxStatus> StatusMapPair;
             std::unordered_map<uint32_t, RxStatus> m_status;
+
+            packetdata::P25PacketData *m_packetData;
 
             bool m_debug;
 

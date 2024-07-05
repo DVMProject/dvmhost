@@ -293,7 +293,11 @@ bool Data::process(uint8_t* data, uint32_t len)
                         if ((m_rfDataHeader.getFormat() != PDUFormatType::AMBT) &&
                             (m_rfDataHeader.getFormat() != PDUFormatType::RSP) &&
                             (m_rfDataHeader.getSAP() != PDUSAP::CONV_DATA_REG)) {
-                            writeNetwork(m_rfDataBlockCnt, buffer, P25_PDU_FEC_LENGTH_BYTES, m_rfData[i].getLastBlock());
+                            uint32_t networkBlock = m_rfDataBlockCnt + 1U;
+                            if (m_rfUseSecondHeader)
+                                ++networkBlock;
+
+                            writeNetwork(networkBlock, buffer, P25_PDU_FEC_LENGTH_BYTES, m_rfData[i].getLastBlock());
                         }
 
                         m_rfDataBlockCnt++;
@@ -645,6 +649,13 @@ bool Data::processNetwork(uint8_t* data, uint32_t len, uint32_t blockLength)
                         m_netData[i].getSerialNo() == 0U) {
                         LogMessage(LOG_NET, P25_PDU_STR ", block %u, fmt = $%02X, lastBlock = %u, sap = $%02X, llId = %u",
                             m_netData[i].getSerialNo(), m_netData[i].getFormat(), m_netData[i].getLastBlock(), m_netData[i].getSAP(), m_netData[i].getLLId());
+                        if (m_dumpPDUData) {
+                            uint8_t dataBlock[P25_PDU_CONFIRMED_DATA_LENGTH_BYTES];
+                            ::memset(dataBlock, 0xAAU, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
+                            m_netData[i].getData(dataBlock);
+                            Utils::dump(2U, "Network Data Block", dataBlock, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
+                        }
+
                         m_netSecondHeader.reset();
                         m_netSecondHeader.setAckNeeded(true);
                         m_netSecondHeader.setFormat(m_netData[i].getFormat());
@@ -656,10 +667,17 @@ bool Data::processNetwork(uint8_t* data, uint32_t len, uint32_t blockLength)
                         LogMessage(LOG_NET, P25_PDU_STR ", block %u, fmt = $%02X, lastBlock = %u",
                             (m_netDataHeader.getFormat() == PDUFormatType::CONFIRMED) ? m_netData[i].getSerialNo() : m_netDataBlockCnt, m_netData[i].getFormat(),
                             m_netData[i].getLastBlock());
+
+                        if (m_dumpPDUData) {
+                            uint8_t dataBlock[P25_PDU_CONFIRMED_DATA_LENGTH_BYTES];
+                            ::memset(dataBlock, 0xAAU, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
+                            m_netData[i].getData(dataBlock);
+                            Utils::dump(2U, "Network Data Block", dataBlock, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
+                        }
                     }
 
                     m_netData[i].getData(m_pduUserData + dataOffset);
-                    dataOffset += (m_rfDataHeader.getFormat() == PDUFormatType::CONFIRMED) ? P25_PDU_CONFIRMED_DATA_LENGTH_BYTES : P25_PDU_UNCONFIRMED_LENGTH_BYTES;
+                    dataOffset += (m_netDataHeader.getFormat() == PDUFormatType::CONFIRMED) ? P25_PDU_CONFIRMED_DATA_LENGTH_BYTES : P25_PDU_UNCONFIRMED_LENGTH_BYTES;
                     m_pduUserDataLength = dataOffset;
 
                     m_netDataBlockCnt++;
@@ -699,13 +717,11 @@ bool Data::processNetwork(uint8_t* data, uint32_t len, uint32_t blockLength)
 
             ::ActivityLog("P25", false, "Net data transmission from %u to %u, %u blocks", srcId, dstId, m_netDataHeader.getBlocksToFollow());
 
-            if (m_repeatPDU) {
-                if (m_verbose) {
-                    LogMessage(LOG_NET, P25_PDU_STR ", repeating PDU, llId = %u", (m_netUseSecondHeader || m_netExtendedAddress) ? m_netSecondHeader.getLLId() : m_netDataHeader.getLLId());
-                }
-
-                writeNet_PDU_Buffered(); // re-generate buffered PDU and send it on
+            if (m_verbose) {
+                LogMessage(LOG_NET, P25_PDU_STR ", transmitting network PDU, llId = %u", (m_netUseSecondHeader || m_netExtendedAddress) ? m_netSecondHeader.getLLId() : m_netDataHeader.getLLId());
             }
+
+            writeNet_PDU_Buffered(); // re-generate buffered PDU and send it on
 
             ::ActivityLog("P25", false, "end of Net data transmission");
 
@@ -775,7 +791,7 @@ void Data::writeRF_PDU_User(data::DataHeader& dataHeader, data::DataHeader& seco
 
     // generate the second PDU header
     if (useSecondHeader) {
-        secondHeader.encode(m_pduUserData, true);
+        secondHeader.encode(pduUserData, true);
 
         ::memset(block, 0x00U, P25_PDU_FEC_LENGTH_BYTES);
         secondHeader.encode(block);
