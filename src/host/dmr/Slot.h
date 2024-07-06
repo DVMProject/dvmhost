@@ -430,13 +430,23 @@ namespace dmr
 
         static uint8_t* m_idle;
 
+        /**
+         * @brief Short LC Activity Type
+         */
+        enum SLCO_ACT_TYPE {
+            NONE,       //! None
+            VOICE,      //! Voice
+            DATA,       //! Data
+            CSBK        //! CSBK
+        };
+
         static defines::FLCO::E m_flco1;
         static uint8_t m_id1;
-        static bool m_voice1;
+        static SLCO_ACT_TYPE m_actType1;
 
         static defines::FLCO::E m_flco2;
         static uint8_t m_id2;
-        static bool m_voice2;
+        static SLCO_ACT_TYPE m_actType2;
 
         static bool m_verifyReg;
 
@@ -517,9 +527,9 @@ namespace dmr
          * @param slotNo DMR slot number.
          * @param id ID.
          * @param flco Full-Link Control Opcode.
-         * @param voice Flag indicating this is for a voice frame.
+         * @param actType Traffic activity type.
          */
-        static void setShortLC(uint32_t slotNo, uint32_t id, defines::FLCO::E flco = defines::FLCO::GROUP, bool voice = true);
+        static void setShortLC(uint32_t slotNo, uint32_t id, defines::FLCO::E flco = defines::FLCO::GROUP, Slot::SLCO_ACT_TYPE actType = Slot::SLCO_ACT_TYPE::NONE);
         /**
          * @brief Helper to set the DMR short LC for TSCC.
          * @param siteData Instance of the dmr::SiteData class.

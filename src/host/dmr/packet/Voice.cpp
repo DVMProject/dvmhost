@@ -204,7 +204,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
             m_slot->m_rfLastSrcId = srcId;
 
             if (m_slot->m_netState == RS_NET_IDLE) {
-                m_slot->setShortLC(m_slot->m_slotNo, dstId, flco, true);
+                m_slot->setShortLC(m_slot->m_slotNo, dstId, flco, Slot::SLCO_ACT_TYPE::VOICE);
             }
 
             if (m_verbose) {
@@ -618,7 +618,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 m_slot->m_rfLastSrcId = srcId;
 
                 if (m_slot->m_netState == RS_NET_IDLE) {
-                    m_slot->setShortLC(m_slot->m_slotNo, dstId, flco, true);
+                    m_slot->setShortLC(m_slot->m_slotNo, dstId, flco, Slot::SLCO_ACT_TYPE::VOICE);
                 }
 
                 ::ActivityLog("DMR", true, "Slot %u RF late entry from %u to %s%u", m_slot->m_slotNo, srcId, flco == FLCO::GROUP ? "TG " : "", dstId);
@@ -728,7 +728,7 @@ void Voice::processNetwork(const data::Data& dmrData)
         m_slot->m_netLastSrcId = srcId;
         m_slot->m_netTGHang.start();
 
-        m_slot->setShortLC(m_slot->m_slotNo, dstId, flco, true);
+        m_slot->setShortLC(m_slot->m_slotNo, dstId, flco, Slot::SLCO_ACT_TYPE::VOICE);
 
         if (m_verbose) {
             LogMessage(LOG_NET, DMR_DT_VOICE_LC_HEADER ", slot = %u, srcId = %u, dstId = %u, FLCO = $%02X, FID = $%02X, PF = %u", m_slot->m_slotNo,
@@ -797,7 +797,7 @@ void Voice::processNetwork(const data::Data& dmrData)
             m_slot->m_netLastSrcId = srcId;
             m_slot->m_netTGHang.start();
 
-            m_slot->setShortLC(m_slot->m_slotNo, dstId, m_slot->m_netLC->getFLCO(), true);
+            m_slot->setShortLC(m_slot->m_slotNo, dstId, m_slot->m_netLC->getFLCO(), Slot::SLCO_ACT_TYPE::VOICE);
 
             ::ActivityLog("DMR", false, "Slot %u network late entry from %u to %s%u",
                 m_slot->m_slotNo, srcId, m_slot->m_netLC->getFLCO() == FLCO::GROUP ? "TG " : "", dstId);
@@ -903,7 +903,7 @@ void Voice::processNetwork(const data::Data& dmrData)
             m_slot->m_netLastSrcId = srcId;
             m_slot->m_netTGHang.start();
 
-            m_slot->setShortLC(m_slot->m_slotNo, dstId, m_slot->m_netLC->getFLCO(), true);
+            m_slot->setShortLC(m_slot->m_slotNo, dstId, m_slot->m_netLC->getFLCO(), Slot::SLCO_ACT_TYPE::VOICE);
 
             ::ActivityLog("DMR", false, "Slot %u network late entry from %u to %s%u",
                 m_slot->m_slotNo, srcId, m_slot->m_netLC->getFLCO() == FLCO::GROUP ? "TG " : "", dstId);

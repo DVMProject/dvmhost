@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2016,2018 Jonathan Naylor, G4KLX
- *  Copyright (C) 2023 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2023-2024 Bryan Biedenkapp, N2PLL
  *
  */
 #include "Defines.h"
@@ -57,13 +57,13 @@ Trellis::~Trellis() = default;
 
 /* Decodes 3/4 rate Trellis. */
 
-bool Trellis::decode34(const uint8_t* data, uint8_t* payload)
+bool Trellis::decode34(const uint8_t* data, uint8_t* payload, bool skipSymbols)
 {
     assert(data != nullptr);
     assert(payload != nullptr);
 
     int8_t dibits[98U];
-    deinterleave(data, dibits);
+    deinterleave(data, dibits, skipSymbols);
 
     uint8_t points[49U];
     dibitsToPoints(dibits, points);
@@ -93,7 +93,7 @@ bool Trellis::decode34(const uint8_t* data, uint8_t* payload)
 
 /* Encodes 3/4 rate Trellis. */
 
-void Trellis::encode34(const uint8_t* payload, uint8_t* data)
+void Trellis::encode34(const uint8_t* payload, uint8_t* data, bool skipSymbols)
 {
     assert(payload != nullptr);
     assert(data != nullptr);
@@ -115,7 +115,7 @@ void Trellis::encode34(const uint8_t* payload, uint8_t* data)
     int8_t dibits[98U];
     pointsToDibits(points, dibits);
 
-    interleave(dibits, data);
+    interleave(dibits, data, skipSymbols);
 }
 
 /* Decodes 1/2 rate Trellis. */
@@ -187,13 +187,15 @@ void Trellis::encode12(const uint8_t* payload, uint8_t* data)
 
 /* Helper to deinterleave the input symbols into dibits. */
 
-void Trellis::deinterleave(const uint8_t* data, int8_t* dibits) const
+void Trellis::deinterleave(const uint8_t* data, int8_t* dibits, bool skipSymbols) const
 {
     for (uint32_t i = 0U; i < 98U; i++) {
         uint32_t n = i * 2U + 0U;
+        if (skipSymbols && n >= 98U) n += 68U;
         bool b1 = READ_BIT(data, n) != 0x00U;
 
         n = i * 2U + 1U;
+        if (skipSymbols && n >= 98U) n += 68U;
         bool b2 = READ_BIT(data, n) != 0x00U;
 
         int8_t dibit;
@@ -213,7 +215,7 @@ void Trellis::deinterleave(const uint8_t* data, int8_t* dibits) const
 
 /* Helper to interleave the input dibits into symbols. */
 
-void Trellis::interleave(const int8_t* dibits, uint8_t* data) const
+void Trellis::interleave(const int8_t* dibits, uint8_t* data, bool skipSymbols) const
 {
     for (uint32_t i = 0U; i < 98U; i++) {
         uint32_t n = INTERLEAVE_TABLE[i];
@@ -239,9 +241,11 @@ void Trellis::interleave(const int8_t* dibits, uint8_t* data) const
         }
 
         n = i * 2U + 0U;
+        if (skipSymbols && n >= 98U) n += 68U;
         WRITE_BIT(data, n, b1);
 
         n = i * 2U + 1U;
+        if (skipSymbols && n >= 98U) n += 68U;
         WRITE_BIT(data, n, b2);
     }
 }

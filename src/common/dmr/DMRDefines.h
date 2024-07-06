@@ -109,7 +109,10 @@ namespace dmr
         const uint8_t   SLOT2 = 0x80U;
 
         const uint32_t  MAX_PDU_COUNT = 32U;
-        const uint32_t  MAX_PDU_LENGTH = 512U;
+
+        const uint32_t  PDU_UNCONFIRMED_LENGTH_BYTES = 12U;
+        const uint32_t  PDU_CONFIRMED_LENGTH_BYTES = 18U;
+        const uint32_t  PDU_UNCODED_LENGTH_BYTES = 24U;
 
         const uint32_t  MI_LENGTH_BYTES = 4U;           // This was guessed based on OTA data captures -- the message indicator seems to be the same length as a source/destination address
         /** @} */

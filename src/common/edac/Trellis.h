@@ -5,6 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2016,2018 Jonathan Naylor, G4KLX
+ *  Copyright (C) 2023-2024 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -43,15 +44,17 @@ namespace edac
          * @brief Decodes 3/4 rate Trellis.
          * @param[in] data Trellis symbol bytes.
          * @param[out] payload Output bytes.
+         * @param skipSymbols Flag indicating symbols should be skipped (this is used for DMR).
          * @returns bool True, if Trellis decoded, otherwise false.
          */
-        bool decode34(const uint8_t* data, uint8_t* payload);
+        bool decode34(const uint8_t* data, uint8_t* payload, bool skipSymbols = false);
         /**
          * @brief Encodes 3/4 rate Trellis.
          * @param[in] payload Input bytes.
          * @param[out] data Trellis symbol bytes.
+         * @param skipSymbols Flag indicating symbols should be skipped (this is used for DMR).
          */
-        void encode34(const uint8_t* payload, uint8_t* data);
+        void encode34(const uint8_t* payload, uint8_t* data, bool skipSymbols = false);
 
         /**
          * @brief Decodes 1/2 rate Trellis.
@@ -72,14 +75,16 @@ namespace edac
          * @brief Helper to deinterleave the input symbols into dibits.
          * @param[in] data Trellis symbol bytes.
          * @param[out] dibits Dibits.
+         * @param skipSymbols Flag indicating symbols should be skipped (this is used for DMR).
          */
-        void deinterleave(const uint8_t* in, int8_t* dibits) const;
+        void deinterleave(const uint8_t* in, int8_t* dibits, bool skipSymbols = false) const;
         /**
          * @brief Helper to interleave the input dibits into symbols.
          * @param[in] dibits Dibits.
          * @param[out] data Trellis symbol bytes.
+         * @param skipSymbols Flag indicating symbols should be skipped (this is used for DMR).
          */
-        void interleave(const int8_t* dibits, uint8_t* out) const;
+        void interleave(const int8_t* dibits, uint8_t* out, bool skipSymbols = false) const;
         /**
          * @brief Helper to map dibits to trellis constellation points.
          * @param[in] dibits Dibits.

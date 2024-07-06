@@ -417,16 +417,14 @@ bool Data::process(uint8_t* data, uint32_t len)
                             }
                         }
                     }
-/*
+
                     if (m_repeatPDU) {
-                        if (!m_rfDataHeader.getFullMessage()) {
-                            m_rfDataHeader.setSAP(PDUSAP::EXT_ADDR);
+                        if (m_verbose) {
+                            LogMessage(LOG_RF, P25_PDU_STR ", repeating PDU, llId = %u, srcLlId = %u", m_rfDataHeader.getLLId(), m_rfDataHeader.getSrcLLId());
                         }
 
-                        writeRF_PDU_Ack_Response(m_rfDataHeader.getResponseClass(), m_rfDataHeader.getResponseType(), m_rfDataHeader.getResponseStatus(), 
-                                                 m_rfDataHeader.getLLId(), m_rfDataHeader.getSrcLLId());
-                   }
-*/
+                        writeRF_PDU_Buffered(); // re-generate buffered PDU and send it on
+                    }
                 }
                 else {
                     // handle standard P25 service access points
@@ -1524,73 +1522,75 @@ void Data::writeRF_PDU_Buffered()
     Utils::setBitRange(block, data, offset, P25_PDU_FEC_LENGTH_BITS);
     offset += P25_PDU_FEC_LENGTH_BITS;
 
-    uint32_t dataOffset = 0U;
+    if (blocksToFollow > 0U) {
+        uint32_t dataOffset = 0U;
 
-    // generate the second PDU header
-    if (m_rfUseSecondHeader) {
-        m_rfSecondHeader.encode(m_pduUserData, true);
+        // generate the second PDU header
+        if (m_rfUseSecondHeader && m_rfDataHeader.getFormat() != PDUFormatType::RSP) {
+            m_rfSecondHeader.encode(m_pduUserData, true);
 
-        ::memset(block, 0x00U, P25_PDU_FEC_LENGTH_BYTES);
-        m_rfSecondHeader.encode(block);
-        Utils::setBitRange(block, data, offset, P25_PDU_FEC_LENGTH_BITS);
+            ::memset(block, 0x00U, P25_PDU_FEC_LENGTH_BYTES);
+            m_rfSecondHeader.encode(block);
+            Utils::setBitRange(block, data, offset, P25_PDU_FEC_LENGTH_BITS);
 
-        bitLength += P25_PDU_FEC_LENGTH_BITS;
-        offset += P25_PDU_FEC_LENGTH_BITS;
-        dataOffset += P25_PDU_HEADER_LENGTH_BYTES;
-        blocksToFollow--;
+            bitLength += P25_PDU_FEC_LENGTH_BITS;
+            offset += P25_PDU_FEC_LENGTH_BITS;
+            dataOffset += P25_PDU_HEADER_LENGTH_BYTES;
+            blocksToFollow--;
 
-        if (m_verbose) {
-            LogMessage(LOG_RF, P25_PDU_STR ", OSP, fmt = $%02X, mfId = $%02X, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padLength = %u, n = %u, seqNo = %u, lastFragment = %u, hdrOffset = %u, bitLength = %u, llId = %u",
-                m_rfSecondHeader.getFormat(), m_rfSecondHeader.getMFId(), m_rfSecondHeader.getSAP(), m_rfSecondHeader.getFullMessage(),
-                m_rfSecondHeader.getBlocksToFollow(), m_rfSecondHeader.getPadLength(), m_rfSecondHeader.getNs(), m_rfSecondHeader.getFSN(), m_rfSecondHeader.getLastFragment(),
-                m_rfSecondHeader.getHeaderOffset(), bitLength, m_rfSecondHeader.getLLId());
-        }
-    }
-
-    edac::CRC::addCRC32(m_pduUserData, m_pduUserDataLength);
-
-    // generate the PDU data
-    for (uint32_t i = 0U; i < blocksToFollow; i++) {
-        m_rfData[i].setFormat((m_rfUseSecondHeader) ? m_rfSecondHeader : m_rfDataHeader);
-        m_rfData[i].setSerialNo(i);
-        m_rfData[i].setData(m_pduUserData + dataOffset);
-
-        // are we processing extended address data from the first block?
-        if (m_rfDataHeader.getSAP() == PDUSAP::EXT_ADDR && m_rfDataHeader.getFormat() == PDUFormatType::CONFIRMED &&
-            m_rfData[i].getSerialNo() == 0U) {
             if (m_verbose) {
-                LogMessage(LOG_RF, P25_PDU_STR ", OSP, block %u, fmt = $%02X, lastBlock = %u, sap = $%02X, llId = %u",
-                    m_rfData[i].getSerialNo(), m_rfData[i].getFormat(), m_rfData[i].getLastBlock(), m_rfData[i].getSAP(), m_rfData[i].getLLId());
-
-                if (m_dumpPDUData) {
-                    uint8_t dataBlock[P25_PDU_CONFIRMED_DATA_LENGTH_BYTES];
-                    ::memset(dataBlock, 0xAAU, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
-                    m_rfData[i].getData(dataBlock);
-                    Utils::dump(2U, "Data Block", dataBlock, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
-                }
-            }
-        }
-        else {
-            if (m_verbose) {
-                LogMessage(LOG_RF, P25_PDU_STR ", OSP, block %u, fmt = $%02X, lastBlock = %u",
-                    (m_rfDataHeader.getFormat() == PDUFormatType::CONFIRMED) ? m_rfData[i].getSerialNo() : i, m_rfData[i].getFormat(),
-                    m_rfData[i].getLastBlock());
-
-                if (m_dumpPDUData) {
-                    uint8_t dataBlock[P25_PDU_CONFIRMED_DATA_LENGTH_BYTES];
-                    ::memset(dataBlock, 0xAAU, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
-                    m_rfData[i].getData(dataBlock);
-                    Utils::dump(2U, "Data Block", dataBlock, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
-                }
+                LogMessage(LOG_RF, P25_PDU_STR ", OSP, fmt = $%02X, mfId = $%02X, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padLength = %u, n = %u, seqNo = %u, lastFragment = %u, hdrOffset = %u, bitLength = %u, llId = %u",
+                    m_rfSecondHeader.getFormat(), m_rfSecondHeader.getMFId(), m_rfSecondHeader.getSAP(), m_rfSecondHeader.getFullMessage(),
+                    m_rfSecondHeader.getBlocksToFollow(), m_rfSecondHeader.getPadLength(), m_rfSecondHeader.getNs(), m_rfSecondHeader.getFSN(), m_rfSecondHeader.getLastFragment(),
+                    m_rfSecondHeader.getHeaderOffset(), bitLength, m_rfSecondHeader.getLLId());
             }
         }
 
-        ::memset(block, 0x00U, P25_PDU_FEC_LENGTH_BYTES);
-        m_rfData[i].encode(block);
-        Utils::setBitRange(block, data, offset, P25_PDU_FEC_LENGTH_BITS);
+        edac::CRC::addCRC32(m_pduUserData, m_pduUserDataLength);
 
-        offset += P25_PDU_FEC_LENGTH_BITS;
-        dataOffset += (m_rfDataHeader.getFormat() == PDUFormatType::CONFIRMED) ? P25_PDU_CONFIRMED_DATA_LENGTH_BYTES : P25_PDU_UNCONFIRMED_LENGTH_BYTES;
+        // generate the PDU data
+        for (uint32_t i = 0U; i < blocksToFollow; i++) {
+            m_rfData[i].setFormat((m_rfUseSecondHeader) ? m_rfSecondHeader : m_rfDataHeader);
+            m_rfData[i].setSerialNo(i);
+            m_rfData[i].setData(m_pduUserData + dataOffset);
+
+            // are we processing extended address data from the first block?
+            if (m_rfDataHeader.getSAP() == PDUSAP::EXT_ADDR && m_rfDataHeader.getFormat() == PDUFormatType::CONFIRMED &&
+                m_rfData[i].getSerialNo() == 0U) {
+                if (m_verbose) {
+                    LogMessage(LOG_RF, P25_PDU_STR ", OSP, block %u, fmt = $%02X, lastBlock = %u, sap = $%02X, llId = %u",
+                        m_rfData[i].getSerialNo(), m_rfData[i].getFormat(), m_rfData[i].getLastBlock(), m_rfData[i].getSAP(), m_rfData[i].getLLId());
+
+                    if (m_dumpPDUData) {
+                        uint8_t dataBlock[P25_PDU_CONFIRMED_DATA_LENGTH_BYTES];
+                        ::memset(dataBlock, 0xAAU, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
+                        m_rfData[i].getData(dataBlock);
+                        Utils::dump(2U, "Data Block", dataBlock, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
+                    }
+                }
+            }
+            else {
+                if (m_verbose) {
+                    LogMessage(LOG_RF, P25_PDU_STR ", OSP, block %u, fmt = $%02X, lastBlock = %u",
+                        (m_rfDataHeader.getFormat() == PDUFormatType::CONFIRMED) ? m_rfData[i].getSerialNo() : i, m_rfData[i].getFormat(),
+                        m_rfData[i].getLastBlock());
+
+                    if (m_dumpPDUData) {
+                        uint8_t dataBlock[P25_PDU_CONFIRMED_DATA_LENGTH_BYTES];
+                        ::memset(dataBlock, 0xAAU, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
+                        m_rfData[i].getData(dataBlock);
+                        Utils::dump(2U, "Data Block", dataBlock, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
+                    }
+                }
+            }
+
+            ::memset(block, 0x00U, P25_PDU_FEC_LENGTH_BYTES);
+            m_rfData[i].encode(block);
+            Utils::setBitRange(block, data, offset, P25_PDU_FEC_LENGTH_BITS);
+
+            offset += P25_PDU_FEC_LENGTH_BITS;
+            dataOffset += (m_rfDataHeader.getFormat() == PDUFormatType::CONFIRMED) ? P25_PDU_CONFIRMED_DATA_LENGTH_BYTES : P25_PDU_UNCONFIRMED_LENGTH_BYTES;
+        }
     }
 
     writeRF_PDU(data, bitLength);

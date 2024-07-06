@@ -70,10 +70,10 @@ uint8_t* Slot::m_idle = nullptr;
 
 FLCO::E Slot::m_flco1;
 uint8_t Slot::m_id1 = 0U;
-bool Slot::m_voice1 = true;
+Slot::SLCO_ACT_TYPE Slot::m_actType1 = Slot::SLCO_ACT_TYPE::VOICE;
 FLCO::E Slot::m_flco2;
 uint8_t Slot::m_id2 = 0U;
-bool Slot::m_voice2 = true;
+Slot::SLCO_ACT_TYPE Slot::m_actType2 = Slot::SLCO_ACT_TYPE::VOICE;
 
 bool Slot::m_verifyReg = false;
 
@@ -516,7 +516,10 @@ void Slot::clock()
                 }
 
                 if ((m_dmr->m_tsccCnt % 2) > 0) {
-                    setShortLC(m_slotNo, m_tsccPayloadDstId, m_tsccPayloadGroup ? FLCO::GROUP : FLCO::PRIVATE, m_tsccPayloadVoice);
+                    if (m_tsccPayloadVoice)
+                        setShortLC(m_slotNo, m_tsccPayloadDstId, m_tsccPayloadGroup ? FLCO::GROUP : FLCO::PRIVATE, SLCO_ACT_TYPE::VOICE);
+                    else                        
+                        setShortLC(m_slotNo, m_tsccPayloadDstId, m_tsccPayloadGroup ? FLCO::GROUP : FLCO::PRIVATE, SLCO_ACT_TYPE::DATA);
                 }
             }
         }
@@ -1452,7 +1455,7 @@ void Slot::clearTSCCActivated()
 
 /* Helper to set the DMR short LC. */
 
-void Slot::setShortLC(uint32_t slotNo, uint32_t id, FLCO::E flco, bool voice)
+void Slot::setShortLC(uint32_t slotNo, uint32_t id, FLCO::E flco, SLCO_ACT_TYPE actType)
 {
     assert(m_modem != nullptr);
 
@@ -1460,7 +1463,7 @@ void Slot::setShortLC(uint32_t slotNo, uint32_t id, FLCO::E flco, bool voice)
         case 1U:
             m_id1 = 0U;
             m_flco1 = flco;
-            m_voice1 = voice;
+            m_actType1 = actType;
             if (id != 0U) {
                 uint8_t buffer[3U];
                 buffer[0U] = (id << 16) & 0xFFU;
@@ -1472,7 +1475,7 @@ void Slot::setShortLC(uint32_t slotNo, uint32_t id, FLCO::E flco, bool voice)
         case 2U:
             m_id2 = 0U;
             m_flco2 = flco;
-            m_voice2 = voice;
+            m_actType2 = actType;
             if (id != 0U) {
                 uint8_t buffer[3U];
                 buffer[0U] = (id << 16) & 0xFFU;
@@ -1498,34 +1501,34 @@ void Slot::setShortLC(uint32_t slotNo, uint32_t id, FLCO::E flco, bool voice)
 
     if (m_id1 != 0U) {
         lc[2U] = m_id1;
-        if (m_voice1) {
-            if (m_flco1 == FLCO::GROUP)
-                lc[1U] |= 0x80U;
-            else
-                lc[1U] |= 0x90U;
-        }
-        else {
-            if (m_flco1 == FLCO::GROUP)
-                lc[1U] |= 0xB0U;
-            else
-                lc[1U] |= 0xA0U;
-        }
+        if (m_actType1 == SLCO_ACT_TYPE::VOICE && m_flco1 == FLCO::GROUP)
+            lc[1U] |= 0x08U;
+        else if (m_actType1 == SLCO_ACT_TYPE::VOICE && m_flco1 == FLCO::PRIVATE)
+            lc[1U] |= 0x09U;
+        else if (m_actType1 == SLCO_ACT_TYPE::DATA && m_flco1 == FLCO::GROUP)
+            lc[1U] |= 0x0BU;
+        else if (m_actType1 == SLCO_ACT_TYPE::DATA && m_flco1 == FLCO::PRIVATE)
+            lc[1U] |= 0x0AU;
+        else if (m_actType1 == SLCO_ACT_TYPE::CSBK && m_flco1 == FLCO::GROUP)
+            lc[1U] |= 0x02U;
+        else if (m_actType1 == SLCO_ACT_TYPE::CSBK && m_flco1 == FLCO::PRIVATE)
+            lc[1U] |= 0x03U;
     }
 
     if (m_id2 != 0U) {
         lc[3U] = m_id2;
-        if (m_voice2) {
-            if (m_flco2 == FLCO::GROUP)
-                lc[1U] |= 0x08U;
-            else
-                lc[1U] |= 0x09U;
-        }
-        else {
-            if (m_flco2 == FLCO::GROUP)
-                lc[1U] |= 0x0BU;
-            else
-                lc[1U] |= 0x0AU;
-        }
+        if (m_actType2 == SLCO_ACT_TYPE::VOICE && m_flco2 == FLCO::GROUP)
+            lc[1U] |= 0x08U;
+        else if (m_actType2 == SLCO_ACT_TYPE::VOICE && m_flco2 == FLCO::PRIVATE)
+            lc[1U] |= 0x09U;
+        else if (m_actType2 == SLCO_ACT_TYPE::DATA && m_flco2 == FLCO::GROUP)
+            lc[1U] |= 0x0BU;
+        else if (m_actType2 == SLCO_ACT_TYPE::DATA && m_flco2 == FLCO::PRIVATE)
+            lc[1U] |= 0x0AU;
+        else if (m_actType2 == SLCO_ACT_TYPE::CSBK && m_flco2 == FLCO::GROUP)
+            lc[1U] |= 0x02U;
+        else if (m_actType2 == SLCO_ACT_TYPE::CSBK && m_flco2 == FLCO::PRIVATE)
+            lc[1U] |= 0x03U;
     }
 
     lc[4U] = edac::CRC::crc8(lc, 4U);

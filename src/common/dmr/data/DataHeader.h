@@ -62,9 +62,13 @@ namespace dmr
 
         public:
             /**
-             * @brief Flag indicating whether the CSBK is group or individual.
+             * @brief Flag indicating whether the data header is group or individual.
              */
             __PROPERTY(bool, GI, GI);
+            /**
+             * @brief Flag indicating whether the data header requires acknowledgement.
+             */
+            __PROPERTY(bool, A, A);
 
             /**
              * @brief Data packet format.
@@ -120,15 +124,15 @@ namespace dmr
             /**
              * @brief Response class.
              */
-            __PROPERTY(uint8_t, rspClass, Class);
+            __PROPERTY(uint8_t, rspClass, ResponseClass);
             /**
              * @brief Response type.
              */
-            __PROPERTY(uint8_t, rspType, Type);
+            __PROPERTY(uint8_t, rspType, ResponseType);
             /**
              * @brief Response status.
              */
-            __PROPERTY(uint8_t, rspStatus, Status);
+            __PROPERTY(uint8_t, rspStatus, ResponseStatus);
 
             /**
              * @brief Source Port.
@@ -141,7 +145,6 @@ namespace dmr
 
         private:
             uint8_t* m_data;
-            bool m_A;
             bool m_SF;
             bool m_PF;
             uint8_t m_UDTO;

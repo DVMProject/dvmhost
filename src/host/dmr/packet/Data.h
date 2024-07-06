@@ -99,6 +99,25 @@ namespace dmr
              * @brief Finalizes a instance of the Data class.
              */
             ~Data();
+
+            /**
+             * @brief Helper to write a DMR PDU packet.
+             * @param dataType DMR Data Type for this frame.
+             * @param[in] pdu Buffer containing encoded PDU to transmit.
+             */
+            void writeRF_PDU(defines::DataType::E dataType, const uint8_t* pdu);
+
+            /**
+             * @brief Helper to write a PDU acknowledge response.
+             * @param rspClass Response Class.
+             * @param rspType Response Type.
+             * @param rspStatus Response Status.
+             * @param sap Service access point.
+             * @param gi Flag indicating group or individual.
+             * @param srcId Source ID.
+             * @param dstId Destination ID.
+             */
+            void writeRF_PDU_Ack_Response(uint8_t rspClass, uint8_t rspType, uint8_t sap, uint8_t rspStatus, bool gi, uint32_t srcId, uint32_t dstId);
         };
     } // namespace packet
 } // namespace dmr

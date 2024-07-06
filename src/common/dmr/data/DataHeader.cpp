@@ -37,6 +37,7 @@ const uint8_t UDTF_NMEA = 0x05U;
 
 DataHeader::DataHeader() :
     m_GI(false),
+    m_A(false),
     m_DPF(DPF::UDT),
     m_sap(0U),
     m_fsn(0U),
@@ -54,7 +55,6 @@ DataHeader::DataHeader() :
     m_srcPort(0U),
     m_dstPort(0U),
     m_data(nullptr),
-    m_A(false),
     m_SF(false),
     m_PF(false),
     m_UDTO(0U)

@@ -171,6 +171,13 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len)
             }
         }
 
+        // if data preamble, signal its existence
+        if (m_slot->m_netState == RS_NET_IDLE && csbk->getDataContent()) {
+            m_slot->setShortLC(m_slot->m_slotNo, dstId, gi ? FLCO::GROUP : FLCO::PRIVATE, Slot::SLCO_ACT_TYPE::DATA);
+        } else {
+            m_slot->setShortLC(m_slot->m_slotNo, dstId, gi ? FLCO::GROUP : FLCO::PRIVATE, Slot::SLCO_ACT_TYPE::CSBK);        
+        }
+
         bool handled = false;
         switch (csbko) {
         case CSBKO::UU_V_REQ:
@@ -343,7 +350,7 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len)
         case CSBKO::PRECCSBK:
         {
             if (m_verbose) {
-                LogMessage(LOG_RF, "DMR Slot %u, , CSBK, PRECCSBK (%s Preamble CSBK), toFollow = %u, srcId = %u, dstId = %u",
+                LogMessage(LOG_RF, "DMR Slot %u, CSBK, PRECCSBK (%s Preamble CSBK), toFollow = %u, srcId = %u, dstId = %u",
                     m_slot->m_slotNo, csbk->getDataContent() ? "Data" : "CSBK", csbk->getCBF(), srcId, dstId);
             }
         }
@@ -435,10 +442,18 @@ void ControlSignaling::processNetwork(const data::Data & dmrData)
             }
         }
 
+        bool gi = csbk->getGI();
         uint32_t srcId = csbk->getSrcId();
         uint32_t dstId = csbk->getDstId();
 
         CHECK_TG_HANG(dstId);
+
+        // if data preamble, signal its existence
+        if (csbk->getDataContent()) {
+            m_slot->setShortLC(m_slot->m_slotNo, dstId, gi ? FLCO::GROUP : FLCO::PRIVATE, Slot::SLCO_ACT_TYPE::DATA);
+        } else {
+            m_slot->setShortLC(m_slot->m_slotNo, dstId, gi ? FLCO::GROUP : FLCO::PRIVATE, Slot::SLCO_ACT_TYPE::CSBK);        
+        }
 
         bool handled = false;
         switch (csbko) {
