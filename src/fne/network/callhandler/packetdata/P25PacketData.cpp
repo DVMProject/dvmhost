@@ -210,12 +210,6 @@ bool P25PacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
                     status->blockData[i].getSerialNo() == 0U) {
                     LogMessage(LOG_NET, P25_PDU_STR ", ISP, block %u, fmt = $%02X, lastBlock = %u",
                         status->blockData[i].getSerialNo(), status->blockData[i].getFormat(), status->blockData[i].getLastBlock());
-                    if (m_network->m_dumpDataPacket) {
-                        uint8_t dataBlock[P25_PDU_CONFIRMED_DATA_LENGTH_BYTES];
-                        ::memset(dataBlock, 0xAAU, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
-                        status->blockData[i].getData(dataBlock);
-                        Utils::dump(2U, "Data Block", dataBlock, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
-                    }
 
                     uint8_t secondHeader[P25_PDU_HEADER_LENGTH_BYTES];
                     ::memset(secondHeader, 0x00U, P25_PDU_HEADER_LENGTH_BYTES);
@@ -232,13 +226,6 @@ bool P25PacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
                     LogMessage(LOG_NET, P25_PDU_STR ", peerId = %u, block %u, fmt = $%02X, lastBlock = %u",
                         peerId, (status->header.getFormat() == PDUFormatType::CONFIRMED) ? status->blockData[i].getSerialNo() : status->dataBlockCnt, status->blockData[i].getFormat(),
                         status->blockData[i].getLastBlock());
-
-                    if (m_network->m_dumpDataPacket) {
-                        uint8_t dataBlock[P25_PDU_CONFIRMED_DATA_LENGTH_BYTES];
-                        ::memset(dataBlock, 0xAAU, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
-                        status->blockData[i].getData(dataBlock);
-                        Utils::dump(2U, "Data Block", dataBlock, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
-                    }
                 }
 
                 status->blockData[i].getData(status->pduUserData + dataOffset);
@@ -445,13 +432,6 @@ void P25PacketData::write_PDU_User(uint32_t peerId, network::PeerNetwork* peerNe
             LogMessage(LOG_NET, P25_PDU_STR ", OSP, peerId = %u, block %u, fmt = $%02X, lastBlock = %u",
                 peerId, (dataHeader.getFormat() == PDUFormatType::CONFIRMED) ? dataBlock.getSerialNo() : i, dataBlock.getFormat(),
                 dataBlock.getLastBlock());
-
-            if (m_network->m_dumpDataPacket) {
-                uint8_t rawDataBlock[P25_PDU_CONFIRMED_DATA_LENGTH_BYTES];
-                ::memset(rawDataBlock, 0xAAU, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
-                dataBlock.getData(rawDataBlock);
-                Utils::dump(2U, "Data Block", rawDataBlock, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
-            }
 
             ::memset(buffer, 0x00U, P25_PDU_FEC_LENGTH_BYTES);
             dataBlock.encode(buffer);
