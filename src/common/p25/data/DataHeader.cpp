@@ -42,7 +42,7 @@ DataHeader::DataHeader() :
     m_ackNeeded(false),
     m_outbound(false),
     m_fmt(PDUFormatType::CONFIRMED),
-    m_sap(0U),
+    m_sap(PDUSAP::USER_DATA),
     m_mfId(MFG_STANDARD),
     m_llId(0U),
     m_blocksToFollow(0U),
@@ -53,6 +53,7 @@ DataHeader::DataHeader() :
     m_Ns(0U),
     m_lastFragment(true),
     m_headerOffset(0U),
+    m_exSap(PDUSAP::USER_DATA),
     m_srcLlId(0U),
     m_rspClass(PDUAckClass::NACK),
     m_rspType(PDUAckType::NACK_ILLEGAL),
@@ -399,7 +400,9 @@ void DataHeader::reset()
 
     m_headerOffset = 0U;
 
+    m_exSap = PDUSAP::USER_DATA;
     m_srcLlId = 0U;
+
     m_rspClass = PDUAckClass::NACK;
     m_rspType = PDUAckType::NACK_ILLEGAL;
     m_rspStatus = 0U;
