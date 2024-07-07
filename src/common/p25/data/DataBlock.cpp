@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2018,2022,2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2018-2024 Bryan Biedenkapp, N2PLL
  *
  */
 #include "Defines.h"
@@ -30,8 +30,6 @@ using namespace p25::data;
 DataBlock::DataBlock() :
     m_serialNo(0U),
     m_lastBlock(false),
-    m_llId(0U),
-    m_sap(0U),
     m_trellis(),
     m_fmt(PDUFormatType::CONFIRMED),
     m_headerSap(0U),
@@ -63,7 +61,6 @@ bool DataBlock::decode(const uint8_t* data, const DataHeader& header)
     // set these to reasonable defaults
     m_serialNo = 0U;
     m_lastBlock = false;
-    m_llId = 0U;
 
     if (m_fmt == PDUFormatType::CONFIRMED) {
         // decode 3/4 rate Trellis
@@ -82,17 +79,7 @@ bool DataBlock::decode(const uint8_t* data, const DataHeader& header)
             uint16_t crc = ((buffer[0] & 0x01U) << 8) + buffer[1];                          // CRC-9 Check Sum
 
             ::memset(m_data, 0x00U, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
-
-            // if this is extended addressing and the first block decode the SAP and LLId
-            if (m_headerSap == PDUSAP::EXT_ADDR && m_serialNo == 0U) {
-                m_sap = buffer[5U] & 0x3FU;                                                 // Service Access Point
-                m_llId = (buffer[2U] << 16) + (buffer[3U] << 8) + buffer[4U];               // Logical Link ID
-
-                ::memcpy(m_data, buffer + 2U, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);         // Payload Data
-            }
-            else {
-                ::memcpy(m_data, buffer + 2U, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);         // Payload Data
-            }
+            ::memcpy(m_data, buffer + 2U, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);             // Payload Data
 
             uint8_t crcBuffer[18U];
             ::memset(crcBuffer, 0x00U, 18U);
@@ -115,7 +102,7 @@ bool DataBlock::decode(const uint8_t* data, const DataHeader& header)
 
 #if DEBUG_P25_PDU_DATA
             LogDebug(LOG_P25, "PDU, fmt = $%02X, crc = $%04X, calculated = $%04X", m_fmt, crc, calculated);
-            Utils::dump(1U, "P25, DataBlock::decode(), Confirmed PDU Block Data", m_data, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
+            Utils::dump(1U, "P25, DataBlock::decode(), Confirmed PDU Data Block", buffer, P25_PDU_CONFIRMED_LENGTH_BYTES);
 #endif
         }
         catch (...) {
@@ -165,19 +152,7 @@ void DataBlock::encode(uint8_t* data)
 
         buffer[0U] = ((m_serialNo << 1) & 0xFEU);                                           // Confirmed Data Serial No.
 
-        // if this is extended addressing and the first block decode the SAP and LLId
-        if (m_headerSap == PDUSAP::EXT_ADDR && m_serialNo == 0U) {
-            buffer[5U] = m_sap & 0x3FU;                                                     // Service Access Point
-
-            buffer[2U] = (m_llId >> 16) & 0xFFU;                                            // Logical Link ID
-            buffer[3U] = (m_llId >> 8) & 0xFFU;
-            buffer[4U] = (m_llId >> 0) & 0xFFU;
-
-            ::memcpy(buffer + 6U, m_data, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES - 4U);
-        }
-        else {
-            ::memcpy(buffer + 2U, m_data, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
-        }
+        ::memcpy(buffer + 2U, m_data, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);                 // Payload Data
 
         uint8_t crcBuffer[18U];
         ::memset(crcBuffer, 0x00U, 18U);

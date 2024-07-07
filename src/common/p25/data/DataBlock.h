@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2018,2022 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2018-2024 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -96,15 +96,6 @@ namespace p25
              * @brief Flag indicating this is the last block in a sequence of block.
              */
             __PROPERTY(bool, lastBlock, LastBlock);
-
-            /**
-             * @brief Logical link ID.
-             */
-            __PROPERTY(uint32_t, llId, LLId);
-            /**
-             * @brief Service access point.
-             */
-            __PROPERTY(uint8_t, sap, SAP);
 
         private:
             edac::Trellis m_trellis;

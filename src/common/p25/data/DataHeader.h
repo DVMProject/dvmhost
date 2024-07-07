@@ -63,6 +63,20 @@ namespace p25
             void encode(uint8_t* data, bool noTrellis = false);
 
             /**
+             * @brief Decodes P25 PDU extended addressing header.
+             * @param[in] data Buffer containing a PDU data header to decode.
+             * @param noTrellis Flag indicating not to perform Trellis encoding.
+             * @returns bool True, if PDU data header decoded, otherwise false.
+             */
+            bool decodeExtAddr(const uint8_t* data, bool noTrellis = false);
+            /**
+             * @brief Encodes P25 PDU extended addressing header.
+             * @param[out] data Buffer to encode a PDU data header.
+             * @param noTrellis Flag indicating not to perform Trellis encoding.
+             */
+            void encodeExtAddr(uint8_t* data, bool noTrellis = false);
+
+            /**
              * @brief Helper to reset data values to defaults.
              */
             void reset();
@@ -79,6 +93,12 @@ namespace p25
              * @returns uint32_t Length of data copied.
              */
             uint32_t getData(uint8_t* buffer) const;
+            /**
+             * @brief Gets the raw extended address header data.
+             * @param[out] buffer Buffer to copy raw header data to.
+             * @returns uint32_t Length of data copied.
+             */
+            uint32_t getExtAddrData(uint8_t* buffer) const;
 
             /**
              * @brief Helper to calculate the number of blocks to follow and padding length for a PDU.
@@ -158,11 +178,17 @@ namespace p25
              */
             __PROPERTY(uint8_t, headerOffset, HeaderOffset);
 
-            // Response Data
+            // Extended Addressing Data
+            /**
+             * @brief Service access point.
+             */
+            __PROPERTY(uint8_t, exSap, EXSAP);
             /**
              * @brief Source Logical link ID.
              */
             __PROPERTY(uint32_t, srcLlId, SrcLLId);
+
+            // Response Data
             /**
              * @brief Response class.
              */
@@ -175,7 +201,7 @@ namespace p25
              * @brief Response status.
              */
             __PROPERTY(uint8_t, rspStatus, ResponseStatus);
-
+            
             // AMBT Data
             /**
              * @brief Alternate Trunking Block Opcode
@@ -194,6 +220,7 @@ namespace p25
             edac::Trellis m_trellis;
 
             uint8_t* m_data;
+            uint8_t* m_extAddrData;
         
             static bool m_warnCRC;
         };

@@ -80,8 +80,6 @@ namespace network
 
                     p25::data::DataBlock* blockData;
                     p25::data::DataHeader header;
-                    p25::data::DataHeader secondHeader;
-                    bool useSecondHeader;
                     bool extendedAddress;
                     uint32_t dataOffset;
                     uint8_t dataBlockCnt;
@@ -100,8 +98,6 @@ namespace network
                         peerId(0U),
                         blockData(nullptr),
                         header(),
-                        secondHeader(),
-                        useSecondHeader(false),
                         extendedAddress(false),
                         dataOffset(0U),
                         dataBlockCnt(0U),
@@ -144,12 +140,11 @@ namespace network
                  * @param peerId Peer ID.
                  * @param peerNet Instance of PeerNetwork to use to send traffic.
                  * @param dataHeader Instance of a PDU data header.
-                 * @param secondHeader Instance of a PDU data header.
-                 * @param useSecondHeader Flag indicating whether or not to use a second data header.
+                 * @param extendedAddress Flag indicating whether or not to extended addressing is in use.
                  * @param pduUserData Buffer containing user data to transmit.
                  */
-                void write_PDU_User(uint32_t peerId, network::PeerNetwork* peerNet, p25::data::DataHeader& dataHeader, p25::data::DataHeader& secondHeader, 
-                    bool useSecondHeader, uint8_t* pduUserData, bool queueOnly = false);
+                void write_PDU_User(uint32_t peerId, network::PeerNetwork* peerNet, p25::data::DataHeader& dataHeader,
+                    bool extendedAddress, uint8_t* pduUserData, bool queueOnly = false);
 
                 /**
                  * @brief Write data processed to the network.

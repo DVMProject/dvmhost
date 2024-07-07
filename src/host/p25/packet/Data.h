@@ -83,12 +83,11 @@ namespace p25
             /**
              * @brief Helper to write user data as a P25 PDU packet.
              * @param dataHeader Instance of a PDU data header.
-             * @param secondHeader Instance of a PDU data header.
-             * @param useSecondHeader Flag indicating whether or not to use a second data header.
+             * @param extendedAddress Flag indicating whether or not to extended addressing is in use.
              * @param pduUserData Buffer containing user data to transmit.
              * @param imm Flag indicating the PDU should be written to the immediate queue.
              */
-            void writeRF_PDU_User(data::DataHeader& dataHeader, data::DataHeader& secondHeader, bool useSecondHeader, uint8_t* pduUserData, bool imm = false);
+            void writeRF_PDU_User(data::DataHeader& dataHeader, bool extendedAddress, uint8_t* pduUserData, bool imm = false);
 
             /**
              * @brief Updates the processor by the passed number of milliseconds.
@@ -123,8 +122,6 @@ namespace p25
 
             data::DataBlock* m_rfData;
             data::DataHeader m_rfDataHeader;
-            data::DataHeader m_rfSecondHeader;
-            bool m_rfUseSecondHeader;
             bool m_rfExtendedAddress;
             uint8_t m_rfDataBlockCnt;
             uint8_t* m_rfPDU;
@@ -133,8 +130,6 @@ namespace p25
 
             data::DataBlock* m_netData;
             data::DataHeader m_netDataHeader;
-            data::DataHeader m_netSecondHeader;
-            bool m_netUseSecondHeader;
             bool m_netExtendedAddress;
             uint32_t m_netDataOffset;
             uint8_t m_netDataBlockCnt;

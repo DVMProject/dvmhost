@@ -61,10 +61,13 @@ DataHeader::DataHeader() :
     m_ambtField8(0U),
     m_ambtField9(0U),
     m_trellis(),
-    m_data(nullptr)
+    m_data(nullptr),
+    m_extAddrData(nullptr)
 {
     m_data = new uint8_t[P25_PDU_HEADER_LENGTH_BYTES];
     ::memset(m_data, 0x00U, P25_PDU_HEADER_LENGTH_BYTES);
+    m_extAddrData = new uint8_t[P25_PDU_HEADER_LENGTH_BYTES];
+    ::memset(m_extAddrData, 0x00U, P25_PDU_HEADER_LENGTH_BYTES);
 }
 
 /* Finalizes a instance of the DataHeader class. */
@@ -72,6 +75,7 @@ DataHeader::DataHeader() :
 DataHeader::~DataHeader()
 {
     delete[] m_data;
+    delete[] m_extAddrData;
 }
 
 /* Decodes P25 PDU data header. */
@@ -254,6 +258,122 @@ void DataHeader::encode(uint8_t* data, bool noTrellis)
     }
 }
 
+/* Decodes P25 PDU extended addressing header. */
+
+bool DataHeader::decodeExtAddr(const uint8_t* data, bool noTrellis)
+{
+    assert(data != nullptr);
+
+    ::memset(m_extAddrData, 0x00U, P25_PDU_HEADER_LENGTH_BYTES);
+
+    if (m_sap != PDUSAP::EXT_ADDR)
+        return false;
+
+    if (m_fmt == PDUFormatType::CONFIRMED) {
+        ::memcpy(m_extAddrData, data, 4U);
+#if DEBUG_P25_PDU_DATA
+        Utils::dump(1U, "P25, DataHeader::decodeExtAddr(), PDU Extended Address Data", m_extAddrData, 4U);
+#endif
+        m_exSap = m_extAddrData[3U] & 0x3FU;                                    // Service Access Point
+        m_srcLlId = (m_extAddrData[0U] << 16) + (m_extAddrData[1U] << 8) +      // Source Logical Link ID
+            m_extAddrData[2U];        
+    } else if (m_fmt == PDUFormatType::UNCONFIRMED) {
+        // decode 1/2 rate Trellis & check CRC-CCITT 16
+        bool valid = true;
+        if (noTrellis) {
+            ::memcpy(m_extAddrData, data, P25_PDU_HEADER_LENGTH_BYTES);
+        }
+        else {
+            valid = m_trellis.decode12(data, m_extAddrData);
+        }
+
+        if (valid) {
+            valid = edac::CRC::checkCCITT162(m_extAddrData, P25_PDU_HEADER_LENGTH_BYTES);
+            if (!valid) {
+                if (m_warnCRC) {
+                    // if we're already warning instead of erroring CRC, don't announce invalid CRC in the 
+                    // case where no CRC is defined
+                    if ((m_extAddrData[P25_PDU_HEADER_LENGTH_BYTES - 2U] != 0x00U) && (m_extAddrData[P25_PDU_HEADER_LENGTH_BYTES - 1U] != 0x00U)) {
+                        LogWarning(LOG_P25, "DataHeader::decodeExtAddr(), failed CRC CCITT-162 check");
+                    }
+
+                    valid = true; // ignore CRC error
+                }
+                else {
+                    LogError(LOG_P25, "DataHeader::decodeExtAddr(), failed CRC CCITT-162 check");
+                }
+            }
+        }
+
+        if (!valid) {
+            return false;
+        }
+
+#if DEBUG_P25_PDU_DATA
+        Utils::dump(1U, "P25, DataHeader::decodeExtAddr(), PDU Extended Address Data", m_extAddrData, P25_PDU_HEADER_LENGTH_BYTES);
+#endif
+
+        m_exSap = m_extAddrData[1U] & 0x3FU;                                    // Service Access Point
+        m_srcLlId = (m_extAddrData[3U] << 16) + (m_extAddrData[4U] << 8) +      // Source Logical Link ID
+            m_extAddrData[5U];
+    }
+
+    return true;
+}
+
+/* Encodes P25 PDU extended addressing header. */
+
+void DataHeader::encodeExtAddr(uint8_t* data, bool noTrellis)
+{
+    assert(data != nullptr);
+
+    if (m_sap != PDUSAP::EXT_ADDR)
+        return;
+
+    uint8_t header[P25_PDU_HEADER_LENGTH_BYTES];
+    ::memset(header, 0x00U, P25_PDU_HEADER_LENGTH_BYTES);
+
+    if (m_fmt == PDUFormatType::CONFIRMED) {
+        header[3U] = m_exSap & 0x3FU;                                           // Service Access Point
+        header[3U] |= 0xC0U;
+
+        header[0U] = (m_srcLlId >> 16) & 0xFFU;                                 // Source Logical Link ID
+        header[1U] = (m_srcLlId >> 8) & 0xFFU;
+        header[2U] = (m_srcLlId >> 0) & 0xFFU;
+
+#if DEBUG_P25_PDU_DATA
+        Utils::dump(1U, "P25, DataHeader::encodeExtAddr(), PDU Header Data", header, P25_PDU_HEADER_LENGTH_BYTES);
+#endif
+
+        ::memcpy(data, header, 4U); // only copy the 4 bytes of header data for confirmed
+    } else if (m_fmt == PDUFormatType::UNCONFIRMED) {
+        header[0U] = m_fmt & 0x1FU;                                             // Packet Format
+
+        header[1U] = m_exSap & 0x3FU;                                           // Service Access Point
+        header[1U] |= 0xC0U;
+
+        header[2U] = m_mfId;                                                    // Mfg Id.
+
+        header[3U] = (m_srcLlId >> 16) & 0xFFU;                                 // Source Logical Link ID
+        header[4U] = (m_srcLlId >> 8) & 0xFFU;
+        header[5U] = (m_srcLlId >> 0) & 0xFFU;
+
+        // compute CRC-CCITT 16
+        edac::CRC::addCCITT162(header, P25_PDU_HEADER_LENGTH_BYTES);
+
+#if DEBUG_P25_PDU_DATA
+        Utils::dump(1U, "P25, DataHeader::encodeExtAddr(), PDU Header Data", header, P25_PDU_HEADER_LENGTH_BYTES);
+#endif
+
+        if (!noTrellis) {
+            // encode 1/2 rate Trellis
+            m_trellis.encode12(header, data);
+        } else {
+            ::memcpy(data, header, P25_PDU_HEADER_LENGTH_BYTES);
+        }
+    }
+}
+
 /* Helper to reset data values to defaults. */
 
 void DataHeader::reset()
@@ -315,6 +435,17 @@ uint32_t DataHeader::getData(uint8_t* buffer) const
     assert(m_data != nullptr);
 
     ::memcpy(buffer, m_data, P25_PDU_HEADER_LENGTH_BYTES);
+    return P25_PDU_HEADER_LENGTH_BYTES;
+}
+
+/* Gets the raw extended address header data. */
+
+uint32_t DataHeader::getExtAddrData(uint8_t* buffer) const
+{
+    assert(buffer != nullptr);
+    assert(m_extAddrData != nullptr);
+
+    ::memcpy(buffer, m_extAddrData, P25_PDU_HEADER_LENGTH_BYTES);
     return P25_PDU_HEADER_LENGTH_BYTES;
 }
 

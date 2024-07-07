@@ -1608,7 +1608,7 @@ void ControlSignaling::writeRF_TSDU_AMBT(lc::AMBT* ambt, bool imm)
         Utils::dump(1U, "!!! *PDU (AMBT) TSBK Block Data", pduUserData, P25_PDU_UNCONFIRMED_LENGTH_BYTES * header.getBlocksToFollow());
     }
 
-    m_p25->m_data->writeRF_PDU_User(header, header, false, pduUserData, imm);
+    m_p25->m_data->writeRF_PDU_User(header, false, pduUserData, imm);
 }
 
 /*
