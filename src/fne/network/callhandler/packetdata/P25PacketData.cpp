@@ -29,6 +29,12 @@ using namespace p25::defines;
 #include <chrono>
 
 // ---------------------------------------------------------------------------
+//  Constants
+// ---------------------------------------------------------------------------
+
+const uint8_t DATA_CALL_COLL_TIMEOUT = 60U;
+
+// ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
@@ -70,6 +76,17 @@ bool P25PacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
         if (streamId != status->streamId) {
             LogWarning(LOG_NET, "P25, Data Call Collision, peer = %u, streamId = %u, rxPeer = %u, rxLlId = %u, rxStreamId = %u, external = %u",
                 peerId, streamId, status->peerId, status->llId, status->streamId, external);
+
+            uint64_t duration = hrc::diff(pktTime, status->callStartTime);
+
+            if ((duration / 1000) > DATA_CALL_COLL_TIMEOUT) {
+                LogWarning(LOG_NET, "P25, force clearing stuck data call, timeout, peer = %u, streamId = %u, rxPeer = %u, rxLlId = %u, rxStreamId = %u, external = %u",
+                    peerId, streamId, status->peerId, status->llId, status->streamId, external);
+
+                delete status;
+                m_status.erase(peerId);
+            }
+
             return false;
         }
     } else {
