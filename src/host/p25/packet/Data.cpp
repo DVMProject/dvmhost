@@ -420,16 +420,32 @@ bool Data::process(uint8_t* data, uint32_t len)
                     }
                 }
                 else {
+                    uint8_t sap = (m_rfExtendedAddress) ? m_rfDataHeader.getEXSAP() : m_rfDataHeader.getSAP();
+
                     // handle standard P25 service access points
-                    switch (m_rfDataHeader.getSAP()) {
-                    case PDUSAP::CONV_DATA_REG:
+                    switch (sap) {
+                    case PDUSAP::ARP:
                     {
+                        /* bryanb: quick and dirty ARP logging */
+                        uint8_t arpPacket[22U];
+                        ::memset(arpPacket, 0x00U, 22U);
+                        ::memcpy(arpPacket, m_pduUserData + 12U, 22U);
+
+                        uint16_t opcode = __GET_UINT16B(arpPacket, 6U);
+                        uint32_t srcHWAddr = __GET_UINT16(arpPacket, 8U);
+                        uint32_t srcProtoAddr = __GET_UINT32(arpPacket, 11U);
+                        uint32_t tgtHWAddr = __GET_UINT16(arpPacket, 15U);
+                        uint32_t tgtProtoAddr = __GET_UINT32(arpPacket, 18U);
+
                         if (m_verbose) {
-                            LogMessage(LOG_RF, P25_PDU_STR ", CONV_DATA_REG (Conventional Data Registration), blocksToFollow = %u",
-                                m_rfDataHeader.getBlocksToFollow());
+                            if (opcode == P25_PDU_ARP_REQUEST) {
+                                LogMessage(LOG_RF, P25_PDU_STR ", ARP request, who has %s? tell %s (%u)", __IP_FROM_UINT(tgtProtoAddr).c_str(), __IP_FROM_UINT(srcProtoAddr).c_str(), srcHWAddr);
+                            } else if (opcode == P25_PDU_ARP_REPLY) {
+                                LogMessage(LOG_RF, P25_PDU_STR ", ARP reply, %s is at %u", __IP_FROM_UINT(srcProtoAddr).c_str(), srcHWAddr);
+                            }
                         }
 
-                        processConvDataReg();
+                        writeRF_PDU_Buffered(); // re-generate buffered PDU and send it on
                     }
                     break;
                     case PDUSAP::SNDCP_CTRL_DATA:
@@ -440,6 +456,16 @@ bool Data::process(uint8_t* data, uint32_t len)
                         }
 
                         processSNDCPControl();
+                    }
+                    break;
+                    case PDUSAP::CONV_DATA_REG:
+                    {
+                        if (m_verbose) {
+                            LogMessage(LOG_RF, P25_PDU_STR ", CONV_DATA_REG (Conventional Data Registration), blocksToFollow = %u",
+                                m_rfDataHeader.getBlocksToFollow());
+                        }
+
+                        processConvDataReg();
                     }
                     break;
                     case PDUSAP::TRUNK_CTRL:
@@ -621,6 +647,9 @@ bool Data::processNetwork(uint8_t* data, uint32_t len, uint32_t blockLength)
         m_netPDUCount++;
         m_netDataBlockCnt++;
 
+        uint32_t srcId = (m_netExtendedAddress) ? m_netDataHeader.getSrcLLId() : m_netDataHeader.getLLId();
+        uint32_t dstId = m_netDataHeader.getLLId();
+
         if (m_netDataBlockCnt >= m_netDataHeader.getBlocksToFollow()) {
             uint32_t blocksToFollow = m_netDataHeader.getBlocksToFollow();
             uint32_t offset = 0U;
@@ -757,18 +786,22 @@ bool Data::processNetwork(uint8_t* data, uint32_t len, uint32_t blockLength)
                 LogWarning(LOG_NET, P25_PDU_STR ", incomplete PDU (%d / %d blocks)", m_netDataBlockCnt, blocksToFollow);
             }
 
-            uint32_t srcId = (m_netExtendedAddress) ? m_netDataHeader.getSrcLLId() : m_netDataHeader.getLLId();
-            uint32_t dstId = m_netDataHeader.getLLId();
+            uint8_t sap = (m_netExtendedAddress) ? m_netDataHeader.getEXSAP() : m_netDataHeader.getSAP();
 
-            ::ActivityLog("P25", false, "Net data transmission from %u to %u, %u blocks", srcId, dstId, m_netDataHeader.getBlocksToFollow());
+            // handle standard P25 service access points
+            switch (sap) {
+            default:
+                ::ActivityLog("P25", false, "Net data transmission from %u to %u, %u blocks", srcId, dstId, m_netDataHeader.getBlocksToFollow());
 
-            if (m_verbose) {
-                LogMessage(LOG_NET, P25_PDU_STR ", transmitting network PDU, llId = %u", (m_netExtendedAddress) ? m_netDataHeader.getSrcLLId() : m_netDataHeader.getLLId());
+                if (m_verbose) {
+                    LogMessage(LOG_NET, P25_PDU_STR ", transmitting network PDU, llId = %u", (m_netExtendedAddress) ? m_netDataHeader.getSrcLLId() : m_netDataHeader.getLLId());
+                }
+
+                writeNet_PDU_Buffered(); // re-generate buffered PDU and send it on
+
+                ::ActivityLog("P25", false, "end of Net data transmission");
+                break;
             }
-
-            writeNet_PDU_Buffered(); // re-generate buffered PDU and send it on
-
-            ::ActivityLog("P25", false, "end of Net data transmission");
 
             m_netDataHeader.reset();
             m_netExtendedAddress = false;
@@ -1429,11 +1462,12 @@ void Data::writeRF_PDU(const uint8_t* pdu, uint32_t bitLength, bool noNulls, boo
 
         m_p25->addFrame(data, newByteLength + 2U, false, imm);
     }
-
+/*
     // add trailing null pad; only if control data isn't being transmitted
     if (!m_p25->m_ccRunning && !noNulls) {
         m_p25->writeRF_Nulls();
     }
+*/    
 }
 
 /* Helper to write a network P25 PDU packet. */

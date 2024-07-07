@@ -168,6 +168,11 @@ namespace p25
 
         /** @brief All-call Talkgroup ID */
         const uint32_t  TGID_ALL = 0xFFFFU;
+
+        /** @brief ARP Request */
+        const uint8_t   P25_PDU_ARP_REQUEST = 0x01U;
+        /** @brief ARP Reply */
+        const uint8_t   P25_PDU_ARP_REPLY = 0x02U;
         /** @} */
 
         /** @brief Station Service Classes */
