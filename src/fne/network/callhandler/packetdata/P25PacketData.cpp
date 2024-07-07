@@ -153,6 +153,8 @@ bool P25PacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
 
         uint8_t buffer[P25_PDU_FEC_LENGTH_BYTES];
 
+        status->dataBlockCnt = 0U;
+
         // process second header if we're using enhanced addressing
         if (status->header.getSAP() == PDUSAP::EXT_ADDR &&
             status->header.getFormat() == PDUFormatType::UNCONFIRMED) {
@@ -170,7 +172,7 @@ bool P25PacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
                 return false;
             }
 
-            LogMessage(LOG_NET, P25_PDU_STR ", ISP, sap = $%02X, srcLlId = %u",
+            LogMessage(LOG_NET, P25_PDU_STR ", ISP, extended address, sap = $%02X, srcLlId = %u",
                 status->header.getEXSAP(), status->header.getSrcLLId());
 
             status->extendedAddress = true;
@@ -183,8 +185,6 @@ bool P25PacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
             dataOffset += P25_PDU_HEADER_LENGTH_BYTES;
             status->pduUserDataLength += P25_PDU_HEADER_LENGTH_BYTES;
         }
-
-        status->dataBlockCnt = 0U;
 
         // process all blocks in the data stream
         status->pduUserData = new uint8_t[P25_MAX_PDU_BLOCKS * P25_PDU_CONFIRMED_LENGTH_BYTES + 2U];
@@ -208,16 +208,13 @@ bool P25PacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
                 // are we processing extended address data from the first block?
                 if (status->header.getSAP() == PDUSAP::EXT_ADDR && status->header.getFormat() == PDUFormatType::CONFIRMED &&
                     status->blockData[i].getSerialNo() == 0U) {
-                    LogMessage(LOG_NET, P25_PDU_STR ", ISP, block %u, fmt = $%02X, lastBlock = %u",
-                        status->blockData[i].getSerialNo(), status->blockData[i].getFormat(), status->blockData[i].getLastBlock());
-
                     uint8_t secondHeader[P25_PDU_HEADER_LENGTH_BYTES];
                     ::memset(secondHeader, 0x00U, P25_PDU_HEADER_LENGTH_BYTES);
                     status->blockData[i].getData(secondHeader);
 
                     status->header.decodeExtAddr(secondHeader);
-
-                    LogMessage(LOG_NET, P25_PDU_STR ", ISP, sap = $%02X, srcLlId = %u",
+                    LogMessage(LOG_NET, P25_PDU_STR ", ISP, block %u, fmt = $%02X, lastBlock = %u, sap = $%02X, srcLlId = %u",
+                        status->blockData[i].getSerialNo(), status->blockData[i].getFormat(), status->blockData[i].getLastBlock(),
                         status->header.getEXSAP(), status->header.getSrcLLId());
 
                     status->extendedAddress = true;
@@ -233,14 +230,6 @@ bool P25PacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
                 status->pduUserDataLength = dataOffset;
 
                 status->dataBlockCnt++;
-
-                // is this the last block?
-                if (status->blockData[i].getLastBlock() && status->dataBlockCnt == blocksToFollow) {
-                    bool crcRet = edac::CRC::checkCRC32(status->pduUserData, status->pduUserDataLength);
-                    if (!crcRet) {
-                        LogWarning(LOG_NET, P25_PDU_STR ", failed CRC-32 check, blocks %u, len %u", blocksToFollow, status->pduUserDataLength);
-                    }
-                }
             }
             else {
                 if (status->blockData[i].getFormat() == PDUFormatType::CONFIRMED)
@@ -302,7 +291,14 @@ void P25PacketData::dispatch(uint32_t peerId)
 {
     RxStatus* status = m_status[peerId];
 
-    if (m_network->m_dumpDataPacket) {
+    if (status->header.getBlocksToFollow() > 0U) {
+        bool crcRet = edac::CRC::checkCRC32(status->pduUserData, status->pduUserDataLength);
+        if (!crcRet) {
+            LogWarning(LOG_NET, P25_PDU_STR ", failed CRC-32 check, blocks %u, len %u", status->header.getBlocksToFollow(), status->pduUserDataLength);
+        }
+    }
+
+    if (m_network->m_dumpDataPacket && status->dataBlockCnt > 0U) {
         Utils::dump(1U, "PDU Packet", status->pduUserData, status->pduUserDataLength);
     }
 
@@ -401,10 +397,11 @@ void P25PacketData::write_PDU_User(uint32_t peerId, network::PeerNetwork* peerNe
 
             dataOffset += P25_PDU_HEADER_LENGTH_BYTES;
             packetLength += P25_PDU_HEADER_LENGTH_BYTES;
-            blocksToFollow--;
-            ++networkBlock;
 
-            LogMessage(LOG_RF, P25_PDU_STR ", OSP, sap = $%02X, srcLlId = %u",
+            blocksToFollow--;
+            networkBlock++;
+
+            LogMessage(LOG_RF, P25_PDU_STR ", OSP, extended address, sap = $%02X, srcLlId = %u",
                 dataHeader.getEXSAP(), dataHeader.getSrcLLId());
         }
 
@@ -438,9 +435,9 @@ void P25PacketData::write_PDU_User(uint32_t peerId, network::PeerNetwork* peerNe
             writeNetwork(peerId, peerNet, dataHeader, networkBlock, buffer, P25_PDU_FEC_LENGTH_BYTES, (dataBlock.getLastBlock()) ? RTP_END_OF_CALL_SEQ : pktSeq, streamId);
             ++pktSeq;
 
-            networkBlock++;
-
             dataOffset += (dataHeader.getFormat() == PDUFormatType::CONFIRMED) ? P25_PDU_CONFIRMED_DATA_LENGTH_BYTES : P25_PDU_UNCONFIRMED_LENGTH_BYTES;
+
+            networkBlock++;
         }
     }
 }

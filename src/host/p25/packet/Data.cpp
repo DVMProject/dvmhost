@@ -113,7 +113,6 @@ bool Data::process(uint8_t* data, uint32_t len)
 
                 m_rfDataHeader.reset();
                 m_rfExtendedAddress = false;
-                m_rfDataBlockCnt = 0U;
                 m_rfPDUCount = 0U;
                 m_rfPDUBits = 0U;
                 m_p25->m_rfState = m_prevRfState;
@@ -133,7 +132,6 @@ bool Data::process(uint8_t* data, uint32_t len)
 
                 m_rfDataHeader.reset();
                 m_rfExtendedAddress = false;
-                m_rfDataBlockCnt = 0U;
                 m_rfPDUCount = 0U;
                 m_rfPDUBits = 0U;
                 m_p25->m_rfState = m_prevRfState;
@@ -150,7 +148,6 @@ bool Data::process(uint8_t* data, uint32_t len)
                 
                 m_rfDataHeader.reset();
                 m_rfExtendedAddress = false;
-                m_rfDataBlockCnt = 0U;
                 m_rfPDUCount = 0U;
                 m_rfPDUBits = 0U;
                 m_p25->m_rfState = m_prevRfState;
@@ -180,7 +177,6 @@ bool Data::process(uint8_t* data, uint32_t len)
                     Utils::dump(1U, "Unfixable PDU Data", m_rfPDU + offset, P25_PDU_HEADER_LENGTH_BYTES);
 
                     m_rfDataHeader.reset();
-                    m_rfDataBlockCnt = 0U;
                     m_rfPDUCount = 0U;
                     m_rfPDUBits = 0U;
                     m_p25->m_rfState = m_prevRfState;
@@ -188,7 +184,7 @@ bool Data::process(uint8_t* data, uint32_t len)
                 }
 
                 if (m_verbose) {
-                    LogMessage(LOG_RF, P25_PDU_STR ", ISP, sap = $%02X, srcLlId = %u",
+                    LogMessage(LOG_RF, P25_PDU_STR ", ISP, extended address, sap = $%02X, srcLlId = %u",
                         m_rfDataHeader.getEXSAP(), m_rfDataHeader.getSrcLLId());
                 }
 
@@ -198,7 +194,6 @@ bool Data::process(uint8_t* data, uint32_t len)
                 offset += P25_PDU_FEC_LENGTH_BITS;
                 m_rfPDUCount++;
                 blocksToFollow--;
-                m_rfDataBlockCnt++;
 
                 // if we are using a secondary header place it in the PDU user data buffer
                 m_rfDataHeader.getExtAddrData(m_pduUserData + dataOffset);
@@ -211,6 +206,8 @@ bool Data::process(uint8_t* data, uint32_t len)
 
             m_rfPDUCount++;
             uint32_t bitLength = ((blocksToFollow + 1U) * P25_PDU_FEC_LENGTH_BITS) + P25_PREAMBLE_LENGTH_BITS;
+
+            m_rfDataBlockCnt = 0U;
 
             if (m_rfPDUBits >= bitLength) {
                 // process all blocks in the data stream
@@ -237,19 +234,14 @@ bool Data::process(uint8_t* data, uint32_t len)
                         // are we processing extended address data from the first block?
                         if (m_rfDataHeader.getSAP() == PDUSAP::EXT_ADDR && m_rfDataHeader.getFormat() == PDUFormatType::CONFIRMED &&
                             m_rfData[i].getSerialNo() == 0U) {
-                            if (m_verbose) {
-                                LogMessage(LOG_RF, P25_PDU_STR ", ISP, block %u, fmt = $%02X, lastBlock = %u",
-                                    m_rfData[i].getSerialNo(), m_rfData[i].getFormat(), m_rfData[i].getLastBlock());
-                            }
-
                             uint8_t secondHeader[P25_PDU_CONFIRMED_DATA_LENGTH_BYTES];
                             ::memset(secondHeader, 0x00U, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
                             m_rfData[i].getData(secondHeader);
 
                             m_rfDataHeader.decodeExtAddr(secondHeader);
                             if (m_verbose) {
-                                LogMessage(LOG_RF, P25_PDU_STR ", ISP, sap = $%02X, srcLlId = %u",
-                                    m_rfDataHeader.getEXSAP(), m_rfDataHeader.getSrcLLId());
+                                LogMessage(LOG_RF, P25_PDU_STR ", ISP, block %u, fmt = $%02X, lastBlock = %u, sap = $%02X, srcLlId = %u",
+                                    m_rfData[i].getSerialNo(), m_rfData[i].getFormat(), m_rfData[i].getLastBlock(), m_rfDataHeader.getEXSAP(), m_rfDataHeader.getSrcLLId());
                             }
 
                             srcId = m_rfDataHeader.getSrcLLId();
@@ -277,14 +269,6 @@ bool Data::process(uint8_t* data, uint32_t len)
                         }
 
                         m_rfDataBlockCnt++;
-
-                        // is this the last block?
-                        if (m_rfData[i].getLastBlock() && m_rfDataBlockCnt == blocksToFollow) {
-                            bool crcRet = edac::CRC::checkCRC32(m_pduUserData, m_pduUserDataLength);
-                            if (!crcRet) {
-                                LogWarning(LOG_RF, P25_PDU_STR ", failed CRC-32 check, blocks %u, len %u", blocksToFollow, m_pduUserDataLength);
-                            }
-                        }
                     }
                     else {
                         if (m_rfData[i].getFormat() == PDUFormatType::CONFIRMED) {
@@ -314,6 +298,13 @@ bool Data::process(uint8_t* data, uint32_t len)
                     }
 
                     offset += P25_PDU_FEC_LENGTH_BITS;
+                }
+
+                if (m_rfDataHeader.getBlocksToFollow() > 0U) {
+                    bool crcRet = edac::CRC::checkCRC32(m_pduUserData, m_pduUserDataLength);
+                    if (!crcRet) {
+                        LogWarning(LOG_RF, P25_PDU_STR ", failed CRC-32 check, blocks %u, len %u", m_rfDataHeader.getBlocksToFollow(), m_pduUserDataLength);
+                    }
                 }
 
                 if (m_dumpPDUData && m_rfDataBlockCnt > 0U) {
@@ -396,7 +387,7 @@ bool Data::process(uint8_t* data, uint32_t len)
 
                     if (m_repeatPDU) {
                         if (m_verbose) {
-                            LogMessage(LOG_RF, P25_PDU_STR ", repeating PDU, llId = %u, srcLlId = %u", m_rfDataHeader.getLLId(), m_rfDataHeader.getSrcLLId());
+                            LogMessage(LOG_RF, P25_PDU_STR ", repeating ACK PDU, llId = %u, srcLlId = %u", m_rfDataHeader.getLLId(), m_rfDataHeader.getSrcLLId());
                         }
 
                         writeRF_PDU_Buffered(); // re-generate buffered PDU and send it on
@@ -607,7 +598,7 @@ bool Data::processNetwork(uint8_t* data, uint32_t len, uint32_t blockLength)
 
             if (m_repeatPDU) {
                 if (m_verbose) {
-                    LogMessage(LOG_NET, P25_PDU_STR ", repeating PDU, llId = %u, srcLlId = %u", m_netDataHeader.getLLId(), m_netDataHeader.getSrcLLId());
+                    LogMessage(LOG_NET, P25_PDU_STR ", repeating ACK PDU, llId = %u, srcLlId = %u", m_netDataHeader.getLLId(), m_netDataHeader.getSrcLLId());
                 }
 
                 writeNet_PDU_Buffered(); // re-generate buffered PDU and send it on
@@ -659,7 +650,7 @@ bool Data::processNetwork(uint8_t* data, uint32_t len, uint32_t blockLength)
                 }
 
                 if (m_verbose) {
-                    LogMessage(LOG_NET, P25_PDU_STR ", ISP, sap = $%02X, srcLlId = %u",
+                    LogMessage(LOG_NET, P25_PDU_STR ", ISP, extended address, sap = $%02X, srcLlId = %u",
                         m_netDataHeader.getEXSAP(), m_netDataHeader.getSrcLLId());
                 }
 
@@ -667,7 +658,6 @@ bool Data::processNetwork(uint8_t* data, uint32_t len, uint32_t blockLength)
 
                 offset += P25_PDU_FEC_LENGTH_BYTES;
                 blocksToFollow--;
-                m_netDataBlockCnt++;
 
                 // if we are using a secondary header place it in the PDU user data buffer
                 m_netDataHeader.getExtAddrData(m_pduUserData + dataOffset);
@@ -695,20 +685,14 @@ bool Data::processNetwork(uint8_t* data, uint32_t len, uint32_t blockLength)
                     // are we processing extended address data from the first block?
                     if (m_netDataHeader.getSAP() == PDUSAP::EXT_ADDR && m_netDataHeader.getFormat() == PDUFormatType::CONFIRMED &&
                         m_netData[i].getSerialNo() == 0U) {
-                        if (m_verbose) {
-                            LogMessage(LOG_NET, P25_PDU_STR ", ISP, block %u, fmt = $%02X, lastBlock = %u",
-                                m_netData[i].getSerialNo(), m_netData[i].getFormat(), m_netData[i].getLastBlock());
-                        }
-
                         uint8_t secondHeader[P25_PDU_HEADER_LENGTH_BYTES];
                         ::memset(secondHeader, 0x00U, P25_PDU_HEADER_LENGTH_BYTES);
                         m_netData[i].getData(secondHeader);
 
                         m_netDataHeader.decodeExtAddr(secondHeader);
-
                         if (m_verbose) {
-                            LogMessage(LOG_NET, P25_PDU_STR ", ISP, sap = $%02X, srcLlId = %u",
-                                m_netDataHeader.getEXSAP(), m_netDataHeader.getSrcLLId());
+                            LogMessage(LOG_NET, P25_PDU_STR ", ISP, block %u, fmt = $%02X, lastBlock = %u, sap = $%02X, srcLlId = %u",
+                                m_netData[i].getSerialNo(), m_netData[i].getFormat(), m_netData[i].getLastBlock(), m_netDataHeader.getEXSAP(), m_netDataHeader.getSrcLLId());
                         }
 
                         m_netExtendedAddress = true;
@@ -724,14 +708,6 @@ bool Data::processNetwork(uint8_t* data, uint32_t len, uint32_t blockLength)
                     m_pduUserDataLength = dataOffset;
 
                     m_netDataBlockCnt++;
-
-                    // is this the last block?
-                    if (m_netData[i].getLastBlock() && m_netDataBlockCnt == blocksToFollow) {
-                        bool crcRet = edac::CRC::checkCRC32(m_pduUserData, m_pduUserDataLength);
-                        if (!crcRet) {
-                            LogWarning(LOG_NET, P25_PDU_STR ", failed CRC-32 check, blocks %u, len %u", blocksToFollow, m_pduUserDataLength);
-                        }
-                    }
                 }
                 else {
                     if (m_netData[i].getFormat() == PDUFormatType::CONFIRMED)
@@ -745,6 +721,13 @@ bool Data::processNetwork(uint8_t* data, uint32_t len, uint32_t blockLength)
                 }
 
                 offset += P25_PDU_FEC_LENGTH_BYTES;
+            }
+
+            if (m_netDataHeader.getBlocksToFollow() > 0U) {
+                bool crcRet = edac::CRC::checkCRC32(m_pduUserData, m_pduUserDataLength);
+                if (!crcRet) {
+                    LogWarning(LOG_NET, P25_PDU_STR ", failed CRC-32 check, blocks %u, len %u", m_netDataHeader.getBlocksToFollow(), m_pduUserDataLength);
+                }
             }
 
             if (m_dumpPDUData && m_netDataBlockCnt > 0U) {
@@ -847,13 +830,15 @@ void Data::writeRF_PDU_User(data::DataHeader& dataHeader, bool extendedAddress, 
             Utils::setBitRange(block, data, offset, P25_PDU_FEC_LENGTH_BITS);
 
             bitLength += P25_PDU_FEC_LENGTH_BITS;
+
             offset += P25_PDU_FEC_LENGTH_BITS;
             dataOffset += P25_PDU_HEADER_LENGTH_BYTES;
             packetLength += P25_PDU_HEADER_LENGTH_BYTES;
+            
             blocksToFollow--;
 
             if (m_verbose) {
-                LogMessage(LOG_RF, P25_PDU_STR ", OSP, sap = $%02X, srcLlId = %u",
+                LogMessage(LOG_RF, P25_PDU_STR ", OSP, extended address, sap = $%02X, srcLlId = %u",
                     dataHeader.getEXSAP(), dataHeader.getSrcLLId());
             }
         }
@@ -1379,6 +1364,8 @@ void Data::writeRF_PDU(const uint8_t* pdu, uint32_t bitLength, bool noNulls, boo
     assert(pdu != nullptr);
     assert(bitLength > 0U);
 
+    m_p25->writeRF_Preamble();
+
     if (!ackRetry) {
         if (m_retryPDUData != nullptr)
             delete m_retryPDUData;
@@ -1424,12 +1411,11 @@ void Data::writeRF_PDU(const uint8_t* pdu, uint32_t bitLength, bool noNulls, boo
 
         m_p25->addFrame(data, newByteLength + 2U, false, imm);
     }
-/*
+
     // add trailing null pad; only if control data isn't being transmitted
     if (!m_p25->m_ccRunning && !noNulls) {
         m_p25->writeRF_Nulls();
     }
-*/    
 }
 
 /* Helper to write a network P25 PDU packet. */
@@ -1472,10 +1458,11 @@ void Data::writeNet_PDU_Buffered()
             bitLength += P25_PDU_FEC_LENGTH_BITS;
             offset += P25_PDU_FEC_LENGTH_BITS;
             dataOffset += P25_PDU_HEADER_LENGTH_BYTES;
+
             blocksToFollow--;
 
             if (m_verbose) {
-                LogMessage(LOG_NET, P25_PDU_STR ", OSP, sap = $%02X, srcLlId = %u",
+                LogMessage(LOG_NET, P25_PDU_STR ", OSP, extended address, sap = $%02X, srcLlId = %u",
                     m_netDataHeader.getEXSAP(), m_netDataHeader.getSrcLLId());
             }
         }
@@ -1485,7 +1472,7 @@ void Data::writeNet_PDU_Buffered()
             m_netDataHeader.encodeExtAddr(m_pduUserData);
 
             if (m_verbose) {
-                LogMessage(LOG_NET, P25_PDU_STR ", OSP, sap = $%02X, srcLlId = %u",
+                LogMessage(LOG_NET, P25_PDU_STR ", OSP, extended address, sap = $%02X, srcLlId = %u",
                     m_netDataHeader.getEXSAP(), m_netDataHeader.getSrcLLId());
             }
         }
@@ -1556,10 +1543,11 @@ void Data::writeRF_PDU_Buffered()
             bitLength += P25_PDU_FEC_LENGTH_BITS;
             offset += P25_PDU_FEC_LENGTH_BITS;
             dataOffset += P25_PDU_HEADER_LENGTH_BYTES;
+
             blocksToFollow--;
 
             if (m_verbose) {
-                LogMessage(LOG_RF, P25_PDU_STR ", OSP, sap = $%02X, srcLlId = %u",
+                LogMessage(LOG_RF, P25_PDU_STR ", OSP, extended address, sap = $%02X, srcLlId = %u",
                     m_rfDataHeader.getEXSAP(), m_rfDataHeader.getSrcLLId());
             }
         }
@@ -1569,7 +1557,7 @@ void Data::writeRF_PDU_Buffered()
             m_rfDataHeader.encodeExtAddr(m_pduUserData);
 
             if (m_verbose) {
-                LogMessage(LOG_RF, P25_PDU_STR ", OSP, sap = $%02X, srcLlId = %u",
+                LogMessage(LOG_RF, P25_PDU_STR ", OSP, extended address, sap = $%02X, srcLlId = %u",
                     m_rfDataHeader.getEXSAP(), m_rfDataHeader.getSrcLLId());
             }
         }
