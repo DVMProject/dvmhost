@@ -979,6 +979,7 @@ void Data::clock(uint32_t ms)
                         }
 
                         std::unique_ptr<lc::TDULC> lc = std::make_unique<lc::tdulc::LC_CALL_TERM>();
+                        lc->setDstId(llId);
                         m_p25->m_control->writeRF_TDULC(lc.get(), true);
                         for (uint8_t i = 0U; i < 8U; i++) {
                             m_p25->writeRF_TDU(true);
@@ -1053,6 +1054,7 @@ void Data::sndcpReset(uint32_t llId, bool callTerm)
             }
 
             std::unique_ptr<lc::TDULC> lc = std::make_unique<lc::tdulc::LC_CALL_TERM>();
+            lc->setDstId(llId);
             m_p25->m_control->writeRF_TDULC(lc.get(), true);
             m_p25->writeRF_Preamble();
 

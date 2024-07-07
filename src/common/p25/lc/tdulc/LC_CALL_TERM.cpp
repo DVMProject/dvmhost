@@ -50,7 +50,7 @@ void LC_CALL_TERM::encode(uint8_t* data)
     m_implicit = true;
 
     rsValue = 0U;
-    rsValue = (rsValue << 24) + WUID_FNE;                                           // System Radio Address
+    rsValue = (rsValue << 24) + m_dstId;                                        // Target Address
 
     std::unique_ptr<uint8_t[]> rs = TDULC::fromValue(rsValue);
     TDULC::encode(data, rs.get());
