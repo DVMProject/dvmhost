@@ -159,9 +159,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 }
             }
 
-            if (m_p25->m_duplex) {
-                m_p25->writeRF_Preamble();
-            }
+            m_p25->writeRF_Preamble();
 
             m_p25->m_rfTGHang.start();
             m_p25->m_netTGHang.stop();
@@ -517,6 +515,8 @@ bool Voice::process(uint8_t* data, uint32_t len)
             else {
                 frameType = FrameType::HDU_LATE_ENTRY;
                 LogWarning(LOG_RF, P25_HDU_STR ", not transmitted; possible late entry, dstId = %u, algo = $%02X, kid = $%04X", m_rfLastHDU.getDstId(), m_rfLastHDU.getAlgId(), m_rfLastHDU.getKId());
+
+                m_p25->writeRF_Preamble();
             }
 
             // if voice on control; insert group voice channel updates directly after HDU but before LDUs

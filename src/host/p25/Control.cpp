@@ -1596,6 +1596,9 @@ void Control::writeRF_Nulls()
 
 void Control::writeRF_Preamble(uint32_t preambleCount, bool force)
 {
+    if (!m_duplex && !force)
+        return;
+
     if (preambleCount == 0) {
         preambleCount = m_tduPreambleCount;
     }
