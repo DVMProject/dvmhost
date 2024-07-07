@@ -72,7 +72,7 @@ bool DataBlock::decode(const uint8_t* data, const DataHeader& header)
             }
 
 #if DEBUG_P25_PDU_DATA
-            Utils::dump(1U, "P25, DataBlock::decode(), PDU Confirmed Data Block", buffer, P25_PDU_CONFIRMED_LENGTH_BYTES);
+            Utils::dump(1U, "P25, DataBlock::decode(), Confirmed PDU Data Block", buffer, P25_PDU_CONFIRMED_LENGTH_BYTES);
 #endif
 
             m_serialNo = (buffer[0] & 0xFEU) >> 1;                                          // Confirmed Data Serial No.
@@ -102,7 +102,6 @@ bool DataBlock::decode(const uint8_t* data, const DataHeader& header)
 
 #if DEBUG_P25_PDU_DATA
             LogDebug(LOG_P25, "PDU, fmt = $%02X, crc = $%04X, calculated = $%04X", m_fmt, crc, calculated);
-            Utils::dump(1U, "P25, DataBlock::decode(), Confirmed PDU Data Block", buffer, P25_PDU_CONFIRMED_LENGTH_BYTES);
 #endif
         }
         catch (...) {
@@ -122,7 +121,7 @@ bool DataBlock::decode(const uint8_t* data, const DataHeader& header)
             ::memset(m_data, 0x00U, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
 
 #if DEBUG_P25_PDU_DATA
-            Utils::dump(1U, "P25, DataBlock::decode(), PDU Unconfirmed Data Block", buffer, P25_PDU_UNCONFIRMED_LENGTH_BYTES);
+            Utils::dump(1U, "P25, DataBlock::decode(), Unconfirmed PDU Data Block", buffer, P25_PDU_UNCONFIRMED_LENGTH_BYTES);
 #endif
 
             ::memcpy(m_data, buffer, P25_PDU_UNCONFIRMED_LENGTH_BYTES);                     // Payload Data
@@ -172,7 +171,7 @@ void DataBlock::encode(uint8_t* data)
         buffer[1U] = (crc & 0xFFU);                                                         // CRC-9 Check Sum (b0 - b7)
 
 #if DEBUG_P25_PDU_DATA
-        Utils::dump(1U, "P25, DataBlock::encode(), PDU Confirmed Data Block", buffer, P25_PDU_CONFIRMED_LENGTH_BYTES);
+        Utils::dump(1U, "P25, DataBlock::encode(), Confirmed PDU Data Block", buffer, P25_PDU_CONFIRMED_LENGTH_BYTES);
 #endif
 
         m_trellis.encode34(buffer, data);
@@ -184,7 +183,7 @@ void DataBlock::encode(uint8_t* data)
         ::memcpy(buffer, m_data, P25_PDU_UNCONFIRMED_LENGTH_BYTES);
 
 #if DEBUG_P25_PDU_DATA
-        Utils::dump(1U, "P25, DataBlock::encode(), PDU Unconfirmed Data Block", buffer, P25_PDU_UNCONFIRMED_LENGTH_BYTES);
+        Utils::dump(1U, "P25, DataBlock::encode(), Unconfirmed PDU Data Block", buffer, P25_PDU_UNCONFIRMED_LENGTH_BYTES);
 #endif
 
         m_trellis.encode12(buffer, data);

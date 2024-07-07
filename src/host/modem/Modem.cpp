@@ -869,6 +869,8 @@ void Modem::clock(uint32_t ms)
         default:
             LogWarning(LOG_MODEM, "Unknown message, type = %02X", m_buffer[2U]);
             Utils::dump("Buffer dump", m_buffer, m_length);
+            if (m_rspState != RESP_START)
+                m_rspState = RESP_START;
             break;
         }
     }
@@ -2232,6 +2234,7 @@ RESP_TYPE_DVM Modem::getResponse()
             m_buffer[0U] != DVM_LONG_FRAME_START) {
             //LogError(LOG_MODEM, "Modem::getResponse(), illegal response, first byte not a frame start; byte = %02X", m_buffer[0U]);
             ::memset(m_buffer, 0x00U, BUFFER_LENGTH);
+            m_rspState = RESP_START;
             return RTM_ERROR;
         }
 
@@ -2259,6 +2262,7 @@ RESP_TYPE_DVM Modem::getResponse()
 
         if (m_buffer[1U] >= 250U && !m_rspDoubleLength) {
             LogError(LOG_MODEM, "Invalid length received from the modem, len = %u", m_buffer[1U]);
+            m_rspState = RESP_START;
             return RTM_ERROR;
         }
 
