@@ -89,6 +89,7 @@ FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port,
     m_influxOrg("dvm"),
     m_influxBucket("dvm"),
     m_influxLogRawData(false),
+    m_disablePacketData(false),
     m_dumpDataPacket(false),
     m_reportPeerPing(reportPeerPing),
     m_verbose(verbose)
@@ -147,6 +148,7 @@ void FNENetwork::setOptions(yaml::Node& conf, bool printOptions)
     m_filterHeaders = conf["filterHeaders"].as<bool>(true);
     m_filterTerminators = conf["filterTerminators"].as<bool>(true);
 
+    m_disablePacketData = conf["disablePacketData"].as<bool>(false);
     m_dumpDataPacket = conf["dumpDataPacket"].as<bool>(false);
 
     /*
@@ -169,6 +171,7 @@ void FNENetwork::setOptions(yaml::Node& conf, bool printOptions)
         if (m_disallowAdjStsBcast) {
             LogWarning(LOG_NET, "NOTICE: All P25 ADJ_STS_BCAST messages will be blocked and dropped!");
         }
+        LogInfo("    Disable Packet Data: %s", m_disablePacketData ? "yes" : "no");
         LogInfo("    Dump Packet Data: %s", m_dumpDataPacket ? "yes" : "no");
         LogInfo("    Disable P25 ADJ_STS_BCAST to external peers: %s", m_disallowExtAdjStsBcast ? "yes" : "no");
         LogInfo("    Allow conventional sites to override affiliation and receive all traffic: %s", m_allowConvSiteAffOverride ? "yes" : "no");

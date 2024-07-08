@@ -85,6 +85,8 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
     FrameType::E frameType = FrameType::DATA_UNIT;
 
     if (duid == DUID::PDU) {
+        if (m_network->m_disablePacketData)
+            return false;
         return m_packetData->processFrame(data, len, peerId, pktSeq, streamId, external);
     }
 

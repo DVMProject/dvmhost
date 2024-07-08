@@ -458,7 +458,9 @@ namespace network
         bool m_influxLogRawData;
         influxdb::ServerInfo m_influxServer;
 
+        bool m_disablePacketData;
         bool m_dumpDataPacket;
+
         bool m_reportPeerPing;
         bool m_verbose;
 

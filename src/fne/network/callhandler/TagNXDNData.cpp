@@ -66,6 +66,12 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
     uint32_t srcId = __GET_UINT16(data, 5U);
     uint32_t dstId = __GET_UINT16(data, 8U);
 
+    if (messageType == MessageType::RTCH_DCALL_HDR ||
+        messageType == MessageType::RTCH_DCALL_DATA) {
+        if (m_network->m_disablePacketData)
+            return false;
+    }
+
     // perform TGID route rewrites if configured
     routeRewrite(buffer, peerId, messageType, dstId, false);
     dstId = __GET_UINT16(buffer, 8U);

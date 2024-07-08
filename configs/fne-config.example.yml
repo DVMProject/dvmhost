@@ -68,6 +68,8 @@ master:
     # Flag indicating whether or not NXDN traffic will be passed.
     allowNXDNTraffic: true
 
+    # Flag indicating whether packet data will be passed.
+    disablePacketData: false
     # Flag indicating whether verbose dumping of data packets is enabled.
     dumpDataPacket: false
 

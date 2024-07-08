@@ -97,6 +97,14 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
         dmrData.setN(n);
     }
 
+    if (dataType == DataType::DATA_HEADER ||
+        dataType == DataType::RATE_12_DATA ||
+        dataType == DataType::RATE_34_DATA ||
+        dataType == DataType::RATE_1_DATA) {
+        if (m_network->m_disablePacketData)
+            return false;
+    }
+
     // perform TGID route rewrites if configured
     routeRewrite(buffer, peerId, dmrData, dataType, dstId, slotNo, false);
     dstId = __GET_UINT16(buffer, 8U);
