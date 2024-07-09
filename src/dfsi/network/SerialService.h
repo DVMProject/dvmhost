@@ -183,6 +183,9 @@ namespace network
         // Call Data object for current RX P25 call (VHDR, LDU, etc)
         VoiceCallData* m_rxVoiceCallData;
 
+        // The last LDU1 LC sent to the net, used to keep track of current call src/dst IDs, etc
+        p25::lc::LC* m_rxLastLDU1;
+
         // Functions called by clock() to read/write from/to the serial port
         /**
          * @brief Read a data message from the serial interface.

@@ -57,7 +57,8 @@ SerialService::SerialService(std::string& portType, const std::string& portName,
     m_callTimeout(callTimeout),
     m_rxVoiceControl(nullptr),
     m_rxVoiceLsd(nullptr),
-    m_rxVoiceCallData(nullptr)
+    m_rxVoiceCallData(nullptr),
+    m_rxLastLDU1(nullptr)
 {
     assert(!portName.empty());
     assert(baudrate > 0U);
@@ -95,6 +96,7 @@ SerialService::~SerialService()
     delete m_rxVoiceControl;
     delete m_rxVoiceLsd;
     delete m_rxVoiceCallData;
+    delete m_rxLastLDU1;
 }
 
 /* Updates the timer by the passed number of milliseconds. */
@@ -566,6 +568,11 @@ void SerialService::processP25ToNet()
         m_rxVoiceCallData = new VoiceCallData();
     }
 
+    // Create a new last LDU1 data object if needed
+    if (m_rxLastLDU1 == nullptr) {
+        m_rxLastLDU1 = new p25::lc::LC();
+    }
+
     // Parse out the data
     uint8_t tag = data[0U];
 
@@ -599,8 +606,10 @@ void SerialService::processP25ToNet()
             if (start.getStartStop() == StartStopFlag::START) {
                 // Flag we have a local call (i.e. from V24) in progress
                 m_lclCallInProgress = true;
-                // Reset the call data (just in case)
+                // Reset the call data
                 m_rxVoiceCallData->resetCallData();
+                m_rxLastLDU1->setSrcId(0U);
+                m_rxLastLDU1->setDstId(0U);
                 // Generate a new random stream ID
                 m_rxVoiceCallData->newStreamId();
                 // Log
@@ -615,6 +624,8 @@ void SerialService::processP25ToNet()
                     m_network->writeP25TDU(*m_rxVoiceControl, *m_rxVoiceLsd);
                     // Reset
                     m_rxVoiceCallData->resetCallData();
+                    m_rxLastLDU1->setSrcId(0U);
+                    m_rxLastLDU1->setDstId(0U);
                 }
             }
         }
@@ -678,6 +689,8 @@ void SerialService::processP25ToNet()
                     m_rxVoiceCallData->algoId = vhdr[10U];
                     m_rxVoiceCallData->kId = __GET_UINT16B(vhdr, 11U);
                     m_rxVoiceCallData->dstId = __GET_UINT16B(vhdr, 13U);
+                    // Update our last LDU dst ID
+                    m_rxLastLDU1->setDstId(m_rxVoiceCallData->dstId);
                 }
                 // Log if we decoded succesfully
                 if (m_debug) {
@@ -880,9 +893,27 @@ void SerialService::processP25ToNet()
         m_rxVoiceControl->setLCO(m_rxVoiceCallData->lco);
         m_rxVoiceControl->setMFId(m_rxVoiceCallData->mfId);
 
-        // Create LC
-        m_rxVoiceControl->setSrcId(m_rxVoiceCallData->srcId);
-        m_rxVoiceControl->setDstId(m_rxVoiceCallData->dstId);
+        // Update src/dst as long as this is a standard MFID LDU1
+        if (m_rxVoiceControl->isStandardMFId()) {
+            m_rxVoiceControl->setSrcId(m_rxVoiceCallData->srcId);
+            m_rxVoiceControl->setDstId(m_rxVoiceCallData->dstId);
+        }
+
+        // Check if we need to overwrite the src ID due to a nonstandard/corrupt/invalid LDU1
+        if (m_rxLastLDU1->getSrcId() != 0U) {
+            if (m_rxVoiceCallData->srcId != m_rxLastLDU1->getSrcId()) {
+                LogWarning(LOG_SERIAL, P25_LDU1_STR ", srcId = %u doesn't match last LDU1 srcId = %u, fixing", m_rxVoiceCallData->srcId, m_rxLastLDU1->getSrcId());
+                m_rxVoiceControl->setSrcId(m_rxLastLDU1->getSrcId());
+            }
+        }
+
+        // Do the same for dst ID
+        if (m_rxLastLDU1->getDstId() != 0U) {
+            if (m_rxVoiceCallData->dstId != m_rxLastLDU1->getDstId()) {
+                LogWarning(LOG_SERIAL, P25_LDU1_STR ", dstId = %u doesn't match last LDU1 dstId = %u, fixing", m_rxVoiceCallData->dstId, m_rxLastLDU1->getDstId());
+                m_rxVoiceControl->setDstId(m_rxLastLDU1->getDstId());
+            }
+        }
 
         // Get service options
         bool emergency = ((m_rxVoiceCallData->serviceOptions & 0xFFU) & 0x80U) == 0x80U;    // Emergency Flag
@@ -944,6 +975,9 @@ void SerialService::processP25ToNet()
     if (m_rxVoiceCallData->n == 9U) {
         // Send (TODO: dynamically set HDU_VALID or DATA_VALID depending on start of call or not)
         bool ret = m_network->writeP25LDU1(*m_rxVoiceControl, *m_rxVoiceLsd, m_rxVoiceCallData->netLDU1, FrameType::HDU_VALID);
+        // Update last
+        m_rxLastLDU1->setSrcId(m_rxVoiceControl->getSrcId());
+        m_rxLastLDU1->setDstId(m_rxVoiceControl->getDstId());
         // Print
         LogInfoEx(LOG_SERIAL, P25_LDU1_STR " audio, mfId = $%02X, srcId = %u, dstId = %u, group = %u, emerg = %u, encrypt = %u, prio = %u, lsd = $%02X%02X",
             m_rxVoiceControl->getMFId(), m_rxVoiceControl->getSrcId(), m_rxVoiceControl->getDstId(), m_rxVoiceControl->getGroup(), 
