@@ -29,6 +29,7 @@ using namespace network::viface;
 #include <dirent.h>
 #include <arpa/inet.h>
 #include <sys/select.h>
+#include <sys/epoll.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <linux/if.h>
@@ -268,6 +269,7 @@ readMTUErr:
 
 VIFace::VIFace(std::string name, bool tap, int id) :
     m_ksFd(-1),
+    m_epollFd(-1),
     m_mac(),
     m_ipv4Address("192.168.1.254"),
     m_ipv4Netmask("255.255.255.0"),
@@ -300,6 +302,28 @@ VIFace::VIFace(std::string name, bool tap, int id) :
 
     m_queues = queues;
 
+    // epoll create
+    m_epollFd = epoll_create1(0);
+    if (m_epollFd == -1) {
+        LogError(LOG_NET, "Unable to initialize epoll %s, err: %d, error: %s", name.c_str(), errno, strerror(errno));
+        throw std::runtime_error("Unable to initialize epoll.");
+    }
+
+    struct epoll_event ev = {
+        .events = EPOLLIN,
+        .data = { .fd = m_queues.rxFd },
+    };
+
+    if (epoll_ctl(m_epollFd, EPOLL_CTL_ADD, ev.data.fd, &ev) == -1) {
+        LogError(LOG_NET, "Unable to configure epoll %s, err: %d, error: %s", name.c_str(), errno, strerror(errno));
+        throw std::runtime_error("Unable to configure epoll.");
+    }
+
+    ev.data.fd = m_queues.txFd;
+    if (epoll_ctl(m_epollFd, EPOLL_CTL_ADD, ev.data.fd, &ev) == -1) {
+        LogError(LOG_NET, "Unable to configure epoll %s, err: %d, error: %s", name.c_str(), errno, strerror(errno));
+        throw std::runtime_error("Unable to configure epoll.");
+    }
     // create socket channels to the NET kernel for later ioctl
     m_ksFd = -1;
     m_ksFd = socket(AF_INET, SOCK_STREAM, 0);
@@ -445,27 +469,32 @@ bool VIFace::isUp() const
 ssize_t VIFace::read(uint8_t* buffer)
 {
     assert(buffer != nullptr);
-
     ::memset(buffer, 0x00U, m_mtu);
 
-    int _errno = 0;
+    struct epoll_event wait_event;
+
+    int ret = epoll_wait(m_epollFd, &wait_event, 1, 0);
+    if ((ret < 0) && (errno != EINTR)) {
+        LogError(LOG_NET, "Error returned from epoll_wait, err: %d, error: %s", errno, strerror(errno));
+        return -1;
+    }
+
+    if (ret == 0) {
+        return -1;
+    }
     
     // read packet into our buffer
-    ssize_t len = ::read(m_queues.rxFd, buffer, m_mtu);
-    _errno = errno;
-
-    // kernel writes incoming packets to BOTH queues, so we
-    // need to read from both
-    if (((len < 0) && (_errno == EAGAIN)) || (len == 0)) {
-        len = ::read(m_queues.txFd, buffer, m_mtu);
-        _errno = errno;
+    if (ret > 0) {
+        // Read packet into our buffer
+        ssize_t len = ::read(wait_event.data.fd, buffer, m_mtu);
+        if (len == -1) {
+            LogError(LOG_NET, "Error returned from read, err: %d, error: %s", errno, strerror(errno));
+        }
+    
+       return len;
     }
 
-    if (len == -1) {
-        LogError(LOG_NET, "Error returned from read, err: %d, error: %s", errno, strerror(errno));
-    }
-
-    return len;
+    return -1;
 }
 
 /* Write a packet to this virtual interface. */

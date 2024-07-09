@@ -218,6 +218,7 @@ namespace network
             struct viface_queues m_queues;
 
             int m_ksFd;
+            int m_epollFd;
 
             std::string m_mac;
             std::string m_ipv4Address;
