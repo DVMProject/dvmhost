@@ -54,7 +54,7 @@ namespace p25
         class HOST_SW_API MotFullRateVoice {
         public:
             static const uint8_t LENGTH = 17;
-            static const uint8_t SHORTENED_LENGTH = 13;
+            static const uint8_t SHORTENED_LENGTH = 14;
             static const uint8_t ADDITIONAL_LENGTH = 4;
 
             /**
