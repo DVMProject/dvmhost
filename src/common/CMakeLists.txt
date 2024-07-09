@@ -47,6 +47,7 @@ file(GLOB common_SRC
     "src/common/network/rest/http/*.cpp"
     "src/common/network/tcp/*.cpp"
     "src/common/network/udp/*.cpp"
+    "src/common/network/viface/*.cpp"
     "src/common/yaml/*.cpp"
     "src/common/*.cpp"
 )
@@ -90,6 +91,7 @@ file(GLOB common_INCLUDE
     "src/common/network/rest/http/*.h"
     "src/common/network/tcp/*.h"
     "src/common/network/udp/*.h"
+    "src/common/network/viface/*.h"
     "src/common/yaml/*.h"
     "src/common/*.h"
 )
