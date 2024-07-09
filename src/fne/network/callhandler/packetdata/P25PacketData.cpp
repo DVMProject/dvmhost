@@ -327,6 +327,15 @@ void P25PacketData::dispatch(uint32_t peerId)
         Utils::dump(1U, "PDU Packet", status->pduUserData, status->pduUserDataLength);
     }
 
+    dispatchToFNE(peerId);
+}
+
+/* Helper to dispatch PDU user data back to the FNE network. */
+
+void P25PacketData::dispatchToFNE(uint32_t peerId)
+{
+    RxStatus* status = m_status[peerId];
+
     uint32_t srcId = (status->extendedAddress) ? status->header.getSrcLLId() : status->header.getLLId();
     uint32_t dstId = status->header.getLLId();
 

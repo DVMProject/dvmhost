@@ -125,11 +125,19 @@ namespace network
                  * @param dmrData Instance of data::NetData DMR data container class.
                  * @param data Network data buffer.
                  * @param len Length of data.
+                 */
+                void dispatch(uint32_t peerId, dmr::data::NetData& dmrData, const uint8_t* data, uint32_t len);
+                /**
+                 * @brief Helper to dispatch PDU user data back to the FNE network.
+                 * @param peerId Peer ID.
+                 * @param dmrData Instance of data::NetData DMR data container class.
+                 * @param data Network data buffer.
+                 * @param len Length of data.
                  * @param seqNo 
                  * @param pktSeq RTP packet sequence.
                  * @param streamId Stream ID.
                  */
-                void dispatch(uint32_t peerId, dmr::data::NetData& dmrData, const uint8_t* data, uint32_t len, uint8_t seqNo, uint16_t pktSeq, uint32_t streamId);
+                void dispatchToFNE(uint32_t peerId, dmr::data::NetData& dmrData, const uint8_t* data, uint32_t len, uint8_t seqNo, uint16_t pktSeq, uint32_t streamId);
             };
         } // namespace packetdata
     } // namespace callhandler

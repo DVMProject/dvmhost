@@ -159,7 +159,7 @@ bool DMRPacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
                 m_status[peerId] = status;
                 
                 LogMessage(LOG_NET, "DMR, Data Call Start, peer = %u, slot = %u, srcId = %u, dstId = %u, streamId = %u, external = %u", peerId, status->slotNo, status->srcId, status->dstId, streamId, external);
-                dispatch(peerId, dmrData, data, len, seqNo, pktSeq, streamId);
+                dispatchToFNE(peerId, dmrData, data, len, seqNo, pktSeq, streamId);
 
                 return true;
             } else {
@@ -184,8 +184,8 @@ bool DMRPacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
 
         bool ret = dataBlock.decode(frame, status->header);
         if (ret) {
-            uint32_t len = dataBlock.getData(status->pduUserData + status->pduDataOffset);
-            status->pduDataOffset += len;
+            uint32_t blockLen = dataBlock.getData(status->pduUserData + status->pduDataOffset);
+            status->pduDataOffset += blockLen;
 
             status->frames--;
             if (status->frames == 0U)
@@ -200,22 +200,13 @@ bool DMRPacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
                 LogMessage(LOG_NET, DMR_DT_RATE_1_DATA ", ISP, block %u, peer = %u, dataType = $%02X, dpf = $%02X", status->dataBlockCnt, peerId, dataBlock.getDataType(), dataBlock.getFormat());
             }
 
-            dispatch(peerId, dmrData, data, len, seqNo, pktSeq, streamId);
+            dispatchToFNE(peerId, dmrData, data, len, seqNo, pktSeq, streamId);
             status->dataBlockCnt++;
         }
 
         // dispatch the PDU data
         if (status->dataBlockCnt > 0U && status->frames == 0U) {
-            if (status->header.getBlocksToFollow() > 0U && status->frames == 0U) {
-                bool crcRet = edac::CRC::checkCRC32(status->pduUserData, status->pduDataOffset);
-                if (!crcRet) {
-                    LogWarning(LOG_NET, P25_PDU_STR ", failed CRC-32 check, blocks %u, len %u", status->header.getBlocksToFollow(), status->pduDataOffset);
-                }
-
-                if (m_network->m_dumpDataPacket) {
-                    Utils::dump(1U, "PDU Packet", status->pduUserData, status->pduDataOffset);
-                }
-            }
+            dispatch(peerId, dmrData, data, len);
 
             uint64_t duration = hrc::diff(pktTime, status->callStartTime);
             bool gi = status->header.getGI();
@@ -253,7 +244,25 @@ bool DMRPacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
 
 /* Helper to dispatch PDU user data. */
 
-void DMRPacketData::dispatch(uint32_t peerId, dmr::data::NetData& dmrData, const uint8_t* data, uint32_t len, uint8_t seqNo, uint16_t pktSeq, uint32_t streamId)
+void DMRPacketData::dispatch(uint32_t peerId, dmr::data::NetData& dmrData, const uint8_t* data, uint32_t len)
+{
+    RxStatus *status = m_status[peerId];
+
+    if (status->header.getBlocksToFollow() > 0U && status->frames == 0U) {
+        bool crcRet = edac::CRC::checkCRC32(status->pduUserData, status->pduDataOffset);
+        if (!crcRet) {
+            LogWarning(LOG_NET, P25_PDU_STR ", failed CRC-32 check, blocks %u, len %u", status->header.getBlocksToFollow(), status->pduDataOffset);
+        }
+
+        if (m_network->m_dumpDataPacket) {
+            Utils::dump(1U, "PDU Packet", status->pduUserData, status->pduDataOffset);
+        }
+    }
+}
+
+/* Helper to dispatch PDU user data back to the FNE network. */
+
+void DMRPacketData::dispatchToFNE(uint32_t peerId, dmr::data::NetData& dmrData, const uint8_t* data, uint32_t len, uint8_t seqNo, uint16_t pktSeq, uint32_t streamId)
 {
     RxStatus* status = m_status[peerId];
 
@@ -267,7 +276,7 @@ void DMRPacketData::dispatch(uint32_t peerId, dmr::data::NetData& dmrData, const
         for (auto peer : m_network->m_peers) {
             if (peerId != peer.first) {
                 // is this peer ignored?
-                if (!m_tag->isPeerPermitted(peer.first, dmrData, status->streamId)) {
+                if (!m_tag->isPeerPermitted(peer.first, dmrData, streamId)) {
                     continue;
                 }
 
@@ -299,7 +308,7 @@ void DMRPacketData::dispatch(uint32_t peerId, dmr::data::NetData& dmrData, const
             // is coming from a external peer
             if (dstPeerId != peerId) {
                 // is this peer ignored?
-                if (!m_tag->isPeerPermitted(dstPeerId, dmrData, status->streamId, true)) {
+                if (!m_tag->isPeerPermitted(dstPeerId, dmrData, streamId, true)) {
                     continue;
                 }
 

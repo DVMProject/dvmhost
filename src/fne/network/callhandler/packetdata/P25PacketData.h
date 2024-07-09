@@ -137,6 +137,11 @@ namespace network
                  * @param peerId Peer ID.
                  */
                 void dispatch(uint32_t peerId);
+                /**
+                 * @brief Helper to dispatch PDU user data back to the FNE network.
+                 * @param peerId Peer ID.
+                 */
+                void dispatchToFNE(uint32_t peerId);
 
                 /**
                  * @brief Helper to write user data as a P25 PDU packet.
