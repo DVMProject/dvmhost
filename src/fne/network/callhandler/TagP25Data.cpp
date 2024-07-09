@@ -51,7 +51,7 @@ TagP25Data::TagP25Data(FNENetwork* network, bool debug) :
 {
     assert(network != nullptr);
 
-    m_packetData = new P25PacketData(network, debug);
+    m_packetData = new P25PacketData(network, this, debug);
 }
 
 /* Finalizes a instance of the TagP25Data class. */

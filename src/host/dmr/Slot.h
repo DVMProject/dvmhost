@@ -148,7 +148,7 @@ namespace dmr
          * @brief Process a data frames from the network.
          * @param[in] data Instance of data::Data DMR data container class.
          */
-        void processNetwork(const data::Data& data);
+        void processNetwork(const data::NetData& data);
         /** @} */
 
         /** @name Data Clocking */
@@ -319,13 +319,11 @@ namespace dmr
 
         std::unique_ptr<lc::LC> m_rfLC;
         std::unique_ptr<lc::PrivacyLC> m_rfPrivacyLC;
-        std::unique_ptr<data::DataHeader> m_rfDataHeader;
 
         uint8_t m_rfSeqNo;
 
         std::unique_ptr<lc::LC> m_netLC;
         std::unique_ptr<lc::PrivacyLC> m_netPrivacyLC;
-        std::unique_ptr<data::DataHeader> m_netDataHeader;
 
         Timer m_networkWatchdog;
         Timer m_rfTimeoutTimer;

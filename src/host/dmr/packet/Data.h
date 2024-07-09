@@ -18,8 +18,9 @@
 #define __DMR_PACKET_DATA_H__
 
 #include "Defines.h"
-#include "common/dmr/data/Data.h"
+#include "common/dmr/data/NetData.h"
 #include "common/dmr/data/DataHeader.h"
+#include "common/dmr/data/DataBlock.h"
 #include "common/dmr/data/EmbeddedData.h"
 #include "common/dmr/lc/LC.h"
 #include "common/edac/AMBEFEC.h"
@@ -63,10 +64,10 @@ namespace dmr
             bool process(uint8_t* data, uint32_t len);
             /**
              * @brief Process a data frame from the network.
-             * @param[in] data Instance of data::Data DMR data container class.
+             * @param[in] data Instance of data::NetData DMR data container class.
              * @returns bool True, if data frame is processed, otherwise false.
              */
-            void processNetwork(const data::Data& dmrData);
+            void processNetwork(const data::NetData& dmrData);
             /** @} */
 
         private:
@@ -74,6 +75,12 @@ namespace dmr
             friend class packet::ControlSignaling;
             friend class dmr::Slot;
             Slot* m_slot;
+
+            data::DataHeader m_rfDataHeader;
+            uint8_t m_rfDataBlockCnt;
+
+            data::DataHeader m_netDataHeader;
+            uint8_t m_netDataBlockCnt;
 
             uint8_t* m_pduUserData;
             uint32_t m_pduDataOffset;

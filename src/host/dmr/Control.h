@@ -26,7 +26,7 @@
 #define __DMR_CONTROL_H__
 
 #include "Defines.h"
-#include "common/dmr/data/Data.h"
+#include "common/dmr/data/NetData.h"
 #include "common/lookups/RSSIInterpolator.h"
 #include "common/lookups/IdenTableLookup.h"
 #include "common/lookups/RadioIdLookup.h"

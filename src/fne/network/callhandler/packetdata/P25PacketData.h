@@ -23,6 +23,7 @@
 #include "common/p25/data/DataHeader.h"
 #include "network/FNENetwork.h"
 #include "network/PeerNetwork.h"
+#include "network/callhandler/TagP25Data.h"
 
 #include <deque>
 
@@ -45,9 +46,10 @@ namespace network
                 /**
                  * @brief Initializes a new instance of the P25PacketData class.
                  * @param network Instance of the FNENetwork class.
+                 * @param tag Instance of the TagP25Data class.
                  * @param debug Flag indicating whether network debug is enabled.
                  */
-                P25PacketData(FNENetwork* network, bool debug);
+                P25PacketData(FNENetwork* network, TagP25Data* tag, bool debug);
                 /**
                  * @brief Finalizes a instance of the P25PacketData class.
                  */
@@ -67,6 +69,7 @@ namespace network
 
             private:
                 FNENetwork* m_network;
+                TagP25Data *m_tag;
 
                 /**
                  * @brief Represents the receive status of a call.

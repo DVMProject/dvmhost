@@ -632,7 +632,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
 
 /* Process a voice frame from the network. */
 
-void Voice::processNetwork(const data::Data& dmrData)
+void Voice::processNetwork(const data::NetData& dmrData)
 {
     uint8_t dataType = dmrData.getDataType();
 

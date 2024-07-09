@@ -15,6 +15,7 @@
 #include "common/dmr/SlotType.h"
 #include "common/dmr/Sync.h"
 #include "common/edac/BPTC19696.h"
+#include "common/edac/CRC.h"
 #include "common/edac/Trellis.h"
 #include "common/Log.h"
 #include "common/Utils.h"
@@ -151,16 +152,14 @@ bool Data::process(uint8_t* data, uint32_t len)
         if (m_slot->m_rfState == RS_RF_DATA)
             return true;
 
-        data::DataHeader* dataHeader = new data::DataHeader();
-        bool valid = dataHeader->decode(data + 2U);
+        m_rfDataHeader.reset();
+        bool valid = m_rfDataHeader.decode(data + 2U);
         if (!valid)
             return false;
 
-        m_slot->m_rfDataHeader = std::unique_ptr<data::DataHeader>(dataHeader);
-
-        bool gi = dataHeader->getGI();
-        uint32_t srcId = dataHeader->getSrcId();
-        uint32_t dstId = dataHeader->getDstId();
+        bool gi = m_rfDataHeader.getGI();
+        uint32_t srcId = m_rfDataHeader.getSrcId();
+        uint32_t dstId = m_rfDataHeader.getDstId();
 
         CHECK_AUTHORITATIVE(dstId);
         CHECK_TRAFFIC_COLLISION(dstId);
@@ -185,29 +184,31 @@ bool Data::process(uint8_t* data, uint32_t len)
             }
         }
 
-        m_slot->m_rfFrames = dataHeader->getBlocks();
+        m_rfDataBlockCnt = 0U;
+
+        m_slot->m_rfFrames = m_rfDataHeader.getBlocksToFollow();
         m_slot->m_rfSeqNo = 0U;
         m_slot->m_rfLC = std::make_unique<lc::LC>(gi ? FLCO::GROUP : FLCO::PRIVATE, srcId, dstId);
 
         if (m_verbose) {
-            LogMessage(LOG_RF, DMR_DT_DATA_HEADER ", slot = %u, dpf = $%02X, ack = %u, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padCount = %u, seqNo = %u, dstId = %u, srcId = %u, group = %u",
-                m_slot->m_slotNo, dataHeader->getDPF(), dataHeader->getA(), dataHeader->getSAP(), dataHeader->getFullMesage(), dataHeader->getBlocks(), dataHeader->getPadCount(), dataHeader->getFSN(),
-                dstId, srcId, gi);
+            LogMessage(LOG_RF, DMR_DT_DATA_HEADER ", slot = %u, dpf = $%02X, ack = %u, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padLength = %u, packetLength = %u, seqNo = %u, dstId = %u, srcId = %u, group = %u",
+                m_slot->m_slotNo, m_rfDataHeader.getDPF(), m_rfDataHeader.getA(), m_rfDataHeader.getSAP(), m_rfDataHeader.getFullMesage(), m_rfDataHeader.getBlocksToFollow(), m_rfDataHeader.getPadLength(), m_rfDataHeader.getPacketLength(),
+                m_rfDataHeader.getFSN(), dstId, srcId, gi);
         }
 
         // did we receive a response header?
-        if (dataHeader->getDPF() == DPF::RESPONSE) {
+        if (m_rfDataHeader.getDPF() == DPF::RESPONSE) {
             if (m_verbose) {
                 LogMessage(LOG_RF, DMR_DT_DATA_HEADER " ISP, response, slot = %u, sap = $%02X, rspClass = $%02X, rspType = $%02X, rspStatus = $%02X, dstId = %u, srcId = %u, group = %u",
-                        m_slot->m_slotNo, dataHeader->getSAP(), dataHeader->getResponseClass(), dataHeader->getResponseType(), dataHeader->getResponseStatus(),
+                        m_slot->m_slotNo, m_rfDataHeader.getSAP(), m_rfDataHeader.getResponseClass(), m_rfDataHeader.getResponseType(), m_rfDataHeader.getResponseStatus(),
                         dstId, srcId, gi);
 
-                if (dataHeader->getResponseClass() == PDUResponseClass::ACK && dataHeader->getResponseType() == PDUResponseType::ACK) {
+                if (m_rfDataHeader.getResponseClass() == PDUResponseClass::ACK && m_rfDataHeader.getResponseType() == PDUResponseType::ACK) {
                     LogMessage(LOG_RF, DMR_DT_DATA_HEADER " ISP, response, OSP ACK, slot = %u, dstId = %u, srcId = %u, group = %u",
                         m_slot->m_slotNo, dstId, srcId, gi);
                 } else {
-                    if (dataHeader->getResponseClass() == PDUResponseClass::NACK) {
-                        switch (dataHeader->getResponseType()) {
+                    if (m_rfDataHeader.getResponseClass() == PDUResponseClass::NACK) {
+                        switch (m_rfDataHeader.getResponseType()) {
                             case PDUResponseType::NACK_ILLEGAL:
                                 LogMessage(LOG_RF, DMR_DT_DATA_HEADER " ISP, response, OSP NACK, illegal format, slot = %u, dstId = %u, srcId = %u, group = %u",
                                     m_slot->m_slotNo, dstId, srcId, gi);
@@ -224,7 +225,7 @@ bool Data::process(uint8_t* data, uint32_t len)
                             default:
                                 break;
                             }
-                    } else if (dataHeader->getResponseClass() == PDUResponseClass::ACK_RETRY) {
+                    } else if (m_rfDataHeader.getResponseClass() == PDUResponseClass::ACK_RETRY) {
                         LogMessage(LOG_RF, DMR_DT_DATA_HEADER " ISP, response, OSP ACK RETRY, slot = %u, dstId = %u, srcId = %u, group = %u",
                             m_slot->m_slotNo, dstId, srcId, gi);
                     }
@@ -233,7 +234,7 @@ bool Data::process(uint8_t* data, uint32_t len)
         }
 
         // Regenerate the data header
-        dataHeader->encode(data + 2U);
+        m_rfDataHeader.encode(data + 2U);
 
         // Regenerate the Slot Type
         slotType.encode(data + 2U);
@@ -259,7 +260,7 @@ bool Data::process(uint8_t* data, uint32_t len)
 
         ::ActivityLog("DMR", true, "Slot %u RF data header from %u to %s%u, %u blocks", m_slot->m_slotNo, srcId, gi ? "TG " : "", dstId, m_slot->m_rfFrames);
 
-        ::memset(m_pduUserData, 0x00U, MAX_PDU_COUNT * PDU_UNCODED_LENGTH_BYTES + 2U);
+        ::memset(m_pduUserData, 0x00U, MAX_PDU_COUNT * DMR_PDU_UNCODED_LENGTH_BYTES + 2U);
         m_pduDataOffset = 0U;
 
         if (m_slot->m_rfFrames == 0U) {
@@ -273,48 +274,43 @@ bool Data::process(uint8_t* data, uint32_t len)
         if (m_slot->m_rfState != RS_RF_DATA || m_slot->m_rfFrames == 0U)
             return false;
 
-        edac::BPTC19696 bptc;
-        edac::Trellis trellis;
+        data::DataBlock dataBlock;
+        dataBlock.setDataType(dataType);
 
-        // decode the rate 1/2 payload
-        if (dataType == DataType::RATE_12_DATA) {
-            // decode the BPTC (196,96) FEC
-            uint8_t payload[PDU_UNCONFIRMED_LENGTH_BYTES];
-            bptc.decode(data + 2U, payload);
+        bool ret = dataBlock.decode(data + 2U, m_rfDataHeader);
+        if (ret) {
+            uint32_t len = dataBlock.getData(m_pduUserData + m_pduDataOffset);
+            m_pduDataOffset += len;
 
-            // store payload
-            ::memcpy(m_pduUserData + m_pduDataOffset, payload, PDU_UNCONFIRMED_LENGTH_BYTES);
-            m_pduDataOffset += PDU_UNCONFIRMED_LENGTH_BYTES;
+            m_slot->m_rfFrames--;
+            if (m_slot->m_rfFrames == 0U)
+                dataBlock.setLastBlock(true);
 
-            // encode the BPTC (196,96) FEC
-            bptc.encode(payload, data + 2U);
-        }
-        else if (dataType == DataType::RATE_34_DATA) {
-            // decode the Trellis 3/4 rate FEC
-            uint8_t payload[PDU_CONFIRMED_LENGTH_BYTES];
-            bool ret = trellis.decode34(data + 2U, payload, true);
-            if (ret) {
-                // store payload
-                ::memcpy(m_pduUserData + m_pduDataOffset, payload, PDU_CONFIRMED_LENGTH_BYTES);
-
-                // encode the Trellis 3/4 rate FEC
-                trellis.encode34(payload, data + 2U, true);
-            }
-            else {
-                LogWarning(LOG_RF, "DMR Slot %u, RATE_34_DATA, unfixable RF rate 3/4 data", m_slot->m_slotNo);
-                Utils::dump(1U, "Unfixable PDU Data", data + 2U, DMR_FRAME_LENGTH_BYTES);
+            if (m_verbose) {
+                if (dataType == DataType::RATE_34_DATA) {
+                    LogMessage(LOG_RF, DMR_DT_RATE_34_DATA ", ISP, block %u, dataType = $%02X, dpf = $%02X", m_rfDataBlockCnt, dataBlock.getDataType(), dataBlock.getFormat());
+                } else if (dataType == DataType::RATE_12_DATA) {
+                    LogMessage(LOG_RF, DMR_DT_RATE_12_DATA ", ISP, block %u, dataType = $%02X, dpf = $%02X", m_rfDataBlockCnt, dataBlock.getDataType(), dataBlock.getFormat());
+                }
+                else {
+                    LogMessage(LOG_RF, DMR_DT_RATE_1_DATA ", ISP, block %u, dataType = $%02X, dpf = $%02X", m_rfDataBlockCnt, dataBlock.getDataType(), dataBlock.getFormat());
+                }
             }
 
-            m_pduDataOffset += PDU_CONFIRMED_LENGTH_BYTES;
-        }
-        else if (dataType == DataType::RATE_1_DATA) {
-            // store payload
-            ::memcpy(m_pduUserData + m_pduDataOffset, data + 2U, PDU_UNCODED_LENGTH_BYTES);
-
-            m_pduDataOffset += PDU_UNCODED_LENGTH_BYTES;
+            dataBlock.encode(data + 2U);
+            m_rfDataBlockCnt++;
         }
 
-        m_slot->m_rfFrames--;
+        if (m_rfDataHeader.getBlocksToFollow() > 0U && m_slot->m_rfFrames == 0U) {
+            bool crcRet = edac::CRC::checkCRC32(m_pduUserData, m_pduDataOffset);
+            if (!crcRet) {
+                LogWarning(LOG_RF, P25_PDU_STR ", failed CRC-32 check, blocks %u, len %u", m_rfDataHeader.getBlocksToFollow(), m_pduDataOffset);
+            }
+
+            if (m_dumpDataPacket) {
+                Utils::dump(1U, "PDU Packet", m_pduUserData, m_pduDataOffset);
+            }
+        }
 
         data[0U] = m_slot->m_rfFrames == 0U ? modem::TAG_EOT : modem::TAG_DATA;
         data[1U] = 0x00U;
@@ -332,24 +328,8 @@ bool Data::process(uint8_t* data, uint32_t len)
         }
 
         if (m_slot->m_rfFrames == 0U) {
-            if (m_dumpDataPacket) {
-                Utils::dump(1U, "PDU Packet", m_pduUserData, m_pduDataOffset);
-            }
-
             LogMessage(LOG_RF, "DMR Slot %u, RATE_12/34_DATA, ended data transmission", m_slot->m_slotNo);
             m_slot->writeEndRF();
-        }
-
-        if (m_verbose) {
-            if (dataType == DataType::RATE_12_DATA) {
-                LogMessage(LOG_RF, DMR_DT_RATE_12_DATA ", block = %u", m_slot->m_rfFrames + 1);
-            }
-            else if (dataType == DataType::RATE_34_DATA) {
-                LogMessage(LOG_RF, DMR_DT_RATE_34_DATA ", block = %u", m_slot->m_rfFrames + 1);
-            }
-            else {
-                LogMessage(LOG_RF, DMR_DT_RATE_1_DATA ", block = %u", m_slot->m_rfFrames + 1);
-            }
         }
 
         return true;
@@ -360,9 +340,9 @@ bool Data::process(uint8_t* data, uint32_t len)
 
 /* Process a data frame from the network. */
 
-void Data::processNetwork(const data::Data& dmrData)
+void Data::processNetwork(const data::NetData& dmrData)
 {
-    uint8_t dataType = dmrData.getDataType();
+    DataType::E dataType = dmrData.getDataType();
 
     uint8_t data[DMR_FRAME_LENGTH_BYTES + 2U];
     dmrData.getData(data + 2U);
@@ -424,18 +404,16 @@ void Data::processNetwork(const data::Data& dmrData)
         if (m_slot->m_netState == RS_NET_DATA)
             return;
 
-        data::DataHeader* dataHeader = new data::DataHeader();
-        bool valid = dataHeader->decode(data + 2U);
+        m_netDataHeader.reset();
+        bool valid = m_netDataHeader.decode(data + 2U);
         if (!valid) {
             LogError(LOG_NET, "DMR Slot %u, DataType::DATA_HEADER, unable to decode the network data header", m_slot->m_slotNo);
             return;
         }
 
-        m_slot->m_netDataHeader = std::unique_ptr<data::DataHeader>(dataHeader);
-
-        bool gi = dataHeader->getGI();
-        uint32_t srcId = dataHeader->getSrcId();
-        uint32_t dstId = dataHeader->getDstId();
+        bool gi = m_netDataHeader.getGI();
+        uint32_t srcId = m_netDataHeader.getSrcId();
+        uint32_t dstId = m_netDataHeader.getDstId();
 
         CHECK_NET_AUTHORITATIVE(dstId);
         CHECK_TG_HANG(dstId);
@@ -444,22 +422,24 @@ void Data::processNetwork(const data::Data& dmrData)
             m_slot->m_tsccPayloadActRetry.stop();
         }
 
-        m_slot->m_netFrames = dataHeader->getBlocks();
+        m_netDataBlockCnt = 0U;
+
+        m_slot->m_netFrames = m_netDataHeader.getBlocksToFollow();
         m_slot->m_netLC = std::make_unique<lc::LC>(gi ? FLCO::GROUP : FLCO::PRIVATE, srcId, dstId);
 
         // did we receive a response header?
-        if (dataHeader->getDPF() == DPF::RESPONSE) {
+        if (m_netDataHeader.getDPF() == DPF::RESPONSE) {
             if (m_verbose) {
                 LogMessage(LOG_NET, DMR_DT_DATA_HEADER " ISP, response, slot = %u, sap = $%02X, rspClass = $%02X, rspType = $%02X, rspStatus = $%02X, dstId = %u, srcId = %u, group = %u",
-                        m_slot->m_slotNo, dataHeader->getSAP(), dataHeader->getResponseClass(), dataHeader->getResponseType(), dataHeader->getResponseStatus(),
+                        m_slot->m_slotNo, m_netDataHeader.getSAP(), m_netDataHeader.getResponseClass(), m_netDataHeader.getResponseType(), m_netDataHeader.getResponseStatus(),
                         dstId, srcId, gi);
 
-                if (dataHeader->getResponseClass() == PDUResponseClass::ACK && dataHeader->getResponseType() == PDUResponseType::ACK) {
+                if (m_netDataHeader.getResponseClass() == PDUResponseClass::ACK && m_netDataHeader.getResponseType() == PDUResponseType::ACK) {
                     LogMessage(LOG_NET, DMR_DT_DATA_HEADER " ISP, response, OSP ACK, slot = %u, dstId = %u, srcId = %u, group = %u",
                         m_slot->m_slotNo, dstId, srcId, gi);
                 } else {
-                    if (dataHeader->getResponseClass() == PDUResponseClass::NACK) {
-                        switch (dataHeader->getResponseType()) {
+                    if (m_netDataHeader.getResponseClass() == PDUResponseClass::NACK) {
+                        switch (m_netDataHeader.getResponseType()) {
                             case PDUResponseType::NACK_ILLEGAL:
                                 LogMessage(LOG_NET, DMR_DT_DATA_HEADER " ISP, response, OSP NACK, illegal format, slot = %u, dstId = %u, srcId = %u, group = %u",
                                     m_slot->m_slotNo, dstId, srcId, gi);
@@ -476,7 +456,7 @@ void Data::processNetwork(const data::Data& dmrData)
                             default:
                                 break;
                             }
-                    } else if (dataHeader->getResponseClass() == PDUResponseClass::ACK_RETRY) {
+                    } else if (m_netDataHeader.getResponseClass() == PDUResponseClass::ACK_RETRY) {
                         LogMessage(LOG_NET, DMR_DT_DATA_HEADER " ISP, response, OSP ACK RETRY, slot = %u, dstId = %u, srcId = %u, group = %u",
                             m_slot->m_slotNo, dstId, srcId, gi);
                     }
@@ -485,7 +465,7 @@ void Data::processNetwork(const data::Data& dmrData)
         }
 
         // Regenerate the data header
-        dataHeader->encode(data + 2U);
+        m_netDataHeader.encode(data + 2U);
 
         // Regenerate the Slot Type
         SlotType slotType;
@@ -512,15 +492,15 @@ void Data::processNetwork(const data::Data& dmrData)
         m_slot->setShortLC(m_slot->m_slotNo, dstId, gi ? FLCO::GROUP : FLCO::PRIVATE, Slot::SLCO_ACT_TYPE::DATA);
 
         if (m_verbose) {
-            LogMessage(LOG_NET, DMR_DT_DATA_HEADER ", slot = %u, dpf = $%02X, ack = %u, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padCount = %u, seqNo = %u, dstId = %u, srcId = %u, group = %u",
-                m_slot->m_slotNo, dataHeader->getDPF(), dataHeader->getA(), dataHeader->getSAP(), dataHeader->getFullMesage(), dataHeader->getBlocks(), dataHeader->getPadCount(), dataHeader->getFSN(),
-                dstId, srcId, gi);
+            LogMessage(LOG_NET, DMR_DT_DATA_HEADER ", slot = %u, dpf = $%02X, ack = %u, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padLength = %u, packetLength = %u, seqNo = %u, dstId = %u, srcId = %u, group = %u",
+                m_slot->m_slotNo, m_netDataHeader.getDPF(), m_netDataHeader.getA(), m_netDataHeader.getSAP(), m_netDataHeader.getFullMesage(), m_netDataHeader.getBlocksToFollow(), m_netDataHeader.getPadLength(), m_netDataHeader.getPacketLength(),
+                m_netDataHeader.getFSN(), dstId, srcId, gi);
         }
 
         ::ActivityLog("DMR", false, "Slot %u network data header from %u to %s%u, %u blocks",
             m_slot->m_slotNo, srcId, gi ? "TG " : "", dstId, m_slot->m_netFrames);
 
-        ::memset(m_pduUserData, 0x00U, MAX_PDU_COUNT * PDU_UNCODED_LENGTH_BYTES + 2U);
+        ::memset(m_pduUserData, 0x00U, MAX_PDU_COUNT * DMR_PDU_UNCODED_LENGTH_BYTES + 2U);
         m_pduDataOffset = 0U;
 
         if (m_slot->m_netFrames == 0U) {
@@ -534,47 +514,43 @@ void Data::processNetwork(const data::Data& dmrData)
             return;
         }
 
-        // regenerate the rate 1/2 payload
-        if (dataType == DataType::RATE_12_DATA) {
-            // decode the BPTC (196,96) FEC
-            edac::BPTC19696 bptc;
-            uint8_t payload[PDU_UNCONFIRMED_LENGTH_BYTES];
-            bptc.decode(data + 2U, payload);
+        data::DataBlock dataBlock;
+        dataBlock.setDataType(dataType);
 
-            // store payload
-            ::memcpy(m_pduUserData + m_pduDataOffset, payload, PDU_UNCONFIRMED_LENGTH_BYTES);
-            m_pduDataOffset += PDU_UNCONFIRMED_LENGTH_BYTES;
+        bool ret = dataBlock.decode(data + 2U, m_netDataHeader);
+        if (ret) {
+            uint32_t len = dataBlock.getData(m_pduUserData + m_pduDataOffset);
+            m_pduDataOffset += len;
 
-            // encode the BPTC (196,96) FEC
-            bptc.encode(payload, data + 2U);
-        }
-        else if (dataType == DataType::RATE_34_DATA) {
-            // decode the Trellis 3/4 rate FEC
-            edac::Trellis trellis;
-            uint8_t payload[PDU_CONFIRMED_LENGTH_BYTES];
-            bool ret = trellis.decode34(data + 2U, payload, true);
-            if (ret) {
-                // store payload
-                ::memcpy(m_pduUserData + m_pduDataOffset, payload, PDU_CONFIRMED_LENGTH_BYTES);
+            m_slot->m_netFrames--;
+            if (m_slot->m_netFrames == 0U)
+                dataBlock.setLastBlock(true);
 
-                // encode the Trellis 3/4 rate FEC
-                trellis.encode34(payload, data + 2U, true);
-            }
-            else {
-                LogWarning(LOG_NET, "DMR Slot %u, RATE_34_DATA, unfixable network rate 3/4 data", m_slot->m_slotNo);
-                Utils::dump(1U, "Data", data + 2U, DMR_FRAME_LENGTH_BYTES);
+            if (m_verbose) {
+                if (dataType == DataType::RATE_34_DATA) {
+                    LogMessage(LOG_NET, DMR_DT_RATE_34_DATA ", ISP, block %u, dataType = $%02X, dpf = $%02X", m_netDataBlockCnt, dataBlock.getDataType(), dataBlock.getFormat());
+                } else if (dataType == DataType::RATE_12_DATA) {
+                    LogMessage(LOG_NET, DMR_DT_RATE_12_DATA ", ISP, block %u, dataType = $%02X, dpf = $%02X", m_netDataBlockCnt, dataBlock.getDataType(), dataBlock.getFormat());
+                }
+                else {
+                    LogMessage(LOG_NET, DMR_DT_RATE_1_DATA ", ISP, block %u, dataType = $%02X, dpf = $%02X", m_netDataBlockCnt, dataBlock.getDataType(), dataBlock.getFormat());
+                }
             }
 
-            m_pduDataOffset += PDU_CONFIRMED_LENGTH_BYTES;
-        }
-        else if (dataType == DataType::RATE_1_DATA) {
-            // store payload
-            ::memcpy(m_pduUserData + m_pduDataOffset, data + 2U, PDU_UNCODED_LENGTH_BYTES);
-
-            m_pduDataOffset += PDU_UNCODED_LENGTH_BYTES;
+            dataBlock.encode(data + 2U);
+            m_netDataBlockCnt++;
         }
 
-        m_slot->m_netFrames--;
+        if (m_netDataHeader.getBlocksToFollow() > 0U && m_slot->m_netFrames == 0U) {
+            bool crcRet = edac::CRC::checkCRC32(m_pduUserData, m_pduDataOffset);
+            if (!crcRet) {
+                LogWarning(LOG_NET, P25_PDU_STR ", failed CRC-32 check, blocks %u, len %u", m_netDataHeader.getBlocksToFollow(), m_pduDataOffset);
+            }
+
+            if (m_dumpDataPacket) {
+                Utils::dump(1U, "PDU Packet", m_pduUserData, m_pduDataOffset);
+            }
+        }
 
         if (m_repeatDataPacket) {
             // regenerate the Slot Type
@@ -590,25 +566,9 @@ void Data::processNetwork(const data::Data& dmrData)
             data[1U] = 0x00U;
 
             m_slot->addFrame(data, true);
-
-            if (m_verbose) {
-                if (dataType == DataType::RATE_12_DATA) {
-                    LogMessage(LOG_RF, DMR_DT_RATE_12_DATA ", block = %u", m_slot->m_netFrames + 1);
-                }
-                else if (dataType == DataType::RATE_34_DATA) {
-                    LogMessage(LOG_RF, DMR_DT_RATE_34_DATA ", block = %u", m_slot->m_netFrames + 1);
-                }
-                else {
-                    LogMessage(LOG_RF, DMR_DT_RATE_1_DATA ", block = %u", m_slot->m_netFrames + 1);
-                }
-            }
         }
 
         if (m_slot->m_netFrames == 0U) {
-            if (m_dumpDataPacket) {
-                Utils::dump(1U, "PDU Packet", m_pduUserData, m_pduDataOffset);
-            }
-
             LogMessage(LOG_NET, "DMR Slot %u, RATE_12/34_DATA, ended data transmission", m_slot->m_slotNo);
             m_slot->writeEndNet();
         }
@@ -627,6 +587,10 @@ void Data::processNetwork(const data::Data& dmrData)
 
 Data::Data(Slot* slot, network::BaseNetwork* network, bool dumpDataPacket, bool repeatDataPacket, bool debug, bool verbose) :
     m_slot(slot),
+    m_rfDataHeader(),
+    m_rfDataBlockCnt(0U),
+    m_netDataHeader(),
+    m_netDataBlockCnt(0U),
     m_pduUserData(nullptr),
     m_pduDataOffset(0U),
     m_lastRejectId(0U),
@@ -635,8 +599,8 @@ Data::Data(Slot* slot, network::BaseNetwork* network, bool dumpDataPacket, bool 
     m_verbose(verbose),
     m_debug(debug)
 {
-    m_pduUserData = new uint8_t[MAX_PDU_COUNT * PDU_UNCODED_LENGTH_BYTES + 2U];
-    ::memset(m_pduUserData, 0x00U, MAX_PDU_COUNT * PDU_UNCODED_LENGTH_BYTES + 2U);
+    m_pduUserData = new uint8_t[MAX_PDU_COUNT * DMR_PDU_UNCODED_LENGTH_BYTES + 2U];
+    ::memset(m_pduUserData, 0x00U, MAX_PDU_COUNT * DMR_PDU_UNCODED_LENGTH_BYTES + 2U);
 }
 
 /* Finalizes a instance of the Data class. */
@@ -709,7 +673,7 @@ void Data::writeRF_PDU_Ack_Response(uint8_t rspClass, uint8_t rspType, uint8_t r
     rspHeader.setResponseClass(rspClass);
     rspHeader.setResponseType(rspType);
     rspHeader.setResponseStatus(rspStatus);
-    rspHeader.setBlocks(1U);
+    rspHeader.setBlocksToFollow(1U);
 
     rspHeader.encode(data + 2U);
     writeRF_PDU(DataType::DATA_HEADER, data);
@@ -717,8 +681,8 @@ void Data::writeRF_PDU_Ack_Response(uint8_t rspClass, uint8_t rspType, uint8_t r
     ::memset(data + 2U, 0x00U, DMR_FRAME_LENGTH_BYTES);
 
     // decode the BPTC (196,96) FEC
-    uint8_t payload[PDU_UNCONFIRMED_LENGTH_BYTES];
-    ::memset(payload, 0x00U, PDU_UNCONFIRMED_LENGTH_BYTES);
+    uint8_t payload[DMR_PDU_UNCONFIRMED_LENGTH_BYTES];
+    ::memset(payload, 0x00U, DMR_PDU_UNCONFIRMED_LENGTH_BYTES);
 
     // encode the BPTC (196,96) FEC
     bptc.encode(payload, data + 2U);

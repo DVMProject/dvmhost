@@ -18,7 +18,7 @@
 #define __DMR_PACKET_VOICE_H__
 
 #include "Defines.h"
-#include "common/dmr/data/Data.h"
+#include "common/dmr/data/NetData.h"
 #include "common/dmr/data/EmbeddedData.h"
 #include "common/dmr/lc/LC.h"
 #include "common/dmr/lc/PrivacyLC.h"
@@ -58,10 +58,10 @@ namespace dmr
             bool process(uint8_t* data, uint32_t len);
             /**
              * @brief Process a data frame from the network.
-             * @param[in] data Instance of data::Data DMR data container class.
+             * @param[in] data Instance of data::NetData DMR data container class.
              * @returns bool True, if data frame is processed, otherwise false.
              */
-            void processNetwork(const data::Data& dmrData);
+            void processNetwork(const data::NetData& dmrData);
             /** @} */
 
         private:

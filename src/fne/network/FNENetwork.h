@@ -48,6 +48,7 @@
 class HOST_SW_API HostFNE;
 class HOST_SW_API RESTAPI;
 namespace network { namespace callhandler { class HOST_SW_API TagDMRData; } }
+namespace network { namespace callhandler { namespace packetdata { class HOST_SW_API DMRPacketData; } } }
 namespace network { namespace callhandler { class HOST_SW_API TagP25Data; } }
 namespace network { namespace callhandler { namespace packetdata { class HOST_SW_API P25PacketData; } } }
 namespace network { namespace callhandler { class HOST_SW_API TagNXDNData; } }
@@ -393,6 +394,7 @@ namespace network
     private:
         friend class DiagNetwork;
         friend class callhandler::TagDMRData;
+        friend class callhandler::packetdata::DMRPacketData;
         callhandler::TagDMRData* m_tagDMR;
         friend class callhandler::TagP25Data;
         friend class callhandler::packetdata::P25PacketData;

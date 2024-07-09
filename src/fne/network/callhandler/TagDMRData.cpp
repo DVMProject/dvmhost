@@ -23,6 +23,7 @@
 using namespace system_clock;
 using namespace network;
 using namespace network::callhandler;
+using namespace network::callhandler::packetdata;
 using namespace dmr;
 using namespace dmr::defines;
 
@@ -43,6 +44,8 @@ TagDMRData::TagDMRData(FNENetwork* network, bool debug) :
     m_debug(debug)
 {
     assert(network != nullptr);
+
+    m_packetData = new DMRPacketData(network, this, debug);
 }
 
 /* Finalizes a instance of the TagDMRData class. */
@@ -70,7 +73,7 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
 
     DataType::E dataType = (DataType::E)(data[15U] & 0x0FU);
 
-    data::Data dmrData;
+    data::NetData dmrData;
     dmrData.setSeqNo(seqNo);
     dmrData.setSlotNo(slotNo);
     dmrData.setSrcId(srcId);
@@ -97,13 +100,17 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
         dmrData.setN(n);
     }
 
-    if (dataType == DataType::DATA_HEADER ||
-        dataType == DataType::RATE_12_DATA ||
-        dataType == DataType::RATE_34_DATA ||
-        dataType == DataType::RATE_1_DATA) {
+    if (dataSync && ((dataType == DataType::DATA_HEADER)    ||
+                     (dataType == DataType::RATE_12_DATA)   ||
+                     (dataType == DataType::RATE_34_DATA)   ||
+                     (dataType == DataType::RATE_1_DATA))) {
         if (m_network->m_disablePacketData)
             return false;
+        return m_packetData->processFrame(data, len, peerId, pktSeq, streamId, external);
     }
+
+    uint8_t frame[DMR_FRAME_LENGTH_BYTES];
+    dmrData.getData(frame);
 
     // perform TGID route rewrites if configured
     routeRewrite(buffer, peerId, dmrData, dataType, dstId, slotNo, false);
@@ -446,7 +453,7 @@ void TagDMRData::write_Call_Alrt(uint32_t peerId, uint8_t slot, uint32_t srcId, 
 
 /* Helper to route rewrite the network data buffer. */
 
-void TagDMRData::routeRewrite(uint8_t* buffer, uint32_t peerId, dmr::data::Data& dmrData, DataType::E dataType, uint32_t dstId, uint32_t slotNo, bool outbound)
+void TagDMRData::routeRewrite(uint8_t* buffer, uint32_t peerId, dmr::data::NetData& dmrData, DataType::E dataType, uint32_t dstId, uint32_t slotNo, bool outbound)
 {
     uint32_t rewriteDstId = dstId;
     uint32_t rewriteSlotNo = slotNo;
@@ -537,7 +544,7 @@ bool TagDMRData::peerRewrite(uint32_t peerId, uint32_t& dstId, uint32_t& slotNo,
 
 /* Helper to process CSBKs being passed from a peer. */
 
-bool TagDMRData::processCSBK(uint8_t* buffer, uint32_t peerId, dmr::data::Data& dmrData)
+bool TagDMRData::processCSBK(uint8_t* buffer, uint32_t peerId, dmr::data::NetData& dmrData)
 {
     // are we receiving a CSBK?
     if (dmrData.getDataType() == DataType::CSBK) {
@@ -598,7 +605,7 @@ bool TagDMRData::processCSBK(uint8_t* buffer, uint32_t peerId, dmr::data::Data& 
 
 /* Helper to determine if the peer is permitted for traffic. */
 
-bool TagDMRData::isPeerPermitted(uint32_t peerId, data::Data& data, uint32_t streamId, bool external)
+bool TagDMRData::isPeerPermitted(uint32_t peerId, data::NetData& data, uint32_t streamId, bool external)
 {
     if (data.getFLCO() == FLCO::PRIVATE) {
         if (!m_network->checkU2UDroppedPeer(peerId))
@@ -682,7 +689,7 @@ bool TagDMRData::isPeerPermitted(uint32_t peerId, data::Data& data, uint32_t str
 
 /* Helper to validate the DMR call stream. */
 
-bool TagDMRData::validate(uint32_t peerId, data::Data& data, uint32_t streamId)
+bool TagDMRData::validate(uint32_t peerId, data::NetData& data, uint32_t streamId)
 {
     // is the source ID a blacklisted ID?
     lookups::RadioId rid = m_network->m_ridLookup->find(data.getSrcId());
@@ -896,7 +903,7 @@ void TagDMRData::write_CSBK(uint32_t peerId, uint8_t slot, lc::CSBK* csbk)
     // Convert the Data Sync to be from the BS or MS as needed
     Sync::addDMRDataSync(data + 2U, true);
 
-    data::Data dmrData;
+    data::NetData dmrData;
     dmrData.setSlotNo(slot);
     dmrData.setDataType(DataType::CSBK);
     dmrData.setSrcId(csbk->getSrcId());

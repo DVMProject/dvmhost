@@ -161,6 +161,7 @@ namespace network
             typedef std::pair<const uint32_t, RxStatus> StatusMapPair;
             std::unordered_map<uint32_t, RxStatus> m_status;
 
+            friend class packetdata::P25PacketData;
             packetdata::P25PacketData *m_packetData;
 
             bool m_debug;

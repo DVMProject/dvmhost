@@ -12,7 +12,6 @@
 #include "Defines.h"
 #include "dmr/DMRDefines.h"
 #include "dmr/data/DataHeader.h"
-#include "edac/BPTC19696.h"
 #include "edac/CRC.h"
 #include "Utils.h"
 
@@ -22,6 +21,7 @@ using namespace dmr::data;
 
 #include <cassert>
 #include <cstring>
+#include <cmath>
 
 // ---------------------------------------------------------------------------
 //  Constants
@@ -42,24 +42,26 @@ DataHeader::DataHeader() :
     m_sap(0U),
     m_fsn(0U),
     m_Ns(0U),
-    m_padCount(0U),
+    m_blocksToFollow(0U),
+    m_padLength(0U),
     m_F(false),
     m_S(false),
     m_dataFormat(0U),
     m_srcId(0U),
     m_dstId(0U),
-    m_blocks(0U),
     m_rspClass(PDUResponseClass::NACK),
     m_rspType(PDUResponseType::NACK_ILLEGAL),
     m_rspStatus(0U),
     m_srcPort(0U),
     m_dstPort(0U),
+    m_bptc(),
     m_data(nullptr),
     m_SF(false),
     m_PF(false),
     m_UDTO(0U)
 {
     m_data = new uint8_t[DMR_LC_HEADER_LENGTH_BYTES];
+    ::memset(m_data, 0x00U, DMR_LC_HEADER_LENGTH_BYTES);
 }
 
 /* Finalizes a instance of the DataHeader class. */
@@ -79,13 +81,13 @@ DataHeader& DataHeader::operator=(const DataHeader& header)
         m_sap = header.m_sap;
         m_fsn = header.m_fsn;
         m_Ns = header.m_Ns;
-        m_padCount = header.m_padCount;
+        m_blocksToFollow = header.m_blocksToFollow;
+        m_padLength = header.m_padLength;
         m_F = header.m_F;
         m_S = header.m_S;
         m_dataFormat = header.m_dataFormat;
         m_srcId = header.m_srcId;
         m_dstId = header.m_dstId;
-        m_blocks = header.m_blocks;
         m_rspClass = header.m_rspClass;
         m_rspType = header.m_rspType;
         m_rspStatus = header.m_rspStatus;
@@ -109,8 +111,7 @@ bool DataHeader::decode(const uint8_t* data)
     assert(data != nullptr);
 
     // decode BPTC (196,96) FEC
-    edac::BPTC19696 bptc;
-    bptc.decode(data, m_data);
+    m_bptc.decode(data, m_data);
 
     // make sure the CRC-CCITT 16 was actually included (the network tends to zero the CRC)
     if (m_data[10U] != 0x00U && m_data[11U] != 0x00U) {
@@ -144,8 +145,8 @@ bool DataHeader::decode(const uint8_t* data)
 #endif
         m_sap = ((m_data[1U] & 0xF0U) >> 4);                                    // Service Access Point
         m_dataFormat = (m_data[1U] & 0x0FU);                                    // UDT Format
-        m_blocks = (m_data[8U] & 0x03U) + 1U;                                   // Blocks To Follow
-        m_padCount = (m_data[8U] & 0xF8U) >> 3;                                 // Pad Nibble
+        m_blocksToFollow = (m_data[8U] & 0x03U) + 1U;                           // Blocks To Follow
+        m_padLength = (m_data[8U] & 0xF8U) >> 3;                                // Pad Nibble
         m_SF = (m_data[9U] & 0x80U) == 0x80U;                                   // Supplemental Flag
         m_PF = (m_data[9U] & 0x40U) == 0x40U;                                   // Protect Flag
         m_UDTO = m_data[9U] & 0x3FU;                                            // UDT Opcode
@@ -156,9 +157,9 @@ bool DataHeader::decode(const uint8_t* data)
         Utils::dump(1U, "DMR, DataHeader::decode(), Unconfirmed Data Header", m_data, DMR_LC_HEADER_LENGTH_BYTES);
 #endif
         m_sap = ((m_data[1U] & 0xF0U) >> 4);                                    // Service Access Point
-        m_padCount = (m_data[0U] & 0x10U) + (m_data[1U] & 0x0FU);               // Octet Pad Count
+        m_padLength = (m_data[0U] & 0x10U) + (m_data[1U] & 0x0FU);              // Octet Pad Count
         m_F = (m_data[8U] & 0x80U) == 0x80U;                                    // Full Message Flag
-        m_blocks = m_data[8U] & 0x7FU;                                          // Blocks To Follow
+        m_blocksToFollow = m_data[8U] & 0x7FU;                                  // Blocks To Follow
         m_fsn = m_data[9U] & 0x0FU;                                             // Fragment Sequence Number
         break;
 
@@ -167,9 +168,9 @@ bool DataHeader::decode(const uint8_t* data)
         Utils::dump(1U, "DMR, DataHeader::decode(), Confirmed Data Header", m_data, DMR_LC_HEADER_LENGTH_BYTES);
 #endif
         m_sap = ((m_data[1U] & 0xF0U) >> 4);                                    // Service Access Point
-        m_padCount = (m_data[0U] & 0x10U) + (m_data[1U] & 0x0FU);               // Octet Pad Count
+        m_padLength = (m_data[0U] & 0x10U) + (m_data[1U] & 0x0FU);              // Octet Pad Count
         m_F = (m_data[8U] & 0x80U) == 0x80U;                                    // Full Message Flag
-        m_blocks = m_data[8U] & 0x7FU;                                          // Blocks To Follow
+        m_blocksToFollow = m_data[8U] & 0x7FU;                                  // Blocks To Follow
         m_S = (m_data[9U] & 0x80U) == 0x80U;                                    // Synchronize Flag
         m_Ns = (m_data[9U] >> 4) & 0x07U;                                       // Send Sequence Number
         m_fsn = m_data[9U] & 0x0FU;                                             // Fragement Sequence Number
@@ -180,7 +181,7 @@ bool DataHeader::decode(const uint8_t* data)
         Utils::dump(1U, "DMR, DataHeader::decode(), Response Data Header", m_data, DMR_LC_HEADER_LENGTH_BYTES);
 #endif
         m_sap = ((m_data[1U] & 0xF0U) >> 4);                                    // Service Access Point
-        m_blocks = m_data[8U] & 0x7FU;                                          // Blocks To Follow
+        m_blocksToFollow = m_data[8U] & 0x7FU;                                  // Blocks To Follow
         m_rspClass = (m_data[9U] >> 6) & 0x03U;                                 // Response Class
         m_rspType = (m_data[9U] >> 3) & 0x07U;                                  // Response Type
         m_rspStatus = m_data[9U] & 0x07U;                                       // Response Status
@@ -191,11 +192,11 @@ bool DataHeader::decode(const uint8_t* data)
         Utils::dump(1U, "DMR, DataHeader::decode(), Defined Short Data Header", m_data, DMR_LC_HEADER_LENGTH_BYTES);
 #endif
         m_sap = ((m_data[1U] & 0xF0U) >> 4);                                    // Service Access Point
-        m_blocks = (m_data[0U] & 0x30U) + (m_data[1U] & 0x0FU);                 // Blocks To Follow
+        m_blocksToFollow = (m_data[0U] & 0x30U) + (m_data[1U] & 0x0FU);         // Blocks To Follow
         m_F = (m_data[8U] & 0x01U) == 0x01U;                                    // Full Message Flag
         m_S = (m_data[8U] & 0x02U) == 0x02U;                                    // Synchronize Flag
         m_dataFormat = (m_data[8U] & 0xFCU) >> 2;                               // Defined Data Format
-        m_padCount = m_data[9U];                                                // Bit Padding
+        m_padLength = m_data[9U];                                               // Bit Padding
         break;
 
     case DPF::DEFINED_RAW:
@@ -203,7 +204,7 @@ bool DataHeader::decode(const uint8_t* data)
         Utils::dump(1U, "DMR, DataHeader::decode(), Raw Data Header", m_data, DMR_LC_HEADER_LENGTH_BYTES);
 #endif
         m_sap = ((m_data[1U] & 0xF0U) >> 4);                                    // Service Access Point
-        m_blocks = (m_data[0U] & 0x30U) + (m_data[1U] & 0x0FU);                 // Blocks To Follow
+        m_blocksToFollow = (m_data[0U] & 0x30U) + (m_data[1U] & 0x0FU);         // Blocks To Follow
         m_F = (m_data[8U] & 0x01U) == 0x01U;                                    // Full Message Flag
         m_S = (m_data[8U] & 0x02U) == 0x02U;                                    // Synchronize Flag
         m_dstPort = (m_data[8U] & 0x1CU) >> 2;                                  // Destination Port
@@ -220,7 +221,7 @@ bool DataHeader::decode(const uint8_t* data)
 
 /* Encodes a DMR data header. */
 
-void DataHeader::encode(uint8_t* data) const
+void DataHeader::encode(uint8_t* data)
 {
     assert(data != nullptr);
 
@@ -262,8 +263,8 @@ void DataHeader::encode(uint8_t* data) const
     case DPF::UDT:
         m_data[1U] = ((m_sap & 0x0FU) << 4) +                                   // Service Access Point
             (m_dataFormat & 0x0FU);                                             // UDT Format
-        m_data[8U] = ((m_padCount & 0x1FU) << 3) +                              // Pad Nibble
-            (m_blocks - 1U);                                                    // Blocks To Follow
+        m_data[8U] = ((m_padLength & 0x1FU) << 3) +                             // Pad Nibble
+            (m_blocksToFollow - 1U);                                            // Blocks To Follow
         m_data[9U] = (m_SF ? 0x80U : 0x00U) +                                   // Supplemental Flag
             (m_PF ? 0x40U : 0x00U) +                                            // Protect Flag
             (m_UDTO & 0x3F);                                                    // UDT Opcode
@@ -273,11 +274,11 @@ void DataHeader::encode(uint8_t* data) const
         break;
 
     case DPF::UNCONFIRMED_DATA:
-        m_data[0U] = m_data[0U] + (m_padCount & 0x10U);                         // Octet Pad Count MSB
+        m_data[0U] = m_data[0U] + (m_padLength & 0x10U);                        // Octet Pad Count MSB
         m_data[1U] = ((m_sap & 0x0FU) << 4) +                                   // Service Access Point
-            (m_padCount & 0x0FU);                                               // Octet Pad Count LSB
+            (m_padLength & 0x0FU);                                              // Octet Pad Count LSB
         m_data[8U] = (m_F ? 0x80U : 0x00U) +                                    // Full Message Flag
-            (m_blocks & 0x7FU);                                                 // Blocks To Follow
+            (m_blocksToFollow & 0x7FU);                                         // Blocks To Follow
         m_data[9U] = m_fsn;                                                     // Fragment Sequence Number
 #if DEBUG_DMR_PDU_DATA
         Utils::dump(1U, "DMR, DataHeader::decode(), Unconfirmed Data Header", m_data, DMR_LC_HEADER_LENGTH_BYTES);
@@ -285,11 +286,11 @@ void DataHeader::encode(uint8_t* data) const
         break;
 
     case DPF::CONFIRMED_DATA:
-        m_data[0U] = m_data[0U] + (m_padCount & 0x10U);                         // Octet Pad Count MSB
+        m_data[0U] = m_data[0U] + (m_padLength & 0x10U);                        // Octet Pad Count MSB
         m_data[1U] = ((m_sap & 0x0FU) << 4) +                                   // Service Access Point
-            (m_padCount & 0x0FU);                                               // Octet Pad Count LSB
+            (m_padLength & 0x0FU);                                              // Octet Pad Count LSB
         m_data[8U] = (m_F ? 0x80U : 0x00U) +                                    // Full Message Flag
-            (m_blocks & 0x7FU);                                                 // Blocks To Follow
+            (m_blocksToFollow & 0x7FU);                                         // Blocks To Follow
         m_data[9U] = (m_S ? 0x80U : 0x00U) +                                    // Synchronize Flag
             ((m_Ns & 0x07U) << 4) +                                             // Send Sequence Number
             (m_fsn & 0x0FU);                                                    // Fragment Sequence Number
@@ -300,7 +301,7 @@ void DataHeader::encode(uint8_t* data) const
 
     case DPF::RESPONSE:
         m_data[1U] = ((m_sap & 0x0FU) << 4);                                    // Service Access Point
-        m_data[8U] = m_blocks & 0x7FU;                                          // Blocks To Follow
+        m_data[8U] = m_blocksToFollow & 0x7FU;                                  // Blocks To Follow
         m_data[9U] = ((m_rspClass & 0x03U) << 6) +                              // Response Class
             ((m_rspType & 0x07U) << 3) +                                        // Response Type
             ((m_rspStatus & 0x07U));                                            // Response Status
@@ -310,22 +311,22 @@ void DataHeader::encode(uint8_t* data) const
         break;
 
     case DPF::DEFINED_SHORT:
-        m_data[0U] = m_data[0U] + (m_blocks & 0x30U);                           // Blocks To Follow MSB
+        m_data[0U] = m_data[0U] + (m_blocksToFollow & 0x30U);                   // Blocks To Follow MSB
         m_data[1U] = ((m_sap & 0x0FU) << 4) +                                   // Service Access Point
-            (m_blocks & 0x0FU);                                                 // Blocks To Follow LSB
+            (m_blocksToFollow & 0x0FU);                                         // Blocks To Follow LSB
         m_data[8U] = (m_F ? 0x01U : 0x00U) +                                    // Full Message Flag
             (m_S ? 0x02U : 0x00U) +                                             // Synchronize Flag
             ((m_dataFormat & 0xFCU) << 2);                                      // Defined Data Format
-        m_data[9U] = m_padCount;                                                // Bit Padding
+        m_data[9U] = m_padLength;                                               // Bit Padding
 #if DEBUG_DMR_PDU_DATA
         Utils::dump(1U, "DMR, DataHeader::decode(), Defined Short Data Header", m_data, DMR_LC_HEADER_LENGTH_BYTES);
 #endif
         break;
 
     case DPF::DEFINED_RAW:
-        m_data[0U] = m_data[0U] + (m_blocks & 0x30U);                           // Blocks To Follow MSB
+        m_data[0U] = m_data[0U] + (m_blocksToFollow & 0x30U);                   // Blocks To Follow MSB
         m_data[1U] = ((m_sap & 0x0FU) << 4) +                                   // Service Access Point
-            (m_blocks & 0x0FU);                                                 // Blocks To Follow LSB
+            (m_blocksToFollow & 0x0FU);                                         // Blocks To Follow LSB
         m_data[8U] = (m_F ? 0x01U : 0x00U) +                                    // Full Message Flag
             (m_S ? 0x02U : 0x00U) +                                             // Synchronize Flag
             ((m_dstPort & 0x07U) << 2) +                                        // Destination Port
@@ -362,6 +363,97 @@ void DataHeader::encode(uint8_t* data) const
     }
 
     // encode BPTC (196,96) FEC
-    edac::BPTC19696 bptc;
-    bptc.encode(m_data, data);
+    m_bptc.encode(m_data, data);
+}
+
+/* Helper to reset data values to defaults. */
+
+void DataHeader::reset()
+{
+    m_GI = false;
+    m_A = false;
+
+    m_DPF = DPF::UDT;
+
+    m_sap = 0U;
+    m_fsn = 0U;
+    m_Ns = 0U;
+    m_blocksToFollow = 0U;
+    m_padLength = 0U;
+    m_F = false;
+    m_S = false;
+
+    m_dataFormat = 0U;
+
+    m_srcId = 0U;
+    m_dstId = 0U;
+
+    m_rspClass = PDUResponseClass::NACK;
+    m_rspType = PDUResponseType::NACK_ILLEGAL;
+    m_rspStatus = 0U;
+
+    m_srcPort = 0U;
+    m_dstPort = 0U;
+
+    ::memset(m_data, 0x00U, DMR_LC_HEADER_LENGTH_BYTES);
+
+    m_SF = false;
+    m_PF = false;
+    m_UDTO = 0U;
+}
+
+/* Gets the total length in bytes of enclosed packet data. */
+
+uint32_t DataHeader::getPacketLength() const
+{
+    if (m_DPF == DPF::RESPONSE) {
+        return 0U; // responses have no packet length as they are header only
+    }
+
+    if (m_DPF == DPF::CONFIRMED_DATA) {
+        return DMR_PDU_CONFIRMED_DATA_LENGTH_BYTES * m_blocksToFollow - 4 - m_padLength;
+    }
+    else {
+        return DMR_PDU_UNCONFIRMED_LENGTH_BYTES * m_blocksToFollow - 4 - m_padLength;
+    }
+}
+
+/* Gets the raw header data. */
+
+uint32_t DataHeader::getData(uint8_t* buffer) const
+{
+    assert(buffer != nullptr);
+    assert(m_data != nullptr);
+
+    ::memcpy(buffer, m_data, DMR_LC_HEADER_LENGTH_BYTES);
+    return DMR_LC_HEADER_LENGTH_BYTES;
+}
+
+/* Helper to calculate the number of blocks to follow and padding length for a PDU. */
+
+void DataHeader::calculateLength(uint32_t packetLength)
+{
+    uint32_t len = packetLength + 4U; // packet length + CRC32
+    uint32_t blockLen = (m_DPF == DPF::CONFIRMED_DATA) ? DMR_PDU_CONFIRMED_DATA_LENGTH_BYTES : DMR_PDU_UNCONFIRMED_LENGTH_BYTES;
+
+    if (len > blockLen) {
+        m_padLength = blockLen - (len % blockLen);
+        m_blocksToFollow = (uint8_t)ceilf((float)len / (float)blockLen);
+    } else {
+        m_padLength = 0U;
+        m_blocksToFollow = 1U;
+    }
+}
+
+/* Helper to determine the pad length for a given packet length. */
+
+uint32_t DataHeader::calculatePadLength(DPF::E dpf, uint32_t packetLength)
+{
+    uint32_t len = packetLength + 4U; // packet length + CRC32
+    if (dpf == DPF::CONFIRMED_DATA) {
+        return DMR_PDU_CONFIRMED_DATA_LENGTH_BYTES - (len % DMR_PDU_CONFIRMED_DATA_LENGTH_BYTES);
+    }
+    else {
+        return DMR_PDU_UNCONFIRMED_LENGTH_BYTES - (len % DMR_PDU_UNCONFIRMED_LENGTH_BYTES);
+    }
 }

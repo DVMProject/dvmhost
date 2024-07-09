@@ -81,11 +81,11 @@ bool DataBlock::decode(const uint8_t* data, const DataHeader& header)
             ::memset(m_data, 0x00U, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
             ::memcpy(m_data, buffer + 2U, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);             // Payload Data
 
-            uint8_t crcBuffer[18U];
-            ::memset(crcBuffer, 0x00U, 18U);
+            uint8_t crcBuffer[P25_PDU_CONFIRMED_LENGTH_BYTES];
+            ::memset(crcBuffer, 0x00U, P25_PDU_CONFIRMED_LENGTH_BYTES);
 
             // generate CRC buffer
-            for (uint32_t i = 0; i < 144U; i++) {
+            for (uint32_t i = 0U; i < 144U; i++) {
                 bool b = READ_BIT(buffer, i);
                 if (i < 7U) {
                     WRITE_BIT(crcBuffer, i, b);
@@ -153,11 +153,11 @@ void DataBlock::encode(uint8_t* data)
 
         ::memcpy(buffer + 2U, m_data, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);                 // Payload Data
 
-        uint8_t crcBuffer[18U];
-        ::memset(crcBuffer, 0x00U, 18U);
+        uint8_t crcBuffer[P25_PDU_CONFIRMED_LENGTH_BYTES];
+        ::memset(crcBuffer, 0x00U, P25_PDU_CONFIRMED_LENGTH_BYTES);
 
         // generate CRC buffer
-        for (uint32_t i = 0; i < 144U; i++) {
+        for (uint32_t i = 0U; i < 144U; i++) {
             bool b = READ_BIT(buffer, i);
             if (i < 7U) {
                 WRITE_BIT(crcBuffer, i, b);

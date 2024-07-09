@@ -8,7 +8,6 @@
  *
  */
 #include "fne/Defines.h"
-#include "common/p25/lc/tsbk/TSBKFactory.h"
 #include "common/p25/Sync.h"
 #include "common/edac/CRC.h"
 #include "common/Clock.h"
@@ -21,6 +20,7 @@
 
 using namespace system_clock;
 using namespace network;
+using namespace network::callhandler;
 using namespace network::callhandler::packetdata;
 using namespace p25;
 using namespace p25::defines;
@@ -40,12 +40,14 @@ const uint8_t DATA_CALL_COLL_TIMEOUT = 60U;
 
 /* Initializes a new instance of the P25PacketData class. */
 
-P25PacketData::P25PacketData(FNENetwork* network, bool debug) :
+P25PacketData::P25PacketData(FNENetwork* network, TagP25Data* tag, bool debug) :
     m_network(network),
+    m_tag(tag),
     m_status(),
     m_debug(debug)
 {
     assert(network != nullptr);
+    assert(tag != nullptr);
 }
 
 /* Finalizes a instance of the P25PacketData class. */
@@ -128,6 +130,29 @@ bool P25PacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
     }
 
     RxStatus* status = m_status[peerId];
+
+    // is the source ID a blacklisted ID?
+    lookups::RadioId rid = m_network->m_ridLookup->find(status->header.getLLId());
+    if (!rid.radioDefault()) {
+        if (!rid.radioEnabled()) {
+            // report error event to InfluxDB
+            if (m_network->m_enableInfluxDB) {
+                influxdb::QueryBuilder()
+                    .meas("call_error_event")
+                        .tag("peerId", std::to_string(peerId))
+                        .tag("streamId", std::to_string(streamId))
+                        .tag("srcId", std::to_string(status->header.getLLId()))
+                        .tag("dstId", std::to_string(status->header.getLLId()))
+                            .field("message", INFLUXDB_ERRSTR_DISABLED_SRC_RID)
+                        .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
+                    .request(m_network->m_influxServer);
+            }
+
+            delete status;
+            m_status.erase(peerId);
+            return false;
+        }
+    }
 
     // a PDU header only with no blocks to follow is usually a response header
     if (status->header.getBlocksToFollow() == 0U) {

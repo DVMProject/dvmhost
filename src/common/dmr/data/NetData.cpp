@@ -10,7 +10,7 @@
  */
 #include "Defines.h"
 #include "dmr/DMRDefines.h"
-#include "dmr/data/Data.h"
+#include "dmr/data/NetData.h"
 
 using namespace dmr;
 using namespace dmr::defines;
@@ -23,9 +23,9 @@ using namespace dmr::data;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/* Initializes a new instance of the Data class. */
+/* Initializes a new instance of the NetData class. */
 
-Data::Data(const Data& data) :
+NetData::NetData(const NetData& data) :
     m_slotNo(data.m_slotNo),
     m_srcId(data.m_srcId),
     m_dstId(data.m_dstId),
@@ -41,9 +41,9 @@ Data::Data(const Data& data) :
     ::memcpy(m_data, data.m_data, 2U * DMR_FRAME_LENGTH_BYTES);
 }
 
-/* Initializes a new instance of the Data class. */
+/* Initializes a new instance of the NetData class. */
 
-Data::Data() :
+NetData::NetData() :
     m_slotNo(1U),
     m_srcId(0U),
     m_dstId(0U),
@@ -58,16 +58,16 @@ Data::Data() :
     m_data = new uint8_t[2U * DMR_FRAME_LENGTH_BYTES];
 }
 
-/* Finalizes a instance of the Data class. */
+/* Finalizes a instance of the NetData class. */
 
-Data::~Data()
+NetData::~NetData()
 {
     delete[] m_data;
 }
 
 /* Equals operator. */
 
-Data& Data::operator=(const Data& data)
+NetData& NetData::operator=(const NetData& data)
 {
     if (this != &data) {
         ::memcpy(m_data, data.m_data, DMR_FRAME_LENGTH_BYTES);
@@ -88,7 +88,7 @@ Data& Data::operator=(const Data& data)
 
 /* Sets raw data. */
 
-void Data::setData(const uint8_t* buffer)
+void NetData::setData(const uint8_t* buffer)
 {
     assert(buffer != nullptr);
 
@@ -97,7 +97,7 @@ void Data::setData(const uint8_t* buffer)
 
 /* Gets raw data. */
 
-uint32_t Data::getData(uint8_t* buffer) const
+uint32_t NetData::getData(uint8_t* buffer) const
 {
     assert(buffer != nullptr);
 

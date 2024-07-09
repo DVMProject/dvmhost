@@ -9,13 +9,13 @@
  *
  */
 /**
- * @file Data.h
+ * @file NetData.h
  * @ingroup dmr
- * @file Data.cpp
+ * @file NetData.cpp
  * @ingroup dmr
  */
-#if !defined(__DMR_DATA__DATA_H__)
-#define __DMR_DATA__DATA_H__
+#if !defined(__DMR_DATA__NET_DATA_H__)
+#define __DMR_DATA__NET_DATA_H__
 
 #include "common/Defines.h"
 #include "common/dmr/DMRDefines.h"
@@ -32,27 +32,27 @@ namespace dmr
          * @brief Represents network DMR data.
          * @ingroup dmr
          */
-        class HOST_SW_API Data {
+        class HOST_SW_API NetData {
         public:
             /**
-             * @brief Initializes a new instance of the Data class.
-             * @param data Instance of Data class to copy from.
+             * @brief Initializes a new instance of the NetData class.
+             * @param data Instance of NetData class to copy from.
              */
-            Data(const Data& data);
+            NetData(const NetData& data);
             /**
-             * @brief Initializes a new instance of the Data class.
+             * @brief Initializes a new instance of the NetData class.
              */
-            Data();
+            NetData();
             /**
-             * @brief Finalizes a instance of the Data class.
+             * @brief Finalizes a instance of the NetData class.
              */
-            ~Data();
+            ~NetData();
 
             /**
              * @brief Equals operator.
-             * @param data Instance of Data class to copy from.
+             * @param data Instance of NetData class to copy from.
              */
-            Data& operator=(const Data& data);
+            NetData& operator=(const NetData& data);
 
             /**
              * @brief Sets raw data.
@@ -116,4 +116,4 @@ namespace dmr
     } // namespace data
 } // namespace dmr
 
-#endif // __DMR_DATA__DATA_H__
+#endif // __DMR_DATA__NET_DATA_H__

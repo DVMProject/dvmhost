@@ -18,10 +18,11 @@
 
 #include "fne/Defines.h"
 #include "common/dmr/DMRDefines.h"
-#include "common/dmr/data/Data.h"
+#include "common/dmr/data/NetData.h"
 #include "common/dmr/lc/CSBK.h"
 #include "common/Clock.h"
 #include "network/FNENetwork.h"
+#include "network/callhandler/packetdata/DMRPacketData.h"
 
 #include <deque>
 
@@ -140,19 +141,22 @@ namespace network
             typedef std::pair<const uint32_t, RxStatus> StatusMapPair;
             std::unordered_map<uint32_t, RxStatus> m_status;
 
+            friend class packetdata::DMRPacketData;
+            packetdata::DMRPacketData *m_packetData;
+
             bool m_debug;
 
             /**
              * @brief Helper to route rewrite the network data buffer.
              * @param buffer Frame buffer.
              * @param peerId Peer ID.
-             * @param dmrData Instance of data::Data DMR data container class.
+             * @param dmrData Instance of data::NetData DMR data container class.
              * @param dataType DMR Data Type.
              * @param dstId Destination ID.
              * @param slotNo DMR slot number.
              * @param outbound Flag indicating whether or not this is outbound traffic.
              */
-            void routeRewrite(uint8_t* buffer, uint32_t peerId, dmr::data::Data& dmrData, DMRDEF::DataType::E dataType, uint32_t dstId, uint32_t slotNo, bool outbound = true);
+            void routeRewrite(uint8_t* buffer, uint32_t peerId, dmr::data::NetData& dmrData, DMRDEF::DataType::E dataType, uint32_t dstId, uint32_t slotNo, bool outbound = true);
             /**
              * @brief Helper to route rewrite destination ID and slot.
              * @param peerId Peer ID.
@@ -167,28 +171,28 @@ namespace network
              * @brief Helper to process CSBKs being passed from a peer.
              * @param buffer Frame buffer.
              * @param peerId Peer ID.
-             * @param dmrData Instance of data::Data DMR data container class.
+             * @param dmrData Instance of data::NetData DMR data container class.
              * @returns bool True, if allowed to pass, otherwise false.
              */
-            bool processCSBK(uint8_t* buffer, uint32_t peerId, dmr::data::Data& dmrData);
+            bool processCSBK(uint8_t* buffer, uint32_t peerId, dmr::data::NetData& dmrData);
 
             /**
              * @brief Helper to determine if the peer is permitted for traffic.
              * @param peerId Peer ID.
-             * @param dmrData Instance of data::Data DMR data container class.
+             * @param dmrData Instance of data::NetData DMR data container class.
              * @param streamId Stream ID.
              * @param external Flag indicating this traffic came from an external peer.
              * @returns bool True, if valid, otherwise false.
              */
-            bool isPeerPermitted(uint32_t peerId, dmr::data::Data& data, uint32_t streamId, bool external = false);
+            bool isPeerPermitted(uint32_t peerId, dmr::data::NetData& data, uint32_t streamId, bool external = false);
             /**
              * @brief Helper to validate the DMR call stream.
              * @param peerId Peer ID.
-             * @param dmrData Instance of data::Data DMR data container class.
+             * @param dmrData Instance of data::NetData DMR data container class.
              * @param streamId Stream ID.
              * @returns bool True, if valid, otherwise false.
              */
-            bool validate(uint32_t peerId, dmr::data::Data& data, uint32_t streamId);
+            bool validate(uint32_t peerId, dmr::data::NetData& data, uint32_t streamId);
 
             /**
              * @brief Helper to write a grant packet.

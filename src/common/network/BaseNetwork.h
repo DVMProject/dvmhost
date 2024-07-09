@@ -25,7 +25,7 @@
 #define __BASE_NETWORK_H__
 
 #include "common/Defines.h"
-#include "common/dmr/data/Data.h"
+#include "common/dmr/data/NetData.h"
 #include "common/p25/data/DataHeader.h"
 #include "common/p25/data/LowSpeedData.h"
 #include "common/p25/lc/LC.h"
@@ -316,11 +316,11 @@ namespace network
         virtual UInt8Array readDMR(bool& ret, uint32_t& frameLength);
         /**
          * @brief Writes DMR frame data to the network.
-         * @param[in] data Instance of the dmr::data::Data class containing the DMR message.
+         * @param[in] data Instance of the dmr::data::NetData class containing the DMR message.
          * @param noSequence Flag indicating the message should be sent with no RTP sequence (65535).
          * @returns bool True, if message was sent, otherwise false.
          */
-        virtual bool writeDMR(const dmr::data::Data& data, bool noSequence = false);
+        virtual bool writeDMR(const dmr::data::NetData& data, bool noSequence = false);
 
         /**
          * @brief Helper to test if the DMR ring buffer has data.
@@ -513,7 +513,7 @@ namespace network
          * @param data Instance of the dmr::data::Data class containing the DMR message.
          * @returns UInt8Array Buffer containing the built network message.
          */
-        UInt8Array createDMR_Message(uint32_t& length, const uint32_t streamId, const dmr::data::Data& data);
+        UInt8Array createDMR_Message(uint32_t& length, const uint32_t streamId, const dmr::data::NetData& data);
 
         /**
          * @brief Creates an P25 frame message header.

@@ -630,7 +630,7 @@ void Control::processNetwork()
         return;
     }
 
-    data::Data data;
+    data::NetData data;
 
     // process network message header
     uint8_t seqNo = buffer[4U];

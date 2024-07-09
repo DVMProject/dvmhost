@@ -36,6 +36,7 @@
 // ---------------------------------------------------------------------------
 
 namespace network { namespace callhandler { class HOST_SW_API TagDMRData; } }
+namespace network { namespace callhandler { namespace packetdata { class HOST_SW_API DMRPacketData; } } }
 namespace network { namespace callhandler { class HOST_SW_API TagP25Data; } }
 namespace network { namespace callhandler { namespace packetdata { class HOST_SW_API P25PacketData; } } }
 namespace network { namespace callhandler { class HOST_SW_API TagNXDNData; } }
@@ -72,6 +73,7 @@ private:
 
     friend class network::FNENetwork;
     friend class network::callhandler::TagDMRData;
+    friend class network::callhandler::packetdata::DMRPacketData;
     friend class network::callhandler::TagP25Data;
     friend class network::callhandler::packetdata::P25PacketData;
     friend class network::callhandler::TagNXDNData;

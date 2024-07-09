@@ -369,7 +369,7 @@ UInt8Array BaseNetwork::readDMR(bool& ret, uint32_t& frameLength)
 
 /* Writes DMR frame data to the network. */
 
-bool BaseNetwork::writeDMR(const dmr::data::Data& data, bool noSequence)
+bool BaseNetwork::writeDMR(const dmr::data::NetData& data, bool noSequence)
 {
     using namespace dmr::defines;
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
@@ -679,7 +679,7 @@ uint16_t BaseNetwork::pktSeq(bool reset)
 
 /* Creates an DMR frame message. */
 
-UInt8Array BaseNetwork::createDMR_Message(uint32_t& length, const uint32_t streamId, const dmr::data::Data& data)
+UInt8Array BaseNetwork::createDMR_Message(uint32_t& length, const uint32_t streamId, const dmr::data::NetData& data)
 {
     using namespace dmr::defines;
     uint8_t* buffer = new uint8_t[DMR_PACKET_LENGTH + PACKET_PAD];

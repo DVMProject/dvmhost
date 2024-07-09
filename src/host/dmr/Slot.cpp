@@ -107,11 +107,9 @@ Slot::Slot(uint32_t slotNo, uint32_t timeout, uint32_t tgHang, uint32_t queueSiz
     m_permittedDstId(0U),
     m_rfLC(nullptr),
     m_rfPrivacyLC(nullptr),
-    m_rfDataHeader(nullptr),
     m_rfSeqNo(0U),
     m_netLC(nullptr),
     m_netPrivacyLC(nullptr),
-    m_netDataHeader(nullptr),
     m_networkWatchdog(1000U, 0U, 1500U),
     m_rfTimeoutTimer(1000U, timeout),
     m_rfTGHang(1000U, tgHang),
@@ -355,7 +353,7 @@ uint32_t Slot::getFrame(uint8_t* data)
 
 /* Process a data frame from the network. */
 
-void Slot::processNetwork(const data::Data& dmrData)
+void Slot::processNetwork(const data::NetData& dmrData)
 {
     // don't process network frames if the RF modem isn't in a listening state
     if (m_rfState != RS_RF_LISTENING) {
@@ -1183,7 +1181,7 @@ void Slot::writeNetwork(const uint8_t* data, DataType::E dataType, FLCO::E flco,
     if (m_network == nullptr)
         return;
 
-    data::Data dmrData;
+    data::NetData dmrData;
     dmrData.setSlotNo(m_slotNo);
     dmrData.setDataType(dataType);
     dmrData.setSrcId(srcId);
@@ -1251,7 +1249,6 @@ void Slot::writeEndRF(bool writeEnd)
 
     m_rfLC = nullptr;
     m_rfPrivacyLC = nullptr;
-    m_rfDataHeader = nullptr;
 }
 
 /* Helper to write network end of frame data. */
@@ -1309,7 +1306,6 @@ void Slot::writeEndNet(bool writeEnd)
 
     m_netLC = nullptr;
     m_netPrivacyLC = nullptr;
-    m_netDataHeader = nullptr;
 }
 
 /* Helper to write control channel packet data. */

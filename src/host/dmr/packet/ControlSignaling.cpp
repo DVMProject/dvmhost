@@ -390,7 +390,7 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len)
 
 /* Process a data frame from the network. */
 
-void ControlSignaling::processNetwork(const data::Data & dmrData)
+void ControlSignaling::processNetwork(const data::NetData& dmrData)
 {
     DataType::E dataType = dmrData.getDataType();
 
@@ -570,7 +570,7 @@ void ControlSignaling::processNetwork(const data::Data & dmrData)
         case CSBKO::PRECCSBK:
         {
             if (m_verbose) {
-                LogMessage(LOG_NET, "DMR Slot %u, , CSBK, PRECCSBK (%s Preamble CSBK), toFollow = %u, srcId = %u, dstId = %u",
+                LogMessage(LOG_NET, "DMR Slot %u, CSBK, PRECCSBK (%s Preamble CSBK), toFollow = %u, srcId = %u, dstId = %u",
                     m_slot->m_slotNo, csbk->getDataContent() ? "Data" : "CSBK", csbk->getCBF(), srcId, dstId);
             }
         }
@@ -597,29 +597,7 @@ void ControlSignaling::processNetwork(const data::Data & dmrData)
             data[0U] = modem::TAG_DATA;
             data[1U] = 0x00U;
 
-            if (csbko == CSBKO::PRECCSBK && csbk->getDataContent()) {
-                uint32_t cbf = NO_PREAMBLE_CSBK + csbk->getCBF() - 1U;
-                for (uint32_t i = 0U; i < NO_PREAMBLE_CSBK; i++, cbf--) {
-                    // change blocks to follow
-                    csbk->setCBF(cbf);
-
-                    // regenerate the CSBK data
-                    csbk->encode(data + 2U);
-
-                    // regenerate the Slot Type
-                    SlotType slotType;
-                    slotType.decode(data + 2U);
-                    slotType.setColorCode(m_slot->m_colorCode);
-                    slotType.encode(data + 2U);
-
-                    // convert the Data Sync to be from the BS or MS as needed
-                    Sync::addDMRDataSync(data + 2U, m_slot->m_duplex);
-
-                    m_slot->addFrame(data, true);
-                }
-            }
-            else
-                m_slot->addFrame(data, true);
+            m_slot->addFrame(data, true);
         }
     }
     else {
