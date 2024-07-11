@@ -682,6 +682,20 @@ void SerialService::processP25ToNet()
                 if (!ret) {
                     LogError(LOG_SERIAL, "V24 traffic failed to decode RS (36,20,17) FEC [STREAM ID %u]", m_rxVoiceCallData->streamId);
                 } else {
+                    // Start the call, if it's not been started already
+                    if (!m_lclCallInProgress)
+                    {
+                        // Flag we have a local call (i.e. from V24) in progress
+                        m_lclCallInProgress = true;
+                        // Reset the call data
+                        m_rxVoiceCallData->resetCallData();
+                        m_rxLastLDU1->setSrcId(0U);
+                        m_rxLastLDU1->setDstId(0U);
+                        // Generate a new random stream ID
+                        m_rxVoiceCallData->newStreamId();
+                        // Log
+                        LogInfoEx(LOG_SERIAL, "V24 LATE CALL START (VHDR) [STREAM ID %u]", m_rxVoiceCallData->streamId);
+                    }
                     // Copy Message Indicator
                     ::memcpy(m_rxVoiceCallData->mi, vhdr, MI_LENGTH_BYTES);
                     // Get additional info
@@ -691,10 +705,10 @@ void SerialService::processP25ToNet()
                     m_rxVoiceCallData->dstId = __GET_UINT16B(vhdr, 13U);
                     // Update our last LDU dst ID
                     m_rxLastLDU1->setDstId(m_rxVoiceCallData->dstId);
-                }
-                // Log if we decoded succesfully
-                if (m_debug) {
-                    LogDebug(LOG_SERIAL, "P25, HDU algId = $%02X, kId = $%04X, dstId = $%04X", m_rxVoiceCallData->algoId, m_rxVoiceCallData->kId, m_rxVoiceCallData->dstId);
+                    // Log if we decoded succesfully
+                    if (m_debug) {
+                        LogDebug(LOG_SERIAL, "P25, HDU algId = $%02X, kId = $%04X, dstId = $%04X", m_rxVoiceCallData->algoId, m_rxVoiceCallData->kId, m_rxVoiceCallData->dstId);
+                    }
                 }
             }
             catch (...) {
