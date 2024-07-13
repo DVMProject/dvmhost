@@ -75,6 +75,11 @@ namespace dmr
              * @returns uint32_t Total length of packet in bytes.
              */
             uint32_t getPacketLength() const;
+            /**
+             * @brief Gets the total length in bytes of entire PDU.
+             * @returns uint32_t Total length of PDU in bytes.
+             */
+            uint32_t getPDULength() const;
 
             /**
              * @brief Gets the raw header data.

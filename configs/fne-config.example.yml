@@ -226,3 +226,22 @@ system:
         file: peer_list.dat
         # Amount of time between updates of white/blacklist file. (minutes)
         time: 2
+
+#
+# Packet Data Virtual Network Tunnel Configuration
+#
+vtun:
+    # Flag indicating the virtual network tunnel is enabled.
+    # (If this is enabled, dvmfne must be run as root to create the TUN interface.)
+    enabled: false
+    # Operational mode for the network tunnel (dmr or p25).
+    digitalMode: p25
+
+    # Kernel Interface Name
+    interfaceName: fne0
+    # IP address of the tunnel network interface
+    address: 192.168.1.254
+    # Netmask of the tunnel network interface
+    netmask: 255.255.255.0
+    # Broadcast address of the tunnel network interface
+    broadcast: 192.168.1.255

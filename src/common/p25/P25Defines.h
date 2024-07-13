@@ -92,6 +92,10 @@ namespace p25
         const uint32_t  P25_PDU_CONFIRMED_DATA_LENGTH_BYTES = 16U;
         const uint32_t  P25_PDU_UNCONFIRMED_LENGTH_BYTES = 12U;
 
+        const uint32_t  P25_PDU_ARP_PCKT_LENGTH = 22U;
+        const uint8_t   P25_PDU_ARP_HW_ADDR_LENGTH = 3U;
+        const uint8_t   P25_PDU_ARP_PROTO_ADDR_LENGTH = 4U;
+
         const uint32_t  P25_PDU_FEC_LENGTH_BYTES = 25U;
         const uint32_t  P25_PDU_FEC_LENGTH_BITS = P25_PDU_FEC_LENGTH_BYTES * 8U - 4U; // Trellis is actually 196 bits
 
@@ -168,6 +172,9 @@ namespace p25
 
         /** @brief All-call Talkgroup ID */
         const uint32_t  TGID_ALL = 0xFFFFU;
+
+        /** @brief ARP Hardware Type */
+        const uint16_t  P25_PDU_ARP_CAI_TYPE = 0x21U;
 
         /** @brief ARP Request */
         const uint8_t   P25_PDU_ARP_REQUEST = 0x01U;

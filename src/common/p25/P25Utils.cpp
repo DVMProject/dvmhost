@@ -21,9 +21,9 @@ using namespace p25::defines;
 //  Static Class Members
 // ---------------------------------------------------------------------------
 
-/* Helper to set the busy status bits on P25 frame data. */
+/* Helper to set the status bits on P25 frame data. */
 
-void P25Utils::setBusyBits(uint8_t* data, uint32_t ssOffset, bool b1, bool b2)
+void P25Utils::setStatusBits(uint8_t* data, uint32_t ssOffset, bool b1, bool b2)
 {
     assert(data != nullptr);
 
@@ -31,37 +31,60 @@ void P25Utils::setBusyBits(uint8_t* data, uint32_t ssOffset, bool b1, bool b2)
     WRITE_BIT(data, ssOffset + 1U, b2);
 }
 
-/* Helper to add the busy status bits on P25 frame data. */
+/* Helper to add the status bits on P25 frame data. */
 
-void P25Utils::addBusyBits(uint8_t* data, uint32_t length, bool b1, bool b2)
+void P25Utils::addStatusBits(uint8_t* data, uint32_t length, bool inbound, bool control)
 {
     assert(data != nullptr);
 
     // insert the "10" (Unknown, use for inbound or outbound) status bits
     for (uint32_t ss0Pos = P25_SS0_START; ss0Pos < length; ss0Pos += P25_SS_INCREMENT) {
         uint32_t ss1Pos = ss0Pos + 1U;
-        WRITE_BIT(data, ss0Pos, true);  // 1
-        WRITE_BIT(data, ss1Pos, false); // 0
+        WRITE_BIT(data, ss0Pos, true);              // 1
+        WRITE_BIT(data, ss1Pos, false);             // 0
     }
 
     // interleave the requested status bits (every other)
     for (uint32_t ss0Pos = P25_SS0_START; ss0Pos < length; ss0Pos += (P25_SS_INCREMENT * 2U)) {
         uint32_t ss1Pos = ss0Pos + 1U;
-        WRITE_BIT(data, ss0Pos, b1);
-        WRITE_BIT(data, ss1Pos, b2);
+        if (inbound) {
+            WRITE_BIT(data, ss0Pos, false);         // 0
+            WRITE_BIT(data, ss1Pos, true);          // 1
+        } else {
+            if (control) {
+                WRITE_BIT(data, ss0Pos, true);      // 1
+                WRITE_BIT(data, ss1Pos, false);     // 0
+            } else {
+                WRITE_BIT(data, ss0Pos, true);      // 1
+                WRITE_BIT(data, ss1Pos, true);      // 1
+            }
+        }
     }
 }
 
 /* Helper to add the idle status bits on P25 frame data. */
 
-void P25Utils::addIdleBits(uint8_t* data, uint32_t length, bool b1, bool b2)
+void P25Utils::addIdleStatusBits(uint8_t* data, uint32_t length)
 {
     assert(data != nullptr);
 
     for (uint32_t ss0Pos = P25_SS0_START; ss0Pos < length; ss0Pos += (P25_SS_INCREMENT * 5U)) {
         uint32_t ss1Pos = ss0Pos + 1U;
-        WRITE_BIT(data, ss0Pos, b1);
-        WRITE_BIT(data, ss1Pos, b2);
+        WRITE_BIT(data, ss0Pos, true);              // 1
+        WRITE_BIT(data, ss1Pos, false);             // 0
+    }
+}
+
+/* Helper to add the trunk start slot status bits on P25 frame data. */
+
+void P25Utils::addTrunkSlotStatusBits(uint8_t* data, uint32_t length)
+{
+    assert(data != nullptr);
+
+    for (uint32_t ss0Pos = P25_SS0_START; ss0Pos < length; ss0Pos += (P25_SS_INCREMENT * 5U)) {
+        uint32_t ss1Pos = ss0Pos + 1U;
+        WRITE_BIT(data, ss0Pos, true);              // 1
+        WRITE_BIT(data, ss1Pos, true);              // 1
     }
 }
 

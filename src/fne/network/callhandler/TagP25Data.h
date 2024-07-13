@@ -80,6 +80,13 @@ namespace network
             bool processGrantReq(uint32_t srcId, uint32_t dstId, bool unitToUnit, uint32_t peerId, uint16_t pktSeq, uint32_t streamId);
 
             /**
+             * @brief Process a data frame from the virtual IP network.
+             * @param data Network data buffer.
+             * @param len Length of data.
+             */
+            void processPacketFrame(const uint8_t* data, uint32_t len);
+
+            /**
              * @brief Helper to playback a parrot frame to the network.
              */
             void playbackParrot();

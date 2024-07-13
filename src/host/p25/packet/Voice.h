@@ -124,6 +124,8 @@ namespace p25
             uint8_t m_vocLDU1Count;
             uint8_t m_roamLDU1Count;
 
+            bool m_inbound;
+
             bool m_verbose;
             bool m_debug;
 

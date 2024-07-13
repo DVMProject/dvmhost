@@ -421,6 +421,13 @@ bool TagP25Data::processGrantReq(uint32_t srcId, uint32_t dstId, bool unitToUnit
     return true;
 }
 
+/* Process a data frame from the virtual IP network. */
+
+void TagP25Data::processPacketFrame(const uint8_t* data, uint32_t len)
+{
+    m_packetData->processPacketFrame(data, len);
+}
+
 /* Helper to playback a parrot frame to the network. */
 
 void TagP25Data::playbackParrot()
@@ -1224,10 +1231,10 @@ void TagP25Data::write_TSDU(uint32_t peerId, lc::TSBK* tsbk)
     tsbk->encode(data);
 
     // Add busy bits
-    P25Utils::addBusyBits(data, P25_TSDU_FRAME_LENGTH_BYTES, true, false);
+    P25Utils::addStatusBits(data, P25_TSDU_FRAME_LENGTH_BYTES, false);
 
     // Set first busy bits to 1,1
-    P25Utils::setBusyBits(data, P25_SS0_START, true, true);
+    P25Utils::setStatusBits(data, P25_SS0_START, true, true);
 
     if (m_debug) {
         LogDebug(LOG_RF, P25_TSDU_STR ", lco = $%02X, mfId = $%02X, lastBlock = %u, AIV = %u, EX = %u, srcId = %u, dstId = %u, sysId = $%03X, netId = $%05X",

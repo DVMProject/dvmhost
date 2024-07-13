@@ -140,8 +140,10 @@ namespace p25
             uint32_t m_retryPDUBitLength;
             uint8_t m_retryCount;
 
-            uint8_t* m_pduUserData;
-            uint32_t m_pduUserDataLength;
+            uint8_t* m_rfPduUserData;
+            uint32_t m_rfPduUserDataLength;
+            uint8_t* m_netPduUserData;
+            uint32_t m_netPduUserDataLength;
 
             std::unordered_map<uint32_t, uint32_t> m_fneRegTable;
 
@@ -151,6 +153,8 @@ namespace p25
             std::unordered_map<uint32_t, defines::SNDCPState::E> m_sndcpStateTable;
             std::unordered_map<uint32_t, Timer> m_sndcpReadyTimers;
             std::unordered_map<uint32_t, Timer> m_sndcpStandbyTimers;
+
+            bool m_inbound;
 
             bool m_dumpPDUData;
             bool m_repeatPDU;
@@ -174,14 +178,16 @@ namespace p25
 
             /**
              * @brief Helper used to process conventional data registration from PDU data.
-             * @returns bool True, if SNDCP control data was processed, otherwise false.
+             * @param pduUserData Buffer containing user data to transmit.
+             * @returns bool True, if conventional data registration data was processed, otherwise false.
              */
-            bool processConvDataReg();
+            bool processConvDataReg(const uint8_t* pduUserData);
             /**
              * @brief Helper used to process SNDCP control data from PDU data.
+             * @param pduUserData Buffer containing user data to transmit.
              * @returns bool True, if SNDCP control data was processed, otherwise false.
              */
-            bool processSNDCPControl();
+            bool processSNDCPControl(const uint8_t* pduUserData);
 
             /**
              * @brief Write data processed from RF to the network.

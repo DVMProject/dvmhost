@@ -184,6 +184,8 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
 
     // handle individual DUIDs
     if (duid == DUID::TSDU) {
+        m_inbound = true;
+
         if (m_p25->m_rfState != RS_RF_DATA) {
             m_p25->m_rfState = RS_RF_DATA;
         }
@@ -666,6 +668,7 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
             m_p25->writeRF_Nulls();
         }
 
+        m_inbound = false;
         m_p25->m_rfState = prevRfState;
         return true;
     }
@@ -1201,6 +1204,7 @@ ControlSignaling::ControlSignaling(Control* p25, bool dumpTSBKData, bool debug, 
     m_disableGrantSrcIdCheck(false),
     m_redundantImmediate(true),
     m_redundantGrant(false),
+    m_inbound(false),
     m_dumpTSBK(dumpTSBKData),
     m_verbose(verbose),
     m_debug(debug)
@@ -1299,7 +1303,7 @@ void ControlSignaling::writeRF_TDULC(lc::TDULC* lc, bool noNetwork)
     lc->encode(data + 2U);
 
     // Add busy bits
-    P25Utils::addBusyBits(data + 2U, P25_TDULC_FRAME_LENGTH_BITS, true, true);
+    P25Utils::addStatusBits(data + 2U, P25_TDULC_FRAME_LENGTH_BITS, false);
 
     m_p25->m_rfTimeout.stop();
 
@@ -1338,7 +1342,7 @@ void ControlSignaling::writeNet_TDULC(lc::TDULC* lc)
     lc->encode(buffer + 2U);
 
     // Add busy bits
-    P25Utils::addBusyBits(buffer + 2U, P25_TDULC_FRAME_LENGTH_BITS, true, true);
+    P25Utils::addStatusBits(buffer + 2U, P25_TDULC_FRAME_LENGTH_BITS, false);
 
     m_p25->addFrame(buffer, P25_TDULC_FRAME_LENGTH_BYTES + 2U, true);
 
@@ -1394,10 +1398,11 @@ void ControlSignaling::writeRF_TSDU_SBF(lc::TSBK* tsbk, bool noNetwork, bool for
     }
 
     // Add busy bits
-    P25Utils::addBusyBits(data + 2U, P25_TSDU_FRAME_LENGTH_BITS, true, false);
+    P25Utils::addStatusBits(data + 2U, P25_TSDU_FRAME_LENGTH_BITS, m_inbound, true);
+    P25Utils::addTrunkSlotStatusBits(data + 2U, P25_TSDU_FRAME_LENGTH_BITS);
 
     // Set first busy bits to 1,1
-    P25Utils::setBusyBits(data + 2U, P25_SS0_START, true, true);
+    P25Utils::setStatusBits(data + 2U, P25_SS0_START, true, true);
 
     if (!noNetwork)
         writeNetworkRF(tsbk, data + 2U, true);
@@ -1455,10 +1460,11 @@ void ControlSignaling::writeNet_TSDU(lc::TSBK* tsbk)
     tsbk->encode(buffer + 2U);
 
     // Add busy bits
-    P25Utils::addBusyBits(buffer + 2U, P25_TSDU_FRAME_LENGTH_BYTES, true, false);
+    P25Utils::addStatusBits(buffer + 2U, P25_TSDU_FRAME_LENGTH_BYTES, false, true);
+    P25Utils::addTrunkSlotStatusBits(buffer + 2U, P25_TSDU_FRAME_LENGTH_BYTES);
 
     // Set first busy bits to 1,1
-    P25Utils::setBusyBits(buffer + 2U, P25_SS0_START, true, true);
+    P25Utils::setStatusBits(buffer + 2U, P25_SS0_START, true, true);
 
     m_p25->addFrame(buffer, P25_TSDU_FRAME_LENGTH_BYTES + 2U, true);
 
@@ -1548,10 +1554,8 @@ void ControlSignaling::writeRF_TSDU_MBF(lc::TSBK* tsbk)
         P25Utils::encode(tsdu, data + 2U, 114U, 720U);
 
         // Add busy bits
-        P25Utils::addBusyBits(data + 2U, P25_TSDU_TRIPLE_FRAME_LENGTH_BITS, true, false);
-
-        // Add idle bits
-        P25Utils::addIdleBits(data + 2U, P25_TSDU_TRIPLE_FRAME_LENGTH_BITS, true, true);
+        P25Utils::addStatusBits(data + 2U, P25_TSDU_TRIPLE_FRAME_LENGTH_BITS, m_inbound, true);
+        P25Utils::addTrunkSlotStatusBits(data + 2U, P25_TSDU_TRIPLE_FRAME_LENGTH_BITS);
 
         data[0U] = modem::TAG_DATA;
         data[1U] = 0x00U;
@@ -2855,10 +2859,10 @@ void ControlSignaling::writeNet_TSDU_From_RF(lc::TSBK* tsbk, uint8_t* data)
     tsbk->encode(data);
 
     // Add busy bits
-    P25Utils::addBusyBits(data, P25_TSDU_FRAME_LENGTH_BYTES, true, false);
+    P25Utils::addStatusBits(data, P25_TSDU_FRAME_LENGTH_BYTES, false);
 
     // Set first busy bits to 1,1
-    P25Utils::setBusyBits(data, P25_SS0_START, true, true);
+    P25Utils::setStatusBits(data, P25_SS0_START, true, true);
 }
 
 /* Helper to automatically inhibit a source ID on a denial. */

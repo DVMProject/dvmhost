@@ -67,9 +67,29 @@ namespace network
                  */
                 bool processFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint16_t pktSeq, uint32_t streamId, bool external = false);
 
+                /**
+                 * @brief Process a data frame from the virtual IP network.
+                 * @param data Network data buffer.
+                 * @param len Length of data.
+                 * @param alreaedyQueued Flag indicating the data frame being processed is already queued.
+                 */
+                void processPacketFrame(const uint8_t* data, uint32_t len, bool alreadyQueued = false);
+
             private:
                 FNENetwork* m_network;
                 TagP25Data *m_tag;
+
+                static uint8_t m_sendSeqNo;
+
+                /**
+                 * @brief Represents a queued data frame from the VTUN.
+                 */
+                class VTUNDataFrame {
+                public:
+                    uint8_t* buffer;
+                    uint32_t bufferLen;
+                };
+                std::deque<VTUNDataFrame> m_dataFrames;
 
                 /**
                  * @brief Represents the receive status of a call.
@@ -130,6 +150,8 @@ namespace network
                 typedef std::pair<const uint32_t, RxStatus*> StatusMapPair;
                 std::unordered_map<uint32_t, RxStatus*> m_status;
 
+                std::unordered_map<uint32_t, uint32_t> m_arpTable;
+
                 bool m_debug;
 
                 /**
@@ -142,6 +164,34 @@ namespace network
                  * @param peerId Peer ID.
                  */
                 void dispatchToFNE(uint32_t peerId);
+                /**
+                 * @brief Helper to dispatch PDU user data back to the FNE network.
+                 * @param dataHeader Instance of a PDU data header.
+                 * @param extendedAddress Flag indicating whether or not to extended addressing is in use.
+                 * @param pduUserData Buffer containing user data to transmit.
+                 */
+                void dispatchUserFrameToFNE(p25::data::DataHeader& dataHeader, bool extendedAddress, uint8_t* pduUserData);
+
+                /**
+                 * @brief Helper used to process SNDCP control data from PDU data.
+                 * @param status Instance of the RxStatus class.
+                 * @returns bool True, if SNDCP control data was processed, otherwise false.
+                 */
+                bool processSNDCPControl(RxStatus* status);
+
+                /**
+                 * @brief Helper write ARP request to the network.
+                 * @param addr IP Address.
+                 */
+                void write_PDU_ARP(uint32_t addr);
+                /**
+                 * @brief Helper write ARP reply to the network.
+                 * @param targetAddr Target IP Address.
+                 * @param requestorLlid Requestor Logical Link Address.
+                 * @param requestorAddr Requestor IP Address.
+                 * @param targetLlId Target Logical Link Address.
+                 */
+                void write_PDU_ARP_Reply(uint32_t targetAddr, uint32_t requestorLlid, uint32_t requestorAddr, uint32_t targetLlid = 0U);
 
                 /**
                  * @brief Helper to write user data as a P25 PDU packet.
@@ -167,6 +217,25 @@ namespace network
                  */
                 bool writeNetwork(uint32_t peerId, network::PeerNetwork* peerNet, const p25::data::DataHeader& dataHeader, const uint8_t currentBlock, 
                     const uint8_t* data, uint32_t len, uint16_t pktSeq, uint32_t streamId, bool queueOnly = false);
+
+                /**
+                 * @brief Helper to determine if the logical link ID has an ARP entry.
+                 * @param llId Logical Link Address.
+                 * @returns bool True, if the logical link ID has an arp entry, otherwise false.
+                 */
+                bool hasARPEntry(uint32_t llId) const;
+                /**
+                 * @brief Helper to get the IP address for the given logical link ID.
+                 * @param llId Logical Link Address.
+                 * @returns uint32_t Numerical IP address.
+                 */
+                uint32_t getIPAddress(uint32_t llId);
+                /**
+                 * @brief Helper to get the logical link ID granted to the given IP address.
+                 * @param addr Numerical IP address.
+                 * @returns uint32_t Logical Link Address.
+                 */
+                uint32_t getLLIdAddress(uint32_t addr);
             };
         } // namespace packetdata
     } // namespace callhandler

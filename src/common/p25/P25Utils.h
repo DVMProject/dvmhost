@@ -118,29 +118,37 @@ namespace p25
         }
 
         /**
-         * @brief Helper to set the busy status bits on P25 frame data.
+         * @brief Helper to set the status bits on P25 frame data.
          * @param data P25 frame data buffer.
          * @param ssOffset 
          * @param b1 Status Bit 1
          * @param b2 Status Bit 2
          */
-        static void setBusyBits(uint8_t* data, uint32_t ssOffset, bool b1, bool b2);
+        static void setStatusBits(uint8_t* data, uint32_t ssOffset, bool b1, bool b2);
         /**
-         * @brief Helper to add the busy status bits on P25 frame data.
+         * @brief Helper to add the status bits on P25 frame data.
+         *  This appropriately sets the status bits for the P25 frame, starting with 1,0 and then
+         *  properly setting 0,1 for inbound traffic, or 1,1 for idle (or 1,0 for control channels).
          * @param data P25 frame data buffer.
          * @param length 
-         * @param b1 Status Bit 1
-         * @param b2 Status Bit 2
+         * @param inbound Flag indicating inbound channel is busy.
+         * @param control Flag indicating the channel is a control channel.
          */
-        static void addBusyBits(uint8_t* data, uint32_t length, bool b1, bool b2);
+        static void addStatusBits(uint8_t *data, uint32_t length, bool inbound, bool control = false);
         /**
          * @brief Helper to add the idle status bits on P25 frame data.
+         *  This sets the status bits to 1,0 interleaved every 5th status bit pair.
+         * @param data P25 frame data buffer.
+         * @param length
+         */
+        static void addIdleStatusBits(uint8_t* data, uint32_t length);
+        /**
+         * @brief Helper to add the trunk start slot status bits on P25 frame data.
+         *  This sets the status bits to 1,1 interleaved every 5th status bit pair.
          * @param data P25 frame data buffer.
          * @param length 
-         * @param b1 Status Bit 1
-         * @param b2 Status Bit 2
          */
-        static void addIdleBits(uint8_t* data, uint32_t length, bool b1, bool b2);
+        static void addTrunkSlotStatusBits(uint8_t* data, uint32_t length);
 
         /**
          * @brief Decode bit interleaving.

@@ -205,6 +205,8 @@ namespace p25
             bool m_redundantImmediate;
             bool m_redundantGrant;
 
+            bool m_inbound;
+
             bool m_dumpTSBK;
 
             bool m_verbose;

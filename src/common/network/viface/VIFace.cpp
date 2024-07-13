@@ -19,6 +19,7 @@ using namespace network::viface;
 #include <sstream>
 #include <fstream>
 #include <iomanip>
+#include <random>
 
 #include <cassert>
 #include <cstring>
@@ -332,7 +333,7 @@ VIFace::VIFace(std::string name, bool tap, int id) :
         throw std::runtime_error("Unable to create IPv4 socket channel to the NET kernel.");
     }
 
-    // Set id
+    // set id
     if (id < 0) {
         m_id = m_idSeq;
         m_idSeq++;
@@ -543,6 +544,30 @@ bool VIFace::write(const uint8_t* buffer, uint32_t length, ssize_t* lenWritten)
     return result;
 }
 
+/* Set the MAC address of the virtual interface to a random value. */
+
+void VIFace::setRandomMAC()
+{
+    // generate random MAC
+    std::random_device rd;
+    std::mt19937 mt(rd());
+
+    std::ostringstream addr;
+    addr << std::hex << std::setfill('0');
+    for (int i = 0; i < 6; i++) {
+        uint8_t macByte = 0U;
+        std::uniform_int_distribution<uint8_t> dist(1U, 254U);
+        macByte = dist(mt);
+
+        addr << std::setw(2) << (uint8_t)(0xFFU & macByte);
+        if (i != 5) {
+            addr << ":";
+        }
+    }
+
+    m_mac = addr.str();
+}
+
 /* Set the MAC address of the virtual interface. */
 
 void VIFace::setMAC(std::string mac)
@@ -567,7 +592,7 @@ std::string VIFace::getMAC() const
     std::ostringstream addr;
     addr << std::hex << std::setfill('0');
     for (int i = 0; i < 6; i++) {
-        addr << std::setw(2) << (uint8_t)(0xFF & ifr.ifr_hwaddr.sa_data[i]);
+        addr << std::setw(2) << (uint8_t)(0xFFU & ifr.ifr_hwaddr.sa_data[i]);
         if (i != 5) {
             addr << ":";
         }

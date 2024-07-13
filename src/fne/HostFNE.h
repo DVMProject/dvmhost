@@ -20,6 +20,7 @@
 #include "common/lookups/RadioIdLookup.h"
 #include "common/lookups/TalkgroupRulesLookup.h"
 #include "common/lookups/PeerListLookup.h"
+#include "common/network/viface/VIFace.h"
 #include "common/yaml/Yaml.h"
 #include "common/Timer.h"
 #include "network/FNENetwork.h"
@@ -52,6 +53,14 @@ namespace network { namespace callhandler { class HOST_SW_API TagNXDNData; } }
 class HOST_SW_API HostFNE {
 public:
     /**
+     * @brief Virtual Network Packet Data Digital Mode
+     */
+    enum PacketDataMode {
+        DMR,            //! Digital Mobile Radio
+        PROJECT25       //! Project 25
+    };
+
+    /**
      * @brief Initializes a new instance of the HostFNE class.
      * @param confFile Full-path to the configuration file.
      */
@@ -79,6 +88,10 @@ private:
     friend class network::callhandler::TagNXDNData;
     network::FNENetwork* m_network;
     network::DiagNetwork* m_diagNetwork;
+
+    bool m_vtunEnabled;
+    PacketDataMode m_packetDataMode;
+    network::viface::VIFace* m_tun;
 
     bool m_dmrEnabled;
     bool m_p25Enabled;
@@ -122,6 +135,12 @@ private:
      * @returns bool True, if network connectivity was initialized, otherwise false.
      */
     bool createPeerNetworks();
+
+    /**
+     * @brief Initializes virtual networking.
+     * @returns bool True, if network connectivity was initialized, otherwise false.
+     */
+    bool createVirtualNetworking();
 
     /**
      * @brief Processes any peer network traffic.

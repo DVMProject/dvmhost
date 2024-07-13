@@ -122,6 +122,10 @@ namespace network
             bool write(const uint8_t* buffer, uint32_t length, ssize_t* lenWritten = nullptr);
 
             /**
+             * @brief Set the MAC address of the virtual interface to a random value.
+             */
+            void setRandomMAC();
+            /**
              * @brief Set the MAC address of the virtual interface.
              *
              *  The format of the MAC address is verified, but is just until up()

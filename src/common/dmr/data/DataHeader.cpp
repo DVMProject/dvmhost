@@ -418,6 +418,22 @@ uint32_t DataHeader::getPacketLength() const
     }
 }
 
+/* Gets the total length in bytes of entire PDU. */
+
+uint32_t DataHeader::getPDULength() const
+{
+    if (m_DPF == DPF::RESPONSE) {
+        return 0U; // responses have no packet length as they are header only
+    }
+
+    if (m_DPF == DPF::CONFIRMED_DATA) {
+        return DMR_PDU_CONFIRMED_DATA_LENGTH_BYTES * m_blocksToFollow;
+    }
+    else {
+        return DMR_PDU_UNCONFIRMED_LENGTH_BYTES * m_blocksToFollow;
+    }
+}
+
 /* Gets the raw header data. */
 
 uint32_t DataHeader::getData(uint8_t* buffer) const

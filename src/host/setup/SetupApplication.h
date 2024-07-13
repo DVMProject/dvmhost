@@ -63,7 +63,7 @@ protected:
                 nid->encode(data + 2U, DUID::TDU);
 
                 // Add busy bits
-                p25::P25Utils::addBusyBits(data + 2U, P25_TDU_FRAME_LENGTH_BITS, true, true);
+                p25::P25Utils::addStatusBits(data + 2U, P25_TDU_FRAME_LENGTH_BITS, false);
 
                 data[0U] = modem::TAG_EOT;
                 data[1U] = 0x00U;

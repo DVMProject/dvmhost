@@ -21,6 +21,7 @@
 #include "FNEMain.h"
 
 using namespace network;
+using namespace network::viface;
 using namespace lookups;
 
 #include <cstdio>
@@ -35,6 +36,7 @@ using namespace lookups;
 // ---------------------------------------------------------------------------
 
 #define IDLE_WARMUP_MS 5U
+#define DEFAULT_MTU_SIZE 496
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -47,6 +49,9 @@ HostFNE::HostFNE(const std::string& confFile) :
     m_conf(),
     m_network(nullptr),
     m_diagNetwork(nullptr),
+    m_vtunEnabled(false),
+    m_packetDataMode(PacketDataMode::PROJECT25),
+    m_tun(nullptr),
     m_dmrEnabled(false),
     m_p25Enabled(false),
     m_nxdnEnabled(false),
@@ -171,6 +176,11 @@ int HostFNE::run()
     if (!ret)
         return EXIT_FAILURE;
 
+    // initialize virtual networking
+    ret = createVirtualNetworking();
+    if (!ret)
+        return EXIT_FAILURE;
+
     ::LogInfoEx(LOG_HOST, "FNE is up and running");
 
     StopWatch stopWatch;
@@ -206,6 +216,38 @@ int HostFNE::run()
         diagNetworkLoop.run();
         diagNetworkLoop.setName("dvmfne:diag-network-loop");
     }
+
+    ThreadFunc vtunLoop([&, this]() {
+        if (g_killed)
+            return;
+
+        if (!m_vtunEnabled)
+            return;
+
+        if (m_tun != nullptr) {
+            while (!g_killed) {
+                uint8_t packet[DEFAULT_MTU_SIZE];
+                ::memset(packet, 0x00U, DEFAULT_MTU_SIZE);
+
+                ssize_t len = m_tun->read(packet);
+                if (len > 0) {
+                    switch (m_packetDataMode) {
+                    case PacketDataMode::DMR:
+                        // TODO: not supported yet
+                        break;
+
+                    case PacketDataMode::PROJECT25:
+                        m_network->p25TrafficHandler()->processPacketFrame(packet, DEFAULT_MTU_SIZE);
+                        break;
+                    }
+                }
+
+                Thread::sleep(5U);
+            }
+        }
+    });
+    vtunLoop.run();
+    vtunLoop.setName("dvmfne:vtun-loop");
 
     // main execution loop
     while (!g_killed) {
@@ -250,6 +292,10 @@ int HostFNE::run()
         diagNetworkLoop.wait();
     }
 
+    if (m_vtunEnabled) {
+        vtunLoop.wait();
+    }
+
     if (m_network != nullptr) {
         m_network->close();
         delete m_network;
@@ -285,6 +331,14 @@ int HostFNE::run()
     if (m_peerListLookup != nullptr) {
         m_peerListLookup->stop();
         delete m_peerListLookup;
+    }
+
+    if (m_tun != nullptr) {
+        if (m_tun->isUp()) {
+            m_tun->down();
+        }
+
+        delete m_tun;
     }
 
     return EXIT_SUCCESS;
@@ -671,6 +725,49 @@ bool HostFNE::createPeerNetworks()
             if (network != nullptr)
                 m_peerNetworks[identity] = network;
         }
+    }
+
+    return true;
+}
+
+/* Initializes virtual networking. */
+
+bool HostFNE::createVirtualNetworking()
+{
+    yaml::Node vtunConf = m_conf["vtun"];
+
+    bool vtunEnabled = vtunConf["enabled"].as<bool>(false);
+    if (vtunEnabled) {
+        m_vtunEnabled = vtunEnabled;
+
+        std::string vtunName = vtunConf["interfaceName"].as<std::string>("fne0");
+        std::string ipv4Address = vtunConf["address"].as<std::string>("192.168.1.254");
+        std::string ipv4Netmask = vtunConf["netmask"].as<std::string>("255.255.255.0");
+        std::string ipv4Broadcast = vtunConf["broadcast"].as<std::string>("192.168.1.255");
+        std::string packetDataModeStr = vtunConf["digitalMode"].as<std::string>("p25");
+
+        if (packetDataModeStr == "dmr") {
+            m_packetDataMode = PacketDataMode::DMR;
+        } else {
+            m_packetDataMode = PacketDataMode::PROJECT25;
+        }
+
+        LogInfo("Virtual Network Parameters");
+        LogInfo("    Interface Name: %s", vtunName.c_str());
+        LogInfo("    Address: %s", ipv4Address.c_str());
+        LogInfo("    Netmask: %s", ipv4Netmask.c_str());
+        LogInfo("    Broadcast: %s", ipv4Broadcast.c_str());
+        LogInfo("    Digital Packet Mode: %s", packetDataModeStr.c_str());
+
+        // initialize networking
+        m_tun = new VIFace(vtunName, false);
+
+        m_tun->setIPv4(ipv4Address);
+        m_tun->setIPv4Netmask(ipv4Netmask);
+        m_tun->setIPv4Broadcast(ipv4Broadcast);
+        m_tun->setMTU(DEFAULT_MTU_SIZE);
+
+        m_tun->up();
     }
 
     return true;

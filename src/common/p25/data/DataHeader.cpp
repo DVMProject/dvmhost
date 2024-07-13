@@ -430,6 +430,22 @@ uint32_t DataHeader::getPacketLength() const
     }
 }
 
+/* Gets the total length in bytes of entire PDU. */
+
+uint32_t DataHeader::getPDULength() const
+{
+    if (m_fmt == PDUFormatType::RSP) {
+        return 0U; // responses have no packet length as they are header only
+    }
+
+    if (m_fmt == PDUFormatType::CONFIRMED) {
+        return P25_PDU_CONFIRMED_DATA_LENGTH_BYTES * m_blocksToFollow;
+    }
+    else {
+        return P25_PDU_UNCONFIRMED_LENGTH_BYTES * m_blocksToFollow;
+    }
+}
+
 /* Gets the raw header data. */
 
 uint32_t DataHeader::getData(uint8_t* buffer) const
@@ -457,6 +473,14 @@ uint32_t DataHeader::getExtAddrData(uint8_t* buffer) const
 void DataHeader::calculateLength(uint32_t packetLength)
 {
     uint32_t len = packetLength + 4U; // packet length + CRC32
+    if (m_fmt == PDUFormatType::UNCONFIRMED && m_sap == PDUSAP::EXT_ADDR) {
+        len += P25_PDU_HEADER_LENGTH_BYTES;
+    }
+
+    if (m_fmt == PDUFormatType::CONFIRMED && m_sap == PDUSAP::EXT_ADDR) {
+        len += 4U;
+    }
+
     uint32_t blockLen = (m_fmt == PDUFormatType::CONFIRMED) ? P25_PDU_CONFIRMED_DATA_LENGTH_BYTES : P25_PDU_UNCONFIRMED_LENGTH_BYTES;
 
     if (len > blockLen) {

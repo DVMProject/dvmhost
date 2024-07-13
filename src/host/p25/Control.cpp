@@ -1638,7 +1638,7 @@ void Control::writeRF_TDU(bool noNetwork, bool imm)
     m_nid.encode(data + 2U, DUID::TDU);
 
     // Add busy bits
-    P25Utils::addBusyBits(data + 2U, P25_TDU_FRAME_LENGTH_BITS, true, true);
+    P25Utils::addStatusBits(data + 2U, P25_TDU_FRAME_LENGTH_BITS, false);
 
     if (!noNetwork)
         m_voice->writeNetwork(data + 2U, DUID::TDU);
