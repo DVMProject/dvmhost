@@ -49,8 +49,10 @@ void Voice::resetRF()
 
     m_rfLC = lc;
     //m_rfLastHDU = lc;
+    m_rfLastHDUValid = false;
     m_rfLastLDU1 = lc;
     m_rfLastLDU2 = lc;
+    m_rfFirstLDU2 = true;
 
     m_rfFrames = 0U;
     m_rfErrs = 0U;
@@ -171,6 +173,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
             m_p25->m_rfLastSrcId = lc.getSrcId();
 
             m_rfLastHDU = lc;
+            m_rfLastHDUValid = true;
 
             if (m_p25->m_rfState == RS_RF_LISTENING) {
                 if (!m_p25->m_dedicatedControl) {
@@ -206,6 +209,10 @@ bool Voice::process(uint8_t* data, uint32_t len)
 
             uint32_t srcId = lc.getSrcId();
             uint32_t dstId = lc.getDstId();
+            if (dstId == 0U && !lc.isStandardMFId() && m_rfLastHDUValid) {
+                dstId = m_rfLastHDU.getDstId();
+            }
+
             bool group = lc.getGroup();
             bool encrypted = lc.getEncrypted();
 
@@ -767,12 +774,20 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 uint8_t nextMI[MI_LENGTH_BYTES];
                 ::memset(nextMI, 0x00U, MI_LENGTH_BYTES);
 
-                m_rfLastLDU2.getMI(lastMI);
-                getNextMI(lastMI, nextMI);
+                if (m_rfFirstLDU2) {
+                    m_rfFirstLDU2 = false;
+                    if (m_rfLastHDUValid) {
+                        m_rfLastHDU.getMI(lastMI);
+                    }
+                }
+                else {
+                    m_rfLastLDU2.getMI(lastMI);
+                }
 
+                getNextMI(lastMI, nextMI);
                 if (m_verbose && m_debug) {
-                    Utils::dump(1U, "Previous P25 HDU MI", lastMI, MI_LENGTH_BYTES);
-                    Utils::dump(1U, "Calculated next P25 HDU MI", nextMI, MI_LENGTH_BYTES);
+                    Utils::dump(1U, "Previous P25 MI", lastMI, MI_LENGTH_BYTES);
+                    Utils::dump(1U, "Calculated next P25 MI", nextMI, MI_LENGTH_BYTES);
                 }
 
                 m_rfLC.setMI(nextMI);
@@ -780,6 +795,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
             }
             else {
                 m_rfLastLDU2 = m_rfLC;
+                m_rfFirstLDU2 = false;
             }
 
             m_inbound = true;
@@ -1371,8 +1387,10 @@ Voice::Voice(Control* p25, bool debug, bool verbose) :
     m_audio(),
     m_rfLC(),
     m_rfLastHDU(),
+    m_rfLastHDUValid(false),
     m_rfLastLDU1(),
     m_rfLastLDU2(),
+    m_rfFirstLDU2(true),
     m_netLC(),
     m_netLastLDU1(),
     m_netLastFrameType(FrameType::DATA_UNIT),

@@ -98,8 +98,10 @@ namespace p25
 
             lc::LC m_rfLC;
             lc::LC m_rfLastHDU;
+            bool m_rfLastHDUValid;
             lc::LC m_rfLastLDU1;
             lc::LC m_rfLastLDU2;
+            bool m_rfFirstLDU2;
 
             lc::LC m_netLC;
             lc::LC m_netLastLDU1;
