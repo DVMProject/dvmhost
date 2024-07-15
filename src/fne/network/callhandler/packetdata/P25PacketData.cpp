@@ -331,9 +331,9 @@ void P25PacketData::processPacketFrame(const uint8_t* data, uint32_t len, bool a
     uint16_t pktLen = Utils::reverseEndian(ipHeader->ip_len); // bryanb: this could be problematic on different endianness
 
     LogMessage(LOG_NET, "P25, VTUN -> PDU IP Data, srcIp = %s, dstIp = %s, pktLen = %u, proto = %02X", srcIp, dstIp, pktLen, proto);
-
+#if DEBUG_P25_PDU_DATA
     Utils::dump(1U, "P25PacketData::processPacketFrame() packet", data, pktLen);
-
+#endif
     uint32_t dstLlId = getLLIdAddress(Utils::reverseEndian(ipHeader->ip_dst.s_addr));
     if (dstLlId == 0U) {
         LogMessage(LOG_NET, "P25, no ARP entry for, dstIp = %s", dstIp);
@@ -361,9 +361,9 @@ void P25PacketData::processPacketFrame(const uint8_t* data, uint32_t len, bool a
         uint8_t pduUserData[pduLength];
         ::memset(pduUserData, 0x00U, pduLength);
         ::memcpy(pduUserData + 4U, data, pktLen);
-
+#if DEBUG_P25_PDU_DATA
         Utils::dump(1U, "P25PacketData::processPacketFrame() pduUserData", pduUserData, pduLength);
-
+#endif
         dispatchUserFrameToFNE(rspHeader, true, pduUserData);
     }
 
@@ -464,9 +464,9 @@ void P25PacketData::dispatch(uint32_t peerId)
         uint8_t ipFrame[pktLen]; 
         ::memset(ipFrame, 0x00U, pktLen);
         ::memcpy(ipFrame, status->pduUserData + dataPktOffset, pktLen);
-
+#if DEBUG_P25_PDU_DATA
         Utils::dump(1U, "P25PacketData::dispatch() ipFrame", ipFrame, pktLen);
-
+#endif
         if (!m_network->m_host->m_tun->write(ipFrame, pktLen)) {
             LogError(LOG_NET, P25_PDU_STR ", failed to write IP frame to virtual tunnel, len %u", pktLen);
         }
@@ -652,9 +652,9 @@ void P25PacketData::write_PDU_ARP(uint32_t addr)
     __SET_UINT32(__IP_FROM_STR(fneIPv4), arpPacket, 11U);       // Sender Protocol Address
 
     __SET_UINT32(addr, arpPacket, 18U);                         // Target Protocol Address
-
+#if DEBUG_P25_PDU_DATA
     Utils::dump(1U, "P25PacketData::write_PDU_ARP() arpPacket", arpPacket, P25_PDU_ARP_PCKT_LENGTH);
-
+#endif
     LogMessage(LOG_NET, P25_PDU_STR ", ARP request, who has %s? tell %s (%u)", __IP_FROM_UINT(addr).c_str(), fneIPv4.c_str(), WUID_FNE);
 
     // assemble a P25 PDU frame header for transport...
@@ -708,9 +708,9 @@ void P25PacketData::write_PDU_ARP_Reply(uint32_t targetAddr, uint32_t requestorL
 
     __SET_UINT16(requestorLlid, arpPacket, 15U);                // Requestor Hardware Address
     __SET_UINT32(requestorAddr, arpPacket, 18U);                // Requestor Protocol Address
-
+#if DEBUG_P25_PDU_DATA
     Utils::dump(1U, "P25PacketData::write_PDU_ARP_Reply() arpPacket", arpPacket, P25_PDU_ARP_PCKT_LENGTH);
-
+#endif
     LogMessage(LOG_NET, P25_PDU_STR ", ARP reply, %s is at %u", __IP_FROM_UINT(targetAddr).c_str(), tgtLlid);
 
     // assemble a P25 PDU frame header for transport...
@@ -797,7 +797,9 @@ void P25PacketData::write_PDU_User(uint32_t peerId, network::PeerNetwork* peerNe
             edac::CRC::addCRC32(pduUserData, packetLength);
         }
 
-        Utils::dump("OSP PDU User Data", pduUserData, packetLength);
+        if (m_network->m_dumpDataPacket) {
+            Utils::dump("OSP PDU User Data", pduUserData, packetLength);
+        }
 
         // generate the PDU data
         for (uint32_t i = 0U; i < blocksToFollow; i++) {
