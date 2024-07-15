@@ -654,14 +654,19 @@ uint32_t Control::peekFrameLength()
     if (m_txQueue.isEmpty() && m_txImmQueue.isEmpty())
         return 0U;
 
-    uint8_t len = 0U;
+    uint8_t length[2U];
+    ::memset(length, 0x00U, 2U);
+
+    uint16_t len = 0U;
 
     // tx immediate queue takes priority
     if (!m_txImmQueue.isEmpty()) {
-        m_txImmQueue.peek(&len, 1U);
+        m_txImmQueue.peek(length, 2U);
+        len = (length[0U] << 8) + length[1U];
     }
     else {
-        m_txQueue.peek(&len, 1U);
+        m_txQueue.peek(length, 2U);
+        len = (length[0U] << 8) + length[1U];
     }
 
     return len;
@@ -676,15 +681,22 @@ uint32_t Control::getFrame(uint8_t* data)
     if (m_txQueue.isEmpty() && m_txImmQueue.isEmpty())
         return 0U;
 
-    uint8_t len = 0U;
+    uint8_t length[2U];
+    ::memset(length, 0x00U, 2U);
+
+    uint16_t len = 0U;
 
     // tx immediate queue takes priority
     if (!m_txImmQueue.isEmpty()) {
-        m_txImmQueue.get(&len, 1U);
+        m_txImmQueue.get(length, 2U);
+        len = (length[0U] << 8) + length[1U];
+
         m_txImmQueue.get(data, len);
     }
     else {
-        m_txQueue.get(&len, 1U);
+        m_txQueue.get(length, 2U);
+        len = (length[0U] << 8) + length[1U];
+
         m_txQueue.get(data, len);
     }
 
@@ -1133,9 +1145,15 @@ void Control::addFrame(const uint8_t* data, uint32_t length, bool net, bool imm)
             }
         }
 
-        uint8_t len = length;
-        m_txImmQueue.addData(&len, 1U);
-        m_txImmQueue.addData(data, len);
+        uint8_t lenBuffer[2U];
+        if (length > 255U)
+            lenBuffer[0U] = (length >> 8U) & 0xFFU;
+        else
+            lenBuffer[0U] = 0x00U;
+        lenBuffer[1U] = length & 0xFFU;
+        m_txImmQueue.addData(lenBuffer, 2U);
+
+        m_txImmQueue.addData(data, length);
         return;
     }
 
@@ -1154,9 +1172,16 @@ void Control::addFrame(const uint8_t* data, uint32_t length, bool net, bool imm)
         }
     }
 
-    uint8_t len = length;
-    m_txQueue.addData(&len, 1U);
-    m_txQueue.addData(data, len);
+
+    uint8_t lenBuffer[2U];
+    if (length > 255U)
+        lenBuffer[0U] = (length >> 8U) & 0xFFU;
+    else
+        lenBuffer[0U] = 0x00U;
+    lenBuffer[1U] = length & 0xFFU;
+    m_txQueue.addData(lenBuffer, 2U);
+
+    m_txQueue.addData(data, length);
 }
 
 /* Process a data frames from the network. */
