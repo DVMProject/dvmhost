@@ -77,8 +77,9 @@ public:
     /**
      * @brief Helper to sleep the current thread.
      * @param ms Time in milliseconds to sleep.
+     * @param us Time in microseconds to sleep.
      */
-    static void sleep(uint32_t ms);
+    static void sleep(uint32_t ms, uint32_t us = 0U);
 
 private:
     pthread_t m_thread;

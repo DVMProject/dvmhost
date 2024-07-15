@@ -84,9 +84,13 @@ void Thread::detach()
 
 /* Helper to sleep the current thread. */
 
-void Thread::sleep(uint32_t ms)
+void Thread::sleep(uint32_t ms, uint32_t us)
 {
-    ::usleep(ms * 1000);
+    if (us > 0U) {
+        ::usleep(us);
+    } else {
+        ::usleep(ms * 1000U);
+    }
 }
 
 // ---------------------------------------------------------------------------
