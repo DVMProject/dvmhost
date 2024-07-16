@@ -237,7 +237,7 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                         if (m_parrotFrames.size() > 0) {
                             for (auto& pkt : m_parrotFrames) {
                                 if (pkt.buffer != nullptr) {
-                                    delete pkt.buffer;
+                                    delete[] pkt.buffer;
                                 }
                             }
                             m_parrotFrames.clear();
@@ -492,7 +492,7 @@ void TagP25Data::playbackParrot()
             }
         }
 
-        delete pkt.buffer;
+        delete[] pkt.buffer;
     }
     Thread::sleep(180);
     m_parrotFrames.pop_front();

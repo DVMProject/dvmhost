@@ -58,7 +58,12 @@ LC::LC(const LC& data) : LC()
 
 LC::LC(const lc::LC& control, const data::LowSpeedData& lsd) : LC()
 {
+    if (m_control != nullptr)
+        delete m_control;
     m_control = new lc::LC(control);
+
+    if (m_lsd != nullptr)
+        delete m_lsd;
     m_lsd = new data::LowSpeedData(lsd);
 }
 
@@ -66,16 +71,13 @@ LC::LC(const lc::LC& control, const data::LowSpeedData& lsd) : LC()
 
 LC::~LC()
 {
-    if (m_control != nullptr) {
+    if (m_control != nullptr)
         delete m_control;
-    }
-    if (m_lsd != nullptr) {
+    if (m_lsd != nullptr)
         delete m_lsd;
-    }
     delete[] m_mi;
-    if (m_rsBuffer != nullptr) {
+    if (m_rsBuffer != nullptr)
         delete[] m_rsBuffer;
-    }
 }
 
 /* Equals operator. */
@@ -113,18 +115,16 @@ bool LC::decodeLDU1(const uint8_t* data, uint8_t* imbe)
     {
         case DFSIFrameType::LDU1_VOICE1:
             {
-                if (m_control != nullptr) {
+                if (m_control != nullptr)
                     delete m_control;
-                }
                 m_control = new lc::LC();
 
-                if (m_lsd != nullptr) {
-                    m_lsd = new data::LowSpeedData();
-                }
+                if (m_lsd != nullptr)
+                    delete m_lsd;
+                m_lsd = new data::LowSpeedData();
 
-                if (m_rsBuffer != nullptr) {
-                    delete m_rsBuffer;
-                }
+                if (m_rsBuffer != nullptr)
+                    delete[] m_rsBuffer;
                 m_rsBuffer = new uint8_t[P25_LDU_LC_FEC_LENGTH_BYTES];
                 ::memset(m_rsBuffer, 0x00U, P25_LDU_LC_FEC_LENGTH_BYTES);
 
@@ -424,9 +424,8 @@ bool LC::decodeLDU2(const uint8_t* data, uint8_t* imbe)
         case DFSIFrameType::LDU2_VOICE10:
             {
                 ::memset(m_mi, 0x00U, MI_LENGTH_BYTES);
-                if (m_lsd != nullptr) {
+                if (m_lsd != nullptr)
                     delete m_lsd;
-                }
                 m_lsd = new data::LowSpeedData();
 
                 m_rssi = data[6U];                                                  // RSSI
@@ -661,7 +660,11 @@ void LC::copy(const LC& data)
 
     m_rssi = data.m_rssi;
 
+    if (m_control != nullptr)
+        delete m_control;
     m_control = new lc::LC(*data.m_control);
+    if (m_lsd != nullptr)
+        delete m_lsd;
     m_lsd = new data::LowSpeedData(*data.m_lsd);
 
     delete[] m_mi;

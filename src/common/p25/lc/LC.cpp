@@ -360,6 +360,8 @@ bool LC::decodeLDU2(const uint8_t* data)
 
     m_algId = rs[9U];                                                               // Algorithm ID
     if (m_algId != ALGO_UNENCRYPT) {
+        if (m_mi != nullptr)
+            delete[] m_mi;
         m_mi = new uint8_t[MI_LENGTH_BYTES];
         ::memset(m_mi, 0x00U, MI_LENGTH_BYTES);
         ::memcpy(m_mi, rs, MI_LENGTH_BYTES);                                        // Message Indicator
@@ -371,6 +373,8 @@ bool LC::decodeLDU2(const uint8_t* data)
         }
     }
     else {
+        if (m_mi != nullptr)
+            delete[] m_mi;
         m_mi = new uint8_t[MI_LENGTH_BYTES];
         ::memset(m_mi, 0x00U, MI_LENGTH_BYTES);
 

@@ -161,6 +161,13 @@ Control::~Control()
     if (m_data != nullptr) {
         delete m_data;
     }
+
+    if (m_llaK != nullptr) {
+        delete[] m_llaK;
+    }
+    delete[] m_llaRS;
+    delete[] m_llaCRS;
+    delete[] m_llaKS;
 }
 
 /* Resets the data states for the RF interface. */

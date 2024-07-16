@@ -134,7 +134,7 @@ bool FrameQueue::write(const uint8_t* message, uint32_t length, uint32_t streamI
         ret = false;
     }
 
-    delete buffer;
+    delete[] buffer;
     return ret;
 }
 

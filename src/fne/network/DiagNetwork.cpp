@@ -84,6 +84,7 @@ void DiagNetwork::processNetwork()
         ::memcpy(req->buffer, buffer.get(), length);
 
         if (!Thread::runAsThread(m_fneNetwork, threadedNetworkRx, req)) {
+            delete[] req->buffer;
             delete req;
             return;
         }
@@ -310,7 +311,7 @@ void* DiagNetwork::threadedNetworkRx(void* arg)
         }
 
         if (req->buffer != nullptr)
-            delete req->buffer;
+            delete[] req->buffer;
         delete req;
     }
 

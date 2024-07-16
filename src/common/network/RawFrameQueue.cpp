@@ -162,7 +162,7 @@ void RawFrameQueue::deleteBuffers()
         if (buffer != nullptr) {
             // LogDebug(LOG_NET, "deleting buffer, addr %p len %u", buffer->buffer, buffer->length);
             if (buffer->buffer != nullptr) {
-                delete buffer->buffer;
+                delete[] buffer->buffer;
                 buffer->length = 0;
                 buffer->buffer = nullptr;
             }

@@ -241,6 +241,7 @@ void FNENetwork::processNetwork()
         ::memcpy(req->buffer, buffer.get(), length);
 
         if (!Thread::runAsThread(this, threadedNetworkRx, req)) {
+            delete[] req->buffer;
             delete req;
             return;
         }
@@ -1170,7 +1171,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
         }
 
         if (req->buffer != nullptr)
-            delete req->buffer;
+            delete[] req->buffer;
         delete req;
     }
 
