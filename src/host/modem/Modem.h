@@ -270,8 +270,8 @@ namespace modem
     const uint32_t MAX_ADC_OVERFLOW = 128U;
     const uint32_t MAX_DAC_OVERFLOW = 128U;
 
-    const uint32_t MODEM_POLL_TIME_IDLE = 100U;
-    const uint32_t MODEM_POLL_TIME_ACTIVE = 175U;
+    const uint32_t MODEM_POLL_TIME_IDLE = 125U;
+    const uint32_t MODEM_POLL_TIME_ACTIVE = 75U;
 
     /** @} */
 
