@@ -1621,6 +1621,10 @@ void Voice::writeNet_LDU1()
         uint8_t mi[MI_LENGTH_BYTES];
         ::memset(mi, 0x00U, MI_LENGTH_BYTES);
 
+        if (control.getAlgId() != ALGO_UNENCRYPT && control.getKId() != 0) {
+            control.getMI(m_lastMI);
+        }
+
         if (m_netLastLDU1.getAlgId() != ALGO_UNENCRYPT && m_netLastLDU1.getKId() != 0) {
             control.setAlgId(m_netLastLDU1.getAlgId());
             control.setKId(m_netLastLDU1.getKId());
