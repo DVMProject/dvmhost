@@ -483,18 +483,18 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
                 IOSP_EXT_FNCT* iosp = static_cast<IOSP_EXT_FNCT*>(tsbk.get());
                 if (m_verbose) {
                     LogMessage(LOG_RF, P25_TSDU_STR ", %s, op = $%02X, arg = %u, tgt = %u",
-                        tsbk->toString(true).c_str(), iosp->getExtendedFunction(), dstId, srcId);
+                        tsbk->toString(true).c_str(), iosp->getExtendedFunction(), srcId, dstId);
                 }
 
                 // generate activity log entry
                 if (iosp->getExtendedFunction() == ExtendedFunctions::CHECK_ACK) {
-                    ::ActivityLog("P25", true, "radio check response from %u to %u", dstId, srcId);
+                    ::ActivityLog("P25", true, "radio check response from %u to %u", srcId, dstId);
                 }
                 else if (iosp->getExtendedFunction() == ExtendedFunctions::INHIBIT_ACK) {
-                    ::ActivityLog("P25", true, "radio inhibit response from %u to %u", dstId, srcId);
+                    ::ActivityLog("P25", true, "radio inhibit response from %u to %u", srcId, dstId);
                 }
                 else if (iosp->getExtendedFunction() == ExtendedFunctions::UNINHIBIT_ACK) {
-                    ::ActivityLog("P25", true, "radio uninhibit response from %u to %u", dstId, srcId);
+                    ::ActivityLog("P25", true, "radio uninhibit response from %u to %u", srcId, dstId);
                 }
 
                 writeRF_TSDU_SBF(iosp, true);
@@ -910,6 +910,17 @@ bool ControlSignaling::processNetwork(uint8_t* data, uint32_t len, lc::LC& contr
                         if (m_verbose) {
                             LogMessage(LOG_NET, P25_TSDU_STR ", %s, serviceType = $%02X, arg = %u, tgt = %u",
                                 tsbk->toString(true).c_str(), iosp->getService(), srcId, dstId);
+                        }
+
+                        // generate activity log entry
+                        if (iosp->getExtendedFunction() == ExtendedFunctions::CHECK_ACK) {
+                            ::ActivityLog("P25", false, "radio check response from %u to %u", srcId, dstId);
+                        }
+                        else if (iosp->getExtendedFunction() == ExtendedFunctions::INHIBIT_ACK) {
+                            ::ActivityLog("P25", false, "radio inhibit response from %u to %u", srcId, dstId);
+                        }
+                        else if (iosp->getExtendedFunction() == ExtendedFunctions::UNINHIBIT_ACK) {
+                            ::ActivityLog("P25", false, "radio uninhibit response from %u to %u", srcId, dstId);
                         }
                     }
                     break;

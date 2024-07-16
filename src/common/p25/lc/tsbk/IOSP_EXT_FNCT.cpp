@@ -45,8 +45,8 @@ bool IOSP_EXT_FNCT::decode(const uint8_t* data, bool rawTSBK)
     ulong64_t tsbkValue = TSBK::toValue(tsbk);
 
     m_extendedFunction = (uint32_t)((tsbkValue >> 48) & 0xFFFFU);                   // Extended Function
-    m_dstId = (uint32_t)((tsbkValue >> 24) & 0xFFFFFFU);                            // Argument
-    m_srcId = (uint32_t)(tsbkValue & 0xFFFFFFU);                                    // Target Radio Address
+    m_srcId = (uint32_t)((tsbkValue >> 24) & 0xFFFFFFU);                            // Argument
+    m_dstId = (uint32_t)(tsbkValue & 0xFFFFFFU);                                    // Target Radio Address
 
     return true;
 }
