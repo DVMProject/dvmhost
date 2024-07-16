@@ -39,8 +39,6 @@
 #include <unordered_map>
 #include <mutex>
 
-#include <pthread.h>
-
 // ---------------------------------------------------------------------------
 //  Class Prototypes
 // ---------------------------------------------------------------------------
@@ -253,11 +251,8 @@ namespace network
      * @brief Represents the data required for a peer ACL update request thread.
      * @ingroup fne_network
      */
-    struct ACLUpdateRequest {
-        FNENetwork* network;    //! Instance of the FNENetwork class.
+    struct ACLUpdateRequest : thread_t {
         uint32_t peerId;        //! Peer ID for this request.
-
-        pthread_t thread;       //! Request Thread Handle.
     };
 
     // ---------------------------------------------------------------------------
@@ -268,8 +263,7 @@ namespace network
      * @brief Represents the data required for a network packet handler thread.
      * @ingroup fne_network
      */
-    struct NetPacketRequest {
-        FNENetwork* network;                //! Instance of the FNENetwork class.
+    struct NetPacketRequest : thread_t {
         uint32_t peerId;                    //! Peer ID for this request.
 
         sockaddr_storage address;           //! IP Address and Port. 
@@ -278,8 +272,6 @@ namespace network
         frame::RTPFNEHeader fneHeader;      //! RTP FNE Header
         int length = 0U;                    //! Length of raw data buffer
         uint8_t *buffer;                    //! Raw data buffer
-
-        pthread_t thread;                   //! Request Thread Handle.
     };
 
     // ---------------------------------------------------------------------------

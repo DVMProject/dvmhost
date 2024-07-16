@@ -12,6 +12,7 @@
 */
 #include "Defines.h"
 #include "Host.h"
+#include "HostMain.h"
 
 using namespace modem;
 
@@ -19,99 +20,219 @@ using namespace modem;
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
+/* Entry point to read NXDN frames from modem Rx queue. */
+
+void* Host::threadNXDNReader(void* arg)
+{
+    thread_t* th = (thread_t*)arg;
+    if (th != nullptr) {
+        ::pthread_detach(th->thread);
+
+        std::string threadName("nxdd:frame-r");
+        Host* host = static_cast<Host*>(th->obj);
+        if (host == nullptr) {
+            g_killed = true;
+            LogDebug(LOG_HOST, "[FAIL] %s", threadName.c_str());
+        }
+
+        if (g_killed) {
+            delete th;
+            return nullptr;
+        }
+
+        LogDebug(LOG_HOST, "[ OK ] %s", threadName.c_str());
+#ifdef _GNU_SOURCE
+        ::pthread_setname_np(th->thread, threadName.c_str());
+#endif // _GNU_SOURCE
+
+        if (host->m_nxdn != nullptr) {
+            while (!g_killed) {
+                // scope is intentional
+                {
+                    // ------------------------------------------------------
+                    //  -- Read from Modem Processing                     --
+                    // ------------------------------------------------------
+
+                    uint8_t data[NXDDEF::NXDN_FRAME_LENGTH_BYTES * 2U];
+                    auto afterReadCallback = [&]() {
+                        if (host->m_dmr != nullptr) {
+                            host->interruptDMRBeacon();
+                        }
+
+                        // if there is a P25 CC running; halt the CC
+                        if (host->m_p25 != nullptr) {
+                            if (host->m_p25->getCCRunning() && !host->m_p25->getCCHalted()) {
+                                host->interruptP25Control();
+                            }
+                        }
+                    };
+
+                    if (host->m_nxdn != nullptr) {
+                        uint8_t nextLen = host->m_modem->peekNXDNFrameLength();
+                        if (nextLen > 0U) {
+                            uint32_t len = host->m_modem->readNXDNFrame(data);
+                            if (len > 0U) {
+                                if (host->m_state == STATE_IDLE) {
+                                    // process NXDN frames
+                                    bool ret = host->m_nxdn->processFrame(data, len);
+                                    if (ret) {
+                                        host->m_modeTimer.setTimeout(host->m_rfModeHang);
+                                        host->setState(STATE_NXDN);
+
+                                        afterReadCallback();
+                                    }
+                                }
+                                else if (host->m_state == STATE_NXDN) {
+                                    // process NXDN frames
+                                    bool ret = host->m_nxdn->processFrame(data, len);
+                                    if (ret) {
+                                        host->m_modeTimer.start();
+                                    }
+                                }
+                                else if (host->m_state != HOST_STATE_LOCKOUT) {
+                                    LogWarning(LOG_HOST, "NXDN modem data received, state = %u", host->m_state);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (host->m_state != STATE_IDLE)
+                    Thread::sleep(m_activeTickDelay);
+                if (host->m_state == STATE_IDLE)
+                    Thread::sleep(m_idleTickDelay);
+            }
+        }
+
+        LogDebug(LOG_HOST, "[STOP] %s", threadName.c_str());
+        delete th;
+    }
+
+    return nullptr;
+}
+
+/* Entry point to write NXDN frames to modem. */
+
+void* Host::threadNXDNWriter(void* arg)
+{
+    thread_t* th = (thread_t*)arg;
+    if (th != nullptr) {
+        ::pthread_detach(th->thread);
+
+        std::string threadName("nxdd:frame-w");
+        Host* host = static_cast<Host*>(th->obj);
+        if (host == nullptr) {
+            g_killed = true;
+            LogDebug(LOG_HOST, "[FAIL] %s", threadName.c_str());
+        }
+
+        if (g_killed) {
+            delete th;
+            return nullptr;
+        }
+
+        LogDebug(LOG_HOST, "[ OK ] %s", threadName.c_str());
+#ifdef _GNU_SOURCE
+        ::pthread_setname_np(th->thread, threadName.c_str());
+#endif // _GNU_SOURCE
+
+        StopWatch stopWatch;
+        stopWatch.start();
+
+        if (host->m_nxdn != nullptr) {
+            while (!g_killed) {
+                host->m_nxdnTxWatchdogTimer.start();
+
+                uint32_t ms = stopWatch.elapsed();
+                stopWatch.start();
+                host->m_nxdnTxLoopMS = ms;
+
+                // scope is intentional
+                {
+                    std::lock_guard<std::mutex> lock(m_clockingMutex);
+
+                    // ------------------------------------------------------
+                    //  -- Write to Modem Processing                      --
+                    // ------------------------------------------------------
+
+                    uint8_t data[NXDDEF::NXDN_FRAME_LENGTH_BYTES * 2U];
+                    auto afterWriteCallback = [&]() {
+                        if (host->m_dmr != nullptr) {
+                            host->interruptDMRBeacon();
+                        }
+
+                        // if there is a P25 CC running; halt the CC
+                        if (host->m_p25 != nullptr) {
+                            if (host->m_p25->getCCRunning() && !host->m_p25->getCCHalted()) {
+                                host->interruptP25Control();
+                            }
+                        }
+                    };
+
+                    // check if there is space on the modem for NXDN frames,
+                    // if there is read frames from the NXDN controller and write it
+                    // to the modem
+                    if (host->m_nxdn != nullptr) {
+                        bool ret = host->m_modem->hasNXDNSpace();
+                        if (ret) {
+                            uint32_t nextLen = host->m_nxdn->peekFrameLength();
+                            if (host->m_nxdnCtrlChannel) {
+                                if (host->m_nxdnDedicatedTxTestTimer.hasExpired() && !host->m_nxdnDedicatedTxTestTimer.isPaused()) {
+                                    host->m_nxdnDedicatedTxTestTimer.pause();
+                                    if (!host->m_modem->hasTX() && host->m_modem->gotModemStatus() && host->m_state == STATE_NXDN && host->m_nxdn->getCCRunning()) {
+                                        LogError(LOG_HOST, "NXDN dedicated m_nxdn stopped transmitting, running = %u, halted = %u, frameLength = %u", host->m_nxdn->getCCRunning(), host->m_nxdn->getCCHalted(), nextLen);
+                                    }
+                                }
+                            }
+
+                            uint32_t len = host->m_nxdn->getFrame(data);
+                            if (len > 0U) {
+                                // if the state is idle; set to NXDN and start mode timer
+                                if (host->m_state == STATE_IDLE) {
+                                    host->m_modeTimer.setTimeout(host->m_netModeHang);
+                                    host->setState(STATE_NXDN);
+                                }
+
+                                // if the state is NXDN; write NXDN data
+                                if (host->m_state == STATE_NXDN) {
+                                    host->m_modem->writeNXDNFrame(data, len);
+
+                                    afterWriteCallback();
+
+                                    host->m_modeTimer.start();
+                                }
+
+                                host->m_lastDstId = host->m_nxdn->getLastDstId();
+                                host->m_lastSrcId = host->m_nxdn->getLastSrcId();
+                            }
+                        }
+                    }
+                }
+
+                if (host->m_state != STATE_IDLE)
+                    Thread::sleep(m_activeTickDelay);
+                if (host->m_state == STATE_IDLE)
+                    Thread::sleep(m_idleTickDelay);
+            }
+        }
+
+        LogDebug(LOG_HOST, "[STOP] %s", threadName.c_str());
+        delete th;
+    }
+
+    return nullptr;
+}
+
 /* Helper to interrupt a running NXDN control channel. */
 
-void Host::interruptNXDNControl(nxdn::Control* control)
+void Host::interruptNXDNControl()
 {
-    if (control != nullptr) {
-        LogDebug(LOG_HOST, "interrupt NXDN control, m_state = %u", m_state);
-        control->setCCHalted(true);         
+    if (m_nxdn != nullptr) {
+        LogDebug(LOG_HOST, "interrupt NXDN m_nxdn, m_state = %u", m_state);
+        m_nxdn->setCCHalted(true);
 
         if (m_nxdnBcastDurationTimer.isRunning() && !m_nxdnBcastDurationTimer.isPaused()) {
             m_nxdnBcastDurationTimer.pause();
-        }
-    }
-}
-
-/* Helper to read NXDN frames from modem. */
-
-void Host::readFramesNXDN(nxdn::Control* control, std::function<void()>&& afterReadCallback)
-{
-    uint8_t data[NXDDEF::NXDN_FRAME_LENGTH_BYTES * 2U];
-
-    if (control != nullptr) {
-        uint32_t len = m_modem->readNXDNFrame(data);
-        if (len > 0U) {
-            if (m_state == STATE_IDLE) {
-                // process NXDN frames
-                bool ret = control->processFrame(data, len);
-                if (ret) {
-                    m_modeTimer.setTimeout(m_rfModeHang);
-                    setState(STATE_NXDN);
-
-                    if (afterReadCallback != nullptr) {
-                        afterReadCallback();
-                    }
-                }
-            }
-            else if (m_state == STATE_NXDN) {
-                // process NXDN frames
-                bool ret = control->processFrame(data, len);
-                if (ret) {
-                    m_modeTimer.start();
-                }
-            }
-            else if (m_state != HOST_STATE_LOCKOUT) {
-                LogWarning(LOG_HOST, "NXDN modem data received, state = %u", m_state);
-            }
-        }
-    }
-}
-
-/* Helper to write NXDN frames to modem. */
-
-void Host::writeFramesNXDN(nxdn::Control* control, std::function<void()>&& afterWriteCallback)
-{
-    uint8_t data[NXDDEF::NXDN_FRAME_LENGTH_BYTES * 2U];
-
-    // check if there is space on the modem for NXDN frames,
-    // if there is read frames from the NXDN controller and write it
-    // to the modem
-    if (control != nullptr) {
-        bool ret = m_modem->hasNXDNSpace();
-        if (ret) {
-            uint32_t nextLen = control->peekFrameLength();
-            if (m_nxdnCtrlChannel) {
-                if (m_nxdnDedicatedTxTestTimer.hasExpired() && !m_nxdnDedicatedTxTestTimer.isPaused()) {
-                    m_nxdnDedicatedTxTestTimer.pause();
-                    if (!m_modem->hasTX() && m_modem->gotModemStatus() && m_state == STATE_NXDN && control->getCCRunning()) {
-                        LogError(LOG_HOST, "NXDN dedicated control stopped transmitting, running = %u, halted = %u, frameLength = %u", control->getCCRunning(), control->getCCHalted(), nextLen);
-                    }
-                }
-            }
-
-            uint32_t len = control->getFrame(data);
-            if (len > 0U) {
-                // if the state is idle; set to NXDN and start mode timer
-                if (m_state == STATE_IDLE) {
-                    m_modeTimer.setTimeout(m_netModeHang);
-                    setState(STATE_NXDN);
-                }
-
-                // if the state is NXDN; write NXDN data
-                if (m_state == STATE_NXDN) {
-                    m_modem->writeNXDNFrame(data, len);
-
-                    if (afterWriteCallback != nullptr) {
-                        afterWriteCallback();
-                    }
-
-                    m_modeTimer.start();
-                }
-
-                m_lastDstId = control->getLastDstId();
-                m_lastSrcId = control->getLastSrcId();
-            }
         }
     }
 }

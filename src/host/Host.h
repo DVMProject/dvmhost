@@ -44,6 +44,9 @@
 #include <string>
 #include <unordered_map>
 #include <functional>
+#include <mutex>
+
+#include <pthread.h>
 
 // ---------------------------------------------------------------------------
 //  Class Prototypes
@@ -190,13 +193,19 @@ private:
     uint32_t m_adjSiteLoopMS;
     Timer m_adjSiteLoopWatchdogTimer;
 
-    uint8_t m_activeTickDelay;
-    uint8_t m_idleTickDelay;
+    static std::mutex m_clockingMutex;
+
+    static uint8_t m_activeTickDelay;
+    static uint8_t m_idleTickDelay;
 
     friend class RESTAPI;
     std::string m_restAddress;
     uint16_t m_restPort;
     RESTAPI *m_RESTAPI;
+
+    std::unique_ptr<dmr::Control> m_dmr;
+    std::unique_ptr<p25::Control> m_p25;
+    std::unique_ptr<nxdn::Control> m_nxdn;
 
     /**
      * @brief Helper to generate the status of the host in JSON format.
@@ -235,14 +244,29 @@ private:
     void setState(uint8_t state);
 
     /**
-     * @brief Helper to create the state lock file.
-     * @param state 
+     * @brief Entry point to modem clocking thread.
+     * @param arg Instance of the thread_t structure.
+     * @returns void* (Ignore)
      */
-    void createLockFile(const char* state) const;
+    static void* threadModem(void* arg);
     /**
-     * @brief Helper to remove the state lock file.
+     * @brief Entry point to watchdog thread.
+     * @param arg Instance of the thread_t structure.
+     * @returns void* (Ignore)
      */
-    void removeLockFile() const;
+    static void* threadWatchdog(void* arg);
+    /**
+     * @brief Entry point to site data update thread.
+     * @param arg Instance of the thread_t structure.
+     * @returns void* (Ignore)
+     */
+    static void* threadSiteData(void* arg);
+    /**
+     * @brief Entry point to presence update thread.
+     * @param arg Instance of the thread_t structure.
+     * @returns void* (Ignore)
+     */
+    static void* threadPresence(void* arg);
 
     // Configuration (Host.Config.cpp)
     /**
@@ -263,75 +287,72 @@ private:
 
     // Digital Mobile Radio (Host.DMR.cpp)
     /**
-     * @brief Helper to interrupt a running DMR beacon.
-     * @param control Instance of the dmr::Control class.
+     * @brief Entry point to read DMR slot 1 frames from modem Rx queue.
+     * @param arg Instance of the thread_t structure.
+     * @returns void* (Ignore)
      */
-    void interruptDMRBeacon(dmr::Control* control);
+    static void* threadDMRReader1(void* arg);
+    /**
+     * @brief Entry point to write DMR slot 1 frames to modem.
+     * @param arg Instance of the thread_t structure.
+     * @returns void* (Ignore)
+     */
+    static void* threadDMRWriter1(void* arg);
+    /**
+     * @brief Entry point to read DMR slot 2 frames from modem Rx queue.
+     * @param arg Instance of the thread_t structure.
+     * @returns void* (Ignore)
+     */
+    static void* threadDMRReader2(void* arg);
+    /**
+     * @brief Entry point to write DMR slot 2 frames to modem.
+     * @param arg Instance of the thread_t structure.
+     * @returns void* (Ignore)
+     */
+    static void* threadDMRWriter2(void* arg);
 
     /**
-     * @brief Helper to read DMR slot 1 frames from modem.
-     * @param control Instance of the dmr::Control class.
-     * @param afterReadCallback Function callback after reading frames.
+     * @brief Helper to interrupt a running DMR beacon.
      */
-    void readFramesDMR1(dmr::Control* control, std::function<void()>&& afterReadCallback);
-    /**
-     * @brief Helper to write DMR slot 1 frames to modem.
-     * @param control Instance of the dmr::Control class.
-     * @param afterWriteCallback Function callback writing reading frames.
-     */
-    void writeFramesDMR1(dmr::Control* control, std::function<void()>&& afterWriteCallback);
-    /**
-     * @brief Helper to read DMR slot 2 frames from modem.
-     * @param control Instance of the dmr::Control class.
-     * @param afterReadCallback Function callback after reading frames.
-     */
-    void readFramesDMR2(dmr::Control* control, std::function<void()>&& afterReadCallback);
-    /**
-     * @brief Helper to write DMR slot 2 frames to modem.
-     * @param control Instance of the dmr::Control class.
-     * @param afterWriteCallback Function callback writing reading frames.
-     */
-    void writeFramesDMR2(dmr::Control* control, std::function<void()>&& afterWriteCallback);
+    void interruptDMRBeacon();
 
     // Project 25 (Host.P25.cpp)
     /**
-     * @brief Helper to interrupt a running P25 control channel.
-     * @param control Instance of the p25::Control class.
+     * @brief Entry point to read P25 frames from modem Rx queue.
+     * @param arg Instance of the thread_t structure.
+     * @returns void* (Ignore)
      */
-    void interruptP25Control(p25::Control* control);
+    static void* threadP25Reader(void* arg);
+    /**
+     * @brief Entry point to write P25 frames to modem.
+     * @param arg Instance of the thread_t structure.
+     * @returns void* (Ignore)
+     */
+    static void* threadP25Writer(void* arg);
 
     /**
-     * @brief Helper to read P25 frames from modem.
-     * @param control Instance of the p25::Control class.
-     * @param afterReadCallback Function callback after reading frames.
+     * @brief Helper to interrupt a running P25 control channel.
      */
-    void readFramesP25(p25::Control* control, std::function<void()>&& afterReadCallback);
-    /**
-     * @brief Helper to write P25 frames to modem.
-     * @param control Instance of the p25::Control class.
-     * @param afterWriteCallback Function callback writing reading frames.
-     */
-    void writeFramesP25(p25::Control* control, std::function<void()>&& afterWriteCallback);
+    void interruptP25Control();
 
     // Next Generation Digital Narrowband (Host.NXDN.cpp)
     /**
-     * @brief Helper to interrupt a running NXDN control channel.
-     * @param control Instance of the nxdn::Control class.
+     * @brief Entry point to read NXDN frames from modem Rx queue.
+     * @param arg Instance of the thread_t structure.
+     * @returns void* (Ignore)
      */
-    void interruptNXDNControl(nxdn::Control* control);
+    static void* threadNXDNReader(void* arg);
+    /**
+     * @brief Entry point to write NXDN frames to modem.
+     * @param arg Instance of the thread_t structure.
+     * @returns void* (Ignore)
+     */
+    static void* threadNXDNWriter(void* arg);
 
     /**
-     * @brief Helper to read NXDN frames from modem.
-     * @param control Instance of the nxdn::Control class.
-     * @param afterReadCallback Function callback after reading frames.
+     * @brief Helper to interrupt a running NXDN control channel.
      */
-    void readFramesNXDN(nxdn::Control* control, std::function<void()>&& afterReadCallback);
-    /**
-     * @brief Helper to write NXDN frames to modem.
-     * @param control Instance of the nxdn::Control class.
-     * @param afterWriteCallback Function callback writing reading frames.
-     */
-    void writeFramesNXDN(nxdn::Control* control, std::function<void()>&& afterWriteCallback);
+    void interruptNXDNControl();
 };
 
 #endif // __HOST_H__

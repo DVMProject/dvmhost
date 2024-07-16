@@ -139,7 +139,7 @@ Modem::Modem(port::IModemPort* port, bool duplex, bool rxInvert, bool txInvert, 
     m_rxDMRQueue2(dmrQueueSize, "Modem RX DMR2"),
     m_rxP25Queue(p25QueueSize, "Modem RX P25"),
     m_rxNXDNQueue(nxdnQueueSize, "Modem RX NXDN"),
-    m_statusTimer(1000U, 0U, 250U),
+    m_statusTimer(1000U, 0U, MODEM_POLL_TIME_IDLE),
     m_inactivityTimer(1000U, 8U),
     m_dmrSpace1(0U),
     m_dmrSpace2(0U),
@@ -149,6 +149,10 @@ Modem::Modem(port::IModemPort* port, bool duplex, bool rxInvert, bool txInvert, 
     m_cd(false),
     m_lockout(false),
     m_error(false),
+    m_dmr1ReadLock(),
+    m_dmr2ReadLock(),
+    m_p25ReadLock(),
+    m_nxdnReadLock(),
     m_ignoreModemConfigArea(ignoreModemConfigArea),
     m_flashDisabled(false),
     m_gotModemStatus(false),
@@ -507,7 +511,7 @@ bool Modem::open()
 
 void Modem::clock(uint32_t ms)
 {
-    // poll the modem status every 250ms
+    // poll the modem status
     m_statusTimer.clock(ms);
     if (m_statusTimer.hasExpired()) {
         getStatus();
@@ -550,8 +554,7 @@ void Modem::clock(uint32_t ms)
         case CMD_DMR_DATA1:
         {
             if (m_dmrEnabled) {
-                //if (m_trace)
-                //    Utils::dump(1U, "RX DMR Data 1", m_buffer, m_length);
+                std::lock_guard<std::mutex> lock(m_dmr1ReadLock);
 
                 if (m_rspDoubleLength) {
                     LogError(LOG_MODEM, "CMD_DMR_DATA1 double length?; len = %u", m_length);
@@ -575,8 +578,7 @@ void Modem::clock(uint32_t ms)
         case CMD_DMR_DATA2:
         {
             if (m_dmrEnabled) {
-                //if (m_trace)
-                //    Utils::dump(1U, "RX DMR Data 2", m_buffer, m_length);
+                std::lock_guard<std::mutex> lock(m_dmr2ReadLock);
 
                 if (m_rspDoubleLength) {
                     LogError(LOG_MODEM, "CMD_DMR_DATA2 double length?; len = %u", m_length);
@@ -600,8 +602,7 @@ void Modem::clock(uint32_t ms)
         case CMD_DMR_LOST1:
         {
             if (m_dmrEnabled) {
-                //if (m_trace)
-                //    Utils::dump(1U, "RX DMR Lost 1", m_buffer, m_length);
+                std::lock_guard<std::mutex> lock(m_dmr1ReadLock);
 
                 if (m_rspDoubleLength) {
                     LogError(LOG_MODEM, "CMD_DMR_LOST1 double length?; len = %u", m_length);
@@ -620,8 +621,7 @@ void Modem::clock(uint32_t ms)
         case CMD_DMR_LOST2:
         {
             if (m_dmrEnabled) {
-                //if (m_trace)
-                //    Utils::dump(1U, "RX DMR Lost 2", m_buffer, m_length);
+                std::lock_guard<std::mutex> lock(m_dmr2ReadLock);
 
                 if (m_rspDoubleLength) {
                     LogError(LOG_MODEM, "CMD_DMR_LOST2 double length?; len = %u", m_length);
@@ -641,8 +641,7 @@ void Modem::clock(uint32_t ms)
         case CMD_P25_DATA:
         {
             if (m_p25Enabled) {
-                //if (m_trace)
-                //    Utils::dump(1U, "RX P25 Data", m_buffer, m_length);
+                std::lock_guard<std::mutex> lock(m_p25ReadLock);
 
                 uint8_t length[2U];
                 if (m_length > 255U)
@@ -663,8 +662,7 @@ void Modem::clock(uint32_t ms)
         case CMD_P25_LOST:
         {
             if (m_p25Enabled) {
-                //if (m_trace)
-                //    Utils::dump(1U, "RX P25 Lost", m_buffer, m_length);
+                std::lock_guard<std::mutex> lock(m_p25ReadLock);
 
                 if (m_rspDoubleLength) {
                     LogError(LOG_MODEM, "CMD_P25_LOST double length?; len = %u", m_length);
@@ -684,8 +682,7 @@ void Modem::clock(uint32_t ms)
         case CMD_NXDN_DATA:
         {
             if (m_nxdnEnabled) {
-                //if (m_trace)
-                //    Utils::dump(1U, "RX NXDN Data", m_buffer, m_length);
+                std::lock_guard<std::mutex> lock(m_nxdnReadLock);
 
                 if (m_rspDoubleLength) {
                     LogError(LOG_MODEM, "CMD_NXDN_DATA double length?; len = %u", m_length);
@@ -706,8 +703,7 @@ void Modem::clock(uint32_t ms)
         case CMD_NXDN_LOST:
         {
             if (m_nxdnEnabled) {
-                //if (m_trace)
-                //    Utils::dump(1U, "RX NXDN Lost", m_buffer, m_length);
+                std::lock_guard<std::mutex> lock(m_nxdnReadLock);
 
                 if (m_rspDoubleLength) {
                     LogError(LOG_MODEM, "CMD_NXDN_LOST double length?; len = %u", m_length);
@@ -726,9 +722,6 @@ void Modem::clock(uint32_t ms)
         /** General */
         case CMD_GET_STATUS:
         {
-            //if (m_trace)
-            //   Utils::dump(1U, "Get Status", m_buffer, m_length);
-
             m_isHotspot = (m_buffer[3U] & 0x01U) == 0x01U;
 
             // override hotspot flag if we're forcing hotspot
@@ -897,21 +890,79 @@ void Modem::close()
     }
 }
 
+/* Get the frame data length for the next frame in the DMR Slot 1 ring buffer. */
+
+uint32_t Modem::peekDMRFrame1Length()
+{
+    if (m_rxDMRQueue1.isEmpty())
+        return 0U;
+
+    uint8_t len = 0U;
+    m_rxDMRQueue1.peek(&len, 1U);
+#if DEBUG_MODEM
+    LogDebug(LOG_MODEM, "Modem::peekDMRFrame1Length() len = %u, dataSize = %u", len, m_rxDMRQueue1.dataSize());
+#endif
+    // this ensures we never get in a situation where we have length stuck on the queue
+    if (m_rxDMRQueue1.dataSize() == 1U && len > m_rxDMRQueue1.dataSize()) {
+        m_rxDMRQueue1.get(&len, 1U); // ensure we pop the length off
+        return 0U;
+    }
+
+    if (m_rxDMRQueue1.dataSize() >= len) {
+        return len;
+    }
+
+    return 0U;
+}
+
 /* Reads DMR Slot 1 frame data from the DMR Slot 1 ring buffer. */
 
 uint32_t Modem::readDMRFrame1(uint8_t* data)
 {
     assert(data != nullptr);
+    std::lock_guard<std::mutex> lock(m_dmr1ReadLock);
 
     if (m_rxDMRQueue1.isEmpty())
         return 0U;
 
     uint8_t len = 0U;
     m_rxDMRQueue1.peek(&len, 1U);
+
+    // this ensures we never get in a situation where we have length stuck on the queue
+    if (m_rxDMRQueue1.dataSize() == 1U && len > m_rxDMRQueue1.dataSize()) {
+        m_rxDMRQueue1.get(&len, 1U); // ensure we pop the length off
+        return 0U;
+    }
+
     if (m_rxDMRQueue1.dataSize() >= len) {
         m_rxDMRQueue1.get(&len, 1U); // ensure we pop the length off
         m_rxDMRQueue1.get(data, len);
     
+        return len;
+    }
+
+    return 0U;
+}
+
+/* Get the frame data length for the next frame in the DMR Slot 2 ring buffer. */
+
+uint32_t Modem::peekDMRFrame2Length()
+{
+    if (m_rxDMRQueue2.isEmpty())
+        return 0U;
+
+    uint8_t len = 0U;
+    m_rxDMRQueue2.peek(&len, 1U);
+#if DEBUG_MODEM
+    LogDebug(LOG_MODEM, "Modem::peekDMRFrame2Length() len = %u, dataSize = %u", len, m_rxDMRQueue2.dataSize());
+#endif
+    // this ensures we never get in a situation where we have length stuck on the queue
+    if (m_rxDMRQueue2.dataSize() == 1U && len > m_rxDMRQueue2.dataSize()) {
+        m_rxDMRQueue2.get(&len, 1U); // ensure we pop the length off
+        return 0U;
+    }
+
+    if (m_rxDMRQueue2.dataSize() >= len) {
         return len;
     }
 
@@ -923,16 +974,53 @@ uint32_t Modem::readDMRFrame1(uint8_t* data)
 uint32_t Modem::readDMRFrame2(uint8_t* data)
 {
     assert(data != nullptr);
+    std::lock_guard<std::mutex> lock(m_dmr2ReadLock);
 
     if (m_rxDMRQueue2.isEmpty())
         return 0U;
 
     uint8_t len = 0U;
     m_rxDMRQueue2.peek(&len, 1U);
+
+    // this ensures we never get in a situation where we have length stuck on the queue
+    if (m_rxDMRQueue2.dataSize() == 1U && len > m_rxDMRQueue2.dataSize()) {
+        m_rxDMRQueue2.get(&len, 1U); // ensure we pop the length off
+        return 0U;
+    }
+
     if (m_rxDMRQueue2.dataSize() >= len) {
         m_rxDMRQueue2.get(&len, 1U); // ensure we pop the length off
         m_rxDMRQueue2.get(data, len);
 
+        return len;
+    }
+
+    return 0U;
+}
+
+/* Get the frame data length for the next frame in the P25 ring buffer. */
+
+uint32_t Modem::peekP25FrameLength()
+{
+    if (m_rxP25Queue.isEmpty())
+        return 0U;
+
+    uint8_t length[2U];
+    ::memset(length, 0x00U, 2U);
+    m_rxP25Queue.peek(length, 2U);
+
+    uint16_t len = 0U;
+    len = (length[0U] << 8) + length[1U];
+#if DEBUG_MODEM
+    LogDebug(LOG_MODEM, "Modem::peekP25FrameLength() len = %u, dataSize = %u", len, m_rxP25Queue.dataSize());
+#endif
+    // this ensures we never get in a situation where we have length stuck on the queue
+    if (m_rxP25Queue.dataSize() == 2U && len > m_rxP25Queue.dataSize()) {
+        m_rxP25Queue.get(length, 2U); // ensure we pop the length off
+        return 0U;
+    }
+
+    if (m_rxP25Queue.dataSize() >= len) {
         return len;
     }
 
@@ -944,6 +1032,7 @@ uint32_t Modem::readDMRFrame2(uint8_t* data)
 uint32_t Modem::readP25Frame(uint8_t* data)
 {
     assert(data != nullptr);
+    std::lock_guard<std::mutex> lock(m_p25ReadLock);
 
     if (m_rxP25Queue.isEmpty())
         return 0U;
@@ -971,17 +1060,50 @@ uint32_t Modem::readP25Frame(uint8_t* data)
     return 0U;
 }
 
+/* Get the frame data length for the next frame in the NXDN ring buffer. */
+
+uint32_t Modem::peekNXDNFrameLength()
+{
+    if (m_rxNXDNQueue.isEmpty())
+        return 0U;
+
+    uint8_t len = 0U;
+    m_rxNXDNQueue.peek(&len, 1U);
+#if DEBUG_MODEM
+    LogDebug(LOG_MODEM, "Modem::peekNXDNFrameLength() len = %u, dataSize = %u", len, m_rxNXDNQueue.dataSize());
+#endif
+    // this ensures we never get in a situation where we have length stuck on the queue
+    if (m_rxNXDNQueue.dataSize() == 1U && len > m_rxNXDNQueue.dataSize()) {
+        m_rxNXDNQueue.get(&len, 1U); // ensure we pop the length off
+        return 0U;
+    }
+
+    if (m_rxNXDNQueue.dataSize() >= len) {
+        return len;
+    }
+
+    return 0U;
+}
+
 /* Reads NXDN frame data from the NXDN ring buffer. */
 
 uint32_t Modem::readNXDNFrame(uint8_t* data)
 {
     assert(data != nullptr);
+    std::lock_guard<std::mutex> lock(m_nxdnReadLock);
 
     if (m_rxNXDNQueue.isEmpty())
         return 0U;
 
     uint8_t len = 0U;
     m_rxNXDNQueue.peek(&len, 1U);
+
+    // this ensures we never get in a situation where we have length stuck on the queue
+    if (m_rxNXDNQueue.dataSize() == 1U && len > m_rxNXDNQueue.dataSize()) {
+        m_rxNXDNQueue.get(&len, 1U); // ensure we pop the length off
+        return 0U;
+    }
+
     if (m_rxNXDNQueue.dataSize() >= len) {
         m_rxNXDNQueue.get(&len, 1U); // ensure we pop the length off
         m_rxNXDNQueue.get(data, len);
@@ -1569,6 +1691,12 @@ DVM_STATE Modem::getState() const
 
 bool Modem::setState(DVM_STATE state)
 {
+    if (state != STATE_IDLE) {
+        m_statusTimer.setTimeout(0U, MODEM_POLL_TIME_ACTIVE);
+    } else {
+        m_statusTimer.setTimeout(0U, MODEM_POLL_TIME_IDLE);
+    }
+
     uint8_t buffer[4U];
 
     buffer[0U] = DVM_SHORT_FRAME_START;

@@ -131,6 +131,18 @@ private:
      */
     bool createMasterNetwork();
     /**
+     * @brief Entry point to master FNE network thread.
+     * @param arg Instance of the thread_t structure.
+     * @returns void* (Ignore)
+     */
+    static void* threadMasterNetwork(void* arg);
+    /**
+     * @brief Entry point to master FNE diagnostics network thread.
+     * @param arg Instance of the thread_t structure.
+     * @returns void* (Ignore)
+     */
+    static void* threadDiagNetwork(void* arg);
+    /**
      * @brief Initializes peer FNE network connectivity.
      * @returns bool True, if network connectivity was initialized, otherwise false.
      */
@@ -141,6 +153,12 @@ private:
      * @returns bool True, if network connectivity was initialized, otherwise false.
      */
     bool createVirtualNetworking();
+    /**
+     * @brief Entry point to virtual networking thread.
+     * @param arg Instance of the thread_t structure.
+     * @returns void* (Ignore)
+     */
+    static void* threadVirtualNetworking(void* arg);
 
     /**
      * @brief Processes any peer network traffic.

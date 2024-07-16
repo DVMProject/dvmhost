@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2015,2016 Jonathan Naylor, G4KLX
- *  Copyright (C) 2023 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2023,2024 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -26,6 +26,19 @@
 #include <string>
 
 #include <pthread.h>
+
+// ---------------------------------------------------------------------------
+//  Structure Declaration
+// ---------------------------------------------------------------------------
+
+/**
+ * @brief Represents the data passed to a thread runner.
+ * @ingroup common
+ */
+struct thread_t {
+    void* obj;                          //! Object that created this thread.
+    pthread_t thread;                   //! Thread Handle.
+};
 
 // ---------------------------------------------------------------------------
 //  Class Declaration
@@ -75,7 +88,16 @@ public:
     virtual void detach();
 
     /**
-     * @brief Helper to sleep the current thread.
+     * @brief Executes the specified start routine to run as a thread.
+     * @param obj Instance of a object to pass to the threaded function.
+     * @param startRoutine Represents the function that executes on a thread.
+     * @param[out] thread Instance of the thread data.
+     * @returns bool True, if successful, otherwise error occurred.
+     */
+    static bool runAsThread(void* obj, void *(*startRoutine)(void *), thread_t* thread = nullptr);
+
+    /**
+     * @brief Suspends the current thread for the specified amount of time.
      * @param ms Time in milliseconds to sleep.
      * @param us Time in microseconds to sleep.
      */

@@ -34,6 +34,7 @@
 
 #include <string>
 #include <functional>
+#include <mutex>
 
 /**
  * @addtogroup modem
@@ -269,6 +270,9 @@ namespace modem
     const uint32_t MAX_ADC_OVERFLOW = 128U;
     const uint32_t MAX_DAC_OVERFLOW = 128U;
 
+    const uint32_t MODEM_POLL_TIME_IDLE = 100U;
+    const uint32_t MODEM_POLL_TIME_ACTIVE = 175U;
+
     /** @} */
 
     // ---------------------------------------------------------------------------
@@ -429,11 +433,21 @@ namespace modem
         void close();
 
         /**
+         * @brief Get the frame data length for the next frame in the DMR Slot 1 ring buffer.
+         * @returns uint32_t Length of frame data retrieved.
+         */
+        uint32_t peekDMRFrame1Length();
+        /**
          * @brief Reads DMR Slot 1 frame data from the DMR Slot 1 ring buffer.
          * @param[out] data Buffer to write frame data to.
          * @returns uint32_t Length of data read from ring buffer.
          */
         uint32_t readDMRFrame1(uint8_t* data);
+        /**
+         * @brief Get the frame data length for the next frame in the DMR Slot 2 ring buffer.
+         * @returns uint32_t Length of frame data retrieved.
+         */
+        uint32_t peekDMRFrame2Length();
         /**
          * @brief Reads DMR Slot 2 frame data from the DMR Slot 1 ring buffer.
          * @param[out] data Buffer to write frame data to.
@@ -441,11 +455,21 @@ namespace modem
          */
         uint32_t readDMRFrame2(uint8_t* data);
         /**
+         * @brief Get the frame data length for the next frame in the P25 ring buffer.
+         * @returns uint32_t Length of frame data retrieved.
+         */
+        uint32_t peekP25FrameLength();
+        /**
          * @brief Reads P25 frame data from the P25 ring buffer.
          * @param[out] data Buffer to write frame data to.
          * @returns uint32_t Length of data read from ring buffer.
          */
         uint32_t readP25Frame(uint8_t* data);
+        /**
+         * @brief Get the frame data length for the next frame in the NXDN ring buffer.
+         * @returns uint32_t Length of frame data retrieved.
+         */
+        uint32_t peekNXDNFrameLength();
         /**
          * @brief Reads NXDN frame data from the NXDN ring buffer.
          * @param[out] data Buffer to write frame data to.
@@ -762,6 +786,11 @@ namespace modem
         bool m_cd;
         bool m_lockout;
         bool m_error;
+
+        std::mutex m_dmr1ReadLock;
+        std::mutex m_dmr2ReadLock;
+        std::mutex m_p25ReadLock;
+        std::mutex m_nxdnReadLock;
 
         bool m_ignoreModemConfigArea;
         bool m_flashDisabled;

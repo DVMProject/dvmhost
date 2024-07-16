@@ -12,7 +12,6 @@
 #include "common/Log.h"
 #include "common/StopWatch.h"
 #include "common/Thread.h"
-#include "common/ThreadFunc.h"
 #include "network/callhandler/TagDMRData.h"
 #include "network/callhandler/TagP25Data.h"
 #include "network/callhandler/TagNXDNData.h"
@@ -28,6 +27,7 @@ using namespace lookups;
 #include <algorithm>
 #include <functional>
 
+#include <sys/utsname.h>
 #include <unistd.h>
 #include <pwd.h>
 
@@ -181,75 +181,29 @@ int HostFNE::run()
     if (!ret)
         return EXIT_FAILURE;
 
-    ::LogInfoEx(LOG_HOST, "FNE is up and running");
-
     StopWatch stopWatch;
     stopWatch.start();
 
-    // setup network loop threads
-    ThreadFunc networkLoop([&, this]() {
-        if (g_killed)
-            return;
+    /*
+    ** Initialize Threads
+    */
 
-        if (m_network != nullptr) {
-            while (!g_killed) {
-                m_network->processNetwork();
-                Thread::sleep(5U);
-            }
-        }
-    });
-    networkLoop.run();
-    networkLoop.setName("dvmfne:network-loop");
+    if (!Thread::runAsThread(this, threadMasterNetwork))
+        return EXIT_FAILURE;
+    if (!Thread::runAsThread(this, threadDiagNetwork))
+        return EXIT_FAILURE;
+    if (!Thread::runAsThread(this, threadVirtualNetworking))
+        return EXIT_FAILURE;
 
-    ThreadFunc diagNetworkLoop([&, this]() {
-        if (g_killed)
-            return;
+    /*
+    ** Main execution loop
+    */
 
-        if (m_diagNetwork != nullptr) {
-            while (!g_killed) {
-                m_diagNetwork->processNetwork();
-                Thread::sleep(5U);
-            }
-        }
-    });
-    if (m_useAlternatePortForDiagnostics) {
-        diagNetworkLoop.run();
-        diagNetworkLoop.setName("dvmfne:diag-network-loop");
-    }
+    struct utsname utsinfo;
+    ::memset(&utsinfo, 0, sizeof(utsinfo));
+    ::uname(&utsinfo);
 
-    ThreadFunc vtunLoop([&, this]() {
-        if (g_killed)
-            return;
-
-        if (!m_vtunEnabled)
-            return;
-
-        if (m_tun != nullptr) {
-            while (!g_killed) {
-                uint8_t packet[DEFAULT_MTU_SIZE];
-                ::memset(packet, 0x00U, DEFAULT_MTU_SIZE);
-
-                ssize_t len = m_tun->read(packet);
-                if (len > 0) {
-                    switch (m_packetDataMode) {
-                    case PacketDataMode::DMR:
-                        // TODO: not supported yet
-                        break;
-
-                    case PacketDataMode::PROJECT25:
-                        m_network->p25TrafficHandler()->processPacketFrame(packet, DEFAULT_MTU_SIZE);
-                        break;
-                    }
-                }
-
-                Thread::sleep(5U);
-            }
-        }
-    });
-    vtunLoop.run();
-    vtunLoop.setName("dvmfne:vtun-loop");
-
-    // main execution loop
+    ::LogInfoEx(LOG_HOST, "[ OK ] FNE is up and running on %s %s %s", utsinfo.sysname, utsinfo.release, utsinfo.machine);
     while (!g_killed) {
         uint32_t ms = stopWatch.elapsed();
 
@@ -287,15 +241,6 @@ int HostFNE::run()
     }
 
     // shutdown threads
-    networkLoop.wait();
-    if (m_useAlternatePortForDiagnostics) {
-        diagNetworkLoop.wait();
-    }
-
-    if (m_vtunEnabled) {
-        vtunLoop.wait();
-    }
-
     if (m_network != nullptr) {
         m_network->close();
         delete m_network;
@@ -629,6 +574,89 @@ bool HostFNE::createMasterNetwork()
     return true;
 }
 
+/* Entry point to master FNE network thread. */
+
+void* HostFNE::threadMasterNetwork(void* arg)
+{
+    thread_t* th = (thread_t*)arg;
+    if (th != nullptr) {
+        ::pthread_detach(th->thread);
+
+        std::string threadName("fne:network-loop");
+        HostFNE* fne = static_cast<HostFNE*>(th->obj);
+        if (fne == nullptr) {
+            g_killed = true;
+            LogDebug(LOG_HOST, "[FAIL] %s", threadName.c_str());
+        }
+
+        if (g_killed) {
+            delete th;
+            return nullptr;
+        }
+
+        LogDebug(LOG_HOST, "[ OK ] %s", threadName.c_str());
+#ifdef _GNU_SOURCE
+        ::pthread_setname_np(th->thread, threadName.c_str());
+#endif // _GNU_SOURCE
+
+        if (fne->m_network != nullptr) {
+            while (!g_killed) {
+                fne->m_network->processNetwork();
+                Thread::sleep(5U);
+            }
+        }
+
+        LogDebug(LOG_HOST, "[STOP] %s", threadName.c_str());
+        delete th;
+    }
+
+    return nullptr;
+}
+
+/* Entry point to master FNE diagnostics network thread. */
+
+void* HostFNE::threadDiagNetwork(void* arg)
+{
+    thread_t* th = (thread_t*)arg;
+    if (th != nullptr) {
+        ::pthread_detach(th->thread);
+
+        std::string threadName("fne:diag-network-loop");
+        HostFNE* fne = static_cast<HostFNE*>(th->obj);
+        if (fne == nullptr) {
+            g_killed = true;
+            LogDebug(LOG_HOST, "[FAIL] %s", threadName.c_str());
+        }
+
+        if (g_killed) {
+            delete th;
+            return nullptr;
+        }
+
+        if (!fne->m_useAlternatePortForDiagnostics) {
+            delete th;
+            return nullptr;
+        }
+
+        LogDebug(LOG_HOST, "[ OK ] %s", threadName.c_str());
+#ifdef _GNU_SOURCE
+        ::pthread_setname_np(th->thread, threadName.c_str());
+#endif // _GNU_SOURCE
+
+        if (fne->m_diagNetwork != nullptr) {
+            while (!g_killed) {
+                fne->m_diagNetwork->processNetwork();
+                Thread::sleep(5U);
+            }
+        }
+
+        LogDebug(LOG_HOST, "[STOP] %s", threadName.c_str());
+        delete th;
+    }
+
+    return nullptr;
+}
+
 /* Initializes peer FNE network connectivity. */
 
 bool HostFNE::createPeerNetworks()
@@ -771,6 +799,65 @@ bool HostFNE::createVirtualNetworking()
     }
 
     return true;
+}
+
+/* Entry point to virtual networking thread. */
+
+void* HostFNE::threadVirtualNetworking(void* arg)
+{
+    thread_t* th = (thread_t*)arg;
+    if (th != nullptr) {
+        ::pthread_detach(th->thread);
+
+        std::string threadName("fne:vtun-loop");
+        HostFNE* fne = static_cast<HostFNE*>(th->obj);
+        if (fne == nullptr) {
+            g_killed = true;
+            LogDebug(LOG_HOST, "[FAIL] %s", threadName.c_str());
+        }
+
+        if (g_killed) {
+            delete th;
+            return nullptr;
+        }
+
+        if (!fne->m_vtunEnabled) {
+            delete th;
+            return nullptr;
+        }
+
+        LogDebug(LOG_HOST, "[ OK ] %s", threadName.c_str());
+#ifdef _GNU_SOURCE
+        ::pthread_setname_np(th->thread, threadName.c_str());
+#endif // _GNU_SOURCE
+
+        if (fne->m_tun != nullptr) {
+            while (!g_killed) {
+                uint8_t packet[DEFAULT_MTU_SIZE];
+                ::memset(packet, 0x00U, DEFAULT_MTU_SIZE);
+
+                ssize_t len = fne->m_tun->read(packet);
+                if (len > 0) {
+                    switch (fne->m_packetDataMode) {
+                    case PacketDataMode::DMR:
+                        // TODO: not supported yet
+                        break;
+
+                    case PacketDataMode::PROJECT25:
+                        fne->m_network->p25TrafficHandler()->processPacketFrame(packet, DEFAULT_MTU_SIZE);
+                        break;
+                    }
+                }
+
+                Thread::sleep(5U);
+            }
+        }
+
+        LogDebug(LOG_HOST, "[STOP] %s", threadName.c_str());
+        delete th;
+    }
+
+    return nullptr;
 }
 
 /* Processes any peer network traffic. */

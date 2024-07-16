@@ -299,13 +299,13 @@ int main(int argc, char** argv)
         }
 
         if (g_signal == 2)
-            ::LogInfoEx(LOG_HOST, "Exited on receipt of SIGINT");
+            ::LogInfoEx(LOG_HOST, "[STOP] dvmhost:main SIGINT");
 
         if (g_signal == 15)
-            ::LogInfoEx(LOG_HOST, "Exited on receipt of SIGTERM");
+            ::LogInfoEx(LOG_HOST, "[STOP] dvmhost:main SIGTERM");
 
         if (g_signal == 1)
-            ::LogInfoEx(LOG_HOST, "Restarting on receipt of SIGHUP");
+            ::LogInfoEx(LOG_HOST, "[RSTR] dvmhost:main SIGHUP");
     } while (g_signal == 1);
 
     ::LogFinalise();

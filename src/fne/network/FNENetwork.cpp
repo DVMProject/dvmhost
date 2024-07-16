@@ -229,7 +229,6 @@ void FNENetwork::processNetwork()
         uint32_t peerId = fneHeader.getPeerId();
 
         NetPacketRequest* req = new NetPacketRequest();
-        req->network = this;
         req->peerId = peerId;
 
         req->address = address;
@@ -241,8 +240,7 @@ void FNENetwork::processNetwork()
         req->buffer = new uint8_t[length];
         ::memcpy(req->buffer, buffer.get(), length);
 
-        if (::pthread_create(&req->thread, NULL, threadedNetworkRx, req) != 0) {
-            LogError(LOG_NET, "Error returned from pthread_create, err: %d", errno);
+        if (!Thread::runAsThread(this, threadedNetworkRx, req)) {
             delete req;
             return;
         }
@@ -392,16 +390,21 @@ void* FNENetwork::threadedNetworkRx(void* arg)
 
         uint64_t now = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
-        FNENetwork* network = req->network;
+        FNENetwork* network = static_cast<FNENetwork*>(req->obj);
+        if (network == nullptr) {
+            delete req;
+            return nullptr;
+        }
+
         if (req->length > 0) {
             uint32_t peerId = req->fneHeader.getPeerId();
             uint32_t streamId = req->fneHeader.getStreamId();
 
             std::stringstream peerName;
             peerName << peerId << ":rx-pckt";
-            if (pthread_kill(req->thread, 0) == 0) {
-                ::pthread_setname_np(req->thread, peerName.str().c_str());
-            }
+#ifdef _GNU_SOURCE
+            ::pthread_setname_np(req->thread, peerName.str().c_str());
+#endif // _GNU_SOURCE
 
             // update current peer packet sequence and stream ID
             if (peerId > 0 && (network->m_peers.find(peerId) != network->m_peers.end()) && streamId != 0U) {
@@ -1314,21 +1317,20 @@ void FNENetwork::setupRepeaterLogin(uint32_t peerId, FNEPeerConnection* connecti
 void FNENetwork::peerACLUpdate(uint32_t peerId)
 {
     ACLUpdateRequest* req = new ACLUpdateRequest();
-    req->network = this;
     req->peerId = peerId;
 
     std::stringstream peerName;
     peerName << peerId << ":acl-update";
 
-    if (::pthread_create(&req->thread, NULL, threadedACLUpdate, req) != 0) {
-        LogError(LOG_NET, "Error returned from pthread_create, err: %d", errno);
+    if (!Thread::runAsThread(this, threadedACLUpdate, req)) {
         delete req;
         return;
     }
 
-    if (pthread_kill(req->thread, 0) == 0) {
-        ::pthread_setname_np(req->thread, peerName.str().c_str());
-    }
+    // pthread magic to rename the thread properly
+#ifdef _GNU_SOURCE
+    ::pthread_setname_np(req->thread, peerName.str().c_str());
+#endif // _GNU_SOURCE
 }
 
 /* Helper to send the ACL lists to the specified peer in a separate thread. */
@@ -1339,13 +1341,19 @@ void* FNENetwork::threadedACLUpdate(void* arg)
     if (req != nullptr) {
         ::pthread_detach(req->thread);
 
-        std::string peerIdentity = req->network->resolvePeerIdentity(req->peerId);
+        FNENetwork* network = static_cast<FNENetwork*>(req->obj);
+        if (network == nullptr) {
+            delete req;
+            return nullptr;
+        }
+
+        std::string peerIdentity = network->resolvePeerIdentity(req->peerId);
         LogInfoEx(LOG_NET, "PEER %u (%s) sending ACL list updates", req->peerId, peerIdentity.c_str());
 
-        req->network->writeWhitelistRIDs(req->peerId);
-        req->network->writeBlacklistRIDs(req->peerId);
-        req->network->writeTGIDs(req->peerId);
-        req->network->writeDeactiveTGIDs(req->peerId);
+        network->writeWhitelistRIDs(req->peerId);
+        network->writeBlacklistRIDs(req->peerId);
+        network->writeTGIDs(req->peerId);
+        network->writeDeactiveTGIDs(req->peerId);
 
         delete req;
     }

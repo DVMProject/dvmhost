@@ -28,6 +28,7 @@ using namespace lookups;
 #include <functional>
 #include <random>
 
+#include <sys/utsname.h>
 #include <unistd.h>
 #include <pwd.h>
 
@@ -152,8 +153,6 @@ int Dfsi::run()
     if (!ret)
         return EXIT_FAILURE;
 
-    ::LogInfoEx(LOG_HOST, "DFSI peer network is up and running");
-
     std::string dfsiModeStr = "Unknown";
 
     switch (dfsiMode) {
@@ -195,7 +194,15 @@ int Dfsi::run()
     StopWatch stopWatch;
     stopWatch.start();
 
-    // main execution loop
+    /*
+    ** Main execution loop
+    */
+
+    struct utsname utsinfo;
+    ::memset(&utsinfo, 0, sizeof(utsinfo));
+    ::uname(&utsinfo);
+
+    ::LogInfoEx(LOG_HOST, "[ OK ] DFSI is up and running on %s %s %s", utsinfo.sysname, utsinfo.release, utsinfo.machine);
     while (!g_killed) {
         uint32_t ms = stopWatch.elapsed();
 

@@ -72,7 +72,6 @@ void DiagNetwork::processNetwork()
         uint32_t peerId = fneHeader.getPeerId();
 
         NetPacketRequest* req = new NetPacketRequest();
-        req->network = m_fneNetwork;
         req->peerId = peerId;
 
         req->address = address;
@@ -84,8 +83,7 @@ void DiagNetwork::processNetwork()
         req->buffer = new uint8_t[length];
         ::memcpy(req->buffer, buffer.get(), length);
 
-        if (::pthread_create(&req->thread, NULL, threadedNetworkRx, req) != 0) {
-            LogError(LOG_NET, "Error returned from pthread_create, err: %d", errno);
+        if (!Thread::runAsThread(m_fneNetwork, threadedNetworkRx, req)) {
             delete req;
             return;
         }
@@ -150,16 +148,21 @@ void* DiagNetwork::threadedNetworkRx(void* arg)
     if (req != nullptr) {
         ::pthread_detach(req->thread);
 
-        FNENetwork* network = req->network;
+        FNENetwork* network = static_cast<FNENetwork*>(req->obj);
+        if (network == nullptr) {
+            delete req;
+            return nullptr;
+        }
+
         if (req->length > 0) {
             uint32_t peerId = req->fneHeader.getPeerId();
             uint32_t streamId = req->fneHeader.getStreamId();
 
             std::stringstream peerName;
             peerName << peerId << ":diag-rx-pckt";
-            if (pthread_kill(req->thread, 0) == 0) {
-                ::pthread_setname_np(req->thread, peerName.str().c_str());
-            }
+#ifdef _GNU_SOURCE
+            ::pthread_setname_np(req->thread, peerName.str().c_str());
+#endif // _GNU_SOURCE
 
             // update current peer packet sequence and stream ID
             if (peerId > 0 && (network->m_peers.find(peerId) != network->m_peers.end()) && streamId != 0U) {

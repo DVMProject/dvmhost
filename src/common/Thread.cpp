@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2015,2016 Jonathan Naylor, G4KLX
- *  Copyright (C) 2023 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2023,2024 Bryan Biedenkapp, N2PLL
  *
  */
 #include "Thread.h"
@@ -82,7 +82,25 @@ void Thread::detach()
     ::pthread_detach(m_thread);
 }
 
-/* Helper to sleep the current thread. */
+/* Executes the specified start routine to run as a thread. */
+
+bool Thread::runAsThread(void* obj, void *(*startRoutine)(void *), thread_t* thread)
+{
+    if (thread == nullptr)
+        thread = new thread_t();
+
+    thread->obj = obj;
+
+    if (::pthread_create(&thread->thread, NULL, startRoutine, thread) != 0) {
+        LogError(LOG_NET, "Error returned from pthread_create, err: %d", errno);
+        delete thread;
+        return false;
+    }
+
+    return true;
+}
+
+/* Suspends the current thread for the specified amount of time. */
 
 void Thread::sleep(uint32_t ms, uint32_t us)
 {

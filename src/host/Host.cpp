@@ -15,7 +15,6 @@
 #include "common/Log.h"
 #include "common/StopWatch.h"
 #include "common/Thread.h"
-#include "common/ThreadFunc.h"
 #include "common/Utils.h"
 #include "remote/RESTClient.h"
 #include "host/Host.h"
@@ -29,9 +28,18 @@ using namespace lookups;
 #include <algorithm>
 #include <functional>
 #include <memory>
-#include <mutex>
 
+#include <sys/utsname.h>
 #include <unistd.h>
+
+// ---------------------------------------------------------------------------
+//  Static Class Members
+// ---------------------------------------------------------------------------
+
+std::mutex Host::m_clockingMutex;
+
+uint8_t Host::m_activeTickDelay = 5U;
+uint8_t Host::m_idleTickDelay = 5U;
 
 // ---------------------------------------------------------------------------
 //  Constants
@@ -130,11 +138,12 @@ Host::Host(const std::string& confFile) :
     m_mainLoopWatchdogTimer(1000U, 1U),
     m_adjSiteLoopMS(0U),
     m_adjSiteLoopWatchdogTimer(1000U, 1U),
-    m_activeTickDelay(5U),
-    m_idleTickDelay(5U),
     m_restAddress("0.0.0.0"),
     m_restPort(REST_API_DEFAULT_PORT),
-    m_RESTAPI(nullptr)
+    m_RESTAPI(nullptr),
+    m_dmr(nullptr),
+    m_p25(nullptr),
+    m_nxdn(nullptr)
 {
     /* stub */
 }
@@ -232,7 +241,7 @@ int Host::run()
 
     // is the modem slaved to a remote DVM host?
     if (m_modemRemote) {
-        ::LogInfoEx(LOG_HOST, "Host is up and running in remote modem mode");
+        ::LogInfoEx(LOG_HOST, "[ OK ] Host is running in remote modem mode");
 
         StopWatch stopWatch;
         stopWatch.start();
@@ -348,8 +357,6 @@ int Host::run()
 
     // initialize DMR
     Timer dmrBeaconIntervalTimer(1000U);
-
-    std::unique_ptr<dmr::Control> dmr = nullptr;
     LogInfo("DMR Parameters");
     LogInfo("    Enabled: %s", m_dmrEnabled ? "yes" : "no");
     if (m_dmrEnabled) {
@@ -417,14 +424,14 @@ int Host::run()
             g_fireDMRBeacon = true;
         }
 
-        dmr = std::make_unique<dmr::Control>(m_authoritative, m_dmrColorCode, callHang, m_dmrQueueSizeBytes,
+        m_dmr = std::make_unique<dmr::Control>(m_authoritative, m_dmrColorCode, callHang, m_dmrQueueSizeBytes,
             embeddedLCOnly, dumpTAData, m_timeout, m_rfTalkgroupHang, m_modem, m_network, m_duplex, m_channelLookup, m_ridLookup, m_tidLookup, 
             m_idenTable, rssi, jitter, dmrDumpDataPacket, dmrRepeatDataPacket, dmrDumpCsbkData, dmrDebug, dmrVerbose);
-        dmr->setOptions(m_conf, m_supervisor, m_controlChData, m_dmrNetId, m_siteId, m_channelId, 
+        m_dmr->setOptions(m_conf, m_supervisor, m_controlChData, m_dmrNetId, m_siteId, m_channelId, 
             m_channelNo, true);
 
         if (dmrCtrlChannel) {
-            dmr->setCCRunning(true);
+            m_dmr->setCCRunning(true);
         }
 
         m_dmrTXTimer.setTimeout(txHang);
@@ -439,8 +446,6 @@ int Host::run()
 
     // initialize P25
     Timer p25BcastIntervalTimer(1000U);
-
-    std::unique_ptr<p25::Control> p25 = nullptr;
     LogInfo("P25 Parameters");
     LogInfo("    Enabled: %s", m_p25Enabled ? "yes" : "no");
     if (m_p25Enabled) {
@@ -488,14 +493,14 @@ int Host::run()
             }
         }
 
-        p25 = std::make_unique<p25::Control>(m_authoritative, m_p25NAC, callHang, m_p25QueueSizeBytes, m_modem,
+        m_p25 = std::make_unique<p25::Control>(m_authoritative, m_p25NAC, callHang, m_p25QueueSizeBytes, m_modem,
             m_network, m_timeout, m_rfTalkgroupHang, m_duplex, m_channelLookup, m_ridLookup, m_tidLookup, m_idenTable, rssi, p25DumpDataPacket, 
             p25RepeatDataPacket, p25DumpTsbkData, p25Debug, p25Verbose);
-        p25->setOptions(m_conf, m_supervisor, m_cwCallsign, m_controlChData,
+        m_p25->setOptions(m_conf, m_supervisor, m_cwCallsign, m_controlChData,
             m_p25NetId, m_sysId, m_p25RfssId, m_siteId, m_channelId, m_channelNo, true);
 
         if (p25CtrlChannel) {
-            p25->setCCRunning(true);
+            m_p25->setCCRunning(true);
         }
 
         if (p25Verbose) {
@@ -508,8 +513,6 @@ int Host::run()
 
     // initialize NXDN
     Timer nxdnBcastIntervalTimer(1000U);
-
-    std::unique_ptr<nxdn::Control> nxdn = nullptr;
     LogInfo("NXDN Parameters");
     LogInfo("    Enabled: %s", m_nxdnEnabled ? "yes" : "no");
     if (m_nxdnEnabled) {
@@ -550,14 +553,14 @@ int Host::run()
             }
         }
 
-        nxdn = std::make_unique<nxdn::Control>(m_authoritative, m_nxdnRAN, callHang, m_nxdnQueueSizeBytes,
+        m_nxdn = std::make_unique<nxdn::Control>(m_authoritative, m_nxdnRAN, callHang, m_nxdnQueueSizeBytes,
             m_timeout, m_rfTalkgroupHang, m_modem, m_network, m_duplex, m_channelLookup, m_ridLookup, m_tidLookup, m_idenTable, rssi, 
             nxdnDumpRcchData, nxdnDebug, nxdnVerbose);
-        nxdn->setOptions(m_conf, m_supervisor, m_cwCallsign, m_controlChData, m_siteId, 
+        m_nxdn->setOptions(m_conf, m_supervisor, m_cwCallsign, m_controlChData, m_siteId, 
             m_sysId, m_channelId, m_channelNo, true);
 
         if (nxdnCtrlChannel) {
-            nxdn->setCCRunning(true);
+            m_nxdn->setCCRunning(true);
         }
 
         if (nxdnVerbose) {
@@ -567,6 +570,10 @@ int Host::run()
             LogInfo("    Debug: yes");
         }
     }
+
+    /*
+    ** Error Condition Checking
+    */
 
     if (!m_dmrEnabled && !m_p25Enabled && !m_nxdnEnabled) {
         ::LogError(LOG_HOST, "No protocols enabled? DMR, P25 and/or NXDN must be enabled!");
@@ -654,13 +661,13 @@ int Host::run()
     if (!g_killed) {
         // fixed mode will force a state change
         if (m_fixedMode) {
-            if (dmr != nullptr)
+            if (m_dmr != nullptr)
                 setState(STATE_DMR);
 
-            if (p25 != nullptr)
+            if (m_p25 != nullptr)
                 setState(STATE_P25);
 
-            if (nxdn != nullptr)
+            if (m_nxdn != nullptr)
                 setState(STATE_NXDN);
         }
         else {
@@ -683,10 +690,15 @@ int Host::run()
         }
 
         if (m_RESTAPI != nullptr) {
-            m_RESTAPI->setProtocols(dmr.get(), p25.get(), nxdn.get());
+            m_RESTAPI->setProtocols(m_dmr.get(), m_p25.get(), m_nxdn.get());
         }
 
-        ::LogInfoEx(LOG_HOST, "Host is performing late initialization and warmup");
+        ::LogInfoEx(LOG_HOST, "[WAIT] Host is performing late initialization and warmup");
+
+        m_modem->clearNXDNFrame();
+        m_modem->clearP25Frame();
+        m_modem->clearDMRFrame2();
+        m_modem->clearDMRFrame1();
 
         // perform early pumping of the modem clock (this is so the DSP has time to setup its buffers),
         // and clock the network (so it may perform early connect)
@@ -725,437 +737,86 @@ int Host::run()
             }
         }
 
-        ::LogInfoEx(LOG_HOST, "Host is up and running");
         stopWatch.start();
     }
 
     bool hasTxShutdown = false;
-    static std::mutex clockingMutex;
 
     // Macro to start DMR duplex idle transmission (or beacon)
     #define START_DMR_DUPLEX_IDLE(x)                                                                                    \
-        if (dmr != nullptr) {                                                                                           \
+        if (m_dmr != nullptr) {                                                                                         \
             if (m_duplex) {                                                                                             \
                 m_modem->writeDMRStart(x);                                                                              \
                 m_dmrTXTimer.start();                                                                                   \
             }                                                                                                           \
         }
 
+    /*
+    ** Initialize Threads
+    */
+
     /** Watchdog */
-    ThreadFunc watchdogThread([&, this]() {
-        if (g_killed)
-            return;
+    if (!Thread::runAsThread(this, threadWatchdog))
+        return EXIT_FAILURE;
 
-        StopWatch stopWatch;
-        stopWatch.start();
-
-        LogDebug(LOG_HOST, "started watchdog");
-        while (!g_killed) {
-            uint32_t ms = stopWatch.elapsed();
-            stopWatch.start();
-
-            // scope is intentional
-            {
-                /** Digital Mobile Radio */
-                if (dmr != nullptr) {
-                    if (m_dmrTx1WatchdogTimer.isRunning())
-                        m_dmrTx1WatchdogTimer.clock(ms);
-                    if (m_dmrTx1WatchdogTimer.isRunning() && m_dmrTx1WatchdogTimer.hasExpired() && !m_dmrTx1WatchdogTimer.isPaused()) {
-                        m_dmrTx1WatchdogTimer.pause();
-                        LogError(LOG_HOST, "DMR, slot 1 frame processor hung >%us, ms = %u", m_dmrTx1WatchdogTimer.getTimeout(), m_dmrTx1LoopMS);
-                    }
-
-                    if (m_dmrTx2WatchdogTimer.isRunning())
-                        m_dmrTx2WatchdogTimer.clock(ms);
-                    if (m_dmrTx2WatchdogTimer.isRunning() && m_dmrTx2WatchdogTimer.hasExpired() && !m_dmrTx2WatchdogTimer.isPaused()) {
-                        m_dmrTx2WatchdogTimer.pause();
-                        LogError(LOG_HOST, "DMR, slot 2 frame processor hung >%us, ms = %u", m_dmrTx2WatchdogTimer.getTimeout(), m_dmrTx2LoopMS);
-                    }
-                }
-
-                /** Project 25 */
-                if (p25 != nullptr) {
-                    if (m_p25TxWatchdogTimer.isRunning())
-                        m_p25TxWatchdogTimer.clock(ms);
-                    if (m_p25TxWatchdogTimer.isRunning() && m_p25TxWatchdogTimer.hasExpired() && !m_p25TxWatchdogTimer.isPaused()) {
-                        m_p25TxWatchdogTimer.pause();
-                        LogError(LOG_HOST, "P25, frame processor hung >%us, ms = %u", m_p25TxWatchdogTimer.getTimeout(), m_p25TxLoopMS);
-                    }
-                }
-
-                /** Next Generation Digital Narrowband */
-                if (nxdn != nullptr) {
-                    if (m_nxdnTxWatchdogTimer.isRunning())
-                        m_nxdnTxWatchdogTimer.clock(ms);
-                    if (m_nxdnTxWatchdogTimer.isRunning() && m_nxdnTxWatchdogTimer.hasExpired() && !m_nxdnTxWatchdogTimer.isPaused()) {
-                        m_nxdnTxWatchdogTimer.pause();
-                        LogError(LOG_HOST, "NXDN, frame processor hung >%us, ms = %u", m_nxdnTxWatchdogTimer.getTimeout(), m_nxdnTxLoopMS);
-                    }
-                }
-            }
-
-            // scope is intentional
-            {
-                if (m_mainLoopWatchdogTimer.isRunning())
-                    m_mainLoopWatchdogTimer.clock(ms);
-                if (m_mainLoopWatchdogTimer.isRunning() && m_mainLoopWatchdogTimer.hasExpired() && !m_mainLoopWatchdogTimer.isPaused()) {
-                    m_mainLoopWatchdogTimer.pause();
-                    LogError(LOG_HOST, "main processor hung >%us, stage = %u, ms = %u", m_mainLoopWatchdogTimer.getTimeout(), m_mainLoopStage, m_mainLoopMS);
-                }
-
-                if (m_adjSiteLoopWatchdogTimer.isRunning())
-                    m_adjSiteLoopWatchdogTimer.clock(ms);
-                if (m_adjSiteLoopWatchdogTimer.isRunning() && m_adjSiteLoopWatchdogTimer.hasExpired() && !m_adjSiteLoopWatchdogTimer.isPaused()) {
-                    m_adjSiteLoopWatchdogTimer.pause();
-                    LogError(LOG_HOST, "adj. site update hung >%us, ms = %u", m_adjSiteLoopWatchdogTimer.getTimeout(), m_adjSiteLoopMS);
-                }
-            }
-
-            if (m_state != STATE_IDLE)
-                Thread::sleep(m_activeTickDelay);
-            if (m_state == STATE_IDLE)
-                Thread::sleep(m_idleTickDelay);
-        }
-    });
-    watchdogThread.run();
-    watchdogThread.setName("host:watchdog");
+    /** Modem */
+    if (!Thread::runAsThread(this, threadModem))
+        return EXIT_FAILURE;
 
     /** Digital Mobile Radio Frame Processor */
-    ThreadFunc dmrFrame1WriteThread([&, this]() {
-        if (g_killed)
-            return;
-
-        StopWatch stopWatch;
-        stopWatch.start();
-
-        if (dmr != nullptr) {
-            LogDebug(LOG_HOST, "DMR, started slot 1 frame processor (modem write)");
-            while (!g_killed) {
-                m_dmrTx1WatchdogTimer.start();
-
-                uint32_t ms = stopWatch.elapsed();
-                stopWatch.start();
-                m_dmrTx1LoopMS = ms;
-
-                // scope is intentional
-                {
-                    std::lock_guard<std::mutex> lock(clockingMutex);
-
-                    // ------------------------------------------------------
-                    //  -- Write to Modem Processing                      --
-                    // ------------------------------------------------------
-                    
-                    // write DMR slot 1 frames to modem
-                    writeFramesDMR1(dmr.get(), [&, this]() {
-                        // if there is a P25 CC running; halt the CC
-                        if (p25 != nullptr) {
-                            if (p25->getCCRunning() && !p25->getCCHalted()) {
-                                this->interruptP25Control(p25.get());
-                            }
-                        }
-
-                        // if there is a NXDN CC running; halt the CC
-                        if (nxdn != nullptr) {
-                            if (nxdn->getCCRunning() && !nxdn->getCCHalted()) {
-                                this->interruptNXDNControl(nxdn.get());
-                            }
-                        }
-                    });
-                }
-
-                if (m_state != STATE_IDLE)
-                    Thread::sleep(m_activeTickDelay);
-                if (m_state == STATE_IDLE)
-                    Thread::sleep(m_idleTickDelay);
-            }
-        }
-    });
-    dmrFrame1WriteThread.run();
-    dmrFrame1WriteThread.setName("dmr:frame1-w");
-
-    ThreadFunc dmrFrame2WriteThread([&, this]() {
-        if (g_killed)
-            return;
-
-        StopWatch stopWatch;
-        stopWatch.start();
-
-        if (dmr != nullptr) {
-            LogDebug(LOG_HOST, "DMR, started slot 2 frame processor (modem write)");
-            while (!g_killed) {
-                m_dmrTx2WatchdogTimer.start();
-
-                uint32_t ms = stopWatch.elapsed();
-                stopWatch.start();
-                m_dmrTx2LoopMS = ms;
-
-                // scope is intentional
-                {
-                    std::lock_guard<std::mutex> lock(clockingMutex);
-
-                    // ------------------------------------------------------
-                    //  -- Write to Modem Processing                      --
-                    // ------------------------------------------------------
-
-                    // write DMR slot 2 frames to modem
-                    writeFramesDMR2(dmr.get(), [&, this]() {
-                        // if there is a P25 CC running; halt the CC
-                        if (p25 != nullptr) {
-                            if (p25->getCCRunning() && !p25->getCCHalted()) {
-                                this->interruptP25Control(p25.get());
-                            }
-                        }
-
-                        // if there is a NXDN CC running; halt the CC
-                        if (nxdn != nullptr) {
-                            if (nxdn->getCCRunning() && !nxdn->getCCHalted()) {
-                                this->interruptNXDNControl(nxdn.get());
-                            }
-                        }
-                    });
-                }
-
-                if (m_state != STATE_IDLE)
-                    Thread::sleep(m_activeTickDelay);
-                if (m_state == STATE_IDLE)
-                    Thread::sleep(m_idleTickDelay);
-            }
-        }
-    });
-    dmrFrame2WriteThread.run();
-    dmrFrame2WriteThread.setName("dmr:frame2-w");
+    if (m_dmr != nullptr) {
+        if (!Thread::runAsThread(this, threadDMRReader1))
+            return EXIT_FAILURE;
+        if (!Thread::runAsThread(this, threadDMRWriter1))
+            return EXIT_FAILURE;
+        if (!Thread::runAsThread(this, threadDMRReader2))
+            return EXIT_FAILURE;
+        if (!Thread::runAsThread(this, threadDMRWriter2))
+            return EXIT_FAILURE;
+    }
 
     /** Project 25 Frame Processor */
-    ThreadFunc p25FrameWriteThread([&, this]() {
-        if (g_killed)
-            return;
-
-        StopWatch stopWatch;
-        stopWatch.start();
-
-        if (p25 != nullptr) {
-            LogDebug(LOG_HOST, "P25, started frame processor (modem write)");
-            while (!g_killed) {
-                m_p25TxWatchdogTimer.start();
-
-                uint32_t ms = stopWatch.elapsed();
-                stopWatch.start();
-                m_p25TxLoopMS = ms;
-
-                // scope is intentional
-                {
-                    std::lock_guard<std::mutex> lock(clockingMutex);
-
-                    // ------------------------------------------------------
-                    //  -- Write to Modem Processing                      --
-                    // ------------------------------------------------------
-
-                    // write P25 frames to modem
-                    writeFramesP25(p25.get(), [&, this]() {
-                        if (dmr != nullptr) {
-                            this->interruptDMRBeacon(dmr.get());
-                        }
-
-                        // if there is a NXDN CC running; halt the CC
-                        if (nxdn != nullptr) {
-                            if (nxdn->getCCRunning() && !nxdn->getCCHalted()) {
-                                this->interruptNXDNControl(nxdn.get());
-                            }
-                        }
-                    });
-                }
-
-                if (m_state != STATE_IDLE)
-                    Thread::sleep(m_activeTickDelay);
-                if (m_state == STATE_IDLE)
-                    Thread::sleep(m_idleTickDelay);
-            }
-        }
-    });
-    p25FrameWriteThread.run();
-    p25FrameWriteThread.setName("p25:frame-w");
+    if (m_p25 != nullptr) {
+        if (!Thread::runAsThread(this, threadP25Reader))
+            return EXIT_FAILURE;
+        if (!Thread::runAsThread(this, threadP25Writer))
+            return EXIT_FAILURE;
+    }
 
     /** Next Generation Digital Narrowband Frame Processor */
-    ThreadFunc nxdnFrameWriteThread([&, this]() {
-        if (g_killed)
-            return;
-
-        StopWatch stopWatch;
-        stopWatch.start();
-
-        if (nxdn != nullptr) {
-            LogDebug(LOG_HOST, "NXDN, started frame processor (modem write)");
-            while (!g_killed) {
-                m_nxdnTxWatchdogTimer.start();
-
-                uint32_t ms = stopWatch.elapsed();
-                stopWatch.start();
-                m_nxdnTxLoopMS = ms;
-
-                // scope is intentional
-                {
-                    std::lock_guard<std::mutex> lock(clockingMutex);
-
-                    // ------------------------------------------------------
-                    //  -- Write to Modem Processing                      --
-                    // ------------------------------------------------------
-
-                    // write NXDN frames to modem
-                    writeFramesNXDN(nxdn.get(), [&, this]() {
-                        if (dmr != nullptr) {
-                            this->interruptDMRBeacon(dmr.get());
-                        }
-
-                        // if there is a P25 CC running; halt the CC
-                        if (p25 != nullptr) {
-                            if (p25->getCCRunning() && !p25->getCCHalted()) {
-                                this->interruptP25Control(p25.get());
-                            }
-                        }
-                    });
-                }
-
-                if (m_state != STATE_IDLE)
-                    Thread::sleep(m_activeTickDelay);
-                if (m_state == STATE_IDLE)
-                    Thread::sleep(m_idleTickDelay);
-            }
-        }
-    });
-    nxdnFrameWriteThread.run();
-    nxdnFrameWriteThread.setName("nxdn:frame-w");
+    if (m_nxdn != nullptr) {
+        if (!Thread::runAsThread(this, threadNXDNReader))
+            return EXIT_FAILURE;
+        if (!Thread::runAsThread(this, threadNXDNWriter))
+            return EXIT_FAILURE;
+    }
 
     /** Adjacent Site and Affiliation Update */
-    ThreadFunc siteDataUpdateThread([&, this]() {
-        if (g_killed)
-            return;
-
-        Timer networkPeerStatusNotify(1000U, 5U);
-        networkPeerStatusNotify.start();
-
-        StopWatch stopWatch;
-        stopWatch.start();
-
-        LogDebug(LOG_HOST, "started adj. site and affiliation processor");
-        while (!g_killed) {
-            uint32_t ms = stopWatch.elapsed();
-            stopWatch.start();
-            m_adjSiteLoopMS = ms;
-
-            if (dmr != nullptr)
-                dmr->clockSiteData(ms);
-            if (p25 != nullptr)
-                p25->clockSiteData(ms);
-            if (nxdn != nullptr)
-                nxdn->clockSiteData(ms);
-
-            if (m_allowStatusTransfer) {
-                networkPeerStatusNotify.clock(ms);
-                if (networkPeerStatusNotify.isRunning() && networkPeerStatusNotify.hasExpired()) {
-                    networkPeerStatusNotify.start();
-                    json::object statusObj = getStatus();
-                    m_network->writePeerStatus(statusObj);
-                }
-            }
-
-            if (m_state != STATE_IDLE)
-                Thread::sleep(m_activeTickDelay);
-            if (m_state == STATE_IDLE)
-                Thread::sleep(m_idleTickDelay);
-        }
-    });
-    siteDataUpdateThread.run();
-    siteDataUpdateThread.setName("host:site-data");
+    if (!Thread::runAsThread(this, threadSiteData))
+        return EXIT_FAILURE;
 
     /** Network Presence Notification */
-    ThreadFunc presenceThread([&, this]() {
-        if (g_killed)
-            return;
-
-        Timer presenceNotifyTimer(1000U, m_presenceTime);
-        presenceNotifyTimer.start();
-        bool hasInitialRegistered = false;
-
-        StopWatch stopWatch;
-        stopWatch.start();
-
-        LogDebug(LOG_HOST, "started presence notifier");
-        while (!g_killed) {
-            // scope is intentional
-            {
-                uint32_t ms = stopWatch.elapsed();
-                stopWatch.start();
-
-                presenceNotifyTimer.clock(ms);
-
-                // VC -> CC presence registration
-                if (!m_controlChData.address().empty() && m_controlChData.port() != 0 && m_network != nullptr && m_RESTAPI != nullptr &&
-                    !m_dmrCtrlChannel && !m_p25CtrlChannel && !m_nxdnCtrlChannel) {
-                    if ((presenceNotifyTimer.isRunning() && presenceNotifyTimer.hasExpired()) || !hasInitialRegistered) {
-                        LogMessage(LOG_HOST, "CC %s:%u, notifying CC of VC registration, peerId = %u", m_controlChData.address().c_str(), m_controlChData.port(), m_network->getPeerId());
-                        hasInitialRegistered = true;
-
-                        std::string localAddress = network::udp::Socket::getLocalAddress();
-                        if (m_restAddress == "0.0.0.0") {
-                            m_restAddress = localAddress;
-                        }
-
-                        // callback REST API to release the granted TG on the specified control channel
-                        json::object req = json::object();
-                        req["channelNo"].set<uint32_t>(m_channelNo);
-                        uint32_t peerId = m_network->getPeerId();
-                        req["peerId"].set<uint32_t>(peerId);
-                        req["restAddress"].set<std::string>(m_restAddress);
-                        req["restPort"].set<uint16_t>(m_restPort);
-
-                        int ret = RESTClient::send(m_controlChData.address(), m_controlChData.port(), m_controlChData.password(),
-                            HTTP_PUT, PUT_REGISTER_CC_VC, req, m_controlChData.ssl(), REST_QUICK_WAIT, false);
-                        if (ret != network::rest::http::HTTPPayload::StatusType::OK) {
-                            ::LogError(LOG_HOST, "failed to notify the CC %s:%u of VC registration", m_controlChData.address().c_str(), m_controlChData.port());
-                        }
-
-                        presenceNotifyTimer.start();
-                    }
-                }
-
-                // CC -> FNE registered VC announcement
-                if (m_dmrCtrlChannel || m_p25CtrlChannel || m_nxdnCtrlChannel) {
-                    if ((presenceNotifyTimer.isRunning() && presenceNotifyTimer.hasExpired()) || g_fireCCVCNotification) {
-                        g_fireCCVCNotification = false;
-                        if (m_network != nullptr && m_voiceChPeerId.size() > 0) {
-                            LogMessage(LOG_HOST, "notifying FNE of VC registrations, peerId = %u", m_network->getPeerId());
-
-                            std::vector<uint32_t> peers;
-                            for (auto it : m_voiceChPeerId) {
-                                peers.push_back(it.second);
-                            }
-
-                            m_network->announceSiteVCs(peers);
-                        }
-
-                        presenceNotifyTimer.start();
-                    }
-                }
-            }
-
-            if (m_state != STATE_IDLE)
-                Thread::sleep(m_activeTickDelay);
-            if (m_state == STATE_IDLE)
-                Thread::sleep(m_idleTickDelay);
+    {
+        if (!m_controlChData.address().empty() && m_controlChData.port() != 0 && m_network != nullptr) {
+            if (!Thread::runAsThread(this, threadPresence))
+                return EXIT_FAILURE;
         }
-    });
 
-    if (!m_controlChData.address().empty() && m_controlChData.port() != 0 && m_network != nullptr) {
-        presenceThread.run();
-        presenceThread.setName("host:presence");
+        if (m_dmrCtrlChannel || m_p25CtrlChannel || m_nxdnCtrlChannel) {
+            if (!Thread::runAsThread(this, threadPresence))
+                return EXIT_FAILURE;
+        }
     }
 
-    if (m_dmrCtrlChannel || m_p25CtrlChannel || m_nxdnCtrlChannel) {
-        presenceThread.run();
-        presenceThread.setName("host:presence");
-    }
+    /*
+    ** Main execution loop
+    */
 
-    // main execution loop
+    struct utsname utsinfo;
+    ::memset(&utsinfo, 0, sizeof(utsinfo));
+    ::uname(&utsinfo);
+
+    ::LogInfoEx(LOG_HOST, "[ OK ] Host is up and running on %s %s %s", utsinfo.sysname, utsinfo.release, utsinfo.machine);
     while (!killed) {
         if (m_modem->hasLockout() && m_state != HOST_STATE_LOCKOUT)
             setState(HOST_STATE_LOCKOUT);
@@ -1168,138 +829,34 @@ int Host::run()
             setState(STATE_IDLE);
 
         uint32_t ms = stopWatch.elapsed();
-        if (ms > 1U)
-            m_modem->clock(ms);
+        stopWatch.start();
 
-        if (!m_fixedMode) {
-            if (m_modeTimer.isRunning() && m_modeTimer.hasExpired()) {
-                setState(STATE_IDLE);
+        if (!m_modem->hasError()) {
+            if (!m_fixedMode) {
+                if (m_modeTimer.isRunning() && m_modeTimer.hasExpired()) {
+                    setState(STATE_IDLE);
+                }
             }
-        }
-        else {
-            m_modeTimer.stop();
-            if (dmr != nullptr && m_state != STATE_DMR && !m_modem->hasTX()) {
-                LogDebug(LOG_HOST, "fixed mode state abnormal, m_state = %u, state = %u", m_state, STATE_DMR);
-                setState(STATE_DMR);
-            }
-            if (p25 != nullptr && m_state != STATE_P25 && !m_modem->hasTX()) {
-                LogDebug(LOG_HOST, "fixed mode state abnormal, m_state = %u, state = %u", m_state, STATE_P25);
-                setState(STATE_P25);
-            }
-            if (nxdn != nullptr && m_state != STATE_NXDN && !m_modem->hasTX()) {
-                LogDebug(LOG_HOST, "fixed mode state abnormal, m_state = %u, state = %u", m_state, STATE_NXDN);
-                setState(STATE_NXDN);
+            else {
+                m_modeTimer.stop();
+                if (m_dmr != nullptr && m_state != STATE_DMR && !m_modem->hasTX()) {
+                    LogDebug(LOG_HOST, "fixed mode state abnormal, m_state = %u, state = %u", m_state, STATE_DMR);
+                    setState(STATE_DMR);
+                }
+                if (m_p25 != nullptr && m_state != STATE_P25 && !m_modem->hasTX()) {
+                    LogDebug(LOG_HOST, "fixed mode state abnormal, m_state = %u, state = %u", m_state, STATE_P25);
+                    setState(STATE_P25);
+                }
+                if (m_nxdn != nullptr && m_state != STATE_NXDN && !m_modem->hasTX()) {
+                    LogDebug(LOG_HOST, "fixed mode state abnormal, m_state = %u, state = %u", m_state, STATE_NXDN);
+                    setState(STATE_NXDN);
+                }
             }
         }
 
         m_mainLoopWatchdogTimer.start();
         m_mainLoopStage = 0U; // intentional magic number
-
-        // scope is intentional
-        {
-            std::lock_guard<std::mutex> lock(clockingMutex);
-
-            // ------------------------------------------------------
-            //  -- Modem Clocking                                 --
-            // ------------------------------------------------------
-
-            ms = stopWatch.elapsed();
-            stopWatch.start();
-
-            m_modem->clock(ms);
-            m_mainLoopStage = 1U; // intentional magic number
-        }
-
         m_mainLoopMS = ms;
-
-        // ------------------------------------------------------
-        //  -- Read from Modem Processing                     --
-        // ------------------------------------------------------
-
-        /** Digital Mobile Radio */
-        if (dmr != nullptr) {
-            m_mainLoopStage = 2U; // intentional magic number
-
-            // read DMR slot 1 frames from modem
-            readFramesDMR1(dmr.get(), [&, this]() {
-                if (dmr != nullptr) {
-                    this->interruptDMRBeacon(dmr.get());
-                }
-
-                // if there is a P25 CC running; halt the CC
-                if (p25 != nullptr) {
-                    if (p25->getCCRunning() && !p25->getCCHalted()) {
-                        this->interruptP25Control(p25.get());
-                    }
-                }
-
-                // if there is a NXDN CC running; halt the CC
-                if (nxdn != nullptr) {
-                    if (nxdn->getCCRunning() && !nxdn->getCCHalted()) {
-                        this->interruptNXDNControl(nxdn.get());
-                    }
-                }
-            });
-
-            // read DMR slot 2 frames from modem
-            readFramesDMR2(dmr.get(), [&, this]() {
-                if (dmr != nullptr) {
-                    this->interruptDMRBeacon(dmr.get());
-                }
-
-                // if there is a P25 CC running; halt the CC
-                if (p25 != nullptr) {
-                    if (p25->getCCRunning() && !p25->getCCHalted()) {
-                        this->interruptP25Control(p25.get());
-                    }
-                }
-
-                // if there is a NXDN CC running; halt the CC
-                if (nxdn != nullptr) {
-                    if (nxdn->getCCRunning() && !nxdn->getCCHalted()) {
-                        this->interruptNXDNControl(nxdn.get());
-                    }
-                }
-            });
-        }
-
-        /** Project 25 */
-        if (p25 != nullptr) {
-            m_mainLoopStage = 3U; // intentional magic number
-
-            // read P25 frames from modem
-            readFramesP25(p25.get(), [&, this]() {
-                if (dmr != nullptr) {
-                    this->interruptDMRBeacon(dmr.get());
-                }
-
-                // if there is a NXDN CC running; halt the CC
-                if (nxdn != nullptr) {
-                    if (nxdn->getCCRunning() && !nxdn->getCCHalted()) {
-                        this->interruptNXDNControl(nxdn.get());
-                    }
-                }
-            });
-        }
-
-        /** Next Generation Digital Narrowband */
-        if (nxdn != nullptr) {
-            m_mainLoopStage = 4U; // intentional magic number
-
-            // read NXDN frames from modem
-            readFramesNXDN(nxdn.get(), [&, this]() {
-                if (dmr != nullptr) {
-                    this->interruptDMRBeacon(dmr.get());
-                }
-
-                // if there is a P25 CC running; halt the CC
-                if (p25 != nullptr) {
-                    if (p25->getCCRunning() && !p25->getCCHalted()) {
-                        this->interruptP25Control(p25.get());
-                    }
-                }
-            });
-        }
 
         // ------------------------------------------------------
         //  -- Network, DMR, and P25 Clocking                 --
@@ -1310,9 +867,9 @@ int Host::run()
             m_network->clock(ms);
         }
 
-        if (dmr != nullptr) {
+        if (m_dmr != nullptr) {
             m_mainLoopStage = 6U; // intentional magic number
-            dmr->clock();
+            m_dmr->clock();
 
             if (m_dmrCtrlChannel) {
                 if (!m_dmrDedicatedTxTestTimer.isRunning()) {
@@ -1323,9 +880,9 @@ int Host::run()
             }
         }
 
-        if (p25 != nullptr) {
+        if (m_p25 != nullptr) {
             m_mainLoopStage = 7U; // intentional magic number
-            p25->clock();
+            m_p25->clock();
 
             if (m_p25CtrlChannel) {
                 if (!m_p25DedicatedTxTestTimer.isRunning()) {
@@ -1336,9 +893,9 @@ int Host::run()
             }
         }
 
-        if (nxdn != nullptr) {
+        if (m_nxdn != nullptr) {
             m_mainLoopStage = 8U; // intentional magic number
-            nxdn->clock();
+            m_nxdn->clock();
 
             if (m_nxdnCtrlChannel) {
                 if (!m_nxdnDedicatedTxTestTimer.isRunning()) {
@@ -1369,7 +926,7 @@ int Host::run()
 
                 LogMessage(LOG_HOST, "CW, start transmitting");
                 m_isTxCW = true;
-                std::lock_guard<std::mutex> lock(clockingMutex);
+                std::lock_guard<std::mutex> lock(m_clockingMutex);
 
                 setState(STATE_IDLE);
                 m_modem->sendCWId(m_cwCallsign);
@@ -1412,7 +969,7 @@ int Host::run()
         m_mainLoopStage = 10U; // intentional magic number
 
         /** Digial Mobile Radio */
-        if (dmr != nullptr) {
+        if (m_dmr != nullptr) {
             if (m_dmrTSCCData && m_dmrCtrlChannel) {
                 if (m_state != STATE_DMR)
                     setState(STATE_DMR);
@@ -1438,7 +995,7 @@ int Host::run()
                     }
 
                     if (m_dmrTSCCData) {
-                        dmr->setCCRunning(true);
+                        m_dmr->setCCRunning(true);
                     }
 
                     g_fireDMRBeacon = false;
@@ -1466,7 +1023,7 @@ int Host::run()
                 }
 
                 if (m_dmrTSCCData) {
-                    dmr->setCCRunning(false);
+                    m_dmr->setCCRunning(false);
                 }
             }
 
@@ -1483,7 +1040,7 @@ int Host::run()
         }
 
         /** Project 25 */
-        if (p25 != nullptr) {
+        if (m_p25 != nullptr) {
             if (m_p25CCData) {
                 p25BcastIntervalTimer.clock(ms);
 
@@ -1498,7 +1055,7 @@ int Host::run()
                             if (m_state != STATE_P25)
                                 setState(STATE_P25);
 
-                            p25->setCCRunning(true);
+                            m_p25->setCCRunning(true);
 
                             // hide this message for continuous CC -- otherwise display every time we process
                             if (!m_p25CtrlChannel) {
@@ -1525,7 +1082,7 @@ int Host::run()
                     if (m_p25BcastDurationTimer.isRunning() && m_p25BcastDurationTimer.hasExpired()) {
                         m_p25BcastDurationTimer.stop();
 
-                        p25->setCCRunning(false);
+                        m_p25->setCCRunning(false);
 
                         if (m_state == STATE_P25 && !m_modeTimer.isRunning()) {
                             m_modeTimer.setTimeout(m_rfModeHang);
@@ -1537,7 +1094,7 @@ int Host::run()
         }
 
         /** Next Generation Digital Narrowband */
-        if (nxdn != nullptr) {
+        if (m_nxdn != nullptr) {
             if (m_nxdnCCData) {
                 nxdnBcastIntervalTimer.clock(ms);
 
@@ -1552,7 +1109,7 @@ int Host::run()
                             if (m_state != STATE_NXDN)
                                 setState(STATE_NXDN);
 
-                            nxdn->setCCRunning(true);
+                            m_nxdn->setCCRunning(true);
 
                             // hide this message for continuous CC -- otherwise display every time we process
                             if (!m_nxdnCtrlChannel) {
@@ -1579,7 +1136,7 @@ int Host::run()
                     if (m_nxdnBcastDurationTimer.isRunning() && m_nxdnBcastDurationTimer.hasExpired()) {
                         m_nxdnBcastDurationTimer.stop();
 
-                        nxdn->setCCRunning(false);
+                        m_nxdn->setCCRunning(false);
 
                         if (m_state == STATE_NXDN && !m_modeTimer.isRunning()) {
                             m_modeTimer.setTimeout(m_rfModeHang);
@@ -1600,22 +1157,7 @@ int Host::run()
         }
 
         if (g_killed) {
-            // shutdown helper threads
-            presenceThread.wait();
-            siteDataUpdateThread.wait();
-
-            if (dmr != nullptr) {
-                dmrFrame1WriteThread.wait();
-                dmrFrame2WriteThread.wait();
-            }
-            if (p25 != nullptr)
-                p25FrameWriteThread.wait();
-            if (nxdn != nullptr)
-                nxdnFrameWriteThread.wait();
-
-            watchdogThread.wait();
-
-            if (dmr != nullptr) {
+            if (m_dmr != nullptr) {
                 if (m_state == STATE_DMR && m_duplex && m_modem->hasTX()) {
                     m_modem->writeDMRStart(false);
                     m_dmrTXTimer.stop();
@@ -1627,36 +1169,36 @@ int Host::run()
                         m_modem->clearDMRFrame2();
                     }
 
-                    dmr->setCCRunning(false);
-                    dmr->setCCHalted(true);
+                    m_dmr->setCCRunning(false);
+                    m_dmr->setCCHalted(true);
 
                     m_dmrBeaconDurationTimer.stop();
                     dmrBeaconIntervalTimer.stop();
                 }
             }
 
-            if (p25 != nullptr) {
+            if (m_p25 != nullptr) {
                 if (m_p25CtrlChannel) {
                     if (!hasTxShutdown) {
                         m_modem->clearP25Frame();
-                        p25->reset();
+                        m_p25->reset();
                     }
 
-                    p25->setCCRunning(false);
+                    m_p25->setCCRunning(false);
 
                     m_p25BcastDurationTimer.stop();
                     p25BcastIntervalTimer.stop();
                 }
             }
 
-            if (nxdn != nullptr) {
+            if (m_nxdn != nullptr) {
                 if (m_nxdnCtrlChannel) {
                     if (!hasTxShutdown) {
                         m_modem->clearNXDNFrame();
-                        nxdn->reset();
+                        m_nxdn->reset();
                     }
 
-                    nxdn->setCCRunning(false);
+                    m_nxdn->setCCRunning(false);
 
                     m_nxdnBcastDurationTimer.stop();
                     nxdnBcastIntervalTimer.stop();
@@ -1908,7 +1450,6 @@ void Host::setState(uint8_t state)
             m_state = STATE_DMR;
             m_modeTimer.start();
             //m_cwIdTimer.stop();
-            createLockFile("DMR");
             break;
 
         case STATE_P25:
@@ -1916,7 +1457,6 @@ void Host::setState(uint8_t state)
             m_state = STATE_P25;
             m_modeTimer.start();
             //m_cwIdTimer.stop();
-            createLockFile("P25");
             break;
 
         case STATE_NXDN:
@@ -1924,7 +1464,6 @@ void Host::setState(uint8_t state)
             m_state = STATE_NXDN;
             m_modeTimer.start();
             //m_cwIdTimer.stop();
-            createLockFile("NXDN");
             break;
 
         case HOST_STATE_LOCKOUT:
@@ -1941,7 +1480,6 @@ void Host::setState(uint8_t state)
             m_state = HOST_STATE_LOCKOUT;
             m_modeTimer.stop();
             //m_cwIdTimer.stop();
-            removeLockFile();
             break;
 
         case HOST_STATE_ERROR:
@@ -1957,7 +1495,6 @@ void Host::setState(uint8_t state)
             m_state = HOST_STATE_ERROR;
             m_modeTimer.stop();
             m_cwIdTimer.stop();
-            removeLockFile();
             break;
 
         default:
@@ -1982,7 +1519,6 @@ void Host::setState(uint8_t state)
                 m_cwIdTimer.start();
             }
 
-            removeLockFile();
             m_modeTimer.stop();
 
             if (m_state == HOST_STATE_QUIT) {
@@ -2024,20 +1560,330 @@ void Host::setState(uint8_t state)
     }
 }
 
-/* Helper to create the state lock file. */
+/* Entry point to modem clock thread. */
 
-void Host::createLockFile(const char* mode) const
+void* Host::threadModem(void* arg)
 {
-    FILE* fp = ::fopen(g_lockFile.c_str(), "wt");
-    if (fp != nullptr) {
-        ::fprintf(fp, "%s\n", mode);
-        ::fclose(fp);
+    thread_t* th = (thread_t*)arg;
+    if (th != nullptr) {
+        ::pthread_detach(th->thread);
+
+        std::string threadName("host:modem");
+        Host* host = static_cast<Host*>(th->obj);
+        if (host == nullptr) {
+            g_killed = true;
+            LogDebug(LOG_HOST, "[FAIL] %s", threadName.c_str());
+        }
+
+        if (g_killed) {
+            delete th;
+            return nullptr;
+        }
+
+        LogDebug(LOG_HOST, "[ OK ] %s", threadName.c_str());
+#ifdef _GNU_SOURCE
+        ::pthread_setname_np(th->thread, threadName.c_str());
+#endif // _GNU_SOURCE
+
+        StopWatch stopWatch;
+        stopWatch.start();
+
+        while (!g_killed) {
+            uint32_t ms = stopWatch.elapsed();
+            if (ms > 1U)
+                host->m_modem->clock(ms);
+
+            // scope is intentional
+            {
+                std::lock_guard<std::mutex> lock(m_clockingMutex);
+
+                // ------------------------------------------------------
+                //  -- Modem Clocking                                 --
+                // ------------------------------------------------------
+
+                ms = stopWatch.elapsed();
+                stopWatch.start();
+
+                host->m_modem->clock(ms);
+            }
+
+            Thread::sleep(0U, 50U);
+        }
+
+        LogDebug(LOG_HOST, "[STOP] %s", threadName.c_str());
+        delete th;
     }
+
+    return nullptr;
 }
 
-/* Helper to remove the state lock file. */
+/* Entry point to watchdog thread. */
 
-void Host::removeLockFile() const
+void* Host::threadWatchdog(void* arg)
 {
-    ::remove(g_lockFile.c_str());
+    thread_t* th = (thread_t*)arg;
+    if (th != nullptr) {
+        ::pthread_detach(th->thread);
+
+        std::string threadName("host:watchdog");
+        Host* host = static_cast<Host*>(th->obj);
+        if (host == nullptr) {
+            g_killed = true;
+            LogDebug(LOG_HOST, "[FAIL] %s", threadName.c_str());
+        }
+
+        if (g_killed) {
+            delete th;
+            return nullptr;
+        }
+
+        LogDebug(LOG_HOST, "[ OK ] %s", threadName.c_str());
+#ifdef _GNU_SOURCE
+        ::pthread_setname_np(th->thread, threadName.c_str());
+#endif // _GNU_SOURCE
+
+        StopWatch stopWatch;
+        stopWatch.start();
+
+        while (!g_killed) {
+            uint32_t ms = stopWatch.elapsed();
+            stopWatch.start();
+
+            // scope is intentional
+            {
+                /** Digital Mobile Radio */
+                if (host->m_dmr != nullptr) {
+                    if (host->m_dmrTx1WatchdogTimer.isRunning())
+                        host->m_dmrTx1WatchdogTimer.clock(ms);
+                    if (host->m_dmrTx1WatchdogTimer.isRunning() && host->m_dmrTx1WatchdogTimer.hasExpired() && !host->m_dmrTx1WatchdogTimer.isPaused()) {
+                        host->m_dmrTx1WatchdogTimer.pause();
+                        LogError(LOG_HOST, "DMR, slot 1 frame processor hung >%us, ms = %u", host->m_dmrTx1WatchdogTimer.getTimeout(), host->m_dmrTx1LoopMS);
+                    }
+
+                    if (host->m_dmrTx2WatchdogTimer.isRunning())
+                        host->m_dmrTx2WatchdogTimer.clock(ms);
+                    if (host->m_dmrTx2WatchdogTimer.isRunning() && host->m_dmrTx2WatchdogTimer.hasExpired() && !host->m_dmrTx2WatchdogTimer.isPaused()) {
+                        host->m_dmrTx2WatchdogTimer.pause();
+                        LogError(LOG_HOST, "DMR, slot 2 frame processor hung >%us, ms = %u", host->m_dmrTx2WatchdogTimer.getTimeout(), host->m_dmrTx2LoopMS);
+                    }
+                }
+
+                /** Project 25 */
+                if (host->m_p25 != nullptr) {
+                    if (host->m_p25TxWatchdogTimer.isRunning())
+                        host->m_p25TxWatchdogTimer.clock(ms);
+                    if (host->m_p25TxWatchdogTimer.isRunning() && host->m_p25TxWatchdogTimer.hasExpired() && !host->m_p25TxWatchdogTimer.isPaused()) {
+                        host->m_p25TxWatchdogTimer.pause();
+                        LogError(LOG_HOST, "P25, frame processor hung >%us, ms = %u", host->m_p25TxWatchdogTimer.getTimeout(), host->m_p25TxLoopMS);
+                    }
+                }
+
+                /** Next Generation Digital Narrowband */
+                if (host->m_nxdn != nullptr) {
+                    if (host->m_nxdnTxWatchdogTimer.isRunning())
+                        host->m_nxdnTxWatchdogTimer.clock(ms);
+                    if (host->m_nxdnTxWatchdogTimer.isRunning() && host->m_nxdnTxWatchdogTimer.hasExpired() && !host->m_nxdnTxWatchdogTimer.isPaused()) {
+                        host->m_nxdnTxWatchdogTimer.pause();
+                        LogError(LOG_HOST, "NXDN, frame processor hung >%us, ms = %u", host->m_nxdnTxWatchdogTimer.getTimeout(), host->m_nxdnTxLoopMS);
+                    }
+                }
+            }
+
+            // scope is intentional
+            {
+                if (host->m_mainLoopWatchdogTimer.isRunning())
+                    host->m_mainLoopWatchdogTimer.clock(ms);
+                if (host->m_mainLoopWatchdogTimer.isRunning() && host->m_mainLoopWatchdogTimer.hasExpired() && !host->m_mainLoopWatchdogTimer.isPaused()) {
+                    host->m_mainLoopWatchdogTimer.pause();
+                    LogError(LOG_HOST, "main processor hung >%us, stage = %u, ms = %u", host->m_mainLoopWatchdogTimer.getTimeout(), host->m_mainLoopStage, host->m_mainLoopMS);
+                }
+
+                if (host->m_adjSiteLoopWatchdogTimer.isRunning())
+                    host->m_adjSiteLoopWatchdogTimer.clock(ms);
+                if (host->m_adjSiteLoopWatchdogTimer.isRunning() && host->m_adjSiteLoopWatchdogTimer.hasExpired() && !host->m_adjSiteLoopWatchdogTimer.isPaused()) {
+                    host->m_adjSiteLoopWatchdogTimer.pause();
+                    LogError(LOG_HOST, "adj. site update hung >%us, ms = %u", host->m_adjSiteLoopWatchdogTimer.getTimeout(), host->m_adjSiteLoopMS);
+                }
+            }
+
+            if (host->m_state != STATE_IDLE)
+                Thread::sleep(m_activeTickDelay);
+            if (host->m_state == STATE_IDLE)
+                Thread::sleep(m_idleTickDelay);
+        }
+
+        LogDebug(LOG_HOST, "[STOP] %s", threadName.c_str());
+        delete th;
+    }
+
+    return nullptr;
+}
+
+/* Entry point to site data update thread. */
+
+void* Host::threadSiteData(void* arg)
+{
+    thread_t* th = (thread_t*)arg;
+    if (th != nullptr) {
+        ::pthread_detach(th->thread);
+
+        std::string threadName("host:site-data");
+        Host* host = static_cast<Host*>(th->obj);
+        if (host == nullptr) {
+            g_killed = true;
+            LogDebug(LOG_HOST, "[FAIL] %s", threadName.c_str());
+        }
+
+        if (g_killed) {
+            delete th;
+            return nullptr;
+        }
+
+        LogDebug(LOG_HOST, "[ OK ] %s", threadName.c_str());
+#ifdef _GNU_SOURCE
+        ::pthread_setname_np(th->thread, threadName.c_str());
+#endif // _GNU_SOURCE
+
+        Timer networkPeerStatusNotify(1000U, 5U);
+        networkPeerStatusNotify.start();
+
+        StopWatch stopWatch;
+        stopWatch.start();
+
+        while (!g_killed) {
+            uint32_t ms = stopWatch.elapsed();
+            stopWatch.start();
+            host->m_adjSiteLoopMS = ms;
+
+            if (host->m_dmr != nullptr)
+                host->m_dmr->clockSiteData(ms);
+            if (host->m_p25 != nullptr)
+                host->m_p25->clockSiteData(ms);
+            if (host->m_nxdn != nullptr)
+                host->m_nxdn->clockSiteData(ms);
+
+            if (host->m_allowStatusTransfer && host->m_network != nullptr) {
+                networkPeerStatusNotify.clock(ms);
+                if (networkPeerStatusNotify.isRunning() && networkPeerStatusNotify.hasExpired()) {
+                    networkPeerStatusNotify.start();
+                    json::object statusObj = host->getStatus();
+                    host->m_network->writePeerStatus(statusObj);
+                }
+            }
+
+            if (host->m_state != STATE_IDLE)
+                Thread::sleep(m_activeTickDelay);
+            if (host->m_state == STATE_IDLE)
+                Thread::sleep(m_idleTickDelay);
+        }
+
+        LogDebug(LOG_HOST, "[STOP] %s", threadName.c_str());
+        delete th;
+    }
+
+    return nullptr;
+}
+
+/* Entry point to presence update thread. */
+
+void* Host::threadPresence(void* arg)
+{
+    thread_t* th = (thread_t*)arg;
+    if (th != nullptr) {
+        ::pthread_detach(th->thread);
+
+        std::string threadName("host:presence");
+        Host* host = static_cast<Host*>(th->obj);
+        if (host == nullptr) {
+            g_killed = true;
+            LogDebug(LOG_HOST, "[FAIL] %s", threadName.c_str());
+        }
+
+        if (g_killed) {
+            delete th;
+            return nullptr;
+        }
+
+        LogDebug(LOG_HOST, "[ OK ] %s", threadName.c_str());
+#ifdef _GNU_SOURCE
+        ::pthread_setname_np(th->thread, threadName.c_str());
+#endif // _GNU_SOURCE
+
+        Timer presenceNotifyTimer(1000U, host->m_presenceTime);
+        presenceNotifyTimer.start();
+        bool hasInitialRegistered = false;
+
+        StopWatch stopWatch;
+        stopWatch.start();
+
+        LogDebug(LOG_HOST, "started presence notifier");
+        while (!g_killed) {
+            // scope is intentional
+            {
+                uint32_t ms = stopWatch.elapsed();
+                stopWatch.start();
+
+                presenceNotifyTimer.clock(ms);
+
+                // VC -> CC presence registration
+                if (!host->m_controlChData.address().empty() && host->m_controlChData.port() != 0 && host->m_network != nullptr && host->m_RESTAPI != nullptr &&
+                    !host->m_dmrCtrlChannel && !host->m_p25CtrlChannel && !host->m_nxdnCtrlChannel) {
+                    if ((presenceNotifyTimer.isRunning() && presenceNotifyTimer.hasExpired()) || !hasInitialRegistered) {
+                        LogMessage(LOG_HOST, "CC %s:%u, notifying CC of VC registration, peerId = %u", host->m_controlChData.address().c_str(), host->m_controlChData.port(), host->m_network->getPeerId());
+                        hasInitialRegistered = true;
+
+                        std::string localAddress = network::udp::Socket::getLocalAddress();
+                        if (host->m_restAddress == "0.0.0.0") {
+                            host->m_restAddress = localAddress;
+                        }
+
+                        // callback REST API to release the granted TG on the specified control channel
+                        json::object req = json::object();
+                        req["channelNo"].set<uint32_t>(host->m_channelNo);
+                        uint32_t peerId = host->m_network->getPeerId();
+                        req["peerId"].set<uint32_t>(peerId);
+                        req["restAddress"].set<std::string>(host->m_restAddress);
+                        req["restPort"].set<uint16_t>(host->m_restPort);
+
+                        int ret = RESTClient::send(host->m_controlChData.address(), host->m_controlChData.port(), host->m_controlChData.password(),
+                            HTTP_PUT, PUT_REGISTER_CC_VC, req, host->m_controlChData.ssl(), REST_QUICK_WAIT, false);
+                        if (ret != network::rest::http::HTTPPayload::StatusType::OK) {
+                            ::LogError(LOG_HOST, "failed to notify the CC %s:%u of VC registration", host->m_controlChData.address().c_str(), host->m_controlChData.port());
+                        }
+
+                        presenceNotifyTimer.start();
+                    }
+                }
+
+                // CC -> FNE registered VC announcement
+                if (host->m_dmrCtrlChannel || host->m_p25CtrlChannel || host->m_nxdnCtrlChannel) {
+                    if ((presenceNotifyTimer.isRunning() && presenceNotifyTimer.hasExpired()) || g_fireCCVCNotification) {
+                        g_fireCCVCNotification = false;
+                        if (host->m_network != nullptr && host->m_voiceChPeerId.size() > 0) {
+                            LogMessage(LOG_HOST, "notifying FNE of VC registrations, peerId = %u", host->m_network->getPeerId());
+
+                            std::vector<uint32_t> peers;
+                            for (auto it : host->m_voiceChPeerId) {
+                                peers.push_back(it.second);
+                            }
+
+                            host->m_network->announceSiteVCs(peers);
+                        }
+
+                        presenceNotifyTimer.start();
+                    }
+                }
+            }
+
+            if (host->m_state != STATE_IDLE)
+                Thread::sleep(m_activeTickDelay);
+            if (host->m_state == STATE_IDLE)
+                Thread::sleep(m_idleTickDelay);
+        }
+
+        LogDebug(LOG_HOST, "[STOP] %s", threadName.c_str());
+        delete th;
+    }
+
+    return nullptr;
 }

@@ -81,8 +81,6 @@ bool Host::readParams()
 
     int8_t lto = (int8_t)systemConf["localTimeOffset"].as<int32_t>(0);
 
-    removeLockFile();
-
     LogInfo("General Parameters");
     if (!udpMasterMode) {
         LogInfo("    DMR: %s", m_dmrEnabled ? "enabled" : "disabled");
@@ -100,7 +98,6 @@ bool Host::readParams()
         LogInfo("    Net Mode Hang: %us", m_netModeHang);
         LogInfo("    Identity: %s", m_identity.c_str());
         LogInfo("    Fixed Mode: %s", m_fixedMode ? "yes" : "no");
-        LogInfo("    Lock Filename: %s", g_lockFile.c_str());
         LogInfo("    Local Time Offset: %dh", lto);
 
         yaml::Node systemInfo = systemConf["info"];
