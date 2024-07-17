@@ -18,6 +18,7 @@
 
 using namespace edac;
 using namespace p25;
+using namespace p25::defines;
 
 #include <catch2/catch_test_macros.hpp>
 #include <stdlib.h>
@@ -39,26 +40,26 @@ TEST_CASE("LDU1", "[Reed-Soloman 24,12,13 Test]") {
         }
 
         // LDU1 Encode
-        uint8_t rs[P25_LDU_LC_LENGTH_BYTES];
-        ::memset(rs, 0x00U, P25_LDU_LC_LENGTH_BYTES);
+        uint8_t rs[P25_LDU_LC_FEC_LENGTH_BYTES];
+        ::memset(rs, 0x00U, P25_LDU_LC_FEC_LENGTH_BYTES);
 
         for (uint32_t i = 0; i < 9U; i++)
             rs[i] = random[i];
         rs[8U] = 0xF0U;
 
-        Utils::dump(2U, "LC::encodeLDU1(), LDU1", rs, P25_LDU_LC_LENGTH_BYTES);
+        Utils::dump(2U, "LC::encodeLDU1(), LDU1", rs, P25_LDU_LC_FEC_LENGTH_BYTES);
 
         // encode RS (24,12,13) FEC
         m_rs.encode241213(rs);
 
-        Utils::dump(2U, "LC::encodeLDU1(), LDU1 RS", rs, P25_LDU_LC_LENGTH_BYTES);
+        Utils::dump(2U, "LC::encodeLDU1(), LDU1 RS", rs, P25_LDU_LC_FEC_LENGTH_BYTES);
 
         // LDU1 Decode
         rs[6U] >>= 8;
         rs[7U] >>= 8;
         rs[8U] >>= 8;
 
-        Utils::dump(2U, "LC::encodeLDU1(), LDU RS (errors injected)", rs, P25_LDU_LC_LENGTH_BYTES);
+        Utils::dump(2U, "LC::encodeLDU1(), LDU RS (errors injected)", rs, P25_LDU_LC_FEC_LENGTH_BYTES);
 
         // decode RS (24,12,13) FEC
         try {
@@ -70,12 +71,12 @@ TEST_CASE("LDU1", "[Reed-Soloman 24,12,13 Test]") {
             }
         }
         catch (...) {
-            Utils::dump(2U, "P25, RS excepted with input data", rs, P25_LDU_LC_LENGTH_BYTES);
+            Utils::dump(2U, "P25, RS excepted with input data", rs, P25_LDU_LC_FEC_LENGTH_BYTES);
             failed = true;
             goto cleanup;
         }
 
-        Utils::dump(2U, "LC::decodeLDU1(), LDU1", rs, P25_LDU_LC_LENGTH_BYTES);
+        Utils::dump(2U, "LC::decodeLDU1(), LDU1", rs, P25_LDU_LC_FEC_LENGTH_BYTES);
 
         for (uint32_t i = 0; i < 9U; i++) {
             if (i == 8U) {

@@ -19,6 +19,7 @@
 
 using namespace edac;
 using namespace nxdn;
+using namespace nxdn::defines;
 
 #include <catch2/catch_test_macros.hpp>
 

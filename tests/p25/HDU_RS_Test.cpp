@@ -18,6 +18,7 @@
 
 using namespace edac;
 using namespace p25;
+using namespace p25::defines;
 
 #include <catch2/catch_test_macros.hpp>
 #include <stdlib.h>
