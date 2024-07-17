@@ -203,6 +203,14 @@ int Dfsi::run()
     ::uname(&utsinfo);
 
     ::LogInfoEx(LOG_HOST, "[ OK ] DFSI is up and running on %s %s %s", utsinfo.sysname, utsinfo.release, utsinfo.machine);
+    
+    // Get serial board info if connected
+    if (m_serial)
+    {
+        m_serial->getBoardInfo();
+    }
+
+    // main execution loop
     while (!g_killed) {
         uint32_t ms = stopWatch.elapsed();
 

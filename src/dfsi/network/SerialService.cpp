@@ -169,6 +169,24 @@ void SerialService::clock(uint32_t ms)
             }
             break;
 
+            // Get version string
+            case CMD_GET_VERSION:
+            {
+                // Print proto info
+                LogMessage(LOG_DVMV24, "V24 board protocol: %02X, CPU: %02X", m_msgBuffer[3U], m_msgBuffer[4U]);
+                // Print CPU info
+                switch (m_msgBuffer[4U])
+                {   
+                    case 2U:
+                        LogMessage(LOG_DVMV24, "ST-Micro ARM, UDID: %02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X", m_msgBuffer[5U], m_msgBuffer[6U], m_msgBuffer[7U], m_msgBuffer[8U], m_msgBuffer[9U], m_msgBuffer[10U], m_msgBuffer[11U], m_msgBuffer[12U], m_msgBuffer[13U], m_msgBuffer[14U], m_msgBuffer[15U], m_msgBuffer[16U]);
+                        break;
+                    default:
+                        LogWarning(LOG_DVMV24, "Unknown CPU type!");
+                        break;
+                }
+            }
+            break;
+
             // Handle debug messages
             case CMD_DEBUG1:
             case CMD_DEBUG2:
@@ -177,7 +195,7 @@ void SerialService::clock(uint32_t ms)
             case CMD_DEBUG5:
             case CMD_DEBUG_DUMP:
                 printDebug(m_msgBuffer, m_msgLength);
-                break;
+            break;
 
             // Fallback if we get a message we have no clue how to handle
             default:
@@ -197,7 +215,11 @@ void SerialService::clock(uint32_t ms)
 
     // Clear a call in progress flag if we're longer than our timeout value
     if (m_lclCallInProgress && (now - m_lastLclFrame > m_callTimeout)) {
+        // Clear the flag
         m_lclCallInProgress = false;
+        // Reset the call data
+        rxResetCallData();
+        // Debug print
         if (m_debug)
             LogDebug(LOG_SERIAL, "Local call activity timeout");
     }
@@ -607,9 +629,7 @@ void SerialService::processP25ToNet()
                 // Flag we have a local call (i.e. from V24) in progress
                 m_lclCallInProgress = true;
                 // Reset the call data
-                m_rxVoiceCallData->resetCallData();
-                m_rxLastLDU1->setSrcId(0U);
-                m_rxLastLDU1->setDstId(0U);
+                rxResetCallData();
                 // Generate a new random stream ID
                 m_rxVoiceCallData->newStreamId();
                 // Log
@@ -623,9 +643,7 @@ void SerialService::processP25ToNet()
                     // Send the TDU (using call data which we hope has been filled earlier)
                     m_network->writeP25TDU(*m_rxVoiceControl, *m_rxVoiceLsd);
                     // Reset
-                    m_rxVoiceCallData->resetCallData();
-                    m_rxLastLDU1->setSrcId(0U);
-                    m_rxLastLDU1->setDstId(0U);
+                    rxResetCallData();
                 }
             }
         }
@@ -688,9 +706,7 @@ void SerialService::processP25ToNet()
                         // Flag we have a local call (i.e. from V24) in progress
                         m_lclCallInProgress = true;
                         // Reset the call data
-                        m_rxVoiceCallData->resetCallData();
-                        m_rxLastLDU1->setSrcId(0U);
-                        m_rxLastLDU1->setDstId(0U);
+                        rxResetCallData();
                         // Generate a new random stream ID
                         m_rxVoiceCallData->newStreamId();
                         // Log
@@ -1940,6 +1956,34 @@ void SerialService::insertMissingAudio(uint8_t *data, uint32_t& lost)
     }
 }
 
+/* Resets the V24 RX call data objects */
+
+void SerialService::rxResetCallData()
+{
+    // Reset the RX call data object
+    m_rxVoiceCallData->resetCallData();
+    // Reset our LDU TGID info
+    m_rxLastLDU1->setSrcId(0U);
+    m_rxLastLDU1->setDstId(0U);
+}
+
+/* */
+
+void SerialService::getBoardInfo()
+{
+    uint8_t buffer[3U];
+    buffer[0U] = DVM_SHORT_FRAME_START;
+    buffer[1U] = 3U;
+    buffer[2U] = CMD_GET_VERSION;
+
+    int ret = m_port->write(buffer, 3U);
+
+    if (ret != 3U)
+    {
+        LogError(LOG_SERIAL, "Failed to send version query command to V24 board");
+    }
+}
+
 /* */
 
 void SerialService::printDebug(const uint8_t* buffer, uint16_t len)
@@ -1961,34 +2005,34 @@ void SerialService::printDebug(const uint8_t* buffer, uint16_t len)
 
     // Handle the individual debug types
     if (buffer[2U] == CMD_DEBUG1) {
-        LogDebug(LOG_SERIAL, "V24 USB: %.*s", len - 3U, buffer + 3U);
+        LogDebug(LOG_DVMV24, "%.*s", len - 3U, buffer + 3U);
     }
     else if (buffer[2U] == CMD_DEBUG2) {
         short val1 = (buffer[len - 2U] << 8) | buffer[len - 1U];
-        LogDebug(LOG_SERIAL, "V24 USB: %.*s %X", len - 5U, buffer + 3U, val1);
+        LogDebug(LOG_DVMV24, "%.*s %X", len - 5U, buffer + 3U, val1);
     }
     else if (buffer[2U] == CMD_DEBUG3) {
         short val1 = (buffer[len - 4U] << 8) | buffer[len - 3U];
         short val2 = (buffer[len - 2U] << 8) | buffer[len - 1U];
-        LogDebug(LOG_SERIAL, "V24 USB: %.*s %X %X", len - 7U, buffer + 3U, val1, val2);
+        LogDebug(LOG_DVMV24, "%.*s %X %X", len - 7U, buffer + 3U, val1, val2);
     }
     else if (buffer[2U] == CMD_DEBUG4) {
         short val1 = (buffer[len - 6U] << 8) | buffer[len - 5U];
         short val2 = (buffer[len - 4U] << 8) | buffer[len - 3U];
         short val3 = (buffer[len - 2U] << 8) | buffer[len - 1U];
-        LogDebug(LOG_SERIAL, "V24 USB: %.*s %X %X %X", len - 9U, buffer + 3U, val1, val2, val3);
+        LogDebug(LOG_DVMV24, "%.*s %X %X %X", len - 9U, buffer + 3U, val1, val2, val3);
     }
     else if (buffer[2U] == CMD_DEBUG5) {
         short val1 = (buffer[len - 8U] << 8) | buffer[len - 7U];
         short val2 = (buffer[len - 6U] << 8) | buffer[len - 5U];
         short val3 = (buffer[len - 4U] << 8) | buffer[len - 3U];
         short val4 = (buffer[len - 2U] << 8) | buffer[len - 1U];
-        LogDebug(LOG_SERIAL, "V24 USB: %.*s %X %X %X %X", len - 11U, buffer + 3U, val1, val2, val3, val4);
+        LogDebug(LOG_DVMV24, "%.*s %X %X %X %X", len - 11U, buffer + 3U, val1, val2, val3, val4);
     }
     else if (buffer[2U] == CMD_DEBUG_DUMP) {
         uint8_t data[255U];
         ::memset(data, 0x00U, 255U);
         ::memcpy(data, buffer, len);
-        Utils::dump(1U, "V24 USB Debug Dump", data, len);
+        Utils::dump(1U, "DVMV24 Debug Dump", data, len);
     }
 }

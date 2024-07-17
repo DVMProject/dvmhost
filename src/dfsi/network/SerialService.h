@@ -124,6 +124,11 @@ namespace network
          */
         void processP25ToNet();
 
+        /**
+         * @brief Send the CMD_GET_VERSION to the connected V24 board to get firmware/UDID info
+        */
+        void getBoardInfo();
+
     private:
         std::string m_portName;
         uint32_t m_baudrate;
@@ -241,6 +246,11 @@ namespace network
          * @param[out] lost Count of lost IMBE frames.
          */
         void insertMissingAudio(uint8_t* data, uint32_t& lost);
+
+        /**
+         * @brief Resets the current rx call data (stream ID, TGIDs, etc)
+        */
+        void rxResetCallData();
 
         /**
          * @brief 

@@ -47,6 +47,7 @@
 #define LOG_CAL     "CAL"
 #define LOG_SETUP   "SETUP"
 #define LOG_SERIAL  "SERIAL"
+#define LOG_DVMV24  "DVMV24"
 
 /** @endcond */
 
