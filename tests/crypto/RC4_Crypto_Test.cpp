@@ -30,9 +30,10 @@ TEST_CASE("RC4", "[Crypto Test]") {
         srand((unsigned int)time(NULL));
 
         // key (K)
-        uint8_t K[8] = 
+        uint8_t K[13] = 
         {
-            0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07
+            0x00, 0x01, 0x02, 0x03, 0x04,                      // Selectable Key
+            0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07     // MI
         };
 
         // message
@@ -48,10 +49,10 @@ TEST_CASE("RC4", "[Crypto Test]") {
 
         Utils::dump(2U, "RC4_Crypto_Test, Message", message, 48);
 
-        uint8_t* crypted = rc4->crypt(message, 48 * sizeof(uint8_t), K, 8);
+        uint8_t* crypted = rc4->crypt(message, 48 * sizeof(uint8_t), K, 13);
         Utils::dump(2U, "RC4_Crypto_Test, Encrypted", crypted, 48);
 
-        uint8_t* decrypted = rc4->crypt(crypted, 48 * sizeof(uint8_t), K, 8);
+        uint8_t* decrypted = rc4->crypt(crypted, 48 * sizeof(uint8_t), K, 13);
         Utils::dump(2U, "RC4_Crypto_Test, Decrypted", decrypted, 48);
 
         for (uint32_t i = 0; i < 48U; i++) {
