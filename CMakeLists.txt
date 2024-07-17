@@ -1,16 +1,13 @@
 # SPDX-License-Identifier: GPL-2.0-only
-#/**
-#* Digital Voice Modem - CMake Build System
-#* GPLv2 Open Source. Use is subject to license terms.
-#* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-#*
-#* @package DVM / CMake Build System
-#* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-#*
-#*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
-#*   Copyright (C) 2022 Natalie Moore
-#*
-#*/
+#/*
+# * Digital Voice Modem - CMake Build System
+# * GPLv2 Open Source. Use is subject to license terms.
+# * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+# *
+# *  Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
+# *  Copyright (C) 2022 Natalie Moore
+# *
+# */
 cmake_minimum_required(VERSION 3.16.0)
 set(CMAKE_EXPORT_COMPILE_COMMANDS on) 
 
