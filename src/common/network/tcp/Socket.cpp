@@ -65,38 +65,22 @@ Socket::~Socket()
 int Socket::accept(sockaddr* address, socklen_t* addrlen) noexcept
 {
     // check that the accept() won't block
-    int i, n;
-    struct pollfd pfd[TCP_SOCKET_MAX];
-    for (i = n = 0; i < TCP_SOCKET_MAX; i++) {
-        if (m_fd >= 0) {
-            pfd[n].fd = m_fd;
-            pfd[n].events = POLLIN;
-            n++;
-        }
-    }
+    struct pollfd pfd;
+    pfd.fd = m_fd;
+    pfd.events = POLLIN;
+    pfd.revents = 0;
 
-    // no socket descriptor to receive
-    if (n == 0)
-        return 0;
-
-    // Return immediately
-    int ret = ::poll(pfd, n, 0);
+    // return immediately
+    int ret = ::poll(&pfd, 1, 0);
     if (ret < 0) {
         LogError(LOG_NET, "Error returned from TCP poll, err: %d", errno);
         return -1;
     }
 
-    int index;
-    for (i = 0; i < n; i++) {
-        // round robin
-        index = (i + m_counter) % n;
-        if (pfd[index].revents & POLLIN)
-            break;
-    }
-    if (i == n)
+    if ((pfd.revents & POLLIN) == 0)
         return -1;
 
-    return ::accept(pfd[index].fd, address, addrlen);
+    return ::accept(pfd.fd, address, addrlen);
 }
 
 /* Connects the client to a remote TCP host using the specified host name and port number. */
@@ -143,39 +127,23 @@ ssize_t Socket::listen(const std::string& ipAddr, const uint16_t port, int backl
         return -1;
 
     // check that the read() won't block
-    int i, n;
-    struct pollfd pfd[TCP_SOCKET_MAX];
-    for (i = n = 0; i < TCP_SOCKET_MAX; i++) {
-        if (m_fd >= 0) {
-            pfd[n].fd = m_fd;
-            pfd[n].events = POLLIN;
-            n++;
-        }
-    }
+    struct pollfd pfd;
+    pfd.fd = m_fd;
+    pfd.events = POLLIN;
+    pfd.revents = 0;
 
-    // no socket descriptor to receive
-    if (n == 0)
-        return 0;
-
-    // Return immediately
-    int ret = ::poll(pfd, n, 0);
+    // return immediately
+    int ret = ::poll(&pfd, 1, 0);
     if (ret < 0) {
         LogError(LOG_NET, "Error returned from TCP poll, err: %d", errno);
         return -1;
     }
 
-    int index;
-    for (i = 0; i < n; i++) {
-        // round robin
-        index = (i + m_counter) % n;
-        if (pfd[index].revents & POLLIN)
-            break;
-    }
-    if (i == n)
+    if ((pfd.revents & POLLIN) == 0)
         return 0;
 
     m_counter++;
-    return ::read(pfd[index].fd, (char*)buffer, length);
+    return ::read(pfd.fd, (char*)buffer, length);
 }
 
 /* Write data to the socket. */

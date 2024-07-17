@@ -33,10 +33,6 @@
 #include <cstdlib>
 #include <ctime>
 
-#if !defined(TCP_SOCKET_MAX)
-#define TCP_SOCKET_MAX	1
-#endif
-
 namespace network
 {
     namespace tcp

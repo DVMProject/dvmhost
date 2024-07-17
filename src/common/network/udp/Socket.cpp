@@ -149,40 +149,24 @@ ssize_t Socket::read(uint8_t* buffer, uint32_t length, sockaddr_storage& address
     if (m_fd < 0)
         return -1;
 
-    // Check that the readfrom() won't block
-    int i, n;
-    struct pollfd pfd[UDP_SOCKET_MAX];
-    for (i = n = 0; i < UDP_SOCKET_MAX; i++) {
-        if (m_fd >= 0) {
-            pfd[n].fd = m_fd;
-            pfd[n].events = POLLIN;
-            n++;
-        }
-    }
+    // check that the readfrom() won't block
+    struct pollfd pfd;
+    pfd.fd = m_fd;
+    pfd.events = POLLIN;
+    pfd.revents = 0;
 
-    // no socket descriptor to receive
-    if (n == 0)
-        return 0;
-
-    // Return immediately
-    int ret = ::poll(pfd, n, 0);
+    // return immediately
+    int ret = ::poll(&pfd, 1, 0);
     if (ret < 0) {
         LogError(LOG_NET, "Error returned from UDP poll, err: %d", errno);
         return -1;
     }
 
-    int index;
-    for (i = 0; i < n; i++) {
-        // round robin
-        index = (i + m_counter) % n;
-        if (pfd[index].revents & POLLIN)
-            break;
-    }
-    if (i == n)
+    if ((pfd.revents & POLLIN) == 0)
         return 0;
 
     socklen_t size = sizeof(sockaddr_storage);
-    ssize_t len = ::recvfrom(pfd[index].fd, (char*)buffer, length, 0, (sockaddr*)& address, &size);
+    ssize_t len = ::recvfrom(pfd.fd, (char*)buffer, length, 0, (sockaddr*)& address, &size);
     if (len <= 0) {
         LogError(LOG_NET, "Error returned from recvfrom, err: %d", errno);
 

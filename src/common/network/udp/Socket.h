@@ -37,10 +37,6 @@
 #include <arpa/inet.h>
 #include <errno.h>
 
-#if !defined(UDP_SOCKET_MAX)
-#define UDP_SOCKET_MAX	1
-#endif
-
 #define AES_WRAPPED_PCKT_MAGIC 0xC0FEU
 #define AES_WRAPPED_PCKT_KEY_LEN 32
 
