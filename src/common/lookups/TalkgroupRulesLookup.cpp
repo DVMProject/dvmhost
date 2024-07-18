@@ -90,6 +90,7 @@ bool TalkgroupRulesLookup::read()
 
     if (m_reloadTime > 0U)
         run();
+    setName("host:tg-lookup-tbl");
 
     return ret;
 }

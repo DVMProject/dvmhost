@@ -1607,7 +1607,7 @@ void* Host::threadModem(void* arg)
                 host->m_modem->clock(ms);
             }
 
-            Thread::sleep(0U, 50U);
+            Thread::sleep(0U, 750U);
         }
 
         LogDebug(LOG_HOST, "[STOP] %s", threadName.c_str());
