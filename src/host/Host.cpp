@@ -1206,9 +1206,7 @@ int Host::run()
             }
 
             hasTxShutdown = true;
-            if (!m_modem->hasTX()) {
-                killed = true;
-            }
+            killed = true;
         }
 
         m_modeTimer.clock(ms);
@@ -1816,7 +1814,6 @@ void* Host::threadPresence(void* arg)
         StopWatch stopWatch;
         stopWatch.start();
 
-        LogDebug(LOG_HOST, "started presence notifier");
         while (!g_killed) {
             // scope is intentional
             {
