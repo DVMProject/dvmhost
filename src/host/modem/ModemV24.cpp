@@ -14,6 +14,7 @@
 #include "common/p25/dfsi/LC.h"
 #include "common/p25/dfsi/frames/Frames.h"
 #include "common/p25/lc/LC.h"
+#include "common/p25/lc/tsbk/TSBKFactory.h"
 #include "common/p25/NID.h"
 #include "common/p25/P25Utils.h"
 #include "common/p25/Sync.h"
@@ -642,6 +643,43 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
             m_call->n++;
         }
         break;
+
+        case DFSIFrameType::TSBK:
+        {
+            MotTSBKFrame tf = MotTSBKFrame(dfsiData);
+            std::unique_ptr<lc::TSBK> tsbk = lc::tsbk::TSBKFactory::createTSBK(tf.tsbkData, true);
+
+            if (tsbk != nullptr) {
+                LogError(LOG_MODEM, "V.24/DFSI traffic failed to decode TSBK FEC");
+            } else {
+                uint8_t buffer[P25_TSDU_FRAME_LENGTH_BYTES + 2U];
+                ::memset(buffer, 0x00U, P25_TSDU_FRAME_LENGTH_BYTES + 2U);
+
+                buffer[0U] = modem::TAG_DATA;
+                buffer[1U] = 0x00U;
+
+                // Generate Sync
+                Sync::addP25Sync(buffer + 2U);
+
+                // Generate NID
+                m_nid.encode(buffer + 2U, DUID::TSDU);
+
+                // Regenerate TSDU Data
+                tsbk->setLastBlock(true); // always set last block -- this a Single Block TSDU
+                tsbk->encode(buffer + 2U);
+
+                // Add busy bits
+                P25Utils::addStatusBits(buffer + 2U, P25_TSDU_FRAME_LENGTH_BYTES, false, true);
+                P25Utils::addTrunkSlotStatusBits(buffer + 2U, P25_TSDU_FRAME_LENGTH_BYTES);
+
+                // Set first busy bits to 1,1
+                P25Utils::setStatusBits(buffer + 2U, P25_SS0_START, true, true);
+
+                storeConvertedRx(buffer, P25_TSDU_FRAME_LENGTH_BYTES + 2U);
+            }
+        }
+        break;
+
         // The remaining LDUs all create full rate voice frames so we do that here
         default:
         {
@@ -1071,15 +1109,15 @@ void ModemV24::endOfStream()
     MotStartOfStream end = MotStartOfStream();
     end.setStartStop(StartStopFlag::STOP);
 
-    // Create buffer and encode
-    uint8_t startBuf[end.LENGTH];
-    ::memset(startBuf, 0x00U, end.LENGTH);
-    end.encode(startBuf);
+    // create buffer and encode
+    uint8_t endBuf[MotStartOfStream::LENGTH];
+    ::memset(endBuf, 0x00U, MotStartOfStream::LENGTH);
+    end.encode(endBuf);
 
     if (m_trace)
-        Utils::dump(1U, "ModemV24::endOfStream() MotStartOfStream", startBuf, MotStartOfStream::LENGTH);
+        Utils::dump(1U, "ModemV24::endOfStream() MotStartOfStream", endBuf, MotStartOfStream::LENGTH);
 
-    queueP25Frame(startBuf, MotStartOfStream::LENGTH, STT_NON_IMBE);
+    queueP25Frame(endBuf, MotStartOfStream::LENGTH, STT_NON_IMBE);
 
     m_callInProgress = false;
 }
@@ -1171,7 +1209,28 @@ void ModemV24::convertFromAir(uint8_t* data, uint32_t length)
             break;
 
         case DUID::TSDU:
-            break;
+        {
+            std::unique_ptr<lc::TSBK> tsbk = lc::tsbk::TSBKFactory::createTSBK(data + 2U);
+            if (tsbk == nullptr) {
+                LogWarning(LOG_MODEM, P25_TSDU_STR ", undecodable LC");
+                return;
+            }
+
+            MotTSBKFrame tsbkFrame = MotTSBKFrame();
+            delete[] tsbkFrame.tsbkData;
+            tsbkFrame.tsbkData = tsbk->getDecodedRaw();
+
+            // create buffer and encode
+            uint8_t tsbkBuf[MotTSBKFrame::LENGTH];
+            ::memset(tsbkBuf, 0x00U, MotTSBKFrame::LENGTH);
+            tsbkFrame.encode(tsbkBuf);
+
+            if (m_trace)
+                Utils::dump(1U, "ModemV24::convertFromAir() MotTSBKFrame", tsbkBuf, MotTSBKFrame::LENGTH);
+
+            queueP25Frame(tsbkBuf, MotTSBKFrame::LENGTH, STT_NON_IMBE);
+        }
+        break;
 
         default:
             break;
