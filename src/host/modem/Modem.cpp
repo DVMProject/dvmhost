@@ -1742,7 +1742,7 @@ uint8_t Modem::getVersion() const
 }
 
 // ---------------------------------------------------------------------------
-//  Private Class Members
+//  Protected Class Members
 // ---------------------------------------------------------------------------
 
 /* Internal helper to warm reset the connection to the modem. */

@@ -13,6 +13,7 @@ using namespace network;
 using namespace modem;
 using namespace p25;
 using namespace p25::defines;
+using namespace p25::dfsi::frames;
 using namespace dfsi;
 
 // ---------------------------------------------------------------------------

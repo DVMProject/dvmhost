@@ -312,7 +312,7 @@ namespace modem
         /**
          * @brief Finalizes a instance of the Modem class.
          */
-        ~Modem();
+        virtual ~Modem();
 
         /**
          * @brief Sets the RF DC offset parameters.
@@ -419,18 +419,18 @@ namespace modem
          * @brief Opens connection to the air interface modem.
          * @returns bool True, if connection to modem is made, otherwise false.
          */
-        bool open();
+        virtual bool open();
 
         /**
          * @brief Updates the modem by the passed number of milliseconds.
          * @param ms Number of milliseconds.
          */
-        void clock(uint32_t ms);
+        virtual void clock(uint32_t ms);
 
         /**
          * @brief Closes connection to the air interface modem.
          */
-        void close();
+        virtual void close();
 
         /**
          * @brief Get the frame data length for the next frame in the DMR Slot 1 ring buffer.
@@ -661,7 +661,7 @@ namespace modem
          */
         uint8_t getVersion() const;
 
-    private:
+    protected:
         friend class ::Host;
         friend class ::HostCal;
         friend class ::RESTAPI;
@@ -871,11 +871,11 @@ namespace modem
         /**
          * @brief Flag indicating if modem trace is enabled.
          */
-        __READONLY_PROPERTY(bool, trace, Trace);
+        __PROTECTED_READONLY_PROPERTY(bool, trace, Trace);
         /**
          * @brief Flag indicating if modem debugging is enabled.
          */
-        __READONLY_PROPERTY(bool, debug, Debug);
+        __PROTECTED_READONLY_PROPERTY(bool, debug, Debug);
     };
 } // namespace modem
 

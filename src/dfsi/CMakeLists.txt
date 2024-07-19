@@ -17,12 +17,6 @@ file(GLOB dvmdfsi_SRC
     "src/dfsi/network/*.h"
     "src/dfsi/network/*.cpp"
     
-    # DFSI Data Frames
-    "src/dfsi/frames/*.h"
-    "src/dfsi/frames/*.cpp"
-    "src/dfsi/frames/fsc/*.h"
-    "src/dfsi/frames/fsc/*.cpp"
-    
     # Core
     "src/dfsi/*.h"
     "src/dfsi/*.cpp"
