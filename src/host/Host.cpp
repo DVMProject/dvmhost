@@ -59,7 +59,7 @@ Host::Host(const std::string& confFile) :
     m_conf(),
     m_modem(nullptr),
     m_modemRemote(false),
-    m_modemDFSI(false),
+    m_isModemDFSI(false),
     m_network(nullptr),
     m_modemRemotePort(nullptr),
     m_state(STATE_IDLE),
@@ -586,12 +586,12 @@ int Host::run()
         g_killed = true;
     }
 
-    if (m_modemDFSI && m_dmrEnabled) {
+    if (m_isModemDFSI && m_dmrEnabled) {
         ::LogError(LOG_HOST, "Cannot use V.24/DFSI modem with DMR protocol!");
         g_killed = true;
     }
 
-    if (m_modemDFSI && m_nxdnEnabled) {
+    if (m_isModemDFSI && m_nxdnEnabled) {
         ::LogError(LOG_HOST, "Cannot use V.24/DFSI modem with NXDN protocol!");
         g_killed = true;
     }

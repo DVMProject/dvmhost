@@ -17,6 +17,7 @@
 #include "common/Log.h"
 #include "common/Utils.h"
 #include "p25/Control.h"
+#include "modem/ModemV24.h"
 #include "remote/RESTClient.h"
 #include "ActivityLog.h"
 #include "HostMain.h"
@@ -55,6 +56,7 @@ Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t q
     m_txNAC(nac),
     m_timeout(timeout),
     m_modem(modem),
+    m_isModemDFSI(false),
     m_network(network),
     m_inhibitUnauth(false),
     m_legacyGroupGrnt(true),
@@ -125,6 +127,10 @@ Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t q
     assert(tidLookup != nullptr);
     assert(idenTable != nullptr);
     assert(rssiMapper != nullptr);
+
+    modem::ModemV24* modemV24 = dynamic_cast<modem::ModemV24*>(modem);
+    if (modemV24 != nullptr)
+        m_isModemDFSI = true;
 
     m_interval.start();
 

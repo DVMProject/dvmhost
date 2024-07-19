@@ -561,7 +561,7 @@ bool Host::createModem()
 
     std::transform(modemMode.begin(), modemMode.end(), modemMode.begin(), ::tolower);
     if (modemMode == MODEM_MODE_DFSI) {
-        m_modemDFSI = true;
+        m_isModemDFSI = true;
         LogInfo("    RT/RT: %s", rtrt ? "yes" : "no");
         LogInfo("    DIU Flag: %s", diu ? "yes" : "no");
         LogInfo("    Jitter Size: %u ms", jitter);
@@ -630,7 +630,7 @@ bool Host::createModem()
         LogInfo("    Debug: yes");
     }
 
-    if (m_modemDFSI) {
+    if (m_isModemDFSI) {
         m_modem = new ModemV24(modemPort, m_duplex, m_p25QueueSizeBytes, m_p25QueueSizeBytes, rtrt, diu, jitter,
             dumpModemStatus, trace, debug);
     } else {
