@@ -1216,14 +1216,16 @@ void ModemV24::convertFromAir(uint8_t* data, uint32_t length)
                 return;
             }
 
-            MotTSBKFrame tsbkFrame = MotTSBKFrame();
-            delete[] tsbkFrame.tsbkData;
-            tsbkFrame.tsbkData = tsbk->getDecodedRaw();
+            MotTSBKFrame tf = MotTSBKFrame();
+            tf.startOfStream->setStartStop(StartStopFlag::START);
+            tf.startOfStream->setRT(m_rtrt ? RTFlag::ENABLED : RTFlag::DISABLED);
+            delete[] tf.tsbkData;
+            tf.tsbkData = tsbk->getDecodedRaw();
 
             // create buffer and encode
             uint8_t tsbkBuf[MotTSBKFrame::LENGTH];
             ::memset(tsbkBuf, 0x00U, MotTSBKFrame::LENGTH);
-            tsbkFrame.encode(tsbkBuf);
+            tf.encode(tsbkBuf);
 
             if (m_trace)
                 Utils::dump(1U, "ModemV24::convertFromAir() MotTSBKFrame", tsbkBuf, MotTSBKFrame::LENGTH);
