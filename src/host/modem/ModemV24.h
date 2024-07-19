@@ -20,6 +20,7 @@
 #include "common/edac/RS634717.h"
 #include "common/p25/dfsi/frames/MotVoiceHeader1.h"
 #include "common/p25/dfsi/frames/MotVoiceHeader2.h"
+#include "common/p25/lc/LC.h"
 #include "common/p25/Audio.h"
 #include "common/p25/NID.h"
 #include "modem/Modem.h"
@@ -40,8 +41,9 @@ namespace modem
      * @ingroup modem
      */
     enum SERIAL_TX_TYPE {
-        NONIMBE,                            //! Non-IMBE Data/Signalling Frame
-        IMBE                                //! IMBE Voice Frame
+        STT_NO_DATA,                        //! No Data
+        STT_NON_IMBE,                       //! Non-IMBE Data/Signalling Frame
+        STT_IMBE                            //! IMBE Voice Frame
     };
 
     /** @} */
@@ -329,12 +331,29 @@ namespace modem
         void convertToAir(const uint8_t *data, uint32_t length);
 
         /**
+         * @brief Helper to add a V.24 data frame to the P25 Tx queue with the proper timestamp and formatting.
+         * @param data Buffer containing V.24 data frame to send.
+         * @param len Length of buffer.
+         * @param msgType Type of message to send (used for proper jitter clocking).
+         */
+        void queueP25Frame(uint8_t* data, uint16_t length, SERIAL_TX_TYPE msgType);
+
+        /**
+         * @brief Send a start of stream sequence (HDU, etc) to the connected serial V24 device.
+         * @param[in] control Instance of p25::lc::LC containing link control data.
+         */
+        void startOfStream(const p25::lc::LC& control);
+        /**
+         * @brief Send an end of stream sequence (TDU, etc) to the connected serial V24 device.
+         */
+        void endOfStream();
+
+        /**
          * @brief Internal helper to convert from TIA-102 air interface to V.24/DFSI.
          * @param data Buffer containing data to convert.
          * @param length Length of buffer.
-         * @returns SERIAL_TX_TYPE Transmit data type.
          */
-        SERIAL_TX_TYPE convertFromAir(uint8_t* data, uint32_t length);
+        void convertFromAir(uint8_t* data, uint32_t length);
     };
 } // namespace modem
 
