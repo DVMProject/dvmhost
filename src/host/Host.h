@@ -40,6 +40,7 @@
 #include "network/Network.h"
 #include "network/RESTAPI.h"
 #include "modem/Modem.h"
+#include "modem/ModemV24.h"
 
 #include <string>
 #include <unordered_map>
@@ -92,6 +93,7 @@ private:
 
     modem::Modem* m_modem;
     bool m_modemRemote;
+    bool m_modemDFSI;
     network::Network* m_network;
 
     modem::port::IModemPort* m_modemRemotePort;

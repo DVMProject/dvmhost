@@ -143,6 +143,9 @@ typedef unsigned long long  ulong64_t;
 #define UART_PORT "uart"
 #define PTY_PORT "pty"
 
+#define MODEM_MODE_DVM "dvm"
+#define MODEM_MODE_DFSI "dfsi"
+
 const uint32_t  REMOTE_MODEM_PORT = 3334;
 const uint32_t  TRAFFIC_DEFAULT_PORT = 62031;
 const uint32_t  REST_API_DEFAULT_PORT = 9990;

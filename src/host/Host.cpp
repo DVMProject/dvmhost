@@ -59,6 +59,7 @@ Host::Host(const std::string& confFile) :
     m_conf(),
     m_modem(nullptr),
     m_modemRemote(false),
+    m_modemDFSI(false),
     m_network(nullptr),
     m_modemRemotePort(nullptr),
     m_state(STATE_IDLE),
@@ -585,6 +586,16 @@ int Host::run()
         g_killed = true;
     }
 
+    if (m_modemDFSI && m_dmrEnabled) {
+        ::LogError(LOG_HOST, "Cannot use V.24/DFSI modem with DMR protocol!");
+        g_killed = true;
+    }
+
+    if (m_modemDFSI && m_nxdnEnabled) {
+        ::LogError(LOG_HOST, "Cannot use V.24/DFSI modem with NXDN protocol!");
+        g_killed = true;
+    }
+
     // P25 CC checks
     if (m_dmrEnabled && m_p25CtrlChannel) {
         ::LogError(LOG_HOST, "Cannot have DMR enabled when using dedicated P25 control!");
@@ -738,6 +749,8 @@ int Host::run()
         }
 
         stopWatch.start();
+    } else {
+        return EXIT_SUCCESS;
     }
 
     bool hasTxShutdown = false;

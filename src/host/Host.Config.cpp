@@ -395,6 +395,7 @@ bool Host::createModem()
 
     yaml::Node modemProtocol = modemConf["protocol"];
     std::string portType = modemProtocol["type"].as<std::string>("null");
+    std::string modemMode = modemProtocol["mode"].as<std::string>("dvm");
     yaml::Node uartProtocol = modemProtocol["uart"];
     std::string uartPort = uartProtocol["port"].as<std::string>();
     uint32_t uartSpeed = uartProtocol["speed"].as<uint32_t>(115200);
@@ -449,6 +450,12 @@ bool Host::createModem()
     uint16_t p25FifoLength = (uint16_t)modemConf["p25FifoLength"].as<uint32_t>(P25_TX_BUFFER_LEN);
     uint16_t nxdnFifoLength = (uint16_t)modemConf["nxdnFifoLength"].as<uint32_t>(NXDN_TX_BUFFER_LEN);
 
+    yaml::Node dfsiParams = modemConf["dfsi"];
+
+    bool rtrt = dfsiParams["rtrt"].as<bool>();
+    bool diu = dfsiParams["diu"].as<bool>();
+    uint16_t jitter = dfsiParams["jitter"].as<uint16_t>();
+
     // clamp fifo sizes
     if (dmrFifoLength < DMR_TX_BUFFER_LEN) {
         LogWarning(LOG_HOST, "DMR FIFO size must be greater then %u bytes, defaulting to %u bytes!", DMR_TX_BUFFER_LEN, DMR_TX_BUFFER_LEN);
@@ -492,6 +499,7 @@ bool Host::createModem()
 
     LogInfo("Modem Parameters");
     LogInfo("    Port Type: %s", portType.c_str());
+    LogInfo("    Modem Mode: %s", modemMode.c_str());
 
     port::IModemPort* modemPort = nullptr;
     std::transform(portType.begin(), portType.end(), portType.begin(), ::tolower);
@@ -549,6 +557,14 @@ bool Host::createModem()
     else {
         LogError(LOG_HOST, "Invalid protocol port type, %s!", portType.c_str());
         return false;
+    }
+
+    std::transform(modemMode.begin(), modemMode.end(), modemMode.begin(), ::tolower);
+    if (modemMode == MODEM_MODE_DFSI) {
+        m_modemDFSI = true;
+        LogInfo("    RT/RT: %s", rtrt ? "yes" : "no");
+        LogInfo("    DIU Flag: %s", diu ? "yes" : "no");
+        LogInfo("    Jitter Size: %u ms", jitter);
     }
 
     if (g_remoteModemMode) {
@@ -614,8 +630,13 @@ bool Host::createModem()
         LogInfo("    Debug: yes");
     }
 
-    m_modem = new Modem(modemPort, m_duplex, rxInvert, txInvert, pttInvert, dcBlocker, cosLockout, fdmaPreamble, dmrRxDelay, p25CorrCount,
-        m_dmrQueueSizeBytes, m_p25QueueSizeBytes, m_nxdnQueueSizeBytes, disableOFlowReset, ignoreModemConfigArea, dumpModemStatus, trace, debug);
+    if (m_modemDFSI) {
+        m_modem = new ModemV24(modemPort, m_duplex, m_p25QueueSizeBytes, m_p25QueueSizeBytes, rtrt, diu, jitter,
+            dumpModemStatus, trace, debug);
+    } else {
+        m_modem = new Modem(modemPort, m_duplex, rxInvert, txInvert, pttInvert, dcBlocker, cosLockout, fdmaPreamble, dmrRxDelay, p25CorrCount,
+            m_dmrQueueSizeBytes, m_p25QueueSizeBytes, m_nxdnQueueSizeBytes, disableOFlowReset, ignoreModemConfigArea, dumpModemStatus, trace, debug);
+    }
     if (!m_modemRemote) {
         m_modem->setModeParams(m_dmrEnabled, m_p25Enabled, m_nxdnEnabled);
         m_modem->setLevels(rxLevel, cwIdTXLevel, dmrTXLevel, p25TXLevel, nxdnTXLevel);
