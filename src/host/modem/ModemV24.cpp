@@ -1216,9 +1216,22 @@ void ModemV24::convertFromAir(uint8_t* data, uint32_t length)
                 return;
             }
 
+            MotStartOfStream startOfStream = MotStartOfStream();
+            startOfStream.setStartStop(StartStopFlag::START);
+            startOfStream.setRT(m_rtrt ? RTFlag::ENABLED : RTFlag::DISABLED);
+            startOfStream.setStreamType(StreamTypeFlag::TSBK);
+
+            // create buffer and encode
+            uint8_t startBuf[MotStartOfStream::LENGTH];
+            ::memset(startBuf, 0x00U, MotStartOfStream::LENGTH);
+            startOfStream.encode(startBuf);
+
+            queueP25Frame(startBuf, MotStartOfStream::LENGTH, STT_NON_IMBE);
+
             MotTSBKFrame tf = MotTSBKFrame();
             tf.startOfStream->setStartStop(StartStopFlag::START);
             tf.startOfStream->setRT(m_rtrt ? RTFlag::ENABLED : RTFlag::DISABLED);
+            tf.startOfStream->setStreamType(StreamTypeFlag::TSBK);
             delete[] tf.tsbkData;
             tf.tsbkData = tsbk->getDecodedRaw();
 
@@ -1231,6 +1244,19 @@ void ModemV24::convertFromAir(uint8_t* data, uint32_t length)
                 Utils::dump(1U, "ModemV24::convertFromAir() MotTSBKFrame", tsbkBuf, MotTSBKFrame::LENGTH);
 
             queueP25Frame(tsbkBuf, MotTSBKFrame::LENGTH, STT_NON_IMBE);
+
+            MotStartOfStream endOfStream = MotStartOfStream();
+            endOfStream.setStartStop(StartStopFlag::STOP);
+            endOfStream.setRT(m_rtrt ? RTFlag::ENABLED : RTFlag::DISABLED);
+            endOfStream.setStreamType(StreamTypeFlag::TSBK);
+
+            // create buffer and encode
+            uint8_t endBuf[MotStartOfStream::LENGTH];
+            ::memset(endBuf, 0x00U, MotStartOfStream::LENGTH);
+            endOfStream.encode(endBuf);
+
+            queueP25Frame(endBuf, MotStartOfStream::LENGTH, STT_NON_IMBE);
+            queueP25Frame(endBuf, MotStartOfStream::LENGTH, STT_NON_IMBE);
         }
         break;
 
