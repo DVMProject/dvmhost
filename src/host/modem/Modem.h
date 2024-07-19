@@ -384,7 +384,7 @@ namespace modem
          * @brief Sets the P25 NAC.
          * @param nac NAC.
          */
-        void setP25NAC(uint32_t nac);
+        virtual void setP25NAC(uint32_t nac);
         /**
          * @brief Sets the RF receive deviation levels.
          * @param rxLevel Rx Level.
@@ -634,7 +634,7 @@ namespace modem
          * @param length Length of data to write.
          * @returns int Actual length of data written.
          */
-        int write(const uint8_t* data, uint32_t length);
+        virtual int write(const uint8_t* data, uint32_t length);
 
         /**
          * @brief Gets the current operating state for the air interface modem.
