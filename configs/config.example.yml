@@ -456,6 +456,8 @@ system:
         protocol:
             # Modem port type.
             type: "null" # Valid values are "null", and "uart"
+            # Modem mode.
+            mode: "dvm" # Valid values are "dvm", and "dfsi"
 
             uart:
                 # UART/RS232 serial port device.
@@ -548,6 +550,14 @@ system:
             txFine: 127 # Valid values between 0 and 255
             rssiCoarse: 127 # Valid values between 0 and 255
             rssiFine: 127 # Valid values between 0 and 255
+
+        dfsi:
+            # RT/RT flag enabled (0x02) or disabled (0x04)
+            rtrt: true
+            # Use the DIU source flag (0x00) instead of the quantar source flag (0x02)
+            diu: true
+            # Jitter buffer length in ms
+            jitter: 200
 
         # Sets received the signal offset from DC.
         rxDCOffset: 0 # Valid values between -128 and 128
