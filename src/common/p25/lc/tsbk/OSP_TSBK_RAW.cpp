@@ -44,7 +44,15 @@ bool OSP_TSBK_RAW::decode(const uint8_t* data, bool rawTSBK)
 {
     assert(data != nullptr);
 
-    /* stub */
+    if (m_tsbk != nullptr)
+        delete[] m_tsbk;
+
+    m_tsbk = new uint8_t[P25_TSBK_LENGTH_BYTES + 1U];
+    ::memset(m_tsbk, 0x00U, P25_TSBK_LENGTH_BYTES);
+
+    bool ret = TSBK::decode(data, m_tsbk, rawTSBK);
+    if (!ret)
+        return false;
 
     return true;
 }
