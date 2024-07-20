@@ -35,12 +35,15 @@ bool TSBKFactory::m_warnCRC = false;
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the TSBKFactory class. */
+
 TSBKFactory::TSBKFactory() = default;
 
 /* Finalizes a instance of TSBKFactory class. */
+
 TSBKFactory::~TSBKFactory() = default;
 
 /* Create an instance of a TSBK. */
+
 std::unique_ptr<TSBK> TSBKFactory::createTSBK(const uint8_t* data, bool rawTSBK)
 {
     assert(data != nullptr);
@@ -223,6 +226,7 @@ std::unique_ptr<TSBK> TSBKFactory::createTSBK(const uint8_t* data, bool rawTSBK)
 }
 
 /* Create an instance of a AMBT. */
+
 std::unique_ptr<AMBT> TSBKFactory::createAMBT(const data::DataHeader& dataHeader, const data::DataBlock* blocks)
 {
     assert(blocks != nullptr);
@@ -310,6 +314,7 @@ std::unique_ptr<AMBT> TSBKFactory::createAMBT(const data::DataHeader& dataHeader
 // ---------------------------------------------------------------------------
 
 /* Decode a TSBK. */
+
 std::unique_ptr<TSBK> TSBKFactory::decode(TSBK* tsbk, const uint8_t* data, bool rawTSBK)
 {
     assert(tsbk != nullptr);
@@ -323,6 +328,7 @@ std::unique_ptr<TSBK> TSBKFactory::decode(TSBK* tsbk, const uint8_t* data, bool 
 }
 
 /* Decode an AMBT. */
+
 std::unique_ptr<AMBT> TSBKFactory::decode(AMBT* ambt, const data::DataHeader& dataHeader, const data::DataBlock* blocks)
 {
     assert(ambt != nullptr);

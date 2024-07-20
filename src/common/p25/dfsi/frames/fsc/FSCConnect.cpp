@@ -36,7 +36,7 @@ FSCConnect::FSCConnect() : FSCMessage(),
 
 /* Initializes a instance of the FSCConnect class. */
 
-FSCConnect::FSCConnect(uint8_t* data) : FSCMessage(data),
+FSCConnect::FSCConnect(const uint8_t* data) : FSCMessage(data),
     m_vcBasePort(0U),
     m_vcSSRC(0U),
     m_fsHeartbeatPeriod(5U),

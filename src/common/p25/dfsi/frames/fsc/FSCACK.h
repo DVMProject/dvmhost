@@ -51,7 +51,7 @@ namespace p25
                      * @brief Initializes a copy instance of the FSCACK class.
                      * @param data Buffer to containing FSCACK to decode.
                      */
-                    FSCACK(uint8_t* data);
+                    FSCACK(const uint8_t* data);
 
                     /**
                      * @brief Decode a FSC ACK frame.

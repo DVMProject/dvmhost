@@ -37,7 +37,7 @@ FSCACK::FSCACK() : FSCMessage(),
 
 /* Initializes a instance of the FSCACK class. */
 
-FSCACK::FSCACK(uint8_t* data) : FSCMessage(data),
+FSCACK::FSCACK(const uint8_t* data) : FSCMessage(data),
     m_ackMessageId(FSCMessageType::FSC_INVALID),
     m_ackVersion(1U),
     m_ackCorrelationTag(0U),
