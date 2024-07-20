@@ -371,13 +371,25 @@ void ModemV24::close()
 
 int ModemV24::write(const uint8_t* data, uint32_t length)
 {
-    uint8_t buffer[length];
-    ::memset(buffer, 0x00U, length);
-    ::memcpy(buffer, data, length);
+    assert(data != nullptr);
 
-    // convert data from TIA-102 air formatting to V.24/DFSI formatting
-    convertFromAir(buffer, length);
-    return length;
+    uint8_t modemCommand = CMD_GET_VERSION;
+    if (data[0U] == DVM_SHORT_FRAME_START) {
+        modemCommand = data[2U];
+    } else if (data[0U] == DVM_LONG_FRAME_START) {
+        modemCommand = data[3U];
+    }
+
+    if (modemCommand == CMD_P25_DATA) {
+        uint8_t buffer[length];
+        ::memset(buffer, 0x00U, length);
+        ::memcpy(buffer, data, length);
+
+        convertFromAir(buffer, length);
+        return length;
+    } else {
+        Modem::write(data, length);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -501,6 +513,9 @@ void ModemV24::create_TDU(uint8_t* buffer)
 
 void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
 {
+    assert(data != nullptr);
+    assert(length > 0U);
+
     uint8_t buffer[P25_PDU_FRAME_LENGTH_BYTES + 2U];
     ::memset(buffer, 0x00U, P25_PDU_FRAME_LENGTH_BYTES + 2U);
 
@@ -1126,6 +1141,9 @@ void ModemV24::endOfStream()
 
 void ModemV24::convertFromAir(uint8_t* data, uint32_t length)
 {
+    assert(data != nullptr);
+    assert(length > 0U);
+
     uint8_t ldu[9U * 25U];
     ::memset(ldu, 0x00U, 9 * 25U);
 
