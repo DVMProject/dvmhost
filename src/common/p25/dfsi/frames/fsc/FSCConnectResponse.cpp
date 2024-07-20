@@ -33,7 +33,7 @@ FSCConnectResponse::FSCConnectResponse() : FSCResponse(),
 
 /* Initializes a instance of the FSCConnectResponse class. */
 
-FSCConnectResponse::FSCConnectResponse(uint8_t* data) : FSCResponse(data),
+FSCConnectResponse::FSCConnectResponse(const uint8_t* data) : FSCResponse(data),
     m_vcBasePort(0U)
 {
     decode(data);

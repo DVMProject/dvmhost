@@ -32,7 +32,7 @@ FSCDisconnect::FSCDisconnect() : FSCMessage()
 
 /* Initializes a instance of the FSCDisconnect class. */
 
-FSCDisconnect::FSCDisconnect(uint8_t* data) : FSCMessage(data)
+FSCDisconnect::FSCDisconnect(const uint8_t* data) : FSCMessage(data)
 {
     decode(data);
 }

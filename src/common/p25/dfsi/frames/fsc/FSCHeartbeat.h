@@ -51,7 +51,7 @@ namespace p25
                      * @brief Initializes a copy instance of the FSCHeartbeat class.
                      * @param data Buffer to containing FSCHeartbeat to decode.
                      */
-                    FSCHeartbeat(uint8_t* data);
+                    FSCHeartbeat(const uint8_t* data);
                 };
             } // namespace fsc
         } // namespace frames

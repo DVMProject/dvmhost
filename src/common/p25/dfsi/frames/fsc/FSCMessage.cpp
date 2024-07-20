@@ -8,6 +8,7 @@
  *
  */
 #include "common/p25/dfsi/frames/fsc/FSCMessage.h"
+#include "common/p25/dfsi/frames/Frames.h"
 #include "common/p25/dfsi/DFSIDefines.h"
 #include "common/Utils.h"
 #include "common/Log.h"
@@ -35,7 +36,7 @@ FSCMessage::FSCMessage() :
 
 /* Initializes a instance of the FSCMessage class. */
 
-FSCMessage::FSCMessage(uint8_t* data) :
+FSCMessage::FSCMessage(const uint8_t* data) :
     m_messageId(FSCMessageType::FSC_INVALID),
     m_version(1U),
     m_correlationTag(0U)
@@ -69,4 +70,33 @@ void FSCMessage::encode(uint8_t* data)
 
     if (m_messageId != FSCMessageType::FSC_HEARTBEAT && m_messageId != FSCMessageType::FSC_ACK)
         data[2U] = m_correlationTag;                            // Message Correlation Tag
+}
+
+/* Create an instance of a FSCMessage. */
+
+std::unique_ptr<FSCMessage> FSCMessage::createMessage(const uint8_t* data)
+{
+    assert(data != nullptr);
+
+    uint8_t msg[FSCMessage::LENGTH + 1U];
+    ::memset(msg, 0x00U, FSCMessage::LENGTH);
+
+    uint8_t messageId = (FSCMessageType::E)(msg[0U]);           // Message ID
+
+    // standard P25 reference opcodes
+    switch (messageId) {
+    case FSCMessageType::FSC_CONNECT:
+        return std::unique_ptr<FSCMessage>(new FSCConnect(data));
+    case FSCMessageType::FSC_HEARTBEAT:
+        return std::unique_ptr<FSCMessage>(new FSCHeartbeat(data));
+    case FSCMessageType::FSC_ACK:
+        return std::unique_ptr<FSCMessage>(new FSCACK(data));
+    case FSCMessageType::FSC_DISCONNECT:
+        return std::unique_ptr<FSCMessage>(new FSCDisconnect(data));
+    default:
+        LogError(LOG_P25, "FSCMessage::create(), unknown message value, messageId = $%02X", messageId);
+        break;
+    }
+
+    return nullptr;
 }

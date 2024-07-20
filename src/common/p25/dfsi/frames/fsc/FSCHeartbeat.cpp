@@ -32,7 +32,7 @@ FSCHeartbeat::FSCHeartbeat() : FSCMessage()
 
 /* Initializes a instance of the FSCHeartbeat class. */
 
-FSCHeartbeat::FSCHeartbeat(uint8_t* data) : FSCMessage(data)
+FSCHeartbeat::FSCHeartbeat(const uint8_t* data) : FSCMessage(data)
 {
     decode(data);
 }

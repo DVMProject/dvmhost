@@ -474,7 +474,7 @@ namespace network
 
         /**
          * @brief Generates a new stream ID.
-         * @returns uint32_T New stream ID.
+         * @returns uint32_t New stream ID.
          */
         uint32_t createStreamId() { std::uniform_int_distribution<uint32_t> dist(DVM_RAND_MIN, DVM_RAND_MAX); return dist(m_random); }
 

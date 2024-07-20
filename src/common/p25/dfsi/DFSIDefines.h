@@ -68,6 +68,8 @@ namespace p25
              * @{
              */
 
+            const uint8_t   DFSI_RTP_PAYLOAD_TYPE = 0x64U;  //!
+
             const uint8_t   DFSI_STATUS_NO_ERROR = 0x00U;   //!
             const uint8_t   DFSI_STATUS_ERASE = 0x02U;      //!
 

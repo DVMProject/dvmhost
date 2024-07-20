@@ -33,7 +33,7 @@ FSCResponse::FSCResponse() :
 
 /* Initializes a instance of the FSCResponse class. */
 
-FSCResponse::FSCResponse(uint8_t* data) :
+FSCResponse::FSCResponse(const uint8_t* data) :
     m_version(1U)
 {
     decode(data);

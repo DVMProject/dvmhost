@@ -51,7 +51,7 @@ namespace p25
                      * @brief Initializes a copy instance of the FSCDisconnect class.
                      * @param data Buffer to containing FSCDisconnect to decode.
                      */
-                    FSCDisconnect(uint8_t* data);
+                    FSCDisconnect(const uint8_t* data);
                 };
             } // namespace fsc
         } // namespace frames

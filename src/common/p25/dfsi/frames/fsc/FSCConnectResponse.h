@@ -51,7 +51,7 @@ namespace p25
                      * @brief Initializes a copy instance of the FSCConnectResponse class.
                      * @param data Buffer to containing FSCConnectResponse to decode.
                      */
-                    FSCConnectResponse(uint8_t* data);
+                    FSCConnectResponse(const uint8_t* data);
 
                     /**
                      * @brief Decode a FSC connect response frame.

@@ -50,7 +50,7 @@ namespace p25
                      * @brief Initializes a copy instance of the FSCMessage class.
                      * @param data Buffer to containing FSCMessage to decode.
                      */
-                    FSCMessage(uint8_t* data);
+                    FSCMessage(const uint8_t* data);
 
                     /**
                      * @brief Decode a FSC message frame.
@@ -62,7 +62,14 @@ namespace p25
                      * @param[out] data Buffer to encode a FSCMessage.
                      */
                     virtual void encode(uint8_t* data);
-                
+
+                    /**
+                     * @brief Create an instance of a FSCMessage.
+                     * @param[in] data Buffer containing FSCMessage packet data to decode.
+                     * @returns FSCMessage* Instance of a FSCMessage representing the decoded data.
+                     */
+                    static std::unique_ptr<FSCMessage> createMessage(const uint8_t* data);
+
                 public:
                     /**
                      * @brief Message ID.
