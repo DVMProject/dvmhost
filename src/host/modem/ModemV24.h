@@ -291,7 +291,7 @@ namespace modem
 
         p25::Audio m_audio;
 
-        p25::NID m_nid;
+        p25::NID* m_nid;
 
         RingBuffer<uint8_t> m_txP25Queue;
 

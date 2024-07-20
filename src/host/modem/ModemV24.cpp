@@ -43,7 +43,7 @@ ModemV24::ModemV24(port::IModemPort* port, bool duplex, uint32_t p25QueueSize, u
     m_rtrt(rtrt),
     m_diu(diu),
     m_audio(),
-    m_nid(DEFAULT_NAC),
+    m_nid(nullptr),
     m_txP25Queue(p25TxQueueSize, "TX P25 Queue"),
     m_call(),
     m_callInProgress(false),
@@ -58,7 +58,10 @@ ModemV24::ModemV24(port::IModemPort* port, bool duplex, uint32_t p25QueueSize, u
 
 /* Finalizes a instance of the Modem class. */
 
-ModemV24::~ModemV24() = default;
+ModemV24::~ModemV24()
+{
+    delete m_nid;
+}
 
 /* Sets the call timeout. */
 
@@ -72,7 +75,7 @@ void ModemV24::setCallTimeout(uint16_t timeout)
 void ModemV24::setP25NAC(uint32_t nac)
 {
     Modem::setP25NAC(nac);
-    m_nid = NID(nac);
+    m_nid = new NID(nac);
 }
 
 /* Opens connection to the air interface modem. */
@@ -383,12 +386,12 @@ int ModemV24::write(const uint8_t* data, uint32_t length)
     if (modemCommand == CMD_P25_DATA) {
         uint8_t buffer[length];
         ::memset(buffer, 0x00U, length);
-        ::memcpy(buffer, data, length);
+        ::memcpy(buffer, data + 2U, length);
 
         convertFromAir(buffer, length);
         return length;
     } else {
-        Modem::write(data, length);
+        return Modem::write(data, length);
     }
 }
 
@@ -499,7 +502,7 @@ void ModemV24::create_TDU(uint8_t* buffer)
     Sync::addP25Sync(data + 2U);
 
     // Generate NID
-    m_nid.encode(data + 2U, DUID::TDU);
+    m_nid->encode(data + 2U, DUID::TDU);
 
     // Add busy bits
     P25Utils::addStatusBits(data + 2U, P25_TDU_FRAME_LENGTH_BITS, false);
@@ -624,7 +627,7 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
                     Sync::addP25Sync(buffer + 2U);
 
                     // Generate NID
-                    m_nid.encode(buffer + 2U, DUID::HDU);
+                    m_nid->encode(buffer + 2U, DUID::HDU);
 
                     // Generate HDU
                     lc.encodeHDU(buffer + 2U);
@@ -677,7 +680,7 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
                 Sync::addP25Sync(buffer + 2U);
 
                 // Generate NID
-                m_nid.encode(buffer + 2U, DUID::TSDU);
+                m_nid->encode(buffer + 2U, DUID::TSDU);
 
                 // Regenerate TSDU Data
                 tsbk->setLastBlock(true); // always set last block -- this a Single Block TSDU
@@ -892,7 +895,7 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
         Sync::addP25Sync(buffer + 2U);
 
         // generate NID
-        m_nid.encode(buffer + 2U, DUID::LDU1);
+        m_nid->encode(buffer + 2U, DUID::LDU1);
 
         // generate LDU1 Data
         lc.encodeLDU1(buffer + 2U);
@@ -934,7 +937,7 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
         Sync::addP25Sync(buffer + 2U);
 
         // generate NID
-        m_nid.encode(buffer + 2U, DUID::LDU2);
+        m_nid->encode(buffer + 2U, DUID::LDU2);
 
         // generate LDU2 data
         lc.encodeLDU2(buffer + 2U);
@@ -970,6 +973,9 @@ void ModemV24::queueP25Frame(uint8_t* data, uint16_t len, SERIAL_TX_TYPE msgType
 {
     assert(data != nullptr);
     assert(len > 0U);
+
+    // LogDebug(LOG_MODEM, "ModemV24::queueP25Frame() msgType = $%02X", msgType);
+    // Utils::dump(1U, "ModemV24::queueP25Frame() data", data, len);
 
     // get current time in ms
     uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
@@ -1144,15 +1150,17 @@ void ModemV24::convertFromAir(uint8_t* data, uint32_t length)
     assert(data != nullptr);
     assert(length > 0U);
 
+    // Utils::dump(1U, "ModemV24::convertFromAir() data", data, length);
+
     uint8_t ldu[9U * 25U];
     ::memset(ldu, 0x00U, 9 * 25U);
 
     // decode the NID
-    bool valid = m_nid.decode(data + 2U);
+    bool valid = m_nid->decode(data + 2U);
     if (!valid)
         return;
 
-    DUID::E duid = m_nid.getDUID();
+    DUID::E duid = m_nid->getDUID();
 
     // handle individual DUIDs
     lc::LC lc = lc::LC();
@@ -1228,8 +1236,8 @@ void ModemV24::convertFromAir(uint8_t* data, uint32_t length)
 
         case DUID::TSDU:
         {
-            std::unique_ptr<lc::TSBK> tsbk = lc::tsbk::TSBKFactory::createTSBK(data + 2U);
-            if (tsbk == nullptr) {
+            lc::tsbk::OSP_TSBK_RAW tsbk = lc::tsbk::OSP_TSBK_RAW();
+            if (!tsbk.decode(data + 2U)) {
                 LogWarning(LOG_MODEM, P25_TSDU_STR ", undecodable LC");
                 return;
             }
@@ -1251,7 +1259,10 @@ void ModemV24::convertFromAir(uint8_t* data, uint32_t length)
             tf.startOfStream->setRT(m_rtrt ? RTFlag::ENABLED : RTFlag::DISABLED);
             tf.startOfStream->setStreamType(StreamTypeFlag::TSBK);
             delete[] tf.tsbkData;
-            tf.tsbkData = tsbk->getDecodedRaw();
+
+            tf.tsbkData = new uint8_t[P25_TSBK_LENGTH_BYTES];
+            ::memset(tf.tsbkData, 0x00U, P25_TSBK_LENGTH_BYTES);
+            ::memcpy(tf.tsbkData, tsbk.getDecodedRaw(), P25_TSBK_LENGTH_BYTES);
 
             // create buffer and encode
             uint8_t tsbkBuf[MotTSBKFrame::LENGTH];
