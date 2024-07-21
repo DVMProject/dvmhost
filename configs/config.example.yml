@@ -455,9 +455,13 @@ system:
         #
         protocol:
             # Modem port type.
+            #   null - Null Modem (Loopback for testing)
+            #   uart - Serial Modem
             type: "null" # Valid values are "null", and "uart"
             # Modem mode.
-            mode: "dvm" # Valid values are "dvm", and "dfsi"
+            #   air - Standard air interface modem (Hotspot or Repeater)
+            #   dfsi - TIA-102 DFSI interface modem
+            mode: "air" # Valid values are "air", and "dfsi"
 
             uart:
                 # UART/RS232 serial port device.

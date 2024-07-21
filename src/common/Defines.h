@@ -139,11 +139,11 @@ typedef unsigned long long  ulong64_t;
 #define DEFAULT_CONF_FILE "config.yml"
 #define DEFAULT_LOCK_FILE "/tmp/dvm.lock"
 
-#define NULL_PORT "null"
-#define UART_PORT "uart"
-#define PTY_PORT "pty"
+#define NULL_PORT       "null"
+#define UART_PORT       "uart"
+#define PTY_PORT        "pty"
 
-#define MODEM_MODE_DVM "dvm"
+#define MODEM_MODE_AIR  "air"
 #define MODEM_MODE_DFSI "dfsi"
 
 const uint32_t  REMOTE_MODEM_PORT = 3334;

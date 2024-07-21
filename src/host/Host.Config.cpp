@@ -395,7 +395,7 @@ bool Host::createModem()
 
     yaml::Node modemProtocol = modemConf["protocol"];
     std::string portType = modemProtocol["type"].as<std::string>("null");
-    std::string modemMode = modemProtocol["mode"].as<std::string>("dvm");
+    std::string modemMode = modemProtocol["mode"].as<std::string>("air");
     yaml::Node uartProtocol = modemProtocol["uart"];
     std::string uartPort = uartProtocol["port"].as<std::string>();
     uint32_t uartSpeed = uartProtocol["speed"].as<uint32_t>(115200);
@@ -499,7 +499,7 @@ bool Host::createModem()
 
     LogInfo("Modem Parameters");
     LogInfo("    Port Type: %s", portType.c_str());
-    LogInfo("    Modem Mode: %s", modemMode.c_str());
+    LogInfo("    Interface Mode: %s", modemMode.c_str());
 
     port::IModemPort* modemPort = nullptr;
     std::transform(portType.begin(), portType.end(), portType.begin(), ::tolower);
@@ -572,7 +572,6 @@ bool Host::createModem()
             m_modemRemotePort = new port::UDPPort(g_remoteAddress, g_remotePort);
             m_modemRemote = true;
             ignoreModemConfigArea = true;
-
         }
         else {
             delete modemPort;
