@@ -565,6 +565,8 @@ system:
             diu: true
             # Jitter buffer length in ms
             jitter: 200
+            # Timer which will reset local/remote call flags if frames aren't received longer than this time in ms
+            callTimeout: 200
 
         # Sets received the signal offset from DC.
         rxDCOffset: 0 # Valid values between -128 and 128
