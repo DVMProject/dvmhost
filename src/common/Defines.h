@@ -108,8 +108,8 @@ typedef unsigned long long  ulong64_t;
 #define __EXE_NAME__ ""
 
 #define VERSION_MAJOR       "04"
-#define VERSION_MINOR       "02"
-#define VERSION_REV         "C"
+#define VERSION_MINOR       "04"
+#define VERSION_REV         "D"
 
 #define __NETVER__ "DVM_R" VERSION_MAJOR VERSION_REV VERSION_MINOR
 #define __VER__ VERSION_MAJOR "." VERSION_MINOR VERSION_REV " (R" VERSION_MAJOR VERSION_REV VERSION_MINOR " " __GIT_VER__ ")"
