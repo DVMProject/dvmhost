@@ -262,7 +262,7 @@ int V24UDPPort::write(const uint8_t* buffer, uint32_t length)
     {
         if (m_socket != nullptr) {
             uint32_t messageLen = 0U;
-            uint8_t* message = generateMessage(buffer, length, m_streamId, m_peerId, m_pktSeq, &messageLen);
+            uint8_t* message = generateMessage(buffer + 3U, length - 3U, m_streamId, m_peerId, m_pktSeq, &messageLen);
 
             bool written = m_socket->write(message, messageLen, m_addr, m_addrLen);
             if (written)
