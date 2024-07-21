@@ -128,6 +128,7 @@ Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t q
     assert(idenTable != nullptr);
     assert(rssiMapper != nullptr);
 
+    // bryanb: this is a hacky check to see if the modem is a ModemV24 or not...
     modem::ModemV24* modemV24 = dynamic_cast<modem::ModemV24*>(modem);
     if (modemV24 != nullptr)
         m_isModemDFSI = true;
@@ -288,6 +289,8 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
 
     m_ackTSBKRequests = control["ackRequests"].as<bool>(true);
     m_control->m_ctrlTSDUMBF = !control["disableTSDUMBF"].as<bool>(false);
+    if (m_isModemDFSI)
+        m_control->m_ctrlTSDUMBF = false; // force single block TSDUs for DFSI mode
     m_control->m_ctrlTimeDateAnn = control["enableTimeDateAnn"].as<bool>(false);
     m_control->m_redundantImmediate = control["redundantImmediate"].as<bool>(true);
     m_control->m_redundantGrant = control["redundantGrantTransmit"].as<bool>(false);

@@ -562,9 +562,9 @@ bool Host::createModem()
     std::transform(modemMode.begin(), modemMode.end(), modemMode.begin(), ::tolower);
     if (modemMode == MODEM_MODE_DFSI) {
         m_isModemDFSI = true;
-        LogInfo("    RT/RT: %s", rtrt ? "yes" : "no");
-        LogInfo("    DIU Flag: %s", diu ? "yes" : "no");
-        LogInfo("    Jitter Size: %u ms", jitter);
+        LogInfo("    DFSI RT/RT: %s", rtrt ? "yes" : "no");
+        LogInfo("    DFSI DIU Flag: %s", diu ? "yes" : "no");
+        LogInfo("    DFSI Jitter Size: %u ms", jitter);
     }
 
     if (g_remoteModemMode) {

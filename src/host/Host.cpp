@@ -692,6 +692,11 @@ int Host::run()
                 setState(STATE_P25);
             }
 
+            if (m_isModemDFSI) {
+                m_fixedMode = true;
+                setState(STATE_P25);
+            }
+
             if (m_nxdnCtrlChannel) {
                 m_fixedMode = true;
                 setState(STATE_NXDN);
