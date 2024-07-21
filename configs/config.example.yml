@@ -458,7 +458,7 @@ system:
             #   null - Null Modem (Loopback for testing)
             #   uart - Serial Modem
             type: "null" # Valid values are "null", and "uart"
-            # Modem mode.
+            # Modem interface mode.
             #   air - Standard air interface modem (Hotspot or Repeater)
             #   dfsi - TIA-102 DFSI interface modem
             mode: "air" # Valid values are "air", and "dfsi"
