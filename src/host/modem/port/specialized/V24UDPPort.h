@@ -70,18 +70,14 @@ namespace modem
                  * @param address Hostname/IP address to connect to.
                  * @param modemPort Port number.
                  * @param controlPort Control Port number.
+                 * @param useFSC Flag indicating whether or not FSC handshakes are used to setup communications.
                  * @param debug Flag indicating whether network debug is enabled.
                  */
-                V24UDPPort(uint32_t peerId, const std::string& modemAddress, uint16_t modemPort, uint16_t controlPort = 0U, bool debug = false);
+                V24UDPPort(uint32_t peerId, const std::string& modemAddress, uint16_t modemPort, uint16_t controlPort = 0U, bool useFSC = false, bool debug = false);
                 /**
                  * @brief Finalizes a instance of the V24UDPPort class.
                  */
                 ~V24UDPPort() override;
-
-                /**
-                 * @brief Process FSC control frames from the network.
-                 */
-                void processCtrlNetwork();
 
                 /**
                  * @brief Updates the timer by the passed number of milliseconds.
@@ -149,7 +145,15 @@ namespace modem
                 uint32_t m_timestamp;
                 uint16_t m_pktSeq;
 
+                uint8_t m_modemState;
+                bool m_tx;
+
                 bool m_debug;
+
+                /**
+                 * @brief Process FSC control frames from the network.
+                 */
+                void processCtrlNetwork();
 
                 /**
                  * @brief Entry point to process a given network packet.
@@ -163,6 +167,10 @@ namespace modem
                  * @param port Port number.
                  */
                 void createVCPort(uint16_t port);
+                /**
+                 * @brief Internal helper to write a FSC connect packet.
+                 */
+                void writeConnect();
                 /**
                  * @brief Internal helper to write a FSC heartbeat packet.
                  */
@@ -193,6 +201,26 @@ namespace modem
                  */
                 uint8_t* generateMessage(const uint8_t* message, uint32_t length, uint32_t streamId,
                     uint32_t ssrc, uint16_t rtpSeq, uint32_t* outBufferLen);
+
+                /**
+                 * @brief Helper to return a faked modem version.
+                 */
+                void getVersion();
+                /**
+                 * @brief Helper to return a faked modem status.
+                 */
+                void getStatus();
+                /**
+                 * @brief Helper to write a faked modem acknowledge.
+                 * @param type  
+                 */
+                void writeAck(uint8_t type);
+                /**
+                 * @brief Helper to write a faked modem negative acknowledge.
+                 * @param opcode 
+                 * @param err 
+                 */
+                void writeNAK(uint8_t opcode, uint8_t err);
             };
         } // namespace specialized
     } // namespace port

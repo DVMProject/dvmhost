@@ -16,6 +16,7 @@
 #include "common/StopWatch.h"
 #include "common/Thread.h"
 #include "common/Utils.h"
+#include "modem/port/specialized/V24UDPPort.h"
 #include "remote/RESTClient.h"
 #include "host/Host.h"
 #include "ActivityLog.h"
@@ -60,6 +61,7 @@ Host::Host(const std::string& confFile) :
     m_modem(nullptr),
     m_modemRemote(false),
     m_isModemDFSI(false),
+    m_udpDSFIRemotePort(nullptr),
     m_network(nullptr),
     m_modemRemotePort(nullptr),
     m_state(STATE_IDLE),
@@ -922,6 +924,13 @@ int Host::run()
                     m_nxdnDedicatedTxTestTimer.clock(ms);
                 }
             }
+        }
+
+        if (m_udpDSFIRemotePort != nullptr) {
+            m_mainLoopStage = 11U; // intentional magic number
+            modem::port::specialized::V24UDPPort* udpPort = dynamic_cast<modem::port::specialized::V24UDPPort*>(m_udpDSFIRemotePort);
+            
+            udpPort->clock(ms);
         }
 
         // ------------------------------------------------------

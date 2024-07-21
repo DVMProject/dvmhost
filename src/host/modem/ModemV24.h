@@ -43,6 +43,7 @@ namespace modem
     enum SERIAL_TX_TYPE {
         STT_NO_DATA,                        //! No Data
         STT_NON_IMBE,                       //! Non-IMBE Data/Signalling Frame
+        STT_NON_IMBE_NO_JITTER,             //! Non-IMBE Data/Signalling Frame with Jitter Disabled
         STT_IMBE                            //! IMBE Voice Frame
     };
 

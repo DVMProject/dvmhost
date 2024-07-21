@@ -16,6 +16,7 @@
 #include "modem/port/UARTPort.h"
 #include "modem/port/PseudoPTYPort.h"
 #include "modem/port/UDPPort.h"
+#include "modem/port/specialized/V24UDPPort.h"
 #include "Host.h"
 #include "HostMain.h"
 
@@ -452,9 +453,10 @@ bool Host::createModem()
 
     yaml::Node dfsiParams = modemConf["dfsi"];
 
-    bool rtrt = dfsiParams["rtrt"].as<bool>();
-    bool diu = dfsiParams["diu"].as<bool>();
-    uint16_t jitter = dfsiParams["jitter"].as<uint16_t>();
+    bool rtrt = dfsiParams["rtrt"].as<bool>(true);
+    bool diu = dfsiParams["diu"].as<bool>(true);
+    uint16_t jitter = dfsiParams["jitter"].as<uint16_t>(200U);
+    bool useFSCForUDP = dfsiParams["useFSC"].as<bool>(false);
 
     // clamp fifo sizes
     if (dmrFifoLength < DMR_TX_BUFFER_LEN) {
@@ -565,6 +567,9 @@ bool Host::createModem()
         LogInfo("    DFSI RT/RT: %s", rtrt ? "yes" : "no");
         LogInfo("    DFSI DIU Flag: %s", diu ? "yes" : "no");
         LogInfo("    DFSI Jitter Size: %u ms", jitter);
+        if (g_remoteModemMode) {
+            LogInfo("    DFSI Use FSC: %s", useFSCForUDP ? "yes" : "no");
+        }
     }
 
     if (g_remoteModemMode) {
@@ -575,7 +580,14 @@ bool Host::createModem()
         }
         else {
             delete modemPort;
-            modemPort = new port::UDPPort(g_remoteAddress, g_remotePort);
+            if (modemMode == MODEM_MODE_DFSI) {
+                yaml::Node networkConf = m_conf["network"];
+                uint32_t id = networkConf["id"].as<uint32_t>(1000U);
+                modemPort = new port::specialized::V24UDPPort(id, g_remoteAddress, g_remotePort, g_remotePort, useFSCForUDP, debug);
+                m_udpDSFIRemotePort = modemPort;
+            } else {
+                modemPort = new port::UDPPort(g_remoteAddress, g_remotePort);
+            }
             m_modemRemote = false;
         }
 

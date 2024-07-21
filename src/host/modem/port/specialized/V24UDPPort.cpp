@@ -13,6 +13,7 @@
 #include "common/Log.h"
 #include "common/Utils.h"
 #include "modem/port/specialized/V24UDPPort.h"
+#include "modem/Modem.h"
 
 using namespace p25::dfsi::defines;
 using namespace p25::dfsi::frames;
@@ -34,13 +35,16 @@ using namespace network::udp;
 
 const uint32_t BUFFER_LENGTH = 2000U;
 
+const char* V24_UDP_HARDWARE = "V.24 UDP Modem Controller";
+const uint8_t V24_UDP_PROTOCOL_VERSION = 4U;
+
 // ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the V24UDPPort class. */
 
-V24UDPPort::V24UDPPort(uint32_t peerId, const std::string& address, uint16_t modemPort, uint16_t controlPort, bool debug) :
+V24UDPPort::V24UDPPort(uint32_t peerId, const std::string& address, uint16_t modemPort, uint16_t controlPort, bool useFSC, bool debug) :
     m_socket(nullptr),
     m_localPort(modemPort),
     m_controlSocket(nullptr),
@@ -60,6 +64,8 @@ V24UDPPort::V24UDPPort(uint32_t peerId, const std::string& address, uint16_t mod
     m_streamId(0U),
     m_timestamp(INVALID_TS),
     m_pktSeq(0U),
+    m_modemState(STATE_P25),
+    m_tx(false),
     m_debug(debug)
 {
     assert(peerId > 0U);
@@ -67,7 +73,7 @@ V24UDPPort::V24UDPPort(uint32_t peerId, const std::string& address, uint16_t mod
     assert(modemPort > 0U);
     assert(controlPort > 0U);
 
-    if (controlPort > 0U) {
+    if (controlPort > 0U && useFSC) {
         m_controlSocket = new Socket(controlPort);
         m_ctrlFrameQueue = new RawFrameQueue(m_controlSocket, m_debug);
 
@@ -102,52 +108,22 @@ V24UDPPort::~V24UDPPort()
         delete m_socket;
 }
 
-/* rocess FSC control frames from the network. */
-
-void V24UDPPort::processCtrlNetwork()
-{
-    sockaddr_storage address;
-    uint32_t addrLen;
-    int length = 0U;
-
-    // read message
-    UInt8Array buffer = m_ctrlFrameQueue->read(length, address, addrLen);
-    if (length > 0) {
-        if (m_debug)
-            Utils::dump(1U, "FSC Control Network Message", buffer.get(), length);
-
-        V24PacketRequest* req = new V24PacketRequest();
-        req->address = address;
-        req->addrLen = addrLen;
-
-        req->length = length;
-        req->buffer = new uint8_t[length];
-        ::memcpy(req->buffer, buffer.get(), length);
-
-        if (!Thread::runAsThread(this, threadedCtrlNetworkRx, req)) {
-            delete[] req->buffer;
-            delete req;
-            return;
-        }
-    }
-}
-
 /* Updates the timer by the passed number of milliseconds. */
 
 void V24UDPPort::clock(uint32_t ms)
 {
+    // if we have a FSC control socket
     if (m_controlSocket != nullptr) {
         if (m_reqConnectionToPeer) {
             if (!m_reqConnectionTimer.isRunning()) {
                 // make initial request
-
-                /* TODO TODO TODO */
+                writeConnect();
+                m_reqConnectionTimer.start();
             } else {
                 m_reqConnectionTimer.clock(ms);
                 if (m_reqConnectionTimer.isRunning() && m_reqConnectionTimer.hasExpired()) {
                     // make another request
-
-                    /* TODO TODO TODO */
+                    writeConnect();
                 }
             }
         }
@@ -157,6 +133,61 @@ void V24UDPPort::clock(uint32_t ms)
             if (m_heartbeatTimer.isRunning() && m_heartbeatTimer.hasExpired()) {
                 writeHeartbeat();
                 m_heartbeatTimer.start();
+            }
+        }
+
+        processCtrlNetwork();
+    }
+
+    // if we have a RTP voice socket
+    if (m_socket != nullptr) {
+        uint8_t data[BUFFER_LENGTH];
+        ::memset(data, 0x00U, BUFFER_LENGTH);
+
+        sockaddr_storage addr;
+        uint32_t addrLen;
+        int ret = m_socket->read(data, BUFFER_LENGTH, addr, addrLen);
+        if (ret != 0) {
+            // An error occurred on the socket
+            if (ret < 0)
+                return;
+
+            // Add new data to the ring buffer
+            if (ret > 0) {
+                RTPHeader rtpHeader = RTPHeader();
+                rtpHeader.decode(data);
+
+                // ensure payload type is correct
+                if (rtpHeader.getPayloadType() != DFSI_RTP_PAYLOAD_TYPE)
+                {
+                    LogError(LOG_MODEM, "Invalid RTP header received from network");
+                    return;
+                }
+
+                // copy message
+                uint32_t messageLength = ret - RTP_HEADER_LENGTH_BYTES;
+                uint8_t message[messageLength];
+                ::memset(message, 0x00U, messageLength);
+
+                ::memcpy(message, data + RTP_HEADER_LENGTH_BYTES, messageLength);
+
+                if (udp::Socket::match(addr, m_addr)) {
+                    uint8_t reply[messageLength + 4U];
+
+                    reply[0U] = DVM_SHORT_FRAME_START;
+                    reply[1U] = messageLength & 0xFFU;
+                    reply[2U] = CMD_P25_DATA;
+
+                    reply[3U] = 0x00U;
+
+                    ::memcpy(reply + 4U, message, messageLength);
+
+                    m_buffer.addData(reply, messageLength + 4U);
+                }
+                else {
+                    std::string addrStr = udp::Socket::address(addr);
+                    LogWarning(LOG_HOST, "SECURITY: Remote modem mode encountered invalid IP address; %s", addrStr.c_str());
+                }
             }
         }
     }
@@ -198,45 +229,6 @@ int V24UDPPort::read(uint8_t* buffer, uint32_t length)
     assert(buffer != nullptr);
     assert(length > 0U);
 
-    uint8_t data[BUFFER_LENGTH];
-    ::memset(data, 0x00U, BUFFER_LENGTH);
-
-    sockaddr_storage addr;
-    uint32_t addrLen;
-    int ret = m_socket->read(data, BUFFER_LENGTH, addr, addrLen);
-
-    // An error occurred on the socket
-    if (ret < 0)
-        return ret;
-
-    // Add new data to the ring buffer
-    if (ret > 0) {
-        RTPHeader rtpHeader = RTPHeader();
-        rtpHeader.decode(data);
-
-        // ensure payload type is correct
-        if (rtpHeader.getPayloadType() != DFSI_RTP_PAYLOAD_TYPE)
-        {
-            LogError(LOG_MODEM, "Invalid RTP header received from network");
-            return 0U;
-        }
-
-        // copy message
-        uint32_t messageLength = ret - RTP_HEADER_LENGTH_BYTES;
-        uint8_t message[messageLength];
-        ::memset(message, 0x00U, messageLength);
-
-        ::memcpy(message, data + RTP_HEADER_LENGTH_BYTES, messageLength);
-
-        if (udp::Socket::match(addr, m_addr)) {
-            m_buffer.addData(data, ret);
-        }
-        else {
-            std::string addrStr = udp::Socket::address(addr);
-            LogWarning(LOG_HOST, "SECURITY: Remote modem mode encountered invalid IP address; %s", addrStr.c_str());
-        }
-    }
-
     // Get required data from the ring buffer
     uint32_t avail = m_buffer.dataSize();
     if (avail < length)
@@ -255,12 +247,38 @@ int V24UDPPort::write(const uint8_t* buffer, uint32_t length)
     assert(buffer != nullptr);
     assert(length > 0U);
 
-    uint32_t messageLen = 0U;
-    uint8_t* message = generateMessage(buffer, length, m_streamId, m_peerId, m_pktSeq, &messageLen);
+    switch (buffer[2U]) {
+    case CMD_GET_VERSION:
+        getVersion();
+        return int(length);
+    case CMD_GET_STATUS:
+        getStatus();
+        return int(length);
+    case CMD_SET_CONFIG:
+    case CMD_SET_MODE:
+        writeAck(buffer[2U]);
+        return int(length);
+    case CMD_P25_DATA:
+    {
+        if (m_socket != nullptr) {
+            uint32_t messageLen = 0U;
+            uint8_t* message = generateMessage(buffer, length, m_streamId, m_peerId, m_pktSeq, &messageLen);
 
-    bool written = m_socket->write(message, messageLen, m_addr, m_addrLen);
-    if (written)
-        return length;
+            bool written = m_socket->write(message, messageLen, m_addr, m_addrLen);
+            if (written)
+                return length;
+        } else {
+            writeNAK(CMD_P25_DATA, RSN_INVALID_REQUEST);
+            return int(length);
+        }
+    }
+    break;
+    case CMD_FLSH_READ:
+        writeNAK(CMD_FLSH_READ, RSN_NO_INTERNAL_FLASH);
+        return int(length);
+    default:
+        return int(length);
+    }
 
     return -1;
 }
@@ -279,6 +297,36 @@ void V24UDPPort::close()
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
+/* Process FSC control frames from the network. */
+
+void V24UDPPort::processCtrlNetwork()
+{
+    sockaddr_storage address;
+    uint32_t addrLen;
+    int length = 0U;
+
+    // read message
+    UInt8Array buffer = m_ctrlFrameQueue->read(length, address, addrLen);
+    if (length > 0) {
+        if (m_debug)
+            Utils::dump(1U, "FSC Control Network Message", buffer.get(), length);
+
+        V24PacketRequest* req = new V24PacketRequest();
+        req->address = address;
+        req->addrLen = addrLen;
+
+        req->length = length;
+        req->buffer = new uint8_t[length];
+        ::memcpy(req->buffer, buffer.get(), length);
+
+        if (!Thread::runAsThread(this, threadedCtrlNetworkRx, req)) {
+            delete[] req->buffer;
+            delete req;
+            return;
+        }
+    }
+}
+
 /* Process a data frames from the network. */
 
 void* V24UDPPort::threadedCtrlNetworkRx(void* arg)
@@ -286,8 +334,6 @@ void* V24UDPPort::threadedCtrlNetworkRx(void* arg)
     V24PacketRequest* req = (V24PacketRequest*)arg;
     if (req != nullptr) {
         ::pthread_detach(req->thread);
-
-        uint64_t now = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
         V24UDPPort* network = static_cast<V24UDPPort*>(req->obj);
         if (network == nullptr) {
@@ -421,6 +467,24 @@ void V24UDPPort::createVCPort(uint16_t port)
     }
 }
 
+/* Internal helper to write a FSC connect packet. */
+
+void V24UDPPort::writeConnect()
+{
+    FSCConnect connect = FSCConnect();
+    connect.setFSHeartbeatPeriod(5U);   // hardcoded?
+    connect.setHostHeartbeatPeriod(5U); // hardcoded?
+    connect.setVCBasePort(m_localPort);
+    connect.setVCSSRC(m_peerId);
+
+    uint8_t buffer[FSCConnect::LENGTH];
+    ::memset(buffer, 0x00U, FSCConnect::LENGTH);
+
+    connect.encode(buffer);
+
+    m_ctrlFrameQueue->write(buffer, FSCConnect::LENGTH, m_controlAddr, m_ctrlAddrLen);
+}
+
 /* Internal helper to write a FSC heartbeat packet. */
 
 void V24UDPPort::writeHeartbeat()
@@ -455,7 +519,7 @@ uint8_t* V24UDPPort::generateMessage(const uint8_t* message, uint32_t length, ui
     ::memset(buffer, 0x00U, bufferLen);
 
     RTPHeader header = RTPHeader();
-    header.setExtension(true);
+    header.setExtension(false);
 
     header.setPayloadType(DFSI_RTP_PAYLOAD_TYPE);
     header.setTimestamp(timestamp);
@@ -486,4 +550,90 @@ uint8_t* V24UDPPort::generateMessage(const uint8_t* message, uint32_t length, ui
     }
 
     return buffer;
+}
+
+/* Helper to return a faked modem version. */
+
+void V24UDPPort::getVersion()
+{
+    uint8_t reply[200U];
+
+    reply[0U] = DVM_SHORT_FRAME_START;
+    reply[1U] = 0U;
+    reply[2U] = CMD_GET_VERSION;
+
+    reply[3U] = V24_UDP_PROTOCOL_VERSION;
+    reply[4U] = 15U;
+
+    // Reserve 16 bytes for the UDID
+    ::memset(reply + 5U, 0x00U, 16U);
+
+    uint8_t count = 21U;
+    for (uint8_t i = 0U; V24_UDP_HARDWARE[i] != 0x00U; i++, count++)
+        reply[count] = V24_UDP_HARDWARE[i];
+
+    reply[1U] = count;
+
+    m_buffer.addData(reply, count);
+}
+
+/* Helper to return a faked modem status. */
+
+void V24UDPPort::getStatus()
+{
+    uint8_t reply[15U];
+
+    // Send all sorts of interesting internal values
+    reply[0U] = DVM_SHORT_FRAME_START;
+    reply[1U] = 12U;
+    reply[2U] = CMD_GET_STATUS;
+
+    reply[3U] = 0x00U;
+    reply[3U] |= 0x08U; // P25 enable flag
+
+    reply[4U] = uint8_t(m_modemState);
+
+    reply[5U] = m_tx ? 0x01U : 0x00U;
+
+    reply[6U] = 0U;
+
+    reply[7U] = 0U;
+    reply[8U] = 0U;
+
+    reply[9U] = 0U;
+
+    reply[10U] = 5U; // always report 5 P25 frames worth of space
+
+    reply[11U] = 0U;
+
+    m_buffer.addData(reply, 12U);
+}
+
+/* Helper to write a faked modem acknowledge. */
+
+void V24UDPPort::writeAck(uint8_t type)
+{
+    uint8_t reply[4U];
+
+    reply[0U] = DVM_SHORT_FRAME_START;
+    reply[1U] = 4U;
+    reply[2U] = CMD_ACK;
+    reply[3U] = type;
+
+    m_buffer.addData(reply, 4U);
+}
+
+/* Helper to write a faked modem negative acknowledge. */
+
+void V24UDPPort::writeNAK(uint8_t opcode, uint8_t err)
+{
+    uint8_t reply[5U];
+
+    reply[0U] = DVM_SHORT_FRAME_START;
+    reply[1U] = 5U;
+    reply[2U] = CMD_NAK;
+    reply[3U] = opcode;
+    reply[4U] = err;
+
+    m_buffer.addData(reply, 5U);
 }

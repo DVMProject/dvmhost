@@ -687,9 +687,8 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
         case DFSIFrameType::TSBK:
         {
             MotTSBKFrame tf = MotTSBKFrame(dfsiData);
-            std::unique_ptr<lc::TSBK> tsbk = lc::tsbk::TSBKFactory::createTSBK(tf.tsbkData, true);
-
-            if (tsbk != nullptr) {
+            lc::tsbk::OSP_TSBK_RAW tsbk = lc::tsbk::OSP_TSBK_RAW();
+            if (!tsbk.decode(tf.tsbkData, true)) {
                 LogError(LOG_MODEM, "V.24/DFSI traffic failed to decode TSBK FEC");
             } else {
                 uint8_t buffer[P25_TSDU_FRAME_LENGTH_BYTES + 2U];
@@ -705,8 +704,8 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
                 m_nid->encode(buffer + 2U, DUID::TSDU);
 
                 // Regenerate TSDU Data
-                tsbk->setLastBlock(true); // always set last block -- this a Single Block TSDU
-                tsbk->encode(buffer + 2U);
+                tsbk.setLastBlock(true); // always set last block -- this a Single Block TSDU
+                tsbk.encode(buffer + 2U);
 
                 // Add busy bits
                 P25Utils::addStatusBits(buffer + 2U, P25_TSDU_FRAME_LENGTH_BYTES, false, true);
@@ -1010,6 +1009,10 @@ void ModemV24::queueP25Frame(uint8_t* data, uint16_t len, SERIAL_TX_TYPE msgType
     // if this is our first message, timestamp is just now + the jitter buffer offset in ms
     if (m_lastP25Tx == 0U) {
         msgTime = now + m_jitter;
+
+        // if the message type requests no jitter delay -- just set the message time to now
+        if (msgType == STT_NON_IMBE_NO_JITTER)
+            msgTime = now;
     }
     // if we had a message before this, calculate the new timestamp dynamically
     else {
@@ -1280,7 +1283,7 @@ void ModemV24::convertFromAir(uint8_t* data, uint32_t length)
             ::memset(startBuf, 0x00U, MotStartOfStream::LENGTH);
             startOfStream.encode(startBuf);
 
-            queueP25Frame(startBuf, MotStartOfStream::LENGTH, STT_NON_IMBE);
+            queueP25Frame(startBuf, MotStartOfStream::LENGTH, STT_NON_IMBE_NO_JITTER);
 
             MotTSBKFrame tf = MotTSBKFrame();
             tf.startOfStream->setStartStop(StartStopFlag::START);
@@ -1300,7 +1303,7 @@ void ModemV24::convertFromAir(uint8_t* data, uint32_t length)
             if (m_trace)
                 Utils::dump(1U, "ModemV24::convertFromAir() MotTSBKFrame", tsbkBuf, MotTSBKFrame::LENGTH);
 
-            queueP25Frame(tsbkBuf, MotTSBKFrame::LENGTH, STT_NON_IMBE);
+            queueP25Frame(tsbkBuf, MotTSBKFrame::LENGTH, STT_NON_IMBE_NO_JITTER);
 
             MotStartOfStream endOfStream = MotStartOfStream();
             endOfStream.setStartStop(StartStopFlag::STOP);
@@ -1312,8 +1315,8 @@ void ModemV24::convertFromAir(uint8_t* data, uint32_t length)
             ::memset(endBuf, 0x00U, MotStartOfStream::LENGTH);
             endOfStream.encode(endBuf);
 
-            queueP25Frame(endBuf, MotStartOfStream::LENGTH, STT_NON_IMBE);
-            queueP25Frame(endBuf, MotStartOfStream::LENGTH, STT_NON_IMBE);
+            queueP25Frame(endBuf, MotStartOfStream::LENGTH, STT_NON_IMBE_NO_JITTER);
+            queueP25Frame(endBuf, MotStartOfStream::LENGTH, STT_NON_IMBE_NO_JITTER);
         }
         break;
 

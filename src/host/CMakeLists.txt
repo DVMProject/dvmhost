@@ -46,6 +46,8 @@ file(GLOB dvmhost_SRC
     "src/host/modem/*.cpp"
     "src/host/modem/port/*.h"
     "src/host/modem/port/*.cpp"
+    "src/host/modem/port/specialized/*.h"
+    "src/host/modem/port/specialized/*.cpp"
     "src/host/network/*.h"
     "src/host/network/*.cpp"
     "src/remote/RESTClient.cpp"
