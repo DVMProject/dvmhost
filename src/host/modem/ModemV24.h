@@ -295,9 +295,13 @@ namespace modem
 
         RingBuffer<uint8_t> m_txP25Queue;
 
-        DFSICallData* m_call;
-        bool m_callInProgress;
-        uint64_t m_lastFrameTime;
+        DFSICallData* m_txCall;
+        DFSICallData* m_rxCall;
+        bool m_txCallInProgress;
+        bool m_rxCallInProgress;
+        uint64_t m_txLastFrameTime;
+        uint64_t m_rxLastFrameTime;
+        
         uint16_t m_callTimeout;
 
         uint16_t m_jitter;
