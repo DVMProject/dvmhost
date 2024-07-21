@@ -551,6 +551,9 @@ system:
             rssiCoarse: 127 # Valid values between 0 and 255
             rssiFine: 127 # Valid values between 0 and 255
 
+        #
+        # V.24 Modem Configuration
+        #
         dfsi:
             # RT/RT flag enabled (0x02) or disabled (0x04)
             rtrt: true
