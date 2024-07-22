@@ -1,6 +1,6 @@
 # Digital Voice Modem Host
 
-The DVM Host (dvmhost) software suite, provides the a set of applications that, act as a primary host computer implementation of a mixed-mode DMR, P25 and/or NXDN or dedicated-mode DMR, P25 or NXDN repeater system that talks to the actual air modem hardware, a TIA/V.24 standard interface mode allowing communications to commercial P25 hardware using the V.24 DFSI modem hardware or UDP, and the networking core (dvmfne) that provides a centralized network service that interconnects various DVM endpoint applications allowing networked communications.
+The DVM Host (dvmhost) software suite, provides the a set of applications that, act as a primary host computer implementation of a mixed-mode DMR, P25 and/or NXDN or dedicated-mode DMR, P25 or NXDN repeater system that talks to the actual air modem hardware, or for P25 mode, a TIA/V.24 standard interface mode allowing communications to commercial P25 hardware using the V.24 DFSI modem hardware or UDP. Networking core (dvmfne) that provides a centralized network service that interconnects various DVM endpoint applications allowing networked communications.
 
 Please feel free to reach out to us for help, comments or otherwise, on our Discord: https://discord.gg/3pBe8xgrEz
 
