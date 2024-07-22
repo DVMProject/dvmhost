@@ -116,7 +116,7 @@ namespace network
             m_lastACLUpdate(0U),
             m_isExternalPeer(false),
             m_config(),
-            m_pktLastSeq(0U),
+            m_pktLastSeq(RTP_END_OF_CALL_SEQ),
             m_pktNextSeq(1U)
         {
             /* stub */
@@ -143,7 +143,7 @@ namespace network
             m_lastACLUpdate(0U),
             m_isExternalPeer(false),
             m_config(),
-            m_pktLastSeq(0U),
+            m_pktLastSeq(RTP_END_OF_CALL_SEQ),
             m_pktNextSeq(1U)
         {
             assert(id > 0U);

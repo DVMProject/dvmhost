@@ -108,8 +108,8 @@ typedef unsigned long long  ulong64_t;
 #define __EXE_NAME__ ""
 
 #define VERSION_MAJOR       "04"
-#define VERSION_MINOR       "02"
-#define VERSION_REV         "C"
+#define VERSION_MINOR       "04"
+#define VERSION_REV         "D"
 
 #define __NETVER__ "DVM_R" VERSION_MAJOR VERSION_REV VERSION_MINOR
 #define __VER__ VERSION_MAJOR "." VERSION_MINOR VERSION_REV " (R" VERSION_MAJOR VERSION_REV VERSION_MINOR " " __GIT_VER__ ")"
@@ -139,9 +139,12 @@ typedef unsigned long long  ulong64_t;
 #define DEFAULT_CONF_FILE "config.yml"
 #define DEFAULT_LOCK_FILE "/tmp/dvm.lock"
 
-#define NULL_PORT "null"
-#define UART_PORT "uart"
-#define PTY_PORT "pty"
+#define NULL_PORT       "null"
+#define UART_PORT       "uart"
+#define PTY_PORT        "pty"
+
+#define MODEM_MODE_AIR  "air"
+#define MODEM_MODE_DFSI "dfsi"
 
 const uint32_t  REMOTE_MODEM_PORT = 3334;
 const uint32_t  TRAFFIC_DEFAULT_PORT = 62031;

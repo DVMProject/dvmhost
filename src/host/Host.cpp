@@ -16,6 +16,7 @@
 #include "common/StopWatch.h"
 #include "common/Thread.h"
 #include "common/Utils.h"
+#include "modem/port/specialized/V24UDPPort.h"
 #include "remote/RESTClient.h"
 #include "host/Host.h"
 #include "ActivityLog.h"
@@ -59,6 +60,8 @@ Host::Host(const std::string& confFile) :
     m_conf(),
     m_modem(nullptr),
     m_modemRemote(false),
+    m_isModemDFSI(false),
+    m_udpDSFIRemotePort(nullptr),
     m_network(nullptr),
     m_modemRemotePort(nullptr),
     m_state(STATE_IDLE),
@@ -585,6 +588,16 @@ int Host::run()
         g_killed = true;
     }
 
+    if (m_isModemDFSI && m_dmrEnabled) {
+        ::LogError(LOG_HOST, "Cannot use V.24/DFSI modem with DMR protocol!");
+        g_killed = true;
+    }
+
+    if (m_isModemDFSI && m_nxdnEnabled) {
+        ::LogError(LOG_HOST, "Cannot use V.24/DFSI modem with NXDN protocol!");
+        g_killed = true;
+    }
+
     // P25 CC checks
     if (m_dmrEnabled && m_p25CtrlChannel) {
         ::LogError(LOG_HOST, "Cannot have DMR enabled when using dedicated P25 control!");
@@ -681,6 +694,11 @@ int Host::run()
                 setState(STATE_P25);
             }
 
+            if (m_isModemDFSI) {
+                m_fixedMode = true;
+                setState(STATE_P25);
+            }
+
             if (m_nxdnCtrlChannel) {
                 m_fixedMode = true;
                 setState(STATE_NXDN);
@@ -738,6 +756,8 @@ int Host::run()
         }
 
         stopWatch.start();
+    } else {
+        return EXIT_SUCCESS;
     }
 
     bool hasTxShutdown = false;
@@ -904,6 +924,13 @@ int Host::run()
                     m_nxdnDedicatedTxTestTimer.clock(ms);
                 }
             }
+        }
+
+        if (m_udpDSFIRemotePort != nullptr) {
+            m_mainLoopStage = 11U; // intentional magic number
+            modem::port::specialized::V24UDPPort* udpPort = dynamic_cast<modem::port::specialized::V24UDPPort*>(m_udpDSFIRemotePort);
+            
+            udpPort->clock(ms);
         }
 
         // ------------------------------------------------------

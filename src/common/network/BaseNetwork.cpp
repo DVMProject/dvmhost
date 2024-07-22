@@ -102,7 +102,7 @@ bool BaseNetwork::writeGrantReq(const uint8_t mode, const uint32_t srcId, const 
 
     buffer[20U] = mode;                                                             // DVM Mode State
 
-    return writeMaster({ NET_FUNC::GRANT_REQ, NET_SUBFUNC::NOP }, buffer, MSG_HDR_SIZE, 0U, 0U);
+    return writeMaster({ NET_FUNC::GRANT_REQ, NET_SUBFUNC::NOP }, buffer, MSG_HDR_SIZE, RTP_END_OF_CALL_SEQ, 0U);
 }
 
 /* Writes the local activity log to the network. */
@@ -123,7 +123,7 @@ bool BaseNetwork::writeActLog(const char* message)
     ::strcpy(buffer + 11U, message);
 
     return writeMaster({ NET_FUNC::TRANSFER, NET_SUBFUNC::TRANSFER_SUBFUNC_ACTIVITY }, (uint8_t*)buffer, (uint32_t)len + 12U,
-        0U, 0U, false, m_useAlternatePortForDiagnostics);
+        RTP_END_OF_CALL_SEQ, 0U, false, m_useAlternatePortForDiagnostics);
 }
 
 /* Writes the local diagnostics log to the network. */
@@ -144,7 +144,7 @@ bool BaseNetwork::writeDiagLog(const char* message)
     ::strcpy(buffer + 11U, message);
 
     return writeMaster({ NET_FUNC::TRANSFER, NET_SUBFUNC::TRANSFER_SUBFUNC_DIAG }, (uint8_t*)buffer, (uint32_t)len + 12U,
-        0U, 0U, false, m_useAlternatePortForDiagnostics);
+        RTP_END_OF_CALL_SEQ, 0U, false, m_useAlternatePortForDiagnostics);
 }
 
 /* Writes the local status to the network. */
@@ -184,7 +184,7 @@ bool BaseNetwork::announceGroupAffiliation(uint32_t srcId, uint32_t dstId)
     __SET_UINT16(srcId, buffer, 0U);
     __SET_UINT16(dstId, buffer, 3U);
 
-    return writeMaster({ NET_FUNC::ANNOUNCE, NET_SUBFUNC::ANNC_SUBFUNC_GRP_AFFIL }, buffer, MSG_ANNC_GRP_AFFIL, 0U, 0U);
+    return writeMaster({ NET_FUNC::ANNOUNCE, NET_SUBFUNC::ANNC_SUBFUNC_GRP_AFFIL }, buffer, MSG_ANNC_GRP_AFFIL, RTP_END_OF_CALL_SEQ, 0U);
 }
 
 /* Writes a unit registration to the network. */
@@ -198,7 +198,7 @@ bool BaseNetwork::announceUnitRegistration(uint32_t srcId)
 
     __SET_UINT16(srcId, buffer, 0U);
 
-    return writeMaster({ NET_FUNC::ANNOUNCE, NET_SUBFUNC::ANNC_SUBFUNC_UNIT_REG }, buffer, MSG_ANNC_UNIT_REG, 0U, 0U);
+    return writeMaster({ NET_FUNC::ANNOUNCE, NET_SUBFUNC::ANNC_SUBFUNC_UNIT_REG }, buffer, MSG_ANNC_UNIT_REG, RTP_END_OF_CALL_SEQ, 0U);
 }
 
 /* Writes a unit deregistration to the network. */
@@ -212,7 +212,7 @@ bool BaseNetwork::announceUnitDeregistration(uint32_t srcId)
 
     __SET_UINT16(srcId, buffer, 0U);
 
-    return writeMaster({ NET_FUNC::ANNOUNCE, NET_SUBFUNC::ANNC_SUBFUNC_UNIT_DEREG }, buffer, MSG_ANNC_UNIT_REG, 0U, 0U);
+    return writeMaster({ NET_FUNC::ANNOUNCE, NET_SUBFUNC::ANNC_SUBFUNC_UNIT_DEREG }, buffer, MSG_ANNC_UNIT_REG, RTP_END_OF_CALL_SEQ, 0U);
 }
 
 /* Writes a complete update of the peer affiliation list to the network. */
@@ -235,7 +235,7 @@ bool BaseNetwork::announceAffiliationUpdate(const std::unordered_map<uint32_t, u
         offs += 8U;
     }
 
-    return writeMaster({ NET_FUNC::ANNOUNCE, NET_SUBFUNC::ANNC_SUBFUNC_AFFILS }, buffer, 4U + (affs.size() * 8U), 0U, 0U);
+    return writeMaster({ NET_FUNC::ANNOUNCE, NET_SUBFUNC::ANNC_SUBFUNC_AFFILS }, buffer, 4U + (affs.size() * 8U), RTP_END_OF_CALL_SEQ, 0U);
 }
 
 /* Writes a complete update of the peer's voice channel list to the network. */
@@ -257,7 +257,7 @@ bool BaseNetwork::announceSiteVCs(const std::vector<uint32_t> peers)
         offs += 4U;
     }
 
-    return writeMaster({ NET_FUNC::ANNOUNCE, NET_SUBFUNC::ANNC_SUBFUNC_SITE_VC }, buffer, 4U + (peers.size() * 4U), 0U, 0U);
+    return writeMaster({ NET_FUNC::ANNOUNCE, NET_SUBFUNC::ANNC_SUBFUNC_SITE_VC }, buffer, 4U + (peers.size() * 4U), RTP_END_OF_CALL_SEQ, 0U);
 }
 
 /* Resets the DMR ring buffer for the given slot. */

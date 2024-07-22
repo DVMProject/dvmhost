@@ -455,7 +455,13 @@ system:
         #
         protocol:
             # Modem port type.
+            #   null - Null Modem (Loopback for testing)
+            #   uart - Serial Modem
             type: "null" # Valid values are "null", and "uart"
+            # Modem interface mode.
+            #   air - Standard air interface modem (Hotspot or Repeater)
+            #   dfsi - TIA-102 DFSI interface modem
+            mode: "air" # Valid values are "air", and "dfsi"
 
             uart:
                 # UART/RS232 serial port device.
@@ -548,6 +554,19 @@ system:
             txFine: 127 # Valid values between 0 and 255
             rssiCoarse: 127 # Valid values between 0 and 255
             rssiFine: 127 # Valid values between 0 and 255
+
+        #
+        # V.24 Modem Configuration
+        #
+        dfsi:
+            # RT/RT flag enabled (0x02) or disabled (0x04)
+            rtrt: true
+            # Use the DIU source flag (0x00) instead of the quantar source flag (0x02)
+            diu: true
+            # Jitter buffer length in ms
+            jitter: 200
+            # Timer which will reset local/remote call flags if frames aren't received longer than this time in ms
+            callTimeout: 200
 
         # Sets received the signal offset from DC.
         rxDCOffset: 0 # Valid values between -128 and 128

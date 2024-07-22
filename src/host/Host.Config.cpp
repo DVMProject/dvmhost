@@ -16,6 +16,7 @@
 #include "modem/port/UARTPort.h"
 #include "modem/port/PseudoPTYPort.h"
 #include "modem/port/UDPPort.h"
+#include "modem/port/specialized/V24UDPPort.h"
 #include "Host.h"
 #include "HostMain.h"
 
@@ -395,6 +396,7 @@ bool Host::createModem()
 
     yaml::Node modemProtocol = modemConf["protocol"];
     std::string portType = modemProtocol["type"].as<std::string>("null");
+    std::string modemMode = modemProtocol["mode"].as<std::string>("air");
     yaml::Node uartProtocol = modemProtocol["uart"];
     std::string uartPort = uartProtocol["port"].as<std::string>();
     uint32_t uartSpeed = uartProtocol["speed"].as<uint32_t>(115200);
@@ -449,6 +451,14 @@ bool Host::createModem()
     uint16_t p25FifoLength = (uint16_t)modemConf["p25FifoLength"].as<uint32_t>(P25_TX_BUFFER_LEN);
     uint16_t nxdnFifoLength = (uint16_t)modemConf["nxdnFifoLength"].as<uint32_t>(NXDN_TX_BUFFER_LEN);
 
+    yaml::Node dfsiParams = modemConf["dfsi"];
+
+    bool rtrt = dfsiParams["rtrt"].as<bool>(true);
+    bool diu = dfsiParams["diu"].as<bool>(true);
+    uint16_t jitter = dfsiParams["jitter"].as<uint16_t>(200U);
+    bool useFSCForUDP = dfsiParams["useFSC"].as<bool>(false);
+    uint16_t dfsiCallTimeout = dfsiParams["callTimeout"].as<uint16_t>(200U);
+
     // clamp fifo sizes
     if (dmrFifoLength < DMR_TX_BUFFER_LEN) {
         LogWarning(LOG_HOST, "DMR FIFO size must be greater then %u bytes, defaulting to %u bytes!", DMR_TX_BUFFER_LEN, DMR_TX_BUFFER_LEN);
@@ -492,6 +502,7 @@ bool Host::createModem()
 
     LogInfo("Modem Parameters");
     LogInfo("    Port Type: %s", portType.c_str());
+    LogInfo("    Interface Mode: %s", modemMode.c_str());
 
     port::IModemPort* modemPort = nullptr;
     std::transform(portType.begin(), portType.end(), portType.begin(), ::tolower);
@@ -551,16 +562,33 @@ bool Host::createModem()
         return false;
     }
 
+    std::transform(modemMode.begin(), modemMode.end(), modemMode.begin(), ::tolower);
+    if (modemMode == MODEM_MODE_DFSI) {
+        m_isModemDFSI = true;
+        LogInfo("    DFSI RT/RT: %s", rtrt ? "yes" : "no");
+        LogInfo("    DFSI DIU Flag: %s", diu ? "yes" : "no");
+        LogInfo("    DFSI Jitter Size: %u ms", jitter);
+        if (g_remoteModemMode) {
+            LogInfo("    DFSI Use FSC: %s", useFSCForUDP ? "yes" : "no");
+        }
+    }
+
     if (g_remoteModemMode) {
         if (portType == UART_PORT || portType == PTY_PORT) {
             m_modemRemotePort = new port::UDPPort(g_remoteAddress, g_remotePort);
             m_modemRemote = true;
             ignoreModemConfigArea = true;
-
         }
         else {
             delete modemPort;
-            modemPort = new port::UDPPort(g_remoteAddress, g_remotePort);
+            if (modemMode == MODEM_MODE_DFSI) {
+                yaml::Node networkConf = m_conf["network"];
+                uint32_t id = networkConf["id"].as<uint32_t>(1000U);
+                modemPort = new port::specialized::V24UDPPort(id, g_remoteAddress, g_remotePort, g_remotePort, useFSCForUDP, debug);
+                m_udpDSFIRemotePort = modemPort;
+            } else {
+                modemPort = new port::UDPPort(g_remoteAddress, g_remotePort);
+            }
             m_modemRemote = false;
         }
 
@@ -614,8 +642,14 @@ bool Host::createModem()
         LogInfo("    Debug: yes");
     }
 
-    m_modem = new Modem(modemPort, m_duplex, rxInvert, txInvert, pttInvert, dcBlocker, cosLockout, fdmaPreamble, dmrRxDelay, p25CorrCount,
-        m_dmrQueueSizeBytes, m_p25QueueSizeBytes, m_nxdnQueueSizeBytes, disableOFlowReset, ignoreModemConfigArea, dumpModemStatus, trace, debug);
+    if (m_isModemDFSI) {
+        m_modem = new ModemV24(modemPort, m_duplex, m_p25QueueSizeBytes, m_p25QueueSizeBytes, rtrt, diu, jitter,
+            dumpModemStatus, trace, debug);
+        ((ModemV24*)m_modem)->setCallTimeout(dfsiCallTimeout);
+    } else {
+        m_modem = new Modem(modemPort, m_duplex, rxInvert, txInvert, pttInvert, dcBlocker, cosLockout, fdmaPreamble, dmrRxDelay, p25CorrCount,
+            m_dmrQueueSizeBytes, m_p25QueueSizeBytes, m_nxdnQueueSizeBytes, disableOFlowReset, ignoreModemConfigArea, dumpModemStatus, trace, debug);
+    }
     if (!m_modemRemote) {
         m_modem->setModeParams(m_dmrEnabled, m_p25Enabled, m_nxdnEnabled);
         m_modem->setLevels(rxLevel, cwIdTXLevel, dmrTXLevel, p25TXLevel, nxdnTXLevel);

@@ -283,6 +283,7 @@ namespace p25
         uint32_t m_timeout;
 
         modem::Modem* m_modem;
+        bool m_isModemDFSI;
         network::Network* m_network;
 
         bool m_inhibitUnauth;

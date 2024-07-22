@@ -107,7 +107,8 @@ namespace p25
             namespace StreamTypeFlag {
                 /** @brief V.24 Data Stream Type  */
                 enum E : uint8_t {
-                    VOICE = 0x0BU                       //! Voice
+                    VOICE = 0x0BU,                      //! Voice
+                    TSBK = 0x0FU                        //! TSBK
                 };
             }
 
