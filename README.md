@@ -82,15 +82,15 @@ It should also be important to read and review the [calibration notes](#calibrat
 The following setups assume the host is compiled with the setup TUI mode (if available) [NOTE: Steps 3 - 5 only apply to the air interface modem.]. It is possible to setup the modem without the setup TUI, and requires manually modifying `config.yml` and the `iden_table.dat` files.
 
 1. Create/Edit `config.yml` and ensure the settings for the modem are correct, find the "modem" section in "system". Check that the uart settings have the appropriate UART port and port speed set (the config.yml defaults to /dev/ttyUSB0 and 115200).
-    1.1. If using the air modem interface, ensure the the modem protocol mode is set to "air".
-    1.2. If using the V.24 DFSI modem interface, ensure the modem protocol mode is set to "dfsi".
-        1.2.1. The V.24 DFSI modem has multiple firmware revisions, it is required to use firmware version 2.0 or greater for use with dvmhost.
+    1. If using the air modem interface, ensure the the modem protocol mode is set to "air".
+    2. If using the V.24 DFSI modem interface, ensure the modem protocol mode is set to "dfsi".
+        1. The V.24 DFSI modem has multiple firmware revisions, it is required to use firmware version 2.0 or greater for use with dvmhost.
 2. Start `dvmhost` as follows: `/path/to/dvmhost -c /path/to/config.yml --setup`. This will start the dvmhost setup TUI mode.
 3. Using the TUI user interface, use the "Setup" menu to set default parameters.
-    3.1. The "Logging & Data Configuration" submenu allows you to alter the various logging file paths and levels, as well as paths to data files (such as the `iden_table.dat` file).
-    3.2. The "System Configuration" submenu allows you to alter various modem port and speed, system settings, and mode settings configuration.
-    3.3. The "Site Parameters" submenu allows you to alter various CW morse identification, and site parameters.
-    3.4. The "Channel Configuration" submenu allows you to alter the configured channel for the modem you are configuring.
+    1. The "Logging & Data Configuration" submenu allows you to alter the various logging file paths and levels, as well as paths to data files (such as the `iden_table.dat` file).
+    2. The "System Configuration" submenu allows you to alter various modem port and speed, system settings, and mode settings configuration.
+    3. The "Site Parameters" submenu allows you to alter various CW morse identification, and site parameters.
+    4. The "Channel Configuration" submenu allows you to alter the configured channel for the modem you are configuring.
 4. After altering settings, use the "File" menu, "Save Settings" menu option to save the desired configuration.
 5. Quit setup mode (some settings changes require a restart of the software to be effective) using, "File" menu, "Quit".
 
