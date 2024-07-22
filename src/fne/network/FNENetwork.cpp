@@ -414,8 +414,10 @@ void* FNENetwork::threadedNetworkRx(void* arg)
 
                 if (connection != nullptr) {
                     if (pktSeq == RTP_END_OF_CALL_SEQ) {
-                        connection->pktLastSeq(pktSeq);
-                        connection->pktNextSeq(0U);
+                        if (req->fneHeader.getFunction() != NET_FUNC::PING) {
+                            connection->pktLastSeq(pktSeq);
+                            connection->pktNextSeq(0U);
+                        }
                     } else {
                         if ((connection->currStreamId() == streamId) && (pktSeq != connection->pktNextSeq()) && (pktSeq != (RTP_END_OF_CALL_SEQ - 1U))) {
                             LogWarning(LOG_NET, "PEER %u (%s) stream %u out-of-sequence; %u != %u", peerId, connection->identity().c_str(),
@@ -847,7 +849,6 @@ void* FNENetwork::threadedNetworkRx(void* arg)
 
                                 connection->pingsReceived(pingsRx);
                                 connection->lastPing(now);
-                                connection->pktLastSeq(connection->pktLastSeq() + 1);
 
                                 // does this peer need an ACL update?
                                 uint64_t dt = connection->lastACLUpdate() + network->m_updateLookupTime;
@@ -858,8 +859,21 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                     connection->lastACLUpdate(now);
                                 }
 
+                                uint8_t payload[8U];
+                                ::memset(payload, 0x00U, 8U);
+
+                                // split ulong64_t (8 byte) value into bytes
+                                payload[0U] = (uint8_t)((now >> 56) & 0xFFU);
+                                payload[1U] = (uint8_t)((now >> 48) & 0xFFU);
+                                payload[2U] = (uint8_t)((now >> 40) & 0xFFU);
+                                payload[3U] = (uint8_t)((now >> 32) & 0xFFU);
+                                payload[4U] = (uint8_t)((now >> 24) & 0xFFU);
+                                payload[5U] = (uint8_t)((now >> 16) & 0xFFU);
+                                payload[6U] = (uint8_t)((now >> 8) & 0xFFU);
+                                payload[7U] = (uint8_t)((now >> 0) & 0xFFU);
+
                                 network->m_peers[peerId] = connection;
-                                network->writePeerCommand(peerId, { NET_FUNC::PONG, NET_SUBFUNC::NOP });
+                                network->writePeerCommand(peerId, { NET_FUNC::PONG, NET_SUBFUNC::NOP }, payload, 8U);
 
                                 if (network->m_reportPeerPing) {
                                     LogInfoEx(LOG_NET, "PEER %u (%s) ping, pingsReceived = %u, lastPing = %u", peerId, connection->identity().c_str(),

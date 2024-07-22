@@ -23,6 +23,12 @@ using namespace network;
 #include <cassert>
 
 // ---------------------------------------------------------------------------
+//  Constants
+// ---------------------------------------------------------------------------
+
+#define MAX_SERVER_DIFF 250 // maximum difference in time between a server timestamp and local timestamp in milliseconds
+
+// ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
@@ -192,6 +198,8 @@ void Network::clock(uint32_t ms)
     if (!m_enabled) {
         return;
     }
+
+    uint64_t now = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
     // roll the RTP timestamp if no call is in progress
     if ((m_status == NET_STAT_RUNNING) &&
@@ -580,6 +588,24 @@ void Network::clock(uint32_t ms)
             break;
         case NET_FUNC::PONG:                                                                        // Master Ping Response
             m_timeoutTimer.start();
+            if (length >= 14) {
+                ulong64_t serverNow = 0U;
+
+                // combine bytes into ulong64_t (8 byte) value
+                serverNow = buffer[6U];
+                serverNow = (serverNow << 8) + buffer[7U];
+                serverNow = (serverNow << 8) + buffer[8U];
+                serverNow = (serverNow << 8) + buffer[9U];
+                serverNow = (serverNow << 8) + buffer[10U];
+                serverNow = (serverNow << 8) + buffer[11U];
+                serverNow = (serverNow << 8) + buffer[12U];
+                serverNow = (serverNow << 8) + buffer[13U];
+
+                // check the ping RTT and report any over the maximum defined time
+                uint64_t dt = now - serverNow;
+                if (dt > MAX_SERVER_DIFF)
+                    LogWarning(LOG_NET, "PEER %u pong, time delay greater than %ums, now = %u, server = %u, dt = %u", m_peerId, MAX_SERVER_DIFF, now, serverNow, dt);
+            }
             break;
         default:
             Utils::dump("unknown opcode from the master", buffer.get(), length);
