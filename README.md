@@ -1,12 +1,11 @@
 # Digital Voice Modem Host
 
-The DVM Host (dvmhost) software suite, provides the a set of applications that, act as a primary host computer implementation of a mixed-mode DMR, P25 and/or NXDN or dedicated-mode DMR, P25 or NXDN repeater system that talks to the actual modem hardware, a TIA/V.24 standard interface (dvmdfsi) allowing communications to commercial P25 hardware, and the networking core (dvmfne) that provides a centralized network service that interconnects various DVM endpoint applications allowing networked communications.
+The DVM Host (dvmhost) software suite, provides the a set of applications that, act as a primary host computer implementation of a mixed-mode DMR, P25 and/or NXDN or dedicated-mode DMR, P25 or NXDN repeater system that talks to the actual air modem hardware, a TIA/V.24 standard interface mode allowing communications to commercial P25 hardware using the V.24 DFSI modem hardware or UDP, and the networking core (dvmfne) that provides a centralized network service that interconnects various DVM endpoint applications allowing networked communications.
 
 Please feel free to reach out to us for help, comments or otherwise, on our Discord: https://discord.gg/3pBe8xgrEz
 
 This project generates a few executables:
 - `dvmhost` host software that connects to the DVM modems (both repeater and hotspot) and is the primary data processing application for digital modes. [See configuration](#dvmhost-configuration) to configure and calibrate.
-- `dvmdfsi` TIA/V.24 standard interface application that connects to a V.24 interface board or UDP to allow for P25 DFSI communications with commercial P25 hardware.
 - `dvmfne` a network "core", this provides a central server for `dvmhost` instances to connect to and be networked with, allowing relay of traffic and other data between `dvmhost` instances and other `dvmfne` instances. [See configuration](#dvmfne-configuration) to configure.
 - `dvmcmd` a simple command-line utility to send remote control commands to a `dvmhost` or `dvmfne` instance with REST API configured.
 - `dvmmon` a TUI utility that allows semi-realtime console-based monitoring of `dvmhost` instances (this tool is only available when project wide TUI support is enabled!).
@@ -80,9 +79,12 @@ It should also be important to read and review the [calibration notes](#calibrat
 
 ### Initial Setup Steps
 
-The following setups assume the host is compiled with the setup TUI mode (if availble). It is possible to setup the modem without the setup TUI, and requires manually modifying `config.yml` and the `iden_table.dat` files.
+The following setups assume the host is compiled with the setup TUI mode (if available) [NOTE: Steps 3 - 5 only apply to the air interface modem.]. It is possible to setup the modem without the setup TUI, and requires manually modifying `config.yml` and the `iden_table.dat` files.
 
-1. Create/Edit `config.yml` and ensure the settings for the modem are correct, find the "modem" section in "system". Check that the uart protocol has the appropriate UART port and port speed set (the config.yml defaults to /dev/ttyUSB0 and 115200).
+1. Create/Edit `config.yml` and ensure the settings for the modem are correct, find the "modem" section in "system". Check that the uart settings have the appropriate UART port and port speed set (the config.yml defaults to /dev/ttyUSB0 and 115200).
+    1.1. If using the air modem interface, ensure the the modem protocol mode is set to "air".
+    1.2. If using the V.24 DFSI modem interface, ensure the modem protocol mode is set to "dfsi".
+        1.2.1. The V.24 DFSI modem has multiple firmware revisions, it is required to use firmware version 2.0 or greater for use with dvmhost.
 2. Start `dvmhost` as follows: `/path/to/dvmhost -c /path/to/config.yml --setup`. This will start the dvmhost setup TUI mode.
 3. Using the TUI user interface, use the "Setup" menu to set default parameters.
     3.1. The "Logging & Data Configuration" submenu allows you to alter the various logging file paths and levels, as well as paths to data files (such as the `iden_table.dat` file).
@@ -92,7 +94,7 @@ The following setups assume the host is compiled with the setup TUI mode (if ava
 4. After altering settings, use the "File" menu, "Save Settings" menu option to save the desired configuration.
 5. Quit setup mode (some settings changes require a restart of the software to be effective) using, "File" menu, "Quit".
 
-### Transmit Calibration (using setup TUI, if available)
+### (Air Interface) Transmit Calibration (using setup TUI, if available)
 
 1. Start `dvmhost` as follows: `/path/to/dvmhost -c /path/to/config.yml --setup`. This will start the dvmhost setup TUI mode. The best way to calibrate the DVM is to use a radio from which you can receive and transmit the appropriate test patterns (for example using ASTRO25 Tuner and an XTS radio to use the "Bit Error Rate" functions under Performance Testing).
 2. Depending on which protocol you are calibration with, use the "Calibrate" menu, and select the appropriate mode using the "Operational Mode" submenu. (For example, select [Tx] DMR BS 1031 Hz Test Pattern for DMR or [Tx] P25 1011 Hz Test Pattern (NAC293 ID1 TG1) for P25.)
@@ -105,7 +107,7 @@ The following setups assume the host is compiled with the setup TUI mode (if ava
 9. After altering settings, use the "File" menu, "Save Settings" menu option to save the desired configuration.
 10. Quit setup mode, if done doing calibration, using, "File" menu, "Quit".
 
-### Transmit Calibration (using old calibration CLI)
+### (Air Interface) Transmit Calibration (using old calibration CLI)
 
 1. Start `dvmhost` as follows: `/path/to/dvmhost -c /path/to/config.yml --cal`. This will start the dvmhost calibration mode. The best way to calibrate the DVM is to use a radio from which you can receive and transmit the appropriate test patterns (for example using ASTRO25 Tuner and an XTS radio to use the "Bit Error Rate" functions under Performance Testing).
 2. Depending on which protocol you are calibration with, enter DMR BS 1031 Hz Test Pattern (M) or P25 1011 Hz Test Pattern (NAC293 ID1 TG1) (P).
@@ -116,7 +118,7 @@ The following setups assume the host is compiled with the setup TUI mode (if ava
 7. Stop Tx (press spacebar to toggle Tx).
 8. Save the configuration using "s" and quit calibration mode with "q".
 
-### Receive Calibration (using setup TUI, if available)
+### (Air Interface) Receive Calibration (using setup TUI, if available)
 
 1. Start `dvmhost` as follows: `/path/to/dvmhost -c /path/to/config.yml --setup`. This will start the dvmhost setup TUI mode. The best way to calibrate the DVM is to use a radio from which you can receive and transmit the appropriate test patterns (for example using ASTRO25 Tuner and an XTS radio to use the "Transmitter Test Pattern" functions under Performance Testing).
 2. Depending on which protocol you are calibration with, use the "Calibrate" menu, and select the appropriate mode using the "Operational Mode" submenu. (For example, select [Rx] DMR BS 1031 Hz Test Pattern for DMR or [Rx] P25 1011 Hz Test Pattern (NAC293 ID1 TG1) for P25.)
@@ -127,7 +129,7 @@ The following setups assume the host is compiled with the setup TUI mode (if ava
 8. After altering settings, use the "File" menu, "Save Settings" menu option to save the desired configuration.
 9. Quit setup mode, if done doing calibration, using, "File" menu, "Quit".
 
-### Receive Calibration (using old calibration CLI)
+### (Air Interface) Receive Calibration (using old calibration CLI)
 
 1. Start `dvmhost` as follows: `/path/to/dvmhost -c /path/to/config.yml --cal`. This will start the dvmhost calibration mode. The best way to calibrate the DVM is to use a radio from which you can receive and transmit the appropriate test patterns (for example using ASTRO25 Tuner and an XTS radio to use the "Transmitter Test Pattern" functions under Performance Testing).
 2. Depending on which protocol you are calibration with, enter DMR BS 1031 Hz Test Pattern (M) or P25 1011 Hz Test Pattern (P).
@@ -137,7 +139,7 @@ The following setups assume the host is compiled with the setup TUI mode (if ava
 6. While observing the BER via the calibration console, adjust the RX potentiometer(s) for the lowest received BER. If necessary also adjust the software RXLevel for some fine tuning with the "R" (increase) and "r" (decrease).
 7. Save the configuration using "s" and quit calibration mode with "q".
 
-### Calibration Notes
+### (Air Interface) Calibration Notes
 
 - If you have access to appropriate RF test equipment (or equivilant equipment) that is capable of monitor the overall transmitted *analog* FM deviation; if is important to adjust both the modem and the connected radios so that the overall transmitted *analog* FM deviation be between 2.75khz and 2.83khz (a center average of 2.80khz *analog* FM deviation is best).
 - When using a repeater/modem board attached to an appropriate FM repeater/radio, it *may* be necessary to "de-tune" the repeater/radio slightly, most commercial grade equipment operating within a 12.5khz channel may impose a strict 2.5khz (and no greater) maximum *analog* FM deviation, this is well below what is required for good digital operation. It may be necessary using whatever tuning/alignment tools to "de-tune" or adjust the equipments alignment to allow for a wider *analog* FM deviation, as close to 2.80khz as possible.
@@ -172,21 +174,6 @@ usage: ./dvmhost [-vhdf][--syslog][--setup][-c <configuration file>][--remote [-
   --remote  remote modem mode
   -a        remote modem command address
   -p        remote modem command port
-
-  --        stop handling options
-```
-
-### dvmdfsi Command Line Parameters
-```
-usage: ./dvmdfsi [-vhf][--syslog][-c <configuration file>]
-
-  -v        show version information
-  -h        show this screen
-  -f        foreground mode
-
-  --syslog  force logging to syslog
-
-  -c <file> specifies the configuration file to use
 
   --        stop handling options
 ```

@@ -227,7 +227,6 @@ endif (ENABLE_TESTS)
 install(TARGETS dvmhost DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
 install(TARGETS dvmcmd DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
 install(TARGETS dvmfne DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
-install(TARGETS dvmdfsi DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
 if (ENABLE_TUI_SUPPORT AND (NOT DISABLE_MONITOR))
 install(TARGETS dvmmon DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
 endif (ENABLE_TUI_SUPPORT AND (NOT DISABLE_MONITOR))
@@ -249,14 +248,12 @@ if (NOT TARGET strip)
                     COMMAND arm-linux-gnueabihf-strip -s dvmhost
                     COMMAND arm-linux-gnueabihf-strip -s dvmfne
                     COMMAND arm-linux-gnueabihf-strip -s dvmcmd
-                    COMMAND arm-linux-gnueabihf-strip -s dvmmon
-                    COMMAND arm-linux-gnueabihf-strip -s dvmdfsi)
+                    COMMAND arm-linux-gnueabihf-strip -s dvmmon)
         else()
             add_custom_target(strip
                     COMMAND arm-linux-gnueabihf-strip -s dvmhost
                     COMMAND arm-linux-gnueabihf-strip -s dvmfne
-                    COMMAND arm-linux-gnueabihf-strip -s dvmcmd
-                    COMMAND arm-linux-gnueabihf-strip -s dvmdfsi)
+                    COMMAND arm-linux-gnueabihf-strip -s dvmcmd)
         endif (ENABLE_TUI_SUPPORT AND (NOT DISABLE_MONITOR))
     elseif (CROSS_COMPILE_AARCH64)
         if (ENABLE_TUI_SUPPORT AND (NOT DISABLE_MONITOR))
@@ -264,28 +261,24 @@ if (NOT TARGET strip)
                 COMMAND aarch64-linux-gnu-strip -s dvmhost
                 COMMAND aarch64-linux-gnu-strip -s dvmfne
                 COMMAND aarch64-linux-gnu-strip -s dvmcmd
-                COMMAND aarch64-linux-gnu-strip -s dvmmon
-                COMMAND aarch64-linux-gnu-strip -s dvmdfsi)
+                COMMAND aarch64-linux-gnu-strip -s dvmmon)
         else()
             add_custom_target(strip
                 COMMAND aarch64-linux-gnu-strip -s dvmhost
                 COMMAND aarch64-linux-gnu-strip -s dvmfne
-                COMMAND aarch64-linux-gnu-strip -s dvmcmd
-                COMMAND aarch64-linux-gnu-strip -s dvmdfsi)
+                COMMAND aarch64-linux-gnu-strip -s dvmcmd)
         endif (ENABLE_TUI_SUPPORT AND (NOT DISABLE_MONITOR))
     elseif (CROSS_COMPILE_RPI_ARM)
         if (NOT WITH_RPI_ARM_TOOLS)
             add_custom_target(strip
                 COMMAND ${CMAKE_CURRENT_BINARY_DIR}/_deps/rpitools-src/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-strip -s dvmhost
                 COMMAND ${CMAKE_CURRENT_BINARY_DIR}/_deps/rpitools-src/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-strip -s dvmfne
-                COMMAND ${CMAKE_CURRENT_BINARY_DIR}/_deps/rpitools-src/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-strip -s dvmcmd
-                COMMAND ${CMAKE_CURRENT_BINARY_DIR}/_deps/rpitools-src/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-strip -s dvmdfsi)
+                COMMAND ${CMAKE_CURRENT_BINARY_DIR}/_deps/rpitools-src/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-strip -s dvmcmd)
         else()
             add_custom_target(strip
                 COMMAND ${RPI_ARM_TOOLS}/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-strip -s dvmhost
                 COMMAND ${RPI_ARM_TOOLS}/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-strip -s dvmfne
-                COMMAND ${RPI_ARM_TOOLS}/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-strip -s dvmcmd
-                COMMAND ${RPI_ARM_TOOLS}/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-strip -s dvmdfsi)
+                COMMAND ${RPI_ARM_TOOLS}/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-strip -s dvmcmd)
         endif ()
     else()
         if (ENABLE_TUI_SUPPORT AND (NOT DISABLE_MONITOR))
@@ -293,14 +286,12 @@ if (NOT TARGET strip)
                 COMMAND strip -s dvmhost
                 COMMAND strip -s dvmfne
                 COMMAND strip -s dvmcmd
-                COMMAND strip -s dvmmon
-                COMMAND strip -s dvmdfsi)
+                COMMAND strip -s dvmmon)
         else()
             add_custom_target(strip
                 COMMAND strip -s dvmhost
                 COMMAND strip -s dvmfne
-                COMMAND strip -s dvmcmd
-                COMMAND strip -s dvmdfsi)
+                COMMAND strip -s dvmcmd)
         endif (ENABLE_TUI_SUPPORT AND (NOT DISABLE_MONITOR))
     endif (CROSS_COMPILE_ARM)
 endif (NOT TARGET strip)
@@ -326,7 +317,6 @@ if (NOT TARGET tarball)
             COMMAND cp -v dvmcmd ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
             COMMAND cp -v dvmmon ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
             COMMAND cp -v dvmfne ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
-            COMMAND cp -v dvmdfsi ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
             COMMAND cp ../tools/*.sh ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
             COMMAND chmod +x ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/*.sh
             COMMAND cp -v ../configs/*.yml ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
@@ -355,7 +345,6 @@ if (NOT TARGET tarball)
             COMMAND cp -v dvmhost ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
             COMMAND cp -v dvmcmd ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
             COMMAND cp -v dvmfne ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
-            COMMAND cp -v dvmdfsi ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
             COMMAND cp ../tools/*.sh ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
             COMMAND chmod +x ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/*.sh
             COMMAND cp -v ../configs/*.yml ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
@@ -394,7 +383,6 @@ add_custom_target(old_install
     COMMAND install -m 755 dvmcmd ${CMAKE_LEGACY_INSTALL_PREFIX}/bin
     COMMAND install -m 755 dvmmon ${CMAKE_LEGACY_INSTALL_PREFIX}/bin
     COMMAND install -m 755 dvmfne ${CMAKE_LEGACY_INSTALL_PREFIX}/bin
-    COMMAND install -m 755 dvmdfsi ${CMAKE_LEGACY_INSTALL_PREFIX}/bin
     COMMAND install -m 644 ../configs/config.example.yml ${CMAKE_LEGACY_INSTALL_PREFIX}/config.example.yml
     COMMAND install -m 644 ../configs/fne-config.example.yml ${CMAKE_LEGACY_INSTALL_PREFIX}/fne-config.example.yml
     COMMAND install -m 644 ../configs/monitor-config.example.yml ${CMAKE_LEGACY_INSTALL_PREFIX}/monitor-config.example.yml
