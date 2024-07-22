@@ -71,10 +71,10 @@ namespace dmr
             m_siteId = DMRUtils::siteId(siteId, siteModel);
 
             // parId clamping
-            if (parId == 0U)
-                parId = 3U;
-            if (parId > 3U)
-                parId = 3U;
+            if (m_parId == 0U)
+                m_parId = 3U;
+            if (m_parId > 3U)
+                m_parId = 3U;
         }
 
         /**

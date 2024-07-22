@@ -120,9 +120,9 @@ bool BaseNetwork::writeActLog(const char* message)
     char buffer[DATA_PACKET_LENGTH];
     uint32_t len = ::strlen(message);
 
-    ::strcpy(buffer + 11U, message);
+    ::strncpy(buffer + 11U, message, len);
 
-    return writeMaster({ NET_FUNC::TRANSFER, NET_SUBFUNC::TRANSFER_SUBFUNC_ACTIVITY }, (uint8_t*)buffer, (uint32_t)len + 12U,
+    return writeMaster({ NET_FUNC::TRANSFER, NET_SUBFUNC::TRANSFER_SUBFUNC_ACTIVITY }, (uint8_t*)buffer, (uint32_t)len + 11U,
         RTP_END_OF_CALL_SEQ, 0U, false, m_useAlternatePortForDiagnostics);
 }
 
@@ -141,9 +141,9 @@ bool BaseNetwork::writeDiagLog(const char* message)
     char buffer[DATA_PACKET_LENGTH];
     uint32_t len = ::strlen(message);
 
-    ::strcpy(buffer + 11U, message);
+    ::strncpy(buffer + 11U, message, len);
 
-    return writeMaster({ NET_FUNC::TRANSFER, NET_SUBFUNC::TRANSFER_SUBFUNC_DIAG }, (uint8_t*)buffer, (uint32_t)len + 12U,
+    return writeMaster({ NET_FUNC::TRANSFER, NET_SUBFUNC::TRANSFER_SUBFUNC_DIAG }, (uint8_t*)buffer, (uint32_t)len + 11U,
         RTP_END_OF_CALL_SEQ, 0U, false, m_useAlternatePortForDiagnostics);
 }
 
@@ -166,10 +166,10 @@ bool BaseNetwork::writePeerStatus(json::object obj)
     char buffer[DATA_PACKET_LENGTH];
     uint32_t len = ::strlen(json.c_str());
 
-    ::strcpy(buffer + 11U, json.c_str());
+    ::strncpy(buffer + 11U, json.c_str(), len);
 
-    return writeMaster({ NET_FUNC::TRANSFER, NET_SUBFUNC::TRANSFER_SUBFUNC_STATUS }, (uint8_t*)buffer, (uint32_t)len + 12U,
-        0U, 0U, false, m_useAlternatePortForDiagnostics);
+    return writeMaster({ NET_FUNC::TRANSFER, NET_SUBFUNC::TRANSFER_SUBFUNC_STATUS }, (uint8_t*)buffer, (uint32_t)len + 11U,
+        RTP_END_OF_CALL_SEQ, 0U, false, m_useAlternatePortForDiagnostics);
 }
 
 /* Writes a group affiliation to the network. */
@@ -699,10 +699,14 @@ UInt8Array BaseNetwork::createDMR_Message(uint32_t& length, const uint32_t strea
     buffer[14U] = 0U;                                                               // Control Bits
 
     // Individual slot disabling
-    if (slotNo == 1U && !m_slot1)
+    if (slotNo == 1U && !m_slot1) {
+        delete[] buffer;
         return nullptr;
-    if (slotNo == 2U && !m_slot2)
+    }
+    if (slotNo == 2U && !m_slot2) {
+        delete[] buffer;
         return nullptr;
+    }
 
     buffer[15U] = slotNo == 1U ? 0x00U : 0x80U;                                     // Slot Number
 

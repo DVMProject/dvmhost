@@ -208,8 +208,6 @@ bool TSBK::decode(const uint8_t* data, uint8_t* payload, bool rawTSBK)
                 if ((tsbk[P25_TSBK_LENGTH_BYTES - 2U] != 0x00U) && (tsbk[P25_TSBK_LENGTH_BYTES - 1U] != 0x00U)) {
                     LogWarning(LOG_P25, "TSBK::decode(), failed CRC CCITT-162 check");
                 }
-
-                ret = true; // ignore CRC error
             }
             else {
                 LogError(LOG_P25, "TSBK::decode(), failed CRC CCITT-162 check");

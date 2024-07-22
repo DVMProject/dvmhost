@@ -565,9 +565,10 @@ bool HostFNE::createMasterNetwork()
             LogError(LOG_HOST, "failed to initialize diagnostic log networking!");
             m_useAlternatePortForDiagnostics = false; // this isn't fatal so just disable alternate port
         }
-
-        if (encrypted) {
-            m_diagNetwork->setPresharedKey(presharedKey);
+        else {
+            if (encrypted) {
+                m_diagNetwork->setPresharedKey(presharedKey);
+            }
         }
     }
 

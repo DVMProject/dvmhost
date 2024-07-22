@@ -566,7 +566,7 @@ std::string Socket::getLocalAddress()
 
     int err = -1;
     if ((err = getifaddrs(&ifaddr)) == -1) {
-        LogError(LOG_NET, "Cannot retreive system network interfaces");
+        LogError(LOG_NET, "Cannot retreive system network interfaces, err: %d", err);
         return "0.0.0.0";
     }
 
