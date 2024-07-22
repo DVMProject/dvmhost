@@ -199,7 +199,7 @@ void Network::clock(uint32_t ms)
         return;
     }
 
-    uint64_t now = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
     // roll the RTP timestamp if no call is in progress
     if ((m_status == NET_STAT_RUNNING) &&

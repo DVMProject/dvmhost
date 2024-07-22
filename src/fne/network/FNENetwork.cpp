@@ -256,7 +256,7 @@ void FNENetwork::clock(uint32_t ms)
         return;
     }
 
-    uint64_t now = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
     if (m_forceListUpdate) {
         for (auto peer : m_peers) {
@@ -274,7 +274,7 @@ void FNENetwork::clock(uint32_t ms)
             FNEPeerConnection* connection = peer.second;
             if (connection != nullptr) {
                 if (connection->connected()) {
-                    uint64_t dt = connection->lastPing() + (m_host->m_pingTime * m_host->m_maxMissedPings);
+                    uint64_t dt = connection->lastPing() + ((m_host->m_pingTime * 1000) * m_host->m_maxMissedPings);
                     if (dt < now) {
                         LogInfoEx(LOG_NET, "PEER %u (%s) timed out, dt = %u, now = %u", id, connection->identity().c_str(),
                             dt, now);
@@ -389,7 +389,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
     if (req != nullptr) {
         ::pthread_detach(req->thread);
 
-        uint64_t now = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+        uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
         FNENetwork* network = static_cast<FNENetwork*>(req->obj);
         if (network == nullptr) {
@@ -414,7 +414,9 @@ void* FNENetwork::threadedNetworkRx(void* arg)
 
                 if (connection != nullptr) {
                     if (pktSeq == RTP_END_OF_CALL_SEQ) {
-                        if (req->fneHeader.getFunction() != NET_FUNC::PING) {
+                        // only reset packet sequences if we're a PROTOCOL or RPTC function
+                        if ((req->fneHeader.getFunction() == NET_FUNC::PROTOCOL) ||
+                            (req->fneHeader.getFunction() == NET_FUNC::RPTC)) {
                             connection->pktLastSeq(pktSeq);
                             connection->pktNextSeq(0U);
                         }
@@ -851,12 +853,14 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                 connection->lastPing(now);
 
                                 // does this peer need an ACL update?
-                                uint64_t dt = connection->lastACLUpdate() + network->m_updateLookupTime;
+                                uint64_t dt = connection->lastACLUpdate() + (network->m_updateLookupTime * 1000);
                                 if (dt < now) {
                                     LogInfoEx(LOG_NET, "PEER %u (%s) updating ACL list, dt = %u, now = %u", peerId, connection->identity().c_str(),
                                         dt, now);
-                                    network->peerACLUpdate(peerId);
-                                    connection->lastACLUpdate(now);
+                                    if (connection->pktLastSeq() == RTP_END_OF_CALL_SEQ) {
+                                        network->peerACLUpdate(peerId);
+                                        connection->lastACLUpdate(now);
+                                    }
                                 }
 
                                 uint8_t payload[8U];
@@ -1365,10 +1369,15 @@ void* FNENetwork::threadedACLUpdate(void* arg)
         std::string peerIdentity = network->resolvePeerIdentity(req->peerId);
         LogInfoEx(LOG_NET, "PEER %u (%s) sending ACL list updates", req->peerId, peerIdentity.c_str());
 
-        network->writeWhitelistRIDs(req->peerId);
-        network->writeBlacklistRIDs(req->peerId);
-        network->writeTGIDs(req->peerId);
-        network->writeDeactiveTGIDs(req->peerId);
+        FNEPeerConnection* connection = network->m_peers[req->peerId];
+        if (connection != nullptr) {
+            network->writeWhitelistRIDs(req->peerId);
+            network->writeBlacklistRIDs(req->peerId);
+            network->writeTGIDs(req->peerId);
+
+            connection->pktLastSeq(RTP_END_OF_CALL_SEQ - 1U);
+            network->writeDeactiveTGIDs(req->peerId);
+        }
 
         delete req;
     }
@@ -1380,7 +1389,7 @@ void* FNENetwork::threadedACLUpdate(void* arg)
 
 void FNENetwork::writeWhitelistRIDs(uint32_t peerId)
 {
-    uint64_t now = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
     // send radio ID white/black lists
     std::vector<uint32_t> ridWhitelist;
@@ -1453,7 +1462,7 @@ void FNENetwork::writeWhitelistRIDs(uint32_t peerId)
 
 void FNENetwork::writeBlacklistRIDs(uint32_t peerId)
 {
-    uint64_t now = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
     // send radio ID blacklist
     std::vector<uint32_t> ridBlacklist;
