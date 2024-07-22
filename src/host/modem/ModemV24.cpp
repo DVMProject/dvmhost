@@ -481,7 +481,7 @@ int ModemV24::writeSerial()
         // Sanity check on data tag
         uint8_t tag = lengthTagTs[2U];
         if (tag != TAG_DATA) {
-            LogError(LOG_SERIAL, "Got unexpected data tag from TX P25 ringbuffer! %02X", tag);
+            LogError(LOG_MODEM, "Got unexpected data tag from TX P25 ringbuffer! %02X", tag);
             return 0U;
         }
 
@@ -850,7 +850,7 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
                         m_rxCall->lsd1 = voice.additionalData[0U];
                         m_rxCall->lsd2 = voice.additionalData[1U];
                     } else {
-                        LogWarning(LOG_SERIAL, "V.24/DFSI VC18 traffic missing metadata");
+                        LogWarning(LOG_MODEM, "V.24/DFSI VC18 traffic missing metadata");
                     }
                 }
                 break;
