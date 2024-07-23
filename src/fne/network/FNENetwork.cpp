@@ -859,8 +859,8 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                         dt, now);
                                     if (connection->pktLastSeq() == RTP_END_OF_CALL_SEQ) {
                                         network->peerACLUpdate(peerId);
-                                        connection->lastACLUpdate(now);
                                     }
+                                    connection->lastACLUpdate(now);
                                 }
 
                                 uint8_t payload[8U];

@@ -79,7 +79,7 @@ bool MotTSBKFrame::decode(const uint8_t* data)
     // decode start of stream
     startOfStream->decode(startBuffer);
 
-    ::memcpy(tsbkData, data + 8U, P25_TSBK_LENGTH_BYTES);
+    ::memcpy(tsbkData, data + 7U, P25_TSBK_LENGTH_BYTES);
 
     return true;
 }
@@ -103,6 +103,6 @@ void MotTSBKFrame::encode(uint8_t* data)
     // encode TSBK - scope is intentional
     {
         data[0U] = DFSIFrameType::TSBK;
-        ::memcpy(data + 8U, tsbkData, P25_TSBK_LENGTH_BYTES);
+        ::memcpy(data + 7U, tsbkData, P25_TSBK_LENGTH_BYTES);
     }
 }
