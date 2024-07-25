@@ -1329,7 +1329,7 @@ void ModemV24::convertFromAir(uint8_t* data, uint32_t length)
         ::memset(rs, 0x00U, P25_LDU_LC_FEC_LENGTH_BYTES);
 
         if (duid == DUID::LDU1) {
-            if (lc.isStandardMFId()) {
+            if (lc.isStandardMFId() && !lc.isDemandUseRawLC()) {
                 uint8_t serviceOptions =
                     (lc.getEmergency() ? 0x80U : 0x00U) +
                     (lc.getEncrypted() ? 0x40U : 0x00U) +

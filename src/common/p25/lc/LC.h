@@ -111,6 +111,11 @@ namespace p25
              * @returns bool True, if the MFId contained for this LC is standard, otherwise false.
              */
             bool isStandardMFId() const;
+            /**
+             * @brief Helper to determine if we should utilize the raw RS data from the decode.
+             * @returns bool True, if the raw LC value should be used, otherwise false.
+             */
+            bool isDemandUseRawLC() const { return m_demandUseRawLC; }
 
             /** @name Encryption data */
             /**
@@ -234,6 +239,7 @@ namespace p25
             edac::RS634717 m_rs;
             bool m_encryptOverride;
             bool m_tsbkVendorSkip;
+            bool m_demandUseRawLC;
 
             uint32_t m_callTimer;
 
