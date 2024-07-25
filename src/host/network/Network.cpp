@@ -21,6 +21,7 @@ using namespace network;
 
 #include <cstdio>
 #include <cassert>
+#include <cmath>
 
 // ---------------------------------------------------------------------------
 //  Constants
@@ -602,7 +603,7 @@ void Network::clock(uint32_t ms)
                 serverNow = (serverNow << 8) + buffer[13U];
 
                 // check the ping RTT and report any over the maximum defined time
-                uint64_t dt = now - serverNow;
+                uint64_t dt = (uint64_t)fabs(now - serverNow);
                 if (dt > MAX_SERVER_DIFF)
                     LogWarning(LOG_NET, "PEER %u pong, time delay greater than %ums, now = %u, server = %u, dt = %u", m_peerId, MAX_SERVER_DIFF, now, serverNow, dt);
             }
