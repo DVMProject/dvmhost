@@ -1206,7 +1206,7 @@ void ModemV24::convertFromAir(uint8_t* data, uint32_t length)
         break;
         case DUID::LDU1:
         {
-            bool ret = lc.decodeLDU1(data + 2U);
+            bool ret = lc.decodeLDU1(data + 2U, true);
             if (!ret) {
                 LogWarning(LOG_MODEM, P25_LDU1_STR ", undecodable LC");
                 return;
@@ -1329,36 +1329,17 @@ void ModemV24::convertFromAir(uint8_t* data, uint32_t length)
         ::memset(rs, 0x00U, P25_LDU_LC_FEC_LENGTH_BYTES);
 
         if (duid == DUID::LDU1) {
-            if (lc.isStandardMFId() && !lc.isDemandUseRawLC()) {
-                uint8_t serviceOptions =
-                    (lc.getEmergency() ? 0x80U : 0x00U) +
-                    (lc.getEncrypted() ? 0x40U : 0x00U) +
-                    (lc.getPriority() & 0x07U);
+            rs[0U] = lc.getLCO();                                               // LCO
 
-                rs[0U] = lc.getLCO();                                               // LCO
-                rs[1U] = lc.getMFId();                                              // MFId
-                rs[2U] = serviceOptions;                                            // Service Options
-                uint32_t dstId = lc.getDstId();
-                rs[3U] = (dstId >> 16) & 0xFFU;                                     // Target Address
-                rs[4U] = (dstId >> 8) & 0xFFU;
-                rs[5U] = (dstId >> 0) & 0xFFU;
-                uint32_t srcId = lc.getSrcId();
-                rs[6U] = (srcId >> 16) & 0xFFU;                                     // Source Address
-                rs[7U] = (srcId >> 8) & 0xFFU;
-                rs[8U] = (srcId >> 0) & 0xFFU;
-            } else {
-                rs[0U] = lc.getLCO();                                               // LCO
-
-                // split ulong64_t (8 byte) value into bytes
-                rs[1U] = (uint8_t)((lc.getRS() >> 56) & 0xFFU);
-                rs[2U] = (uint8_t)((lc.getRS() >> 48) & 0xFFU);
-                rs[3U] = (uint8_t)((lc.getRS() >> 40) & 0xFFU);
-                rs[4U] = (uint8_t)((lc.getRS() >> 32) & 0xFFU);
-                rs[5U] = (uint8_t)((lc.getRS() >> 24) & 0xFFU);
-                rs[6U] = (uint8_t)((lc.getRS() >> 16) & 0xFFU);
-                rs[7U] = (uint8_t)((lc.getRS() >> 8) & 0xFFU);
-                rs[8U] = (uint8_t)((lc.getRS() >> 0) & 0xFFU);
-            }
+            // split ulong64_t (8 byte) value into bytes
+            rs[1U] = (uint8_t)((lc.getRS() >> 56) & 0xFFU);
+            rs[2U] = (uint8_t)((lc.getRS() >> 48) & 0xFFU);
+            rs[3U] = (uint8_t)((lc.getRS() >> 40) & 0xFFU);
+            rs[4U] = (uint8_t)((lc.getRS() >> 32) & 0xFFU);
+            rs[5U] = (uint8_t)((lc.getRS() >> 24) & 0xFFU);
+            rs[6U] = (uint8_t)((lc.getRS() >> 16) & 0xFFU);
+            rs[7U] = (uint8_t)((lc.getRS() >> 8) & 0xFFU);
+            rs[8U] = (uint8_t)((lc.getRS() >> 0) & 0xFFU);
 
             // encode RS (24,12,13) FEC
             m_rs.encode241213(rs);

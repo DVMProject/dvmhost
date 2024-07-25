@@ -85,9 +85,10 @@ namespace p25
             /**
              * @brief Decode a logical link data unit 1.
              * @param[in] data Buffer containing an LDU1 to decode.
+             * @param rawOnly Flag indicating only the raw bytes of the LC should be decoded.
              * @returns True, if LDU1 decoded, otherwise false.
              */
-            bool decodeLDU1(const uint8_t* data);
+            bool decodeLDU1(const uint8_t* data, bool rawOnly = false);
             /**
              * @brief Encode a logical link data unit 1.
              * @param[out] data Buffer to encode an LDU1.
@@ -111,11 +112,6 @@ namespace p25
              * @returns bool True, if the MFId contained for this LC is standard, otherwise false.
              */
             bool isStandardMFId() const;
-            /**
-             * @brief Helper to determine if we should utilize the raw RS data from the decode.
-             * @returns bool True, if the raw LC value should be used, otherwise false.
-             */
-            bool isDemandUseRawLC() const { return m_demandUseRawLC; }
 
             /** @name Encryption data */
             /**
@@ -239,7 +235,6 @@ namespace p25
             edac::RS634717 m_rs;
             bool m_encryptOverride;
             bool m_tsbkVendorSkip;
-            bool m_demandUseRawLC;
 
             uint32_t m_callTimer;
 
@@ -257,9 +252,10 @@ namespace p25
             /**
              * @brief Decode link control.
              * @param[in] rs Buffer containing the decoded Reed-Solomon LC data.
+             * @param rawOnly Flag indicating only the raw bytes of the LC should be decoded.
              * @returns bool True, if LC is decoded, otherwise false.
              */
-            bool decodeLC(const uint8_t* rs);
+            bool decodeLC(const uint8_t* rs, bool rawOnly = false);
             /**
              * @brief Encode link control.
              * @param[out] rs Buffer to encode LC data.

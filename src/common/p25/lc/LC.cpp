@@ -66,7 +66,6 @@ LC::LC() :
     m_rs(),
     m_encryptOverride(false),
     m_tsbkVendorSkip(false),
-    m_demandUseRawLC(false),
     m_callTimer(0U),
     m_mi(nullptr)
 {
@@ -213,7 +212,7 @@ void LC::encodeHDU(uint8_t* data)
 
 /* Decode a logical link data unit 1. */
 
-bool LC::decodeLDU1(const uint8_t* data)
+bool LC::decodeLDU1(const uint8_t* data, bool rawOnly)
 {
     assert(data != nullptr);
 
@@ -260,7 +259,7 @@ bool LC::decodeLDU1(const uint8_t* data)
     Utils::dump(2U, "LC::decodeLDU1(), LDU1 LC", rs, P25_LDU_LC_LENGTH_BYTES);
 #endif
 
-    return decodeLC(rs);
+    return decodeLC(rs, rawOnly);
 }
 
 /* Encode a logical link data unit 1. */
@@ -508,7 +507,6 @@ void LC::copy(const LC& data)
     m_callTimer = data.m_callTimer;
 
     m_rsValue = data.m_rsValue;
-    m_demandUseRawLC = data.m_demandUseRawLC;
 
     m_algId = data.m_algId;
     if (m_algId != ALGO_UNENCRYPT) {
@@ -541,10 +539,8 @@ void LC::copy(const LC& data)
 
 /* Decode link control. */
 
-bool LC::decodeLC(const uint8_t* rs)
+bool LC::decodeLC(const uint8_t* rs, bool rawOnly)
 {
-    m_demandUseRawLC = false;
-
     ulong64_t rsValue = 0U;
 
     // combine bytes into ulong64_t (8 byte) value
@@ -563,11 +559,13 @@ bool LC::decodeLC(const uint8_t* rs)
 
     m_mfId = rs[1U];                                                                // Mfg Id.
 
+    if (rawOnly)
+        return true;
+
     // non-standard P25 vendor opcodes (these are just detected for passthru, and stored
     // as the packed RS value)
     if ((m_mfId != MFG_STANDARD) && (m_mfId != MFG_STANDARD_ALT)) {
         //Utils::dump(1U, "Decoded P25 Non-Standard RS", rs, P25_LDU_LC_FEC_LENGTH_BYTES);
-        m_demandUseRawLC = true;
         return true;
     }
 
@@ -584,9 +582,6 @@ bool LC::decodeLC(const uint8_t* rs)
         m_explicitId = (rs[3U] & 0x01U) == 0x01U;                                   // Explicit Source ID Flag
         m_dstId = (uint32_t)((rsValue >> 24) & 0xFFFFU);                            // Talkgroup Address
         m_srcId = (uint32_t)(rsValue & 0xFFFFFFU);                                  // Source Radio Address
-        break;
-    case LCO::GROUP_UPDT:
-        m_demandUseRawLC = true;
         break;
     case LCO::PRIVATE:
         m_mfId = rs[1U];                                                            // Mfg Id.
@@ -614,9 +609,6 @@ bool LC::decodeLC(const uint8_t* rs)
         m_netId = (uint32_t)((rsValue >> 36) & 0xFFFFFU);                           // Network ID
         m_sysId = (uint32_t)((rsValue >> 24) & 0xFFFU);                             // System ID
         m_srcId = (uint32_t)(rsValue & 0xFFFFFFU);                                  // Source Radio Address
-        break;
-    case LCO::RFSS_STS_BCAST:
-        m_demandUseRawLC = true;
         break;
     default:
         LogError(LOG_P25, "LC::decodeLC(), unknown LC value, mfId = $%02X, lco = $%02X", m_mfId, m_lco);
