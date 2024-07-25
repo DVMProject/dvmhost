@@ -421,7 +421,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                             connection->pktNextSeq(0U);
                         }
                     } else {
-                        if ((connection->currStreamId() == streamId) && (pktSeq != connection->pktNextSeq()) && (pktSeq != (RTP_END_OF_CALL_SEQ - 1U))) {
+                        if ((connection->currStreamId() == streamId) && (pktSeq != connection->pktNextSeq()) && (pktSeq != (RTP_END_OF_CALL_SEQ - 1U)) && pktSeq != 0U) {
                             LogWarning(LOG_NET, "PEER %u (%s) stream %u out-of-sequence; %u != %u", peerId, connection->identity().c_str(),
                                 streamId, pktSeq, connection->pktNextSeq());
                         }

@@ -130,7 +130,7 @@ bool FrameQueue::write(const uint8_t* message, uint32_t length, uint32_t streamI
 
     bool ret = true;
     if (!m_socket->write(buffer, bufferLen, addr, addrLen)) {
-        LogError(LOG_NET, "Failed writing data to the network");
+        // LogError(LOG_NET, "Failed writing data to the network");
         ret = false;
     }
 

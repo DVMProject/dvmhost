@@ -583,6 +583,7 @@ void Network::clock(uint32_t ms)
         case NET_FUNC::MST_CLOSING:                                                                 // Master Shutdown
             {
                 LogError(LOG_NET, "PEER %u master is closing down, remotePeerId = %u", m_peerId, m_remotePeerId);
+                m_status = NET_STAT_WAITING_CONNECT;
                 close();
                 open();
             }

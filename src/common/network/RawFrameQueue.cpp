@@ -91,7 +91,7 @@ bool RawFrameQueue::write(const uint8_t* message, uint32_t length, sockaddr_stor
 
     bool ret = true;
     if (!m_socket->write(buffer, length, addr, addrLen)) {
-        LogError(LOG_NET, "Failed writing data to the network");
+        // LogError(LOG_NET, "Failed writing data to the network");
         ret = false;
     }
 
@@ -142,7 +142,7 @@ bool RawFrameQueue::flushQueue()
 
     ret = true;
     if (!m_socket->write(m_buffers)) {
-        LogError(LOG_NET, "Failed writing data to the network");
+        // LogError(LOG_NET, "Failed writing data to the network");
         ret = false;
     }
 
