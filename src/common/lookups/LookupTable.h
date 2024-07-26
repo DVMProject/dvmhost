@@ -141,7 +141,8 @@ namespace lookups
         virtual bool hasEntry(uint32_t id)
         {
             try {
-                m_table.at(id);
+                T entry = m_table.at(id); // this value will get discarded
+                (void)entry;              // but some variants of C++ mark the unordered_map<>::at as nodiscard
                 return true;
             }
             catch (...) {
