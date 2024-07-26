@@ -744,7 +744,7 @@ bool TagP25Data::processTSDUTo(uint8_t* buffer, uint32_t peerId, uint8_t duid)
 
         std::unique_ptr<lc::TSBK> tsbk = lc::tsbk::TSBKFactory::createTSBK(data.get());
         if (tsbk != nullptr) {
-            uint32_t srcId = tsbk->getSrcId();
+            //uint32_t srcId = tsbk->getSrcId();
             uint32_t dstId = tsbk->getDstId();
 
             FNEPeerConnection* connection = nullptr;

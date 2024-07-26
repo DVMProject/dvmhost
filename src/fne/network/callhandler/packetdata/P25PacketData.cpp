@@ -74,7 +74,6 @@ bool P25PacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
 
     uint32_t blockLength = __GET_UINT16(data, 8U);
 
-    uint8_t blocksToFollow = data[20U];
     uint8_t currentBlock = data[21U];
 
     if (blockLength == 0U)
@@ -416,7 +415,7 @@ void P25PacketData::dispatch(uint32_t peerId)
         uint16_t opcode = __GET_UINT16B(arpPacket, 6U);
         uint32_t srcHWAddr = __GET_UINT16(arpPacket, 8U);
         uint32_t srcProtoAddr = __GET_UINT32(arpPacket, 11U);
-        uint32_t tgtHWAddr = __GET_UINT16(arpPacket, 15U);
+        //uint32_t tgtHWAddr = __GET_UINT16(arpPacket, 15U);
         uint32_t tgtProtoAddr = __GET_UINT32(arpPacket, 18U);
 
         if (opcode == P25_PDU_ARP_REQUEST) {

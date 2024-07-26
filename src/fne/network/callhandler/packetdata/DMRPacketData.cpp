@@ -81,7 +81,6 @@ bool DMRPacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
     dmrData.setFLCO(flco);
 
     bool dataSync = (data[15U] & 0x20U) == 0x20U;
-    bool voiceSync = (data[15U] & 0x10U) == 0x10U;
 
     if (dataSync) {
         dmrData.setData(data + 20U);
@@ -158,7 +157,7 @@ bool DMRPacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
 
                 m_status[peerId] = status;
                 
-                LogMessage(LOG_NET, "DMR, Data Call Start, peer = %u, slot = %u, srcId = %u, dstId = %u, streamId = %u, external = %u", peerId, status->slotNo, status->srcId, status->dstId, streamId, external);
+                LogMessage(LOG_NET, "DMR, Data Call Start, peer = %u, slot = %u, srcId = %u, dstId = %u, group = %u, streamId = %u, external = %u", peerId, status->slotNo, status->srcId, status->dstId, gi, streamId, external);
                 dispatchToFNE(peerId, dmrData, data, len, seqNo, pktSeq, streamId);
 
                 return true;
@@ -212,8 +211,8 @@ bool DMRPacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
             bool gi = status->header.getGI();
             uint32_t srcId = status->header.getSrcId();
             uint32_t dstId = status->header.getDstId();
-            LogMessage(LOG_NET, "P25, Data Call End, peer = %u, slot = %u, srcId = %u, dstId = %u, blocks = %u, duration = %u, streamId = %u, external = %u",
-                peerId, srcId, dstId, status->header.getBlocksToFollow(), duration / 1000, streamId, external);
+            LogMessage(LOG_NET, "P25, Data Call End, peer = %u, slot = %u, srcId = %u, dstId = %u, group = %u, blocks = %u, duration = %u, streamId = %u, external = %u",
+                peerId, srcId, dstId, gi, status->header.getBlocksToFollow(), duration / 1000, streamId, external);
 
             // report call event to InfluxDB
             if (m_network->m_enableInfluxDB) {
@@ -266,7 +265,6 @@ void DMRPacketData::dispatchToFNE(uint32_t peerId, dmr::data::NetData& dmrData, 
 {
     RxStatus* status = m_status[peerId];
 
-    bool gi = status->header.getGI();
     uint32_t srcId = status->header.getSrcId();
     uint32_t dstId = status->header.getDstId();
 

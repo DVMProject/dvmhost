@@ -210,7 +210,8 @@ bool AffiliationLookup::groupUnaff(uint32_t srcId)
 
     // remove dynamic affiliation table entry
     try {
-        m_grpAffTable.at(srcId);
+        uint32_t entry = m_grpAffTable.at(srcId); // this value will get discarded
+        (void)entry;                              // but some variants of C++ mark the unordered_map<>::at as nodiscard
         m_grpAffTable.erase(srcId);
         return true;
     }
