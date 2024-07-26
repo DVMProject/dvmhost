@@ -69,7 +69,8 @@ void PeerListLookup::eraseEntry(uint32_t id)
 {
     std::lock_guard<std::mutex> lock(m_mutex);
     try {
-        m_table.at(id);
+        PeerId entry = m_table.at(id);  // this value will get discarded
+        (void)entry;                    // but some variants of C++ mark the unordered_map<>::at as nodiscard
         m_table.erase(id);
     } catch (...) {
         /* stub */
