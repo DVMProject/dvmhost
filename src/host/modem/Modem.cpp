@@ -364,6 +364,13 @@ void Modem::setFifoLength(uint16_t dmrLength, uint16_t p25Length, uint16_t nxdnL
     if (m_nxdnFifoLength < NXDN_TX_BUFFER_LEN)
         m_nxdnFifoLength = NXDN_TX_BUFFER_LEN;
 
+    if (!m_dmrEnabled && m_dmrFifoLength > 0U)
+        m_dmrFifoLength = 0U;
+    if (!m_p25Enabled && m_p25FifoLength > 0U)
+        m_p25FifoLength = 0U;
+    if (!m_nxdnEnabled && m_nxdnFifoLength > 0U)
+        m_nxdnFifoLength = 0U;
+
     uint8_t buffer[9U];
 
     buffer[0U] = DVM_SHORT_FRAME_START;
