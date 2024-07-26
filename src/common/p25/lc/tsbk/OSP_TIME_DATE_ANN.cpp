@@ -70,7 +70,7 @@ void OSP_TIME_DATE_ANN::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
     LogDebug(LOG_P25, "TSBKO, OSP_TIME_DATE_ANN, tmM = %u / %u, tmY = %u / %u", local_tm.tm_mon, tmM, local_tm.tm_year, tmY);
 #endif
 
-    uint8_t lto = fabs(m_siteData.lto()) * 2U; // this will cause a bug for half-hour timezone intervals...
+    uint16_t lto = abs(m_siteData.lto()) * 2U; // this will cause a bug for half-hour timezone intervals...
 
     // mark the LTO as valid if its non-zero
     bool vl = false;
