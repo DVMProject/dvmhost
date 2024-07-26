@@ -234,7 +234,7 @@ void* Host::threadDMRWriter1(void* arg)
                                 if (host->m_dmrDedicatedTxTestTimer.hasExpired() && !host->m_dmrDedicatedTxTestTimer.isPaused()) {
                                     host->m_dmrDedicatedTxTestTimer.pause();
                                     if (!host->m_modem->hasTX() && host->m_modem->gotModemStatus() && host->m_state == STATE_DMR && (host->m_dmr->getTSCCSlotNo() == 1U) && host->m_dmr->getCCRunning()) {
-                                        LogError(LOG_HOST, "DMR dedicated m_dmr not transmitting, running = %u, halted = %u, frameLength1 = %u", host->m_dmr->getCCRunning(), host->m_dmr->getCCHalted(), nextLen);
+                                        LogError(LOG_HOST, "DMR dedicated CC not transmitting, running = %u, halted = %u, frameLength1 = %u", host->m_dmr->getCCRunning(), host->m_dmr->getCCHalted(), nextLen);
                                     }
                                 }
                             }
@@ -486,7 +486,7 @@ void* Host::threadDMRWriter2(void* arg)
                                 if (host->m_dmrDedicatedTxTestTimer.hasExpired() && !host->m_dmrDedicatedTxTestTimer.isPaused()) {
                                     host->m_dmrDedicatedTxTestTimer.pause();
                                     if (!host->m_modem->hasTX() && host->m_modem->gotModemStatus() && host->m_state == STATE_DMR && (host->m_dmr->getTSCCSlotNo() == 2U) && host->m_dmr->getCCRunning()) {
-                                        LogError(LOG_HOST, "DMR dedicated m_dmr not transmitting, running = %u, halted = %u, frameLength2 = %u", host->m_dmr->getCCRunning(), host->m_dmr->getCCHalted(), nextLen);
+                                        LogError(LOG_HOST, "DMR dedicated CC not transmitting, running = %u, halted = %u, frameLength2 = %u", host->m_dmr->getCCRunning(), host->m_dmr->getCCHalted(), nextLen);
                                     }
                                 }
                             }

@@ -1188,7 +1188,6 @@ void Control::addFrame(const uint8_t* data, uint32_t length, bool net, bool imm)
         }
     }
 
-
     uint8_t lenBuffer[2U];
     if (length > 255U)
         lenBuffer[0U] = (length >> 8U) & 0xFFU;
