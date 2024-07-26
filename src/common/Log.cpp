@@ -133,6 +133,8 @@ static bool LogOpen()
 
         openlog(m_fileRoot.c_str(), LOG_CONS | LOG_PID | LOG_NDELAY, LOG_DAEMON);
         return true;
+#else
+        return false;
 #endif // !defined(_WIN32)
     }
 }
