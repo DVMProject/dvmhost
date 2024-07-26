@@ -188,7 +188,7 @@ void* Host::threadNXDNWriter(void* arg)
                                 if (host->m_nxdnDedicatedTxTestTimer.hasExpired() && !host->m_nxdnDedicatedTxTestTimer.isPaused()) {
                                     host->m_nxdnDedicatedTxTestTimer.pause();
                                     if (!host->m_modem->hasTX() && host->m_modem->gotModemStatus() && host->m_state == STATE_NXDN && host->m_nxdn->getCCRunning()) {
-                                        LogError(LOG_HOST, "NXDN dedicated m_nxdn stopped transmitting, running = %u, halted = %u, frameLength = %u", host->m_nxdn->getCCRunning(), host->m_nxdn->getCCHalted(), nextLen);
+                                        LogError(LOG_HOST, "NXDN dedicated CC stopped transmitting, running = %u, halted = %u, frameLength = %u", host->m_nxdn->getCCRunning(), host->m_nxdn->getCCHalted(), nextLen);
                                     }
                                 }
                             }

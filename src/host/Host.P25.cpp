@@ -228,7 +228,7 @@ void* Host::threadP25Writer(void* arg)
                             if (host->m_p25DedicatedTxTestTimer.hasExpired() && !host->m_p25DedicatedTxTestTimer.isPaused()) {
                                 host->m_p25DedicatedTxTestTimer.pause();
                                 if (!host->m_modem->hasTX() && host->m_modem->gotModemStatus() && host->m_state == STATE_P25 && host->m_p25->getCCRunning()) {
-                                    LogError(LOG_HOST, "P25 dedicated m_p25 not transmitting, running = %u, halted = %u, frameLength = %u", host->m_p25->getCCRunning(), host->m_p25->getCCHalted(), nextLen);
+                                    LogError(LOG_HOST, "P25 dedicated CC not transmitting, running = %u, halted = %u, frameLength = %u", host->m_p25->getCCRunning(), host->m_p25->getCCHalted(), nextLen);
                                 }
                             }
                         }
