@@ -235,7 +235,7 @@ bool Data::process(ChOption::E option, uint8_t* data, uint32_t len)
     writeNetwork(data, NXDN_FRAME_LENGTH_BYTES + 2U);
 
     if (m_nxdn->m_duplex) {
-        m_nxdn->addFrame(data, NXDN_FRAME_LENGTH_BYTES + 2U);
+        m_nxdn->addFrame(data);
     }
 
     m_nxdn->m_voice->m_rfFrames++;
@@ -341,7 +341,7 @@ bool Data::processNetwork(ChOption::E option, lc::RTCH& netLC, uint8_t* data, ui
     NXDNUtils::scrambler(data + 2U);
 
     if (m_nxdn->m_duplex) {
-        m_nxdn->addFrame(data, NXDN_FRAME_LENGTH_BYTES + 2U);
+        m_nxdn->addFrame(data, true);
     }
 
     m_nxdn->m_voice->m_netFrames++;

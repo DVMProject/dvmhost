@@ -297,7 +297,7 @@ bool Voice::process(FuncChannelType::E fct, ChOption::E option, uint8_t* data, u
             data[0U] = type == MessageType::RTCH_TX_REL ? modem::TAG_EOT : modem::TAG_DATA;
             data[1U] = 0x00U;
 
-            m_nxdn->addFrame(data, NXDN_FRAME_LENGTH_BYTES + 2U);
+            m_nxdn->addFrame(data);
         }
 
         if (data[0U] == modem::TAG_EOT) {
@@ -483,7 +483,7 @@ bool Voice::process(FuncChannelType::E fct, ChOption::E option, uint8_t* data, u
                 start[0U] = modem::TAG_DATA;
                 start[1U] = 0x00U;
 
-                m_nxdn->addFrame(start, NXDN_FRAME_LENGTH_BYTES + 2U);
+                m_nxdn->addFrame(start);
             }
         }
     }
@@ -626,7 +626,7 @@ bool Voice::process(FuncChannelType::E fct, ChOption::E option, uint8_t* data, u
             data[0U] = modem::TAG_DATA;
             data[1U] = 0x00U;
 
-            m_nxdn->addFrame(data, NXDN_FRAME_LENGTH_BYTES + 2U);
+            m_nxdn->addFrame(data);
         }
 
         m_rfFrames++;
@@ -742,7 +742,7 @@ bool Voice::processNetwork(FuncChannelType::E fct, ChOption::E option, lc::RTCH&
             data[0U] = type == MessageType::RTCH_TX_REL ? modem::TAG_EOT : modem::TAG_DATA;
             data[1U] = 0x00U;
 
-            m_nxdn->addFrame(data, NXDN_FRAME_LENGTH_BYTES + 2U, true);
+            m_nxdn->addFrame(data, true);
         }
 
         if (data[0U] == modem::TAG_EOT) {
@@ -903,7 +903,7 @@ bool Voice::processNetwork(FuncChannelType::E fct, ChOption::E option, lc::RTCH&
                 start[0U] = modem::TAG_DATA;
                 start[1U] = 0x00U;
 
-                m_nxdn->addFrame(start, NXDN_FRAME_LENGTH_BYTES + 2U, true);
+                m_nxdn->addFrame(start, true);
             }
         }
     }
@@ -1003,7 +1003,7 @@ bool Voice::processNetwork(FuncChannelType::E fct, ChOption::E option, lc::RTCH&
             data[0U] = modem::TAG_DATA;
             data[1U] = 0x00U;
 
-            m_nxdn->addFrame(data, NXDN_FRAME_LENGTH_BYTES + 2U);
+            m_nxdn->addFrame(data, true);
         }
 
         m_netFrames++;
