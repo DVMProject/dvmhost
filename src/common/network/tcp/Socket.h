@@ -23,15 +23,27 @@
 #include "Defines.h"
 #include "common/Log.h"
 
+#if defined(_WIN32)
+#include <ws2tcpip.h>
+#include <Winsock2.h>
+#else
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <sys/socket.h>
 #include <poll.h>
 #include <unistd.h>
+#endif // defined(_WIN32)
 
 #include <cstdlib>
 #include <ctime>
+
+#if defined(_WIN32)
+#ifndef _SSIZE_T_DECLARED
+typedef SSIZE_T ssize_t;
+#define _SSIZE_T_DECLARED
+#endif
+#endif // defined(_WIN32)
 
 namespace network
 {
@@ -61,7 +73,11 @@ namespace network
              * @brief Initializes a new instance of the Socket class.
              * @param fd File descriptor for existing socket.
              */
+#if defined(_WIN32)
+            Socket(const SOCKET fd) noexcept;
+#else
             Socket(const int fd) noexcept;
+#endif // defined(_WIN32)
             /**
              * @brief Initializes a new instance of the Socket class.
              * @param domain Address family type.
@@ -142,7 +158,11 @@ namespace network
             std::string m_localAddress;
             uint16_t m_localPort;
 
+#if defined(_WIN32)
+            SOCKET m_fd;
+#else
             int m_fd;
+#endif // defined(_WIN32)
 
             uint32_t m_counter;
 

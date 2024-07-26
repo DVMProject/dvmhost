@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2009,2014,2015 Jonathan Naylor, G4KLX
- *  Copyright (C) 2018-2019 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2018-2024 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -26,7 +26,9 @@
 #include <cstring>
 #include <string>
 
+#if !defined(_WIN32)
 #include <arpa/inet.h>
+#endif // !defined(WIN32)
 
 // ---------------------------------------------------------------------------
 //  Constants
@@ -108,6 +110,7 @@ inline std::string __IP_FROM_UINT(const uint32_t& value) {
  * @param value String representation of the IP address.
  * @return uint32_t Packed IP address.
  */
+#if !defined(_WIN32)
 inline uint32_t __IP_FROM_STR(const std::string& value) {
     struct sockaddr_in sa;
     inet_pton(AF_INET, value.c_str(), &(sa.sin_addr));
@@ -122,6 +125,9 @@ inline uint32_t __IP_FROM_STR(const std::string& value) {
 
     return (ip[0U] << 24) | (ip[1U] << 16) | (ip[2U] << 8)  | (ip[3U] << 0);
 }
+#else
+extern HOST_SW_API uint32_t __IP_FROM_STR(const std::string& value);
+#endif // !defined(_WIN32)
 
 /**
  * @brief Helper to lower-case an input string.
@@ -250,6 +256,23 @@ inline std::string strtoupper(const std::string value) {
  * @ingroup utils
  */
 typedef std::unique_ptr<uint8_t[]> UInt8Array;
+
+/**
+ * @brief Helper macro to allocate a variable length array.
+ * @param buffer Name of buffer to create.
+ * @param size Size of buffer.
+ */
+#define __ALLOC_VLA(buffer, size)                                                               \
+            std::unique_ptr<uint8_t[]> __UNIQUE_##buffer = std::make_unique<uint8_t[]>(size);   \
+            uint8_t* ##buffer = __UNIQUE_##buffer.get();
+ /**
+  * @brief Helper macro to allocate a variable length array.
+  * @param buffer Name of buffer to create.
+  * @param size Size of buffer.
+  */
+#define __ALLOC_VLA_CHAR(buffer, size)                                                          \
+            std::unique_ptr<char[]> __UNIQUE_##buffer = std::make_unique<char[]>(size);         \
+            char* ##buffer = __UNIQUE_##buffer.get();
 
 // ---------------------------------------------------------------------------
 //  Class Declaration

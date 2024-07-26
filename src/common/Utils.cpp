@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2009,2014,2015,2016 Jonathan Naylor, G4KLX
- *  Copyright (C) 2018-2019 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2018-2024 Bryan Biedenkapp, N2PLL
  *
  */
 #include "Utils.h"
@@ -13,6 +13,10 @@
 
 #include <cstdio>
 #include <cassert>
+
+#if defined(_WIN32)
+#include <WS2tcpip.h>
+#endif // defined(_WIN32)
 
 // ---------------------------------------------------------------------------
 //  Constants/Macros
@@ -24,6 +28,30 @@ const uint8_t BITS_TABLE[] = {
 #   define B6(n) B4(n), B4(n+1), B4(n+1), B4(n+2)
     B6(0), B6(1), B6(1), B6(2)
 };
+
+// ---------------------------------------------------------------------------
+//  Global Functions
+// ---------------------------------------------------------------------------
+
+#if defined(_WIN32)
+/* IP address from uint32_t value. */
+
+uint32_t __IP_FROM_STR(const std::string& value)
+{
+    struct sockaddr_in sa;
+    inet_pton(AF_INET, value.c_str(), &(sa.sin_addr));
+
+    uint8_t ip[4U];
+    ::memset(ip, 0x00U, 4U);
+
+    ip[3U] = ((uint32_t)sa.sin_addr.s_addr >> 24) & 0xFFU;
+    ip[2U] = ((uint32_t)sa.sin_addr.s_addr >> 16) & 0xFFU;
+    ip[1U] = ((uint32_t)sa.sin_addr.s_addr >> 8) & 0xFFU;
+    ip[0U] = ((uint32_t)sa.sin_addr.s_addr >> 0) & 0xFFU;
+
+    return (ip[0U] << 24) | (ip[1U] << 16) | (ip[2U] << 8) | (ip[3U] << 0);
+}
+#endif // defined(_WIN32)
 
 // ---------------------------------------------------------------------------
 //  Static Class Members

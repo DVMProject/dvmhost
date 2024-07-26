@@ -67,7 +67,7 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
 {
     hrc::hrc_t pktTime = hrc::now();
 
-    uint8_t buffer[len];
+    __ALLOC_VLA(buffer, len);
     ::memset(buffer, 0x00U, len);
     ::memcpy(buffer, data, len);
 
@@ -309,7 +309,7 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                         m_network->m_frameQueue->flushQueue();
                     }
 
-                    uint8_t outboundPeerBuffer[len];
+                    __ALLOC_VLA(outboundPeerBuffer, len);
                     ::memset(outboundPeerBuffer, 0x00U, len);
                     ::memcpy(outboundPeerBuffer, buffer, len);
 
@@ -353,7 +353,7 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                         continue;
                     }
 
-                    uint8_t outboundPeerBuffer[len];
+                    __ALLOC_VLA(outboundPeerBuffer, len);
                     ::memset(outboundPeerBuffer, 0x00U, len);
                     ::memcpy(outboundPeerBuffer, buffer, len);
 

@@ -30,7 +30,9 @@ using namespace p25::sndcp;
 #include <cassert>
 #include <chrono>
 
+#if !defined(_WIN32)
 #include <netinet/ip.h>
+#endif // !defined(_WIN32)
 
 // ---------------------------------------------------------------------------
 //  Static Class Members
@@ -319,6 +321,7 @@ bool P25PacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
 
 void P25PacketData::processPacketFrame(const uint8_t* data, uint32_t len, bool alreadyQueued)
 {
+#if !defined(_WIN32)
     struct ip* ipHeader = (struct ip*)data;
 
     char srcIp[INET_ADDRSTRLEN];
@@ -358,7 +361,7 @@ void P25PacketData::processPacketFrame(const uint8_t* data, uint32_t len, bool a
         rspHeader.calculateLength(pktLen);
         uint32_t pduLength = rspHeader.getPDULength();
 
-        uint8_t pduUserData[pduLength];
+        __ALLOC_VLA(pduUserData, pduLength);
         ::memset(pduUserData, 0x00U, pduLength);
         ::memcpy(pduUserData + 4U, data, pktLen);
 #if DEBUG_P25_PDU_DATA
@@ -368,6 +371,7 @@ void P25PacketData::processPacketFrame(const uint8_t* data, uint32_t len, bool a
     }
 
     Thread::sleep(1750);
+#endif // !defined(_WIN32)
 }
 
 // ---------------------------------------------------------------------------
@@ -403,6 +407,7 @@ void P25PacketData::dispatch(uint32_t peerId)
     switch (sap) {
     case PDUSAP::ARP:
     {
+#if !defined(_WIN32)
         // is the host virtual tunneling enabled?
         if (!m_network->m_host->m_vtunEnabled)
             break;
@@ -434,10 +439,14 @@ void P25PacketData::dispatch(uint32_t peerId)
                 m_arpTable[srcHWAddr] = srcProtoAddr;
             }
         }
+#else
+        break;
+#endif // !defined(_WIN32)
     }
     break;
     case PDUSAP::PACKET_DATA:
     {
+#if !defined(_WIN32)
         // is the host virtual tunneling enabled?
         if (!m_network->m_host->m_vtunEnabled)
             break;
@@ -461,7 +470,7 @@ void P25PacketData::dispatch(uint32_t peerId)
 
         LogMessage(LOG_NET, "P25, PDU -> VTUN, IP Data, srcIp = %s, dstIp = %s, pktLen = %u, proto = %02X", srcIp, dstIp, pktLen, proto);
 
-        uint8_t ipFrame[pktLen]; 
+        __ALLOC_VLA(ipFrame, pktLen);
         ::memset(ipFrame, 0x00U, pktLen);
         ::memcpy(ipFrame, status->pduUserData + dataPktOffset, pktLen);
 #if DEBUG_P25_PDU_DATA
@@ -470,6 +479,7 @@ void P25PacketData::dispatch(uint32_t peerId)
         if (!m_network->m_host->m_tun->write(ipFrame, pktLen)) {
             LogError(LOG_NET, P25_PDU_STR ", failed to write IP frame to virtual tunnel, len %u", pktLen);
         }
+#endif // !defined(_WIN32)
     }
     break;
     case PDUSAP::SNDCP_CTRL_DATA:
@@ -634,6 +644,7 @@ bool P25PacketData::processSNDCPControl(RxStatus* status)
 
 void P25PacketData::write_PDU_ARP(uint32_t addr)
 {
+#if !defined(_WIN32)
     if (!m_network->m_host->m_vtunEnabled)
         return;
 
@@ -673,11 +684,12 @@ void P25PacketData::write_PDU_ARP(uint32_t addr)
     rspHeader.calculateLength(P25_PDU_ARP_PCKT_LENGTH);
     uint32_t pduLength = rspHeader.getPDULength();
 
-    uint8_t pduUserData[pduLength];
+    __ALLOC_VLA(pduUserData, pduLength);
     ::memset(pduUserData, 0x00U, pduLength);
     ::memcpy(pduUserData + P25_PDU_HEADER_LENGTH_BYTES, arpPacket, P25_PDU_ARP_PCKT_LENGTH);
 
     dispatchUserFrameToFNE(rspHeader, true, pduUserData);
+#endif // !defined(_WIN32)
 }
 
 /* Helper write ARP reply to the network. */
@@ -729,7 +741,7 @@ void P25PacketData::write_PDU_ARP_Reply(uint32_t targetAddr, uint32_t requestorL
     rspHeader.calculateLength(P25_PDU_ARP_PCKT_LENGTH);
     uint32_t pduLength = rspHeader.getPDULength();
 
-    uint8_t pduUserData[pduLength];
+    __ALLOC_VLA(pduUserData, pduLength);
     ::memset(pduUserData, 0x00U, pduLength);
     ::memcpy(pduUserData + P25_PDU_HEADER_LENGTH_BYTES, arpPacket, P25_PDU_ARP_PCKT_LENGTH);
 

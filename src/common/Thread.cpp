@@ -13,7 +13,9 @@
 
 #include <cerrno>
 #include <signal.h>
+#if !defined(_WIN32)
 #include <unistd.h>
+#endif // !defined(_WIN32)
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -40,11 +42,19 @@ bool Thread::run()
         return m_started;
 
     m_started = true;
+#if defined(_WIN32)
+    m_thread = ::CreateThread(NULL, 0, &helper, this, 0, NULL);
+    if (m_thread == NULL) {
+        LogError(LOG_NET, "Error returned from CreateThread, err: %lu", ::GetLastError());
+        return false;
+    }
+#else
     int err = ::pthread_create(&m_thread, NULL, helper, this);
     if (err != 0) {
         LogError(LOG_NET, "Error returned from pthread_create, err: %d", errno);
         return false;
     }
+#endif // defined(_WIN32)
 
     return true;
 }
@@ -53,7 +63,12 @@ bool Thread::run()
 
 void Thread::wait()
 {
+#if defined(_WIN32)
+    ::WaitForSingleObject(m_thread, INFINITE);
+    ::CloseHandle(m_thread);
+#else
     ::pthread_join(m_thread, NULL);
+#endif // defined(_WIN32)
 }
 
 /* Set thread name visible in the kernel and its interfaces. */
@@ -62,11 +77,15 @@ void Thread::setName(std::string name)
 {
     if (!m_started)
         return;
+#if defined(_WIN32)
+    // WIN32 doesn't have a way to set thread names (easily, or consistently anyway)
+#else
     if (pthread_kill(m_thread, 0) != 0)
         return;
 #ifdef _GNU_SOURCE
     ::pthread_setname_np(m_thread, name.c_str());
 #endif // _GNU_SOURCE
+#endif // defined(_WIN32)
 }
 
 /* 
@@ -79,7 +98,11 @@ void Thread::detach()
 {
     if (!m_started)
         return;
+#if defined(_WIN32)
+    ::CloseHandle(m_thread);
+#else
     ::pthread_detach(m_thread);
+#endif // defined(_WIN32)
 }
 
 /* Executes the specified start routine to run as a thread. */
@@ -91,11 +114,22 @@ bool Thread::runAsThread(void* obj, void *(*startRoutine)(void *), thread_t* thr
 
     thread->obj = obj;
 
+#if defined(_WIN32)
+    HANDLE hnd = ::CreateThread(NULL, 0, reinterpret_cast<LPTHREAD_START_ROUTINE>((void*)startRoutine), thread, CREATE_SUSPENDED, NULL);
+    if (hnd == NULL) {
+        LogError(LOG_NET, "Error returned from CreateThread, err: %lu", ::GetLastError());
+        return false;
+    }
+
+    thread->thread = hnd;
+    ::ResumeThread(hnd);
+#else
     if (::pthread_create(&thread->thread, NULL, startRoutine, thread) != 0) {
         LogError(LOG_NET, "Error returned from pthread_create, err: %d", errno);
         delete thread;
         return false;
     }
+#endif // defined(_WIN32)
 
     return true;
 }
@@ -104,11 +138,21 @@ bool Thread::runAsThread(void* obj, void *(*startRoutine)(void *), thread_t* thr
 
 void Thread::sleep(uint32_t ms, uint32_t us)
 {
+#if defined(_WIN32)
+    if (us > 0U) {
+        ::Sleep(1);
+    }
+    else {
+        ::Sleep(ms);
+    }
+#else
     if (us > 0U) {
         ::usleep(us);
-    } else {
+    }
+    else {
         ::usleep(ms * 1000U);
     }
+#endif // defined(_WIN32)
 }
 
 // ---------------------------------------------------------------------------
@@ -117,10 +161,18 @@ void Thread::sleep(uint32_t ms, uint32_t us)
 
 /* Internal helper thats used as the entry point for the thread. */
 
+#if defined(_WIN32)
+DWORD Thread::helper(LPVOID arg)
+#else
 void* Thread::helper(void* arg)
+#endif // defined(_WIN32)
 {
     Thread* p = (Thread*)arg;
     p->entry();
 
+#if defined(_WIN32)
+    return 0UL;
+#else
     return nullptr;
+#endif // defined(_WIN32)
 }

@@ -56,7 +56,7 @@ bool MBT_ISP_AUTH_RESP_M::decodeMBT(const data::DataHeader& dataHeader, const da
 {
     assert(blocks != nullptr);
 
-    uint8_t pduUserData[P25_PDU_UNCONFIRMED_LENGTH_BYTES * dataHeader.getBlocksToFollow()];
+    __ALLOC_VLA(pduUserData, P25_PDU_UNCONFIRMED_LENGTH_BYTES * dataHeader.getBlocksToFollow());
     ::memset(pduUserData, 0x00U, P25_PDU_UNCONFIRMED_LENGTH_BYTES * dataHeader.getBlocksToFollow());
 
     bool ret = AMBT::decode(dataHeader, blocks, pduUserData);

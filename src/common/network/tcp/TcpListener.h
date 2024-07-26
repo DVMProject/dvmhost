@@ -45,10 +45,17 @@ namespace network
             TcpListener() noexcept(false) : Socket(AF_INET, SOCK_STREAM, 0)
             {
                 int reuse = 1;
+#if defined(_WIN32)
+                if (::setsockopt(m_fd, SOL_SOCKET, SO_REUSEADDR, (char*)&reuse, sizeof(reuse)) != 0) {
+                    LogError(LOG_NET, "Cannot set the TCP socket option, err: %lu", ::GetLastError());
+                    throw std::runtime_error("Cannot set the TCP socket option");
+                }
+#else
                 if (::setsockopt(m_fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, (char*)& reuse, sizeof(reuse)) != 0) {
                     LogError(LOG_NET, "Cannot set the TCP socket option, err: %d", errno);
                     throw std::runtime_error("Cannot set the TCP socket option");
                 }
+#endif // defined(_WIN32)
             }
             /**
              * @brief Initializes a new instance of the TcpListener class.
@@ -58,7 +65,11 @@ namespace network
             explicit TcpListener(const uint16_t port, const std::string& address = "0.0.0.0") noexcept(false) : TcpListener()
             {
                 if (!bind(address, port)) {
+#if defined(_WIN32)
+                    LogError(LOG_NET, "Cannot to bind TCP server, err: %lu", ::GetLastError());
+#else
                     LogError(LOG_NET, "Cannot to bind TCP server, err: %d", errno);
+#endif // defined(_WIN32)
                     throw std::runtime_error("Cannot to bind TCP server");
                 }
             }
@@ -71,7 +82,11 @@ namespace network
             TcpListener(const std::string& ipAddr, const uint16_t port, const int backlog) noexcept(false) : TcpListener(port, ipAddr)
             {
                 if (listen(ipAddr, port, backlog) < 0) {
+#if defined(_WIN32)
+                    LogError(LOG_NET, "Failed to listen on TCP server, err: %lu", ::GetLastError());
+#else
                     LogError(LOG_NET, "Failed to listen on TCP server, err: %d", errno);
+#endif // defined(_WIN32)
                     throw std::runtime_error("Failed to listen on TCP server.");
                 }
             }
@@ -84,10 +99,17 @@ namespace network
             {
                 sockaddr_in client = {};
                 socklen_t clientLen = sizeof(client);
+#if defined(_WIN32)
+                SOCKET fd = Socket::accept(reinterpret_cast<sockaddr*>(&client), &clientLen);
+                if (fd == INVALID_SOCKET) {
+                    return nullptr;
+                }
+#else
                 int fd = Socket::accept(reinterpret_cast<sockaddr*>(&client), &clientLen);
                 if (fd < 0) {
                     return nullptr;
                 }
+#endif // defined(_WIN32)
 
                 return new TcpClient(fd, client, clientLen);
             }

@@ -7,6 +7,7 @@
  *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
  *
  */
+#if !defined(_WIN32)
 #include "Defines.h"
 #include "network/viface/VIFace.h"
 #include "Log.h"
@@ -725,3 +726,4 @@ std::string VIFace::ioctlGetIPv4(uint64_t request) const
 
     return std::string(addr);
 }
+#endif // !defined(_WIN32)

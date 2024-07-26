@@ -166,13 +166,13 @@ void V24UDPPort::clock(uint32_t ms)
 
                 // copy message
                 uint32_t messageLength = ret - RTP_HEADER_LENGTH_BYTES;
-                uint8_t message[messageLength];
+                __ALLOC_VLA(message, messageLength);
                 ::memset(message, 0x00U, messageLength);
 
                 ::memcpy(message, data + RTP_HEADER_LENGTH_BYTES, messageLength);
 
                 if (udp::Socket::match(addr, m_addr)) {
-                    uint8_t reply[messageLength + 4U];
+                    __ALLOC_VLA(reply, messageLength + 4U);
 
                     reply[0U] = DVM_SHORT_FRAME_START;
                     reply[1U] = messageLength & 0xFFU;
@@ -333,7 +333,11 @@ void* V24UDPPort::threadedCtrlNetworkRx(void* arg)
 {
     V24PacketRequest* req = (V24PacketRequest*)arg;
     if (req != nullptr) {
+#if defined(_WIN32)
+        ::CloseHandle(req->thread);
+#else
         ::pthread_detach(req->thread);
+#endif // defined(_WIN32)
 
         V24UDPPort* network = static_cast<V24UDPPort*>(req->obj);
         if (network == nullptr) {

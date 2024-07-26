@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2023 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2023,2024 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -22,8 +22,27 @@
 
 #include "common/Defines.h"
 
+#if defined(_WIN32)
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
+#include <WinSock2.h>
+#else
 #include <sys/time.h>
+#endif // defined(_WIN32)
 #include <chrono>
+
+#if defined(_WIN32)
+ // ---------------------------------------------------------------------------
+ //  Global Functions
+ // ---------------------------------------------------------------------------
+ /**
+  * @brief Gets the current time of day, putting it into *TV.
+  * @param tv
+  * @param tzp
+  * @returns int
+  */
+extern HOST_SW_API int gettimeofday(struct timeval* tv, struct timezone* tzp);
+#endif // defined(_WIN32)
 
 namespace system_clock 
 {

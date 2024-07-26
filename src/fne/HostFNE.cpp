@@ -20,16 +20,20 @@
 #include "FNEMain.h"
 
 using namespace network;
+#if !defined(_WIN32)
 using namespace network::viface;
+#endif // !defined(_WIN32)
 using namespace lookups;
 
 #include <cstdio>
 #include <algorithm>
 #include <functional>
 
+#if !defined(_WIN32)
 #include <sys/utsname.h>
 #include <unistd.h>
 #include <pwd.h>
+#endif // !defined(_WIN32)
 
 // ---------------------------------------------------------------------------
 //  Constants
@@ -51,7 +55,9 @@ HostFNE::HostFNE(const std::string& confFile) :
     m_diagNetwork(nullptr),
     m_vtunEnabled(false),
     m_packetDataMode(PacketDataMode::PROJECT25),
+#if !defined(_WIN32)
     m_tun(nullptr),
+#endif // !defined(_WIN32)
     m_dmrEnabled(false),
     m_p25Enabled(false),
     m_nxdnEnabled(false),
@@ -106,6 +112,7 @@ int HostFNE::run()
         ::fatal("unable to open the activity log file\n");
     }
 
+#if !defined(_WIN32)
     // handle POSIX process forking
     if (m_daemon) {
         // create new process
@@ -138,6 +145,7 @@ int HostFNE::run()
         ::close(STDOUT_FILENO);
         ::close(STDERR_FILENO);
     }
+#endif // !defined(_WIN32)
 
     ::LogInfo(__BANNER__ "\r\n" __PROG_NAME__ " " __VER__ " (built " __BUILD__ ")\r\n" \
         "Copyright (c) 2017-2024 Bryan Biedenkapp, N2PLL and DVMProject (https://github.com/dvmproject) Authors.\r\n" \
@@ -192,18 +200,22 @@ int HostFNE::run()
         return EXIT_FAILURE;
     if (!Thread::runAsThread(this, threadDiagNetwork))
         return EXIT_FAILURE;
+#if !defined(_WIN32)
     if (!Thread::runAsThread(this, threadVirtualNetworking))
         return EXIT_FAILURE;
-
+#endif // !defined(_WIN32)
     /*
     ** Main execution loop
     */
-
+#if defined(_WIN32)
+    ::LogInfoEx(LOG_HOST, "[ OK ] FNE is up and running on Win32");
+#else
     struct utsname utsinfo;
     ::memset(&utsinfo, 0, sizeof(utsinfo));
     ::uname(&utsinfo);
 
     ::LogInfoEx(LOG_HOST, "[ OK ] FNE is up and running on %s %s %s", utsinfo.sysname, utsinfo.release, utsinfo.machine);
+#endif // defined(_WIN32)
     while (!g_killed) {
         uint32_t ms = stopWatch.elapsed();
 
@@ -277,7 +289,7 @@ int HostFNE::run()
         m_peerListLookup->stop();
         delete m_peerListLookup;
     }
-
+#if !defined(_WIN32)
     if (m_tun != nullptr) {
         if (m_tun->isUp()) {
             m_tun->down();
@@ -285,7 +297,7 @@ int HostFNE::run()
 
         delete m_tun;
     }
-
+#endif // !defined(_WIN32)
     return EXIT_SUCCESS;
 }
 
@@ -581,7 +593,11 @@ void* HostFNE::threadMasterNetwork(void* arg)
 {
     thread_t* th = (thread_t*)arg;
     if (th != nullptr) {
+#if defined(_WIN32)
+        ::CloseHandle(th->thread);
+#else
         ::pthread_detach(th->thread);
+#endif // defined(_WIN32)
 
         std::string threadName("fne:network-loop");
         HostFNE* fne = static_cast<HostFNE*>(th->obj);
@@ -620,7 +636,11 @@ void* HostFNE::threadDiagNetwork(void* arg)
 {
     thread_t* th = (thread_t*)arg;
     if (th != nullptr) {
+#if defined(_WIN32)
+        ::CloseHandle(th->thread);
+#else
         ::pthread_detach(th->thread);
+#endif // defined(_WIN32)
 
         std::string threadName("fne:diag-network-loop");
         HostFNE* fne = static_cast<HostFNE*>(th->obj);
@@ -764,7 +784,7 @@ bool HostFNE::createPeerNetworks()
 bool HostFNE::createVirtualNetworking()
 {
     yaml::Node vtunConf = m_conf["vtun"];
-
+#if !defined(_WIN32)
     bool vtunEnabled = vtunConf["enabled"].as<bool>(false);
     if (vtunEnabled) {
         m_vtunEnabled = vtunEnabled;
@@ -798,10 +818,11 @@ bool HostFNE::createVirtualNetworking()
 
         m_tun->up();
     }
-
+#endif // !defined(_WIN32)
     return true;
 }
 
+#if !defined(_WIN32)
 /* Entry point to virtual networking thread. */
 
 void* HostFNE::threadVirtualNetworking(void* arg)
@@ -860,6 +881,7 @@ void* HostFNE::threadVirtualNetworking(void* arg)
 
     return nullptr;
 }
+#endif // !defined(_WIN32)
 
 /* Processes any peer network traffic. */
 

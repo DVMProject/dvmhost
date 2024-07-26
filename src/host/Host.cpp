@@ -30,8 +30,10 @@ using namespace lookups;
 #include <functional>
 #include <memory>
 
+#if !defined(_WIN32)
 #include <sys/utsname.h>
 #include <unistd.h>
+#endif // !defined(_WIN32)
 
 // ---------------------------------------------------------------------------
 //  Static Class Members
@@ -190,6 +192,7 @@ int Host::run()
         ::fatal("unable to open the activity log file\n");
     }
 
+#if !defined(_WIN32)
     // handle POSIX process forking
     if (m_daemon) {
         // create new process
@@ -226,6 +229,7 @@ int Host::run()
         ::close(STDOUT_FILENO);
         ::close(STDERR_FILENO);
     }
+#endif // !defined(_WIN32)
 
     ::LogInfo(__BANNER__ "\r\n" __PROG_NAME__ " " __VER__ " (built " __BUILD__ ")\r\n" \
         "Copyright (c) 2017-2024 Bryan Biedenkapp, N2PLL and DVMProject (https://github.com/dvmproject) Authors.\r\n" \
@@ -831,12 +835,15 @@ int Host::run()
     /*
     ** Main execution loop
     */
-
+#if defined(_WIN32)
+    ::LogInfoEx(LOG_HOST, "[ OK ] Host is up and running on Win32");
+#else
     struct utsname utsinfo;
     ::memset(&utsinfo, 0, sizeof(utsinfo));
     ::uname(&utsinfo);
 
     ::LogInfoEx(LOG_HOST, "[ OK ] Host is up and running on %s %s %s", utsinfo.sysname, utsinfo.release, utsinfo.machine);
+#endif // defined(_WIN32)
     while (!killed) {
         if (m_modem->hasLockout() && m_state != HOST_STATE_LOCKOUT)
             setState(HOST_STATE_LOCKOUT);
@@ -1591,7 +1598,11 @@ void* Host::threadModem(void* arg)
 {
     thread_t* th = (thread_t*)arg;
     if (th != nullptr) {
+#if defined(_WIN32)
+        ::CloseHandle(th->thread);
+#else
         ::pthread_detach(th->thread);
+#endif // defined(_WIN32)
 
         std::string threadName("host:modem");
         Host* host = static_cast<Host*>(th->obj);
@@ -1648,7 +1659,11 @@ void* Host::threadWatchdog(void* arg)
 {
     thread_t* th = (thread_t*)arg;
     if (th != nullptr) {
+#if defined(_WIN32)
+        ::CloseHandle(th->thread);
+#else
         ::pthread_detach(th->thread);
+#endif // defined(_WIN32)
 
         std::string threadName("host:watchdog");
         Host* host = static_cast<Host*>(th->obj);
@@ -1750,7 +1765,11 @@ void* Host::threadSiteData(void* arg)
 {
     thread_t* th = (thread_t*)arg;
     if (th != nullptr) {
+#if defined(_WIN32)
+        ::CloseHandle(th->thread);
+#else
         ::pthread_detach(th->thread);
+#endif // defined(_WIN32)
 
         std::string threadName("host:site-data");
         Host* host = static_cast<Host*>(th->obj);
@@ -1815,7 +1834,11 @@ void* Host::threadPresence(void* arg)
 {
     thread_t* th = (thread_t*)arg;
     if (th != nullptr) {
+#if defined(_WIN32)
+        ::CloseHandle(th->thread);
+#else
         ::pthread_detach(th->thread);
+#endif // defined(_WIN32)
 
         std::string threadName("host:presence");
         Host* host = static_cast<Host*>(th->obj);

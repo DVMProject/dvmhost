@@ -1469,7 +1469,7 @@ bool Modem::writeP25Frame(const uint8_t* data, uint32_t length)
             return false;
         }
 
-        uint8_t buffer[MAX_LENGTH];
+        __ALLOC_VLA(buffer, MAX_LENGTH);
 
         if (length < 252U) {
             buffer[0U] = DVM_SHORT_FRAME_START;

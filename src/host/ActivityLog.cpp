@@ -14,7 +14,11 @@
 #include "common/network/BaseNetwork.h"
 #include "common/Log.h" // for CurrentLogFileLevel() and LogGetNetwork()
 
+#if defined(_WIN32)
+#include "common/Clock.h"
+#else
 #include <sys/time.h>
+#endif // defined(_WIN32)
 
 #if defined(CATCH2_TEST_COMPILATION)
 #include <catch2/catch_test_macros.hpp>
@@ -115,16 +119,18 @@ void ActivityLog(const char *mode, const bool sourceRf, const char* msg, ...)
     assert(msg != nullptr);
 
     char buffer[ACT_LOG_BUFFER_LEN];
-    struct timeval now;
-    ::gettimeofday(&now, NULL);
+    time_t now;
+    ::time(&now);
+    struct tm* tm = ::localtime(&now);
 
-    struct tm* tm = ::gmtime(&now.tv_sec);
+    struct timeval nowMillis;
+    ::gettimeofday(&nowMillis, NULL);
 
     if (strcmp(mode, "") == 0) {
-        ::sprintf(buffer, "A: %04d-%02d-%02d %02d:%02d:%02d.%03lu ", tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec, now.tv_usec / 1000U);
+        ::sprintf(buffer, "A: %04d-%02d-%02d %02d:%02d:%02d.%03lu ", tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec, nowMillis.tv_usec / 1000U);
     }
     else {
-        ::sprintf(buffer, "A: %04d-%02d-%02d %02d:%02d:%02d.%03lu %s %s ", tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec, now.tv_usec / 1000U, mode, (sourceRf) ? "RF" : "Net");
+        ::sprintf(buffer, "A: %04d-%02d-%02d %02d:%02d:%02d.%03lu %s %s ", tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec, nowMillis.tv_usec / 1000U, mode, (sourceRf) ? "RF" : "Net");
     }
 
     va_list vl, vl_len;

@@ -266,7 +266,9 @@ int main(int argc, char** argv)
 
     ::signal(SIGINT, sigHandler);
     ::signal(SIGTERM, sigHandler);
+#if !defined(_WIN32)
     ::signal(SIGHUP, sigHandler);
+#endif // !defined(_WIN32)
 
     int ret = 0;
 

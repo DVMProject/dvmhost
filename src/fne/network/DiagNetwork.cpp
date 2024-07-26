@@ -147,7 +147,11 @@ void* DiagNetwork::threadedNetworkRx(void* arg)
 {
     NetPacketRequest* req = (NetPacketRequest*)arg;
     if (req != nullptr) {
+#if defined(_WIN32)
+        ::CloseHandle(req->thread);
+#else
         ::pthread_detach(req->thread);
+#endif // defined(_WIN32)
 
         FNENetwork* network = static_cast<FNENetwork*>(req->obj);
         if (network == nullptr) {
@@ -205,7 +209,7 @@ void* DiagNetwork::threadedNetworkRx(void* arg)
 
                                     // validate peer (simple validation really)
                                     if (connection->connected() && connection->address() == ip) {
-                                        uint8_t rawPayload[req->length - 11U];
+                                        __ALLOC_VLA(rawPayload, req->length - 11U);
                                         ::memset(rawPayload, 0x00U, req->length - 11U);
                                         ::memcpy(rawPayload, req->buffer + 11U, req->length - 11U);
                                         std::string payload(rawPayload, rawPayload + (req->length - 11U));
@@ -239,7 +243,7 @@ void* DiagNetwork::threadedNetworkRx(void* arg)
 
                                     // validate peer (simple validation really)
                                     if (connection->connected() && connection->address() == ip) {
-                                        uint8_t rawPayload[req->length - 11U];
+                                        __ALLOC_VLA(rawPayload, req->length - 11U);
                                         ::memset(rawPayload, 0x00U, req->length - 11U);
                                         ::memcpy(rawPayload, req->buffer + 11U, req->length - 11U);
                                         std::string payload(rawPayload, rawPayload + (req->length - 11U));
@@ -277,7 +281,7 @@ void* DiagNetwork::threadedNetworkRx(void* arg)
 
                                     // validate peer (simple validation really)
                                     if (connection->connected() && connection->address() == ip) {
-                                        uint8_t rawPayload[req->length - 11U];
+                                        __ALLOC_VLA(rawPayload, req->length - 11U);
                                         ::memset(rawPayload, 0x00U, req->length - 11U);
                                         ::memcpy(rawPayload, req->buffer + 11U, req->length - 11U);
                                         std::string payload(rawPayload, rawPayload + (req->length - 11U));

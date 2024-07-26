@@ -26,7 +26,12 @@ void* Host::threadP25Reader(void* arg)
 {
     thread_t* th = (thread_t*)arg;
     if (th != nullptr) {
+#if defined(_WIN32)
+        ::CloseHandle(th->thread);
+#else
         ::pthread_detach(th->thread);
+#endif // defined(_WIN32)
+
 
         std::string threadName("p25d:frame-r");
         Host* host = static_cast<Host*>(th->obj);
@@ -158,7 +163,11 @@ void* Host::threadP25Writer(void* arg)
 {
     thread_t* th = (thread_t*)arg;
     if (th != nullptr) {
+#if defined(_WIN32)
+        ::CloseHandle(th->thread);
+#else
         ::pthread_detach(th->thread);
+#endif // defined(_WIN32)
 
         std::string threadName("p25d:frame-w");
         Host* host = static_cast<Host*>(th->obj);

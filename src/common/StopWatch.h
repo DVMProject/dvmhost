@@ -5,6 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2015,2016 Jonathan Naylor, G4KLX
+ *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -22,7 +23,12 @@
 
 #include "common/Defines.h"
 
+#if defined(_WIN32)
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
+#else
 #include <sys/time.h>
+#endif // defined(_WIN32)
 
 // ---------------------------------------------------------------------------
 //  Class Declaration
@@ -61,7 +67,13 @@ public:
     uint32_t elapsed();
 
 private:
+#if defined(_WIN32)
+    LARGE_INTEGER m_frequencyS;
+    LARGE_INTEGER m_frequencyMS;
+    LARGE_INTEGER m_start;
+#else
     ulong64_t m_startMS;
+#endif // defined(_WIN32)
 };
 
 #endif // __STOPWATCH_H__

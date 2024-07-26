@@ -34,7 +34,7 @@ bool MBT_IOSP_ACK_RSP::decodeMBT(const data::DataHeader& dataHeader, const data:
 {
     assert(blocks != nullptr);
 
-    uint8_t pduUserData[P25_PDU_UNCONFIRMED_LENGTH_BYTES * dataHeader.getBlocksToFollow()];
+    __ALLOC_VLA(pduUserData, P25_PDU_UNCONFIRMED_LENGTH_BYTES * dataHeader.getBlocksToFollow());
     ::memset(pduUserData, 0x00U, P25_PDU_UNCONFIRMED_LENGTH_BYTES * dataHeader.getBlocksToFollow());
 
     bool ret = AMBT::decode(dataHeader, blocks, pduUserData);

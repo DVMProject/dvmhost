@@ -15,6 +15,7 @@
  */
 #if !defined(__PSEUDO_PTY_PORT_H__)
 #define __PSEUDO_PTY_PORT_H__
+#if !defined(_WIN32)
 
 #include "Defines.h"
 #include "modem/port/UARTPort.h"
@@ -66,4 +67,5 @@ namespace modem
     } // namespace port
 } // namespace modem
 
+#endif // !defined(_WIN32)
 #endif // __PSEUDO_PTY_PORT_H__

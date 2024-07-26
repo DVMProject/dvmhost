@@ -366,7 +366,7 @@ void FNENetwork::close()
         ::memset(buffer, 0x00U, 1U);
 
         for (auto peer : m_peers) {
-            writePeer(peer.first, { NET_FUNC::MST_CLOSING, NET_SUBFUNC::NOP }, buffer, 1U, (ushort)0U, 0U);
+            writePeer(peer.first, { NET_FUNC::MST_CLOSING, NET_SUBFUNC::NOP }, buffer, 1U, (uint16_t)0U, 0U);
         }
     }
 
@@ -387,7 +387,11 @@ void* FNENetwork::threadedNetworkRx(void* arg)
 {
     NetPacketRequest* req = (NetPacketRequest*)arg;
     if (req != nullptr) {
+#if defined(_WIN32)
+        ::CloseHandle(req->thread);
+#else
         ::pthread_detach(req->thread);
+#endif // defined(_WIN32)
 
         uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
@@ -627,7 +631,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
 
                             if (connection->connectionState() == NET_STAT_WAITING_AUTHORISATION) {
                                 // get the hash from the frame message
-                                uint8_t hash[req->length - 8U];
+                                __ALLOC_VLA(hash, req->length - 8U);
                                 ::memset(hash, 0x00U, req->length - 8U);
                                 ::memcpy(hash, req->buffer + 8U, req->length - 8U);
 
@@ -724,7 +728,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                             connection->lastPing(now);
 
                             if (connection->connectionState() == NET_STAT_WAITING_CONFIG) {
-                                uint8_t rawPayload[req->length - 8U];
+                                __ALLOC_VLA(rawPayload, req->length - 8U);
                                 ::memset(rawPayload, 0x00U, req->length - 8U);
                                 ::memcpy(rawPayload, req->buffer + 8U, req->length - 8U);
                                 std::string payload(rawPayload, rawPayload + (req->length - 8U));
@@ -968,7 +972,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
 
                                     // validate peer (simple validation really)
                                     if (connection->connected() && connection->address() == ip) {
-                                        uint8_t rawPayload[req->length - 11U];
+                                        __ALLOC_VLA(rawPayload, req->length - 11U);
                                         ::memset(rawPayload, 0x00U, req->length - 11U);
                                         ::memcpy(rawPayload, req->buffer + 11U, req->length - 11U);
                                         std::string payload(rawPayload, rawPayload + (req->length - 11U));
@@ -1002,7 +1006,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
 
                                     // validate peer (simple validation really)
                                     if (connection->connected() && connection->address() == ip) {
-                                        uint8_t rawPayload[req->length - 11U];
+                                        __ALLOC_VLA(rawPayload, req->length - 11U);
                                         ::memset(rawPayload, 0x00U, req->length - 11U);
                                         ::memcpy(rawPayload, req->buffer + 11U, req->length - 11U);
                                         std::string payload(rawPayload, rawPayload + (req->length - 11U));
@@ -1358,7 +1362,11 @@ void* FNENetwork::threadedACLUpdate(void* arg)
 {
     ACLUpdateRequest* req = (ACLUpdateRequest*)arg;
     if (req != nullptr) {
+#if defined(_WIN32)
+        ::CloseHandle(req->thread);
+#else
         ::pthread_detach(req->thread);
+#endif // defined(_WIN32)
 
         FNENetwork* network = static_cast<FNENetwork*>(req->obj);
         if (network == nullptr) {
@@ -1432,7 +1440,7 @@ void FNENetwork::writeWhitelistRIDs(uint32_t peerId)
 
             // build dataset
             uint16_t bufSize = 4U + (listSize * 4U);
-            uint8_t payload[bufSize];
+            __ALLOC_VLA(payload, bufSize);
             ::memset(payload, 0x00U, bufSize);
 
             __SET_UINT32(listSize, payload, 0U);
@@ -1505,7 +1513,7 @@ void FNENetwork::writeBlacklistRIDs(uint32_t peerId)
 
             // build dataset
             uint16_t bufSize = 4U + (listSize * 4U);
-            uint8_t payload[bufSize];
+            __ALLOC_VLA(payload, bufSize);
             ::memset(payload, 0x00U, bufSize);
 
             __SET_UINT32(listSize, payload, 0U);
@@ -1586,7 +1594,7 @@ void FNENetwork::writeTGIDs(uint32_t peerId)
     }
 
     // build dataset
-    uint8_t payload[4U + (tgidList.size() * 5U)];
+    __ALLOC_VLA(payload, 4U + (tgidList.size() * 5U));
     ::memset(payload, 0x00U, 4U + (tgidList.size() * 5U));
 
     __SET_UINT32(tgidList.size(), payload, 0U);
@@ -1646,7 +1654,7 @@ void FNENetwork::writeDeactiveTGIDs(uint32_t peerId)
     }
 
     // build dataset
-    uint8_t payload[4U + (tgidList.size() * 5U)];
+    __ALLOC_VLA(payload, 4U + (tgidList.size() * 5U));
     ::memset(payload, 0x00U, 4U + (tgidList.size() * 5U));
 
     __SET_UINT32(tgidList.size(), payload, 0U);
