@@ -1141,7 +1141,7 @@ void Control::writeRF_Message_Tx_Rel(bool noNetwork)
         m_data->writeNetwork(data, NXDN_FRAME_LENGTH_BYTES + 2U);
 
     if (m_duplex) {
-        addFrame(data, NXDN_FRAME_LENGTH_BYTES + 2U);
+        addFrame(data);
     }
 }
 

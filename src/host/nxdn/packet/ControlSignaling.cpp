@@ -366,7 +366,7 @@ void ControlSignaling::writeRF_Message(RCCH* rcch, bool noNetwork, bool imm)
         writeNetwork(data, NXDN_FRAME_LENGTH_BYTES + 2U);
 
     if (m_nxdn->m_duplex) {
-        m_nxdn->addFrame(data, NXDN_FRAME_LENGTH_BYTES + 2U, imm);
+        m_nxdn->addFrame(data, false, imm);
     }
 }
 
@@ -762,7 +762,7 @@ void ControlSignaling::writeRF_CC_Message_Site_Info()
     NXDNUtils::addPostBits(data + 2U);
 
     if (m_nxdn->m_duplex) {
-        m_nxdn->addFrame(data, NXDN_FRAME_LENGTH_BYTES + 2U);
+        m_nxdn->addFrame(data);
     }
 }
 
@@ -805,6 +805,6 @@ void ControlSignaling::writeRF_CC_Message_Service_Info()
     NXDNUtils::addPostBits(data + 2U);
 
     if (m_nxdn->m_duplex) {
-        m_nxdn->addFrame(data, NXDN_FRAME_LENGTH_BYTES + 2U);
+        m_nxdn->addFrame(data);
     }
 }
