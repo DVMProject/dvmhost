@@ -410,7 +410,7 @@ bool Data::process(uint8_t* data, uint32_t len)
                         uint16_t opcode = __GET_UINT16B(arpPacket, 6U);
                         uint32_t srcHWAddr = __GET_UINT16(arpPacket, 8U);
                         uint32_t srcProtoAddr = __GET_UINT32(arpPacket, 11U);
-                        uint32_t tgtHWAddr = __GET_UINT16(arpPacket, 15U);
+                        //uint32_t tgtHWAddr = __GET_UINT16(arpPacket, 15U);
                         uint32_t tgtProtoAddr = __GET_UINT32(arpPacket, 18U);
 
                         if (m_verbose) {
@@ -755,7 +755,7 @@ bool Data::processNetwork(uint8_t* data, uint32_t len, uint32_t blockLength)
                 uint16_t opcode = __GET_UINT16B(arpPacket, 6U);
                 uint32_t srcHWAddr = __GET_UINT16(arpPacket, 8U);
                 uint32_t srcProtoAddr = __GET_UINT32(arpPacket, 11U);
-                uint32_t tgtHWAddr = __GET_UINT16(arpPacket, 15U);
+                //uint32_t tgtHWAddr = __GET_UINT16(arpPacket, 15U);
                 uint32_t tgtProtoAddr = __GET_UINT32(arpPacket, 18U);
 
                 if (m_verbose) {

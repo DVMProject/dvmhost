@@ -100,9 +100,6 @@ bool DataBlock::decode(const uint8_t* data, const DataHeader& header)
             ::memset(crcBuffer, 0x00U, DMR_PDU_UNCODED_LENGTH_BYTES);
 
             // generate CRC buffer
-            uint32_t bufferLen = DMR_PDU_CONFIRMED_DATA_LENGTH_BYTES;
-            if (m_dataType == DataType::RATE_12_DATA)
-                bufferLen = DMR_PDU_UNCONFIRMED_LENGTH_BYTES;
             uint32_t crcBitLength = 144U;
             if (m_dataType == DataType::RATE_12_DATA)
                 crcBitLength = 96U;
