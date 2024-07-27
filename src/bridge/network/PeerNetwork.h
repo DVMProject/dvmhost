@@ -83,7 +83,7 @@ namespace network
          * @param dmrN 
          * @param embeddedData 
          */
-        void writeDMRTerminator(dmr::data::NetData& data, int* seqNo, uint8_t* dmrN, dmr::data::EmbeddedData& embeddedData);
+        void writeDMRTerminator(dmr::data::NetData& data, uint32_t* seqNo, uint8_t* dmrN, dmr::data::EmbeddedData& embeddedData);
 
     protected:
         /**

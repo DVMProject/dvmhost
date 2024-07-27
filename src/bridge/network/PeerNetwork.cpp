@@ -82,7 +82,7 @@ bool PeerNetwork::writeP25LDU2(const p25::lc::LC& control, const p25::data::LowS
 
 /* Helper to send a DMR terminator with LC message. */
 
-void PeerNetwork::writeDMRTerminator(dmr::data::NetData& data, int* seqNo, uint8_t* dmrN, dmr::data::EmbeddedData& embeddedData)
+void PeerNetwork::writeDMRTerminator(dmr::data::NetData& data, uint32_t* seqNo, uint8_t* dmrN, dmr::data::EmbeddedData& embeddedData)
 {
     using namespace dmr;
     using namespace dmr::defines;

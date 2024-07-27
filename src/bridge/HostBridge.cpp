@@ -52,6 +52,9 @@ const int SAMPLE_RATE = 8000;
 const int BITS_PER_SECOND = 16;
 const int NUMBER_OF_BUFFERS = 8;
 
+#define LOCAL_CALL "Local Traffic"
+#define UDP_CALL "UDP Traffic"
+
 // ---------------------------------------------------------------------------
 //  Static Class Members
 // ---------------------------------------------------------------------------
@@ -76,8 +79,7 @@ void audioCallback(ma_device* device, void* output, const void* input, ma_uint32
         int smpIdx = 0;
         short samples[MBE_SAMPLES_LENGTH];
         const uint8_t* pcm = (const uint8_t*)input;
-        for (int pcmIdx = 0; pcmIdx < pcmBytes; pcmIdx += 2)
-        {
+        for (int pcmIdx = 0; pcmIdx < pcmBytes; pcmIdx += 2) {
             samples[smpIdx] = (short)((pcm[pcmIdx + 1] << 8) + pcm[pcmIdx + 0]);
             smpIdx++;
         }
@@ -93,12 +95,30 @@ void audioCallback(ma_device* device, void* output, const void* input, ma_uint32
         bridge->m_outputAudio.get(samples, MBE_SAMPLES_LENGTH);
         uint8_t* pcm = (uint8_t*)output;
         int pcmIdx = 0;
-        for (int smpIdx = 0; smpIdx < MBE_SAMPLES_LENGTH; smpIdx++)
-        {
+        for (int smpIdx = 0; smpIdx < MBE_SAMPLES_LENGTH; smpIdx++) {
             pcm[pcmIdx + 0] = (uint8_t)(samples[smpIdx] & 0xFF);
             pcm[pcmIdx + 1] = (uint8_t)((samples[smpIdx] >> 8) & 0xFF);
             pcmIdx += 2;
         }
+    }
+}
+
+/* Helper callback, called when MDC packets are detected. */
+
+void mdcPacketDetected(int frameCount, mdc_u8_t op, mdc_u8_t arg, mdc_u16_t unitID,
+    mdc_u8_t extra0, mdc_u8_t extra1, mdc_u8_t extra2, mdc_u8_t extra3, void* context)
+{
+    HostBridge* bridge = (HostBridge*)context;
+
+    if (op == OP_PTT_ID && bridge->m_overrideSrcIdFromMDC) {
+        // HACK: nasty bullshit to convert MDC unitID to decimal
+        char* pCharRes = new (char);
+        ::sprintf(pCharRes, "%X", unitID);
+
+        int res = std::stoi(pCharRes);
+
+        bridge->m_srcIdOverride = res;
+        ::LogMessage(LOG_HOST, "Local Traffic, MDC Detect, srcId = %u", bridge->m_srcIdOverride);
     }
 }
 
@@ -120,6 +140,7 @@ HostBridge::HostBridge(const std::string& confFile) :
     m_udpReceivePort(32001),
     m_udpReceiveAddress("127.0.0.1"),
     m_srcId(p25::defines::WUID_FNE),
+    m_srcIdOverride(0U),
     m_overrideSrcIdFromMDC(false),
     m_overrideSrcIdFromUDP(false),
     m_dstId(1U),
@@ -160,11 +181,16 @@ HostBridge::HostBridge(const std::string& confFile) :
     m_netLDU2(nullptr),
     m_p25SeqNo(0U),
     m_p25N(0U),
+    m_audioDetect(false),
+    m_trafficFromUDP(false),
+    m_udpSrcId(0U),
+    m_udpDstId(0U),
     m_callInProgress(false),
     m_ignoreCall(false),
     m_callAlgoId(p25::defines::ALGO_UNENCRYPT),
     m_rxStartTime(0U),
     m_rxStreamId(0U),
+    m_txStreamId(0U),
     m_debug(false)
 #if defined(_WIN32)
     ,
@@ -337,8 +363,6 @@ int HostBridge::run()
         return EXIT_FAILURE;
     }
 
-    ma_uint32 sizeInBytes = m_maDeviceConfig.periodSizeInFrames * ma_get_bytes_per_frame(m_maDevice.capture.format, m_maDevice.capture.channels);
-
     // configure tone generator for preamble
     m_maSineWaveConfig = ma_waveform_config_init(m_maDevice.playback.format, m_maDevice.playback.channels, m_maDevice.sampleRate, ma_waveform_type_sine, 0.2, m_preambleTone);
     result = ma_waveform_init(&m_maSineWaveConfig, &m_maSineWaveform);
@@ -348,6 +372,7 @@ int HostBridge::run()
     }
 
     m_mdcDecoder = mdc_decoder_new(SAMPLE_RATE);
+    mdc_decoder_set_callback(m_mdcDecoder, mdcPacketDetected, this);
 
     // initialize vocoders
     if (m_txMode == TX_MODE_DMR) {
@@ -427,6 +452,9 @@ int HostBridge::run()
 
         if (m_network != nullptr)
             m_network->clock(ms);
+
+        if (m_udpAudio && m_udpAudioSocket != nullptr)
+            processUDPAudio();
 
         uint32_t length = 0U;
         bool netReadRet = false;
@@ -885,6 +913,104 @@ bool HostBridge::createNetwork()
     }
 
     return true;
+}
+
+/* Helper to process UDP audio. */
+
+void HostBridge::processUDPAudio()
+{
+    if (!m_udpAudio)
+        return;
+    if (m_udpAudioSocket == nullptr)
+        return;
+
+    sockaddr_storage addr;
+    uint32_t addrLen;
+
+    // read message from socket
+    uint8_t buffer[DATA_PACKET_LENGTH];
+    ::memset(buffer, 0x00U, DATA_PACKET_LENGTH);
+    int length = m_udpAudioSocket->read(buffer, DATA_PACKET_LENGTH, addr, addrLen);
+    if (length < 0) {
+        LogError(LOG_NET, "Failed reading data from the network");
+        return;
+    }
+
+    if (length > 0) {
+        if (m_debug)
+            Utils::dump(1U, "UDP Audio Network Packet", buffer, length);
+        
+        uint32_t pcmLength = __GET_UINT32(buffer, 0U);
+        __ALLOC_VLA(pcm, pcmLength);
+        ::memcpy(pcm, buffer + 4U, pcmLength);
+
+        // Utils::dump(1U, "PCM RECV BYTE BUFFER", pcm, pcmLength);
+
+        m_udpSrcId = m_srcId;
+        if (m_udpMetadata) {
+            if (m_overrideSrcIdFromUDP)
+                m_udpSrcId = __GET_UINT32(buffer, pcmLength + 4U);
+        }
+
+        m_udpDstId = m_dstId;
+
+        std::lock_guard<std::mutex> lock(m_audioMutex);
+
+        int smpIdx = 0;
+        short samples[MBE_SAMPLES_LENGTH];
+        for (int pcmIdx = 0; pcmIdx < pcmLength; pcmIdx += 2) {
+            samples[smpIdx] = (short)((pcm[pcmIdx + 1] << 8) + pcm[pcmIdx + 0]);
+            smpIdx++;
+        }
+
+        m_inputAudio.addData(samples, MBE_SAMPLES_LENGTH);
+
+        m_trafficFromUDP = true;
+
+        // force start a call if one isn't already in progress
+        if (!m_audioDetect && !m_callInProgress)
+        {
+            m_audioDetect = true;
+            if (m_txStreamId == 0U) {
+                LogMessage(LOG_HOST, "%s, call start, srcId = %u, dstId = %u", UDP_CALL, m_udpSrcId, m_udpDstId);
+                if (m_grantDemand) {
+                    switch (m_txMode)
+                    {
+                    case TX_MODE_P25:
+                    {
+                        p25::lc::LC lc = p25::lc::LC();
+                        lc.setLCO(p25::defines::LCO::GROUP);
+                        lc.setDstId(m_udpDstId);
+                        lc.setSrcId(m_udpSrcId);
+
+                        p25::data::LowSpeedData lsd = p25::data::LowSpeedData();
+
+                        uint8_t controlByte = 0x80U;
+                        m_network->writeP25TDU(lc, lsd, controlByte);
+                    }
+                    break;
+                    }
+                }
+            }
+
+            m_dropTime.stop();
+
+            if (!m_dropTime.isRunning())
+                m_dropTime.start();
+        }
+
+        // If audio detection is active and no call is in progress, encode and transmit the audio
+        if (m_audioDetect && !m_callInProgress) {
+            switch (m_txMode) {
+            case TX_MODE_DMR:
+                encodeDMRAudioFrame(pcm, m_udpSrcId);
+                break;
+            case TX_MODE_P25:
+                encodeP25AudioFrame(pcm, m_udpSrcId);
+                break;
+            }
+        }
+    }
 }
 
 /* Helper to process DMR network traffic. */
@@ -1761,6 +1887,7 @@ void HostBridge::encodeP25AudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32_
     if (m_p25N == 8U) {
         LogMessage(LOG_NET, P25_LDU1_STR " audio, srcId = %u, dstId = %u", srcId, dstId);
         m_network->writeP25LDU1(lc, lsd, m_netLDU1, FrameType::HDU_VALID);
+        m_txStreamId = m_network->getP25StreamId();
     }
 
     // send P25 LDU2
@@ -1833,6 +1960,9 @@ void* HostBridge::threadAudioProcess(void* arg)
             uint32_t ms = stopWatch.elapsed();
             stopWatch.start();
 
+            if (bridge->m_dropTime.isRunning())
+                bridge->m_dropTime.clock(ms);
+
             // scope is intentional
             {
                 std::lock_guard<std::mutex> lock(m_audioMutex);
@@ -1841,7 +1971,127 @@ void* HostBridge::threadAudioProcess(void* arg)
                     short samples[MBE_SAMPLES_LENGTH];
                     bridge->m_inputAudio.get(samples, MBE_SAMPLES_LENGTH);
 
-                    // TODO TODO TODO
+                    // process MDC, if necessary
+                    if (bridge->m_overrideSrcIdFromMDC)
+                        mdc_decoder_process_samples(bridge->m_mdcDecoder, samples, MBE_SAMPLES_LENGTH);
+
+                    float sampleLevel = bridge->m_voxSampleLevel / 1000;
+
+                    uint32_t srcId = bridge->m_srcId;
+                    if (bridge->m_srcIdOverride != 0 && bridge->m_overrideSrcIdFromMDC)
+                        srcId = bridge->m_srcIdOverride;
+
+                    uint32_t dstId = bridge->m_dstId;
+
+                    std::string trafficType = LOCAL_CALL;
+                    if (bridge->m_trafficFromUDP) {
+                        srcId = bridge->m_udpSrcId;
+                        trafficType = UDP_CALL;
+                    }
+
+                    // perform maximum sample detection
+                    float maxSample = 0.0f;
+                    for (int i = 0; i < MBE_SAMPLES_LENGTH; i++) {
+                        float sampleValue = fabs(samples[i]);
+                        maxSample = fmax(maxSample, sampleValue);
+                    }
+
+                    // handle Rx triggered by internal VOX
+                    if (maxSample > sampleLevel) {
+                        bridge->m_audioDetect = true;
+                        if (bridge->m_txStreamId == 0U) {
+                            LogMessage(LOG_HOST, "%s, call start, srcId = %u, dstId = %u", trafficType.c_str(), srcId, dstId);
+
+                            if (bridge->m_grantDemand) {
+                                switch (bridge->m_txMode) {
+                                case TX_MODE_P25:
+                                {
+                                    p25::lc::LC lc = p25::lc::LC();
+                                    lc.setLCO(p25::defines::LCO::GROUP);
+                                    lc.setDstId(dstId);
+                                    lc.setSrcId(srcId);
+
+                                    p25::data::LowSpeedData lsd = p25::data::LowSpeedData();
+
+                                    uint8_t controlByte = 0x80U;
+                                    bridge->m_network->writeP25TDU(lc, lsd, controlByte);
+                                }
+                                break;
+                                }
+                            }
+                        }
+
+                        bridge->m_dropTime.stop();
+                    } else {
+                        // if we've exceeded the audio drop timeout, then really drop the audio
+                        if (bridge->m_dropTime.isRunning() && bridge->m_dropTime.hasExpired()) {
+                            if (bridge->m_audioDetect) {
+                                LogMessage(LOG_HOST, "%s, call end, srcId = %u, dstId = %u", trafficType.c_str(), srcId, dstId);
+
+                                bridge->m_audioDetect = false;
+                                bridge->m_dropTime.stop();
+
+                                if (!bridge->m_callInProgress) {
+                                    switch (bridge->m_txMode) {
+                                    case TX_MODE_DMR:
+                                    {
+                                        dmr::data::NetData data = dmr::data::NetData();
+                                        data.setDataType(dmr::defines::DataType::TERMINATOR_WITH_LC);
+                                        data.setDstId(dstId);
+                                        data.setSrcId(srcId);
+
+                                        bridge->m_network->writeDMRTerminator(data, &bridge->m_dmrSeqNo, &bridge->m_dmrN, bridge->m_dmrEmbeddedData);
+                                    }
+                                    break;
+                                    case TX_MODE_P25:
+                                    {
+                                        p25::lc::LC lc = p25::lc::LC();
+                                        lc.setLCO(p25::defines::LCO::GROUP);
+                                        lc.setDstId(dstId);
+                                        lc.setSrcId(srcId);
+
+                                        p25::data::LowSpeedData lsd = p25::data::LowSpeedData();
+
+                                        uint8_t controlByte = 0x00U;
+                                        bridge->m_network->writeP25TDU(lc, lsd, controlByte);
+                                    }
+                                    break;
+                                    }
+                                }
+
+                                bridge->m_srcIdOverride = 0;
+                                bridge->m_txStreamId = 0;
+
+                                bridge->m_udpSrcId = 0;
+                                bridge->m_udpDstId = 0;
+                                bridge->m_trafficFromUDP = false;
+                            }
+                        }
+
+                        if (!bridge->m_dropTime.isRunning())
+                            bridge->m_dropTime.start();
+                    }
+
+                    if (bridge->m_audioDetect && !bridge->m_callInProgress) {
+                        ma_uint32 pcmBytes = MBE_SAMPLES_LENGTH * ma_get_bytes_per_frame(bridge->m_maDevice.capture.format, bridge->m_maDevice.capture.channels);
+                        __ALLOC_VLA(pcm, pcmBytes);
+                        int pcmIdx = 0;
+                        for (int smpIdx = 0; smpIdx < MBE_SAMPLES_LENGTH; smpIdx++) {
+                            pcm[pcmIdx + 0] = (uint8_t)(samples[smpIdx] & 0xFF);
+                            pcm[pcmIdx + 1] = (uint8_t)((samples[smpIdx] >> 8) & 0xFF);
+                            pcmIdx += 2;
+                        }
+
+                        switch (bridge->m_txMode)
+                        {
+                        case TX_MODE_DMR:
+                            bridge->encodeDMRAudioFrame(pcm);
+                            break;
+                        case TX_MODE_P25:
+                            bridge->encodeP25AudioFrame(pcm);
+                            break;
+                        }
+                    }
                 }
             }
 

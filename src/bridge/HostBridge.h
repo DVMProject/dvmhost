@@ -76,6 +76,21 @@ const uint8_t TX_MODE_P25 = 2U;
  */
 void audioCallback(ma_device* device, void* output, const void* input, ma_uint32 frameCount);
 
+/**
+ * @brief Helper callback, called when MDC packets are detected.
+ * @param frameCount 
+ * @param op MDC Opcode.
+ * @param arg MDC Argument.
+ * @param unitID Unit ID.
+ * @param extra0 1st extra byte.
+ * @param extra1 2nd extra byte.
+ * @param extra2 3rd extra byte.
+ * @param extra3 4th extra byte.
+ * @param context 
+ */
+void mdcPacketDetected(int frameCount, mdc_u8_t op, mdc_u8_t arg, mdc_u16_t unitID,
+    mdc_u8_t extra0, mdc_u8_t extra1, mdc_u8_t extra2, mdc_u8_t extra3, void* context);
+
 // ---------------------------------------------------------------------------
 //  Class Declaration
 // ---------------------------------------------------------------------------
@@ -104,6 +119,8 @@ public:
 
 private:
     friend void ::audioCallback(ma_device* device, void* output, const void* input, ma_uint32 frameCount);
+    friend void ::mdcPacketDetected(int frameCount, mdc_u8_t op, mdc_u8_t arg, mdc_u16_t unitID,
+        mdc_u8_t extra0, mdc_u8_t extra1, mdc_u8_t extra2, mdc_u8_t extra3, void* context);
 
     const std::string& m_confFile;
     yaml::Node m_conf;
@@ -119,6 +136,7 @@ private:
     std::string m_udpReceiveAddress;
 
     uint32_t m_srcId;
+    uint32_t m_srcIdOverride;
     bool m_overrideSrcIdFromMDC;
     bool m_overrideSrcIdFromUDP;
     uint32_t m_dstId;
@@ -176,11 +194,16 @@ private:
     uint32_t m_p25SeqNo;
     uint8_t m_p25N;
 
+    bool m_audioDetect;
+    bool m_trafficFromUDP;
+    uint32_t m_udpSrcId;
+    uint32_t m_udpDstId;
     bool m_callInProgress;
     bool m_ignoreCall;
     uint8_t m_callAlgoId;
     uint64_t m_rxStartTime;
     uint32_t m_rxStreamId;
+    uint32_t m_txStreamId;
 
     bool m_debug;
 
@@ -326,6 +349,11 @@ private:
      * @returns bool True, if network connectivity was initialized, otherwise false.
      */
     bool createNetwork();
+
+    /**
+     * @brief Helper to process UDP audio.
+     */
+    void processUDPAudio();
 
     /**
      * @brief Helper to process DMR network traffic.
