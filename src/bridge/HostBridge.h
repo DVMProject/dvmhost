@@ -390,8 +390,9 @@ private:
      * @param ldu 
      * @param srcId 
      * @param dstId 
+     * @param p25N 
      */
-    void decodeP25AudioFrame(uint8_t* ldu, uint32_t srcId, uint32_t dstId);
+    void decodeP25AudioFrame(uint8_t* ldu, uint32_t srcId, uint32_t dstId, uint8_t p25N);
     /**
      * @brief Helper to encode P25 network traffic audio frames.
      * @param pcm 

@@ -1170,6 +1170,7 @@ void HostBridge::processDMRNetwork(uint8_t* buffer, uint32_t length)
             ambe[13] |= (uint8_t)(data[19] & 0x0F);
             ::memcpy(ambe + 14U, data.get() + 20U, 13U);
 
+            LogMessage(LOG_NET, DMR_DT_VOICE ", audio, slot = %u, srcId = %u, dstId = %u, seqNo = %u", slotNo, srcId, dstId, n);
             decodeDMRAudioFrame(ambe, srcId, dstId, n);
         }
 
@@ -1203,7 +1204,8 @@ void HostBridge::decodeDMRAudioFrame(uint8_t* ambe, uint32_t srcId, uint32_t dst
         }
 #endif // defined(_WIN32)
 
-        LogMessage(LOG_HOST, "DMR, Voice Frame, VC%u.%u, srcId = %u, dstId = %u, errs = %u", dmrN, n, srcId, dstId, errs);
+        if (m_debug)
+            LogMessage(LOG_HOST, DMR_DT_VOICE ", Frame, VC%u.%u, srcId = %u, dstId = %u, errs = %u", dmrN, n, srcId, dstId, errs);
 
         // post-process: apply gain to decoded audio frames
         if (m_rxAudioGain != 1.0f) {
@@ -1346,7 +1348,7 @@ void HostBridge::encodeDMRAudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32_
             emb.encode(data);
         }
 
-        LogMessage(LOG_HOST, "DMR, Voice Frame, VC%u, srcId = %u, dstId = %u, slot = %u", m_dmrN, srcId, dstId, m_slot);
+        LogMessage(LOG_HOST, DMR_DT_VOICE ", srcId = %u, dstId = %u, slot = %u, seqNo = %u", srcId, dstId, m_slot, m_dmrN);
 
         // generate DMR network frame
         data::NetData dmrData;
@@ -1603,8 +1605,10 @@ void HostBridge::processP25Network(uint8_t* buffer, uint32_t length)
                 dfsiLC.decodeLDU1(data.get() + count, m_netLDU1 + 204U);
                 count += DFSI_LDU1_VOICE9_FRAME_LENGTH_BYTES;
 
+                LogMessage(LOG_NET, P25_LDU1_STR " audio, srcId = %u, dstId = %u", srcId, dstId);
+
                 // decode 9 IMBE codewords into PCM samples
-                decodeP25AudioFrame(m_netLDU1, srcId, dstId);
+                decodeP25AudioFrame(m_netLDU1, srcId, dstId, 1U);
             }
             break;
         case DUID::LDU2:
@@ -1652,8 +1656,10 @@ void HostBridge::processP25Network(uint8_t* buffer, uint32_t length)
                 dfsiLC.decodeLDU2(data.get() + count, m_netLDU2 + 204U);
                 count += DFSI_LDU2_VOICE18_FRAME_LENGTH_BYTES;
 
+                LogMessage(LOG_NET, P25_LDU2_STR " audio");
+
                 // decode 9 IMBE codewords into PCM samples
-                decodeP25AudioFrame(m_netLDU2, srcId, dstId);
+                decodeP25AudioFrame(m_netLDU2, srcId, dstId, 2U);
             }
             break;
         }
@@ -1664,7 +1670,7 @@ void HostBridge::processP25Network(uint8_t* buffer, uint32_t length)
 
 /* Helper to decode P25 network traffic audio frames. */
 
-void HostBridge::decodeP25AudioFrame(uint8_t* ldu, uint32_t srcId, uint32_t dstId)
+void HostBridge::decodeP25AudioFrame(uint8_t* ldu, uint32_t srcId, uint32_t dstId, uint8_t p25N)
 {
     assert(ldu != nullptr);
     using namespace p25;
@@ -1718,7 +1724,8 @@ void HostBridge::decodeP25AudioFrame(uint8_t* ldu, uint32_t srcId, uint32_t dstI
         }
 #endif // defined(_WIN32)
 
-        LogMessage(LOG_HOST, "P25, Voice Frame, VC%u, srcId = %u, dstId = %u, errs = %u", n, srcId, dstId, errs);
+        if (m_debug)
+            LogDebug(LOG_HOST, "P25, LDU (Logical Link Data Unit), Frame, VC%u.%u, srcId = %u, dstId = %u, errs = %u", p25N, n, srcId, dstId, errs);
 
         // post-process: apply gain to decoded audio frames
         if (m_rxAudioGain != 1.0f) {
@@ -1908,14 +1915,14 @@ void HostBridge::encodeP25AudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32_
 
     // send P25 LDU1
     if (m_p25N == 8U) {
-        LogMessage(LOG_NET, P25_LDU1_STR " audio, srcId = %u, dstId = %u", srcId, dstId);
+        LogMessage(LOG_HOST, P25_LDU1_STR " audio, srcId = %u, dstId = %u", srcId, dstId);
         m_network->writeP25LDU1(lc, lsd, m_netLDU1, FrameType::HDU_VALID);
         m_txStreamId = m_network->getP25StreamId();
     }
 
     // send P25 LDU2
     if (m_p25N == 17U) {
-        LogMessage(LOG_NET, P25_LDU2_STR " audio");
+        LogMessage(LOG_HOST, P25_LDU2_STR " audio");
         m_network->writeP25LDU2(lc, lsd, m_netLDU2);
     }
 
