@@ -595,7 +595,7 @@ void MBEEncoder::encodeBits(uint8_t* bits, uint8_t* codeword)
 
     int32_t errs = 0;
     float samples[160U];
-    ::memset(samples, 0x00U, 160U);
+    ::memset(samples, 0x00U, 160U * sizeof(float));
 
     switch (m_mbeMode)
     {

@@ -95,7 +95,7 @@ int32_t MBEDecoder::decodeBits(uint8_t* codeword, char* mbeBits)
 {
     int32_t errs = 0;
     float samples[160U];
-    ::memset(samples, 0x00U, 160U);
+    ::memset(samples, 0x00U, 160U * sizeof(float));
 
     switch (m_mbeMode)
     {
@@ -220,7 +220,7 @@ int32_t MBEDecoder::decodeF(uint8_t* codeword, float samples[])
 int32_t MBEDecoder::decode(uint8_t* codeword, int16_t samples[])
 {
     float samplesF[160U];
-    ::memset(samplesF, 0x00U, 160U);
+    ::memset(samplesF, 0x00U, 160U * sizeof(float));
     int32_t errs = decodeF(codeword, samplesF);
 
     float* sampleFPtr = samplesF;
