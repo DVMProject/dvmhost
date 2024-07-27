@@ -6,6 +6,7 @@
  *
  *  Copyright (C) 2015,2016,2017 Jonathan Naylor, G4KLX
  *  Copyright (C) 2020-2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2024 Caleb, KO4UYJ
  *
  */
 #include "Defines.h"
@@ -185,6 +186,20 @@ bool BaseNetwork::announceGroupAffiliation(uint32_t srcId, uint32_t dstId)
     __SET_UINT16(dstId, buffer, 3U);
 
     return writeMaster({ NET_FUNC::ANNOUNCE, NET_SUBFUNC::ANNC_SUBFUNC_GRP_AFFIL }, buffer, MSG_ANNC_GRP_AFFIL, RTP_END_OF_CALL_SEQ, 0U);
+}
+
+/* Writes a group affiliation removal to the network. */
+
+bool BaseNetwork::announceGroupAffiliationRemoval(uint32_t srcId)
+{
+    if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
+        return false;
+
+    uint8_t buffer[DATA_PACKET_LENGTH];
+
+    __SET_UINT16(srcId, buffer, 0U);
+
+    return writeMaster({ NET_FUNC::ANNOUNCE, NET_SUBFUNC::ANNC_SUBFUNC_GRP_UNAFFIL }, buffer, MSG_ANNC_GRP_UNAFFIL, RTP_END_OF_CALL_SEQ, 0U);
 }
 
 /* Writes a unit registration to the network. */

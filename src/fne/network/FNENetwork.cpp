@@ -1111,6 +1111,27 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                             }
                         }
                     }
+                    else if (req->fneHeader.getSubFunction() == NET_SUBFUNC::ANNC_SUBFUNC_GRP_UNAFFIL) {    // Announce Group Affiliation Removal
+                        if (peerId > 0 && (network->m_peers.find(peerId) != network->m_peers.end())) {
+                            FNEPeerConnection* connection = network->m_peers[peerId];
+                            if (connection != nullptr) {
+                                std::string ip = udp::Socket::address(req->address);
+                                lookups::AffiliationLookup* aff = network->m_peerAffiliations[peerId];
+                                if (aff == nullptr) {
+                                    LogError(LOG_NET, "PEER %u (%s) has an invalid affiliations lookup? This shouldn't happen BUGBUG.", peerId, connection->identity().c_str());
+                                }
+
+                                // validate peer (simple validation really)
+                                if (connection->connected() && connection->address() == ip && aff != nullptr) {
+                                    uint32_t srcId = __GET_UINT16(req->buffer, 0U);             // Source Address
+                                    aff->groupUnaff(srcId);
+                                }
+                                else {
+                                    network->writePeerNAK(peerId, TAG_ANNOUNCE, NET_CONN_NAK_FNE_UNAUTHORIZED);
+                                }
+                            }
+                        }
+                    }
                     else if (req->fneHeader.getSubFunction() == NET_SUBFUNC::ANNC_SUBFUNC_AFFILS) {     // Announce Update All Affiliations
                         if (peerId > 0 && (network->m_peers.find(peerId) != network->m_peers.end())) {
                             FNEPeerConnection* connection = network->m_peers[peerId];
