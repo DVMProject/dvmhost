@@ -939,7 +939,10 @@ void HostBridge::processUDPAudio()
             Utils::dump(1U, "UDP Audio Network Packet", buffer, length);
         
         uint32_t pcmLength = __GET_UINT32(buffer, 0U);
-        __ALLOC_VLA(pcm, pcmLength);
+
+        UInt8Array __pcm = std::make_unique<uint8_t[]>(pcmLength);
+        uint8_t* pcm = __pcm.get();
+
         ::memcpy(pcm, buffer + 4U, pcmLength);
 
         // Utils::dump(1U, "PCM RECV BYTE BUFFER", pcm, pcmLength);
@@ -1955,7 +1958,9 @@ void HostBridge::generatePreambleTone()
     uint64_t frameCount = SampleTimeConvert::ToSamples(SAMPLE_RATE, 1, m_preambleLength);
 
     ma_uint32 pcmBytes = frameCount * ma_get_bytes_per_frame(m_maDevice.capture.format, m_maDevice.capture.channels);
-    __ALLOC_VLA(sine, pcmBytes);
+    UInt8Array __sine = std::make_unique<uint8_t[]>(pcmBytes);
+    uint8_t* sine = __sine.get();
+
     ma_waveform_read_pcm_frames(&m_maSineWaveform, sine, frameCount, NULL);
 
     int smpIdx = 0;
@@ -2121,7 +2126,9 @@ void* HostBridge::threadAudioProcess(void* arg)
 
                     if (bridge->m_audioDetect && !bridge->m_callInProgress) {
                         ma_uint32 pcmBytes = MBE_SAMPLES_LENGTH * ma_get_bytes_per_frame(bridge->m_maDevice.capture.format, bridge->m_maDevice.capture.channels);
-                        __ALLOC_VLA(pcm, pcmBytes);
+                        UInt8Array __pcm = std::make_unique<uint8_t[]>(pcmBytes);
+                        uint8_t* pcm = __pcm.get();
+
                         int pcmIdx = 0;
                         for (int smpIdx = 0; smpIdx < MBE_SAMPLES_LENGTH; smpIdx++) {
                             pcm[pcmIdx + 0] = (uint8_t)(samples[smpIdx] & 0xFF);

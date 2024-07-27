@@ -631,7 +631,8 @@ void* FNENetwork::threadedNetworkRx(void* arg)
 
                             if (connection->connectionState() == NET_STAT_WAITING_AUTHORISATION) {
                                 // get the hash from the frame message
-                                __ALLOC_VLA(hash, req->length - 8U);
+                                UInt8Array __hash = std::make_unique<uint8_t[]>(req->length - 8U);
+                                uint8_t* hash = __hash.get();
                                 ::memset(hash, 0x00U, req->length - 8U);
                                 ::memcpy(hash, req->buffer + 8U, req->length - 8U);
 
@@ -728,7 +729,8 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                             connection->lastPing(now);
 
                             if (connection->connectionState() == NET_STAT_WAITING_CONFIG) {
-                                __ALLOC_VLA(rawPayload, req->length - 8U);
+                                UInt8Array __rawPayload = std::make_unique<uint8_t[]>(req->length - 8U);
+                                uint8_t* rawPayload = __rawPayload.get();
                                 ::memset(rawPayload, 0x00U, req->length - 8U);
                                 ::memcpy(rawPayload, req->buffer + 8U, req->length - 8U);
                                 std::string payload(rawPayload, rawPayload + (req->length - 8U));
@@ -972,7 +974,8 @@ void* FNENetwork::threadedNetworkRx(void* arg)
 
                                     // validate peer (simple validation really)
                                     if (connection->connected() && connection->address() == ip) {
-                                        __ALLOC_VLA(rawPayload, req->length - 11U);
+                                        UInt8Array __rawPayload = std::make_unique<uint8_t[]>(req->length - 11U);
+                                        uint8_t* rawPayload = __rawPayload.get();
                                         ::memset(rawPayload, 0x00U, req->length - 11U);
                                         ::memcpy(rawPayload, req->buffer + 11U, req->length - 11U);
                                         std::string payload(rawPayload, rawPayload + (req->length - 11U));
@@ -1006,7 +1009,8 @@ void* FNENetwork::threadedNetworkRx(void* arg)
 
                                     // validate peer (simple validation really)
                                     if (connection->connected() && connection->address() == ip) {
-                                        __ALLOC_VLA(rawPayload, req->length - 11U);
+                                        UInt8Array __rawPayload = std::make_unique<uint8_t[]>(req->length - 11U);
+                                        uint8_t* rawPayload = __rawPayload.get();
                                         ::memset(rawPayload, 0x00U, req->length - 11U);
                                         ::memcpy(rawPayload, req->buffer + 11U, req->length - 11U);
                                         std::string payload(rawPayload, rawPayload + (req->length - 11U));
@@ -1461,7 +1465,8 @@ void FNENetwork::writeWhitelistRIDs(uint32_t peerId)
 
             // build dataset
             uint16_t bufSize = 4U + (listSize * 4U);
-            __ALLOC_VLA(payload, bufSize);
+            UInt8Array __payload = std::make_unique<uint8_t[]>(bufSize);
+            uint8_t* payload = __payload.get();
             ::memset(payload, 0x00U, bufSize);
 
             __SET_UINT32(listSize, payload, 0U);
@@ -1534,7 +1539,8 @@ void FNENetwork::writeBlacklistRIDs(uint32_t peerId)
 
             // build dataset
             uint16_t bufSize = 4U + (listSize * 4U);
-            __ALLOC_VLA(payload, bufSize);
+            UInt8Array __payload = std::make_unique<uint8_t[]>(bufSize);
+            uint8_t* payload = __payload.get();
             ::memset(payload, 0x00U, bufSize);
 
             __SET_UINT32(listSize, payload, 0U);
@@ -1615,7 +1621,8 @@ void FNENetwork::writeTGIDs(uint32_t peerId)
     }
 
     // build dataset
-    __ALLOC_VLA(payload, 4U + (tgidList.size() * 5U));
+    UInt8Array __payload = std::make_unique<uint8_t[]>(4U + (tgidList.size() * 5U));
+    uint8_t* payload = __payload.get();
     ::memset(payload, 0x00U, 4U + (tgidList.size() * 5U));
 
     __SET_UINT32(tgidList.size(), payload, 0U);
@@ -1675,7 +1682,8 @@ void FNENetwork::writeDeactiveTGIDs(uint32_t peerId)
     }
 
     // build dataset
-    __ALLOC_VLA(payload, 4U + (tgidList.size() * 5U));
+    UInt8Array __payload = std::make_unique<uint8_t[]>(4U + (tgidList.size() * 5U));
+    uint8_t* payload = __payload.get();
     ::memset(payload, 0x00U, 4U + (tgidList.size() * 5U));
 
     __SET_UINT32(tgidList.size(), payload, 0U);

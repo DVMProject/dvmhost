@@ -256,23 +256,11 @@ inline std::string strtoupper(const std::string value) {
  * @ingroup utils
  */
 typedef std::unique_ptr<uint8_t[]> UInt8Array;
-
 /**
- * @brief Helper macro to allocate a variable length array.
- * @param buffer Name of buffer to create.
- * @param size Size of buffer.
+ * @brief Unique char array.
+ * @ingroup utils
  */
-#define __ALLOC_VLA(buffer, size)                                                               \
-            std::unique_ptr<uint8_t[]> __UNIQUE_##buffer = std::make_unique<uint8_t[]>(size);   \
-            uint8_t* ##buffer = __UNIQUE_##buffer.get();
- /**
-  * @brief Helper macro to allocate a variable length array.
-  * @param buffer Name of buffer to create.
-  * @param size Size of buffer.
-  */
-#define __ALLOC_VLA_CHAR(buffer, size)                                                          \
-            std::unique_ptr<char[]> __UNIQUE_##buffer = std::make_unique<char[]>(size);         \
-            char* ##buffer = __UNIQUE_##buffer.get();
+typedef std::unique_ptr<char[]> CharArray;
 
 // ---------------------------------------------------------------------------
 //  Class Declaration

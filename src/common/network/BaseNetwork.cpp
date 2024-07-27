@@ -237,7 +237,8 @@ bool BaseNetwork::announceAffiliationUpdate(const std::unordered_map<uint32_t, u
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
         return false;
 
-    __ALLOC_VLA(buffer, 4U + (affs.size() * 8U));
+    UInt8Array __buffer = std::make_unique<uint8_t[]>(4U + (affs.size() * 8U));
+    uint8_t* buffer = __buffer.get();
     ::memset(buffer, 0x00U, 4U + (affs.size() * 8U));
 
     __SET_UINT32(affs.size(), buffer, 0U);
@@ -260,7 +261,8 @@ bool BaseNetwork::announceSiteVCs(const std::vector<uint32_t> peers)
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
         return false;
 
-    __ALLOC_VLA(buffer, 4U + (peers.size() * 4U));
+    UInt8Array __buffer = std::make_unique<uint8_t[]>(4U + (peers.size() * 4U));
+    uint8_t* buffer = __buffer.get();
     ::memset(buffer, 0x00U, 4U + (peers.size() * 4U));
 
     __SET_UINT32(peers.size(), buffer, 0U);

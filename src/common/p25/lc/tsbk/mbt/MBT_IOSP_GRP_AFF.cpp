@@ -35,7 +35,8 @@ bool MBT_IOSP_GRP_AFF::decodeMBT(const data::DataHeader& dataHeader, const data:
 {
     assert(blocks != nullptr);
 
-    __ALLOC_VLA(pduUserData, P25_PDU_UNCONFIRMED_LENGTH_BYTES * dataHeader.getBlocksToFollow());
+    UInt8Array __pduUserData = std::make_unique<uint8_t[]>(P25_PDU_UNCONFIRMED_LENGTH_BYTES * dataHeader.getBlocksToFollow());
+    uint8_t* pduUserData = __pduUserData.get();
     ::memset(pduUserData, 0x00U, P25_PDU_UNCONFIRMED_LENGTH_BYTES * dataHeader.getBlocksToFollow());
 
     bool ret = AMBT::decode(dataHeader, blocks, pduUserData);

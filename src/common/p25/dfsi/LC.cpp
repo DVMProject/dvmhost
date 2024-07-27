@@ -323,7 +323,8 @@ void LC::encodeLDU1(uint8_t* data, const uint8_t* imbe)
     // encode RS (24,12,13) FEC
     m_rs.encode241213(rs);
 
-    __ALLOC_VLA(dfsiFrame, frameLength);
+    UInt8Array __dfsiFrame = std::make_unique<uint8_t[]>(frameLength);
+    uint8_t* dfsiFrame = __dfsiFrame.get();
 
     dfsiFrame[0U] = m_frameType;                                                    // Frame Type
 
@@ -563,7 +564,8 @@ void LC::encodeLDU2(uint8_t* data, const uint8_t* imbe)
     // encode RS (24,16,9) FEC
     m_rs.encode24169(rs);
 
-    __ALLOC_VLA(dfsiFrame, frameLength);
+    UInt8Array __dfsiFrame = std::make_unique<uint8_t[]>(frameLength);
+    uint8_t* dfsiFrame = __dfsiFrame.get();
 
     dfsiFrame[0U] = m_frameType;                                                    // Frame Type
 

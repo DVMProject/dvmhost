@@ -494,7 +494,8 @@ bool Socket::write(BufferVector& buffers, ssize_t* lenWritten) noexcept
             // Utils::dump(1U, "Socket::write() crypted", crypted, cryptedLen);
 
             // finalize
-            __ALLOC_VLA(out, cryptedLen + 2U);
+            UInt8Array __outBuf = std::make_unique<uint8_t[]>(cryptedLen + 2U);
+            uint8_t* out = __outBuf.get();
             ::memcpy(out + 2U, crypted, cryptedLen);
             __SET_UINT16B(AES_WRAPPED_PCKT_MAGIC, out, 0U);
 
