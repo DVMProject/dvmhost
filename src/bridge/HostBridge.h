@@ -152,6 +152,7 @@ private:
     uint8_t m_txMode;
 
     float m_voxSampleLevel;
+    uint16_t m_dropTimeMS;
     Timer m_dropTime;
 
     bool m_detectAnalogMDC1200;
@@ -409,6 +410,20 @@ private:
      * @returns void* (Ignore)
      */
     static void* threadAudioProcess(void* arg);
+
+    /**
+     * @brief Entry point to network processing thread.
+     * @param arg Instance of the thread_t structure.
+     * @returns void* (Ignore)
+     */
+    static void* threadNetworkProcess(void* arg);
+
+    /**
+     * @brief Entry point to call lockup handler thread.
+     * @param arg Instance of the thread_t structure.
+     * @returns void* (Ignore)
+     */
+    static void* threadCallLockup(void* arg);
 };
 
 #endif // __HOST_BRIDGE_H__

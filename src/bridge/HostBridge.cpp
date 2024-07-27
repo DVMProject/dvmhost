@@ -50,7 +50,7 @@ using namespace network::udp;
 
 const int SAMPLE_RATE = 8000;
 const int BITS_PER_SECOND = 16;
-const int NUMBER_OF_BUFFERS = 8;
+const int NUMBER_OF_BUFFERS = 27;
 
 #define LOCAL_CALL "Local Traffic"
 #define UDP_CALL "UDP Traffic"
@@ -89,8 +89,6 @@ void audioCallback(ma_device* device, void* output, const void* input, ma_uint32
 
     // playback output audio
     if (bridge->m_outputAudio.dataSize() >= MBE_SAMPLES_LENGTH) {
-        std::lock_guard<std::mutex> lock(HostBridge::m_audioMutex);
-
         short samples[MBE_SAMPLES_LENGTH];
         bridge->m_outputAudio.get(samples, MBE_SAMPLES_LENGTH);
         uint8_t* pcm = (uint8_t*)output;
@@ -153,6 +151,7 @@ HostBridge::HostBridge(const std::string& confFile) :
     m_vocoderEncoderAudioGain(3.0),
     m_txMode(1U),
     m_voxSampleLevel(30.0f),
+    m_dropTimeMS(180U),
     m_dropTime(1000U, 0U, 180U),
     m_detectAnalogMDC1200(false),
     m_preambleLeaderTone(false),
@@ -422,8 +421,11 @@ int HostBridge::run()
     ** Initialize Threads
     */
 
-    /** Audio Processor */
     if (!Thread::runAsThread(this, threadAudioProcess))
+        return EXIT_FAILURE;
+    if (!Thread::runAsThread(this, threadNetworkProcess))
+        return EXIT_FAILURE;
+    if (!Thread::runAsThread(this, threadCallLockup))
         return EXIT_FAILURE;
 
     // start audio device
@@ -455,22 +457,6 @@ int HostBridge::run()
 
         if (m_udpAudio && m_udpAudioSocket != nullptr)
             processUDPAudio();
-
-        uint32_t length = 0U;
-        bool netReadRet = false;
-        if (m_txMode == TX_MODE_DMR) {
-            UInt8Array dmrBuffer = m_network->readDMR(netReadRet, length);
-            if (netReadRet) {
-                processDMRNetwork(dmrBuffer.get(), length);
-            }
-        }
-
-        if (m_txMode == TX_MODE_P25) {
-            UInt8Array p25Buffer = m_network->readP25(netReadRet, length);
-            if (netReadRet) {
-                processP25Network(p25Buffer.get(), length);
-            }
-        }
 
         if (ms < 2U)
             Thread::sleep(1U);
@@ -763,8 +749,8 @@ bool HostBridge::readParams()
         m_txMode = TX_MODE_P25;
 
     m_voxSampleLevel = systemConf["voxSampleLevel"].as<float>(30.0f);
-    uint16_t dropTimeMs = (uint16_t)systemConf["dropTimeMs"].as<uint32_t>(180);
-    m_dropTime = Timer(1000U, 0U, dropTimeMs);
+    m_dropTimeMS = (uint16_t)systemConf["dropTimeMs"].as<uint32_t>(180);
+    m_dropTime = Timer(1000U, 0U, m_dropTimeMS);
 
     m_detectAnalogMDC1200 = systemConf["detectAnalogMDC1200"].as<bool>(false);
 
@@ -784,7 +770,7 @@ bool HostBridge::readParams()
     LogInfo("    Vocoder Encoder Audio Gain: %.1f", m_vocoderEncoderAudioGain);
     LogInfo("    Transmit Mode: %s", m_txMode == TX_MODE_DMR ? "DMR" : "P25");
     LogInfo("    VOX Sample Level: %.1f", m_voxSampleLevel);
-    LogInfo("    Drop Time: %ums", dropTimeMs);
+    LogInfo("    Drop Time: %ums", m_dropTimeMS);
     LogInfo("    Detect Analog MDC1200: %s", m_detectAnalogMDC1200 ? "yes" : "no");
     LogInfo("    Generate Preamble Tone: %s", m_preambleLeaderTone ? "yes" : "no");
     LogInfo("    Preamble Tone: %uhz", m_preambleTone);
@@ -1137,6 +1123,9 @@ void HostBridge::processDMRNetwork(uint8_t* buffer, uint32_t length)
             uint64_t diff = now - m_rxStartTime;
 
             LogMessage(LOG_HOST, "DMR, call end, srcId = %u, dstId = %u, dur = %us", srcId, dstId, diff / 1000U);
+            
+            m_rxStartTime = 0U;
+            m_rxStreamId = 0U;
             return;
         }
 
@@ -1169,6 +1158,8 @@ void HostBridge::processDMRNetwork(uint8_t* buffer, uint32_t length)
 
             decodeDMRAudioFrame(ambe, srcId, dstId, n);
         }
+
+        m_rxStreamId = m_network->getDMRStreamId(slotNo);
     }
 }
 
@@ -1491,6 +1482,9 @@ void HostBridge::processP25Network(uint8_t* buffer, uint32_t length)
             uint64_t diff = now - m_rxStartTime;
 
             LogMessage(LOG_HOST, "P25, call end, srcId = %u, dstId = %u, dur = %us", srcId, dstId, diff / 1000U);
+
+            m_rxStartTime = 0U;
+            m_rxStreamId = 0U;
             return;
         }
 
@@ -1637,6 +1631,8 @@ void HostBridge::processP25Network(uint8_t* buffer, uint32_t length)
             }
             break;
         }
+
+        m_rxStreamId = m_network->getP25StreamId();
     }
 }
 
@@ -1649,8 +1645,7 @@ void HostBridge::decodeP25AudioFrame(uint8_t* ldu, uint32_t srcId, uint32_t dstI
     using namespace p25::defines;
 
     // decode 9 IMBE codewords into PCM samples
-    for (int n = 0; n < 9; n++)
-    {
+    for (int n = 0; n < 9; n++) {
         uint8_t imbe[RAW_IMBE_LENGTH_BYTES];
         switch (n) {
         case 0:
@@ -1681,6 +1676,8 @@ void HostBridge::decodeP25AudioFrame(uint8_t* ldu, uint32_t srcId, uint32_t dstI
             ::memcpy(imbe, ldu + 204U, RAW_IMBE_LENGTH_BYTES);
             break;
         }
+
+        // Utils::dump(1U, "IMBE", imbe, RAW_IMBE_LENGTH_BYTES);
 
         short samples[MBE_SAMPLES_LENGTH];
         int errs = 0;
@@ -1936,7 +1933,7 @@ void* HostBridge::threadAudioProcess(void* arg)
         ::pthread_detach(th->thread);
 #endif // defined(_WIN32)
 
-        std::string threadName("bridge:audio-processor");
+        std::string threadName("bridge:audio-process");
         HostBridge* bridge = static_cast<HostBridge*>(th->obj);
         if (bridge == nullptr) {
             g_killed = true;
@@ -2096,6 +2093,172 @@ void* HostBridge::threadAudioProcess(void* arg)
             }
 
             Thread::sleep(1U);
+        }
+
+        LogDebug(LOG_HOST, "[STOP] %s", threadName.c_str());
+        delete th;
+    }
+
+    return nullptr;
+}
+
+/* Entry point to network processing thread. */
+
+void* HostBridge::threadNetworkProcess(void* arg)
+{
+    thread_t* th = (thread_t*)arg;
+    if (th != nullptr) {
+#if defined(_WIN32)
+        ::CloseHandle(th->thread);
+#else
+        ::pthread_detach(th->thread);
+#endif // defined(_WIN32)
+
+        std::string threadName("bridge:net-process");
+        HostBridge* bridge = static_cast<HostBridge*>(th->obj);
+        if (bridge == nullptr) {
+            g_killed = true;
+            LogDebug(LOG_HOST, "[FAIL] %s", threadName.c_str());
+        }
+
+        if (g_killed) {
+            delete th;
+            return nullptr;
+        }
+
+        LogDebug(LOG_HOST, "[ OK ] %s", threadName.c_str());
+#ifdef _GNU_SOURCE
+        ::pthread_setname_np(th->thread, threadName.c_str());
+#endif // _GNU_SOURCE
+
+        StopWatch stopWatch;
+        stopWatch.start();
+
+        while (!g_killed) {
+            uint32_t ms = stopWatch.elapsed();
+            stopWatch.start();
+
+            uint32_t length = 0U;
+            bool netReadRet = false;
+            if (bridge->m_txMode == TX_MODE_DMR) {
+                UInt8Array dmrBuffer = bridge->m_network->readDMR(netReadRet, length);
+                if (netReadRet) {
+                    bridge->processDMRNetwork(dmrBuffer.get(), length);
+                }
+            }
+
+            if (bridge->m_txMode == TX_MODE_P25) {
+                UInt8Array p25Buffer = bridge->m_network->readP25(netReadRet, length);
+                if (netReadRet) {
+                    bridge->processP25Network(p25Buffer.get(), length);
+                }
+            }
+
+            Thread::sleep(1U);
+        }
+
+        LogDebug(LOG_HOST, "[STOP] %s", threadName.c_str());
+        delete th;
+    }
+
+    return nullptr;
+}
+
+/* Entry point to call lockup handler thread. */
+
+void* HostBridge::threadCallLockup(void* arg)
+{
+    thread_t* th = (thread_t*)arg;
+    if (th != nullptr) {
+#if defined(_WIN32)
+        ::CloseHandle(th->thread);
+#else
+        ::pthread_detach(th->thread);
+#endif // defined(_WIN32)
+
+        std::string threadName("bridge:call-lockup");
+        HostBridge* bridge = static_cast<HostBridge*>(th->obj);
+        if (bridge == nullptr) {
+            g_killed = true;
+            LogDebug(LOG_HOST, "[FAIL] %s", threadName.c_str());
+        }
+
+        if (g_killed) {
+            delete th;
+            return nullptr;
+        }
+
+        LogDebug(LOG_HOST, "[ OK ] %s", threadName.c_str());
+#ifdef _GNU_SOURCE
+        ::pthread_setname_np(th->thread, threadName.c_str());
+#endif // _GNU_SOURCE
+
+        StopWatch stopWatch;
+        stopWatch.start();
+
+        while (!g_killed) {
+            uint32_t ms = stopWatch.elapsed();
+            stopWatch.start();
+
+            std::string trafficType = LOCAL_CALL;
+            if (bridge->m_trafficFromUDP)
+                trafficType = UDP_CALL;
+
+            uint32_t srcId = bridge->m_srcId;
+            if (bridge->m_srcIdOverride != 0 && bridge->m_overrideSrcIdFromMDC)
+                srcId = bridge->m_srcIdOverride;
+
+            uint32_t dstId = bridge->m_dstId;
+
+            ulong64_t temp = (bridge->m_dropTimeMS) * 1000U;
+            uint32_t dropTimeout = (uint32_t)((temp / 1000ULL + 1ULL) * 2U);
+
+            // if we've exceeded the audio drop timeout, then really drop the audio
+            if (bridge->m_dropTime.isRunning() && (bridge->m_dropTime.getTimer() >= dropTimeout)) {
+                if (bridge->m_audioDetect) {
+                    LogMessage(LOG_HOST, "%s, call end (S)", trafficType.c_str());
+
+                    bridge->m_audioDetect = false;
+                    bridge->m_dropTime.stop();
+
+                    if (!bridge->m_callInProgress) {
+                        switch (bridge->m_txMode) {
+                        case TX_MODE_DMR:
+                        {
+                            dmr::data::NetData data = dmr::data::NetData();
+                            data.setDataType(dmr::defines::DataType::TERMINATOR_WITH_LC);
+                            data.setDstId(dstId);
+                            data.setSrcId(srcId);
+
+                            bridge->m_network->writeDMRTerminator(data, &bridge->m_dmrSeqNo, &bridge->m_dmrN, bridge->m_dmrEmbeddedData);
+                        }
+                        break;
+                        case TX_MODE_P25:
+                        {
+                            p25::lc::LC lc = p25::lc::LC();
+                            lc.setLCO(p25::defines::LCO::GROUP);
+                            lc.setDstId(dstId);
+                            lc.setSrcId(srcId);
+
+                            p25::data::LowSpeedData lsd = p25::data::LowSpeedData();
+
+                            uint8_t controlByte = 0x00U;
+                            bridge->m_network->writeP25TDU(lc, lsd, controlByte);
+                        }
+                        break;
+                        }
+                    }
+
+                    bridge->m_srcIdOverride = 0;
+                    bridge->m_txStreamId = 0;
+
+                    bridge->m_udpSrcId = 0;
+                    bridge->m_udpDstId = 0;
+                    bridge->m_trafficFromUDP = false;
+                }
+            }
+
+            Thread::sleep(5U);
         }
 
         LogDebug(LOG_HOST, "[STOP] %s", threadName.c_str());
