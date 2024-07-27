@@ -71,7 +71,7 @@ public:
 private:
 #if !defined(_WIN32)
     termios m_termios;
-#endif !defined(_WIN32)
+#endif // !defined(_WIN32)
 };
 
 #endif // __CONSOLE_H__
