@@ -95,6 +95,7 @@ namespace network
             ANNC_SUBFUNC_GRP_AFFIL = 0x00U,         //! Announce Group Affiliation
             ANNC_SUBFUNC_UNIT_REG = 0x01U,          //! Announce Unit Registration
             ANNC_SUBFUNC_UNIT_DEREG = 0x02U,        //! Announce Unit Deregistration
+            ANNC_SUBFUNC_GRP_UNAFFIL = 0x03U,       //! Announce Group Affiliation Removal
             ANNC_SUBFUNC_AFFILS = 0x90U,            //! Update All Affiliations
             ANNC_SUBFUNC_SITE_VC = 0x9AU            //! Announce Site VCs
         };
