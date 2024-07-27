@@ -1209,14 +1209,19 @@ void HostBridge::decodeDMRAudioFrame(uint8_t* ambe, uint32_t srcId, uint32_t dst
 
         // post-process: apply gain to decoded audio frames
         if (m_rxAudioGain != 1.0f) {
-/*
-            BufferedWaveProvider buffer = new BufferedWaveProvider(waveFormat);
-            buffer.AddSamples(pcm, 0, pcm.Length);
+            for (int n = 0; n < MBE_SAMPLES_LENGTH; n += 2) {
+                short sample = samples[n];
+                float newSample = sample * m_rxAudioGain;
+                sample = (short)newSample;
 
-            VolumeWaveProvider16 gainControl = new VolumeWaveProvider16(buffer);
-            gainControl.Volume = Program.Configuration.RxAudioGain;
-            gainControl.Read(pcm, 0, pcm.Length);
-*/
+                // clip if necessary
+                if (m_rxAudioGain > 1.0f) {
+                    if (newSample > 32767)
+                        sample = 32767;
+                    else if (newSample < -32767)
+                        sample = -32767;
+                }
+            }
         }
 
         if (m_localAudio) {
@@ -1271,10 +1276,8 @@ void HostBridge::encodeDMRAudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32_
     using namespace dmr::defines;
 
     uint32_t srcId = m_srcId;
-/*
-    if (srcIdOverride != 0 && Program.Configuration.OverrideSourceIdFromMDC)
-        srcId = srcIdOverride;
-*/
+    if (m_srcIdOverride != 0 && (m_overrideSrcIdFromMDC || m_overrideSrcIdFromUDP))
+        srcId = m_srcIdOverride;
     if (forcedSrcId > 0 && forcedSrcId != m_srcId)
         srcId = forcedSrcId;
     uint32_t dstId = m_dstId;
@@ -1372,23 +1375,28 @@ void HostBridge::encodeDMRAudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32_
         m_ambeCount = 0U;
     }
 
-    // pre-process: apply gain to PCM audio frames
-    if (m_txAudioGain != 1.0f) {
-/*
-        BufferedWaveProvider buffer = new BufferedWaveProvider(waveFormat);
-        buffer.AddSamples(pcm, 0, pcm.Length);
-
-        VolumeWaveProvider16 gainControl = new VolumeWaveProvider16(buffer);
-        gainControl.Volume = Program.Configuration.TxAudioGain;
-        gainControl.Read(pcm, 0, pcm.Length);
-*/
-    }
-
     int smpIdx = 0;
     short samples[MBE_SAMPLES_LENGTH];
     for (int pcmIdx = 0; pcmIdx < (MBE_SAMPLES_LENGTH * 2U); pcmIdx += 2) {
         samples[smpIdx] = (short)((pcm[pcmIdx + 1] << 8) + pcm[pcmIdx + 0]);
         smpIdx++;
+    }
+
+    // pre-process: apply gain to PCM audio frames
+    if (m_txAudioGain != 1.0f) {
+        for (int n = 0; n < MBE_SAMPLES_LENGTH; n += 2) {
+            short sample = samples[n];
+            float newSample = sample * m_txAudioGain;
+            sample = (short)newSample;
+
+            // clip if necessary
+            if (m_txAudioGain > 1.0f) {
+                if (newSample > 32767)
+                    sample = 32767;
+                else if (newSample < -32767)
+                    sample = -32767;
+            }
+        }
     }
 
     // encode PCM samples into AMBE codewords
@@ -1729,14 +1737,19 @@ void HostBridge::decodeP25AudioFrame(uint8_t* ldu, uint32_t srcId, uint32_t dstI
 
         // post-process: apply gain to decoded audio frames
         if (m_rxAudioGain != 1.0f) {
-/*
-            BufferedWaveProvider buffer = new BufferedWaveProvider(waveFormat);
-            buffer.AddSamples(pcm, 0, pcm.Length);
+            for (int n = 0; n < MBE_SAMPLES_LENGTH; n += 2) {
+                short sample = samples[n];
+                float newSample = sample * m_rxAudioGain;
+                sample = (short)newSample;
 
-            VolumeWaveProvider16 gainControl = new VolumeWaveProvider16(buffer);
-            gainControl.Volume = Program.Configuration.RxAudioGain;
-            gainControl.Read(pcm, 0, pcm.Length);
-*/
+                // clip if necessary
+                if (m_rxAudioGain > 1.0f) {
+                    if (newSample > 32767)
+                        sample = 32767;
+                    else if (newSample < -32767)
+                        sample = -32767;
+                }
+            }
         }
 
         if (m_localAudio) {
@@ -1797,23 +1810,28 @@ void HostBridge::encodeP25AudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32_
     if (m_p25N == 9)
         ::memset(m_netLDU2, 0x00U, 9U * 25U);
 
-    // pre-process: apply gain to PCM audio frames
-    if (m_txAudioGain != 1.0f) {
-/*
-        BufferedWaveProvider buffer = new BufferedWaveProvider(waveFormat);
-        buffer.AddSamples(pcm, 0, pcm.Length);
-
-        VolumeWaveProvider16 gainControl = new VolumeWaveProvider16(buffer);
-        gainControl.Volume = Program.Configuration.TxAudioGain;
-        gainControl.Read(pcm, 0, pcm.Length);
-*/
-    }
-
     int smpIdx = 0;
     short samples[MBE_SAMPLES_LENGTH];
     for (int pcmIdx = 0; pcmIdx < (MBE_SAMPLES_LENGTH * 2U); pcmIdx += 2) {
         samples[smpIdx] = (short)((pcm[pcmIdx + 1] << 8) + pcm[pcmIdx + 0]);
         smpIdx++;
+    }
+
+    // pre-process: apply gain to PCM audio frames
+    if (m_txAudioGain != 1.0f) {
+        for (int n = 0; n < MBE_SAMPLES_LENGTH; n += 2) {
+            short sample = samples[n];
+            float newSample = sample * m_txAudioGain;
+            sample = (short)newSample;
+
+            // clip if necessary
+            if (m_txAudioGain > 1.0f) {
+                if (newSample > 32767)
+                    sample = 32767;
+                else if (newSample < -32767)
+                    sample = -32767;
+            }
+        }
     }
 
     // encode PCM samples into IMBE codewords
@@ -1894,10 +1912,8 @@ void HostBridge::encodeP25AudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32_
     }
 
     uint32_t srcId = m_srcId;
-/*
-    if (srcIdOverride != 0 && (Program.Configuration.OverrideSourceIdFromMDC || Program.Configuration.OverrideSourceIdFromUDP))
-        srcId = srcIdOverride;
-*/
+    if (m_srcIdOverride != 0 && (m_overrideSrcIdFromMDC || m_overrideSrcIdFromUDP))
+        srcId = m_srcIdOverride;
     if (forcedSrcId > 0 && forcedSrcId != m_srcId)
         srcId = forcedSrcId;
     uint32_t dstId = m_dstId;
