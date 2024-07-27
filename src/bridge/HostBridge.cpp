@@ -27,6 +27,7 @@
 #include "bridge/ActivityLog.h"
 #include "HostBridge.h"
 #include "BridgeMain.h"
+#include "SampleTimeConversion.h"
 
 using namespace network;
 using namespace network::udp;
@@ -49,6 +50,7 @@ using namespace network::udp;
 
 const int SAMPLE_RATE = 8000;
 const int BITS_PER_SECOND = 16;
+const int NUMBER_OF_BUFFERS = 8;
 
 // ---------------------------------------------------------------------------
 //  Static Class Members
@@ -142,8 +144,8 @@ HostBridge::HostBridge(const std::string& confFile) :
     m_maCaptureDevices(nullptr),
     m_maDeviceConfig(),
     m_maDevice(),
-    m_inputAudio(MBE_SAMPLES_LENGTH * 2U, "Input Audio Buffer"),
-    m_outputAudio(MBE_SAMPLES_LENGTH * 2U, "Output Audio Buffer"),
+    m_inputAudio(MBE_SAMPLES_LENGTH * NUMBER_OF_BUFFERS, "Input Audio Buffer"),
+    m_outputAudio(MBE_SAMPLES_LENGTH * NUMBER_OF_BUFFERS, "Output Audio Buffer"),
     m_decoder(nullptr),
     m_encoder(nullptr),
     m_mdcDecoder(nullptr),
@@ -1777,20 +1779,22 @@ void HostBridge::generatePreambleTone()
 {
     std::lock_guard<std::mutex> lock(m_audioMutex);
 
-    ma_uint32 pcmBytes = MBE_SAMPLES_LENGTH * ma_get_bytes_per_frame(m_maDevice.capture.format, m_maDevice.capture.channels);
+    uint64_t frameCount = SampleTimeConvert::ToSamples(SAMPLE_RATE, 1, m_preambleLength);
+
+    ma_uint32 pcmBytes = frameCount * ma_get_bytes_per_frame(m_maDevice.capture.format, m_maDevice.capture.channels);
     __ALLOC_VLA(sine, pcmBytes);
-    ma_waveform_read_pcm_frames(&m_maSineWaveform, sine, 160, NULL);
+    ma_waveform_read_pcm_frames(&m_maSineWaveform, sine, frameCount, NULL);
 
     int smpIdx = 0;
-    short sineSamples[MBE_SAMPLES_LENGTH];
+    std::unique_ptr<short[]> __UNIQUE_sineSamples = std::make_unique<short[]>(frameCount);
+    short* sineSamples = __UNIQUE_sineSamples.get();
     const uint8_t* pcm = (const uint8_t*)sine;
-    for (int pcmIdx = 0; pcmIdx < pcmBytes; pcmIdx += 2)
-    {
+    for (int pcmIdx = 0; pcmIdx < pcmBytes; pcmIdx += 2) {
         sineSamples[smpIdx] = (short)((pcm[pcmIdx + 1] << 8) + pcm[pcmIdx + 0]);
         smpIdx++;
     }
 
-    m_outputAudio.addData(sineSamples, MBE_SAMPLES_LENGTH);
+    m_outputAudio.addData(sineSamples, frameCount);
 }
 
 /* Entry point to audio processing thread. */

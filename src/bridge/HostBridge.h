@@ -82,7 +82,7 @@ void audioCallback(ma_device* device, void* output, const void* input, ma_uint32
 
 /**
  * @brief This class implements the core service logic.
- * @ingroup testpeer
+ * @ingroup bridge
  */
 class HOST_SW_API HostBridge {
 public:
