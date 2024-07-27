@@ -954,8 +954,7 @@ void HostBridge::processUDPAudio()
         m_trafficFromUDP = true;
 
         // force start a call if one isn't already in progress
-        if (!m_audioDetect && !m_callInProgress)
-        {
+        if (!m_audioDetect && !m_callInProgress) {
             m_audioDetect = true;
             if (m_txStreamId == 0U) {
                 LogMessage(LOG_HOST, "%s, call start, srcId = %u, dstId = %u", UDP_CALL, m_udpSrcId, m_udpDstId);

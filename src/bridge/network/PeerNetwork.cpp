@@ -192,7 +192,7 @@ bool PeerNetwork::writeConfig()
     json::value v = json::value(config);
     std::string json = v.serialize();
 
-    __ALLOC_VLA_CHAR(buffer, json.length() + 8U);
+    __ALLOC_VLA_CHAR(buffer, json.length() + 9U);
 
     ::memcpy(buffer + 0U, TAG_REPEATER_CONFIG, 4U);
     ::sprintf(buffer + 8U, "%s", json.c_str());
