@@ -210,7 +210,6 @@ namespace network
          * @returns bool True, if group affiliation announcement was sent, otherwise false. 
          */
         virtual bool announceGroupAffiliation(uint32_t srcId, uint32_t dstId);
-
         /**
          * @brief Writes a group affiliation removal to the network.
          * @param srcId Source Radio ID.
@@ -234,7 +233,6 @@ namespace network
          * @returns bool True, if unit registration announcement was sent, otherwise false. 
          */
         virtual bool announceUnitRegistration(uint32_t srcId);
-
         /**
          * @brief Writes a unit deregistration to the network.
          * @param srcId Source Radio ID.
