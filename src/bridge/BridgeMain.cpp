@@ -43,8 +43,8 @@ bool g_foreground = false;
 bool g_killed = false;
 bool g_hideMessages = false;
 
-uint32_t g_inputDevice = -1;
-uint32_t g_outputDevice = -1;
+int g_inputDevice = -1;
+int g_outputDevice = -1;
 
 uint8_t* g_gitHashBytes = nullptr;
 
@@ -172,13 +172,13 @@ int checkArgs(int argc, char* argv[])
         else if (IS("-i")) {
             if ((argc - 1) <= 0)
                 usage("error: %s", "must specify the input audio device to use");
-            g_inputDevice = (uint32_t)::atoi(argv[++i]);
+            g_inputDevice = ::atoi(argv[++i]);
             p += 2;
         }
         else if (IS("-o")) {
             if ((argc - 1) <= 0)
                 usage("error: %s", "must specify the output audio device to use");
-            g_outputDevice = (uint32_t)::atoi(argv[++i]);
+            g_outputDevice = ::atoi(argv[++i]);
             p += 2;
         }
         else if (IS("-c")) {

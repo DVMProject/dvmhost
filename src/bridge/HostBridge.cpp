@@ -79,7 +79,7 @@ void audioCallback(ma_device* device, void* output, const void* input, ma_uint32
         int smpIdx = 0;
         short samples[MBE_SAMPLES_LENGTH];
         const uint8_t* pcm = (const uint8_t*)input;
-        for (int pcmIdx = 0; pcmIdx < pcmBytes; pcmIdx += 2) {
+        for (uint32_t pcmIdx = 0; pcmIdx < pcmBytes; pcmIdx += 2) {
             samples[smpIdx] = (short)((pcm[pcmIdx + 1] << 8) + pcm[pcmIdx + 0]);
             smpIdx++;
         }
@@ -93,7 +93,7 @@ void audioCallback(ma_device* device, void* output, const void* input, ma_uint32
         bridge->m_outputAudio.get(samples, MBE_SAMPLES_LENGTH);
         uint8_t* pcm = (uint8_t*)output;
         int pcmIdx = 0;
-        for (int smpIdx = 0; smpIdx < MBE_SAMPLES_LENGTH; smpIdx++) {
+        for (uint32_t smpIdx = 0; smpIdx < MBE_SAMPLES_LENGTH; smpIdx++) {
             pcm[pcmIdx + 0] = (uint8_t)(samples[smpIdx] & 0xFF);
             pcm[pcmIdx + 1] = (uint8_t)((samples[smpIdx] >> 8) & 0xFF);
             pcmIdx += 2;
@@ -204,6 +204,7 @@ HostBridge::HostBridge(const std::string& confFile) :
     m_frameLengthInBytes(0)
 #endif // defined(_WIN32)
 {
+#if defined(_WIN32)
     ambe_init_dec = nullptr;
     ambe_get_dec_mode = nullptr;
     ambe_voice_dec = nullptr;
@@ -211,7 +212,7 @@ HostBridge::HostBridge(const std::string& confFile) :
     ambe_init_enc = nullptr;
     ambe_get_enc_mode = nullptr;
     ambe_voice_enc = nullptr;
-
+#endif // defined(_WIN32)
     m_ambeBuffer = new uint8_t[27U];
     ::memset(m_ambeBuffer, 0x00U, 27U);
 
@@ -481,9 +482,6 @@ int HostBridge::run()
         delete m_encoder;
 
     delete m_mdcDecoder;
-
-    delete m_decoderState;
-    delete m_encoderState;
 
 #if defined(_WIN32)
     if (m_encoderState != nullptr)
@@ -959,7 +957,7 @@ void HostBridge::processUDPAudio()
 
         int smpIdx = 0;
         short samples[MBE_SAMPLES_LENGTH];
-        for (int pcmIdx = 0; pcmIdx < pcmLength; pcmIdx += 2) {
+        for (uint32_t pcmIdx = 0; pcmIdx < pcmLength; pcmIdx += 2) {
             samples[smpIdx] = (short)((pcm[pcmIdx + 1] << 8) + pcm[pcmIdx + 0]);
             smpIdx++;
         }
@@ -1189,9 +1187,9 @@ void HostBridge::decodeDMRAudioFrame(uint8_t* ambe, uint32_t srcId, uint32_t dst
     using namespace dmr;
     using namespace dmr::defines;
 
-    for (int n = 0; n < AMBE_PER_SLOT; n++) {
+    for (uint32_t n = 0; n < AMBE_PER_SLOT; n++) {
         uint8_t ambePartial[RAW_AMBE_LENGTH_BYTES];
-        for (int i = 0; i < RAW_AMBE_LENGTH_BYTES; i++)
+        for (uint32_t i = 0; i < RAW_AMBE_LENGTH_BYTES; i++)
             ambePartial[i] = ambe[i + (n * 9)];
 
         short samples[MBE_SAMPLES_LENGTH];
@@ -1224,6 +1222,8 @@ void HostBridge::decodeDMRAudioFrame(uint8_t* ambe, uint32_t srcId, uint32_t dst
                     else if (newSample < -32767)
                         sample = -32767;
                 }
+
+                samples[n] = sample;
             }
         }
 
@@ -1234,7 +1234,7 @@ void HostBridge::decodeDMRAudioFrame(uint8_t* ambe, uint32_t srcId, uint32_t dst
         if (m_udpAudio) {
             int pcmIdx = 0;
             uint8_t pcm[MBE_SAMPLES_LENGTH * 2U];
-            for (int smpIdx = 0; smpIdx < MBE_SAMPLES_LENGTH; smpIdx++) {
+            for (uint32_t smpIdx = 0; smpIdx < MBE_SAMPLES_LENGTH; smpIdx++) {
                 pcm[pcmIdx + 0] = (uint8_t)(samples[smpIdx] & 0xFF);
                 pcm[pcmIdx + 1] = (uint8_t)((samples[smpIdx] >> 8) & 0xFF);
                 pcmIdx += 2;
@@ -1380,7 +1380,7 @@ void HostBridge::encodeDMRAudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32_
 
     int smpIdx = 0;
     short samples[MBE_SAMPLES_LENGTH];
-    for (int pcmIdx = 0; pcmIdx < (MBE_SAMPLES_LENGTH * 2U); pcmIdx += 2) {
+    for (uint32_t pcmIdx = 0; pcmIdx < (MBE_SAMPLES_LENGTH * 2U); pcmIdx += 2) {
         samples[smpIdx] = (short)((pcm[pcmIdx + 1] << 8) + pcm[pcmIdx + 0]);
         smpIdx++;
     }
@@ -1399,6 +1399,8 @@ void HostBridge::encodeDMRAudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32_
                 else if (newSample < -32767)
                     sample = -32767;
             }
+
+            samples[n] = sample;
         }
     }
 
@@ -1673,6 +1675,17 @@ void HostBridge::processP25Network(uint8_t* buffer, uint32_t length)
                 decodeP25AudioFrame(m_netLDU2, srcId, dstId, 2U);
             }
             break;
+        
+        case DUID::HDU:
+        case DUID::PDU:
+        case DUID::TDU:
+        case DUID::TDULC:
+        case DUID::TSDU:
+        case DUID::VSELP1:
+        case DUID::VSELP2:
+        default:
+            // this makes GCC happy
+            break;
         }
 
         m_rxStreamId = m_network->getP25StreamId();
@@ -1752,6 +1765,8 @@ void HostBridge::decodeP25AudioFrame(uint8_t* ldu, uint32_t srcId, uint32_t dstI
                     else if (newSample < -32767)
                         sample = -32767;
                 }
+
+                samples[n] = sample;
             }
         }
 
@@ -1762,7 +1777,7 @@ void HostBridge::decodeP25AudioFrame(uint8_t* ldu, uint32_t srcId, uint32_t dstI
         if (m_udpAudio) {
             int pcmIdx = 0;
             uint8_t pcm[MBE_SAMPLES_LENGTH * 2U];
-            for (int smpIdx = 0; smpIdx < MBE_SAMPLES_LENGTH; smpIdx++) {
+            for (uint32_t smpIdx = 0; smpIdx < MBE_SAMPLES_LENGTH; smpIdx++) {
                 pcm[pcmIdx + 0] = (uint8_t)(samples[smpIdx] & 0xFF);
                 pcm[pcmIdx + 1] = (uint8_t)((samples[smpIdx] >> 8) & 0xFF);
                 pcmIdx += 2;
@@ -1815,7 +1830,7 @@ void HostBridge::encodeP25AudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32_
 
     int smpIdx = 0;
     short samples[MBE_SAMPLES_LENGTH];
-    for (int pcmIdx = 0; pcmIdx < (MBE_SAMPLES_LENGTH * 2U); pcmIdx += 2) {
+    for (uint32_t pcmIdx = 0; pcmIdx < (MBE_SAMPLES_LENGTH * 2U); pcmIdx += 2) {
         samples[smpIdx] = (short)((pcm[pcmIdx + 1] << 8) + pcm[pcmIdx + 0]);
         smpIdx++;
     }
@@ -1834,6 +1849,8 @@ void HostBridge::encodeP25AudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32_
                 else if (newSample < -32767)
                     sample = -32767;
             }
+
+            samples[n] = sample;
         }
     }
 
@@ -1967,7 +1984,7 @@ void HostBridge::generatePreambleTone()
     std::unique_ptr<short[]> __UNIQUE_sineSamples = std::make_unique<short[]>(frameCount);
     short* sineSamples = __UNIQUE_sineSamples.get();
     const uint8_t* pcm = (const uint8_t*)sine;
-    for (int pcmIdx = 0; pcmIdx < pcmBytes; pcmIdx += 2) {
+    for (uint32_t pcmIdx = 0; pcmIdx < pcmBytes; pcmIdx += 2) {
         sineSamples[smpIdx] = (short)((pcm[pcmIdx + 1] << 8) + pcm[pcmIdx + 0]);
         smpIdx++;
     }
@@ -2043,7 +2060,7 @@ void* HostBridge::threadAudioProcess(void* arg)
                     // perform maximum sample detection
                     float maxSample = 0.0f;
                     for (int i = 0; i < MBE_SAMPLES_LENGTH; i++) {
-                        float sampleValue = fabs(samples[i]);
+                        float sampleValue = fabs((float)samples[i]);
                         maxSample = fmax(maxSample, sampleValue);
                     }
 
@@ -2130,7 +2147,7 @@ void* HostBridge::threadAudioProcess(void* arg)
                         uint8_t* pcm = __pcm.get();
 
                         int pcmIdx = 0;
-                        for (int smpIdx = 0; smpIdx < MBE_SAMPLES_LENGTH; smpIdx++) {
+                        for (uint32_t smpIdx = 0; smpIdx < MBE_SAMPLES_LENGTH; smpIdx++) {
                             pcm[pcmIdx + 0] = (uint8_t)(samples[smpIdx] & 0xFF);
                             pcm[pcmIdx + 1] = (uint8_t)((samples[smpIdx] >> 8) & 0xFF);
                             pcmIdx += 2;
@@ -2271,7 +2288,7 @@ void* HostBridge::threadCallLockup(void* arg)
             uint32_t dropTimeout = (uint32_t)((temp / 1000ULL + 1ULL) * 2U);
 
             // if we've exceeded the audio drop timeout, then really drop the audio
-            if (bridge->m_dropTime.isRunning() && (bridge->m_dropTime.getTimer() >= dropTimeout) ||
+            if ((bridge->m_dropTime.isRunning() && (bridge->m_dropTime.getTimer() >= dropTimeout)) ||
                 (!bridge->m_dropTime.isRunning() && !bridge->m_audioDetect && bridge->m_callInProgress)) {
                 LogMessage(LOG_HOST, "%s, call end (S)", trafficType.c_str());
 

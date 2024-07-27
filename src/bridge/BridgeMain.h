@@ -41,9 +41,9 @@ extern bool g_killed;
 extern bool g_hideMessages;
 
 /** @brief Audio Input Device Index. */
-extern uint32_t g_inputDevice;
+extern int g_inputDevice;
 /** @brief Audio Output Device Index. */
-extern uint32_t g_outputDevice;
+extern int g_outputDevice;
 
 extern uint8_t* g_gitHashBytes;
 
