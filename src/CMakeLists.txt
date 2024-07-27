@@ -22,6 +22,13 @@ endif (COMPILE_WIN32)
 target_include_directories(common PRIVATE src src/common)
 
 #
+## vocoder
+#
+include(src/vocoder/CMakeLists.txt)
+add_library(vocoder STATIC ${vocoder_SRC} ${vocoder_INCLUDE})
+target_include_directories(vocoder PRIVATE src src/vocoder)
+
+#
 ## dvmhost
 #
 include(src/host/CMakeLists.txt)
@@ -89,3 +96,11 @@ include(src/remote/CMakeLists.txt)
 add_executable(dvmcmd ${common_INCLUDE} ${dvmcmd_SRC})
 target_link_libraries(dvmcmd PRIVATE common ${OPENSSL_LIBRARIES} asio::asio Threads::Threads)
 target_include_directories(dvmcmd PRIVATE ${OPENSSL_INCLUDE_DIR} src src/remote)
+
+#
+## dvmbridge
+#
+include(src/bridge/CMakeLists.txt)
+add_executable(dvmbridge ${common_INCLUDE} ${bridge_SRC})
+target_link_libraries(dvmbridge PRIVATE common vocoder ${OPENSSL_LIBRARIES} asio::asio Threads::Threads)
+target_include_directories(dvmbridge PRIVATE ${OPENSSL_INCLUDE_DIR} src src/host src/bridge)

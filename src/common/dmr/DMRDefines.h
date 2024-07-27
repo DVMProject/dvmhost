@@ -117,6 +117,7 @@ namespace dmr
         const uint32_t  DMR_PDU_UNCODED_LENGTH_BYTES = 24U;
 
         const uint32_t  MI_LENGTH_BYTES = 4U;           // This was guessed based on OTA data captures -- the message indicator seems to be the same length as a source/destination address
+        const uint32_t  RAW_AMBE_LENGTH_BYTES = 9U;
         /** @} */
 
         /** @name Thresholds */

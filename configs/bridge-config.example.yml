@@ -1,0 +1,133 @@
+#
+# Digital Voice Modem - Bridge
+#
+# @package DVM / Bridge
+#
+
+# Flag indicating whether the host will run as a background or foreground task.
+daemon: true
+
+#
+# Logging Configuration
+#
+#   Logging Levels:
+#     1 - Debug
+#     2 - Message
+#     3 - Informational
+#     4 - Warning
+#     5 - Error
+#     6 - Fatal
+#
+log:
+    # Console display logging level (used when in foreground).
+    displayLevel: 1
+    # File logging level.
+    fileLevel: 1
+    # Flag indicating file logs should be sent to syslog instead of a file.
+    useSyslog: false
+    # Full path for the directory to store the log files.
+    filePath: .
+    # Full path for the directory to store the activity log files.
+    activityFilePath: .
+    # Log filename prefix.
+    fileRoot: dvmbridge
+
+#
+# Network Configuration
+#
+network:
+    # Network Peer ID
+    id: 9000123
+    # Hostname/IP address of FNE master to connect to.
+    address: 127.0.0.1
+    # Port number to connect to.
+    port: 62031
+    # FNE access password.
+    password: RPT1234
+    
+    # Flag indicating whether or not host endpoint networking is encrypted.
+    encrypted: false
+    # AES-256 32-byte Preshared Key
+    #   (This field *must* be 32 hex bytes in length or 64 characters
+    #    0 - 9, A - F.)
+    presharedKey: "000102030405060708090A0B0C0D0E0F000102030405060708090A0B0C0D0E0F"
+
+    # Flag indicating whether or not verbose debug logging is enabled.
+    debug: false
+
+    # Enable PCM audio over UDP.
+    udpAudio: false
+    # Enable meta data such as dstId and srcId in the UDP data
+    udpMetaData: false
+    # PCM over UDP send port.
+    udpSendPort: 34001
+    # PCM over UDP send address destination.
+    udpSendAddress: "127.0.0.1"
+    # PCM over UDP receive port.
+    udpReceivePort: 32001
+    # PCM over UDP receive address.
+    udpReceiveAddress: "127.0.0.1"
+
+    # Source "Radio ID" for transmitted audio frames.
+    sourceId: 1234567
+    # Flag indicating the source "Radio ID" will be overridden from the detected
+    # MDC1200 pre- PTT ID.
+    overrideSourceIdFromMDC: false
+    # Flag indicating the source "Radio ID" will be overridden from the received
+    # UDP SRC ID.
+    overrideSourceIdFromUDP: false
+    # Talkgroup ID for transmitted/received audio frames.
+    destinationId: 1
+    # Slot for received/transmitted audio frames.
+    slot: 1
+
+system:
+    # Textual Name
+    identity: BRIDGE
+
+    # PCM audio gain for received (from digital network) audio frames.
+    #   - This is used to apply gain to the decoded IMBE/AMBE audio, post-decoding.
+    rxAudioGain: 1.0
+    # Vocoder audio gain for decoded (from digital network) audio frames.
+    #   - This is used to apply gain to the decoded IMBE/AMBE audio in the vocoder.
+    #   - (Not used when utilizing external USB vocoder!)
+    vocoderDecoderAudioGain: 3.0
+    # Flag indicating AGC should be used for frames received/decoded.
+    #   - This is used to apply automatic gain control to decoded IMBE/AMBE audio in the vocoder.
+    #   - (Not used when utilizing external USB vocoder!)
+    vocoderDecoderAutoGain: false
+
+    # PCM audio gain for transmitted (to digital network) audio frames.
+    #   - This is used to apply gain to the encoded IMBE/AMBE audio, pre-encoding.
+    txAudioGain: 1.0
+    # Vocoder audio gain for transmitted/encoded (to digital network) audio frames.
+    #   - This is used to apply gain to the encoded IMBE/AMBE audio in the vocoder.
+    #   - (Not used when utilizing external USB vocoder!)
+    vocoderEncoderAudioGain: 3.0
+
+    # Audio transmit mode (1 - DMR, 2 - P25).
+    txMode: 1
+
+    # Relative sample level for VOX to activate.
+    voxSampleLevel: 30.0
+    # Amount of time (ms) from loss of active VOX level to drop audio.
+    dropTimeMs: 180
+
+    # Enables detection of MDC1200 packets on the PCM side of the bridge.
+    #   (This is useful for pre-MDC to set the transmitting source ID.)
+    detectAnalogMDC1200: false
+
+    # Flag indicating whether the analog preamble leader is enabled.
+    #   (This enables a leader control tone before audio frames from the 
+    #    network are sent.)
+    preambleLeaderTone: false
+    # Frequency of preamble tone.
+    preambleTone: 2175
+    # Amount of time (ms) to transmit preamble tone.
+    preambleLength: 200
+
+    # Flag indicating whether a network grant demand packet will be sent before audio.
+    grantDemand: false
+
+    # Enable local audio over speakers.
+    localAudio: true
