@@ -77,6 +77,7 @@ namespace network
 
     const uint32_t  MSG_HDR_SIZE = 24U;
     const uint32_t  MSG_ANNC_GRP_AFFIL = 6U;
+    const uint32_t  MSG_ANNC_GRP_UNAFFIL = 3U;
     const uint32_t  MSG_ANNC_UNIT_REG = 3U;
     const uint32_t  DMR_PACKET_LENGTH = 55U;        // 20 byte header + DMR_FRAME_LENGTH_BYTES + 2 byte trailer
     const uint32_t  P25_LDU1_PACKET_LENGTH = 193U;  // 24 byte header + DFSI data + 1 byte frame type + 12 byte enc sync
@@ -210,6 +211,13 @@ namespace network
          */
         virtual bool announceGroupAffiliation(uint32_t srcId, uint32_t dstId);
         /**
+         * @brief Writes a group affiliation removal to the network.
+         * @param srcId Source Radio ID.
+         * @returns bool True, if group affiliation announcement was sent, otherwise false. 
+         */
+        virtual bool announceGroupAffiliationRemoval(uint32_t srcId);
+
+        /**
          * @brief Writes a unit registration to the network.
          * \code{.unparsed}
          *  Below is the representation of the data layout for the unit registration
@@ -231,12 +239,14 @@ namespace network
          * @returns bool True, if unit deregistration announcement was sent, otherwise false. 
          */
         virtual bool announceUnitDeregistration(uint32_t srcId);
+
         /**
          * @brief Writes a complete update of the peer affiliation list to the network.
          * @param affs Complete map of peer unit affiliations.
          * @returns bool True, if affiliation update announcement was sent, otherwise false. 
          */
         virtual bool announceAffiliationUpdate(const std::unordered_map<uint32_t, uint32_t> affs);
+
         /**
          * @brief Writes a complete update of the peer's voice channel list to the network.
          * @param peers List of voice channel peers.
