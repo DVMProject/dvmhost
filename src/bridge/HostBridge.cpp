@@ -176,6 +176,7 @@ HostBridge::HostBridge(const std::string& confFile) :
     m_ambeCount(0U),
     m_dmrSeqNo(0U),
     m_dmrN(0U),
+    m_rxP25LC(),
     m_netLDU1(nullptr),
     m_netLDU2(nullptr),
     m_p25SeqNo(0U),
@@ -598,6 +599,7 @@ int HostBridge::ambeDecode(const uint8_t* codeword, uint32_t codewordLength, sho
 
         // repack bits into 7-byte array
         packBitsToBytes(bits.get(), cw.get(), m_frameLengthInBytes, m_frameLengthInBits);
+        codewordLength = m_frameLengthInBytes;
     }
 
     if (codewordLength > m_frameLengthInBytes) {
@@ -873,8 +875,18 @@ bool HostBridge::createNetwork()
         LogInfo("    Debug: yes");
     }
 
+    bool dmr = false, p25 = false;
+    switch (m_txMode) {
+    case TX_MODE_DMR:
+        dmr = true;
+        break;
+    case TX_MODE_P25:
+        p25 = true;
+        break;
+    }
+
     // initialize networking
-    m_network = new PeerNetwork(address, port, local, id, password, true, debug, false, true, false, true, true, true, true, true, false);
+    m_network = new PeerNetwork(address, port, local, id, password, true, debug, dmr, p25, false, true, true, true, true, true, false);
 
     m_network->setMetadata(m_identity, 0U, 0U, 0.0F, 0.0F, 0, 0, 0, 0.0F, 0.0F, 0, "");
     m_network->setConventional(true);
@@ -957,6 +969,7 @@ void HostBridge::processUDPAudio()
         if (!m_audioDetect && !m_callInProgress) {
             m_audioDetect = true;
             if (m_txStreamId == 0U) {
+                m_txStreamId = 1U; // prevent further false starts -- this isn't the right way to handle this...
                 LogMessage(LOG_HOST, "%s, call start, srcId = %u, dstId = %u", UDP_CALL, m_udpSrcId, m_udpDstId);
                 if (m_grantDemand) {
                     switch (m_txMode)
@@ -1123,6 +1136,8 @@ void HostBridge::processDMRNetwork(uint8_t* buffer, uint32_t length)
 
             LogMessage(LOG_HOST, "DMR, call end, srcId = %u, dstId = %u, dur = %us", srcId, dstId, diff / 1000U);
             
+            m_rxDMRLC = lc::LC();
+            m_rxDMRPILC = lc::PrivacyLC();
             m_rxStartTime = 0U;
             m_rxStreamId = 0U;
             return;
@@ -1302,6 +1317,7 @@ void HostBridge::encodeDMRAudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32_
             dmrData.setData(data);
 
             m_network->writeDMR(dmrData, false);
+            m_txStreamId = m_network->getDMRStreamId(m_slot);
 
             m_dmrSeqNo++;
             delete[] data;
@@ -1347,6 +1363,7 @@ void HostBridge::encodeDMRAudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32_
         dmrData.setData(data);
 
         m_network->writeDMR(dmrData, false);
+        m_txStreamId = m_network->getDMRStreamId(m_slot);
 
         m_dmrSeqNo++;
         ::memset(m_ambeBuffer, 0x00U, 27U);
@@ -1445,7 +1462,27 @@ void HostBridge::processP25Network(uint8_t* buffer, uint32_t length)
     uint8_t lsd1 = buffer[20U];
     uint8_t lsd2 = buffer[21U];
 
-    if (lco == LCO::GROUP) {
+    lc::LC control;
+    data::LowSpeedData lsd;
+
+    control.setLCO(lco);
+    control.setSrcId(srcId);
+    control.setDstId(dstId);
+    control.setMFId(MFId);
+
+    if (!control.isStandardMFId()) {
+        control.setLCO(LCO::GROUP);
+    }
+    else {
+        if (control.getLCO() == LCO::GROUP_UPDT || control.getLCO() == LCO::RFSS_STS_BCAST) {
+            control.setLCO(LCO::GROUP);
+        }
+    }
+
+    lsd.setLSD1(lsd1);
+    lsd.setLSD2(lsd2);
+
+    if (control.getLCO() == LCO::GROUP) {
         if (srcId == 0)
             return;
 
@@ -1482,6 +1519,7 @@ void HostBridge::processP25Network(uint8_t* buffer, uint32_t length)
 
             LogMessage(LOG_HOST, "P25, call end, srcId = %u, dstId = %u, dur = %us", srcId, dstId, diff / 1000U);
 
+            m_rxP25LC = lc::LC();
             m_rxStartTime = 0U;
             m_rxStreamId = 0U;
             return;
@@ -1516,17 +1554,6 @@ void HostBridge::processP25Network(uint8_t* buffer, uint32_t length)
             m_ignoreCall = true;
             return;
         }
-
-        lc::LC control;
-        data::LowSpeedData lsd;
-
-        control.setLCO(lco);
-        control.setSrcId(srcId);
-        control.setDstId(dstId);
-        control.setMFId(MFId);
-
-        lsd.setLSD1(lsd1);
-        lsd.setLSD2(lsd2);
 
         int count = 0;
         switch (duid)
@@ -1996,6 +2023,7 @@ void* HostBridge::threadAudioProcess(void* arg)
                     if (maxSample > sampleLevel) {
                         bridge->m_audioDetect = true;
                         if (bridge->m_txStreamId == 0U) {
+                            bridge->m_txStreamId = 1U; // prevent further false starts -- this isn't the right way to handle this...
                             LogMessage(LOG_HOST, "%s, call start, srcId = %u, dstId = %u", trafficType.c_str(), srcId, dstId);
 
                             if (bridge->m_grantDemand) {
@@ -2213,48 +2241,47 @@ void* HostBridge::threadCallLockup(void* arg)
             uint32_t dropTimeout = (uint32_t)((temp / 1000ULL + 1ULL) * 2U);
 
             // if we've exceeded the audio drop timeout, then really drop the audio
-            if (bridge->m_dropTime.isRunning() && (bridge->m_dropTime.getTimer() >= dropTimeout)) {
-                if (bridge->m_audioDetect) {
-                    LogMessage(LOG_HOST, "%s, call end (S)", trafficType.c_str());
+            if (bridge->m_dropTime.isRunning() && (bridge->m_dropTime.getTimer() >= dropTimeout) ||
+                (!bridge->m_dropTime.isRunning() && !bridge->m_audioDetect && bridge->m_callInProgress)) {
+                LogMessage(LOG_HOST, "%s, call end (S)", trafficType.c_str());
 
-                    bridge->m_audioDetect = false;
-                    bridge->m_dropTime.stop();
+                bridge->m_audioDetect = false;
+                bridge->m_dropTime.stop();
 
-                    if (!bridge->m_callInProgress) {
-                        switch (bridge->m_txMode) {
-                        case TX_MODE_DMR:
-                        {
-                            dmr::data::NetData data = dmr::data::NetData();
-                            data.setDataType(dmr::defines::DataType::TERMINATOR_WITH_LC);
-                            data.setDstId(dstId);
-                            data.setSrcId(srcId);
+                if (!bridge->m_callInProgress) {
+                    switch (bridge->m_txMode) {
+                    case TX_MODE_DMR:
+                    {
+                        dmr::data::NetData data = dmr::data::NetData();
+                        data.setDataType(dmr::defines::DataType::TERMINATOR_WITH_LC);
+                        data.setDstId(dstId);
+                        data.setSrcId(srcId);
 
-                            bridge->m_network->writeDMRTerminator(data, &bridge->m_dmrSeqNo, &bridge->m_dmrN, bridge->m_dmrEmbeddedData);
-                        }
-                        break;
-                        case TX_MODE_P25:
-                        {
-                            p25::lc::LC lc = p25::lc::LC();
-                            lc.setLCO(p25::defines::LCO::GROUP);
-                            lc.setDstId(dstId);
-                            lc.setSrcId(srcId);
-
-                            p25::data::LowSpeedData lsd = p25::data::LowSpeedData();
-
-                            uint8_t controlByte = 0x00U;
-                            bridge->m_network->writeP25TDU(lc, lsd, controlByte);
-                        }
-                        break;
-                        }
+                        bridge->m_network->writeDMRTerminator(data, &bridge->m_dmrSeqNo, &bridge->m_dmrN, bridge->m_dmrEmbeddedData);
                     }
+                    break;
+                    case TX_MODE_P25:
+                    {
+                        p25::lc::LC lc = p25::lc::LC();
+                        lc.setLCO(p25::defines::LCO::GROUP);
+                        lc.setDstId(dstId);
+                        lc.setSrcId(srcId);
 
-                    bridge->m_srcIdOverride = 0;
-                    bridge->m_txStreamId = 0;
+                        p25::data::LowSpeedData lsd = p25::data::LowSpeedData();
 
-                    bridge->m_udpSrcId = 0;
-                    bridge->m_udpDstId = 0;
-                    bridge->m_trafficFromUDP = false;
+                        uint8_t controlByte = 0x00U;
+                        bridge->m_network->writeP25TDU(lc, lsd, controlByte);
+                    }
+                    break;
+                    }
                 }
+
+                bridge->m_srcIdOverride = 0;
+                bridge->m_txStreamId = 0;
+
+                bridge->m_udpSrcId = 0;
+                bridge->m_udpDstId = 0;
+                bridge->m_trafficFromUDP = false;
             }
 
             Thread::sleep(5U);

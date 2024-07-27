@@ -190,6 +190,7 @@ private:
     uint32_t m_dmrSeqNo;
     uint8_t m_dmrN;
 
+    p25::lc::LC m_rxP25LC;
     uint8_t* m_netLDU1;
     uint8_t* m_netLDU2;
     uint32_t m_p25SeqNo;
