@@ -334,6 +334,10 @@ if (NOT TARGET tarball)
             COMMAND if [ -e dvm-firmware_due.bin ]\; then cp -v dvm-firmware_due.bin ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
             COMMAND if [ -e dvm-firmware-hs_f1.elf ]\; then cp -v dvm-firmware-hs_f1.elf ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
             COMMAND if [ -e dvm-firmware-hs_f1.bin ]\; then cp -v dvm-firmware-hs_f1.bin ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+            COMMAND if [ -e DVM-V24-stm32f103.elf ]\; then cp -v DVM-V24-stm32f103.elf ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+            COMMAND if [ -e DVM-V24-stm32f103.bin ]\; then cp -v DVM-V24-stm32f103.bin ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+            COMMAND if [ -e DVM-V24-stm32f103.hex ]\; then cp -v DVM-V24-stm32f103.hex ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+            COMMAND if [ -e DVM-V24-stm32f103.map ]\; then cp -v DVM-V24-stm32f103.map ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
             COMMAND cd ${CMAKE_INSTALL_PREFIX_TARBALL} && tar czvf ../dvmhost_${CPACK_DEBIAN_PACKAGE_VERSION}_${ARCH}.tar.gz *
             COMMAND rm -rf ${CMAKE_INSTALL_PREFIX_TARBALL})
     else()
@@ -362,6 +366,10 @@ if (NOT TARGET tarball)
             COMMAND if [ -e dvm-firmware_due.bin ]\; then cp -v dvm-firmware_due.bin ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
             COMMAND if [ -e dvm-firmware-hs_f1.elf ]\; then cp -v dvm-firmware-hs_f1.elf ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
             COMMAND if [ -e dvm-firmware-hs_f1.bin ]\; then cp -v dvm-firmware-hs_f1.bin ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+            COMMAND if [ -e DVM-V24-stm32f103.elf ]\; then cp -v DVM-V24-stm32f103.elf ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+            COMMAND if [ -e DVM-V24-stm32f103.bin ]\; then cp -v DVM-V24-stm32f103.bin ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+            COMMAND if [ -e DVM-V24-stm32f103.hex ]\; then cp -v DVM-V24-stm32f103.hex ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+            COMMAND if [ -e DVM-V24-stm32f103.map ]\; then cp -v DVM-V24-stm32f103.map ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
             COMMAND cd ${CMAKE_INSTALL_PREFIX_TARBALL} && tar czvf ../dvmhost_${CPACK_DEBIAN_PACKAGE_VERSION}_${ARCH}.tar.gz *
             COMMAND rm -rf ${CMAKE_INSTALL_PREFIX_TARBALL})
     endif (ENABLE_TUI_SUPPORT AND (NOT DISABLE_MONITOR))
@@ -409,6 +417,10 @@ add_custom_target(old_install
     COMMAND if [ -e dvm-firmware_due.bin ]\; then install -m 644 dvm-firmware_due.bin ${CMAKE_LEGACY_INSTALL_PREFIX}/fw/dvm-firmware_due.bin\; fi
     COMMAND if [ -e dvm-firmware-hs_f1.elf ]\; then install -m 644 dvm-firmware-hs_f1.elf ${CMAKE_LEGACY_INSTALL_PREFIX}/fw/dvm-firmware-hs_f1.elf\; fi
     COMMAND if [ -e dvm-firmware-hs_f1.bin ]\; then install -m 644 dvm-firmware-hs_f1.bin ${CMAKE_LEGACY_INSTALL_PREFIX}/fw/dvm-firmware-hs_f1.bin\; fi)
+    COMMAND if [ -e DVM-V24-stm32f103.elf ]\; then cp -v DVM-V24-stm32f103.elf ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+    COMMAND if [ -e DVM-V24-stm32f103.bin ]\; then cp -v DVM-V24-stm32f103.bin ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+    COMMAND if [ -e DVM-V24-stm32f103.hex ]\; then cp -v DVM-V24-stm32f103.hex ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+    COMMAND if [ -e DVM-V24-stm32f103.map ]\; then cp -v DVM-V24-stm32f103.map ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
 
 #
 # Custom make target to perform non-standard legacy service install. This is meant
