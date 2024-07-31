@@ -4,3 +4,6 @@
 [submodule "src/fw/hotspot"]
 	path = src/fw/hotspot
 	url = https://github.com/DVMProject/dvmfirmware-hs.git
+[submodule "src/fw/v24"]
+	path = src/fw/v24
+	url = https://github.com/dvmproject/dvmv24.git
