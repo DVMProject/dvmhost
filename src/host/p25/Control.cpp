@@ -557,9 +557,10 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
             errs += Utils::countBits8(syncBytes[i] ^ P25_SYNC_BYTES[i]);
 
         if (errs >= MAX_SYNC_BYTES_ERRS) {
+/*
             LogWarning(LOG_RF, "P25, possible sync word rejected, errs = %u, sync word = %02X %02X %02X %02X %02X %02X", errs,
                 syncBytes[0U], syncBytes[1U], syncBytes[2U], syncBytes[3U], syncBytes[4U], syncBytes[5U]);
-
+*/
             return false;
         }
         else {
