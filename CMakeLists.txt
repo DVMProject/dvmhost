@@ -448,11 +448,11 @@ add_custom_target(old_install-service
 # Firmware compilation
 #
 add_custom_target(dvmfw
-    DEPENDS dvmfw-stm32f4 dvmfw-stm32f4-pog dvmfw-stm32f4-eda dvmfw-stm32f4-dvmv1 dvmfw-stm32fx dvm-v24
+    DEPENDS dvmfw-stm32f4 dvmfw-stm32f4-pog dvmfw-stm32f4-eda dvmfw-stm32f4-dvmv1 dvmfw-stm32fx dvmfw-v24
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/src/fw/modem
 )
 add_custom_target(dvmfw-clean
-    DEPENDS dvmfw-stm32f4-clean dvmfw-stm32fx-clean dvm-v24-clean
+    DEPENDS dvmfw-stm32f4-clean dvmfw-stm32fx-clean dvmfw-v24-clean
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/src/fw/modem
 )
 
@@ -511,6 +511,7 @@ add_custom_target(dvmfw-stm32fx-clean
     COMMAND rm -f ${CMAKE_CURRENT_BINARY_DIR}/dvm-firmware*.bin
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/src/fw/hotspot
 )
+
 add_custom_target(dvmfw-v24
     COMMAND make -f Makefile
     COMMAND cp DVM-V24-stm32f103.elf ${CMAKE_CURRENT_BINARY_DIR}
