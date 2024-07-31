@@ -195,11 +195,11 @@ bool RadioIdLookup::load()
             }
 
             m_table[id] = RadioId(radioEnabled, false, alias, ipAddress);
-            if (alias != "") {
+            /*if (alias != "") {
                 LogDebug(LOG_HOST, "Loaded RID %u (%s) into RID lookup table", id, parsed[2].c_str());
             } else {
                 LogDebug(LOG_HOST, "Loaded RID %u into RID lookup table", id);
-            }
+            }*/
         }
     }
 
