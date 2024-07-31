@@ -514,13 +514,12 @@ add_custom_target(dvmfw-stm32fx-clean
 
 add_custom_target(dvmfw-v24
     COMMAND make -f Makefile
-    COMMAND cp DVM-V24-stm32f103.elf ${CMAKE_CURRENT_BINARY_DIR}
-    COMMAND cp DVM-V24-stm32f103.bin ${CMAKE_CURRENT_BINARY_DIR}
-    COMMAND cp DVM-V24-stm32f103.hex ${CMAKE_CURRENT_BINARY_DIR}
-    COMMAND cp DVM-V24-stm32f103.map ${CMAKE_CURRENT_BINARY_DIR}
+    COMMAND cp build/DVM-V24-stm32f103.elf ${CMAKE_CURRENT_BINARY_DIR}
+    COMMAND cp build/DVM-V24-stm32f103.bin ${CMAKE_CURRENT_BINARY_DIR}
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/src/fw/v24/fw
 )
 add_custom_target(dvmfw-v24-clean
+    COMMAND make -f Makefile clean
     COMMAND rm -rf ${CMAKE_CURRENT_SOURCE_DIR}/src/fw/v24/fw/Build
     COMMAND rm -f ${CMAKE_CURRENT_BINARY_DIR}/DVM-V24*
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/src/fw/v24/fw
