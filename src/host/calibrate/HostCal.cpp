@@ -242,6 +242,65 @@ int HostCal::run(int argc, char **argv)
             }
             break;
 
+        case 'X':
+        {
+            char value[5] = { '\0' };
+            ::fprintf(stdout, "> FDMA Preambles [%u] ? ", m_modem->m_fdmaPreamble);
+            ::fflush(stdout);
+
+            m_console.getLine(value, 5, 0);
+            if (value[0] != '\0') {
+                // bryanb: appease the compiler...
+                uint32_t fdmaPreamble = m_modem->m_fdmaPreamble;
+                sscanf(value, "%u", &fdmaPreamble);
+
+                m_modem->m_fdmaPreamble = (uint8_t)fdmaPreamble;
+
+                writeConfig();
+            }
+        }
+        break;
+
+        case 'W':
+        {
+            char value[5] = { '\0' };
+            ::fprintf(stdout, "> DMR Rx Delay [%u] ? ", m_modem->m_dmrRxDelay);
+            ::fflush(stdout);
+
+            m_console.getLine(value, 5, 0);
+            if (value[0] != '\0') {
+                // bryanb: appease the compiler...
+                uint32_t dmrRxDelay = m_modem->m_dmrRxDelay;
+                sscanf(value, "%u", &dmrRxDelay);
+
+                m_modem->m_dmrRxDelay = (uint8_t)dmrRxDelay;
+
+                writeConfig();
+            }
+        }
+        break;
+
+        case 'w':
+        {
+            if (!m_isHotspot) {
+                char value[5] = { '\0' };
+                ::fprintf(stdout, "> P25 Correlation Count [%u] ? ", m_modem->m_p25CorrCount);
+                ::fflush(stdout);
+
+                m_console.getLine(value, 5, 0);
+                if (value[0] != '\0') {
+                    // bryanb: appease the compiler...
+                    uint32_t p25CorrCount = m_modem->m_p25CorrCount;
+                    sscanf(value, "%u", &p25CorrCount);
+
+                    m_modem->m_p25CorrCount = (uint8_t)p25CorrCount;
+
+                    writeConfig();
+                }
+            }
+        }
+        break;
+
         case 'F':
         {
             char value[10] = { '\0' };
