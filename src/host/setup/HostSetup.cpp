@@ -1091,7 +1091,7 @@ void HostSetup::processP25BER(const uint8_t* buffer)
     data::DataHeader dataHeader = data::DataHeader();
 
     if (duid == DUID::HDU) {
-        timerStart();
+        //timerStart();
 
         bool ret = lc.decodeHDU(buffer);
         if (!ret) {
