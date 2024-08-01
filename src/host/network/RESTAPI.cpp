@@ -1779,6 +1779,26 @@ void RESTAPI::restAPI_PutP25RID(const HTTPPayload& request, HTTPPayload& reply, 
     else if (::strtolower(command) == RID_CMD_UNINHIBIT) {
         m_p25->control()->writeRF_TSDU_Ext_Func(ExtendedFunctions::UNINHIBIT, WUID_FNE, dstId);
     }
+    else if (::strtolower(command) == RID_CMD_DYN_REGRP) {
+        // validate source ID is a integer within the JSON blob
+        if (!req["tgId"].is<uint32_t>()) {
+            errorPayload(reply, "talkgroup ID was not valid");
+            return;
+        }
+
+        uint32_t tgId = req["tgId"].get<uint32_t>();
+
+        m_p25->control()->writeRF_TSDU_Ext_Func(ExtendedFunctions::DYN_REGRP_REQ, tgId, dstId);
+    }
+    else if (::strtolower(command) == RID_CMD_DYN_REGRP_CANCEL) {
+        m_p25->control()->writeRF_TSDU_Ext_Func(ExtendedFunctions::DYN_REGRP_CANCEL, 0U, dstId);
+    }
+    else if (::strtolower(command) == RID_CMD_DYN_REGRP_LOCK) {
+        m_p25->control()->writeRF_TSDU_Ext_Func(ExtendedFunctions::DYN_REGRP_LOCK, 0U, dstId);
+    }
+    else if (::strtolower(command) == RID_CMD_DYN_REGRP_UNLOCK) {
+        m_p25->control()->writeRF_TSDU_Ext_Func(ExtendedFunctions::DYN_REGRP_UNLOCK, 0U, dstId);
+    }
     else if (::strtolower(command) == RID_CMD_GAQ) {
         m_p25->control()->writeRF_TSDU_Grp_Aff_Q(dstId);
     }

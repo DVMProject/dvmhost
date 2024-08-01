@@ -312,7 +312,17 @@ namespace p25
                 INHIBIT = 0x007FU,                      //! Radio Inhibit
                 CHECK_ACK = 0x0080U,                    //! Radio Check Ack
                 UNINHIBIT_ACK = 0x00FEU,                //! Radio Uninhibit Ack
-                INHIBIT_ACK = 0x00FFU                   //! Radio Inhibit Ack
+                INHIBIT_ACK = 0x00FFU,                  //! Radio Inhibit Ack
+
+                DYN_REGRP_REQ = 0x0200U,                //! MFID $90 (Motorola) Dynamic Regroup IR
+                DYN_REGRP_CANCEL = 0x0201U,             //! MFID $90 (Motorola) Dynamic Regroup IR Cancellation
+                DYN_REGRP_LOCK = 0x0202U,               //! MFID $90 (Motorola) Lock Selector
+                DYN_REGRP_UNLOCK = 0x0203U,             //! MFID $90 (Motorola) Unlock Selector
+
+                DYN_REGRP_REQ_ACK = 0x0280U,            //! MFID $90 (Motorola) Dynamic Regroup IR Ack
+                DYN_REGRP_CANCEL_ACK = 0x0281U,         //! MFID $90 (Motorola) Dynamic Regroup IR Cancellation Ack
+                DYN_REGRP_LOCK_ACK = 0x0282U,           //! MFID $90 (Motorola) Lock Selector Ack
+                DYN_REGRP_UNLOCK_ACK = 0x0283U,         //! MFID $90 (Motorola) Unlock Selector Ack
             };
         }
 

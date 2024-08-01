@@ -534,8 +534,13 @@ void TagP25Data::write_TSDU_Ext_Func(uint32_t peerId, uint32_t func, uint32_t ar
     iosp->setSrcId(arg);
     iosp->setDstId(dstId);
 
-    LogMessage(LOG_NET, P25_TSDU_STR ", %s, op = $%02X, arg = %u, tgt = %u",
-        iosp->toString().c_str(), iosp->getExtendedFunction(), iosp->getSrcId(), iosp->getDstId());
+    // class $02 is Motorola -- set the MFID properly
+    if ((func >> 8) == 0x02U) {
+        iosp->setMFId(MFG_MOT);
+    }
+
+    LogMessage(LOG_NET, P25_TSDU_STR ", %s, mfId = $%02X, op = $%02X, arg = %u, tgt = %u",
+        iosp->toString().c_str(), iosp->getMFId(), iosp->getExtendedFunction(), iosp->getSrcId(), iosp->getDstId());
 
     write_TSDU(peerId, iosp.get());
 }
