@@ -674,6 +674,10 @@ int HostCal::run(int argc, char **argv)
         case '`':
             printStatus();
             break;
+        case '!':
+            writeBootload();
+            end = true;
+            break;
         case 'V':
             ::LogInfo(__PROG_NAME__ " %s (built %s)", __VER__, __BUILD__);
             ::LogInfo("Copyright (c) 2017-2024 Bryan Biedenkapp, N2PLL and DVMProject (https://github.com/dvmproject) Authors.");
@@ -747,6 +751,7 @@ void HostCal::displayHelp()
     LogMessage(LOG_CAL, "General Commands:");
     LogMessage(LOG_CAL, "    <space>  Toggle transmit");
     LogMessage(LOG_CAL, "    `        Display current settings and operation mode");
+    LogMessage(LOG_CAL, "    !        Restart into Bootloader Mode (wipes configuration area!)");
     LogMessage(LOG_CAL, "    V        Display version of host");
     LogMessage(LOG_CAL, "    v        Display version of firmware");
     LogMessage(LOG_CAL, "    H/h      Display help");

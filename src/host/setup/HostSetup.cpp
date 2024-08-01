@@ -139,7 +139,9 @@ HostSetup::HostSetup(const std::string& confFile) :
     m_timeout(300U),
     m_timer(0U),
     m_updateConfigFromModem(false),
-    m_hasFetchedStatus(false)
+    m_hasFetchedStatus(false),
+    m_requestedStatus(false),
+    m_reqBootload(false)
 {
     /* stub */
 }
@@ -1985,6 +1987,10 @@ bool HostSetup::writeFlash()
         buffer[48U] = m_modem->m_rssiFinePot;
     }
 
+    buffer[100U] = 0x00U;
+    if (m_reqBootload)
+        buffer[100U] |= 0x20U;
+
     // software signature
     std::string software;
     software.append(__NETVER__ " (built " __BUILD__ ")");
@@ -2010,6 +2016,24 @@ bool HostSetup::writeFlash()
 
     m_modem->clock(0U);
     return true;
+}
+
+/* */
+
+void HostSetup::writeBootload()
+{
+    m_reqBootload = true;
+    if (writeFlash()) {
+        uint8_t buffer[4U];
+        ::memset(buffer, 0x00U, 4U);
+
+        buffer[0U] = DVM_SHORT_FRAME_START;
+        buffer[1U] = 4U;
+        buffer[2U] = CMD_RESET_MCU;
+
+        m_modem->write(buffer, 4U);
+        return;
+    }
 }
 
 /* Helper to clock the calibration BER timer. */
