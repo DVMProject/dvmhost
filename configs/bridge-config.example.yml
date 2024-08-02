@@ -109,7 +109,7 @@ system:
     txMode: 1
 
     # Relative sample level for VOX to activate.
-    voxSampleLevel: 30.0
+    voxSampleLevel: 80.0
     # Amount of time (ms) from loss of active VOX level to drop audio.
     dropTimeMs: 180
 
@@ -125,6 +125,9 @@ system:
     preambleTone: 2175
     # Amount of time (ms) to transmit preamble tone.
     preambleLength: 200
+
+    # Flag indicating the detected VOX sample level should be dumped to the log (useful for setting VOX levels).
+    dumpSampleLevel: false
 
     # Flag indicating whether a network grant demand packet will be sent before audio.
     grantDemand: false

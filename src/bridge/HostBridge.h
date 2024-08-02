@@ -207,6 +207,10 @@ private:
     uint32_t m_rxStreamId;
     uint32_t m_txStreamId;
 
+    uint8_t m_detectedSampleCnt;
+    bool m_dumpSampleLevel;
+
+    bool m_running;
     bool m_debug;
 
     static std::mutex m_audioMutex;

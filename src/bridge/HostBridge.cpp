@@ -50,7 +50,7 @@ using namespace network::udp;
 
 const int SAMPLE_RATE = 8000;
 const int BITS_PER_SECOND = 16;
-const int NUMBER_OF_BUFFERS = 27;
+const int NUMBER_OF_BUFFERS = 32;
 
 #define LOCAL_CALL "Local Traffic"
 #define UDP_CALL "UDP Traffic"
@@ -70,6 +70,9 @@ std::mutex HostBridge::m_audioMutex;
 void audioCallback(ma_device* device, void* output, const void* input, ma_uint32 frameCount)
 {
     HostBridge* bridge = (HostBridge*)device->pUserData;
+    if (!bridge->m_running)
+        return;
+
     ma_uint32 pcmBytes = frameCount * ma_get_bytes_per_frame(device->capture.format, device->capture.channels);
 
     // capture input audio
@@ -107,6 +110,8 @@ void mdcPacketDetected(int frameCount, mdc_u8_t op, mdc_u8_t arg, mdc_u16_t unit
     mdc_u8_t extra0, mdc_u8_t extra1, mdc_u8_t extra2, mdc_u8_t extra3, void* context)
 {
     HostBridge* bridge = (HostBridge*)context;
+    if (!bridge->m_running)
+        return;
 
     if (op == OP_PTT_ID && bridge->m_overrideSrcIdFromMDC) {
         // HACK: nasty bullshit to convert MDC unitID to decimal
@@ -191,6 +196,9 @@ HostBridge::HostBridge(const std::string& confFile) :
     m_rxStartTime(0U),
     m_rxStreamId(0U),
     m_txStreamId(0U),
+    m_detectedSampleCnt(0U),
+    m_dumpSampleLevel(false),
+    m_running(false),
     m_debug(false)
 #if defined(_WIN32)
     ,
@@ -309,6 +317,11 @@ int HostBridge::run()
     if (!ret)
         return EXIT_FAILURE;
 
+    if (!m_localAudio && !m_udpAudio) {
+        ::LogError(LOG_HOST, "Must at least local audio or UDP audio!");
+        return EXIT_FAILURE;
+    }
+
     if (m_localAudio) {
         if (g_inputDevice == -1) {
             ::LogError(LOG_HOST, "Cannot have local audio and no specified input audio device.");
@@ -328,48 +341,55 @@ int HostBridge::run()
     if (!ret)
         return EXIT_FAILURE;
 
-    // initialize audio devices
-    if (ma_context_init(NULL, 0, NULL, &m_maContext) != MA_SUCCESS) {
-        ::LogError(LOG_HOST, "Failed to initialize audio context.");
-        return EXIT_FAILURE;
-    }
+    ma_result result;
+    if (m_localAudio) {
+        // initialize audio devices
+        if (ma_context_init(NULL, 0, NULL, &m_maContext) != MA_SUCCESS) {
+            ::LogError(LOG_HOST, "Failed to initialize audio context.");
+            return EXIT_FAILURE;
+        }
 
-    ma_uint32 playbackDeviceCount, captureDeviceCount;
-    ma_result result = ma_context_get_devices(&m_maContext, &m_maPlaybackDevices, &playbackDeviceCount, &m_maCaptureDevices, &captureDeviceCount);
-    if (result != MA_SUCCESS) {
-        ::LogError(LOG_HOST, "Failed to retrieve audio device information.");
-        return EXIT_FAILURE;
-    }
+        ma_uint32 playbackDeviceCount, captureDeviceCount;
+        result = ma_context_get_devices(&m_maContext, &m_maPlaybackDevices, &playbackDeviceCount, &m_maCaptureDevices, &captureDeviceCount);
+        if (result != MA_SUCCESS) {
+            ::LogError(LOG_HOST, "Failed to retrieve audio device information.");
+            return EXIT_FAILURE;
+        }
 
-    // configure audio devices
-    m_maDeviceConfig = ma_device_config_init(ma_device_type_duplex);
-    m_maDeviceConfig.sampleRate = SAMPLE_RATE;
+        LogInfo("Audio Parameters");
+        LogInfo("    Input Device: %s", m_maCaptureDevices[g_inputDevice].name);
+        LogInfo("    Output Device: %s", m_maPlaybackDevices[g_outputDevice].name);
 
-    m_maDeviceConfig.capture.pDeviceID = &m_maCaptureDevices[g_inputDevice].id;
-    m_maDeviceConfig.capture.format = ma_format_s16;
-    m_maDeviceConfig.capture.channels = 1;
-    m_maDeviceConfig.capture.shareMode = ma_share_mode_shared;
+        // configure audio devices
+        m_maDeviceConfig = ma_device_config_init(ma_device_type_duplex);
+        m_maDeviceConfig.sampleRate = SAMPLE_RATE;
 
-    m_maDeviceConfig.playback.pDeviceID = &m_maPlaybackDevices[g_outputDevice].id;
-    m_maDeviceConfig.playback.format = ma_format_s16;
-    m_maDeviceConfig.playback.channels = 1;
-    
-    m_maDeviceConfig.periodSizeInFrames = MBE_SAMPLES_LENGTH;
-    m_maDeviceConfig.dataCallback = audioCallback;
-    m_maDeviceConfig.pUserData = this;
+        m_maDeviceConfig.capture.pDeviceID = &m_maCaptureDevices[g_inputDevice].id;
+        m_maDeviceConfig.capture.format = ma_format_s16;
+        m_maDeviceConfig.capture.channels = 1;
+        m_maDeviceConfig.capture.shareMode = ma_share_mode_shared;
 
-    result = ma_device_init(NULL, &m_maDeviceConfig, &m_maDevice);
-    if (result != MA_SUCCESS) {
-        ma_context_uninit(&m_maContext);
-        return EXIT_FAILURE;
-    }
+        m_maDeviceConfig.playback.pDeviceID = &m_maPlaybackDevices[g_outputDevice].id;
+        m_maDeviceConfig.playback.format = ma_format_s16;
+        m_maDeviceConfig.playback.channels = 1;
 
-    // configure tone generator for preamble
-    m_maSineWaveConfig = ma_waveform_config_init(m_maDevice.playback.format, m_maDevice.playback.channels, m_maDevice.sampleRate, ma_waveform_type_sine, 0.2, m_preambleTone);
-    result = ma_waveform_init(&m_maSineWaveConfig, &m_maSineWaveform);
-    if (result != MA_SUCCESS) {
-        ma_context_uninit(&m_maContext);
-        return EXIT_FAILURE;
+        m_maDeviceConfig.periodSizeInFrames = MBE_SAMPLES_LENGTH;
+        m_maDeviceConfig.dataCallback = audioCallback;
+        m_maDeviceConfig.pUserData = this;
+
+        result = ma_device_init(NULL, &m_maDeviceConfig, &m_maDevice);
+        if (result != MA_SUCCESS) {
+            ma_context_uninit(&m_maContext);
+            return EXIT_FAILURE;
+        }
+
+        // configure tone generator for preamble
+        m_maSineWaveConfig = ma_waveform_config_init(m_maDevice.playback.format, m_maDevice.playback.channels, m_maDevice.sampleRate, ma_waveform_type_sine, 0.2, m_preambleTone);
+        result = ma_waveform_init(&m_maSineWaveConfig, &m_maSineWaveform);
+        if (result != MA_SUCCESS) {
+            ma_context_uninit(&m_maContext);
+            return EXIT_FAILURE;
+        }
     }
 
     m_mdcDecoder = mdc_decoder_new(SAMPLE_RATE);
@@ -423,22 +443,27 @@ int HostBridge::run()
     ** Initialize Threads
     */
 
-    if (!Thread::runAsThread(this, threadAudioProcess))
-        return EXIT_FAILURE;
     if (!Thread::runAsThread(this, threadNetworkProcess))
         return EXIT_FAILURE;
     if (!Thread::runAsThread(this, threadCallLockup))
         return EXIT_FAILURE;
 
-    // start audio device
-    result = ma_device_start(&m_maDevice);
-    if (result != MA_SUCCESS) {
-        ma_device_uninit(&m_maDevice);
-        ma_context_uninit(&m_maContext);
-        return EXIT_FAILURE;
+    if (m_localAudio) {
+        if (!Thread::runAsThread(this, threadAudioProcess))
+            return EXIT_FAILURE;
+
+        // start audio device
+        result = ma_device_start(&m_maDevice);
+        if (result != MA_SUCCESS) {
+            ma_device_uninit(&m_maDevice);
+            ma_context_uninit(&m_maContext);
+            return EXIT_FAILURE;
+        }
     }
 
     ::LogInfoEx(LOG_HOST, "Bridge is up and running");
+
+    m_running = true;
 
     StopWatch stopWatch;
     stopWatch.start();
@@ -758,6 +783,8 @@ bool HostBridge::readParams()
     m_preambleTone = (uint16_t)systemConf["preambleTone"].as<uint32_t>(2175);
     m_preambleLength = (uint16_t)systemConf["preambleLength"].as<uint32_t>(200);
 
+    m_dumpSampleLevel = systemConf["dumpSampleLevel"].as<bool>(false);
+
     m_grantDemand = systemConf["grantDemand"].as<bool>(false);
 
     m_localAudio = systemConf["localAudio"].as<bool>(true);
@@ -775,6 +802,8 @@ bool HostBridge::readParams()
     LogInfo("    Generate Preamble Tone: %s", m_preambleLeaderTone ? "yes" : "no");
     LogInfo("    Preamble Tone: %uhz", m_preambleTone);
     LogInfo("    Preamble Tone Length: %ums", m_preambleLength);
+    LogInfo("    Dump Sample Levels: %s", m_dumpSampleLevel ? "yes" : "no");
+    LogInfo("    Grant Demands: %s", m_grantDemand ? "yes" : "no");
     LogInfo("    Local Audio: %s", m_localAudio ? "yes" : "no");
 
     return true;
@@ -1210,7 +1239,7 @@ void HostBridge::decodeDMRAudioFrame(uint8_t* ambe, uint32_t srcId, uint32_t dst
 
         // post-process: apply gain to decoded audio frames
         if (m_rxAudioGain != 1.0f) {
-            for (int n = 0; n < MBE_SAMPLES_LENGTH; n += 2) {
+            for (int n = 0; n < MBE_SAMPLES_LENGTH; n++) {
                 short sample = samples[n];
                 float newSample = sample * m_rxAudioGain;
                 sample = (short)newSample;
@@ -1387,7 +1416,7 @@ void HostBridge::encodeDMRAudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32_
 
     // pre-process: apply gain to PCM audio frames
     if (m_txAudioGain != 1.0f) {
-        for (int n = 0; n < MBE_SAMPLES_LENGTH; n += 2) {
+        for (int n = 0; n < MBE_SAMPLES_LENGTH; n++) {
             short sample = samples[n];
             float newSample = sample * m_txAudioGain;
             sample = (short)newSample;
@@ -1753,7 +1782,7 @@ void HostBridge::decodeP25AudioFrame(uint8_t* ldu, uint32_t srcId, uint32_t dstI
 
         // post-process: apply gain to decoded audio frames
         if (m_rxAudioGain != 1.0f) {
-            for (int n = 0; n < MBE_SAMPLES_LENGTH; n += 2) {
+            for (int n = 0; n < MBE_SAMPLES_LENGTH; n++) {
                 short sample = samples[n];
                 float newSample = sample * m_rxAudioGain;
                 sample = (short)newSample;
@@ -1837,7 +1866,7 @@ void HostBridge::encodeP25AudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32_
 
     // pre-process: apply gain to PCM audio frames
     if (m_txAudioGain != 1.0f) {
-        for (int n = 0; n < MBE_SAMPLES_LENGTH; n += 2) {
+        for (int n = 0; n < MBE_SAMPLES_LENGTH; n++) {
             short sample = samples[n];
             float newSample = sample * m_txAudioGain;
             sample = (short)newSample;
@@ -1973,6 +2002,10 @@ void HostBridge::generatePreambleTone()
     std::lock_guard<std::mutex> lock(m_audioMutex);
 
     uint64_t frameCount = SampleTimeConvert::ToSamples(SAMPLE_RATE, 1, m_preambleLength);
+    if (frameCount > m_outputAudio.freeSpace()) {
+        ::LogError(LOG_HOST, "failed to generate preamble tone");
+        return;
+    }
 
     ma_uint32 pcmBytes = frameCount * ma_get_bytes_per_frame(m_maDevice.capture.format, m_maDevice.capture.channels);
     UInt8Array __sine = std::make_unique<uint8_t[]>(pcmBytes);
@@ -2025,6 +2058,11 @@ void* HostBridge::threadAudioProcess(void* arg)
         stopWatch.start();
 
         while (!g_killed) {
+            if (!bridge->m_running) {
+                Thread::sleep(1U);
+                continue;
+            }
+
             uint32_t ms = stopWatch.elapsed();
             stopWatch.start();
 
@@ -2062,6 +2100,16 @@ void* HostBridge::threadAudioProcess(void* arg)
                     for (int i = 0; i < MBE_SAMPLES_LENGTH; i++) {
                         float sampleValue = fabs((float)samples[i]);
                         maxSample = fmax(maxSample, sampleValue);
+                    }
+                    maxSample = maxSample / 1000;
+
+                    if (bridge->m_dumpSampleLevel && bridge->m_detectedSampleCnt > 50U) {
+                        bridge->m_detectedSampleCnt = 0U;
+                        ::LogInfoEx(LOG_HOST, "Detected Sample Level: %.2f", maxSample * 1000);
+                    }
+
+                    if (bridge->m_dumpSampleLevel) {
+                        bridge->m_detectedSampleCnt++;
                     }
 
                     // handle Rx triggered by internal VOX
@@ -2209,6 +2257,11 @@ void* HostBridge::threadNetworkProcess(void* arg)
         stopWatch.start();
 
         while (!g_killed) {
+            if (!bridge->m_running) {
+                Thread::sleep(1U);
+                continue;
+            }
+
             uint32_t ms = stopWatch.elapsed();
             stopWatch.start();
 
@@ -2271,6 +2324,11 @@ void* HostBridge::threadCallLockup(void* arg)
         stopWatch.start();
 
         while (!g_killed) {
+            if (!bridge->m_running) {
+                Thread::sleep(1U);
+                continue;
+            }
+
             uint32_t ms = stopWatch.elapsed();
             stopWatch.start();
 
