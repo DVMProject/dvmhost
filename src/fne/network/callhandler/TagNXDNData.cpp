@@ -32,6 +32,12 @@ using namespace nxdn::defines;
 #include <chrono>
 
 // ---------------------------------------------------------------------------
+//  Constants
+// ---------------------------------------------------------------------------
+
+const uint32_t CALL_COLL_TIMEOUT = 10U;
+
+// ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
@@ -153,6 +159,13 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                     RxStatus status = m_status[dstId];
                     if (streamId != status.streamId) {
                         if (status.srcId != 0U && status.srcId != srcId) {
+                            uint64_t lastPktDuration = hrc::diff(hrc::now(), status.lastPacket);
+                            if ((lastPktDuration / 1000) > CALL_COLL_TIMEOUT) {
+                                LogWarning(LOG_NET, "NXDN, Call Collision, lasted more then %us with no further updates, forcibly ending call");
+                                m_status.erase(dstId);
+                                m_network->m_callInProgress = false;
+                            }
+
                             LogWarning(LOG_NET, "NXDN, Call Collision, peer = %u, srcId = %u, dstId = %u, streamId = %u, rxPeer = %u, rxSrcId = %u, rxDstId = %u, rxStreamId = %u, external = %u",
                                 peerId, srcId, dstId, streamId, status.peerId, status.srcId, status.dstId, status.streamId, external);
                             return false;
@@ -213,6 +226,8 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                 return true; // end here because parrot calls should never repeat anywhere
             }
         }
+
+        m_status[dstId].lastPacket = hrc::now();
 
         // repeat traffic to the connected peers
         if (m_network->m_peers.size() > 0U) {

@@ -33,6 +33,7 @@ using namespace p25::defines;
 // ---------------------------------------------------------------------------
 
 const uint32_t GRANT_TIMER_TIMEOUT = 15U;
+const uint32_t CALL_COLL_TIMEOUT = 10U;
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -224,6 +225,13 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                     RxStatus status = m_status[dstId];
                     if (streamId != status.streamId && ((duid != DUID::TDU) && (duid != DUID::TDULC))) {
                         if (status.srcId != 0U && status.srcId != srcId) {
+                            uint64_t lastPktDuration = hrc::diff(hrc::now(), status.lastPacket);
+                            if ((lastPktDuration / 1000) > CALL_COLL_TIMEOUT) {
+                                LogWarning(LOG_NET, "P25, Call Collision, lasted more then %us with no further updates, forcibly ending call");
+                                m_status.erase(dstId);
+                                m_network->m_callInProgress = false;
+                            }
+
                             LogWarning(LOG_NET, "P25, Call Collision, peer = %u, srcId = %u, dstId = %u, streamId = %u, rxPeer = %u, rxSrcId = %u, rxDstId = %u, rxStreamId = %u, external = %u",
                                 peerId, srcId, dstId, streamId, status.peerId, status.srcId, status.dstId, status.streamId, external);
                             return false;
@@ -289,6 +297,8 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
         if (!processTSDUFrom(buffer, peerId, duid)) {
             return false;
         }
+
+        m_status[dstId].lastPacket = hrc::now();
 
         // repeat traffic to the connected peers
         if (m_network->m_peers.size() > 0U) {

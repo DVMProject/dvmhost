@@ -23,7 +23,10 @@ using namespace p25::lc::tsbk;
 
 /* Initializes a new instance of the OSP_GRP_VCH_GRANT_UPD class. */
 
-OSP_GRP_VCH_GRANT_UPD::OSP_GRP_VCH_GRANT_UPD() : TSBK()
+OSP_GRP_VCH_GRANT_UPD::OSP_GRP_VCH_GRANT_UPD() : TSBK(),
+    m_grpVchIdB(0U),
+    m_grpVchNoB(0U),
+    m_dstIdB(0U)
 {
     m_lco = TSBKO::OSP_GRP_VCH_GRANT_UPD;
 }
@@ -43,9 +46,12 @@ bool OSP_GRP_VCH_GRANT_UPD::decode(const uint8_t* data, bool rawTSBK)
 
     ulong64_t tsbkValue = TSBK::toValue(tsbk);
 
-    m_grpVchId = (uint8_t)((tsbkValue >> 60) & 0xFU);                               // Channel ID
-    m_grpVchNo = (uint32_t)((tsbkValue >> 48) & 0xFFFU);                            // Channel Number
-    m_dstId = (uint32_t)((tsbkValue >> 32) & 0xFFFFU);                              // Talkgroup Address
+    m_grpVchId = (uint8_t)((tsbkValue >> 60) & 0xFU);                               // Channel ID (A)
+    m_grpVchNo = (uint32_t)((tsbkValue >> 48) & 0xFFFU);                            // Channel Number (A)
+    m_dstId = (uint32_t)((tsbkValue >> 32) & 0xFFFFU);                              // Talkgroup Address (A)
+    m_grpVchIdB = (uint8_t)((tsbkValue >> 28) & 0xFU);                              // Channel ID (B)
+    m_grpVchNoB = (uint32_t)((tsbkValue >> 16) & 0xFFFU);                           // Channel Number (B)
+    m_dstIdB = (uint32_t)(tsbkValue & 0xFFFFU);                                     // Talkgroup Address (B)
 
     return true;
 }
@@ -59,14 +65,22 @@ void OSP_GRP_VCH_GRANT_UPD::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
     ulong64_t tsbkValue = 0U;
 
     if (m_grpVchId != 0U) {
-        tsbkValue = m_grpVchId;                                                     // Channel ID
+        tsbkValue = m_grpVchId;                                                     // Channel ID (A)
     }
     else {
-        tsbkValue = m_siteData.channelId();                                         // Channel ID
+        tsbkValue = m_siteData.channelId();                                         // Channel ID (Site)
     }
-    tsbkValue = (tsbkValue << 12) + m_grpVchNo;                                     // Channel Number
-    tsbkValue = (tsbkValue << 16) + m_dstId;                                        // Talkgroup Address
-    tsbkValue = (tsbkValue << 32) + 0;
+    tsbkValue = (tsbkValue << 12) + m_grpVchNo;                                     // Channel Number (A)
+    tsbkValue = (tsbkValue << 16) + m_dstId;                                        // Talkgroup Address (A)
+
+    if (m_grpVchIdB != 0U) {
+        tsbkValue = (tsbkValue << 4) + m_grpVchIdB;                                 // Channel ID (B)
+    }
+    else {
+        tsbkValue = (tsbkValue << 4) + m_siteData.channelId();                      // Channel ID (Site)
+    }
+    tsbkValue = (tsbkValue << 12) + m_grpVchNoB;                                    // Channel Number (A)
+    tsbkValue = (tsbkValue << 16) + m_dstIdB;                                       // Talkgroup Address (B)
 
     std::unique_ptr<uint8_t[]> tsbk = TSBK::fromValue(tsbkValue);
     TSBK::encode(data, tsbk.get(), rawTSBK, noTrellis);

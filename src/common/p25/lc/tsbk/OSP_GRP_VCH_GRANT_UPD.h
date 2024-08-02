@@ -60,6 +60,20 @@ namespace p25
                  * @returns std::string String representation of the TSBK.
                  */
                 std::string toString(bool isp = false) override;
+
+            public:
+                /**
+                 * @brief Voice channel ID.
+                 */
+                __PROPERTY(uint8_t, grpVchIdB, GrpVchIdB);
+                /**
+                 * @brief Voice channel number.
+                 */
+                __PROPERTY(uint32_t, grpVchNoB, GrpVchNoB);
+                /**
+                 * @brief Destination ID.
+                 */
+                __PROPERTY(uint32_t, dstIdB, DstIdB);
             };
         } // namespace tsbk
     } // namespace lc

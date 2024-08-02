@@ -31,6 +31,12 @@ using namespace dmr::defines;
 #include <chrono>
 
 // ---------------------------------------------------------------------------
+//  Constants
+// ---------------------------------------------------------------------------
+
+const uint32_t CALL_COLL_TIMEOUT = 10U;
+
+// ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
@@ -193,6 +199,13 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                 RxStatus status = it->second;
                 if (streamId != status.streamId) {
                     if (status.srcId != 0U && status.srcId != srcId) {
+                        uint64_t lastPktDuration = hrc::diff(hrc::now(), status.lastPacket);
+                        if ((lastPktDuration / 1000) > CALL_COLL_TIMEOUT) {
+                            LogWarning(LOG_NET, "DMR, Call Collision, lasted more then %us with no further updates, forcibly ending call");
+                            m_status.erase(dstId);
+                            m_network->m_callInProgress = false;
+                        }
+
                         LogWarning(LOG_NET, "DMR, Call Collision, peer = %u, srcId = %u, dstId = %u, slotNo = %u, streamId = %u, rxPeer = %u, rxSrcId = %u, rxDstId = %u, rxSlotNo = %u, rxStreamId = %u, external = %u",
                             peerId, srcId, dstId, slotNo, streamId, status.peerId, status.srcId, status.dstId, status.slotNo, status.streamId, external);
                         return false;
@@ -260,6 +273,8 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
         if (!processCSBK(buffer, peerId, dmrData)) {
             return false;
         }
+
+        m_status[dstId].lastPacket = hrc::now();
 
         // repeat traffic to the connected peers
         if (m_network->m_peers.size() > 0U) {

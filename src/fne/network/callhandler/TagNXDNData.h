@@ -110,6 +110,7 @@ namespace network
             class RxStatus {
             public:
                 system_clock::hrc::hrc_t callStartTime;
+                system_clock::hrc::hrc_t lastPacket;
                 uint32_t srcId;
                 uint32_t dstId;
                 uint32_t streamId;
