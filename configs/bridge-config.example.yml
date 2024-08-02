@@ -52,6 +52,9 @@ network:
     #    0 - 9, A - F.)
     presharedKey: "000102030405060708090A0B0C0D0E0F000102030405060708090A0B0C0D0E0F"
 
+    # Flag indicating whether or not the host diagnostic log will be sent to the network.
+    allowDiagnosticTransfer: true
+
     # Flag indicating whether or not verbose debug logging is enabled.
     debug: false
 

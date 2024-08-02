@@ -829,6 +829,7 @@ bool HostBridge::createNetwork()
     uint16_t local = (uint16_t)networkConf["local"].as<uint32_t>(0U);
     uint32_t id = networkConf["id"].as<uint32_t>(1000U);
     std::string password = networkConf["password"].as<std::string>();
+    bool allowDiagnosticTransfer = networkConf["allowDiagnosticTransfer"].as<bool>(false);
     bool debug = networkConf["debug"].as<bool>(false);
 
     m_udpAudio = networkConf["udpAudio"].as<bool>(false);
@@ -922,7 +923,7 @@ bool HostBridge::createNetwork()
     }
 
     // initialize networking
-    m_network = new PeerNetwork(address, port, local, id, password, true, debug, dmr, p25, false, true, true, true, true, true, false);
+    m_network = new PeerNetwork(address, port, local, id, password, true, debug, dmr, p25, false, true, true, true, allowDiagnosticTransfer, true, false);
 
     m_network->setMetadata(m_identity, 0U, 0U, 0.0F, 0.0F, 0, 0, 0, 0.0F, 0.0F, 0, "");
     m_network->setConventional(true);
