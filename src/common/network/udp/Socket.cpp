@@ -20,7 +20,9 @@ using namespace network::udp;
 #include <cerrno>
 #include <cstring>
 
+#if !defined(_WIN32)
 #include <ifaddrs.h>
+#endif // !defined(_WIN32)
 
 // ---------------------------------------------------------------------------
 //  Constants
@@ -38,7 +40,11 @@ Socket::Socket(const std::string& address, uint16_t port) :
     m_localAddress(address),
     m_localPort(port),
     m_af(AF_UNSPEC),
+#if defined(_WIN32)
+    m_fd(INVALID_SOCKET),
+#else
     m_fd(-1),
+#endif // defined(_WIN32)
     m_aes(nullptr),
     m_isCryptoWrapped(false),
     m_presharedKey(nullptr),
@@ -46,6 +52,14 @@ Socket::Socket(const std::string& address, uint16_t port) :
 {
     m_aes = new crypto::AES(crypto::AESKeyLength::AES_256);
     m_presharedKey = new uint8_t[AES_WRAPPED_PCKT_KEY_LEN];
+
+#if defined(_WIN32)
+    WSAData data;
+    int wsaRet = ::WSAStartup(MAKEWORD(2, 2), &data);
+    if (wsaRet != 0) {
+        ::LogError(LOG_NET, "Error from WSAStartup, err: %d", wsaRet);
+    }
+#endif // defined(_WIN32)
 }
 
 /* Initializes a new instance of the Socket class. */
@@ -54,7 +68,11 @@ Socket::Socket(uint16_t port) :
     m_localAddress(),
     m_localPort(port),
     m_af(AF_UNSPEC),
+#if defined(_WIN32)
+    m_fd(INVALID_SOCKET),
+#else
     m_fd(-1),
+#endif // defined(_WIN32)
     m_aes(nullptr),
     m_isCryptoWrapped(false),
     m_presharedKey(nullptr),
@@ -62,6 +80,14 @@ Socket::Socket(uint16_t port) :
 {
     m_aes = new crypto::AES(crypto::AESKeyLength::AES_256);
     m_presharedKey = new uint8_t[AES_WRAPPED_PCKT_KEY_LEN];
+
+#if defined(_WIN32)
+    WSAData data;
+    int wsaRet = ::WSAStartup(MAKEWORD(2, 2), &data);
+    if (wsaRet != 0) {
+        ::LogError(LOG_NET, "Error from WSAStartup, err: %d", wsaRet);
+    }
+#endif // defined(_WIN32)
 }
 
 /* Finalizes a instance of the Socket class. */
@@ -72,6 +98,10 @@ Socket::~Socket()
         delete m_aes;
     if (m_presharedKey != nullptr)
         delete[] m_presharedKey;
+
+#if defined(_WIN32)
+    ::WSACleanup();
+#endif // defined(_WIN32)
 }
 
 /* Opens UDP socket connection. */
@@ -133,10 +163,17 @@ bool Socket::open(const uint32_t af, const std::string& address, const uint16_t 
 
 void Socket::close()
 {
+#if defined(_WIN32)
+    if (m_fd != INVALID_SOCKET) {
+        ::closesocket(m_fd);
+        m_fd = INVALID_SOCKET;
+    }
+#else
     if (m_fd >= 0) {
         ::close(m_fd);
         m_fd = -1;
     }
+#endif // defined(_WIN32)
 }
 
 /* Read data from the UDP socket. */
@@ -146,8 +183,13 @@ ssize_t Socket::read(uint8_t* buffer, uint32_t length, sockaddr_storage& address
     assert(buffer != nullptr);
     assert(length > 0U);
 
+#if defined(_WIN32)
+    if (m_fd == INVALID_SOCKET)
+        return -1;
+#else
     if (m_fd < 0)
         return -1;
+#endif // defined(_WIN32)
 
     // check that the readfrom() won't block
     struct pollfd pfd;
@@ -156,9 +198,17 @@ ssize_t Socket::read(uint8_t* buffer, uint32_t length, sockaddr_storage& address
     pfd.revents = 0;
 
     // return immediately
+#if defined(_WIN32)
+    int ret = WSAPoll(&pfd, 1, 0);
+#else
     int ret = ::poll(&pfd, 1, 0);
+#endif // defined(_WIN32)
     if (ret < 0) {
+#if defined(_WIN32)
+        LogError(LOG_NET, "Error returned from UDP poll, err: %lu", ::GetLastError());
+#else
         LogError(LOG_NET, "Error returned from UDP poll, err: %d", errno);
+#endif // defined(_WIN32)
         return -1;
     }
 
@@ -168,7 +218,11 @@ ssize_t Socket::read(uint8_t* buffer, uint32_t length, sockaddr_storage& address
     socklen_t size = sizeof(sockaddr_storage);
     ssize_t len = ::recvfrom(pfd.fd, (char*)buffer, length, 0, (sockaddr*)& address, &size);
     if (len <= 0) {
+#if defined(_WIN32)
+        LogError(LOG_NET, "Error returned from recvfrom, err: %lu", ::GetLastError());
+#else
         LogError(LOG_NET, "Error returned from recvfrom, err: %d", errno);
+#endif // defined(_WIN32)
 
         if (len == -1 && errno == ENOTSOCK) {
             LogMessage(LOG_NET, "Re-opening UDP port on %u", m_localPort);
@@ -239,6 +293,16 @@ bool Socket::write(const uint8_t* buffer, uint32_t length, const sockaddr_storag
     assert(buffer != nullptr);
     assert(length > 0U);
 
+#if defined(_WIN32)
+    if (m_fd == INVALID_SOCKET) {
+        if (lenWritten != nullptr) {
+            *lenWritten = -1;
+        }
+
+        //LogError(LOG_NET, "tried to write datagram with no file descriptor? this shouldn't happen BUGBUG");
+        return false;
+    }
+#else
     if (m_fd < 0) {
         if (lenWritten != nullptr) {
             *lenWritten = -1;
@@ -247,6 +311,7 @@ bool Socket::write(const uint8_t* buffer, uint32_t length, const sockaddr_storag
         //LogError(LOG_NET, "tried to write datagram with no file descriptor? this shouldn't happen BUGBUG");
         return false;
     }
+#endif // defined(_WIN32)
 
     bool result = false;
     UInt8Array out = nullptr;
@@ -301,7 +366,11 @@ bool Socket::write(const uint8_t* buffer, uint32_t length, const sockaddr_storag
 
     ssize_t sent = ::sendto(m_fd, (char*)out.get(), length, 0, (sockaddr*)& address, addrLen);
     if (sent < 0) {
+#if defined(_WIN32)
+        LogError(LOG_NET, "Error returned from sendto, err: %lu", ::GetLastError());
+#else
         LogError(LOG_NET, "Error returned from sendto, err: %d", errno);
+#endif // defined(_WIN32)
 
         if (lenWritten != nullptr) {
             *lenWritten = -1;
@@ -425,7 +494,8 @@ bool Socket::write(BufferVector& buffers, ssize_t* lenWritten) noexcept
             // Utils::dump(1U, "Socket::write() crypted", crypted, cryptedLen);
 
             // finalize
-            uint8_t out[cryptedLen + 2U];
+            UInt8Array __outBuf = std::make_unique<uint8_t[]>(cryptedLen + 2U);
+            uint8_t* out = __outBuf.get();
             ::memcpy(out + 2U, crypted, cryptedLen);
             __SET_UINT16B(AES_WRAPPED_PCKT_MAGIC, out, 0U);
 
@@ -558,6 +628,9 @@ int Socket::lookup(const std::string& hostname, uint16_t port, sockaddr_storage&
 
 std::string Socket::getLocalAddress()
 {
+#if defined(_WIN32)
+    return std::string(); // this breaks shit...
+#else
     struct ifaddrs *ifaddr, *ifa;
     int n;
     char host[NI_MAXHOST];
@@ -593,6 +666,7 @@ std::string Socket::getLocalAddress()
 
     freeifaddrs(ifaddr);
     return address;
+#endif // defined(_WIN32)
 }
 
 /* */
@@ -716,10 +790,17 @@ bool Socket::isNone(const sockaddr_storage& addr)
 bool Socket::initSocket(const int domain, const int type, const int protocol) noexcept(false)
 {
     m_fd = ::socket(domain, type, protocol);
+#if defined(_WIN32)
+    if (m_fd == INVALID_SOCKET) {
+        LogError(LOG_NET, "Cannot create the UDP socket, err: %lu", ::GetLastError());
+        return false;
+    }
+#else
     if (m_fd < 0) {
         LogError(LOG_NET, "Cannot create the UDP socket, err: %d", errno);
         return false;
     }
+#endif // defined(_WIN32)
 
     m_af = domain;
     return true;
@@ -738,7 +819,11 @@ bool Socket::bind(const std::string& ipAddr, const uint16_t port) noexcept(false
     socklen_t length = sizeof(addr);
     bool retval = true;
     if (::bind(m_fd, reinterpret_cast<sockaddr*>(&addr), length) < 0) {
+#if defined(_WIN32)
+        LogError(LOG_NET, "Cannot bind the UDP address, err: %lu", ::GetLastError());
+#else
         LogError(LOG_NET, "Cannot bind the UDP address, err: %d", errno);
+#endif // defined(_WIN32)
         retval = false;
     }
 

@@ -34,7 +34,9 @@ using namespace lookups;
 #include <cstdio>
 #include <algorithm>
 
+#if !defined(_WIN32)
 #include <unistd.h>
+#endif // !defined(_WIN32)
 
 #if !defined(CATCH2_TEST_COMPILATION)
 
@@ -1729,7 +1731,11 @@ bool HostSetup::writeFifoLength()
 
 void HostSetup::sleep(uint32_t ms)
 {
+#if defined(_WIN32)
+    ::Sleep(ms);
+#else
     ::usleep(ms * 1000);
+#endif // defined(_WIN32)
 }
 
 /* Read the configuration area on the air interface modem. */

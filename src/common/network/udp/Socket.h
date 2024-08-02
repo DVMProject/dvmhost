@@ -27,6 +27,11 @@
 #include <string>
 #include <vector>
 
+#if defined(_WIN32)
+#pragma comment(lib, "Ws2_32.lib")
+#include <ws2tcpip.h>
+#include <Winsock2.h>
+#else
 #include <netdb.h>
 #include <sys/time.h>
 #include <sys/types.h>
@@ -36,6 +41,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <errno.h>
+#endif // defined(_WIN32)
 
 #define AES_WRAPPED_PCKT_MAGIC 0xC0FEU
 #define AES_WRAPPED_PCKT_KEY_LEN 32
@@ -48,6 +54,13 @@ enum IPMATCHTYPE {
     IMT_ADDRESS_AND_PORT,       //! Address and Port
     IMT_ADDRESS_ONLY            //! Address Only
 };
+
+#if defined(_WIN32)
+#ifndef _SSIZE_T_DECLARED
+typedef SSIZE_T ssize_t;
+#define _SSIZE_T_DECLARED
+#endif
+#endif // defined(_WIN32)
 
 namespace network
 {
@@ -71,6 +84,60 @@ namespace network
             ssize_t n = 0;
             for (unsigned int i = 0; i < vlen; i++) {
                 ssize_t ret = sendmsg(sockfd, &msgvec[i].msg_hdr, flags);
+                if (ret < 0)
+                    break;
+                n += ret;
+            }
+
+            if (n == 0)
+                return -1;
+
+            return int(n);
+        }
+        /** \endcond */
+#endif
+#if defined(_WIN32)
+        /** \cond */
+        /* Structure for scatter/gather I/O.  */
+        struct iovec {
+            void* iov_base;         /* Pointer to data.  */
+            size_t iov_len;         /* Length of data.  */
+        };
+
+        /* Structure describing messages sent by
+           `sendmsg' and received by `recvmsg'.  */
+        struct msghdr {
+            void* msg_name;         /* Address to send to/receive from.  */
+            socklen_t msg_namelen;  /* Length of address data.  */
+
+            struct iovec* msg_iov;  /* Vector of data to send/receive into.  */
+            size_t msg_iovlen;      /* Number of elements in the vector.  */
+
+            void* msg_control;      /* Ancillary data (eg BSD filedesc passing). */
+            size_t msg_controllen;  /* Ancillary data buffer length.
+                            !! The type should be socklen_t but the
+                           definition of the kernel is incompatible
+                           with this.  */
+
+            int msg_flags;          /* Flags on received message.  */
+        };
+
+        /* For `sendmmsg'.  */
+        struct mmsghdr {
+            struct msghdr msg_hdr;  /* Actual message header.  */
+            unsigned int msg_len;   /* Number of received or sent bytes for the entry.  */
+        };
+
+        /* Send a VLEN messages as described by VMESSAGES to socket FD.
+        Returns the number of datagrams successfully written or -1 for errors.
+
+        This function is a cancellation point and therefore not marked with
+        __THROW.  */
+        static inline int sendmmsg(SOCKET sockfd, struct mmsghdr* msgvec, unsigned int vlen, int flags)
+        {
+            ssize_t n = 0;
+            for (unsigned int i = 0; i < vlen; i++) {
+                ssize_t ret = ::sendto(sockfd, (char*)&msgvec[i].msg_hdr.msg_iov->iov_base, msgvec[i].msg_hdr.msg_iov->iov_len, 0, (sockaddr*)&msgvec[i].msg_hdr.msg_name, msgvec[i].msg_hdr.msg_namelen);
                 if (ret < 0)
                     break;
                 n += ret;
@@ -253,7 +320,11 @@ namespace network
             uint16_t m_localPort;
 
             uint32_t m_af;
+#if defined(_WIN32)
+            SOCKET m_fd;
+#else
             int m_fd;
+#endif // defined(_WIN32)
 
             crypto::AES* m_aes;
             bool m_isCryptoWrapped;

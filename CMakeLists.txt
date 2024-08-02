@@ -39,11 +39,23 @@ endif (ENABLE_TCP_SSL)
 option(CROSS_COMPILE_ARM "Cross-compile for 32-bit ARM" off)
 option(CROSS_COMPILE_AARCH64 "Cross-compile for 64-bit ARM" off)
 option(CROSS_COMPILE_RPI_ARM "Cross-compile for (old RPi) 32-bit ARM" off)
+option(COMPILE_WIN32 "Compile for Win32" off)
 
-set(CMAKE_C_COMPILER /usr/bin/gcc)
-set(CMAKE_CXX_COMPILER /usr/bin/g++)
-set(ARCH amd64)
-set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE amd64)
+if (COMPILE_WIN32)
+    set(ARCH amd64)
+    set(CMAKE_SYSTEM_PROCESSOR amd64)
+
+    # No TUI for this
+    set(ENABLE_TUI_SUPPORT OFF)
+    message(CHECK_START "Enable TUI support - no; for simplicity WIN32 does not support TUI.")
+    set(ENABLE_TCP_SSL OFF)
+    message(CHECK_START "Enable TCP SSL support - no; for simplicity WIN32 does not support TCP SSL.")
+else()
+    set(CMAKE_C_COMPILER /usr/bin/gcc)
+    set(CMAKE_CXX_COMPILER /usr/bin/g++)
+    set(ARCH amd64)
+    set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE amd64)
+endif (COMPILE_WIN32)
 
 if (CROSS_COMPILE_ARM)
     set(CMAKE_C_COMPILER /usr/bin/arm-linux-gnueabihf-gcc)
@@ -123,19 +135,19 @@ if(NOT CMAKE_BUILD_TYPE)
 endif(NOT CMAKE_BUILD_TYPE)
 message(CHECK_START "Build Type is ${CMAKE_BUILD_TYPE}")
 if (CMAKE_BUILD_TYPE MATCHES Debug)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -O0 -Wall -Wno-overloaded-virtual -std=c++14")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -O0 -Wall")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0 -Wall -Wno-overloaded-virtual -std=c++14")
-    set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -g -O0 -Wall -Wno-overloaded-virtual -std=c++14")
+    set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -g -O0 -Wall")
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -g -O0 -Wall -Wno-overloaded-virtual -std=c++14")
 elseif(CMAKE_BUILD_TYPE MATCHES Release)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -O3 -Wall -Wno-overloaded-virtual -std=c++14 -s")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -O3 -Wall -s")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O3 -Wall -Wno-overloaded-virtual -std=c++14 -s")
-    set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -g -O3 -Wall -Wno-overloaded-virtual -std=c++14 -s")
+    set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -g -O3 -Wall -s")
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -g -O3 -Wall -Wno-overloaded-virtual -std=c++14 -s")
 else()
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -O3 -Wall -Wno-overloaded-virtual -std=c++14")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -O3 -Wall")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O3 -Wall -Wno-overloaded-virtual -std=c++14")
-    set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -g -O3 -Wall -Wno-overloaded-virtual -std=c++14")
+    set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -g -O3 -Wall")
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -g -O3 -Wall -Wno-overloaded-virtual -std=c++14")
 endif()
 if (CROSS_COMPILE_ARM)
@@ -144,6 +156,15 @@ if (CROSS_COMPILE_ARM)
     set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -Wno-psabi")
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -Wno-psabi")
 endif (CROSS_COMPILE_ARM)
+if (CROSS_COMPILE_RPI_ARM)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+    set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -std=c99")
+endif (CROSS_COMPILE_RPI_ARM)
+if (COMPILE_WIN32)
+    set(CMAKE_C_FLAGS "/EHsc /D_WIN32 /D_DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR")
+    set(CMAKE_CXX_FLAGS "/EHsc /D_WIN32 /D_DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR")
+endif (COMPILE_WIN32)
 
 set(CMAKE_INSTALL_PREFIX "/usr/local")
 
@@ -230,7 +251,8 @@ install(TARGETS dvmfne DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
 if (ENABLE_TUI_SUPPORT AND (NOT DISABLE_MONITOR))
 install(TARGETS dvmmon DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
 endif (ENABLE_TUI_SUPPORT AND (NOT DISABLE_MONITOR))
-install(FILES configs/config.example.yml configs/fne-config.example.yml configs/monitor-config.example.yml configs/iden_table.dat configs/RSSI.dat configs/rid_acl.example.dat configs/talkgroup_rules.example.yml DESTINATION ${CMAKE_INSTALL_PREFIX}/etc)
+install(TARGETS dvmbridge DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
+install(FILES configs/config.example.yml configs/fne-config.example.yml configs/monitor-config.example.yml configs/iden_table.dat configs/RSSI.dat configs/rid_acl.example.dat configs/talkgroup_rules.example.yml configs/bridge-config.example.yml DESTINATION ${CMAKE_INSTALL_PREFIX}/etc)
 install(PROGRAMS tools/start-dvm.sh tools/stop-dvm.sh tools/dvm-watchdog.sh tools/stop-watchdog.sh tools/fne-watchdog.sh tools/start-dvm-fne.sh DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
 install(CODE "execute_process(COMMAND bash \"-c\" \"sed -i 's/filePath: ./filePath: \\\\/var\\\\/log\\\\//' /usr/local/etc/config.example.yml\")")
 install(CODE "execute_process(COMMAND bash \"-c\" \"sed -i 's/activityFilePath: ./activityFilePath: \\\\/var\\\\/log\\\\//' /usr/local/etc/config.example.yml\")")
@@ -248,12 +270,14 @@ if (NOT TARGET strip)
                     COMMAND arm-linux-gnueabihf-strip -s dvmhost
                     COMMAND arm-linux-gnueabihf-strip -s dvmfne
                     COMMAND arm-linux-gnueabihf-strip -s dvmcmd
-                    COMMAND arm-linux-gnueabihf-strip -s dvmmon)
+                    COMMAND arm-linux-gnueabihf-strip -s dvmmon
+                    COMMAND arm-linux-gnueabihf-strip -s dvmbridge)
         else()
             add_custom_target(strip
                     COMMAND arm-linux-gnueabihf-strip -s dvmhost
                     COMMAND arm-linux-gnueabihf-strip -s dvmfne
-                    COMMAND arm-linux-gnueabihf-strip -s dvmcmd)
+                    COMMAND arm-linux-gnueabihf-strip -s dvmcmd
+                    COMMAND arm-linux-gnueabihf-strip -s dvmbridge)
         endif (ENABLE_TUI_SUPPORT AND (NOT DISABLE_MONITOR))
     elseif (CROSS_COMPILE_AARCH64)
         if (ENABLE_TUI_SUPPORT AND (NOT DISABLE_MONITOR))
@@ -261,24 +285,28 @@ if (NOT TARGET strip)
                 COMMAND aarch64-linux-gnu-strip -s dvmhost
                 COMMAND aarch64-linux-gnu-strip -s dvmfne
                 COMMAND aarch64-linux-gnu-strip -s dvmcmd
-                COMMAND aarch64-linux-gnu-strip -s dvmmon)
+                COMMAND aarch64-linux-gnu-strip -s dvmmon
+                COMMAND aarch64-linux-gnu-strip -s dvmbridge)
         else()
             add_custom_target(strip
                 COMMAND aarch64-linux-gnu-strip -s dvmhost
                 COMMAND aarch64-linux-gnu-strip -s dvmfne
-                COMMAND aarch64-linux-gnu-strip -s dvmcmd)
+                COMMAND aarch64-linux-gnu-strip -s dvmcmd
+                COMMAND aarch64-linux-gnu-strip -s dvmbridge)
         endif (ENABLE_TUI_SUPPORT AND (NOT DISABLE_MONITOR))
     elseif (CROSS_COMPILE_RPI_ARM)
         if (NOT WITH_RPI_ARM_TOOLS)
             add_custom_target(strip
                 COMMAND ${CMAKE_CURRENT_BINARY_DIR}/_deps/rpitools-src/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-strip -s dvmhost
                 COMMAND ${CMAKE_CURRENT_BINARY_DIR}/_deps/rpitools-src/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-strip -s dvmfne
-                COMMAND ${CMAKE_CURRENT_BINARY_DIR}/_deps/rpitools-src/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-strip -s dvmcmd)
+                COMMAND ${CMAKE_CURRENT_BINARY_DIR}/_deps/rpitools-src/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-strip -s dvmcmd
+                COMMAND ${CMAKE_CURRENT_BINARY_DIR}/_deps/rpitools-src/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-strip -s dvmbridge)
         else()
             add_custom_target(strip
                 COMMAND ${RPI_ARM_TOOLS}/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-strip -s dvmhost
                 COMMAND ${RPI_ARM_TOOLS}/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-strip -s dvmfne
-                COMMAND ${RPI_ARM_TOOLS}/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-strip -s dvmcmd)
+                COMMAND ${RPI_ARM_TOOLS}/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-strip -s dvmcmd
+                COMMAND ${RPI_ARM_TOOLS}/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-strip -s dvmbridge)
         endif ()
     else()
         if (ENABLE_TUI_SUPPORT AND (NOT DISABLE_MONITOR))
@@ -286,12 +314,14 @@ if (NOT TARGET strip)
                 COMMAND strip -s dvmhost
                 COMMAND strip -s dvmfne
                 COMMAND strip -s dvmcmd
-                COMMAND strip -s dvmmon)
+                COMMAND strip -s dvmmon
+                COMMAND strip -s dvmbridge)
         else()
             add_custom_target(strip
                 COMMAND strip -s dvmhost
                 COMMAND strip -s dvmfne
-                COMMAND strip -s dvmcmd)
+                COMMAND strip -s dvmcmd
+                COMMAND strip -s dvmbridge)
         endif (ENABLE_TUI_SUPPORT AND (NOT DISABLE_MONITOR))
     endif (CROSS_COMPILE_ARM)
 endif (NOT TARGET strip)
@@ -317,6 +347,7 @@ if (NOT TARGET tarball)
             COMMAND cp -v dvmcmd ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
             COMMAND cp -v dvmmon ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
             COMMAND cp -v dvmfne ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
+            COMMAND cp -v dvmbridge ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
             COMMAND cp ../tools/*.sh ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
             COMMAND chmod +x ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/*.sh
             COMMAND cp -v ../configs/*.yml ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
@@ -347,6 +378,7 @@ if (NOT TARGET tarball)
             COMMAND cp -v dvmhost ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
             COMMAND cp -v dvmcmd ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
             COMMAND cp -v dvmfne ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
+            COMMAND cp -v dvmbridge ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
             COMMAND cp ../tools/*.sh ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
             COMMAND chmod +x ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/*.sh
             COMMAND cp -v ../configs/*.yml ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
@@ -387,6 +419,7 @@ add_custom_target(old_install
     COMMAND install -m 755 dvmcmd ${CMAKE_LEGACY_INSTALL_PREFIX}/bin
     COMMAND install -m 755 dvmmon ${CMAKE_LEGACY_INSTALL_PREFIX}/bin
     COMMAND install -m 755 dvmfne ${CMAKE_LEGACY_INSTALL_PREFIX}/bin
+    COMMAND install -m 755 dvmbridge ${CMAKE_LEGACY_INSTALL_PREFIX}/bin
     COMMAND install -m 644 ../configs/config.example.yml ${CMAKE_LEGACY_INSTALL_PREFIX}/config.example.yml
     COMMAND install -m 644 ../configs/fne-config.example.yml ${CMAKE_LEGACY_INSTALL_PREFIX}/fne-config.example.yml
     COMMAND install -m 644 ../configs/monitor-config.example.yml ${CMAKE_LEGACY_INSTALL_PREFIX}/monitor-config.example.yml
@@ -394,6 +427,7 @@ add_custom_target(old_install
     COMMAND install -m 644 ../configs/RSSI.dat ${CMAKE_LEGACY_INSTALL_PREFIX}/RSSI.dat
     COMMAND install -m 644 ../configs/rid_acl.example.dat ${CMAKE_LEGACY_INSTALL_PREFIX}/rid_acl.dat
     COMMAND install -m 644 ../configs/talkgroup_rules.example.yml ${CMAKE_LEGACY_INSTALL_PREFIX}/talkgroup_rules.example.yml
+    COMMAND install -m 644 ../configs/bridge-config.example.yml ${CMAKE_LEGACY_INSTALL_PREFIX}/bridge-config.example.yml
     COMMAND install -m 755 ../tools/start-dvm.sh ${CMAKE_LEGACY_INSTALL_PREFIX}
     COMMAND install -m 755 ../tools/stop-dvm.sh ${CMAKE_LEGACY_INSTALL_PREFIX}
     COMMAND install -m 755 ../tools/dvm-watchdog.sh ${CMAKE_LEGACY_INSTALL_PREFIX}
@@ -433,6 +467,7 @@ add_custom_target(old_install-service
     COMMAND chown dvmhost:dvmhost ${CMAKE_LEGACY_INSTALL_PREFIX}/RSSI.dat
     COMMAND chown dvmhost:dvmhost ${CMAKE_LEGACY_INSTALL_PREFIX}/rid_acl.dat
     COMMAND chown dvmhost:dvmhost ${CMAKE_LEGACY_INSTALL_PREFIX}/talkgroup_rules.example.yml
+    COMMAND chown dvmhost:dvmhost ${CMAKE_LEGACY_INSTALL_PREFIX}/bridge-config.example.yml
     COMMAND chown dvmhost:dvmhost ${CMAKE_LEGACY_INSTALL_PREFIX}/log
     COMMAND cp ../linux/dvmhost.service /lib/systemd/system/
     COMMAND bash \"-c\" \"sed -i 's/\\\\/usr\\\\/local\\\\/bin/\\\\/opt\\\\/dvm\\\\/bin/' /lib/systemd/system/dvmhost.service\"

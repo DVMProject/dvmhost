@@ -11,8 +11,12 @@
 #include "Log.h"
 #include "network/BaseNetwork.h"
 
+#if defined(_WIN32)
+#include "Clock.h"
+#else
 #include <sys/time.h>
 #include <syslog.h>
+#endif // defined(_WIN32)
 
 #if defined(CATCH2_TEST_COMPILATION)
 #include <catch2/catch_test_macros.hpp>
@@ -107,6 +111,7 @@ static bool LogOpen()
         return m_fpLog != nullptr;
     }
     else {
+#if !defined(_WIN32)
         switch (m_fileLevel) {
         case 1U:
             setlogmask(LOG_UPTO(LOG_DEBUG));
@@ -128,6 +133,9 @@ static bool LogOpen()
 
         openlog(m_fileRoot.c_str(), LOG_CONS | LOG_PID | LOG_NDELAY, LOG_DAEMON);
         return true;
+#else
+        return false;
+#endif // !defined(_WIN32)
     }
 }
 
@@ -167,8 +175,12 @@ bool LogInitialise(const std::string& filePath, const std::string& fileRoot, uin
     m_fileLevel = fileLevel;
     g_logDisplayLevel = displayLevel;
     g_disableTimeDisplay = disableTimeDisplay;
+#if defined(_WIN32)
+    g_useSyslog = false;
+#else
     if (!g_useSyslog)
         g_useSyslog = useSyslog;
+#endif // defined(_WIN32)
     return ::LogOpen();
 }
 
@@ -181,8 +193,10 @@ void LogFinalise()
 #endif
     if (m_fpLog != nullptr)
         ::fclose(m_fpLog);
+#if !defined(_WIN32)
     if (g_useSyslog)
         closelog();
+#endif // !defined(_WIN32)
 }
 
 /* Writes a new entry to the diagnostics log. */
@@ -258,6 +272,7 @@ void Log(uint32_t level, const char *module, const char* fmt, ...)
             ::fprintf(m_fpLog, "%s\n", buffer);
             ::fflush(m_fpLog);
         } else {
+#if !defined(_WIN32)
             // convert our log level into syslog level
             int syslogLevel = LOG_INFO;
             switch (level) {
@@ -282,6 +297,7 @@ void Log(uint32_t level, const char *module, const char* fmt, ...)
             }
 
             syslog(syslogLevel, "%s", buffer);
+#endif // !defined(_WIN32)
         }
     }
 
@@ -294,8 +310,10 @@ void Log(uint32_t level, const char *module, const char* fmt, ...)
     if (level >= 6U && level < 9999U) {
         if (m_fpLog != nullptr)
             ::fclose(m_fpLog);
+#if !defined(_WIN32)
         if (g_useSyslog)
             ::closelog();
+#endif // !defined(_WIN32)
         exit(1);
     }
 }

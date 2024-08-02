@@ -266,7 +266,8 @@ namespace network
                                         }
                                     case 0:
                                         while (contentLength > 0 && !_NO_MORE()) {
-                                            contentLength -= (iv[1].iov_len = std::min(contentLength, (int)iv[0].iov_len - len));
+                                            //contentLength -= (iv[1].iov_len = std::min(contentLength, (int)iv[0].iov_len - len));
+                                            contentLength -= (iv[1].iov_len = (((contentLength) < ((int)iv[0].iov_len - len)) ? (contentLength) : ((int)iv[0].iov_len - len)));
                                             if (resp)
                                                 resp->append(&header[len], iv[1].iov_len);
                                             len += iv[1].iov_len;

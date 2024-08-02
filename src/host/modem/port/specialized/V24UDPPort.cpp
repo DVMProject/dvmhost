@@ -166,13 +166,15 @@ void V24UDPPort::clock(uint32_t ms)
 
                 // copy message
                 uint32_t messageLength = ret - RTP_HEADER_LENGTH_BYTES;
-                uint8_t message[messageLength];
+                UInt8Array __message = std::make_unique<uint8_t[]>(messageLength);
+                uint8_t* message = __message.get();
                 ::memset(message, 0x00U, messageLength);
 
                 ::memcpy(message, data + RTP_HEADER_LENGTH_BYTES, messageLength);
 
                 if (udp::Socket::match(addr, m_addr)) {
-                    uint8_t reply[messageLength + 4U];
+                    UInt8Array __reply = std::make_unique<uint8_t[]>(messageLength + 4U);
+                    uint8_t* reply = __reply.get();
 
                     reply[0U] = DVM_SHORT_FRAME_START;
                     reply[1U] = messageLength & 0xFFU;
@@ -333,7 +335,11 @@ void* V24UDPPort::threadedCtrlNetworkRx(void* arg)
 {
     V24PacketRequest* req = (V24PacketRequest*)arg;
     if (req != nullptr) {
+#if defined(_WIN32)
+        ::CloseHandle(req->thread);
+#else
         ::pthread_detach(req->thread);
+#endif // defined(_WIN32)
 
         V24UDPPort* network = static_cast<V24UDPPort*>(req->obj);
         if (network == nullptr) {

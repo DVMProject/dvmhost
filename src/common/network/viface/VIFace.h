@@ -19,6 +19,7 @@
  */
 #if !defined(__VIFACE_H__)
 #define __VIFACE_H__
+#if !defined(_WIN32)
 
 #include "common/Defines.h"
 
@@ -244,4 +245,5 @@ namespace network
     } // namespace viface
 } // namespace network
 
+#endif // !defined(WIN32)
 #endif // __VIFACE_H__

@@ -28,21 +28,41 @@ using namespace network::tcp;
 Socket::Socket() : 
     m_localAddress(),
     m_localPort(0U),
+#if defined(_WIN32)
+    m_fd(INVALID_SOCKET),
+#else
     m_fd(-1),
+#endif // defined(_WIN32)
     m_counter(0U)
 {
-    /* stub */
+#if defined(_WIN32)
+    WSAData data;
+    int wsaRet = ::WSAStartup(MAKEWORD(2, 2), &data);
+    if (wsaRet != 0) {
+        ::LogError(LOG_NET, "Error from WSAStartup, err: %d", wsaRet);
+    }
+#endif // defined(_WIN32)
 }
 
 /* Initializes a new instance of the Socket class. */
 
+#if defined(_WIN32)
+Socket::Socket(const SOCKET fd) noexcept :
+#else
 Socket::Socket(const int fd) noexcept :
+#endif // defined(_WIN32)
     m_localAddress(),
     m_localPort(0U),
     m_fd(fd),
     m_counter(0U)
 {
-    /* stub */
+#if defined(_WIN32)
+    WSAData data;
+    int wsaRet = ::WSAStartup(MAKEWORD(2, 2), &data);
+    if (wsaRet != 0) {
+        ::LogError(LOG_NET, "Error from WSAStartup, err: %d", wsaRet);
+    }
+#endif // defined(_WIN32)
 }
 
 /* Initializes a new instance of the Socket class. */
@@ -56,8 +76,18 @@ Socket::Socket(const int domain, const int type, const int protocol) : Socket()
 
 Socket::~Socket()
 {
+#if defined(_WIN32)
+    ::shutdown(m_fd, SD_SEND);
+    if (m_fd != INVALID_SOCKET) {
+        ::closesocket(m_fd);
+        m_fd = INVALID_SOCKET;
+    }
+
+    ::WSACleanup();
+#else
     static_cast<void>(::shutdown(m_fd, SHUT_RDWR));
     static_cast<void>(::close(m_fd));
+#endif // defined(_WIN32)
 }
 
 /* Accepts a pending connection request. */
@@ -71,9 +101,17 @@ int Socket::accept(sockaddr* address, socklen_t* addrlen) noexcept
     pfd.revents = 0;
 
     // return immediately
+#if defined(_WIN32)
+    int ret = WSAPoll(&pfd, 1, 0);
+#else
     int ret = ::poll(&pfd, 1, 0);
+#endif // defined(_WIN32)
     if (ret < 0) {
+#if defined(_WIN32)
+        LogError(LOG_NET, "Error returned from TCP poll, err: %lu", ::GetLastError());
+#else
         LogError(LOG_NET, "Error returned from TCP poll, err: %d", errno);
+#endif // defined(_WIN32)
         return -1;
     }
 
@@ -133,9 +171,17 @@ ssize_t Socket::listen(const std::string& ipAddr, const uint16_t port, int backl
     pfd.revents = 0;
 
     // return immediately
+#if defined(_WIN32)
+    int ret = WSAPoll(&pfd, 1, 0);
+#else
     int ret = ::poll(&pfd, 1, 0);
+#endif // defined(_WIN32)
     if (ret < 0) {
+#if defined(_WIN32)
+        LogError(LOG_NET, "Error returned from TCP poll, err: %lu", ::GetLastError());
+#else
         LogError(LOG_NET, "Error returned from TCP poll, err: %d", errno);
+#endif // defined(_WIN32)
         return -1;
     }
 
@@ -143,7 +189,11 @@ ssize_t Socket::listen(const std::string& ipAddr, const uint16_t port, int backl
         return 0;
 
     m_counter++;
+#if defined(_WIN32)
+    return ::recv(pfd.fd, (char*)buffer, length, 0);
+#else
     return ::read(pfd.fd, (char*)buffer, length);
+#endif // defined(_WIN32)
 }
 
 /* Write data to the socket. */
@@ -156,7 +206,11 @@ ssize_t Socket::write(const uint8_t* buffer, size_t length) noexcept
     if (m_fd < 0)
         return -1;
 
+#if defined(_WIN32)
+    return ::send(m_fd, (char*)buffer, length, 0);
+#else
     return ::send(m_fd, buffer, length, 0);
+#endif // defined(_WIN32)
 }
 
 /* Gets the numeric representation of an address from a sockaddr_storage socket address structure. */
@@ -255,10 +309,17 @@ bool Socket::isNone(const sockaddr_storage& addr)
 bool Socket::initSocket(const int domain, const int type, const int protocol)
 {
     m_fd = ::socket(domain, type, protocol);
+#if defined(_WIN32)
+    if (m_fd == INVALID_SOCKET) {
+        LogError(LOG_NET, "Cannot create the TCP socket, err: %lu", ::GetLastError());
+        return false;
+    }
+#else
     if (m_fd < 0) {
         LogError(LOG_NET, "Cannot create the TCP socket, err: %d", errno);
         return false;
     }
+#endif // defined(_WIN32)
 
     return true;
 }
@@ -276,7 +337,11 @@ bool Socket::bind(const std::string& ipAddr, const uint16_t port)
     socklen_t length = sizeof(addr);
     bool retval = true;
     if (::bind(m_fd, reinterpret_cast<sockaddr*>(&addr), length) < 0) {
+#if defined(_WIN32)
+        LogError(LOG_NET, "Cannot bind the TCP address, err: %lu", ::GetLastError());
+#else
         LogError(LOG_NET, "Cannot bind the TCP address, err: %d", errno);
+#endif // defined(_WIN32)
         retval = false;
     }
 

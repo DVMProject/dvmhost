@@ -39,7 +39,11 @@ void* Host::threadDMRReader1(void* arg)
 {
     thread_t* th = (thread_t*)arg;
     if (th != nullptr) {
+#if defined(_WIN32)
+        ::CloseHandle(th->thread);
+#else
         ::pthread_detach(th->thread);
+#endif // defined(_WIN32)
 
         std::string threadName("dmrd:frame1-r");
         Host* host = static_cast<Host*>(th->obj);
@@ -168,7 +172,11 @@ void* Host::threadDMRWriter1(void* arg)
 {
     thread_t* th = (thread_t*)arg;
     if (th != nullptr) {
+#if defined(_WIN32)
+        ::CloseHandle(th->thread);
+#else
         ::pthread_detach(th->thread);
+#endif // defined(_WIN32)
 
         std::string threadName("dmrd:frame1-w");
         Host* host = static_cast<Host*>(th->obj);
@@ -292,7 +300,11 @@ void* Host::threadDMRReader2(void* arg)
 {
     thread_t* th = (thread_t*)arg;
     if (th != nullptr) {
+#if defined(_WIN32)
+        ::CloseHandle(th->thread);
+#else
         ::pthread_detach(th->thread);
+#endif // defined(_WIN32)
 
         std::string threadName("dmrd:frame2-r");
         Host* host = static_cast<Host*>(th->obj);
@@ -420,7 +432,11 @@ void* Host::threadDMRWriter2(void* arg)
 {
     thread_t* th = (thread_t*)arg;
     if (th != nullptr) {
+#if defined(_WIN32)
+        ::CloseHandle(th->thread);
+#else
         ::pthread_detach(th->thread);
+#endif // defined(_WIN32)
 
         std::string threadName("dmrd:frame2-w");
         Host* host = static_cast<Host*>(th->obj);

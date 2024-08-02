@@ -7,6 +7,7 @@
  *  Copyright (C) 2020,2021 Jonathan Naylor, G4KLX
  *
  */
+#if !defined(_WIN32)
 #include "common/Log.h"
 #include "modem/port/PseudoPTYPort.h"
 
@@ -75,3 +76,4 @@ void PseudoPTYPort::close()
     UARTPort::close();
     ::unlink(m_symlink.c_str());
 }
+#endif // !defined(_WIN32)

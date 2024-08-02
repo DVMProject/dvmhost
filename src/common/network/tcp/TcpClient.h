@@ -53,7 +53,11 @@ namespace network
              * @param client Address for client.
              * @param clientLen Length of sockaddr_in structure.
              */
+#if defined(_WIN32)
+            TcpClient(const SOCKET fd, sockaddr_in& client, int clientLen) noexcept(false) : Socket(fd),
+#else
             TcpClient(const int fd, sockaddr_in& client, int clientLen) noexcept(false) : Socket(fd),
+#endif // defined(_WIN32)
                 m_sockaddr()
             {
                 ::memcpy(reinterpret_cast<char*>(&m_sockaddr), reinterpret_cast<char*>(&client), clientLen);
@@ -75,7 +79,11 @@ namespace network
 
                 int ret = ::connect(m_fd, reinterpret_cast<sockaddr*>(&addr), sizeof(addr));
                 if (ret < 0) {
+#if defined(_WIN32)
+                    LogError(LOG_NET, "Failed to connect to server, err: %lu", ::GetLastError());
+#else
                     LogError(LOG_NET, "Failed to connect to server, err: %d", errno);
+#endif // defined(_WIN32)
                 }
             }
 
@@ -95,7 +103,11 @@ namespace network
             {
                 int reuse = 1;
                 if (::setsockopt(m_fd, IPPROTO_TCP, TCP_NODELAY, (char*)& reuse, sizeof(reuse)) != 0) {
+#if defined(_WIN32)
+                    LogError(LOG_NET, "Cannot set the TCP socket option, err: %lu", ::GetLastError());
+#else
                     LogError(LOG_NET, "Cannot set the TCP socket option, err: %d", errno);
+#endif // defined(_WIN32)
                     throw std::runtime_error("Cannot set the TCP socket option");
                 }
             }

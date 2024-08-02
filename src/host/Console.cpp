@@ -11,10 +11,14 @@
 
 #include <cstdio>
 
+#if defined(_WIN32)
+#include <conio.h>
+#else
 #include <cstring>
 #include <termios.h>
 #include <unistd.h>
 #include <sys/select.h>
+#endif // defined(_WIN32)
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -22,10 +26,16 @@
 
 /* Initializes a new instance of the Console class. */
 
+#if !defined(_WIN32)
 Console::Console() :
     m_termios()
+#else
+Console::Console()
+#endif // !defined(_WIN32)
 {
+#if !defined(_WIN32)
     ::memset(&m_termios, 0x00U, sizeof(termios));
+#endif // !defined(_WIN32)
 }
 
 /* Finalizes a instance of the Console class. */
@@ -36,6 +46,7 @@ Console::~Console() = default;
 
 bool Console::open()
 {
+#if !defined(_WIN32)
     termios tios;
 
     int n = ::tcgetattr(STDIN_FILENO, &tios);
@@ -53,7 +64,7 @@ bool Console::open()
         ::fprintf(stderr, "tcsetattr: returned %d\r\n", n);
         return false;
     }
-
+#endif // !defined(_WIN32)
     return true;
 }
 
@@ -61,15 +72,23 @@ bool Console::open()
 
 void Console::close()
 {
+#if !defined(_WIN32)
     int n = ::tcsetattr(STDIN_FILENO, TCSANOW, &m_termios);
     if (n != 0)
         ::fprintf(stderr, "tcsetattr: returned %d\r\n", n);
+#endif // !defined(_WIN32)
 }
 
 /* Retrieves a character input on the keyboard. */
 
 int Console::getChar()
 {
+#if defined(_WIN32)
+    if (::_kbhit() == 0)
+        return -1;
+
+    return ::_getch();
+#else
     fd_set fds;
     FD_ZERO(&fds);
     FD_SET(STDIN_FILENO, &fds);
@@ -94,6 +113,7 @@ int Console::getChar()
     }
 
     return c;
+#endif // defined(_WIN32)
 }
 
 /* Retrieves an array of characters input on the keyboard. */

@@ -6,7 +6,7 @@
  *
  *  Copyright (C) 2002-2004,2007-2009,2011-2013,2015-2017,2020,2021 Jonathan Naylor, G4KLX
  *  Copyright (C) 1999-2001 Thomas Sailor, HB9JNX
- *  Copyright (C) 2020-2021 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2020-2024 Bryan Biedenkapp, N2PLL
  *
  */
 #include "Defines.h"
@@ -18,6 +18,10 @@ using namespace modem::port;
 #include <cstring>
 #include <cassert>
 
+#if defined(_WIN32)
+#include <setupapi.h>
+#include <winioctl.h>
+#else
 #include <sys/types.h>
 
 #include <sys/ioctl.h>
@@ -25,6 +29,7 @@ using namespace modem::port;
 #include <fcntl.h>
 #include <unistd.h>
 #include <termios.h>
+#endif // defined(_WIN32)
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -37,7 +42,11 @@ UARTPort::UARTPort(const std::string& device, SERIAL_SPEED speed, bool assertRTS
     m_device(device),
     m_speed(speed),
     m_assertRTS(assertRTS),
+#if defined(_WIN32)
+    m_fd(INVALID_HANDLE_VALUE)
+#else
     m_fd(-1)
+#endif // defined(_WIN32)
 {
     assert(!device.empty());
 }
@@ -52,7 +61,84 @@ bool UARTPort::open()
 {
     if (m_isOpen)
         return true;
+#if defined(_WIN32)
+    assert(m_fd == INVALID_HANDLE_VALUE);
 
+    DWORD errCode;
+
+    std::string baseName = m_device.substr(4U); // Convert "\\.\COM10" to "COM10"
+
+    m_fd = ::CreateFileA(m_device.c_str(), GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (m_fd == INVALID_HANDLE_VALUE) {
+        ::LogError(LOG_HOST, "Cannot open device - %s, err=%04lx", m_device.c_str(), ::GetLastError());
+        return false;
+    }
+
+    DCB dcb;
+    if (::GetCommState(m_fd, &dcb) == 0) {
+        ::LogError(LOG_HOST, "Cannot get the attributes for %s, err=%04lx", m_device.c_str(), ::GetLastError());
+        ::ClearCommError(m_fd, &errCode, NULL);
+        ::CloseHandle(m_fd);
+        return false;
+    }
+
+    dcb.BaudRate = DWORD(m_speed);
+    dcb.ByteSize = 8;
+    dcb.Parity = NOPARITY;
+    dcb.fParity = FALSE;
+    dcb.StopBits = ONESTOPBIT;
+    dcb.fInX = FALSE;
+    dcb.fOutX = FALSE;
+    dcb.fOutxCtsFlow = FALSE;
+    dcb.fOutxDsrFlow = FALSE;
+    dcb.fDsrSensitivity = FALSE;
+    dcb.fDtrControl = DTR_CONTROL_DISABLE;
+    dcb.fRtsControl = RTS_CONTROL_DISABLE;
+
+    if (::SetCommState(m_fd, &dcb) == 0) {
+        ::LogError(LOG_HOST, "Cannot set the attributes for %s, err=%04lx", m_device.c_str(), ::GetLastError());
+        ::ClearCommError(m_fd, &errCode, NULL);
+        ::CloseHandle(m_fd);
+        return false;
+    }
+
+    COMMTIMEOUTS timeouts;
+    if (!::GetCommTimeouts(m_fd, &timeouts)) {
+        ::LogError(LOG_HOST, "Cannot get the timeouts for %s, err=%04lx", m_device.c_str(), ::GetLastError());
+        ::ClearCommError(m_fd, &errCode, NULL);
+        ::CloseHandle(m_fd);
+        return false;
+    }
+
+    timeouts.ReadIntervalTimeout = MAXDWORD;
+    timeouts.ReadTotalTimeoutMultiplier = 0UL;
+    timeouts.ReadTotalTimeoutConstant = 0UL;
+
+    if (!::SetCommTimeouts(m_fd, &timeouts)) {
+        ::LogError(LOG_HOST, "Cannot set the timeouts for %s, err=%04lx", m_device.c_str(), ::GetLastError());
+        ::ClearCommError(m_fd, &errCode, NULL);
+        ::CloseHandle(m_fd);
+        return false;
+    }
+
+    if (::EscapeCommFunction(m_fd, CLRDTR) == 0) {
+        ::LogError(LOG_HOST, "Cannot clear DTR for %s, err=%04lx", m_device.c_str(), ::GetLastError());
+        ::ClearCommError(m_fd, &errCode, NULL);
+        ::CloseHandle(m_fd);
+        return false;
+    }
+
+    if (::EscapeCommFunction(m_fd, m_assertRTS ? SETRTS : CLRRTS) == 0) {
+        ::LogError(LOG_HOST, "Cannot set/clear RTS for %s, err=%04lx", m_device.c_str(), ::GetLastError());
+        ::ClearCommError(m_fd, &errCode, NULL);
+        ::CloseHandle(m_fd);
+        return false;
+    }
+
+    ::ClearCommError(m_fd, &errCode, NULL);
+
+    return true;
+#else
     assert(m_fd == -1);
 
 #if defined(__APPLE__)
@@ -72,6 +158,7 @@ bool UARTPort::open()
     }
 
     return setTermios();
+#endif // defined(_WIN32)
 }
 
 /* Reads data from the serial port. */
@@ -79,6 +166,26 @@ bool UARTPort::open()
 int UARTPort::read(uint8_t* buffer, uint32_t length)
 {
     assert(buffer != nullptr);
+#if defined(_WIN32)
+    assert(m_fd != INVALID_HANDLE_VALUE);
+
+    if (length == 0U)
+        return 0;
+
+    uint32_t offset = 0U;
+
+    while (offset < length) {
+        int ret = readNonblock(buffer + offset, length - offset);
+        if (ret < 0) {
+            return ret;
+        } else if (ret == 0) {
+            if (offset == 0U)
+                return 0;
+        } else {
+            offset += ret;
+        }
+    }
+#else
     assert(m_fd != -1);
 
     if (length == 0U)
@@ -123,7 +230,7 @@ int UARTPort::read(uint8_t* buffer, uint32_t length)
                 offset += len;
         }
     }
-
+#endif // defined(_WIN32)
     return length;
 }
 
@@ -132,7 +239,28 @@ int UARTPort::read(uint8_t* buffer, uint32_t length)
 int UARTPort::write(const uint8_t* buffer, uint32_t length)
 {
     assert(buffer != nullptr);
+#if defined(_WIN32)
+    if (m_isOpen && m_fd == INVALID_HANDLE_VALUE)
+        return 0;
 
+    assert(m_fd != INVALID_HANDLE_VALUE);
+
+    if (length == 0U)
+        return 0;
+
+    uint32_t ptr = 0U;
+
+    while (ptr < length) {
+        DWORD bytes = 0UL;
+        BOOL ret = ::WriteFile(m_fd, buffer + ptr, length - ptr, &bytes, NULL);
+        if (!ret) {
+            ::LogError(LOG_HOST, "Error from WriteFile for %s: %04lx", m_device.c_str(), ::GetLastError());
+            return -1;
+        }
+
+        ptr += bytes;
+    }
+#else
     if (m_isOpen && m_fd == -1)
         return 0;
 
@@ -156,7 +284,7 @@ int UARTPort::write(const uint8_t* buffer, uint32_t length)
         if (n > 0)
             ptr += n;
     }
-
+#endif // defined(_WIN32)
     return length;
 }
 
@@ -164,6 +292,15 @@ int UARTPort::write(const uint8_t* buffer, uint32_t length)
 
 void UARTPort::close()
 {
+#if defined(_WIN32)
+    if (!m_isOpen && m_fd == INVALID_HANDLE_VALUE)
+        return;
+
+    assert(m_fd != INVALID_HANDLE_VALUE);
+
+    ::CloseHandle(m_fd);
+    m_fd = INVALID_HANDLE_VALUE;
+#else
     if (!m_isOpen && m_fd == -1)
         return;
 
@@ -171,6 +308,7 @@ void UARTPort::close()
 
     ::close(m_fd);
     m_fd = -1;
+#endif // defined(_WIN32)
     m_isOpen = false;
 }
 
@@ -200,10 +338,50 @@ UARTPort::UARTPort(SERIAL_SPEED speed, bool assertRTS) :
     m_isOpen(false),
     m_speed(speed),
     m_assertRTS(assertRTS),
+#if defined(_WIN32)
+    m_fd(INVALID_HANDLE_VALUE)
+#else
     m_fd(-1)
+#endif // defined(_WIN32)
 {
     /* stub */
 }
+
+#if defined(_WIN32)
+/* Helper on Windows to read from serial port non-blocking. */
+
+int UARTPort::readNonblock(unsigned char* buffer, unsigned int length)
+{
+    assert(m_fd != INVALID_HANDLE_VALUE);
+    assert(buffer != NULL);
+
+    if (length == 0U)
+        return 0;
+
+    DWORD errors;
+    COMSTAT status;
+    if (::ClearCommError(m_fd, &errors, &status) == 0) {
+        ::LogError(LOG_HOST, "Error from ClearCommError for %s, err=%04lx", m_device.c_str(), ::GetLastError());
+        return -1;
+    }
+
+    if (status.cbInQue == 0UL)
+        return 0;
+
+    DWORD readLength = status.cbInQue;
+    if (length < readLength)
+        readLength = length;
+
+    DWORD bytes = 0UL;
+    BOOL ret = ::ReadFile(m_fd, buffer, readLength, &bytes, NULL);
+    if (!ret) {
+        ::LogError(LOG_HOST, "Error from ReadFile for %s: %04lx", m_device.c_str(), ::GetLastError());
+        return -1;
+    }
+
+    return int(bytes);
+}
+#endif // defined(_WIN32)
 
 /* Checks it the serial port can be written to. */
 
@@ -232,6 +410,7 @@ bool UARTPort::canWrite()
 
 bool UARTPort::setTermios()
 {
+#if !defined(_WIN32)
     termios termios;
     if (::tcgetattr(m_fd, &termios) < 0) {
         ::LogError(LOG_HOST, "Cannot get the attributes for %s", m_device.c_str());
@@ -324,6 +503,7 @@ bool UARTPort::setTermios()
 #if defined(__APPLE__)
     setNonblock(false);
 #endif
+#endif // !defined(_WIN32)
 
     m_isOpen = true;
     return true;

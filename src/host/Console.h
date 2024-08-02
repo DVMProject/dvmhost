@@ -18,7 +18,9 @@
 
 #include "Defines.h"
 
+#if !defined(_WIN32)
 #include <termios.h>
+#endif // !defined(_WIN32)
 
 // ---------------------------------------------------------------------------
 //  Class Declaration
@@ -67,7 +69,9 @@ public:
     int getLine(char line[], int max, char mask);
 
 private:
+#if !defined(_WIN32)
     termios m_termios;
+#endif // !defined(_WIN32)
 };
 
 #endif // __CONSOLE_H__

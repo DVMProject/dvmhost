@@ -91,7 +91,9 @@ private:
 
     bool m_vtunEnabled;
     PacketDataMode m_packetDataMode;
+#if !defined(_WIN32)
     network::viface::VIFace* m_tun;
+#endif // !defined(_WIN32)
 
     bool m_dmrEnabled;
     bool m_p25Enabled;
@@ -153,13 +155,14 @@ private:
      * @returns bool True, if network connectivity was initialized, otherwise false.
      */
     bool createVirtualNetworking();
+#if !defined(_WIN32)
     /**
      * @brief Entry point to virtual networking thread.
      * @param arg Instance of the thread_t structure.
      * @returns void* (Ignore)
      */
     static void* threadVirtualNetworking(void* arg);
-
+#endif // !defined(_WIN32)
     /**
      * @brief Processes any peer network traffic.
      * @param peerNetwork Instance of PeerNetwork to process traffic for.

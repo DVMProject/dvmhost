@@ -26,7 +26,11 @@ void* Host::threadNXDNReader(void* arg)
 {
     thread_t* th = (thread_t*)arg;
     if (th != nullptr) {
+#if defined(_WIN32)
+        ::CloseHandle(th->thread);
+#else
         ::pthread_detach(th->thread);
+#endif // defined(_WIN32)
 
         std::string threadName("nxdd:frame-r");
         Host* host = static_cast<Host*>(th->obj);
@@ -117,7 +121,11 @@ void* Host::threadNXDNWriter(void* arg)
 {
     thread_t* th = (thread_t*)arg;
     if (th != nullptr) {
+#if defined(_WIN32)
+        ::CloseHandle(th->thread);
+#else
         ::pthread_detach(th->thread);
+#endif // defined(_WIN32)
 
         std::string threadName("nxdd:frame-w");
         Host* host = static_cast<Host*>(th->obj);

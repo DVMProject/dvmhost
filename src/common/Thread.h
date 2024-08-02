@@ -25,7 +25,18 @@
 
 #include <string>
 
+#if defined(_WIN32)
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
+#else
 #include <pthread.h>
+#endif // defined(_WIN32)
+
+#if defined(_WIN32)
+ /* Thread identifiers.  The structure of the attribute type is not
+    exposed on purpose.  */
+typedef HANDLE pthread_t;
+#endif // defined(_WIN32)
 
 // ---------------------------------------------------------------------------
 //  Structure Declaration
@@ -111,7 +122,11 @@ private:
      * @param arg 
      * @returns void* 
      */
+#if defined(_WIN32)
+    static DWORD __stdcall helper(LPVOID arg);
+#else
     static void* helper(void* arg);
+#endif // defined(_WIN32)
 
 public:
     /**

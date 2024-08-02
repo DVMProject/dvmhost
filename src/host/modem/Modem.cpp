@@ -1476,7 +1476,8 @@ bool Modem::writeP25Frame(const uint8_t* data, uint32_t length)
             return false;
         }
 
-        uint8_t buffer[MAX_LENGTH];
+        UInt8Array __buffer = std::make_unique<uint8_t[]>(MAX_LENGTH);
+        uint8_t* buffer = __buffer.get();
 
         if (length < 252U) {
             buffer[0U] = DVM_SHORT_FRAME_START;

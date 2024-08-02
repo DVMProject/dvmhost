@@ -403,7 +403,8 @@ int ModemV24::write(const uint8_t* data, uint32_t length)
     }
 
     if (modemCommand == CMD_P25_DATA) {
-        uint8_t buffer[length];
+        UInt8Array __buffer = std::make_unique<uint8_t[]>(length);
+        uint8_t* buffer = __buffer.get();
         ::memset(buffer, 0x00U, length);
         ::memcpy(buffer, data + 2U, length);
 
@@ -475,7 +476,8 @@ int ModemV24::writeSerial()
         m_txP25Queue.get(lengthTagTs, 11U);
         
         // Get the actual data
-        uint8_t buffer[len];
+        UInt8Array __buffer = std::make_unique<uint8_t[]>(len);
+        uint8_t* buffer = __buffer.get();
         m_txP25Queue.get(buffer, len);
         
         // Sanity check on data tag
@@ -541,7 +543,8 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
     ::memset(buffer, 0x00U, P25_PDU_FRAME_LENGTH_BYTES + 2U);
 
     // get the DFSI data (skip the 0x00 padded byte at the start)
-    uint8_t dfsiData[length - 1U];
+    UInt8Array __dfsiData = std::make_unique<uint8_t[]>(length - 1U);
+    uint8_t* dfsiData = __dfsiData.get();
     ::memset(dfsiData, 0x00U, length - 1U);
     ::memcpy(dfsiData, data + 1U, length - 1U);
 
@@ -609,7 +612,7 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
             // buffer for decoded VHDR data
             uint8_t vhdr[DFSI_VHDR_LEN];
 
-            uint offset = 0U;
+            uint32_t offset = 0U;
             for (uint32_t i = 0; i < DFSI_VHDR_RAW_LEN; i++, offset += 6)
                 Utils::hex2Bin(raw[i], vhdr, offset);
 

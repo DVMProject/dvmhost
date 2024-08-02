@@ -14,8 +14,19 @@ include(src/CompilerOptions.cmake)
 #
 include(src/common/CMakeLists.txt)
 add_library(common STATIC ${common_SRC} ${common_INCLUDE})
-target_link_libraries(common PRIVATE asio::asio Threads::Threads util)
+if (COMPILE_WIN32)
+    target_link_libraries(common PRIVATE asio::asio Threads::Threads)
+else ()
+    target_link_libraries(common PRIVATE asio::asio Threads::Threads util)
+endif (COMPILE_WIN32)
 target_include_directories(common PRIVATE src src/common)
+
+#
+## vocoder
+#
+include(src/vocoder/CMakeLists.txt)
+add_library(vocoder STATIC ${vocoder_SRC} ${vocoder_INCLUDE})
+target_include_directories(vocoder PRIVATE src src/vocoder)
 
 #
 ## dvmhost
@@ -29,8 +40,12 @@ endif (ENABLE_SETUP_TUI)
 add_executable(dvmhost ${common_INCLUDE} ${dvmhost_SRC})
 if (ENABLE_SETUP_TUI)
     target_link_libraries(dvmhost PRIVATE common ${OPENSSL_LIBRARIES} asio::asio finalcut Threads::Threads util)
-else()
-    target_link_libraries(dvmhost PRIVATE common ${OPENSSL_LIBRARIES} asio::asio Threads::Threads util)
+else ()
+    if (COMPILE_WIN32)
+        target_link_libraries(dvmhost PRIVATE common ${OPENSSL_LIBRARIES} asio::asio Threads::Threads)
+    else ()
+        target_link_libraries(dvmhost PRIVATE common ${OPENSSL_LIBRARIES} asio::asio Threads::Threads util)
+    endif (COMPILE_WIN32)
 endif (ENABLE_SETUP_TUI)
 target_include_directories(dvmhost PRIVATE ${OPENSSL_INCLUDE_DIR} src src/host)
 
@@ -81,3 +96,15 @@ include(src/remote/CMakeLists.txt)
 add_executable(dvmcmd ${common_INCLUDE} ${dvmcmd_SRC})
 target_link_libraries(dvmcmd PRIVATE common ${OPENSSL_LIBRARIES} asio::asio Threads::Threads)
 target_include_directories(dvmcmd PRIVATE ${OPENSSL_INCLUDE_DIR} src src/remote)
+
+#
+## dvmbridge
+#
+include(src/bridge/CMakeLists.txt)
+add_executable(dvmbridge ${common_INCLUDE} ${bridge_SRC})
+if (COMPILE_WIN32)
+    target_link_libraries(dvmbridge PRIVATE common vocoder ${OPENSSL_LIBRARIES} asio::asio Threads::Threads)
+else ()
+    target_link_libraries(dvmbridge PRIVATE common vocoder ${OPENSSL_LIBRARIES} dl asio::asio Threads::Threads)
+endif (COMPILE_WIN32)
+target_include_directories(dvmbridge PRIVATE ${OPENSSL_INCLUDE_DIR} src src/host src/bridge)

@@ -6,7 +6,7 @@
  *
  *  Copyright (C) 2002-2004,2007-2009,2011-2013,2015-2017,2020,2021 Jonathan Naylor, G4KLX
  *  Copyright (C) 1999-2001 Thomas Sailor, HB9JNX
- *  Copyright (C) 2020-2021 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2020-2024 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -23,6 +23,10 @@
 #include "modem/port/ISerialPort.h"
 
 #include <string>
+
+#if defined(_WIN32)
+#include <windows.h>
+#endif // defined(_WIN32)
 
 namespace modem
 {
@@ -125,8 +129,21 @@ namespace modem
             std::string m_device;
             SERIAL_SPEED m_speed;
             bool m_assertRTS;
+#if defined(_WIN32)
+            HANDLE m_fd;
+#else
             int m_fd;
+#endif // defined(_WIN32)
 
+#if defined(_WIN32)
+            /**
+             * @brief Helper on Windows to read from serial port non-blocking.
+             * @param[in] buffer Buffer containing data to write to port.
+             * @param length Length of data to write to port.
+             * @returns int Actual length of data written to the port.
+             */
+            int readNonblock(uint8_t* buffer, uint32_t length);
+#endif // defined(_WIN32)
             /**
              * @brief Checks it the serial port can be written to.
              * @returns bool True, if port can be written to, otherwise false.
