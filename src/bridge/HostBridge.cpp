@@ -114,14 +114,23 @@ void mdcPacketDetected(int frameCount, mdc_u8_t op, mdc_u8_t arg, mdc_u16_t unit
         return;
 
     if (op == OP_PTT_ID && bridge->m_overrideSrcIdFromMDC) {
+        ::LogMessage(LOG_HOST, "Local Traffic, MDC Detect, unitId = $%04X", unitID);
+
         // HACK: nasty bullshit to convert MDC unitID to decimal
         char* pCharRes = new (char);
-        ::sprintf(pCharRes, "%X", unitID);
+        ::sprintf(pCharRes, "0x%X", unitID);
 
-        int res = std::stoi(pCharRes);
+        uint32_t res = 0U;
+        std::string s = std::string(pCharRes + 2U);
+        if (s.find_first_not_of("0123456789") == std::string::npos) {
+            res = (uint32_t)std::stoi(pCharRes + 2U);
+        }
+        else {
+            res = (uint32_t)std::stoi(pCharRes, 0, 16);
+        }
 
         bridge->m_srcIdOverride = res;
-        ::LogMessage(LOG_HOST, "Local Traffic, MDC Detect, srcId = %u", bridge->m_srcIdOverride);
+        ::LogMessage(LOG_HOST, "Local Traffic, MDC Detect, converted srcId = %u", bridge->m_srcIdOverride);
     }
 }
 
