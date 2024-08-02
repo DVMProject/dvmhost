@@ -37,8 +37,6 @@ extern std::string g_lockFile;
 extern bool g_foreground;
 /** @brief (Global) Flag indicating the FNE should stop immediately. */
 extern bool g_killed;
-/** @brief  */
-extern bool g_hideMessages;
 
 /** @brief Audio Input Device Index. */
 extern int g_inputDevice;

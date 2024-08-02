@@ -7,6 +7,7 @@ Please feel free to reach out to us for help, comments or otherwise, on our Disc
 This project generates a few executables:
 - `dvmhost` host software that connects to the DVM modems (both air interface for repeater and hotspot or P25 DFSI for commerical P25 hardware) and is the primary data processing application for digital modes. [See configuration](#dvmhost-configuration) to configure and calibrate.
 - `dvmfne` a network "core", this provides a central server for `dvmhost` instances to connect to and be networked with, allowing relay of traffic and other data between `dvmhost` instances and other `dvmfne` instances. [See configuration](#dvmfne-configuration) to configure.
+- `dvmbridge` a analog/PCM audio bridge, this provides the capability for analog or PCM audio resources to be connected to a `dvmfne` instance, allowing realtime vocoding of traffic.
 - `dvmcmd` a simple command-line utility to send remote control commands to a `dvmhost` or `dvmfne` instance with REST API configured.
 - `dvmmon` a TUI utility that allows semi-realtime console-based monitoring of `dvmhost` instances (this tool is only available when project wide TUI support is enabled!).
 
@@ -192,6 +193,29 @@ usage: ./dvmfne [-vhf][--syslog][-c <configuration file>]
   -c <file> specifies the configuration file to use
 
   --        stop handling options
+```
+
+### dvmbridge Command Line Parameters
+
+```
+usage: ./dvmbridge [-vhf][-i <input audio device id>][-o <output audio device id>][-c <configuration file>]
+
+  -v        show version information
+  -h        show this screen
+  -f        foreground mode
+
+  -i        input audio device
+  -o        output audio device
+
+  -c <file> specifies the configuration file to use
+
+  --        stop handling options
+
+Audio Input Devices:
+    ... <list of audio input devices> ...
+
+Audio Output Devices:
+    ... <list of audio output devices> ...
 ```
 
 ### dvmcmd Command Line Parameters

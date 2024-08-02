@@ -108,8 +108,6 @@ void usage(const char* message, const char* arg)
         "\n"
         "  -c <file> specifies the configuration file to use\n"
         "\n"
-        "  -s        Silent (will not log messages to the FNE)\n"
-        "\n"
         "  --        stop handling options\n",
         g_progExe.c_str());
 
@@ -165,9 +163,6 @@ int checkArgs(int argc, char* argv[])
         }
         else if (IS("-f")) {
             g_foreground = true;
-        }
-        else if (IS("-s")) {
-            g_hideMessages = true;
         }
         else if (IS("-i")) {
             if ((argc - 1) <= 0)
