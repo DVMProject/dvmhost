@@ -185,6 +185,8 @@ protected:
     bool m_hasFetchedStatus;
     bool m_requestedStatus;
 
+    bool m_reqBootload;
+
     /**
      * @brief Modem port open callback.
      * @param modem Instance of the Modem class.
@@ -319,6 +321,11 @@ protected:
      * @returns bool True, if modem coonfiguration area was written, otherwise false.
      */
     bool writeFlash();
+
+    /**
+     * @brief 
+     */
+    void writeBootload();
 
     /**
      * @brief Helper to clock the calibration BER timer.

@@ -92,12 +92,20 @@
 #define RCD_P25_RID_CHECK               "p25-rid-check"
 #define RCD_P25_RID_INHIBIT             "p25-rid-inhibit"
 #define RCD_P25_RID_UNINHIBIT           "p25-rid-uninhibit"
+#define RCD_P25_RID_DYN_REGRP           "p25-rid-dyn-regrp"
+#define RCD_P25_RID_DYN_REGRP_CANCEL    "p25-rid-dyn-regrp-cancel"
+#define RCD_P25_RID_DYN_REGRP_LOCK      "p25-rid-dyn-regrp-lock"
+#define RCD_P25_RID_DYN_REGRP_UNLOCK    "p25-rid-dyn-regrp-unlock"
 #define RCD_P25_RID_GAQ                 "p25-rid-gaq"
 #define RCD_P25_RID_UREG                "p25-rid-ureg"
 #define RCD_FNE_P25_RID_PAGE            "fne-p25-rid-page"
 #define RCD_FNE_P25_RID_CHECK           "fne-p25-rid-check"
 #define RCD_FNE_P25_RID_INHIBIT         "fne-p25-rid-inhibit"
 #define RCD_FNE_P25_RID_UNINHIBIT       "fne-p25-rid-uninhibit"
+#define RCD_FNE_P25_RID_DYN_REGRP       "fne-p25-rid-dyn-regrp"
+#define RCD_FNE_P25_RID_DYN_REGRP_CANCEL "fne-p25-rid-dyn-regrp-cancel"
+#define RCD_FNE_P25_RID_DYN_REGRP_LOCK  "fne-p25-rid-dyn-regrp-lock"
+#define RCD_FNE_P25_RID_DYN_REGRP_UNLOCK "fne-p25-rid-dyn-regrp-unlock"
 #define RCD_FNE_P25_RID_GAQ             "fne-p25-rid-gaq"
 #define RCD_FNE_P25_RID_UREG            "fne-p25-rid-ureg"
 
@@ -254,6 +262,14 @@ void usage(const char* message, const char* arg)
     reply += "  p25-rid-check <rid>         Radio Checks the specified RID\r\n";
     reply += "  p25-rid-inhibit <rid>       Inhibits the specified RID\r\n";
     reply += "  p25-rid-uninhibit <rid>     Uninhibits the specified RID\r\n";
+    reply += "  p25-rid-dyn-regrp <rid> <tg>\r\n";
+    reply += "                              Dynamic Regroup Request to the specified RID\r\n";
+    reply += "  p25-rid-dyn-regrp-cancel <rid>\r\n";
+    reply += "                              Dynamic Regroup Cancellation to the specified RID\r\n";
+    reply += "  p25-rid-dyn-regrp-lock <rid>\r\n";
+    reply += "                              Dynamic Regroup Selector Lock to the specified RID\r\n";
+    reply += "  p25-rid-dyn-regrp-unlock <rid>\r\n";
+    reply += "                              Dynamic Regroup Selector Unlock to the specified RID\r\n";
     reply += "  p25-rid-gaq <rid>           Group affiliation queries the specified RID\r\n";
     reply += "  p25-rid-ureg <rid>          Demand unit registration for the specified RID\r\n";
     reply += "\r\n";
@@ -695,7 +711,7 @@ int main(int argc, char** argv)
             req["dstId"].set<uint32_t>(dstId);
 
             if (rcom == RCD_FNE_P25_RID_PAGE) {
-                uint32_t peerId = getArgUInt32(args, 2U);
+                uint32_t peerId = getArgUInt32(args, 1U);
                 req["peerId"].set<uint32_t>(peerId);
             }
 
@@ -708,7 +724,7 @@ int main(int argc, char** argv)
             req["dstId"].set<uint32_t>(dstId);
 
             if (rcom == RCD_P25_RID_CHECK) {
-                uint32_t peerId = getArgUInt32(args, 2U);
+                uint32_t peerId = getArgUInt32(args, 1U);
                 req["peerId"].set<uint32_t>(peerId);
             }
 
@@ -721,7 +737,7 @@ int main(int argc, char** argv)
             req["dstId"].set<uint32_t>(dstId);
 
             if (rcom == RCD_FNE_P25_RID_INHIBIT) {
-                uint32_t peerId = getArgUInt32(args, 2U);
+                uint32_t peerId = getArgUInt32(args, 1U);
                 req["peerId"].set<uint32_t>(peerId);
             }
 
@@ -734,7 +750,61 @@ int main(int argc, char** argv)
             req["dstId"].set<uint32_t>(dstId);
 
             if (rcom == RCD_FNE_P25_RID_UNINHIBIT) {
+                uint32_t peerId = getArgUInt32(args, 1U);
+                req["peerId"].set<uint32_t>(peerId);
+            }
+
+            retCode = client->send(HTTP_PUT, PUT_P25_RID, req, response);
+        }
+        else if ((rcom == RCD_P25_RID_DYN_REGRP || rcom == RCD_FNE_P25_RID_DYN_REGRP) && argCnt >= 1U) {
+            json::object req = json::object();
+            req["command"].set<std::string>(std::string(RID_CMD_DYN_REGRP));
+            uint32_t dstId = getArgUInt32(args, 0U);
+            req["dstId"].set<uint32_t>(dstId);
+            uint32_t tgId = getArgUInt32(args, 1U);
+            req["tgId"].set<uint32_t>(tgId);
+
+            if (rcom == RCD_FNE_P25_RID_DYN_REGRP) {
                 uint32_t peerId = getArgUInt32(args, 2U);
+                req["peerId"].set<uint32_t>(peerId);
+            }
+
+            retCode = client->send(HTTP_PUT, PUT_P25_RID, req, response);
+        }
+        else if ((rcom == RCD_P25_RID_DYN_REGRP_CANCEL || rcom == RCD_FNE_P25_RID_DYN_REGRP_CANCEL) && argCnt >= 1U) {
+            json::object req = json::object();
+            req["command"].set<std::string>(std::string(RID_CMD_DYN_REGRP_CANCEL));
+            uint32_t dstId = getArgUInt32(args, 0U);
+            req["dstId"].set<uint32_t>(dstId);
+
+            if (rcom == RCD_FNE_P25_RID_DYN_REGRP_CANCEL) {
+                uint32_t peerId = getArgUInt32(args, 1U);
+                req["peerId"].set<uint32_t>(peerId);
+            }
+
+            retCode = client->send(HTTP_PUT, PUT_P25_RID, req, response);
+        }
+        else if ((rcom == RCD_P25_RID_DYN_REGRP_LOCK || rcom == RCD_FNE_P25_RID_DYN_REGRP_LOCK) && argCnt >= 1U) {
+            json::object req = json::object();
+            req["command"].set<std::string>(std::string(RID_CMD_DYN_REGRP_LOCK));
+            uint32_t dstId = getArgUInt32(args, 0U);
+            req["dstId"].set<uint32_t>(dstId);
+
+            if (rcom == RCD_FNE_P25_RID_DYN_REGRP_LOCK) {
+                uint32_t peerId = getArgUInt32(args, 1U);
+                req["peerId"].set<uint32_t>(peerId);
+            }
+
+            retCode = client->send(HTTP_PUT, PUT_P25_RID, req, response);
+        }
+        else if ((rcom == RCD_P25_RID_DYN_REGRP_UNLOCK || rcom == RCD_FNE_P25_RID_DYN_REGRP_UNLOCK) && argCnt >= 1U) {
+            json::object req = json::object();
+            req["command"].set<std::string>(std::string(RID_CMD_DYN_REGRP_UNLOCK));
+            uint32_t dstId = getArgUInt32(args, 0U);
+            req["dstId"].set<uint32_t>(dstId);
+
+            if (rcom == RCD_FNE_P25_RID_DYN_REGRP_UNLOCK) {
+                uint32_t peerId = getArgUInt32(args, 1U);
                 req["peerId"].set<uint32_t>(peerId);
             }
 
@@ -747,7 +817,7 @@ int main(int argc, char** argv)
             req["dstId"].set<uint32_t>(dstId);
 
             if (rcom == RCD_FNE_P25_RID_GAQ) {
-                uint32_t peerId = getArgUInt32(args, 2U);
+                uint32_t peerId = getArgUInt32(args, 1U);
                 req["peerId"].set<uint32_t>(peerId);
             }
 
@@ -760,7 +830,7 @@ int main(int argc, char** argv)
             req["dstId"].set<uint32_t>(dstId);
 
             if (rcom == RCD_FNE_P25_RID_UREG) {
-                uint32_t peerId = getArgUInt32(args, 2U);
+                uint32_t peerId = getArgUInt32(args, 1U);
                 req["peerId"].set<uint32_t>(peerId);
             }
 

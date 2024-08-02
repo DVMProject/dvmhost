@@ -352,8 +352,6 @@ if (NOT TARGET tarball)
             COMMAND if [ -e dvm-firmware-hs_f1.bin ]\; then cp -v dvm-firmware-hs_f1.bin ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
             COMMAND if [ -e DVM-V24-stm32f103.elf ]\; then cp -v DVM-V24-stm32f103.elf ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
             COMMAND if [ -e DVM-V24-stm32f103.bin ]\; then cp -v DVM-V24-stm32f103.bin ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
-            COMMAND if [ -e DVM-V24-stm32f103.hex ]\; then cp -v DVM-V24-stm32f103.hex ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
-            COMMAND if [ -e DVM-V24-stm32f103.map ]\; then cp -v DVM-V24-stm32f103.map ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
             COMMAND cd ${CMAKE_INSTALL_PREFIX_TARBALL} && tar czvf ../dvmhost_${CPACK_DEBIAN_PACKAGE_VERSION}_${ARCH}.tar.gz *
             COMMAND rm -rf ${CMAKE_INSTALL_PREFIX_TARBALL})
     else()
@@ -384,8 +382,6 @@ if (NOT TARGET tarball)
             COMMAND if [ -e dvm-firmware-hs_f1.bin ]\; then cp -v dvm-firmware-hs_f1.bin ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
             COMMAND if [ -e DVM-V24-stm32f103.elf ]\; then cp -v DVM-V24-stm32f103.elf ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
             COMMAND if [ -e DVM-V24-stm32f103.bin ]\; then cp -v DVM-V24-stm32f103.bin ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
-            COMMAND if [ -e DVM-V24-stm32f103.hex ]\; then cp -v DVM-V24-stm32f103.hex ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
-            COMMAND if [ -e DVM-V24-stm32f103.map ]\; then cp -v DVM-V24-stm32f103.map ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
             COMMAND cd ${CMAKE_INSTALL_PREFIX_TARBALL} && tar czvf ../dvmhost_${CPACK_DEBIAN_PACKAGE_VERSION}_${ARCH}.tar.gz *
             COMMAND rm -rf ${CMAKE_INSTALL_PREFIX_TARBALL})
     endif (ENABLE_TUI_SUPPORT AND (NOT DISABLE_MONITOR))
@@ -434,9 +430,7 @@ add_custom_target(old_install
     COMMAND if [ -e dvm-firmware-hs_f1.elf ]\; then install -m 644 dvm-firmware-hs_f1.elf ${CMAKE_LEGACY_INSTALL_PREFIX}/fw/dvm-firmware-hs_f1.elf\; fi
     COMMAND if [ -e dvm-firmware-hs_f1.bin ]\; then install -m 644 dvm-firmware-hs_f1.bin ${CMAKE_LEGACY_INSTALL_PREFIX}/fw/dvm-firmware-hs_f1.bin\; fi
     COMMAND if [ -e DVM-V24-stm32f103.elf ]\; then cp -v DVM-V24-stm32f103.elf ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
-    COMMAND if [ -e DVM-V24-stm32f103.bin ]\; then cp -v DVM-V24-stm32f103.bin ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
-    COMMAND if [ -e DVM-V24-stm32f103.hex ]\; then cp -v DVM-V24-stm32f103.hex ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
-    COMMAND if [ -e DVM-V24-stm32f103.map ]\; then cp -v DVM-V24-stm32f103.map ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi)
+    COMMAND if [ -e DVM-V24-stm32f103.bin ]\; then cp -v DVM-V24-stm32f103.bin ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi)
 
 #
 # Custom make target to perform non-standard legacy service install. This is meant
@@ -464,11 +458,11 @@ add_custom_target(old_install-service
 # Firmware compilation
 #
 add_custom_target(dvmfw
-    DEPENDS dvmfw-stm32f4 dvmfw-stm32f4-pog dvmfw-stm32f4-eda dvmfw-stm32f4-dvmv1 dvmfw-stm32fx dvm-v24
+    DEPENDS dvmfw-stm32f4 dvmfw-stm32f4-pog dvmfw-stm32f4-eda dvmfw-stm32f4-dvmv1 dvmfw-stm32fx dvmfw-v24
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/src/fw/modem
 )
 add_custom_target(dvmfw-clean
-    DEPENDS dvmfw-stm32f4-clean dvmfw-stm32fx-clean dvm-v24-clean
+    DEPENDS dvmfw-stm32f4-clean dvmfw-stm32fx-clean dvmfw-v24-clean
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/src/fw/modem
 )
 
@@ -527,15 +521,15 @@ add_custom_target(dvmfw-stm32fx-clean
     COMMAND rm -f ${CMAKE_CURRENT_BINARY_DIR}/dvm-firmware*.bin
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/src/fw/hotspot
 )
+
 add_custom_target(dvmfw-v24
     COMMAND make -f Makefile
-    COMMAND cp DVM-V24-stm32f103.elf ${CMAKE_CURRENT_BINARY_DIR}
-    COMMAND cp DVM-V24-stm32f103.bin ${CMAKE_CURRENT_BINARY_DIR}
-    COMMAND cp DVM-V24-stm32f103.hex ${CMAKE_CURRENT_BINARY_DIR}
-    COMMAND cp DVM-V24-stm32f103.map ${CMAKE_CURRENT_BINARY_DIR}
+    COMMAND cp build/DVM-V24-stm32f103.elf ${CMAKE_CURRENT_BINARY_DIR}
+    COMMAND cp build/DVM-V24-stm32f103.bin ${CMAKE_CURRENT_BINARY_DIR}
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/src/fw/v24/fw
 )
 add_custom_target(dvmfw-v24-clean
+    COMMAND make -f Makefile clean
     COMMAND rm -rf ${CMAKE_CURRENT_SOURCE_DIR}/src/fw/v24/fw/Build
     COMMAND rm -f ${CMAKE_CURRENT_BINARY_DIR}/DVM-V24*
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/src/fw/v24/fw

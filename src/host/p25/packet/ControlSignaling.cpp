@@ -487,14 +487,30 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
                 }
 
                 // generate activity log entry
-                if (iosp->getExtendedFunction() == ExtendedFunctions::CHECK_ACK) {
+                switch (iosp->getExtendedFunction()) {
+                // Standard
+                case ExtendedFunctions::CHECK_ACK:
                     ::ActivityLog("P25", true, "radio check response from %u to %u", srcId, dstId);
-                }
-                else if (iosp->getExtendedFunction() == ExtendedFunctions::INHIBIT_ACK) {
+                    break;
+                case ExtendedFunctions::INHIBIT_ACK:
                     ::ActivityLog("P25", true, "radio inhibit response from %u to %u", srcId, dstId);
-                }
-                else if (iosp->getExtendedFunction() == ExtendedFunctions::UNINHIBIT_ACK) {
+                    break;
+                case ExtendedFunctions::UNINHIBIT_ACK:
                     ::ActivityLog("P25", true, "radio uninhibit response from %u to %u", srcId, dstId);
+                    break;
+                // Dynamic Regroup
+                case ExtendedFunctions::DYN_REGRP_REQ_ACK:
+                    ::ActivityLog("P25", true, "radio dynamic regroup response from %u to TG%u", srcId, dstId);
+                    break;
+                case ExtendedFunctions::DYN_REGRP_CANCEL_ACK:
+                    ::ActivityLog("P25", true, "radio dynamic regroup cancel response from %u to TG%u", srcId, dstId);
+                    break;
+                case ExtendedFunctions::DYN_REGRP_LOCK_ACK:
+                    ::ActivityLog("P25", true, "radio dynamic regroup selector lock response from %u", srcId);
+                    break;
+                case ExtendedFunctions::DYN_REGRP_UNLOCK_ACK:
+                    ::ActivityLog("P25", true, "radio dynamic regroup selector unlock response from %u", srcId);
+                    break;
                 }
 
                 writeRF_TSDU_SBF(iosp, true);
@@ -913,14 +929,30 @@ bool ControlSignaling::processNetwork(uint8_t* data, uint32_t len, lc::LC& contr
                         }
 
                         // generate activity log entry
-                        if (iosp->getExtendedFunction() == ExtendedFunctions::CHECK_ACK) {
+                        switch (iosp->getExtendedFunction()) {
+                        // Standard
+                        case ExtendedFunctions::CHECK_ACK:
                             ::ActivityLog("P25", false, "radio check response from %u to %u", srcId, dstId);
-                        }
-                        else if (iosp->getExtendedFunction() == ExtendedFunctions::INHIBIT_ACK) {
+                            break;
+                        case ExtendedFunctions::INHIBIT_ACK:
                             ::ActivityLog("P25", false, "radio inhibit response from %u to %u", srcId, dstId);
-                        }
-                        else if (iosp->getExtendedFunction() == ExtendedFunctions::UNINHIBIT_ACK) {
+                            break;
+                        case ExtendedFunctions::UNINHIBIT_ACK:
                             ::ActivityLog("P25", false, "radio uninhibit response from %u to %u", srcId, dstId);
+                            break;
+                        // Dynamic Regroup
+                        case ExtendedFunctions::DYN_REGRP_REQ_ACK:
+                            ::ActivityLog("P25", false, "radio dynamic regroup response from %u to TG%u", srcId, dstId);
+                            break;
+                        case ExtendedFunctions::DYN_REGRP_CANCEL_ACK:
+                            ::ActivityLog("P25", false, "radio dynamic regroup cancel response from %u to TG%u", srcId, dstId);
+                            break;
+                        case ExtendedFunctions::DYN_REGRP_LOCK_ACK:
+                            ::ActivityLog("P25", false, "radio dynamic regroup selector lock response from %u", srcId);
+                            break;
+                        case ExtendedFunctions::DYN_REGRP_UNLOCK_ACK:
+                            ::ActivityLog("P25", false, "radio dynamic regroup selector unlock response from %u", srcId);
+                            break;
                         }
                     }
                     break;
@@ -1070,20 +1102,41 @@ void ControlSignaling::writeRF_TSDU_Ext_Func(uint32_t func, uint32_t arg, uint32
         m_lastMFID = MFG_STANDARD;
     }
 
+    // class $02 is Motorola -- set the MFID properly
+    if ((func >> 8) == 0x02U) {
+        iosp->setMFId(MFG_MOT);
+    }
+
     if (m_verbose) {
-        LogMessage(LOG_RF, P25_TSDU_STR ", %s, op = $%02X, arg = %u, tgt = %u",
-            iosp->toString().c_str(), iosp->getExtendedFunction(), iosp->getSrcId(), iosp->getDstId());
+        LogMessage(LOG_RF, P25_TSDU_STR ", %s, mfId = $%02X, op = $%02X, arg = %u, tgt = %u",
+            iosp->toString().c_str(), iosp->getMFId(), iosp->getExtendedFunction(), iosp->getSrcId(), iosp->getDstId());
     }
 
     // generate activity log entry
-    if (func == ExtendedFunctions::CHECK) {
+    switch (func) {
+    // Standard
+    case ExtendedFunctions::CHECK:
         ::ActivityLog("P25", true, "radio check request from %u to %u", arg, dstId);
-    }
-    else if (func == ExtendedFunctions::INHIBIT) {
+        break;
+    case ExtendedFunctions::INHIBIT:
         ::ActivityLog("P25", true, "radio inhibit request from %u to %u", arg, dstId);
-    }
-    else if (func == ExtendedFunctions::UNINHIBIT) {
+        break;
+    case ExtendedFunctions::UNINHIBIT:
         ::ActivityLog("P25", true, "radio uninhibit request from %u to %u", arg, dstId);
+        break;
+    // Dynamic Regroup
+    case ExtendedFunctions::DYN_REGRP_REQ:
+        ::ActivityLog("P25", true, "radio dynamic regroup request TG%u for %u", arg, dstId);
+        break;
+    case ExtendedFunctions::DYN_REGRP_CANCEL:
+        ::ActivityLog("P25", true, "radio dynamic regroup cancel for %u", dstId);
+        break;
+    case ExtendedFunctions::DYN_REGRP_LOCK:
+        ::ActivityLog("P25", true, "radio dynamic regroup selector lock for %u", dstId);
+        break;
+    case ExtendedFunctions::DYN_REGRP_UNLOCK:
+        ::ActivityLog("P25", true, "radio dynamic regroup selector unlock for %u", dstId);
+        break;
     }
 
     writeRF_TSDU_SBF_Imm(iosp.get(), false);

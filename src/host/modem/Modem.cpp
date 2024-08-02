@@ -2567,6 +2567,9 @@ std::string Modem::cmdToString(uint8_t opcode)
     case CMD_FLSH_WRITE:
         return std::string("FLSH_WRITE");
 
+    case CMD_RESET_MCU:
+        return std::string("CMD_RESET_MCU");
+
     default:
         return std::string();
     }
