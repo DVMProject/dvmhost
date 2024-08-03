@@ -591,6 +591,9 @@ void Network::clock(uint32_t ms)
         case NET_FUNC::PONG:                                                                        // Master Ping Response
             m_timeoutTimer.start();
             if (length >= 14) {
+                if (m_debug)
+                    Utils::dump(1U, "Network Received, PONG", buffer.get(), length);
+
                 ulong64_t serverNow = 0U;
 
                 // combine bytes into ulong64_t (8 byte) value
