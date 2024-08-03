@@ -2836,6 +2836,14 @@ bool ControlSignaling::writeRF_TSDU_Loc_Reg_Rsp(uint32_t srcId, uint32_t dstId, 
                 osp->setResponse(ResponseCode::DENY);
                 noNet = true;
             }
+
+            // deny affiliation if the TG is non-preferred on this site/CC
+            if (acl::AccessControl::tgidNonPreferred(dstId)) {
+                LogWarning(LOG_RF, P25_TSDU_STR ", %s non-preferred on this site, TGID rejection, dstId = %u", osp->toString().c_str(), dstId);
+                ::ActivityLog("P25", true, "location registration request from %u to %s %u denied", srcId, "TG ", dstId);
+                osp->setResponse(ResponseCode::DENY);
+                noNet = true;
+            }
         }
     }
 
@@ -2845,6 +2853,13 @@ bool ControlSignaling::writeRF_TSDU_Loc_Reg_Rsp(uint32_t srcId, uint32_t dstId, 
         }
 
         ::ActivityLog("P25", true, "location registration request from %u", srcId);
+
+        // update dynamic affiliation table
+        m_p25->m_affiliations.groupAff(srcId, dstId);
+
+        if (m_p25->m_network != nullptr)
+            m_p25->m_network->announceGroupAffiliation(srcId, dstId);
+
         ret = true;
     }
 
