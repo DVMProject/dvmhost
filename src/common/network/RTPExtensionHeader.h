@@ -44,6 +44,7 @@ namespace network
          *     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
          *     | Payload Type                  | Payload Length                |
          *     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         * 4 bytes
          * \endcode
          */
         class HOST_SW_API RTPExtensionHeader {

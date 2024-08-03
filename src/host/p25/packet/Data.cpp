@@ -122,9 +122,9 @@ bool Data::process(uint8_t* data, uint32_t len)
             }
 
             if (m_verbose) {
-                LogMessage(LOG_RF, P25_PDU_STR ", ISP, ack = %u, outbound = %u, fmt = $%02X, mfId = $%02X, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padLength = %u, packetLength = %u, n = %u, seqNo = %u, lastFragment = %u, hdrOffset = %u, llId = %u",
+                LogMessage(LOG_RF, P25_PDU_STR ", ISP, ack = %u, outbound = %u, fmt = $%02X, mfId = $%02X, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padLength = %u, packetLength = %u, S = %u, n = %u, seqNo = %u, lastFragment = %u, hdrOffset = %u, llId = %u",
                     m_rfDataHeader.getAckNeeded(), m_rfDataHeader.getOutbound(), m_rfDataHeader.getFormat(), m_rfDataHeader.getMFId(), m_rfDataHeader.getSAP(), m_rfDataHeader.getFullMessage(),
-                    m_rfDataHeader.getBlocksToFollow(), m_rfDataHeader.getPadLength(), m_rfDataHeader.getPacketLength(), m_rfDataHeader.getNs(), m_rfDataHeader.getFSN(), m_rfDataHeader.getLastFragment(),
+                    m_rfDataHeader.getBlocksToFollow(), m_rfDataHeader.getPadLength(), m_rfDataHeader.getPacketLength(), m_rfDataHeader.getSynchronize(), m_rfDataHeader.getNs(), m_rfDataHeader.getFSN(), m_rfDataHeader.getLastFragment(),
                     m_rfDataHeader.getHeaderOffset(), m_rfDataHeader.getLLId());
             }
 
@@ -306,6 +306,7 @@ bool Data::process(uint8_t* data, uint32_t len)
                     bool crcRet = edac::CRC::checkCRC32(m_rfPduUserData, m_rfPduUserDataLength);
                     if (!crcRet) {
                         LogWarning(LOG_RF, P25_PDU_STR ", failed CRC-32 check, blocks %u, len %u", m_rfDataHeader.getBlocksToFollow(), m_rfPduUserDataLength);
+                        writeRF_PDU_Ack_Response(PDUAckClass::NACK, PDUAckType::NACK_PACKET_CRC, 0U, (m_rfExtendedAddress) ? m_rfDataHeader.getSrcLLId() : m_rfDataHeader.getLLId());
                     }
                 }
 
@@ -387,7 +388,8 @@ bool Data::process(uint8_t* data, uint32_t len)
                         }
                     }
 
-                    if (m_repeatPDU) {
+                    // only repeat the PDU locally if the packet isn't for the FNE
+                    if (m_repeatPDU && m_rfDataHeader.getLLId() != WUID_FNE) {
                         if (m_verbose) {
                             LogMessage(LOG_RF, P25_PDU_STR ", repeating ACK PDU, llId = %u, srcLlId = %u", m_rfDataHeader.getLLId(), m_rfDataHeader.getSrcLLId());
                         }
@@ -455,17 +457,17 @@ bool Data::process(uint8_t* data, uint32_t len)
                     }
                     break;
                     default:
-                        ::ActivityLog("P25", true, "RF data transmission from %u to %u, %u blocks", srcId, dstId, m_rfDataHeader.getBlocksToFollow());
-
-                        if (m_repeatPDU) {
+                        // only repeat the PDU locally if the packet isn't for the FNE
+                        if (m_repeatPDU && m_rfDataHeader.getLLId() != WUID_FNE) {
+                            ::ActivityLog("P25", true, "RF data transmission from %u to %u, %u blocks", srcId, dstId, m_rfDataHeader.getBlocksToFollow());
+    
                             if (m_verbose) {
                                 LogMessage(LOG_RF, P25_PDU_STR ", repeating PDU, llId = %u", (m_rfExtendedAddress) ? m_rfDataHeader.getSrcLLId() : m_rfDataHeader.getLLId());
                             }
 
                             writeRF_PDU_Buffered(); // re-generate buffered PDU and send it on
+                            ::ActivityLog("P25", true, "end of RF data transmission");
                         }
-
-                        ::ActivityLog("P25", true, "end of RF data transmission");
                         break;
                     }
                 }
@@ -525,9 +527,9 @@ bool Data::processNetwork(uint8_t* data, uint32_t len, uint32_t blockLength)
         }
 
         if (m_verbose) {
-            LogMessage(LOG_NET, P25_PDU_STR ", ack = %u, outbound = %u, fmt = $%02X, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padLength = %u, packetLength = %u, n = %u, seqNo = %u, hdrOffset = %u, llId = %u",
+            LogMessage(LOG_NET, P25_PDU_STR ", ack = %u, outbound = %u, fmt = $%02X, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padLength = %u, packetLength = %u, S = %u, n = %u, seqNo = %u, hdrOffset = %u, llId = %u",
                 m_netDataHeader.getAckNeeded(), m_netDataHeader.getOutbound(), m_netDataHeader.getFormat(), m_netDataHeader.getSAP(), m_netDataHeader.getFullMessage(),
-                m_netDataHeader.getBlocksToFollow(), m_netDataHeader.getPadLength(), m_netDataHeader.getPacketLength(), m_netDataHeader.getNs(), m_netDataHeader.getFSN(),
+                m_netDataHeader.getBlocksToFollow(), m_netDataHeader.getPadLength(), m_netDataHeader.getPacketLength(), m_netDataHeader.getSynchronize(), m_netDataHeader.getNs(), m_netDataHeader.getFSN(),
                 m_netDataHeader.getHeaderOffset(), m_netDataHeader.getLLId());
         }
 
@@ -825,8 +827,9 @@ void Data::writeRF_PDU_User(data::DataHeader& dataHeader, bool extendedAddress, 
     uint32_t bitLength = ((dataHeader.getBlocksToFollow() + 1U) * P25_PDU_FEC_LENGTH_BITS) + P25_PREAMBLE_LENGTH_BITS;
     uint32_t offset = P25_PREAMBLE_LENGTH_BITS;
 
-    UInt8Array __data = std::make_unique<uint8_t[]>(bitLength / 8U);
+    UInt8Array __data = std::make_unique<uint8_t[]>((bitLength / 8U) + 1U);
     uint8_t* data = __data.get();
+
     ::memset(data, 0x00U, bitLength / 8U);
     uint8_t block[P25_PDU_FEC_LENGTH_BYTES];
     ::memset(block, 0x00U, P25_PDU_FEC_LENGTH_BYTES);
@@ -834,9 +837,9 @@ void Data::writeRF_PDU_User(data::DataHeader& dataHeader, bool extendedAddress, 
     uint32_t blocksToFollow = dataHeader.getBlocksToFollow();
 
     if (m_verbose) {
-        LogMessage(LOG_RF, P25_PDU_STR ", OSP, ack = %u, outbound = %u, fmt = $%02X, mfId = $%02X, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padLength = %u, packetLength = %u, n = %u, seqNo = %u, lastFragment = %u, hdrOffset = %u, bitLength = %u, llId = %u",
+        LogMessage(LOG_RF, P25_PDU_STR ", OSP, ack = %u, outbound = %u, fmt = $%02X, mfId = $%02X, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padLength = %u, packetLength = %u, S = %u, n = %u, seqNo = %u, lastFragment = %u, hdrOffset = %u, bitLength = %u, llId = %u",
             dataHeader.getAckNeeded(), dataHeader.getOutbound(), dataHeader.getFormat(), dataHeader.getMFId(), dataHeader.getSAP(), dataHeader.getFullMessage(),
-            dataHeader.getBlocksToFollow(), dataHeader.getPadLength(), dataHeader.getPacketLength(), dataHeader.getNs(), dataHeader.getFSN(), dataHeader.getLastFragment(),
+            dataHeader.getBlocksToFollow(), dataHeader.getPadLength(), dataHeader.getPacketLength(), dataHeader.getSynchronize(), dataHeader.getNs(), dataHeader.getFSN(), dataHeader.getLastFragment(),
             dataHeader.getHeaderOffset(), bitLength, dataHeader.getLLId());
     }
 
@@ -1461,8 +1464,9 @@ void Data::writeNet_PDU_Buffered()
     uint32_t bitLength = ((m_netDataHeader.getBlocksToFollow() + 1U) * P25_PDU_FEC_LENGTH_BITS) + P25_PREAMBLE_LENGTH_BITS;
     uint32_t offset = P25_PREAMBLE_LENGTH_BITS;
 
-    UInt8Array __data = std::make_unique<uint8_t[]>(bitLength / 8U);
+    UInt8Array __data = std::make_unique<uint8_t[]>((bitLength / 8U) + 1U);
     uint8_t* data = __data.get();
+
     ::memset(data, 0x00U, bitLength / 8U);
     uint8_t block[P25_PDU_FEC_LENGTH_BYTES];
     ::memset(block, 0x00U, P25_PDU_FEC_LENGTH_BYTES);
@@ -1551,8 +1555,9 @@ void Data::writeRF_PDU_Buffered()
     uint32_t bitLength = ((m_rfDataHeader.getBlocksToFollow() + 1U) * P25_PDU_FEC_LENGTH_BITS) + P25_PREAMBLE_LENGTH_BITS;
     uint32_t offset = P25_PREAMBLE_LENGTH_BITS;
 
-    UInt8Array __data = std::make_unique<uint8_t[]>(bitLength / 8U);
+    UInt8Array __data = std::make_unique<uint8_t[]>((bitLength / 8U) + 1U);
     uint8_t* data = __data.get();
+
     ::memset(data, 0x00U, bitLength / 8U);
     uint8_t block[P25_PDU_FEC_LENGTH_BYTES];
     ::memset(block, 0x00U, P25_PDU_FEC_LENGTH_BYTES);
@@ -1677,8 +1682,9 @@ void Data::writeRF_PDU_Ack_Response(uint8_t ackClass, uint8_t ackType, uint8_t a
     uint32_t bitLength = (1U * P25_PDU_FEC_LENGTH_BITS) + P25_PREAMBLE_LENGTH_BITS;
     uint32_t offset = P25_PREAMBLE_LENGTH_BITS;
 
-    UInt8Array __data = std::make_unique<uint8_t[]>(bitLength / 8U);
+    UInt8Array __data = std::make_unique<uint8_t[]>((bitLength / 8U) + 1U);
     uint8_t* data = __data.get();
+
     ::memset(data, 0x00U, bitLength / 8U);
     uint8_t block[P25_PDU_FEC_LENGTH_BYTES];
     ::memset(block, 0x00U, P25_PDU_FEC_LENGTH_BYTES);

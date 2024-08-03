@@ -58,6 +58,8 @@ P25PacketData::P25PacketData(FNENetwork* network, TagP25Data* tag, bool debug) :
     m_dataFrames(),
     m_status(),
     m_arpTable(),
+    m_readyForPkt(),
+    m_suNotReadyTimeout(),
     m_debug(debug)
 {
     assert(network != nullptr);
@@ -119,9 +121,9 @@ bool P25PacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
                 return false;
             }
 
-            LogMessage(LOG_NET, P25_PDU_STR ", peerId = %u, ack = %u, outbound = %u, fmt = $%02X, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padLength = %u, packetLength = %u, n = %u, seqNo = %u, hdrOffset = %u, llId = %u",
+            LogMessage(LOG_NET, P25_PDU_STR ", peerId = %u, ack = %u, outbound = %u, fmt = $%02X, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padLength = %u, packetLength = %u, S = %u, n = %u, seqNo = %u, hdrOffset = %u, llId = %u",
                 peerId, status->header.getAckNeeded(), status->header.getOutbound(), status->header.getFormat(), status->header.getSAP(), status->header.getFullMessage(),
-                status->header.getBlocksToFollow(), status->header.getPadLength(), status->header.getPacketLength(), status->header.getNs(), status->header.getFSN(),
+                status->header.getBlocksToFollow(), status->header.getPadLength(), status->header.getPacketLength(), status->header.getSynchronize(), status->header.getNs(), status->header.getFSN(),
                 status->header.getHeaderOffset(), status->header.getLLId());
 
             // make sure we don't get a PDU with more blocks then we support
@@ -134,13 +136,18 @@ bool P25PacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
 
             m_status[peerId] = status;
 
-            // a PDU header only with no blocks to follow is usually a response header
-            if (status->header.getBlocksToFollow() == 0U) {
+            // is this a response header?
+            if (status->header.getFormat() == PDUFormatType::RSP) {
                 dispatch(peerId);
 
                 delete status;
                 m_status.erase(peerId);
                 return true;
+            }
+
+            if (status->header.getSAP() != PDUSAP::EXT_ADDR &&
+                status->header.getFormat() != PDUFormatType::UNCONFIRMED) {
+                m_readyForPkt[status->llId] = true;
             }
 
             LogMessage(LOG_NET, "P25, Data Call Start, peer = %u, llId = %u, streamId = %u, external = %u", peerId, status->llId, streamId, external);
@@ -190,6 +197,10 @@ bool P25PacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
 
         status->dataBlockCnt = 0U;
 
+        // process all blocks in the data stream
+        status->pduUserData = new uint8_t[P25_MAX_PDU_BLOCKS * P25_PDU_CONFIRMED_LENGTH_BYTES + 2U];
+        ::memset(status->pduUserData, 0x00U, P25_MAX_PDU_BLOCKS * P25_PDU_CONFIRMED_LENGTH_BYTES + 2U);
+
         // process second header if we're using enhanced addressing
         if (status->header.getSAP() == PDUSAP::EXT_ADDR &&
             status->header.getFormat() == PDUFormatType::UNCONFIRMED) {
@@ -211,6 +222,8 @@ bool P25PacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
                 status->header.getEXSAP(), status->header.getSrcLLId());
 
             status->extendedAddress = true;
+            status->llId = status->header.getSrcLLId();
+            m_readyForPkt[status->llId] = true;
 
             offset += P25_PDU_FEC_LENGTH_BYTES;
             blocksToFollow--;
@@ -220,10 +233,6 @@ bool P25PacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
             dataOffset += P25_PDU_HEADER_LENGTH_BYTES;
             status->pduUserDataLength += P25_PDU_HEADER_LENGTH_BYTES;
         }
-
-        // process all blocks in the data stream
-        status->pduUserData = new uint8_t[P25_MAX_PDU_BLOCKS * P25_PDU_CONFIRMED_LENGTH_BYTES + 2U];
-        ::memset(status->pduUserData, 0x00U, P25_MAX_PDU_BLOCKS * P25_PDU_CONFIRMED_LENGTH_BYTES + 2U);
 
         // decode data blocks
         for (uint32_t i = 0U; i < blocksToFollow; i++) {
@@ -336,14 +345,60 @@ void P25PacketData::processPacketFrame(const uint8_t* data, uint32_t len, bool a
 #if DEBUG_P25_PDU_DATA
     Utils::dump(1U, "P25PacketData::processPacketFrame() packet", data, pktLen);
 #endif
+
+    VTUNDataFrame dataFrame;
+    dataFrame.buffer = new uint8_t[len];
+    ::memcpy(dataFrame.buffer, data, len);
+    dataFrame.bufferLen = len;
+    dataFrame.pktLen = pktLen;
+
     uint32_t dstLlId = getLLIdAddress(Utils::reverseEndian(ipHeader->ip_dst.s_addr));
+
+    dataFrame.srcHWAddr = WUID_FNE;
+    dataFrame.srcProtoAddr = Utils::reverseEndian(ipHeader->ip_src.s_addr);
+    dataFrame.tgtHWAddr = dstLlId;
+    dataFrame.tgtProtoAddr = Utils::reverseEndian(ipHeader->ip_dst.s_addr);
+
     if (dstLlId == 0U) {
         LogMessage(LOG_NET, "P25, no ARP entry for, dstIp = %s", dstIp);
         write_PDU_ARP(Utils::reverseEndian(ipHeader->ip_dst.s_addr));
-
-        // TODO: queue data frame for retransmission?
     }
-    else {
+
+    m_dataFrames.push_back(dataFrame);
+#endif // !defined(_WIN32)
+}
+
+/* Updates the timer by the passed number of milliseconds. */
+
+void P25PacketData::clock(uint32_t ms)
+{
+    // transmit queued data frames
+    if (m_dataFrames.size() > 0) {
+        auto& dataFrame = m_dataFrames[0];
+
+        if (dataFrame.tgtHWAddr == 0U) {
+            uint32_t dstLlId = getLLIdAddress(dataFrame.tgtProtoAddr);
+            if (dstLlId == 0U)
+                return;
+
+            dataFrame.tgtHWAddr = dstLlId;
+        }
+
+        // don't allow another packet to go out if we haven't acked the previous
+        if (!m_readyForPkt[dataFrame.tgtHWAddr]) {
+            m_suNotReadyTimeout[dataFrame.tgtHWAddr].clock(ms);
+            if (m_suNotReadyTimeout[dataFrame.tgtHWAddr].isRunning() && m_suNotReadyTimeout[dataFrame.tgtHWAddr].hasExpired()) {
+                m_suNotReadyTimeout[dataFrame.tgtHWAddr].stop();
+                m_readyForPkt[dataFrame.tgtHWAddr] = true;
+            }
+
+            return;
+        }
+
+        m_readyForPkt[dataFrame.tgtHWAddr] = false;
+        m_suNotReadyTimeout[dataFrame.tgtHWAddr] = Timer(1000U, 5U, 0U);
+        m_suNotReadyTimeout[dataFrame.tgtHWAddr].start();
+
         // assemble a P25 PDU frame header for transport...
         data::DataHeader rspHeader = data::DataHeader();
         rspHeader.setFormat(PDUFormatType::CONFIRMED);
@@ -351,27 +406,27 @@ void P25PacketData::processPacketFrame(const uint8_t* data, uint32_t len, bool a
         rspHeader.setAckNeeded(true);
         rspHeader.setOutbound(true);
         rspHeader.setSAP(PDUSAP::EXT_ADDR);
-        rspHeader.setLLId(dstLlId);
+        rspHeader.setLLId(dataFrame.tgtHWAddr);
         rspHeader.setBlocksToFollow(1U);
 
         rspHeader.setEXSAP(PDUSAP::PACKET_DATA);
         rspHeader.setSrcLLId(WUID_FNE);
 
-        rspHeader.calculateLength(pktLen);
+        rspHeader.calculateLength(dataFrame.pktLen);
         uint32_t pduLength = rspHeader.getPDULength();
 
         UInt8Array __pduUserData = std::make_unique<uint8_t[]>(pduLength);
         uint8_t* pduUserData = __pduUserData.get();
         ::memset(pduUserData, 0x00U, pduLength);
-        ::memcpy(pduUserData + 4U, data, pktLen);
+        ::memcpy(pduUserData + 4U, dataFrame.buffer, dataFrame.pktLen);
 #if DEBUG_P25_PDU_DATA
-        Utils::dump(1U, "P25PacketData::processPacketFrame() pduUserData", pduUserData, pduLength);
+        Utils::dump(1U, "P25PacketData::clock() pduUserData", pduUserData, pduLength);
 #endif
         dispatchUserFrameToFNE(rspHeader, true, pduUserData);
-    }
 
-    Thread::sleep(1750);
-#endif // !defined(_WIN32)
+        delete[] dataFrame.buffer;
+        m_dataFrames.pop_front();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -384,16 +439,29 @@ void P25PacketData::dispatch(uint32_t peerId)
 {
     RxStatus* status = m_status[peerId];
 
+    bool crcValid = false;
     if (status->header.getBlocksToFollow() > 0U) {
-        bool crcRet = edac::CRC::checkCRC32(status->pduUserData, status->pduUserDataLength);
-        if (!crcRet) {
-            LogWarning(LOG_NET, P25_PDU_STR ", failed CRC-32 check, blocks %u, len %u", status->header.getBlocksToFollow(), status->pduUserDataLength);
+        crcValid = edac::CRC::checkCRC32(status->pduUserData, status->pduUserDataLength);
+        if (!crcValid) {
+            LogError(LOG_NET, P25_PDU_STR ", failed CRC-32 check, blocks %u, len %u", status->header.getBlocksToFollow(), status->pduUserDataLength);
         }
     }
 
     if (m_network->m_dumpDataPacket && status->dataBlockCnt > 0U) {
         Utils::dump(1U, "PDU Packet", status->pduUserData, status->pduUserDataLength);
     }    
+
+    if (status->header.getFormat() == PDUFormatType::RSP) {
+        LogMessage(LOG_NET, P25_PDU_STR ", ISP, response, fmt = $%02X, rspClass = $%02X, rspType = $%02X, rspStatus = $%02X, llId = %u, srcLlId = %u",
+                status->header.getFormat(), status->header.getResponseClass(), status->header.getResponseType(), status->header.getResponseStatus(),
+                status->header.getLLId(), status->header.getSrcLLId());
+/*
+        if (status->header.getResponseClass() == PDUAckClass::ACK && status->header.getResponseType() == PDUAckType::ACK) {
+            m_readyForPkt[status->header.getSrcLLId()] = true;
+        }
+*/
+        return;
+    }
 
     uint8_t sap = (status->extendedAddress) ? status->header.getEXSAP() : status->header.getSAP();
 
@@ -438,6 +506,8 @@ void P25PacketData::dispatch(uint32_t peerId)
             } else {
                 m_arpTable[srcHWAddr] = srcProtoAddr;
             }
+
+            m_readyForPkt[srcHWAddr] = true;
         }
 #else
         break;
@@ -450,6 +520,11 @@ void P25PacketData::dispatch(uint32_t peerId)
         // is the host virtual tunneling enabled?
         if (!m_network->m_host->m_vtunEnabled)
             break;
+
+        if (!crcValid) {
+            write_PDU_Ack_Response(PDUAckClass::NACK, PDUAckType::NACK_PACKET_CRC, 0U, (status->extendedAddress) ? status->header.getSrcLLId() : status->header.getLLId());
+            break;
+        }
 
         int dataPktOffset = 0U;
         if (status->header.getFormat() == PDUFormatType::CONFIRMED && status->extendedAddress)
@@ -480,6 +555,9 @@ void P25PacketData::dispatch(uint32_t peerId)
         if (!m_network->m_host->m_tun->write(ipFrame, pktLen)) {
             LogError(LOG_NET, P25_PDU_STR ", failed to write IP frame to virtual tunnel, len %u", pktLen);
         }
+
+        write_PDU_Ack_Response(PDUAckClass::ACK, PDUAckType::ACK, 0U, (status->extendedAddress) ? status->header.getSrcLLId() : status->header.getLLId());
+        m_readyForPkt[status->header.getSrcLLId()] = true;
 #endif // !defined(_WIN32)
     }
     break;
@@ -562,11 +640,13 @@ void P25PacketData::dispatchUserFrameToFNE(p25::data::DataHeader& dataHeader, bo
     uint32_t srcId = (extendedAddress) ? dataHeader.getSrcLLId() : dataHeader.getLLId();
     uint32_t dstId = dataHeader.getLLId();
 
+    dataHeader.setSynchronize(true);
+/*
     dataHeader.setNs(m_sendSeqNo);
     ++m_sendSeqNo;
     if (m_sendSeqNo > 7U)
         m_sendSeqNo = 0U;
-
+*/
     // repeat traffic to the connected peers
     if (m_network->m_peers.size() > 0U) {
         uint32_t i = 0U;
@@ -751,13 +831,38 @@ void P25PacketData::write_PDU_ARP_Reply(uint32_t targetAddr, uint32_t requestorL
     dispatchUserFrameToFNE(rspHeader, true, pduUserData);
 }
 
+/* Helper to write a PDU acknowledge response. */
+
+void P25PacketData::write_PDU_Ack_Response(uint8_t ackClass, uint8_t ackType, uint8_t ackStatus, uint32_t llId, uint32_t srcLlId)
+{
+    if (ackClass == PDUAckClass::ACK && ackType != PDUAckType::ACK)
+        return;
+
+    data::DataHeader rspHeader = data::DataHeader();
+    rspHeader.setFormat(PDUFormatType::RSP);
+    rspHeader.setMFId(MFG_STANDARD);
+    rspHeader.setOutbound(true);
+    rspHeader.setResponseClass(ackClass);
+    rspHeader.setResponseType(ackType);
+    rspHeader.setResponseStatus(ackStatus);
+    rspHeader.setLLId(llId);
+    if (srcLlId > 0U) {
+        rspHeader.setSrcLLId(srcLlId);
+        rspHeader.setFullMessage(false);
+    }
+    else {
+        rspHeader.setFullMessage(true);
+    }
+    rspHeader.setBlocksToFollow(0U);
+
+    dispatchUserFrameToFNE(rspHeader, srcLlId > 0U, nullptr);
+}
+
 /* Helper to write user data as a P25 PDU packet. */
 
 void P25PacketData::write_PDU_User(uint32_t peerId, network::PeerNetwork* peerNet, data::DataHeader& dataHeader,
     bool extendedAddress, uint8_t* pduUserData, bool queueOnly)
 {
-    assert(pduUserData != nullptr);
-
     uint32_t streamId = m_network->createStreamId();
     uint16_t pktSeq = 0U;
 
@@ -766,16 +871,19 @@ void P25PacketData::write_PDU_User(uint32_t peerId, network::PeerNetwork* peerNe
 
     uint32_t blocksToFollow = dataHeader.getBlocksToFollow();
 
-    LogMessage(LOG_NET, P25_PDU_STR ", OSP, peerId = %u, ack = %u, outbound = %u, fmt = $%02X, mfId = $%02X, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padLength = %u, packetLength = %u, n = %u, seqNo = %u, lastFragment = %u, hdrOffset = %u, llId = %u",
+    LogMessage(LOG_NET, P25_PDU_STR ", OSP, peerId = %u, ack = %u, outbound = %u, fmt = $%02X, mfId = $%02X, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padLength = %u, packetLength = %u, S = %u, n = %u, seqNo = %u, lastFragment = %u, hdrOffset = %u, llId = %u",
         peerId, dataHeader.getAckNeeded(), dataHeader.getOutbound(), dataHeader.getFormat(), dataHeader.getMFId(), dataHeader.getSAP(), dataHeader.getFullMessage(),
-        dataHeader.getBlocksToFollow(), dataHeader.getPadLength(), dataHeader.getPacketLength(), dataHeader.getNs(), dataHeader.getFSN(), dataHeader.getLastFragment(),
+        dataHeader.getBlocksToFollow(), dataHeader.getPadLength(), dataHeader.getPacketLength(), dataHeader.getSynchronize(), dataHeader.getNs(), dataHeader.getFSN(), dataHeader.getLastFragment(),
         dataHeader.getHeaderOffset(), dataHeader.getLLId());
 
     // generate the PDU header and 1/2 rate Trellis
     dataHeader.encode(buffer);
     writeNetwork(peerId, peerNet, dataHeader, 0U, buffer, P25_PDU_FEC_LENGTH_BYTES, pktSeq, streamId, queueOnly);
-    ++pktSeq;
 
+    if (pduUserData == nullptr)
+        return;
+
+    ++pktSeq;
     uint32_t packetLength = dataHeader.getPDULength();
 
     if (blocksToFollow > 0U) {

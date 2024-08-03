@@ -24,6 +24,12 @@ using namespace network::frame;
 #include <cassert>
 
 // ---------------------------------------------------------------------------
+//  Constants
+// ---------------------------------------------------------------------------
+
+#define NET_RING_BUF_SIZE 4098U
+
+// ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
@@ -43,9 +49,9 @@ BaseNetwork::BaseNetwork(uint32_t peerId, bool duplex, bool debug, bool slot1, b
     m_debug(debug),
     m_socket(nullptr),
     m_frameQueue(nullptr),
-    m_rxDMRData(4000U, "DMR Net Buffer"),
-    m_rxP25Data(4000U, "P25 Net Buffer"),
-    m_rxNXDNData(4000U, "NXDN Net Buffer"),
+    m_rxDMRData(NET_RING_BUF_SIZE, "DMR Net Buffer"),
+    m_rxP25Data(NET_RING_BUF_SIZE, "P25 Net Buffer"),
+    m_rxNXDNData(NET_RING_BUF_SIZE, "NXDN Net Buffer"),
     m_random(),
     m_dmrStreamId(nullptr),
     m_p25StreamId(0U),

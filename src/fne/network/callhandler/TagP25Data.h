@@ -80,13 +80,6 @@ namespace network
             bool processGrantReq(uint32_t srcId, uint32_t dstId, bool unitToUnit, uint32_t peerId, uint16_t pktSeq, uint32_t streamId);
 
             /**
-             * @brief Process a data frame from the virtual IP network.
-             * @param data Network data buffer.
-             * @param len Length of data.
-             */
-            void processPacketFrame(const uint8_t* data, uint32_t len);
-
-            /**
              * @brief Helper to playback a parrot frame to the network.
              */
             void playbackParrot();
@@ -131,6 +124,12 @@ namespace network
              * @param dstId Destination Radio ID.
              */
             void write_TSDU_U_Reg_Cmd(uint32_t peerId, uint32_t dstId);
+
+            /**
+             * @brief Gets instance of the P25PacketData class.
+             * @returns P25PacketData* Instance of the P25PacketData class.
+             */
+            packetdata::P25PacketData* packetData() { return m_packetData; }
 
         private:
             FNENetwork* m_network;

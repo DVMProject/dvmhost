@@ -75,6 +75,12 @@ namespace network
                  */
                 void processPacketFrame(const uint8_t* data, uint32_t len, bool alreadyQueued = false);
 
+                /**
+                 * @brief Updates the timer by the passed number of milliseconds.
+                 * @param ms Number of milliseconds.
+                 */
+                void clock(uint32_t ms);
+
             private:
                 FNENetwork* m_network;
                 TagP25Data *m_tag;
@@ -86,8 +92,15 @@ namespace network
                  */
                 class VTUNDataFrame {
                 public:
+                    uint32_t srcHWAddr;
+                    uint32_t srcProtoAddr;
+                    uint32_t tgtHWAddr;
+                    uint32_t tgtProtoAddr;
+
                     uint8_t* buffer;
                     uint32_t bufferLen;
+                    
+                    uint16_t pktLen;
                 };
                 std::deque<VTUNDataFrame> m_dataFrames;
 
@@ -151,6 +164,8 @@ namespace network
                 std::unordered_map<uint32_t, RxStatus*> m_status;
 
                 std::unordered_map<uint32_t, uint32_t> m_arpTable;
+                std::unordered_map<uint32_t, bool> m_readyForPkt;
+                std::unordered_map<uint32_t, Timer> m_suNotReadyTimeout;
 
                 bool m_debug;
 
@@ -192,6 +207,16 @@ namespace network
                  * @param targetLlId Target Logical Link Address.
                  */
                 void write_PDU_ARP_Reply(uint32_t targetAddr, uint32_t requestorLlid, uint32_t requestorAddr, uint32_t targetLlid = 0U);
+
+                /**
+                 * @brief Helper to write a PDU acknowledge response.
+                 * @param ackClass Acknowledgement Class.
+                 * @param ackType Acknowledgement Type.
+                 * @param ackStatus 
+                 * @param llId Logical Link ID.
+                 * @param srcLlId Source Logical Link ID.
+                 */
+                void write_PDU_Ack_Response(uint8_t ackClass, uint8_t ackType, uint8_t ackStatus, uint32_t llId, uint32_t srcLlId = 0U);
 
                 /**
                  * @brief Helper to write user data as a P25 PDU packet.

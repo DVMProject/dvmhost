@@ -103,6 +103,12 @@ namespace network
              */
             void write_Call_Alrt(uint32_t peerId, uint8_t slot, uint32_t srcId, uint32_t dstId);
 
+            /**
+             * @brief Gets instance of the DMRPacketData class.
+             * @returns DMRPacketData* Instance of the DMRPacketData class.
+             */
+            packetdata::DMRPacketData* packetData() { return m_packetData; }
+
         private:
             FNENetwork* m_network;
 
@@ -143,7 +149,7 @@ namespace network
             std::unordered_map<uint32_t, RxStatus> m_status;
 
             friend class packetdata::DMRPacketData;
-            packetdata::DMRPacketData *m_packetData;
+            packetdata::DMRPacketData* m_packetData;
 
             bool m_debug;
 

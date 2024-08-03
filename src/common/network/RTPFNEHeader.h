@@ -129,6 +129,7 @@ namespace network
          *     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
          *     | Message Length                                                |
          *     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         * 20 bytes (16 bytes without RTP Extension Header)
          * \endcode
          */
         class HOST_SW_API RTPFNEHeader : public RTPExtensionHeader {

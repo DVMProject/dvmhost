@@ -857,7 +857,13 @@ void* HostFNE::threadVirtualNetworking(void* arg)
 #endif // _GNU_SOURCE
 
         if (fne->m_tun != nullptr) {
+            StopWatch stopWatch;
+            stopWatch.start();
+
             while (!g_killed) {
+                uint32_t ms = stopWatch.elapsed();
+                stopWatch.start();
+
                 uint8_t packet[DEFAULT_MTU_SIZE];
                 ::memset(packet, 0x00U, DEFAULT_MTU_SIZE);
 
@@ -869,9 +875,20 @@ void* HostFNE::threadVirtualNetworking(void* arg)
                         break;
 
                     case PacketDataMode::PROJECT25:
-                        fne->m_network->p25TrafficHandler()->processPacketFrame(packet, DEFAULT_MTU_SIZE);
+                        fne->m_network->p25TrafficHandler()->packetData()->processPacketFrame(packet, DEFAULT_MTU_SIZE);
                         break;
                     }
+                }
+
+                // clock traffic handler
+                switch (fne->m_packetDataMode) {
+                case PacketDataMode::DMR:
+                    // TODO: not supported yet
+                    break;
+
+                case PacketDataMode::PROJECT25:
+                    fne->m_network->p25TrafficHandler()->packetData()->clock(ms);
+                    break;
                 }
 
                 Thread::sleep(5U);

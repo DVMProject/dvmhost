@@ -280,6 +280,8 @@ void Network::clock(uint32_t ms)
                        
                         if (m_debug)
                             Utils::dump(1U, "Network Received, DMR", buffer.get(), length);
+                        if (length > 255)
+                            LogError(LOG_NET, "DMR Stream %u, frame oversized? this shouldn't happen, pktSeq = %u, len = %u", streamId, m_pktSeq, length);
 
                         uint8_t len = length;
                         m_rxDMRData.addData(&len, 1U);
@@ -306,6 +308,8 @@ void Network::clock(uint32_t ms)
 
                         if (m_debug)
                             Utils::dump(1U, "Network Received, P25", buffer.get(), length);
+                        if (length > 255)
+                            LogError(LOG_NET, "P25 Stream %u, frame oversized? this shouldn't happen, pktSeq = %u, len = %u", streamId, m_pktSeq, length);
 
                         uint8_t len = length;
                         m_rxP25Data.addData(&len, 1U);
@@ -332,6 +336,8 @@ void Network::clock(uint32_t ms)
 
                         if (m_debug)
                             Utils::dump(1U, "Network Received, NXDN", buffer.get(), length);
+                        if (length > 255)
+                            LogError(LOG_NET, "NXDN Stream %u, frame oversized? this shouldn't happen, pktSeq = %u, len = %u", streamId, m_pktSeq, length);
 
                         uint8_t len = length;
                         m_rxNXDNData.addData(&len, 1U);

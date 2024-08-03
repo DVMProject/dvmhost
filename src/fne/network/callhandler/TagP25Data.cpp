@@ -434,13 +434,6 @@ bool TagP25Data::processGrantReq(uint32_t srcId, uint32_t dstId, bool unitToUnit
     return true;
 }
 
-/* Process a data frame from the virtual IP network. */
-
-void TagP25Data::processPacketFrame(const uint8_t* data, uint32_t len)
-{
-    m_packetData->processPacketFrame(data, len);
-}
-
 /* Helper to playback a parrot frame to the network. */
 
 void TagP25Data::playbackParrot()
