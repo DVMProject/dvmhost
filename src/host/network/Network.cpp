@@ -27,7 +27,7 @@ using namespace network;
 //  Constants
 // ---------------------------------------------------------------------------
 
-#define MAX_SERVER_DIFF 250 // maximum difference in time between a server timestamp and local timestamp in milliseconds
+#define MAX_SERVER_DIFF 250ULL // maximum difference in time between a server timestamp and local timestamp in milliseconds
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -609,7 +609,7 @@ void Network::clock(uint32_t ms)
                 // check the ping RTT and report any over the maximum defined time
                 uint64_t dt = (uint64_t)fabs(now - serverNow);
                 if (dt > MAX_SERVER_DIFF)
-                    LogWarning(LOG_NET, "PEER %u pong, time delay greater than %ums, now = %u, server = %u, dt = %u", m_peerId, MAX_SERVER_DIFF, now, serverNow, dt);
+                    LogWarning(LOG_NET, "PEER %u pong, time delay greater than %llums, now = %llu, server = %llu, dt = %llu", m_peerId, MAX_SERVER_DIFF, now, serverNow, dt);
             }
             break;
         default:
