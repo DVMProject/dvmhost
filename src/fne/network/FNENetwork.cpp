@@ -886,8 +886,8 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                 network->writePeerCommand(peerId, { NET_FUNC::PONG, NET_SUBFUNC::NOP }, payload, 8U);
 
                                 if (network->m_reportPeerPing) {
-                                    LogInfoEx(LOG_NET, "PEER %u (%s) ping, pingsReceived = %u, lastPing = %u", peerId, connection->identity().c_str(),
-                                        connection->pingsReceived(), lastPing);
+                                    LogInfoEx(LOG_NET, "PEER %u (%s) ping, pingsReceived = %u, lastPing = %u, now = %u", peerId, connection->identity().c_str(),
+                                        connection->pingsReceived(), lastPing, now);
                                 }
                             }
                             else {
