@@ -441,6 +441,11 @@ void P25PacketData::dispatch(uint32_t peerId)
 
     bool crcValid = false;
     if (status->header.getBlocksToFollow() > 0U) {
+        if (status->pduUserDataLength < 4U) {
+            LogError(LOG_NET, P25_PDU_STR ", illegal PDU packet length, blocks %u, len %u", status->header.getBlocksToFollow(), status->pduUserDataLength);
+            return;
+        }
+
         crcValid = edac::CRC::checkCRC32(status->pduUserData, status->pduUserDataLength);
         if (!crcValid) {
             LogError(LOG_NET, P25_PDU_STR ", failed CRC-32 check, blocks %u, len %u", status->header.getBlocksToFollow(), status->pduUserDataLength);
