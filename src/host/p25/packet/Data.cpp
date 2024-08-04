@@ -306,7 +306,7 @@ bool Data::process(uint8_t* data, uint32_t len)
                     bool crcRet = edac::CRC::checkCRC32(m_rfPduUserData, m_rfPduUserDataLength);
                     if (!crcRet) {
                         LogWarning(LOG_RF, P25_PDU_STR ", failed CRC-32 check, blocks %u, len %u", m_rfDataHeader.getBlocksToFollow(), m_rfPduUserDataLength);
-                        writeRF_PDU_Ack_Response(PDUAckClass::NACK, PDUAckType::NACK_PACKET_CRC, 0U, (m_rfExtendedAddress) ? m_rfDataHeader.getSrcLLId() : m_rfDataHeader.getLLId());
+                        writeRF_PDU_Ack_Response(PDUAckClass::NACK, PDUAckType::NACK_PACKET_CRC, m_rfDataHeader.getNs(), (m_rfExtendedAddress) ? m_rfDataHeader.getSrcLLId() : m_rfDataHeader.getLLId());
                     }
                 }
 
@@ -381,7 +381,7 @@ bool Data::process(uint8_t* data, uint32_t len)
                                         LogMessage(LOG_RF, P25_PDU_STR ", ISP, response, OSP ACK RETRY, llId = %u, exceeded retries, undeliverable",
                                             m_rfDataHeader.getLLId());
 
-                                        writeRF_PDU_Ack_Response(PDUAckClass::NACK, PDUAckType::NACK_UNDELIVERABLE, 0U, m_rfDataHeader.getLLId());
+                                        writeRF_PDU_Ack_Response(PDUAckClass::NACK, PDUAckType::NACK_UNDELIVERABLE, m_rfDataHeader.getNs(), m_rfDataHeader.getLLId());
                                     }
                                 }
                             }
@@ -1199,7 +1199,7 @@ bool Data::processConvDataReg(const uint8_t* pduUserData)
         m_convRegTimerTable[llId].start();
 
         // acknowledge
-        writeRF_PDU_Ack_Response(PDUAckClass::ACK, PDUAckType::ACK, 0U, llId);
+        writeRF_PDU_Ack_Response(PDUAckClass::ACK, PDUAckType::ACK, m_rfDataHeader.getNs(), llId);
     }
     break;
     case PDURegType::DISCONNECT:
@@ -1211,7 +1211,7 @@ bool Data::processConvDataReg(const uint8_t* pduUserData)
         }
 
         // acknowledge
-        writeRF_PDU_Ack_Response(PDUAckClass::ACK, PDUAckType::ACK, 0U, llId);
+        writeRF_PDU_Ack_Response(PDUAckClass::ACK, PDUAckType::ACK, m_rfDataHeader.getNs(), llId);
 
         if (hasLLIdFNEReg(llId)) {
             // remove dynamic FNE registration table entry
@@ -1364,7 +1364,7 @@ bool Data::processSNDCPControl(const uint8_t* pduUserData)
                     isp->getDeactType());
             }
 
-            writeRF_PDU_Ack_Response(PDUAckClass::ACK, PDUAckType::ACK, 0U, llId);
+            writeRF_PDU_Ack_Response(PDUAckClass::ACK, PDUAckType::ACK, m_rfDataHeader.getNs(), llId);
             sndcpReset(llId, true);
         }
         break;

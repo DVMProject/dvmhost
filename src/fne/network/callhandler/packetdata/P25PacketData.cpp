@@ -35,12 +35,6 @@ using namespace p25::sndcp;
 #endif // !defined(_WIN32)
 
 // ---------------------------------------------------------------------------
-//  Static Class Members
-// ---------------------------------------------------------------------------
-
-uint8_t P25PacketData::m_sendSeqNo = 0U;
-
-// ---------------------------------------------------------------------------
 //  Constants
 // ---------------------------------------------------------------------------
 
@@ -148,6 +142,7 @@ bool P25PacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
             if (status->header.getSAP() != PDUSAP::EXT_ADDR &&
                 status->header.getFormat() != PDUFormatType::UNCONFIRMED) {
                 m_readyForPkt[status->llId] = true;
+                m_suSendSeq[status->llId] = 0U;
             }
 
             LogMessage(LOG_NET, "P25, Data Call Start, peer = %u, llId = %u, streamId = %u, external = %u", peerId, status->llId, streamId, external);
@@ -224,6 +219,7 @@ bool P25PacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
             status->extendedAddress = true;
             status->llId = status->header.getSrcLLId();
             m_readyForPkt[status->llId] = true;
+            m_suSendSeq[status->llId] = 0U;
 
             offset += P25_PDU_FEC_LENGTH_BYTES;
             blocksToFollow--;
@@ -449,6 +445,7 @@ void P25PacketData::dispatch(uint32_t peerId)
         crcValid = edac::CRC::checkCRC32(status->pduUserData, status->pduUserDataLength);
         if (!crcValid) {
             LogError(LOG_NET, P25_PDU_STR ", failed CRC-32 check, blocks %u, len %u", status->header.getBlocksToFollow(), status->pduUserDataLength);
+            return;
         }
     }
 
@@ -526,11 +523,6 @@ void P25PacketData::dispatch(uint32_t peerId)
         if (!m_network->m_host->m_vtunEnabled)
             break;
 
-        if (!crcValid) {
-            write_PDU_Ack_Response(PDUAckClass::NACK, PDUAckType::NACK_PACKET_CRC, 0U, (status->extendedAddress) ? status->header.getSrcLLId() : status->header.getLLId());
-            break;
-        }
-
         int dataPktOffset = 0U;
         if (status->header.getFormat() == PDUFormatType::CONFIRMED && status->extendedAddress)
             dataPktOffset = 4U;
@@ -561,7 +553,7 @@ void P25PacketData::dispatch(uint32_t peerId)
             LogError(LOG_NET, P25_PDU_STR ", failed to write IP frame to virtual tunnel, len %u", pktLen);
         }
 
-        write_PDU_Ack_Response(PDUAckClass::ACK, PDUAckType::ACK, 0U, (status->extendedAddress) ? status->header.getSrcLLId() : status->header.getLLId());
+        write_PDU_Ack_Response(PDUAckClass::ACK, PDUAckType::ACK, status->header.getNs(), (status->extendedAddress) ? status->header.getSrcLLId() : status->header.getLLId());
         m_readyForPkt[status->header.getSrcLLId()] = true;
 #endif // !defined(_WIN32)
     }
@@ -645,13 +637,17 @@ void P25PacketData::dispatchUserFrameToFNE(p25::data::DataHeader& dataHeader, bo
     uint32_t srcId = (extendedAddress) ? dataHeader.getSrcLLId() : dataHeader.getLLId();
     uint32_t dstId = dataHeader.getLLId();
 
-    dataHeader.setSynchronize(true);
-/*
-    dataHeader.setNs(m_sendSeqNo);
-    ++m_sendSeqNo;
-    if (m_sendSeqNo > 7U)
-        m_sendSeqNo = 0U;
-*/
+    uint8_t sendSeqNo = m_suSendSeq[srcId];
+    if (sendSeqNo == 0U) {
+        dataHeader.setSynchronize(true);
+    }
+
+    dataHeader.setNs(sendSeqNo);
+    ++sendSeqNo;
+    if (sendSeqNo > 7U)
+        sendSeqNo = 0U;
+    m_suSendSeq[srcId] = sendSeqNo;
+
     // repeat traffic to the connected peers
     if (m_network->m_peers.size() > 0U) {
         uint32_t i = 0U;

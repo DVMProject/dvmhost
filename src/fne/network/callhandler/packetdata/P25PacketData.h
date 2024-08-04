@@ -85,8 +85,6 @@ namespace network
                 FNENetwork* m_network;
                 TagP25Data *m_tag;
 
-                static uint8_t m_sendSeqNo;
-
                 /**
                  * @brief Represents a queued data frame from the VTUN.
                  */
@@ -166,6 +164,7 @@ namespace network
                 std::unordered_map<uint32_t, uint32_t> m_arpTable;
                 std::unordered_map<uint32_t, bool> m_readyForPkt;
                 std::unordered_map<uint32_t, Timer> m_suNotReadyTimeout;
+                std::unordered_map<uint32_t, uint8_t> m_suSendSeq;
 
                 bool m_debug;
 
