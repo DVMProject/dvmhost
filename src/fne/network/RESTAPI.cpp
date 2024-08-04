@@ -200,6 +200,16 @@ json::object tgToJson(const TalkgroupRuleGroupVoice& groupVoice)
         }
         config["rewrite"].set<json::array>(rewrites);
 
+        json::array always = json::array();
+        std::vector<uint32_t> alwaysSend = groupVoice.config().alwaysSend();
+        if (alwaysSend.size() > 0) {
+            for (auto alwaysEntry : alwaysSend) {
+                uint32_t peerId = alwaysEntry;
+                always.push_back(json::value((double)peerId));
+            }
+        }
+        config["always"].set<json::array>(always);
+
         json::array preferreds = json::array();
         std::vector<uint32_t> preferred = groupVoice.config().preferred();
         if (preferred.size() > 0) {
@@ -381,6 +391,27 @@ TalkgroupRuleGroupVoice jsonToTG(json::object& req, HTTPPayload& reply)
                 rewrite.push_back(rewriteRule);
             }
             config.rewrite(rewrite);
+        }
+
+        if (!configObj["always"].is<json::array>()) {
+            errorPayload(reply, "TG configuration \"always\" was not a valid JSON array");
+            LogDebug(LOG_REST,  "TG configuration \"always\" was not a valid JSON array");
+            return TalkgroupRuleGroupVoice();
+        }
+        json::array always = configObj["always"].get<json::array>();
+
+        std::vector<uint32_t> alwaysSend = groupVoice.config().alwaysSend();
+        if (always.size() > 0) {
+            for (auto alwaysEntry : always) {
+                if (!alwaysEntry.is<uint32_t>()) {
+                    errorPayload(reply, "TG configuration always value was not a valid number");
+                    LogDebug(LOG_REST,  "TG configuration always value was not a valid number");
+                    return TalkgroupRuleGroupVoice();
+                }
+
+                alwaysSend.push_back(alwaysEntry.get<uint32_t>());
+            }
+            config.alwaysSend(alwaysSend);
         }
 
         if (!configObj["preferred"].is<json::array>()) {
