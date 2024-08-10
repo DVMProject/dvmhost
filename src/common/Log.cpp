@@ -120,6 +120,7 @@ static bool LogOpen()
             setlogmask(LOG_UPTO(LOG_INFO));
             break;
         case 3U:
+        case 9999U: // in-band U: messages should also be notices
             setlogmask(LOG_UPTO(LOG_NOTICE));
             break;
         case 4U:
