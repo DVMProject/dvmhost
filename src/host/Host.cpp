@@ -1298,6 +1298,12 @@ json::object Host::getStatus()
 
         uint32_t peerId = networkConf["id"].as<uint32_t>();
         response["peerId"].set<uint32_t>(peerId);
+
+        response["sysId"].set<uint32_t>(m_sysId);
+        response["siteId"].set<uint8_t>(m_siteId);
+        response["p25RfssId"].set<uint8_t>(m_p25RfssId);
+        response["p25NetId"].set<uint32_t>(m_p25NetId);
+        response["p24NAC"].set<uint32_t>(m_p25NAC);
     }
 
     yaml::Node modemConfig = m_conf["system"]["modem"];
