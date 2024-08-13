@@ -1303,7 +1303,7 @@ json::object Host::getStatus()
         response["siteId"].set<uint8_t>(m_siteId);
         response["p25RfssId"].set<uint8_t>(m_p25RfssId);
         response["p25NetId"].set<uint32_t>(m_p25NetId);
-        response["p24NAC"].set<uint32_t>(m_p25NAC);
+        response["p25NAC"].set<uint32_t>(m_p25NAC);
     }
 
     yaml::Node modemConfig = m_conf["system"]["modem"];
