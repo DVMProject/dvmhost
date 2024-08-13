@@ -98,6 +98,7 @@ Slot::Slot(uint32_t slotNo, uint32_t timeout, uint32_t tgHang, uint32_t queueSiz
     m_slotNo(slotNo),
     m_txImmQueue(queueSize, "DMR Imm Slot Frame"),
     m_txQueue(queueSize, "DMR Slot Frame"),
+    m_queueLock(),
     m_rfState(RS_RF_LISTENING),
     m_rfLastDstId(0U),
     m_rfLastSrcId(0U),
@@ -332,6 +333,8 @@ uint32_t Slot::peekFrameLength()
 uint32_t Slot::getFrame(uint8_t* data)
 {
     assert(data != nullptr);
+
+    std::lock_guard<std::mutex> lock(m_queueLock);
 
     if (m_txQueue.isEmpty() && m_txImmQueue.isEmpty())
         return 0U;
@@ -986,6 +989,8 @@ void Slot::setAlohaConfig(uint8_t nRandWait, uint8_t backOff)
 void Slot::addFrame(const uint8_t *data, bool net, bool imm)
 {
     assert(data != nullptr);
+
+    std::lock_guard<std::mutex> lock(m_queueLock);
 
     if (!net) {
         if (m_netState != RS_NET_IDLE)

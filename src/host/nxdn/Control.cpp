@@ -42,6 +42,11 @@ const uint8_t SCRAMBLER[] = {
     0x28U, 0x28U, 0x00U, 0x0AU, 0x02U, 0x82U, 0x20U, 0x28U, 0x82U, 0x2AU, 0xAAU, 0x20U, 0x22U, 0x80U,
     0xA8U, 0x8AU, 0x08U, 0xA0U, 0xAAU, 0x02U };
 
+// ---------------------------------------------------------------------------
+//  Static Class Members
+// ---------------------------------------------------------------------------
+
+std::mutex Control::m_queueLock;
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -482,6 +487,8 @@ uint32_t Control::getFrame(uint8_t* data)
 {
     assert(data != nullptr);
 
+    std::lock_guard<std::mutex> lock(m_queueLock);
+
     if (m_txQueue.isEmpty() && m_txImmQueue.isEmpty())
         return 0U;
 
@@ -824,6 +831,8 @@ uint32_t Control::getLastSrcId() const
 void Control::addFrame(const uint8_t *data, bool net, bool imm)
 {
 	assert(data != nullptr);
+
+    std::lock_guard<std::mutex> lock(m_queueLock);
 
     if (!net) {
         if (m_rfTimeout.isRunning() && m_rfTimeout.hasExpired())

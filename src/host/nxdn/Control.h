@@ -43,6 +43,7 @@
 
 #include <cstdio>
 #include <string>
+#include <mutex>
 
 namespace nxdn
 {
@@ -289,6 +290,7 @@ namespace nxdn
 
         RingBuffer<uint8_t> m_txImmQueue;
         RingBuffer<uint8_t> m_txQueue;
+        static std::mutex m_queueLock;
 
         RPT_RF_STATE m_rfState;
         uint32_t m_rfLastDstId;

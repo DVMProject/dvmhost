@@ -47,6 +47,7 @@
 #include <vector>
 #include <unordered_map>
 #include <random>
+#include <mutex>
 
 namespace p25
 {
@@ -312,6 +313,7 @@ namespace p25
 
         RingBuffer<uint8_t> m_txImmQueue;
         RingBuffer<uint8_t> m_txQueue;
+        static std::mutex m_queueLock;
 
         RPT_RF_STATE m_rfState;
         uint32_t m_rfLastDstId;

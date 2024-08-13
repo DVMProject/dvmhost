@@ -35,6 +35,7 @@
 #include "network/Network.h"
 
 #include <vector>
+#include <mutex>
 
 namespace dmr
 {
@@ -307,6 +308,7 @@ namespace dmr
 
         RingBuffer<uint8_t> m_txImmQueue;
         RingBuffer<uint8_t> m_txQueue;
+        std::mutex m_queueLock;
 
         RPT_RF_STATE m_rfState;
         uint32_t m_rfLastDstId;

@@ -38,6 +38,12 @@ const uint32_t TSBK_PCH_CCH_CNT = 6U;
 const uint32_t MAX_PREAMBLE_TDU_CNT = 64U;
 
 // ---------------------------------------------------------------------------
+//  Static Class Members
+// ---------------------------------------------------------------------------
+
+std::mutex Control::m_queueLock;
+
+// ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
@@ -695,6 +701,8 @@ uint32_t Control::getFrame(uint8_t* data)
 {
     assert(data != nullptr);
 
+    std::lock_guard<std::mutex> lock(m_queueLock);
+
     if (m_txQueue.isEmpty() && m_txImmQueue.isEmpty())
         return 0U;
 
@@ -1132,6 +1140,8 @@ uint32_t Control::getLastSrcId() const
 void Control::addFrame(const uint8_t* data, uint32_t length, bool net, bool imm)
 {
     assert(data != nullptr);
+
+    std::lock_guard<std::mutex> lock(m_queueLock);
 
     if (!net) {
         if (m_rfTimeout.isRunning() && m_rfTimeout.hasExpired())
