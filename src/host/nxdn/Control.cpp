@@ -830,7 +830,7 @@ uint32_t Control::getLastSrcId() const
 
 void Control::addFrame(const uint8_t *data, bool net, bool imm)
 {
-	assert(data != nullptr);
+    assert(data != nullptr);
 
     std::lock_guard<std::mutex> lock(m_queueLock);
 
