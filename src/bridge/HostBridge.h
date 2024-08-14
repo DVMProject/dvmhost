@@ -214,6 +214,7 @@ private:
     bool m_debug;
 
     static std::mutex m_audioMutex;
+    static std::mutex m_networkMutex;
 
 #if defined(_WIN32)
     void* m_decoderState;

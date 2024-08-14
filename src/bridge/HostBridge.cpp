@@ -60,6 +60,7 @@ const int NUMBER_OF_BUFFERS = 32;
 // ---------------------------------------------------------------------------
 
 std::mutex HostBridge::m_audioMutex;
+std::mutex HostBridge::m_networkMutex;
 
 // ---------------------------------------------------------------------------
 //  Global Functions
@@ -489,7 +490,10 @@ int HostBridge::run()
         // ------------------------------------------------------
 
         if (m_network != nullptr)
+        {
+            std::lock_guard<std::mutex> lock(HostBridge::m_networkMutex);
             m_network->clock(ms);
+        }
 
         if (m_udpAudio && m_udpAudioSocket != nullptr)
             processUDPAudio();
@@ -2278,6 +2282,7 @@ void* HostBridge::threadNetworkProcess(void* arg)
             uint32_t length = 0U;
             bool netReadRet = false;
             if (bridge->m_txMode == TX_MODE_DMR) {
+                std::lock_guard<std::mutex> lock(HostBridge::m_networkMutex);
                 UInt8Array dmrBuffer = bridge->m_network->readDMR(netReadRet, length);
                 if (netReadRet) {
                     bridge->processDMRNetwork(dmrBuffer.get(), length);
@@ -2285,6 +2290,7 @@ void* HostBridge::threadNetworkProcess(void* arg)
             }
 
             if (bridge->m_txMode == TX_MODE_P25) {
+                std::lock_guard<std::mutex> lock(HostBridge::m_networkMutex);
                 UInt8Array p25Buffer = bridge->m_network->readP25(netReadRet, length);
                 if (netReadRet) {
                     bridge->processP25Network(p25Buffer.get(), length);
