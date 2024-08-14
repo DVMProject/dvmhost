@@ -493,7 +493,7 @@ namespace modem
          * @brief Helper to test if the P25 ring buffer has free space.
          * @returns bool True, if the P25 ring buffer has free space, otherwise false.
          */
-        bool hasP25Space(uint32_t length) const;
+        virtual bool hasP25Space(uint32_t length) const;
         /**
          * @brief Helper to test if the NXDN ring buffer has free space.
          * @returns bool True, if the NXDN ring buffer has free space, otherwise false.

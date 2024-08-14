@@ -279,6 +279,12 @@ namespace modem
         void close() override;
 
         /**
+         * @brief Helper to test if the P25 ring buffer has free space.
+         * @returns bool True, if the P25 ring buffer has free space, otherwise false.
+         */
+        bool hasP25Space(uint32_t length) const override;
+
+        /**
          * @brief Writes raw data to the air interface modem.
          * @param data Data to write to modem.
          * @param length Length of data to write.

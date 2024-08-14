@@ -389,6 +389,13 @@ void ModemV24::close()
     }
 }
 
+/* Helper to test if the P25 ring buffer has free space. */
+
+bool ModemV24::hasP25Space(uint32_t length) const
+{
+    return Modem::hasP25Space(length);
+}
+
 /* Writes raw data to the air interface modem. */
 
 int ModemV24::write(const uint8_t* data, uint32_t length)
