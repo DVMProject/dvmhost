@@ -312,6 +312,8 @@ bool Slot::processFrame(uint8_t *data, uint32_t len)
 
 uint32_t Slot::peekFrameLength()
 {
+    std::lock_guard<std::mutex> lock(m_queueLock);
+
     if (m_txQueue.isEmpty() && m_txImmQueue.isEmpty())
         return 0U;
 
