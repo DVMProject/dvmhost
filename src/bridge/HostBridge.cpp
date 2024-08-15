@@ -1175,10 +1175,12 @@ void HostBridge::processDMRNetwork(uint8_t* buffer, uint32_t length)
             m_ignoreCall = false;
             m_callAlgoId = 0U;
 
-            uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-            uint64_t diff = now - m_rxStartTime;
+            if (m_rxStartTime > 0U) {
+                uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+                uint64_t diff = now - m_rxStartTime;
 
-            LogMessage(LOG_HOST, "DMR, call end, srcId = %u, dstId = %u, dur = %us", srcId, dstId, diff / 1000U);
+                LogMessage(LOG_HOST, "DMR, call end, srcId = %u, dstId = %u, dur = %us", srcId, dstId, diff / 1000U);
+            }
             
             m_rxDMRLC = lc::LC();
             m_rxDMRPILC = lc::PrivacyLC();
@@ -1572,10 +1574,12 @@ void HostBridge::processP25Network(uint8_t* buffer, uint32_t length)
             m_ignoreCall = false;
             m_callAlgoId = ALGO_UNENCRYPT;
 
-            uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-            uint64_t diff = now - m_rxStartTime;
+            if (m_rxStartTime > 0U) {
+                uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+                uint64_t diff = now - m_rxStartTime;
 
-            LogMessage(LOG_HOST, "P25, call end, srcId = %u, dstId = %u, dur = %us", srcId, dstId, diff / 1000U);
+                LogMessage(LOG_HOST, "P25, call end, srcId = %u, dstId = %u, dur = %us", srcId, dstId, diff / 1000U);
+            }
 
             m_rxP25LC = lc::LC();
             m_rxStartTime = 0U;
