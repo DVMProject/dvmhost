@@ -160,7 +160,7 @@ This source repository contains configuration example files within the configs f
 
 If using local audio with `dvmbridge`, command line arguments for the input and output device *are* required. (See command line parameters below.) 
 
-On Windows, by default `dvmbridge` will default to using the WinMM (Windows Multimedia API), this should work for most uses. If necessary, in some situations (like many instances of `dvmbridge` for example), it may be desirable to use the Windows high-performance audio subsystem, WASAPI (Windows Audio Session API), normally `dvmbridge` will simply default to using WinMM on Windows sysetms, but
+On Windows, by default `dvmbridge` will utilize WinMM (Windows Multimedia API), this should work for most uses. If necessary, in some situations (like many instances of `dvmbridge` for example), it may be desirable to use the Windows high-performance audio subsystem, WASAPI (Windows Audio Session API), normally `dvmbridge` will always default to using WinMM on Windows systems (even those with WASAPI support), but
 using the command line parameter `-wasapi` will force `dvmbridge` to utilize WASAPI instead. (This may help with some cases of where audio is choppy as well.)
 
 There is no other real configuration for a `dvmbridge` instance other then setting the appropriate parameters within the configuration files.
