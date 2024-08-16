@@ -158,7 +158,7 @@ static bool g_debug = false;
 
 void fatal(const char* message)
 {
-    ::fprintf(stderr, "%s: %s\n", g_progExe.c_str(), message);
+    ::fprintf(stderr, "%s: FATAL PANIC; %s\n", g_progExe.c_str(), message);
     exit(EXIT_FAILURE);
 }
 

@@ -88,7 +88,7 @@ void fatal(const char* msg, ...)
 
     va_end(vl);
 
-    ::fprintf(stderr, "%s: %s\n", g_progExe.c_str(), buffer);
+    ::fprintf(stderr, "%s: FATAL PANIC; %s\n", g_progExe.c_str(), buffer);
     exit(EXIT_FAILURE);
 }
 

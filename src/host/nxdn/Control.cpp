@@ -492,11 +492,17 @@ bool Control::isQueueFull()
 
     // tx immediate queue takes priority
     if (!m_txImmQueue.isEmpty()) {
-        return !m_txImmQueue.hasSpace(NXDN_FRAME_LENGTH_BYTES);
+        uint32_t space = m_txImmQueue.freeSpace();
+        if (space < (NXDN_FRAME_LENGTH_BYTES + 1U))
+            return true;
     }
     else {
-        return !m_txQueue.hasSpace(NXDN_FRAME_LENGTH_BYTES);
+        uint32_t space = m_txQueue.freeSpace();
+        if (space < (NXDN_FRAME_LENGTH_BYTES + 1U))
+            return true;
     }
+
+    return false;
 }
 
 /* Get frame data from data ring buffer. */
