@@ -112,6 +112,10 @@ void usage(const char* message, const char* arg)
         "\n"
         "  -i        input audio device\n"
         "  -o        output audio device\n"
+#ifdef _WIN32
+        "\n"
+        "  -wasapi   use WASAPI on Windows\n"
+#endif
         "\n"
         "  -c <file> specifies the configuration file to use\n"
         "\n"
@@ -195,6 +199,14 @@ int checkArgs(int argc, char* argv[])
 
             p += 2;
         }
+#ifdef _WIN32
+        else if (IS("-wasapi")) {
+            // Windows
+            g_backends[0] = ma_backend_wasapi;
+            g_backends[1] = ma_backend_winmm;
+            g_backends[2] = ma_backend_null;
+        }
+#endif
         else if (IS("-v")) {
             ::fprintf(stdout, __PROG_NAME__ " %s (built %s)\r\n", __VER__, __BUILD__);
             ::fprintf(stdout, "Copyright (c) 2017-2024 Bryan Biedenkapp, N2PLL and DVMProject (https://github.com/dvmproject) Authors.\n");
