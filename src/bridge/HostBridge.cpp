@@ -354,7 +354,7 @@ int HostBridge::run()
     ma_result result;
     if (m_localAudio) {
         // initialize audio devices
-        if (ma_context_init(NULL, 0, NULL, &m_maContext) != MA_SUCCESS) {
+        if (ma_context_init(g_backends, g_backendCnt, NULL, &m_maContext) != MA_SUCCESS) {
             ::LogError(LOG_HOST, "Failed to initialize audio context.");
             return EXIT_FAILURE;
         }
@@ -367,6 +367,7 @@ int HostBridge::run()
         }
 
         LogInfo("Audio Parameters");
+        LogInfo("    Audio Backend: %s", ma_get_backend_name(m_maContext.backend));
         LogInfo("    Input Device: %s", m_maCaptureDevices[g_inputDevice].name);
         LogInfo("    Output Device: %s", m_maPlaybackDevices[g_outputDevice].name);
 
@@ -382,12 +383,13 @@ int HostBridge::run()
         m_maDeviceConfig.playback.pDeviceID = &m_maPlaybackDevices[g_outputDevice].id;
         m_maDeviceConfig.playback.format = ma_format_s16;
         m_maDeviceConfig.playback.channels = 1;
+        m_maDeviceConfig.playback.shareMode = ma_share_mode_shared;
 
         m_maDeviceConfig.periodSizeInFrames = MBE_SAMPLES_LENGTH;
         m_maDeviceConfig.dataCallback = audioCallback;
         m_maDeviceConfig.pUserData = this;
 
-        result = ma_device_init(NULL, &m_maDeviceConfig, &m_maDevice);
+        result = ma_device_init(&m_maContext, &m_maDeviceConfig, &m_maDevice);
         if (result != MA_SUCCESS) {
             ma_context_uninit(&m_maContext);
             return EXIT_FAILURE;

@@ -10,8 +10,6 @@
 #include "Defines.h"
 #include "common/Log.h"
 #include "bridge/ActivityLog.h"
-#define MINIAUDIO_IMPLEMENTATION
-#include "audio/miniaudio.h"
 #include "BridgeMain.h"
 #include "HostBridge.h"
 
@@ -47,6 +45,15 @@ int g_inputDevice = -1;
 int g_outputDevice = -1;
 
 uint8_t* g_gitHashBytes = nullptr;
+
+#ifdef _WIN32
+ma_backend g_backends[3];
+ma_uint32 g_backendCnt = 3;
+#else
+ma_backend g_backends[7];
+ma_uint32 g_backendCnt = 7;
+#endif
+
 
 // ---------------------------------------------------------------------------
 //  Global Functions
@@ -112,10 +119,12 @@ void usage(const char* message, const char* arg)
         g_progExe.c_str());
 
     ma_context context;
-    if (ma_context_init(NULL, 0, NULL, &context) != MA_SUCCESS) {
+    if (ma_context_init(g_backends, g_backendCnt, NULL, &context) != MA_SUCCESS) {
         fprintf(stderr, "Failed to initialize audio context.\n");
         exit(EXIT_FAILURE);
     }
+
+    fprintf(stdout, "\nAudio Backend: %s", ma_get_backend_name(context.backend));
 
     ma_device_info* playbackDevices;
     ma_device_info* captureDevices;
@@ -218,6 +227,24 @@ int main(int argc, char** argv)
 {
     g_gitHashBytes = new uint8_t[4U];
     ::memset(g_gitHashBytes, 0x00U, 4U);
+
+#ifdef _WIN32
+    // Windows
+    g_backends[0] = ma_backend_winmm;
+    g_backends[1] = ma_backend_wasapi;
+    g_backends[2] = ma_backend_null;
+#else
+    // Linux
+    g_backends[0] = ma_backend_pulseaudio;
+    g_backends[1] = ma_backend_alsa;
+    g_backends[2] = ma_backend_jack;
+    g_backends[3] = ma_backend_oss;
+    // MacOS
+    g_backends[4] = ma_backend_coreaudio;
+    g_backends[5] = ma_backend_sndio;
+    // BSD
+    g_backends[6] = ma_backend_null;
+#endif
 
     uint32_t hash = ::strtoul(__GIT_VER_HASH__, 0, 16);
     __SET_UINT32(hash, g_gitHashBytes, 0U);

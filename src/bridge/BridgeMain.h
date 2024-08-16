@@ -17,6 +17,8 @@
 #define __BRIDGE_MAIN_H__
 
 #include "Defines.h"
+#define MINIAUDIO_IMPLEMENTATION
+#include "audio/miniaudio.h"
 
 #include <string>
 
@@ -44,6 +46,14 @@ extern int g_inputDevice;
 extern int g_outputDevice;
 
 extern uint8_t* g_gitHashBytes;
+
+#ifdef _WIN32
+extern ma_backend g_backends[];
+extern ma_uint32 g_backendCnt;
+#else
+extern ma_backend g_backends[];
+extern ma_uint32 g_backendCnt;
+#endif
 
 /**
  * @brief Helper to trigger a fatal error message. This will cause the program to terminate 
