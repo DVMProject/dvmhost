@@ -276,6 +276,10 @@ void* Host::threadDMRWriter1(void* arg)
                                 host->m_lastDstId = host->m_dmr->getLastDstId(1U);
                                 host->m_lastSrcId = host->m_dmr->getLastSrcId(1U);
                             }
+                        } else {
+                            if (host->m_dmr->isQueueFull(1U)) {
+                                LogError(LOG_HOST, "PANIC; modem->hasDMRSpace1() = %u, and DMR slot 1 queue is full!", ret);
+                            }
                         }
                     }
                 }
@@ -497,7 +501,7 @@ void* Host::threadDMRWriter2(void* arg)
                         // to the modem
                         bool ret = host->m_modem->hasDMRSpace2();
                         if (ret) {
-                            uint32_t nextLen = host->m_dmr->peekFrameLength(1U);
+                            uint32_t nextLen = host->m_dmr->peekFrameLength(2U);
                             if (host->m_dmrCtrlChannel) {
                                 if (host->m_dmrDedicatedTxTestTimer.hasExpired() && !host->m_dmrDedicatedTxTestTimer.isPaused()) {
                                     host->m_dmrDedicatedTxTestTimer.pause();
@@ -535,6 +539,10 @@ void* Host::threadDMRWriter2(void* arg)
 
                                 host->m_lastDstId = host->m_dmr->getLastDstId(2U);
                                 host->m_lastSrcId = host->m_dmr->getLastSrcId(2U);
+                            }
+                        } else {
+                            if (host->m_dmr->isQueueFull(2U)) {
+                                LogError(LOG_HOST, "PANIC; modem->hasDMRSpace2() = %u, and DMR slot 2 queue is full!", ret);
                             }
                         }
                     }

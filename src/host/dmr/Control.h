@@ -148,6 +148,12 @@ namespace dmr
          */
         uint32_t peekFrameLength(uint32_t slotNo);
         /**
+         * @brief Helper to determine whether or not the internal frame queue is full.
+         * @param slotNo DMR slot number.
+         * @returns bool True if frame queue is full, otherwise false.
+         */
+        bool isQueueFull(uint32_t slotNo);
+        /**
          * @brief Get frame data from data ring buffer.
          * @param slotNo DMR slot number.
          * @param[out] data Buffer to store frame data.

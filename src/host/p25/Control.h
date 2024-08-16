@@ -161,6 +161,11 @@ namespace p25
          */
         uint32_t peekFrameLength();
         /**
+         * @brief Helper to determine whether or not the internal frame queue is full.
+         * @returns bool True if frame queue is full, otherwise false.
+         */
+        bool isQueueFull();
+        /**
          * @brief Get frame data from data ring buffer.
          * @param[out] data Buffer to store frame data.
          * @returns uint32_t Length of frame data retrieved.

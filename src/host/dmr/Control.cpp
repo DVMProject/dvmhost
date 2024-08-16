@@ -303,6 +303,21 @@ uint32_t Control::peekFrameLength(uint32_t slotNo)
     }
 }
 
+/* Helper to determine whether or not the internal frame queue is full. */
+
+bool Control::isQueueFull(uint32_t slotNo)
+{
+    switch (slotNo) {
+    case 1U:
+        return m_slot1->isQueueFull();
+    case 2U:
+        return m_slot2->isQueueFull();
+    default:
+        LogError(LOG_DMR, "DMR, invalid slot, slotNo = %u", slotNo);
+        return true;
+    }
+}
+
 /* Get a data frame for slot, from data ring buffer. */
 
 uint32_t Control::getFrame(uint32_t slotNo, uint8_t* data)

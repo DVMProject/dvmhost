@@ -330,6 +330,22 @@ uint32_t Slot::peekFrameLength()
     return len;
 }
 
+/* Helper to determine whether or not the internal frame queue is full. */
+
+bool Slot::isQueueFull()
+{
+    if (m_txQueue.isEmpty() && m_txImmQueue.isEmpty())
+        return false;
+
+    // tx immediate queue takes priority
+    if (!m_txImmQueue.isEmpty()) {
+        return !m_txImmQueue.hasSpace(DMR_FRAME_LENGTH_BYTES);
+    }
+    else {
+        return !m_txQueue.hasSpace(DMR_FRAME_LENGTH_BYTES);
+    }
+}
+
 /* Get frame data from data ring buffer. */
 
 uint32_t Slot::getFrame(uint8_t* data)

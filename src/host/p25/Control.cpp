@@ -697,6 +697,22 @@ uint32_t Control::peekFrameLength()
     return len;
 }
 
+/* Helper to determine whether or not the internal frame queue is full. */
+
+bool Control::isQueueFull()
+{
+    if (m_txQueue.isEmpty() && m_txImmQueue.isEmpty())
+        return false;
+
+    // tx immediate queue takes priority
+    if (!m_txImmQueue.isEmpty()) {
+        return !m_txImmQueue.hasSpace(P25_LDU_FRAME_LENGTH_BYTES);
+    }
+    else {
+        return !m_txQueue.hasSpace(P25_LDU_FRAME_LENGTH_BYTES);
+    }
+}
+
 /* Get frame data from data ring buffer. */
 
 uint32_t Control::getFrame(uint8_t* data)
