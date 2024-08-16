@@ -7,7 +7,7 @@ Please feel free to reach out to us for help, comments or otherwise, on our Disc
 This project generates a few executables:
 - `dvmhost` host software that connects to the DVM modems (both air interface for repeater and hotspot or P25 DFSI for commerical P25 hardware) and is the primary data processing application for digital modes. [See configuration](#dvmhost-configuration) to configure and calibrate.
 - `dvmfne` a network "core", this provides a central server for `dvmhost` instances to connect to and be networked with, allowing relay of traffic and other data between `dvmhost` instances and other `dvmfne` instances. [See configuration](#dvmfne-configuration) to configure.
-- `dvmbridge` a analog/PCM audio bridge, this provides the capability for analog or PCM audio resources to be connected to a `dvmfne` instance, allowing realtime vocoding of traffic.
+- `dvmbridge` a analog/PCM audio bridge, this provides the capability for analog or PCM audio resources to be connected to a `dvmfne` instance, allowing realtime vocoding of traffic. [See configuration](#dvmbridge-configuration) to configure.
 - `dvmcmd` a simple command-line utility to send remote control commands to a `dvmhost` or `dvmfne` instance with REST API configured.
 - `dvmmon` a TUI utility that allows semi-realtime console-based monitoring of `dvmhost` instances (this tool is only available when project wide TUI support is enabled!).
 
@@ -154,6 +154,17 @@ This source repository contains configuration example files within the configs f
 
 There is no other real configuration for a `dvmfne` instance other then setting the appropriate parameters within the configuration files.
 
+## dvmbridge Configuration
+
+This source repository contains configuration example files within the configs folder, please review `bridge-config.example.yml` for the `dvmbridge` for details on various configurable options.
+
+If using local audio with `dvmbridge`, command line arguments for the input and output device *are* required. (See command line parameters below.) 
+
+On Windows, by default `dvmbridge` will default to using the WinMM (Windows Multimedia API), this should work for most uses. If necessary, in some situations (like many instances of `dvmbridge` for example), it may be desirable to use the Windows high-performance audio subsystem, WASAPI (Windows Audio Session API), normally `dvmbridge` will simply default to using WinMM on Windows sysetms, but
+using the command line parameter `-wasapi` will force `dvmbridge` to utilize WASAPI instead. (This may help with some cases of where audio is choppy as well.)
+
+There is no other real configuration for a `dvmbridge` instance other then setting the appropriate parameters within the configuration files.
+
 ## Command Line Parameters
 
 ### dvmhost Command Line Parameters
@@ -206,6 +217,8 @@ usage: ./dvmbridge [-vhf][-i <input audio device id>][-o <output audio device id
 
   -i        input audio device
   -o        output audio device
+  
+  -wasapi   use WASAPI on Windows
 
   -c <file> specifies the configuration file to use
 
