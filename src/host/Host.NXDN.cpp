@@ -213,10 +213,6 @@ void* Host::threadNXDNWriter(void* arg)
                                 host->m_lastDstId = host->m_nxdn->getLastDstId();
                                 host->m_lastSrcId = host->m_nxdn->getLastSrcId();
                             }
-                        } else {
-                            if (host->m_nxdn->isQueueFull()) {
-                                LogError(LOG_HOST, "PANIC; modem->hasNXDNSpace() = %u, and NXDN queue is full!", ret);
-                            }
                         }
                     }
                 }

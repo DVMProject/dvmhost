@@ -259,10 +259,6 @@ void* Host::threadP25Writer(void* arg)
                                 else {
                                     nextLen = 0U;
                                 }
-                            } else {
-                                if (host->m_p25->isQueueFull()) {
-                                    LogError(LOG_HOST, "PANIC; modem->hasP25Space() = %u, and P25 queue is full!", ret);
-                                }
                             }
                         }
 
