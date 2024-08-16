@@ -1708,13 +1708,13 @@ void* Host::threadWatchdog(void* arg)
                         host->m_dmrTx1WatchdogTimer.clock(ms);
                     if (host->m_dmrTx1WatchdogTimer.isRunning() && host->m_dmrTx1WatchdogTimer.hasExpired() && !host->m_dmrTx1WatchdogTimer.isPaused()) {
                         host->m_dmrTx1WatchdogTimer.pause();
-                        LogError(LOG_HOST, "DMR, slot 1 frame processor hung >%us, ms = %u", host->m_dmrTx1WatchdogTimer.getTimeout(), host->m_dmrTx1LoopMS);
+                        LogError(LOG_HOST, "PANIC; DMR, slot 1 Tx frame processor hung >%us, ms = %u", host->m_dmrTx1WatchdogTimer.getTimeout(), host->m_dmrTx1LoopMS);
                     }
 
                     if (host->m_dmr->getTSCCSlotNo() != 1U) {
                         if (host->m_modem->gotModemStatus() && !host->m_modem->hasDMRSpace1() && host->m_dmr->isQueueFull(1U) &&
                             !host->m_dmrBeaconDurationTimer.isRunning()) {
-                            LogError(LOG_HOST, "PANIC; has no DMR slot 1 buffer space, and DMR slot 1 queue is full!");
+                            LogError(LOG_HOST, "PANIC; DMR, has no DMR slot 1 buffer space, and DMR slot 1 queue is full!");
                         }
                     }
 
@@ -1722,13 +1722,13 @@ void* Host::threadWatchdog(void* arg)
                         host->m_dmrTx2WatchdogTimer.clock(ms);
                     if (host->m_dmrTx2WatchdogTimer.isRunning() && host->m_dmrTx2WatchdogTimer.hasExpired() && !host->m_dmrTx2WatchdogTimer.isPaused()) {
                         host->m_dmrTx2WatchdogTimer.pause();
-                        LogError(LOG_HOST, "DMR, slot 2 frame processor hung >%us, ms = %u", host->m_dmrTx2WatchdogTimer.getTimeout(), host->m_dmrTx2LoopMS);
+                        LogError(LOG_HOST, "PANIC; DMR, slot 2 Tx frame processor hung >%us, ms = %u", host->m_dmrTx2WatchdogTimer.getTimeout(), host->m_dmrTx2LoopMS);
                     }
 
                     if (host->m_dmr->getTSCCSlotNo() != 2U) {
                         if (host->m_modem->gotModemStatus() && !host->m_modem->hasDMRSpace2() && host->m_dmr->isQueueFull(2U) &&
                             !host->m_dmrBeaconDurationTimer.isRunning()) {
-                            LogError(LOG_HOST, "PANIC; has no DMR slot 2 buffer space, and DMR slot 2 queue is full!");
+                            LogError(LOG_HOST, "PANIC; DMR, has no DMR slot 2 buffer space, and DMR slot 2 queue is full!");
                         }
                     }
                 }
@@ -1739,12 +1739,12 @@ void* Host::threadWatchdog(void* arg)
                         host->m_p25TxWatchdogTimer.clock(ms);
                     if (host->m_p25TxWatchdogTimer.isRunning() && host->m_p25TxWatchdogTimer.hasExpired() && !host->m_p25TxWatchdogTimer.isPaused()) {
                         host->m_p25TxWatchdogTimer.pause();
-                        LogError(LOG_HOST, "P25, PANIC; frame processor hung >%us, ms = %u", host->m_p25TxWatchdogTimer.getTimeout(), host->m_p25TxLoopMS);
+                        LogError(LOG_HOST, "PANIC; P25, Tx frame processor hung >%us, ms = %u", host->m_p25TxWatchdogTimer.getTimeout(), host->m_p25TxLoopMS);
                     }
 
                     if (host->m_modem->gotModemStatus() && !host->m_modem->hasP25Space(P25DEF::P25_LDU_FRAME_LENGTH_BYTES) && host->m_p25->isQueueFull() &&
                         !host->m_p25CtrlChannel && !host->m_p25BcastDurationTimer.isRunning()) {
-                        LogError(LOG_HOST, "PANIC; modem has no P25 buffer space, and internal P25 queue is full!");
+                        LogError(LOG_HOST, "PANIC; P25, modem has no P25 buffer space, and internal P25 queue is full!");
                     }
                 }
 
@@ -1754,12 +1754,12 @@ void* Host::threadWatchdog(void* arg)
                         host->m_nxdnTxWatchdogTimer.clock(ms);
                     if (host->m_nxdnTxWatchdogTimer.isRunning() && host->m_nxdnTxWatchdogTimer.hasExpired() && !host->m_nxdnTxWatchdogTimer.isPaused()) {
                         host->m_nxdnTxWatchdogTimer.pause();
-                        LogError(LOG_HOST, "NXDN, frame processor hung >%us, ms = %u", host->m_nxdnTxWatchdogTimer.getTimeout(), host->m_nxdnTxLoopMS);
+                        LogError(LOG_HOST, "PANIC; NXDN, Tx frame processor hung >%us, ms = %u", host->m_nxdnTxWatchdogTimer.getTimeout(), host->m_nxdnTxLoopMS);
                     }
 
                     if (host->m_modem->gotModemStatus() && !host->m_modem->hasNXDNSpace() && host->m_nxdn->isQueueFull() &&
                         !host->m_nxdnCtrlChannel && !host->m_nxdnBcastDurationTimer.isRunning()) {
-                        LogError(LOG_HOST, "PANIC; modem has no NXDN buffer space, and NXDN queue is full!");
+                        LogError(LOG_HOST, "PANIC; NXDN, modem has no NXDN buffer space, and NXDN queue is full!");
                     }
                 }
             }
