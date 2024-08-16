@@ -488,6 +488,25 @@ int HostBridge::run()
         stopWatch.start();
 
         // ------------------------------------------------------
+        //  -- Audio Device Checking                          --
+        // ------------------------------------------------------
+
+        if (m_localAudio) {
+            ma_device_state state = ma_device_get_state(&m_maDevice);
+            if (state != ma_device_state_started) {
+                LogError(LOG_HOST, "audio device state invalid, state = %u", state);
+
+                // restart audio device
+                result = ma_device_start(&m_maDevice);
+                if (result != MA_SUCCESS) {
+                    ma_device_uninit(&m_maDevice);
+                    ma_context_uninit(&m_maContext);
+                    ::fatal("failed to reinitialize audio device! panic.");
+                }
+            }
+        }
+
+        // ------------------------------------------------------
         //  -- Network Clocking                               --
         // ------------------------------------------------------
 
