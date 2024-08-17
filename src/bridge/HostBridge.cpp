@@ -1403,8 +1403,6 @@ void HostBridge::encodeDMRAudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32_
 
             m_dmrSeqNo++;
             delete[] data;
-        
-            Thread::sleep(60U);
         }
 
         // send DMR voice
@@ -1452,8 +1450,6 @@ void HostBridge::encodeDMRAudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32_
         m_dmrSeqNo++;
         ::memset(m_ambeBuffer, 0x00U, 27U);
         m_ambeCount = 0U;
-        
-        Thread::sleep(60U);
     }
 
     int smpIdx = 0;
