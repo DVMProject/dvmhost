@@ -187,6 +187,8 @@ private:
     Timer m_nxdnBcastDurationTimer;
     Timer m_nxdnDedicatedTxTestTimer;
     
+    /* Watchdog Timers */
+
     Timer m_dmrTx1WatchdogTimer;
     uint32_t m_dmrTx1LoopMS;
     Timer m_dmrTx2WatchdogTimer;
@@ -200,6 +202,10 @@ private:
     Timer m_mainLoopWatchdogTimer;
     uint32_t m_adjSiteLoopMS;
     Timer m_adjSiteLoopWatchdogTimer;
+    uint32_t m_dmr1OverflowCnt;
+    uint32_t m_dmr2OverflowCnt;
+    uint32_t m_p25OverflowCnt;
+    uint32_t m_nxdnOverflowCnt;
 
     static std::mutex m_clockingMutex;
 

@@ -50,6 +50,7 @@ uint8_t Host::m_idleTickDelay = 5U;
 
 #define CW_IDLE_SLEEP_MS 50U
 #define IDLE_WARMUP_MS 5U
+#define MAX_OVERFLOW_CNT 10U
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -143,6 +144,10 @@ Host::Host(const std::string& confFile) :
     m_mainLoopWatchdogTimer(1000U, 1U),
     m_adjSiteLoopMS(0U),
     m_adjSiteLoopWatchdogTimer(1000U, 1U),
+    m_dmr1OverflowCnt(0U),
+    m_dmr2OverflowCnt(0U),
+    m_p25OverflowCnt(0U),
+    m_nxdnOverflowCnt(0U),
     m_restAddress("0.0.0.0"),
     m_restPort(REST_API_DEFAULT_PORT),
     m_RESTAPI(nullptr),
@@ -1717,19 +1722,27 @@ void* Host::threadWatchdog(void* arg)
                     }
 
                     if (host->m_modem->gotModemStatus() && !host->m_modem->hasDMRSpace1() && host->m_dmr->isQueueFull(1U) &&
-                        !host->m_dmrBeaconDurationTimer.isRunning()) {
-                        std::lock_guard<std::mutex> lock(m_clockingMutex);
+                        !host->m_dmrCtrlChannel && !host->m_dmrBeaconDurationTimer.isRunning()) {
+                        if (host->m_dmr1OverflowCnt > MAX_OVERFLOW_CNT) {
+                            std::lock_guard<std::mutex> lock(m_clockingMutex);
 
-                        LogError(LOG_HOST, "PANIC; DMR, has no DMR slot 1 FIFO space, and DMR slot 1 queue is full! Resetting states.");
+                            LogError(LOG_HOST, "PANIC; DMR, has no DMR slot 1 FIFO space, and DMR slot 1 queue is full! Resetting states.");
 
-                        host->setState(STATE_IDLE);
-                        host->m_modem->writeDMRStart(false);
-                        host->m_modem->clearDMRFrame1();
+                            host->setState(STATE_IDLE);
+                            host->m_modem->writeDMRStart(false);
+                            host->m_modem->clearDMRFrame1();
 
-                        // respect the fixed mode state
-                        if (host->m_fixedMode) {
-                            host->setState(STATE_DMR);
+                            // respect the fixed mode state
+                            if (host->m_fixedMode) {
+                                host->setState(STATE_DMR);
+                            }
+
+                            host->m_dmr1OverflowCnt = 0U;
+                        } else {
+                            host->m_dmr1OverflowCnt++;
                         }
+                    } else {
+                        host->m_dmr1OverflowCnt = 0U;
                     }
 
                     if (host->m_dmrTx2WatchdogTimer.isRunning())
@@ -1740,19 +1753,27 @@ void* Host::threadWatchdog(void* arg)
                     }
 
                     if (host->m_modem->gotModemStatus() && !host->m_modem->hasDMRSpace2() && host->m_dmr->isQueueFull(2U) &&
-                        !host->m_dmrBeaconDurationTimer.isRunning()) {
-                        std::lock_guard<std::mutex> lock(m_clockingMutex);
+                        !host->m_dmrCtrlChannel && !host->m_dmrBeaconDurationTimer.isRunning()) {
+                        if (host->m_dmr2OverflowCnt > MAX_OVERFLOW_CNT) {
+                            std::lock_guard<std::mutex> lock(m_clockingMutex);
 
-                        LogError(LOG_HOST, "PANIC; DMR, has no DMR slot 2 FIFO space, and DMR slot 2 queue is full! Resetting states.");
+                            LogError(LOG_HOST, "PANIC; DMR, has no DMR slot 2 FIFO space, and DMR slot 2 queue is full! Resetting states.");
 
-                        host->setState(STATE_IDLE);
-                        host->m_modem->writeDMRStart(false);
-                        host->m_modem->clearDMRFrame2();
+                            host->setState(STATE_IDLE);
+                            host->m_modem->writeDMRStart(false);
+                            host->m_modem->clearDMRFrame2();
 
-                        // respect the fixed mode state
-                        if (host->m_fixedMode) {
-                            host->setState(STATE_DMR);
+                            // respect the fixed mode state
+                            if (host->m_fixedMode) {
+                                host->setState(STATE_DMR);
+                            }
+
+                            host->m_dmr2OverflowCnt = 0U;
+                        } else {
+                            host->m_dmr2OverflowCnt++;
                         }
+                    } else {
+                        host->m_dmr2OverflowCnt = 0U;
                     }
                 }
 
@@ -1767,18 +1788,26 @@ void* Host::threadWatchdog(void* arg)
 
                     if (host->m_modem->gotModemStatus() && !host->m_modem->hasP25Space(P25DEF::P25_LDU_FRAME_LENGTH_BYTES) && host->m_p25->isQueueFull() &&
                         !host->m_p25CtrlChannel && !host->m_p25BcastDurationTimer.isRunning()) {
-                        std::lock_guard<std::mutex> lock(m_clockingMutex);
+                        if (host->m_p25OverflowCnt > MAX_OVERFLOW_CNT) {
+                            std::lock_guard<std::mutex> lock(m_clockingMutex);
 
-                        LogError(LOG_HOST, "PANIC; P25, modem has no P25 FIFO space, and internal P25 queue is full! Resetting states.");
+                            LogError(LOG_HOST, "PANIC; P25, modem has no P25 FIFO space, and internal P25 queue is full! Resetting states.");
 
-                        host->setState(STATE_IDLE);
-                        host->m_modem->clearP25Frame();
-                        host->m_p25->reset();
+                            host->setState(STATE_IDLE);
+                            host->m_modem->clearP25Frame();
+                            host->m_p25->reset();
 
-                        // respect the fixed mode state
-                        if (host->m_fixedMode) {
-                            host->setState(STATE_P25);
+                            // respect the fixed mode state
+                            if (host->m_fixedMode) {
+                                host->setState(STATE_P25);
+                            }
+
+                            host->m_p25OverflowCnt = 0U;
+                        } else {
+                            host->m_p25OverflowCnt++;
                         }
+                    } else {
+                        host->m_p25OverflowCnt = 0U;
                     }
                 }
 
@@ -1793,18 +1822,26 @@ void* Host::threadWatchdog(void* arg)
 
                     if (host->m_modem->gotModemStatus() && !host->m_modem->hasNXDNSpace() && host->m_nxdn->isQueueFull() &&
                         !host->m_nxdnCtrlChannel && !host->m_nxdnBcastDurationTimer.isRunning()) {
-                        std::lock_guard<std::mutex> lock(m_clockingMutex);
+                        if (host->m_nxdnOverflowCnt > MAX_OVERFLOW_CNT) {
+                            std::lock_guard<std::mutex> lock(m_clockingMutex);
 
-                        LogError(LOG_HOST, "PANIC; NXDN, modem has no NXDN FIFO space, and NXDN queue is full! Resetting states.");
+                            LogError(LOG_HOST, "PANIC; NXDN, modem has no NXDN FIFO space, and NXDN queue is full! Resetting states.");
 
-                        host->setState(STATE_IDLE);
-                        host->m_modem->clearNXDNFrame();
-                        host->m_nxdn->reset();
+                            host->setState(STATE_IDLE);
+                            host->m_modem->clearNXDNFrame();
+                            host->m_nxdn->reset();
 
-                        // respect the fixed mode state
-                        if (host->m_fixedMode) {
-                            host->setState(STATE_NXDN);
+                            // respect the fixed mode state
+                            if (host->m_fixedMode) {
+                                host->setState(STATE_NXDN);
+                            }
+
+                            host->m_nxdnOverflowCnt = 0U;
+                        } else {
+                            host->m_nxdnOverflowCnt++;
                         }
+                    } else {
+                        host->m_nxdnOverflowCnt = 0U;
                     }
                 }
             }
