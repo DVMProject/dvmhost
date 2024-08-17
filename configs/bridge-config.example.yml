@@ -61,7 +61,7 @@ network:
     # Enable PCM audio over UDP.
     udpAudio: false
     # Enable meta data such as dstId and srcId in the UDP data
-    udpMetaData: false
+    udpMetadata: false
     # PCM over UDP send port.
     udpSendPort: 34001
     # PCM over UDP send address destination.

@@ -412,6 +412,13 @@ private:
     void generatePreambleTone();
 
     /**
+     * @brief Helper to end a local or UDP call.
+     * @param srcId 
+     * @param dstId 
+     */
+    void callEnd(uint32_t srcId, uint32_t dstId);
+
+    /**
      * @brief Entry point to audio processing thread.
      * @param arg Instance of the thread_t structure.
      * @returns void* (Ignore)
@@ -426,11 +433,11 @@ private:
     static void* threadNetworkProcess(void* arg);
 
     /**
-     * @brief Entry point to call lockup handler thread.
+     * @brief Entry point to call watchdog handler thread.
      * @param arg Instance of the thread_t structure.
      * @returns void* (Ignore)
      */
-    static void* threadCallLockup(void* arg);
+    static void* threadCallWatchdog(void* arg);
 };
 
 #endif // __HOST_BRIDGE_H__
