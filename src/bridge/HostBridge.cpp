@@ -1353,8 +1353,10 @@ void HostBridge::encodeDMRAudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32_
     using namespace dmr::defines;
 
     uint32_t srcId = m_srcId;
-    if (m_srcIdOverride != 0 && (m_overrideSrcIdFromMDC || m_overrideSrcIdFromUDP))
+    if (m_srcIdOverride != 0 && (m_overrideSrcIdFromMDC))
         srcId = m_srcIdOverride;
+    if (m_overrideSrcIdFromUDP)
+        srcId = m_udpSrcId;
     if (forcedSrcId > 0 && forcedSrcId != m_srcId)
         srcId = forcedSrcId;
     uint32_t dstId = m_dstId;
@@ -2008,8 +2010,10 @@ void HostBridge::encodeP25AudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32_
     }
 
     uint32_t srcId = m_srcId;
-    if (m_srcIdOverride != 0 && (m_overrideSrcIdFromMDC || m_overrideSrcIdFromUDP))
+    if (m_srcIdOverride != 0 && (m_overrideSrcIdFromMDC))
         srcId = m_srcIdOverride;
+    if (m_overrideSrcIdFromUDP)
+        srcId = m_udpSrcId;
     if (forcedSrcId > 0 && forcedSrcId != m_srcId)
         srcId = forcedSrcId;
     uint32_t dstId = m_dstId;
@@ -2121,6 +2125,11 @@ void HostBridge::callEnd(uint32_t srcId, uint32_t dstId)
     m_udpSrcId = 0;
     m_udpDstId = 0;
     m_trafficFromUDP = false;
+
+    m_dmrSeqNo = 0U;
+    m_dmrN = 0U;
+    m_p25SeqNo = 0U;
+    m_p25N = 0U;
 }
 
 /* Entry point to audio processing thread. */
