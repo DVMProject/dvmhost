@@ -1656,7 +1656,10 @@ void* Host::threadModem(void* arg)
                 host->m_modem->clock(ms);
             }
 
-            Thread::sleep(1U);
+            if (host->m_state != STATE_IDLE)
+                Thread::sleep(m_activeTickDelay);
+            if (host->m_state == STATE_IDLE)
+                Thread::sleep(m_idleTickDelay);
         }
 
         LogDebug(LOG_HOST, "[STOP] %s", threadName.c_str());
