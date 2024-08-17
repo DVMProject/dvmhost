@@ -272,9 +272,8 @@ namespace modem
     const uint32_t MAX_ADC_OVERFLOW = 128U;
     const uint32_t MAX_DAC_OVERFLOW = 128U;
 
-    const uint32_t MODEM_POLL_TIME_IDLE = 125U;
-    const uint32_t MODEM_POLL_TIME_ACTIVE = 75U;
-
+    const uint32_t MODEM_POLL_TIME = 250U;
+    
     /** @} */
 
     // ---------------------------------------------------------------------------
@@ -485,20 +484,40 @@ namespace modem
          */
         bool hasDMRSpace1() const;
         /**
+         * @brief Helper to return the currently reported available DMR Slot 1 ring buffer free space.
+         * @return uint32_t Size in bytes available for the DMR Slot 1 ring buffer.
+         */
+        uint32_t getDMRSpace1() const { return m_dmrSpace1; }
+        /**
          * @brief Helper to test if the DMR Slot 2 ring buffer has free space.
          * @returns bool True, if the DMR Slot 2 ring buffer has free space, otherwise false.
          */
         bool hasDMRSpace2() const;
+        /**
+         * @brief Helper to return the currently reported available DMR Slot 2 ring buffer free space.
+         * @return uint32_t Size in bytes available for the DMR Slot 2 ring buffer.
+         */
+        uint32_t getDMRSpace2() const { return m_dmrSpace2; }
         /**
          * @brief Helper to test if the P25 ring buffer has free space.
          * @returns bool True, if the P25 ring buffer has free space, otherwise false.
          */
         virtual bool hasP25Space(uint32_t length) const;
         /**
+         * @brief Helper to return the currently reported available P25 ring buffer free space.
+         * @return uint32_t Size in bytes available for the P25 ring buffer.
+         */
+        uint32_t getP25Space() const { return m_p25Space; }
+        /**
          * @brief Helper to test if the NXDN ring buffer has free space.
          * @returns bool True, if the NXDN ring buffer has free space, otherwise false.
          */
         bool hasNXDNSpace() const;
+        /**
+         * @brief Helper to return the currently reported available NXDN ring buffer free space.
+         * @return uint32_t Size in bytes available for the NXDN ring buffer.
+         */
+        uint32_t getNXDNSpace() const { return m_nxdnSpace; }
 
         /**
          * @brief Helper to test if the modem is a hotspot.

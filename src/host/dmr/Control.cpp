@@ -517,9 +517,11 @@ void Control::tsccClearActivatedSlot(uint32_t slotNo)
 
     switch (slotNo) {
     case 1U:
+        m_modem->clearDMRFrame1();
         m_slot1->clearTSCCActivated();
         break;
     case 2U:
+        m_modem->clearDMRFrame2();
         m_slot2->clearTSCCActivated();
         break;
     default:

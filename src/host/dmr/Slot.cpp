@@ -1026,6 +1026,15 @@ void Slot::addFrame(const uint8_t *data, bool net, bool imm)
         Utils::symbols("!!! *Tx DMR", data + 2U, len - 2U);
     }
 
+    uint32_t fifoSpace = 0U;
+    if (m_slotNo == 1U) {
+        fifoSpace = m_modem->getDMRSpace1();
+    } else {
+        fifoSpace = m_modem->getDMRSpace2();
+    }
+
+    //LogDebug(LOG_DMR, "Slot %u, addFrame() fifoSpace = %u", m_slotNo, fifoSpace);
+
     // is this immediate data?
     if (imm) {
         // resize immediate queue if necessary (this shouldn't really ever happen)
@@ -1034,11 +1043,11 @@ void Slot::addFrame(const uint8_t *data, bool net, bool imm)
             if (!net) {
                 uint32_t queueLen = m_txImmQueue.length();
                 m_txImmQueue.resize(queueLen + len);
-                LogError(LOG_DMR, "Slot %u, overflow in the imm DMR slot queue; queue free is %u, needed %u; resized was %u is %u", m_slotNo, space, len, queueLen, m_txQueue.length());
+                LogError(LOG_DMR, "Slot %u, overflow in the imm DMR slot queue; queue free is %u, needed %u; resized was %u is %u, fifoSpace = %u", m_slotNo, space, len, queueLen, m_txQueue.length(), fifoSpace);
                 return;
             }
             else {
-                LogError(LOG_DMR, "Slot %u, overflow in the imm DMR slot queue while writing network data; queue free is %u, needed %u", m_slotNo, space, len);
+                LogError(LOG_DMR, "Slot %u, overflow in the imm DMR slot queue while writing network data; queue free is %u, needed %u, fifoSpace = %u", m_slotNo, space, len, fifoSpace);
                 return;
             }
         }
@@ -1053,11 +1062,11 @@ void Slot::addFrame(const uint8_t *data, bool net, bool imm)
         if (!net) {
             uint32_t queueLen = m_txQueue.length();
             m_txQueue.resize(queueLen + (DMR_FRAME_LENGTH_BYTES + 2U));
-            LogError(LOG_DMR, "Slot %u, overflow in the DMR slot queue; queue free is %u, needed %u; resized was %u is %u", m_slotNo, space, len, queueLen, m_txQueue.length());
+            LogError(LOG_DMR, "Slot %u, overflow in the DMR slot queue; queue free is %u, needed %u; resized was %u is %u, fifoSpace = %u", m_slotNo, space, len, queueLen, m_txQueue.length(), fifoSpace);
             return;
         }
         else {
-            LogError(LOG_DMR, "Slot %u, overflow in the DMR slot queue while writing network data; queue free is %u, needed %u", m_slotNo, space, len);
+            LogError(LOG_DMR, "Slot %u, overflow in the DMR slot queue while writing network data; queue free is %u, needed %u, fifoSpace = %u", m_slotNo, space, len, fifoSpace);
             return;
         }
     }

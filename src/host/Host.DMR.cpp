@@ -259,6 +259,7 @@ void* Host::threadDMRWriter1(void* arg)
                                 // if the state is DMR; start DMR idle frames and write DMR slot 1 data
                                 if (host->m_state == STATE_DMR) {
                                     START_DMR_DUPLEX_IDLE(true);
+                                    host->m_dmrTXTimer.start();
 
                                     host->m_modem->writeDMRFrame1(data, len);
 
@@ -519,6 +520,7 @@ void* Host::threadDMRWriter2(void* arg)
                                 // if the state is DMR; start DMR idle frames and write DMR slot 2 data
                                 if (host->m_state == STATE_DMR) {
                                     START_DMR_DUPLEX_IDLE(true);
+                                    host->m_dmrTXTimer.start();
 
                                     host->m_modem->writeDMRFrame2(data, len);
 

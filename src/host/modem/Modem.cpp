@@ -139,7 +139,7 @@ Modem::Modem(port::IModemPort* port, bool duplex, bool rxInvert, bool txInvert, 
     m_rxDMRQueue2(dmrQueueSize, "Modem RX DMR2"),
     m_rxP25Queue(p25QueueSize, "Modem RX P25"),
     m_rxNXDNQueue(nxdnQueueSize, "Modem RX NXDN"),
-    m_statusTimer(1000U, 0U, MODEM_POLL_TIME_IDLE),
+    m_statusTimer(1000U, 0U, MODEM_POLL_TIME),
     m_inactivityTimer(1000U, 8U),
     m_dmrSpace1(0U),
     m_dmrSpace2(0U),
@@ -1699,12 +1699,6 @@ DVM_STATE Modem::getState() const
 
 bool Modem::setState(DVM_STATE state)
 {
-    if (state != STATE_IDLE) {
-        m_statusTimer.setTimeout(0U, MODEM_POLL_TIME_ACTIVE);
-    } else {
-        m_statusTimer.setTimeout(0U, MODEM_POLL_TIME_IDLE);
-    }
-
     uint8_t buffer[4U];
 
     buffer[0U] = DVM_SHORT_FRAME_START;

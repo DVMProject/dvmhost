@@ -871,6 +871,10 @@ void Control::addFrame(const uint8_t *data, bool net, bool imm)
         Utils::symbols("!!! *Tx NXDN", data + 2U, len - 2U);
     }
 
+    uint32_t fifoSpace = m_modem->getNXDNSpace();
+
+    //LogDebug(LOG_NXDN, "addFrame() fifoSpace = %u", fifoSpace);
+
     // is this immediate data?
     if (imm) {
         // resize immediate queue if necessary (this shouldn't really ever happen)
@@ -879,11 +883,11 @@ void Control::addFrame(const uint8_t *data, bool net, bool imm)
             if (!net) {
                 uint32_t queueLen = m_txImmQueue.length();
                 m_txImmQueue.resize(queueLen + len);
-                LogError(LOG_P25, "overflow in the NXDN queue while writing imm data; queue free is %u, needed %u; resized was %u is %u", space, len, queueLen, m_txImmQueue.length());
+                LogError(LOG_NXDN, "overflow in the NXDN queue while writing imm data; queue free is %u, needed %u; resized was %u is %u, fifoSpace = %u", space, len, queueLen, m_txImmQueue.length(), fifoSpace);
                 return;
             }
             else {
-                LogError(LOG_P25, "overflow in the NXDN queue while writing imm network data; queue free is %u, needed %u", space, len);
+                LogError(LOG_NXDN, "overflow in the NXDN queue while writing imm network data; queue free is %u, needed %u, fifoSpace = %u", space, len, fifoSpace);
                 return;
             }
         }
@@ -898,11 +902,11 @@ void Control::addFrame(const uint8_t *data, bool net, bool imm)
         if (!net) {
             uint32_t queueLen = m_txQueue.length();
             m_txQueue.resize(queueLen + len);
-            LogError(LOG_NXDN, "overflow in the NXDN queue while writing data; queue free is %u, needed %u; resized was %u is %u", space, len, queueLen, m_txQueue.length());
+            LogError(LOG_NXDN, "overflow in the NXDN queue while writing data; queue free is %u, needed %u; resized was %u is %u, fifoSpace = %u", space, len, queueLen, m_txQueue.length(), fifoSpace);
             return;
         }
         else {
-            LogError(LOG_NXDN, "overflow in the NXDN queue while writing network data; queue free is %u, needed %u", space, len);
+            LogError(LOG_NXDN, "overflow in the NXDN queue while writing network data; queue free is %u, needed %u, fifoSpace = %u", space, len, fifoSpace);
             return;
         }
     }

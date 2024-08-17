@@ -1071,6 +1071,8 @@ int Host::run()
                 m_dmrTXTimer.clock(ms);
                 if (m_dmrTXTimer.isRunning() && m_dmrTXTimer.hasExpired()) {
                     m_modem->writeDMRStart(false);
+                    m_modem->clearDMRFrame1();
+                    m_modem->clearDMRFrame2();
                     m_dmrTXTimer.stop();
                 }
             } else {
@@ -1711,11 +1713,10 @@ void* Host::threadWatchdog(void* arg)
                         LogError(LOG_HOST, "PANIC; DMR, slot 1 Tx frame processor hung >%us, ms = %u", host->m_dmrTx1WatchdogTimer.getTimeout(), host->m_dmrTx1LoopMS);
                     }
 
-                    if (host->m_dmr->getTSCCSlotNo() != 1U) {
-                        if (host->m_modem->gotModemStatus() && !host->m_modem->hasDMRSpace1() && host->m_dmr->isQueueFull(1U) &&
-                            !host->m_dmrBeaconDurationTimer.isRunning()) {
-                            LogError(LOG_HOST, "PANIC; DMR, has no DMR slot 1 buffer space, and DMR slot 1 queue is full!");
-                        }
+                    if (host->m_modem->gotModemStatus() && !host->m_modem->hasDMRSpace1() && host->m_dmr->isQueueFull(1U) &&
+                        !host->m_dmrBeaconDurationTimer.isRunning()) {
+                        LogError(LOG_HOST, "PANIC; DMR, has no DMR slot 1 FIFO space, and DMR slot 1 queue is full!");
+                        host->m_modem->clearDMRFrame1();
                     }
 
                     if (host->m_dmrTx2WatchdogTimer.isRunning())
@@ -1725,11 +1726,10 @@ void* Host::threadWatchdog(void* arg)
                         LogError(LOG_HOST, "PANIC; DMR, slot 2 Tx frame processor hung >%us, ms = %u", host->m_dmrTx2WatchdogTimer.getTimeout(), host->m_dmrTx2LoopMS);
                     }
 
-                    if (host->m_dmr->getTSCCSlotNo() != 2U) {
-                        if (host->m_modem->gotModemStatus() && !host->m_modem->hasDMRSpace2() && host->m_dmr->isQueueFull(2U) &&
-                            !host->m_dmrBeaconDurationTimer.isRunning()) {
-                            LogError(LOG_HOST, "PANIC; DMR, has no DMR slot 2 buffer space, and DMR slot 2 queue is full!");
-                        }
+                    if (host->m_modem->gotModemStatus() && !host->m_modem->hasDMRSpace2() && host->m_dmr->isQueueFull(2U) &&
+                        !host->m_dmrBeaconDurationTimer.isRunning()) {
+                        LogError(LOG_HOST, "PANIC; DMR, has no DMR slot 2 FIFO space, and DMR slot 2 queue is full!");
+                        host->m_modem->clearDMRFrame2();
                     }
                 }
 
@@ -1744,7 +1744,8 @@ void* Host::threadWatchdog(void* arg)
 
                     if (host->m_modem->gotModemStatus() && !host->m_modem->hasP25Space(P25DEF::P25_LDU_FRAME_LENGTH_BYTES) && host->m_p25->isQueueFull() &&
                         !host->m_p25CtrlChannel && !host->m_p25BcastDurationTimer.isRunning()) {
-                        LogError(LOG_HOST, "PANIC; P25, modem has no P25 buffer space, and internal P25 queue is full!");
+                        LogError(LOG_HOST, "PANIC; P25, modem has no P25 FIFO space, and internal P25 queue is full!");
+                        host->m_modem->clearP25Frame();
                     }
                 }
 
@@ -1759,7 +1760,8 @@ void* Host::threadWatchdog(void* arg)
 
                     if (host->m_modem->gotModemStatus() && !host->m_modem->hasNXDNSpace() && host->m_nxdn->isQueueFull() &&
                         !host->m_nxdnCtrlChannel && !host->m_nxdnBcastDurationTimer.isRunning()) {
-                        LogError(LOG_HOST, "PANIC; NXDN, modem has no NXDN buffer space, and NXDN queue is full!");
+                        LogError(LOG_HOST, "PANIC; NXDN, modem has no NXDN FIFO space, and NXDN queue is full!");
+                        host->m_modem->clearNXDNFrame();
                     }
                 }
             }
