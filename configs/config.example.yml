@@ -157,7 +157,8 @@ protocols:
         silenceThreshold: 21
         # Maximum number of lost frames before terminating a call.
         frameLossThreshold: 2
-        # Internal data queue size (in DMR packets).
+        # Internal data queue size (in DMR frames). This is the queue used internally to buffer frames before they
+        # are sent to the air interface modem.
         queueSize: 31
         # Flag indicating whether or not verbose logging is enabled.
         verbose: true
@@ -250,7 +251,8 @@ protocols:
         silenceThreshold: 124
         # Maximum number of lost frames before terminating a call.
         frameLossThreshold: 6
-        # Internal data queue size (in P25 packets).
+        # Internal data queue size (in P25 LDU frames). This is the queue used internally to buffer frames before they
+        # are sent to the air interface modem.
         queueSize: 12
         # Flag indicating whether or not verbose logging is enabled.
         verbose: true
@@ -295,7 +297,8 @@ protocols:
         silenceThreshold: 14
         # Maximum number of lost frames before terminating a call.
         frameLossThreshold: 4
-        # Internal data queue size (in NXDN packets).
+        # Internal data queue size (in NXDN frames). This is the queue used internally to buffer frames before they
+        # are sent to the air interface modem.
         queueSize: 31
         # Flag indicating whether or not verbose logging is enabled.
         verbose: true
@@ -487,11 +490,23 @@ system:
         # Amount of packet correlations that should occur before P25 data is returned from the modem to the host.
         # (Note: Changing this value will impact P25 protocol stability, and should not be altered.)
         p25CorrCount: 8
-        # Size (in bytes) of the DMR transmit FIFO buffer.
+        # Size (in bytes) of the DMR transmit FIFO buffer. It is not recommended to adjust this unless absolutely
+        # necessary, excessive sizes will cause delays in transmitted frames due to excessive buffering.
+        #   Calculation Formula: (DMR Frame Size (33 bytes) * x Frames) + Pad Bytes = FIFO Buffer Size Bytes
+        #   Default (Recommended) Value: (33 * 16) + 5 = 560
+        #   "Oversized" Value: (33 * 24) + 5 = 797
         dmrFifoLength: 560
-        # Size (in bytes) of the P25 transmit FIFO buffer.
+        # Size (in bytes) of the P25 transmit FIFO buffer. It is not recommended to adjust this unless absolutely
+        # necessary, excessive sizes will cause delays in transmitted frames due to excessive buffering.
+        #   Calculation Formula: (P25 LDU Frame Size (216 bytes) * x Frames) + Pad Bytes = FIFO Buffer Size Bytes
+        #   Default (Recommended) Value: (216 * 2) + 90 = 522
+        #   "Oversized" Value: (216 * 4) + 90 = 954
         p25FifoLength: 522
-        # Size (in bytes) of the NXDN transmit FIFO buffer.
+        # Size (in bytes) of the NXDN transmit FIFO buffer. It is not recommended to adjust this unless absolutely
+        # necessary, excessive sizes will cause delays in transmitted frames due to excessive buffering.
+        #   Calculation Formula: (NXDN Frame Size (48 bytes) * x Frames) + Pad Bytes = FIFO Buffer Size Bytes
+        #   Default (Recommended) Value: (48 * 11) + 10 = 538
+        #   "Oversized" Value: (48 * 19) + 10 = 922
         nxdnFifoLength: 538
 
         #
