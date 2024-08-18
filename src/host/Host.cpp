@@ -1792,7 +1792,6 @@ void* Host::threadWatchdog(void* arg)
                     }
 
                     if (!host->m_disableWatchdogOverflow) {
-                        LogDebug(LOG_HOST, "disableWatchdogOverflow = %u", host->m_disableWatchdogOverflow);
                         if (host->m_modem->gotModemStatus() && !host->m_modem->hasP25Space(P25DEF::P25_LDU_FRAME_LENGTH_BYTES) && host->m_p25->isQueueFull() &&
                             !host->m_p25CtrlChannel && !host->m_p25BcastDurationTimer.isRunning()) {
                             if (host->m_p25OverflowCnt > MAX_OVERFLOW_CNT) {
