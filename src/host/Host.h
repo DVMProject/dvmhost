@@ -207,6 +207,8 @@ private:
     uint32_t m_p25OverflowCnt;
     uint32_t m_nxdnOverflowCnt;
 
+    bool m_disableWatchdogOverflow;
+
     static std::mutex m_clockingMutex;
 
     static uint8_t m_activeTickDelay;

@@ -148,6 +148,7 @@ Host::Host(const std::string& confFile) :
     m_dmr2OverflowCnt(0U),
     m_p25OverflowCnt(0U),
     m_nxdnOverflowCnt(0U),
+    m_disableWatchdogOverflow(false),
     m_restAddress("0.0.0.0"),
     m_restPort(REST_API_DEFAULT_PORT),
     m_RESTAPI(nullptr),
@@ -1721,28 +1722,30 @@ void* Host::threadWatchdog(void* arg)
                         LogError(LOG_HOST, "PANIC; DMR, slot 1 Tx frame processor hung >%us, ms = %u", host->m_dmrTx1WatchdogTimer.getTimeout(), host->m_dmrTx1LoopMS);
                     }
 
-                    if (host->m_modem->gotModemStatus() && !host->m_modem->hasDMRSpace1() && host->m_dmr->isQueueFull(1U) &&
-                        !host->m_dmrCtrlChannel && !host->m_dmrBeaconDurationTimer.isRunning()) {
-                        if (host->m_dmr1OverflowCnt > MAX_OVERFLOW_CNT) {
-                            std::lock_guard<std::mutex> lock(m_clockingMutex);
+                    if (!host->m_disableWatchdogOverflow) {
+                        if (host->m_modem->gotModemStatus() && !host->m_modem->hasDMRSpace1() && host->m_dmr->isQueueFull(1U) &&
+                            !host->m_dmrCtrlChannel && !host->m_dmrBeaconDurationTimer.isRunning()) {
+                            if (host->m_dmr1OverflowCnt > MAX_OVERFLOW_CNT) {
+                                std::lock_guard<std::mutex> lock(m_clockingMutex);
 
-                            LogError(LOG_HOST, "PANIC; DMR, has no DMR slot 1 FIFO space, and DMR slot 1 queue is full! Resetting states.");
+                                LogError(LOG_HOST, "PANIC; DMR, has no DMR slot 1 FIFO space, and DMR slot 1 queue is full! Resetting states.");
 
-                            host->setState(STATE_IDLE);
-                            host->m_modem->writeDMRStart(false);
-                            host->m_modem->clearDMRFrame1();
+                                host->setState(STATE_IDLE);
+                                host->m_modem->writeDMRStart(false);
+                                host->m_modem->clearDMRFrame1();
 
-                            // respect the fixed mode state
-                            if (host->m_fixedMode) {
-                                host->setState(STATE_DMR);
+                                // respect the fixed mode state
+                                if (host->m_fixedMode) {
+                                    host->setState(STATE_DMR);
+                                }
+
+                                host->m_dmr1OverflowCnt = 0U;
+                            } else {
+                                host->m_dmr1OverflowCnt++;
                             }
-
-                            host->m_dmr1OverflowCnt = 0U;
                         } else {
-                            host->m_dmr1OverflowCnt++;
+                            host->m_dmr1OverflowCnt = 0U;
                         }
-                    } else {
-                        host->m_dmr1OverflowCnt = 0U;
                     }
 
                     if (host->m_dmrTx2WatchdogTimer.isRunning())
@@ -1752,28 +1755,30 @@ void* Host::threadWatchdog(void* arg)
                         LogError(LOG_HOST, "PANIC; DMR, slot 2 Tx frame processor hung >%us, ms = %u", host->m_dmrTx2WatchdogTimer.getTimeout(), host->m_dmrTx2LoopMS);
                     }
 
-                    if (host->m_modem->gotModemStatus() && !host->m_modem->hasDMRSpace2() && host->m_dmr->isQueueFull(2U) &&
-                        !host->m_dmrCtrlChannel && !host->m_dmrBeaconDurationTimer.isRunning()) {
-                        if (host->m_dmr2OverflowCnt > MAX_OVERFLOW_CNT) {
-                            std::lock_guard<std::mutex> lock(m_clockingMutex);
+                    if (!host->m_disableWatchdogOverflow) {
+                        if (host->m_modem->gotModemStatus() && !host->m_modem->hasDMRSpace2() && host->m_dmr->isQueueFull(2U) &&
+                            !host->m_dmrCtrlChannel && !host->m_dmrBeaconDurationTimer.isRunning()) {
+                            if (host->m_dmr2OverflowCnt > MAX_OVERFLOW_CNT) {
+                                std::lock_guard<std::mutex> lock(m_clockingMutex);
 
-                            LogError(LOG_HOST, "PANIC; DMR, has no DMR slot 2 FIFO space, and DMR slot 2 queue is full! Resetting states.");
+                                LogError(LOG_HOST, "PANIC; DMR, has no DMR slot 2 FIFO space, and DMR slot 2 queue is full! Resetting states.");
 
-                            host->setState(STATE_IDLE);
-                            host->m_modem->writeDMRStart(false);
-                            host->m_modem->clearDMRFrame2();
+                                host->setState(STATE_IDLE);
+                                host->m_modem->writeDMRStart(false);
+                                host->m_modem->clearDMRFrame2();
 
-                            // respect the fixed mode state
-                            if (host->m_fixedMode) {
-                                host->setState(STATE_DMR);
+                                // respect the fixed mode state
+                                if (host->m_fixedMode) {
+                                    host->setState(STATE_DMR);
+                                }
+
+                                host->m_dmr2OverflowCnt = 0U;
+                            } else {
+                                host->m_dmr2OverflowCnt++;
                             }
-
-                            host->m_dmr2OverflowCnt = 0U;
                         } else {
-                            host->m_dmr2OverflowCnt++;
+                            host->m_dmr2OverflowCnt = 0U;
                         }
-                    } else {
-                        host->m_dmr2OverflowCnt = 0U;
                     }
                 }
 
@@ -1786,28 +1791,31 @@ void* Host::threadWatchdog(void* arg)
                         LogError(LOG_HOST, "PANIC; P25, Tx frame processor hung >%us, ms = %u", host->m_p25TxWatchdogTimer.getTimeout(), host->m_p25TxLoopMS);
                     }
 
-                    if (host->m_modem->gotModemStatus() && !host->m_modem->hasP25Space(P25DEF::P25_LDU_FRAME_LENGTH_BYTES) && host->m_p25->isQueueFull() &&
-                        !host->m_p25CtrlChannel && !host->m_p25BcastDurationTimer.isRunning()) {
-                        if (host->m_p25OverflowCnt > MAX_OVERFLOW_CNT) {
-                            std::lock_guard<std::mutex> lock(m_clockingMutex);
+                    if (!host->m_disableWatchdogOverflow) {
+                        LogDebug(LOG_HOST, "disableWatchdogOverflow = %u", host->m_disableWatchdogOverflow);
+                        if (host->m_modem->gotModemStatus() && !host->m_modem->hasP25Space(P25DEF::P25_LDU_FRAME_LENGTH_BYTES) && host->m_p25->isQueueFull() &&
+                            !host->m_p25CtrlChannel && !host->m_p25BcastDurationTimer.isRunning()) {
+                            if (host->m_p25OverflowCnt > MAX_OVERFLOW_CNT) {
+                                std::lock_guard<std::mutex> lock(m_clockingMutex);
 
-                            LogError(LOG_HOST, "PANIC; P25, modem has no P25 FIFO space, and internal P25 queue is full! Resetting states.");
+                                LogError(LOG_HOST, "PANIC; P25, modem has no P25 FIFO space, and internal P25 queue is full! Resetting states.");
 
-                            host->setState(STATE_IDLE);
-                            host->m_modem->clearP25Frame();
-                            host->m_p25->reset();
+                                host->setState(STATE_IDLE);
+                                host->m_modem->clearP25Frame();
+                                host->m_p25->reset();
 
-                            // respect the fixed mode state
-                            if (host->m_fixedMode) {
-                                host->setState(STATE_P25);
+                                // respect the fixed mode state
+                                if (host->m_fixedMode) {
+                                    host->setState(STATE_P25);
+                                }
+
+                                host->m_p25OverflowCnt = 0U;
+                            } else {
+                                host->m_p25OverflowCnt++;
                             }
-
-                            host->m_p25OverflowCnt = 0U;
                         } else {
-                            host->m_p25OverflowCnt++;
+                            host->m_p25OverflowCnt = 0U;
                         }
-                    } else {
-                        host->m_p25OverflowCnt = 0U;
                     }
                 }
 
@@ -1820,28 +1828,30 @@ void* Host::threadWatchdog(void* arg)
                         LogError(LOG_HOST, "PANIC; NXDN, Tx frame processor hung >%us, ms = %u", host->m_nxdnTxWatchdogTimer.getTimeout(), host->m_nxdnTxLoopMS);
                     }
 
-                    if (host->m_modem->gotModemStatus() && !host->m_modem->hasNXDNSpace() && host->m_nxdn->isQueueFull() &&
-                        !host->m_nxdnCtrlChannel && !host->m_nxdnBcastDurationTimer.isRunning()) {
-                        if (host->m_nxdnOverflowCnt > MAX_OVERFLOW_CNT) {
-                            std::lock_guard<std::mutex> lock(m_clockingMutex);
+                    if (!host->m_disableWatchdogOverflow) {
+                        if (host->m_modem->gotModemStatus() && !host->m_modem->hasNXDNSpace() && host->m_nxdn->isQueueFull() &&
+                            !host->m_nxdnCtrlChannel && !host->m_nxdnBcastDurationTimer.isRunning()) {
+                            if (host->m_nxdnOverflowCnt > MAX_OVERFLOW_CNT) {
+                                std::lock_guard<std::mutex> lock(m_clockingMutex);
 
-                            LogError(LOG_HOST, "PANIC; NXDN, modem has no NXDN FIFO space, and NXDN queue is full! Resetting states.");
+                                LogError(LOG_HOST, "PANIC; NXDN, modem has no NXDN FIFO space, and NXDN queue is full! Resetting states.");
 
-                            host->setState(STATE_IDLE);
-                            host->m_modem->clearNXDNFrame();
-                            host->m_nxdn->reset();
+                                host->setState(STATE_IDLE);
+                                host->m_modem->clearNXDNFrame();
+                                host->m_nxdn->reset();
 
-                            // respect the fixed mode state
-                            if (host->m_fixedMode) {
-                                host->setState(STATE_NXDN);
+                                // respect the fixed mode state
+                                if (host->m_fixedMode) {
+                                    host->setState(STATE_NXDN);
+                                }
+
+                                host->m_nxdnOverflowCnt = 0U;
+                            } else {
+                                host->m_nxdnOverflowCnt++;
                             }
-
-                            host->m_nxdnOverflowCnt = 0U;
                         } else {
-                            host->m_nxdnOverflowCnt++;
+                            host->m_nxdnOverflowCnt = 0U;
                         }
-                    } else {
-                        host->m_nxdnOverflowCnt = 0U;
                     }
                 }
             }

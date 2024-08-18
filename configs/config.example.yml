@@ -338,6 +338,8 @@ system:
     idleTickDelay: 5
     # Sets the local time offset from GMT.
     localTimeOffset: 0
+    # Flag indicating the watchdog overflow check should be disabled.
+    disableWatchdogOverflow: false
 
     #
     # Location Information

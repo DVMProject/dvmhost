@@ -82,6 +82,8 @@ bool Host::readParams()
 
     int8_t lto = (int8_t)systemConf["localTimeOffset"].as<int32_t>(0);
 
+    m_disableWatchdogOverflow = systemConf["disableWatchdogOverflow"].as<bool>(false);
+
     LogInfo("General Parameters");
     if (!udpMasterMode) {
         LogInfo("    DMR: %s", m_dmrEnabled ? "enabled" : "disabled");
@@ -100,6 +102,9 @@ bool Host::readParams()
         LogInfo("    Identity: %s", m_identity.c_str());
         LogInfo("    Fixed Mode: %s", m_fixedMode ? "yes" : "no");
         LogInfo("    Local Time Offset: %dh", lto);
+        if (m_disableWatchdogOverflow) {
+            LogInfo("    Disable Watchdog Overflow Check: yes");
+        }
 
         yaml::Node systemInfo = systemConf["info"];
         m_latitude = systemInfo["latitude"].as<float>(0.0F);
