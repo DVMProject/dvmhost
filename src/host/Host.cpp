@@ -1644,10 +1644,6 @@ void* Host::threadModem(void* arg)
         stopWatch.start();
 
         while (!g_killed) {
-            uint32_t ms = stopWatch.elapsed();
-            if (ms > 1U)
-                host->m_modem->clock(ms);
-
             // scope is intentional
             {
                 std::lock_guard<std::mutex> lock(m_clockingMutex);
@@ -1656,7 +1652,7 @@ void* Host::threadModem(void* arg)
                 //  -- Modem Clocking                                 --
                 // ------------------------------------------------------
 
-                ms = stopWatch.elapsed();
+                uint32_t ms = stopWatch.elapsed();
                 stopWatch.start();
 
                 host->m_modem->clock(ms);
