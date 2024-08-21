@@ -216,7 +216,7 @@ void ModemV24::clock(uint32_t ms)
             bool p25Enable = (m_buffer[3U] & 0x08U) == 0x08U;
             bool nxdnEnable = (m_buffer[3U] & 0x10U) == 0x10U;
 
-            // Flag indicating if free space is being reported in 16-byte blocks instead of LDUs
+            // flag indicating if free space is being reported in 16-byte blocks instead of LDUs
             bool spaceInBlocks = (m_buffer[3U] & 0x80) == 0x80;
 
             m_modemState = (DVM_STATE)m_buffer[4U];
@@ -285,6 +285,7 @@ void ModemV24::clock(uint32_t ms)
 
             m_cd = (m_buffer[5U] & 0x40U) == 0x40U;
 
+            // spaces from the modem are returned in "logical" frame count, or a block size, not raw byte size
             // DMR and NXDN space are always 0U since the board doesn't support them
             m_dmrSpace1 = 0U;
             m_dmrSpace2 = 0U;
@@ -292,13 +293,9 @@ void ModemV24::clock(uint32_t ms)
 
             // P25 free space can be reported as 16-byte blocks or frames based on the flag above
             if (spaceInBlocks)
-            {
-                m_p25Space = m_buffer[10U] * 16U;
-            }
+                m_p25Space = m_buffer[10U] * P25_BUFFER_BLOCK_SIZE;
             else
-            {
                 m_p25Space = m_buffer[10U] * (P25DEF::P25_LDU_FRAME_LENGTH_BYTES);
-            }
 
             if (m_dumpModemStatus) {
                 LogDebug(LOG_MODEM, "ModemV24::clock(), CMD_GET_STATUS, isHotspot = %u, dmr = %u / %u, p25 = %u / %u, nxdn = %u / %u, modemState = %u, tx = %u, adcOverflow = %u, rxOverflow = %u, txOverflow = %u, dacOverflow = %u, dmrSpace1 = %u, dmrSpace2 = %u, p25Space = %u, nxdnSpace = %u",

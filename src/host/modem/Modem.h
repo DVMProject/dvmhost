@@ -273,7 +273,9 @@ namespace modem
     const uint32_t MAX_DAC_OVERFLOW = 128U;
 
     const uint32_t MODEM_POLL_TIME = 125U;
-    
+
+    const uint32_t P25_BUFFER_BLOCK_SIZE = 16U;
+
     /** @} */
 
     // ---------------------------------------------------------------------------
