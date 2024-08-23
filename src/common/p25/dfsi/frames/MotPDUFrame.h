@@ -72,12 +72,12 @@ namespace p25
                 ~MotPDUFrame();
 
                 /**
-                 * @brief Decode a PDU frame.
+                 * @brief Decode a PDU frame. (only the PDU data header...)
                  * @param[in] data Buffer to containing MotPDUFrame to decode.
                  */
                 bool decode(const uint8_t* data);
                 /**
-                 * @brief Encode a TSBK frame.
+                 * @brief Encode a PDU frame. (only the PDU data header...)
                  * @param[out] data Buffer to encode a MotPDUFrame.
                  */
                 void encode(uint8_t* data);

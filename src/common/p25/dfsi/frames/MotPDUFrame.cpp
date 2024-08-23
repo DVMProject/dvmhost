@@ -60,7 +60,7 @@ MotPDUFrame::~MotPDUFrame()
         delete[] pduHeaderData;
 }
 
-/* Decode a TSBK frame. */
+/* Decode a PDU frame. (only the PDU data header...) */
 
 bool MotPDUFrame::decode(const uint8_t* data)
 {
@@ -84,7 +84,7 @@ bool MotPDUFrame::decode(const uint8_t* data)
     return true;
 }
 
-/* Encode a TSBK frame. */
+/* Encode a PDU frame. (only the PDU data header...) */
 
 void MotPDUFrame::encode(uint8_t* data)
 {
@@ -100,7 +100,7 @@ void MotPDUFrame::encode(uint8_t* data)
         ::memcpy(data + 1U, buffer + 1U, 4U);
     }
 
-    // encode TSBK - scope is intentional
+    // encode PDU - scope is intentional
     {
         data[0U] = DFSIFrameType::PDU;
         ::memcpy(data + 9U, pduHeaderData, P25_PDU_HEADER_LENGTH_BYTES);
