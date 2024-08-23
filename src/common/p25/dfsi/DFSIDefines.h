@@ -114,6 +114,7 @@ namespace p25
                     LDU2_VOICE17 = 0x72U,       // IMBE LDU2 - Voice 17 + Encryption Sync
                     LDU2_VOICE18 = 0x73U,       // IMBE LDU2 - Voice 18 + Low Speed Data
 
+                    PDU = 0x87U,                // PDU
                     TSBK = 0xA1U                // TSBK
                 };
             }

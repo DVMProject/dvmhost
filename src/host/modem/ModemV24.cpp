@@ -10,6 +10,8 @@
  */
 #include "Defines.h"
 #include "common/p25/P25Defines.h"
+#include "common/p25/data/DataHeader.h"
+#include "common/p25/data/DataBlock.h"
 #include "common/p25/data/LowSpeedData.h"
 #include "common/p25/dfsi/LC.h"
 #include "common/p25/dfsi/frames/Frames.h"
@@ -516,8 +518,11 @@ void ModemV24::storeConvertedRx(const uint8_t* buffer, uint32_t length)
 {
     // store converted frame into the Rx modem queue
     uint8_t storedLen[2U];
-    storedLen[0U] = 0x00U;
-    storedLen[1U] = length;
+    if (length > 255U)
+        storedLen[0U] = (length >> 8U) & 0xFFU;
+    else
+        storedLen[0U] = 0x00U;
+    storedLen[1U] = length & 0xFFU;
     m_rxP25Queue.addData(storedLen, 2U);
 
     //Utils::dump("Storing converted RX data", buffer, length);
@@ -700,6 +705,72 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
             MotStartVoiceFrame svf = MotStartVoiceFrame(dfsiData);
             ::memcpy(m_rxCall->netLDU2 + 10U, svf.fullRateVoice->imbeData, RAW_IMBE_LENGTH_BYTES);
             m_rxCall->n++;
+        }
+        break;
+
+        case DFSIFrameType::PDU:
+        {
+            // bryanb: this is gonna be a complete clusterfuck...
+            MotPDUFrame pf = MotPDUFrame(dfsiData);
+            data::DataHeader dataHeader = data::DataHeader();
+            if (!dataHeader.decode(pf.pduHeaderData, true)) {
+                LogError(LOG_MODEM, "V.24/DFSI traffic failed to decode PDU FEC");
+            } else {
+                uint32_t bitLength = ((dataHeader.getBlocksToFollow() + 1U) * P25_PDU_FEC_LENGTH_BITS) + P25_PREAMBLE_LENGTH_BITS;
+                uint32_t offset = P25_PREAMBLE_LENGTH_BITS;
+
+                UInt8Array __data = std::make_unique<uint8_t[]>((bitLength / 8U) + 1U);
+                uint8_t* data = __data.get();
+
+                ::memset(data, 0x00U, bitLength / 8U);
+                uint8_t block[P25_PDU_FEC_LENGTH_BYTES];
+                ::memset(block, 0x00U, P25_PDU_FEC_LENGTH_BYTES);
+
+                uint32_t blocksToFollow = dataHeader.getBlocksToFollow();
+
+                if (blocksToFollow > 0U) {
+                    uint32_t dataOffset = MotPDUFrame::LENGTH;
+
+                    // generate the PDU data
+                    for (uint32_t i = 0U; i < blocksToFollow; i++) {
+                        data::DataBlock dataBlock = data::DataBlock();
+                        dataBlock.setFormat(dataHeader);
+                        dataBlock.setSerialNo(i);
+                        dataBlock.setData(dfsiData + dataOffset);
+
+                        ::memset(block, 0x00U, P25_PDU_FEC_LENGTH_BYTES);
+                        dataBlock.encode(block);
+                        Utils::setBitRange(block, data, offset, P25_PDU_FEC_LENGTH_BITS);
+
+                        offset += P25_PDU_FEC_LENGTH_BITS;
+                        dataOffset += (dataHeader.getFormat() == PDUFormatType::CONFIRMED) ? P25_PDU_CONFIRMED_DATA_LENGTH_BYTES : P25_PDU_UNCONFIRMED_LENGTH_BYTES;
+                    }
+                }
+
+                uint8_t buffer[P25_PDU_FRAME_LENGTH_BYTES + 2U];
+                ::memset(buffer, 0x00U, P25_PDU_FRAME_LENGTH_BYTES + 2U);
+
+                // Add the data
+                uint32_t newBitLength = P25Utils::encode(data, buffer + 2U, bitLength);
+                uint32_t newByteLength = newBitLength / 8U;
+                if ((newBitLength % 8U) > 0U)
+                    newByteLength++;
+
+                // Regenerate Sync
+                Sync::addP25Sync(buffer + 2U);
+
+                // Regenerate NID
+                m_nid->encode(buffer + 2U, DUID::PDU);
+
+                // Add status bits
+                P25Utils::addStatusBits(buffer + 2U, newBitLength, false);
+                P25Utils::addIdleStatusBits(buffer + 2U, newBitLength);
+
+                // Set first busy bits to 1,1
+                P25Utils::setStatusBits(buffer + 2U, P25_SS0_START, true, true);
+
+                storeConvertedRx(buffer, P25_PDU_FRAME_LENGTH_BYTES + 2U);
+            }
         }
         break;
 

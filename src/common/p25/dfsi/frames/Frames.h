@@ -26,6 +26,7 @@
 #include "common/p25/dfsi/frames/MotVoiceHeader1.h"
 #include "common/p25/dfsi/frames/MotVoiceHeader2.h"
 #include "common/p25/dfsi/frames/MotTSBKFrame.h"
+#include "common/p25/dfsi/frames/MotPDUFrame.h"
 
 // FSC
 #include "common/p25/dfsi/frames/fsc/FSCMessage.h"
