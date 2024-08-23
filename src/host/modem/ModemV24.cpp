@@ -729,7 +729,7 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
                 uint32_t blocksToFollow = dataHeader.getBlocksToFollow();
 
                 if (blocksToFollow > 0U) {
-                    uint32_t dataOffset = MotPDUFrame::LENGTH;
+                    uint32_t dataOffset = MotPDUFrame::LENGTH + 1U;
 
                     // generate the PDU data
                     for (uint32_t i = 0U; i < blocksToFollow; i++) {
@@ -743,7 +743,7 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
                         Utils::setBitRange(block, data, offset, P25_PDU_FEC_LENGTH_BITS);
 
                         offset += P25_PDU_FEC_LENGTH_BITS;
-                        dataOffset += (dataHeader.getFormat() == PDUFormatType::CONFIRMED) ? P25_PDU_CONFIRMED_DATA_LENGTH_BYTES : P25_PDU_UNCONFIRMED_LENGTH_BYTES;
+                        dataOffset += ((dataHeader.getFormat() == PDUFormatType::CONFIRMED) ? P25_PDU_CONFIRMED_DATA_LENGTH_BYTES : P25_PDU_UNCONFIRMED_LENGTH_BYTES) + 1U;
                     }
                 }
 
