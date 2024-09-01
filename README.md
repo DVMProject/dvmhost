@@ -45,7 +45,7 @@ sudo apt-get install libasio-dev:arm64 libncurses-dev:arm64 libssl-dev:arm64
    ```
 3. Run CMake with any specific options required. (Where [options] is any various compilation options you require.)
    ```
-   dvmhost/build # cmake [options] ..
+   dvmhost/build # cmake ~/dvmhost ~/dvmhost/build [options] ..
    ...
    -- Build files have been written to: dvmhost/build
    dvmhost/build # make
