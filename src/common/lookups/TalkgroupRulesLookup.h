@@ -409,6 +409,7 @@ namespace lookups
          */
         TalkgroupRuleGroupVoice() :
             m_name(),
+            m_nameAlias(),
             m_config(),
             m_source()
         {
@@ -422,6 +423,7 @@ namespace lookups
             TalkgroupRuleGroupVoice()
         {
             m_name = node["name"].as<std::string>();
+            m_nameAlias = node["alias"].as<std::string>();
             m_config = TalkgroupRuleConfig(node["config"]);
             m_source = TalkgroupRuleGroupVoiceSource(node["source"]);
         }
@@ -434,6 +436,7 @@ namespace lookups
         {
             if (this != &data) {
                 m_name = data.m_name;
+                m_nameAlias = data.m_nameAlias;
                 m_config = data.m_config;
                 m_source = data.m_source;
             }
@@ -460,6 +463,7 @@ namespace lookups
         {
             // Get all the properties
             node["name"] = m_name;
+            node["alias"] = m_nameAlias;
 
             yaml::Node config, source;
             m_config.getYaml(config);
@@ -475,6 +479,10 @@ namespace lookups
          * @brief Textual name for the routing rule.
          */
         __PROPERTY_PLAIN(std::string, name);
+        /**
+         * @brief (Optional) Secondary textual name for the routing rule.
+         */
+        __PROPERTY_PLAIN(std::string, nameAlias);
         /**
          * @brief Configuration for the routing rule.
          */
