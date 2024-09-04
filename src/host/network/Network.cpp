@@ -27,7 +27,7 @@ using namespace network;
 //  Constants
 // ---------------------------------------------------------------------------
 
-#define MAX_SERVER_DIFF 250ULL // maximum difference in time between a server timestamp and local timestamp in milliseconds
+#define MAX_SERVER_DIFF 360ULL // maximum difference in time between a server timestamp and local timestamp in milliseconds
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
