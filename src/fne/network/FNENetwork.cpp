@@ -478,7 +478,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                             }
                         }
                         else {
-                            network->writePeerNAK(peerId, TAG_DMR_DATA, NET_CONN_NAK_FNE_UNAUTHORIZED);
+                            network->writePeerNAK(peerId, TAG_DMR_DATA, NET_CONN_NAK_FNE_UNAUTHORIZED, req->address, req->addrLen);
                         }
                     }
                     else if (req->fneHeader.getSubFunction() == NET_SUBFUNC::PROTOCOL_SUBFUNC_P25) {    // Encapsulated P25 data frame
@@ -501,7 +501,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                             }
                         }
                         else {
-                            network->writePeerNAK(peerId, TAG_P25_DATA, NET_CONN_NAK_FNE_UNAUTHORIZED);
+                            network->writePeerNAK(peerId, TAG_P25_DATA, NET_CONN_NAK_FNE_UNAUTHORIZED, req->address, req->addrLen);
                         }
                     }
                     else if (req->fneHeader.getSubFunction() == NET_SUBFUNC::PROTOCOL_SUBFUNC_NXDN) {   // Encapsulated NXDN data frame
@@ -524,7 +524,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                             }
                         }
                         else {
-                            network->writePeerNAK(peerId, TAG_NXDN_DATA, NET_CONN_NAK_FNE_UNAUTHORIZED);
+                            network->writePeerNAK(peerId, TAG_NXDN_DATA, NET_CONN_NAK_FNE_UNAUTHORIZED, req->address, req->addrLen);
                         }
                     }
                     else {
