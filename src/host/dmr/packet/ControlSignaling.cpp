@@ -1285,6 +1285,7 @@ void ControlSignaling::writeRF_CSBK_U_Reg_Rsp(uint32_t srcId, uint8_t serviceOpt
     bool dereg = (serviceOptions & 0x01U) == 0x01U;
 
     std::unique_ptr<CSBK_ACK_RSP> csbk = std::make_unique<CSBK_ACK_RSP>();
+    csbk->setResponse(0U); // disable TSCC power saving (ETSI TS-102.361-4 6.4.7.2)
 
     if (!dereg) {
         if (m_verbose) {
