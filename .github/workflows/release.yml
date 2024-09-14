@@ -68,7 +68,7 @@ jobs:
           cp dvmcmd dvmhost ${{ env.PACKAGENAME }}
           zip -9 -r ${{ env.PACKAGENAME }}.zip ${{ env.PACKAGENAME }}
       - name: Upload artifact
-        uses: actions/upload-artifact@v4.1.7
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ needs.setup.outputs.APPNAME }}-${{ matrix.arch }}
           path: ${{ env.PACKAGENAME }}.zip
@@ -101,7 +101,7 @@ jobs:
       DEBIAN_FRONTEND: noninteractive
     steps:
       - name: Download artifact
-        uses: actions/download-artifact@v4.1.7
+        uses: actions/download-artifact@v4
         with:
           name: ${{ needs.setup.outputs.APPNAME }}-${{ matrix.arch }}
       - name: Upload release asset
