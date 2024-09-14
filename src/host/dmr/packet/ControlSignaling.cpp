@@ -200,7 +200,7 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len)
 
                 CSBK_RAND* isp = static_cast<CSBK_RAND*>(csbk.get());
                 if (m_verbose) {
-                    LogMessage(LOG_RF, "DMR Slot %u, , CSBK, RAND (Random Access), serviceKind = $%02X, serviceOptions = $%02X, serviceExtra = $%02X, srcId = %u, dstId = %u",
+                    LogMessage(LOG_RF, "DMR Slot %u, CSBK, RAND (Random Access), serviceKind = $%02X, serviceOptions = $%02X, serviceExtra = $%02X, srcId = %u, dstId = %u",
                         m_slot->m_slotNo, isp->getServiceKind(), isp->getServiceOptions(), isp->getServiceExtra(), isp->getSrcId(), isp->getDstId());
                 }
 
@@ -286,7 +286,7 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len)
                     writeRF_CSBK_U_Reg_Rsp(srcId, isp->getServiceOptions());
                     break;
                 default:
-                    LogWarning(LOG_RF, "DMR Slot %u, , CSBK, RAND (Random Access), unhandled service, serviceKind = %02X", m_slot->m_slotNo, isp->getServiceKind());
+                    LogWarning(LOG_RF, "DMR Slot %u, CSBK, RAND (Random Access), unhandled service, serviceKind = %02X", m_slot->m_slotNo, isp->getServiceKind());
                     // should we drop the CSBK and not repeat it?
                     break;
                 }
@@ -1283,6 +1283,24 @@ void ControlSignaling::writeRF_CSBK_U_Reg_Rsp(uint32_t srcId, uint8_t serviceOpt
     Slot *m_tscc = m_slot->m_dmr->getTSCCSlot();
 
     bool dereg = (serviceOptions & 0x01U) == 0x01U;
+    uint8_t powerSave = (serviceOptions >> 1) & 0x07U;
+
+    // is the SU asking for power saving? if so -- politely tell it off
+    if (powerSave > 0U) {
+        std::unique_ptr<CSBK_NACK_RSP> csbk = std::make_unique<CSBK_NACK_RSP>();
+        csbk->setReason(ReasonCode::TS_DENY_RSN_REG_DENIED);
+
+        if (m_verbose) {
+            LogMessage(LOG_RF, "DMR Slot %u, CSBK, %s, SU power saving unsupported, srcId = %u, serviceOptions = $%02X", m_tscc->m_slotNo, csbk->toString().c_str(), srcId, serviceOptions);
+        }
+
+        csbk->setSrcId(WUID_REGI);
+        csbk->setDstId(srcId);
+
+        writeRF_CSBK_Imm(csbk.get());
+
+        return;
+    }
 
     std::unique_ptr<CSBK_ACK_RSP> csbk = std::make_unique<CSBK_ACK_RSP>();
     csbk->setResponse(0U); // disable TSCC power saving (ETSI TS-102.361-4 6.4.7.2)
