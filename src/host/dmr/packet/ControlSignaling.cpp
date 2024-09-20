@@ -479,7 +479,7 @@ void ControlSignaling::processNetwork(const data::NetData& dmrData)
             } else {
                 CSBK_RAND* isp = static_cast<CSBK_RAND*>(csbk.get());
                 if (m_verbose) {
-                    LogMessage(LOG_NET, "DMR Slot %u, , CSBK, RAND (Random Access), serviceKind = $%02X, serviceOptions = $%02X, serviceExtra = $%02X, srcId = %u, dstId = %u",
+                    LogMessage(LOG_NET, "DMR Slot %u, CSBK, RAND (Random Access), serviceKind = $%02X, serviceOptions = $%02X, serviceExtra = $%02X, srcId = %u, dstId = %u",
                         m_slot->m_slotNo, isp->getServiceKind(), isp->getServiceOptions(), isp->getServiceExtra(), isp->getSrcId(), isp->getDstId());
                 }
 
@@ -513,7 +513,7 @@ void ControlSignaling::processNetwork(const data::NetData& dmrData)
                 case ServiceKind::REG_SVC:
                     break;
                 default:
-                    LogWarning(LOG_RF, "DMR Slot %u, , CSBK, RAND (Random Access), unhandled service, serviceKind = %02X", m_slot->m_slotNo, isp->getServiceKind());
+                    LogWarning(LOG_RF, "DMR Slot %u, CSBK, RAND (Random Access), unhandled service, serviceKind = %02X", m_slot->m_slotNo, isp->getServiceKind());
                     // should we drop the CSBK and not repeat it?
                     break;
                 }
@@ -819,7 +819,7 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
     if (!skip) {
         if (m_slot->m_rfState != RS_RF_LISTENING && m_slot->m_rfState != RS_RF_DATA) {
             if (!net) {
-                LogWarning(LOG_RF, "DMR Slot %u, , CSBK, RAND (Random Access, VOICE_CALL (Voice Call) denied, traffic in progress, dstId = %u", m_tscc->m_slotNo, dstId);
+                LogWarning(LOG_RF, "DMR Slot %u, CSBK, RAND (Random Access, VOICE_CALL (Voice Call) denied, traffic in progress, dstId = %u", m_tscc->m_slotNo, dstId);
                 writeRF_CSBK_ACK_RSP(srcId, ReasonCode::TS_DENY_RSN_TGT_BUSY, (grp) ? 1U : 0U);
 
                 ::ActivityLog("DMR", true, "Slot %u group grant request %u to TG %u denied", m_tscc->m_slotNo, srcId, dstId);
@@ -831,7 +831,7 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
 
         if (m_slot->m_netState != RS_NET_IDLE && dstId == m_slot->m_netLastDstId) {
             if (!net) {
-                LogWarning(LOG_RF, "DMR Slot %u, , CSBK, RAND (Random Access, VOICE_CALL (Voice Call) denied, traffic in progress, dstId = %u", m_tscc->m_slotNo, dstId);
+                LogWarning(LOG_RF, "DMR Slot %u, CSBK, RAND (Random Access, VOICE_CALL (Voice Call) denied, traffic in progress, dstId = %u", m_tscc->m_slotNo, dstId);
                 writeRF_CSBK_ACK_RSP(srcId, ReasonCode::TS_DENY_RSN_TGT_BUSY, (grp) ? 1U : 0U);
 
                 ::ActivityLog("DMR", true, "Slot %u group grant request %u to TG %u denied", m_tscc->m_slotNo, srcId, dstId);
@@ -857,7 +857,7 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
             if (!m_tscc->m_affiliations->rfCh()->isRFChAvailable()) {
                 if (grp) {
                     if (!net) {
-                        LogWarning(LOG_RF, "DMR Slot %u, , CSBK, RAND (Random Access, GRP_VOICE_CALL (Group Voice Call) queued, no channels available, dstId = %u", m_tscc->m_slotNo, dstId);
+                        LogWarning(LOG_RF, "DMR Slot %u, CSBK, RAND (Random Access, GRP_VOICE_CALL (Group Voice Call) queued, no channels available, dstId = %u", m_tscc->m_slotNo, dstId);
                         writeRF_CSBK_ACK_RSP(srcId, ReasonCode::TS_QUEUED_RSN_NO_RESOURCE, (grp) ? 1U : 0U);
 
                         ::ActivityLog("DMR", true, "Slot %u group grant request %u to TG %u queued", m_tscc->m_slotNo, srcId, dstId);
@@ -868,7 +868,7 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
                 }
                 else {
                     if (!net) {
-                        LogWarning(LOG_RF, "DMR Slot %u, , CSBK, RAND (Random Access, IND_VOICE_CALL (Individual Voice Call) queued, no channels available, dstId = %u", m_tscc->m_slotNo, dstId);
+                        LogWarning(LOG_RF, "DMR Slot %u, CSBK, RAND (Random Access, IND_VOICE_CALL (Individual Voice Call) queued, no channels available, dstId = %u", m_tscc->m_slotNo, dstId);
                         writeRF_CSBK_ACK_RSP(srcId, ReasonCode::TS_QUEUED_RSN_NO_RESOURCE, (grp) ? 1U : 0U);
 
                         ::ActivityLog("DMR", true, "Slot %u group grant request %u to TG %u queued", m_tscc->m_slotNo, srcId, dstId);
@@ -893,7 +893,7 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
                 uint32_t grantedSrcId = m_tscc->m_affiliations->getGrantedSrcId(dstId);
                 if (srcId != grantedSrcId) {
                     if (!net) {
-                        LogWarning(LOG_RF, "DMR Slot %u, , CSBK, RAND (Random Access, VOICE_CALL (Voice Call) denied, traffic in progress, dstId = %u", m_tscc->m_slotNo, dstId);
+                        LogWarning(LOG_RF, "DMR Slot %u, CSBK, RAND (Random Access, VOICE_CALL (Voice Call) denied, traffic in progress, dstId = %u", m_tscc->m_slotNo, dstId);
                         writeRF_CSBK_ACK_RSP(srcId, ReasonCode::TS_DENY_RSN_TGT_BUSY, (grp) ? 1U : 0U);
 
                         ::ActivityLog("DMR", true, "Slot %u group grant request %u to TG %u denied", m_tscc->m_slotNo, srcId, dstId);
@@ -941,7 +941,7 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
                 int ret = RESTClient::send(voiceChData.address(), voiceChData.port(), voiceChData.password(),
                     HTTP_PUT, PUT_PERMIT_TG, req, voiceChData.ssl(), REST_QUICK_WAIT, m_tscc->m_debug);
                 if (ret != network::rest::http::HTTPPayload::StatusType::OK) {
-                    ::LogError(LOG_RF, "DMR Slot %u, , CSBK, RAND (Random Access), failed to permit TG for use, chNo = %u, slot = %u", m_tscc->m_slotNo, chNo, slot);
+                    ::LogError(LOG_RF, "DMR Slot %u, CSBK, RAND (Random Access), failed to permit TG for use, chNo = %u, slot = %u", m_tscc->m_slotNo, chNo, slot);
                     m_tscc->m_affiliations->releaseGrant(dstId, false);
                     if (!net) {
                         writeRF_CSBK_ACK_RSP(srcId, ReasonCode::TS_DENY_RSN_TGT_BUSY, (grp) ? 1U : 0U);
@@ -952,7 +952,7 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
                 }
             }
             else {
-                ::LogError(LOG_RF, "DMR Slot %u, , CSBK, RAND (Random Access), failed to permit TG for use, chNo = %u, slot = %u", m_tscc->m_slotNo, chNo, slot);
+                ::LogError(LOG_RF, "DMR Slot %u, CSBK, RAND (Random Access), failed to permit TG for use, chNo = %u, slot = %u", m_tscc->m_slotNo, chNo, slot);
             }
         }
 
@@ -993,7 +993,7 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
                                  HTTP_PUT, PUT_DMR_TSCC_PAYLOAD_ACT, req, voiceChData.ssl(), REST_QUICK_WAIT, m_tscc->m_debug);
             }
             else {
-                ::LogError(LOG_RF, "DMR Slot %u, , CSBK, RAND (Random Access), failed to activate payload channel, chNo = %u, slot = %u", m_tscc->m_slotNo, chNo, slot);
+                ::LogError(LOG_RF, "DMR Slot %u, CSBK, RAND (Random Access), failed to activate payload channel, chNo = %u, slot = %u", m_tscc->m_slotNo, chNo, slot);
             }
         }
         else {
@@ -1019,7 +1019,7 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
                 int ret = RESTClient::send(voiceChData.address(), voiceChData.port(), voiceChData.password(),
                     HTTP_PUT, PUT_PERMIT_TG, req, voiceChData.ssl(), REST_QUICK_WAIT, m_tscc->m_debug);
                 if (ret != network::rest::http::HTTPPayload::StatusType::OK) {
-                    ::LogError(LOG_RF, "DMR Slot %u, , CSBK, RAND (Random Access), failed to permit TG for use, chNo = %u, slot = %u", m_tscc->m_slotNo, chNo, slot);
+                    ::LogError(LOG_RF, "DMR Slot %u, CSBK, RAND (Random Access), failed to permit TG for use, chNo = %u, slot = %u", m_tscc->m_slotNo, chNo, slot);
                     m_tscc->m_affiliations->releaseGrant(dstId, false);
                     if (!net) {
                         writeRF_CSBK_ACK_RSP(srcId, ReasonCode::TS_DENY_RSN_TGT_BUSY, (grp) ? 1U : 0U);
@@ -1030,7 +1030,7 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
                 }
             }
             else {
-                ::LogError(LOG_RF, "DMR Slot %u, , CSBK, RAND (Random Access), failed to permit TG for use, chNo = %u, slot = %u", m_tscc->m_slotNo, chNo, slot);
+                ::LogError(LOG_RF, "DMR Slot %u, CSBK, RAND (Random Access), failed to permit TG for use, chNo = %u, slot = %u", m_tscc->m_slotNo, chNo, slot);
             }
         }
 
@@ -1069,7 +1069,7 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
                     HTTP_PUT, PUT_DMR_TSCC_PAYLOAD_ACT, req, voiceChData.ssl(), REST_QUICK_WAIT, m_tscc->m_debug);
             }
             else {
-                ::LogError(LOG_RF, "DMR Slot %u, , CSBK, RAND (Random Access), failed to activate payload channel, chNo = %u, slot = %u", m_tscc->m_slotNo, chNo, slot);
+                ::LogError(LOG_RF, "DMR Slot %u, CSBK, RAND (Random Access), failed to activate payload channel, chNo = %u, slot = %u", m_tscc->m_slotNo, chNo, slot);
             }
         }
         else {
@@ -1101,7 +1101,7 @@ bool ControlSignaling::writeRF_CSBK_Data_Grant(uint32_t srcId, uint32_t dstId, u
     if (!skip) {
         if (m_slot->m_rfState != RS_RF_LISTENING && m_slot->m_rfState != RS_RF_DATA) {
             if (!net) {
-                LogWarning(LOG_RF, "DMR Slot %u, , CSBK, RAND (Random Access, DATA_CALL (Data Call) denied, traffic in progress, dstId = %u", m_tscc->m_slotNo, dstId);
+                LogWarning(LOG_RF, "DMR Slot %u, CSBK, RAND (Random Access, DATA_CALL (Data Call) denied, traffic in progress, dstId = %u", m_tscc->m_slotNo, dstId);
                 writeRF_CSBK_ACK_RSP(srcId, ReasonCode::TS_DENY_RSN_TGT_BUSY, (grp) ? 1U : 0U);
 
                 ::ActivityLog("DMR", true, "Slot %u group grant request %u to TG %u denied", m_tscc->m_slotNo, srcId, dstId);
@@ -1113,7 +1113,7 @@ bool ControlSignaling::writeRF_CSBK_Data_Grant(uint32_t srcId, uint32_t dstId, u
 
         if (m_slot->m_netState != RS_NET_IDLE && dstId == m_slot->m_netLastDstId) {
             if (!net) {
-                LogWarning(LOG_RF, "DMR Slot %u, , CSBK, RAND (Random Access, DATA_CALL (Data Call) denied, traffic in progress, dstId = %u", m_tscc->m_slotNo, dstId);
+                LogWarning(LOG_RF, "DMR Slot %u, CSBK, RAND (Random Access, DATA_CALL (Data Call) denied, traffic in progress, dstId = %u", m_tscc->m_slotNo, dstId);
                 writeRF_CSBK_ACK_RSP(srcId, ReasonCode::TS_DENY_RSN_TGT_BUSY, (grp) ? 1U : 0U);
 
                 ::ActivityLog("DMR", true, "Slot %u group grant request %u to TG %u denied", m_tscc->m_slotNo, srcId, dstId);
@@ -1139,7 +1139,7 @@ bool ControlSignaling::writeRF_CSBK_Data_Grant(uint32_t srcId, uint32_t dstId, u
             if (!m_tscc->m_affiliations->rfCh()->isRFChAvailable()) {
                 if (grp) {
                     if (!net) {
-                        LogWarning(LOG_RF, "DMR Slot %u, , CSBK, RAND (Random Access, GRP_DATA_CALL (Group Data Call) queued, no channels available, dstId = %u", m_tscc->m_slotNo, dstId);
+                        LogWarning(LOG_RF, "DMR Slot %u, CSBK, RAND (Random Access, GRP_DATA_CALL (Group Data Call) queued, no channels available, dstId = %u", m_tscc->m_slotNo, dstId);
                         writeRF_CSBK_ACK_RSP(srcId, ReasonCode::TS_QUEUED_RSN_NO_RESOURCE, (grp) ? 1U : 0U);
 
                         ::ActivityLog("DMR", true, "Slot %u group grant request %u to TG %u queued", m_tscc->m_slotNo, srcId, dstId);
@@ -1150,7 +1150,7 @@ bool ControlSignaling::writeRF_CSBK_Data_Grant(uint32_t srcId, uint32_t dstId, u
                 }
                 else {
                     if (!net) {
-                        LogWarning(LOG_RF, "DMR Slot %u, , CSBK, RAND (Random Access, IND_DATA_CALL (Individual Data Call) queued, no channels available, dstId = %u", m_tscc->m_slotNo, dstId);
+                        LogWarning(LOG_RF, "DMR Slot %u, CSBK, RAND (Random Access, IND_DATA_CALL (Individual Data Call) queued, no channels available, dstId = %u", m_tscc->m_slotNo, dstId);
                         writeRF_CSBK_ACK_RSP(srcId, ReasonCode::TS_QUEUED_RSN_NO_RESOURCE, (grp) ? 1U : 0U);
 
                         ::ActivityLog("DMR", true, "Slot %u group grant request %u to TG %u queued", m_tscc->m_slotNo, srcId, dstId);
@@ -1218,7 +1218,7 @@ bool ControlSignaling::writeRF_CSBK_Data_Grant(uint32_t srcId, uint32_t dstId, u
                     HTTP_PUT, PUT_DMR_TSCC_PAYLOAD_ACT, req, voiceChData.ssl(), REST_QUICK_WAIT, m_tscc->m_debug);
             }
             else {
-                ::LogError(LOG_RF, "DMR Slot %u, , CSBK, RAND (Random Access), failed to activate payload channel, chNo = %u, slot = %u", m_tscc->m_slotNo, chNo, slot);
+                ::LogError(LOG_RF, "DMR Slot %u, CSBK, RAND (Random Access), failed to activate payload channel, chNo = %u, slot = %u", m_tscc->m_slotNo, chNo, slot);
             }
         }
         else {
@@ -1265,7 +1265,7 @@ bool ControlSignaling::writeRF_CSBK_Data_Grant(uint32_t srcId, uint32_t dstId, u
                     HTTP_PUT, PUT_DMR_TSCC_PAYLOAD_ACT, req, voiceChData.ssl(), REST_QUICK_WAIT, m_tscc->m_debug);
             }
             else {
-                ::LogError(LOG_RF, "DMR Slot %u, , CSBK, RAND (Random Access), failed to activate payload channel, chNo = %u, slot = %u", m_tscc->m_slotNo, chNo, slot);
+                ::LogError(LOG_RF, "DMR Slot %u, CSBK, RAND (Random Access), failed to activate payload channel, chNo = %u, slot = %u", m_tscc->m_slotNo, chNo, slot);
             }
         }
         else {
