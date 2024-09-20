@@ -36,14 +36,8 @@ DMRAffiliationLookup::~DMRAffiliationLookup() = default;
 
 bool DMRAffiliationLookup::grantCh(uint32_t dstId, uint32_t srcId, uint32_t grantTimeout, bool grp, bool netGranted)
 {
-    uint32_t chNo = m_chLookup->getFirstRFChannel();
-    uint8_t slot = getAvailableSlotForChannel(chNo);
-
-    if (slot == 0U) {
-        return false;
-    }
-
-    return grantChSlot(dstId, srcId, slot, grantTimeout, grp, netGranted);
+    ::LogDebug(LOG_HOST, "%s, DMRAffiliationLookup::grantCh() use grantChSlot() BUGBUG");
+    return false;
 }
 
 /* Helper to grant a channel and slot. */
@@ -58,7 +52,11 @@ bool DMRAffiliationLookup::grantChSlot(uint32_t dstId, uint32_t srcId, uint8_t s
         return false;
     }
 
-    uint32_t chNo = m_chLookup->getFirstRFChannel();
+    uint32_t chNo = getAvailableChannelForSlot(slot);
+    if (chNo == 0U) {
+        return false;
+    }
+
     if (chNo == m_tsccChNo && slot == m_tsccSlot) {
         return false;
     }
@@ -210,6 +208,47 @@ void DMRAffiliationLookup::setSlotForChannelTSCC(uint32_t chNo, uint8_t slot)
 
     m_tsccChNo = chNo;
     m_tsccSlot = slot;
+}
+
+/* Helper to determine the an available channel for a slot. */
+
+uint32_t DMRAffiliationLookup::getAvailableChannelForSlot(uint8_t slot) const
+{
+    if (slot == 0U) {
+        return 0U;
+    }
+
+    uint32_t chNo = 0U;
+    for (auto entry : m_chLookup->rfChDataTable()) {
+        if (entry.second.chNo() == m_tsccChNo && slot == m_tsccSlot) {
+            continue;
+        } else {
+            // lookup dynamic channel slot grant table entry
+            bool chAvailSlot = false;
+            for (auto gntEntry : m_grantChSlotTable) {
+                uint32_t foundChNo = std::get<0>(gntEntry.second);
+                if (foundChNo == entry.second.chNo()) {
+                    uint8_t foundSlot = std::get<1>(gntEntry.second);
+                    if (slot == foundSlot)
+                        continue;
+                    else {
+                        chAvailSlot = true;
+                        break;
+                    }
+                }
+            }
+
+            // if we have no granted channels -- return true
+            if (m_grantChSlotTable.size() == 0U)
+                chAvailSlot = true;
+
+            chNo = entry.second.chNo();
+            if (chAvailSlot)
+                break;
+        }
+    }
+
+    return chNo;
 }
 
 /* Helper to determine the first available slot for given the channel number. */

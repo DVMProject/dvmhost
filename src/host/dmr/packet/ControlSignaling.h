@@ -85,6 +85,7 @@ namespace dmr
             /** @} */
 
         private:
+            friend class dmr::Control;
             friend class dmr::Slot;
             Slot* m_slot;
 

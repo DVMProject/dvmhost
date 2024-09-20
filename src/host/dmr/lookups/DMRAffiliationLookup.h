@@ -101,6 +101,12 @@ namespace dmr
             void setSlotForChannelTSCC(uint32_t chNo, uint8_t slot);
 
             /**
+             * @brief Helper to determine the an available channel for a slot.
+             * @param chNo Channel Number.
+             */
+            uint32_t getAvailableChannelForSlot(uint8_t slot) const;
+
+            /**
              * @brief Helper to determine the first available slot for given the channel number.
              * @param chNo Channel Number.
              */

@@ -854,7 +854,11 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
         }
 
         if (!m_tscc->m_affiliations->isGranted(dstId)) {
-            if (!m_tscc->m_affiliations->rfCh()->isRFChAvailable()) {
+            ::lookups::TalkgroupRuleGroupVoice groupVoice = m_tscc->m_tidLookup->find(dstId);
+            slot = groupVoice.source().tgSlot();
+
+            uint32_t availChNo = m_tscc->m_affiliations->getAvailableChannelForSlot(slot);
+            if (!m_tscc->m_affiliations->rfCh()->isRFChAvailable() || availChNo == 0U) {
                 if (grp) {
                     if (!net) {
                         LogWarning(LOG_RF, "DMR Slot %u, CSBK, RAND (Random Access, GRP_VOICE_CALL (Group Voice Call) queued, no channels available, dstId = %u", m_tscc->m_slotNo, dstId);
@@ -879,9 +883,10 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
                 }
             }
             else {
-                if (m_tscc->m_affiliations->grantCh(dstId, srcId, GRANT_TIMER_TIMEOUT, grp, net)) {
+                if (m_tscc->m_affiliations->grantChSlot(dstId, srcId, slot, GRANT_TIMER_TIMEOUT, grp, net)) {
                     chNo = m_tscc->m_affiliations->getGrantedCh(dstId);
                     slot = m_tscc->m_affiliations->getGrantedSlot(dstId);
+                    LogDebug(LOG_RF, "DMR Slot %u, CSBK, RAND (Random Access, VOICE_CALL (Voice Call), chNo = %u, slot = %u, tsccChNo = %u", m_tscc->m_slotNo, chNo, slot, m_tscc->m_channelNo);
                     //m_tscc->m_siteData.setChCnt(m_tscc->m_affiliations->getRFChCnt() + m_tscc->m_affiliations->getGrantedRFChCnt());
                 }
             }
@@ -1136,7 +1141,11 @@ bool ControlSignaling::writeRF_CSBK_Data_Grant(uint32_t srcId, uint32_t dstId, u
         }
 
         if (!m_tscc->m_affiliations->isGranted(dstId)) {
-            if (!m_tscc->m_affiliations->rfCh()->isRFChAvailable()) {
+            ::lookups::TalkgroupRuleGroupVoice groupVoice = m_tscc->m_tidLookup->find(dstId);
+            slot = groupVoice.source().tgSlot();
+
+            uint32_t availChNo = m_tscc->m_affiliations->getAvailableChannelForSlot(slot);
+            if (!m_tscc->m_affiliations->rfCh()->isRFChAvailable() || availChNo == 0U) {
                 if (grp) {
                     if (!net) {
                         LogWarning(LOG_RF, "DMR Slot %u, CSBK, RAND (Random Access, GRP_DATA_CALL (Group Data Call) queued, no channels available, dstId = %u", m_tscc->m_slotNo, dstId);
@@ -1161,7 +1170,7 @@ bool ControlSignaling::writeRF_CSBK_Data_Grant(uint32_t srcId, uint32_t dstId, u
                 }
             }
             else {
-                if (m_tscc->m_affiliations->grantCh(dstId, srcId, GRANT_TIMER_TIMEOUT, grp, net)) {
+                if (m_tscc->m_affiliations->grantChSlot(dstId, srcId, slot, GRANT_TIMER_TIMEOUT, grp, net)) {
                     chNo = m_tscc->m_affiliations->getGrantedCh(dstId);
                     slot = m_tscc->m_affiliations->getGrantedSlot(dstId);
 

@@ -712,6 +712,16 @@ void Control::processNetwork()
         data.setN(n);
     }
 
+    // are we TSCC enabled?
+    if (m_enableTSCC) {
+        Slot* tscc = getTSCCSlot();
+        if (tscc != nullptr) {
+            if (!tscc->m_affiliations->isGranted(dstId)) {
+                tscc->m_control->writeRF_CSBK_Grant(srcId, dstId, 4U, (flco == FLCO::GROUP) ? true : false, true);
+            }
+        }
+    }
+
     // forward onto the specific slot for final processing and delivery
     switch (slotNo) {
         case 1U:
