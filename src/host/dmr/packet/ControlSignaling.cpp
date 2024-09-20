@@ -886,7 +886,6 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
                 if (m_tscc->m_affiliations->grantChSlot(dstId, srcId, slot, GRANT_TIMER_TIMEOUT, grp, net)) {
                     chNo = m_tscc->m_affiliations->getGrantedCh(dstId);
                     slot = m_tscc->m_affiliations->getGrantedSlot(dstId);
-                    LogDebug(LOG_RF, "DMR Slot %u, CSBK, RAND (Random Access, VOICE_CALL (Voice Call), chNo = %u, slot = %u, tsccChNo = %u", m_tscc->m_slotNo, chNo, slot, m_tscc->m_channelNo);
                     //m_tscc->m_siteData.setChCnt(m_tscc->m_affiliations->getRFChCnt() + m_tscc->m_affiliations->getGrantedRFChCnt());
                 }
             }
