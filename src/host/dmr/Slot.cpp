@@ -464,6 +464,8 @@ void Slot::clock()
         else {
             m_siteData.setNetActive(false);
         }
+
+        lc::CSBK::setSiteData(m_siteData);
     }
 
     // if we have control enabled; do clocking to generate a CC data stream
