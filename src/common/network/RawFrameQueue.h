@@ -67,11 +67,12 @@ namespace network
          * @brief Write message to the UDP socket.
          * @param[in] message Message buffer to frame and queue.
          * @param length Length of message.
-         * @param addr IP address to write data to.
+         * @param address IP address to write data to.
          * @param addrLen 
+         * @param[out] lenWritten Total number of bytes written.
          * @returns bool True, if message was sent, otherwise false.
          */
-        bool write(const uint8_t* message, uint32_t length, sockaddr_storage& addr, uint32_t addrLen);
+        bool write(const uint8_t* message, uint32_t length, sockaddr_storage& addr, uint32_t addrLen, ssize_t* lenWritten = nullptr);
 
         /**
          * @brief Cache message to frame queue.

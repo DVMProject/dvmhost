@@ -77,7 +77,7 @@ UInt8Array RawFrameQueue::read(int& messageLength, sockaddr_storage& address, ui
 
 /* Write message to the UDP socket. */
 
-bool RawFrameQueue::write(const uint8_t* message, uint32_t length, sockaddr_storage& addr, uint32_t addrLen)
+bool RawFrameQueue::write(const uint8_t* message, uint32_t length, sockaddr_storage& addr, uint32_t addrLen, ssize_t* lenWritten)
 {
     assert(message != nullptr);
     assert(length > 0U);
@@ -90,7 +90,7 @@ bool RawFrameQueue::write(const uint8_t* message, uint32_t length, sockaddr_stor
         Utils::dump(1U, "RawFrameQueue::write() Message", buffer, length);
 
     bool ret = true;
-    if (!m_socket->write(buffer, length, addr, addrLen)) {
+    if (!m_socket->write(buffer, length, addr, addrLen, lenWritten)) {
         // LogError(LOG_NET, "Failed writing data to the network");
         ret = false;
     }
