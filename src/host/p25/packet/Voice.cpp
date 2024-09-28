@@ -1482,6 +1482,7 @@ void Voice::writeRF_EndOfVoice()
     resetNet();
 
     // transmit channelNo release burst
+    m_p25->writeRF_TDU(true, true);
     m_p25->m_control->writeRF_TDULC_ChanRelease(grp, srcId, dstId);
 }
 
