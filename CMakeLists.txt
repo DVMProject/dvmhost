@@ -353,6 +353,8 @@ if (NOT TARGET tarball)
             COMMAND cp ../tools/*.sh ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
             COMMAND chmod +x ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/*.sh
             COMMAND cp -v ../configs/*.yml ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
+            COMMAND mkdir -p ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/schema
+            COMMAND cp -v ../configs/schema/*.json ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/schema
             COMMAND cp -v ../configs/*.dat ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
             COMMAND mkdir -p ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw
             COMMAND if [ -e dvm-firmware_f4.elf ]\; then cp -v dvm-firmware_f4.elf ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
@@ -384,6 +386,8 @@ if (NOT TARGET tarball)
             COMMAND cp ../tools/*.sh ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
             COMMAND chmod +x ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/*.sh
             COMMAND cp -v ../configs/*.yml ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
+            COMMAND mkdir -p ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/schema
+            COMMAND cp -v ../configs/schema/*.json ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/schema
             COMMAND cp -v ../configs/*.dat ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
             COMMAND mkdir -p ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw
             COMMAND if [ -e dvm-firmware_f4.elf ]\; then cp -v dvm-firmware_f4.elf ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
@@ -417,6 +421,7 @@ add_custom_target(old_install
     COMMAND mkdir -p ${CMAKE_LEGACY_INSTALL_PREFIX}
     COMMAND mkdir -p ${CMAKE_LEGACY_INSTALL_PREFIX}/bin
     COMMAND mkdir -p ${CMAKE_LEGACY_INSTALL_PREFIX}/log
+    COMMAND mkdir -p ${CMAKE_LEGACY_INSTALL_PREFIX}/schema
     COMMAND install -m 755 dvmhost ${CMAKE_LEGACY_INSTALL_PREFIX}/bin
     COMMAND install -m 755 dvmcmd ${CMAKE_LEGACY_INSTALL_PREFIX}/bin
     COMMAND install -m 755 dvmmon ${CMAKE_LEGACY_INSTALL_PREFIX}/bin
@@ -430,6 +435,7 @@ add_custom_target(old_install
     COMMAND install -m 644 ../configs/rid_acl.example.dat ${CMAKE_LEGACY_INSTALL_PREFIX}/rid_acl.dat
     COMMAND install -m 644 ../configs/talkgroup_rules.example.yml ${CMAKE_LEGACY_INSTALL_PREFIX}/talkgroup_rules.example.yml
     COMMAND install -m 644 ../configs/bridge-config.example.yml ${CMAKE_LEGACY_INSTALL_PREFIX}/bridge-config.example.yml
+    COMMAND install -m 644 ../configs/talkgroup_rules.yaml_schema.json ${CMAKE_LEGACY_INSTALL_PREFIX}/schema/talkgroup_rules.yaml_schema.json
     COMMAND install -m 755 ../tools/start-dvm.sh ${CMAKE_LEGACY_INSTALL_PREFIX}
     COMMAND install -m 755 ../tools/stop-dvm.sh ${CMAKE_LEGACY_INSTALL_PREFIX}
     COMMAND install -m 755 ../tools/dvm-watchdog.sh ${CMAKE_LEGACY_INSTALL_PREFIX}

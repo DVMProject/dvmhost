@@ -1,8 +1,6 @@
 #
 # Digital Voice Modem - Conference FNE Software Configuration
 #
-# @package DVM / Conference FNE Software
-#
 
 # Flag indicating whether the host will run as a background or foreground task.
 daemon: true

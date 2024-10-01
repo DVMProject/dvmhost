@@ -1,0 +1,107 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "title": "Digital Voice Modem - Talkgroup Rules",
+    "properties": {
+        "groupVoice": {
+            "description": "List of talkgroups defined by this rules file.",
+            "type": "array",
+            "items": {
+                "type": "object",
+                "required": [ "name", "config", "source" ],
+                "properties": {
+                    "name": {
+                        "description": "Textual name of the talkgroup.",
+                        "type": "string"
+                    },
+                    "config": {
+                        "description": "Talkgroup Configuration",
+                        "type": "object",
+                        "required": [ "active" ],
+                        "properties": {
+                            "active": {
+                                "description": "Flag indicating whether this talkgroup is active or not.",
+                                "type": "boolean"
+                            },
+                            "affiliated": {
+                                "description": "Flag indicating whether this talkgroup will only repeat with affiliations.",
+                                "type": "boolean"
+                            },
+                            "inclusion": {
+                                "description": "List of peer IDs included for this talkgroup (peers listed here will be selected for traffic).",
+                                "type": "array",
+                                "items": {
+                                    "description": "Network Peer ID.",
+                                    "type": "number",
+                                    "uniqueItems": true
+                                }
+                            },
+                            "exclusion": {
+                                "description": "List of peer IDs excluded for this talkgroup (peers listed here will be ignored for traffic).",
+                                "type": "array",
+                                "items": {
+                                    "description": "Network Peer ID.",
+                                    "type": "number",
+                                    "uniqueItems": true
+                                }
+                            },
+                            "rewrite": {
+                                "description": "List of peer talkgroup rewrites.",
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "peerid": {
+                                            "description": "Network Peer ID to rewrite this TGID for.",
+                                            "type": "number"
+                                        },
+                                        "tgid": {
+                                            "description": "Numerical talkgroup ID number to rewrite to.",
+                                            "type": "number"
+                                        },
+                                        "slot": {
+                                            "description": "DMR slot number.",
+                                            "type": "number"
+                                        }
+                                    }
+                                }
+                            },
+                            "always": {
+                                "description": "List of peer IDs that always receive traffic for this talkgroup regardless of affiliation rules.",
+                                "type": "array",
+                                "items": {
+                                    "description": "Network Peer ID.",
+                                    "type": "number",
+                                    "uniqueItems": true
+                                }
+                            },
+                            "preferred": {
+                                "description": "List of site CC peer IDs defining talkgroup access preference (peers listed here will be preferred for access, sites not listed here will be non-preferred and will cause a AFF_GRP_RSP DENY, typically triggering roaming). If this list is empty *all* peers are preferred. (Trunking Only)",
+                                "type": "array",
+                                "items": {
+                                    "description": "Network Peer ID.",
+                                    "type": "number",
+                                    "uniqueItems": true
+                                }
+                            }
+                        }
+                    },
+                    "source": {
+                        "description": "Source Configuration",
+                        "type": "object",
+                        "required": [ "tgid", "slot" ],
+                        "properties": {
+                            "tgid": {
+                                "description": "Numerical talkgroup ID number.",
+                                "type": "number"
+                            },
+                            "slot": {
+                                "description": "DMR slot number.",
+                                "type": "number"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

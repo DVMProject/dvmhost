@@ -1,8 +1,6 @@
 #
 # Digital Voice Modem - Bridge
 #
-# @package DVM / Bridge
-#
 
 # Flag indicating whether the host will run as a background or foreground task.
 daemon: true

@@ -1,7 +1,6 @@
+# yaml-language-server: $schema=schema/talkgroup_rules.yaml_schema.json
 #
 # Digital Voice Modem - Talkgroup Rules
-#
-# @package DVM / Host Software
 #
 
 # 
