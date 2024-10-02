@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2023 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -66,12 +66,14 @@ public:
         // file menu
         m_fileMenuSeparator1.setSeparator();
         m_saveSettingsItem.addAccelerator(FKey::Meta_s); // Meta/Alt + S
-        m_saveSettingsItem.addCallback("clicked", this, [&]() { g_tidLookups->commit(); });
-        m_keyF2.addCallback("activate", this, [&]() { g_tidLookups->commit(); });
+        m_saveSettingsItem.addCallback("clicked", this, [&]() { save(); });
+        m_keyF2.addCallback("activate", this, [&]() { save(); });
         m_quitItem.addAccelerator(FKey::Meta_x); // Meta/Alt + X
         m_quitItem.addCallback("clicked", getFApplication(), &FApplication::cb_exitApp, this);
         m_keyF3.addCallback("activate", getFApplication(), &FApplication::cb_exitApp, this);
         m_keyF5.addCallback("activate", this, [&]() { g_tidLookups->reload(); m_wnd->loadListView(); });
+
+        m_backupOnSave.setChecked();
 
         // help menu
         m_aboutItem.addCallback("clicked", this, [&]() {
@@ -98,6 +100,7 @@ private:
     FMenu m_fileMenu{"&File", &m_menuBar};
     FMenuItem m_saveSettingsItem{"&Save", &m_fileMenu};
     FCheckMenuItem m_saveOnCloseToggle{"Save on Close?", &m_fileMenu};
+    FCheckMenuItem m_backupOnSave{"Backup Rules File?", &m_fileMenu};
     FMenuItem m_fileMenuSeparator1{&m_fileMenu};
     FMenuItem m_quitItem{"&Quit", &m_fileMenu};
 
@@ -108,6 +111,34 @@ private:
     FStatusKey m_keyF2{FKey::F2, "Save", &m_statusBar};
     FStatusKey m_keyF3{FKey::F3, "Quit", &m_statusBar};
     FStatusKey m_keyF5{FKey::F5, "Reload", &m_statusBar};
+
+    /**
+     * @brief 
+     */
+    void save()
+    {
+        if (m_backupOnSave.isChecked()) {
+            std::string bakFile = g_iniFile + ".bak";
+            LogMessage(LOG_HOST, "Backing up existing file %s to %s", g_iniFile.c_str(), bakFile.c_str());
+            copyFile(g_iniFile.c_str(), bakFile.c_str());
+        }
+
+        g_tidLookups->commit(); 
+    }
+
+    /**
+     * @brief Helper to copy one file to another.
+     * @param src Source file.
+     * @param dest Destination File.
+     * @returns bool True, if file copied, otherwise false.
+     */
+    bool copyFile(const char *srcFilePath, const char* destFilePath)
+    {
+        std::ifstream src(srcFilePath, std::ios::binary);
+        std::ofstream dest(destFilePath, std::ios::binary);
+        dest << src.rdbuf();
+        return src && dest;
+    }
 
     /*
     ** Event Handlers
