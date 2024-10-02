@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Digital Voice Modem - Host Monitor Software
+ * Digital Voice Modem - Talkgroup Editor
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
@@ -10,9 +10,9 @@
 #include "Defines.h"
 #include "common/yaml/Yaml.h"
 #include "common/Log.h"
-#include "MonitorMain.h"
-#include "MonitorApplication.h"
-#include "MonitorMainWnd.h"
+#include "TGEdMain.h"
+#include "TGEdApplication.h"
+#include "TGEdMainWnd.h"
 
 using namespace lookups;
 
@@ -38,7 +38,7 @@ bool g_debug = false;
 
 bool g_hideLoggingWnd = false;
 
-lookups::IdenTableLookup* g_idenTable = nullptr;
+lookups::TalkgroupRulesLookup* g_tidLookups = nullptr;
 
 // ---------------------------------------------------------------------------
 //	Global Functions
@@ -78,7 +78,7 @@ void usage(const char* message, const char* arg)
     ::fprintf(stdout, 
         "usage: %s [-dvh]"
         "[--hide-log]"
-        "[-c <configuration file>]"
+        "[-c <talkgroup rules file>]"
         "\n\n"
         "  -d                          enable debug\n"
         "  -v                          show version information\n"
@@ -86,7 +86,7 @@ void usage(const char* message, const char* arg)
         "\n"
         "  --hide-log                  hide interactive logging window on startup\n"
         "\n"
-        "  -c <file>                   specifies the monitor configuration file to use\n"
+        "  -c <file>                   specifies the talkgroup rules file to edit\n"
         "\n"
         "  --                          stop handling options\n",
         g_progExe.c_str());
@@ -116,11 +116,11 @@ int checkArgs(int argc, char* argv[])
         }
         else if (IS("-c")) {
             if (argc-- <= 0)
-                usage("error: %s", "must specify the monitor configuration file to use");
+                usage("error: %s", "must specify the talkgroup rules file to edit");
             g_iniFile = std::string(argv[++i]);
 
             if (g_iniFile.empty())
-                usage("error: %s", "monitor configuration file cannot be blank!");
+                usage("error: %s", "talkgroup rules file cannot be blank!");
 
             p += 2;
         }
@@ -188,7 +188,7 @@ int main(int argc, char** argv)
     ::LogInfo(__PROG_NAME__ " " __VER__ " (built " __BUILD__ ")\r\n" \
         "Copyright (c) 2017-2024 Bryan Biedenkapp, N2PLL and DVMProject (https://github.com/dvmproject) Authors.\r\n" \
         "Portions Copyright (c) 2015-2021 by Jonathan Naylor, G4KLX and others\r\n" \
-        ">> Host Monitor\r\n");
+        ">> Talkgroup Rules Editor\r\n");
 
     try {
         ret = yaml::Parse(g_conf, g_iniFile.c_str());
@@ -201,35 +201,15 @@ int main(int argc, char** argv)
     }
 
     // setup the finalcut tui
-    MonitorApplication app{argc, argv};
+    TGEdApplication app{argc, argv};
 
-    MonitorMainWnd wnd{&app};
+    TGEdMainWnd wnd{&app};
     finalcut::FWidget::setMainWidget(&wnd);
-
-    // try to load bandplan identity table
-    std::string idenLookupFile = g_conf["iden_table"]["file"].as<std::string>();
-    uint32_t idenReloadTime = g_conf["iden_table"]["time"].as<uint32_t>(0U);
-
-    if (idenLookupFile.length() <= 0U) {
-        ::LogError(LOG_HOST, "No bandplan identity table? This must be defined!");
-        return 1;
-    }
-
-    yaml::Node& voiceChList = g_conf["channels"];
-    if (voiceChList.size() == 0U) {
-        ::LogError(LOG_HOST, "No channels defined to monitor? This must be defined!");
-        return 1;
-    }
 
     g_logDisplayLevel = 0U;
 
-    LogInfo("Iden Table Lookups");
-    LogInfo("    File: %s", idenLookupFile.length() > 0U ? idenLookupFile.c_str() : "None");
-    if (idenReloadTime > 0U)
-        LogInfo("    Reload: %u mins", idenReloadTime);
-
-    g_idenTable = new IdenTableLookup(idenLookupFile, idenReloadTime);
-    g_idenTable->read();
+    g_tidLookups = new TalkgroupRulesLookup(g_iniFile, 0U, false);
+    g_tidLookups->read();
 
     // show and start the application
     wnd.show();

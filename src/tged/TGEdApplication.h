@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Digital Voice Modem - Host Monitor Software
+ * Digital Voice Modem - Talkgroup Editor
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
@@ -8,15 +8,15 @@
  *
  */
 /**
- * @file MonitorApplication.h
- * @ingroup monitor
+ * @file TGEdApplication.h
+ * @ingroup tged
  */
-#if !defined(__MONITOR_APPLICATION_H__)
-#define __MONITOR_APPLICATION_H__
+#if !defined(__TGED_APPLICATION_H__)
+#define __TGED_APPLICATION_H__
 
 #include "common/Log.h"
-#include "MonitorMain.h"
-#include "MonitorMainWnd.h"
+#include "TGEdMain.h"
+#include "TGEdMainWnd.h"
 
 #include <final/final.h>
 using namespace finalcut;
@@ -79,10 +79,12 @@ public:
         shadow_bg                         = FColor::LightGray;  // only for transparent shadow
 
         current_element_focus_fg          = FColor::White;
-        current_element_focus_bg          = FColor::Cyan;
-        current_element_fg                = FColor::LightBlue;
-        current_element_bg                = FColor::Cyan;
+        current_element_focus_bg          = FColor::Blue;
+        current_element_fg                = FColor::LightGray;
+        current_element_bg                = FColor::DarkGray;
+
         current_inc_search_element_fg     = FColor::LightRed;
+
         selected_current_element_focus_fg = FColor::LightRed;
         selected_current_element_focus_bg = FColor::Cyan;
         selected_current_element_fg       = FColor::Red;
@@ -165,16 +167,16 @@ public:
 
 /**
  * @brief This class implements the finalcut application.
- * @ingroup monitor
+ * @ingroup tged
  */
-class HOST_SW_API MonitorApplication final : public finalcut::FApplication {
+class HOST_SW_API TGEdApplication final : public finalcut::FApplication {
 public:
     /**
-     * @brief Initializes a new instance of the MonitorApplication class.
+     * @brief Initializes a new instance of the TGEdApplication class.
      * @param argc Passed argc.
      * @param argv Passed argv.
      */
-    explicit MonitorApplication(const int& argc, char** argv) : FApplication{argc, argv}
+    explicit TGEdApplication(const int& argc, char** argv) : FApplication{argc, argv}
     {
         m_statusRefreshTimer = addTimer(1000);
     }
@@ -209,4 +211,4 @@ private:
     int m_statusRefreshTimer;
 };
 
-#endif // __MONITOR_APPLICATION_H__
+#endif // __TGED_APPLICATION_H__

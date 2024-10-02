@@ -250,9 +250,9 @@ endif (ENABLE_TESTS)
 install(TARGETS dvmhost DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
 install(TARGETS dvmcmd DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
 install(TARGETS dvmfne DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
-if (ENABLE_TUI_SUPPORT AND (NOT DISABLE_MONITOR))
+if (ENABLE_TUI_SUPPORT AND (NOT DISABLE_TUI_APPS))
 install(TARGETS dvmmon DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
-endif (ENABLE_TUI_SUPPORT AND (NOT DISABLE_MONITOR))
+endif (ENABLE_TUI_SUPPORT AND (NOT DISABLE_TUI_APPS))
 install(TARGETS dvmbridge DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
 install(FILES configs/config.example.yml configs/fne-config.example.yml configs/monitor-config.example.yml configs/iden_table.dat configs/RSSI.dat configs/rid_acl.example.dat configs/talkgroup_rules.example.yml configs/bridge-config.example.yml DESTINATION ${CMAKE_INSTALL_PREFIX}/etc)
 install(PROGRAMS tools/start-dvm.sh tools/stop-dvm.sh tools/dvm-watchdog.sh tools/stop-watchdog.sh tools/fne-watchdog.sh tools/start-dvm-fne.sh DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
@@ -267,12 +267,13 @@ install(CODE "execute_process(COMMAND bash \"-c\" \"sed -i 's/file: talkgroup_ru
 #
 if (NOT TARGET strip)
     if (CROSS_COMPILE_ARM)
-        if (ENABLE_TUI_SUPPORT AND (NOT DISABLE_MONITOR))
+        if (ENABLE_TUI_SUPPORT AND (NOT DISABLE_TUI_APPS))
             add_custom_target(strip
                     COMMAND arm-linux-gnueabihf-strip -s dvmhost
                     COMMAND arm-linux-gnueabihf-strip -s dvmfne
                     COMMAND arm-linux-gnueabihf-strip -s dvmcmd
                     COMMAND arm-linux-gnueabihf-strip -s dvmmon
+                    COMMAND arm-linux-gnueabihf-strip -s tged
                     COMMAND arm-linux-gnueabihf-strip -s dvmbridge)
         else()
             add_custom_target(strip
@@ -280,14 +281,15 @@ if (NOT TARGET strip)
                     COMMAND arm-linux-gnueabihf-strip -s dvmfne
                     COMMAND arm-linux-gnueabihf-strip -s dvmcmd
                     COMMAND arm-linux-gnueabihf-strip -s dvmbridge)
-        endif (ENABLE_TUI_SUPPORT AND (NOT DISABLE_MONITOR))
+        endif (ENABLE_TUI_SUPPORT AND (NOT DISABLE_TUI_APPS))
     elseif (CROSS_COMPILE_AARCH64)
-        if (ENABLE_TUI_SUPPORT AND (NOT DISABLE_MONITOR))
+        if (ENABLE_TUI_SUPPORT AND (NOT DISABLE_TUI_APPS))
             add_custom_target(strip
                 COMMAND aarch64-linux-gnu-strip -s dvmhost
                 COMMAND aarch64-linux-gnu-strip -s dvmfne
                 COMMAND aarch64-linux-gnu-strip -s dvmcmd
                 COMMAND aarch64-linux-gnu-strip -s dvmmon
+                COMMAND aarch64-linux-gnu-strip -s tged
                 COMMAND aarch64-linux-gnu-strip -s dvmbridge)
         else()
             add_custom_target(strip
@@ -295,7 +297,7 @@ if (NOT TARGET strip)
                 COMMAND aarch64-linux-gnu-strip -s dvmfne
                 COMMAND aarch64-linux-gnu-strip -s dvmcmd
                 COMMAND aarch64-linux-gnu-strip -s dvmbridge)
-        endif (ENABLE_TUI_SUPPORT AND (NOT DISABLE_MONITOR))
+        endif (ENABLE_TUI_SUPPORT AND (NOT DISABLE_TUI_APPS))
     elseif (CROSS_COMPILE_RPI_ARM)
         if (NOT WITH_RPI_ARM_TOOLS)
             add_custom_target(strip
@@ -311,12 +313,13 @@ if (NOT TARGET strip)
                 COMMAND ${RPI_ARM_TOOLS}/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-strip -s dvmbridge)
         endif ()
     else()
-        if (ENABLE_TUI_SUPPORT AND (NOT DISABLE_MONITOR))
+        if (ENABLE_TUI_SUPPORT AND (NOT DISABLE_TUI_APPS))
             add_custom_target(strip
                 COMMAND strip -s dvmhost
                 COMMAND strip -s dvmfne
                 COMMAND strip -s dvmcmd
                 COMMAND strip -s dvmmon
+                COMMAND strip -s tged
                 COMMAND strip -s dvmbridge)
         else()
             add_custom_target(strip
@@ -324,7 +327,7 @@ if (NOT TARGET strip)
                 COMMAND strip -s dvmfne
                 COMMAND strip -s dvmcmd
                 COMMAND strip -s dvmbridge)
-        endif (ENABLE_TUI_SUPPORT AND (NOT DISABLE_MONITOR))
+        endif (ENABLE_TUI_SUPPORT AND (NOT DISABLE_TUI_APPS))
     endif (CROSS_COMPILE_ARM)
 endif (NOT TARGET strip)
 
@@ -339,7 +342,7 @@ endif (NOT TARGET strip)
 # 
 if (NOT TARGET tarball)
     set(CMAKE_INSTALL_PREFIX_TARBALL "tar_build")
-    if (ENABLE_TUI_SUPPORT AND (NOT DISABLE_MONITOR))
+    if (ENABLE_TUI_SUPPORT AND (NOT DISABLE_TUI_APPS))
         add_custom_target(tarball
             COMMAND rm -rf ${CMAKE_INSTALL_PREFIX_TARBALL}
             COMMAND mkdir -p ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
@@ -348,6 +351,7 @@ if (NOT TARGET tarball)
             COMMAND cp -v dvmhost ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
             COMMAND cp -v dvmcmd ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
             COMMAND cp -v dvmmon ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
+            COMMAND cp -v tged ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
             COMMAND cp -v dvmfne ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
             COMMAND cp -v dvmbridge ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
             COMMAND cp ../tools/*.sh ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
@@ -406,7 +410,7 @@ if (NOT TARGET tarball)
             COMMAND if [ -e DVM-V24-stm32f103.bin ]\; then cp -v DVM-V24-stm32f103.bin ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
             COMMAND cd ${CMAKE_INSTALL_PREFIX_TARBALL} && tar czvf ../dvmhost_${CPACK_DEBIAN_PACKAGE_VERSION}_${ARCH}.tar.gz *
             COMMAND rm -rf ${CMAKE_INSTALL_PREFIX_TARBALL})
-    endif (ENABLE_TUI_SUPPORT AND (NOT DISABLE_MONITOR))
+    endif (ENABLE_TUI_SUPPORT AND (NOT DISABLE_TUI_APPS))
 endif (NOT TARGET tarball)
 
 #
@@ -425,6 +429,7 @@ add_custom_target(old_install
     COMMAND install -m 755 dvmhost ${CMAKE_LEGACY_INSTALL_PREFIX}/bin
     COMMAND install -m 755 dvmcmd ${CMAKE_LEGACY_INSTALL_PREFIX}/bin
     COMMAND install -m 755 dvmmon ${CMAKE_LEGACY_INSTALL_PREFIX}/bin
+    COMMAND install -m 755 tged ${CMAKE_LEGACY_INSTALL_PREFIX}/bin
     COMMAND install -m 755 dvmfne ${CMAKE_LEGACY_INSTALL_PREFIX}/bin
     COMMAND install -m 755 dvmbridge ${CMAKE_LEGACY_INSTALL_PREFIX}/bin
     COMMAND install -m 644 ../configs/config.example.yml ${CMAKE_LEGACY_INSTALL_PREFIX}/config.example.yml

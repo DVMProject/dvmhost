@@ -247,7 +247,7 @@ int HostSetup::run(int argc, char** argv)
     // show and start the application
     setupWnd.show();
 
-    finalcut::FApplication::setDarkTheme();
+    finalcut::FApplication::setColorTheme<dvmColorTheme>();
     app.resetColors();
     app.redraw();
     return app.exec();

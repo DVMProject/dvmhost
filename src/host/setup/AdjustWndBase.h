@@ -113,7 +113,7 @@ protected:
         m_connectedLabel.setGeometry(FPoint(36, int(getHeight()) - 3), FSize(20, 3));
         if (m_setup->m_isConnected) {
             m_connectedLabel.setText("Modem Connected");
-            m_connectedLabel.setForegroundColor(FColor::Green3);
+            m_connectedLabel.setForegroundColor(FColor::DarkGreen);
         }
         else {
             m_connectedLabel.setText("Modem Disconnected");

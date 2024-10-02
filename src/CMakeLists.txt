@@ -82,12 +82,22 @@ target_include_directories(dvmfne PRIVATE ${OPENSSL_INCLUDE_DIR} src src/host sr
 #
 ## dvmmon
 #
-if (ENABLE_TUI_SUPPORT AND (NOT DISABLE_MONITOR))
+if (ENABLE_TUI_SUPPORT AND (NOT DISABLE_TUI_APPS))
     include(src/monitor/CMakeLists.txt)
     add_executable(dvmmon ${common_INCLUDE} ${dvmmon_SRC})
     target_link_libraries(dvmmon PRIVATE common ${OPENSSL_LIBRARIES} asio::asio finalcut Threads::Threads)
     target_include_directories(dvmmon PRIVATE ${OPENSSL_INCLUDE_DIR} src src/host src/monitor)
-endif (ENABLE_TUI_SUPPORT AND (NOT DISABLE_MONITOR))
+endif (ENABLE_TUI_SUPPORT AND (NOT DISABLE_TUI_APPS))
+
+#
+## tged
+#
+if (ENABLE_TUI_SUPPORT AND (NOT DISABLE_TUI_APPS))
+    include(src/tged/CMakeLists.txt)
+    add_executable(tged ${common_INCLUDE} ${tged_SRC})
+    target_link_libraries(tged PRIVATE common ${OPENSSL_LIBRARIES} asio::asio finalcut Threads::Threads)
+    target_include_directories(tged PRIVATE ${OPENSSL_INCLUDE_DIR} src src/host src/tged)
+endif (ENABLE_TUI_SUPPORT AND (NOT DISABLE_TUI_APPS))
 
 #
 ## dvmcmd
