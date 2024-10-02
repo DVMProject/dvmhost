@@ -110,6 +110,12 @@ public:
             m_listView.insert(line);
         }
 
+        // generate dialog title        
+        uint32_t len = g_tidLookups->groupVoice().size();
+        std::stringstream ss;
+        ss << "Talkgroup List (" << len << " TGs)";
+        FDialog::setText(ss.str());
+
         setFocusWidget(&m_listView);
         redraw();
     }
