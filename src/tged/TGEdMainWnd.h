@@ -65,8 +65,11 @@ public:
 
         // file menu
         m_fileMenuSeparator1.setSeparator();
+        m_fileMenuSeparator2.setSeparator();
         m_saveSettingsItem.addAccelerator(FKey::Meta_s); // Meta/Alt + S
         m_saveSettingsItem.addCallback("clicked", this, [&]() { save(); });
+        m_reloadSettingsItem.addAccelerator(FKey::Meta_r); // Meta/Alt + R
+        m_reloadSettingsItem.addCallback("clicked", this, [&]() { g_tidLookups->reload(); m_wnd->loadListView(); });
         m_keyF2.addCallback("activate", this, [&]() { save(); });
         m_quitItem.addAccelerator(FKey::Meta_x); // Meta/Alt + X
         m_quitItem.addCallback("clicked", getFApplication(), &FApplication::cb_exitApp, this);
@@ -98,7 +101,9 @@ private:
     FMenuBar m_menuBar{this};
 
     FMenu m_fileMenu{"&File", &m_menuBar};
+    FMenuItem m_reloadSettingsItem{"&Reload", &m_fileMenu};
     FMenuItem m_saveSettingsItem{"&Save", &m_fileMenu};
+    FMenuItem m_fileMenuSeparator2{&m_fileMenu};
     FCheckMenuItem m_saveOnCloseToggle{"Save on Close?", &m_fileMenu};
     FCheckMenuItem m_backupOnSave{"Backup Rules File?", &m_fileMenu};
     FMenuItem m_fileMenuSeparator1{&m_fileMenu};
