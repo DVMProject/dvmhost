@@ -13,6 +13,10 @@
                         "description": "Textual name of the talkgroup.",
                         "type": "string"
                     },
+                    "alias": {
+                        "description": "Secondary name/group for the talkgroup.",
+                        "type": "string"
+                    },
                     "config": {
                         "description": "Talkgroup Configuration",
                         "type": "object",
