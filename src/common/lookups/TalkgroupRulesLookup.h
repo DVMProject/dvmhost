@@ -473,7 +473,6 @@ namespace lookups
             node["source"] = source;
         }
 
-
     public:
         /**
          * @brief Textual name for the routing rule.

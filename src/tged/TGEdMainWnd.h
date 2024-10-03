@@ -8,7 +8,7 @@
  *
  */
 /**
- * @file TGEdainWnd.h
+ * @file TGEdMainWnd.h
  * @ingroup tged
  */
 #if !defined(__TGED_MAIN_WND_H__)

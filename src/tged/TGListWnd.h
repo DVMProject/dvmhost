@@ -90,6 +90,9 @@ public:
         m_selected = TalkgroupRuleGroupVoice();
         m_selectedTgId = 0U;
 
+        auto entry = g_tidLookups->groupVoice()[0U];
+        m_selected = entry;
+
         m_listView.clear();
         for (auto entry : g_tidLookups->groupVoice()) {
             // pad TGs properly

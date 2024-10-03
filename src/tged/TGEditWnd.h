@@ -197,6 +197,10 @@ private:
                 }
 
                 m_tgId.setText(std::to_string(tgId));
+
+                auto source = m_rule.source();
+                source.tgId(tgId);
+                m_rule.source(source); 
                 redraw(); 
             });
             m_tgId.addCallback("down-pressed", [&]() {
@@ -207,6 +211,10 @@ private:
                 }
 
                 m_tgId.setText(std::to_string(tgId));
+
+                auto source = m_rule.source();
+                source.tgId(tgId);
+                m_rule.source(source); 
                 redraw();
             });
             m_tgId.addCallback("changed", [&]() { 
