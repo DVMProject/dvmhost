@@ -9,6 +9,8 @@
 groupVoice:
     # Textual name of the talkgroup.
   - name: Talkgroup 1
+    # Secondary name/grouping of the talkgroup. (Informational)
+    alias: Tactical
     #
     # Talkgroup Configuration
     #
@@ -40,6 +42,8 @@ groupVoice:
 
     # Textual name of the talkgroup.
   - name: Parrot
+    # Secondary name/grouping of the talkgroup. (Informational)
+    alias: Parrot/Testing
     #
     # Talkgroup Configuration
     #
@@ -73,6 +77,8 @@ groupVoice:
 
     # Textual name of the talkgroup.
   - name: Rewrite Example
+    # Secondary name/grouping of the talkgroup. (Informational)
+    alias: Example Group
     #
     # Talkgroup Configuration
     #
@@ -112,6 +118,8 @@ groupVoice:
 
     # Textual name of the talkgroup.
   - name: System Wide P25
+    # Secondary name/grouping of the talkgroup. (Informational)
+    alias: System Wide
     #
     # Talkgroup Configuration
     #
@@ -143,6 +151,8 @@ groupVoice:
 
     # Textual name of the talkgroup.
   - name: System Wide DMR TS1
+    # Secondary name/grouping of the talkgroup. (Informational)
+    alias: System Wide
     #
     # Talkgroup Configuration
     #
@@ -174,6 +184,8 @@ groupVoice:
 
     # Textual name of the talkgroup.
   - name: System Wide DMR TS2
+    # Secondary name/grouping of the talkgroup. (Informational)
+    alias: System Wide
     #
     # Talkgroup Configuration
     #
