@@ -140,6 +140,8 @@ json::object tgToJson(const TalkgroupRuleGroupVoice& groupVoice)
 
     std::string tgName = groupVoice.name();
     tg["name"].set<std::string>(tgName);
+    std::string tgAlias = groupVoice.nameAlias();
+    tg["alias"].set<std::string>(tgAlias);
     bool invalid = groupVoice.isInvalid();
     tg["invalid"].set<bool>(invalid);
 
@@ -244,6 +246,14 @@ TalkgroupRuleGroupVoice jsonToTG(json::object& req, HTTPPayload& reply)
     }
 
     groupVoice.name(req["name"].get<std::string>());
+
+    if (!req["alias"].is<std::string>()) {
+        errorPayload(reply, "TG \"alias\" was not a valid string");
+        LogDebug(LOG_REST, "TG \"alias\" was not a valid string");
+        return TalkgroupRuleGroupVoice();
+    }
+
+    groupVoice.nameAlias(req["alias"].get<std::string>());
 
     // source stanza
     {
