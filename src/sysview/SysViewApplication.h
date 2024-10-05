@@ -371,14 +371,15 @@ protected:
                 // is this the end of the call stream?
                 if (dataSync && (dataType == DMRDEF::DataType::TERMINATOR_WITH_LC)) {
                     if (srcId == 0U && dstId == 0U) {
-                        LogWarning(LOG_NET, "DMR, invalid TERMINATOR, srcId = %u, dstId = %u", srcId, dstId);
+                        LogWarning(LOG_NET, "DMR, invalid TERMINATOR, srcId = %u (%s), dstId = %u (%s)", 
+                            srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str());
                     }
 
                     RxStatus status;
                     auto it = std::find_if(m_dmrStatus.begin(), m_dmrStatus.end(), [&](StatusMapPair x) { return (x.second.dstId == dstId && x.second.slotNo == slotNo); });
                     if (it == m_dmrStatus.end()) {
-                        LogError(LOG_NET, "DMR, tried to end call for non-existent call in progress?, srcId = %u, dstId = %u",
-                            srcId, dstId);
+                        LogError(LOG_NET, "DMR, tried to end call for non-existent call in progress?, srcId = %u (%s), dstId = %u (%s)",
+                            srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str());
                     }
                     else {
                         status = it->second;
@@ -389,15 +390,16 @@ protected:
                     if (std::find_if(m_dmrStatus.begin(), m_dmrStatus.end(), [&](StatusMapPair x) { return (x.second.dstId == dstId && x.second.slotNo == slotNo); }) != m_dmrStatus.end()) {
                         m_dmrStatus.erase(dstId);
 
-                        LogMessage(LOG_NET, "DMR, Call End, srcId = %u, dstId = %u, duration = %u",
-                                    srcId, dstId, duration / 1000);
+                        LogMessage(LOG_NET, "DMR, Call End, srcId = %u (%s), dstId = %u (%s), duration = %u",
+                                    srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str(), duration / 1000);
                     }
                 }
 
                 // is this a new call stream?
                 if (dataSync && (dataType == DMRDEF::DataType::VOICE_LC_HEADER)) {
                     if (srcId == 0U && dstId == 0U) {
-                        LogWarning(LOG_NET, "DMR, invalid call, srcId = %u, dstId = %u", srcId, dstId);
+                        LogWarning(LOG_NET, "DMR, invalid call, srcId = %u (%s), dstId = %u (%s)", 
+                            srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str());
                     }
 
                     auto it = std::find_if(m_dmrStatus.begin(), m_dmrStatus.end(), [&](StatusMapPair x) { return (x.second.dstId == dstId && x.second.slotNo == slotNo); });
@@ -410,7 +412,8 @@ protected:
                         status.slotNo = slotNo;
                         m_dmrStatus[dstId] = status; // this *could* be an issue if a dstId appears on both slots somehow...
 
-                        LogMessage(LOG_NET, "DMR, Call Start, srcId = %u, dstId = %u", srcId, dstId);
+                        LogMessage(LOG_NET, "DMR, Call Start, srcId = %u (%s), dstId = %u (%s)", 
+                            srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str());
                     }
                 }
 
@@ -432,7 +435,8 @@ protected:
                             }
                             break;
                         default:
-                            LogMessage(LOG_NET, "DMR Slot %u, DT_CSBK, %s, srcId = %u, dstId = %u", dmrData.getSlotNo(), csbk->toString().c_str(), srcId, dstId);
+                            LogMessage(LOG_NET, "DMR Slot %u, DT_CSBK, %s, srcId = %u (%s), dstId = %u (%s)", dmrData.getSlotNo(), csbk->toString().c_str(), 
+                                srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str());
                             break;
                         }
                     }
@@ -483,7 +487,8 @@ protected:
                     // is this the end of the call stream?
                     if ((duid == P25DEF::DUID::TDU) || (duid == P25DEF::DUID::TDULC)) {
                         if (srcId == 0U && dstId == 0U) {
-                            LogWarning(LOG_NET, "P25, invalid TDU, srcId = %u, dstId = %u", srcId, dstId);
+                            LogWarning(LOG_NET, "P25, invalid TDU, srcId = %u (%s), dstId = %u (%s)", 
+                                srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str());
                         }
 
                         RxStatus status = m_p25Status[dstId];
@@ -492,15 +497,16 @@ protected:
                         if (std::find_if(m_p25Status.begin(), m_p25Status.end(), [&](StatusMapPair x) { return x.second.dstId == dstId; }) != m_p25Status.end()) {
                             m_p25Status.erase(dstId);
 
-                            LogMessage(LOG_NET, "P25, Call End, srcId = %u, dstId = %u, duration = %u",
-                                srcId, dstId, duration / 1000);
+                            LogMessage(LOG_NET, "P25, Call End, srcId = %u (%s), dstId = %u (%s), duration = %u",
+                                srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str(), duration / 1000);
                         }
                     }
 
                     // is this a new call stream?
                     if ((duid != P25DEF::DUID::TDU) && (duid != P25DEF::DUID::TDULC)) {
                         if (srcId == 0U && dstId == 0U) {
-                            LogWarning(LOG_NET, "P25, invalid call, srcId = %u, dstId = %u", srcId, dstId);
+                            LogWarning(LOG_NET, "P25, invalid call, srcId = %u (%s), dstId = %u (%s)", 
+                                srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str());
                         }
 
                         auto it = std::find_if(m_p25Status.begin(), m_p25Status.end(), [&](StatusMapPair x) { return x.second.dstId == dstId; });
@@ -512,7 +518,8 @@ protected:
                             status.dstId = dstId;
                             m_p25Status[dstId] = status;
 
-                            LogMessage(LOG_NET, "P25, Call Start, srcId = %u, dstId = %u", srcId, dstId);
+                            LogMessage(LOG_NET, "P25, Call Start, srcId = %u (%s), dstId = %u (%s)", 
+                                srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str());
                         }
                     }
                 }
@@ -521,7 +528,8 @@ protected:
                 case P25DEF::DUID::TDU:
                 case P25DEF::DUID::TDULC:
                     if (duid == P25DEF::DUID::TDU) {
-                        LogMessage(LOG_NET, P25_TDU_STR ", srcId = %u, dstId = %u", srcId, dstId);
+                        LogMessage(LOG_NET, P25_TDU_STR ", srcId = %u (%s), dstId = %u (%s)", 
+                                srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str());
                     }
                     else {
                         std::unique_ptr<lc::TDULC> tdulc = lc::tdulc::TDULCFactory::createTDULC(data.get());
@@ -529,7 +537,8 @@ protected:
                             LogWarning(LOG_NET, P25_TDULC_STR ", undecodable TDULC");
                         }
                         else {
-                            LogMessage(LOG_NET, P25_TDULC_STR ", srcId = %u, dstId = %u", srcId, dstId);
+                            LogMessage(LOG_NET, P25_TDULC_STR ", srcId = %u (%s), dstId = %u (%s)", 
+                                srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str());
                         }
                     }
                     break;
@@ -544,49 +553,55 @@ protected:
                             case P25DEF::TSBKO::IOSP_GRP_VCH:
                             case P25DEF::TSBKO::IOSP_UU_VCH:
                             {
-                                LogMessage(LOG_NET, P25_TSDU_STR ", %s, emerg = %u, encrypt = %u, prio = %u, chNo = %u, srcId = %u, dstId = %u",
-                                    tsbk->toString(true).c_str(), tsbk->getEmergency(), tsbk->getEncrypted(), tsbk->getPriority(), tsbk->getGrpVchNo(), srcId, dstId);
+                                LogMessage(LOG_NET, P25_TSDU_STR ", %s, emerg = %u, encrypt = %u, prio = %u, chNo = %u, srcId = %u (%s), dstId = %u (%s)",
+                                    tsbk->toString(true).c_str(), tsbk->getEmergency(), tsbk->getEncrypted(), tsbk->getPriority(), tsbk->getGrpVchNo(), 
+                                    srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str());
                             }
                             break;
                             case P25DEF::TSBKO::IOSP_UU_ANS:
                             {
                                 lc::tsbk::IOSP_UU_ANS* iosp = static_cast<lc::tsbk::IOSP_UU_ANS*>(tsbk.get());
                                 if (iosp->getResponse() > 0U) {
-                                    LogMessage(LOG_NET, P25_TSDU_STR ", %s, response = $%02X, srcId = %u, dstId = %u",
-                                        tsbk->toString(true).c_str(), iosp->getResponse(), srcId, dstId);
+                                    LogMessage(LOG_NET, P25_TSDU_STR ", %s, response = $%02X, srcId = %u (%s), dstId = %u (%s)",
+                                        tsbk->toString(true).c_str(), iosp->getResponse(),
+                                        srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str());
                                 }
                             }
                             break;
                             case P25DEF::TSBKO::IOSP_STS_UPDT:
                             {
                                 lc::tsbk::IOSP_STS_UPDT* iosp = static_cast<lc::tsbk::IOSP_STS_UPDT*>(tsbk.get());
-                                LogMessage(LOG_NET, P25_TSDU_STR ", %s, status = $%02X, srcId = %u",
-                                    tsbk->toString(true).c_str(), iosp->getStatus(), srcId);
+                                LogMessage(LOG_NET, P25_TSDU_STR ", %s, status = $%02X, srcId = %u (%s)",
+                                    tsbk->toString(true).c_str(), iosp->getStatus(), srcId, resolveRID(srcId).c_str());
                             }
                             break;
                             case P25DEF::TSBKO::IOSP_MSG_UPDT:
                             {
                                 lc::tsbk::IOSP_MSG_UPDT* iosp = static_cast<lc::tsbk::IOSP_MSG_UPDT*>(tsbk.get());
-                                LogMessage(LOG_NET, P25_TSDU_STR ", %s, message = $%02X, srcId = %u, dstId = %u",
-                                    tsbk->toString(true).c_str(), iosp->getMessage(), srcId, dstId);
+                                LogMessage(LOG_NET, P25_TSDU_STR ", %s, message = $%02X, srcId = %u (%s), dstId = %u (%s)",
+                                    tsbk->toString(true).c_str(), iosp->getMessage(), 
+                                    srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str());
                             }
                             break;
                             case P25DEF::TSBKO::IOSP_RAD_MON:
                             {
                                 lc::tsbk::IOSP_RAD_MON* iosp = static_cast<lc::tsbk::IOSP_RAD_MON*>(tsbk.get());
-                                LogMessage(LOG_NET, P25_TSDU_STR ", %s, srcId = %u, dstId = %u", tsbk->toString(true).c_str(), srcId, dstId);
+                                LogMessage(LOG_NET, P25_TSDU_STR ", %s, srcId = %u (%s), dstId = %u (%s)", tsbk->toString(true).c_str(), 
+                                    srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str());
                             }
                             break;
                             case P25DEF::TSBKO::IOSP_CALL_ALRT:
                             {
-                                LogMessage(LOG_NET, P25_TSDU_STR ", %s, srcId = %u, dstId = %u", tsbk->toString(true).c_str(), srcId, dstId);
+                                LogMessage(LOG_NET, P25_TSDU_STR ", %s, srcId = %u (%s), dstId = %u (%s)", tsbk->toString(true).c_str(), 
+                                    srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str());
                             }
                             break;
                             case P25DEF::TSBKO::IOSP_ACK_RSP:
                             {
                                 lc::tsbk::IOSP_ACK_RSP* iosp = static_cast<lc::tsbk::IOSP_ACK_RSP*>(tsbk.get());
-                                LogMessage(LOG_NET, P25_TSDU_STR ", %s, AIV = %u, serviceType = $%02X, srcId = %u, dstId = %u",
-                                    tsbk->toString(true).c_str(), iosp->getAIV(), iosp->getService(), dstId, srcId);
+                                LogMessage(LOG_NET, P25_TSDU_STR ", %s, AIV = %u, serviceType = $%02X, srcId = %u (%s), dstId = %u (%s)",
+                                    tsbk->toString(true).c_str(), iosp->getAIV(), iosp->getService(), 
+                                    srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str());
                             }
                             break;
                             case P25DEF::TSBKO::IOSP_EXT_FNCT:
@@ -601,31 +616,34 @@ protected:
                                 // non-emergency mode is a TSBKO::OSP_DENY_RSP
                                 if (!tsbk->getEmergency()) {
                                     lc::tsbk::OSP_DENY_RSP* osp = static_cast<lc::tsbk::OSP_DENY_RSP*>(tsbk.get());
-                                    LogMessage(LOG_NET, P25_TSDU_STR ", %s, AIV = %u, reason = $%02X, srcId = %u, dstId = %u",
-                                        osp->toString().c_str(), osp->getAIV(), osp->getResponse(), osp->getSrcId(), osp->getDstId());
+                                    LogMessage(LOG_NET, P25_TSDU_STR ", %s, AIV = %u, reason = $%02X, srcId = %u (%s), dstId = %u (%s)",
+                                        osp->toString().c_str(), osp->getAIV(), osp->getResponse(), 
+                                        osp->getSrcId(), resolveRID(osp->getSrcId()).c_str(), osp->getDstId(), resolveTGID(osp->getDstId()).c_str());
                                 } else {
-                                    LogMessage(LOG_NET, P25_TSDU_STR ", %s, srcId = %u, dstId = %u", tsbk->toString().c_str(), srcId, dstId);
+                                    LogMessage(LOG_NET, P25_TSDU_STR ", %s, srcId = %u (%s), dstId = %u (%s)", tsbk->toString().c_str(), 
+                                        srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str());
                                 }
                             }
                             break;
                             case P25DEF::TSBKO::IOSP_GRP_AFF:
                             {
                                 lc::tsbk::IOSP_GRP_AFF* iosp = static_cast<lc::tsbk::IOSP_GRP_AFF*>(tsbk.get());
-                                LogMessage(LOG_NET, P25_TSDU_STR ", %s, sysId = $%03X, srcId = %u, dstId = %u", tsbk->toString().c_str(),
-                                        iosp->getSysId(), srcId, dstId);
+                                LogMessage(LOG_NET, P25_TSDU_STR ", %s, sysId = $%03X, srcId = %u (%s), dstId = %u (%s)", tsbk->toString().c_str(),
+                                        iosp->getSysId(), srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str());
                             }
                             break;
                             case P25DEF::TSBKO::OSP_U_DEREG_ACK:
                             {
                                 lc::tsbk::OSP_U_DEREG_ACK* iosp = static_cast<lc::tsbk::OSP_U_DEREG_ACK*>(tsbk.get());
-                                LogMessage(LOG_NET, P25_TSDU_STR ", %s, srcId = %u",
-                                    tsbk->toString(true).c_str(), srcId);
+                                LogMessage(LOG_NET, P25_TSDU_STR ", %s, srcId = %u (%s)",
+                                    tsbk->toString(true).c_str(), srcId, resolveRID(srcId).c_str());
                             }
                             break;
                             case P25DEF::TSBKO::OSP_LOC_REG_RSP:
                             {
                                 lc::tsbk::OSP_LOC_REG_RSP* osp = static_cast<lc::tsbk::OSP_LOC_REG_RSP*>(tsbk.get());
-                                LogMessage(LOG_NET, P25_TSDU_STR ", %s, srcId = %u, dstId = %u", osp->toString().c_str(), srcId, dstId);
+                                LogMessage(LOG_NET, P25_TSDU_STR ", %s, srcId = %u (%s), dstId = %u (%s)", osp->toString().c_str(), 
+                                    srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str());
                             }
                             break;
                             case P25DEF::TSBKO::OSP_ADJ_STS_BCAST:
@@ -636,7 +654,8 @@ protected:
                             }
                             break;
                             default:
-                                LogMessage(LOG_NET, P25_TSDU_STR ", %s, srcId = %u, dstId = %u", tsbk->toString().c_str(), srcId, dstId);
+                                LogMessage(LOG_NET, P25_TSDU_STR ", %s, srcId = %u (%s), dstId = %u (%s)", tsbk->toString().c_str(), 
+                                    srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str());
                                 break;
                         }
                     }
@@ -672,7 +691,8 @@ protected:
                     // is this the end of the call stream?
                     if (messageType == NXDDEF::MessageType::RTCH_TX_REL || messageType == NXDDEF::MessageType::RTCH_TX_REL_EX) {
                         if (srcId == 0U && dstId == 0U) {
-                            LogWarning(LOG_NET, "NXDN, invalid TX_REL, srcId = %u, dstId = %u", srcId, dstId);
+                            LogWarning(LOG_NET, "NXDN, invalid TX_REL, srcId = %u (%s), dstId = %u (%s)", 
+                                srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str());
                         }
 
                         RxStatus status = m_nxdnStatus[dstId];
@@ -681,15 +701,16 @@ protected:
                         if (std::find_if(m_nxdnStatus.begin(), m_nxdnStatus.end(), [&](StatusMapPair x) { return x.second.dstId == dstId; }) != m_nxdnStatus.end()) {
                             m_nxdnStatus.erase(dstId);
 
-                            LogMessage(LOG_NET, "NXDN, Call End, srcId = %u, dstId = %u, duration = %u",
-                                srcId, dstId, duration / 1000);
+                            LogMessage(LOG_NET, "NXDN, Call End, srcId = %u (%s), dstId = %u (%s), duration = %u",
+                                srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str(), duration / 1000);
                         }
                     }
 
                     // is this a new call stream?
                     if ((messageType != NXDDEF::MessageType::RTCH_TX_REL && messageType != NXDDEF::MessageType::RTCH_TX_REL_EX)) {
                         if (srcId == 0U && dstId == 0U) {
-                            LogWarning(LOG_NET, "NXDN, invalid call, srcId = %u, dstId = %u", srcId, dstId);
+                            LogWarning(LOG_NET, "NXDN, invalid call, srcId = %u (%s), dstId = %u (%s)", 
+                                srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str());
                         }
 
                         auto it = std::find_if(m_nxdnStatus.begin(), m_nxdnStatus.end(), [&](StatusMapPair x) { return x.second.dstId == dstId; });
@@ -701,7 +722,8 @@ protected:
                             status.dstId = dstId;
                             m_nxdnStatus[dstId] = status;
 
-                            LogMessage(LOG_NET, "NXDN, Call Start, srcId = %u, dstId = %u", srcId, dstId);
+                            LogMessage(LOG_NET, "NXDN, Call Start, srcId = %u (%s), dstId = %u (%s)", 
+                                srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str());
                         }
                     }
                 }

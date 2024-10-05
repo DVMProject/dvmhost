@@ -30,4 +30,7 @@
 #undef __EXE_NAME__ 
 #define __EXE_NAME__ "sysview"
 
+#undef __NETVER__
+#define __NETVER__ "SYSVIEW_R" VERSION_MAJOR VERSION_REV VERSION_MINOR
+
 #endif // __DEFINES_H__

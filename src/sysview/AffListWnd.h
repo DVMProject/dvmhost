@@ -122,15 +122,19 @@ public:
                         std::ostringstream peerOss;
                         peerOss << std::setw(9) << std::setfill('0') << peerId;
 
+                        std::string srcAlias = resolveRID(srcId);
+
                         // pad TGs properly
                         std::ostringstream tgidOss;
                         tgidOss << std::setw(5) << std::setfill('0') << dstId;
 
+                        std::string dstAlias = resolveTGID(dstId);
+
                         // build list view entry
-                        const std::array<std::string, 3U> columns = {
+                        const std::array<std::string, 5U> columns = {
                             peerOss.str(),
-                            std::to_string(srcId),
-                            tgidOss.str()
+                            std::to_string(srcId), srcAlias,
+                            tgidOss.str(), dstAlias
                         };
 
                         const finalcut::FStringList line(columns.cbegin(), columns.cend());
@@ -187,21 +191,23 @@ private:
         // configure list view columns
         m_listView.addColumn("Peer ID", 10);
         m_listView.addColumn("RID", 10);
+        m_listView.addColumn("RID Alias", 15);
         m_listView.addColumn("TGID", 9);
+        m_listView.addColumn("TGID Alias", 15);
 
         // set right alignment for TGID
         m_listView.setColumnAlignment(1, finalcut::Align::Right);
         m_listView.setColumnAlignment(2, finalcut::Align::Right);
-        m_listView.setColumnAlignment(3, finalcut::Align::Right);
+        m_listView.setColumnAlignment(4, finalcut::Align::Right);
 
         // set type of sorting
         m_listView.setColumnSortType(1, finalcut::SortType::Name);
         m_listView.setColumnSortType(2, finalcut::SortType::Name);
-        m_listView.setColumnSortType(3, finalcut::SortType::Name);
+        m_listView.setColumnSortType(4, finalcut::SortType::Name);
 
         // sort by TGID
         m_listView.setColumnSort(1, finalcut::SortOrder::Ascending);
-        m_listView.setColumnSort(3, finalcut::SortOrder::Ascending);
+        m_listView.setColumnSort(4, finalcut::SortOrder::Ascending);
 
         setFocusWidget(&m_listView);
         redraw();

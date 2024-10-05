@@ -33,6 +33,9 @@
 #undef __EXE_NAME__ 
 #define __EXE_NAME__ "sysview"
 
+#undef __NETVER__
+#define __NETVER__ "SYSVIEW_R" VERSION_MAJOR VERSION_REV VERSION_MINOR
+
 // ---------------------------------------------------------------------------
 //  Externs
 // ---------------------------------------------------------------------------
@@ -65,6 +68,20 @@ extern lookups::IdenTableLookup* g_idenTable;
  * This is a variable argument function.
  */
 extern HOST_SW_API void fatal(const char* msg, ...);
+
+/**
+ * @brief Helper to resolve a TGID to a textual name.
+ * @param id Talkgroup ID.
+ * @return std::string Textual name for TGID.
+ */
+extern HOST_SW_API std::string resolveRID(uint32_t id);
+
+/**
+ * @brief Helper to resolve a TGID to a textual name.
+ * @param id Talkgroup ID.
+ * @return std::string Textual name for TGID.
+ */
+extern HOST_SW_API std::string resolveTGID(uint32_t id);
 
 /**
  * @brief Initializes peer network connectivity. 

@@ -67,6 +67,56 @@ void fatal(const char* msg, ...)
 }
 
 /**
+ * @brief Helper to resolve a TGID to a textual name.
+ * @param id Talkgroup ID.
+ * @return std::string Textual name for TGID.
+ */
+std::string resolveRID(uint32_t id)
+{
+    switch (id) {
+    case DMRDEF::WUID_REGI:
+        return std::string("DMR REG SVCS");
+    case DMRDEF::WUID_STUNI:
+        return std::string("DMR MS STUN");
+    case DMRDEF::WUID_AUTHI:
+        return std::string("DMR AUTH SVCS");
+    case DMRDEF::WUID_KILLI:
+        return std::string("DMR MS KILL");
+    case DMRDEF::WUID_ALLL:
+        return std::string("ALL CALL SW");
+
+    case P25DEF::WUID_REG:
+        return std::string("REG SVCS");
+    case P25DEF::WUID_FNE:
+        return std::string("SYS/FNE");
+    case P25DEF::WUID_ALL:
+        return std::string("ALL CALL");
+    }
+
+    auto entry = g_ridLookup->find(id);
+    if (!entry.radioDefault()) {
+        return entry.radioAlias();
+    }
+
+    return std::string("UNK");
+}
+
+/**
+ * @brief Helper to resolve a TGID to a textual name.
+ * @param id Talkgroup ID.
+ * @return std::string Textual name for TGID.
+ */
+std::string resolveTGID(uint32_t id)
+{
+    auto entry = g_tidLookup->find(id);
+    if (!entry.isInvalid()) {
+        return entry.name();
+    }
+
+    return std::string("UNK");
+}
+
+/**
  * @brief Initializes peer network connectivity. 
  * @returns bool 
  */
@@ -255,8 +305,8 @@ int main(int argc, char** argv)
     g_ridLookup->read();
 
     // try to load talkgroup IDs table
-    std::string tidLookupFile = g_conf["talkgroup_id"]["file"].as<std::string>();
-    uint32_t tidReloadTime = g_conf["talkgroup_id"]["time"].as<uint32_t>(0U);
+    std::string tidLookupFile = g_conf["talkgroup_rules"]["file"].as<std::string>();
+    uint32_t tidReloadTime = g_conf["talkgroup_rules"]["time"].as<uint32_t>(0U);
 
     LogInfo("Talkgroup Rule Lookups");
     LogInfo("    File: %s", tidLookupFile.length() > 0U ? tidLookupFile.c_str() : "None");
