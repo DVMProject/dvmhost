@@ -7,7 +7,7 @@
  *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
  *
  */
-#include "Defines.h"
+#include "sysview/Defines.h"
 #include "common/network/json/json.h"
 #include "common/p25/dfsi/DFSIDefines.h"
 #include "common/p25/dfsi/LC.h"
