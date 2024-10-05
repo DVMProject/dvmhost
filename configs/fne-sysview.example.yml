@@ -1,0 +1,61 @@
+#
+# Digital Voice Modem - FNE System View
+#
+
+#
+# Radio ID ACL Configuration
+#
+radio_id:
+    # Full path to the Radio ID ACL file.
+    file: rid_acl.dat
+    # Amount of time between updates of Radio ID ACL file. (minutes)
+    time: 2
+
+#
+# Talkgroup Rules Configuration
+#
+talkgroup_rules:
+    # Full path to the talkgroup rules file.
+    file: talkgroup_rules.yml
+    # Amount of time between updates of talkgroup rules file. (minutes)
+    time: 30
+
+#
+# Channel Identity Table Configuration
+#
+iden_table:
+    # Full path to the identity table file.
+    file: iden_table.dat
+    # Amount of time between updates of identity table file. (minutes)
+    time: 30
+
+#
+# FNE Configuration
+#
+fne:
+    # Hostname/IP address of the FNE master to connect to.
+    masterAddress: 127.0.0.1
+    # Port number of the FNE master to connect to.
+    masterPort: 32090
+    # FNE access password.
+    password: RPT1234
+    # Textual identity of this peer.
+    identity: EXPEER
+    # Network Peer ID
+    peerId: 9000990
+  
+    # Flag indicating whether or not peer endpoint networking is encrypted.
+    encrypted: false
+    # AES-256 32-byte Preshared Key
+    #   (This field *must* be 32 hex bytes in length or 64 characters
+    #    0 - 9, A - F.)
+    presharedKey: "000102030405060708090A0B0C0D0E0F000102030405060708090A0B0C0D0E0F"
+
+    # IP address of the FNE REST API.
+    restAddress: 127.0.0.1
+    # Port number for the FNE REST API.
+    restPort: 9990
+    # Flag indicating whether or not REST API is operating in SSL mode.
+    restSsl: false
+    # REST API authentication password.
+    restPassword: "PASSWORD"

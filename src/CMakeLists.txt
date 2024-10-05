@@ -90,6 +90,16 @@ if (ENABLE_TUI_SUPPORT AND (NOT DISABLE_TUI_APPS))
 endif (ENABLE_TUI_SUPPORT AND (NOT DISABLE_TUI_APPS))
 
 #
+## sysview
+#
+if (ENABLE_TUI_SUPPORT AND (NOT DISABLE_TUI_APPS))
+    include(src/sysview/CMakeLists.txt)
+    add_executable(sysview ${common_INCLUDE} ${sysView_SRC})
+    target_link_libraries(sysview PRIVATE common ${OPENSSL_LIBRARIES} asio::asio finalcut Threads::Threads)
+    target_include_directories(sysview PRIVATE ${OPENSSL_INCLUDE_DIR} src src/host src/sysview)
+endif (ENABLE_TUI_SUPPORT AND (NOT DISABLE_TUI_APPS))
+
+#
 ## tged
 #
 if (ENABLE_TUI_SUPPORT AND (NOT DISABLE_TUI_APPS))

@@ -106,6 +106,7 @@ namespace network
                  */
                 void send(HTTPPayload request)
                 {
+                    m_sizeToTransfer = m_bytesTransferred = 0U;
                     request.attachHostHeader(m_socket.remote_endpoint());
                     write(request);
                 }
@@ -122,24 +123,61 @@ namespace network
 
                             try
                             {
-                                std::tie(result, content) = m_lexer.parse(m_request, m_buffer.data(), m_buffer.data() + bytes_transferred);
+                                if (m_sizeToTransfer > 0U && (m_bytesTransferred + bytes_transferred) < m_sizeToTransfer) {
+                                    ::memcpy(m_fullBuffer.data() + m_bytesTransferred, m_buffer.data(), bytes_transferred);
+                                    m_bytesTransferred += bytes_transferred;
 
-                                std::string contentLength = m_request.headers.find("Content-Length");
-                                if (contentLength != "") {
-                                    size_t length = (size_t)::strtoul(contentLength.c_str(), NULL, 10);
-                                    m_request.content = std::string(content, length);
-                                }
-
-                                m_request.headers.add("RemoteHost", m_socket.remote_endpoint().address().to_string());
-
-                                if (result == HTTPLexer::GOOD) {
-                                    m_requestHandler.handleRequest(m_request, m_reply);
-                                }
-                                else if (result == HTTPLexer::BAD) {
-                                    return;
+                                    read();
                                 }
                                 else {
-                                    read();
+                                    if (m_sizeToTransfer > 0U) {
+                                        // final copy
+                                        ::memcpy(m_fullBuffer.data() + m_bytesTransferred, m_buffer.data(), bytes_transferred);
+                                        m_bytesTransferred += bytes_transferred;
+
+                                        m_sizeToTransfer = 0U;
+                                        bytes_transferred = m_bytesTransferred;
+
+                                        // reset lexer and re-parse the full content
+                                        m_lexer.reset();
+                                        std::tie(result, content) = m_lexer.parse(m_request, m_fullBuffer.data(), m_fullBuffer.data() + bytes_transferred);
+                                    } else {
+                                        ::memcpy(m_fullBuffer.data() + m_bytesTransferred, m_buffer.data(), bytes_transferred);
+                                        m_bytesTransferred += bytes_transferred;
+
+                                        std::tie(result, content) = m_lexer.parse(m_request, m_buffer.data(), m_buffer.data() + bytes_transferred);
+                                    }
+
+                                    // determine content length
+                                    std::string contentLength = m_request.headers.find("Content-Length");
+                                    if (contentLength != "") {
+                                        size_t length = (size_t)::strtoul(contentLength.c_str(), NULL, 10);
+
+                                        // setup a full read if necessary
+                                        if (length > bytes_transferred && m_sizeToTransfer == 0U) {
+                                            m_sizeToTransfer = length;
+                                        }
+
+                                        if (m_sizeToTransfer > 0U) {
+                                            result = HTTPLexer::CONTINUE;
+                                        } else {
+                                            m_request.content = std::string(content, length);
+                                        }
+                                    }
+
+                                    m_request.headers.add("RemoteHost", m_socket.remote_endpoint().address().to_string());
+
+                                    if (result == HTTPLexer::GOOD) {
+                                        m_sizeToTransfer = m_bytesTransferred = 0U;
+                                        m_requestHandler.handleRequest(m_request, m_reply);
+                                    }
+                                    else if (result == HTTPLexer::BAD) {
+                                        m_sizeToTransfer = m_bytesTransferred = 0U;
+                                        return;
+                                    }
+                                    else {
+                                        read();
+                                    }
                                 }
                             }
                             catch(const std::exception& e) { ::LogError(LOG_REST, "ClientConnection::read(), %s", ec.message().c_str()); }
@@ -187,7 +225,11 @@ namespace network
 
                 RequestHandlerType& m_requestHandler;
 
-                std::array<char, 8192> m_buffer;
+                std::size_t m_sizeToTransfer;
+                std::size_t m_bytesTransferred;
+                std::array<char, 65535> m_fullBuffer;
+
+                std::array<char, 1024> m_buffer;
 
                 HTTPPayload m_request;
                 HTTPLexer m_lexer;

@@ -332,7 +332,10 @@ int RESTClient::send(const std::string& address, uint32_t port, const std::strin
         }
         else {
             if (m_debug) {
-                ::LogDebug(LOG_REST, "REST Response: %s", m_response.content.c_str());
+                if (m_response.content.size() < 4095) {
+                    ::LogDebug(LOG_REST, "REST Response: %s", m_response.content.c_str());
+                }
+                // bryanb: this will cause REST responses >4095 characters to simply not print...
             }
         }
 
