@@ -28,6 +28,7 @@
 #include "common/nxdn/lc/RTCH.h"
 #include "common/Log.h"
 #include "common/StopWatch.h"
+#include "p25/tsbk/OSP_GRP_AFF.h"
 #include "network/PeerNetwork.h"
 #include "SysViewMain.h"
 #include "SysViewMainWnd.h"
@@ -627,9 +628,9 @@ protected:
                             break;
                             case P25DEF::TSBKO::IOSP_GRP_AFF:
                             {
-                                lc::tsbk::IOSP_GRP_AFF* iosp = static_cast<lc::tsbk::IOSP_GRP_AFF*>(tsbk.get());
-                                LogMessage(LOG_NET, P25_TSDU_STR ", %s, sysId = $%03X, anncId = %u (%s), srcId = %u (%s), dstId = %u (%s), response = $%02X", tsbk->toString().c_str(),
-                                        iosp->getSysId(), iosp->getAnnounceGroup(), resolveTGID(iosp->getAnnounceGroup()).c_str(),
+                                lc::tsbk::OSP_GRP_AFF* iosp = static_cast<lc::tsbk::OSP_GRP_AFF*>(tsbk.get());
+                                LogMessage(LOG_NET, P25_TSDU_STR ", %s, anncId = %u (%s), srcId = %u (%s), dstId = %u (%s), response = $%02X", tsbk->toString().c_str(),
+                                        iosp->getAnnounceGroup(), resolveTGID(iosp->getAnnounceGroup()).c_str(),
                                         srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str(),
                                         iosp->getResponse());
                             }

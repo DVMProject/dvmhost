@@ -15,6 +15,8 @@ file(GLOB sysView_SRC
     "src/remote/RESTClient.cpp"
     "src/remote/RESTClient.h"
     
+    "src/sysview/p25/tsbk/*.h"
+    "src/sysview/p25/tsbk/*.cpp"
     "src/sysview/network/*.h"
     "src/sysview/network/*.cpp"
     "src/sysview/*.h"
