@@ -252,7 +252,7 @@ namespace network
                 std::size_t m_bytesTransferred;
                 std::array<char, 65535> m_fullBuffer;
 
-                std::array<char, 1024> m_buffer;
+                std::array<char, 4096> m_buffer;
 
                 HTTPPayload m_request;
                 HTTPLexer m_lexer;

@@ -147,6 +147,14 @@ public:
                         voiceChannelPeers.push_back(vcPeerId);
                     }
 
+                    json::object peerConfig = peerObj["config"].get<json::object>();
+                    std::string identity = peerConfig["identity"].get<std::string>();
+                    std::string software = peerConfig["software"].get<std::string>();
+
+                    json::object channel = peerConfig["channel"].get<json::object>();
+                    uint32_t chNo = (uint32_t)channel["channelNo"].get<int>();
+                    uint8_t chId = channel["channelId"].get<uint8_t>();
+
                     // pad peer IDs properly
                     std::ostringstream peerOss;
                     peerOss << std::setw(9) << std::setfill('0') << peerId;
@@ -156,14 +164,16 @@ public:
                     ccPeerOss << std::setw(9) << std::setfill('0') << ccPeerId;
 
                     // build list view entry
-                    const std::array<std::string, 8U> columns = {
+                    const std::array<std::string, 12U> columns = {
                         peerOss.str(),
+                        identity, software,
                         peerAddress, std::to_string(port),
                         ccPeerOss.str(),
                         (voiceChannelPeers.size() > 0U) ? "X" : "",
                         (connected) ? "X" : "",
                         strConnState,
-                        std::to_string(pingsReceived)
+                        std::to_string(pingsReceived),
+                        std::to_string(chId), std::to_string(chNo)
                     };
 
                     const finalcut::FStringList line(columns.cbegin(), columns.cend());
@@ -218,6 +228,8 @@ private:
 
         // configure list view columns
         m_listView.addColumn("Peer ID", 10);
+        m_listView.addColumn("Identity", 10);
+        m_listView.addColumn("Software", 15);
         m_listView.addColumn("IP Address", 15);
         m_listView.addColumn("Port", 8);
         m_listView.addColumn("CC Peer ID", 10);
@@ -225,6 +237,8 @@ private:
         m_listView.addColumn("Connected", 5);
         m_listView.addColumn("State", 15);
         m_listView.addColumn("Pings Received", 8);
+        m_listView.addColumn("Ch. ID", 8);
+        m_listView.addColumn("Ch. No", 8);
 
         // set right alignment for TGID
         m_listView.setColumnAlignment(1, finalcut::Align::Right);

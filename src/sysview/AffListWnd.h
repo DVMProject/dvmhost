@@ -28,7 +28,7 @@ using namespace finalcut;
 //  Constants
 // ---------------------------------------------------------------------------
 
-#define AFF_LIST_WIDTH 74
+#define AFF_LIST_WIDTH 64
 #define AFF_LIST_HEIGHT 15
 
 // ---------------------------------------------------------------------------
