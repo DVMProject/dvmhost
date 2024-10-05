@@ -628,8 +628,10 @@ protected:
                             case P25DEF::TSBKO::IOSP_GRP_AFF:
                             {
                                 lc::tsbk::IOSP_GRP_AFF* iosp = static_cast<lc::tsbk::IOSP_GRP_AFF*>(tsbk.get());
-                                LogMessage(LOG_NET, P25_TSDU_STR ", %s, sysId = $%03X, srcId = %u (%s), dstId = %u (%s)", tsbk->toString().c_str(),
-                                        iosp->getSysId(), srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str());
+                                LogMessage(LOG_NET, P25_TSDU_STR ", %s, sysId = $%03X, anncId = %u (%s), srcId = %u (%s), dstId = %u (%s), response = $%02X", tsbk->toString().c_str(),
+                                        iosp->getSysId(), iosp->getAnnounceGroup(), resolveTGID(iosp->getAnnounceGroup()).c_str(),
+                                        srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str(),
+                                        iosp->getResponse());
                             }
                             break;
                             case P25DEF::TSBKO::OSP_U_DEREG_ACK:
