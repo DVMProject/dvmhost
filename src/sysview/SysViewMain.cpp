@@ -136,6 +136,15 @@ void closePeerNetwork()
         g_app->closePeerNetwork();
 }
 
+/**
+ * @brief 
+ */
+network::PeerNetwork* getNetwork()
+{
+    if (g_app != nullptr)
+        return g_app->network;
+}
+
 /* Helper to pring usage the command line arguments. (And optionally an error.) */
 
 void usage(const char* message, const char* arg)

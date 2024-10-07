@@ -29,6 +29,12 @@ using namespace finalcut;
 
 #include "LogDisplayWnd.h"
 
+#include "PageSubscriberWnd.h"
+#include "InhibitSubscriberWnd.h"
+#include "UninhibitSubscriberWnd.h"
+#include "RadioCheckSubscriberWnd.h"
+#include "DynRegroupSubscriberWnd.h"
+
 #include <vector>
 
 // ---------------------------------------------------------------------------
@@ -61,6 +67,52 @@ public:
         m_quitItem.addCallback("clicked", getFApplication(), &FApplication::cb_exitApp, this);
         m_keyF3.addCallback("activate", getFApplication(), &FApplication::cb_exitApp, this);
 
+        // command menu
+        m_pageSU.addCallback("clicked", this, [&]() {
+            PageSubscriberWnd wnd{this};
+            wnd.show();
+        });
+        m_keyF5.addCallback("activate", this, [&]() {
+            PageSubscriberWnd wnd{this};
+            wnd.show();
+        });
+        m_radioCheckSU.addCallback("clicked", this, [&]() {
+            RadioCheckSubscriberWnd wnd{this};
+            wnd.show();
+        });
+        m_cmdMenuSeparator1.setSeparator();
+        m_inhibitSU.addCallback("clicked", this, [&]() {
+            InhibitSubscriberWnd wnd{this};
+            wnd.show();
+        });
+        m_keyF7.addCallback("activate", this, [&]() {
+            InhibitSubscriberWnd wnd{this};
+            wnd.show();
+        });
+        m_uninhibitSU.addCallback("clicked", this, [&]() {
+            UninhibitSubscriberWnd wnd{this};
+            wnd.show();
+        });
+        m_keyF8.addCallback("activate", this, [&]() {
+            UninhibitSubscriberWnd wnd{this};
+            wnd.show();
+        });
+        m_cmdMenuSeparator2.setSeparator();
+        m_dynRegrp.addCallback("clicked", this, [&]() {
+            DynRegroupSubscriberWnd wnd{this};
+            wnd.show();
+        });
+        m_dynRegrpLck.addCallback("clicked", this, [&]() {
+            DynRegroupSubscriberWnd wnd{this};
+            wnd.lock = true;
+            wnd.show();
+        });
+        m_dynRegrpUnlock.addCallback("clicked", this, [&]() {
+            DynRegroupSubscriberWnd wnd{this};
+            wnd.unlock = true;
+            wnd.show();
+        });
+
         // help menu
         m_aboutItem.addCallback("clicked", this, [&]() {
             const FString line(2, UniChar::BoxDrawingsHorizontal);
@@ -89,11 +141,25 @@ private:
     FMenu m_fileMenu{"&File", &m_menuBar};
     FMenuItem m_quitItem{"&Quit", &m_fileMenu};
 
+    FMenu m_cmdMenu{"&Commands", &m_menuBar};
+    FMenuItem m_pageSU{"&Page Subscriber", &m_cmdMenu};
+    FMenuItem m_radioCheckSU{"Radio &Check Subscriber", &m_cmdMenu};
+    FMenuItem m_cmdMenuSeparator1{&m_cmdMenu};
+    FMenuItem m_inhibitSU{"&Inhibit Subscriber", &m_cmdMenu};
+    FMenuItem m_uninhibitSU{"&Uninhibit Subscriber", &m_cmdMenu};
+    FMenuItem m_cmdMenuSeparator2{&m_cmdMenu};
+    FMenuItem m_dynRegrp{"&Dynamic Regroup", &m_cmdMenu};
+    FMenuItem m_dynRegrpLck{"Dynamic Regroup - Lock", &m_cmdMenu};
+    FMenuItem m_dynRegrpUnlock{"Dynamic Regroup - Unlock", &m_cmdMenu};
+
     FMenu m_helpMenu{"&Help", &m_menuBar};
     FMenuItem m_aboutItem{"&About", &m_helpMenu};
 
     FStatusBar m_statusBar{this};
     FStatusKey m_keyF3{FKey::F3, "Quit", &m_statusBar};
+    FStatusKey m_keyF5{FKey::F5, "Page Subscriber", &m_statusBar};
+    FStatusKey m_keyF7{FKey::F7, "Inhibit Subscriber", &m_statusBar};
+    FStatusKey m_keyF8{FKey::F8, "Uninhibit Subscriber", &m_statusBar};
 
     /*
     ** Event Handlers

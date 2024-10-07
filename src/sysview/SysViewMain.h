@@ -21,6 +21,7 @@
 #include "common/lookups/TalkgroupRulesLookup.h"
 #include "common/lookups/IdenTableLookup.h"
 #include "common/yaml/Yaml.h"
+#include "network/PeerNetwork.h"
 
 #include <string>
 
@@ -93,5 +94,11 @@ extern HOST_SW_API bool createPeerNetwork();
  * @brief Shuts down peer networking.
  */
 extern HOST_SW_API void closePeerNetwork();
+
+/**
+ * @brief 
+ * @returns PeerNetwork* 
+ */
+extern HOST_SW_API network::PeerNetwork* getNetwork();
 
 #endif // __SYS_VIEW_MAIN_H__
