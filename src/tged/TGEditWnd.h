@@ -292,7 +292,7 @@ private:
             auto config = m_rule.config();
             config.inclusion(wnd.peerList);
             m_rule.config(config);
-            LogMessage(LOG_HOST, "Updated %s (%u) peer inclusion list", m_rule.name().c_str(), m_rule.source().tgId());
+            LogMessage(LOG_HOST, "Updated %s (%u) peer inclusion list, %u inclusions.", m_rule.name().c_str(), m_rule.source().tgId(), m_rule.config().inclusionSize());
         });
 
         m_exclusionList.setGeometry(FPoint(20, 10), FSize(16, 1));
@@ -303,7 +303,7 @@ private:
             auto config = m_rule.config();
             config.exclusion(wnd.peerList);
             m_rule.config(config);
-            LogMessage(LOG_HOST, "Updated %s (%u) peer exclusion list", m_rule.name().c_str(), m_rule.source().tgId());
+            LogMessage(LOG_HOST, "Updated %s (%u) peer exclusion list, %u exclusions.", m_rule.name().c_str(), m_rule.source().tgId(), m_rule.config().exclusionSize());
         });
 
         m_alwaysList.setGeometry(FPoint(2, 12), FSize(16, 1));
@@ -314,7 +314,7 @@ private:
             auto config = m_rule.config();
             config.alwaysSend(wnd.peerList);
             m_rule.config(config);
-            LogMessage(LOG_HOST, "Updated %s (%u) peer always receiving list", m_rule.name().c_str(), m_rule.source().tgId());
+            LogMessage(LOG_HOST, "Updated %s (%u) peer always receiving list, %u always.", m_rule.name().c_str(), m_rule.source().tgId(), m_rule.config().alwaysSendSize());
         });
 
         m_preferredList.setGeometry(FPoint(20, 12), FSize(16, 1));
@@ -325,7 +325,7 @@ private:
             auto config = m_rule.config();
             config.preferred(wnd.peerList);
             m_rule.config(config);
-            LogMessage(LOG_HOST, "Updated %s (%u) peer preference list", m_rule.name().c_str(), m_rule.source().tgId());
+            LogMessage(LOG_HOST, "Updated %s (%u) peer preference list, %u preferred.", m_rule.name().c_str(), m_rule.source().tgId(), m_rule.config().preferredSize());
         });
 
         m_rewriteList.setGeometry(FPoint(2, 14), FSize(16, 1));
@@ -446,7 +446,7 @@ private:
                 auto it = std::find_if(groupVoice.begin(), groupVoice.end(),
                     [&](lookups::TalkgroupRuleGroupVoice x)
                     {
-                        return x.source().tgId() == m_origTgId && x.source().tgSlot() == m_origTgSlot;
+                        return x.source().tgId() == m_rule.source().tgId() && x.source().tgSlot() == m_rule.source().tgSlot();
                     });
                 if (it != groupVoice.end()) {
                     LogError(LOG_HOST, "Not saving duplicate talkgroup, TG %s (%u), talkgroups must be unique.", m_rule.name().c_str(), m_rule.source().tgId());
