@@ -255,16 +255,16 @@ private:
 
         if (!m_tx) {
             if (m_failed) {
-                setColor(wc->titlebar_active_fg, FColor::LightRed);
+                setColor(FColor::Black, FColor::LightRed);
             }
             else if (m_control) {
-                setColor(wc->titlebar_active_fg, FColor::Purple1);
+                setColor(FColor::LightGray, FColor::Purple1);
             }
             else {
-                setColor(wc->titlebar_active_fg, FColor::White);
+                setColor(FColor::Black, FColor::White);
             }
         } else {
-            setColor(wc->titlebar_active_fg, FColor::LightGreen);
+            setColor(FColor::Black, FColor::LightGreen);
         }
 
         const auto width = getWidth();
@@ -310,19 +310,22 @@ private:
 
         m_modeStr.setGeometry(FPoint(24, 3), FSize(4, 1));
         m_modeStr.setAlignment(Align::Right);
+        m_modeStr.setForegroundColor(FColor::DarkBlue);                 // why?
         m_modeStr.setBackgroundColor(FColor::LightGray);                // why?
-        m_modeStr.setEmphasis();
 
         m_peerIdStr.setGeometry(FPoint(19, 4), FSize(9, 1));
+        m_peerIdStr.setForegroundColor(FColor::DarkBlue);               // why?
         m_peerIdStr.setBackgroundColor(FColor::LightGray);              // why?
         m_peerIdStr.setAlignment(Align::Right);
 
         // channel number
         {
             m_channelNoLabel.setGeometry(FPoint(2, 3), FSize(10, 1));
+            m_channelNoLabel.setForegroundColor(FColor::Black);         // why?
             m_channelNoLabel.setBackgroundColor(FColor::LightGray);     // why?
 
             m_chanNo.setGeometry(FPoint(11, 3), FSize(8, 1));
+            m_chanNo.setForegroundColor(FColor::Black);                 // why?
             m_chanNo.setBackgroundColor(FColor::LightGray);             // why?
             m_chanNo.setText("");
         }
@@ -330,14 +333,18 @@ private:
         // channel frequency
         {
             m_txFreqLabel.setGeometry(FPoint(2, 4), FSize(4, 1));
+            m_txFreqLabel.setForegroundColor(FColor::Black);            // why?
             m_txFreqLabel.setBackgroundColor(FColor::LightGray);        // why?
             m_txFreq.setGeometry(FPoint(6, 4), FSize(8, 1));
+            m_txFreq.setForegroundColor(FColor::Black);                 // why?
             m_txFreq.setBackgroundColor(FColor::LightGray);             // why?
             m_txFreq.setText("");
 
             m_rxFreqLabel.setGeometry(FPoint(2, 5), FSize(4, 1));
+            m_rxFreqLabel.setForegroundColor(FColor::Black);            // why?
             m_rxFreqLabel.setBackgroundColor(FColor::LightGray);        // why?
             m_rxFreq.setGeometry(FPoint(6, 5), FSize(8, 1));
+            m_rxFreq.setForegroundColor(FColor::Black);                 // why?
             m_rxFreq.setBackgroundColor(FColor::LightGray);             // why?
             m_rxFreq.setText("");
         }
@@ -345,9 +352,11 @@ private:
         // last TG
         {
             m_lastDstLabel.setGeometry(FPoint(2, 6), FSize(11, 1));
+            m_lastDstLabel.setForegroundColor(FColor::Black);           // why?
             m_lastDstLabel.setBackgroundColor(FColor::LightGray);       // why?
 
             m_lastDst.setGeometry(FPoint(13, 6), FSize(8, 1));
+            m_lastDst.setForegroundColor(FColor::Black);                // why?
             m_lastDst.setBackgroundColor(FColor::LightGray);            // why?
             m_lastDst.setText("None");
         }
@@ -355,9 +364,11 @@ private:
         // last source
         {
             m_lastSrcLabel.setGeometry(FPoint(2, 7), FSize(11, 1));
+            m_lastSrcLabel.setForegroundColor(FColor::Black);           // why?
             m_lastSrcLabel.setBackgroundColor(FColor::LightGray);       // why?
 
             m_lastSrc.setGeometry(FPoint(13, 7), FSize(8, 1));
+            m_lastSrc.setForegroundColor(FColor::Black);                // why?
             m_lastSrc.setBackgroundColor(FColor::LightGray);            // why?
             m_lastSrc.setText("None");
         }
