@@ -208,11 +208,11 @@ private:
         // channel frequency
         {
             m_txFreqLabel.setGeometry(FPoint(2, 2), FSize(4, 1));
-            m_txFreq.setGeometry(FPoint(6, 2), FSize(8, 1));
+            m_txFreq.setGeometry(FPoint(6, 2), FSize(9, 1));
             m_txFreq.setText("");
 
             m_rxFreqLabel.setGeometry(FPoint(2, 3), FSize(4, 1));
-            m_rxFreq.setGeometry(FPoint(6, 3), FSize(8, 1));
+            m_rxFreq.setGeometry(FPoint(6, 3), FSize(9, 1));
             m_rxFreq.setText("");
         }
 
@@ -256,12 +256,12 @@ private:
         uint32_t txFrequency = (uint32_t)((entry.baseFrequency() + ((calcSpace * 125) * m_channelNo)));
 
         std::stringstream ss;
-        ss << std::fixed << std::setprecision(4) << (float)(txFrequency / 1000000.0f);
+        ss << std::fixed << std::setprecision(5) << (float)(txFrequency / 1000000.0f);
 
         m_txFreq.setText(ss.str());
 
         ss.str(std::string());
-        ss << std::fixed << std::setprecision(4) << (float)(rxFrequency / 1000000.0f);
+        ss << std::fixed << std::setprecision(5) << (float)(rxFrequency / 1000000.0f);
 
         m_rxFreq.setText(ss.str());
 

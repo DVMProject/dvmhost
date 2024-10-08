@@ -85,12 +85,12 @@ public:
         uint32_t txFrequency = (uint32_t)((entry.baseFrequency() + ((calcSpace * 125) * channelNo)));
 
         std::stringstream ss;
-        ss << std::fixed << std::setprecision(4) << (float)(txFrequency / 1000000.0f);
+        ss << std::fixed << std::setprecision(5) << (float)(txFrequency / 1000000.0f);
 
         m_txFreq.setText(ss.str());
 
         ss.str(std::string());
-        ss << std::fixed << std::setprecision(4) << (float)(rxFrequency / 1000000.0f);
+        ss << std::fixed << std::setprecision(5) << (float)(rxFrequency / 1000000.0f);
 
         m_rxFreq.setText(ss.str());
 
@@ -335,7 +335,7 @@ private:
             m_txFreqLabel.setGeometry(FPoint(2, 4), FSize(4, 1));
             m_txFreqLabel.setForegroundColor(FColor::Black);            // why?
             m_txFreqLabel.setBackgroundColor(FColor::LightGray);        // why?
-            m_txFreq.setGeometry(FPoint(6, 4), FSize(8, 1));
+            m_txFreq.setGeometry(FPoint(6, 4), FSize(9, 1));
             m_txFreq.setForegroundColor(FColor::Black);                 // why?
             m_txFreq.setBackgroundColor(FColor::LightGray);             // why?
             m_txFreq.setText("");
@@ -343,7 +343,7 @@ private:
             m_rxFreqLabel.setGeometry(FPoint(2, 5), FSize(4, 1));
             m_rxFreqLabel.setForegroundColor(FColor::Black);            // why?
             m_rxFreqLabel.setBackgroundColor(FColor::LightGray);        // why?
-            m_rxFreq.setGeometry(FPoint(6, 5), FSize(8, 1));
+            m_rxFreq.setGeometry(FPoint(6, 5), FSize(9, 1));
             m_rxFreq.setForegroundColor(FColor::Black);                 // why?
             m_rxFreq.setBackgroundColor(FColor::LightGray);             // why?
             m_rxFreq.setText("");
