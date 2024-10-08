@@ -110,11 +110,19 @@ public:
             break;
         }
 
-        m_peerIdStr.setText(__INT_STR(peerId));
+        // pad peer IDs properly
+        std::ostringstream peerOss;
+        peerOss << std::setw(9) << std::setfill('0') << peerId;
+        m_peerIdStr.setText(peerOss.str());
 
         if (peerStatus["lastDstId"].is<uint32_t>()) {
             uint32_t lastDstId = peerStatus["lastDstId"].get<uint32_t>();
-            m_lastDst.setText(__INT_STR(lastDstId));
+
+            // pad TGs properly
+            std::ostringstream tgidOss;
+            tgidOss << std::setw(5) << std::setfill('0') << lastDstId;
+
+            m_lastDst.setText(tgidOss.str());
         }
 
         if (peerStatus["lastSrcId"].is<uint32_t>()) {
@@ -245,7 +253,19 @@ private:
 
         const auto& wc = getColorTheme();
 
-        setColor(wc->titlebar_active_fg, wc->titlebar_active_bg);
+        if (!m_tx) {
+            if (m_failed) {
+                setColor(wc->titlebar_active_fg, FColor::LightRed);
+            }
+            else if (m_control) {
+                setColor(wc->titlebar_active_fg, FColor::Purple1);
+            }
+            else {
+                setColor(wc->titlebar_active_fg, FColor::White);
+            }
+        } else {
+            setColor(wc->titlebar_active_fg, FColor::LightGreen);
+        }
 
         const auto width = getWidth();
         auto textWidth = getColumnWidth(tbText);
@@ -283,45 +303,62 @@ private:
      */
     void initControls()
     {
+        // My hope is that this code is so awful I'm never allowed to write UI code again.
+        // For whatever reason FinalCut refuses to properly set the background color of the controls
+        // in this widget...so we're forcing them to LightGray, this will be a problem if the overall palette
+        // changes in the future.
+
         m_modeStr.setGeometry(FPoint(24, 3), FSize(4, 1));
         m_modeStr.setAlignment(Align::Right);
+        m_modeStr.setBackgroundColor(FColor::LightGray);                // why?
         m_modeStr.setEmphasis();
 
         m_peerIdStr.setGeometry(FPoint(19, 4), FSize(9, 1));
+        m_peerIdStr.setBackgroundColor(FColor::LightGray);              // why?
         m_peerIdStr.setAlignment(Align::Right);
 
         // channel number
         {
             m_channelNoLabel.setGeometry(FPoint(2, 3), FSize(10, 1));
+            m_channelNoLabel.setBackgroundColor(FColor::LightGray);     // why?
 
             m_chanNo.setGeometry(FPoint(11, 3), FSize(8, 1));
+            m_chanNo.setBackgroundColor(FColor::LightGray);             // why?
             m_chanNo.setText("");
         }
 
         // channel frequency
         {
             m_txFreqLabel.setGeometry(FPoint(2, 4), FSize(4, 1));
+            m_txFreqLabel.setBackgroundColor(FColor::LightGray);        // why?
             m_txFreq.setGeometry(FPoint(6, 4), FSize(8, 1));
+            m_txFreq.setBackgroundColor(FColor::LightGray);             // why?
             m_txFreq.setText("");
 
             m_rxFreqLabel.setGeometry(FPoint(2, 5), FSize(4, 1));
+            m_rxFreqLabel.setBackgroundColor(FColor::LightGray);        // why?
             m_rxFreq.setGeometry(FPoint(6, 5), FSize(8, 1));
+            m_rxFreq.setBackgroundColor(FColor::LightGray);             // why?
             m_rxFreq.setText("");
         }
 
         // last TG
         {
             m_lastDstLabel.setGeometry(FPoint(2, 6), FSize(11, 1));
+            m_lastDstLabel.setBackgroundColor(FColor::LightGray);       // why?
 
             m_lastDst.setGeometry(FPoint(13, 6), FSize(8, 1));
+            m_lastDst.setBackgroundColor(FColor::LightGray);            // why?
             m_lastDst.setText("None");
         }
 
         // last source
         {
             m_lastSrcLabel.setGeometry(FPoint(2, 7), FSize(11, 1));
+            m_lastSrcLabel.setBackgroundColor(FColor::LightGray);       // why?
 
             m_lastSrc.setGeometry(FPoint(13, 7), FSize(8, 1));
+            m_lastSrc.setBackgroundColor(FColor::LightGray);            // why?
             m_lastSrc.setText("None");
         }
     }
@@ -351,6 +388,7 @@ public:
      */
     void update()
     {
+        const auto& rootWidget = getRootWidget();
         for (auto entry : getNetwork()->peerStatus) {
             auto it = std::find_if(m_nodes.begin(), m_nodes.end(), [&](NodeStatusWidget* wdgt) {
                 if (wdgt->peerId == entry.first && wdgt->uniqueId == (int32_t)entry.first)
@@ -520,6 +558,7 @@ public:
             }
         }
 
+        rootWidget->redraw();
         redraw();
     }
 
@@ -605,6 +644,9 @@ private:
         wdgt->redraw();
         
         m_nodes.push_back(wdgt);
+
+        rootWidget->redraw();
+        redraw();
     }
 
     /**
