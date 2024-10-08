@@ -29,6 +29,8 @@ using namespace finalcut;
 
 #include "LogDisplayWnd.h"
 
+#include "NodeStatusWnd.h"
+
 #include "PageSubscriberWnd.h"
 #include "InhibitSubscriberWnd.h"
 #include "UninhibitSubscriberWnd.h"
@@ -43,6 +45,8 @@ using namespace finalcut;
 
 #define MINIMUM_SUPPORTED_SIZE_WIDTH 83
 #define MINIMUM_SUPPORTED_SIZE_HEIGHT 30
+
+#define NETWORK_NOT_READY_STR "Peer network is not ready, please wait and try again."
 
 // ---------------------------------------------------------------------------
 //  Class Declaration
@@ -63,54 +67,111 @@ public:
         __InternalOutputStream(m_logWnd);
 
         // file menu
+        m_statusMenu.addCallback("clicked", this, [&]() {
+            if (getNetwork()->getStatus() == network::NET_STAT_RUNNING) {
+                NodeStatusWnd wnd{this};
+                wnd.show();
+            } else {
+                FMessageBox::error(this, NETWORK_NOT_READY_STR);
+            }
+        });
+        m_keyF11.addCallback("activate", this, [&]() {
+            if (getNetwork()->getStatus() == network::NET_STAT_RUNNING) {
+                NodeStatusWnd wnd{this};
+                wnd.show();
+            } else {
+                FMessageBox::error(this, NETWORK_NOT_READY_STR);
+            }
+        });
+        m_fileMenuSeparator1.setSeparator();
         m_quitItem.addAccelerator(FKey::Meta_x); // Meta/Alt + X
         m_quitItem.addCallback("clicked", getFApplication(), &FApplication::cb_exitApp, this);
         m_keyF3.addCallback("activate", getFApplication(), &FApplication::cb_exitApp, this);
 
         // command menu
         m_pageSU.addCallback("clicked", this, [&]() {
-            PageSubscriberWnd wnd{this};
-            wnd.show();
+            if (getNetwork()->getStatus() == network::NET_STAT_RUNNING) {
+                PageSubscriberWnd wnd{this};
+                wnd.show();
+            } else {
+                FMessageBox::error(this, NETWORK_NOT_READY_STR);
+            }
         });
         m_keyF5.addCallback("activate", this, [&]() {
-            PageSubscriberWnd wnd{this};
-            wnd.show();
+            if (getNetwork()->getStatus() == network::NET_STAT_RUNNING) {
+                PageSubscriberWnd wnd{this};
+                wnd.show();
+            } else {
+                FMessageBox::error(this, NETWORK_NOT_READY_STR);
+            }
         });
         m_radioCheckSU.addCallback("clicked", this, [&]() {
-            RadioCheckSubscriberWnd wnd{this};
-            wnd.show();
+            if (getNetwork()->getStatus() == network::NET_STAT_RUNNING) {
+                RadioCheckSubscriberWnd wnd{this};
+                wnd.show();
+            } else {
+                FMessageBox::error(this, NETWORK_NOT_READY_STR);
+            }
         });
         m_cmdMenuSeparator1.setSeparator();
         m_inhibitSU.addCallback("clicked", this, [&]() {
-            InhibitSubscriberWnd wnd{this};
-            wnd.show();
+            if (getNetwork()->getStatus() == network::NET_STAT_RUNNING) {
+                InhibitSubscriberWnd wnd{this};
+                wnd.show();
+            } else {
+                FMessageBox::error(this, NETWORK_NOT_READY_STR);
+            }
         });
         m_keyF7.addCallback("activate", this, [&]() {
-            InhibitSubscriberWnd wnd{this};
-            wnd.show();
+            if (getNetwork()->getStatus() == network::NET_STAT_RUNNING) {
+                InhibitSubscriberWnd wnd{this};
+                wnd.show();
+            } else {
+                FMessageBox::error(this, NETWORK_NOT_READY_STR);
+            }
         });
         m_uninhibitSU.addCallback("clicked", this, [&]() {
-            UninhibitSubscriberWnd wnd{this};
-            wnd.show();
+            if (getNetwork()->getStatus() == network::NET_STAT_RUNNING) {
+                UninhibitSubscriberWnd wnd{this};
+                wnd.show();
+            } else {
+                FMessageBox::error(this, NETWORK_NOT_READY_STR);
+            }
         });
         m_keyF8.addCallback("activate", this, [&]() {
-            UninhibitSubscriberWnd wnd{this};
-            wnd.show();
+            if (getNetwork()->getStatus() == network::NET_STAT_RUNNING) {
+                UninhibitSubscriberWnd wnd{this};
+                wnd.show();
+            } else {
+                FMessageBox::error(this, NETWORK_NOT_READY_STR);
+            }
         });
         m_cmdMenuSeparator2.setSeparator();
         m_dynRegrp.addCallback("clicked", this, [&]() {
-            DynRegroupSubscriberWnd wnd{this};
-            wnd.show();
+            if (getNetwork()->getStatus() == network::NET_STAT_RUNNING) {
+                DynRegroupSubscriberWnd wnd{this};
+                wnd.show();
+            } else {
+                FMessageBox::error(this, NETWORK_NOT_READY_STR);
+            }
         });
         m_dynRegrpLck.addCallback("clicked", this, [&]() {
-            DynRegroupSubscriberWnd wnd{this};
-            wnd.lock = true;
-            wnd.show();
+            if (getNetwork()->getStatus() == network::NET_STAT_RUNNING) {
+                DynRegroupSubscriberWnd wnd{this};
+                wnd.lock = true;
+                wnd.show();
+            } else {
+                FMessageBox::error(this, NETWORK_NOT_READY_STR);
+            }
         });
         m_dynRegrpUnlock.addCallback("clicked", this, [&]() {
-            DynRegroupSubscriberWnd wnd{this};
-            wnd.unlock = true;
-            wnd.show();
+            if (getNetwork()->getStatus() == network::NET_STAT_RUNNING) {
+                DynRegroupSubscriberWnd wnd{this};
+                wnd.unlock = true;
+                wnd.show();
+            } else {
+                FMessageBox::error(this, NETWORK_NOT_READY_STR);
+            }
         });
 
         // help menu
@@ -139,6 +200,8 @@ private:
     FMenuBar m_menuBar{this};
 
     FMenu m_fileMenu{"&File", &m_menuBar};
+    FMenuItem m_statusMenu{"&Peer Status", &m_fileMenu};
+    FMenuItem m_fileMenuSeparator1{&m_fileMenu};
     FMenuItem m_quitItem{"&Quit", &m_fileMenu};
 
     FMenu m_cmdMenu{"&Commands", &m_menuBar};
@@ -160,6 +223,7 @@ private:
     FStatusKey m_keyF5{FKey::F5, "Page Subscriber", &m_statusBar};
     FStatusKey m_keyF7{FKey::F7, "Inhibit Subscriber", &m_statusBar};
     FStatusKey m_keyF8{FKey::F8, "Uninhibit Subscriber", &m_statusBar};
+    FStatusKey m_keyF11{FKey::F11, "Peer Status", &m_statusBar};
 
     /*
     ** Event Handlers

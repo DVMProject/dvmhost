@@ -211,6 +211,19 @@ namespace network
 
         uint32_t m_remotePeerId;
 
+        bool m_promiscuousPeer;
+
+        /**
+         * @brief User overrideable handler that allows user code to process network packets not handled by this class.
+         * @param peerId Peer ID.
+         * @param opcode FNE network opcode pair.
+         * @param[in] data Buffer containing message to send to peer.
+         * @param length Length of buffer.
+         * @param streamId Stream ID.
+         */
+        virtual void userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opcode, const uint8_t* data = nullptr, uint32_t length = 0U,
+            uint32_t streamId = 0U);
+
         /**
          * @brief Writes login request to the network.
          * @returns bool True, if login request was sent, otherwise false.

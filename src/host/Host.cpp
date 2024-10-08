@@ -1319,6 +1319,69 @@ json::object Host::getStatus()
         response["p25NAC"].set<uint32_t>(m_p25NAC);
     }
 
+    json::array vcChannels = json::array();
+    bool _true = true;
+    bool _false = false;
+
+    if (m_channelLookup->rfChDataSize() > 0) {
+        for (auto entry : m_channelLookup->rfChDataTable()) {
+            json::object chData = json::object();
+
+            uint32_t chNo = entry.first;
+            chData["channelNo"].set<uint32_t>(chNo);
+
+            uint8_t chId = entry.second.chId();
+            chData["channelId"].set<uint8_t>(chId);
+
+            uint32_t dstId = 0U, srcId = 0U;
+
+            // fetch affiliations from DMR if we're a DMR CC
+            if (m_dmrTSCCData) {
+                if (m_dmr->affiliations()->isChBusy(chNo)) {
+                    chData["tx"].set<bool>(_true);
+                } else {
+                    chData["tx"].set<bool>(_false);
+                }
+
+                dstId = m_dmr->affiliations()->getGrantedDstByCh(chNo);
+                if (dstId > 0U)
+                    srcId = m_dmr->affiliations()->getGrantedSrcId(dstId);
+            }
+
+            // fetch affiliations from P25 if we're a P25 CC
+            if (m_p25CCData) {
+                if (m_p25->affiliations().isChBusy(chNo)) {
+                    chData["tx"].set<bool>(_true);
+                } else {
+                    chData["tx"].set<bool>(_false);
+                }
+
+                dstId = m_p25->affiliations().getGrantedDstByCh(chNo);
+                if (dstId > 0U)
+                    srcId = m_p25->affiliations().getGrantedSrcId(dstId);
+            }
+
+            // fetch affiliations from NXDN if we're a NXDN CC
+            if (m_nxdnCCData) {
+                if (m_nxdn->affiliations().isChBusy(chNo)) {
+                    chData["tx"].set<bool>(_true);
+                } else {
+                    chData["tx"].set<bool>(_false);
+                }
+
+                dstId = m_nxdn->affiliations().getGrantedDstByCh(chNo);
+                if (dstId > 0U)
+                    srcId = m_nxdn->affiliations().getGrantedSrcId(dstId);
+            }
+
+            chData["lastDstId"].set<uint32_t>(dstId);
+            chData["lastSrcId"].set<uint32_t>(srcId);
+
+            vcChannels.push_back(json::value(chData));
+        }
+    }
+    response["vcChannels"].set<json::array>(vcChannels);
+
     yaml::Node modemConfig = m_conf["system"]["modem"];
     {
         json::object modemInfo = json::object();

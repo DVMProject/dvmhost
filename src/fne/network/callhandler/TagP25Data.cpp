@@ -972,6 +972,14 @@ bool TagP25Data::isPeerPermitted(uint32_t peerId, lc::LC& control, DUID::E duid,
         }
     }
 
+    // is this peer a SysView peer?
+    if (connection != nullptr) {
+        if (connection->isSysView()) {
+            external = true; // we'll just set the external flag to disable the affiliation check
+                             // for SysView peers
+        }
+    }
+
     // is this a TG that requires affiliations to repeat?
     // NOTE: external peers *always* repeat traffic regardless of affiliation
     if (tg.config().affiliated() && !external) {

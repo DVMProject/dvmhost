@@ -478,6 +478,18 @@ uint32_t AffiliationLookup::getGrantedCh(uint32_t dstId)
     return 0U;
 }
 
+/* Helper to get the destination ID for the given channel. */
+
+uint32_t AffiliationLookup::getGrantedDstByCh(uint32_t chNo)
+{
+    for (auto entry : m_grantChTable) {
+        if (entry.second == chNo)
+            return entry.first;
+    }
+
+    return 0U;
+}
+
 /* Helper to get the destination ID granted to the given source ID. */
 
 uint32_t AffiliationLookup::getGrantedBySrcId(uint32_t srcId)

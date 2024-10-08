@@ -227,6 +227,28 @@ void* DiagNetwork::threadedNetworkRx(void* arg)
                                                     .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
                                                 .request(network->m_influxServer);
                                         }
+
+                                        // repeat traffic to the connected peers
+                                        if (network->m_peers.size() > 0U) {
+                                            uint32_t i = 0U;
+                                            for (auto peer : network->m_peers) {
+                                                if (peer.second != nullptr) {
+                                                    if (peer.second->isSysView()) {
+                                                        uint32_t peerStreamId = peer.second->currStreamId();
+                                                        if (streamId == 0U) {
+                                                            streamId = peerStreamId;
+                                                        }
+                                                        sockaddr_storage addr = peer.second->socketStorage();
+                                                        uint32_t addrLen = peer.second->sockStorageLen();
+
+                                                        network->m_frameQueue->write(req->buffer, req->length, streamId, peerId, network->m_peerId, 
+                                                            { NET_FUNC::TRANSFER, NET_SUBFUNC::TRANSFER_SUBFUNC_ACTIVITY }, RTP_END_OF_CALL_SEQ, addr, addrLen);
+                                                    }
+                                                } else {
+                                                    continue;
+                                                }
+                                            }
+                                        }
                                     }
                                     else {
                                         network->writePeerNAK(peerId, TAG_TRANSFER_ACT_LOG, NET_CONN_NAK_FNE_UNAUTHORIZED);
@@ -296,6 +318,28 @@ void* DiagNetwork::threadedNetworkRx(void* arg)
                                                     .field("status", payload)
                                                 .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
                                             .request(network->m_influxServer);
+
+                                        // repeat traffic to the connected peers
+                                        if (network->m_peers.size() > 0U) {
+                                            uint32_t i = 0U;
+                                            for (auto peer : network->m_peers) {
+                                                if (peer.second != nullptr) {
+                                                    if (peer.second->isSysView()) {
+                                                        uint32_t peerStreamId = peer.second->currStreamId();
+                                                        if (streamId == 0U) {
+                                                            streamId = peerStreamId;
+                                                        }
+                                                        sockaddr_storage addr = peer.second->socketStorage();
+                                                        uint32_t addrLen = peer.second->sockStorageLen();
+
+                                                        network->m_frameQueue->write(req->buffer, req->length, streamId, peerId, network->m_peerId, 
+                                                            { NET_FUNC::TRANSFER, NET_SUBFUNC::TRANSFER_SUBFUNC_STATUS }, RTP_END_OF_CALL_SEQ, addr, addrLen);
+                                                    }
+                                                } else {
+                                                    continue;
+                                                }
+                                            }
+                                        }
                                     }
                                     else {
                                         network->writePeerNAK(peerId, TAG_TRANSFER_STATUS, NET_CONN_NAK_FNE_UNAUTHORIZED);

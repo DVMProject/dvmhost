@@ -115,6 +115,8 @@ namespace network
             m_lastPing(0U),
             m_lastACLUpdate(0U),
             m_isExternalPeer(false),
+            m_isConventionalPeer(false),
+            m_isSysView(false),
             m_config(),
             m_pktLastSeq(RTP_END_OF_CALL_SEQ),
             m_pktNextSeq(1U)
@@ -142,6 +144,8 @@ namespace network
             m_lastPing(0U),
             m_lastACLUpdate(0U),
             m_isExternalPeer(false),
+            m_isConventionalPeer(false),
+            m_isSysView(false),
             m_config(),
             m_pktLastSeq(RTP_END_OF_CALL_SEQ),
             m_pktNextSeq(1U)
@@ -223,10 +227,12 @@ namespace network
         __PROPERTY_PLAIN(bool, isExternalPeer);
         /**
          * @brief Flag indicating this connection is from an conventional peer.
-         * 
-         * 
          */
         __PROPERTY_PLAIN(bool, isConventionalPeer);
+        /**
+         * @brief Flag indicating this connection is from an SysView peer.
+         */
+        __PROPERTY_PLAIN(bool, isSysView);
 
         /**
          * @brief JSON objecting containing peer configuration information.

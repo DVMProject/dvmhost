@@ -70,7 +70,8 @@ Network::Network(const std::string& address, uint16_t port, uint16_t localPort, 
     m_restApiPassword(),
     m_restApiPort(0),
     m_conventional(false),
-    m_remotePeerId(0U)
+    m_remotePeerId(0U),
+    m_promiscuousPeer(false)
 {
     assert(!address.empty());
     assert(port > 0U);
@@ -237,7 +238,7 @@ void Network::clock(uint32_t ms)
 
         // is this RTP packet destined for us?
         uint32_t peerId = fneHeader.getPeerId();
-        if (m_peerId != peerId) {
+        if ((m_peerId != peerId) && !m_promiscuousPeer) {
             LogError(LOG_NET, "Packet received was not destined for us? peerId = %u", peerId);
             return;
         }
@@ -619,7 +620,9 @@ void Network::clock(uint32_t ms)
             }
             break;
         default:
-            Utils::dump("unknown opcode from the master", buffer.get(), length);
+            userPacketHandler(fneHeader.getPeerId(), { fneHeader.getFunction(), fneHeader.getSubFunction() }, 
+                buffer.get(), length, fneHeader.getStreamId());
+            break;
         }
     }
 
@@ -707,6 +710,13 @@ void Network::enable(bool enabled)
 // ---------------------------------------------------------------------------
 //  Protected Class Members
 // ---------------------------------------------------------------------------
+
+/* User overrideable handler that allows user code to process network packets not handled by this class. */
+
+void Network::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opcode, const uint8_t* data, uint32_t length, uint32_t streamId)
+{
+    Utils::dump("unknown opcode from the master", data, length);
+}
 
 /* Writes login request to the network. */
 

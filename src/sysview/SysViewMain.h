@@ -91,11 +91,6 @@ extern HOST_SW_API std::string resolveTGID(uint32_t id);
 extern HOST_SW_API bool createPeerNetwork();
 
 /**
- * @brief Shuts down peer networking.
- */
-extern HOST_SW_API void closePeerNetwork();
-
-/**
  * @brief 
  * @returns PeerNetwork* 
  */

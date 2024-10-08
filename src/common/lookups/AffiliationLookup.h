@@ -216,6 +216,12 @@ namespace lookups
          */
         virtual uint32_t getGrantedCh(uint32_t dstId);
         /**
+         * @brief Helper to get the destination ID for the given channel.
+         * @param chNo Channel Number
+         * @returns uint32_t Destination Address.
+         */
+        virtual uint32_t getGrantedDstByCh(uint32_t chNo);
+        /**
          * @brief Helper to get the destination ID granted to the given source ID.
          * @param srcId Source Radio ID.
          * @returns uint32_t Destination Address.

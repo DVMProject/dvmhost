@@ -56,7 +56,23 @@ namespace network
         PeerNetwork(const std::string& address, uint16_t port, uint16_t localPort, uint32_t peerId, const std::string& password,
             bool duplex, bool debug, bool dmr, bool p25, bool nxdn, bool slot1, bool slot2, bool allowActivityTransfer, bool allowDiagnosticTransfer, bool updateLookup, bool saveLookup);
 
+        /**
+         * @brief Map of peer status.
+         */
+        std::unordered_map<uint32_t, json::object> peerStatus;
+
     protected:
+        /**
+         * @brief User overrideable handler that allows user code to process network packets not handled by this class.
+         * @param peerId Peer ID.
+         * @param opcode FNE network opcode pair.
+         * @param[in] data Buffer containing message to send to peer.
+         * @param length Length of buffer.
+         * @param streamId Stream ID.
+         */
+        void userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opcode, const uint8_t* data = nullptr, uint32_t length = 0U,
+            uint32_t streamId = 0U) override;
+
         /**
          * @brief Writes configuration to the network.
          * @returns bool True, if configuration was sent, otherwise false.

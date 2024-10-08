@@ -167,7 +167,10 @@ protected:
     void onKeyPress(finalcut::FKeyEvent* e) override
     {
         const auto key = e->key();
-        if (key == FKey::F12) {
+        if (key == FKey::Escape) {
+            this->close();
+        }
+        else if (key == FKey::F12) {
             setTransmit();
         }
     }

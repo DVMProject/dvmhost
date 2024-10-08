@@ -777,6 +777,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                             LogInfoEx(LOG_NET, "PEER %u reports identity [%8s]", peerId, identity.c_str());
                                         }
 
+                                        // is the peer reporting it is an external peer?
                                         if (peerConfig["externalPeer"].is<bool>()) {
                                             bool external = peerConfig["externalPeer"].get<bool>();
                                             connection->isExternalPeer(external);
@@ -784,6 +785,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                                 LogInfoEx(LOG_NET, "PEER %u reports external peer", peerId);
                                         }
 
+                                        // is the peer reporting it is a conventional peer?
                                         if (peerConfig["conventionalPeer"].is<bool>()) {
                                             if (network->m_allowConvSiteAffOverride) {
                                                 bool convPeer = peerConfig["conventionalPeer"].get<bool>();
@@ -791,6 +793,14 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                                 if (convPeer)
                                                     LogInfoEx(LOG_NET, "PEER %u reports conventional peer", peerId);
                                             }
+                                        }
+
+                                        // is the peer reporting it is a SysView peer?
+                                        if (peerConfig["sysView"].is<bool>()) {
+                                            bool sysView = peerConfig["sysView"].get<bool>();
+                                            connection->isSysView(sysView);
+                                            if (sysView)
+                                                LogInfoEx(LOG_NET, "PEER %u reports SysView peer", peerId);
                                         }
 
                                         if (peerConfig["software"].is<std::string>()) {

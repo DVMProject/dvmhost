@@ -26,16 +26,80 @@ using namespace network;
 
 PeerNetwork::PeerNetwork(const std::string& address, uint16_t port, uint16_t localPort, uint32_t peerId, const std::string& password,
     bool duplex, bool debug, bool dmr, bool p25, bool nxdn, bool slot1, bool slot2, bool allowActivityTransfer, bool allowDiagnosticTransfer, bool updateLookup, bool saveLookup) :
-    Network(address, port, localPort, peerId, password, duplex, debug, dmr, p25, nxdn, slot1, slot2, allowActivityTransfer, allowDiagnosticTransfer, updateLookup, saveLookup)
+    Network(address, port, localPort, peerId, password, duplex, debug, dmr, p25, nxdn, slot1, slot2, allowActivityTransfer, allowDiagnosticTransfer, updateLookup, saveLookup),
+    peerStatus()
 {
     assert(!address.empty());
     assert(port > 0U);
     assert(!password.empty());
+
+    // ignore the source peer ID for packets destined to SysView
+    m_promiscuousPeer = true;
 }
 
 // ---------------------------------------------------------------------------
 //  Protected Class Members
 // ---------------------------------------------------------------------------
+
+/* User overrideable handler that allows user code to process network packets not handled by this class. */
+
+void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opcode, const uint8_t* data, uint32_t length, uint32_t streamId)
+{
+    switch (opcode.first) {
+    case NET_FUNC::TRANSFER:
+    {
+        switch (opcode.second) {
+        case NET_SUBFUNC::TRANSFER_SUBFUNC_ACTIVITY:
+        {
+            UInt8Array __rawPayload = std::make_unique<uint8_t[]>(length - 11U);
+            uint8_t* rawPayload = __rawPayload.get();
+            ::memset(rawPayload, 0x00U, length - 11U);
+            ::memcpy(rawPayload, data + 11U, length - 11U);
+            std::string payload(rawPayload, rawPayload + (length - 11U));
+
+            bool currState = g_disableTimeDisplay;
+            g_disableTimeDisplay = true;
+            ::Log(9999U, nullptr, "%.9u %s", peerId, payload.c_str());
+            g_disableTimeDisplay = currState;
+        }
+        break;
+
+        case NET_SUBFUNC::TRANSFER_SUBFUNC_STATUS:
+        {
+            UInt8Array __rawPayload = std::make_unique<uint8_t[]>(length - 11U);
+            uint8_t* rawPayload = __rawPayload.get();
+            ::memset(rawPayload, 0x00U, length - 11U);
+            ::memcpy(rawPayload, data + 11U, length - 11U);
+            std::string payload(rawPayload, rawPayload + (length - 11U));
+
+            // parse JSON body
+            json::value v;
+            std::string err = json::parse(v, payload);
+            if (!err.empty()) {
+                break;
+            }
+
+            // ensure parsed JSON is an object
+            if (!v.is<json::object>()) {
+                break;
+            }
+
+            json::object obj = v.get<json::object>();
+            peerStatus[peerId] = obj;
+        }
+        break;
+
+        default:
+            break;
+        }
+    }
+    break;
+    
+    default:
+        Utils::dump("unknown opcode from the master", data, length);
+        break;
+    }
+}
 
 /* Writes configuration to the network. */
 
@@ -81,6 +145,8 @@ bool PeerNetwork::writeConfig()
 
     bool convPeer = true;
     config["conventionalPeer"].set<bool>(convPeer);                                 // Conventional Peer Marker
+    bool sysView = true;
+    config["sysView"].set<bool>(sysView);                                           // SysView Peer Marker
     config["software"].set<std::string>(std::string(software));                     // Software ID
 
     json::value v = json::value(config);

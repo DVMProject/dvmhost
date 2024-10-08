@@ -496,6 +496,14 @@ bool TagNXDNData::isPeerPermitted(uint32_t peerId, lc::RTCH& lc, uint8_t message
             }
         }
 
+        // is this peer a SysView peer?
+        if (connection != nullptr) {
+            if (connection->isSysView()) {
+                external = true; // we'll just set the external flag to disable the affiliation check
+                                 // for SysView peers
+            }
+        }
+
         // is this a TG that requires affiliations to repeat?
         // NOTE: external peers *always* repeat traffic regardless of affiliation
         if (tg.config().affiliated() && !external) {
