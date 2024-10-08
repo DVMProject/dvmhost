@@ -1973,7 +1973,7 @@ void* Host::threadSiteData(void* arg)
         ::pthread_setname_np(th->thread, threadName.c_str());
 #endif // _GNU_SOURCE
 
-        Timer networkPeerStatusNotify(1000U, 5U);
+        Timer networkPeerStatusNotify(1000U, 2U);
         networkPeerStatusNotify.start();
 
         StopWatch stopWatch;

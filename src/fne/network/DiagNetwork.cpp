@@ -305,21 +305,6 @@ void* DiagNetwork::threadedNetworkRx(void* arg)
 
                                     // validate peer (simple validation really)
                                     if (connection->connected() && connection->address() == ip) {
-                                        UInt8Array __rawPayload = std::make_unique<uint8_t[]>(req->length - 11U);
-                                        uint8_t* rawPayload = __rawPayload.get();
-                                        ::memset(rawPayload, 0x00U, req->length - 11U);
-                                        ::memcpy(rawPayload, req->buffer + 11U, req->length - 11U);
-                                        std::string payload(rawPayload, rawPayload + (req->length - 11U));
-
-                                        influxdb::QueryBuilder()
-                                            .meas("peer_status")
-                                                .tag("peerId", std::to_string(peerId))
-                                                    .field("identity", connection->identity())
-                                                    .field("status", payload)
-                                                .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
-                                            .request(network->m_influxServer);
-
-                                        // repeat traffic to the connected peers
                                         if (network->m_peers.size() > 0U) {
                                             uint32_t i = 0U;
                                             for (auto peer : network->m_peers) {

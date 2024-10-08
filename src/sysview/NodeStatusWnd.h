@@ -400,7 +400,8 @@ public:
     void update()
     {
         const auto& rootWidget = getRootWidget();
-        for (auto entry : getNetwork()->peerStatus) {
+        std::map<uint32_t, json::object> peerStatus(getNetwork()->peerStatus.begin(), getNetwork()->peerStatus.end());
+        for (auto entry : peerStatus) {
             auto it = std::find_if(m_nodes.begin(), m_nodes.end(), [&](NodeStatusWidget* wdgt) {
                 if (wdgt->peerId == entry.first && wdgt->uniqueId == (int32_t)entry.first)
                     return true;
@@ -826,7 +827,7 @@ private:
                         killed = wnd->m_killed;
                     }
 
-                    Thread::sleep(1000U);
+                    Thread::sleep(250U);
                 } else {
                     break;
                 }
