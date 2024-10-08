@@ -38,7 +38,8 @@ HostWS::HostWS(const std::string& confFile) :
     m_conf(),
     m_websocketPort(8443U),
     m_wsServer(),
-    m_wsConList()
+    m_wsConList(),
+    m_debug(false)
 {
     /* stub */
 }
@@ -133,11 +134,14 @@ int HostWS::run()
     m_wsServer.set_message_handler(websocketpp::lib::bind(&HostWS::wsOnMessage, this, 
         websocketpp::lib::placeholders::_1, websocketpp::lib::placeholders::_2));
 
-    m_wsServer.set_access_channels(websocketpp::log::alevel::all);
-    m_wsServer.clear_access_channels(websocketpp::log::alevel::frame_payload);
+    if (m_debug) {
+        m_wsServer.set_access_channels(websocketpp::log::alevel::all);
+    } else {
+        m_wsServer.set_access_channels(websocketpp::log::alevel::none);
+    }
 
     /** WebSocket Thread */
-    if (!Thread::runAsThread(nullptr, threadWebSocket))
+    if (!Thread::runAsThread(this, threadWebSocket))
         return EXIT_FAILURE;
 
     ::LogInfoEx(LOG_HOST, "SysView is up and running");
@@ -261,13 +265,16 @@ int HostWS::run()
 
 void HostWS::send(json::object obj)
 {
-    json::value v = json::value(obj);
-    std::string json = std::string(v.serialize());
+    try {
+        json::value v = json::value(obj);
+        std::string json = std::string(v.serialize());
 
-    wsConList::iterator it;
-    for (it = m_wsConList.begin(); it != m_wsConList.end(); ++it) {
-        m_wsServer.send(*it, json, websocketpp::frame::opcode::text);
+        wsConList::iterator it;
+        for (it = m_wsConList.begin(); it != m_wsConList.end(); ++it) {
+            m_wsServer.send(*it, json, websocketpp::frame::opcode::text);
+        }
     }
+    catch (websocketpp::exception) { /* stub */ }
 }
 
 // ---------------------------------------------------------------------------
@@ -280,9 +287,14 @@ bool HostWS::readParams()
 {
     yaml::Node websocketConf = m_conf["websocket"];
     m_websocketPort = websocketConf["port"].as<uint16_t>(8443U);
+    m_debug = websocketConf["debug"].as<bool>(false);
 
     LogInfo("General Parameters");
     LogInfo("    Port: %u", m_websocketPort);
+
+    if (m_debug) {
+        LogInfo("    Debug: yes");
+    }
 
     return true;
 }
@@ -337,7 +349,7 @@ void* HostWS::threadWebSocket(void* arg)
         ::pthread_setname_np(th->thread, threadName.c_str());
 #endif // _GNU_SOURCE
 
-        ws->m_wsServer.listen(ws->m_websocketPort);
+        ws->m_wsServer.listen(websocketpp::lib::asio::ip::tcp::v4(), ws->m_websocketPort);
         ws->m_wsServer.start_accept();
         ws->m_wsServer.run();
 

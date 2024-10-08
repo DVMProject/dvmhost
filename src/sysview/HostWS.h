@@ -76,6 +76,8 @@ private:
     typedef std::set<websocketpp::connection_hdl, std::owner_less<websocketpp::connection_hdl>> wsConList;
     wsConList m_wsConList;
 
+    bool m_debug;
+
     /**
      * @brief Reads basic configuration parameters from the INI.
      * @returns bool True, if configuration was read successfully, otherwise false.

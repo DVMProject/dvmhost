@@ -91,3 +91,6 @@ fne:
 websocket:
     # Port number of the WebSocket should listen on.
     port: 8443
+
+    # Flag indicating whether or not verbose debug logging is enabled.
+    debug: false
