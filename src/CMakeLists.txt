@@ -96,7 +96,11 @@ if (ENABLE_TUI_SUPPORT AND (NOT DISABLE_TUI_APPS))
     include(src/sysview/CMakeLists.txt)
     add_executable(sysview ${common_INCLUDE} ${sysView_SRC})
     target_link_libraries(sysview PRIVATE common ${OPENSSL_LIBRARIES} asio::asio finalcut Threads::Threads)
-    target_include_directories(sysview PRIVATE ${OPENSSL_INCLUDE_DIR} src src/host src/sysview)
+    if (NOT DISABLE_WEBSOCKETS)
+        target_include_directories(sysview PRIVATE ${OPENSSL_INCLUDE_DIR} ${websocketpp_SOURCE_DIR} src src/host src/sysview)
+    else ()
+        target_include_directories(sysview PRIVATE ${OPENSSL_INCLUDE_DIR} src src/host src/sysview)
+    endif (NOT DISABLE_WEBSOCKETS)
 endif (ENABLE_TUI_SUPPORT AND (NOT DISABLE_TUI_APPS))
 
 #
@@ -106,7 +110,7 @@ if (ENABLE_TUI_SUPPORT AND (NOT DISABLE_TUI_APPS))
     include(src/tged/CMakeLists.txt)
     add_executable(tged ${common_INCLUDE} ${tged_SRC})
     target_link_libraries(tged PRIVATE common ${OPENSSL_LIBRARIES} asio::asio finalcut Threads::Threads)
-    target_include_directories(tged PRIVATE ${OPENSSL_INCLUDE_DIR} src src/host src/tged)
+    target_include_directories(tged PRIVATE ${OPENSSL_INCLUDE_DIR} websocketpp src src/host src/tged)
 endif (ENABLE_TUI_SUPPORT AND (NOT DISABLE_TUI_APPS))
 
 #

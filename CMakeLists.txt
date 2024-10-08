@@ -35,6 +35,12 @@ else ()
     message(CHECK_PASS "no")
 endif (ENABLE_TCP_SSL)
 
+option(DISABLE_WEBSOCKETS "Disable WebSocket support" off)
+if (DISABLE_WEBSOCKETS)
+    message(CHECK_START "Disable WebSocket support - enabled")
+    add_definitions(-DNO_WEBSOCKETS)
+endif (DISABLE_WEBSOCKETS)
+
 # Cross-compile options
 option(CROSS_COMPILE_ARM "Cross-compile for 32-bit ARM" off)
 option(CROSS_COMPILE_AARCH64 "Cross-compile for 64-bit ARM" off)
@@ -191,6 +197,21 @@ if (NOT ASIO_INCLUDED)
         set(ASIO_INCLUDED 1)
     endif (WITH_ASIO)
 endif (NOT ASIO_INCLUDED)
+
+if (NOT DISABLE_WEBSOCKETS)
+    if (NOT WEBSOCKETPP_INCLUDED)
+        message("-- Cloning WebSocket++")
+        include(FetchContent)
+        FetchContent_Declare(
+            WEBSOCKETPP
+            GIT_REPOSITORY https://github.com/zaphoyd/websocketpp.git
+            GIT_TAG 56123c87598f8b1dd471be83ca841ceae07f95ba # 0.8.2
+        )
+        FetchContent_MakeAvailable(WEBSOCKETPP)
+        add_subdirectory(${websocketpp_SOURCE_DIR} ${websocketpp_BINARY_DIR} EXCLUDE_FROM_ALL)
+        set(WEBSOCKETPP_INCLUDED 1)
+    endif (NOT WEBSOCKETPP_INCLUDED)
+endif (NOT DISABLE_WEBSOCKETS)
 
 if (ENABLE_TUI_SUPPORT AND NOT FC_INCLUDED)
     message("-- Cloning finalcut")

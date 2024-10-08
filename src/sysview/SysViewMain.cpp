@@ -29,6 +29,9 @@
 #include "SysViewMain.h"
 #include "SysViewApplication.h"
 #include "SysViewMainWnd.h"
+#if !defined(NO_WEBSOCKETS)
+#include "HostWS.h"
+#endif // !defined(NO_WEBSOCKETS)
 
 using namespace system_clock;
 using namespace network;
@@ -49,13 +52,18 @@ using namespace lookups;
 //  Global Variables
 // ---------------------------------------------------------------------------
 
+int g_signal = 0;
+
 std::string g_progExe = std::string(__EXE_NAME__);
 std::string g_iniFile = std::string(DEFAULT_CONF_FILE);
 yaml::Node g_conf;
 bool g_debug = false;
 
+bool g_foreground = false;
 bool g_killed = false;
 bool g_hideLoggingWnd = false;
+
+bool g_webSocketMode = false;
 
 lookups::RadioIdLookup* g_ridLookup = nullptr;
 lookups::TalkgroupRulesLookup* g_tidLookup = nullptr;
@@ -85,6 +93,14 @@ std::unordered_map<uint32_t, RxStatus> g_nxdnStatus;
 // ---------------------------------------------------------------------------
 //	Global Functions
 // ---------------------------------------------------------------------------
+
+/* Internal signal handler. */
+
+static void sigHandler(int signum)
+{
+    g_signal = signum;
+    g_killed = true;
+}
 
 /* Helper to print a fatal error message and exit. */
 
@@ -728,6 +744,9 @@ void usage(const char* message, const char* arg)
         "usage: %s [-dvh]"
         "[--hide-log]"
         "[-c <configuration file>]"
+#if !defined(NO_WEBSOCKETS)
+        "[-f][-ws]"
+#endif // !defined(NO_WEBSOCKETS)
         "\n\n"
         "  -d                          enable debug\n"
         "  -v                          show version information\n"
@@ -737,6 +756,11 @@ void usage(const char* message, const char* arg)
         "\n"
         "  -c <file>                   specifies the system view configuration file to use\n"
         "\n"
+#if !defined(NO_WEBSOCKETS)
+        "  -f                          foreground mode\n"
+        "  -ws                         websocket mode\n"
+        "\n"
+#endif // !defined(NO_WEBSOCKETS)
         "  --                          stop handling options\n",
         g_progExe.c_str());
 
@@ -777,6 +801,16 @@ int checkArgs(int argc, char* argv[])
             ++p;
             g_hideLoggingWnd = true;
         }
+#if !defined(NO_WEBSOCKETS)
+        else if (IS("-f")) {
+            ++p;
+            g_foreground = true;
+        }
+        else if (IS("-ws")) {
+            ++p;
+            g_webSocketMode = true;
+        }
+#endif // !defined(NO_WEBSOCKETS)
         else if (IS("-d")) {
             ++p;
             g_debug = true;
@@ -834,10 +868,18 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    ::LogInfo(__PROG_NAME__ " " __VER__ " (built " __BUILD__ ")\r\n" \
-        "Copyright (c) 2017-2024 Bryan Biedenkapp, N2PLL and DVMProject (https://github.com/dvmproject) Authors.\r\n" \
-        "Portions Copyright (c) 2015-2021 by Jonathan Naylor, G4KLX and others\r\n" \
-        ">> FNE System View\r\n");
+    if (!g_webSocketMode) {
+        ::LogInfo(__PROG_NAME__ " " __VER__ " (built " __BUILD__ ")\r\n" \
+            "Copyright (c) 2017-2024 Bryan Biedenkapp, N2PLL and DVMProject (https://github.com/dvmproject) Authors.\r\n" \
+            "Portions Copyright (c) 2015-2021 by Jonathan Naylor, G4KLX and others\r\n" \
+            ">> FNE System View\r\n");
+    } else {
+        ::LogInfo(__BANNER__ "\r\n" __PROG_NAME__ " " __VER__ " (built " __BUILD__ ")\r\n" \
+            "Copyright (c) 2024 DVMProject (https://github.com/dvmproject) Authors.\r\n" \
+            "This program is non-free software; redistribution is strictly prohibited.\r\n" \
+            "RESTRICTED CONFIDENTIAL PROPRIETARY. DO NOT DISTRIBUTE.\r\n" \
+            ">> FNE System View\r\n");
+    }
 
     try {
         ret = yaml::Parse(g_conf, g_iniFile.c_str());
@@ -854,11 +896,20 @@ int main(int argc, char** argv)
         return EXIT_FAILURE;
 
     // setup the finalcut tui
-    SysViewApplication app{argc, argv};
-    g_app = &app;
+    SysViewApplication* app = nullptr;
+    SysViewMainWnd* wnd = nullptr;
+    if (!g_webSocketMode) {
+        app = new SysViewApplication(argc, argv);
+        g_app = app;
 
-    SysViewMainWnd wnd{&app};
-    finalcut::FWidget::setMainWidget(&wnd);
+        wnd = new SysViewMainWnd(app);
+        finalcut::FWidget::setMainWidget(wnd);
+    } else {
+        // in WebSocket mode install signal handlers
+        ::signal(SIGINT, sigHandler);
+        ::signal(SIGTERM, sigHandler);
+        ::signal(SIGHUP, sigHandler);
+    }
 
     // try to load bandplan identity table
     std::string idenLookupFile = g_conf["iden_table"]["file"].as<std::string>();
@@ -869,7 +920,8 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    g_logDisplayLevel = 0U;
+    if (!g_webSocketMode)
+        g_logDisplayLevel = 0U;
 
     // try to load radio IDs table
     std::string ridLookupFile = g_conf["radio_id"]["file"].as<std::string>();
@@ -903,14 +955,30 @@ int main(int argc, char** argv)
     g_idenTable = new IdenTableLookup(idenLookupFile, idenReloadTime);
     g_idenTable->read();
 
-    // show and start the application
-    wnd.show();
+    int _errno = 0U;
+    if (!g_webSocketMode) {
+        // show and start the application
+        wnd->show();
 
-    finalcut::FApplication::setColorTheme<dvmColorTheme>();
-    app.resetColors();
-    app.redraw();
-    
-    int _errno = app.exec();
+        finalcut::FApplication::setColorTheme<dvmColorTheme>();
+        app->resetColors();
+        app->redraw();
+        
+        _errno = app->exec();
+
+        if (wnd != nullptr)
+            delete wnd;
+        if (app != nullptr)
+            delete app;
+    } else {
+#if !defined(NO_WEBSOCKETS)
+        ::LogFinalise(); // HostWS will reinitialize logging after this point...
+
+        HostWS* host = new HostWS(g_iniFile);
+        _errno = host->run();
+        delete host;
+#endif // !defined(NO_WEBSOCKETS)
+    }
 
     g_logDisplayLevel = 1U;
 

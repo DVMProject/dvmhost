@@ -42,6 +42,9 @@
 // ---------------------------------------------------------------------------
 
 /** @brief  */
+extern int g_signal;
+
+/** @brief  */
 extern std::string g_progExe;
 /** @brief  */
 extern std::string g_iniFile;
@@ -49,6 +52,11 @@ extern std::string g_iniFile;
 extern yaml::Node g_conf;
 /** @brief  */
 extern bool g_debug;
+
+/** @brief (Global) Flag indicating foreground operation. */
+extern bool g_foreground;
+/** @brief (Global) Flag indicating the SysView should stop immediately. */
+extern bool g_killed;
 
 /** @brief  */
 extern bool g_hideLoggingWnd;

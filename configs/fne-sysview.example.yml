@@ -3,6 +3,31 @@
 #
 
 #
+# Logging Configuration (only used in WebSocket mode)
+#
+#   Logging Levels:
+#     1 - Debug
+#     2 - Message
+#     3 - Informational
+#     4 - Warning
+#     5 - Error
+#     6 - Fatal
+#
+log:
+    # Console display logging level (used when in foreground).
+    displayLevel: 1
+    # File logging level.
+    fileLevel: 1
+    # Flag indicating file logs should be sent to syslog instead of a file.
+    useSyslog: false
+    # Full path for the directory to store the log files.
+    filePath: .
+    # Full path for the directory to store the activity log files.
+    activityFilePath: .
+    # Log filename prefix.
+    fileRoot: SYSVIEW
+
+#
 # Radio ID ACL Configuration
 #
 radio_id:
@@ -59,3 +84,10 @@ fne:
     restSsl: false
     # REST API authentication password.
     restPassword: "PASSWORD"
+
+#
+# WebSocket Configuration (only used in WebSocket mode)
+#
+websocket:
+    # Port number of the WebSocket should listen on.
+    port: 8443
