@@ -208,7 +208,7 @@ if (NOT DISABLE_WEBSOCKETS)
             GIT_TAG 56123c87598f8b1dd471be83ca841ceae07f95ba # 0.8.2
         )
         FetchContent_MakeAvailable(WEBSOCKETPP)
-        add_subdirectory(${websocketpp_SOURCE_DIR} ${websocketpp_BINARY_DIR} EXCLUDE_FROM_ALL)
+        add_subdirectory(${websocketpp_SOURCE_DIR} EXCLUDE_FROM_ALL)
         set(WEBSOCKETPP_INCLUDED 1)
     endif (NOT WEBSOCKETPP_INCLUDED)
 endif (NOT DISABLE_WEBSOCKETS)
