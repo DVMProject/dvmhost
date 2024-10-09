@@ -157,6 +157,28 @@ public:
 
                     g_peerIdentityNameMap[peerId] = std::string(identity);
 
+                    std::ostringstream txOss;
+                    std::ostringstream rxOss;
+                    if (chNo > 0U) {
+                        IdenTable idenEntry = g_idenTable->find(chId);
+                        if (idenEntry.baseFrequency() == 0U) {
+                            ::LogError(LOG_HOST, "Channel Id %u has an invalid base frequency.", chId);
+                        }
+
+                        if (idenEntry.txOffsetMhz() == 0U) {
+                            ::LogError(LOG_HOST, "Channel Id %u has an invalid Tx offset.", chId);
+                        }
+
+                        uint32_t calcSpace = (uint32_t)(idenEntry.chSpaceKhz() / 0.125);
+                        float calcTxOffset = idenEntry.txOffsetMhz() * 1000000.0;
+
+                        uint32_t rxFrequency = (uint32_t)((idenEntry.baseFrequency() + ((calcSpace * 125) * chNo)) + (uint32_t)calcTxOffset);
+                        uint32_t txFrequency = (uint32_t)((idenEntry.baseFrequency() + ((calcSpace * 125) * chNo)));
+
+                        txOss << std::fixed << std::setprecision(5) << (double)(txFrequency / 1000000.0);
+                        rxOss << std::fixed << std::setprecision(5) << (double)(rxFrequency / 1000000.0);
+                    }
+
                     // pad peer IDs properly
                     std::ostringstream peerOss;
                     peerOss << std::setw(9) << std::setfill('0') << peerId;
@@ -166,7 +188,7 @@ public:
                     ccPeerOss << std::setw(9) << std::setfill('0') << ccPeerId;
 
                     // build list view entry
-                    const std::array<std::string, 12U> columns = {
+                    const std::array<std::string, 14U> columns = {
                         peerOss.str(),
                         identity, software,
                         peerAddress, std::to_string(port),
@@ -175,7 +197,8 @@ public:
                         (connected) ? "X" : "",
                         strConnState,
                         std::to_string(pingsReceived),
-                        std::to_string(chId), std::to_string(chNo)
+                        std::to_string(chId), std::to_string(chNo),
+                        rxOss.str(), txOss.str()
                     };
 
                     const finalcut::FStringList line(columns.cbegin(), columns.cend());
@@ -241,6 +264,8 @@ private:
         m_listView.addColumn("Pings Received", 8);
         m_listView.addColumn("Ch. ID", 8);
         m_listView.addColumn("Ch. No", 8);
+        m_listView.addColumn("Rx Freq", 9);
+        m_listView.addColumn("Tx Freq", 9);
 
         // set right alignment for TGID
         m_listView.setColumnAlignment(1, finalcut::Align::Right);
