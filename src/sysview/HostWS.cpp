@@ -149,11 +149,15 @@ int HostWS::run()
     StopWatch stopWatch;
     stopWatch.start();
 
+    g_logDisplayLevel = 0U;
+
     std::ostringstream logOutput;
     __InternalOutputStream(logOutput);
 
     Timer peerListUpdate(1000U, 10U);
+    peerListUpdate.start();
     Timer affListUpdate(1000U, 10U);
+    affListUpdate.start();
 
     // main execution loop
     while (!g_killed) {
@@ -163,17 +167,10 @@ int HostWS::run()
         stopWatch.start();
 
         if (m_wsConList.size() > 0U) {
-            if (!peerListUpdate.isRunning()) {
-                peerListUpdate.start();
-            }
-
-            if (!affListUpdate.isRunning()) {
-                affListUpdate.start();
-            }
-
             // send log messages
             if (!logOutput.str().empty()) {
-                std::string str = logOutput.str();
+                std::string str = std::string(logOutput.str());
+                logOutput.str("");
 
                 json::object wsObj = json::object();
                 std::string type = "log";
@@ -194,8 +191,9 @@ int HostWS::run()
                 wsObj["payload"].set<json::object>(peerStatus);
                 send(wsObj);
             }
-    
+
             // update peer list data
+            peerListUpdate.clock(ms);
             if (peerListUpdate.isRunning() && peerListUpdate.hasExpired()) {
                 peerListUpdate.start();
                 // callback REST API to get status of the channel we represent
@@ -222,6 +220,7 @@ int HostWS::run()
             }
 
             // update affiliation list data
+            affListUpdate.clock(ms);
             if (affListUpdate.isRunning() && affListUpdate.hasExpired()) {
                 affListUpdate.start();
                 // callback REST API to get status of the channel we represent
@@ -247,13 +246,15 @@ int HostWS::run()
                 }
             }
         } else {
-            peerListUpdate.stop();
-            affListUpdate.stop();
+            // clear ostream
+            logOutput.str("");
         }
 
         if (ms < 2U)
             Thread::sleep(1U);
     }
+
+    g_logDisplayLevel = 1U;
 
     if (g_killed)
         m_wsServer.stop();
