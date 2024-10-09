@@ -68,6 +68,10 @@ extern lookups::TalkgroupRulesLookup* g_tidLookup;
 /** @brief  */
 extern lookups::IdenTableLookup* g_idenTable;
 
+typedef std::pair<const uint32_t, std::string> PeerIdentityMapPair;
+/** @brief  */
+extern std::unordered_map<uint32_t, std::string> g_peerIdentityNameMap;
+
 /**
  * @brief Helper to trigger a fatal error message. This will cause the program to terminate 
  * immediately with an error message.

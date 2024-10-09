@@ -69,6 +69,8 @@ lookups::RadioIdLookup* g_ridLookup = nullptr;
 lookups::TalkgroupRulesLookup* g_tidLookup = nullptr;
 lookups::IdenTableLookup* g_idenTable = nullptr;
 
+std::unordered_map<uint32_t, std::string> g_peerIdentityNameMap = std::unordered_map<uint32_t, std::string>();
+
 SysViewApplication* g_app = nullptr;
 
 network::PeerNetwork* g_network = nullptr;

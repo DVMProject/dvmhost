@@ -17,6 +17,7 @@
 #include "host/modem/Modem.h"
 #include "common/Log.h"
 #include "common/Thread.h"
+#include "SysViewMain.h"
 
 #include <final/final.h>
 using namespace finalcut;
@@ -110,6 +111,12 @@ public:
             break;
         }
 
+        m_peerIdentityStr.setText("UNK");
+        auto it = std::find_if(g_peerIdentityNameMap.begin(), g_peerIdentityNameMap.end(), [&](PeerIdentityMapPair x) { return x.first == peerId; });
+        if (it != g_peerIdentityNameMap.end()) {
+            m_peerIdentityStr.setText(it->second);
+        }
+
         // pad peer IDs properly
         std::ostringstream peerOss;
         peerOss << std::setw(9) << std::setfill('0') << peerId;
@@ -178,6 +185,7 @@ private:
 
     FLabel m_modeStr{this};
     FLabel m_peerIdStr{this};
+    FLabel m_peerIdentityStr{this};
 
     FLabel m_channelNoLabel{"Ch. No.: ", this};
     FLabel m_chanNo{this};
@@ -317,6 +325,11 @@ private:
         m_peerIdStr.setForegroundColor(FColor::DarkBlue);               // why?
         m_peerIdStr.setBackgroundColor(FColor::LightGray);              // why?
         m_peerIdStr.setAlignment(Align::Right);
+
+        m_peerIdentityStr.setGeometry(FPoint(19, 5), FSize(9, 1));
+        m_peerIdentityStr.setForegroundColor(FColor::DarkBlue);         // why?
+        m_peerIdentityStr.setBackgroundColor(FColor::LightGray);        // why?
+        m_peerIdentityStr.setAlignment(Align::Right);
 
         // channel number
         {

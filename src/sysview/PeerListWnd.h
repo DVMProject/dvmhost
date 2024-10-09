@@ -155,6 +155,8 @@ public:
                     uint32_t chNo = (uint32_t)channel["channelNo"].get<int>();
                     uint8_t chId = channel["channelId"].get<uint8_t>();
 
+                    g_peerIdentityNameMap[peerId] = std::string(identity);
+
                     // pad peer IDs properly
                     std::ostringstream peerOss;
                     peerOss << std::setw(9) << std::setfill('0') << peerId;
