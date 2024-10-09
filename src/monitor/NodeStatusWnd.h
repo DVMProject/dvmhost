@@ -250,18 +250,18 @@ private:
         m_chanNo.setText(__INT_STR(m_channelId) + "-" + __INT_STR(m_channelNo));
 
         uint32_t calcSpace = (uint32_t)(entry.chSpaceKhz() / 0.125);
-        float calcTxOffset = entry.txOffsetMhz() * 1000000;
+        float calcTxOffset = entry.txOffsetMhz() * 1000000.0;
 
-        uint32_t rxFrequency = (uint32_t)((entry.baseFrequency() + ((calcSpace * 125) * m_channelNo)) + calcTxOffset);
+        uint32_t rxFrequency = (uint32_t)((entry.baseFrequency() + ((calcSpace * 125) * m_channelNo)) + (uint32_t)calcTxOffset);
         uint32_t txFrequency = (uint32_t)((entry.baseFrequency() + ((calcSpace * 125) * m_channelNo)));
 
         std::stringstream ss;
-        ss << std::fixed << std::setprecision(5) << (float)(txFrequency / 1000000.0f);
+        ss << std::fixed << std::setprecision(5) << (double)(txFrequency / 1000000.0);
 
         m_txFreq.setText(ss.str());
 
         ss.str(std::string());
-        ss << std::fixed << std::setprecision(5) << (float)(rxFrequency / 1000000.0f);
+        ss << std::fixed << std::setprecision(5) << (double)(rxFrequency / 1000000.0);
 
         m_rxFreq.setText(ss.str());
 

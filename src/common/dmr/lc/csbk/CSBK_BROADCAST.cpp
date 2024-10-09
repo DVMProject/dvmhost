@@ -106,11 +106,11 @@ void CSBK_BROADCAST::encode(uint8_t* data)
     case BroadcastAnncType::CHAN_FREQ:
     {
         uint32_t calcSpace = (uint32_t)(m_siteIdenEntry.chSpaceKhz() / 0.125);
-        float calcTxOffset = m_siteIdenEntry.txOffsetMhz() * 1000000;
+        float calcTxOffset = m_siteIdenEntry.txOffsetMhz() * 1000000.0;
         const uint32_t multiple = 100000;
 
         // calculate Rx frequency
-        uint32_t rxFrequency = (uint32_t)((m_siteIdenEntry.baseFrequency() + ((calcSpace * 125) * m_logicalCh1)) + calcTxOffset);
+        uint32_t rxFrequency = (uint32_t)((m_siteIdenEntry.baseFrequency() + ((calcSpace * 125) * m_logicalCh1)) + (uint32_t)calcTxOffset);
 
         // generate frequency in mhz
         uint32_t rxFreqMhz = rxFrequency + multiple / 2;

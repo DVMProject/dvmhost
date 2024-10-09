@@ -167,10 +167,10 @@ bool Host::readParams()
         }
 
         uint32_t calcSpace = (uint32_t)(entry.chSpaceKhz() / 0.125);
-        float calcTxOffset = entry.txOffsetMhz() * 1000000;
+        float calcTxOffset = entry.txOffsetMhz() * 1000000.0;
 
         m_txFrequency = (uint32_t)((entry.baseFrequency() + ((calcSpace * 125) * m_channelNo)));
-        m_rxFrequency = (uint32_t)(m_txFrequency + calcTxOffset);
+        m_rxFrequency = (uint32_t)(m_txFrequency + (uint32_t)calcTxOffset);
 
         if (calcTxOffset < 0.0f && m_rxFrequency < entry.baseFrequency()) {
             ::LogWarning(LOG_HOST, "Channel Id %u Channel No $%04X has an invalid frequency. Rx Frequency (%u) is less then the base frequency (%u), this may result in incorrect trunking behavior.", m_channelId, m_channelNo,
