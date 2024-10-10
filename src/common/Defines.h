@@ -115,6 +115,10 @@ typedef unsigned long long  ulong64_t;
 #define __VER__ VERSION_MAJOR "." VERSION_MINOR VERSION_REV " (R" VERSION_MAJOR VERSION_REV VERSION_MINOR " " __GIT_VER__ ")"
 
 #define __BUILD__ __DATE__ " " __TIME__
+#if !defined(NDEBUG)
+#undef __BUILD__
+#define __BUILD__ __DATE__ " " __TIME__ " DEBUG_FACTORY_LABTOOL"
+#endif // DEBUG
 
 #define __BANNER__ "\r\n" \
 "                                        .         .           \r\n" \
