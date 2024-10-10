@@ -44,7 +44,16 @@ public:
      * @brief Initializes a new instance of the NodeStatusWidget class.
      * @param widget 
      */
-    explicit NodeStatusWidget(FWidget* widget = nullptr) : FWidget{widget}
+    explicit NodeStatusWidget(FWidget* widget = nullptr) : FWidget{widget},
+        chData(),
+        channelId(0U),
+        channelNo(0U),
+        peerId(0U),
+        uniqueId(0U),
+        peerStatus(),
+        m_failed(false),
+        m_control(false),
+        m_tx(false)
     {
         /* stub */
     }
@@ -150,17 +159,17 @@ public:
             // are we a dedicated control channel?
             if (dmrCC || p25CC || nxdnCC) {
                 m_control = true;
-                tbText = "CONTROL";
+                m_tbText = std::string("CONTROL");
             }
 
             // if we aren't a dedicated control channel; set our
             // title bar appropriately and set Tx state
             if (!m_control) {
                 if (dmrTSCCEnable || p25CtrlEnable || nxdnCtrlEnable) {
-                    tbText = "ENH. VOICE/CONV";
+                    m_tbText = std::string("ENH. VOICE/CONV");
                 }
                 else {
-                    tbText = "VOICE/CONV";
+                    m_tbText = std::string("VOICE/CONV");
                 }
 
                 // are we transmitting?
@@ -172,8 +181,6 @@ public:
                 }
             }
         }
-
-        redraw();
     }
 
 private:
@@ -181,7 +188,7 @@ private:
     bool m_control;
     bool m_tx;
 
-    FString tbText{}; // title bar text
+    FString m_tbText{}; // title bar text
 
     FLabel m_modeStr{this};
     FLabel m_peerIdStr{this};
@@ -207,7 +214,10 @@ private:
     {
         setSize(FSize{NODE_STATUS_WIDTH, NODE_STATUS_HEIGHT});
 
-        tbText = "UNKNOWN";
+        setFocusable(false);
+
+        m_failed = true;
+        m_tbText = "UNKNOWN";
 
         initControls();
     }
@@ -223,16 +233,8 @@ private:
         setForegroundColor(wc->dialog_fg);
         setBackgroundColor(wc->dialog_bg);
 
-        if (FVTerm::getFOutput()->isMonochron())
-            setReverse(true);
-
-        drawTitleBar();
-        setCursorPos({2, int(getHeight()) - 1});
-
-        if (FVTerm::getFOutput()->isMonochron())
-            setReverse(false);
-
         if (m_failed) {
+            m_tbText = "FAILED";
             setColor(FColor::LightGray, FColor::LightRed);
         }
         else if (m_control) {
@@ -245,7 +247,16 @@ private:
             setColor(FColor::LightGray, FColor::Black);
         }
 
-        finalcut::drawBorder(this, FRect(FPoint{1, 2}, FPoint{NODE_STATUS_WIDTH, NODE_STATUS_HEIGHT}));
+        finalcut::drawBorder(this, FRect(FPoint{1, 1}, FPoint{NODE_STATUS_WIDTH, NODE_STATUS_HEIGHT + 1}));
+
+        if (FVTerm::getFOutput()->isMonochron())
+            setReverse(true);
+
+        drawTitleBar();
+        setCursorPos({2, int(getHeight()) - 1});
+
+        if (FVTerm::getFOutput()->isMonochron())
+            setReverse(false);
     }
 
     /**
@@ -253,7 +264,7 @@ private:
      */
     void drawTitleBar()
     {
-        print() << FPoint{1, 1};
+        print() << FPoint{2, 1};
 
         // Fill with spaces (left of the title)
         if (FVTerm::getFOutput()->getMaxColor() < 16)
@@ -276,30 +287,30 @@ private:
         }
 
         const auto width = getWidth();
-        auto textWidth = getColumnWidth(tbText);
+        auto textWidth = getColumnWidth(m_tbText);
         std::size_t leadingSpace{0};
 
         if (width > textWidth)
-            leadingSpace = (width - textWidth) / 2;
+            leadingSpace = ((width - textWidth) / 2) - 1;
 
         // Print leading whitespace
         print(FString(leadingSpace, L' '));
 
         // Print title bar text
-        if (!tbText.isEmpty()) {
+        if (!m_tbText.isEmpty()) {
             if (textWidth <= width)
-                print(tbText);
+                print(m_tbText);
             else {
                 // Print ellipsis
-                const auto len = getLengthFromColumnWidth(tbText, width - 2);
-                print(tbText.left(len));
+                const auto len = getLengthFromColumnWidth(m_tbText, width - 2);
+                print(m_tbText.left(len));
                 print("..");
                 textWidth = len + 2;
             }
         }
 
         // Print trailing whitespace
-        std::size_t trailingSpace = width - leadingSpace - textWidth;
+        std::size_t trailingSpace = (width - leadingSpace - textWidth) - 2;
         print(FString(trailingSpace, L' '));
 
         if (FVTerm::getFOutput()->getMaxColor() < 16)
@@ -316,28 +327,28 @@ private:
         // in this widget...so we're forcing them to LightGray, this will be a problem if the overall palette
         // changes in the future.
 
-        m_modeStr.setGeometry(FPoint(24, 3), FSize(4, 1));
+        m_modeStr.setGeometry(FPoint(24, 2), FSize(4, 1));
         m_modeStr.setAlignment(Align::Right);
         m_modeStr.setForegroundColor(FColor::DarkBlue);                 // why?
         m_modeStr.setBackgroundColor(FColor::LightGray);                // why?
 
-        m_peerIdStr.setGeometry(FPoint(19, 4), FSize(9, 1));
+        m_peerIdStr.setGeometry(FPoint(19, 3), FSize(9, 1));
         m_peerIdStr.setForegroundColor(FColor::DarkBlue);               // why?
         m_peerIdStr.setBackgroundColor(FColor::LightGray);              // why?
         m_peerIdStr.setAlignment(Align::Right);
 
-        m_peerIdentityStr.setGeometry(FPoint(19, 5), FSize(9, 1));
+        m_peerIdentityStr.setGeometry(FPoint(19, 4), FSize(9, 1));
         m_peerIdentityStr.setForegroundColor(FColor::DarkBlue);         // why?
         m_peerIdentityStr.setBackgroundColor(FColor::LightGray);        // why?
         m_peerIdentityStr.setAlignment(Align::Right);
 
         // channel number
         {
-            m_channelNoLabel.setGeometry(FPoint(2, 3), FSize(10, 1));
+            m_channelNoLabel.setGeometry(FPoint(2, 2), FSize(10, 1));
             m_channelNoLabel.setForegroundColor(FColor::Black);         // why?
             m_channelNoLabel.setBackgroundColor(FColor::LightGray);     // why?
 
-            m_chanNo.setGeometry(FPoint(11, 3), FSize(8, 1));
+            m_chanNo.setGeometry(FPoint(11, 2), FSize(8, 1));
             m_chanNo.setForegroundColor(FColor::Black);                 // why?
             m_chanNo.setBackgroundColor(FColor::LightGray);             // why?
             m_chanNo.setText("");
@@ -345,18 +356,18 @@ private:
 
         // channel frequency
         {
-            m_txFreqLabel.setGeometry(FPoint(2, 4), FSize(4, 1));
+            m_txFreqLabel.setGeometry(FPoint(2, 3), FSize(4, 1));
             m_txFreqLabel.setForegroundColor(FColor::Black);            // why?
             m_txFreqLabel.setBackgroundColor(FColor::LightGray);        // why?
-            m_txFreq.setGeometry(FPoint(6, 4), FSize(9, 1));
+            m_txFreq.setGeometry(FPoint(6, 3), FSize(9, 1));
             m_txFreq.setForegroundColor(FColor::Black);                 // why?
             m_txFreq.setBackgroundColor(FColor::LightGray);             // why?
             m_txFreq.setText("");
 
-            m_rxFreqLabel.setGeometry(FPoint(2, 5), FSize(4, 1));
+            m_rxFreqLabel.setGeometry(FPoint(2, 4), FSize(4, 1));
             m_rxFreqLabel.setForegroundColor(FColor::Black);            // why?
             m_rxFreqLabel.setBackgroundColor(FColor::LightGray);        // why?
-            m_rxFreq.setGeometry(FPoint(6, 5), FSize(9, 1));
+            m_rxFreq.setGeometry(FPoint(6, 4), FSize(9, 1));
             m_rxFreq.setForegroundColor(FColor::Black);                 // why?
             m_rxFreq.setBackgroundColor(FColor::LightGray);             // why?
             m_rxFreq.setText("");
@@ -402,9 +413,24 @@ public:
      * @brief Initializes a new instance of the ScrollView class.
      * @param widget 
      */
-    explicit ScrollView(finalcut::FWidget* widget = nullptr) : finalcut::FScrollView{widget}
+    explicit ScrollView(finalcut::FWidget* widget = nullptr) : finalcut::FScrollView{widget},
+        m_nodes()
     {
-        /* stub */
+        m_nodes.clear();
+    }
+
+    /**
+     * @brief 
+     */
+    void deinit()
+    {
+        // deinitialize the node widgets
+        for (auto entry : m_nodes) {
+            entry->removeParent();
+            delete entry;
+            entry = nullptr;
+        }
+        m_nodes.clear();
     }
 
     /**
@@ -591,8 +617,8 @@ private:
     std::vector<NodeStatusWidget*> m_nodes;
 
     const int m_defaultOffsX = 2;
-    int m_nodeWdgtOffsX = m_defaultOffsX;
-    int m_nodeWdgtOffsY = 2;
+    int m_nodeWdgtOffsX = 2;
+    int m_nodeWdgtOffsY = 1;
 
     /**
      * @brief Initializes the window layout.
@@ -600,6 +626,9 @@ private:
     void initLayout() override
     {
         FScrollView::initLayout();
+
+        setFlags().feature.no_border = true;
+        setHorizontalScrollBarMode(ScrollBarMode::Hidden);
     }
 
     /**
@@ -651,9 +680,11 @@ private:
         // update widget status
         try
         {
+            wdgt->setFailed(false);
             wdgt->update();
         }
         catch (std::exception& e) {
+            wdgt->setFailed(true);
             ::LogWarning(LOG_HOST, "PEER %u, failed to update peer status, %s", peerId, e.what());
         }
 
@@ -669,9 +700,6 @@ private:
         wdgt->redraw();
         
         m_nodes.push_back(wdgt);
-
-        rootWidget->redraw();
-        redraw();
     }
 
     /**
@@ -684,6 +712,8 @@ private:
     void updateNode(NodeStatusWidget* wdgt, uint32_t peerId, json::object peerObj, int32_t uniqueId = -1)
     {
         assert(wdgt != nullptr);
+
+        const auto& rootWidget = getRootWidget();
 
         uint8_t channelId = peerObj["channelId"].get<uint8_t>();
         uint32_t channelNo = peerObj["channelNo"].get<uint32_t>();
@@ -730,14 +760,16 @@ public:
      * @brief Initializes a new instance of the NodeStatusWnd class.
      * @param widget 
      */
-    explicit NodeStatusWnd(FWidget* widget = nullptr) : FDialog{widget}
+    explicit NodeStatusWnd(FWidget* widget = nullptr) : FDialog{widget},
+        m_killed(false),
+        m_threadStopped(false)
     {
-        m_killed = false;
         Thread::runAsThread(this, threadNodeUpdate);
     }
 
 private:
     bool m_killed;
+    bool m_threadStopped;
 
     ScrollView m_scroll{this};
 
@@ -750,6 +782,7 @@ private:
         FDialog::setSize(FSize{80, 25});
 
         FDialog::setMinimizable(false);
+        FDialog::setResizeable(false);
         FDialog::setShadow();
 
         std::size_t maxWidth, maxHeight;
@@ -788,7 +821,7 @@ private:
     void initControls()
     {
         m_scroll.setGeometry(FPoint{1, 1}, FSize{78, 22});
-        m_scroll.setScrollSize(FSize{230, 440});
+        m_scroll.setScrollSize(FSize{440, 440});
 
         m_scroll.update();
     }
@@ -798,7 +831,7 @@ private:
      */
     void adjustSize() override
     {
-        m_scroll.setGeometry(FPoint{1, 1}, FSize{getWidth() - 2, getHeight() - 3});
+        m_scroll.setGeometry(FPoint{1, 1}, FSize{getWidth() - 1, getHeight() - 2});
     }
 
     /* Entry point to node update thread. */
@@ -840,12 +873,13 @@ private:
                         killed = wnd->m_killed;
                     }
 
-                    Thread::sleep(250U);
+                    Thread::sleep(175U);
                 } else {
                     break;
                 }
             }
 
+            wnd->m_threadStopped = true;
             LogDebug(LOG_HOST, "[STOP] %s", threadName.c_str());
             delete th;
         }
@@ -876,8 +910,11 @@ private:
     void onClose(FCloseEvent* e) override
     {
         m_killed = true;
-        Thread::sleep(1250U); // this is a horrible way of making sure the update thread stops...
+        while (!m_threadStopped) {
+            Thread::sleep(125U);
+        }
 
+        m_scroll.deinit();
         hide();
     }
 };

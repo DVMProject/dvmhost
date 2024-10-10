@@ -121,6 +121,8 @@ private:
     bool m_control;
     bool m_tx;
 
+    FString m_tbText{}; // title bar text
+
     lookups::VoiceChData m_chData;
     uint8_t m_channelId;
     uint32_t m_channelNo;
@@ -155,7 +157,8 @@ private:
         FDialog::setShadow(false);
         FDialog::setModal(false);
 
-        FDialog::setText("UNKNOWN");
+        m_failed = true;
+        m_tbText = "UNKNOWN";
 
         initControls();
 
@@ -169,7 +172,14 @@ private:
     {
         FDialog::draw();
 
+        setColor();
+
+        const auto& wc = getColorTheme();
+        setForegroundColor(wc->dialog_fg);
+        setBackgroundColor(wc->dialog_bg);
+
         if (m_failed) {
+            m_tbText = "FAILED";
             setColor(FColor::LightGray, FColor::LightRed);
         }
         else if (m_control) {
@@ -182,7 +192,74 @@ private:
             setColor(FColor::LightGray, FColor::Black);
         }
 
-        finalcut::drawBorder(this, FRect(FPoint{1, 2}, FPoint{NODE_STATUS_WIDTH, NODE_STATUS_HEIGHT}));
+        finalcut::drawBorder(this, FRect(FPoint{1, 1}, FPoint{NODE_STATUS_WIDTH, NODE_STATUS_HEIGHT + 1}));
+
+        if (FVTerm::getFOutput()->isMonochron())
+            setReverse(true);
+
+        drawTitleBar();
+        setCursorPos({2, int(getHeight()) - 1});
+
+        if (FVTerm::getFOutput()->isMonochron())
+            setReverse(false);
+    }
+
+    /**
+     * @brief 
+     */
+    void drawTitleBar()
+    {
+        print() << FPoint{2, 1};
+
+        // Fill with spaces (left of the title)
+        if (FVTerm::getFOutput()->getMaxColor() < 16)
+            setBold();
+
+        const auto& wc = getColorTheme();
+
+        if (!m_tx) {
+            if (m_failed) {
+                setColor(FColor::Black, FColor::LightRed);
+            }
+            else if (m_control) {
+                setColor(FColor::LightGray, FColor::Purple1);
+            }
+            else {
+                setColor(FColor::Black, FColor::White);
+            }
+        } else {
+            setColor(FColor::Black, FColor::LightGreen);
+        }
+
+        const auto width = getWidth();
+        auto textWidth = getColumnWidth(m_tbText);
+        std::size_t leadingSpace{0};
+
+        if (width > textWidth)
+            leadingSpace = ((width - textWidth) / 2) - 1;
+
+        // Print leading whitespace
+        print(FString(leadingSpace, L' '));
+
+        // Print title bar text
+        if (!m_tbText.isEmpty()) {
+            if (textWidth <= width)
+                print(m_tbText);
+            else {
+                // Print ellipsis
+                const auto len = getLengthFromColumnWidth(m_tbText, width - 2);
+                print(m_tbText.left(len));
+                print("..");
+                textWidth = len + 2;
+            }
+        }
+
+        // Print trailing whitespace
+        std::size_t trailingSpace = (width - leadingSpace - textWidth) - 2;
+        print(FString(trailingSpace, L' '));
+
+        if (FVTerm::getFOutput()->getMaxColor() < 16)
+            unsetBold();
     }
 
     /**
@@ -190,16 +267,17 @@ private:
      */
     void initControls()
     {
-        m_modeStr.setGeometry(FPoint(22, 1), FSize(4, 1));
+        m_modeStr.setGeometry(FPoint(23, 1), FSize(4, 1));
         m_modeStr.setAlignment(Align::Right);
         m_modeStr.setEmphasis();
 
-        m_peerIdStr.setGeometry(FPoint(17, 2), FSize(9, 1));
+        m_peerIdStr.setGeometry(FPoint(18, 2), FSize(9, 1));
         m_peerIdStr.setAlignment(Align::Right);
+        m_peerIdStr.setEmphasis();
 
         // channel number
         {
-            m_channelNoLabel.setGeometry(FPoint(2, 1), FSize(10, 1));
+            m_channelNoLabel.setGeometry(FPoint(1, 1), FSize(10, 1));
 
             m_chanNo.setGeometry(FPoint(11, 1), FSize(8, 1));
             m_chanNo.setText("");
@@ -207,18 +285,18 @@ private:
 
         // channel frequency
         {
-            m_txFreqLabel.setGeometry(FPoint(2, 2), FSize(4, 1));
+            m_txFreqLabel.setGeometry(FPoint(1, 2), FSize(4, 1));
             m_txFreq.setGeometry(FPoint(6, 2), FSize(9, 1));
             m_txFreq.setText("");
 
-            m_rxFreqLabel.setGeometry(FPoint(2, 3), FSize(4, 1));
+            m_rxFreqLabel.setGeometry(FPoint(1, 3), FSize(4, 1));
             m_rxFreq.setGeometry(FPoint(6, 3), FSize(9, 1));
             m_rxFreq.setText("");
         }
 
         // last TG
         {
-            m_lastDstLabel.setGeometry(FPoint(2, 4), FSize(11, 1));
+            m_lastDstLabel.setGeometry(FPoint(1, 4), FSize(11, 1));
 
             m_lastDst.setGeometry(FPoint(13, 4), FSize(8, 1));
             m_lastDst.setText("None");
@@ -226,7 +304,7 @@ private:
 
         // last source
         {
-            m_lastSrcLabel.setGeometry(FPoint(2, 5), FSize(11, 1));
+            m_lastSrcLabel.setGeometry(FPoint(1, 5), FSize(11, 1));
 
             m_lastSrc.setGeometry(FPoint(13, 5), FSize(8, 1));
             m_lastSrc.setText("None");
@@ -305,7 +383,7 @@ private:
                         ++m_failCnt;
                         if (m_failCnt > NODE_UPDATE_FAIL_CNT) {
                             m_failed = true;
-                            setText("FAILED");
+                            m_tbText = std::string("FAILED");
                         }
                     }
                     else {
@@ -330,7 +408,11 @@ private:
 
                             if (rsp["peerId"].is<uint32_t>()) {
                                 m_peerId = rsp["peerId"].get<uint32_t>();
-                                m_peerIdStr.setText(__INT_STR(m_peerId));
+
+                                // pad peer IDs properly
+                                std::ostringstream peerOss;
+                                peerOss << std::setw(9) << std::setfill('0') << m_peerId;
+                                m_peerIdStr.setText(peerOss.str());
                             }
 
                             // get remote node state
@@ -346,17 +428,17 @@ private:
                                 // are we a dedicated control channel?
                                 if (dmrCC || p25CC || nxdnCC) {
                                     m_control = true;
-                                    setText("CONTROL");
+                                    m_tbText = std::string("CONTROL");
                                 }
 
                                 // if we aren't a dedicated control channel; set our
                                 // title bar appropriately and set Tx state
                                 if (!m_control) {
                                     if (dmrTSCCEnable || p25CtrlEnable || nxdnCtrlEnable) {
-                                        setText("ENH. VOICE/CONV");
+                                        m_tbText = std::string("ENH. VOICE/CONV");
                                     }
                                     else {
-                                        setText("VOICE/CONV");
+                                        m_tbText = std::string("VOICE/CONV");
                                     }
 
                                     // are we transmitting?
@@ -389,12 +471,12 @@ private:
                             // report last known transmitted destination ID
                             if (rsp["lastDstId"].is<uint32_t>()) {
                                 uint32_t lastDstId = rsp["lastDstId"].get<uint32_t>();
-                                if (lastDstId == 0) {
-                                    m_lastDst.setText("None");
-                                }
-                                else {
-                                    m_lastDst.setText(__INT_STR(lastDstId));
-                                }
+
+                                // pad TGs properly
+                                std::ostringstream tgidOss;
+                                tgidOss << std::setw(5) << std::setfill('0') << lastDstId;
+
+                                m_lastDst.setText(tgidOss.str());
                             }
                             else {
                                 ::LogWarning(LOG_HOST, "%s:%u, does not report last TG information");
@@ -403,12 +485,7 @@ private:
                             // report last known transmitted source ID
                             if (rsp["lastSrcId"].is<uint32_t>()) {
                                 uint32_t lastSrcId = rsp["lastSrcId"].get<uint32_t>();
-                                if (lastSrcId == 0) {
-                                    m_lastSrc.setText("None");
-                                }
-                                else {
-                                    m_lastSrc.setText(__INT_STR(lastSrcId));
-                                }
+                                m_lastSrc.setText(__INT_STR(lastSrcId));
                             }
                             else {
                                 ::LogWarning(LOG_HOST, "%s:%u, does not report last source information");
@@ -434,7 +511,7 @@ private:
                     if (ret == network::rest::http::HTTPPayload::StatusType::OK) {
                         m_failed = false;
                         m_failCnt = 0U;
-                        setText("UNKNOWN");
+                        m_tbText = std::string("UNKNOWN");
                     }
                 }
 
