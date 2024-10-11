@@ -111,11 +111,11 @@ public:
                 json::array fnePeers = rsp["peers"].get<json::array>();
                 for (auto entry : fnePeers) {
                     json::object peerObj = entry.get<json::object>();
-                    uint32_t peerId = peerObj["peerId"].get<uint32_t>();
-                    std::string peerAddress = peerObj["address"].get<std::string>();
-                    uint16_t port = (uint16_t)peerObj["port"].get<uint32_t>();
-                    bool connected = peerObj["connected"].get<bool>();
-                    uint32_t connectionState = (uint32_t)peerObj["connectionState"].get<uint32_t>();
+                    uint32_t peerId = peerObj["peerId"].getDefault<uint32_t>(0U);
+                    std::string peerAddress = peerObj["address"].getDefault<std::string>("");
+                    uint16_t port = (uint16_t)peerObj["port"].getDefault<uint32_t>(0U);
+                    bool connected = peerObj["connected"].getDefault<bool>(false);
+                    uint32_t connectionState = (uint32_t)peerObj["connectionState"].getDefault<uint32_t>(0U);
                     std::string strConnState = "";
                     switch (connectionState) {
                     case network::NET_CONN_STATUS::NET_STAT_RUNNING:
@@ -135,25 +135,25 @@ public:
                         break;
                     }
 
-                    uint32_t pingsReceived = (uint32_t)peerObj["pingsReceived"].get<uint32_t>();
-                    uint64_t lastPing = (uint64_t)peerObj["lastPing"].get<uint32_t>();
+                    uint32_t pingsReceived = (uint32_t)peerObj["pingsReceived"].getDefault<uint32_t>(0U);
+                    uint64_t lastPing = (uint64_t)peerObj["lastPing"].getDefault<uint32_t>(0U);
 
-                    uint32_t ccPeerId = (uint32_t)peerObj["controlChannel"].get<uint32_t>();
+                    uint32_t ccPeerId = (uint32_t)peerObj["controlChannel"].getDefault<uint32_t>(0U);
 
                     json::array voiceChannels = peerObj["voiceChannels"].get<json::array>();
                     std::vector<uint32_t> voiceChannelPeers;
                     for (auto vcEntry : voiceChannels) {
-                        uint32_t vcPeerId = vcEntry.get<uint32_t>();
+                        uint32_t vcPeerId = vcEntry.getDefault<uint32_t>(0U);
                         voiceChannelPeers.push_back(vcPeerId);
                     }
 
                     json::object peerConfig = peerObj["config"].get<json::object>();
-                    std::string identity = peerConfig["identity"].get<std::string>();
-                    std::string software = peerConfig["software"].get<std::string>();
+                    std::string identity = peerConfig["identity"].getDefault<std::string>("");
+                    std::string software = peerConfig["software"].getDefault<std::string>("");
 
                     json::object channel = peerConfig["channel"].get<json::object>();
-                    uint32_t chNo = (uint32_t)channel["channelNo"].get<int>();
-                    uint8_t chId = channel["channelId"].get<uint8_t>();
+                    uint32_t chNo = (uint32_t)channel["channelNo"].getDefault<int>(1);
+                    uint8_t chId = channel["channelId"].getDefault<uint8_t>(0U);
 
                     g_peerIdentityNameMap[peerId] = std::string(identity);
 

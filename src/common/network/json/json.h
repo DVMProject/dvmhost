@@ -17,6 +17,7 @@
 #define __JSON_H__
 
 #include "common/Defines.h"
+#include "common/Log.h"
 
 #include <algorithm>
 #include <cstdio>
@@ -171,6 +172,8 @@ namespace json
 
         template <typename T> const T &get() const;
         template <typename T> T &get();
+        template <typename T> const T getDefault(T def) const;
+        template <typename T> T getDefault(T def);
 
         template <typename T> void set(const T &);
 #if PICOJSON_USE_RVALUE_REFERENCE
@@ -376,11 +379,21 @@ namespace json
 
     #define GET(ctype, var)                                                         \
         template <> inline const ctype &value::get<ctype>() const {                 \
+            if (!is<ctype>()) ::LogError(LOG_HOST, "JSON ERROR: type mismatch! call is<type>() before get<type>(), type = %s, %s", to_type().c_str(), to_str().c_str()); \
             PICOJSON_ASSERT("type mismatch! call is<type>() before get<type>()" && is<ctype>()); \
             return var;                                                             \
         }                                                                           \
         template <> inline ctype &value::get<ctype>() {                             \
+            if (!is<ctype>()) ::LogError(LOG_HOST, "JSON ERROR: type mismatch! call is<type>() before get<type>(), type = %s, %s", to_type().c_str(), to_str().c_str()); \
             PICOJSON_ASSERT("type mismatch! call is<type>() before get<type>()" && is<ctype>()); \
+            return var;                                                             \
+        }                                                                           \
+        template <> inline const ctype value::getDefault<ctype>(ctype def) const {  \
+            if (!is<ctype>()) return def;                                           \
+            return var;                                                             \
+        }                                                                           \
+        template <> inline ctype value::getDefault<ctype>(ctype def) {              \
+            if (!is<ctype>()) return def;                                           \
             return var;                                                             \
         }
 

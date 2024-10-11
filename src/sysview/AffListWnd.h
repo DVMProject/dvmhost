@@ -111,12 +111,12 @@ public:
                 json::array fneAffils = rsp["affiliations"].get<json::array>();
                 for (auto entry : fneAffils) {
                     json::object peerAffils = entry.get<json::object>();
-                    uint32_t peerId = peerAffils["peerId"].get<uint32_t>();
+                    uint32_t peerId = peerAffils["peerId"].getDefault<uint32_t>(0U);
                     json::array affils = peerAffils["affiliations"].get<json::array>();
                     for (auto pentry : affils) {
                         json::object peerEntry = pentry.get<json::object>();
-                        uint32_t dstId = peerEntry["dstId"].get<uint32_t>();
-                        uint32_t srcId = peerEntry["srcId"].get<uint32_t>();
+                        uint32_t dstId = peerEntry["dstId"].getDefault<uint32_t>(0U);
+                        uint32_t srcId = peerEntry["srcId"].getDefault<uint32_t>(0U);
 
                         // pad peer IDs properly
                         std::ostringstream peerOss;
