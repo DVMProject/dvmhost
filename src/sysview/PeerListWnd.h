@@ -193,7 +193,7 @@ public:
                         identity, software,
                         peerAddress, std::to_string(port),
                         ccPeerOss.str(),
-                        (voiceChannelPeers.size() > 0U) ? "X" : "",
+                        std::to_string(voiceChannelPeers.size()),
                         (connected) ? "X" : "",
                         strConnState,
                         std::to_string(pingsReceived),
