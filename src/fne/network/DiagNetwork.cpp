@@ -230,7 +230,6 @@ void* DiagNetwork::threadedNetworkRx(void* arg)
 
                                         // repeat traffic to the connected peers
                                         if (network->m_peers.size() > 0U) {
-                                            uint32_t i = 0U;
                                             for (auto peer : network->m_peers) {
                                                 if (peer.second != nullptr) {
                                                     if (peer.second->isSysView()) {
@@ -306,7 +305,6 @@ void* DiagNetwork::threadedNetworkRx(void* arg)
                                     // validate peer (simple validation really)
                                     if (connection->connected() && connection->address() == ip) {
                                         if (network->m_peers.size() > 0U) {
-                                            uint32_t i = 0U;
                                             for (auto peer : network->m_peers) {
                                                 if (peer.second != nullptr) {
                                                     if (peer.second->isSysView()) {
