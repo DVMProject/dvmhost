@@ -313,6 +313,10 @@ void* DiagNetwork::threadedNetworkRx(void* arg)
                                                     sockaddr_storage addr = peer.second->socketStorage();
                                                     uint32_t addrLen = peer.second->sockStorageLen();
 
+                                                    if (network->m_debug) {
+                                                        LogDebug(LOG_NET, "SysView, srcPeer = %u, dstPeer = %u, peer status message, len = %u", 
+                                                            peerId, peer.first, req->length);
+                                                    }
                                                     network->m_frameQueue->write(req->buffer, req->length, streamId, peerId, network->m_peerId, 
                                                         { NET_FUNC::TRANSFER, NET_SUBFUNC::TRANSFER_SUBFUNC_STATUS }, RTP_END_OF_CALL_SEQ, addr, addrLen);
                                                 }
