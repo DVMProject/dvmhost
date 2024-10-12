@@ -233,7 +233,7 @@ bool createPeerNetwork()
     }
 
     // initialize networking
-    g_network = new PeerNetwork(address, port, 0U, id, password, true, g_debug, true, true, true, true, true, true, true, true, false);
+    g_network = new PeerNetwork(address, port, 0U, id, password, true, g_debug, true, true, true, true, true, true, false, true, false);
     g_network->setMetadata(identity, 0U, 0U, 0.0F, 0.0F, 0, 0, 0, 0.0F, 0.0F, 0, "");
     g_network->setLookups(g_ridLookup, g_tidLookup);
 

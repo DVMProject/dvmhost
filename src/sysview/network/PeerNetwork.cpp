@@ -13,6 +13,7 @@
 #include "common/p25/dfsi/LC.h"
 #include "common/Utils.h"
 #include "network/PeerNetwork.h"
+#include "SysViewMain.h"
 
 using namespace network;
 
@@ -71,6 +72,9 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
             ::memset(rawPayload, 0x00U, length - 11U);
             ::memcpy(rawPayload, data + 11U, length - 11U);
             std::string payload(rawPayload, rawPayload + (length - 11U));
+
+            if (g_debug)
+                LogMessage(LOG_NET, "Peer Status, peerId = %u", peerId);
 
             // parse JSON body
             json::value v;
