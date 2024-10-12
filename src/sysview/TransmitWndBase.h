@@ -36,6 +36,50 @@ using namespace finalcut;
 // ---------------------------------------------------------------------------
 
 /**
+ * @brief This class implements the line edit control for RIDs.
+ * @ingroup fneSysView
+ */
+class HOST_SW_API RIDLineEdit final : public FLineEdit {
+public:
+    /**
+     * @brief Initializes a new instance of the RIDLineEdit class.
+     * @param widget 
+     */
+    explicit RIDLineEdit(FWidget* widget = nullptr) : FLineEdit{widget}
+    {
+        setInputFilter("[[:digit:]]");
+    }
+
+    /*
+    ** Event Handlers
+    */
+
+    /**
+     * @brief Event that occurs on keyboard key press.
+     * @param e Keyboard Event.
+     */
+    void onKeyPress(finalcut::FKeyEvent* e) override
+    {
+        const auto key = e->key();
+        if (key == FKey::Up) {
+            emitCallback("up-pressed");
+            e->accept();
+            return;
+        } else if (key == FKey::Down) {
+            emitCallback("down-pressed");
+            e->accept();
+            return;
+        }
+
+        FLineEdit::onKeyPress(e);
+    }
+};
+
+// ---------------------------------------------------------------------------
+//  Class Declaration
+// ---------------------------------------------------------------------------
+
+/**
  * @brief This class implements the base class for transmit windows.
  * @ingroup fneSysView
  */
@@ -307,11 +351,13 @@ protected:
         // Set first busy bits to 1,1
         P25Utils::setStatusBits(data, P25_SS0_START, true, true);
 
-        LogDebug(LOG_RF, P25_TSDU_STR ", lco = $%02X, mfId = $%02X, lastBlock = %u, AIV = %u, EX = %u, srcId = %u, dstId = %u, sysId = $%03X, netId = $%05X",
-            tsbk->getLCO(), tsbk->getMFId(), tsbk->getLastBlock(), tsbk->getAIV(), tsbk->getEX(), tsbk->getSrcId(), tsbk->getDstId(),
-            tsbk->getSysId(), tsbk->getNetId());
+        if (g_debug) {
+            LogDebug(LOG_RF, P25_TSDU_STR ", lco = $%02X, mfId = $%02X, lastBlock = %u, AIV = %u, EX = %u, srcId = %u, dstId = %u, sysId = $%03X, netId = $%05X",
+                tsbk->getLCO(), tsbk->getMFId(), tsbk->getLastBlock(), tsbk->getAIV(), tsbk->getEX(), tsbk->getSrcId(), tsbk->getDstId(),
+                tsbk->getSysId(), tsbk->getNetId());
 
-        Utils::dump(1U, "!!! *TSDU (SBF) TSBK Block Data", data + P25_PREAMBLE_LENGTH_BYTES, P25_TSBK_FEC_LENGTH_BYTES);
+            Utils::dump(1U, "!!! *TSDU (SBF) TSBK Block Data", data + P25_PREAMBLE_LENGTH_BYTES, P25_TSBK_FEC_LENGTH_BYTES);
+        }
 
         lc::LC lc = lc::LC();
         lc.setLCO(tsbk->getLCO());

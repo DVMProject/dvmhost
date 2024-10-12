@@ -91,10 +91,11 @@ private:
     FLabel m_dialogLabel{"Dynamic Regroup Subscriber", this};
 
     FLabel m_subscriberLabel{"Subscriber ID: ", this};
-    FSpinBox m_subscriber{this};
+    RIDLineEdit m_subscriber{this};
     FLabel m_tgLabel{"Talkgroup ID: ", this};
     TGIdLineEdit m_tgId{this};
 
+    uint32_t m_srcId = 1U;
     uint32_t m_selectedTgId = 1U;
 
     /**
@@ -141,18 +142,50 @@ private:
 
             m_subscriberLabel.setGeometry(FPoint(2, 8), FSize(25, 1));
             m_subscriber.setGeometry(FPoint(28, 8), FSize(20, 1));
-            m_subscriber.setRange(0, 16777211);
-            m_subscriber.setValue(1);
+            m_subscriber.setText(std::to_string(m_srcId));
             m_subscriber.setShadow(false);
-            m_subscriber.addCallback("changed", [&]() {
-                if (m_subscriber.getValue() >= 1 && m_subscriber.getValue() <= 16777211) {
-                    m_txButton.setEnable(true);
-                }
-                else {
-                    m_txButton.setEnable(false);
+            m_subscriber.addCallback("up-pressed", [&]() {
+                uint32_t rid = ::atoi(m_subscriber.getText().c_str());
+                rid++;
+                if (rid > 16777215U) {
+                    rid = 16777215U;
                 }
 
+                m_subscriber.setText(std::to_string(rid));
+
+                m_srcId = rid;
                 redraw();
+            });
+            m_subscriber.addCallback("down-pressed", [&]() {
+                uint32_t rid = ::atoi(m_subscriber.getText().c_str());
+                rid--;
+                if (rid < 1U) {
+                    rid = 1U;
+                }
+
+                m_subscriber.setText(std::to_string(rid));
+
+                m_srcId = rid;
+                redraw();
+            });
+            m_subscriber.addCallback("changed", [&]() { 
+                if (m_subscriber.getText().c_str() == "") {
+                    m_srcId = 1U;
+                    return;
+                }
+
+                uint32_t rid = ::atoi(m_subscriber.getText().c_str());
+                if (rid < 1U) {
+                    rid = 1U;
+                }
+
+                if (rid > 16777215U) {
+                    rid = 16777215U;
+                }
+
+                m_subscriber.setText(std::to_string(rid));
+
+                m_srcId = rid;
             });
 
             m_tgLabel.setGeometry(FPoint(2, 9), FSize(25, 1));
@@ -181,6 +214,11 @@ private:
                 redraw();
             });
             m_tgId.addCallback("changed", [&]() { 
+                if (m_tgId.getText().getLength() == 0) {
+                    m_selectedTgId = 1U;
+                    return;
+                }
+
                 uint32_t tgId = ::atoi(m_tgId.getText().c_str());
                 if (tgId < 1U) {
                     tgId = 1U;
@@ -217,16 +255,16 @@ private:
             using namespace p25::defines;
 
             if (lock) {
-                writeP25_Ext_Func(ExtendedFunctions::DYN_REGRP_LOCK, WUID_FNE, (uint32_t)m_subscriber.getValue());
+                writeP25_Ext_Func(ExtendedFunctions::DYN_REGRP_LOCK, WUID_FNE, m_srcId);
                 break;
             }
 
             if (unlock) {
-                writeP25_Ext_Func(ExtendedFunctions::DYN_REGRP_UNLOCK, WUID_FNE, (uint32_t)m_subscriber.getValue());
+                writeP25_Ext_Func(ExtendedFunctions::DYN_REGRP_UNLOCK, WUID_FNE, m_srcId);
                 break;
             }
 
-            writeP25_Ext_Func(ExtendedFunctions::DYN_REGRP_REQ, m_selectedTgId, (uint32_t)m_subscriber.getValue());
+            writeP25_Ext_Func(ExtendedFunctions::DYN_REGRP_REQ, m_selectedTgId, m_srcId);
         }
         break;
 

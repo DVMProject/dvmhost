@@ -210,7 +210,6 @@ public:
             }
         }
 
-        setFocusWidget(&m_listView);
         redraw();
     }
 

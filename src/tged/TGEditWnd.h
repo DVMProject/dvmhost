@@ -218,6 +218,13 @@ private:
                 redraw();
             });
             m_tgId.addCallback("changed", [&]() { 
+                if (m_tgId.getText().getLength() == 0) {
+                    auto source = m_rule.source();
+                    source.tgId(1U);
+                    m_rule.source(source); 
+                    return;
+                }
+
                 uint32_t tgId = ::atoi(m_tgId.getText().c_str());
                 if (tgId < 1U) {
                     tgId = 1U;
