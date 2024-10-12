@@ -65,7 +65,7 @@ fne:
     # FNE access password.
     password: RPT1234
     # Textual identity of this peer.
-    identity: EXPEER
+    identity: SYSVIEW
     # Network Peer ID
     peerId: 9000990
   
