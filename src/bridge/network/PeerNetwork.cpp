@@ -196,13 +196,13 @@ bool PeerNetwork::writeConfig()
     char* buffer = __buffer.get();
 
     ::memcpy(buffer + 0U, TAG_REPEATER_CONFIG, 4U);
-    ::sprintf(buffer + 8U, "%s", json.c_str());
+    ::snprintf(buffer + 8U, json.length() + 1U, "%s", json.c_str());
 
     if (m_debug) {
         Utils::dump(1U, "Network Message, Configuration", (uint8_t*)buffer, json.length() + 8U);
     }
 
-    return writeMaster({ NET_FUNC::RPTC, NET_SUBFUNC::NOP }, (uint8_t*)buffer, json.length() + 8U, pktSeq(), m_loginStreamId);
+    return writeMaster({ NET_FUNC::RPTC, NET_SUBFUNC::NOP }, (uint8_t*)buffer, json.length() + 8U, RTP_END_OF_CALL_SEQ, m_loginStreamId);
 }
 
 // ---------------------------------------------------------------------------
