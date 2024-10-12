@@ -295,38 +295,35 @@ void* DiagNetwork::threadedNetworkRx(void* arg)
                         }
                     }
                     else if (req->fneHeader.getSubFunction() == NET_SUBFUNC::TRANSFER_SUBFUNC_STATUS) { // Peer Status Transfer
-                        // report peer status to InfluxDB
-                        if (network->m_enableInfluxDB) {
-                            if (peerId > 0 && (network->m_peers.find(peerId) != network->m_peers.end())) {
-                                FNEPeerConnection* connection = network->m_peers[peerId];
-                                if (connection != nullptr) {
-                                    std::string ip = udp::Socket::address(req->address);
+                        if (peerId > 0 && (network->m_peers.find(peerId) != network->m_peers.end())) {
+                            FNEPeerConnection* connection = network->m_peers[peerId];
+                            if (connection != nullptr) {
+                                std::string ip = udp::Socket::address(req->address);
 
-                                    // validate peer (simple validation really)
-                                    if (connection->connected() && connection->address() == ip) {
-                                        if (network->m_peers.size() > 0U) {
-                                            for (auto peer : network->m_peers) {
-                                                if (peer.second != nullptr) {
-                                                    if (peer.second->isSysView()) {
-                                                        uint32_t peerStreamId = peer.second->currStreamId();
-                                                        if (streamId == 0U) {
-                                                            streamId = peerStreamId;
-                                                        }
-                                                        sockaddr_storage addr = peer.second->socketStorage();
-                                                        uint32_t addrLen = peer.second->sockStorageLen();
-
-                                                        network->m_frameQueue->write(req->buffer, req->length, streamId, peerId, network->m_peerId, 
-                                                            { NET_FUNC::TRANSFER, NET_SUBFUNC::TRANSFER_SUBFUNC_STATUS }, RTP_END_OF_CALL_SEQ, addr, addrLen);
+                                // validate peer (simple validation really)
+                                if (connection->connected() && connection->address() == ip) {
+                                    if (network->m_peers.size() > 0U) {
+                                        for (auto peer : network->m_peers) {
+                                            if (peer.second != nullptr) {
+                                                if (peer.second->isSysView()) {
+                                                    uint32_t peerStreamId = peer.second->currStreamId();
+                                                    if (streamId == 0U) {
+                                                        streamId = peerStreamId;
                                                     }
-                                                } else {
-                                                    continue;
+                                                    sockaddr_storage addr = peer.second->socketStorage();
+                                                    uint32_t addrLen = peer.second->sockStorageLen();
+
+                                                    network->m_frameQueue->write(req->buffer, req->length, streamId, peerId, network->m_peerId, 
+                                                        { NET_FUNC::TRANSFER, NET_SUBFUNC::TRANSFER_SUBFUNC_STATUS }, RTP_END_OF_CALL_SEQ, addr, addrLen);
                                                 }
+                                            } else {
+                                                continue;
                                             }
                                         }
                                     }
-                                    else {
-                                        network->writePeerNAK(peerId, TAG_TRANSFER_STATUS, NET_CONN_NAK_FNE_UNAUTHORIZED);
-                                    }
+                                }
+                                else {
+                                    network->writePeerNAK(peerId, TAG_TRANSFER_STATUS, NET_CONN_NAK_FNE_UNAUTHORIZED);
                                 }
                             }
                         }
