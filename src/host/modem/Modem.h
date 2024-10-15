@@ -660,6 +660,11 @@ namespace modem
         virtual int write(const uint8_t* data, uint32_t length);
 
         /**
+         * @brief Gets the flag for the V.24 connection state.
+         * @returns bool True, if V.24 device is connected, otherwise false. (This is always true for air interfaces.)
+         */
+        bool isV24Connected() const;
+        /**
          * @brief Gets the current operating state for the air interface modem.
          * @returns DVM_STATE Current operating state of modem.
          */
@@ -779,6 +784,7 @@ namespace modem
         uint32_t m_adcOverFlowCount;    // dedicated modem - ADC overflow count
         uint32_t m_dacOverFlowCount;    // dedicated modem - DAC overflow count
 
+        bool m_v24Connected;
         DVM_STATE m_modemState;
 
         uint8_t* m_buffer;

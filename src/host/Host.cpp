@@ -1470,6 +1470,8 @@ json::object Host::getStatus()
         uint32_t txFreqEffective = m_modem->m_txFrequency + m_modem->m_txTuning;
         modemInfo["txFrequencyEffective"].set<uint32_t>(txFreqEffective);
 
+        modemInfo["v24Connected"].set<bool>(m_modem->m_v24Connected);
+
         uint8_t protoVer = m_modem->getVersion();
         modemInfo["protoVer"].set<uint8_t>(protoVer);
 

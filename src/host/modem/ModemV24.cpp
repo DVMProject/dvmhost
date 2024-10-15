@@ -58,6 +58,8 @@ ModemV24::ModemV24(port::IModemPort* port, bool duplex, uint32_t p25QueueSize, u
     m_lastP25Tx(0U),
     m_rs()
 {
+    m_v24Connected = false; // defaulted to false for V.24 modems
+
     // Init m_call
     m_txCall = new DFSICallData();
     m_rxCall = new DFSICallData();
@@ -219,8 +221,9 @@ void ModemV24::clock(uint32_t ms)
             bool nxdnEnable = (m_buffer[3U] & 0x10U) == 0x10U;
 
             // flag indicating if free space is being reported in 16-byte blocks instead of LDUs
-            bool spaceInBlocks = (m_buffer[3U] & 0x80) == 0x80;
+            bool spaceInBlocks = (m_buffer[3U] & 0x80U) == 0x80U;
 
+            m_v24Connected = (m_buffer[3U] & 0x40U) == 0x40U;
             m_modemState = (DVM_STATE)m_buffer[4U];
 
             m_tx = (m_buffer[5U] & 0x01U) == 0x01U;
@@ -300,8 +303,8 @@ void ModemV24::clock(uint32_t ms)
                 m_p25Space = m_buffer[10U] * (P25DEF::P25_LDU_FRAME_LENGTH_BYTES);
 
             if (m_dumpModemStatus) {
-                LogDebug(LOG_MODEM, "ModemV24::clock(), CMD_GET_STATUS, isHotspot = %u, dmr = %u / %u, p25 = %u / %u, nxdn = %u / %u, modemState = %u, tx = %u, adcOverflow = %u, rxOverflow = %u, txOverflow = %u, dacOverflow = %u, dmrSpace1 = %u, dmrSpace2 = %u, p25Space = %u, nxdnSpace = %u",
-                    m_isHotspot, dmrEnable, m_dmrEnabled, p25Enable, m_p25Enabled, nxdnEnable, m_nxdnEnabled, m_modemState, m_tx, adcOverflow, rxOverflow, txOverflow, dacOverflow, m_dmrSpace1, m_dmrSpace2, m_p25Space, m_nxdnSpace);
+                LogDebug(LOG_MODEM, "ModemV24::clock(), CMD_GET_STATUS, isHotspot = %u, v24Connected = %u, dmr = %u / %u, p25 = %u / %u, nxdn = %u / %u, modemState = %u, tx = %u, adcOverflow = %u, rxOverflow = %u, txOverflow = %u, dacOverflow = %u, dmrSpace1 = %u, dmrSpace2 = %u, p25Space = %u, nxdnSpace = %u",
+                    m_isHotspot, m_v24Connected, dmrEnable, m_dmrEnabled, p25Enable, m_p25Enabled, nxdnEnable, m_nxdnEnabled, m_modemState, m_tx, adcOverflow, rxOverflow, txOverflow, dacOverflow, m_dmrSpace1, m_dmrSpace2, m_p25Space, m_nxdnSpace);
                 LogDebug(LOG_MODEM, "ModemV24::clock(), CMD_GET_STATUS, rxDMRData1 size = %u, len = %u, free = %u; rxDMRData2 size = %u, len = %u, free = %u, rxP25Data size = %u, len = %u, free = %u, rxNXDNData size = %u, len = %u, free = %u",
                     m_rxDMRQueue1.length(), m_rxDMRQueue1.dataSize(), m_rxDMRQueue1.freeSpace(), m_rxDMRQueue2.length(), m_rxDMRQueue2.dataSize(), m_rxDMRQueue2.freeSpace(),
                     m_rxP25Queue.length(), m_rxP25Queue.dataSize(), m_rxP25Queue.freeSpace(), m_rxNXDNQueue.length(), m_rxNXDNQueue.dataSize(), m_rxNXDNQueue.freeSpace());

@@ -181,6 +181,19 @@ public:
                 }
             }
         }
+
+        if (peerStatus["modem"].is<json::object>()) {
+            json::object modemInfo = peerStatus["modem"].get<json::object>();
+
+            bool v24Connected = modemInfo["v24Connected"].getDefault<bool>(true);
+            if (!v24Connected) {
+                m_tx = false;
+                m_failed = true;
+            } else {
+                if (m_failed)
+                    m_failed = false;
+            }
+        }
     }
 
 private:

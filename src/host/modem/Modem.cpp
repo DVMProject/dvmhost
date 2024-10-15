@@ -125,6 +125,7 @@ Modem::Modem(port::IModemPort* port, bool duplex, bool rxInvert, bool txInvert, 
     m_nxdnFifoLength(NXDN_TX_BUFFER_LEN),
     m_adcOverFlowCount(0U),
     m_dacOverFlowCount(0U),
+    m_v24Connected(true),
     m_modemState(STATE_IDLE),
     m_buffer(nullptr),
     m_length(0U),
@@ -741,8 +742,9 @@ void Modem::clock(uint32_t ms)
             bool nxdnEnable = (m_buffer[3U] & 0x10U) == 0x10U;
 
             // flag indicating if free space is being reported in 16-byte blocks instead of LDUs
-            bool spaceInBlocks = (m_buffer[3U] & 0x80) == 0x80;
+            bool spaceInBlocks = (m_buffer[3U] & 0x80U) == 0x80U;
 
+            m_v24Connected = true;
             m_modemState = (DVM_STATE)m_buffer[4U];
 
             m_tx = (m_buffer[5U] & 0x01U) == 0x01U;
@@ -1696,6 +1698,13 @@ bool Modem::setDMRIgnoreCACH_AT(uint8_t slotNo)
 int Modem::write(const uint8_t* data, uint32_t length)
 {
     return m_port->write(data, length);
+}
+
+/* Gets the flag for the V.24 connection state. */
+
+bool Modem::isV24Connected() const
+{
+    return m_v24Connected;
 }
 
 /* Gets the current operating state for the air interface modem. */
