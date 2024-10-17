@@ -24,6 +24,7 @@
 #include "network/PeerNetwork.h"
 
 #include <string>
+#include <functional>
 
 // ---------------------------------------------------------------------------
 //  Constants
@@ -81,6 +82,12 @@ extern std::unordered_map<uint32_t, std::string> g_peerIdentityNameMap;
  * This is a variable argument function.
  */
 extern HOST_SW_API void fatal(const char* msg, ...);
+
+/**
+ * @brief Helper to set the network data event callback.
+ * @param callback 
+ */
+extern HOST_SW_API void setNetDataEventCallback(std::function<void(json::object)>&& callback);
 
 /**
  * @brief Helper to resolve a TGID to a textual name.

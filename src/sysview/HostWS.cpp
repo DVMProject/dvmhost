@@ -159,6 +159,8 @@ int HostWS::run()
     Timer affListUpdate(1000U, 10U);
     affListUpdate.start();
 
+    setNetDataEventCallback([=](json::object obj) { netDataEvent(obj); });
+
     // main execution loop
     while (!g_killed) {
         uint32_t ms = stopWatch.elapsed();
@@ -298,6 +300,17 @@ bool HostWS::readParams()
     }
 
     return true;
+}
+
+/* Called when a network data event occurs. */
+
+void HostWS::netDataEvent(json::object obj)
+{
+    json::object wsObj = json::object();
+    std::string type = "net_event";
+    wsObj["type"].set<std::string>(type);
+    wsObj["payload"].set<json::object>(obj);
+    send(wsObj);
 }
 
 /* Called when a WebSocket connection is opened. */

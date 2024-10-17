@@ -85,6 +85,12 @@ private:
     bool readParams();
 
     /**
+     * @brief Called when a network data event occurs.
+     * @param obj JSON object for data event.
+     */
+    void netDataEvent(json::object obj);
+
+    /**
      * @brief Called when a WebSocket connection is opened.
      * @param handle Connection Handle.
      */

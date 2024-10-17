@@ -71,6 +71,8 @@ lookups::IdenTableLookup* g_idenTable = nullptr;
 
 std::unordered_map<uint32_t, std::string> g_peerIdentityNameMap = std::unordered_map<uint32_t, std::string>();
 
+std::function<void(json::object)> g_netDataEvent = nullptr;
+
 SysViewApplication* g_app = nullptr;
 
 network::PeerNetwork* g_network = nullptr;
@@ -122,11 +124,15 @@ void fatal(const char* msg, ...)
     exit(EXIT_FAILURE);
 }
 
-/**
- * @brief Helper to resolve a TGID to a textual name.
- * @param id Talkgroup ID.
- * @return std::string Textual name for TGID.
- */
+/* Helper to set the network data event callback. */
+
+void setNetDataEventCallback(std::function<void(json::object)>&& callback) 
+{ 
+    g_netDataEvent = callback; 
+}
+
+/* Helper to resolve a TGID to a textual name. */
+
 std::string resolveRID(uint32_t id)
 {
     switch (id) {
@@ -157,11 +163,8 @@ std::string resolveRID(uint32_t id)
     return std::string("UNK");
 }
 
-/**
- * @brief Helper to resolve a TGID to a textual name.
- * @param id Talkgroup ID.
- * @return std::string Textual name for TGID.
- */
+/* Helper to resolve a TGID to a textual name. */
+
 std::string resolveTGID(uint32_t id)
 {
     auto entry = g_tidLookup->find(id);
@@ -172,10 +175,8 @@ std::string resolveTGID(uint32_t id)
     return std::string("UNK");
 }
 
-/**
- * @brief Initializes peer network connectivity. 
- * @returns bool 
- */
+/* Initializes peer network connectivity. */
+
 bool createPeerNetwork()
 {
     yaml::Node fne = g_conf["fne"];
@@ -257,9 +258,8 @@ bool createPeerNetwork()
     return true;
 }
 
-/**
- * @brief 
- */
+/* */
+
 network::PeerNetwork* getNetwork()
 {
     return g_network;
@@ -407,6 +407,17 @@ void* threadNetworkPump(void* arg)
 
                         std::unique_ptr<lc::CSBK> csbk = lc::csbk::CSBKFactory::createCSBK(data + 2U, DMRDEF::DataType::CSBK);
                         if (csbk != nullptr) {
+                            json::object netEvent = json::object();
+                            std::string type = "csbk";
+                            netEvent["type"].set<std::string>(type);
+
+                            uint8_t slot = dmrData.getSlotNo();
+                            netEvent["slot"].set<uint8_t>(slot);
+                            uint8_t csbko = csbk->getCSBKO();
+                            netEvent["opcode"].set<uint8_t>(csbko);
+                            std::string desc = csbk->toString();
+                            netEvent["desc"].set<std::string>(desc);
+
                             switch (csbk->getCSBKO()) {
                             case DMRDEF::CSBKO::BROADCAST:
                                 {
@@ -414,12 +425,36 @@ void* threadNetworkPump(void* arg)
                                     if (osp->getAnncType() == DMRDEF::BroadcastAnncType::ANN_WD_TSCC) {
                                         LogMessage(LOG_NET, "DMR Slot %u, DT_CSBK, %s, sysId = $%03X, chNo = %u", dmrData.getSlotNo(), csbk->toString().c_str(),
                                             osp->getSystemId(), osp->getLogicalCh1());
+
+                                        // generate a net event for this
+                                        if (g_netDataEvent != nullptr) {
+                                            uint32_t sysId = osp->getSystemId();
+                                            uint16_t logicalCh1 = osp->getLogicalCh1();
+                                            netEvent["sysId"].set<uint32_t>(sysId);
+                                            netEvent["chNo"].set<uint16_t>(logicalCh1);
+
+                                            g_netDataEvent(netEvent);
+                                        }
                                     }
                                 }
                                 break;
                             default:
-                                LogMessage(LOG_NET, "DMR Slot %u, DT_CSBK, %s, srcId = %u (%s), dstId = %u (%s)", dmrData.getSlotNo(), csbk->toString().c_str(), 
-                                    srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str());
+                                {
+                                    LogMessage(LOG_NET, "DMR Slot %u, DT_CSBK, %s, srcId = %u (%s), dstId = %u (%s)", dmrData.getSlotNo(), csbk->toString().c_str(), 
+                                        srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str());
+
+                                    // generate a net event for this
+                                    if (g_netDataEvent != nullptr) {
+                                        std::string resolvedSrc = resolveRID(srcId);
+                                        std::string resolvedDst = resolveTGID(dstId);
+                                        netEvent["srcId"].set<uint32_t>(srcId);
+                                        netEvent["srcStr"].set<std::string>(resolvedSrc);
+                                        netEvent["dstId"].set<uint32_t>(dstId);
+                                        netEvent["dstStr"].set<std::string>(resolvedDst);
+
+                                        g_netDataEvent(netEvent);
+                                    }
+                                }
                                 break;
                             }
                         }
@@ -532,6 +567,15 @@ void* threadNetworkPump(void* arg)
                             LogWarning(LOG_NET, P25_TSDU_STR ", undecodable TSBK");
                         }
                         else {
+                            json::object netEvent = json::object();
+                            std::string type = "tsbk";
+                            netEvent["type"].set<std::string>(type);
+
+                            uint8_t lco = tsbk->getLCO();
+                            netEvent["opcode"].set<uint8_t>(lco);
+                            std::string desc = tsbk->toString();
+                            netEvent["desc"].set<std::string>(desc);
+
                             switch (tsbk->getLCO()) {
                                 case P25DEF::TSBKO::IOSP_GRP_VCH:
                                 case P25DEF::TSBKO::IOSP_UU_VCH:
@@ -539,6 +583,27 @@ void* threadNetworkPump(void* arg)
                                     LogMessage(LOG_NET, P25_TSDU_STR ", %s, emerg = %u, encrypt = %u, prio = %u, chNo = %u, srcId = %u (%s), dstId = %u (%s)",
                                         tsbk->toString(true).c_str(), tsbk->getEmergency(), tsbk->getEncrypted(), tsbk->getPriority(), tsbk->getGrpVchNo(), 
                                         srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str());
+
+                                    // generate a net event for this
+                                    if (g_netDataEvent != nullptr) {
+                                        bool emerg = tsbk->getEmergency();
+                                        netEvent["emerg"].set<bool>(emerg);
+                                        bool encry = tsbk->getEncrypted();
+                                        netEvent["encry"].set<bool>(encry);
+                                        uint8_t prio = tsbk->getPriority();
+                                        netEvent["prio"].set<uint8_t>(prio);
+                                        uint32_t chNo = tsbk->getGrpVchNo();
+                                        netEvent["chNo"].set<uint32_t>(chNo);
+
+                                        std::string resolvedSrc = resolveRID(srcId);
+                                        std::string resolvedDst = resolveTGID(dstId);
+                                        netEvent["srcId"].set<uint32_t>(srcId);
+                                        netEvent["srcStr"].set<std::string>(resolvedSrc);
+                                        netEvent["dstId"].set<uint32_t>(dstId);
+                                        netEvent["dstStr"].set<std::string>(resolvedDst);
+
+                                        g_netDataEvent(netEvent);
+                                    }
                                 }
                                 break;
                                 case P25DEF::TSBKO::IOSP_UU_ANS:
@@ -548,6 +613,21 @@ void* threadNetworkPump(void* arg)
                                         LogMessage(LOG_NET, P25_TSDU_STR ", %s, response = $%02X, srcId = %u (%s), dstId = %u (%s)",
                                             tsbk->toString(true).c_str(), iosp->getResponse(),
                                             srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str());
+
+                                        // generate a net event for this
+                                        if (g_netDataEvent != nullptr) {
+                                            uint8_t response = iosp->getResponse();
+                                            netEvent["response"].set<uint8_t>(response);
+
+                                            std::string resolvedSrc = resolveRID(srcId);
+                                            std::string resolvedDst = resolveTGID(dstId);
+                                            netEvent["srcId"].set<uint32_t>(srcId);
+                                            netEvent["srcStr"].set<std::string>(resolvedSrc);
+                                            netEvent["dstId"].set<uint32_t>(dstId);
+                                            netEvent["dstStr"].set<std::string>(resolvedDst);
+
+                                            g_netDataEvent(netEvent);
+                                        }
                                     }
                                 }
                                 break;
@@ -556,6 +636,21 @@ void* threadNetworkPump(void* arg)
                                     lc::tsbk::IOSP_STS_UPDT* iosp = static_cast<lc::tsbk::IOSP_STS_UPDT*>(tsbk.get());
                                     LogMessage(LOG_NET, P25_TSDU_STR ", %s, status = $%02X, srcId = %u (%s)",
                                         tsbk->toString(true).c_str(), iosp->getStatus(), srcId, resolveRID(srcId).c_str());
+
+                                    // generate a net event for this
+                                    if (g_netDataEvent != nullptr) {
+                                        uint8_t status = iosp->getStatus();
+                                        netEvent["status"].set<uint8_t>(status);
+
+                                        std::string resolvedSrc = resolveRID(srcId);
+                                        std::string resolvedDst = resolveTGID(dstId);
+                                        netEvent["srcId"].set<uint32_t>(srcId);
+                                        netEvent["srcStr"].set<std::string>(resolvedSrc);
+                                        netEvent["dstId"].set<uint32_t>(dstId);
+                                        netEvent["dstStr"].set<std::string>(resolvedDst);
+
+                                        g_netDataEvent(netEvent);
+                                    }
                                 }
                                 break;
                                 case P25DEF::TSBKO::IOSP_MSG_UPDT:
@@ -564,6 +659,21 @@ void* threadNetworkPump(void* arg)
                                     LogMessage(LOG_NET, P25_TSDU_STR ", %s, message = $%02X, srcId = %u (%s), dstId = %u (%s)",
                                         tsbk->toString(true).c_str(), iosp->getMessage(), 
                                         srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str());
+
+                                    // generate a net event for this
+                                    if (g_netDataEvent != nullptr) {
+                                        uint8_t message = iosp->getMessage();
+                                        netEvent["message"].set<uint8_t>(message);
+
+                                        std::string resolvedSrc = resolveRID(srcId);
+                                        std::string resolvedDst = resolveTGID(dstId);
+                                        netEvent["srcId"].set<uint32_t>(srcId);
+                                        netEvent["srcStr"].set<std::string>(resolvedSrc);
+                                        netEvent["dstId"].set<uint32_t>(dstId);
+                                        netEvent["dstStr"].set<std::string>(resolvedDst);
+
+                                        g_netDataEvent(netEvent);
+                                    }
                                 }
                                 break;
                                 case P25DEF::TSBKO::IOSP_RAD_MON:
@@ -571,12 +681,36 @@ void* threadNetworkPump(void* arg)
                                     //lc::tsbk::IOSP_RAD_MON* iosp = static_cast<lc::tsbk::IOSP_RAD_MON*>(tsbk.get());
                                     LogMessage(LOG_NET, P25_TSDU_STR ", %s, srcId = %u (%s), dstId = %u (%s)", tsbk->toString(true).c_str(), 
                                         srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str());
+
+                                    // generate a net event for this
+                                    if (g_netDataEvent != nullptr) {
+                                        std::string resolvedSrc = resolveRID(srcId);
+                                        std::string resolvedDst = resolveTGID(dstId);
+                                        netEvent["srcId"].set<uint32_t>(srcId);
+                                        netEvent["srcStr"].set<std::string>(resolvedSrc);
+                                        netEvent["dstId"].set<uint32_t>(dstId);
+                                        netEvent["dstStr"].set<std::string>(resolvedDst);
+
+                                        g_netDataEvent(netEvent);
+                                    }
                                 }
                                 break;
                                 case P25DEF::TSBKO::IOSP_CALL_ALRT:
                                 {
                                     LogMessage(LOG_NET, P25_TSDU_STR ", %s, srcId = %u (%s), dstId = %u (%s)", tsbk->toString(true).c_str(), 
                                         srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str());
+                                
+                                    // generate a net event for this
+                                    if (g_netDataEvent != nullptr) {
+                                        std::string resolvedSrc = resolveRID(srcId);
+                                        std::string resolvedDst = resolveTGID(dstId);
+                                        netEvent["srcId"].set<uint32_t>(srcId);
+                                        netEvent["srcStr"].set<std::string>(resolvedSrc);
+                                        netEvent["dstId"].set<uint32_t>(dstId);
+                                        netEvent["dstStr"].set<std::string>(resolvedDst);
+
+                                        g_netDataEvent(netEvent);
+                                    }
                                 }
                                 break;
                                 case P25DEF::TSBKO::IOSP_ACK_RSP:
@@ -585,6 +719,21 @@ void* threadNetworkPump(void* arg)
                                     LogMessage(LOG_NET, P25_TSDU_STR ", %s, AIV = %u, serviceType = $%02X, srcId = %u (%s), dstId = %u (%s)",
                                         tsbk->toString(true).c_str(), iosp->getAIV(), iosp->getService(), 
                                         srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str());
+
+                                    // generate a net event for this
+                                    if (g_netDataEvent != nullptr) {
+                                        uint8_t service = iosp->getService();
+                                        netEvent["service"].set<uint8_t>(service);
+
+                                        std::string resolvedSrc = resolveRID(srcId);
+                                        std::string resolvedDst = resolveTGID(dstId);
+                                        netEvent["srcId"].set<uint32_t>(srcId);
+                                        netEvent["srcStr"].set<std::string>(resolvedSrc);
+                                        netEvent["dstId"].set<uint32_t>(dstId);
+                                        netEvent["dstStr"].set<std::string>(resolvedDst);
+
+                                        g_netDataEvent(netEvent);
+                                    }
                                 }
                                 break;
                                 case P25DEF::TSBKO::IOSP_EXT_FNCT:
@@ -592,6 +741,20 @@ void* threadNetworkPump(void* arg)
                                     lc::tsbk::IOSP_EXT_FNCT* iosp = static_cast<lc::tsbk::IOSP_EXT_FNCT*>(tsbk.get());
                                     LogMessage(LOG_NET, P25_TSDU_STR ", %s, serviceType = $%02X, arg = %u, tgt = %u",
                                         tsbk->toString(true).c_str(), iosp->getService(), srcId, dstId);
+
+                                    // generate a net event for this
+                                    if (g_netDataEvent != nullptr) {
+                                        uint8_t service = iosp->getService();
+                                        netEvent["service"].set<uint8_t>(service);
+
+                                        netEvent["arg"].set<uint32_t>(srcId);
+
+                                        std::string resolvedDst = resolveRID(dstId);
+                                        netEvent["dstId"].set<uint32_t>(dstId);
+                                        netEvent["dstStr"].set<std::string>(resolvedDst);
+
+                                        g_netDataEvent(netEvent);
+                                    }
                                 }
                                 break;
                                 case P25DEF::TSBKO::ISP_EMERG_ALRM_REQ:
@@ -602,9 +765,36 @@ void* threadNetworkPump(void* arg)
                                         LogMessage(LOG_NET, P25_TSDU_STR ", %s, AIV = %u, reason = $%02X, srcId = %u (%s), dstId = %u (%s)",
                                             osp->toString().c_str(), osp->getAIV(), osp->getResponse(), 
                                             osp->getSrcId(), resolveRID(osp->getSrcId()).c_str(), osp->getDstId(), resolveTGID(osp->getDstId()).c_str());
+
+                                        // generate a net event for this
+                                        if (g_netDataEvent != nullptr) {
+                                            uint8_t reason = osp->getResponse();
+                                            netEvent["reason"].set<uint8_t>(reason);
+
+                                            std::string resolvedSrc = resolveRID(srcId);
+                                            std::string resolvedDst = resolveTGID(dstId);
+                                            netEvent["srcId"].set<uint32_t>(srcId);
+                                            netEvent["srcStr"].set<std::string>(resolvedSrc);
+                                            netEvent["dstId"].set<uint32_t>(dstId);
+                                            netEvent["dstStr"].set<std::string>(resolvedDst);
+
+                                            g_netDataEvent(netEvent);
+                                        }
                                     } else {
                                         LogMessage(LOG_NET, P25_TSDU_STR ", %s, srcId = %u (%s), dstId = %u (%s)", tsbk->toString().c_str(), 
                                             srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str());
+
+                                        // generate a net event for this
+                                        if (g_netDataEvent != nullptr) {
+                                            std::string resolvedSrc = resolveRID(srcId);
+                                            std::string resolvedDst = resolveTGID(dstId);
+                                            netEvent["srcId"].set<uint32_t>(srcId);
+                                            netEvent["srcStr"].set<std::string>(resolvedSrc);
+                                            netEvent["dstId"].set<uint32_t>(dstId);
+                                            netEvent["dstStr"].set<std::string>(resolvedDst);
+
+                                            g_netDataEvent(netEvent);
+                                        }
                                     }
                                 }
                                 break;
@@ -615,6 +805,23 @@ void* threadNetworkPump(void* arg)
                                             iosp->getAnnounceGroup(), resolveTGID(iosp->getAnnounceGroup()).c_str(),
                                             srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str(),
                                             iosp->getResponse());
+
+                                    // generate a net event for this
+                                    if (g_netDataEvent != nullptr) {
+                                        uint32_t anncId = iosp->getAnnounceGroup();
+                                        netEvent["anncId"].set<uint32_t>(anncId);
+                                        uint8_t resp = iosp->getResponse();
+                                        netEvent["response"].set<uint8_t>(resp);
+
+                                        std::string resolvedSrc = resolveRID(srcId);
+                                        std::string resolvedDst = resolveTGID(dstId);
+                                        netEvent["srcId"].set<uint32_t>(srcId);
+                                        netEvent["srcStr"].set<std::string>(resolvedSrc);
+                                        netEvent["dstId"].set<uint32_t>(dstId);
+                                        netEvent["dstStr"].set<std::string>(resolvedDst);
+
+                                        g_netDataEvent(netEvent);
+                                    }
                                 }
                                 break;
                                 case P25DEF::TSBKO::OSP_U_DEREG_ACK:
@@ -622,6 +829,15 @@ void* threadNetworkPump(void* arg)
                                     //lc::tsbk::OSP_U_DEREG_ACK* iosp = static_cast<lc::tsbk::OSP_U_DEREG_ACK*>(tsbk.get());
                                     LogMessage(LOG_NET, P25_TSDU_STR ", %s, srcId = %u (%s)",
                                         tsbk->toString(true).c_str(), srcId, resolveRID(srcId).c_str());
+
+                                    // generate a net event for this
+                                    if (g_netDataEvent != nullptr) {
+                                        std::string resolvedSrc = resolveRID(srcId);
+                                        netEvent["srcId"].set<uint32_t>(srcId);
+                                        netEvent["srcStr"].set<std::string>(resolvedSrc);
+
+                                        g_netDataEvent(netEvent);
+                                    }
                                 }
                                 break;
                                 case P25DEF::TSBKO::OSP_LOC_REG_RSP:
@@ -629,6 +845,18 @@ void* threadNetworkPump(void* arg)
                                     lc::tsbk::OSP_LOC_REG_RSP* osp = static_cast<lc::tsbk::OSP_LOC_REG_RSP*>(tsbk.get());
                                     LogMessage(LOG_NET, P25_TSDU_STR ", %s, srcId = %u (%s), dstId = %u (%s)", osp->toString().c_str(), 
                                         srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str());
+
+                                    // generate a net event for this
+                                    if (g_netDataEvent != nullptr) {
+                                        std::string resolvedSrc = resolveRID(srcId);
+                                        std::string resolvedDst = resolveTGID(dstId);
+                                        netEvent["srcId"].set<uint32_t>(srcId);
+                                        netEvent["srcStr"].set<std::string>(resolvedSrc);
+                                        netEvent["dstId"].set<uint32_t>(dstId);
+                                        netEvent["dstStr"].set<std::string>(resolvedDst);
+
+                                        g_netDataEvent(netEvent);
+                                    }
                                 }
                                 break;
                                 case P25DEF::TSBKO::OSP_ADJ_STS_BCAST:
@@ -636,11 +864,43 @@ void* threadNetworkPump(void* arg)
                                     lc::tsbk::OSP_ADJ_STS_BCAST* osp = static_cast<lc::tsbk::OSP_ADJ_STS_BCAST*>(tsbk.get());
                                     LogMessage(LOG_NET, P25_TSDU_STR ", %s, sysId = $%03X, rfss = $%02X, site = $%02X, chId = %u, chNo = %u, svcClass = $%02X", tsbk->toString().c_str(),
                                         osp->getAdjSiteSysId(), osp->getAdjSiteRFSSId(), osp->getAdjSiteId(), osp->getAdjSiteChnId(), osp->getAdjSiteChnNo(), osp->getAdjSiteSvcClass());
+
+                                    // generate a net event for this
+                                    if (g_netDataEvent != nullptr) {
+                                        uint32_t sysId = osp->getAdjSiteSysId();
+                                        netEvent["sysId"].set<uint32_t>(sysId);
+                                        uint8_t rfssId = osp->getAdjSiteRFSSId();
+                                        netEvent["rfssId"].set<uint8_t>(rfssId);
+                                        uint8_t siteId = osp->getAdjSiteId();
+                                        netEvent["siteId"].set<uint8_t>(siteId);
+                                        uint8_t chId = osp->getAdjSiteChnId();
+                                        netEvent["chId"].set<uint8_t>(chId);
+                                        uint32_t chNo = osp->getAdjSiteChnNo();
+                                        netEvent["chNo"].set<uint32_t>(chNo);
+                                        uint8_t svcClass = osp->getAdjSiteSvcClass();
+                                        netEvent["svcClass"].set<uint8_t>(svcClass);
+
+                                        g_netDataEvent(netEvent);
+                                    }
                                 }
                                 break;
                                 default:
-                                    LogMessage(LOG_NET, P25_TSDU_STR ", %s, srcId = %u (%s), dstId = %u (%s)", tsbk->toString().c_str(), 
-                                        srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str());
+                                    {
+                                        LogMessage(LOG_NET, P25_TSDU_STR ", %s, srcId = %u (%s), dstId = %u (%s)", tsbk->toString().c_str(), 
+                                            srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str());
+
+                                        // generate a net event for this
+                                        if (g_netDataEvent != nullptr) {
+                                            std::string resolvedSrc = resolveRID(srcId);
+                                            std::string resolvedDst = resolveTGID(dstId);
+                                            netEvent["srcId"].set<uint32_t>(srcId);
+                                            netEvent["srcStr"].set<std::string>(resolvedSrc);
+                                            netEvent["dstId"].set<uint32_t>(dstId);
+                                            netEvent["dstStr"].set<std::string>(resolvedDst);
+
+                                            g_netDataEvent(netEvent);
+                                        }
+                                    }
                                     break;
                             }
                         }
