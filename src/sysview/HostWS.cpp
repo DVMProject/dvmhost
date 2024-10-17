@@ -158,6 +158,8 @@ int HostWS::run()
     peerListUpdate.start();
     Timer affListUpdate(1000U, 10U);
     affListUpdate.start();
+    Timer peerStatusUpdate(1000U, 0U, 175U);
+    peerStatusUpdate.start();
 
     setNetDataEventCallback([=](json::object obj) { netDataEvent(obj); });
 
@@ -182,16 +184,21 @@ int HostWS::run()
             }
 
             // update peer status
-            std::map<uint32_t, json::object> peerStatus(getNetwork()->peerStatus.begin(), getNetwork()->peerStatus.end());
-            for (auto entry : peerStatus) {
-                json::object wsObj = json::object();
-                std::string type = "peer_status";
-                wsObj["type"].set<std::string>(type);
-                uint32_t peerId = entry.first;
-                wsObj["peerId"].set<uint32_t>(peerId);
-                json::object peerStatus = entry.second;
-                wsObj["payload"].set<json::object>(peerStatus);
-                send(wsObj);
+            peerStatusUpdate.clock(ms);
+            if (peerStatusUpdate.isRunning() && peerStatusUpdate.hasExpired()) {
+                peerStatusUpdate.start();
+
+                std::map<uint32_t, json::object> peerStatus(getNetwork()->peerStatus.begin(), getNetwork()->peerStatus.end());
+                for (auto entry : peerStatus) {
+                    json::object wsObj = json::object();
+                    std::string type = "peer_status";
+                    wsObj["type"].set<std::string>(type);
+                    uint32_t peerId = entry.first;
+                    wsObj["peerId"].set<uint32_t>(peerId);
+                    json::object peerStatus = entry.second;
+                    wsObj["payload"].set<json::object>(peerStatus);
+                    send(wsObj);
+                }
             }
 
             // update peer list data
