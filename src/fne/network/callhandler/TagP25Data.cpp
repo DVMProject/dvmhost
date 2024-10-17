@@ -179,37 +179,44 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                 }
 
                 if (std::find_if(m_status.begin(), m_status.end(), [&](StatusMapPair x) { return x.second.dstId == dstId; }) != m_status.end()) {
-                    m_status.erase(dstId);
+                    if (grantDemand) {
+                        LogWarning(LOG_NET, "P25, Call Collision, peer = %u, srcId = %u, dstId = %u, streamId = %u, rxPeer = %u, rxSrcId = %u, rxDstId = %u, rxStreamId = %u, external = %u",
+                            peerId, srcId, dstId, streamId, status.peerId, status.srcId, status.dstId, status.streamId, external);
+                        return false;
+                    }
+                    else {
+                        m_status.erase(dstId);
 
-                    // is this a parrot talkgroup? if so, clear any remaining frames from the buffer
-                    lookups::TalkgroupRuleGroupVoice tg = m_network->m_tidLookup->find(dstId);
-                    if (tg.config().parrot()) {
-                        if (m_parrotFrames.size() > 0) {
-                            m_parrotFramesReady = true;
-                            m_parrotFirstFrame = true;
-                            LogMessage(LOG_NET, "P25, Parrot Playback will Start, peer = %u, srcId = %u", peerId, srcId);
-                            m_network->m_parrotDelayTimer.start();
+                        // is this a parrot talkgroup? if so, clear any remaining frames from the buffer
+                        lookups::TalkgroupRuleGroupVoice tg = m_network->m_tidLookup->find(dstId);
+                        if (tg.config().parrot()) {
+                            if (m_parrotFrames.size() > 0) {
+                                m_parrotFramesReady = true;
+                                m_parrotFirstFrame = true;
+                                LogMessage(LOG_NET, "P25, Parrot Playback will Start, peer = %u, srcId = %u", peerId, srcId);
+                                m_network->m_parrotDelayTimer.start();
+                            }
                         }
+
+                        LogMessage(LOG_NET, "P25, Call End, peer = %u, srcId = %u, dstId = %u, duration = %u, streamId = %u, external = %u",
+                            peerId, srcId, dstId, duration / 1000, streamId, external);
+
+                        // report call event to InfluxDB
+                        if (m_network->m_enableInfluxDB) {
+                            influxdb::QueryBuilder()
+                                .meas("call_event")
+                                    .tag("peerId", std::to_string(peerId))
+                                    .tag("mode", "P25")
+                                    .tag("streamId", std::to_string(streamId))
+                                    .tag("srcId", std::to_string(srcId))
+                                    .tag("dstId", std::to_string(dstId))
+                                        .field("duration", duration)
+                                    .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
+                                .request(m_network->m_influxServer);
+                        }
+
+                        m_network->m_callInProgress = false;
                     }
-
-                    LogMessage(LOG_NET, "P25, Call End, peer = %u, srcId = %u, dstId = %u, duration = %u, streamId = %u, external = %u",
-                        peerId, srcId, dstId, duration / 1000, streamId, external);
-
-                    // report call event to InfluxDB
-                    if (m_network->m_enableInfluxDB) {
-                        influxdb::QueryBuilder()
-                            .meas("call_event")
-                                .tag("peerId", std::to_string(peerId))
-                                .tag("mode", "P25")
-                                .tag("streamId", std::to_string(streamId))
-                                .tag("srcId", std::to_string(srcId))
-                                .tag("dstId", std::to_string(dstId))
-                                    .field("duration", duration)
-                                .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
-                            .request(m_network->m_influxServer);
-                    }
-
-                    m_network->m_callInProgress = false;
                 }
             }
 
