@@ -1411,6 +1411,12 @@ void Control::processNetwork()
                     return;
                 }
 
+                // if we're non-dedicated control, and if we're not in a listening or idle state, ignore any grant
+                // demands
+                if (!m_dedicatedControl && (m_rfState != RS_RF_LISTENING || m_netState != RS_NET_IDLE)) {
+                    return;
+                }
+
                 // validate source RID
                 if (!acl::AccessControl::validateSrcId(srcId)) {
                     return;
