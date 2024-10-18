@@ -1621,9 +1621,14 @@ void FNENetwork::writeTGIDs(uint32_t peerId)
         if (entry.config().active()) {
             uint8_t slotNo = entry.source().tgSlot();
 
-            // set upper bit of the slot number to flag non-preferred
+            // set the $80 bit of the slot number to flag non-preferred
             if (nonPreferred) {
-                slotNo = 0x80U + (slotNo & 0x03U);
+                slotNo |= 0x80U;
+            }
+
+            // set the $40 bit of the slot number to identify if this TG is by affiliation or not
+            if (entry.config().affiliated()) {
+                slotNo |= 0x40U;
             }
 
             tgidList.push_back({ entry.source().tgId(), slotNo });

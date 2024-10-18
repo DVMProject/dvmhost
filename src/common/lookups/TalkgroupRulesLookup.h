@@ -545,9 +545,10 @@ namespace lookups
          * @param id Unique ID to add.
          * @param slot DMR slot this talkgroup is valid on.
          * @param enabled Flag indicating if talkgroup ID is enabled or not.
+         * @param affiliated Flag indicating if talkgroup ID requires affiliated or not.
          * @param nonPreferred Flag indicating if the talkgroup ID is non-preferred.
          */
-        void addEntry(uint32_t id, uint8_t slot, bool enabled, bool nonPreferred = false);
+        void addEntry(uint32_t id, uint8_t slot, bool enabled, bool affiliated = false, bool nonPreferred = false);
         /**
          * @brief Adds a new entry to the lookup table.
          * @param groupVoice Group Voice Configuration Block.

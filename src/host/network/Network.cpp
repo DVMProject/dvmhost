@@ -413,6 +413,7 @@ void Network::clock(uint32_t ms)
                             for (uint32_t i = 0; i < len; i++) {
                                 uint32_t id = __GET_UINT16(buffer, offs);
                                 uint8_t slot = (buffer[offs + 3U]) & 0x03U;
+                                bool affiliated = (buffer[offs + 3U] & 0x40U) == 0x40U;
                                 bool nonPreferred = (buffer[offs + 3U] & 0x80U) == 0x80U;
 
                                 lookups::TalkgroupRuleGroupVoice tid = m_tidLookup->find(id, slot);
@@ -431,8 +432,9 @@ void Network::clock(uint32_t ms)
                                         m_tidLookup->eraseEntry(id, slot);
                                     }
                                     
-                                    LogMessage(LOG_NET, "Activated%s TG %u TS %u in TGID table", (nonPreferred) ? " non-preferred" : "", id, slot);
-                                    m_tidLookup->addEntry(id, slot, true, nonPreferred);
+                                    LogMessage(LOG_NET, "Activated%s%s TG %u TS %u in TGID table", 
+                                        (nonPreferred) ? " non-preferred" : "", (affiliated) ? " affiliated" : "", id, slot);
+                                    m_tidLookup->addEntry(id, slot, true, affiliated, nonPreferred);
                                 }
 
                                 offs += 5U;

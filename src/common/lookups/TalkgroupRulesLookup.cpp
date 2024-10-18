@@ -105,13 +105,14 @@ void TalkgroupRulesLookup::clear()
 
 /* Adds a new entry to the lookup table by the specified unique ID. */
 
-void TalkgroupRulesLookup::addEntry(uint32_t id, uint8_t slot, bool enabled, bool nonPreferred)
+void TalkgroupRulesLookup::addEntry(uint32_t id, uint8_t slot, bool enabled, bool affiliated, bool nonPreferred)
 {
     TalkgroupRuleGroupVoiceSource source;
     TalkgroupRuleConfig config;
     source.tgId(id);
     source.tgSlot(slot);
     config.active(enabled);
+    config.affiliated(affiliated);
     config.nonPreferred(nonPreferred);
 
     std::lock_guard<std::mutex> lock(m_mutex);
@@ -131,6 +132,7 @@ void TalkgroupRulesLookup::addEntry(uint32_t id, uint8_t slot, bool enabled, boo
         
         config = it->config();
         config.active(enabled);
+        config.affiliated(affiliated);
         config.nonPreferred(nonPreferred);
 
         TalkgroupRuleGroupVoice entry = *it;
