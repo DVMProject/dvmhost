@@ -307,6 +307,7 @@ namespace p25
         bool m_allowExplicitSourceId;
         bool m_convNetGrantDemand;
         bool m_sndcpSupport;
+        bool m_ignoreAffiliationCheck;
 
         ::lookups::IdenTableLookup* m_idenTable;
         ::lookups::RadioIdLookup* m_ridLookup;

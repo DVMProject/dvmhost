@@ -383,6 +383,7 @@ namespace dmr
 
         bool m_enableTSCC;
         bool m_dedicatedTSCC;
+        bool m_ignoreAffiliationCheck;
 
         uint32_t m_tsccPayloadDstId;
         uint32_t m_tsccPayloadSrcId;

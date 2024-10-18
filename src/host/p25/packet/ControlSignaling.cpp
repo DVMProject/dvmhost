@@ -2179,12 +2179,14 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
         }
 
         if (!m_p25->m_affiliations.isGranted(dstId)) {
-            // is this an affiliation required group?
-            ::lookups::TalkgroupRuleGroupVoice tid = m_p25->m_tidLookup->find(dstId);
-            if (tid.config().affiliated()) {
-                if (!m_p25->m_affiliations.hasGroupAff(dstId)) {
-                    LogWarning(LOG_NET, P25_TSDU_STR ", TSBKO, IOSP_GRP_VCH (Group Voice Channel Request) ignored, no group affiliations, dstId = %u", dstId);
-                    return false;
+            if (grp && !m_p25->m_ignoreAffiliationCheck) {
+                // is this an affiliation required group?
+                ::lookups::TalkgroupRuleGroupVoice tid = m_p25->m_tidLookup->find(dstId);
+                if (tid.config().affiliated()) {
+                    if (!m_p25->m_affiliations.hasGroupAff(dstId)) {
+                        LogWarning(LOG_NET, P25_TSDU_STR ", TSBKO, IOSP_GRP_VCH (Group Voice Channel Request) ignored, no group affiliations, dstId = %u", dstId);
+                        return false;
+                    }
                 }
             }
 

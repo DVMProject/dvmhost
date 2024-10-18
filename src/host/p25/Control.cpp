@@ -77,6 +77,7 @@ Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t q
     m_allowExplicitSourceId(true),
     m_convNetGrantDemand(false),
     m_sndcpSupport(false),
+    m_ignoreAffiliationCheck(false),
     m_idenTable(idenTable),
     m_ridLookup(ridLookup),
     m_tidLookup(tidLookup),
@@ -264,6 +265,8 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
     m_control->m_unitToUnitAvailCheck = p25Protocol["unitToUnitAvailCheck"].as<bool>(true);
 
     m_sndcpSupport = p25Protocol["sndcpSupport"].as<bool>(false);
+
+    m_ignoreAffiliationCheck = p25Protocol["ignoreAffiliationCheck"].as<bool>(false);
 
     yaml::Node control = p25Protocol["control"];
     m_enableControl = control["enable"].as<bool>(false);
@@ -479,6 +482,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
 
         LogInfo("    SNDCP Support: %s", m_sndcpSupport ? "yes" : "no");
 
+        LogInfo("    Ignore Affiliation Check: %s", m_ignoreAffiliationCheck ? "yes" : "no");
         LogInfo("    No Status ACK: %s", m_control->m_noStatusAck ? "yes" : "no");
         LogInfo("    No Message ACK: %s", m_control->m_noMessageAck ? "yes" : "no");
         LogInfo("    Unit-to-Unit Availability Check: %s", m_control->m_unitToUnitAvailCheck ? "yes" : "no");

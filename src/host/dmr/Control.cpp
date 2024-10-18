@@ -172,6 +172,10 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, ::lookups::VoiceChDa
     m_slot1->setFrameLossThreshold(frameLossThreshold);
     m_slot2->setFrameLossThreshold(frameLossThreshold);
 
+    bool ignoreAffiliationCheck = dmrProtocol["ignoreAffiliationCheck"].as<bool>(true);
+    m_slot1->m_ignoreAffiliationCheck = ignoreAffiliationCheck;
+    m_slot2->m_ignoreAffiliationCheck = ignoreAffiliationCheck;
+
     if (printOptions) {
         if (enableTSCC) {
             LogInfo("    TSCC Slot: %u", m_tsccSlotNo);
@@ -182,6 +186,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, ::lookups::VoiceChDa
             }
         }
 
+        LogInfo("    Ignore Affiliation Check: %s", ignoreAffiliationCheck ? "yes" : "no");
         LogInfo("    Notify Control: %s", notifyCC ? "yes" : "no");
         LogInfo("    Silence Threshold: %u (%.1f%%)", silenceThreshold, float(silenceThreshold) / 1.41F);
         LogInfo("    Frame Loss Threshold: %u", frameLossThreshold);
