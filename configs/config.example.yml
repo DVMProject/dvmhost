@@ -17,6 +17,8 @@ daemon: true
 #     6 - Fatal
 #
 log:
+    # Flag indicating whether or not the NON-AUTHORITATIVE errors should be logged.
+    disableNonAuthoritiveLogging: false
     # Console display logging level (used when in foreground).
     displayLevel: 1
     # File logging level.

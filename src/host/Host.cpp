@@ -185,6 +185,7 @@ int Host::run()
     // initialize system logging
     yaml::Node logConf = m_conf["log"];
     bool useSyslog = logConf["useSyslog"].as<bool>(false);
+    g_disableNonAuthoritativeLogging = logConf["disableNonAuthoritiveLogging"].as<bool>(false);
     if (g_foreground)
         useSyslog = false;
     ret = ::LogInitialise(logConf["filePath"].as<std::string>(), logConf["fileRoot"].as<std::string>(),

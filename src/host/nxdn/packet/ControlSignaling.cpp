@@ -468,6 +468,15 @@ bool ControlSignaling::writeRF_Message_Grant(uint32_t srcId, uint32_t dstId, uin
         }
 
         if (!m_nxdn->m_affiliations.isGranted(dstId)) {
+            // is this an affiliation required group?
+            ::lookups::TalkgroupRuleGroupVoice tid = m_nxdn->m_tidLookup->find(dstId);
+            if (tid.config().affiliated()) {
+                if (!m_nxdn->m_affiliations.hasGroupAff(dstId)) {
+                    LogWarning(LOG_RF, "NXDN, %s ignored, no group affiliations, dstId = %u", rcch->toString().c_str(), dstId);
+                    return false;
+                }
+            }
+
             if (!m_nxdn->m_affiliations.rfCh()->isRFChAvailable()) {
                 if (grp) {
                     if (!net) {

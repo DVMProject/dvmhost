@@ -62,6 +62,9 @@ extern bool g_fireCCVCNotification;
 /** @brief  */
 extern uint8_t* g_gitHashBytes;
 
+/** @brief (Global) Flag disabling NON-AUTHORITATIVE error logging. */
+extern bool g_disableNonAuthoritativeLogging;
+
 /** @brief (Global) Modem debug flag. Forces modem debug regardless of configuration settings. */
 extern bool g_modemDebug;
 

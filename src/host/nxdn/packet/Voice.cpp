@@ -18,6 +18,7 @@
 #include "common/Log.h"
 #include "nxdn/packet/Voice.h"
 #include "ActivityLog.h"
+#include "HostMain.h"
 
 using namespace nxdn;
 using namespace nxdn::defines;
@@ -114,7 +115,8 @@ using namespace nxdn::packet;
     }                                                                                   \
                                                                                         \
     if (!m_nxdn->m_authoritative && m_nxdn->m_permittedDstId != _DST_ID) {              \
-        LogWarning(LOG_NET, "[NON-AUTHORITATIVE] Ignoring network traffic, destination not permitted, dstId = %u", _DST_ID); \
+        if (!g_disableNonAuthoritativeLogging)                                          \
+            LogWarning(LOG_NET, "[NON-AUTHORITATIVE] Ignoring network traffic, destination not permitted, dstId = %u", _DST_ID); \
         resetNet();                                                                     \
         if (m_nxdn->m_network != nullptr)                                               \
             m_nxdn->m_network->resetNXDN();                                             \
@@ -230,7 +232,8 @@ bool Voice::process(FuncChannelType::E fct, ChOption::E option, uint8_t* data, u
         // don't process RF frames if this modem isn't authoritative
         if (!m_nxdn->m_authoritative && m_nxdn->m_permittedDstId != dstId) {
             if (m_nxdn->m_rfState != RS_RF_AUDIO) {
-                LogWarning(LOG_RF, "[NON-AUTHORITATIVE] Ignoring RF traffic, destination not permitted!");
+                if (!g_disableNonAuthoritativeLogging)
+                    LogWarning(LOG_RF, "[NON-AUTHORITATIVE] Ignoring RF traffic, destination not permitted!");
                 m_nxdn->m_rfState = RS_RF_LISTENING;
                 m_nxdn->m_rfMask  = 0x00U;
                 m_nxdn->m_rfLC.reset();
@@ -681,7 +684,8 @@ bool Voice::processNetwork(FuncChannelType::E fct, ChOption::E option, lc::RTCH&
         if (!m_nxdn->m_authoritative && m_nxdn->m_permittedDstId != dstId) {
             if (m_nxdn->m_netState != RS_NET_AUDIO) {
                 // bryanb: do we want to log this condition?
-                //LogWarning(LOG_NET, "[NON-AUTHORITATIVE] Ignoring network traffic, destination not permitted!");
+                //if (!g_disableNonAuthoritativeLogging)
+                //    LogWarning(LOG_NET, "[NON-AUTHORITATIVE] Ignoring network traffic, destination not permitted!");
                 m_nxdn->m_netState = RS_NET_IDLE;
                 m_nxdn->m_netMask  = 0x00U;
                 m_nxdn->m_netLC.reset();

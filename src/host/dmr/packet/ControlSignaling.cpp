@@ -857,6 +857,15 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
             ::lookups::TalkgroupRuleGroupVoice groupVoice = m_tscc->m_tidLookup->find(dstId);
             slot = groupVoice.source().tgSlot();
 
+            // is this an affiliation required group?
+            ::lookups::TalkgroupRuleGroupVoice tid = m_tscc->m_tidLookup->find(dstId, slot);
+            if (tid.config().affiliated()) {
+                if (!m_tscc->m_affiliations->hasGroupAff(dstId)) {
+                    LogWarning(LOG_RF, "DMR Slot %u, CSBK, RAND (Random Access, GRP_VOICE_CALL (Group Voice Call) ignored, no group affiliations, dstId = %u", m_tscc->m_slotNo, dstId);
+                    return false;
+                }
+            }
+
             uint32_t availChNo = m_tscc->m_affiliations->getAvailableChannelForSlot(slot);
             if (!m_tscc->m_affiliations->rfCh()->isRFChAvailable() || availChNo == 0U) {
                 if (grp) {

@@ -58,6 +58,8 @@ bool g_fireCCVCNotification = false;
 
 uint8_t* g_gitHashBytes = nullptr;
 
+bool g_disableNonAuthoritativeLogging = false;
+
 bool g_modemDebug = false;
 
 // ---------------------------------------------------------------------------

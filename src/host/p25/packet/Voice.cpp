@@ -21,6 +21,7 @@
 #include "common/Utils.h"
 #include "p25/packet/Voice.h"
 #include "ActivityLog.h"
+#include "HostMain.h"
 
 using namespace p25;
 using namespace p25::defines;
@@ -134,7 +135,8 @@ bool Voice::process(uint8_t* data, uint32_t len)
 
             // don't process RF frames if this modem isn't authoritative
             if (!m_p25->m_authoritative && m_p25->m_permittedDstId != lc.getDstId()) {
-                LogWarning(LOG_RF, "[NON-AUTHORITATIVE] Ignoring RF traffic, destination not permitted!");
+                if (!g_disableNonAuthoritativeLogging)
+                    LogWarning(LOG_RF, "[NON-AUTHORITATIVE] Ignoring RF traffic, destination not permitted!");
                 resetRF();
                 m_p25->m_rfState = RS_RF_LISTENING;
                 return false;
@@ -220,7 +222,8 @@ bool Voice::process(uint8_t* data, uint32_t len)
 
             // don't process RF frames if this modem isn't authoritative
             if (!m_p25->m_authoritative && m_p25->m_permittedDstId != lc.getDstId()) {
-                LogWarning(LOG_RF, "[NON-AUTHORITATIVE] Ignoring RF traffic, destination not permitted!");
+                if (!g_disableNonAuthoritativeLogging)
+                    LogWarning(LOG_RF, "[NON-AUTHORITATIVE] Ignoring RF traffic, destination not permitted!");
                 resetRF();
                 m_p25->m_rfState = RS_RF_LISTENING;
                 return false;
@@ -587,7 +590,8 @@ bool Voice::process(uint8_t* data, uint32_t len)
         if (m_p25->m_rfState == RS_RF_AUDIO) {
             // don't process RF frames if this modem isn't authoritative
             if (!m_p25->m_authoritative && m_p25->m_permittedDstId != m_rfLC.getDstId()) {
-                LogWarning(LOG_RF, "[NON-AUTHORITATIVE] Ignoring RF traffic, destination not permitted!");
+                if (!g_disableNonAuthoritativeLogging)
+                    LogWarning(LOG_RF, "[NON-AUTHORITATIVE] Ignoring RF traffic, destination not permitted!");
                 resetRF();
                 m_p25->m_rfState = RS_RF_LISTENING;
                 return false;
@@ -1164,7 +1168,8 @@ bool Voice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
 
     // don't process network frames if this modem isn't authoritative
     if (!m_p25->m_authoritative && m_p25->m_permittedDstId != dstId) {
-        LogWarning(LOG_NET, "[NON-AUTHORITATIVE] Ignoring network traffic, destination not permitted, dstId = %u", dstId);
+        if (!g_disableNonAuthoritativeLogging)
+            LogWarning(LOG_NET, "[NON-AUTHORITATIVE] Ignoring network traffic, destination not permitted, dstId = %u", dstId);
         resetNet();
         if (m_p25->m_network != nullptr)
             m_p25->m_network->resetP25();
@@ -1678,7 +1683,7 @@ void Voice::writeNet_LDU1()
                 (m_netLC.getPriority() & 0x07U);                                    // Priority
 
             if (!m_p25->m_control->writeRF_TSDU_Grant(srcId, dstId, serviceOptions, group, true)) {
-                LogError(LOG_NET, P25_HDU_STR " call failure, network call not granted, dstId = %u", dstId);
+                LogError(LOG_NET, P25_HDU_STR " call rejected, network call not granted, dstId = %u", dstId);
 
                 if ((!m_p25->m_networkWatchdog.isRunning() || m_p25->m_networkWatchdog.hasExpired()) &&
                     m_p25->m_netLastDstId != 0U) {
@@ -1929,7 +1934,8 @@ void Voice::writeNet_LDU2()
 
     // don't process network frames if this modem isn't authoritative
     if (!m_p25->m_authoritative && m_p25->m_permittedDstId != dstId) {
-        LogWarning(LOG_NET, "[NON-AUTHORITATIVE] Ignoring network traffic (LDU2), destination not permitted!");
+        if (!g_disableNonAuthoritativeLogging)
+            LogWarning(LOG_NET, "[NON-AUTHORITATIVE] Ignoring network traffic (LDU2), destination not permitted!");
         resetNet();
         return;
     }

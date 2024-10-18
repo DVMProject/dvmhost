@@ -22,6 +22,7 @@
 #include "dmr/packet/Data.h"
 #include "dmr/Slot.h"
 #include "ActivityLog.h"
+#include "HostMain.h"
 
 using namespace dmr;
 using namespace dmr::defines;
@@ -36,7 +37,8 @@ using namespace dmr::packet;
 
 #define CHECK_AUTHORITATIVE(_DST_ID)                                                    \
     if (!m_slot->m_authoritative && m_slot->m_permittedDstId != dstId) {                \
-        LogWarning(LOG_RF, "[NON-AUTHORITATIVE] Ignoring RF traffic, destination not permitted!"); \
+        if (!g_disableNonAuthoritativeLogging)                                          \
+            LogWarning(LOG_RF, "[NON-AUTHORITATIVE] Ignoring RF traffic, destination not permitted!"); \
         m_slot->m_rfState = RS_RF_LISTENING;                                            \
         return false;                                                                   \
     }

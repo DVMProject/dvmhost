@@ -21,6 +21,7 @@
 #include "common/dmr/acl/AccessControl.h"
 #include "remote/RESTClient.h"
 #include "ActivityLog.h"
+#include "HostMain.h"
 
 using namespace dmr;
 using namespace dmr::defines;
@@ -414,7 +415,8 @@ void Slot::processNetwork(const data::NetData& dmrData)
 
     // don't process network frames if this modem isn't authoritative
     if (!m_authoritative && m_permittedDstId != dmrData.getDstId()) {
-        LogWarning(LOG_NET, "DMR Slot %u, [NON-AUTHORITATIVE] Ignoring network traffic, destination not permitted!", m_slotNo);
+        if (!g_disableNonAuthoritativeLogging)
+            LogWarning(LOG_NET, "DMR Slot %u, [NON-AUTHORITATIVE] Ignoring network traffic, destination not permitted!", m_slotNo);
         return;
     }
 

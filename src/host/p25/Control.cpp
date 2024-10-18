@@ -1436,12 +1436,14 @@ void Control::processNetwork()
                 }
 
                 // perform grant response logic
+                m_control->writeRF_TSDU_Grant(srcId, dstId, serviceOptions, !unitToUnit, true);
+/*
                 if (!m_control->writeRF_TSDU_Grant(srcId, dstId, serviceOptions, !unitToUnit, true))
                 {
-                    LogError(LOG_NET, P25_TSDU_STR " call failure, network call not granted, dstId = %u", dstId);
+                    LogError(LOG_NET, P25_TSDU_STR " call rejected, network call not granted, dstId = %u", dstId);
                     return;
                 }
-
+*/
                 return;
             }
 
