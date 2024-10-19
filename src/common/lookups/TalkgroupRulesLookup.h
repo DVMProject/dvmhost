@@ -523,8 +523,9 @@ namespace lookups
 
         /**
          * @brief Stops and unloads this lookup table.
+         * @param noDestroy Flag indicating the lookup table should remain resident in memory after stopping.
          */
-        void stop();
+        void stop(bool noDestroy = false);
         /**
          * @brief Reads the lookup table from the specified lookup table file.
          * @returns bool True, if lookup table was read, otherwise false.
@@ -587,8 +588,19 @@ namespace lookups
          */
         bool getACL();
 
+        /**
+         * @brief Returns the filename used to load this lookup table.
+         * @return std::string Full-path to the lookup table file.
+         */
+        const std::string filename() { return m_rulesFile; };
+        /**
+         * @brief Sets the filename used to load this lookup table.
+         * @param filename Full-path to the routing rules file.
+         */
+        void filename(std::string filename) { m_rulesFile = filename; };
+
     private:
-        const std::string m_rulesFile;
+        std::string m_rulesFile;
         uint32_t m_reloadTime;
         yaml::Node m_rules;
 

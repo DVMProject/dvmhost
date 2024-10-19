@@ -17,6 +17,7 @@
 #define __PEER_NETWORK_H__
 
 #include "Defines.h"
+#include "common/lookups/PeerListLookup.h"
 #include "host/network/Network.h"
 
 #include <string>
@@ -57,6 +58,12 @@ namespace network
             bool duplex, bool debug, bool dmr, bool p25, bool nxdn, bool slot1, bool slot2, bool allowActivityTransfer, bool allowDiagnosticTransfer, bool updateLookup, bool saveLookup);
 
         /**
+         * @brief Sets the instances of the Peer List lookup tables.
+         * @param pidLookup Peer List Lookup Table Instance
+         */
+        void setPeerLookups(lookups::PeerListLookup* pidLookup);
+
+        /**
          * @brief Gets the blocked traffic peer ID table.
          * @returns std::vector<uint32_t> List of peer IDs this peer network cannot send traffic to.
          */
@@ -76,10 +83,39 @@ namespace network
         std::vector<uint32_t> m_blockTrafficToTable;
 
         /**
+         * @brief User overrideable handler that allows user code to process network packets not handled by this class.
+         * @param peerId Peer ID.
+         * @param opcode FNE network opcode pair.
+         * @param[in] data Buffer containing message to send to peer.
+         * @param length Length of buffer.
+         * @param streamId Stream ID.
+         */
+        void userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opcode, const uint8_t* data = nullptr, uint32_t length = 0U,
+            uint32_t streamId = 0U) override;
+
+        /**
          * @brief Writes configuration to the network.
          * @returns bool True, if configuration was sent, otherwise false.
          */
         bool writeConfig() override;
+
+    private:
+        lookups::PeerListLookup* m_pidLookup;
+
+        uint32_t m_tgidCompressedSize;
+        uint32_t m_tgidSize;
+
+        uint8_t* m_tgidBuffer;
+
+        uint32_t m_ridCompressedSize;
+        uint32_t m_ridSize;
+
+        uint8_t* m_ridBuffer;
+
+        uint32_t m_pidCompressedSize;
+        uint32_t m_pidSize;
+
+        uint8_t* m_pidBuffer;
     };
 } // namespace network
 

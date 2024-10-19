@@ -9,6 +9,7 @@
  */
 #include "fne/Defines.h"
 #include "common/network/json/json.h"
+#include "common/zlib/zlib.h"
 #include "common/Utils.h"
 #include "fne/network/PeerNetwork.h"
 
@@ -17,6 +18,8 @@ using namespace network;
 #include <cstdio>
 #include <cassert>
 #include <algorithm>
+#include <fstream>
+#include <streambuf>
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -27,11 +30,31 @@ using namespace network;
 PeerNetwork::PeerNetwork(const std::string& address, uint16_t port, uint16_t localPort, uint32_t peerId, const std::string& password,
     bool duplex, bool debug, bool dmr, bool p25, bool nxdn, bool slot1, bool slot2, bool allowActivityTransfer, bool allowDiagnosticTransfer, bool updateLookup, bool saveLookup) :
     Network(address, port, localPort, peerId, password, duplex, debug, dmr, p25, nxdn, slot1, slot2, allowActivityTransfer, allowDiagnosticTransfer, updateLookup, saveLookup),
-    m_blockTrafficToTable()
+    m_blockTrafficToTable(),
+    m_pidLookup(nullptr),
+    m_tgidCompressedSize(0U),
+    m_tgidSize(0U),
+    m_tgidBuffer(nullptr),
+    m_ridCompressedSize(0U),
+    m_ridSize(0U),
+    m_ridBuffer(nullptr),
+    m_pidCompressedSize(0U),
+    m_pidSize(0U),
+    m_pidBuffer(nullptr)
 {
     assert(!address.empty());
     assert(port > 0U);
     assert(!password.empty());
+
+    // ignore the source peer ID for packets
+    m_promiscuousPeer = true;
+}
+
+/* Sets the instances of the Peer List lookup tables. */
+
+void PeerNetwork::setPeerLookups(lookups::PeerListLookup* pidLookup)
+{
+    m_pidLookup = pidLookup;
 }
 
 /* Checks if the passed peer ID is blocked from sending to this peer. */
@@ -51,6 +74,383 @@ bool PeerNetwork::checkBlockedPeer(uint32_t peerId)
 // ---------------------------------------------------------------------------
 //  Protected Class Members
 // ---------------------------------------------------------------------------
+
+/* User overrideable handler that allows user code to process network packets not handled by this class. */
+
+void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opcode, const uint8_t* data, uint32_t length, uint32_t streamId)
+{
+    switch (opcode.first) {
+    case NET_FUNC::PEER_LINK:
+    {
+        switch (opcode.second) {
+        case NET_SUBFUNC::PL_TALKGROUP_LIST:
+        {
+            uint8_t curBlock = data[8U];
+            uint8_t blockCnt = data[9U];
+
+            // if this is the first block store sizes and initialize temp buffer
+            if (curBlock == 0U) {
+                m_tgidSize = __GET_UINT32(data, 0U);
+                m_tgidCompressedSize = __GET_UINT32(data, 4U);
+
+                if (m_tgidBuffer != nullptr)
+                    delete[] m_tgidBuffer;
+                m_tgidBuffer = new uint8_t[m_tgidSize];
+            }
+
+            if (m_tgidBuffer != nullptr) {
+                if (curBlock < blockCnt) {
+                    uint32_t offs = curBlock * PEER_LINK_BLOCK_SIZE;
+                    ::memcpy(m_tgidBuffer + offs, data + 10U, PEER_LINK_BLOCK_SIZE);
+                    // Utils::dump(1U, "Block Payload", data, 10U + PEER_LINK_BLOCK_SIZE);
+                } else {
+                    uint32_t offs = curBlock * PEER_LINK_BLOCK_SIZE;
+                    ::memcpy(m_tgidBuffer + offs, data + 10U, PEER_LINK_BLOCK_SIZE);
+
+                    // Utils::dump(1U, "Block Payload", data, 10U + PEER_LINK_BLOCK_SIZE);
+                    // Utils::dump(1U, "Compressed Payload", m_tgidBuffer, m_tgidCompressedSize);
+
+                    // handle last block
+                    // compression structures
+                    z_stream strm;
+                    strm.zalloc = Z_NULL;
+                    strm.zfree = Z_NULL;
+                    strm.opaque = Z_NULL;
+
+                    // set input data
+                    strm.avail_in = m_tgidCompressedSize;
+                    strm.next_in = m_tgidBuffer;
+
+                    // initialize decompression
+                    int ret = inflateInit(&strm);
+                    if (ret != Z_OK) {
+                        LogError(LOG_NET, "PEER %u error initializing ZLIB", peerId);
+
+                        m_tgidSize = 0U;
+                        m_tgidCompressedSize = 0U;
+                        if (m_tgidBuffer != nullptr)
+                            delete[] m_tgidBuffer;
+                        m_tgidBuffer = nullptr;
+                        break;
+                    }
+
+                    // decompress data
+                    std::vector<uint8_t> decompressedData;
+                    uint8_t outbuffer[1024];
+                    do {
+                        strm.avail_out = sizeof(outbuffer);
+                        strm.next_out = outbuffer;
+
+                        ret = inflate(&strm, Z_NO_FLUSH);
+                        if (ret == Z_STREAM_ERROR) {
+                            LogError(LOG_NET, "PEER %u error decompressing TGID list", peerId);
+                            inflateEnd(&strm);
+                            goto tid_lookup_cleanup; // yes - I hate myself; but this is quick
+                        }
+
+                        decompressedData.insert(decompressedData.end(), outbuffer, outbuffer + sizeof(outbuffer) - strm.avail_out);
+                    } while (ret != Z_STREAM_END);
+
+                    // cleanup
+                    inflateEnd(&strm);
+
+                    // scope is intentional
+                    {
+                        uint32_t decompressedLen = strm.total_out;
+                        uint8_t* decompressed = decompressedData.data();
+
+                        // Utils::dump(1U, "Raw TGID Data", decompressed, decompressedLen);
+
+                        // check that we got the appropriate data
+                        if (decompressedLen == m_tgidSize) {
+                            // store to file
+                            std::unique_ptr<char[]> __str = std::make_unique<char[]>(decompressedLen + 1U);
+                            char* str = __str.get();
+                            ::memcpy(str, decompressed, decompressedLen + 1U);
+                            str[decompressedLen] = 0; // null termination
+
+                            std::string filename = "/tmp/talkgroup_rules.yml";
+                            std::ofstream file(filename, std::ofstream::out);
+                            if (file.fail()) {
+                                LogError(LOG_NET, "Cannot open the talkgroup ID lookup file - %s", filename.c_str());
+                                goto tid_lookup_cleanup; // yes - I hate myself; but this is quick
+                            }
+
+                            file << str;
+                            file.close();
+
+                            m_tidLookup->stop(true);
+                            m_tidLookup->filename(filename);
+                            m_tidLookup->reload();
+
+                            // cleanup temporary file
+                            ::remove(filename.c_str());
+                        }
+                        else {
+                            LogError(LOG_NET, "PEER %u error decompressed TGID list, was not of expected size! %u != %u", peerId, decompressedLen, m_tgidSize);
+                        }
+                    }
+
+tid_lookup_cleanup:
+                    m_tgidSize = 0U;
+                    m_tgidCompressedSize = 0U;
+                    if (m_tgidBuffer != nullptr)
+                        delete[] m_tgidBuffer;
+                    m_tgidBuffer = nullptr;
+                }
+            }
+        }
+        break;
+
+        case NET_SUBFUNC::PL_RID_LIST:
+        {
+            uint8_t curBlock = data[8U];
+            uint8_t blockCnt = data[9U];
+
+            // if this is the first block store sizes and initialize temp buffer
+            if (curBlock == 0U) {
+                m_ridSize = __GET_UINT32(data, 0U);
+                m_ridCompressedSize = __GET_UINT32(data, 4U);
+
+                if (m_ridBuffer != nullptr)
+                    delete[] m_ridBuffer;
+                m_ridBuffer = new uint8_t[m_ridSize];
+            }
+
+            if (m_ridBuffer != nullptr) {
+                if (curBlock < blockCnt) {
+                    uint32_t offs = curBlock * PEER_LINK_BLOCK_SIZE;
+                    ::memcpy(m_ridBuffer + offs, data + 10U, PEER_LINK_BLOCK_SIZE);
+                    // Utils::dump(1U, "Block Payload", data, 10U + PEER_LINK_BLOCK_SIZE);
+                } else {
+                    uint32_t offs = curBlock * PEER_LINK_BLOCK_SIZE;
+                    ::memcpy(m_ridBuffer + offs, data + 10U, PEER_LINK_BLOCK_SIZE);
+
+                    // Utils::dump(1U, "Block Payload", data, 10U + PEER_LINK_BLOCK_SIZE);
+                    // Utils::dump(1U, "Compressed Payload", m_ridBuffer, m_ridCompressedSize);
+
+                    // handle last block
+                    // compression structures
+                    z_stream strm;
+                    strm.zalloc = Z_NULL;
+                    strm.zfree = Z_NULL;
+                    strm.opaque = Z_NULL;
+
+                    // set input data
+                    strm.avail_in = m_ridCompressedSize;
+                    strm.next_in = m_ridBuffer;
+
+                    // initialize decompression
+                    int ret = inflateInit(&strm);
+                    if (ret != Z_OK) {
+                        LogError(LOG_NET, "PEER %u error initializing ZLIB", peerId);
+
+                        m_ridSize = 0U;
+                        m_ridCompressedSize = 0U;
+                        if (m_ridBuffer != nullptr)
+                            delete[] m_ridBuffer;
+                        m_ridBuffer = nullptr;
+                        break;
+                    }
+
+                    // decompress data
+                    std::vector<uint8_t> decompressedData;
+                    uint8_t outbuffer[1024];
+                    do {
+                        strm.avail_out = sizeof(outbuffer);
+                        strm.next_out = outbuffer;
+
+                        ret = inflate(&strm, Z_NO_FLUSH);
+                        if (ret == Z_STREAM_ERROR) {
+                            LogError(LOG_NET, "PEER %u error decompressing RID list", peerId);
+                            inflateEnd(&strm);
+                            goto rid_lookup_cleanup; // yes - I hate myself; but this is quick
+                        }
+
+                        decompressedData.insert(decompressedData.end(), outbuffer, outbuffer + sizeof(outbuffer) - strm.avail_out);
+                    } while (ret != Z_STREAM_END);
+
+                    // cleanup
+                    inflateEnd(&strm);
+
+                    // scope is intentional
+                    {
+                        uint32_t decompressedLen = strm.total_out;
+                        uint8_t* decompressed = decompressedData.data();
+
+                        // Utils::dump(1U, "Raw RID Data", decompressed, decompressedLen);
+
+                        // check that we got the appropriate data
+                        if (decompressedLen == m_ridSize) {
+                            // store to file
+                            std::unique_ptr<char[]> __str = std::make_unique<char[]>(decompressedLen + 1U);
+                            char* str = __str.get();
+                            ::memcpy(str, decompressed, decompressedLen + 1U);
+                            str[decompressedLen] = 0; // null termination
+
+                            std::string filename = "/tmp/rid_acl.dat";
+                            std::ofstream file(filename, std::ofstream::out);
+                            if (file.fail()) {
+                                LogError(LOG_NET, "Cannot open the radio ID lookup file - %s", filename.c_str());
+                                goto rid_lookup_cleanup; // yes - I hate myself; but this is quick
+                            }
+
+                            file << str;
+                            file.close();
+
+                            m_ridLookup->stop(true);
+                            m_ridLookup->filename(filename);
+                            m_ridLookup->reload();
+
+                            // cleanup temporary file
+                            ::remove(filename.c_str());
+                        }
+                        else {
+                            LogError(LOG_NET, "PEER %u error decompressed RID list, was not of expected size! %u != %u", peerId, decompressedLen, m_ridSize);
+                        }
+                    }
+
+rid_lookup_cleanup:
+                    m_ridSize = 0U;
+                    m_ridCompressedSize = 0U;
+                    if (m_ridBuffer != nullptr)
+                        delete[] m_ridBuffer;
+                    m_ridBuffer = nullptr;
+                }
+            }
+        }
+        break;
+
+        case NET_SUBFUNC::PL_PEER_LIST:
+        {
+            uint8_t curBlock = data[8U];
+            uint8_t blockCnt = data[9U];
+
+            // if this is the first block store sizes and initialize temp buffer
+            if (curBlock == 0U) {
+                m_pidSize = __GET_UINT32(data, 0U);
+                m_pidCompressedSize = __GET_UINT32(data, 4U);
+
+                if (m_pidBuffer != nullptr)
+                    delete[] m_pidBuffer;
+                m_pidBuffer = new uint8_t[m_pidSize];
+            }
+
+            if (m_pidBuffer != nullptr) {
+                if (curBlock < blockCnt) {
+                    uint32_t offs = curBlock * PEER_LINK_BLOCK_SIZE;
+                    ::memcpy(m_pidBuffer + offs, data + 10U, PEER_LINK_BLOCK_SIZE);
+                    // Utils::dump(1U, "Block Payload", data, 10U + PEER_LINK_BLOCK_SIZE);
+                } else {
+                    uint32_t offs = curBlock * PEER_LINK_BLOCK_SIZE;
+                    ::memcpy(m_pidBuffer + offs, data + 10U, PEER_LINK_BLOCK_SIZE);
+
+                    // Utils::dump(1U, "Block Payload", data, 10U + PEER_LINK_BLOCK_SIZE);
+                    // Utils::dump(1U, "Compressed Payload", m_pidBuffer, m_pidCompressedSize);
+
+                    // handle last block
+                    // compression structures
+                    z_stream strm;
+                    strm.zalloc = Z_NULL;
+                    strm.zfree = Z_NULL;
+                    strm.opaque = Z_NULL;
+
+                    // set input data
+                    strm.avail_in = m_pidCompressedSize;
+                    strm.next_in = m_pidBuffer;
+
+                    // initialize decompression
+                    int ret = inflateInit(&strm);
+                    if (ret != Z_OK) {
+                        LogError(LOG_NET, "PEER %u error initializing ZLIB", peerId);
+
+                        m_pidSize = 0U;
+                        m_pidCompressedSize = 0U;
+                        if (m_pidBuffer != nullptr)
+                            delete[] m_pidBuffer;
+                        m_pidBuffer = nullptr;
+                        break;
+                    }
+
+                    // decompress data
+                    std::vector<uint8_t> decompressedData;
+                    uint8_t outbuffer[1024];
+                    do {
+                        strm.avail_out = sizeof(outbuffer);
+                        strm.next_out = outbuffer;
+
+                        ret = inflate(&strm, Z_NO_FLUSH);
+                        if (ret == Z_STREAM_ERROR) {
+                            LogError(LOG_NET, "PEER %u error decompressing peer list", peerId);
+                            inflateEnd(&strm);
+                            goto pid_lookup_cleanup; // yes - I hate myself; but this is quick
+                        }
+
+                        decompressedData.insert(decompressedData.end(), outbuffer, outbuffer + sizeof(outbuffer) - strm.avail_out);
+                    } while (ret != Z_STREAM_END);
+
+                    // cleanup
+                    inflateEnd(&strm);
+
+                    // scope is intentional
+                    {
+                        uint32_t decompressedLen = strm.total_out;
+                        uint8_t* decompressed = decompressedData.data();
+
+                        // Utils::dump(1U, "Raw Peer List Data", decompressed, decompressedLen);
+
+                        // check that we got the appropriate data
+                        if (decompressedLen == m_pidSize) {
+                            // store to file
+                            std::unique_ptr<char[]> __str = std::make_unique<char[]>(decompressedLen + 1U);
+                            char* str = __str.get();
+                            ::memcpy(str, decompressed, decompressedLen + 1U);
+                            str[decompressedLen] = 0; // null termination
+
+                            std::string filename = "/tmp/peer_list.dat";
+                            std::ofstream file(filename, std::ofstream::out);
+                            if (file.fail()) {
+                                LogError(LOG_NET, "Cannot open the peer ID lookup file - %s", filename.c_str());
+                                goto pid_lookup_cleanup; // yes - I hate myself; but this is quick
+                            }
+
+                            file << str;
+                            file.close();
+
+                            m_pidLookup->stop(true);
+                            m_pidLookup->filename(filename);
+                            m_pidLookup->reload();
+
+                            // cleanup temporary file
+                            ::remove(filename.c_str());
+                        }
+                        else {
+                            LogError(LOG_NET, "PEER %u error decompressed peer ID list, was not of expected size! %u != %u", peerId, decompressedLen, m_pidSize);
+                        }
+                    }
+
+pid_lookup_cleanup:
+                    m_pidSize = 0U;
+                    m_pidCompressedSize = 0U;
+                    if (m_pidBuffer != nullptr)
+                        delete[] m_pidBuffer;
+                    m_pidBuffer = nullptr;
+                }
+            }
+        }
+        break;
+
+        default:
+            break;
+        }
+    }
+    break;
+
+    default:
+        Utils::dump("unknown opcode from the master", data, length);
+        break;
+    }
+}
 
 /* Writes configuration to the network. */
 

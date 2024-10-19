@@ -526,8 +526,9 @@ namespace network
         /**
          * @brief Helper to send the list of whitelisted RIDs to the specified peer.
          * @param peerId Peer ID.
+         * @param sendISSI Flag indicating the RID transfer is to an external peer via ISSI.
          */
-        void writeWhitelistRIDs(uint32_t peerId);
+        void writeWhitelistRIDs(uint32_t peerId, bool sendISSI);
         /**
          * @brief Helper to send the list of blacklisted RIDs to the specified peer.
          * @param peerId Peer ID.
@@ -536,13 +537,19 @@ namespace network
         /**
          * @brief Helper to send the list of active TGIDs to the specified peer.
          * @param peerId Peer ID.
+         * @param sendISSI Flag indicating the TGID transfer is to an external peer via ISSI.
          */
-        void writeTGIDs(uint32_t peerId);
+        void writeTGIDs(uint32_t peerId, bool sendISSI);
         /**
          * @brief Helper to send the list of deactivated TGIDs to the specified peer.
          * @param peerId Peer ID.
          */
         void writeDeactiveTGIDs(uint32_t peerId);
+        /**
+         * @brief Helper to send the list of peers to the specified peer.
+         * @param peerId Peer ID.
+         */
+        void writePeerList(uint32_t peerId);
 
         /**
          * @brief Helper to send a data message to the specified peer.

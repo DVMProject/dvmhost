@@ -46,16 +46,16 @@ void PeerListLookup::clear()
 
 /* Adds a new entry to the list. */
 
-void PeerListLookup::addEntry(uint32_t id, const std::string& password)
+void PeerListLookup::addEntry(uint32_t id, const std::string& password, bool peerLink)
 {
-    PeerId entry = PeerId(id, password, false);
+    PeerId entry = PeerId(id, password, peerLink, false);
 
     std::lock_guard<std::mutex> lock(m_mutex);
     try {
         PeerId _entry = m_table.at(id);
         // if either the alias or the enabled flag doesn't match, update the entry
         if (_entry.peerId() == id) {
-            _entry = PeerId(id, password, false);
+            _entry = PeerId(id, password, peerLink, false);
             m_table[id] = _entry;
         }
     } catch (...) {
@@ -87,7 +87,7 @@ PeerId PeerListLookup::find(uint32_t id)
     try {
         entry = m_table.at(id);
     } catch (...) {
-        entry = PeerId(0U, "", true);
+        entry = PeerId(0U, "", false, true);
     }
 
     return entry;
@@ -188,10 +188,10 @@ bool PeerListLookup::load()
 
             for (char c : line) {
                 if (c == delim) {
-                    if (!next.empty()) {
+                    //if (!next.empty()) {
                         parsed.push_back(next);
                         next.clear();
-                    }
+                    //}
                 }
                 else
                     next += c;
@@ -201,15 +201,23 @@ bool PeerListLookup::load()
 
             // parse tokenized line
             uint32_t id = ::atoi(parsed[0].c_str());
+            bool peerLink = false;
+            if (parsed.size() >= 3)
+                peerLink = ::atoi(parsed[2].c_str()) == 1;
 
             // Check for an optional alias field
             if (parsed.size() >= 2) {
-                m_table[id] = PeerId(id, parsed[1], false);
-                LogDebug(LOG_HOST, "Loaded peer ID %u into peer ID lookup table, using unique peer password", id);
-            } else {
-                m_table[id] = PeerId(id, "", false);
-                LogDebug(LOG_HOST, "Loaded peer ID %u into peer ID lookup table, using master password", id);
+                if (!parsed[1].empty()) {
+                    m_table[id] = PeerId(id, parsed[1], peerLink, false);
+                    LogDebug(LOG_HOST, "Loaded peer ID %u into peer ID lookup table, using unique peer password%s", id,
+                        (peerLink) ? ", Peer-Link Enabled" : "");
+                    continue;
+                }
             }
+
+            m_table[id] = PeerId(id, "", peerLink, false);
+            LogDebug(LOG_HOST, "Loaded peer ID %u into peer ID lookup table, using master password%s", id,
+                (peerLink) ? ", Peer-Link Enabled" : "");
         }
     }
 

@@ -70,10 +70,11 @@ void TalkgroupRulesLookup::entry()
 
 /* Stops and unloads this lookup table. */
 
-void TalkgroupRulesLookup::stop()
+void TalkgroupRulesLookup::stop(bool noDestroy)
 {
     if (m_reloadTime == 0U) {
-        delete this;
+        if (!noDestroy)
+            delete this;
         return;
     }
 

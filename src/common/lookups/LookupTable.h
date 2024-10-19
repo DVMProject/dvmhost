@@ -86,11 +86,13 @@ namespace lookups
 
         /**
          * @brief Stops and unloads this lookup table.
+         * @param noDestroy Flag indicating the lookup table should remain resident in memory after stopping.
          */
-        virtual void stop()
+        virtual void stop(bool noDestroy = false)
         {
             if (m_reloadTime == 0U) {
-                delete this;
+                if (!noDestroy)
+                    delete this;
                 return;
             }
 
@@ -164,6 +166,17 @@ namespace lookups
          * @returns std::unordered_map<uint32_t, T> Table.
          */
         virtual std::unordered_map<uint32_t, T> table() { return m_table; }
+
+        /**
+         * @brief Returns the filename used to load this lookup table.
+         * @return std::string Full-path to the lookup table file.
+         */
+        const std::string filename() { return m_filename; };
+        /**
+         * @brief Sets the filename used to load this lookup table.
+         * @param filename Full-path to the routing rules file.
+         */
+        void filename(std::string filename) { m_filename = filename; };
 
     protected:
         std::string m_filename;

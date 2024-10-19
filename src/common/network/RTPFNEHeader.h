@@ -27,6 +27,8 @@
 //  Constants
 // ---------------------------------------------------------------------------
 
+#define PEER_LINK_BLOCK_SIZE 534
+
 #define RTP_FNE_HEADER_LENGTH_BYTES 16
 #define RTP_FNE_HEADER_LENGTH_EXT_LEN 4
 
@@ -67,7 +69,9 @@ namespace network
 
             TRANSFER = 0x90U,                       //! Network Transfer Function
 
-            ANNOUNCE = 0x91U                        //! Network Announce Function
+            ANNOUNCE = 0x91U,                       //! Network Announce Function
+
+            PEER_LINK = 0x92U                       //! FNE Peer-Link Function
         };
     };
 
@@ -97,7 +101,11 @@ namespace network
             ANNC_SUBFUNC_UNIT_DEREG = 0x02U,        //! Announce Unit Deregistration
             ANNC_SUBFUNC_GRP_UNAFFIL = 0x03U,       //! Announce Group Affiliation Removal
             ANNC_SUBFUNC_AFFILS = 0x90U,            //! Update All Affiliations
-            ANNC_SUBFUNC_SITE_VC = 0x9AU            //! Announce Site VCs
+            ANNC_SUBFUNC_SITE_VC = 0x9AU,           //! Announce Site VCs
+
+            PL_TALKGROUP_LIST = 0x00U,              //! FNE Peer-Link Talkgroup Transfer
+            PL_RID_LIST = 0x01U,                    //! FNE Peer-Link Radio ID Transfer
+            PL_PEER_LIST = 0x02U                    //! FNE Peer-Link Peer List Transfer
         };
     };
 
