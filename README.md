@@ -1,10 +1,14 @@
-# Digital Voice Modem Host
+# Digital Voice Modem Core Software Suite
 
-The DVM Host (dvmhost) software suite, provides the a set of applications that, act as a primary host computer implementation of a mixed-mode DMR, P25 and/or NXDN or dedicated-mode DMR, P25 or NXDN repeater system that talks to the actual air modem hardware, or for P25 mode, a TIA/V.24 standard interface mode allowing communications to commercial P25 hardware using the V.24 DFSI modem hardware or UDP. Networking core (dvmfne) that provides a centralized network service that interconnects various DVM endpoint applications allowing networked communications.
+The Digital Voice Modem ("DVM") Core Software Suite, provides the a set of applications that:
+
+- Act as a primary host computer implementation of a mixed-mode DMR, P25 and/or NXDN or dedicated-mode DMR, P25 or NXDN repeater system that talks to the actual air modem hardware, or for P25 mode, a TIA/V.24 standard interface mode allowing communications to commercial P25 hardware using the V.24 DFSI modem hardware or UDP. 
+- Networking core (dvmfne) that provides a centralized network service that interconnects various DVM endpoint applications allowing networked communications.
+- Analog <-> Digital and Digital <-> Digital (Transcoding) vocoding.
 
 Please feel free to reach out to us for help, comments or otherwise, on our Discord: https://discord.gg/3pBe8xgrEz
 
-This project generates a few executables:
+This project suite generates a few executables:
 - `dvmhost` host software that connects to the DVM modems (both air interface for repeater and hotspot or P25 DFSI for commerical P25 hardware) and is the primary data processing application for digital modes. [See configuration](#dvmhost-configuration) to configure and calibrate.
 - `dvmfne` a network "core", this provides a central server for `dvmhost` instances to connect to and be networked with, allowing relay of traffic and other data between `dvmhost` instances and other `dvmfne` instances. [See configuration](#dvmfne-configuration) to configure.
 - `dvmbridge` a analog/PCM audio bridge, this provides the capability for analog or PCM audio resources to be connected to a `dvmfne` instance, allowing realtime vocoding of traffic. [See configuration](#dvmbridge-configuration) to configure.
