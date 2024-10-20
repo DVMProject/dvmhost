@@ -197,13 +197,6 @@ namespace network
                         return 1;
                     }
 
-                    // set SO_LINGER option
-                    linger lin;
-                    lin.l_onoff = 0;
-                    lin.l_linger = 2;
-
-                    setsockopt(fd, SOL_SOCKET, SO_LINGER, (const char *)&lin, sizeof(int));
-
                     // connect to the server
                     ret = connect(fd, addr->ai_addr, addr->ai_addrlen);
                     if (ret < 0) {
@@ -216,11 +209,11 @@ namespace network
                     while (true) {
                         if (!si.token().empty()) {
                             iv[0].iov_len = snprintf(&header[0], len,
-                                "%s /api/v2/%s?org=%s&bucket=%s%s HTTP/1.1\r\nHost: %s\r\nAuthorization: Token %s\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: %d\r\n\r\n",
+                                "%s /api/v2/%s?org=%s&bucket=%s%s HTTP/1.1\r\nHost: %s\r\nConnection: close\r\nAuthorization: Token %s\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: %d\r\n\r\n",
                                 method, uri, si.org().c_str(), si.bucket().c_str(), queryString.c_str(), si.host().c_str(), si.token().c_str(), (int)body.length());
                         } else {
                             iv[0].iov_len = snprintf(&header[0], len,
-                                "%s /api/v2/%s?org=%s&bucket=%s%s HTTP/1.1\r\nHost: %s\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: %d\r\n\r\n",
+                                "%s /api/v2/%s?org=%s&bucket=%s%s HTTP/1.1\r\nHost: %s\r\nConnection: close\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: %d\r\n\r\n",
                                 method, uri, si.org().c_str(), si.bucket().c_str(), queryString.c_str(), si.host().c_str(), (int)body.length());
                         }
 #ifdef INFLUX_DEBUG
@@ -300,6 +293,14 @@ namespace network
 
                     ret = -11;
                 END:
+                    // set SO_LINGER option
+                    struct linger sl;
+                    sl.l_onoff = 1;     /* non-zero value enables linger option in kernel */
+                    sl.l_linger = 0;    /* timeout interval in seconds */
+
+                    setsockopt(fd, SOL_SOCKET, SO_LINGER, &sl, sizeof(sl));
+
+                    // close socket
                     closesocket(fd);
                     return ret / 100 == 2 ? 0 : ret;
 #undef _NO_MORE
