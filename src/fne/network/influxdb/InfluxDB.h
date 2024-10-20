@@ -189,12 +189,20 @@ namespace network
                         return 1;
                     }
 
+                    // set SO_REUSEADDR option
                     const int sockOptVal = 1;
                     if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &sockOptVal, sizeof(int)) < 0) {
                         LogError(LOG_NET, "Failed to connect to InfluxDB server, err: %d", errno);
                         closesocket(fd);
                         return 1;
                     }
+
+                    // set SO_LINGER option
+                    linger lin;
+                    lin.l_onoff = 0;
+                    lin.l_linger = 2;
+
+                    setsockopt(fd, SOL_SOCKET, SO_LINGER, (const char *)&lin, sizeof(int));
 
                     // connect to the server
                     ret = connect(fd, addr->ai_addr, addr->ai_addrlen);
