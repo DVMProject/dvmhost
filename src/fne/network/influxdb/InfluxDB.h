@@ -189,7 +189,8 @@ namespace network
                         return 1;
                     }
 
-                    if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int)) < 0) {
+                    const int sockOptVal = 1;
+                    if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &sockOptVal, sizeof(int)) < 0) {
                         LogError(LOG_NET, "Failed to connect to InfluxDB server, err: %d", errno);
                         closesocket(fd);
                         return 1;
