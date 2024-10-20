@@ -1070,7 +1070,8 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                 std::string ip = udp::Socket::address(req->address);
                                 lookups::AffiliationLookup* aff = network->m_peerAffiliations[peerId];
                                 if (aff == nullptr) {
-                                    LogError(LOG_NET, "PEER %u (%s) has an invalid affiliations lookup? This shouldn't happen BUGBUG.", peerId, connection->identity().c_str());
+                                    LogError(LOG_NET, "PEER %u (%s) has uninitialized affiliations lookup?", peerId, connection->identity().c_str());
+                                    network->writePeerNAK(peerId, TAG_ANNOUNCE, NET_CONN_NAK_INVALID);
                                 }
 
                                 // validate peer (simple validation really)
@@ -1093,7 +1094,8 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                 std::string ip = udp::Socket::address(req->address);
                                 lookups::AffiliationLookup* aff = network->m_peerAffiliations[peerId];
                                 if (aff == nullptr) {
-                                    LogError(LOG_NET, "PEER %u (%s) has an invalid affiliations lookup? This shouldn't happen BUGBUG.", peerId, connection->identity().c_str());
+                                    LogError(LOG_NET, "PEER %u (%s) has uninitialized affiliations lookup?", peerId, connection->identity().c_str());
+                                    network->writePeerNAK(peerId, TAG_ANNOUNCE, NET_CONN_NAK_INVALID);
                                 }
 
                                 // validate peer (simple validation really)
@@ -1114,7 +1116,8 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                 std::string ip = udp::Socket::address(req->address);
                                 lookups::AffiliationLookup* aff = network->m_peerAffiliations[peerId];
                                 if (aff == nullptr) {
-                                    LogError(LOG_NET, "PEER %u (%s) has an invalid affiliations lookup? This shouldn't happen BUGBUG.", peerId, connection->identity().c_str());
+                                    LogError(LOG_NET, "PEER %u (%s) has uninitialized affiliations lookup?", peerId, connection->identity().c_str());
+                                    network->writePeerNAK(peerId, TAG_ANNOUNCE, NET_CONN_NAK_INVALID);
                                 }
 
                                 // validate peer (simple validation really)
@@ -1135,7 +1138,8 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                 std::string ip = udp::Socket::address(req->address);
                                 lookups::AffiliationLookup* aff = network->m_peerAffiliations[peerId];
                                 if (aff == nullptr) {
-                                    LogError(LOG_NET, "PEER %u (%s) has an invalid affiliations lookup? This shouldn't happen BUGBUG.", peerId, connection->identity().c_str());
+                                    LogError(LOG_NET, "PEER %u (%s) has uninitialized affiliations lookup?", peerId, connection->identity().c_str());
+                                    network->writePeerNAK(peerId, TAG_ANNOUNCE, NET_CONN_NAK_INVALID);
                                 }
 
                                 // validate peer (simple validation really)
@@ -1159,7 +1163,8 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                 if (connection->connected() && connection->address() == ip) {
                                     lookups::AffiliationLookup* aff = network->m_peerAffiliations[peerId];
                                     if (aff == nullptr) {
-                                        LogError(LOG_NET, "PEER %u (%s) has an invalid affiliations lookup? This shouldn't happen BUGBUG.", peerId, connection->identity().c_str());
+                                        LogError(LOG_NET, "PEER %u (%s) has uninitialized affiliations lookup?", peerId, connection->identity().c_str());
+                                        network->writePeerNAK(peerId, TAG_ANNOUNCE, NET_CONN_NAK_INVALID);
                                     }
 
                                     if (aff != nullptr) {
