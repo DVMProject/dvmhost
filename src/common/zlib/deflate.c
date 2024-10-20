@@ -392,19 +392,11 @@ int ZEXPORT deflateInit2_(z_streamp strm, int level, int method,
 
     strm->msg = Z_NULL;
     if (strm->zalloc == (alloc_func)0) {
-#ifdef Z_SOLO
-        return Z_STREAM_ERROR;
-#else
         strm->zalloc = zcalloc;
         strm->opaque = (voidpf)0;
-#endif
     }
     if (strm->zfree == (free_func)0)
-#ifdef Z_SOLO
-        return Z_STREAM_ERROR;
-#else
         strm->zfree = zcfree;
-#endif
 
 #ifdef FASTEST
     if (level != 0) level = 1;

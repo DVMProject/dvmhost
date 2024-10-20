@@ -187,19 +187,11 @@ int ZEXPORT inflateInit2_(z_streamp strm, int windowBits,
     if (strm == Z_NULL) return Z_STREAM_ERROR;
     strm->msg = Z_NULL;                 /* in case we return an error */
     if (strm->zalloc == (alloc_func)0) {
-#ifdef Z_SOLO
-        return Z_STREAM_ERROR;
-#else
         strm->zalloc = zcalloc;
         strm->opaque = (voidpf)0;
-#endif
     }
     if (strm->zfree == (free_func)0)
-#ifdef Z_SOLO
-        return Z_STREAM_ERROR;
-#else
         strm->zfree = zcfree;
-#endif
     state = (struct inflate_state FAR *)
             ZALLOC(strm, 1, sizeof(struct inflate_state));
     if (state == Z_NULL) return Z_MEM_ERROR;

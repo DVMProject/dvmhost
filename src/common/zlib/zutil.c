@@ -7,9 +7,6 @@
 /* @(#) $Id$ */
 
 #include "zutil.h"
-#ifndef Z_SOLO
-#  include "gzguts.h"
-#endif
 
 z_const char * const z_errmsg[10] = {
     (z_const char *)"need dictionary",     /* Z_NEED_DICT       2  */
@@ -167,8 +164,6 @@ void ZLIB_INTERNAL zmemzero(Bytef* dest, uInt len) {
 }
 #endif
 
-#ifndef Z_SOLO
-
 #ifdef SYS16BIT
 
 #ifdef __TURBOC__
@@ -296,5 +291,3 @@ void ZLIB_INTERNAL zcfree(voidpf opaque, voidpf ptr) {
 }
 
 #endif /* MY_ZCALLOC */
-
-#endif /* !Z_SOLO */

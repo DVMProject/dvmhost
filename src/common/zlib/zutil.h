@@ -22,7 +22,7 @@
 
 #include "zlib.h"
 
-#if defined(STDC) && !defined(Z_SOLO)
+#if defined(STDC)
 #  if !(defined(_WIN32_WCE) && defined(_MSC_VER))
 #    include <stddef.h>
 #  endif
@@ -43,7 +43,7 @@ typedef unsigned short ush;
 typedef ush FAR ushf;
 typedef unsigned long  ulg;
 
-#if !defined(Z_U8) && !defined(Z_SOLO) && defined(STDC)
+#if !defined(Z_U8) && defined(STDC)
 #  include <limits.h>
 #  if (ULONG_MAX == 0xffffffffffffffff)
 #    define Z_U8 unsigned long
@@ -92,18 +92,16 @@ extern z_const char * const z_errmsg[10]; /* indexed by 2-zlib_error */
 
 #if defined(MSDOS) || (defined(WINDOWS) && !defined(WIN32))
 #  define OS_CODE  0x00
-#  ifndef Z_SOLO
-#    if defined(__TURBOC__) || defined(__BORLANDC__)
-#      if (__STDC__ == 1) && (defined(__LARGE__) || defined(__COMPACT__))
-         /* Allow compilation with ANSI keywords only enabled */
-         void _Cdecl farfree( void *block );
-         void *_Cdecl farmalloc( unsigned long nbytes );
-#      else
-#        include <alloc.h>
-#      endif
-#    else /* MSC or DJGPP */
-#      include <malloc.h>
+#  if defined(__TURBOC__) || defined(__BORLANDC__)
+#    if (__STDC__ == 1) && (defined(__LARGE__) || defined(__COMPACT__))
+       /* Allow compilation with ANSI keywords only enabled */
+       void _Cdecl farfree( void *block );
+       void *_Cdecl farmalloc( unsigned long nbytes );
+#    else
+#      include <alloc.h>
 #    endif
+#  else /* MSC or DJGPP */
+#    include <malloc.h>
 #  endif
 #endif
 
@@ -133,7 +131,7 @@ extern z_const char * const z_errmsg[10]; /* indexed by 2-zlib_error */
 
 #ifdef OS2
 #  define OS_CODE  6
-#  if defined(M_I86) && !defined(Z_SOLO)
+#  if defined(M_I86)
 #    include <malloc.h>
 #  endif
 #endif
@@ -188,7 +186,7 @@ extern z_const char * const z_errmsg[10]; /* indexed by 2-zlib_error */
 
          /* functions */
 
-#if defined(pyr) || defined(Z_SOLO)
+#if defined(pyr)
 #  define NO_MEMCPY
 #endif
 #if defined(SMALL_MEDIUM) && !defined(_MSC_VER) && !defined(__SC__)
@@ -237,11 +235,9 @@ extern z_const char * const z_errmsg[10]; /* indexed by 2-zlib_error */
 #  define Tracecv(c,x)
 #endif
 
-#ifndef Z_SOLO
-   voidpf ZLIB_INTERNAL zcalloc(voidpf opaque, unsigned items,
-                                unsigned size);
-   void ZLIB_INTERNAL zcfree(voidpf opaque, voidpf ptr);
-#endif
+voidpf ZLIB_INTERNAL zcalloc(voidpf opaque, unsigned items,
+                            unsigned size);
+void ZLIB_INTERNAL zcfree(voidpf opaque, voidpf ptr);
 
 #define ZALLOC(strm, items, size) \
            (*((strm)->zalloc))((strm)->opaque, (items), (size))
