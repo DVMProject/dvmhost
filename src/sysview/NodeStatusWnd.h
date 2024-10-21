@@ -91,7 +91,7 @@ public:
         uint32_t calcSpace = (uint32_t)(entry.chSpaceKhz() / 0.125);
         float calcTxOffset = entry.txOffsetMhz() * 1000000.0;
 
-        uint32_t rxFrequency = (uint32_t)((entry.baseFrequency() + ((calcSpace * 125) * channelNo)) + (uint32_t)calcTxOffset);
+        uint32_t rxFrequency = (uint32_t)((entry.baseFrequency() + ((calcSpace * 125) * channelNo)) + (int32_t)calcTxOffset);
         uint32_t txFrequency = (uint32_t)((entry.baseFrequency() + ((calcSpace * 125) * channelNo)));
 
         std::stringstream ss;

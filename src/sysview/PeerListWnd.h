@@ -172,7 +172,7 @@ public:
                         uint32_t calcSpace = (uint32_t)(idenEntry.chSpaceKhz() / 0.125);
                         float calcTxOffset = idenEntry.txOffsetMhz() * 1000000.0;
 
-                        uint32_t rxFrequency = (uint32_t)((idenEntry.baseFrequency() + ((calcSpace * 125) * chNo)) + (uint32_t)calcTxOffset);
+                        uint32_t rxFrequency = (uint32_t)((idenEntry.baseFrequency() + ((calcSpace * 125) * chNo)) + (int32_t)calcTxOffset);
                         uint32_t txFrequency = (uint32_t)((idenEntry.baseFrequency() + ((calcSpace * 125) * chNo)));
 
                         txOss << std::fixed << std::setprecision(5) << (double)(txFrequency / 1000000.0);

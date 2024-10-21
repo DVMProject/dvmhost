@@ -330,7 +330,7 @@ private:
         uint32_t calcSpace = (uint32_t)(entry.chSpaceKhz() / 0.125);
         float calcTxOffset = entry.txOffsetMhz() * 1000000.0;
 
-        uint32_t rxFrequency = (uint32_t)((entry.baseFrequency() + ((calcSpace * 125) * m_channelNo)) + (uint32_t)calcTxOffset);
+        uint32_t rxFrequency = (uint32_t)((entry.baseFrequency() + ((calcSpace * 125) * m_channelNo)) + (int32_t)calcTxOffset);
         uint32_t txFrequency = (uint32_t)((entry.baseFrequency() + ((calcSpace * 125) * m_channelNo)));
 
         std::stringstream ss;

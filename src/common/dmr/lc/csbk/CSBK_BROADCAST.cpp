@@ -110,7 +110,7 @@ void CSBK_BROADCAST::encode(uint8_t* data)
         const uint32_t multiple = 100000;
 
         // calculate Rx frequency
-        uint32_t rxFrequency = (uint32_t)((m_siteIdenEntry.baseFrequency() + ((calcSpace * 125) * m_logicalCh1)) + (uint32_t)calcTxOffset);
+        uint32_t rxFrequency = (uint32_t)((m_siteIdenEntry.baseFrequency() + ((calcSpace * 125) * m_logicalCh1)) + (int32_t)calcTxOffset);
 
         // generate frequency in mhz
         uint32_t rxFreqMhz = rxFrequency + multiple / 2;

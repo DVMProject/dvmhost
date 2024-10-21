@@ -55,7 +55,7 @@ void OSP_SNDCP_CH_ANN::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
     float calcTxOffset = m_siteIdenEntry.txOffsetMhz() * 1000000.0;
 
     uint32_t txFrequency = (uint32_t)((m_siteIdenEntry.baseFrequency() + ((calcSpace * 125) * m_siteData.channelNo())));
-    uint32_t rxFrequency = (uint32_t)(txFrequency + (uint32_t)calcTxOffset);
+    uint32_t rxFrequency = (uint32_t)(txFrequency + (int32_t)calcTxOffset);
 
     uint32_t rootFreq = rxFrequency - m_siteIdenEntry.baseFrequency();
     uint32_t rxChNo = rootFreq / (m_siteIdenEntry.chSpaceKhz() * 1000);
