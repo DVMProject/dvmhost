@@ -105,7 +105,9 @@ namespace network
 
             PL_TALKGROUP_LIST = 0x00U,              //! FNE Peer-Link Talkgroup Transfer
             PL_RID_LIST = 0x01U,                    //! FNE Peer-Link Radio ID Transfer
-            PL_PEER_LIST = 0x02U                    //! FNE Peer-Link Peer List Transfer
+            PL_PEER_LIST = 0x02U,                   //! FNE Peer-Link Peer List Transfer
+
+            PL_ACT_PEER_LIST = 0xA2U,               //! FNE Peer-Link Active Peer List Transfer
         };
     };
 

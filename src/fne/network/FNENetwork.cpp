@@ -72,6 +72,7 @@ FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port,
     m_peerListLookup(nullptr),
     m_status(NET_STAT_INVALID),
     m_peers(),
+    m_peerLinkPeers(),
     m_peerAffiliations(),
     m_ccPeerMap(),
     m_maintainenceTimer(1000U, pingTime),
@@ -302,6 +303,31 @@ void FNENetwork::clock(uint32_t ms)
         if (!m_callInProgress) {
             frame::RTPHeader::resetStartTime();
             m_frameQueue->clearTimestamps();
+        }
+
+        // send active peer list to Peer-Link masters
+        if (m_host->m_peerNetworks.size() > 0) {
+            for (auto peer : m_host->m_peerNetworks) {
+                if (peer.second != nullptr) {
+                    if (peer.second->isEnabled() && peer.second->isPeerLink()) {
+                        if (m_peers.size() > 0) {
+                            json::array peers = json::array();
+                            for (auto entry : m_peers) {
+                                uint32_t peerId = entry.first;
+                                network::FNEPeerConnection* peerConn = entry.second;
+                                if (peerConn != nullptr) {
+                                    json::object peerObj = fneConnObject(peerId, peerConn);
+                                    uint32_t peerNetPeerId = peer.second->getPeerId();
+                                    peerObj["parentPeerId"].set<uint32_t>(peerNetPeerId);
+                                    peers.push_back(json::value(peerObj));
+                                }
+                            }
+
+                            peer.second->writePeerLinkPeers(&peers);
+                        }
+                    }
+                }
+            }
         }
 
         m_maintainenceTimer.start();
@@ -786,6 +812,21 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                             connection->isExternalPeer(external);
                                             if (external)
                                                 LogInfoEx(LOG_NET, "PEER %u reports external peer", peerId);
+
+                                            // check if the peer is participating in peer link
+                                            lookups::PeerId peerEntry = network->m_peerListLookup->find(req->peerId);
+                                            if (!peerEntry.peerDefault()) {
+                                                if (peerEntry.peerLink()) {
+                                                    if (network->m_host->m_useAlternatePortForDiagnostics) {
+                                                        connection->isPeerLink(true);
+                                                        if (external)
+                                                            LogInfoEx(LOG_NET, "PEER %u configured for Peer-Link", peerId);
+                                                    } else {
+                                                        LogError(LOG_NET, "PEER %u, Peer-Link operations *require* the alternate diagnostics port option to be enabled.", peerId);
+                                                        LogError(LOG_NET, "PEER %u, will not receive Peer-Link ACL updates.", peerId);
+                                                    }
+                                                }
+                                            }
                                         }
 
                                         // is the peer reporting it is a conventional peer?
@@ -1080,6 +1121,18 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                     uint32_t dstId = __GET_UINT16(req->buffer, 3U);             // Destination Address
                                     aff->groupUnaff(srcId);
                                     aff->groupAff(srcId, dstId);
+
+                                    // attempt to repeat traffic to Peer-Link masters
+                                    if (network->m_host->m_peerNetworks.size() > 0) {
+                                        for (auto peer : network->m_host->m_peerNetworks) {
+                                            if (peer.second != nullptr) {
+                                                if (peer.second->isEnabled() && peer.second->isPeerLink()) {
+                                                    peer.second->writeMaster({ NET_FUNC::ANNOUNCE, NET_SUBFUNC::ANNC_SUBFUNC_GRP_AFFIL }, 
+                                                        req->buffer, req->length, req->rtpHeader.getSequence(), streamId, false, false);
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
                                 else {
                                     network->writePeerNAK(peerId, TAG_ANNOUNCE, NET_CONN_NAK_FNE_UNAUTHORIZED);
@@ -1102,6 +1155,18 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                 if (connection->connected() && connection->address() == ip && aff != nullptr) {
                                     uint32_t srcId = __GET_UINT16(req->buffer, 0U);             // Source Address
                                     aff->unitReg(srcId);
+
+                                    // attempt to repeat traffic to Peer-Link masters
+                                    if (network->m_host->m_peerNetworks.size() > 0) {
+                                        for (auto peer : network->m_host->m_peerNetworks) {
+                                            if (peer.second != nullptr) {
+                                                if (peer.second->isEnabled() && peer.second->isPeerLink()) {
+                                                    peer.second->writeMaster({ NET_FUNC::ANNOUNCE, NET_SUBFUNC::ANNC_SUBFUNC_UNIT_REG }, 
+                                                        req->buffer, req->length, req->rtpHeader.getSequence(), streamId, false, false);
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
                                 else {
                                     network->writePeerNAK(peerId, TAG_ANNOUNCE, NET_CONN_NAK_FNE_UNAUTHORIZED);
@@ -1124,6 +1189,18 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                 if (connection->connected() && connection->address() == ip && aff != nullptr) {
                                     uint32_t srcId = __GET_UINT16(req->buffer, 0U);             // Source Address
                                     aff->unitDereg(srcId);
+
+                                    // attempt to repeat traffic to Peer-Link masters
+                                    if (network->m_host->m_peerNetworks.size() > 0) {
+                                        for (auto peer : network->m_host->m_peerNetworks) {
+                                            if (peer.second != nullptr) {
+                                                if (peer.second->isEnabled() && peer.second->isPeerLink()) {
+                                                    peer.second->writeMaster({ NET_FUNC::ANNOUNCE, NET_SUBFUNC::ANNC_SUBFUNC_UNIT_DEREG }, 
+                                                        req->buffer, req->length, req->rtpHeader.getSequence(), streamId, false, false);
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
                                 else {
                                     network->writePeerNAK(peerId, TAG_ANNOUNCE, NET_CONN_NAK_FNE_UNAUTHORIZED);
@@ -1146,6 +1223,18 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                 if (connection->connected() && connection->address() == ip && aff != nullptr) {
                                     uint32_t srcId = __GET_UINT16(req->buffer, 0U);             // Source Address
                                     aff->groupUnaff(srcId);
+
+                                    // attempt to repeat traffic to Peer-Link masters
+                                    if (network->m_host->m_peerNetworks.size() > 0) {
+                                        for (auto peer : network->m_host->m_peerNetworks) {
+                                            if (peer.second != nullptr) {
+                                                if (peer.second->isEnabled() && peer.second->isPeerLink()) {
+                                                    peer.second->writeMaster({ NET_FUNC::ANNOUNCE, NET_SUBFUNC::ANNC_SUBFUNC_GRP_UNAFFIL }, 
+                                                        req->buffer, req->length, req->rtpHeader.getSequence(), streamId, false, false);
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
                                 else {
                                     network->writePeerNAK(peerId, TAG_ANNOUNCE, NET_CONN_NAK_FNE_UNAUTHORIZED);
@@ -1181,6 +1270,18 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                             offs += 8U;
                                         }
                                         LogMessage(LOG_NET, "PEER %u (%s) announced %u affiliations", peerId, connection->identity().c_str(), len);
+
+                                        // attempt to repeat traffic to Peer-Link masters
+                                        if (network->m_host->m_peerNetworks.size() > 0) {
+                                            for (auto peer : network->m_host->m_peerNetworks) {
+                                                if (peer.second != nullptr) {
+                                                    if (peer.second->isEnabled() && peer.second->isPeerLink()) {
+                                                        peer.second->writeMaster({ NET_FUNC::ANNOUNCE, NET_SUBFUNC::ANNC_SUBFUNC_AFFILS }, 
+                                                            req->buffer, req->length, req->rtpHeader.getSequence(), streamId, false, false);
+                                                    }
+                                                }
+                                            }
+                                        }
                                     }
                                 }
                                 else {
@@ -1215,6 +1316,18 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                     }
                                     LogMessage(LOG_NET, "PEER %u (%s) announced %u VCs", peerId, connection->identity().c_str(), len);
                                     network->m_ccPeerMap[peerId] = vcPeers;
+
+                                    // attempt to repeat traffic to Peer-Link masters
+                                    if (network->m_host->m_peerNetworks.size() > 0) {
+                                        for (auto peer : network->m_host->m_peerNetworks) {
+                                            if (peer.second != nullptr) {
+                                                if (peer.second->isEnabled() && peer.second->isPeerLink()) {
+                                                    peer.second->writeMaster({ NET_FUNC::ANNOUNCE, NET_SUBFUNC::ANNC_SUBFUNC_SITE_VC }, 
+                                                        req->buffer, req->length, req->rtpHeader.getSequence(), streamId, false, false);
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
                                 else {
                                     network->writePeerNAK(peerId, TAG_ANNOUNCE, NET_CONN_NAK_FNE_UNAUTHORIZED);
@@ -1300,7 +1413,6 @@ bool FNENetwork::erasePeer(uint32_t peerId)
         auto it = std::find_if(m_peers.begin(), m_peers.end(), [&](PeerMapPair x) { return x.first == peerId; });
         if (it != m_peers.end()) {
             m_peers.erase(peerId);
-            return true;
         }
     }
 
@@ -1309,11 +1421,59 @@ bool FNENetwork::erasePeer(uint32_t peerId)
         auto it = std::find_if(m_ccPeerMap.begin(), m_ccPeerMap.end(), [&](auto x) { return x.first == peerId; });
         if (it != m_ccPeerMap.end()) {
             m_ccPeerMap.erase(peerId);
-            return true;
         }
     }
 
-    return false;
+    // erase any Peer-Link entries for this peer
+    {
+        auto it = std::find_if(m_peerLinkPeers.begin(), m_peerLinkPeers.end(), [&](auto x) { return x.first == peerId; });
+        if (it != m_peerLinkPeers.end()) {
+            m_peerLinkPeers.erase(peerId);
+        }
+    }
+
+    return true;
+}
+
+
+/* Helper to create a JSON representation of a FNE peer connection. */
+
+json::object FNENetwork::fneConnObject(uint32_t peerId, FNEPeerConnection *conn)
+{
+    json::object peerObj = json::object();
+    peerObj["peerId"].set<uint32_t>(peerId);
+
+    std::string address = conn->address();
+    peerObj["address"].set<std::string>(address);
+    uint16_t port = conn->port();
+    peerObj["port"].set<uint16_t>(port);
+    bool connected = conn->connected();
+    peerObj["connected"].set<bool>(connected);
+    uint32_t connectionState = (uint32_t)conn->connectionState();
+    peerObj["connectionState"].set<uint32_t>(connectionState);
+    uint32_t pingsReceived = conn->pingsReceived();
+    peerObj["pingsReceived"].set<uint32_t>(pingsReceived);
+    uint64_t lastPing = conn->lastPing();
+    peerObj["lastPing"].set<uint64_t>(lastPing);
+    uint32_t ccPeerId = conn->ccPeerId();
+    peerObj["controlChannel"].set<uint32_t>(ccPeerId);
+
+    json::object peerConfig = conn->config();
+    if (peerConfig["rcon"].is<json::object>())
+        peerConfig.erase("rcon");
+    peerObj["config"].set<json::object>(peerConfig);
+
+    json::array voiceChannels = json::array();
+    auto it = std::find_if(m_ccPeerMap.begin(), m_ccPeerMap.end(), [&](auto x) { return x.first == peerId; });
+    if (it != m_ccPeerMap.end()) {
+        std::vector<uint32_t> vcPeers = m_ccPeerMap[peerId];
+        for (uint32_t vcEntry : vcPeers) {
+            voiceChannels.push_back(json::value((double)vcEntry));
+        }
+    }
+    peerObj["voiceChannels"].set<json::array>(voiceChannels);
+
+    return peerObj;
 }
 
 /* Helper to reset a peer connection. */
@@ -1419,20 +1579,11 @@ void* FNENetwork::threadedACLUpdate(void* arg)
 
         std::string peerIdentity = network->resolvePeerIdentity(req->peerId);
 
-        // check if the peer is participating in peer link
-        bool peerLink = false;
-        lookups::PeerId peerEntry = network->m_peerListLookup->find(req->peerId);
-        if (!peerEntry.peerDefault()) {
-            if (peerEntry.peerLink()) {
-                peerLink = true;
-            }
-        }
-
         FNEPeerConnection* connection = network->m_peers[req->peerId];
         if (connection != nullptr) {
             // if the connection is an external peer, and peer is participating in peer link,
             // send the peer proper configuration data
-            if (connection->isExternalPeer() && peerLink) {
+            if (connection->isExternalPeer() && connection->isPeerLink()) {
                 LogInfoEx(LOG_NET, "PEER %u (%s) sending Peer-Link ACL list updates", req->peerId, peerIdentity.c_str());
 
                 network->writeWhitelistRIDs(req->peerId, true);

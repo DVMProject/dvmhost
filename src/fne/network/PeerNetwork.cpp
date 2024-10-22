@@ -32,6 +32,7 @@ PeerNetwork::PeerNetwork(const std::string& address, uint16_t port, uint16_t loc
     Network(address, port, localPort, peerId, password, duplex, debug, dmr, p25, nxdn, slot1, slot2, allowActivityTransfer, allowDiagnosticTransfer, updateLookup, saveLookup),
     m_blockTrafficToTable(),
     m_pidLookup(nullptr),
+    m_peerLink(false),
     m_tgidCompressedSize(0U),
     m_tgidSize(0U),
     m_tgidBuffer(nullptr),
@@ -71,6 +72,32 @@ bool PeerNetwork::checkBlockedPeer(uint32_t peerId)
     return false;
 }
 
+/* Writes a complete update of this CFNE's active peer list to the network. */
+
+bool PeerNetwork::writePeerLinkPeers(json::array* peerList)
+{
+    if (peerList == nullptr)
+        return false;
+    if (peerList->size() == 0)
+        return false;
+
+    if (peerList->size() > 0 && m_peerLink) {
+        json::value v = json::value(*peerList);
+        std::string json = std::string(v.serialize());
+
+        CharArray __buffer = std::make_unique<char[]>(json.length() + 9U);
+        char* buffer = __buffer.get();
+
+        ::memcpy(buffer + 0U, TAG_PEER_LINK, 4U);
+        ::snprintf(buffer + 8U, json.length() + 1U, "%s", json.c_str());
+
+        return writeMaster({ NET_FUNC::PEER_LINK, NET_SUBFUNC::PL_ACT_PEER_LIST }, 
+            (uint8_t*)buffer, json.length() + 8U, RTP_END_OF_CALL_SEQ, createStreamId(), false, true);
+    }
+
+    return false;
+}
+
 // ---------------------------------------------------------------------------
 //  Protected Class Members
 // ---------------------------------------------------------------------------
@@ -95,7 +122,10 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
 
                 if (m_tgidBuffer != nullptr)
                     delete[] m_tgidBuffer;
-                m_tgidBuffer = new uint8_t[m_tgidSize];
+                if (m_tgidSize < PEER_LINK_BLOCK_SIZE)
+                    m_tgidBuffer = new uint8_t[PEER_LINK_BLOCK_SIZE + 1U];
+                else 
+                    m_tgidBuffer = new uint8_t[m_tgidSize + 1U];
             }
 
             if (m_tgidBuffer != nullptr) {
@@ -166,7 +196,7 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
                             // store to file
                             std::unique_ptr<char[]> __str = std::make_unique<char[]>(decompressedLen + 1U);
                             char* str = __str.get();
-                            ::memcpy(str, decompressed, decompressedLen + 1U);
+                            ::memcpy(str, decompressed, decompressedLen);
                             str[decompressedLen] = 0; // null termination
 
                             std::string filename = "/tmp/talkgroup_rules.yml";
@@ -182,6 +212,9 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
                             m_tidLookup->stop(true);
                             m_tidLookup->filename(filename);
                             m_tidLookup->reload();
+
+                            // flag this peer as Peer-Link enabled
+                            m_peerLink = true;
 
                             // cleanup temporary file
                             ::remove(filename.c_str());
@@ -214,7 +247,10 @@ tid_lookup_cleanup:
 
                 if (m_ridBuffer != nullptr)
                     delete[] m_ridBuffer;
-                m_ridBuffer = new uint8_t[m_ridSize];
+                if (m_ridSize < PEER_LINK_BLOCK_SIZE)
+                    m_ridBuffer = new uint8_t[PEER_LINK_BLOCK_SIZE + 1U];
+                else 
+                    m_ridBuffer = new uint8_t[m_ridSize + 1U];
             }
 
             if (m_ridBuffer != nullptr) {
@@ -285,7 +321,7 @@ tid_lookup_cleanup:
                             // store to file
                             std::unique_ptr<char[]> __str = std::make_unique<char[]>(decompressedLen + 1U);
                             char* str = __str.get();
-                            ::memcpy(str, decompressed, decompressedLen + 1U);
+                            ::memcpy(str, decompressed, decompressedLen);
                             str[decompressedLen] = 0; // null termination
 
                             std::string filename = "/tmp/rid_acl.dat";
@@ -301,6 +337,9 @@ tid_lookup_cleanup:
                             m_ridLookup->stop(true);
                             m_ridLookup->filename(filename);
                             m_ridLookup->reload();
+
+                            // flag this peer as Peer-Link enabled
+                            m_peerLink = true;
 
                             // cleanup temporary file
                             ::remove(filename.c_str());
@@ -333,7 +372,10 @@ rid_lookup_cleanup:
 
                 if (m_pidBuffer != nullptr)
                     delete[] m_pidBuffer;
-                m_pidBuffer = new uint8_t[m_pidSize];
+                if (m_pidSize < PEER_LINK_BLOCK_SIZE)
+                    m_pidBuffer = new uint8_t[PEER_LINK_BLOCK_SIZE + 1U];
+                else 
+                    m_pidBuffer = new uint8_t[m_pidSize + 1U];
             }
 
             if (m_pidBuffer != nullptr) {
@@ -345,8 +387,8 @@ rid_lookup_cleanup:
                     uint32_t offs = curBlock * PEER_LINK_BLOCK_SIZE;
                     ::memcpy(m_pidBuffer + offs, data + 10U, PEER_LINK_BLOCK_SIZE);
 
-                    // Utils::dump(1U, "Block Payload", data, 10U + PEER_LINK_BLOCK_SIZE);
-                    // Utils::dump(1U, "Compressed Payload", m_pidBuffer, m_pidCompressedSize);
+                     Utils::dump(1U, "Block Payload", data, 10U + PEER_LINK_BLOCK_SIZE);
+                     Utils::dump(1U, "Compressed Payload", m_pidBuffer, m_pidCompressedSize);
 
                     // handle last block
                     // compression structures
@@ -404,7 +446,7 @@ rid_lookup_cleanup:
                             // store to file
                             std::unique_ptr<char[]> __str = std::make_unique<char[]>(decompressedLen + 1U);
                             char* str = __str.get();
-                            ::memcpy(str, decompressed, decompressedLen + 1U);
+                            ::memcpy(str, decompressed, decompressedLen);
                             str[decompressedLen] = 0; // null termination
 
                             std::string filename = "/tmp/peer_list.dat";
@@ -420,6 +462,9 @@ rid_lookup_cleanup:
                             m_pidLookup->stop(true);
                             m_pidLookup->filename(filename);
                             m_pidLookup->reload();
+
+                            // flag this peer as Peer-Link enabled
+                            m_peerLink = true;
 
                             // cleanup temporary file
                             ::remove(filename.c_str());

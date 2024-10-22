@@ -79,6 +79,19 @@ namespace network
          */
         bool checkBlockedPeer(uint32_t peerId);
 
+        /**
+         * @brief Writes a complete update of this CFNE's active peer list to the network.
+         * @param peerList List of active peers.
+         * @returns bool True, if list was sent, otherwise false.
+         */
+        bool writePeerLinkPeers(json::array* peerList);
+
+        /**
+         * @brief Returns flag indicating whether or not this peer connection is Peer-Link enabled.
+         * @returns bool True, if Peer-Link enabled, otherwise false.
+         */
+        bool isPeerLink() const { return m_peerLink; }
+
     protected:
         std::vector<uint32_t> m_blockTrafficToTable;
 
@@ -101,6 +114,7 @@ namespace network
 
     private:
         lookups::PeerListLookup* m_pidLookup;
+        bool m_peerLink;
 
         uint32_t m_tgidCompressedSize;
         uint32_t m_tgidSize;
