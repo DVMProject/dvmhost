@@ -387,8 +387,8 @@ rid_lookup_cleanup:
                     uint32_t offs = curBlock * PEER_LINK_BLOCK_SIZE;
                     ::memcpy(m_pidBuffer + offs, data + 10U, PEER_LINK_BLOCK_SIZE);
 
-                     Utils::dump(1U, "Block Payload", data, 10U + PEER_LINK_BLOCK_SIZE);
-                     Utils::dump(1U, "Compressed Payload", m_pidBuffer, m_pidCompressedSize);
+                    // Utils::dump(1U, "Block Payload", data, 10U + PEER_LINK_BLOCK_SIZE);
+                    // Utils::dump(1U, "Compressed Payload", m_pidBuffer, m_pidCompressedSize);
 
                     // handle last block
                     // compression structures
