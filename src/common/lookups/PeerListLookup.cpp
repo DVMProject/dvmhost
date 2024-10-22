@@ -266,6 +266,12 @@ bool PeerListLookup::save()
             line += password;
             line += ",";
         }
+        bool peerLink = entry.second.peerLink();
+        if (peerLink) {
+            line += "1,";
+        } else {
+            line += "0,";
+        }
         // Add the newline
         line += "\n";
         // Write to file
