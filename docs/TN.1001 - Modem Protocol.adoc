@@ -611,7 +611,47 @@ The modem shall transmit:
 |=== 
 
 ==== 2.4.14 Flash Read
-*TODO TODO TODO*
+This opcode is utilized to read data from the modem's configuration partition on the flash.
+
+The host shall transmit:
+[cols="2,1,2"]
+|===
+|Name |Length (bytes) |Description
+
+|Short Frame Start
+|1
+|Short Frame Start
+
+|Length
+|3
+|Length
+
+|Flash Read Opcode
+|1
+|$E0
+|=== 
+
+The modem shall transmit:
+[cols="2,1,2"]
+|===
+|Name |Length (bytes) |Description
+
+|Short Frame Start
+|1
+|Short Frame Start
+
+|Length
+|249
+|Length
+
+|Flash Read Opcode
+|1
+|$E0
+
+|Variable Length Data
+|249
+|...
+|=== 
 
 ==== 2.4.15 Flash Write
 *TODO TODO TODO*
