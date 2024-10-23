@@ -407,7 +407,7 @@ After transmitting the login packet, the peer shall wait for a response from the
 
 In the case of an ACK response packet, the master response data will contain a 4 byte challenge salt used for the authorisation state. The peer shall store this salt and transition the login state machine to the authorisation state.
 
-==== 3.1.3 Authorisation
+==== 3.1.2 Authorisation
 The authorisation procedure is straight forward, the peer shall utilize the salt transmitted to it in the previous stage to generate a SHA256 hash of the unique connection password for that peer.
 
 The peer shall then transmit the following packet to the master:
@@ -436,7 +436,7 @@ After transmitting the authorisation packet, the peer shall wait for a response 
 
 In the case of an ACK response packet, the peer shall transition the login state machine to the configuration state.
 
-==== 3.1.2 Configuration
+==== 3.1.3 Configuration
 The configuration procedure is straight forward, the peer shall generate a JSON configuration data blob to transmit to the CFNE:
 
 [discrete]
@@ -993,3 +993,125 @@ The master shall transmit the following for each block to the CFNE peer:
 The CFNE peer shall continue receiving this packet until it has determined it has received all blocks of data. Once all blocks of data are received it shall reassemble the compressed data payload into a contiguous buffer and decompress the data.
 
 The CFNE peer shall then utilize the decompressed data to fully reconfigure its peer list ACL lookup table with the data from the master.
+
+== 4. Concepts
+
+The DVM CFNE network protocol is implemented by the dvmfne application contained within the dvmhost source code repository (simply known as Digital Voice Modem Core Software Suite).
+
+The dvmfne (DVM CFNE) implements all the necessary functionality for a central control and traffic processing server. Currently the DVM CFNE implements functionality to:
+
+* Handle end-point application handshake and authentication.
+* Maintain and manage end-point lifetimes using a ping/pong keep-alive mechanism.
+* Maintain and manage access rules (not limited to but including):
+    ** Talkgroup Routing Rules
+    ** Radio ID Access Control List
+    ** Peer ID Access Control List
+* Maintain and manage traffic routing for DMR, P25 and NXDN utilizing the talkgroup routing rules.
+* Apply and enforce ACL for talkgroups, radio IDs and peer IDs.
+* Ensure end-point applications are updated with the CFNE rules on a configured interval.
+
+=== 4.1 Login
+
+(See Section 3.1 above for procedures). The general login concept for the DVM CFNE network, is a 4 stage state machine. Each stage of the state machine describes a particular step in the initial login and handshake process with the CFNE server.
+
+* Login - This is the initial default state of any end-point application once its networking is initialized. In this state, as described in Section 3.1.1, a packet will be sent to initiate the initial stage of the state machine.
+* Authorisation - This is the second stage of the state machine, if the CFNE approves the initial handshake it will return a packet back to the initiating end-point with a unique challenge salt, the end-point shall then utilize this salt to respond with a SHA256 response back to the CFNE to complete authorisation (Section 3.1.2).
+* Configuration - This is the third stage of the state machine, if the CFNE approves the previous authorisation attempt, the end-point application should proceed to transmit to the CFNE various configuration parameters. (Section 3.1.3).
+* Running - This is the last stage of the state machine, after the CFNE accepts the configuration, the end-point application may transition to this state and begin processing and transmitting network messages.
+
+=== 4.2 End-point ACL Updates
+
+After initial login has been completed, and the end-point application has transitioned into a running state, the CFNE shall immediately transmit the initial ACL lists to the end-point application (if so configured).
+
+NOTE: It is important to note here, the end-point application may be configured to not accept ACL updates, in such a configuration, the CFNE will still enforce rules on its side.
+
+(See Section 3.1.4)
+
+=== 4.3 Protocol Data
+
+On the CFNE side, the call routers for the various protocols shall perform any necessary steps to validate the traffic flowing is, valid and allowed by the ACL rules configured on the CFNE.
+
+On the end-point side, the end-point application may impose any of its own rules or utilize the rules as accepted by the CFNE (if so configured).
+
+==== 4.3.1 CFNE Talkgroup Management
+
+The CFNE provides facilities to maintain a list of configured talkgroups for that CFNE. These talkgroups have many parameters and features (see the talkgroup_rules.example.yml for details).
+
+Talkgroup Rule entries consist of the following parameters:
+[cols="2,1,2"]
+|===
+|Name |Stanza |Description
+
+|name
+|
+|This is the logical name of the talkgroup. This can be any alphanumeric string, and is mostly utilized for tools that need logical naming.
+
+|alias
+|
+|This is a secondary logical name of the talkgroup. This can be any alphanumeric string.
+
+|active
+|config
+|Flag indicating whether this talkgroup is active or not.
+
+|affiliated
+|config
+|Flag indicating whether this talkgroup will only repeat with affiliations.
+
+|inclusion
+|config
+|List of peer IDs included for this talkgroup (peers listed here will be selected for traffic).
+
+|exclusion
+|config
+|List of peer IDs excluded for this talkgroup (peers listed here will be ignored for traffic).
+
+|rewrite
+|config
+|List of peer IDs that always receive traffic for this talkgroup regardless of affiliation rules.
+
+|always
+|config
+|List of peer IDs that always receive traffic for this talkgroup regardless of affiliation rules.
+
+|tgid
+|source
+|Numerical talkgroup ID number.
+
+|slot
+|source
+|DMR slot number.
+|=== 
+
+==== 4.3.2 CFNE Talkgroup Rewriting
+
+The CFNE provides facilities to rewrite talkgroup destination data depending on the destination peer ID (this is configured in the talkgroup rules YAML via the rewrite parameter in the config stanza).
+
+When a CFNE call router receives a protocol data packet destined for a specific talkgroup, while repeating the packet to its connected end-point peers, it shall run a a series of operations to:
+
+* Check if the talkgroup in the packet is one that requires rewriting.
+* Check if the talkgroup is rewritten for that specific peer, if it is not, pass it as is, if it is, appropariately rewrite both the talkgroup *and* slot (if using DMR).
+
+Talkgroup rewriting should be used *sparingly* it is an expensive operation to perform, and may result in traffic delays if used too extensively.
+
+=== 4.3 Transfers
+
+*TODO TODO TODO*
+
+=== 4.4 Announcements
+
+*TODO TODO TODO*
+
+=== 4.5 Peer-Link
+
+Peer-Link provides a method for a central/master CFNE to be a truth source for all configuration data. Peer-Link is configured on a central/master CFNE, utilizing a parameter in the peer ID ACL file. (Peer-Link is different from a typical ISSI-style CFNE peer connection, continue readin.)
+
+Once enabled, Peer-Link allows for any secondary/slave CFNEs when peered back to the master CFNE to receive all operating configuration from the central/master CFNE:
+
+* Talkgroup Rules - A Peer-Linked CFNE once connected to a master CFNE allowing Peer-Link will be transferred the current complete talkgroup rule set from the master CFNE, and then continue to be transmitted this ruleset on the ACL update interval configured on the master CFNE.
+* Radio IDs - A Peer-Linked CFNE once connected to a master CFNE allowing Peer-Link will be transferred the current complete radio ID ACL rule set from the master CFNE, and then continue to be transmitted this ruleset on the ACL update interval configured on the master CFNE.
+* Peer IDs - A Peer-Linked CFNE once connected to a master CFNE allowing Peer-Link will be transferred the current complete peer ID ACL rule set from the master CFNE, and then continue to be transmitted this ruleset on the ACL update interval configured on the master CFNE.
+
+(See Section 3.7)
+
+Once connected, a Peer-Linked CFNE will transparently pass peer list, peer status and activity logging messages back to the central/master CFNE. This allows for monitoring from a single source giving visualization into the entire linked network.
