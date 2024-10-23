@@ -365,11 +365,6 @@ void* DiagNetwork::threadedNetworkRx(void* arg)
                                             for (auto peer : network->m_host->m_peerNetworks) {
                                                 if (peer.second != nullptr) {
                                                     if (peer.second->isEnabled() && peer.second->isPeerLink()) {
-                                                        if (network->m_debug) {
-                                                            LogDebug(LOG_NET, "Peer-Link, srcPeer = %u, dstPeer = %u, peer status message, len = %u", 
-                                                                pktPeerId, peer.first, req->length);
-                                                        }
-
                                                         peer.second->writeMaster({ NET_FUNC::TRANSFER, NET_SUBFUNC::TRANSFER_SUBFUNC_STATUS }, 
                                                             req->buffer, req->length, RTP_END_OF_CALL_SEQ, streamId, false, true, pktPeerId);
                                                     }
