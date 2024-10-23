@@ -772,7 +772,67 @@ For both activity logs, diagnostic logs and peer status the packet format is ide
 |Message Payload
 |<Variable>
 |
-|=== 
+|===
+
+==== 3.5.1 Peer Status JSON Structure
+
+[source,json]
+    {
+        "state": <Modem State>,
+        "isTxCW": <Boolean flag indicating if the end-point is transmitting CW>,
+        "fixedMode": <Boolean flag indicating if the end-point is operating in fixed mode>,
+        "dmrTSCCEnable": <Boolean flag indicating whether or not dedicated DMR TSCC is enabled>,
+        "dmrCC": <Boolean flag indicating whether or not DMR CC is enabled>,
+        "p25CtrlEnable": <Boolean flag indicating whether or not dedicatd P25 control is enabled>,
+        "p25CC": <Boolean flag indicating whether or not P25 CC is enabled>,
+        "nxdnCtrlEnable": <Boolean flag indicating whether or not dedicatd NXDN control is enabled>,
+        "nxdnCC": <Boolean flag indicating whether or not NXDN CC is enabled>,
+        "tx": <Boolean flag indicating whether end-point is transmitting>,
+        "channelId": <Channel ID from the IDEN channel bandplan>,
+        "channelNo": <Channel Number from the IDEN channel bandplan>,
+        "lastDstId": <Last destination ID transmitted, may revert to 0 after a call ends>,
+        "lastSrcId": <Last source ID transmitted, may revert to 0 after a call ends>,
+        "peerId": <Unique Peer Identification Number>,
+        "sysId": <System ID>,
+        "siteId": <Site ID>,
+        "p25RfssId": <P25 RFSS ID>,
+        "p25NetId": <P25 WACN/Network ID>,
+        "p25NAC": <P25 NAC>,
+        "vcChannels": [
+            { 
+                "channelId": <Channel ID from the IDEN channel bandplan>,
+                "channelNo": <Channel Number from the IDEN channel bandplan>,
+                "tx": <Boolean flag indicating whether end-point is transmitting>,
+                "lastDstId": <Last destination ID transmitted, may revert to 0 after a call ends>,
+                "lastSrcId": <Last source ID transmitted, may revert to 0 after a call ends>,
+            }
+        ],
+        "modem": {
+            "portType": "<Port Type>",
+            "modemPort": "<Modem Port>",
+            "portSpeed": <Port Speed>,
+            "rxLevel": <Configured Rx Level>,
+            "cwTxLevel": <Configured CWID Tx Level>,
+            "dmrTxLevel": <Configured DMR Tx Level>,
+            "p25TxLevel": <Configured P25 Tx Level>,
+            "nxdnTxLevel": <Configured NXDN Tx Level>,
+            "rxDCOffset": <Configured Rx DC Offset>,
+            "txDCOffset": <Configured Tx DC Offset>,
+            "fdmaPremables": <Configured FDMA Preambles>,
+            "dmrRxDelay": <Configured DMR Rx Delay>,
+            "p25CorrCount": <Configured P25 Correlation Count>,
+            "rxFrequency": <Peer Rx Frequency in Hz>,
+            "txFrequency": <Peer Tx Frequency in Hz>,
+            "rxTuning": <Peer Rx Tuning Offset>,
+            "txTuning": <Peer Tx Tuning Offset>,
+            "rxFrequencyEffective": <Peer Rx Effective Frequency in Hz>,
+            "txFrequencyEffective": <Peer Tx Effective Frequency in Hz>,
+            "v24Connected": <Boolean indicating V.24 is connected (if a V.24 modem)>,
+            "protoVer": <Protocol version>
+        }
+    }
+
+NOTE: For the "state" (Modem State) value See TN.1001 - Modem Protocol Section 2.3.2, the state value is shared between host and modem.
 
 === 3.6 Announce Data 
 Announce data, is announcement to the master CFNE about various subscriber operations, such as group affiliation, unit registration and unit deregistration.
@@ -1096,11 +1156,13 @@ Talkgroup rewriting should be used *sparingly* it is an expensive operation to p
 
 === 4.3 Transfers
 
-*TODO TODO TODO*
+The CFNE provides facilities for end-point applications to transfer activity, diagnostic and peer status logs to the CFNE. (See Section 3.5)
+
+NOTE: Transfer messages can be quite noisy, especially if full diagnostic log transfer is enabled on both the CFNE and the end-point applications. It is recommended to utilize the alternate port operation to offload these messages to a secondary port to prevent delays on the main traffic port. (See fne-config.example.yml, useAlternatePortForDiagnostics).
 
 === 4.4 Announcements
 
-*TODO TODO TODO*
+The CFNE provides facilities for end-point applications to announce a variety of subscriber events to the CFNE. These events are self explanatory, and are documented above. (See Section 3.6)
 
 === 4.5 Peer-Link
 
