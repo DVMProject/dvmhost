@@ -667,6 +667,7 @@ The host shall transmit:
 Upon reception, the modem shall perform whatever operations necessary to transition to the requested mode and transmit a ACK or NACK in response.
 
 If the operation fails the modem shall:
+
 * Respond with a NACK and the "Illegal Length" if packet from the host is improperly sized.
 * Respond with a NACK and the "Invalid FDMA Preamble" if the FDMA preamble parameter is out of range.
 * Respond with a NACK and the "Invalid DMR Color Code" if the DMR color code is out of range.
@@ -748,6 +749,7 @@ The host shall transmit:
 Upon reception, the modem shall perform whatever operations necessary to set the Rx level and transmit a ACK or NACK in response.
 
 If the operation fails the modem shall:
+
 * Respond with a NACK and the "Illegal Length" if packet from the host is improperly sized.
 * Respond with a NACK and the "Invalid Request" if parameters are out of range.
 
@@ -779,6 +781,7 @@ The host shall transmit:
 Upon reception, the modem shall perform whatever operations necessary to set the Rx level and transmit a ACK or NACK in response.
 
 If the operation fails the modem shall:
+
 * Respond with a NACK and the "Illegal Length" if packet from the host is improperly sized.
 
 ==== 2.4.7 Set RF Parameters (Hotspot Only)
@@ -854,6 +857,7 @@ The host shall transmit:
 Upon reception, the modem shall perform whatever operations necessary to set the RF parameters and transmit a ACK or NACK in response.
 
 If the operation fails the modem shall:
+
 * Respond with a NACK and the "Illegal Length" if packet from the host is improperly sized.
 * Respond with a NACK and the "Invalid Request" if parameters are out of range.
 
@@ -899,6 +903,7 @@ The host shall transmit:
 Upon reception, the modem shall perform whatever operations necessary to transmit a CWID with the given letters and transmit a ACK or NACK in response.
 
 If the operation fails the modem shall:
+
 * Respond with a NACK and the "Illegal Length" if packet from the host is improperly sized.
 
 ==== 2.4.11 Set FIFO Buffers
@@ -937,6 +942,7 @@ The host shall transmit:
 Upon reception, the modem shall perform whatever operations necessary to resize the FIFO buffers and transmit a ACK or NACK in response.
 
 If the operation fails the modem shall:
+
 * Respond with a NACK and the "Illegal Length" if packet from the host is improperly sized.
 * Respond with a NACK and the "Invalid Mode" if buffers are attempted to be resized while not in an IDLE state.
 
@@ -1065,6 +1071,7 @@ The host shall transmit:
 Upon reception, the modem shall perform whatever operations necessary to write data to the flash and transmit a ACK or NACK in response.
 
 If the flash operation fails the modem shall:
+
 * Respond with a NACK and the "Flash Write Too Big" if more then 254 bytes are attempted to be written.
 * Respond with a NACK and the "Flash Write Failed" if a write error occurs.
 
@@ -1094,16 +1101,134 @@ Upon reception of this opcode the modem should immediately issue a MCU restart. 
 === 2.5 DMR Opcode Specifications
 
 ==== 2.5.1 Slot 1 Data
-*TODO TODO TODO*
+This opcode is utilized by both the host and modem to transmit DMR Slot 1 frame data.
 
-==== 2.5.2 Slot 2 Lost
-*TODO TODO TODO*
+The host or modem shall transmit:
+[cols="2,1,2"]
+|===
+|Name |Length (bytes) |Description
+
+|Short Frame Start
+|1
+|Short Frame Start
+
+|Length
+|36
+|Length
+
+|DMR Slot 1 Data Opcode
+|1
+|$18
+
+|...
+|...
+|...
+
+|Frame Data
+|<Variable>
+|
+
+|...
+|...
+|...
+|=== 
+
+Upon reception, the host or modem shall perform whatever operations necessary to handle frame data.
+
+If data is being transmitted to the modem, upon reception, the modem shall perform whatever operations necessary to handle the frame data for transmission and transmit a ACK or NACK in response.
+
+If the write data operation fails the modem shall:
+
+* Respond with a NACK and the "Illegal Length" if the frame data is not the standard DMR frame length 33 bytes.
+* Respond with a NACK and the "Ringbuffer Full" if the DMR FIFO buffer is full.
+
+==== 2.5.2 Slot 1 Lost
+This opcode is utilized to notify the host the current transmission synchronization was lost.
+
+The modem shall transmit:
+[cols="2,1,2"]
+|===
+|Name |Length (bytes) |Description
+
+|Short Frame Start
+|1
+|Short Frame Start
+
+|Length
+|3
+|Length
+
+|DMR Sot 1 Lost Opcode
+|1
+|$19
+|=== 
+
+Upon reception, the host shall perform whatever operations necessary to handle a transmission loss event.
 
 ==== 2.5.3 Slot 2 Data
-*TODO TODO TODO*
+This opcode is utilized by both the host and modem to transmit DMR Slot 2 or DMR DMO frame data.
+
+The host or modem shall transmit:
+[cols="2,1,2"]
+|===
+|Name |Length (bytes) |Description
+
+|Short Frame Start
+|1
+|Short Frame Start
+
+|Length
+|36
+|Length
+
+|DMR Slot 2 Data Opcode
+|1
+|$1A
+
+|...
+|...
+|...
+
+|Frame Data
+|<Variable>
+|
+
+|...
+|...
+|...
+|=== 
+
+Upon reception, the host or modem shall perform whatever operations necessary to handle frame data.
+
+If data is being transmitted to the modem, upon reception, the modem shall perform whatever operations necessary to handle the frame data for transmission and transmit a ACK or NACK in response.
+
+If the write data operation fails the modem shall:
+
+* Respond with a NACK and the "Illegal Length" if the frame data is not the standard DMR frame length 33 bytes.
+* Respond with a NACK and the "Ringbuffer Full" if the DMR FIFO buffer is full.
 
 ==== 2.5.4 Slot 2 Lost
-*TODO TODO TODO*
+This opcode is utilized to notify the host the current transmission synchronization was lost.
+
+The modem shall transmit:
+[cols="2,1,2"]
+|===
+|Name |Length (bytes) |Description
+
+|Short Frame Start
+|1
+|Short Frame Start
+
+|Length
+|3
+|Length
+
+|DMR Sot 1 Lost Opcode
+|1
+|$1B
+|=== 
+
+Upon reception, the host shall perform whatever operations necessary to handle a transmission loss event.
 
 ==== 2.5.5 Short LC
 *TODO TODO TODO*
@@ -1115,32 +1240,254 @@ Upon reception of this opcode the modem should immediately issue a MCU restart. 
 *TODO TODO TODO*
 
 ==== 2.5.8 CACH AT Control
-*TODO TODO TODO*
+This opcode is utilized to set the CACH AT bit for the specified slot.
+
+The host shall transmit:
+[cols="2,1,2"]
+|===
+|Name |Length (bytes) |Description
+
+|Short Frame Start
+|1
+|Short Frame Start
+
+|Length
+|4
+|Length
+
+|DMR CACH AT Control Opcode
+|1
+|$1F
+
+|DMR Slot
+|1
+|DMR Slot to set the CACH AT bit for.
+|=== 
+
+Upon reception, the modem shall perform whatever operations necessary to set the CACH AT bit for the specified slot.
 
 ==== 2.5.9 Slot 1 Clear
-*TODO TODO TODO*
+This opcode is utilized to clear the FIFO buffer for DMR Slot 1.
+
+The host shall transmit:
+[cols="2,1,2"]
+|===
+|Name |Length (bytes) |Description
+
+|Short Frame Start
+|1
+|Short Frame Start
+
+|Length
+|3
+|Length
+
+|DMR Slot 2 Clear Opcode
+|1
+|$20
+|=== 
+
+Upon reception, the modem shall perform whatever operations necessary to clear the FIFO buffers.
 
 ==== 2.5.10 Slot 2 Clear
-*TODO TODO TODO*
+This opcode is utilized to clear the FIFO buffer for DMR Slot 2.
+
+The host shall transmit:
+[cols="2,1,2"]
+|===
+|Name |Length (bytes) |Description
+
+|Short Frame Start
+|1
+|Short Frame Start
+
+|Length
+|3
+|Length
+
+|DMR Slot 2 Clear Opcode
+|1
+|$21
+|=== 
+
+Upon reception, the modem shall perform whatever operations necessary to clear the FIFO buffers.
 
 === 2.6 P25 Opcode Specifications
 
 ==== 2.6.1 Data
-*TODO TODO TODO*
+This opcode is utilized by both the host and modem to transmit P25 frame data.
+
+The host or modem shall transmit:
+[cols="2,1,2"]
+|===
+|Name |Length (bytes) |Description
+
+|Short Frame Start
+|1
+|Short Frame Start
+
+|Length
+|21 or greater
+|Length, P25 data frames are variable length, the minimum data frame is a TDU data frame which has a modem packet length of 21 bytes.
+
+|P25 Data Opcode
+|1
+|$31
+
+|...
+|...
+|...
+
+|Frame Data
+|<Variable>
+|
+
+|...
+|...
+|...
+|=== 
+
+Upon reception, the host or modem shall perform whatever operations necessary to handle frame data.
+
+If data is being transmitted to the modem, upon reception, the modem shall perform whatever operations necessary to handle the frame data for transmission and transmit a ACK or NACK in response.
+
+If the write data operation fails the modem shall:
+
+* Respond with a NACK and the "Illegal Length" if the frame data is less then a standard P25 TDU frame length 18 bytes.
+* Respond with a NACK and the "Ringbuffer Full" if the P25 FIFO buffer is full.
 
 ==== 2.6.2 Lost
-*TODO TODO TODO*
+This opcode is utilized to notify the host the current transmission synchronization was lost.
+
+The modem shall transmit:
+[cols="2,1,2"]
+|===
+|Name |Length (bytes) |Description
+
+|Short Frame Start
+|1
+|Short Frame Start
+
+|Length
+|3
+|Length
+
+|P25 Lost Opcode
+|1
+|$32
+|=== 
+
+Upon reception, the host shall perform whatever operations necessary to handle a transmission loss event.
 
 ==== 2.6.3 Clear
-*TODO TODO TODO*
+This opcode is utilized to clear the FIFO buffer for P25.
+
+The host shall transmit:
+[cols="2,1,2"]
+|===
+|Name |Length (bytes) |Description
+
+|Short Frame Start
+|1
+|Short Frame Start
+
+|Length
+|3
+|Length
+
+|P25 Clear Opcode
+|1
+|$33
+|=== 
+
+Upon reception, the modem shall perform whatever operations necessary to clear the FIFO buffers.
 
 === 2.7 NXDN Opcode Specifications
 
 ==== 2.7.1 Data
-*TODO TODO TODO*
+This opcode is utilized by both the host and modem to transmit NXDN frame data.
+
+The host or modem shall transmit:
+[cols="2,1,2"]
+|===
+|Name |Length (bytes) |Description
+
+|Short Frame Start
+|1
+|Short Frame Start
+
+|Length
+|51
+|Length
+
+|NXDN Data Opcode
+|1
+|$41
+
+|...
+|...
+|...
+
+|Frame Data
+|<Variable>
+|
+
+|...
+|...
+|...
+|=== 
+
+Upon reception, the host or modem shall perform whatever operations necessary to handle frame data.
+
+If data is being transmitted to the modem, upon reception, the modem shall perform whatever operations necessary to handle the frame data for transmission and transmit a ACK or NACK in response.
+
+If the write data operation fails the modem shall:
+
+* Respond with a NACK and the "Illegal Length" if the frame data is not the standard NXDN frame length 48 bytes.
+* Respond with a NACK and the "Ringbuffer Full" if the NXDN FIFO buffer is full.
 
 ==== 2.7.2 Lost
-*TODO TODO TODO*
+This opcode is utilized to notify the host the current transmission synchronization was lost.
+
+The modem shall transmit:
+[cols="2,1,2"]
+|===
+|Name |Length (bytes) |Description
+
+|Short Frame Start
+|1
+|Short Frame Start
+
+|Length
+|3
+|Length
+
+|NXDN Lost Opcode
+|1
+|$42
+|=== 
+
+Upon reception, the host shall perform whatever operations necessary to handle a transmission loss event.
 
 ==== 2.7.3 Clear
-*TODO TODO TODO*
+This opcode is utilized to clear the FIFO buffer for NXDN.
+
+The host shall transmit:
+[cols="2,1,2"]
+|===
+|Name |Length (bytes) |Description
+
+|Short Frame Start
+|1
+|Short Frame Start
+
+|Length
+|3
+|Length
+
+|NXDN Clear Opcode
+|1
+|$43
+|=== 
+
+Upon reception, the modem shall perform whatever operations necessary to clear the FIFO buffers.
