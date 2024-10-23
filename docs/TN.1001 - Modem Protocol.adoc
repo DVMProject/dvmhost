@@ -1,0 +1,520 @@
+= Digital Voice Modem
+
+== Technical Note
+=== Modem Protocol
+
+Document Identifier: TN.1000
+
+Author: Bryan Biedenkapp, N2PLL
+
+Editors: Bryan Biedenkapp, N2PLL
+
+Contributors: N/A
+
+Abstract: Describes high-level concepts and procedures for the Modem Protocol.
+
+Status: Draft
+
+== 1. Introduction
+This document describes, in high-level, the general concepts and procedures for the Modem Protocol used by DVM projects.
+
+== 2. Technical Note
+
+=== 2.1 Definitions
+* DVM: Digital Voice Modem
+
+=== 2.2 General Concept
+The DVM Modem Protocol defines a common and standard communications protocol between a host application and a dedicated modem hardware device (usually based around a STM32F446 or similar).
+
+The core purpose of the protocol is to provide a common serial communications between the host application and the dedicated modem hardware.
+
+=== 2.3 Modem Packet Framing
+The modem protocol implements a very simplistic framing mechanism for transmitting data between the host and modem (and vice versa).
+
+[cols="2,1,3"]
+|===
+|Frame Type |Opcode |Description
+
+|Short
+|$FE
+|This frame type is used for transporting packets of 254 bytes or less in length.
+
+|Long
+|$FD
+|This frame type is used for transporting packets greater than 254 bytes in length.
+|=== 
+
+[discrete]
+==== Modem Packet - Short Frame
+[listing]
+    Byte 0               1               2               3
+    Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 
+        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+        | Frame Type  | Length          | Opcode        | ...           |
+        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+        | <Variable Length Data>                                        |
+        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    2 bytes (not including data length)
+
+[discrete]
+==== Modem Packet - Long Frame
+[listing]
+    Byte 0               1               2               3
+    Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 
+        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+        | Frame Type  | Length                          | Opcode        |
+        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+        | <Variable Length Data>                                        |
+        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    3 bytes (not including data length)
+
+It is important to note the Length parameter of the packet buffer should be the length of the *entire* packet not just the payload.
+
+==== 2.3.1 Modem Opcodes
+The opcode defines which operation/command being transmitted.
+
+[cols="2,1,3"]
+|===
+|Function Name |Opcode |Description
+
+|Get Version
+|$00
+|This function is used for retrieving the firmware version from the modem.
+
+|Get Status
+|$01
+|This function is used for retrieving the current status from the modem.
+
+|Set Configuration
+|$02
+|This function is used for setting configuration parameters to the modem.
+
+|Set Mode
+|$03
+|This function is used for setting the operational mode parameter to the modem.
+
+|Set Symbol Level Adjustment
+|$04
+|This function is used for setting the symbol level adjustment parameters to the modem.
+
+|Set Rx Level Adjustment
+|$05
+|This function is used for setting the receive level adjustment parameter to the modem.
+
+|Set RF Parameters
+|$06
+|This function is used for setting the RF parameters to the modem. (Hotspot Only)
+
+|Calibration Data
+|$08
+|This function is used for setting calibration data to the modem when operating in a calibration mode.
+
+|RSSI Data
+|$08
+|This function is used for receiving RSSI data from the modem.
+
+|Send CW ID
+|$0A
+|This function is used to cause the modem to emit a CWID burst of morse code.
+
+|Set FIFO Buffers
+|$0F
+|This function is used for setting the internal FIFO ringbuffer sizes on the modem.
+
+|DMR Slot 1 Data
+|$18
+|This function is used for sending/receiving DMR Slot 1 protocol data to/from the modem.
+
+|DMR Slot 1 Lost
+|$19
+|This function is used for signalling loss of synchronization for DMR Slot 1 protocol data.
+
+|DMR Slot 2 Data
+|$1A
+|This function is used for sending/receiving DMR Slot 2 protocol data to/from the modem.
+
+|DMR Slot 2 Lost
+|$1B
+|This function is used for signalling loss of synchronization for DMR Slot 2 protocol data.
+
+|DMR Short LC
+|$1C
+|This function is used for sending/receiving DMR Short LC protocol data to/from the modem.
+
+|DMR Start
+|$1D
+|This function is used for providing transmitter control and starting the DMR data stream.
+
+|DMR Abort
+|$1E
+|
+
+|DMR CACH AT Control
+|$1F
+|This function is used for setting the DMR CACH AT bit on or off.
+
+|DMR Slot 1 Clear
+|$20
+|This function is used for commanding the modem to clear the DMR Slot 1 FIFO buffers.
+
+|DMR Slot 2 Clear
+|$21
+|This function is used for commanding the modem to clear the DMR Slot 2 FIFO buffers.
+
+|Project 25 Data
+|$31
+|This function is used for sending/receiving Project 25 protocol data to/from the modem.
+
+|Project 25 Lost
+|$32
+|This function is used for signalling loss of synchronization for Project 25 protocol data.
+
+|Project 25 Clear
+|$33
+|This function is used for commanding the modem to clear the Project 25 FIFO buffers.
+
+|NXDN Data
+|$41
+|This function is used for sending/receiving NXDN protocol data to/from the modem.
+
+|NXDN Lost
+|$42
+|This function is used for signalling loss of synchronization for NXDN protocol data.
+
+|NXDN Clear
+|$43
+|This function is used for commanding the modem to clear the NXDN FIFO buffers.
+
+|Ack
+|$70
+|This function is used for acknowledging a command.
+
+|Nack
+|$7F
+|This function is used for negative acknowledgment of a command.
+
+|Flash Read
+|$E0
+|This function is used for reading 256 bytes of data from the flash storage partition of the modem. (Only on supported hardware.)
+
+|Flash Write
+|$E1
+|This function is used for writing 256 bytes of data to the flash storage partition of the modem. (Only on supported hardware.)
+
+|Reboot MCU
+|$EA
+|This function is used for triggering a reboot of the modem MCU.
+
+|Debug 1
+|$F1
+|This function is used for receiving debug data from the modem. (1 byte)
+
+|Debug 2
+|$F2
+|This function is used for receiving debug data from the modem. (2 byte)
+
+|Debug 3
+|$F3
+|This function is used for receiving debug data from the modem. (3 byte)
+
+|Debug 4
+|$F4
+|This function is used for receiving debug data from the modem. (4 byte)
+
+|Debug 5
+|$F5
+|This function is used for receiving debug data from the modem. (5 byte)
+
+|=== 
+
+==== 2.3.1 Modem Operational States
+The operational state defines which mode/state the modem is currently in.
+
+[cols="2,1,3"]
+|===
+|State Name |State |Description
+
+|IDLE
+|0
+|This is the default state for a modem, the modem is not in any active mode in this state.
+
+|DMR
+|1
+|When in this mode the modem is actively Rx/Tx DMR protocol data.
+
+|Project 25
+|2
+|When in this mode the modem is actively Rx/Tx Project 25 protocol data.
+
+|NXDN
+|3
+|When in this mode the modem is actively Rx/Tx NXDN protocol data.
+
+|CW
+|10
+|When in this mode the modem is actively Tx CWID morse data.
+
+|Project 25 Calibration 1K
+|92
+|
+
+|DMR DMO Calibration 1K
+|93
+|
+
+|DMR Calibration 1K
+|94
+|
+
+|DMR Low Frequency Calibration
+|95
+|
+
+|RSSI Calibration
+|96
+|
+
+|Project 25 Calibration
+|97
+|
+
+|DMR Calibration
+|98
+|
+
+|NXDN Calibration
+|99
+|
+|=== 
+
+=== 2.4 General Opcode Specifications
+
+==== 2.4.1 Get Version
+This opcode is utilized to retreive the hardcoded (at compile time) version string from the firmware.
+
+The host shall transmit:
+[cols="2,1,2"]
+|===
+|Name |Length (bytes) |Description
+
+|Short Frame Start
+|1
+|Short Frame Start
+
+|Length
+|3
+|Length
+
+|Get Version Opcode
+|1
+|
+|=== 
+
+Upon reception, the modem shall transmit in response:
+[cols="2,1,2"]
+|===
+|Name |Length (bytes) |Description
+
+|Short Frame Start
+|1
+|Short Frame Start
+
+|Length
+|3
+|Length
+
+|Get Version Opcode
+|1
+|$00
+
+|Protocol Version
+|1
+|
+
+|CPU Type
+|1
+|
+
+|CPU UDID
+|16
+|Universal Device Identifier
+
+|Baked Firmware Version String
+|83
+|
+|=== 
+
+==== 2.4.2 Get Status
+This opcode is utilized to retreive the various interesting operational runtime values from the modem.
+
+The host shall transmit:
+[cols="2,1,2"]
+|===
+|Name |Length (bytes) |Description
+
+|Short Frame Start
+|1
+|Short Frame Start
+
+|Length
+|3
+|Length
+
+|Get Status Opcode
+|1
+|$01
+|=== 
+
+Upon reception, the modem shall transmit in response:
+[cols="2,1,2"]
+|===
+|Name |Length (bytes) |Description
+
+|Short Frame Start
+|1
+|Short Frame Start
+
+|Length
+|3
+|Length
+
+|Get Status Opcode
+|1
+|$01
+
+|Protocol Enablement Flags
+|1
+|This byte contains flags that indicate which digital protocol is enabled on the modem.
+
+|Modem State
+|1
+|Current operational state.
+
+|Operation Flags
+|1
+|This byte contains various operation flags.
+
+|Reserved
+|1
+|
+
+|DMR Slot 1 FIFO Space
+|1
+|This byte contains the FIFO space available in DMR frames.
+
+|DMR Slot 2 FIFO Space
+|1
+|This byte contains the FIFO space available in DMR frames.
+
+|Reserved
+|1
+|
+
+|Project 25 FIFO Space
+|1
+|This byte contains the FIFO space available in P25 LDU frames.
+
+|NXDN FIFO Space
+|1
+|This byte contains the FIFO space available in NXDN frames.
+
+|=== 
+
+==== 2.4.3 Set Configuration
+*TODO TODO TODO*
+
+==== 2.4.4 Set Mode
+*TODO TODO TODO*
+
+==== 2.4.5 Set Symbol Level Adjustment
+*TODO TODO TODO*
+
+==== 2.4.6 Set Rx Level Adjustment
+*TODO TODO TODO*
+
+==== 2.4.7 Set RF Parameters (Hotspot Only)
+*TODO TODO TODO*
+
+==== 2.4.8 Calibration Data
+*TODO TODO TODO*
+
+==== 2.4.9 RSSI Data
+*TODO TODO TODO*
+
+==== 2.4.10 Send CWID
+*TODO TODO TODO*
+
+==== 2.4.11 Set FIFO Buffers
+*TODO TODO TODO*
+
+==== 2.4.11 Set FIFO Buffers
+*TODO TODO TODO*
+
+==== 2.4.12 Acknowledgement
+*TODO TODO TODO*
+
+==== 2.4.13 Negative Acknowledgement
+*TODO TODO TODO*
+
+==== 2.4.14 Flash Read
+*TODO TODO TODO*
+
+==== 2.4.15 Flash Write
+*TODO TODO TODO*
+
+==== 2.4.16 Reset MCU
+*TODO TODO TODO*
+
+=== 2.5 DMR Opcode Specifications
+
+==== 2.5.1 Slot 1 Data
+*TODO TODO TODO*
+
+==== 2.5.2 Slot 2 Lost
+*TODO TODO TODO*
+
+==== 2.5.3 Slot 2 Data
+*TODO TODO TODO*
+
+==== 2.5.4 Slot 2 Lost
+*TODO TODO TODO*
+
+==== 2.5.5 Short LC
+*TODO TODO TODO*
+
+==== 2.5.6 Start
+*TODO TODO TODO*
+
+==== 2.5.7 Abort
+*TODO TODO TODO*
+
+==== 2.5.8 CACH AT Control
+*TODO TODO TODO*
+
+==== 2.5.9 Slot 1 Clear
+*TODO TODO TODO*
+
+==== 2.5.10 Slot 2 Clear
+*TODO TODO TODO*
+
+=== 2.6 P25 Opcode Specifications
+
+==== 2.6.1 Data
+*TODO TODO TODO*
+
+==== 2.6.2 Lost
+*TODO TODO TODO*
+
+==== 2.6.3 Clear
+*TODO TODO TODO*
+
+=== 2.7 NXDN Opcode Specifications
+
+==== 2.7.1 Data
+*TODO TODO TODO*
+
+==== 2.7.2 Lost
+*TODO TODO TODO*
+
+==== 2.7.3 Clear
+*TODO TODO TODO*
