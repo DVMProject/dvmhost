@@ -227,7 +227,7 @@ The opcode defines which operation/command being transmitted.
 
 |=== 
 
-==== 2.3.1 Modem Operational States
+==== 2.3.2 Modem Operational States
 The operational state defines which mode/state the modem is currently in.
 
 [cols="2,1,3"]
@@ -285,6 +285,91 @@ The operational state defines which mode/state the modem is currently in.
 |NXDN Calibration
 |99
 |
+|=== 
+
+==== 2.3.3 Negative Acknowledgement Reasons
+This table defines the reasons a negative acknowledgement may be sent.
+
+[cols="2,1,3"]
+|===
+|Reason Name |Reason Code |Description
+
+|OK
+|0
+|
+
+|NAK
+|1
+|General Failure.
+
+|Illegal Length
+|2
+|Packet received was of an illegal length, and was discarded by the modem.
+
+|Invalid Request
+|4
+|Packet received was an invalid request, and was discarded by the modem.
+
+|Ringbuffer Full
+|8
+|Sent when a command attempts to write to a FIFO buffer that is full.
+
+|Invalid FDMA Preamble
+|10
+|Sent by the Set Configuration command typically, to indicate the FDMA preamble value was out of range.
+
+|Invalid Mode
+|11
+|Sent by either Set Configuration or Set Mode command to indicate a mode was specified that is invalid.
+
+|Invalid DMR CC
+|12
+|
+
+|Invalid DMR Slot
+|13
+|Sent by the modem to indicate the DMR slot value was out of range.
+
+|Invalid DMR Start
+|14
+|
+
+|Invalid DMR Rx Delay
+|15
+|Sent by the modem to indicate the DMR Rx Delay value was out of range.
+
+|Invalid P25 Correlation Count
+|16
+|Sent by the modem to indicate the P25 Correlation Count value was out of range.
+
+|No Internal Flash
+|20
+|Sent by the modem when the hardware does not support the Flash Read or Flash Write operations.
+
+|Flash Erase Failed
+|21
+|Sent by the modem when the configuration partition of the flash was unable to be erased.
+
+|Flash Write Failed
+|22
+|Sent by the modem when the configuration partition of the flash was unable to be written.
+
+|Flash Write Too Big
+|23
+|Sent by the modem when the data sent to be written to the configuration partition of the flash was too large to be written.
+
+|DMR Disabled
+|63
+|Sent by the modem to indicate DMR operations are disabled.
+
+|P25 Disabled
+|64
+|Sent by the modem to indicate P25 operations are disabled.
+
+|NXDN Disabled
+|65
+|Sent by the modem to indicate NXDN operations are disabled.
+
 |=== 
 
 === 2.4 General Opcode Specifications
@@ -424,7 +509,31 @@ Upon reception, the modem shall transmit in response:
 *TODO TODO TODO*
 
 ==== 2.4.4 Set Mode
-*TODO TODO TODO*
+This opcode is utilized to set the operational mode of the modem.
+
+The host shall transmit:
+[cols="2,1,2"]
+|===
+|Name |Length (bytes) |Description
+
+|Short Frame Start
+|1
+|Short Frame Start
+
+|Length
+|4
+|Length
+
+|Set Mode Opcode
+|1
+|$03
+
+|Operational Mode
+|1
+|$00
+|=== 
+
+Upon reception, the modem shall perform whatever operations necessary to transition to the requested mode and transmit a ACK or NACK in response.
 
 ==== 2.4.5 Set Symbol Level Adjustment
 *TODO TODO TODO*
@@ -447,14 +556,59 @@ Upon reception, the modem shall transmit in response:
 ==== 2.4.11 Set FIFO Buffers
 *TODO TODO TODO*
 
-==== 2.4.11 Set FIFO Buffers
-*TODO TODO TODO*
-
 ==== 2.4.12 Acknowledgement
-*TODO TODO TODO*
+This opcode is utilized by the modem to notify the host of a positive acknowledgement of a command.
+
+The modem shall transmit:
+[cols="2,1,2"]
+|===
+|Name |Length (bytes) |Description
+
+|Short Frame Start
+|1
+|Short Frame Start
+
+|Length
+|4
+|Length
+
+|Ack Opcode
+|1
+|$70
+
+|Opcode Being Acknowledged
+|1
+|$00
+|=== 
 
 ==== 2.4.13 Negative Acknowledgement
-*TODO TODO TODO*
+This opcode is utilized by the modem to notify the host of a negative acknowledgement of a command.
+
+The modem shall transmit:
+[cols="2,1,2"]
+|===
+|Name |Length (bytes) |Description
+
+|Short Frame Start
+|1
+|Short Frame Start
+
+|Length
+|5
+|Length
+
+|Nack Opcode
+|1
+|$7F
+
+|Opcode Being Acknowledged
+|1
+|$00
+
+|NACK Reason Code
+|1
+|$00
+|=== 
 
 ==== 2.4.14 Flash Read
 *TODO TODO TODO*
@@ -463,7 +617,27 @@ Upon reception, the modem shall transmit in response:
 *TODO TODO TODO*
 
 ==== 2.4.16 Reset MCU
-*TODO TODO TODO*
+This opcode is utilized to reboot the MCU of the modem.
+
+The host shall transmit:
+[cols="2,1,2"]
+|===
+|Name |Length (bytes) |Description
+
+|Short Frame Start
+|1
+|Short Frame Start
+
+|Length
+|3
+|Length
+
+|Reset MCU Opcode
+|1
+|$EA
+|=== 
+
+Upon reception of this opcode the modem should immediately issue a MCU restart. No response back from the modem shall be expected.
 
 === 2.5 DMR Opcode Specifications
 
