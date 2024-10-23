@@ -322,9 +322,9 @@ This table defines the reasons a negative acknowledgement may be sent.
 |11
 |Sent by either Set Configuration or Set Mode command to indicate a mode was specified that is invalid.
 
-|Invalid DMR CC
+|Invalid DMR Color Code
 |12
-|
+|Sent by the Set Configuration command typically, if the DMR color code is out of range.
 
 |Invalid DMR Slot
 |13
@@ -506,7 +506,172 @@ Upon reception, the modem shall transmit in response:
 |=== 
 
 ==== 2.4.3 Set Configuration
-*TODO TODO TODO*
+This opcode is utilized to set the general configuration of the modem.
+
+The host shall transmit:
+[cols="2,1,2"]
+|===
+|Name |Length (bytes) |Description
+
+|Short Frame Start
+|1
+|Short Frame Start
+
+|Length
+|24
+|Length
+
+|Set Configuration Opcode
+|1
+|$02
+
+|Flags 1 Byte
+|1
+|This flags byte represents various states (see below).
+
+|Flags 2 Byte
+|1
+|This flags byte represents various states (see below).
+
+|FDMA Preamble Length
+|1
+|
+
+|Initial Mode
+|1
+|This sets the initial mode of the modem, the mode can be changed with Set Mode at any time.
+
+|Rx Level
+|1
+|
+
+|CW ID Tx Level
+|1
+|
+
+|DMR Color Code
+|1
+|
+
+|DMR Rx Delay
+|1
+|
+
+|P25 NAC
+|2
+|
+
+|DMR Tx Level
+|1
+|
+
+|P25 Correlation Count
+|1
+|
+
+|P25 Tx Level
+|1
+|
+
+|Tx DC Offset
+|1
+|
+
+|Rx DC Offset
+|1
+|
+
+|NXDN Tx Level
+|1
+|
+
+|Rx Coarse Softpot Setting
+|1
+|This currently only applies to DVMV1 modems.
+
+|Rx Fine Softpot Setting
+|1
+|This currently only applies to DVMV1 modems.
+
+|Tx Coarse Softpot Setting
+|1
+|This currently only applies to DVMV1 modems.
+
+|Tx Fine Softpot Setting
+|1
+|This currently only applies to DVMV1 modems.
+
+|RSSI Coarse Softpot Setting
+|1
+|This currently only applies to DVMV1 modems.
+
+|RSSI Fine Softpot Setting
+|1
+|This currently only applies to DVMV1 modems.
+|=== 
+
+[discrete]
+==== Flags 1 Byte
+[cols="2,1,2"]
+|===
+|Name |Flag Bit |Description
+
+|Rx Invert
+|$01
+|
+
+|Tx Invert
+|$02
+|
+
+|PTT Invert
+|$04
+|
+
+|Modem Debug
+|$10
+|
+
+|Simplex Operation
+|$80
+|
+|=== 
+
+[discrete]
+==== Flags 2 Byte
+[cols="2,1,2"]
+|===
+|Name |Flag Bit |Description
+
+|DC Blocker
+|$01
+|
+
+|COS Lockout
+|$04
+|
+
+|DMR Enabled
+|$02
+|
+
+|P25 Enabled
+|$08
+|
+
+|NXDN Enabled
+|$10
+|
+|=== 
+
+Upon reception, the modem shall perform whatever operations necessary to transition to the requested mode and transmit a ACK or NACK in response.
+
+If the operation fails the modem shall:
+* Respond with a NACK and the "Illegal Length" if packet from the host is improperly sized.
+* Respond with a NACK and the "Invalid FDMA Preamble" if the FDMA preamble parameter is out of range.
+* Respond with a NACK and the "Invalid DMR Color Code" if the DMR color code is out of range.
+* Respond with a NACK and the "Invalid DMR Rx Delay" if the DMR receive delay is out of range.
+* Respond with a NACK and the "Invalid P25 Correlation Count" if the P25 correlation count is out of range.
 
 ==== 2.4.4 Set Mode
 This opcode is utilized to set the operational mode of the modem.
@@ -536,13 +701,161 @@ The host shall transmit:
 Upon reception, the modem shall perform whatever operations necessary to transition to the requested mode and transmit a ACK or NACK in response.
 
 ==== 2.4.5 Set Symbol Level Adjustment
-*TODO TODO TODO*
+This opcode is utilized to set the symbol level adjustments on the modem.
+
+The host shall transmit:
+[cols="2,1,2"]
+|===
+|Name |Length (bytes) |Description
+
+|Short Frame Start
+|1
+|Short Frame Start
+
+|Length
+|9
+|Length
+
+|Set Symbol Level Adjustment Opcode
+|1
+|$04
+
+|DMR +3/-3 Symbol Level Adjustment
+|1
+|This is a unsigned value of 0 to 255 representing an adjustment of -128 to 128.
+
+|DMR +1/-1 Symbol Level Adjustment
+|1
+|This is a unsigned value of 0 to 255 representing an adjustment of -128 to 128.
+
+|P25 +3/-3 Symbol Level Adjustment
+|1
+|This is a unsigned value of 0 to 255 representing an adjustment of -128 to 128.
+
+|P25 +1/-1 Symbol Level Adjustment
+|1
+|This is a unsigned value of 0 to 255 representing an adjustment of -128 to 128.
+
+|NXDN +3/-3 Symbol Level Adjustment
+|1
+|This is a unsigned value of 0 to 255 representing an adjustment of -128 to 128.
+
+|NXDN +1/-1 Symbol Level Adjustment
+|1
+|This is a unsigned value of 0 to 255 representing an adjustment of -128 to 128.
+|=== 
+
+Upon reception, the modem shall perform whatever operations necessary to set the Rx level and transmit a ACK or NACK in response.
+
+If the operation fails the modem shall:
+* Respond with a NACK and the "Illegal Length" if packet from the host is improperly sized.
+* Respond with a NACK and the "Invalid Request" if parameters are out of range.
 
 ==== 2.4.6 Set Rx Level Adjustment
-*TODO TODO TODO*
+This opcode is utilized to set the Rx level on the modem.
+
+The host shall transmit:
+[cols="2,1,2"]
+|===
+|Name |Length (bytes) |Description
+
+|Short Frame Start
+|1
+|Short Frame Start
+
+|Length
+|4
+|Length
+
+|Set Rx Level Opcode
+|1
+|$05
+
+|Rx Level
+|1
+|
+|=== 
+
+Upon reception, the modem shall perform whatever operations necessary to set the Rx level and transmit a ACK or NACK in response.
+
+If the operation fails the modem shall:
+* Respond with a NACK and the "Illegal Length" if packet from the host is improperly sized.
 
 ==== 2.4.7 Set RF Parameters (Hotspot Only)
-*TODO TODO TODO*
+This opcode is utilized to set the RF parameters for a hotspot modem.
+
+The host shall transmit:
+[cols="2,1,2"]
+|===
+|Name |Length (bytes) |Description
+
+|Short Frame Start
+|1
+|Short Frame Start
+
+|Length
+|18 or 22
+|Length of 18 does not set AFC parameters, length of 22 sets AFC parameters.
+
+|Set RF Parameters Opcode
+|1
+|$06
+
+|Rx Frequency (in Hz)
+|4
+|
+
+|Tx Frequency (in Hz)
+|4
+|
+
+|Tx Power (value from 0 to 255)
+|1
+|
+
+|DMR Discriminator Bandwidth Adjustment
+|1
+|This is a unsigned value of 0 to 255 representing an adjustment of -128 to 128.
+
+|P25 Discriminator Bandwidth Adjustment
+|1
+|This is a unsigned value of 0 to 255 representing an adjustment of -128 to 128.
+
+|DMR Post Demodulation Bandwidth Adjustment
+|1
+|This is a unsigned value of 0 to 255 representing an adjustment of -128 to 128.
+
+|P25 Post Demodulation Bandwidth Adjustment
+|1
+|This is a unsigned value of 0 to 255 representing an adjustment of -128 to 128.
+
+|AFC Gain Mode
+|1
+|This represents the AFC gain mode: 0 = Auto, 1 = Auto (Linear), 2 = Low, 3 = High.
+
+|NXDN Discriminator Bandwidth Adjustment
+|1
+|This is a unsigned value of 0 to 255 representing an adjustment of -128 to 128.
+
+|NXDN Post Demodulation Bandwidth Adjustment
+|1
+|This is a unsigned value of 0 to 255 representing an adjustment of -128 to 128.
+
+|AFC Enable, KI and KP
+|1
+|This value represents whether or not AFC is enabled ($80 bit), the AFC KI (lower 4 bits), the AFC KP (upper 4 bits).
+
+|AFC Range
+|1
+|
+
+|=== 
+
+Upon reception, the modem shall perform whatever operations necessary to set the RF parameters and transmit a ACK or NACK in response.
+
+If the operation fails the modem shall:
+* Respond with a NACK and the "Illegal Length" if packet from the host is improperly sized.
+* Respond with a NACK and the "Invalid Request" if parameters are out of range.
 
 ==== 2.4.8 Calibration Data
 *TODO TODO TODO*
@@ -551,10 +864,81 @@ Upon reception, the modem shall perform whatever operations necessary to transit
 *TODO TODO TODO*
 
 ==== 2.4.10 Send CWID
-*TODO TODO TODO*
+This opcode is utilized to transmit a CW ID morse message from the modem.
+
+The host shall transmit:
+[cols="2,1,2"]
+|===
+|Name |Length (bytes) |Description
+
+|Short Frame Start
+|1
+|Short Frame Start
+
+|Length
+|4 or More
+|Length, the length is typically 3 + the length of the CWID to send.
+
+|Send CWID Opcode
+|1
+|$0A
+
+|...
+|...
+|...
+
+|CWID Letters
+|1
+|
+
+|...
+|...
+|...
+|=== 
+
+Upon reception, the modem shall perform whatever operations necessary to transmit a CWID with the given letters and transmit a ACK or NACK in response.
+
+If the operation fails the modem shall:
+* Respond with a NACK and the "Illegal Length" if packet from the host is improperly sized.
 
 ==== 2.4.11 Set FIFO Buffers
-*TODO TODO TODO*
+This opcode is utilized to set the size of the FIFO buffers on the modem.
+
+The host shall transmit:
+[cols="2,1,2"]
+|===
+|Name |Length (bytes) |Description
+
+|Short Frame Start
+|1
+|Short Frame Start
+
+|Length
+|6
+|Length
+
+|Set FIFO Buffers Opcode
+|1
+|$0F
+
+|DMR Buffer Size
+|2
+|This is a unsigned 16-bit value representing the FIFO buffer size.
+
+|P25 Buffer Size
+|2
+|This is a unsigned 16-bit value representing the FIFO buffer size.
+
+|NXDN Buffer Size
+|2
+|This is a unsigned 16-bit value representing the FIFO buffer size.
+|=== 
+
+Upon reception, the modem shall perform whatever operations necessary to resize the FIFO buffers and transmit a ACK or NACK in response.
+
+If the operation fails the modem shall:
+* Respond with a NACK and the "Illegal Length" if packet from the host is improperly sized.
+* Respond with a NACK and the "Invalid Mode" if buffers are attempted to be resized while not in an IDLE state.
 
 ==== 2.4.12 Acknowledgement
 This opcode is utilized by the modem to notify the host of a positive acknowledgement of a command.
@@ -654,7 +1038,35 @@ The modem shall transmit:
 |=== 
 
 ==== 2.4.15 Flash Write
-*TODO TODO TODO*
+This opcode is utilized to write data from the modem's configuration partition on the flash.
+
+The host shall transmit:
+[cols="2,1,2"]
+|===
+|Name |Length (bytes) |Description
+
+|Short Frame Start
+|1
+|Short Frame Start
+
+|Length
+|254
+|Length
+
+|Flash Write Opcode
+|1
+|$E1
+
+|Flash Data
+|<Variable>
+|...
+|=== 
+
+Upon reception, the modem shall perform whatever operations necessary to write data to the flash and transmit a ACK or NACK in response.
+
+If the flash operation fails the modem shall:
+* Respond with a NACK and the "Flash Write Too Big" if more then 254 bytes are attempted to be written.
+* Respond with a NACK and the "Flash Write Failed" if a write error occurs.
 
 ==== 2.4.16 Reset MCU
 This opcode is utilized to reboot the MCU of the modem.
