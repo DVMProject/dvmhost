@@ -5,9 +5,9 @@
 
 Document Identifier: TN.1000
 
-Author: Bryan Biedenkapp
+Author: Bryan Biedenkapp, N2PLL
 
-Editors: Bryan Biedenkapp
+Editors: Bryan Biedenkapp, N2PLL
 
 Contributors: N/A
 
