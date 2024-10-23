@@ -487,7 +487,7 @@ The peer shall then transmit the following packet to the master:
 |Configuration JSON
 |=== 
 
-After transmitting the authorisation packet, the peer shall wait for a response from the master, the master may respond with:
+After transmitting the configuration packet, the peer shall wait for a response from the master, the master may respond with:
 
 * NACK packet containing Bad Connection State error.
 * ACK response packet.
@@ -526,7 +526,7 @@ The master shall transmit the following packet to the peer:
 The peer may use this data to update/build its own internal radio ID lookup lists for any ACL operations the peer may need to do. The radio IDs in this list are "whitelisted" or allowed for access.
 
 ===== 3.1.4.2 Blacklist RIDs
-The master CFNE will transmit this to a peer, so the peer may update its internal radio ID lookup tables with the list of whitelisted radio IDs.
+The master CFNE will transmit this to a peer, so the peer may update its internal radio ID lookup tables with the list of blacklisted radio IDs.
 
 The master shall transmit the following packet to the peer:
 
