@@ -138,6 +138,10 @@ public:
                     uint32_t pingsReceived = (uint32_t)peerObj["pingsReceived"].getDefault<uint32_t>(0U);
                     uint64_t lastPing = (uint64_t)peerObj["lastPing"].getDefault<uint32_t>(0U);
 
+                    uint32_t parentPeerId = 0U;
+                    if (peerObj["parentPeerId"].is<uint32_t>())
+                        parentPeerId = (uint32_t)peerObj["parentPeerId"].getDefault<uint32_t>(0U);
+
                     uint32_t ccPeerId = (uint32_t)peerObj["controlChannel"].getDefault<uint32_t>(0U);
 
                     json::array voiceChannels = peerObj["voiceChannels"].get<json::array>();
@@ -184,15 +188,19 @@ public:
                     peerOss << std::setw(9) << std::setfill('0') << peerId;
 
                     // pad peer IDs properly
+                    std::ostringstream parentPeerOss;
+                    parentPeerOss << std::setw(9) << std::setfill('0') << parentPeerId;
+
+                    // pad peer IDs properly
                     std::ostringstream ccPeerOss;
                     ccPeerOss << std::setw(9) << std::setfill('0') << ccPeerId;
 
                     // build list view entry
-                    const std::array<std::string, 14U> columns = {
+                    const std::array<std::string, 15U> columns = {
                         peerOss.str(),
                         identity, software,
                         peerAddress, std::to_string(port),
-                        ccPeerOss.str(),
+                        parentPeerOss.str(), ccPeerOss.str(),
                         std::to_string(voiceChannelPeers.size()),
                         (connected) ? "X" : "",
                         strConnState,
@@ -256,6 +264,7 @@ private:
         m_listView.addColumn("Software", 15);
         m_listView.addColumn("IP Address", 15);
         m_listView.addColumn("Port", 8);
+        m_listView.addColumn("Link Peer ID", 10);
         m_listView.addColumn("CC Peer ID", 10);
         m_listView.addColumn("VC Count", 8);
         m_listView.addColumn("Connected", 5);
@@ -270,6 +279,7 @@ private:
         m_listView.setColumnAlignment(1, finalcut::Align::Right);
         m_listView.setColumnAlignment(4, finalcut::Align::Right);
         m_listView.setColumnAlignment(6, finalcut::Align::Center);
+        m_listView.setColumnAlignment(7, finalcut::Align::Center);
 
         // set type of sorting
         m_listView.setColumnSortType(1, finalcut::SortType::Name);

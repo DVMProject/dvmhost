@@ -81,6 +81,7 @@ private:
     yaml::Node m_conf;
 
     friend class network::FNENetwork;
+    friend class network::DiagNetwork;
     friend class network::callhandler::TagDMRData;
     friend class network::callhandler::packetdata::DMRPacketData;
     friend class network::callhandler::TagP25Data;

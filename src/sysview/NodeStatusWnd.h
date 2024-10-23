@@ -454,17 +454,21 @@ public:
         const auto& rootWidget = getRootWidget();
         std::map<uint32_t, json::object> peerStatus(getNetwork()->peerStatus.begin(), getNetwork()->peerStatus.end());
         for (auto entry : peerStatus) {
+            uint32_t peerId = entry.first;
+            json::object peerObj = entry.second;
+            if (peerObj["peerId"].is<uint32_t>())
+                peerId = peerObj["peerId"].get<uint32_t>();
+
             auto it = std::find_if(m_nodes.begin(), m_nodes.end(), [&](NodeStatusWidget* wdgt) {
-                if (wdgt->peerId == entry.first && wdgt->uniqueId == (int32_t)entry.first)
+                if (wdgt->peerId == peerId && wdgt->uniqueId == (int32_t)peerId)
                     return true;
                 return false;
             });
 
             if (it == m_nodes.end()) {
                 json::object peerObj = entry.second;
-                addNode(entry.first, peerObj);
+                addNode(peerId, peerObj);
 
-                uint32_t peerId = entry.first;
                 uint8_t channelId = peerObj["channelId"].get<uint8_t>();
                 uint32_t channelNo = peerObj["channelNo"].get<uint32_t>();
 
@@ -538,9 +542,8 @@ public:
             } else {
                 NodeStatusWidget* wdgt = *it;
                 json::object peerObj = entry.second;
-                updateNode(wdgt, entry.first, peerObj);
+                updateNode(wdgt, peerId, peerObj);
 
-                uint32_t peerId = entry.first;
                 uint8_t channelId = peerObj["channelId"].get<uint8_t>();
                 uint32_t channelNo = peerObj["channelNo"].get<uint32_t>();
 

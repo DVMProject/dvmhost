@@ -117,6 +117,7 @@ namespace network
             m_isExternalPeer(false),
             m_isConventionalPeer(false),
             m_isSysView(false),
+            m_isPeerLink(false),
             m_config(),
             m_pktLastSeq(RTP_END_OF_CALL_SEQ),
             m_pktNextSeq(1U)
@@ -146,6 +147,7 @@ namespace network
             m_isExternalPeer(false),
             m_isConventionalPeer(false),
             m_isSysView(false),
+            m_isPeerLink(false),
             m_config(),
             m_pktLastSeq(RTP_END_OF_CALL_SEQ),
             m_pktNextSeq(1U)
@@ -233,6 +235,11 @@ namespace network
          * @brief Flag indicating this connection is from an SysView peer.
          */
         __PROPERTY_PLAIN(bool, isSysView);
+
+        /**
+         * @brief Flag indicating this connection is from an external peer that is peer link enabled.
+         */
+        __PROPERTY_PLAIN(bool, isPeerLink);
 
         /**
          * @brief JSON objecting containing peer configuration information.
@@ -383,6 +390,14 @@ namespace network
         void close() override;
 
         /**
+         * @brief Helper to create a JSON representation of a FNE peer connection.
+         * @param peerId Peer ID.
+         * @param conn FNE Peer Connection.
+         * @return json::object 
+         */
+        json::object fneConnObject(uint32_t peerId, FNEPeerConnection *conn);
+
+        /**
          * @brief Helper to reset a peer connection.
          * @param peerId Peer ID to reset.
          * @returns bool True, if connection state is reset, otherwise false.
@@ -426,6 +441,7 @@ namespace network
         static std::mutex m_peerMutex;
         typedef std::pair<const uint32_t, network::FNEPeerConnection*> PeerMapPair;
         std::unordered_map<uint32_t, FNEPeerConnection*> m_peers;
+        std::unordered_map<uint32_t, json::array> m_peerLinkPeers;
         typedef std::pair<const uint32_t, lookups::AffiliationLookup*> PeerAffiliationMapPair;
         std::unordered_map<uint32_t, lookups::AffiliationLookup*> m_peerAffiliations;
         std::unordered_map<uint32_t, std::vector<uint32_t>> m_ccPeerMap;

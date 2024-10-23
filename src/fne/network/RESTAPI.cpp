@@ -821,45 +821,27 @@ void RESTAPI::restAPI_GetPeerQuery(const HTTPPayload& request, HTTPPayload& repl
                         LogDebug(LOG_REST, "Preparing Peer %u (%s) for REST API query", peerId, peer->address().c_str());
                     }
 
-                    json::object peerObj = json::object();
-                    peerObj["peerId"].set<uint32_t>(peerId);
-
-                    std::string address = peer->address();
-                    peerObj["address"].set<std::string>(address);
-                    uint16_t port = peer->port();
-                    peerObj["port"].set<uint16_t>(port);
-                    bool connected = peer->connected();
-                    peerObj["connected"].set<bool>(connected);
-                    uint32_t connectionState = (uint32_t)peer->connectionState();
-                    peerObj["connectionState"].set<uint32_t>(connectionState);
-                    uint32_t pingsReceived = peer->pingsReceived();
-                    peerObj["pingsReceived"].set<uint32_t>(pingsReceived);
-                    uint64_t lastPing = peer->lastPing();
-                    peerObj["lastPing"].set<uint64_t>(lastPing);
-                    uint32_t ccPeerId = peer->ccPeerId();
-                    peerObj["controlChannel"].set<uint32_t>(ccPeerId);
-
-                    json::object peerConfig = peer->config();
-                    if (peerConfig["rcon"].is<json::object>())
-                        peerConfig.erase("rcon");
-                    peerObj["config"].set<json::object>(peerConfig);
-
-                    json::array voiceChannels = json::array();
-                    auto it = std::find_if(m_network->m_ccPeerMap.begin(), m_network->m_ccPeerMap.end(), [&](auto x) { return x.first == peerId; });
-                    if (it != m_network->m_ccPeerMap.end()) {
-                        std::vector<uint32_t> vcPeers = m_network->m_ccPeerMap[peerId];
-                        for (uint32_t vcEntry : vcPeers) {
-                            voiceChannels.push_back(json::value((double)vcEntry));
-                        }
-                    }
-                    peerObj["voiceChannels"].set<json::array>(voiceChannels);
-
+                    json::object peerObj = m_network->fneConnObject(peerId, peer);
                     peers.push_back(json::value(peerObj));
                 }
             }
         }
         else {
             LogDebug(LOG_REST, "No peers connected to this FNE");
+        }
+
+        // report any Peer-Link reported peers
+        if (m_network->m_peerLinkPeers.size() > 0) {
+            for (auto entry : m_network->m_peerLinkPeers) {
+                json::array peerObjs = entry.second;
+                if (entry.second.size() > 0) {
+                    for (auto linkEntry : entry.second) {
+                        if (linkEntry.is<json::object>()) {
+                            peers.push_back(json::value(linkEntry));
+                        }
+                    }
+                }
+            }
         }
     }
     else {
