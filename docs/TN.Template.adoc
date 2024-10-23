@@ -1,0 +1,28 @@
+= Digital Voice Modem
+
+== Technical Note
+=== *<Subject Matter>*
+
+Document Identifier: <TN.DocumentNumber>
+
+Author: <Replace and list authors>
+
+Editors: <Replace and list editors>
+
+Contributors: <Replace and list contributors>
+
+Abstract: <Supply your own summary of the technical purpose of the document.>
+
+Status: <Draft|Published>
+
+== 1. Introduction
+_Place a general summary of the technical note here to serve as executive summary enticing the reader to read on._
+
+== 2. Technical Note
+_Place a general summary of the technical note here to serve as executive summary enticing the reader to read on._
+
+=== 2.1 Definitions
+_Use this section to list any technical definitions required by the reader in order to understand the proposed technical note below._
+
+=== 2.2 _<User Content>_
+_Use this section and all following sections to describe the content of the technical note._

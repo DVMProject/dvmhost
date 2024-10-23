@@ -1,0 +1,995 @@
+= Digital Voice Modem
+
+== Technical Note
+=== Fixed Network Equipment Network
+
+Document Identifier: TN.1000
+
+Author: Bryan Biedenkapp
+
+Editors: Bryan Biedenkapp
+
+Contributors: N/A
+
+Abstract: Describes high-level concepts and procedures for the Fixed Network Equipment Network.
+
+Status: Draft
+
+== 1. Introduction
+This document describes, in high-level, the general concepts and procedures for the Fixed Network Equipment networking used by DVM projects.
+
+== 2. Technical Note
+
+=== 2.1 Definitions
+* DVM: Digital Voice Modem
+* FNE: Fixed Network Equipment. DVM server software used for linking DVM end-point applications.
+* CFNE: Converged Fixed Network Equipment. Moniker given to the second-generation linking server for DVM.
+* RTP: Real-time Transport Protocol. UDP network protocol used for delivering audio and video over IP networks
+* UDP: User Datagram Protocol.
+* Master: Primary CFNE a peer communicates to.
+* Peer: End-point application or linked CFNE.
+* DMR: Digital Mobile Radio. (ETSI TS-102)
+* P25: Project 25. (TIA-102)
+* NXDN: Next Generation Digital Narrowband.
+
+=== 2.2 General Concept
+The DVM FNE Network Protocol defines a common and standard communications protocol between the, CFNE server application, and DVM end-point applications.
+
+The core purpose of the protocol is to provide a common real-time communications channel between the DVM CFNE (which is the central interconnection (linking) server for DVM end-point applications).
+
+To accomplish this the protocol sits on-top of a standard RTP implementation which itself sits atop UDP.
+
+=== 2.3 RTP
+The DVM FNE Network Protocol implements the standard RTP packet framing consisting of a standard RTP packet header and a custom RTP extension header:
+
+[discrete]
+==== RTP Packet Header
+[listing]
+    Byte 0               1               2               3
+    Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 
+        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+        |Ver|P|E| CSRC  |M| Payload Type| Sequence                      |
+        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+        | Timestamp                                                     |
+        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+        | SSRC                                                          |
+        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    12 bytes
+
+[discrete]
+==== FNE Extension Header
+[listing]
+    Byte 0               1               2               3
+    Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 
+        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+        | Payload Type                  | Payload Length                |
+        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+        | Payload CRC-16                | Function      | Sub-function  |
+        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+        | Stream ID                                                     |
+        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+        | Peer ID                                                       |
+        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+        | Message Length                                                |
+        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    20 bytes (16 bytes without RTP Extension Header)
+
+==== 2.3.1 FNE Extension Header
+
+===== 2.3.1.1 Payload Type and Length
+The DVM FNE Network Protocol fixes the standard RTP Extension Header payload type to $FE. The length of the header is always 4 words (16 bytes) long (not including the RTP Extension Header data).
+
+===== 2.3.1.2 Extension Header Content
+The DVM FNE Network Protocol contains several packed elements:
+
+* Payload CRC-16 - CRC-CCITT 16-bit CRC for the entire contained payload.
+* Function - Network Function.
+* Sub-Function - Network Subfunction.
+* Stream ID - RTP Stream ID.
+* Peer ID - Unique Peer ID which sent the message.
+* Message Length - Length of message contained (payload length).
+
+Functions and Sub-Functions are described in the tables below. The Stream ID, Peer ID and Message Length fields should be self explanatory.
+
+===== 2.3.1.2.1 Function
+The function parameter of the extension header defines the major operation opcode.
+
+[cols="2,1,3"]
+|===
+|Function Name |Opcode |Description
+
+|Protocol
+|$00
+|This function is used for transporting logical data frames for a given digital voice mode.
+
+|Master
+|$01
+|This function is used for Master -> Peer communications.
+
+|Repeater Login
+|$60
+|This function is used during the login procedure for general peer initial login to a master.
+
+|Repeater Authorisation
+|$61
+|This function is used during the login procedure for authentication with the master.
+
+|Repeater Configuration
+|$62
+|This function is used during the login procedure for transferring peer configuration data to the master.
+
+|Repeater Closing
+|$74
+|This function is used to notify the master that a peer is disconnecting/closing.
+
+|Master Closing
+|$71
+|This function is used to notify a peer that the master is shutting down/closing.
+
+|Ping
+|$74
+|This function is used as a keep-alive from the Master -> Peer.
+
+|Pong
+|$75
+|This function is used as a keep-alive response from the Peer -> Master.
+
+|Grant Request
+|$7A
+|This function is a general grant request from a peer to the CFNE when the peer is requesting the CFNE perform talkgroup granting.
+
+|Ack
+|$7E
+|This function is a general acknowledgment.
+
+|Nack
+|$7F
+|This function is a general negative acknowledgement.
+
+|Transfer
+|$90
+|This function defines data transfer operations (typically used for logging and other status notifications).
+
+|Announce
+|$91
+|This function is used to announce status related to Group Affiliation, Unit Registration and Voice Channel registration.
+
+|Peer-Link
+|$92
+|This function is used from both Master -> Peer and Peer -> Master for linked CFNEs operating as a single network.
+|=== 
+
+===== 2.3.1.2.2 Sub-Function
+The sub-function parameter of the extension header defines the minor operation opcodes in conjunction with a major operation opcode, described above in section 2.3.1.2.1.
+
+[cols="2,1,2,3"]
+|===
+|Function Name |Opcode |Major Function |Description
+
+|DMR
+|$00
+|Protocol
+|This sub-function is used for DMR traffic.
+
+|P25
+|$01
+|Protocol
+|This sub-function is used for P25 traffic.
+
+|NXDN
+|$02
+|Protocol
+|This sub-function is used for NXDN traffic.
+
+|Whitelist RIDs
+|$00
+|Master
+|This sub-function is used for transferring the list of whitelisted RIDs from the Master -> Peer.
+
+|Blacklist RIDs
+|$01
+|Master
+|This sub-function is used for transferring the list of blacklisted RIDs from the Master -> Peer.
+
+|Active TGIDs
+|$02
+|Master
+|This sub-function is used for transferring the list of active TGIDs from the Master -> Peer.
+
+|Deactivated TGIDs
+|$03
+|Master
+|This sub-function is used for transferring the list of deactived TGIDs from the Master -> Peer.
+
+|Activity Log Transfer
+|$01
+|Transfer
+|This sub-function is used for transferring an activity log message from a Peer -> Master.
+
+|Diagnostics Log Transfer
+|$02
+|Transfer
+|This sub-function is used for transferring an diagnostics log message from a Peer -> Master.
+
+|Peer Status Transfer
+|$03
+|Transfer
+|This sub-function is used for transferring a peer status JSON message from a Peer -> Master.
+
+|Group Affiliation
+|$00
+|Announce
+|This sub-function is used for a peer to announce to the master about a group affiliation.
+
+|Unit Registration
+|$01
+|Announce
+|This sub-function is used for a peer to announce to the master about a unit registration.
+
+|Unit Deregistration
+|$02
+|Announce
+|This sub-function is used for a peer to announce to the master about a unit deregistration.
+
+|Group Affiliation Removal
+|$03
+|Announce
+|This sub-function is used for a peer to announce to the master about a group affiliation removal.
+
+|Update All Affiliations
+|$90
+|Announce
+|This sub-function is used for a peer to announce all of its group affiliations to the master.
+
+|Site VCs
+|$9A
+|Announce
+|This sub-function is used for a peer to announce its list of registered voice channels to the master.
+
+|Peer-Link Talkgroup Transfer
+|$00
+|Peer-Link
+|This sub-function is used for a CFNE master to transfer the entire certified talkgroup rules configuration to a CFNE linked peer.
+
+|Peer-Link Radio ID Transfer
+|$01
+|Peer-Link
+|This sub-function is used for a CFNE master to transfer the entire certified radio ID lookup configuration to a CFNE linked peer.
+
+|Peer-Link Peer ID Transfer
+|$02
+|Peer-Link
+|This sub-function is used for a CFNE master to transfer the entire certified peer ID lookup configuration to a CFNE linked peer.
+
+|Peer-Link Active Peer List Transfer
+|$A2
+|Peer-Link
+|This sub-function is used for a CFNE linked peer to transfer the internal list of active peers to the CFNE master.
+|=== 
+
+=== 2.3 NACK Types
+This is the basic description of the various packet NACKs that may occur.
+
+[cols="2,1,2"]
+|===
+|Name |Opcode |Description
+
+|General Failure
+|0
+|Represents an unknown/generic/general failure.
+
+|Mode Not Enabled
+|1
+|Occurs when a Protocol function is denied on a master due to a the digital mode not being enabled.
+
+|Illegal Packet
+|2
+|Represents a generic failure where the packet was unintelligble or otherwise malformed.
+
+|FNE Unauthorized
+|3
+|Represents a failure of a packet to be consumed because the peer that sent the packet was not authorized or properly logged into the CFNE.
+
+|Bad Connection State
+|4
+|Represents a incorrect operation was transmitted. This usually only happens during the login procedure which has an explicit state machine.
+
+|Invalid Configuration Data
+|5
+|Represents a failure of the configuration data sent to the CFNE during the final stage of login.
+
+|Peer Reset
+|6
+|General NACK message intended to cause the peer to reset its internal connection states.
+
+|Peer ACL
+|7
+|Fatal failure where the peer is not authorized to communicate with the CFNE. The peer should cease communications, and discontinue network operations when encountering this NACK.
+
+|FNE Max Connections
+|8
+|General failure of the CFNE having reached its maximum allowable connected peers.
+|===
+
+=== 2.4 TAG Types
+Some protocol commands (documented in the procedures below) utilize textual marker tags.
+
+[cols="2,1,2"]
+|===
+|Name |Tag |Description
+
+|DMR Data
+|DMRD
+|Marker for DMR data packets.
+
+|Project 25 Data
+|P25D
+|Marker for P25 data packets.
+
+|Next Generation Digital Narrowband Data
+|NXDD
+|Marker for NXDN data packets.
+
+|Repeater/Peer Login
+|RPTL
+|
+
+|Repeater/Peer Authorisation
+|RPTK
+|
+
+|Repeater/Peer Configuration
+|RPTC
+|
+
+|Ping Keep-Alive
+|RPTP
+|
+
+|Ping Keep-Alive Response
+|RPTG
+|
+
+|Transfer Message
+|TRNS
+|
+
+|Activity Log Transfer
+|TRNSLOG
+|
+
+|Diagnostics Log Transfer
+|TRNSDIAG
+|
+
+|Peer Status Transfer
+|TRNSSTS
+|
+
+|Announcement
+|ANNC
+|
+
+|===
+
+== 3. Procedures
+
+=== 3.1 Peer Login
+Peer login is completed in 3 distinct parts, the peer should build a 4 state, state machine to represent different stages of login and then running:
+
+* Login
+* Authorisation
+* Configuration
+* Connected/Running
+
+The peer may consider itself "running" when all 3 initial states are completed successfully, if any part fails the peer should consider the login procedure failed, and attempt to restart the process.
+
+==== 3.1.1 Login
+The login procedure is straight forward, the end-point shall transmit a packet containing 8 bytes of data to the master:
+
+[cols="2,1,2"]
+|===
+|Name |Length (bytes) |Description
+
+|RPTL Tag
+|4
+|Repeater Login Tag
+
+|Peer ID
+|4
+|Unique Peer ID
+|=== 
+
+After transmitting the login packet, the peer shall wait for a response from the master, the master may respond with:
+
+* NACK packet containing either a FNE Max Connections or Peer ACL error, or if the RPTL was unexpected a Bad Connection State error.
+* ACK response packet.
+
+In the case of an ACK response packet, the master response data will contain a 4 byte challenge salt used for the authorisation state. The peer shall store this salt and transition the login state machine to the authorisation state.
+
+==== 3.1.3 Authorisation
+The authorisation procedure is straight forward, the peer shall utilize the salt transmitted to it in the previous stage to generate a SHA256 hash of the unique connection password for that peer.
+
+The peer shall then transmit the following packet to the master:
+
+[cols="2,1,2"]
+|===
+|Name |Length (bytes) |Description
+
+|RPTK Tag
+|4
+|Repeater Authorisation Tag
+
+|Peer ID
+|4
+|Unique Peer ID
+
+|SHA256 Hash
+|32
+|Unique salted password hash
+|=== 
+
+After transmitting the authorisation packet, the peer shall wait for a response from the master, the master may respond with:
+
+* NACK packet containing either a FNE Unauthorized, Peer ACL error, or if the RPTK was unexpected a Bad Connection State error.
+* ACK response packet.
+
+In the case of an ACK response packet, the peer shall transition the login state machine to the configuration state.
+
+==== 3.1.2 Configuration
+The configuration procedure is straight forward, the peer shall generate a JSON configuration data blob to transmit to the CFNE:
+
+[discrete]
+===== Configuration JSON
+[source,json]
+    {
+        "identity": "<Peer Identity String>",
+        "rxFrequency": <Peer Rx Frequency in Hz>,
+        "txFrequency": <Peer Tx Frequency in Hz>,
+        "info": 
+        {
+            "latitude": <Peer Geographical Latitude>,
+            "longitude": <Peer Geographical Longitude>,
+            "height": <Peer Height (in meters)>,
+            "location": "<Textual String Describing Peer Location>"
+        },
+        "channel":
+        {
+            "txPower": <Peer Transmit Power (in W)>,
+            "txOffsetMhz": <Peer Transmit Offset (in MHz)>,
+            "chBandwidthKhz": <Peer Channel Bandwidth (in KHz>,
+            "channelId": <Channel ID from the IDEN channel bandplan>,
+            "channelNo": <Channel Number from the IDEN channel bandplan>,
+        },
+        "externalPeer":  <Boolean flag indicating whether or not this peer is a linked CFNE peer>,
+        "conventionalPeer": <Boolean flag indicating whether or not this is a conventional peer>,
+        "sysView": <Boolean flag indicating whether or not this peer is a SysView peer>,
+        "software": "<Textual hardcoded string containing software watermark>",
+    }
+
+
+The peer shall then transmit the following packet to the master:
+
+[cols="2,1,2"]
+|===
+|Name |Length (bytes) |Description
+
+|RPTC Tag
+|4
+|Repeater Configuration Tag
+
+|Reserved
+|4
+|
+
+|JSON Blob
+|<Variable Length>
+|Configuration JSON
+|=== 
+
+After transmitting the authorisation packet, the peer shall wait for a response from the master, the master may respond with:
+
+* NACK packet containing Bad Connection State error.
+* ACK response packet.
+
+In the case of an ACK response packet, the peer shall transition the login state machine to the running state. At this point the peer is authorised on the CFNE and will begin receiving traffic and may transmit traffic.
+
+==== 3.1.4 Post Login
+Post login the CFNE shall send various ACL updates to the peer both initially after login and then on a configured interval.
+
+===== 3.1.4.1 Whitelist RIDs
+The master CFNE will transmit this to a peer, so the peer may update its internal radio ID lookup tables with the list of whitelisted radio IDs.
+
+The master shall transmit the following packet to the peer:
+
+[cols="2,1,2"]
+|===
+|Name |Length (bytes) |Description
+
+|Length
+|4
+|This is the logical length of the number of elements transmitted
+
+|...
+|...
+|...
+
+|Radio ID
+|4
+|Logical 4 byte radio ID
+
+|...
+|...
+|...
+|=== 
+
+The peer may use this data to update/build its own internal radio ID lookup lists for any ACL operations the peer may need to do. The radio IDs in this list are "whitelisted" or allowed for access.
+
+===== 3.1.4.2 Blacklist RIDs
+The master CFNE will transmit this to a peer, so the peer may update its internal radio ID lookup tables with the list of whitelisted radio IDs.
+
+The master shall transmit the following packet to the peer:
+
+[cols="2,1,2"]
+|===
+|Name |Length (bytes) |Description
+
+|Length
+|4
+|This is the logical length of the number of elements transmitted
+
+|...
+|...
+|...
+
+|Radio ID
+|4
+|Logical 4 byte radio ID
+
+|...
+|...
+|...
+|=== 
+
+The peer may use this data to update/build its own internal radio ID lookup lists for any ACL operations the peer may need to do. The radio IDs in this list are "blacklisted" or disallowed for access.
+
+===== 3.1.4.3 Active TGIDs
+The master CFNE will transmit this to a peer, so the peer may update its internal talkgroup ID lookup tables with the list of active talkgroup IDs.
+
+The master shall transmit the following packet to the peer:
+
+[cols="2,1,2"]
+|===
+|Name |Length (bytes) |Description
+
+|Length
+|4
+|This is the logical length of the number of elements transmitted
+
+|...
+|...
+|...
+
+|Talkgroup ID
+|4
+|Logical 4 byte talkgroup ID
+
+|Flags and DMR Slot
+|1
+|Flags and DMR Slot
+
+|...
+|...
+|...
+|=== 
+
+The Flags and DMR Slot element contains amonst other things the associated DMR slot the talkgroup is configured for and:
+
+* $80 bit - Flags whether or not the talkgroup is "preferred" for a site.
+* $40 bit - Flags whether or not the talkgroup *requires* affiliation for traffic to process.
+
+The peer may use this data to update/build its own internal talkgroup ID lookup lists for any ACL operations the peer may need to do. The talkgroup IDs in this list are active or allowed for access.
+
+===== 3.1.4.4 Deactivated TGIDs
+The master CFNE will transmit this to a peer, so the peer may update its internal talkgroup ID lookup tables with the list of deactivated talkgroup IDs.
+
+The master shall transmit the following packet to the peer:
+
+[cols="2,1,2"]
+|===
+|Name |Length (bytes) |Description
+
+|Length
+|4
+|This is the logical length of the number of elements transmitted
+
+|...
+|...
+|...
+
+|Talkgroup ID
+|4
+|Logical 4 byte talkgroup ID
+
+|DMR Slot
+|1
+|DMR Slot
+
+|...
+|...
+|...
+|=== 
+
+The peer may use this data to update/build its own internal talkgroup ID lookup lists for any ACL operations the peer may need to do. The talkgroup IDs in this list are deactivated or disallowed for access.
+
+=== 3.2 DMR Protocol Data
+For both reception and transmission of DMR protocol data on the network, simple packets are formed using the Protocol function and DMR sub-function.
+
+The payload for a DMR protocol data message is formatted:
+
+[discrete]
+==== DMR Payload
+[listing]
+     Below is the representation of the data layout for the DMR frame
+     message header. The header is 20 bytes in length.
+    
+     Byte 0               1               2               3
+     Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0
+         +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         | Protocol Tag (DMRD)                                           |
+         +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         | Seq No.       | Source ID                                     |
+         +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         | Destination ID                                | Reserved      |
+         +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         | Reserved                      | Control Flags |S|G| Data Type |
+         +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         | Reserved                                                      |
+         +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    
+     The data starting at offset 20 for 33 bytes is the raw DMR frame.
+    
+     DMR frame message has 2 trailing bytes:
+    
+     Byte 53              54
+     Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0
+         +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         | BER           | RSSI          |
+         +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+=== 3.3 P25 Protocol Data
+For both reception and transmission of P25 protocol data on the network, simple packets are formed using the Protocol function and P25 sub-function.
+
+==== 3.3.1 Message Header
+All messages (with the exception of PDUs) carry this message header:
+
+[discrete]
+==== P25 Message Payload Header
+[listing]
+     Below is the representation of the data layout for the P25 frame
+     message header. The header is 24 bytes in length.
+    
+     Byte 0               1               2               3
+     Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0
+         +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         | Protocol Tag (P25D)                                           |
+         +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         | LCO           | Source ID                                     |
+         +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         | Destination ID                                | System ID     |
+         +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         | System ID     | Reserved      | Control Flags | MFId          |
+         +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         | Network ID                                    | Reserved      |
+         +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         | LSD1          | LSD2          | DUID          | Frame Length  |
+         +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    
+     The data starting at offset 20 for variable number of bytes (DUID dependant)
+     is the P25 frame.
+    
+     If the P25 frame message is a LDU1, it contains 13 trailing bytes that
+     contain the frame type, and encryption data.
+    
+     Byte 180             181             182             183
+     Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0
+         +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         | Frame Type    | Algorithm ID  | Key ID                        |
+         +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         | Message Indicator                                             |
+         +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         |                                                               |
+         +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         |               |
+         +-+-+-+-+-+-+-+-+
+
+==== 3.3.2 PDU Message Header
+[listing]
+     Below is the representation of the data layout for the P25 frame
+     message header used for a PDU. The header is 24 bytes in length.
+    
+     Byte 0               1               2               3
+     Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0
+         +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         | Protocol Tag (P25D)                                           |
+         +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         |C| SAP         | Reserved                                      |
+         +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         | PDU Length (Bytes)                            | Reserved      |
+         +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         |                                               | MFId          |
+         +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         | Reserved                                                      |
+         +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         | Blk to Flw    | Current Block | DUID          | Frame Length  |
+         +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    
+     The data starting at offset 24 for variable number of bytes (DUID dependant)
+     is the P25 frame.
+
+=== 3.4 NXDN Protocol Data
+For both reception and transmission of NXDN protocol data on the network, simple packets are formed using the Protocol function and NXDN sub-function.
+
+The payload for a NXDN protocol data message is formatted:
+
+[discrete]
+==== NXDN Payload
+[listing]
+     Below is the representation of the data layout for the NXDN frame
+     message header. The header is 24 bytes in length.
+     
+     Byte 0               1               2               3
+     Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0
+         +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         | Protocol Tag (NXDD)                                           |
+         +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         | Message Type  | Source ID                                     |
+         +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         | Destination ID                                | Reserved      |
+         +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         | Reserved                      | Control Flags |R|G| Reserved  |
+         +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         | Reserved                                                      |
+         +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         |                                               | Frame Length  |
+         +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    
+     The data starting at offset 24 for 48 bytes is the raw NXDN frame.
+
+=== 3.5 Transfer Data
+Transfer data, is activity log, diagnostic log, or peer status data.
+
+For both activity logs, diagnostic logs and peer status the packet format is identical:
+
+[cols="2,1,2"]
+|===
+|Name |Length (bytes) |Description
+
+|Reserved
+|11
+|
+
+|Message Payload
+|<Variable>
+|
+|=== 
+
+=== 3.6 Announce Data 
+Announce data, is announcement to the master CFNE about various subscriber operations, such as group affiliation, unit registration and unit deregistration.
+
+==== 3.6.1 Group Affiliation Announcement
+A group affiliation announcement packet is formatted:
+
+[discrete]
+==== Payload
+[listing]
+     Below is the representation of the data layout for the group affiliation
+     announcement message. The message is 6 bytes in length.
+    
+     Byte 0               1               2               3
+     Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0
+         +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         | Source ID                                     | Dest ID       |
+         +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         |                             |
+         +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+==== 3.6.2 Group Affiliation Removal Announcement
+A group affiliation removal announcement packet is formatted:
+
+[discrete]
+==== Payload
+[listing]
+     Below is the representation of the data layout for the group affiliation
+     removal announcement message. The message is 3 bytes in length.
+    
+     Byte 0               1               2
+     Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0
+         +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         | Source ID                                     |
+         +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+==== 3.6.3 Unit Registration/Deregistration Announcement
+A unit registration announcement packet is formatted:
+
+[discrete]
+==== Payload
+[listing]
+     Below is the representation of the data layout for the unit registration/deregistration
+     announcement message. The message is 3 bytes in length.
+    
+     Byte 0               1               2
+     Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0
+         +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         | Source ID                                     |
+         +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+==== 3.6.1 Update Affiliations Announcement
+A peer update affiliations announcement packet is formatted:
+
+[cols="2,1,2"]
+|===
+|Name |Length (bytes) |Description
+
+|Length
+|4
+|This is the logical length of the number of elements transmitted
+
+|...
+|...
+|...
+
+|Radio ID
+|4
+|Logical 4 byte radio ID
+
+|Talkgroup ID
+|1
+|Logical 4 byte talkgroup ID
+
+|...
+|...
+|...
+|=== 
+
+==== 3.6.1 Site VCs Announcement
+A peer site VCs announcement packet is formatted:
+
+[cols="2,1,2"]
+|===
+|Name |Length (bytes) |Description
+
+|Length
+|4
+|This is the logical length of the number of elements transmitted
+
+|...
+|...
+|...
+
+|Peer ID
+|4
+|Logical 4 byte peer ID
+
+|...
+|...
+|...
+|=== 
+
+=== 3.7 Peer-Link Data
+Peer-Link data is special CFNE <-> CFNE communications data utilized when a linked CFNE is configured for Peer-Link operation in a master CFNE's peer list ACL.
+
+Peer-Link allows a connected peer CFNE to receive its entire configuration for, talkgroup rules, radio IDs, and peer list ACLs to come from the master CFNE.
+
+Upon following the normal login procedures outlined in section 3.1. The Peer-Link post login procedure will occur.
+
+==== 3.7.1 Post Login
+Post login the CFNE shall send various Peer-Link ACL updates to the CFNE peer both initially after login and then on a configured interval.
+
+===== 3.7.1.1 Radio ID ACL List
+The master CFNE will transmit this to a peer, so the CFNE peer may configure its internal radio ID lookup tables with the list of radio IDs from the master.
+
+The master shall, read (in its entirety) the currently configured radio ID ACL list, compress the list using ZLIB and transmit it to the linked CFNE peer in blocks of 534 bytes (or a maximum of 572 bytes over the wire when accounting for the RTP headers). 
+
+The master shall transmit the following for each block to the CFNE peer:
+
+[cols="2,1,2"]
+|===
+|Name |Length (bytes) |Description
+
+|Data Length
+|4
+|This is the length of the uncompressed data in bytes. (This is only transmitted for the first block, all subsequent blocks set this value to 0.)
+
+|Compressed Length
+|4
+|This is the total length of compressed data in bytes. (This is only transmitted for the first block, all subsequent blocks set this value to 0.)
+
+|Current Block
+|1
+|This is number of the current block.
+
+|Total Blocks
+|1
+|This is the count of the total block.
+
+|Payload
+|534 (usually less for the last block if the data length isn't a multiple of 534)
+|Raw payload bytes
+|=== 
+
+The CFNE peer shall continue receiving this packet until it has determined it has received all blocks of data. Once all blocks of data are received it shall reassemble the compressed data payload into a contiguous buffer and decompress the data.
+
+The CFNE peer shall then utilize the decompressed data to fully reconfigure its radio ID lookup table with the data from the master.
+
+===== 3.7.1.2 Talkgroup Rules ACL
+The master CFNE will transmit this to a peer, so the CFNE peer may configure its internal talkgroup rules lookup tables with the list of talkgroup rules from the master.
+
+The master shall, read (in its entirety) the currently configured talkgroup rules, compress the list using ZLIB and transmit it to the linked CFNE peer in blocks of 534 bytes (or a maximum of 572 bytes over the wire when accounting for the RTP headers). 
+
+The master shall transmit the following for each block to the CFNE peer:
+
+[cols="2,1,2"]
+|===
+|Name |Length (bytes) |Description
+
+|Data Length
+|4
+|This is the length of the uncompressed data in bytes. (This is only transmitted for the first block, all subsequent blocks set this value to 0.)
+
+|Compressed Length
+|4
+|This is the total length of compressed data in bytes. (This is only transmitted for the first block, all subsequent blocks set this value to 0.)
+
+|Current Block
+|1
+|This is number of the current block.
+
+|Total Blocks
+|1
+|This is the count of the total block.
+
+|Payload
+|534 (usually less for the last block if the data length isn't a multiple of 534)
+|Raw payload bytes
+|=== 
+
+The CFNE peer shall continue receiving this packet until it has determined it has received all blocks of data. Once all blocks of data are received it shall reassemble the compressed data payload into a contiguous buffer and decompress the data.
+
+The CFNE peer shall then utilize the decompressed data to fully reconfigure its talkgroup rules lookup table with the data from the master.
+
+===== 3.7.1.2 Peer List ACL
+The master CFNE will transmit this to a peer, so the CFNE peer may configure its internal peer list ACL lookup tables with the list of peer list ACLs from the master.
+
+The master shall, read (in its entirety) the currently configured talkgroup rules, compress the list using ZLIB and transmit it to the linked CFNE peer in blocks of 534 bytes (or a maximum of 572 bytes over the wire when accounting for the RTP headers). 
+
+The master shall transmit the following for each block to the CFNE peer:
+
+[cols="2,1,2"]
+|===
+|Name |Length (bytes) |Description
+
+|Data Length
+|4
+|This is the length of the uncompressed data in bytes. (This is only transmitted for the first block, all subsequent blocks set this value to 0.)
+
+|Compressed Length
+|4
+|This is the total length of compressed data in bytes. (This is only transmitted for the first block, all subsequent blocks set this value to 0.)
+
+|Current Block
+|1
+|This is number of the current block.
+
+|Total Blocks
+|1
+|This is the count of the total block.
+
+|Payload
+|534 (usually less for the last block if the data length isn't a multiple of 534)
+|Raw payload bytes
+|=== 
+
+The CFNE peer shall continue receiving this packet until it has determined it has received all blocks of data. Once all blocks of data are received it shall reassemble the compressed data payload into a contiguous buffer and decompress the data.
+
+The CFNE peer shall then utilize the decompressed data to fully reconfigure its peer list ACL lookup table with the data from the master.
