@@ -1773,6 +1773,11 @@ void* Host::threadWatchdog(void* arg)
             uint32_t ms = stopWatch.elapsed();
             stopWatch.start();
 
+            if (host->m_isTxCW) {
+                Thread::sleep(1U);
+                continue;
+            }
+
             // scope is intentional
             {
                 /** Digital Mobile Radio */
