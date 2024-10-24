@@ -738,6 +738,7 @@ bool TagDMRData::validate(uint32_t peerId, data::NetData& data, uint32_t streamI
                     .request(m_network->m_influxServer);
             }
 
+            m_network->writePeerICC(peerId, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR, NET_ICC::REJECT_TRAFFIC, data.getSlotNo());
             return false;
         }
     }
@@ -789,6 +790,7 @@ bool TagDMRData::validate(uint32_t peerId, data::NetData& data, uint32_t streamI
                     .request(m_network->m_influxServer);
             }
 
+            m_network->writePeerICC(peerId, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR, NET_ICC::REJECT_TRAFFIC, data.getSlotNo());
             return false;
         }
 
@@ -808,6 +810,7 @@ bool TagDMRData::validate(uint32_t peerId, data::NetData& data, uint32_t streamI
                     .request(m_network->m_influxServer);
             }
 
+            m_network->writePeerICC(peerId, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR, NET_ICC::REJECT_TRAFFIC, data.getSlotNo());
             return false;
         }
 
@@ -826,6 +829,7 @@ bool TagDMRData::validate(uint32_t peerId, data::NetData& data, uint32_t streamI
                     .request(m_network->m_influxServer);
             }
 
+            m_network->writePeerICC(peerId, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR, NET_ICC::REJECT_TRAFFIC, data.getSlotNo());
             return false;
         }
     }

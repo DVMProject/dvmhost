@@ -453,6 +453,27 @@ void Slot::processNetwork(const data::NetData& dmrData)
     }
 }
 
+/* Helper to process an In-Call Control message. */
+
+void Slot::processInCallCtrl(network::NET_ICC::ENUM command)
+{
+    switch (command) {
+    case network::NET_ICC::REJECT_TRAFFIC:
+        {
+            processFrameLoss();
+
+            m_rfLastDstId = 0U;
+            m_rfLastSrcId = 0U;
+            m_rfTGHang.stop();
+            m_rfState = RS_RF_REJECTED;
+        }
+        break;
+
+    default:
+        break;
+    }
+}
+
 /* Updates the DMR slot processor. */
 
 void Slot::clock()

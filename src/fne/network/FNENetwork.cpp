@@ -124,6 +124,7 @@ void FNENetwork::setOptions(yaml::Node& conf, bool printOptions)
     m_disallowAdjStsBcast = conf["disallowAdjStsBcast"].as<bool>(false);
     m_disallowExtAdjStsBcast = conf["disallowExtAdjStsBcast"].as<bool>(true);
     m_allowConvSiteAffOverride = conf["allowConvSiteAffOverride"].as<bool>(true);
+    m_enableInCallCtrl = conf["enableInCallCtrl"].as<bool>(true);
     m_softConnLimit = conf["connectionLimit"].as<uint32_t>(MAX_HARD_CONN_CAP);
 
     if (m_softConnLimit > MAX_HARD_CONN_CAP) {
@@ -179,6 +180,7 @@ void FNENetwork::setOptions(yaml::Node& conf, bool printOptions)
         LogInfo("    Dump Packet Data: %s", m_dumpDataPacket ? "yes" : "no");
         LogInfo("    Disable P25 ADJ_STS_BCAST to external peers: %s", m_disallowExtAdjStsBcast ? "yes" : "no");
         LogInfo("    Allow conventional sites to override affiliation and receive all traffic: %s", m_allowConvSiteAffOverride ? "yes" : "no");
+        LogInfo("    Enable In-Call Control: %s", m_enableInCallCtrl ? "yes" : "no");
         LogInfo("    Restrict grant response by affiliation: %s", m_restrictGrantToAffOnly ? "yes" : "no");
         LogInfo("    Traffic Headers Filtered by Destination ID: %s", m_filterHeaders ? "yes" : "no");
         LogInfo("    Traffic Terminators Filtered by Destination ID: %s", m_filterTerminators ? "yes" : "no");
@@ -2243,6 +2245,24 @@ void FNENetwork::writePeerList(uint32_t peerId)
     return;
 }
 
+/* Helper to send a In-Call Control command to the specified peer. */
+
+bool FNENetwork::writePeerICC(uint32_t peerId, NET_SUBFUNC::ENUM subFunc, NET_ICC::ENUM command, uint8_t slotNo)
+{
+    assert(peerId > 0);
+    if (!m_enableInCallCtrl)
+        return false;
+
+    uint8_t buffer[DATA_PACKET_LENGTH];
+    ::memset(buffer, 0x00U, DATA_PACKET_LENGTH);
+
+    __SET_UINT32(peerId, buffer, 6U);                                           // Peer ID
+    buffer[10U] = (uint8_t)command;                                             // In-Call Control Command
+    buffer[11U] = slotNo;
+
+    return writePeer(peerId, { NET_FUNC::INCALL_CTRL, subFunc }, buffer, 12U, RTP_END_OF_CALL_SEQ, false, true);
+}
+
 /* Helper to send a data message to the specified peer. */
 
 bool FNENetwork::writePeer(uint32_t peerId, FrameQueue::OpcodePair opcode, const uint8_t* data,
@@ -2379,7 +2399,7 @@ bool FNENetwork::writePeerNAK(uint32_t peerId, const char* tag, NET_CONN_NAK_REA
     __SET_UINT16B((uint16_t)reason, buffer, 10U);                               // Reason
 
     logPeerNAKReason(peerId, tag, reason);
-    return writePeer(peerId, { NET_FUNC::NAK, NET_SUBFUNC::NOP }, buffer, 10U, RTP_END_OF_CALL_SEQ, false, true);
+    return writePeer(peerId, { NET_FUNC::NAK, NET_SUBFUNC::NOP }, buffer, 12U, RTP_END_OF_CALL_SEQ, false, true);
 }
 
 /* Helper to send a NAK response to the specified peer. */

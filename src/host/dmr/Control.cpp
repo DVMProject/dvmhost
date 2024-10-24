@@ -176,6 +176,11 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, ::lookups::VoiceChDa
     m_slot1->m_ignoreAffiliationCheck = ignoreAffiliationCheck;
     m_slot2->m_ignoreAffiliationCheck = ignoreAffiliationCheck;
 
+    // set the In-Call Control function callback
+    if (m_network != nullptr) {
+        m_network->setDMRICCCallback([=](network::NET_ICC::ENUM command, uint8_t slotNo) { processInCallCtrl(command, slotNo); });
+    }
+
     if (printOptions) {
         if (enableTSCC) {
             LogInfo("    TSCC Slot: %u", m_tsccSlotNo);
@@ -735,5 +740,20 @@ void Control::processNetwork()
         case 2U:
             m_slot2->processNetwork(data);
             break;
+    }
+}
+
+/* Helper to process an In-Call Control message. */
+
+void Control::processInCallCtrl(network::NET_ICC::ENUM command, uint8_t slotNo)
+{
+    switch (slotNo) {
+    case 1U:
+        return m_slot1->processInCallCtrl(command);
+    case 2U:
+        return m_slot2->processInCallCtrl(command);
+    default:
+        LogError(LOG_DMR, "DMR, invalid slot, slotNo = %u", slotNo);
+        break;
     }
 }

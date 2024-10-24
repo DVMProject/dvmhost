@@ -157,6 +157,14 @@ namespace dmr
         void processNetwork(const data::NetData& data);
         /** @} */
 
+        /** @name In-Call Control */
+        /**
+         * @brief Helper to process an In-Call Control message.
+         * @param command In-Call Control Command.
+         */
+        void processInCallCtrl(network::NET_ICC::ENUM command);
+        /** @} */
+
         /** @name Data Clocking */
         /**
          * @brief Updates the processor.

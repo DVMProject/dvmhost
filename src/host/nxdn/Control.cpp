@@ -296,6 +296,11 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
         }
     }
 
+    // set the In-Call Control function callback
+    if (m_network != nullptr) {
+        m_network->setNXDNICCCallback([=](network::NET_ICC::ENUM command) { processInCallCtrl(command); });
+    }
+
     if (printOptions) {
         LogInfo("    Silence Threshold: %u (%.1f%%)", m_voice->m_silenceThreshold, float(m_voice->m_silenceThreshold) / 12.33F);
         LogInfo("    Frame Loss Threshold: %u", m_frameLossThreshold);
@@ -1030,6 +1035,27 @@ void Control::processFrameLoss()
 
     m_rfMask = 0x00U;
     m_rfLC.reset();
+}
+
+/* Helper to process an In-Call Control message. */
+
+void Control::processInCallCtrl(network::NET_ICC::ENUM command)
+{
+    switch (command) {
+    case network::NET_ICC::REJECT_TRAFFIC:
+        {
+            processFrameLoss();
+
+            m_rfLastDstId = 0U;
+            m_rfLastSrcId = 0U;
+            m_rfTGHang.stop();
+            m_rfState = RS_RF_REJECTED;
+        }
+        break;
+
+    default:
+        break;
+    }
 }
 
 /* Helper to send a REST API request to the CC to release a channel grant at the end of a call. */

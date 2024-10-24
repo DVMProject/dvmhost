@@ -31,6 +31,7 @@
 #include "common/lookups/IdenTableLookup.h"
 #include "common/lookups/RadioIdLookup.h"
 #include "common/lookups/TalkgroupRulesLookup.h"
+#include "common/network/RTPFNEHeader.h"
 #include "common/yaml/Yaml.h"
 #include "dmr/lookups/DMRAffiliationLookup.h"
 #include "dmr/Slot.h"
@@ -330,6 +331,12 @@ namespace dmr
          * @brief Process a data frames from the network.
          */
         void processNetwork();
+        /**
+         * @brief Helper to process an In-Call Control message.
+         * @param command In-Call Control Command.
+         * @param slotNo DMR slot.
+         */
+        void processInCallCtrl(network::NET_ICC::ENUM command, uint8_t slotNo);
     };
 } // namespace dmr
 

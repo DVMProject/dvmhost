@@ -32,6 +32,7 @@
 
 #include <string>
 #include <cstdint>
+#include <functional>
 
 namespace network
 {
@@ -152,6 +153,22 @@ namespace network
          */
         void enable(bool enabled);
 
+        /**
+         * @brief Helper to set the DMR In-Call Control callback.
+         * @param callback 
+         */
+        void setDMRICCCallback(std::function<void(NET_ICC::ENUM, uint8_t)>&& callback) { m_dmrInCallCallback = callback; }
+        /**
+         * @brief Helper to set the P25 In-Call Control callback.
+         * @param callback 
+         */
+        void setP25ICCCallback(std::function<void(NET_ICC::ENUM)>&& callback) { m_p25InCallCallback = callback; }
+        /**
+         * @brief Helper to set the NXDN In-Call Control callback.
+         * @param callback 
+         */
+        void setNXDNICCCallback(std::function<void(NET_ICC::ENUM)>&& callback) { m_nxdnInCallCallback = callback; }
+
     public:
         /**
          * @brief Last received RTP sequence number.
@@ -212,6 +229,10 @@ namespace network
         uint32_t m_remotePeerId;
 
         bool m_promiscuousPeer;
+
+        std::function<void(NET_ICC::ENUM command, uint8_t slotNo)> m_dmrInCallCallback;
+        std::function<void(NET_ICC::ENUM command)> m_p25InCallCallback;
+        std::function<void(NET_ICC::ENUM command)> m_nxdnInCallCallback;
 
         /**
          * @brief User overrideable handler that allows user code to process network packets not handled by this class.

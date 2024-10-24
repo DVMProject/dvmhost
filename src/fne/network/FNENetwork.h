@@ -457,6 +457,7 @@ namespace network
         bool m_disallowExtAdjStsBcast;
         bool m_allowConvSiteAffOverride;
         bool m_restrictGrantToAffOnly;
+        bool m_enableInCallCtrl;
 
         bool m_filterHeaders;
         bool m_filterTerminators;
@@ -566,6 +567,16 @@ namespace network
          * @param peerId Peer ID.
          */
         void writePeerList(uint32_t peerId);
+        
+        /**
+         * @brief Helper to send a In-Call Control command to the specified peer.
+         * @param peerId Peer ID.
+         * @param subFunc Network Sub-Function.
+         * @param command In-Call Control Command.
+         * @param slotNo DMR slot.
+         */
+        bool writePeerICC(uint32_t peerId, NET_SUBFUNC::ENUM subFunc = NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR, 
+            NET_ICC::ENUM command = NET_ICC::NOP, uint8_t slotNo = 0U);
 
         /**
          * @brief Helper to send a data message to the specified peer.

@@ -71,7 +71,10 @@ Network::Network(const std::string& address, uint16_t port, uint16_t localPort, 
     m_restApiPort(0),
     m_conventional(false),
     m_remotePeerId(0U),
-    m_promiscuousPeer(false)
+    m_promiscuousPeer(false),
+    m_dmrInCallCallback(nullptr),
+    m_p25InCallCallback(nullptr),
+    m_nxdnInCallCallback(nullptr)
 {
     assert(!address.empty());
     assert(port > 0U);
@@ -482,6 +485,42 @@ void Network::clock(uint32_t ms)
                 }
                 else {
                     Utils::dump("unknown master control opcode from the master", buffer.get(), length);
+                }
+            }
+            break;
+
+        case NET_FUNC::INCALL_CTRL:
+            {
+                if (fneHeader.getSubFunction() == NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR) {              // DMR In-Call Control
+                    if (m_enabled && m_dmrEnabled) {
+                        NET_ICC::ENUM command = (NET_ICC::ENUM)buffer[10U];
+                        uint8_t slot = buffer[11U];
+
+                        if (m_dmrInCallCallback != nullptr) {
+                            m_dmrInCallCallback(command, slot);
+                        }
+                    }
+                }
+                else if (fneHeader.getSubFunction() == NET_SUBFUNC::PROTOCOL_SUBFUNC_P25) {         // P25 In-Call Control
+                    if (m_enabled && m_p25Enabled) {
+                        NET_ICC::ENUM command = (NET_ICC::ENUM)buffer[10U];
+
+                        if (m_p25InCallCallback != nullptr) {
+                            m_p25InCallCallback(command);
+                        }
+                    }
+                }
+                else if (fneHeader.getSubFunction() == NET_SUBFUNC::PROTOCOL_SUBFUNC_NXDN) {        // NXDN In-Call Control
+                    if (m_enabled && m_nxdnEnabled) {
+                        NET_ICC::ENUM command = (NET_ICC::ENUM)buffer[10U];
+
+                        if (m_nxdnInCallCallback != nullptr) {
+                            m_nxdnInCallCallback(command);
+                        }
+                    }
+                }
+                else {
+                    Utils::dump("unknown protocol opcode from the master", buffer.get(), length);
                 }
             }
             break;

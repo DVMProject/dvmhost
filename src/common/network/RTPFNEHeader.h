@@ -63,6 +63,7 @@ namespace network
             PONG = 0x75U,                           //! Pong
 
             GRANT_REQ = 0x7AU,                      //! Grant Request
+            INCALL_CTRL = 0x7BU,                    //! In-Call Control
 
             ACK = 0x7EU,                            //! Packet Acknowledge
             NAK = 0x7FU,                            //! Packet Negative Acknowledge
@@ -108,6 +109,19 @@ namespace network
             PL_PEER_LIST = 0x02U,                   //! FNE Peer-Link Peer List Transfer
 
             PL_ACT_PEER_LIST = 0xA2U,               //! FNE Peer-Link Active Peer List Transfer
+        };
+    };
+
+    /**
+     * @brief Network In-Call Control
+     * @ingroup network_core
+     */
+    namespace NET_ICC {
+        enum ENUM : uint8_t {
+            NOP = 0xFFU,                            //! No Operation Sub-Function
+
+            BUSY_DENY = 0x00U,                      //! Busy Deny
+            REJECT_TRAFFIC = 0x01U,                 //! Reject Active Traffic
         };
     };
 

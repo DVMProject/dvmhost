@@ -31,6 +31,7 @@
 #include "common/lookups/IdenTableLookup.h"
 #include "common/lookups/RadioIdLookup.h"
 #include "common/lookups/TalkgroupRulesLookup.h"
+#include "common/network/RTPFNEHeader.h"
 #include "common/p25/SiteData.h"
 #include "common/RingBuffer.h"
 #include "common/StopWatch.h"
@@ -397,6 +398,11 @@ namespace p25
          * @brief Helper to process loss of frame stream from modem.
          */
         void processFrameLoss();
+        /**
+         * @brief Helper to process an In-Call Control message.
+         * @param command In-Call Control Command.
+         */
+        void processInCallCtrl(network::NET_ICC::ENUM command);
 
         /**
          * @brief Helper to send a REST API request to the CC to release a channel grant at the end of a call.

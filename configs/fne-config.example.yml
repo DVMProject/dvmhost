@@ -87,6 +87,8 @@ master:
     disallowExtAdjStsBcast: true
     # Flag indicating whether or not a conventional site can override affiliation rules.
     allowConvSiteAffOverride: true
+    # Flag indicating whether or not In-Call Control feedback is enabled.
+    enableInCallCtrl: true
 
     # Flag indicating that traffic headers will be filtered by destination ID (i.e. valid RID or valid TGID).
     filterHeaders: true
