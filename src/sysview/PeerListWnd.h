@@ -144,11 +144,13 @@ public:
 
                     uint32_t ccPeerId = (uint32_t)peerObj["controlChannel"].getDefault<uint32_t>(0U);
 
-                    json::array voiceChannels = peerObj["voiceChannels"].get<json::array>();
                     std::vector<uint32_t> voiceChannelPeers;
-                    for (auto vcEntry : voiceChannels) {
-                        uint32_t vcPeerId = vcEntry.getDefault<uint32_t>(0U);
-                        voiceChannelPeers.push_back(vcPeerId);
+                    if (peerObj["voiceChannels"].is<json::array>()) {
+                        json::array voiceChannels = peerObj["voiceChannels"].get<json::array>();
+                        for (auto vcEntry : voiceChannels) {
+                            uint32_t vcPeerId = vcEntry.getDefault<uint32_t>(0U);
+                            voiceChannelPeers.push_back(vcPeerId);
+                        }
                     }
 
                     json::object peerConfig = peerObj["config"].get<json::object>();
