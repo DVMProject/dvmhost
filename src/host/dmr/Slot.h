@@ -161,8 +161,9 @@ namespace dmr
         /**
          * @brief Helper to process an In-Call Control message.
          * @param command In-Call Control Command.
+         * @param dstId Destination ID.
          */
-        void processInCallCtrl(network::NET_ICC::ENUM command);
+        void processInCallCtrl(network::NET_ICC::ENUM command, uint32_t dstId);
         /** @} */
 
         /** @name Data Clocking */

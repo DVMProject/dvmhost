@@ -455,17 +455,19 @@ void Slot::processNetwork(const data::NetData& dmrData)
 
 /* Helper to process an In-Call Control message. */
 
-void Slot::processInCallCtrl(network::NET_ICC::ENUM command)
+void Slot::processInCallCtrl(network::NET_ICC::ENUM command, uint32_t dstId)
 {
     switch (command) {
     case network::NET_ICC::REJECT_TRAFFIC:
         {
-            processFrameLoss();
+            if (m_rfState == RS_RF_AUDIO && m_rfLC->getDstId() == dstId) {
+                processFrameLoss();
 
-            m_rfLastDstId = 0U;
-            m_rfLastSrcId = 0U;
-            m_rfTGHang.stop();
-            m_rfState = RS_RF_REJECTED;
+                m_rfLastDstId = 0U;
+                m_rfLastSrcId = 0U;
+                m_rfTGHang.stop();
+                m_rfState = RS_RF_REJECTED;
+            }
         }
         break;
 

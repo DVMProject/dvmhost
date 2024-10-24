@@ -573,10 +573,11 @@ namespace network
          * @param peerId Peer ID.
          * @param subFunc Network Sub-Function.
          * @param command In-Call Control Command.
+         * @param dstId Destination ID.
          * @param slotNo DMR slot.
          */
         bool writePeerICC(uint32_t peerId, NET_SUBFUNC::ENUM subFunc = NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR, 
-            NET_ICC::ENUM command = NET_ICC::NOP, uint8_t slotNo = 0U);
+            NET_ICC::ENUM command = NET_ICC::NOP, uint32_t dstId = 0U, uint8_t slotNo = 0U);
 
         /**
          * @brief Helper to send a data message to the specified peer.

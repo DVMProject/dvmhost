@@ -494,28 +494,31 @@ void Network::clock(uint32_t ms)
                 if (fneHeader.getSubFunction() == NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR) {              // DMR In-Call Control
                     if (m_enabled && m_dmrEnabled) {
                         NET_ICC::ENUM command = (NET_ICC::ENUM)buffer[10U];
-                        uint8_t slot = buffer[11U];
+                        uint32_t dstId = __GET_UINT16(buffer, 11U);
+                        uint8_t slot = buffer[14U];
 
                         if (m_dmrInCallCallback != nullptr) {
-                            m_dmrInCallCallback(command, slot);
+                            m_dmrInCallCallback(command, dstId, slot);
                         }
                     }
                 }
                 else if (fneHeader.getSubFunction() == NET_SUBFUNC::PROTOCOL_SUBFUNC_P25) {         // P25 In-Call Control
                     if (m_enabled && m_p25Enabled) {
                         NET_ICC::ENUM command = (NET_ICC::ENUM)buffer[10U];
+                        uint32_t dstId = __GET_UINT16(buffer, 11U);
 
                         if (m_p25InCallCallback != nullptr) {
-                            m_p25InCallCallback(command);
+                            m_p25InCallCallback(command, dstId);
                         }
                     }
                 }
                 else if (fneHeader.getSubFunction() == NET_SUBFUNC::PROTOCOL_SUBFUNC_NXDN) {        // NXDN In-Call Control
                     if (m_enabled && m_nxdnEnabled) {
                         NET_ICC::ENUM command = (NET_ICC::ENUM)buffer[10U];
+                        uint32_t dstId = __GET_UINT16(buffer, 11U);
 
                         if (m_nxdnInCallCallback != nullptr) {
-                            m_nxdnInCallCallback(command);
+                            m_nxdnInCallCallback(command, dstId);
                         }
                     }
                 }

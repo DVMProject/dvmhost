@@ -441,7 +441,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
 
     // set the In-Call Control function callback
     if (m_network != nullptr) {
-        m_network->setP25ICCCallback([=](network::NET_ICC::ENUM command) { processInCallCtrl(command); });
+        m_network->setP25ICCCallback([=](network::NET_ICC::ENUM command, uint32_t dstId) { processInCallCtrl(command, dstId); });
     }
 
     if (printOptions) {
@@ -1541,17 +1541,19 @@ void Control::processFrameLoss()
 
 /* Helper to process an In-Call Control message. */
 
-void Control::processInCallCtrl(network::NET_ICC::ENUM command)
+void Control::processInCallCtrl(network::NET_ICC::ENUM command, uint32_t dstId)
 {
     switch (command) {
     case network::NET_ICC::REJECT_TRAFFIC:
         {
-            processFrameLoss();
+            if (m_rfState == RS_RF_AUDIO && m_voice->m_rfLC.getDstId() == dstId) {
+                processFrameLoss();
 
-            m_rfLastDstId = 0U;
-            m_rfLastSrcId = 0U;
-            m_rfTGHang.stop();
-            m_rfState = RS_RF_REJECTED;
+                m_rfLastDstId = 0U;
+                m_rfLastSrcId = 0U;
+                m_rfTGHang.stop();
+                m_rfState = RS_RF_REJECTED;
+            }
         }
         break;
 

@@ -334,9 +334,10 @@ namespace dmr
         /**
          * @brief Helper to process an In-Call Control message.
          * @param command In-Call Control Command.
+         * @param dstId Destination ID.
          * @param slotNo DMR slot.
          */
-        void processInCallCtrl(network::NET_ICC::ENUM command, uint8_t slotNo);
+        void processInCallCtrl(network::NET_ICC::ENUM command, uint32_t dstId, uint8_t slotNo);
     };
 } // namespace dmr
 

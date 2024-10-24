@@ -2253,10 +2253,12 @@ void FNENetwork::writePeerList(uint32_t peerId)
 
 /* Helper to send a In-Call Control command to the specified peer. */
 
-bool FNENetwork::writePeerICC(uint32_t peerId, NET_SUBFUNC::ENUM subFunc, NET_ICC::ENUM command, uint8_t slotNo)
+bool FNENetwork::writePeerICC(uint32_t peerId, NET_SUBFUNC::ENUM subFunc, NET_ICC::ENUM command, uint32_t dstId, uint8_t slotNo)
 {
     assert(peerId > 0);
     if (!m_enableInCallCtrl)
+        return false;
+    if (dstId == 0U)
         return false;
 
     uint8_t buffer[DATA_PACKET_LENGTH];
@@ -2264,9 +2266,10 @@ bool FNENetwork::writePeerICC(uint32_t peerId, NET_SUBFUNC::ENUM subFunc, NET_IC
 
     __SET_UINT32(peerId, buffer, 6U);                                           // Peer ID
     buffer[10U] = (uint8_t)command;                                             // In-Call Control Command
-    buffer[11U] = slotNo;
+    __SET_UINT16(dstId, buffer, 11U);                                           // Destination ID
+    buffer[14U] = slotNo;                                                       // DMR Slot No
 
-    return writePeer(peerId, { NET_FUNC::INCALL_CTRL, subFunc }, buffer, 12U, RTP_END_OF_CALL_SEQ, false, true);
+    return writePeer(peerId, { NET_FUNC::INCALL_CTRL, subFunc }, buffer, 15U, RTP_END_OF_CALL_SEQ, false, true);
 }
 
 /* Helper to send a data message to the specified peer. */
