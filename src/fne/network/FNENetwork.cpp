@@ -1012,6 +1012,12 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                     }
                 }
                 break;
+            case NET_FUNC::INCALL_CTRL:
+                {
+                    // FNEs are god-like entities, and we don't recognize the authority of foreign FNEs telling us what
+                    // to do...
+                }
+                break;
 
             case NET_FUNC::TRANSFER:
                 {
