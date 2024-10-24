@@ -138,6 +138,10 @@ The function parameter of the extension header defines the major operation opcod
 |$7A
 |This function is a general grant request from a peer to the CFNE when the peer is requesting the CFNE perform talkgroup granting.
 
+|In-Call Control
+|$7B
+|This function is a Master -> Peer request, for In-Call control operations (usually to terminate a call in progress).
+
 |Ack
 |$7E
 |This function is a general acknowledgment.
