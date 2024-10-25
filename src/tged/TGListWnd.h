@@ -100,13 +100,14 @@ public:
             oss << std::setw(5) << std::setfill('0') << entry.source().tgId();
 
             // build list view entry
-            const std::array<std::string, 8U> columns = {
+            const std::array<std::string, 9U> columns = {
                 entry.name(), entry.nameAlias(), oss.str(),
                 (entry.config().active()) ? "X" : "",
                 (entry.config().affiliated()) ? "X" : "",
                 std::to_string(entry.config().inclusionSize()),
                 std::to_string(entry.config().exclusionSize()),
-                std::to_string(entry.config().alwaysSendSize())
+                std::to_string(entry.config().alwaysSendSize()),
+                std::to_string(entry.config().permittedRIDsSize())
             };
 
             const finalcut::FStringList line(columns.cbegin(), columns.cend());
@@ -182,6 +183,7 @@ private:
         m_listView.addColumn("Inclusions", 5);
         m_listView.addColumn("Exclusions", 5);
         m_listView.addColumn("Always", 5);
+        m_listView.addColumn("Permitted RIDs", 5);
 
         // set right alignment for TGID
         m_listView.setColumnAlignment(3, finalcut::Align::Right);
@@ -190,6 +192,7 @@ private:
         m_listView.setColumnAlignment(6, finalcut::Align::Right);
         m_listView.setColumnAlignment(7, finalcut::Align::Right);
         m_listView.setColumnAlignment(8, finalcut::Align::Right);
+        m_listView.setColumnAlignment(9, finalcut::Align::Right);
 
         // set type of sorting
         m_listView.setColumnSortType(1, finalcut::SortType::Name);

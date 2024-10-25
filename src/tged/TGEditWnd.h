@@ -19,6 +19,7 @@
 #include "tged/CloseWndBase.h"
 #include "tged/TGEdMain.h"
 #include "tged/TGEditPeerListWnd.h"
+#include "tged/TGEditRIDListWnd.h"
 
 #include <final/final.h>
 using namespace finalcut;
@@ -123,6 +124,7 @@ private:
     FButton m_preferredList{"&Preferred...", this};
 
     FButton m_rewriteList{"&Rewrites...", this};
+    FButton m_permittedRIDList{"&Permitted Radios...", this};
 
     /**
      * @brief Initializes the window layout.
@@ -339,6 +341,17 @@ private:
         m_rewriteList.setDisable();
         m_rewriteList.addCallback("clicked", [&]() { 
             // TODO
+        });
+
+        m_permittedRIDList.setGeometry(FPoint(20, 14), FSize(16, 1));
+        m_permittedRIDList.addCallback("clicked", [&]() { 
+            TGEditRIDListWnd wnd{m_rule, m_rule.config().permittedRIDs(), "Permitted Radios", this};
+            wnd.show();
+
+            auto config = m_rule.config();
+            config.permittedRIDs(wnd.ridList);
+            m_rule.config(config);
+            LogMessage(LOG_HOST, "Updated %s (%u) permitted radio list, %u permitted.", m_rule.name().c_str(), m_rule.source().tgId(), m_rule.config().permittedRIDsSize());
         });
 
         CloseWndBase::initControls();

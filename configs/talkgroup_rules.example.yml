@@ -31,6 +31,8 @@ groupVoice:
       #   sites not listed here will be non-preferred and will cause a AFF_GRP_RSP DENY, typically triggering roaming).
       #   If this list is empty *all* peers are preferred. (Trunking Only)
       preferred: []
+      # List of radio IDs permitted to transmit on the talkgroup.
+      rid_permitted: []
     #
     # Source Configuration
     #
@@ -66,6 +68,8 @@ groupVoice:
       #   sites not listed here will be non-preferred and will cause a AFF_GRP_RSP DENY, typically triggering roaming).
       #   If this list is empty *all* peers are preferred. (Trunking Only)
       preferred: []
+      # List of radio IDs permitted to transmit on the talkgroup.
+      rid_permitted: []
     #
     # Source Configuration
     #
@@ -107,6 +111,8 @@ groupVoice:
       #   sites not listed here will be non-preferred and will cause a AFF_GRP_RSP DENY, typically triggering roaming).
       #   If this list is empty *all* peers are preferred. (Trunking Only)
       preferred: []
+      # List of radio IDs permitted to transmit on the talkgroup.
+      rid_permitted: []
     #
     # Source Configuration
     #
@@ -140,6 +146,8 @@ groupVoice:
       #   sites not listed here will be non-preferred and will cause a AFF_GRP_RSP DENY, typically triggering roaming).
       #   If this list is empty *all* peers are preferred. (Trunking Only)
       preferred: []
+      # List of radio IDs permitted to transmit on the talkgroup.
+      rid_permitted: []
     #
     # Source Configuration
     #
@@ -173,6 +181,8 @@ groupVoice:
       #   sites not listed here will be non-preferred and will cause a AFF_GRP_RSP DENY, typically triggering roaming).
       #   If this list is empty *all* peers are preferred. (Trunking Only)
       preferred: []
+      # List of radio IDs permitted to transmit on the talkgroup.
+      rid_permitted: []
     #
     # Source Configuration
     #
@@ -206,6 +216,8 @@ groupVoice:
       #   sites not listed here will be non-preferred and will cause a AFF_GRP_RSP DENY, typically triggering roaming).
       #   If this list is empty *all* peers are preferred. (Trunking Only)
       preferred: []
+      # List of radio IDs permitted to transmit on the talkgroup.
+      rid_permitted: []
     #
     # Source Configuration
     #

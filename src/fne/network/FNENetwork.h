@@ -75,6 +75,7 @@ namespace network
     #define INFLUXDB_ERRSTR_INV_TALKGROUP "illegal/invalid talkgroup"
     #define INFLUXDB_ERRSTR_DISABLED_TALKGROUP "disabled talkgroup"
     #define INFLUXDB_ERRSTR_INV_SLOT "invalid slot for talkgroup"
+    #define INFLUXDB_ERRSTR_RID_NOT_PERMITTED "RID not permitted for talkgroup"
 
     // ---------------------------------------------------------------------------
     //  Class Prototypes

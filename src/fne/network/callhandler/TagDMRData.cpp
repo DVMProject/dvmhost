@@ -738,6 +738,7 @@ bool TagDMRData::validate(uint32_t peerId, data::NetData& data, uint32_t streamI
                     .request(m_network->m_influxServer);
             }
 
+            // report In-Call Control to the peer sending traffic
             m_network->writePeerICC(peerId, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR, NET_ICC::REJECT_TRAFFIC, data.getSlotNo());
             return false;
         }
@@ -790,6 +791,7 @@ bool TagDMRData::validate(uint32_t peerId, data::NetData& data, uint32_t streamI
                     .request(m_network->m_influxServer);
             }
 
+            // report In-Call Control to the peer sending traffic
             m_network->writePeerICC(peerId, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR, NET_ICC::REJECT_TRAFFIC, data.getDstId(),  data.getSlotNo());
             return false;
         }
@@ -810,10 +812,12 @@ bool TagDMRData::validate(uint32_t peerId, data::NetData& data, uint32_t streamI
                     .request(m_network->m_influxServer);
             }
 
+            // report In-Call Control to the peer sending traffic
             m_network->writePeerICC(peerId, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR, NET_ICC::REJECT_TRAFFIC, data.getDstId(), data.getSlotNo());
             return false;
         }
 
+        // is the TGID active?
         if (!tg.config().active()) {
             // report error event to InfluxDB
             if (m_network->m_enableInfluxDB) {
@@ -829,8 +833,33 @@ bool TagDMRData::validate(uint32_t peerId, data::NetData& data, uint32_t streamI
                     .request(m_network->m_influxServer);
             }
 
+            // report In-Call Control to the peer sending traffic
             m_network->writePeerICC(peerId, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR, NET_ICC::REJECT_TRAFFIC, data.getDstId(), data.getSlotNo());
             return false;
+        }
+
+        // does the TGID have a permitted RID list?
+        if (tg.config().permittedRIDs().size() > 0) {
+            // does the transmitting RID have permission?
+            std::vector<uint32_t> permittedRIDs = tg.config().permittedRIDs();
+            if (std::find(permittedRIDs.begin(), permittedRIDs.end(), data.getSrcId()) == permittedRIDs.end()) {
+                // report error event to InfluxDB
+                if (m_network->m_enableInfluxDB) {
+                    influxdb::QueryBuilder()
+                        .meas("call_error_event")
+                            .tag("peerId", std::to_string(peerId))
+                            .tag("streamId", std::to_string(streamId))
+                            .tag("srcId", std::to_string(data.getSrcId()))
+                            .tag("dstId", std::to_string(data.getDstId()))
+                                .field("message", INFLUXDB_ERRSTR_RID_NOT_PERMITTED)
+                            .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
+                        .request(m_network->m_influxServer);
+                }
+
+                // report In-Call Control to the peer sending traffic
+                m_network->writePeerICC(peerId, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR, NET_ICC::REJECT_TRAFFIC, data.getDstId(), data.getSlotNo());
+                return false;
+            }
         }
     }
 

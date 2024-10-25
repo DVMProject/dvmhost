@@ -193,6 +193,7 @@ namespace lookups
             m_rewrite(),
             m_alwaysSend(),
             m_preferred(),
+            m_permittedRIDs(),
             m_nonPreferred(false)
         {
             /* stub */
@@ -247,6 +248,14 @@ namespace lookups
                     m_preferred.push_back(peerId);
                 }
             }
+
+            yaml::Node& permittedRIDList = node["rid_permitted"];
+            if (permittedRIDList.size() > 0U) {
+                for (size_t i = 0; i < permittedRIDList.size(); i++) {
+                    uint32_t radioId = permittedRIDList[i].as<uint32_t>(0U);
+                    m_permittedRIDs.push_back(radioId);
+                }
+            }
         }
 
         /**
@@ -264,6 +273,7 @@ namespace lookups
                 m_rewrite = data.m_rewrite;
                 m_alwaysSend = data.m_alwaysSend;
                 m_preferred = data.m_preferred;
+                m_permittedRIDs = data.m_permittedRIDs;
                 m_nonPreferred = data.m_nonPreferred;
             }
 
@@ -295,6 +305,11 @@ namespace lookups
          * @returns uint8_t Total count of preferred peer rules.
          */
         uint8_t preferredSize() const { return m_preferred.size(); }
+        /**
+         * @brief Gets the count of permitted RIDs.
+         * @returns uint8_t Total count of permitted RID rules.
+         */
+        uint8_t permittedRIDsSize() const { return m_permittedRIDs.size(); }
 
         /**
          * @brief Return the YAML structure for this TalkgroupRuleConfig.
@@ -352,6 +367,15 @@ namespace lookups
                 }
             }
             node["preferred"] = preferredList;
+
+            yaml::Node permittedRIDList;
+            if (m_permittedRIDs.size() > 0U) {
+                for (auto rid : m_permittedRIDs) {
+                    yaml::Node& newRid = permittedRIDList.push_back();
+                    newRid = __INT_STR(rid);
+                }
+            }
+            node["rid_permitted"] = permittedRIDList;
         }
 
     public:
@@ -387,6 +411,11 @@ namespace lookups
          * @brief List of peer IDs preferred by this rule.
          */
         __PROPERTY_PLAIN(std::vector<uint32_t>, preferred);
+
+        /**
+         * @brief List of radios IDs permitted to transmit on the talkgroup.
+         */
+        __PROPERTY_PLAIN(std::vector<uint32_t>, permittedRIDs);
 
         /**
          * @brief Flag indicating whether or not the talkgroup is a non-preferred.
