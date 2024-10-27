@@ -1181,3 +1181,11 @@ Once enabled, Peer-Link allows for any secondary/slave CFNEs when peered back to
 (See Section 3.7)
 
 Once connected, a Peer-Linked CFNE will transparently pass peer list, peer status and activity logging messages back to the central/master CFNE. This allows for monitoring from a single source giving visualization into the entire linked network.
+
+== Appendix A. Grant Demands
+
+=== A.1 Description
+
+On DVM, for P25 a special network TDU exists called a "grant demand". The "grant demand" TDUs set a flag in the control bit of the P25 network header (bit $80) to flag that the TDU is meant to trigger a channel grant on a end-point.
+
+Because these grants are considered "network sourced" end-points should issue a grant locally and not repeat that grant to the network.
