@@ -25,6 +25,8 @@
 #include <cassert>
 #include <cstring>
 
+#include <fcntl.h>
+
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 #include <openssl/x509v3.h>
@@ -63,8 +65,84 @@ namespace network
                 ::memcpy(reinterpret_cast<char*>(&m_sockaddr), reinterpret_cast<char*>(&client), clientLen);
 
                 initSsl(sslCtx);
-                if (SSL_accept(m_pSSL) <= 0) {
-                    LogError(LOG_NET, "Cannot accept SSL client, %s err: %d", ERR_error_string(ERR_get_error(), NULL), errno);
+
+                // setup socket for non-blocking operations
+                int flags = fcntl(fd, F_GETFL, 0);
+                if (flags < 0) {
+                    LogError(LOG_NET, "failed fcntl(F_GETFL), err: %d", errno);
+                    throw std::runtime_error("Cannot accept SSL client");
+                }
+
+                if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) < 0) {
+                    LogError(LOG_NET, "failed fcntl(F_SETFL), err: %d", errno);
+                    throw std::runtime_error("Cannot accept SSL client");
+                }
+
+                int status = -1;
+                struct timeval tv, tvRestore;
+                tv.tv_sec = 2;
+                tv.tv_usec = 0;
+                tvRestore = tv;
+
+                fd_set writeFdSet;
+                fd_set readFdSet;
+
+                // begin application specific OpenSSL handshake polling
+                do {
+                    tv = tvRestore;
+                    FD_ZERO(&writeFdSet);
+                    FD_ZERO(&readFdSet);
+
+                    status = ::SSL_accept(m_pSSL);
+                    switch (::SSL_get_error(m_pSSL, status)) {
+                    case SSL_ERROR_NONE:
+                        status = 0;
+                        break;
+
+                    case SSL_ERROR_WANT_WRITE:
+                        FD_SET(fd, &writeFdSet);
+                        status = 1; // wait for more activity
+                        break;
+
+                    case SSL_ERROR_WANT_READ:
+                        FD_SET(fd, &readFdSet);
+                        status = 1; // wait for more activity
+                        break;
+
+                    case SSL_ERROR_ZERO_RETURN:
+                    case SSL_ERROR_SYSCALL:
+                        // the peer has notified us that it is shutting down via
+                        // the SSL "close_notify" message so we need to
+                        // shutdown, too.
+                        LogError(LOG_NET, "Cannot accept SSL client, connection closed during handshake, %s err: %d", ERR_error_string(ERR_get_error(), NULL), errno);
+                        throw std::runtime_error("Cannot accept SSL client");
+                    default:
+                        LogError(LOG_NET, "Cannot accept SSL client, unexpected error during handshake, %s err: %d", ERR_error_string(ERR_get_error(), NULL), errno);
+                        throw std::runtime_error("Cannot accept SSL client");
+                    }
+
+                    if (status == 1) {
+                        // must have at least one handle to wait for at this point.
+                        status = select(fd + 1, &readFdSet, &writeFdSet, NULL, &tv);
+                        if (status >= 1) {
+                            status = 1;
+                        }
+                        else {
+                            LogError(LOG_NET, "Cannot accept SSL client, timeout during handshake, %s err: %d", ERR_error_string(ERR_get_error(), NULL), errno);
+                            throw std::runtime_error("Cannot accept SSL client");
+                        }
+                    }
+                } while (status == 1 && !SSL_is_init_finished(m_pSSL));
+
+                // reset socket blocking operations
+                flags = fcntl(fd, F_GETFL, 0);
+                if (flags < 0) {
+                    LogError(LOG_NET, "failed fcntl(F_GETFL), err: %d", errno);
+                    throw std::runtime_error("Cannot accept SSL client");
+                }
+
+                if (fcntl(fd, F_SETFL, flags & (~O_NONBLOCK)) < 0) {
+                    LogError(LOG_NET, "failed fcntl(F_SETFL), err: %d", errno);
                     throw std::runtime_error("Cannot accept SSL client");
                 }
             }
