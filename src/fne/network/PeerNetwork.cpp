@@ -199,7 +199,14 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
                             ::memcpy(str, decompressed, decompressedLen);
                             str[decompressedLen] = 0; // null termination
 
-                            std::string filename = "/tmp/talkgroup_rules.yml";
+                            // randomize filename
+                            std::ostringstream s;
+                            std::random_device rd;
+                            std::mt19937 mt(rd());
+                            std::uniform_int_distribution<uint32_t> dist(0x00U, 0xFFFFFFFFU);
+                            s << "/tmp/talkgroup_rules.yml." << dist(mt);
+
+                            std::string filename = s.str();
                             std::ofstream file(filename, std::ofstream::out);
                             if (file.fail()) {
                                 LogError(LOG_NET, "Cannot open the talkgroup ID lookup file - %s", filename.c_str());
@@ -324,7 +331,14 @@ tid_lookup_cleanup:
                             ::memcpy(str, decompressed, decompressedLen);
                             str[decompressedLen] = 0; // null termination
 
-                            std::string filename = "/tmp/rid_acl.dat";
+                            // randomize filename
+                            std::ostringstream s;
+                            std::random_device rd;
+                            std::mt19937 mt(rd());
+                            std::uniform_int_distribution<uint32_t> dist(0x00U, 0xFFFFFFFFU);
+                            s << "/tmp/rid_acl.dat." << dist(mt);
+
+                            std::string filename = s.str();
                             std::ofstream file(filename, std::ofstream::out);
                             if (file.fail()) {
                                 LogError(LOG_NET, "Cannot open the radio ID lookup file - %s", filename.c_str());
@@ -449,7 +463,14 @@ rid_lookup_cleanup:
                             ::memcpy(str, decompressed, decompressedLen);
                             str[decompressedLen] = 0; // null termination
 
-                            std::string filename = "/tmp/peer_list.dat";
+                            // randomize filename
+                            std::ostringstream s;
+                            std::random_device rd;
+                            std::mt19937 mt(rd());
+                            std::uniform_int_distribution<uint32_t> dist(0x00U, 0xFFFFFFFFU);
+                            s << "/tmp/peer_list.dat." << dist(mt);
+
+                            std::string filename = s.str();
                             std::ofstream file(filename, std::ofstream::out);
                             if (file.fail()) {
                                 LogError(LOG_NET, "Cannot open the peer ID lookup file - %s", filename.c_str());
