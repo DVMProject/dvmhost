@@ -25,6 +25,7 @@
 
 #include <string>
 #include <cstdint>
+#include <mutex>
 
 namespace network
 {
@@ -57,6 +58,15 @@ namespace network
             bool duplex, bool debug, bool dmr, bool p25, bool nxdn, bool slot1, bool slot2, bool allowActivityTransfer, bool allowDiagnosticTransfer, bool updateLookup, bool saveLookup);
 
         /**
+         * @brief Helper to lock the peer status mutex.
+         */
+        void lockPeerStatus() { m_peerStatusMutex.lock(); }
+        /**
+         * @brief Helper to unlock the peer status mutex.
+         */
+        void unlockPeerStatus() { m_peerStatusMutex.unlock(); }
+
+        /**
          * @brief Map of peer status.
          */
         std::unordered_map<uint32_t, json::object> peerStatus;
@@ -78,6 +88,9 @@ namespace network
          * @returns bool True, if configuration was sent, otherwise false.
          */
         bool writeConfig() override;
+
+    private:
+        static std::mutex m_peerStatusMutex;
     };
 } // namespace network
 

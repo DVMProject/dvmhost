@@ -20,6 +20,12 @@ using namespace network;
 #include <cassert>
 
 // ---------------------------------------------------------------------------
+//  Static Class Members
+// ---------------------------------------------------------------------------
+
+std::mutex PeerNetwork::m_peerStatusMutex;
+
+// ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
@@ -89,6 +95,7 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
             }
 
             json::object obj = v.get<json::object>();
+            std::lock_guard<std::mutex> lock(m_peerStatusMutex);
             peerStatus[peerId] = obj;
         }
         break;

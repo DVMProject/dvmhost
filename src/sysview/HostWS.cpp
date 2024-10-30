@@ -188,7 +188,10 @@ int HostWS::run()
             if (peerStatusUpdate.isRunning() && peerStatusUpdate.hasExpired()) {
                 peerStatusUpdate.start();
 
+                getNetwork()->lockPeerStatus();
                 std::map<uint32_t, json::object> peerStatus(getNetwork()->peerStatus.begin(), getNetwork()->peerStatus.end());
+                getNetwork()->unlockPeerStatus();
+
                 for (auto entry : peerStatus) {
                     json::object wsObj = json::object();
                     std::string type = "peer_status";

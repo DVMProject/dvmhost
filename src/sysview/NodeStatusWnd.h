@@ -452,7 +452,10 @@ public:
     void update()
     {
         const auto& rootWidget = getRootWidget();
+        getNetwork()->lockPeerStatus();
         std::map<uint32_t, json::object> peerStatus(getNetwork()->peerStatus.begin(), getNetwork()->peerStatus.end());
+        getNetwork()->unlockPeerStatus();
+
         for (auto entry : peerStatus) {
             uint32_t peerId = entry.first;
             json::object peerObj = entry.second;
