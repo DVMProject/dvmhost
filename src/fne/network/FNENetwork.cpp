@@ -2396,7 +2396,7 @@ bool FNENetwork::writePeerNAK(uint32_t peerId, const char* tag, NET_CONN_NAK_REA
     __SET_UINT16B((uint16_t)reason, buffer, 10U);                               // Reason
 
     logPeerNAKReason(peerId, tag, reason);
-    LogWarning(LOG_NET, "PEER %u NAK %s, %s:%u", peerId, tag, udp::Socket::address(addr).c_str(), udp::Socket::port(addr));
+    LogWarning(LOG_NET, "PEER %u NAK %s -> %s:%u", peerId, tag, udp::Socket::address(addr).c_str(), udp::Socket::port(addr));
     return m_frameQueue->write(buffer, 12U, createStreamId(), peerId, m_peerId,
         { NET_FUNC::NAK, NET_SUBFUNC::NOP }, 0U, addr, addrLen);
 }
