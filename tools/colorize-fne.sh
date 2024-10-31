@@ -23,9 +23,12 @@
 #*   along with this program; if not, write to the Free Software
 #*   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #*/
-PID=`pgrep dvm-watchdog.sh`
-pgrep dvm-watchdog.sh >/dev/null
-if [ $? -eq 0 ]; then
-    kill -9 $PID
-fi
+LOG_COLOR="s#W:#\x1b[0m\x1b[1m\x1b[33m&#; s#E:#\x1b[0m\x1b[1m\x1b[31m&#; s#M:#\x1b[0m&#; s#I:#\x1b[0m&#; s#D:#\x1b[1m\x1b[34m&#; s#U:#\x1b[44m\x1b[1m\x1b[33m&#;"
 
+P25_COLOR="s#LDU#\x1b[36m&#; s#TDU#\x1b[0m\x1b[32m&#; s#HDU#\x1b[0m\x1b[32m&#; s#TSDU#\x1b[0m\x1b[35m&#"
+AFF_COLOR="s#Affiliations#\x1b[1m\x1b[36m&#;"
+
+RF_HIGHLIGHT="s#(RF)#\x1b[1m\x1b[34m&\x1b[0m#;"
+NET_HIGHLIGHT="s#(NET)#\x1b[1m\x1b[36m&\x1b[0m#;"
+
+sed "${LOG_COLOR}; ${RF_HIGHLIGHT}; ${NET_HIGHLIGHT}; ${P25_COLOR}; ${AFF_COLOR}"
