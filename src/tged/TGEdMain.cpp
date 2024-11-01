@@ -210,6 +210,7 @@ int main(int argc, char** argv)
 
     g_tidLookups = new TalkgroupRulesLookup(g_iniFile, 0U, false);
     g_tidLookups->read();
+    LogMessage(LOG_HOST, "Loaded talkgroup rules file: %s", g_iniFile.c_str());
 
     // show and start the application
     wnd.show();
