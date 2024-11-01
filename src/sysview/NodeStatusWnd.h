@@ -19,6 +19,8 @@
 #include "common/Thread.h"
 #include "SysViewMain.h"
 
+#include "FDblDialog.h"
+
 #include <final/final.h>
 using namespace finalcut;
 
@@ -769,13 +771,13 @@ private:
  * @brief This class implements the node status window.
  * @ingroup fneSysView
  */
-class HOST_SW_API NodeStatusWnd final : public finalcut::FDialog {
+class HOST_SW_API NodeStatusWnd final : public FDblDialog {
 public:
     /**
      * @brief Initializes a new instance of the NodeStatusWnd class.
      * @param widget 
      */
-    explicit NodeStatusWnd(FWidget* widget = nullptr) : FDialog{widget},
+    explicit NodeStatusWnd(FWidget* widget = nullptr) : FDblDialog{widget},
         m_killed(false),
         m_threadStopped(false)
     {

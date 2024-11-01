@@ -19,6 +19,7 @@
 #include "fne/network/RESTDefines.h"
 #include "remote/RESTClient.h"
 
+#include "FDblDialog.h"
 #include "SysViewMainWnd.h"
 
 #include <final/final.h>
@@ -39,13 +40,13 @@ using namespace finalcut;
  * @brief This class implements the peer list window.
  * @ingroup fneSysView
  */
-class HOST_SW_API PeerListWnd final : public finalcut::FDialog {
+class HOST_SW_API PeerListWnd final : public FDblDialog {
 public:
     /**
      * @brief Initializes a new instance of the PeerListWnd class.
      * @param widget 
      */
-    explicit PeerListWnd(FWidget* widget = nullptr) : FDialog{widget}
+    explicit PeerListWnd(FWidget* widget = nullptr) : FDblDialog{widget}
     {
         m_timerId = addTimer(25000); // starts the timer every 25 seconds
     }

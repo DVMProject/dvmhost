@@ -16,6 +16,7 @@
 
 #include "common/Log.h"
 
+#include "FDblDialog.h"
 #include "TGEdMainWnd.h"
 #include "TGEditWnd.h"
 
@@ -37,13 +38,13 @@ using namespace finalcut;
  * @brief This class implements the talkgroup list window.
  * @ingroup tged
  */
-class HOST_SW_API TGListWnd final : public finalcut::FDialog {
+class HOST_SW_API TGListWnd final : public FDblDialog {
 public:
     /**
      * @brief Initializes a new instance of the TGListWnd class.
      * @param widget 
      */
-    explicit TGListWnd(FWidget* widget = nullptr) : FDialog{widget}
+    explicit TGListWnd(FWidget* widget = nullptr) : FDblDialog{widget}
     {
         /* stub */
     }
@@ -282,6 +283,50 @@ private:
         LogMessage(LOG_HOST, "Deleting TG %s (%u)", m_selected.name().c_str(), m_selected.source().tgId());
         g_tidLookups->eraseEntry(m_selected.source().tgId(), m_selected.source().tgSlot());
         loadListView();
+    }
+
+    /**
+     * @brief 
+     */
+    void drawBorder() override
+    {
+        if (!hasBorder())
+            return;        
+
+        setColor();
+
+        FRect box{{1, 2}, getSize()};
+        box.scaleBy(0, -1);
+
+        FRect rect = box;
+        if (rect.x1_ref() > rect.x2_ref())
+            std::swap(rect.x1_ref(), rect.x2_ref());
+
+        if (rect.y1_ref() > rect.y2_ref())
+            std::swap(rect.y1_ref(), rect.y2_ref());
+
+        rect.x1_ref() = std::max(rect.x1_ref(), 1);
+        rect.y1_ref() = std::max(rect.y1_ref(), 1);
+        rect.x2_ref() = std::min(rect.x2_ref(), rect.x1_ref() + int(getWidth()) - 1);
+        rect.y2_ref() = std::min(rect.y2_ref(), rect.y1_ref() + int(getHeight()) - 1);
+
+        if (box.getWidth() < 3)
+            return;
+
+        // Use box-drawing characters to draw a border
+        constexpr std::array<wchar_t, 8> box_char
+        {{
+            static_cast<wchar_t>(0x2554),
+            static_cast<wchar_t>(0x2550),
+            static_cast<wchar_t>(0x2557),
+            static_cast<wchar_t>(0x2551),
+            static_cast<wchar_t>(0x2551),
+            static_cast<wchar_t>(0x255A),
+            static_cast<wchar_t>(0x2550),
+            static_cast<wchar_t>(0x255D)
+        }};
+
+        drawGenericBox(this, box, box_char);
     }
 
     /*

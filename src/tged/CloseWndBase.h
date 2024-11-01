@@ -16,6 +16,8 @@
 
 #include "common/Thread.h"
 
+#include "FDblDialog.h"
+
 #include <final/final.h>
 using namespace finalcut;
 
@@ -27,13 +29,13 @@ using namespace finalcut;
  * @brief This class implements the base class for windows with close buttons.
  * @ingroup tged
  */
-class HOST_SW_API CloseWndBase : public finalcut::FDialog {
+class HOST_SW_API CloseWndBase : public FDblDialog {
 public:
     /**
      * @brief Initializes a new instance of the CloseWndBase class.
      * @param widget 
      */
-    explicit CloseWndBase(FWidget* widget = nullptr) : FDialog{widget}
+    explicit CloseWndBase(FWidget* widget = nullptr) : FDblDialog{widget}
     {
         /* stub */
     }

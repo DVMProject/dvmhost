@@ -28,6 +28,8 @@
 #include "host/modem/Modem.h"
 #include "SysViewMain.h"
 
+#include "FDblDialog.h"
+
 #include <final/final.h>
 using namespace finalcut;
 
@@ -83,13 +85,13 @@ public:
  * @brief This class implements the base class for transmit windows.
  * @ingroup fneSysView
  */
-class HOST_SW_API TransmitWndBase : public finalcut::FDialog {
+class HOST_SW_API TransmitWndBase : public FDblDialog {
 public:
     /**
      * @brief Initializes a new instance of the TransmitWndBase class.
      * @param widget 
      */
-    explicit TransmitWndBase(FWidget* widget = nullptr) : FDialog{widget}
+    explicit TransmitWndBase(FWidget* widget = nullptr) : FDblDialog{widget}
     {
         /* stub */
     }
