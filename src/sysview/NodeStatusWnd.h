@@ -171,7 +171,15 @@ public:
                     m_tbText = std::string("ENH. VOICE/CONV");
                 }
                 else {
-                    m_tbText = std::string("VOICE/CONV");
+                    if (peerStatus["vControl"].is<bool>()) {
+                        bool vControl = peerStatus["vControl"].getDefault<bool>(false);
+                        if (vControl) 
+                            m_tbText = std::string("CC-VC");
+                        else
+                            m_tbText = std::string("VOICE/CONV");
+                    } else {
+                        m_tbText = std::string("VOICE/CONV");
+                    }
                 }
 
                 // are we transmitting?
@@ -531,6 +539,9 @@ public:
 
                         vcObj["state"].set<uint8_t>(state);
 
+                        bool _true = true;
+                        vcObj["vControl"].set<bool>(_true);
+
                         bool _false = false;
                         vcObj["dmrTSCCEnable"].set<bool>(_false);
                         vcObj["dmrCC"].set<bool>(_false);
@@ -612,6 +623,9 @@ public:
                             }
 
                             vcObj["state"].set<uint8_t>(state);
+
+                            bool _true = true;
+                            vcObj["vControl"].set<bool>(_true);
 
                             bool _false = false;
                             vcObj["dmrTSCCEnable"].set<bool>(_false);
