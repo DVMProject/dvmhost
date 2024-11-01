@@ -441,6 +441,80 @@ if (NOT TARGET tarball)
 endif (NOT TARGET tarball)
 
 #
+# Custom make target to perform a tarball packaging. This will ultimately contain the same type of pathing
+# the non-standard legacy install to "/opt/dvm" does.
+# 
+if (NOT TARGET tarball_notools)
+    set(CMAKE_INSTALL_PREFIX_TARBALL "tar_build")
+    if (ENABLE_TUI_SUPPORT AND (NOT DISABLE_TUI_APPS))
+        add_custom_target(tarball_notools
+            COMMAND rm -rf ${CMAKE_INSTALL_PREFIX_TARBALL}
+            COMMAND mkdir -p ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
+            COMMAND mkdir -p ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/log
+            COMMAND touch ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/log/INCLUDE_DIRECTORY
+            COMMAND cp -v dvmhost ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
+            COMMAND cp -v dvmcmd ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
+            COMMAND cp -v dvmmon ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
+            COMMAND cp -v sysview ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
+            COMMAND cp -v tged ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
+            COMMAND cp -v dvmfne ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
+            COMMAND cp -v dvmbridge ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
+            COMMAND cp -v ../configs/*.yml ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
+            COMMAND mkdir -p ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/schema
+            COMMAND cp -v ../configs/schema/*.json ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/schema
+            COMMAND cp -v ../configs/*.dat ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
+            COMMAND mkdir -p ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw
+            COMMAND if [ -e dvm-firmware_f4.elf ]\; then cp -v dvm-firmware_f4.elf ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+            COMMAND if [ -e dvm-firmware_f4.bin ]\; then cp -v dvm-firmware_f4.bin ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+            COMMAND if [ -e dvm-firmware_f4-pog.elf ]\; then cp -v dvm-firmware_f4-pog.elf ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+            COMMAND if [ -e dvm-firmware_f4-pog.bin ]\; then cp -v dvm-firmware_f4-pog.bin ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+            COMMAND if [ -e dvm-firmware_eda.elf ]\; then cp -v dvm-firmware_eda.elf ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+            COMMAND if [ -e dvm-firmware_eda.bin ]\; then cp -v dvm-firmware_eda.bin ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+            COMMAND if [ -e dvm-firmware_f4-dvmv1.elf ]\; then cp -v dvm-firmware_f4-dvmv1.elf ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+            COMMAND if [ -e dvm-firmware_f4-dvmv1.bin ]\; then cp -v dvm-firmware_f4-dvmv1.bin ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+            COMMAND if [ -e dvm-firmware_due.elf ]\; then cp -v dvm-firmware_due.elf ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+            COMMAND if [ -e dvm-firmware_due.bin ]\; then cp -v dvm-firmware_due.bin ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+            COMMAND if [ -e dvm-firmware-hs_f1.elf ]\; then cp -v dvm-firmware-hs_f1.elf ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+            COMMAND if [ -e dvm-firmware-hs_f1.bin ]\; then cp -v dvm-firmware-hs_f1.bin ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+            COMMAND if [ -e DVM-V24-stm32f103.elf ]\; then cp -v DVM-V24-stm32f103.elf ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+            COMMAND if [ -e DVM-V24-stm32f103.bin ]\; then cp -v DVM-V24-stm32f103.bin ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+            COMMAND cd ${CMAKE_INSTALL_PREFIX_TARBALL} && tar czvf ../dvmhost_${CPACK_DEBIAN_PACKAGE_VERSION}_${ARCH}.tar.gz *
+            COMMAND rm -rf ${CMAKE_INSTALL_PREFIX_TARBALL})
+    else()
+        add_custom_target(tarball_notools
+            COMMAND rm -rf ${CMAKE_INSTALL_PREFIX_TARBALL}
+            COMMAND mkdir -p ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
+            COMMAND mkdir -p ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/log
+            COMMAND touch ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/log/INCLUDE_DIRECTORY
+            COMMAND cp -v dvmhost ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
+            COMMAND cp -v dvmcmd ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
+            COMMAND cp -v dvmfne ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
+            COMMAND cp -v dvmbridge ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
+            COMMAND cp -v ../configs/*.yml ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
+            COMMAND mkdir -p ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/schema
+            COMMAND cp -v ../configs/schema/*.json ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/schema
+            COMMAND cp -v ../configs/*.dat ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
+            COMMAND mkdir -p ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw
+            COMMAND if [ -e dvm-firmware_f4.elf ]\; then cp -v dvm-firmware_f4.elf ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+            COMMAND if [ -e dvm-firmware_f4.bin ]\; then cp -v dvm-firmware_f4.bin ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+            COMMAND if [ -e dvm-firmware_f4-pog.elf ]\; then cp -v dvm-firmware_f4-pog.elf ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+            COMMAND if [ -e dvm-firmware_f4-pog.bin ]\; then cp -v dvm-firmware_f4-pog.bin ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+            COMMAND if [ -e dvm-firmware_eda.elf ]\; then cp -v dvm-firmware_eda.elf ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+            COMMAND if [ -e dvm-firmware_eda.bin ]\; then cp -v dvm-firmware_eda.bin ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+            COMMAND if [ -e dvm-firmware_f4-dvmv1.elf ]\; then cp -v dvm-firmware_f4-dvmv1.elf ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+            COMMAND if [ -e dvm-firmware_f4-dvmv1.bin ]\; then cp -v dvm-firmware_f4-dvmv1.bin ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+            COMMAND if [ -e dvm-firmware_due.elf ]\; then cp -v dvm-firmware_due.elf ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+            COMMAND if [ -e dvm-firmware_due.bin ]\; then cp -v dvm-firmware_due.bin ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+            COMMAND if [ -e dvm-firmware-hs_f1.elf ]\; then cp -v dvm-firmware-hs_f1.elf ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+            COMMAND if [ -e dvm-firmware-hs_f1.bin ]\; then cp -v dvm-firmware-hs_f1.bin ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+            COMMAND if [ -e DVM-V24-stm32f103.elf ]\; then cp -v DVM-V24-stm32f103.elf ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+            COMMAND if [ -e DVM-V24-stm32f103.bin ]\; then cp -v DVM-V24-stm32f103.bin ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+            COMMAND cd ${CMAKE_INSTALL_PREFIX_TARBALL} && tar czvf ../dvmhost_${CPACK_DEBIAN_PACKAGE_VERSION}_${ARCH}.tar.gz *
+            COMMAND rm -rf ${CMAKE_INSTALL_PREFIX_TARBALL})
+    endif (ENABLE_TUI_SUPPORT AND (NOT DISABLE_TUI_APPS))
+endif (NOT TARGET tarball_notools)
+
+#
 # Custom make target to perform non-standard legacy install to "/opt/dvm". This is meant
 # to retain backward compatibility with deployment scripts and other tools that work with "/opt/dvm"
 # instead of system paths.
