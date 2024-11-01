@@ -283,8 +283,6 @@ private:
         if (FVTerm::getFOutput()->getMaxColor() < 16)
             setBold();
 
-        const auto& wc = getColorTheme();
-
         if (!m_tx) {
             if (m_failed) {
                 setColor(FColor::Black, FColor::LightRed);
@@ -731,8 +729,6 @@ private:
     void updateNode(NodeStatusWidget* wdgt, uint32_t peerId, json::object peerObj, int32_t uniqueId = -1)
     {
         assert(wdgt != nullptr);
-
-        const auto& rootWidget = getRootWidget();
 
         uint8_t channelId = peerObj["channelId"].get<uint8_t>();
         uint32_t channelNo = peerObj["channelNo"].get<uint32_t>();

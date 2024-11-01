@@ -169,7 +169,7 @@ private:
                 redraw();
             });
             m_subscriber.addCallback("changed", [&]() { 
-                if (m_subscriber.getText().c_str() == "") {
+                if (m_subscriber.getText().getLength() == 0U) {
                     m_srcId = 1U;
                     return;
                 }
