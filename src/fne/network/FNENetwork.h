@@ -475,7 +475,7 @@ namespace network
         influxdb::ServerInfo m_influxServer;
 
         bool m_disablePacketData;
-        bool m_dumpDataPacket;
+        bool m_dumpPacketData;
 
         bool m_reportPeerPing;
         bool m_verbose;

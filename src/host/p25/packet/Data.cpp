@@ -381,7 +381,7 @@ bool Data::process(uint8_t* data, uint32_t len)
                                         LogMessage(LOG_RF, P25_PDU_STR ", ISP, response, OSP ACK RETRY, llId = %u, exceeded retries, undeliverable",
                                             m_rfDataHeader.getLLId());
 
-                                        writeRF_PDU_Ack_Response(PDUAckClass::NACK, PDUAckType::NACK_UNDELIVERABLE, m_rfDataHeader.getNs(), m_rfDataHeader.getLLId());
+                                        writeRF_PDU_Ack_Response(PDUAckClass::NACK, PDUAckType::NACK_UNDELIVERABLE, m_rfDataHeader.getNs(), m_rfDataHeader.getLLId(), m_rfDataHeader.getSrcLLId());
                                     }
                                 }
                             }
@@ -390,11 +390,8 @@ bool Data::process(uint8_t* data, uint32_t len)
 
                     // only repeat the PDU locally if the packet isn't for the FNE
                     if (m_repeatPDU && m_rfDataHeader.getLLId() != WUID_FNE) {
-                        if (m_verbose) {
-                            LogMessage(LOG_RF, P25_PDU_STR ", repeating ACK PDU, llId = %u, srcLlId = %u", m_rfDataHeader.getLLId(), m_rfDataHeader.getSrcLLId());
-                        }
-
-                        writeRF_PDU_Buffered(); // re-generate buffered PDU and send it on
+                        writeRF_PDU_Ack_Response(m_rfDataHeader.getResponseClass(), m_rfDataHeader.getResponseType(), m_rfDataHeader.getResponseStatus(),
+                            m_rfDataHeader.getLLId(), m_rfDataHeader.getSrcLLId());
                     }
                 }
                 else {
@@ -497,9 +494,6 @@ bool Data::process(uint8_t* data, uint32_t len)
 
 bool Data::processNetwork(uint8_t* data, uint32_t len, uint32_t blockLength)
 {
-    if (m_p25->m_rfState != RS_RF_LISTENING && m_p25->m_netState == RS_NET_IDLE)
-        return false;
-
     if (m_p25->m_netState != RS_NET_DATA) {
         m_netDataHeader.reset();
         m_netDataOffset = 0U;
@@ -601,13 +595,8 @@ bool Data::processNetwork(uint8_t* data, uint32_t len, uint32_t blockLength)
                 }
             }
 
-            if (m_repeatPDU) {
-                if (m_verbose) {
-                    LogMessage(LOG_NET, P25_PDU_STR ", repeating ACK PDU, llId = %u, srcLlId = %u", m_netDataHeader.getLLId(), m_netDataHeader.getSrcLLId());
-                }
-
-                writeNet_PDU_Buffered(); // re-generate buffered PDU and send it on
-            }
+            writeRF_PDU_Ack_Response(m_netDataHeader.getResponseClass(), m_netDataHeader.getResponseType(), m_netDataHeader.getResponseStatus(),
+                m_netDataHeader.getLLId(), m_netDataHeader.getSrcLLId());
 
             m_netDataHeader.reset();
             m_netExtendedAddress = false;
@@ -1439,7 +1428,7 @@ void Data::writeRF_PDU(const uint8_t* pdu, uint32_t bitLength, bool noNulls, boo
 
     // Add status bits
     P25Utils::addStatusBits(data + 2U, newBitLength, false);
-    P25Utils::addIdleStatusBits(data + 2U, newBitLength);
+    P25Utils::addTrunkSlotStatusBits(data + 2U, newBitLength);
 
     // Set first busy bits to 1,1
     P25Utils::setStatusBits(data + 2U, P25_SS0_START, true, true);
@@ -1697,13 +1686,11 @@ void Data::writeRF_PDU_Ack_Response(uint8_t ackClass, uint8_t ackType, uint8_t a
     rspHeader.setResponseType(ackType);
     rspHeader.setResponseStatus(ackStatus);
     rspHeader.setLLId(llId);
-    if (m_rfDataHeader.getSAP() == PDUSAP::EXT_ADDR) {
+    if (srcLlId > 0U) {
         rspHeader.setSrcLLId(srcLlId);
-        rspHeader.setFullMessage(false);
     }
-    else {
-        rspHeader.setFullMessage(true);
-    }
+    rspHeader.setFullMessage(true);
+
     rspHeader.setBlocksToFollow(0U);
 
     // Generate the PDU header and 1/2 rate Trellis
@@ -1711,8 +1698,8 @@ void Data::writeRF_PDU_Ack_Response(uint8_t ackClass, uint8_t ackType, uint8_t a
     Utils::setBitRange(block, data, offset, P25_PDU_FEC_LENGTH_BITS);
 
     if (m_verbose) {
-        LogMessage(LOG_RF, P25_PDU_STR ", OSP, response, ackClass = $%02X, ackType = $%02X, llId = %u, srcLLId = %u",
-            rspHeader.getResponseClass(), rspHeader.getResponseType(), rspHeader.getLLId(), rspHeader.getSrcLLId());
+        LogMessage(LOG_RF, P25_PDU_STR ", OSP, response, rspClass = $%02X, rspType = $%02X, rspStatus = $%02X, llId = %u, srcLLId = %u",
+            rspHeader.getResponseClass(), rspHeader.getResponseType(), rspHeader.getResponseStatus(), rspHeader.getLLId(), rspHeader.getSrcLLId());
     }
 
     writeRF_PDU(data, bitLength, noNulls);

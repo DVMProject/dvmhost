@@ -90,17 +90,20 @@ namespace network
                  */
                 class VTUNDataFrame {
                 public:
-                    uint32_t srcHWAddr;
-                    uint32_t srcProtoAddr;
-                    uint32_t tgtHWAddr;
-                    uint32_t tgtProtoAddr;
+                    uint32_t srcHWAddr;         //! Source Hardware Address
+                    uint32_t srcProtoAddr;      //! Source Protocol Address
+                    uint32_t tgtHWAddr;         //! Target Hardware Address
+                    uint32_t tgtProtoAddr;      //! Target Protocol Address
 
-                    uint8_t* buffer;
-                    uint32_t bufferLen;
+                    uint8_t* buffer;            //! Raw data buffer
+                    uint32_t bufferLen;         //! Length of raw data buffer
                     
-                    uint16_t pktLen;
+                    uint16_t pktLen;            //! Packet Length
+                    uint8_t proto;              //! Packet Protocol
+
+                    uint64_t timestamp;         //! Timestamp in milliseconds
                 };
-                std::deque<VTUNDataFrame> m_dataFrames;
+                std::deque<VTUNDataFrame*> m_dataFrames;
 
                 /**
                  * @brief Represents the receive status of a call.
@@ -161,12 +164,15 @@ namespace network
                 typedef std::pair<const uint32_t, RxStatus*> StatusMapPair;
                 std::unordered_map<uint32_t, RxStatus*> m_status;
 
+                typedef std::pair<const uint32_t, uint32_t> ArpTablePair;
                 std::unordered_map<uint32_t, uint32_t> m_arpTable;
-                std::unordered_map<uint32_t, bool> m_readyForPkt;
-                std::unordered_map<uint32_t, Timer> m_suNotReadyTimeout;
+                typedef std::pair<const uint32_t, bool> ReadyForNextPktPair;
+                std::unordered_map<uint32_t, bool> m_readyForNextPkt;
                 std::unordered_map<uint32_t, uint8_t> m_suSendSeq;
 
                 bool m_debug;
+
+                static std::timed_mutex m_vtunMutex;
 
                 /**
                  * @brief Helper to dispatch PDU user data.

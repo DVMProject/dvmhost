@@ -206,6 +206,8 @@ int HostFNE::run()
 #if !defined(_WIN32)
     if (!Thread::runAsThread(this, threadVirtualNetworking))
         return EXIT_FAILURE;
+    if (!Thread::runAsThread(this, threadVirtualNetworkingClock))
+        return EXIT_FAILURE;
 #endif // !defined(_WIN32)
     /*
     ** Main execution loop
@@ -836,7 +838,71 @@ void* HostFNE::threadVirtualNetworking(void* arg)
     if (th != nullptr) {
         ::pthread_detach(th->thread);
 
-        std::string threadName("fne:vtun-loop");
+        std::string threadName("fne:vtun-net-rx");
+        HostFNE* fne = static_cast<HostFNE*>(th->obj);
+        if (fne == nullptr) {
+            g_killed = true;
+            LogDebug(LOG_HOST, "[FAIL] %s", threadName.c_str());
+        }
+
+        if (g_killed) {
+            delete th;
+            return nullptr;
+        }
+
+        if (!fne->m_vtunEnabled) {
+            delete th;
+            return nullptr;
+        }
+
+        LogDebug(LOG_HOST, "[ OK ] %s", threadName.c_str());
+#ifdef _GNU_SOURCE
+        ::pthread_setname_np(th->thread, threadName.c_str());
+#endif // _GNU_SOURCE
+
+        if (fne->m_tun != nullptr) {
+            StopWatch stopWatch;
+            stopWatch.start();
+
+            while (!g_killed) {
+                stopWatch.start();
+
+                uint8_t packet[DEFAULT_MTU_SIZE];
+                ::memset(packet, 0x00U, DEFAULT_MTU_SIZE);
+
+                ssize_t len = fne->m_tun->read(packet);
+                if (len > 0) {
+                    switch (fne->m_packetDataMode) {
+                    case PacketDataMode::DMR:
+                        // TODO: not supported yet
+                        break;
+
+                    case PacketDataMode::PROJECT25:
+                        fne->m_network->p25TrafficHandler()->packetData()->processPacketFrame(packet, DEFAULT_MTU_SIZE);
+                        break;
+                    }
+                }
+
+                Thread::sleep(2U);
+            }
+        }
+
+        LogDebug(LOG_HOST, "[STOP] %s", threadName.c_str());
+        delete th;
+    }
+
+    return nullptr;
+}
+
+/* Entry point to virtual networking clocking thread. */
+
+void* HostFNE::threadVirtualNetworkingClock(void* arg)
+{
+    thread_t* th = (thread_t*)arg;
+    if (th != nullptr) {
+        ::pthread_detach(th->thread);
+
+        std::string threadName("fne:vtun-clock");
         HostFNE* fne = static_cast<HostFNE*>(th->obj);
         if (fne == nullptr) {
             g_killed = true;
@@ -866,22 +932,6 @@ void* HostFNE::threadVirtualNetworking(void* arg)
                 uint32_t ms = stopWatch.elapsed();
                 stopWatch.start();
 
-                uint8_t packet[DEFAULT_MTU_SIZE];
-                ::memset(packet, 0x00U, DEFAULT_MTU_SIZE);
-
-                ssize_t len = fne->m_tun->read(packet);
-                if (len > 0) {
-                    switch (fne->m_packetDataMode) {
-                    case PacketDataMode::DMR:
-                        // TODO: not supported yet
-                        break;
-
-                    case PacketDataMode::PROJECT25:
-                        fne->m_network->p25TrafficHandler()->packetData()->processPacketFrame(packet, DEFAULT_MTU_SIZE);
-                        break;
-                    }
-                }
-
                 // clock traffic handler
                 switch (fne->m_packetDataMode) {
                 case PacketDataMode::DMR:
@@ -893,7 +943,7 @@ void* HostFNE::threadVirtualNetworking(void* arg)
                     break;
                 }
 
-                Thread::sleep(5U);
+                Thread::sleep(2U);
             }
         }
 

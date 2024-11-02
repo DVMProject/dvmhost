@@ -952,5 +952,39 @@ void TagDMRData::write_CSBK(uint32_t peerId, uint8_t slot, lc::CSBK* csbk)
         return;
     }
 
-    m_network->writePeer(peerId, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR }, message.get(), messageLength, RTP_END_OF_CALL_SEQ, streamId, false, true);
+    if (peerId > 0U) {
+        m_network->writePeer(peerId, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR }, message.get(), messageLength, RTP_END_OF_CALL_SEQ, streamId, false, true);
+    } else {
+        // repeat traffic to the connected peers
+        if (m_network->m_peers.size() > 0U) {
+            uint32_t i = 0U;
+            for (auto peer : m_network->m_peers) {
+                // every 5 peers flush the queue
+                if (i % 5U == 0U) {
+                    m_network->m_frameQueue->flushQueue();
+                }
+
+                m_network->writePeer(peer.first, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR }, message.get(), messageLength, RTP_END_OF_CALL_SEQ, streamId, true);
+                if (m_network->m_debug) {
+                    LogDebug(LOG_NET, "DMR, peer = %u, slotNo = %u, len = %u, stream = %u", 
+                        peer.first, slot, messageLength, streamId);
+                }
+                i++;
+            }
+            m_network->m_frameQueue->flushQueue();
+        }
+
+        // repeat traffic to external peers
+        if (m_network->m_host->m_peerNetworks.size() > 0U) {
+            for (auto peer : m_network->m_host->m_peerNetworks) {
+                uint32_t dstPeerId = peer.second->getPeerId();
+
+                peer.second->writeMaster({ NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR }, message.get(), messageLength, RTP_END_OF_CALL_SEQ, streamId);
+                if (m_network->m_debug) {
+                    LogDebug(LOG_NET, "DMR, peer = %u, slotNo = %u, len = %u, stream = %u", 
+                        dstPeerId, slot, messageLength, streamId);
+                }
+            }
+        }
+    }
 }
