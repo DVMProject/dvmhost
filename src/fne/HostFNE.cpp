@@ -604,7 +604,7 @@ void* HostFNE::threadMasterNetwork(void* arg)
         ::pthread_detach(th->thread);
 #endif // defined(_WIN32)
 
-        std::string threadName("fne:network-loop");
+        std::string threadName("fne:net");
         HostFNE* fne = static_cast<HostFNE*>(th->obj);
         if (fne == nullptr) {
             g_killed = true;
@@ -647,7 +647,7 @@ void* HostFNE::threadDiagNetwork(void* arg)
         ::pthread_detach(th->thread);
 #endif // defined(_WIN32)
 
-        std::string threadName("fne:diag-network-loop");
+        std::string threadName("fne:diag-net");
         HostFNE* fne = static_cast<HostFNE*>(th->obj);
         if (fne == nullptr) {
             g_killed = true;
@@ -838,7 +838,7 @@ void* HostFNE::threadVirtualNetworking(void* arg)
     if (th != nullptr) {
         ::pthread_detach(th->thread);
 
-        std::string threadName("fne:vtun-net-rx");
+        std::string threadName("fne:vt-net-rx");
         HostFNE* fne = static_cast<HostFNE*>(th->obj);
         if (fne == nullptr) {
             g_killed = true;
@@ -902,7 +902,7 @@ void* HostFNE::threadVirtualNetworkingClock(void* arg)
     if (th != nullptr) {
         ::pthread_detach(th->thread);
 
-        std::string threadName("fne:vtun-clock");
+        std::string threadName("fne:vt-clock");
         HostFNE* fne = static_cast<HostFNE*>(th->obj);
         if (fne == nullptr) {
             g_killed = true;
