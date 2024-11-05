@@ -110,6 +110,7 @@ public:
                 m_listView.clear();
                 
                 json::array fnePeers = rsp["peers"].get<json::array>();
+                uint32_t cnt = 0U;
                 for (auto entry : fnePeers) {
                     json::object peerObj = entry.get<json::object>();
                     uint32_t peerId = peerObj["peerId"].getDefault<uint32_t>(0U);
@@ -214,7 +215,13 @@ public:
 
                     const finalcut::FStringList line(columns.cbegin(), columns.cend());
                     m_listView.insert(line);
+
+                    cnt++;
                 }
+
+                std::ostringstream wndTitle;
+                wndTitle << "Peers View" << " [" << cnt << "] (10s)";
+                FDialog::setText(wndTitle.str());
             }
             catch (std::exception& e) {
                 ::LogWarning(LOG_HOST, "[AFFVIEW] %s:%u, failed to properly handle peer query request, %s", fneRESTAddress.c_str(), fneRESTPort, e.what());

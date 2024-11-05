@@ -110,6 +110,7 @@ public:
                 m_listView.clear();
 
                 json::array fneAffils = rsp["affiliations"].get<json::array>();
+                uint32_t cnt = 0U;
                 for (auto entry : fneAffils) {
                     json::object peerAffils = entry.get<json::object>();
                     uint32_t peerId = peerAffils["peerId"].getDefault<uint32_t>(0U);
@@ -140,8 +141,14 @@ public:
 
                         const finalcut::FStringList line(columns.cbegin(), columns.cend());
                         m_listView.insert(line);
+
+                        cnt++;
                     }
                 }
+
+                std::ostringstream wndTitle;
+                wndTitle << "Affiliations View" << " [" << cnt << "] (10s)";
+                FDialog::setText(wndTitle.str());
             }
             catch (std::exception& e) {
                 ::LogWarning(LOG_HOST, "[AFFVIEW] %s:%u, failed to properly handle affiliation request, %s", fneRESTAddress.c_str(), fneRESTPort, e.what());
