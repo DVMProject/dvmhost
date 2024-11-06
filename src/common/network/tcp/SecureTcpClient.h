@@ -80,7 +80,7 @@ namespace network
 
                 int status = -1;
                 struct timeval tv, tvRestore;
-                tv.tv_sec = 2;
+                tv.tv_sec = 5;
                 tv.tv_usec = 0;
                 tvRestore = tv;
 
