@@ -58,6 +58,11 @@ namespace network
             bool duplex, bool debug, bool dmr, bool p25, bool nxdn, bool slot1, bool slot2, bool allowActivityTransfer, bool allowDiagnosticTransfer, bool updateLookup, bool saveLookup);
 
         /**
+         * @brief Flag indicating whether or not SysView has received Peer-Link data transfers.
+         */
+        bool hasPeerLink() const { return m_peerLink; }
+
+        /**
          * @brief Helper to lock the peer status mutex.
          */
         void lockPeerStatus() { m_peerStatusMutex.lock(); }
@@ -91,6 +96,17 @@ namespace network
 
     private:
         static std::mutex m_peerStatusMutex;
+        bool m_peerLink;
+
+        uint32_t m_tgidCompressedSize;
+        uint32_t m_tgidSize;
+
+        uint8_t* m_tgidBuffer;
+
+        uint32_t m_ridCompressedSize;
+        uint32_t m_ridSize;
+
+        uint8_t* m_ridBuffer;
     };
 } // namespace network
 

@@ -231,7 +231,7 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
                         }
                     }
 
-tid_lookup_cleanup:
+                tid_lookup_cleanup:
                     m_tgidSize = 0U;
                     m_tgidCompressedSize = 0U;
                     if (m_tgidBuffer != nullptr)
@@ -363,7 +363,7 @@ tid_lookup_cleanup:
                         }
                     }
 
-rid_lookup_cleanup:
+                rid_lookup_cleanup:
                     m_ridSize = 0U;
                     m_ridCompressedSize = 0U;
                     if (m_ridBuffer != nullptr)
@@ -495,7 +495,7 @@ rid_lookup_cleanup:
                         }
                     }
 
-pid_lookup_cleanup:
+                pid_lookup_cleanup:
                     m_pidSize = 0U;
                     m_pidCompressedSize = 0U;
                     if (m_pidBuffer != nullptr)
