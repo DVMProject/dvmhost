@@ -20,6 +20,8 @@
 #include "remote/RESTClient.h"
 #include "MonitorMain.h"
 
+#include "FDblDialog.h"
+
 #include <final/final.h>
 using namespace finalcut;
 
@@ -31,14 +33,14 @@ using namespace finalcut;
  * @brief This class implements the base class for transmit windows.
  * @ingroup monitor
  */
-class HOST_SW_API TransmitWndBase : public finalcut::FDialog {
+class HOST_SW_API TransmitWndBase : public FDblDialog {
 public:
     /**
      * @brief Initializes a new instance of the TransmitWndBase class.
      * @param channel Channel data.
      * @param widget 
      */
-    explicit TransmitWndBase(lookups::VoiceChData channel, FWidget* widget = nullptr) : FDialog{widget},
+    explicit TransmitWndBase(lookups::VoiceChData channel, FWidget* widget = nullptr) : FDblDialog{widget},
         m_selectedCh(channel)
     {
         /* stub */

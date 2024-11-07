@@ -19,6 +19,7 @@
 #include "fne/network/RESTDefines.h"
 #include "remote/RESTClient.h"
 
+#include "FDblDialog.h"
 #include "SysViewMainWnd.h"
 
 #include <final/final.h>
@@ -39,13 +40,13 @@ using namespace finalcut;
  * @brief This class implements the affiliations list window.
  * @ingroup fneSysView
  */
-class HOST_SW_API AffListWnd final : public finalcut::FDialog {
+class HOST_SW_API AffListWnd final : public FDblDialog {
 public:
     /**
      * @brief Initializes a new instance of the AffListWnd class.
      * @param widget 
      */
-    explicit AffListWnd(FWidget* widget = nullptr) : FDialog{widget}
+    explicit AffListWnd(FWidget* widget = nullptr) : FDblDialog{widget}
     {
         m_timerId = addTimer(10000); // starts the timer every 10 seconds
     }
@@ -109,6 +110,7 @@ public:
                 m_listView.clear();
 
                 json::array fneAffils = rsp["affiliations"].get<json::array>();
+                uint32_t cnt = 0U;
                 for (auto entry : fneAffils) {
                     json::object peerAffils = entry.get<json::object>();
                     uint32_t peerId = peerAffils["peerId"].getDefault<uint32_t>(0U);
@@ -139,8 +141,14 @@ public:
 
                         const finalcut::FStringList line(columns.cbegin(), columns.cend());
                         m_listView.insert(line);
+
+                        cnt++;
                     }
                 }
+
+                std::ostringstream wndTitle;
+                wndTitle << "Affiliations View" << " [" << cnt << "] (10s)";
+                FDialog::setText(wndTitle.str());
             }
             catch (std::exception& e) {
                 ::LogWarning(LOG_HOST, "[AFFVIEW] %s:%u, failed to properly handle affiliation request, %s", fneRESTAddress.c_str(), fneRESTPort, e.what());

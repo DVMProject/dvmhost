@@ -5,8 +5,6 @@
 #* GPLv2 Open Source. Use is subject to license terms.
 #* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 #*
-#* @package DVM / Host Software
-#*
 #*/
 #/*
 #*   Copyright (C) 2022 by Bryan Biedenkapp N2PLL

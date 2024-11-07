@@ -1419,12 +1419,6 @@ void RESTAPI::restAPI_PutDMRRID(const HTTPPayload& request, HTTPPayload& reply, 
         return;
     }
 
-    // validate peer ID is a integer within the JSON blob
-    if (!req["peerId"].is<uint32_t>()) {
-        errorPayload(reply, "peer ID was not valid");
-        return;
-    }
-
     // validate destination ID is a integer within the JSON blob
     if (!req["dstId"].is<uint32_t>()) {
         errorPayload(reply, "destination ID was not valid");
@@ -1437,14 +1431,9 @@ void RESTAPI::restAPI_PutDMRRID(const HTTPPayload& request, HTTPPayload& reply, 
         return;
     }
 
-    uint32_t peerId = req["peerId"].get<uint32_t>();     
+    uint32_t peerId = req["peerId"].getDefault<uint32_t>(0U);
     uint32_t dstId = req["dstId"].get<uint32_t>();
     uint8_t slot = req["slot"].get<uint8_t>();
-
-    if (peerId == 0U) {
-        errorPayload(reply, "peer ID was not valid");
-        return;
-    }
 
     if (dstId == 0U) {
         errorPayload(reply, "destination ID was not valid");
@@ -1500,25 +1489,14 @@ void RESTAPI::restAPI_PutP25RID(const HTTPPayload& request, HTTPPayload& reply, 
         return;
     }
 
-    // validate peer ID is a integer within the JSON blob
-    if (!req["peerId"].is<uint32_t>()) {
-        errorPayload(reply, "peer ID was not valid");
-        return;
-    }
-
     // validate destination ID is a integer within the JSON blob
     if (!req["dstId"].is<uint32_t>()) {
         errorPayload(reply, "destination ID was not valid");
         return;
     }
 
-    uint32_t peerId = req["peerId"].get<uint32_t>();     
+    uint32_t peerId = req["peerId"].getDefault<uint32_t>(0U);
     uint32_t dstId = req["dstId"].get<uint32_t>();
-
-    if (peerId == 0U) {
-        errorPayload(reply, "peer ID was not valid");
-        return;
-    }
 
     if (dstId == 0U) {
         errorPayload(reply, "destination ID was not valid");

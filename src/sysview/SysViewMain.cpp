@@ -153,6 +153,9 @@ std::string resolveRID(uint32_t id)
         return std::string("SYS/FNE");
     case P25DEF::WUID_ALL:
         return std::string("ALL CALL");
+
+    case 0:
+        return std::string("EXTERNAL/PATCH");
     }
 
     auto entry = g_ridLookup->find(id);

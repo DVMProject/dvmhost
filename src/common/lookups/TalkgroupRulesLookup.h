@@ -634,9 +634,9 @@ namespace lookups
         yaml::Node m_rules;
 
         bool m_acl;
+        bool m_stop;
 
         static std::mutex m_mutex;
-        bool m_stop;
 
         /**
          * @brief Loads the table from the passed lookup table file.

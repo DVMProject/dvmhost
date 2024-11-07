@@ -191,12 +191,19 @@ namespace network
 
                     // set SO_REUSEADDR option
                     const int sockOptVal = 1;
+#if defined(_WIN32)
+                    if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (char*)&sockOptVal, sizeof(int)) < 0) {
+                        LogError(LOG_NET, "Failed to connect to InfluxDB server, err: %d", errno);
+                        closesocket(fd);
+                        return 1;
+                    }
+#else
                     if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &sockOptVal, sizeof(int)) < 0) {
                         LogError(LOG_NET, "Failed to connect to InfluxDB server, err: %d", errno);
                         closesocket(fd);
                         return 1;
                     }
-
+#endif
                     // connect to the server
                     ret = connect(fd, addr->ai_addr, addr->ai_addrlen);
                     if (ret < 0) {
@@ -297,9 +304,11 @@ namespace network
                     struct linger sl;
                     sl.l_onoff = 1;     /* non-zero value enables linger option in kernel */
                     sl.l_linger = 0;    /* timeout interval in seconds */
-
+#if defined(_WIN32)
+                    setsockopt(fd, SOL_SOCKET, SO_LINGER, (char*)&sl, sizeof(sl));
+#else
                     setsockopt(fd, SOL_SOCKET, SO_LINGER, &sl, sizeof(sl));
-
+#endif
                     // close socket
                     closesocket(fd);
                     return ret / 100 == 2 ? 0 : ret;

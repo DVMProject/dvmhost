@@ -570,7 +570,7 @@ void Network::clock(uint32_t ms)
                     }
                 }
 
-                if (m_status == NET_STAT_RUNNING || (reason == NET_CONN_NAK_FNE_MAX_CONN)) {
+                if (m_status == NET_STAT_RUNNING && (reason == NET_CONN_NAK_FNE_MAX_CONN)) {
                     LogWarning(LOG_NET, "PEER %u master NAK; attemping to relogin, remotePeerId = %u", m_peerId, rtpHeader.getSSRC());
                     m_status = NET_STAT_WAITING_LOGIN;
                     m_timeoutTimer.start();

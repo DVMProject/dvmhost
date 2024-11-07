@@ -74,7 +74,7 @@ public:
         m_quitItem.addAccelerator(FKey::Meta_x); // Meta/Alt + X
         m_quitItem.addCallback("clicked", getFApplication(), &FApplication::cb_exitApp, this);
         m_keyF3.addCallback("activate", getFApplication(), &FApplication::cb_exitApp, this);
-        m_keyF5.addCallback("activate", this, [&]() { g_tidLookups->reload(); m_wnd->loadListView(); });
+        m_keyF5.addCallback("activate", this, [&]() { g_tidLookups->reload(); m_wnd->loadListView(); LogMessage(LOG_HOST, "Loaded talkgroup rules file: %s", g_iniFile.c_str()); });
 
         m_backupOnSave.setChecked();
 

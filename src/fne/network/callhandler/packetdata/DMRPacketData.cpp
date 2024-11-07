@@ -253,8 +253,8 @@ void DMRPacketData::dispatch(uint32_t peerId, dmr::data::NetData& dmrData, const
             LogWarning(LOG_NET, P25_PDU_STR ", failed CRC-32 check, blocks %u, len %u", status->header.getBlocksToFollow(), status->pduDataOffset);
         }
 
-        if (m_network->m_dumpDataPacket) {
-            Utils::dump(1U, "PDU Packet", status->pduUserData, status->pduDataOffset);
+        if (m_network->m_dumpPacketData) {
+            Utils::dump(1U, "ISP PDU Packet", status->pduUserData, status->pduDataOffset);
         }
     }
 }

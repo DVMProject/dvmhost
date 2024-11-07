@@ -19,6 +19,8 @@
 #include "common/Thread.h"
 #include "SysViewMain.h"
 
+#include "FDblDialog.h"
+
 #include <final/final.h>
 using namespace finalcut;
 
@@ -169,7 +171,15 @@ public:
                     m_tbText = std::string("ENH. VOICE/CONV");
                 }
                 else {
-                    m_tbText = std::string("VOICE/CONV");
+                    if (peerStatus["vControl"].is<bool>()) {
+                        bool vControl = peerStatus["vControl"].getDefault<bool>(false);
+                        if (vControl) 
+                            m_tbText = std::string("CC-VC");
+                        else
+                            m_tbText = std::string("VOICE/CONV");
+                    } else {
+                        m_tbText = std::string("VOICE/CONV");
+                    }
                 }
 
                 // are we transmitting?
@@ -282,8 +292,6 @@ private:
         // Fill with spaces (left of the title)
         if (FVTerm::getFOutput()->getMaxColor() < 16)
             setBold();
-
-        const auto& wc = getColorTheme();
 
         if (!m_tx) {
             if (m_failed) {
@@ -452,7 +460,10 @@ public:
     void update()
     {
         const auto& rootWidget = getRootWidget();
+        getNetwork()->lockPeerStatus();
         std::map<uint32_t, json::object> peerStatus(getNetwork()->peerStatus.begin(), getNetwork()->peerStatus.end());
+        getNetwork()->unlockPeerStatus();
+
         for (auto entry : peerStatus) {
             uint32_t peerId = entry.first;
             json::object peerObj = entry.second;
@@ -527,6 +538,9 @@ public:
                         }
 
                         vcObj["state"].set<uint8_t>(state);
+
+                        bool _true = true;
+                        vcObj["vControl"].set<bool>(_true);
 
                         bool _false = false;
                         vcObj["dmrTSCCEnable"].set<bool>(_false);
@@ -609,6 +623,9 @@ public:
                             }
 
                             vcObj["state"].set<uint8_t>(state);
+
+                            bool _true = true;
+                            vcObj["vControl"].set<bool>(_true);
 
                             bool _false = false;
                             vcObj["dmrTSCCEnable"].set<bool>(_false);
@@ -729,8 +746,6 @@ private:
     {
         assert(wdgt != nullptr);
 
-        const auto& rootWidget = getRootWidget();
-
         uint8_t channelId = peerObj["channelId"].get<uint8_t>();
         uint32_t channelNo = peerObj["channelNo"].get<uint32_t>();
 
@@ -770,13 +785,13 @@ private:
  * @brief This class implements the node status window.
  * @ingroup fneSysView
  */
-class HOST_SW_API NodeStatusWnd final : public finalcut::FDialog {
+class HOST_SW_API NodeStatusWnd final : public FDblDialog {
 public:
     /**
      * @brief Initializes a new instance of the NodeStatusWnd class.
      * @param widget 
      */
-    explicit NodeStatusWnd(FWidget* widget = nullptr) : FDialog{widget},
+    explicit NodeStatusWnd(FWidget* widget = nullptr) : FDblDialog{widget},
         m_killed(false),
         m_threadStopped(false)
     {

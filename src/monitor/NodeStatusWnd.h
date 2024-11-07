@@ -215,8 +215,6 @@ private:
         if (FVTerm::getFOutput()->getMaxColor() < 16)
             setBold();
 
-        const auto& wc = getColorTheme();
-
         if (!m_tx) {
             if (m_failed) {
                 setColor(FColor::Black, FColor::LightRed);

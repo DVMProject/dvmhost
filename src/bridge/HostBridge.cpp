@@ -1041,8 +1041,7 @@ void HostBridge::processUDPAudio()
                 m_txStreamId = 1U; // prevent further false starts -- this isn't the right way to handle this...
                 LogMessage(LOG_HOST, "%s, call start, srcId = %u, dstId = %u", UDP_CALL, m_udpSrcId, m_udpDstId);
                 if (m_grantDemand) {
-                    switch (m_txMode)
-                    {
+                    switch (m_txMode) {
                     case TX_MODE_P25:
                     {
                         p25::lc::LC lc = p25::lc::LC();
@@ -2101,6 +2100,7 @@ void HostBridge::callEnd(uint32_t srcId, uint32_t dstId)
             data.setSrcId(srcId);
 
             m_network->writeDMRTerminator(data, &m_dmrSeqNo, &m_dmrN, m_dmrEmbeddedData);
+            m_network->resetDMR(data.getSlotNo());
         }
         break;
         case TX_MODE_P25:
@@ -2114,6 +2114,7 @@ void HostBridge::callEnd(uint32_t srcId, uint32_t dstId)
 
             uint8_t controlByte = 0x00U;
             m_network->writeP25TDU(lc, lsd, controlByte);
+            m_network->resetP25();
         }
         break;
         }

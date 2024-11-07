@@ -9,14 +9,18 @@
  */
 #if !defined(NO_WEBSOCKETS)
 #include "Defines.h"
+#include "common/lookups/TalkgroupRulesLookup.h"
 #include "common/Log.h"
 #include "common/StopWatch.h"
 #include "common/Thread.h"
 #include "common/Utils.h"
 #include "fne/network/RESTDefines.h"
 #include "remote/RESTClient.h"
+#include "network/PeerNetwork.h"
 #include "HostWS.h"
 #include "SysViewMain.h"
+
+using namespace lookups;
 
 #include <unistd.h>
 #include <pwd.h>
@@ -26,6 +30,110 @@
 // ---------------------------------------------------------------------------
 
 #define IDLE_WARMUP_MS 5U
+
+
+// ---------------------------------------------------------------------------
+//  Global Functions
+// ---------------------------------------------------------------------------
+
+/**
+ * @brief Helper to convert a TalkgroupRuleGroupVoice to JSON.
+ * @param groupVoice Instance of TalkgroupRuleGroupVoice to convert to JSON.
+ * @returns json::object JSON object.
+ */
+json::object tgToJson(const TalkgroupRuleGroupVoice& groupVoice) 
+{
+    json::object tg = json::object();
+
+    std::string tgName = groupVoice.name();
+    tg["name"].set<std::string>(tgName);
+    std::string tgAlias = groupVoice.nameAlias();
+    tg["alias"].set<std::string>(tgAlias);
+    bool invalid = groupVoice.isInvalid();
+    tg["invalid"].set<bool>(invalid);
+
+    // source stanza
+    {
+        json::object source = json::object();
+        uint32_t tgId = groupVoice.source().tgId();
+        source["tgid"].set<uint32_t>(tgId);
+        uint8_t tgSlot = groupVoice.source().tgSlot();
+        source["slot"].set<uint8_t>(tgSlot);
+        tg["source"].set<json::object>(source);
+    }
+
+    // config stanza
+    {
+        json::object config = json::object();
+        bool active = groupVoice.config().active();
+        config["active"].set<bool>(active);
+        bool affiliated = groupVoice.config().affiliated();
+        config["affiliated"].set<bool>(affiliated);
+        bool parrot = groupVoice.config().parrot();
+        config["parrot"].set<bool>(parrot);
+
+        json::array inclusions = json::array();
+        std::vector<uint32_t> inclusion = groupVoice.config().inclusion();
+        if (inclusion.size() > 0) {
+            for (auto inclEntry : inclusion) {
+                uint32_t peerId = inclEntry;
+                inclusions.push_back(json::value((double)peerId));
+            }
+        }
+        config["inclusion"].set<json::array>(inclusions);
+
+        json::array exclusions = json::array();
+        std::vector<uint32_t> exclusion = groupVoice.config().exclusion();
+        if (exclusion.size() > 0) {
+            for (auto exclEntry : exclusion) {
+                uint32_t peerId = exclEntry;
+                exclusions.push_back(json::value((double)peerId));
+            }
+        }
+        config["exclusion"].set<json::array>(exclusions);
+
+        json::array rewrites = json::array();
+        std::vector<lookups::TalkgroupRuleRewrite> rewrite = groupVoice.config().rewrite();
+        if (rewrite.size() > 0) {
+            for (auto rewrEntry : rewrite) {
+                json::object rewrite = json::object();
+                uint32_t peerId = rewrEntry.peerId();
+                rewrite["peerid"].set<uint32_t>(peerId);
+                uint32_t tgId = rewrEntry.tgId();
+                rewrite["tgid"].set<uint32_t>(tgId);
+                uint8_t tgSlot = rewrEntry.tgSlot();
+                rewrite["slot"].set<uint8_t>(tgSlot);
+
+                rewrites.push_back(json::value(rewrite));
+            }
+        }
+        config["rewrite"].set<json::array>(rewrites);
+
+        json::array always = json::array();
+        std::vector<uint32_t> alwaysSend = groupVoice.config().alwaysSend();
+        if (alwaysSend.size() > 0) {
+            for (auto alwaysEntry : alwaysSend) {
+                uint32_t peerId = alwaysEntry;
+                always.push_back(json::value((double)peerId));
+            }
+        }
+        config["always"].set<json::array>(always);
+
+        json::array preferreds = json::array();
+        std::vector<uint32_t> preferred = groupVoice.config().preferred();
+        if (preferred.size() > 0) {
+            for (auto prefEntry : preferred) {
+                uint32_t peerId = prefEntry;
+                preferreds.push_back(json::value((double)peerId));
+            }
+        }
+        config["preferred"].set<json::array>(preferreds);
+
+        tg["config"].set<json::object>(config);
+    }
+
+    return tg;
+}
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -161,6 +269,11 @@ int HostWS::run()
     Timer peerStatusUpdate(1000U, 0U, 175U);
     peerStatusUpdate.start();
 
+    Timer tgDataUpdate(1000U, 30U);
+    tgDataUpdate.start();
+    Timer ridDataUpdate(1000U, 30U);
+    ridDataUpdate.start();
+
     setNetDataEventCallback([=](json::object obj) { netDataEvent(obj); });
 
     // main execution loop
@@ -188,7 +301,10 @@ int HostWS::run()
             if (peerStatusUpdate.isRunning() && peerStatusUpdate.hasExpired()) {
                 peerStatusUpdate.start();
 
+                getNetwork()->lockPeerStatus();
                 std::map<uint32_t, json::object> peerStatus(getNetwork()->peerStatus.begin(), getNetwork()->peerStatus.end());
+                getNetwork()->unlockPeerStatus();
+
                 for (auto entry : peerStatus) {
                     json::object wsObj = json::object();
                     std::string type = "peer_status";
@@ -253,6 +369,58 @@ int HostWS::run()
                         ::LogWarning(LOG_HOST, "[AFFVIEW] %s:%u, failed to properly handle peer query request, %s", fneRESTAddress.c_str(), fneRESTPort, e.what());
                     }
                 }
+            }
+
+            // send full talkgroup list data
+            tgDataUpdate.clock(ms);
+            if (tgDataUpdate.isRunning() && tgDataUpdate.hasExpired()) {
+                tgDataUpdate.start();
+
+                json::object wsObj = json::object();
+                std::string type = "tg_data";
+
+                json::array tgs = json::array();
+                if (g_tidLookup != nullptr) {
+                    if (g_tidLookup->groupVoice().size() > 0) {
+                        for (auto entry : g_tidLookup->groupVoice()) {
+                            json::object tg = tgToJson(entry);
+                            tgs.push_back(json::value(tg));
+                        }
+                    }
+                }
+
+                wsObj["payload"].set<json::array>(tgs);
+                send(wsObj);
+            }
+
+            // send full radio ID list data
+            ridDataUpdate.clock(ms);
+            if (ridDataUpdate.isRunning() && ridDataUpdate.hasExpired()) {
+                ridDataUpdate.start();
+
+                json::object wsObj = json::object();
+                std::string type = "rid_data";
+
+                json::array rids = json::array();
+                if (g_ridLookup != nullptr) {
+                    if (g_ridLookup->table().size() > 0) {
+                        for (auto entry : g_ridLookup->table()) {
+                            json::object ridObj = json::object();
+
+                            uint32_t rid = entry.first;
+                            ridObj["id"].set<uint32_t>(rid);
+                            bool enabled = entry.second.radioEnabled();
+                            ridObj["enabled"].set<bool>(enabled);
+                            std::string alias = entry.second.radioAlias();
+                            ridObj["alias"].set<std::string>(alias);
+
+                            rids.push_back(json::value(ridObj));
+                        }
+                    }
+                }
+
+                wsObj["payload"].set<json::array>(rids);
+                send(wsObj);
             }
         } else {
             // clear ostream
