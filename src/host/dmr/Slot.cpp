@@ -462,6 +462,12 @@ void Slot::processInCallCtrl(network::NET_ICC::ENUM command, uint32_t dstId)
         {
             if (m_rfState == RS_RF_AUDIO && m_rfLC->getDstId() == dstId) {
                 LogWarning(LOG_DMR, "Slot %u, network requested in-call traffic reject, dstId = %u", m_slotNo, dstId);
+                if (m_affiliations->isGranted(dstId)) {
+                    m_affiliations->releaseGrant(dstId, false);
+                    if (!m_enableTSCC) {
+                        notifyCC_ReleaseGrant(dstId);
+                    }
+                }
 
                 processFrameLoss();
 

@@ -1059,6 +1059,12 @@ void Control::processInCallCtrl(network::NET_ICC::ENUM command, uint32_t dstId)
         {
             if (m_rfState == RS_RF_AUDIO && m_rfLC.getDstId() == dstId) {
                 LogWarning(LOG_P25, "network requested in-call traffic reject, dstId = %u", dstId);
+                if (m_affiliations.isGranted(dstId)) {
+                    m_affiliations.releaseGrant(dstId, false);
+                    if (!m_enableControl) {
+                        notifyCC_ReleaseGrant(dstId);
+                    }
+                }
 
                 processFrameLoss();
 
