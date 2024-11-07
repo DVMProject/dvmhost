@@ -459,6 +459,7 @@ namespace network
         bool m_allowConvSiteAffOverride;
         bool m_restrictGrantToAffOnly;
         bool m_enableInCallCtrl;
+        bool m_rejectUnknownRID;
 
         bool m_filterHeaders;
         bool m_filterTerminators;

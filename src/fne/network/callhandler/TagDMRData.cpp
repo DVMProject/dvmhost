@@ -739,7 +739,32 @@ bool TagDMRData::validate(uint32_t peerId, data::NetData& data, uint32_t streamI
             }
 
             // report In-Call Control to the peer sending traffic
-            m_network->writePeerICC(peerId, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR, NET_ICC::REJECT_TRAFFIC, data.getSlotNo());
+            m_network->writePeerICC(peerId, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR, NET_ICC::REJECT_TRAFFIC, data.getDstId(), data.getSlotNo());
+            return false;
+        }
+    }
+    else {
+        // if this is a default radio -- and we are rejecting undefined radios
+        // report call error
+        if (m_network->m_rejectUnknownRID) {
+            // report error event to InfluxDB
+            if (m_network->m_enableInfluxDB) {
+                influxdb::QueryBuilder()
+                    .meas("call_error_event")
+                        .tag("peerId", std::to_string(peerId))
+                        .tag("streamId", std::to_string(streamId))
+                        .tag("srcId", std::to_string(data.getSrcId()))
+                        .tag("dstId", std::to_string(data.getDstId()))
+                            .field("message", INFLUXDB_ERRSTR_DISABLED_SRC_RID)
+                            .field("slot", data.getSlotNo())
+                        .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
+                    .request(m_network->m_influxServer);
+            }
+
+            LogWarning(LOG_NET, "DMR slot %s, illegal/unknown RID attempted access, srcId = %u, dstId = %u", data.getSlotNo(), data.getSrcId(), data.getDstId());
+
+            // report In-Call Control to the peer sending traffic
+            m_network->writePeerICC(peerId, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR, NET_ICC::REJECT_TRAFFIC, data.getDstId(), data.getSlotNo());
             return false;
         }
     }
@@ -768,6 +793,31 @@ bool TagDMRData::validate(uint32_t peerId, data::NetData& data, uint32_t streamI
                         .request(m_network->m_influxServer);
                 }
 
+                return false;
+            }
+        }
+        else {
+            // if this is a default radio -- and we are rejecting undefined radios
+            // report call error
+            if (m_network->m_rejectUnknownRID) {
+                // report error event to InfluxDB
+                if (m_network->m_enableInfluxDB) {
+                    influxdb::QueryBuilder()
+                        .meas("call_error_event")
+                            .tag("peerId", std::to_string(peerId))
+                            .tag("streamId", std::to_string(streamId))
+                            .tag("srcId", std::to_string(data.getSrcId()))
+                            .tag("dstId", std::to_string(data.getDstId()))
+                                .field("message", INFLUXDB_ERRSTR_DISABLED_SRC_RID)
+                                .field("slot", data.getSlotNo())
+                            .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
+                        .request(m_network->m_influxServer);
+                }
+
+                LogWarning(LOG_NET, "DMR slot %s, illegal/unknown RID attempted access, srcId = %u, dstId = %u", data.getSlotNo(), data.getSrcId(), data.getDstId());
+
+                // report In-Call Control to the peer sending traffic
+                m_network->writePeerICC(peerId, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR, NET_ICC::REJECT_TRAFFIC, data.getDstId(), data.getSlotNo());
                 return false;
             }
         }

@@ -66,7 +66,7 @@ namespace p25
     // ---------------------------------------------------------------------------
 
     /**
-     * @brief This class implements core logic for handling P25.
+     * @brief This class implements core controller logic for handling P25.
      * @ingroup host_p25
      */
     class HOST_SW_API Control {
@@ -238,6 +238,16 @@ namespace p25
          * @returns P25AffiliationLookup Instance of the P25AffiliationLookup class.
          */
         lookups::P25AffiliationLookup affiliations() { return m_affiliations; }
+
+        /**
+         * @brief Returns the current operating RF state of the P25 controller.
+         * @returns RPT_RF_STATE 
+         */
+        RPT_RF_STATE getRFState() const { return m_rfState; }
+        /**
+         * @brief Clears the current operating RF state back to idle.
+         */
+        void clearRFReject();
 
         /**
          * @brief Flag indicating whether the processor or is busy or not.

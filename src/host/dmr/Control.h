@@ -52,7 +52,7 @@ namespace dmr
     // ---------------------------------------------------------------------------
 
     /**
-     * @brief This class implements core logic for handling DMR.
+     * @brief This class implements core controller logic for handling DMR.
      * @ingroup host_dmr
      */
     class HOST_SW_API Control {
@@ -214,6 +214,18 @@ namespace dmr
          * @returns DMRAffiliationLookup* Instance of the DMRAffiliationLookup class.
          */
         lookups::DMRAffiliationLookup* affiliations();
+
+        /**
+         * @brief Returns the current operating RF state of the DMR controller.
+         * @param slotNo DMR slot number.
+         * @returns RPT_RF_STATE 
+         */
+        RPT_RF_STATE getRFState(uint32_t slotNo) const;
+        /**
+         * @brief Clears the current operating RF state back to idle (with no data reset!).
+         * @param slotNo DMR slot number.
+         */
+        void clearRFReject(uint32_t slotNo);
 
         /**
          * @brief Helper to return the slot carrying the TSCC.

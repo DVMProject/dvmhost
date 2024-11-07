@@ -442,6 +442,10 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
         return false;
     }
 
+    // if the controller is currently in an reject state; block any RF traffic
+    if (valid && m_rfState == RS_RF_REJECTED)
+        return false;
+
     RFChannelType::E rfct = m_rfLastLICH.getRFCT();
     FuncChannelType::E fct = m_rfLastLICH.getFCT();
     ChOption::E option = m_rfLastLICH.getOption();
@@ -693,19 +697,9 @@ void Control::clock()
         }
     }
 
-    // reset states if we're in a rejected state
-    if (m_rfState == RS_RF_REJECTED) {
-        m_txQueue.clear();
-
-        m_voice->resetRF();
-        m_voice->resetNet();
-
-        m_data->resetRF();
-
-        if (m_network != nullptr)
-            m_network->resetNXDN();
-
-        m_rfState = RS_RF_LISTENING;
+    // reset states if we're in a rejected state and we're a control channel
+    if (m_rfState == RS_RF_REJECTED && m_enableControl && m_dedicatedControl) {
+        clearRFReject();
     }
 
     if (m_frameLossCnt > 0U && m_rfState == RS_RF_LISTENING)
@@ -798,6 +792,25 @@ void Control::touchGrantTG(uint32_t dstId)
         }
 
         m_affiliations.touchGrant(dstId);
+    }
+}
+
+/* Clears the current operating RF state back to idle. */
+
+void Control::clearRFReject()
+{
+    if (m_rfState == RS_RF_REJECTED) {
+        m_txQueue.clear();
+
+        m_voice->resetRF();
+        m_voice->resetNet();
+
+        m_data->resetRF();
+
+        if (m_network != nullptr)
+            m_network->resetNXDN();
+
+        m_rfState = RS_RF_LISTENING;
     }
 }
 
@@ -1045,6 +1058,8 @@ void Control::processInCallCtrl(network::NET_ICC::ENUM command, uint32_t dstId)
     case network::NET_ICC::REJECT_TRAFFIC:
         {
             if (m_rfState == RS_RF_AUDIO && m_rfLC.getDstId() == dstId) {
+                LogWarning(LOG_P25, "network requested in-call traffic reject, dstId = %u", dstId);
+
                 processFrameLoss();
 
                 m_rfLastDstId = 0U;

@@ -61,7 +61,7 @@ namespace nxdn
     // ---------------------------------------------------------------------------
 
     /**
-     * @brief This class implements core logic for handling NXDN.
+     * @brief This class implements core controller logic for handling NXDN.
      * @ingroup host_nxdn
      */
     class HOST_SW_API Control {
@@ -211,6 +211,16 @@ namespace nxdn
          * @returns AffiliationLookup Instance of the AffiliationLookup class.
          */
         lookups::AffiliationLookup affiliations() { return m_affiliations; }
+
+        /**
+         * @brief Returns the current operating RF state of the NXDN controller.
+         * @returns RPT_RF_STATE 
+         */
+        RPT_RF_STATE getRFState() const { return m_rfState; }
+        /**
+         * @brief Clears the current operating RF state back to idle.
+         */
+        void clearRFReject();
 
         /**
          * @brief Flag indicating whether the processor or is busy or not.

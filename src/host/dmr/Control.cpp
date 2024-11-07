@@ -471,6 +471,38 @@ dmr::lookups::DMRAffiliationLookup* Control::affiliations()
     return nullptr;
 }
 
+/* Returns the current operating RF state of the DMR controller. */
+
+RPT_RF_STATE Control::getRFState(uint32_t slotNo) const
+{
+    switch (slotNo) {
+    case 1U:
+        return m_slot1->getRFState();
+    case 2U:
+        return m_slot2->getRFState();
+    default:
+        LogError(LOG_DMR, "DMR, invalid slot, slotNo = %u", slotNo);
+        break;
+    }
+
+    return RS_RF_INVALID;
+}
+
+/* Clears the current operating RF state back to idle (with no data reset!). */
+
+void Control::clearRFReject(uint32_t slotNo)
+{
+    switch (slotNo) {
+    case 1U:
+        return m_slot1->clearRFReject();
+    case 2U:
+        return m_slot2->clearRFReject();
+    default:
+        LogError(LOG_DMR, "DMR, invalid slot, slotNo = %u", slotNo);
+        break;
+    }
+}
+
 /* Helper to return the slot carrying the TSCC. */
 
 Slot* Control::getTSCCSlot() const

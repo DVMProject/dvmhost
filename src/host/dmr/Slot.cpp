@@ -461,6 +461,8 @@ void Slot::processInCallCtrl(network::NET_ICC::ENUM command, uint32_t dstId)
     case network::NET_ICC::REJECT_TRAFFIC:
         {
             if (m_rfState == RS_RF_AUDIO && m_rfLC->getDstId() == dstId) {
+                LogWarning(LOG_DMR, "Slot %u, network requested in-call traffic reject, dstId = %u", m_slotNo, dstId);
+
                 processFrameLoss();
 
                 m_rfLastDstId = 0U;
@@ -677,22 +679,9 @@ void Slot::clock()
         }
     }
 
-    if (m_rfState == RS_RF_REJECTED) {
-        if (!m_enableTSCC) {
-            m_txQueue.clear();
-        }
-
-        m_rfFrames = 0U;
-        m_rfErrs = 0U;
-        m_rfBits = 1U;
-
-        m_netFrames = 0U;
-        m_netLost = 0U;
-
-        if (m_network != nullptr)
-            m_network->resetDMR(m_slotNo);
-
-        m_rfState = RS_RF_LISTENING;
+    // reset states if we're in a rejected state and we're a control channel
+    if (m_rfState == RS_RF_REJECTED && m_enableTSCC) {
+        clearRFReject();
     }
 
     if (m_frameLossCnt > 0U && m_rfState == RS_RF_LISTENING)
@@ -829,6 +818,29 @@ void Slot::touchGrantTG(uint32_t dstId)
         }
 
         m_affiliations->touchGrant(dstId);
+    }
+}
+
+/* Clears the current operating RF state back to idle. */
+
+void Slot::clearRFReject()
+{
+    if (m_rfState == RS_RF_REJECTED) {
+        if (!m_enableTSCC) {
+            m_txQueue.clear();
+        }
+
+        m_rfFrames = 0U;
+        m_rfErrs = 0U;
+        m_rfBits = 1U;
+
+        m_netFrames = 0U;
+        m_netLost = 0U;
+
+        if (m_network != nullptr)
+            m_network->resetDMR(m_slotNo);
+
+        m_rfState = RS_RF_LISTENING;
     }
 }
 

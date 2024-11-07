@@ -215,6 +215,16 @@ namespace dmr
         packet::ControlSignaling* control() { return m_control; }
 
         /**
+         * @brief Returns the current operating RF state of the NXDN controller.
+         * @returns RPT_RF_STATE 
+         */
+        RPT_RF_STATE getRFState() const { return m_rfState; }
+        /**
+         * @brief Clears the current operating RF state back to idle (with no data reset!).
+         */
+        void clearRFReject();
+
+        /**
          * @brief Helper to change the debug and verbose state.
          * @param debug Flag indicating whether debug is enabled or not.
          * @param verbose Flag indicating whether verbosity is enabled or not.

@@ -49,8 +49,14 @@ void* Host::threadNXDNReader(void* arg)
         ::pthread_setname_np(th->thread, threadName.c_str());
 #endif // _GNU_SOURCE
 
+        StopWatch stopWatch;
+        stopWatch.start();
+
         if (host->m_nxdn != nullptr) {
             while (!g_killed) {
+                uint32_t ms = stopWatch.elapsed();
+                stopWatch.start();
+
                 // scope is intentional
                 {
                     // ------------------------------------------------------
@@ -95,6 +101,23 @@ void* Host::threadNXDNReader(void* arg)
                                 }
                                 else if (host->m_state != HOST_STATE_LOCKOUT) {
                                     LogWarning(LOG_HOST, "NXDN modem data received, state = %u", host->m_state);
+                                }
+                            }
+
+                            // were frames received while still in an reject state? if so, reset the timer
+                            if (host->m_nxdn->getRFState() == RS_RF_REJECTED) {
+                                host->m_nxdnRejectTimer.start();
+                                host->m_nxdnRejCnt++;
+                            }
+                        } else {
+                            // if we're receiving no more frames, and we're in a reject state, clear the state
+                            if (host->m_nxdn->getRFState() == RS_RF_REJECTED) {
+                                host->m_nxdnRejectTimer.clock(ms);
+                                if (host->m_nxdnRejectTimer.hasExpired()) {
+                                    LogMessage(LOG_HOST, "NXDN, reset from previous call reject, frames = %u", host->m_nxdnRejCnt);
+                                    host->m_nxdnRejectTimer.stop();
+                                    host->m_nxdn->clearRFReject();
+                                    host->m_nxdnRejCnt = 0U;
                                 }
                             }
                         }

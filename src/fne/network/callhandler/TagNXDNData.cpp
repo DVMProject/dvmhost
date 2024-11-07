@@ -557,6 +557,30 @@ bool TagNXDNData::validate(uint32_t peerId, lc::RTCH& lc, uint8_t messageType, u
             return false;
         }
     }
+    else {
+        // if this is a default radio -- and we are rejecting undefined radios
+        // report call error
+        if (m_network->m_rejectUnknownRID) {
+            // report error event to InfluxDB
+            if (m_network->m_enableInfluxDB) {
+                influxdb::QueryBuilder()
+                    .meas("call_error_event")
+                        .tag("peerId", std::to_string(peerId))
+                        .tag("streamId", std::to_string(streamId))
+                        .tag("srcId", std::to_string(lc.getSrcId()))
+                        .tag("dstId", std::to_string(lc.getDstId()))
+                            .field("message", INFLUXDB_ERRSTR_DISABLED_SRC_RID)
+                        .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
+                    .request(m_network->m_influxServer);
+            }
+
+            LogWarning(LOG_NET, "NXDN, illegal/unknown RID attempted access, srcId = %u, dstId = %u", lc.getSrcId(), lc.getDstId());
+
+            // report In-Call Control to the peer sending traffic
+            m_network->writePeerICC(peerId, NET_SUBFUNC::PROTOCOL_SUBFUNC_NXDN, NET_ICC::REJECT_TRAFFIC, lc.getDstId());
+            return false;
+        }
+    }
 
     // always validate a terminator if the source is valid
     if (messageType == MessageType::RTCH_TX_REL || messageType == MessageType::RTCH_TX_REL_EX)
@@ -580,6 +604,30 @@ bool TagNXDNData::validate(uint32_t peerId, lc::RTCH& lc, uint8_t messageType, u
                             .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
                         .request(m_network->m_influxServer);
                 }
+
+                // report In-Call Control to the peer sending traffic
+                m_network->writePeerICC(peerId, NET_SUBFUNC::PROTOCOL_SUBFUNC_NXDN, NET_ICC::REJECT_TRAFFIC, lc.getDstId());
+                return false;
+            }
+        }
+        else {
+            // if this is a default radio -- and we are rejecting undefined radios
+            // report call error
+            if (m_network->m_rejectUnknownRID) {
+                // report error event to InfluxDB
+                if (m_network->m_enableInfluxDB) {
+                    influxdb::QueryBuilder()
+                        .meas("call_error_event")
+                            .tag("peerId", std::to_string(peerId))
+                            .tag("streamId", std::to_string(streamId))
+                            .tag("srcId", std::to_string(lc.getSrcId()))
+                            .tag("dstId", std::to_string(lc.getDstId()))
+                                .field("message", INFLUXDB_ERRSTR_DISABLED_SRC_RID)
+                            .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
+                        .request(m_network->m_influxServer);
+                }
+
+                LogWarning(LOG_NET, "NXDN, illegal/unknown RID attempted access, srcId = %u, dstId = %u", lc.getSrcId(), lc.getDstId());
 
                 // report In-Call Control to the peer sending traffic
                 m_network->writePeerICC(peerId, NET_SUBFUNC::PROTOCOL_SUBFUNC_NXDN, NET_ICC::REJECT_TRAFFIC, lc.getDstId());

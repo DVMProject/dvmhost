@@ -83,6 +83,8 @@ FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port,
     m_disallowExtAdjStsBcast(true),
     m_allowConvSiteAffOverride(false),
     m_restrictGrantToAffOnly(false),
+    m_enableInCallCtrl(true),
+    m_rejectUnknownRID(false),
     m_filterHeaders(true),
     m_filterTerminators(true),
     m_dropU2UPeerTable(),
@@ -125,6 +127,7 @@ void FNENetwork::setOptions(yaml::Node& conf, bool printOptions)
     m_disallowExtAdjStsBcast = conf["disallowExtAdjStsBcast"].as<bool>(true);
     m_allowConvSiteAffOverride = conf["allowConvSiteAffOverride"].as<bool>(true);
     m_enableInCallCtrl = conf["enableInCallCtrl"].as<bool>(true);
+    m_rejectUnknownRID = conf["rejectUnknownRID"].as<bool>(false);
     m_softConnLimit = conf["connectionLimit"].as<uint32_t>(MAX_HARD_CONN_CAP);
 
     if (m_softConnLimit > MAX_HARD_CONN_CAP) {
@@ -181,6 +184,7 @@ void FNENetwork::setOptions(yaml::Node& conf, bool printOptions)
         LogInfo("    Disable P25 ADJ_STS_BCAST to external peers: %s", m_disallowExtAdjStsBcast ? "yes" : "no");
         LogInfo("    Allow conventional sites to override affiliation and receive all traffic: %s", m_allowConvSiteAffOverride ? "yes" : "no");
         LogInfo("    Enable In-Call Control: %s", m_enableInCallCtrl ? "yes" : "no");
+        LogInfo("    Reject Unknown RIDs: %s", m_rejectUnknownRID ? "yes" : "no");
         LogInfo("    Restrict grant response by affiliation: %s", m_restrictGrantToAffOnly ? "yes" : "no");
         LogInfo("    Traffic Headers Filtered by Destination ID: %s", m_filterHeaders ? "yes" : "no");
         LogInfo("    Traffic Terminators Filtered by Destination ID: %s", m_filterTerminators ? "yes" : "no");

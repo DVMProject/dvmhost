@@ -50,8 +50,14 @@ void* Host::threadP25Reader(void* arg)
         ::pthread_setname_np(th->thread, threadName.c_str());
 #endif // _GNU_SOURCE
 
+        StopWatch stopWatch;
+        stopWatch.start();
+
         if (host->m_p25 != nullptr) {
             while (!g_killed) {
+                uint32_t ms = stopWatch.elapsed();
+                stopWatch.start();
+
                 // scope is intentional
                 {
                     // ------------------------------------------------------
@@ -137,6 +143,23 @@ void* Host::threadP25Reader(void* arg)
                                 }
                                 else if (host->m_state != HOST_STATE_LOCKOUT) {
                                     LogWarning(LOG_HOST, "P25 modem data received, state = %u", host->m_state);
+                                }
+
+                                // were frames received while still in an In-Call reject state? if so, reset the timer
+                                if (host->m_p25->getRFState() == RS_RF_REJECTED) {
+                                    host->m_p25RejectTimer.start();
+                                    host->m_p25RejCnt++;
+                                }
+                            }
+                        } else {
+                            // if we're receiving no more frames, and we're in a in-call reject state, clear the state
+                            if (host->m_p25->getRFState() == RS_RF_REJECTED) {
+                                host->m_p25RejectTimer.clock(ms);
+                                if (host->m_p25RejectTimer.hasExpired()) {
+                                    LogMessage(LOG_HOST, "P25, reset from previous call reject, frames = %u", host->m_p25RejCnt);
+                                    host->m_p25RejectTimer.stop();
+                                    host->m_p25->clearRFReject();
+                                    host->m_p25RejCnt = 0U;
                                 }
                             }
                         }

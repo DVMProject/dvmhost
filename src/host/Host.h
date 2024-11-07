@@ -180,12 +180,21 @@ private:
     bool m_authoritative;
     bool m_supervisor;
 
+    uint32_t m_dmr1RejCnt;
+    uint32_t m_dmr2RejCnt;
+    uint32_t m_p25RejCnt;
+    uint32_t m_nxdnRejCnt;
+
     Timer m_dmrBeaconDurationTimer;
     Timer m_dmrDedicatedTxTestTimer;
+    Timer m_dmr1RejectTimer;
+    Timer m_dmr2RejectTimer;
     Timer m_p25BcastDurationTimer;
     Timer m_p25DedicatedTxTestTimer;
+    Timer m_p25RejectTimer;
     Timer m_nxdnBcastDurationTimer;
     Timer m_nxdnDedicatedTxTestTimer;
+    Timer m_nxdnRejectTimer;
     
     /* Watchdog Timers */
 
