@@ -66,7 +66,13 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
 
             bool currState = g_disableTimeDisplay;
             g_disableTimeDisplay = true;
-            ::Log(9999U, nullptr, "%.9u %s", peerId, payload.c_str());
+
+            std::string identity = std::string();
+            auto it = std::find_if(g_peerIdentityNameMap.begin(), g_peerIdentityNameMap.end(), [&](PeerIdentityMapPair x) { return x.first == peerId; });
+            if (it != g_peerIdentityNameMap.end())
+                identity = g_peerIdentityNameMap[peerId];
+
+            ::Log(9999U, nullptr, "%.9u (%8s) %s", peerId, identity.c_str(), payload.c_str());
             g_disableTimeDisplay = currState;
         }
         break;
