@@ -683,10 +683,10 @@ void P25PacketData::dispatchToFNE(uint32_t peerId)
                 }
 
                 write_PDU_User(peer.first, nullptr, status->header, status->extendedAddress, status->pduUserData, true);
-                if (m_network->m_debug) {
+//                if (m_network->m_debug) {
                     LogDebug(LOG_NET, "P25, srcPeer = %u, dstPeer = %u, duid = $%02X, srcId = %u, dstId = %u", 
                         peerId, peer.first, DUID::PDU, srcId, dstId);
-                }
+//                }
 
                 i++;
             }
@@ -713,16 +713,16 @@ void P25PacketData::dispatchToFNE(uint32_t peerId)
                 }
 
                 write_PDU_User(dstPeerId, peer.second, status->header, status->extendedAddress, status->pduUserData);
-                if (m_network->m_debug) {
+//                if (m_network->m_debug) {
                     LogDebug(LOG_NET, "P25, srcPeer = %u, dstPeer = %u, duid = $%02X, srcId = %u, dstId = %u", 
                         peerId, dstPeerId, DUID::PDU, srcId, dstId);
-                }
+//                }
             }
         }
     }
 }
 
-/* Helper to dispatch PDU user data back to the FNE network. */
+/* Helper to dispatch PDU user data back to the local FNE network. (Will not transmit to external peers.) */
 
 void P25PacketData::dispatchUserFrameToFNE(p25::data::DataHeader& dataHeader, bool extendedAddress, uint8_t* pduUserData)
 {
@@ -758,19 +758,6 @@ void P25PacketData::dispatchUserFrameToFNE(p25::data::DataHeader& dataHeader, bo
             i++;
         }
         m_network->m_frameQueue->flushQueue();
-    }
-
-    // repeat traffic to external peers
-    if (m_network->m_host->m_peerNetworks.size() > 0U) {
-        for (auto peer : m_network->m_host->m_peerNetworks) {
-            uint32_t dstPeerId = peer.second->getPeerId();
-
-            write_PDU_User(dstPeerId, peer.second, dataHeader, extendedAddress, pduUserData);
-            if (m_network->m_debug) {
-                LogDebug(LOG_NET, "P25, dstPeer = %u, duid = $%02X, srcId = %u, dstId = %u", 
-                    dstPeerId, DUID::PDU, srcId, dstId);
-            }
-        }
     }
 }
 
@@ -962,10 +949,11 @@ void P25PacketData::write_PDU_User(uint32_t peerId, network::PeerNetwork* peerNe
 
     uint32_t blocksToFollow = dataHeader.getBlocksToFollow();
 
-    LogMessage(LOG_NET, P25_PDU_STR ", OSP, peerId = %u, ack = %u, outbound = %u, fmt = $%02X, mfId = $%02X, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padLength = %u, packetLength = %u, S = %u, n = %u, seqNo = %u, lastFragment = %u, hdrOffset = %u, llId = %u",
-        peerId, dataHeader.getAckNeeded(), dataHeader.getOutbound(), dataHeader.getFormat(), dataHeader.getMFId(), dataHeader.getSAP(), dataHeader.getFullMessage(),
-        dataHeader.getBlocksToFollow(), dataHeader.getPadLength(), dataHeader.getPacketLength(), dataHeader.getSynchronize(), dataHeader.getNs(), dataHeader.getFSN(), dataHeader.getLastFragment(),
-        dataHeader.getHeaderOffset(), dataHeader.getLLId());
+    if (m_network->m_verbosePacketData)
+        LogMessage(LOG_NET, P25_PDU_STR ", OSP, peerId = %u, ack = %u, outbound = %u, fmt = $%02X, mfId = $%02X, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padLength = %u, packetLength = %u, S = %u, n = %u, seqNo = %u, lastFragment = %u, hdrOffset = %u, llId = %u",
+            peerId, dataHeader.getAckNeeded(), dataHeader.getOutbound(), dataHeader.getFormat(), dataHeader.getMFId(), dataHeader.getSAP(), dataHeader.getFullMessage(),
+            dataHeader.getBlocksToFollow(), dataHeader.getPadLength(), dataHeader.getPacketLength(), dataHeader.getSynchronize(), dataHeader.getNs(), dataHeader.getFSN(), dataHeader.getLastFragment(),
+            dataHeader.getHeaderOffset(), dataHeader.getLLId());
 
     // generate the PDU header and 1/2 rate Trellis
     dataHeader.encode(buffer);
@@ -995,16 +983,18 @@ void P25PacketData::write_PDU_User(uint32_t peerId, network::PeerNetwork* peerNe
             blocksToFollow--;
             networkBlock++;
 
-            LogMessage(LOG_NET, P25_PDU_STR ", OSP, extended address, sap = $%02X, srcLlId = %u",
-                dataHeader.getEXSAP(), dataHeader.getSrcLLId());
+            if (m_network->m_verbosePacketData)
+                LogMessage(LOG_NET, P25_PDU_STR ", OSP, extended address, sap = $%02X, srcLlId = %u",
+                    dataHeader.getEXSAP(), dataHeader.getSrcLLId());
         }
 
         // are we processing extended address data from the first block?
         if ((dataHeader.getFormat() == PDUFormatType::CONFIRMED) && (dataHeader.getSAP() == PDUSAP::EXT_ADDR) && extendedAddress) {
             dataHeader.encodeExtAddr(pduUserData);
 
-            LogMessage(LOG_NET, P25_PDU_STR ", OSP, sap = $%02X, srcLlId = %u",
-                dataHeader.getEXSAP(), dataHeader.getSrcLLId());
+            if (m_network->m_verbosePacketData)
+                LogMessage(LOG_NET, P25_PDU_STR ", OSP, sap = $%02X, srcLlId = %u",
+                    dataHeader.getEXSAP(), dataHeader.getSrcLLId());
         }
 
         if (dataHeader.getFormat() != PDUFormatType::AMBT) {
@@ -1022,9 +1012,10 @@ void P25PacketData::write_PDU_User(uint32_t peerId, network::PeerNetwork* peerNe
             dataBlock.setSerialNo(i);
             dataBlock.setData(pduUserData + dataOffset);
 
-            LogMessage(LOG_NET, P25_PDU_STR ", OSP, peerId = %u, block %u, fmt = $%02X, lastBlock = %u",
-                peerId, (dataHeader.getFormat() == PDUFormatType::CONFIRMED) ? dataBlock.getSerialNo() : i, dataBlock.getFormat(),
-                dataBlock.getLastBlock());
+            if (m_network->m_verbosePacketData)
+                LogMessage(LOG_NET, P25_PDU_STR ", OSP, peerId = %u, block %u, fmt = $%02X, lastBlock = %u",
+                    peerId, (dataHeader.getFormat() == PDUFormatType::CONFIRMED) ? dataBlock.getSerialNo() : i, dataBlock.getFormat(),
+                    dataBlock.getLastBlock());
 
             ::memset(buffer, 0x00U, P25_PDU_FEC_LENGTH_BYTES);
             dataBlock.encode(buffer);

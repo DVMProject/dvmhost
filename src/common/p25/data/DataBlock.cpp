@@ -42,7 +42,8 @@ DataBlock::DataBlock() :
 
 DataBlock::~DataBlock()
 {
-    delete[] m_data;
+    if (m_data != nullptr)
+        delete[] m_data;
 }
 
 /* Decodes P25 PDU data block. */
