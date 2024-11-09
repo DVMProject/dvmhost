@@ -97,6 +97,7 @@ FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port,
     m_influxLogRawData(false),
     m_disablePacketData(false),
     m_dumpPacketData(false),
+    m_verbosePacketData(false),
     m_reportPeerPing(reportPeerPing),
     m_verbose(verbose)
 {
@@ -158,6 +159,7 @@ void FNENetwork::setOptions(yaml::Node& conf, bool printOptions)
 
     m_disablePacketData = conf["disablePacketData"].as<bool>(false);
     m_dumpPacketData = conf["dumpPacketData"].as<bool>(false);
+    m_verbosePacketData = conf["verbosePacketData"].as<bool>(false);
 
     /*
     ** Drop Unit to Unit Peers
@@ -591,7 +593,11 @@ void* FNENetwork::threadedNetworkRx(void* arg)
 
                         // check if the peer is in the peer ACL list
                         if (network->m_peerListLookup->getACL()) {
-                            if (!network->m_peerListLookup->isPeerAllowed(peerId)) {
+                            if (network->m_peerListLookup->isPeerListEmpty()) {
+                                LogWarning(LOG_NET, "Peer List ACL enabled, but we have an empty peer list? Passing all peers.");
+                            }
+
+                            if (!network->m_peerListLookup->isPeerAllowed(peerId) && !network->m_peerListLookup->isPeerListEmpty()) {
                                 if (network->m_peerListLookup->getMode() == lookups::PeerListLookup::BLACKLIST) {
                                     LogWarning(LOG_NET, "PEER %u RPTL, blacklisted from access", peerId);
                                 } else {
@@ -625,7 +631,11 @@ void* FNENetwork::threadedNetworkRx(void* arg)
 
                                     // check if the peer is in the peer ACL list
                                     if (network->m_peerListLookup->getACL()) {
-                                        if (!network->m_peerListLookup->isPeerAllowed(peerId)) {
+                                        if (network->m_peerListLookup->isPeerListEmpty()) {
+                                            LogWarning(LOG_NET, "Peer List ACL enabled, but we have an empty peer list? Passing all peers.");
+                                        }
+
+                                        if (!network->m_peerListLookup->isPeerAllowed(peerId) && !network->m_peerListLookup->isPeerListEmpty()) {
                                             if (network->m_peerListLookup->getMode() == lookups::PeerListLookup::BLACKLIST) {
                                                 LogWarning(LOG_NET, "PEER %u RPTL, blacklisted from access", peerId);
                                             } else {
@@ -681,7 +691,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                 // check if the peer is in the peer ACL list
                                 bool validAcl = true;
                                 if (network->m_peerListLookup->getACL()) {
-                                    if (!network->m_peerListLookup->isPeerAllowed(peerId)) {
+                                    if (!network->m_peerListLookup->isPeerAllowed(peerId) && !network->m_peerListLookup->isPeerListEmpty()) {
                                         if (network->m_peerListLookup->getMode() == lookups::PeerListLookup::BLACKLIST) {
                                             LogWarning(LOG_NET, "PEER %u RPTK, blacklisted from access", peerId);
                                         } else {
@@ -699,6 +709,11 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                                 passwordForPeer = network->m_password;
                                             }
                                         }
+                                    }
+
+                                    if (network->m_peerListLookup->isPeerListEmpty()) {
+                                        LogWarning(LOG_NET, "Peer List ACL enabled, but we have an empty peer list? Passing all peers.");
+                                        validAcl = true;
                                     }
                                 }
 

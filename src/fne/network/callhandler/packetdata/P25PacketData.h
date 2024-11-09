@@ -185,7 +185,7 @@ namespace network
                  */
                 void dispatchToFNE(uint32_t peerId);
                 /**
-                 * @brief Helper to dispatch PDU user data back to the FNE network.
+                 * @brief Helper to dispatch PDU user data back to the local FNE network. (Will not transmit to external peers.)
                  * @param dataHeader Instance of a PDU data header.
                  * @param extendedAddress Flag indicating whether or not to extended addressing is in use.
                  * @param pduUserData Buffer containing user data to transmit.

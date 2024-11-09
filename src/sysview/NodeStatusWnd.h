@@ -465,10 +465,8 @@ public:
         getNetwork()->unlockPeerStatus();
 
         for (auto entry : peerStatus) {
-            uint32_t peerId = entry.first;
             json::object peerObj = entry.second;
-            if (peerObj["peerId"].is<uint32_t>())
-                peerId = peerObj["peerId"].get<uint32_t>();
+            uint32_t peerId = peerObj["peerId"].getDefault<uint32_t>(entry.first);
 
             auto it = std::find_if(m_nodes.begin(), m_nodes.end(), [&](NodeStatusWidget* wdgt) {
                 if (wdgt->peerId == peerId && wdgt->uniqueId == (int32_t)peerId)

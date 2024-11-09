@@ -195,6 +195,12 @@ namespace lookups
         bool isPeerAllowed(uint32_t id) const;
 
         /**
+         * @brief Checks if the peer list is empty.
+         * @returns bool True, if list is empty, otherwise false.
+         */
+        bool isPeerListEmpty() const { return m_table.size() == 0U; }
+
+        /**
          * @brief Sets the mode to either WHITELIST or BLACKLIST.
          * @param mode The mode to set.
          */

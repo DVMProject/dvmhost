@@ -70,6 +70,8 @@ master:
     disablePacketData: false
     # Flag indicating whether verbose dumping of data packets is enabled.
     dumpPacketData: false
+    # Flag indicating whether verbose logging of data packet operations is enabled.
+    verbosePacketData: false
 
     # Delay from when a call on a parrot TG ends to when the playback starts (in milliseconds).
     parrotDelay: 2000
