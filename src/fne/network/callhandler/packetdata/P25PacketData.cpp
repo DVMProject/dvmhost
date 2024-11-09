@@ -683,10 +683,10 @@ void P25PacketData::dispatchToFNE(uint32_t peerId)
                 }
 
                 write_PDU_User(peer.first, nullptr, status->header, status->extendedAddress, status->pduUserData, true);
-//                if (m_network->m_debug) {
+                if (m_network->m_debug) {
                     LogDebug(LOG_NET, "P25, srcPeer = %u, dstPeer = %u, duid = $%02X, srcId = %u, dstId = %u", 
                         peerId, peer.first, DUID::PDU, srcId, dstId);
-//                }
+                }
 
                 i++;
             }
@@ -713,10 +713,10 @@ void P25PacketData::dispatchToFNE(uint32_t peerId)
                 }
 
                 write_PDU_User(dstPeerId, peer.second, status->header, status->extendedAddress, status->pduUserData);
-//                if (m_network->m_debug) {
+                if (m_network->m_debug) {
                     LogDebug(LOG_NET, "P25, srcPeer = %u, dstPeer = %u, duid = $%02X, srcId = %u, dstId = %u", 
                         peerId, dstPeerId, DUID::PDU, srcId, dstId);
-//                }
+                }
             }
         }
     }
