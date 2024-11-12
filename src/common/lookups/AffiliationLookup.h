@@ -29,6 +29,7 @@
 #include <algorithm>
 #include <vector>
 #include <functional>
+#include <mutex>
 
 namespace lookups
 {
@@ -182,9 +183,10 @@ namespace lookups
          * @brief Helper to release the channel grant for the destination ID.
          * @param dstId Destination Address.
          * @param releaseAll Flag indicating all channel grants should be released.
+         * @param noLock Flag indicating no mutex lock operation should be performed while releasing.
          * @returns bool True, if channel grant was released, otherwise false.
          */
-        virtual bool releaseGrant(uint32_t dstId, bool releaseAll);
+        virtual bool releaseGrant(uint32_t dstId, bool releaseAll, bool noLock = false);
         /**
          * @brief Helper to determine if the channel number is busy.
          * @param chNo Channel Number.
@@ -298,6 +300,8 @@ namespace lookups
         bool m_disableUnitRegTimeout;
 
         bool m_verbose;
+
+        static std::mutex m_mutex;
     };
 } // namespace lookups
 
