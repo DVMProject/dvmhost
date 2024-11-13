@@ -35,12 +35,12 @@ namespace edac
         /**
          * @brief Decode Golay (23,12,7) FEC.
          * @param code 
-         * @returns uint8_t Number of errors detected.
+         * @returns uint32_t Data decoded with Golay FEC
          */
         static uint32_t decode23127(uint32_t code);
         /**
          * @brief Decode Golay (24,12,8) FEC.
-         * @param code 
+         * @param code
          * @param out 
          * @returns bool 
          */
