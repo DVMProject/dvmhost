@@ -193,6 +193,11 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
 
                         // check that we got the appropriate data
                         if (decompressedLen == m_tgidSize) {
+                            if (m_tidLookup == nullptr) {
+                                LogError(LOG_NET, "Talkgroup ID lookup not available yet.");
+                                goto tid_lookup_cleanup; // yes - I hate myself; but this is quick
+                            }
+
                             // store to file
                             std::unique_ptr<char[]> __str = std::make_unique<char[]>(decompressedLen + 1U);
                             char* str = __str.get();
@@ -325,6 +330,11 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
 
                         // check that we got the appropriate data
                         if (decompressedLen == m_ridSize) {
+                            if (m_ridLookup == nullptr) {
+                                LogError(LOG_NET, "Radio ID lookup not available yet.");
+                                goto rid_lookup_cleanup; // yes - I hate myself; but this is quick
+                            }
+
                             // store to file
                             std::unique_ptr<char[]> __str = std::make_unique<char[]>(decompressedLen + 1U);
                             char* str = __str.get();
@@ -457,6 +467,11 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
 
                         // check that we got the appropriate data
                         if (decompressedLen == m_pidSize) {
+                            if (m_pidLookup == nullptr) {
+                                LogError(LOG_NET, "Peer ID lookup not available yet.");
+                                goto pid_lookup_cleanup; // yes - I hate myself; but this is quick
+                            }
+
                             // store to file
                             std::unique_ptr<char[]> __str = std::make_unique<char[]>(decompressedLen + 1U);
                             char* str = __str.get();
