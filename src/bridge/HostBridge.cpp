@@ -925,7 +925,7 @@ bool HostBridge::createNetwork()
     LogInfo("    PCM over UDP Audio: %s", m_udpAudio ? "yes" : "no");
     if (m_udpAudio) {
         LogInfo("    UDP Audio Metadata: %s", m_udpMetadata ? "yes" : "no");
-        LogInfo("    UDP Audio end Address: %s", m_udpSendAddress.c_str());
+        LogInfo("    UDP Audio Send Address: %s", m_udpSendAddress.c_str());
         LogInfo("    UDP Audio Send Port: %u", m_udpSendPort);
         LogInfo("    UDP Audio Receive Address: %s", m_udpReceiveAddress.c_str());
         LogInfo("    UDP Audio Receive Port: %u", m_udpReceivePort);
