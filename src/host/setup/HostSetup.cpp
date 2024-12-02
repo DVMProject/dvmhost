@@ -811,7 +811,6 @@ bool HostSetup::createModem(bool consoleDisplay)
         modemPort = new port::UARTPort(uartPort, serialSpeed, true);
         LogInfo("    UART Port: %s", uartPort.c_str());
         LogInfo("    UART Speed: %u", uartSpeed);
-        LogInfo("    Assert RTS enabled");
     }
 
     LogInfo("    RX Invert: %s", rxInvert ? "yes" : "no");
