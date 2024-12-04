@@ -552,12 +552,17 @@ bool Host::createModem()
         }
 
         if (portType == PTY_PORT) {
-            modemPort = new port::UARTPort(uartPort, serialSpeed, false);
+            modemPort = new port::UARTPort(uartPort, serialSpeed, false, false);
             LogInfo("    PTY Port: %s", uartPort.c_str());
             LogInfo("    PTY Speed: %u", uartSpeed);
         }
         else {
-            modemPort = new port::UARTPort(uartPort, serialSpeed, true);
+            if (modemMode == MODEM_MODE_DFSI) {
+                modemPort = new port::UARTPort(uartPort, serialSpeed, false, true);
+                LogInfo("    RTS/DTR boot flags enabled");
+            } else {
+                modemPort = new port::UARTPort(uartPort, serialSpeed, true, false);
+            }
             LogInfo("    UART Port: %s", uartPort.c_str());
             LogInfo("    UART Speed: %u", uartSpeed);
         }

@@ -30,7 +30,7 @@ using namespace modem::port;
 
 /* Initializes a new instance of the PseudoPTYPort class. */
 
-PseudoPTYPort::PseudoPTYPort(const std::string& symlink, SERIAL_SPEED speed, bool assertRTS) : UARTPort(speed, assertRTS),
+PseudoPTYPort::PseudoPTYPort(const std::string& symlink, SERIAL_SPEED speed, bool assertRTS) : UARTPort(speed, assertRTS, false),
     m_symlink(symlink)
 {
     /* stub */

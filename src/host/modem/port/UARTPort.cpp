@@ -37,11 +37,12 @@ using namespace modem::port;
 
 /* Initializes a new instance of the UARTPort class. */
 
-UARTPort::UARTPort(const std::string& device, SERIAL_SPEED speed, bool assertRTS) :
+UARTPort::UARTPort(const std::string& device, SERIAL_SPEED speed, bool assertRTS, bool rtsBoot) :
     m_isOpen(false),
     m_device(device),
     m_speed(speed),
     m_assertRTS(assertRTS),
+    m_rtsBoot(rtsBoot),
 #if defined(_WIN32)
     m_fd(INVALID_HANDLE_VALUE)
 #else
@@ -334,10 +335,11 @@ int UARTPort::setNonblock(bool nonblock)
 
 /* Initializes a new instance of the UARTPort class. */
 
-UARTPort::UARTPort(SERIAL_SPEED speed, bool assertRTS) :
+UARTPort::UARTPort(SERIAL_SPEED speed, bool assertRTS, bool rtsBoot) :
     m_isOpen(false),
     m_speed(speed),
     m_assertRTS(assertRTS),
+    m_rtsBoot(rtsBoot),
 #if defined(_WIN32)
     m_fd(INVALID_HANDLE_VALUE)
 #else
@@ -493,6 +495,40 @@ bool UARTPort::setTermios()
 
         y |= TIOCM_RTS;
 
+        if (::ioctl(m_fd, TIOCMSET, &y) < 0) {
+            ::LogError(LOG_HOST, "Cannot set the control attributes for %s", m_device.c_str());
+            ::close(m_fd);
+            return false;
+        }
+    }
+
+    // Special setting of RTS/DTR for DVM-V24 boards with onboard DTR/RTS boot connections
+    if (m_rtsBoot) {
+        ::LogInfoEx(LOG_MODEM, "RTS/DTR boot flag enabled, forcing board reset");
+        uint32_t y;
+        if (::ioctl(m_fd, TIOCMGET, &y) < 0) {
+            ::LogError(LOG_HOST, "Cannot get the control attributes for %s", m_device.c_str());
+            ::close(m_fd);
+            return false;
+        }
+
+        // Force RTS bit off
+        y &= ~TIOCM_RTS;
+
+        if (::ioctl(m_fd, TIOCMSET, &y) < 0) {
+            ::LogError(LOG_HOST, "Cannot set the control attributes for %s", m_device.c_str());
+            ::close(m_fd);
+            return false;
+        }
+
+        // Toggle DTR to force second reset
+        y &= ~TIOCM_DTR;
+        if (::ioctl(m_fd, TIOCMSET, &y) < 0) {
+            ::LogError(LOG_HOST, "Cannot set the control attributes for %s", m_device.c_str());
+            ::close(m_fd);
+            return false;
+        }
+        y |= TIOCM_DTR;
         if (::ioctl(m_fd, TIOCMSET, &y) < 0) {
             ::LogError(LOG_HOST, "Cannot set the control attributes for %s", m_device.c_str());
             ::close(m_fd);
