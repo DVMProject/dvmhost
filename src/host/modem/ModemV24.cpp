@@ -754,15 +754,15 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
                 ::memset(buffer, 0x00U, P25_PDU_FRAME_LENGTH_BYTES + 2U);
 
                 // add the data
-                uint32_t newBitLength = P25Utils::encode(data, buffer + 2U, bitLength);
+                uint32_t newBitLength = P25Utils::encodeByLength(data, buffer + 2U, bitLength);
                 uint32_t newByteLength = newBitLength / 8U;
                 if ((newBitLength % 8U) > 0U)
                     newByteLength++;
 
-                // regenerate Sync
+                // generate Sync
                 Sync::addP25Sync(buffer + 2U);
 
-                // regenerate NID
+                // generate NID
                 m_nid->encode(buffer + 2U, DUID::PDU);
 
                 // add status bits

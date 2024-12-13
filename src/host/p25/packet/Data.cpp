@@ -96,6 +96,8 @@ bool Data::process(uint8_t* data, uint32_t len)
             m_rfPduUserDataLength = 0U;
         }
 
+        //Utils::dump(1U, "Raw PDU ISP", data, len);
+
         uint32_t start = m_rfPDUCount * P25_PDU_FRAME_LENGTH_BITS;
 
         uint8_t buffer[P25_PDU_FRAME_LENGTH_BYTES];
@@ -815,6 +817,9 @@ void Data::writeRF_PDU_User(data::DataHeader& dataHeader, bool extendedAddress, 
     m_p25->writeRF_TDU(true, imm);
 
     uint32_t bitLength = ((dataHeader.getBlocksToFollow() + 1U) * P25_PDU_FEC_LENGTH_BITS) + P25_PREAMBLE_LENGTH_BITS;
+    if (dataHeader.getPadLength() > 0U)
+        bitLength += (dataHeader.getPadLength() * 8U);
+
     uint32_t offset = P25_PREAMBLE_LENGTH_BITS;
 
     UInt8Array __data = std::make_unique<uint8_t[]>((bitLength / 8U) + 1U);
@@ -1392,7 +1397,7 @@ void Data::writeRF_PDU(const uint8_t* pdu, uint32_t bitLength, bool imm, bool ac
     assert(pdu != nullptr);
     assert(bitLength > 0U);
 
-    m_p25->writeRF_Preamble();
+    m_p25->writeRF_TDU(true, imm);
 
     if (!ackRetry) {
         if (m_retryPDUData != nullptr)
@@ -1416,20 +1421,22 @@ void Data::writeRF_PDU(const uint8_t* pdu, uint32_t bitLength, bool imm, bool ac
     ::memset(data, 0x00U, P25_PDU_FRAME_LENGTH_BYTES + 2U);
 
     // add the data
-    uint32_t newBitLength = P25Utils::encode(pdu, data + 2U, bitLength);
+    uint32_t newBitLength = P25Utils::encodeByLength(pdu, data + 2U, bitLength);
     uint32_t newByteLength = newBitLength / 8U;
     if ((newBitLength % 8U) > 0U)
         newByteLength++;
 
-    // regenerate Sync
+    // generate Sync
     Sync::addP25Sync(data + 2U);
 
-    // regenerate NID
+    // generate NID
     m_p25->m_nid.encode(data + 2U, DUID::PDU);
 
     // add status bits
     P25Utils::addStatusBits(data + 2U, newBitLength, m_inbound, true);
     P25Utils::setStatusBitsStartIdle(data + 2U);
+
+    //Utils::dump("Raw PDU OSP", data, newByteLength + 2U);
 
     if (m_p25->m_duplex) {
         data[0U] = modem::TAG_DATA;
@@ -1446,6 +1453,9 @@ void Data::writeRF_PDU(const uint8_t* pdu, uint32_t bitLength, bool imm, bool ac
 void Data::writeNet_PDU_Buffered()
 {
     uint32_t bitLength = ((m_netDataHeader.getBlocksToFollow() + 1U) * P25_PDU_FEC_LENGTH_BITS) + P25_PREAMBLE_LENGTH_BITS;
+    if (m_netDataHeader.getPadLength() > 0U)
+        bitLength += (m_netDataHeader.getPadLength() * 8U);
+
     uint32_t offset = P25_PREAMBLE_LENGTH_BITS;
 
     UInt8Array __data = std::make_unique<uint8_t[]>((bitLength / 8U) + 1U);
@@ -1537,6 +1547,9 @@ void Data::writeNet_PDU_Buffered()
 void Data::writeRF_PDU_Buffered()
 {
     uint32_t bitLength = ((m_rfDataHeader.getBlocksToFollow() + 1U) * P25_PDU_FEC_LENGTH_BITS) + P25_PREAMBLE_LENGTH_BITS;
+    if (m_rfDataHeader.getPadLength() > 0U)
+        bitLength += (m_rfDataHeader.getPadLength() * 8U);
+
     uint32_t offset = P25_PREAMBLE_LENGTH_BITS;
 
     UInt8Array __data = std::make_unique<uint8_t[]>((bitLength / 8U) + 1U);

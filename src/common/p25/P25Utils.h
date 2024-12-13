@@ -188,7 +188,7 @@ namespace p25
          * @param length 
          * @returns uint32_t 
          */
-        static uint32_t encode(const uint8_t* in, uint8_t* out, uint32_t length);
+        static uint32_t encodeByLength(const uint8_t* in, uint8_t* out, uint32_t length);
 
         /**
          * @brief Compare two datasets for the given length.

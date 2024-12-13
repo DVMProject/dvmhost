@@ -191,9 +191,9 @@ uint32_t P25Utils::encode(const uint8_t* in, uint8_t* out, uint32_t start, uint3
     return n;
 }
 
-/* Encode bit interleaving. */
+/* Encode bit interleaving for a given length. */
 
-uint32_t P25Utils::encode(const uint8_t* in, uint8_t* out, uint32_t length)
+uint32_t P25Utils::encodeByLength(const uint8_t* in, uint8_t* out, uint32_t length)
 {
     assert(in != nullptr);
     assert(out != nullptr);
@@ -207,17 +207,14 @@ uint32_t P25Utils::encode(const uint8_t* in, uint8_t* out, uint32_t length)
     while (n < length) {
         if (pos == ss0Pos) {
             ss0Pos += P25_SS_INCREMENT;
-
         }
         else if (pos == ss1Pos) {
             ss1Pos += P25_SS_INCREMENT;
-
         }
         else {
             bool b = READ_BIT(in, n);
             WRITE_BIT(out, pos, b);
             n++;
-
         }
         pos++;
 
