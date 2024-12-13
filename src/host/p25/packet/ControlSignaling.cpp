@@ -1357,17 +1357,17 @@ void ControlSignaling::writeRF_TDULC(lc::TDULC* lc, bool noNetwork)
     uint8_t data[P25_TDULC_FRAME_LENGTH_BYTES + 2U];
     ::memset(data + 2U, 0x00U, P25_TDULC_FRAME_LENGTH_BYTES);
 
-    // Generate Sync
+    // generate Sync
     Sync::addP25Sync(data + 2U);
 
-    // Generate NID
+    // generate NID
     m_p25->m_nid.encode(data + 2U, DUID::TDULC);
 
-    // Generate TDULC Data
+    // generate TDULC Data
     lc->encode(data + 2U);
 
-    // Add busy bits
-    P25Utils::addStatusBits(data + 2U, P25_TDULC_FRAME_LENGTH_BITS, false);
+    // add status bits
+    P25Utils::addStatusBits(data + 2U, P25_TDULC_FRAME_LENGTH_BITS, false, false);
 
     m_p25->m_rfTimeout.stop();
 
@@ -1396,17 +1396,17 @@ void ControlSignaling::writeNet_TDULC(lc::TDULC* lc)
     buffer[0U] = modem::TAG_EOT;
     buffer[1U] = 0x00U;
 
-    // Generate Sync
+    // generate Sync
     Sync::addP25Sync(buffer + 2U);
 
-    // Generate NID
+    // generate NID
     m_p25->m_nid.encode(buffer + 2U, DUID::TDULC);
 
-    // Regenerate TDULC Data
+    // regenerate TDULC Data
     lc->encode(buffer + 2U);
 
-    // Add busy bits
-    P25Utils::addStatusBits(buffer + 2U, P25_TDULC_FRAME_LENGTH_BITS, false);
+    // add status bits
+    P25Utils::addStatusBits(buffer + 2U, P25_TDULC_FRAME_LENGTH_BITS, false, false);
 
     m_p25->addFrame(buffer, P25_TDULC_FRAME_LENGTH_BYTES + 2U, true);
 
@@ -1443,13 +1443,13 @@ void ControlSignaling::writeRF_TSDU_SBF(lc::TSBK* tsbk, bool noNetwork, bool for
     uint8_t data[P25_TSDU_FRAME_LENGTH_BYTES + 2U];
     ::memset(data + 2U, 0x00U, P25_TSDU_FRAME_LENGTH_BYTES);
 
-    // Generate Sync
+    // generate Sync
     Sync::addP25Sync(data + 2U);
 
-    // Generate NID
+    // generate NID
     m_p25->m_nid.encode(data + 2U, DUID::TSDU);
 
-    // Generate TSBK block
+    // generate TSBK block
     tsbk->setLastBlock(true); // always set last block -- this a Single Block TSDU
     tsbk->encode(data + 2U);
 
@@ -1461,12 +1461,10 @@ void ControlSignaling::writeRF_TSDU_SBF(lc::TSBK* tsbk, bool noNetwork, bool for
         Utils::dump(1U, "!!! *TSDU (SBF) TSBK Block Data", data + P25_PREAMBLE_LENGTH_BYTES + 2U, P25_TSBK_FEC_LENGTH_BYTES);
     }
 
-    // Add busy bits
+    // add status bits
     P25Utils::addStatusBits(data + 2U, P25_TSDU_FRAME_LENGTH_BITS, m_inbound, true);
-    P25Utils::addTrunkSlotStatusBits(data + 2U, P25_TSDU_FRAME_LENGTH_BITS);
-
-    // Set first busy bits to 1,1
-    P25Utils::setStatusBits(data + 2U, P25_SS0_START, true, true);
+    P25Utils::addIdleStatusBits(data + 2U, P25_TSDU_FRAME_LENGTH_BITS);
+    P25Utils::setStatusBitsStartIdle(data + 2U);
 
     if (!noNetwork)
         writeNetworkRF(tsbk, data + 2U, true);
@@ -1513,22 +1511,20 @@ void ControlSignaling::writeNet_TSDU(lc::TSBK* tsbk)
     buffer[0U] = modem::TAG_DATA;
     buffer[1U] = 0x00U;
 
-    // Generate Sync
+    // generate Sync
     Sync::addP25Sync(buffer + 2U);
 
-    // Generate NID
+    // generate NID
     m_p25->m_nid.encode(buffer + 2U, DUID::TSDU);
 
-    // Regenerate TSDU Data
+    // regenerate TSDU Data
     tsbk->setLastBlock(true); // always set last block -- this a Single Block TSDU
     tsbk->encode(buffer + 2U);
 
-    // Add busy bits
+    // add status bits
     P25Utils::addStatusBits(buffer + 2U, P25_TSDU_FRAME_LENGTH_BYTES, false, true);
-    P25Utils::addTrunkSlotStatusBits(buffer + 2U, P25_TSDU_FRAME_LENGTH_BYTES);
-
-    // Set first busy bits to 1,1
-    P25Utils::setStatusBits(buffer + 2U, P25_SS0_START, true, true);
+    P25Utils::addIdleStatusBits(buffer + 2U, P25_TSDU_FRAME_LENGTH_BYTES);
+    P25Utils::setStatusBitsStartIdle(buffer + 2U);
 
     m_p25->addFrame(buffer, P25_TSDU_FRAME_LENGTH_BYTES + 2U, true);
 
@@ -1566,7 +1562,7 @@ void ControlSignaling::writeRF_TSDU_MBF(lc::TSBK* tsbk)
 
     // trigger encoding of last block and write to queue
     if (m_mbfCnt + 1U == TSBK_MBF_CNT) {
-        // Generate TSBK block
+        // generate TSBK block
         tsbk->setLastBlock(true); // set last block
         tsbk->encode(frame, true);
 
@@ -1580,7 +1576,7 @@ void ControlSignaling::writeRF_TSDU_MBF(lc::TSBK* tsbk)
 
         Utils::setBitRange(frame, m_rfMBF, (m_mbfCnt * P25_TSBK_FEC_LENGTH_BITS), P25_TSBK_FEC_LENGTH_BITS);
 
-        // Generate TSDU frame
+        // generate TSDU frame
         uint8_t tsdu[P25_TSDU_TRIPLE_FRAME_LENGTH_BYTES];
         ::memset(tsdu, 0x00U, P25_TSDU_TRIPLE_FRAME_LENGTH_BYTES);
 
@@ -1597,7 +1593,7 @@ void ControlSignaling::writeRF_TSDU_MBF(lc::TSBK* tsbk)
                 Utils::dump(1U, "!!! *TSDU (MBF) TSBK Block", frame, P25_TSBK_FEC_LENGTH_BYTES);
             }
 
-            // Add TSBK data
+            // add TSBK data
             Utils::setBitRange(frame, tsdu, offset, P25_TSBK_FEC_LENGTH_BITS);
 
             offset += P25_TSBK_FEC_LENGTH_BITS;
@@ -1608,18 +1604,18 @@ void ControlSignaling::writeRF_TSDU_MBF(lc::TSBK* tsbk)
         uint8_t data[P25_TSDU_TRIPLE_FRAME_LENGTH_BYTES + 2U];
         ::memset(data + 2U, 0x00U, P25_TSDU_TRIPLE_FRAME_LENGTH_BYTES);
 
-        // Generate Sync
+        // generate Sync
         Sync::addP25Sync(data + 2U);
 
-        // Generate NID
+        // generate NID
         m_p25->m_nid.encode(data + 2U, DUID::TSDU);
 
         // interleave
         P25Utils::encode(tsdu, data + 2U, 114U, 720U);
 
-        // Add busy bits
+        // add busy bits
         P25Utils::addStatusBits(data + 2U, P25_TSDU_TRIPLE_FRAME_LENGTH_BITS, m_inbound, true);
-        P25Utils::addTrunkSlotStatusBits(data + 2U, P25_TSDU_TRIPLE_FRAME_LENGTH_BITS);
+        P25Utils::addIdleStatusBits(data + 2U, P25_TSDU_TRIPLE_FRAME_LENGTH_BITS);
 
         data[0U] = modem::TAG_DATA;
         data[1U] = 0x00U;
@@ -1631,7 +1627,7 @@ void ControlSignaling::writeRF_TSDU_MBF(lc::TSBK* tsbk)
         return;
     }
 
-    // Generate TSBK block
+    // generate TSBK block
     tsbk->setLastBlock(false); // clear last block
     tsbk->encode(frame, true);
 
@@ -2938,21 +2934,19 @@ void ControlSignaling::writeNet_TSDU_From_RF(lc::TSBK* tsbk, uint8_t* data)
 
     ::memset(data, 0x00U, P25_TSDU_FRAME_LENGTH_BYTES);
 
-    // Generate Sync
+    // generate Sync
     Sync::addP25Sync(data);
 
-    // Generate NID
+    // generate NID
     m_p25->m_nid.encode(data, DUID::TSDU);
 
-    // Regenerate TSDU Data
+    // regenerate TSDU Data
     tsbk->setLastBlock(true); // always set last block -- this a Single Block TSDU
     tsbk->encode(data);
 
-    // Add busy bits
-    P25Utils::addStatusBits(data, P25_TSDU_FRAME_LENGTH_BYTES, false);
-
-    // Set first busy bits to 1,1
-    P25Utils::setStatusBits(data, P25_SS0_START, true, true);
+    // add status bits
+    P25Utils::addStatusBits(data, P25_TSDU_FRAME_LENGTH_BYTES, false, false);
+    P25Utils::setStatusBitsStartIdle(data);
 }
 
 /* Helper to automatically inhibit a source ID on a denial. */

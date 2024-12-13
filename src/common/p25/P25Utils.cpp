@@ -31,13 +31,37 @@ void P25Utils::setStatusBits(uint8_t* data, uint32_t ssOffset, bool b1, bool b2)
     WRITE_BIT(data, ssOffset + 1U, b2);
 }
 
-/* Helper to add the status bits on P25 frame data. */
+/* Helper to set the starting status bits on P25 frame data to 1,1 for idle. */
 
-void P25Utils::addStatusBits(uint8_t* data, uint32_t length, bool inbound, bool control)
+void P25Utils::setStatusBitsStartIdle(uint8_t* data)
 {
     assert(data != nullptr);
 
-    // insert the "10" (Unknown, use for inbound or outbound) status bits
+    // set "1,1" (Start of Inbound Slot/Idle) status bits [TIA-102.BAAA]
+    P25Utils::setStatusBits(data, P25_SS0_START, true, true);
+}
+
+/* Helper to set all status bits on a P25 frame data to 1,1 for idle. */
+
+void P25Utils::setStatusBitsAllIdle(uint8_t* data, uint32_t length)
+{
+    assert(data != nullptr);
+
+    // set "1,1" (Idle) status bits [TIA-102.BAAA]
+    for (uint32_t ss0Pos = P25_SS0_START; ss0Pos < length; ss0Pos += P25_SS_INCREMENT) {
+        uint32_t ss1Pos = ss0Pos + 1U;
+        WRITE_BIT(data, ss0Pos, true);              // 1
+        WRITE_BIT(data, ss1Pos, true);              // 1
+    }
+}
+
+/* Helper to add the status bits on P25 frame data. */
+
+void P25Utils::addStatusBits(uint8_t* data, uint32_t length, bool busy, bool unknown)
+{
+    assert(data != nullptr);
+
+    // set "1,0" (Unknown) status bits [TIA-102.BAAA]
     for (uint32_t ss0Pos = P25_SS0_START; ss0Pos < length; ss0Pos += P25_SS_INCREMENT) {
         uint32_t ss1Pos = ss0Pos + 1U;
         WRITE_BIT(data, ss0Pos, true);              // 1
@@ -47,14 +71,17 @@ void P25Utils::addStatusBits(uint8_t* data, uint32_t length, bool inbound, bool 
     // interleave the requested status bits (every other)
     for (uint32_t ss0Pos = P25_SS0_START; ss0Pos < length; ss0Pos += (P25_SS_INCREMENT * 2U)) {
         uint32_t ss1Pos = ss0Pos + 1U;
-        if (inbound) {
+        if (busy) {
+            // set "0,1" (Busy) status bits [TIA-102.BAAA]
             WRITE_BIT(data, ss0Pos, false);         // 0
             WRITE_BIT(data, ss1Pos, true);          // 1
         } else {
-            if (control) {
+            if (unknown) {
+                // set "1,0" (Unknown) status bits [TIA-102.BAAA]
                 WRITE_BIT(data, ss0Pos, true);      // 1
                 WRITE_BIT(data, ss1Pos, false);     // 0
             } else {
+                // set "1,1" (Start of Inbound Slot/Idle) status bits [TIA-102.BAAA]
                 WRITE_BIT(data, ss0Pos, true);      // 1
                 WRITE_BIT(data, ss1Pos, true);      // 1
             }
@@ -62,27 +89,35 @@ void P25Utils::addStatusBits(uint8_t* data, uint32_t length, bool inbound, bool 
     }
 }
 
-/* Helper to add the idle status bits on P25 frame data. */
+/* Helper to add the unknown (1,0) status bits on P25 frame data. */
 
-void P25Utils::addIdleStatusBits(uint8_t* data, uint32_t length)
+void P25Utils::addUnknownStatusBits(uint8_t* data, uint32_t length, uint8_t interval)
 {
     assert(data != nullptr);
 
-    for (uint32_t ss0Pos = P25_SS0_START; ss0Pos < length; ss0Pos += (P25_SS_INCREMENT * 5U)) {
+    if (interval == 0U)
+        interval = 1U;
+
+    for (uint32_t ss0Pos = P25_SS0_START; ss0Pos < length; ss0Pos += (P25_SS_INCREMENT * interval)) {
         uint32_t ss1Pos = ss0Pos + 1U;
+        // set "1,0" (Unknown) status bits [TIA-102.BAAA]
         WRITE_BIT(data, ss0Pos, true);              // 1
         WRITE_BIT(data, ss1Pos, false);             // 0
     }
 }
 
-/* Helper to add the trunk start slot status bits on P25 frame data. */
+/* Helper to add the idle (1,1) status bits on P25 frame data. */
 
-void P25Utils::addTrunkSlotStatusBits(uint8_t* data, uint32_t length)
+void P25Utils::addIdleStatusBits(uint8_t* data, uint32_t length, uint8_t interval)
 {
     assert(data != nullptr);
 
-    for (uint32_t ss0Pos = P25_SS0_START; ss0Pos < length; ss0Pos += (P25_SS_INCREMENT * 5U)) {
+    if (interval == 0U)
+        interval = 1U;
+
+    for (uint32_t ss0Pos = P25_SS0_START; ss0Pos < length; ss0Pos += (P25_SS_INCREMENT * interval)) {
         uint32_t ss1Pos = ss0Pos + 1U;
+        // set "1,1" (Start of Inbound Slot/Idle) status bits [TIA-102.BAAA]
         WRITE_BIT(data, ss0Pos, true);              // 1
         WRITE_BIT(data, ss1Pos, true);              // 1
     }

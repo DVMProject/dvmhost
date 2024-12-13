@@ -542,14 +542,14 @@ void ModemV24::create_TDU(uint8_t* buffer)
     uint8_t data[P25_TDU_FRAME_LENGTH_BYTES + 2U];
     ::memset(data + 2U, 0x00U, P25_TDU_FRAME_LENGTH_BYTES);
 
-    // Generate Sync
+    // generate Sync
     Sync::addP25Sync(data + 2U);
 
-    // Generate NID
+    // generate NID
     m_nid->encode(data + 2U, DUID::TDU);
 
-    // Add busy bits
-    P25Utils::addStatusBits(data + 2U, P25_TDU_FRAME_LENGTH_BITS, false);
+    // add status bits
+    P25Utils::addStatusBits(data + 2U, P25_TDU_FRAME_LENGTH_BITS, false, false);
 
     buffer[0U] = modem::TAG_EOT;
     buffer[1U] = 0x01U;
@@ -672,17 +672,17 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
                     lc.setKId(m_rxCall->kId);
                     lc.setMI(m_rxCall->MI);
 
-                    // Generate Sync
+                    // generate Sync
                     Sync::addP25Sync(buffer + 2U);
 
-                    // Generate NID
+                    // generate NID
                     m_nid->encode(buffer + 2U, DUID::HDU);
 
-                    // Generate HDU
+                    // generate HDU
                     lc.encodeHDU(buffer + 2U);
 
-                    // Add busy bits
-                    P25Utils::addStatusBits(buffer + 2U, P25_HDU_FRAME_LENGTH_BITS, true);
+                    // add status bits
+                    P25Utils::addStatusBits(buffer + 2U, P25_HDU_FRAME_LENGTH_BITS, true, false);
 
                     buffer[0U] = modem::TAG_DATA;
                     buffer[1U] = 0x01U;
@@ -753,24 +753,22 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
                 uint8_t buffer[P25_PDU_FRAME_LENGTH_BYTES + 2U];
                 ::memset(buffer, 0x00U, P25_PDU_FRAME_LENGTH_BYTES + 2U);
 
-                // Add the data
+                // add the data
                 uint32_t newBitLength = P25Utils::encode(data, buffer + 2U, bitLength);
                 uint32_t newByteLength = newBitLength / 8U;
                 if ((newBitLength % 8U) > 0U)
                     newByteLength++;
 
-                // Regenerate Sync
+                // regenerate Sync
                 Sync::addP25Sync(buffer + 2U);
 
-                // Regenerate NID
+                // regenerate NID
                 m_nid->encode(buffer + 2U, DUID::PDU);
 
-                // Add status bits
-                P25Utils::addStatusBits(buffer + 2U, newBitLength, false);
+                // add status bits
+                P25Utils::addStatusBits(buffer + 2U, newBitLength, false, false);
                 P25Utils::addIdleStatusBits(buffer + 2U, newBitLength);
-
-                // Set first busy bits to 1,1
-                P25Utils::setStatusBits(buffer + 2U, P25_SS0_START, true, true);
+                P25Utils::setStatusBitsStartIdle(buffer + 2U);
 
                 storeConvertedRx(buffer, P25_PDU_FRAME_LENGTH_BYTES + 2U);
             }
@@ -790,22 +788,20 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
                 buffer[0U] = modem::TAG_DATA;
                 buffer[1U] = 0x00U;
 
-                // Generate Sync
+                // generate Sync
                 Sync::addP25Sync(buffer + 2U);
 
-                // Generate NID
+                // generate NID
                 m_nid->encode(buffer + 2U, DUID::TSDU);
 
-                // Regenerate TSDU Data
+                // regenerate TSDU Data
                 tsbk.setLastBlock(true); // always set last block -- this a Single Block TSDU
                 tsbk.encode(buffer + 2U);
 
-                // Add busy bits
+                // add status bits
                 P25Utils::addStatusBits(buffer + 2U, P25_TSDU_FRAME_LENGTH_BYTES, false, true);
-                P25Utils::addTrunkSlotStatusBits(buffer + 2U, P25_TSDU_FRAME_LENGTH_BYTES);
-
-                // Set first busy bits to 1,1
-                P25Utils::setStatusBits(buffer + 2U, P25_SS0_START, true, true);
+                P25Utils::addIdleStatusBits(buffer + 2U, P25_TSDU_FRAME_LENGTH_BYTES);
+                P25Utils::setStatusBitsStartIdle(buffer + 2U);
 
                 storeConvertedRx(buffer, P25_TSDU_FRAME_LENGTH_BYTES + 2U);
             }
@@ -1028,8 +1024,8 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
         m_audio.encode(buffer + 2U, m_rxCall->netLDU1 + 180U, 7U);
         m_audio.encode(buffer + 2U, m_rxCall->netLDU1 + 204U, 8U);
 
-        // add busy bits
-        P25Utils::addStatusBits(buffer + 2U, P25_LDU_FRAME_LENGTH_BITS, true);
+        // add status bits
+        P25Utils::addStatusBits(buffer + 2U, P25_LDU_FRAME_LENGTH_BITS, true, false);
 
         buffer[0U] = modem::TAG_DATA;
         buffer[1U] = 0x01U;
@@ -1070,8 +1066,8 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
         m_audio.encode(buffer + 2U, m_rxCall->netLDU2 + 180U, 7U);
         m_audio.encode(buffer + 2U, m_rxCall->netLDU2 + 204U, 8U);
 
-        // add busy bits
-        P25Utils::addStatusBits(buffer + 2U, P25_LDU_FRAME_LENGTH_BITS, true);
+        // add status bits
+        P25Utils::addStatusBits(buffer + 2U, P25_LDU_FRAME_LENGTH_BITS, true, false);
 
         buffer[0U] = modem::TAG_DATA;
         buffer[1U] = 0x01U;
