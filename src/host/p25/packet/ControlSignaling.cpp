@@ -559,6 +559,14 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
                 }
 
                 ::ActivityLog("P25", true, "group affiliation query response from %u to %s %u", srcId, "TG ", dstId);
+
+                if (!m_p25->m_affiliations.isGroupAff(srcId, dstId)) {
+                    // update dynamic affiliation table
+                    m_p25->m_affiliations.groupAff(srcId, dstId);
+
+                    if (m_p25->m_network != nullptr)
+                        m_p25->m_network->announceGroupAffiliation(srcId, dstId);
+                }
             }
             break;
             case TSBKO::ISP_U_DEREG_REQ:
