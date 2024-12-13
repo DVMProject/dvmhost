@@ -548,6 +548,12 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
                 // make sure control data is supported
                 IS_SUPPORT_CONTROL_CHECK(tsbk->toString(true), TSBKO::ISP_GRP_AFF_Q_RSP, srcId);
 
+                // validate the source RID
+                VALID_SRCID(tsbk->toString(true), TSBKO::IOSP_ACK_RSP, srcId);
+
+                // validate the target RID
+                VALID_DSTID(tsbk->toString(true), TSBKO::IOSP_ACK_RSP, srcId, dstId);
+
                 if (m_p25->m_ackTSBKRequests) {
                     writeRF_TSDU_ACK_FNE(srcId, TSBKO::ISP_GRP_AFF_Q_RSP, true, true);
                 }
