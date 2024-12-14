@@ -627,6 +627,8 @@ bool HostSetup::calculateRxTxFreq(bool consoleDisplay, uint32_t txFrequency)
             m_txFrequency = prevTxFrequency;
             m_rxFrequency = prevRxFrequency;
         }
+
+        m_conf["system"]["config"]["channelNo"] = __INT_HEX_STR(m_channelNo);
     }
     else {
         yaml::Node systemConf = m_conf["system"];
