@@ -46,16 +46,16 @@ void PeerListLookup::clear()
 
 /* Adds a new entry to the list. */
 
-void PeerListLookup::addEntry(uint32_t id, const std::string& password, bool peerLink)
+void PeerListLookup::addEntry(uint32_t id, const std::string& alias, const std::string& password, bool peerLink)
 {
-    PeerId entry = PeerId(id, password, peerLink, false);
+    PeerId entry = PeerId(id, alias, password, peerLink, false);
 
     std::lock_guard<std::mutex> lock(m_mutex);
     try {
         PeerId _entry = m_table.at(id);
         // if either the alias or the enabled flag doesn't match, update the entry
         if (_entry.peerId() == id) {
-            _entry = PeerId(id, password, peerLink, false);
+            _entry = PeerId(id, alias, password, peerLink, false);
             m_table[id] = _entry;
         }
     } catch (...) {
@@ -87,7 +87,7 @@ PeerId PeerListLookup::find(uint32_t id)
     try {
         entry = m_table.at(id);
     } catch (...) {
-        entry = PeerId(0U, "", false, true);
+        entry = PeerId(0U, "", "", false, true);
     }
 
     return entry;
@@ -201,22 +201,29 @@ bool PeerListLookup::load()
 
             // parse tokenized line
             uint32_t id = ::atoi(parsed[0].c_str());
+
+            // Parse optional alias field (at end of line to avoid breaking change with existing lists)
+            std::string alias = "";
+            if (parsed.size() >= 4)
+                alias = parsed[3].c_str();
+
+            // Parse peer link flag
             bool peerLink = false;
             if (parsed.size() >= 3)
                 peerLink = ::atoi(parsed[2].c_str()) == 1;
 
-            // Check for an optional alias field
-            if (parsed.size() >= 2) {
-                if (!parsed[1].empty()) {
-                    m_table[id] = PeerId(id, parsed[1], peerLink, false);
-                    LogDebug(LOG_HOST, "Loaded peer ID %u into peer ID lookup table, using unique peer password%s", id,
-                        (peerLink) ? ", Peer-Link Enabled" : "");
-                    continue;
-                }
-            }
+            // Parse optional password
+            std::string password = "";
+            if (parsed.size() >= 2)
+                password = parsed[1].c_str();
 
-            m_table[id] = PeerId(id, "", peerLink, false);
-            LogDebug(LOG_HOST, "Loaded peer ID %u into peer ID lookup table, using master password%s", id,
+            // Load into table
+            m_table[id] = PeerId(id, alias, password, peerLink, false);
+
+            // Log depending on what was loaded
+            LogDebug(LOG_HOST, "Loaded peer ID %u%s into peer ID lookup table, %s%s", id,
+                (!alias.empty() ? (" (" + alias + ")").c_str() : ""),
+                (!password.empty() ? "using unique peer password" : "using master password"),
                 (peerLink) ? ", Peer-Link Enabled" : "");
         }
     }
@@ -258,19 +265,26 @@ bool PeerListLookup::save()
     for (auto& entry: m_table) {
         // Get the parameters
         uint32_t peerId = entry.first;
+        std::string alias = entry.second.peerAlias();
         std::string password = entry.second.peerPassword();
         // Format into a string
         line = std::to_string(peerId) + ",";
-        // Add the alias if we have one
+        // Add the password if we have one
         if (password.length() > 0) {
             line += password;
             line += ",";
         }
+        // Add peerLink flag
         bool peerLink = entry.second.peerLink();
         if (peerLink) {
             line += "1,";
         } else {
             line += "0,";
+        }
+        // Add alias if we have one
+        if (alias.length() > 0) {
+            line += alias;
+            line += ",";
         }
         // Add the newline
         line += "\n";
