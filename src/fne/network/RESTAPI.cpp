@@ -1177,8 +1177,13 @@ void RESTAPI::restAPI_GetPeerList(const HTTPPayload& request, HTTPPayload& reply
                 json::object peerObj = json::object();
 
                 uint32_t peerId = entry.first;
+                std::string peerAlias = entry.second.peerAlias();
+                bool peerLink = entry.second.peerLink();
+                bool peerPassword = !entry.second.peerPassword().empty();   // True if password is not empty, otherwise false
                 peerObj["peerId"].set<uint32_t>(peerId);
-
+                peerObj["peerAlias"].set<std::string>(peerAlias);
+                peerObj["peerLink"].set<bool>(peerLink);
+                peerObj["peerPassword"].set<bool>(peerPassword);
                 peers.push_back(json::value(peerObj));
             }
         }
@@ -1203,14 +1208,51 @@ void RESTAPI::restAPI_PutPeerAdd(const HTTPPayload& request, HTTPPayload& reply,
 
     errorPayload(reply, "OK", HTTPPayload::OK);
 
+    // Validate peer ID (required)
     if (!req["peerId"].is<uint32_t>()) {
         errorPayload(reply, "peerId was not a valid integer");
         return;
     }
-
+    // Get
     uint32_t peerId = req["peerId"].get<uint32_t>();
 
-    m_peerListLookup->addEntry(peerId);
+    // Get peer alias (optional)
+    std::string peerAlias = "";
+    if (req.find("peerAlias") != req.end()) {
+        // Validate
+        if (!req["peerAlias"].is<std::string>()) {
+            errorPayload(reply, "peerAlias was not a valid string");
+            return;
+        }
+        // Get
+        peerAlias = req["peerAlias"].get<std::string>();
+    }
+
+    // Get peer link setting (optional)
+    bool peerLink = false;
+    if (req.find("peerLink") != req.end()) {
+        // Validate
+        if (!req["peerLink"].is<bool>()) {
+            errorPayload(reply, "peerLink was not a valid boolean");
+            return;
+        }
+        // Get
+        peerLink = req["peerLink"].get<bool>();
+    }
+
+    // Get peer password (optional)
+    std::string peerPassword = "";
+    if (req.find("peerPassword") != req.end()) {
+        // Validate
+        if (!req["peerPassword"].is<std::string>()) {
+            errorPayload(reply, "peerPassword was not a valid string");
+            return;
+        }
+        // Get
+        peerPassword = req["peerPassword"].get<std::string>();
+    }
+
+    m_peerListLookup->addEntry(peerId, peerAlias, peerPassword, peerLink);
 }
 
 /* REST API endpoint; implements put peer delete request. */

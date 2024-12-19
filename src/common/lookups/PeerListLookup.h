@@ -47,6 +47,7 @@ namespace lookups
          */
         PeerId() :
             m_peerId(0U),
+            m_peerAlias(),
             m_peerPassword(),
             m_peerLink(false),
             m_peerDefault(false)
@@ -56,12 +57,14 @@ namespace lookups
         /**
          * @brief Initializes a new instance of the PeerId class.
          * @param peerId Peer ID.
+         * @param peerAlias Peer alias
          * @param peerPassword Per Peer Password.
          * @param sendConfiguration Flag indicating this peer participates in peer link and should be sent configuration.
          * @param peerDefault Flag indicating this is a "default" (i.e. undefined) peer.
          */
-        PeerId(uint32_t peerId, const std::string& peerPassword, bool peerLink, bool peerDefault) :
+        PeerId(uint32_t peerId, const std::string& peerAlias, const std::string& peerPassword, bool peerLink, bool peerDefault) :
             m_peerId(peerId),
+            m_peerAlias(peerAlias),
             m_peerPassword(peerPassword),
             m_peerLink(peerLink),
             m_peerDefault(peerDefault)
@@ -77,6 +80,7 @@ namespace lookups
         {
             if (this != &data) {
                 m_peerId = data.m_peerId;
+                m_peerAlias = data.m_peerAlias;
                 m_peerPassword = data.m_peerPassword;
                 m_peerLink = data.m_peerLink;
                 m_peerDefault = data.m_peerDefault;
@@ -88,13 +92,15 @@ namespace lookups
         /**
          * @brief Sets flag values.
          * @param peerId Peer ID.
+         * @param peerAlias Peer Alias
          * @param peerPassword Per Peer Password.
          * @param sendConfiguration Flag indicating this peer participates in peer link and should be sent configuration.
          * @param peerDefault Flag indicating this is a "default" (i.e. undefined) peer.
          */
-        void set(uint32_t peerId, const std::string& peerPassword, bool peerLink, bool peerDefault)
+        void set(uint32_t peerId, const std::string& peerAlias, const std::string& peerPassword, bool peerLink, bool peerDefault)
         {
             m_peerId = peerId;
+            m_peerAlias = peerAlias;
             m_peerPassword =  peerPassword;
             m_peerLink = peerLink;
             m_peerDefault = peerDefault;
@@ -105,6 +111,10 @@ namespace lookups
          * @brief Peer ID.
          */
         __READONLY_PROPERTY_PLAIN(uint32_t, peerId);
+        /**
+         * @breif Peer Alias
+         */
+        __READONLY_PROPERTY_PLAIN(std::string, peerAlias);
         /**
          * @brief Per Peer Password.
          */
@@ -157,7 +167,7 @@ namespace lookups
          * @param password Per Peer Password.
          * @param peerLink Flag indicating this peer will participate in peer link and should be sent configuration.
          */
-        void addEntry(uint32_t id, const std::string& password = "", bool peerLink = false);
+        void addEntry(uint32_t id, const std::string& alias = "", const std::string& password = "", bool peerLink = false);
         /**
          * @brief Removes an existing entry from the list.
          * @param peerId Unique peer ID to remove.
