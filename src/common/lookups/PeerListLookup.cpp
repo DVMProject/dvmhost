@@ -272,8 +272,8 @@ bool PeerListLookup::save()
         // Add the password if we have one
         if (password.length() > 0) {
             line += password;
-            line += ",";
         }
+        line += ",";
         // Add peerLink flag
         bool peerLink = entry.second.peerLink();
         if (peerLink) {
