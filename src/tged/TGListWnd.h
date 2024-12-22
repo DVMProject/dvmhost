@@ -132,6 +132,7 @@ private:
 
     FButton m_addTG{"&Add", this};
     FButton m_editTG{"&Edit", this};
+    FLabel m_fileName{"/path/to/file.yml", this};
     FButton m_deleteTG{"&Delete", this};
 
     /**
@@ -167,6 +168,9 @@ private:
         m_editTG.setGeometry(FPoint(13, int(getHeight() - 4)), FSize(10, 1));
         m_editTG.setDisable();
         m_editTG.addCallback("clicked", [&]() { editEntry(); });
+
+        m_fileName.setGeometry(FPoint(27, int(getHeight() - 4)), FSize(42, 1));
+        m_fileName.setText(g_iniFile);
 
         m_deleteTG.setGeometry(FPoint(int(getWidth()) - 13, int(getHeight() - 4)), FSize(10, 1));
         m_deleteTG.setDisable();
