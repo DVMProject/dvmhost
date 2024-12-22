@@ -216,8 +216,10 @@ private:
                     auto entry = g_tidLookups->find(tgid);
                     if (!entry.isInvalid()) {
                         m_selected = entry;
+/*
                         if (m_selectedTgId != tgid)
                             LogMessage(LOG_HOST, "Selected TG %s (%u) for editing", m_selected.name().c_str(), m_selected.source().tgId());
+*/
                         m_selectedTgId = tgid;
 
                         m_editTG.setEnable();
