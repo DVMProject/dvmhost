@@ -322,14 +322,14 @@ private:
         // Use box-drawing characters to draw a border
         constexpr std::array<wchar_t, 8> box_char
         {{
-            static_cast<wchar_t>(0x2554),
-            static_cast<wchar_t>(0x2550),
-            static_cast<wchar_t>(0x2557),
-            static_cast<wchar_t>(0x2551),
-            static_cast<wchar_t>(0x2551),
-            static_cast<wchar_t>(0x255A),
-            static_cast<wchar_t>(0x2550),
-            static_cast<wchar_t>(0x255D)
+            static_cast<wchar_t>(0x2554),   // ╔
+            static_cast<wchar_t>(0x2550),   // ═
+            static_cast<wchar_t>(0x2557),   // ╗
+            static_cast<wchar_t>(0x2551),   // ║
+            static_cast<wchar_t>(0x2551),   // ║
+            static_cast<wchar_t>(0x255A),   // ╚
+            static_cast<wchar_t>(0x2550),   // ═
+            static_cast<wchar_t>(0x255D)    // ╝
         }};
 
         drawGenericBox(this, box, box_char);

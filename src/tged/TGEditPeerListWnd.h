@@ -219,11 +219,17 @@ private:
      */
     void addEntry()
     {
+        LogMessage(LOG_HOST, "Adding %s peer ID %s from TG %s (%u)", m_title.c_str(), m_entry.getText().c_str(),
+            m_rule.name().c_str(), m_rule.source().tgId());
+
         if (m_entry.getText() == "") {
-            m_listBox.insert(std::to_string(0U));
+            peerList.push_back(0U);
         } else {
-            m_listBox.insert(m_entry.getText());
+            uint32_t peerId = ::atoi(m_entry.getText().c_str());
+            peerList.push_back(peerId);
         }
+
+        loadList();
 
         //setFocusWidget(&m_listBox);
         redraw();
@@ -238,9 +244,20 @@ private:
 
         size_t curItem = m_listBox.currentItem();
         auto item = m_listBox.getItem(curItem);
-        LogMessage(LOG_HOST, "Removing %s peer ID %s from TG %s (%u)", m_title.c_str(), item.getText().c_str(),
-            m_rule.name().c_str(), m_rule.source().tgId());
-        m_listBox.remove(curItem);
+        if (item.getText() != "") {
+            uint32_t peerId = ::atoi(item.getText().c_str());
+            for (std::vector<uint32_t>::iterator it = peerList.begin(); it != peerList.end(); it++) {
+                auto entry = *it;
+                if (entry == peerId) {
+                    LogMessage(LOG_HOST, "Removing %s peer ID %s from TG %s (%u)", m_title.c_str(), item.getText().c_str(),
+                                m_rule.name().c_str(), m_rule.source().tgId());
+                    peerList.erase(it);
+                    break;
+                }
+            }
+        }
+
+        loadList();
 
         //setFocusWidget(&m_listBox);
         redraw();
@@ -283,15 +300,9 @@ private:
             return;
         }
 
-        peerList.clear();
-        for (uint32_t i = 0U; i < m_listBox.getCount(); i++) {
-            auto item = m_listBox.getItem(i + 1U);
-            if (item.getText() != "") {
-                uint32_t peerId = ::atoi(item.getText().c_str());
-                LogMessage(LOG_HOST, "%s peer ID %s for TG %s (%u)", m_title.c_str(), item.getText().c_str(),
-                    m_rule.name().c_str(), m_rule.source().tgId());
-                peerList.push_back(peerId);
-            }
+        for (auto entry : peerList) {
+            LogMessage(LOG_HOST, "%s peer ID %u for TG %s (%u)", m_title.c_str(), entry,
+                m_rule.name().c_str(), m_rule.source().tgId());
         }
 
         CloseWndBase::onClose(e);
