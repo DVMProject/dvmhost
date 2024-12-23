@@ -35,6 +35,44 @@
 //  Externs
 // ---------------------------------------------------------------------------
 
+/**
+ * bryanb: This is some low-down, dirty, C++ hack-o-ramma.
+ */
+
+/**
+ * @brief Implements RTTI type defining.
+ * @typedef Tag 
+ */
+template<typename Tag>
+struct RTTIResult {
+    typedef typename Tag::type type;
+    static type ptr;
+};
+
+template<typename Tag>
+typename RTTIResult<Tag>::type RTTIResult<Tag>::ptr;
+
+/**
+ * @brief Implements nasty hack to access private members of a class.
+ * @typedef Tag 
+ * @typedef TypePtr 
+ */
+template<typename Tag, typename Tag::type TypePtr>
+struct HackTheGibson : RTTIResult<Tag> {
+    /* fill it ... */
+    struct filler {
+        filler() { RTTIResult<Tag>::ptr = TypePtr; }
+    };
+    static filler fillerObj;
+};
+
+template<typename Tag, typename Tag::type TypePtr>
+typename HackTheGibson<Tag, TypePtr>::filler HackTheGibson<Tag, TypePtr>::fillerObj;
+
+// ---------------------------------------------------------------------------
+//  Externs
+// ---------------------------------------------------------------------------
+
 /** @brief  */
 extern std::string g_progExe;
 /** @brief  */

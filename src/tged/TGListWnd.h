@@ -23,6 +23,11 @@
 #include <final/final.h>
 using namespace finalcut;
 
+struct PrivateFListViewScrollToY { typedef void(FListView::*type)(int); };
+template class HackTheGibson<PrivateFListViewScrollToY, &FListView::scrollToY>;
+struct PrivateFListViewIteratorFirst { typedef FListViewIterator FListView::*type; };
+template class HackTheGibson<PrivateFListViewIteratorFirst, &FListView::first_visible_line>;
+
 // ---------------------------------------------------------------------------
 //  Constants
 // ---------------------------------------------------------------------------
@@ -94,6 +99,15 @@ public:
         auto entry = g_tidLookups->groupVoice()[0U];
         m_selected = entry;
 
+        // bryanb: HACK -- use HackTheGibson to access the private current listview iterator to get the scroll position
+        /*
+         * This uses the RTTI hack to access private members on FListView; and this code *could* break as a consequence.
+         */
+        int firstScrollLinePos = 0;
+        if (m_listView.getCount() > 0) {
+            firstScrollLinePos = (m_listView.*RTTIResult<PrivateFListViewIteratorFirst>::ptr).getPosition();
+        }
+
         m_listView.clear();
         for (auto entry : g_tidLookups->groupVoice()) {
             // pad TGs properly
@@ -112,6 +126,16 @@ public:
 
             const finalcut::FStringList line(columns.cbegin(), columns.cend());
             m_listView.insert(line);
+        }
+
+        // bryanb: HACK -- use HackTheGibson to access the private set scroll Y to set the scroll position
+        /*
+         * This uses the RTTI hack to access private members on FListView; and this code *could* break as a consequence.
+         */
+        if (firstScrollLinePos > m_listView.getCount())
+            firstScrollLinePos = 0;
+        if (firstScrollLinePos > 0 && m_listView.getCount() > 0) {
+            (m_listView.*RTTIResult<PrivateFListViewScrollToY>::ptr)(firstScrollLinePos);
         }
 
         // generate dialog title        
