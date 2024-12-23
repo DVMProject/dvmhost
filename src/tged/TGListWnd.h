@@ -27,6 +27,8 @@ struct PrivateFListViewScrollToY { typedef void(FListView::*type)(int); };
 template class HackTheGibson<PrivateFListViewScrollToY, &FListView::scrollToY>;
 struct PrivateFListViewIteratorFirst { typedef FListViewIterator FListView::*type; };
 template class HackTheGibson<PrivateFListViewIteratorFirst, &FListView::first_visible_line>;
+struct PrivateFListViewVBarPtr { typedef FScrollbarPtr FListView::*type; };
+template class HackTheGibson<PrivateFListViewVBarPtr, &FListView::vbar>;
 
 // ---------------------------------------------------------------------------
 //  Constants
@@ -136,6 +138,7 @@ public:
             firstScrollLinePos = 0;
         if (firstScrollLinePos > 0 && m_listView.getCount() > 0) {
             (m_listView.*RTTIResult<PrivateFListViewScrollToY>::ptr)(firstScrollLinePos);
+            (m_listView.*RTTIResult<PrivateFListViewVBarPtr>::ptr)->setValue(firstScrollLinePos);
         }
 
         // generate dialog title        
