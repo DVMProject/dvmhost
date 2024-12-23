@@ -132,7 +132,7 @@ public:
         /*
          * This uses the RTTI hack to access private members on FListView; and this code *could* break as a consequence.
          */
-        if (firstScrollLinePos > m_listView.getCount())
+        if ((size_t)firstScrollLinePos > m_listView.getCount())
             firstScrollLinePos = 0;
         if (firstScrollLinePos > 0 && m_listView.getCount() > 0) {
             (m_listView.*RTTIResult<PrivateFListViewScrollToY>::ptr)(firstScrollLinePos);
