@@ -60,7 +60,7 @@ void OSP_U_DEREG_ACK::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 
     tsbkValue = (tsbkValue << 8) + m_siteData.netId();                              // Network ID
     tsbkValue = (tsbkValue << 12) + m_siteData.sysId();                             // System ID
-    tsbkValue = (tsbkValue << 24) + m_srcId;                                        // Source Radio Address
+    tsbkValue = (tsbkValue << 24) + m_dstId;                                        // Destination Radio Address
 
     std::unique_ptr<uint8_t[]> tsbk = TSBK::fromValue(tsbkValue);
     TSBK::encode(data, tsbk.get(), rawTSBK, noTrellis);
