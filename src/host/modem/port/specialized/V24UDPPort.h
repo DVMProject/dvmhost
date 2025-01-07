@@ -8,7 +8,7 @@
  * @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
  * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
  *
- *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2024-2025 Bryan Biedenkapp, N2PLL
  *
  */
 /**
