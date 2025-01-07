@@ -281,7 +281,7 @@ void V24UDPPort::processCtrlNetwork()
     // read message
     UInt8Array buffer = m_ctrlFrameQueue->read(length, address, addrLen);
     if (length > 0) {
-        //if (m_debug)
+        if (m_debug)
             Utils::dump(1U, "FSC Control Network Message", buffer.get(), length);
 
         V24PacketRequest* req = new V24PacketRequest();
