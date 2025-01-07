@@ -36,7 +36,7 @@ FSCConnectResponse::FSCConnectResponse() : FSCResponse(),
 FSCConnectResponse::FSCConnectResponse(const uint8_t* data) : FSCResponse(data),
     m_vcBasePort(0U)
 {
-    decode(data);
+    FSCConnectResponse::decode(data);
 }
 
 /* Decode a FSC connect frame. */

@@ -42,7 +42,7 @@ FSCConnect::FSCConnect(const uint8_t* data) : FSCMessage(data),
     m_fsHeartbeatPeriod(5U),
     m_hostHeartbeatPeriod(5U)
 {
-    decode(data);
+    FSCConnect::decode(data);
 }
 
 /* Decode a FSC connect frame. */

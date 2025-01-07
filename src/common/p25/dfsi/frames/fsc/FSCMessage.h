@@ -82,7 +82,7 @@ namespace p25
                     /**
                      * @brief 
                      */
-                    __PROTECTED_READONLY_PROPERTY(uint8_t, correlationTag, CorrelationTag);
+                    __PROPERTY(uint8_t, correlationTag, CorrelationTag);
                 };
             } // namespace fsc
         } // namespace frames

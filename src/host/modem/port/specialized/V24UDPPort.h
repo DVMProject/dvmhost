@@ -72,9 +72,10 @@ namespace modem
                  * @param modemPort Port number.
                  * @param controlPort Control Port number.
                  * @param useFSC Flag indicating whether or not FSC handshakes are used to setup communications.
+                 * @param fscInitiator Flag indicating whether or not the FSC handshake should be initiated when the port is opened.
                  * @param debug Flag indicating whether network debug is enabled.
                  */
-                V24UDPPort(uint32_t peerId, const std::string& modemAddress, uint16_t modemPort, uint16_t controlPort = 0U, bool useFSC = false, bool debug = false);
+                V24UDPPort(uint32_t peerId, const std::string& modemAddress, uint16_t modemPort, uint16_t controlPort = 0U, bool useFSC = false, bool fscInitiator = false, bool debug = false);
                 /**
                  * @brief Finalizes a instance of the V24UDPPort class.
                  */
@@ -131,6 +132,10 @@ namespace modem
                 uint32_t m_ctrlAddrLen;
 
                 RingBuffer<uint8_t> m_buffer;
+
+                bool m_fscInitiator;
+
+                Timer m_timeoutTimer;
 
                 Timer m_reqConnectionTimer;
                 Timer m_heartbeatTimer;

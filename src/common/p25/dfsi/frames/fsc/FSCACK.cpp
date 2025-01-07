@@ -44,7 +44,7 @@ FSCACK::FSCACK(const uint8_t* data) : FSCMessage(data),
     m_responseCode(FSCAckResponseCode::CONTROL_ACK),
     m_respLength(0U)
 {
-    decode(data);
+    FSCACK::decode(data);
 }
 
 /* Decode a FSC ACK frame. */

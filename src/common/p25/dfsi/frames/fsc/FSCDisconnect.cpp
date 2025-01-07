@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2024-2025 Bryan Biedenkapp, N2PLL
  *
  */
 #include "common/p25/dfsi/frames/fsc/FSCDisconnect.h"
@@ -34,5 +34,5 @@ FSCDisconnect::FSCDisconnect() : FSCMessage()
 
 FSCDisconnect::FSCDisconnect(const uint8_t* data) : FSCMessage(data)
 {
-    decode(data);
+    FSCMessage::decode(data);
 }

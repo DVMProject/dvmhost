@@ -7,7 +7,7 @@
 * @package DVM / Modem Host Software
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*  Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
+*  Copyright (C) 2017-2025 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
@@ -461,8 +461,9 @@ bool Host::createModem()
     bool rtrt = dfsiParams["rtrt"].as<bool>(true);
     bool diu = dfsiParams["diu"].as<bool>(true);
     uint16_t jitter = dfsiParams["jitter"].as<uint16_t>(200U);
-    bool useFSCForUDP = dfsiParams["useFSC"].as<bool>(false);
     uint16_t dfsiCallTimeout = dfsiParams["callTimeout"].as<uint16_t>(200U);
+    bool useFSCForUDP = dfsiParams["fsc"].as<bool>(false);
+    bool fscInitiator = dfsiParams["initiator"].as<bool>(false);
 
     // clamp fifo sizes
     if (dmrFifoLength < DMR_TX_BUFFER_LEN) {
@@ -580,6 +581,7 @@ bool Host::createModem()
         LogInfo("    DFSI Jitter Size: %u ms", jitter);
         if (g_remoteModemMode) {
             LogInfo("    DFSI Use FSC: %s", useFSCForUDP ? "yes" : "no");
+            LogInfo("    DFSI FSC Initiator: %s", fscInitiator ? "yes" : "no");
         }
     }
 
@@ -594,9 +596,10 @@ bool Host::createModem()
             if (modemMode == MODEM_MODE_DFSI) {
                 yaml::Node networkConf = m_conf["network"];
                 uint32_t id = networkConf["id"].as<uint32_t>(1000U);
-                modemPort = new port::specialized::V24UDPPort(id, g_remoteAddress, g_remotePort, 0U, useFSCForUDP, debug);
                 if (useFSCForUDP) {
-                    modemPort = new port::specialized::V24UDPPort(id, g_remoteAddress, g_remotePort + 1U, g_remotePort, useFSCForUDP, debug);
+                    modemPort = new port::specialized::V24UDPPort(id, g_remoteAddress, g_remotePort + 1U, g_remotePort, true, fscInitiator, debug);
+                } else {
+                    modemPort = new port::specialized::V24UDPPort(id, g_remoteAddress, g_remotePort, 0U, false, false, debug);
                 }
                 m_udpDSFIRemotePort = modemPort;
             } else {
