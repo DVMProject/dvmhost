@@ -331,6 +331,7 @@ void* V24UDPPort::threadedCtrlNetworkRx(void* arg)
 
                     network->m_localPort = vcBasePort;
                     network->createVCPort(vcBasePort);
+                    network->m_socket->open(network->m_addr);
                     network->m_heartbeatTimer.start();
                     network->m_timeoutTimer.start();
 
@@ -389,6 +390,7 @@ void* V24UDPPort::threadedCtrlNetworkRx(void* arg)
                             }
 
                             network->createVCPort(network->m_localPort);
+                            network->m_socket->open(network->m_addr);
 
                             network->m_reqConnectionToPeer = false;
                             network->m_reqConnectionTimer.stop();
