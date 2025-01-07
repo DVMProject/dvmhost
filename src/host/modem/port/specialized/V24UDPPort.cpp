@@ -312,8 +312,6 @@ void* V24UDPPort::threadedCtrlNetworkRx(void* arg)
         ::pthread_detach(req->thread);
 #endif // defined(_WIN32)
 
-        uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-
         V24UDPPort* network = static_cast<V24UDPPort*>(req->obj);
         if (network == nullptr) {
             delete req;
