@@ -31,6 +31,7 @@
 
 #include <string>
 #include <random>
+#include <mutex>
 
 namespace modem
 {
@@ -150,6 +151,8 @@ namespace modem
 
                 bool m_debug;
 
+                static std::mutex m_bufferMutex;
+
                 /**
                  * @brief Process FSC control frames from the network.
                  */
@@ -161,6 +164,18 @@ namespace modem
                  * @returns void* (Ignore)
                  */
                 static void* threadedCtrlNetworkRx(void* arg);
+
+                /**
+                 * @brief Process voice conveyance frames from the network.
+                 */
+                void processVCNetwork();
+
+                /**
+                 * @brief Entry point to process a given network packet.
+                 * @param arg Instance of the NetPacketRequest structure.
+                 * @returns void* (Ignore)
+                 */
+                static void* threadedVCNetworkRx(void* arg);
 
                 /**
                  * @brief Internal helper to setup the voice channel port.

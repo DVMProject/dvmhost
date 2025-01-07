@@ -594,7 +594,10 @@ bool Host::createModem()
             if (modemMode == MODEM_MODE_DFSI) {
                 yaml::Node networkConf = m_conf["network"];
                 uint32_t id = networkConf["id"].as<uint32_t>(1000U);
-                modemPort = new port::specialized::V24UDPPort(id, g_remoteAddress, g_remotePort, g_remotePort, useFSCForUDP, debug);
+                modemPort = new port::specialized::V24UDPPort(id, g_remoteAddress, g_remotePort, 0U, useFSCForUDP, debug);
+                if (useFSCForUDP) {
+                    modemPort = new port::specialized::V24UDPPort(id, g_remoteAddress, g_remotePort + 1U, g_remotePort, useFSCForUDP, debug);
+                }
                 m_udpDSFIRemotePort = modemPort;
             } else {
                 modemPort = new port::UDPPort(g_remoteAddress, g_remotePort);

@@ -39,6 +39,12 @@ const char* V24_UDP_HARDWARE = "V.24 UDP Modem Controller";
 const uint8_t V24_UDP_PROTOCOL_VERSION = 4U;
 
 // ---------------------------------------------------------------------------
+//  Static Class Members
+// ---------------------------------------------------------------------------
+
+std::mutex V24UDPPort::m_bufferMutex;
+
+// ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
@@ -139,60 +145,7 @@ void V24UDPPort::clock(uint32_t ms)
         processCtrlNetwork();
     }
 
-    // if we have a RTP voice socket
-    if (m_socket != nullptr) {
-        uint8_t data[BUFFER_LENGTH];
-        ::memset(data, 0x00U, BUFFER_LENGTH);
-
-        sockaddr_storage addr;
-        uint32_t addrLen;
-        int ret = m_socket->read(data, BUFFER_LENGTH, addr, addrLen);
-        if (ret != 0) {
-            // An error occurred on the socket
-            if (ret < 0)
-                return;
-
-            // Add new data to the ring buffer
-            if (ret > 0) {
-                RTPHeader rtpHeader = RTPHeader();
-                rtpHeader.decode(data);
-
-                // ensure payload type is correct
-                if (rtpHeader.getPayloadType() != DFSI_RTP_PAYLOAD_TYPE)
-                {
-                    LogError(LOG_MODEM, "Invalid RTP header received from network");
-                    return;
-                }
-
-                // copy message
-                uint32_t messageLength = ret - RTP_HEADER_LENGTH_BYTES;
-                UInt8Array __message = std::make_unique<uint8_t[]>(messageLength);
-                uint8_t* message = __message.get();
-                ::memset(message, 0x00U, messageLength);
-
-                ::memcpy(message, data + RTP_HEADER_LENGTH_BYTES, messageLength);
-
-                if (udp::Socket::match(addr, m_addr)) {
-                    UInt8Array __reply = std::make_unique<uint8_t[]>(messageLength + 4U);
-                    uint8_t* reply = __reply.get();
-
-                    reply[0U] = DVM_SHORT_FRAME_START;
-                    reply[1U] = messageLength & 0xFFU;
-                    reply[2U] = CMD_P25_DATA;
-
-                    reply[3U] = 0x00U;
-
-                    ::memcpy(reply + 4U, message, messageLength);
-
-                    m_buffer.addData(reply, messageLength + 4U);
-                }
-                else {
-                    std::string addrStr = udp::Socket::address(addr);
-                    LogWarning(LOG_HOST, "SECURITY: Remote modem mode encountered invalid IP address; %s", addrStr.c_str());
-                }
-            }
-        }
-    }
+    processVCNetwork();
 }
 
 /* Resets the RTP packet sequence and stream ID. */
@@ -231,6 +184,8 @@ int V24UDPPort::read(uint8_t* buffer, uint32_t length)
     assert(buffer != nullptr);
     assert(length > 0U);
 
+    std::lock_guard<std::mutex> lock(m_bufferMutex);
+
     // Get required data from the ring buffer
     uint32_t avail = m_buffer.dataSize();
     if (avail < length)
@@ -264,7 +219,10 @@ int V24UDPPort::write(const uint8_t* buffer, uint32_t length)
     {
         if (m_socket != nullptr) {
             uint32_t messageLen = 0U;
-            uint8_t* message = generateMessage(buffer + 3U, length - 3U, m_streamId, m_peerId, m_pktSeq, &messageLen);
+            uint8_t* message = generateMessage(buffer + 4U, length - 4U, m_streamId, m_peerId, m_pktSeq, &messageLen);
+
+            if (m_debug)
+                Utils::dump(1U, "!!! Tx Outgoing DFSI UDP", buffer + 4U, length - 4U);
 
             bool written = m_socket->write(message, messageLen, m_addr, m_addrLen);
             if (written)
@@ -458,6 +416,107 @@ void* V24UDPPort::threadedCtrlNetworkRx(void* arg)
     return nullptr;
 }
 
+/* Process voice conveyance frames from the network. */
+
+void V24UDPPort::processVCNetwork()
+{
+    // if we have a RTP voice socket
+    if (m_socket != nullptr) {
+        uint8_t data[BUFFER_LENGTH];
+        ::memset(data, 0x00U, BUFFER_LENGTH);
+
+        sockaddr_storage addr;
+        uint32_t addrLen;
+        int ret = m_socket->read(data, BUFFER_LENGTH, addr, addrLen);
+        if (ret != 0) {
+            // An error occurred on the socket
+            if (ret < 0)
+                return;
+
+            // Add new data to the ring buffer
+            if (ret > 0) {
+                if (m_debug)
+                    Utils::dump("!!! Rx Incoming DFSI UDP", data, ret);
+
+                V24PacketRequest* req = new V24PacketRequest();
+                req->address = addr;
+                req->addrLen = addrLen;
+
+                req->rtpHeader = RTPHeader();
+                req->rtpHeader.decode(data);
+
+                // ensure payload type is correct
+                if (req->rtpHeader.getPayloadType() != DFSI_RTP_PAYLOAD_TYPE) {
+                    LogError(LOG_MODEM, "Invalid RTP header received from network");
+                    delete req;
+                    return;
+                }
+
+                // copy message
+                req->length = ret - RTP_HEADER_LENGTH_BYTES;
+                req->buffer = new uint8_t[req->length];
+                ::memset(req->buffer, 0x00U, req->length);
+
+                ::memcpy(req->buffer, data + RTP_HEADER_LENGTH_BYTES, req->length);
+
+                if (!Thread::runAsThread(this, threadedVCNetworkRx, req)) {
+                    delete[] req->buffer;
+                    delete req;
+                    return;
+                }
+            }
+        }
+    }
+}
+
+/* Process a data frames from the network. */
+
+void* V24UDPPort::threadedVCNetworkRx(void* arg)
+{
+    V24PacketRequest* req = (V24PacketRequest*)arg;
+    if (req != nullptr) {
+#if defined(_WIN32)
+        ::CloseHandle(req->thread);
+#else
+        ::pthread_detach(req->thread);
+#endif // defined(_WIN32)
+
+        V24UDPPort* network = static_cast<V24UDPPort*>(req->obj);
+        if (network == nullptr) {
+            delete req;
+            return nullptr;
+        }
+
+        if (req->length > 0) {
+            if (udp::Socket::match(req->address, network->m_addr)) {
+                UInt8Array __reply = std::make_unique<uint8_t[]>(req->length + 4U);
+                uint8_t* reply = __reply.get();
+
+                reply[0U] = DVM_SHORT_FRAME_START;
+                reply[1U] = (req->length + 4U) & 0xFFU;
+                reply[2U] = CMD_P25_DATA;
+
+                reply[3U] = 0x00U;
+
+                ::memcpy(reply + 4U, req->buffer, req->length);
+
+                std::lock_guard<std::mutex> lock(m_bufferMutex);
+                network->m_buffer.addData(reply, req->length + 4U);
+            }
+            else {
+                std::string addrStr = udp::Socket::address(req->address);
+                LogWarning(LOG_HOST, "SECURITY: Remote modem mode encountered invalid IP address; %s", addrStr.c_str());
+            }
+        }
+
+        if (req->buffer != nullptr)
+            delete[] req->buffer;
+        delete req;
+    }
+
+    return nullptr;
+}
+
 /* Internal helper to setup the voice channel port. */
 
 void V24UDPPort::createVCPort(uint16_t port)
@@ -580,6 +639,7 @@ void V24UDPPort::getVersion()
 
     reply[1U] = count;
 
+    std::lock_guard<std::mutex> lock(m_bufferMutex);
     m_buffer.addData(reply, count);
 }
 
@@ -612,6 +672,7 @@ void V24UDPPort::getStatus()
 
     reply[11U] = 0U;
 
+    std::lock_guard<std::mutex> lock(m_bufferMutex);
     m_buffer.addData(reply, 12U);
 }
 
@@ -626,6 +687,7 @@ void V24UDPPort::writeAck(uint8_t type)
     reply[2U] = CMD_ACK;
     reply[3U] = type;
 
+    std::lock_guard<std::mutex> lock(m_bufferMutex);
     m_buffer.addData(reply, 4U);
 }
 
@@ -641,5 +703,6 @@ void V24UDPPort::writeNAK(uint8_t opcode, uint8_t err)
     reply[3U] = opcode;
     reply[4U] = err;
 
+    std::lock_guard<std::mutex> lock(m_bufferMutex);
     m_buffer.addData(reply, 5U);
 }
