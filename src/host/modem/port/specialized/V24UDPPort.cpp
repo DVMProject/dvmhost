@@ -147,7 +147,7 @@ void V24UDPPort::clock(uint32_t ms)
 
         m_timeoutTimer.clock(ms);
         if (m_timeoutTimer.isRunning() && m_timeoutTimer.hasExpired()) {
-            LogError(LOG_NET, "PEER %u connection to the DFSI endpoint has timed out, disconnected");
+            LogError(LOG_NET, "DFSI connection to the remote endpoint has timed out, disconnected");
             m_reqConnectionTimer.stop();
             m_reqConnectionToPeer = true;
             m_establishedConnection = false;
