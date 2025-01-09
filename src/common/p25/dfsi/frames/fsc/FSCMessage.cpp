@@ -94,9 +94,13 @@ std::unique_ptr<FSCMessage> FSCMessage::createMessage(const uint8_t* data)
         break;
     }
 
-    if (!message->decode(data)) {
-        return nullptr;
+    if (message != nullptr) {
+        if (!message->decode(data)) {
+            return nullptr;
+        }
+
+        return std::unique_ptr<FSCMessage>(message);
     }
 
-    return std::unique_ptr<FSCMessage>(message);
+    return nullptr;
 }
