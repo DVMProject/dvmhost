@@ -475,7 +475,9 @@ void* V24UDPPort::threadedCtrlNetworkRx(void* arg)
                         }
 
                         uint16_t vcPort = connMessage->getVCBasePort();
-                        network->m_heartbeatInterval = connMessage->getFSHeartbeatPeriod();
+                        network->m_heartbeatInterval = connMessage->getHostHeartbeatPeriod();
+                        if (network->m_heartbeatInterval > 30U)
+                            network->m_heartbeatInterval = 30U;
                         network->m_localPort = vcPort;
 
                         network->createVCPort(network->m_localPort);
@@ -483,11 +485,15 @@ void* V24UDPPort::threadedCtrlNetworkRx(void* arg)
 
                         network->m_fscState = CS_CONNECTED;
                         network->m_reqConnectionTimer.stop();
+
+                        if (connMessage->getHostHeartbeatPeriod() > 30U)
+                            LogWarning(LOG_MODEM, "V.24 UDP, DFSI FSC Connection, requested heartbeat of %u, reduce to 30 seconds or less", connMessage->getHostHeartbeatPeriod());
+
                         network->m_heartbeatTimer = Timer(1000U, network->m_heartbeatInterval);
                         network->m_heartbeatTimer.start();
                         network->m_timeoutTimer.start();
 
-                        LogMessage(LOG_MODEM, "V.24 UDP, Incoming DFSI FSC Connection, vcBasePort = %u, fsHBInterval = %u, hostHBInterval = %u", network->m_localPort, network->m_heartbeatInterval, connMessage->getHostHeartbeatPeriod());
+                        LogMessage(LOG_MODEM, "V.24 UDP, Incoming DFSI FSC Connection, vcBasePort = %u, hostHBInterval = %u", network->m_localPort, connMessage->getHostHeartbeatPeriod());
 
                         // construct connect ACK response data
                         uint8_t respData[3U];
