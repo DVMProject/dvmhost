@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2024-2025 Bryan Biedenkapp, N2PLL
  *
  */
 #include "common/p25/dfsi/frames/FullRateVoice.h"
@@ -95,7 +95,15 @@ bool FullRateVoice::decode(const uint8_t* data)
             // CAI 9 and 10 are 3 bytes of additional data not 4
             ::memcpy(additionalData, data + 14U, ADDITIONAL_LENGTH - 1U);
         } else {
-            ::memcpy(additionalData, data + 14U, ADDITIONAL_LENGTH);
+            uint8_t buffer[ADDITIONAL_LENGTH - 1U];
+            ::memset(buffer, 0x00U, ADDITIONAL_LENGTH - 1U);
+            ::memcpy(buffer, data + 14U, ADDITIONAL_LENGTH - 1U);
+            buffer[2U] &= 0xC0U; // mask low bits
+
+            uint32_t offset = 0;
+            for (uint8_t i = 0; i < ADDITIONAL_LENGTH - 1U; i++, offset += 6) {
+                Utils::hex2Bin(additionalData[i], buffer, offset);
+            }
         }
     } else {
         if (additionalData != nullptr)
@@ -128,7 +136,16 @@ void FullRateVoice::encode(uint8_t* data)
             // CAI 9 and 10 are 3 bytes of additional data not 4
             ::memcpy(data + 14U, additionalData, ADDITIONAL_LENGTH - 1U);
         } else {
-            ::memcpy(data + 14U, additionalData, ADDITIONAL_LENGTH);
+            uint8_t buffer[ADDITIONAL_LENGTH - 1U];
+            ::memset(buffer, 0x00U, ADDITIONAL_LENGTH - 1U);
+            ::memcpy(buffer, additionalData, ADDITIONAL_LENGTH - 1U);
+
+            uint32_t offset = 0;
+            for (uint8_t i = 0; i < ADDITIONAL_LENGTH - 1U; i++, offset += 6) {
+                buffer[i] = Utils::bin2Hex(additionalData, offset);
+            }
+
+            ::memcpy(data + 14U, buffer, ADDITIONAL_LENGTH);
         }
     }
 }

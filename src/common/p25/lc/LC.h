@@ -73,14 +73,16 @@ namespace p25
             /**
              * @brief Decode a header data unit.
              * @param[in] data Buffer containing the HDU to decode.
+             * @param rawOnly Flag indicating only the raw bytes of the LC should be decoded.
              * @returns True, if HDU decoded, otherwise false.
              */
-            bool decodeHDU(const uint8_t* data);
+            bool decodeHDU(const uint8_t* data, bool rawOnly = false);
             /**
              * @brief Encode a header data unit.
              * @param[out] data Buffer to encode an HDU.
+             * @param rawOnly Flag indicating only the raw bytes of the LC should be encoded.
              */
-            void encodeHDU(uint8_t* data);
+            void encodeHDU(uint8_t* data, bool rawOnly = false);
 
             /**
              * @brief Decode a logical link data unit 1.

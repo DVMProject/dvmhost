@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2024-2025 Bryan Biedenkapp, N2PLL
  *
  */
 #include "common/p25/dfsi/frames/BlockHeader.h"
@@ -26,8 +26,10 @@ using namespace p25::dfsi::frames;
 /* Initializes a instance of the BlockHeader class. */
 
 BlockHeader::BlockHeader() :
-    m_payloadType(false),
-    m_blockLength(BlockType::UNDEFINED)
+    m_payloadType(true),
+    m_blockType(BlockType::UNDEFINED),
+    m_timestampOffset(0U),
+    m_blockLength(0U)
 {
     /* stub */
 }
@@ -35,8 +37,10 @@ BlockHeader::BlockHeader() :
 /* Initializes a instance of the BlockHeader class. */
 
 BlockHeader::BlockHeader(uint8_t* data, bool verbose) :
-    m_payloadType(false),
-    m_blockLength(BlockType::UNDEFINED)
+    m_payloadType(true),
+    m_blockType(BlockType::UNDEFINED),
+    m_timestampOffset(0U),
+    m_blockLength(0U)
 {
     decode(data, verbose);
 }

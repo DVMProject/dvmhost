@@ -96,14 +96,17 @@ LC& LC::operator=(const LC& data)
 
 /* Decode a header data unit. */
 
-bool LC::decodeHDU(const uint8_t* data)
+bool LC::decodeHDU(const uint8_t* data, bool rawOnly)
 {
     assert(data != nullptr);
 
     // deinterleave
     uint8_t rs[P25_HDU_LENGTH_BYTES + 1U];
     uint8_t raw[P25_HDU_LENGTH_BYTES + 1U];
-    P25Utils::decode(data, raw, 114U, 780U);
+    if (rawOnly)
+        ::memcpy(raw, data, P25_HDU_LENGTH_BYTES);
+    else
+        P25Utils::decode(data, raw, 114U, 780U);
 
     // decode Golay (18,6,8) FEC
     decodeHDUGolay(raw, rs);
@@ -167,7 +170,7 @@ bool LC::decodeHDU(const uint8_t* data)
 
 /* Encode a header data unit. */
 
-void LC::encodeHDU(uint8_t* data)
+void LC::encodeHDU(uint8_t* data, bool rawOnly)
 {
     assert(data != nullptr);
     assert(m_mi != nullptr);
@@ -201,6 +204,11 @@ void LC::encodeHDU(uint8_t* data)
 
     // encode Golay (18,6,8) FEC
     encodeHDUGolay(raw, rs);
+
+    if (rawOnly) {
+        ::memcpy(data, raw, P25_HDU_LENGTH_BYTES);
+        return;
+    }
 
     // interleave
     P25Utils::encode(raw, data, 114U, 780U);

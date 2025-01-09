@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2024-2025 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -133,10 +133,10 @@ namespace p25
              *     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
              *     |    IMBE 8     |    IMBE 9     |    IMBE 10    |    IMBE 11    |
              *     +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
-             *     |  Et | Er  |M|L|E|  E1 |SF | B |    Link Ctrl  |    Link Ctrl  |
-             *     |     |     | | |4|     |   |   |               |               |
+             *     |  Et | Er  |M|L|E|  E1 |SF | B | Link Ctrl | Link Ctrl | Link  |
+             *     |     |     | | |4|     |   |   |           |           |       |
              *     +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
-             *     |    Link Ctrl  |R| Status      |
+             *     |Ctr|R| Status    | Rsvd        |
              *     +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
              * 
              * CAI Frames 12 - 17.
@@ -150,10 +150,10 @@ namespace p25
              *     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
              *     |    IMBE 8     |    IMBE 9     |    IMBE 10    |    IMBE 11    |
              *     +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
-             *     |  Et | Er  |M|L|E|  E1 |SF | B |    Enc Sync   |    Enc Sync   |
-             *     |     |     | | |4|     |   |   |               |               |
+             *     |  Et | Er  |M|L|E|  E1 |SF | B | Enc Sync  | Enc Sync  | Enc   |
+             *     |     |     | | |4|     |   |   |           |           |       |
              *     +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
-             *     |    Enc Sync   |R| Status      |
+             *     |Syn|R| Status    | Rsvd        |
              *     +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
              * 
              * CAI Frames 9 and 10.
@@ -177,9 +177,9 @@ namespace p25
              */
             class HOST_SW_API FullRateVoice {
             public:
-                static const uint8_t LENGTH = 18;
-                static const uint8_t ADDITIONAL_LENGTH = 4;
-                static const uint8_t IMBE_BUF_LEN = 11;
+                static const uint8_t LENGTH = 18U;
+                static const uint8_t ADDITIONAL_LENGTH = 4U;
+                static const uint8_t IMBE_BUF_LEN = 11U;
 
                 /**
                  * @brief Initializes a copy instance of the FullRateVoice class.

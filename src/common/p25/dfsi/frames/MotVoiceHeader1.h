@@ -61,8 +61,8 @@ namespace p25
              */
             class HOST_SW_API MotVoiceHeader1 {
             public:
-                static const uint8_t LENGTH = 30;
-                static const uint8_t HCW_LENGTH = 21;
+                static const uint8_t LENGTH = 30U;
+                static const uint8_t HCW_LENGTH = 21U;
 
                 /**
                  * @brief Initializes a copy instance of the MotVoiceHeader1 class.

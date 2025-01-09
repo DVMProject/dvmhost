@@ -58,7 +58,7 @@ namespace p25
              */
             class HOST_SW_API MotStartVoiceFrame {
             public:
-                static const uint8_t LENGTH = 22;
+                static const uint8_t LENGTH = 22U;
 
                 /**
                  * @brief Initializes a copy instance of the MotStartVoiceFrame class.

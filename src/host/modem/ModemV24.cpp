@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2024-2024 Bryan Biedenkapp, N2PLL
  *  Copyright (C) 2024 Patrick McDonnell, W3AXL
  *
  */
@@ -56,7 +56,8 @@ ModemV24::ModemV24(port::IModemPort* port, bool duplex, uint32_t p25QueueSize, u
     m_callTimeout(200U),
     m_jitter(jitter),
     m_lastP25Tx(0U),
-    m_rs()
+    m_rs(),
+    m_useTIAFormat(false)
 {
     m_v24Connected = false; // defaulted to false for V.24 modems
 
@@ -87,6 +88,13 @@ void ModemV24::setP25NAC(uint32_t nac)
 {
     Modem::setP25NAC(nac);
     m_nid = new NID(nac);
+}
+
+/* Helper to set the TIA-102 format DFSI frame flag. */
+
+void ModemV24::setTIAFormat(bool set)
+{
+    m_useTIAFormat = set;
 }
 
 /* Opens connection to the air interface modem. */
@@ -127,7 +135,10 @@ bool ModemV24::open()
 
     m_error = false;
 
-    LogMessage(LOG_MODEM, "Modem Ready [Direct Mode]");
+    if (m_useTIAFormat)
+        LogMessage(LOG_MODEM, "Modem Ready [Direct Mode / TIA-102]");
+    else
+        LogMessage(LOG_MODEM, "Modem Ready [Direct Mode / V.24]");
     return true;
 }
 
@@ -182,7 +193,10 @@ void ModemV24::clock(uint32_t ms)
                 std::lock_guard<std::mutex> lock(m_p25ReadLock);
             
                 // convert data from V.24/DFSI formatting to TIA-102 air formatting
-                convertToAir(m_buffer + (cmdOffset + 1U), m_length - (cmdOffset + 1U));
+                if (m_useTIAFormat)
+                    convertToAirTIA(m_buffer + (cmdOffset + 1U), m_length - (cmdOffset + 1U));
+                else
+                    convertToAir(m_buffer + (cmdOffset + 1U), m_length - (cmdOffset + 1U));
             }
         }
         break;
@@ -429,7 +443,10 @@ int ModemV24::write(const uint8_t* data, uint32_t length)
         ::memset(buffer, 0x00U, length);
         ::memcpy(buffer, data + 2U, length);
 
-        convertFromAir(buffer, length);
+        if (m_useTIAFormat)
+            convertFromAirTIA(buffer, length);
+        else
+            convertFromAir(buffer, length);
         return length;
     } else {
         return Modem::write(data, length);
@@ -943,8 +960,9 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
                     }
                 }
                 break;
+
                 default:
-                break;
+                    break;
             }
 
             // increment our voice frame counter
@@ -952,6 +970,442 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
         }
         break;
     }
+
+    // encode LDU1 if ready
+    if (m_rxCall->n == 9U) {
+        lc::LC lc = lc::LC();
+        lc.setLCO(m_rxCall->lco);
+        lc.setMFId(m_rxCall->mfId);
+
+        if (lc.isStandardMFId()) {
+            lc.setSrcId(m_rxCall->srcId);
+            lc.setDstId(m_rxCall->dstId);
+        } else {
+            uint8_t rsBuffer[P25_LDU_LC_FEC_LENGTH_BYTES];
+            ::memset(rsBuffer, 0x00U, P25_LDU_LC_FEC_LENGTH_BYTES);
+
+            rsBuffer[0U] = m_rxCall->lco;
+            rsBuffer[1U] = m_rxCall->mfId;
+            rsBuffer[2U] = m_rxCall->serviceOptions;
+            rsBuffer[3U] = (m_rxCall->dstId >> 16) & 0xFFU;
+            rsBuffer[4U] = (m_rxCall->dstId >> 8) & 0xFFU;
+            rsBuffer[5U] = (m_rxCall->dstId >> 0) & 0xFFU;
+            rsBuffer[6U] = (m_rxCall->srcId >> 16) & 0xFFU;
+            rsBuffer[7U] = (m_rxCall->srcId >> 8) & 0xFFU;
+            rsBuffer[8U] = (m_rxCall->srcId >> 0) & 0xFFU;
+
+            // combine bytes into ulong64_t (8 byte) value
+            ulong64_t rsValue = 0U;
+            rsValue = rsBuffer[1U];
+            rsValue = (rsValue << 8) + rsBuffer[2U];
+            rsValue = (rsValue << 8) + rsBuffer[3U];
+            rsValue = (rsValue << 8) + rsBuffer[4U];
+            rsValue = (rsValue << 8) + rsBuffer[5U];
+            rsValue = (rsValue << 8) + rsBuffer[6U];
+            rsValue = (rsValue << 8) + rsBuffer[7U];
+            rsValue = (rsValue << 8) + rsBuffer[8U];
+
+            lc.setRS(rsValue);
+        }
+
+        bool emergency = ((m_rxCall->serviceOptions & 0xFFU) & 0x80U) == 0x80U;    // Emergency Flag
+        bool encryption = ((m_rxCall->serviceOptions & 0xFFU) & 0x40U) == 0x40U;   // Encryption Flag
+        uint8_t priority = ((m_rxCall->serviceOptions & 0xFFU) & 0x07U);           // Priority
+        lc.setEmergency(emergency);
+        lc.setEncrypted(encryption);
+        lc.setPriority(priority);
+
+        data::LowSpeedData lsd = data::LowSpeedData();
+        lsd.setLSD1(m_rxCall->lsd1);
+        lsd.setLSD2(m_rxCall->lsd2);
+
+        // generate Sync
+        Sync::addP25Sync(buffer + 2U);
+
+        // generate NID
+        m_nid->encode(buffer + 2U, DUID::LDU1);
+
+        // generate LDU1 Data
+        lc.encodeLDU1(buffer + 2U);
+
+        // generate Low Speed Data
+        lsd.process(buffer + 2U);
+
+        // generate audio
+        m_audio.encode(buffer + 2U, m_rxCall->netLDU1 + 10U, 0U);
+        m_audio.encode(buffer + 2U, m_rxCall->netLDU1 + 26U, 1U);
+        m_audio.encode(buffer + 2U, m_rxCall->netLDU1 + 55U, 2U);
+        m_audio.encode(buffer + 2U, m_rxCall->netLDU1 + 80U, 3U);
+        m_audio.encode(buffer + 2U, m_rxCall->netLDU1 + 105U, 4U);
+        m_audio.encode(buffer + 2U, m_rxCall->netLDU1 + 130U, 5U);
+        m_audio.encode(buffer + 2U, m_rxCall->netLDU1 + 155U, 6U);
+        m_audio.encode(buffer + 2U, m_rxCall->netLDU1 + 180U, 7U);
+        m_audio.encode(buffer + 2U, m_rxCall->netLDU1 + 204U, 8U);
+
+        // add status bits
+        P25Utils::addStatusBits(buffer + 2U, P25_LDU_FRAME_LENGTH_BITS, true, false);
+
+        buffer[0U] = modem::TAG_DATA;
+        buffer[1U] = 0x01U;
+        storeConvertedRx(buffer, P25_LDU_FRAME_LENGTH_BYTES + 2U);
+    }
+    
+    // encode LDU2 if ready
+    if (m_rxCall->n == 18U) {
+        lc::LC lc = lc::LC();
+        lc.setMI(m_rxCall->MI);
+        lc.setAlgId(m_rxCall->algoId);
+        lc.setKId(m_rxCall->kId);
+
+        data::LowSpeedData lsd = data::LowSpeedData();
+        lsd.setLSD1(m_rxCall->lsd1);
+        lsd.setLSD2(m_rxCall->lsd2);
+
+        // generate Sync
+        Sync::addP25Sync(buffer + 2U);
+
+        // generate NID
+        m_nid->encode(buffer + 2U, DUID::LDU2);
+
+        // generate LDU2 data
+        lc.encodeLDU2(buffer + 2U);
+
+        // generate Low Speed Data
+        lsd.process(buffer + 2U);
+
+        // generate audio
+        m_audio.encode(buffer + 2U, m_rxCall->netLDU2 + 10U, 0U);
+        m_audio.encode(buffer + 2U, m_rxCall->netLDU2 + 26U, 1U);
+        m_audio.encode(buffer + 2U, m_rxCall->netLDU2 + 55U, 2U);
+        m_audio.encode(buffer + 2U, m_rxCall->netLDU2 + 80U, 3U);
+        m_audio.encode(buffer + 2U, m_rxCall->netLDU2 + 105U, 4U);
+        m_audio.encode(buffer + 2U, m_rxCall->netLDU2 + 130U, 5U);
+        m_audio.encode(buffer + 2U, m_rxCall->netLDU2 + 155U, 6U);
+        m_audio.encode(buffer + 2U, m_rxCall->netLDU2 + 180U, 7U);
+        m_audio.encode(buffer + 2U, m_rxCall->netLDU2 + 204U, 8U);
+
+        // add status bits
+        P25Utils::addStatusBits(buffer + 2U, P25_LDU_FRAME_LENGTH_BITS, true, false);
+
+        buffer[0U] = modem::TAG_DATA;
+        buffer[1U] = 0x01U;
+        storeConvertedRx(buffer, P25_LDU_FRAME_LENGTH_BYTES + 2U);
+
+        m_rxCall->n = 0;
+    }
+}
+
+/* Internal helper to convert from TIA-102 DFSI to TIA-102 air interface. */
+
+void ModemV24::convertToAirTIA(const uint8_t *data, uint32_t length)
+{
+    assert(data != nullptr);
+    assert(length > 0U);
+
+    uint8_t buffer[P25_PDU_FRAME_LENGTH_BYTES + 2U];
+    ::memset(buffer, 0x00U, P25_PDU_FRAME_LENGTH_BYTES + 2U);
+
+    // get the DFSI data (skip the 0x00 padded byte at the start)
+    UInt8Array __dfsiData = std::make_unique<uint8_t[]>(length - 1U);
+    uint8_t* dfsiData = __dfsiData.get();
+    ::memset(dfsiData, 0x00U, length - 1U);
+    ::memcpy(dfsiData, data + 1U, length - 1U);
+
+    if (m_debug)
+        Utils::dump("DFSI RX data from board", dfsiData, length - 1U);
+
+    ControlOctet ctrl = ControlOctet();
+    ctrl.decode(dfsiData);
+
+    uint8_t blockCnt = ctrl.getBlockHeaderCnt();
+
+    // iterate through blocks
+    uint8_t hdrOffs = 1U, dataOffs = blockCnt;
+    for (uint8_t i = 0U; i < blockCnt; i++) {
+        BlockHeader hdr = BlockHeader();
+        hdr.decode(dfsiData + hdrOffs);
+
+        BlockType::E blockType = hdr.getBlockType();
+        switch (blockType) {
+        case BlockType::START_OF_STREAM:
+        {
+            StartOfStream start = StartOfStream();
+            start.decode(dfsiData + dataOffs);
+
+            uint16_t nac = start.getNID() & 0xFFFU;
+
+            // bryanb: maybe compare the NACs?
+
+            dataOffs += StartOfStream::LENGTH;
+        }
+        break;
+        case BlockType::END_OF_STREAM:
+        {
+            dataOffs += 1U;
+
+            // generate Sync
+            Sync::addP25Sync(buffer + 2U);
+
+            // generate NID
+            m_nid->encode(buffer + 2U, DUID::TDU);
+
+            // add status bits
+            P25Utils::setStatusBitsAllIdle(buffer + 2U, P25_TDU_FRAME_LENGTH_BITS);
+
+            buffer[0U] = modem::TAG_DATA;
+            buffer[1U] = 0x01U;
+            storeConvertedRx(buffer, P25_TDU_FRAME_LENGTH_BITS + 2U);
+        }
+        break;
+
+        case BlockType::VOICE_HEADER_P1:
+        {
+            // copy to call data VHDR1
+            ::memset(m_rxCall->VHDR1, 0x00U, 18U);
+            ::memcpy(m_rxCall->VHDR1, dfsiData + dataOffs + 1U, 18U);
+
+            dataOffs += 19U; // 18 Golay + Block Type Marker
+        }
+        break;
+        case BlockType::VOICE_HEADER_P2:
+        {
+            // copy to call data VHDR2
+            ::memset(m_rxCall->VHDR2, 0x00U, 18U);
+            ::memcpy(m_rxCall->VHDR2, dfsiData + dataOffs + 1U, 18U);
+
+            dataOffs += 19U; // 18 Golay + Block Type Marker
+
+            // buffer for raw VHDR data
+            uint8_t raw[DFSI_VHDR_RAW_LEN];
+            ::memset(raw, 0x00U, DFSI_VHDR_RAW_LEN);
+
+            ::memcpy(raw, m_rxCall->VHDR1, 18U);
+            ::memcpy(raw + 18U, m_rxCall->VHDR2, 18U);
+
+            // buffer for decoded VHDR data
+            uint8_t vhdr[DFSI_VHDR_RAW_LEN];
+
+            uint32_t offset = 0U;
+            for (uint32_t i = 0; i < DFSI_VHDR_RAW_LEN; i++, offset += 6)
+                Utils::hex2Bin(raw[i], vhdr, offset);
+
+            // try to decode the RS data
+            try {
+                lc::LC lc = lc::LC();
+                if (!lc.decodeHDU(raw, true)) {
+                    LogError(LOG_MODEM, "V.24/DFSI traffic failed to decode RS (36,20,17) FEC");
+                } else {
+                    // late entry?
+                    if (!m_rxCallInProgress) {
+                        m_rxCallInProgress = true;
+                        m_rxCall->resetCallData();
+                        if (m_debug)
+                            LogDebug(LOG_MODEM, "V24 RX VHDR late entry, resetting call data");
+                    }
+
+                    uint8_t mi[MI_LENGTH_BYTES];
+                    lc.getMI(mi);
+
+                    ::memcpy(m_rxCall->MI, mi, MI_LENGTH_BYTES);
+
+                    m_rxCall->mfId = lc.getMFId();
+                    m_rxCall->algoId = lc.getAlgId();
+                    m_rxCall->kId = lc.getKId();
+                    m_rxCall->dstId = lc.getDstId();
+
+                    if (m_debug) {
+                        LogDebug(LOG_MODEM, "P25, VHDR algId = $%02X, kId = $%04X, dstId = $%04X", m_rxCall->algoId, m_rxCall->kId, m_rxCall->dstId);
+                    }
+
+                    // generate Sync
+                    Sync::addP25Sync(buffer + 2U);
+
+                    // generate NID
+                    m_nid->encode(buffer + 2U, DUID::HDU);
+
+                    // generate HDU
+                    lc.encodeHDU(buffer + 2U);
+
+                    // add status bits
+                    P25Utils::addStatusBits(buffer + 2U, P25_HDU_FRAME_LENGTH_BITS, true, false);
+
+                    buffer[0U] = modem::TAG_DATA;
+                    buffer[1U] = 0x01U;
+                    storeConvertedRx(buffer, P25_HDU_FRAME_LENGTH_BYTES + 2U);
+                }
+            }
+            catch (...) {
+                LogError(LOG_MODEM, "V.24/DFSI RX traffic got exception while trying to decode RS data for VHDR");
+            }
+        }
+        break;
+    
+        case BlockType::FULL_RATE_VOICE:
+        {
+            FullRateVoice voice = FullRateVoice();
+            voice.decode(dfsiData + dataOffs);
+
+            DFSIFrameType::E frameType = voice.getFrameType();
+            switch (frameType) {
+            case DFSIFrameType::LDU1_VOICE1:
+            {
+                ::memcpy(m_rxCall->netLDU1 + 10U, voice.imbeData, RAW_IMBE_LENGTH_BYTES);
+            }
+            break;
+            case DFSIFrameType::LDU1_VOICE2:
+            {
+                ::memcpy(m_rxCall->netLDU1 + 26U, voice.imbeData, RAW_IMBE_LENGTH_BYTES);
+            }
+            break;
+            case DFSIFrameType::LDU1_VOICE3:
+            {
+                ::memcpy(m_rxCall->netLDU1 + 55U, voice.imbeData, RAW_IMBE_LENGTH_BYTES);
+                if (voice.additionalData != nullptr) {
+                    m_rxCall->lco = voice.additionalData[0U];
+                    m_rxCall->mfId = voice.additionalData[1U];
+                    m_rxCall->serviceOptions = voice.additionalData[2U];
+                } else {
+                    LogWarning(LOG_MODEM, "V.24/DFSI VC3 traffic missing metadata");
+                }
+            }
+            break;
+            case DFSIFrameType::LDU1_VOICE4:
+            {
+                ::memcpy(m_rxCall->netLDU1 + 80U, voice.imbeData, RAW_IMBE_LENGTH_BYTES);
+                if (voice.additionalData != nullptr) {
+                    m_rxCall->dstId = __GET_UINT16(voice.additionalData, 0U);
+                } else {
+                    LogWarning(LOG_MODEM, "V.24/DFSI VC4 traffic missing metadata");
+                }
+            }
+            break;
+            case DFSIFrameType::LDU1_VOICE5:
+            {
+                ::memcpy(m_rxCall->netLDU1 + 105U, voice.imbeData, RAW_IMBE_LENGTH_BYTES);
+                if (voice.additionalData != nullptr) {
+                    m_rxCall->srcId = __GET_UINT16(voice.additionalData, 0U);
+                } else {
+                    LogWarning(LOG_MODEM, "V.24/DFSI VC5 traffic missing metadata");
+                }
+            }
+            break;
+            case DFSIFrameType::LDU1_VOICE6:
+            {
+                ::memcpy(m_rxCall->netLDU1 + 130U, voice.imbeData, RAW_IMBE_LENGTH_BYTES);
+            }
+            break;
+            case DFSIFrameType::LDU1_VOICE7:
+            {
+                ::memcpy(m_rxCall->netLDU1 + 155U, voice.imbeData, RAW_IMBE_LENGTH_BYTES);
+            }
+            break;
+            case DFSIFrameType::LDU1_VOICE8:
+            {
+                ::memcpy(m_rxCall->netLDU1 + 180U, voice.imbeData, RAW_IMBE_LENGTH_BYTES);
+            }
+            break;
+            case DFSIFrameType::LDU1_VOICE9:
+            {
+                ::memcpy(m_rxCall->netLDU1 + 204U, voice.imbeData, RAW_IMBE_LENGTH_BYTES);
+                if (voice.additionalData != nullptr) {
+                    m_rxCall->lsd1 = voice.additionalData[0U];
+                    m_rxCall->lsd2 = voice.additionalData[1U];
+                } else {
+                    LogWarning(LOG_MODEM, "V.24/DFSI VC9 traffic missing metadata");
+                }
+            }
+            break;
+
+            case DFSIFrameType::LDU2_VOICE10:
+            {
+                ::memcpy(m_rxCall->netLDU2 + 10U, voice.imbeData, RAW_IMBE_LENGTH_BYTES);
+            }
+            break;
+            case DFSIFrameType::LDU2_VOICE11:
+            {
+                ::memcpy(m_rxCall->netLDU2 + 26U, voice.imbeData, RAW_IMBE_LENGTH_BYTES);
+            }
+            break;
+            case DFSIFrameType::LDU2_VOICE12:
+            {
+                ::memcpy(m_rxCall->netLDU2 + 55U, voice.imbeData, RAW_IMBE_LENGTH_BYTES);
+                if (voice.additionalData != nullptr) {
+                    ::memcpy(m_rxCall->MI, voice.additionalData, 3U);
+                } else {
+                    LogWarning(LOG_MODEM, "V.24/DFSI VC12 traffic missing metadata");
+                }
+            }
+            break;
+            case DFSIFrameType::LDU2_VOICE13:
+            {
+                ::memcpy(m_rxCall->netLDU2 + 80U, voice.imbeData, RAW_IMBE_LENGTH_BYTES);
+                if (voice.additionalData != nullptr) {
+                    ::memcpy(m_rxCall->MI + 3U, voice.additionalData, 3U);
+                } else {
+                    LogWarning(LOG_MODEM, "V.24/DFSI VC13 traffic missing metadata");
+                }
+            }
+            break;
+            case DFSIFrameType::LDU2_VOICE14:
+            {
+                ::memcpy(m_rxCall->netLDU2 + 105U, voice.imbeData, RAW_IMBE_LENGTH_BYTES);
+                if (voice.additionalData != nullptr) {
+                    ::memcpy(m_rxCall->MI + 6U, voice.additionalData, 3U);
+                } else {
+                    LogWarning(LOG_MODEM, "V.24/DFSI VC14 traffic missing metadata");
+                }
+            }
+            break;
+            case DFSIFrameType::LDU2_VOICE15:
+            {
+                ::memcpy(m_rxCall->netLDU2 + 130U, voice.imbeData, RAW_IMBE_LENGTH_BYTES);
+                if (voice.additionalData != nullptr) {
+                    m_rxCall->algoId = voice.additionalData[0U];
+                    m_rxCall->kId = __GET_UINT16B(voice.additionalData, 1U);
+                } else {
+                    LogWarning(LOG_MODEM, "V.24/DFSI VC15 traffic missing metadata");
+                }
+            }
+            break;
+            case DFSIFrameType::LDU2_VOICE16:
+            {
+                ::memcpy(m_rxCall->netLDU2 + 155U, voice.imbeData, RAW_IMBE_LENGTH_BYTES);
+            }
+            break;
+            case DFSIFrameType::LDU2_VOICE17:
+            {
+                ::memcpy(m_rxCall->netLDU2 + 180U, voice.imbeData, RAW_IMBE_LENGTH_BYTES);
+            }
+            break;
+            case DFSIFrameType::LDU2_VOICE18:
+            {
+                ::memcpy(m_rxCall->netLDU2 + 204U, voice.imbeData, RAW_IMBE_LENGTH_BYTES);
+                if (voice.additionalData != nullptr) {
+                    m_rxCall->lsd1 = voice.additionalData[0U];
+                    m_rxCall->lsd2 = voice.additionalData[1U];
+                } else {
+                    LogWarning(LOG_MODEM, "V.24/DFSI VC18 traffic missing metadata");
+                }
+            }
+            break;
+
+            default:
+                break;
+            }
+
+            // increment our voice frame counter
+            m_rxCall->n++;
+        }
+        break;
+        
+        default:
+            break;
+        }
+
+        hdrOffs += BlockHeader::LENGTH;
+    }
+
+    m_rxLastFrameTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
     // encode LDU1 if ready
     if (m_rxCall->n == 9U) {
@@ -1255,6 +1709,154 @@ void ModemV24::endOfStream()
         Utils::dump(1U, "ModemV24::endOfStream() MotStartOfStream", endBuf, MotStartOfStream::LENGTH);
 
     queueP25Frame(endBuf, MotStartOfStream::LENGTH, STT_NON_IMBE);
+
+    m_txCallInProgress = false;
+}
+
+/* Helper to generate the NID value. */
+
+uint16_t ModemV24::generateNID(DUID::E duid)
+{
+    uint8_t nid[2U];
+    ::memset(nid, 0x00U, 2U);
+
+    nid[0U] = (m_p25NAC >> 4) & 0xFFU;
+    nid[1U] = (m_p25NAC << 4) & 0xF0U;
+    nid[1U] |= duid;
+
+    return __GET_UINT16B(nid, 0U);
+}
+
+/* Send a start of stream sequence (HDU, etc) to the connected UDP TIA-102 device. */
+
+void ModemV24::startOfStreamTIA(const p25::lc::LC& control)
+{
+    m_txCallInProgress = true;
+
+    p25::lc::LC lc = p25::lc::LC(control);
+    
+    uint16_t length = 0U;
+    uint8_t buffer[P25_HDU_LENGTH_BYTES];
+    ::memset(buffer, 0x00U, P25_HDU_LENGTH_BYTES);
+
+    // generate control octet
+    ControlOctet ctrl = ControlOctet();
+    ctrl.setBlockHeaderCnt(1U);
+    ctrl.encode(buffer);
+    length += ControlOctet::LENGTH;
+
+    // generate block header
+    BlockHeader hdr = BlockHeader();
+    hdr.setBlockType(BlockType::START_OF_STREAM);
+    hdr.encode(buffer + 1U);
+    length += BlockHeader::LENGTH;
+
+    // generate start of stream
+    StartOfStream start = StartOfStream();
+    start.setNID(generateNID());
+    start.encode(buffer + 2U);
+    length += StartOfStream::LENGTH;
+
+    if (m_trace)
+        Utils::dump(1U, "ModemV24::startOfStreamTIA() StartOfStream", buffer, length);
+
+    queueP25Frame(buffer, length, STT_NON_IMBE);
+
+    ::memset(buffer, 0x00U, P25_HDU_LENGTH_BYTES);
+    length = 0U;
+
+    // generate control octet
+    ctrl.setBlockHeaderCnt(2U);
+    ctrl.encode(buffer);
+    length += ControlOctet::LENGTH;
+
+    // generate block header 1
+    hdr.setBlockType(BlockType::VOICE_HEADER_P1);
+    hdr.encode(buffer + 1U);
+    length += BlockHeader::LENGTH;
+    hdr.setBlockType(BlockType::START_OF_STREAM);
+    hdr.encode(buffer + 2U);
+    length += BlockHeader::LENGTH;
+
+    // generate voice header 1
+    uint8_t hdu[P25_HDU_LENGTH_BYTES];
+    ::memset(hdu, 0x00U, P25_HDU_LENGTH_BYTES);
+    lc.encodeHDU(hdu, true);
+
+    // convert the binary bytes to hex bytes
+    uint8_t raw[DFSI_VHDR_RAW_LEN];
+    uint32_t offset = 0;
+    for (uint8_t i = 0; i < DFSI_VHDR_RAW_LEN; i++, offset += 6) {
+        raw[i] = Utils::bin2Hex(hdu, offset);
+    }
+
+    // prepare VHDR1
+    buffer[3U] = DFSIFrameType::MOT_VHDR_1;
+    ::memcpy(buffer + 4U, raw, 18U);
+    length += 19U; // 18 Golay + Block Type Marker
+
+    start.encode(buffer + length);
+    length += StartOfStream::LENGTH;
+
+    if (m_trace)
+        Utils::dump(1U, "ModemV24::startOfStreamTIA() VoiceHeader1", buffer, length);
+
+    queueP25Frame(buffer, length, STT_NON_IMBE);
+
+    ::memset(buffer, 0x00U, P25_HDU_LENGTH_BYTES);
+    length = 0U;
+
+    // generate control octet
+    ctrl.setBlockHeaderCnt(2U);
+    ctrl.encode(buffer);
+    length += ControlOctet::LENGTH;
+
+    // generate block header 1
+    hdr.setBlockType(BlockType::VOICE_HEADER_P2);
+    hdr.encode(buffer + 1U);
+    length += BlockHeader::LENGTH;
+    hdr.setBlockType(BlockType::START_OF_STREAM);
+    hdr.encode(buffer + 2U);
+    length += BlockHeader::LENGTH;
+
+    // prepare VHDR2
+    buffer[3U] = DFSIFrameType::MOT_VHDR_2;
+    ::memcpy(buffer + 4U, raw + 18U, 18U);
+    length += 19U; // 18 Golay + Block Type Marker
+
+    start.encode(buffer + length);
+    length += StartOfStream::LENGTH;
+
+    if (m_trace)
+        Utils::dump(1U, "ModemV24::startOfStreamTIA() VoiceHeader2", buffer, length);
+
+    queueP25Frame(buffer, length, STT_NON_IMBE);
+}
+
+/* Send an end of stream sequence (TDU, etc) to the connected UDP TIA-102 device. */
+
+void ModemV24::endOfStreamTIA()
+{
+    uint16_t length = 0U;
+    uint8_t buffer[2U];
+    ::memset(buffer, 0x00U, 2U);
+
+    // generate control octet
+    ControlOctet ctrl = ControlOctet();
+    ctrl.setBlockHeaderCnt(1U);
+    ctrl.encode(buffer);
+    length += ControlOctet::LENGTH;
+
+    // generate block header
+    BlockHeader hdr = BlockHeader();
+    hdr.setBlockType(BlockType::END_OF_STREAM);
+    hdr.encode(buffer + 1U);
+    length += BlockHeader::LENGTH;
+
+    if (m_trace)
+        Utils::dump(1U, "ModemV24::endOfStreamTIA() EndOfStream", buffer, length);
+
+    queueP25Frame(buffer, length, STT_NON_IMBE);
 
     m_txCallInProgress = false;
 }
@@ -1586,6 +2188,300 @@ void ModemV24::convertFromAir(uint8_t* data, uint32_t length)
             if (buffer != nullptr) {
                 if (m_trace) {
                     Utils::dump("ModemV24::convertFromAir() Encoded V.24 Voice Frame Data", buffer, bufferSize);
+                }
+
+                queueP25Frame(buffer, bufferSize, STT_IMBE);
+                delete[] buffer;
+            }
+        }
+    }
+}
+
+/* Internal helper to convert from TIA-102 air interface to TIA-102 DFSI. */
+
+void ModemV24::convertFromAirTIA(uint8_t* data, uint32_t length)
+{
+    assert(data != nullptr);
+    assert(length > 0U);
+
+    if (m_trace)
+        Utils::dump(1U, "ModemV24::convertFromAirTIA() data", data, length);
+
+    uint8_t ldu[9U * 25U];
+    ::memset(ldu, 0x00U, 9 * 25U);
+
+    // decode the NID
+    bool valid = m_nid->decode(data + 2U);
+    if (!valid)
+        return;
+
+    DUID::E duid = m_nid->getDUID();
+
+    // handle individual DUIDs
+    lc::LC lc = lc::LC();
+    data::LowSpeedData lsd = data::LowSpeedData();
+    switch (duid) {
+        case DUID::HDU:
+        {
+            bool ret = lc.decodeHDU(data + 2U);
+            if (!ret) {
+                LogWarning(LOG_MODEM, P25_HDU_STR ", undecodable LC");
+            }
+
+            startOfStreamTIA(lc);
+        }
+        break;
+        case DUID::LDU1:
+        {
+            bool ret = lc.decodeLDU1(data + 2U, true);
+            if (!ret) {
+                LogWarning(LOG_MODEM, P25_LDU1_STR ", undecodable LC");
+                return;
+            }
+
+            lsd.process(data + 2U);
+
+            // late entry?
+            if (!m_txCallInProgress) {
+                startOfStreamTIA(lc);
+                if (m_debug)
+                    LogDebug(LOG_MODEM, "V24 TX VHDR late entry, resetting TX call data");
+            }
+
+            // generate audio
+            m_audio.decode(data + 2U, ldu + 10U, 0U);
+            m_audio.decode(data + 2U, ldu + 26U, 1U);
+            m_audio.decode(data + 2U, ldu + 55U, 2U);
+            m_audio.decode(data + 2U, ldu + 80U, 3U);
+            m_audio.decode(data + 2U, ldu + 105U, 4U);
+            m_audio.decode(data + 2U, ldu + 130U, 5U);
+            m_audio.decode(data + 2U, ldu + 155U, 6U);
+            m_audio.decode(data + 2U, ldu + 180U, 7U);
+            m_audio.decode(data + 2U, ldu + 204U, 8U);
+        }
+        break;
+        case DUID::LDU2:
+        {
+            bool ret = lc.decodeLDU2(data + 2U);
+            if (!ret) {
+                LogWarning(LOG_MODEM, P25_LDU2_STR ", undecodable LC");
+                return;
+            }
+
+            lsd.process(data + 2U);
+
+            // generate audio
+            m_audio.decode(data + 2U, ldu + 10U, 0U);
+            m_audio.decode(data + 2U, ldu + 26U, 1U);
+            m_audio.decode(data + 2U, ldu + 55U, 2U);
+            m_audio.decode(data + 2U, ldu + 80U, 3U);
+            m_audio.decode(data + 2U, ldu + 105U, 4U);
+            m_audio.decode(data + 2U, ldu + 130U, 5U);
+            m_audio.decode(data + 2U, ldu + 155U, 6U);
+            m_audio.decode(data + 2U, ldu + 180U, 7U);
+            m_audio.decode(data + 2U, ldu + 204U, 8U);
+        }
+        break;
+
+        case DUID::TDU:
+        case DUID::TDULC:
+            if (m_txCallInProgress)
+                endOfStreamTIA();
+            break;
+
+        case DUID::PDU:
+            break;
+
+        case DUID::TSDU:
+            break;
+
+        default:
+            break;
+    }
+
+    if (duid == DUID::LDU1 || duid == DUID::LDU2) {
+        uint8_t rs[P25_LDU_LC_FEC_LENGTH_BYTES];
+        ::memset(rs, 0x00U, P25_LDU_LC_FEC_LENGTH_BYTES);
+
+        if (duid == DUID::LDU1) {
+            rs[0U] = lc.getLCO();                                               // LCO
+
+            // split ulong64_t (8 byte) value into bytes
+            rs[1U] = (uint8_t)((lc.getRS() >> 56) & 0xFFU);
+            rs[2U] = (uint8_t)((lc.getRS() >> 48) & 0xFFU);
+            rs[3U] = (uint8_t)((lc.getRS() >> 40) & 0xFFU);
+            rs[4U] = (uint8_t)((lc.getRS() >> 32) & 0xFFU);
+            rs[5U] = (uint8_t)((lc.getRS() >> 24) & 0xFFU);
+            rs[6U] = (uint8_t)((lc.getRS() >> 16) & 0xFFU);
+            rs[7U] = (uint8_t)((lc.getRS() >> 8) & 0xFFU);
+            rs[8U] = (uint8_t)((lc.getRS() >> 0) & 0xFFU);
+
+            // encode RS (24,12,13) FEC
+            m_rs.encode241213(rs);
+        } else {
+            // generate MI data
+            uint8_t mi[MI_LENGTH_BYTES];
+            ::memset(mi, 0x00U, MI_LENGTH_BYTES);
+            lc.getMI(mi);
+
+            for (uint32_t i = 0; i < MI_LENGTH_BYTES; i++)
+                rs[i] = mi[i];                                                      // Message Indicator
+
+            rs[9U] = lc.getAlgId();                                                 // Algorithm ID
+            rs[10U] = (lc.getKId() >> 8) & 0xFFU;                                   // Key ID
+            rs[11U] = (lc.getKId() >> 0) & 0xFFU;                                   // ...
+
+            // encode RS (24,16,9) FEC
+            m_rs.encode24169(rs);
+        }
+
+        for (int n = 0; n < 9; n++) {
+            uint8_t* buffer = nullptr;
+            uint16_t bufferSize = 0;
+            FullRateVoice voice = FullRateVoice();
+
+            switch (n) {
+                case 0: // VOICE1/10
+                {
+                    voice.setFrameType((duid == DUID::LDU1) ? DFSIFrameType::LDU1_VOICE1 : DFSIFrameType::LDU2_VOICE10);
+                    ::memcpy(voice.imbeData, ldu + 10U, RAW_IMBE_LENGTH_BYTES);
+                }
+                break;
+                case 1: // VOICE2/11
+                {
+                    voice.setFrameType((duid == DUID::LDU1) ? DFSIFrameType::LDU1_VOICE2 : DFSIFrameType::LDU2_VOICE11);
+                    ::memcpy(voice.imbeData, ldu + 26U, RAW_IMBE_LENGTH_BYTES);
+                }
+                break;
+                case 2: // VOICE3/12
+                {
+                    voice.setFrameType((duid == DUID::LDU1) ? DFSIFrameType::LDU1_VOICE3 : DFSIFrameType::LDU2_VOICE12);
+                    ::memcpy(voice.imbeData, ldu + 55U, RAW_IMBE_LENGTH_BYTES);
+
+                    voice.additionalData = new uint8_t[voice.ADDITIONAL_LENGTH];
+                    ::memset(voice.additionalData, 0x00U, voice.ADDITIONAL_LENGTH);
+
+                    // copy additional data
+                    voice.additionalData[0U] = rs[0U];
+                    voice.additionalData[1U] = rs[1U];
+                    voice.additionalData[2U] = rs[2U];
+                }
+                break;
+                case 3: // VOICE4/13
+                {
+                    voice.setFrameType((duid == DUID::LDU1) ? DFSIFrameType::LDU1_VOICE4 : DFSIFrameType::LDU2_VOICE13);
+                    ::memcpy(voice.imbeData, ldu + 80U, RAW_IMBE_LENGTH_BYTES);
+
+                    voice.additionalData = new uint8_t[voice.ADDITIONAL_LENGTH];
+                    ::memset(voice.additionalData, 0x00U, voice.ADDITIONAL_LENGTH);
+
+                    // copy additional data
+                    voice.additionalData[0U] = rs[3U];
+                    voice.additionalData[1U] = rs[4U];
+                    voice.additionalData[2U] = rs[5U];
+                }
+                break;
+                case 4: // VOICE5/14
+                {
+                    voice.setFrameType((duid == DUID::LDU1) ? DFSIFrameType::LDU1_VOICE5 : DFSIFrameType::LDU2_VOICE14);
+                    ::memcpy(voice.imbeData, ldu + 105U, RAW_IMBE_LENGTH_BYTES);
+
+                    voice.additionalData = new uint8_t[voice.ADDITIONAL_LENGTH];
+                    ::memset(voice.additionalData, 0x00U, voice.ADDITIONAL_LENGTH);
+
+                    voice.additionalData[0U] = rs[6U];
+                    voice.additionalData[1U] = rs[7U];
+                    voice.additionalData[2U] = rs[8U];
+                }
+                break;
+                case 5: // VOICE6/15
+                {
+                    voice.setFrameType((duid == DUID::LDU1) ? DFSIFrameType::LDU1_VOICE6 : DFSIFrameType::LDU2_VOICE15);
+                    ::memcpy(voice.imbeData, ldu + 130U, RAW_IMBE_LENGTH_BYTES);
+
+                    voice.additionalData = new uint8_t[voice.ADDITIONAL_LENGTH];
+                    ::memset(voice.additionalData, 0x00U, voice.ADDITIONAL_LENGTH);
+
+                    voice.additionalData[0U] = rs[9U];
+                    voice.additionalData[1U] = rs[10U];
+                    voice.additionalData[2U] = rs[11U];
+                }
+                break;
+                case 6: // VOICE7/16
+                {
+                    voice.setFrameType((duid == DUID::LDU1) ? DFSIFrameType::LDU1_VOICE7 : DFSIFrameType::LDU2_VOICE16);
+                    ::memcpy(voice.imbeData, ldu + 155U, RAW_IMBE_LENGTH_BYTES);
+
+                    voice.additionalData = new uint8_t[voice.ADDITIONAL_LENGTH];
+                    ::memset(voice.additionalData, 0x00U, voice.ADDITIONAL_LENGTH);
+
+                    voice.additionalData[0U] = rs[12U];
+                    voice.additionalData[1U] = rs[13U];
+                    voice.additionalData[2U] = rs[14U];
+                }
+                break;
+                case 7: // VOICE8/17
+                {
+                    voice.setFrameType((duid == DUID::LDU1) ? DFSIFrameType::LDU1_VOICE8 : DFSIFrameType::LDU2_VOICE17);
+                    ::memcpy(voice.imbeData, ldu + 180U, RAW_IMBE_LENGTH_BYTES);
+
+                    voice.additionalData = new uint8_t[voice.ADDITIONAL_LENGTH];
+                    ::memset(voice.additionalData, 0x00U, voice.ADDITIONAL_LENGTH);
+
+                    voice.additionalData[0U] = rs[15U];
+                    voice.additionalData[1U] = rs[16U];
+                    voice.additionalData[2U] = rs[17U];
+                }
+                break;
+                case 8: // VOICE9/18
+                {
+                    voice.setFrameType((duid == DUID::LDU1) ? DFSIFrameType::LDU1_VOICE9 : DFSIFrameType::LDU2_VOICE18);
+                    ::memcpy(voice.imbeData, ldu + 204U, RAW_IMBE_LENGTH_BYTES);
+
+                    voice.additionalData = new uint8_t[voice.ADDITIONAL_LENGTH];
+                    ::memset(voice.additionalData, 0x00U, voice.ADDITIONAL_LENGTH);
+
+                    voice.additionalData[0U] = lsd.getLSD1();
+                    voice.additionalData[1U] = lsd.getLSD2();
+                }
+                break;
+            }
+
+            // For n=0 (VHDR1/10) case we create the buffer in the switch, for all other frame types we do that here
+            if (n != 0) {
+                buffer = new uint8_t[P25_PDU_FRAME_LENGTH_BYTES];
+                ::memset(buffer, 0x00U, P25_PDU_FRAME_LENGTH_BYTES);
+
+                // generate control octet
+                ControlOctet ctrl = ControlOctet();
+                ctrl.setBlockHeaderCnt(2U);
+                ctrl.encode(buffer);
+                bufferSize += ControlOctet::LENGTH;
+
+                // generate block header
+                BlockHeader hdr = BlockHeader();
+                hdr.setBlockType(BlockType::FULL_RATE_VOICE);
+                hdr.encode(buffer + 1U);
+                bufferSize += BlockHeader::LENGTH;
+
+                // generate block header
+                hdr.setBlockType(BlockType::START_OF_STREAM);
+                hdr.encode(buffer + 2U);
+                bufferSize += BlockHeader::LENGTH;
+
+                voice.encode(buffer + bufferSize);
+                bufferSize += FullRateVoice::LENGTH;
+
+                // generate start of stream
+                StartOfStream start = StartOfStream();
+                start.setNID(generateNID());
+                start.encode(buffer + bufferSize);
+                bufferSize += StartOfStream::LENGTH;
+            }
+
+            if (buffer != nullptr) {
+                if (m_trace) {
+                    Utils::dump("ModemV24::convertFromAirTIA() Encoded V.24 Voice Frame Data", buffer, bufferSize);
                 }
 
                 queueP25Frame(buffer, bufferSize, STT_IMBE);

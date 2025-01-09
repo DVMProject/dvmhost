@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2024-2025 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -45,7 +45,7 @@ namespace p25
              */
             class HOST_SW_API StartOfStream {
             public:
-                static const uint8_t LENGTH = 4;
+                static const uint8_t LENGTH = 4U;
 
                 /**
                  * @brief Initializes a copy instance of the StartOfStream class.
