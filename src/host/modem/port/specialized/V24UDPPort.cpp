@@ -62,7 +62,7 @@ V24UDPPort::V24UDPPort(uint32_t peerId, const std::string& address, uint16_t mod
     m_ctrlAddrLen(0U),
     m_buffer(2000U, "UDP Port Ring Buffer"),
     m_fscInitiator(fscInitiator),
-    m_timeoutTimer(1000U, 30U),
+    m_timeoutTimer(1000U, 45U),
     m_reqConnectionTimer(1000U, 30U),
     m_heartbeatInterval(5U),
     m_heartbeatTimer(1000U, 5U),
