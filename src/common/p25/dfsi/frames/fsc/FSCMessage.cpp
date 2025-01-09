@@ -89,6 +89,11 @@ std::unique_ptr<FSCMessage> FSCMessage::createMessage(const uint8_t* data)
     case FSCMessageType::FSC_DISCONNECT:
         message = new FSCDisconnect();
         break;
+
+    case FSCMessageType::FSC_SEL_CHAN:
+        message = new FSCMessage();
+        break;
+
     default:
         LogError(LOG_P25, "FSCMessage::createMessage(), unknown message value, messageId = $%02X", messageId);
         break;
