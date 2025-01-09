@@ -514,6 +514,23 @@ void* V24UDPPort::threadedCtrlNetworkRx(void* arg)
                     }
                     break;
 
+                    case FSCMessageType::FSC_SEL_CHAN:
+                    {
+                        FSCACK ackResp = FSCACK();
+                        ackResp.setCorrelationTag(message->getCorrelationTag());
+                        ackResp.setAckMessageId(FSCMessageType::FSC_SEL_CHAN);
+                        ackResp.setResponseCode(FSCAckResponseCode::CONTROL_ACK);
+                        ackResp.setAckCorrelationTag(message->getCorrelationTag());
+                        ackResp.setResponseLength(0U);
+
+                        uint8_t buffer[FSCACK::LENGTH];
+                        ::memset(buffer, 0x00U, FSCACK::LENGTH);
+                        ackResp.encode(buffer);
+
+                        network->m_ctrlFrameQueue->write(buffer, FSCACK::LENGTH, network->m_controlAddr, network->m_ctrlAddrLen);
+                    }
+                    break;
+
                     case FSCMessageType::FSC_REPORT_SEL_MODES:
                     {
                         FSCACK ackResp = FSCACK();

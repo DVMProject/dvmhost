@@ -44,15 +44,17 @@ namespace p25
             namespace FSCMessageType {
                 /** @brief FSC Control Service Message.*/
                 enum E : uint8_t {
-                    FSC_CONNECT = 0,                    //! Establish connection with FSS.
-                    FSC_HEARTBEAT = 1,                  //! Heartbeat/Connectivity Maintenance.
+                    FSC_CONNECT = 0,                    //! Establish connection with FSS
+                    FSC_HEARTBEAT = 1,                  //! Heartbeat/Connectivity Maintenance
                     FSC_ACK = 2,                        //! Control Service Ack.
+
+                    FSC_SEL_CHAN = 5,                   //! Channel Selection
 
                     FSC_REPORT_SEL_MODES = 8,           //! Report Selected Modes
 
-                    FSC_DISCONNECT = 9,                 //! Detach Control Service.
+                    FSC_DISCONNECT = 9,                 //! Detach Control Service
 
-                    FSC_INVALID = 127,                  //! Invalid Control Message.
+                    FSC_INVALID = 127,                  //! Invalid Control Message
                 };
             }
 

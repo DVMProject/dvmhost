@@ -1120,7 +1120,7 @@ void ModemV24::convertToAirTIA(const uint8_t *data, uint32_t length)
     uint8_t blockCnt = ctrl.getBlockHeaderCnt();
 
     // iterate through blocks
-    uint8_t hdrOffs = 1U, dataOffs = blockCnt;
+    uint8_t hdrOffs = 1U, dataOffs = blockCnt + 1U;
     for (uint8_t i = 0U; i < blockCnt; i++) {
         BlockHeader hdr = BlockHeader();
         hdr.decode(dfsiData + hdrOffs);
