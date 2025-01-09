@@ -592,8 +592,12 @@ system:
             callTimeout: 200
             # Flag indicating when operating in V.24 UDP mode, the FSC protocol should be used to negotiate connection.
             fsc: false
+            # Sets the heartbeat interval for the FSC connection.
+            fscHeartbeat: 5
             # Flag indicating when operating in V.24 UDP mode, this instance should initiate the FSC protocol handshake.
             initiator: false
+            # Flag indicating DFSI frames should be formatted in TIA-102 standard instead of serial standard format.
+            dfsiTIAMode: false
 
         # Sets received the signal offset from DC.
         rxDCOffset: 0 # Valid values between -128 and 128

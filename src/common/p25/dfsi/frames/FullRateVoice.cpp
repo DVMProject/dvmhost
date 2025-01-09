@@ -145,7 +145,7 @@ void FullRateVoice::encode(uint8_t* data)
                 buffer[i] = Utils::bin2Hex(additionalData, offset);
             }
 
-            ::memcpy(data + 14U, buffer, ADDITIONAL_LENGTH);
+            ::memcpy(data + 14U, buffer, ADDITIONAL_LENGTH - 1U);
         }
     }
 }

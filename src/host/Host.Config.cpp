@@ -463,7 +463,9 @@ bool Host::createModem()
     uint16_t jitter = dfsiParams["jitter"].as<uint16_t>(200U);
     uint16_t dfsiCallTimeout = dfsiParams["callTimeout"].as<uint16_t>(200U);
     bool useFSCForUDP = dfsiParams["fsc"].as<bool>(false);
+    uint32_t fscHeartbeat = dfsiParams["fscHeartbeat"].as<uint32_t>(5U);
     bool fscInitiator = dfsiParams["initiator"].as<bool>(false);
+    bool dfsiTIAMode = dfsiParams["dfsiTIAMode"].as<bool>(false);
 
     // clamp fifo sizes
     if (dmrFifoLength < DMR_TX_BUFFER_LEN) {
@@ -581,7 +583,9 @@ bool Host::createModem()
         LogInfo("    DFSI Jitter Size: %u ms", jitter);
         if (g_remoteModemMode) {
             LogInfo("    DFSI Use FSC: %s", useFSCForUDP ? "yes" : "no");
+            LogInfo("    DFSI FSC Heartbeat: %us", fscHeartbeat);
             LogInfo("    DFSI FSC Initiator: %s", fscInitiator ? "yes" : "no");
+            LogInfo("    DFSI FSC TIA Frames: %s", dfsiTIAMode ? "yes" : "no");
         }
     }
 
@@ -598,7 +602,8 @@ bool Host::createModem()
                 uint32_t id = networkConf["id"].as<uint32_t>(1000U);
                 if (useFSCForUDP) {
                     modemPort = new port::specialized::V24UDPPort(id, g_remoteAddress, g_remotePort + 1U, g_remotePort, true, fscInitiator, debug);
-                } else {
+                    ((modem::port::specialized::V24UDPPort*)modemPort)->setHeartbeatInterval(fscHeartbeat);
+               } else {
                     modemPort = new port::specialized::V24UDPPort(id, g_remoteAddress, g_remotePort, 0U, false, false, debug);
                 }
                 m_udpDFSIRemotePort = modemPort;
@@ -662,6 +667,7 @@ bool Host::createModem()
         m_modem = new ModemV24(modemPort, m_duplex, m_p25QueueSizeBytes, m_p25QueueSizeBytes, rtrt, diu, jitter,
             dumpModemStatus, trace, debug);
         ((ModemV24*)m_modem)->setCallTimeout(dfsiCallTimeout);
+        ((ModemV24*)m_modem)->setTIAFormat(dfsiTIAMode);
     } else {
         m_modem = new Modem(modemPort, m_duplex, rxInvert, txInvert, pttInvert, dcBlocker, cosLockout, fdmaPreamble, dmrRxDelay, p25CorrCount,
             m_dmrQueueSizeBytes, m_p25QueueSizeBytes, m_nxdnQueueSizeBytes, disableOFlowReset, ignoreModemConfigArea, dumpModemStatus, trace, debug);

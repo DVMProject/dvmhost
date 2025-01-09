@@ -64,6 +64,7 @@ V24UDPPort::V24UDPPort(uint32_t peerId, const std::string& address, uint16_t mod
     m_fscInitiator(fscInitiator),
     m_timeoutTimer(1000U, 30U),
     m_reqConnectionTimer(1000U, 30U),
+    m_heartbeatInterval(5U),
     m_heartbeatTimer(1000U, 5U),
     m_random(),
     m_peerId(peerId),
@@ -113,6 +114,19 @@ V24UDPPort::~V24UDPPort()
 
     if (m_socket != nullptr)
         delete m_socket;
+}
+
+/* Helper to set and configure the heartbeat interval for FSC connections. */
+
+void V24UDPPort::setHeartbeatInterval(uint32_t interval)
+{
+    if (interval < 5U)
+        interval = 5U;
+    if (interval > 30U)
+        interval = 30U;
+
+    m_heartbeatInterval = interval;
+    m_heartbeatTimer = Timer(1000U, interval);
 }
 
 /* Updates the timer by the passed number of milliseconds. */
@@ -461,6 +475,7 @@ void* V24UDPPort::threadedCtrlNetworkRx(void* arg)
                         }
 
                         uint16_t vcPort = connMessage->getVCBasePort();
+                        network->m_heartbeatInterval = connMessage->getFSHeartbeatPeriod();
                         network->m_localPort = vcPort;
 
                         network->createVCPort(network->m_localPort);
@@ -468,10 +483,11 @@ void* V24UDPPort::threadedCtrlNetworkRx(void* arg)
 
                         network->m_fscState = CS_CONNECTED;
                         network->m_reqConnectionTimer.stop();
+                        network->m_heartbeatTimer = Timer(1000U, network->m_heartbeatInterval);
                         network->m_heartbeatTimer.start();
                         network->m_timeoutTimer.start();
 
-                        LogMessage(LOG_MODEM, "V.24 UDP, Incoming DFSI FSC Connection, vcBasePort = %u", network->m_localPort);
+                        LogMessage(LOG_MODEM, "V.24 UDP, Incoming DFSI FSC Connection, vcBasePort = %u, fsHBInterval = %u, hostHBInterval = %u", network->m_localPort, network->m_heartbeatInterval, connMessage->getHostHeartbeatPeriod());
 
                         // construct connect ACK response data
                         uint8_t respData[3U];
@@ -681,8 +697,8 @@ void V24UDPPort::writeConnect()
     LogMessage(LOG_MODEM, "V.24 UDP, Attempting DFSI FSC Connection, peerId = %u, vcBasePort = %u", m_peerId, m_localPort);
 
     FSCConnect connect = FSCConnect();
-    connect.setFSHeartbeatPeriod(5U);   // hardcoded?
-    connect.setHostHeartbeatPeriod(5U); // hardcoded?
+    connect.setFSHeartbeatPeriod(m_heartbeatInterval);
+    connect.setHostHeartbeatPeriod(m_heartbeatInterval);
     connect.setVCBasePort(m_localPort);
     connect.setVCSSRC(m_peerId);
 

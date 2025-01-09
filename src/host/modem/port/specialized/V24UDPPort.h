@@ -82,6 +82,11 @@ namespace modem
                 ~V24UDPPort() override;
 
                 /**
+                 * @brief Helper to set and configure the heartbeat interval for FSC connections.
+                 */
+                void setHeartbeatInterval(uint32_t interval);
+
+                /**
                  * @brief Updates the timer by the passed number of milliseconds.
                  * @param ms Number of milliseconds.
                  */
@@ -147,6 +152,7 @@ namespace modem
                 Timer m_timeoutTimer;
 
                 Timer m_reqConnectionTimer;
+                uint32_t m_heartbeatInterval;
                 Timer m_heartbeatTimer;
 
                 std::mt19937 m_random;
