@@ -83,6 +83,9 @@ std::unique_ptr<FSCMessage> FSCMessage::createMessage(const uint8_t* data)
     case FSCMessageType::FSC_ACK:
         message = new FSCACK();
         break;
+    case FSCMessageType::FSC_REPORT_SEL_MODES:
+        message = new FSCReportSelModes();
+        break;
     case FSCMessageType::FSC_DISCONNECT:
         message = new FSCDisconnect();
         break;

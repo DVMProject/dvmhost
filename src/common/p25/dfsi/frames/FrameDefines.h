@@ -48,6 +48,8 @@ namespace p25
                     FSC_HEARTBEAT = 1,                  //! Heartbeat/Connectivity Maintenance.
                     FSC_ACK = 2,                        //! Control Service Ack.
 
+                    FSC_REPORT_SEL_MODES = 8,           //! Report Selected Modes
+
                     FSC_DISCONNECT = 9,                 //! Detach Control Service.
 
                     FSC_INVALID = 127,                  //! Invalid Control Message.

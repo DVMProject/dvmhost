@@ -492,6 +492,37 @@ void* V24UDPPort::threadedCtrlNetworkRx(void* arg)
                     }
                     break;
 
+                    case FSCMessageType::FSC_REPORT_SEL_MODES:
+                    {
+                        FSCACK ackResp = FSCACK();
+                        ackResp.setCorrelationTag(message->getCorrelationTag());
+                        ackResp.setAckMessageId(FSCMessageType::FSC_REPORT_SEL_MODES);
+                        ackResp.setResponseCode(FSCAckResponseCode::CONTROL_ACK);
+                        ackResp.setAckCorrelationTag(message->getCorrelationTag());
+
+                        // construct connect ACK response data
+                        uint8_t respData[5U];
+                        ::memset(respData, 0x00U, 5U);
+
+                        // bryanb: because DVM is essentially a repeater -- we hardcode these values
+                        respData[0U] = 1U; // Version 1
+                        respData[1U] = 1U; // Repeat Inbound Audio
+                        respData[2U] = 0U; // Rx Channel Selection
+                        respData[3U] = 0U; // Tx Channel Selection
+                        respData[4U] = 1U; // Monitor Mode
+
+                        // pack ack
+                        ackResp.setResponseLength(5U);
+                        ackResp.responseData = respData;
+
+                        uint8_t buffer[FSCACK::LENGTH + 5U];
+                        ::memset(buffer, 0x00U, FSCACK::LENGTH + 5U);
+                        ackResp.encode(buffer);
+
+                        network->m_ctrlFrameQueue->write(buffer, FSCACK::LENGTH + 5U, network->m_controlAddr, network->m_ctrlAddrLen);
+                    }
+                    break;
+
                     case FSCMessageType::FSC_DISCONNECT:
                     {
                         LogMessage(LOG_MODEM, "V.24 UDP, DFSI FSC Disconnect, vcBasePort = %u", network->m_localPort);
