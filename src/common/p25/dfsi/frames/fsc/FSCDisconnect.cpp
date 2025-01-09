@@ -29,10 +29,3 @@ FSCDisconnect::FSCDisconnect() : FSCMessage()
 {
     m_messageId = FSCMessageType::FSC_DISCONNECT;
 }
-
-/* Initializes a instance of the FSCDisconnect class. */
-
-FSCDisconnect::FSCDisconnect(const uint8_t* data) : FSCMessage(data)
-{
-    FSCMessage::decode(data);
-}

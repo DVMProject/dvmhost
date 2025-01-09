@@ -41,17 +41,12 @@ namespace p25
                  */
                 class HOST_SW_API FSCConnect : public FSCMessage {
                 public:
-                    static const uint8_t LENGTH = 11;
+                    static const uint8_t LENGTH = 11U;
 
                     /**
                      * @brief Initializes a copy instance of the FSCConnect class.
                      */
                     FSCConnect();
-                    /**
-                     * @brief Initializes a copy instance of the FSCConnect class.
-                     * @param data Buffer to containing FSCConnect to decode.
-                     */
-                    FSCConnect(const uint8_t* data);
 
                     /**
                      * @brief Decode a FSC connect frame.

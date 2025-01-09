@@ -64,7 +64,7 @@ Host::Host(const std::string& confFile) :
     m_modem(nullptr),
     m_modemRemote(false),
     m_isModemDFSI(false),
-    m_udpDSFIRemotePort(nullptr),
+    m_udpDFSIRemotePort(nullptr),
     m_network(nullptr),
     m_modemRemotePort(nullptr),
     m_state(STATE_IDLE),
@@ -945,10 +945,9 @@ int Host::run()
             }
         }
 
-        if (m_udpDSFIRemotePort != nullptr) {
+        if (m_udpDFSIRemotePort != nullptr) {
             m_mainLoopStage = 11U; // intentional magic number
-            modem::port::specialized::V24UDPPort* udpPort = dynamic_cast<modem::port::specialized::V24UDPPort*>(m_udpDSFIRemotePort);
-            
+            modem::port::specialized::V24UDPPort* udpPort = dynamic_cast<modem::port::specialized::V24UDPPort*>(m_udpDFSIRemotePort);
             udpPort->clock(ms);
         }
 
@@ -1638,8 +1637,13 @@ void Host::setState(uint8_t state)
 
             m_modeTimer.stop();
 
-            if (m_state == HOST_STATE_QUIT) {
+            if (state == HOST_STATE_QUIT) {
                 ::LogInfoEx(LOG_HOST, "Host is shutting down");
+
+                if (m_udpDFSIRemotePort != nullptr) {
+                    modem::port::specialized::V24UDPPort* udpPort = dynamic_cast<modem::port::specialized::V24UDPPort*>(m_udpDFSIRemotePort);
+                    udpPort->closeFSC();
+                }
 
                 if (m_modem != nullptr) {
                     m_modem->close();

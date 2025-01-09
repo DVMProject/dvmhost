@@ -41,17 +41,12 @@ namespace p25
                  */
                 class HOST_SW_API FSCACK : public FSCMessage {
                 public:
-                    static const uint8_t LENGTH = 6;
+                    static const uint8_t LENGTH = 7U;
 
                     /**
                      * @brief Initializes a copy instance of the FSCACK class.
                      */
                     FSCACK();
-                    /**
-                     * @brief Initializes a copy instance of the FSCACK class.
-                     * @param data Buffer to containing FSCACK to decode.
-                     */
-                    FSCACK(const uint8_t* data);
 
                     /**
                      * @brief Decode a FSC ACK frame.
@@ -78,7 +73,7 @@ namespace p25
                     /**
                      * @brief 
                      */
-                    __READONLY_PROPERTY(uint8_t, ackCorrelationTag, AckCorrelationTag);
+                    __PROPERTY(uint8_t, ackCorrelationTag, AckCorrelationTag);
                     /**
                      * @brief Response code.
                      */

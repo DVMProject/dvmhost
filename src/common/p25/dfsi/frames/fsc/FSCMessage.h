@@ -46,11 +46,6 @@ namespace p25
                      * @brief Initializes a copy instance of the FSCMessage class.
                      */
                     FSCMessage();
-                    /**
-                     * @brief Initializes a copy instance of the FSCMessage class.
-                     * @param data Buffer to containing FSCMessage to decode.
-                     */
-                    FSCMessage(const uint8_t* data);
 
                     /**
                      * @brief Decode a FSC message frame.

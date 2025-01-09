@@ -29,10 +29,3 @@ FSCHeartbeat::FSCHeartbeat() : FSCMessage()
 {
     m_messageId = FSCMessageType::FSC_HEARTBEAT;
 }
-
-/* Initializes a instance of the FSCHeartbeat class. */
-
-FSCHeartbeat::FSCHeartbeat(const uint8_t* data) : FSCMessage(data)
-{
-    /* stub */
-}

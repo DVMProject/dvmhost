@@ -93,20 +93,25 @@ namespace modem
                 void reset();
 
                 /**
-                 * @brief Opens a connection to the serial port.
+                 * @brief Opens a connection to the FSC port.
+                 * @returns bool True, if connection is opened, otherwise false.
+                 */
+                bool openFSC();
+                /**
+                 * @brief Opens a connection to the port.
                  * @returns bool True, if connection is opened, otherwise false.
                  */
                 bool open() override;
 
                 /**
-                 * @brief Reads data from the serial port.
+                 * @brief Reads data from the port.
                  * @param[out] buffer Buffer to read data from the port to.
                  * @param length Length of data to read from the port.
                  * @returns int Actual length of data read from serial port.
                  */
                 int read(uint8_t* buffer, uint32_t length) override;
                 /**
-                 * @brief Writes data to the serial port.
+                 * @brief Writes data to the port.
                  * @param[in] buffer Buffer containing data to write to port.
                  * @param length Length of data to write to port.
                  * @returns int Actual length of data written to the port.
@@ -114,7 +119,11 @@ namespace modem
                 int write(const uint8_t* buffer, uint32_t length) override;
 
                 /**
-                 * @brief Closes the connection to the serial port.
+                 * @brief Closes the connection to the FSC port.
+                 */
+                void closeFSC();
+                /**
+                 * @brief Closes the connection to the port.
                  */
                 void close() override;
 
@@ -140,9 +149,6 @@ namespace modem
                 Timer m_reqConnectionTimer;
                 Timer m_heartbeatTimer;
 
-                bool m_reqConnectionToPeer;
-                bool m_establishedConnection;
-
                 std::mt19937 m_random;
 
                 uint32_t m_peerId;
@@ -150,6 +156,13 @@ namespace modem
                 uint32_t m_streamId;
                 uint32_t m_timestamp;
                 uint16_t m_pktSeq;
+
+                enum CS_STATE : uint8_t {
+                    CS_NOT_CONNECTED = 0,
+                    CS_CONNECTING = 1,
+                    CS_CONNECTED = 2
+                };
+                CS_STATE m_fscState;
 
                 uint8_t m_modemState;
                 bool m_tx;

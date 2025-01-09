@@ -30,10 +30,8 @@
 
 // FSC
 #include "common/p25/dfsi/frames/fsc/FSCMessage.h"
-#include "common/p25/dfsi/frames/fsc/FSCResponse.h"
 #include "common/p25/dfsi/frames/fsc/FSCACK.h"
 #include "common/p25/dfsi/frames/fsc/FSCConnect.h"
-#include "common/p25/dfsi/frames/fsc/FSCConnectResponse.h"
 #include "common/p25/dfsi/frames/fsc/FSCDisconnect.h"
 #include "common/p25/dfsi/frames/fsc/FSCHeartbeat.h"
 

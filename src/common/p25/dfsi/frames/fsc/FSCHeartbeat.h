@@ -41,17 +41,12 @@ namespace p25
                  */
                 class HOST_SW_API FSCHeartbeat : public FSCMessage {
                 public:
-                    static const uint8_t LENGTH = 3;
+                    static const uint8_t LENGTH = 3U;
 
                     /**
                      * @brief Initializes a copy instance of the FSCHeartbeat class.
                      */
                     FSCHeartbeat();
-                    /**
-                     * @brief Initializes a copy instance of the FSCHeartbeat class.
-                     * @param data Buffer to containing FSCHeartbeat to decode.
-                     */
-                    FSCHeartbeat(const uint8_t* data);
                 };
             } // namespace fsc
         } // namespace frames

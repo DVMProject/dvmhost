@@ -601,7 +601,7 @@ bool Host::createModem()
                 } else {
                     modemPort = new port::specialized::V24UDPPort(id, g_remoteAddress, g_remotePort, 0U, false, false, debug);
                 }
-                m_udpDSFIRemotePort = modemPort;
+                m_udpDFSIRemotePort = modemPort;
             } else {
                 modemPort = new port::UDPPort(g_remoteAddress, g_remotePort);
             }
@@ -685,6 +685,11 @@ bool Host::createModem()
         m_modem->setOpenHandler(MODEM_OC_PORT_HANDLER_BIND(Host::rmtPortModemOpen, this));
         m_modem->setCloseHandler(MODEM_OC_PORT_HANDLER_BIND(Host::rmtPortModemClose, this));
         m_modem->setResponseHandler(MODEM_RESP_HANDLER_BIND(Host::rmtPortModemHandler, this));
+    }
+
+    if (useFSCForUDP) {
+        modem::port::specialized::V24UDPPort* udpPort = dynamic_cast<modem::port::specialized::V24UDPPort*>(m_udpDFSIRemotePort);
+        udpPort->openFSC();
     }
 
     bool ret = m_modem->open();

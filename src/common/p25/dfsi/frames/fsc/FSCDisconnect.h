@@ -41,17 +41,12 @@ namespace p25
                  */
                 class HOST_SW_API FSCDisconnect : public FSCMessage {
                 public:
-                    static const uint8_t LENGTH = 3;
+                    static const uint8_t LENGTH = 3U;
 
                     /**
                      * @brief Initializes a copy instance of the FSCDisconnect class.
                      */
                     FSCDisconnect();
-                    /**
-                     * @brief Initializes a copy instance of the FSCDisconnect class.
-                     * @param data Buffer to containing FSCDisconnect to decode.
-                     */
-                    FSCDisconnect(const uint8_t* data);
                 };
             } // namespace fsc
         } // namespace frames
