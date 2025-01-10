@@ -108,6 +108,10 @@ bool LC::decodeHDU(const uint8_t* data, bool rawOnly)
     else
         P25Utils::decode(data, raw, 114U, 780U);
 
+#if DEBUG_P25_HDU
+    Utils::dump(2U, "LC::decodeHDU(), HDU Raw", raw, P25_HDU_LENGTH_BYTES);
+#endif
+
     // decode Golay (18,6,8) FEC
     decodeHDUGolay(raw, rs);
 
@@ -247,7 +251,7 @@ bool LC::decodeLDU1(const uint8_t* data, bool rawOnly)
     decodeLDUHamming(raw, rs + 15U);
 
 #if DEBUG_P25_LDU1
-    Utils::dump(2U, "LC::decodeLDU1(), LDU1 RS", rs, P25_LDU_LC_LENGTH_BYTES);
+    Utils::dump(2U, "LC::decodeLDU1(), LDU1 RS", rs, P25_LDU_LC_FEC_LENGTH_BYTES);
 #endif
 
     // decode RS (24,12,13) FEC
@@ -264,7 +268,7 @@ bool LC::decodeLDU1(const uint8_t* data, bool rawOnly)
     }
 
 #if DEBUG_P25_LDU1
-    Utils::dump(2U, "LC::decodeLDU1(), LDU1 LC", rs, P25_LDU_LC_LENGTH_BYTES);
+    Utils::dump(2U, "LC::decodeLDU1(), LDU1 LC", rs, P25_LDU_LC_FEC_LENGTH_BYTES);
 #endif
 
     return decodeLC(rs, rawOnly);
@@ -282,14 +286,14 @@ void LC::encodeLDU1(uint8_t* data)
     encodeLC(rs);
 
 #if DEBUG_P25_LDU1
-    Utils::dump(2U, "LC::encodeLDU1(), LDU1 LC", rs, P25_LDU_LC_LENGTH_BYTES);
+    Utils::dump(2U, "LC::encodeLDU1(), LDU1 LC", rs, P25_LDU_LC_FEC_LENGTH_BYTES);
 #endif
 
     // encode RS (24,12,13) FEC
     m_rs.encode241213(rs);
 
 #if DEBUG_P25_LDU1
-    Utils::dump(2U, "LC::encodeLDU1(), LDU1 RS", rs, P25_LDU_LC_LENGTH_BYTES);
+    Utils::dump(2U, "LC::encodeLDU1(), LDU1 RS", rs, P25_LDU_LC_FEC_LENGTH_BYTES);
 #endif
 
     // encode Hamming (10,6,3) FEC and interleave for LC data
@@ -346,7 +350,7 @@ bool LC::decodeLDU2(const uint8_t* data)
     decodeLDUHamming(raw, rs + 15U);
 
 #if DEBUG_P25_LDU2
-    Utils::dump(2U, "LC::decodeLDU2(), LDU2 RS", rs, P25_LDU_LC_LENGTH_BYTES);
+    Utils::dump(2U, "LC::decodeLDU2(), LDU2 RS", rs, P25_LDU_LC_FEC_LENGTH_BYTES);
 #endif
 
     // decode RS (24,16,9) FEC
@@ -363,7 +367,7 @@ bool LC::decodeLDU2(const uint8_t* data)
     }
 
 #if DEBUG_P25_LDU2
-    Utils::dump(2U, "LC::decodeLDU2(), LDU2 LC", rs, P25_LDU_LC_LENGTH_BYTES);
+    Utils::dump(2U, "LC::decodeLDU2(), LDU2 LC", rs, P25_LDU_LC_FEC_LENGTH_BYTES);
 #endif
 
     m_algId = rs[9U];                                                               // Algorithm ID
@@ -414,14 +418,14 @@ void LC::encodeLDU2(uint8_t* data)
     rs[11U] = (m_kId >> 0) & 0xFFU;                                                 // ...
 
 #if DEBUG_P25_LDU2
-    Utils::dump(2U, "LC::encodeLDU2(), LDU2 LC", rs, P25_LDU_LC_LENGTH_BYTES);
+    Utils::dump(2U, "LC::encodeLDU2(), LDU2 LC", rs, P25_LDU_LC_FEC_LENGTH_BYTES);
 #endif
 
     // encode RS (24,16,9) FEC
     m_rs.encode24169(rs);
 
 #if DEBUG_P25_LDU2
-    Utils::dump(2U, "LC::encodeLDU2(), LDU2 RS", rs, P25_LDU_LC_LENGTH_BYTES);
+    Utils::dump(2U, "LC::encodeLDU2(), LDU2 RS", rs, P25_LDU_LC_FEC_LENGTH_BYTES);
 #endif
 
     // encode Hamming (10,6,3) FEC and interleave for LC data

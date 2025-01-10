@@ -1183,16 +1183,16 @@ void ModemV24::convertToAirTIA(const uint8_t *data, uint32_t length)
             ::memcpy(raw + 18U, m_rxCall->VHDR2, 18U);
 
             // buffer for decoded VHDR data
-            uint8_t vhdr[DFSI_VHDR_RAW_LEN];
+            uint8_t vhdr[P25_HDU_LENGTH_BYTES];
 
             uint32_t offset = 0U;
-            for (uint32_t i = 0; i < DFSI_VHDR_RAW_LEN; i++, offset += 6)
+            for (uint32_t i = 0; i < P25_HDU_LENGTH_BYTES; i++, offset += 6)
                 Utils::hex2Bin(raw[i], vhdr, offset);
 
             // try to decode the RS data
             try {
-                lc::LC lc = lc::LC();
-                if (!lc.decodeHDU(raw, true)) {
+                bool ret = m_rs.decode362017(vhdr);
+                if (!ret) {
                     LogError(LOG_MODEM, "V.24/DFSI traffic failed to decode RS (36,20,17) FEC");
                 } else {
                     // late entry?
@@ -1203,19 +1203,23 @@ void ModemV24::convertToAirTIA(const uint8_t *data, uint32_t length)
                             LogDebug(LOG_MODEM, "V24 RX VHDR late entry, resetting call data");
                     }
 
-                    uint8_t mi[MI_LENGTH_BYTES];
-                    lc.getMI(mi);
+                    ::memcpy(m_rxCall->MI, vhdr, MI_LENGTH_BYTES);
 
-                    ::memcpy(m_rxCall->MI, mi, MI_LENGTH_BYTES);
-
-                    m_rxCall->mfId = lc.getMFId();
-                    m_rxCall->algoId = lc.getAlgId();
-                    m_rxCall->kId = lc.getKId();
-                    m_rxCall->dstId = lc.getDstId();
+                    m_rxCall->mfId = vhdr[9U];
+                    m_rxCall->algoId = vhdr[10U];
+                    m_rxCall->kId = __GET_UINT16B(vhdr, 11U);
+                    m_rxCall->dstId = __GET_UINT16B(vhdr, 13U);
 
                     if (m_debug) {
                         LogDebug(LOG_MODEM, "P25, VHDR algId = $%02X, kId = $%04X, dstId = $%04X", m_rxCall->algoId, m_rxCall->kId, m_rxCall->dstId);
                     }
+
+                    // generate a HDU
+                    lc::LC lc = lc::LC();
+                    lc.setDstId(m_rxCall->dstId);
+                    lc.setAlgId(m_rxCall->algoId);
+                    lc.setKId(m_rxCall->kId);
+                    lc.setMI(m_rxCall->MI);
 
                     // generate Sync
                     Sync::addP25Sync(buffer + 2U);
@@ -1762,6 +1766,30 @@ void ModemV24::startOfStreamTIA(const p25::lc::LC& control)
 
     queueP25Frame(buffer, length, STT_NON_IMBE);
 
+    uint8_t mi[MI_LENGTH_BYTES];
+    ::memset(mi, 0x00U, MI_LENGTH_BYTES);
+    control.getMI(mi);
+
+    uint8_t vhdr[P25_HDU_LENGTH_BYTES];
+    ::memset(vhdr, 0x00U, P25_HDU_LENGTH_BYTES);
+
+    ::memcpy(vhdr, mi, MI_LENGTH_BYTES);
+
+    vhdr[9U] = control.getMFId();
+    vhdr[10U] = control.getAlgId();
+    __SET_UINT16B(control.getKId(), vhdr, 11U);
+    __SET_UINT16B(control.getDstId(), vhdr, 13U);
+
+    // perform RS encoding
+    m_rs.encode362017(vhdr);
+
+    // convert the binary bytes to hex bytes
+    uint8_t raw[DFSI_VHDR_RAW_LEN];
+    uint32_t offset = 0;
+    for (uint8_t i = 0; i < DFSI_VHDR_RAW_LEN; i++, offset += 6) {
+        raw[i] = Utils::bin2Hex(vhdr, offset);
+    }
+
     ::memset(buffer, 0x00U, P25_HDU_LENGTH_BYTES);
     length = 0U;
 
@@ -1782,13 +1810,6 @@ void ModemV24::startOfStreamTIA(const p25::lc::LC& control)
     uint8_t hdu[P25_HDU_LENGTH_BYTES];
     ::memset(hdu, 0x00U, P25_HDU_LENGTH_BYTES);
     lc.encodeHDU(hdu, true);
-
-    // convert the binary bytes to hex bytes
-    uint8_t raw[DFSI_VHDR_RAW_LEN];
-    uint32_t offset = 0;
-    for (uint8_t i = 0; i < DFSI_VHDR_RAW_LEN; i++, offset += 6) {
-        raw[i] = Utils::bin2Hex(hdu, offset);
-    }
 
     // prepare VHDR1
     buffer[3U] = DFSIFrameType::MOT_VHDR_1;
