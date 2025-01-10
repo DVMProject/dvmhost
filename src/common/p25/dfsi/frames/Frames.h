@@ -35,5 +35,6 @@
 #include "common/p25/dfsi/frames/fsc/FSCReportSelModes.h"
 #include "common/p25/dfsi/frames/fsc/FSCDisconnect.h"
 #include "common/p25/dfsi/frames/fsc/FSCHeartbeat.h"
+#include "common/p25/dfsi/frames/fsc/FSCSelChannel.h"
 
 #endif // __DFSI_FRAMES_H__

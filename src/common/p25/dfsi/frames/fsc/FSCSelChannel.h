@@ -4,17 +4,17 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2025 Bryan Biedenkapp, N2PLL
  *
  */
 /**
- * @file FSCConnect.h
+ * @file FSCReportSelModes.h
  * @ingroup dfsi_fsc_frames
- * @file FSCConnect.cpp
+ * @file FSCReportSelModes.cpp
  * @ingroup dfsi_fsc_frames
  */
-#if !defined(__FSC_CONNECT_H__)
-#define __FSC_CONNECT_H__
+#if !defined(__FSC_SEL_CHANNEL_H__)
+#define __FSC_SEL_CHANNEL_H__
 
 #include "Defines.h"
 #include "common/Defines.h"
@@ -36,50 +36,42 @@ namespace p25
                 // ---------------------------------------------------------------------------
 
                 /**
-                 * @brief Implements the FSC Connect Message.
+                 * @brief Implements the FSC Select Channel Message.
                  * @ingroup dfsi_fsc_frames
                  */
-                class HOST_SW_API FSCConnect : public FSCMessage {
+                class HOST_SW_API FSCSelChannel : public FSCMessage {
                 public:
-                    static const uint8_t LENGTH = 11U;
+                    static const uint8_t LENGTH = 3U;
 
                     /**
-                     * @brief Initializes a copy instance of the FSCConnect class.
+                     * @brief Initializes a copy instance of the FSCSelChannel class.
                      */
-                    FSCConnect();
+                    FSCSelChannel();
 
                     /**
-                     * @brief Decode a FSC connect frame.
-                     * @param[in] data Buffer to containing FSCConnect to decode.
+                     * @brief Decode a FSC select channel frame.
+                     * @param[in] data Buffer to containing FSCSelChannel to decode.
                      */
                     bool decode(const uint8_t* data) override;
                     /**
-                     * @brief Encode a FSC connect frame.
-                     * @param[out] data Buffer to encode a FSCConnect.
+                     * @brief Encode a FSC select channel frame.
+                     * @param[out] data Buffer to encode a FSCSelChannel.
                      */
                     void encode(uint8_t* data) override;
 
                 public:
                     /**
-                     * @brief Voice Conveyance RTP Port.
+                     * @brief Receive Channel Number.
                      */
-                    __PROPERTY(uint16_t, vcBasePort, VCBasePort);
+                    __PROPERTY(uint8_t, rxChan, RxChan);
                     /**
-                     * @brief SSRC Identifier for all RTP transmissions.
+                     * @brief Transmit Channel Number.
                      */
-                    __PROPERTY(uint32_t, vcSSRC, VCSSRC);
-                    /**
-                     * @brief Fixed Station Heartbeat Period.
-                     */
-                    __PROPERTY(uint8_t, fsHeartbeatPeriod, FSHeartbeatPeriod);
-                    /**
-                     * @brief Host Heartbeat Period.
-                     */
-                    __PROPERTY(uint8_t, hostHeartbeatPeriod, HostHeartbeatPeriod);
+                    __PROPERTY(uint8_t, txChan, TxChan);
                 };
             } // namespace fsc
         } // namespace frames
     } // namespace dfsi
 } // namespace p25
 
-#endif // __FSC_CONNECT_H__
+#endif // __FSC_SEL_CHANNEL_H__
