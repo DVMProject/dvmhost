@@ -302,6 +302,8 @@ namespace modem
         bool m_rtrt;
         bool m_diu;
 
+        uint8_t m_superFrameCnt;
+
         p25::Audio m_audio;
 
         p25::NID* m_nid;

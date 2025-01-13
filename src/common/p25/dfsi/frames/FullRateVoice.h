@@ -37,6 +37,7 @@ namespace p25
              * @brief Implements a P25 full rate voice packet.
              * \code{.unparsed}
              * CAI Frames 1, 2, 10 and 11.
+             * 14 bytes
              * 
              * Byte 0               1               2               3
              * Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 
@@ -52,6 +53,7 @@ namespace p25
              *     +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
              * 
              * CAI Frames 3 - 8.
+             * 18 bytes
              * 
              * Byte 0               1               2               3
              * Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 
@@ -69,6 +71,7 @@ namespace p25
              *     +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
              * 
              * CAI Frames 12 - 17.
+             * 18 bytes
              * 
              * Byte 0               1               2               3
              * Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 
@@ -86,6 +89,7 @@ namespace p25
              *     +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
              *
              * CAI Frames 9 and 10.
+             * 17 bytes
              * 
              * Byte 0               1               2               3
              * Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 
@@ -108,6 +112,7 @@ namespace p25
              * the layout with 8-bit aligned IMBE blocks instead of message vectors:
              * 
              * CAI Frames 1, 2, 10 and 11.
+             * 14 bytes
              *
              * Byte 0               1               2               3
              * Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 
@@ -123,6 +128,7 @@ namespace p25
              *     +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
              * 
              * CAI Frames 3 - 8.
+             * 18 bytes
              *
              * Byte 0               1               2               3
              * Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 
@@ -140,6 +146,7 @@ namespace p25
              *     +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
              * 
              * CAI Frames 12 - 17.
+             * 18 bytes
              *
              * Byte 0               1               2               3
              * Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 
@@ -156,7 +163,8 @@ namespace p25
              *     |Syn|R| Status    | Rsvd        |
              *     +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
              * 
-             * CAI Frames 9 and 10.
+             * CAI Frames 9 and 18.
+             * 17 bytes
              *
              * Byte 0               1               2               3
              * Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 
@@ -177,6 +185,9 @@ namespace p25
              */
             class HOST_SW_API FullRateVoice {
             public:
+                static const uint8_t LENGTH_121011 = 14U;
+                static const uint8_t LENGTH_918 = 17U;
+
                 static const uint8_t LENGTH = 18U;
                 static const uint8_t ADDITIONAL_LENGTH = 4U;
                 static const uint8_t IMBE_BUF_LEN = 11U;
@@ -196,8 +207,15 @@ namespace p25
                 ~FullRateVoice();
 
                 /**
+                 * @brief 
+                 * @returns uint8_t 
+                 */
+                uint8_t getLength();
+
+                /**
                  * @brief Decode a full rate voice frame.
                  * @param[in] data Buffer to containing FullRateVoice to decode.
+                 * @returns bool 
                  */
                 bool decode(const uint8_t* data);
                 /**
@@ -247,10 +265,10 @@ namespace p25
                  */
                 bool isVoice12thru17();
                 /**
-                 * @brief Helper indicating if the frame is voice 9 or 10.
-                 * @returns bool True, if frame is voice 9, or 10, otherwise false.
+                 * @brief Helper indicating if the frame is voice 9 or 18.
+                 * @returns bool True, if frame is voice 9, or 18, otherwise false.
                  */
-                bool isVoice9or10();
+                bool isVoice9or18();
             };
         } // namespace frames
     } // namespace dfsi

@@ -79,7 +79,6 @@ V24UDPPort::V24UDPPort(uint32_t peerId, const std::string& address, uint16_t mod
     assert(peerId > 0U);
     assert(!address.empty());
     assert(modemPort > 0U);
-    assert(controlPort > 0U);
 
     if (controlPort > 0U && useFSC) {
         m_controlSocket = new Socket(controlPort);

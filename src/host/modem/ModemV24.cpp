@@ -44,6 +44,7 @@ ModemV24::ModemV24(port::IModemPort* port, bool duplex, uint32_t p25QueueSize, u
         false, false, dumpModemStatus, trace, debug),
     m_rtrt(rtrt),
     m_diu(diu),
+    m_superFrameCnt(0U),
     m_audio(),
     m_nid(nullptr),
     m_txP25Queue(p25TxQueueSize, "TX P25 Queue"),
@@ -1253,6 +1254,7 @@ void ModemV24::convertToAirTIA(const uint8_t *data, uint32_t length)
         case BlockType::FULL_RATE_VOICE:
         {
             FullRateVoice voice = FullRateVoice();
+            //m_superFrameCnt = voice.getSuperframeCnt();
             voice.decode(dfsiData + dataOffs);
 
             DFSIFrameType::E frameType = voice.getFrameType();
@@ -1742,6 +1744,7 @@ uint16_t ModemV24::generateNID(DUID::E duid)
 void ModemV24::startOfStreamTIA(const p25::lc::LC& control)
 {
     m_txCallInProgress = true;
+    m_superFrameCnt = 0U;
 
     p25::lc::LC lc = p25::lc::LC(control);
     
@@ -1864,6 +1867,8 @@ void ModemV24::startOfStreamTIA(const p25::lc::LC& control)
 
 void ModemV24::endOfStreamTIA()
 {
+    m_superFrameCnt = 0U;
+
     uint16_t length = 0U;
     uint8_t buffer[2U];
     ::memset(buffer, 0x00U, 2U);
@@ -2474,37 +2479,24 @@ void ModemV24::convertFromAirTIA(uint8_t* data, uint32_t length)
                 break;
             }
 
-            // For n=0 (VHDR1/10) case we create the buffer in the switch, for all other frame types we do that here
-            if (n != 0) {
-                buffer = new uint8_t[P25_PDU_FRAME_LENGTH_BYTES];
-                ::memset(buffer, 0x00U, P25_PDU_FRAME_LENGTH_BYTES);
+            buffer = new uint8_t[P25_PDU_FRAME_LENGTH_BYTES];
+            ::memset(buffer, 0x00U, P25_PDU_FRAME_LENGTH_BYTES);
 
-                // generate control octet
-                ControlOctet ctrl = ControlOctet();
-                ctrl.setBlockHeaderCnt(2U);
-                ctrl.encode(buffer);
-                bufferSize += ControlOctet::LENGTH;
+            // generate control octet
+            ControlOctet ctrl = ControlOctet();
+            ctrl.setBlockHeaderCnt(1U);
+            ctrl.encode(buffer);
+            bufferSize += ControlOctet::LENGTH;
 
-                // generate block header
-                BlockHeader hdr = BlockHeader();
-                hdr.setBlockType(BlockType::FULL_RATE_VOICE);
-                hdr.encode(buffer + 1U);
-                bufferSize += BlockHeader::LENGTH;
+            // generate block header
+            BlockHeader hdr = BlockHeader();
+            hdr.setBlockType(BlockType::FULL_RATE_VOICE);
+            hdr.encode(buffer + 1U);
+            bufferSize += BlockHeader::LENGTH;
 
-                // generate block header
-                hdr.setBlockType(BlockType::START_OF_STREAM);
-                hdr.encode(buffer + 2U);
-                bufferSize += BlockHeader::LENGTH;
-
-                voice.encode(buffer + bufferSize);
-                bufferSize += FullRateVoice::LENGTH;
-
-                // generate start of stream
-                StartOfStream start = StartOfStream();
-                start.setNID(generateNID());
-                start.encode(buffer + bufferSize);
-                bufferSize += StartOfStream::LENGTH;
-            }
+            voice.setSuperframeCnt(m_superFrameCnt);
+            voice.encode(buffer + bufferSize);
+            bufferSize += voice.getLength(); // 18, 17 or 14 depending on voice frame type
 
             if (buffer != nullptr) {
                 if (m_trace) {
@@ -2514,6 +2506,15 @@ void ModemV24::convertFromAirTIA(uint8_t* data, uint32_t length)
                 queueP25Frame(buffer, bufferSize, STT_IMBE);
                 delete[] buffer;
             }
+        }
+
+        // bryanb: this is a naive way of incrementing the superframe counter, we basically just increment it after
+        // processing and LDU2
+        if (duid == DUID::LDU2) {
+            if (m_superFrameCnt == 255U)
+                m_superFrameCnt = 0U;
+            else
+                m_superFrameCnt++;
         }
     }
 }

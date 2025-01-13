@@ -585,7 +585,7 @@ bool Host::createModem()
             LogInfo("    DFSI Use FSC: %s", useFSCForUDP ? "yes" : "no");
             LogInfo("    DFSI FSC Heartbeat: %us", fscHeartbeat);
             LogInfo("    DFSI FSC Initiator: %s", fscInitiator ? "yes" : "no");
-            LogInfo("    DFSI FSC TIA Frames: %s", dfsiTIAMode ? "yes" : "no");
+            LogInfo("    DFSI TIA-102 Frames: %s", dfsiTIAMode ? "yes" : "no");
         }
     }
 
