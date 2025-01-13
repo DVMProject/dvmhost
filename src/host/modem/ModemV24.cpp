@@ -1182,12 +1182,18 @@ void ModemV24::convertToAirTIA(const uint8_t *data, uint32_t length)
             ::memcpy(raw, m_rxCall->VHDR1, 18U);
             ::memcpy(raw + 18U, m_rxCall->VHDR2, 18U);
 
+            assert(raw != nullptr);
+
             // buffer for decoded VHDR data
             uint8_t vhdr[P25_HDU_LENGTH_BYTES];
+            ::memset(vhdr, 0x00U, P25_HDU_LENGTH_BYTES);
+
+            assert(vhdr != nullptr);
 
             uint32_t offset = 0U;
-            for (uint32_t i = 0; i < P25_HDU_LENGTH_BYTES; i++, offset += 6)
+            for (uint32_t i = 0; i < DFSI_VHDR_RAW_LEN; i++, offset += 6) {
                 Utils::hex2Bin(raw[i], vhdr, offset);
+            }
 
             // try to decode the RS data
             try {
