@@ -907,7 +907,7 @@ bool TagP25Data::isPeerPermitted(uint32_t peerId, lc::LC& control, DUID::E duid,
 
     if (duid == DUID::TDU) {
         if (m_network->m_filterTerminators) {
-            if (control.getSrcId() != 0U && control.getDstId() != 0U) {
+            if (/*control.getSrcId() != 0U &&*/control.getDstId() != 0U) {
                 // is this a group call?
                 lookups::TalkgroupRuleGroupVoice tg = m_network->m_tidLookup->find(control.getDstId());
                 if (!tg.isInvalid()) {
