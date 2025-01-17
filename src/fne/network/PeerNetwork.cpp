@@ -222,6 +222,7 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
                             file.close();
 
                             m_tidLookup->stop(true);
+                            m_tidLookup->setReloadTime(0U);
                             m_tidLookup->filename(filename);
                             m_tidLookup->reload();
 
@@ -359,6 +360,7 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
                             file.close();
 
                             m_ridLookup->stop(true);
+                            m_ridLookup->setReloadTime(0U);
                             m_ridLookup->filename(filename);
                             m_ridLookup->reload();
 
@@ -496,6 +498,7 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
                             file.close();
 
                             m_pidLookup->stop(true);
+                            m_pidLookup->setReloadTime(0U);
                             m_pidLookup->filename(filename);
                             m_pidLookup->reload();
 

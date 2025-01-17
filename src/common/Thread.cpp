@@ -63,6 +63,8 @@ bool Thread::run()
 
 void Thread::wait()
 {
+    if (!m_started)
+        return;
 #if defined(_WIN32)
     ::WaitForSingleObject(m_thread, INFINITE);
     ::CloseHandle(m_thread);

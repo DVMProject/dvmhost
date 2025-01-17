@@ -178,6 +178,12 @@ namespace lookups
          */
         void filename(std::string filename) { m_filename = filename; };
 
+        /**
+         * @brief Helper to set the reload time of this lookup table.
+         * @param reloadTime Lookup time in seconds.
+         */
+        void setReloadTime(uint32_t reloadTime) { m_reloadTime = 0U; }
+
     protected:
         std::string m_filename;
         uint32_t m_reloadTime;
