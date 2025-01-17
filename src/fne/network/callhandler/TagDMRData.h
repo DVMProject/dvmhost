@@ -120,13 +120,31 @@ namespace network
                 uint8_t* buffer;
                 uint32_t bufferLen;
 
+                /**
+                 * @brief DMR slot number.
+                 */
                 uint8_t slotNo;
 
+                /**
+                 * @brief RTP Packet Sequence.
+                 */
                 uint16_t pktSeq;
+                /**
+                 * @brief Call Stream ID.
+                 */
                 uint32_t streamId;
+                /**
+                 * @brief Peer ID.
+                 */
                 uint32_t peerId;
 
+                /**
+                 * @brief Source ID.
+                 */
                 uint32_t srcId;
+                /**
+                 * @brief Destination ID.
+                 */
                 uint32_t dstId;
             };
             std::deque<ParrotFrame> m_parrotFrames;
@@ -139,11 +157,43 @@ namespace network
             public:
                 system_clock::hrc::hrc_t callStartTime;
                 system_clock::hrc::hrc_t lastPacket;
+                /**
+                 * @brief Source ID.
+                 */
                 uint32_t srcId;
+                /**
+                 * @brief Destination ID.
+                 */
                 uint32_t dstId;
+                /**
+                 * @brief DMR slot number.
+                 */
                 uint8_t slotNo;
+                /**
+                 * @brief Call Stream ID.
+                 */
                 uint32_t streamId;
+                /**
+                 * @brief Peer ID.
+                 */
                 uint32_t peerId;
+                /**
+                 * @brief Flag indicating this call is active with traffic currently in progress.
+                 */
+                bool activeCall;
+
+                /**
+                 * @brief Helper to reset call status.
+                 */
+                void reset() 
+                {
+                    srcId = 0U;
+                    dstId = 0U;
+                    slotNo = 0U;
+                    streamId = 0U;
+                    peerId = 0U;
+                    activeCall = false;
+                }
             };
             typedef std::pair<const uint32_t, RxStatus> StatusMapPair;
             std::unordered_map<uint32_t, RxStatus> m_status;

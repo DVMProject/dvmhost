@@ -113,8 +113,15 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                 RxStatus status = m_status[dstId];
                 uint64_t duration = hrc::diff(pktTime, status.callStartTime);
 
-                if (std::find_if(m_status.begin(), m_status.end(), [&](StatusMapPair x) { return x.second.dstId == dstId; }) != m_status.end()) {
-                    m_status.erase(dstId);
+                auto it = std::find_if(m_status.begin(), m_status.end(), [&](StatusMapPair x) {
+                    if (x.second.dstId == dstId) {
+                        if (x.second.activeCall)
+                            return true;
+                    }
+                    return false;
+                });
+                if (it != m_status.end()) {
+                    m_status[dstId].reset();
 
                     // is this a parrot talkgroup? if so, clear any remaining frames from the buffer
                     lookups::TalkgroupRuleGroupVoice tg = m_network->m_tidLookup->find(dstId);
@@ -154,7 +161,13 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                     return false;
                 }
 
-                auto it = std::find_if(m_status.begin(), m_status.end(), [&](StatusMapPair x) { return x.second.dstId == dstId; });
+                auto it = std::find_if(m_status.begin(), m_status.end(), [&](StatusMapPair x) {
+                    if (x.second.dstId == dstId) {
+                        if (x.second.activeCall)
+                            return true;
+                    }
+                    return false;
+                });
                 if (it != m_status.end()) {
                     RxStatus status = m_status[dstId];
                     if (streamId != status.streamId) {
@@ -162,7 +175,7 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                             uint64_t lastPktDuration = hrc::diff(hrc::now(), status.lastPacket);
                             if ((lastPktDuration / 1000) > CALL_COLL_TIMEOUT) {
                                 LogWarning(LOG_NET, "NXDN, Call Collision, lasted more then %us with no further updates, forcibly ending call");
-                                m_status.erase(dstId);
+                                m_status[dstId].reset();
                                 m_network->m_callInProgress = false;
                             }
 
@@ -188,13 +201,12 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                     }
 
                     // this is a new call stream
-                    RxStatus status = RxStatus();
-                    status.callStartTime = pktTime;
-                    status.srcId = srcId;
-                    status.dstId = dstId;
-                    status.streamId = streamId;
-                    status.peerId = peerId;
-                    m_status[dstId] = status;
+                    m_status[dstId].callStartTime = pktTime;
+                    m_status[dstId].srcId = srcId;
+                    m_status[dstId].dstId = dstId;
+                    m_status[dstId].streamId = streamId;
+                    m_status[dstId].peerId = peerId;
+                    m_status[dstId].activeCall = true;
 
                     LogMessage(LOG_NET, "NXDN, Call Start, peer = %u, srcId = %u, dstId = %u, streamId = %u, external = %u", peerId, srcId, dstId, streamId, external);
 
@@ -320,7 +332,14 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
 bool TagNXDNData::processGrantReq(uint32_t srcId, uint32_t dstId, bool unitToUnit, uint32_t peerId, uint16_t pktSeq, uint32_t streamId)
 {
     // if we have an Rx status for the destination deny the grant
-    if (std::find_if(m_status.begin(), m_status.end(), [&](StatusMapPair x) { return x.second.dstId == dstId; }) != m_status.end()) {
+    auto it = std::find_if(m_status.begin(), m_status.end(), [&](StatusMapPair x) {
+        if (x.second.dstId == dstId) {
+            if (x.second.activeCall)
+                return true;
+        }
+        return false;
+    });
+    if (it != m_status.end()) {
         return false;
     }
 
