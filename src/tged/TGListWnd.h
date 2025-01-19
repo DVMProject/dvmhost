@@ -117,8 +117,8 @@ public:
             oss << std::setw(5) << std::setfill('0') << entry.source().tgId();
 
             // build list view entry
-            const std::array<std::string, 8U> columns = {
-                entry.name(), entry.nameAlias(), oss.str(),
+            const std::array<std::string, 9U> columns = {
+                entry.name(), entry.nameAlias(), oss.str(), std::to_string(entry.source().tgSlot()),
                 (entry.config().active()) ? "X" : "",
                 (entry.config().affiliated()) ? "X" : "",
                 std::to_string(entry.config().inclusionSize()),
@@ -209,6 +209,7 @@ private:
         m_listView.addColumn("Name", 25);
         m_listView.addColumn("Alias", 20);
         m_listView.addColumn("TGID", 9);
+        m_listView.addColumn("Slot", 4);
         m_listView.addColumn("Active", 5);
         m_listView.addColumn("Affiliated", 5);
         m_listView.addColumn("Inclusions", 5);
@@ -217,11 +218,12 @@ private:
 
         // set right alignment for TGID
         m_listView.setColumnAlignment(3, finalcut::Align::Right);
-        m_listView.setColumnAlignment(4, finalcut::Align::Center);
+        m_listView.setColumnAlignment(4, finalcut::Align::Right);
         m_listView.setColumnAlignment(5, finalcut::Align::Center);
-        m_listView.setColumnAlignment(6, finalcut::Align::Right);
+        m_listView.setColumnAlignment(6, finalcut::Align::Center);
         m_listView.setColumnAlignment(7, finalcut::Align::Right);
         m_listView.setColumnAlignment(8, finalcut::Align::Right);
+        m_listView.setColumnAlignment(9, finalcut::Align::Right);
 
         // set type of sorting
         m_listView.setColumnSortType(1, finalcut::SortType::Name);
@@ -229,7 +231,6 @@ private:
         m_listView.setColumnSortType(3, finalcut::SortType::Name);
 
         // sort by TGID
-        m_listView.setColumnSort(2, finalcut::SortOrder::Ascending);
         m_listView.setColumnSort(3, finalcut::SortOrder::Ascending);
 
         m_listView.addCallback("clicked", [&]() { editEntry(); });
