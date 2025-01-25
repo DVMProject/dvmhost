@@ -1111,6 +1111,26 @@ bool TagP25Data::validate(uint32_t peerId, lc::LC& control, DUID::E duid, const 
                 }
                 break;
             }
+
+            // handle validating DVM call termination packets
+            if (tsbk->getMFId() == MFG_DVM_OCS) {
+                switch (tsbk->getLCO()) {
+                    case LCO::CALL_TERM:
+                    {
+                        lookups::TalkgroupRuleGroupVoice tg = m_network->m_tidLookup->find(tsbk->getDstId());
+
+                        // check TGID validity
+                        if (tg.isInvalid()) {
+                            return false;
+                        }
+
+                        if (!tg.config().active()) {
+                            return false;
+                        }
+                    }
+                    break;
+                }
+            }
         }
 
         return true;
