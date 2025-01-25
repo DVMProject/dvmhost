@@ -787,15 +787,15 @@ bool ControlSignaling::processNetwork(uint8_t* data, uint32_t len, lc::LC& contr
                         case LCO::CALL_TERM:
                         {
                             if (m_p25->m_dedicatedControl) {
-                                uint32_t chNo = tsbk->getGrpVchNo();
-
-                                if (m_verbose) {
-                                    LogMessage(LOG_NET, P25_TSDU_STR ", %s, chNo = %u, srcId = %u, dstId = %u", 
-                                        tsbk->toString().c_str(), chNo, srcId, dstId);
-                                }
-
                                 // is the specified channel granted?
                                 if (/*m_p25->m_affiliations.isChBusy(chNo) &&*/ m_p25->m_affiliations.isGranted(dstId)) {
+                                    uint32_t chNo = tsbk->getGrpVchNo();
+
+                                    if (m_verbose) {
+                                        LogMessage(LOG_NET, P25_TSDU_STR ", %s, chNo = %u, srcId = %u, dstId = %u", 
+                                            tsbk->toString().c_str(), chNo, srcId, dstId);
+                                    }
+
                                     m_p25->m_affiliations.releaseGrant(dstId, false);
                                 }
                             }
