@@ -195,6 +195,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
         m_lastDUID = DUID::LDU1;
 
         bool alreadyDecoded = false;
+        bool hduEncrypt = false;
         FrameType::E frameType = FrameType::DATA_UNIT;
         ulong64_t rsValue = 0U;
         if (m_p25->m_rfState == RS_RF_LISTENING) {
@@ -392,6 +393,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
 
             m_rfLC = lc;
             m_rfLastLDU1 = m_rfLC;
+            hduEncrypt = encrypted;
 
             m_lastRejectId = 0U;
             ::ActivityLog("P25", true, "RF %svoice transmission from %u to %s%u", encrypted ? "encrypted ": "", srcId, group ? "TG " : "", dstId);
@@ -659,6 +661,10 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 else {
                     m_rfLastLDU1 = m_rfLC;
                 }
+            }
+            else {
+                // this might be the first LDU1 -- set the encryption flag if necessary
+                m_rfLC.setEncrypted(hduEncrypt);
             }
 
             m_inbound = true;
