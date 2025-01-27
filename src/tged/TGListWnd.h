@@ -316,6 +316,23 @@ private:
 
         LogMessage(LOG_HOST, "Deleting TG %s (%u)", m_selected.name().c_str(), m_selected.source().tgId());
         g_tidLookups->eraseEntry(m_selected.source().tgId(), m_selected.source().tgSlot());
+
+        // bryanb: HACK -- use HackTheGibson to access the private current listview iterator to get the scroll position
+        /*
+         * This uses the RTTI hack to access private members on FListView; and this code *could* break as a consequence.
+         */
+        int firstScrollLinePos = 0;
+        if (m_listView.getCount() > 0) {
+            firstScrollLinePos = (m_listView.*RTTIResult<PrivateFListViewIteratorFirst>::ptr).getPosition();
+        }
+        if ((size_t)firstScrollLinePos > m_listView.getCount())
+            firstScrollLinePos = 0;
+        if (firstScrollLinePos > 0 && m_listView.getCount() > 0) {
+            --firstScrollLinePos;
+            (m_listView.*RTTIResult<PrivateFListViewScrollToY>::ptr)(firstScrollLinePos);
+            (m_listView.*RTTIResult<PrivateFListViewVBarPtr>::ptr)->setValue(firstScrollLinePos);
+        }
+
         loadListView();
     }
 
