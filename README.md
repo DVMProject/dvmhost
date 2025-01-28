@@ -154,6 +154,18 @@ The following setups assume the host is compiled with the setup TUI mode (if ava
 - Unusually high BER >10% and other various receive problems may be due to the radio/hotspot being off frequency and requiring some adjustment. Even a slight frequency drift can be catastrophic for proper digital modulation. The recommendation is to ensure the interfaced radio does not have an overall reference frequency drift > +/- 150hz. An unusually high BER can also be explained by DC level offsets in the signal paths, or issues with the FM deviation levels on the interfaced radio being too high or too low.
 - For hotspot operation, it may be necessary to enable/disable the AFC (automatic frequency correction) or change the gain mode. Both of these options can be altered using the setup TUI or directly in the `config.yml` file. In some cases when operating in trunking mode, for example, it may be necessary to change the orientation of the transmit antenna by using a 90 degree adapter as well as changing the gain mode to "Low" to prevent Rx desense.
 
+### (Hotspot) Calibration Steps (using a capable service monitor)
+
+1. Zero any frequency offsets, both Rx and Tx. Ensure the Tx Deviation level is nominal (50).
+2. Using spectrum analyzer mode, and using "z" or "P25 1200 Hz Tone Mode", and begin transmitting. You want to adjust the transmit deviation (T/t) and zero null the center carrier on the spectra seen on the spectrum analyzer (you should maintain the side lobes to the left and right of the center) as much as possible and maintain a clean 1200hz sine tone.
+3. Switch to a mode on your service monitor where you can observe the *analog* FM deviation (if you have low and high pass settings like on an HP monitor, set 50hz Low Pass and 3khz High Pass), use "P" or "P25 1011 Hz Test Pattern" and begin transmitting. Observe the FM deviation, you want to adjust the transmit deviation to get the average deviation as close to 2.83khz as possible (a little high is okay, 2.9khz or so will increase BER but it will still be acceptable).
+4. Switch to a mode on your service monitor where you can observe the frequency error, its best to view this error in Hz if possible, like step 3, use "P" or "P25 1011 Hz Test Pattern" and begin transmitting. Note the average frequency error. Use the Tx Frequency Adjustment accordingly to set an adjustment. (For example, if the observed frequency error is +200hz from center, you want to enter a -200hz adjustment in calibration/setup.)
+
+### (Hotspot) Calibration Notes
+
+- The Rx Frequency adjustment usually follows the Tx Frequency Adjustment, so if you've set a -200hz adjustment for Tx the Rx Frequency Adjustment should be -200hz or around -200hz. 
+- After calibration use a digital capable radio, with a front panel BER test or a radio with Tuner software capable of BER test. Evaluate Rx and Tx BER. Make fine adjustments if necessary to dial in BER.
+
 ## dvmfne Configuration
 
 This source repository contains configuration example files within the configs folder, please review `fne-config.example.yml` for the `dvmfne` for details on various configurable options. When first setting up a FNE instance, it is important to properly configure a `talkgroup_rules.example.yml` file, this file defines all the various rules for valid talkgroups and other settings.

@@ -432,7 +432,7 @@ bool Host::createModem()
     uint8_t afcRange = (uint8_t)hotspotParams["afcRange"].as<uint32_t>(1U);
     int rxTuning = hotspotParams["rxTuning"].as<int>(0);
     int txTuning = hotspotParams["txTuning"].as<int>(0);
-    uint8_t rfPower = (uint8_t)hotspotParams["rfPower"].as<uint32_t>(100U);
+    uint8_t rfPower = (uint8_t)hotspotParams["rfPower"].as<uint32_t>(95U);
 
     yaml::Node repeaterParams = modemConf["repeater"];
 
@@ -636,7 +636,7 @@ bool Host::createModem()
         LogInfo("    RX Coarse: %u, Fine: %u", rxCoarse, rxFine);
         LogInfo("    TX Coarse: %u, Fine: %u", txCoarse, txFine);
         LogInfo("    RSSI Coarse: %u, Fine: %u", rssiCoarse, rssiFine);
-        LogInfo("    RF Power Level: %u", rfPower);
+        LogInfo("    RF Power Level: %u%", rfPower);
         LogInfo("    RX Level: %.1f%%", rxLevel);
         LogInfo("    CW Id TX Level: %.1f%%", cwIdTXLevel);
         LogInfo("    DMR TX Level: %.1f%%", dmrTXLevel);

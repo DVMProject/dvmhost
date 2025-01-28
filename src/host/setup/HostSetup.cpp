@@ -874,7 +874,7 @@ bool HostSetup::createModem(bool consoleDisplay)
     m_modem->setLevels(rxLevel, txLevel, txLevel, txLevel, txLevel);
     m_modem->setSymbolAdjust(dmrSymLevel3Adj, dmrSymLevel1Adj, p25SymLevel3Adj, p25SymLevel1Adj, nxdnSymLevel3Adj, nxdnSymLevel1Adj);
     m_modem->setDCOffsetParams(txDCOffset, rxDCOffset);
-    m_modem->setRFParams(m_rxFrequency, m_txFrequency, rxTuning, txTuning, 100U, dmrDiscBWAdj, p25DiscBWAdj, nxdnDiscBWAdj, dmrPostBWAdj, p25PostBWAdj, nxdnPostBWAdj, adfGainMode,
+    m_modem->setRFParams(m_rxFrequency, m_txFrequency, rxTuning, txTuning, 95U, dmrDiscBWAdj, p25DiscBWAdj, nxdnDiscBWAdj, dmrPostBWAdj, p25PostBWAdj, nxdnPostBWAdj, adfGainMode,
         afcEnable, afcKI, afcKP, afcRange);
     m_modem->setSoftPot(rxCoarsePot, rxFinePot, txCoarsePot, txFinePot, rssiCoarsePot, rssiFinePot);
 
