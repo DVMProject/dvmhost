@@ -645,6 +645,8 @@ system:
         # Full path to the RID ACL file.
         file: rid_acl.dat
         # Amount of time between updates of RID ACL file. (minutes)
+        #   NOTE: If utilizing purely FNE pushed RID ACL rules, this update time should be set to 0 to prevent
+        #     FNE rules from becoming erased.
         time: 2
         # Flag indicating whether or not RID ACLs are enforced.
         acl: false
@@ -656,6 +658,8 @@ system:
         # Full path to the talkgroup rules file.
         file: talkgroup_rules.yml
         # Amount of time between updates of talkgroup rules file. (minutes)
+        #   NOTE: If utilizing purely FNE pushed talkgroup rules, this update time should be set to 0 to prevent
+        #     FNE rules from becoming erased.
         time: 2
         # Flag indicating whether or not TGID ACLs are enforced.
         acl: false
