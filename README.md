@@ -165,6 +165,9 @@ The following setups assume the host is compiled with the setup TUI mode (if ava
 
 - The Rx Frequency adjustment usually follows the Tx Frequency Adjustment, so if you've set a -200hz adjustment for Tx the Rx Frequency Adjustment should be -200hz or around -200hz. 
 - After calibration use a digital capable radio, with a front panel BER test or a radio with Tuner software capable of BER test. Evaluate Rx and Tx BER. Make fine adjustments if necessary to dial in BER.
+- Calibrating a hotspot without a service monitor is possible, however a bit more tricky and mostly trial and error. The steps are essentially the same as the steps above, with the cavet being *step 2 should be skipped* and a radio capable of measuring Rx/Tx BER using
+either front panel controls or tuning software is mandatory. In steps 3 and 4 while observing the BER via whatever available means, you want to essentially vary transmit deviation and frequency offset to find the lowest possible BER. (A very stable SDR *might* be usable
+for step 4 to observe frequency error.)
 
 ## dvmfne Configuration
 
