@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2023,2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2023,2024,2025 Bryan Biedenkapp, N2PLL
  *
  */
 #include "Defines.h"
@@ -22,6 +22,12 @@ using namespace network::frame;
 
 #include <cassert>
 #include <cstring>
+
+// ---------------------------------------------------------------------------
+//  Static Class Members
+// ---------------------------------------------------------------------------
+
+std::mutex FrameQueue::m_fqTimestampLock;
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -170,6 +176,7 @@ void FrameQueue::enqueueMessage(const uint8_t* message, uint32_t length, uint32_
 
 void FrameQueue::clearTimestamps()
 {
+    std::lock_guard<std::mutex> lock(m_fqTimestampLock);
     m_streamTimestamps.clear();
 }
 
@@ -187,6 +194,7 @@ uint8_t* FrameQueue::generateMessage(const uint8_t* message, uint32_t length, ui
 
     uint32_t timestamp = INVALID_TS;
     if (streamId != 0U) {
+        std::lock_guard<std::mutex> lock(m_fqTimestampLock);
         auto entry = m_streamTimestamps.find(streamId);
         if (entry != m_streamTimestamps.end()) {
             timestamp = entry->second;
@@ -221,6 +229,7 @@ uint8_t* FrameQueue::generateMessage(const uint8_t* message, uint32_t length, ui
     }
 
     if (streamId != 0U && rtpSeq == RTP_END_OF_CALL_SEQ) {
+        std::lock_guard<std::mutex> lock(m_fqTimestampLock);
         auto entry = m_streamTimestamps.find(streamId);
         if (entry != m_streamTimestamps.end()) {
             if (m_debug)

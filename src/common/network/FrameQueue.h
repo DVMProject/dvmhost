@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2023,2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2023,2024,2025 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -21,6 +21,7 @@
 #include "common/network/RTPFNEHeader.h"
 #include "common/network/RawFrameQueue.h"
 
+#include <mutex>
 #include <unordered_map>
 
 namespace network
@@ -116,6 +117,7 @@ namespace network
     private:
         uint32_t m_peerId;
         std::unordered_map<uint32_t, uint32_t> m_streamTimestamps;
+        static std::mutex m_fqTimestampLock;
 
         /**
          * @brief Generate RTP message for the frame queue.
