@@ -868,6 +868,14 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
                 }
             }
 
+            if (!grp && !m_tscc->m_ignoreAffiliationCheck) {
+                // is this the target registered?
+                if (!m_tscc->m_affiliations->isUnitReg(dstId)) {
+                    LogWarning(LOG_RF, "DMR Slot %u, CSBK, RAND (Random Access, IND_VOICE_CALL (Individual Voice Call) ignored, no unit registration, dstId = %u", m_tscc->m_slotNo, dstId);
+                    return false;
+                }
+            }
+
             uint32_t availChNo = m_tscc->m_affiliations->getAvailableChannelForSlot(slot);
             if (!m_tscc->m_affiliations->rfCh()->isRFChAvailable() || availChNo == 0U) {
                 if (grp) {

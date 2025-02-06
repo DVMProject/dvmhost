@@ -479,6 +479,14 @@ bool ControlSignaling::writeRF_Message_Grant(uint32_t srcId, uint32_t dstId, uin
                 }
             }
 
+            if (!grp && !m_nxdn->m_ignoreAffiliationCheck) {
+                // is this the target registered?
+                if (!m_nxdn->m_affiliations.isUnitReg(dstId)) {
+                    LogWarning(LOG_RF, "NXDN, %s ignored, no unit registration, dstId = %u", rcch->toString().c_str(), dstId);
+                    return false;
+                }
+            }
+
             if (!m_nxdn->m_affiliations.rfCh()->isRFChAvailable()) {
                 if (grp) {
                     if (!net) {
