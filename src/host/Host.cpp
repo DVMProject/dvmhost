@@ -1667,11 +1667,11 @@ void Host::setState(uint8_t state)
 
                 if (m_tidLookup != nullptr) {
                     m_tidLookup->stop();
-                    delete m_tidLookup;
+                    //delete m_tidLookup;
                 }
                 if (m_ridLookup != nullptr) {
                     m_ridLookup->stop();
-                    delete m_ridLookup;
+                    //delete m_ridLookup;
                 }
             }
             else {
