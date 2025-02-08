@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2022,2024,2025 Bryan Biedenkapp, N2PLL
  *
  */
 #include "Defines.h"
@@ -34,7 +34,17 @@ bool LC_CALL_TERM::decode(const uint8_t* data)
 {
     assert(data != nullptr);
 
-    /* stub */
+    uint8_t rs[P25_TDULC_LENGTH_BYTES + 1U];
+    ::memset(rs, 0x00U, P25_TDULC_LENGTH_BYTES);
+
+    bool ret = TDULC::decode(data, rs);
+    if (!ret)
+        return false;
+
+    ulong64_t rsValue = TDULC::toValue(rs);
+
+    m_implicit = true;
+    m_dstId = (uint32_t)(rsValue & 0xFFFFFFU);                                  // Target Address
 
     return true;
 }
