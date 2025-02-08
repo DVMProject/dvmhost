@@ -755,12 +755,16 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                             else {
                                 LogWarning(LOG_NET, "PEER %u RPTK NAK, login exchange while in an incorrect state, connectionState = %u", peerId, connection->connectionState());
                                 network->writePeerNAK(peerId, TAG_REPEATER_AUTH, NET_CONN_NAK_BAD_CONN_STATE, req->address, req->addrLen);
+
+                                delete connection;
                                 network->erasePeer(peerId);
                             }
                         }
                     }
                     else {
                         network->writePeerNAK(peerId, TAG_REPEATER_AUTH, NET_CONN_NAK_BAD_CONN_STATE, req->address, req->addrLen);
+
+                        network->erasePeer(peerId);
                         LogWarning(LOG_NET, "PEER %u RPTK NAK, having no connection", peerId);
                     }
                 }
