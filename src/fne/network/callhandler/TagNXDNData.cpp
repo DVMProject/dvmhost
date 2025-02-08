@@ -463,6 +463,8 @@ bool TagNXDNData::peerRewrite(uint32_t peerId, uint32_t& dstId, bool outbound)
 bool TagNXDNData::isPeerPermitted(uint32_t peerId, lc::RTCH& lc, uint8_t messageType, uint32_t streamId, bool external)
 {
     if (!lc.getGroup()) {
+        if (m_network->m_disallowU2U)
+            return false;
         if (!m_network->checkU2UDroppedPeer(peerId))
             return true;
         return false;

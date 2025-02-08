@@ -882,6 +882,8 @@ bool TagP25Data::processTSDUToExternal(uint8_t* buffer, uint32_t srcPeerId, uint
 bool TagP25Data::isPeerPermitted(uint32_t peerId, lc::LC& control, DUID::E duid, uint32_t streamId, bool external)
 {
     if (control.getLCO() == LCO::PRIVATE) {
+        if (m_network->m_disallowU2U)
+            return false;
         if (!m_network->checkU2UDroppedPeer(peerId))
             return true;
         return false;

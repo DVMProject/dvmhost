@@ -463,6 +463,7 @@ namespace network
 
         bool m_forceListUpdate;
 
+        bool m_disallowU2U;
         std::vector<uint32_t> m_dropU2UPeerTable;
 
         bool m_enableInfluxDB;

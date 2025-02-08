@@ -656,6 +656,8 @@ bool TagDMRData::processCSBK(uint8_t* buffer, uint32_t peerId, dmr::data::NetDat
 bool TagDMRData::isPeerPermitted(uint32_t peerId, data::NetData& data, uint32_t streamId, bool external)
 {
     if (data.getFLCO() == FLCO::PRIVATE) {
+        if (m_network->m_disallowU2U)
+            return false;
         if (!m_network->checkU2UDroppedPeer(peerId))
             return true;
         return false;

@@ -95,6 +95,8 @@ master:
     # Flag indicating that terminators will be filtered by destination ID (i.e. valid RID or valid TGID).
     filterTerminators: true
 
+    # Flag indicating the FNE will drop all inbound Unit-to-Unit calls.
+    disallowAllUnitToUnit: false
     # List of peers that unit to unit calls are dropped for.
     dropUnitToUnit: []
 

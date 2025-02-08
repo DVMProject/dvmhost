@@ -85,6 +85,7 @@ FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port,
     m_restrictGrantToAffOnly(false),
     m_filterHeaders(true),
     m_filterTerminators(true),
+    m_disallowU2U(false),
     m_dropU2UPeerTable(),
     m_enableInfluxDB(false),
     m_influxServerAddress("127.0.0.1"),
@@ -161,6 +162,8 @@ void FNENetwork::setOptions(yaml::Node& conf, bool printOptions)
     ** Drop Unit to Unit Peers
     */
 
+    m_disallowU2U = conf["disallowAllUnitToUnit"].as<bool>(false);
+
     yaml::Node& dropUnitToUnit = conf["dropUnitToUnit"];
     if (dropUnitToUnit.size() > 0U) {
         for (size_t i = 0; i < dropUnitToUnit.size(); i++) {
@@ -184,6 +187,7 @@ void FNENetwork::setOptions(yaml::Node& conf, bool printOptions)
         LogInfo("    Restrict grant response by affiliation: %s", m_restrictGrantToAffOnly ? "yes" : "no");
         LogInfo("    Traffic Headers Filtered by Destination ID: %s", m_filterHeaders ? "yes" : "no");
         LogInfo("    Traffic Terminators Filtered by Destination ID: %s", m_filterTerminators ? "yes" : "no");
+        LogInfo("    Disallow Unit-to-Unit: %s", m_disallowU2U ? "yes" : "no");
         LogInfo("    InfluxDB Reporting Enabled: %s", m_enableInfluxDB ? "yes" : "no");
         if (m_enableInfluxDB) {
             LogInfo("    InfluxDB Address: %s", m_influxServerAddress.c_str());
