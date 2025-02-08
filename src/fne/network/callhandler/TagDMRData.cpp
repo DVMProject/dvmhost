@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2023-2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2023-2025 Bryan Biedenkapp, N2PLL
  *
  */
 #include "fne/Defines.h"
@@ -129,7 +129,7 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
     // is the stream valid?
     if (validate(peerId, dmrData, streamId)) {
         // is this peer ignored?
-        if (!isPeerPermitted(peerId, dmrData, streamId)) {
+        if (!isPeerPermitted(peerId, dmrData, streamId, external)) {
             return false;
         }
 
