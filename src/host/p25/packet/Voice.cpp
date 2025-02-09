@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2016,2017,2018 Jonathan Naylor, G4KLX
- *  Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2017-2025 Bryan Biedenkapp, N2PLL
  *
  */
 #include "Defines.h"
@@ -1358,6 +1358,18 @@ bool Voice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
             // currently ignored -- this is a TODO
             break;
         case DUID::TDU:
+        case DUID::TDULC:
+            if (duid == DUID::TDULC) {
+                std::unique_ptr<lc::TDULC> tdulc = lc::tdulc::TDULCFactory::createTDULC(data);
+                if (tdulc == nullptr) {
+                    LogWarning(LOG_NET, P25_TDULC_STR ", undecodable TDULC");
+                }
+                else {
+                    if (tdulc->getLCO() != LCO::CALL_TERM)
+                        break;
+                }
+            }
+
             // ignore a TDU that doesn't contain our destination ID
             if (control.getDstId() != m_p25->m_netLastDstId) {
                 return false;
@@ -1383,9 +1395,6 @@ bool Voice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
 
                 resetNet();
             }
-            break;
-        case DUID::TDULC:
-            // currently ignored
             break;
 
         default:

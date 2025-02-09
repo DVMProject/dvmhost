@@ -456,6 +456,7 @@ namespace network
         bool m_disallowAdjStsBcast;
         bool m_disallowExtAdjStsBcast;
         bool m_allowConvSiteAffOverride;
+        bool m_disallowCallTerm;
         bool m_restrictGrantToAffOnly;
 
         bool m_filterHeaders;

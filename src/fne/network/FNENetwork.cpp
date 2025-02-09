@@ -82,6 +82,7 @@ FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port,
     m_disallowAdjStsBcast(false),
     m_disallowExtAdjStsBcast(true),
     m_allowConvSiteAffOverride(false),
+    m_disallowCallTerm(false),
     m_restrictGrantToAffOnly(false),
     m_filterHeaders(true),
     m_filterTerminators(true),
@@ -126,6 +127,7 @@ void FNENetwork::setOptions(yaml::Node& conf, bool printOptions)
     m_disallowAdjStsBcast = conf["disallowAdjStsBcast"].as<bool>(false);
     m_disallowExtAdjStsBcast = conf["disallowExtAdjStsBcast"].as<bool>(true);
     m_allowConvSiteAffOverride = conf["allowConvSiteAffOverride"].as<bool>(true);
+    m_disallowCallTerm = conf["disallowCallTerm"].as<bool>(false);
     m_softConnLimit = conf["connectionLimit"].as<uint32_t>(MAX_HARD_CONN_CAP);
 
     if (m_softConnLimit > MAX_HARD_CONN_CAP) {
@@ -183,6 +185,7 @@ void FNENetwork::setOptions(yaml::Node& conf, bool printOptions)
         LogInfo("    Disable Packet Data: %s", m_disablePacketData ? "yes" : "no");
         LogInfo("    Dump Packet Data: %s", m_dumpPacketData ? "yes" : "no");
         LogInfo("    Disable P25 ADJ_STS_BCAST to external peers: %s", m_disallowExtAdjStsBcast ? "yes" : "no");
+        LogInfo("    Disable P25 TDULC call termination broadcasts to any peers: %s", m_disallowCallTerm ? "yes" : "no");
         LogInfo("    Allow conventional sites to override affiliation and receive all traffic: %s", m_allowConvSiteAffOverride ? "yes" : "no");
         LogInfo("    Restrict grant response by affiliation: %s", m_restrictGrantToAffOnly ? "yes" : "no");
         LogInfo("    Traffic Headers Filtered by Destination ID: %s", m_filterHeaders ? "yes" : "no");

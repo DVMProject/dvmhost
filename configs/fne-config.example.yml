@@ -89,6 +89,8 @@ master:
     disallowExtAdjStsBcast: true
     # Flag indicating whether or not a conventional site can override affiliation rules.
     allowConvSiteAffOverride: true
+    # Flag indicating whether or not a TDULC call terminations will pass to any peers.
+    disallowCallTerm: false
 
     # Flag indicating that traffic headers will be filtered by destination ID (i.e. valid RID or valid TGID).
     filterHeaders: true

@@ -778,7 +778,8 @@ bool TagP25Data::processTSDUFrom(uint8_t* buffer, uint32_t peerId, uint8_t duid)
             // handle standard P25 reference opcodes
             switch (tdulc->getLCO()) {
             case LCO::CALL_TERM:
-                return false; // discard call terms at the FNE
+                if (m_network->m_disallowCallTerm)
+                    return false;
             default:
                 break;
             }
