@@ -1355,7 +1355,7 @@ void ControlSignaling::writeNetworkRF(lc::TDULC* tduLc, const uint8_t* data, boo
     lc.setSrcId(tduLc->getSrcId());
     lc.setDstId(tduLc->getDstId());
 
-    m_p25->m_network->writeP25TSDU(lc, data);
+    m_p25->m_network->writeP25TDULC(lc, data);
     if (autoReset)
         m_p25->m_network->resetP25();
 }

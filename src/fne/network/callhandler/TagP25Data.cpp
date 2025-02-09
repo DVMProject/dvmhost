@@ -9,6 +9,7 @@
  */
 #include "fne/Defines.h"
 #include "common/p25/lc/tsbk/TSBKFactory.h"
+#include "common/p25/lc/tdulc/TDULCFactory.h"
 #include "common/p25/Sync.h"
 #include "common/Clock.h"
 #include "common/Log.h"
@@ -761,6 +762,30 @@ bool TagP25Data::processTSDUFrom(uint8_t* buffer, uint32_t peerId, uint8_t duid)
         } else {
             std::string peerIdentity = m_network->resolvePeerIdentity(peerId);
             LogWarning(LOG_NET, "PEER %u (%s), passing TSBK that failed to decode? tsbk == nullptr", peerId, peerIdentity.c_str());
+        }
+    }
+
+    // are we receiving a TDULC?
+    if (duid == DUID::TDULC) {
+        uint32_t frameLength = buffer[23U];
+
+        UInt8Array data = std::unique_ptr<uint8_t[]>(new uint8_t[frameLength]);
+        ::memset(data.get(), 0x00U, frameLength);
+        ::memcpy(data.get(), buffer + 24U, frameLength);
+
+        std::unique_ptr<lc::TDULC> tdulc = lc::tdulc::TDULCFactory::createTDULC(data.get());
+        if (tdulc != nullptr) {
+            // handle standard P25 reference opcodes
+            switch (tdulc->getLCO()) {
+            case LCO::CALL_TERM:
+                return false; // discard call terms at the FNE
+            default:
+                break;
+            }
+        } else {
+            // bryanb: should these be logged?
+            //std::string peerIdentity = m_network->resolvePeerIdentity(peerId);
+            //LogWarning(LOG_NET, "PEER %u (%s), passing TDULC that failed to decode? tdulc == nullptr", peerId, peerIdentity.c_str());
         }
     }
 

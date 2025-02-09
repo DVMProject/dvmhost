@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2015,2016,2017 Jonathan Naylor, G4KLX
- *  Copyright (C) 2020-2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2020-2025 Bryan Biedenkapp, N2PLL
  *  Copyright (C) 2024 Caleb, KO4UYJ
  *
  */
@@ -572,6 +572,26 @@ bool BaseNetwork::writeP25TSDU(const p25::lc::LC& control, const uint8_t* data)
     return writeMaster({ NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25 }, message.get(), messageLength, RTP_END_OF_CALL_SEQ, m_p25StreamId);
 }
 
+/* Writes P25 TDULC frame data to the network. */
+
+bool BaseNetwork::writeP25TDULC(const p25::lc::LC& control, const uint8_t* data)
+{
+    if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
+        return false;
+
+    if (m_p25StreamId == 0U) {
+        m_p25StreamId = createStreamId();
+    }
+
+    uint32_t messageLength = 0U;
+    UInt8Array message = createP25_TDULCMessage(messageLength, control, data);
+    if (message == nullptr) {
+        return false;
+    }
+
+    return writeMaster({ NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25 }, message.get(), messageLength, RTP_END_OF_CALL_SEQ, m_p25StreamId);
+}
+
 /* Writes P25 PDU frame data to the network. */
 
 bool BaseNetwork::writeP25PDU(const p25::data::DataHeader& header, const uint8_t currentBlock, const uint8_t* data,
@@ -1022,6 +1042,35 @@ UInt8Array BaseNetwork::createP25_TSDUMessage(uint32_t& length, const p25::lc::L
         Utils::dump(1U, "Network Message, P25 TDSU", buffer, (P25_TSDU_PACKET_LENGTH + PACKET_PAD));
 
     length = (P25_TSDU_PACKET_LENGTH + PACKET_PAD);
+    return UInt8Array(buffer);
+}
+
+/* Creates an P25 TDULC frame message. */
+
+UInt8Array BaseNetwork::createP25_TDULCMessage(uint32_t& length, const p25::lc::LC& control, const uint8_t* data)
+{
+    using namespace p25::defines;
+    assert(data != nullptr);
+
+    uint8_t* buffer = new uint8_t[P25_TDULC_PACKET_LENGTH + PACKET_PAD];
+    ::memset(buffer, 0x00U, P25_TDULC_PACKET_LENGTH + PACKET_PAD);
+
+    // construct P25 message header
+    p25::data::LowSpeedData lsd = p25::data::LowSpeedData();
+    createP25_MessageHdr(buffer, DUID::TDULC, control, lsd, FrameType::TERMINATOR);
+
+    // pack raw P25 TSDU bytes
+    uint32_t count = MSG_HDR_SIZE;
+
+    ::memcpy(buffer + 24U, data, P25_TDULC_FRAME_LENGTH_BYTES);
+    count += P25_TDULC_FRAME_LENGTH_BYTES;
+
+    buffer[23U] = count;
+
+    if (m_debug)
+        Utils::dump(1U, "Network Message, P25 TDULC", buffer, (P25_TDULC_PACKET_LENGTH + PACKET_PAD));
+
+    length = (P25_TDULC_PACKET_LENGTH + PACKET_PAD);
     return UInt8Array(buffer);
 }
 

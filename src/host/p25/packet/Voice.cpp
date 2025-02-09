@@ -1358,7 +1358,6 @@ bool Voice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
             // currently ignored -- this is a TODO
             break;
         case DUID::TDU:
-        case DUID::TDULC:
             // ignore a TDU that doesn't contain our destination ID
             if (control.getDstId() != m_p25->m_netLastDstId) {
                 return false;
@@ -1384,6 +1383,9 @@ bool Voice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
 
                 resetNet();
             }
+            break;
+        case DUID::TDULC:
+            // currently ignored
             break;
 
         default:
