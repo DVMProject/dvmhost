@@ -4,17 +4,17 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2025 Bryan Biedenkapp, N2PLL
  *
  */
 /**
- * @file FSCDisconnect.h
+ * @file FSCReportSelModes.h
  * @ingroup dfsi_fsc_frames
- * @file FSCDisconnect.cpp
+ * @file FSCReportSelModes.cpp
  * @ingroup dfsi_fsc_frames
  */
-#if !defined(__FSC_DISCONNECT_H__)
-#define __FSC_DISCONNECT_H__
+#if !defined(__FSC_REPORT_SEL_MODES_H__)
+#define __FSC_REPORT_SEL_MODES_H__
 
 #include "Defines.h"
 #include "common/Defines.h"
@@ -36,21 +36,21 @@ namespace p25
                 // ---------------------------------------------------------------------------
 
                 /**
-                 * @brief Implements the FSC Disconnect Message.
+                 * @brief Implements the FSC Report Selected Modes Message.
                  * @ingroup dfsi_fsc_frames
                  */
-                class HOST_SW_API FSCDisconnect : public FSCMessage {
+                class HOST_SW_API FSCReportSelModes : public FSCMessage {
                 public:
                     static const uint8_t LENGTH = 3U;
 
                     /**
-                     * @brief Initializes a copy instance of the FSCDisconnect class.
+                     * @brief Initializes a copy instance of the FSCReportSelModes class.
                      */
-                    FSCDisconnect();
+                    FSCReportSelModes();
                 };
             } // namespace fsc
         } // namespace frames
     } // namespace dfsi
 } // namespace p25
 
-#endif // __FSC_DISCONNECT_H__
+#endif // __FSC_REPORT_SEL_MODES_H__

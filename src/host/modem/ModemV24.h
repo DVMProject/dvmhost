@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2024-2025 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -262,6 +262,12 @@ namespace modem
         void setP25NAC(uint32_t nac) override;
 
         /**
+         * @brief Helper to set the TIA-102 format DFSI frame flag.
+         * @param set 
+         */
+        void setTIAFormat(bool set);
+
+        /**
          * @brief Opens connection to the air interface modem.
          * @returns bool True, if connection to modem is made, otherwise false.
          */
@@ -296,6 +302,8 @@ namespace modem
         bool m_rtrt;
         bool m_diu;
 
+        uint8_t m_superFrameCnt;
+
         p25::Audio m_audio;
 
         p25::NID* m_nid;
@@ -315,6 +323,8 @@ namespace modem
         uint64_t m_lastP25Tx;
 
         edac::RS634717 m_rs;
+
+        bool m_useTIAFormat;
 
         /**
          * @brief Helper to write data from the P25 Tx queue to the serial interface.
@@ -340,6 +350,12 @@ namespace modem
          * @param length Length of buffer.
          */
         void convertToAir(const uint8_t *data, uint32_t length);
+        /**
+         * @brief Internal helper to convert from TIA-102 DFSI to TIA-102 air interface.
+         * @param data Buffer containing data to convert.
+         * @param length Length of buffer.
+         */
+        void convertToAirTIA(const uint8_t *data, uint32_t length);
 
         /**
          * @brief Helper to add a V.24 data frame to the P25 Tx queue with the proper timestamp and formatting.
@@ -360,11 +376,34 @@ namespace modem
         void endOfStream();
 
         /**
+         * @brief Helper to generate the NID value.
+         * @param duid P25 DUID.
+         * @returns uint16_t P25 NID.
+         */
+        uint16_t generateNID(P25DEF::DUID::E duid = P25DEF::DUID::LDU1);
+
+        /**
+         * @brief Send a start of stream sequence (HDU, etc) to the connected UDP TIA-102 device.
+         * @param[in] control Instance of p25::lc::LC containing link control data.
+         */
+        void startOfStreamTIA(const p25::lc::LC& control);
+        /**
+         * @brief Send an end of stream sequence (TDU, etc) to the connected UDP TIA-102 device.
+         */
+        void endOfStreamTIA();
+
+        /**
          * @brief Internal helper to convert from TIA-102 air interface to V.24/DFSI.
          * @param data Buffer containing data to convert.
          * @param length Length of buffer.
          */
         void convertFromAir(uint8_t* data, uint32_t length);
+        /**
+         * @brief Internal helper to convert from TIA-102 air interface to TIA-102 DFSI.
+         * @param data Buffer containing data to convert.
+         * @param length Length of buffer.
+         */
+        void convertFromAirTIA(uint8_t* data, uint32_t length);
     };
 } // namespace modem
 

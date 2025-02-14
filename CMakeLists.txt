@@ -543,7 +543,7 @@ add_custom_target(old_install
     COMMAND install -m 644 ../configs/rid_acl.example.dat ${CMAKE_LEGACY_INSTALL_PREFIX}/rid_acl.dat
     COMMAND install -m 644 ../configs/talkgroup_rules.example.yml ${CMAKE_LEGACY_INSTALL_PREFIX}/talkgroup_rules.example.yml
     COMMAND install -m 644 ../configs/bridge-config.example.yml ${CMAKE_LEGACY_INSTALL_PREFIX}/bridge-config.example.yml
-    COMMAND install -m 644 ../configs/talkgroup_rules.yaml_schema.json ${CMAKE_LEGACY_INSTALL_PREFIX}/schema/talkgroup_rules.yaml_schema.json
+    COMMAND install -m 644 ../configs/schema/talkgroup_rules.yaml_schema.json ${CMAKE_LEGACY_INSTALL_PREFIX}/schema/talkgroup_rules.yaml_schema.json
     COMMAND install -m 755 ../tools/start-dvm.sh ${CMAKE_LEGACY_INSTALL_PREFIX}
     COMMAND install -m 755 ../tools/stop-dvm.sh ${CMAKE_LEGACY_INSTALL_PREFIX}
     COMMAND install -m 755 ../tools/dvm-watchdog.sh ${CMAKE_LEGACY_INSTALL_PREFIX}

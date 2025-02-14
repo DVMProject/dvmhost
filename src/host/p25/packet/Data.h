@@ -202,11 +202,10 @@ namespace p25
              * @brief Helper to write a P25 PDU packet.
              * @param[in] pdu Constructed PDU to transmit.
              * @param bitlength Length of PDU in bits.
-             * @param noNulls Flag indicating no trailing nulls should be transmitted.
              * @param imm Flag indicating the PDU should be written to the immediate queue.
              * @param ackRetry Flag indicating the PDU is being sent as an acknowledged retry.
              */
-            void writeRF_PDU(const uint8_t* pdu, uint32_t bitLength, bool noNulls = false, bool imm = false, bool ackRetry = false);
+            void writeRF_PDU(const uint8_t* pdu, uint32_t bitLength, bool imm = false, bool ackRetry = false);
             /**
              * @brief Helper to write a network P25 PDU packet.
              * This will take buffered network PDU data and repeat it over the air.
@@ -231,9 +230,8 @@ namespace p25
              * @param ackStatus 
              * @param llId Logical Link ID.
              * @param srcLlId Source Logical Link ID.
-             * @param noNulls Flag indicating no trailing nulls should be transmitted.
              */
-            void writeRF_PDU_Ack_Response(uint8_t ackClass, uint8_t ackType, uint8_t ackStatus, uint32_t llId, uint32_t srcLlId = 0U, bool noNulls = false);
+            void writeRF_PDU_Ack_Response(uint8_t ackClass, uint8_t ackType, uint8_t ackStatus, uint32_t llId, uint32_t srcLlId = 0U);
         };
     } // namespace packet
 } // namespace p25

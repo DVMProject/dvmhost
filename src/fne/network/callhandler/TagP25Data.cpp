@@ -4,11 +4,12 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2023-2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2023-2025 Bryan Biedenkapp, N2PLL
  *
  */
 #include "fne/Defines.h"
 #include "common/p25/lc/tsbk/TSBKFactory.h"
+#include "common/p25/lc/tdulc/TDULCFactory.h"
 #include "common/p25/Sync.h"
 #include "common/Clock.h"
 #include "common/Log.h"
@@ -153,7 +154,7 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
     // is the stream valid?
     if (validate(peerId, control, duid, tsbk.get(), streamId)) {
         // is this peer ignored?
-        if (!isPeerPermitted(peerId, control, duid, streamId)) {
+        if (!isPeerPermitted(peerId, control, duid, streamId, external)) {
             return false;
         }
 
@@ -178,14 +179,21 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                     }
                 }
 
-                if (std::find_if(m_status.begin(), m_status.end(), [&](StatusMapPair x) { return x.second.dstId == dstId; }) != m_status.end()) {
+                auto it = std::find_if(m_status.begin(), m_status.end(), [&](StatusMapPair x) {
+                    if (x.second.dstId == dstId) {
+                        if (x.second.activeCall)
+                            return true;
+                    }
+                    return false;
+                });
+                if (it != m_status.end()) {
                     if (grantDemand) {
                         LogWarning(LOG_NET, "P25, Call Collision, peer = %u, srcId = %u, dstId = %u, streamId = %u, rxPeer = %u, rxSrcId = %u, rxDstId = %u, rxStreamId = %u, external = %u",
                             peerId, srcId, dstId, streamId, status.peerId, status.srcId, status.dstId, status.streamId, external);
                         return false;
                     }
                     else {
-                        m_status.erase(dstId);
+                        m_status[dstId].reset();
 
                         // is this a parrot talkgroup? if so, clear any remaining frames from the buffer
                         lookups::TalkgroupRuleGroupVoice tg = m_network->m_tidLookup->find(dstId);
@@ -227,7 +235,13 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                     return false;
                 }
 
-                auto it = std::find_if(m_status.begin(), m_status.end(), [&](StatusMapPair x) { return x.second.dstId == dstId; });
+                auto it = std::find_if(m_status.begin(), m_status.end(), [&](StatusMapPair x) {
+                    if (x.second.dstId == dstId) {
+                        if (x.second.activeCall)
+                            return true;
+                    }
+                    return false;
+                });
                 if (it != m_status.end()) {
                     RxStatus status = m_status[dstId];
                     if (streamId != status.streamId && ((duid != DUID::TDU) && (duid != DUID::TDULC))) {
@@ -235,7 +249,7 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                             uint64_t lastPktDuration = hrc::diff(hrc::now(), status.lastPacket);
                             if ((lastPktDuration / 1000) > CALL_COLL_TIMEOUT) {
                                 LogWarning(LOG_NET, "P25, Call Collision, lasted more then %us with no further updates, forcibly ending call");
-                                m_status.erase(dstId);
+                                m_status[dstId].reset();
                                 m_network->m_callInProgress = false;
                             }
 
@@ -261,13 +275,12 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                     }
 
                     // this is a new call stream
-                    RxStatus status = RxStatus();
-                    status.callStartTime = pktTime;
-                    status.srcId = srcId;
-                    status.dstId = dstId;
-                    status.streamId = streamId;
-                    status.peerId = peerId;
-                    m_status[dstId] = status;
+                    m_status[dstId].callStartTime = pktTime;
+                    m_status[dstId].srcId = srcId;
+                    m_status[dstId].dstId = dstId;
+                    m_status[dstId].streamId = streamId;
+                    m_status[dstId].peerId = peerId;
+                    m_status[dstId].activeCall = true;
 
                     LogMessage(LOG_NET, "P25, Call Start, peer = %u, srcId = %u, dstId = %u, streamId = %u, external = %u", peerId, srcId, dstId, streamId, external);
 
@@ -406,7 +419,14 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
 bool TagP25Data::processGrantReq(uint32_t srcId, uint32_t dstId, bool unitToUnit, uint32_t peerId, uint16_t pktSeq, uint32_t streamId)
 {
     // if we have an Rx status for the destination deny the grant
-    if (std::find_if(m_status.begin(), m_status.end(), [&](StatusMapPair x) { return x.second.dstId == dstId; }) != m_status.end()) {
+    auto it = std::find_if(m_status.begin(), m_status.end(), [&](StatusMapPair x) {
+        if (x.second.dstId == dstId) {
+            if (x.second.activeCall)
+                return true;
+        }
+        return false;
+    });
+    if (it != m_status.end()) {
         return false;
     }
 
@@ -745,6 +765,31 @@ bool TagP25Data::processTSDUFrom(uint8_t* buffer, uint32_t peerId, uint8_t duid)
         }
     }
 
+    // are we receiving a TDULC?
+    if (duid == DUID::TDULC) {
+        uint32_t frameLength = buffer[23U];
+
+        UInt8Array data = std::unique_ptr<uint8_t[]>(new uint8_t[frameLength]);
+        ::memset(data.get(), 0x00U, frameLength);
+        ::memcpy(data.get(), buffer + 24U, frameLength);
+
+        std::unique_ptr<lc::TDULC> tdulc = lc::tdulc::TDULCFactory::createTDULC(data.get());
+        if (tdulc != nullptr) {
+            // handle standard P25 reference opcodes
+            switch (tdulc->getLCO()) {
+            case LCO::CALL_TERM:
+                if (m_network->m_disallowCallTerm)
+                    return false;
+            default:
+                break;
+            }
+        } else {
+            // bryanb: should these be logged?
+            //std::string peerIdentity = m_network->resolvePeerIdentity(peerId);
+            //LogWarning(LOG_NET, "PEER %u (%s), passing TDULC that failed to decode? tdulc == nullptr", peerId, peerIdentity.c_str());
+        }
+    }
+
     return true;
 }
 
@@ -863,6 +908,8 @@ bool TagP25Data::processTSDUToExternal(uint8_t* buffer, uint32_t srcPeerId, uint
 bool TagP25Data::isPeerPermitted(uint32_t peerId, lc::LC& control, DUID::E duid, uint32_t streamId, bool external)
 {
     if (control.getLCO() == LCO::PRIVATE) {
+        if (m_network->m_disallowU2U)
+            return false;
         if (!m_network->checkU2UDroppedPeer(peerId))
             return true;
         return false;
@@ -907,7 +954,7 @@ bool TagP25Data::isPeerPermitted(uint32_t peerId, lc::LC& control, DUID::E duid,
 
     if (duid == DUID::TDU) {
         if (m_network->m_filterTerminators) {
-            if (control.getSrcId() != 0U && control.getDstId() != 0U) {
+            if (/*control.getSrcId() != 0U &&*/control.getDstId() != 0U) {
                 // is this a group call?
                 lookups::TalkgroupRuleGroupVoice tg = m_network->m_tidLookup->find(control.getDstId());
                 if (!tg.isInvalid()) {
@@ -1153,6 +1200,26 @@ bool TagP25Data::validate(uint32_t peerId, lc::LC& control, DUID::E duid, const 
                 }
                 break;
             }
+
+            // handle validating DVM call termination packets
+            if (tsbk->getMFId() == MFG_DVM_OCS) {
+                switch (tsbk->getLCO()) {
+                    case LCO::CALL_TERM:
+                    {
+                        lookups::TalkgroupRuleGroupVoice tg = m_network->m_tidLookup->find(tsbk->getDstId());
+
+                        // check TGID validity
+                        if (tg.isInvalid()) {
+                            return false;
+                        }
+
+                        if (!tg.config().active()) {
+                            return false;
+                        }
+                    }
+                    break;
+                }
+            }
         }
 
         return true;
@@ -1337,20 +1404,18 @@ void TagP25Data::write_TSDU(uint32_t peerId, lc::TSBK* tsbk)
     uint8_t data[P25_TSDU_FRAME_LENGTH_BYTES];
     ::memset(data, 0x00U, P25_TSDU_FRAME_LENGTH_BYTES);
 
-    // Generate Sync
+    // generate Sync
     Sync::addP25Sync(data);
 
     // network bursts have no NID
 
-    // Generate TSBK block
+    // generate TSBK block
     tsbk->setLastBlock(true); // always set last block -- this a Single Block TSDU
     tsbk->encode(data);
 
-    // Add busy bits
-    P25Utils::addStatusBits(data, P25_TSDU_FRAME_LENGTH_BYTES, false);
-
-    // Set first busy bits to 1,1
-    P25Utils::setStatusBits(data, P25_SS0_START, true, true);
+    // add status bits
+    P25Utils::addStatusBits(data, P25_TSDU_FRAME_LENGTH_BYTES, false, true);
+    P25Utils::setStatusBitsStartIdle(data);
 
     if (m_debug) {
         LogDebug(LOG_RF, P25_TSDU_STR ", lco = $%02X, mfId = $%02X, lastBlock = %u, AIV = %u, EX = %u, srcId = %u, dstId = %u, sysId = $%03X, netId = $%05X",

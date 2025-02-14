@@ -95,12 +95,16 @@ master:
     # Flag indicating whether or not unknown/undefined RIDs will be rejected by the FNE.
     #   (This is a strict rejection, any unknown or undefined RID not in the RID ACL list will be hard rejected.)
     rejectUnknownRID: false
+    # Flag indicating whether or not a TDULC call terminations will pass to any peers.
+    disallowCallTerm: false
 
     # Flag indicating that traffic headers will be filtered by destination ID (i.e. valid RID or valid TGID).
     filterHeaders: true
     # Flag indicating that terminators will be filtered by destination ID (i.e. valid RID or valid TGID).
     filterTerminators: true
 
+    # Flag indicating the FNE will drop all inbound Unit-to-Unit calls.
+    disallowAllUnitToUnit: false
     # List of peers that unit to unit calls are dropped for.
     dropUnitToUnit: []
 

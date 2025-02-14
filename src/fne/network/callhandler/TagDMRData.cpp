@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2023-2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2023-2025 Bryan Biedenkapp, N2PLL
  *
  */
 #include "fne/Defines.h"
@@ -129,7 +129,7 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
     // is the stream valid?
     if (validate(peerId, dmrData, streamId)) {
         // is this peer ignored?
-        if (!isPeerPermitted(peerId, dmrData, streamId)) {
+        if (!isPeerPermitted(peerId, dmrData, streamId, external)) {
             return false;
         }
 
@@ -141,19 +141,33 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
             }
 
             RxStatus status;
-            auto it = std::find_if(m_status.begin(), m_status.end(), [&](StatusMapPair x) { return (x.second.dstId == dstId && x.second.slotNo == slotNo); });
-            if (it == m_status.end()) {
-                LogError(LOG_NET, "DMR, tried to end call for non-existent call in progress?, peer = %u, srcId = %u, dstId = %u, streamId = %u, external = %u",
-                    peerId, srcId, dstId, streamId, external);
-            }
-            else {
-                status = it->second;
+            {
+                auto it = std::find_if(m_status.begin(), m_status.end(), [&](StatusMapPair x) {
+                    if (x.second.dstId == dstId && x.second.slotNo == slotNo) {
+                        return true;
+                    }
+                    return false;
+                });
+                if (it == m_status.end()) {
+                    LogError(LOG_NET, "DMR, tried to end call for non-existent call in progress?, peer = %u, srcId = %u, dstId = %u, streamId = %u, external = %u",
+                        peerId, srcId, dstId, streamId, external);
+                }
+                else {
+                    status = it->second;
+                }
             }
 
             uint64_t duration = hrc::diff(pktTime, status.callStartTime);
 
-            if (std::find_if(m_status.begin(), m_status.end(), [&](StatusMapPair x) { return (x.second.dstId == dstId && x.second.slotNo == slotNo); }) != m_status.end()) {
-                m_status.erase(dstId);
+            auto it = std::find_if(m_status.begin(), m_status.end(), [&](StatusMapPair x) {
+                if (x.second.dstId == dstId && x.second.slotNo == slotNo) {
+                    if (x.second.activeCall)
+                        return true;
+                }
+                return false;
+            });
+            if (it != m_status.end()) {
+                m_status[dstId].reset();
 
                 // is this a parrot talkgroup? if so, clear any remaining frames from the buffer
                 lookups::TalkgroupRuleGroupVoice tg = m_network->m_tidLookup->find(dstId);
@@ -194,7 +208,13 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                 return false;
             }
 
-            auto it = std::find_if(m_status.begin(), m_status.end(), [&](StatusMapPair x) { return (x.second.dstId == dstId && x.second.slotNo == slotNo); });
+            auto it = std::find_if(m_status.begin(), m_status.end(), [&](StatusMapPair x) {
+                if (x.second.dstId == dstId && x.second.slotNo == slotNo) {
+                    if (x.second.activeCall)
+                        return true;
+                }
+                return false;
+            });
             if (it != m_status.end()) {
                 RxStatus status = it->second;
                 if (streamId != status.streamId) {
@@ -202,7 +222,7 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                         uint64_t lastPktDuration = hrc::diff(hrc::now(), status.lastPacket);
                         if ((lastPktDuration / 1000) > CALL_COLL_TIMEOUT) {
                             LogWarning(LOG_NET, "DMR, Call Collision, lasted more then %us with no further updates, forcibly ending call");
-                            m_status.erase(dstId);
+                            m_status[dstId].reset();
                             m_network->m_callInProgress = false;
                         }
 
@@ -228,14 +248,14 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                 }
 
                 // this is a new call stream
-                RxStatus status = RxStatus();
-                status.callStartTime = pktTime;
-                status.srcId = srcId;
-                status.dstId = dstId;
-                status.slotNo = slotNo;
-                status.streamId = streamId;
-                status.peerId = peerId;
-                m_status[dstId] = status; // this *could* be an issue if a dstId appears on both slots somehow...
+                // bryanb: this could be problematic and is naive, if a dstId appears on both slots (which shouldn't happen)
+                m_status[dstId].callStartTime = pktTime;
+                m_status[dstId].srcId = srcId;
+                m_status[dstId].dstId = dstId;
+                m_status[dstId].slotNo = slotNo;
+                m_status[dstId].streamId = streamId;
+                m_status[dstId].peerId = peerId;
+                m_status[dstId].activeCall = true;
 
                 LogMessage(LOG_NET, "DMR, Call Start, peer = %u, srcId = %u, dstId = %u, streamId = %u, external = %u", peerId, srcId, dstId, streamId, external);
 
@@ -367,7 +387,14 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
 bool TagDMRData::processGrantReq(uint32_t srcId, uint32_t dstId, uint8_t slot, bool unitToUnit, uint32_t peerId, uint16_t pktSeq, uint32_t streamId)
 {
     // if we have an Rx status for the destination deny the grant
-    if (std::find_if(m_status.begin(), m_status.end(), [&](StatusMapPair x) { return x.second.dstId == dstId; }) != m_status.end()) {
+    auto it = std::find_if(m_status.begin(), m_status.end(), [&](StatusMapPair x) {
+        if (x.second.dstId == dstId/* && x.second.slotNo == slot*/) {
+            if (x.second.activeCall)
+                return true;
+        }
+        return false;
+    });
+    if (it != m_status.end()) {
         return false;
     }
 
@@ -629,6 +656,8 @@ bool TagDMRData::processCSBK(uint8_t* buffer, uint32_t peerId, dmr::data::NetDat
 bool TagDMRData::isPeerPermitted(uint32_t peerId, data::NetData& data, uint32_t streamId, bool external)
 {
     if (data.getFLCO() == FLCO::PRIVATE) {
+        if (m_network->m_disallowU2U)
+            return false;
         if (!m_network->checkU2UDroppedPeer(peerId))
             return true;
         return false;

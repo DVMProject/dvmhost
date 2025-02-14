@@ -220,6 +220,9 @@ bool LC::decodeLDU1(const uint8_t* data, uint8_t* imbe)
             break;
     }
 
+    if (m_control->getLCO() == LCO::PRIVATE)
+        m_control->setGroup(false);
+
     // by LDU1_VOICE8 we should have all the pertinant RS bytes
     if (m_frameType == DFSIFrameType::LDU1_VOICE8) {
         ulong64_t rsValue = 0U;

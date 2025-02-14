@@ -1780,14 +1780,14 @@ void Control::writeRF_TDU(bool noNetwork, bool imm)
     uint8_t data[P25_TDU_FRAME_LENGTH_BYTES + 2U];
     ::memset(data + 2U, 0x00U, P25_TDU_FRAME_LENGTH_BYTES);
 
-    // Generate Sync
+    // generate Sync
     Sync::addP25Sync(data + 2U);
 
-    // Generate NID
+    // generate NID
     m_nid.encode(data + 2U, DUID::TDU);
 
-    // Add busy bits
-    P25Utils::addStatusBits(data + 2U, P25_TDU_FRAME_LENGTH_BITS, false);
+    // add status bits
+    P25Utils::setStatusBitsAllIdle(data + 2U, P25_TDU_FRAME_LENGTH_BITS);
 
     if (!noNetwork)
         m_voice->writeNetwork(data + 2U, DUID::TDU);

@@ -149,6 +149,9 @@ private:
             m_channelNo.setRange(0, 4095);
             m_channelNo.setShadow(false);
             m_channelNo.addCallback("changed", [&]() {
+                if (!m_radioChNo.isChecked())
+                    return;
+
                 m_setup->m_conf["system"]["config"]["channelNo"] = __INT_HEX_STR(m_channelNo.getValue());
                 m_setup->calculateRxTxFreq();
                 m_channelFreq.setValue(m_setup->m_txFrequency);
@@ -167,34 +170,17 @@ private:
             m_channelFreq.setValue(m_setup->m_txFrequency);
             m_channelFreq.setShadow(false);
             m_channelFreq.addCallback("changed", [&]() {
-                entry = m_setup->m_idenTable->find(m_setup->m_channelId);
+                if (!m_radioChFreq.isChecked())
+                    return;
 
-                uint32_t txFrequency = m_channelFreq.getValue();
-
-                uint32_t prevTxFrequency = m_setup->m_txFrequency;
-                m_setup->m_txFrequency = txFrequency;
-                uint32_t prevRxFrequency = m_setup->m_rxFrequency;
-                m_setup->m_rxFrequency = m_setup->m_txFrequency + (uint32_t)(entry.txOffsetMhz() * 1000000);
-
-                float spaceHz = entry.chSpaceKhz() * 1000;
-
-                uint32_t rootFreq = m_setup->m_txFrequency - entry.baseFrequency();
-                uint8_t prevChannelNo = m_setup->m_channelNo;
-                m_setup->m_channelNo = (uint32_t)(rootFreq / spaceHz);
-
-                if (m_setup->m_channelNo < 0 || m_setup->m_channelNo > 4096) {
-                    m_setup->m_channelNo = prevChannelNo;
-                    m_setup->m_txFrequency = prevTxFrequency;
-                    m_setup->m_rxFrequency = prevRxFrequency;
-                }
-
-                m_setup->m_conf["system"]["config"]["channelNo"] = __INT_HEX_STR(m_setup->m_channelNo);
-                m_setup->calculateRxTxFreq();
+                uint32_t txFrequency = (uint32_t)(m_channelFreq.getValue());
+                m_setup->calculateRxTxFreq(false, txFrequency);
                 m_channelNo.setValue(m_setup->m_channelNo);
                 if (m_setup->m_isConnected) {
                     m_setup->writeRFParams();
                 }
             });
+
             m_hzLabel.setGeometry(FPoint(40, 12), FSize(5, 1));
         }
 

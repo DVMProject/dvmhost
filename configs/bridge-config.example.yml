@@ -58,7 +58,7 @@ network:
 
     # Enable PCM audio over UDP.
     udpAudio: false
-    # Enable meta data such as dstId and srcId in the UDP data
+    # Enable meta data such as dstId and srcId in the UDP data.
     udpMetadata: false
     # PCM over UDP send port.
     udpSendPort: 34001
@@ -68,6 +68,11 @@ network:
     udpReceivePort: 32001
     # PCM over UDP receive address.
     udpReceiveAddress: "127.0.0.1"
+    # Flag indicating UDP audio should be encoded using G.711 uLaw.
+    udpUseULaw: false
+    # Flag indicating UDP audio should be transmitted without the length leader.
+    #   NOTE: This flag is only applicable when encoding G.711 uLaw.
+    udpNoIncludeLength: false
 
     # Source "Radio ID" for transmitted audio frames.
     sourceId: 1234567

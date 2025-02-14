@@ -57,7 +57,7 @@ namespace p25
              */
             class HOST_SW_API MotTSBKFrame {
             public:
-                static const uint8_t LENGTH = 24;
+                static const uint8_t LENGTH = 24U;
 
                 /**
                  * @brief Initializes a copy instance of the MotTSBKFrame class.

@@ -457,6 +457,7 @@ namespace network
         bool m_disallowAdjStsBcast;
         bool m_disallowExtAdjStsBcast;
         bool m_allowConvSiteAffOverride;
+        bool m_disallowCallTerm;
         bool m_restrictGrantToAffOnly;
         bool m_enableInCallCtrl;
         bool m_rejectUnknownRID;
@@ -466,6 +467,7 @@ namespace network
 
         bool m_forceListUpdate;
 
+        bool m_disallowU2U;
         std::vector<uint32_t> m_dropU2UPeerTable;
 
         bool m_enableInfluxDB;

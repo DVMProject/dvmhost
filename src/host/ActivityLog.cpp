@@ -7,7 +7,7 @@
 * @package DVM / Modem Host Software
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+*  Copyright (C) 2024-2025 Bryan Biedenkapp, N2PLL
 *
 */
 #include "ActivityLog.h"
@@ -76,7 +76,7 @@ static bool ActivityLogOpen()
     }
 
     char filename[200U];
-    ::sprintf(filename, "%s/%s-%04d-%02d-%02d.activity.log", LogGetFilePath().c_str(), LogGetFileRoot().c_str(), tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday);
+    ::sprintf(filename, "%s/%s-%04d-%02d-%02d.activity.log", m_actFilePath.c_str(), m_actFileRoot.c_str(), tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday);
 
     m_actFpLog = ::fopen(filename, "a+t");
     m_actTm = *tm;

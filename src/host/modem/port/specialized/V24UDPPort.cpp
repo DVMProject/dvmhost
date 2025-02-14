@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2024-2025 Bryan Biedenkapp, N2PLL
  *
  */
 #include "Defines.h"
@@ -39,12 +39,18 @@ const char* V24_UDP_HARDWARE = "V.24 UDP Modem Controller";
 const uint8_t V24_UDP_PROTOCOL_VERSION = 4U;
 
 // ---------------------------------------------------------------------------
+//  Static Class Members
+// ---------------------------------------------------------------------------
+
+std::mutex V24UDPPort::m_bufferMutex;
+
+// ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the V24UDPPort class. */
 
-V24UDPPort::V24UDPPort(uint32_t peerId, const std::string& address, uint16_t modemPort, uint16_t controlPort, bool useFSC, bool debug) :
+V24UDPPort::V24UDPPort(uint32_t peerId, const std::string& address, uint16_t modemPort, uint16_t controlPort, bool useFSC, bool fscInitiator, bool debug) :
     m_socket(nullptr),
     m_localPort(modemPort),
     m_controlSocket(nullptr),
@@ -55,15 +61,17 @@ V24UDPPort::V24UDPPort(uint32_t peerId, const std::string& address, uint16_t mod
     m_addrLen(0U),
     m_ctrlAddrLen(0U),
     m_buffer(2000U, "UDP Port Ring Buffer"),
+    m_fscInitiator(fscInitiator),
+    m_timeoutTimer(1000U, 45U),
     m_reqConnectionTimer(1000U, 30U),
+    m_heartbeatInterval(5U),
     m_heartbeatTimer(1000U, 5U),
-    m_reqConnectionToPeer(true),
-    m_establishedConnection(false),
     m_random(),
     m_peerId(peerId),
     m_streamId(0U),
     m_timestamp(INVALID_TS),
     m_pktSeq(0U),
+    m_fscState(CS_NOT_CONNECTED),
     m_modemState(STATE_P25),
     m_tx(false),
     m_debug(debug)
@@ -71,7 +79,6 @@ V24UDPPort::V24UDPPort(uint32_t peerId, const std::string& address, uint16_t mod
     assert(peerId > 0U);
     assert(!address.empty());
     assert(modemPort > 0U);
-    assert(controlPort > 0U);
 
     if (controlPort > 0U && useFSC) {
         m_controlSocket = new Socket(controlPort);
@@ -108,13 +115,26 @@ V24UDPPort::~V24UDPPort()
         delete m_socket;
 }
 
+/* Helper to set and configure the heartbeat interval for FSC connections. */
+
+void V24UDPPort::setHeartbeatInterval(uint32_t interval)
+{
+    if (interval < 5U)
+        interval = 5U;
+    if (interval > 30U)
+        interval = 30U;
+
+    m_heartbeatInterval = interval;
+    m_heartbeatTimer = Timer(1000U, interval);
+}
+
 /* Updates the timer by the passed number of milliseconds. */
 
 void V24UDPPort::clock(uint32_t ms)
 {
     // if we have a FSC control socket
     if (m_controlSocket != nullptr) {
-        if (m_reqConnectionToPeer) {
+        if ((m_fscState == CS_NOT_CONNECTED) && m_fscInitiator) {
             if (!m_reqConnectionTimer.isRunning()) {
                 // make initial request
                 writeConnect();
@@ -124,11 +144,12 @@ void V24UDPPort::clock(uint32_t ms)
                 if (m_reqConnectionTimer.isRunning() && m_reqConnectionTimer.hasExpired()) {
                     // make another request
                     writeConnect();
+                    m_reqConnectionTimer.start();
                 }
             }
         }
 
-        if (m_establishedConnection) {
+        if (m_fscState == CS_CONNECTED) {
             m_heartbeatTimer.clock(ms);
             if (m_heartbeatTimer.isRunning() && m_heartbeatTimer.hasExpired()) {
                 writeHeartbeat();
@@ -136,63 +157,22 @@ void V24UDPPort::clock(uint32_t ms)
             }
         }
 
+        m_timeoutTimer.clock(ms);
+        if (m_timeoutTimer.isRunning() && m_timeoutTimer.hasExpired()) {
+            LogError(LOG_NET, "V.24 UDP, DFSI connection to the remote endpoint has timed out, disconnected");
+            m_fscState = CS_NOT_CONNECTED;
+            if (!m_fscInitiator)
+                m_reqConnectionTimer.stop();
+            else
+                m_reqConnectionTimer.start();
+            m_heartbeatTimer.stop();
+            m_timeoutTimer.stop();
+        }
+
         processCtrlNetwork();
     }
 
-    // if we have a RTP voice socket
-    if (m_socket != nullptr) {
-        uint8_t data[BUFFER_LENGTH];
-        ::memset(data, 0x00U, BUFFER_LENGTH);
-
-        sockaddr_storage addr;
-        uint32_t addrLen;
-        int ret = m_socket->read(data, BUFFER_LENGTH, addr, addrLen);
-        if (ret != 0) {
-            // An error occurred on the socket
-            if (ret < 0)
-                return;
-
-            // Add new data to the ring buffer
-            if (ret > 0) {
-                RTPHeader rtpHeader = RTPHeader();
-                rtpHeader.decode(data);
-
-                // ensure payload type is correct
-                if (rtpHeader.getPayloadType() != DFSI_RTP_PAYLOAD_TYPE)
-                {
-                    LogError(LOG_MODEM, "Invalid RTP header received from network");
-                    return;
-                }
-
-                // copy message
-                uint32_t messageLength = ret - RTP_HEADER_LENGTH_BYTES;
-                UInt8Array __message = std::make_unique<uint8_t[]>(messageLength);
-                uint8_t* message = __message.get();
-                ::memset(message, 0x00U, messageLength);
-
-                ::memcpy(message, data + RTP_HEADER_LENGTH_BYTES, messageLength);
-
-                if (udp::Socket::match(addr, m_addr)) {
-                    UInt8Array __reply = std::make_unique<uint8_t[]>(messageLength + 4U);
-                    uint8_t* reply = __reply.get();
-
-                    reply[0U] = DVM_SHORT_FRAME_START;
-                    reply[1U] = messageLength & 0xFFU;
-                    reply[2U] = CMD_P25_DATA;
-
-                    reply[3U] = 0x00U;
-
-                    ::memcpy(reply + 4U, message, messageLength);
-
-                    m_buffer.addData(reply, messageLength + 4U);
-                }
-                else {
-                    std::string addrStr = udp::Socket::address(addr);
-                    LogWarning(LOG_HOST, "SECURITY: Remote modem mode encountered invalid IP address; %s", addrStr.c_str());
-                }
-            }
-        }
-    }
+    processVCNetwork();
 }
 
 /* Resets the RTP packet sequence and stream ID. */
@@ -204,18 +184,34 @@ void V24UDPPort::reset()
     m_streamId = createStreamId();
 }
 
-/* Opens a connection to the port. */
+/* Opens a connection to the FSC port. */
 
-bool V24UDPPort::open()
+bool V24UDPPort::openFSC()
 {
-    if (m_addrLen == 0U && m_ctrlAddrLen == 0U) {
+    if (m_ctrlAddrLen == 0U) {
         LogError(LOG_NET, "Unable to resolve the address of the modem");
         return false;
     }
 
     if (m_controlSocket != nullptr) {
         return m_controlSocket->open(m_controlAddr);
+    }
+
+    return false;
+}
+
+/* Opens a connection to the port. */
+
+bool V24UDPPort::open()
+{
+    if (m_controlSocket != nullptr) {
+        return true; // FSC mode always returns that the port was opened
     } else {
+        if (m_addrLen == 0U) {
+            LogError(LOG_NET, "Unable to resolve the address of the modem");
+            return false;
+        }
+
         if (m_socket != nullptr) {
             return m_socket->open(m_addr);
         }
@@ -230,6 +226,8 @@ int V24UDPPort::read(uint8_t* buffer, uint32_t length)
 {
     assert(buffer != nullptr);
     assert(length > 0U);
+
+    std::lock_guard<std::mutex> lock(m_bufferMutex);
 
     // Get required data from the ring buffer
     uint32_t avail = m_buffer.dataSize();
@@ -264,7 +262,10 @@ int V24UDPPort::write(const uint8_t* buffer, uint32_t length)
     {
         if (m_socket != nullptr) {
             uint32_t messageLen = 0U;
-            uint8_t* message = generateMessage(buffer + 3U, length - 3U, m_streamId, m_peerId, m_pktSeq, &messageLen);
+            uint8_t* message = generateMessage(buffer + 4U, length - 4U, m_streamId, m_peerId, m_pktSeq, &messageLen);
+
+            if (m_debug)
+                Utils::dump(1U, "!!! Tx Outgoing DFSI UDP", buffer + 4U, length - 4U);
 
             bool written = m_socket->write(message, messageLen, m_addr, m_addrLen);
             if (written)
@@ -285,12 +286,33 @@ int V24UDPPort::write(const uint8_t* buffer, uint32_t length)
     return -1;
 }
 
+/* Closes the connection to the FSC port. */
+
+void V24UDPPort::closeFSC()
+{
+    if (m_controlSocket != nullptr) {
+        if (m_fscState == CS_CONNECTED) {
+            LogMessage(LOG_MODEM, "V.24 UDP, Closing DFSI FSC Connection, vcBasePort = %u", m_localPort);
+
+            FSCDisconnect discoMessage = FSCDisconnect();
+
+            uint8_t buffer[FSCDisconnect::LENGTH];
+            ::memset(buffer, 0x00U, FSCDisconnect::LENGTH);
+            discoMessage.encode(buffer);
+
+            m_ctrlFrameQueue->write(buffer, FSCDisconnect::LENGTH, m_controlAddr, m_ctrlAddrLen);
+
+            Thread::sleep(500U);
+        }
+
+        m_controlSocket->close();
+    }
+}
+
 /* Closes the connection to the port. */
 
 void V24UDPPort::close()
 {
-    if (m_controlSocket != nullptr)
-        m_controlSocket->close();
     if (m_socket != nullptr)
         m_socket->close();
 }
@@ -348,105 +370,322 @@ void* V24UDPPort::threadedCtrlNetworkRx(void* arg)
         }
 
         if (req->length > 0) {
-            if (network->m_reqConnectionToPeer) {
-                // FSC_CONNECT response -- is ... strange
-                if (req->buffer[0] == 1U) {
-                    network->m_reqConnectionToPeer = false;
-                    network->m_reqConnectionTimer.stop();
-                    network->m_establishedConnection = true;
-
-                    FSCConnectResponse resp = FSCConnectResponse(req->buffer);
-                    uint16_t vcBasePort = resp.getVCBasePort();
-
-                    network->m_localPort = vcBasePort;
-                    network->createVCPort(vcBasePort);
-                    network->m_heartbeatTimer.start();
-
-                    uint8_t buffer[FSCConnectResponse::LENGTH];
-                    ::memset(buffer, 0x00U, FSCConnectResponse::LENGTH);
-
-                    resp.setVCBasePort(network->m_localPort);
-                    resp.encode(buffer);
-
-                    network->m_ctrlFrameQueue->write(buffer, FSCConnectResponse::LENGTH, network->m_controlAddr, network->m_ctrlAddrLen);
-                }
-            }
-            else
-            {
-                std::unique_ptr<FSCMessage> message = FSCMessage::createMessage(req->buffer);
-                if (message != nullptr) {
-                    switch (message->getMessageId())
+            std::unique_ptr<FSCMessage> message = FSCMessage::createMessage(req->buffer);
+            if (message != nullptr) {
+                switch (message->getMessageId()) {
+                    case FSCMessageType::FSC_ACK:
                     {
-                        case FSCMessageType::FSC_ACK:
-                            {
-                                FSCACK* ackMessage = static_cast<FSCACK*>(message.get());
-                                switch (ackMessage->getResponseCode())
-                                {
-                                    case FSCAckResponseCode::CONTROL_NAK:
-                                    case FSCAckResponseCode::CONTROL_NAK_CONNECTED:
-                                    case FSCAckResponseCode::CONTROL_NAK_M_UNSUPP:
-                                    case FSCAckResponseCode::CONTROL_NAK_V_UNSUPP:
-                                    case FSCAckResponseCode::CONTROL_NAK_F_UNSUPP:
-                                    case FSCAckResponseCode::CONTROL_NAK_PARMS:
-                                    case FSCAckResponseCode::CONTROL_NAK_BUSY:
-                                        LogError(LOG_MODEM, "V.24 UDP, ACK, ackMessageId = $%02X, ackResponseCode = $%02X", ackMessage->getAckMessageId(), ackMessage->getResponseCode());
-                                        break;
+                        FSCACK* ackMessage = static_cast<FSCACK*>(message.get());
+                        if (network->m_debug)
+                            LogDebug(LOG_MODEM, "V.24 UDP, ACK, ackMessageId = $%02X, ackResponseCode = $%02X, respLength = %u", ackMessage->getAckMessageId(), ackMessage->getResponseCode(), ackMessage->getResponseLength());
 
-                                    case FSCAckResponseCode::CONTROL_ACK:
-                                        {
-                                            if (ackMessage->getAckMessageId() == FSCMessageType::FSC_DISCONNECT) {
-                                                network->m_reqConnectionTimer.stop();
-                                                network->m_reqConnectionToPeer = false;
-                                                network->m_establishedConnection = false;
-                                                network->m_heartbeatTimer.stop();
-                                            }
+                        switch (ackMessage->getResponseCode()) {
+                            case FSCAckResponseCode::CONTROL_NAK:
+                            case FSCAckResponseCode::CONTROL_NAK_CONNECTED:
+                            case FSCAckResponseCode::CONTROL_NAK_M_UNSUPP:
+                            case FSCAckResponseCode::CONTROL_NAK_V_UNSUPP:
+                            case FSCAckResponseCode::CONTROL_NAK_F_UNSUPP:
+                            case FSCAckResponseCode::CONTROL_NAK_PARMS:
+                            case FSCAckResponseCode::CONTROL_NAK_BUSY:
+                                LogError(LOG_MODEM, "V.24 UDP, ACK, ackMessageId = $%02X, ackResponseCode = $%02X", ackMessage->getAckMessageId(), ackMessage->getResponseCode());
+                                break;
+
+                            case FSCAckResponseCode::CONTROL_ACK:
+                            {
+                                switch (ackMessage->getAckMessageId()) {
+                                    case FSCMessageType::FSC_CONNECT:
+                                    {
+                                        uint16_t vcBasePort = __GET_UINT16B(ackMessage->responseData, 1U);
+
+                                        if (network->m_socket != nullptr) {
+                                            network->m_socket->close();
+                                            delete network->m_socket;
+                                            network->m_socket = nullptr;
                                         }
-                                        break;
+
+                                        network->m_localPort = vcBasePort;
+                                        network->createVCPort(vcBasePort);
+                                        network->m_socket->open(network->m_addr);
+
+                                        network->m_fscState = CS_CONNECTED;
+                                        network->m_reqConnectionTimer.stop();
+                                        network->m_heartbeatTimer.start();
+                                        network->m_timeoutTimer.start();
+
+                                        LogMessage(LOG_MODEM, "V.24 UDP, Established DFSI FSC Connection, vcBasePort = %u", vcBasePort);
+                                    }
+                                    break;
+
+                                    case FSCMessageType::FSC_DISCONNECT:
+                                    {
+                                        if (network->m_socket != nullptr) {
+                                            network->m_socket->close();
+                                            delete network->m_socket;
+                                            network->m_socket = nullptr;
+                                        }
+
+                                        network->m_fscState = CS_NOT_CONNECTED;
+                                        if (!network->m_fscInitiator)
+                                            network->m_reqConnectionTimer.stop();
+                                        else
+                                            network->m_reqConnectionTimer.start();
+                                        network->m_heartbeatTimer.stop();
+                                        network->m_timeoutTimer.stop();
+                                    }
+                                    break;
 
                                     default:
-                                        LogError(LOG_MODEM, "V.24 UDP, unknown ACK opcode, ackMessageId = $%02X", ackMessage->getAckMessageId());
                                         break;
                                 }
                             }
                             break;
 
-                        case FSCMessageType::FSC_CONNECT:
-                            {
-                                network->createVCPort(network->m_localPort);
-                                network->m_heartbeatTimer.start();
-
-                                uint8_t buffer[FSCConnectResponse::LENGTH];
-                                ::memset(buffer, 0x00U, FSCConnectResponse::LENGTH);
-
-                                FSCConnectResponse resp = FSCConnectResponse(req->buffer);
-                                resp.setVCBasePort(network->m_localPort);
-                                resp.encode(buffer);
-
-                                network->m_ctrlFrameQueue->write(buffer, FSCConnectResponse::LENGTH, network->m_controlAddr, network->m_ctrlAddrLen);
-                            }
-                            break;
-
-                        case FSCMessageType::FSC_DISCONNECT:
-                            {
-                                network->m_reqConnectionTimer.stop();
-                                network->m_reqConnectionToPeer = false;
-                                network->m_establishedConnection = false;
-                                network->m_heartbeatTimer.stop();
-                            }
-                            break;
-
-                        case FSCMessageType::FSC_HEARTBEAT:
-                            {
-                                if (network->m_establishedConnection) {
-                                    network->writeHeartbeat();
-                                }
-                            }
-                            break;
-
-                        default:
-                            break;
+                            default:
+                                LogError(LOG_MODEM, "V.24 UDP, unknown ACK opcode, ackMessageId = $%02X", ackMessage->getAckMessageId());
+                                break;
+                        }
                     }
+                    break;
+
+                    case FSCMessageType::FSC_CONNECT:
+                    {
+                        FSCConnect* connMessage = static_cast<FSCConnect*>(message.get());
+                        FSCACK ackResp = FSCACK();
+                        ackResp.setCorrelationTag(connMessage->getCorrelationTag());
+                        ackResp.setAckMessageId(FSCMessageType::FSC_CONNECT);
+                        ackResp.setResponseCode(FSCAckResponseCode::CONTROL_ACK);
+                        ackResp.setAckCorrelationTag(connMessage->getCorrelationTag());
+
+                        if (connMessage->getVersion() != 1U) {
+                            ackResp.setResponseCode(FSCAckResponseCode::CONTROL_NAK_V_UNSUPP);
+
+                            uint8_t buffer[FSCACK::LENGTH];
+                            ::memset(buffer, 0x00U, FSCACK::LENGTH);
+                            ackResp.encode(buffer);
+
+                            network->m_ctrlFrameQueue->write(buffer, FSCACK::LENGTH, network->m_controlAddr, network->m_ctrlAddrLen);
+                            break;
+                        }
+
+                        if (network->m_socket != nullptr) {
+                            network->m_socket->close();
+                            delete network->m_socket;
+                            network->m_socket = nullptr;
+                        }
+
+                        uint16_t vcPort = connMessage->getVCBasePort();
+                        network->m_heartbeatInterval = connMessage->getHostHeartbeatPeriod();
+                        if (network->m_heartbeatInterval > 30U)
+                            network->m_heartbeatInterval = 30U;
+                        network->m_localPort = vcPort;
+
+                        network->createVCPort(network->m_localPort);
+                        network->m_socket->open(network->m_addr);
+
+                        network->m_fscState = CS_CONNECTED;
+                        network->m_reqConnectionTimer.stop();
+
+                        if (connMessage->getHostHeartbeatPeriod() > 30U)
+                            LogWarning(LOG_MODEM, "V.24 UDP, DFSI FSC Connection, requested heartbeat of %u, reduce to 30 seconds or less", connMessage->getHostHeartbeatPeriod());
+
+                        network->m_heartbeatTimer = Timer(1000U, network->m_heartbeatInterval);
+                        network->m_heartbeatTimer.start();
+                        network->m_timeoutTimer.start();
+
+                        LogMessage(LOG_MODEM, "V.24 UDP, Incoming DFSI FSC Connection, vcBasePort = %u, hostHBInterval = %u", network->m_localPort, connMessage->getHostHeartbeatPeriod());
+
+                        // construct connect ACK response data
+                        uint8_t respData[3U];
+                        ::memset(respData, 0x00U, 3U);
+
+                        respData[0U] = 1U; // Version 1
+                        __SET_UINT16B(network->m_localPort, respData, 1U);
+
+                        // pack ack
+                        ackResp.setResponseLength(3U);
+                        ackResp.responseData = respData;
+
+                        uint8_t buffer[FSCACK::LENGTH + 3U];
+                        ::memset(buffer, 0x00U, FSCACK::LENGTH + 3U);
+                        ackResp.encode(buffer);
+
+                        network->m_ctrlFrameQueue->write(buffer, FSCACK::LENGTH + 3U, network->m_controlAddr, network->m_ctrlAddrLen);
+                    }
+                    break;
+
+                    case FSCMessageType::FSC_SEL_CHAN:
+                    {
+                        FSCACK ackResp = FSCACK();
+                        ackResp.setCorrelationTag(message->getCorrelationTag());
+                        ackResp.setAckMessageId(FSCMessageType::FSC_SEL_CHAN);
+                        ackResp.setResponseCode(FSCAckResponseCode::CONTROL_ACK);
+                        ackResp.setAckCorrelationTag(message->getCorrelationTag());
+                        ackResp.setResponseLength(0U);
+
+                        uint8_t buffer[FSCACK::LENGTH];
+                        ::memset(buffer, 0x00U, FSCACK::LENGTH);
+                        ackResp.encode(buffer);
+
+                        network->m_ctrlFrameQueue->write(buffer, FSCACK::LENGTH, network->m_controlAddr, network->m_ctrlAddrLen);
+                    }
+                    break;
+
+                    case FSCMessageType::FSC_REPORT_SEL_MODES:
+                    {
+                        FSCACK ackResp = FSCACK();
+                        ackResp.setCorrelationTag(message->getCorrelationTag());
+                        ackResp.setAckMessageId(FSCMessageType::FSC_REPORT_SEL_MODES);
+                        ackResp.setResponseCode(FSCAckResponseCode::CONTROL_ACK);
+                        ackResp.setAckCorrelationTag(message->getCorrelationTag());
+
+                        // construct connect ACK response data
+                        uint8_t respData[5U];
+                        ::memset(respData, 0x00U, 5U);
+
+                        // bryanb: because DVM is essentially a repeater -- we hardcode these values
+                        respData[0U] = 1U; // Version 1
+                        respData[1U] = 1U; // Repeat Inbound Audio
+                        respData[2U] = 0U; // Rx Channel Selection
+                        respData[3U] = 0U; // Tx Channel Selection
+                        respData[4U] = 1U; // Monitor Mode
+
+                        // pack ack
+                        ackResp.setResponseLength(5U);
+                        ackResp.responseData = respData;
+
+                        uint8_t buffer[FSCACK::LENGTH + 5U];
+                        ::memset(buffer, 0x00U, FSCACK::LENGTH + 5U);
+                        ackResp.encode(buffer);
+
+                        network->m_ctrlFrameQueue->write(buffer, FSCACK::LENGTH + 5U, network->m_controlAddr, network->m_ctrlAddrLen);
+                    }
+                    break;
+
+                    case FSCMessageType::FSC_DISCONNECT:
+                    {
+                        LogMessage(LOG_MODEM, "V.24 UDP, DFSI FSC Disconnect, vcBasePort = %u", network->m_localPort);
+
+                        if (network->m_socket != nullptr) {
+                            network->m_socket->close();
+                            delete network->m_socket;
+                            network->m_socket = nullptr;
+                        }
+
+                        network->m_fscState = CS_NOT_CONNECTED;
+                        network->m_reqConnectionTimer.stop();
+                        network->m_heartbeatTimer.stop();
+                        network->m_timeoutTimer.stop();
+                    }
+                    break;
+
+                    case FSCMessageType::FSC_HEARTBEAT:
+                        network->m_timeoutTimer.start();
+                        break;
+
+                    default:
+                        break;
                 }
+            }
+        }
+
+        if (req->buffer != nullptr)
+            delete[] req->buffer;
+        delete req;
+    }
+
+    return nullptr;
+}
+
+/* Process voice conveyance frames from the network. */
+
+void V24UDPPort::processVCNetwork()
+{
+    // if we have a RTP voice socket
+    if (m_socket != nullptr) {
+        uint8_t data[BUFFER_LENGTH];
+        ::memset(data, 0x00U, BUFFER_LENGTH);
+
+        sockaddr_storage addr;
+        uint32_t addrLen;
+        int ret = m_socket->read(data, BUFFER_LENGTH, addr, addrLen);
+        if (ret != 0) {
+            // An error occurred on the socket
+            if (ret < 0)
+                return;
+
+            // Add new data to the ring buffer
+            if (ret > 0) {
+                if (m_debug)
+                    Utils::dump("!!! Rx Incoming DFSI UDP", data, ret);
+
+                V24PacketRequest* req = new V24PacketRequest();
+                req->address = addr;
+                req->addrLen = addrLen;
+
+                req->rtpHeader = RTPHeader();
+                req->rtpHeader.decode(data);
+
+                // ensure payload type is correct
+                if (req->rtpHeader.getPayloadType() != DFSI_RTP_PAYLOAD_TYPE) {
+                    LogError(LOG_MODEM, "Invalid RTP header received from network");
+                    delete req;
+                    return;
+                }
+
+                // copy message
+                req->length = ret - RTP_HEADER_LENGTH_BYTES;
+                req->buffer = new uint8_t[req->length];
+                ::memset(req->buffer, 0x00U, req->length);
+
+                ::memcpy(req->buffer, data + RTP_HEADER_LENGTH_BYTES, req->length);
+
+                if (!Thread::runAsThread(this, threadedVCNetworkRx, req)) {
+                    delete[] req->buffer;
+                    delete req;
+                    return;
+                }
+            }
+        }
+    }
+}
+
+/* Process a data frames from the network. */
+
+void* V24UDPPort::threadedVCNetworkRx(void* arg)
+{
+    V24PacketRequest* req = (V24PacketRequest*)arg;
+    if (req != nullptr) {
+#if defined(_WIN32)
+        ::CloseHandle(req->thread);
+#else
+        ::pthread_detach(req->thread);
+#endif // defined(_WIN32)
+
+        V24UDPPort* network = static_cast<V24UDPPort*>(req->obj);
+        if (network == nullptr) {
+            delete req;
+            return nullptr;
+        }
+
+        if (req->length > 0) {
+            if (udp::Socket::match(req->address, network->m_addr)) {
+                UInt8Array __reply = std::make_unique<uint8_t[]>(req->length + 4U);
+                uint8_t* reply = __reply.get();
+
+                reply[0U] = DVM_SHORT_FRAME_START;
+                reply[1U] = (req->length + 4U) & 0xFFU;
+                reply[2U] = CMD_P25_DATA;
+
+                reply[3U] = 0x00U;
+
+                ::memcpy(reply + 4U, req->buffer, req->length);
+
+                std::lock_guard<std::mutex> lock(m_bufferMutex);
+                network->m_buffer.addData(reply, req->length + 4U);
+            }
+            else {
+                std::string addrStr = udp::Socket::address(req->address);
+                LogWarning(LOG_HOST, "SECURITY: Remote modem mode encountered invalid IP address; %s", addrStr.c_str());
             }
         }
 
@@ -477,9 +716,11 @@ void V24UDPPort::createVCPort(uint16_t port)
 
 void V24UDPPort::writeConnect()
 {
+    LogMessage(LOG_MODEM, "V.24 UDP, Attempting DFSI FSC Connection, peerId = %u, vcBasePort = %u", m_peerId, m_localPort);
+
     FSCConnect connect = FSCConnect();
-    connect.setFSHeartbeatPeriod(5U);   // hardcoded?
-    connect.setHostHeartbeatPeriod(5U); // hardcoded?
+    connect.setFSHeartbeatPeriod(m_heartbeatInterval);
+    connect.setHostHeartbeatPeriod(m_heartbeatInterval);
     connect.setVCBasePort(m_localPort);
     connect.setVCSSRC(m_peerId);
 
@@ -487,6 +728,8 @@ void V24UDPPort::writeConnect()
     ::memset(buffer, 0x00U, FSCConnect::LENGTH);
 
     connect.encode(buffer);
+
+    m_fscState = CS_CONNECTING;
 
     m_ctrlFrameQueue->write(buffer, FSCConnect::LENGTH, m_controlAddr, m_ctrlAddrLen);
 }
@@ -580,6 +823,7 @@ void V24UDPPort::getVersion()
 
     reply[1U] = count;
 
+    std::lock_guard<std::mutex> lock(m_bufferMutex);
     m_buffer.addData(reply, count);
 }
 
@@ -612,6 +856,7 @@ void V24UDPPort::getStatus()
 
     reply[11U] = 0U;
 
+    std::lock_guard<std::mutex> lock(m_bufferMutex);
     m_buffer.addData(reply, 12U);
 }
 
@@ -626,6 +871,7 @@ void V24UDPPort::writeAck(uint8_t type)
     reply[2U] = CMD_ACK;
     reply[3U] = type;
 
+    std::lock_guard<std::mutex> lock(m_bufferMutex);
     m_buffer.addData(reply, 4U);
 }
 
@@ -641,5 +887,6 @@ void V24UDPPort::writeNAK(uint8_t opcode, uint8_t err)
     reply[3U] = opcode;
     reply[4U] = err;
 
+    std::lock_guard<std::mutex> lock(m_bufferMutex);
     m_buffer.addData(reply, 5U);
 }

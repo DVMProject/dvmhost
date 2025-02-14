@@ -218,9 +218,10 @@ protected:
     /**
      * @brief Helper to calculate the Rx/Tx frequencies.
      * @param consoleDisplay Flag indicating output should goto the console log.
+     * @param txFrequency Transmit frequency to use (this will auto calculate the Rx frequency from Tx frequency).
      * @returns bool True, if Rx/Tx frequencies are calculated, otherwise false.
      */
-    bool calculateRxTxFreq(bool consoleDisplay = false);
+    bool calculateRxTxFreq(bool consoleDisplay = false, uint32_t txFrequency = 0U);
     /**
      * @brief Helper to log the system configuration parameters.
      */

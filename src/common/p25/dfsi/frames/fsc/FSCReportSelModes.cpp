@@ -4,10 +4,10 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2024-2025 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2025 Bryan Biedenkapp, N2PLL
  *
  */
-#include "common/p25/dfsi/frames/fsc/FSCDisconnect.h"
+#include "common/p25/dfsi/frames/fsc/FSCReportSelModes.h"
 #include "common/p25/dfsi/DFSIDefines.h"
 #include "common/Utils.h"
 #include "common/Log.h"
@@ -23,9 +23,9 @@ using namespace p25::dfsi::frames::fsc;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/* Initializes a instance of the FSCDisconnect class. */
+/* Initializes a instance of the FSCReportSelModes class. */
 
-FSCDisconnect::FSCDisconnect() : FSCMessage()
+FSCReportSelModes::FSCReportSelModes() : FSCMessage()
 {
-    m_messageId = FSCMessageType::FSC_DISCONNECT;
+    m_messageId = FSCMessageType::FSC_REPORT_SEL_MODES;
 }

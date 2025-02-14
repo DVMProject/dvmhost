@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2016,2017,2018 Jonathan Naylor, G4KLX
- *  Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2017-2025 Bryan Biedenkapp, N2PLL
  *
  */
 #include "Defines.h"
@@ -195,6 +195,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
         m_lastDUID = DUID::LDU1;
 
         bool alreadyDecoded = false;
+        bool hduEncrypt = false;
         FrameType::E frameType = FrameType::DATA_UNIT;
         ulong64_t rsValue = 0U;
         if (m_p25->m_rfState == RS_RF_LISTENING) {
@@ -392,6 +393,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
 
             m_rfLC = lc;
             m_rfLastLDU1 = m_rfLC;
+            hduEncrypt = encrypted;
 
             m_lastRejectId = 0U;
             ::ActivityLog("P25", true, "RF %svoice transmission from %u to %s%u", encrypted ? "encrypted ": "", srcId, group ? "TG " : "", dstId);
@@ -508,17 +510,17 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 uint8_t buffer[P25_HDU_FRAME_LENGTH_BYTES + 2U];
                 ::memset(buffer, 0x00U, P25_HDU_FRAME_LENGTH_BYTES + 2U);
 
-                // Generate Sync
+                // generate Sync
                 Sync::addP25Sync(buffer + 2U);
 
-                // Generate NID
+                // generate NID
                 m_p25->m_nid.encode(buffer + 2U, DUID::HDU);
 
-                // Generate HDU
+                // generate HDU
                 m_rfLC.encodeHDU(buffer + 2U);
 
-                // Add busy bits
-                P25Utils::addStatusBits(buffer + 2U, P25_HDU_FRAME_LENGTH_BITS, m_inbound);
+                // add status bits
+                P25Utils::addStatusBits(buffer + 2U, P25_HDU_FRAME_LENGTH_BITS, m_inbound, false);
 
                 writeNetwork(buffer, DUID::HDU);
 
@@ -660,6 +662,10 @@ bool Voice::process(uint8_t* data, uint32_t len)
                     m_rfLastLDU1 = m_rfLC;
                 }
             }
+            else {
+                // this might be the first LDU1 -- set the encryption flag if necessary
+                m_rfLC.setEncrypted(hduEncrypt);
+            }
 
             m_inbound = true;
 
@@ -740,8 +746,8 @@ bool Voice::process(uint8_t* data, uint32_t len)
             m_rfErrs += errors;
             m_rfFrames++;
 
-            // add busy bits
-            P25Utils::addStatusBits(data + 2U, P25_LDU_FRAME_LENGTH_BITS, m_inbound);
+            // add status bits
+            P25Utils::addStatusBits(data + 2U, P25_LDU_FRAME_LENGTH_BITS, m_inbound, false);
 
             writeNetwork(data + 2U, DUID::LDU1, frameType);
 
@@ -857,8 +863,8 @@ bool Voice::process(uint8_t* data, uint32_t len)
             m_rfErrs += errors;
             m_rfFrames++;
 
-            // add busy bits
-            P25Utils::addStatusBits(data + 2U, P25_LDU_FRAME_LENGTH_BITS, m_inbound);
+            // add status bits
+            P25Utils::addStatusBits(data + 2U, P25_LDU_FRAME_LENGTH_BITS, m_inbound, false);
 
             writeNetwork(data + 2U, DUID::LDU2);
 
@@ -937,17 +943,17 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 uint8_t buffer[P25_HDU_FRAME_LENGTH_BYTES + 2U];
                 ::memset(buffer, 0x00U, P25_HDU_FRAME_LENGTH_BYTES + 2U);
 
-                // Generate Sync
+                // generate Sync
                 Sync::addP25Sync(buffer + 2U);
 
-                // Generate NID
+                // generate NID
                 m_p25->m_nid.encode(buffer + 2U, DUID::HDU);
 
-                // Generate HDU
+                // generate HDU
                 m_rfLC.encodeHDU(buffer + 2U);
 
-                // Add busy bits
-                P25Utils::addStatusBits(buffer + 2U, P25_HDU_FRAME_LENGTH_BITS, m_inbound);
+                // add status bits
+                P25Utils::addStatusBits(buffer + 2U, P25_HDU_FRAME_LENGTH_BITS, m_inbound, false);
 
                 writeNetwork(buffer, DUID::HDU);
 
@@ -989,8 +995,8 @@ bool Voice::process(uint8_t* data, uint32_t len)
             // generate NID
             m_p25->m_nid.encode(data + 2U, DUID::VSELP1);
 
-            // add busy bits
-            P25Utils::addStatusBits(data + 2U, P25_LDU_FRAME_LENGTH_BITS, m_inbound);
+            // add status bits
+            P25Utils::addStatusBits(data + 2U, P25_LDU_FRAME_LENGTH_BITS, m_inbound, false);
 
             writeNetwork(data + 2U, DUID::VSELP1);
 
@@ -1031,8 +1037,8 @@ bool Voice::process(uint8_t* data, uint32_t len)
             // generate NID
             m_p25->m_nid.encode(data + 2U, DUID::VSELP2);
 
-            // add busy bits
-            P25Utils::addStatusBits(data + 2U, P25_LDU_FRAME_LENGTH_BITS, m_inbound);
+            // add status bits
+            P25Utils::addStatusBits(data + 2U, P25_LDU_FRAME_LENGTH_BITS, m_inbound, false);
 
             writeNetwork(data + 2U, DUID::VSELP2);
 
@@ -1136,6 +1142,12 @@ bool Voice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
         if (m_p25->m_rfLastDstId == dstId && (m_p25->m_rfTGHang.isRunning() && !m_p25->m_rfTGHang.hasExpired())) {
             m_p25->m_rfTGHang.start();
         }
+    }
+
+    // bryanb: possible fix for a "tail ride" condition where network traffic immediately follows RF traffic *while*
+    // the RF TG hangtimer is running
+    if (m_p25->m_rfTGHang.isRunning() && !m_p25->m_rfTGHang.hasExpired()) {
+        m_p25->m_rfTGHang.stop();
     }
 
     // perform authoritative network TG hangtimer and traffic preemption
@@ -1347,6 +1359,17 @@ bool Voice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
             break;
         case DUID::TDU:
         case DUID::TDULC:
+            if (duid == DUID::TDULC) {
+                std::unique_ptr<lc::TDULC> tdulc = lc::tdulc::TDULCFactory::createTDULC(data);
+                if (tdulc == nullptr) {
+                    LogWarning(LOG_NET, P25_TDULC_STR ", undecodable TDULC");
+                }
+                else {
+                    if (tdulc->getLCO() != LCO::CALL_TERM)
+                        break;
+                }
+            }
+
             // ignore a TDU that doesn't contain our destination ID
             if (control.getDstId() != m_p25->m_netLastDstId) {
                 return false;
@@ -1507,14 +1530,14 @@ void Voice::writeNet_TDU()
     buffer[0U] = modem::TAG_EOT;
     buffer[1U] = 0x00U;
 
-    // Generate Sync
+    // generate Sync
     Sync::addP25Sync(buffer + 2U);
 
-    // Generate NID
+    // generate NID
     m_p25->m_nid.encode(buffer + 2U, DUID::TDU);
 
-    // Add busy bits
-    P25Utils::addStatusBits(buffer + 2U, P25_TDU_FRAME_LENGTH_BITS, false);
+    // add status bits
+    P25Utils::addStatusBits(buffer + 2U, P25_TDU_FRAME_LENGTH_BITS, false, false);
 
     m_p25->addFrame(buffer, P25_TDU_FRAME_LENGTH_BYTES + 2U, true);
 
@@ -1776,17 +1799,17 @@ void Voice::writeNet_LDU1()
                 uint8_t buffer[P25_HDU_FRAME_LENGTH_BYTES + 2U];
                 ::memset(buffer, 0x00U, P25_HDU_FRAME_LENGTH_BYTES + 2U);
 
-                // Generate Sync
+                // generate Sync
                 Sync::addP25Sync(buffer + 2U);
 
-                // Generate NID
+                // generate NID
                 m_p25->m_nid.encode(buffer + 2U, DUID::HDU);
 
-                // Generate header
+                // generate HDU
                 m_netLC.encodeHDU(buffer + 2U);
 
-                // Add busy bits
-                P25Utils::addStatusBits(buffer + 2U, P25_HDU_FRAME_LENGTH_BITS, false);
+                // add status bits
+                P25Utils::addStatusBits(buffer + 2U, P25_HDU_FRAME_LENGTH_BITS, false, false);
 
                 buffer[0U] = modem::TAG_DATA;
                 buffer[1U] = 0x00U;
@@ -1864,13 +1887,13 @@ void Voice::writeNet_LDU1()
     uint8_t buffer[P25_LDU_FRAME_LENGTH_BYTES + 2U];
     ::memset(buffer, 0x00U, P25_LDU_FRAME_LENGTH_BYTES + 2U);
 
-    // Generate Sync
+    // generate Sync
     Sync::addP25Sync(buffer + 2U);
 
-    // Generate NID
+    // generate NID
     m_p25->m_nid.encode(buffer + 2U, DUID::LDU1);
 
-    // Generate LDU1 data
+    // generate LDU1 data
     if (!m_netLC.isStandardMFId()) {
         if (m_debug) {
             LogDebug(LOG_NET, "P25, LDU1 LC, non-standard payload, lco = $%02X, mfId = $%02X", m_netLC.getLCO(), m_netLC.getMFId());
@@ -1880,7 +1903,7 @@ void Voice::writeNet_LDU1()
 
     m_netLC.encodeLDU1(buffer + 2U);
 
-    // Add the Audio
+    // add the Audio
     m_audio.encode(buffer + 2U, m_netLDU1 + 10U, 0U);
     m_audio.encode(buffer + 2U, m_netLDU1 + 26U, 1U);
     m_audio.encode(buffer + 2U, m_netLDU1 + 55U, 2U);
@@ -1891,13 +1914,13 @@ void Voice::writeNet_LDU1()
     m_audio.encode(buffer + 2U, m_netLDU1 + 180U, 7U);
     m_audio.encode(buffer + 2U, m_netLDU1 + 204U, 8U);
 
-    // Add the Low Speed Data
+    // add the Low Speed Data
     m_netLSD.setLSD1(lsd.getLSD1());
     m_netLSD.setLSD2(lsd.getLSD2());
     m_netLSD.encode(buffer + 2U);
 
-    // Add busy bits
-    P25Utils::addStatusBits(buffer + 2U, P25_LDU_FRAME_LENGTH_BITS, false);
+    // add status bits
+    P25Utils::addStatusBits(buffer + 2U, P25_LDU_FRAME_LENGTH_BITS, false, false);
 
     buffer[0U] = modem::TAG_DATA;
     buffer[1U] = 0x00U;
@@ -1962,16 +1985,16 @@ void Voice::writeNet_LDU2()
     uint8_t buffer[P25_LDU_FRAME_LENGTH_BYTES + 2U];
     ::memset(buffer, 0x00U, P25_LDU_FRAME_LENGTH_BYTES + 2U);
 
-    // Generate Sync
+    // generate Sync
     Sync::addP25Sync(buffer + 2U);
 
-    // Generate NID
+    // generate NID
     m_p25->m_nid.encode(buffer + 2U, DUID::LDU2);
 
-    // Generate LDU2 data
+    // generate LDU2 data
     m_netLC.encodeLDU2(buffer + 2U);
 
-    // Add the Audio
+    // add the Audio
     m_audio.encode(buffer + 2U, m_netLDU2 + 10U, 0U);
     m_audio.encode(buffer + 2U, m_netLDU2 + 26U, 1U);
     m_audio.encode(buffer + 2U, m_netLDU2 + 55U, 2U);
@@ -1982,13 +2005,13 @@ void Voice::writeNet_LDU2()
     m_audio.encode(buffer + 2U, m_netLDU2 + 180U, 7U);
     m_audio.encode(buffer + 2U, m_netLDU2 + 204U, 8U);
 
-    // Add the Low Speed Data
+    // add the Low Speed Data
     m_netLSD.setLSD1(lsd.getLSD1());
     m_netLSD.setLSD2(lsd.getLSD2());
     m_netLSD.encode(buffer + 2U);
 
-    // Add busy bits
-    P25Utils::addStatusBits(buffer + 2U, P25_LDU_FRAME_LENGTH_BITS, false);
+    // add status bits
+    P25Utils::addStatusBits(buffer + 2U, P25_LDU_FRAME_LENGTH_BITS, false, false);
 
     buffer[0U] = modem::TAG_DATA;
     buffer[1U] = 0x00U;

@@ -102,7 +102,7 @@ public:
             FMessageBox info("About", line + __PROG_NAME__ + line + L"\n\n"
                 L"" + __BANNER__ + L"\n"
                 L"Version " + __VER__ + L"\n\n"
-                L"Copyright (c) 2017-2024 Bryan Biedenkapp, N2PLL and DVMProject (https://github.com/dvmproject) Authors." + L"\n"
+                L"Copyright (c) 2017-2025 Bryan Biedenkapp, N2PLL and DVMProject (https://github.com/dvmproject) Authors." + L"\n"
                 L"Portions Copyright (c) 2015-2021 by Jonathan Naylor, G4KLX and others", 
                 FMessageBox::ButtonType::Ok, FMessageBox::ButtonType::Reject, FMessageBox::ButtonType::Reject, this);
             info.setCenterText();

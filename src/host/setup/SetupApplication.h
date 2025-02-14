@@ -193,15 +193,15 @@ protected:
                 uint8_t data[P25_TDU_FRAME_LENGTH_BYTES + 2U];
                 ::memset(data + 2U, 0x00U, P25_TDU_FRAME_LENGTH_BYTES);
 
-                // Generate Sync
+                // generate Sync
                 p25::Sync::addP25Sync(data + 2U);
 
-                // Generate NID
+                // generate NID
                 std::unique_ptr<p25::NID> nid = std::make_unique<p25::NID>(1U);
                 nid->encode(data + 2U, DUID::TDU);
 
-                // Add busy bits
-                p25::P25Utils::addStatusBits(data + 2U, P25_TDU_FRAME_LENGTH_BITS, false);
+                // add status bits
+                p25::P25Utils::addStatusBits(data + 2U, P25_TDU_FRAME_LENGTH_BITS, false, false);
 
                 data[0U] = modem::TAG_EOT;
                 data[1U] = 0x00U;

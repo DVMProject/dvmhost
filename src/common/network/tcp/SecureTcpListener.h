@@ -7,7 +7,7 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+*  Copyright (C) 2024-2025 Bryan Biedenkapp, N2PLL
 *
 */
 /**
@@ -109,9 +109,10 @@ namespace network
 
             /**
              * @brief Accept a new TCP connection either secure or unsecure.
+             * @param nonBlocking Flag indicating accepted TCP connections should use non-blocking sockets.
              * @returns SecureTcpClient* Newly accepted TCP connection.
              */
-            [[nodiscard]] SecureTcpClient* accept()
+            [[nodiscard]] SecureTcpClient* accept(bool nonBlocking = false)
             {
                 sockaddr_in client = {};
                 socklen_t clientLen = sizeof(client);
@@ -120,7 +121,7 @@ namespace network
                     return nullptr;
                 }
 
-                return new SecureTcpClient(fd, m_pSSLCtx, client, clientLen);
+                return new SecureTcpClient(fd, m_pSSLCtx, client, clientLen, nonBlocking);
             }
 
         private:

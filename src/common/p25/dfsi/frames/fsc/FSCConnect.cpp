@@ -34,17 +34,6 @@ FSCConnect::FSCConnect() : FSCMessage(),
     m_messageId = FSCMessageType::FSC_CONNECT;
 }
 
-/* Initializes a instance of the FSCConnect class. */
-
-FSCConnect::FSCConnect(const uint8_t* data) : FSCMessage(data),
-    m_vcBasePort(0U),
-    m_vcSSRC(0U),
-    m_fsHeartbeatPeriod(5U),
-    m_hostHeartbeatPeriod(5U)
-{
-    decode(data);
-}
-
 /* Decode a FSC connect frame. */
 
 bool FSCConnect::decode(const uint8_t* data)

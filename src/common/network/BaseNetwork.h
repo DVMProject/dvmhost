@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2015,2016,2017,2018 Jonathan Naylor, G4KLX
- *  Copyright (C) 2020-2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2020-2025 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -84,6 +84,7 @@ namespace network
     const uint32_t  P25_LDU1_PACKET_LENGTH = 193U;  // 24 byte header + DFSI data + 1 byte frame type + 12 byte enc sync
     const uint32_t  P25_LDU2_PACKET_LENGTH = 181U;  // 24 byte header + DFSI data + 1 byte frame type
     const uint32_t  P25_TSDU_PACKET_LENGTH = 69U;   // 24 byte header + TSDU data
+    const uint32_t  P25_TDULC_PACKET_LENGTH = 78U;  // 24 byte header + TDULC data
 
     /**
      * @brief Network Peer Connection Status
@@ -382,6 +383,13 @@ namespace network
          */
         virtual bool writeP25TSDU(const p25::lc::LC& control, const uint8_t* data);
         /**
+         * @brief Writes P25 TDULC frame data to the network.
+         * @param[in] control Instance of p25::lc::LC containing link control data.
+         * @param[in] data Buffer containing P25 TDULC data to send.
+         * @returns bool True, if message was sent, otherwise false.
+         */
+        virtual bool writeP25TDULC(const p25::lc::LC& control, const uint8_t* data);
+        /**
          * @brief Writes P25 PDU frame data to the network.
          * @param[in] dataHeader Instance of p25::data::DataHeader containing PDU header data.
          * @param currentBlock Current block index being sent.
@@ -633,6 +641,19 @@ namespace network
          * @returns UInt8Array Buffer containing the built network message.
          */
         UInt8Array createP25_TSDUMessage(uint32_t& length, const p25::lc::LC& control, const uint8_t* data);
+
+        /**
+         * @brief Creates an P25 TDULC frame message.
+         * 
+         *  The data packed into a P25 TDULC frame message is essentially just a message header with the FEC encoded
+         *  raw TDULC data.
+         * 
+         * @param[out] length Length of network message buffer.
+         * @param[in] control Instance of p25::lc::LC containing link control data.
+         * @param[in] data Buffer containing P25 TDULC data to send.
+         * @returns UInt8Array Buffer containing the built network message.
+         */
+        UInt8Array createP25_TDULCMessage(uint32_t& length, const p25::lc::LC& control, const uint8_t* data);
 
         /**
          * @brief Creates an P25 PDU frame message.

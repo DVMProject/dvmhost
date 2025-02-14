@@ -21,6 +21,12 @@ using namespace lookups;
 const uint32_t UNIT_REG_TIMEOUT = 43200U; // 12 hours
 
 // ---------------------------------------------------------------------------
+//  Static Class Members
+// ---------------------------------------------------------------------------
+
+std::mutex AffiliationLookup::m_mutex;
+
+// ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
@@ -297,6 +303,7 @@ bool AffiliationLookup::grantCh(uint32_t dstId, uint32_t srcId, uint32_t grantTi
         return false;
     }
 
+    std::lock_guard<std::mutex> lock(m_mutex);
     uint32_t chNo = m_chLookup->getFirstRFChannel();
     m_chLookup->removeRFCh(chNo);
 
@@ -326,6 +333,7 @@ void AffiliationLookup::touchGrant(uint32_t dstId)
         return;
     }
 
+    std::lock_guard<std::mutex> lock(m_mutex);
     if (isGranted(dstId)) {
         m_grantTimers[dstId].start();
     }
@@ -333,11 +341,14 @@ void AffiliationLookup::touchGrant(uint32_t dstId)
 
 /* Helper to release the channel grant for the destination ID. */
 
-bool AffiliationLookup::releaseGrant(uint32_t dstId, bool releaseAll)
+bool AffiliationLookup::releaseGrant(uint32_t dstId, bool releaseAll, bool noLock)
 {
     if (dstId == 0U && !releaseAll) {
         return false;
     }
+
+    if (!noLock)
+        m_mutex.lock();
 
     // are we trying to release all grants?
     if (dstId == 0U && releaseAll) {
@@ -354,6 +365,8 @@ bool AffiliationLookup::releaseGrant(uint32_t dstId, bool releaseAll)
             releaseGrant(dstId, false);
         }
 
+        if (!noLock)
+            m_mutex.unlock();
         return true;
     }
 
@@ -383,9 +396,14 @@ bool AffiliationLookup::releaseGrant(uint32_t dstId, bool releaseAll)
         }
 
         m_grantTimers[dstId].stop();
+
+        if (!noLock)
+            m_mutex.unlock();
         return true;
     }
 
+    if (!noLock)
+        m_mutex.unlock();
     return false;
 }
 
@@ -527,6 +545,8 @@ uint32_t AffiliationLookup::getGrantedSrcId(uint32_t dstId)
 
 void AffiliationLookup::clock(uint32_t ms)
 {
+    std::lock_guard<std::mutex> lock(m_mutex);
+
     // clock all the grant timers
     std::vector<uint32_t> gntsToRel = std::vector<uint32_t>();
     for (auto entry : m_grantChTable) {
@@ -540,7 +560,7 @@ void AffiliationLookup::clock(uint32_t ms)
 
     // release grants that have timed out
     for (uint32_t dstId : gntsToRel) {
-        releaseGrant(dstId, false);
+        releaseGrant(dstId, false, true);
     }
 
     if (!m_disableUnitRegTimeout) {

@@ -29,19 +29,9 @@ using namespace p25::dfsi::frames::fsc;
 FSCMessage::FSCMessage() :
     m_messageId(FSCMessageType::FSC_INVALID),
     m_version(1U),
-    m_correlationTag(0U)
+    m_correlationTag(1U)
 {
     /* stub */
-}
-
-/* Initializes a instance of the FSCMessage class. */
-
-FSCMessage::FSCMessage(const uint8_t* data) :
-    m_messageId(FSCMessageType::FSC_INVALID),
-    m_version(1U),
-    m_correlationTag(0U)
-{
-    decode(data);
 }
 
 /* Decode a FSC message frame. */
@@ -78,24 +68,42 @@ std::unique_ptr<FSCMessage> FSCMessage::createMessage(const uint8_t* data)
 {
     assert(data != nullptr);
 
-    uint8_t msg[FSCMessage::LENGTH + 1U];
-    ::memset(msg, 0x00U, FSCMessage::LENGTH);
+    uint8_t messageId = (FSCMessageType::E)(data[0U]);           // Message ID
 
-    uint8_t messageId = (FSCMessageType::E)(msg[0U]);           // Message ID
+    FSCMessage* message = nullptr;
 
     // standard P25 reference opcodes
     switch (messageId) {
     case FSCMessageType::FSC_CONNECT:
-        return std::unique_ptr<FSCMessage>(new FSCConnect(data));
-    case FSCMessageType::FSC_HEARTBEAT:
-        return std::unique_ptr<FSCMessage>(new FSCHeartbeat(data));
-    case FSCMessageType::FSC_ACK:
-        return std::unique_ptr<FSCMessage>(new FSCACK(data));
-    case FSCMessageType::FSC_DISCONNECT:
-        return std::unique_ptr<FSCMessage>(new FSCDisconnect(data));
-    default:
-        LogError(LOG_P25, "FSCMessage::create(), unknown message value, messageId = $%02X", messageId);
+        message = new FSCConnect();
         break;
+    case FSCMessageType::FSC_HEARTBEAT:
+        message = new FSCHeartbeat();
+        break;
+    case FSCMessageType::FSC_ACK:
+        message = new FSCACK();
+        break;
+    case FSCMessageType::FSC_REPORT_SEL_MODES:
+        message = new FSCReportSelModes();
+        break;
+    case FSCMessageType::FSC_SEL_CHAN:
+        message = new FSCSelChannel();
+        break;
+    case FSCMessageType::FSC_DISCONNECT:
+        message = new FSCDisconnect();
+        break;
+
+    default:
+        LogError(LOG_P25, "FSCMessage::createMessage(), unknown message value, messageId = $%02X", messageId);
+        break;
+    }
+
+    if (message != nullptr) {
+        if (!message->decode(data)) {
+            return nullptr;
+        }
+
+        return std::unique_ptr<FSCMessage>(message);
     }
 
     return nullptr;

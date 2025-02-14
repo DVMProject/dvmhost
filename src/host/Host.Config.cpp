@@ -7,7 +7,7 @@
 * @package DVM / Modem Host Software
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*  Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
+*  Copyright (C) 2017-2025 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
@@ -432,7 +432,7 @@ bool Host::createModem()
     uint8_t afcRange = (uint8_t)hotspotParams["afcRange"].as<uint32_t>(1U);
     int rxTuning = hotspotParams["rxTuning"].as<int>(0);
     int txTuning = hotspotParams["txTuning"].as<int>(0);
-    uint8_t rfPower = (uint8_t)hotspotParams["rfPower"].as<uint32_t>(100U);
+    uint8_t rfPower = (uint8_t)hotspotParams["rfPower"].as<uint32_t>(95U);
 
     yaml::Node repeaterParams = modemConf["repeater"];
 
@@ -461,8 +461,11 @@ bool Host::createModem()
     bool rtrt = dfsiParams["rtrt"].as<bool>(true);
     bool diu = dfsiParams["diu"].as<bool>(true);
     uint16_t jitter = dfsiParams["jitter"].as<uint16_t>(200U);
-    bool useFSCForUDP = dfsiParams["useFSC"].as<bool>(false);
     uint16_t dfsiCallTimeout = dfsiParams["callTimeout"].as<uint16_t>(200U);
+    bool useFSCForUDP = dfsiParams["fsc"].as<bool>(false);
+    uint32_t fscHeartbeat = dfsiParams["fscHeartbeat"].as<uint32_t>(5U);
+    bool fscInitiator = dfsiParams["initiator"].as<bool>(false);
+    bool dfsiTIAMode = dfsiParams["dfsiTIAMode"].as<bool>(false);
 
     // clamp fifo sizes
     if (dmrFifoLength < DMR_TX_BUFFER_LEN) {
@@ -552,12 +555,17 @@ bool Host::createModem()
         }
 
         if (portType == PTY_PORT) {
-            modemPort = new port::UARTPort(uartPort, serialSpeed, false);
+            modemPort = new port::UARTPort(uartPort, serialSpeed, false, false);
             LogInfo("    PTY Port: %s", uartPort.c_str());
             LogInfo("    PTY Speed: %u", uartSpeed);
         }
         else {
-            modemPort = new port::UARTPort(uartPort, serialSpeed, true);
+            if (modemMode == MODEM_MODE_DFSI) {
+                modemPort = new port::UARTPort(uartPort, serialSpeed, false, true);
+                LogInfo("    RTS/DTR boot flags enabled");
+            } else {
+                modemPort = new port::UARTPort(uartPort, serialSpeed, true, false);
+            }
             LogInfo("    UART Port: %s", uartPort.c_str());
             LogInfo("    UART Speed: %u", uartSpeed);
         }
@@ -575,6 +583,9 @@ bool Host::createModem()
         LogInfo("    DFSI Jitter Size: %u ms", jitter);
         if (g_remoteModemMode) {
             LogInfo("    DFSI Use FSC: %s", useFSCForUDP ? "yes" : "no");
+            LogInfo("    DFSI FSC Heartbeat: %us", fscHeartbeat);
+            LogInfo("    DFSI FSC Initiator: %s", fscInitiator ? "yes" : "no");
+            LogInfo("    DFSI TIA-102 Frames: %s", dfsiTIAMode ? "yes" : "no");
         }
     }
 
@@ -589,8 +600,13 @@ bool Host::createModem()
             if (modemMode == MODEM_MODE_DFSI) {
                 yaml::Node networkConf = m_conf["network"];
                 uint32_t id = networkConf["id"].as<uint32_t>(1000U);
-                modemPort = new port::specialized::V24UDPPort(id, g_remoteAddress, g_remotePort, g_remotePort, useFSCForUDP, debug);
-                m_udpDSFIRemotePort = modemPort;
+                if (useFSCForUDP) {
+                    modemPort = new port::specialized::V24UDPPort(id, g_remoteAddress, g_remotePort + 1U, g_remotePort, true, fscInitiator, debug);
+                    ((modem::port::specialized::V24UDPPort*)modemPort)->setHeartbeatInterval(fscHeartbeat);
+               } else {
+                    modemPort = new port::specialized::V24UDPPort(id, g_remoteAddress, g_remotePort, 0U, false, false, debug);
+                }
+                m_udpDFSIRemotePort = modemPort;
             } else {
                 modemPort = new port::UDPPort(g_remoteAddress, g_remotePort);
             }
@@ -620,7 +636,7 @@ bool Host::createModem()
         LogInfo("    RX Coarse: %u, Fine: %u", rxCoarse, rxFine);
         LogInfo("    TX Coarse: %u, Fine: %u", txCoarse, txFine);
         LogInfo("    RSSI Coarse: %u, Fine: %u", rssiCoarse, rssiFine);
-        LogInfo("    RF Power Level: %u", rfPower);
+        LogInfo("    RF Power Level: %u%", rfPower);
         LogInfo("    RX Level: %.1f%%", rxLevel);
         LogInfo("    CW Id TX Level: %.1f%%", cwIdTXLevel);
         LogInfo("    DMR TX Level: %.1f%%", dmrTXLevel);
@@ -651,6 +667,7 @@ bool Host::createModem()
         m_modem = new ModemV24(modemPort, m_duplex, m_p25QueueSizeBytes, m_p25QueueSizeBytes, rtrt, diu, jitter,
             dumpModemStatus, trace, debug);
         ((ModemV24*)m_modem)->setCallTimeout(dfsiCallTimeout);
+        ((ModemV24*)m_modem)->setTIAFormat(dfsiTIAMode);
     } else {
         m_modem = new Modem(modemPort, m_duplex, rxInvert, txInvert, pttInvert, dcBlocker, cosLockout, fdmaPreamble, dmrRxDelay, p25CorrCount,
             m_dmrQueueSizeBytes, m_p25QueueSizeBytes, m_nxdnQueueSizeBytes, disableOFlowReset, ignoreModemConfigArea, dumpModemStatus, trace, debug);
@@ -674,6 +691,11 @@ bool Host::createModem()
         m_modem->setOpenHandler(MODEM_OC_PORT_HANDLER_BIND(Host::rmtPortModemOpen, this));
         m_modem->setCloseHandler(MODEM_OC_PORT_HANDLER_BIND(Host::rmtPortModemClose, this));
         m_modem->setResponseHandler(MODEM_RESP_HANDLER_BIND(Host::rmtPortModemHandler, this));
+    }
+
+    if (useFSCForUDP) {
+        modem::port::specialized::V24UDPPort* udpPort = dynamic_cast<modem::port::specialized::V24UDPPort*>(m_udpDFSIRemotePort);
+        udpPort->openFSC();
     }
 
     bool ret = m_modem->open();

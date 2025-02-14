@@ -50,8 +50,8 @@ namespace p25
              */
             class HOST_SW_API MotStartOfStream {
             public:
-                static const uint8_t LENGTH = 10;
-                static const uint8_t FIXED_MARKER = 0x02;
+                static const uint8_t LENGTH = 10U;
+                static const uint8_t FIXED_MARKER = 0x02U;
 
                 /**
                  * @brief Initializes a copy instance of the MotStartOfStream class.

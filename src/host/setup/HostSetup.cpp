@@ -598,7 +598,7 @@ void HostSetup::saveConfig()
 
 /* Helper to calculate the Rx/Tx frequencies. */
 
-bool HostSetup::calculateRxTxFreq(bool consoleDisplay)
+bool HostSetup::calculateRxTxFreq(bool consoleDisplay, uint32_t txFrequency)
 {
     IdenTable entry = m_idenTable->find(m_channelId);
     if (entry.baseFrequency() == 0U) {
@@ -610,37 +610,59 @@ bool HostSetup::calculateRxTxFreq(bool consoleDisplay)
         return false;
     }
 
-    yaml::Node systemConf = m_conf["system"];
-    yaml::Node rfssConfig = systemConf["config"];
-    m_channelNo = (uint32_t)::strtoul(rfssConfig["channelNo"].as<std::string>("1").c_str(), NULL, 16);
-    if (m_channelNo == 0U) { // clamp to 1
-        m_channelNo = 1U;
-    }
-    if (m_channelNo > 4095U) { // clamp to 4095
-        m_channelNo = 4095U;
-    }
+    if (txFrequency > 0U) {
+        uint32_t prevTxFrequency = m_txFrequency;
+        m_txFrequency = txFrequency;
+        uint32_t prevRxFrequency = m_rxFrequency;
+        m_rxFrequency = m_txFrequency + (uint32_t)(entry.txOffsetMhz() * 1000000);
 
-    if (m_startupDuplex) {
-        if (entry.txOffsetMhz() == 0U) {
-            if (consoleDisplay) {
-                g_logDisplayLevel = 1U;
-            }
+        float spaceHz = entry.chSpaceKhz() * 1000.0;
 
-            ::LogError(LOG_HOST, "Channel Id %u has an invalid Tx offset.", m_channelId);
-            return false;
+        uint32_t rootFreq = m_txFrequency - entry.baseFrequency();
+        uint8_t prevChannelNo = m_channelNo;
+        m_channelNo = (uint32_t)(rootFreq / spaceHz);
+
+        if (m_channelNo < 0 || m_channelNo > 4096) {
+            m_channelNo = prevChannelNo;
+            m_txFrequency = prevTxFrequency;
+            m_rxFrequency = prevRxFrequency;
         }
 
-        uint32_t calcSpace = (uint32_t)(entry.chSpaceKhz() / 0.125);
-        float calcTxOffset = entry.txOffsetMhz() * 1000000.0;
-
-        m_rxFrequency = (uint32_t)((entry.baseFrequency() + ((calcSpace * 125) * m_channelNo)) + (int32_t)calcTxOffset);
-        m_txFrequency = (uint32_t)((entry.baseFrequency() + ((calcSpace * 125) * m_channelNo)));
+        m_conf["system"]["config"]["channelNo"] = __INT_HEX_STR(m_channelNo);
     }
     else {
-        uint32_t calcSpace = (uint32_t)(entry.chSpaceKhz() / 0.125);
+        yaml::Node systemConf = m_conf["system"];
+        yaml::Node rfssConfig = systemConf["config"];
+        m_channelNo = (uint32_t)::strtoul(rfssConfig["channelNo"].as<std::string>("1").c_str(), NULL, 16);
+        if (m_channelNo == 0U) { // clamp to 1
+            m_channelNo = 1U;
+        }
+        if (m_channelNo > 4095U) { // clamp to 4095
+            m_channelNo = 4095U;
+        }
 
-        m_rxFrequency = (uint32_t)((entry.baseFrequency() + ((calcSpace * 125) * m_channelNo)));
-        m_txFrequency = m_rxFrequency;
+        if (m_startupDuplex) {
+            if (entry.txOffsetMhz() == 0U) {
+                if (consoleDisplay) {
+                    g_logDisplayLevel = 1U;
+                }
+
+                ::LogError(LOG_HOST, "Channel Id %u has an invalid Tx offset.", m_channelId);
+                return false;
+            }
+
+            uint32_t calcSpace = (uint32_t)(entry.chSpaceKhz() / 0.125);
+            float calcTxOffset = entry.txOffsetMhz() * 1000000.0;
+
+            m_rxFrequency = (uint32_t)((entry.baseFrequency() + ((calcSpace * 125) * m_channelNo)) + (int32_t)calcTxOffset);
+            m_txFrequency = (uint32_t)((entry.baseFrequency() + ((calcSpace * 125) * m_channelNo)));
+        }
+        else {
+            uint32_t calcSpace = (uint32_t)(entry.chSpaceKhz() / 0.125);
+
+            m_rxFrequency = (uint32_t)((entry.baseFrequency() + ((calcSpace * 125) * m_channelNo)));
+            m_txFrequency = m_rxFrequency;
+        }
     }
 
     if (m_isHotspot) {
@@ -852,7 +874,7 @@ bool HostSetup::createModem(bool consoleDisplay)
     m_modem->setLevels(rxLevel, txLevel, txLevel, txLevel, txLevel);
     m_modem->setSymbolAdjust(dmrSymLevel3Adj, dmrSymLevel1Adj, p25SymLevel3Adj, p25SymLevel1Adj, nxdnSymLevel3Adj, nxdnSymLevel1Adj);
     m_modem->setDCOffsetParams(txDCOffset, rxDCOffset);
-    m_modem->setRFParams(m_rxFrequency, m_txFrequency, rxTuning, txTuning, 100U, dmrDiscBWAdj, p25DiscBWAdj, nxdnDiscBWAdj, dmrPostBWAdj, p25PostBWAdj, nxdnPostBWAdj, adfGainMode,
+    m_modem->setRFParams(m_rxFrequency, m_txFrequency, rxTuning, txTuning, 95U, dmrDiscBWAdj, p25DiscBWAdj, nxdnDiscBWAdj, dmrPostBWAdj, p25PostBWAdj, nxdnPostBWAdj, adfGainMode,
         afcEnable, afcKI, afcKP, afcRange);
     m_modem->setSoftPot(rxCoarsePot, rxFinePot, txCoarsePot, txFinePot, rssiCoarsePot, rssiFinePot);
 

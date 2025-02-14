@@ -49,8 +49,8 @@ bool ControlOctet::decode(const uint8_t* data)
 {
     assert(data != nullptr);
 
-    m_signal = (data[0U] & 0x07U) == 0x07U;                     // Signal Flag
-    m_compact = (data[0U] & 0x06U) == 0x06U;                    // Compact Flag
+    m_signal = (data[0U] & 0x80U) == 0x80U;                     // Signal Flag
+    m_compact = (data[0U] & 0x40U) == 0x40U;                    // Compact Flag
     m_blockHeaderCnt = (uint8_t)(data[0U] & 0x3FU);             // Block Header Count
 
     return true;
@@ -62,7 +62,7 @@ void ControlOctet::encode(uint8_t* data)
 {
     assert(data != nullptr);
 
-    data[0U] = (uint8_t)((m_signal ? 0x07U : 0x00U) +           // Signal Flag
-            (m_compact ? 0x06U : 0x00U) +                       // Control Flag
+    data[0U] = (uint8_t)((m_signal ? 0x80U : 0x00U) +           // Signal Flag
+            (m_compact ? 0x40U : 0x00U) +                       // Control Flag
             (m_blockHeaderCnt & 0x3F));
 }

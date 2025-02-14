@@ -35,18 +35,6 @@ FSCACK::FSCACK() : FSCMessage(),
     m_messageId = FSCMessageType::FSC_ACK;
 }
 
-/* Initializes a instance of the FSCACK class. */
-
-FSCACK::FSCACK(const uint8_t* data) : FSCMessage(data),
-    m_ackMessageId(FSCMessageType::FSC_INVALID),
-    m_ackVersion(1U),
-    m_ackCorrelationTag(0U),
-    m_responseCode(FSCAckResponseCode::CONTROL_ACK),
-    m_respLength(0U)
-{
-    decode(data);
-}
-
 /* Decode a FSC ACK frame. */
 
 bool FSCACK::decode(const uint8_t* data)
@@ -65,7 +53,7 @@ bool FSCACK::decode(const uint8_t* data)
             delete responseData;
         responseData = new uint8_t[m_respLength];
         ::memset(responseData, 0x00U, m_respLength);
-        ::memcpy(responseData, data, m_respLength);
+        ::memcpy(responseData, data + 7U, m_respLength);
     }
     else {
         if (responseData != nullptr)
@@ -90,6 +78,6 @@ void FSCACK::encode(uint8_t* data)
     data[6U] = m_respLength;                                    // Response Data Length
 
     if (m_respLength > 0U && responseData != nullptr) {
-        ::memcpy(data, responseData, m_respLength);
+        ::memcpy(data + 7U, responseData, m_respLength);
     }
 }

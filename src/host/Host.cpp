@@ -64,7 +64,7 @@ Host::Host(const std::string& confFile) :
     m_modem(nullptr),
     m_modemRemote(false),
     m_isModemDFSI(false),
-    m_udpDSFIRemotePort(nullptr),
+    m_udpDFSIRemotePort(nullptr),
     m_network(nullptr),
     m_modemRemotePort(nullptr),
     m_state(STATE_IDLE),
@@ -247,7 +247,7 @@ int Host::run()
 #endif // !defined(_WIN32)
 
     ::LogInfo(__BANNER__ "\r\n" __PROG_NAME__ " " __VER__ " (built " __BUILD__ ")\r\n" \
-        "Copyright (c) 2017-2024 Bryan Biedenkapp, N2PLL and DVMProject (https://github.com/dvmproject) Authors.\r\n" \
+        "Copyright (c) 2017-2025 Bryan Biedenkapp, N2PLL and DVMProject (https://github.com/dvmproject) Authors.\r\n" \
         "Portions Copyright (c) 2015-2021 by Jonathan Naylor, G4KLX and others\r\n" \
         ">> Modem Controller\r\n");
 
@@ -953,10 +953,9 @@ int Host::run()
             }
         }
 
-        if (m_udpDSFIRemotePort != nullptr) {
+        if (m_udpDFSIRemotePort != nullptr) {
             m_mainLoopStage = 11U; // intentional magic number
-            modem::port::specialized::V24UDPPort* udpPort = dynamic_cast<modem::port::specialized::V24UDPPort*>(m_udpDSFIRemotePort);
-            
+            modem::port::specialized::V24UDPPort* udpPort = dynamic_cast<modem::port::specialized::V24UDPPort*>(m_udpDFSIRemotePort);
             udpPort->clock(ms);
         }
 
@@ -1646,8 +1645,13 @@ void Host::setState(uint8_t state)
 
             m_modeTimer.stop();
 
-            if (m_state == HOST_STATE_QUIT) {
+            if (state == HOST_STATE_QUIT) {
                 ::LogInfoEx(LOG_HOST, "Host is shutting down");
+
+                if (m_udpDFSIRemotePort != nullptr) {
+                    modem::port::specialized::V24UDPPort* udpPort = dynamic_cast<modem::port::specialized::V24UDPPort*>(m_udpDFSIRemotePort);
+                    udpPort->closeFSC();
+                }
 
                 if (m_modem != nullptr) {
                     m_modem->close();
@@ -1671,11 +1675,11 @@ void Host::setState(uint8_t state)
 
                 if (m_tidLookup != nullptr) {
                     m_tidLookup->stop();
-                    delete m_tidLookup;
+                    //delete m_tidLookup;
                 }
                 if (m_ridLookup != nullptr) {
                     m_ridLookup->stop();
-                    delete m_ridLookup;
+                    //delete m_ridLookup;
                 }
             }
             else {

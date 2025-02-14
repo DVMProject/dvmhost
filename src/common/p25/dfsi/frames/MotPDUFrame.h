@@ -55,7 +55,7 @@ namespace p25
              */
             class HOST_SW_API MotPDUFrame {
             public:
-                static const uint8_t LENGTH = 20;
+                static const uint8_t LENGTH = 20U;
 
                 /**
                  * @brief Initializes a copy instance of the MotPDUFrame class.

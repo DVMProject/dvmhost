@@ -997,7 +997,7 @@ void* threadNetworkPump(void* arg)
 void usage(const char* message, const char* arg)
 {
     ::fprintf(stdout, __PROG_NAME__ " %s (built %s)\r\n", __VER__, __BUILD__);
-    ::fprintf(stdout, "Copyright (c) 2017-2024 Bryan Biedenkapp, N2PLL and DVMProject (https://github.com/dvmproject) Authors.\n");
+    ::fprintf(stdout, "Copyright (c) 2017-2025 Bryan Biedenkapp, N2PLL and DVMProject (https://github.com/dvmproject) Authors.\n");
     ::fprintf(stdout, "Portions Copyright (c) 2015-2021 by Jonathan Naylor, G4KLX and others\n\n");
     if (message != nullptr) {
         ::fprintf(stderr, "%s: ", g_progExe.c_str());
@@ -1082,7 +1082,7 @@ int checkArgs(int argc, char* argv[])
         }
         else if (IS("-v")) {
             ::fprintf(stdout, __PROG_NAME__ " %s (built %s)\r\n", __VER__, __BUILD__);
-            ::fprintf(stdout, "Copyright (c) 2017-2024 Bryan Biedenkapp, N2PLL and DVMProject (https://github.com/dvmproject) Authors.\n");
+            ::fprintf(stdout, "Copyright (c) 2017-2025 Bryan Biedenkapp, N2PLL and DVMProject (https://github.com/dvmproject) Authors.\n");
             ::fprintf(stdout, "Portions Copyright (c) 2015-2021 by Jonathan Naylor, G4KLX and others\n\n");
             if (argc == 2)
                 exit(EXIT_SUCCESS);
@@ -1133,18 +1133,10 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    if (!g_webSocketMode) {
-        ::LogInfo(__PROG_NAME__ " " __VER__ " (built " __BUILD__ ")\r\n" \
-            "Copyright (c) 2017-2024 Bryan Biedenkapp, N2PLL and DVMProject (https://github.com/dvmproject) Authors.\r\n" \
-            "Portions Copyright (c) 2015-2021 by Jonathan Naylor, G4KLX and others\r\n" \
-            ">> FNE System View\r\n");
-    } else {
-        ::LogInfo(__BANNER__ "\r\n" __PROG_NAME__ " " __VER__ " (built " __BUILD__ ")\r\n" \
-            "Copyright (c) 2024 DVMProject (https://github.com/dvmproject) Authors.\r\n" \
-            "This program is non-free software; redistribution is strictly prohibited.\r\n" \
-            "RESTRICTED CONFIDENTIAL PROPRIETARY. DO NOT DISTRIBUTE.\r\n" \
-            ">> FNE System View\r\n");
-    }
+    ::LogInfo(__PROG_NAME__ " " __VER__ " (built " __BUILD__ ")\r\n" \
+        "Copyright (c) 2017-2025 Bryan Biedenkapp, N2PLL and DVMProject (https://github.com/dvmproject) Authors.\r\n" \
+        "Portions Copyright (c) 2015-2021 by Jonathan Naylor, G4KLX and others\r\n" \
+        ">> FNE System View\r\n");
 
     try {
         ret = yaml::Parse(g_conf, g_iniFile.c_str());

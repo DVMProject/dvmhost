@@ -76,7 +76,7 @@ namespace modem
              * @param speed Serial port speed.
              * @param assertRTS 
              */
-            UARTPort(const std::string& device, SERIAL_SPEED speed, bool assertRTS = false);
+            UARTPort(const std::string& device, SERIAL_SPEED speed, bool assertRTS = false, bool rtsBoot = false);
             /**
              * @brief Finalizes a instance of the UARTPort class.
              */
@@ -122,13 +122,14 @@ namespace modem
              * @param speed Serial port speed.
              * @param assertRTS 
              */
-            UARTPort(SERIAL_SPEED speed, bool assertRTS = false);
+            UARTPort(SERIAL_SPEED speed, bool assertRTS = false, bool rtsBoot = false);
 
             bool m_isOpen;
 
             std::string m_device;
             SERIAL_SPEED m_speed;
             bool m_assertRTS;
+            bool m_rtsBoot;
 #if defined(_WIN32)
             HANDLE m_fd;
 #else

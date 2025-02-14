@@ -46,9 +46,9 @@ std::vector<uint32_t> P25AffiliationLookup::clearGroupAff(uint32_t dstId, bool r
 
 /* Helper to release the channel grant for the destination ID. */
 
-bool P25AffiliationLookup::releaseGrant(uint32_t dstId, bool releaseAll)
+bool P25AffiliationLookup::releaseGrant(uint32_t dstId, bool releaseAll, bool noLock)
 {
-    bool ret = ::lookups::AffiliationLookup::releaseGrant(dstId, releaseAll);
+    bool ret = ::lookups::AffiliationLookup::releaseGrant(dstId, releaseAll, noLock);
     if (ret) {
         if (m_rfGrantChCnt > 0U) {
             m_p25->m_siteData.setChCnt(m_chLookup->rfChSize() + m_rfGrantChCnt);

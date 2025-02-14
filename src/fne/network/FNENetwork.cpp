@@ -82,11 +82,13 @@ FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port,
     m_disallowAdjStsBcast(false),
     m_disallowExtAdjStsBcast(true),
     m_allowConvSiteAffOverride(false),
+    m_disallowCallTerm(false),
     m_restrictGrantToAffOnly(false),
     m_enableInCallCtrl(true),
     m_rejectUnknownRID(false),
     m_filterHeaders(true),
     m_filterTerminators(true),
+    m_disallowU2U(false),
     m_dropU2UPeerTable(),
     m_enableInfluxDB(false),
     m_influxServerAddress("127.0.0.1"),
@@ -129,6 +131,7 @@ void FNENetwork::setOptions(yaml::Node& conf, bool printOptions)
     m_allowConvSiteAffOverride = conf["allowConvSiteAffOverride"].as<bool>(true);
     m_enableInCallCtrl = conf["enableInCallCtrl"].as<bool>(true);
     m_rejectUnknownRID = conf["rejectUnknownRID"].as<bool>(false);
+    m_disallowCallTerm = conf["disallowCallTerm"].as<bool>(false);
     m_softConnLimit = conf["connectionLimit"].as<uint32_t>(MAX_HARD_CONN_CAP);
 
     if (m_softConnLimit > MAX_HARD_CONN_CAP) {
@@ -165,6 +168,8 @@ void FNENetwork::setOptions(yaml::Node& conf, bool printOptions)
     ** Drop Unit to Unit Peers
     */
 
+    m_disallowU2U = conf["disallowAllUnitToUnit"].as<bool>(false);
+
     yaml::Node& dropUnitToUnit = conf["dropUnitToUnit"];
     if (dropUnitToUnit.size() > 0U) {
         for (size_t i = 0; i < dropUnitToUnit.size(); i++) {
@@ -184,12 +189,14 @@ void FNENetwork::setOptions(yaml::Node& conf, bool printOptions)
         LogInfo("    Disable Packet Data: %s", m_disablePacketData ? "yes" : "no");
         LogInfo("    Dump Packet Data: %s", m_dumpPacketData ? "yes" : "no");
         LogInfo("    Disable P25 ADJ_STS_BCAST to external peers: %s", m_disallowExtAdjStsBcast ? "yes" : "no");
+        LogInfo("    Disable P25 TDULC call termination broadcasts to any peers: %s", m_disallowCallTerm ? "yes" : "no");
         LogInfo("    Allow conventional sites to override affiliation and receive all traffic: %s", m_allowConvSiteAffOverride ? "yes" : "no");
         LogInfo("    Enable In-Call Control: %s", m_enableInCallCtrl ? "yes" : "no");
         LogInfo("    Reject Unknown RIDs: %s", m_rejectUnknownRID ? "yes" : "no");
         LogInfo("    Restrict grant response by affiliation: %s", m_restrictGrantToAffOnly ? "yes" : "no");
         LogInfo("    Traffic Headers Filtered by Destination ID: %s", m_filterHeaders ? "yes" : "no");
         LogInfo("    Traffic Terminators Filtered by Destination ID: %s", m_filterTerminators ? "yes" : "no");
+        LogInfo("    Disallow Unit-to-Unit: %s", m_disallowU2U ? "yes" : "no");
         LogInfo("    InfluxDB Reporting Enabled: %s", m_enableInfluxDB ? "yes" : "no");
         if (m_enableInfluxDB) {
             LogInfo("    InfluxDB Address: %s", m_influxServerAddress.c_str());
@@ -761,12 +768,16 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                             else {
                                 LogWarning(LOG_NET, "PEER %u RPTK NAK, login exchange while in an incorrect state, connectionState = %u", peerId, connection->connectionState());
                                 network->writePeerNAK(peerId, TAG_REPEATER_AUTH, NET_CONN_NAK_BAD_CONN_STATE, req->address, req->addrLen);
+
+                                delete connection;
                                 network->erasePeer(peerId);
                             }
                         }
                     }
                     else {
                         network->writePeerNAK(peerId, TAG_REPEATER_AUTH, NET_CONN_NAK_BAD_CONN_STATE, req->address, req->addrLen);
+
+                        network->erasePeer(peerId);
                         LogWarning(LOG_NET, "PEER %u RPTK NAK, having no connection", peerId);
                     }
                 }

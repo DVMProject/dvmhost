@@ -23,6 +23,13 @@
 #include <final/final.h>
 using namespace finalcut;
 
+struct PrivateFListViewScrollToY { typedef void(FListView::*type)(int); };
+template class HackTheGibson<PrivateFListViewScrollToY, &FListView::scrollToY>;
+struct PrivateFListViewIteratorFirst { typedef FListViewIterator FListView::*type; };
+template class HackTheGibson<PrivateFListViewIteratorFirst, &FListView::first_visible_line>;
+struct PrivateFListViewVBarPtr { typedef FScrollbarPtr FListView::*type; };
+template class HackTheGibson<PrivateFListViewVBarPtr, &FListView::vbar>;
+
 // ---------------------------------------------------------------------------
 //  Constants
 // ---------------------------------------------------------------------------
@@ -94,6 +101,15 @@ public:
         auto entry = g_tidLookups->groupVoice()[0U];
         m_selected = entry;
 
+        // bryanb: HACK -- use HackTheGibson to access the private current listview iterator to get the scroll position
+        /*
+         * This uses the RTTI hack to access private members on FListView; and this code *could* break as a consequence.
+         */
+        int firstScrollLinePos = 0;
+        if (m_listView.getCount() > 0) {
+            firstScrollLinePos = (m_listView.*RTTIResult<PrivateFListViewIteratorFirst>::ptr).getPosition();
+        }
+
         m_listView.clear();
         for (auto entry : g_tidLookups->groupVoice()) {
             // pad TGs properly
@@ -101,8 +117,8 @@ public:
             oss << std::setw(5) << std::setfill('0') << entry.source().tgId();
 
             // build list view entry
-            const std::array<std::string, 9U> columns = {
-                entry.name(), entry.nameAlias(), oss.str(),
+            const std::array<std::string, 10U> columns = {
+                entry.name(), entry.nameAlias(), oss.str(), std::to_string(entry.source().tgSlot()),
                 (entry.config().active()) ? "X" : "",
                 (entry.config().affiliated()) ? "X" : "",
                 std::to_string(entry.config().inclusionSize()),
@@ -113,6 +129,17 @@ public:
 
             const finalcut::FStringList line(columns.cbegin(), columns.cend());
             m_listView.insert(line);
+        }
+
+        // bryanb: HACK -- use HackTheGibson to access the private set scroll Y to set the scroll position
+        /*
+         * This uses the RTTI hack to access private members on FListView; and this code *could* break as a consequence.
+         */
+        if ((size_t)firstScrollLinePos > m_listView.getCount())
+            firstScrollLinePos = 0;
+        if (firstScrollLinePos > 0 && m_listView.getCount() > 0) {
+            (m_listView.*RTTIResult<PrivateFListViewScrollToY>::ptr)(firstScrollLinePos);
+            (m_listView.*RTTIResult<PrivateFListViewVBarPtr>::ptr)->setValue(firstScrollLinePos);
         }
 
         // generate dialog title        
@@ -133,6 +160,7 @@ private:
 
     FButton m_addTG{"&Add", this};
     FButton m_editTG{"&Edit", this};
+    FLabel m_fileName{"/path/to/file.yml", this};
     FButton m_deleteTG{"&Delete", this};
 
     /**
@@ -169,6 +197,9 @@ private:
         m_editTG.setDisable();
         m_editTG.addCallback("clicked", [&]() { editEntry(); });
 
+        m_fileName.setGeometry(FPoint(27, int(getHeight() - 4)), FSize(42, 1));
+        m_fileName.setText(g_iniFile);
+
         m_deleteTG.setGeometry(FPoint(int(getWidth()) - 13, int(getHeight() - 4)), FSize(10, 1));
         m_deleteTG.setDisable();
         m_deleteTG.addCallback("clicked", [&]() { deleteEntry(); });
@@ -179,6 +210,7 @@ private:
         m_listView.addColumn("Name", 25);
         m_listView.addColumn("Alias", 20);
         m_listView.addColumn("TGID", 9);
+        m_listView.addColumn("Slot", 4);
         m_listView.addColumn("Active", 5);
         m_listView.addColumn("Affiliated", 5);
         m_listView.addColumn("Inclusions", 5);
@@ -188,9 +220,9 @@ private:
 
         // set right alignment for TGID
         m_listView.setColumnAlignment(3, finalcut::Align::Right);
-        m_listView.setColumnAlignment(4, finalcut::Align::Center);
+        m_listView.setColumnAlignment(4, finalcut::Align::Right);
         m_listView.setColumnAlignment(5, finalcut::Align::Center);
-        m_listView.setColumnAlignment(6, finalcut::Align::Right);
+        m_listView.setColumnAlignment(6, finalcut::Align::Center);
         m_listView.setColumnAlignment(7, finalcut::Align::Right);
         m_listView.setColumnAlignment(8, finalcut::Align::Right);
         m_listView.setColumnAlignment(9, finalcut::Align::Right);
@@ -201,7 +233,6 @@ private:
         m_listView.setColumnSortType(3, finalcut::SortType::Name);
 
         // sort by TGID
-        m_listView.setColumnSort(2, finalcut::SortOrder::Ascending);
         m_listView.setColumnSort(3, finalcut::SortOrder::Ascending);
 
         m_listView.addCallback("clicked", [&]() { editEntry(); });
@@ -215,8 +246,10 @@ private:
                     auto entry = g_tidLookups->find(tgid);
                     if (!entry.isInvalid()) {
                         m_selected = entry;
+/*
                         if (m_selectedTgId != tgid)
                             LogMessage(LOG_HOST, "Selected TG %s (%u) for editing", m_selected.name().c_str(), m_selected.source().tgId());
+*/
                         m_selectedTgId = tgid;
 
                         m_editTG.setEnable();
@@ -285,6 +318,23 @@ private:
 
         LogMessage(LOG_HOST, "Deleting TG %s (%u)", m_selected.name().c_str(), m_selected.source().tgId());
         g_tidLookups->eraseEntry(m_selected.source().tgId(), m_selected.source().tgSlot());
+
+        // bryanb: HACK -- use HackTheGibson to access the private current listview iterator to get the scroll position
+        /*
+         * This uses the RTTI hack to access private members on FListView; and this code *could* break as a consequence.
+         */
+        int firstScrollLinePos = 0;
+        if (m_listView.getCount() > 0) {
+            firstScrollLinePos = (m_listView.*RTTIResult<PrivateFListViewIteratorFirst>::ptr).getPosition();
+        }
+        if ((size_t)firstScrollLinePos > m_listView.getCount())
+            firstScrollLinePos = 0;
+        if (firstScrollLinePos > 0 && m_listView.getCount() > 0) {
+            --firstScrollLinePos;
+            (m_listView.*RTTIResult<PrivateFListViewScrollToY>::ptr)(firstScrollLinePos);
+            (m_listView.*RTTIResult<PrivateFListViewVBarPtr>::ptr)->setValue(firstScrollLinePos);
+        }
+
         loadListView();
     }
 
@@ -319,14 +369,14 @@ private:
         // Use box-drawing characters to draw a border
         constexpr std::array<wchar_t, 8> box_char
         {{
-            static_cast<wchar_t>(0x2554),
-            static_cast<wchar_t>(0x2550),
-            static_cast<wchar_t>(0x2557),
-            static_cast<wchar_t>(0x2551),
-            static_cast<wchar_t>(0x2551),
-            static_cast<wchar_t>(0x255A),
-            static_cast<wchar_t>(0x2550),
-            static_cast<wchar_t>(0x255D)
+            static_cast<wchar_t>(0x2554),   // ╔
+            static_cast<wchar_t>(0x2550),   // ═
+            static_cast<wchar_t>(0x2557),   // ╗
+            static_cast<wchar_t>(0x2551),   // ║
+            static_cast<wchar_t>(0x2551),   // ║
+            static_cast<wchar_t>(0x255A),   // ╚
+            static_cast<wchar_t>(0x2550),   // ═
+            static_cast<wchar_t>(0x255D)    // ╝
         }};
 
         drawGenericBox(this, box, box_char);

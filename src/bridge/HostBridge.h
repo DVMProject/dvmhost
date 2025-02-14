@@ -91,6 +91,31 @@ void audioCallback(ma_device* device, void* output, const void* input, ma_uint32
 void mdcPacketDetected(int frameCount, mdc_u8_t op, mdc_u8_t arg, mdc_u16_t unitID,
     mdc_u8_t extra0, mdc_u8_t extra1, mdc_u8_t extra2, mdc_u8_t extra3, void* context);
 
+/**
+ * @brief Helper to convert PCM into G.711 aLaw.
+ * @param pcm PCM value.
+ * @return uint8_t aLaw value.
+ */
+uint8_t pcmToaLaw(short pcm);
+/**
+ * @brief Helper to convert G.711 aLaw into PCM.
+ * @param alaw aLaw value.
+ * @return short PCM value.
+ */
+short aLawToPCM(uint8_t alaw);
+/**
+ * @brief Helper to convert PCM into G.711 uLaw.
+ * @param pcm PCM value.
+ * @return uint8_t uLaw value.
+ */
+uint8_t pcmTouLaw(short pcm);
+/**
+ * @brief Helper to convert G.711 uLaw into PCM.
+ * @param ulaw uLaw value.
+ * @return short PCM value.
+ */
+short uLawToPCM(uint8_t ulaw);
+
 // ---------------------------------------------------------------------------
 //  Class Declaration
 // ---------------------------------------------------------------------------
@@ -134,6 +159,8 @@ private:
     std::string m_udpSendAddress;
     uint16_t m_udpReceivePort;
     std::string m_udpReceiveAddress;
+    bool m_udpNoIncludeLength;
+    bool m_udpUseULaw;
 
     uint32_t m_srcId;
     uint32_t m_srcIdOverride;

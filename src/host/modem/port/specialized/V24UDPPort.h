@@ -8,7 +8,7 @@
  * @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
  * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
  *
- *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2024-2025 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -31,6 +31,7 @@
 
 #include <string>
 #include <random>
+#include <mutex>
 
 namespace modem
 {
@@ -71,13 +72,19 @@ namespace modem
                  * @param modemPort Port number.
                  * @param controlPort Control Port number.
                  * @param useFSC Flag indicating whether or not FSC handshakes are used to setup communications.
+                 * @param fscInitiator Flag indicating whether or not the FSC handshake should be initiated when the port is opened.
                  * @param debug Flag indicating whether network debug is enabled.
                  */
-                V24UDPPort(uint32_t peerId, const std::string& modemAddress, uint16_t modemPort, uint16_t controlPort = 0U, bool useFSC = false, bool debug = false);
+                V24UDPPort(uint32_t peerId, const std::string& modemAddress, uint16_t modemPort, uint16_t controlPort = 0U, bool useFSC = false, bool fscInitiator = false, bool debug = false);
                 /**
                  * @brief Finalizes a instance of the V24UDPPort class.
                  */
                 ~V24UDPPort() override;
+
+                /**
+                 * @brief Helper to set and configure the heartbeat interval for FSC connections.
+                 */
+                void setHeartbeatInterval(uint32_t interval);
 
                 /**
                  * @brief Updates the timer by the passed number of milliseconds.
@@ -91,20 +98,25 @@ namespace modem
                 void reset();
 
                 /**
-                 * @brief Opens a connection to the serial port.
+                 * @brief Opens a connection to the FSC port.
+                 * @returns bool True, if connection is opened, otherwise false.
+                 */
+                bool openFSC();
+                /**
+                 * @brief Opens a connection to the port.
                  * @returns bool True, if connection is opened, otherwise false.
                  */
                 bool open() override;
 
                 /**
-                 * @brief Reads data from the serial port.
+                 * @brief Reads data from the port.
                  * @param[out] buffer Buffer to read data from the port to.
                  * @param length Length of data to read from the port.
                  * @returns int Actual length of data read from serial port.
                  */
                 int read(uint8_t* buffer, uint32_t length) override;
                 /**
-                 * @brief Writes data to the serial port.
+                 * @brief Writes data to the port.
                  * @param[in] buffer Buffer containing data to write to port.
                  * @param length Length of data to write to port.
                  * @returns int Actual length of data written to the port.
@@ -112,7 +124,11 @@ namespace modem
                 int write(const uint8_t* buffer, uint32_t length) override;
 
                 /**
-                 * @brief Closes the connection to the serial port.
+                 * @brief Closes the connection to the FSC port.
+                 */
+                void closeFSC();
+                /**
+                 * @brief Closes the connection to the port.
                  */
                 void close() override;
 
@@ -131,11 +147,13 @@ namespace modem
 
                 RingBuffer<uint8_t> m_buffer;
 
-                Timer m_reqConnectionTimer;
-                Timer m_heartbeatTimer;
+                bool m_fscInitiator;
 
-                bool m_reqConnectionToPeer;
-                bool m_establishedConnection;
+                Timer m_timeoutTimer;
+
+                Timer m_reqConnectionTimer;
+                uint32_t m_heartbeatInterval;
+                Timer m_heartbeatTimer;
 
                 std::mt19937 m_random;
 
@@ -145,10 +163,19 @@ namespace modem
                 uint32_t m_timestamp;
                 uint16_t m_pktSeq;
 
+                enum CS_STATE : uint8_t {
+                    CS_NOT_CONNECTED = 0,
+                    CS_CONNECTING = 1,
+                    CS_CONNECTED = 2
+                };
+                CS_STATE m_fscState;
+
                 uint8_t m_modemState;
                 bool m_tx;
 
                 bool m_debug;
+
+                static std::mutex m_bufferMutex;
 
                 /**
                  * @brief Process FSC control frames from the network.
@@ -161,6 +188,18 @@ namespace modem
                  * @returns void* (Ignore)
                  */
                 static void* threadedCtrlNetworkRx(void* arg);
+
+                /**
+                 * @brief Process voice conveyance frames from the network.
+                 */
+                void processVCNetwork();
+
+                /**
+                 * @brief Entry point to process a given network packet.
+                 * @param arg Instance of the NetPacketRequest structure.
+                 * @returns void* (Ignore)
+                 */
+                static void* threadedVCNetworkRx(void* arg);
 
                 /**
                  * @brief Internal helper to setup the voice channel port.

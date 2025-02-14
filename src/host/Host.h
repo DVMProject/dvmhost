@@ -99,7 +99,7 @@ private:
     modem::Modem* m_modem;
     bool m_modemRemote;
     bool m_isModemDFSI;
-    modem::port::IModemPort* m_udpDSFIRemotePort;
+    modem::port::IModemPort* m_udpDFSIRemotePort;
     network::Network* m_network;
 
     modem::port::IModemPort* m_modemRemotePort;

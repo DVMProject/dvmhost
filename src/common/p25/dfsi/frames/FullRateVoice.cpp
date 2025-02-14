@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2024-2025 Bryan Biedenkapp, N2PLL
  *
  */
 #include "common/p25/dfsi/frames/FullRateVoice.h"
@@ -38,6 +38,8 @@ FullRateVoice::FullRateVoice() :
 {
     imbeData = new uint8_t[IMBE_BUF_LEN];
     ::memset(imbeData, 0x00U, IMBE_BUF_LEN);
+    additionalData = new uint8_t[ADDITIONAL_LENGTH];
+    ::memset(additionalData, 0x00U, ADDITIONAL_LENGTH);
 }
 
 /* Initializes a instance of the FullRateVoice class. */
@@ -65,6 +67,21 @@ FullRateVoice::~FullRateVoice()
         delete[] additionalData;
 }
 
+/* */
+
+uint8_t FullRateVoice::getLength()
+{
+    if (isVoice9or18()) {
+        return LENGTH_918;
+    }
+
+    if (isVoice3thru8() || isVoice12thru17()) {
+        return LENGTH;
+    }
+
+    return LENGTH_121011;
+}
+
 /* Decode a full rate voice frame. */
 
 bool FullRateVoice::decode(const uint8_t* data)
@@ -85,14 +102,11 @@ bool FullRateVoice::decode(const uint8_t* data)
     m_superframeCnt = (uint8_t)((data[13U] >> 2) & 0x03U);      // Superframe Counter
     m_busy = (uint8_t)(data[13U] & 0x03U);
 
-    if (isVoice3thru8() || isVoice12thru17() || isVoice9or10()) {
-        if (additionalData != nullptr)
-            delete additionalData;
-        additionalData = new uint8_t[ADDITIONAL_LENGTH];
+    if (isVoice3thru8() || isVoice12thru17() || isVoice9or18()) {
         ::memset(additionalData, 0x00U, ADDITIONAL_LENGTH);
 
-        if (isVoice9or10()) {
-            // CAI 9 and 10 are 3 bytes of additional data not 4
+        if (isVoice9or18()) {
+            // CAI 9 and 18 are 3 bytes of additional data not 4
             ::memcpy(additionalData, data + 14U, ADDITIONAL_LENGTH - 1U);
         } else {
             ::memcpy(additionalData, data + 14U, ADDITIONAL_LENGTH);
@@ -122,10 +136,9 @@ void FullRateVoice::encode(uint8_t* data)
     data[13U] = (uint8_t)(((m_superframeCnt & 0x03U) << 2) +    // Superframe Count
         (m_busy & 0x03U));                                      // Busy Status
 
-    if ((isVoice3thru8() || isVoice12thru17() || isVoice9or10()) &&
-        additionalData != nullptr) {
-        if (isVoice9or10()) {
-            // CAI 9 and 10 are 3 bytes of additional data not 4
+    if (isVoice3thru8() || isVoice12thru17() || isVoice9or18()) {
+        if (isVoice9or18()) {
+            // CAI 9 and 18 are 3 bytes of additional data not 4
             ::memcpy(data + 14U, additionalData, ADDITIONAL_LENGTH - 1U);
         } else {
             ::memcpy(data + 14U, additionalData, ADDITIONAL_LENGTH);
@@ -163,9 +176,9 @@ bool FullRateVoice::isVoice12thru17()
 
 /* Helper indicating if the frame is voice 9 or 10. */
 
-bool FullRateVoice::isVoice9or10()
+bool FullRateVoice::isVoice9or18()
 {
-    if ( (m_frameType == DFSIFrameType::LDU1_VOICE9) || (m_frameType == DFSIFrameType::LDU2_VOICE10) ) {
+    if ( (m_frameType == DFSIFrameType::LDU1_VOICE9) || (m_frameType == DFSIFrameType::LDU2_VOICE18) ) {
         return true;
     } else {
         return false;

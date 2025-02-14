@@ -338,20 +338,18 @@ protected:
         uint8_t data[P25_TSDU_FRAME_LENGTH_BYTES];
         ::memset(data, 0x00U, P25_TSDU_FRAME_LENGTH_BYTES);
 
-        // Generate Sync
+        // generate Sync
         Sync::addP25Sync(data);
 
         // network bursts have no NID
 
-        // Generate TSBK block
+        // generate TSBK block
         tsbk->setLastBlock(true); // always set last block -- this a Single Block TSDU
         tsbk->encode(data);
 
-        // Add busy bits
-        P25Utils::addStatusBits(data, P25_TSDU_FRAME_LENGTH_BYTES, false);
-
-        // Set first busy bits to 1,1
-        P25Utils::setStatusBits(data, P25_SS0_START, true, true);
+        // add status bits
+        P25Utils::addStatusBits(data, P25_TSDU_FRAME_LENGTH_BYTES, false, true);
+        P25Utils::setStatusBitsStartIdle(data);
 
         if (g_debug) {
             LogDebug(LOG_RF, P25_TSDU_STR ", lco = $%02X, mfId = $%02X, lastBlock = %u, AIV = %u, EX = %u, srcId = %u, dstId = %u, sysId = $%03X, netId = $%05X",

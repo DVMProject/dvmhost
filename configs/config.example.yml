@@ -590,6 +590,14 @@ system:
             jitter: 200
             # Timer which will reset local/remote call flags if frames aren't received longer than this time in ms
             callTimeout: 200
+            # Flag indicating when operating in V.24 UDP mode, the FSC protocol should be used to negotiate connection.
+            fsc: false
+            # Sets the heartbeat interval for the FSC connection.
+            fscHeartbeat: 5
+            # Flag indicating when operating in V.24 UDP mode, this instance should initiate the FSC protocol handshake.
+            initiator: false
+            # Flag indicating DFSI frames should be formatted in TIA-102 standard instead of serial standard format.
+            dfsiTIAMode: false
 
         # Sets received the signal offset from DC.
         rxDCOffset: 0 # Valid values between -128 and 128
@@ -637,6 +645,8 @@ system:
         # Full path to the RID ACL file.
         file: rid_acl.dat
         # Amount of time between updates of RID ACL file. (minutes)
+        #   NOTE: If utilizing purely FNE pushed RID ACL rules, this update time should be set to 0 to prevent
+        #     FNE rules from becoming erased.
         time: 2
         # Flag indicating whether or not RID ACLs are enforced.
         acl: false
@@ -648,6 +658,8 @@ system:
         # Full path to the talkgroup rules file.
         file: talkgroup_rules.yml
         # Amount of time between updates of talkgroup rules file. (minutes)
+        #   NOTE: If utilizing purely FNE pushed talkgroup rules, this update time should be set to 0 to prevent
+        #     FNE rules from becoming erased.
         time: 2
         # Flag indicating whether or not TGID ACLs are enforced.
         acl: false

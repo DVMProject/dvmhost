@@ -79,6 +79,8 @@ std::unique_ptr<TDULC> TDULCFactory::createTDULC(const uint8_t* data)
         return decode(new LC_PRIVATE(), data);
     case LCO::TEL_INT_VCH_USER:
         return decode(new LC_TEL_INT_VCH_USER(), data);
+    case LCO::CALL_TERM:
+        return decode(new LC_CALL_TERM(), data);
     default:
         LogError(LOG_P25, "TDULCFactory::create(), unknown TDULC LCO value, lco = $%02X", lco);
         break;

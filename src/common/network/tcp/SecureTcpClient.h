@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2024-2025 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -56,8 +56,9 @@ namespace network
              * @param sslCtx Instance of the OpenSSL context.
              * @param client Address for client.
              * @param clientLen Length of sockaddr_in structure.
+             * @param nonBlocking Flag indicating socket operations should be non-blocking.
              */
-            SecureTcpClient(const int fd, SSL_CTX* sslCtx, sockaddr_in& client, int clientLen) : Socket(fd),
+            SecureTcpClient(const int fd, SSL_CTX* sslCtx, sockaddr_in& client, int clientLen, bool nonBlocking) : Socket(fd),
                 m_sockaddr(),
                 m_pSSL(nullptr),
                 m_pSSLCtx(nullptr)
@@ -135,23 +136,26 @@ namespace network
                 } while (status == 1 && !SSL_is_init_finished(m_pSSL));
 
                 // reset socket blocking operations
-                flags = fcntl(fd, F_GETFL, 0);
-                if (flags < 0) {
-                    LogError(LOG_NET, "failed fcntl(F_GETFL), err: %d", errno);
-                    throw std::runtime_error("Cannot accept SSL client");
-                }
+                if (!nonBlocking) {
+                    flags = fcntl(fd, F_GETFL, 0);
+                    if (flags < 0) {
+                        LogError(LOG_NET, "failed fcntl(F_GETFL), err: %d", errno);
+                        throw std::runtime_error("Cannot accept SSL client");
+                    }
 
-                if (fcntl(fd, F_SETFL, flags & (~O_NONBLOCK)) < 0) {
-                    LogError(LOG_NET, "failed fcntl(F_SETFL), err: %d", errno);
-                    throw std::runtime_error("Cannot accept SSL client");
+                    if (fcntl(fd, F_SETFL, flags & (~O_NONBLOCK)) < 0) {
+                        LogError(LOG_NET, "failed fcntl(F_SETFL), err: %d", errno);
+                        throw std::runtime_error("Cannot accept SSL client");
+                    }
                 }
             }
             /**
              * @brief Initializes a new instance of the SecureTcpClient class.
              * @param address IP Address.
              * @param port Port.
+             * @param nonBlocking Flag indicating socket operations should be non-blocking.
              */
-            SecureTcpClient(const std::string& address, const uint16_t port) : 
+            SecureTcpClient(const std::string& address, const uint16_t port, bool nonBlocking) : 
                 m_pSSL(nullptr),
                 m_pSSLCtx(nullptr)
             {
@@ -179,6 +183,20 @@ namespace network
                 if (SSL_connect(m_pSSL) <= 0) {
                     LogError(LOG_NET, "Failed to connect to server, %s err: %d", ERR_error_string(ERR_get_error(), NULL), errno);
                     throw std::runtime_error("Failed to SSL connect to server");
+                }
+            
+                // setup socket for non-blocking operations
+                if (nonBlocking) {
+                    int flags = fcntl(m_fd, F_GETFL, 0);
+                    if (flags < 0) {
+                        LogError(LOG_NET, "failed fcntl(F_GETFL), err: %d", errno);
+                        throw std::runtime_error("Failed to set SSL server connection to non-blocking");
+                    }
+
+                    if (fcntl(m_fd, F_SETFL, flags | O_NONBLOCK) < 0) {
+                        LogError(LOG_NET, "failed fcntl(F_SETFL), err: %d", errno);
+                        throw std::runtime_error("Failed to set SSL server connection to non-blocking");
+                    }
                 }
             }
             /**

@@ -86,11 +86,14 @@ bool DMRAffiliationLookup::grantChSlot(uint32_t dstId, uint32_t srcId, uint8_t s
 
 /* Helper to release the channel grant for the destination ID. */
 
-bool DMRAffiliationLookup::releaseGrant(uint32_t dstId, bool releaseAll)
+bool DMRAffiliationLookup::releaseGrant(uint32_t dstId, bool releaseAll, bool noLock)
 {
     if (dstId == 0U && !releaseAll) {
         return false;
     }
+
+    if (!noLock)
+        m_mutex.lock();
 
     // are we trying to release all grants?
     if (dstId == 0U && releaseAll) {
@@ -107,6 +110,8 @@ bool DMRAffiliationLookup::releaseGrant(uint32_t dstId, bool releaseAll)
             releaseGrant(dstId, false);
         }
 
+        if (!noLock)
+            m_mutex.unlock();
         return true;
     }
 
@@ -139,9 +144,14 @@ bool DMRAffiliationLookup::releaseGrant(uint32_t dstId, bool releaseAll)
         }
 
         m_grantTimers[dstId].stop();
+
+        if (!noLock)
+            m_mutex.unlock();
         return true;
     }
 
+    if (!noLock)
+        m_mutex.unlock();
     return false;
 }
 
