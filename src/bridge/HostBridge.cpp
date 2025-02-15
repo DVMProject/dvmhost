@@ -19,6 +19,7 @@
 #include "common/p25/dfsi/LC.h"
 #include "common/p25/lc/LC.h"
 #include "common/p25/P25Utils.h"
+#include "common/network/RTPHeader.h"
 #include "common/network/udp/Socket.h"
 #include "common/Log.h"
 #include "common/StopWatch.h"
@@ -30,6 +31,7 @@
 #include "SampleTimeConversion.h"
 
 using namespace network;
+using namespace network::frame;
 using namespace network::udp;
 
 #include <cstdio>
@@ -66,6 +68,8 @@ static short seg_uend[8] = { 0x3F, 0x7F, 0xFF, 0x1FF, 0x3FF, 0x7FF, 0xFFF, 0x1FF
 
 #define	BIAS (0x84)             // bias for linear code
 #define CLIP 8159
+
+const uint8_t RTP_G711_PAYLOAD_TYPE = 0x00U;
 
 // ---------------------------------------------------------------------------
 //  Static Class Members
@@ -288,6 +292,7 @@ HostBridge::HostBridge(const std::string& confFile) :
     m_udpReceiveAddress("127.0.0.1"),
     m_udpNoIncludeLength(false),
     m_udpUseULaw(false),
+    m_udpRTPFrames(false),
     m_srcId(p25::defines::WUID_FNE),
     m_srcIdOverride(0U),
     m_overrideSrcIdFromMDC(false),
@@ -345,7 +350,9 @@ HostBridge::HostBridge(const std::string& confFile) :
     m_detectedSampleCnt(0U),
     m_dumpSampleLevel(false),
     m_running(false),
-    m_debug(false)
+    m_debug(false),
+    m_rtpSeqNo(0U),
+    m_rtpTimestamp(INVALID_TS)
 #if defined(_WIN32)
     ,
     m_encoderState(nullptr),
@@ -1005,8 +1012,12 @@ bool HostBridge::createNetwork()
     m_udpReceiveAddress = networkConf["udpReceiveAddress"].as<std::string>();
     m_udpUseULaw = networkConf["udpUseULaw"].as<bool>(false);
 
-    if (m_udpUseULaw)
+    if (m_udpUseULaw) {
         m_udpNoIncludeLength = networkConf["udpNoIncludeLength"].as<bool>(false);
+        m_udpRTPFrames = networkConf["udpRTPFrames"].as<bool>(false);
+        if (m_udpRTPFrames)
+            m_udpNoIncludeLength = true; // RTP disables the length being included
+    }
 
     if (m_udpUseULaw && m_udpMetadata)
         m_udpMetadata = false; // metadata isn't supported when encoding uLaw
@@ -1072,9 +1083,10 @@ bool HostBridge::createNetwork()
         LogInfo("    UDP Audio Send Port: %u", m_udpSendPort);
         LogInfo("    UDP Audio Receive Address: %s", m_udpReceiveAddress.c_str());
         LogInfo("    UDP Audio Receive Port: %u", m_udpReceivePort);
-        LogInfo("    UDP Audio Use uLaw Encoding: %u", m_udpUseULaw ? "yes" : "no");
+        LogInfo("    UDP Audio Use uLaw Encoding: %s", m_udpUseULaw ? "yes" : "no");
         if (m_udpUseULaw) {
-            LogInfo("    UDP Audio No Length Header: %u", m_udpNoIncludeLength ? "yes" : "no");
+            LogInfo("    UDP Audio No Length Header: %s", m_udpNoIncludeLength ? "yes" : "no");
+            LogInfo("    UDP Audio RTP Framed: %s", m_udpRTPFrames ? "yes" : "no");
         }
     }
 
@@ -1161,11 +1173,24 @@ void HostBridge::processUDPAudio()
         UInt8Array __pcm = std::make_unique<uint8_t[]>(pcmLength);
         uint8_t* pcm = __pcm.get();
 
-        if (m_udpNoIncludeLength) {
-            ::memcpy(pcm, buffer, pcmLength);
+        if (m_udpRTPFrames) {
+            RTPHeader rtpHeader = RTPHeader();
+            rtpHeader.decode(buffer);
+
+            if (rtpHeader.getPayloadType() != RTP_G711_PAYLOAD_TYPE) {
+                LogError(LOG_HOST, "Invalid RTP payload type %u", rtpHeader.getPayloadType());
+                return;
+            }
+
+            ::memcpy(pcm, buffer + RTP_HEADER_LENGTH_BYTES, MBE_SAMPLES_LENGTH);
         }
         else {
-            ::memcpy(pcm, buffer + 4U, pcmLength);
+            if (m_udpNoIncludeLength) {
+                ::memcpy(pcm, buffer, pcmLength);
+            }
+            else {
+                ::memcpy(pcm, buffer + 4U, pcmLength);
+            }
         }
 
         // Utils::dump(1U, "PCM RECV BYTE BUFFER", pcm, pcmLength);
@@ -1379,6 +1404,9 @@ void HostBridge::processDMRNetwork(uint8_t* buffer, uint32_t length)
             m_rxDMRPILC = lc::PrivacyLC();
             m_rxStartTime = 0U;
             m_rxStreamId = 0U;
+
+            m_rtpSeqNo = 0U;
+            m_rtpTimestamp = INVALID_TS;
             return;
         }
 
@@ -1497,6 +1525,22 @@ void HostBridge::decodeDMRAudioFrame(uint8_t* ambe, uint32_t srcId, uint32_t dst
                     } else {
                         __SET_UINT32(MBE_SAMPLES_LENGTH, audioData, 0U);
                         ::memcpy(audioData + 4U, pcm, MBE_SAMPLES_LENGTH);
+                    }
+
+                    // are we sending RTP audio frames?
+                    if (m_udpRTPFrames) {
+                        uint8_t* rtpFrame = generateRTPHeaders(MBE_SAMPLES_LENGTH, m_rtpSeqNo);
+                        if (rtpFrame != nullptr) {
+                            length += RTP_HEADER_LENGTH_BYTES;
+                            uint8_t* newAudioData = new uint8_t[length];
+                            ::memcpy(newAudioData, rtpFrame, RTP_HEADER_LENGTH_BYTES);
+                            ::memcpy(newAudioData + RTP_HEADER_LENGTH_BYTES, audioData, MBE_SAMPLES_LENGTH);
+                            delete[] audioData;
+
+                            audioData = newAudioData;
+                        }
+
+                        m_rtpSeqNo++;
                     }
                 }
                 else {
@@ -1798,6 +1842,9 @@ void HostBridge::processP25Network(uint8_t* buffer, uint32_t length)
             m_rxP25LC = lc::LC();
             m_rxStartTime = 0U;
             m_rxStreamId = 0U;
+
+            m_rtpSeqNo = 0U;
+            m_rtpTimestamp = INVALID_TS;
             return;
         }
 
@@ -2064,6 +2111,22 @@ void HostBridge::decodeP25AudioFrame(uint8_t* ldu, uint32_t srcId, uint32_t dstI
                         __SET_UINT32(MBE_SAMPLES_LENGTH, audioData, 0U);
                         ::memcpy(audioData + 4U, pcm, MBE_SAMPLES_LENGTH);
                     }
+
+                    // are we sending RTP audio frames?
+                    if (m_udpRTPFrames) {
+                        uint8_t* rtpFrame = generateRTPHeaders(MBE_SAMPLES_LENGTH, m_rtpSeqNo);
+                        if (rtpFrame != nullptr) {
+                            length += RTP_HEADER_LENGTH_BYTES;
+                            uint8_t* newAudioData = new uint8_t[length];
+                            ::memcpy(newAudioData, rtpFrame, RTP_HEADER_LENGTH_BYTES);
+                            ::memcpy(newAudioData + RTP_HEADER_LENGTH_BYTES, audioData, MBE_SAMPLES_LENGTH);
+                            delete[] audioData;
+
+                            audioData = newAudioData;
+                        }
+
+                        m_rtpSeqNo++;
+                    }
                 }
                 else {
                     __SET_UINT32((MBE_SAMPLES_LENGTH * 2U), audioData, 0U);
@@ -2278,6 +2341,40 @@ void HostBridge::generatePreambleTone()
     m_outputAudio.addData(sineSamples, frameCount);
 }
 
+/* Helper to generate outgoing RTP headers. */
+
+uint8_t* HostBridge::generateRTPHeaders(uint8_t msgLen, uint16_t& rtpSeq)
+{
+    uint32_t timestamp = m_rtpTimestamp;
+    if (timestamp != INVALID_TS) {
+        timestamp += (RTP_GENERIC_CLOCK_RATE / 50);
+        if (m_debug)
+            LogDebug(LOG_NET, "HostBridge::generateRTPHeaders() RTP, previous TS = %u, TS = %u, rtpSeq = %u", m_rtpTimestamp, timestamp, rtpSeq);
+        m_rtpTimestamp = timestamp;
+    }
+
+    // generate RTP header
+    RTPHeader header = RTPHeader();
+
+    header.setPayloadType(RTP_G711_PAYLOAD_TYPE);
+    header.setTimestamp(timestamp);
+    header.setSequence(rtpSeq);
+    header.setSSRC(m_network->getPeerId());
+
+    uint8_t* buffer = new uint8_t[RTP_HEADER_LENGTH_BYTES + msgLen];
+    ::memset(buffer, 0x00U, RTP_HEADER_LENGTH_BYTES + msgLen);
+
+    header.encode(buffer);
+
+    if (timestamp == INVALID_TS) {
+        if (m_debug)
+            LogDebug(LOG_NET, "HostBridge::generateRTPHeaders() RTP, initial TS = %u, rtpSeq = %u", header.getTimestamp(), rtpSeq);
+        m_rtpTimestamp = header.getTimestamp();
+    }
+
+    return buffer;
+}
+
 /* Helper to end a local or UDP call. */
 
 void HostBridge::callEnd(uint32_t srcId, uint32_t dstId)
@@ -2334,6 +2431,9 @@ void HostBridge::callEnd(uint32_t srcId, uint32_t dstId)
     m_dmrN = 0U;
     m_p25SeqNo = 0U;
     m_p25N = 0U;
+
+    m_rtpSeqNo = 0U;
+    m_rtpTimestamp = INVALID_TS;
 }
 
 /* Entry point to audio processing thread. */

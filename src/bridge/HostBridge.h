@@ -161,6 +161,7 @@ private:
     std::string m_udpReceiveAddress;
     bool m_udpNoIncludeLength;
     bool m_udpUseULaw;
+    bool m_udpRTPFrames;
 
     uint32_t m_srcId;
     uint32_t m_srcIdOverride;
@@ -239,6 +240,9 @@ private:
 
     bool m_running;
     bool m_debug;
+
+    uint16_t m_rtpSeqNo;
+    uint32_t m_rtpTimestamp;
 
     static std::mutex m_audioMutex;
     static std::mutex m_networkMutex;
@@ -432,6 +436,14 @@ private:
      * @param forcedDstId 
      */
     void encodeP25AudioFrame(uint8_t* pcm, uint32_t forcedSrcId = 0U, uint32_t forcedDstId = 0U);
+
+    /**
+     * @brief Helper to generate outgoing RTP headers.
+     * @param msgLen Message Length.
+     * @param rtpSeq RTP Sequence.
+     * @returns uint8_t* Buffer containing the encoded RTP headers.
+     */
+    uint8_t* generateRTPHeaders(uint8_t msgLen, uint16_t& rtpSeq);
 
     /**
      * @brief Helper to generate the preamble tone.
