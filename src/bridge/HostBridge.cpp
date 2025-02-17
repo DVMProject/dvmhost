@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2024-2025 Bryan Biedenkapp, N2PLL
  *
  */
 #include "Defines.h"
@@ -1169,6 +1169,9 @@ void HostBridge::processUDPAudio()
         } else {
             pcmLength = __GET_UINT32(buffer, 0U);
         }
+
+        if (m_udpRTPFrames)
+            pcmLength = MBE_SAMPLES_LENGTH;
 
         UInt8Array __pcm = std::make_unique<uint8_t[]>(pcmLength);
         uint8_t* pcm = __pcm.get();
