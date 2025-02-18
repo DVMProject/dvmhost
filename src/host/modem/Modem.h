@@ -898,6 +898,10 @@ namespace modem
 
     public:
         /**
+         * @brief Flag indicating if modem response trace is enabled.
+         */
+        __PROTECTED_PROPERTY(bool, respTrace, ResponseTrace);
+        /**
          * @brief Flag indicating if modem trace is enabled.
          */
         __PROTECTED_READONLY_PROPERTY(bool, trace, Trace);

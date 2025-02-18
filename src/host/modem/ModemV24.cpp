@@ -198,6 +198,8 @@ void ModemV24::clock(uint32_t ms)
                     convertToAirTIA(m_buffer + (cmdOffset + 1U), m_length - (cmdOffset + 1U));
                 else
                     convertToAir(m_buffer + (cmdOffset + 1U), m_length - (cmdOffset + 1U));
+                if (m_trace)
+                    Utils::dump(1U, "ModemV24::clock() RX P25 Data", m_buffer + (cmdOffset + 1U), m_length - (cmdOffset + 1U));
             }
         }
         break;
