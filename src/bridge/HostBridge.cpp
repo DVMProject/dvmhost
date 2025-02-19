@@ -1222,7 +1222,7 @@ void HostBridge::processUDPAudio()
             if (m_trace)
                 Utils::dump(1U, "HostBridge()::processUDPAudio() uLaw Audio", pcm, MBE_SAMPLES_LENGTH * 2U);
 
-            for (uint32_t pcmIdx = 0; pcmIdx < pcmLength; pcmIdx++) {
+            for (uint32_t pcmIdx = 0; pcmIdx < MBE_SAMPLES_LENGTH; pcmIdx++) {
                 samples[smpIdx] = decodeMuLaw(pcm[pcmIdx]);
                 smpIdx++;
             }
