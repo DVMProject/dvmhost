@@ -96,25 +96,25 @@ void mdcPacketDetected(int frameCount, mdc_u8_t op, mdc_u8_t arg, mdc_u16_t unit
  * @param pcm PCM value.
  * @return uint8_t aLaw value.
  */
-uint8_t pcmToaLaw(short pcm);
+uint8_t encodeALaw(short pcm);
 /**
  * @brief Helper to convert G.711 aLaw into PCM.
  * @param alaw aLaw value.
  * @return short PCM value.
  */
-short aLawToPCM(uint8_t alaw);
+short decodeALaw(uint8_t alaw);
 /**
- * @brief Helper to convert PCM into G.711 uLaw.
+ * @brief Helper to convert PCM into G.711 MuLaw.
  * @param pcm PCM value.
- * @return uint8_t uLaw value.
+ * @return uint8_t MuLaw value.
  */
-uint8_t pcmTouLaw(short pcm);
+uint8_t encodeMuLaw(short pcm);
 /**
- * @brief Helper to convert G.711 uLaw into PCM.
- * @param ulaw uLaw value.
+ * @brief Helper to convert G.711 MuLaw into PCM.
+ * @param ulaw MuLaw value.
  * @return short PCM value.
  */
-short uLawToPCM(uint8_t ulaw);
+short decodeMuLaw(uint8_t ulaw);
 
 // ---------------------------------------------------------------------------
 //  Class Declaration
@@ -239,6 +239,7 @@ private:
     bool m_dumpSampleLevel;
 
     bool m_running;
+    bool m_trace;
     bool m_debug;
 
     uint16_t m_rtpSeqNo;

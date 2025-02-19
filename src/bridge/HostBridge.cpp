@@ -165,17 +165,17 @@ static short search(short val, short* table, short size)
 
 /* Helper to convert PCM into G.711 aLaw. */
 
-uint8_t pcmToaLaw(short pcm)
+uint8_t encodeALaw(short pcm)
 {
     short mask;
-    unsigned char aval;
+    uint8_t aval;
 
     pcm = pcm >> 3;
 
     if (pcm >= 0) {
-        mask = 0xD5;  // sign (7th) bit = 1
+        mask = 0xD5U;  // sign (7th) bit = 1
     } else {
-        mask = 0x55;  // sign bit = 0
+        mask = 0x55U;  // sign bit = 0
         pcm = -pcm - 1;
     }
 
@@ -200,9 +200,9 @@ uint8_t pcmToaLaw(short pcm)
 
 /* Helper to convert G.711 aLaw into PCM. */
 
-short aLawToPCM(uint8_t alaw)
+short decodeALaw(uint8_t alaw)
 {
-    alaw ^= 0x55;
+    alaw ^= 0x55U;
 
     short t = (alaw & QUANT_MASK) << 4;
     short seg = ((unsigned)alaw & SEG_MASK) >> SEG_SHIFT;
@@ -211,19 +211,19 @@ short aLawToPCM(uint8_t alaw)
         t += 8;
         break;
     case 1:
-        t += 0x108;
+        t += 0x108U;
         break;
     default:
-        t += 0x108;
+        t += 0x108U;
         t <<= seg - 1;
     }
 
     return ((alaw & SIGN_BIT) ? t : -t);
 }
 
-/* Helper to convert PCM into G.711 uLaw. */
+/* Helper to convert PCM into G.711 MuLaw. */
 
-uint8_t pcmTouLaw(short pcm)
+uint8_t encodeMuLaw(short pcm)
 {
     short mask;
 
@@ -256,9 +256,9 @@ uint8_t pcmTouLaw(short pcm)
     }
 }
 
-/* Helper to convert G.711 uLaw into PCM. */
+/* Helper to convert G.711 MuLaw into PCM. */
 
-short uLawToPCM(uint8_t ulaw)
+short decodeMuLaw(uint8_t ulaw)
 {
     // complement to obtain normal u-law value
     ulaw = ~ulaw;
@@ -350,6 +350,7 @@ HostBridge::HostBridge(const std::string& confFile) :
     m_detectedSampleCnt(0U),
     m_dumpSampleLevel(false),
     m_running(false),
+    m_trace(false),
     m_debug(false),
     m_rtpSeqNo(0U),
     m_rtpTimestamp(INVALID_TS)
@@ -969,6 +970,9 @@ bool HostBridge::readParams()
     yaml::Node networkConf = m_conf["network"];
     m_udpAudio = networkConf["udpAudio"].as<bool>(false);
 
+    m_trace = systemConf["trace"].as<bool>(false);
+    m_debug = systemConf["debug"].as<bool>(false);
+
     LogInfo("General Parameters");
     LogInfo("    Rx Audio Gain: %.1f", m_rxAudioGain);
     LogInfo("    Vocoder Decoder Audio Gain: %.1f", m_vocoderDecoderAudioGain);
@@ -986,6 +990,10 @@ bool HostBridge::readParams()
     LogInfo("    Grant Demands: %s", m_grantDemand ? "yes" : "no");
     LogInfo("    Local Audio: %s", m_localAudio ? "yes" : "no");
     LogInfo("    UDP Audio: %s", m_udpAudio ? "yes" : "no");
+
+    if (m_debug) {
+        LogInfo("    Debug: yes");
+    }
 
     return true;
 }
@@ -1160,8 +1168,8 @@ void HostBridge::processUDPAudio()
     }
 
     if (length > 0) {
-        if (m_debug)
-            Utils::dump(1U, "UDP Audio Network Packet", buffer, length);
+        if (m_trace)
+            Utils::dump(1U, "HostBridge()::processUDPAudio() Audio Network Packet", buffer, length);
 
         uint32_t pcmLength = 0;
         if (m_udpNoIncludeLength) {
@@ -1171,7 +1179,7 @@ void HostBridge::processUDPAudio()
         }
 
         if (m_udpRTPFrames)
-            pcmLength = MBE_SAMPLES_LENGTH;
+            pcmLength = MBE_SAMPLES_LENGTH * 2U;
 
         UInt8Array __pcm = std::make_unique<uint8_t[]>(pcmLength);
         uint8_t* pcm = __pcm.get();
@@ -1185,7 +1193,7 @@ void HostBridge::processUDPAudio()
                 return;
             }
 
-            ::memcpy(pcm, buffer + RTP_HEADER_LENGTH_BYTES, MBE_SAMPLES_LENGTH);
+            ::memcpy(pcm, buffer + RTP_HEADER_LENGTH_BYTES, MBE_SAMPLES_LENGTH * 2U);
         }
         else {
             if (m_udpNoIncludeLength) {
@@ -1211,9 +1219,19 @@ void HostBridge::processUDPAudio()
         int smpIdx = 0;
         short samples[MBE_SAMPLES_LENGTH];
         if (m_udpUseULaw) {
+            if (m_trace)
+                Utils::dump(1U, "HostBridge()::processUDPAudio() uLaw Audio", pcm, MBE_SAMPLES_LENGTH * 2U);
+
             for (uint32_t pcmIdx = 0; pcmIdx < pcmLength; pcmIdx++) {
-                samples[smpIdx] = uLawToPCM(pcm[pcmIdx]);
+                samples[smpIdx] = decodeMuLaw(pcm[pcmIdx]);
                 smpIdx++;
+            }
+
+            int pcmIdx = 0;
+            for (uint32_t smpIdx = 0; smpIdx < MBE_SAMPLES_LENGTH; smpIdx++) {
+                pcm[pcmIdx + 0] = (uint8_t)(samples[smpIdx] & 0xFF);
+                pcm[pcmIdx + 1] = (uint8_t)((samples[smpIdx] >> 8) & 0xFF);
+                pcmIdx += 2;
             }
         }
         else {
@@ -1505,8 +1523,11 @@ void HostBridge::decodeDMRAudioFrame(uint8_t* ambe, uint32_t srcId, uint32_t dst
             uint8_t pcm[MBE_SAMPLES_LENGTH * 2U];
             if (m_udpUseULaw) {
                 for (uint32_t smpIdx = 0; smpIdx < MBE_SAMPLES_LENGTH; smpIdx++) {
-                    pcm[smpIdx] = pcmTouLaw(samples[smpIdx]);
+                    pcm[smpIdx] = encodeMuLaw(samples[smpIdx]);
                 }
+
+                if (m_trace)
+                    Utils::dump(1U, "HostBridge()::decodeDMRAudioFrame() Encoded uLaw Audio", pcm, MBE_SAMPLES_LENGTH);
             }
             else {
                 for (uint32_t smpIdx = 0; smpIdx < MBE_SAMPLES_LENGTH; smpIdx++) {
@@ -2090,8 +2111,11 @@ void HostBridge::decodeP25AudioFrame(uint8_t* ldu, uint32_t srcId, uint32_t dstI
             uint8_t pcm[MBE_SAMPLES_LENGTH * 2U];
             if (m_udpUseULaw) {
                 for (uint32_t smpIdx = 0; smpIdx < MBE_SAMPLES_LENGTH; smpIdx++) {
-                    pcm[smpIdx] = pcmTouLaw(samples[smpIdx]);
+                    pcm[smpIdx] = encodeMuLaw(samples[smpIdx]);
                 }
+
+                if (m_trace)
+                    Utils::dump(1U, "HostBridge()::decodeP25AudioFrame() Encoded uLaw Audio", pcm, MBE_SAMPLES_LENGTH);
             }
             else {
                 for (uint32_t smpIdx = 0; smpIdx < MBE_SAMPLES_LENGTH; smpIdx++) {

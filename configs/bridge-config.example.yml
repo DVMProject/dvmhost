@@ -143,3 +143,8 @@ system:
 
     # Enable local audio over speakers.
     localAudio: true
+
+    # Flag indicating whether or not trace logging is enabled.
+    trace: false
+    # Flag indicating whether or not debug logging is enabled.
+    debug: false
