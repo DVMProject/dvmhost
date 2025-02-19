@@ -1153,7 +1153,7 @@ void ControlSignaling::writeRF_TSDU_Ext_Func(uint32_t func, uint32_t arg, uint32
         break;
     }
 
-    writeRF_TSDU_SBF_Imm(iosp.get(), false);
+    writeRF_TSDU_SBF_Imm(iosp.get(), true);
 }
 
 /* Helper to write a group affiliation query packet. */
