@@ -136,7 +136,7 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
         // is this the end of the call stream?
         if (dataSync && (dataType == DataType::TERMINATOR_WITH_LC)) {
             if (srcId == 0U && dstId == 0U) {
-                LogWarning(LOG_NET, "DMR, invalid TERMINATOR, peer = %u, srcId = %u, dstId = %u, streamId = %u, external = %u", peerId, srcId, dstId, streamId, external);
+                LogWarning(LOG_NET, "DMR, invalid TERMINATOR, peer = %u, srcId = %u, dstId = %u, slot = %u, streamId = %u, external = %u", peerId, srcId, dstId, slotNo, streamId, external);
                 return false;
             }
 
@@ -149,8 +149,8 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                     return false;
                 });
                 if (it == m_status.end()) {
-                    LogError(LOG_NET, "DMR, tried to end call for non-existent call in progress?, peer = %u, srcId = %u, dstId = %u, streamId = %u, external = %u",
-                        peerId, srcId, dstId, streamId, external);
+                    LogError(LOG_NET, "DMR, tried to end call for non-existent call in progress?, peer = %u, srcId = %u, dstId = %u, slot = %u, streamId = %u, external = %u",
+                        peerId, srcId, dstId, slotNo, streamId, external);
                 }
                 else {
                     status = it->second;
@@ -179,8 +179,8 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                     }
                 }
 
-                LogMessage(LOG_NET, "DMR, Call End, peer = %u, srcId = %u, dstId = %u, duration = %u, streamId = %u, external = %u",
-                            peerId, srcId, dstId, duration / 1000, streamId, external);
+                LogMessage(LOG_NET, "DMR, Call End, peer = %u, srcId = %u, dstId = %u, slot = %u, duration = %u, streamId = %u, external = %u",
+                            peerId, srcId, dstId, slotNo, duration / 1000, streamId, external);
 
                 // report call event to InfluxDB
                 if (m_network->m_enableInfluxDB) {

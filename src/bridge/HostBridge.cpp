@@ -1651,6 +1651,9 @@ void HostBridge::encodeDMRAudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32_
 
             dmrData.setData(data);
 
+            LogMessage(LOG_HOST, DMR_DT_VOICE_LC_HEADER ", slot = %u, srcId = %u, dstId = %u, FLCO = $%02X", m_slot,
+                dmrLC.getSrcId(), dmrLC.getDstId(), dmrData.getFLCO());
+
             m_network->writeDMR(dmrData, false);
             m_txStreamId = m_network->getDMRStreamId(m_slot);
 
@@ -2423,10 +2426,25 @@ void HostBridge::callEnd(uint32_t srcId, uint32_t dstId)
         switch (m_txMode) {
         case TX_MODE_DMR:
         {
+            dmr::defines::DataType::E dataType = dmr::defines::DataType::VOICE_SYNC;
+            if (m_dmrN == 0)
+                dataType = dmr::defines::DataType::VOICE_SYNC;
+            else {
+                dataType = dmr::defines::DataType::VOICE;
+            }
+
             dmr::data::NetData data = dmr::data::NetData();
-            data.setDataType(dmr::defines::DataType::TERMINATOR_WITH_LC);
-            data.setDstId(dstId);
+            data.setSlotNo(m_slot);
+            data.setDataType(dataType);
             data.setSrcId(srcId);
+            data.setDstId(dstId);
+            data.setFLCO(dmr::defines::FLCO::GROUP);
+            data.setN(m_dmrN);
+            data.setSeqNo(m_dmrSeqNo);
+            data.setBER(0U);
+            data.setRSSI(0U);
+
+            LogMessage(LOG_HOST, DMR_DT_TERMINATOR_WITH_LC ", slot = %u, dstId = %u", m_slot, dstId);
 
             m_network->writeDMRTerminator(data, &m_dmrSeqNo, &m_dmrN, m_dmrEmbeddedData);
             m_network->resetDMR(data.getSlotNo());
@@ -2440,6 +2458,8 @@ void HostBridge::callEnd(uint32_t srcId, uint32_t dstId)
             lc.setSrcId(srcId);
 
             p25::data::LowSpeedData lsd = p25::data::LowSpeedData();
+
+            LogMessage(LOG_HOST, P25_TDU_STR);
 
             uint8_t controlByte = 0x00U;
             m_network->writeP25TDU(lc, lsd, controlByte);
