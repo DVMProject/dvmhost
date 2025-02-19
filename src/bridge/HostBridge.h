@@ -447,7 +447,7 @@ private:
     uint8_t* generateRTPHeaders(uint8_t msgLen, uint16_t& rtpSeq);
 
     /**
-     * @brief Helper to generate the preamble tone.
+     * @brief Helper to generate the single-tone preamble tone.
      */
     void generatePreambleTone();
 

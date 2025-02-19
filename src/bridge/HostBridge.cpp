@@ -2338,7 +2338,7 @@ void HostBridge::encodeP25AudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32_
     m_p25N++;
 }
 
-/* Helper to generate the preamble tone. */
+/* Helper to generate the single-tone preamble tone. */
 
 void HostBridge::generatePreambleTone()
 {
@@ -2349,6 +2349,8 @@ void HostBridge::generatePreambleTone()
         ::LogError(LOG_HOST, "failed to generate preamble tone");
         return;
     }
+
+    ma_waveform_set_frequency(&m_maSineWaveform, m_preambleTone);
 
     ma_uint32 pcmBytes = frameCount * ma_get_bytes_per_frame(m_maDevice.capture.format, m_maDevice.capture.channels);
     UInt8Array __sine = std::make_unique<uint8_t[]>(pcmBytes);
