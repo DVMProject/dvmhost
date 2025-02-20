@@ -225,6 +225,8 @@ protocols:
         legacyGroupReg: false
         # Flag indicating the host should send a network grant demand TDU for conventional traffic.
         convNetGrantDemand: false
+        # Flag indicating the host should demand a full unit registration for a refused affiliation request.
+        demandUnitRegForRefusedAff: true
         # Flag indicating the host should verify group affiliation.
         verifyAff: false
         # Flag indicating the host should verify unit registration.

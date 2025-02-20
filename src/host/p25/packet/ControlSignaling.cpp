@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2017-2025 Bryan Biedenkapp, N2PLL
  *  Copyright (C) 2022 Jason-UWU
  *
  */
@@ -540,7 +540,11 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
                     writeRF_TSDU_ACK_FNE(srcId, TSBKO::IOSP_GRP_AFF, true, true);
                 }
 
-                writeRF_TSDU_Grp_Aff_Rsp(srcId, dstId);
+                if (writeRF_TSDU_Grp_Aff_Rsp(srcId, dstId) == ResponseCode::REFUSED) {
+                    if (m_p25->m_demandUnitRegForRefusedAff) {
+                        writeRF_TSDU_U_Reg_Cmd(srcId);
+                    }
+                }
             }
             break;
             case TSBKO::ISP_GRP_AFF_Q_RSP:
@@ -2637,10 +2641,8 @@ void ControlSignaling::writeRF_TSDU_Deny(uint32_t srcId, uint32_t dstId, uint8_t
 
 /* Helper to write a group affiliation response packet. */
 
-bool ControlSignaling::writeRF_TSDU_Grp_Aff_Rsp(uint32_t srcId, uint32_t dstId)
+uint8_t ControlSignaling::writeRF_TSDU_Grp_Aff_Rsp(uint32_t srcId, uint32_t dstId)
 {
-    bool ret = false;
-
     std::unique_ptr<IOSP_GRP_AFF> iosp = std::make_unique<IOSP_GRP_AFF>();
     iosp->setMFId(m_lastMFID);
     iosp->setAnnounceGroup(m_announcementGroup);
@@ -2714,7 +2716,6 @@ bool ControlSignaling::writeRF_TSDU_Grp_Aff_Rsp(uint32_t srcId, uint32_t dstId)
         }
 
         ::ActivityLog("P25", true, "group affiliation request from %u to %s %u", srcId, "TG ", dstId);
-        ret = true;
 
         // update dynamic affiliation table
         m_p25->m_affiliations.groupAff(srcId, dstId);
@@ -2724,7 +2725,7 @@ bool ControlSignaling::writeRF_TSDU_Grp_Aff_Rsp(uint32_t srcId, uint32_t dstId)
     }
 
     writeRF_TSDU_SBF_Imm(iosp.get(), noNet);
-    return ret;
+    return iosp->getResponse();
 }
 
 /* Helper to write a unit registration response packet. */
