@@ -441,6 +441,12 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
         }
     });
 
+    // throw a warning if we are notifying a CC of our presence (this indicates we're a VC) *AND* we have the control
+    // enable flag set
+    if (m_enableControl && m_notifyCC) {
+        LogWarning(LOG_P25, "We are configured as a dedicated trunked voice channel but, have control data enabled. Don't do this, control data for a dedicated trunked voice channel should be disabled. This can cause unintended behavior.");
+    }
+
     if (printOptions) {
         LogInfo("    Silence Threshold: %u (%.1f%%)", m_voice->m_silenceThreshold, float(m_voice->m_silenceThreshold) / 12.33F);
         LogInfo("    Frame Loss Threshold: %u", m_frameLossThreshold);
@@ -1266,6 +1272,7 @@ void Control::processNetwork()
 
     bool grantDemand = (buffer[14U] & 0x80U) == 0x80U;
     bool grantDenial = (buffer[14U] & 0x40U) == 0x40U;
+    bool grantEncrypt = (buffer[14U] & 0x08U) == 0x08U;
     bool unitToUnit = (buffer[14U] & 0x01U) == 0x01U;
 
     // process network message header
@@ -1434,12 +1441,15 @@ void Control::processNetwork()
                     return;
                 }
 
+                if (grantEncrypt)
+                    control.setEncrypted(true); // make sure encrypted flag is set
+
                 uint8_t serviceOptions = (control.getEmergency() ? 0x80U : 0x00U) +     // Emergency Flag
                     (control.getEncrypted() ? 0x40U : 0x00U) +                          // Encrypted Flag
                     (control.getPriority() & 0x07U);                                    // Priority
 
                 if (m_verbose) {
-                    LogMessage(LOG_NET, P25_TSDU_STR " remote grant demand, srcId = %u, dstId = %u, unitToUnit = %u", srcId, dstId, unitToUnit);
+                    LogMessage(LOG_NET, P25_TSDU_STR " remote grant demand, srcId = %u, dstId = %u, unitToUnit = %u, encrypted = %u", srcId, dstId, unitToUnit, grantEncrypt);
                 }
 
                 // are we denying the grant?
