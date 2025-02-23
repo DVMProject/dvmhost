@@ -840,6 +840,8 @@ void V24UDPPort::getStatus()
 
     reply[3U] = 0x00U;
     reply[3U] |= 0x08U; // P25 enable flag
+    if (m_fscState == CS_CONNECTED)
+        reply[3U] |= 0x40U; // V.24 connected flag
 
     reply[4U] = uint8_t(m_modemState);
 

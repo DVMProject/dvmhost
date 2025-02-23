@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2017-2025 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -364,8 +364,9 @@ namespace p25
              * @brief Helper to write a group affiliation response packet.
              * @param srcId Source Radio ID.
              * @param dstId Destination ID.
+             * @returns uint8_t Grant response code.
              */
-            bool writeRF_TSDU_Grp_Aff_Rsp(uint32_t srcId, uint32_t dstId);
+            uint8_t writeRF_TSDU_Grp_Aff_Rsp(uint32_t srcId, uint32_t dstId);
             /**
              * @brief Helper to write a unit registration response packet.
              * @param srcId Source Radio ID.

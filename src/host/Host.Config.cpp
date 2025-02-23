@@ -494,6 +494,7 @@ bool Host::createModem()
     bool disableOFlowReset = modemConf["disableOFlowReset"].as<bool>(false);
     bool ignoreModemConfigArea = modemConf["ignoreModemConfigArea"].as<bool>(false);
     bool dumpModemStatus = modemConf["dumpModemStatus"].as<bool>(false);
+    bool respTrace = modemConf["respTrace"].as<bool>(false);
     bool trace = modemConf["trace"].as<bool>(false);
     bool debug = modemConf["debug"].as<bool>(false);
 
@@ -686,6 +687,8 @@ bool Host::createModem()
         else
             m_modem->setP25NAC(m_p25NAC);
     }
+
+    m_modem->setResponseTrace(respTrace);
 
     if (m_modemRemote) {
         m_modem->setOpenHandler(MODEM_OC_PORT_HANDLER_BIND(Host::rmtPortModemOpen, this));

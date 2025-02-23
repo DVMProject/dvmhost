@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2016,2017,2018 Jonathan Naylor, G4KLX
- *  Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2017-2025 Bryan Biedenkapp, N2PLL
  *
  */
 #include "Defines.h"
@@ -78,6 +78,7 @@ Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t q
     m_convNetGrantDemand(false),
     m_sndcpSupport(false),
     m_ignoreAffiliationCheck(false),
+    m_demandUnitRegForRefusedAff(true),
     m_idenTable(idenTable),
     m_ridLookup(ridLookup),
     m_tidLookup(tidLookup),
@@ -267,6 +268,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
     m_sndcpSupport = p25Protocol["sndcpSupport"].as<bool>(false);
 
     m_ignoreAffiliationCheck = p25Protocol["ignoreAffiliationCheck"].as<bool>(false);
+    m_demandUnitRegForRefusedAff = p25Protocol["demandUnitRegForRefusedAff"].as<bool>(true);
 
     yaml::Node control = p25Protocol["control"];
     m_enableControl = control["enable"].as<bool>(false);
@@ -493,6 +495,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
         LogInfo("    Unit-to-Unit Availability Check: %s", m_control->m_unitToUnitAvailCheck ? "yes" : "no");
         LogInfo("    Explicit Source ID Support: %s", m_allowExplicitSourceId ? "yes" : "no");
         LogInfo("    Conventional Network Grant Demand: %s", m_convNetGrantDemand ? "yes" : "no");
+        LogInfo("    Demand Unit Registration for Refused Affiliation: %s", m_demandUnitRegForRefusedAff ? "yes" : "no");
 
         if (disableUnitRegTimeout) {
             LogInfo("    Disable Unit Registration Timeout: yes");

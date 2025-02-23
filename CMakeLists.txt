@@ -57,15 +57,15 @@ if (COMPILE_WIN32)
     set(ENABLE_TCP_SSL OFF)
     message(CHECK_START "Enable TCP SSL support - no; for simplicity WIN32 does not support TCP SSL.")
 else()
-    set(CMAKE_C_COMPILER /usr/bin/gcc)
-    set(CMAKE_CXX_COMPILER /usr/bin/g++)
+    set(CMAKE_C_COMPILER /usr/bin/gcc CACHE STRING "C compiler")
+    set(CMAKE_CXX_COMPILER /usr/bin/g++ CACHE STRING "C++ compiler")
     set(ARCH amd64)
     set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE amd64)
 endif (COMPILE_WIN32)
 
 if (CROSS_COMPILE_ARM)
-    set(CMAKE_C_COMPILER /usr/bin/arm-linux-gnueabihf-gcc)
-    set(CMAKE_CXX_COMPILER /usr/bin/arm-linux-gnueabihf-g++)
+    set(CMAKE_C_COMPILER /usr/bin/arm-linux-gnueabihf-gcc CACHE STRING "C compiler")
+    set(CMAKE_CXX_COMPILER /usr/bin/arm-linux-gnueabihf-g++ CACHE STRING "C++ compiler")
     set(ARCH armhf)
     set(CMAKE_SYSTEM_PROCESSOR armhf)
     set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE armhf)
@@ -73,8 +73,8 @@ if (CROSS_COMPILE_ARM)
     message(CHECK_START "Cross compiling for 32-bit ARM - ${CMAKE_C_COMPILER}")
 endif (CROSS_COMPILE_ARM)
 if (CROSS_COMPILE_AARCH64)
-    set(CMAKE_C_COMPILER /usr/bin/aarch64-linux-gnu-gcc)
-    set(CMAKE_CXX_COMPILER /usr/bin/aarch64-linux-gnu-g++)
+    set(CMAKE_C_COMPILER /usr/bin/aarch64-linux-gnu-gcc CACHE STRING "C compiler")
+    set(CMAKE_CXX_COMPILER /usr/bin/aarch64-linux-gnu-g++ CACHE STRING "C++ compiler")
     set(ARCH arm64)
     set(CMAKE_SYSTEM_PROCESSOR arm64)
     set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE arm64)
@@ -97,16 +97,16 @@ if (CROSS_COMPILE_RPI_ARM)
             GIT_REPOSITORY https://github.com/raspberrypi/tools.git
         )
         FetchContent_MakeAvailable(RPiTools)
-        set(CMAKE_C_COMPILER ${CMAKE_CURRENT_BINARY_DIR}/_deps/rpitools-src/arm-bcm2708/arm-rpi-4.9.3-linux-gnueabihf/bin/arm-linux-gnueabihf-gcc)
-        set(CMAKE_CXX_COMPILER ${CMAKE_CURRENT_BINARY_DIR}/_deps/rpitools-src/arm-bcm2708/arm-rpi-4.9.3-linux-gnueabihf/bin/arm-linux-gnueabihf-g++)
+        set(CMAKE_C_COMPILER ${CMAKE_CURRENT_BINARY_DIR}/_deps/rpitools-src/arm-bcm2708/arm-rpi-4.9.3-linux-gnueabihf/bin/arm-linux-gnueabihf-gcc CACHE STRING "C compiler" FORCE)
+        set(CMAKE_CXX_COMPILER ${CMAKE_CURRENT_BINARY_DIR}/_deps/rpitools-src/arm-bcm2708/arm-rpi-4.9.3-linux-gnueabihf/bin/arm-linux-gnueabihf-g++ CACHE STRING "C++ compiler" FORCE)
 
         message(CHECK_START "Apply OpenSSL library binaries for cross compling (old RPi) 32-bit ARM - ${CMAKE_CURRENT_BINARY_DIR}/_deps/rpitools-src")
         execute_process(COMMAND tar xzf contrib/openssl_cross_patch.RPI_ARM.tar.gz -C ${CMAKE_CURRENT_BINARY_DIR}/_deps/rpitools-src WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR})
 
         set(OPENSSL_ROOT_DIR ${CMAKE_CURRENT_BINARY_DIR}/_deps/rpitools-src/arm-bcm2708/arm-rpi-4.9.3-linux-gnueabihf/arm-linux-gnueabihf/sysroot/usr/lib)
     else()
-        set(CMAKE_C_COMPILER ${RPI_ARM_TOOLS}/arm-bcm2708/arm-rpi-4.9.3-linux-gnueabihf/bin/arm-linux-gnueabihf-gcc)
-        set(CMAKE_CXX_COMPILER ${RPI_ARM_TOOLS}/arm-bcm2708/arm-rpi-4.9.3-linux-gnueabihf/bin/arm-linux-gnueabihf-g++)
+        set(CMAKE_C_COMPILER ${RPI_ARM_TOOLS}/arm-bcm2708/arm-rpi-4.9.3-linux-gnueabihf/bin/arm-linux-gnueabihf-gcc CACHE STRING "C compiler" FORCE)
+        set(CMAKE_CXX_COMPILER ${RPI_ARM_TOOLS}/arm-bcm2708/arm-rpi-4.9.3-linux-gnueabihf/bin/arm-linux-gnueabihf-g++ CACHE STRING "C++ compiler" FORCE)
 
         message(CHECK_START "Apply OpenSSL library binaries for cross compling (old RPi) 32-bit ARM - ${RPI_ARM_TOOLS}")
         execute_process(COMMAND tar xzf contrib/openssl_cross_patch.RPI_ARM.tar.gz -C ${RPI_ARM_TOOLS} WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR})
@@ -538,7 +538,7 @@ add_custom_target(old_install
     COMMAND install -m 644 ../configs/fne-config.example.yml ${CMAKE_LEGACY_INSTALL_PREFIX}/fne-config.example.yml
     COMMAND install -m 644 ../configs/fne-sysview.example.yml ${CMAKE_LEGACY_INSTALL_PREFIX}/fne-sysview.example.yml
     COMMAND install -m 644 ../configs/monitor-config.example.yml ${CMAKE_LEGACY_INSTALL_PREFIX}/monitor-config.example.yml
-    COMMAND install -m 644 ../configs/iden_table.dat ${CMAKE_LEGACY_INSTALL_PREFIX}/iden_table.dat
+    COMMAND install -m 644 ../configs/iden_table.example.dat ${CMAKE_LEGACY_INSTALL_PREFIX}/iden_table.example.dat
     COMMAND install -m 644 ../configs/RSSI.dat ${CMAKE_LEGACY_INSTALL_PREFIX}/RSSI.dat
     COMMAND install -m 644 ../configs/rid_acl.example.dat ${CMAKE_LEGACY_INSTALL_PREFIX}/rid_acl.dat
     COMMAND install -m 644 ../configs/talkgroup_rules.example.yml ${CMAKE_LEGACY_INSTALL_PREFIX}/talkgroup_rules.example.yml
@@ -580,9 +580,9 @@ add_custom_target(old_install-service
     COMMAND chown dvmhost:dvmhost ${CMAKE_LEGACY_INSTALL_PREFIX}/fne-config.example.yml
     COMMAND chown dvmhost:dvmhost ${CMAKE_LEGACY_INSTALL_PREFIX}/fne-sysview.example.yml
     COMMAND chown dvmhost:dvmhost ${CMAKE_LEGACY_INSTALL_PREFIX}/monitor-config.example.yml
-    COMMAND chown dvmhost:dvmhost ${CMAKE_LEGACY_INSTALL_PREFIX}/iden_table.dat
+    COMMAND chown dvmhost:dvmhost ${CMAKE_LEGACY_INSTALL_PREFIX}/iden_table.example.dat
     COMMAND chown dvmhost:dvmhost ${CMAKE_LEGACY_INSTALL_PREFIX}/RSSI.dat
-    COMMAND chown dvmhost:dvmhost ${CMAKE_LEGACY_INSTALL_PREFIX}/rid_acl.dat
+    COMMAND chown dvmhost:dvmhost ${CMAKE_LEGACY_INSTALL_PREFIX}/rid_acl.example.dat
     COMMAND chown dvmhost:dvmhost ${CMAKE_LEGACY_INSTALL_PREFIX}/talkgroup_rules.example.yml
     COMMAND chown dvmhost:dvmhost ${CMAKE_LEGACY_INSTALL_PREFIX}/bridge-config.example.yml
     COMMAND chown dvmhost:dvmhost ${CMAKE_LEGACY_INSTALL_PREFIX}/log

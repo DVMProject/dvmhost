@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2024-2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2024-2025 Bryan Biedenkapp, N2PLL
  *  Copyright (C) 2024 Patrick McDonnell, W3AXL
  *
  */
@@ -198,6 +198,8 @@ void ModemV24::clock(uint32_t ms)
                     convertToAirTIA(m_buffer + (cmdOffset + 1U), m_length - (cmdOffset + 1U));
                 else
                     convertToAir(m_buffer + (cmdOffset + 1U), m_length - (cmdOffset + 1U));
+                if (m_trace)
+                    Utils::dump(1U, "ModemV24::clock() RX P25 Data", m_buffer + (cmdOffset + 1U), m_length - (cmdOffset + 1U));
             }
         }
         break;

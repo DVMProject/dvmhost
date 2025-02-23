@@ -409,7 +409,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
                         // are we auto-registering legacy radios to groups?
                         if (m_p25->m_legacyGroupReg && group) {
                             if (!m_p25->m_affiliations.isGroupAff(srcId, dstId)) {
-                                if (!m_p25->m_control->writeRF_TSDU_Grp_Aff_Rsp(srcId, dstId)) {
+                                if (m_p25->m_control->writeRF_TSDU_Grp_Aff_Rsp(srcId, dstId) != ResponseCode::ACCEPT) {
                                     LogWarning(LOG_RF, P25_HDU_STR " denial, conventional affiliation required, not affiliated to TGID, srcId = %u, dstId = %u", srcId, dstId);
                                     m_p25->m_rfLastDstId = 0U;
                                     m_p25->m_rfLastSrcId = 0U;
