@@ -248,6 +248,8 @@ private:
     uint16_t m_rtpSeqNo;
     uint32_t m_rtpTimestamp;
 
+    uint32_t m_usrpSeqNo;
+
     static std::mutex m_audioMutex;
     static std::mutex m_networkMutex;
 
@@ -448,6 +450,11 @@ private:
      * @returns uint8_t* Buffer containing the encoded RTP headers.
      */
     uint8_t* generateRTPHeaders(uint8_t msgLen, uint16_t& rtpSeq);
+
+    /**
+    * @brief Helper to generate USRP end of transmission
+    */
+    void sendUsrpEot();
 
     /**
      * @brief Helper to generate the single-tone preamble tone.

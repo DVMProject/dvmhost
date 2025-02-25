@@ -322,8 +322,8 @@ HostBridge::HostBridge(const std::string& confFile) :
     m_maCaptureDevices(nullptr),
     m_maDeviceConfig(),
     m_maDevice(),
-    m_inputAudio(MBE_SAMPLES_LENGTH * NUMBER_OF_BUFFERS, "Input Audio Buffer"),
-    m_outputAudio(MBE_SAMPLES_LENGTH * NUMBER_OF_BUFFERS, "Output Audio Buffer"),
+    m_inputAudio(MBE_SAMPLES_LENGTH* NUMBER_OF_BUFFERS, "Input Audio Buffer"),
+    m_outputAudio(MBE_SAMPLES_LENGTH* NUMBER_OF_BUFFERS, "Output Audio Buffer"),
     m_decoder(nullptr),
     m_encoder(nullptr),
     m_mdcDecoder(nullptr),
@@ -355,7 +355,8 @@ HostBridge::HostBridge(const std::string& confFile) :
     m_trace(false),
     m_debug(false),
     m_rtpSeqNo(0U),
-    m_rtpTimestamp(INVALID_TS)
+    m_rtpTimestamp(INVALID_TS),
+    m_usrpSeqNo(0U)
 #if defined(_WIN32)
     ,
     m_encoderState(nullptr),
@@ -1461,18 +1462,8 @@ void HostBridge::processDMRNetwork(uint8_t* buffer, uint32_t length)
                 uint64_t diff = now - m_rxStartTime;
 
                 // send USRP end of transmission
-                if (m_udpUsrp) {
-                    sockaddr_storage addr;
-                    uint32_t addrLen;
-
-                    uint8_t* usrpHeader = new uint8_t[USRP_HEADER_LENGTH];
-
-                    ::memcpy(usrpHeader, "USRP", 4);
-
-                    if (udp::Socket::lookup(m_udpSendAddress, m_udpSendPort, addr, addrLen) == 0) {
-                        m_udpAudioSocket->write(usrpHeader, USRP_HEADER_LENGTH, addr, addrLen);
-                    }
-                }
+                if (m_udpUsrp)
+                    sendUsrpEot();
 
                 LogMessage(LOG_HOST, "P25, call end (T), srcId = %u, dstId = %u, dur = %us", srcId, dstId, diff / 1000U);
             }
@@ -1621,11 +1612,15 @@ void HostBridge::decodeDMRAudioFrame(uint8_t* ambe, uint32_t srcId, uint32_t dst
                 length = (MBE_SAMPLES_LENGTH * 2U) + USRP_HEADER_LENGTH;
                 audioData = new uint8_t[(MBE_SAMPLES_LENGTH * 2U) + USRP_HEADER_LENGTH]; // PCM + 32 bytes (USRP Header)
 
+                m_usrpSeqNo += 1U;
                 usrpHeader[15U] = 1; // set PTT state to true
+                __SET_UINT32(m_usrpSeqNo, usrpHeader, 4U);
+
                 ::memcpy(usrpHeader, "USRP", 4);
                 ::memcpy(audioData, usrpHeader, USRP_HEADER_LENGTH); // copy USRP header into the UDP payload
-
                 ::memcpy(audioData + USRP_HEADER_LENGTH, pcm, MBE_SAMPLES_LENGTH * 2U);
+
+                Utils::dump(1U, "USRP", audioData, 352U);
             }
 
             sockaddr_storage addr;
@@ -1910,16 +1905,7 @@ void HostBridge::processP25Network(uint8_t* buffer, uint32_t length)
 
                 // send USRP end of transmission
                 if (m_udpUsrp) {
-                    sockaddr_storage addr;
-                    uint32_t addrLen;
-
-                    uint8_t* usrpHeader = new uint8_t[USRP_HEADER_LENGTH];
-
-                    ::memcpy(usrpHeader, "USRP", 4);
-
-                    if (udp::Socket::lookup(m_udpSendAddress, m_udpSendPort, addr, addrLen) == 0) {
-                        m_udpAudioSocket->write(usrpHeader, USRP_HEADER_LENGTH, addr, addrLen);
-                    }
+                    sendUsrpEot();
                 }
 
                 LogMessage(LOG_HOST, "P25, call end, srcId = %u, dstId = %u, dur = %us", srcId, dstId, diff / 1000U);
@@ -2242,10 +2228,12 @@ void HostBridge::decodeP25AudioFrame(uint8_t* ldu, uint32_t srcId, uint32_t dstI
                 length = (MBE_SAMPLES_LENGTH * 2U) + USRP_HEADER_LENGTH;
                 audioData = new uint8_t[(MBE_SAMPLES_LENGTH * 2U) + USRP_HEADER_LENGTH]; // PCM + 32 bytes (USRP Header)
 
+                m_usrpSeqNo++;
                 usrpHeader[15U] = 1; // set PTT state to true
+                __SET_UINT32(m_usrpSeqNo, usrpHeader, 4U);
+
                 ::memcpy(usrpHeader, "USRP", 4);
                 ::memcpy(audioData, usrpHeader, USRP_HEADER_LENGTH); // copy USRP header into the UDP payload
-
                 ::memcpy(audioData + USRP_HEADER_LENGTH, pcm, MBE_SAMPLES_LENGTH * 2U);
             }
 
@@ -2414,6 +2402,22 @@ void HostBridge::encodeP25AudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32_
 
     m_p25SeqNo++;
     m_p25N++;
+}
+
+/* Helper to send USRP end of transmission */
+
+void HostBridge::sendUsrpEot() {
+    sockaddr_storage addr;
+    uint32_t addrLen;
+
+    uint8_t* usrpHeader = new uint8_t[USRP_HEADER_LENGTH];
+
+    m_usrpSeqNo = 0U;
+    ::memcpy(usrpHeader, "USRP", 4);
+
+    if (udp::Socket::lookup(m_udpSendAddress, m_udpSendPort, addr, addrLen) == 0) {
+        m_udpAudioSocket->write(usrpHeader, USRP_HEADER_LENGTH, addr, addrLen);
+    }
 }
 
 /* Helper to generate the single-tone preamble tone. */
