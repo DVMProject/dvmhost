@@ -56,6 +56,8 @@
 #define DECSTATE_SIZE 2048
 #define ENCSTATE_SIZE 6144
 
+#define USRP_HEADER_LENGTH 32
+
 const uint8_t FULL_RATE_MODE = 0x00U;
 const uint8_t HALF_RATE_MODE = 0x01U;
 
@@ -162,6 +164,7 @@ private:
     bool m_udpNoIncludeLength;
     bool m_udpUseULaw;
     bool m_udpRTPFrames;
+    bool m_udpUsrp;
 
     uint32_t m_srcId;
     uint32_t m_srcIdOverride;

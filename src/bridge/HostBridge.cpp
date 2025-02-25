@@ -5,6 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2024-2025 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2025 Caleb, K4PHP
  *
  */
 #include "Defines.h"
@@ -293,6 +294,7 @@ HostBridge::HostBridge(const std::string& confFile) :
     m_udpNoIncludeLength(false),
     m_udpUseULaw(false),
     m_udpRTPFrames(false),
+    m_udpUsrp(false),
     m_srcId(p25::defines::WUID_FNE),
     m_srcIdOverride(0U),
     m_overrideSrcIdFromMDC(false),
@@ -1019,7 +1021,11 @@ bool HostBridge::createNetwork()
     m_udpReceivePort = (uint16_t)networkConf["udpReceivePort"].as<uint32_t>(34001);
     m_udpReceiveAddress = networkConf["udpReceiveAddress"].as<std::string>();
     m_udpUseULaw = networkConf["udpUseULaw"].as<bool>(false);
+    m_udpUsrp = networkConf["udpUsrp"].as<bool>(false);
 
+    if (m_udpUsrp)
+        m_udpMetadata = false; // USRP disables metadata due to USRP always having metadata
+    
     if (m_udpUseULaw) {
         m_udpNoIncludeLength = networkConf["udpNoIncludeLength"].as<bool>(false);
         m_udpRTPFrames = networkConf["udpRTPFrames"].as<bool>(false);
@@ -1096,6 +1102,7 @@ bool HostBridge::createNetwork()
             LogInfo("    UDP Audio No Length Header: %s", m_udpNoIncludeLength ? "yes" : "no");
             LogInfo("    UDP Audio RTP Framed: %s", m_udpRTPFrames ? "yes" : "no");
         }
+        LogInfo("    UDP Audio USRP: %s", m_udpUsrp ? "yes" : "no");
     }
 
     LogInfo("    Source ID: %u", m_srcId);
@@ -1178,30 +1185,39 @@ void HostBridge::processUDPAudio()
             pcmLength = __GET_UINT32(buffer, 0U);
         }
 
-        if (m_udpRTPFrames)
+        if (m_udpRTPFrames || m_udpUsrp)
             pcmLength = MBE_SAMPLES_LENGTH * 2U;
 
         UInt8Array __pcm = std::make_unique<uint8_t[]>(pcmLength);
         uint8_t* pcm = __pcm.get();
+        
+        if (!m_udpUsrp) {
+            if (m_udpRTPFrames) {
+                RTPHeader rtpHeader = RTPHeader();
+                rtpHeader.decode(buffer);
 
-        if (m_udpRTPFrames) {
-            RTPHeader rtpHeader = RTPHeader();
-            rtpHeader.decode(buffer);
+                if (rtpHeader.getPayloadType() != RTP_G711_PAYLOAD_TYPE) {
+                    LogError(LOG_HOST, "Invalid RTP payload type %u", rtpHeader.getPayloadType());
+                    return;
+                }
 
-            if (rtpHeader.getPayloadType() != RTP_G711_PAYLOAD_TYPE) {
-                LogError(LOG_HOST, "Invalid RTP payload type %u", rtpHeader.getPayloadType());
-                return;
-            }
-
-            ::memcpy(pcm, buffer + RTP_HEADER_LENGTH_BYTES, MBE_SAMPLES_LENGTH * 2U);
-        }
-        else {
-            if (m_udpNoIncludeLength) {
-                ::memcpy(pcm, buffer, pcmLength);
+                ::memcpy(pcm, buffer + RTP_HEADER_LENGTH_BYTES, MBE_SAMPLES_LENGTH * 2U);
             }
             else {
-                ::memcpy(pcm, buffer + 4U, pcmLength);
+                if (m_udpNoIncludeLength) {
+                    ::memcpy(pcm, buffer, pcmLength);
+                }
+                else {
+                    ::memcpy(pcm, buffer + 4U, pcmLength);
+                }
             }
+        }
+        else {
+            uint8_t* usrpHeader = new uint8_t[USRP_HEADER_LENGTH];
+            ::memcpy(usrpHeader, buffer, USRP_HEADER_LENGTH);
+
+            if (usrpHeader[15U] == 1U && length > USRP_HEADER_LENGTH) // PTT state true and ensure we did not just receive a USRP header
+                ::memcpy(pcm, buffer + USRP_HEADER_LENGTH, pcmLength);
         }
 
         // Utils::dump(1U, "PCM RECV BYTE BUFFER", pcm, pcmLength);
@@ -1444,6 +1460,20 @@ void HostBridge::processDMRNetwork(uint8_t* buffer, uint32_t length)
                 uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
                 uint64_t diff = now - m_rxStartTime;
 
+                // send USRP end of transmission
+                if (m_udpUsrp) {
+                    sockaddr_storage addr;
+                    uint32_t addrLen;
+
+                    uint8_t* usrpHeader = new uint8_t[USRP_HEADER_LENGTH];
+
+                    ::memcpy(usrpHeader, "USRP", 4);
+
+                    if (udp::Socket::lookup(m_udpSendAddress, m_udpSendPort, addr, addrLen) == 0) {
+                        m_udpAudioSocket->write(usrpHeader, USRP_HEADER_LENGTH, addr, addrLen);
+                    }
+                }
+
                 LogMessage(LOG_HOST, "P25, call end (T), srcId = %u, dstId = %u, dur = %us", srcId, dstId, diff / 1000U);
             }
 
@@ -1539,48 +1569,63 @@ void HostBridge::decodeDMRAudioFrame(uint8_t* ambe, uint32_t srcId, uint32_t dst
 
             uint32_t length = (MBE_SAMPLES_LENGTH * 2U) + 4U;
             uint8_t* audioData = nullptr;
-            if (!m_udpMetadata) {
-                audioData = new uint8_t[(MBE_SAMPLES_LENGTH * 2U) + 4U]; // PCM + 4 bytes (PCM length)
-                if (m_udpUseULaw) {
-                    length = (MBE_SAMPLES_LENGTH) + 4U;
-                    if (m_udpNoIncludeLength) {
-                        length = MBE_SAMPLES_LENGTH;
-                        ::memcpy(audioData, pcm, MBE_SAMPLES_LENGTH);
-                    } else {
-                        __SET_UINT32(MBE_SAMPLES_LENGTH, audioData, 0U);
-                        ::memcpy(audioData + 4U, pcm, MBE_SAMPLES_LENGTH);
-                    }
-
-                    // are we sending RTP audio frames?
-                    if (m_udpRTPFrames) {
-                        uint8_t* rtpFrame = generateRTPHeaders(MBE_SAMPLES_LENGTH, m_rtpSeqNo);
-                        if (rtpFrame != nullptr) {
-                            length += RTP_HEADER_LENGTH_BYTES;
-                            uint8_t* newAudioData = new uint8_t[length];
-                            ::memcpy(newAudioData, rtpFrame, RTP_HEADER_LENGTH_BYTES);
-                            ::memcpy(newAudioData + RTP_HEADER_LENGTH_BYTES, audioData, MBE_SAMPLES_LENGTH);
-                            delete[] audioData;
-
-                            audioData = newAudioData;
+            if (!m_udpUsrp) {
+                if (!m_udpMetadata) {
+                    audioData = new uint8_t[(MBE_SAMPLES_LENGTH * 2U) + 4U]; // PCM + 4 bytes (PCM length)
+                    if (m_udpUseULaw) {
+                        length = (MBE_SAMPLES_LENGTH)+4U;
+                        if (m_udpNoIncludeLength) {
+                            length = MBE_SAMPLES_LENGTH;
+                            ::memcpy(audioData, pcm, MBE_SAMPLES_LENGTH);
+                        }
+                        else {
+                            __SET_UINT32(MBE_SAMPLES_LENGTH, audioData, 0U);
+                            ::memcpy(audioData + 4U, pcm, MBE_SAMPLES_LENGTH);
                         }
 
-                        m_rtpSeqNo++;
+                        // are we sending RTP audio frames?
+                        if (m_udpRTPFrames) {
+                            uint8_t* rtpFrame = generateRTPHeaders(MBE_SAMPLES_LENGTH, m_rtpSeqNo);
+                            if (rtpFrame != nullptr) {
+                                length += RTP_HEADER_LENGTH_BYTES;
+                                uint8_t* newAudioData = new uint8_t[length];
+                                ::memcpy(newAudioData, rtpFrame, RTP_HEADER_LENGTH_BYTES);
+                                ::memcpy(newAudioData + RTP_HEADER_LENGTH_BYTES, audioData, MBE_SAMPLES_LENGTH);
+                                delete[] audioData;
+
+                                audioData = newAudioData;
+                            }
+
+                            m_rtpSeqNo++;
+                        }
+                    }
+                    else {
+                        __SET_UINT32((MBE_SAMPLES_LENGTH * 2U), audioData, 0U);
+                        ::memcpy(audioData + 4U, pcm, MBE_SAMPLES_LENGTH * 2U);
                     }
                 }
                 else {
+                    length = (MBE_SAMPLES_LENGTH * 2U) + 12U;
+                    audioData = new uint8_t[(MBE_SAMPLES_LENGTH * 2U) + 12U]; // PCM + (4 bytes (PCM length) + 4 bytes (srcId) + 4 bytes (dstId))
                     __SET_UINT32((MBE_SAMPLES_LENGTH * 2U), audioData, 0U);
                     ::memcpy(audioData + 4U, pcm, MBE_SAMPLES_LENGTH * 2U);
+
+                    // embed destination and source IDs
+                    __SET_UINT32(dstId, audioData, ((MBE_SAMPLES_LENGTH * 2U) + 4U));
+                    __SET_UINT32(srcId, audioData, ((MBE_SAMPLES_LENGTH * 2U) + 8U));
                 }
             }
             else {
-                length = (MBE_SAMPLES_LENGTH * 2U) + 12U;
-                audioData = new uint8_t[(MBE_SAMPLES_LENGTH * 2U) + 12U]; // PCM + (4 bytes (PCM length) + 4 bytes (srcId) + 4 bytes (dstId))
-                __SET_UINT32((MBE_SAMPLES_LENGTH * 2U), audioData, 0U);
-                ::memcpy(audioData + 4U, pcm, MBE_SAMPLES_LENGTH * 2U);
+                uint8_t* usrpHeader = new uint8_t[USRP_HEADER_LENGTH];
 
-                // embed destination and source IDs
-                __SET_UINT32(dstId, audioData, ((MBE_SAMPLES_LENGTH * 2U) + 4U));
-                __SET_UINT32(srcId, audioData, ((MBE_SAMPLES_LENGTH * 2U) + 8U));
+                length = (MBE_SAMPLES_LENGTH * 2U) + USRP_HEADER_LENGTH;
+                audioData = new uint8_t[(MBE_SAMPLES_LENGTH * 2U) + USRP_HEADER_LENGTH]; // PCM + 32 bytes (USRP Header)
+
+                usrpHeader[15U] = 1; // set PTT state to true
+                ::memcpy(usrpHeader, "USRP", 4);
+                ::memcpy(audioData, usrpHeader, USRP_HEADER_LENGTH); // copy USRP header into the UDP payload
+
+                ::memcpy(audioData + USRP_HEADER_LENGTH, pcm, MBE_SAMPLES_LENGTH * 2U);
             }
 
             sockaddr_storage addr;
@@ -1863,6 +1908,20 @@ void HostBridge::processP25Network(uint8_t* buffer, uint32_t length)
                 uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
                 uint64_t diff = now - m_rxStartTime;
 
+                // send USRP end of transmission
+                if (m_udpUsrp) {
+                    sockaddr_storage addr;
+                    uint32_t addrLen;
+
+                    uint8_t* usrpHeader = new uint8_t[USRP_HEADER_LENGTH];
+
+                    ::memcpy(usrpHeader, "USRP", 4);
+
+                    if (udp::Socket::lookup(m_udpSendAddress, m_udpSendPort, addr, addrLen) == 0) {
+                        m_udpAudioSocket->write(usrpHeader, USRP_HEADER_LENGTH, addr, addrLen);
+                    }
+                }
+
                 LogMessage(LOG_HOST, "P25, call end, srcId = %u, dstId = %u, dur = %us", srcId, dstId, diff / 1000U);
             }
 
@@ -2130,48 +2189,64 @@ void HostBridge::decodeP25AudioFrame(uint8_t* ldu, uint32_t srcId, uint32_t dstI
 
             uint32_t length = (MBE_SAMPLES_LENGTH * 2U) + 4U;
             uint8_t* audioData = nullptr;
-            if (!m_udpMetadata) {
-                audioData = new uint8_t[(MBE_SAMPLES_LENGTH * 2U) + 4U]; // PCM + 4 bytes (PCM length)
-                if (m_udpUseULaw) {
-                    length = (MBE_SAMPLES_LENGTH) + 4U;
-                    if (m_udpNoIncludeLength) {
-                        length = MBE_SAMPLES_LENGTH;
-                        ::memcpy(audioData, pcm, MBE_SAMPLES_LENGTH);
-                    } else {
-                        __SET_UINT32(MBE_SAMPLES_LENGTH, audioData, 0U);
-                        ::memcpy(audioData + 4U, pcm, MBE_SAMPLES_LENGTH);
-                    }
 
-                    // are we sending RTP audio frames?
-                    if (m_udpRTPFrames) {
-                        uint8_t* rtpFrame = generateRTPHeaders(MBE_SAMPLES_LENGTH, m_rtpSeqNo);
-                        if (rtpFrame != nullptr) {
-                            length += RTP_HEADER_LENGTH_BYTES;
-                            uint8_t* newAudioData = new uint8_t[length];
-                            ::memcpy(newAudioData, rtpFrame, RTP_HEADER_LENGTH_BYTES);
-                            ::memcpy(newAudioData + RTP_HEADER_LENGTH_BYTES, audioData, MBE_SAMPLES_LENGTH);
-                            delete[] audioData;
-
-                            audioData = newAudioData;
+            if (!m_udpUsrp) {
+                if (!m_udpMetadata) {
+                    audioData = new uint8_t[(MBE_SAMPLES_LENGTH * 2U) + 4U]; // PCM + 4 bytes (PCM length)
+                    if (m_udpUseULaw) {
+                        length = (MBE_SAMPLES_LENGTH)+4U;
+                        if (m_udpNoIncludeLength) {
+                            length = MBE_SAMPLES_LENGTH;
+                            ::memcpy(audioData, pcm, MBE_SAMPLES_LENGTH);
+                        }
+                        else {
+                            __SET_UINT32(MBE_SAMPLES_LENGTH, audioData, 0U);
+                            ::memcpy(audioData + 4U, pcm, MBE_SAMPLES_LENGTH);
                         }
 
-                        m_rtpSeqNo++;
+                        // are we sending RTP audio frames?
+                        if (m_udpRTPFrames) {
+                            uint8_t* rtpFrame = generateRTPHeaders(MBE_SAMPLES_LENGTH, m_rtpSeqNo);
+                            if (rtpFrame != nullptr) {
+                                length += RTP_HEADER_LENGTH_BYTES;
+                                uint8_t* newAudioData = new uint8_t[length];
+                                ::memcpy(newAudioData, rtpFrame, RTP_HEADER_LENGTH_BYTES);
+                                ::memcpy(newAudioData + RTP_HEADER_LENGTH_BYTES, audioData, MBE_SAMPLES_LENGTH);
+                                delete[] audioData;
+
+                                audioData = newAudioData;
+                            }
+
+                            m_rtpSeqNo++;
+                        }
+                    }
+                    else {
+                        __SET_UINT32((MBE_SAMPLES_LENGTH * 2U), audioData, 0U);
+                        ::memcpy(audioData + 4U, pcm, MBE_SAMPLES_LENGTH * 2U);
                     }
                 }
                 else {
+                    length = (MBE_SAMPLES_LENGTH * 2U) + 12U;
+                    audioData = new uint8_t[(MBE_SAMPLES_LENGTH * 2U) + 12U]; // PCM + (4 bytes (PCM length) + 4 bytes (srcId) + 4 bytes (dstId))
                     __SET_UINT32((MBE_SAMPLES_LENGTH * 2U), audioData, 0U);
                     ::memcpy(audioData + 4U, pcm, MBE_SAMPLES_LENGTH * 2U);
+
+                    // embed destination and source IDs
+                    __SET_UINT32(dstId, audioData, ((MBE_SAMPLES_LENGTH * 2U) + 4U));
+                    __SET_UINT32(srcId, audioData, ((MBE_SAMPLES_LENGTH * 2U) + 8U));
                 }
             }
             else {
-                length = (MBE_SAMPLES_LENGTH * 2U) + 12U;
-                audioData = new uint8_t[(MBE_SAMPLES_LENGTH * 2U) + 12U]; // PCM + (4 bytes (PCM length) + 4 bytes (srcId) + 4 bytes (dstId))
-                __SET_UINT32((MBE_SAMPLES_LENGTH * 2U), audioData, 0U);
-                ::memcpy(audioData + 4U, pcm, MBE_SAMPLES_LENGTH * 2U);
+                uint8_t* usrpHeader = new uint8_t[USRP_HEADER_LENGTH];
 
-                // embed destination and source IDs
-                __SET_UINT32(dstId, audioData, ((MBE_SAMPLES_LENGTH * 2U) + 4U));
-                __SET_UINT32(srcId, audioData, ((MBE_SAMPLES_LENGTH * 2U) + 8U));
+                length = (MBE_SAMPLES_LENGTH * 2U) + USRP_HEADER_LENGTH;
+                audioData = new uint8_t[(MBE_SAMPLES_LENGTH * 2U) + USRP_HEADER_LENGTH]; // PCM + 32 bytes (USRP Header)
+
+                usrpHeader[15U] = 1; // set PTT state to true
+                ::memcpy(usrpHeader, "USRP", 4);
+                ::memcpy(audioData, usrpHeader, USRP_HEADER_LENGTH); // copy USRP header into the UDP payload
+
+                ::memcpy(audioData + USRP_HEADER_LENGTH, pcm, MBE_SAMPLES_LENGTH * 2U);
             }
 
             sockaddr_storage addr;
