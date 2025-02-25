@@ -1024,12 +1024,17 @@ bool HostBridge::createNetwork()
     m_udpUseULaw = networkConf["udpUseULaw"].as<bool>(false);
     m_udpUsrp = networkConf["udpUsrp"].as<bool>(false);
 
-    if (m_udpUsrp)
-        m_udpMetadata = false; // USRP disables metadata due to USRP always having metadata
+    if (m_udpUsrp) {
+        m_udpMetadata = false;          // USRP disables metadata due to USRP always having metadata
+        m_udpRTPFrames = false;         // USRP disables RTP
+        m_udpNoIncludeLength = true;    // USRP disables length
+        m_udpUseULaw = false;           // USRP disables ULaw
+    }
     
     if (m_udpUseULaw) {
         m_udpNoIncludeLength = networkConf["udpNoIncludeLength"].as<bool>(false);
         m_udpRTPFrames = networkConf["udpRTPFrames"].as<bool>(false);
+        m_udpUsrp = false; // ULaw disables USRP
         if (m_udpRTPFrames)
             m_udpNoIncludeLength = true; // RTP disables the length being included
     }
