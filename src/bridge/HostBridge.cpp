@@ -1612,15 +1612,13 @@ void HostBridge::decodeDMRAudioFrame(uint8_t* ambe, uint32_t srcId, uint32_t dst
                 length = (MBE_SAMPLES_LENGTH * 2U) + USRP_HEADER_LENGTH;
                 audioData = new uint8_t[(MBE_SAMPLES_LENGTH * 2U) + USRP_HEADER_LENGTH]; // PCM + 32 bytes (USRP Header)
 
-                m_usrpSeqNo += 1U;
+                m_usrpSeqNo++;
                 usrpHeader[15U] = 1; // set PTT state to true
                 __SET_UINT32(m_usrpSeqNo, usrpHeader, 4U);
 
                 ::memcpy(usrpHeader, "USRP", 4);
                 ::memcpy(audioData, usrpHeader, USRP_HEADER_LENGTH); // copy USRP header into the UDP payload
                 ::memcpy(audioData + USRP_HEADER_LENGTH, pcm, MBE_SAMPLES_LENGTH * 2U);
-
-                Utils::dump(1U, "USRP", audioData, 352U);
             }
 
             sockaddr_storage addr;
