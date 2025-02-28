@@ -452,23 +452,31 @@ void Slot::processNetwork(const data::NetData& dmrData)
                 
                 if (grantDemand) {
                     if (m_disableNetworkGrant) {
-                        return;
+                        if (m_enableTSCC && m_dedicatedTSCC) // if we *are* the TSCC exit after this
+                            return;
+                        break;
                     }
 
                     // if we're non-dedicated control, and if we're not in a listening or idle state, ignore any grant
                     // demands
                     if (!dedicatedTSCC && (m_rfState != RS_RF_LISTENING || m_netState != RS_NET_IDLE)) {
-                        return;
+                        if (m_enableTSCC && m_dedicatedTSCC) // if we *are* the TSCC exit after this
+                            return;
+                        break;
                     }
 
                     // validate source RID
                     if (!acl::AccessControl::validateSrcId(dmrData.getSrcId())) {
-                        return;
+                        if (m_enableTSCC && m_dedicatedTSCC) // if we *are* the TSCC exit after this
+                            return;
+                        break;
                     }
 
                     // validate the target ID, if the target is a talkgroup
                     if (!acl::AccessControl::validateTGId(dmrData.getSlotNo(), dmrData.getDstId())) {
-                        return;
+                        if (m_enableTSCC && m_dedicatedTSCC) // if we *are* the TSCC exit after this
+                            return;
+                        break;
                     }
 
                     if (m_verbose) {
@@ -483,7 +491,10 @@ void Slot::processNetwork(const data::NetData& dmrData)
                         tscc->m_control->writeRF_CSBK_Data_Grant(dmrData.getSrcId(), dmrData.getDstId(), 4U, !unitToUnit, true);
                 }
             }
-            return;
+
+            if (m_enableTSCC && m_dedicatedTSCC) // if we *are* the TSCC exit after this
+                return;
+            break;
         default:
             return;
         }
