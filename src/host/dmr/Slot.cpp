@@ -436,14 +436,10 @@ void Slot::processNetwork(const data::NetData& dmrData)
     if (tscc != nullptr)
         dedicatedTSCC = tscc->m_dedicatedTSCC;
 
-    // ignore non-CSBK data destined for the TSCC slot
+    // check if this host instance is TSCC enabled or not -- if it is, handle processing network grant demands
     if (enableTSCC && dedicatedTSCC) {
         switch (dataType)
         {
-        case DataType::CSBK:
-            if (m_slotNo != m_dmr->m_tsccSlotNo)
-                return;
-            break;
         case DataType::VOICE_LC_HEADER:
         case DataType::DATA_HEADER:
             {
@@ -452,30 +448,22 @@ void Slot::processNetwork(const data::NetData& dmrData)
                 
                 if (grantDemand) {
                     if (m_disableNetworkGrant) {
-                        if (m_enableTSCC && m_dedicatedTSCC) // if we *are* the TSCC exit after this
-                            return;
                         break;
                     }
 
                     // if we're non-dedicated control, and if we're not in a listening or idle state, ignore any grant
                     // demands
                     if (!dedicatedTSCC && (m_rfState != RS_RF_LISTENING || m_netState != RS_NET_IDLE)) {
-                        if (m_enableTSCC && m_dedicatedTSCC) // if we *are* the TSCC exit after this
-                            return;
                         break;
                     }
 
                     // validate source RID
                     if (!acl::AccessControl::validateSrcId(dmrData.getSrcId())) {
-                        if (m_enableTSCC && m_dedicatedTSCC) // if we *are* the TSCC exit after this
-                            return;
                         break;
                     }
 
                     // validate the target ID, if the target is a talkgroup
                     if (!acl::AccessControl::validateTGId(dmrData.getSlotNo(), dmrData.getDstId())) {
-                        if (m_enableTSCC && m_dedicatedTSCC) // if we *are* the TSCC exit after this
-                            return;
                         break;
                     }
 
@@ -491,12 +479,20 @@ void Slot::processNetwork(const data::NetData& dmrData)
                         tscc->m_control->writeRF_CSBK_Data_Grant(dmrData.getSrcId(), dmrData.getDstId(), 4U, !unitToUnit, true);
                 }
             }
-
-            if (m_enableTSCC && m_dedicatedTSCC) // if we *are* the TSCC exit after this
-                return;
             break;
         default:
-            return;
+            break;
+        }
+
+        // if *this slot* is the TSCC slot, stop processing after this point
+        if (m_enableTSCC && m_dedicatedTSCC)
+        {
+            if (dataType != DataType::CSBK)
+                return;
+            else {
+                if (m_slotNo != m_dmr->m_tsccSlotNo)
+                    return;
+            }
         }
     }
 
