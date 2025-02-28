@@ -427,11 +427,22 @@ void Slot::processNetwork(const data::NetData& dmrData)
 
     DataType::E dataType = dmrData.getDataType();
 
+    Slot* tscc = m_dmr->getTSCCSlot();
+
+    bool enableTSCC = false;
+    if (tscc != nullptr)
+        enableTSCC = tscc->m_enableTSCC;
+    bool dedicatedTSCC = false;
+    if (tscc != nullptr)
+        dedicatedTSCC = tscc->m_dedicatedTSCC;
+
     // ignore non-CSBK data destined for the TSCC slot
-    if (m_enableTSCC && m_dedicatedTSCC && m_slotNo == m_dmr->m_tsccSlotNo) {
+    if (enableTSCC && dedicatedTSCC) {
         switch (dataType)
         {
         case DataType::CSBK:
+            if (m_slotNo != m_dmr->m_tsccSlotNo)
+                return;
             break;
         case DataType::VOICE_LC_HEADER:
         case DataType::DATA_HEADER:
@@ -446,7 +457,7 @@ void Slot::processNetwork(const data::NetData& dmrData)
 
                     // if we're non-dedicated control, and if we're not in a listening or idle state, ignore any grant
                     // demands
-                    if (!m_dedicatedTSCC && (m_rfState != RS_RF_LISTENING || m_netState != RS_NET_IDLE)) {
+                    if (!dedicatedTSCC && (m_rfState != RS_RF_LISTENING || m_netState != RS_NET_IDLE)) {
                         return;
                     }
 
@@ -467,9 +478,9 @@ void Slot::processNetwork(const data::NetData& dmrData)
 
                     // perform grant response logic
                     if (dataType == DataType::VOICE_LC_HEADER)
-                        m_control->writeRF_CSBK_Grant(dmrData.getSrcId(), dmrData.getDstId(), 4U, !unitToUnit, true);
+                        tscc->m_control->writeRF_CSBK_Grant(dmrData.getSrcId(), dmrData.getDstId(), 4U, !unitToUnit, true);
                     if (dataType == DataType::DATA_HEADER)
-                        m_control->writeRF_CSBK_Data_Grant(dmrData.getSrcId(), dmrData.getDstId(), 4U, !unitToUnit, true);
+                        tscc->m_control->writeRF_CSBK_Data_Grant(dmrData.getSrcId(), dmrData.getDstId(), 4U, !unitToUnit, true);
                 }
             }
             return;
