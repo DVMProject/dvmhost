@@ -742,7 +742,7 @@ UInt8Array BaseNetwork::createDMR_Message(uint32_t& length, const uint32_t strea
 
     uint32_t slotNo = data.getSlotNo();
 
-    buffer[14U] = 0U;                                                               // Control Bits
+    buffer[14U] = data.getControl();                                                // Control Bits
 
     // Individual slot disabling
     if (slotNo == 1U && !m_slot1) {

@@ -379,7 +379,7 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len)
             if (m_slot->m_duplex)
                 m_slot->addFrame(data);
 
-            m_slot->writeNetwork(data, DataType::CSBK, gi ? FLCO::GROUP : FLCO::PRIVATE, srcId, dstId, 0U, true);
+            m_slot->writeNetwork(data, DataType::CSBK, gi ? FLCO::GROUP : FLCO::PRIVATE, srcId, dstId, 0U, 0U, true);
         }
 
         return true;
@@ -765,7 +765,7 @@ void ControlSignaling::writeNet_CSBK(lc::CSBK* csbk)
     if (m_slot->m_duplex)
         m_slot->addFrame(data);
 
-    m_slot->writeNetwork(data, DataType::CSBK, csbk->getGI() ? FLCO::GROUP : FLCO::PRIVATE, csbk->getSrcId(), csbk->getDstId(), 0U, true);
+    m_slot->writeNetwork(data, DataType::CSBK, csbk->getGI() ? FLCO::GROUP : FLCO::PRIVATE, csbk->getSrcId(), csbk->getDstId(), 0U, 0U, true);
 }
 
 /*

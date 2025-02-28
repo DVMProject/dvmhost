@@ -152,6 +152,8 @@ Slot::Slot(uint32_t slotNo, uint32_t timeout, uint32_t tgHang, uint32_t queueSiz
     m_enableTSCC(false),
     m_dedicatedTSCC(false),
     m_ignoreAffiliationCheck(false),
+    m_disableNetworkGrant(false),
+    m_convNetGrantDemand(false),
     m_tsccPayloadDstId(0U),
     m_tsccPayloadSrcId(0U),
     m_tsccPayloadGroup(false),
@@ -426,9 +428,54 @@ void Slot::processNetwork(const data::NetData& dmrData)
     DataType::E dataType = dmrData.getDataType();
 
     // ignore non-CSBK data destined for the TSCC slot
-    if (m_enableTSCC && m_dedicatedTSCC && m_slotNo == m_dmr->m_tsccSlotNo &&
-        dataType != DataType::CSBK) {
-        return;
+    if (m_enableTSCC && m_dedicatedTSCC && m_slotNo == m_dmr->m_tsccSlotNo) {
+        switch (dataType)
+        {
+        case DataType::CSBK:
+            break;
+        case DataType::VOICE_LC_HEADER:
+        case DataType::DATA_HEADER:
+            {
+                bool grantDemand = (dmrData.getControl() & 0x80U) == 0x80U;
+                bool unitToUnit = (dmrData.getControl() & 0x01U) == 0x01U;
+                
+                if (grantDemand) {
+                    if (m_disableNetworkGrant) {
+                        return;
+                    }
+
+                    // if we're non-dedicated control, and if we're not in a listening or idle state, ignore any grant
+                    // demands
+                    if (!m_dedicatedTSCC && (m_rfState != RS_RF_LISTENING || m_netState != RS_NET_IDLE)) {
+                        return;
+                    }
+
+                    // validate source RID
+                    if (!acl::AccessControl::validateSrcId(dmrData.getSrcId())) {
+                        return;
+                    }
+
+                    // validate the target ID, if the target is a talkgroup
+                    if (!acl::AccessControl::validateTGId(dmrData.getSlotNo(), dmrData.getDstId())) {
+                        return;
+                    }
+
+                    if (m_verbose) {
+                        LogMessage(LOG_NET, "DMR Slot %u, remote grant demand, srcId = %u, dstId = %u, unitToUnit = %u",
+                                   m_slotNo, dmrData.getSrcId(), dmrData.getDstId(), unitToUnit);
+                    }
+
+                    // perform grant response logic
+                    if (dataType == DataType::VOICE_LC_HEADER)
+                        m_control->writeRF_CSBK_Grant(dmrData.getSrcId(), dmrData.getDstId(), 4U, !unitToUnit, true);
+                    if (dataType == DataType::DATA_HEADER)
+                        m_control->writeRF_CSBK_Data_Grant(dmrData.getSrcId(), dmrData.getDstId(), 4U, !unitToUnit, true);
+                }
+            }
+            return;
+        default:
+            return;
+        }
     }
 
     switch (dataType)
@@ -1203,18 +1250,18 @@ void Slot::notifyCC_TouchGrant(uint32_t dstId)
 
 /* Write data frame to the network. */
 
-void Slot::writeNetwork(const uint8_t* data, DataType::E dataType, uint8_t errors, bool noSequence)
+void Slot::writeNetwork(const uint8_t* data, DataType::E dataType, uint8_t control, uint8_t errors, bool noSequence)
 {
     assert(data != nullptr);
     assert(m_rfLC != nullptr);
 
-    writeNetwork(data, dataType, m_rfLC->getFLCO(), m_rfLC->getSrcId(), m_rfLC->getDstId(), errors);
+    writeNetwork(data, dataType, m_rfLC->getFLCO(), m_rfLC->getSrcId(), m_rfLC->getDstId(), control, errors);
 }
 
 /* Write data frame to the network. */
 
 void Slot::writeNetwork(const uint8_t* data, DataType::E dataType, FLCO::E flco, uint32_t srcId,
-    uint32_t dstId, uint8_t errors, bool noSequence)
+    uint32_t dstId, uint8_t control, uint8_t errors, bool noSequence)
 {
     assert(data != nullptr);
 
@@ -1230,6 +1277,7 @@ void Slot::writeNetwork(const uint8_t* data, DataType::E dataType, FLCO::E flco,
     dmrData.setSrcId(srcId);
     dmrData.setDstId(dstId);
     dmrData.setFLCO(flco);
+    dmrData.setControl(control);
     dmrData.setN(m_voice->m_rfN);
     dmrData.setSeqNo(m_rfSeqNo);
     dmrData.setBER(errors);

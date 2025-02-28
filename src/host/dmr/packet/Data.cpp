@@ -105,7 +105,7 @@ bool Data::process(uint8_t* data, uint32_t len)
             data[0U] = modem::TAG_EOT;
             data[1U] = 0x00U;
 
-            m_slot->writeNetwork(data, DataType::TERMINATOR_WITH_LC);
+            m_slot->writeNetwork(data, DataType::TERMINATOR_WITH_LC, 0U);
 
             if (m_slot->m_duplex) {
                 for (uint32_t i = 0U; i < m_slot->m_hangCount; i++)
@@ -250,7 +250,11 @@ bool Data::process(uint8_t* data, uint32_t len)
         if (m_slot->m_duplex && m_repeatDataPacket)
             m_slot->addFrame(data);
 
-        m_slot->writeNetwork(data, DataType::DATA_HEADER);
+        uint8_t controlByte = 0U;
+        if (m_slot->m_convNetGrantDemand)
+            controlByte |= 0x80U;                                            // Grant Demand Flag
+
+        m_slot->writeNetwork(data, DataType::DATA_HEADER, controlByte);
 
         m_slot->m_rfState = RS_RF_DATA;
         m_slot->m_rfLastDstId = dstId;
@@ -323,7 +327,7 @@ bool Data::process(uint8_t* data, uint32_t len)
         // convert the Data Sync to be from the BS or MS as needed
         Sync::addDMRDataSync(data + 2U, m_slot->m_duplex);
 
-        m_slot->writeNetwork(data, dataType);
+        m_slot->writeNetwork(data, dataType, 0U);
 
         if (m_slot->m_duplex && m_repeatDataPacket) {
             m_slot->addFrame(data);

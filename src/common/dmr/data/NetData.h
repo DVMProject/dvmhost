@@ -88,6 +88,11 @@ namespace dmr
             /**
              * @brief 
              */
+            __PROPERTY(uint8_t, control, Control);
+
+            /**
+             * @brief 
+             */
             __PROPERTY(uint8_t, n, N);
 
             /**

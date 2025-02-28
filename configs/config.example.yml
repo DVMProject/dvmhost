@@ -129,8 +129,14 @@ protocols:
             # Flag indicating whether or not the source ID validation before granting disabled.
             disableGrantSourceIdCheck: false
         
+        # Flag indicating whether or not network calls will generate a channel grant.
+        #   (This applies only in conventional operations where channel granting is utilized and RF-only talkgroup
+        #    steering is required.)
+        disableNetworkGrant: false
         # Flag indicating whether or not a TGID will be tested for affiliations before being granted.
         ignoreAffiliationCheck: false
+        # Flag indicating the host should send a network grant demand for conventional traffic.
+        convNetGrantDemand: false
         # Flag indicating whether or not received RF embedded LC data only should be transmitted.
         embeddedLCOnly: false
         # Flag indicating whether talker alias data should be dumped to the log.

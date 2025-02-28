@@ -30,6 +30,7 @@ NetData::NetData(const NetData& data) :
     m_srcId(data.m_srcId),
     m_dstId(data.m_dstId),
     m_flco(data.m_flco),
+    m_control(data.m_control),
     m_n(data.m_n),
     m_seqNo(data.m_seqNo),
     m_dataType(data.m_dataType),
@@ -48,6 +49,7 @@ NetData::NetData() :
     m_srcId(0U),
     m_dstId(0U),
     m_flco(FLCO::GROUP),
+    m_control(0U),
     m_n(0U),
     m_seqNo(0U),
     m_dataType(DataType::IDLE),
@@ -76,6 +78,7 @@ NetData& NetData::operator=(const NetData& data)
         m_srcId = data.m_srcId;
         m_dstId = data.m_dstId;
         m_flco = data.m_flco;
+        m_control = data.m_control;
         m_dataType = data.m_dataType;
         m_seqNo = data.m_seqNo;
         m_n = data.m_n;

@@ -1687,6 +1687,11 @@ void HostBridge::encodeDMRAudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32_
             dmrData.setSrcId(srcId);
             dmrData.setDstId(dstId);
             dmrData.setFLCO(FLCO::GROUP);
+            if (m_grantDemand) {
+                dmrData.setControl(0x80U); // DMR remote grant demand flag
+            } else {
+                dmrData.setControl(0U);
+            }
             dmrData.setN(m_dmrN);
             dmrData.setSeqNo(m_dmrSeqNo);
             dmrData.setBER(0U);
