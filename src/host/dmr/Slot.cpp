@@ -1400,14 +1400,14 @@ void Slot::writeEndNet(bool writeEnd)
     // release trunked grant (if necessary)
     Slot* tscc = m_dmr->getTSCCSlot();
     if (tscc != nullptr) {
-        if (tscc->m_enableTSCC && m_rfLC != nullptr) {
-            tscc->m_affiliations->releaseGrant(m_rfLC->getDstId(), false);
+        if (tscc->m_enableTSCC && m_netLC != nullptr) {
+            tscc->m_affiliations->releaseGrant(m_netLC->getDstId(), false);
         }
 
         clearTSCCActivated();
 
         if (!tscc->m_enableTSCC) {
-            notifyCC_ReleaseGrant(m_rfLC->getDstId());
+            notifyCC_ReleaseGrant(m_netLC->getDstId());
         }
     }
 
