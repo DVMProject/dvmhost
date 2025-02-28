@@ -1222,4 +1222,8 @@ Once connected, a Peer-Linked CFNE will transparently pass peer list, peer statu
 
 On DVM, for P25 a special network TDU exists called a "grant demand". The "grant demand" TDUs set a flag in the control bit of the P25 network header (bit $80) to flag that the TDU is meant to trigger a channel grant on a end-point.
 
+For DMR, "grant demands", are carryed along side the VOICE_LC_HEADER or DATA_HEADER packets with the control bytes set. Like, P25, the "grant demand" set a flag in the control bit of the DMR network header (bit $80) to flag that the packet is meant to trigger a channel grant on a end-point.
+
 Because these grants are considered "network sourced" end-points should issue a grant locally and not repeat that grant to the network.
+
+(See Section 3.3.1 for P25, and Section 3.2 for DMR)
