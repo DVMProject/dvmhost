@@ -1163,15 +1163,15 @@ void Slot::processFrameLoss()
             m_slotNo, m_rfFrames, m_rfBits, m_rfErrs, float(m_rfErrs * 100U) / float(m_rfBits));
 
         // release trunked grant (if necessary)
-        Slot *m_tscc = m_dmr->getTSCCSlot();
-        if (m_tscc != nullptr) {
-            if (m_tscc->m_enableTSCC && m_rfLC != nullptr) {
-                m_tscc->m_affiliations->releaseGrant(m_rfLC->getDstId(), false);
+        Slot* tscc = m_dmr->getTSCCSlot();
+        if (tscc != nullptr) {
+            if (tscc->m_enableTSCC && m_rfLC != nullptr) {
+                tscc->m_affiliations->releaseGrant(m_rfLC->getDstId(), false);
             }
             
             clearTSCCActivated();
 
-            if (!m_tscc->m_enableTSCC) {
+            if (!tscc->m_enableTSCC) {
                 notifyCC_ReleaseGrant(m_rfLC->getDstId());
             }
         }
@@ -1394,6 +1394,20 @@ void Slot::writeEndNet(bool writeEnd)
         else {
             for (uint32_t i = 0U; i < 3U; i++)
                 addFrame(data, true);
+        }
+    }
+
+    // release trunked grant (if necessary)
+    Slot* tscc = m_dmr->getTSCCSlot();
+    if (tscc != nullptr) {
+        if (tscc->m_enableTSCC && m_rfLC != nullptr) {
+            tscc->m_affiliations->releaseGrant(m_rfLC->getDstId(), false);
+        }
+
+        clearTSCCActivated();
+
+        if (!tscc->m_enableTSCC) {
+            notifyCC_ReleaseGrant(m_rfLC->getDstId());
         }
     }
 
