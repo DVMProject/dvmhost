@@ -87,6 +87,9 @@ network:
     # Flag indicating the source "Radio ID" will be overridden from the received
     # UDP SRC ID.
     overrideSourceIdFromUDP: false
+    # Flag indicating if the source "Radio ID" is being overriden, and changes mid-call, bridge should
+    # terminate previous call an initiate a new one. (This applies only when both udpMetadata and overrideSourceIdFromUDP is set.)
+    resetCallForSourceIdChange: false
     # Talkgroup ID for transmitted/received audio frames.
     destinationId: 1
     # Slot for received/transmitted audio frames.

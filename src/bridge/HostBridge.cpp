@@ -299,6 +299,7 @@ HostBridge::HostBridge(const std::string& confFile) :
     m_srcIdOverride(0U),
     m_overrideSrcIdFromMDC(false),
     m_overrideSrcIdFromUDP(false),
+    m_resetCallForSourceIdChange(false),
     m_dstId(1U),
     m_slot(1U),
     m_identity(),
@@ -1045,8 +1046,14 @@ bool HostBridge::createNetwork()
     m_srcId = (uint32_t)networkConf["sourceId"].as<uint32_t>(p25::defines::WUID_FNE);
     m_overrideSrcIdFromMDC = networkConf["overrideSourceIdFromMDC"].as<bool>(false);
     m_overrideSrcIdFromUDP = networkConf["overrideSourceIdFromUDP"].as<bool>(false);
+    m_resetCallForSourceIdChange = networkConf["resetCallForSourceIdChange"].as<bool>(false);
     m_dstId = (uint32_t)networkConf["destinationId"].as<uint32_t>(1U);
     m_slot = (uint8_t)networkConf["slot"].as<uint32_t>(1U);
+
+    if (!m_udpMetadata && m_resetCallForSourceIdChange)
+        m_resetCallForSourceIdChange = false; // only applies to UDP audio with metadata
+    if (!m_overrideSrcIdFromUDP && m_resetCallForSourceIdChange)
+        m_resetCallForSourceIdChange = false; // only applies to UDP audio when overriding source ID
 
     bool encrypted = networkConf["encrypted"].as<bool>(false);
     std::string key = networkConf["presharedKey"].as<std::string>();
@@ -1116,6 +1123,9 @@ bool HostBridge::createNetwork()
     LogInfo("    DMR Slot: %u", m_slot);
     LogInfo("    Override Source ID from MDC: %s", m_overrideSrcIdFromMDC ? "yes" : "no");
     LogInfo("    Override Source ID from UDP Audio: %s", m_overrideSrcIdFromUDP ? "yes" : "no");
+    if (m_resetCallForSourceIdChange) {
+        LogInfo("    Reset Call if Source ID Changes from UDP Audio: %s", m_resetCallForSourceIdChange ? "yes" : "no");
+    }
 
     if (debug) {
         LogInfo("    Debug: yes");
@@ -1224,17 +1234,27 @@ void HostBridge::processUDPAudio()
 
             if (usrpHeader[15U] == 1U && length > USRP_HEADER_LENGTH) // PTT state true and ensure we did not just receive a USRP header
                 ::memcpy(pcm, buffer + USRP_HEADER_LENGTH, pcmLength);
+
+            delete[] usrpHeader;
         }
 
         // Utils::dump(1U, "PCM RECV BYTE BUFFER", pcm, pcmLength);
 
-        m_udpSrcId = m_srcId;
-        if (m_udpMetadata) {
-            if (m_overrideSrcIdFromUDP)
-                m_udpSrcId = __GET_UINT32(buffer, pcmLength + 8U);
-        }
-
         m_udpDstId = m_dstId;
+
+        if (m_udpMetadata) {
+            if (m_overrideSrcIdFromUDP) {
+                uint32_t udpSrcId = __GET_UINT32(buffer, pcmLength + 8U);
+
+                // if the UDP source ID now doesn't match the current call ID, reset call states
+                if (m_resetCallForSourceIdChange && (udpSrcId != m_udpSrcId))
+                    callEnd(m_udpSrcId, m_dstId);
+
+                m_udpSrcId = udpSrcId;
+            }
+        } else {
+            m_udpSrcId = m_srcId;
+        }
 
         std::lock_guard<std::mutex> lock(m_audioMutex);
 

@@ -170,6 +170,7 @@ private:
     uint32_t m_srcIdOverride;
     bool m_overrideSrcIdFromMDC;
     bool m_overrideSrcIdFromUDP;
+    bool m_resetCallForSourceIdChange;
     uint32_t m_dstId;
     uint8_t m_slot;
 
