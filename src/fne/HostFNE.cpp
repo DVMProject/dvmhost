@@ -281,18 +281,18 @@ int HostFNE::run()
     }
 
     if (m_tidLookup != nullptr) {
+        m_tidLookup->setReloadTime(0U); // no reload
         m_tidLookup->stop();
-        delete m_tidLookup;
     }
 
     if (m_ridLookup != nullptr) {
+        m_ridLookup->setReloadTime(0U); // no reload
         m_ridLookup->stop();
-        delete m_ridLookup;
     }
 
     if (m_peerListLookup != nullptr) {
+        m_peerListLookup->setReloadTime(0U); // no reload
         m_peerListLookup->stop();
-        delete m_peerListLookup;
     }
 #if !defined(_WIN32)
     if (m_tun != nullptr) {

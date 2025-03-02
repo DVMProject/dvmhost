@@ -1666,12 +1666,12 @@ void Host::setState(uint8_t state)
                 }
 
                 if (m_tidLookup != nullptr) {
+                    m_tidLookup->setReloadTime(0U);
                     m_tidLookup->stop();
-                    //delete m_tidLookup;
                 }
                 if (m_ridLookup != nullptr) {
+                    m_tidLookup->setReloadTime(0U);
                     m_ridLookup->stop();
-                    //delete m_ridLookup;
                 }
             }
             else {

@@ -122,13 +122,13 @@ namespace p25
                 m_netId = dist(mt);
 
                 // netId clamping
-                netId = P25Utils::netId(netId);
+                m_netId = P25Utils::netId(netId);
 
                 dist = std::uniform_int_distribution<uint32_t>(0x01, 0xFFEU);
                 m_sysId = dist(mt);
 
                 // sysId clamping
-                sysId = P25Utils::sysId(sysId);
+                m_sysId = P25Utils::sysId(sysId);
             }
 
             m_rfssId = rfssId;

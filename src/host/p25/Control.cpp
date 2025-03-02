@@ -1317,7 +1317,7 @@ void Control::processNetwork()
         }
 
         if (!m_dedicatedControl)
-            ret = m_data->processNetwork(data.get(), frameLength, blockLength);
+            m_data->processNetwork(data.get(), frameLength, blockLength);
 
         return;
     }
@@ -1414,7 +1414,7 @@ void Control::processNetwork()
                 break;
             }
 
-            ret = m_voice->processNetwork(data.get(), frameLength, control, lsd, duid, frameType);
+            m_voice->processNetwork(data.get(), frameLength, control, lsd, duid, frameType);
             break;
 
         case DUID::TDU:

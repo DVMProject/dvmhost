@@ -333,6 +333,7 @@ bool Socket::write(const uint8_t* buffer, uint32_t length, const sockaddr_storag
             cryptedLen += alignment;
 
             // reallocate buffer and copy
+            delete[] cryptoBuffer;
             cryptoBuffer = new uint8_t[cryptedLen];
             ::memset(cryptoBuffer, 0x00U, cryptedLen);
             ::memcpy(cryptoBuffer, buffer, length);

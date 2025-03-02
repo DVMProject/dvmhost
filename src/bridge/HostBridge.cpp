@@ -658,8 +658,7 @@ int HostBridge::run()
         //  -- Network Clocking                               --
         // ------------------------------------------------------
 
-        if (m_network != nullptr)
-        {
+        if (m_network != nullptr) {
             std::lock_guard<std::mutex> lock(HostBridge::m_networkMutex);
             m_network->clock(ms);
         }
@@ -2434,11 +2433,12 @@ void HostBridge::encodeP25AudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32_
 
 /* Helper to send USRP end of transmission */
 
-void HostBridge::sendUsrpEot() {
+void HostBridge::sendUsrpEot() 
+{
     sockaddr_storage addr;
     uint32_t addrLen;
 
-    uint8_t* usrpHeader = new uint8_t[USRP_HEADER_LENGTH];
+    uint8_t usrpHeader[USRP_HEADER_LENGTH];
 
     m_usrpSeqNo = 0U;
     ::memcpy(usrpHeader, "USRP", 4);
@@ -2621,17 +2621,11 @@ void* HostBridge::threadAudioProcess(void* arg)
         ::pthread_setname_np(th->thread, threadName.c_str());
 #endif // _GNU_SOURCE
 
-        StopWatch stopWatch;
-        stopWatch.start();
-
         while (!g_killed) {
             if (!bridge->m_running) {
                 Thread::sleep(1U);
                 continue;
             }
-
-            uint32_t ms = stopWatch.elapsed();
-            stopWatch.start();
 
             // scope is intentional
             {
@@ -2779,17 +2773,11 @@ void* HostBridge::threadNetworkProcess(void* arg)
         ::pthread_setname_np(th->thread, threadName.c_str());
 #endif // _GNU_SOURCE
 
-        StopWatch stopWatch;
-        stopWatch.start();
-
         while (!g_killed) {
             if (!bridge->m_running) {
                 Thread::sleep(1U);
                 continue;
             }
-
-            uint32_t ms = stopWatch.elapsed();
-            stopWatch.start();
 
             uint32_t length = 0U;
             bool netReadRet = false;
