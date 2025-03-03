@@ -440,7 +440,7 @@ void Network::clock(uint32_t ms)
                                 offs += 5U;
                             }
 
-                            LogMessage(LOG_NET, "Activated %u TGs; loaded %u entries into lookup table", len, m_tidLookup->groupVoice().size());
+                            LogMessage(LOG_NET, "Activated %u TGs; loaded %u entries into talkgroup rules table", len, m_tidLookup->groupVoice().size());
 
                             // save if saving from network is enabled
                             if (m_saveLookup && len > 0) {
@@ -471,7 +471,7 @@ void Network::clock(uint32_t ms)
                                 offs += 5U;
                             }
 
-                            LogMessage(LOG_NET, "Deactivated %u TGs; loaded %u entries into lookup table", len, m_tidLookup->groupVoice().size());
+                            LogMessage(LOG_NET, "Deactivated %u TGs; loaded %u entries into talkgroup rules table", len, m_tidLookup->groupVoice().size());
 
                             // save if saving from network is enabled
                             if (m_saveLookup && len > 0) {
