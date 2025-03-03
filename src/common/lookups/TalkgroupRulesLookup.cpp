@@ -358,10 +358,10 @@ bool TalkgroupRulesLookup::save()
     for (auto entry : m_groupVoice) {
         yaml::Node& gv = groupVoiceList.push_back();
         entry.getYaml(gv);
-        //LogDebug(LOG_HOST, "Added TGID %s to yaml TG list", gv["name"].as<std::string>().c_str());
+        //LogDebugEx(LOG_HOST, "TalkgroupRulesLookup::save()", "Added TGID %s to yaml TG list", gv["name"].as<std::string>().c_str());
     }
 
-    //LogDebug(LOG_HOST, "Got final GroupVoiceList YAML size of %u", groupVoiceList.size());
+    //LogDebugEx(LOG_HOST, "TalkgroupRulesLookup::save()", "Got final GroupVoiceList YAML size of %u", groupVoiceList.size());
     
     // Set the new rules
     newRules["groupVoice"] = groupVoiceList;
@@ -373,7 +373,7 @@ bool TalkgroupRulesLookup::save()
     }
 
     try {
-        //LogDebug(LOG_HOST, "Saving TGID file to %s", m_rulesFile.c_str());
+        LogMessage(LOG_HOST, "Saving talkgroup rules file to %s", m_rulesFile.c_str());
         yaml::Serialize(newRules, m_rulesFile.c_str());
         LogDebug(LOG_HOST, "Saved TGID config file to %s", m_rulesFile.c_str());
     }

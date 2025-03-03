@@ -211,7 +211,7 @@ uint8_t* FrameQueue::generateMessage(const uint8_t* message, uint32_t length, ui
         if (timestamp != INVALID_TS) {
             timestamp += (RTP_GENERIC_CLOCK_RATE / 133);
             if (m_debug)
-                LogDebug(LOG_NET, "FrameQueue::generateMessage() RTP streamId = %u, previous TS = %u, TS = %u, rtpSeq = %u", streamId, m_streamTimestamps[streamId], timestamp, rtpSeq);
+                LogDebugEx(LOG_NET, "FrameQueue::generateMessage()", "RTP streamId = %u, previous TS = %u, TS = %u, rtpSeq = %u", streamId, m_streamTimestamps[streamId], timestamp, rtpSeq);
             m_streamTimestamps[streamId] = timestamp;
         }
     }
@@ -232,7 +232,7 @@ uint8_t* FrameQueue::generateMessage(const uint8_t* message, uint32_t length, ui
 
     if (streamId != 0U && timestamp == INVALID_TS && rtpSeq != RTP_END_OF_CALL_SEQ) {
         if (m_debug)
-            LogDebug(LOG_NET, "FrameQueue::generateMessage() RTP streamId = %u, initial TS = %u, rtpSeq = %u", streamId, header.getTimestamp(), rtpSeq);
+            LogDebugEx(LOG_NET, "FrameQueue::generateMessage()", "RTP streamId = %u, initial TS = %u, rtpSeq = %u", streamId, header.getTimestamp(), rtpSeq);
         m_streamTimestamps[streamId] = header.getTimestamp();
     }
 
@@ -241,7 +241,7 @@ uint8_t* FrameQueue::generateMessage(const uint8_t* message, uint32_t length, ui
         auto entry = m_streamTimestamps.find(streamId);
         if (entry != m_streamTimestamps.end()) {
             if (m_debug)
-                LogDebug(LOG_NET, "FrameQueue::generateMessage() RTP streamId = %u, rtpSeq = %u", streamId, rtpSeq);
+                LogDebugEx(LOG_NET, "FrameQueue::generateMessage()", "RTP streamId = %u, rtpSeq = %u", streamId, rtpSeq);
             m_streamTimestamps.erase(streamId);
         }
     }

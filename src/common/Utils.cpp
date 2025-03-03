@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2009,2014,2015,2016 Jonathan Naylor, G4KLX
- *  Copyright (C) 2018-2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2018-2025 Bryan Biedenkapp, N2PLL
  *
  */
 #include "Utils.h"
@@ -72,7 +72,7 @@ void Utils::dump(int level, const std::string& title, const uint8_t* data, uint3
 {
     assert(data != nullptr);
 
-    ::Log(level, "DUMP", "%s (len %u)", title.c_str(), length);
+    ::Log(level, "DUMP", nullptr, 0, nullptr, "%s (len %u)", title.c_str(), length);
 
     uint32_t offset = 0U;
 
@@ -103,7 +103,7 @@ void Utils::dump(int level, const std::string& title, const uint8_t* data, uint3
 
         output += '*';
 #endif
-        ::Log(level, "DUMP", "%04X:  %s", offset, output.c_str());
+        ::Log(level, "DUMP", nullptr, 0, nullptr, "%04X:  %s", offset, output.c_str());
 
         offset += 16U;
 
@@ -143,7 +143,7 @@ void Utils::symbols(const std::string& title, const uint8_t* data, uint32_t leng
 {
     assert(data != nullptr);
 
-    ::Log(2U, "SYMBOLS", "%s (len %u)", title.c_str(), length);
+    ::Log(2U, "SYMBOLS", nullptr, 0, nullptr, "%s (len %u)", title.c_str(), length);
 
     uint32_t offset = 0U;
     uint32_t count = 0U;
@@ -158,7 +158,7 @@ void Utils::symbols(const std::string& title, const uint8_t* data, uint32_t leng
         microslotHeader += temp;
     }
 
-    ::Log(2U, "SYMBOLS", "MCR:  %s", microslotHeader.c_str());
+    ::Log(2U, "SYMBOLS", nullptr, 0, nullptr, "MCR:  %s", microslotHeader.c_str());
 
     uint32_t bufLen = length;
     while (bufLen > 0U) {
@@ -188,7 +188,7 @@ void Utils::symbols(const std::string& title, const uint8_t* data, uint32_t leng
             symOffset += 9;
         }
 
-        ::Log(2U, "SYMBOLS", "%03u:  %s", count, output.c_str());
+        ::Log(2U, "SYMBOLS", nullptr, 0, nullptr, "%03u:  %s", count, output.c_str());
 
         offset += 18U;
         count += 2U;

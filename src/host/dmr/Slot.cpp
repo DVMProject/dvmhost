@@ -1103,7 +1103,7 @@ void Slot::addFrame(const uint8_t *data, bool net, bool imm)
         fifoSpace = m_modem->getDMRSpace2();
     }
 
-    //LogDebug(LOG_DMR, "Slot %u, addFrame() fifoSpace = %u", m_slotNo, fifoSpace);
+    //LogDebugEx(LOG_DMR, "Slot::addFrame()", "Slot %u, fifoSpace = %u", m_slotNo, fifoSpace);
 
     // is this immediate data?
     if (imm) {
@@ -1506,7 +1506,7 @@ void Slot::writeRF_ControlData(uint16_t frameCnt, uint8_t n)
                             bool grp = m_affiliations->isGroup(dstId);
 
                             if (m_debug) {
-                                LogDebug(LOG_DMR, "writeRF_ControlData, frameCnt = %u, seq = %u, late entry, dstId = %u, srcId = %u", frameCnt, n, dstId, srcId);
+                                LogDebugEx(LOG_DMR, "Slot::writeRF_ControlData()", "frameCnt = %u, seq = %u, late entry, dstId = %u, srcId = %u", frameCnt, n, dstId, srcId);
                             }
 
                             m_control->writeRF_CSBK_Grant_LateEntry(dstId, srcId, grp);
@@ -1709,8 +1709,8 @@ void Slot::setShortLC_TSCC(SiteData siteData, uint16_t counter)
     lc[3U] = (uint8_t)((lcValue >> 0) & 0xFFU);
     lc[4U] = edac::CRC::crc8(lc, 4U);
 
-    //LogDebug(LOG_DMR, "setShortLC_TSCC, netId = %02X, siteId = %02X", siteData.netId(), siteData.siteId());
-    //Utils::dump(1U, "shortLC_TSCC", lc, 5U);
+    //LogDebugEx(LOG_DMR, "Slot::setShortLC_TSCC()", "netId = %02X, siteId = %02X", siteData.netId(), siteData.siteId());
+    //Utils::dump(1U, "[Slot::shortLC_TSCC()]", lc, 5U);
 
     uint8_t sLC[9U];
 
@@ -1769,8 +1769,8 @@ void Slot::setShortLC_Payload(SiteData siteData, uint16_t counter)
     lc[3U] = (uint8_t)((lcValue >> 0) & 0xFFU);
     lc[4U] = edac::CRC::crc8(lc, 4U);
 
-    //LogDebug(LOG_DMR, "setShortLC_Payload, netId = %02X, siteId = %02X", siteData.netId(), siteData.siteId());
-    //Utils::dump(1U, "setShortLC_Payload", lc, 5U);
+    //LogDebugEx(LOG_DMR, "Slot::setShortLC_Payload()", "netId = %02X, siteId = %02X", siteData.netId(), siteData.siteId());
+    //Utils::dump(1U, "[Slot::setShortLC_Payload()]", lc, 5U);
 
     uint8_t sLC[9U];
 

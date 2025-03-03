@@ -581,7 +581,7 @@ void Modem::clock(uint32_t ms)
 
                 m_rxDMRQueue1.addData(m_buffer + 3U, m_length - 3U);
                 if (m_trace)
-                    Utils::dump(1U, "Modem::clock() RX DMR Data 1", m_buffer + 3U, m_length - 3U);
+                    Utils::dump(1U, "[Modem::clock()] RX DMR Data 1", m_buffer + 3U, m_length - 3U);
             }
         }
         break;
@@ -607,7 +607,7 @@ void Modem::clock(uint32_t ms)
 
                 m_rxDMRQueue2.addData(m_buffer + 3U, m_length - 3U);
                 if (m_trace)
-                    Utils::dump(1U, "Modem::clock() RX DMR Data 2", m_buffer + 3U, m_length - 3U);
+                    Utils::dump(1U, "[Modem::clock()] RX DMR Data 2", m_buffer + 3U, m_length - 3U);
             }
         }
         break;
@@ -669,7 +669,7 @@ void Modem::clock(uint32_t ms)
 
                 m_rxP25Queue.addData(m_buffer + (cmdOffset + 1U), m_length - (cmdOffset + 1U));
                 if (m_trace)
-                    Utils::dump(1U, "Modem::clock() RX P25 Data", m_buffer + (cmdOffset + 1U), m_length - (cmdOffset + 1U));
+                    Utils::dump(1U, "[Modem::clock()] RX P25 Data", m_buffer + (cmdOffset + 1U), m_length - (cmdOffset + 1U));
             }
         }
         break;
@@ -712,7 +712,7 @@ void Modem::clock(uint32_t ms)
 
                 m_rxNXDNQueue.addData(m_buffer + 3U, m_length - 3U);
                 if (m_trace)
-                    Utils::dump(1U, "Modem::clock() RX NXDN Data", m_buffer + 3U, m_length - 3U);
+                    Utils::dump(1U, "[Modem::clock()] RX NXDN Data", m_buffer + 3U, m_length - 3U);
             }
         }
         break;
@@ -834,9 +834,9 @@ void Modem::clock(uint32_t ms)
                 m_p25Space = m_buffer[10U] * (P25DEF::P25_LDU_FRAME_LENGTH_BYTES);
 
             if (m_dumpModemStatus) {
-                LogDebug(LOG_MODEM, "Modem::clock(), CMD_GET_STATUS, isHotspot = %u, dmr = %u / %u, p25 = %u / %u, nxdn = %u / %u, modemState = %u, tx = %u, adcOverflow = %u, rxOverflow = %u, txOverflow = %u, dacOverflow = %u, dmrSpace1 = %u, dmrSpace2 = %u, p25Space = %u, nxdnSpace = %u",
+                LogDebugEx(LOG_MODEM, "Modem::clock()", "CMD_GET_STATUS, isHotspot = %u, dmr = %u / %u, p25 = %u / %u, nxdn = %u / %u, modemState = %u, tx = %u, adcOverflow = %u, rxOverflow = %u, txOverflow = %u, dacOverflow = %u, dmrSpace1 = %u, dmrSpace2 = %u, p25Space = %u, nxdnSpace = %u",
                     m_isHotspot, dmrEnable, m_dmrEnabled, p25Enable, m_p25Enabled, nxdnEnable, m_nxdnEnabled, m_modemState, m_tx, adcOverflow, rxOverflow, txOverflow, dacOverflow, m_dmrSpace1, m_dmrSpace2, m_p25Space, m_nxdnSpace);
-                LogDebug(LOG_MODEM, "Modem::clock(), CMD_GET_STATUS, rxDMRData1 size = %u, len = %u, free = %u; rxDMRData2 size = %u, len = %u, free = %u, rxP25Data size = %u, len = %u, free = %u, rxNXDNData size = %u, len = %u, free = %u",
+                LogDebugEx(LOG_MODEM, "Modem::clock()", "CMD_GET_STATUS, rxDMRData1 size = %u, len = %u, free = %u; rxDMRData2 size = %u, len = %u, free = %u, rxP25Data size = %u, len = %u, free = %u, rxNXDNData size = %u, len = %u, free = %u",
                     m_rxDMRQueue1.length(), m_rxDMRQueue1.dataSize(), m_rxDMRQueue1.freeSpace(), m_rxDMRQueue2.length(), m_rxDMRQueue2.dataSize(), m_rxDMRQueue2.freeSpace(),
                     m_rxP25Queue.length(), m_rxP25Queue.dataSize(), m_rxP25Queue.freeSpace(), m_rxNXDNQueue.length(), m_rxNXDNQueue.dataSize(), m_rxNXDNQueue.freeSpace());
             }
@@ -907,7 +907,7 @@ void Modem::clock(uint32_t ms)
 
 void Modem::close()
 {
-    LogDebug(LOG_MODEM, "Closing the modem");
+    LogMessage(LOG_MODEM, "Closing the modem");
     m_port->close();
 
     m_gotModemStatus = false;
@@ -928,7 +928,7 @@ uint32_t Modem::peekDMRFrame1Length()
     uint8_t len = 0U;
     m_rxDMRQueue1.peek(&len, 1U);
 #if DEBUG_MODEM
-    LogDebug(LOG_MODEM, "Modem::peekDMRFrame1Length() len = %u, dataSize = %u", len, m_rxDMRQueue1.dataSize());
+    LogDebugEx(LOG_MODEM, "Modem::peekDMRFrame1Length()", "len = %u, dataSize = %u", len, m_rxDMRQueue1.dataSize());
 #endif
     // this ensures we never get in a situation where we have length stuck on the queue
     if (m_rxDMRQueue1.dataSize() == 1U && len > m_rxDMRQueue1.dataSize()) {
@@ -982,7 +982,7 @@ uint32_t Modem::peekDMRFrame2Length()
     uint8_t len = 0U;
     m_rxDMRQueue2.peek(&len, 1U);
 #if DEBUG_MODEM
-    LogDebug(LOG_MODEM, "Modem::peekDMRFrame2Length() len = %u, dataSize = %u", len, m_rxDMRQueue2.dataSize());
+    LogDebugEx(LOG_MODEM, "Modem::peekDMRFrame2Length()", "len = %u, dataSize = %u", len, m_rxDMRQueue2.dataSize());
 #endif
     // this ensures we never get in a situation where we have length stuck on the queue
     if (m_rxDMRQueue2.dataSize() == 1U && len > m_rxDMRQueue2.dataSize()) {
@@ -1040,7 +1040,7 @@ uint32_t Modem::peekP25FrameLength()
     uint16_t len = 0U;
     len = (length[0U] << 8) + length[1U];
 #if DEBUG_MODEM
-    LogDebug(LOG_MODEM, "Modem::peekP25FrameLength() len = %u, dataSize = %u", len, m_rxP25Queue.dataSize());
+    LogDebugEx(LOG_MODEM, "Modem::peekP25FrameLength()", "len = %u, dataSize = %u", len, m_rxP25Queue.dataSize());
 #endif
     // this ensures we never get in a situation where we have length stuck on the queue
     if (m_rxP25Queue.dataSize() == 2U && len > m_rxP25Queue.dataSize()) {
@@ -1098,7 +1098,7 @@ uint32_t Modem::peekNXDNFrameLength()
     uint8_t len = 0U;
     m_rxNXDNQueue.peek(&len, 1U);
 #if DEBUG_MODEM
-    LogDebug(LOG_MODEM, "Modem::peekNXDNFrameLength() len = %u, dataSize = %u", len, m_rxNXDNQueue.dataSize());
+    LogDebugEx(LOG_MODEM, "Modem::peekNXDNFrameLength()", "len = %u, dataSize = %u", len, m_rxNXDNQueue.dataSize());
 #endif
     // this ensures we never get in a situation where we have length stuck on the queue
     if (m_rxNXDNQueue.dataSize() == 1U && len > m_rxNXDNQueue.dataSize()) {
@@ -1222,7 +1222,7 @@ void Modem::clearDMRFrame1()
     buffer[1U] = 3U;
     buffer[2U] = CMD_DMR_CLEAR1;
 #if DEBUG_MODEM
-    Utils::dump(1U, "Modem::clearDMRFrame1(), Written", buffer, 3U);
+    Utils::dump(1U, "[Modem::clearDMRFrame1()] Written", buffer, 3U);
 #endif
     write(buffer, 3U);
     Thread::sleep(5); // 5ms delay
@@ -1238,7 +1238,7 @@ void Modem::clearDMRFrame2()
     buffer[1U] = 3U;
     buffer[2U] = CMD_DMR_CLEAR2;
 #if DEBUG_MODEM
-    Utils::dump(1U, "Modem::clearDMRFrame2(), Written", buffer, 3U);
+    Utils::dump(1U, "[Modem::clearDMRFrame2()] Written", buffer, 3U);
 #endif
     write(buffer, 3U);
     Thread::sleep(5); // 5ms delay
@@ -1254,7 +1254,7 @@ void Modem::clearP25Frame()
     buffer[1U] = 3U;
     buffer[2U] = CMD_P25_CLEAR;
 #if DEBUG_MODEM
-    Utils::dump(1U, "Modem::clearP25Data(), Written", buffer, 3U);
+    Utils::dump(1U, "[Modem::clearP25Data()] Written", buffer, 3U);
 #endif
     write(buffer, 3U);
     Thread::sleep(5); // 5ms delay
@@ -1270,7 +1270,7 @@ void Modem::clearNXDNFrame()
     buffer[1U] = 3U;
     buffer[2U] = CMD_NXDN_CLEAR;
 #if DEBUG_MODEM
-    Utils::dump(1U, "Modem::clearNXDNFrame(), Written", buffer, 3U);
+    Utils::dump(1U, "[Modem::clearNXDNFrame()] Written", buffer, 3U);
 #endif
     write(buffer, 3U);
     Thread::sleep(5); // 5ms delay
@@ -1382,7 +1382,7 @@ bool Modem::writeDMRFrame1(const uint8_t* data, uint32_t length)
             return false;
         if (length > MAX_LENGTH) {
             LogError(LOG_MODEM, "Modem::writeDMRData1(); request data to write >%u?, len = %u", MAX_LENGTH, length);
-            Utils::dump(1U, "Modem::writeDMRData1(); Attmpted Data", data, length);
+            Utils::dump(1U, "[Modem::writeDMRData1()] Attmpted Data", data, length);
             return false;
         }
 
@@ -1399,9 +1399,9 @@ bool Modem::writeDMRFrame1(const uint8_t* data, uint32_t length)
         // write or buffer DMR slot 1 data to air interface
         if (m_dmrSpace1 >= length) {
             if (m_debug)
-                LogDebug(LOG_MODEM, "Modem::writeDMRData1(); immediate write (len %u)", length);
+                LogDebugEx(LOG_MODEM, "Modem::writeDMRData1()", "immediate write (len %u)", length);
             if (m_trace)
-                Utils::dump(1U, "Modem::writeDMRData1() Immediate TX DMR Data 1", buffer + 3U, length - 1U);
+                Utils::dump(1U, "[Modem::writeDMRData1()] Immediate TX DMR Data 1", buffer + 3U, length - 1U);
 
             int ret = write(buffer, len);
             if (ret != int(len)) {
@@ -1453,9 +1453,9 @@ bool Modem::writeDMRFrame2(const uint8_t* data, uint32_t length)
         // write or buffer DMR slot 2 data to air interface
         if (m_dmrSpace2 >= length) {
             if (m_debug)
-                LogDebug(LOG_MODEM, "Modem::writeDMRData2(); immediate write (len %u)", length);
+                LogDebugEx(LOG_MODEM, "Modem::writeDMRData2()", "immediate write (len %u)", length);
             if (m_trace)
-                Utils::dump(1U, "Modem::writeDMRData2() Immediate TX DMR Data 2", buffer + 3U, length - 1U);
+                Utils::dump(1U, "[Modem::writeDMRData2()] Immediate TX DMR Data 2", buffer + 3U, length - 1U);
 
             int ret = write(buffer, len);
             if (ret != int(len)) {
@@ -1493,7 +1493,7 @@ bool Modem::writeP25Frame(const uint8_t* data, uint32_t length)
             return false;
         if (length > MAX_LENGTH) {
             LogError(LOG_MODEM, "Modem::writeP25Data(); request data to write >%u?, len = %u", MAX_LENGTH, length);
-            Utils::dump(1U, "Modem::writeP25Data(); Attmpted Data", data, length);
+            Utils::dump(1U, "[Modem::writeP25Data()] Attmpted Data", data, length);
             return false;
         }
 
@@ -1519,9 +1519,9 @@ bool Modem::writeP25Frame(const uint8_t* data, uint32_t length)
         // write or buffer P25 data to air interface
         if (m_p25Space >= length) {
             if (m_debug)
-                LogDebug(LOG_MODEM, "Modem::writeP25Data(); immediate write (len %u)", length);
+                LogDebugEx(LOG_MODEM, "Modem::writeP25Data()", "immediate write (len %u)", length);
             if (m_trace)
-                Utils::dump(1U, "Modem::writeP25Data() Immediate TX P25 Data", buffer + 3U, length - 3U);
+                Utils::dump(1U, "[Modem::writeP25Data()] Immediate TX P25 Data", buffer + 3U, length - 3U);
 
             int ret = write(buffer, len);
             if (ret != int(len)) {
@@ -1556,7 +1556,7 @@ bool Modem::writeNXDNFrame(const uint8_t* data, uint32_t length)
             return false;
         if (length > MAX_LENGTH) {
             LogError(LOG_MODEM, "Modem::writeNXDNData(); request data to write >%u?, len = %u", MAX_LENGTH, length);
-            Utils::dump(1U, "Modem::writeNXDNData(); Attmpted Data", data, length);
+            Utils::dump(1U, "[Modem::writeNXDNData()] Attmpted Data", data, length);
             return false;
         }
 
@@ -1573,9 +1573,9 @@ bool Modem::writeNXDNFrame(const uint8_t* data, uint32_t length)
         // write or buffer NXDN data to air interface
         if (m_nxdnSpace >= length) {
             if (m_debug)
-                LogDebug(LOG_MODEM, "Modem::writeNXDNData(); immediate write (len %u)", length);
+                LogDebugEx(LOG_MODEM, "Modem::writeNXDNData()", "immediate write (len %u)", length);
             if (m_trace)
-                Utils::dump(1U, "Modem::writeNXDNData() Immediate TX NXDN Data", buffer + 3U, length - 1U);
+                Utils::dump(1U, "[Modem::writeNXDNData()] Immediate TX NXDN Data", buffer + 3U, length - 1U);
 
             int ret = write(buffer, len);
             if (ret != int(len)) {
@@ -1613,7 +1613,7 @@ bool Modem::writeDMRStart(bool tx)
         buffer[2U] = CMD_DMR_START;
         buffer[3U] = tx ? 0x01U : 0x00U;
 #if DEBUG_MODEM
-        Utils::dump(1U, "Modem::writeDMRStart(), Written", buffer, 4U);
+        Utils::dump(1U, "[Modem::writeDMRStart()] Written", buffer, 4U);
 #endif
         return write(buffer, 4U) == 4;
     }
@@ -1644,7 +1644,7 @@ bool Modem::writeDMRShortLC(const uint8_t* lc)
         buffer[10U] = lc[7U];
         buffer[11U] = lc[8U];
 #if DEBUG_MODEM
-        Utils::dump(1U, "Modem::writeDMRShortLC(), Written", buffer, 12U);
+        Utils::dump(1U, "[Modem::writeDMRShortLC()] Written", buffer, 12U);
 #endif
         return write(buffer, 12U) == 12;
     }
@@ -1665,7 +1665,7 @@ bool Modem::writeDMRAbort(uint32_t slotNo)
         buffer[2U] = CMD_DMR_ABORT;
         buffer[3U] = slotNo;
 #if DEBUG_MODEM
-        Utils::dump(1U, "Modem::writeDMRAbort(), Written", buffer, 4U);
+        Utils::dump(1U, "[Modem::writeDMRAbort()] Written", buffer, 4U);
 #endif
         return write(buffer, 4U) == 4;
     }
@@ -1689,7 +1689,7 @@ bool Modem::setDMRIgnoreCACH_AT(uint8_t slotNo)
         // are we on a protocol version 3 firmware?
         if (m_protoVer >= 3U) {
 #if DEBUG_MODEM
-            Utils::dump(1U, "Modem::setDMRIgnoreCACH_AT(), Written", buffer, 4U);
+            Utils::dump(1U, "[Modem::setDMRIgnoreCACH_AT()] Written", buffer, 4U);
 #endif
             return write(buffer, 4U) == 4;
         } else {
@@ -1734,7 +1734,7 @@ bool Modem::setState(DVM_STATE state)
     buffer[2U] = CMD_SET_MODE;
     buffer[3U] = state;
 #if DEBUG_MODEM
-    Utils::dump(1U, "Modem::setState(), Written", buffer, 4U);
+    Utils::dump(1U, "[Modem::setState()] Written", buffer, 4U);
 #endif
     return write(buffer, 4U) == 4;
 }
@@ -1876,7 +1876,7 @@ bool Modem::getStatus()
     buffer[1U] = 3U;
     buffer[2U] = CMD_GET_STATUS;
 
-    //LogDebug(LOG_MODEM, "getStatus(), polling modem status");
+    //LogDebugEx(LOG_MODEM, "Modem::getStatus()", "polling modem status");
 
     return write(buffer, 3U) == 3;
 }
@@ -2372,7 +2372,7 @@ RESP_TYPE_DVM Modem::getResponse()
 {
     m_rspDoubleLength = false;
 
-    //LogDebug(LOG_MODEM, "Modem::getResponse(), checking if we have data");
+    //LogDebugEx(LOG_MODEM, "Modem::getResponse()", "checking if we have data");
 
     // get the start of the frame or nothing at all
     if (m_rspState == RESP_START) {
@@ -2384,13 +2384,13 @@ RESP_TYPE_DVM Modem::getResponse()
         }
 
         if (ret == 0) {
-            //LogDebug(LOG_MODEM, "Modem::getResponse(), no data available");
+            //LogDebugEx(LOG_MODEM, "Modem::getResponse()", "no data available");
             return RTM_TIMEOUT;
         }
 
         if (m_buffer[0U] != DVM_SHORT_FRAME_START &&
             m_buffer[0U] != DVM_LONG_FRAME_START) {
-            //LogError(LOG_MODEM, "Modem::getResponse(), illegal response, first byte not a frame start; byte = %02X", m_buffer[0U]);
+            //LogErrorEx(LOG_MODEM, "Modem::getResponse()", "illegal response, first byte not a frame start; byte = %02X", m_buffer[0U]);
             ::memset(m_buffer, 0x00U, BUFFER_LENGTH);
             m_rspState = RESP_START;
             return RTM_ERROR;
@@ -2400,12 +2400,12 @@ RESP_TYPE_DVM Modem::getResponse()
             m_rspDoubleLength = true;
         }
 
-        //LogDebug(LOG_MODEM, "Modem::getResponse(), RESP_START");
+        //LogDebugEx(LOG_MODEM, "Modem::getResponse()", "RESP_START");
 
         m_rspState = RESP_LENGTH1;
     }
 
-    //LogDebug(LOG_MODEM, "Modem::getResponse(), getting frame length 1/2, rspDoubleLength = %u", m_rspDoubleLength);
+    //LogDebugEx(LOG_MODEM, "Modem::getResponse()", "getting frame length 1/2, rspDoubleLength = %u", m_rspDoubleLength);
     // get the length of the frame, 1/2
     if (m_rspState == RESP_LENGTH1) {
         int ret = m_port->read(m_buffer + 1U, 1U);
@@ -2432,12 +2432,12 @@ RESP_TYPE_DVM Modem::getResponse()
             m_length = m_buffer[1U];
         }
 
-        //LogDebug(LOG_MODEM, "Modem::getResponse(), RESP_LENGTH1, len = %u", m_length);
+        //LogDebugEx(LOG_MODEM, "Modem::getResponse()", "RESP_LENGTH1, len = %u", m_length);
 
         m_rspOffset = 2U;
     }
 
-    //LogDebug(LOG_MODEM, "Modem::getResponse(), getting frame length 2/2");
+    //LogDebugEx(LOG_MODEM, "Modem::getResponse()", "getting frame length 2/2");
     // get the length of the frame, 2/2
     if (m_rspState == RESP_LENGTH2) {
         int ret = m_port->read(m_buffer + 2U, 1U);
@@ -2453,13 +2453,13 @@ RESP_TYPE_DVM Modem::getResponse()
         m_length = (m_length + (m_buffer[2U] & 0xFFU));
         m_rspState = RESP_TYPE;
 
-        //LogDebug(LOG_MODEM, "Modem::getResponse(), RESP_LENGTH2, len = %u", m_length);
+        //LogDebugEx(LOG_MODEM, "Modem::getResponse()", "RESP_LENGTH2, len = %u", m_length);
 
         m_rspDoubleLength = true;
         m_rspOffset = 3U;
     }
 
-    //LogDebug(LOG_MODEM, "Modem::getResponse(), getting frame type");
+    //LogDebugEx(LOG_MODEM, "Modem::getResponse()", "getting frame type");
     // get the frame type
     if (m_rspState == RESP_TYPE) {
         int ret = m_port->read(m_buffer + m_rspOffset, 1U);
@@ -2474,18 +2474,18 @@ RESP_TYPE_DVM Modem::getResponse()
 
         m_rspType = (DVM_COMMANDS)m_buffer[m_rspOffset];
 
-        //LogDebug(LOG_MODEM, "Modem::getResponse(), RESP_TYPE, len = %u, type = %u", m_length, m_rspType);
+        //LogDebugEx(LOG_MODEM, "Modem::getResponse()", "RESP_TYPE, len = %u, type = %u", m_length, m_rspType);
 
         m_rspState = RESP_DATA;
         m_rspOffset++;
     }
 
-    //LogDebug(LOG_MODEM, "Modem::getResponse(), getting frame data");
+    //LogDebugEx(LOG_MODEM, "Modem::getResponse()", "getting frame data");
 
     // get the frame data
     if (m_rspState == RESP_DATA) {
         if (m_respTrace)
-            LogDebug(LOG_MODEM, "Modem::getResponse(), RESP_DATA, len = %u, offset = %u, type = %02X", m_length, m_rspOffset, m_rspType);
+            LogDebugEx(LOG_MODEM, "Modem::getResponse()", "RESP_DATA, len = %u, offset = %u, type = %02X", m_length, m_rspOffset, m_rspType);
 
         while (m_rspOffset < m_length) {
             int ret = m_port->read(m_buffer + m_rspOffset, m_length - m_rspOffset);
@@ -2503,7 +2503,7 @@ RESP_TYPE_DVM Modem::getResponse()
         }
 
         if (m_respTrace)
-            Utils::dump(1U, "Modem::getResponse() Buffer", m_buffer, m_length);
+            Utils::dump(1U, "[Modem::getResponse()] Buffer", m_buffer, m_length);
     }
 
     m_rspState = RESP_START;

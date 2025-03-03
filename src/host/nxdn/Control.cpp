@@ -877,7 +877,7 @@ void Control::addFrame(const uint8_t *data, bool net, bool imm)
 
     uint32_t fifoSpace = m_modem->getNXDNSpace();
 
-    //LogDebug(LOG_NXDN, "addFrame() fifoSpace = %u", fifoSpace);
+    //LogDebugEx(LOG_NXDN, "Control::addFrame()", "fifoSpace = %u", fifoSpace);
 
     // is this immediate data?
     if (imm) {

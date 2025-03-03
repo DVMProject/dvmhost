@@ -266,7 +266,7 @@ AES::AES(const AESKeyLength keyLength) {
 uint8_t* AES::encryptECB(const uint8_t in[], uint32_t inLen, const uint8_t key[])
 {
     if (inLen % BLOCK_BYTES_LEN != 0) {
-        LogDebug(LOG_HOST, "AES::encryptECB() Plaintext length must be divisible by %u, inLen = %u", BLOCK_BYTES_LEN, inLen);
+        LogDebugEx(LOG_HOST, "AES::encryptECB()", "plaintext length must be divisible by %u, inLen = %u", BLOCK_BYTES_LEN, inLen);
         return nullptr;
     }
 
@@ -289,7 +289,7 @@ uint8_t* AES::encryptECB(const uint8_t in[], uint32_t inLen, const uint8_t key[]
 uint8_t* AES::decryptECB(const uint8_t in[], uint32_t inLen, const uint8_t key[]) 
 {
     if (inLen % BLOCK_BYTES_LEN != 0) {
-        LogDebug(LOG_HOST, "AES::decryptECB() Plaintext length must be divisible by %u, inLen = %u", BLOCK_BYTES_LEN, inLen);
+        LogDebugEx(LOG_HOST, "AES::decryptECB()", "plaintext length must be divisible by %u, inLen = %u", BLOCK_BYTES_LEN, inLen);
         return nullptr;
     }
 
@@ -312,7 +312,7 @@ uint8_t* AES::decryptECB(const uint8_t in[], uint32_t inLen, const uint8_t key[]
 uint8_t* AES::encryptCBC(const uint8_t in[], uint32_t inLen, const uint8_t key[], const uint8_t* iv) 
 {
     if (inLen % BLOCK_BYTES_LEN != 0) {
-        LogDebug(LOG_HOST, "AES::encryptCBC() Plaintext length must be divisible by %u, inLen = %u", BLOCK_BYTES_LEN, inLen);
+        LogDebugEx(LOG_HOST, "AES::encryptCBC()", "plaintext length must be divisible by %u, inLen = %u", BLOCK_BYTES_LEN, inLen);
         return nullptr;
     }
 
@@ -339,7 +339,7 @@ uint8_t* AES::encryptCBC(const uint8_t in[], uint32_t inLen, const uint8_t key[]
 uint8_t* AES::decryptCBC(const uint8_t in[], uint32_t inLen, const uint8_t key[], const uint8_t *iv) 
 {
     if (inLen % BLOCK_BYTES_LEN != 0) {
-        LogDebug(LOG_HOST, "AES::decryptCBC() Plaintext length must be divisible by %u, inLen = %u", BLOCK_BYTES_LEN, inLen);
+        LogDebugEx(LOG_HOST, "AES::decryptCBC()", "plaintext length must be divisible by %u, inLen = %u", BLOCK_BYTES_LEN, inLen);
         return nullptr;
     }
 
@@ -366,7 +366,7 @@ uint8_t* AES::decryptCBC(const uint8_t in[], uint32_t inLen, const uint8_t key[]
 uint8_t* AES::encryptCFB(const uint8_t in[], uint32_t inLen, const uint8_t key[], const uint8_t *iv) 
 {
     if (inLen % BLOCK_BYTES_LEN != 0) {
-        LogDebug(LOG_HOST, "AES::encryptCFB() Plaintext length must be divisible by %u, inLen = %u", BLOCK_BYTES_LEN, inLen);
+        LogDebugEx(LOG_HOST, "AES::encryptCFB()", "plaintext length must be divisible by %u, inLen = %u", BLOCK_BYTES_LEN, inLen);
         return nullptr;
     }
 
@@ -394,7 +394,7 @@ uint8_t* AES::encryptCFB(const uint8_t in[], uint32_t inLen, const uint8_t key[]
 uint8_t* AES::decryptCFB(const uint8_t in[], uint32_t inLen, const uint8_t key[], const uint8_t *iv) 
 {
     if (inLen % BLOCK_BYTES_LEN != 0) {
-        LogDebug(LOG_HOST, "AES::decryptCFB() Plaintext length must be divisible by %u, inLen = %u", BLOCK_BYTES_LEN, inLen);
+        LogDebugEx(LOG_HOST, "AES::decryptCFB()", "plaintext length must be divisible by %u, inLen = %u", BLOCK_BYTES_LEN, inLen);
         return nullptr;
     }
 

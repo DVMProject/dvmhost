@@ -195,11 +195,6 @@ bool RadioIdLookup::load()
             }
 
             m_table[id] = RadioId(radioEnabled, false, alias, ipAddress);
-            /*if (alias != "") {
-                LogDebug(LOG_HOST, "Loaded RID %u (%s) into RID lookup table", id, parsed[2].c_str());
-            } else {
-                LogDebug(LOG_HOST, "Loaded RID %u into RID lookup table", id);
-            }*/
         }
     }
 
@@ -218,8 +213,6 @@ bool RadioIdLookup::load()
 
 bool RadioIdLookup::save()
 {
-    LogDebug(LOG_HOST, "Saving RID lookup file to %s", m_filename.c_str());
-
     if (m_filename.empty()) {
         return false;
     }
@@ -229,6 +222,8 @@ bool RadioIdLookup::save()
         LogError(LOG_HOST, "Cannot open the radio ID lookup file - %s", m_filename.c_str());
         return false;
     }
+
+    LogMessage(LOG_HOST, "Saving RID lookup file to %s", m_filename.c_str());
 
     // Counter for lines written
     unsigned int lines = 0;

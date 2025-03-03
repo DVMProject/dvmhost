@@ -2488,7 +2488,7 @@ uint8_t* HostBridge::generateRTPHeaders(uint8_t msgLen, uint16_t& rtpSeq)
     if (timestamp != INVALID_TS) {
         timestamp += (RTP_GENERIC_CLOCK_RATE / 50);
         if (m_debug)
-            LogDebug(LOG_NET, "HostBridge::generateRTPHeaders() RTP, previous TS = %u, TS = %u, rtpSeq = %u", m_rtpTimestamp, timestamp, rtpSeq);
+            LogDebugEx(LOG_NET, "HostBridge::generateRTPHeaders()", "RTP, previous TS = %u, TS = %u, rtpSeq = %u", m_rtpTimestamp, timestamp, rtpSeq);
         m_rtpTimestamp = timestamp;
     }
 
@@ -2507,7 +2507,7 @@ uint8_t* HostBridge::generateRTPHeaders(uint8_t msgLen, uint16_t& rtpSeq)
 
     if (timestamp == INVALID_TS) {
         if (m_debug)
-            LogDebug(LOG_NET, "HostBridge::generateRTPHeaders() RTP, initial TS = %u, rtpSeq = %u", header.getTimestamp(), rtpSeq);
+            LogDebugEx(LOG_NET, "HostBridge::generateRTPHeaders()", "RTP, initial TS = %u, rtpSeq = %u", header.getTimestamp(), rtpSeq);
         m_rtpTimestamp = header.getTimestamp();
     }
 
@@ -2608,7 +2608,7 @@ void* HostBridge::threadAudioProcess(void* arg)
         HostBridge* bridge = static_cast<HostBridge*>(th->obj);
         if (bridge == nullptr) {
             g_killed = true;
-            LogDebug(LOG_HOST, "[FAIL] %s", threadName.c_str());
+            LogError(LOG_HOST, "[FAIL] %s", threadName.c_str());
         }
 
         if (g_killed) {
@@ -2616,7 +2616,7 @@ void* HostBridge::threadAudioProcess(void* arg)
             return nullptr;
         }
 
-        LogDebug(LOG_HOST, "[ OK ] %s", threadName.c_str());
+        LogMessage(LOG_HOST, "[ OK ] %s", threadName.c_str());
 #ifdef _GNU_SOURCE
         ::pthread_setname_np(th->thread, threadName.c_str());
 #endif // _GNU_SOURCE
@@ -2737,7 +2737,7 @@ void* HostBridge::threadAudioProcess(void* arg)
             Thread::sleep(1U);
         }
 
-        LogDebug(LOG_HOST, "[STOP] %s", threadName.c_str());
+        LogMessage(LOG_HOST, "[STOP] %s", threadName.c_str());
         delete th;
     }
 
@@ -2760,7 +2760,7 @@ void* HostBridge::threadNetworkProcess(void* arg)
         HostBridge* bridge = static_cast<HostBridge*>(th->obj);
         if (bridge == nullptr) {
             g_killed = true;
-            LogDebug(LOG_HOST, "[FAIL] %s", threadName.c_str());
+            LogError(LOG_HOST, "[FAIL] %s", threadName.c_str());
         }
 
         if (g_killed) {
@@ -2768,7 +2768,7 @@ void* HostBridge::threadNetworkProcess(void* arg)
             return nullptr;
         }
 
-        LogDebug(LOG_HOST, "[ OK ] %s", threadName.c_str());
+        LogMessage(LOG_HOST, "[ OK ] %s", threadName.c_str());
 #ifdef _GNU_SOURCE
         ::pthread_setname_np(th->thread, threadName.c_str());
 #endif // _GNU_SOURCE
@@ -2800,7 +2800,7 @@ void* HostBridge::threadNetworkProcess(void* arg)
             Thread::sleep(1U);
         }
 
-        LogDebug(LOG_HOST, "[STOP] %s", threadName.c_str());
+        LogMessage(LOG_HOST, "[STOP] %s", threadName.c_str());
         delete th;
     }
 
@@ -2823,7 +2823,7 @@ void* HostBridge::threadCallWatchdog(void* arg)
         HostBridge* bridge = static_cast<HostBridge*>(th->obj);
         if (bridge == nullptr) {
             g_killed = true;
-            LogDebug(LOG_HOST, "[FAIL] %s", threadName.c_str());
+            LogError(LOG_HOST, "[FAIL] %s", threadName.c_str());
         }
 
         if (g_killed) {
@@ -2831,7 +2831,7 @@ void* HostBridge::threadCallWatchdog(void* arg)
             return nullptr;
         }
 
-        LogDebug(LOG_HOST, "[ OK ] %s", threadName.c_str());
+        LogMessage(LOG_HOST, "[ OK ] %s", threadName.c_str());
 #ifdef _GNU_SOURCE
         ::pthread_setname_np(th->thread, threadName.c_str());
 #endif // _GNU_SOURCE
@@ -2885,7 +2885,7 @@ void* HostBridge::threadCallWatchdog(void* arg)
             Thread::sleep(5U);
         }
 
-        LogDebug(LOG_HOST, "[STOP] %s", threadName.c_str());
+        LogMessage(LOG_HOST, "[STOP] %s", threadName.c_str());
         delete th;
     }
 

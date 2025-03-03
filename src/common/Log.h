@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2015,2016 Jonathan Naylor, G4KLX
- *  Copyright (C) 2018-2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2018-2025 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -62,7 +62,16 @@
  * 
  * This is a variable argument function.
  */
-#define LogDebug(_module, fmt, ...)     Log(1U, _module, fmt, ##__VA_ARGS__)
+#define LogDebug(_module, fmt, ...)             Log(1U, _module, __FILE__, __LINE__, nullptr, fmt, ##__VA_ARGS__)
+/**
+ * @brief Macro helper to create a debug log entry.
+ * @param _module Name of module generating log entry.
+ * @param _func Name of function generating log entry.
+ * @param fmt String format.
+ * 
+ * This is a variable argument function.
+ */
+#define LogDebugEx(_module, _func, fmt, ...)    Log(1U, _module, __FILE__, __LINE__, _func, fmt, ##__VA_ARGS__)
 /**
  * @brief Macro helper to create a message log entry.
  * @param _module Name of module generating log entry.
@@ -70,7 +79,7 @@
  * 
  * This is a variable argument function.
  */
-#define LogMessage(_module, fmt, ...)   Log(2U, _module, fmt, ##__VA_ARGS__)
+#define LogMessage(_module, fmt, ...)           Log(2U, _module, nullptr, 0, nullptr, fmt, ##__VA_ARGS__)
 /**
  * @brief Macro helper to create a informational log entry.
  * @param _module Name of module generating log entry.
@@ -79,7 +88,7 @@
  * This is a variable argument function. LogInfo() does not use a module
  * name when creating a log entry.
  */
-#define LogInfo(fmt, ...)               Log(3U, nullptr, fmt, ##__VA_ARGS__)
+#define LogInfo(fmt, ...)                       Log(3U, nullptr, nullptr, 0, nullptr, fmt, ##__VA_ARGS__)
 /**
  * @brief Macro helper to create a informational log entry with module name.
  * @param _module Name of module generating log entry.
@@ -87,7 +96,7 @@
  * 
  * This is a variable argument function.
  */
-#define LogInfoEx(_module, fmt, ...)    Log(3U, _module, fmt, ##__VA_ARGS__)
+#define LogInfoEx(_module, fmt, ...)            Log(3U, _module, nullptr, 0, nullptr, fmt, ##__VA_ARGS__)
 /**
  * @brief Macro helper to create a warning log entry.
  * @param _module Name of module generating log entry.
@@ -95,7 +104,7 @@
  * 
  * This is a variable argument function.
  */
-#define LogWarning(_module, fmt, ...)   Log(4U, _module, fmt, ##__VA_ARGS__)
+#define LogWarning(_module, fmt, ...)           Log(4U, _module, nullptr, 0, nullptr, fmt, ##__VA_ARGS__)
 /**
  * @brief Macro helper to create a error log entry.
  * @param _module Name of module generating log entry.
@@ -103,7 +112,7 @@
  * 
  * This is a variable argument function.
  */
-#define LogError(_module, fmt, ...)     Log(5U, _module, fmt, ##__VA_ARGS__)
+#define LogError(_module, fmt, ...)             Log(5U, _module, nullptr, 0, nullptr, fmt, ##__VA_ARGS__)
 /**
  * @brief Macro helper to create a fatal log entry.
  * @param _module Name of module generating log entry.
@@ -111,7 +120,7 @@
  * 
  * This is a variable argument function.
  */
-#define LogFatal(_module, fmt, ...)     Log(6U, _module, fmt, ##__VA_ARGS__)
+#define LogFatal(_module, fmt, ...)             Log(6U, _module, nullptr, 0, nullptr, fmt, ##__VA_ARGS__)
 
 // ---------------------------------------------------------------------------
 //  Externs
@@ -186,11 +195,14 @@ extern HOST_SW_API void LogFinalise();
  * @brief Writes a new entry to the diagnostics log.
  * @param level Log level for entry.
  * @param module Name of module generating log entry.
+ * @param file Name of source code file generating log entry.
+ * @param line Line number in source code file generating log entry.
+ * @param func Name of function generating log entry.
  * @param fmt String format.
  * 
- * This is a variable argument function.
+ * This is a variable argument function. This shouldn't be called directly, utilize the LogXXXX macros above, instead.
  */
-extern HOST_SW_API void Log(uint32_t level, const char* module, const char* fmt, ...);
+extern HOST_SW_API void Log(uint32_t level, const char* module, const char* file, const int lineNo, const char* func, const char* fmt, ...);
 
 /** @} */
 #endif // __LOG_H__

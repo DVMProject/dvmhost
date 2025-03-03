@@ -86,7 +86,7 @@ bool LICH::decode(const uint8_t* data)
     m_lich = lich[0U];
 
 #if DEBUG_NXDN_LICH
-    LogDebug(LOG_NXDN, "LICH::decode(), m_lich = %02X", m_lich);
+    LogDebugEx(LOG_NXDN, "LICH::decode()", "m_lich = %02X", m_lich);
 #endif
 
     bool newParity = getParity();
@@ -121,7 +121,7 @@ void LICH::encode(uint8_t* data)
     m_lich |= (m_outbound ? 0x01U : 0x00U) << 1;
 
 #if DEBUG_NXDN_LICH
-    LogDebug(LOG_NXDN, "LICH::encode(), m_lich = %02X", m_lich);
+    LogDebugEx(LOG_NXDN, "LICH::encode()", "m_lich = %02X", m_lich);
 #endif
 
     bool parity = getParity();

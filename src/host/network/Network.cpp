@@ -226,7 +226,7 @@ void Network::clock(uint32_t ms)
         }
 
         if (m_debug) {
-            LogDebug(LOG_NET, "RTP, peerId = %u, seq = %u, streamId = %u, func = %02X, subFunc = %02X", fneHeader.getPeerId(), rtpHeader.getSequence(),
+            LogDebugEx(LOG_NET, "Network::clock()", "RTP, peerId = %u, seq = %u, streamId = %u, func = %02X, subFunc = %02X", fneHeader.getPeerId(), rtpHeader.getSequence(),
                 fneHeader.getStreamId(), fneHeader.getFunction(), fneHeader.getSubFunction());
         }
 
@@ -280,7 +280,7 @@ void Network::clock(uint32_t ms)
                         }
                        
                         if (m_debug)
-                            Utils::dump(1U, "Network Received, DMR", buffer.get(), length);
+                            Utils::dump(1U, "[Network::clock()] Network Received, DMR", buffer.get(), length);
                         if (length > 255)
                             LogError(LOG_NET, "DMR Stream %u, frame oversized? this shouldn't happen, pktSeq = %u, len = %u", streamId, m_pktSeq, length);
 
@@ -308,7 +308,7 @@ void Network::clock(uint32_t ms)
                         }
 
                         if (m_debug)
-                            Utils::dump(1U, "Network Received, P25", buffer.get(), length);
+                            Utils::dump(1U, "[Network::clock()] Network Received, P25", buffer.get(), length);
                         if (length > 255)
                             LogError(LOG_NET, "P25 Stream %u, frame oversized? this shouldn't happen, pktSeq = %u, len = %u", streamId, m_pktSeq, length);
 
@@ -336,7 +336,7 @@ void Network::clock(uint32_t ms)
                         }
 
                         if (m_debug)
-                            Utils::dump(1U, "Network Received, NXDN", buffer.get(), length);
+                            Utils::dump(1U, "[Network::clock()] Network Received, NXDN", buffer.get(), length);
                         if (length > 255)
                             LogError(LOG_NET, "NXDN Stream %u, frame oversized? this shouldn't happen, pktSeq = %u, len = %u", streamId, m_pktSeq, length);
 
@@ -548,7 +548,7 @@ void Network::clock(uint32_t ms)
             {
                 switch (m_status) {
                     case NET_STAT_WAITING_LOGIN:
-                        LogDebug(LOG_NET, "PEER %u RPTL ACK, performing login exchange, remotePeerId = %u", m_peerId, rtpHeader.getSSRC());
+                        LogMessage(LOG_NET, "PEER %u RPTL ACK, performing login exchange, remotePeerId = %u", m_peerId, rtpHeader.getSSRC());
 
                         ::memcpy(m_salt, buffer.get() + 6U, sizeof(uint32_t));
                         writeAuthorisation();
@@ -558,7 +558,7 @@ void Network::clock(uint32_t ms)
                         m_retryTimer.start();
                         break;
                     case NET_STAT_WAITING_AUTHORISATION:
-                        LogDebug(LOG_NET, "PEER %u RPTK ACK, performing configuration exchange, remotePeerId = %u", m_peerId, rtpHeader.getSSRC());
+                        LogMessage(LOG_NET, "PEER %u RPTK ACK, performing configuration exchange, remotePeerId = %u", m_peerId, rtpHeader.getSSRC());
 
                         writeConfig();
 

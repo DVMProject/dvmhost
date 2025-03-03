@@ -155,7 +155,7 @@ bool RS634717::decode241213(uint8_t* data)
 
     int ec = rs241213.decode(codeword);
 #if DEBUG_RS
-    LogDebug(LOG_HOST, "RS634717::decode241213(), errors = %d", ec);
+    LogDebugEx(LOG_HOST, "RS634717::decode241213()", "errors = %d", ec);
 #endif
     offset = 0U;
     for (uint32_t i = 0U; i < 12U; i++, offset += 6)
@@ -205,7 +205,7 @@ bool RS634717::decode24169(uint8_t* data)
 
     int ec = rs24169.decode(codeword);
 #if DEBUG_RS
-    LogDebug(LOG_HOST, "RS634717::decode24169(), errors = %d\n", ec);
+    LogDebugEx(LOG_HOST, "RS634717::decode24169()", "errors = %d\n", ec);
 #endif
     offset = 0U;
     for (uint32_t i = 0U; i < 16U; i++, offset += 6)
@@ -255,7 +255,7 @@ bool RS634717::decode362017(uint8_t* data)
 
     int ec = rs634717.decode(codeword);
 #if DEBUG_RS
-    LogDebug(LOG_HOST, "RS634717::decode362017(), errors = %d\n", ec);
+    LogDebugEx(LOG_HOST, "RS634717::decode362017()", "errors = %d\n", ec);
 #endif
     offset = 0U;
     for (uint32_t i = 0U; i < 20U; i++, offset += 6)

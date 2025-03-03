@@ -221,7 +221,7 @@ bool PeerListLookup::load()
             m_table[id] = PeerId(id, alias, password, peerLink, false);
 
             // Log depending on what was loaded
-            LogDebug(LOG_HOST, "Loaded peer ID %u%s into peer ID lookup table, %s%s", id,
+            LogMessage(LOG_HOST, "Loaded peer ID %u%s into peer ID lookup table, %s%s", id,
                 (!alias.empty() ? (" (" + alias + ")").c_str() : ""),
                 (!password.empty() ? "using unique peer password" : "using master password"),
                 (peerLink) ? ", Peer-Link Enabled" : "");
@@ -242,8 +242,6 @@ bool PeerListLookup::load()
 
 bool PeerListLookup::save()
 {
-    LogDebug(LOG_HOST, "Saving peer lookup file to %s", m_filename.c_str());
-
     if (m_filename.empty()) {
         return false;
     }
@@ -253,6 +251,8 @@ bool PeerListLookup::save()
         LogError(LOG_HOST, "Cannot open the peer ID lookup file - %s", m_filename.c_str());
         return false;
     }
+
+    LogMessage(LOG_HOST, "Saving peer lookup file to %s", m_filename.c_str());
 
     // Counter for lines written
     unsigned int lines = 0;

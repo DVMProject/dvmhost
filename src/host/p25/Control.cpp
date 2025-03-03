@@ -1194,7 +1194,7 @@ void Control::addFrame(const uint8_t* data, uint32_t length, bool net, bool imm)
 
     uint32_t fifoSpace = m_modem->getP25Space();
 
-    //LogDebug(LOG_P25, "addFrame() fifoSpace = %u", fifoSpace);
+    // LogDebugEx(LOG_P25, "Control::addFrame()", "fifoSpace = %u", fifoSpace);
 
     // is this immediate data?
     if (imm) {
@@ -1688,10 +1688,6 @@ void Control::writeRF_Nulls()
 
     data[0U] = modem::TAG_EOT;
     data[1U] = 0x00U;
-
-    if (m_debug) {
-        LogDebug(LOG_P25, "writeRF_Nulls()");
-    }
 
     addFrame(data, NULLS_LENGTH_BYTES + 2U);
 }

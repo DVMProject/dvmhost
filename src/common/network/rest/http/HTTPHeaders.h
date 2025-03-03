@@ -97,7 +97,7 @@ namespace network
                  */
                 void add(const std::string& name, const std::string& value)
                 {
-                    //::LogDebug(LOG_REST, "HTTPHeaders::add(), header = %s, value = %s", name.c_str(), value.c_str());
+                    //::LogDebugEx(LOG_REST, "HTTPHeaders::add()", "header = %s, value = %s", name.c_str(), value.c_str());
                     for (auto& header : m_headers) {
                         if (::strtolower(header.name) == ::strtolower(name)) {
                             header.value = value;
@@ -107,7 +107,7 @@ namespace network
 
                     m_headers.push_back(Header(name, value));
                     //for (auto header : m_headers)
-                    //    ::LogDebug(LOG_REST, "HTTPHeaders::add() m_headers.header = %s, m_headers.value = %s", header.name.c_str(), header.value.c_str());
+                    //    ::LogDebugEx(LOG_REST, "HTTPHeaders::add()", "m_headers.header = %s, m_headers.value = %s", header.name.c_str(), header.value.c_str());
                 }
                 /**
                  * @brief Helper to remove a HTTP header.
