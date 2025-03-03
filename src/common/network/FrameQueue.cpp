@@ -57,13 +57,21 @@ UInt8Array FrameQueue::read(int& messageLength, sockaddr_storage& address, uint3
     ::memset(buffer, 0x00U, DATA_PACKET_LENGTH);
     int length = m_socket->read(buffer, DATA_PACKET_LENGTH, address, addrLen);
     if (length < 0) {
-        LogError(LOG_NET, "Failed reading data from the network");
+        if (m_failedReadCnt <= MAX_FAILED_READ_CNT_LOGGING)
+            LogError(LOG_NET, "Failed reading data from the network, failedCnt = %u", m_failedReadCnt);
+        else {
+            if (m_failedReadCnt == MAX_FAILED_READ_CNT_LOGGING + 1U)
+                LogError(LOG_NET, "Failed reading data from the network -- exceeded 5 read errors, probable connection issue, silencing further errors");
+        }
+        m_failedReadCnt++;
         return nullptr;
     }
 
     if (length > 0) {
         if (m_debug)
             Utils::dump(1U, "Network Packet", buffer, length);
+
+        m_failedReadCnt = 0U;
 
         if (length < RTP_HEADER_LENGTH_BYTES + RTP_EXTENSION_HEADER_LENGTH_BYTES) {
             LogError(LOG_NET, "FrameQueue::read(), message received from network is malformed! %u bytes != %u bytes", 

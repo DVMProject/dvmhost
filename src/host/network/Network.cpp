@@ -669,7 +669,7 @@ bool Network::open()
         LogMessage(LOG_NET, "PEER %u opening network", m_peerId);
 
     if (udp::Socket::lookup(m_address, m_port, m_addr, m_addrLen) != 0) {
-        LogMessage(LOG_NET, "Could not lookup the address of the master");
+        LogMessage(LOG_NET, "!!! Could not lookup the address of the master!");
         return false;
     }
 

@@ -33,6 +33,7 @@ std::mutex RawFrameQueue::m_flushMutex;
 RawFrameQueue::RawFrameQueue(udp::Socket* socket, bool debug) :
     m_socket(socket),
     m_buffers(),
+    m_failedReadCnt(0U),
     m_debug(debug)
 {
     /* stub */
@@ -56,13 +57,21 @@ UInt8Array RawFrameQueue::read(int& messageLength, sockaddr_storage& address, ui
     ::memset(buffer, 0x00U, DATA_PACKET_LENGTH);
     int length = m_socket->read(buffer, DATA_PACKET_LENGTH, address, addrLen);
     if (length < 0) {
-        LogError(LOG_NET, "Failed reading data from the network");
+        if (m_failedReadCnt <= MAX_FAILED_READ_CNT_LOGGING)
+            LogError(LOG_NET, "Failed reading data from the network, failedCnt = %u", m_failedReadCnt);
+        else {
+            if (m_failedReadCnt == MAX_FAILED_READ_CNT_LOGGING + 1U)
+                LogError(LOG_NET, "Failed reading data from the network -- exceeded 5 read errors, probable connection issue, silencing further errors");
+        }
+        m_failedReadCnt++;
         return nullptr;
     }
 
     if (length > 0) {
         if (m_debug)
             Utils::dump(1U, "Network Packet", buffer, length);
+
+        m_failedReadCnt = 0U;
 
         // copy message
         messageLength = length;
