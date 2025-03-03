@@ -234,7 +234,7 @@ bool PeerListLookup::load()
     if (size == 0U)
         return false;
 
-    LogInfoEx(LOG_HOST, "Loaded %lu peers into list", size);
+    LogInfoEx(LOG_HOST, "Loaded %lu entries into peer list lookup table", size);
     return true;
 }
 

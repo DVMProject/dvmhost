@@ -204,7 +204,7 @@ bool RadioIdLookup::load()
     if (size == 0U)
         return false;
 
-    LogInfoEx(LOG_HOST, "Loaded %u entries into lookup table", size);
+    LogInfoEx(LOG_HOST, "Loaded %lu entries into radio ID lookup table", size);
 
     return true;
 }

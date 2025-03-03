@@ -335,7 +335,7 @@ bool TalkgroupRulesLookup::load()
     if (size == 0U)
         return false;
 
-    LogInfoEx(LOG_HOST, "Loaded %u entries into lookup table", size);
+    LogInfoEx(LOG_HOST, "Loaded %lu entries into talkgroup rules table", size);
 
     return true;
 }
