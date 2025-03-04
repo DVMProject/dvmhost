@@ -479,7 +479,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
             }
 
             // if we don't have a stream ID and are receiving call data -- throw an error and discard
-            if (streamId == 0 && req->fneHeader.getFunction() == NET_FUNC::PROTOCOL) {
+            if (streamId == 0U && req->fneHeader.getFunction() == NET_FUNC::PROTOCOL) {
                 std::string peerIdentity = network->resolvePeerIdentity(peerId);
                 LogError(LOG_NET, "PEER %u (%s) malformed packet (no stream ID for a call?)", peerId, peerIdentity.c_str());
 
