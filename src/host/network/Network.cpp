@@ -295,17 +295,12 @@ void Network::clock(uint32_t ms)
                                     m_pktLastSeq = m_pktSeq;
                                 }
 
-                                if (m_rxDMRStreamId[slotNo] != streamId && (rtpHeader.getSequence() != RTP_END_OF_CALL_SEQ)) {
-                                    //LogDebug(LOG_NET, "DMR Incorrect Stream; %u != %u", streamId, m_rxDMRStreamId[slotNo]);
-                                    break;
-                                }
-
                                 if (rtpHeader.getSequence() == RTP_END_OF_CALL_SEQ) {
                                     m_rxDMRStreamId[slotNo] = 0U;
                                 }
                             }
                         }
-                       
+
                         if (m_debug)
                             Utils::dump(1U, "[Network::clock()] Network Received, DMR", buffer.get(), length);
                         if (length > 255)
@@ -347,11 +342,6 @@ void Network::clock(uint32_t ms)
                                     }
 
                                     m_pktLastSeq = m_pktSeq;
-                                }
-
-                                if (m_rxP25StreamId != streamId && (rtpHeader.getSequence() != RTP_END_OF_CALL_SEQ)) {
-                                    //LogDebug(LOG_NET, "P25 Incorrect Stream; %u != %u", streamId, m_rxP25StreamId);
-                                    break;
                                 }
 
                                 if (rtpHeader.getSequence() == RTP_END_OF_CALL_SEQ) {
@@ -401,11 +391,6 @@ void Network::clock(uint32_t ms)
                                     }
 
                                     m_pktLastSeq = m_pktSeq;
-                                }
-
-                                if (m_rxNXDNStreamId != streamId && (rtpHeader.getSequence() != RTP_END_OF_CALL_SEQ)) {
-                                    //LogDebug(LOG_NET, "NXDN Incorrect Stream; %u != %u", streamId, m_rxNXDNStreamId);
-                                    break;
                                 }
 
                                 if (rtpHeader.getSequence() == RTP_END_OF_CALL_SEQ) {

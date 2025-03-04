@@ -2269,7 +2269,7 @@ bool FNENetwork::writePeer(uint32_t peerId, FrameQueue::OpcodePair opcode, const
     uint32_t length, uint16_t pktSeq, uint32_t streamId, bool queueOnly, bool incPktSeq, bool directWrite) const
 {
     if (streamId == 0U) {
-        LogError(LOG_NET, "PEER %u, trying to send data with a streamId of 0? BUGBUG", peerId);
+        LogError(LOG_NET, "BUGBUG: PEER %u, trying to send data with a streamId of 0?", peerId);
     }
 
     auto it = std::find_if(m_peers.begin(), m_peers.end(), [&](PeerMapPair x) { return x.first == peerId; });
