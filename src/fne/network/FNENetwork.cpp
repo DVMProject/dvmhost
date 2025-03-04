@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2023-2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2023-2025 Bryan Biedenkapp, N2PLL
  *
  */
 #include "fne/Defines.h"
@@ -403,8 +403,9 @@ void FNENetwork::close()
         uint8_t buffer[1U];
         ::memset(buffer, 0x00U, 1U);
 
+        uint32_t streamId = createStreamId();
         for (auto peer : m_peers) {
-            writePeer(peer.first, { NET_FUNC::MST_CLOSING, NET_SUBFUNC::NOP }, buffer, 1U, (uint16_t)0U, 0U);
+            writePeer(peer.first, { NET_FUNC::MST_CLOSING, NET_SUBFUNC::NOP }, buffer, 1U, RTP_END_OF_CALL_SEQ, streamId, false);
         }
     }
 
@@ -459,21 +460,18 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                         // only reset packet sequences if we're a PROTOCOL or RPTC function
                         if ((req->fneHeader.getFunction() == NET_FUNC::PROTOCOL) ||
                             (req->fneHeader.getFunction() == NET_FUNC::RPTC)) {
-                            connection->pktLastSeq(pktSeq);
-                            connection->pktNextSeq(0U);
+                            connection->eraseStreamPktSeq(streamId); // attempt to erase packet sequence for the stream
                         }
                     } else {
-                        if ((connection->currStreamId() == streamId) && (pktSeq != connection->pktNextSeq()) && (pktSeq != (RTP_END_OF_CALL_SEQ - 1U)) && pktSeq != 0U) {
-                            LogWarning(LOG_NET, "PEER %u (%s) stream %u out-of-sequence; %u != %u", peerId, connection->identity().c_str(),
-                                streamId, pktSeq, connection->pktNextSeq());
+                        if (connection->hasStreamPktSeq(streamId)) {
+                            uint16_t currPkt = connection->getStreamPktSeq(streamId);
+                            if ((pktSeq != currPkt) && (pktSeq != (RTP_END_OF_CALL_SEQ - 1U)) && pktSeq != 0U) {
+                                LogWarning(LOG_NET, "PEER %u (%s) stream %u out-of-sequence; %u != %u", peerId, connection->identity().c_str(),
+                                    streamId, pktSeq, currPkt);
+                            }
                         }
 
-                        connection->currStreamId(streamId);
-                        connection->pktLastSeq(pktSeq);
-                        connection->pktNextSeq(pktSeq + 1);
-                        if (connection->pktNextSeq() > (RTP_END_OF_CALL_SEQ - 1U)) {
-                            connection->pktNextSeq(0U);
-                        }
+                        connection->incStreamPktSeq(streamId, pktSeq + 1U);
                     }
                 }
 
@@ -510,7 +508,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                             network->m_tagDMR->processFrame(req->buffer, req->length, peerId, req->rtpHeader.getSequence(), streamId);
                                         }
                                     } else {
-                                        network->writePeerNAK(peerId, TAG_DMR_DATA, NET_CONN_NAK_MODE_NOT_ENABLED);
+                                        network->writePeerNAK(peerId, streamId, TAG_DMR_DATA, NET_CONN_NAK_MODE_NOT_ENABLED);
                                     }
                                 }
                             }
@@ -533,7 +531,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                             network->m_tagP25->processFrame(req->buffer, req->length, peerId, req->rtpHeader.getSequence(), streamId);
                                         }
                                     } else {
-                                        network->writePeerNAK(peerId, TAG_P25_DATA, NET_CONN_NAK_MODE_NOT_ENABLED);
+                                        network->writePeerNAK(peerId, streamId, TAG_P25_DATA, NET_CONN_NAK_MODE_NOT_ENABLED);
                                     }
                                 }
                             }
@@ -556,7 +554,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                             network->m_tagNXDN->processFrame(req->buffer, req->length, peerId, req->rtpHeader.getSequence(), streamId);
                                         }
                                     } else {
-                                        network->writePeerNAK(peerId, TAG_NXDN_DATA, NET_CONN_NAK_MODE_NOT_ENABLED);
+                                        network->writePeerNAK(peerId, streamId, TAG_NXDN_DATA, NET_CONN_NAK_MODE_NOT_ENABLED);
                                     }
                                 }
                             }
@@ -588,9 +586,8 @@ void* FNENetwork::threadedNetworkRx(void* arg)
 
                         FNEPeerConnection* connection = new FNEPeerConnection(peerId, req->address, req->addrLen);
                         connection->lastPing(now);
-                        connection->currStreamId(streamId);
 
-                        network->setupRepeaterLogin(peerId, connection);
+                        network->setupRepeaterLogin(peerId, streamId, connection);
 
                         // check if the peer is in the peer ACL list
                         if (network->m_peerListLookup->getACL()) {
@@ -625,10 +622,9 @@ void* FNENetwork::threadedNetworkRx(void* arg)
 
                                     connection = new FNEPeerConnection(peerId, req->address, req->addrLen);
                                     connection->lastPing(now);
-                                    connection->currStreamId(streamId);
 
                                     network->erasePeerAffiliations(peerId);
-                                    network->setupRepeaterLogin(peerId, connection);
+                                    network->setupRepeaterLogin(peerId, streamId, connection);
 
                                     // check if the peer is in the peer ACL list
                                     if (network->m_peerListLookup->getACL()) {
@@ -745,7 +741,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
 
                                     if (validHash) {
                                         connection->connectionState(NET_STAT_WAITING_CONFIG);
-                                        network->writePeerACK(peerId);
+                                        network->writePeerACK(peerId, streamId);
                                         LogInfoEx(LOG_NET, "PEER %u RPTK ACK, completed the login exchange", peerId);
                                         network->m_peers[peerId] = connection;
                                     }
@@ -822,7 +818,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                             buffer[0U] = 0x80U;
                                         }
 
-                                        network->writePeerACK(peerId, buffer, 1U);
+                                        network->writePeerACK(peerId, streamId, buffer, 1U);
                                         LogInfoEx(LOG_NET, "PEER %u RPTC ACK, completed the configuration exchange", peerId);
 
                                         json::object peerConfig = connection->config();
@@ -943,7 +939,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                 if (dt < now) {
                                     LogInfoEx(LOG_NET, "PEER %u (%s) updating ACL list, dt = %u, now = %u", peerId, connection->identity().c_str(),
                                         dt, now);
-                                    if (connection->pktLastSeq() == RTP_END_OF_CALL_SEQ) {
+                                    if (connection->streamCount() <= 1) {
                                         network->peerACLUpdate(peerId);
                                     }
                                     connection->lastACLUpdate(now);
@@ -963,7 +959,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                 payload[7U] = (uint8_t)((now >> 0) & 0xFFU);
 
                                 network->m_peers[peerId] = connection;
-                                network->writePeerCommand(peerId, { NET_FUNC::PONG, NET_SUBFUNC::NOP }, payload, 8U);
+                                network->writePeerCommand(peerId, { NET_FUNC::PONG, NET_SUBFUNC::NOP }, payload, 8U, streamId, false);
 
                                 if (network->m_reportPeerPing) {
                                     LogInfoEx(LOG_NET, "PEER %u (%s) ping, pingsReceived = %u, lastPing = %u, now = %u", peerId, connection->identity().c_str(),
@@ -971,7 +967,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                 }
                             }
                             else {
-                                network->writePeerNAK(peerId, TAG_REPEATER_PING);
+                                network->writePeerNAK(peerId, streamId, TAG_REPEATER_PING);
                             }
                         }
                     }
@@ -1001,7 +997,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                         if (network->m_tagDMR != nullptr) {
                                             network->m_tagDMR->processGrantReq(srcId, dstId, slot, unitToUnit, peerId, req->rtpHeader.getSequence(), streamId);
                                         } else {
-                                            network->writePeerNAK(peerId, TAG_DMR_DATA, NET_CONN_NAK_MODE_NOT_ENABLED);
+                                            network->writePeerNAK(peerId, streamId, TAG_DMR_DATA, NET_CONN_NAK_MODE_NOT_ENABLED);
                                         }
                                     }
                                     break;
@@ -1010,7 +1006,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                         if (network->m_tagP25 != nullptr) {
                                             network->m_tagP25->processGrantReq(srcId, dstId, unitToUnit, peerId, req->rtpHeader.getSequence(), streamId);
                                         } else {
-                                            network->writePeerNAK(peerId, TAG_P25_DATA, NET_CONN_NAK_MODE_NOT_ENABLED);
+                                            network->writePeerNAK(peerId, streamId, TAG_P25_DATA, NET_CONN_NAK_MODE_NOT_ENABLED);
                                         }
                                     }
                                     break;
@@ -1019,18 +1015,18 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                         if (network->m_tagNXDN != nullptr) {
                                             network->m_tagNXDN->processGrantReq(srcId, dstId, unitToUnit, peerId, req->rtpHeader.getSequence(), streamId);
                                         } else {
-                                            network->writePeerNAK(peerId, TAG_NXDN_DATA, NET_CONN_NAK_MODE_NOT_ENABLED);
+                                            network->writePeerNAK(peerId, streamId, TAG_NXDN_DATA, NET_CONN_NAK_MODE_NOT_ENABLED);
                                         }
                                     }
                                     break;
                                 default:
-                                    network->writePeerNAK(peerId, TAG_REPEATER_GRANT, NET_CONN_NAK_ILLEGAL_PACKET);
+                                    network->writePeerNAK(peerId, streamId, TAG_REPEATER_GRANT, NET_CONN_NAK_ILLEGAL_PACKET);
                                     Utils::dump("unknown state for grant request from the peer", req->buffer, req->length);
                                     break;
                                 }
                             }
                             else {
-                                network->writePeerNAK(peerId, TAG_REPEATER_GRANT, NET_CONN_NAK_FNE_UNAUTHORIZED);
+                                network->writePeerNAK(peerId, streamId, TAG_REPEATER_GRANT, NET_CONN_NAK_FNE_UNAUTHORIZED);
                             }
                         }
                     }
@@ -1074,7 +1070,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                         }
                                     }
                                     else {
-                                        network->writePeerNAK(peerId, TAG_TRANSFER_ACT_LOG, NET_CONN_NAK_FNE_UNAUTHORIZED);
+                                        network->writePeerNAK(peerId, streamId, TAG_TRANSFER_ACT_LOG, NET_CONN_NAK_FNE_UNAUTHORIZED);
                                     }
                                 }
                             }
@@ -1112,7 +1108,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                         }
                                     }
                                     else {
-                                        network->writePeerNAK(peerId, TAG_TRANSFER_DIAG_LOG, NET_CONN_NAK_FNE_UNAUTHORIZED);
+                                        network->writePeerNAK(peerId, streamId, TAG_TRANSFER_DIAG_LOG, NET_CONN_NAK_FNE_UNAUTHORIZED);
                                     }
                                 }
                             }
@@ -1122,7 +1118,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                         // main traffic port status transfers aren't supported for performance reasons
                     }
                     else {
-                        network->writePeerNAK(peerId, TAG_TRANSFER, NET_CONN_NAK_ILLEGAL_PACKET);
+                        network->writePeerNAK(peerId, streamId, TAG_TRANSFER, NET_CONN_NAK_ILLEGAL_PACKET);
                         Utils::dump("unknown transfer opcode from the peer", req->buffer, req->length);
                     }
                 }
@@ -1138,7 +1134,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                 lookups::AffiliationLookup* aff = network->m_peerAffiliations[peerId];
                                 if (aff == nullptr) {
                                     LogError(LOG_NET, "PEER %u (%s) has uninitialized affiliations lookup?", peerId, connection->identity().c_str());
-                                    network->writePeerNAK(peerId, TAG_ANNOUNCE, NET_CONN_NAK_INVALID);
+                                    network->writePeerNAK(peerId, streamId, TAG_ANNOUNCE, NET_CONN_NAK_INVALID);
                                 }
 
                                 // validate peer (simple validation really)
@@ -1161,7 +1157,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                     }
                                 }
                                 else {
-                                    network->writePeerNAK(peerId, TAG_ANNOUNCE, NET_CONN_NAK_FNE_UNAUTHORIZED);
+                                    network->writePeerNAK(peerId, streamId, TAG_ANNOUNCE, NET_CONN_NAK_FNE_UNAUTHORIZED);
                                 }
                             }
                         }
@@ -1174,7 +1170,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                 lookups::AffiliationLookup* aff = network->m_peerAffiliations[peerId];
                                 if (aff == nullptr) {
                                     LogError(LOG_NET, "PEER %u (%s) has uninitialized affiliations lookup?", peerId, connection->identity().c_str());
-                                    network->writePeerNAK(peerId, TAG_ANNOUNCE, NET_CONN_NAK_INVALID);
+                                    network->writePeerNAK(peerId, streamId, TAG_ANNOUNCE, NET_CONN_NAK_INVALID);
                                 }
 
                                 // validate peer (simple validation really)
@@ -1195,7 +1191,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                     }
                                 }
                                 else {
-                                    network->writePeerNAK(peerId, TAG_ANNOUNCE, NET_CONN_NAK_FNE_UNAUTHORIZED);
+                                    network->writePeerNAK(peerId, streamId, TAG_ANNOUNCE, NET_CONN_NAK_FNE_UNAUTHORIZED);
                                 }
                             }
                         }
@@ -1208,7 +1204,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                 lookups::AffiliationLookup* aff = network->m_peerAffiliations[peerId];
                                 if (aff == nullptr) {
                                     LogError(LOG_NET, "PEER %u (%s) has uninitialized affiliations lookup?", peerId, connection->identity().c_str());
-                                    network->writePeerNAK(peerId, TAG_ANNOUNCE, NET_CONN_NAK_INVALID);
+                                    network->writePeerNAK(peerId, streamId, TAG_ANNOUNCE, NET_CONN_NAK_INVALID);
                                 }
 
                                 // validate peer (simple validation really)
@@ -1229,7 +1225,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                     }
                                 }
                                 else {
-                                    network->writePeerNAK(peerId, TAG_ANNOUNCE, NET_CONN_NAK_FNE_UNAUTHORIZED);
+                                    network->writePeerNAK(peerId, streamId, TAG_ANNOUNCE, NET_CONN_NAK_FNE_UNAUTHORIZED);
                                 }
                             }
                         }
@@ -1242,7 +1238,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                 lookups::AffiliationLookup* aff = network->m_peerAffiliations[peerId];
                                 if (aff == nullptr) {
                                     LogError(LOG_NET, "PEER %u (%s) has uninitialized affiliations lookup?", peerId, connection->identity().c_str());
-                                    network->writePeerNAK(peerId, TAG_ANNOUNCE, NET_CONN_NAK_INVALID);
+                                    network->writePeerNAK(peerId, streamId, TAG_ANNOUNCE, NET_CONN_NAK_INVALID);
                                 }
 
                                 // validate peer (simple validation really)
@@ -1263,7 +1259,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                     }
                                 }
                                 else {
-                                    network->writePeerNAK(peerId, TAG_ANNOUNCE, NET_CONN_NAK_FNE_UNAUTHORIZED);
+                                    network->writePeerNAK(peerId, streamId, TAG_ANNOUNCE, NET_CONN_NAK_FNE_UNAUTHORIZED);
                                 }
                             }
                         }
@@ -1279,7 +1275,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                     lookups::AffiliationLookup* aff = network->m_peerAffiliations[peerId];
                                     if (aff == nullptr) {
                                         LogError(LOG_NET, "PEER %u (%s) has uninitialized affiliations lookup?", peerId, connection->identity().c_str());
-                                        network->writePeerNAK(peerId, TAG_ANNOUNCE, NET_CONN_NAK_INVALID);
+                                        network->writePeerNAK(peerId, streamId, TAG_ANNOUNCE, NET_CONN_NAK_INVALID);
                                     }
 
                                     if (aff != nullptr) {
@@ -1311,7 +1307,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                     }
                                 }
                                 else {
-                                    network->writePeerNAK(peerId, TAG_ANNOUNCE, NET_CONN_NAK_FNE_UNAUTHORIZED);
+                                    network->writePeerNAK(peerId, streamId, TAG_ANNOUNCE, NET_CONN_NAK_FNE_UNAUTHORIZED);
                                 }
                             }
                         }
@@ -1356,13 +1352,13 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                     }
                                 }
                                 else {
-                                    network->writePeerNAK(peerId, TAG_ANNOUNCE, NET_CONN_NAK_FNE_UNAUTHORIZED);
+                                    network->writePeerNAK(peerId, streamId, TAG_ANNOUNCE, NET_CONN_NAK_FNE_UNAUTHORIZED);
                                 }
                             }
                         }
                     }
                     else {
-                        network->writePeerNAK(peerId, TAG_ANNOUNCE, NET_CONN_NAK_ILLEGAL_PACKET);
+                        network->writePeerNAK(peerId, streamId, TAG_ANNOUNCE, NET_CONN_NAK_ILLEGAL_PACKET);
                         Utils::dump("unknown announcement opcode from the peer", req->buffer, req->length);
                     }
                 }
@@ -1545,7 +1541,7 @@ std::string FNENetwork::resolvePeerIdentity(uint32_t peerId)
 
 /* Helper to complete setting up a repeater login request. */
 
-void FNENetwork::setupRepeaterLogin(uint32_t peerId, FNEPeerConnection* connection)
+void FNENetwork::setupRepeaterLogin(uint32_t peerId, uint32_t streamId, FNEPeerConnection* connection)
 {
     std::uniform_int_distribution<uint32_t> dist(DVM_RAND_MIN, DVM_RAND_MAX);
     connection->salt(dist(m_random));
@@ -1560,7 +1556,7 @@ void FNENetwork::setupRepeaterLogin(uint32_t peerId, FNEPeerConnection* connecti
     ::memset(salt, 0x00U, 4U);
     __SET_UINT32(connection->salt(), salt, 0U);
 
-    writePeerACK(peerId, salt, 4U);
+    writePeerACK(peerId, streamId, salt, 4U);
     LogInfoEx(LOG_NET, "PEER %u RPTL ACK, challenge response sent for login", peerId);
 }
 
@@ -1607,26 +1603,24 @@ void* FNENetwork::threadedACLUpdate(void* arg)
 
         FNEPeerConnection* connection = network->m_peers[req->peerId];
         if (connection != nullptr) {
+            uint32_t aclStreamId = network->createStreamId();
+
             // if the connection is an external peer, and peer is participating in peer link,
             // send the peer proper configuration data
             if (connection->isExternalPeer() && connection->isPeerLink()) {
                 LogInfoEx(LOG_NET, "PEER %u (%s) sending Peer-Link ACL list updates", req->peerId, peerIdentity.c_str());
 
-                network->writeWhitelistRIDs(req->peerId, true);
-                network->writeTGIDs(req->peerId, true);
-
-                connection->pktLastSeq(RTP_END_OF_CALL_SEQ - 1U);
-                network->writePeerList(req->peerId);
+                network->writeWhitelistRIDs(req->peerId, aclStreamId, true);
+                network->writeTGIDs(req->peerId, aclStreamId, true);
+                network->writePeerList(req->peerId, aclStreamId);
             }
             else {
                 LogInfoEx(LOG_NET, "PEER %u (%s) sending ACL list updates", req->peerId, peerIdentity.c_str());
 
-                network->writeWhitelistRIDs(req->peerId, false);
-                network->writeBlacklistRIDs(req->peerId);
-                network->writeTGIDs(req->peerId, false);
-
-                connection->pktLastSeq(RTP_END_OF_CALL_SEQ - 1U);
-                network->writeDeactiveTGIDs(req->peerId);
+                network->writeWhitelistRIDs(req->peerId, aclStreamId, false);
+                network->writeBlacklistRIDs(req->peerId, aclStreamId);
+                network->writeTGIDs(req->peerId, aclStreamId, false);
+                network->writeDeactiveTGIDs(req->peerId, aclStreamId);
             }
         }
 
@@ -1638,7 +1632,7 @@ void* FNENetwork::threadedACLUpdate(void* arg)
 
 /* Helper to send the list of whitelisted RIDs to the specified peer. */
 
-void FNENetwork::writeWhitelistRIDs(uint32_t peerId, bool isExternalPeer)
+void FNENetwork::writeWhitelistRIDs(uint32_t peerId, uint32_t streamId, bool isExternalPeer)
 {
     uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
@@ -1743,7 +1737,7 @@ void FNENetwork::writeWhitelistRIDs(uint32_t peerId, bool isExternalPeer)
                 offs += PEER_LINK_BLOCK_SIZE;
 
                 writePeer(peerId, { NET_FUNC::PEER_LINK, NET_SUBFUNC::PL_RID_LIST }, 
-                    payload, bufSize, 0U, false, true, true);
+                    payload, bufSize, 0U, streamId, false, true, true);
             }
 
             connection->lastPing(now);
@@ -1813,7 +1807,7 @@ void FNENetwork::writeWhitelistRIDs(uint32_t peerId, bool isExternalPeer)
             }
 
             writePeerCommand(peerId, { NET_FUNC::MASTER, NET_SUBFUNC::MASTER_SUBFUNC_WL_RID },
-                payload, bufSize, true);
+                payload, bufSize, streamId, true);
         }
 
         connection->lastPing(now);
@@ -1822,7 +1816,7 @@ void FNENetwork::writeWhitelistRIDs(uint32_t peerId, bool isExternalPeer)
 
 /* Helper to send the list of whitelisted RIDs to the specified peer. */
 
-void FNENetwork::writeBlacklistRIDs(uint32_t peerId)
+void FNENetwork::writeBlacklistRIDs(uint32_t peerId, uint32_t streamId)
 {
     uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
@@ -1887,7 +1881,7 @@ void FNENetwork::writeBlacklistRIDs(uint32_t peerId)
             }
 
             writePeerCommand(peerId, { NET_FUNC::MASTER, NET_SUBFUNC::MASTER_SUBFUNC_BL_RID },
-                payload, bufSize, true);
+                payload, bufSize, streamId, true);
         }
 
         connection->lastPing(now);
@@ -1896,7 +1890,7 @@ void FNENetwork::writeBlacklistRIDs(uint32_t peerId)
 
 /* Helper to send the list of active TGIDs to the specified peer. */
 
-void FNENetwork::writeTGIDs(uint32_t peerId, bool isExternalPeer)
+void FNENetwork::writeTGIDs(uint32_t peerId, uint32_t streamId, bool isExternalPeer)
 {
     uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
@@ -2005,7 +1999,7 @@ void FNENetwork::writeTGIDs(uint32_t peerId, bool isExternalPeer)
                 offs += PEER_LINK_BLOCK_SIZE;
 
                 writePeer(peerId, { NET_FUNC::PEER_LINK, NET_SUBFUNC::PL_TALKGROUP_LIST }, 
-                    payload, bufSize, 0U, false, true, true);
+                    payload, bufSize, 0U, streamId, false, true, true);
             }
 
             connection->lastPing(now);
@@ -2086,12 +2080,12 @@ void FNENetwork::writeTGIDs(uint32_t peerId, bool isExternalPeer)
     }
 
     writePeerCommand(peerId, { NET_FUNC::MASTER, NET_SUBFUNC::MASTER_SUBFUNC_ACTIVE_TGS },
-        payload, 4U + (tgidList.size() * 5U), true);
+        payload, 4U + (tgidList.size() * 5U), streamId, true);
 }
 
 /* Helper to send the list of deactivated TGIDs to the specified peer. */
 
-void FNENetwork::writeDeactiveTGIDs(uint32_t peerId)
+void FNENetwork::writeDeactiveTGIDs(uint32_t peerId, uint32_t streamId)
 {
     if (!m_tidLookup->sendTalkgroups()) {
         return;
@@ -2147,12 +2141,12 @@ void FNENetwork::writeDeactiveTGIDs(uint32_t peerId)
     }
 
     writePeerCommand(peerId, { NET_FUNC::MASTER, NET_SUBFUNC::MASTER_SUBFUNC_DEACTIVE_TGS }, 
-        payload, 4U + (tgidList.size() * 5U), true);
+        payload, 4U + (tgidList.size() * 5U), streamId, true);
 }
 
 /* Helper to send the list of peers to the specified peer. */
 
-void FNENetwork::writePeerList(uint32_t peerId)
+void FNENetwork::writePeerList(uint32_t peerId, uint32_t streamId)
 {
     if (!m_tidLookup->sendTalkgroups()) {
         return;
@@ -2260,7 +2254,7 @@ void FNENetwork::writePeerList(uint32_t peerId)
             offs += PEER_LINK_BLOCK_SIZE;
 
             writePeer(peerId, { NET_FUNC::PEER_LINK, NET_SUBFUNC::PL_PEER_LIST }, 
-                payload, bufSize, 0U, false, true, true);
+                payload, bufSize, 0U, streamId, false, true, true);
         }
 
         connection->lastPing(now);
@@ -2269,21 +2263,25 @@ void FNENetwork::writePeerList(uint32_t peerId)
     return;
 }
 
-/* Helper to send a data message to the specified peer. */
+/* Helper to send a data message to the specified peer with a explicit packet sequence. */
 
 bool FNENetwork::writePeer(uint32_t peerId, FrameQueue::OpcodePair opcode, const uint8_t* data,
-    uint32_t length, uint16_t pktSeq, uint32_t streamId, bool queueOnly, bool directWrite) const
+    uint32_t length, uint16_t pktSeq, uint32_t streamId, bool queueOnly, bool incPktSeq, bool directWrite) const
 {
+    if (streamId == 0U) {
+        LogError(LOG_NET, "PEER %u, trying to send data with a streamId of 0? BUGBUG", peerId);
+    }
+
     auto it = std::find_if(m_peers.begin(), m_peers.end(), [&](PeerMapPair x) { return x.first == peerId; });
     if (it != m_peers.end()) {
         FNEPeerConnection* connection = m_peers.at(peerId);
         if (connection != nullptr) {
-            uint32_t peerStreamId = connection->currStreamId();
-            if (streamId == 0U) {
-                streamId = peerStreamId;
-            }
             sockaddr_storage addr = connection->socketStorage();
             uint32_t addrLen = connection->sockStorageLen();
+
+            if (incPktSeq) {
+                pktSeq = connection->incStreamPktSeq(streamId, pktSeq);
+            }
 
             if (directWrite)
                 return m_frameQueue->write(data, length, streamId, peerId, m_peerId, opcode, pktSeq, addr, addrLen);
@@ -2299,31 +2297,10 @@ bool FNENetwork::writePeer(uint32_t peerId, FrameQueue::OpcodePair opcode, const
     return false;
 }
 
-/* Helper to send a data message to the specified peer. */
-
-bool FNENetwork::writePeer(uint32_t peerId, FrameQueue::OpcodePair opcode, const uint8_t* data,
-    uint32_t length, uint32_t streamId, bool queueOnly, bool incPktSeq, bool directWrite) const
-{
-    auto it = std::find_if(m_peers.begin(), m_peers.end(), [&](PeerMapPair x) { return x.first == peerId; });
-    if (it != m_peers.end()) {
-        FNEPeerConnection* connection = m_peers.at(peerId);
-        if (connection != nullptr) {
-            if (incPktSeq) {
-                connection->pktLastSeq(connection->pktLastSeq() + 1);
-            }
-            uint16_t pktSeq = connection->pktLastSeq();
-
-            return writePeer(peerId, opcode, data, length, pktSeq, streamId, queueOnly, directWrite);
-        }
-    }
-
-    return false;
-}
-
 /* Helper to send a command message to the specified peer. */
 
 bool FNENetwork::writePeerCommand(uint32_t peerId, FrameQueue::OpcodePair opcode,
-    const uint8_t* data, uint32_t length, bool incPktSeq) const
+    const uint8_t* data, uint32_t length, uint32_t streamId, bool incPktSeq) const
 {
     assert(peerId > 0);
 
@@ -2335,12 +2312,12 @@ bool FNENetwork::writePeerCommand(uint32_t peerId, FrameQueue::OpcodePair opcode
     }
 
     uint32_t len = length + 6U;
-    return writePeer(peerId, opcode, buffer, len, 0U, false, incPktSeq, true);
+    return writePeer(peerId, opcode, buffer, len, RTP_END_OF_CALL_SEQ, streamId, false, incPktSeq, true);
 }
 
 /* Helper to send a ACK response to the specified peer. */
 
-bool FNENetwork::writePeerACK(uint32_t peerId, const uint8_t* data, uint32_t length)
+bool FNENetwork::writePeerACK(uint32_t peerId, uint32_t streamId, const uint8_t* data, uint32_t length)
 {
     uint8_t buffer[DATA_PACKET_LENGTH];
     ::memset(buffer, 0x00U, DATA_PACKET_LENGTH);
@@ -2351,7 +2328,8 @@ bool FNENetwork::writePeerACK(uint32_t peerId, const uint8_t* data, uint32_t len
         ::memcpy(buffer + 6U, data, length);
     }
 
-    return writePeer(peerId, { NET_FUNC::ACK, NET_SUBFUNC::NOP }, buffer, length + 10U, RTP_END_OF_CALL_SEQ, false, true);
+    return writePeer(peerId, { NET_FUNC::ACK, NET_SUBFUNC::NOP }, buffer, length + 10U, RTP_END_OF_CALL_SEQ, streamId, 
+        false);
 }
 
 /* Helper to log a warning specifying which NAK reason is being sent a peer. */
@@ -2393,7 +2371,7 @@ void FNENetwork::logPeerNAKReason(uint32_t peerId, const char* tag, NET_CONN_NAK
 
 /* Helper to send a NAK response to the specified peer. */
 
-bool FNENetwork::writePeerNAK(uint32_t peerId, const char* tag, NET_CONN_NAK_REASON reason)
+bool FNENetwork::writePeerNAK(uint32_t peerId, uint32_t streamId, const char* tag, NET_CONN_NAK_REASON reason)
 {
     assert(peerId > 0);
     assert(tag != nullptr);
@@ -2405,7 +2383,8 @@ bool FNENetwork::writePeerNAK(uint32_t peerId, const char* tag, NET_CONN_NAK_REA
     __SET_UINT16B((uint16_t)reason, buffer, 10U);                               // Reason
 
     logPeerNAKReason(peerId, tag, reason);
-    return writePeer(peerId, { NET_FUNC::NAK, NET_SUBFUNC::NOP }, buffer, 10U, RTP_END_OF_CALL_SEQ, false, true);
+    return writePeer(peerId, { NET_FUNC::NAK, NET_SUBFUNC::NOP }, buffer, 10U, RTP_END_OF_CALL_SEQ, streamId, 
+        false);
 }
 
 /* Helper to send a NAK response to the specified peer. */

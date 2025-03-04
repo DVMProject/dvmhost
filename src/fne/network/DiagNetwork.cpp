@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2023-2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2023-2025 Bryan Biedenkapp, N2PLL
  *
  */
 #include "fne/Defines.h"
@@ -177,20 +177,17 @@ void* DiagNetwork::threadedNetworkRx(void* arg)
 
                 if (connection != nullptr) {
                     if (pktSeq == RTP_END_OF_CALL_SEQ) {
-                        connection->pktLastSeq(pktSeq);
-                        connection->pktNextSeq(0U);
+                        connection->eraseStreamPktSeq(streamId); // attempt to erase packet sequence for the stream
                     } else {
-                        if ((connection->currStreamId() == streamId) && (pktSeq != connection->pktNextSeq()) && (pktSeq != (RTP_END_OF_CALL_SEQ - 1U))) {
-                            LogWarning(LOG_NET, "PEER %u (%s) stream %u out-of-sequence; %u != %u", peerId, connection->identity().c_str(),
-                                streamId, pktSeq, connection->pktNextSeq());
+                        if (connection->hasStreamPktSeq(streamId)) {
+                            uint16_t currPkt = connection->getStreamPktSeq(streamId);
+                            if ((pktSeq != currPkt) && (pktSeq != (RTP_END_OF_CALL_SEQ - 1U)) && pktSeq != 0U) {
+                                LogWarning(LOG_NET, "PEER %u (%s) stream %u out-of-sequence; %u != %u", peerId, connection->identity().c_str(),
+                                    streamId, pktSeq, currPkt);
+                            }
                         }
 
-                        connection->currStreamId(streamId);
-                        connection->pktLastSeq(pktSeq);
-                        connection->pktNextSeq(pktSeq + 1);
-                        if (connection->pktNextSeq() > (RTP_END_OF_CALL_SEQ - 1U)) {
-                            connection->pktNextSeq(0U);
-                        }
+                        connection->incStreamPktSeq(streamId, pktSeq + 1U);
                     }
                 }
 
@@ -255,10 +252,6 @@ void* DiagNetwork::threadedNetworkRx(void* arg)
                                             for (auto peer : network->m_peers) {
                                                 if (peer.second != nullptr) {
                                                     if (peer.second->isSysView()) {
-                                                        uint32_t peerStreamId = peer.second->currStreamId();
-                                                        if (streamId == 0U) {
-                                                            streamId = peerStreamId;
-                                                        }
                                                         sockaddr_storage addr = peer.second->socketStorage();
                                                         uint32_t addrLen = peer.second->sockStorageLen();
 
@@ -284,7 +277,7 @@ void* DiagNetwork::threadedNetworkRx(void* arg)
                                         }
                                     }
                                     else {
-                                        network->writePeerNAK(pktPeerId, TAG_TRANSFER_ACT_LOG, NET_CONN_NAK_FNE_UNAUTHORIZED);
+                                        network->writePeerNAK(pktPeerId, streamId, TAG_TRANSFER_ACT_LOG, NET_CONN_NAK_FNE_UNAUTHORIZED);
                                     }
                                 }
                             }
@@ -322,7 +315,7 @@ void* DiagNetwork::threadedNetworkRx(void* arg)
                                         }
                                     }
                                     else {
-                                        network->writePeerNAK(peerId, TAG_TRANSFER_DIAG_LOG, NET_CONN_NAK_FNE_UNAUTHORIZED);
+                                        network->writePeerNAK(peerId, streamId, TAG_TRANSFER_DIAG_LOG, NET_CONN_NAK_FNE_UNAUTHORIZED);
                                     }
                                 }
                             }
@@ -341,10 +334,6 @@ void* DiagNetwork::threadedNetworkRx(void* arg)
                                         for (auto peer : network->m_peers) {
                                             if (peer.second != nullptr) {
                                                 if (peer.second->isSysView()) {
-                                                    uint32_t peerStreamId = peer.second->currStreamId();
-                                                    if (streamId == 0U) {
-                                                        streamId = peerStreamId;
-                                                    }
                                                     sockaddr_storage addr = peer.second->socketStorage();
                                                     uint32_t addrLen = peer.second->sockStorageLen();
 
@@ -374,13 +363,13 @@ void* DiagNetwork::threadedNetworkRx(void* arg)
                                     }
                                 }
                                 else {
-                                    network->writePeerNAK(pktPeerId, TAG_TRANSFER_STATUS, NET_CONN_NAK_FNE_UNAUTHORIZED);
+                                    network->writePeerNAK(pktPeerId, streamId, TAG_TRANSFER_STATUS, NET_CONN_NAK_FNE_UNAUTHORIZED);
                                 }
                             }
                         }
                     }
                     else {
-                        network->writePeerNAK(peerId, TAG_TRANSFER, NET_CONN_NAK_ILLEGAL_PACKET);
+                        network->writePeerNAK(peerId, streamId, TAG_TRANSFER, NET_CONN_NAK_ILLEGAL_PACKET);
                         Utils::dump("unknown transfer opcode from the peer", req->buffer, req->length);
                     }
                 }
@@ -420,7 +409,7 @@ void* DiagNetwork::threadedNetworkRx(void* arg)
                                 }
                             }
                             else {
-                                network->writePeerNAK(peerId, TAG_PEER_LINK, NET_CONN_NAK_FNE_UNAUTHORIZED);
+                                network->writePeerNAK(peerId, streamId, TAG_PEER_LINK, NET_CONN_NAK_FNE_UNAUTHORIZED);
                             }
                         }
                     }

@@ -58,6 +58,20 @@ void PeerNetwork::setPeerLookups(lookups::PeerListLookup* pidLookup)
     m_pidLookup = pidLookup;
 }
 
+/* Gets the received DMR stream ID. */
+
+uint32_t PeerNetwork::getRxDMRStreamId(uint32_t slotNo) const
+{
+    assert(slotNo == 1U || slotNo == 2U);
+
+    if (slotNo == 1U) {
+        return m_rxDMRStreamId[0U];
+    }
+    else {
+        return m_rxDMRStreamId[1U];
+    }
+}
+
 /* Checks if the passed peer ID is blocked from sending to this peer. */
 
 bool PeerNetwork::checkBlockedPeer(uint32_t peerId)

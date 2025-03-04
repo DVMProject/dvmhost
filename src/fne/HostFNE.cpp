@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2023,2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2023,2024,2025 Bryan Biedenkapp, N2PLL
  *
  */
 #include "Defines.h"
@@ -972,7 +972,7 @@ void HostFNE::processPeer(network::PeerNetwork* peerNetwork)
         if (ret) {
             uint32_t peerId = peerNetwork->getPeerId();
             uint32_t slotNo = (data[15U] & 0x80U) == 0x80U ? 2U : 1U;
-            uint32_t streamId = peerNetwork->getDMRStreamId(slotNo);
+            uint32_t streamId = peerNetwork->getRxDMRStreamId(slotNo);
 
             m_network->dmrTrafficHandler()->processFrame(data.get(), length, peerId, peerNetwork->pktLastSeq(), streamId, true);
         }
@@ -985,7 +985,7 @@ void HostFNE::processPeer(network::PeerNetwork* peerNetwork)
         UInt8Array data = peerNetwork->readP25(ret, length);
         if (ret) {
             uint32_t peerId = peerNetwork->getPeerId();
-            uint32_t streamId = peerNetwork->getP25StreamId();
+            uint32_t streamId = peerNetwork->getRxP25StreamId();
 
             m_network->p25TrafficHandler()->processFrame(data.get(), length, peerId, peerNetwork->pktLastSeq(), streamId, true);
         }
@@ -998,7 +998,7 @@ void HostFNE::processPeer(network::PeerNetwork* peerNetwork)
         UInt8Array data = peerNetwork->readNXDN(ret, length);
         if (ret) {
             uint32_t peerId = peerNetwork->getPeerId();
-            uint32_t streamId = peerNetwork->getNXDNStreamId();
+            uint32_t streamId = peerNetwork->getRxNXDNStreamId();
 
             m_network->nxdnTrafficHandler()->processFrame(data.get(), length, peerId, peerNetwork->pktLastSeq(), streamId, true);
         }

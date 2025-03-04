@@ -64,6 +64,23 @@ namespace network
         void setPeerLookups(lookups::PeerListLookup* pidLookup);
 
         /**
+         * @brief Gets the received DMR stream ID.
+         * @param slotNo DMR slot to get stream ID for.
+         * @return uint32_t Stream ID for the given DMR slot.
+         */
+        uint32_t getRxDMRStreamId(uint32_t slotNo) const;
+        /**
+         * @brief Gets the received P25 stream ID.
+         * @return uint32_t Stream ID.
+         */
+        uint32_t getRxP25StreamId() const { return m_rxP25StreamId; }
+        /**
+         * @brief Gets the received NXDN stream ID.
+         * @return uint32_t Stream ID.
+         */
+        uint32_t getRxNXDNStreamId() const { return m_rxNXDNStreamId; }
+
+        /**
          * @brief Gets the blocked traffic peer ID table.
          * @returns std::vector<uint32_t> List of peer IDs this peer network cannot send traffic to.
          */

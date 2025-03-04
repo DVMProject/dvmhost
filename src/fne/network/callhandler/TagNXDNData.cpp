@@ -759,5 +759,5 @@ void TagNXDNData::write_Message(uint32_t peerId, lc::RCCH* rcch)
     }
 
     uint32_t streamId = m_network->createStreamId();
-    m_network->writePeer(peerId, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_NXDN }, message.get(), messageLength, RTP_END_OF_CALL_SEQ, streamId, false, true);
+    m_network->writePeer(peerId, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_NXDN }, message.get(), messageLength, RTP_END_OF_CALL_SEQ, streamId, false);
 }
