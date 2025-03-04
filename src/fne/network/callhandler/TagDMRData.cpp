@@ -197,6 +197,7 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                         .request(m_network->m_influxServer);
                 }
 
+                m_network->eraseStreamPktSeq(peerId, streamId);
                 m_network->m_callInProgress = false;
             }
         }

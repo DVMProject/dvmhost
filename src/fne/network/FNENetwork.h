@@ -598,6 +598,13 @@ namespace network
         bool checkU2UDroppedPeer(uint32_t peerId);
 
         /**
+         * @brief Erases a stream ID from the given peer ID connection.
+         * @param peerId Peer ID.
+         * @param streamId Stream ID.
+         */
+        void eraseStreamPktSeq(uint32_t peerId, uint32_t streamId);
+
+        /**
          * @brief Helper to create a peer on the peers affiliations list.
          * @param peerId Peer ID.
          * @param peerName Textual peer name for the given peer ID.

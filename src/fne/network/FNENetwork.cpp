@@ -1392,6 +1392,19 @@ bool FNENetwork::checkU2UDroppedPeer(uint32_t peerId)
     return false;
 }
 
+/* Erases a stream ID from the given peer ID connection. */
+
+void FNENetwork::eraseStreamPktSeq(uint32_t peerId, uint32_t streamId)
+{
+    if (peerId > 0 && (m_peers.find(peerId) != m_peers.end())) {
+        FNEPeerConnection* connection = m_peers[peerId];
+        if (connection != nullptr) {
+            std::lock_guard<std::mutex> lock(m_peerMutex);
+            connection->eraseStreamPktSeq(streamId);
+        }
+    }
+}
+
 /* Helper to create a peer on the peers affiliations list. */
 
 void FNENetwork::createPeerAffiliations(uint32_t peerId, std::string peerName)
