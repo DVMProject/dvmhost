@@ -262,11 +262,11 @@ void Network::clock(uint32_t ms)
             {
                 if (fneHeader.getSubFunction() == NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR) {              // Encapsulated DMR data frame
                     if (m_enabled && m_dmrEnabled) {
-                        uint32_t slotNo = (buffer[15U] & 0x80U) == 0x80U ? 2U : 1U;
+                        uint32_t slotNo = (buffer[15U] & 0x80U) == 0x80U ? 1U : 0U; // this is the raw index for the stream ID array
 
                         if (m_debug) {
                             LogDebug(LOG_NET, "DMR Slot %u, peer = %u, len = %u, pktSeq = %u, streamId = %u", 
-                                slotNo, peerId, length, rtpHeader.getSequence(), streamId);
+                                slotNo + 1U, peerId, length, rtpHeader.getSequence(), streamId);
                         }
 
                         if (m_promiscuousPeer) {
