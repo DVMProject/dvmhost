@@ -1246,8 +1246,10 @@ void HostBridge::processUDPAudio()
                 uint32_t udpSrcId = __GET_UINT32(buffer, pcmLength + 8U);
 
                 // if the UDP source ID now doesn't match the current call ID, reset call states
-                if (m_resetCallForSourceIdChange && (udpSrcId != m_udpSrcId))
+                if (m_resetCallForSourceIdChange && (udpSrcId != m_udpSrcId)) {
                     callEnd(m_udpSrcId, m_dstId);
+                    m_udpDstId = m_dstId;
+                }
 
                 m_udpSrcId = udpSrcId;
             }
