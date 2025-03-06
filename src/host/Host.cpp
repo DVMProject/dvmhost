@@ -1519,6 +1519,10 @@ bool Host::rmtPortModemHandler(Modem* modem, uint32_t ms, modem::RESP_TYPE_DVM r
         if (modem->getTrace())
             Utils::dump(1U, "TX Remote Data", buffer, len);
 
+            // never send less then 3 bytes
+            if (len < 3U)
+                return false;
+
         // send entire modem packet over the remote port
         m_modemRemotePort->write(buffer, len);
     }
@@ -1540,10 +1544,24 @@ bool Host::rmtPortModemHandler(Modem* modem, uint32_t ms, modem::RESP_TYPE_DVM r
             return true;
         }
 
-        uint8_t len = data[1U];
-        int ret = modem->write(data, len);
-        if (ret != int(len))
-            LogError(LOG_MODEM, "Error writing remote data");
+        uint32_t pktLength = 0U;
+        switch (data[0U]) {
+            case DVM_SHORT_FRAME_START:
+                pktLength = data[1U];
+                break;
+            case DVM_LONG_FRAME_START:
+                pktLength = ((data[1U] & 0xFFU) << 8) + (data[2U] & 0xFFU);
+                break;
+            default:
+                LogError(LOG_MODEM, "Invalid start of modem frame!");
+                break;
+        }
+
+        if (pktLength > 0U) {
+            int ret = modem->write(data, pktLength);
+            if (ret != int(pktLength))
+                LogError(LOG_MODEM, "Error writing remote data");
+        }
     }
 
     // handled modem response

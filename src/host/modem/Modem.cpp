@@ -1381,8 +1381,8 @@ bool Modem::writeDMRFrame1(const uint8_t* data, uint32_t length)
         if (data[0U] != TAG_DATA && data[0U] != TAG_EOT)
             return false;
         if (length > MAX_LENGTH) {
-            LogError(LOG_MODEM, "Modem::writeDMRData1(); request data to write >%u?, len = %u", MAX_LENGTH, length);
-            Utils::dump(1U, "[Modem::writeDMRData1()] Attmpted Data", data, length);
+            LogError(LOG_MODEM, "Modem::writeDMRFrame1(); request data to write >%u?, len = %u", MAX_LENGTH, length);
+            Utils::dump(1U, "[Modem::writeDMRFrame1()] Attmpted Data", data, length);
             return false;
         }
 
@@ -1399,9 +1399,9 @@ bool Modem::writeDMRFrame1(const uint8_t* data, uint32_t length)
         // write or buffer DMR slot 1 data to air interface
         if (m_dmrSpace1 >= length) {
             if (m_debug)
-                LogDebugEx(LOG_MODEM, "Modem::writeDMRData1()", "immediate write (len %u)", length);
+                LogDebugEx(LOG_MODEM, "Modem::writeDMRFrame1()", "immediate write (len %u)", length);
             if (m_trace)
-                Utils::dump(1U, "[Modem::writeDMRData1()] Immediate TX DMR Data 1", buffer + 3U, length - 1U);
+                Utils::dump(1U, "[Modem::writeDMRFrame1()] Immediate TX DMR Data 1", buffer + 3U, length - 1U);
 
             int ret = write(buffer, len);
             if (ret != int(len)) {
@@ -1435,8 +1435,8 @@ bool Modem::writeDMRFrame2(const uint8_t* data, uint32_t length)
         if (data[0U] != TAG_DATA && data[0U] != TAG_EOT)
             return false;
         if (length > MAX_LENGTH) {
-            LogError(LOG_MODEM, "Modem::writeDMRData2(); request data to write >%u?, len = %u", MAX_LENGTH, length);
-            Utils::dump(1U, "Modem::writeDMRData2(); Attmpted Data", data, length);
+            LogError(LOG_MODEM, "Modem::writeDMRFrame2(); request data to write >%u?, len = %u", MAX_LENGTH, length);
+            Utils::dump(1U, "Modem::writeDMRFrame2(); Attmpted Data", data, length);
             return false;
         }
 
@@ -1453,9 +1453,9 @@ bool Modem::writeDMRFrame2(const uint8_t* data, uint32_t length)
         // write or buffer DMR slot 2 data to air interface
         if (m_dmrSpace2 >= length) {
             if (m_debug)
-                LogDebugEx(LOG_MODEM, "Modem::writeDMRData2()", "immediate write (len %u)", length);
+                LogDebugEx(LOG_MODEM, "Modem::writeDMRFrame2()", "immediate write (len %u)", length);
             if (m_trace)
-                Utils::dump(1U, "[Modem::writeDMRData2()] Immediate TX DMR Data 2", buffer + 3U, length - 1U);
+                Utils::dump(1U, "[Modem::writeDMRFrame2()] Immediate TX DMR Data 2", buffer + 3U, length - 1U);
 
             int ret = write(buffer, len);
             if (ret != int(len)) {
@@ -1492,8 +1492,8 @@ bool Modem::writeP25Frame(const uint8_t* data, uint32_t length)
         if (data[0U] != TAG_DATA && data[0U] != TAG_EOT)
             return false;
         if (length > MAX_LENGTH) {
-            LogError(LOG_MODEM, "Modem::writeP25Data(); request data to write >%u?, len = %u", MAX_LENGTH, length);
-            Utils::dump(1U, "[Modem::writeP25Data()] Attmpted Data", data, length);
+            LogError(LOG_MODEM, "Modem::writeP25Frame(); request data to write >%u?, len = %u", MAX_LENGTH, length);
+            Utils::dump(1U, "[Modem::writeP25Frame()] Attmpted Data", data, length);
             return false;
         }
 
@@ -1514,14 +1514,14 @@ bool Modem::writeP25Frame(const uint8_t* data, uint32_t length)
             ::memcpy(buffer + 4U, data + 1U, length - 1U);
         }
 
-        uint8_t len = length + 2U;
+        uint32_t len = length + 2U;
 
         // write or buffer P25 data to air interface
         if (m_p25Space >= length) {
             if (m_debug)
-                LogDebugEx(LOG_MODEM, "Modem::writeP25Data()", "immediate write (len %u)", length);
+                LogDebugEx(LOG_MODEM, "Modem::writeP25Frame()", "immediate write (len %u)", length);
             if (m_trace)
-                Utils::dump(1U, "[Modem::writeP25Data()] Immediate TX P25 Data", buffer + 3U, length - 3U);
+                Utils::dump(1U, "[Modem::writeP25Frame()] Immediate TX P25 Data", buffer + 3U, length - 3U);
 
             int ret = write(buffer, len);
             if (ret != int(len)) {
@@ -1555,8 +1555,8 @@ bool Modem::writeNXDNFrame(const uint8_t* data, uint32_t length)
         if (data[0U] != TAG_DATA && data[0U] != TAG_EOT)
             return false;
         if (length > MAX_LENGTH) {
-            LogError(LOG_MODEM, "Modem::writeNXDNData(); request data to write >%u?, len = %u", MAX_LENGTH, length);
-            Utils::dump(1U, "[Modem::writeNXDNData()] Attmpted Data", data, length);
+            LogError(LOG_MODEM, "Modem::writeNXDNFrame(); request data to write >%u?, len = %u", MAX_LENGTH, length);
+            Utils::dump(1U, "[Modem::writeNXDNFrame()] Attmpted Data", data, length);
             return false;
         }
 
@@ -1573,9 +1573,9 @@ bool Modem::writeNXDNFrame(const uint8_t* data, uint32_t length)
         // write or buffer NXDN data to air interface
         if (m_nxdnSpace >= length) {
             if (m_debug)
-                LogDebugEx(LOG_MODEM, "Modem::writeNXDNData()", "immediate write (len %u)", length);
+                LogDebugEx(LOG_MODEM, "Modem::writeNXDNFrame()", "immediate write (len %u)", length);
             if (m_trace)
-                Utils::dump(1U, "[Modem::writeNXDNData()] Immediate TX NXDN Data", buffer + 3U, length - 1U);
+                Utils::dump(1U, "[Modem::writeNXDNFrame()] Immediate TX NXDN Data", buffer + 3U, length - 1U);
 
             int ret = write(buffer, len);
             if (ret != int(len)) {
