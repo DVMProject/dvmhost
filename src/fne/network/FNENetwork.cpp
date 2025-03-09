@@ -339,6 +339,24 @@ void FNENetwork::clock(uint32_t ms)
             }
         }
 
+        // send ACL updates forcibly to any Peer-Link peers
+        for (auto peer : m_peers) {
+            uint32_t id = peer.first;
+            FNEPeerConnection* connection = peer.second;
+            if (connection != nullptr) {
+                if (connection->connected() && connection->isPeerLink()) {
+                    // does this peer need an ACL update?
+                    uint64_t dt = connection->lastACLUpdate() + (m_updateLookupTime * 1000);
+                    if (dt < now) {
+                        LogInfoEx(LOG_NET, "PEER %u (%s) updating ACL list, dt = %u, now = %u", id, connection->identity().c_str(),
+                            dt, now);
+                        peerACLUpdate(id);
+                        connection->lastACLUpdate(now);
+                    }
+                }
+            }
+        }
+
         m_maintainenceTimer.start();
     }
 
@@ -939,10 +957,11 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                 if (dt < now) {
                                     LogInfoEx(LOG_NET, "PEER %u (%s) updating ACL list, dt = %u, now = %u", peerId, connection->identity().c_str(),
                                         dt, now);
-                                    if (connection->streamCount() <= 1) {
+                                    dt = connection->lastACLUpdate() + ((network->m_updateLookupTime * 1000) * 2);
+                                    if (connection->streamCount() <= 1 || (dt < now)) {
                                         network->peerACLUpdate(peerId);
+                                        connection->lastACLUpdate(now);
                                     }
-                                    connection->lastACLUpdate(now);
                                 }
 
                                 uint8_t payload[8U];
@@ -2161,10 +2180,6 @@ void FNENetwork::writeDeactiveTGIDs(uint32_t peerId, uint32_t streamId)
 
 void FNENetwork::writePeerList(uint32_t peerId, uint32_t streamId)
 {
-    if (!m_tidLookup->sendTalkgroups()) {
-        return;
-    }
-
     uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
     // sending PEER_LINK style RID list to external peers
