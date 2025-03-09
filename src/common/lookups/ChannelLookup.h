@@ -206,8 +206,9 @@ namespace lookups
         /**
          * @brief Helper to remove a RF channel.
          * @param chNo Channel Number.
+         * @returns bool True, if channel remove, otherwise false.
          */
-        void removeRFCh(uint32_t chNo);
+        bool removeRFCh(uint32_t chNo);
         /**
          * @brief Helper to determine if there are any RF channels available..
          * @returns bool True, if any RF channels are available for use, otherwise false.

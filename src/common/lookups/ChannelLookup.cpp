@@ -71,12 +71,18 @@ bool ChannelLookup::addRFCh(uint32_t chNo, bool force)
 
 /* Helper to remove a RF channel. */
 
-void ChannelLookup::removeRFCh(uint32_t chNo)
+bool ChannelLookup::removeRFCh(uint32_t chNo)
 {
     if (chNo == 0U) {
-        return;
+        return false;
     }
 
-    auto it = std::find(m_rfChTable.begin(), m_rfChTable.end(), chNo);
-    m_rfChTable.erase(it);
+    try {
+        auto it = std::find(m_rfChTable.begin(), m_rfChTable.end(), chNo);
+        m_rfChTable.erase(it);
+    } catch (...) {
+        return false;
+    }
+
+    return true;
 }

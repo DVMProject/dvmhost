@@ -467,64 +467,69 @@ bool Socket::write(BufferVector& buffers, ssize_t* lenWritten) noexcept
             continue;
         }
 
-        // are we crypto wrapped?
-        if (m_isCryptoWrapped && m_presharedKey != nullptr) {
-            uint32_t cryptedLen = length * sizeof(uint8_t);
-            uint8_t* cryptoBuffer = buffers[i]->buffer;
+        try {
+            // are we crypto wrapped?
+            if (m_isCryptoWrapped && m_presharedKey != nullptr) {
+                uint32_t cryptedLen = length * sizeof(uint8_t);
+                uint8_t* cryptoBuffer = buffers[i]->buffer;
 
-            // do we need to pad the original buffer to be block aligned?
-            if (cryptedLen % crypto::AES::BLOCK_BYTES_LEN != 0) {
-                uint32_t alignment = crypto::AES::BLOCK_BYTES_LEN - (cryptedLen % crypto::AES::BLOCK_BYTES_LEN);
-                cryptedLen += alignment;
+                // do we need to pad the original buffer to be block aligned?
+                if (cryptedLen % crypto::AES::BLOCK_BYTES_LEN != 0) {
+                    uint32_t alignment = crypto::AES::BLOCK_BYTES_LEN - (cryptedLen % crypto::AES::BLOCK_BYTES_LEN);
+                    cryptedLen += alignment;
 
-                // reallocate buffer and copy
-                cryptoBuffer = new uint8_t[cryptedLen];
-                ::memset(cryptoBuffer, 0x00U, cryptedLen);
-                ::memcpy(cryptoBuffer, buffers.at(i)->buffer, length);
+                    // reallocate buffer and copy
+                    cryptoBuffer = new uint8_t[cryptedLen];
+                    ::memset(cryptoBuffer, 0x00U, cryptedLen);
+                    ::memcpy(cryptoBuffer, buffers.at(i)->buffer, length);
+                }
+
+                // encrypt
+                uint8_t* crypted = m_aes->encryptECB(cryptoBuffer, cryptedLen, m_presharedKey);
+                delete[] cryptoBuffer;
+
+                if (crypted == nullptr) {
+                    --size;
+                    continue;
+                }
+
+                // Utils::dump(1U, "Socket::write() crypted", crypted, cryptedLen);
+
+                // finalize
+                UInt8Array __outBuf = std::make_unique<uint8_t[]>(cryptedLen + 2U);
+                uint8_t* out = __outBuf.get();
+                ::memcpy(out + 2U, crypted, cryptedLen);
+                __SET_UINT16B(AES_WRAPPED_PCKT_MAGIC, out, 0U);
+
+                // cleanup buffers and replace with new
+                delete[] crypted;
+                //delete buffers[i]->buffer;
+
+                // this should never happen...
+                if (buffers[i] == nullptr) {
+                    --size;
+                    continue;
+                }
+
+                buffers[i]->buffer = new uint8_t[cryptedLen + 2U];
+                ::memcpy(buffers[i]->buffer, out, cryptedLen + 2U);
+                buffers[i]->length = cryptedLen + 2U;
             }
 
-            // encrypt
-            uint8_t* crypted = m_aes->encryptECB(cryptoBuffer, cryptedLen, m_presharedKey);
-            delete[] cryptoBuffer;
+            chunks[i].iov_len = buffers.at(i)->length;
+            chunks[i].iov_base = buffers.at(i)->buffer;
+            sent += buffers.at(i)->length;
 
-            if (crypted == nullptr) {
-                --size;
-                continue;
-            }
-
-            // Utils::dump(1U, "Socket::write() crypted", crypted, cryptedLen);
-
-            // finalize
-            UInt8Array __outBuf = std::make_unique<uint8_t[]>(cryptedLen + 2U);
-            uint8_t* out = __outBuf.get();
-            ::memcpy(out + 2U, crypted, cryptedLen);
-            __SET_UINT16B(AES_WRAPPED_PCKT_MAGIC, out, 0U);
-
-            // cleanup buffers and replace with new
-            delete[] crypted;
-            //delete buffers[i]->buffer;
-
-            // this should never happen...
-            if (buffers[i] == nullptr) {
-                --size;
-                continue;
-            }
-
-            buffers[i]->buffer = new uint8_t[cryptedLen + 2U];
-            ::memcpy(buffers[i]->buffer, out, cryptedLen + 2U);
-            buffers[i]->length = cryptedLen + 2U;
+            headers[i].msg_hdr.msg_name = (void*)&buffers.at(i)->address;
+            headers[i].msg_hdr.msg_namelen = buffers.at(i)->addrLen;
+            headers[i].msg_hdr.msg_iov = &chunks[i];
+            headers[i].msg_hdr.msg_iovlen = 1;
+            headers[i].msg_hdr.msg_control = 0;
+            headers[i].msg_hdr.msg_controllen = 0;
         }
-
-        chunks[i].iov_len = buffers.at(i)->length;
-        chunks[i].iov_base = buffers.at(i)->buffer;
-        sent += buffers.at(i)->length;
-
-        headers[i].msg_hdr.msg_name = (void*)&buffers.at(i)->address;
-        headers[i].msg_hdr.msg_namelen = buffers.at(i)->addrLen;
-        headers[i].msg_hdr.msg_iov = &chunks[i];
-        headers[i].msg_hdr.msg_iovlen = 1;
-        headers[i].msg_hdr.msg_control = 0;
-        headers[i].msg_hdr.msg_controllen = 0;
+        catch (...) {
+            --size;
+        }
     }
 
     bool skip = false;
