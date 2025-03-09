@@ -110,19 +110,19 @@ namespace lookups
         /**
          * @brief Peer ID.
          */
-        __READONLY_PROPERTY_PLAIN(uint32_t, peerId);
+        __PROPERTY_PLAIN(uint32_t, peerId);
         /**
          * @breif Peer Alias
          */
-        __READONLY_PROPERTY_PLAIN(std::string, peerAlias);
+        __PROPERTY_PLAIN(std::string, peerAlias);
         /**
          * @brief Per Peer Password.
          */
-        __READONLY_PROPERTY_PLAIN(std::string, peerPassword);
+        __PROPERTY_PLAIN(std::string, peerPassword);
         /**
          * @brief Flag indicating if the peer participates in peer link and should be sent configuration.
          */
-        __READONLY_PROPERTY_PLAIN(bool, peerLink);
+        __PROPERTY_PLAIN(bool, peerLink);
         /**
          * @brief Flag indicating if the peer is default.
          */
@@ -220,6 +220,17 @@ namespace lookups
          * @returns Mode Current peer list operational mode.
          */
         Mode getMode() const;
+
+        /**
+         * @brief Gets the entire peer ID table.
+         * @returns std::unordered_map<uint32_t, PeerId> 
+         */
+        std::unordered_map<uint32_t, PeerId> table() const { return m_table; }
+        /**
+         * @brief Gets the entire peer ID table.
+         * @returns std::vector<PeerId> 
+         */
+        std::vector<PeerId> tableAsList() const;
 
     protected:
         bool m_acl;

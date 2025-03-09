@@ -152,6 +152,20 @@ PeerListLookup::Mode PeerListLookup::getMode() const
     return m_mode;
 }
 
+/* Gets the entire peer ID table. */
+
+std::vector<PeerId> PeerListLookup::tableAsList() const
+{
+    std::vector<PeerId> ret = std::vector<PeerId>();
+
+    std::lock_guard<std::mutex> lock(m_mutex);
+    for (auto entry : m_table) {
+        ret.push_back(entry.second);
+    }
+
+    return ret;
+}
+
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------
