@@ -961,10 +961,14 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                 // does this peer need an ACL update?
                                 uint64_t dt = connection->lastACLUpdate() + (network->m_updateLookupTime * 1000);
                                 if (dt < now) {
-                                    LogInfoEx(LOG_NET, "PEER %u (%s) updating ACL list, dt = %u, now = %u", peerId, connection->identity().c_str(),
-                                        dt, now);
-                                    dt = connection->lastACLUpdate() + ((network->m_updateLookupTime * 1000) * 2);
-                                    if (connection->streamCount() <= 1 || (dt < now)) {
+                                    if (connection->streamCount() <= 1 || ((dt * 2) < now)) {
+                                        if ((dt * 2) < now)
+                                            LogInfoEx(LOG_NET, "PEER %u (%s) late updating ACL list, dt = %u, ddt = %u, now = %u", peerId, connection->identity().c_str(),
+                                                dt, dt * 2, now);
+                                        else
+                                            LogInfoEx(LOG_NET, "PEER %u (%s) updating ACL list, dt = %u,  now = %u", peerId, connection->identity().c_str(),
+                                                dt, now);
+
                                         network->peerACLUpdate(peerId);
                                         connection->lastACLUpdate(now);
                                     }
