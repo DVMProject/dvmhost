@@ -64,6 +64,8 @@ namespace network
 
             GRANT_REQ = 0x7AU,                      //! Grant Request
             INCALL_CTRL = 0x7BU,                    //! In-Call Control
+            KEY_REQ = 0x7CU,                        //! Encryption Key Request
+            KEY_RSP = 0x7DU,                        //! Encryption Key Response
 
             ACK = 0x7EU,                            //! Packet Acknowledge
             NAK = 0x7FU,                            //! Packet Negative Acknowledge
