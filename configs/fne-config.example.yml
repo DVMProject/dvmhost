@@ -118,6 +118,19 @@ master:
     influxLogRawData: false
 
     #
+    # Crypto Container Configuration
+    #
+    crypto_container:
+        # Flag indicating whether or not crypto services are enabled.
+        enabled: false
+        # Full path to the talkgroup rules file.
+        file: key_container.ekc
+        # Container password.
+        password: "PASSWORD"
+        # Amount of time between updates of crypto container file. (minutes)
+        time: 30
+
+    #
     # Talkgroup Rules Configuration
     #
     talkgroup_rules:

@@ -27,6 +27,7 @@
 #include "network/DiagNetwork.h"
 #include "network/PeerNetwork.h"
 #include "network/RESTAPI.h"
+#include "CryptoContainer.h"
 
 #include <string>
 #include <unordered_map>
@@ -103,6 +104,8 @@ private:
     lookups::RadioIdLookup* m_ridLookup;
     lookups::TalkgroupRulesLookup* m_tidLookup;
     lookups::PeerListLookup* m_peerListLookup;
+
+    CryptoContainer* m_cryptoLookup;
 
     std::unordered_map<std::string, network::PeerNetwork*> m_peerNetworks;
 

@@ -64,6 +64,7 @@ HostFNE::HostFNE(const std::string& confFile) :
     m_ridLookup(nullptr),
     m_tidLookup(nullptr),
     m_peerListLookup(nullptr),
+    m_cryptoLookup(nullptr),
     m_peerNetworks(),
     m_pingTime(5U),
     m_maxMissedPings(5U),
@@ -353,6 +354,12 @@ bool HostFNE::readParams()
     std::string talkgroupConfig = talkgroupRules["file"].as<std::string>();
     uint32_t talkgroupConfigReload = talkgroupRules["time"].as<uint32_t>(30U);
 
+    yaml::Node cryptoContainer = masterConf["crypto_container"];
+    bool cryptoContainerEnabled = cryptoContainer["enabled"].as<bool>(false);
+    std::string cryptoContainerEKC = cryptoContainer["file"].as<std::string>();
+    std::string cryptoContainerPassword = cryptoContainer["password"].as<std::string>();
+    uint32_t cryptoContainerReload = cryptoContainer["time"].as<uint32_t>(30U);
+
     std::string peerListLookupFile = systemConf["peer_acl"]["file"].as<std::string>();
     bool peerListLookupEnable = systemConf["peer_acl"]["enabled"].as<bool>(false);
     std::string peerListModeStr = systemConf["peer_acl"]["mode"].as<std::string>("whitelist");
@@ -384,6 +391,16 @@ bool HostFNE::readParams()
 
     m_peerListLookup = new PeerListLookup(peerListLookupFile, peerListMode, peerListConfigReload, peerListLookupEnable);
     m_peerListLookup->read();
+
+    // try to load peer whitelist/blacklist
+    LogInfo("Crypto Container Lookups");
+    LogInfo("    Enabled: %s", cryptoContainerEnabled ? "yes" : "no");
+    LogInfo("    File: %s", cryptoContainerEKC.length() > 0U ? cryptoContainerEKC.c_str() : "None");
+    if (cryptoContainerReload > 0U)
+        LogInfo("    Reload: %u mins", cryptoContainerReload);
+
+    m_cryptoLookup = new CryptoContainer(cryptoContainerEKC, cryptoContainerPassword, cryptoContainerReload, cryptoContainerEnabled);
+    m_cryptoLookup->read();
 
     return true;
 }
