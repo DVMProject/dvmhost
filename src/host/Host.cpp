@@ -1519,9 +1519,9 @@ bool Host::rmtPortModemHandler(Modem* modem, uint32_t ms, modem::RESP_TYPE_DVM r
         if (modem->getTrace())
             Utils::dump(1U, "TX Remote Data", buffer, len);
 
-            // never send less then 3 bytes
-            if (len < 3U)
-                return false;
+        // never send less then 3 bytes
+        if (len < 3U)
+            return false;
 
         // send entire modem packet over the remote port
         m_modemRemotePort->write(buffer, len);

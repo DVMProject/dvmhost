@@ -22,7 +22,9 @@
 #include "common/Defines.h"
 
 // Shorthand macro to dmr::defines -- keeps source code that doesn't use "using" concise
+#if !defined(DMRDEF)
 #define DMRDEF dmr::defines
+#endif // DMRDEF
 namespace dmr
 {
     namespace defines
