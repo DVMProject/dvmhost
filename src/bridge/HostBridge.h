@@ -56,6 +56,8 @@
 #define DECSTATE_SIZE 2048
 #define ENCSTATE_SIZE 6144
 
+#define USRP_HEADER_LENGTH 32
+
 const uint8_t FULL_RATE_MODE = 0x00U;
 const uint8_t HALF_RATE_MODE = 0x01U;
 
@@ -162,11 +164,13 @@ private:
     bool m_udpNoIncludeLength;
     bool m_udpUseULaw;
     bool m_udpRTPFrames;
+    bool m_udpUsrp;
 
     uint32_t m_srcId;
     uint32_t m_srcIdOverride;
     bool m_overrideSrcIdFromMDC;
     bool m_overrideSrcIdFromUDP;
+    bool m_resetCallForSourceIdChange;
     uint32_t m_dstId;
     uint8_t m_slot;
 
@@ -244,6 +248,8 @@ private:
 
     uint16_t m_rtpSeqNo;
     uint32_t m_rtpTimestamp;
+
+    uint32_t m_usrpSeqNo;
 
     static std::mutex m_audioMutex;
     static std::mutex m_networkMutex;
@@ -445,6 +451,11 @@ private:
      * @returns uint8_t* Buffer containing the encoded RTP headers.
      */
     uint8_t* generateRTPHeaders(uint8_t msgLen, uint16_t& rtpSeq);
+
+    /**
+    * @brief Helper to generate USRP end of transmission
+    */
+    void sendUsrpEot();
 
     /**
      * @brief Helper to generate the single-tone preamble tone.

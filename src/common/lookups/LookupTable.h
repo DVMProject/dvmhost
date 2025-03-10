@@ -182,7 +182,7 @@ namespace lookups
          * @brief Helper to set the reload time of this lookup table.
          * @param reloadTime Lookup time in seconds.
          */
-        void setReloadTime(uint32_t reloadTime) { m_reloadTime = 0U; }
+        void setReloadTime(uint32_t reloadTime) { m_reloadTime = reloadTime; }
 
     protected:
         std::string m_filename;

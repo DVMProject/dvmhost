@@ -29,6 +29,7 @@ namespace network
     // ---------------------------------------------------------------------------
 
     const uint32_t DATA_PACKET_LENGTH = 8192U;
+    const uint8_t MAX_FAILED_READ_CNT_LOGGING = 5U;
 
     // ---------------------------------------------------------------------------
     //  Class Declaration
@@ -95,6 +96,8 @@ namespace network
 
         static std::mutex m_flushMutex;
         udp::BufferVector m_buffers;
+
+        uint32_t m_failedReadCnt;
 
         bool m_debug;
 

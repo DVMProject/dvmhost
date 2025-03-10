@@ -9,7 +9,7 @@
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
 *  Copyright (C) 2016,2017 Jonathan Naylor, G4KLX
-*  Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
+*  Copyright (C) 2017-2025 Bryan Biedenkapp, N2PLL
 *
 */
 /**
@@ -111,7 +111,9 @@ namespace p25
             data::LowSpeedData m_netLSD;
 
             dfsi::LC m_dfsiLC;
+            bool m_gotNetLDU1;
             uint8_t* m_netLDU1;
+            bool m_gotNetLDU2;
             uint8_t* m_netLDU2;
 
             defines::DUID::E m_lastDUID;
@@ -192,6 +194,14 @@ namespace p25
              * @param data Buffer containing frame data.
              */
             void insertEncryptedNullAudio(uint8_t* data);
+
+            /**
+             * @brief Helper to reset IMBE buffer with null frames.
+             * @param data Buffer containing frame data.
+             * @param encrypted Flag indicating whether or not the data is encrypted.
+             */
+            void resetWithNullAudio(uint8_t* data, bool encrypted);
+
             /**
              * @brief Given the last MI, generate the next MI using LFSR.
              * @param lastMI Last MI received.

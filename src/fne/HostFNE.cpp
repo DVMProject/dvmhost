@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2023,2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2023,2024,2025 Bryan Biedenkapp, N2PLL
  *
  */
 #include "Defines.h"
@@ -64,6 +64,7 @@ HostFNE::HostFNE(const std::string& confFile) :
     m_ridLookup(nullptr),
     m_tidLookup(nullptr),
     m_peerListLookup(nullptr),
+    m_cryptoLookup(nullptr),
     m_peerNetworks(),
     m_pingTime(5U),
     m_maxMissedPings(5U),
@@ -281,18 +282,18 @@ int HostFNE::run()
     }
 
     if (m_tidLookup != nullptr) {
+        m_tidLookup->setReloadTime(0U); // no reload
         m_tidLookup->stop();
-        delete m_tidLookup;
     }
 
     if (m_ridLookup != nullptr) {
+        m_ridLookup->setReloadTime(0U); // no reload
         m_ridLookup->stop();
-        delete m_ridLookup;
     }
 
     if (m_peerListLookup != nullptr) {
+        m_peerListLookup->setReloadTime(0U); // no reload
         m_peerListLookup->stop();
-        delete m_peerListLookup;
     }
 #if !defined(_WIN32)
     if (m_tun != nullptr) {
@@ -353,6 +354,15 @@ bool HostFNE::readParams()
     std::string talkgroupConfig = talkgroupRules["file"].as<std::string>();
     uint32_t talkgroupConfigReload = talkgroupRules["time"].as<uint32_t>(30U);
 
+    yaml::Node cryptoContainer = masterConf["crypto_container"];
+    bool cryptoContainerEnabled = cryptoContainer["enabled"].as<bool>(false);
+#if !defined(ENABLE_TCP_SSL)
+    cryptoContainerEnabled = false;
+#endif // ENABLE_TCP_SSL
+    std::string cryptoContainerEKC = cryptoContainer["file"].as<std::string>();
+    std::string cryptoContainerPassword = cryptoContainer["password"].as<std::string>();
+    uint32_t cryptoContainerReload = cryptoContainer["time"].as<uint32_t>(30U);
+
     std::string peerListLookupFile = systemConf["peer_acl"]["file"].as<std::string>();
     bool peerListLookupEnable = systemConf["peer_acl"]["enabled"].as<bool>(false);
     std::string peerListModeStr = systemConf["peer_acl"]["mode"].as<std::string>("whitelist");
@@ -384,6 +394,16 @@ bool HostFNE::readParams()
 
     m_peerListLookup = new PeerListLookup(peerListLookupFile, peerListMode, peerListConfigReload, peerListLookupEnable);
     m_peerListLookup->read();
+
+    // try to load peer whitelist/blacklist
+    LogInfo("Crypto Container Lookups");
+    LogInfo("    Enabled: %s", cryptoContainerEnabled ? "yes" : "no");
+    LogInfo("    File: %s", cryptoContainerEKC.length() > 0U ? cryptoContainerEKC.c_str() : "None");
+    if (cryptoContainerReload > 0U)
+        LogInfo("    Reload: %u mins", cryptoContainerReload);
+
+    m_cryptoLookup = new CryptoContainer(cryptoContainerEKC, cryptoContainerPassword, cryptoContainerReload, cryptoContainerEnabled);
+    m_cryptoLookup->read();
 
     return true;
 }
@@ -608,7 +628,7 @@ void* HostFNE::threadMasterNetwork(void* arg)
         HostFNE* fne = static_cast<HostFNE*>(th->obj);
         if (fne == nullptr) {
             g_killed = true;
-            LogDebug(LOG_HOST, "[FAIL] %s", threadName.c_str());
+            LogError(LOG_HOST, "[FAIL] %s", threadName.c_str());
         }
 
         if (g_killed) {
@@ -616,7 +636,7 @@ void* HostFNE::threadMasterNetwork(void* arg)
             return nullptr;
         }
 
-        LogDebug(LOG_HOST, "[ OK ] %s", threadName.c_str());
+        LogMessage(LOG_HOST, "[ OK ] %s", threadName.c_str());
 #ifdef _GNU_SOURCE
         ::pthread_setname_np(th->thread, threadName.c_str());
 #endif // _GNU_SOURCE
@@ -628,7 +648,7 @@ void* HostFNE::threadMasterNetwork(void* arg)
             }
         }
 
-        LogDebug(LOG_HOST, "[STOP] %s", threadName.c_str());
+        LogMessage(LOG_HOST, "[STOP] %s", threadName.c_str());
         delete th;
     }
 
@@ -651,7 +671,7 @@ void* HostFNE::threadDiagNetwork(void* arg)
         HostFNE* fne = static_cast<HostFNE*>(th->obj);
         if (fne == nullptr) {
             g_killed = true;
-            LogDebug(LOG_HOST, "[FAIL] %s", threadName.c_str());
+            LogError(LOG_HOST, "[FAIL] %s", threadName.c_str());
         }
 
         if (g_killed) {
@@ -664,7 +684,7 @@ void* HostFNE::threadDiagNetwork(void* arg)
             return nullptr;
         }
 
-        LogDebug(LOG_HOST, "[ OK ] %s", threadName.c_str());
+        LogMessage(LOG_HOST, "[ OK ] %s", threadName.c_str());
 #ifdef _GNU_SOURCE
         ::pthread_setname_np(th->thread, threadName.c_str());
 #endif // _GNU_SOURCE
@@ -676,7 +696,7 @@ void* HostFNE::threadDiagNetwork(void* arg)
             }
         }
 
-        LogDebug(LOG_HOST, "[STOP] %s", threadName.c_str());
+        LogMessage(LOG_HOST, "[STOP] %s", threadName.c_str());
         delete th;
     }
 
@@ -842,7 +862,7 @@ void* HostFNE::threadVirtualNetworking(void* arg)
         HostFNE* fne = static_cast<HostFNE*>(th->obj);
         if (fne == nullptr) {
             g_killed = true;
-            LogDebug(LOG_HOST, "[FAIL] %s", threadName.c_str());
+            LogError(LOG_HOST, "[FAIL] %s", threadName.c_str());
         }
 
         if (g_killed) {
@@ -855,7 +875,7 @@ void* HostFNE::threadVirtualNetworking(void* arg)
             return nullptr;
         }
 
-        LogDebug(LOG_HOST, "[ OK ] %s", threadName.c_str());
+        LogMessage(LOG_HOST, "[ OK ] %s", threadName.c_str());
 #ifdef _GNU_SOURCE
         ::pthread_setname_np(th->thread, threadName.c_str());
 #endif // _GNU_SOURCE
@@ -887,7 +907,7 @@ void* HostFNE::threadVirtualNetworking(void* arg)
             }
         }
 
-        LogDebug(LOG_HOST, "[STOP] %s", threadName.c_str());
+        LogMessage(LOG_HOST, "[STOP] %s", threadName.c_str());
         delete th;
     }
 
@@ -906,7 +926,7 @@ void* HostFNE::threadVirtualNetworkingClock(void* arg)
         HostFNE* fne = static_cast<HostFNE*>(th->obj);
         if (fne == nullptr) {
             g_killed = true;
-            LogDebug(LOG_HOST, "[FAIL] %s", threadName.c_str());
+            LogError(LOG_HOST, "[FAIL] %s", threadName.c_str());
         }
 
         if (g_killed) {
@@ -919,7 +939,7 @@ void* HostFNE::threadVirtualNetworkingClock(void* arg)
             return nullptr;
         }
 
-        LogDebug(LOG_HOST, "[ OK ] %s", threadName.c_str());
+        LogMessage(LOG_HOST, "[ OK ] %s", threadName.c_str());
 #ifdef _GNU_SOURCE
         ::pthread_setname_np(th->thread, threadName.c_str());
 #endif // _GNU_SOURCE
@@ -947,7 +967,7 @@ void* HostFNE::threadVirtualNetworkingClock(void* arg)
             }
         }
 
-        LogDebug(LOG_HOST, "[STOP] %s", threadName.c_str());
+        LogMessage(LOG_HOST, "[STOP] %s", threadName.c_str());
         delete th;
     }
 
@@ -972,7 +992,7 @@ void HostFNE::processPeer(network::PeerNetwork* peerNetwork)
         if (ret) {
             uint32_t peerId = peerNetwork->getPeerId();
             uint32_t slotNo = (data[15U] & 0x80U) == 0x80U ? 2U : 1U;
-            uint32_t streamId = peerNetwork->getDMRStreamId(slotNo);
+            uint32_t streamId = peerNetwork->getRxDMRStreamId(slotNo);
 
             m_network->dmrTrafficHandler()->processFrame(data.get(), length, peerId, peerNetwork->pktLastSeq(), streamId, true);
         }
@@ -985,7 +1005,7 @@ void HostFNE::processPeer(network::PeerNetwork* peerNetwork)
         UInt8Array data = peerNetwork->readP25(ret, length);
         if (ret) {
             uint32_t peerId = peerNetwork->getPeerId();
-            uint32_t streamId = peerNetwork->getP25StreamId();
+            uint32_t streamId = peerNetwork->getRxP25StreamId();
 
             m_network->p25TrafficHandler()->processFrame(data.get(), length, peerId, peerNetwork->pktLastSeq(), streamId, true);
         }
@@ -998,7 +1018,7 @@ void HostFNE::processPeer(network::PeerNetwork* peerNetwork)
         UInt8Array data = peerNetwork->readNXDN(ret, length);
         if (ret) {
             uint32_t peerId = peerNetwork->getPeerId();
-            uint32_t streamId = peerNetwork->getNXDNStreamId();
+            uint32_t streamId = peerNetwork->getRxNXDNStreamId();
 
             m_network->nxdnTrafficHandler()->processFrame(data.get(), length, peerId, peerNetwork->pktLastSeq(), streamId, true);
         }

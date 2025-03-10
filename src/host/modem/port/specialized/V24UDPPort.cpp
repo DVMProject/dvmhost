@@ -759,7 +759,7 @@ uint8_t* V24UDPPort::generateMessage(const uint8_t* message, uint32_t length, ui
     if (timestamp != INVALID_TS) {
         timestamp += (RTP_GENERIC_CLOCK_RATE / 133);
         if (m_debug)
-            LogDebug(LOG_NET, "V24UDPPort::generateMessage() RTP streamId = %u, previous TS = %u, TS = %u, rtpSeq = %u", streamId, m_timestamp, timestamp, rtpSeq);
+            LogDebugEx(LOG_NET, "V24UDPPort::generateMessage()", "RTP streamId = %u, previous TS = %u, TS = %u, rtpSeq = %u", streamId, m_timestamp, timestamp, rtpSeq);
         m_timestamp = timestamp;
     }
 
@@ -779,20 +779,20 @@ uint8_t* V24UDPPort::generateMessage(const uint8_t* message, uint32_t length, ui
 
     if (streamId != 0U && timestamp == INVALID_TS && rtpSeq != RTP_END_OF_CALL_SEQ) {
         if (m_debug)
-            LogDebug(LOG_NET, "V24UDPPort::generateMessage() RTP streamId = %u, initial TS = %u, rtpSeq = %u", streamId, header.getTimestamp(), rtpSeq);
+            LogDebugEx(LOG_NET, "V24UDPPort::generateMessage()", "RTP streamId = %u, initial TS = %u, rtpSeq = %u", streamId, header.getTimestamp(), rtpSeq);
         m_timestamp = header.getTimestamp();
     }
 
     if (streamId != 0U && rtpSeq == RTP_END_OF_CALL_SEQ) {
         m_timestamp = INVALID_TS;
         if (m_debug)
-            LogDebug(LOG_NET, "V24UDPPort::generateMessage() RTP streamId = %u, rtpSeq = %u", streamId, rtpSeq);
+            LogDebugEx(LOG_NET, "V24UDPPort::generateMessage()", "RTP streamId = %u, rtpSeq = %u", streamId, rtpSeq);
     }
 
     ::memcpy(buffer + RTP_HEADER_LENGTH_BYTES, message, length);
 
     if (m_debug)
-        Utils::dump(1U, "V24UDPPort::generateMessage() Buffered Message", buffer, bufferLen);
+        Utils::dump(1U, "[V24UDPPort::generateMessage()] Buffered Message", buffer, bufferLen);
 
     if (outBufferLen != nullptr) {
         *outBufferLen = bufferLen;

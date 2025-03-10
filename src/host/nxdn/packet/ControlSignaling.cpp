@@ -398,7 +398,7 @@ void ControlSignaling::writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adj
     do
     {
         if (m_debug) {
-            LogDebug(LOG_NXDN, "writeRF_ControlData, frameCnt = %u, seq = %u", frameCnt, n);
+            LogDebugEx(LOG_NXDN, "ControlSignaling::writeRF_ControlData()", "frameCnt = %u, seq = %u", frameCnt, n);
         }
 
         switch (n)

@@ -18,6 +18,7 @@ file(GLOB dvmfne_SRC
     "src/fne/network/influxdb/*.h"
     "src/fne/network/*.h"
     "src/fne/network/*.cpp"
+    "src/fne/xml/*.h"
     "src/fne/*.h"
     "src/fne/*.cpp"
 )

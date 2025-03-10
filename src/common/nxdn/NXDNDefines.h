@@ -22,7 +22,9 @@
 #include "common/Defines.h"
 
 // Shorthand macro to nxdn::defines -- keeps source code that doesn't use "using" concise
+#if !defined(NXDDEF)
 #define NXDDEF nxdn::defines
+#endif // NXDDEF
 namespace nxdn
 {
     namespace defines

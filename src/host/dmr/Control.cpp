@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2015,2016,2017 Jonathan Naylor, G4KLX
- *  Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2017-2025 Bryan Biedenkapp, N2PLL
  *
  */
 #include "Defines.h"
@@ -181,6 +181,18 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, ::lookups::VoiceChDa
         m_network->setDMRICCCallback([=](network::NET_ICC::ENUM command, uint32_t dstId, uint8_t slotNo) { processInCallCtrl(command, dstId, slotNo); });
     }
 
+    /*
+    ** Network Grant Disables
+    */
+    bool disableNetworkGrant = dmrProtocol["disableNetworkGrant"].as<bool>(false);
+    m_slot1->m_disableNetworkGrant = disableNetworkGrant;
+    m_slot2->m_disableNetworkGrant = disableNetworkGrant;
+
+    bool convNetGrantDemand = dmrProtocol["convNetGrantDemand"].as<bool>(false);
+    m_slot1->m_convNetGrantDemand = convNetGrantDemand;
+    m_slot2->m_convNetGrantDemand = convNetGrantDemand;
+
+
     if (printOptions) {
         if (enableTSCC) {
             LogInfo("    TSCC Slot: %u", m_tsccSlotNo);
@@ -190,6 +202,9 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, ::lookups::VoiceChDa
                 LogInfo("    TSCC Disable Grant Source ID Check: yes");
             }
         }
+        if (disableNetworkGrant) {
+            LogInfo("    Disable Network Grants: yes");
+        }
 
         LogInfo("    Ignore Affiliation Check: %s", ignoreAffiliationCheck ? "yes" : "no");
         LogInfo("    Notify Control: %s", notifyCC ? "yes" : "no");
@@ -197,6 +212,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, ::lookups::VoiceChDa
         LogInfo("    Frame Loss Threshold: %u", frameLossThreshold);
 
         LogInfo("    Verify Registration: %s", Slot::m_verifyReg ? "yes" : "no");
+        LogInfo("    Conventional Network Grant Demand: %s", convNetGrantDemand ? "yes" : "no");
     }
 }
 
@@ -697,6 +713,8 @@ void Control::processNetwork()
     uint32_t srcId = __GET_UINT16(buffer, 5U);
     uint32_t dstId = __GET_UINT16(buffer, 8U);
 
+    uint8_t controlByte = buffer[14U];
+
     FLCO::E flco = (buffer[15U] & 0x40U) == 0x40U ? FLCO::PRIVATE : FLCO::GROUP;
 
     uint32_t slotNo = (buffer[15U] & 0x80U) == 0x80U ? 2U : 1U;
@@ -727,6 +745,8 @@ void Control::processNetwork()
     data.setSrcId(srcId);
     data.setDstId(dstId);
     data.setFLCO(flco);
+
+    data.setControl(controlByte);
 
     bool dataSync = (buffer[15U] & 0x20U) == 0x20U;
     bool voiceSync = (buffer[15U] & 0x10U) == 0x10U;

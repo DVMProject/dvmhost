@@ -358,7 +358,7 @@ HTTPLexer::ResultType HTTPLexer::consume(HTTPPayload& req, char input)
     case EXPECTING_NEWLINE_3:
         if (input == '\n') {
             for (auto header : m_headers) {
-                //::LogDebug(LOG_REST, "HTTPLexer::consume(), header = %s, value = %s", header.name.c_str(), header.value.c_str());
+                //::LogDebugEx(LOG_REST, "HTTPLexer::consume()", "header = %s, value = %s", header.name.c_str(), header.value.c_str());
                 req.headers.add(header.name, header.value);
             }
 

@@ -223,6 +223,7 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                                 .request(m_network->m_influxServer);
                         }
 
+                        m_network->eraseStreamPktSeq(peerId, streamId);
                         m_network->m_callInProgress = false;
                     }
                 }
@@ -494,12 +495,14 @@ void TagP25Data::playbackParrot()
                 if (message != nullptr) {
                     if (m_network->m_parrotOnlyOriginating) {
                         LogMessage(LOG_NET, "P25, Parrot Grant Demand, peer = %u, srcId = %u, dstId = %u", pkt.peerId, srcId, dstId);
-                        m_network->writePeer(pkt.peerId, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25 }, message.get(), messageLength, 0U, false);
+                        m_network->writePeer(pkt.peerId, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25 }, message.get(), messageLength,
+                            RTP_END_OF_CALL_SEQ, m_network->createStreamId(), false);
                     } else {
                         // repeat traffic to the connected peers
                         for (auto peer : m_network->m_peers) {
                             LogMessage(LOG_NET, "P25, Parrot Grant Demand, peer = %u, srcId = %u, dstId = %u", peer.first, srcId, dstId);
-                            m_network->writePeer(peer.first, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25 }, message.get(), messageLength, 0U, false);
+                            m_network->writePeer(peer.first, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25 }, message.get(), messageLength, 
+                                RTP_END_OF_CALL_SEQ, m_network->createStreamId(), false);
                         }
                     }
                 }
@@ -1090,7 +1093,7 @@ bool TagP25Data::validate(uint32_t peerId, lc::LC& control, DUID::E duid, const 
                 }
 
                 // report In-Call Control to the peer sending traffic
-                m_network->writePeerICC(peerId, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25, NET_ICC::REJECT_TRAFFIC, control.getDstId());
+                m_network->writePeerICC(peerId, streamId, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25, NET_ICC::REJECT_TRAFFIC, control.getDstId());
                 return false;
             }
         }
@@ -1114,7 +1117,7 @@ bool TagP25Data::validate(uint32_t peerId, lc::LC& control, DUID::E duid, const 
                 LogWarning(LOG_NET, "P25, illegal/unknown RID attempted access, srcId = %u, dstId = %u", control.getSrcId(), control.getDstId());
 
                 // report In-Call Control to the peer sending traffic
-                m_network->writePeerICC(peerId, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25, NET_ICC::REJECT_TRAFFIC, control.getDstId());
+                m_network->writePeerICC(peerId, streamId, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25, NET_ICC::REJECT_TRAFFIC, control.getDstId());
                 return false;
             }
         }
@@ -1148,7 +1151,7 @@ bool TagP25Data::validate(uint32_t peerId, lc::LC& control, DUID::E duid, const 
                 }
 
                 // report In-Call Control to the peer sending traffic
-                m_network->writePeerICC(peerId, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25, NET_ICC::REJECT_TRAFFIC, control.getDstId());
+                m_network->writePeerICC(peerId, streamId, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25, NET_ICC::REJECT_TRAFFIC, control.getDstId());
                 return false;
             }
         }
@@ -1172,7 +1175,7 @@ bool TagP25Data::validate(uint32_t peerId, lc::LC& control, DUID::E duid, const 
                 LogWarning(LOG_NET, "P25, illegal/unknown RID attempted access, srcId = %u, dstId = %u", control.getSrcId(), control.getDstId());
 
                 // report In-Call Control to the peer sending traffic
-                m_network->writePeerICC(peerId, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25, NET_ICC::REJECT_TRAFFIC, control.getDstId());
+                m_network->writePeerICC(peerId, streamId, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25, NET_ICC::REJECT_TRAFFIC, control.getDstId());
                 return false;
             }
         }
@@ -1242,7 +1245,7 @@ bool TagP25Data::validate(uint32_t peerId, lc::LC& control, DUID::E duid, const 
         }
 
         // report In-Call Control to the peer sending traffic
-        m_network->writePeerICC(peerId, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25, NET_ICC::REJECT_TRAFFIC, control.getDstId());
+        m_network->writePeerICC(peerId, streamId, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25, NET_ICC::REJECT_TRAFFIC, control.getDstId());
         return false;
     }
 
@@ -1262,7 +1265,7 @@ bool TagP25Data::validate(uint32_t peerId, lc::LC& control, DUID::E duid, const 
         }
 
         // report In-Call Control to the peer sending traffic
-        m_network->writePeerICC(peerId, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25, NET_ICC::REJECT_TRAFFIC, control.getDstId());
+        m_network->writePeerICC(peerId, streamId, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25, NET_ICC::REJECT_TRAFFIC, control.getDstId());
         return false;
     }
 
@@ -1285,7 +1288,7 @@ bool TagP25Data::validate(uint32_t peerId, lc::LC& control, DUID::E duid, const 
             }
 
             // report In-Call Control to the peer sending traffic
-            m_network->writePeerICC(peerId, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25, NET_ICC::REJECT_TRAFFIC, control.getDstId());
+            m_network->writePeerICC(peerId, streamId, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25, NET_ICC::REJECT_TRAFFIC, control.getDstId());
             return false;
         }
     }
@@ -1439,7 +1442,8 @@ void TagP25Data::write_TSDU(uint32_t peerId, lc::TSBK* tsbk)
 
     uint32_t streamId = m_network->createStreamId();
     if (peerId > 0U) {
-        m_network->writePeer(peerId, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25 }, message.get(), messageLength, RTP_END_OF_CALL_SEQ, streamId, false, true);
+        m_network->writePeer(peerId, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25 }, message.get(), messageLength,
+            RTP_END_OF_CALL_SEQ, streamId, false);
     } else {
         // repeat traffic to the connected peers
         if (m_network->m_peers.size() > 0U) {
@@ -1450,7 +1454,8 @@ void TagP25Data::write_TSDU(uint32_t peerId, lc::TSBK* tsbk)
                     m_network->m_frameQueue->flushQueue();
                 }
 
-                m_network->writePeer(peer.first, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25 }, message.get(), messageLength, RTP_END_OF_CALL_SEQ, streamId, true);
+                m_network->writePeer(peer.first, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25 }, message.get(), messageLength, 
+                    RTP_END_OF_CALL_SEQ, streamId, true);
                 if (m_network->m_debug) {
                     LogDebug(LOG_NET, "P25, peer = %u, len = %u, streamId = %u", 
                         peer.first, messageLength, streamId);

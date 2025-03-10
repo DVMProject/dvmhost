@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2015,2016,2017 Jonathan Naylor, G4KLX
- *  Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2017-2025 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -403,6 +403,8 @@ namespace dmr
         bool m_enableTSCC;
         bool m_dedicatedTSCC;
         bool m_ignoreAffiliationCheck;
+        bool m_disableNetworkGrant;
+        bool m_convNetGrantDemand;
 
         uint32_t m_tsccPayloadDstId;
         uint32_t m_tsccPayloadSrcId;
@@ -507,10 +509,11 @@ namespace dmr
          * @brief Write data frame to the network.
          * @param[in] data Buffer containing frame data to write to the network.
          * @param dataType DMR Data Type for this frame.
+         * @param control Control Byte.
          * @param errors Number of bit errors detected for this frame.
          * @param noSequence Flag indicating this frame carries no sequence number.
          */
-        void writeNetwork(const uint8_t* data, defines::DataType::E dataType, uint8_t errors = 0U, bool noSequence = false);
+        void writeNetwork(const uint8_t* data, defines::DataType::E dataType, uint8_t control, uint8_t errors = 0U, bool noSequence = false);
         /**
          * @brief Write data frame to the network.
          * @param[in] data Buffer containing frame data to write to the network.
@@ -518,11 +521,12 @@ namespace dmr
          * @param flco Full-Link Control Opcode.
          * @param srcId Source Radio ID.
          * @param dstId Destination ID.
+         * @param control Control Byte.
          * @param errors Number of bit errors detected for this frame.
          * @param noSequence Flag indicating this frame carries no sequence number.
          */
         void writeNetwork(const uint8_t* data, defines::DataType::E dataType, defines::FLCO::E flco, uint32_t srcId,
-            uint32_t dstId, uint8_t errors = 0U, bool noSequence = false);
+            uint32_t dstId, uint8_t control, uint8_t errors = 0U, bool noSequence = false);
 
         /**
          * @brief Helper to write RF end of frame data.

@@ -197,6 +197,7 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                         .request(m_network->m_influxServer);
                 }
 
+                m_network->eraseStreamPktSeq(peerId, streamId);
                 m_network->m_callInProgress = false;
             }
         }
@@ -768,7 +769,7 @@ bool TagDMRData::validate(uint32_t peerId, data::NetData& data, uint32_t streamI
             }
 
             // report In-Call Control to the peer sending traffic
-            m_network->writePeerICC(peerId, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR, NET_ICC::REJECT_TRAFFIC, data.getDstId(), data.getSlotNo());
+            m_network->writePeerICC(peerId, streamId, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR, NET_ICC::REJECT_TRAFFIC, data.getDstId(), data.getSlotNo());
             return false;
         }
     }
@@ -793,7 +794,7 @@ bool TagDMRData::validate(uint32_t peerId, data::NetData& data, uint32_t streamI
             LogWarning(LOG_NET, "DMR slot %s, illegal/unknown RID attempted access, srcId = %u, dstId = %u", data.getSlotNo(), data.getSrcId(), data.getDstId());
 
             // report In-Call Control to the peer sending traffic
-            m_network->writePeerICC(peerId, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR, NET_ICC::REJECT_TRAFFIC, data.getDstId(), data.getSlotNo());
+            m_network->writePeerICC(peerId, streamId, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR, NET_ICC::REJECT_TRAFFIC, data.getDstId(), data.getSlotNo());
             return false;
         }
     }
@@ -846,7 +847,7 @@ bool TagDMRData::validate(uint32_t peerId, data::NetData& data, uint32_t streamI
                 LogWarning(LOG_NET, "DMR slot %s, illegal/unknown RID attempted access, srcId = %u, dstId = %u", data.getSlotNo(), data.getSrcId(), data.getDstId());
 
                 // report In-Call Control to the peer sending traffic
-                m_network->writePeerICC(peerId, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR, NET_ICC::REJECT_TRAFFIC, data.getDstId(), data.getSlotNo());
+                m_network->writePeerICC(peerId, streamId, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR, NET_ICC::REJECT_TRAFFIC, data.getDstId(), data.getSlotNo());
                 return false;
             }
         }
@@ -871,7 +872,7 @@ bool TagDMRData::validate(uint32_t peerId, data::NetData& data, uint32_t streamI
             }
 
             // report In-Call Control to the peer sending traffic
-            m_network->writePeerICC(peerId, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR, NET_ICC::REJECT_TRAFFIC, data.getDstId(),  data.getSlotNo());
+            m_network->writePeerICC(peerId, streamId, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR, NET_ICC::REJECT_TRAFFIC, data.getDstId(),  data.getSlotNo());
             return false;
         }
 
@@ -892,7 +893,7 @@ bool TagDMRData::validate(uint32_t peerId, data::NetData& data, uint32_t streamI
             }
 
             // report In-Call Control to the peer sending traffic
-            m_network->writePeerICC(peerId, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR, NET_ICC::REJECT_TRAFFIC, data.getDstId(), data.getSlotNo());
+            m_network->writePeerICC(peerId, streamId, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR, NET_ICC::REJECT_TRAFFIC, data.getDstId(), data.getSlotNo());
             return false;
         }
 
@@ -913,7 +914,7 @@ bool TagDMRData::validate(uint32_t peerId, data::NetData& data, uint32_t streamI
             }
 
             // report In-Call Control to the peer sending traffic
-            m_network->writePeerICC(peerId, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR, NET_ICC::REJECT_TRAFFIC, data.getDstId(), data.getSlotNo());
+            m_network->writePeerICC(peerId, streamId, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR, NET_ICC::REJECT_TRAFFIC, data.getDstId(), data.getSlotNo());
             return false;
         }
 
@@ -936,7 +937,7 @@ bool TagDMRData::validate(uint32_t peerId, data::NetData& data, uint32_t streamI
                 }
 
                 // report In-Call Control to the peer sending traffic
-                m_network->writePeerICC(peerId, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR, NET_ICC::REJECT_TRAFFIC, data.getDstId(), data.getSlotNo());
+                m_network->writePeerICC(peerId, streamId, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR, NET_ICC::REJECT_TRAFFIC, data.getDstId(), data.getSlotNo());
                 return false;
             }
         }
@@ -1065,7 +1066,7 @@ void TagDMRData::write_CSBK(uint32_t peerId, uint8_t slot, lc::CSBK* csbk)
     }
 
     if (peerId > 0U) {
-        m_network->writePeer(peerId, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR }, message.get(), messageLength, RTP_END_OF_CALL_SEQ, streamId, false, true);
+        m_network->writePeer(peerId, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR }, message.get(), messageLength, RTP_END_OF_CALL_SEQ, streamId, false);
     } else {
         // repeat traffic to the connected peers
         if (m_network->m_peers.size() > 0U) {

@@ -36,7 +36,7 @@ DMRAffiliationLookup::~DMRAffiliationLookup() = default;
 
 bool DMRAffiliationLookup::grantCh(uint32_t dstId, uint32_t srcId, uint32_t grantTimeout, bool grp, bool netGranted)
 {
-    ::LogDebug(LOG_HOST, "%s, DMRAffiliationLookup::grantCh() use grantChSlot() BUGBUG");
+    ::LogDebugEx(LOG_HOST, "%s", "DMRAffiliationLookup::grantCh()", "use grantChSlot() BUGBUG");
     return false;
 }
 

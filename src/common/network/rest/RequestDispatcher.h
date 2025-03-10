@@ -322,9 +322,9 @@ namespace network
             void handleRequest(const Request& request, Reply& reply)
             {
                 for (auto header : request.headers.headers())
-                    ::LogDebug(LOG_REST, "DebugRequestDispatcher::handleRequest() header = %s, value = %s", header.name.c_str(), header.value.c_str());
+                    ::LogDebugEx(LOG_REST, "DebugRequestDispatcher::handleRequest()", "header = %s, value = %s", header.name.c_str(), header.value.c_str());
 
-                ::LogDebug(LOG_REST, "DebugRequestDispatcher::handleRequest() content = %s", request.content.c_str());
+                ::LogDebugEx(LOG_REST, "DebugRequestDispatcher::handleRequest()", "content = %s", request.content.c_str());
             }
         };
 

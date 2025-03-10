@@ -208,7 +208,7 @@ private:
 
         // configure list view columns
         m_listView.addColumn("Name", 25);
-        m_listView.addColumn("Alias", 20);
+        m_listView.addColumn("Alias", 40);
         m_listView.addColumn("TGID", 9);
         m_listView.addColumn("Slot", 4);
         m_listView.addColumn("Active", 5);

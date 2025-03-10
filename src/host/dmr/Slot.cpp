@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2015,2016,2017,2018 Jonathan Naylor, G4KLX
- *  Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2017-2025 Bryan Biedenkapp, N2PLL
  *
  */
 #include "Defines.h"
@@ -152,6 +152,8 @@ Slot::Slot(uint32_t slotNo, uint32_t timeout, uint32_t tgHang, uint32_t queueSiz
     m_enableTSCC(false),
     m_dedicatedTSCC(false),
     m_ignoreAffiliationCheck(false),
+    m_disableNetworkGrant(false),
+    m_convNetGrantDemand(false),
     m_tsccPayloadDstId(0U),
     m_tsccPayloadSrcId(0U),
     m_tsccPayloadGroup(false),
@@ -425,10 +427,73 @@ void Slot::processNetwork(const data::NetData& dmrData)
 
     DataType::E dataType = dmrData.getDataType();
 
-    // ignore non-CSBK data destined for the TSCC slot
-    if (m_enableTSCC && m_dedicatedTSCC && m_slotNo == m_dmr->m_tsccSlotNo &&
-        dataType != DataType::CSBK) {
-        return;
+    Slot* tscc = m_dmr->getTSCCSlot();
+
+    bool enableTSCC = false;
+    if (tscc != nullptr)
+        enableTSCC = tscc->m_enableTSCC;
+    bool dedicatedTSCC = false;
+    if (tscc != nullptr)
+        dedicatedTSCC = tscc->m_dedicatedTSCC;
+
+    // check if this host instance is TSCC enabled or not -- if it is, handle processing network grant demands
+    if (enableTSCC && dedicatedTSCC) {
+        switch (dataType)
+        {
+        case DataType::VOICE_LC_HEADER:
+        case DataType::DATA_HEADER:
+            {
+                bool grantDemand = (dmrData.getControl() & 0x80U) == 0x80U;
+                bool unitToUnit = (dmrData.getControl() & 0x01U) == 0x01U;
+                
+                if (grantDemand) {
+                    if (m_disableNetworkGrant) {
+                        break;
+                    }
+
+                    // if we're non-dedicated control, and if we're not in a listening or idle state, ignore any grant
+                    // demands
+                    if (!dedicatedTSCC && (m_rfState != RS_RF_LISTENING || m_netState != RS_NET_IDLE)) {
+                        break;
+                    }
+
+                    // validate source RID
+                    if (!acl::AccessControl::validateSrcId(dmrData.getSrcId())) {
+                        break;
+                    }
+
+                    // validate the target ID, if the target is a talkgroup
+                    if (!acl::AccessControl::validateTGId(dmrData.getSlotNo(), dmrData.getDstId())) {
+                        break;
+                    }
+
+                    if (m_verbose) {
+                        LogMessage(LOG_NET, "DMR Slot %u, remote grant demand, srcId = %u, dstId = %u, unitToUnit = %u",
+                                   m_slotNo, dmrData.getSrcId(), dmrData.getDstId(), unitToUnit);
+                    }
+
+                    // perform grant response logic
+                    if (dataType == DataType::VOICE_LC_HEADER)
+                        tscc->m_control->writeRF_CSBK_Grant(dmrData.getSrcId(), dmrData.getDstId(), 4U, !unitToUnit, true);
+                    if (dataType == DataType::DATA_HEADER)
+                        tscc->m_control->writeRF_CSBK_Data_Grant(dmrData.getSrcId(), dmrData.getDstId(), 4U, !unitToUnit, true);
+                }
+            }
+            break;
+        default:
+            break;
+        }
+
+        // if *this slot* is the TSCC slot, stop processing after this point
+        if (m_enableTSCC && m_dedicatedTSCC)
+        {
+            if (dataType != DataType::CSBK)
+                return;
+            else {
+                if (m_slotNo != m_dmr->m_tsccSlotNo)
+                    return;
+            }
+        }
     }
 
     switch (dataType)
@@ -1079,7 +1144,7 @@ void Slot::addFrame(const uint8_t *data, bool net, bool imm)
         fifoSpace = m_modem->getDMRSpace2();
     }
 
-    //LogDebug(LOG_DMR, "Slot %u, addFrame() fifoSpace = %u", m_slotNo, fifoSpace);
+    //LogDebugEx(LOG_DMR, "Slot::addFrame()", "Slot %u, fifoSpace = %u", m_slotNo, fifoSpace);
 
     // is this immediate data?
     if (imm) {
@@ -1139,15 +1204,15 @@ void Slot::processFrameLoss()
             m_slotNo, m_rfFrames, m_rfBits, m_rfErrs, float(m_rfErrs * 100U) / float(m_rfBits));
 
         // release trunked grant (if necessary)
-        Slot *m_tscc = m_dmr->getTSCCSlot();
-        if (m_tscc != nullptr) {
-            if (m_tscc->m_enableTSCC && m_rfLC != nullptr) {
-                m_tscc->m_affiliations->releaseGrant(m_rfLC->getDstId(), false);
+        Slot* tscc = m_dmr->getTSCCSlot();
+        if (tscc != nullptr) {
+            if (tscc->m_enableTSCC && m_rfLC != nullptr) {
+                tscc->m_affiliations->releaseGrant(m_rfLC->getDstId(), false);
             }
             
             clearTSCCActivated();
 
-            if (!m_tscc->m_enableTSCC) {
+            if (!tscc->m_enableTSCC) {
                 notifyCC_ReleaseGrant(m_rfLC->getDstId());
             }
         }
@@ -1244,18 +1309,18 @@ void Slot::notifyCC_TouchGrant(uint32_t dstId)
 
 /* Write data frame to the network. */
 
-void Slot::writeNetwork(const uint8_t* data, DataType::E dataType, uint8_t errors, bool noSequence)
+void Slot::writeNetwork(const uint8_t* data, DataType::E dataType, uint8_t control, uint8_t errors, bool noSequence)
 {
     assert(data != nullptr);
     assert(m_rfLC != nullptr);
 
-    writeNetwork(data, dataType, m_rfLC->getFLCO(), m_rfLC->getSrcId(), m_rfLC->getDstId(), errors);
+    writeNetwork(data, dataType, m_rfLC->getFLCO(), m_rfLC->getSrcId(), m_rfLC->getDstId(), control, errors);
 }
 
 /* Write data frame to the network. */
 
 void Slot::writeNetwork(const uint8_t* data, DataType::E dataType, FLCO::E flco, uint32_t srcId,
-    uint32_t dstId, uint8_t errors, bool noSequence)
+    uint32_t dstId, uint8_t control, uint8_t errors, bool noSequence)
 {
     assert(data != nullptr);
 
@@ -1271,6 +1336,7 @@ void Slot::writeNetwork(const uint8_t* data, DataType::E dataType, FLCO::E flco,
     dmrData.setSrcId(srcId);
     dmrData.setDstId(dstId);
     dmrData.setFLCO(flco);
+    dmrData.setControl(control);
     dmrData.setN(m_voice->m_rfN);
     dmrData.setSeqNo(m_rfSeqNo);
     dmrData.setBER(errors);
@@ -1372,6 +1438,20 @@ void Slot::writeEndNet(bool writeEnd)
         }
     }
 
+    // release trunked grant (if necessary)
+    Slot* tscc = m_dmr->getTSCCSlot();
+    if (tscc != nullptr) {
+        if (tscc->m_enableTSCC && m_netLC != nullptr) {
+            tscc->m_affiliations->releaseGrant(m_netLC->getDstId(), false);
+        }
+
+        clearTSCCActivated();
+
+        if (!tscc->m_enableTSCC) {
+            notifyCC_ReleaseGrant(m_netLC->getDstId());
+        }
+    }
+
     m_data->m_pduDataOffset = 0U;
 
     if (m_network != nullptr)
@@ -1467,7 +1547,7 @@ void Slot::writeRF_ControlData(uint16_t frameCnt, uint8_t n)
                             bool grp = m_affiliations->isGroup(dstId);
 
                             if (m_debug) {
-                                LogDebug(LOG_DMR, "writeRF_ControlData, frameCnt = %u, seq = %u, late entry, dstId = %u, srcId = %u", frameCnt, n, dstId, srcId);
+                                LogDebugEx(LOG_DMR, "Slot::writeRF_ControlData()", "frameCnt = %u, seq = %u, late entry, dstId = %u, srcId = %u", frameCnt, n, dstId, srcId);
                             }
 
                             m_control->writeRF_CSBK_Grant_LateEntry(dstId, srcId, grp);
@@ -1670,8 +1750,8 @@ void Slot::setShortLC_TSCC(SiteData siteData, uint16_t counter)
     lc[3U] = (uint8_t)((lcValue >> 0) & 0xFFU);
     lc[4U] = edac::CRC::crc8(lc, 4U);
 
-    //LogDebug(LOG_DMR, "setShortLC_TSCC, netId = %02X, siteId = %02X", siteData.netId(), siteData.siteId());
-    //Utils::dump(1U, "shortLC_TSCC", lc, 5U);
+    //LogDebugEx(LOG_DMR, "Slot::setShortLC_TSCC()", "netId = %02X, siteId = %02X", siteData.netId(), siteData.siteId());
+    //Utils::dump(1U, "[Slot::shortLC_TSCC()]", lc, 5U);
 
     uint8_t sLC[9U];
 
@@ -1730,8 +1810,8 @@ void Slot::setShortLC_Payload(SiteData siteData, uint16_t counter)
     lc[3U] = (uint8_t)((lcValue >> 0) & 0xFFU);
     lc[4U] = edac::CRC::crc8(lc, 4U);
 
-    //LogDebug(LOG_DMR, "setShortLC_Payload, netId = %02X, siteId = %02X", siteData.netId(), siteData.siteId());
-    //Utils::dump(1U, "setShortLC_Payload", lc, 5U);
+    //LogDebugEx(LOG_DMR, "Slot::setShortLC_Payload()", "netId = %02X, siteId = %02X", siteData.netId(), siteData.siteId());
+    //Utils::dump(1U, "[Slot::setShortLC_Payload()]", lc, 5U);
 
     uint8_t sLC[9U];
 

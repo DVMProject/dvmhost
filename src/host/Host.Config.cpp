@@ -637,7 +637,7 @@ bool Host::createModem()
         LogInfo("    RX Coarse: %u, Fine: %u", rxCoarse, rxFine);
         LogInfo("    TX Coarse: %u, Fine: %u", txCoarse, txFine);
         LogInfo("    RSSI Coarse: %u, Fine: %u", rssiCoarse, rssiFine);
-        LogInfo("    RF Power Level: %u%", rfPower);
+        LogInfo("    RF Power Level: %u%%", rfPower);
         LogInfo("    RX Level: %.1f%%", rxLevel);
         LogInfo("    CW Id TX Level: %.1f%%", cwIdTXLevel);
         LogInfo("    DMR TX Level: %.1f%%", dmrTXLevel);

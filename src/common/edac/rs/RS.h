@@ -338,7 +338,7 @@ namespace edac
                     return;
                 }
 #if DEBUG_RS
-                LogDebug(LOG_HOST, "reed_solomon_tabs::reed_solomon_tabs() RS(%d,*): initialized for %d symbols size, %d modulo table", SIZE, NN, MODS);
+                LogDebugEx(LOG_HOST, "reed_solomon_tabs::reed_solomon_tabs()", "RS(%d,*): initialized for %d symbols size, %d modulo table", SIZE, NN, MODS);
 #endif
                 // Generate Galois field lookup tables
                 index_of[0] = A0; // log(zero) = -inf
@@ -478,7 +478,7 @@ namespace edac
                     return;
                 }
 #if DEBUG_RS
-                LogDebug(LOG_HOST, "reed_solomon::reed_solomon() RS(%d,%d): initialized for %d roots", SIZE, LOAD, NROOTS);
+                LogDebugEx(LOG_HOST, "reed_solomon::reed_solomon()", "RS(%d,%d): initialized for %d roots", SIZE, LOAD, NROOTS);
 #endif
 
                 std::array<TYP, NROOTS + 1> tmppoly; // uninitialized
@@ -896,25 +896,25 @@ namespace edac
                 }
 
                 if (count != no_eras) {
-                    LogDebug(LOG_HOST, "reed_solomon::decode(): count = %d, no_eras = %d, lambda(x) is WRONG", count, no_eras);
+                    LogDebugEx(LOG_HOST, "reed_solomon::decode()", "count = %d, no_eras = %d, lambda(x) is WRONG", count, no_eras);
                     count = -1;
                     goto finish;
                 }
 
                 if (count) {
                     std::stringstream ss;
-                    ss << "reed_solomon::decode(): Erasure positions as determined by roots of Eras Loc Poly: ";
+                    ss << "Erasure positions as determined by roots of Eras Loc Poly: ";
                     for (int i = 0; i < count; i++) {
                         ss << loc[i] << ' ';
                     }
-                    LogDebug(LOG_HOST, "%s", ss.str().c_str());
+                    LogDebugEx(LOG_HOST, "reed_solomon::decode()", "%s", ss.str().c_str());
                     ss.clear();
 
-                    ss << "reed_solomon::decode(): Erasure positions as determined by roots of eras_pos array: ";
+                    ss << "Erasure positions as determined by roots of eras_pos array: ";
                     for (int i = 0; i < no_eras; i++) {
                         ss << eras_pos[i] << ' ';
                     }
-                    LogDebug(LOG_HOST, "%s", ss.str().c_str());
+                    LogDebugEx(LOG_HOST, "reed_solomon::decode()", "%s", ss.str().c_str());
                 }
 #endif
 
@@ -1052,7 +1052,7 @@ namespace edac
 
 #if DEBUG_RS
                     if (den == 0) {
-                        LogDebug(LOG_HOST, "reed_solomon::decode(): ERROR: denominator = 0");
+                        LogDebugEx(LOG_HOST, "reed_solomon::decode()", "ERROR: denominator = 0");
                         count = -1;
                         goto finish;
                     }
@@ -1066,9 +1066,9 @@ namespace edac
                             // correction location outside of the data and parity we've been provided!
 #if DEBUG_RS
                             std::stringstream ss;
-                            ss << "reed_solomon::decode(): ERROR: RS(" << SIZE <<"," << LOAD << ") computed error location: " << loc[j] <<
+                            ss << "ERROR: RS(" << SIZE <<"," << LOAD << ") computed error location: " << loc[j] <<
                                 " within " << pad << " pad symbols, not within " << LOAD - pad << " data or " << NROOTS << " parity";
-                            LogDebug(LOG_HOST, "%s", ss.str().c_str());
+                            LogDebugEx(LOG_HOST, "reed_solomon::decode()", "%s", ss.str().c_str());
 #endif
                             count = -1;
                             goto finish;
@@ -1098,7 +1098,7 @@ namespace edac
 finish:
 #if DEBUG_RS
                 if (count > NROOTS) {
-                    LogDebug(LOG_HOST, "reed_solomon::decode(): ERROR: number of corrections %d exceeds NROOTS %d", count, NROOTS);
+                    LogDebugEx(LOG_HOST, "reed_solomon::decode()", "ERROR: number of corrections %d exceeds NROOTS %d", count, NROOTS);
                 }
 
                 if (count > 0) {
@@ -1114,8 +1114,8 @@ finish:
                     }
 
                     std::stringstream ss;
-                    ss << "reed_solomon::decode(): e)rase, E)rror; count = " << count << ": " << std::endl << errors;
-                    LogDebug(LOG_HOST, "%s", ss.str().c_str());
+                    ss << "e)rase, E)rror; count = " << count << ": " << std::endl << errors;
+                    LogDebugEx(LOG_HOST, "reed_solomon::decode()", "%s", ss.str().c_str());
                 }
 #endif
                 if (eras_pos != NULL) {

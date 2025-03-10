@@ -91,7 +91,7 @@ master:
     allowConvSiteAffOverride: true
     # Flag indicating whether or not In-Call Control feedback is enabled.
     #   (This will enforce RID ACLs network wide, regardless of local peer RID ACL setting.)
-    enableInCallCtrl: true
+    enableInCallCtrl: false
     # Flag indicating whether or not unknown/undefined RIDs will be rejected by the FNE.
     #   (This is a strict rejection, any unknown or undefined RID not in the RID ACL list will be hard rejected.)
     rejectUnknownRID: false
@@ -122,6 +122,19 @@ master:
     influxBucket: "dvm"
     # Flag indicating whether TSBK/CSBK/RCCH messages will be logged to InfluxDB.
     influxLogRawData: false
+
+    #
+    # Crypto Container Configuration
+    #
+    crypto_container:
+        # Flag indicating whether or not crypto services are enabled.
+        enabled: false
+        # Full path to the talkgroup rules file.
+        file: key_container.ekc
+        # Container password.
+        password: "PASSWORD"
+        # Amount of time between updates of crypto container file. (minutes)
+        time: 30
 
     #
     # Talkgroup Rules Configuration

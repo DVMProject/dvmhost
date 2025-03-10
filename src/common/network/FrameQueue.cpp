@@ -57,13 +57,21 @@ UInt8Array FrameQueue::read(int& messageLength, sockaddr_storage& address, uint3
     ::memset(buffer, 0x00U, DATA_PACKET_LENGTH);
     int length = m_socket->read(buffer, DATA_PACKET_LENGTH, address, addrLen);
     if (length < 0) {
-        LogError(LOG_NET, "Failed reading data from the network");
+        if (m_failedReadCnt <= MAX_FAILED_READ_CNT_LOGGING)
+            LogError(LOG_NET, "Failed reading data from the network, failedCnt = %u", m_failedReadCnt);
+        else {
+            if (m_failedReadCnt == MAX_FAILED_READ_CNT_LOGGING + 1U)
+                LogError(LOG_NET, "Failed reading data from the network -- exceeded 5 read errors, probable connection issue, silencing further errors");
+        }
+        m_failedReadCnt++;
         return nullptr;
     }
 
     if (length > 0) {
         if (m_debug)
             Utils::dump(1U, "Network Packet", buffer, length);
+
+        m_failedReadCnt = 0U;
 
         if (length < RTP_HEADER_LENGTH_BYTES + RTP_EXTENSION_HEADER_LENGTH_BYTES) {
             LogError(LOG_NET, "FrameQueue::read(), message received from network is malformed! %u bytes != %u bytes", 
@@ -203,7 +211,7 @@ uint8_t* FrameQueue::generateMessage(const uint8_t* message, uint32_t length, ui
         if (timestamp != INVALID_TS) {
             timestamp += (RTP_GENERIC_CLOCK_RATE / 133);
             if (m_debug)
-                LogDebug(LOG_NET, "FrameQueue::generateMessage() RTP streamId = %u, previous TS = %u, TS = %u, rtpSeq = %u", streamId, m_streamTimestamps[streamId], timestamp, rtpSeq);
+                LogDebugEx(LOG_NET, "FrameQueue::generateMessage()", "RTP streamId = %u, previous TS = %u, TS = %u, rtpSeq = %u", streamId, m_streamTimestamps[streamId], timestamp, rtpSeq);
             m_streamTimestamps[streamId] = timestamp;
         }
     }
@@ -224,7 +232,7 @@ uint8_t* FrameQueue::generateMessage(const uint8_t* message, uint32_t length, ui
 
     if (streamId != 0U && timestamp == INVALID_TS && rtpSeq != RTP_END_OF_CALL_SEQ) {
         if (m_debug)
-            LogDebug(LOG_NET, "FrameQueue::generateMessage() RTP streamId = %u, initial TS = %u, rtpSeq = %u", streamId, header.getTimestamp(), rtpSeq);
+            LogDebugEx(LOG_NET, "FrameQueue::generateMessage()", "RTP streamId = %u, initial TS = %u, rtpSeq = %u", streamId, header.getTimestamp(), rtpSeq);
         m_streamTimestamps[streamId] = header.getTimestamp();
     }
 
@@ -233,7 +241,7 @@ uint8_t* FrameQueue::generateMessage(const uint8_t* message, uint32_t length, ui
         auto entry = m_streamTimestamps.find(streamId);
         if (entry != m_streamTimestamps.end()) {
             if (m_debug)
-                LogDebug(LOG_NET, "FrameQueue::generateMessage() RTP streamId = %u, rtpSeq = %u", streamId, rtpSeq);
+                LogDebugEx(LOG_NET, "FrameQueue::generateMessage()", "RTP streamId = %u, rtpSeq = %u", streamId, rtpSeq);
             m_streamTimestamps.erase(streamId);
         }
     }

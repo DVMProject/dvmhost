@@ -279,7 +279,7 @@ std::vector<asio::const_buffer> HTTPPayload::toBuffers()
         // copy URI and erase zero terminator
         uri.erase(std::find(uri.begin(), uri.end(), '\0'), uri.end());
 #if DEBUG_HTTP_PAYLOAD
-        ::LogDebug(LOG_REST, "HTTPPayload::toBuffers() method = %s, uri = %s", method.c_str(), uri.c_str());
+        ::LogDebugEx(LOG_REST, "HTTPPayload::toBuffers()", "method = %s, uri = %s", method.c_str(), uri.c_str());
 #endif
         buffers.push_back(asio::buffer(method));
         buffers.push_back(asio::buffer(misc_strings::request_method_separator));
@@ -295,7 +295,7 @@ std::vector<asio::const_buffer> HTTPPayload::toBuffers()
     for (std::size_t i = 0; i < headers.size(); ++i) {
         HTTPHeaders::Header& h = headers.m_headers[i];
 #if DEBUG_HTTP_PAYLOAD
-        ::LogDebug(LOG_REST, "HTTPPayload::toBuffers() header = %s, value = %s", h.name.c_str(), h.value.c_str());
+        ::LogDebugEx(LOG_REST, "HTTPPayload::toBuffers()", "header = %s, value = %s", h.name.c_str(), h.value.c_str());
 #endif
 
         buffers.push_back(asio::buffer(h.name));
@@ -309,9 +309,9 @@ std::vector<asio::const_buffer> HTTPPayload::toBuffers()
         buffers.push_back(asio::buffer(content));
 
 #if DEBUG_HTTP_PAYLOAD
-    ::LogDebug(LOG_REST, "HTTPPayload::toBuffers() content = %s", content.c_str());
+    ::LogDebugEx(LOG_REST, "HTTPPayload::toBuffers()", "content = %s", content.c_str());
     for (auto buffer : buffers)
-        Utils::dump("buffer[]", (uint8_t*)buffer.data(), buffer.size());
+        Utils::dump("[HTTPPayload::toBuffers()] buffer[]", (uint8_t*)buffer.data(), buffer.size());
 #endif
 
     return buffers;

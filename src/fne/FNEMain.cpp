@@ -32,6 +32,10 @@ using namespace lookups;
 //  Global Variables
 // ---------------------------------------------------------------------------
 
+#ifndef SIGHUP
+#define SIGHUP 1
+#endif
+
 int g_signal = 0;
 std::string g_progExe = std::string(__EXE_NAME__);
 std::string g_iniFile = std::string(DEFAULT_CONF_FILE);
@@ -209,15 +213,15 @@ int main(int argc, char** argv)
         ret = fne->run();
         delete fne;
 
-        if (g_signal == 2)
+        if (g_signal == SIGINT)
             ::LogInfoEx(LOG_HOST, "[STOP] dvmfne:main SIGINT");
 
-        if (g_signal == 15)
+        if (g_signal == SIGTERM)
             ::LogInfoEx(LOG_HOST, "[STOP] dvmfne:main SIGTERM");
 
-        if (g_signal == 1)
+        if (g_signal == SIGHUP)
             ::LogInfoEx(LOG_HOST, "[RSTR] dvmfne:main SIGHUP");
-    } while (g_signal == 1);
+    } while (g_signal == SIGHUP);
 
     ::LogFinalise();
     ::ActivityLogFinalise();

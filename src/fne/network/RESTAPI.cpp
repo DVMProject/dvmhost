@@ -653,7 +653,7 @@ bool RESTAPI::validateAuth(const HTTPPayload& request, HTTPPayload& reply)
     std::string host = request.headers.find("RemoteHost");
     std::string headerToken = request.headers.find("X-DVM-Auth-Token");
 #if DEBUG_HTTP_PAYLOAD
-    ::LogDebug(LOG_REST, "RESTAPI::validateAuth() token, host = %s, token = %s", host.c_str(), headerToken.c_str());
+    ::LogDebugEx(LOG_REST, "RESTAPI::validateAuth()", "token, host = %s, token = %s", host.c_str(), headerToken.c_str());
 #endif
     if (headerToken.empty()) {
         errorPayload(reply, "no authentication token", HTTPPayload::UNAUTHORIZED);
@@ -662,11 +662,11 @@ bool RESTAPI::validateAuth(const HTTPPayload& request, HTTPPayload& reply)
 
     for (auto& token : m_authTokens) {
 #if DEBUG_HTTP_PAYLOAD
-        ::LogDebug(LOG_REST, "RESTAPI::validateAuth() valid list, host = %s, token = %s", token.first.c_str(), std::to_string(token.second).c_str());
+        ::LogDebugEx(LOG_REST, "RESTAPI::validateAuth()", "valid list, host = %s, token = %s", token.first.c_str(), std::to_string(token.second).c_str());
 #endif
         if (token.first.compare(host) == 0) {
 #if DEBUG_HTTP_PAYLOAD
-            ::LogDebug(LOG_REST, "RESTAPI::validateAuth() storedToken = %s, passedToken = %s", std::to_string(token.second).c_str(), headerToken.c_str());
+            ::LogDebugEx(LOG_REST, "RESTAPI::validateAuth()", "storedToken = %s, passedToken = %s", std::to_string(token.second).c_str(), headerToken.c_str());
 #endif
             if (std::to_string(token.second).compare(headerToken) == 0) {
                 return true;

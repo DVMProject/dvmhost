@@ -661,6 +661,21 @@ The payload for a DMR protocol data message is formatted:
          | BER           | RSSI          |
          +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
+[discrete]
+==== Control Flags
+[cols="2,1,2"]
+|===
+|Name |Flag |Description
+
+|Grant Demand
+|$80 (0x80)
+|This control flag indicates the packet contains a remote grant demand request.
+
+|Unit to Unit
+|$01 (0x01)
+|This control flag indicates any included control request is a unit-to-unit request.
+|=== 
+
 === 3.3 P25 Protocol Data
 For both reception and transmission of P25 protocol data on the network, simple packets are formed using the Protocol function and P25 sub-function.
 
@@ -706,6 +721,29 @@ All messages (with the exception of PDUs) carry this message header:
          +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
          |               |
          +-+-+-+-+-+-+-+-+
+
+[discrete]
+==== Control Flags
+[cols="2,1,2"]
+|===
+|Name |Flag |Description
+
+|Grant Demand
+|$80 (0x80)
+|This control flag indicates the packet contains a remote grant demand request.
+
+|Grant Denial
+|$40 (0x40)
+|This control flag indicates any included grant demand request is to be denied.
+
+|Encrypted
+|$08 (0x08)
+|This control flag indicates any included control request is for encrypted traffic to follow.
+
+|Unit to Unit
+|$01 (0x01)
+|This control flag indicates any included control request is a unit-to-unit request.
+|=== 
 
 ==== 3.3.2 PDU Message Header
 [listing]
@@ -1188,4 +1226,8 @@ Once connected, a Peer-Linked CFNE will transparently pass peer list, peer statu
 
 On DVM, for P25 a special network TDU exists called a "grant demand". The "grant demand" TDUs set a flag in the control bit of the P25 network header (bit $80) to flag that the TDU is meant to trigger a channel grant on a end-point.
 
+For DMR, "grant demands", are carried along side the VOICE_LC_HEADER or DATA_HEADER packets with the control bytes set. Like, P25, the "grant demand" set a flag in the control bit of the DMR network header (bit $80) to flag that the packet is meant to trigger a channel grant on a end-point.
+
 Because these grants are considered "network sourced" end-points should issue a grant locally and not repeat that grant to the network.
+
+(See Section 3.3.1 for P25, and Section 3.2 for DMR)

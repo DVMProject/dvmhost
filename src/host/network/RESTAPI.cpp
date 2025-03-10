@@ -349,7 +349,7 @@ bool RESTAPI::validateAuth(const HTTPPayload& request, HTTPPayload& reply)
     std::string host = request.headers.find("RemoteHost");
     std::string headerToken = request.headers.find("X-DVM-Auth-Token");
 #if DEBUG_HTTP_PAYLOAD
-    ::LogDebug(LOG_REST, "RESTAPI::validateAuth() token, host = %s, token = %s", host.c_str(), headerToken.c_str());
+    ::LogDebugEx(LOG_REST, "RESTAPI::validateAuth()", "token, host = %s, token = %s", host.c_str(), headerToken.c_str());
 #endif
     if (headerToken.empty()) {
         errorPayload(reply, "no authentication token", HTTPPayload::UNAUTHORIZED);
@@ -358,11 +358,11 @@ bool RESTAPI::validateAuth(const HTTPPayload& request, HTTPPayload& reply)
 
     for (auto& token : m_authTokens) {
 #if DEBUG_HTTP_PAYLOAD
-        ::LogDebug(LOG_REST, "RESTAPI::validateAuth() valid list, host = %s, token = %s", token.first.c_str(), std::to_string(token.second).c_str());
+        ::LogDebugEx(LOG_REST, "RESTAPI::validateAuth()", "valid list, host = %s, token = %s", token.first.c_str(), std::to_string(token.second).c_str());
 #endif
         if (token.first.compare(host) == 0) {
 #if DEBUG_HTTP_PAYLOAD
-            ::LogDebug(LOG_REST, "RESTAPI::validateAuth() storedToken = %s, passedToken = %s", std::to_string(token.second).c_str(), headerToken.c_str());
+            ::LogDebugEx(LOG_REST, "RESTAPI::validateAuth()", "storedToken = %s, passedToken = %s", std::to_string(token.second).c_str(), headerToken.c_str());
 #endif
             if (std::to_string(token.second).compare(headerToken) == 0) {
                 return true;
@@ -1006,7 +1006,7 @@ void RESTAPI::restAPI_PutRegisterCCVC(const HTTPPayload& request, HTTPPayload& r
 
     uint32_t peerId = req["peerId"].get<uint32_t>();
 
-    // LogDebug(LOG_REST, "restAPI_PutRegisterCCVC(): callback, channelNo = %u, peerId = %u", channelNo, peerId);
+    // LogDebugEx(LOG_REST, "RESTAPI::restAPI_PutRegisterCCVC()", "callback, channelNo = %u, peerId = %u", channelNo, peerId);
 
     // validate restAddress is a string within the JSON blob
     if (!req["restAddress"].is<std::string>()) {
@@ -1087,7 +1087,7 @@ void RESTAPI::restAPI_PutReleaseGrant(const HTTPPayload& request, HTTPPayload& r
         return;
     }
 
-    // LogDebug(LOG_REST, "restAPI_PutReleaseGrant(): callback, state = %u, dstId = %u", state, dstId);
+    // LogDebugEx(LOG_REST, "RESTAPI::restAPI_PutReleaseGrant()", "callback, state = %u, dstId = %u", state, dstId);
 
     switch (state) {
     case STATE_DMR:
@@ -1179,7 +1179,7 @@ void RESTAPI::restAPI_PutTouchGrant(const HTTPPayload& request, HTTPPayload& rep
         return;
     }
 
-    // LogDebug(LOG_REST, "restAPI_PutTouchGrant(): callback, state = %u, dstId = %u", state, dstId);
+    // LogDebugEx(LOG_REST, "RESTAPI::restAPI_PutTouchGrant()", "callback, state = %u, dstId = %u", state, dstId);
 
     switch (state) {
     case STATE_DMR:

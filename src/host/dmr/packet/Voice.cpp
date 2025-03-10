@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2015,2016,2017,2018 Jonathan Naylor, G4KLX
- *  Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2017-2025 Bryan Biedenkapp, N2PLL
  *
  */
 #include "Defines.h"
@@ -199,7 +199,11 @@ bool Voice::process(uint8_t* data, uint32_t len)
                     m_slot->addFrame(data);
             }
 
-            m_slot->writeNetwork(data, DataType::VOICE_LC_HEADER);
+            uint8_t controlByte = 0U;
+            if (m_slot->m_convNetGrantDemand)
+                controlByte |= 0x80U;                                            // Grant Demand Flag
+
+            m_slot->writeNetwork(data, DataType::VOICE_LC_HEADER, controlByte);
 
             m_slot->m_rfState = RS_RF_AUDIO;
             m_slot->m_rfLastDstId = dstId;
@@ -246,7 +250,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
             if (m_slot->m_duplex)
                 m_slot->addFrame(data);
 
-            m_slot->writeNetwork(data, DataType::VOICE_PI_HEADER);
+            m_slot->writeNetwork(data, DataType::VOICE_PI_HEADER, 0U);
 
             if (m_verbose) {
                 LogMessage(LOG_RF, DMR_DT_VOICE_PI_HEADER ", slot = %u, algId = %u, kId = %u, dstId = %u", m_slot->m_slotNo,
@@ -304,7 +308,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 if (m_slot->m_duplex)
                     m_slot->addFrame(data);
 
-                m_slot->writeNetwork(data, DataType::VOICE_SYNC, errors);
+                m_slot->writeNetwork(data, DataType::VOICE_SYNC, 0U, errors);
                 return true;
             }
 
@@ -458,7 +462,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 data[0U] = modem::TAG_DATA;
                 data[1U] = 0x00U;
 
-                m_slot->writeNetwork(data, DataType::VOICE, errors);
+                m_slot->writeNetwork(data, DataType::VOICE, 0U, errors);
 
                 if (m_embeddedLCOnly) {
                     // Only send the previously received LC
@@ -561,7 +565,11 @@ bool Voice::process(uint8_t* data, uint32_t len)
                         m_slot->addFrame(start);
                 }
 
-                m_slot->writeNetwork(start, DataType::VOICE_LC_HEADER);
+                uint8_t controlByte = 0U;
+                if (m_slot->m_convNetGrantDemand)
+                    controlByte |= 0x80U;                                            // Grant Demand Flag
+
+                m_slot->writeNetwork(start, DataType::VOICE_LC_HEADER, controlByte);
 
                 m_rfN = data[1U] & 0x0FU;
 
@@ -610,7 +618,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 if (m_slot->m_duplex)
                     m_slot->addFrame(data);
 
-                m_slot->writeNetwork(data, DataType::VOICE, errors);
+                m_slot->writeNetwork(data, DataType::VOICE, 0U, errors);
 
                 m_slot->m_rfState = RS_RF_AUDIO;
 
@@ -644,6 +652,8 @@ void Voice::processNetwork(const data::NetData& dmrData)
     if (dataType == DataType::VOICE_LC_HEADER) {
         if (m_slot->m_netState == RS_NET_AUDIO)
             return;
+
+        
 
         lc::FullLC fullLC;
         std::unique_ptr<lc::LC> lc = fullLC.decode(data + 2U, DataType::VOICE_LC_HEADER);

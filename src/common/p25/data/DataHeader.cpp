@@ -353,7 +353,7 @@ void DataHeader::encodeExtAddr(uint8_t* data, bool noTrellis)
         header[1U] = m_exSap & 0x3FU;                                           // Service Access Point
         header[1U] |= 0xC0U;
 
-        header[2U] = m_mfId;                                                    // Mfg Id.
+        //header[2U] = m_mfId;                                                    // Mfg Id.
 
         header[3U] = (m_srcLlId >> 16) & 0xFFU;                                 // Source Logical Link ID
         header[4U] = (m_srcLlId >> 8) & 0xFFU;

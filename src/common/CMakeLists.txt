@@ -28,6 +28,7 @@ file(GLOB common_SRC
     "src/common/p25/lc/tsbk/*.cpp"
     "src/common/p25/lc/tsbk/mbt/*.cpp"
     "src/common/p25/sndcp/*.cpp"
+    "src/common/p25/kmm/*.cpp"
     "src/common/p25/lookups/*.cpp"
 
     # NXDN module
@@ -73,6 +74,7 @@ file(GLOB common_INCLUDE
     "src/common/p25/lc/tsbk/*.h"
     "src/common/p25/lc/tsbk/mbt/*.h"
     "src/common/p25/sndcp/*.h"
+    "src/common/p25/kmm/*.h"
     "src/common/p25/lookups/*.h"
 
     # NXDN module

@@ -305,7 +305,9 @@ bool AffiliationLookup::grantCh(uint32_t dstId, uint32_t srcId, uint32_t grantTi
 
     std::lock_guard<std::mutex> lock(m_mutex);
     uint32_t chNo = m_chLookup->getFirstRFChannel();
-    m_chLookup->removeRFCh(chNo);
+    if (!m_chLookup->removeRFCh(chNo)) {
+        return false;
+    }
 
     m_grantChTable[dstId] = chNo;
     m_grantSrcIdTable[dstId] = srcId;

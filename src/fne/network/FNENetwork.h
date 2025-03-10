@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2023-2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2023-2025 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -104,7 +104,6 @@ namespace network
         FNEPeerConnection() :
             m_id(0U),
             m_ccPeerId(0U),
-            m_currStreamId(0U),
             m_socketStorage(),
             m_sockStorageLen(0U),
             m_address(),
@@ -120,8 +119,8 @@ namespace network
             m_isSysView(false),
             m_isPeerLink(false),
             m_config(),
-            m_pktLastSeq(RTP_END_OF_CALL_SEQ),
-            m_pktNextSeq(1U)
+            m_streamSeqMutex(),
+            m_streamSeqNos()
         {
             /* stub */
         }
@@ -134,7 +133,6 @@ namespace network
         FNEPeerConnection(uint32_t id, sockaddr_storage& socketStorage, uint32_t sockStorageLen) :
             m_id(id),
             m_ccPeerId(0U),
-            m_currStreamId(0U),
             m_socketStorage(socketStorage),
             m_sockStorageLen(sockStorageLen),
             m_address(udp::Socket::address(socketStorage)),
@@ -150,13 +148,125 @@ namespace network
             m_isSysView(false),
             m_isPeerLink(false),
             m_config(),
-            m_pktLastSeq(RTP_END_OF_CALL_SEQ),
-            m_pktNextSeq(1U)
+            m_streamSeqMutex(),
+            m_streamSeqNos()
         {
             assert(id > 0U);
             assert(sockStorageLen > 0U);
             assert(!m_address.empty());
             assert(m_port > 0U);
+        }
+
+        /**
+         * @brief Helper to return the current count of mapped RTP streams.
+         * @returns size_t 
+         */
+        size_t streamCount()
+        {
+            return m_streamSeqNos.size();
+        }
+
+        /**
+         * @brief Helper to determine if the stream ID has a stored RTP sequence.
+         * @param streamId Stream ID.
+         * @returns bool  
+         */
+        bool hasStreamPktSeq(uint64_t streamId)
+        {
+            bool ret = false;
+            m_streamSeqMutex.try_lock_for(std::chrono::milliseconds(60));
+
+            // determine if the stream has a current sequence no and return
+            {
+                auto it = m_streamSeqNos.find(streamId);
+                if (it == m_streamSeqNos.end()) {
+                    ret = false;
+                }
+                else {
+                    ret = true;
+                }
+            }
+
+            m_streamSeqMutex.unlock();
+
+            return ret;
+        }
+
+        /**
+         * @brief Helper to get the stored RTP sequence for the given stream ID.
+         * @param streamId Stream ID.
+         * @returns uint16_t 
+         */
+        uint16_t getStreamPktSeq(uint64_t streamId)
+        {
+            m_streamSeqMutex.try_lock_for(std::chrono::milliseconds(60));
+
+            // find the current sequence no and return
+            uint32_t pktSeq = 0U;
+            {
+                auto it = m_streamSeqNos.find(streamId);
+                if (it == m_streamSeqNos.end()) {
+                    pktSeq = RTP_END_OF_CALL_SEQ;
+                } else {
+                    pktSeq = m_streamSeqNos[streamId];
+                }
+            }
+
+            m_streamSeqMutex.unlock();
+
+            return pktSeq;
+        }
+
+        /**
+         * @brief Helper to increment the stored RTP sequence for the given stream ID.
+         * @param streamId Stream ID.
+         * @param initialSeq Initial sequence number to set.
+         * @returns uint16_t 
+         */
+        uint16_t incStreamPktSeq(uint64_t streamId, uint16_t initialSeq)
+        {
+            m_streamSeqMutex.try_lock_for(std::chrono::milliseconds(60));
+
+            // find the current sequence no, increment and return
+            uint32_t pktSeq = 0U;
+            {
+                auto it = m_streamSeqNos.find(streamId);
+                if (it == m_streamSeqNos.end()) {
+                    m_streamSeqNos.insert({streamId, initialSeq});
+                } else {
+                    pktSeq = m_streamSeqNos[streamId];
+
+                    ++pktSeq;
+                    if (pktSeq > RTP_END_OF_CALL_SEQ) {
+                        pktSeq = 0U;
+                    }
+
+                    m_streamSeqNos[streamId] = pktSeq;
+                }
+            }
+
+            m_streamSeqMutex.unlock();
+
+            return pktSeq;
+        }
+        /**
+         * @brief Helper to erase the stored RTP sequence for the given stream ID.
+         * @param streamId Stream ID.
+         * @returns uint16_t 
+         */
+        void eraseStreamPktSeq(uint64_t streamId)
+        {
+            m_streamSeqMutex.try_lock_for(std::chrono::milliseconds(60));
+
+            // find the sequence no and erase
+            {
+                auto entry = m_streamSeqNos.find(streamId);
+                if (entry != m_streamSeqNos.end()) {
+                    m_streamSeqNos.erase(streamId);
+                }
+            }
+
+            m_streamSeqMutex.unlock();
         }
 
     public:
@@ -173,11 +283,6 @@ namespace network
          * @brief Control Channel Peer ID.
          */
         __PROPERTY_PLAIN(uint32_t, ccPeerId);
-
-        /**
-         * @brief Current Stream ID.
-         */
-        __PROPERTY_PLAIN(uint32_t, currStreamId);
 
         /**
          * @brief Unix socket storage containing the connected address.
@@ -247,14 +352,9 @@ namespace network
          */
         __PROPERTY_PLAIN(json::object, config);
 
-        /**
-         * @brief Last received RTP sequence.
-         */
-        __PROPERTY_PLAIN(uint16_t, pktLastSeq);
-        /**
-         * @brief Calculated next RTP sequence.
-         */
-        __PROPERTY_PLAIN(uint16_t, pktNextSeq);
+    private:
+        std::timed_mutex m_streamSeqMutex;
+        std::unordered_map<uint64_t, uint16_t> m_streamSeqNos;
     };
 
     // ---------------------------------------------------------------------------
@@ -501,6 +601,13 @@ namespace network
         bool checkU2UDroppedPeer(uint32_t peerId);
 
         /**
+         * @brief Erases a stream ID from the given peer ID connection.
+         * @param peerId Peer ID.
+         * @param streamId Stream ID.
+         */
+        void eraseStreamPktSeq(uint32_t peerId, uint32_t streamId);
+
+        /**
          * @brief Helper to create a peer on the peers affiliations list.
          * @param peerId Peer ID.
          * @param peerName Textual peer name for the given peer ID.
@@ -529,9 +636,10 @@ namespace network
         /**
          * @brief Helper to complete setting up a repeater login request.
          * @param peerId Peer ID.
+         * @param streamId Stream ID for the login sequence.
          * @param connection Instance of the FNEPeerConnection class.
          */
-        void setupRepeaterLogin(uint32_t peerId, FNEPeerConnection* connection);
+        void setupRepeaterLogin(uint32_t peerId, uint32_t streamId, FNEPeerConnection* connection);
 
         /**
          * @brief Helper to send the ACL lists to the specified peer in a separate thread.
@@ -548,44 +656,50 @@ namespace network
         /**
          * @brief Helper to send the list of whitelisted RIDs to the specified peer.
          * @param peerId Peer ID.
+         * @param streamId Stream ID for this message.
          * @param sendISSI Flag indicating the RID transfer is to an external peer via ISSI.
          */
-        void writeWhitelistRIDs(uint32_t peerId, bool sendISSI);
+        void writeWhitelistRIDs(uint32_t peerId, uint32_t streamId, bool sendISSI);
         /**
          * @brief Helper to send the list of blacklisted RIDs to the specified peer.
          * @param peerId Peer ID.
+         * @param streamId Stream ID for this message.
          */
-        void writeBlacklistRIDs(uint32_t peerId);
+        void writeBlacklistRIDs(uint32_t peerId, uint32_t streamId);
         /**
          * @brief Helper to send the list of active TGIDs to the specified peer.
          * @param peerId Peer ID.
+         * @param streamId Stream ID for this message.
          * @param sendISSI Flag indicating the TGID transfer is to an external peer via ISSI.
          */
-        void writeTGIDs(uint32_t peerId, bool sendISSI);
+        void writeTGIDs(uint32_t peerId, uint32_t streamId, bool sendISSI);
         /**
          * @brief Helper to send the list of deactivated TGIDs to the specified peer.
          * @param peerId Peer ID.
+         * @param streamId Stream ID for this message.
          */
-        void writeDeactiveTGIDs(uint32_t peerId);
+        void writeDeactiveTGIDs(uint32_t peerId, uint32_t streamId);
         /**
          * @brief Helper to send the list of peers to the specified peer.
          * @param peerId Peer ID.
+         * @param streamId Stream ID for this message.
          */
-        void writePeerList(uint32_t peerId);
+        void writePeerList(uint32_t peerId, uint32_t streamId);
         
         /**
          * @brief Helper to send a In-Call Control command to the specified peer.
          * @param peerId Peer ID.
+         * @param streamId Stream ID for this message.
          * @param subFunc Network Sub-Function.
          * @param command In-Call Control Command.
          * @param dstId Destination ID.
          * @param slotNo DMR slot.
          */
-        bool writePeerICC(uint32_t peerId, NET_SUBFUNC::ENUM subFunc = NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR, 
+        bool writePeerICC(uint32_t peerId, uint32_t streamId, NET_SUBFUNC::ENUM subFunc = NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR, 
             NET_ICC::ENUM command = NET_ICC::NOP, uint32_t dstId = 0U, uint8_t slotNo = 0U);
 
         /**
-         * @brief Helper to send a data message to the specified peer.
+         * @brief Helper to send a data message to the specified peer with a explicit packet sequence.
          * @param peerId Peer ID.
          * @param opcode FNE network opcode pair.
          * @param[in] data Buffer containing message to send to peer.
@@ -593,23 +707,11 @@ namespace network
          * @param pktSeq RTP packet sequence for this message.
          * @param streamId Stream ID for this message.
          * @param queueOnly Flag indicating this message should be queued for transmission.
-         * @param directWrite Flag indicating this message should be immediately directly written.
-         */
-        bool writePeer(uint32_t peerId, FrameQueue::OpcodePair opcode, const uint8_t* data, uint32_t length, 
-            uint16_t pktSeq, uint32_t streamId, bool queueOnly = false, bool directWrite = false) const;
-        /**
-         * @brief Helper to send a data message to the specified peer.
-         * @param peerId Peer ID.
-         * @param opcode FNE network opcode pair.
-         * @param[in] data Buffer containing message to send to peer.
-         * @param length Length of buffer.
-         * @param streamId Stream ID for this message.
-         * @param queueOnly Flag indicating this message should be queued for transmission.
          * @param incPktSeq Flag indicating the message should increment the packet sequence after transmission.
          * @param directWrite Flag indicating this message should be immediately directly written.
          */
         bool writePeer(uint32_t peerId, FrameQueue::OpcodePair opcode, const uint8_t* data, uint32_t length, 
-            uint32_t streamId, bool queueOnly = false, bool incPktSeq = false, bool directWrite = false) const;
+            uint16_t pktSeq, uint32_t streamId, bool queueOnly, bool incPktSeq = false, bool directWrite = false) const;
 
         /**
          * @brief Helper to send a command message to the specified peer.
@@ -617,18 +719,20 @@ namespace network
          * @param opcode FNE network opcode pair.
          * @param[in] data Buffer containing message to send to peer.
          * @param length Length of buffer.
+         * @param streamId Stream ID for this message.
          * @param incPktSeq Flag indicating the message should increment the packet sequence after transmission.
          */
-        bool writePeerCommand(uint32_t peerId, FrameQueue::OpcodePair opcode, const uint8_t* data = nullptr, uint32_t length = 0U, 
-            bool incPktSeq = false) const;
+        bool writePeerCommand(uint32_t peerId, FrameQueue::OpcodePair opcode, const uint8_t* data, uint32_t length, 
+            uint32_t streamId, bool incPktSeq) const;
 
         /**
          * @brief Helper to send a ACK response to the specified peer.
          * @param peerId Peer ID.
+         * @param streamId Stream ID for this message.
          * @param[in] data Buffer containing response data to send to peer.
          * @param length Length of buffer.
          */
-        bool writePeerACK(uint32_t peerId, const uint8_t* data = nullptr, uint32_t length = 0U);
+        bool writePeerACK(uint32_t peerId, uint32_t streamId, const uint8_t* data = nullptr, uint32_t length = 0U);
 
         /**
          * @brief Helper to log a warning specifying which NAK reason is being sent a peer.
@@ -640,10 +744,11 @@ namespace network
         /**
          * @brief Helper to send a NAK response to the specified peer.
          * @param peerId Peer ID.
+         * @param streamId Stream ID for this message.
          * @param tag Tag.
          * @param reason NAK reason.
          */
-        bool writePeerNAK(uint32_t peerId, const char* tag, NET_CONN_NAK_REASON reason = NET_CONN_NAK_GENERAL_FAILURE);
+        bool writePeerNAK(uint32_t peerId, uint32_t streamId, const char* tag, NET_CONN_NAK_REASON reason = NET_CONN_NAK_GENERAL_FAILURE);
         /**
          * @brief Helper to send a NAK response to the specified peer.
          * @param peerId Peer ID.

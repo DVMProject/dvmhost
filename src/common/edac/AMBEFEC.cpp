@@ -571,7 +571,7 @@ uint32_t AMBEFEC::regenerate(uint32_t& a, uint32_t& b, uint32_t& c) const
     if (!valid) {
         uint32_t errsA = Utils::countBits32(data ^ a);
 #if DEBUG_AMBEFEC
-        LogDebug(LOG_HOST, "AMBEFEC::regnerate() invalid A block, errsA = %u, a = %6X, b = %6X, c = %6X", errsA, a, b, c);
+        LogDebugEx(LOG_HOST, "AMBEFEC::regnerate()", "invalid A block, errsA = %u, a = %6X, b = %6X, c = %6X", errsA, a, b, c);
 #endif
         a = 0xF00292U;
         b = 0x0E0B20U;
@@ -596,7 +596,7 @@ uint32_t AMBEFEC::regenerate(uint32_t& a, uint32_t& b, uint32_t& c) const
     v = b ^ old_b;
     uint32_t errsB = Utils::countBits32(v);
 #if DEBUG_AMBEFEC
-    LogDebug(LOG_HOST, "AMBEFEC::regnerate() errsA = %u, a = %6X, errsB = %u, b = %6X, c = %6X", errsA, a, errsB, b, c);
+    LogDebugEx(LOG_HOST, "AMBEFEC::regnerate()", "errsA = %u, a = %6X, errsB = %u, b = %6X, c = %6X", errsA, a, errsB, b, c);
 #endif
     if (errsA >= 4U || ((errsA + errsB) >= 6U && errsA >= 2U)) {
         a = 0xF00292U;

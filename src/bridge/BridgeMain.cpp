@@ -32,6 +32,10 @@ using namespace lookups;
 //  Global Variables
 // ---------------------------------------------------------------------------
 
+#ifndef SIGHUP
+#define SIGHUP 1
+#endif
+
 int g_signal = 0;
 std::string g_progExe = std::string(__EXE_NAME__);
 std::string g_iniFile = std::string(DEFAULT_CONF_FILE);
@@ -293,15 +297,15 @@ int main(int argc, char** argv)
         ret = bridge->run();
         delete bridge;
 
-        if (g_signal == 2)
+        if (g_signal == SIGINT)
             ::LogInfoEx(LOG_HOST, "Exited on receipt of SIGINT");
 
-        if (g_signal == 15)
+        if (g_signal == SIGTERM)
             ::LogInfoEx(LOG_HOST, "Exited on receipt of SIGTERM");
 
-        if (g_signal == 1)
+        if (g_signal == SIGHUP)
             ::LogInfoEx(LOG_HOST, "Restarting on receipt of SIGHUP");
-    } while (g_signal == 1);
+    } while (g_signal == SIGHUP);
 
     ::LogFinalise();
     ::ActivityLogFinalise();

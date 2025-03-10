@@ -36,6 +36,10 @@ using namespace lookups;
 //  Global Variables
 // ---------------------------------------------------------------------------
 
+#ifndef SIGHUP
+#define SIGHUP 1
+#endif
+
 int g_signal = 0;
 bool g_calibrate = false;
 bool g_setup = false;
@@ -302,15 +306,15 @@ int main(int argc, char** argv)
             delete host;
         }
 
-        if (g_signal == 2)
+        if (g_signal == SIGINT)
             ::LogInfoEx(LOG_HOST, "[STOP] dvmhost:main SIGINT");
 
-        if (g_signal == 15)
+        if (g_signal == SIGTERM)
             ::LogInfoEx(LOG_HOST, "[STOP] dvmhost:main SIGTERM");
 
-        if (g_signal == 1)
+        if (g_signal == SIGHUP)
             ::LogInfoEx(LOG_HOST, "[RSTR] dvmhost:main SIGHUP");
-    } while (g_signal == 1);
+    } while (g_signal == SIGHUP);
 
     ::LogFinalise();
     ::ActivityLogFinalise();

@@ -82,7 +82,7 @@ public:
                 m_iPtr = 0U;
         }
 #if DEBUG_RINGBUFFER
-        LogDebug(LOG_HOST, "RingBuffer::addData(%s): iPtr_Before = %u, iPtr_After = %u, oPtr = %u, len = %u, len_Written = %u", m_name, iPtr_BeforeWrite, m_iPtr, m_oPtr, m_length, (m_iPtr - iPtr_BeforeWrite));
+        LogDebugEx(LOG_HOST, "RingBuffer::addData()", "(%s): iPtr_Before = %u, iPtr_After = %u, oPtr = %u, len = %u, len_Written = %u", m_name, iPtr_BeforeWrite, m_iPtr, m_oPtr, m_length, (m_iPtr - iPtr_BeforeWrite));
 #endif
         return true;
     }
@@ -109,7 +109,7 @@ public:
                 m_oPtr = 0U;
         }
 #if DEBUG_RINGBUFFER
-        LogDebug(LOG_HOST, "RingBuffer::getData(%s): iPtr = %u, oPtr_Before = %u, oPtr_After = %u, len = %u, len_Read = %u", m_name, m_iPtr, oPtr_BeforeRead, m_oPtr, m_length, (m_oPtr - oPtr_BeforeRead));
+        LogDebugEx(LOG_HOST, "RingBuffer::getData()", "(%s): iPtr = %u, oPtr_Before = %u, oPtr_After = %u, len = %u, len_Read = %u", m_name, m_iPtr, oPtr_BeforeRead, m_oPtr, m_length, (m_oPtr - oPtr_BeforeRead));
 #endif
         return true;
     }

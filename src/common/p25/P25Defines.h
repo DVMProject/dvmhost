@@ -22,7 +22,9 @@
 #include "common/Defines.h"
 
 // Shorthand macro to p25::defines -- keeps source code that doesn't use "using" concise
+#if !defined(P25DEF)
 #define P25DEF p25::defines
+#endif // P25DEF
 namespace p25
 {
     namespace defines
@@ -410,6 +412,58 @@ namespace p25
                 DENY = 0x05U                            //! Deny
             };
         }
+
+        /** @brief KMM Message Type */
+        namespace KMM_MessageType {
+            enum : uint8_t {
+                NULL_CMD = 0x00U,                       //! Null
+
+                CHANGE_RSI_CMD = 0x03U,                 //! Change RSI Command
+                CHANGE_RSI_RSP = 0x04U,                 //! Change RSI Response
+                CHANGEOVER_CMD = 0x05U,                 //! Changeover Command
+                CHANGEOVER_RSP = 0x06U,                 //! Changeover Response
+
+                HELLO = 0x0CU,                          //! Hello
+
+                INVENTORY_CMD = 0x0DU,                  //! Inventory Command
+                INVENTORY_RSP = 0x0EU,                  //! Inventory Response
+
+                MODIFY_KEY_CMD = 0x13U,                 //! Modify Key Command
+
+                NAK = 0x16U,                            //! Negative Ack
+
+                ZEROIZE_CMD = 0x21U,                    //! Zeroize Command
+                ZEROIZE_RSP = 0x22U,                    //! Zeroize Response
+            };
+        }
+
+        /** @brief KMM Response Kind */
+        namespace KMM_ResponseKind {
+            enum : uint8_t {
+                NONE = 0x00U,                           //! Response Kind 1 (None)
+                DELAYED = 0x01U,                        //! Response Kind 2 (Delayed)
+                IMMEDIATE = 0x02U,                      //! Response Kind 3 (Immediate)
+            };
+        }
+
+        /** @brief KMM Message Authentication */
+        namespace KMM_MAC {
+            enum : uint8_t {
+                NO_MAC = 0x00U,                         //! No Message Authentication
+                ENH_MAC = 0x02U,                        //! Enhanced Message Authentication
+                DES_MAC = 0x03U,                        //! DES Message Authentication
+            };
+        }
+
+        /** @brief KMM Decryption Instruction - None */
+        const uint8_t   KMM_DECRYPT_INSTRUCT_NONE = 0x00U;
+        /** @brief KMM Decryption Instruction - Message Indicator */
+        const uint8_t   KMM_DECRYPT_INSTRUCT_MI = 0x40U;
+
+        /** @brief KMM Key Format TEK */
+        const uint8_t   KEY_FORMAT_TEK = 0x80U;
+        /** @brief KMM Key Format Delete Key */
+        const uint8_t   KEY_FORMAT_DELETE = 0x20U;
 
         /** @brief SNDCP version 1 */
         const uint8_t   SNDCP_VERSION_1 = 0x01U;

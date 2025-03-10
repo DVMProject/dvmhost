@@ -320,9 +320,9 @@ void ModemV24::clock(uint32_t ms)
                 m_p25Space = m_buffer[10U] * (P25DEF::P25_LDU_FRAME_LENGTH_BYTES);
 
             if (m_dumpModemStatus) {
-                LogDebug(LOG_MODEM, "ModemV24::clock(), CMD_GET_STATUS, isHotspot = %u, v24Connected = %u, dmr = %u / %u, p25 = %u / %u, nxdn = %u / %u, modemState = %u, tx = %u, adcOverflow = %u, rxOverflow = %u, txOverflow = %u, dacOverflow = %u, dmrSpace1 = %u, dmrSpace2 = %u, p25Space = %u, nxdnSpace = %u",
+                LogDebugEx(LOG_MODEM, "ModemV24::clock()", "CMD_GET_STATUS, isHotspot = %u, v24Connected = %u, dmr = %u / %u, p25 = %u / %u, nxdn = %u / %u, modemState = %u, tx = %u, adcOverflow = %u, rxOverflow = %u, txOverflow = %u, dacOverflow = %u, dmrSpace1 = %u, dmrSpace2 = %u, p25Space = %u, nxdnSpace = %u",
                     m_isHotspot, m_v24Connected, dmrEnable, m_dmrEnabled, p25Enable, m_p25Enabled, nxdnEnable, m_nxdnEnabled, m_modemState, m_tx, adcOverflow, rxOverflow, txOverflow, dacOverflow, m_dmrSpace1, m_dmrSpace2, m_p25Space, m_nxdnSpace);
-                LogDebug(LOG_MODEM, "ModemV24::clock(), CMD_GET_STATUS, rxDMRData1 size = %u, len = %u, free = %u; rxDMRData2 size = %u, len = %u, free = %u, rxP25Data size = %u, len = %u, free = %u, rxNXDNData size = %u, len = %u, free = %u",
+                LogDebugEx(LOG_MODEM, "ModemV24::clock()", "CMD_GET_STATUS, rxDMRData1 size = %u, len = %u, free = %u; rxDMRData2 size = %u, len = %u, free = %u, rxP25Data size = %u, len = %u, free = %u, rxNXDNData size = %u, len = %u, free = %u",
                     m_rxDMRQueue1.length(), m_rxDMRQueue1.dataSize(), m_rxDMRQueue1.freeSpace(), m_rxDMRQueue2.length(), m_rxDMRQueue2.dataSize(), m_rxDMRQueue2.freeSpace(),
                     m_rxP25Queue.length(), m_rxP25Queue.dataSize(), m_rxP25Queue.freeSpace(), m_rxNXDNQueue.length(), m_rxNXDNQueue.dataSize(), m_rxNXDNQueue.freeSpace());
             }
@@ -409,7 +409,7 @@ void ModemV24::clock(uint32_t ms)
 
 void ModemV24::close()
 {
-    LogDebug(LOG_MODEM, "Closing the modem");
+    LogMessage(LOG_MODEM, "Closing the modem");
     m_port->close();
 
     m_gotModemStatus = false;
@@ -1553,9 +1553,9 @@ void ModemV24::queueP25Frame(uint8_t* data, uint16_t len, SERIAL_TX_TYPE msgType
     assert(len > 0U);
 
     if (m_debug)
-        LogDebug(LOG_MODEM, "ModemV24::queueP25Frame() msgType = $%02X", msgType);
+        LogDebugEx(LOG_MODEM, "ModemV24::queueP25Frame()", "msgType = $%02X", msgType);
     if (m_trace)
-        Utils::dump(1U, "ModemV24::queueP25Frame() data", data, len);
+        Utils::dump(1U, "[ModemV24::queueP25Frame()] data", data, len);
 
     // get current time in ms
     uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();

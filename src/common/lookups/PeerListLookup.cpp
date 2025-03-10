@@ -152,6 +152,20 @@ PeerListLookup::Mode PeerListLookup::getMode() const
     return m_mode;
 }
 
+/* Gets the entire peer ID table. */
+
+std::vector<PeerId> PeerListLookup::tableAsList() const
+{
+    std::vector<PeerId> ret = std::vector<PeerId>();
+
+    std::lock_guard<std::mutex> lock(m_mutex);
+    for (auto entry : m_table) {
+        ret.push_back(entry.second);
+    }
+
+    return ret;
+}
+
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------
@@ -221,7 +235,7 @@ bool PeerListLookup::load()
             m_table[id] = PeerId(id, alias, password, peerLink, false);
 
             // Log depending on what was loaded
-            LogDebug(LOG_HOST, "Loaded peer ID %u%s into peer ID lookup table, %s%s", id,
+            LogMessage(LOG_HOST, "Loaded peer ID %u%s into peer ID lookup table, %s%s", id,
                 (!alias.empty() ? (" (" + alias + ")").c_str() : ""),
                 (!password.empty() ? "using unique peer password" : "using master password"),
                 (peerLink) ? ", Peer-Link Enabled" : "");
@@ -234,7 +248,7 @@ bool PeerListLookup::load()
     if (size == 0U)
         return false;
 
-    LogInfoEx(LOG_HOST, "Loaded %lu peers into list", size);
+    LogInfoEx(LOG_HOST, "Loaded %lu entries into peer list lookup table", size);
     return true;
 }
 
@@ -242,8 +256,6 @@ bool PeerListLookup::load()
 
 bool PeerListLookup::save()
 {
-    LogDebug(LOG_HOST, "Saving peer lookup file to %s", m_filename.c_str());
-
     if (m_filename.empty()) {
         return false;
     }
@@ -253,6 +265,8 @@ bool PeerListLookup::save()
         LogError(LOG_HOST, "Cannot open the peer ID lookup file - %s", m_filename.c_str());
         return false;
     }
+
+    LogMessage(LOG_HOST, "Saving peer lookup file to %s", m_filename.c_str());
 
     // Counter for lines written
     unsigned int lines = 0;

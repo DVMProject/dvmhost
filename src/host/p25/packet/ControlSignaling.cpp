@@ -1784,7 +1784,7 @@ void ControlSignaling::writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adj
     }
 
     if (m_debug) {
-        LogDebug(LOG_P25, "writeRF_ControlData, mbfCnt = %u, frameCnt = %u, seq = %u, adjSS = %u", m_mbfCnt, frameCnt, n, adjSS);
+        LogDebugEx(LOG_P25, "ControlSignaling::writeRF_ControlData()", "mbfCnt = %u, frameCnt = %u, seq = %u, adjSS = %u", m_mbfCnt, frameCnt, n, adjSS);
     }
 
     // bryanb: this is just a simple counter because we treat the SYNC_BCST as unlocked
@@ -1877,7 +1877,7 @@ void ControlSignaling::writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adj
             queueRF_TSBK_Ctrl(TSBKO::OSP_RFSS_STS_BCAST);
             queueRF_TSBK_Ctrl(TSBKO::OSP_NET_STS_BCAST);
             if (m_debug) {
-                LogDebug(LOG_P25, "writeRF_ControlData, have 1 pad 2, mbfCnt = %u", m_mbfCnt);
+                LogDebugEx(LOG_P25, "ControlSignaling::writeRF_ControlData()]", "have 1 pad 2, mbfCnt = %u", m_mbfCnt);
             }
         }
 
@@ -1892,7 +1892,7 @@ void ControlSignaling::writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adj
             }
 
             if (m_debug) {
-                LogDebug(LOG_P25, "writeRF_ControlData, have 2 pad 1, mbfCnt = %u", m_mbfCnt);
+                LogDebugEx(LOG_P25, "ControlSignaling::writeRF_ControlData()", "have 2 pad 1, mbfCnt = %u", m_mbfCnt);
             }
         }
 

@@ -544,12 +544,7 @@ bool BaseNetwork::writeP25TDU(const p25::lc::LC& control, const p25::data::LowSp
         return false;
     }
 
-    uint16_t seq = pktSeq(resetSeq);
-    if (controlByte == 0x00U) {
-        seq = RTP_END_OF_CALL_SEQ;
-    }
-
-    return writeMaster({ NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25 }, message.get(), messageLength, seq, m_p25StreamId);
+    return writeMaster({ NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25 }, message.get(), messageLength, RTP_END_OF_CALL_SEQ, m_p25StreamId);
 }
 
 /* Writes P25 TSDU frame data to the network. */
@@ -742,7 +737,7 @@ UInt8Array BaseNetwork::createDMR_Message(uint32_t& length, const uint32_t strea
 
     uint32_t slotNo = data.getSlotNo();
 
-    buffer[14U] = 0U;                                                               // Control Bits
+    buffer[14U] = data.getControl();                                                // Control Bits
 
     // Individual slot disabling
     if (slotNo == 1U && !m_slot1) {

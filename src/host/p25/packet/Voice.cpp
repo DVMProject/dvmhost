@@ -75,6 +75,9 @@ void Voice::resetNet()
     m_netLastLDU1 = lc;
     //m_netLastFrameType = P25_FT_DATA_UNIT;
 
+    m_gotNetLDU1 = false;
+    m_gotNetLDU2 = false;
+
     m_netFrames = 0U;
     m_netLost = 0U;
     m_vocLDU1Count = 0U;
@@ -385,7 +388,12 @@ bool Voice::process(uint8_t* data, uint32_t len)
             // send network grant demand TDU
             if (m_p25->m_network != nullptr) {
                 if (!m_p25->m_dedicatedControl && m_p25->m_convNetGrantDemand) {
-                    uint8_t controlByte = 0x80U + ((group) ? 0x00U : 0x01U);
+                    uint8_t controlByte = 0x80U;                                            // Grant Demand Flag
+                    if (encrypted)
+                        controlByte |= 0x08U;                                               // Grant Encrypt Flag
+                    if (!group)
+                        controlByte |= 0x01U;                                               // Unit-to-unit Flag
+
                     LogMessage(LOG_RF, P25_HDU_STR " remote grant demand, srcId = %u, dstId = %u", srcId, dstId);
                     m_p25->m_network->writeP25TDU(lc, m_rfLSD, controlByte);
                 }
@@ -437,7 +445,9 @@ bool Voice::process(uint8_t* data, uint32_t len)
 
             // conventional registration or DVRS support?
             if ((m_p25->m_enableControl && !m_p25->m_dedicatedControl) || m_p25->m_voiceOnControl) {
-                m_p25->m_control->writeRF_TSDU_Grant(srcId, dstId, serviceOptions, group, true, true);
+                if (!m_p25->m_affiliations.isGranted(dstId)) {
+                    m_p25->m_control->writeRF_TSDU_Grant(srcId, dstId, serviceOptions, group, false, true);
+                }
 
                 // if voice on control; insert grant updates before voice traffic
                 if (m_p25->m_voiceOnControl) {
@@ -1241,6 +1251,8 @@ bool Voice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
                 m_dfsiLC.decodeLDU1(data + count, m_netLDU1 + 204U);
                 count += DFSI_LDU1_VOICE9_FRAME_LENGTH_BYTES;
 
+                m_gotNetLDU1 = true;
+
                 // these aren't set by the DFSI decoder, so we'll manually
                 // reset them
                 m_dfsiLC.control()->setNetId(control.getNetId());
@@ -1320,6 +1332,8 @@ bool Voice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
                 m_dfsiLC.setFrameType(DFSIFrameType::LDU2_VOICE18);
                 m_dfsiLC.decodeLDU2(data + count, m_netLDU2 + 204U);
                 count += DFSI_LDU2_VOICE18_FRAME_LENGTH_BYTES;
+
+                m_gotNetLDU2 = true;
 
                 if (m_p25->m_enableControl) {
                     lc::LC control = lc::LC(*m_dfsiLC.control());
@@ -1431,7 +1445,9 @@ Voice::Voice(Control* p25, bool debug, bool verbose) :
     m_rfLSD(),
     m_netLSD(),
     m_dfsiLC(),
+    m_gotNetLDU1(false),
     m_netLDU1(nullptr),
+    m_gotNetLDU2(false),
     m_netLDU2(nullptr),
     m_lastDUID(DUID::TDU),
     m_lastIMBE(nullptr),
@@ -1449,7 +1465,9 @@ Voice::Voice(Control* p25, bool debug, bool verbose) :
     m_netLDU2 = new uint8_t[9U * 25U];
 
     ::memset(m_netLDU1, 0x00U, 9U * 25U);
+    resetWithNullAudio(m_netLDU1, false);
     ::memset(m_netLDU2, 0x00U, 9U * 25U);
+    resetWithNullAudio(m_netLDU2, false);
 
     m_lastIMBE = new uint8_t[RAW_IMBE_LENGTH_BYTES];
     ::memcpy(m_lastIMBE, NULL_IMBE, RAW_IMBE_LENGTH_BYTES);
@@ -1556,8 +1574,8 @@ void Voice::writeNet_TDU()
     if (m_p25->m_network != nullptr)
         m_p25->m_network->resetP25();
 
-    ::memset(m_netLDU1, 0x00U, 9U * 25U);
-    ::memset(m_netLDU2, 0x00U, 9U * 25U);
+    resetWithNullAudio(m_netLDU1, false);
+    resetWithNullAudio(m_netLDU2, false);
 
     m_p25->m_netTimeout.stop();
     m_p25->m_networkWatchdog.stop();
@@ -1580,9 +1598,10 @@ void Voice::checkNet_LDU1()
         return;
 
     // check for an unflushed LDU1
-    if (m_netLDU1[10U] != 0x00U || m_netLDU1[26U] != 0x00U || m_netLDU1[55U] != 0x00U ||
+    if ((m_netLDU1[10U] != 0x00U || m_netLDU1[26U] != 0x00U || m_netLDU1[55U] != 0x00U ||
         m_netLDU1[80U] != 0x00U || m_netLDU1[105U] != 0x00U || m_netLDU1[130U] != 0x00U ||
-        m_netLDU1[155U] != 0x00U || m_netLDU1[180U] != 0x00U || m_netLDU1[204U] != 0x00U)
+        m_netLDU1[155U] != 0x00U || m_netLDU1[180U] != 0x00U || m_netLDU1[204U] != 0x00U) &&
+        m_gotNetLDU1)
         writeNet_LDU1();
 }
 
@@ -1711,33 +1730,35 @@ void Voice::writeNet_LDU1()
                 (m_netLC.getEncrypted() ? 0x40U : 0x00U) +                          // Encrypted Flag
                 (m_netLC.getPriority() & 0x07U);                                    // Priority
 
-            if (!m_p25->m_control->writeRF_TSDU_Grant(srcId, dstId, serviceOptions, group, true)) {
-                LogError(LOG_NET, P25_HDU_STR " call rejected, network call not granted, dstId = %u", dstId);
+            if (!m_p25->m_affiliations.isGranted(dstId)) {
+                if (!m_p25->m_control->writeRF_TSDU_Grant(srcId, dstId, serviceOptions, group, true)) {
+                    LogError(LOG_NET, P25_HDU_STR " call rejected, network call not granted, dstId = %u", dstId);
 
-                if ((!m_p25->m_networkWatchdog.isRunning() || m_p25->m_networkWatchdog.hasExpired()) &&
-                    m_p25->m_netLastDstId != 0U) {
-                    if (m_p25->m_network != nullptr)
-                        m_p25->m_network->resetP25();
+                    if ((!m_p25->m_networkWatchdog.isRunning() || m_p25->m_networkWatchdog.hasExpired()) &&
+                        m_p25->m_netLastDstId != 0U) {
+                        if (m_p25->m_network != nullptr)
+                            m_p25->m_network->resetP25();
 
-                    ::memset(m_netLDU1, 0x00U, 9U * 25U);
-                    ::memset(m_netLDU2, 0x00U, 9U * 25U);
+                        resetWithNullAudio(m_netLDU1, false);
+                        resetWithNullAudio(m_netLDU2, false);
 
-                    m_p25->m_netTimeout.stop();
-                    m_p25->m_networkWatchdog.stop();
+                        m_p25->m_netTimeout.stop();
+                        m_p25->m_networkWatchdog.stop();
 
-                    m_netLC = lc::LC();
-                    m_netLastLDU1 = lc::LC();
-                    m_netLastFrameType = FrameType::DATA_UNIT;
+                        m_netLC = lc::LC();
+                        m_netLastLDU1 = lc::LC();
+                        m_netLastFrameType = FrameType::DATA_UNIT;
 
-                    m_p25->m_netState = RS_NET_IDLE;
-                    m_p25->m_netLastDstId = 0U;
-                    m_p25->m_netLastSrcId = 0U;
+                        m_p25->m_netState = RS_NET_IDLE;
+                        m_p25->m_netLastDstId = 0U;
+                        m_p25->m_netLastSrcId = 0U;
 
-                    if (m_p25->m_rfState == RS_RF_REJECTED) {
-                        m_p25->m_rfState = RS_RF_LISTENING;
+                        if (m_p25->m_rfState == RS_RF_REJECTED) {
+                            m_p25->m_rfState = RS_RF_LISTENING;
+                        }
+
+                        return;
                     }
-
-                    return;
                 }
             }
 
@@ -1933,7 +1954,8 @@ void Voice::writeNet_LDU1()
             sysId, netId);
     }
 
-    ::memset(m_netLDU1, 0x00U, 9U * 25U);
+    resetWithNullAudio(m_netLDU1, m_netLC.getAlgId() != P25DEF::ALGO_UNENCRYPT);
+    m_gotNetLDU1 = false;
 
     m_netFrames += 9U;
 }
@@ -1946,10 +1968,12 @@ void Voice::checkNet_LDU2()
         return;
 
     // check for an unflushed LDU2
-    if (m_netLDU2[10U] != 0x00U || m_netLDU2[26U] != 0x00U || m_netLDU2[55U] != 0x00U ||
+    if ((m_netLDU2[10U] != 0x00U || m_netLDU2[26U] != 0x00U || m_netLDU2[55U] != 0x00U ||
         m_netLDU2[80U] != 0x00U || m_netLDU2[105U] != 0x00U || m_netLDU2[130U] != 0x00U ||
-        m_netLDU2[155U] != 0x00U || m_netLDU2[180U] != 0x00U || m_netLDU2[204U] != 0x00U)
+        m_netLDU2[155U] != 0x00U || m_netLDU2[180U] != 0x00U || m_netLDU2[204U] != 0x00U) &&
+        m_gotNetLDU2) {
         writeNet_LDU2();
+    }
 }
 
 /* Helper to write a network P25 LDU2 packet. */
@@ -2022,14 +2046,15 @@ void Voice::writeNet_LDU2()
         LogMessage(LOG_NET, P25_LDU2_STR " audio, algo = $%02X, kid = $%04X", m_netLC.getAlgId(), m_netLC.getKId());
     }
 
-    ::memset(m_netLDU2, 0x00U, 9U * 25U);
+    resetWithNullAudio(m_netLDU2, m_netLC.getAlgId() != P25DEF::ALGO_UNENCRYPT);
+    m_gotNetLDU2 = false;
 
     m_netFrames += 9U;
 }
 
 /* Helper to insert IMBE silence frames for missing audio. */
 
-void Voice::insertMissingAudio(uint8_t *data)
+void Voice::insertMissingAudio(uint8_t* data)
 {
     if (data[10U] == 0x00U) {
         ::memcpy(data + 10U, m_lastIMBE, 11U);
@@ -2183,6 +2208,44 @@ void Voice::insertEncryptedNullAudio(uint8_t *data)
 
     if (data[200U] == 0x00U) {
         ::memcpy(data + 204U, ENCRYPTED_NULL_IMBE, 11U);
+    }
+}
+
+/* Helper to reset IMBE buffer with null frames. */
+
+void Voice::resetWithNullAudio(uint8_t* data, bool encrypted)
+{
+    if (data == nullptr)
+        return;
+
+    // clear buffer for next sequence
+    ::memset(data, 0x00U, 9U * 25U);
+
+    // fill with null
+    if (!encrypted) {
+        ::memcpy(data + 10U, P25DEF::NULL_IMBE, 11U);
+        ::memcpy(data + 26U, P25DEF::NULL_IMBE, 11U);
+        ::memcpy(data + 55U, P25DEF::NULL_IMBE, 11U);
+
+        ::memcpy(data + 80U, P25DEF::NULL_IMBE, 11U);
+        ::memcpy(data + 105U, P25DEF::NULL_IMBE, 11U);
+        ::memcpy(data + 130U, P25DEF::NULL_IMBE, 11U);
+
+        ::memcpy(data + 155U, P25DEF::NULL_IMBE, 11U);
+        ::memcpy(data + 180U, P25DEF::NULL_IMBE, 11U);
+        ::memcpy(data + 204U, P25DEF::NULL_IMBE, 11U);
+    } else {
+        ::memcpy(data + 10U, P25DEF::ENCRYPTED_NULL_IMBE, 11U);
+        ::memcpy(data + 26U, P25DEF::ENCRYPTED_NULL_IMBE, 11U);
+        ::memcpy(data + 55U, P25DEF::ENCRYPTED_NULL_IMBE, 11U);
+
+        ::memcpy(data + 80U, P25DEF::ENCRYPTED_NULL_IMBE, 11U);
+        ::memcpy(data + 105U, P25DEF::ENCRYPTED_NULL_IMBE, 11U);
+        ::memcpy(data + 130U, P25DEF::ENCRYPTED_NULL_IMBE, 11U);
+
+        ::memcpy(data + 155U, P25DEF::ENCRYPTED_NULL_IMBE, 11U);
+        ::memcpy(data + 180U, P25DEF::ENCRYPTED_NULL_IMBE, 11U);
+        ::memcpy(data + 204U, P25DEF::ENCRYPTED_NULL_IMBE, 11U);
     }
 }
 

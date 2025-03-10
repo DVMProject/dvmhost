@@ -76,6 +76,8 @@ network:
     # Flag indicating UDP audio should be RTP framed.
     #   NOTE: This flag is only applicable when encoding G.711 uLaw.
     udpRTPFrames: false
+    # Flag indicating UDP audio should follow the USRP format.
+    udpUsrp: false
 
     # Source "Radio ID" for transmitted audio frames.
     sourceId: 1234567
@@ -85,6 +87,9 @@ network:
     # Flag indicating the source "Radio ID" will be overridden from the received
     # UDP SRC ID.
     overrideSourceIdFromUDP: false
+    # Flag indicating if the source "Radio ID" is being overriden, and changes mid-call, bridge should
+    # terminate previous call an initiate a new one. (This applies only when both udpMetadata and overrideSourceIdFromUDP is set.)
+    resetCallForSourceIdChange: false
     # Talkgroup ID for transmitted/received audio frames.
     destinationId: 1
     # Slot for received/transmitted audio frames.

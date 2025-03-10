@@ -114,8 +114,8 @@ bool AMBT::decode(const data::DataHeader& dataHeader, const data::DataBlock* blo
     }
 
     if (m_verbose) {
-        LogDebug(LOG_P25, "AMBT::decode(), mfId = $%02X, lco = $%02X, ambt8 = $%02X, ambt9 = $%02X", m_mfId, m_lco, dataHeader.getAMBTField8(), dataHeader.getAMBTField9());
-        Utils::dump(2U, "AMBT::decode(), pduUserData", pduUserData, P25_PDU_UNCONFIRMED_LENGTH_BYTES * dataHeader.getBlocksToFollow());
+        LogDebugEx(LOG_P25, "AMBT::decode()", "mfId = $%02X, lco = $%02X, ambt8 = $%02X, ambt9 = $%02X", m_mfId, m_lco, dataHeader.getAMBTField8(), dataHeader.getAMBTField9());
+        Utils::dump(2U, "[AMBT::decode()] pduUserData", pduUserData, P25_PDU_UNCONFIRMED_LENGTH_BYTES * dataHeader.getBlocksToFollow());
     }
 
     return true;
