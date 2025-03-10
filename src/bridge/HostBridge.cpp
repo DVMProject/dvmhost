@@ -599,6 +599,17 @@ int HostBridge::run()
     }
 #endif // defined(_WIN32)
 
+    // set the In-Call Control function callback
+    if (m_network != nullptr) {
+        if (m_txMode == TX_MODE_DMR) {
+            m_network->setDMRICCCallback([=](network::NET_ICC::ENUM command, uint32_t dstId, uint8_t slotNo) { processInCallCtrl(command, dstId, slotNo); });
+        }
+
+        if (m_txMode == TX_MODE_P25) {
+            m_network->setP25ICCCallback([=](network::NET_ICC::ENUM command, uint32_t dstId) { processInCallCtrl(command, dstId, 0U); });
+        }
+    }
+
     /*
     ** Initialize Threads
     */
@@ -1332,6 +1343,26 @@ void HostBridge::processUDPAudio()
                 break;
             }
         }
+    }
+}
+
+/* Helper to process an In-Call Control message. */
+
+void HostBridge::processInCallCtrl(network::NET_ICC::ENUM command, uint32_t dstId, uint8_t slotNo)
+{
+    switch (command) {
+    case network::NET_ICC::REJECT_TRAFFIC:
+        {
+            /*
+            ** bryanb: this is a naive implementation, it will likely cause start/stop, start/stop type cycling
+            */
+            if (dstId == m_dstId)
+                callEnd(m_srcId, m_dstId);
+        }
+        break;
+
+    default:
+        break;
     }
 }
 

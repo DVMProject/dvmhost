@@ -401,6 +401,14 @@ private:
     void processUDPAudio();
 
     /**
+     * @brief Helper to process an In-Call Control message.
+     * @param command In-Call Control Command.
+     * @param dstId Destination ID.
+     * @param slotNo DMR slot.
+     */
+    void processInCallCtrl(network::NET_ICC::ENUM command, uint32_t dstId, uint8_t slotNo);
+
+    /**
      * @brief Helper to process DMR network traffic.
      * @param buffer 
      * @param length 
