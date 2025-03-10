@@ -24,7 +24,7 @@
 #if defined(ENABLE_TCP_SSL)
 #include <openssl/bio.h>
 #include <openssl/evp.h>
-#endif
+#endif // ENABLE_TCP_SSL
 
 using namespace crypto;
 
@@ -38,6 +38,7 @@ using namespace crypto;
 //  Global Functions
 // ---------------------------------------------------------------------------
 
+#if defined(ENABLE_TCP_SSL)
 /**
  * @brief Calculates the length of a decoded base64 string.
  * @param b64input String containing the base64 encoded data.
@@ -84,6 +85,7 @@ int base64Decode(char* b64message, uint8_t** buffer)
 
     return decodeLen;
 }
+#endif // ENABLE_TCP_SSL
 
 /**
  * @brief 
