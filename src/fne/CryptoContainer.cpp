@@ -12,7 +12,9 @@
 #include "common/Timer.h"
 #include "common/Utils.h"
 #include "common/zlib/zlib.h"
+#if defined(ENABLE_TCP_SSL)
 #include "xml/rapidxml.h"
+#endif // ENABLE_TCP_SSL
 #include "CryptoContainer.h"
 
 #include <cstdio>

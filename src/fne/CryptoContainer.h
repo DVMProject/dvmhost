@@ -20,6 +20,7 @@
 #include "common/Thread.h"
 #include "common/Utils.h"
 
+#include <cassert>
 #include <string>
 #include <mutex>
 #include <unordered_map>
