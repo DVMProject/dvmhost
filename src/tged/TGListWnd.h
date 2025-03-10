@@ -226,6 +226,7 @@ private:
         m_listView.setColumnAlignment(7, finalcut::Align::Right);
         m_listView.setColumnAlignment(8, finalcut::Align::Right);
         m_listView.setColumnAlignment(9, finalcut::Align::Right);
+        m_listView.setColumnAlignment(10, finalcut::Align::Right);
 
         // set type of sorting
         m_listView.setColumnSortType(1, finalcut::SortType::Name);
