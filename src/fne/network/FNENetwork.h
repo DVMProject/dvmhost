@@ -32,6 +32,7 @@
 #include "common/lookups/TalkgroupRulesLookup.h"
 #include "common/lookups/PeerListLookup.h"
 #include "fne/network/influxdb/InfluxDB.h"
+#include "fne/CryptoContainer.h"
 #include "host/network/Network.h"
 
 #include <string>
@@ -456,12 +457,14 @@ namespace network
         callhandler::TagNXDNData* nxdnTrafficHandler() const { return m_tagNXDN; }
 
         /**
-         * @brief Sets the instances of the Radio ID, Talkgroup ID and Peer List lookup tables.
+         * @brief Sets the instances of the Radio ID, Talkgroup ID Peer List, and Crypto lookup tables.
          * @param ridLookup Radio ID Lookup Table Instance
          * @param tidLookup Talkgroup Rules Lookup Table Instance
          * @param peerListLookup Peer List Lookup Table Instance
+         * @param cryptoLookup Crypto Container Lookup Table Instance
          */
-        void setLookups(lookups::RadioIdLookup* ridLookup, lookups::TalkgroupRulesLookup* tidLookup, lookups::PeerListLookup* peerListLookup);
+        void setLookups(lookups::RadioIdLookup* ridLookup, lookups::TalkgroupRulesLookup* tidLookup, lookups::PeerListLookup* peerListLookup,
+            CryptoContainer* cryptoLookup);
         /**
          * @brief Sets endpoint preshared encryption key.
          * @param presharedKey Encryption preshared key for networking.
@@ -536,6 +539,8 @@ namespace network
         lookups::RadioIdLookup* m_ridLookup;
         lookups::TalkgroupRulesLookup* m_tidLookup;
         lookups::PeerListLookup* m_peerListLookup;
+
+        CryptoContainer* m_cryptoLookup;
 
         NET_CONN_STATUS m_status;
 

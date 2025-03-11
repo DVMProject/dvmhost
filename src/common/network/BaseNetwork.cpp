@@ -15,6 +15,7 @@
 #include "common/nxdn/NXDNDefines.h"
 #include "common/p25/dfsi/DFSIDefines.h"
 #include "common/p25/dfsi/LC.h"
+#include "common/p25/kmm/KMMModifyKey.h"
 #include "network/BaseNetwork.h"
 #include "Utils.h"
 
@@ -110,6 +111,37 @@ bool BaseNetwork::writeGrantReq(const uint8_t mode, const uint32_t srcId, const 
     buffer[20U] = mode;                                                             // DVM Mode State
 
     return writeMaster({ NET_FUNC::GRANT_REQ, NET_SUBFUNC::NOP }, buffer, MSG_HDR_SIZE, RTP_END_OF_CALL_SEQ, 0U);
+}
+
+/* Writes enc. key request to the network. */
+
+bool BaseNetwork::writeKeyReq(const uint16_t kId, const uint8_t algId)
+{
+    using namespace p25::defines;
+    using namespace p25::kmm;
+
+    if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
+        return false;
+
+    uint8_t buffer[DATA_PACKET_LENGTH];
+    ::memset(buffer, 0x00U, DATA_PACKET_LENGTH);
+
+    KMMModifyKey modifyKeyCmd = KMMModifyKey();
+    modifyKeyCmd.setDecryptInfoFmt(KMM_DECRYPT_INSTRUCT_NONE);
+    modifyKeyCmd.setAlgId(algId);
+    modifyKeyCmd.setKId(kId);
+
+    KeysetItem ks = KeysetItem();
+    ks.keysetId(0U);
+    ks.algId(algId);
+    ks.keyLength(P25DEF::MAX_ENC_KEY_LENGTH_BYTES);
+    modifyKeyCmd.setKeysetItem(ks);
+
+    modifyKeyCmd.encode(buffer + 11U);
+
+    Utils::dump("writeKeyReq", buffer, modifyKeyCmd.length() + 11U);
+
+    return writeMaster({ NET_FUNC::KEY_REQ, NET_SUBFUNC::NOP }, buffer, modifyKeyCmd.length() + 11U, RTP_END_OF_CALL_SEQ, 0U);
 }
 
 /* Writes the local activity log to the network. */

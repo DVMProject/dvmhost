@@ -117,6 +117,8 @@ namespace p25
         const uint8_t   AUTH_RAND_SEED_LENGTH_BYTES = 10U;
         const uint8_t   AUTH_RAND_CHLNG_LENGTH_BYTES = 5U;
         const uint8_t   AUTH_KEY_LENGTH_BYTES = 16U;
+
+        const uint8_t   MAX_ENC_KEY_LENGTH_BYTES = 32U;
         /* @} */
 
         /** @name Thresholds */
@@ -143,6 +145,12 @@ namespace p25
         /** @name Encryption Algorithms */
         /** @brief Unencrypted */
         const uint8_t   ALGO_UNENCRYPT = 0x80U;
+        /** @brief DES-OFB */
+        const uint8_t   ALGO_DES = 0x81U;
+        /** @brief AES-256 */
+        const uint8_t   ALGO_AES_256 = 0x84U;
+        /** @brief ARC4 */
+        const uint8_t   ALGO_ARC4 = 0xAAU;
         /** @} */
 
         /** @name IDEN Table Bandwidth Sizes */
@@ -452,6 +460,28 @@ namespace p25
                 NO_MAC = 0x00U,                         //! No Message Authentication
                 ENH_MAC = 0x02U,                        //! Enhanced Message Authentication
                 DES_MAC = 0x03U,                        //! DES Message Authentication
+            };
+        }
+
+        /** @brief KMM Inventory Type */
+        namespace KMM_InventoryType {
+            enum : uint8_t {
+                NULL_INVENTORY = 0x00U,                 //! Null
+
+                LIST_ACTIVE_KEYSET_IDS = 0x01U,         //! List Active Keyset IDs
+                LIST_INACTIVE_KEYSET_IDS = 0x02U,       //! List Inactive Keyset IDs
+                LIST_ACTIVE_KEY_IDS = 0x03U,            //! List Active Key IDs
+                LIST_INACTIVE_KEY_IDS = 0x04U,          //! List Inactive Key IDs
+            };
+        }
+
+        /** @brief KMM Hello Flag */
+        namespace KMM_HelloFlag {
+            enum : uint8_t {
+                IDENT_ONLY = 0x00U,                     //! KMF or SU Identification Only
+
+                REKEY_REQUEST_UKEK = 0x01U,             //! Rekey Request (UKEK Exists)
+                REKEY_REQUEST_NO_UKEK = 0x02U,          //! Rekey Request (UKEK does not exist)
             };
         }
 

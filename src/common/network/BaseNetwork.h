@@ -59,6 +59,7 @@
 
 #define TAG_REPEATER_PING       "RPTP"
 #define TAG_REPEATER_GRANT      "RPTG"
+#define TAG_REPEATER_KEY        "RKEY"
 
 #define TAG_TRANSFER            "TRNS"
 #define TAG_TRANSFER_ACT_LOG    "TRNSLOG"
@@ -171,6 +172,14 @@ namespace network
          * @returns bool True, if grant request was sent, otherwise false. 
          */
         bool writeGrantReq(const uint8_t mode, const uint32_t srcId, const uint32_t dstId, const uint8_t slot, const bool unitToUnit);
+
+        /**
+         * @brief Writes a enc. key request to the network.
+         * @param kId Key ID.
+         * @param algId Algorithm ID.
+         * @returns bool True, if request was sent, otherwise false. 
+         */
+        bool writeKeyReq(const uint16_t kId, const uint8_t algId);
 
         /**
          * @brief Writes the local activity log to the network.

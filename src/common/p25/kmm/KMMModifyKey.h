@@ -37,7 +37,7 @@ namespace p25
          * @{
          */
 
-         const uint32_t KMM_MODIFY_KEY_LENGTH = KMM_FRAME_LENGTH + 4U;
+         const uint32_t KMM_MODIFY_KEY_LENGTH = KMM_FRAME_LENGTH + 8U;
 
          /** @} */
  
@@ -63,16 +63,16 @@ namespace p25
             uint32_t length() const override;
 
             /**
-             * @brief Decode a KMM modify key packet.
-             * @param[in] data Buffer containing KMM packet data to decode.
+             * @brief Decode a KMM modify key.
+             * @param[in] data Buffer containing KMM frame data to decode.
              * @returns bool True, if decoded, otherwise false.
              */
-            bool decode(const uint8_t* data);
+            bool decode(const uint8_t* data) override;
             /**
-             * @brief Encode a KMM modify key packet.
-             * @param[out] data Buffer to encode KMM  packet data to.
+             * @brief Encode a KMM modify key.
+             * @param[out] data Buffer to encode KMM frame data to.
              */
-            void encode(uint8_t* data);
+            void encode(uint8_t* data) override;
 
             /** @name Encryption data */
             /**

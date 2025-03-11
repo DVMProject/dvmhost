@@ -121,16 +121,14 @@ namespace p25
             /**
              * @brief Internal helper to decode a KMM header.
              * @param data Buffer containing KMM packet data to decode.
-             * @param outbound Flag indicating whether the packet is inbound or outbound.
              * @returns bool True, if decoded, otherwise false.
              */
-            bool decodeHeader(const uint8_t* data, bool outbound = false);
+            bool decodeHeader(const uint8_t* data);
             /**
              * @brief Internal helper to encode a KMM header.
              * @param data Buffer to encode KMM packet data to.
-             * @param outbound Flag indicating whether the packet is inbound or outbound.
              */
-            void encodeHeader(uint8_t* data, bool outbound = false);
+            void encodeHeader(uint8_t* data);
 
             __PROTECTED_COPY(KMMFrame);
         };

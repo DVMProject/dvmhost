@@ -13,6 +13,7 @@
 #include "common/network/RTPHeader.h"
 #include "common/network/RTPFNEHeader.h"
 #include "common/network/json/json.h"
+#include "common/p25/kmm/KMMFactory.h"
 #include "common/Log.h"
 #include "common/Utils.h"
 #include "network/Network.h"
@@ -74,7 +75,8 @@ Network::Network(const std::string& address, uint16_t port, uint16_t localPort, 
     m_promiscuousPeer(false),
     m_dmrInCallCallback(nullptr),
     m_p25InCallCallback(nullptr),
-    m_nxdnInCallCallback(nullptr)
+    m_nxdnInCallCallback(nullptr),
+    m_keyRespCallback(nullptr)
 {
     assert(!address.empty());
     assert(port > 0U);
@@ -588,6 +590,44 @@ void Network::clock(uint32_t ms)
                 }
                 else {
                     Utils::dump("unknown protocol opcode from the master", buffer.get(), length);
+                }
+            }
+            break;
+
+        case NET_FUNC::KEY_RSP:                                                                     // Enc. Key Response
+            {
+                if (m_enabled) {
+                    using namespace p25::kmm;
+
+                    std::unique_ptr<KMMFrame> frame = KMMFactory::create(buffer.get() + 11U);
+                    if (frame == nullptr) {
+                        LogWarning(LOG_NET, "PEER %u, undecodable KMM frame from master", m_peerId);
+                        break;
+                    }
+
+                    switch (frame->getMessageId()) {
+                    case P25DEF::KMM_MessageType::MODIFY_KEY_CMD:
+                        {
+                            KMMModifyKey* modifyKey = static_cast<KMMModifyKey*>(frame.get());
+                            if (modifyKey->getAlgId() > 0U) {
+                                KeysetItem ks = modifyKey->getKeysetItem();
+                                if (ks.keys().size() > 0U) {
+                                    // fetch first key (a master response should never really send back more then one key)
+                                    KeyItem ki = ks.keys()[0];
+                                    LogMessage(LOG_NET, "PEER %u, master reported enc. key, algId = $%02X, kID = $%04X", m_peerId,
+                                        ks.algId(), ki.kId());
+
+                                    if (m_keyRespCallback != nullptr) {
+                                        m_keyRespCallback(ki, ks.algId(), ks.keyLength());
+                                    }
+                                }
+                            }
+                        }
+                        break;
+
+                    default:
+                        break;
+                    }
                 }
             }
             break;

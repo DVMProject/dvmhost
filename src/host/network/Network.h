@@ -25,6 +25,7 @@
 #include "common/network/BaseNetwork.h"
 #include "common/lookups/RadioIdLookup.h"
 #include "common/lookups/TalkgroupRulesLookup.h"
+#include "common/p25/kmm/KeysetItem.h"
 
 #include <string>
 #include <cstdint>
@@ -165,6 +166,12 @@ namespace network
          */
         void setNXDNICCCallback(std::function<void(NET_ICC::ENUM, uint32_t)>&& callback) { m_nxdnInCallCallback = callback; }
 
+        /**
+         * @brief Helper to set the enc. key response callback.
+         * @param callback 
+         */
+        void setKeyResponseCallback(std::function<void(p25::kmm::KeyItem, uint8_t, uint8_t)>&& callback) { m_keyRespCallback = callback; }
+
     public:
         /**
          * @brief Last received RTP sequence number.
@@ -229,6 +236,8 @@ namespace network
         std::function<void(NET_ICC::ENUM command, uint32_t dstId, uint8_t slotNo)> m_dmrInCallCallback;
         std::function<void(NET_ICC::ENUM command, uint32_t dstId)> m_p25InCallCallback;
         std::function<void(NET_ICC::ENUM command, uint32_t dstId)> m_nxdnInCallCallback;
+
+        std::function<void(p25::kmm::KeyItem ki, uint8_t algId, uint8_t keyLength)> m_keyRespCallback;
 
         /**
          * @brief User overrideable handler that allows user code to process network packets not handled by this class.

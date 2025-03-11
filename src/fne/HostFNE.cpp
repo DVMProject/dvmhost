@@ -573,7 +573,7 @@ bool HostFNE::createMasterNetwork()
         parrotDelay, parrotGrantDemand, m_allowActivityTransfer, m_allowDiagnosticTransfer, m_pingTime, m_updateLookupTime);
     m_network->setOptions(masterConf, true);
 
-    m_network->setLookups(m_ridLookup, m_tidLookup, m_peerListLookup);
+    m_network->setLookups(m_ridLookup, m_tidLookup, m_peerListLookup, m_cryptoLookup);
 
     if (m_RESTAPI != nullptr) {
         m_RESTAPI->setNetwork(m_network);

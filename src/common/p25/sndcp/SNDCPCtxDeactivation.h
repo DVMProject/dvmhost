@@ -46,12 +46,12 @@ namespace p25
              * @param[in] data Buffer containing SNDCP packet data to decode.
              * @returns bool True, if decoded, otherwise false.
              */
-            bool decode(const uint8_t* data);
+            bool decode(const uint8_t* data) override;
             /**
              * @brief Encode a SNDCP context deactivation packet.
              * @param[out] data Buffer to encode SNDCP packet data to.
              */
-            void encode(uint8_t* data);
+            void encode(uint8_t* data) override;
 
         public:
             /**

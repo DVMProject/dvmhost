@@ -32,6 +32,8 @@ KMMModifyKey::KMMModifyKey() : KMMFrame(),
     m_miSet(false),
     m_mi(nullptr)
 {
+    m_messageId = KMM_MessageType::MODIFY_KEY_CMD;
+
     m_mi = new uint8_t[MI_LENGTH_BYTES];
     ::memset(m_mi, 0x00U, MI_LENGTH_BYTES);
 }
@@ -46,7 +48,7 @@ KMMModifyKey::~KMMModifyKey()
     }
 }
 
-/* Gets the byte length of this KMMFrame. */
+/* Gets the byte length of this KMMModifyKey. */
 
 uint32_t KMMModifyKey::length() const
 {
@@ -64,39 +66,43 @@ bool KMMModifyKey::decode(const uint8_t* data)
 {
     assert(data != nullptr);
 
-    KMMFrame::decodeHeader(data, false);
+    KMMFrame::decodeHeader(data);
 
     m_decryptInfoFmt = data[10U];                               // Decryption Instruction Format
     m_algId = data[11U];                                        // Algorithm ID
-    m_kId = data[12U];                                          // Key ID
+    m_kId = __GET_UINT16B(data, 12U);                           // Key ID
 
     uint16_t offset = 0U;
     if (m_decryptInfoFmt == KMM_DECRYPT_INSTRUCT_MI) {
         ::memset(m_mi, 0x00U, MI_LENGTH_BYTES);
-        ::memcpy(m_mi, data + 13U, MI_LENGTH_BYTES);
+        ::memcpy(m_mi, data + 14U, MI_LENGTH_BYTES);
         offset += 9U;
     }
 
-    m_keysetItem.keysetId(data[13U + offset]);
-    m_keysetItem.algId(data[14U + offset]);
-    m_keysetItem.keyLength(data[15U + offset]);
+    m_keysetItem.keysetId(data[14U + offset]);
+    m_keysetItem.algId(data[15U + offset]);
+    m_keysetItem.keyLength(data[16U + offset]);
 
-    uint8_t keyCount = data[16U + offset];
+    uint8_t keyCount = data[17U + offset];
     for (uint8_t i = 0U; i < keyCount; i++) {
-        KeyItem* key = new KeyItem();
+        KeyItem key = KeyItem();
 
         UInt8Array __keyPayload = std::make_unique<uint8_t[]>(m_keysetItem.keyLength());
         uint8_t* keyPayload = __keyPayload.get();
 
-        uint8_t keyFormat = data[17U + offset];
+        uint8_t keyFormat = data[18U + offset];
         uint8_t keyNameLen = keyFormat & 0x1FU;
 
-        key->keyFormat(keyFormat & 0xE0U);
-        key->sln(data[18U + offset]);
-        key->kId(data[19U + offset]);
+        key.keyFormat(keyFormat & 0xE0U);
 
-        ::memcpy(keyPayload, data + (20U + offset), m_keysetItem.keyLength());
-        key->setKey(keyPayload, m_keysetItem.keyLength());
+        uint16_t sln = __GET_UINT16B(data, 19U + offset);
+        key.sln(sln);
+
+        uint16_t kId = __GET_UINT16B(data, 21U + offset);
+        key.kId(kId);
+
+        ::memcpy(keyPayload, data + (23U + offset), m_keysetItem.keyLength());
+        key.setKey(keyPayload, m_keysetItem.keyLength());
 
         m_keysetItem.push_back(key);
 
@@ -111,8 +117,9 @@ bool KMMModifyKey::decode(const uint8_t* data)
 void KMMModifyKey::encode(uint8_t* data)
 {
     assert(data != nullptr);
+    m_messageLength = length();
 
-    KMMFrame::encodeHeader(data, true);
+    KMMFrame::encodeHeader(data);
 
     if (!m_miSet && m_decryptInfoFmt == KMM_DECRYPT_INSTRUCT_MI) {
         m_decryptInfoFmt = KMM_DECRYPT_INSTRUCT_NONE;
@@ -120,31 +127,31 @@ void KMMModifyKey::encode(uint8_t* data)
 
     data[10U] = m_decryptInfoFmt;                               // Decryption Instruction Format
     data[11U] = m_algId;                                        // Algorithm ID
-    data[12U] = m_kId;                                          // Key ID
+    __SET_UINT16B(m_kId, data, 12U);                            // Key ID
 
     uint16_t offset = 0U;
     if (m_decryptInfoFmt == KMM_DECRYPT_INSTRUCT_MI) {
-        ::memcpy(data + 13U, m_mi, MI_LENGTH_BYTES);
+        ::memcpy(data + 14U, m_mi, MI_LENGTH_BYTES);
         offset += 9U;
     }
 
-    data[13U + offset] = m_keysetItem.keysetId();
-    data[14U + offset] = m_keysetItem.algId();
-    data[15U + offset] = m_keysetItem.keyLength();
+    data[14U + offset] = m_keysetItem.keysetId();
+    data[15U + offset] = m_keysetItem.algId();
+    data[16U + offset] = m_keysetItem.keyLength();
 
     uint8_t keyCount = m_keysetItem.keys().size();
-    data[16U + offset] = keyCount;
+    data[17U + offset] = keyCount;
     for (auto key : m_keysetItem.keys()) {
-        uint8_t keyNameLen = key->keyFormat() & 0x1FU;
-        data[17U + offset] = key->keyFormat();
-        data[18U + offset] = key->sln();
-        data[19U + offset] = key->kId();
+        uint8_t keyNameLen = key.keyFormat() & 0x1FU;
+        data[18U + offset] = key.keyFormat();
+        __SET_UINT16B(key.sln(), data, 19U + offset);
+        __SET_UINT16B(key.kId(), data, 21U + offset);
 
         UInt8Array __keyPayload = std::make_unique<uint8_t[]>(m_keysetItem.keyLength());
         uint8_t* keyPayload = __keyPayload.get();
-        key->getKey(keyPayload);
+        key.getKey(keyPayload);
 
-        ::memcpy(data + (20U + offset), keyPayload, m_keysetItem.keyLength());
+        ::memcpy(data + (23U + offset), keyPayload, m_keysetItem.keyLength());
 
         offset += 5U + keyNameLen + m_keysetItem.keyLength();
     }

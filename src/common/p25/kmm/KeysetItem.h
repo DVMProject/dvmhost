@@ -25,6 +25,19 @@ namespace p25
     namespace kmm
     {
         // ---------------------------------------------------------------------------
+        //  Constants
+        // ---------------------------------------------------------------------------
+
+        /**
+         * @addtogroup p25_kmm
+         * @{
+         */
+
+         const uint8_t MAX_ENC_KEY_LENGTH_BYTES = 32U;
+
+        /** @} */
+
+        // ---------------------------------------------------------------------------
         //  Class Declaration
         // ---------------------------------------------------------------------------
 
@@ -42,19 +55,9 @@ namespace p25
                 m_sln(0U),
                 m_kId(0U),
                 m_keyLength(0U),
-                m_keyMaterial(nullptr)
+                m_keyMaterial()
             {
-                /* stub */
-            }
-            /**
-             * @brief Finalizes a instance of the KeyItem class.
-             */
-            ~KeyItem() 
-            {
-                if (m_keyMaterial != nullptr) {
-                    delete[] m_keyMaterial;
-                    m_keyMaterial = nullptr;
-                }
+                ::memset(m_keyMaterial, 0x00U, MAX_ENC_KEY_LENGTH_BYTES);
             }
 
             /**
@@ -69,11 +72,8 @@ namespace p25
                     m_kId = data.m_kId;
 
                     if (data.m_keyLength > 0U) {
-                        if (m_keyMaterial != nullptr) {
-                            delete[] m_keyMaterial;
-                        }
+                        ::memset(m_keyMaterial, 0x00U, MAX_ENC_KEY_LENGTH_BYTES);
 
-                        m_keyMaterial = new uint8_t[data.m_keyLength];
                         m_keyLength = data.m_keyLength;
                         ::memcpy(m_keyMaterial, data.m_keyMaterial, data.m_keyLength);
                     }
@@ -91,6 +91,10 @@ namespace p25
             {
                 assert(key != nullptr);
                 m_keyLength = keyLength;
+                if (m_keyMaterial == nullptr) {
+                    ::memset(m_keyMaterial, 0x00U, MAX_ENC_KEY_LENGTH_BYTES);
+                    ::memset(m_keyMaterial, 0x00U, m_keyLength);
+                }
                 ::memcpy(m_keyMaterial, key, keyLength);
             }
 
@@ -120,7 +124,7 @@ namespace p25
 
         private:
             uint32_t m_keyLength;
-            uint8_t* m_keyMaterial;
+            uint8_t m_keyMaterial[MAX_ENC_KEY_LENGTH_BYTES];
         };
 
         // ---------------------------------------------------------------------------
@@ -144,15 +148,6 @@ namespace p25
             {
                 /* stub */
             }
-            /**
-             * @brief Finalizes a instance of the KeysetItem class.
-             */
-            ~KeysetItem() 
-            {
-                for (auto key : m_keys) {
-                    delete key;
-                }
-            }
 
             /**
              * @brief Equals operator. Copies this KeysetItem to another KeysetItem.
@@ -165,13 +160,9 @@ namespace p25
                     m_algId = data.m_algId;
                     m_keyLength = data.m_keyLength;
 
-                    for (auto key : m_keys) {
-                        delete key;
-                    }
                     m_keys.clear();
-                    
                     for (auto key : data.m_keys) {
-                        KeyItem* copy = key;
+                        KeyItem copy = key;
                         m_keys.push_back(copy);
                     }
                 }
@@ -198,7 +189,7 @@ namespace p25
              * @brief Add a key to the key list.
              * @param key 
              */
-            void push_back(KeyItem* key)
+            void push_back(KeyItem key)
             {
                 m_keys.push_back(key);
             }
@@ -220,7 +211,7 @@ namespace p25
             /**
              * @brief List of keys.
              */
-            __PROPERTY_PLAIN(std::vector<KeyItem*>, keys);
+            __PROPERTY_PLAIN(std::vector<KeyItem>, keys);
         };
     } // namespace kmm
 } // namespace p25

@@ -10,6 +10,7 @@
 #include "fne/Defines.h"
 #include "common/edac/SHA256.h"
 #include "common/network/json/json.h"
+#include "common/p25/kmm/KMMFactory.h"
 #include "common/zlib/zlib.h"
 #include "common/Log.h"
 #include "common/Utils.h"
@@ -209,13 +210,15 @@ void FNENetwork::setOptions(yaml::Node& conf, bool printOptions)
     }
 }
 
-/* Sets the instances of the Radio ID, Talkgroup Rules, and Peer List lookup tables. */
+/* Sets the instances of the Radio ID, Talkgroup ID Peer List, and Crypto lookup tables. */
 
-void FNENetwork::setLookups(lookups::RadioIdLookup* ridLookup, lookups::TalkgroupRulesLookup* tidLookup, lookups::PeerListLookup* peerListLookup)
+void FNENetwork::setLookups(lookups::RadioIdLookup* ridLookup, lookups::TalkgroupRulesLookup* tidLookup, lookups::PeerListLookup* peerListLookup,
+    CryptoContainer* cryptoLookup)
 {
     m_ridLookup = ridLookup;
     m_tidLookup = tidLookup;
     m_peerListLookup = peerListLookup;
+    m_cryptoLookup = cryptoLookup;
 }
 
 /* Sets endpoint preshared encryption key. */
@@ -1061,10 +1064,85 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                     }
                 }
                 break;
-            case NET_FUNC::INCALL_CTRL:
+
+            case NET_FUNC::INCALL_CTRL:                                                                 // In-Call Control
                 {
                     // FNEs are god-like entities, and we don't recognize the authority of foreign FNEs telling us what
                     // to do...
+                }
+                break;
+
+            case NET_FUNC::KEY_REQ:                                                                     // Enc. Key Request
+                {
+                    using namespace p25::defines;
+                    using namespace p25::kmm;
+
+                    if (peerId > 0 && (network->m_peers.find(peerId) != network->m_peers.end())) {
+                        FNEPeerConnection* connection = network->m_peers[peerId];
+                        if (connection != nullptr) {
+                            std::string ip = udp::Socket::address(req->address);
+
+                            // validate peer (simple validation really)
+                            if (connection->connected() && connection->address() == ip) {
+                                std::unique_ptr<KMMFrame> frame = KMMFactory::create(req->buffer + 11U);
+                                if (frame == nullptr) {
+                                    LogWarning(LOG_NET, "PEER %u (%s), undecodable KMM frame from peer", peerId, connection->identity().c_str());
+                                    break;
+                                }
+
+                                switch (frame->getMessageId()) {
+                                case P25DEF::KMM_MessageType::MODIFY_KEY_CMD:
+                                    {
+                                        KMMModifyKey* modifyKey = static_cast<KMMModifyKey*>(frame.get());
+                                        if (modifyKey->getAlgId() > 0U && modifyKey->getKId() > 0U) {
+                                            LogMessage(LOG_NET, "PEER %u (%s) requested enc. key, algId = $%02X, kID = $%04X", peerId, connection->identity().c_str(),
+                                                modifyKey->getAlgId(), modifyKey->getKId());
+                                            ::KeyItem keyItem = network->m_cryptoLookup->find(modifyKey->getKId());
+                                            if (!keyItem.isInvalid()) {
+                                                uint8_t buffer[DATA_PACKET_LENGTH];
+                                                ::memset(buffer, 0x00U, DATA_PACKET_LENGTH);
+
+                                                KMMModifyKey modifyKeyRsp = KMMModifyKey();
+                                                modifyKeyRsp.setDecryptInfoFmt(KMM_DECRYPT_INSTRUCT_NONE);
+                                                modifyKeyRsp.setAlgId(modifyKey->getAlgId());
+                                                modifyKeyRsp.setKId(0U);
+
+                                                KeysetItem ks = KeysetItem();
+                                                ks.keysetId(1U);
+                                                ks.algId(modifyKey->getAlgId());
+                                                ks.keyLength(P25DEF::MAX_ENC_KEY_LENGTH_BYTES); // bryanb: this --- will be problematic and should be properly calculated
+
+                                                p25::kmm::KeyItem ki = p25::kmm::KeyItem();
+                                                ki.keyFormat(KEY_FORMAT_TEK);
+                                                ki.kId((uint16_t)keyItem.kId());
+                                                ki.sln((uint16_t)keyItem.sln());
+
+                                                uint8_t key[P25DEF::MAX_ENC_KEY_LENGTH_BYTES];
+                                                ::memset(key, 0x00U, P25DEF::MAX_ENC_KEY_LENGTH_BYTES);
+                                                keyItem.getKey(key);
+                                                ki.setKey(key, P25DEF::MAX_ENC_KEY_LENGTH_BYTES); // bryanb: this --- will be problematic and should be properly calculated
+
+                                                ks.push_back(ki);
+                                                modifyKeyRsp.setKeysetItem(ks);
+
+                                                modifyKeyRsp.encode(buffer + 11U);
+
+                                                network->writePeer(peerId, { NET_FUNC::KEY_RSP, NET_SUBFUNC::NOP }, buffer, modifyKeyRsp.length() + 11U, 
+                                                    RTP_END_OF_CALL_SEQ, network->createStreamId(), false, false, true);
+                                            }
+                                        }
+                                    }
+                                    break;
+
+                                default:
+                                    break;
+                                }
+                            }
+                            else {
+                                network->writePeerNAK(peerId, streamId, TAG_REPEATER_KEY, NET_CONN_NAK_FNE_UNAUTHORIZED);
+                            }
+                        }
+                    }
                 }
                 break;
 

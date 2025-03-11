@@ -33,7 +33,7 @@ KMMFrame::KMMFrame(const KMMFrame& data) : KMMFrame()
 
 KMMFrame::KMMFrame() :
     m_messageId(KMM_MessageType::NULL_CMD),
-    m_messageLength(7U),
+    m_messageLength(KMM_FRAME_LENGTH),
     m_respKind(KMM_ResponseKind::NONE),
     m_complete(true),
     m_mfMessageNumber(0U),
@@ -50,20 +50,20 @@ KMMFrame::~KMMFrame() = default;
 //  Protected Class Members
 // ---------------------------------------------------------------------------
 
-/* Internal helper to decode a SNDCP header. */
+/* Internal helper to decode a KMM header. */
 
-bool KMMFrame::decodeHeader(const uint8_t* data, bool outbound)
+bool KMMFrame::decodeHeader(const uint8_t* data)
 {
     assert(data != nullptr);
 
     m_messageId = data[0U];                                                         // Message ID
     m_messageLength = __GET_UINT16B(data, 1U);                                      // Message Length
 
-    m_respKind = (data[2U] >> 6U) & 0x03U;                                          // Response Kind
-    m_mfMessageNumber = (data[2U] >> 4U) & 0x03U;                                   // Message Number
-    m_mfMac = (data[2U] >> 2U) & 0x03U;                                             // MAC
+    m_respKind = (data[3U] >> 6U) & 0x03U;                                          // Response Kind
+    m_mfMessageNumber = (data[3U] >> 4U) & 0x03U;                                   // Message Number
+    m_mfMac = (data[3U] >> 2U) & 0x03U;                                             // MAC
 
-    bool done = (data[2U] & 0x01U) == 0x01U;                                        // Done Flag
+    bool done = (data[3U] & 0x01U) == 0x01U;                                        // Done Flag
     if (!done)
         m_complete = true;
     else
@@ -75,16 +75,16 @@ bool KMMFrame::decodeHeader(const uint8_t* data, bool outbound)
     return true;
 }
 
-/* Internal helper to encode a SNDCP header. */
+/* Internal helper to encode a KMM header. */
 
-void KMMFrame::encodeHeader(uint8_t* data, bool outbound)
+void KMMFrame::encodeHeader(uint8_t* data)
 {
     assert(data != nullptr);
 
     data[0U] = m_messageId;                                                         // Message ID
-    __SET_UINT16B(m_messageLength, data, 2U);                                       // Message Length
+    __SET_UINT16B(m_messageLength, data, 1U);                                       // Message Length
 
-    data[2U] = ((m_respKind & 0x03U) << 6U) +                                       // Response Kind
+    data[3U] = ((m_respKind & 0x03U) << 6U) +                                       // Response Kind
         ((m_mfMessageNumber & 0x03U) << 4U) +                                       // Message Number
         ((m_mfMac & 0x03U) << 2U) +                                                 // MAC
         ((!m_complete) ? 0x01U : 0x00U);                                            // Done Flag
