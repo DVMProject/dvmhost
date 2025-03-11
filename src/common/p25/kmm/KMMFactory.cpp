@@ -58,7 +58,7 @@ std::unique_ptr<KMMFrame> KMMFactory::create(const uint8_t* data)
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/* Decode a SNDCP packet. */
+/* Decode a KMM frame. */
 
 std::unique_ptr<KMMFrame> KMMFactory::decode(KMMFrame* packet, const uint8_t* data)
 {
