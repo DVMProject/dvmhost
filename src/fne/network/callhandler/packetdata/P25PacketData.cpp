@@ -8,6 +8,7 @@
  *
  */
 #include "fne/Defines.h"
+#include "common/p25/kmm/KMMFactory.h"
 #include "common/p25/sndcp/SNDCPFactory.h"
 #include "common/p25/Sync.h"
 #include "common/edac/CRC.h"
@@ -25,6 +26,7 @@ using namespace network::callhandler;
 using namespace network::callhandler::packetdata;
 using namespace p25;
 using namespace p25::defines;
+using namespace p25::kmm;
 using namespace p25::sndcp;
 
 #include <cassert>
@@ -658,6 +660,14 @@ void P25PacketData::dispatch(uint32_t peerId)
         processSNDCPControl(status);
     }
     break;
+    case PDUSAP::UNENC_KMM:
+    case PDUSAP::ENC_KMM:
+    {
+        LogMessage(LOG_NET, P25_PDU_STR ", KMM (Key Management Message), blocksToFollow = %u",
+            status->header.getBlocksToFollow());
+
+        processKMM(status);
+    }
     default:
         break;
     }
@@ -791,6 +801,60 @@ bool P25PacketData::processSNDCPControl(RxStatus* status)
                 isp->getDeactType());
 
             m_arpTable.erase(llId);
+        }
+        break;
+
+        default:
+        break;
+    } // switch (packet->getPDUType())
+
+    return true;
+}
+
+/* Helper used to process KMM frames from PDU data. */
+
+bool P25PacketData::processKMM(RxStatus* status)
+{
+    std::unique_ptr<KMMFrame> frame = KMMFactory::create(status->pduUserData);
+    if (frame == nullptr) {
+        LogWarning(LOG_NET, P25_PDU_STR ", undecodable KMM packet");
+        return false;
+    }
+
+    uint32_t llId = status->header.getLLId();
+
+    switch (frame->getMessageId()) {
+        case KMM_MessageType::HELLO:
+        {
+            KMMHello* kmm = static_cast<KMMHello*>(frame.get());
+            LogMessage(LOG_NET, P25_PDU_STR ", KMM Hello, llId = %u, flag = $%02X", llId,
+                kmm->getFlag());
+
+            // respond with No-Service
+            // assemble a P25 PDU frame header for transport...
+            data::DataHeader dataHeader = data::DataHeader();
+            dataHeader.setFormat(PDUFormatType::UNCONFIRMED);
+            dataHeader.setMFId(MFG_STANDARD);
+            dataHeader.setAckNeeded(false);
+            dataHeader.setOutbound(true);
+            dataHeader.setSAP(PDUSAP::UNENC_KMM);
+            dataHeader.setLLId(WUID_ALL);
+            dataHeader.setBlocksToFollow(1U);
+
+            dataHeader.calculateLength(KMM_NO_SERVICE_LENGTH);
+            uint32_t pduLength = dataHeader.getPDULength();
+
+            UInt8Array __pduUserData = std::make_unique<uint8_t[]>(pduLength);
+            uint8_t* pduUserData = __pduUserData.get();
+            ::memset(pduUserData, 0x00U, pduLength);
+
+            uint8_t buffer[KMM_NO_SERVICE_LENGTH];
+            KMMNoService outKmm = KMMNoService();
+            outKmm.encode(buffer);
+
+            ::memcpy(pduUserData, buffer, KMM_NO_SERVICE_LENGTH);
+
+            dispatchUserFrameToFNE(dataHeader, false, pduUserData);
         }
         break;
 

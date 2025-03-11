@@ -200,6 +200,13 @@ namespace network
                 bool processSNDCPControl(RxStatus* status);
 
                 /**
+                 * @brief Helper used to process KMM frames from PDU data.
+                 * @param status Instance of the RxStatus class.
+                 * @returns bool True, if KMM data was processed, otherwise false.
+                 */
+                bool processKMM(RxStatus* status);
+
+                /**
                  * @brief Helper write ARP request to the network.
                  * @param addr IP Address.
                  */

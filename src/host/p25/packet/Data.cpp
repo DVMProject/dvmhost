@@ -445,6 +445,15 @@ bool Data::process(uint8_t* data, uint32_t len)
                         processConvDataReg(m_rfPduUserData);
                     }
                     break;
+                    case PDUSAP::UNENC_KMM:
+                    case PDUSAP::ENC_KMM:
+                    {
+                        if (m_verbose) {
+                            LogMessage(LOG_RF, P25_PDU_STR ", KMM (Key Management Message), blocksToFollow = %u",
+                                m_rfDataHeader.getBlocksToFollow());
+                        }
+                    }
+                    break;
                     case PDUSAP::TRUNK_CTRL:
                     {
                         if (m_verbose) {
