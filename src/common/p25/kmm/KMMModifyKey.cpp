@@ -165,6 +165,8 @@ void KMMModifyKey::encode(uint8_t* data)
 
 void KMMModifyKey::copy(const KMMModifyKey& data)
 {
+    KMMFrame::copy(data);
+
     m_decryptInfoFmt = data.m_decryptInfoFmt;
     m_algId = data.m_algId;
     m_kId = data.m_kId;

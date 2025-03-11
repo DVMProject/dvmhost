@@ -68,5 +68,7 @@ void KMMHello::encode(uint8_t* data)
 
 void KMMHello::copy(const KMMHello& data)
 {
+    KMMFrame::copy(data);
+
     m_flag = data.m_flag;
 }
