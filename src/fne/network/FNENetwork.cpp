@@ -1099,6 +1099,14 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                                 modifyKey->getAlgId(), modifyKey->getKId());
                                             ::KeyItem keyItem = network->m_cryptoLookup->find(modifyKey->getKId());
                                             if (!keyItem.isInvalid()) {
+                                                uint8_t key[P25DEF::MAX_ENC_KEY_LENGTH_BYTES];
+                                                ::memset(key, 0x00U, P25DEF::MAX_ENC_KEY_LENGTH_BYTES);
+                                                uint8_t keyLength = keyItem.getKey(key);
+
+                                                LogDebugEx(LOG_HOST, "FNENetwork::threadedNetworkRx()", "keyLength = %u", keyLength);
+                                                Utils::dump(1U, "Key", key, P25DEF::MAX_ENC_KEY_LENGTH_BYTES);
+
+                                                // build response buffer
                                                 uint8_t buffer[DATA_PACKET_LENGTH];
                                                 ::memset(buffer, 0x00U, DATA_PACKET_LENGTH);
 
@@ -1110,17 +1118,13 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                                 KeysetItem ks = KeysetItem();
                                                 ks.keysetId(1U);
                                                 ks.algId(modifyKey->getAlgId());
-                                                ks.keyLength(P25DEF::MAX_ENC_KEY_LENGTH_BYTES); // bryanb: this --- will be problematic and should be properly calculated
+                                                ks.keyLength(keyLength);
 
                                                 p25::kmm::KeyItem ki = p25::kmm::KeyItem();
                                                 ki.keyFormat(KEY_FORMAT_TEK);
                                                 ki.kId((uint16_t)keyItem.kId());
                                                 ki.sln((uint16_t)keyItem.sln());
-
-                                                uint8_t key[P25DEF::MAX_ENC_KEY_LENGTH_BYTES];
-                                                ::memset(key, 0x00U, P25DEF::MAX_ENC_KEY_LENGTH_BYTES);
-                                                keyItem.getKey(key);
-                                                ki.setKey(key, P25DEF::MAX_ENC_KEY_LENGTH_BYTES); // bryanb: this --- will be problematic and should be properly calculated
+                                                ki.setKey(key, keyLength);
 
                                                 ks.push_back(ki);
                                                 modifyKeyRsp.setKeysetItem(ks);

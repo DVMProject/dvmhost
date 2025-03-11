@@ -91,21 +91,31 @@ public:
     /**
      * @brief Gets the encryption key.
      * @param[out] key Buffer containing the key.
+     * @returns uint8_t Length of encryption key.
      */
-    void getKey(uint8_t* key) const
+    uint8_t getKey(uint8_t* key) const
     {
         assert(key != nullptr);
 
         const char* rawKey = m_keyMaterial.c_str();
         ::memset(key, 0x00U, 32U);
-    
+
+        uint8_t len = 32U, charPos = 0U;
         for (uint8_t i = 0U; i < 32U; i++) {
             char t[4] = {rawKey[0], rawKey[1], 0};
+
             key[i] = (uint8_t)::strtoul(t, NULL, 16);
-            if (i + 2U > m_keyMaterial.size())
+
+            if (charPos + 2U > m_keyMaterial.size()) {
+                len = i;
                 break;
+            }
+
             rawKey += 2 * sizeof(char);
+            charPos += 2U;
         }
+
+        return len;
     }
 
 public:
