@@ -23,6 +23,9 @@
 #include "common/p25/kmm/KMMFrame.h"
 #include "common/p25/kmm/KMMHello.h"
 #include "common/p25/kmm/KMMInventoryCommand.h"
+#include "common/p25/kmm/KMMInventoryResponseHeader.h"
+#include "common/p25/kmm/KMMInventoryResponseListKeysets.h"
+#include "common/p25/kmm/KMMInventoryResponseListKeyIDs.h"
 #include "common/p25/kmm/KMMModifyKey.h"
 
 namespace p25

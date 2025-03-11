@@ -44,6 +44,32 @@ std::unique_ptr<KMMFrame> KMMFactory::create(const uint8_t* data)
         return decode(new KMMHello(), data);
     case KMM_MessageType::INVENTORY_CMD:
         return decode(new KMMInventoryCommand(), data);
+    case KMM_MessageType::INVENTORY_RSP:
+        {
+            std::unique_ptr<KMMFrame> frame = decode(new KMMInventoryResponseHeader(), data);
+            if (frame == nullptr) {
+                break;
+            }
+
+            KMMInventoryResponseHeader* header = static_cast<KMMInventoryResponseHeader*>(frame.get());
+            if (header == nullptr) {
+                break;
+            }
+
+            switch (header->getInventoryType()) {
+            case KMM_InventoryType::LIST_ACTIVE_KEYSET_IDS:
+            case KMM_InventoryType::LIST_INACTIVE_KEYSET_IDS:
+                return decode(new KMMInventoryResponseListKeysets(), data);
+            case KMM_InventoryType::LIST_ACTIVE_KEY_IDS:
+            case KMM_InventoryType::LIST_INACTIVE_KEY_IDS:
+                return decode(new KMMInventoryResponseListKeyIDs(), data);
+
+            default:
+                LogError(LOG_P25, "KMMFactory::create(), unknown KMM inventory type value, inventoryType = $%02X", header->getInventoryType());
+                break;
+            }
+        }
+        break;
     case KMM_MessageType::MODIFY_KEY_CMD:
         return decode(new KMMModifyKey(), data);
     default:
