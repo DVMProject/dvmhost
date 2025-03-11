@@ -1075,6 +1075,7 @@ bool TagP25Data::validate(uint32_t peerId, lc::LC& control, DUID::E duid, const 
     //LogDebug(LOG_NET, "P25, duid = $%02X, mfId = $%02X, lco = $%02X, srcId = %u, dstId = %u", duid, control.getMFId(), control.getLCO(), control.getSrcId(), control.getDstId());
 
     // is the source ID a blacklisted ID?
+    bool rejectUnknownBadCall = false;
     if (!skipRidCheck) {
         lookups::RadioId rid = m_network->m_ridLookup->find(control.getSrcId());
         if (!rid.radioDefault()) {
@@ -1101,24 +1102,7 @@ bool TagP25Data::validate(uint32_t peerId, lc::LC& control, DUID::E duid, const 
             // if this is a default radio -- and we are rejecting undefined radios
             // report call error
             if (m_network->m_rejectUnknownRID) {
-                // report error event to InfluxDB
-                if (m_network->m_enableInfluxDB) {
-                    influxdb::QueryBuilder()
-                        .meas("call_error_event")
-                            .tag("peerId", std::to_string(peerId))
-                            .tag("streamId", std::to_string(streamId))
-                            .tag("srcId", std::to_string(control.getSrcId()))
-                            .tag("dstId", std::to_string(control.getDstId()))
-                                .field("message", INFLUXDB_ERRSTR_DISABLED_SRC_RID)
-                            .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
-                        .request(m_network->m_influxServer);
-                }
-
-                LogWarning(LOG_NET, "P25, illegal/unknown RID attempted access, srcId = %u, dstId = %u", control.getSrcId(), control.getDstId());
-
-                // report In-Call Control to the peer sending traffic
-                m_network->writePeerICC(peerId, streamId, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25, NET_ICC::REJECT_TRAFFIC, control.getDstId());
-                return false;
+                rejectUnknownBadCall = true;
             }
         }
     }
@@ -1185,6 +1169,9 @@ bool TagP25Data::validate(uint32_t peerId, lc::LC& control, DUID::E duid, const 
 
     // always validate a TSDU or PDU if the source is valid
     if (duid == DUID::TSDU) {
+        if (rejectUnknownBadCall)
+            return false;
+
         if (tsbk != nullptr) {
             // handle standard P25 reference opcodes
             switch (tsbk->getLCO()) {
@@ -1256,7 +1243,30 @@ bool TagP25Data::validate(uint32_t peerId, lc::LC& control, DUID::E duid, const 
         auto it = std::find(alwaysSend.begin(), alwaysSend.end(), peerId);
         if (it != alwaysSend.end()) {
             isAlwaysPeer = true; // skip any following checks and always send traffic
+            rejectUnknownBadCall = false;
         }
+    }
+
+    // fail call if the reject flag is set
+    if (rejectUnknownBadCall) {
+        // report error event to InfluxDB
+        if (m_network->m_enableInfluxDB) {
+            influxdb::QueryBuilder()
+                .meas("call_error_event")
+                    .tag("peerId", std::to_string(peerId))
+                    .tag("streamId", std::to_string(streamId))
+                    .tag("srcId", std::to_string(control.getSrcId()))
+                    .tag("dstId", std::to_string(control.getDstId()))
+                        .field("message", INFLUXDB_ERRSTR_DISABLED_SRC_RID)
+                    .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
+                .request(m_network->m_influxServer);
+        }
+
+        LogWarning(LOG_NET, "P25, illegal/unknown RID attempted access, srcId = %u, dstId = %u", control.getSrcId(), control.getDstId());
+
+        // report In-Call Control to the peer sending traffic
+        m_network->writePeerICC(peerId, streamId, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25, NET_ICC::REJECT_TRAFFIC, control.getDstId());
+        return false;
     }
 
     // is the TGID active?
