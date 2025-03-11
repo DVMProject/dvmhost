@@ -439,9 +439,15 @@ namespace p25
                 MODIFY_KEY_CMD = 0x13U,                 //! Modify Key Command
 
                 NAK = 0x16U,                            //! Negative Ack
+                NO_SERVICE = 0x17U,                     //! No Service
 
                 ZEROIZE_CMD = 0x21U,                    //! Zeroize Command
                 ZEROIZE_RSP = 0x22U,                    //! Zeroize Response
+
+                DEREG_CMD = 0x23U,                      //! SU Deregistration Command
+                DEREG_RSP = 0x24U,                      //! SU Deregistration Response
+                REG_CMD = 0x25U,                        //! SU Registration Command
+                REG_RSP = 0x26U,                        //! SU Registration Response
             };
         }
 
@@ -485,6 +491,31 @@ namespace p25
             };
         }
 
+        /** @brief KMM Status */
+        namespace KMM_Status {
+            enum : uint8_t {
+                CMD_PERFORMED = 0x00U,                  //! Command Performed
+                CMD_NOT_PERFORMED = 0x01U,              //! Command Was Not Performed
+
+                ITEM_NOT_EXIST = 0x02U,                 //! Item does not exist
+                INVALID_MSG_ID = 0x03U,                 //! Invalid Message ID
+                INVALID_MAC = 0x04U,                    //! Invalid Message Authentication Code
+
+                OUT_OF_MEMORY = 0x05U,                  //! Out of Memory
+                FAILED_TO_DECRYPT = 0x06U,              //! Failed to decrypt message
+
+                INVALID_MSG_NUMBER = 0x07U,             //! Invalid Message Number
+                INVALID_KID = 0x08U,                    //! Invalid Key ID
+                INVALID_ALGID = 0x09U,                  //! Invalid Algorithm ID
+                INVALID_MFID = 0x0AU,                   //! Invalid Manufacturer ID
+
+                MI_ALL_ZERO = 0x0CU,                    //! Message Indicator All Zero
+                KEY_FAIL = 0x0DU,                       //! Key Identified by Alg/KID is Erased
+
+                UNKNOWN = 0xFFU,                        //! Unknown
+            };
+        }
+
         /** @brief KMM Decryption Instruction - None */
         const uint8_t   KMM_DECRYPT_INSTRUCT_NONE = 0x00U;
         /** @brief KMM Decryption Instruction - Message Indicator */
@@ -492,6 +523,8 @@ namespace p25
 
         /** @brief KMM Key Format TEK */
         const uint8_t   KEY_FORMAT_TEK = 0x80U;
+        /** @brief KMM Key Format TEK */
+        const uint8_t   KEY_FORMAT_KEK_EXISTS = 0x40U;
         /** @brief KMM Key Format Delete Key */
         const uint8_t   KEY_FORMAT_DELETE = 0x20U;
 

@@ -8,13 +8,13 @@
  *
  */
 /**
- * @file KMMInventoryResponseHeader.h
+ * @file KMMZeroize.h
  * @ingroup p25_kmm
- * @file KMMInventoryResponseHeader.cpp
+ * @file KMMZeroize.cpp
  * @ingroup p25_kmm
  */
-#if !defined(__P25_KMM__KMM_INVENTORY_RESPONSE_HDR_H__)
-#define  __P25_KMM__KMM_INVENTORY_RESPONSE_HDR_H__
+#if !defined(__P25_KMM__KMM_ZEROIZE_H__)
+#define  __P25_KMM__KMM_ZEROIZE_H__
 
 #include "common/Defines.h"
 #include "common/p25/kmm/KMMFrame.h"
@@ -36,7 +36,7 @@ namespace p25
          * @{
          */
 
-         const uint32_t KMM_INVENTORY_RSP_HDR_LENGTH = KMM_FRAME_LENGTH + 3U;
+         const uint32_t KMM_ZEROIZE_LENGTH = KMM_FRAME_LENGTH;
 
          /** @} */
  
@@ -44,42 +44,33 @@ namespace p25
         //  Class Declaration
         // ---------------------------------------------------------------------------
 
-        class HOST_SW_API KMMInventoryResponseHeader : public KMMFrame {
+        class HOST_SW_API KMMZeroize : public KMMFrame {
         public:
             /**
-             * @brief Initializes a new instance of the KMMInventoryResponseHeader class.
+             * @brief Initializes a new instance of the KMMZeroize class.
              */
-            KMMInventoryResponseHeader();
+            KMMZeroize();
             /**
-             * @brief Finalizes a instance of the KMMInventoryResponseHeader class.
+             * @brief Finalizes a instance of the KMMZeroize class.
              */
-            ~KMMInventoryResponseHeader();
+            ~KMMZeroize();
 
             /**
-             * @brief Decode a KMM inventory response header.
+             * @brief Decode a KMM hello.
              * @param[in] data Buffer containing KMM frame data to decode.
              * @returns bool True, if decoded, otherwise false.
              */
             bool decode(const uint8_t* data) override;
             /**
-             * @brief Encode a KMM inventory reponse header.
+             * @brief Encode a KMM hello.
              * @param[out] data Buffer to encode KMM frame data to.
              */
             void encode(uint8_t* data) override;
 
         public:
-            /**
-             * @brief 
-             */
-            __PROTECTED_PROPERTY(uint8_t, inventoryType, InventoryType);
-            /**
-             * @brief 
-             */
-            __PROTECTED_PROPERTY(uint16_t, numberOfItems, NumberOfItems);
-
-            __PROTECTED_COPY(KMMInventoryResponseHeader);
+            __COPY(KMMZeroize);
         };
     } // namespace kmm
 } // namespace p25
 
-#endif // __P25_KMM__KMM_INVENTORY_RESPONSE_HDR_H__
+#endif // __P25_KMM__KMM_ZEROIZE_H__

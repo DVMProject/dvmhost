@@ -72,6 +72,21 @@ std::unique_ptr<KMMFrame> KMMFactory::create(const uint8_t* data)
         break;
     case KMM_MessageType::MODIFY_KEY_CMD:
         return decode(new KMMModifyKey(), data);
+    case KMM_MessageType::NAK:
+        return decode(new KMMNegativeAck(), data);
+    case KMM_MessageType::NO_SERVICE:
+        return decode(new KMMNoService(), data);
+    case KMM_MessageType::ZEROIZE_CMD:
+    case KMM_MessageType::ZEROIZE_RSP:
+        return decode(new KMMZeroize(), data);
+    case KMM_MessageType::DEREG_CMD:
+        return decode(new KMMDeregistrationCommand(), data);
+    case KMM_MessageType::DEREG_RSP:
+        return decode(new KMMDeregistrationResponse(), data);
+    case KMM_MessageType::REG_CMD:
+        return decode(new KMMRegistrationCommand(), data);
+    case KMM_MessageType::REG_RSP:
+        return decode(new KMMRegistrationResponse(), data);
     default:
         LogError(LOG_P25, "KMMFactory::create(), unknown KMM message ID value, messageId = $%02X", messageId);
         break;

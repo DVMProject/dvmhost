@@ -18,7 +18,6 @@
 
 #include "common/Defines.h"
 #include "common/p25/kmm/KMMFrame.h"
-#include "common/p25/kmm/KeysetItem.h"
 #include "common/Utils.h"
 
 #include <string>

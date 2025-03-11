@@ -21,12 +21,19 @@
 #include "common/p25/kmm/KeysetItem.h"
 
 #include "common/p25/kmm/KMMFrame.h"
+#include "common/p25/kmm/KMMDeregistrationCommand.h"
+#include "common/p25/kmm/KMMDeregistrationResponse.h"
 #include "common/p25/kmm/KMMHello.h"
 #include "common/p25/kmm/KMMInventoryCommand.h"
 #include "common/p25/kmm/KMMInventoryResponseHeader.h"
 #include "common/p25/kmm/KMMInventoryResponseListKeysets.h"
 #include "common/p25/kmm/KMMInventoryResponseListKeyIDs.h"
 #include "common/p25/kmm/KMMModifyKey.h"
+#include "common/p25/kmm/KMMNegativeAck.h"
+#include "common/p25/kmm/KMMNoService.h"
+#include "common/p25/kmm/KMMRegistrationCommand.h"
+#include "common/p25/kmm/KMMRegistrationResponse.h"
+#include "common/p25/kmm/KMMZeroize.h"
 
 namespace p25
 {
