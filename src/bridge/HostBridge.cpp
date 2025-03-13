@@ -1256,13 +1256,19 @@ void HostBridge::processUDPAudio()
             if (m_overrideSrcIdFromUDP) {
                 uint32_t udpSrcId = __GET_UINT32(buffer, pcmLength + 8U);
 
-                // if the UDP source ID now doesn't match the current call ID, reset call states
-                if (m_resetCallForSourceIdChange && (udpSrcId != m_udpSrcId)) {
-                    callEnd(m_udpSrcId, m_dstId);
-                    m_udpDstId = m_dstId;
-                }
+                if (udpSrcId != 0U) {
+                    // if the UDP source ID now doesn't match the current call ID, reset call states
+                    if (m_resetCallForSourceIdChange && (udpSrcId != m_udpSrcId)) {
+                        callEnd(m_udpSrcId, m_dstId);
+                        m_udpDstId = m_dstId;
+                    }
 
-                m_udpSrcId = udpSrcId;
+                    m_udpSrcId = udpSrcId;
+                } else {
+                    if (m_udpSrcId == 0U) {
+                        m_udpSrcId = m_srcId;
+                    }
+                }
             }
         } else {
             m_udpSrcId = m_srcId;
@@ -2555,6 +2561,11 @@ void HostBridge::callEnd(uint32_t srcId, uint32_t dstId)
     if (m_trafficFromUDP) {
         srcId = m_udpSrcId;
         trafficType = UDP_CALL;
+    }
+
+    if (srcId == 0U && !m_audioDetect && !m_dropTime.isRunning()) {
+        LogError(LOG_HOST, "%s, call end, ignoring invalid call end, srcId = %u, dstId = %u", trafficType.c_str(), srcId, dstId);
+        return;
     }
 
     LogMessage(LOG_HOST, "%s, call end, srcId = %u, dstId = %u", trafficType.c_str(), srcId, dstId);
