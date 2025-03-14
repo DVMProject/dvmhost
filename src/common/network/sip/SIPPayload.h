@@ -40,12 +40,7 @@ namespace network
         #define SIP_CANCEL "CANCEL"
         #define SIP_REGISTER "REGISTER"
         #define SIP_OPTIONS "OPTIONS"
-        #define SIP_SUBSCRIBE "SUBSCRIBE"
-        #define SIP_NOTIFY "NOTIFY"
-        #define SIP_PUBLISH "PUBLISH"
-        #define SIP_INFO "INFO"
         #define SIP_MESSAGE "MESSAGE"
-        #define SIP_UPDATE "UPDATE"
 
         // ---------------------------------------------------------------------------
         //  Structure Declaration
