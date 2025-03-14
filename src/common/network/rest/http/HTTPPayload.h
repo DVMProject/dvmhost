@@ -14,8 +14,8 @@
  * @file HTTPPayload.cpp
  * @ingroup http
  */
-#if !defined(__REST_HTTP__HTTP_REPLY_H__)
-#define __REST_HTTP__HTTP_REPLY_H__
+#if !defined(__REST_HTTP__HTTP_PAYLOAD_H__)
+#define __REST_HTTP__HTTP_PAYLOAD_H__
 
 #include "common/Defines.h"
 #include "common/network/json/json.h"
@@ -32,7 +32,6 @@ namespace network
     {
         namespace http
         {
-
             // ---------------------------------------------------------------------------
             //  Constants
             // ---------------------------------------------------------------------------
@@ -142,4 +141,4 @@ namespace network
     } // namespace rest
 } // namespace network
 
-#endif // __REST_HTTP__HTTP_REPLY_H__
+#endif // __REST_HTTP__HTTP_PAYLOAD_H__

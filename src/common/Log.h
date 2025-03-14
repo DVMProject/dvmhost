@@ -38,6 +38,7 @@
 
 #define LOG_HOST    "HOST"
 #define LOG_REST    "RESTAPI"
+#define LOG_SIP     "SIP"
 #define LOG_MODEM   "MODEM"
 #define LOG_RF      "RF"
 #define LOG_NET     "NET"

@@ -4,25 +4,22 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2023 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2023-2025 Bryan Biedenkapp, N2PLL
  *
  */
 /**
- * @defgroup rest REST Services
- * @brief Implementation for REST services.
+ * @defgroup sip Session Initiation Protocol Services
+ * @brief Implementation for Session Initiation Protocol services.
  * @ingroup network_core
- * @defgroup http Embedded HTTP Core
- * @brief Implementation for basic HTTP services.
- * @ingroup rest
  * 
  * @file RequestDispatcher.h
- * @ingroup rest
+ * @ingroup sip
  */
-#if !defined(__REST__DISPATCHER_H__)
-#define __REST__DISPATCHER_H__
+#if !defined(__SIP__DISPATCHER_H__)
+#define __SIP__DISPATCHER_H__
 
 #include "common/Defines.h"
-#include "common/network/rest/http/HTTPPayload.h"
+#include "common/network/sip/SIPPayload.h"
 #include "common/Log.h"
 
 #include <functional>
@@ -33,15 +30,15 @@
 
 namespace network
 {
-    namespace rest
+    namespace sip
     {
         // ---------------------------------------------------------------------------
         //  Structure Declaration
         // ---------------------------------------------------------------------------
 
         /**
-         * @brief Structure representing a REST API request match.
-         * @ingroup rest
+         * @brief Structure representing a SIP request match.
+         * @ingroup sip
          */
         struct RequestMatch : std::smatch {
             /**
@@ -73,39 +70,48 @@ namespace network
             explicit RequestMatcher(const std::string& expression) : m_expression(expression), m_isRegEx(false) { /* stub */ }
 
             /**
-             * @brief Handler for GET requests.
-             * @param handler GET request handler.
+             * @brief Handler for INVITE requests.
+             * @param handler INVITE request handler.
              * @return RequestMatcher* Instance of a RequestMatcher.
              */
-            RequestMatcher<Request, Reply>& get(RequestHandlerType handler) {
-                m_handlers[HTTP_GET] = handler;
+            RequestMatcher<Request, Reply>& invite(RequestHandlerType handler) {
+                m_handlers[SIP_INVITE] = handler;
                 return *this;
             }
             /**
-             * @brief Handler for POST requests.
-             * @param handler POST request handler.
+             * @brief Handler for ACK requests.
+             * @param handler ACK request handler.
              * @return RequestMatcher* Instance of a RequestMatcher.
              */
-            RequestMatcher<Request, Reply>& post(RequestHandlerType handler) {
-                m_handlers[HTTP_POST] = handler;
+            RequestMatcher<Request, Reply>& ack(RequestHandlerType handler) {
+                m_handlers[SIP_ACK] = handler;
                 return *this;
             }
             /**
-             * @brief Handler for PUT requests.
-             * @param handler PUT request handler.
+             * @brief Handler for BYE requests.
+             * @param handler BYE request handler.
              * @return RequestMatcher* Instance of a RequestMatcher.
              */
-            RequestMatcher<Request, Reply>& put(RequestHandlerType handler) {
-                m_handlers[HTTP_PUT] = handler;
+            RequestMatcher<Request, Reply>& bye(RequestHandlerType handler) {
+                m_handlers[SIP_BYE] = handler;
                 return *this;
             }
             /**
-             * @brief Handler for DELETE requests.
-             * @param handler DELETE request handler.
+             * @brief Handler for CANCEL requests.
+             * @param handler CANCEL request handler.
              * @return RequestMatcher* Instance of a RequestMatcher.
              */
-            RequestMatcher<Request, Reply>& del(RequestHandlerType handler) {
-                m_handlers[HTTP_DELETE] = handler;
+            RequestMatcher<Request, Reply>& cancel(RequestHandlerType handler) {
+                m_handlers[SIP_CANCEL] = handler;
+                return *this;
+            }
+            /**
+             * @brief Handler for REGISTER requests.
+             * @param handler REGISTER request handler.
+             * @return RequestMatcher* Instance of a RequestMatcher.
+             */
+            RequestMatcher<Request, Reply>& registerReq(RequestHandlerType handler) {
+                m_handlers[SIP_REGISTER] = handler;
                 return *this;
             }
             /**
@@ -114,7 +120,61 @@ namespace network
              * @return RequestMatcher* Instance of a RequestMatcher.
              */
             RequestMatcher<Request, Reply>& options(RequestHandlerType handler) {
-                m_handlers[HTTP_OPTIONS] = handler;
+                m_handlers[SIP_OPTIONS] = handler;
+                return *this;
+            }
+            /**
+             * @brief Handler for SUBSCRIBE requests.
+             * @param handler SUBSCRIBE request handler.
+             * @return RequestMatcher* Instance of a RequestMatcher.
+             */
+            RequestMatcher<Request, Reply>& subscribe(RequestHandlerType handler) {
+                m_handlers[SIP_SUBSCRIBE] = handler;
+                return *this;
+            }
+            /**
+             * @brief Handler for NOTIFY requests.
+             * @param handler NOTIFY request handler.
+             * @return RequestMatcher* Instance of a RequestMatcher.
+             */
+            RequestMatcher<Request, Reply>& notify(RequestHandlerType handler) {
+                m_handlers[SIP_NOTIFY] = handler;
+                return *this;
+            }
+            /**
+             * @brief Handler for PUBLISH requests.
+             * @param handler PUBLISH request handler.
+             * @return RequestMatcher* Instance of a RequestMatcher.
+             */
+            RequestMatcher<Request, Reply>& publish(RequestHandlerType handler) {
+                m_handlers[SIP_PUBLISH] = handler;
+                return *this;
+            }
+            /**
+             * @brief Handler for INFO requests.
+             * @param handler INFO request handler.
+             * @return RequestMatcher* Instance of a RequestMatcher.
+             */
+            RequestMatcher<Request, Reply>& info(RequestHandlerType handler) {
+                m_handlers[SIP_INFO] = handler;
+                return *this;
+            }
+            /**
+             * @brief Handler for MESSAGE requests.
+             * @param handler MESSAGE request handler.
+             * @return RequestMatcher* Instance of a RequestMatcher.
+             */
+            RequestMatcher<Request, Reply>& message(RequestHandlerType handler) {
+                m_handlers[SIP_MESSAGE] = handler;
+                return *this;
+            }
+            /**
+             * @brief Handler for UPDATE requests.
+             * @param handler UPDATE request handler.
+             * @return RequestMatcher* Instance of a RequestMatcher.
+             */
+            RequestMatcher<Request, Reply>& update(RequestHandlerType handler) {
+                m_handlers[SIP_UPDATE] = handler;
                 return *this;
             }
 
@@ -155,29 +215,29 @@ namespace network
         // ---------------------------------------------------------------------------
 
         /**
-         * @brief This class implements RESTful web request dispatching.
-         * @tparam Request HTTP request.
-         * @tparam Reply HTTP reply.
+         * @brief This class implements SIP request dispatching.
+         * @tparam Request SIP request.
+         * @tparam Reply SIP reply.
          */
-        template<typename Request = http::HTTPPayload, typename Reply = http::HTTPPayload>
-        class RequestDispatcher {
+        template<typename Request = SIPPayload, typename Reply = SIPPayload>
+        class SIPRequestDispatcher {
             typedef RequestMatcher<Request, Reply> MatcherType;
         public:
             /**
-             * @brief Initializes a new instance of the RequestDispatcher class.
+             * @brief Initializes a new instance of the SIPRequestDispatcher class.
              */
-            RequestDispatcher() : m_basePath(), m_debug(false) { /* stub */ }
+            SIPRequestDispatcher() : m_basePath(), m_debug(false) { /* stub */ }
             /**
-             * @brief Initializes a new instance of the RequestDispatcher class.
+             * @brief Initializes a new instance of the SIPRequestDispatcher class.
              * @param debug Flag indicating whether or not verbose logging should be enabled.
              */
-            RequestDispatcher(bool debug) : m_basePath(), m_debug(debug) { /* stub */ }
+            SIPRequestDispatcher(bool debug) : m_basePath(), m_debug(debug) { /* stub */ }
             /**
-             * @brief Initializes a new instance of the RequestDispatcher class.
+             * @brief Initializes a new instance of the SIPRequestDispatcher class.
              * @param basePath 
              * @param debug Flag indicating whether or not verbose logging should be enabled.
              */
-            RequestDispatcher(const std::string& basePath, bool debug) : m_basePath(basePath), m_debug(debug) { /* stub */ }
+            SIPRequestDispatcher(const std::string& basePath, bool debug) : m_basePath(basePath), m_debug(debug) { /* stub */ }
 
             /**
              * @brief Helper to match a request patch.
@@ -190,12 +250,12 @@ namespace network
                 MatcherTypePtr& p = m_matchers[expression];
                 if (!p) {
                     if (m_debug) {
-                        ::LogDebug(LOG_REST, "creating RequestDispatcher, expression = %s", expression.c_str());
+                        ::LogDebug(LOG_REST, "creating SIPRequestDispatcher, expression = %s", expression.c_str());
                     }
                     p = std::make_shared<MatcherType>(expression);
                 } else {
                     if (m_debug) {
-                        ::LogDebug(LOG_REST, "fetching RequestDispatcher, expression = %s", expression.c_str());
+                        ::LogDebug(LOG_REST, "fetching SIPRequestDispatcher, expression = %s", expression.c_str());
                     }
                 }
 
@@ -204,9 +264,9 @@ namespace network
             }
 
             /**
-             * @brief Helper to handle HTTP request.
-             * @param request HTTP request.
-             * @param reply HTTP reply.
+             * @brief Helper to handle SIP request.
+             * @param request SIP request.
+             * @param reply SIP reply.
              */
             void handleRequest(const Request& request, Reply& reply)
             {
@@ -219,15 +279,6 @@ namespace network
                             }
 
                             //what = matcher.first;
-
-                            // ensure CORS headers are added
-                            reply.headers.add("Access-Control-Allow-Origin", "*");
-                            reply.headers.add("Access-Control-Allow-Methods", "*");
-                            reply.headers.add("Access-Control-Allow-Headers", "*");
-                            
-                            if (request.method == HTTP_OPTIONS) {
-                                reply.status = http::HTTPPayload::OK;
-                            }
                             
                             matcher.second->handleRequest(request, reply, what);
                             return;
@@ -245,7 +296,7 @@ namespace network
                 }
 
                 ::LogError(LOG_REST, "unknown endpoint, uri = %s", request.uri.c_str());
-                reply = http::HTTPPayload::statusPayload(http::HTTPPayload::BAD_REQUEST, "application/json");
+                reply = SIPPayload::statusPayload(SIPPayload::BAD_REQUEST, "application/sdp");
             }
 
         private:
@@ -263,28 +314,28 @@ namespace network
 
         /**
          * @brief This class implements a generic basic request dispatcher.
-         * @tparam Request HTTP request.
-         * @tparam Reply HTTP reply.
+         * @tparam Request SIP request.
+         * @tparam Reply SIP reply.
          */
-        template<typename Request = http::HTTPPayload, typename Reply = http::HTTPPayload>
-        class BasicRequestDispatcher {
+        template<typename Request = SIPPayload, typename Reply = SIPPayload>
+        class SIPBasicRequestDispatcher {
         public:
             typedef std::function<void(const Request&, Reply&)> RequestHandlerType;
 
             /**
-             * @brief Initializes a new instance of the BasicRequestDispatcher class.
+             * @brief Initializes a new instance of the SIPBasicRequestDispatcher class.
              */
-            BasicRequestDispatcher() { /* stub */ }
+            SIPBasicRequestDispatcher() { /* stub */ }
             /**
-             * @brief Initializes a new instance of the BasicRequestDispatcher class.
+             * @brief Initializes a new instance of the SIPBasicRequestDispatcher class.
              * @param handler Instance of a RequestHandlerType for this dispatcher.
              */
-            BasicRequestDispatcher(RequestHandlerType handler) : m_handler(handler) { /* stub */ }
+            SIPBasicRequestDispatcher(RequestHandlerType handler) : m_handler(handler) { /* stub */ }
 
             /**
-             * @brief Helper to handle HTTP request.
-             * @param request HTTP request.
-             * @param reply HTTP reply.
+             * @brief Helper to handle SIP request.
+             * @param request SIP request.
+             * @param reply SIP reply.
              */
             void handleRequest(const Request& request, Reply& reply)
             {
@@ -303,33 +354,33 @@ namespace network
 
         /**
          * @brief This class implements a generic debug request dispatcher.
-         * @tparam Request HTTP request.
-         * @tparam Reply HTTP reply.
+         * @tparam Request SIP request.
+         * @tparam Reply SIP reply.
          */
-        template<typename Request = http::HTTPPayload, typename Reply = http::HTTPPayload>
-        class DebugRequestDispatcher {
+        template<typename Request = SIPPayload, typename Reply = SIPPayload>
+        class SIPDebugRequestDispatcher {
         public:
             /**
-             * @brief Initializes a new instance of the DebugRequestDispatcher class.
+             * @brief Initializes a new instance of the SIPDebugRequestDispatcher class.
              */
-            DebugRequestDispatcher() { /* stub */ }
+            SIPDebugRequestDispatcher() { /* stub */ }
 
             /**
-             * @brief Helper to handle HTTP request.
-             * @param request HTTP request.
-             * @param reply HTTP reply.
+             * @brief Helper to handle SIP request.
+             * @param request SIP request.
+             * @param reply SIP reply.
              */
             void handleRequest(const Request& request, Reply& reply)
             {
                 for (auto header : request.headers.headers())
-                    ::LogDebugEx(LOG_REST, "DebugRequestDispatcher::handleRequest()", "header = %s, value = %s", header.name.c_str(), header.value.c_str());
+                    ::LogDebugEx(LOG_SIP, "SIPDebugRequestDispatcher::handleRequest()", "header = %s, value = %s", header.name.c_str(), header.value.c_str());
 
-                ::LogDebugEx(LOG_REST, "DebugRequestDispatcher::handleRequest()", "content = %s", request.content.c_str());
+                ::LogDebugEx(LOG_SIP, "SIPDebugRequestDispatcher::handleRequest()", "content = %s", request.content.c_str());
             }
         };
 
-        typedef RequestDispatcher<http::HTTPPayload, http::HTTPPayload> DefaultRequestDispatcher;
-    } // namespace rest
+        typedef SIPRequestDispatcher<SIPPayload, SIPPayload> DefaultSIPRequestDispatcher;
+    } // namespace sip
 } // namespace network
 
-#endif // __REST__DISPATCHER_H__
+#endif // __SIP__DISPATCHER_H__
