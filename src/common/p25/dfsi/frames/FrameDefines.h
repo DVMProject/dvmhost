@@ -85,6 +85,8 @@ namespace p25
                     START_OF_STREAM = 9,                //! Start of Stream
                     END_OF_STREAM = 10,                 //! End of Stream
 
+                    START_OF_STREAM_ACK = 14,           //! Start of Stream Ack
+
                     UNDEFINED = 127                     //! Undefined
                 };
             }

@@ -1140,6 +1140,10 @@ void ModemV24::convertToAirTIA(const uint8_t *data, uint32_t length)
             // bryanb: maybe compare the NACs?
 
             dataOffs += StartOfStream::LENGTH;
+
+            // ack start of stream
+            // bryanb: is this really the right place to be doing this...
+            ackStartOfStreamTIA(); 
         }
         break;
         case BlockType::END_OF_STREAM:
@@ -1893,6 +1897,32 @@ void ModemV24::endOfStreamTIA()
     queueP25Frame(buffer, length, STT_NON_IMBE);
 
     m_txCallInProgress = false;
+}
+
+/* Send a start of stream ACK. */
+
+void ModemV24::ackStartOfStreamTIA()
+{
+    uint16_t length = 0U;
+    uint8_t buffer[P25_HDU_LENGTH_BYTES];
+    ::memset(buffer, 0x00U, P25_HDU_LENGTH_BYTES);
+
+    // generate control octet
+    ControlOctet ctrl = ControlOctet();
+    ctrl.setBlockHeaderCnt(1U);
+    ctrl.encode(buffer);
+    length += ControlOctet::LENGTH;
+
+    // generate block header
+    BlockHeader hdr = BlockHeader();
+    hdr.setBlockType(BlockType::START_OF_STREAM_ACK);
+    hdr.encode(buffer + 1U);
+    length += BlockHeader::LENGTH;
+
+    if (m_trace)
+        Utils::dump(1U, "ModemV24::ackStartOfStreamTIA() Ack StartOfStream", buffer, length);
+
+    queueP25Frame(buffer, length, STT_NON_IMBE);
 }
 
 /* Internal helper to convert from TIA-102 air interface to V.24/DFSI. */

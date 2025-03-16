@@ -391,6 +391,10 @@ namespace modem
          * @brief Send an end of stream sequence (TDU, etc) to the connected UDP TIA-102 device.
          */
         void endOfStreamTIA();
+        /**
+         * @brief Send a start of stream ACK.
+         */
+        void ackStartOfStreamTIA();
 
         /**
          * @brief Internal helper to convert from TIA-102 air interface to V.24/DFSI.
