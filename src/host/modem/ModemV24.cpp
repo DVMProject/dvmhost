@@ -832,6 +832,12 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
         default:
         {
             MotFullRateVoice voice = MotFullRateVoice(dfsiData);
+
+            if (m_debug) {
+                LogDebugEx(LOG_MODEM, "ModemV24::convertToAir()", "Full Rate Voice, frameType = %x, source = %u", voice.getFrameType(), voice.getSource());
+                Utils::dump(1U, "Full Rate Voice IMBE", voice.imbeData, RAW_IMBE_LENGTH_BYTES);
+            }
+
             switch (frameType) {
                 case DFSIFrameType::LDU1_VOICE2:
                 {
@@ -1115,18 +1121,24 @@ void ModemV24::convertToAirTIA(const uint8_t *data, uint32_t length)
     ::memcpy(dfsiData, data + 1U, length - 1U);
 
     if (m_debug)
-        Utils::dump("DFSI RX data from board", dfsiData, length - 1U);
+        Utils::dump("DFSI RX data from UDP", dfsiData, length - 1U);
 
     ControlOctet ctrl = ControlOctet();
     ctrl.decode(dfsiData);
 
     uint8_t blockCnt = ctrl.getBlockHeaderCnt();
 
+    if (m_debug)
+        ::LogDebugEx(LOG_MODEM, "ModemV24::convertToAirTIA()", "blockCnt = %u", blockCnt);
+
     // iterate through blocks
     uint8_t hdrOffs = 1U, dataOffs = blockCnt + 1U;
     for (uint8_t i = 0U; i < blockCnt; i++) {
         BlockHeader hdr = BlockHeader();
         hdr.decode(dfsiData + hdrOffs);
+
+        if (m_debug)
+            ::LogDebugEx(LOG_MODEM, "ModemV24::convertToAirTIA()", "block = %u, blockType = $%02X", i, hdr.getBlockType());
 
         BlockType::E blockType = hdr.getBlockType();
         switch (blockType) {
@@ -1135,18 +1147,18 @@ void ModemV24::convertToAirTIA(const uint8_t *data, uint32_t length)
             StartOfStream start = StartOfStream();
             start.decode(dfsiData + dataOffs);
 
+            uint16_t nac = ((start.getNID() & 0xFFFFU) >> 4) & 0xFFFU;
+            if (m_debug)
+                ::LogDebugEx(LOG_MODEM, "ModemV24::convertToAirTIA()", "Start of Stream, nac = $%03X, errs: %u", nac, start.getErrorCount());
+
+            // bryanb: maybe compare the NACs?
+
+            dataOffs += StartOfStream::LENGTH;
+
+            // only ack the first start of stream block
             if (blockCnt == 1U) {
-                uint16_t nac = start.getNID() & 0xFFFU;
-
-                // bryanb: maybe compare the NACs?
-
-                dataOffs += StartOfStream::LENGTH;
-
                 // ack start of stream
                 ackStartOfStreamTIA(); 
-            } else {
-                dataOffs += 1U; // this is really bizarre and shouldn't be needed but Motorola has
-                                // forced my hand ... again
             }
         }
         break;
@@ -1266,6 +1278,13 @@ void ModemV24::convertToAirTIA(const uint8_t *data, uint32_t length)
             FullRateVoice voice = FullRateVoice();
             //m_superFrameCnt = voice.getSuperframeCnt();
             voice.decode(dfsiData + dataOffs);
+
+            if (m_debug) {
+                LogDebugEx(LOG_MODEM, "ModemV24::convertToAirTIA()", "Full Rate Voice, frameType = %x, busy = %u, lostFrame = %u, muteFrame = %u, superFrameCnt = %u", voice.getFrameType(), voice.getBusy(), voice.getLostFrame(), voice.getMuteFrame(), voice.getSuperframeCnt(), voice.getTotalErrors());
+                Utils::dump(1U, "Full Rate Voice IMBE", voice.imbeData, RAW_IMBE_LENGTH_BYTES);
+            }
+
+            dataOffs += voice.getLength();
 
             DFSIFrameType::E frameType = voice.getFrameType();
             switch (frameType) {
