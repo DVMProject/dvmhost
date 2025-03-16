@@ -1135,15 +1135,19 @@ void ModemV24::convertToAirTIA(const uint8_t *data, uint32_t length)
             StartOfStream start = StartOfStream();
             start.decode(dfsiData + dataOffs);
 
-            uint16_t nac = start.getNID() & 0xFFFU;
+            if (blockCnt == 1U) {
+                uint16_t nac = start.getNID() & 0xFFFU;
 
-            // bryanb: maybe compare the NACs?
+                // bryanb: maybe compare the NACs?
 
-            dataOffs += StartOfStream::LENGTH;
+                dataOffs += StartOfStream::LENGTH;
 
-            // ack start of stream
-            // bryanb: is this really the right place to be doing this...
-            ackStartOfStreamTIA(); 
+                // ack start of stream
+                ackStartOfStreamTIA(); 
+            } else {
+                dataOffs += 1U; // this is really bizarre and shouldn't be needed but Motorola has
+                                // forced my hand ... again
+            }
         }
         break;
         case BlockType::END_OF_STREAM:
