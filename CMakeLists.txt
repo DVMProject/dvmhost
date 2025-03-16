@@ -381,12 +381,12 @@ if (NOT TARGET tarball)
             COMMAND cp -v tged ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
             COMMAND cp -v dvmfne ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
             COMMAND cp -v dvmbridge ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
-            COMMAND cp ../tools/*.sh ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
+            COMMAND cp ${CMAKE_SOURCE_DIR}/tools/*.sh ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
             COMMAND chmod +x ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/*.sh
-            COMMAND cp -v ../configs/*.yml ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
+            COMMAND cp -v ${CMAKE_SOURCE_DIR}/configs/*.yml ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
             COMMAND mkdir -p ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/schema
-            COMMAND cp -v ../configs/schema/*.json ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/schema
-            COMMAND cp -v ../configs/*.dat ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
+            COMMAND cp -v ${CMAKE_SOURCE_DIR}/configs/schema/*.json ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/schema
+            COMMAND cp -v ${CMAKE_SOURCE_DIR}/configs/*.dat ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
             COMMAND mkdir -p ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw
             COMMAND if [ -e dvm-firmware_f4.elf ]\; then cp -v dvm-firmware_f4.elf ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
             COMMAND if [ -e dvm-firmware_f4.bin ]\; then cp -v dvm-firmware_f4.bin ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
@@ -414,12 +414,12 @@ if (NOT TARGET tarball)
             COMMAND cp -v dvmcmd ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
             COMMAND cp -v dvmfne ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
             COMMAND cp -v dvmbridge ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
-            COMMAND cp ../tools/*.sh ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
+            COMMAND cp ${CMAKE_SOURCE_DIR}/tools/*.sh ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
             COMMAND chmod +x ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/*.sh
-            COMMAND cp -v ../configs/*.yml ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
+            COMMAND cp -v ${CMAKE_SOURCE_DIR}/configs/*.yml ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
             COMMAND mkdir -p ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/schema
-            COMMAND cp -v ../configs/schema/*.json ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/schema
-            COMMAND cp -v ../configs/*.dat ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
+            COMMAND cp -v ${CMAKE_SOURCE_DIR}/configs/schema/*.json ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/schema
+            COMMAND cp -v ${CMAKE_SOURCE_DIR}/configs/*.dat ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
             COMMAND mkdir -p ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw
             COMMAND if [ -e dvm-firmware_f4.elf ]\; then cp -v dvm-firmware_f4.elf ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
             COMMAND if [ -e dvm-firmware_f4.bin ]\; then cp -v dvm-firmware_f4.bin ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
@@ -459,10 +459,10 @@ if (NOT TARGET tarball_notools)
             COMMAND cp -v tged ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
             COMMAND cp -v dvmfne ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
             COMMAND cp -v dvmbridge ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
-            COMMAND cp -v ../configs/*.yml ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
+            COMMAND cp -v ${CMAKE_SOURCE_DIR}/configs/*.yml ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
             COMMAND mkdir -p ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/schema
-            COMMAND cp -v ../configs/schema/*.json ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/schema
-            COMMAND cp -v ../configs/*.dat ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
+            COMMAND cp -v ${CMAKE_SOURCE_DIR}/configs/schema/*.json ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/schema
+            COMMAND cp -v ${CMAKE_SOURCE_DIR}/configs/*.dat ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
             COMMAND mkdir -p ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw
             COMMAND if [ -e dvm-firmware_f4.elf ]\; then cp -v dvm-firmware_f4.elf ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
             COMMAND if [ -e dvm-firmware_f4.bin ]\; then cp -v dvm-firmware_f4.bin ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
@@ -490,10 +490,10 @@ if (NOT TARGET tarball_notools)
             COMMAND cp -v dvmcmd ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
             COMMAND cp -v dvmfne ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
             COMMAND cp -v dvmbridge ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
-            COMMAND cp -v ../configs/*.yml ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
+            COMMAND cp -v ${CMAKE_SOURCE_DIR}/configs/*.yml ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
             COMMAND mkdir -p ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/schema
-            COMMAND cp -v ../configs/schema/*.json ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/schema
-            COMMAND cp -v ../configs/*.dat ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
+            COMMAND cp -v ${CMAKE_SOURCE_DIR}/configs/schema/*.json ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/schema
+            COMMAND cp -v ${CMAKE_SOURCE_DIR}/configs/*.dat ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
             COMMAND mkdir -p ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw
             COMMAND if [ -e dvm-firmware_f4.elf ]\; then cp -v dvm-firmware_f4.elf ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
             COMMAND if [ -e dvm-firmware_f4.bin ]\; then cp -v dvm-firmware_f4.bin ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
@@ -534,22 +534,22 @@ add_custom_target(old_install
     COMMAND install -m 755 tged ${CMAKE_LEGACY_INSTALL_PREFIX}/bin
     COMMAND install -m 755 dvmfne ${CMAKE_LEGACY_INSTALL_PREFIX}/bin
     COMMAND install -m 755 dvmbridge ${CMAKE_LEGACY_INSTALL_PREFIX}/bin
-    COMMAND install -m 644 ../configs/config.example.yml ${CMAKE_LEGACY_INSTALL_PREFIX}/config.example.yml
-    COMMAND install -m 644 ../configs/fne-config.example.yml ${CMAKE_LEGACY_INSTALL_PREFIX}/fne-config.example.yml
-    COMMAND install -m 644 ../configs/fne-sysview.example.yml ${CMAKE_LEGACY_INSTALL_PREFIX}/fne-sysview.example.yml
-    COMMAND install -m 644 ../configs/monitor-config.example.yml ${CMAKE_LEGACY_INSTALL_PREFIX}/monitor-config.example.yml
-    COMMAND install -m 644 ../configs/iden_table.example.dat ${CMAKE_LEGACY_INSTALL_PREFIX}/iden_table.example.dat
-    COMMAND install -m 644 ../configs/RSSI.dat ${CMAKE_LEGACY_INSTALL_PREFIX}/RSSI.dat
-    COMMAND install -m 644 ../configs/rid_acl.example.dat ${CMAKE_LEGACY_INSTALL_PREFIX}/rid_acl.dat
-    COMMAND install -m 644 ../configs/talkgroup_rules.example.yml ${CMAKE_LEGACY_INSTALL_PREFIX}/talkgroup_rules.example.yml
-    COMMAND install -m 644 ../configs/bridge-config.example.yml ${CMAKE_LEGACY_INSTALL_PREFIX}/bridge-config.example.yml
-    COMMAND install -m 644 ../configs/schema/talkgroup_rules.yaml_schema.json ${CMAKE_LEGACY_INSTALL_PREFIX}/schema/talkgroup_rules.yaml_schema.json
-    COMMAND install -m 755 ../tools/start-dvm.sh ${CMAKE_LEGACY_INSTALL_PREFIX}
-    COMMAND install -m 755 ../tools/stop-dvm.sh ${CMAKE_LEGACY_INSTALL_PREFIX}
-    COMMAND install -m 755 ../tools/dvm-watchdog.sh ${CMAKE_LEGACY_INSTALL_PREFIX}
-    COMMAND install -m 755 ../tools/stop-watchdog.sh ${CMAKE_LEGACY_INSTALL_PREFIX}
-    COMMAND install -m 755 ../tools/fne-watchdog.sh ${CMAKE_LEGACY_INSTALL_PREFIX}
-    COMMAND install -m 755 ../tools/start-dvm-fne.sh ${CMAKE_LEGACY_INSTALL_PREFIX}
+    COMMAND install -m 644 ${CMAKE_SOURCE_DIR}/configs/config.example.yml ${CMAKE_LEGACY_INSTALL_PREFIX}/config.example.yml
+    COMMAND install -m 644 ${CMAKE_SOURCE_DIR}/configs/fne-config.example.yml ${CMAKE_LEGACY_INSTALL_PREFIX}/fne-config.example.yml
+    COMMAND install -m 644 ${CMAKE_SOURCE_DIR}/configs/fne-sysview.example.yml ${CMAKE_LEGACY_INSTALL_PREFIX}/fne-sysview.example.yml
+    COMMAND install -m 644 ${CMAKE_SOURCE_DIR}/configs/monitor-config.example.yml ${CMAKE_LEGACY_INSTALL_PREFIX}/monitor-config.example.yml
+    COMMAND install -m 644 ${CMAKE_SOURCE_DIR}/configs/iden_table.example.dat ${CMAKE_LEGACY_INSTALL_PREFIX}/iden_table.example.dat
+    COMMAND install -m 644 ${CMAKE_SOURCE_DIR}/configs/RSSI.dat ${CMAKE_LEGACY_INSTALL_PREFIX}/RSSI.dat
+    COMMAND install -m 644 ${CMAKE_SOURCE_DIR}/configs/rid_acl.example.dat ${CMAKE_LEGACY_INSTALL_PREFIX}/rid_acl.dat
+    COMMAND install -m 644 ${CMAKE_SOURCE_DIR}/configs/talkgroup_rules.example.yml ${CMAKE_LEGACY_INSTALL_PREFIX}/talkgroup_rules.example.yml
+    COMMAND install -m 644 ${CMAKE_SOURCE_DIR}/configs/bridge-config.example.yml ${CMAKE_LEGACY_INSTALL_PREFIX}/bridge-config.example.yml
+    COMMAND install -m 644 ${CMAKE_SOURCE_DIR}/configs/schema/talkgroup_rules.yaml_schema.json ${CMAKE_LEGACY_INSTALL_PREFIX}/schema/talkgroup_rules.yaml_schema.json
+    COMMAND install -m 755 ${CMAKE_SOURCE_DIR}/tools/start-dvm.sh ${CMAKE_LEGACY_INSTALL_PREFIX}
+    COMMAND install -m 755 ${CMAKE_SOURCE_DIR}/tools/stop-dvm.sh ${CMAKE_LEGACY_INSTALL_PREFIX}
+    COMMAND install -m 755 ${CMAKE_SOURCE_DIR}/tools/dvm-watchdog.sh ${CMAKE_LEGACY_INSTALL_PREFIX}
+    COMMAND install -m 755 ${CMAKE_SOURCE_DIR}/tools/stop-watchdog.sh ${CMAKE_LEGACY_INSTALL_PREFIX}
+    COMMAND install -m 755 ${CMAKE_SOURCE_DIR}/tools/fne-watchdog.sh ${CMAKE_LEGACY_INSTALL_PREFIX}
+    COMMAND install -m 755 ${CMAKE_SOURCE_DIR}/tools/start-dvm-fne.sh ${CMAKE_LEGACY_INSTALL_PREFIX}
     COMMAND mkdir -p ${CMAKE_LEGACY_INSTALL_PREFIX}/fw
     COMMAND if [ -e dvm-firmware_f4.elf ]\; then install -m 644 dvm-firmware_f4.elf ${CMAKE_LEGACY_INSTALL_PREFIX}/fw/dvm-firmware_f4.elf\; fi
     COMMAND if [ -e dvm-firmware_f4.bin ]\; then install -m 644 dvm-firmware_f4.bin ${CMAKE_LEGACY_INSTALL_PREFIX}/fw/dvm-firmware_f4.bin\; fi
