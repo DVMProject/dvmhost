@@ -60,6 +60,8 @@ V24UDPPort::V24UDPPort(uint32_t peerId, const std::string& address, uint16_t mod
     m_controlAddr(),
     m_addrLen(0U),
     m_ctrlAddrLen(0U),
+    m_remoteAddr(),
+    m_remoteAddrLen(0U),
     m_buffer(2000U, "UDP Port Ring Buffer"),
     m_fscInitiator(fscInitiator),
     m_timeoutTimer(1000U, 45U),
@@ -88,6 +90,9 @@ V24UDPPort::V24UDPPort(uint32_t peerId, const std::string& address, uint16_t mod
             m_ctrlAddrLen = 0U;
 
         if (m_ctrlAddrLen > 0U) {
+            m_remoteAddr = m_controlAddr;
+            m_remoteAddrLen = m_remoteAddrLen;
+
             std::string ctrlAddrStr = udp::Socket::address(m_controlAddr);
             LogWarning(LOG_HOST, "SECURITY: Remote modem expects V.24 control channel IP address; %s for remote modem control", ctrlAddrStr.c_str());
         }
@@ -463,7 +468,7 @@ void* V24UDPPort::threadedCtrlNetworkRx(void* arg)
                             ::memset(buffer, 0x00U, FSCACK::LENGTH);
                             ackResp.encode(buffer);
 
-                            network->m_ctrlFrameQueue->write(buffer, FSCACK::LENGTH, network->m_controlAddr, network->m_ctrlAddrLen);
+                            network->m_ctrlFrameQueue->write(buffer, FSCACK::LENGTH, req->address, req->addrLen);
                             break;
                         }
 
@@ -484,6 +489,9 @@ void* V24UDPPort::threadedCtrlNetworkRx(void* arg)
 
                         network->m_fscState = CS_CONNECTED;
                         network->m_reqConnectionTimer.stop();
+
+                        network->m_remoteAddr = req->address;
+                        network->m_remoteAddrLen = req->addrLen;
 
                         if (connMessage->getHostHeartbeatPeriod() > 30U)
                             LogWarning(LOG_MODEM, "V.24 UDP, DFSI FSC Connection, requested heartbeat of %u, reduce to 30 seconds or less", connMessage->getHostHeartbeatPeriod());
@@ -509,7 +517,7 @@ void* V24UDPPort::threadedCtrlNetworkRx(void* arg)
                         ::memset(buffer, 0x00U, FSCACK::LENGTH + 3U);
                         ackResp.encode(buffer);
 
-                        network->m_ctrlFrameQueue->write(buffer, FSCACK::LENGTH + 3U, network->m_controlAddr, network->m_ctrlAddrLen);
+                        network->m_ctrlFrameQueue->write(buffer, FSCACK::LENGTH + 3U, req->address, req->addrLen);
                     }
                     break;
 
@@ -526,7 +534,7 @@ void* V24UDPPort::threadedCtrlNetworkRx(void* arg)
                         ::memset(buffer, 0x00U, FSCACK::LENGTH);
                         ackResp.encode(buffer);
 
-                        network->m_ctrlFrameQueue->write(buffer, FSCACK::LENGTH, network->m_controlAddr, network->m_ctrlAddrLen);
+                        network->m_ctrlFrameQueue->write(buffer, FSCACK::LENGTH, req->address, req->addrLen);
                     }
                     break;
 
@@ -557,7 +565,7 @@ void* V24UDPPort::threadedCtrlNetworkRx(void* arg)
                         ::memset(buffer, 0x00U, FSCACK::LENGTH + 5U);
                         ackResp.encode(buffer);
 
-                        network->m_ctrlFrameQueue->write(buffer, FSCACK::LENGTH + 5U, network->m_controlAddr, network->m_ctrlAddrLen);
+                        network->m_ctrlFrameQueue->write(buffer, FSCACK::LENGTH + 5U, req->address, req->addrLen);
                     }
                     break;
 
@@ -744,7 +752,7 @@ void V24UDPPort::writeHeartbeat()
     FSCHeartbeat hb = FSCHeartbeat();
     hb.encode(buffer);
 
-    m_ctrlFrameQueue->write(buffer, FSCHeartbeat::LENGTH, m_controlAddr, m_ctrlAddrLen);
+    m_ctrlFrameQueue->write(buffer, FSCHeartbeat::LENGTH, m_remoteAddr, m_remoteAddrLen);
 }
 
 /* Generate RTP message. */

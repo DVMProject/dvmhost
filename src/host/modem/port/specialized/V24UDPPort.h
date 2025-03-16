@@ -145,6 +145,9 @@ namespace modem
                 uint32_t m_addrLen;
                 uint32_t m_ctrlAddrLen;
 
+                sockaddr_storage m_remoteAddr;
+                uint32_t m_remoteAddrLen;
+
                 RingBuffer<uint8_t> m_buffer;
 
                 bool m_fscInitiator;
