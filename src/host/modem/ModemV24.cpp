@@ -1915,6 +1915,7 @@ void ModemV24::ackStartOfStreamTIA()
 
     // generate block header
     BlockHeader hdr = BlockHeader();
+    hdr.setPayloadType(false);
     hdr.setBlockType(BlockType::START_OF_STREAM_ACK);
     hdr.encode(buffer + 1U);
     length += BlockHeader::LENGTH;
