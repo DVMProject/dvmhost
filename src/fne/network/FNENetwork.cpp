@@ -263,7 +263,8 @@ void FNENetwork::processNetwork()
         ::memcpy(req->buffer, buffer.get(), length);
 
         if (!Thread::runAsThread(this, threadedNetworkRx, req)) {
-            delete[] req->buffer;
+            if (req->buffer != nullptr)
+                delete[] req->buffer;
             delete req;
             return;
         }
@@ -2393,7 +2394,8 @@ void FNENetwork::writePeerList(uint32_t peerId, uint32_t streamId)
 
 bool FNENetwork::writePeerICC(uint32_t peerId, uint32_t streamId, NET_SUBFUNC::ENUM subFunc, NET_ICC::ENUM command, uint32_t dstId, uint8_t slotNo)
 {
-    assert(peerId > 0);
+    if (peerId == 0)
+        return false;
     if (!m_enableInCallCtrl)
         return false;
     if (dstId == 0U)
@@ -2449,7 +2451,8 @@ bool FNENetwork::writePeer(uint32_t peerId, FrameQueue::OpcodePair opcode, const
 bool FNENetwork::writePeerCommand(uint32_t peerId, FrameQueue::OpcodePair opcode,
     const uint8_t* data, uint32_t length, uint32_t streamId, bool incPktSeq) const
 {
-    assert(peerId > 0);
+    if (peerId == 0)
+        return false;
 
     uint8_t buffer[DATA_PACKET_LENGTH];
     ::memset(buffer, 0x00U, DATA_PACKET_LENGTH);
@@ -2520,8 +2523,10 @@ void FNENetwork::logPeerNAKReason(uint32_t peerId, const char* tag, NET_CONN_NAK
 
 bool FNENetwork::writePeerNAK(uint32_t peerId, uint32_t streamId, const char* tag, NET_CONN_NAK_REASON reason)
 {
-    assert(peerId > 0);
-    assert(tag != nullptr);
+    if (peerId == 0)
+        return false;
+    if (tag == nullptr)
+        return false;
 
     uint8_t buffer[DATA_PACKET_LENGTH];
     ::memset(buffer, 0x00U, DATA_PACKET_LENGTH);
@@ -2537,8 +2542,10 @@ bool FNENetwork::writePeerNAK(uint32_t peerId, uint32_t streamId, const char* ta
 
 bool FNENetwork::writePeerNAK(uint32_t peerId, const char* tag, NET_CONN_NAK_REASON reason, sockaddr_storage& addr, uint32_t addrLen)
 {
-    assert(peerId > 0);
-    assert(tag != nullptr);
+    if (peerId == 0)
+        return false;
+    if (tag == nullptr)
+        return false;
 
     uint8_t buffer[DATA_PACKET_LENGTH];
     ::memset(buffer, 0x00U, DATA_PACKET_LENGTH);

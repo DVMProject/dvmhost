@@ -386,7 +386,7 @@ namespace network
         frame::RTPHeader rtpHeader;         //! RTP Header
         frame::RTPFNEHeader fneHeader;      //! RTP FNE Header
         int length = 0U;                    //! Length of raw data buffer
-        uint8_t *buffer;                    //! Raw data buffer
+        uint8_t* buffer = nullptr;          //! Raw data buffer
     };
 
     // ---------------------------------------------------------------------------
