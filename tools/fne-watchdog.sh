@@ -39,6 +39,10 @@ while [ true ]; do
     PS_OUT=`ps --no-headers ${PID}`
     if [ ${#PS_OUT} -eq 0 ]; then
         logger "dvmfne PID ${PID} not running -- restarting ${PID_FILE} ${CONFIG}"
+        CURRENT_USER=$(whoami)
+        if [ "$CURRENT_USER" == "root" ]; then
+            wall -n "dvmfne PID ${PID} not running -- restarting ${PID_FILE} ${CONFIG}"
+        fi
         ${R_PATH}/start-dvm-fne.sh ${CONFIG} ${PID_FILE} >/dev/null
         ERRNO=$?
         if [ $ERRNO -ne 0 ]; then
