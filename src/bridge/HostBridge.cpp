@@ -38,7 +38,6 @@ using namespace network::frame;
 using namespace network::udp;
 
 #include <cstdio>
-#include <cmath>
 #include <algorithm>
 #include <functional>
 #include <random>
@@ -2508,8 +2507,8 @@ void HostBridge::encodeP25AudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32_
 
             if (!hasMI) {
                 for (uint8_t i = 0; i < MI_LENGTH_BYTES; i++) {
-                    std::uniform_int_distribution<uint8_t> dist(0x00U, 0xFFU);
-                    m_mi[i] = dist(m_random);
+                    std::uniform_int_distribution<uint32_t> dist(0x00U, 0xFFU);
+                    m_mi[i] = (uint8_t)dist(m_random);
                 }
 
                 generateKeystream();
