@@ -1,5 +1,6 @@
 # Ignore built binaries
 build/
+build*/
 dvmcmd
 dvmhost
 dvmdfsi
