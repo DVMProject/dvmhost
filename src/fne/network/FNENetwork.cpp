@@ -464,9 +464,17 @@ void* FNENetwork::threadedNetworkRx(void* arg)
 
         FNENetwork* network = static_cast<FNENetwork*>(req->obj);
         if (network == nullptr) {
-            delete req;
+            if (req != nullptr) {
+                if (req->buffer != nullptr)
+                    delete[] req->buffer;
+                delete req;
+            }
+
             return nullptr;
         }
+
+        if (req == nullptr)
+            return nullptr;
 
         if (req->length > 0) {
             uint32_t peerId = req->fneHeader.getPeerId();
@@ -512,7 +520,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                 LogError(LOG_NET, "PEER %u (%s) malformed packet (no stream ID for a call?)", peerId, peerIdentity.c_str());
 
                 if (req->buffer != nullptr)
-                    delete req->buffer;
+                    delete[] req->buffer;
                 delete req;
 
                 return nullptr;
@@ -1726,9 +1734,13 @@ void* FNENetwork::threadedACLUpdate(void* arg)
 
         FNENetwork* network = static_cast<FNENetwork*>(req->obj);
         if (network == nullptr) {
-            delete req;
+            if (req != nullptr)
+                delete req;
             return nullptr;
         }
+
+        if (req == nullptr)
+            return nullptr;
 
         std::string peerIdentity = network->resolvePeerIdentity(req->peerId);
 

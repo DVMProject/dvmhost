@@ -85,7 +85,8 @@ void DiagNetwork::processNetwork()
         ::memcpy(req->buffer, buffer.get(), length);
 
         if (!Thread::runAsThread(m_fneNetwork, threadedNetworkRx, req)) {
-            delete[] req->buffer;
+            if (req->buffer != nullptr)
+                delete[] req->buffer;
             delete req;
             return;
         }
@@ -156,9 +157,17 @@ void* DiagNetwork::threadedNetworkRx(void* arg)
 
         FNENetwork* network = static_cast<FNENetwork*>(req->obj);
         if (network == nullptr) {
-            delete req;
+            if (req != nullptr) {
+                if (req->buffer != nullptr)
+                    delete[] req->buffer;
+                delete req;
+            }
+
             return nullptr;
         }
+
+        if (req == nullptr)
+            return nullptr;
 
         if (req->length > 0) {
             uint32_t peerId = req->fneHeader.getPeerId();
