@@ -22,8 +22,6 @@
 #include "common/p25/P25Utils.h"
 #include "common/network/RTPHeader.h"
 #include "common/network/udp/Socket.h"
-#include "common/AESCrypto.h"
-#include "common/RC4Crypto.h"
 #include "common/Log.h"
 #include "common/StopWatch.h"
 #include "common/Thread.h"
@@ -302,12 +300,8 @@ HostBridge::HostBridge(const std::string& confFile) :
     m_udpUsrp(false),
     m_tekAlgoId(p25::defines::ALGO_UNENCRYPT),
     m_tekKeyId(0U),
-    m_tek(nullptr),
-    m_tekLength(0U),
     m_requestedTek(false),
-    m_keystream(nullptr),
-    m_keystreamPos(0U),
-    m_mi(nullptr),
+    m_p25Crypto(nullptr),
     m_srcId(p25::defines::WUID_FNE),
     m_srcIdOverride(0U),
     m_overrideSrcIdFromMDC(false),
@@ -370,8 +364,7 @@ HostBridge::HostBridge(const std::string& confFile) :
     m_debug(false),
     m_rtpSeqNo(0U),
     m_rtpTimestamp(INVALID_TS),
-    m_usrpSeqNo(0U),
-    m_random()
+    m_usrpSeqNo(0U)
 #if defined(_WIN32)
     ,
     m_decoderState(nullptr),
@@ -402,12 +395,7 @@ HostBridge::HostBridge(const std::string& confFile) :
     ::memset(m_netLDU1, 0x00U, 9U * 25U);
     ::memset(m_netLDU2, 0x00U, 9U * 25U);
 
-    m_mi = new uint8_t[p25::defines::MI_LENGTH_BYTES];
-    ::memset(m_mi, 0x00U, p25::defines::MI_LENGTH_BYTES);
-
-    std::random_device rd;
-    std::mt19937 mt(rd());
-    m_random = mt;
+    m_p25Crypto = new p25::crypto::P25Crypto();
 }
 
 /* Finalizes a instance of the HostBridge class. */
@@ -417,9 +405,7 @@ HostBridge::~HostBridge()
     delete[] m_ambeBuffer;
     delete[] m_netLDU1;
     delete[] m_netLDU2;
-    if (m_keystream != nullptr)
-        delete[] m_keystream;
-    delete[] m_mi;
+    delete m_p25Crypto;
 }
 
 /* Executes the main FNE processing loop. */
@@ -2032,12 +2018,14 @@ void HostBridge::processP25Network(uint8_t* buffer, uint32_t length)
                         LogWarning(LOG_HOST, "P25, call ignored, using different encryption parameters, callAlgoId = $%02X, callKID = $%04X, tekAlgoId = $%02X, tekKID = $%04X", m_callAlgoId, callKID, m_tekAlgoId, m_tekKeyId);
                         return;
                     } else {
-                        ::memset(m_mi, 0x00U, MI_LENGTH_BYTES);
+                        uint8_t mi[MI_LENGTH_BYTES];
+                        ::memset(mi, 0x00U, MI_LENGTH_BYTES);
                         for (uint8_t i = 0; i < MI_LENGTH_BYTES; i++) {
-                            m_mi[i] = buffer[184U + i];
+                            mi[i] = buffer[184U + i];
                         }
 
-                        generateKeystream();
+                        m_p25Crypto->setMI(mi);
+                        m_p25Crypto->generateKeystream();
                     }
                 }
             }
@@ -2220,10 +2208,13 @@ void HostBridge::processP25Network(uint8_t* buffer, uint32_t length)
 
                 // copy out the MI for the next super frame
                 if (dfsiLC.control()->getAlgId() == m_tekAlgoId && dfsiLC.control()->getKId() == m_tekKeyId) {
-                    dfsiLC.control()->getMI(m_mi);
-                    generateKeystream();
+                    uint8_t mi[MI_LENGTH_BYTES];
+                    dfsiLC.control()->getMI(mi);
+                    
+                    m_p25Crypto->setMI(mi);
+                    m_p25Crypto->generateKeystream();
                 } else {
-                    ::memset(m_mi, 0x00U, MI_LENGTH_BYTES);
+                    m_p25Crypto->clearMI();
                 }
             }
             break;
@@ -2287,13 +2278,13 @@ void HostBridge::decodeP25AudioFrame(uint8_t* ldu, uint32_t srcId, uint32_t dstI
 
         // Utils::dump(1U, "IMBE", imbe, RAW_IMBE_LENGTH_BYTES);
 
-        if (m_tekAlgoId != p25::defines::ALGO_UNENCRYPT && m_tekKeyId > 0U && m_tek != nullptr) {
+        if (m_tekAlgoId != p25::defines::ALGO_UNENCRYPT && m_tekKeyId > 0U && m_p25Crypto->getTEKLength() > 0U) {
             switch (m_tekAlgoId) {
             case p25::defines::ALGO_AES_256:
-                cryptAES_P25IMBE(imbe, (p25N == 1U) ? DUID::LDU1 : DUID::LDU2);
+                m_p25Crypto->cryptAES_IMBE(imbe, (p25N == 1U) ? DUID::LDU1 : DUID::LDU2);
                 break;
             case p25::defines::ALGO_ARC4:
-                cryptARC4_P25IMBE(imbe, (p25N == 1U) ? DUID::LDU1 : DUID::LDU2);
+                m_p25Crypto->cryptARC4_IMBE(imbe, (p25N == 1U) ? DUID::LDU1 : DUID::LDU2);
                 break;
             default:
                 LogError(LOG_HOST, "unsupported TEK algorithm, tekAlgoId = $%02X", m_tekAlgoId);
@@ -2488,32 +2479,22 @@ void HostBridge::encodeP25AudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32_
 
     // Utils::dump(1U, "Encoded IMBE", imbe, RAW_IMBE_LENGTH_BYTES);
 
-    if (m_tekAlgoId != p25::defines::ALGO_UNENCRYPT && m_tekKeyId > 0U && m_tek != nullptr && m_mi != nullptr) {
+    if (m_tekAlgoId != p25::defines::ALGO_UNENCRYPT && m_tekKeyId > 0U && m_p25Crypto->getTEKLength() > 0U) {
         // generate initial MI for the HDU
-        if (m_p25N == 0U && m_keystream == nullptr) {
-            bool hasMI = false;
-            for (uint8_t i = 0; i < MI_LENGTH_BYTES; i++) {
-                if (m_mi[i] != 0x00U)
-                    hasMI = true;
-            }
-
-            if (!hasMI) {
-                for (uint8_t i = 0; i < MI_LENGTH_BYTES; i++) {
-                    std::uniform_int_distribution<uint32_t> dist(0x00U, 0xFFU);
-                    m_mi[i] = (uint8_t)dist(m_random);
-                }
-
-                generateKeystream();
+        if (m_p25N == 0U && !m_p25Crypto->hasValidKeystream()) {
+            if (!m_p25Crypto->hasValidMI()) {
+                m_p25Crypto->generateMI();
+                m_p25Crypto->generateKeystream();
             }
         }
 
         // perform crypto
         switch (m_tekAlgoId) {
         case p25::defines::ALGO_AES_256:
-            cryptAES_P25IMBE(imbe, (m_p25N < 9U) ? DUID::LDU1 : DUID::LDU2);
+            m_p25Crypto->cryptAES_IMBE(imbe, (m_p25N < 9U) ? DUID::LDU1 : DUID::LDU2);
             break;
         case p25::defines::ALGO_ARC4:
-            cryptARC4_P25IMBE(imbe, (m_p25N < 9U) ? DUID::LDU1 : DUID::LDU2);
+            m_p25Crypto->cryptARC4_IMBE(imbe, (m_p25N < 9U) ? DUID::LDU1 : DUID::LDU2);
             break;
         default:
             LogError(LOG_HOST, "unsupported TEK algorithm, tekAlgoId = $%02X", m_tekAlgoId);
@@ -2522,14 +2503,10 @@ void HostBridge::encodeP25AudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32_
 
         // if we're on the last block of the LDU2 -- generate the next MI
         if (m_p25N == 17U) {
-            uint8_t nextMI[MI_LENGTH_BYTES];
-            ::memset(nextMI, 0x00U, MI_LENGTH_BYTES);
-
-            getNextMI(m_mi, nextMI);
-            ::memcpy(m_mi, nextMI, MI_LENGTH_BYTES);
+            m_p25Crypto->generateNextMI();
 
             // generate new keystream
-            generateKeystream();
+            m_p25Crypto->generateKeystream();
         }
     }
 
@@ -2614,7 +2591,10 @@ void HostBridge::encodeP25AudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32_
 
     lc.setAlgId(m_tekAlgoId);
     lc.setKId(m_tekKeyId);
-    lc.setMI(m_mi);
+
+    uint8_t mi[MI_LENGTH_BYTES];
+    m_p25Crypto->getMI(mi);
+    lc.setMI(mi);
 
     data::LowSpeedData lsd = data::LowSpeedData();
 
@@ -2800,12 +2780,8 @@ void HostBridge::callEnd(uint32_t srcId, uint32_t dstId)
     m_rtpSeqNo = 0U;
     m_rtpTimestamp = INVALID_TS;
 
-    ::memset(m_mi, 0x00U, p25::defines::MI_LENGTH_BYTES);
-    if (m_keystream != nullptr) {
-        delete[] m_keystream;
-        m_keystream = nullptr;
-        m_keystreamPos = 0U;
-    }
+    m_p25Crypto->clearMI();
+    m_p25Crypto->resetKeystream();
 }
 
 /* Helper to process a FNE KMM TEK response. */
@@ -2817,208 +2793,17 @@ void HostBridge::processTEKResponse(p25::kmm::KeyItem* ki, uint8_t algId, uint8_
 
     if (algId == m_tekAlgoId && ki->kId() == m_tekKeyId) {
         LogMessage(LOG_HOST, "TEK loaded, algId = $%02X, kId = $%04X, sln = $%04X", algId, ki->kId(), ki->sln());
-        m_tek = std::make_unique<uint8_t[]>(keyLength);
-        ki->getKey(m_tek.get());
-        m_tekLength = keyLength;
+        UInt8Array tek = std::make_unique<uint8_t[]>(keyLength);
+        ki->getKey(tek.get());
+
+        m_p25Crypto->setTEKAlgoId(algId);
+        m_p25Crypto->setTEKKeyId(ki->kId());
+        m_p25Crypto->setKey(tek.get(), keyLength);
     }
-    else
-    {
-        m_tekAlgoId = p25::defines::ALGO_UNENCRYPT;
-        m_tekKeyId = 0U;
-        m_tekLength = 0U;
-    }
-}
-
-/* Given the last MI, generate the next MI using LFSR. */
-
-void HostBridge::getNextMI(uint8_t lastMI[9U], uint8_t nextMI[9U])
-{
-    uint8_t carry, i;
-    std::copy(lastMI, lastMI + 9, nextMI);
-
-    for (uint8_t cycle = 0; cycle < 64; cycle++) {
-        // calculate bit 0 for the next cycle
-        carry = ((nextMI[0] >> 7) ^ (nextMI[0] >> 5) ^ (nextMI[2] >> 5) ^
-                 (nextMI[3] >> 5) ^ (nextMI[4] >> 2) ^ (nextMI[6] >> 6)) &
-                0x01;
-
-        // shift all the list elements, except the last one
-        for (i = 0; i < 7; i++) {
-            // grab high bit from the next element and use it as our low bit
-            nextMI[i] = ((nextMI[i] & 0x7F) << 1) | (nextMI[i + 1] >> 7);
-        }
-
-        // shift last element, then copy the bit 0 we calculated in
-        nextMI[7] = ((nextMI[i] & 0x7F) << 1) | carry;
-    }
-}
-
-/* Helper to generate the encryption keystream. */
-
-void HostBridge::generateKeystream()
-{
-    using namespace p25::defines;
-    using namespace crypto;
-
-    if (m_tek == nullptr)
-        return;
-    if (m_tekLength == 0U)
-        return;
-    if (m_mi == nullptr)
-        return;
-
-    m_keystreamPos = 0U;
-
-    // generate keystream
-    switch (m_tekAlgoId) {
-    case p25::defines::ALGO_AES_256:
-        {
-            if (m_keystream == nullptr)
-                m_keystream = new uint8_t[240U];
-            ::memset(m_keystream, 0x00U, 240U);
-
-            uint8_t* iv = expandMIToIV();
-
-            AES aes = AES(AESKeyLength::AES_256);
-
-            uint8_t input[16U];
-            ::memset(input, 0x00U, 16U);
-            ::memcpy(input, iv, 16U);
-
-            for (uint32_t i = 0U; i < (240U / 16U); i++) {
-                uint8_t* output = aes.encryptECB(input, 16U, m_tek.get());
-                ::memcpy(m_keystream + (i * 16U), output, 16U);
-                ::memcpy(input, output, 16U);
-            }
-
-            delete[] iv;
-        }
-        break;
-    case p25::defines::ALGO_ARC4:
-        {
-            if (m_keystream == nullptr)
-                m_keystream = new uint8_t[469U];
-            ::memset(m_keystream, 0x00U, 469U);
-
-            uint8_t padding = (uint8_t)::fmax(5U - m_tekLength, 0U);
-            uint8_t adpKey[13U];
-            ::memset(adpKey, 0x00U, 13U);
-
-            uint8_t i = 0U;
-            for (i = 0U; i < padding; i++)
-                adpKey[i] = 0x00U;
-
-            for (; i < 5U; i++)
-                adpKey[i] = (m_tekLength > 0U) ? m_tek[i - padding] : 0x00U;
-
-            for (i = 5U; i < 13U; i++)
-                adpKey[i] = m_mi[i - 5U];
-
-            // generate ARC4 keystream
-            RC4 rc4 = RC4();
-            m_keystream = rc4.keystream(469U, adpKey, 13U);
-        }
-        break;
-    default:
-        LogError(LOG_HOST, "unsupported TEK algorithm, algId = $%02X", m_tekAlgoId);
-        break;
-    }
-}
-
-/* */
-
-uint64_t HostBridge::stepLFSR(uint64_t& lfsr)
-{
-    uint64_t ovBit = (lfsr >> 63U) & 0x01U;
-
-    // compute feedback bit using polynomial: x^64 + x^62 + x^46 + x^38 + x^27 + x^15 + 1
-    uint64_t fbBit = ((lfsr >> 63U) ^ (lfsr >> 61U) ^ (lfsr >> 45U) ^ (lfsr >> 37U) ^
-                      (lfsr >> 26U) ^ (lfsr >> 14U)) & 0x01U;
-
-    // shift LFSR left and insert feedback bit
-    lfsr = (lfsr << 1) | fbBit;
-    return ovBit;
-}
-
-/* Expands the 9-byte MI into a proper 16-byte IV. */
-
-uint8_t* HostBridge::expandMIToIV()
-{
-    // this should never happen...
-    if (m_mi == nullptr)
-        return nullptr;
-
-    uint8_t* iv = new uint8_t[16U];
-    ::memset(iv, 0x00U, 16U);
-
-    // copy first 64-bits of the MI info LFSR
-    uint64_t lfsr = 0U;
-    for (uint8_t i = 0U; i < 8U; i++) {
-        lfsr = (lfsr << 8U) | m_mi[i];
-    }
-
-    uint64_t overflow = 0U;
-    for (uint8_t i = 0U; i < 64U; i++) {
-        overflow = (overflow << 1U) | stepLFSR(lfsr);
-    }
-
-    // copy expansion and LFSR into IV
-    for (int i = 7; i >= 0; i--) {
-        iv[i] = (uint8_t)(overflow & 0xFFU);
-        overflow >>= 8U;
-    }
-
-    for (int i = 15; i >= 8; i--) {
-        iv[i] = (uint8_t)(lfsr & 0xFFU);
-        lfsr >>= 8U;
-    }
-
-    return iv;
-}
-
-/* Helper to crypt IMBE audio using AES-256. */
-
-void HostBridge::cryptAES_P25IMBE(uint8_t* imbe, p25::defines::DUID::E duid)
-{
-    using namespace p25::defines;
-    using namespace crypto;
-
-    if (m_keystream == nullptr)
-        return;
-
-    uint32_t offset = 16U;
-    if (duid == DUID::LDU2) {
-        offset += 101U;
-    }
-
-    offset += (m_keystreamPos * RAW_IMBE_LENGTH_BYTES) + RAW_IMBE_LENGTH_BYTES + ((m_keystreamPos < 8U) ? 0U : 2U);
-    m_keystreamPos = (m_keystreamPos + 1U) % 9U;
-
-    for (uint8_t i = 0U; i < RAW_IMBE_LENGTH_BYTES; i++) {
-        imbe[i] ^= m_keystream[offset + i];
-    }
-}
-
-/* Helper to crypt IMBE audio using ARC4. */
-
-void HostBridge::cryptARC4_P25IMBE(uint8_t* imbe, p25::defines::DUID::E duid)
-{
-    using namespace p25::defines;
-    using namespace crypto;
-
-    if (m_keystream == nullptr)
-        return;
-
-    uint32_t offset = 256U;
-    if (duid == DUID::LDU2) {
-        offset += 101U;
-    }
-
-    offset += (m_keystreamPos * RAW_IMBE_LENGTH_BYTES) + 267U + ((m_keystreamPos < 8U) ? 0U : 2U);
-    m_keystreamPos = (m_keystreamPos + 1U) % 9U;
-
-    for (uint8_t i = 0U; i < RAW_IMBE_LENGTH_BYTES; i++) {
-        imbe[i] ^= m_keystream[offset + i];
+    else {
+        m_p25Crypto->setTEKAlgoId(P25DEF::ALGO_UNENCRYPT);
+        m_p25Crypto->setTEKKeyId(0U);
+        m_p25Crypto->clearKey();
     }
 }
 
@@ -3211,7 +2996,7 @@ void* HostBridge::threadNetworkProcess(void* arg)
 
             if (bridge->m_network->getStatus() == NET_STAT_RUNNING) {
                 if (bridge->m_tekAlgoId != p25::defines::ALGO_UNENCRYPT && bridge->m_tekKeyId > 0U) {
-                    if (bridge->m_tek == nullptr && !bridge->m_requestedTek) {
+                    if (bridge->m_p25Crypto->getTEKLength() == 0U && !bridge->m_requestedTek) {
                         bridge->m_requestedTek = true;
                         LogMessage(LOG_HOST, "Bridge encryption enabled, requesting TEK from network.");
                         bridge->m_network->writeKeyReq(bridge->m_tekKeyId, bridge->m_tekAlgoId);

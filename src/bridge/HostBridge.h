@@ -20,6 +20,7 @@
 #include "common/dmr/data/EmbeddedData.h"
 #include "common/dmr/lc/LC.h"
 #include "common/dmr/lc/PrivacyLC.h"
+#include "common/p25/Crypto.h"
 #include "common/network/udp/Socket.h"
 #include "common/yaml/Yaml.h"
 #include "common/RingBuffer.h"
@@ -35,7 +36,6 @@
 #include <unordered_map>
 #include <vector>
 #include <mutex>
-#include <random>
 
 #if defined(_WIN32)
 #define WIN32_LEAN_AND_MEAN
@@ -169,13 +169,9 @@ private:
 
     uint8_t m_tekAlgoId;
     uint16_t m_tekKeyId;
-    UInt8Array m_tek;
-    uint8_t m_tekLength;
     bool m_requestedTek;
 
-    uint8_t* m_keystream;
-    uint32_t m_keystreamPos;
-    uint8_t* m_mi;
+    p25::crypto::P25Crypto* m_p25Crypto;
 
     uint32_t m_srcId;
     uint32_t m_srcIdOverride;
@@ -261,8 +257,6 @@ private:
     uint32_t m_rtpTimestamp;
 
     uint32_t m_usrpSeqNo;
-
-    std::mt19937 m_random;
 
     static std::mutex m_audioMutex;
     static std::mutex m_networkMutex;
@@ -497,43 +491,6 @@ private:
      * @param keyLength Length of key in bytes.
      */
     void processTEKResponse(p25::kmm::KeyItem* ki, uint8_t algId, uint8_t keyLength);
-
-    /**
-     * @brief Given the last MI, generate the next MI using LFSR.
-     * @param lastMI Last MI received.
-     * @param nextMI Next MI.
-     */
-    void getNextMI(uint8_t lastMI[9U], uint8_t nextMI[9U]);
-
-    /**
-     * @brief Helper to generate the encryption keystream.
-     */
-    void generateKeystream();
-
-    /**
-     * @brief 
-     * @param lfsr 
-     * @return uint64_t
-     */
-    uint64_t stepLFSR(uint64_t& lfsr);
-    /**
-     * @brief Expands the 9-byte MI into a proper 16-byte IV.
-     * @return uint8_t* Buffer containing expanded 16-byte IV.
-     */
-    uint8_t* expandMIToIV();
-
-    /**
-     * @brief Helper to crypt P25 IMBE audio using AES-256.
-     * @param imbe Buffer containing IMBE to crypt.
-     * @param duid P25 DUID.
-     */
-    void cryptAES_P25IMBE(uint8_t* imbe, p25::defines::DUID::E duid);
-    /**
-     * @brief Helper to crypt P25 IMBE audio using ARC4.
-     * @param imbe Buffer containing IMBE to crypt.
-     * @param duid P25 DUID.
-     */
-    void cryptARC4_P25IMBE(uint8_t* imbe, p25::defines::DUID::E duid);
 
     /**
      * @brief Entry point to audio processing thread.

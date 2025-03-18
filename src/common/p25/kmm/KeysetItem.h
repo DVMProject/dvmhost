@@ -91,10 +91,7 @@ namespace p25
             {
                 assert(key != nullptr);
                 m_keyLength = keyLength;
-                if (m_keyMaterial == nullptr) {
-                    ::memset(m_keyMaterial, 0x00U, MAX_ENC_KEY_LENGTH_BYTES);
-                    ::memset(m_keyMaterial, 0x00U, m_keyLength);
-                }
+                ::memset(m_keyMaterial, 0x00U, MAX_ENC_KEY_LENGTH_BYTES);
                 ::memcpy(m_keyMaterial, key, keyLength);
             }
 
