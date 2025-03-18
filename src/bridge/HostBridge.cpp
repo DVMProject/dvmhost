@@ -1655,12 +1655,10 @@ void HostBridge::decodeDMRAudioFrame(uint8_t* ambe, uint32_t srcId, uint32_t dst
                 sample = (short)newSample;
 
                 // clip if necessary
-                if (m_rxAudioGain > 1.0f) {
-                    if (newSample > 32767)
-                        sample = 32767;
-                    else if (newSample < -32767)
-                        sample = -32767;
-                }
+                if (newSample > 32767)
+                    sample = 32767;
+                else if (newSample < -32767)
+                    sample = -32767;
 
                 samples[n] = sample;
             }
@@ -1897,12 +1895,10 @@ void HostBridge::encodeDMRAudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32_
             sample = (short)newSample;
 
             // clip if necessary
-            if (m_txAudioGain > 1.0f) {
-                if (newSample > 32767)
-                    sample = 32767;
-                else if (newSample < -32767)
-                    sample = -32767;
-            }
+            if (newSample > 32767)
+                sample = 32767;
+            else if (newSample < -32767)
+                sample = -32767;
 
             samples[n] = sample;
         }
@@ -2329,12 +2325,10 @@ void HostBridge::decodeP25AudioFrame(uint8_t* ldu, uint32_t srcId, uint32_t dstI
                 sample = (short)newSample;
 
                 // clip if necessary
-                if (m_rxAudioGain > 1.0f) {
-                    if (newSample > 32767)
-                        sample = 32767;
-                    else if (newSample < -32767)
-                        sample = -32767;
-                }
+                if (newSample > 32767)
+                    sample = 32767;
+                else if (newSample < -32767)
+                    sample = -32767;
 
                 samples[n] = sample;
             }
@@ -2469,12 +2463,10 @@ void HostBridge::encodeP25AudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32_
             sample = (short)newSample;
 
             // clip if necessary
-            if (m_txAudioGain > 1.0f) {
-                if (newSample > 32767)
-                    sample = 32767;
-                else if (newSample < -32767)
-                    sample = -32767;
-            }
+            if (newSample > 32767)
+                sample = 32767;
+            else if (newSample < -32767)
+                sample = -32767;
 
             samples[n] = sample;
         }
