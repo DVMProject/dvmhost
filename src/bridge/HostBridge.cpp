@@ -22,6 +22,8 @@
 #include "common/p25/P25Utils.h"
 #include "common/network/RTPHeader.h"
 #include "common/network/udp/Socket.h"
+#include "common/AESCrypto.h"
+#include "common/RC4Crypto.h"
 #include "common/Log.h"
 #include "common/StopWatch.h"
 #include "common/Thread.h"
@@ -36,6 +38,7 @@ using namespace network::frame;
 using namespace network::udp;
 
 #include <cstdio>
+#include <cmath>
 #include <algorithm>
 #include <functional>
 #include <random>
@@ -71,6 +74,9 @@ static short seg_uend[8] = { 0x3F, 0x7F, 0xFF, 0x1FF, 0x3FF, 0x7FF, 0xFFF, 0x1FF
 #define CLIP 8159
 
 const uint8_t RTP_G711_PAYLOAD_TYPE = 0x00U;
+
+#define TEK_AES "aes"
+#define TEK_ARC4 "arc4"
 
 // ---------------------------------------------------------------------------
 //  Static Class Members
@@ -295,6 +301,14 @@ HostBridge::HostBridge(const std::string& confFile) :
     m_udpUseULaw(false),
     m_udpRTPFrames(false),
     m_udpUsrp(false),
+    m_tekAlgoId(p25::defines::ALGO_UNENCRYPT),
+    m_tekKeyId(0U),
+    m_tek(nullptr),
+    m_tekLength(0U),
+    m_requestedTek(false),
+    m_keystream(nullptr),
+    m_keystreamPos(0U),
+    m_mi(nullptr),
     m_srcId(p25::defines::WUID_FNE),
     m_srcIdOverride(0U),
     m_overrideSrcIdFromMDC(false),
@@ -357,12 +371,13 @@ HostBridge::HostBridge(const std::string& confFile) :
     m_debug(false),
     m_rtpSeqNo(0U),
     m_rtpTimestamp(INVALID_TS),
-    m_usrpSeqNo(0U)
+    m_usrpSeqNo(0U),
+    m_random()
 #if defined(_WIN32)
     ,
-    m_encoderState(nullptr),
-    m_dcMode(0U),
     m_decoderState(nullptr),
+    m_dcMode(0U),
+    m_encoderState(nullptr),
     m_ecMode(0U),
     m_ambeDLL(nullptr),
     m_useExternalVocoder(false),
@@ -387,6 +402,13 @@ HostBridge::HostBridge(const std::string& confFile) :
 
     ::memset(m_netLDU1, 0x00U, 9U * 25U);
     ::memset(m_netLDU2, 0x00U, 9U * 25U);
+
+    m_mi = new uint8_t[p25::defines::MI_LENGTH_BYTES];
+    ::memset(m_mi, 0x00U, p25::defines::MI_LENGTH_BYTES);
+
+    std::random_device rd;
+    std::mt19937 mt(rd());
+    m_random = mt;
 }
 
 /* Finalizes a instance of the HostBridge class. */
@@ -396,6 +418,9 @@ HostBridge::~HostBridge()
     delete[] m_ambeBuffer;
     delete[] m_netLDU1;
     delete[] m_netLDU2;
+    if (m_keystream != nullptr)
+        delete[] m_keystream;
+    delete[] m_mi;
 }
 
 /* Executes the main FNE processing loop. */
@@ -1053,6 +1078,30 @@ bool HostBridge::createNetwork()
     if (m_udpUseULaw && m_udpMetadata)
         m_udpMetadata = false; // metadata isn't supported when encoding uLaw
 
+    yaml::Node tekConf = networkConf["tek"];
+    bool tekEnable = tekConf["enable"].as<bool>(false);
+    std::string tekAlgo = tekConf["tekAlgo"].as<std::string>();
+    std::transform(tekAlgo.begin(), tekAlgo.end(), tekAlgo.begin(), ::tolower);
+    m_tekKeyId = (uint32_t)::strtoul(tekConf["tekKeyId"].as<std::string>("0").c_str(), NULL, 16);
+    if (tekEnable && m_tekKeyId > 0U) {
+        if (tekAlgo == TEK_AES)
+            m_tekAlgoId = p25::defines::ALGO_AES_256;
+        else if (tekAlgo == TEK_ARC4)
+            m_tekAlgoId = p25::defines::ALGO_ARC4;
+        else {
+            ::LogError(LOG_HOST, "Invalid TEK algorithm specified, must be \"aes\" or \"adp\".");
+            m_tekAlgoId = p25::defines::ALGO_UNENCRYPT;
+            m_tekKeyId = 0U;
+        }
+    }
+
+    // ensure encryption is currently disabled for DMR (its not supported)
+    if (m_txMode == TX_MODE_DMR && m_tekAlgoId != p25::defines::ALGO_UNENCRYPT && m_tekKeyId > 0U) {
+        ::LogError(LOG_HOST, "Encryption is not supported for DMR. Disabling.");
+        m_tekAlgoId = p25::defines::ALGO_UNENCRYPT;
+        m_tekKeyId = 0U;
+    }
+
     m_srcId = (uint32_t)networkConf["sourceId"].as<uint32_t>(p25::defines::WUID_FNE);
     m_overrideSrcIdFromMDC = networkConf["overrideSourceIdFromMDC"].as<bool>(false);
     m_overrideSrcIdFromUDP = networkConf["overrideSourceIdFromUDP"].as<bool>(false);
@@ -1128,6 +1177,12 @@ bool HostBridge::createNetwork()
         LogInfo("    UDP Audio USRP: %s", m_udpUsrp ? "yes" : "no");
     }
 
+    LogInfo("    Traffic Encrypted: %s", tekEnable ? "yes" : "no");
+    if (tekEnable) {
+        LogInfo("    TEK Algorithm: %s", tekAlgo.c_str());
+        LogInfo("    TEK Key ID: $%04X", m_tekKeyId);
+    }
+
     LogInfo("    Source ID: %u", m_srcId);
     LogInfo("    Destination ID: %u", m_dstId);
     LogInfo("    DMR Slot: %u", m_slot);
@@ -1156,6 +1211,9 @@ bool HostBridge::createNetwork()
 
     m_network->setMetadata(m_identity, 0U, 0U, 0.0F, 0.0F, 0, 0, 0, 0.0F, 0.0F, 0, "");
     m_network->setConventional(true);
+    m_network->setKeyResponseCallback([=](p25::kmm::KeyItem ki, uint8_t algId, uint8_t keyLength) {
+        processTEKResponse(&ki, algId, keyLength);
+    });
 
     if (encrypted) {
         m_network->setPresharedKey(presharedKey);
@@ -1269,6 +1327,8 @@ void HostBridge::processUDPAudio()
                         m_udpSrcId = m_srcId;
                     }
                 }
+            } else {
+                m_udpSrcId = m_srcId;
             }
         } else {
             m_udpSrcId = m_srcId;
@@ -1356,14 +1416,23 @@ void HostBridge::processUDPAudio()
 
 void HostBridge::processInCallCtrl(network::NET_ICC::ENUM command, uint32_t dstId, uint8_t slotNo)
 {
+    std::string trafficType = LOCAL_CALL;
+    if (m_trafficFromUDP) {
+        trafficType = UDP_CALL;
+    }
+
     switch (command) {
     case network::NET_ICC::REJECT_TRAFFIC:
         {
             /*
             ** bryanb: this is a naive implementation, it will likely cause start/stop, start/stop type cycling
             */
-            if (dstId == m_dstId)
+            if (dstId == m_dstId) {
+                LogWarning(LOG_HOST, "network requested in-call traffic reject, dstId = %u", dstId);
+
+                m_ignoreCall = true;
                 callEnd(m_srcId, m_dstId);
+            }
         }
         break;
 
@@ -1948,14 +2017,40 @@ void HostBridge::processP25Network(uint8_t* buffer, uint32_t length)
             return;
 
         // is this a new call stream?
+        uint16_t callKID = 0U;
         if (m_network->getP25StreamId() != m_rxStreamId && ((duid != DUID::TDU) && (duid != DUID::TDULC))) {
             m_callInProgress = true;
             m_callAlgoId = ALGO_UNENCRYPT;
 
+            // if this is the beginning of a call and we have a valid HDU frame, extract the algo ID
+            uint8_t frameType = buffer[180U];
+            if (frameType == FrameType::HDU_VALID) {
+                m_callAlgoId = buffer[181U];
+                if (m_callAlgoId != ALGO_UNENCRYPT) {
+                    callKID = __GET_UINT16B(buffer, 182U);
+
+                    if (m_callAlgoId != m_tekAlgoId && callKID != m_tekKeyId) {
+                        m_callAlgoId = ALGO_UNENCRYPT;
+                        m_callInProgress = false;
+                        m_ignoreCall = true;
+
+                        LogWarning(LOG_HOST, "P25, call ignored, using different encryption parameters, callAlgoId = $%02X, callKID = $%04X, tekAlgoId = $%02X, tekKID = $%04X", m_callAlgoId, callKID, m_tekAlgoId, m_tekKeyId);
+                        return;
+                    } else {
+                        ::memset(m_mi, 0x00U, MI_LENGTH_BYTES);
+                        for (uint8_t i = 0; i < MI_LENGTH_BYTES; i++) {
+                            m_mi[i] = buffer[184U + i];
+                        }
+
+                        generateKeystream();
+                    }
+                }
+            }
+
             uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
             m_rxStartTime = now;
 
-            LogMessage(LOG_HOST, "P25, call start, srcId = %u, dstId = %u", srcId, dstId);
+            LogMessage(LOG_HOST, "P25, call start, srcId = %u, dstId = %u, callAlgoId = $%02X, callKID = $%04X", srcId, dstId, m_callAlgoId, callKID);
             if (m_preambleLeaderTone)
                 generatePreambleTone();
         }
@@ -1988,23 +2083,31 @@ void HostBridge::processP25Network(uint8_t* buffer, uint32_t length)
 
         if (m_ignoreCall && m_callAlgoId == ALGO_UNENCRYPT)
             m_ignoreCall = false;
+        if (m_ignoreCall && m_callAlgoId == m_tekAlgoId)
+            m_ignoreCall = false;
 
-        // if this is an LDU1 see if this is the first LDU with HDU encryption data
-        if (duid == DUID::LDU1 && !m_ignoreCall) {
-            uint8_t frameType = buffer[180U];
-            if (frameType == FrameType::HDU_VALID)
-                m_callAlgoId = buffer[181U];
+        if (duid == DUID::LDU2 && !m_ignoreCall) {
+            m_callAlgoId = data[88U];
+            callKID = __GET_UINT16B(buffer, 89U);
         }
 
-        if (duid == DUID::LDU2 && !m_ignoreCall)
-            m_callAlgoId = data[88];
+        if (m_callAlgoId != ALGO_UNENCRYPT) {
+            if (m_callAlgoId == m_tekAlgoId)
+                m_ignoreCall = false;
+            else
+                m_ignoreCall = true;
+        }
 
         if (m_ignoreCall)
             return;
 
-        if (m_callAlgoId != ALGO_UNENCRYPT) {
+        if (m_callAlgoId != ALGO_UNENCRYPT && m_callAlgoId != m_tekAlgoId && callKID != m_tekKeyId) {
             if (m_callInProgress) {
                 m_callInProgress = false;
+
+                if (m_callAlgoId != m_tekAlgoId && callKID != m_tekKeyId) {
+                    LogWarning(LOG_HOST, "P25, unsupported change of encryption parameters during call, callAlgoId = $%02X, callKID = $%04X, tekAlgoId = $%02X, tekKID = $%04X", m_callAlgoId, callKID, m_tekAlgoId, m_tekKeyId);
+                }
 
                 uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
                 uint64_t diff = now - m_rxStartTime;
@@ -2115,10 +2218,18 @@ void HostBridge::processP25Network(uint8_t* buffer, uint32_t length)
                 dfsiLC.decodeLDU2(data.get() + count, m_netLDU2 + 204U);
                 count += DFSI_LDU2_VOICE18_FRAME_LENGTH_BYTES;
 
-                LogMessage(LOG_NET, P25_LDU2_STR " audio");
+                LogMessage(LOG_NET, P25_LDU2_STR " audio, algo = $%02X, kid = $%04X", dfsiLC.control()->getAlgId(), dfsiLC.control()->getKId());
 
                 // decode 9 IMBE codewords into PCM samples
                 decodeP25AudioFrame(m_netLDU2, srcId, dstId, 2U);
+
+                // copy out the MI for the next super frame
+                if (dfsiLC.control()->getAlgId() == m_tekAlgoId && dfsiLC.control()->getKId() == m_tekKeyId) {
+                    dfsiLC.control()->getMI(m_mi);
+                    generateKeystream();
+                } else {
+                    ::memset(m_mi, 0x00U, MI_LENGTH_BYTES);
+                }
             }
             break;
         
@@ -2180,6 +2291,20 @@ void HostBridge::decodeP25AudioFrame(uint8_t* ldu, uint32_t srcId, uint32_t dstI
         }
 
         // Utils::dump(1U, "IMBE", imbe, RAW_IMBE_LENGTH_BYTES);
+
+        if (m_tekAlgoId != p25::defines::ALGO_UNENCRYPT && m_tekKeyId > 0U && m_tek != nullptr) {
+            switch (m_tekAlgoId) {
+            case p25::defines::ALGO_AES_256:
+                cryptAES_P25IMBE(imbe, (p25N == 1U) ? DUID::LDU1 : DUID::LDU2);
+                break;
+            case p25::defines::ALGO_ARC4:
+                cryptARC4_P25IMBE(imbe, (p25N == 1U) ? DUID::LDU1 : DUID::LDU2);
+                break;
+            default:
+                LogError(LOG_HOST, "unsupported TEK algorithm, tekAlgoId = $%02X", m_tekAlgoId);
+                break;
+            }
+        }
 
         short samples[MBE_SAMPLES_LENGTH];
         int errs = 0;
@@ -2372,6 +2497,51 @@ void HostBridge::encodeP25AudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32_
 
     // Utils::dump(1U, "Encoded IMBE", imbe, RAW_IMBE_LENGTH_BYTES);
 
+    if (m_tekAlgoId != p25::defines::ALGO_UNENCRYPT && m_tekKeyId > 0U && m_tek != nullptr && m_mi != nullptr) {
+        // generate initial MI for the HDU
+        if (m_p25N == 0U && m_keystream == nullptr) {
+            bool hasMI = false;
+            for (uint8_t i = 0; i < MI_LENGTH_BYTES; i++) {
+                if (m_mi[i] != 0x00U)
+                    hasMI = true;
+            }
+
+            if (!hasMI) {
+                for (uint8_t i = 0; i < MI_LENGTH_BYTES; i++) {
+                    std::uniform_int_distribution<uint8_t> dist(0x00U, 0xFFU);
+                    m_mi[i] = dist(m_random);
+                }
+
+                generateKeystream();
+            }
+        }
+
+        // perform crypto
+        switch (m_tekAlgoId) {
+        case p25::defines::ALGO_AES_256:
+            cryptAES_P25IMBE(imbe, (m_p25N < 9U) ? DUID::LDU1 : DUID::LDU2);
+            break;
+        case p25::defines::ALGO_ARC4:
+            cryptARC4_P25IMBE(imbe, (m_p25N < 9U) ? DUID::LDU1 : DUID::LDU2);
+            break;
+        default:
+            LogError(LOG_HOST, "unsupported TEK algorithm, tekAlgoId = $%02X", m_tekAlgoId);
+            break;
+        }
+
+        // if we're on the last block of the LDU2 -- generate the next MI
+        if (m_p25N == 17U) {
+            uint8_t nextMI[MI_LENGTH_BYTES];
+            ::memset(nextMI, 0x00U, MI_LENGTH_BYTES);
+
+            getNextMI(m_mi, nextMI);
+            ::memcpy(m_mi, nextMI, MI_LENGTH_BYTES);
+
+            // generate new keystream
+            generateKeystream();
+        }
+    }
+
     // fill the LDU buffers appropriately
     switch (m_p25N) {
     // LDU1
@@ -2451,6 +2621,10 @@ void HostBridge::encodeP25AudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32_
     lc.setDstId(dstId);
     lc.setSrcId(srcId);
 
+    lc.setAlgId(m_tekAlgoId);
+    lc.setKId(m_tekKeyId);
+    lc.setMI(m_mi);
+
     data::LowSpeedData lsd = data::LowSpeedData();
 
     // send P25 LDU1
@@ -2462,7 +2636,7 @@ void HostBridge::encodeP25AudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32_
 
     // send P25 LDU2
     if (m_p25N == 17U) {
-        LogMessage(LOG_HOST, P25_LDU2_STR " audio");
+        LogMessage(LOG_HOST, P25_LDU2_STR " audio, algo = $%02X, kid = $%04X", m_tekAlgoId, m_tekKeyId);
         m_network->writeP25LDU2(lc, lsd, m_netLDU2);
     }
 
@@ -2634,6 +2808,227 @@ void HostBridge::callEnd(uint32_t srcId, uint32_t dstId)
 
     m_rtpSeqNo = 0U;
     m_rtpTimestamp = INVALID_TS;
+
+    ::memset(m_mi, 0x00U, p25::defines::MI_LENGTH_BYTES);
+    if (m_keystream != nullptr) {
+        delete[] m_keystream;
+        m_keystream = nullptr;
+        m_keystreamPos = 0U;
+    }
+}
+
+/* Helper to process a FNE KMM TEK response. */
+
+void HostBridge::processTEKResponse(p25::kmm::KeyItem* ki, uint8_t algId, uint8_t keyLength)
+{
+    if (ki == nullptr)
+        return;
+
+    if (algId == m_tekAlgoId && ki->kId() == m_tekKeyId) {
+        LogMessage(LOG_HOST, "TEK loaded, algId = $%02X, kId = $%04X, sln = $%04X", algId, ki->kId(), ki->sln());
+        m_tek = std::make_unique<uint8_t[]>(keyLength);
+        ki->getKey(m_tek.get());
+        m_tekLength = keyLength;
+    }
+    else
+    {
+        m_tekAlgoId = p25::defines::ALGO_UNENCRYPT;
+        m_tekKeyId = 0U;
+        m_tekLength = 0U;
+    }
+}
+
+/* Given the last MI, generate the next MI using LFSR. */
+
+void HostBridge::getNextMI(uint8_t lastMI[9U], uint8_t nextMI[9U])
+{
+    uint8_t carry, i;
+    std::copy(lastMI, lastMI + 9, nextMI);
+
+    for (uint8_t cycle = 0; cycle < 64; cycle++) {
+        // calculate bit 0 for the next cycle
+        carry = ((nextMI[0] >> 7) ^ (nextMI[0] >> 5) ^ (nextMI[2] >> 5) ^
+                 (nextMI[3] >> 5) ^ (nextMI[4] >> 2) ^ (nextMI[6] >> 6)) &
+                0x01;
+
+        // shift all the list elements, except the last one
+        for (i = 0; i < 7; i++) {
+            // grab high bit from the next element and use it as our low bit
+            nextMI[i] = ((nextMI[i] & 0x7F) << 1) | (nextMI[i + 1] >> 7);
+        }
+
+        // shift last element, then copy the bit 0 we calculated in
+        nextMI[7] = ((nextMI[i] & 0x7F) << 1) | carry;
+    }
+}
+
+/* Helper to generate the encryption keystream. */
+
+void HostBridge::generateKeystream()
+{
+    using namespace p25::defines;
+    using namespace crypto;
+
+    if (m_tek == nullptr)
+        return;
+    if (m_tekLength == 0U)
+        return;
+    if (m_mi == nullptr)
+        return;
+
+    m_keystreamPos = 0U;
+
+    // generate keystream
+    switch (m_tekAlgoId) {
+    case p25::defines::ALGO_AES_256:
+        {
+            if (m_keystream == nullptr)
+                m_keystream = new uint8_t[240U];
+            ::memset(m_keystream, 0x00U, 240U);
+
+            uint8_t* iv = expandMIToIV();
+
+            AES aes = AES(AESKeyLength::AES_256);
+
+            uint8_t input[16U];
+            ::memset(input, 0x00U, 16U);
+            ::memcpy(input, iv, 16U);
+
+            for (uint32_t i = 0U; i < (240U / 16U); i++) {
+                uint8_t* output = aes.encryptECB(input, 16U, m_tek.get());
+                ::memcpy(m_keystream + (i * 16U), output, 16U);
+                ::memcpy(input, output, 16U);
+            }
+
+            delete[] iv;
+        }
+        break;
+    case p25::defines::ALGO_ARC4:
+        {
+            if (m_keystream == nullptr)
+                m_keystream = new uint8_t[469U];
+            ::memset(m_keystream, 0x00U, 469U);
+
+            uint8_t padding = (uint8_t)::fmax(5U - m_tekLength, 0U);
+            uint8_t adpKey[13U];
+            ::memset(adpKey, 0x00U, 13U);
+
+            uint8_t i = 0U;
+            for (i = 0U; i < padding; i++)
+                adpKey[i] = 0x00U;
+
+            for (; i < 5U; i++)
+                adpKey[i] = (m_tekLength > 0U) ? m_tek[i - padding] : 0x00U;
+
+            for (i = 5U; i < 13U; i++)
+                adpKey[i] = m_mi[i - 5U];
+
+            // generate ARC4 keystream
+            RC4 rc4 = RC4();
+            m_keystream = rc4.keystream(469U, adpKey, 13U);
+        }
+        break;
+    default:
+        LogError(LOG_HOST, "unsupported TEK algorithm, algId = $%02X", m_tekAlgoId);
+        break;
+    }
+}
+
+/* */
+
+uint64_t HostBridge::stepLFSR(uint64_t& lfsr)
+{
+    uint64_t ovBit = (lfsr >> 63U) & 0x01U;
+
+    // compute feedback bit using polynomial: x^64 + x^62 + x^46 + x^38 + x^27 + x^15 + 1
+    uint64_t fbBit = ((lfsr >> 63U) ^ (lfsr >> 61U) ^ (lfsr >> 45U) ^ (lfsr >> 37U) ^
+                      (lfsr >> 26U) ^ (lfsr >> 14U)) & 0x01U;
+
+    // shift LFSR left and insert feedback bit
+    lfsr = (lfsr << 1) | fbBit;
+    return ovBit;
+}
+
+/* Expands the 9-byte MI into a proper 16-byte IV. */
+
+uint8_t* HostBridge::expandMIToIV()
+{
+    // this should never happen...
+    if (m_mi == nullptr)
+        return nullptr;
+
+    uint8_t* iv = new uint8_t[16U];
+    ::memset(iv, 0x00U, 16U);
+
+    // copy first 64-bits of the MI info LFSR
+    uint64_t lfsr = 0U;
+    for (uint8_t i = 0U; i < 8U; i++) {
+        lfsr = (lfsr << 8U) | m_mi[i];
+    }
+
+    uint64_t overflow = 0U;
+    for (uint8_t i = 0U; i < 64U; i++) {
+        overflow = (overflow << 1U) | stepLFSR(lfsr);
+    }
+
+    // copy expansion and LFSR into IV
+    for (int i = 7; i >= 0; i--) {
+        iv[i] = (uint8_t)(overflow & 0xFFU);
+        overflow >>= 8U;
+    }
+
+    for (int i = 15; i >= 8; i--) {
+        iv[i] = (uint8_t)(lfsr & 0xFFU);
+        lfsr >>= 8U;
+    }
+
+    return iv;
+}
+
+/* Helper to crypt IMBE audio using AES-256. */
+
+void HostBridge::cryptAES_P25IMBE(uint8_t* imbe, p25::defines::DUID::E duid)
+{
+    using namespace p25::defines;
+    using namespace crypto;
+
+    if (m_keystream == nullptr)
+        return;
+
+    uint32_t offset = 16U;
+    if (duid == DUID::LDU2) {
+        offset += 101U;
+    }
+
+    offset += (m_keystreamPos * RAW_IMBE_LENGTH_BYTES) + RAW_IMBE_LENGTH_BYTES + ((m_keystreamPos < 8U) ? 0U : 2U);
+    m_keystreamPos = (m_keystreamPos + 1U) % 9U;
+
+    for (uint8_t i = 0U; i < RAW_IMBE_LENGTH_BYTES; i++) {
+        imbe[i] ^= m_keystream[offset + i];
+    }
+}
+
+/* Helper to crypt IMBE audio using ARC4. */
+
+void HostBridge::cryptARC4_P25IMBE(uint8_t* imbe, p25::defines::DUID::E duid)
+{
+    using namespace p25::defines;
+    using namespace crypto;
+
+    if (m_keystream == nullptr)
+        return;
+
+    uint32_t offset = 256U;
+    if (duid == DUID::LDU2) {
+        offset += 101U;
+    }
+
+    offset += (m_keystreamPos * RAW_IMBE_LENGTH_BYTES) + 267U + ((m_keystreamPos < 8U) ? 0U : 2U);
+    m_keystreamPos = (m_keystreamPos + 1U) % 9U;
+
+    for (uint8_t i = 0U; i < RAW_IMBE_LENGTH_BYTES; i++) {
+        imbe[i] ^= m_keystream[offset + i];
+    }
 }
 
 /* Entry point to audio processing thread. */
@@ -2821,6 +3216,16 @@ void* HostBridge::threadNetworkProcess(void* arg)
             if (!bridge->m_running) {
                 Thread::sleep(1U);
                 continue;
+            }
+
+            if (bridge->m_network->getStatus() == NET_STAT_RUNNING) {
+                if (bridge->m_tekAlgoId != p25::defines::ALGO_UNENCRYPT && bridge->m_tekKeyId > 0U) {
+                    if (bridge->m_tek == nullptr && !bridge->m_requestedTek) {
+                        bridge->m_requestedTek = true;
+                        LogMessage(LOG_HOST, "Bridge encryption enabled, requesting TEK from network.");
+                        bridge->m_network->writeKeyReq(bridge->m_tekKeyId, bridge->m_tekAlgoId);
+                    }
+                }
             }
 
             uint32_t length = 0U;

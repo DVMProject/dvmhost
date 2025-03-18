@@ -139,7 +139,7 @@ bool BaseNetwork::writeKeyReq(const uint16_t kId, const uint8_t algId)
 
     modifyKeyCmd.encode(buffer + 11U);
 
-    Utils::dump("writeKeyReq", buffer, modifyKeyCmd.length() + 11U);
+    //Utils::dump("writeKeyReq", buffer, modifyKeyCmd.length() + 11U);
 
     return writeMaster({ NET_FUNC::KEY_REQ, NET_SUBFUNC::NOP }, buffer, modifyKeyCmd.length() + 11U, RTP_END_OF_CALL_SEQ, 0U);
 }

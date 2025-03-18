@@ -54,6 +54,14 @@ namespace crypto
          * @returns uint8_t* Encrypted input buffer.
          */
         uint8_t* crypt(const uint8_t in[], uint32_t inLen, const uint8_t key[], uint32_t keyLen);
+        /**
+         * @brief Generates an ARC4 keystream.
+         * @param len Keystream length.
+         * @param key Encryption key.
+         * @param keyLen Encryption key length.
+         * @returns uint8_t* ARC4 keystream.
+         */
+        uint8_t* keystream(uint32_t len, const uint8_t key[], uint32_t keyLen);
 
     private:
         uint32_t m_i1;
@@ -61,7 +69,7 @@ namespace crypto
 
         void swap(uint8_t* a, uint8_t i1, uint8_t i2);
         void init(const uint8_t key[], uint8_t keyLen, uint8_t* permutation);
-        void transform(const uint8_t* input, uint32_t length, uint8_t* permutation, uint8_t* output);
+        void transform(const uint8_t* input, uint32_t length, uint8_t* permutation, uint8_t* output, bool ksOnly);
     };
 } // namespace crypto
 

@@ -1112,8 +1112,10 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                                 ::memset(key, 0x00U, P25DEF::MAX_ENC_KEY_LENGTH_BYTES);
                                                 uint8_t keyLength = keyItem.getKey(key);
 
-                                                LogDebugEx(LOG_HOST, "FNENetwork::threadedNetworkRx()", "keyLength = %u", keyLength);
-                                                Utils::dump(1U, "Key", key, P25DEF::MAX_ENC_KEY_LENGTH_BYTES);
+                                                if (network->m_debug) {
+                                                    LogDebugEx(LOG_HOST, "FNENetwork::threadedNetworkRx()", "keyLength = %u", keyLength);
+                                                    Utils::dump(1U, "Key", key, P25DEF::MAX_ENC_KEY_LENGTH_BYTES);
+                                                }
 
                                                 // build response buffer
                                                 uint8_t buffer[DATA_PACKET_LENGTH];

@@ -79,6 +79,17 @@ network:
     # Flag indicating UDP audio should follow the USRP format.
     udpUsrp: false
 
+    # Traffic Encryption
+    tek:
+      # Flag indicating whether or not traffic encryption is enabled.
+      enable: false
+      # Traffic Encryption Key Algorithm
+      #   aes - AES-256 Encryption
+      #   arc4 - ARC4/ADP Encryption
+      tekAlgo: "aes"
+      # Traffic Encryption Key ID
+      tekKeyId: 1
+
     # Source "Radio ID" for transmitted audio frames.
     sourceId: 1234567
     # Flag indicating the source "Radio ID" will be overridden from the detected

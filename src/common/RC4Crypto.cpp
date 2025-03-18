@@ -38,7 +38,23 @@ uint8_t* RC4::crypt(const uint8_t in[], uint32_t inLen, const uint8_t key[], uin
     uint8_t* out = new uint8_t[inLen];
     ::memset(out, 0x00U, inLen);
 
-    transform(in, inLen, permutation, out);
+    transform(in, inLen, permutation, out, false);
+    return out;
+}
+
+/* Generates an ARC4 keystream. */
+
+uint8_t* RC4::keystream(uint32_t len, const uint8_t key[], uint32_t keyLen)
+{
+    uint8_t permutation[RC4_PERMUTATION_CNT];
+    ::memset(permutation, 0x00U, RC4_PERMUTATION_CNT);
+
+    init(key, keyLen, permutation);
+
+    uint8_t* out = new uint8_t[len];
+    ::memset(out, 0x00U, len);
+
+    transform(out, len, permutation, out, true);
     return out;
 }
 
@@ -70,7 +86,7 @@ void RC4::init(const uint8_t key[], uint8_t keyLen, uint8_t* permutation)
 
     // randomize, using key
     for (int j = 0, i = 0; i < 256; i++) {
-        j = (j + permutation[i] + key[i % keyLen]) % RC4_PERMUTATION_CNT;
+        j = (j + permutation[i] + key[i % keyLen]) & 0xFFU;
 
         // swap permutation[i] and permutation[j]
         swap(permutation, i, j);
@@ -79,7 +95,7 @@ void RC4::init(const uint8_t key[], uint8_t keyLen, uint8_t* permutation)
 
 /* */
 
-void RC4::transform(const uint8_t* input, uint32_t length, uint8_t* permutation, uint8_t* output)
+void RC4::transform(const uint8_t* input, uint32_t length, uint8_t* permutation, uint8_t* output, bool ksOnly)
 {
     assert(input != nullptr);
     assert(output != nullptr);
@@ -87,14 +103,18 @@ void RC4::transform(const uint8_t* input, uint32_t length, uint8_t* permutation,
     uint32_t i = 0U, j = 0U;
     for (; i < length; i++, j++) {
         // update indices
-        m_i1 = (uint8_t)((m_i1 + 1) % RC4_PERMUTATION_CNT);
-        m_i2 = (uint8_t)((m_i2 + permutation[m_i1]) % RC4_PERMUTATION_CNT);
+        m_i1 = (uint8_t)((m_i1 + 1) & 0xFFU);
+        m_i2 = (uint8_t)((m_i2 + permutation[m_i1]) & 0xFFU);
 
         // swap permutation[m_i1] and permutation[m_i2]
         swap(permutation, m_i1, m_i2);
 
         // transform byte
-        uint8_t b = (uint8_t)((permutation[m_i1] + permutation[m_i2]) % RC4_PERMUTATION_CNT);
-        output[j] = (uint8_t)(input[i] ^ permutation[b]);
+        if (ksOnly)
+            output[i] = permutation[(permutation[m_i1] + permutation[m_i2]) & 0xFFU];
+        else {
+            uint8_t b = (uint8_t)((permutation[m_i1] + permutation[m_i2]) & 0xFFU);
+            output[j] = (uint8_t)(input[i] ^ permutation[b]);
+        }
     }
 }

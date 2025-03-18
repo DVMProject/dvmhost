@@ -323,11 +323,11 @@ uint8_t* AES::encryptCBC(const uint8_t in[], uint32_t inLen, const uint8_t key[]
     ::memset(roundKeys, 0x00U, 4 * AES_NB * (m_Nr + 1));
 
     keyExpansion(key, roundKeys);
-    memcpy(block, iv, BLOCK_BYTES_LEN);
+    ::memcpy(block, iv, BLOCK_BYTES_LEN);
     for (uint32_t i = 0; i < inLen; i += BLOCK_BYTES_LEN) {
         xorBlocks(block, in + i, block, BLOCK_BYTES_LEN);
         encryptBlock(block, out + i, roundKeys);
-        memcpy(block, out + i, BLOCK_BYTES_LEN);
+        ::memcpy(block, out + i, BLOCK_BYTES_LEN);
     }
 
     delete[] roundKeys;
@@ -350,11 +350,11 @@ uint8_t* AES::decryptCBC(const uint8_t in[], uint32_t inLen, const uint8_t key[]
     ::memset(roundKeys, 0x00U, 4 * AES_NB * (m_Nr + 1));
 
     keyExpansion(key, roundKeys);
-    memcpy(block, iv, BLOCK_BYTES_LEN);
+    ::memcpy(block, iv, BLOCK_BYTES_LEN);
     for (uint32_t i = 0; i < inLen; i += BLOCK_BYTES_LEN) {
         decryptBlock(in + i, out + i, roundKeys);
         xorBlocks(block, out + i, out + i, BLOCK_BYTES_LEN);
-        memcpy(block, in + i, BLOCK_BYTES_LEN);
+        ::memcpy(block, in + i, BLOCK_BYTES_LEN);
     }
 
     delete[] roundKeys;
@@ -378,11 +378,11 @@ uint8_t* AES::encryptCFB(const uint8_t in[], uint32_t inLen, const uint8_t key[]
     ::memset(roundKeys, 0x00U, 4 * AES_NB * (m_Nr + 1));
 
     keyExpansion(key, roundKeys);
-    memcpy(block, iv, BLOCK_BYTES_LEN);
+    ::memcpy(block, iv, BLOCK_BYTES_LEN);
     for (uint32_t i = 0; i < inLen; i += BLOCK_BYTES_LEN) {
         encryptBlock(block, encryptedBlock, roundKeys);
         xorBlocks(in + i, encryptedBlock, out + i, BLOCK_BYTES_LEN);
-        memcpy(block, out + i, BLOCK_BYTES_LEN);
+        ::memcpy(block, out + i, BLOCK_BYTES_LEN);
     }
 
     delete[] roundKeys;
@@ -406,11 +406,11 @@ uint8_t* AES::decryptCFB(const uint8_t in[], uint32_t inLen, const uint8_t key[]
     ::memset(roundKeys, 0x00U, 4 * AES_NB * (m_Nr + 1));
 
     keyExpansion(key, roundKeys);
-    memcpy(block, iv, BLOCK_BYTES_LEN);
+    ::memcpy(block, iv, BLOCK_BYTES_LEN);
     for (uint32_t i = 0; i < inLen; i += BLOCK_BYTES_LEN) {
         encryptBlock(block, encryptedBlock, roundKeys);
         xorBlocks(in + i, encryptedBlock, out + i, BLOCK_BYTES_LEN);
-        memcpy(block, in + i, BLOCK_BYTES_LEN);
+        ::memcpy(block, in + i, BLOCK_BYTES_LEN);
     }
 
     delete[] roundKeys;
