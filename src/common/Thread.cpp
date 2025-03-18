@@ -128,7 +128,6 @@ bool Thread::runAsThread(void* obj, void *(*startRoutine)(void *), thread_t* thr
 #else
     if (::pthread_create(&thread->thread, NULL, startRoutine, thread) != 0) {
         LogError(LOG_NET, "Error returned from pthread_create, err: %d", errno);
-        delete thread;
         return false;
     }
 #endif // defined(_WIN32)
