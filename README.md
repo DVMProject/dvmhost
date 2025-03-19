@@ -293,8 +293,8 @@ to run on hardware below the minimal requirements, its is unlikely to provide a 
 
 ### dvmfne
 
-dvmfne's requirements can change radically depending on network size. Larger, busier networks will require far more resources then smaller, less busy networks. dvmfne has been tested with daily unique call
-counts of up to 100,000+ calls on a x86_64 Server with 8GB RAM and 8-core processor, and in this environment it runs comfortably.
+`dvmfne`'s requirements can change radically depending on network size. Larger, busier networks will require far more resources then smaller, less busy networks. (`dvmfne` has been tested with daily unique call
+counts of up to 100,000+ calls on a x86_64 Server with 8GB RAM and 8-core processor, and in this environment it runs comfortably.)
 
 - Minimal Requirements (known "working"): x86_64 Server, 2MB RAM, Dual Core Processor.
 - Requirements: x86_64 Server, 2GB RAM or better, Dual/Quad or better Core Processor.
