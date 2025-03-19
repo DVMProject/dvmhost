@@ -229,7 +229,7 @@ private:
             });
 
             m_canReqKeysEnabled.setGeometry(FPoint(2, 2), FSize(10, 1));
-            m_canReqKeysEnabled.setChecked(m_rule.peerLink());
+            m_canReqKeysEnabled.setChecked(m_rule.canRequestKeys());
             m_canReqKeysEnabled.addCallback("toggled", [&]() {
                 m_rule.canRequestKeys(m_canReqKeysEnabled.isChecked());
             });
@@ -314,7 +314,7 @@ private:
                 if (it != peers.end()) {
                     LogMessage(LOG_HOST, "Updating peer %s (%u) to %s (%u)", it->peerAlias().c_str(), it->peerId(), m_rule.peerAlias().c_str(), m_rule.peerId());
                     g_pidLookups->eraseEntry(m_origPeerId);
-                    g_pidLookups->addEntry(m_rule.peerId(), m_rule.peerAlias(), m_rule.peerPassword(), m_rule.peerLink());
+                    g_pidLookups->addEntry(m_rule.peerId(), m_rule.peerAlias(), m_rule.peerPassword(), m_rule.peerLink(), m_rule.canRequestKeys());
 
                     logRuleInfo();
                 }
@@ -345,7 +345,7 @@ private:
                 } else {
                     LogMessage(LOG_HOST, "Adding Peer %s (%u)", m_rule.peerAlias().c_str(), m_rule.peerId());
                 }
-                g_pidLookups->addEntry(m_rule.peerId(), m_rule.peerAlias(), m_rule.peerPassword(), m_rule.peerLink());
+                g_pidLookups->addEntry(m_rule.peerId(), m_rule.peerAlias(), m_rule.peerPassword(), m_rule.peerLink(), m_rule.canRequestKeys());
 
                 logRuleInfo();
 
