@@ -551,6 +551,8 @@ namespace network
         typedef std::pair<const uint32_t, lookups::AffiliationLookup*> PeerAffiliationMapPair;
         std::unordered_map<uint32_t, lookups::AffiliationLookup*> m_peerAffiliations;
         std::unordered_map<uint32_t, std::vector<uint32_t>> m_ccPeerMap;
+        static std::timed_mutex m_keyQueueMutex;
+        std::unordered_map<uint32_t, uint16_t> m_peerLinkKeyQueue;
 
         Timer m_maintainenceTimer;
 
@@ -763,6 +765,14 @@ namespace network
          * @param addrLen 
          */
         bool writePeerNAK(uint32_t peerId, const char* tag, NET_CONN_NAK_REASON reason, sockaddr_storage& addr, uint32_t addrLen);
+
+        /**
+         * @brief Helper to process a FNE KMM TEK response.
+         * @param ki Key Item.
+         * @param algId Algorithm ID.
+         * @param keyLength Length of key in bytes.
+         */
+        void processTEKResponse(p25::kmm::KeyItem* ki, uint8_t algId, uint8_t keyLength);
     };
 } // namespace network
 

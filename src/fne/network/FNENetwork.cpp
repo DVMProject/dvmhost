@@ -43,6 +43,7 @@ const uint32_t MAX_RID_LIST_CHUNK = 50U;
 // ---------------------------------------------------------------------------
 
 std::mutex FNENetwork::m_peerMutex;
+std::timed_mutex FNENetwork::m_keyQueueMutex;
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -76,6 +77,7 @@ FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port,
     m_peerLinkPeers(),
     m_peerAffiliations(),
     m_ccPeerMap(),
+    m_peerLinkKeyQueue(),
     m_maintainenceTimer(1000U, pingTime),
     m_updateLookupTime(updateLookupTime * 60U),
     m_softConnLimit(0U),
@@ -329,6 +331,13 @@ void FNENetwork::clock(uint32_t ms)
             for (auto peer : m_host->m_peerNetworks) {
                 if (peer.second != nullptr) {
                     if (peer.second->isEnabled() && peer.second->isPeerLink()) {
+                        if (!peer.second->getAttachedKeyRSPHandler()) {
+                            peer.second->setAttachedKeyRSPHandler(true); // this is the only place this should happen
+                            peer.second->setKeyResponseCallback([=](p25::kmm::KeyItem ki, uint8_t algId, uint8_t keyLength) {
+                                processTEKResponse(&ki, algId, keyLength);
+                            });
+                        }
+
                         if (m_peers.size() > 0) {
                             json::array peers = json::array();
                             for (auto entry : m_peers) {
@@ -1117,6 +1126,9 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                                     Utils::dump(1U, "Key", key, P25DEF::MAX_ENC_KEY_LENGTH_BYTES);
                                                 }
 
+                                                LogMessage(LOG_NET, "PEER %u (%s) local enc. key, algId = $%02X, kID = $%04X", peerId, connection->identity().c_str(),
+                                                    modifyKey->getAlgId(), modifyKey->getKId());
+
                                                 // build response buffer
                                                 uint8_t buffer[DATA_PACKET_LENGTH];
                                                 ::memset(buffer, 0x00U, DATA_PACKET_LENGTH);
@@ -1144,6 +1156,25 @@ void* FNENetwork::threadedNetworkRx(void* arg)
 
                                                 network->writePeer(peerId, { NET_FUNC::KEY_RSP, NET_SUBFUNC::NOP }, buffer, modifyKeyRsp.length() + 11U, 
                                                     RTP_END_OF_CALL_SEQ, network->createStreamId(), false, false, true);
+                                            } else {
+                                                // attempt to forward KMM key request to Peer-Link masters
+                                                if (network->m_host->m_peerNetworks.size() > 0) {
+                                                    for (auto peer : network->m_host->m_peerNetworks) {
+                                                        if (peer.second != nullptr) {
+                                                            if (peer.second->isEnabled() && peer.second->isPeerLink()) {
+                                                                LogMessage(LOG_NET, "PEER %u (%s) requesting key from upstream master, algId = $%02X, kID = $%04X", peerId, connection->identity().c_str(),
+                                                                    modifyKey->getAlgId(), modifyKey->getKId());
+
+                                                                network->m_keyQueueMutex.try_lock_for(std::chrono::milliseconds(60));
+                                                                network->m_peerLinkKeyQueue[peerId] = modifyKey->getKId();
+                                                                network->m_keyQueueMutex.unlock();
+
+                                                                peer.second->writeMaster({ NET_FUNC::KEY_RSP, NET_SUBFUNC::NOP }, 
+                                                                    req->buffer, req->length, RTP_END_OF_CALL_SEQ, 0U, false, false, peerId);
+                                                            }
+                                                        }
+                                                    }
+                                                }
                                             }
                                         }
                                     }
@@ -2571,4 +2602,72 @@ bool FNENetwork::writePeerNAK(uint32_t peerId, const char* tag, NET_CONN_NAK_REA
     LogWarning(LOG_NET, "PEER %u NAK %s -> %s:%u", peerId, tag, udp::Socket::address(addr).c_str(), udp::Socket::port(addr));
     return m_frameQueue->write(buffer, 12U, createStreamId(), peerId, m_peerId,
         { NET_FUNC::NAK, NET_SUBFUNC::NOP }, 0U, addr, addrLen);
+}
+
+/* Helper to process a FNE KMM TEK response. */
+
+void FNENetwork::processTEKResponse(p25::kmm::KeyItem* rspKi, uint8_t algId, uint8_t keyLength)
+{
+    using namespace p25::defines;
+    using namespace p25::kmm;
+
+    if (rspKi == nullptr)
+        return;
+
+    LogMessage(LOG_NET, "Remote enc. key, algId = $%02X, kID = $%04X", algId, rspKi->kId());
+
+    m_keyQueueMutex.lock();
+
+    std::vector<uint32_t> peersToRemove;
+    for (auto entry : m_peerLinkKeyQueue) {
+        uint16_t keyId = entry.second;
+        if (keyId == rspKi->kId() && algId > 0U) {
+            uint32_t peerId = entry.first;
+
+            uint8_t key[P25DEF::MAX_ENC_KEY_LENGTH_BYTES];
+            ::memset(key, 0x00U, P25DEF::MAX_ENC_KEY_LENGTH_BYTES);
+            rspKi->getKey(key);
+
+            if (m_debug) {
+                LogDebugEx(LOG_HOST, "FNENetwork::processTEKResponse()", "keyLength = %u", keyLength);
+                Utils::dump(1U, "Key", key, P25DEF::MAX_ENC_KEY_LENGTH_BYTES);
+            }
+
+            // build response buffer
+            uint8_t buffer[DATA_PACKET_LENGTH];
+            ::memset(buffer, 0x00U, DATA_PACKET_LENGTH);
+
+            KMMModifyKey modifyKeyRsp = KMMModifyKey();
+            modifyKeyRsp.setDecryptInfoFmt(KMM_DECRYPT_INSTRUCT_NONE);
+            modifyKeyRsp.setAlgId(algId);
+            modifyKeyRsp.setKId(0U);
+
+            KeysetItem ks = KeysetItem();
+            ks.keysetId(1U);
+            ks.algId(algId);
+            ks.keyLength(keyLength);
+
+            p25::kmm::KeyItem ki = p25::kmm::KeyItem();
+            ki.keyFormat(KEY_FORMAT_TEK);
+            ki.kId(rspKi->kId());
+            ki.sln(rspKi->sln());
+            ki.setKey(key, keyLength);
+
+            ks.push_back(ki);
+            modifyKeyRsp.setKeysetItem(ks);
+
+            modifyKeyRsp.encode(buffer + 11U);
+
+            writePeer(peerId, { NET_FUNC::KEY_RSP, NET_SUBFUNC::NOP }, buffer, modifyKeyRsp.length() + 11U, 
+                RTP_END_OF_CALL_SEQ, createStreamId(), false, false, true);
+
+            peersToRemove.push_back(peerId);
+        }
+    }
+
+    // remove peers who were sent keys
+    for (auto peerId : peersToRemove)
+        m_peerLinkKeyQueue.erase(peerId);
+
+    m_keyQueueMutex.unlock();
 }

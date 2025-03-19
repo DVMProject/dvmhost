@@ -109,6 +109,12 @@ namespace network
          */
         bool isPeerLink() const { return m_peerLink; }
 
+    public:
+        /**
+         * @brief Flag indicating whether or not this peer network has a key response handler attached.
+         */
+        __PROPERTY(bool, attachedKeyRSPHandler, AttachedKeyRSPHandler);
+
     protected:
         std::vector<uint32_t> m_blockTrafficToTable;
 
