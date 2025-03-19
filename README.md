@@ -9,13 +9,20 @@ The Digital Voice Modem ("DVM") Core Software Suite, provides the a set of appli
 Please feel free to reach out to us for help, comments or otherwise, on our Discord: https://discord.gg/3pBe8xgrEz
 
 This project suite generates a few executables:
+
+### Core Applications
+
 - `dvmhost` host software that connects to the DVM modems (both air interface for repeater and hotspot or P25 DFSI for commerical P25 hardware) and is the primary data processing application for digital modes. [See configuration](#dvmhost-configuration) to configure and calibrate.
 - `dvmfne` a network "core", this provides a central server for `dvmhost` instances to connect to and be networked with, allowing relay of traffic and other data between `dvmhost` instances and other `dvmfne` instances. [See configuration](#dvmfne-configuration) to configure.
 - `dvmbridge` a analog/PCM audio bridge, this provides the capability for analog or PCM audio resources to be connected to a `dvmfne` instance, allowing realtime vocoding of traffic. [See configuration](#dvmbridge-configuration) to configure.
 - `dvmcmd` a simple command-line utility to send remote control commands to a `dvmhost` or `dvmfne` instance with REST API configured.
+
+### Supplementary Support Applications
+
 - `dvmmon` a TUI utility that allows semi-realtime console-based monitoring of `dvmhost` instances (this tool is only available when project wide TUI support is enabled!).
 - `sysview` a TUI utility that allows near-realtime console-based monitoring of a `dvmfne` instance (this tool is only available when project wide TUI support is enabled!).
 - `tged` a TUI utility that allows editing of talkgroup rules configuration files (this tool is only available when project wide TUI support is enabled!).
+- `peered` a TUI utility that allows editing of peer list data files (this tool is only available when project wide TUI support is enabled!).
 
 ## Building
 
@@ -272,21 +279,25 @@ usage: ./dvmcmd [-dvhs][-a <address>][-p <port>][-P <password>] <command> <argum
 
 NOTE: See `dvmcmd -h` for full help for commands and arguments.
 
-### dvmmon Command Line Parameters
+## Hardware Requirements
 
-```
-usage: ./dvmmon [-dvh][--hide-log][-c <configuration file>]
+Most of the DVM Core software suite has mostly low modern system requirements. Most both `dvmhost` and `dvmfne` are however, heavily dependent on multi-threading and, as a result perform better on multi-core/multi-processor systems.
 
-  -d                          enable debug
-  -v                          show version information
-  -h                          show this screen
+Please note these hardware requirements are *not* hard limits, the information below has been put together based on observation of installed instances. While there is no reason the software suite will fail
+to run on hardware below the minimal requirements, its is unlikely to provide a decent working experience.
 
-  --hide-log                  hide interactive logging window on startup
+### dvmhost
 
-  -c <file>                   specifies the monitor configuration file to use
+- Minimal Requirements (known "working"): Raspberry Pi 1B, 512MB RAM, Single Core ARM SOC.
+- Requirements: Raspberri Pi 3+/Wyse Terminals/x86_64 Server, 1GB RAM or better, Dual/Quad or better Core Processor.
 
-  --                          stop handling options
-```
+### dvmfne
+
+dvmfne's requirements can change radically depending on network size. Larger, busier networks will require far more resources then smaller, less busy networks. dvmfne has been tested with daily unique call
+counts of up to 100,000+ calls on a x86_64 Server with 8GB RAM and 8-core processor, and in this environment it runs comfortably.
+
+- Minimal Requirements (known "working"): x86_64 Server, 2MB RAM, Dual Core Processor.
+- Requirements: x86_64 Server, 2GB RAM or better, Dual/Quad or better Core Processor.
 
 ## Project Notes
 
