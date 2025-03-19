@@ -240,7 +240,7 @@ bool PeerListLookup::load()
             m_table[id] = PeerId(id, alias, password, peerLink, canRequestKeys, false);
 
             // Log depending on what was loaded
-            LogMessage(LOG_HOST, "Loaded peer ID %u%s into peer ID lookup table, %s%s", id,
+            LogMessage(LOG_HOST, "Loaded peer ID %u%s into peer ID lookup table, %s%s%s", id,
                 (!alias.empty() ? (" (" + alias + ")").c_str() : ""),
                 (!password.empty() ? "using unique peer password" : "using master password"),
                 (peerLink) ? ", Peer-Link Enabled" : "",

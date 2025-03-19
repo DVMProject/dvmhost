@@ -1122,8 +1122,10 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                         if (peerEntry.peerDefault()) {
                                             break;
                                         } else {
-                                            if (!peerEntry.canRequestKeys())
+                                            if (!peerEntry.canRequestKeys()) {
+                                                LogError(LOG_NET, "PEER %u (%s) requested enc. key but is not allowed, no response", peerId, connection->identity().c_str());
                                                 break;
+                                            }
                                         }
                                     }
                                 }
@@ -1188,15 +1190,15 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                                     for (auto peer : network->m_host->m_peerNetworks) {
                                                         if (peer.second != nullptr) {
                                                             if (peer.second->isEnabled() && peer.second->isPeerLink()) {
-                                                                LogMessage(LOG_NET, "PEER %u (%s) requesting key from upstream master, algId = $%02X, kID = $%04X", peerId, connection->identity().c_str(),
+                                                                LogMessage(LOG_NET, "PEER %u (%s) no local key or container, requesting key from upstream master, algId = $%02X, kID = $%04X", peerId, connection->identity().c_str(),
                                                                     modifyKey->getAlgId(), modifyKey->getKId());
 
                                                                 network->m_keyQueueMutex.try_lock_for(std::chrono::milliseconds(60));
                                                                 network->m_peerLinkKeyQueue[peerId] = modifyKey->getKId();
                                                                 network->m_keyQueueMutex.unlock();
 
-                                                                peer.second->writeMaster({ NET_FUNC::KEY_RSP, NET_SUBFUNC::NOP }, 
-                                                                    req->buffer, req->length, RTP_END_OF_CALL_SEQ, 0U, false, false, peerId);
+                                                                peer.second->writeMaster({ NET_FUNC::KEY_REQ, NET_SUBFUNC::NOP }, 
+                                                                    req->buffer, req->length, RTP_END_OF_CALL_SEQ, 0U, false, false);
                                                             }
                                                         }
                                                     }
@@ -2640,7 +2642,7 @@ void FNENetwork::processTEKResponse(p25::kmm::KeyItem* rspKi, uint8_t algId, uin
     if (rspKi == nullptr)
         return;
 
-    LogMessage(LOG_NET, "Remote enc. key, algId = $%02X, kID = $%04X", algId, rspKi->kId());
+    LogMessage(LOG_NET, "upstream master enc. key, algId = $%02X, kID = $%04X", algId, rspKi->kId());
 
     m_keyQueueMutex.lock();
 

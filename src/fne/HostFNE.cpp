@@ -295,6 +295,11 @@ int HostFNE::run()
         m_peerListLookup->setReloadTime(0U); // no reload
         m_peerListLookup->stop();
     }
+
+    if (m_cryptoLookup != nullptr) {
+        m_cryptoLookup->setReloadTime(0U); // no reload
+        m_cryptoLookup->stop();
+    }
 #if !defined(_WIN32)
     if (m_tun != nullptr) {
         if (m_tun->isUp()) {

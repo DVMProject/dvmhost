@@ -184,6 +184,7 @@ public:
 
     /**
      * @brief Stops and unloads this lookup table.
+     *  (NOTE: If the reload time for this lookup table is set to 0, a call to stop will also delete the object.)
      * @param noDestroy Flag indicating the lookup table should remain resident in memory after stopping.
      */
     void stop(bool noDestroy = false);

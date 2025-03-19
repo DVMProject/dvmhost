@@ -557,6 +557,7 @@ namespace lookups
         void stop(bool noDestroy = false);
         /**
          * @brief Reads the lookup table from the specified lookup table file.
+         *  (NOTE: If the reload time for this lookup table is set to 0, a call to stop will also delete the object.)
          * @returns bool True, if lookup table was read, otherwise false.
          */
         bool read();
