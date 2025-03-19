@@ -191,8 +191,10 @@ void LogFinalise()
 #if defined(CATCH2_TEST_COMPILATION)
     return;
 #endif
-    if (m_fpLog != nullptr)
+    if (m_fpLog != nullptr) {
         ::fclose(m_fpLog);
+        m_fpLog = nullptr;
+    }
 #if !defined(_WIN32)
     if (g_useSyslog)
         closelog();
@@ -330,8 +332,10 @@ void Log(uint32_t level, const char *module, const char* file, const int lineNo,
             if (!ret)
                 return;
 
-            ::fprintf(m_fpLog, "%s\n", buffer);
-            ::fflush(m_fpLog);
+            if (m_fpLog != nullptr) {
+                ::fprintf(m_fpLog, "%s\n", buffer);
+                ::fflush(m_fpLog);
+            }
         } else {
 #if !defined(_WIN32)
             // convert our log level into syslog level

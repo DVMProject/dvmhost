@@ -39,6 +39,8 @@ using namespace lookups;
 //  Constants
 // ---------------------------------------------------------------------------
 
+#define THREAD_CYCLE_THRESHOLD 2U
+
 #define IDLE_WARMUP_MS 5U
 #define DEFAULT_MTU_SIZE 496
 
@@ -646,10 +648,18 @@ void* HostFNE::threadMasterNetwork(void* arg)
         ::pthread_setname_np(th->thread, threadName.c_str());
 #endif // _GNU_SOURCE
 
+        StopWatch stopWatch;
+        stopWatch.start();
+
         if (fne->m_network != nullptr) {
             while (!g_killed) {
+                uint32_t ms = stopWatch.elapsed();
+                stopWatch.start();
+
                 fne->m_network->processNetwork();
-                Thread::sleep(5U);
+
+                if (ms < THREAD_CYCLE_THRESHOLD)
+                    Thread::sleep(THREAD_CYCLE_THRESHOLD);
             }
         }
 
@@ -694,10 +704,18 @@ void* HostFNE::threadDiagNetwork(void* arg)
         ::pthread_setname_np(th->thread, threadName.c_str());
 #endif // _GNU_SOURCE
 
+        StopWatch stopWatch;
+        stopWatch.start();
+
         if (fne->m_diagNetwork != nullptr) {
             while (!g_killed) {
+                uint32_t ms = stopWatch.elapsed();
+                stopWatch.start();
+
                 fne->m_diagNetwork->processNetwork();
-                Thread::sleep(5U);
+
+                if (ms < THREAD_CYCLE_THRESHOLD)
+                    Thread::sleep(THREAD_CYCLE_THRESHOLD);
             }
         }
 
@@ -890,6 +908,7 @@ void* HostFNE::threadVirtualNetworking(void* arg)
             stopWatch.start();
 
             while (!g_killed) {
+                uint32_t ms = stopWatch.elapsed();
                 stopWatch.start();
 
                 uint8_t packet[DEFAULT_MTU_SIZE];
@@ -908,7 +927,8 @@ void* HostFNE::threadVirtualNetworking(void* arg)
                     }
                 }
 
-                Thread::sleep(2U);
+                if (ms < THREAD_CYCLE_THRESHOLD)
+                    Thread::sleep(THREAD_CYCLE_THRESHOLD);
             }
         }
 
@@ -968,7 +988,8 @@ void* HostFNE::threadVirtualNetworkingClock(void* arg)
                     break;
                 }
 
-                Thread::sleep(2U);
+                if (ms < THREAD_CYCLE_THRESHOLD)
+                    Thread::sleep(THREAD_CYCLE_THRESHOLD);
             }
         }
 
