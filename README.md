@@ -281,7 +281,7 @@ NOTE: See `dvmcmd -h` for full help for commands and arguments.
 
 ## Hardware Requirements
 
-Most of the DVM Core software suite has mostly low modern system requirements. Most both `dvmhost` and `dvmfne` are however, heavily dependent on multi-threading and, as a result perform better on multi-core/multi-processor systems.
+Most of the DVM Core software suite has mostly low modern system requirements. Both `dvmhost` and `dvmfne` are however, heavily dependent on multi-threading and, as a result perform better on multi-core/multi-processor systems.
 
 Please note these hardware requirements are *not* hard limits, the information below has been put together based on observation of installed instances. While there is no reason the software suite will fail
 to run on hardware below the minimal requirements, its is unlikely to provide a decent working experience.
