@@ -298,6 +298,7 @@ if (NOT TARGET strip)
                     COMMAND arm-linux-gnueabihf-strip -s dvmmon
                     COMMAND arm-linux-gnueabihf-strip -s sysview
                     COMMAND arm-linux-gnueabihf-strip -s tged
+                    COMMAND arm-linux-gnueabihf-strip -s peered
                     COMMAND arm-linux-gnueabihf-strip -s dvmbridge)
         else()
             add_custom_target(strip
@@ -315,6 +316,7 @@ if (NOT TARGET strip)
                 COMMAND aarch64-linux-gnu-strip -s dvmmon
                 COMMAND aarch64-linux-gnu-strip -s sysview
                 COMMAND aarch64-linux-gnu-strip -s tged
+                COMMAND aarch64-linux-gnu-strip -s peered
                 COMMAND aarch64-linux-gnu-strip -s dvmbridge)
         else()
             add_custom_target(strip
@@ -346,6 +348,7 @@ if (NOT TARGET strip)
                 COMMAND strip -s dvmmon
                 COMMAND strip -s sysview
                 COMMAND strip -s tged
+                COMMAND strip -s peered
                 COMMAND strip -s dvmbridge)
         else()
             add_custom_target(strip
@@ -379,6 +382,7 @@ if (NOT TARGET tarball)
             COMMAND cp -v dvmmon ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
             COMMAND cp -v sysview ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
             COMMAND cp -v tged ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
+            COMMAND cp -v peered ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
             COMMAND cp -v dvmfne ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
             COMMAND cp -v dvmbridge ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
             COMMAND cp ${CMAKE_SOURCE_DIR}/tools/*.sh ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
@@ -457,6 +461,7 @@ if (NOT TARGET tarball_notools)
             COMMAND cp -v dvmmon ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
             COMMAND cp -v sysview ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
             COMMAND cp -v tged ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
+            COMMAND cp -v peered ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
             COMMAND cp -v dvmfne ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
             COMMAND cp -v dvmbridge ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
             COMMAND cp -v ${CMAKE_SOURCE_DIR}/configs/*.yml ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
@@ -532,6 +537,7 @@ add_custom_target(old_install
     COMMAND install -m 755 dvmmon ${CMAKE_LEGACY_INSTALL_PREFIX}/bin
     COMMAND install -m 755 sysview ${CMAKE_LEGACY_INSTALL_PREFIX}/bin
     COMMAND install -m 755 tged ${CMAKE_LEGACY_INSTALL_PREFIX}/bin
+    COMMAND install -m 755 peered ${CMAKE_LEGACY_INSTALL_PREFIX}/bin
     COMMAND install -m 755 dvmfne ${CMAKE_LEGACY_INSTALL_PREFIX}/bin
     COMMAND install -m 755 dvmbridge ${CMAKE_LEGACY_INSTALL_PREFIX}/bin
     COMMAND install -m 644 ${CMAKE_SOURCE_DIR}/configs/config.example.yml ${CMAKE_LEGACY_INSTALL_PREFIX}/config.example.yml

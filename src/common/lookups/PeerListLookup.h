@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2016 Jonathan Naylor, G4KLX
- *  Copyright (C) 2017-2022,2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2017-2022,2024,2025 Bryan Biedenkapp, N2PLL
  *  Copyright (c) 2024 Patrick McDonnell, W3AXL
  *  Copyright (c) 2024 Caleb, KO4UYJ
  *
@@ -50,6 +50,7 @@ namespace lookups
             m_peerAlias(),
             m_peerPassword(),
             m_peerLink(false),
+            m_canRequestKeys(false),
             m_peerDefault(false)
         {
             /* stub */
@@ -60,13 +61,16 @@ namespace lookups
          * @param peerAlias Peer alias
          * @param peerPassword Per Peer Password.
          * @param sendConfiguration Flag indicating this peer participates in peer link and should be sent configuration.
+         * @param peerLink lag indicating if the peer participates in peer link and should be sent configuration.
+         * @param canRequestKeys Flag indicating if the peer can request encryption keys.
          * @param peerDefault Flag indicating this is a "default" (i.e. undefined) peer.
          */
-        PeerId(uint32_t peerId, const std::string& peerAlias, const std::string& peerPassword, bool peerLink, bool peerDefault) :
+        PeerId(uint32_t peerId, const std::string& peerAlias, const std::string& peerPassword, bool peerLink, bool canRequestKeys, bool peerDefault) :
             m_peerId(peerId),
             m_peerAlias(peerAlias),
             m_peerPassword(peerPassword),
             m_peerLink(peerLink),
+            m_canRequestKeys(canRequestKeys),
             m_peerDefault(peerDefault)
         {
             /* stub */
@@ -83,6 +87,7 @@ namespace lookups
                 m_peerAlias = data.m_peerAlias;
                 m_peerPassword = data.m_peerPassword;
                 m_peerLink = data.m_peerLink;
+                m_canRequestKeys = data.m_canRequestKeys;
                 m_peerDefault = data.m_peerDefault;
             }
 
@@ -95,14 +100,17 @@ namespace lookups
          * @param peerAlias Peer Alias
          * @param peerPassword Per Peer Password.
          * @param sendConfiguration Flag indicating this peer participates in peer link and should be sent configuration.
+         * @param peerLink lag indicating if the peer participates in peer link and should be sent configuration.
+         * @param canRequestKeys Flag indicating if the peer can request encryption keys.
          * @param peerDefault Flag indicating this is a "default" (i.e. undefined) peer.
          */
-        void set(uint32_t peerId, const std::string& peerAlias, const std::string& peerPassword, bool peerLink, bool peerDefault)
+        void set(uint32_t peerId, const std::string& peerAlias, const std::string& peerPassword, bool peerLink, bool canRequestKeys, bool peerDefault)
         {
             m_peerId = peerId;
             m_peerAlias = peerAlias;
             m_peerPassword =  peerPassword;
             m_peerLink = peerLink;
+            m_canRequestKeys = canRequestKeys;
             m_peerDefault = peerDefault;
         }
 
@@ -123,6 +131,10 @@ namespace lookups
          * @brief Flag indicating if the peer participates in peer link and should be sent configuration.
          */
         __PROPERTY_PLAIN(bool, peerLink);
+        /**
+         * @brief Flag indicating if the peer can request encryption keys.
+         */
+        __PROPERTY_PLAIN(bool, canRequestKeys);
         /**
          * @brief Flag indicating if the peer is default.
          */
@@ -166,8 +178,9 @@ namespace lookups
          * @param peerId Unique peer ID to add.
          * @param password Per Peer Password.
          * @param peerLink Flag indicating this peer will participate in peer link and should be sent configuration.
+         * @param canRequestKeys Flag indicating if the peer can request encryption keys.
          */
-        void addEntry(uint32_t id, const std::string& alias = "", const std::string& password = "", bool peerLink = false);
+        void addEntry(uint32_t id, const std::string& alias = "", const std::string& password = "", bool peerLink = false, bool canRequestKeys = false);
         /**
          * @brief Removes an existing entry from the list.
          * @param peerId Unique peer ID to remove.

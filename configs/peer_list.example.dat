@@ -1,9 +1,9 @@
 #
 # This file sets the valid peer IDs allowed on a FNE.
 #
-# Entry Format: "Peer ID,Peer Password,Peer Link (1 = Enabled / 0 = Disabled),Peer Alias (optional),<newline>"
-#1234,,0,
-#5678,MYSECUREPASSWORD,0,
-#9876,MYSECUREPASSWORD,1,
-#5432,MYSECUREPASSWORD,,Peer Alias 1,
-#1012,MYSECUREPASSWORD,1,Peer Alias 2,
+# Entry Format: "Peer ID,Peer Password,Peer Link (1 = Enabled / 0 = Disabled),Peer Alias (optional),Can Request Keys (1 = Enabled / 0 = Disabled),<newline>"
+#1234,,0,,1,
+#5678,MYSECUREPASSWORD,0,,0,
+#9876,MYSECUREPASSWORD,1,,0,
+#5432,MYSECUREPASSWORD,,Peer Alias 1,0,
+#1012,MYSECUREPASSWORD,1,Peer Alias 2,1,

@@ -114,6 +114,16 @@ if (ENABLE_TUI_SUPPORT AND (NOT DISABLE_TUI_APPS))
 endif (ENABLE_TUI_SUPPORT AND (NOT DISABLE_TUI_APPS))
 
 #
+## peered
+#
+if (ENABLE_TUI_SUPPORT AND (NOT DISABLE_TUI_APPS))
+    include(src/peered/CMakeLists.txt)
+    add_executable(peered ${common_INCLUDE} ${peered_SRC})
+    target_link_libraries(peered PRIVATE common ${OPENSSL_LIBRARIES} asio::asio finalcut Threads::Threads)
+    target_include_directories(peered PRIVATE ${OPENSSL_INCLUDE_DIR} websocketpp src src/host src/peered)
+endif (ENABLE_TUI_SUPPORT AND (NOT DISABLE_TUI_APPS))
+
+#
 ## dvmcmd
 #
 include(src/remote/CMakeLists.txt)

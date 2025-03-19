@@ -1102,6 +1102,19 @@ void* FNENetwork::threadedNetworkRx(void* arg)
 
                             // validate peer (simple validation really)
                             if (connection->connected() && connection->address() == ip) {
+                                // is this peer allowed to request keys?
+                                if (network->m_peerListLookup->getACL()) {
+                                    if (network->m_peerListLookup->getMode() == lookups::PeerListLookup::WHITELIST) {
+                                        lookups::PeerId peerEntry = network->m_peerListLookup->find(peerId);
+                                        if (peerEntry.peerDefault()) {
+                                            break;
+                                        } else {
+                                            if (!peerEntry.canRequestKeys())
+                                                break;
+                                        }
+                                    }
+                                }
+
                                 std::unique_ptr<KMMFrame> frame = KMMFactory::create(req->buffer + 11U);
                                 if (frame == nullptr) {
                                     LogWarning(LOG_NET, "PEER %u (%s), undecodable KMM frame from peer", peerId, connection->identity().c_str());

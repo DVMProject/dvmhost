@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2016 Jonathan Naylor, G4KLX
- *  Copyright (C) 2017-2022,2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2017-2022,2024,2025 Bryan Biedenkapp, N2PLL
  *  Copyright (c) 2024 Patrick McDonnell, W3AXL
  *  Copyright (c) 2024 Caleb, KO4UYJ
  *
@@ -46,16 +46,16 @@ void PeerListLookup::clear()
 
 /* Adds a new entry to the list. */
 
-void PeerListLookup::addEntry(uint32_t id, const std::string& alias, const std::string& password, bool peerLink)
+void PeerListLookup::addEntry(uint32_t id, const std::string& alias, const std::string& password, bool peerLink, bool canRequestKeys)
 {
-    PeerId entry = PeerId(id, alias, password, peerLink, false);
+    PeerId entry = PeerId(id, alias, password, peerLink, canRequestKeys, false);
 
     std::lock_guard<std::mutex> lock(m_mutex);
     try {
         PeerId _entry = m_table.at(id);
         // if either the alias or the enabled flag doesn't match, update the entry
         if (_entry.peerId() == id) {
-            _entry = PeerId(id, alias, password, peerLink, false);
+            _entry = PeerId(id, alias, password, peerLink, canRequestKeys, false);
             m_table[id] = _entry;
         }
     } catch (...) {
@@ -87,7 +87,7 @@ PeerId PeerListLookup::find(uint32_t id)
     try {
         entry = m_table.at(id);
     } catch (...) {
-        entry = PeerId(0U, "", "", false, true);
+        entry = PeerId(0U, "", "", false, false, true);
     }
 
     return entry;
@@ -226,19 +226,25 @@ bool PeerListLookup::load()
             if (parsed.size() >= 3)
                 peerLink = ::atoi(parsed[2].c_str()) == 1;
 
+            // Parse can request keys flag
+            bool canRequestKeys = false;
+            if (parsed.size() >= 5)
+                canRequestKeys = ::atoi(parsed[4].c_str()) == 1;
+
             // Parse optional password
             std::string password = "";
             if (parsed.size() >= 2)
                 password = parsed[1].c_str();
 
             // Load into table
-            m_table[id] = PeerId(id, alias, password, peerLink, false);
+            m_table[id] = PeerId(id, alias, password, peerLink, canRequestKeys, false);
 
             // Log depending on what was loaded
             LogMessage(LOG_HOST, "Loaded peer ID %u%s into peer ID lookup table, %s%s", id,
                 (!alias.empty() ? (" (" + alias + ")").c_str() : ""),
                 (!password.empty() ? "using unique peer password" : "using master password"),
-                (peerLink) ? ", Peer-Link Enabled" : "");
+                (peerLink) ? ", Peer-Link Enabled" : "",
+                (canRequestKeys) ? ", Can Request Keys" : "");
         }
     }
 
@@ -299,6 +305,15 @@ bool PeerListLookup::save()
         if (alias.length() > 0) {
             line += alias;
             line += ",";
+        } else {
+            line += ",";
+        }
+        // Add canRequestKeys flag
+        bool canRequestKeys = entry.second.canRequestKeys();
+        if (canRequestKeys) {
+            line += "1,";
+        } else {
+            line += "0,";
         }
         // Add the newline
         line += "\n";
