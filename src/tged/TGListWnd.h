@@ -19,6 +19,7 @@
 #include "FDblDialog.h"
 #include "TGEdMainWnd.h"
 #include "TGEditWnd.h"
+#include "PeerEntryWnd.h"
 
 #include <final/final.h>
 using namespace finalcut;
@@ -150,6 +151,146 @@ public:
 
         setFocusWidget(&m_listView);
         redraw();
+    }
+
+    /**
+     * @brief 
+     */
+    void addPeerToInclusion()
+    {
+        PeerEntryWnd wnd{"Add Peer to Inclusions", this};
+        wnd.show();
+
+        uint32_t peerId = wnd.peerId;
+        if (peerId > 0U) {
+            auto groupVoice = g_tidLookups->groupVoice();
+            for (auto rule : groupVoice) {
+                uint32_t tgId = rule.source().tgId();
+                uint8_t tgSlot = rule.source().tgSlot();
+
+                auto config = rule.config();
+
+                std::vector<uint32_t> inclusions = config.inclusion();
+                auto it = std::find_if(inclusions.begin(), inclusions.end(), [&](uint32_t x) { return x == wnd.peerId; });
+                if (it == inclusions.end()) {
+                    LogMessage(LOG_HOST, "Updating TG %s (%u) adding inclusion peer %u", rule.name().c_str(), rule.source().tgId(), peerId);
+                    inclusions.push_back(peerId);
+                }
+
+                config.inclusion(inclusions);
+                rule.config(config);
+
+                g_tidLookups->eraseEntry(tgId, tgSlot);
+                g_tidLookups->addEntry(rule);
+            }
+        }
+
+        loadListView();
+    }
+
+    /**
+     * @brief 
+     */
+    void removePeerFromInclusion()
+    {
+        PeerEntryWnd wnd{"Remove Peer from Inclusions", this};
+        wnd.show();
+
+        uint32_t peerId = wnd.peerId;
+        if (peerId > 0U) {
+            auto groupVoice = g_tidLookups->groupVoice();
+            for (auto rule : groupVoice) {
+                uint32_t tgId = rule.source().tgId();
+                uint8_t tgSlot = rule.source().tgSlot();
+
+                auto config = rule.config();
+
+                std::vector<uint32_t> inclusions = config.inclusion();
+                auto it = std::find_if(inclusions.begin(), inclusions.end(), [&](uint32_t x) { return x == wnd.peerId; });
+                if (it != inclusions.end()) {
+                    LogMessage(LOG_HOST, "Updating TG %s (%u) removing inclusion peer %u", rule.name().c_str(), rule.source().tgId(), peerId);
+                    inclusions.erase(it);
+                }
+
+                config.inclusion(inclusions);
+                rule.config(config);
+
+                g_tidLookups->eraseEntry(tgId, tgSlot);
+                g_tidLookups->addEntry(rule);
+            }
+        }
+
+        loadListView();
+    }
+
+    /**
+     * @brief 
+     */
+    void addPeerToAlways()
+    {
+        PeerEntryWnd wnd{"Add Peer to Always", this};
+        wnd.show();
+
+        uint32_t peerId = wnd.peerId;
+        if (peerId > 0U) {
+            auto groupVoice = g_tidLookups->groupVoice();
+            for (auto rule : groupVoice) {
+                uint32_t tgId = rule.source().tgId();
+                uint8_t tgSlot = rule.source().tgSlot();
+
+                auto config = rule.config();
+
+                std::vector<uint32_t> alwaysSend = config.alwaysSend();
+                auto it = std::find_if(alwaysSend.begin(), alwaysSend.end(), [&](uint32_t x) { return x == wnd.peerId; });
+                if (it == alwaysSend.end()) {
+                    LogMessage(LOG_HOST, "Updating TG %s (%u) adding always peer %u", rule.name().c_str(), rule.source().tgId(), peerId);
+                    alwaysSend.push_back(peerId);
+                }
+
+                config.alwaysSend(alwaysSend);
+                rule.config(config);
+
+                g_tidLookups->eraseEntry(tgId, tgSlot);
+                g_tidLookups->addEntry(rule);
+            }
+        }
+
+        loadListView();
+    }
+
+    /**
+     * @brief 
+     */
+    void removePeerFromAlways()
+    {
+        PeerEntryWnd wnd{"Remove Peer from Always", this};
+        wnd.show();
+
+        uint32_t peerId = wnd.peerId;
+        if (peerId > 0U) {
+            auto groupVoice = g_tidLookups->groupVoice();
+            for (auto rule : groupVoice) {
+                uint32_t tgId = rule.source().tgId();
+                uint8_t tgSlot = rule.source().tgSlot();
+
+                auto config = rule.config();
+
+                std::vector<uint32_t> alwaysSend = config.alwaysSend();
+                auto it = std::find_if(alwaysSend.begin(), alwaysSend.end(), [&](uint32_t x) { return x == wnd.peerId; });
+                if (it != alwaysSend.end()) {
+                    LogMessage(LOG_HOST, "Updating TG %s (%u) removing always peer %u", rule.name().c_str(), rule.source().tgId(), peerId);
+                    alwaysSend.erase(it);
+                }
+
+                config.alwaysSend(alwaysSend);
+                rule.config(config);
+
+                g_tidLookups->eraseEntry(tgId, tgSlot);
+                g_tidLookups->addEntry(rule);
+            }
+        }
+
+        loadListView();
     }
 
 private:

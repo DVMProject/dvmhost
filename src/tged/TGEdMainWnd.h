@@ -78,6 +78,13 @@ public:
 
         m_backupOnSave.setChecked();
 
+        // batch menu
+        m_batchMenuSeparator1.setSeparator();
+        m_batchAddPeerInclusion.addCallback("clicked", this, [&]() { m_wnd->addPeerToInclusion(); });
+        m_batchRemovePeerInclusion.addCallback("clicked", this, [&]() { m_wnd->removePeerFromInclusion(); });
+        m_batchAddPeerAlways.addCallback("clicked", this, [&]() { m_wnd->addPeerToAlways(); });
+        m_batchRemovePeerAlways.addCallback("clicked", this, [&]() { m_wnd->removePeerFromAlways(); });
+
         // help menu
         m_aboutItem.addCallback("clicked", this, [&]() {
             const FString line(2, UniChar::BoxDrawingsHorizontal);
@@ -108,6 +115,13 @@ private:
     FCheckMenuItem m_backupOnSave{"Backup Rules File?", &m_fileMenu};
     FMenuItem m_fileMenuSeparator1{&m_fileMenu};
     FMenuItem m_quitItem{"&Quit", &m_fileMenu};
+
+    FMenu m_batchMenu{"&Batch", &m_menuBar};
+    FMenuItem m_batchAddPeerInclusion{"Add Peer to Inclusions...", &m_batchMenu};
+    FMenuItem m_batchRemovePeerInclusion{"Remove Peer from Inclusions...", &m_batchMenu};
+    FMenuItem m_batchMenuSeparator1{&m_batchMenu};
+    FMenuItem m_batchAddPeerAlways{"Add Peer to Always...", &m_batchMenu};
+    FMenuItem m_batchRemovePeerAlways{"Remove Peer from Always...", &m_batchMenu};
 
     FMenu m_helpMenu{"&Help", &m_menuBar};
     FMenuItem m_aboutItem{"&About", &m_helpMenu};
