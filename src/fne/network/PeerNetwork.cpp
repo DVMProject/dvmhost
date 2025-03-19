@@ -565,36 +565,38 @@ bool PeerNetwork::writeConfig()
     json::object config = json::object();
 
     // identity and frequency
-    config["identity"].set<std::string>(m_identity);                                // Identity
-    config["rxFrequency"].set<uint32_t>(m_rxFrequency);                             // Rx Frequency
-    config["txFrequency"].set<uint32_t>(m_txFrequency);                             // Tx Frequency
+    config["identity"].set<std::string>(m_metadata->identity);                      // Identity
+    config["rxFrequency"].set<uint32_t>(m_metadata->rxFrequency);                   // Rx Frequency
+    config["txFrequency"].set<uint32_t>(m_metadata->txFrequency);                   // Tx Frequency
 
     // system info
     json::object sysInfo = json::object();
-    sysInfo["latitude"].set<float>(m_latitude);                                     // Latitude
-    sysInfo["longitude"].set<float>(m_longitude);                                   // Longitude
+    sysInfo["latitude"].set<float>(m_metadata->latitude);                           // Latitude
+    sysInfo["longitude"].set<float>(m_metadata->longitude);                         // Longitude
 
-    sysInfo["height"].set<int>(m_height);                                           // Height
-    sysInfo["location"].set<std::string>(m_location);                               // Location
+    sysInfo["height"].set<int>(m_metadata->height);                                 // Height
+    sysInfo["location"].set<std::string>(m_metadata->location);                     // Location
     config["info"].set<json::object>(sysInfo);
 
     // channel data
     json::object channel = json::object();
-    channel["txPower"].set<uint32_t>(m_power);                                      // Tx Power
-    channel["txOffsetMhz"].set<float>(m_txOffsetMhz);                               // Tx Offset (Mhz)
-    channel["chBandwidthKhz"].set<float>(m_chBandwidthKhz);                         // Ch. Bandwidth (khz)
-    channel["channelId"].set<uint8_t>(m_channelId);                                 // Channel ID
-    channel["channelNo"].set<uint32_t>(m_channelNo);                                // Channel No
+    channel["txPower"].set<uint32_t>(m_metadata->power);                            // Tx Power
+    channel["txOffsetMhz"].set<float>(m_metadata->txOffsetMhz);                     // Tx Offset (Mhz)
+    channel["chBandwidthKhz"].set<float>(m_metadata->chBandwidthKhz);               // Ch. Bandwidth (khz)
+    channel["channelId"].set<uint8_t>(m_metadata->channelId);                       // Channel ID
+    channel["channelNo"].set<uint32_t>(m_metadata->channelNo);                      // Channel No
     config["channel"].set<json::object>(channel);
 
     // RCON
     json::object rcon = json::object();
-    rcon["password"].set<std::string>(m_restApiPassword);                           // REST API Password
-    rcon["port"].set<uint16_t>(m_restApiPort);                                      // REST API Port
+    rcon["password"].set<std::string>(m_metadata->restApiPassword);                 // REST API Password
+    rcon["port"].set<uint16_t>(m_metadata->restApiPort);                            // REST API Port
     config["rcon"].set<json::object>(rcon);
 
+    // Flags
     bool external = true;
     config["externalPeer"].set<bool>(external);                                     // External Peer Marker
+
     config["software"].set<std::string>(std::string(software));                     // Software ID
 
     json::value v = json::value(config);

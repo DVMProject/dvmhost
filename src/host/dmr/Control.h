@@ -32,11 +32,11 @@
 #include "common/lookups/RadioIdLookup.h"
 #include "common/lookups/TalkgroupRulesLookup.h"
 #include "common/network/RTPFNEHeader.h"
+#include "common/network/Network.h"
 #include "common/yaml/Yaml.h"
 #include "dmr/lookups/DMRAffiliationLookup.h"
 #include "dmr/Slot.h"
 #include "modem/Modem.h"
-#include "network/Network.h"
 
 namespace dmr
 {

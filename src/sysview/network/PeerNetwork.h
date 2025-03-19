@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: PROPRIETARY
 /*
- * Digital Voice Modem - FNE Affiliations View
+ * Digital Voice Modem - FNE System View
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
@@ -8,20 +8,20 @@
  *
  */
 /**
- * @defgroup fneAffView_network Networking
- * @brief Implementation for the FNE networking.
- * @ingroup fneAffView
+ * @defgroup fneSysView_network Networking
+ * @brief Implementation for the SysView networking.
+ * @ingroup fneSysView
  *
  * @file PeerNetwork.h
- * @ingroup fneAffView_network
+ * @ingroup fneSysView
  * @file PeerNetwork.cpp
- * @ingroup fneAffView_network
+ * @ingroup fneSysView
  */
 #if !defined(__PEER_NETWORK_H__)
 #define __PEER_NETWORK_H__
 
 #include "Defines.h"
-#include "host/network/Network.h"
+#include "common/network/Network.h"
 
 #include <string>
 #include <cstdint>
@@ -31,9 +31,12 @@ namespace network
 {
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //      Implements the core peer networking logic.
     // ---------------------------------------------------------------------------
 
+    /**
+     * @brief Implements the SysView peer networking logic.
+     * @ingroup fneAffView_network
+     */
     class HOST_SW_API PeerNetwork : public Network {
     public:
         /**

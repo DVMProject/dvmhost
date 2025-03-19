@@ -77,7 +77,7 @@ include(CPack)
 include(src/fne/CMakeLists.txt)
 add_executable(dvmfne ${common_INCLUDE} ${dvmfne_SRC})
 target_link_libraries(dvmfne PRIVATE common ${OPENSSL_LIBRARIES} asio::asio Threads::Threads)
-target_include_directories(dvmfne PRIVATE ${OPENSSL_INCLUDE_DIR} src src/host src/fne)
+target_include_directories(dvmfne PRIVATE ${OPENSSL_INCLUDE_DIR} src src/fne)
 
 #
 ## dvmmon
@@ -141,4 +141,4 @@ if (COMPILE_WIN32)
 else ()
     target_link_libraries(dvmbridge PRIVATE common vocoder ${OPENSSL_LIBRARIES} dl asio::asio Threads::Threads)
 endif (COMPILE_WIN32)
-target_include_directories(dvmbridge PRIVATE ${OPENSSL_INCLUDE_DIR} src src/host src/bridge)
+target_include_directories(dvmbridge PRIVATE ${OPENSSL_INCLUDE_DIR} src src/bridge)

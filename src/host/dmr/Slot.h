@@ -23,6 +23,7 @@
 #include "common/lookups/IdenTableLookup.h"
 #include "common/lookups/RadioIdLookup.h"
 #include "common/lookups/TalkgroupRulesLookup.h"
+#include "common/network/Network.h"
 #include "common/RingBuffer.h"
 #include "common/StopWatch.h"
 #include "common/Timer.h"
@@ -32,7 +33,6 @@
 #include "dmr/packet/Data.h"
 #include "dmr/packet/Voice.h"
 #include "modem/Modem.h"
-#include "network/Network.h"
 
 #include <vector>
 #include <mutex>

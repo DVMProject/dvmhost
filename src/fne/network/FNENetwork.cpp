@@ -303,6 +303,19 @@ void FNENetwork::clock(uint32_t ms)
                     if (dt < now) {
                         LogInfoEx(LOG_NET, "PEER %u (%s) timed out, dt = %u, now = %u", id, connection->identity().c_str(),
                             dt, now);
+
+                        // set connection states for this stale connection
+                        connection->connected(false);
+                        connection->connectionState(NET_STAT_INVALID);
+
+                        // if the connection was an external peer or a peer link -- be noisy about a possible
+                        // netsplit
+                        if (connection->isExternalPeer() || connection->isPeerLink()) {
+                            for (uint8_t i = 0U; i < 3U; i++)
+                                LogWarning(LOG_NET, "PEER %u (%s) downstream netsplit, dt = %u, now = %u", id, connection->identity().c_str(),
+                                    dt, now);
+                        }
+
                         peersToRemove.push_back(id);
                     }
                 }

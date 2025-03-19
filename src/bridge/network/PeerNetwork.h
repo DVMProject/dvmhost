@@ -22,7 +22,7 @@
 
 #include "Defines.h"
 #include "common/dmr/data/EmbeddedData.h"
-#include "host/network/Network.h"
+#include "common/network/Network.h"
 
 #include <string>
 #include <cstdint>

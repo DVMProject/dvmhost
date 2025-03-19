@@ -1,27 +1,22 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /**
-* Digital Voice Modem - Modem Host Software
+ * Digital Voice Modem - Common Library
 * GPLv2 Open Source. Use is subject to license terms.
 * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 *
-*  Copyright (C) 2015,2016,2017,2018 Jonathan Naylor, G4KLX
-*  Copyright (C) 2017-2023 Bryan Biedenkapp, N2PLL
+*  Copyright (C) 2017-2025 Bryan Biedenkapp, N2PLL
 *
 */
 /**
- * @defgroup network Host Networking
- * @brief Implementation for the host networking.
- * @ingroup host
- * 
  * @file Network.h
- * @ingroup network
+ * @ingroup network_core
  * @file Network.cpp
- * @ingroup network
+ * @ingroup network_core
  */
 #if !defined(__NETWORK_H__)
 #define __NETWORK_H__
 
-#include "Defines.h"
+#include "common/Defines.h"
 #include "common/network/BaseNetwork.h"
 #include "common/lookups/RadioIdLookup.h"
 #include "common/lookups/TalkgroupRulesLookup.h"
@@ -33,6 +28,46 @@
 
 namespace network
 {
+    // ---------------------------------------------------------------------------
+    //  Structure Declaration
+    // ---------------------------------------------------------------------------
+
+    /**
+     * @brief This structure represents a peer metadata.
+     * @ingroup network_core
+     */
+    struct PeerMetadata {
+        /** @name Identity and Frequency */
+        std::string identity;                   //! Peer Identity
+        uint32_t rxFrequency;                   //! Peer Rx Frequency
+        uint32_t txFrequency;                   //! Peer Tx Frequency
+        /** @} */
+
+        /** @name System Info */
+        uint32_t power;                         //! Peer Tx Power (W)
+        float latitude;                         //! Location Latitude (decmial notation)
+        float longitude;                        //! Location Longitude (decmial notation)
+        int height;                             //! Height (M)
+        std::string location;                   //! Textual Location
+        /** @} */
+
+        /** @name Channel Data */
+        float txOffsetMhz;                      //! Tx Offset (MHz)
+        float chBandwidthKhz;                   //! Channel Bandwidth (kHz)
+        uint8_t channelId;                      //! Channel ID
+        uint32_t channelNo;                     //! Channel Number
+        /** @} */
+
+        /** @name RCON */
+        std::string restApiPassword;            //! REST API Password
+        uint16_t restApiPort;                   //! REST API Port
+        /** @} */
+
+        /** @name Flags */
+        bool isConventional;                    //! Flag indicating peer is a conventional peer.
+        /** @} */
+    };
+
     // ---------------------------------------------------------------------------
     //  Class Declaration
     // ---------------------------------------------------------------------------
@@ -115,7 +150,7 @@ namespace network
          * @brief Sets a flag indicating whether the conventional option is sent to the FNE.
          * @param conv Flag indicating conventional operation.
          */
-        void setConventional(bool conv) { m_conventional = conv; }
+        void setConventional(bool conv) { m_metadata->isConventional = conv; }
         /**
          * @brief Sets endpoint preshared encryption key.
          * @param presharedKey Encryption preshared key for networking.
@@ -208,35 +243,40 @@ namespace network
         uint16_t m_pktSeq;
         uint32_t m_loginStreamId;
 
-        /** station metadata */
-        std::string m_identity;
-        uint32_t m_rxFrequency;
-        uint32_t m_txFrequency;
-
-        float m_txOffsetMhz;
-        float m_chBandwidthKhz;
-        uint8_t m_channelId;
-        uint32_t m_channelNo;
-
-        uint32_t m_power;
-        float m_latitude;
-        float m_longitude;
-        int m_height;
-        std::string m_location;
-
-        std::string m_restApiPassword;
-        uint16_t m_restApiPort;
-
-        bool m_conventional;
+        PeerMetadata* m_metadata;
 
         uint32_t m_remotePeerId;
 
+        /**
+         * @brief Flag indicating this peer will not perform peer ID checking and will process most incoming packets.
+         */
         bool m_promiscuousPeer;
+        /**
+         * @brief Flag indicating this peer will not handle protocol processing internally, and will forward processing
+         *  to the defined user packet handler.
+         */
+        bool m_userHandleProtocol;
 
+        /**
+         * @brief DMR In-Call Control Function Callback.
+         *  (This is called when the master sends a In-Call Control request.)
+         */
         std::function<void(NET_ICC::ENUM command, uint32_t dstId, uint8_t slotNo)> m_dmrInCallCallback;
+        /**
+         * @brief P25 In-Call Control Function Callback.
+         *  (This is called once the master sends a In-Call Control request.)
+         */
         std::function<void(NET_ICC::ENUM command, uint32_t dstId)> m_p25InCallCallback;
+        /**
+         * @brief NXDN In-Call Control Function Callback.
+         *  (This is called once the master sends a In-Call Control request.)
+         */
         std::function<void(NET_ICC::ENUM command, uint32_t dstId)> m_nxdnInCallCallback;
 
+        /**
+         * @brief Encryption Key Response Function Callback.
+         *  (This is called once the master responds to a key request.)
+         */
         std::function<void(p25::kmm::KeyItem ki, uint8_t algId, uint8_t keyLength)> m_keyRespCallback;
 
         /**

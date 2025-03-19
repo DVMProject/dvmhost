@@ -32,6 +32,7 @@
 #include "common/lookups/RadioIdLookup.h"
 #include "common/lookups/TalkgroupRulesLookup.h"
 #include "common/network/RTPFNEHeader.h"
+#include "common/network/Network.h"
 #include "common/p25/SiteData.h"
 #include "common/RingBuffer.h"
 #include "common/StopWatch.h"
@@ -40,7 +41,6 @@
 #include "p25/packet/Data.h"
 #include "p25/packet/Voice.h"
 #include "p25/packet/ControlSignaling.h"
-#include "network/Network.h"
 #include "p25/lookups/P25AffiliationLookup.h"
 #include "modem/Modem.h"
 

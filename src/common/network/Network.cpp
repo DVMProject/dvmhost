@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Digital Voice Modem - Modem Host Software
+ * Digital Voice Modem - Common Library
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2015,2016,2017 Jonathan Naylor, G4KLX
  *  Copyright (C) 2017-2025 Bryan Biedenkapp, N2PLL
  *
  */
@@ -56,23 +55,10 @@ Network::Network(const std::string& address, uint16_t port, uint16_t localPort, 
     m_timeoutTimer(1000U, 60U),
     m_pktSeq(0U),
     m_loginStreamId(0U),
-    m_identity(),
-    m_rxFrequency(0U),
-    m_txFrequency(0U),
-    m_txOffsetMhz(0.0F),
-    m_chBandwidthKhz(0.0F),
-    m_channelId(0U),
-    m_channelNo(0U),
-    m_power(0U),
-    m_latitude(0.0F),
-    m_longitude(0.0F),
-    m_height(0),
-    m_location(),
-    m_restApiPassword(),
-    m_restApiPort(0),
-    m_conventional(false),
+    m_metadata(nullptr),
     m_remotePeerId(0U),
     m_promiscuousPeer(false),
+    m_userHandleProtocol(false),
     m_dmrInCallCallback(nullptr),
     m_p25InCallCallback(nullptr),
     m_nxdnInCallCallback(nullptr),
@@ -89,6 +75,8 @@ Network::Network(const std::string& address, uint16_t port, uint16_t localPort, 
     m_rxDMRStreamId[1U] = 0U;
     m_rxP25StreamId = 0U;
     m_rxNXDNStreamId = 0U;
+
+    m_metadata = new PeerMetadata();
 }
 
 /* Finalizes a instance of the Network class. */
@@ -97,6 +85,7 @@ Network::~Network()
 {
     delete[] m_salt;
     delete[] m_rxDMRStreamId;
+    delete m_metadata;
 }
 
 /* Resets the DMR ring buffer for the given slot. */
@@ -143,28 +132,29 @@ void Network::setLookups(lookups::RadioIdLookup* ridLookup, lookups::TalkgroupRu
 void Network::setMetadata(const std::string& identity, uint32_t rxFrequency, uint32_t txFrequency, float txOffsetMhz, float chBandwidthKhz,
     uint8_t channelId, uint32_t channelNo, uint32_t power, float latitude, float longitude, int height, const std::string& location)
 {
-    m_identity = identity;
-    m_rxFrequency = rxFrequency;
-    m_txFrequency = txFrequency;
+    m_metadata->identity = identity;
 
-    m_txOffsetMhz = txOffsetMhz;
-    m_chBandwidthKhz = chBandwidthKhz;
-    m_channelId = channelId;
-    m_channelNo = channelNo;
+    m_metadata->rxFrequency = rxFrequency;
+    m_metadata->txFrequency = txFrequency;
 
-    m_power = power;
-    m_latitude = latitude;
-    m_longitude = longitude;
-    m_height = height;
-    m_location = location;
+    m_metadata->txOffsetMhz = txOffsetMhz;
+    m_metadata->chBandwidthKhz = chBandwidthKhz;
+    m_metadata->channelId = channelId;
+    m_metadata->channelNo = channelNo;
+
+    m_metadata->power = power;
+    m_metadata->latitude = latitude;
+    m_metadata->longitude = longitude;
+    m_metadata->height = height;
+    m_metadata->location = location;
 }
 
 /* Sets REST API configuration settings from the modem. */
 
 void Network::setRESTAPIData(const std::string& password, uint16_t port)
 {
-    m_restApiPassword = password;
-    m_restApiPort = port;
+    m_metadata->restApiPassword = password;
+    m_metadata->restApiPort = port;
 }
 
 /* Sets endpoint preshared encryption key. */
@@ -265,6 +255,13 @@ void Network::clock(uint32_t ms)
         switch (fneHeader.getFunction()) {
         case NET_FUNC::PROTOCOL:
             {
+                // are protocol messages being user handled?
+                if (m_userHandleProtocol) {
+                    userPacketHandler(fneHeader.getPeerId(), { fneHeader.getFunction(), fneHeader.getSubFunction() }, 
+                        buffer.get(), length, fneHeader.getStreamId());
+                    break;
+                }
+
                 if (fneHeader.getSubFunction() == NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR) {              // Encapsulated DMR data frame
                     if (m_enabled && m_dmrEnabled) {
                         uint32_t slotNo = (buffer[15U] & 0x80U) == 0x80U ? 1U : 0U; // this is the raw index for the stream ID array
@@ -931,36 +928,38 @@ bool Network::writeConfig()
     json::object config = json::object();
 
     // identity and frequency
-    config["identity"].set<std::string>(m_identity);                                // Identity
-    config["rxFrequency"].set<uint32_t>(m_rxFrequency);                             // Rx Frequency
-    config["txFrequency"].set<uint32_t>(m_txFrequency);                             // Tx Frequency
+    config["identity"].set<std::string>(m_metadata->identity);                      // Identity
+    config["rxFrequency"].set<uint32_t>(m_metadata->rxFrequency);                   // Rx Frequency
+    config["txFrequency"].set<uint32_t>(m_metadata->txFrequency);                   // Tx Frequency
 
     // system info
     json::object sysInfo = json::object();
-    sysInfo["latitude"].set<float>(m_latitude);                                     // Latitude
-    sysInfo["longitude"].set<float>(m_longitude);                                   // Longitude
+    sysInfo["latitude"].set<float>(m_metadata->latitude);                           // Latitude
+    sysInfo["longitude"].set<float>(m_metadata->longitude);                         // Longitude
 
-    sysInfo["height"].set<int>(m_height);                                           // Height
-    sysInfo["location"].set<std::string>(m_location);                               // Location
+    sysInfo["height"].set<int>(m_metadata->height);                                 // Height
+    sysInfo["location"].set<std::string>(m_metadata->location);                     // Location
     config["info"].set<json::object>(sysInfo);
 
     // channel data
     json::object channel = json::object();
-    channel["txPower"].set<uint32_t>(m_power);                                      // Tx Power
-    channel["txOffsetMhz"].set<float>(m_txOffsetMhz);                               // Tx Offset (Mhz)
-    channel["chBandwidthKhz"].set<float>(m_chBandwidthKhz);                         // Ch. Bandwidth (khz)
-    channel["channelId"].set<uint8_t>(m_channelId);                                 // Channel ID
-    channel["channelNo"].set<uint32_t>(m_channelNo);                                // Channel No
+    channel["txPower"].set<uint32_t>(m_metadata->power);                            // Tx Power
+    channel["txOffsetMhz"].set<float>(m_metadata->txOffsetMhz);                     // Tx Offset (Mhz)
+    channel["chBandwidthKhz"].set<float>(m_metadata->chBandwidthKhz);               // Ch. Bandwidth (khz)
+    channel["channelId"].set<uint8_t>(m_metadata->channelId);                       // Channel ID
+    channel["channelNo"].set<uint32_t>(m_metadata->channelNo);                      // Channel No
     config["channel"].set<json::object>(channel);
 
     // RCON
     json::object rcon = json::object();
-    rcon["password"].set<std::string>(m_restApiPassword);                           // REST API Password
-    rcon["port"].set<uint16_t>(m_restApiPort);                                      // REST API Port
+    rcon["password"].set<std::string>(m_metadata->restApiPassword);                 // REST API Password
+    rcon["port"].set<uint16_t>(m_metadata->restApiPort);                            // REST API Port
     config["rcon"].set<json::object>(rcon);
 
-    config["conventionalPeer"].set<bool>(m_conventional);                           // Conventional Peer Marker
-    config["software"].set<std::string>(std::string(software));                     // Software ID
+    // Flags
+    config["conventionalPeer"].set<bool>(m_metadata->isConventional);               // Conventional Peer Marker
+
+    config["software"].set<std::string>(std::string(software));
 
     json::value v = json::value(config);
     std::string json = v.serialize();

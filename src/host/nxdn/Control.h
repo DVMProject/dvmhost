@@ -32,6 +32,7 @@
 #include "common/lookups/TalkgroupRulesLookup.h"
 #include "common/lookups/AffiliationLookup.h"
 #include "common/network/RTPFNEHeader.h"
+#include "common/network/Network.h"
 #include "common/RingBuffer.h"
 #include "common/StopWatch.h"
 #include "common/Timer.h"
@@ -39,7 +40,6 @@
 #include "nxdn/packet/Voice.h"
 #include "nxdn/packet/ControlSignaling.h"
 #include "nxdn/packet/Data.h"
-#include "network/Network.h"
 #include "modem/Modem.h"
 
 #include <cstdio>

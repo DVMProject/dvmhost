@@ -8,9 +8,6 @@
 # *
 # */
 file(GLOB bridge_SRC
-    "src/host/network/Network.h"
-    "src/host/network/Network.cpp"
-
     "src/bridge/audio/*.h"
     "src/bridge/audio/*.c"
 

@@ -31,9 +31,9 @@
 #include "common/lookups/RadioIdLookup.h"
 #include "common/lookups/TalkgroupRulesLookup.h"
 #include "common/lookups/PeerListLookup.h"
+#include "common/network/Network.h"
 #include "fne/network/influxdb/InfluxDB.h"
 #include "fne/CryptoContainer.h"
-#include "host/network/Network.h"
 
 #include <string>
 #include <cstdint>

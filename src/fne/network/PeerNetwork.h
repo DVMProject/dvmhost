@@ -18,7 +18,7 @@
 
 #include "Defines.h"
 #include "common/lookups/PeerListLookup.h"
-#include "host/network/Network.h"
+#include "common/network/Network.h"
 
 #include <string>
 #include <cstdint>
@@ -31,7 +31,7 @@ namespace network
     // ---------------------------------------------------------------------------
 
     /**
-     * @brief Implements the core peer networking logic.
+     * @brief Implements the FNE peer networking logic.
      * @ingroup fne_network
      */
     class HOST_SW_API PeerNetwork : public Network {

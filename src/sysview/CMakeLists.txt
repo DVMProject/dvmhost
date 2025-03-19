@@ -9,8 +9,6 @@
 # */
 file(GLOB sysView_SRC
     "src/host/modem/Modem.h"
-    "src/host/network/Network.h"
-    "src/host/network/Network.cpp"
 
     "src/remote/RESTClient.cpp"
     "src/remote/RESTClient.h"
