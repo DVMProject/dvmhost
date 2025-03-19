@@ -170,6 +170,10 @@ public:
 
                 auto config = rule.config();
 
+                if (!config.active()) {
+                    continue; // don't update rules that aren't active
+                }
+
                 std::vector<uint32_t> inclusions = config.inclusion();
                 auto it = std::find_if(inclusions.begin(), inclusions.end(), [&](uint32_t x) { return x == wnd.peerId; });
                 if (it == inclusions.end()) {
@@ -204,6 +208,10 @@ public:
                 uint8_t tgSlot = rule.source().tgSlot();
 
                 auto config = rule.config();
+
+                if (!config.active()) {
+                    continue; // don't update rules that aren't active
+                }
 
                 std::vector<uint32_t> inclusions = config.inclusion();
                 auto it = std::find_if(inclusions.begin(), inclusions.end(), [&](uint32_t x) { return x == wnd.peerId; });
@@ -240,6 +248,14 @@ public:
 
                 auto config = rule.config();
 
+                if (!config.active()) {
+                    continue; // don't update rules that aren't active
+                }
+
+                if (!config.affiliated()) {
+                    continue; // don't add peers to always lists for those not marked affiliated
+                }
+
                 std::vector<uint32_t> alwaysSend = config.alwaysSend();
                 auto it = std::find_if(alwaysSend.begin(), alwaysSend.end(), [&](uint32_t x) { return x == wnd.peerId; });
                 if (it == alwaysSend.end()) {
@@ -274,6 +290,14 @@ public:
                 uint8_t tgSlot = rule.source().tgSlot();
 
                 auto config = rule.config();
+
+                if (!config.active()) {
+                    continue; // don't update rules that aren't active
+                }
+
+                if (!config.affiliated()) {
+                    continue; // don't remove peers from always lists for those not marked affiliated
+                }
 
                 std::vector<uint32_t> alwaysSend = config.alwaysSend();
                 auto it = std::find_if(alwaysSend.begin(), alwaysSend.end(), [&](uint32_t x) { return x == wnd.peerId; });
