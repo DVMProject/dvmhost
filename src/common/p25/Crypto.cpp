@@ -222,7 +222,7 @@ void P25Crypto::cryptARC4_IMBE(uint8_t* imbe, DUID::E duid)
     if (m_keystream == nullptr)
         return;
 
-    uint32_t offset = 256U;
+    uint32_t offset = 0U;
     if (duid == DUID::LDU2) {
         offset += 101U;
     }
