@@ -128,7 +128,7 @@ master:
     #
     crypto_container:
         # Flag indicating whether or not crypto services are enabled.
-        enabled: false
+        enable: false
         # Full path to the talkgroup rules file.
         file: key_container.ekc
         # Container password.
@@ -151,7 +151,7 @@ master:
 peers:
     - name: EXAMPLEPEER
       # Flag indicating whether or not the peer is enabled.
-      enabled: true
+      enable: true
       # Hostname/IP address of the FNE master to connect to.
       masterAddress: 127.0.0.1
       # Port number of the FNE master to connect to.
@@ -246,7 +246,7 @@ system:
     #
     peer_acl:
         # Flag indicating whether or not the peer ACLs are enabled.
-        enabled: false
+        enable: false
         # Peer ACL mode: whitelist or blacklist
         mode: whitelist
         # Full path to the white/blacklist file.
@@ -260,7 +260,7 @@ system:
 vtun:
     # Flag indicating the virtual network tunnel is enabled.
     # (If this is enabled, dvmfne must be run as root to create the TUN interface.)
-    enabled: false
+    enable: false
     # Operational mode for the network tunnel (dmr or p25).
     digitalMode: p25
 

@@ -362,7 +362,7 @@ bool HostFNE::readParams()
     uint32_t talkgroupConfigReload = talkgroupRules["time"].as<uint32_t>(30U);
 
     yaml::Node cryptoContainer = masterConf["crypto_container"];
-    bool cryptoContainerEnabled = cryptoContainer["enabled"].as<bool>(false);
+    bool cryptoContainerEnabled = cryptoContainer["enable"].as<bool>(false);
 #if !defined(ENABLE_TCP_SSL)
     cryptoContainerEnabled = false;
 #endif // ENABLE_TCP_SSL
@@ -371,7 +371,7 @@ bool HostFNE::readParams()
     uint32_t cryptoContainerReload = cryptoContainer["time"].as<uint32_t>(30U);
 
     std::string peerListLookupFile = systemConf["peer_acl"]["file"].as<std::string>();
-    bool peerListLookupEnable = systemConf["peer_acl"]["enabled"].as<bool>(false);
+    bool peerListLookupEnable = systemConf["peer_acl"]["enable"].as<bool>(false);
     std::string peerListModeStr = systemConf["peer_acl"]["mode"].as<std::string>("whitelist");
     uint32_t peerListConfigReload = systemConf["peer_acl"]["time"].as<uint32_t>(30U);
 
@@ -735,7 +735,7 @@ bool HostFNE::createPeerNetworks()
         for (size_t i = 0; i < peerList.size(); i++) {
             yaml::Node& peerConf = peerList[i];
 
-            bool enabled = peerConf["enabled"].as<bool>(false);
+            bool enabled = peerConf["enable"].as<bool>(false);
             std::string masterAddress = peerConf["masterAddress"].as<std::string>();
             uint16_t masterPort = (uint16_t)peerConf["masterPort"].as<uint32_t>(TRAFFIC_DEFAULT_PORT);
             std::string password = peerConf["password"].as<std::string>();
@@ -835,7 +835,7 @@ bool HostFNE::createVirtualNetworking()
 {
     yaml::Node vtunConf = m_conf["vtun"];
 #if !defined(_WIN32)
-    bool vtunEnabled = vtunConf["enabled"].as<bool>(false);
+    bool vtunEnabled = vtunConf["enable"].as<bool>(false);
     if (vtunEnabled) {
         m_vtunEnabled = vtunEnabled;
 
