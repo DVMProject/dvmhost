@@ -602,10 +602,10 @@ bool Host::createModem()
                 yaml::Node networkConf = m_conf["network"];
                 uint32_t id = networkConf["id"].as<uint32_t>(1000U);
                 if (useFSCForUDP) {
-                    modemPort = new port::specialized::V24UDPPort(id, g_remoteAddress, g_remotePort + 1U, g_remotePort, true, fscInitiator, debug);
+                    modemPort = new port::specialized::V24UDPPort(id, g_remoteAddress, g_remotePort + 1U, g_remotePort, g_remoteLocalPort, true, fscInitiator, debug);
                     ((modem::port::specialized::V24UDPPort*)modemPort)->setHeartbeatInterval(fscHeartbeat);
                } else {
-                    modemPort = new port::specialized::V24UDPPort(id, g_remoteAddress, g_remotePort, 0U, false, false, debug);
+                    modemPort = new port::specialized::V24UDPPort(id, g_remoteAddress, g_remotePort, 0U, 0U, false, false, debug);
                 }
                 m_udpDFSIRemotePort = modemPort;
             } else {
@@ -617,6 +617,8 @@ bool Host::createModem()
         LogInfo("    UDP Mode: %s", m_modemRemote ? "master" : "peer");
         LogInfo("    UDP Address: %s", g_remoteAddress.c_str());
         LogInfo("    UDP Port: %u", g_remotePort);
+        if (g_remoteLocalPort > 0U)
+            LogInfo("    Local Listening UDP Port: %u", g_remoteLocalPort);
     }
 
     if (!m_modemRemote) {
