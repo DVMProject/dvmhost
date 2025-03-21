@@ -1178,6 +1178,15 @@ void ModemV24::convertToAirTIA(const uint8_t *data, uint32_t length)
         }
         break;
 
+        case BlockType::START_OF_STREAM_ACK:
+        {
+            if (m_debug)
+                ::LogDebugEx(LOG_MODEM, "ModemV24::convertToAirTIA()", "Start of Stream ACK");
+
+            // do nothing with the start of stream ack
+        }
+        break;
+
         case BlockType::VOICE_HEADER_P1:
         {
             // copy to call data VHDR1
@@ -1942,7 +1951,7 @@ void ModemV24::ackStartOfStreamTIA()
     if (m_trace)
         Utils::dump(1U, "ModemV24::ackStartOfStreamTIA() Ack StartOfStream", buffer, length);
 
-    writeImmediate(buffer, length);
+    queueP25Frame(buffer, length, STT_NON_IMBE_NO_JITTER);
 }
 
 /* Internal helper to convert from TIA-102 air interface to V.24/DFSI. */
@@ -2569,28 +2578,4 @@ void ModemV24::convertFromAirTIA(uint8_t* data, uint32_t length)
                 m_superFrameCnt++;
         }
     }
-}
-
-/* Writes raw data to the air interface modem. */
-
-int ModemV24::writeImmediate(const uint8_t* data, uint32_t length)
-{
-    assert(data != nullptr);
-
-    // add the DVM start byte, length byte, CMD byte, and padding 0
-    uint8_t header[4U];
-    header[0U] = DVM_SHORT_FRAME_START;
-    header[1U] = length & 0xFFU;
-    header[2U] = CMD_P25_DATA;
-    header[3U] = 0x00U;
-    
-    // get the actual data
-    UInt8Array __buffer = std::make_unique<uint8_t[]>(length + 4U);
-    uint8_t* buffer = __buffer.get();
-
-    ::memset(buffer, 0x00U, length + 4U);
-    ::memcpy(buffer, header, 4U);
-    ::memcpy(buffer + 4U, data, length);
-
-    return m_port->write(data, length);
 }

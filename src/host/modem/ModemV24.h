@@ -408,14 +408,6 @@ namespace modem
          * @param length Length of buffer.
          */
         void convertFromAirTIA(uint8_t* data, uint32_t length);
-
-        /**
-         * @brief Writes raw data to the air interface modem (with no jitter delay).
-         * @param data Data to write to modem.
-         * @param length Length of data to write.
-         * @returns int Actual length of data written.
-         */
-        int writeImmediate(const uint8_t* data, uint32_t length);
     };
 } // namespace modem
 
