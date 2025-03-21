@@ -740,7 +740,7 @@ namespace p25
                 OSP_SNDCP_CH_GNT = 0x14U,               //! SNDCP CH GNT - SNDCP Data Channel Grant
                 OSP_SNDCP_CH_ANN = 0x16U,               //! SNDCP CH ANN - SNDCP Data Channel Announcement
                 OSP_STS_Q = 0x1AU,                      //! STS Q - Status Query
-                OSP_QUE_RSP = 0x21U,                     //! QUE RSP - Queued Response
+                OSP_QUE_RSP = 0x21U,                    //! QUE RSP - Queued Response
                 OSP_DENY_RSP = 0x27U,                   //! DENY RSP - Deny Response
                 OSP_SCCB_EXP = 0x29U,                   //! SCCB - Secondary Control Channel Broadcast - Explicit
                 OSP_GRP_AFF_Q = 0x2AU,                  //! GRP AFF Q - Group Affiliation Query
