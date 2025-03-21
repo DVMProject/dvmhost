@@ -2556,6 +2556,7 @@ void ModemV24::convertFromAirTIA(uint8_t* data, uint32_t length)
             bufferSize += BlockHeader::LENGTH;
 
             voice.setSuperframeCnt(m_superFrameCnt);
+            voice.setBusy(1U); // Inbound Channel is Busy
             voice.encode(buffer + bufferSize);
             bufferSize += voice.getLength(); // 18, 17 or 14 depending on voice frame type
 
