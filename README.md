@@ -24,6 +24,8 @@ This project suite generates a few executables:
 - `tged` a TUI utility that allows editing of talkgroup rules configuration files (this tool is only available when project wide TUI support is enabled!).
 - `peered` a TUI utility that allows editing of peer list data files (this tool is only available when project wide TUI support is enabled!).
 
+![Interconnectivity Possible with DVM](./repo/Basic_P25_Network_Diagram.png)
+
 ## Building
 
 This project utilizes CMake for its build system. (All following information assumes familiarity with the standard Linux make system.)
