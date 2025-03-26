@@ -39,7 +39,7 @@ namespace network
     // ---------------------------------------------------------------------------
 
     /**
-     * @brief Implements the RPC networking logic.
+     * @brief Implements the Remote Procedure Call networking logic.
      * @ingroup network_core
      */
     class HOST_SW_API RPC {

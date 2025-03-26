@@ -34,7 +34,7 @@ namespace network
         // ---------------------------------------------------------------------------
 
         /**
-         * @brief Represents the RPC header.
+         * @brief Represents the Remote Procedure Call network frame header.
          * \code{.unparsed}
          * Byte 0               1               2               3
          * Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 
