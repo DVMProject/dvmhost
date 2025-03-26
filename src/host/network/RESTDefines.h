@@ -65,10 +65,6 @@
 #define GET_RELEASE_GRNTS               "/release-grants"
 #define GET_RELEASE_AFFS                "/release-affs"
 
-#define PUT_REGISTER_CC_VC              "/register-cc-vc"
-#define PUT_RELEASE_TG                  "/release-tg-grant"
-#define PUT_TOUCH_TG                    "/touch-tg-grant"
-
 #define GET_RID_WHITELIST_BASE          "/rid-whitelist/"
 #define GET_RID_WHITELIST               GET_RID_WHITELIST_BASE"(\\d+)"
 #define GET_RID_BLACKLIST_BASE          "/rid-blacklist/"
@@ -82,7 +78,6 @@
 #define PUT_DMR_RID                     "/dmr/rid"
 #define GET_DMR_CC_DEDICATED            "/dmr/cc-enable"
 #define GET_DMR_CC_BCAST                "/dmr/cc-broadcast"
-#define PUT_DMR_TSCC_PAYLOAD_ACT        "/dmr/payload-activate"
 #define GET_DMR_AFFILIATIONS            "/dmr/report-affiliations"
 
 #define GET_P25_CC                      "/p25/cc"

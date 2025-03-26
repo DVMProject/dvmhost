@@ -61,12 +61,12 @@ namespace lookups
          * @brief Initializes a new instance of the VoiceChData class.
          * @param chId Voice Channel Identity.
          * @param chNo Voice Channel Number.
-         * @param address REST API Address.
-         * @param port REST API Port.
-         * @param password REST API Password.
+         * @param address RPC/REST API Address.
+         * @param port RPC/REST API Port.
+         * @param password RPC/REST API Password.
          * @param ssl Flag indicating REST is using SSL.
          */
-        VoiceChData(uint8_t chId, uint32_t chNo, std::string address, uint16_t port, std::string password, bool ssl) :
+        VoiceChData(uint8_t chId, uint32_t chNo, std::string address, uint16_t port, std::string password, bool ssl = false) :
             m_chId(chId),
             m_chNo(chNo),
             m_address(address),
@@ -116,15 +116,15 @@ namespace lookups
          */
         __READONLY_PROPERTY_PLAIN(uint32_t, chNo);
         /**
-         * @brief REST API Address.
+         * @brief RPC/REST API Address.
          */
         __PROPERTY_PLAIN(std::string, address);
         /**
-         * @brief REST API Port.
+         * @brief RPC/REST API Port.
          */
         __PROPERTY_PLAIN(uint16_t, port);
         /**
-         * @brief REST API Password.
+         * @brief RPC/REST API Password.
          */
         __READONLY_PROPERTY_PLAIN(std::string, password);
         /**

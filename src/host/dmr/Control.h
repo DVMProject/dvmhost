@@ -31,6 +31,7 @@
 #include "common/lookups/IdenTableLookup.h"
 #include "common/lookups/RadioIdLookup.h"
 #include "common/lookups/TalkgroupRulesLookup.h"
+#include "common/network/RPC.h"
 #include "common/network/RTPFNEHeader.h"
 #include "common/network/Network.h"
 #include "common/yaml/Yaml.h"
@@ -195,18 +196,6 @@ namespace dmr
          * @param grp Flag indicating group grant.
          */
         void grantTG(uint32_t srcId, uint32_t dstId, uint8_t slot, bool grp);
-        /**
-         * @brief Releases a granted TG.
-         * @param dstId Destination ID.
-         * @param slot DMR slot number.
-         */
-        void releaseGrantTG(uint32_t dstId, uint8_t slot);
-        /**
-         * @brief Touches a granted TG to keep a channel grant alive.
-         * @param dstId Destination ID.
-         * @param slot DMR slot number.
-         */
-        void touchGrantTG(uint32_t dstId, uint8_t slot);
         /** @} */
 
         /**
@@ -350,6 +339,34 @@ namespace dmr
          * @param slotNo DMR slot.
          */
         void processInCallCtrl(network::NET_ICC::ENUM command, uint32_t dstId, uint8_t slotNo);
+
+        /** @name Supervisory Control */
+        /**
+         * @brief (RPC Handler) Permits a TGID on a non-authoritative host.
+         * @param req JSON request.
+         * @param reply JSON response.
+         */
+        void RPC_permittedTG(json::object& req, json::object& reply);
+        /**
+         * @brief (RPC Handler) Releases a granted TG.
+         * @param req JSON request.
+         * @param reply JSON response.
+         */
+        void RPC_releaseGrantTG(json::object& req, json::object& reply);
+        /**
+         * @brief (RPC Handler) Touches a granted TG to keep a channel grant alive.
+         * @param req JSON request.
+         * @param reply JSON response.
+         */
+        void RPC_touchGrantTG(json::object& req, json::object& reply);
+        /** @} */
+
+        /**
+         * @brief (RPC Handler) Helper to payload activate the slot carrying granted payload traffic.
+         * @param req JSON request.
+         * @param reply JSON response.
+         */
+        void RPC_tsccPayloadActivate(json::object& req, json::object& reply);
     };
 } // namespace dmr
 

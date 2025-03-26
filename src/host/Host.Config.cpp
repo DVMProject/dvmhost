@@ -187,19 +187,18 @@ bool Host::readParams()
         {
             yaml::Node controlCh = rfssConfig["controlCh"];
 
-            std::string restApiAddress = controlCh["restAddress"].as<std::string>("");
-            uint16_t restApiPort = (uint16_t)controlCh["restPort"].as<uint32_t>(REST_API_DEFAULT_PORT);
-            std::string restApiPassword = controlCh["restPassword"].as<std::string>();
-            bool restSsl = controlCh["restSsl"].as<bool>(false);
+            std::string rpcApiAddress = controlCh["rpcAddress"].as<std::string>("");
+            uint16_t rpcApiPort = (uint16_t)controlCh["rpcPort"].as<uint32_t>(RPC_DEFAULT_PORT);
+            std::string rpcApiPassword = controlCh["rpcPassword"].as<std::string>();
             m_presenceTime = controlCh["presence"].as<uint32_t>(120U);
 
-            VoiceChData data = VoiceChData(m_channelId, m_channelNo, restApiAddress, restApiPort, restApiPassword, restSsl);
+            VoiceChData data = VoiceChData(m_channelId, m_channelNo, rpcApiAddress, rpcApiPort, rpcApiPassword);
             m_controlChData = data;
 
             if (!m_controlChData.address().empty() && m_controlChData.port() > 0) {
-                ::LogInfoEx(LOG_HOST, "Control Channel REST API Address %s:%u SSL %u", m_controlChData.address().c_str(), m_controlChData.port(), restSsl);
+                ::LogInfoEx(LOG_HOST, "Control Channel RPC Address %s:%u", m_controlChData.address().c_str(), m_controlChData.port());
             } else {
-                ::LogInfoEx(LOG_HOST, "No Control Channel REST API Configured, CC notify disabled");
+                ::LogInfoEx(LOG_HOST, "No Control Channel RPC Configured, CC notify disabled");
             }
         }
 
@@ -236,14 +235,13 @@ bool Host::readParams()
                 chNo = 4095U;
             }
 
-            std::string restApiAddress = channel["restAddress"].as<std::string>("0.0.0.0");
-            uint16_t restApiPort = (uint16_t)channel["restPort"].as<uint32_t>(REST_API_DEFAULT_PORT);
-            std::string restApiPassword = channel["restPassword"].as<std::string>();
-            bool restSsl = channel["restSsl"].as<bool>(false);
+            std::string rpcApiAddress = channel["rpcAddress"].as<std::string>("0.0.0.0");
+            uint16_t rpcApiPort = (uint16_t)channel["rpcPort"].as<uint32_t>(RPC_DEFAULT_PORT);
+            std::string rpcApiPassword = channel["rpcPassword"].as<std::string>();
 
-            ::LogInfoEx(LOG_HOST, "Voice Channel Id %u Channel No $%04X REST API Address %s:%u SSL %u", chId, chNo, restApiAddress.c_str(), restApiPort, restSsl);
+            ::LogInfoEx(LOG_HOST, "Voice Channel Id %u Channel No $%04X RPC Address %s:%u", chId, chNo, rpcApiAddress.c_str(), rpcApiPort);
 
-            VoiceChData data = VoiceChData(chId, chNo, restApiAddress, restApiPort, restApiPassword, restSsl);
+            VoiceChData data = VoiceChData(chId, chNo, rpcApiAddress, rpcApiPort, rpcApiPassword);
             m_channelLookup->setRFChData(chNo, data);
             m_channelLookup->addRFCh(chNo);
         }
@@ -330,7 +328,8 @@ bool Host::readParams()
 
         if (!m_authoritative) {
             m_supervisor = false;
-            LogWarning(LOG_HOST, "Host is non-authoritative! This requires REST API to handle permit TG for VCs and grant TG for CCs!");
+            LogWarning(LOG_HOST, "Host is non-authoritative! This requires a second instance configured in site controller mode.");
+            LogWarning(LOG_HOST, "RPC is required to handle permit TG for VCs!");
         }
     }
     else {
@@ -728,8 +727,36 @@ bool Host::createModem()
 bool Host::createNetwork()
 {
     yaml::Node networkConf = m_conf["network"];
+    std::string rpcAddress = networkConf["rpcAddress"].as<std::string>("127.0.0.1");
+    uint16_t rpcPort = (uint16_t)networkConf["rpcPort"].as<uint32_t>(RPC_DEFAULT_PORT);
+    std::string rpcPassword = networkConf["rpcPassword"].as<std::string>("ULTRA-VERY-SECURE-DEFAULT");
+    bool rpcDebug = networkConf["rpcDebug"].as<bool>(false);
+
+    // initialize RPC
+    m_rpcAddress = rpcAddress;
+    m_rpcPort = rpcPort;
+    g_RPC = new RPC(rpcAddress, rpcPort, 0U, rpcPassword, rpcDebug);
+    bool ret = g_RPC->open();
+    if (!ret) {
+        delete g_RPC;
+        g_RPC = nullptr;
+        LogError(LOG_HOST, "failed to initialize RPC networking!");
+        return false;
+    }
+
     bool netEnable = networkConf["enable"].as<bool>(false);
     bool restApiEnable = networkConf["restEnable"].as<bool>(false);
+
+    LogInfo("Network Parameters");
+    LogInfo("    Enabled: %s", netEnable ? "yes" : "no");
+    LogInfo("    REST API Enabled: %s", restApiEnable ? "yes" : "no");
+
+    LogInfo("    RPC Address: %s", rpcAddress.c_str());
+    LogInfo("    RPC Port: %u", rpcPort);
+
+    if (rpcDebug) {
+        LogInfo("    RPC Debug: yes");
+    }
 
     // dump out if both networking and REST API are disabled
     if (!netEnable && !restApiEnable) {
@@ -826,12 +853,10 @@ bool Host::createNetwork()
 
     IdenTable entry = m_idenTable->find(m_channelId);
 
-    LogInfo("Network Parameters");
-    LogInfo("    Enabled: %s", netEnable ? "yes" : "no");
     if (netEnable) {
         LogInfo("    Peer ID: %u", id);
-        LogInfo("    Address: %s", address.c_str());
-        LogInfo("    Port: %u", port);
+        LogInfo("    Master Address: %s", address.c_str());
+        LogInfo("    Master Port: %u", port);
         if (local > 0U)
             LogInfo("    Local: %u", local);
         else
@@ -851,7 +876,7 @@ bool Host::createNetwork()
             LogInfo("    Debug: yes");
         }
     }
-    LogInfo("    REST API Enabled: %s", restApiEnable ? "yes" : "no");
+
     if (restApiEnable) {
         LogInfo("    REST API Address: %s", restApiAddress.c_str());
         LogInfo("    REST API Port: %u", restApiPort);
@@ -900,7 +925,7 @@ bool Host::createNetwork()
         ::LogSetNetwork(m_network);
     }
 
-    // initialize network remote command
+    // initialize REST API
     if (restApiEnable) {
         m_restAddress = restApiAddress;
         m_restPort = restApiPort;

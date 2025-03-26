@@ -17,8 +17,8 @@
 #include "common/Log.h"
 #include "common/Utils.h"
 #include "nxdn/packet/ControlSignaling.h"
-#include "remote/RESTClient.h"
 #include "ActivityLog.h"
+#include "Host.h"
 
 using namespace nxdn;
 using namespace nxdn::defines;
@@ -560,28 +560,40 @@ bool ControlSignaling::writeRF_Message_Grant(uint32_t srcId, uint32_t dstId, uin
         }
     }
 
-    // callback REST API to permit the granted TG on the specified voice channel
+    // callback RPC to permit the granted TG on the specified voice channel
     if (m_nxdn->m_authoritative && m_nxdn->m_supervisor) {
         ::lookups::VoiceChData voiceChData = m_nxdn->m_affiliations.rfCh()->getRFChData(chNo);
         if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0 &&
             chNo != m_nxdn->m_siteData.channelNo()) {
             json::object req = json::object();
-            int state = modem::DVM_STATE::STATE_NXDN;
-            req["state"].set<int>(state);
             req["dstId"].set<uint32_t>(dstId);
 
-            int ret = RESTClient::send(voiceChData.address(), voiceChData.port(), voiceChData.password(),
-                HTTP_PUT, PUT_PERMIT_TG, req, voiceChData.ssl(), REST_QUICK_WAIT / 2, m_nxdn->m_debug);
-            if (ret != network::rest::http::HTTPPayload::StatusType::OK) {
-                ::LogError((net) ? LOG_NET : LOG_RF, "NXDN, %s, failed to permit TG for use, chNo = %u", rcch->toString().c_str(), chNo);
-                m_nxdn->m_affiliations.releaseGrant(dstId, false);
-                if (!net) {
-                    writeRF_Message_Deny(0U, srcId, CauseResponse::VD_QUE_GRP_BUSY, MessageType::RTCH_VCALL);
-                    m_nxdn->m_rfState = RS_RF_REJECTED;
+            bool requestFailed = false;
+            std::string rcchStr = rcch->toString().c_str();
+            g_RPC->req(RPC_PERMIT_NXDN_TG, req, [=, &requestFailed, &rcchStr](json::object& req, json::object& reply) {
+                if (!req["status"].is<int>()) {
+                    return;
                 }
 
+                int status = req["status"].get<int>();
+                if (status != network::RPC::OK) {
+                    ::LogError((net) ? LOG_NET : LOG_RF, "NXDN, %s, failed to permit TG for use, chNo = %u", rcchStr.c_str(), chNo);
+                    if (req["message"].is<std::string>()) {
+                        std::string retMsg = req["message"].get<std::string>();
+                        ::LogError((net) ? LOG_NET : LOG_RF, "NXDN, RPC failed, %s", retMsg.c_str());
+                    }
+
+                    m_nxdn->m_affiliations.releaseGrant(dstId, false);
+                    if (!net) {
+                        writeRF_Message_Deny(0U, srcId, CauseResponse::VD_QUE_GRP_BUSY, MessageType::RTCH_VCALL);
+                        m_nxdn->m_rfState = RS_RF_REJECTED;
+                    }
+                    requestFailed = true;
+                }
+            }, voiceChData.address(), voiceChData.port());
+
+            if (requestFailed)
                 return false;
-            }
         }
         else {
             ::LogError((net) ? LOG_NET : LOG_RF, "NXDN, %s, failed to permit TG for use, chNo = %u", rcch->toString().c_str(), chNo);

@@ -251,9 +251,9 @@ void Network::clock(uint32_t ms)
             m_pktLastSeq = 0U;
         }
 
-        // process incoming message frame opcodes
+        // process incoming message function opcodes
         switch (fneHeader.getFunction()) {
-        case NET_FUNC::PROTOCOL:
+        case NET_FUNC::PROTOCOL:                                        // Protocol
             {
                 // are protocol messages being user handled?
                 if (m_userHandleProtocol) {
@@ -262,336 +262,371 @@ void Network::clock(uint32_t ms)
                     break;
                 }
 
-                if (fneHeader.getSubFunction() == NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR) {              // Encapsulated DMR data frame
-                    if (m_enabled && m_dmrEnabled) {
-                        uint32_t slotNo = (buffer[15U] & 0x80U) == 0x80U ? 1U : 0U; // this is the raw index for the stream ID array
+                // process incomfing message subfunction opcodes
+                switch (fneHeader.getSubFunction()) {
+                case NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR:                 // Encapsulated DMR data frame
+                    {
+                        if (m_enabled && m_dmrEnabled) {
+                            uint32_t slotNo = (buffer[15U] & 0x80U) == 0x80U ? 1U : 0U; // this is the raw index for the stream ID array
 
-                        if (m_debug) {
-                            LogDebug(LOG_NET, "DMR Slot %u, peer = %u, len = %u, pktSeq = %u, streamId = %u", 
-                                slotNo + 1U, peerId, length, rtpHeader.getSequence(), streamId);
-                        }
+                            if (m_debug) {
+                                LogDebug(LOG_NET, "DMR Slot %u, peer = %u, len = %u, pktSeq = %u, streamId = %u", 
+                                    slotNo + 1U, peerId, length, rtpHeader.getSequence(), streamId);
+                            }
 
-                        if (m_promiscuousPeer) {
-                            m_rxDMRStreamId[slotNo] = streamId;
-                            m_pktLastSeq = m_pktSeq;
-                        }
-                        else {
-                            if (m_rxDMRStreamId[slotNo] == 0U) {
-                                if (rtpHeader.getSequence() == RTP_END_OF_CALL_SEQ) {
-                                    m_rxDMRStreamId[slotNo] = 0U;
-                                }
-                                else {
-                                    m_rxDMRStreamId[slotNo] = streamId;
-                                }
-
+                            if (m_promiscuousPeer) {
+                                m_rxDMRStreamId[slotNo] = streamId;
                                 m_pktLastSeq = m_pktSeq;
                             }
                             else {
-                                if (m_rxDMRStreamId[slotNo] == streamId) {
-                                    if (m_pktSeq != 0U && m_pktLastSeq != 0U) {
-                                        if (m_pktSeq >= 1U && ((m_pktSeq != m_pktLastSeq + 1) && (m_pktSeq - 1 != m_pktLastSeq + 1))) {
-                                            LogWarning(LOG_NET, "DMR Stream %u out-of-sequence; %u != %u", streamId, m_pktSeq, m_pktLastSeq + 1);
-                                        }
+                                if (m_rxDMRStreamId[slotNo] == 0U) {
+                                    if (rtpHeader.getSequence() == RTP_END_OF_CALL_SEQ) {
+                                        m_rxDMRStreamId[slotNo] = 0U;
+                                    }
+                                    else {
+                                        m_rxDMRStreamId[slotNo] = streamId;
                                     }
 
                                     m_pktLastSeq = m_pktSeq;
                                 }
+                                else {
+                                    if (m_rxDMRStreamId[slotNo] == streamId) {
+                                        if (m_pktSeq != 0U && m_pktLastSeq != 0U) {
+                                            if (m_pktSeq >= 1U && ((m_pktSeq != m_pktLastSeq + 1) && (m_pktSeq - 1 != m_pktLastSeq + 1))) {
+                                                LogWarning(LOG_NET, "DMR Stream %u out-of-sequence; %u != %u", streamId, m_pktSeq, m_pktLastSeq + 1);
+                                            }
+                                        }
 
-                                if (rtpHeader.getSequence() == RTP_END_OF_CALL_SEQ) {
-                                    m_rxDMRStreamId[slotNo] = 0U;
+                                        m_pktLastSeq = m_pktSeq;
+                                    }
+
+                                    if (rtpHeader.getSequence() == RTP_END_OF_CALL_SEQ) {
+                                        m_rxDMRStreamId[slotNo] = 0U;
+                                    }
                                 }
                             }
+
+                            if (m_debug)
+                                Utils::dump(1U, "[Network::clock()] Network Received, DMR", buffer.get(), length);
+                            if (length > 255)
+                                LogError(LOG_NET, "DMR Stream %u, frame oversized? this shouldn't happen, pktSeq = %u, len = %u", streamId, m_pktSeq, length);
+
+                            uint8_t len = length;
+                            m_rxDMRData.addData(&len, 1U);
+                            m_rxDMRData.addData(buffer.get(), len);
                         }
-
-                        if (m_debug)
-                            Utils::dump(1U, "[Network::clock()] Network Received, DMR", buffer.get(), length);
-                        if (length > 255)
-                            LogError(LOG_NET, "DMR Stream %u, frame oversized? this shouldn't happen, pktSeq = %u, len = %u", streamId, m_pktSeq, length);
-
-                        uint8_t len = length;
-                        m_rxDMRData.addData(&len, 1U);
-                        m_rxDMRData.addData(buffer.get(), len);
                     }
-                }
-                else if (fneHeader.getSubFunction() == NET_SUBFUNC::PROTOCOL_SUBFUNC_P25) {         // Encapsulated P25 data frame
-                    if (m_enabled && m_p25Enabled) {
-                        if (m_debug) {
-                            LogDebug(LOG_NET, "P25, peer = %u, len = %u, pktSeq = %u, streamId = %u", 
-                                peerId, length, rtpHeader.getSequence(), streamId);
-                        }
+                    break;
 
-                        if (m_promiscuousPeer) {
-                            m_rxP25StreamId = streamId;
-                            m_pktLastSeq = m_pktSeq;
-                        }
-                        else {
-                            if (m_rxP25StreamId == 0U) {
-                                if (rtpHeader.getSequence() == RTP_END_OF_CALL_SEQ) {
-                                    m_rxP25StreamId = 0U;
-                                }
-                                else {
-                                    m_rxP25StreamId = streamId;
-                                }
+                case NET_SUBFUNC::PROTOCOL_SUBFUNC_P25:                 // Encapsulated P25 data frame
+                    {
+                        if (m_enabled && m_p25Enabled) {
+                            if (m_debug) {
+                                LogDebug(LOG_NET, "P25, peer = %u, len = %u, pktSeq = %u, streamId = %u", 
+                                    peerId, length, rtpHeader.getSequence(), streamId);
+                            }
 
+                            if (m_promiscuousPeer) {
+                                m_rxP25StreamId = streamId;
                                 m_pktLastSeq = m_pktSeq;
                             }
                             else {
-                                if (m_rxP25StreamId == streamId) {
-                                    if (m_pktSeq != 0U && m_pktLastSeq != 0U) {
-                                        if (m_pktSeq >= 1U && ((m_pktSeq != m_pktLastSeq + 1) && (m_pktSeq - 1 != m_pktLastSeq + 1))) {
-                                            LogWarning(LOG_NET, "P25 Stream %u out-of-sequence; %u != %u", streamId, m_pktSeq, m_pktLastSeq + 1);
-                                        }
+                                if (m_rxP25StreamId == 0U) {
+                                    if (rtpHeader.getSequence() == RTP_END_OF_CALL_SEQ) {
+                                        m_rxP25StreamId = 0U;
+                                    }
+                                    else {
+                                        m_rxP25StreamId = streamId;
                                     }
 
                                     m_pktLastSeq = m_pktSeq;
                                 }
+                                else {
+                                    if (m_rxP25StreamId == streamId) {
+                                        if (m_pktSeq != 0U && m_pktLastSeq != 0U) {
+                                            if (m_pktSeq >= 1U && ((m_pktSeq != m_pktLastSeq + 1) && (m_pktSeq - 1 != m_pktLastSeq + 1))) {
+                                                LogWarning(LOG_NET, "P25 Stream %u out-of-sequence; %u != %u", streamId, m_pktSeq, m_pktLastSeq + 1);
+                                            }
+                                        }
 
-                                if (rtpHeader.getSequence() == RTP_END_OF_CALL_SEQ) {
-                                    m_rxP25StreamId = 0U;
+                                        m_pktLastSeq = m_pktSeq;
+                                    }
+
+                                    if (rtpHeader.getSequence() == RTP_END_OF_CALL_SEQ) {
+                                        m_rxP25StreamId = 0U;
+                                    }
                                 }
                             }
+
+                            if (m_debug)
+                                Utils::dump(1U, "[Network::clock()] Network Received, P25", buffer.get(), length);
+                            if (length > 255)
+                                LogError(LOG_NET, "P25 Stream %u, frame oversized? this shouldn't happen, pktSeq = %u, len = %u", streamId, m_pktSeq, length);
+
+                            uint8_t len = length;
+                            m_rxP25Data.addData(&len, 1U);
+                            m_rxP25Data.addData(buffer.get(), len);
                         }
-
-                        if (m_debug)
-                            Utils::dump(1U, "[Network::clock()] Network Received, P25", buffer.get(), length);
-                        if (length > 255)
-                            LogError(LOG_NET, "P25 Stream %u, frame oversized? this shouldn't happen, pktSeq = %u, len = %u", streamId, m_pktSeq, length);
-
-                        uint8_t len = length;
-                        m_rxP25Data.addData(&len, 1U);
-                        m_rxP25Data.addData(buffer.get(), len);
                     }
-                }
-                else if (fneHeader.getSubFunction() == NET_SUBFUNC::PROTOCOL_SUBFUNC_NXDN) {        // Encapsulated NXDN data frame
-                    if (m_enabled && m_nxdnEnabled) {
-                        if (m_debug) {
-                            LogDebug(LOG_NET, "NXDN, peer = %u, len = %u, pktSeq = %u, streamId = %u", 
-                                peerId, length, rtpHeader.getSequence(), streamId);
-                        }
+                    break;
 
-                        if (m_promiscuousPeer) {
-                            m_rxNXDNStreamId = streamId;
-                            m_pktLastSeq = m_pktSeq;
-                        }
-                        else {
-                            if (m_rxNXDNStreamId == 0U) {
-                                if (rtpHeader.getSequence() == RTP_END_OF_CALL_SEQ) {
-                                    m_rxNXDNStreamId = 0U;
-                                }
-                                else {
-                                    m_rxNXDNStreamId = streamId;
-                                }
+                case NET_SUBFUNC::PROTOCOL_SUBFUNC_NXDN:                // Encapsulated NXDN data frame
+                    {
+                        if (m_enabled && m_nxdnEnabled) {
+                            if (m_debug) {
+                                LogDebug(LOG_NET, "NXDN, peer = %u, len = %u, pktSeq = %u, streamId = %u", 
+                                    peerId, length, rtpHeader.getSequence(), streamId);
+                            }
 
+                            if (m_promiscuousPeer) {
+                                m_rxNXDNStreamId = streamId;
                                 m_pktLastSeq = m_pktSeq;
                             }
                             else {
-                                if (m_rxNXDNStreamId == streamId) {
-                                    if (m_pktSeq != 0U && m_pktLastSeq != 0U) {
-                                        if (m_pktSeq >= 1U && ((m_pktSeq != m_pktLastSeq + 1) && (m_pktSeq - 1 != m_pktLastSeq + 1))) {
-                                            LogWarning(LOG_NET, "NXDN Stream %u out-of-sequence; %u != %u", streamId, m_pktSeq, m_pktLastSeq + 1);
-                                        }
+                                if (m_rxNXDNStreamId == 0U) {
+                                    if (rtpHeader.getSequence() == RTP_END_OF_CALL_SEQ) {
+                                        m_rxNXDNStreamId = 0U;
+                                    }
+                                    else {
+                                        m_rxNXDNStreamId = streamId;
                                     }
 
                                     m_pktLastSeq = m_pktSeq;
                                 }
+                                else {
+                                    if (m_rxNXDNStreamId == streamId) {
+                                        if (m_pktSeq != 0U && m_pktLastSeq != 0U) {
+                                            if (m_pktSeq >= 1U && ((m_pktSeq != m_pktLastSeq + 1) && (m_pktSeq - 1 != m_pktLastSeq + 1))) {
+                                                LogWarning(LOG_NET, "NXDN Stream %u out-of-sequence; %u != %u", streamId, m_pktSeq, m_pktLastSeq + 1);
+                                            }
+                                        }
 
-                                if (rtpHeader.getSequence() == RTP_END_OF_CALL_SEQ) {
-                                    m_rxNXDNStreamId = 0U;
+                                        m_pktLastSeq = m_pktSeq;
+                                    }
+
+                                    if (rtpHeader.getSequence() == RTP_END_OF_CALL_SEQ) {
+                                        m_rxNXDNStreamId = 0U;
+                                    }
                                 }
                             }
+
+                            if (m_debug)
+                                Utils::dump(1U, "[Network::clock()] Network Received, NXDN", buffer.get(), length);
+                            if (length > 255)
+                                LogError(LOG_NET, "NXDN Stream %u, frame oversized? this shouldn't happen, pktSeq = %u, len = %u", streamId, m_pktSeq, length);
+
+                            uint8_t len = length;
+                            m_rxNXDNData.addData(&len, 1U);
+                            m_rxNXDNData.addData(buffer.get(), len);
                         }
-
-                        if (m_debug)
-                            Utils::dump(1U, "[Network::clock()] Network Received, NXDN", buffer.get(), length);
-                        if (length > 255)
-                            LogError(LOG_NET, "NXDN Stream %u, frame oversized? this shouldn't happen, pktSeq = %u, len = %u", streamId, m_pktSeq, length);
-
-                        uint8_t len = length;
-                        m_rxNXDNData.addData(&len, 1U);
-                        m_rxNXDNData.addData(buffer.get(), len);
                     }
-                }
-                else {
+                    break;
+
+                default:
                     Utils::dump("unknown protocol opcode from the master", buffer.get(), length);
+                    break;
                 }
             }
             break;
 
-        case NET_FUNC::MASTER:
+        case NET_FUNC::MASTER:                                          // Master
             {
-                if (fneHeader.getSubFunction() == NET_SUBFUNC::MASTER_SUBFUNC_WL_RID) {         // Radio ID Whitelist
-                    if (m_enabled && m_updateLookup) {
-                        if (m_debug)
-                            Utils::dump(1U, "Network Received, WL RID", buffer.get(), length);
+                // process incomfing message subfunction opcodes
+                switch (fneHeader.getSubFunction()) {
+                case NET_SUBFUNC::MASTER_SUBFUNC_WL_RID:                // Radio ID Whitelist
+                    {
+                        if (m_enabled && m_updateLookup) {
+                            if (m_debug)
+                                Utils::dump(1U, "Network Received, WL RID", buffer.get(), length);
 
-                        if (m_ridLookup != nullptr) {
-                            // update RID lists
-                            uint32_t len = __GET_UINT32(buffer, 6U);
-                            uint32_t offs = 11U;
-                            for (uint32_t i = 0; i < len; i++) {
-                                uint32_t id = __GET_UINT16(buffer, offs);
-                                m_ridLookup->toggleEntry(id, true);
-                                offs += 4U;
-                            }
+                            if (m_ridLookup != nullptr) {
+                                // update RID lists
+                                uint32_t len = __GET_UINT32(buffer, 6U);
+                                uint32_t offs = 11U;
+                                for (uint32_t i = 0; i < len; i++) {
+                                    uint32_t id = __GET_UINT16(buffer, offs);
+                                    m_ridLookup->toggleEntry(id, true);
+                                    offs += 4U;
+                                }
 
-                            LogMessage(LOG_NET, "Network Announced %u whitelisted RIDs", len);
+                                LogMessage(LOG_NET, "Network Announced %u whitelisted RIDs", len);
 
-                            // save to file if enabled and we got RIDs
-                            if (m_saveLookup && len > 0) {
-                                m_ridLookup->commit();
-                            }
-                        }
-                    }
-                }
-                else if (fneHeader.getSubFunction() == NET_SUBFUNC::MASTER_SUBFUNC_BL_RID) {        // Radio ID Blacklist
-                    if (m_enabled && m_updateLookup) {
-                        if (m_debug)
-                            Utils::dump(1U, "Network Received, BL RID", buffer.get(), length);
-
-                        if (m_ridLookup != nullptr) {
-                            // update RID lists
-                            uint32_t len = __GET_UINT32(buffer, 6U);
-                            uint32_t offs = 11U;
-                            for (uint32_t i = 0; i < len; i++) {
-                                uint32_t id = __GET_UINT16(buffer, offs);
-                                m_ridLookup->toggleEntry(id, false);
-                                offs += 4U;
-                            }
-
-                            LogMessage(LOG_NET, "Network Announced %u blacklisted RIDs", len);
-
-                            // save to file if enabled and we got RIDs
-                            if (m_saveLookup && len > 0) {
-                                m_ridLookup->commit();
+                                // save to file if enabled and we got RIDs
+                                if (m_saveLookup && len > 0) {
+                                    m_ridLookup->commit();
+                                }
                             }
                         }
                     }
-                }
-                else if (fneHeader.getSubFunction() == NET_SUBFUNC::MASTER_SUBFUNC_ACTIVE_TGS) {    // Talkgroup Active IDs
-                    if (m_enabled && m_updateLookup) {
-                        if (m_debug)
-                            Utils::dump(1U, "Network Received, ACTIVE TGS", buffer.get(), length);
+                    break;
+                case NET_SUBFUNC::MASTER_SUBFUNC_BL_RID:                // Radio ID Blacklist
+                    {
+                        if (m_enabled && m_updateLookup) {
+                            if (m_debug)
+                                Utils::dump(1U, "Network Received, BL RID", buffer.get(), length);
 
-                        if (m_tidLookup != nullptr) {
-                            // update TGID lists
-                            uint32_t len = __GET_UINT32(buffer, 6U);
-                            uint32_t offs = 11U;
-                            for (uint32_t i = 0; i < len; i++) {
-                                uint32_t id = __GET_UINT16(buffer, offs);
-                                uint8_t slot = (buffer[offs + 3U]) & 0x03U;
-                                bool affiliated = (buffer[offs + 3U] & 0x40U) == 0x40U;
-                                bool nonPreferred = (buffer[offs + 3U] & 0x80U) == 0x80U;
+                            if (m_ridLookup != nullptr) {
+                                // update RID lists
+                                uint32_t len = __GET_UINT32(buffer, 6U);
+                                uint32_t offs = 11U;
+                                for (uint32_t i = 0; i < len; i++) {
+                                    uint32_t id = __GET_UINT16(buffer, offs);
+                                    m_ridLookup->toggleEntry(id, false);
+                                    offs += 4U;
+                                }
 
-                                lookups::TalkgroupRuleGroupVoice tid = m_tidLookup->find(id, slot);
+                                LogMessage(LOG_NET, "Network Announced %u blacklisted RIDs", len);
 
-                                // if the TG is marked as non-preferred, and the TGID exists in the local entries
-                                // erase the local and overwrite with the FNE data
-                                if (nonPreferred) {
+                                // save to file if enabled and we got RIDs
+                                if (m_saveLookup && len > 0) {
+                                    m_ridLookup->commit();
+                                }
+                            }
+                        }
+                    }
+                    break;
+
+                case NET_SUBFUNC::MASTER_SUBFUNC_ACTIVE_TGS:            // Talkgroup Active IDs
+                    {
+                        if (m_enabled && m_updateLookup) {
+                            if (m_debug)
+                                Utils::dump(1U, "Network Received, ACTIVE TGS", buffer.get(), length);
+
+                            if (m_tidLookup != nullptr) {
+                                // update TGID lists
+                                uint32_t len = __GET_UINT32(buffer, 6U);
+                                uint32_t offs = 11U;
+                                for (uint32_t i = 0; i < len; i++) {
+                                    uint32_t id = __GET_UINT16(buffer, offs);
+                                    uint8_t slot = (buffer[offs + 3U]) & 0x03U;
+                                    bool affiliated = (buffer[offs + 3U] & 0x40U) == 0x40U;
+                                    bool nonPreferred = (buffer[offs + 3U] & 0x80U) == 0x80U;
+
+                                    lookups::TalkgroupRuleGroupVoice tid = m_tidLookup->find(id, slot);
+
+                                    // if the TG is marked as non-preferred, and the TGID exists in the local entries
+                                    // erase the local and overwrite with the FNE data
+                                    if (nonPreferred) {
+                                        if (!tid.isInvalid()) {
+                                            m_tidLookup->eraseEntry(id, slot);
+                                            tid = m_tidLookup->find(id, slot);
+                                        }
+                                    }
+
+                                    if (tid.isInvalid()) {
+                                        if (!tid.config().active()) {
+                                            m_tidLookup->eraseEntry(id, slot);
+                                        }
+
+                                        LogMessage(LOG_NET, "Activated%s%s TG %u TS %u in TGID table", 
+                                            (nonPreferred) ? " non-preferred" : "", (affiliated) ? " affiliated" : "", id, slot);
+                                        m_tidLookup->addEntry(id, slot, true, affiliated, nonPreferred);
+                                    }
+
+                                    offs += 5U;
+                                }
+
+                                LogMessage(LOG_NET, "Activated %u TGs; loaded %u entries into talkgroup rules table", len, m_tidLookup->groupVoice().size());
+
+                                // save if saving from network is enabled
+                                if (m_saveLookup && len > 0) {
+                                    m_tidLookup->commit();
+                                }
+                            }
+                        }
+                    }
+                    break;
+                case NET_SUBFUNC::MASTER_SUBFUNC_DEACTIVE_TGS:          // Talkgroup Deactivated IDs
+                    {
+                        if (m_enabled && m_updateLookup) {
+                            if (m_debug)
+                                Utils::dump(1U, "Network Received, DEACTIVE TGS", buffer.get(), length);
+
+                            if (m_tidLookup != nullptr) {
+                                // update TGID lists
+                                uint32_t len = __GET_UINT32(buffer, 6U);
+                                uint32_t offs = 11U;
+                                for (uint32_t i = 0; i < len; i++) {
+                                    uint32_t id = __GET_UINT16(buffer, offs);
+                                    uint8_t slot = (buffer[offs + 3U]);
+
+                                    lookups::TalkgroupRuleGroupVoice tid = m_tidLookup->find(id, slot);
                                     if (!tid.isInvalid()) {
-                                        m_tidLookup->eraseEntry(id, slot);
-                                        tid = m_tidLookup->find(id, slot);
-                                    }
-                                }
-
-                                if (tid.isInvalid()) {
-                                    if (!tid.config().active()) {
+                                        LogMessage(LOG_NET, "Deactivated TG %u TS %u in TGID table", id, slot);
                                         m_tidLookup->eraseEntry(id, slot);
                                     }
-                                    
-                                    LogMessage(LOG_NET, "Activated%s%s TG %u TS %u in TGID table", 
-                                        (nonPreferred) ? " non-preferred" : "", (affiliated) ? " affiliated" : "", id, slot);
-                                    m_tidLookup->addEntry(id, slot, true, affiliated, nonPreferred);
+
+                                    offs += 5U;
                                 }
 
-                                offs += 5U;
-                            }
+                                LogMessage(LOG_NET, "Deactivated %u TGs; loaded %u entries into talkgroup rules table", len, m_tidLookup->groupVoice().size());
 
-                            LogMessage(LOG_NET, "Activated %u TGs; loaded %u entries into talkgroup rules table", len, m_tidLookup->groupVoice().size());
-
-                            // save if saving from network is enabled
-                            if (m_saveLookup && len > 0) {
-                                m_tidLookup->commit();
+                                // save if saving from network is enabled
+                                if (m_saveLookup && len > 0) {
+                                    m_tidLookup->commit();
+                                }
                             }
                         }
                     }
-                }
-                else if (fneHeader.getSubFunction() == NET_SUBFUNC::MASTER_SUBFUNC_DEACTIVE_TGS) {  // Talkgroup Deactivated IDs
-                    if (m_enabled && m_updateLookup) {
-                        if (m_debug)
-                            Utils::dump(1U, "Network Received, DEACTIVE TGS", buffer.get(), length);
+                    break;
 
-                        if (m_tidLookup != nullptr) {
-                            // update TGID lists
-                            uint32_t len = __GET_UINT32(buffer, 6U);
-                            uint32_t offs = 11U;
-                            for (uint32_t i = 0; i < len; i++) {
-                                uint32_t id = __GET_UINT16(buffer, offs);
-                                uint8_t slot = (buffer[offs + 3U]);
-
-                                lookups::TalkgroupRuleGroupVoice tid = m_tidLookup->find(id, slot);
-                                if (!tid.isInvalid()) {
-                                    LogMessage(LOG_NET, "Deactivated TG %u TS %u in TGID table", id, slot);
-                                    m_tidLookup->eraseEntry(id, slot);
-                                }
-
-                                offs += 5U;
-                            }
-
-                            LogMessage(LOG_NET, "Deactivated %u TGs; loaded %u entries into talkgroup rules table", len, m_tidLookup->groupVoice().size());
-
-                            // save if saving from network is enabled
-                            if (m_saveLookup && len > 0) {
-                                m_tidLookup->commit();
-                            }
-                        }
-                    }
-                }
-                else {
+                default:
                     Utils::dump("unknown master control opcode from the master", buffer.get(), length);
+                    break;
                 }
             }
             break;
 
-        case NET_FUNC::INCALL_CTRL:
+        case NET_FUNC::INCALL_CTRL:                                     // In-Call Control
             {
-                if (fneHeader.getSubFunction() == NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR) {              // DMR In-Call Control
-                    if (m_enabled && m_dmrEnabled) {
-                        NET_ICC::ENUM command = (NET_ICC::ENUM)buffer[10U];
-                        uint32_t dstId = __GET_UINT16(buffer, 11U);
-                        uint8_t slot = buffer[14U];
+                // process incomfing message subfunction opcodes
+                switch (fneHeader.getSubFunction()) {
+                case NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR:                 // DMR In-Call Control
+                    {
+                        if (m_enabled && m_dmrEnabled) {
+                            NET_ICC::ENUM command = (NET_ICC::ENUM)buffer[10U];
+                            uint32_t dstId = __GET_UINT16(buffer, 11U);
+                            uint8_t slot = buffer[14U];
 
-                        if (m_dmrInCallCallback != nullptr) {
-                            m_dmrInCallCallback(command, dstId, slot);
+                            if (m_dmrInCallCallback != nullptr) {
+                                m_dmrInCallCallback(command, dstId, slot);
+                            }
                         }
                     }
-                }
-                else if (fneHeader.getSubFunction() == NET_SUBFUNC::PROTOCOL_SUBFUNC_P25) {         // P25 In-Call Control
-                    if (m_enabled && m_p25Enabled) {
-                        NET_ICC::ENUM command = (NET_ICC::ENUM)buffer[10U];
-                        uint32_t dstId = __GET_UINT16(buffer, 11U);
+                    break;
+                case NET_SUBFUNC::PROTOCOL_SUBFUNC_P25:                 // P25 In-Call Control
+                    {
+                        if (m_enabled && m_p25Enabled) {
+                            NET_ICC::ENUM command = (NET_ICC::ENUM)buffer[10U];
+                            uint32_t dstId = __GET_UINT16(buffer, 11U);
 
-                        if (m_p25InCallCallback != nullptr) {
-                            m_p25InCallCallback(command, dstId);
+                            if (m_p25InCallCallback != nullptr) {
+                                m_p25InCallCallback(command, dstId);
+                            }
+                        }    
+                    }
+                    break;
+                case NET_SUBFUNC::PROTOCOL_SUBFUNC_NXDN:                // NXDN In-Call Control
+                    {
+                        if (m_enabled && m_nxdnEnabled) {
+                            NET_ICC::ENUM command = (NET_ICC::ENUM)buffer[10U];
+                            uint32_t dstId = __GET_UINT16(buffer, 11U);
+
+                            if (m_nxdnInCallCallback != nullptr) {
+                                m_nxdnInCallCallback(command, dstId);
+                            }
                         }
                     }
-                }
-                else if (fneHeader.getSubFunction() == NET_SUBFUNC::PROTOCOL_SUBFUNC_NXDN) {        // NXDN In-Call Control
-                    if (m_enabled && m_nxdnEnabled) {
-                        NET_ICC::ENUM command = (NET_ICC::ENUM)buffer[10U];
-                        uint32_t dstId = __GET_UINT16(buffer, 11U);
+                    break;
 
-                        if (m_nxdnInCallCallback != nullptr) {
-                            m_nxdnInCallCallback(command, dstId);
-                        }
-                    }
-                }
-                else {
-                    Utils::dump("unknown protocol opcode from the master", buffer.get(), length);
+                default:
+                    Utils::dump("unknown incall control opcode from the master", buffer.get(), length);
+                    break;
                 }
             }
             break;
 
-        case NET_FUNC::KEY_RSP:                                                                     // Enc. Key Response
+        case NET_FUNC::KEY_RSP:                                         // Enc. Key Response
             {
                 if (m_enabled) {
                     using namespace p25::kmm;
@@ -629,7 +664,7 @@ void Network::clock(uint32_t ms)
             }
             break;
 
-        case NET_FUNC::NAK:                                                                         // Master Negative Ack
+        case NET_FUNC::NAK:                                             // Master Negative Ack
             {
                 // DVM 3.6 adds support to respond with a NAK reason, as such we just check if the NAK response is greater
                 // then 10 bytes and process the reason value
@@ -687,7 +722,7 @@ void Network::clock(uint32_t ms)
                 }
             }
             break;
-        case NET_FUNC::ACK:                                                                         // Repeater Ack
+        case NET_FUNC::ACK:                                             // Repeater Ack
             {
                 switch (m_status) {
                     case NET_STAT_WAITING_LOGIN:
@@ -732,7 +767,7 @@ void Network::clock(uint32_t ms)
                 }
             }
             break;
-        case NET_FUNC::MST_CLOSING:                                                                 // Master Shutdown
+        case NET_FUNC::MST_CLOSING:                                     // Master Shutdown
             {
                 LogError(LOG_NET, "PEER %u master is closing down, remotePeerId = %u", m_peerId, m_remotePeerId);
                 m_status = NET_STAT_WAITING_CONNECT;
@@ -740,7 +775,7 @@ void Network::clock(uint32_t ms)
                 open();
             }
             break;
-        case NET_FUNC::PONG:                                                                        // Master Ping Response
+        case NET_FUNC::PONG:                                            // Master Ping Response
             m_timeoutTimer.start();
             if (length >= 14) {
                 if (m_debug)

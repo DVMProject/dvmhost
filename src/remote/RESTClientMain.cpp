@@ -71,7 +71,6 @@
 
 #define RCD_RELEASE_GRANTS              "rel-grnts"
 #define RCD_RELEASE_AFFS                "rel-affs"
-#define RCD_RELEASE_AFF                 "rel-aff"
 
 #define RCD_DMR_BEACON                  "dmr-beacon"
 #define RCD_P25_CC                      "p25-cc"
@@ -233,7 +232,6 @@ void usage(const char* message, const char* arg)
     reply += "\r\n";
     reply += "  rel-grnts                   Forcibly releases all channel grants\r\n";
     reply += "  rel-affs                    Forcibly releases all group affiliations\r\n";
-    reply += "  rel-aff <state> <dstid>     Forcibly releases specified group affiliations\r\n";
     reply += "\r\n";
     reply += "  dmr-beacon                  Transmits a DMR beacon burst\r\n";
     reply += "  p25-cc                      Transmits a non-continous P25 CC burst\r\n";
@@ -557,21 +555,6 @@ int main(int argc, char** argv)
         }
         else if (rcom == RCD_RELEASE_AFFS) {
             retCode = client->send(HTTP_GET, GET_RELEASE_AFFS, json::object(), response);
-        }
-        else if (rcom == RCD_RELEASE_AFF) {
-            json::object req = json::object();
-            int state = getArgInt32(args, 0U);
-            req["state"].set<int>(state);
-
-            uint32_t dstId = getArgInt32(args, 1U);
-            req["dstId"].set<uint32_t>(dstId);
-
-            if (state == 1) {
-                uint8_t slot = getArgInt8(args, 2U);
-                req["slot"].set<uint8_t>(slot);
-            }
-
-            retCode = client->send(HTTP_PUT, PUT_RELEASE_TG, req, response);
         }
 
         /*

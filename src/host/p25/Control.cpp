@@ -18,9 +18,9 @@
 #include "common/Utils.h"
 #include "p25/Control.h"
 #include "modem/ModemV24.h"
-#include "remote/RESTClient.h"
 #include "ActivityLog.h"
 #include "HostMain.h"
+#include "Host.h"
 
 using namespace p25::packet;
 using namespace p25::defines;
@@ -159,6 +159,11 @@ Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t q
     m_llaRS = new uint8_t[AUTH_KEY_LENGTH_BYTES];
     m_llaCRS = new uint8_t[AUTH_KEY_LENGTH_BYTES];
     m_llaKS = new uint8_t[AUTH_KEY_LENGTH_BYTES];
+
+    // register RPC handlers
+    g_RPC->registerHandler(RPC_PERMIT_P25_TG, RPC_FUNC_BIND(Control::RPC_permittedTG, this));
+    g_RPC->registerHandler(RPC_RELEASE_P25_TG, RPC_FUNC_BIND(Control::RPC_releaseGrantTG, this));
+    g_RPC->registerHandler(RPC_TOUCH_P25_TG, RPC_FUNC_BIND(Control::RPC_touchGrantTG, this));
 }
 
 /* Finalizes a instance of the Control class. */
@@ -416,13 +421,10 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
             if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0 &&
                 chNo != m_siteData.channelNo()) {
                 json::object req = json::object();
-                int state = modem::DVM_STATE::STATE_P25;
-                req["state"].set<int>(state);
                 dstId = 0U; // clear TG value
                 req["dstId"].set<uint32_t>(dstId);
 
-                RESTClient::send(voiceChData.address(), voiceChData.port(), voiceChData.password(),
-                    HTTP_PUT, PUT_PERMIT_TG, req, voiceChData.ssl(), REST_DEFAULT_WAIT, m_debug);
+                g_RPC->req(RPC_PERMIT_P25_TG, req, nullptr, voiceChData.address(), voiceChData.port());
             }
             else {
                 ::LogError(LOG_P25, P25_TSDU_STR ", TSBKO, IOSP_GRP_VCH (Group Voice Channel Grant), failed to clear TG permit, chNo = %u", chNo);
@@ -461,6 +463,8 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
             if (m_control->m_disableGrantSrcIdCheck) {
                 LogInfo("    Disable Grant Source ID Check: yes");
             }
+            if (m_supervisor)
+                LogMessage(LOG_P25, "Host is configured to operate as a P25 control channel, site controller mode.");
         }
 
         if (m_controlOnly) {
@@ -1050,7 +1054,10 @@ void Control::permittedTG(uint32_t dstId, bool dataPermit)
     }
 
     if (m_verbose) {
-        LogMessage(LOG_P25, "non-authoritative TG permit, dstId = %u", dstId);
+        if (dstId == 0U)
+            LogMessage(LOG_P25, "non-authoritative TG unpermit");
+        else
+            LogMessage(LOG_P25, "non-authoritative TG permit, dstId = %u", dstId);
     }
 
     m_permittedDstId = dstId;
@@ -1074,52 +1081,6 @@ void Control::grantTG(uint32_t srcId, uint32_t dstId, bool grp)
     }
 
     m_control->writeRF_TSDU_Grant(srcId, dstId, 4U, grp);
-}
-
-/* Releases a granted TG. */
-
-void Control::releaseGrantTG(uint32_t dstId)
-{
-    if (!m_enableControl) {
-        return;
-    }
-
-    if (m_verbose) {
-        LogMessage(LOG_P25, "VC request, release TG grant, dstId = %u", dstId);
-    }
-
-    if (m_affiliations.isGranted(dstId)) {
-        uint32_t chNo = m_affiliations.getGrantedCh(dstId);
-        uint32_t srcId = m_affiliations.getGrantedSrcId(dstId);
-        ::lookups::VoiceChData voiceCh = m_affiliations.rfCh()->getRFChData(chNo);
-
-        if (m_verbose) {
-            LogMessage(LOG_P25, "VC %s:%u, TG grant released, srcId = %u, dstId = %u, chId = %u, chNo = %u", voiceCh.address().c_str(), voiceCh.port(), srcId, dstId, voiceCh.chId(), chNo);
-        }
-
-        m_affiliations.releaseGrant(dstId, false);
-    }
-}
-
-/* Touches a granted TG to keep a channel grant alive. */
-
-void Control::touchGrantTG(uint32_t dstId)
-{
-    if (!m_enableControl) {
-        return;
-    }
-
-    if (m_affiliations.isGranted(dstId)) {
-        uint32_t chNo = m_affiliations.getGrantedCh(dstId);
-        uint32_t srcId = m_affiliations.getGrantedSrcId(dstId);
-        ::lookups::VoiceChData voiceCh = m_affiliations.rfCh()->getRFChData(chNo);
-
-        if (m_verbose) {
-            LogMessage(LOG_P25, "VC %s:%u, call in progress, srcId = %u, dstId = %u, chId = %u, chNo = %u", voiceCh.address().c_str(), voiceCh.port(), srcId, dstId, voiceCh.chId(), chNo);
-        }
-
-        m_affiliations.touchGrant(dstId);
-    }
 }
 
 /* Clears the current operating RF state back to idle. */
@@ -1624,15 +1585,25 @@ void Control::notifyCC_ReleaseGrant(uint32_t dstId)
 
     // callback REST API to release the granted TG on the specified control channel
     json::object req = json::object();
-    int state = modem::DVM_STATE::STATE_P25;
-    req["state"].set<int>(state);
     req["dstId"].set<uint32_t>(dstId);
 
-    int ret = RESTClient::send(m_controlChData.address(), m_controlChData.port(), m_controlChData.password(),
-        HTTP_PUT, PUT_RELEASE_TG, req, m_controlChData.ssl(), REST_QUICK_WAIT, m_debug);
-    if (ret != network::rest::http::HTTPPayload::StatusType::OK) {
-        ::LogError(LOG_P25, "failed to notify the CC %s:%u of the release of, dstId = %u", m_controlChData.address().c_str(), m_controlChData.port(), dstId);
-    }
+    g_RPC->req(RPC_RELEASE_P25_TG, req, [=](json::object& req, json::object& reply) {
+        if (!req["status"].is<int>()) {
+            ::LogError(LOG_P25, "failed to notify the CC %s:%u of the release of, dstId = %u, invalid RPC response", m_controlChData.address().c_str(), m_controlChData.port(), dstId);
+            return;
+        }
+
+        int status = req["status"].get<int>();
+        if (status != network::RPC::OK) {
+            ::LogError(LOG_P25, "failed to notify the CC %s:%u of the release of, dstId = %u", m_controlChData.address().c_str(), m_controlChData.port(), dstId);
+            if (req["message"].is<std::string>()) {
+                std::string retMsg = req["message"].get<std::string>();
+                ::LogError(LOG_P25, "RPC failed, %s", retMsg.c_str());
+            }
+        } 
+        else
+            ::LogMessage(LOG_P25, "CC %s:%u, released grant, dstId = %u", m_controlChData.address().c_str(), m_controlChData.port(), dstId);
+    }, m_controlChData.address(), m_controlChData.port());
 
     m_rfLastDstId = 0U;
     m_rfLastSrcId = 0U;
@@ -1658,15 +1629,25 @@ void Control::notifyCC_TouchGrant(uint32_t dstId)
 
     // callback REST API to touch the granted TG on the specified control channel
     json::object req = json::object();
-    int state = modem::DVM_STATE::STATE_P25;
-    req["state"].set<int>(state);
     req["dstId"].set<uint32_t>(dstId);
 
-    int ret = RESTClient::send(m_controlChData.address(), m_controlChData.port(), m_controlChData.password(),
-        HTTP_PUT, PUT_TOUCH_TG, req, m_controlChData.ssl(), REST_QUICK_WAIT, m_debug);
-    if (ret != network::rest::http::HTTPPayload::StatusType::OK) {
-        ::LogError(LOG_P25, "failed to notify the CC %s:%u of the touch of, dstId = %u", m_controlChData.address().c_str(), m_controlChData.port(), dstId);
-    }
+    g_RPC->req(RPC_TOUCH_P25_TG, req, [=](json::object& req, json::object& reply) {
+        if (!req["status"].is<int>()) {
+            ::LogError(LOG_P25, "failed to notify the CC %s:%u of the touch of, dstId = %u, invalid RPC response", m_controlChData.address().c_str(), m_controlChData.port(), dstId);
+            return;
+        }
+
+        int status = req["status"].get<int>();
+        if (status != network::RPC::OK) {
+            ::LogError(LOG_P25, "failed to notify the CC %s:%u of the touch of, dstId = %u", m_controlChData.address().c_str(), m_controlChData.port(), dstId);
+            if (req["message"].is<std::string>()) {
+                std::string retMsg = req["message"].get<std::string>();
+                ::LogError(LOG_P25, "RPC failed, %s", retMsg.c_str());
+            }
+        }
+        else
+            ::LogMessage(LOG_P25, "CC %s:%u, touched grant, dstId = %u", m_controlChData.address().c_str(), m_controlChData.port(), dstId);
+    }, m_controlChData.address(), m_controlChData.port());
 }
 
 /* Helper to write control channel frame data. */
@@ -1806,6 +1787,118 @@ void Control::writeRF_TDU(bool noNetwork, bool imm)
         data[1U] = 0x00U;
 
         addFrame(data, P25_TDU_FRAME_LENGTH_BYTES + 2U, false, imm);
+    }
+}
+
+/* (RPC Handler) Permits a TGID on a non-authoritative host. */
+
+void Control::RPC_permittedTG(json::object& req, json::object& reply)
+{
+    if (!m_enableControl) {
+        g_RPC->defaultResponse(reply, "not P25 control channel", network::RPC::BAD_REQUEST);
+        return;
+    }
+
+    g_RPC->defaultResponse(reply, "OK", network::RPC::OK);
+
+    // validate destination ID is a integer within the JSON blob
+    if (!req["dstId"].is<int>()) {
+        g_RPC->defaultResponse(reply, "destination ID was not a valid integer", network::RPC::INVALID_ARGS);
+        return;
+    }
+
+    uint32_t dstId = req["dstId"].get<uint32_t>();
+    bool dataPermit = false;
+
+    // validate destination ID is a integer within the JSON blob
+    if (req["dataPermit"].is<bool>()) {
+        dataPermit = (bool)req["dataPermit"].get<bool>();
+    }
+
+    // LogDebugEx(LOG_P25, "Control::RPC_permittedTG()", "callback, dstId = %u, dataPermit = %u", dstId, dataPermit);
+
+    permittedTG(dstId, dataPermit);
+}
+
+/* (RPC Handler) Releases a granted TG. */
+
+void Control::RPC_releaseGrantTG(json::object& req, json::object& reply)
+{
+    if (!m_enableControl) {
+        g_RPC->defaultResponse(reply, "not P25 control channel", network::RPC::BAD_REQUEST);
+        return;
+    }
+
+    g_RPC->defaultResponse(reply, "OK", network::RPC::OK);
+
+    // validate destination ID is a integer within the JSON blob
+    if (!req["dstId"].is<int>()) {
+        g_RPC->defaultResponse(reply, "destination ID was not a valid integer", network::RPC::INVALID_ARGS);
+        return;
+    }
+
+    uint32_t dstId = req["dstId"].get<uint32_t>();
+
+    if (dstId == 0U) {
+        g_RPC->defaultResponse(reply, "destination ID is an illegal TGID");
+        return;
+    }
+
+    // LogDebugEx(LOG_P25, "Control::RPC_releaseGrantTG()", "callback, dstId = %u", dstId);
+
+    if (m_verbose) {
+        LogMessage(LOG_P25, "VC request, release TG grant, dstId = %u", dstId);
+    }
+
+    if (m_affiliations.isGranted(dstId)) {
+        uint32_t chNo = m_affiliations.getGrantedCh(dstId);
+        uint32_t srcId = m_affiliations.getGrantedSrcId(dstId);
+        ::lookups::VoiceChData voiceCh = m_affiliations.rfCh()->getRFChData(chNo);
+
+        if (m_verbose) {
+            LogMessage(LOG_P25, "VC %s:%u, TG grant released, srcId = %u, dstId = %u, chId = %u, chNo = %u", voiceCh.address().c_str(), voiceCh.port(), srcId, dstId, voiceCh.chId(), chNo);
+        }
+
+        m_affiliations.releaseGrant(dstId, false);
+    }
+}
+
+/* (RPC Handler) Touches a granted TG to keep a channel grant alive. */
+
+void Control::RPC_touchGrantTG(json::object& req, json::object& reply)
+{
+    if (!m_enableControl) {
+        g_RPC->defaultResponse(reply, "not P25 control channel");
+        return;
+    }
+
+    g_RPC->defaultResponse(reply, "OK", network::RPC::OK);
+
+    // validate destination ID is a integer within the JSON blob
+    if (!req["dstId"].is<int>()) {
+        g_RPC->defaultResponse(reply, "destination ID was not a valid integer", network::RPC::INVALID_ARGS);
+        return;
+    }
+
+    uint32_t dstId = req["dstId"].get<uint32_t>();
+
+    if (dstId == 0U) {
+        g_RPC->defaultResponse(reply, "destination ID is an illegal TGID");
+        return;
+    }
+
+    // LogDebugEx(LOG_P25, "Control::RPC_touchGrantTG()", "callback, dstId = %u", dstId);
+
+    if (m_affiliations.isGranted(dstId)) {
+        uint32_t chNo = m_affiliations.getGrantedCh(dstId);
+        uint32_t srcId = m_affiliations.getGrantedSrcId(dstId);
+        ::lookups::VoiceChData voiceCh = m_affiliations.rfCh()->getRFChData(chNo);
+
+        if (m_verbose) {
+            LogMessage(LOG_P25, "VC %s:%u, call in progress, srcId = %u, dstId = %u, chId = %u, chNo = %u", voiceCh.address().c_str(), voiceCh.port(), srcId, dstId, voiceCh.chId(), chNo);
+        }
+
+        m_affiliations.touchGrant(dstId);
     }
 }
 
