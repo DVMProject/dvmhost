@@ -22,9 +22,9 @@
 #include "p25/packet/Voice.h"
 #include "p25/packet/ControlSignaling.h"
 #include "p25/lookups/P25AffiliationLookup.h"
-#include "remote/RESTClient.h"
 #include "ActivityLog.h"
 #include "HostMain.h"
+#include "Host.h"
 
 using namespace p25;
 using namespace p25::defines;
@@ -2288,27 +2288,34 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
         ::lookups::VoiceChData voiceChData = m_p25->m_affiliations.rfCh()->getRFChData(chNo);
 
         if (grp) {
-            // callback REST API to permit the granted TG on the specified voice channel
+            // callback RPC to permit the granted TG on the specified voice channel
             if (m_p25->m_authoritative && m_p25->m_supervisor) {
                 if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0 &&
                     chNo != m_p25->m_siteData.channelNo()) {
                     json::object req = json::object();
-                    int state = modem::DVM_STATE::STATE_P25;
-                    req["state"].set<int>(state);
                     req["dstId"].set<uint32_t>(dstId);
 
-                    int ret = RESTClient::send(voiceChData.address(), voiceChData.port(), voiceChData.password(),
-                        HTTP_PUT, PUT_PERMIT_TG, req, voiceChData.ssl(), REST_QUICK_WAIT, m_p25->m_debug);
-                    if (ret != network::rest::http::HTTPPayload::StatusType::OK) {
-                        ::LogError((net) ? LOG_NET : LOG_RF, P25_TSDU_STR ", TSBKO, IOSP_GRP_VCH (Group Voice Channel Request), failed to permit TG for use, chNo = %u", chNo);
-                        m_p25->m_affiliations.releaseGrant(dstId, false);
-                        if (!net) {
-                            writeRF_TSDU_Deny(srcId, dstId, ReasonCode::DENY_PTT_BONK, (grp) ? TSBKO::IOSP_GRP_VCH : TSBKO::IOSP_UU_VCH, grp, true);
-                            m_p25->m_rfState = RS_RF_REJECTED;
+                    bool requestFailed = false;
+                    g_RPC->req(RPC_PERMIT_P25_TG, req, [=, &requestFailed](json::object& req, json::object& reply) {
+                        // validate channelNo is a string within the JSON blob
+                        if (!req["status"].is<int>()) {
+                            return;
                         }
 
+                        int status = req["status"].get<int>();
+                        if (status != network::RPC::OK) {
+                            ::LogError((net) ? LOG_NET : LOG_RF, P25_TSDU_STR ", TSBKO, IOSP_GRP_VCH (Group Voice Channel Request), failed to permit TG for use, chNo = %u", chNo);
+                            m_p25->m_affiliations.releaseGrant(dstId, false);
+                            if (!net) {
+                                writeRF_TSDU_Deny(srcId, dstId, ReasonCode::DENY_PTT_BONK, (grp) ? TSBKO::IOSP_GRP_VCH : TSBKO::IOSP_UU_VCH, grp, true);
+                                m_p25->m_rfState = RS_RF_REJECTED;
+                            }
+                            requestFailed = true;
+                        }
+                    }, voiceChData.address(), voiceChData.port());
+
+                    if (requestFailed)
                         return false;
-                    }
                 }
                 else {
                     ::LogError((net) ? LOG_NET : LOG_RF, P25_TSDU_STR ", TSBKO, IOSP_GRP_VCH (Group Voice Channel Request), failed to permit TG for use, chNo = %u", chNo);
@@ -2342,27 +2349,34 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
             }
         }
         else {
-            // callback REST API to permit the granted TG on the specified voice channel
+            // callback RPC to permit the granted TG on the specified voice channel
             if (m_p25->m_authoritative && m_p25->m_supervisor) {
                 if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0 &&
                     chNo != m_p25->m_siteData.channelNo()) {
                     json::object req = json::object();
-                    int state = modem::DVM_STATE::STATE_P25;
-                    req["state"].set<int>(state);
                     req["dstId"].set<uint32_t>(dstId);
 
-                    int ret = RESTClient::send(voiceChData.address(), voiceChData.port(), voiceChData.password(),
-                        HTTP_PUT, PUT_PERMIT_TG, req, voiceChData.ssl(), REST_QUICK_WAIT, m_p25->m_debug);
-                    if (ret != network::rest::http::HTTPPayload::StatusType::OK) {
-                        ::LogError((net) ? LOG_NET : LOG_RF, P25_TSDU_STR ", TSBKO, IOSP_UU_VCH (Unit-to-Unit Voice Channel Request), failed to permit TG for use, chNo = %u", chNo);
-                        m_p25->m_affiliations.releaseGrant(dstId, false);
-                        if (!net) {
-                            writeRF_TSDU_Deny(srcId, dstId, ReasonCode::DENY_PTT_BONK, (grp) ? TSBKO::IOSP_GRP_VCH : TSBKO::IOSP_UU_VCH, grp, true);
-                            m_p25->m_rfState = RS_RF_REJECTED;
+                    bool requestFailed = false;
+                    g_RPC->req(RPC_PERMIT_P25_TG, req, [=, &requestFailed](json::object& req, json::object& reply) {
+                        // validate channelNo is a string within the JSON blob
+                        if (!req["status"].is<int>()) {
+                            return;
                         }
 
+                        int status = req["status"].get<int>();
+                        if (status != network::RPC::OK) {
+                            ::LogError((net) ? LOG_NET : LOG_RF, P25_TSDU_STR ", TSBKO, IOSP_UU_VCH (Unit-to-Unit Voice Channel Request), failed to permit TG for use, chNo = %u", chNo);
+                            m_p25->m_affiliations.releaseGrant(dstId, false);
+                            if (!net) {
+                                writeRF_TSDU_Deny(srcId, dstId, ReasonCode::DENY_PTT_BONK, (grp) ? TSBKO::IOSP_GRP_VCH : TSBKO::IOSP_UU_VCH, grp, true);
+                                m_p25->m_rfState = RS_RF_REJECTED;
+                            }
+                            requestFailed = true;
+                        }
+                    }, voiceChData.address(), voiceChData.port());
+
+                    if (requestFailed)
                         return false;
-                    }
                 }
                 else {
                     ::LogError((net) ? LOG_NET : LOG_RF, P25_TSDU_STR ", TSBKO, IOSP_UU_VCH (Unit-to-Unit Voice Channel Request), failed to permit TG for use, chNo = %u", chNo);
@@ -2540,7 +2554,7 @@ bool ControlSignaling::writeRF_TSDU_SNDCP_Grant(uint32_t srcId, bool skip, uint3
     if (chNo > 0U) {
         ::lookups::VoiceChData voiceChData = m_p25->m_affiliations.rfCh()->getRFChData(chNo);
 
-        // callback REST API to permit the granted TG on the specified voice channel
+        // callback RPC to permit the granted TG on the specified voice channel
         if (m_p25->m_authoritative && m_p25->m_supervisor) {
             if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0 &&
                 chNo != m_p25->m_siteData.channelNo()) {
@@ -2551,16 +2565,25 @@ bool ControlSignaling::writeRF_TSDU_SNDCP_Grant(uint32_t srcId, bool skip, uint3
                 bool dataCh = true;
                 req["dataPermit"].set<bool>(dataCh);
 
-                int ret = RESTClient::send(voiceChData.address(), voiceChData.port(), voiceChData.password(),
-                    HTTP_PUT, PUT_PERMIT_TG, req, voiceChData.ssl(), REST_QUICK_WAIT, m_p25->m_debug);
-                if (ret != network::rest::http::HTTPPayload::StatusType::OK) {
-                    ::LogError(LOG_RF, P25_TSDU_STR ", TSBKO, ISP_SNDCP_CH_REQ (SNDCP Data Channel Request), failed to permit for use, chNo = %u", chNo);
-                    m_p25->m_affiliations.releaseGrant(srcId, false);
-                    writeRF_TSDU_Deny(srcId, srcId, ReasonCode::DENY_PTT_BONK, TSBKO::ISP_SNDCP_CH_REQ, false, true);
-                    m_p25->m_rfState = RS_RF_REJECTED;
+                bool requestFailed = false;
+                g_RPC->req(RPC_PERMIT_P25_TG, req, [=, &requestFailed](json::object& req, json::object& reply) {
+                    // validate channelNo is a string within the JSON blob
+                    if (!req["status"].is<int>()) {
+                        return;
+                    }
 
+                    int status = req["status"].get<int>();
+                    if (status != network::RPC::OK) {
+                        ::LogError(LOG_RF, P25_TSDU_STR ", TSBKO, ISP_SNDCP_CH_REQ (SNDCP Data Channel Request), failed to permit for use, chNo = %u", chNo);
+                        m_p25->m_affiliations.releaseGrant(srcId, false);
+                        writeRF_TSDU_Deny(srcId, srcId, ReasonCode::DENY_PTT_BONK, TSBKO::ISP_SNDCP_CH_REQ, false, true);
+                        m_p25->m_rfState = RS_RF_REJECTED;
+                        requestFailed = true;
+                    }
+                }, voiceChData.address(), voiceChData.port());
+
+                if (requestFailed)
                     return false;
-                }
             }
             else {
                 ::LogError(LOG_RF, P25_TSDU_STR ", TSBKO, ISP_SNDCP_CH_REQ (SNDCP Data Channel Request), failed to permit for use, chNo = %u", chNo);

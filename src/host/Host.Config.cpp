@@ -728,8 +728,34 @@ bool Host::createModem()
 bool Host::createNetwork()
 {
     yaml::Node networkConf = m_conf["network"];
+    std::string rpcAddress = networkConf["rpcAddress"].as<std::string>("127.0.0.1");
+    uint16_t rpcPort = (uint16_t)networkConf["rpcPort"].as<uint32_t>(RPC_DEFAULT_PORT);
+    std::string rpcPassword = networkConf["rpcPassword"].as<std::string>("ULTRA-VERY-SECURE-DEFAULT");
+    bool rpcDebug = networkConf["rpcDebug"].as<bool>(false);
+
+    // initialize RPC
+    g_RPC = new RPC(rpcAddress, rpcPort, 0U, rpcPassword, rpcDebug);
+    bool ret = g_RPC->open();
+    if (!ret) {
+        delete g_RPC;
+        g_RPC = nullptr;
+        LogError(LOG_HOST, "failed to initialize RPC networking!");
+        return false;
+    }
+
     bool netEnable = networkConf["enable"].as<bool>(false);
     bool restApiEnable = networkConf["restEnable"].as<bool>(false);
+
+    LogInfo("Network Parameters");
+    LogInfo("    Enabled: %s", netEnable ? "yes" : "no");
+    LogInfo("    REST API Enabled: %s", restApiEnable ? "yes" : "no");
+
+    LogInfo("    RPC Address: %s", rpcAddress.c_str());
+    LogInfo("    RPC Port: %u", rpcPort);
+
+    if (rpcDebug) {
+        LogInfo("    RPC Debug: yes");
+    }
 
     // dump out if both networking and REST API are disabled
     if (!netEnable && !restApiEnable) {
@@ -826,8 +852,6 @@ bool Host::createNetwork()
 
     IdenTable entry = m_idenTable->find(m_channelId);
 
-    LogInfo("Network Parameters");
-    LogInfo("    Enabled: %s", netEnable ? "yes" : "no");
     if (netEnable) {
         LogInfo("    Peer ID: %u", id);
         LogInfo("    Address: %s", address.c_str());
@@ -851,7 +875,7 @@ bool Host::createNetwork()
             LogInfo("    Debug: yes");
         }
     }
-    LogInfo("    REST API Enabled: %s", restApiEnable ? "yes" : "no");
+
     if (restApiEnable) {
         LogInfo("    REST API Address: %s", restApiAddress.c_str());
         LogInfo("    REST API Port: %u", restApiPort);
@@ -900,7 +924,7 @@ bool Host::createNetwork()
         ::LogSetNetwork(m_network);
     }
 
-    // initialize network remote command
+    // initialize REST API
     if (restApiEnable) {
         m_restAddress = restApiAddress;
         m_restPort = restApiPort;

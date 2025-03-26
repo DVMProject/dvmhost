@@ -226,28 +226,6 @@ private:
     void restAPI_GetReleaseAffs(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
 
     /**
-     * @brief REST API endpoint; implements register CC/VC request.
-     * @param request HTTP request.
-     * @param reply HTTP reply.
-     * @param match HTTP request matcher.
-     */
-    void restAPI_PutRegisterCCVC(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
-    /**
-     * @brief REST API endpoint; implements release grant request.
-     * @param request HTTP request.
-     * @param reply HTTP reply.
-     * @param match HTTP request matcher.
-     */
-    void restAPI_PutReleaseGrant(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
-    /**
-     * @brief REST API endpoint; implements touch grant request.
-     * @param request HTTP request.
-     * @param reply HTTP reply.
-     * @param match HTTP request matcher.
-     */
-    void restAPI_PutTouchGrant(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
-
-    /**
      * @brief REST API endpoint; implements get RID whitelist request.
      * @param request HTTP request.
      * @param reply HTTP reply.
@@ -308,13 +286,6 @@ private:
      * @param match HTTP request matcher.
      */
     void restAPI_GetDMRCCBroadcast(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
-    /**
-     * @brief REST API endpoint; implements trigger TSCC payload channel activation request.
-     * @param request HTTP request.
-     * @param reply HTTP reply.
-     * @param match HTTP request matcher.
-     */
-    void restAPI_PutTSCCPayloadActivate(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
     /**
      * @brief REST API endpoint; implements get DMR affiliations request.
      * @param request HTTP request.

@@ -94,6 +94,15 @@ network:
     # Flag indicating whether or not verbose REST API debug logging is enabled.
     restDebug: false
 
+    # IP address of the network interface to listen for RPC calls on (or 0.0.0.0 for all).
+    rpcAddress: 127.0.0.1
+    # Port number for RPC calls to listen on.
+    rpcPort: 9890
+    # RPC authentication password.
+    rpcPassword: "ULTRA-VERY-SECURE-DEFAULT"
+    # Flag indicating whether or not verbose RPC debug logging is enabled.
+    rpcDebug: false
+
 #
 # Digital Protocol Configuration
 #

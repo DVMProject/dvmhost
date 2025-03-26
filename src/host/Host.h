@@ -34,11 +34,13 @@
 #include "common/lookups/TalkgroupRulesLookup.h"
 #include "common/network/json/json.h"
 #include "common/network/Network.h"
+#include "common/network/RPC.h"
 #include "common/yaml/Yaml.h"
 #include "dmr/Control.h"
 #include "p25/Control.h"
 #include "nxdn/Control.h"
 #include "network/RESTAPI.h"
+#include "network/RPCDefines.h"
 #include "modem/Modem.h"
 #include "modem/ModemV24.h"
 
@@ -53,6 +55,13 @@
 #else
 #include <pthread.h>
 #endif // defined(_WIN32)
+
+// ---------------------------------------------------------------------------
+//  Externs
+// ---------------------------------------------------------------------------
+
+/** @brief  */
+extern network::RPC* g_RPC;
 
 // ---------------------------------------------------------------------------
 //  Class Prototypes
@@ -226,7 +235,7 @@ private:
     friend class RESTAPI;
     std::string m_restAddress;
     uint16_t m_restPort;
-    RESTAPI *m_RESTAPI;
+    RESTAPI* m_RESTAPI;
 
     std::unique_ptr<dmr::Control> m_dmr;
     std::unique_ptr<p25::Control> m_p25;

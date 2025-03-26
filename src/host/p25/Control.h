@@ -31,6 +31,7 @@
 #include "common/lookups/IdenTableLookup.h"
 #include "common/lookups/RadioIdLookup.h"
 #include "common/lookups/TalkgroupRulesLookup.h"
+#include "common/network/RPC.h"
 #include "common/network/RTPFNEHeader.h"
 #include "common/network/Network.h"
 #include "common/p25/SiteData.h"
@@ -211,16 +212,6 @@ namespace p25
          * @param grp Flag indicating group grant.
          */
         void grantTG(uint32_t srcId, uint32_t dstId, bool grp);
-        /**
-         * @brief Releases a granted TG.
-         * @param dstId Destination ID.
-         */
-        void releaseGrantTG(uint32_t dstId);
-        /**
-         * @brief Touches a granted TG to keep a channel grant alive.
-         * @param dstId Destination ID.
-         */
-        void touchGrantTG(uint32_t dstId);
         /** @} */
 
         /**
@@ -454,6 +445,27 @@ namespace p25
          * @param imm Flag indicating the TDU should be written to the immediate queue.
          */
         void writeRF_TDU(bool noNetwork, bool imm = false);
+
+        /** @name Supervisory Control */
+        /**
+         * @brief (RPC Handler) Permits a TGID on a non-authoritative host.
+         * @param req JSON request.
+         * @param reply JSON response.
+         */
+        void RPC_permittedTG(json::object& req, json::object& reply);
+        /**
+         * @brief (RPC Handler) Releases a granted TG.
+         * @param req JSON request.
+         * @param reply JSON response.
+         */
+        void RPC_releaseGrantTG(json::object& req, json::object& reply);
+        /**
+         * @brief (RPC Handler) Touches a granted TG to keep a channel grant alive.
+         * @param req JSON request.
+         * @param reply JSON response.
+         */
+        void RPC_touchGrantTG(json::object& req, json::object& reply);
+        /** @} */
 
         /**
          * @brief Helper to setup and generate LLA AM1 parameters.

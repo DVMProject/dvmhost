@@ -74,7 +74,7 @@ namespace network
 
     /**
      * @brief Implements the core peer networking logic.
-     * @ingroup network
+     * @ingroup network_core
      */
     class HOST_SW_API Network : public BaseNetwork {
     public:

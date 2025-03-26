@@ -17,7 +17,6 @@
 #include "common/Thread.h"
 #include "common/Utils.h"
 #include "modem/port/specialized/V24UDPPort.h"
-#include "remote/RESTClient.h"
 #include "host/Host.h"
 #include "ActivityLog.h"
 #include "HostMain.h"
@@ -34,6 +33,12 @@ using namespace lookups;
 #include <sys/utsname.h>
 #include <unistd.h>
 #endif // !defined(_WIN32)
+
+// ---------------------------------------------------------------------------
+//  Global Variables
+// ---------------------------------------------------------------------------
+
+network::RPC* g_RPC = nullptr;
 
 // ---------------------------------------------------------------------------
 //  Static Class Members
@@ -747,6 +752,8 @@ int Host::run()
             elapsedMs += ms;
             m_modem->clock(ms);
 
+            if (g_RPC != nullptr)
+                g_RPC->clock(ms);
             if (m_network != nullptr)
                 m_network->clock(ms);
 
@@ -908,6 +915,11 @@ int Host::run()
         // ------------------------------------------------------
         //  -- Network, DMR, and P25 Clocking                 --
         // ------------------------------------------------------
+
+        if (g_RPC != nullptr) {
+            m_mainLoopStage = 4U; // intentional magic number
+            g_RPC->clock(ms);
+        }
 
         if (m_network != nullptr) {
             m_mainLoopStage = 5U; // intentional magic number
@@ -1676,6 +1688,11 @@ void Host::setState(uint8_t state)
                     delete m_modem;
                 }
 
+                if (g_RPC != nullptr) {
+                    g_RPC->close();
+                    delete g_RPC;
+                }
+
                 ::LogSetNetwork(nullptr);
                 if (m_network != nullptr) {
                     m_network->close();
@@ -2080,6 +2097,72 @@ void* Host::threadPresence(void* arg)
         ::pthread_setname_np(th->thread, threadName.c_str());
 #endif // _GNU_SOURCE
 
+        // register VC -> CC notification RPC handler
+        g_RPC->registerHandler(RPC_REGISTER_CC_VC, [=](json::object &req, json::object &reply) {
+            g_RPC->defaultResponse(reply, "OK", network::RPC::OK);
+
+            if (!host->m_dmrTSCCData && !host->m_p25CCData && !host->m_nxdnCCData) {
+                g_RPC->defaultResponse(reply, "Host is not a control channel, cannot register voice channel");
+                return;
+            }
+
+            // validate channelNo is a string within the JSON blob
+            if (!req["channelNo"].is<int>()) {
+                g_RPC->defaultResponse(reply, "channelNo was not a valid integer", network::RPC::INVALID_ARGS);
+                return;
+            }
+
+            uint32_t channelNo = req["channelNo"].get<uint32_t>();
+
+            // validate peerId is a string within the JSON blob
+            if (!req["peerId"].is<int>()) {
+                g_RPC->defaultResponse(reply, "peerId was not a valid integer", network::RPC::INVALID_ARGS);
+                return;
+            }
+
+            uint32_t peerId = req["peerId"].get<uint32_t>();
+
+            // LogDebug(LOG_REST, "RPC_REGISTER_CC_VC callback, channelNo = %u, peerId = %u", channelNo, peerId);
+
+            // validate restAddress is a string within the JSON blob
+            if (!req["restAddress"].is<std::string>()) {
+                g_RPC->defaultResponse(reply, "restAddress was not a valid string", network::RPC::INVALID_ARGS);
+                return;
+            }
+
+            if (!req["restPort"].is<int>()) {
+                g_RPC->defaultResponse(reply, "restPort was not a valid integer", network::RPC::INVALID_ARGS);
+                return;
+            }
+
+            std::string restAddress = req["restAddress"].get<std::string>();
+            uint16_t restPort = (uint16_t)req["restPort"].get<int>();
+
+            auto voiceChData = host->rfCh()->rfChDataTable();
+            if (voiceChData.find(channelNo) != voiceChData.end()) {
+                ::lookups::VoiceChData voiceCh = host->rfCh()->getRFChData(channelNo);
+
+                if (voiceCh.address() == "0.0.0.0") {
+                    voiceCh.address(restAddress);
+                }
+
+                if (voiceCh.port() == 0U || voiceCh.port() == REST_API_DEFAULT_PORT) {
+                    voiceCh.port(restPort);
+                }
+
+                host->rfCh()->setRFChData(channelNo, voiceCh);
+
+                host->m_voiceChPeerId[channelNo] = peerId;
+                LogMessage(LOG_REST, "VC %s:%u, registration notice, peerId = %u, chId = %u, chNo = %u", voiceCh.address().c_str(), voiceCh.port(), peerId, voiceCh.chId(), channelNo);
+                LogInfoEx(LOG_HOST, "Voice Channel Id %u Channel No $%04X REST API Address %s:%u SSL %u", voiceCh.chId(), channelNo, voiceCh.address().c_str(), voiceCh.port(), voiceCh.ssl());
+
+                g_fireCCVCNotification = true; // announce this registration immediately to the FNE
+            } else {
+                LogMessage(LOG_REST, "VC, registration rejected, peerId = %u, chNo = %u, VC wasn't a defined member of the CC voice channel list", peerId, channelNo);
+                g_RPC->defaultResponse(reply, "registration rejected", network::RPC::BAD_REQUEST);
+            } 
+        });
+
         Timer presenceNotifyTimer(1000U, host->m_presenceTime);
         presenceNotifyTimer.start();
         bool hasInitialRegistered = false;
@@ -2096,7 +2179,7 @@ void* Host::threadPresence(void* arg)
                 presenceNotifyTimer.clock(ms);
 
                 // VC -> CC presence registration
-                if (!host->m_controlChData.address().empty() && host->m_controlChData.port() != 0 && host->m_network != nullptr && host->m_RESTAPI != nullptr &&
+                if (!host->m_controlChData.address().empty() && host->m_controlChData.port() != 0 && host->m_network != nullptr && 
                     !host->m_dmrCtrlChannel && !host->m_p25CtrlChannel && !host->m_nxdnCtrlChannel) {
                     if ((presenceNotifyTimer.isRunning() && presenceNotifyTimer.hasExpired()) || !hasInitialRegistered) {
                         LogMessage(LOG_HOST, "CC %s:%u, notifying CC of VC registration, peerId = %u", host->m_controlChData.address().c_str(), host->m_controlChData.port(), host->m_network->getPeerId());
@@ -2115,11 +2198,19 @@ void* Host::threadPresence(void* arg)
                         req["restAddress"].set<std::string>(host->m_restAddress);
                         req["restPort"].set<uint16_t>(host->m_restPort);
 
-                        int ret = RESTClient::send(host->m_controlChData.address(), host->m_controlChData.port(), host->m_controlChData.password(),
-                            HTTP_PUT, PUT_REGISTER_CC_VC, req, host->m_controlChData.ssl(), REST_QUICK_WAIT, false);
-                        if (ret != network::rest::http::HTTPPayload::StatusType::OK) {
-                            ::LogError(LOG_HOST, "failed to notify the CC %s:%u of VC registration", host->m_controlChData.address().c_str(), host->m_controlChData.port());
-                        }
+                        g_RPC->req(RPC_REGISTER_CC_VC, req, [=](json::object &req, json::object &reply) {
+                            // validate channelNo is a string within the JSON blob
+                            if (!req["status"].is<int>()) {
+                                ::LogError(LOG_HOST, "failed to notify the CC %s:%u of VC registration, invalid RPC response", host->m_controlChData.address().c_str(), host->m_controlChData.port());
+                                return;
+                            }
+
+                            int status = req["status"].get<int>();
+                            if (status != network::RPC::OK)
+                                ::LogError(LOG_HOST, "failed to notify the CC %s:%u of VC registration", host->m_controlChData.address().c_str(), host->m_controlChData.port());
+                            else
+                                ::LogMessage(LOG_HOST, "CC %s:%u, VC registered, peerId = %u", host->m_controlChData.address().c_str(), host->m_controlChData.port(), host->m_network->getPeerId());
+                        }, host->m_controlChData.address(), host->m_controlChData.port());
 
                         presenceNotifyTimer.start();
                     }
