@@ -2297,7 +2297,6 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
 
                     bool requestFailed = false;
                     g_RPC->req(RPC_PERMIT_P25_TG, req, [=, &requestFailed](json::object& req, json::object& reply) {
-                        // validate channelNo is a string within the JSON blob
                         if (!req["status"].is<int>()) {
                             return;
                         }
@@ -2305,6 +2304,11 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
                         int status = req["status"].get<int>();
                         if (status != network::RPC::OK) {
                             ::LogError((net) ? LOG_NET : LOG_RF, P25_TSDU_STR ", TSBKO, IOSP_GRP_VCH (Group Voice Channel Request), failed to permit TG for use, chNo = %u", chNo);
+                            if (req["message"].is<std::string>()) {
+                                std::string retMsg = req["message"].get<std::string>();
+                                ::LogError((net) ? LOG_NET : LOG_RF, "P25, RPC failed, %s", retMsg.c_str());
+                            }
+
                             m_p25->m_affiliations.releaseGrant(dstId, false);
                             if (!net) {
                                 writeRF_TSDU_Deny(srcId, dstId, ReasonCode::DENY_PTT_BONK, (grp) ? TSBKO::IOSP_GRP_VCH : TSBKO::IOSP_UU_VCH, grp, true);
@@ -2358,7 +2362,6 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
 
                     bool requestFailed = false;
                     g_RPC->req(RPC_PERMIT_P25_TG, req, [=, &requestFailed](json::object& req, json::object& reply) {
-                        // validate channelNo is a string within the JSON blob
                         if (!req["status"].is<int>()) {
                             return;
                         }
@@ -2366,6 +2369,11 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
                         int status = req["status"].get<int>();
                         if (status != network::RPC::OK) {
                             ::LogError((net) ? LOG_NET : LOG_RF, P25_TSDU_STR ", TSBKO, IOSP_UU_VCH (Unit-to-Unit Voice Channel Request), failed to permit TG for use, chNo = %u", chNo);
+                            if (req["message"].is<std::string>()) {
+                                std::string retMsg = req["message"].get<std::string>();
+                                ::LogError((net) ? LOG_NET : LOG_RF, "P25, RPC failed, %s", retMsg.c_str());
+                            }
+
                             m_p25->m_affiliations.releaseGrant(dstId, false);
                             if (!net) {
                                 writeRF_TSDU_Deny(srcId, dstId, ReasonCode::DENY_PTT_BONK, (grp) ? TSBKO::IOSP_GRP_VCH : TSBKO::IOSP_UU_VCH, grp, true);
@@ -2567,7 +2575,6 @@ bool ControlSignaling::writeRF_TSDU_SNDCP_Grant(uint32_t srcId, bool skip, uint3
 
                 bool requestFailed = false;
                 g_RPC->req(RPC_PERMIT_P25_TG, req, [=, &requestFailed](json::object& req, json::object& reply) {
-                    // validate channelNo is a string within the JSON blob
                     if (!req["status"].is<int>()) {
                         return;
                     }
@@ -2575,6 +2582,11 @@ bool ControlSignaling::writeRF_TSDU_SNDCP_Grant(uint32_t srcId, bool skip, uint3
                     int status = req["status"].get<int>();
                     if (status != network::RPC::OK) {
                         ::LogError(LOG_RF, P25_TSDU_STR ", TSBKO, ISP_SNDCP_CH_REQ (SNDCP Data Channel Request), failed to permit for use, chNo = %u", chNo);
+                        if (req["message"].is<std::string>()) {
+                            std::string retMsg = req["message"].get<std::string>();
+                            ::LogError(LOG_RF, "P25, RPC failed, %s", retMsg.c_str());
+                        }
+
                         m_p25->m_affiliations.releaseGrant(srcId, false);
                         writeRF_TSDU_Deny(srcId, srcId, ReasonCode::DENY_PTT_BONK, TSBKO::ISP_SNDCP_CH_REQ, false, true);
                         m_p25->m_rfState = RS_RF_REJECTED;

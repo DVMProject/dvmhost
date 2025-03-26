@@ -825,7 +825,10 @@ void Slot::permittedTG(uint32_t dstId)
     }
 
     if (m_verbose) {
-        LogMessage(LOG_DMR, "DMR Slot %u, non-authoritative TG permit, dstId = %u", m_slotNo, dstId);
+        if (dstId == 0U)
+            LogMessage(LOG_DMR, "DMR Slot %u, non-authoritative TG unpermit", m_slotNo);
+        else
+            LogMessage(LOG_DMR, "DMR Slot %u, non-authoritative TG permit, dstId = %u", m_slotNo, dstId);
     }
 
     m_permittedDstId = dstId;
@@ -1259,15 +1262,19 @@ void Slot::notifyCC_ReleaseGrant(uint32_t dstId)
     req["slot"].set<uint8_t>(slot);
 
     g_RPC->req(RPC_RELEASE_DMR_TG, req, [=](json::object& req, json::object& reply) {
-        // validate channelNo is a string within the JSON blob
         if (!req["status"].is<int>()) {
             ::LogError(LOG_DMR, "DMR Slot %u, failed to notify the CC %s:%u of the release of, dstId = %u, invalid RPC response", m_slotNo, m_controlChData.address().c_str(), m_controlChData.port(), dstId);
             return;
         }
 
         int status = req["status"].get<int>();
-        if (status != network::RPC::OK)
+        if (status != network::RPC::OK) {
             ::LogError(LOG_DMR, "DMR Slot %u, failed to notify the CC %s:%u of the release of, dstId = %u", m_slotNo, m_controlChData.address().c_str(), m_controlChData.port(), dstId);
+            if (req["message"].is<std::string>()) {
+                std::string retMsg = req["message"].get<std::string>();
+                ::LogError(LOG_DMR, "DMR Slot %u, RPC failed, %s", m_slotNo, retMsg.c_str());
+            }
+        }
         else
             ::LogMessage(LOG_DMR, "DMR Slot %u, CC %s:%u, released grant, dstId = %u", m_slotNo, m_controlChData.address().c_str(), m_controlChData.port(), dstId);
     }, m_controlChData.address(), m_controlChData.port());
@@ -1308,8 +1315,13 @@ void Slot::notifyCC_TouchGrant(uint32_t dstId)
         }
 
         int status = req["status"].get<int>();
-        if (status != network::RPC::OK)
+        if (status != network::RPC::OK) {
             ::LogError(LOG_DMR, "DMR Slot %u, failed to notify the CC %s:%u of the touch of, dstId = %u", m_slotNo, m_controlChData.address().c_str(), m_controlChData.port(), dstId);
+            if (req["message"].is<std::string>()) {
+                std::string retMsg = req["message"].get<std::string>();
+                ::LogError(LOG_DMR, "DMR Slot %u, RPC failed, %s", m_slotNo, retMsg.c_str());
+            }
+        }
         else
             ::LogMessage(LOG_DMR, "DMR Slot %u, CC %s:%u, touched grant, dstId = %u", m_slotNo, m_controlChData.address().c_str(), m_controlChData.port(), dstId);
     }, m_controlChData.address(), m_controlChData.port());

@@ -402,7 +402,7 @@ system:
         #
         controlCh:
             # RPC IP Address for control channel. (If blank, notifications are disabled.)
-            rpcAddress: 
+            rpcAddress: 127.0.0.1
             # RPC Port number for control channel. (If 0, notifications are disabled.)
             rpcPort: 0
             # RPC access password for control channel.

@@ -695,7 +695,7 @@ private:
         uint8_t channelId = peerObj["channelId"].get<uint8_t>();
         uint32_t channelNo = peerObj["channelNo"].get<uint32_t>();
 
-        VoiceChData data = VoiceChData(channelId, channelNo, std::string(), 9990U, std::string(), false);
+        VoiceChData data = VoiceChData(channelId, channelNo, std::string(), 9990U, std::string());
 
         wdgt->channelId = channelId;
         wdgt->channelNo = channelNo;
@@ -747,7 +747,7 @@ private:
         uint8_t channelId = peerObj["channelId"].get<uint8_t>();
         uint32_t channelNo = peerObj["channelNo"].get<uint32_t>();
 
-        VoiceChData data = VoiceChData(channelId, channelNo, std::string(), 9990U, std::string(), false);
+        VoiceChData data = VoiceChData(channelId, channelNo, std::string(), 9990U, std::string());
 
         wdgt->channelId = channelId;
         wdgt->channelNo = channelNo;

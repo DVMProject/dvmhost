@@ -165,6 +165,8 @@ Host::Host(const std::string& confFile) :
     m_restAddress("0.0.0.0"),
     m_restPort(REST_API_DEFAULT_PORT),
     m_RESTAPI(nullptr),
+    m_rpcAddress("0.0.0.0"),
+    m_rpcPort(RPC_DEFAULT_PORT),
     m_dmr(nullptr),
     m_p25(nullptr),
     m_nxdn(nullptr)
@@ -752,8 +754,6 @@ int Host::run()
             elapsedMs += ms;
             m_modem->clock(ms);
 
-            if (g_RPC != nullptr)
-                g_RPC->clock(ms);
             if (m_network != nullptr)
                 m_network->clock(ms);
 
@@ -805,6 +805,10 @@ int Host::run()
     /*
     ** Initialize Threads
     */
+
+    /** RPC */
+    if (!Thread::runAsThread(this, threadRPC))
+        return EXIT_FAILURE;
 
     /** Watchdog */
     if (!Thread::runAsThread(this, threadWatchdog))
@@ -915,11 +919,6 @@ int Host::run()
         // ------------------------------------------------------
         //  -- Network, DMR, and P25 Clocking                 --
         // ------------------------------------------------------
-
-        if (g_RPC != nullptr) {
-            m_mainLoopStage = 4U; // intentional magic number
-            g_RPC->clock(ms);
-        }
 
         if (m_network != nullptr) {
             m_mainLoopStage = 5U; // intentional magic number
@@ -1724,6 +1723,64 @@ void Host::setState(uint8_t state)
     }
 }
 
+/* Entry point to RPC clock thread. */
+
+void* Host::threadRPC(void* arg)
+{
+    thread_t* th = (thread_t*)arg;
+    if (th != nullptr) {
+#if defined(_WIN32)
+        ::CloseHandle(th->thread);
+#else
+        ::pthread_detach(th->thread);
+#endif // defined(_WIN32)
+
+        std::string threadName("host:rpc");
+        Host* host = static_cast<Host*>(th->obj);
+        if (host == nullptr) {
+            g_killed = true;
+            LogError(LOG_HOST, "[FAIL] %s", threadName.c_str());
+        }
+
+        if (g_killed) {
+            delete th;
+            return nullptr;
+        }
+
+        LogMessage(LOG_HOST, "[ OK ] %s", threadName.c_str());
+#ifdef _GNU_SOURCE
+        ::pthread_setname_np(th->thread, threadName.c_str());
+#endif // _GNU_SOURCE
+
+        StopWatch stopWatch;
+        stopWatch.start();
+
+        while (!g_killed) {
+            // scope is intentional
+            {
+                // ------------------------------------------------------
+                //  -- RPC Clocking                                   --
+                // ------------------------------------------------------
+
+                uint32_t ms = stopWatch.elapsed();
+                stopWatch.start();
+
+                g_RPC->clock(ms);
+            }
+
+            if (host->m_state != STATE_IDLE)
+                Thread::sleep(m_activeTickDelay);
+            if (host->m_state == STATE_IDLE)
+                Thread::sleep(m_idleTickDelay);
+        }
+
+        LogMessage(LOG_HOST, "[STOP] %s", threadName.c_str());
+        delete th;
+    }
+
+    return nullptr;
+}
+
 /* Entry point to modem clock thread. */
 
 void* Host::threadModem(void* arg)
@@ -2125,36 +2182,36 @@ void* Host::threadPresence(void* arg)
             // LogDebug(LOG_REST, "RPC_REGISTER_CC_VC callback, channelNo = %u, peerId = %u", channelNo, peerId);
 
             // validate restAddress is a string within the JSON blob
-            if (!req["restAddress"].is<std::string>()) {
-                g_RPC->defaultResponse(reply, "restAddress was not a valid string", network::RPC::INVALID_ARGS);
+            if (!req["rpcAddress"].is<std::string>()) {
+                g_RPC->defaultResponse(reply, "rpcAddress was not a valid string", network::RPC::INVALID_ARGS);
                 return;
             }
 
-            if (!req["restPort"].is<int>()) {
-                g_RPC->defaultResponse(reply, "restPort was not a valid integer", network::RPC::INVALID_ARGS);
+            if (!req["rpcPort"].is<int>()) {
+                g_RPC->defaultResponse(reply, "rpcPort was not a valid integer", network::RPC::INVALID_ARGS);
                 return;
             }
 
-            std::string restAddress = req["restAddress"].get<std::string>();
-            uint16_t restPort = (uint16_t)req["restPort"].get<int>();
+            std::string rpcAddress = req["rpcAddress"].get<std::string>();
+            uint16_t rpcPort = (uint16_t)req["rpcPort"].get<int>();
 
             auto voiceChData = host->rfCh()->rfChDataTable();
             if (voiceChData.find(channelNo) != voiceChData.end()) {
                 ::lookups::VoiceChData voiceCh = host->rfCh()->getRFChData(channelNo);
 
                 if (voiceCh.address() == "0.0.0.0") {
-                    voiceCh.address(restAddress);
+                    voiceCh.address(rpcAddress);
                 }
 
-                if (voiceCh.port() == 0U || voiceCh.port() == REST_API_DEFAULT_PORT) {
-                    voiceCh.port(restPort);
+                if (voiceCh.port() == 0U || voiceCh.port() == RPC_DEFAULT_PORT) {
+                    voiceCh.port(rpcPort);
                 }
 
                 host->rfCh()->setRFChData(channelNo, voiceCh);
 
                 host->m_voiceChPeerId[channelNo] = peerId;
                 LogMessage(LOG_REST, "VC %s:%u, registration notice, peerId = %u, chId = %u, chNo = %u", voiceCh.address().c_str(), voiceCh.port(), peerId, voiceCh.chId(), channelNo);
-                LogInfoEx(LOG_HOST, "Voice Channel Id %u Channel No $%04X REST API Address %s:%u SSL %u", voiceCh.chId(), channelNo, voiceCh.address().c_str(), voiceCh.port(), voiceCh.ssl());
+                LogInfoEx(LOG_HOST, "Voice Channel Id %u Channel No $%04X REST API Address %s:%u", voiceCh.chId(), channelNo, voiceCh.address().c_str(), voiceCh.port());
 
                 g_fireCCVCNotification = true; // announce this registration immediately to the FNE
             } else {
@@ -2186,8 +2243,8 @@ void* Host::threadPresence(void* arg)
                         hasInitialRegistered = true;
 
                         std::string localAddress = network::udp::Socket::getLocalAddress();
-                        if (host->m_restAddress == "0.0.0.0") {
-                            host->m_restAddress = localAddress;
+                        if (host->m_rpcAddress == "0.0.0.0") {
+                            host->m_rpcAddress = localAddress;
                         }
 
                         // callback REST API to release the granted TG on the specified control channel
@@ -2195,19 +2252,23 @@ void* Host::threadPresence(void* arg)
                         req["channelNo"].set<uint32_t>(host->m_channelNo);
                         uint32_t peerId = host->m_network->getPeerId();
                         req["peerId"].set<uint32_t>(peerId);
-                        req["restAddress"].set<std::string>(host->m_restAddress);
-                        req["restPort"].set<uint16_t>(host->m_restPort);
+                        req["rpcAddress"].set<std::string>(host->m_rpcAddress);
+                        req["rpcPort"].set<uint16_t>(host->m_rpcPort);
 
                         g_RPC->req(RPC_REGISTER_CC_VC, req, [=](json::object &req, json::object &reply) {
-                            // validate channelNo is a string within the JSON blob
                             if (!req["status"].is<int>()) {
                                 ::LogError(LOG_HOST, "failed to notify the CC %s:%u of VC registration, invalid RPC response", host->m_controlChData.address().c_str(), host->m_controlChData.port());
                                 return;
                             }
 
                             int status = req["status"].get<int>();
-                            if (status != network::RPC::OK)
+                            if (status != network::RPC::OK) {
                                 ::LogError(LOG_HOST, "failed to notify the CC %s:%u of VC registration", host->m_controlChData.address().c_str(), host->m_controlChData.port());
+                                if (req["message"].is<std::string>()) {
+                                    std::string retMsg = req["message"].get<std::string>();
+                                    ::LogError(LOG_HOST, "RPC failed, %s", retMsg.c_str());
+                                }
+                            }
                             else
                                 ::LogMessage(LOG_HOST, "CC %s:%u, VC registered, peerId = %u", host->m_controlChData.address().c_str(), host->m_controlChData.port(), host->m_network->getPeerId());
                         }, host->m_controlChData.address(), host->m_controlChData.port());

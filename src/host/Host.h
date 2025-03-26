@@ -237,6 +237,9 @@ private:
     uint16_t m_restPort;
     RESTAPI* m_RESTAPI;
 
+    std::string m_rpcAddress;
+    uint16_t m_rpcPort;
+
     std::unique_ptr<dmr::Control> m_dmr;
     std::unique_ptr<p25::Control> m_p25;
     std::unique_ptr<nxdn::Control> m_nxdn;
@@ -276,6 +279,13 @@ private:
      * @param state Host running state.
      */
     void setState(uint8_t state);
+
+    /**
+     * @brief Entry point to RPC clocking thread.
+     * @param arg Instance of the thread_t structure.
+     * @returns void* (Ignore)
+     */
+    static void* threadRPC(void* arg);
 
     /**
      * @brief Entry point to modem clocking thread.

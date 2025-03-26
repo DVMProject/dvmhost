@@ -328,7 +328,8 @@ bool Host::readParams()
 
         if (!m_authoritative) {
             m_supervisor = false;
-            LogWarning(LOG_HOST, "Host is non-authoritative! This requires REST API to handle permit TG for VCs and grant TG for CCs!");
+            LogWarning(LOG_HOST, "Host is non-authoritative! This requires a second instance configured in site controller mode.");
+            LogWarning(LOG_HOST, "RPC is required to handle permit TG for VCs!");
         }
     }
     else {
@@ -732,6 +733,8 @@ bool Host::createNetwork()
     bool rpcDebug = networkConf["rpcDebug"].as<bool>(false);
 
     // initialize RPC
+    m_rpcAddress = rpcAddress;
+    m_rpcPort = rpcPort;
     g_RPC = new RPC(rpcAddress, rpcPort, 0U, rpcPassword, rpcDebug);
     bool ret = g_RPC->open();
     if (!ret) {
@@ -852,8 +855,8 @@ bool Host::createNetwork()
 
     if (netEnable) {
         LogInfo("    Peer ID: %u", id);
-        LogInfo("    Address: %s", address.c_str());
-        LogInfo("    Port: %u", port);
+        LogInfo("    Master Address: %s", address.c_str());
+        LogInfo("    Master Port: %u", port);
         if (local > 0U)
             LogInfo("    Local: %u", local);
         else

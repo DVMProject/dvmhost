@@ -134,8 +134,23 @@ void RPC::clock(uint32_t ms)
                 reply(rpcHeader.getFunction(), response, address, addrLen);
             }
         } else {
-            defaultHandler(request, response);
-            reply(rpcHeader.getFunction(), response, address, addrLen);
+            bool isReply = (rpcHeader.getFunction() & RPC_REPLY_FUNC) == RPC_REPLY_FUNC;
+            if (isReply) {
+                if (!request["status"].is<int>()) {
+                    ::LogError(LOG_NET, "RPC %s:%u, invalid RPC response", udp::Socket::address(address).c_str(), udp::Socket::port(address));
+                    return;
+                }
+
+                int status = request["status"].get<int>();
+                if (status != network::RPC::OK) {
+                    if (request["message"].is<std::string>()) {
+                        std::string retMsg = request["message"].get<std::string>();
+                        ::LogError(LOG_NET, "RPC %s:%u failed, %s", udp::Socket::address(address).c_str(), udp::Socket::port(address), retMsg.c_str());
+                    }
+                }
+            }
+            else
+                LogWarning(LOG_NET, "RPC::clock(), ignoring unhandled function, func = $%04X, reply = %u", rpcHeader.getFunction() & 0x3FFFU, isReply);
         }
     }
 }

@@ -571,7 +571,6 @@ bool ControlSignaling::writeRF_Message_Grant(uint32_t srcId, uint32_t dstId, uin
             bool requestFailed = false;
             std::string rcchStr = rcch->toString().c_str();
             g_RPC->req(RPC_PERMIT_NXDN_TG, req, [=, &requestFailed, &rcchStr](json::object& req, json::object& reply) {
-                // validate channelNo is a string within the JSON blob
                 if (!req["status"].is<int>()) {
                     return;
                 }
@@ -579,6 +578,11 @@ bool ControlSignaling::writeRF_Message_Grant(uint32_t srcId, uint32_t dstId, uin
                 int status = req["status"].get<int>();
                 if (status != network::RPC::OK) {
                     ::LogError((net) ? LOG_NET : LOG_RF, "NXDN, %s, failed to permit TG for use, chNo = %u", rcchStr.c_str(), chNo);
+                    if (req["message"].is<std::string>()) {
+                        std::string retMsg = req["message"].get<std::string>();
+                        ::LogError((net) ? LOG_NET : LOG_RF, "NXDN, RPC failed, %s", retMsg.c_str());
+                    }
+
                     m_nxdn->m_affiliations.releaseGrant(dstId, false);
                     if (!net) {
                         writeRF_Message_Deny(0U, srcId, CauseResponse::VD_QUE_GRP_BUSY, MessageType::RTCH_VCALL);

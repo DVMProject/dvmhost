@@ -961,14 +961,18 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
 
                 bool requestFailed = false;
                 g_RPC->req(RPC_PERMIT_DMR_TG, req, [=, &requestFailed](json::object& req, json::object& reply) {
-                    // validate channelNo is a string within the JSON blob
                     if (!req["status"].is<int>()) {
                         return;
                     }
 
                     int status = req["status"].get<int>();
                     if (status != network::RPC::OK) {
-                        ::LogError(LOG_RF, "DMR Slot %u, CSBK, RAND (Random Access), failed to permit TG for use, chNo = %u, slot = %u", tscc->m_slotNo, chNo, slot);
+                        ::LogError((net) ? LOG_NET : LOG_RF, "DMR Slot %u, CSBK, RAND (Random Access), failed to permit TG for use, chNo = %u, slot = %u", tscc->m_slotNo, chNo, slot);
+                        if (req["message"].is<std::string>()) {
+                            std::string retMsg = req["message"].get<std::string>();
+                            ::LogError((net) ? LOG_NET : LOG_RF, "DMR Slot %u, RPC failed, %s", tscc->m_slotNo, retMsg.c_str());
+                        }
+
                         tscc->m_affiliations->releaseGrant(dstId, false);
                         if (!net) {
                             writeRF_CSBK_ACK_RSP(srcId, ReasonCode::TS_DENY_RSN_TGT_BUSY, (grp) ? 1U : 0U);
@@ -1045,14 +1049,18 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
 
                 bool requestFailed = false;
                 g_RPC->req(RPC_PERMIT_DMR_TG, req, [=, &requestFailed](json::object& req, json::object& reply) {
-                    // validate channelNo is a string within the JSON blob
                     if (!req["status"].is<int>()) {
                         return;
                     }
 
                     int status = req["status"].get<int>();
                     if (status != network::RPC::OK) {
-                        ::LogError(LOG_RF, "DMR Slot %u, CSBK, RAND (Random Access), failed to permit TG for use, chNo = %u, slot = %u", tscc->m_slotNo, chNo, slot);
+                        ::LogError((net) ? LOG_NET : LOG_RF, "DMR Slot %u, CSBK, RAND (Random Access), failed to permit TG for use, chNo = %u, slot = %u", tscc->m_slotNo, chNo, slot);
+                        if (req["message"].is<std::string>()) {
+                            std::string retMsg = req["message"].get<std::string>();
+                            ::LogError((net) ? LOG_NET : LOG_RF, "DMR Slot %u, RPC failed, %s", tscc->m_slotNo, retMsg.c_str());
+                        }
+
                         tscc->m_affiliations->releaseGrant(dstId, false);
                         if (!net) {
                             writeRF_CSBK_ACK_RSP(srcId, ReasonCode::TS_DENY_RSN_TGT_BUSY, (grp) ? 1U : 0U);

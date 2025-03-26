@@ -208,6 +208,8 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, ::lookups::VoiceChDa
             if (disableGrantSourceIdCheck) {
                 LogInfo("    TSCC Disable Grant Source ID Check: yes");
             }
+            if (m_supervisor)
+                LogMessage(LOG_DMR, "Host is configured to operate as a DMR TSCC, site controller mode.");
         }
         if (disableNetworkGrant) {
             LogInfo("    Disable Network Grants: yes");
@@ -796,11 +798,6 @@ void Control::RPC_permittedTG(json::object& req, json::object& reply)
     }
 
     uint32_t dstId = req["dstId"].get<uint32_t>();
-
-    if (dstId == 0U) {
-        g_RPC->defaultResponse(reply, "destination ID is an illegal TGID");
-        return;
-    }
 
     // validate slot is a integer within the JSON blob
     if (!req["slot"].is<int>()) {

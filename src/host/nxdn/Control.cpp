@@ -311,6 +311,8 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
             if (m_control->m_disableGrantSrcIdCheck) {
                 LogInfo("    Disable Grant Source ID Check: yes");
             }
+            if (m_supervisor)
+                LogMessage(LOG_DMR, "Host is configured to operate as a NXDN control channel, site controller mode.");
         }
 
         LogInfo("    Ignore Affiliation Check: %s", m_ignoreAffiliationCheck ? "yes" : "no");
@@ -730,7 +732,10 @@ void Control::permittedTG(uint32_t dstId)
     }
 
     if (m_verbose) {
-        LogMessage(LOG_NXDN, "non-authoritative TG permit, dstId = %u", dstId);
+        if (dstId == 0U)
+            LogMessage(LOG_NXDN, "non-authoritative TG unpermit");
+        else
+            LogMessage(LOG_NXDN, "non-authoritative TG permit, dstId = %u", dstId);
     }
 
     m_permittedDstId = dstId;
@@ -1062,15 +1067,19 @@ void Control::notifyCC_ReleaseGrant(uint32_t dstId)
     req["dstId"].set<uint32_t>(dstId);
 
     g_RPC->req(RPC_RELEASE_NXDN_TG, req, [=](json::object& req, json::object& reply) {
-        // validate channelNo is a string within the JSON blob
         if (!req["status"].is<int>()) {
             ::LogError(LOG_NXDN, "failed to notify the CC %s:%u of the release of, dstId = %u, invalid RPC response", m_controlChData.address().c_str(), m_controlChData.port(), dstId);
             return;
         }
 
         int status = req["status"].get<int>();
-        if (status != network::RPC::OK)
+        if (status != network::RPC::OK) {
             ::LogError(LOG_NXDN, "failed to notify the CC %s:%u of the release of, dstId = %u", m_controlChData.address().c_str(), m_controlChData.port(), dstId);
+            if (req["message"].is<std::string>()) {
+                std::string retMsg = req["message"].get<std::string>();
+                ::LogError(LOG_NXDN, "RPC failed, %s", retMsg.c_str());
+            }
+        }
         else
             ::LogMessage(LOG_NXDN, "CC %s:%u, released grant, dstId = %u", m_controlChData.address().c_str(), m_controlChData.port(), dstId);
     }, m_controlChData.address(), m_controlChData.port());
@@ -1102,15 +1111,19 @@ void Control::notifyCC_TouchGrant(uint32_t dstId)
     req["dstId"].set<uint32_t>(dstId);
 
     g_RPC->req(RPC_TOUCH_NXDN_TG, req, [=](json::object& req, json::object& reply) {
-        // validate channelNo is a string within the JSON blob
         if (!req["status"].is<int>()) {
             ::LogError(LOG_NXDN, "failed to notify the CC %s:%u of the touch of, dstId = %u, invalid RPC response", m_controlChData.address().c_str(), m_controlChData.port(), dstId);
             return;
         }
 
         int status = req["status"].get<int>();
-        if (status != network::RPC::OK)
+        if (status != network::RPC::OK) {
             ::LogError(LOG_NXDN, "failed to notify the CC %s:%u of the touch of, dstId = %u", m_controlChData.address().c_str(), m_controlChData.port(), dstId);
+            if (req["message"].is<std::string>()) {
+                std::string retMsg = req["message"].get<std::string>();
+                ::LogError(LOG_NXDN, "RPC failed, %s", retMsg.c_str());
+            }
+        }
         else
             ::LogMessage(LOG_NXDN, "CC %s:%u, touched grant, dstId = %u", m_controlChData.address().c_str(), m_controlChData.port(), dstId);
     }, m_controlChData.address(), m_controlChData.port());
@@ -1134,11 +1147,6 @@ void Control::RPC_permittedTG(json::object& req, json::object& reply)
     }
 
     uint32_t dstId = req["dstId"].get<uint32_t>();
-
-    if (dstId == 0U) {
-        g_RPC->defaultResponse(reply, "destination ID is an illegal TGID");
-        return;
-    }
 
     // LogDebugEx(LOG_NXDN, "Control::RPC_permittedTG()", "callback, dstId = %u, dataPermit = %u", dstId, dataPermit);
 
