@@ -4,13 +4,19 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2024-2025 Bryan Biedenkapp, N2PLL
  *
  */
 #include "lookups/ChannelLookup.h"
 #include "Log.h"
 
 using namespace lookups;
+
+// ---------------------------------------------------------------------------
+//  Static Class Members
+// ---------------------------------------------------------------------------
+
+std::mutex ChannelLookup::m_mutex;
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -51,6 +57,7 @@ VoiceChData ChannelLookup::getRFChData(uint32_t chNo) const
 
 bool ChannelLookup::addRFCh(uint32_t chNo, bool force)
 { 
+    std::lock_guard<std::mutex> lock(m_mutex);
     if (chNo == 0U) {
         return false;
     }
@@ -73,16 +80,16 @@ bool ChannelLookup::addRFCh(uint32_t chNo, bool force)
 
 bool ChannelLookup::removeRFCh(uint32_t chNo)
 {
+    std::lock_guard<std::mutex> lock(m_mutex);
     if (chNo == 0U) {
         return false;
     }
 
-    try {
-        auto it = std::find(m_rfChTable.begin(), m_rfChTable.end(), chNo);
+    auto it = std::find(m_rfChTable.begin(), m_rfChTable.end(), chNo);
+    if (it != m_rfChTable.end()) {
         m_rfChTable.erase(it);
-    } catch (...) {
-        return false;
+        return true;
     }
 
-    return true;
+    return false;
 }

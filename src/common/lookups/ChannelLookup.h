@@ -7,7 +7,7 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+*  Copyright (C) 2024-2025 Bryan Biedenkapp, N2PLL
 *
 */
 /**
@@ -31,6 +31,7 @@
 #include <algorithm>
 #include <vector>
 #include <functional>
+#include <mutex>
 
 namespace lookups
 {
@@ -219,6 +220,8 @@ namespace lookups
     private:
         std::vector<uint32_t> m_rfChTable;
         std::unordered_map<uint32_t, VoiceChData> m_rfChDataTable;
+
+        static std::mutex m_mutex;
     };
 } // namespace lookups
 
