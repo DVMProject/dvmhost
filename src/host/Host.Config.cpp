@@ -32,6 +32,13 @@ using namespace lookups;
 
 bool Host::readParams()
 {
+    yaml::Node networkConf = m_conf["network"];
+    std::string rpcAddress = networkConf["rpcAddress"].as<std::string>("127.0.0.1");
+    uint16_t rpcPort = (uint16_t)networkConf["rpcPort"].as<uint32_t>(RPC_DEFAULT_PORT);
+
+    m_rpcAddress = rpcAddress;
+    m_rpcPort = rpcPort;
+
     yaml::Node modemConf = m_conf["system"]["modem"];
 
     yaml::Node modemProtocol = modemConf["protocol"];
@@ -141,6 +148,11 @@ bool Host::readParams()
         ** Channel Configuration
         */
         yaml::Node rfssConfig = systemConf["config"];
+        m_authoritative = rfssConfig["authoritative"].as<bool>(true);
+        if (m_authoritative) {
+            m_supervisor = rfssConfig["supervisor"].as<bool>(false);
+        }
+
         m_channelLookup = new ChannelLookup();
         m_channelId = (uint8_t)rfssConfig["channelId"].as<uint32_t>(0U);
         if (m_channelId > 15U) { // clamp to 15
@@ -196,6 +208,11 @@ bool Host::readParams()
             m_controlChData = data;
 
             if (!m_controlChData.address().empty() && m_controlChData.port() > 0) {
+                // since we've defined both a control channel address and port, ensure configuration seems sane
+                if ((rpcApiAddress == m_rpcAddress) && rpcApiPort == m_rpcPort) {
+                    ::LogWarning(LOG_HOST, "Detected possible misconfiguration! Control Channel RPC Address/Port and the configured RPC Address/Port are the same!");
+                }
+
                 ::LogInfoEx(LOG_HOST, "Control Channel RPC Address %s:%u", m_controlChData.address().c_str(), m_controlChData.port());
             } else {
                 ::LogInfoEx(LOG_HOST, "No Control Channel RPC Configured, CC notify disabled");
@@ -238,6 +255,14 @@ bool Host::readParams()
             std::string rpcApiAddress = channel["rpcAddress"].as<std::string>("0.0.0.0");
             uint16_t rpcApiPort = (uint16_t)channel["rpcPort"].as<uint32_t>(RPC_DEFAULT_PORT);
             std::string rpcApiPassword = channel["rpcPassword"].as<std::string>();
+
+            // if we are both non-authoritative and non-supervisory then check if the voice channel
+            // configuration seems sane
+            if (!m_authoritative && !m_supervisor) {
+                if ((rpcApiAddress == m_rpcAddress) && rpcApiPort == m_rpcPort) {
+                    ::LogWarning(LOG_HOST, "Detected possible misconfiguration! Voice Channel RPC Address/Port and the configured RPC Address/Port are the same!");
+                }
+            }
 
             ::LogInfoEx(LOG_HOST, "Voice Channel Id %u Channel No $%04X RPC Address %s:%u", chId, chNo, rpcApiAddress.c_str(), rpcApiPort);
 
@@ -295,12 +320,9 @@ bool Host::readParams()
 
         m_nxdnRAN = rfssConfig["ran"].as<uint32_t>(1U);
 
-        m_authoritative = rfssConfig["authoritative"].as<bool>(true);
-
         LogInfo("System Config Parameters");
         LogInfo("    Authoritative: %s", m_authoritative ? "yes" : "no");
         if (m_authoritative) {
-            m_supervisor = rfssConfig["supervisor"].as<bool>(false);
             LogInfo("    Supervisor: %s", m_supervisor ? "yes" : "no");
         }
         LogInfo("    RX Frequency: %uHz", m_rxFrequency);
