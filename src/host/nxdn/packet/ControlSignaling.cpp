@@ -568,32 +568,36 @@ bool ControlSignaling::writeRF_Message_Grant(uint32_t srcId, uint32_t dstId, uin
             json::object req = json::object();
             req["dstId"].set<uint32_t>(dstId);
 
-            bool requestFailed = false;
-            std::string rcchStr = rcch->toString().c_str();
-            g_RPC->req(RPC_PERMIT_NXDN_TG, req, [=, &requestFailed, &rcchStr](json::object& req, json::object& reply) {
+            // send blocking RPC request
+            bool requestFailed = !g_RPC->req(RPC_PERMIT_NXDN_TG, req, [=, &requestFailed](json::object& req, json::object& reply) {
                 if (!req["status"].is<int>()) {
                     return;
                 }
 
                 int status = req["status"].get<int>();
                 if (status != network::RPC::OK) {
-                    ::LogError((net) ? LOG_NET : LOG_RF, "NXDN, %s, failed to permit TG for use, chNo = %u", rcchStr.c_str(), chNo);
                     if (req["message"].is<std::string>()) {
                         std::string retMsg = req["message"].get<std::string>();
                         ::LogError((net) ? LOG_NET : LOG_RF, "NXDN, RPC failed, %s", retMsg.c_str());
                     }
-
-                    m_nxdn->m_affiliations.releaseGrant(dstId, false);
-                    if (!net) {
-                        writeRF_Message_Deny(0U, srcId, CauseResponse::VD_QUE_GRP_BUSY, MessageType::RTCH_VCALL);
-                        m_nxdn->m_rfState = RS_RF_REJECTED;
-                    }
                     requestFailed = true;
+                } else {
+                    requestFailed = false;
                 }
-            }, voiceChData.address(), voiceChData.port());
+            }, voiceChData.address(), voiceChData.port(), true);
 
-            if (requestFailed)
+            // if the request failed block grant
+            if (requestFailed) {
+                ::LogError((net) ? LOG_NET : LOG_RF, "NXDN, %s, failed to permit TG for use, chNo = %u", rcch->toString().c_str(), chNo);
+
+                m_nxdn->m_affiliations.releaseGrant(dstId, false);
+                if (!net) {
+                    writeRF_Message_Deny(0U, srcId, CauseResponse::VD_QUE_GRP_BUSY, MessageType::RTCH_VCALL);
+                    m_nxdn->m_rfState = RS_RF_REJECTED;
+                }
+
                 return false;
+            }
         }
         else {
             ::LogError((net) ? LOG_NET : LOG_RF, "NXDN, %s, failed to permit TG for use, chNo = %u", rcch->toString().c_str(), chNo);

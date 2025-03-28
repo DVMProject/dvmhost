@@ -959,31 +959,36 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
                 req["dstId"].set<uint32_t>(dstId);
                 req["slot"].set<uint8_t>(slot);
 
-                bool requestFailed = false;
-                g_RPC->req(RPC_PERMIT_DMR_TG, req, [=, &requestFailed](json::object& req, json::object& reply) {
+                // send blocking RPC request
+                bool requestFailed = !g_RPC->req(RPC_PERMIT_DMR_TG, req, [=, &requestFailed](json::object& req, json::object& reply) {
                     if (!req["status"].is<int>()) {
                         return;
                     }
 
                     int status = req["status"].get<int>();
                     if (status != network::RPC::OK) {
-                        ::LogError((net) ? LOG_NET : LOG_RF, "DMR Slot %u, CSBK, RAND (Random Access), failed to permit TG for use, chNo = %u, slot = %u", tscc->m_slotNo, chNo, slot);
                         if (req["message"].is<std::string>()) {
                             std::string retMsg = req["message"].get<std::string>();
                             ::LogError((net) ? LOG_NET : LOG_RF, "DMR Slot %u, RPC failed, %s", tscc->m_slotNo, retMsg.c_str());
                         }
-
-                        tscc->m_affiliations->releaseGrant(dstId, false);
-                        if (!net) {
-                            writeRF_CSBK_ACK_RSP(srcId, ReasonCode::TS_DENY_RSN_TGT_BUSY, (grp) ? 1U : 0U);
-                            m_slot->m_rfState = RS_RF_REJECTED;
-                        }
                         requestFailed = true;
+                    } else {
+                        requestFailed = false;
                     }
-                }, voiceChData.address(), voiceChData.port());
+                }, voiceChData.address(), voiceChData.port(), true);
 
-                if (requestFailed)
+                // if the request failed block grant
+                if (requestFailed) {
+                    ::LogError((net) ? LOG_NET : LOG_RF, "DMR Slot %u, CSBK, RAND (Random Access), failed to permit TG for use, chNo = %u, slot = %u", tscc->m_slotNo, chNo, slot);
+
+                    tscc->m_affiliations->releaseGrant(dstId, false);
+                    if (!net) {
+                        writeRF_CSBK_ACK_RSP(srcId, ReasonCode::TS_DENY_RSN_TGT_BUSY, (grp) ? 1U : 0U);
+                        m_slot->m_rfState = RS_RF_REJECTED;
+                    }
+
                     return false;
+                }
             }
             else {
                 ::LogError(LOG_RF, "DMR Slot %u, CSBK, RAND (Random Access), failed to permit TG for use, chNo = %u, slot = %u", tscc->m_slotNo, chNo, slot);
@@ -1023,7 +1028,7 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
                 bool voice = true;
                 req["voice"].set<bool>(voice);
 
-                g_RPC->req(RPC_DMR_TSCC_PAYLOAD_ACT, req, nullptr, voiceChData.address(), voiceChData.port());
+                g_RPC->req(RPC_DMR_TSCC_PAYLOAD_ACT, req, nullptr, voiceChData.address(), voiceChData.port(), true);
             }
             else {
                 ::LogError(LOG_RF, "DMR Slot %u, CSBK, RAND (Random Access), failed to activate payload channel, chNo = %u, slot = %u", tscc->m_slotNo, chNo, slot);
@@ -1047,31 +1052,36 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
                 req["dstId"].set<uint32_t>(dstId);
                 req["slot"].set<uint8_t>(slot);
 
-                bool requestFailed = false;
-                g_RPC->req(RPC_PERMIT_DMR_TG, req, [=, &requestFailed](json::object& req, json::object& reply) {
+                // send blocking RPC request
+                bool requestFailed = !g_RPC->req(RPC_PERMIT_DMR_TG, req, [=, &requestFailed](json::object& req, json::object& reply) {
                     if (!req["status"].is<int>()) {
                         return;
                     }
 
                     int status = req["status"].get<int>();
                     if (status != network::RPC::OK) {
-                        ::LogError((net) ? LOG_NET : LOG_RF, "DMR Slot %u, CSBK, RAND (Random Access), failed to permit TG for use, chNo = %u, slot = %u", tscc->m_slotNo, chNo, slot);
                         if (req["message"].is<std::string>()) {
                             std::string retMsg = req["message"].get<std::string>();
                             ::LogError((net) ? LOG_NET : LOG_RF, "DMR Slot %u, RPC failed, %s", tscc->m_slotNo, retMsg.c_str());
                         }
-
-                        tscc->m_affiliations->releaseGrant(dstId, false);
-                        if (!net) {
-                            writeRF_CSBK_ACK_RSP(srcId, ReasonCode::TS_DENY_RSN_TGT_BUSY, (grp) ? 1U : 0U);
-                            m_slot->m_rfState = RS_RF_REJECTED;
-                        }
                         requestFailed = true;
+                    } else {
+                        requestFailed = false;
                     }
-                }, voiceChData.address(), voiceChData.port());
+                }, voiceChData.address(), voiceChData.port(), true);
 
-                if (requestFailed)
+                // if the request failed block grant
+                if (requestFailed) {
+                    ::LogError((net) ? LOG_NET : LOG_RF, "DMR Slot %u, CSBK, RAND (Random Access), failed to permit TG for use, chNo = %u, slot = %u", tscc->m_slotNo, chNo, slot);
+
+                    tscc->m_affiliations->releaseGrant(dstId, false);
+                    if (!net) {
+                        writeRF_CSBK_ACK_RSP(srcId, ReasonCode::TS_DENY_RSN_TGT_BUSY, (grp) ? 1U : 0U);
+                        m_slot->m_rfState = RS_RF_REJECTED;
+                    }
+
                     return false;
+                }
             }
             else {
                 ::LogError(LOG_RF, "DMR Slot %u, CSBK, RAND (Random Access), failed to permit TG for use, chNo = %u, slot = %u", tscc->m_slotNo, chNo, slot);
@@ -1109,7 +1119,7 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
                 bool voice = true;
                 req["voice"].set<bool>(voice);
 
-                g_RPC->req(RPC_DMR_TSCC_PAYLOAD_ACT, req, nullptr, voiceChData.address(), voiceChData.port());
+                g_RPC->req(RPC_DMR_TSCC_PAYLOAD_ACT, req, nullptr, voiceChData.address(), voiceChData.port(), true);
             }
             else {
                 ::LogError(LOG_RF, "DMR Slot %u, CSBK, RAND (Random Access), failed to activate payload channel, chNo = %u, slot = %u", tscc->m_slotNo, chNo, slot);
@@ -1261,7 +1271,7 @@ bool ControlSignaling::writeRF_CSBK_Data_Grant(uint32_t srcId, uint32_t dstId, u
                 bool voice = false;
                 req["voice"].set<bool>(voice);
 
-                g_RPC->req(RPC_DMR_TSCC_PAYLOAD_ACT, req, nullptr, voiceChData.address(), voiceChData.port());
+                g_RPC->req(RPC_DMR_TSCC_PAYLOAD_ACT, req, nullptr, voiceChData.address(), voiceChData.port(), true);
             }
             else {
                 ::LogError(LOG_RF, "DMR Slot %u, CSBK, RAND (Random Access), failed to activate payload channel, chNo = %u, slot = %u", tscc->m_slotNo, chNo, slot);
@@ -1307,7 +1317,7 @@ bool ControlSignaling::writeRF_CSBK_Data_Grant(uint32_t srcId, uint32_t dstId, u
                 bool voice = false;
                 req["voice"].set<bool>(voice);
 
-                g_RPC->req(RPC_DMR_TSCC_PAYLOAD_ACT, req, nullptr, voiceChData.address(), voiceChData.port());
+                g_RPC->req(RPC_DMR_TSCC_PAYLOAD_ACT, req, nullptr, voiceChData.address(), voiceChData.port(), true);
             }
             else {
                 ::LogError(LOG_RF, "DMR Slot %u, CSBK, RAND (Random Access), failed to activate payload channel, chNo = %u, slot = %u", tscc->m_slotNo, chNo, slot);

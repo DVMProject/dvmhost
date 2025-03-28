@@ -80,22 +80,26 @@ namespace network
 
         /**
          * @brief Writes an RPC request to the network.
+         * @note When using blocking, execution will only be blocked up to a timeout period maximum of 200ms.
          * @param request JSON content body for request.
          * @param reply Reply handler.
          * @param address IP address to write data to.
          * @param port Port number to write data to. 
+         * @param blocking Flag indicating this RPC call should block while waiting for a reply.
          * @returns bool True, if message was written, otherwise false.
          */
-        bool req(uint16_t func, const json::object& request, RPCType reply, std::string address, uint16_t port);
+        bool req(uint16_t func, const json::object& request, RPCType reply, std::string address, uint16_t port, bool blocking = false);
         /**
          * @brief Writes an RPC request to the network.
+         * @note When using blocking, execution will only be blocked up to a timeout period maximum of 200ms.
          * @param request JSON content body for request.
          * @param reply Reply handler.
          * @param address IP address to write data to.
          * @param addrLen 
+         * @param blocking Flag indicating this RPC call should block while waiting for a reply.
          * @returns bool True, if message was written, otherwise false.
          */
-        bool req(uint16_t func, const json::object& request, RPCType reply, sockaddr_storage& address, uint32_t addrLen);
+        bool req(uint16_t func, const json::object& request, RPCType reply, sockaddr_storage& address, uint32_t addrLen, bool blocking = false);
 
         /**
          * @brief Helper to generate a default response error payload.
@@ -140,6 +144,7 @@ namespace network
         std::string m_password;
 
         std::map<uint16_t, RPCType> m_handlers;
+        std::map<uint16_t, bool> m_handlerReplied;
 
         /**
          * @brief Writes an RPC reply to the network.
