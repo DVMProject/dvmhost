@@ -1112,8 +1112,21 @@ bool TagP25Data::validate(uint32_t peerId, lc::LC& control, DUID::E duid, const 
         return true;
 
     // always validate a terminator if the source is valid
-    if (duid == DUID::TDU || duid == DUID::TDULC)
-        return true;
+    if (m_network->m_filterTerminators) {
+        if ((duid == DUID::TDU || duid == DUID::TDULC) && control.getDstId() > 0U) {
+            lookups::TalkgroupRuleGroupVoice tg = m_network->m_tidLookup->find(control.getDstId());
+            if (tg.isInvalid()) {
+                //LogDebugEx(LOG_NET, "TagP25Data::validate()", "TDU for invalid TGID, dropped, dstId = %u", control.getDstId());
+                return false;
+            }
+        }
+
+        if (duid == DUID::TDU || duid == DUID::TDULC)
+            return true;
+    } else {
+        if (duid == DUID::TDU || duid == DUID::TDULC)
+            return true;
+    }
 
     // is this a private call?
     if (control.getLCO() == LCO::PRIVATE) {
@@ -1218,6 +1231,7 @@ bool TagP25Data::validate(uint32_t peerId, lc::LC& control, DUID::E duid, const 
     // check TGID validity
     lookups::TalkgroupRuleGroupVoice tg = m_network->m_tidLookup->find(control.getDstId());
     if (tg.isInvalid()) {
+        //LogDebugEx(LOG_NET, "TagP25Data::validate()", "dstId = %u, invalid dropped", control.getDstId());
         // report error event to InfluxDB
         if (m_network->m_enableInfluxDB) {
             influxdb::QueryBuilder()
