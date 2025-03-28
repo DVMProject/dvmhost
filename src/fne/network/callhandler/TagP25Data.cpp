@@ -1113,12 +1113,26 @@ bool TagP25Data::validate(uint32_t peerId, lc::LC& control, DUID::E duid, const 
 
     // always validate a terminator if the source is valid
     if (m_network->m_filterTerminators) {
-        if ((duid == DUID::TDU || duid == DUID::TDULC) && control.getDstId() > 0U) {
+        if ((duid == DUID::TDU || duid == DUID::TDULC) && control.getDstId() != 0U) {
+            // is this a group call?
             lookups::TalkgroupRuleGroupVoice tg = m_network->m_tidLookup->find(control.getDstId());
-            if (tg.isInvalid()) {
-                //LogDebugEx(LOG_NET, "TagP25Data::validate()", "TDU for invalid TGID, dropped, dstId = %u", control.getDstId());
-                return false;
+            if (!tg.isInvalid()) {
+                return true;
             }
+
+            tg = m_network->m_tidLookup->findByRewrite(peerId, control.getDstId());
+            if (!tg.isInvalid()) {
+                return true;
+            }
+
+            // is this a U2U call?
+            lookups::RadioId rid = m_network->m_ridLookup->find(control.getDstId());
+            if (!rid.radioDefault() && rid.radioEnabled()) {
+                return true;
+            }
+
+            //LogDebugEx(LOG_NET, "TagP25Data::validate()", "TDU for invalid destination, dropped, dstId = %u", control.getDstId());
+            return false;
         }
 
         if (duid == DUID::TDU || duid == DUID::TDULC)
