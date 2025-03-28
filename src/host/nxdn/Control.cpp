@@ -1133,11 +1133,6 @@ void Control::notifyCC_TouchGrant(uint32_t dstId)
 
 void Control::RPC_permittedTG(json::object& req, json::object& reply)
 {
-    if (!m_enableControl) {
-        g_RPC->defaultResponse(reply, "not NXDN control channel", network::RPC::BAD_REQUEST);
-        return;
-    }
-
     g_RPC->defaultResponse(reply, "OK", network::RPC::OK);
 
     // validate destination ID is a integer within the JSON blob

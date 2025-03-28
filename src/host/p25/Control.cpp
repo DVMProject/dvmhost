@@ -1794,11 +1794,6 @@ void Control::writeRF_TDU(bool noNetwork, bool imm)
 
 void Control::RPC_permittedTG(json::object& req, json::object& reply)
 {
-    if (!m_enableControl) {
-        g_RPC->defaultResponse(reply, "not P25 control channel", network::RPC::BAD_REQUEST);
-        return;
-    }
-
     g_RPC->defaultResponse(reply, "OK", network::RPC::OK);
 
     // validate destination ID is a integer within the JSON blob
