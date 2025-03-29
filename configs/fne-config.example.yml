@@ -163,7 +163,7 @@ peers:
       # Network Peer ID
       peerId: 9000990
 
-      # List of peer IDs to block sending traffic to from this peer.
+      # List of peer IDs to block traffic to for this peer.
       blockTrafficTo: []
 
       # Flag indicating whether or not peer endpoint networking is encrypted.
