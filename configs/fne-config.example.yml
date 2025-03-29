@@ -164,6 +164,18 @@ peers:
       peerId: 9000990
 
       # List of peer IDs to block traffic to for this peer.
+      #   The purpose of the blockTrafficTo peer ID list is to prevent traffic sourced from a listed peer ID from
+      #   being resent/repeated to this peer. This usually *should* not needed to be configured, and is usually used
+      #   on complex system configurations where traffic loops are possible due to duplicated or redundant peer
+      #   connections.
+      # 
+      #   For example: If we have FNEs: A, B and C, where both B and C are connected to A, and B is also connected to
+      #   C. On FNE B we would have blockTrafficTo entries for each external peer block listing the peer block peer ID's
+      #   for external peer Cs ID on external peer A's entry, and external peer As ID on external peer Cs entry.
+      #
+      #   Additionally, depending on configured talkgroup rules and other criteria, it may be necessary to also have
+      #   FNE Bs peer ID on FNE Cs peer block entry for FNE A.
+      #
       blockTrafficTo: []
 
       # Flag indicating whether or not peer endpoint networking is encrypted.
