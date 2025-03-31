@@ -10,6 +10,7 @@
  */
 #include "yaml/Yaml.h"
 
+#include <cstdio>
 #include <memory>
 #include <fstream>
 #include <sstream>
@@ -1989,6 +1990,7 @@ namespace yaml
         }
         catch (Exception const& e)
         {
+            ::fprintf(stderr, "YAML Error - %s\n", e.message());
             delete pImp;
             return false;
         }

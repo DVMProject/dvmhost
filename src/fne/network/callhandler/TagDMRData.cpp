@@ -732,7 +732,7 @@ bool TagDMRData::isPeerPermitted(uint32_t peerId, data::NetData& data, uint32_t 
             lookups::AffiliationLookup* aff = m_network->m_peerAffiliations[lookupPeerId];
             if (aff == nullptr) {
                 std::string peerIdentity = m_network->resolvePeerIdentity(lookupPeerId);
-                LogError(LOG_NET, "PEER %u (%s) has an invalid affiliations lookup? This shouldn't happen BUGBUG.", lookupPeerId, peerIdentity.c_str());
+                //LogError(LOG_NET, "PEER %u (%s) has an invalid affiliations lookup? This shouldn't happen BUGBUG.", lookupPeerId, peerIdentity.c_str());
                 return false; // this will cause no traffic to pass for this peer now...I'm not sure this is good behavior
             }
             else {

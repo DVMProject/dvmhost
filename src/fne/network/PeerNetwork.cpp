@@ -10,6 +10,7 @@
 #include "fne/Defines.h"
 #include "common/network/json/json.h"
 #include "common/zlib/zlib.h"
+#include "common/Log.h"
 #include "common/Utils.h"
 #include "fne/network/PeerNetwork.h"
 
@@ -77,13 +78,22 @@ uint32_t PeerNetwork::getRxDMRStreamId(uint32_t slotNo) const
 
 bool PeerNetwork::checkBlockedPeer(uint32_t peerId)
 {
+    if (!m_enabled)
+        return false;
+
     if (m_blockTrafficToTable.empty())
         return false;
 
     if (std::find(m_blockTrafficToTable.begin(), m_blockTrafficToTable.end(), peerId) != m_blockTrafficToTable.end()) {
+        if (m_debug) {
+            ::LogDebugEx(LOG_HOST, "PeerNetwork::checkBlockedPeer()", "PEER %u peerId = %u, blocking traffic", m_peerId, peerId);
+        }
         return true;
     }
 
+    if (m_debug) {
+        ::LogDebugEx(LOG_HOST, "PeerNetwork::checkBlockedPeer()", "PEER %u peerId = %u, passing traffic", m_peerId, peerId);
+    }
     return false;
 }
 

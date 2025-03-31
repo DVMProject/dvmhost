@@ -107,7 +107,7 @@ private:
 
     CryptoContainer* m_cryptoLookup;
 
-    std::unordered_map<std::string, network::PeerNetwork*> m_peerNetworks;
+    std::unordered_map<uint32_t, network::PeerNetwork*> m_peerNetworks;
 
     uint32_t m_pingTime;
     uint32_t m_maxMissedPings;

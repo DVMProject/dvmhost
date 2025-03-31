@@ -49,6 +49,8 @@ extern bool g_remoteModemMode;
 extern std::string g_remoteAddress;
 /** @brief (Global) Remote Modem Port. */
 extern uint16_t g_remotePort;
+/** @brief (Global) Local Remote Modem Port (Listening Port). */
+extern uint16_t g_remoteLocalPort;
 
 /** @brief (Global) Fire DMR beacon flag. */
 extern bool g_fireDMRBeacon;

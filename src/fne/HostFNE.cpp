@@ -806,6 +806,7 @@ bool HostFNE::createPeerNetworks()
                 for (size_t i = 0; i < blockTrafficTo.size(); i++) {
                     uint32_t peerId = (uint32_t)::strtoul(blockTrafficTo[i].as<std::string>("0").c_str(), NULL, 10);
                     if (peerId != 0U) {
+                        ::LogInfoEx(LOG_HOST, "Peer ID %u Blocks Traffic To PEER %u", id, peerId);
                         network->addBlockedTrafficPeer(peerId);
                     }
                 }
@@ -822,7 +823,7 @@ bool HostFNE::createPeerNetworks()
             }
 
             if (network != nullptr)
-                m_peerNetworks[identity] = network;
+                m_peerNetworks[id] = network;
         }
     }
 

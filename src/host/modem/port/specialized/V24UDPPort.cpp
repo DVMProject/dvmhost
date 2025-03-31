@@ -50,7 +50,8 @@ std::mutex V24UDPPort::m_bufferMutex;
 
 /* Initializes a new instance of the V24UDPPort class. */
 
-V24UDPPort::V24UDPPort(uint32_t peerId, const std::string& address, uint16_t modemPort, uint16_t controlPort, bool useFSC, bool fscInitiator, bool debug) :
+V24UDPPort::V24UDPPort(uint32_t peerId, const std::string& address, uint16_t modemPort, uint16_t controlPort, 
+    uint16_t controlLocalPort, bool useFSC, bool fscInitiator, bool debug) :
     m_socket(nullptr),
     m_localPort(modemPort),
     m_controlSocket(nullptr),
@@ -60,8 +61,11 @@ V24UDPPort::V24UDPPort(uint32_t peerId, const std::string& address, uint16_t mod
     m_controlAddr(),
     m_addrLen(0U),
     m_ctrlAddrLen(0U),
-    m_remoteAddr(),
-    m_remoteAddrLen(0U),
+    m_ctrlLocalPort(controlLocalPort),
+    m_remoteCtrlAddr(),
+    m_remoteCtrlAddrLen(0U),
+    m_remoteRTPAddr(),
+    m_remoteRTPAddrLen(0U),
     m_buffer(2000U, "UDP Port Ring Buffer"),
     m_fscInitiator(fscInitiator),
     m_timeoutTimer(1000U, 45U),
@@ -83,15 +87,18 @@ V24UDPPort::V24UDPPort(uint32_t peerId, const std::string& address, uint16_t mod
     assert(modemPort > 0U);
 
     if (controlPort > 0U && useFSC) {
-        m_controlSocket = new Socket(controlPort);
+        if (controlLocalPort == 0U)
+            controlLocalPort = controlPort;
+
+        m_controlSocket = new Socket(controlLocalPort);
         m_ctrlFrameQueue = new RawFrameQueue(m_controlSocket, m_debug);
 
         if (udp::Socket::lookup(address, controlPort, m_controlAddr, m_ctrlAddrLen) != 0)
             m_ctrlAddrLen = 0U;
 
         if (m_ctrlAddrLen > 0U) {
-            m_remoteAddr = m_controlAddr;
-            m_remoteAddrLen = m_remoteAddrLen;
+            m_remoteCtrlAddr = m_controlAddr;
+            m_remoteCtrlAddrLen = m_remoteCtrlAddrLen;
 
             std::string ctrlAddrStr = udp::Socket::address(m_controlAddr);
             LogWarning(LOG_HOST, "SECURITY: Remote modem expects V.24 control channel IP address; %s for remote modem control", ctrlAddrStr.c_str());
@@ -272,7 +279,7 @@ int V24UDPPort::write(const uint8_t* buffer, uint32_t length)
             if (m_debug)
                 Utils::dump(1U, "!!! Tx Outgoing DFSI UDP", buffer + 4U, length - 4U);
 
-            bool written = m_socket->write(message, messageLen, m_addr, m_addrLen);
+            bool written = m_socket->write(message, messageLen, m_remoteRTPAddr, m_remoteRTPAddrLen);
             if (written)
                 return length;
         } else {
@@ -408,16 +415,24 @@ void* V24UDPPort::threadedCtrlNetworkRx(void* arg)
                                             network->m_socket = nullptr;
                                         }
 
-                                        network->m_localPort = vcBasePort;
-                                        network->createVCPort(vcBasePort);
+                                        uint16_t remoteCtrlPort = Socket::port(req->address);
+                                        network->m_remoteCtrlAddr = req->address;
+                                        network->m_remoteCtrlAddrLen = req->addrLen;
+
+                                        // setup local RTP VC port (where we receive traffic)
+                                        network->createVCPort(network->m_localPort);
                                         network->m_socket->open(network->m_addr);
+
+                                        // setup remote RTP VC port (where we send traffic to)
+                                        std::string remoteAddress = Socket::address(req->address);
+                                        network->createRemoteVCPort(remoteAddress, vcBasePort);
 
                                         network->m_fscState = CS_CONNECTED;
                                         network->m_reqConnectionTimer.stop();
                                         network->m_heartbeatTimer.start();
                                         network->m_timeoutTimer.start();
 
-                                        LogMessage(LOG_MODEM, "V.24 UDP, Established DFSI FSC Connection, vcBasePort = %u", vcBasePort);
+                                        LogMessage(LOG_MODEM, "V.24 UDP, Established DFSI FSC Connection, ctrlRemotePort = %u, vcLocalPort = %u, vcRemotePort = %u", remoteCtrlPort, network->m_localPort, vcBasePort);
                                     }
                                     break;
 
@@ -449,6 +464,10 @@ void* V24UDPPort::threadedCtrlNetworkRx(void* arg)
                                 LogError(LOG_MODEM, "V.24 UDP, unknown ACK opcode, ackMessageId = $%02X", ackMessage->getAckMessageId());
                                 break;
                         }
+
+                        if (ackMessage->getResponseLength() > 0U && ackMessage->responseData != nullptr) {
+                            delete[] ackMessage->responseData; // FSCACK doesn't clean itself up...
+                        }
                     }
                     break;
 
@@ -478,20 +497,27 @@ void* V24UDPPort::threadedCtrlNetworkRx(void* arg)
                             network->m_socket = nullptr;
                         }
 
-                        uint16_t vcPort = connMessage->getVCBasePort();
+                        uint16_t vcBasePort = connMessage->getVCBasePort();
                         network->m_heartbeatInterval = connMessage->getHostHeartbeatPeriod();
                         if (network->m_heartbeatInterval > 30U)
                             network->m_heartbeatInterval = 30U;
-                        network->m_localPort = vcPort;
 
+                        uint16_t remoteCtrlPort = Socket::port(req->address);
+                        network->m_remoteCtrlAddr = req->address;
+                        network->m_remoteCtrlAddrLen = req->addrLen;
+    
+                        LogMessage(LOG_MODEM, "V.24 UDP, Incoming DFSI FSC Connection, ctrlRemotePort = %u, vcLocalPort = %u, vcRemotePort = %u, hostHBInterval = %u", remoteCtrlPort, network->m_localPort, vcBasePort, connMessage->getHostHeartbeatPeriod());
+
+                        // setup local RTP VC port (where we receive traffic)
                         network->createVCPort(network->m_localPort);
                         network->m_socket->open(network->m_addr);
 
+                        // setup remote RTP VC port (where we send traffic to)
+                        std::string remoteAddress = Socket::address(req->address);
+                        network->createRemoteVCPort(remoteAddress, vcBasePort);
+
                         network->m_fscState = CS_CONNECTED;
                         network->m_reqConnectionTimer.stop();
-
-                        network->m_remoteAddr = req->address;
-                        network->m_remoteAddrLen = req->addrLen;
 
                         if (connMessage->getHostHeartbeatPeriod() > 30U)
                             LogWarning(LOG_MODEM, "V.24 UDP, DFSI FSC Connection, requested heartbeat of %u, reduce to 30 seconds or less", connMessage->getHostHeartbeatPeriod());
@@ -499,8 +525,6 @@ void* V24UDPPort::threadedCtrlNetworkRx(void* arg)
                         network->m_heartbeatTimer = Timer(1000U, network->m_heartbeatInterval);
                         network->m_heartbeatTimer.start();
                         network->m_timeoutTimer.start();
-
-                        LogMessage(LOG_MODEM, "V.24 UDP, Incoming DFSI FSC Connection, vcBasePort = %u, hostHBInterval = %u", network->m_localPort, connMessage->getHostHeartbeatPeriod());
 
                         // construct connect ACK response data
                         uint8_t respData[3U];
@@ -517,7 +541,8 @@ void* V24UDPPort::threadedCtrlNetworkRx(void* arg)
                         ::memset(buffer, 0x00U, FSCACK::LENGTH + 3U);
                         ackResp.encode(buffer);
 
-                        network->m_ctrlFrameQueue->write(buffer, FSCACK::LENGTH + 3U, req->address, req->addrLen);
+                        if (network->m_ctrlFrameQueue->write(buffer, FSCACK::LENGTH + 3U, req->address, req->addrLen))
+                            LogMessage(LOG_MODEM, "V.24 UDP, Established DFSI FSC Connection, ctrlRemotePort = %u, vcLocalPort = %u, vcRemotePort = %u", remoteCtrlPort, network->m_localPort, vcBasePort);
                     }
                     break;
 
@@ -676,7 +701,7 @@ void* V24UDPPort::threadedVCNetworkRx(void* arg)
         }
 
         if (req->length > 0) {
-            if (udp::Socket::match(req->address, network->m_addr)) {
+            if (udp::Socket::match(req->address, network->m_remoteRTPAddr)) {
                 UInt8Array __reply = std::make_unique<uint8_t[]>(req->length + 4U);
                 uint8_t* reply = __reply.get();
 
@@ -705,7 +730,7 @@ void* V24UDPPort::threadedVCNetworkRx(void* arg)
     return nullptr;
 }
 
-/* Internal helper to setup the voice channel port. */
+/* Internal helper to setup the local voice channel port. */
 
 void V24UDPPort::createVCPort(uint16_t port)
 {
@@ -716,7 +741,20 @@ void V24UDPPort::createVCPort(uint16_t port)
 
     if (m_addrLen > 0U) {
         std::string addrStr = udp::Socket::address(m_addr);
-        LogWarning(LOG_HOST, "SECURITY: Remote modem expects V.24 voice channel IP address; %s for remote modem control", addrStr.c_str());
+        LogWarning(LOG_HOST, "SECURITY: Remote modem expects V.24 voice channel IP address; %s:%u for Rx traffic", addrStr.c_str(), port);
+    }
+}
+
+/* Internal helper to setup the remote voice channel port. */
+
+void V24UDPPort::createRemoteVCPort(std::string address, uint16_t port)
+{
+    if (udp::Socket::lookup(address, port, m_remoteRTPAddr, m_remoteRTPAddrLen) != 0)
+    m_remoteRTPAddrLen = 0U;
+
+    if (m_remoteRTPAddrLen > 0U) {
+        std::string addrStr = udp::Socket::address(m_remoteRTPAddr);
+        LogWarning(LOG_HOST, "SECURITY: Remote modem expects V.24 voice channel IP address; %s:%u for Tx traffic", addrStr.c_str(), port);
     }
 }
 
@@ -752,7 +790,7 @@ void V24UDPPort::writeHeartbeat()
     FSCHeartbeat hb = FSCHeartbeat();
     hb.encode(buffer);
 
-    m_ctrlFrameQueue->write(buffer, FSCHeartbeat::LENGTH, m_remoteAddr, m_remoteAddrLen);
+    m_ctrlFrameQueue->write(buffer, FSCHeartbeat::LENGTH, m_remoteCtrlAddr, m_remoteCtrlAddrLen);
 }
 
 /* Generate RTP message. */

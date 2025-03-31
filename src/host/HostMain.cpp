@@ -53,6 +53,7 @@ bool g_killed = false;
 bool g_remoteModemMode = false;
 std::string g_remoteAddress = std::string("127.0.0.1");
 uint16_t g_remotePort = REMOTE_MODEM_PORT;
+uint16_t g_remoteLocalPort = 0U;
 
 bool g_fireDMRBeacon = false;
 bool g_fireP25Control = false;
@@ -140,6 +141,7 @@ void usage(const char* message, const char* arg)
         "  --remote  remote modem mode\n"
         "  -a        remote modem command address\n"
         "  -p        remote modem command port\n"
+        "  -P        remote modem command port (local listening port)\n"
         "\n"
         "  --        stop handling options\n",
         g_progExe.c_str());
@@ -214,6 +216,16 @@ int checkArgs(int argc, char* argv[])
             g_remotePort = (uint16_t)::atoi(argv[++i]);
 
             if (g_remotePort == 0)
+                usage("error: %s", "remote port number cannot be blank or 0!");
+
+            p += 2;
+        }
+        else if (IS("-P")) {
+            if ((argc - 1) <= 0)
+                usage("error: %s", "must specify the port to connect to");
+            g_remoteLocalPort = (uint16_t)::atoi(argv[++i]);
+
+            if (g_remoteLocalPort == 0)
                 usage("error: %s", "remote port number cannot be blank or 0!");
 
             p += 2;

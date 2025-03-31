@@ -14,6 +14,7 @@
 #include "common/dmr/lc/csbk/CSBKFactory.h"
 #include "common/Log.h"
 #include "dmr/Control.h"
+#include "Host.h"
 
 using namespace dmr;
 using namespace dmr::defines;
@@ -67,6 +68,12 @@ Control::Control(bool authoritative, uint32_t colorCode, uint32_t callHang, uint
     m_slot2 = new Slot(2U, timeout, tgHang, queueSize, dumpDataPacket, repeatDataPacket, dumpCSBKData, debug, verbose);
 
     m_tsccCntInterval.start();
+
+    // register RPC handlers
+    g_RPC->registerHandler(RPC_PERMIT_DMR_TG, RPC_FUNC_BIND(Control::RPC_permittedTG, this));
+    g_RPC->registerHandler(RPC_RELEASE_DMR_TG, RPC_FUNC_BIND(Control::RPC_releaseGrantTG, this));
+    g_RPC->registerHandler(RPC_TOUCH_DMR_TG, RPC_FUNC_BIND(Control::RPC_touchGrantTG, this));
+    g_RPC->registerHandler(RPC_DMR_TSCC_PAYLOAD_ACT, RPC_FUNC_BIND(Control::RPC_tsccPayloadActivate, this));
 }
 
 /* Finalizes a instance of the Control class. */
@@ -201,6 +208,8 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, ::lookups::VoiceChDa
             if (disableGrantSourceIdCheck) {
                 LogInfo("    TSCC Disable Grant Source ID Check: yes");
             }
+            if (m_supervisor)
+                LogMessage(LOG_DMR, "Host is configured to operate as a DMR TSCC, site controller mode.");
         }
         if (disableNetworkGrant) {
             LogInfo("    Disable Network Grants: yes");
@@ -429,40 +438,6 @@ void Control::grantTG(uint32_t srcId, uint32_t dstId, uint8_t slot, bool grp)
         break;
     case 2U:
         m_slot2->grantTG(srcId, dstId, grp);
-        break;
-    default:
-        LogError(LOG_DMR, "DMR, invalid slot, slotNo = %u", slot);
-        break;
-    }
-}
-
-/* Releases a granted TG. */
-
-void Control::releaseGrantTG(uint32_t dstId, uint8_t slot)
-{
-    switch (slot) {
-    case 1U:
-        m_slot1->releaseGrantTG(dstId);
-        break;
-    case 2U:
-        m_slot2->releaseGrantTG(dstId);
-        break;
-    default:
-        LogError(LOG_DMR, "DMR, invalid slot, slotNo = %u", slot);
-        break;
-    }
-}
-
-/* Touchs a granted TG to keep a channel grant alive. */
-
-void Control::touchGrantTG(uint32_t dstId, uint8_t slot)
-{
-    switch (slot) {
-    case 1U:
-        m_slot1->touchGrantTG(dstId);
-        break;
-    case 2U:
-        m_slot2->touchGrantTG(dstId);
         break;
     default:
         LogError(LOG_DMR, "DMR, invalid slot, slotNo = %u", slot);
@@ -807,5 +782,199 @@ void Control::processInCallCtrl(network::NET_ICC::ENUM command, uint32_t dstId, 
     default:
         LogError(LOG_DMR, "DMR, invalid slot, slotNo = %u", slotNo);
         break;
+    }
+}
+
+/* (RPC Handler) Permits a TGID on a non-authoritative host. */
+
+void Control::RPC_permittedTG(json::object& req, json::object& reply)
+{
+    g_RPC->defaultResponse(reply, "OK", network::RPC::OK);
+
+    // validate destination ID is a integer within the JSON blob
+    if (!req["dstId"].is<int>()) {
+        g_RPC->defaultResponse(reply, "destination ID was not a valid integer", network::RPC::INVALID_ARGS);
+        return;
+    }
+
+    uint32_t dstId = req["dstId"].get<uint32_t>();
+
+    // validate slot is a integer within the JSON blob
+    if (!req["slot"].is<int>()) {
+        g_RPC->defaultResponse(reply, "slot was not a valid integer", network::RPC::INVALID_ARGS);
+        return;
+    }
+
+    uint8_t slot = (uint8_t)req["slot"].get<int>();
+
+    if (slot == 0U || slot > 2U) {
+        g_RPC->defaultResponse(reply, "illegal DMR slot");
+        return;
+    }
+
+    // LogDebugEx(LOG_DMR, "Control::RPC_permittedTG()", "callback, dstId = %u, slot = %u", dstId, slot);
+
+    permittedTG(dstId, slot);
+}
+
+/* (RPC Handler) Releases a granted TG. */
+
+void Control::RPC_releaseGrantTG(json::object& req, json::object& reply)
+{
+    g_RPC->defaultResponse(reply, "OK", network::RPC::OK);
+
+    // validate destination ID is a integer within the JSON blob
+    if (!req["dstId"].is<int>()) {
+        g_RPC->defaultResponse(reply, "destination ID was not a valid integer", network::RPC::INVALID_ARGS);
+        return;
+    }
+
+    uint32_t dstId = req["dstId"].get<uint32_t>();
+
+    if (dstId == 0U) {
+        g_RPC->defaultResponse(reply, "destination ID is an illegal TGID");
+        return;
+    }
+
+    // validate slot is a integer within the JSON blob
+    if (!req["slot"].is<int>()) {
+        g_RPC->defaultResponse(reply, "slot was not a valid integer", network::RPC::INVALID_ARGS);
+        return;
+    }
+
+    uint8_t slot = (uint8_t)req["slot"].get<int>();
+
+    if (slot == 0U || slot > 2U) {
+        g_RPC->defaultResponse(reply, "illegal DMR slot");
+        return;
+    }
+
+    // LogDebugEx(LOG_DMR, "Control::RPC_releaseGrantTG()", "callback, dstId = %u, slot = %u", dstId, slot);
+
+    switch (slot) {
+    case 1U:
+        m_slot1->releaseGrantTG(dstId);
+        break;
+    case 2U:
+        m_slot2->releaseGrantTG(dstId);
+        break;
+    default:
+        LogError(LOG_DMR, "DMR, invalid slot, slotNo = %u", slot);
+        break;
+    }
+}
+
+/* (RPC Handler) Touchs a granted TG to keep a channel grant alive. */
+
+void Control::RPC_touchGrantTG(json::object& req, json::object& reply)
+{
+    g_RPC->defaultResponse(reply, "OK", network::RPC::OK);
+
+    // validate destination ID is a integer within the JSON blob
+    if (!req["dstId"].is<int>()) {
+        g_RPC->defaultResponse(reply, "destination ID was not a valid integer", network::RPC::INVALID_ARGS);
+        return;
+    }
+
+    uint32_t dstId = req["dstId"].get<uint32_t>();
+
+    if (dstId == 0U) {
+        g_RPC->defaultResponse(reply, "destination ID is an illegal TGID");
+        return;
+    }
+
+    // validate slot is a integer within the JSON blob
+    if (!req["slot"].is<int>()) {
+        g_RPC->defaultResponse(reply, "slot was not a valid integer", network::RPC::INVALID_ARGS);
+        return;
+    }
+
+    uint8_t slot = (uint8_t)req["slot"].get<int>();
+
+    if (slot == 0U || slot > 2U) {
+        g_RPC->defaultResponse(reply, "illegal DMR slot");
+        return;
+    }
+
+    // LogDebugEx(LOG_DMR, "Control::RPC_touchGrantTG()", "callback, dstId = %u, slot = %u", dstId, slot);
+
+    switch (slot) {
+    case 1U:
+        m_slot1->touchGrantTG(dstId);
+        break;
+    case 2U:
+        m_slot2->touchGrantTG(dstId);
+        break;
+    default:
+        LogError(LOG_DMR, "DMR, invalid slot, slotNo = %u", slot);
+        break;
+    }
+}
+
+/* (RPC Handler) Helper to payload activate the slot carrying granted payload traffic. */
+
+void Control::RPC_tsccPayloadActivate(json::object& req, json::object& reply)
+{
+    g_RPC->defaultResponse(reply, "OK", network::RPC::OK);
+
+    // validate destination ID is a integer within the JSON blob
+    if (!req["slot"].is<uint8_t>()) {
+        g_RPC->defaultResponse(reply, "slot was not valid", network::RPC::INVALID_ARGS);
+        return;
+    }
+
+    // validate clear flag is a boolean within the JSON blob
+    if (!req["clear"].is<bool>()) {
+        g_RPC->defaultResponse(reply, "clear flag was not valid", network::RPC::INVALID_ARGS);
+        return;
+    }
+
+    uint8_t slot = req["slot"].get<uint8_t>();
+    bool clear = req["clear"].get<bool>();
+
+    if (slot == 0U || slot >= 3U) {
+        g_RPC->defaultResponse(reply, "invalid DMR slot number (slot == 0 or slot > 3)");
+        return;
+    }
+
+    if (clear) {
+        tsccClearActivatedSlot(slot);
+    }
+    else {
+        // validate destination ID is a integer within the JSON blob
+        if (!req["dstId"].is<uint32_t>()) {
+            g_RPC->defaultResponse(reply, "destination ID was not valid", network::RPC::INVALID_ARGS);
+            return;
+        }
+
+        // validate destination ID is a integer within the JSON blob
+        if (!req["srcId"].is<uint32_t>()) {
+            g_RPC->defaultResponse(reply, "source ID was not valid", network::RPC::INVALID_ARGS);
+            return;
+        }
+
+        // validate group flag is a boolean within the JSON blob
+        if (!req["group"].is<bool>()) {
+            g_RPC->defaultResponse(reply, "group flag was not valid", network::RPC::INVALID_ARGS);
+            return;
+        }
+
+        // validate voice flag is a boolean within the JSON blob
+        if (!req["voice"].is<bool>()) {
+            g_RPC->defaultResponse(reply, "voice flag was not valid", network::RPC::INVALID_ARGS);
+            return;
+        }
+
+        uint32_t dstId = req["dstId"].get<uint32_t>();
+        uint32_t srcId = req["srcId"].get<uint32_t>();
+        bool group = req["group"].get<bool>();
+        bool voice = req["voice"].get<bool>();
+
+        if (dstId == 0U) {
+            g_RPC->defaultResponse(reply, "destination ID was not valid");
+            return;
+        }
+
+        tsccActivateSlot(slot, dstId, srcId, group, voice);
     }
 }

@@ -19,9 +19,9 @@
 #include "common/Utils.h"
 #include "dmr/Slot.h"
 #include "common/dmr/acl/AccessControl.h"
-#include "remote/RESTClient.h"
 #include "ActivityLog.h"
 #include "HostMain.h"
+#include "Host.h"
 
 using namespace dmr;
 using namespace dmr::defines;
@@ -825,7 +825,10 @@ void Slot::permittedTG(uint32_t dstId)
     }
 
     if (m_verbose) {
-        LogMessage(LOG_DMR, "DMR Slot %u, non-authoritative TG permit, dstId = %u", m_slotNo, dstId);
+        if (dstId == 0U)
+            LogMessage(LOG_DMR, "DMR Slot %u, non-authoritative TG unpermit", m_slotNo);
+        else
+            LogMessage(LOG_DMR, "DMR Slot %u, non-authoritative TG permit, dstId = %u", m_slotNo, dstId);
     }
 
     m_permittedDstId = dstId;
@@ -1035,8 +1038,7 @@ void Slot::init(Control* dmr, bool authoritative, uint32_t colorCode, SiteData s
                 bool clear = true;
                 req["clear"].set<bool>(clear);
 
-                RESTClient::send(voiceChData.address(), voiceChData.port(), voiceChData.password(),
-                    HTTP_PUT, PUT_DMR_TSCC_PAYLOAD_ACT, req, voiceChData.ssl(), REST_QUICK_WAIT, tscc->m_debug);
+                g_RPC->req(RPC_DMR_TSCC_PAYLOAD_ACT, req, nullptr, voiceChData.address(), voiceChData.port());
             }
             else {
                 ::LogError(LOG_DMR, "DMR Slot %u, CSBK, RAND (Random Access), failed to clear payload channel, chNo = %u, slot = %u", tscc->m_slotNo, chNo, slot);
@@ -1046,14 +1048,11 @@ void Slot::init(Control* dmr, bool authoritative, uint32_t colorCode, SiteData s
             if (m_authoritative && m_dmr->m_supervisor) {
                 if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0) {
                     json::object req = json::object();
-                    int state = modem::DVM_STATE::STATE_DMR;
-                    req["state"].set<int>(state);
                     dstId = 0U; // clear TG value
                     req["dstId"].set<uint32_t>(dstId);
                     req["slot"].set<uint8_t>(slot);
 
-                    RESTClient::send(voiceChData.address(), voiceChData.port(), voiceChData.password(),
-                        HTTP_PUT, PUT_PERMIT_TG, req, voiceChData.ssl(), REST_QUICK_WAIT, m_dmr->m_debug);
+                    g_RPC->req(RPC_PERMIT_DMR_TG, req, nullptr, voiceChData.address(), voiceChData.port());
                 }
                 else {
                     ::LogError(LOG_DMR, "DMR Slot %u, CSBK, RAND (Random Access), failed to clear TG permit, chNo = %u, slot = %u", tscc->m_slotNo, chNo, slot);
@@ -1258,17 +1257,27 @@ void Slot::notifyCC_ReleaseGrant(uint32_t dstId)
 
     // callback REST API to release the granted TG on the specified control channel
     json::object req = json::object();
-    int state = modem::DVM_STATE::STATE_DMR;
-    req["state"].set<int>(state);
     req["dstId"].set<uint32_t>(dstId);
     uint8_t slot = m_slotNo;
     req["slot"].set<uint8_t>(slot);
 
-    int ret = RESTClient::send(m_controlChData.address(), m_controlChData.port(), m_controlChData.password(),
-        HTTP_PUT, PUT_RELEASE_TG, req, m_controlChData.ssl(), REST_QUICK_WAIT, m_debug);
-    if (ret != network::rest::http::HTTPPayload::StatusType::OK) {
-        ::LogError(LOG_DMR, "DMR Slot %u, failed to notify the CC %s:%u of the release of, dstId = %u", m_slotNo, m_controlChData.address().c_str(), m_controlChData.port(), dstId);
-    }
+    g_RPC->req(RPC_RELEASE_DMR_TG, req, [=](json::object& req, json::object& reply) {
+        if (!req["status"].is<int>()) {
+            ::LogError(LOG_DMR, "DMR Slot %u, failed to notify the CC %s:%u of the release of, dstId = %u, invalid RPC response", m_slotNo, m_controlChData.address().c_str(), m_controlChData.port(), dstId);
+            return;
+        }
+
+        int status = req["status"].get<int>();
+        if (status != network::RPC::OK) {
+            ::LogError(LOG_DMR, "DMR Slot %u, failed to notify the CC %s:%u of the release of, dstId = %u", m_slotNo, m_controlChData.address().c_str(), m_controlChData.port(), dstId);
+            if (req["message"].is<std::string>()) {
+                std::string retMsg = req["message"].get<std::string>();
+                ::LogError(LOG_DMR, "DMR Slot %u, RPC failed, %s", m_slotNo, retMsg.c_str());
+            }
+        }
+        else
+            ::LogMessage(LOG_DMR, "DMR Slot %u, CC %s:%u, released grant, dstId = %u", m_slotNo, m_controlChData.address().c_str(), m_controlChData.port(), dstId);
+    }, m_controlChData.address(), m_controlChData.port());
 
     m_rfLastDstId = 0U;
     m_rfLastSrcId = 0U;
@@ -1294,17 +1303,28 @@ void Slot::notifyCC_TouchGrant(uint32_t dstId)
 
     // callback REST API to touch the granted TG on the specified control channel
     json::object req = json::object();
-    int state = modem::DVM_STATE::STATE_DMR;
-    req["state"].set<int>(state);
     req["dstId"].set<uint32_t>(dstId);
     uint8_t slot = m_slotNo;
     req["slot"].set<uint8_t>(slot);
 
-    int ret = RESTClient::send(m_controlChData.address(), m_controlChData.port(), m_controlChData.password(),
-        HTTP_PUT, PUT_TOUCH_TG, req, m_controlChData.ssl(), REST_QUICK_WAIT, m_debug);
-    if (ret != network::rest::http::HTTPPayload::StatusType::OK) {
-        ::LogError(LOG_DMR, "DMR Slot %u, failed to notify the CC %s:%u of the touch of, dstId = %u", m_slotNo, m_controlChData.address().c_str(), m_controlChData.port(), dstId);
-    }
+    g_RPC->req(RPC_TOUCH_DMR_TG, req, [=](json::object& req, json::object& reply) {
+        // validate channelNo is a string within the JSON blob
+        if (!req["status"].is<int>()) {
+            ::LogError(LOG_DMR, "DMR Slot %u, failed to notify the CC %s:%u of the touch of, dstId = %u, invalid RPC response", m_slotNo, m_controlChData.address().c_str(), m_controlChData.port(), dstId);
+            return;
+        }
+
+        int status = req["status"].get<int>();
+        if (status != network::RPC::OK) {
+            ::LogError(LOG_DMR, "DMR Slot %u, failed to notify the CC %s:%u of the touch of, dstId = %u", m_slotNo, m_controlChData.address().c_str(), m_controlChData.port(), dstId);
+            if (req["message"].is<std::string>()) {
+                std::string retMsg = req["message"].get<std::string>();
+                ::LogError(LOG_DMR, "DMR Slot %u, RPC failed, %s", m_slotNo, retMsg.c_str());
+            }
+        }
+        else
+            ::LogMessage(LOG_DMR, "DMR Slot %u, CC %s:%u, touched grant, dstId = %u", m_slotNo, m_controlChData.address().c_str(), m_controlChData.port(), dstId);
+    }, m_controlChData.address(), m_controlChData.port());
 }
 
 /* Write data frame to the network. */

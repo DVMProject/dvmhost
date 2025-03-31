@@ -835,7 +835,7 @@ bool TagP25Data::processTSDUTo(uint8_t* buffer, uint32_t peerId, uint8_t duid)
                             lookups::AffiliationLookup* aff = m_network->m_peerAffiliations[lookupPeerId];
                             if (aff == nullptr) {
                                 std::string peerIdentity = m_network->resolvePeerIdentity(lookupPeerId);
-                                LogError(LOG_NET, "PEER %u (%s) has an invalid affiliations lookup? This shouldn't happen BUGBUG.", lookupPeerId, peerIdentity.c_str());
+                                //LogError(LOG_NET, "PEER %u (%s) has an invalid affiliations lookup? This shouldn't happen BUGBUG.", lookupPeerId, peerIdentity.c_str());
                                 return false; // this will cause no TSDU to pass for this peer now...I'm not sure this is good behavior
                             }
                             else {
@@ -1050,7 +1050,7 @@ bool TagP25Data::isPeerPermitted(uint32_t peerId, lc::LC& control, DUID::E duid,
         lookups::AffiliationLookup* aff = m_network->m_peerAffiliations[lookupPeerId];
         if (aff == nullptr) {
             std::string peerIdentity = m_network->resolvePeerIdentity(lookupPeerId);
-            LogError(LOG_NET, "PEER %u (%s) has an invalid affiliations lookup? This shouldn't happen BUGBUG.", lookupPeerId, peerIdentity.c_str());
+            //LogError(LOG_NET, "PEER %u (%s) has an invalid affiliations lookup? This shouldn't happen BUGBUG.", lookupPeerId, peerIdentity.c_str());
             return false; // this will cause no traffic to pass for this peer now...I'm not sure this is good behavior
         }
         else {
@@ -1112,8 +1112,35 @@ bool TagP25Data::validate(uint32_t peerId, lc::LC& control, DUID::E duid, const 
         return true;
 
     // always validate a terminator if the source is valid
-    if (duid == DUID::TDU || duid == DUID::TDULC)
-        return true;
+    if (m_network->m_filterTerminators) {
+        if ((duid == DUID::TDU || duid == DUID::TDULC) && control.getDstId() != 0U) {
+            // is this a group call?
+            lookups::TalkgroupRuleGroupVoice tg = m_network->m_tidLookup->find(control.getDstId());
+            if (!tg.isInvalid()) {
+                return true;
+            }
+
+            tg = m_network->m_tidLookup->findByRewrite(peerId, control.getDstId());
+            if (!tg.isInvalid()) {
+                return true;
+            }
+
+            // is this a U2U call?
+            lookups::RadioId rid = m_network->m_ridLookup->find(control.getDstId());
+            if (!rid.radioDefault() && rid.radioEnabled()) {
+                return true;
+            }
+
+            //LogDebugEx(LOG_NET, "TagP25Data::validate()", "TDU for invalid destination, dropped, dstId = %u", control.getDstId());
+            return false;
+        }
+
+        if (duid == DUID::TDU || duid == DUID::TDULC)
+            return true;
+    } else {
+        if (duid == DUID::TDU || duid == DUID::TDULC)
+            return true;
+    }
 
     // is this a private call?
     if (control.getLCO() == LCO::PRIVATE) {
@@ -1218,6 +1245,7 @@ bool TagP25Data::validate(uint32_t peerId, lc::LC& control, DUID::E duid, const 
     // check TGID validity
     lookups::TalkgroupRuleGroupVoice tg = m_network->m_tidLookup->find(control.getDstId());
     if (tg.isInvalid()) {
+        //LogDebugEx(LOG_NET, "TagP25Data::validate()", "dstId = %u, invalid dropped", control.getDstId());
         // report error event to InfluxDB
         if (m_network->m_enableInfluxDB) {
             influxdb::QueryBuilder()

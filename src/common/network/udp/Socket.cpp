@@ -152,8 +152,6 @@ bool Socket::open(const uint32_t af, const std::string& address, const uint16_t 
         if (!bind(address, port)) {
             return false;
         }
-
-        LogInfoEx(LOG_NET, "Opening UDP port on %u", port);
     }
 
     return true;

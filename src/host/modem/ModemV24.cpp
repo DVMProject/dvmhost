@@ -1155,11 +1155,8 @@ void ModemV24::convertToAirTIA(const uint8_t *data, uint32_t length)
 
             dataOffs += StartOfStream::LENGTH;
 
-            // only ack the first start of stream block
-            if (blockCnt == 1U) {
-                // ack start of stream
-                ackStartOfStreamTIA(); 
-            }
+            // ack start of stream
+            ackStartOfStreamTIA(); 
         }
         break;
         case BlockType::END_OF_STREAM:
@@ -1178,6 +1175,15 @@ void ModemV24::convertToAirTIA(const uint8_t *data, uint32_t length)
             buffer[0U] = modem::TAG_DATA;
             buffer[1U] = 0x01U;
             storeConvertedRx(buffer, P25_TDU_FRAME_LENGTH_BITS + 2U);
+        }
+        break;
+
+        case BlockType::START_OF_STREAM_ACK:
+        {
+            if (m_debug)
+                ::LogDebugEx(LOG_MODEM, "ModemV24::convertToAirTIA()", "Start of Stream ACK");
+
+            // do nothing with the start of stream ack
         }
         break;
 
@@ -1945,7 +1951,7 @@ void ModemV24::ackStartOfStreamTIA()
     if (m_trace)
         Utils::dump(1U, "ModemV24::ackStartOfStreamTIA() Ack StartOfStream", buffer, length);
 
-    queueP25Frame(buffer, length, STT_NON_IMBE);
+    queueP25Frame(buffer, length, STT_NON_IMBE_NO_JITTER);
 }
 
 /* Internal helper to convert from TIA-102 air interface to V.24/DFSI. */
@@ -2550,6 +2556,7 @@ void ModemV24::convertFromAirTIA(uint8_t* data, uint32_t length)
             bufferSize += BlockHeader::LENGTH;
 
             voice.setSuperframeCnt(m_superFrameCnt);
+            voice.setBusy(1U); // Inbound Channel is Busy
             voice.encode(buffer + bufferSize);
             bufferSize += voice.getLength(); // 18, 17 or 14 depending on voice frame type
 

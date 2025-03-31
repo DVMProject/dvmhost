@@ -36,6 +36,9 @@ log:
 # Network Configuration
 #
 network:
+    #
+    # FNE Configuration
+    #
     # Flag indicating whether or not host networking is enabled.
     enable: true
     # Network Peer ID
@@ -77,6 +80,21 @@ network:
     # Flag indicating whether or not verbose debug logging is enabled.
     debug: false
 
+    #
+    # RPC Configuration
+    #
+    # IP address of the network interface to listen for RPC calls on (or 0.0.0.0 for all).
+    rpcAddress: 127.0.0.1
+    # Port number for RPC calls to listen on.
+    rpcPort: 9890
+    # RPC access password.
+    rpcPassword: "ULTRA-VERY-SECURE-DEFAULT"
+    # Flag indicating whether or not verbose RPC debug logging is enabled.
+    rpcDebug: false
+
+    #
+    # REST API Configuration
+    #
     # Flag indicating whether or not REST API is enabled.
     restEnable: false
     # IP address of the network interface to listen for REST API on (or 0.0.0.0 for all).
@@ -392,14 +410,12 @@ system:
         #   These parameters should be left default for dedicated control channels.
         #
         controlCh:
-            # REST API IP Address for control channel. (If blank, notifications are disabled.)
-            restAddress: 
-            # REST API Port number for control channel. (If 0, notifications are disabled.)
-            restPort: 0
-            # REST API access password for control channel.
-            restPassword: "PASSWORD"
-            # Flag indicating whether or not REST API is operating in SSL mode.
-            restSsl: false
+            # RPC IP Address for control channel. (If blank, notifications are disabled.)
+            rpcAddress: 127.0.0.1
+            # RPC Port number for control channel. (If 0, notifications are disabled.)
+            rpcPort: 0
+            # RPC access password for control channel.
+            rpcPassword: "ULTRA-VERY-SECURE-DEFAULT"
             # Flag indicating voice channels will notify the control channel of traffic status.
             notifyEnable: true
             # Amount of time between network presence announcements. (seconds)
@@ -414,14 +430,12 @@ system:
             - channelId: 2
               # Channel Number (used to calculate actual host frequency based on the identity table).
               channelNo: 1
-              # REST API IP Address for voice channel.
-              restAddress: 127.0.0.1
-              # REST API Port number for voice channel.
-              restPort: 9990
-              # REST API access password for voice channel.
-              restPassword: "PASSWORD"
-              # Flag indicating whether or not REST API is operating in SSL mode.
-              restSsl: false
+              # RPC IP Address for voice channel.
+              rpcAddress: 127.0.0.1
+              # RPC Port number for voice channel.
+              rpcPort: 9890
+              # RPC access password for voice channel.
+              rpcPassword: "ULTRA-VERY-SECURE-DEFAULT"
 
         secure:
             # AES-128 16-byte Key (used for LLA)

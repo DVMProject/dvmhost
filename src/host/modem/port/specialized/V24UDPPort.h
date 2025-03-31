@@ -71,11 +71,13 @@ namespace modem
                  * @param address Hostname/IP address to connect to.
                  * @param modemPort Port number.
                  * @param controlPort Control Port number.
+                 * @param controlLocalPort Local listening control port number.
                  * @param useFSC Flag indicating whether or not FSC handshakes are used to setup communications.
                  * @param fscInitiator Flag indicating whether or not the FSC handshake should be initiated when the port is opened.
                  * @param debug Flag indicating whether network debug is enabled.
                  */
-                V24UDPPort(uint32_t peerId, const std::string& modemAddress, uint16_t modemPort, uint16_t controlPort = 0U, bool useFSC = false, bool fscInitiator = false, bool debug = false);
+                V24UDPPort(uint32_t peerId, const std::string& modemAddress, uint16_t modemPort, uint16_t controlPort = 0U, 
+                    uint16_t controlLocalPort = 0U, bool useFSC = false, bool fscInitiator = false, bool debug = false);
                 /**
                  * @brief Finalizes a instance of the V24UDPPort class.
                  */
@@ -145,8 +147,12 @@ namespace modem
                 uint32_t m_addrLen;
                 uint32_t m_ctrlAddrLen;
 
-                sockaddr_storage m_remoteAddr;
-                uint32_t m_remoteAddrLen;
+                uint16_t m_ctrlLocalPort;
+
+                sockaddr_storage m_remoteCtrlAddr;
+                uint32_t m_remoteCtrlAddrLen;
+                sockaddr_storage m_remoteRTPAddr;
+                uint32_t m_remoteRTPAddrLen;
 
                 RingBuffer<uint8_t> m_buffer;
 
@@ -205,10 +211,16 @@ namespace modem
                 static void* threadedVCNetworkRx(void* arg);
 
                 /**
-                 * @brief Internal helper to setup the voice channel port.
+                 * @brief Internal helper to setup the local voice channel port.
                  * @param port Port number.
                  */
                 void createVCPort(uint16_t port);
+                /**
+                 * @brief Internal helper to setup the remote voice channel port.
+                 * @param address IP Address or Hostname.
+                 * @param port Port number.
+                 */
+                void createRemoteVCPort(std::string address, uint16_t port);
                 /**
                  * @brief Internal helper to write a FSC connect packet.
                  */

@@ -26,6 +26,7 @@ using namespace p25::dfsi::frames::fsc;
 /* Initializes a instance of the FSCACK class. */
 
 FSCACK::FSCACK() : FSCMessage(),
+    responseData(nullptr),
     m_ackMessageId(FSCMessageType::FSC_INVALID),
     m_ackVersion(1U),
     m_ackCorrelationTag(0U),
