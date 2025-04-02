@@ -115,9 +115,9 @@ namespace p25
             uint8_t* m_netLDU1;
             bool m_gotNetLDU2;
             uint8_t* m_netLDU2;
+            defines::DUID::E m_netLastDUID;
 
             defines::DUID::E m_lastDUID;
-            uint8_t* m_lastIMBE;
             uint8_t* m_lastMI;
 
             bool m_hadVoice;
@@ -179,11 +179,6 @@ namespace p25
              */
             void writeNet_LDU2();
 
-            /**
-             * @brief Helper to insert IMBE silence frames for missing audio.
-             * @param data Buffer containing frame data.
-             */
-            void insertMissingAudio(uint8_t* data);
             /**
              * @brief Helper to insert IMBE null frames for missing audio.
              * @param data Buffer containing frame data.
