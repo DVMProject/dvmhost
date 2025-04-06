@@ -127,6 +127,7 @@ Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t q
     m_aveRSSI(0U),
     m_rssiCount(0U),
     m_notifyCC(true),
+    m_ccDebug(debug),
     m_verbose(verbose),
     m_debug(debug)
 {
@@ -310,6 +311,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
     m_control->m_ctrlTimeDateAnn = control["enableTimeDateAnn"].as<bool>(false);
     m_control->m_redundantImmediate = control["redundantImmediate"].as<bool>(true);
     m_control->m_redundantGrant = control["redundantGrantTransmit"].as<bool>(false);
+    m_ccDebug = control["debug"].as<bool>(false);
 
     m_allowExplicitSourceId = p25Protocol["allowExplicitSourceId"].as<bool>(true);
     m_convNetGrantDemand = p25Protocol["convNetGrantDemand"].as<bool>(false);
@@ -514,6 +516,10 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
         LogInfo("    Redundant Immediate: %s", m_control->m_redundantImmediate ? "yes" : "no");
         if (m_control->m_redundantGrant) {
             LogInfo("    Redundant Grant Transmit: yes");
+        }
+
+        if (m_ccDebug) {
+            LogInfo("    Control Message Debug: yes");
         }
     }
 

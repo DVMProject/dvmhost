@@ -380,6 +380,7 @@ namespace p25
 
         bool m_notifyCC;
 
+        bool m_ccDebug;
         bool m_verbose;
         bool m_debug;
 

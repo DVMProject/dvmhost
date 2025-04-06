@@ -258,6 +258,12 @@ namespace dmr
         void setNotifyCC(bool notifyCC) { m_notifyCC = notifyCC; }
 
         /**
+         * @brief Sets a flag indicating whether the control message debug is enabled.
+         * @param enable Flag indicating whether the control message debug is enabled.
+         */
+        void setCCDebug(bool enable) { m_ccDebug = enable; }
+
+        /**
          * @brief Helper to set the voice error silence threshold.
          * @param threshold Voice error silence threshold.
          */
@@ -420,6 +426,7 @@ namespace dmr
         bool m_supervisor;
         bool m_notifyCC;
 
+        bool m_ccDebug;
         bool m_verbose;
         bool m_debug;
 

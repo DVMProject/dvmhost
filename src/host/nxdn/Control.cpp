@@ -115,6 +115,7 @@ Control::Control(bool authoritative, uint32_t ran, uint32_t callHang, uint32_t q
     m_rssiCount(0U),
     m_dumpRCCH(dumpRCCHData),
     m_notifyCC(true),
+    m_ccDebug(debug),
     m_verbose(verbose),
     m_debug(debug)
 {
@@ -207,6 +208,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
     }
 
     m_control->m_disableGrantSrcIdCheck = control["disableGrantSourceIdCheck"].as<bool>(false);
+    m_ccDebug = control["debug"].as<bool>(false);
 
     m_ignoreAffiliationCheck = nxdnProtocol["ignoreAffiliationCheck"].as<bool>(false);
 
@@ -304,6 +306,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
     }
 
     if (printOptions) {
+        LogInfo("    Site Location ID: $%04X", m_siteData.locId());
         LogInfo("    Silence Threshold: %u (%.1f%%)", m_voice->m_silenceThreshold, float(m_voice->m_silenceThreshold) / 12.33F);
         LogInfo("    Frame Loss Threshold: %u", m_frameLossThreshold);
 
@@ -322,6 +325,10 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
 
         if (disableUnitRegTimeout) {
             LogInfo("    Disable Unit Registration Timeout: yes");
+        }
+
+        if (m_ccDebug) {
+            LogInfo("    Control Message Debug: yes");
         }
     }
 

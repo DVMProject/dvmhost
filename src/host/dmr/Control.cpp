@@ -112,6 +112,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, ::lookups::VoiceChDa
     else {
         dedicatedTSCC = false;
     }
+    bool ccDebug = control["debug"].as<bool>(false);
 
     Slot::setSiteData(controlChData, netId, siteId, channelId, channelNo, dedicatedTSCC);
     Slot::setAlohaConfig(nRandWait, backOff);
@@ -125,11 +126,13 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, ::lookups::VoiceChDa
             m_slot1->setTSCC(enableTSCC, dedicatedTSCC);
             m_slot1->setSupervisor(m_supervisor);
             m_slot1->setDisableSourceIDGrantCheck(disableGrantSourceIdCheck);
+            m_slot1->setCCDebug(ccDebug);
             break;
         case 2U:
             m_slot2->setTSCC(enableTSCC, dedicatedTSCC);
             m_slot2->setSupervisor(m_supervisor);
             m_slot2->setDisableSourceIDGrantCheck(disableGrantSourceIdCheck);
+            m_slot2->setCCDebug(ccDebug);
             break;
         default:
             LogError(LOG_DMR, "DMR, invalid slot, TSCC disabled, slotNo = %u", m_tsccSlotNo);

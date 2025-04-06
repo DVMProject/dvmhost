@@ -1759,6 +1759,11 @@ void ControlSignaling::writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adj
     if (tsbkVerbose)
         lc::TSBK::setVerbose(false);
 
+    // disable debug logging during control data writes (if necessary)
+    bool controlDebug = m_p25->m_debug;
+    if (!m_p25->m_ccDebug)
+        m_p25->m_debug = m_debug = false;
+
     if (m_convFallback) {
         bool fallbackTx = (frameCnt % 253U) == 0U;
         if (fallbackTx && n == 8U) {
@@ -1901,6 +1906,7 @@ void ControlSignaling::writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adj
     }
 
     lc::TSBK::setVerbose(tsbkVerbose);
+    m_p25->m_debug = m_debug = controlDebug;
 }
 
 /* Helper to generate the given control TSBK into the TSDU frame queue. */
