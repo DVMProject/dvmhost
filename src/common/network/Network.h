@@ -186,6 +186,17 @@ namespace network
         void enable(bool enabled);
 
         /**
+         * @brief Helper to set the peer connected callback.
+         * @param callback 
+         */
+        void setPeerConnectedCallback(std::function<void()>&& callback) { m_peerConnectedCallback = callback; }
+        /**
+         * @brief Helper to set the peer disconnected callback.
+         * @param callback 
+         */
+        void setPeerDisconnectedCallback(std::function<void()>&& callback) { m_peerDisconnectedCallback = callback; }
+
+        /**
          * @brief Helper to set the DMR In-Call Control callback.
          * @param callback 
          */
@@ -256,6 +267,17 @@ namespace network
          *  to the defined user packet handler.
          */
         bool m_userHandleProtocol;
+
+        /**
+         * @brief Peer Connected Function Callback.
+         *  (This is called once this peer connects (or reconnects) to an upstream master.)
+         */
+        std::function<void()> m_peerConnectedCallback;
+        /**
+         * @brief Peer Disconnected Function Callback.
+         *  (This is called once this peer disconnects from an upstream master.)
+         */
+        std::function<void()> m_peerDisconnectedCallback;
 
         /**
          * @brief DMR In-Call Control Function Callback.

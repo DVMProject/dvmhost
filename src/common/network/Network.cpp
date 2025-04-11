@@ -59,6 +59,8 @@ Network::Network(const std::string& address, uint16_t port, uint16_t localPort, 
     m_remotePeerId(0U),
     m_promiscuousPeer(false),
     m_userHandleProtocol(false),
+    m_peerConnectedCallback(nullptr),
+    m_peerDisconnectedCallback(nullptr),
     m_dmrInCallCallback(nullptr),
     m_p25InCallCallback(nullptr),
     m_nxdnInCallCallback(nullptr),
@@ -588,6 +590,7 @@ void Network::clock(uint32_t ms)
                             uint32_t dstId = __GET_UINT16(buffer, 11U);
                             uint8_t slot = buffer[14U];
 
+                            // fire off DMR in-call callback if we have one
                             if (m_dmrInCallCallback != nullptr) {
                                 m_dmrInCallCallback(command, dstId, slot);
                             }
@@ -600,6 +603,7 @@ void Network::clock(uint32_t ms)
                             NET_ICC::ENUM command = (NET_ICC::ENUM)buffer[10U];
                             uint32_t dstId = __GET_UINT16(buffer, 11U);
 
+                            // fire off P25 in-call callback if we have one
                             if (m_p25InCallCallback != nullptr) {
                                 m_p25InCallCallback(command, dstId);
                             }
@@ -612,6 +616,7 @@ void Network::clock(uint32_t ms)
                             NET_ICC::ENUM command = (NET_ICC::ENUM)buffer[10U];
                             uint32_t dstId = __GET_UINT16(buffer, 11U);
 
+                            // fire off NXDN in-call callback if we have one
                             if (m_nxdnInCallCallback != nullptr) {
                                 m_nxdnInCallCallback(command, dstId);
                             }
@@ -649,6 +654,7 @@ void Network::clock(uint32_t ms)
                                     LogMessage(LOG_NET, "PEER %u, master reported enc. key, algId = $%02X, kID = $%04X", m_peerId,
                                         ks.algId(), ki.kId());
 
+                                    // fire off key response callback if we have one
                                     if (m_keyRespCallback != nullptr) {
                                         m_keyRespCallback(ki, ks.algId(), ks.keyLength());
                                     }
@@ -751,6 +757,11 @@ void Network::clock(uint32_t ms)
 
                         pktSeq(true);
 
+                        // fire off peer connected callback if we have one
+                        if (m_peerConnectedCallback != nullptr) {
+                            m_peerConnectedCallback();
+                        }
+
                         m_status = NET_STAT_RUNNING;
                         m_timeoutTimer.start();
                         m_retryTimer.start();
@@ -771,6 +782,12 @@ void Network::clock(uint32_t ms)
             {
                 LogError(LOG_NET, "PEER %u master is closing down, remotePeerId = %u", m_peerId, m_remotePeerId);
                 m_status = NET_STAT_WAITING_CONNECT;
+
+                // fire off peer disconnected callback if we have one
+                if (m_peerDisconnectedCallback != nullptr) {
+                    m_peerDisconnectedCallback();
+                }
+
                 close();
                 open();
             }
@@ -832,6 +849,12 @@ void Network::clock(uint32_t ms)
     m_timeoutTimer.clock(ms);
     if (m_timeoutTimer.isRunning() && m_timeoutTimer.hasExpired()) {
         LogError(LOG_NET, "PEER %u connection to the master has timed out, retrying connection, remotePeerId = %u", m_peerId, m_remotePeerId);
+
+        // fire off peer disconnected callback if we have one
+        if (m_peerDisconnectedCallback != nullptr) {
+            m_peerDisconnectedCallback();
+        }
+
         close();
         open();
     }
