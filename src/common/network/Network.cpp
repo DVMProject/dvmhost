@@ -59,6 +59,7 @@ Network::Network(const std::string& address, uint16_t port, uint16_t localPort, 
     m_remotePeerId(0U),
     m_promiscuousPeer(false),
     m_userHandleProtocol(false),
+    m_neverDisableOnACLNAK(false),
     m_peerConnectedCallback(nullptr),
     m_peerDisconnectedCallback(nullptr),
     m_dmrInCallCallback(nullptr),
@@ -701,8 +702,10 @@ void Network::clock(uint32_t ms)
                         break;
                     case NET_CONN_NAK_PEER_ACL:
                         LogError(LOG_NET, "PEER %u master NAK; ACL rejection, network disabled, remotePeerId = %u", m_peerId, rtpHeader.getSSRC());
-                        m_status = NET_STAT_WAITING_LOGIN;
-                        m_enabled = false; // ACL rejection give up stop trying to connect
+                        if (!m_neverDisableOnACLNAK) {
+                            m_status = NET_STAT_WAITING_LOGIN;
+                            m_enabled = false; // ACL rejection give up stop trying to connect
+                        }
                         break;
 
                     case NET_CONN_NAK_GENERAL_FAILURE:

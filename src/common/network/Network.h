@@ -267,6 +267,10 @@ namespace network
          *  to the defined user packet handler.
          */
         bool m_userHandleProtocol;
+        /**
+         * @brief Flag indicating this peer will not disable networking services on a master ACL NAK.
+         */
+        bool m_neverDisableOnACLNAK;
 
         /**
          * @brief Peer Connected Function Callback.
