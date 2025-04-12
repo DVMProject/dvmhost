@@ -155,36 +155,46 @@ public:
                         }
                     }
 
-                    json::object peerConfig = peerObj["config"].get<json::object>();
-                    std::string identity = peerConfig["identity"].getDefault<std::string>("");
-                    std::string software = peerConfig["software"].getDefault<std::string>("");
-
-                    json::object channel = peerConfig["channel"].get<json::object>();
-                    uint32_t chNo = (uint32_t)channel["channelNo"].getDefault<int>(1);
-                    uint8_t chId = channel["channelId"].getDefault<uint8_t>(0U);
-
-                    g_peerIdentityNameMap[peerId] = std::string(identity);
+                    std::string identity = "* UNK *";
+                    std::string software = "**INVALID**";
+                    uint32_t chNo = 0U;
+                    uint8_t chId = 0U;
 
                     std::ostringstream txOss;
                     std::ostringstream rxOss;
-                    if (chNo > 0U) {
-                        IdenTable idenEntry = g_idenTable->find(chId);
-                        if (idenEntry.baseFrequency() == 0U) {
-                            ::LogError(LOG_HOST, "Channel Id %u has an invalid base frequency.", chId);
+
+                    if (peerObj["config"].is<json::object>()) {
+                        json::object peerConfig = peerObj["config"].get<json::object>();
+                        identity = peerConfig["identity"].getDefault<std::string>("* UNK *");
+                        software = peerConfig["software"].getDefault<std::string>("**INVALID**");
+
+                        if (peerConfig["channel"].is<json::object>()) {
+                            json::object channel = peerConfig["channel"].get<json::object>();
+                            uint32_t chNo = (uint32_t)channel["channelNo"].getDefault<int>(1);
+                            uint8_t chId = channel["channelId"].getDefault<uint8_t>(0U);
+
+                            g_peerIdentityNameMap[peerId] = std::string(identity);
+
+                            if (chNo > 0U) {
+                                IdenTable idenEntry = g_idenTable->find(chId);
+                                if (idenEntry.baseFrequency() == 0U) {
+                                    ::LogError(LOG_HOST, "Channel Id %u has an invalid base frequency.", chId);
+                                }
+
+                                if (idenEntry.txOffsetMhz() == 0U) {
+                                    ::LogError(LOG_HOST, "Channel Id %u has an invalid Tx offset.", chId);
+                                }
+
+                                uint32_t calcSpace = (uint32_t)(idenEntry.chSpaceKhz() / 0.125);
+                                float calcTxOffset = idenEntry.txOffsetMhz() * 1000000.0;
+
+                                uint32_t rxFrequency = (uint32_t)((idenEntry.baseFrequency() + ((calcSpace * 125) * chNo)) + (int32_t)calcTxOffset);
+                                uint32_t txFrequency = (uint32_t)((idenEntry.baseFrequency() + ((calcSpace * 125) * chNo)));
+
+                                txOss << std::fixed << std::setprecision(5) << (double)(txFrequency / 1000000.0);
+                                rxOss << std::fixed << std::setprecision(5) << (double)(rxFrequency / 1000000.0);
+                            }
                         }
-
-                        if (idenEntry.txOffsetMhz() == 0U) {
-                            ::LogError(LOG_HOST, "Channel Id %u has an invalid Tx offset.", chId);
-                        }
-
-                        uint32_t calcSpace = (uint32_t)(idenEntry.chSpaceKhz() / 0.125);
-                        float calcTxOffset = idenEntry.txOffsetMhz() * 1000000.0;
-
-                        uint32_t rxFrequency = (uint32_t)((idenEntry.baseFrequency() + ((calcSpace * 125) * chNo)) + (int32_t)calcTxOffset);
-                        uint32_t txFrequency = (uint32_t)((idenEntry.baseFrequency() + ((calcSpace * 125) * chNo)));
-
-                        txOss << std::fixed << std::setprecision(5) << (double)(txFrequency / 1000000.0);
-                        rxOss << std::fixed << std::setprecision(5) << (double)(rxFrequency / 1000000.0);
                     }
 
                     // pad peer IDs properly
@@ -278,7 +288,7 @@ private:
         m_listView.addColumn("CC Peer ID", 10);
         m_listView.addColumn("VC Count", 8);
         m_listView.addColumn("Connected", 5);
-        m_listView.addColumn("State", 15);
+        m_listView.addColumn("State", 18);
         m_listView.addColumn("Pings Received", 8);
         m_listView.addColumn("Ch. ID", 8);
         m_listView.addColumn("Ch. No", 8);
