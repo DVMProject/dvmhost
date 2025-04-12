@@ -581,7 +581,7 @@ bool ControlSignaling::writeRF_Message_Grant(uint32_t srcId, uint32_t dstId, uin
                 }
 
                 int status = req["status"].get<int>();
-                if (status != network::RPC::OK) {
+                if (status != network::NetRPC::OK) {
                     if (req["message"].is<std::string>()) {
                         std::string retMsg = req["message"].get<std::string>();
                         ::LogError((net) ? LOG_NET : LOG_RF, "NXDN, RPC failed, %s", retMsg.c_str());

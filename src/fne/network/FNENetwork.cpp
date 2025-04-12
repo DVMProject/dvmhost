@@ -1205,9 +1205,11 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                                                 LogMessage(LOG_NET, "PEER %u (%s) no local key or container, requesting key from upstream master, algId = $%02X, kID = $%04X", peerId, connection->identity().c_str(),
                                                                     modifyKey->getAlgId(), modifyKey->getKId());
 
-                                                                network->m_keyQueueMutex.try_lock_for(std::chrono::milliseconds(60));
+                                                                bool locked = network->m_keyQueueMutex.try_lock_for(std::chrono::milliseconds(60));
                                                                 network->m_peerLinkKeyQueue[peerId] = modifyKey->getKId();
-                                                                network->m_keyQueueMutex.unlock();
+
+                                                                if (locked)
+                                                                    network->m_keyQueueMutex.unlock();
 
                                                                 peer.second->writeMaster({ NET_FUNC::KEY_REQ, NET_SUBFUNC::NOP }, 
                                                                     req->buffer, req->length, RTP_END_OF_CALL_SEQ, 0U, false, false);

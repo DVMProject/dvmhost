@@ -389,9 +389,12 @@ void P25PacketData::clock(uint32_t ms)
 
     // transmit queued data frames
     bool processed = false;
-    m_vtunMutex.try_lock_for(std::chrono::milliseconds(60));
+    bool locked = m_vtunMutex.try_lock_for(std::chrono::milliseconds(60));
+    
     auto& dataFrame = m_dataFrames[0];
-    m_vtunMutex.unlock();
+    
+    if (locked)
+        m_vtunMutex.unlock();
 
     if (dataFrame != nullptr) {
         if (now > dataFrame->timestamp + 500U) {
@@ -456,7 +459,7 @@ void P25PacketData::clock(uint32_t ms)
     }
 
 pkt_clock_abort:
-    m_vtunMutex.try_lock_for(std::chrono::milliseconds(60));
+    locked = m_vtunMutex.try_lock_for(std::chrono::milliseconds(60));
     m_dataFrames.pop_front();
     if (processed) {
         if (dataFrame->buffer != nullptr)
@@ -466,7 +469,9 @@ pkt_clock_abort:
         // requeue packet
         m_dataFrames.push_back(dataFrame);
     }
-    m_vtunMutex.unlock();
+
+    if (locked)
+        m_vtunMutex.unlock();
 }
 
 // ---------------------------------------------------------------------------

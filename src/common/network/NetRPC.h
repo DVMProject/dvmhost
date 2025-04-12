@@ -8,18 +8,22 @@
 *
 */
 /**
- * @file RPC.h
+ * @file NetRPC.h
  * @ingroup network_core
- * @file RPC.cpp
+ * @file NetRPC.cpp
  * @ingroup network_core
  */
-#if !defined(__RPC_H__)
-#define __RPC_H__
+#if !defined(__NET_RPC_H__)
+#define __NET_RPC_H__
+
+#if defined(_WIN32)
+#include <Winsock2.h>
+#endif // defined(_WIN32)
 
 #include "common/Defines.h"
+#include "common/network/udp/Socket.h"
 #include "common/network/RawFrameQueue.h"
 #include "common/network/json/json.h"
-#include "common/network/udp/Socket.h"
 
 #include <string>
 #include <cstdint>
@@ -28,6 +32,15 @@
 
 namespace network
 {
+    namespace udp
+    {
+        // ---------------------------------------------------------------------------
+        //  Class Prototypes
+        // ---------------------------------------------------------------------------
+
+        class HOST_SW_API Socket;
+    }
+
     // ---------------------------------------------------------------------------
     //  Macros
     // ---------------------------------------------------------------------------
@@ -42,7 +55,7 @@ namespace network
      * @brief Implements the Remote Procedure Call networking logic.
      * @ingroup network_core
      */
-    class HOST_SW_API RPC {
+    class HOST_SW_API NetRPC {
     public:
         typedef std::function<void(json::object& request, json::object& reply)> RPCType;
 
@@ -58,7 +71,7 @@ namespace network
         } status;
 
         /**
-         * @brief Initializes a new instance of the RPC class.
+         * @brief Initializes a new instance of the NetRPC class.
          * @param address Network Hostname/IP address to connect to.
          * @param port Network port number.
          * @param localPort 
@@ -66,11 +79,11 @@ namespace network
          * @param password Network authentication password.
          * @param debug Flag indicating whether network debug is enabled.
          */
-        RPC(const std::string& address, uint16_t port, uint16_t localPort, const std::string& password, bool debug);
+        NetRPC(const std::string& address, uint16_t port, uint16_t localPort, const std::string& password, bool debug);
         /**
-         * @brief Finalizes a instance of the RPC class.
+         * @brief Finalizes a instance of the NetRPC class.
          */
-        ~RPC();
+        ~NetRPC();
 
         /**
          * @brief Updates the timer by the passed number of milliseconds.
@@ -164,4 +177,4 @@ namespace network
     };
 } // namespace network
 
-#endif // __RPC_H__
+#endif // __NET_RPC_H__

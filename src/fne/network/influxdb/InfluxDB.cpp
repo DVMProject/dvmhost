@@ -10,6 +10,11 @@
 #include "fne/Defines.h"
 #include "fne/network/influxdb/InfluxDB.h"
 
+#if defined(_WIN32)
+#include <ws2tcpip.h>
+#include <Winsock2.h>
+#endif
+
 using namespace network::influxdb;
 
 // ---------------------------------------------------------------------------

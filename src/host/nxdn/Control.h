@@ -31,7 +31,7 @@
 #include "common/lookups/RadioIdLookup.h"
 #include "common/lookups/TalkgroupRulesLookup.h"
 #include "common/lookups/AffiliationLookup.h"
-#include "common/network/RPC.h"
+#include "common/network/NetRPC.h"
 #include "common/network/RTPFNEHeader.h"
 #include "common/network/Network.h"
 #include "common/RingBuffer.h"

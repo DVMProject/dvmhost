@@ -2308,7 +2308,7 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
                         }
 
                         int status = req["status"].get<int>();
-                        if (status != network::RPC::OK) {
+                        if (status != network::NetRPC::OK) {
                             if (req["message"].is<std::string>()) {
                                 std::string retMsg = req["message"].get<std::string>();
                                 ::LogError((net) ? LOG_NET : LOG_RF, "P25, RPC failed, %s", retMsg.c_str());
@@ -2378,7 +2378,7 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
                         }
 
                         int status = req["status"].get<int>();
-                        if (status != network::RPC::OK) {
+                        if (status != network::NetRPC::OK) {
                             if (req["message"].is<std::string>()) {
                                 std::string retMsg = req["message"].get<std::string>();
                                 ::LogError((net) ? LOG_NET : LOG_RF, "P25, RPC failed, %s", retMsg.c_str());
@@ -2596,7 +2596,7 @@ bool ControlSignaling::writeRF_TSDU_SNDCP_Grant(uint32_t srcId, bool skip, uint3
                     }
 
                     int status = req["status"].get<int>();
-                    if (status != network::RPC::OK) {
+                    if (status != network::NetRPC::OK) {
                         if (req["message"].is<std::string>()) {
                             std::string retMsg = req["message"].get<std::string>();
                             ::LogError(LOG_RF, "P25, RPC failed, %s", retMsg.c_str());

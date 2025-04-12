@@ -966,7 +966,7 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
                     }
 
                     int status = req["status"].get<int>();
-                    if (status != network::RPC::OK) {
+                    if (status != network::NetRPC::OK) {
                         if (req["message"].is<std::string>()) {
                             std::string retMsg = req["message"].get<std::string>();
                             ::LogError((net) ? LOG_NET : LOG_RF, "DMR Slot %u, RPC failed, %s", tscc->m_slotNo, retMsg.c_str());
@@ -1059,7 +1059,7 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
                     }
 
                     int status = req["status"].get<int>();
-                    if (status != network::RPC::OK) {
+                    if (status != network::NetRPC::OK) {
                         if (req["message"].is<std::string>()) {
                             std::string retMsg = req["message"].get<std::string>();
                             ::LogError((net) ? LOG_NET : LOG_RF, "DMR Slot %u, RPC failed, %s", tscc->m_slotNo, retMsg.c_str());

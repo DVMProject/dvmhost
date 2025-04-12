@@ -32,6 +32,8 @@
 
 #ifdef _WIN32
     #define NOMINMAX
+    #include <ws2tcpip.h>
+    #include <Winsock2.h>
     #include <windows.h>
     #include <algorithm>
 
@@ -636,7 +638,11 @@ namespace network
                 {
                     TSCallerRequest* req = (TSCallerRequest*)arg;
                     if (req != nullptr) {
+                #if defined(_WIN32)
+                        ::CloseHandle(req->thread);
+                #else
                         ::pthread_detach(req->thread);
+                #endif // defined(_WIN32)
 
                 #ifdef _GNU_SOURCE
                         ::pthread_setname_np(req->thread, "fluxql:request");
