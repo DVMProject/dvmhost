@@ -170,8 +170,8 @@ public:
 
                         if (peerConfig["channel"].is<json::object>()) {
                             json::object channel = peerConfig["channel"].get<json::object>();
-                            uint32_t chNo = (uint32_t)channel["channelNo"].getDefault<int>(1);
-                            uint8_t chId = channel["channelId"].getDefault<uint8_t>(0U);
+                            chNo = (uint32_t)channel["channelNo"].getDefault<int>(1);
+                            chId = channel["channelId"].getDefault<uint8_t>(0U);
 
                             g_peerIdentityNameMap[peerId] = std::string(identity);
 
