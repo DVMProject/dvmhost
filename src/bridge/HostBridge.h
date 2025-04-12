@@ -166,6 +166,7 @@ private:
     bool m_udpUseULaw;
     bool m_udpRTPFrames;
     bool m_udpUsrp;
+    bool m_udpSilenceDuringHang;
 
     uint8_t m_tekAlgoId;
     uint16_t m_tekKeyId;
@@ -192,7 +193,10 @@ private:
 
     float m_voxSampleLevel;
     uint16_t m_dropTimeMS;
-    Timer m_dropTime;
+    Timer m_localDropTime;
+    Timer m_udpCallClock;
+    Timer m_udpHangTime;
+    Timer m_udpDropTime;
 
     bool m_detectAnalogMDC1200;
 
@@ -505,6 +509,20 @@ private:
      * @returns void* (Ignore)
      */
     static void* threadNetworkProcess(void* arg);
+
+    /**
+     * @brief Helper to reset IMBE buffer with null frames.
+     * @param data Buffer containing frame data.
+     * @param encrypted Flag indicating whether or not the data is encrypted.
+     */
+    void resetWithNullAudio(uint8_t* data, bool encrypted);
+
+    /**
+     * @brief Helper to send silence audio frames.
+     * @param srcId
+     * @param dstId
+     */
+    void callEndSilence(uint32_t srcId, uint32_t dstId);
 
     /**
      * @brief Entry point to call watchdog handler thread.

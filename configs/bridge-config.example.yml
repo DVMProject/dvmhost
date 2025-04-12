@@ -68,6 +68,7 @@ network:
     udpReceivePort: 32001
     # PCM over UDP receive address.
     udpReceiveAddress: "127.0.0.1"
+
     # Flag indicating UDP audio should be encoded using G.711 uLaw.
     udpUseULaw: false
     # Flag indicating UDP audio should be transmitted without the length leader.
@@ -78,6 +79,9 @@ network:
     udpRTPFrames: false
     # Flag indicating UDP audio should follow the USRP format.
     udpUsrp: false
+
+    # Flag indicating the UDP audio will be padded with silence during hang time before end of call.
+    udpHangSilence: true
 
     # Traffic Encryption
     tek:
@@ -135,7 +139,7 @@ system:
 
     # Relative sample level for VOX to activate.
     voxSampleLevel: 80.0
-    # Amount of time (ms) from loss of active VOX level to drop audio.
+    # Amount of time (ms) from loss of active call (loss of local VOX or end of UDP audio stream) before ending call.
     dropTimeMs: 180
 
     # Enables detection of MDC1200 packets on the PCM side of the bridge.
