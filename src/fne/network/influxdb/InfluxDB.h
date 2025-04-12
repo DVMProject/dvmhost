@@ -21,6 +21,7 @@
 
 #include "fne/Defines.h"
 #include "common/Log.h"
+#include "common/Thread.h"
 
 #include <sstream>
 #include <cstring>
@@ -56,6 +57,12 @@ namespace network
 {
     namespace influxdb
     {
+        // ---------------------------------------------------------------------------
+        //  Constants
+        // ---------------------------------------------------------------------------
+
+        #define MAX_INFLUXQL_THREAD_CNT 75U // this is a really extreme number of pending queries...
+
         // ---------------------------------------------------------------------------
         //  Class Declaration
         // ---------------------------------------------------------------------------
@@ -177,14 +184,14 @@ namespace network
 
                     ret = getaddrinfo(si.host().c_str(), std::to_string(si.port()).c_str(), &hints, &addr);
                     if (ret != 0) {
-                        LogError(LOG_NET, "Failed to determine InfluxDB server host, err: %d", errno);
+                        ::LogError(LOG_HOST, "Failed to determine InfluxDB server host, err: %d", errno);
                         return 1;
                     }
 
                     // open the socket
                     fd = socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol);
                     if (fd < 0) {
-                        LogError(LOG_NET, "Failed to connect to InfluxDB server, err: %d", errno);
+                        ::LogError(LOG_HOST, "Failed to connect to InfluxDB server, err: %d", errno);
                         closesocket(fd);
                         return 1;
                     }
@@ -193,13 +200,13 @@ namespace network
                     const int sockOptVal = 1;
 #if defined(_WIN32)
                     if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (char*)&sockOptVal, sizeof(int)) < 0) {
-                        LogError(LOG_NET, "Failed to connect to InfluxDB server, err: %d", errno);
+                        ::LogError(LOG_HOST, "Failed to connect to InfluxDB server, err: %d", errno);
                         closesocket(fd);
                         return 1;
                     }
 #else
                     if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &sockOptVal, sizeof(int)) < 0) {
-                        LogError(LOG_NET, "Failed to connect to InfluxDB server, err: %d", errno);
+                        ::LogError(LOG_HOST, "Failed to connect to InfluxDB server, err: %d", errno);
                         closesocket(fd);
                         return 1;
                     }
@@ -207,7 +214,7 @@ namespace network
                     // connect to the server
                     ret = connect(fd, addr->ai_addr, addr->ai_addrlen);
                     if (ret < 0) {
-                        LogError(LOG_NET, "Failed to connect to InfluxDB server, err: %d", errno);
+                        ::LogError(LOG_HOST, "Failed to connect to InfluxDB server, err: %d", errno);
                         closesocket(fd);
                         return 1;
                     }
@@ -576,13 +583,89 @@ namespace network
             // ---------------------------------------------------------------------------
 
             /**
+             * @brief Represents the data required for a voice service packet handler thread.
+             * @ingroup rc_network
+             */
+            struct TSCallerRequest : thread_t {
+                ServerInfo si;         //!
+                std::string lines;     //!
+            };
+
+            // ---------------------------------------------------------------------------
+            //  Structure Declaration
+            // ---------------------------------------------------------------------------
+
+            /**
              * @brief 
              * @ingroup fne_influx
              */
             struct HOST_SW_API TSCaller : public QueryBuilder
-            {
-                detail::TagCaller& meas(const std::string& m)                            { m_lines << '\n'; return this->m(m); }
-                int request(const ServerInfo& si, std::string* resp = nullptr)           { return detail::inner::request("POST", "write", "", m_lines.str(), si, resp); }
+            {                
+                detail::TagCaller& meas(const std::string& m)                   { m_lines << '\n'; return this->m(m); }
+                int request(const ServerInfo& si, std::string* resp = nullptr)  { return detail::inner::request("POST", "write", "", m_lines.str(), si, resp); }
+                int requestAsync(const ServerInfo& si) 
+                {
+                    if (m_currThreadCnt >= MAX_INFLUXQL_THREAD_CNT) {
+                        ::LogError(LOG_HOST, "Maximum concurrent FluxQL thread count reached, dropping request!");
+                        return 1;
+                    }
+            
+                    TSCallerRequest* req = new TSCallerRequest();
+                    req->obj = this;
+
+                    req->si = ServerInfo(si.host(), si.port(), si.org(), si.token(), si.bucket());
+                    req->lines = std::string(m_lines.str());
+
+                    if (!Thread::runAsThread(this, threadedRequest, req)) {
+                        delete req;
+                        return 1;
+                    } else {
+                        m_currThreadCnt++;
+                    }
+            
+                    return 0; 
+                }
+
+            private:
+                static uint32_t m_currThreadCnt;
+
+                /**
+                 * @brief 
+                 */
+                static void* threadedRequest(void* arg)
+                {
+                    TSCallerRequest* req = (TSCallerRequest*)arg;
+                    if (req != nullptr) {
+                        ::pthread_detach(req->thread);
+
+                #ifdef _GNU_SOURCE
+                        ::pthread_setname_np(req->thread, "fluxql:request");
+                #endif // _GNU_SOURCE
+
+                        if (req == nullptr) {
+                            m_currThreadCnt--;
+                            return nullptr;
+                        }
+
+                        TSCaller* caller = static_cast<TSCaller*>(req->obj);
+                        if (caller == nullptr) {
+                            if (req != nullptr) {
+                                delete req;
+                            }
+
+                            m_currThreadCnt--;
+                            return nullptr;
+                        }
+
+                        const ServerInfo& si = req->si;
+                        detail::inner::request("POST", "write", "", req->lines, si, nullptr);
+
+                        delete req;
+                    }
+
+                    m_currThreadCnt--;
+                    return nullptr;
+                }
             };
 
             // ---------------------------------------------------------------------------

@@ -177,7 +177,7 @@ bool P25PacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
                         .tag("dstId", std::to_string(status->header.getLLId()))
                             .field("message", INFLUXDB_ERRSTR_DISABLED_SRC_RID)
                         .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
-                    .request(m_network->m_influxServer);
+                    .requestAsync(m_network->m_influxServer);
             }
 
             delete status;
@@ -318,7 +318,7 @@ bool P25PacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
                     .tag("dstId", std::to_string(dstId))
                         .field("duration", duration)
                     .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
-                .request(m_network->m_influxServer);
+                .requestAsync(m_network->m_influxServer);
         }
 
         delete status;

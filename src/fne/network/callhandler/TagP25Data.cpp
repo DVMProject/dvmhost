@@ -220,7 +220,7 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                                     .tag("dstId", std::to_string(dstId))
                                         .field("duration", duration)
                                     .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
-                                .request(m_network->m_influxServer);
+                                .requestAsync(m_network->m_influxServer);
                         }
 
                         m_network->eraseStreamPktSeq(peerId, streamId);
@@ -731,7 +731,7 @@ bool TagP25Data::processTSDUFrom(uint8_t* buffer, uint32_t peerId, uint8_t duid)
                             .tag("tsbk", tsbk->toString())
                                 .field("raw", ss.str())
                             .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
-                        .request(m_network->m_influxServer);
+                        .requestAsync(m_network->m_influxServer);
                 }
             }
 
@@ -1090,7 +1090,7 @@ bool TagP25Data::validate(uint32_t peerId, lc::LC& control, DUID::E duid, const 
                             .tag("dstId", std::to_string(control.getDstId()))
                                 .field("message", INFLUXDB_ERRSTR_DISABLED_SRC_RID)
                             .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
-                        .request(m_network->m_influxServer);
+                        .requestAsync(m_network->m_influxServer);
                 }
 
                 // report In-Call Control to the peer sending traffic
@@ -1158,7 +1158,7 @@ bool TagP25Data::validate(uint32_t peerId, lc::LC& control, DUID::E duid, const 
                             .tag("dstId", std::to_string(control.getDstId()))
                                 .field("message", INFLUXDB_ERRSTR_DISABLED_DST_RID)
                             .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
-                        .request(m_network->m_influxServer);
+                        .requestAsync(m_network->m_influxServer);
                 }
 
                 // report In-Call Control to the peer sending traffic
@@ -1180,7 +1180,7 @@ bool TagP25Data::validate(uint32_t peerId, lc::LC& control, DUID::E duid, const 
                             .tag("dstId", std::to_string(control.getDstId()))
                                 .field("message", INFLUXDB_ERRSTR_DISABLED_SRC_RID)
                             .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
-                        .request(m_network->m_influxServer);
+                        .requestAsync(m_network->m_influxServer);
                 }
 
                 LogWarning(LOG_NET, "P25, illegal/unknown RID attempted access, srcId = %u, dstId = %u", control.getSrcId(), control.getDstId());
@@ -1256,7 +1256,7 @@ bool TagP25Data::validate(uint32_t peerId, lc::LC& control, DUID::E duid, const 
                     .tag("dstId", std::to_string(control.getDstId()))
                         .field("message", INFLUXDB_ERRSTR_INV_TALKGROUP)
                     .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
-                .request(m_network->m_influxServer);
+                .requestAsync(m_network->m_influxServer);
         }
 
         // report In-Call Control to the peer sending traffic
@@ -1287,7 +1287,7 @@ bool TagP25Data::validate(uint32_t peerId, lc::LC& control, DUID::E duid, const 
                     .tag("dstId", std::to_string(control.getDstId()))
                         .field("message", INFLUXDB_ERRSTR_DISABLED_SRC_RID)
                     .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
-                .request(m_network->m_influxServer);
+                .requestAsync(m_network->m_influxServer);
         }
 
         LogWarning(LOG_NET, "P25, illegal/unknown RID attempted access, srcId = %u, dstId = %u", control.getSrcId(), control.getDstId());
@@ -1309,7 +1309,7 @@ bool TagP25Data::validate(uint32_t peerId, lc::LC& control, DUID::E duid, const 
                     .tag("dstId", std::to_string(control.getDstId()))
                         .field("message", INFLUXDB_ERRSTR_DISABLED_TALKGROUP)
                     .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
-                .request(m_network->m_influxServer);
+                .requestAsync(m_network->m_influxServer);
         }
 
         // report In-Call Control to the peer sending traffic
@@ -1334,7 +1334,7 @@ bool TagP25Data::validate(uint32_t peerId, lc::LC& control, DUID::E duid, const 
                             .tag("dstId", std::to_string(control.getDstId()))
                                 .field("message", INFLUXDB_ERRSTR_RID_NOT_PERMITTED)
                             .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
-                        .request(m_network->m_influxServer);
+                        .requestAsync(m_network->m_influxServer);
                 }
 
                 // report In-Call Control to the peer sending traffic
