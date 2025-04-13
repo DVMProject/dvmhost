@@ -379,6 +379,8 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
     */
     uint8_t serviceClass = ServiceClass::VOICE | ServiceClass::DATA;
     if (m_enableControl) {
+        if (!m_sndcpSupport)
+            serviceClass = ServiceClass::VOICE;
         serviceClass |= ServiceClass::REG;
     }
 
