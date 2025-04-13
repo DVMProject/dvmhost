@@ -75,7 +75,11 @@ int detail::inner::request(const char* method, const char* uri, const std::strin
     // open the socket
     fd = socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol);
     if (fd < 0) {
+#if defined(_WIN32)
+        ::LogError(LOG_HOST, "Failed to connect to InfluxDB server, err: %lu", ::GetLastError());
+#else
         ::LogError(LOG_HOST, "Failed to connect to InfluxDB server, err: %d", errno);
+#endif // defined(_WIN32)
         closesocket(fd);
         return 1;
     }
@@ -83,8 +87,8 @@ int detail::inner::request(const char* method, const char* uri, const std::strin
     // set SO_REUSEADDR option
     const int sockOptVal = 1;
 #if defined(_WIN32)
-    if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (char*)&sockOptVal, sizeof(int)) < 0) {
-        ::LogError(LOG_HOST, "Failed to connect to InfluxDB server, err: %d", errno);
+    if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (char*)&sockOptVal, sizeof(int)) != 0) {
+        ::LogError(LOG_HOST, "Failed to connect to InfluxDB server, err: %lu", ::GetLastError());
         closesocket(fd);
         return 1;
     }
@@ -94,9 +98,17 @@ int detail::inner::request(const char* method, const char* uri, const std::strin
         closesocket(fd);
         return 1;
     }
-#endif
+#endif // defined(_WIN32)
 
     // setup socket for non-blocking operations
+#if defined(_WIN32)
+    u_long flags = 1;
+    if (ioctlsocket(fd, FIONBIO, &flags) != 0) {
+        ::LogError(LOG_HOST, "Failed to connect to InfluxDB server, failed ioctlsocket, err: %d", errno);
+        closesocket(fd);
+        return 1;
+    }
+#else
     int flags = fcntl(fd, F_GETFL, 0);
     if (flags < 0) {
         ::LogError(LOG_HOST, "Failed to connect to InfluxDB server, failed fcntl(F_GETFL), err: %d", errno);
@@ -109,6 +121,7 @@ int detail::inner::request(const char* method, const char* uri, const std::strin
         closesocket(fd);
         return 1;
     }
+#endif // defined(_WIN32)
 
     fd_set fdset;
     struct timeval tv;
@@ -126,10 +139,15 @@ int detail::inner::request(const char* method, const char* uri, const std::strin
 
                 ret = select(fd + 1, NULL, &fdset, NULL, &tv);
                 if (ret < 0 && errno != EINTR) {
+#if defined(_WIN32)
+                    ::LogError(LOG_HOST, "Failed to connect to InfluxDB server, err: %lu", ::GetLastError());
+#else
                     ::LogError(LOG_HOST, "Failed to connect to InfluxDB server, err: %d", errno);
+#endif // defined(_WIN32)
                     closesocket(fd);
                     return 1;
                 } else if (ret > 0) {
+#if !defined(_WIN32)
                     // socket selected for write
                     int valopt;
                     socklen_t slen = sizeof(int);
@@ -145,6 +163,7 @@ int detail::inner::request(const char* method, const char* uri, const std::strin
                         closesocket(fd);
                         return 1;
                     }
+#endif // !defined(_WIN32)
                     break;
                 } else {
                     ::LogError(LOG_HOST, "Failed to connect to InfluxDB server, timed out while connecting");
@@ -156,6 +175,14 @@ int detail::inner::request(const char* method, const char* uri, const std::strin
     }
 
     // reset socket blocking operations
+#if defined(_WIN32)
+    flags = 0;
+    if (ioctlsocket(fd, FIONBIO, &flags) != 0) {
+        ::LogError(LOG_HOST, "Failed to connect to InfluxDB server, failed ioctlsocket, err: %d", errno);
+        closesocket(fd);
+        return 1;
+    }
+#else
     flags = fcntl(fd, F_GETFL, 0);
     if (flags < 0) {
         ::LogError(LOG_HOST, "Failed to connect to InfluxDB server, failed fcntl(F_GETFL), err: %d", errno);
@@ -168,11 +195,17 @@ int detail::inner::request(const char* method, const char* uri, const std::strin
         closesocket(fd);
         return 1;
     }
+#endif // defined(_WIN32)
 
     // ensure the remaining TCP operations timeout
+#if defined(_WIN32)
+    int sendTimeout = SOCK_CONNECT_TIMEOUT;
+    setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, (const char*)&sendTimeout, sizeof(sendTimeout));
+#else
     tv.tv_sec = SOCK_CONNECT_TIMEOUT;
     tv.tv_usec = 0;
     setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
+#endif // defined(_WIN32)
 
     header.resize(len = 0x100);
     while (true) {
