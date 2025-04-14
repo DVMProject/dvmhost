@@ -1088,7 +1088,7 @@ bool TagP25Data::validate(uint32_t peerId, lc::LC& control, DUID::E duid, const 
                             .tag("streamId", std::to_string(streamId))
                             .tag("srcId", std::to_string(control.getSrcId()))
                             .tag("dstId", std::to_string(control.getDstId()))
-                                .field("message", INFLUXDB_ERRSTR_DISABLED_SRC_RID)
+                                .field("message", std::string(INFLUXDB_ERRSTR_DISABLED_SRC_RID))
                             .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
                         .requestAsync(m_network->m_influxServer);
                 }
@@ -1156,7 +1156,7 @@ bool TagP25Data::validate(uint32_t peerId, lc::LC& control, DUID::E duid, const 
                             .tag("streamId", std::to_string(streamId))
                             .tag("srcId", std::to_string(control.getSrcId()))
                             .tag("dstId", std::to_string(control.getDstId()))
-                                .field("message", INFLUXDB_ERRSTR_DISABLED_DST_RID)
+                                .field("message", std::string(INFLUXDB_ERRSTR_DISABLED_DST_RID))
                             .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
                         .requestAsync(m_network->m_influxServer);
                 }
@@ -1178,7 +1178,7 @@ bool TagP25Data::validate(uint32_t peerId, lc::LC& control, DUID::E duid, const 
                             .tag("streamId", std::to_string(streamId))
                             .tag("srcId", std::to_string(control.getSrcId()))
                             .tag("dstId", std::to_string(control.getDstId()))
-                                .field("message", INFLUXDB_ERRSTR_DISABLED_SRC_RID)
+                                .field("message", std::string(INFLUXDB_ERRSTR_DISABLED_SRC_RID))
                             .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
                         .requestAsync(m_network->m_influxServer);
                 }
@@ -1254,7 +1254,7 @@ bool TagP25Data::validate(uint32_t peerId, lc::LC& control, DUID::E duid, const 
                     .tag("streamId", std::to_string(streamId))
                     .tag("srcId", std::to_string(control.getSrcId()))
                     .tag("dstId", std::to_string(control.getDstId()))
-                        .field("message", INFLUXDB_ERRSTR_INV_TALKGROUP)
+                        .field("message", std::string(INFLUXDB_ERRSTR_INV_TALKGROUP))
                     .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
                 .requestAsync(m_network->m_influxServer);
         }
@@ -1285,7 +1285,7 @@ bool TagP25Data::validate(uint32_t peerId, lc::LC& control, DUID::E duid, const 
                     .tag("streamId", std::to_string(streamId))
                     .tag("srcId", std::to_string(control.getSrcId()))
                     .tag("dstId", std::to_string(control.getDstId()))
-                        .field("message", INFLUXDB_ERRSTR_DISABLED_SRC_RID)
+                        .field("message", std::string(INFLUXDB_ERRSTR_DISABLED_SRC_RID))
                     .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
                 .requestAsync(m_network->m_influxServer);
         }
@@ -1307,7 +1307,7 @@ bool TagP25Data::validate(uint32_t peerId, lc::LC& control, DUID::E duid, const 
                     .tag("streamId", std::to_string(streamId))
                     .tag("srcId", std::to_string(control.getSrcId()))
                     .tag("dstId", std::to_string(control.getDstId()))
-                        .field("message", INFLUXDB_ERRSTR_DISABLED_TALKGROUP)
+                        .field("message", std::string(INFLUXDB_ERRSTR_DISABLED_TALKGROUP))
                     .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
                 .requestAsync(m_network->m_influxServer);
         }
@@ -1332,7 +1332,7 @@ bool TagP25Data::validate(uint32_t peerId, lc::LC& control, DUID::E duid, const 
                             .tag("streamId", std::to_string(streamId))
                             .tag("srcId", std::to_string(control.getSrcId()))
                             .tag("dstId", std::to_string(control.getDstId()))
-                                .field("message", INFLUXDB_ERRSTR_RID_NOT_PERMITTED)
+                                .field("message", std::string(INFLUXDB_ERRSTR_RID_NOT_PERMITTED))
                             .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
                         .requestAsync(m_network->m_influxServer);
                 }

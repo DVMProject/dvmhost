@@ -763,8 +763,8 @@ bool TagDMRData::validate(uint32_t peerId, data::NetData& data, uint32_t streamI
                         .tag("streamId", std::to_string(streamId))
                         .tag("srcId", std::to_string(data.getSrcId()))
                         .tag("dstId", std::to_string(data.getDstId()))
-                            .field("message", INFLUXDB_ERRSTR_DISABLED_SRC_RID)
-                            .field("slot", data.getSlotNo())
+                            .field("message", std::string(INFLUXDB_ERRSTR_DISABLED_SRC_RID))
+                            .field("slot", std::to_string(data.getSlotNo()))
                         .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
                     .requestAsync(m_network->m_influxServer);
             }
@@ -800,8 +800,8 @@ bool TagDMRData::validate(uint32_t peerId, data::NetData& data, uint32_t streamI
                             .tag("streamId", std::to_string(streamId))
                             .tag("srcId", std::to_string(data.getSrcId()))
                             .tag("dstId", std::to_string(data.getDstId()))
-                                .field("message", INFLUXDB_ERRSTR_DISABLED_DST_RID)
-                                .field("slot", data.getSlotNo())
+                                .field("message", std::string(INFLUXDB_ERRSTR_DISABLED_DST_RID))
+                                .field("slot", std::to_string(data.getSlotNo()))
                             .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
                         .requestAsync(m_network->m_influxServer);
                 }
@@ -821,8 +821,8 @@ bool TagDMRData::validate(uint32_t peerId, data::NetData& data, uint32_t streamI
                             .tag("streamId", std::to_string(streamId))
                             .tag("srcId", std::to_string(data.getSrcId()))
                             .tag("dstId", std::to_string(data.getDstId()))
-                                .field("message", INFLUXDB_ERRSTR_DISABLED_SRC_RID)
-                                .field("slot", data.getSlotNo())
+                                .field("message", std::string(INFLUXDB_ERRSTR_DISABLED_SRC_RID))
+                                .field("slot", std::to_string(data.getSlotNo()))
                             .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
                         .requestAsync(m_network->m_influxServer);
                 }
@@ -848,8 +848,8 @@ bool TagDMRData::validate(uint32_t peerId, data::NetData& data, uint32_t streamI
                         .tag("streamId", std::to_string(streamId))
                         .tag("srcId", std::to_string(data.getSrcId()))
                         .tag("dstId", std::to_string(data.getDstId()))
-                            .field("message", INFLUXDB_ERRSTR_INV_TALKGROUP)
-                            .field("slot", data.getSlotNo())
+                            .field("message", std::string(INFLUXDB_ERRSTR_INV_TALKGROUP))
+                            .field("slot", std::to_string(data.getSlotNo()))
                         .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
                     .requestAsync(m_network->m_influxServer);
             }
@@ -880,8 +880,8 @@ bool TagDMRData::validate(uint32_t peerId, data::NetData& data, uint32_t streamI
                         .tag("streamId", std::to_string(streamId))
                         .tag("srcId", std::to_string(data.getSrcId()))
                         .tag("dstId", std::to_string(data.getDstId()))
-                            .field("message", INFLUXDB_ERRSTR_DISABLED_SRC_RID)
-                            .field("slot", data.getSlotNo())
+                            .field("message", std::string(INFLUXDB_ERRSTR_DISABLED_SRC_RID))
+                            .field("slot", std::to_string(data.getSlotNo()))
                         .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
                     .requestAsync(m_network->m_influxServer);
             }
@@ -903,8 +903,8 @@ bool TagDMRData::validate(uint32_t peerId, data::NetData& data, uint32_t streamI
                         .tag("streamId", std::to_string(streamId))
                         .tag("srcId", std::to_string(data.getSrcId()))
                         .tag("dstId", std::to_string(data.getDstId()))
-                            .field("message", INFLUXDB_ERRSTR_INV_SLOT)
-                            .field("slot", data.getSlotNo())
+                            .field("message", std::string(INFLUXDB_ERRSTR_INV_SLOT))
+                            .field("slot", std::to_string(data.getSlotNo()))
                         .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
                     .requestAsync(m_network->m_influxServer);
             }
@@ -924,8 +924,8 @@ bool TagDMRData::validate(uint32_t peerId, data::NetData& data, uint32_t streamI
                         .tag("streamId", std::to_string(streamId))
                         .tag("srcId", std::to_string(data.getSrcId()))
                         .tag("dstId", std::to_string(data.getDstId()))
-                            .field("message", INFLUXDB_ERRSTR_DISABLED_TALKGROUP)
-                            .field("slot", data.getSlotNo())
+                            .field("message", std::string(INFLUXDB_ERRSTR_DISABLED_TALKGROUP))
+                            .field("slot", std::to_string(data.getSlotNo()))
                         .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
                     .requestAsync(m_network->m_influxServer);
             }
@@ -950,7 +950,7 @@ bool TagDMRData::validate(uint32_t peerId, data::NetData& data, uint32_t streamI
                                 .tag("streamId", std::to_string(streamId))
                                 .tag("srcId", std::to_string(data.getSrcId()))
                                 .tag("dstId", std::to_string(data.getDstId()))
-                                    .field("message", INFLUXDB_ERRSTR_RID_NOT_PERMITTED)
+                                    .field("message", std::string(INFLUXDB_ERRSTR_RID_NOT_PERMITTED))
                                 .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
                             .requestAsync(m_network->m_influxServer);
                     }

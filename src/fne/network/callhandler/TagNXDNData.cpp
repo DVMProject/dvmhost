@@ -570,7 +570,7 @@ bool TagNXDNData::validate(uint32_t peerId, lc::RTCH& lc, uint8_t messageType, u
                         .tag("streamId", std::to_string(streamId))
                         .tag("srcId", std::to_string(lc.getSrcId()))
                         .tag("dstId", std::to_string(lc.getDstId()))
-                            .field("message", INFLUXDB_ERRSTR_DISABLED_SRC_RID)
+                            .field("message", std::string(INFLUXDB_ERRSTR_DISABLED_SRC_RID))
                         .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
                     .requestAsync(m_network->m_influxServer);
             }
@@ -606,7 +606,7 @@ bool TagNXDNData::validate(uint32_t peerId, lc::RTCH& lc, uint8_t messageType, u
                             .tag("streamId", std::to_string(streamId))
                             .tag("srcId", std::to_string(lc.getSrcId()))
                             .tag("dstId", std::to_string(lc.getDstId()))
-                                .field("message", INFLUXDB_ERRSTR_DISABLED_DST_RID)
+                                .field("message", std::string(INFLUXDB_ERRSTR_DISABLED_DST_RID))
                             .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
                         .requestAsync(m_network->m_influxServer);
                 }
@@ -628,7 +628,7 @@ bool TagNXDNData::validate(uint32_t peerId, lc::RTCH& lc, uint8_t messageType, u
                             .tag("streamId", std::to_string(streamId))
                             .tag("srcId", std::to_string(lc.getSrcId()))
                             .tag("dstId", std::to_string(lc.getDstId()))
-                                .field("message", INFLUXDB_ERRSTR_DISABLED_SRC_RID)
+                                .field("message", std::string(INFLUXDB_ERRSTR_DISABLED_SRC_RID))
                             .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
                         .requestAsync(m_network->m_influxServer);
                 }
@@ -656,7 +656,7 @@ bool TagNXDNData::validate(uint32_t peerId, lc::RTCH& lc, uint8_t messageType, u
                     .tag("streamId", std::to_string(streamId))
                     .tag("srcId", std::to_string(lc.getSrcId()))
                     .tag("dstId", std::to_string(lc.getDstId()))
-                        .field("message", INFLUXDB_ERRSTR_INV_TALKGROUP)
+                        .field("message", std::string(INFLUXDB_ERRSTR_INV_TALKGROUP))
                     .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
                 .requestAsync(m_network->m_influxServer);
         }
@@ -687,7 +687,7 @@ bool TagNXDNData::validate(uint32_t peerId, lc::RTCH& lc, uint8_t messageType, u
                     .tag("streamId", std::to_string(streamId))
                     .tag("srcId", std::to_string(lc.getSrcId()))
                     .tag("dstId", std::to_string(lc.getDstId()))
-                        .field("message", INFLUXDB_ERRSTR_DISABLED_SRC_RID)
+                        .field("message", std::string(INFLUXDB_ERRSTR_DISABLED_SRC_RID))
                     .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
                 .requestAsync(m_network->m_influxServer);
         }
@@ -734,7 +734,7 @@ bool TagNXDNData::validate(uint32_t peerId, lc::RTCH& lc, uint8_t messageType, u
                             .tag("streamId", std::to_string(streamId))
                             .tag("srcId", std::to_string(lc.getSrcId()))
                             .tag("dstId", std::to_string(lc.getDstId()))
-                                .field("message", INFLUXDB_ERRSTR_RID_NOT_PERMITTED)
+                                .field("message", std::string(INFLUXDB_ERRSTR_RID_NOT_PERMITTED))
                             .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
                         .requestAsync(m_network->m_influxServer);
                 }
