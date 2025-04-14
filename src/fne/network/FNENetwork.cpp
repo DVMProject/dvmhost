@@ -2594,7 +2594,7 @@ bool FNENetwork::writePeerACK(uint32_t peerId, uint32_t streamId, const uint8_t*
     }
 
     return writePeer(peerId, { NET_FUNC::ACK, NET_SUBFUNC::NOP }, buffer, length + 10U, RTP_END_OF_CALL_SEQ, streamId, 
-        false);
+        false, false, true);
 }
 
 /* Helper to log a warning specifying which NAK reason is being sent a peer. */
