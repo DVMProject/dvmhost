@@ -11,6 +11,7 @@
 #include "network/RawFrameQueue.h"
 #include "network/udp/Socket.h"
 #include "Log.h"
+#include "Thread.h"
 #include "Utils.h"
 
 using namespace network;
@@ -118,7 +119,8 @@ void RawFrameQueue::enqueueMessage(const uint8_t* message, uint32_t length, sock
     // if the queue is flushing -- don't attempt to enqueue any messages
     if (m_queueFlushing) {
         LogWarning(LOG_NET, "RawFrameQueue::enqueueMessage() -- queue is flushing, waiting to enqueue message");
-        std::lock_guard<std::mutex> lock(m_queueMutex);
+        while (m_queueFlushing)
+            Thread::sleep(2U);
     }
 
     uint8_t* buffer = new uint8_t[length];

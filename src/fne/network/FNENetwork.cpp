@@ -298,26 +298,29 @@ void FNENetwork::clock(uint32_t ms)
             uint32_t id = peer.first;
             FNEPeerConnection* connection = peer.second;
             if (connection != nullptr) {
-                if (connection->connected()) {
-                    uint64_t dt = connection->lastPing() + ((m_host->m_pingTime * 1000) * m_host->m_maxMissedPings);
-                    if (dt < now) {
-                        LogInfoEx(LOG_NET, "PEER %u (%s) timed out, dt = %u, now = %u", id, connection->identity().c_str(),
-                            dt, now);
+                uint64_t dt = 0U;
+                if (connection->isExternalPeer() || connection->isPeerLink())
+                    dt = connection->lastPing() + ((m_host->m_pingTime * 1000) * (m_host->m_maxMissedPings * 2U));
+                else
+                    dt = connection->lastPing() + ((m_host->m_pingTime * 1000) * m_host->m_maxMissedPings);
 
-                        // set connection states for this stale connection
-                        connection->connected(false);
-                        connection->connectionState(NET_STAT_INVALID);
+                if (dt < now) {
+                    LogInfoEx(LOG_NET, "PEER %u (%s) timed out, dt = %u, now = %u", id, connection->identity().c_str(),
+                        dt, now);
 
-                        // if the connection was an external peer or a peer link -- be noisy about a possible
-                        // netsplit
-                        if (connection->isExternalPeer() || connection->isPeerLink()) {
-                            for (uint8_t i = 0U; i < 3U; i++)
-                                LogWarning(LOG_NET, "PEER %u (%s) downstream netsplit, dt = %u, now = %u", id, connection->identity().c_str(),
-                                    dt, now);
-                        }
+                    // set connection states for this stale connection
+                    connection->connected(false);
+                    connection->connectionState(NET_STAT_INVALID);
 
-                        peersToRemove.push_back(id);
+                    // if the connection was an external peer or a peer link -- be noisy about a possible
+                    // netsplit
+                    if (connection->isExternalPeer() || connection->isPeerLink()) {
+                        for (uint8_t i = 0U; i < 3U; i++)
+                            LogWarning(LOG_NET, "PEER %u (%s) downstream netsplit, dt = %u, now = %u", id, connection->identity().c_str(),
+                                dt, now);
                     }
+
+                    peersToRemove.push_back(id);
                 }
             }
         }
