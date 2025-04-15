@@ -433,8 +433,6 @@ bool AffiliationLookup::isChBusy(uint32_t chNo) const
 
 bool AffiliationLookup::isGranted(uint32_t dstId) const
 {
-    std::lock_guard<std::mutex> lock(m_mutex);
-
     if (dstId == 0U) {
         return false;
     }
@@ -457,8 +455,6 @@ bool AffiliationLookup::isGranted(uint32_t dstId) const
 
 bool AffiliationLookup::isGroup(uint32_t dstId) const
 {
-    std::lock_guard<std::mutex> lock(m_mutex);
-
     if (dstId == 0U) {
         return true;
     }
@@ -476,8 +472,6 @@ bool AffiliationLookup::isGroup(uint32_t dstId) const
 
 bool AffiliationLookup::isNetGranted(uint32_t dstId) const
 {
-    std::lock_guard<std::mutex> lock(m_mutex);
-
     if (dstId == 0U) {
         return false;
     }
