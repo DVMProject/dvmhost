@@ -1831,6 +1831,10 @@ void HostBridge::encodeDMRAudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32_
     if (forcedDstId > 0 && forcedDstId != m_dstId)
         dstId = forcedDstId;
 
+    // never allow a source ID of 0
+    if (srcId == 0U)
+        srcId = m_srcId;
+
     uint8_t* data = nullptr;
     m_dmrN = (uint8_t)(m_dmrSeqNo % 6);
     if (m_ambeCount == AMBE_PER_SLOT) {
@@ -2645,6 +2649,10 @@ void HostBridge::encodeP25AudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32_
     uint32_t dstId = m_dstId;
     if (forcedDstId > 0 && forcedDstId != m_dstId)
         dstId = forcedDstId;
+
+    // never allow a source ID of 0
+    if (srcId == 0U)
+        srcId = m_srcId;
 
     lc::LC lc = lc::LC();
     lc.setLCO(LCO::GROUP);
