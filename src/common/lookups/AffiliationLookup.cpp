@@ -299,11 +299,12 @@ bool AffiliationLookup::grantCh(uint32_t dstId, uint32_t srcId, uint32_t grantTi
         return false;
     }
 
+    std::lock_guard<std::mutex> lock(m_mutex);
+
     if (!m_chLookup->isRFChAvailable()) {
         return false;
     }
 
-    std::lock_guard<std::mutex> lock(m_mutex);
     uint32_t chNo = m_chLookup->getFirstRFChannel();
     if (!m_chLookup->removeRFCh(chNo)) {
         return false;
@@ -336,6 +337,7 @@ void AffiliationLookup::touchGrant(uint32_t dstId)
     }
 
     std::lock_guard<std::mutex> lock(m_mutex);
+
     if (isGranted(dstId)) {
         m_grantTimers[dstId].start();
     }
@@ -431,6 +433,8 @@ bool AffiliationLookup::isChBusy(uint32_t chNo) const
 
 bool AffiliationLookup::isGranted(uint32_t dstId) const
 {
+    std::lock_guard<std::mutex> lock(m_mutex);
+
     if (dstId == 0U) {
         return false;
     }
@@ -453,6 +457,8 @@ bool AffiliationLookup::isGranted(uint32_t dstId) const
 
 bool AffiliationLookup::isGroup(uint32_t dstId) const
 {
+    std::lock_guard<std::mutex> lock(m_mutex);
+
     if (dstId == 0U) {
         return true;
     }
@@ -470,6 +476,8 @@ bool AffiliationLookup::isGroup(uint32_t dstId) const
 
 bool AffiliationLookup::isNetGranted(uint32_t dstId) const
 {
+    std::lock_guard<std::mutex> lock(m_mutex);
+
     if (dstId == 0U) {
         return false;
     }
