@@ -1122,6 +1122,38 @@ bool HostBridge::createNetwork()
     m_dstId = (uint32_t)networkConf["destinationId"].as<uint32_t>(1U);
     m_slot = (uint8_t)networkConf["slot"].as<uint32_t>(1U);
 
+    // make sure our source ID is sane
+    if (m_srcId == 0U) {
+        ::LogError(LOG_HOST, "Bridge source ID cannot be set to 0.");
+        return false;
+    }
+
+    // make sure our destination ID is sane
+    if (m_dstId == 0U) {
+        ::LogError(LOG_HOST, "Bridge destination ID cannot be set to 0.");
+        return false;
+    }
+
+    // make sure we're range checked
+    switch (m_txMode) {
+    case TX_MODE_DMR:
+        {
+            if (m_dstId > 16777215) {
+                ::LogError(LOG_HOST, "Bridge destination ID cannot be greater than 16777215.");
+                return false;
+            }
+        }
+        break;
+    case TX_MODE_P25:
+        {
+            if (m_dstId > 65535) {
+                ::LogError(LOG_HOST, "Bridge destination ID cannot be greater than 65535.");
+                return false;
+            }
+        }
+        break;
+    }
+
     if (!m_udpMetadata && m_resetCallForSourceIdChange)
         m_resetCallForSourceIdChange = false; // only applies to UDP audio with metadata
     if (!m_overrideSrcIdFromUDP && m_resetCallForSourceIdChange)
