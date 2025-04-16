@@ -83,7 +83,7 @@ sudo apt-get install libasio-dev:arm64 libncurses-dev:arm64 libssl-dev:arm64
         ```        
         2. Install build.
         ```
-        dvmhost/build # make old_install
+        dvmhost/build # sudo make old_install
         ```        
 
 If cross-compiling is required (for either ARM 32bit, 64bit or old Raspberry Pi ARM 32bit), the CMake build system has some options:
