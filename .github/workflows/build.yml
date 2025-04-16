@@ -70,10 +70,15 @@ jobs:
             g++-arm-linux-gnueabihf \
             gcc-arm-linux-gnueabihf \
             g++-aarch64-linux-gnu \
-            libasio-dev libssl-dev
+            libasio-dev libssl-dev libncurses-dev
       - name: Build
         run: |
-          build_args='-DENABLE_TUI_SUPPORT=0'
+          build_args=''
+          if [[ "${{ matrix.arch }}" == 'amd64' ]]; then
+            build_args='-DENABLE_TUI_SUPPORT=1'
+          else
+            build_args='-DENABLE_TUI_SUPPORT=0'
+          fi
           if [[ "${{ github.event_name }}" == 'push' ]]; then
             build_args="$build_args -DCMAKE_BUILD_TYPE=${{ inputs.build_type }}"
             if [[ "${{ inputs.strip_symbols }}" == 'true' ]]; then

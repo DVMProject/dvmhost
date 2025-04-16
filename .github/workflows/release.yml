@@ -48,7 +48,7 @@ jobs:
             g++-arm-linux-gnueabihf \
             gcc-arm-linux-gnueabihf \
             g++-aarch64-linux-gnu \
-            libasio-dev libssl-dev
+            libasio-dev libssl-dev libncurses-dev
       - name: Build
         run: |
           if [[ "${{ matrix.arch }}" == 'armhf' ]]; then
@@ -56,9 +56,15 @@ jobs:
               -DENABLE_TUI_SUPPORT=0 \
               -DCROSS_COMPILE_RPI_ARM=1 .
           else
-            cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS="-s" -DCMAKE_CXX_FLAGS="-s" \
-              -DENABLE_TUI_SUPPORT=0 \
-              -D "CROSS_COMPILE_$(echo '${{ matrix.arch }}' | tr '[:lower:]' '[:upper:]')=1" .
+            if [[ "${{ github.event_name }}" == 'amd64' ]]; then
+              cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS="-s" -DCMAKE_CXX_FLAGS="-s" \
+                -DENABLE_TUI_SUPPORT=1 \
+                -D "CROSS_COMPILE_$(echo '${{ matrix.arch }}' | tr '[:lower:]' '[:upper:]')=1" .
+            else             
+              cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS="-s" -DCMAKE_CXX_FLAGS="-s" \
+                -DENABLE_TUI_SUPPORT=0 \
+                -D "CROSS_COMPILE_$(echo '${{ matrix.arch }}' | tr '[:lower:]' '[:upper:]')=1" .
+            fi
           fi
 
           make -j $(nproc)
