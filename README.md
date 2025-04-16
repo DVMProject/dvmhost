@@ -65,6 +65,26 @@ sudo apt-get install libasio-dev:arm64 libncurses-dev:arm64 libssl-dev:arm64
    -- Build files have been written to: dvmhost/build
    dvmhost/build # make
    ```
+4. [OPTIONAL] Install binaries (it is *highly* recommended to not run DVM out of the build folder).
+    1. Tarball Install
+        1. Run build finalization.
+        ```
+        dvmhost/build # make strip
+        dvmhost/build # make tarball
+        ```
+        2. After `make tarball` completes file named `dvmhost_R04Gxx_<arch>.tar.gz` should be created.
+        ```
+        dvmhost/build # sudo tar xvzf dvmhost_R04Gxx_<arch>.tar.gz -C /opt
+        ```
+    2. old_install Install
+        1. Run build finalization.
+        ```
+        dvmhost/build # make strip
+        ```        
+        1. Run build finalization.
+        ```
+        dvmhost/build # make old_install
+        ```        
 
 If cross-compiling is required (for either ARM 32bit, 64bit or old Raspberry Pi ARM 32bit), the CMake build system has some options:
 
