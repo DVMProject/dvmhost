@@ -157,11 +157,10 @@ jobs:
         with:
           name: ${{ needs.setup.outputs.APPNAME }}-${{ matrix.arch }}
       - name: Upload release asset
-        uses: actions/upload-release-asset@v1
+        uses: softprops/action-gh-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: ${{ env.PACKAGENAME }}.tar.gz
-          asset_name: ${{ env.PACKAGENAME }}.tar.gz
-          asset_content_type: application/gzip
+          tag_name: ${{ needs.setup.outputs.DATE }}
+          files: ${{ env.PACKAGENAME }}.tar.gz
+          append_body: true
