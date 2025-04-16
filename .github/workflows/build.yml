@@ -7,7 +7,7 @@ on:
       build_type:
         description: "CMake Build Type"
         required: true
-        default: "Release"
+        default: "RelWithDebInfo"
         type: choice
         options:
           - Release
@@ -91,16 +91,15 @@ jobs:
           fi
 
           make -j $(nproc)
+          make tarball
       - name: Package
         run: |
-          mkdir -p ${{ env.PACKAGENAME }}
-          cp dvmcmd dvmhost dvmfne ${{ env.PACKAGENAME }}
-          zip -9 -r ${{ env.PACKAGENAME }}.zip ${{ env.PACKAGENAME }}
+          mv dvmhost_*.tar.gz ${{ env.PACKAGENAME }}.tar.gz
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ needs.setup.outputs.APPNAME }}-${{ matrix.arch }}
-          path: ${{ env.PACKAGENAME }}.zip
+          path: ${{ env.PACKAGENAME }}.tar.gz
 
   create-release:
     if: ${{ github.event.inputs.create_pre_release == 'true' }}
@@ -141,6 +140,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: ${{ env.PACKAGENAME }}.zip
-          asset_name: ${{ env.PACKAGENAME }}.zip
-          asset_content_type: application/zip
+          asset_path: ${{ env.PACKAGENAME }}.tar.gz
+          asset_name: ${{ env.PACKAGENAME }}.tar.gz
+          asset_content_type: application/gzip

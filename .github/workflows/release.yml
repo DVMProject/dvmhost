@@ -62,16 +62,17 @@ jobs:
           fi
 
           make -j $(nproc)
+          make strip
+          make tarball
       - name: Package
         run: |
+          mv dvmhost_*.tar.gz ${{ env.PACKAGENAME }}.tar.gz
           mkdir -p ${{ env.PACKAGENAME }}
-          cp dvmcmd dvmhost ${{ env.PACKAGENAME }}
-          zip -9 -r ${{ env.PACKAGENAME }}.zip ${{ env.PACKAGENAME }}
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ needs.setup.outputs.APPNAME }}-${{ matrix.arch }}
-          path: ${{ env.PACKAGENAME }}.zip
+          path: ${{ env.PACKAGENAME }}.tar.gz
 
   create-release:
     name: Create Release
@@ -110,6 +111,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: ${{ env.PACKAGENAME }}.zip
-          asset_name: ${{ env.PACKAGENAME }}.zip
-          asset_content_type: application/zip
+          asset_path: ${{ env.PACKAGENAME }}.tar.gz
+          asset_name: ${{ env.PACKAGENAME }}.tar.gz
+          asset_content_type: application/gzip
