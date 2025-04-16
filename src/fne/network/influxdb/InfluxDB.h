@@ -63,7 +63,7 @@ namespace network
         //  Constants
         // ---------------------------------------------------------------------------
 
-        #define MAX_INFLUXQL_THREAD_CNT 75U // this is a really extreme number of pending queries...
+        #define MAX_INFLUXQL_THREAD_CNT 75 // this is a really extreme number of pending queries...
 
         // ---------------------------------------------------------------------------
         //  Class Declaration
@@ -430,6 +430,10 @@ namespace network
                 int request(const ServerInfo& si, std::string* resp = nullptr)  { return detail::inner::request("POST", "write", "", m_lines.str(), si, resp); }
                 int requestAsync(const ServerInfo& si) 
                 {
+                    if (m_currThreadCnt < 0) {
+                        m_currThreadCnt = 0;
+                    }
+
                     if (m_currThreadCnt >= MAX_INFLUXQL_THREAD_CNT) {
                         ::LogError(LOG_HOST, "Maximum concurrent FluxQL thread count reached, dropping request!");
                         return 1;
@@ -452,7 +456,7 @@ namespace network
                 }
 
             private:
-                static uint32_t m_currThreadCnt;
+                static int32_t m_currThreadCnt;
 
                 /**
                  * @brief 

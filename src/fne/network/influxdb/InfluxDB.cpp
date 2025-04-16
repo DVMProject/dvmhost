@@ -29,7 +29,7 @@ using namespace network::influxdb;
 //  Static Class Members
 // ---------------------------------------------------------------------------
 
-uint32_t detail::TSCaller::m_currThreadCnt = 0U;
+int32_t detail::TSCaller::m_currThreadCnt = 0U;
 
 /* Generates a InfluxDB REST API request. */
 
