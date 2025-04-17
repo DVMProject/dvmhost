@@ -17,9 +17,9 @@ else()
     set(ENABLE_SETUP_TUI off)
 endif (ENABLE_TUI_SUPPORT)
 
-if (ENABLE_TCP_SSL)
-    add_definitions(-DENABLE_TCP_SSL)
-endif (ENABLE_TCP_SSL)
+if (ENABLE_SSL)
+    add_definitions(-DENABLE_SSL)
+endif (ENABLE_SSL)
 
 option(DISABLE_TUI_APPS "Disable extra TUI applications" off)
 if (DISABLE_TUI_APPS)
@@ -172,7 +172,7 @@ if (HAVE_SENDMMSG)
 endif (HAVE_SENDMMSG)
 
 # are we enabling SSL support?
-if (ENABLE_TCP_SSL)
+if (ENABLE_SSL)
     find_package(OpenSSL REQUIRED)
     include_directories("${OPENSSL_INCLUDE_DIR}")
-endif (ENABLE_TCP_SSL)
+endif (ENABLE_SSL)

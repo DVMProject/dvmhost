@@ -93,10 +93,10 @@ private:
     typedef network::rest::http::HTTPPayload HTTPPayload;
     RESTDispatcherType m_dispatcher;
     network::rest::http::HTTPServer<RESTDispatcherType> m_restServer;
-#if defined(ENABLE_TCP_SSL)
+#if defined(ENABLE_SSL)
     network::rest::http::SecureHTTPServer<RESTDispatcherType> m_restSecureServer;
     bool m_enableSSL;
-#endif // ENABLE_TCP_SSL
+#endif // ENABLE_SSL
 
     std::mt19937 m_random;
 

@@ -10,7 +10,7 @@
 #include "common/Defines.h"
 #include "common/network/tcp/SecureTcpClient.h"
 
-#if defined(ENABLE_TCP_SSL)
+#if defined(ENABLE_SSL)
 
 using namespace network::tcp;
 
@@ -20,4 +20,4 @@ using namespace network::tcp;
 
 std::string SecureTcpClient::m_sslHostname = std::string();
 
-#endif // ENABLE_TCP_SSL
+#endif // ENABLE_SSL

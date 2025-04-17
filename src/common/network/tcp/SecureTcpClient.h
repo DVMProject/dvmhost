@@ -16,7 +16,7 @@
 #if !defined(__SECURE_TCP_CLIENT_H__)
 #define __SECURE_TCP_CLIENT_H__
 
-#if defined(ENABLE_TCP_SSL)
+#if defined(ENABLE_SSL)
 
 #include "Defines.h"
 #include "common/Log.h"
@@ -296,6 +296,6 @@ namespace network
     } // namespace tcp
 } // namespace network
 
-#endif // ENABLE_TCP_SSL
+#endif // ENABLE_SSL
 
 #endif // __SECURE_TCP_CLIENT_H__

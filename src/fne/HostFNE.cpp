@@ -363,9 +363,9 @@ bool HostFNE::readParams()
 
     yaml::Node cryptoContainer = masterConf["crypto_container"];
     bool cryptoContainerEnabled = cryptoContainer["enable"].as<bool>(false);
-#if !defined(ENABLE_TCP_SSL)
+#if !defined(ENABLE_SSL)
     cryptoContainerEnabled = false;
-#endif // ENABLE_TCP_SSL
+#endif // ENABLE_SSL
     std::string cryptoContainerEKC = cryptoContainer["file"].as<std::string>();
     std::string cryptoContainerPassword = cryptoContainer["password"].as<std::string>();
     uint32_t cryptoContainerReload = cryptoContainer["time"].as<uint32_t>(30U);

@@ -152,13 +152,13 @@ int RESTClient::send(const std::string& address, uint32_t port, const std::strin
     typedef network::rest::BasicRequestDispatcher<network::rest::http::HTTPPayload, network::rest::http::HTTPPayload> RESTDispatcherType;
     RESTDispatcherType m_dispatcher(RESTClient::responseHandler);
     HTTPClient<RESTDispatcherType>* client = nullptr;
-#if defined(ENABLE_TCP_SSL)
+#if defined(ENABLE_SSL)
     SecureHTTPClient<RESTDispatcherType>* sslClient = nullptr;
-#endif // ENABLE_TCP_SSL
+#endif // ENABLE_SSL
 
     try {
         // setup HTTP client for authentication payload
-#if defined(ENABLE_TCP_SSL)
+#if defined(ENABLE_SSL)
         if (m_enableSSL) {
             sslClient = new SecureHTTPClient<RESTDispatcherType>(address, port);
             if (!sslClient->open()) {
@@ -167,16 +167,16 @@ int RESTClient::send(const std::string& address, uint32_t port, const std::strin
             }
             sslClient->setHandler(m_dispatcher);
         } else {
-#endif // ENABLE_TCP_SSL
+#endif // ENABLE_SSL
             client = new HTTPClient<RESTDispatcherType>(address, port);
             if (!client->open()) {
                 delete client;
                 return ERRNO_SOCK_OPEN;
             }
             client->setHandler(m_dispatcher);
-#if defined(ENABLE_TCP_SSL)
+#if defined(ENABLE_SSL)
         }
-#endif // ENABLE_TCP_SSL
+#endif // ENABLE_SSL
 
         // generate password SHA hash
         size_t size = password.size();
@@ -207,29 +207,29 @@ int RESTClient::send(const std::string& address, uint32_t port, const std::strin
 
         HTTPPayload httpPayload = HTTPPayload::requestPayload(HTTP_PUT, "/auth");
         httpPayload.payload(request);
-#if defined(ENABLE_TCP_SSL)
+#if defined(ENABLE_SSL)
         if (m_enableSSL) {
             sslClient->request(httpPayload);
         } else {
-#endif // ENABLE_TCP_SSL
+#endif // ENABLE_SSL
             client->request(httpPayload);
-#if defined(ENABLE_TCP_SSL)
+#if defined(ENABLE_SSL)
         }
-#endif // ENABLE_TCP_SSL
+#endif // ENABLE_SSL
 
         // wait for response and parse
         if (wait()) {
-#if defined(ENABLE_TCP_SSL)
+#if defined(ENABLE_SSL)
             if (m_enableSSL) {
                 sslClient->close();
                 delete sslClient;
             } else {
-#endif // ENABLE_TCP_SSL
+#endif // ENABLE_SSL
                 client->close();
                 delete client;
-#if defined(ENABLE_TCP_SSL)
+#if defined(ENABLE_SSL)
             }
-#endif // ENABLE_TCP_SSL
+#endif // ENABLE_SSL
             return ERRNO_API_CALL_TIMEOUT;
         }
 
@@ -244,34 +244,34 @@ int RESTClient::send(const std::string& address, uint32_t port, const std::strin
             token = rsp["token"].get<std::string>();
         }
         else {
-#if defined(ENABLE_TCP_SSL)
+#if defined(ENABLE_SSL)
             if (m_enableSSL) {
                 sslClient->close();
                 delete sslClient;
             } else {
-#endif // ENABLE_TCP_SSL
+#endif // ENABLE_SSL
                 client->close();
                 delete client;
-#if defined(ENABLE_TCP_SSL)
+#if defined(ENABLE_SSL)
             }
-#endif // ENABLE_TCP_SSL
+#endif // ENABLE_SSL
             return ERRNO_BAD_AUTH_RESPONSE;
         }
 
-#if defined(ENABLE_TCP_SSL)
+#if defined(ENABLE_SSL)
         if (m_enableSSL) {
             sslClient->close();
             delete sslClient;
         } else {
-#endif // ENABLE_TCP_SSL
+#endif // ENABLE_SSL
             client->close();
             delete client;
-#if defined(ENABLE_TCP_SSL)
+#if defined(ENABLE_SSL)
         }
-#endif // ENABLE_TCP_SSL
+#endif // ENABLE_SSL
 
         // reset the HTTP client and setup for actual payload request
-#if defined(ENABLE_TCP_SSL)
+#if defined(ENABLE_SSL)
         if (m_enableSSL) {
             sslClient = new SecureHTTPClient<RESTDispatcherType>(address, port);
             if (!sslClient->open()) {
@@ -280,44 +280,44 @@ int RESTClient::send(const std::string& address, uint32_t port, const std::strin
             }
             sslClient->setHandler(m_dispatcher);
         } else {
-#endif // ENABLE_TCP_SSL
+#endif // ENABLE_SSL
             client = new HTTPClient<RESTDispatcherType>(address, port);
             if (!client->open()) {
                 delete client;
                 return ERRNO_SOCK_OPEN;
             }
             client->setHandler(m_dispatcher);
-#if defined(ENABLE_TCP_SSL)
+#if defined(ENABLE_SSL)
         }
-#endif // ENABLE_TCP_SSL
+#endif // ENABLE_SSL
 
         // send actual API request
         httpPayload = HTTPPayload::requestPayload(method, endpoint);
         httpPayload.headers.add("X-DVM-Auth-Token", token);
         httpPayload.payload(payload);
-#if defined(ENABLE_TCP_SSL)
+#if defined(ENABLE_SSL)
         if (m_enableSSL) {
             sslClient->request(httpPayload);
         } else {
-#endif // ENABLE_TCP_SSL
+#endif // ENABLE_SSL
             client->request(httpPayload);
-#if defined(ENABLE_TCP_SSL)
+#if defined(ENABLE_SSL)
         }
-#endif // ENABLE_TCP_SSL
+#endif // ENABLE_SSL
 
         // wait for response and parse
         if (wait()) {
-#if defined(ENABLE_TCP_SSL)
+#if defined(ENABLE_SSL)
             if (m_enableSSL) {
                 sslClient->close();
                 delete sslClient;
             } else {
-#endif // ENABLE_TCP_SSL
+#endif // ENABLE_SSL
                 client->close();
                 delete client;
-#if defined(ENABLE_TCP_SSL)
+#if defined(ENABLE_SSL)
             }
-#endif // ENABLE_TCP_SSL
+#endif // ENABLE_SSL
             return ERRNO_API_CALL_TIMEOUT;
         }
 
@@ -339,32 +339,32 @@ int RESTClient::send(const std::string& address, uint32_t port, const std::strin
             }
         }
 
-#if defined(ENABLE_TCP_SSL)
+#if defined(ENABLE_SSL)
         if (m_enableSSL) {
             sslClient->close();
             delete sslClient;
         } else {
-#endif // ENABLE_TCP_SSL
+#endif // ENABLE_SSL
             client->close();
             delete client;
-#if defined(ENABLE_TCP_SSL)
+#if defined(ENABLE_SSL)
         }
-#endif // ENABLE_TCP_SSL
+#endif // ENABLE_SSL
     }
     catch (std::exception&) {
-#if defined(ENABLE_TCP_SSL)
+#if defined(ENABLE_SSL)
         if (m_enableSSL) {
             if (sslClient != nullptr) {
                 delete sslClient;
             }
         } else {
-#endif // ENABLE_TCP_SSL
+#endif // ENABLE_SSL
             if (client != nullptr) {
                 delete client;
             }
-#if defined(ENABLE_TCP_SSL)
+#if defined(ENABLE_SSL)
         }
-#endif // ENABLE_TCP_SSL
+#endif // ENABLE_SSL
         return ERRNO_INTERNAL_ERROR;
     }
 
