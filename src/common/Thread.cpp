@@ -119,7 +119,7 @@ bool Thread::runAsThread(void* obj, void *(*startRoutine)(void *), thread_t* thr
 #if defined(_WIN32)
     HANDLE hnd = ::CreateThread(NULL, 0, reinterpret_cast<LPTHREAD_START_ROUTINE>((void*)startRoutine), thread, CREATE_SUSPENDED, NULL);
     if (hnd == NULL) {
-        LogError(LOG_NET, "Error returned from CreateThread, err: %lu", ::GetLastError());
+        LogError(LOG_HOST, "Error returned from CreateThread, err: %lu", ::GetLastError());
         return false;
     }
 
@@ -127,7 +127,7 @@ bool Thread::runAsThread(void* obj, void *(*startRoutine)(void *), thread_t* thr
     ::ResumeThread(hnd);
 #else
     if (::pthread_create(&thread->thread, NULL, startRoutine, thread) != 0) {
-        LogError(LOG_NET, "Error returned from pthread_create, err: %d", errno);
+        LogError(LOG_HOST, "Error returned from pthread_create, err: %d", errno);
         return false;
     }
 #endif // defined(_WIN32)
