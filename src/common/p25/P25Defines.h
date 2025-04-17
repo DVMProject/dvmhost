@@ -6,6 +6,7 @@
  *
  *  Copyright (C) 2016 Jonathan Naylor, G4KLX
  *  Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2025 Caleb, K4PHP
  *
  */
 /**
@@ -739,6 +740,7 @@ namespace p25
                 OSP_SNDCP_CH_GNT = 0x14U,               //! SNDCP CH GNT - SNDCP Data Channel Grant
                 OSP_SNDCP_CH_ANN = 0x16U,               //! SNDCP CH ANN - SNDCP Data Channel Announcement
                 OSP_STS_Q = 0x1AU,                      //! STS Q - Status Query
+                OSP_QUE_RSP = 0x21U,                    //! QUE RSP - Queued Response
                 OSP_DENY_RSP = 0x27U,                   //! DENY RSP - Deny Response
                 OSP_SCCB_EXP = 0x29U,                   //! SCCB - Secondary Control Channel Broadcast - Explicit
                 OSP_GRP_AFF_Q = 0x2AU,                  //! GRP AFF Q - Group Affiliation Query
@@ -748,7 +750,6 @@ namespace p25
                 OSP_SYNC_BCAST = 0x30U,                 //! SYNC BCAST - Synchronization Broadcast
                 OSP_AUTH_DMD = 0x31U,                   //! AUTH DMD - Authentication Demand
                 OSP_AUTH_FNE_RESP = 0x32U,              //! AUTH FNE RESP - Authentication FNE Response
-                OSP_QUE_RSP = 0x33U,                    //! QUE RSP - Queued Response
                 OSP_IDEN_UP_VU = 0x34U,                 //! IDEN UP VU - Channel Identifier Update for VHF/UHF Bands
                 OSP_TIME_DATE_ANN = 0x35U,              //! TIME DATE ANN - Time and Date Announcement
                 OSP_SYS_SRV_BCAST = 0x38U,              //! SYS SRV BCAST - System Service Broadcast
