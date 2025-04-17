@@ -23,6 +23,26 @@ using namespace lookups;
 // ---------------------------------------------------------------------------
 
 std::mutex PeerListLookup::m_mutex;
+bool PeerListLookup::m_locked = false;
+
+// ---------------------------------------------------------------------------
+//  Macros
+// ---------------------------------------------------------------------------
+
+// Lock the table.
+#define __LOCK_TABLE()                          \
+    std::lock_guard<std::mutex> lock(m_mutex);  \
+    m_locked = true;
+
+// Unlock the table.
+#define __UNLOCK_TABLE() m_locked = false;
+
+// Spinlock wait for table to be released.
+#define __SPINLOCK()                            \
+    if (m_locked) {                             \
+        while (m_locked)                        \
+            Thread::sleep(2U);                  \
+    }
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -40,8 +60,11 @@ PeerListLookup::PeerListLookup(const std::string& filename, Mode mode, uint32_t 
 
 void PeerListLookup::clear()
 {
-    std::lock_guard<std::mutex> lock(m_mutex);
+    __LOCK_TABLE();
+
     m_table.clear();
+
+    __UNLOCK_TABLE();
 }
 
 /* Adds a new entry to the list. */
@@ -50,7 +73,8 @@ void PeerListLookup::addEntry(uint32_t id, const std::string& alias, const std::
 {
     PeerId entry = PeerId(id, alias, password, peerLink, canRequestKeys, false);
 
-    std::lock_guard<std::mutex> lock(m_mutex);
+    __LOCK_TABLE();
+
     try {
         PeerId _entry = m_table.at(id);
         // if either the alias or the enabled flag doesn't match, update the entry
@@ -61,13 +85,16 @@ void PeerListLookup::addEntry(uint32_t id, const std::string& alias, const std::
     } catch (...) {
         m_table[id] = entry;
     }
+
+    __UNLOCK_TABLE();
 }
 
 /* Removes an existing entry from the list. */
 
 void PeerListLookup::eraseEntry(uint32_t id)
 {
-    std::lock_guard<std::mutex> lock(m_mutex);
+    __LOCK_TABLE();
+
     try {
         PeerId entry = m_table.at(id);  // this value will get discarded
         (void)entry;                    // but some variants of C++ mark the unordered_map<>::at as nodiscard
@@ -75,6 +102,8 @@ void PeerListLookup::eraseEntry(uint32_t id)
     } catch (...) {
         /* stub */
     }
+
+    __UNLOCK_TABLE();
 }
 
 /* Finds a table entry in this lookup table. */
@@ -83,7 +112,8 @@ PeerId PeerListLookup::find(uint32_t id)
 {
     PeerId entry;
 
-    std::lock_guard<std::mutex> lock(m_mutex);
+    __SPINLOCK();
+
     try {
         entry = m_table.at(id);
     } catch (...) {
@@ -111,7 +141,8 @@ bool PeerListLookup::getACL() const
 
 bool PeerListLookup::isPeerInList(uint32_t id) const
 {
-    std::lock_guard<std::mutex> lock(m_mutex);
+    __SPINLOCK();
+
     if (m_table.find(id) != m_table.end()) {
         return true;
     }
@@ -141,8 +172,11 @@ bool PeerListLookup::isPeerAllowed(uint32_t id) const
 
 void PeerListLookup::setMode(Mode mode)
 {
-    std::lock_guard<std::mutex> lock(m_mutex);
+    __LOCK_TABLE();
+
     m_mode = mode;
+
+    __UNLOCK_TABLE();
 }
 
 /* Gets the current mode. */
@@ -158,11 +192,13 @@ std::vector<PeerId> PeerListLookup::tableAsList() const
 {
     std::vector<PeerId> ret = std::vector<PeerId>();
 
-    std::lock_guard<std::mutex> lock(m_mutex);
+    __LOCK_TABLE();
+
     for (auto entry : m_table) {
         ret.push_back(entry.second);
     }
 
+    __UNLOCK_TABLE();
     return ret;
 }
 
@@ -184,8 +220,9 @@ bool PeerListLookup::load()
         return false;
     }
 
-    m_table.clear();
-    std::lock_guard<std::mutex> lock(m_mutex);
+    clear();
+
+    __LOCK_TABLE();
 
     // read lines from file
     std::string line;
@@ -249,6 +286,7 @@ bool PeerListLookup::load()
     }
 
     file.close();
+    __UNLOCK_TABLE();
 
     size_t size = m_table.size();
     if (size == 0U)

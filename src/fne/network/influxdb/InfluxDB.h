@@ -63,7 +63,7 @@ namespace network
         //  Constants
         // ---------------------------------------------------------------------------
 
-        #define MAX_INFLUXQL_THREAD_CNT 75 // this is a really extreme number of pending queries...
+        #define MAX_INFLUXQL_THREAD_CNT 125 // Extreme maximum number of pending Flux queries
 
         // ---------------------------------------------------------------------------
         //  Class Declaration

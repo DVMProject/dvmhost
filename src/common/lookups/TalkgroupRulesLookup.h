@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2023,2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2023,2024,2025 Bryan Biedenkapp, N2PLL
  *  Copyright (C) 2024 Patrick McDonnell, W3AXL
  *
  */
@@ -643,7 +643,8 @@ namespace lookups
         bool m_acl;
         bool m_stop;
 
-        static std::mutex m_mutex;
+        static std::mutex m_mutex;  //! Mutex used for hard locking.
+        static bool m_locked;       //! Flag used for soft locking (prevents find lookups), should be used when atomic operations (add/erase/etc) are being used.
 
         /**
          * @brief Loads the table from the passed lookup table file.
