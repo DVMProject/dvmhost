@@ -115,6 +115,7 @@ Control::Control(bool authoritative, uint32_t ran, uint32_t callHang, uint32_t q
     m_rssiCount(0U),
     m_dumpRCCH(dumpRCCHData),
     m_notifyCC(true),
+    m_ccDebug(debug),
     m_verbose(verbose),
     m_debug(debug)
 {
@@ -207,6 +208,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
     }
 
     m_control->m_disableGrantSrcIdCheck = control["disableGrantSourceIdCheck"].as<bool>(false);
+    m_ccDebug = control["debug"].as<bool>(false);
 
     m_ignoreAffiliationCheck = nxdnProtocol["ignoreAffiliationCheck"].as<bool>(false);
 
@@ -304,6 +306,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
     }
 
     if (printOptions) {
+        LogInfo("    Site Location ID: $%04X", m_siteData.locId());
         LogInfo("    Silence Threshold: %u (%.1f%%)", m_voice->m_silenceThreshold, float(m_voice->m_silenceThreshold) / 12.33F);
         LogInfo("    Frame Loss Threshold: %u", m_frameLossThreshold);
 
@@ -322,6 +325,10 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
 
         if (disableUnitRegTimeout) {
             LogInfo("    Disable Unit Registration Timeout: yes");
+        }
+
+        if (m_ccDebug) {
+            LogInfo("    Control Message Debug: yes");
         }
     }
 
@@ -1073,7 +1080,7 @@ void Control::notifyCC_ReleaseGrant(uint32_t dstId)
         }
 
         int status = req["status"].get<int>();
-        if (status != network::RPC::OK) {
+        if (status != network::NetRPC::OK) {
             ::LogError(LOG_NXDN, "failed to notify the CC %s:%u of the release of, dstId = %u", m_controlChData.address().c_str(), m_controlChData.port(), dstId);
             if (req["message"].is<std::string>()) {
                 std::string retMsg = req["message"].get<std::string>();
@@ -1117,7 +1124,7 @@ void Control::notifyCC_TouchGrant(uint32_t dstId)
         }
 
         int status = req["status"].get<int>();
-        if (status != network::RPC::OK) {
+        if (status != network::NetRPC::OK) {
             ::LogError(LOG_NXDN, "failed to notify the CC %s:%u of the touch of, dstId = %u", m_controlChData.address().c_str(), m_controlChData.port(), dstId);
             if (req["message"].is<std::string>()) {
                 std::string retMsg = req["message"].get<std::string>();
@@ -1133,11 +1140,11 @@ void Control::notifyCC_TouchGrant(uint32_t dstId)
 
 void Control::RPC_permittedTG(json::object& req, json::object& reply)
 {
-    g_RPC->defaultResponse(reply, "OK", network::RPC::OK);
+    g_RPC->defaultResponse(reply, "OK", network::NetRPC::OK);
 
     // validate destination ID is a integer within the JSON blob
     if (!req["dstId"].is<int>()) {
-        g_RPC->defaultResponse(reply, "destination ID was not a valid integer", network::RPC::INVALID_ARGS);
+        g_RPC->defaultResponse(reply, "destination ID was not a valid integer", network::NetRPC::INVALID_ARGS);
         return;
     }
 
@@ -1153,15 +1160,15 @@ void Control::RPC_permittedTG(json::object& req, json::object& reply)
 void Control::RPC_releaseGrantTG(json::object& req, json::object& reply)
 {
     if (!m_enableControl) {
-        g_RPC->defaultResponse(reply, "not NXDN control channel", network::RPC::BAD_REQUEST);
+        g_RPC->defaultResponse(reply, "not NXDN control channel", network::NetRPC::BAD_REQUEST);
         return;
     }
 
-    g_RPC->defaultResponse(reply, "OK", network::RPC::OK);
+    g_RPC->defaultResponse(reply, "OK", network::NetRPC::OK);
 
     // validate destination ID is a integer within the JSON blob
     if (!req["dstId"].is<int>()) {
-        g_RPC->defaultResponse(reply, "destination ID was not a valid integer", network::RPC::INVALID_ARGS);
+        g_RPC->defaultResponse(reply, "destination ID was not a valid integer", network::NetRPC::INVALID_ARGS);
         return;
     }
 
@@ -1200,11 +1207,11 @@ void Control::RPC_touchGrantTG(json::object& req, json::object& reply)
         return;
     }
 
-    g_RPC->defaultResponse(reply, "OK", network::RPC::OK);
+    g_RPC->defaultResponse(reply, "OK", network::NetRPC::OK);
 
     // validate destination ID is a integer within the JSON blob
     if (!req["dstId"].is<int>()) {
-        g_RPC->defaultResponse(reply, "destination ID was not a valid integer", network::RPC::INVALID_ARGS);
+        g_RPC->defaultResponse(reply, "destination ID was not a valid integer", network::NetRPC::INVALID_ARGS);
         return;
     }
 

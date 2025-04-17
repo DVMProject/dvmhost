@@ -83,6 +83,8 @@ void Voice::resetNet()
     m_vocLDU1Count = 0U;
     m_roamLDU1Count = 0U;
     m_p25->m_networkWatchdog.stop();
+
+    m_netLastDUID = DUID::TDU;
 }
 
 /* Process a data frame from the RF interface. */
@@ -1284,11 +1286,21 @@ bool Voice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
                     return true;
                 }
 
-                checkNet_LDU2();
+                // see if we've somehow missed the previous LDU2, and if we have insert null audio
+                if (m_netLastDUID == DUID::LDU1) {
+                    LogWarning(LOG_NET, P25_LDU2_STR " audio, missed LDU2 for superframe, filling in lost audio");
+                    resetWithNullAudio(m_netLDU2, m_netLC.getAlgId() != P25DEF::ALGO_UNENCRYPT);
+                    writeNet_LDU2();
+                } else {
+                    checkNet_LDU2();
+                }
+
                 if (m_p25->m_netState != RS_NET_IDLE) {
                     m_p25->m_netTGHang.start();
                     writeNet_LDU1();
                 }
+
+                m_netLastDUID = duid;
             }
             break;
         case DUID::LDU2:
@@ -1358,13 +1370,22 @@ bool Voice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
                     writeNet_LDU1();
                 }
                 else {
-                    checkNet_LDU1();
+                    // see if we've somehow missed the previous LDU1, and if we have insert null audio
+                    if (m_netLastDUID == DUID::LDU2) {
+                        LogWarning(LOG_NET, P25_LDU1_STR " audio, missed LDU1 for superframe, filling in lost audio");
+                        resetWithNullAudio(m_netLDU1, m_netLC.getAlgId() != P25DEF::ALGO_UNENCRYPT);
+                        writeNet_LDU1();
+                    } else {
+                        checkNet_LDU1();
+                    }
                 }
 
                 if (m_p25->m_netState != RS_NET_IDLE) {
                     m_p25->m_netTGHang.start();
                     writeNet_LDU2();
                 }
+
+                m_netLastDUID = duid;
             }
             break;
         case DUID::VSELP1:
@@ -1394,6 +1415,8 @@ bool Voice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
                 resetNet();
                 return false;
             }
+
+            m_netLastDUID = duid;
 
             if (!m_p25->m_enableControl) {
                 m_p25->m_affiliations.releaseGrant(m_netLC.getDstId(), false);
@@ -1449,8 +1472,8 @@ Voice::Voice(Control* p25, bool debug, bool verbose) :
     m_netLDU1(nullptr),
     m_gotNetLDU2(false),
     m_netLDU2(nullptr),
+    m_netLastDUID(DUID::TDU),
     m_lastDUID(DUID::TDU),
-    m_lastIMBE(nullptr),
     m_lastMI(nullptr),
     m_hadVoice(false),
     m_lastRejectId(0U),
@@ -1469,9 +1492,6 @@ Voice::Voice(Control* p25, bool debug, bool verbose) :
     ::memset(m_netLDU2, 0x00U, 9U * 25U);
     resetWithNullAudio(m_netLDU2, false);
 
-    m_lastIMBE = new uint8_t[RAW_IMBE_LENGTH_BYTES];
-    ::memcpy(m_lastIMBE, NULL_IMBE, RAW_IMBE_LENGTH_BYTES);
-
     m_lastMI = new uint8_t[MI_LENGTH_BYTES];
     ::memset(m_lastMI, 0x00U, MI_LENGTH_BYTES);
 }
@@ -1482,7 +1502,6 @@ Voice::~Voice()
 {
     delete[] m_netLDU1;
     delete[] m_netLDU2;
-    delete[] m_lastIMBE;
     delete[] m_lastMI;
 }
 
@@ -1903,8 +1922,6 @@ void Voice::writeNet_LDU1()
         }
     }
 
-    insertMissingAudio(m_netLDU1);
-
     uint8_t buffer[P25_LDU_FRAME_LENGTH_BYTES + 2U];
     ::memset(buffer, 0x00U, P25_LDU_FRAME_LENGTH_BYTES + 2U);
 
@@ -2004,8 +2021,6 @@ void Voice::writeNet_LDU2()
     m_netLC.setAlgId(control.getAlgId());
     m_netLC.setKId(control.getKId());
 
-    insertMissingAudio(m_netLDU2);
-
     uint8_t buffer[P25_LDU_FRAME_LENGTH_BYTES + 2U];
     ::memset(buffer, 0x00U, P25_LDU_FRAME_LENGTH_BYTES + 2U);
 
@@ -2050,83 +2065,6 @@ void Voice::writeNet_LDU2()
     m_gotNetLDU2 = false;
 
     m_netFrames += 9U;
-}
-
-/* Helper to insert IMBE silence frames for missing audio. */
-
-void Voice::insertMissingAudio(uint8_t* data)
-{
-    if (data[10U] == 0x00U) {
-        ::memcpy(data + 10U, m_lastIMBE, 11U);
-        m_netLost++;
-    }
-    else {
-        ::memcpy(m_lastIMBE, data + 10U, 11U);
-    }
-
-    if (data[26U] == 0x00U) {
-        ::memcpy(data + 26U, m_lastIMBE, 11U);
-        m_netLost++;
-    }
-    else {
-        ::memcpy(m_lastIMBE, data + 26U, 11U);
-    }
-
-    if (data[55U] == 0x00U) {
-        ::memcpy(data + 55U, m_lastIMBE, 11U);
-        m_netLost++;
-    }
-    else {
-        ::memcpy(m_lastIMBE, data + 55U, 11U);
-    }
-
-    if (data[80U] == 0x00U) {
-        ::memcpy(data + 80U, m_lastIMBE, 11U);
-        m_netLost++;
-    }
-    else {
-        ::memcpy(m_lastIMBE, data + 80U, 11U);
-    }
-
-    if (data[105U] == 0x00U) {
-        ::memcpy(data + 105U, m_lastIMBE, 11U);
-        m_netLost++;
-    }
-    else {
-        ::memcpy(m_lastIMBE, data + 105U, 11U);
-    }
-
-    if (data[130U] == 0x00U) {
-        ::memcpy(data + 130U, m_lastIMBE, 11U);
-        m_netLost++;
-    }
-    else {
-        ::memcpy(m_lastIMBE, data + 130U, 11U);
-    }
-
-    if (data[155U] == 0x00U) {
-        ::memcpy(data + 155U, m_lastIMBE, 11U);
-        m_netLost++;
-    }
-    else {
-        ::memcpy(m_lastIMBE, data + 155U, 11U);
-    }
-
-    if (data[180U] == 0x00U) {
-        ::memcpy(data + 180U, m_lastIMBE, 11U);
-        m_netLost++;
-    }
-    else {
-        ::memcpy(m_lastIMBE, data + 180U, 11U);
-    }
-
-    if (data[204U] == 0x00U) {
-        ::memcpy(data + 204U, m_lastIMBE, 11U);
-        m_netLost++;
-    }
-    else {
-        ::memcpy(m_lastIMBE, data + 204U, 11U);
-    }
 }
 
 /* Helper to insert IMBE null frames for missing audio. */

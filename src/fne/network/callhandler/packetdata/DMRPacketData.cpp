@@ -226,7 +226,7 @@ bool DMRPacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
                             .field("duration", duration)
                             .field("slot", slotNo)
                         .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
-                    .request(m_network->m_influxServer);
+                    .requestAsync(m_network->m_influxServer);
             }
 
             delete status;

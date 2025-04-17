@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2016 Jonathan Naylor, G4KLX
- *  Copyright (C) 2017-2022 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2017-2022,2025 Bryan Biedenkapp, N2PLL
  *  Copyright (c) 2024 Patrick McDonnell, W3AXL
  *
  */
@@ -25,6 +25,26 @@ using namespace lookups;
 // ---------------------------------------------------------------------------
 
 std::mutex RadioIdLookup::m_mutex;
+bool RadioIdLookup::m_locked = false;
+
+// ---------------------------------------------------------------------------
+//  Macros
+// ---------------------------------------------------------------------------
+
+// Lock the table.
+#define __LOCK_TABLE()                          \
+    std::lock_guard<std::mutex> lock(m_mutex);  \
+    m_locked = true;
+
+// Unlock the table.
+#define __UNLOCK_TABLE() m_locked = false;
+
+// Spinlock wait for table to be released.
+#define __SPINLOCK()                            \
+    if (m_locked) {                             \
+        while (m_locked)                        \
+            Thread::sleep(2U);                  \
+    }
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -42,8 +62,11 @@ RadioIdLookup::RadioIdLookup(const std::string& filename, uint32_t reloadTime, b
 
 void RadioIdLookup::clear()
 {
-    std::lock_guard<std::mutex> lock(m_mutex);
+    __LOCK_TABLE();
+
     m_table.clear();
+
+    __UNLOCK_TABLE();
 }
 
 /* Toggles the specified radio ID enabled or disabled. */
@@ -64,7 +87,8 @@ void RadioIdLookup::addEntry(uint32_t id, bool enabled, const std::string& alias
 
     RadioId entry = RadioId(enabled, false, alias, ipAddress);
 
-    std::lock_guard<std::mutex> lock(m_mutex);
+    __LOCK_TABLE();
+
     try {
         RadioId _entry = m_table.at(id);
         // if either the alias or the enabled flag doesn't match, update the entry
@@ -79,20 +103,26 @@ void RadioIdLookup::addEntry(uint32_t id, bool enabled, const std::string& alias
         //LogDebug(LOG_HOST, "Adding new RID %d (%s) to ACL", id, alias.c_str());
         m_table[id] = entry;
     }
+
+    __UNLOCK_TABLE();
 }
 
 /* Erases an existing entry from the lookup table by the specified unique ID. */
 
 void RadioIdLookup::eraseEntry(uint32_t id)
 {
-    std::lock_guard<std::mutex> lock(m_mutex);
+    __LOCK_TABLE();
+
     try {
         RadioId entry = m_table.at(id); // this value will get discarded
         (void)entry;                    // but some variants of C++ mark the unordered_map<>::at as nodiscard
         m_table.erase(id);
-    } catch (...) {
+    }
+    catch (...) {
         /* stub */
     }
+
+    __UNLOCK_TABLE();
 }
 
 /* Finds a table entry in this lookup table. */
@@ -105,7 +135,8 @@ RadioId RadioIdLookup::find(uint32_t id)
         return RadioId(true, false);
     }
 
-    std::lock_guard<std::mutex> lock(m_mutex);
+    __SPINLOCK();
+
     try {
         entry = m_table.at(id);
     } catch (...) {
@@ -150,7 +181,7 @@ bool RadioIdLookup::load()
     // clear table
     clear();
 
-    std::lock_guard<std::mutex> lock(m_mutex);
+    __LOCK_TABLE();
 
     // read lines from file
     std::string line;
@@ -199,6 +230,7 @@ bool RadioIdLookup::load()
     }
 
     file.close();
+    __UNLOCK_TABLE();
 
     size_t size = m_table.size();
     if (size == 0U)

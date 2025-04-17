@@ -112,6 +112,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, ::lookups::VoiceChDa
     else {
         dedicatedTSCC = false;
     }
+    bool ccDebug = control["debug"].as<bool>(false);
 
     Slot::setSiteData(controlChData, netId, siteId, channelId, channelNo, dedicatedTSCC);
     Slot::setAlohaConfig(nRandWait, backOff);
@@ -125,11 +126,13 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, ::lookups::VoiceChDa
             m_slot1->setTSCC(enableTSCC, dedicatedTSCC);
             m_slot1->setSupervisor(m_supervisor);
             m_slot1->setDisableSourceIDGrantCheck(disableGrantSourceIdCheck);
+            m_slot1->setCCDebug(ccDebug);
             break;
         case 2U:
             m_slot2->setTSCC(enableTSCC, dedicatedTSCC);
             m_slot2->setSupervisor(m_supervisor);
             m_slot2->setDisableSourceIDGrantCheck(disableGrantSourceIdCheck);
+            m_slot2->setCCDebug(ccDebug);
             break;
         default:
             LogError(LOG_DMR, "DMR, invalid slot, TSCC disabled, slotNo = %u", m_tsccSlotNo);
@@ -789,11 +792,11 @@ void Control::processInCallCtrl(network::NET_ICC::ENUM command, uint32_t dstId, 
 
 void Control::RPC_permittedTG(json::object& req, json::object& reply)
 {
-    g_RPC->defaultResponse(reply, "OK", network::RPC::OK);
+    g_RPC->defaultResponse(reply, "OK", network::NetRPC::OK);
 
     // validate destination ID is a integer within the JSON blob
     if (!req["dstId"].is<int>()) {
-        g_RPC->defaultResponse(reply, "destination ID was not a valid integer", network::RPC::INVALID_ARGS);
+        g_RPC->defaultResponse(reply, "destination ID was not a valid integer", network::NetRPC::INVALID_ARGS);
         return;
     }
 
@@ -801,7 +804,7 @@ void Control::RPC_permittedTG(json::object& req, json::object& reply)
 
     // validate slot is a integer within the JSON blob
     if (!req["slot"].is<int>()) {
-        g_RPC->defaultResponse(reply, "slot was not a valid integer", network::RPC::INVALID_ARGS);
+        g_RPC->defaultResponse(reply, "slot was not a valid integer", network::NetRPC::INVALID_ARGS);
         return;
     }
 
@@ -821,11 +824,11 @@ void Control::RPC_permittedTG(json::object& req, json::object& reply)
 
 void Control::RPC_releaseGrantTG(json::object& req, json::object& reply)
 {
-    g_RPC->defaultResponse(reply, "OK", network::RPC::OK);
+    g_RPC->defaultResponse(reply, "OK", network::NetRPC::OK);
 
     // validate destination ID is a integer within the JSON blob
     if (!req["dstId"].is<int>()) {
-        g_RPC->defaultResponse(reply, "destination ID was not a valid integer", network::RPC::INVALID_ARGS);
+        g_RPC->defaultResponse(reply, "destination ID was not a valid integer", network::NetRPC::INVALID_ARGS);
         return;
     }
 
@@ -838,7 +841,7 @@ void Control::RPC_releaseGrantTG(json::object& req, json::object& reply)
 
     // validate slot is a integer within the JSON blob
     if (!req["slot"].is<int>()) {
-        g_RPC->defaultResponse(reply, "slot was not a valid integer", network::RPC::INVALID_ARGS);
+        g_RPC->defaultResponse(reply, "slot was not a valid integer", network::NetRPC::INVALID_ARGS);
         return;
     }
 
@@ -868,11 +871,11 @@ void Control::RPC_releaseGrantTG(json::object& req, json::object& reply)
 
 void Control::RPC_touchGrantTG(json::object& req, json::object& reply)
 {
-    g_RPC->defaultResponse(reply, "OK", network::RPC::OK);
+    g_RPC->defaultResponse(reply, "OK", network::NetRPC::OK);
 
     // validate destination ID is a integer within the JSON blob
     if (!req["dstId"].is<int>()) {
-        g_RPC->defaultResponse(reply, "destination ID was not a valid integer", network::RPC::INVALID_ARGS);
+        g_RPC->defaultResponse(reply, "destination ID was not a valid integer", network::NetRPC::INVALID_ARGS);
         return;
     }
 
@@ -885,7 +888,7 @@ void Control::RPC_touchGrantTG(json::object& req, json::object& reply)
 
     // validate slot is a integer within the JSON blob
     if (!req["slot"].is<int>()) {
-        g_RPC->defaultResponse(reply, "slot was not a valid integer", network::RPC::INVALID_ARGS);
+        g_RPC->defaultResponse(reply, "slot was not a valid integer", network::NetRPC::INVALID_ARGS);
         return;
     }
 
@@ -915,17 +918,17 @@ void Control::RPC_touchGrantTG(json::object& req, json::object& reply)
 
 void Control::RPC_tsccPayloadActivate(json::object& req, json::object& reply)
 {
-    g_RPC->defaultResponse(reply, "OK", network::RPC::OK);
+    g_RPC->defaultResponse(reply, "OK", network::NetRPC::OK);
 
     // validate destination ID is a integer within the JSON blob
     if (!req["slot"].is<uint8_t>()) {
-        g_RPC->defaultResponse(reply, "slot was not valid", network::RPC::INVALID_ARGS);
+        g_RPC->defaultResponse(reply, "slot was not valid", network::NetRPC::INVALID_ARGS);
         return;
     }
 
     // validate clear flag is a boolean within the JSON blob
     if (!req["clear"].is<bool>()) {
-        g_RPC->defaultResponse(reply, "clear flag was not valid", network::RPC::INVALID_ARGS);
+        g_RPC->defaultResponse(reply, "clear flag was not valid", network::NetRPC::INVALID_ARGS);
         return;
     }
 
@@ -943,25 +946,25 @@ void Control::RPC_tsccPayloadActivate(json::object& req, json::object& reply)
     else {
         // validate destination ID is a integer within the JSON blob
         if (!req["dstId"].is<uint32_t>()) {
-            g_RPC->defaultResponse(reply, "destination ID was not valid", network::RPC::INVALID_ARGS);
+            g_RPC->defaultResponse(reply, "destination ID was not valid", network::NetRPC::INVALID_ARGS);
             return;
         }
 
         // validate destination ID is a integer within the JSON blob
         if (!req["srcId"].is<uint32_t>()) {
-            g_RPC->defaultResponse(reply, "source ID was not valid", network::RPC::INVALID_ARGS);
+            g_RPC->defaultResponse(reply, "source ID was not valid", network::NetRPC::INVALID_ARGS);
             return;
         }
 
         // validate group flag is a boolean within the JSON blob
         if (!req["group"].is<bool>()) {
-            g_RPC->defaultResponse(reply, "group flag was not valid", network::RPC::INVALID_ARGS);
+            g_RPC->defaultResponse(reply, "group flag was not valid", network::NetRPC::INVALID_ARGS);
             return;
         }
 
         // validate voice flag is a boolean within the JSON blob
         if (!req["voice"].is<bool>()) {
-            g_RPC->defaultResponse(reply, "voice flag was not valid", network::RPC::INVALID_ARGS);
+            g_RPC->defaultResponse(reply, "voice flag was not valid", network::NetRPC::INVALID_ARGS);
             return;
         }
 

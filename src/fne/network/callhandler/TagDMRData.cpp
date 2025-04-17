@@ -194,7 +194,7 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                                 .field("duration", duration)
                                 .field("slot", slotNo)
                             .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
-                        .request(m_network->m_influxServer);
+                        .requestAsync(m_network->m_influxServer);
                 }
 
                 m_network->eraseStreamPktSeq(peerId, streamId);
@@ -619,7 +619,7 @@ bool TagDMRData::processCSBK(uint8_t* buffer, uint32_t peerId, dmr::data::NetDat
                             .tag("csbk", csbk->toString())
                                 .field("raw", ss.str())
                             .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
-                        .request(m_network->m_influxServer);
+                        .requestAsync(m_network->m_influxServer);
                 }
             }
 
@@ -763,10 +763,10 @@ bool TagDMRData::validate(uint32_t peerId, data::NetData& data, uint32_t streamI
                         .tag("streamId", std::to_string(streamId))
                         .tag("srcId", std::to_string(data.getSrcId()))
                         .tag("dstId", std::to_string(data.getDstId()))
-                            .field("message", INFLUXDB_ERRSTR_DISABLED_SRC_RID)
-                            .field("slot", data.getSlotNo())
+                            .field("message", std::string(INFLUXDB_ERRSTR_DISABLED_SRC_RID))
+                            .field("slot", std::to_string(data.getSlotNo()))
                         .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
-                    .request(m_network->m_influxServer);
+                    .requestAsync(m_network->m_influxServer);
             }
 
             // report In-Call Control to the peer sending traffic
@@ -800,10 +800,10 @@ bool TagDMRData::validate(uint32_t peerId, data::NetData& data, uint32_t streamI
                             .tag("streamId", std::to_string(streamId))
                             .tag("srcId", std::to_string(data.getSrcId()))
                             .tag("dstId", std::to_string(data.getDstId()))
-                                .field("message", INFLUXDB_ERRSTR_DISABLED_DST_RID)
-                                .field("slot", data.getSlotNo())
+                                .field("message", std::string(INFLUXDB_ERRSTR_DISABLED_DST_RID))
+                                .field("slot", std::to_string(data.getSlotNo()))
                             .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
-                        .request(m_network->m_influxServer);
+                        .requestAsync(m_network->m_influxServer);
                 }
 
                 return false;
@@ -821,10 +821,10 @@ bool TagDMRData::validate(uint32_t peerId, data::NetData& data, uint32_t streamI
                             .tag("streamId", std::to_string(streamId))
                             .tag("srcId", std::to_string(data.getSrcId()))
                             .tag("dstId", std::to_string(data.getDstId()))
-                                .field("message", INFLUXDB_ERRSTR_DISABLED_SRC_RID)
-                                .field("slot", data.getSlotNo())
+                                .field("message", std::string(INFLUXDB_ERRSTR_DISABLED_SRC_RID))
+                                .field("slot", std::to_string(data.getSlotNo()))
                             .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
-                        .request(m_network->m_influxServer);
+                        .requestAsync(m_network->m_influxServer);
                 }
 
                 LogWarning(LOG_NET, "DMR slot %s, illegal/unknown RID attempted access, srcId = %u, dstId = %u", data.getSlotNo(), data.getSrcId(), data.getDstId());
@@ -848,10 +848,10 @@ bool TagDMRData::validate(uint32_t peerId, data::NetData& data, uint32_t streamI
                         .tag("streamId", std::to_string(streamId))
                         .tag("srcId", std::to_string(data.getSrcId()))
                         .tag("dstId", std::to_string(data.getDstId()))
-                            .field("message", INFLUXDB_ERRSTR_INV_TALKGROUP)
-                            .field("slot", data.getSlotNo())
+                            .field("message", std::string(INFLUXDB_ERRSTR_INV_TALKGROUP))
+                            .field("slot", std::to_string(data.getSlotNo()))
                         .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
-                    .request(m_network->m_influxServer);
+                    .requestAsync(m_network->m_influxServer);
             }
 
             // report In-Call Control to the peer sending traffic
@@ -880,10 +880,10 @@ bool TagDMRData::validate(uint32_t peerId, data::NetData& data, uint32_t streamI
                         .tag("streamId", std::to_string(streamId))
                         .tag("srcId", std::to_string(data.getSrcId()))
                         .tag("dstId", std::to_string(data.getDstId()))
-                            .field("message", INFLUXDB_ERRSTR_DISABLED_SRC_RID)
-                            .field("slot", data.getSlotNo())
+                            .field("message", std::string(INFLUXDB_ERRSTR_DISABLED_SRC_RID))
+                            .field("slot", std::to_string(data.getSlotNo()))
                         .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
-                    .request(m_network->m_influxServer);
+                    .requestAsync(m_network->m_influxServer);
             }
 
             LogWarning(LOG_NET, "DMR slot %s, illegal/unknown RID attempted access, srcId = %u, dstId = %u", data.getSlotNo(), data.getSrcId(), data.getDstId());
@@ -903,10 +903,10 @@ bool TagDMRData::validate(uint32_t peerId, data::NetData& data, uint32_t streamI
                         .tag("streamId", std::to_string(streamId))
                         .tag("srcId", std::to_string(data.getSrcId()))
                         .tag("dstId", std::to_string(data.getDstId()))
-                            .field("message", INFLUXDB_ERRSTR_INV_SLOT)
-                            .field("slot", data.getSlotNo())
+                            .field("message", std::string(INFLUXDB_ERRSTR_INV_SLOT))
+                            .field("slot", std::to_string(data.getSlotNo()))
                         .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
-                    .request(m_network->m_influxServer);
+                    .requestAsync(m_network->m_influxServer);
             }
 
             // report In-Call Control to the peer sending traffic
@@ -924,10 +924,10 @@ bool TagDMRData::validate(uint32_t peerId, data::NetData& data, uint32_t streamI
                         .tag("streamId", std::to_string(streamId))
                         .tag("srcId", std::to_string(data.getSrcId()))
                         .tag("dstId", std::to_string(data.getDstId()))
-                            .field("message", INFLUXDB_ERRSTR_DISABLED_TALKGROUP)
-                            .field("slot", data.getSlotNo())
+                            .field("message", std::string(INFLUXDB_ERRSTR_DISABLED_TALKGROUP))
+                            .field("slot", std::to_string(data.getSlotNo()))
                         .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
-                    .request(m_network->m_influxServer);
+                    .requestAsync(m_network->m_influxServer);
             }
 
             // report In-Call Control to the peer sending traffic
@@ -950,9 +950,9 @@ bool TagDMRData::validate(uint32_t peerId, data::NetData& data, uint32_t streamI
                                 .tag("streamId", std::to_string(streamId))
                                 .tag("srcId", std::to_string(data.getSrcId()))
                                 .tag("dstId", std::to_string(data.getDstId()))
-                                    .field("message", INFLUXDB_ERRSTR_RID_NOT_PERMITTED)
+                                    .field("message", std::string(INFLUXDB_ERRSTR_RID_NOT_PERMITTED))
                                 .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
-                            .request(m_network->m_influxServer);
+                            .requestAsync(m_network->m_influxServer);
                     }
 
                     // report In-Call Control to the peer sending traffic

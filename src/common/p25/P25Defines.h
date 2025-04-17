@@ -199,8 +199,8 @@ namespace p25
             enum : uint8_t {
                 INVALID = 0x00U,                        //! Invalid Service Class
                 COMPOSITE = 0x01U,                      //! Composite Control Channel
-                VOICE = 0x10U,                          //! Voice
-                DATA = 0x20U,                           //! Data
+                DATA = 0x10U,                           //! Data
+                VOICE = 0x20U,                          //! Voice
                 REG = 0x40U,                            //! Registration
                 AUTH = 0x80U                            //! Authentication
             };

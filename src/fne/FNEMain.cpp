@@ -22,6 +22,11 @@ using namespace lookups;
 
 #include <signal.h>
 
+#if defined(_WIN32)
+#include <ws2tcpip.h>
+#include <Winsock2.h>
+#endif // !defined(_WIN32)
+
 // ---------------------------------------------------------------------------
 //  Macros
 // ---------------------------------------------------------------------------
@@ -175,6 +180,14 @@ int checkArgs(int argc, char* argv[])
 #if !defined(CATCH2_TEST_COMPILATION)
 int main(int argc, char** argv)
 {
+#if defined(_WIN32)
+    WSAData data;
+    int wsaRet = ::WSAStartup(MAKEWORD(2, 2), &data);
+    if (wsaRet != 0) {
+        ::LogError(LOG_NET, "Error from WSAStartup, err: %d", wsaRet);
+    }
+#endif // defined(_WIN32)
+
     g_gitHashBytes = new uint8_t[4U];
     ::memset(g_gitHashBytes, 0x00U, 4U);
 
@@ -225,6 +238,10 @@ int main(int argc, char** argv)
 
     ::LogFinalise();
     ::ActivityLogFinalise();
+
+#if defined(_WIN32)
+    ::WSACleanup();
+#endif // defined(_WIN32)
 
     return ret;
 }

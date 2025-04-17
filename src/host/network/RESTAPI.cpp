@@ -140,10 +140,10 @@ RESTAPI::RESTAPI(const std::string& address, uint16_t port, const std::string& p
     const std::string& keyFile, const std::string& certFile, bool enableSSL, Host* host, bool debug) :
     m_dispatcher(debug),
     m_restServer(address, port, debug),
-#if defined(ENABLE_TCP_SSL)
+#if defined(ENABLE_SSL)
     m_restSecureServer(address, port, debug),
     m_enableSSL(enableSSL),
-#endif // ENABLE_TCP_SSL
+#endif // ENABLE_SSL
     m_random(),
     m_p25MFId(P25DEF::MFG_STANDARD),
     m_password(password),
@@ -179,14 +179,14 @@ RESTAPI::RESTAPI(const std::string& address, uint16_t port, const std::string& p
         Utils::dump("REST Password Hash", m_passwordHash, 32U);
     }
 
-#if defined(ENABLE_TCP_SSL)
+#if defined(ENABLE_SSL)
     if (m_enableSSL) {
         if (!m_restSecureServer.setCertAndKey(keyFile, certFile)) {
             m_enableSSL = false;
             ::LogError(LOG_REST, "failed to initialize SSL for HTTPS, disabling SSL");
         }
     }
-#endif // ENABLE_TCP_SSL
+#endif // ENABLE_SSL
 
     std::random_device rd;
     std::mt19937 mt(rd());
@@ -219,17 +219,17 @@ void RESTAPI::setProtocols(dmr::Control* dmr, p25::Control* p25, nxdn::Control* 
 bool RESTAPI::open()
 {
     initializeEndpoints();
-#if defined(ENABLE_TCP_SSL)
+#if defined(ENABLE_SSL)
     if (m_enableSSL) {
         m_restSecureServer.open();
         m_restSecureServer.setHandler(m_dispatcher);
     } else {
-#endif // ENABLE_TCP_SSL
+#endif // ENABLE_SSL
         m_restServer.open();
         m_restServer.setHandler(m_dispatcher);
-#if defined(ENABLE_TCP_SSL)
+#if defined(ENABLE_SSL)
     }
-#endif // ENABLE_TCP_SSL
+#endif // ENABLE_SSL
 
     return run();
 }
@@ -238,15 +238,15 @@ bool RESTAPI::open()
 
 void RESTAPI::close()
 {
-#if defined(ENABLE_TCP_SSL)
+#if defined(ENABLE_SSL)
     if (m_enableSSL) {
         m_restSecureServer.stop();
     } else {
-#endif // ENABLE_TCP_SSL
+#endif // ENABLE_SSL
         m_restServer.stop();
-#if defined(ENABLE_TCP_SSL)
+#if defined(ENABLE_SSL)
     }
-#endif // ENABLE_TCP_SSL
+#endif // ENABLE_SSL
     wait();
 }
 
@@ -258,15 +258,15 @@ void RESTAPI::close()
 
 void RESTAPI::entry()
 {
-#if defined(ENABLE_TCP_SSL)
+#if defined(ENABLE_SSL)
     if (m_enableSSL) {
         m_restSecureServer.run();
     } else {
-#endif // ENABLE_TCP_SSL
+#endif // ENABLE_SSL
         m_restServer.run();
-#if defined(ENABLE_TCP_SSL)
+#if defined(ENABLE_SSL)
     }
-#endif // ENABLE_TCP_SSL
+#endif // ENABLE_SSL
 }
 
 /* Helper to initialize REST API endpoints. */

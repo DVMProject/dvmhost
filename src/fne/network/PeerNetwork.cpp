@@ -51,6 +51,9 @@ PeerNetwork::PeerNetwork(const std::string& address, uint16_t port, uint16_t loc
 
     // ignore the source peer ID for packets
     m_promiscuousPeer = true;
+
+    // never disable peer network services on ACL NAK from master
+    m_neverDisableOnACLNAK = true;
 }
 
 /* Sets the instances of the Peer List lookup tables. */

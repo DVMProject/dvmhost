@@ -94,7 +94,8 @@ namespace network
         uint32_t m_addrLen;
         udp::Socket* m_socket;
 
-        static std::mutex m_flushMutex;
+        static std::mutex m_queueMutex;
+        static bool m_queueFlushing;
         udp::BufferVector m_buffers;
 
         uint32_t m_failedReadCnt;

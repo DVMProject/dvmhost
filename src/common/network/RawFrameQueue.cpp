@@ -11,6 +11,7 @@
 #include "network/RawFrameQueue.h"
 #include "network/udp/Socket.h"
 #include "Log.h"
+#include "Thread.h"
 #include "Utils.h"
 
 using namespace network;
@@ -22,7 +23,8 @@ using namespace network;
 //  Static Class Members
 // ---------------------------------------------------------------------------
 
-std::mutex RawFrameQueue::m_flushMutex;
+std::mutex RawFrameQueue::m_queueMutex;
+bool RawFrameQueue::m_queueFlushing = false;
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -114,6 +116,13 @@ void RawFrameQueue::enqueueMessage(const uint8_t* message, uint32_t length, sock
     assert(message != nullptr);
     assert(length > 0U);
 
+    // if the queue is flushing -- don't attempt to enqueue any messages
+    if (m_queueFlushing) {
+        LogWarning(LOG_NET, "RawFrameQueue::enqueueMessage() -- queue is flushing, waiting to enqueue message");
+        while (m_queueFlushing)
+            Thread::sleep(2U);
+    }
+
     uint8_t* buffer = new uint8_t[length];
     ::memset(buffer, 0x00U, length);
     ::memcpy(buffer, message, length);
@@ -135,7 +144,8 @@ void RawFrameQueue::enqueueMessage(const uint8_t* message, uint32_t length, sock
 bool RawFrameQueue::flushQueue()
 {
     bool ret = true;
-    std::lock_guard<std::mutex> lock(m_flushMutex);
+    std::lock_guard<std::mutex> lock(m_queueMutex);
+    m_queueFlushing = true;
 
     if (m_buffers.empty()) {
         return false;
@@ -156,6 +166,7 @@ bool RawFrameQueue::flushQueue()
     }
 
     deleteBuffers();
+    m_queueFlushing = false;
     return ret;
 }
 

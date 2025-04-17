@@ -38,7 +38,7 @@ using namespace lookups;
 //  Global Variables
 // ---------------------------------------------------------------------------
 
-network::RPC* g_RPC = nullptr;
+network::NetRPC* g_RPC = nullptr;
 
 // ---------------------------------------------------------------------------
 //  Static Class Members
@@ -2156,7 +2156,7 @@ void* Host::threadPresence(void* arg)
 
         // register VC -> CC notification RPC handler
         g_RPC->registerHandler(RPC_REGISTER_CC_VC, [=](json::object &req, json::object &reply) {
-            g_RPC->defaultResponse(reply, "OK", network::RPC::OK);
+            g_RPC->defaultResponse(reply, "OK", network::NetRPC::OK);
 
             if (!host->m_dmrTSCCData && !host->m_p25CCData && !host->m_nxdnCCData) {
                 g_RPC->defaultResponse(reply, "Host is not a control channel, cannot register voice channel");
@@ -2165,7 +2165,7 @@ void* Host::threadPresence(void* arg)
 
             // validate channelNo is a string within the JSON blob
             if (!req["channelNo"].is<int>()) {
-                g_RPC->defaultResponse(reply, "channelNo was not a valid integer", network::RPC::INVALID_ARGS);
+                g_RPC->defaultResponse(reply, "channelNo was not a valid integer", network::NetRPC::INVALID_ARGS);
                 return;
             }
 
@@ -2173,7 +2173,7 @@ void* Host::threadPresence(void* arg)
 
             // validate peerId is a string within the JSON blob
             if (!req["peerId"].is<int>()) {
-                g_RPC->defaultResponse(reply, "peerId was not a valid integer", network::RPC::INVALID_ARGS);
+                g_RPC->defaultResponse(reply, "peerId was not a valid integer", network::NetRPC::INVALID_ARGS);
                 return;
             }
 
@@ -2183,12 +2183,12 @@ void* Host::threadPresence(void* arg)
 
             // validate restAddress is a string within the JSON blob
             if (!req["rpcAddress"].is<std::string>()) {
-                g_RPC->defaultResponse(reply, "rpcAddress was not a valid string", network::RPC::INVALID_ARGS);
+                g_RPC->defaultResponse(reply, "rpcAddress was not a valid string", network::NetRPC::INVALID_ARGS);
                 return;
             }
 
             if (!req["rpcPort"].is<int>()) {
-                g_RPC->defaultResponse(reply, "rpcPort was not a valid integer", network::RPC::INVALID_ARGS);
+                g_RPC->defaultResponse(reply, "rpcPort was not a valid integer", network::NetRPC::INVALID_ARGS);
                 return;
             }
 
@@ -2216,7 +2216,7 @@ void* Host::threadPresence(void* arg)
                 g_fireCCVCNotification = true; // announce this registration immediately to the FNE
             } else {
                 LogMessage(LOG_REST, "VC, registration rejected, peerId = %u, chNo = %u, VC wasn't a defined member of the CC voice channel list", peerId, channelNo);
-                g_RPC->defaultResponse(reply, "registration rejected", network::RPC::BAD_REQUEST);
+                g_RPC->defaultResponse(reply, "registration rejected", network::NetRPC::BAD_REQUEST);
             } 
         });
 
@@ -2262,7 +2262,7 @@ void* Host::threadPresence(void* arg)
                             }
 
                             int status = req["status"].get<int>();
-                            if (status != network::RPC::OK) {
+                            if (status != network::NetRPC::OK) {
                                 ::LogError(LOG_HOST, "failed to notify the CC %s:%u of VC registration", host->m_controlChData.address().c_str(), host->m_controlChData.port());
                                 if (req["message"].is<std::string>()) {
                                     std::string retMsg = req["message"].get<std::string>();

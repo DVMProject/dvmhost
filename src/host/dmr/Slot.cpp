@@ -164,6 +164,7 @@ Slot::Slot(uint32_t slotNo, uint32_t timeout, uint32_t tgHang, uint32_t queueSiz
     m_lastLateEntry(0U),
     m_supervisor(false),
     m_notifyCC(true),
+    m_ccDebug(debug),
     m_verbose(verbose),
     m_debug(debug)
 {
@@ -1268,7 +1269,7 @@ void Slot::notifyCC_ReleaseGrant(uint32_t dstId)
         }
 
         int status = req["status"].get<int>();
-        if (status != network::RPC::OK) {
+        if (status != network::NetRPC::OK) {
             ::LogError(LOG_DMR, "DMR Slot %u, failed to notify the CC %s:%u of the release of, dstId = %u", m_slotNo, m_controlChData.address().c_str(), m_controlChData.port(), dstId);
             if (req["message"].is<std::string>()) {
                 std::string retMsg = req["message"].get<std::string>();
@@ -1315,7 +1316,7 @@ void Slot::notifyCC_TouchGrant(uint32_t dstId)
         }
 
         int status = req["status"].get<int>();
-        if (status != network::RPC::OK) {
+        if (status != network::NetRPC::OK) {
             ::LogError(LOG_DMR, "DMR Slot %u, failed to notify the CC %s:%u of the touch of, dstId = %u", m_slotNo, m_controlChData.address().c_str(), m_controlChData.port(), dstId);
             if (req["message"].is<std::string>()) {
                 std::string retMsg = req["message"].get<std::string>();
@@ -1506,6 +1507,11 @@ void Slot::writeRF_ControlData(uint16_t frameCnt, uint8_t n)
     if (csbkVerbose)
         lc::CSBK::setVerbose(false);
 
+    // disable debug logging during control data writes (if necessary)
+    bool controlDebug = m_debug;
+    if (!m_ccDebug)
+        m_debug = false;
+
     // don't add any frames if the queue is full
     uint8_t len = DMR_FRAME_LENGTH_BYTES + 2U;
     uint32_t space = m_txQueue.freeSpace();
@@ -1615,6 +1621,7 @@ void Slot::writeRF_ControlData(uint16_t frameCnt, uint8_t n)
     } while (i <= seqCnt);
 
     lc::CSBK::setVerbose(csbkVerbose);
+    m_debug = controlDebug;
 }
 
 /* Clears the flag indicating whether the slot is a TSCC payload slot. */

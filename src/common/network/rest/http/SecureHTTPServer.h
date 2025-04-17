@@ -15,7 +15,7 @@
 #if !defined(__REST_HTTP__SECURE_HTTP_SERVER_H__)
 #define __REST_HTTP__SECURE_HTTP_SERVER_H__
 
-#if defined(ENABLE_TCP_SSL)
+#if defined(ENABLE_SSL)
 
 #include "common/Defines.h"
 #include "common/network/rest/http/SecureServerConnection.h"
@@ -186,6 +186,6 @@ namespace network
     } // namespace rest
 } // namespace network
 
-#endif // ENABLE_TCP_SSL
+#endif // ENABLE_SSL
 
 #endif // __REST_HTTP__SECURE_HTTP_SERVER_H__

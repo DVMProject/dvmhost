@@ -147,7 +147,7 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                                 .tag("dstId", std::to_string(dstId))
                                     .field("duration", duration)
                                 .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
-                            .request(m_network->m_influxServer);
+                            .requestAsync(m_network->m_influxServer);
                     }
 
                     m_network->eraseStreamPktSeq(peerId, streamId);
@@ -570,9 +570,9 @@ bool TagNXDNData::validate(uint32_t peerId, lc::RTCH& lc, uint8_t messageType, u
                         .tag("streamId", std::to_string(streamId))
                         .tag("srcId", std::to_string(lc.getSrcId()))
                         .tag("dstId", std::to_string(lc.getDstId()))
-                            .field("message", INFLUXDB_ERRSTR_DISABLED_SRC_RID)
+                            .field("message", std::string(INFLUXDB_ERRSTR_DISABLED_SRC_RID))
                         .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
-                    .request(m_network->m_influxServer);
+                    .requestAsync(m_network->m_influxServer);
             }
 
             // report In-Call Control to the peer sending traffic
@@ -606,9 +606,9 @@ bool TagNXDNData::validate(uint32_t peerId, lc::RTCH& lc, uint8_t messageType, u
                             .tag("streamId", std::to_string(streamId))
                             .tag("srcId", std::to_string(lc.getSrcId()))
                             .tag("dstId", std::to_string(lc.getDstId()))
-                                .field("message", INFLUXDB_ERRSTR_DISABLED_DST_RID)
+                                .field("message", std::string(INFLUXDB_ERRSTR_DISABLED_DST_RID))
                             .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
-                        .request(m_network->m_influxServer);
+                        .requestAsync(m_network->m_influxServer);
                 }
 
                 // report In-Call Control to the peer sending traffic
@@ -628,9 +628,9 @@ bool TagNXDNData::validate(uint32_t peerId, lc::RTCH& lc, uint8_t messageType, u
                             .tag("streamId", std::to_string(streamId))
                             .tag("srcId", std::to_string(lc.getSrcId()))
                             .tag("dstId", std::to_string(lc.getDstId()))
-                                .field("message", INFLUXDB_ERRSTR_DISABLED_SRC_RID)
+                                .field("message", std::string(INFLUXDB_ERRSTR_DISABLED_SRC_RID))
                             .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
-                        .request(m_network->m_influxServer);
+                        .requestAsync(m_network->m_influxServer);
                 }
 
                 LogWarning(LOG_NET, "NXDN, illegal/unknown RID attempted access, srcId = %u, dstId = %u", lc.getSrcId(), lc.getDstId());
@@ -656,9 +656,9 @@ bool TagNXDNData::validate(uint32_t peerId, lc::RTCH& lc, uint8_t messageType, u
                     .tag("streamId", std::to_string(streamId))
                     .tag("srcId", std::to_string(lc.getSrcId()))
                     .tag("dstId", std::to_string(lc.getDstId()))
-                        .field("message", INFLUXDB_ERRSTR_INV_TALKGROUP)
+                        .field("message", std::string(INFLUXDB_ERRSTR_INV_TALKGROUP))
                     .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
-                .request(m_network->m_influxServer);
+                .requestAsync(m_network->m_influxServer);
         }
 
         // report In-Call Control to the peer sending traffic
@@ -687,9 +687,9 @@ bool TagNXDNData::validate(uint32_t peerId, lc::RTCH& lc, uint8_t messageType, u
                     .tag("streamId", std::to_string(streamId))
                     .tag("srcId", std::to_string(lc.getSrcId()))
                     .tag("dstId", std::to_string(lc.getDstId()))
-                        .field("message", INFLUXDB_ERRSTR_DISABLED_SRC_RID)
+                        .field("message", std::string(INFLUXDB_ERRSTR_DISABLED_SRC_RID))
                     .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
-                .request(m_network->m_influxServer);
+                .requestAsync(m_network->m_influxServer);
         }
 
         LogWarning(LOG_NET, "NXDN, illegal/unknown RID attempted access, srcId = %u, dstId = %u", lc.getSrcId(), lc.getDstId());
@@ -711,7 +711,7 @@ bool TagNXDNData::validate(uint32_t peerId, lc::RTCH& lc, uint8_t messageType, u
                     .tag("dstId", std::to_string(lc.getDstId()))
                         .field("message", INFLUXDB_ERRSTR_DISABLED_TALKGROUP)
                     .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
-                .request(m_network->m_influxServer);
+                .requestAsync(m_network->m_influxServer);
         }
 
         // report In-Call Control to the peer sending traffic
@@ -734,9 +734,9 @@ bool TagNXDNData::validate(uint32_t peerId, lc::RTCH& lc, uint8_t messageType, u
                             .tag("streamId", std::to_string(streamId))
                             .tag("srcId", std::to_string(lc.getSrcId()))
                             .tag("dstId", std::to_string(lc.getDstId()))
-                                .field("message", INFLUXDB_ERRSTR_RID_NOT_PERMITTED)
+                                .field("message", std::string(INFLUXDB_ERRSTR_RID_NOT_PERMITTED))
                             .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
-                        .request(m_network->m_influxServer);
+                        .requestAsync(m_network->m_influxServer);
                 }
 
                 // report In-Call Control to the peer sending traffic

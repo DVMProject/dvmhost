@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2022,2024,2025 Bryan Biedenkapp, N2PLL
  *
  */
 #include "Defines.h"
@@ -38,9 +38,12 @@ void MESSAGE_TYPE_REG::decode(const uint8_t* data, uint32_t length, uint32_t off
     RCCH::decode(data, rcch, length, offset);
 
     m_regOption = rcch[1U] >> 3;                                                    // Registration Option
-    m_locId = (uint16_t)((rcch[2U] << 8) | rcch[3U]) & 0xFFFFU;                     // Location ID
+
+    m_locId = ((rcch[1U] & 0x07U) << 3) + ((rcch[2U] & 0xFFU) << 8U) +              // Location ID
+        (rcch[3U] & 0xFFU);                                                         // ...
+
     m_srcId = (uint16_t)((rcch[4U] << 8) | rcch[5U]) & 0xFFFFU;                     // Source Radio Address
-    m_dstId = (uint16_t)((rcch[6U] << 8) | rcch[7U]) & 0xFFFFU;                     // Target Radio Address
+    m_dstId = (uint16_t)((rcch[6U] << 8) | rcch[7U]) & 0xFFFFU;                     // Talkgroup Address
     // bryanb: maybe process subscriber type? (byte 8 and 9)
     m_version = rcch[10U];                                                          // Version
 }
@@ -53,11 +56,16 @@ void MESSAGE_TYPE_REG::encode(uint8_t* data, uint32_t length, uint32_t offset)
     uint8_t rcch[NXDN_RCCH_LC_LENGTH_BYTES + 4U];
     ::memset(rcch, 0x00U, NXDN_RCCH_LC_LENGTH_BYTES + 4U);
 
-    rcch[2U] = (m_siteData.locId() >> 8) & 0xFFU;                                   // ...
-    rcch[3U] = (m_siteData.locId() >> 0) & 0xFFU;                                   // ...
+    rcch[1U] = (m_regOption << 3) +                                                 // Registration Option
+            (m_siteData.locId() >> 22U) & 0x03U;                                    // Location ID
+
+    uint16_t systemCode = (m_siteData.locId() >> 12U) << 7U;
+    rcch[2U] = (systemCode >> 8U) & 0x03U;                                          // ...
+    rcch[3U] = systemCode & 0xFFU;                                                  // ...
+
     rcch[4U] = (m_srcId >> 8U) & 0xFFU;                                             // Source Radio Address
     rcch[5U] = (m_srcId >> 0U) & 0xFFU;                                             // ...
-    rcch[6U] = (m_dstId >> 8U) & 0xFFU;                                             // Target Radio Address
+    rcch[6U] = (m_dstId >> 8U) & 0xFFU;                                             // Talkgroup Address
     rcch[7U] = (m_dstId >> 0U) & 0xFFU;                                             // ...
     rcch[8U] = m_causeRsp;                                                          // Cause (MM)
 

@@ -298,26 +298,29 @@ void FNENetwork::clock(uint32_t ms)
             uint32_t id = peer.first;
             FNEPeerConnection* connection = peer.second;
             if (connection != nullptr) {
-                if (connection->connected()) {
-                    uint64_t dt = connection->lastPing() + ((m_host->m_pingTime * 1000) * m_host->m_maxMissedPings);
-                    if (dt < now) {
-                        LogInfoEx(LOG_NET, "PEER %u (%s) timed out, dt = %u, now = %u", id, connection->identity().c_str(),
-                            dt, now);
+                uint64_t dt = 0U;
+                if (connection->isExternalPeer() || connection->isPeerLink())
+                    dt = connection->lastPing() + ((m_host->m_pingTime * 1000) * (m_host->m_maxMissedPings * 2U));
+                else
+                    dt = connection->lastPing() + ((m_host->m_pingTime * 1000) * m_host->m_maxMissedPings);
 
-                        // set connection states for this stale connection
-                        connection->connected(false);
-                        connection->connectionState(NET_STAT_INVALID);
+                if (dt < now) {
+                    LogInfoEx(LOG_NET, "PEER %u (%s) timed out, dt = %u, now = %u", id, connection->identity().c_str(),
+                        dt, now);
 
-                        // if the connection was an external peer or a peer link -- be noisy about a possible
-                        // netsplit
-                        if (connection->isExternalPeer() || connection->isPeerLink()) {
-                            for (uint8_t i = 0U; i < 3U; i++)
-                                LogWarning(LOG_NET, "PEER %u (%s) downstream netsplit, dt = %u, now = %u", id, connection->identity().c_str(),
-                                    dt, now);
-                        }
+                    // set connection states for this stale connection
+                    connection->connected(false);
+                    connection->connectionState(NET_STAT_INVALID);
 
-                        peersToRemove.push_back(id);
+                    // if the connection was an external peer or a peer link -- be noisy about a possible
+                    // netsplit
+                    if (connection->isExternalPeer() || connection->isPeerLink()) {
+                        for (uint8_t i = 0U; i < 3U; i++)
+                            LogWarning(LOG_NET, "PEER %u (%s) downstream netsplit, dt = %u, now = %u", id, connection->identity().c_str(),
+                                dt, now);
                     }
+
+                    peersToRemove.push_back(id);
                 }
             }
         }
@@ -1205,9 +1208,11 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                                                 LogMessage(LOG_NET, "PEER %u (%s) no local key or container, requesting key from upstream master, algId = $%02X, kID = $%04X", peerId, connection->identity().c_str(),
                                                                     modifyKey->getAlgId(), modifyKey->getKId());
 
-                                                                network->m_keyQueueMutex.try_lock_for(std::chrono::milliseconds(60));
+                                                                bool locked = network->m_keyQueueMutex.try_lock_for(std::chrono::milliseconds(60));
                                                                 network->m_peerLinkKeyQueue[peerId] = modifyKey->getKId();
-                                                                network->m_keyQueueMutex.unlock();
+
+                                                                if (locked)
+                                                                    network->m_keyQueueMutex.unlock();
 
                                                                 peer.second->writeMaster({ NET_FUNC::KEY_REQ, NET_SUBFUNC::NOP }, 
                                                                     req->buffer, req->length, RTP_END_OF_CALL_SEQ, 0U, false, false);
@@ -1268,7 +1273,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                                             .field("identity", connection->identity())
                                                             .field("msg", payload)
                                                         .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
-                                                    .request(network->m_influxServer);
+                                                    .requestAsync(network->m_influxServer);
                                             }
                                         }
                                         else {
@@ -1309,7 +1314,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                                             .field("identity", connection->identity())
                                                             .field("msg", payload)
                                                         .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
-                                                    .request(network->m_influxServer);
+                                                    .requestAsync(network->m_influxServer);
                                             }
                                         }
                                         else {
@@ -2592,7 +2597,7 @@ bool FNENetwork::writePeerACK(uint32_t peerId, uint32_t streamId, const uint8_t*
     }
 
     return writePeer(peerId, { NET_FUNC::ACK, NET_SUBFUNC::NOP }, buffer, length + 10U, RTP_END_OF_CALL_SEQ, streamId, 
-        false);
+        false, false, true);
 }
 
 /* Helper to log a warning specifying which NAK reason is being sent a peer. */

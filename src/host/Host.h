@@ -34,7 +34,7 @@
 #include "common/lookups/TalkgroupRulesLookup.h"
 #include "common/network/json/json.h"
 #include "common/network/Network.h"
-#include "common/network/RPC.h"
+#include "common/network/NetRPC.h"
 #include "common/yaml/Yaml.h"
 #include "dmr/Control.h"
 #include "p25/Control.h"
@@ -61,7 +61,7 @@
 // ---------------------------------------------------------------------------
 
 /** @brief  */
-extern network::RPC* g_RPC;
+extern network::NetRPC* g_RPC;
 
 // ---------------------------------------------------------------------------
 //  Class Prototypes

@@ -7,7 +7,7 @@ on:
       build_type:
         description: "CMake Build Type"
         required: true
-        default: "Release"
+        default: "RelWithDebInfo"
         type: choice
         options:
           - Release
@@ -35,7 +35,7 @@ permissions:
 jobs:
   setup:
     name: Setup
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     outputs:
       APPNAME: ${{ steps.get_appname.outputs.APPNAME }}
       DATE: ${{ steps.get_date.outputs.DATE }}
@@ -52,9 +52,8 @@ jobs:
     needs: [setup]
     strategy:
       matrix:
-#        arch: ["amd64", "arm", "aarch64"]
         arch: ["amd64", "arm", "aarch64", "armhf"]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     env:
       PACKAGENAME: ${{ needs.setup.outputs.APPNAME }}-${{ needs.setup.outputs.DATE }}-${{ matrix.arch }}
       DEBIAN_FRONTEND: noninteractive
@@ -63,17 +62,40 @@ jobs:
         uses: actions/checkout@v3
         with:
           submodules: recursive
+      - name: Setup architecture support
+        run: |
+          sudo dpkg --add-architecture armhf
+          sudo dpkg --add-architecture arm64
+          echo "deb [arch=amd64] http://archive.ubuntu.com/ubuntu jammy main restricted universe multiverse" | sudo tee /etc/apt/sources.list
+          echo "deb [arch=amd64] http://archive.ubuntu.com/ubuntu jammy-updates main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list
+          echo "deb [arch=armhf,arm64] http://ports.ubuntu.com/ubuntu-ports jammy main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list
+          echo "deb [arch=armhf,arm64] http://ports.ubuntu.com/ubuntu-ports jammy-updates main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list
+          sudo apt-get update
       - name: Install dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y git build-essential cmake \
             g++-arm-linux-gnueabihf \
             gcc-arm-linux-gnueabihf \
-            g++-aarch64-linux-gnu \
-            libasio-dev libssl-dev
+            g++-aarch64-linux-gnu
+
+          if [[ "${{ matrix.arch }}" == 'aarch64' ]]; then
+            sudo apt-get install -y libasio-dev:arm64 libssl-dev:arm64 libncurses-dev:arm64
+          elif [[ "${{ matrix.arch }}" == 'arm' ]]; then
+            sudo apt-get install -y libasio-dev:armhf libssl-dev:armhf libncurses-dev:armhf
+          elif [[ "${{ matrix.arch }}" == 'armhf' ]]; then
+            sudo apt-get install -y libasio-dev:armhf libssl-dev:armhf
+          else
+            sudo apt-get install -y libasio-dev libssl-dev libncurses-dev
+          fi
       - name: Build
         run: |
-          build_args='-DENABLE_TUI_SUPPORT=0'
+          build_args=''
+          if [[ "${{ matrix.arch }}" == 'amd64' || "${{ matrix.arch }}" == 'arm' || "${{ matrix.arch }}" == 'aarch64' ]]; then
+            build_args='-DENABLE_TUI_SUPPORT=1'
+          else
+            build_args='-DENABLE_TUI_SUPPORT=0'
+          fi
           if [[ "${{ github.event_name }}" == 'push' ]]; then
             build_args="$build_args -DCMAKE_BUILD_TYPE=${{ inputs.build_type }}"
             if [[ "${{ inputs.strip_symbols }}" == 'true' ]]; then
@@ -91,22 +113,21 @@ jobs:
           fi
 
           make -j $(nproc)
+          make tarball
       - name: Package
         run: |
-          mkdir -p ${{ env.PACKAGENAME }}
-          cp dvmcmd dvmhost dvmfne ${{ env.PACKAGENAME }}
-          zip -9 -r ${{ env.PACKAGENAME }}.zip ${{ env.PACKAGENAME }}
+          mv dvmhost_*.tar.gz ${{ env.PACKAGENAME }}.tar.gz
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ needs.setup.outputs.APPNAME }}-${{ matrix.arch }}
-          path: ${{ env.PACKAGENAME }}.zip
+          path: ${{ env.PACKAGENAME }}.tar.gz
 
   create-release:
     if: ${{ github.event.inputs.create_pre_release == 'true' }}
     name: Create Release
     needs: [setup, build]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     outputs:
       upload_url: ${{ steps.create_release.outputs.upload_url }}
     steps:
@@ -126,7 +147,7 @@ jobs:
     strategy:
       matrix:
         arch: ["amd64", "arm", "aarch64", "armhf"]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     env:
       PACKAGENAME: ${{ needs.setup.outputs.APPNAME }}-${{ needs.setup.outputs.DATE }}-${{ matrix.arch }}
       DEBIAN_FRONTEND: noninteractive
@@ -136,11 +157,10 @@ jobs:
         with:
           name: ${{ needs.setup.outputs.APPNAME }}-${{ matrix.arch }}
       - name: Upload release asset
-        uses: actions/upload-release-asset@v1
+        uses: softprops/action-gh-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: ${{ env.PACKAGENAME }}.zip
-          asset_name: ${{ env.PACKAGENAME }}.zip
-          asset_content_type: application/zip
+          tag_name: ${{ needs.setup.outputs.DATE }}
+          files: ${{ env.PACKAGENAME }}.tar.gz
+          append_body: true

@@ -12,9 +12,9 @@
 #include "common/Timer.h"
 #include "common/Utils.h"
 #include "common/zlib/zlib.h"
-#if defined(ENABLE_TCP_SSL)
+#if defined(ENABLE_SSL)
 #include "xml/rapidxml.h"
-#endif // ENABLE_TCP_SSL
+#endif // ENABLE_SSL
 #include "CryptoContainer.h"
 
 #include <cstdio>
@@ -23,10 +23,10 @@
 #include <string>
 #include <vector>
 
-#if defined(ENABLE_TCP_SSL)
+#if defined(ENABLE_SSL)
 #include <openssl/bio.h>
 #include <openssl/evp.h>
-#endif // ENABLE_TCP_SSL
+#endif // ENABLE_SSL
 
 using namespace crypto;
 
@@ -40,7 +40,7 @@ using namespace crypto;
 //  Global Functions
 // ---------------------------------------------------------------------------
 
-#if defined(ENABLE_TCP_SSL)
+#if defined(ENABLE_SSL)
 /**
  * @brief Calculates the length of a decoded base64 string.
  * @param b64input String containing the base64 encoded data.
@@ -87,7 +87,7 @@ int base64Decode(char* b64message, uint8_t** buffer)
 
     return decodeLen;
 }
-#endif // ENABLE_TCP_SSL
+#endif // ENABLE_SSL
 
 /**
  * @brief 
@@ -145,11 +145,11 @@ CryptoContainer::CryptoContainer(const std::string& filename, const std::string&
     m_file(filename),
     m_password(password),
     m_reloadTime(reloadTime),
-#if !defined(ENABLE_TCP_SSL)
+#if !defined(ENABLE_SSL)
     m_enabled(false),
 #else
     m_enabled(enabled),
-#endif // !ENABLE_TCP_SSL
+#endif // !ENABLE_SSL
     m_stop(false),
     m_keys()
 {
@@ -289,7 +289,7 @@ KeyItem CryptoContainer::find(uint32_t kId)
 
 bool CryptoContainer::load()
 {
-#if !defined(ENABLE_TCP_SSL)
+#if !defined(ENABLE_SSL)
     return false;
 #else
     if (!m_enabled) {
@@ -571,5 +571,5 @@ bool CryptoContainer::load()
     LogInfoEx(LOG_HOST, "Loaded %lu entries into crypto lookup table", size);
 
     return true;
-#endif // !ENABLE_TCP_SSL
+#endif // !ENABLE_SSL
 }

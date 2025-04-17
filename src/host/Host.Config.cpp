@@ -757,7 +757,7 @@ bool Host::createNetwork()
     // initialize RPC
     m_rpcAddress = rpcAddress;
     m_rpcPort = rpcPort;
-    g_RPC = new RPC(rpcAddress, rpcPort, 0U, rpcPassword, rpcDebug);
+    g_RPC = new NetRPC(rpcAddress, rpcPort, 0U, rpcPassword, rpcDebug);
     bool ret = g_RPC->open();
     if (!ret) {
         delete g_RPC;

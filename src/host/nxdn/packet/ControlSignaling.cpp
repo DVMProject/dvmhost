@@ -192,11 +192,11 @@ bool ControlSignaling::process(FuncChannelType::E fct, ChOption::E option, uint8
             IS_SUPPORT_CONTROL_CHECK(rcch->toString(true), MessageType::RCCH_REG, srcId);
 
             if (m_verbose) {
-                LogMessage(LOG_RF, "NXDN, %s, srcId = %u, locId = %u", 
-                    rcch->toString(true).c_str(), srcId, rcch->getLocId());
+                LogMessage(LOG_RF, "NXDN, %s, srcId = %u, locId = $%06X, regOption = $%02X", 
+                    rcch->toString(true).c_str(), srcId, rcch->getLocId(), rcch->getRegOption());
             }
 
-            writeRF_Message_U_Reg_Rsp(srcId, rcch->getLocId());
+            writeRF_Message_U_Reg_Rsp(srcId, dstId, rcch->getLocId());
         }
         break;
         case MessageType::RCCH_GRP_REG:
@@ -205,7 +205,7 @@ bool ControlSignaling::process(FuncChannelType::E fct, ChOption::E option, uint8
             IS_SUPPORT_CONTROL_CHECK(rcch->toString(true), MessageType::RCCH_GRP_REG, srcId);
 
             if (m_verbose) {
-                LogMessage(LOG_RF, "NXDN, %s, srcId = %u, dstId = %u, locId = %u", 
+                LogMessage(LOG_RF, "NXDN, %s, srcId = %u, dstId = %u, locId = $%06X", 
                     rcch->toString(true).c_str(), srcId, dstId, rcch->getLocId());
             }
 
@@ -388,6 +388,11 @@ void ControlSignaling::writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adj
     if (rcchVerbose)
         lc::RCCH::setVerbose(false);
 
+    // disable debug logging during control data writes (if necessary)
+    bool controlDebug = m_nxdn->m_debug;
+    if (!m_nxdn->m_ccDebug)
+        m_nxdn->m_debug = m_debug = false;
+
     // don't add any frames if the queue is full
     uint8_t len = NXDN_FRAME_LENGTH_BYTES + 2U;
     uint32_t space = m_nxdn->m_txQueue.freeSpace();
@@ -417,6 +422,7 @@ void ControlSignaling::writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adj
     } while (i <= seqCnt);
 
     lc::RCCH::setVerbose(rcchVerbose);
+    m_nxdn->m_debug = m_debug = controlDebug;
 }
 
 /* Helper to write a grant packet. */
@@ -575,7 +581,7 @@ bool ControlSignaling::writeRF_Message_Grant(uint32_t srcId, uint32_t dstId, uin
                 }
 
                 int status = req["status"].get<int>();
-                if (status != network::RPC::OK) {
+                if (status != network::NetRPC::OK) {
                     if (req["message"].is<std::string>()) {
                         std::string retMsg = req["message"].get<std::string>();
                         ::LogError((net) ? LOG_NET : LOG_RF, "NXDN, RPC failed, %s", retMsg.c_str());
@@ -661,7 +667,7 @@ bool ControlSignaling::writeRF_Message_Grp_Reg_Rsp(uint32_t srcId, uint32_t dstI
 
     // validate the location ID
     if (locId != m_nxdn->m_siteData.locId()) {
-        LogWarning(LOG_RF, "NXDN, %s denial, LOCID rejection, locId = $%04X", rcch->toString().c_str(), locId);
+        LogWarning(LOG_RF, "NXDN, %s denial, LOCID rejection, locId = $%06X", rcch->toString().c_str(), locId);
         ::ActivityLog("NXDN", true, "group affiliation request from %u denied", srcId);
         rcch->setCauseResponse(CauseResponse::MM_REG_FAILED);
     }
@@ -711,14 +717,14 @@ bool ControlSignaling::writeRF_Message_Grp_Reg_Rsp(uint32_t srcId, uint32_t dstI
 
 /* Helper to write a unit registration response packet. */
 
-void ControlSignaling::writeRF_Message_U_Reg_Rsp(uint32_t srcId, uint32_t locId)
+void ControlSignaling::writeRF_Message_U_Reg_Rsp(uint32_t srcId, uint32_t dstId, uint32_t locId)
 {
     std::unique_ptr<rcch::MESSAGE_TYPE_REG> rcch = std::make_unique<rcch::MESSAGE_TYPE_REG>();
     rcch->setCauseResponse(CauseResponse::MM_REG_ACCEPTED);
 
     // validate the location ID
-    if (locId != m_nxdn->m_siteData.locId()) {
-        LogWarning(LOG_RF, "NXDN, %s denial, LOCID rejection, locId = $%04X", rcch->toString().c_str(), locId);
+    if (locId != ((m_nxdn->m_siteData.locId() >> 12U) << 7U)) {
+        LogWarning(LOG_RF, "NXDN, %s denial, LOCID rejection, locId = $%06X", rcch->toString().c_str(), locId);
         ::ActivityLog("NXDN", true, "unit registration request from %u denied", srcId);
         rcch->setCauseResponse(CauseResponse::MM_REG_FAILED);
     }
@@ -730,9 +736,21 @@ void ControlSignaling::writeRF_Message_U_Reg_Rsp(uint32_t srcId, uint32_t locId)
         rcch->setCauseResponse(CauseResponse::MM_REG_FAILED);
     }
 
+    // validate the talkgroup ID
+    if (dstId == 0U) {
+        LogWarning(LOG_RF, "NXDN, %s, TGID 0, dstId = %u", rcch->toString().c_str(), dstId);
+    }
+    else {
+        if (!acl::AccessControl::validateTGId(dstId)) {
+            LogWarning(LOG_RF, "NXDN, %s denial, TGID rejection, dstId = %u", rcch->toString().c_str(), dstId);
+            ::ActivityLog("NXDN", true, "unit registration request from %u to %s %u denied", srcId, "TG ", dstId);
+            rcch->setCauseResponse(CauseResponse::MM_REG_FAILED);
+        }
+    }
+
     if (rcch->getCauseResponse() == CauseResponse::MM_REG_ACCEPTED) {
         if (m_verbose) {
-            LogMessage(LOG_RF, "NXDN, %s, srcId = %u, locId = %u", 
+            LogMessage(LOG_RF, "NXDN, %s, srcId = %u, locId = $%06X", 
                 rcch->toString().c_str(), srcId, locId);
         }
 
@@ -748,7 +766,7 @@ void ControlSignaling::writeRF_Message_U_Reg_Rsp(uint32_t srcId, uint32_t locId)
     }
 
     rcch->setSrcId(srcId);
-    rcch->setDstId(srcId);
+    rcch->setDstId(dstId);
 
     writeRF_Message_Imm(rcch.get(), true);
 }

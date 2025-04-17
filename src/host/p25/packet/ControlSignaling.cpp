@@ -1759,6 +1759,11 @@ void ControlSignaling::writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adj
     if (tsbkVerbose)
         lc::TSBK::setVerbose(false);
 
+    // disable debug logging during control data writes (if necessary)
+    bool controlDebug = m_p25->m_debug;
+    if (!m_p25->m_ccDebug)
+        m_p25->m_debug = m_debug = false;
+
     if (m_convFallback) {
         bool fallbackTx = (frameCnt % 253U) == 0U;
         if (fallbackTx && n == 8U) {
@@ -1901,6 +1906,7 @@ void ControlSignaling::writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adj
     }
 
     lc::TSBK::setVerbose(tsbkVerbose);
+    m_p25->m_debug = m_debug = controlDebug;
 }
 
 /* Helper to generate the given control TSBK into the TSDU frame queue. */
@@ -2302,7 +2308,7 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
                         }
 
                         int status = req["status"].get<int>();
-                        if (status != network::RPC::OK) {
+                        if (status != network::NetRPC::OK) {
                             if (req["message"].is<std::string>()) {
                                 std::string retMsg = req["message"].get<std::string>();
                                 ::LogError((net) ? LOG_NET : LOG_RF, "P25, RPC failed, %s", retMsg.c_str());
@@ -2372,7 +2378,7 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
                         }
 
                         int status = req["status"].get<int>();
-                        if (status != network::RPC::OK) {
+                        if (status != network::NetRPC::OK) {
                             if (req["message"].is<std::string>()) {
                                 std::string retMsg = req["message"].get<std::string>();
                                 ::LogError((net) ? LOG_NET : LOG_RF, "P25, RPC failed, %s", retMsg.c_str());
@@ -2590,7 +2596,7 @@ bool ControlSignaling::writeRF_TSDU_SNDCP_Grant(uint32_t srcId, bool skip, uint3
                     }
 
                     int status = req["status"].get<int>();
-                    if (status != network::RPC::OK) {
+                    if (status != network::NetRPC::OK) {
                         if (req["message"].is<std::string>()) {
                             std::string retMsg = req["message"].get<std::string>();
                             ::LogError(LOG_RF, "P25, RPC failed, %s", retMsg.c_str());

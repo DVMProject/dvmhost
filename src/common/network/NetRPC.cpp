@@ -15,7 +15,7 @@
 #include "common/Log.h"
 #include "common/Thread.h"
 #include "common/Utils.h"
-#include "network/RPC.h"
+#include "network/NetRPC.h"
 
 using namespace network;
 using namespace network::frame;
@@ -34,9 +34,9 @@ using namespace network::frame;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/* Initializes a new instance of the RPC class. */
+/* Initializes a new instance of the NetRPC class. */
 
-RPC::RPC(const std::string& address, uint16_t port, uint16_t localPort, const std::string& password, bool debug) :
+NetRPC::NetRPC(const std::string& address, uint16_t port, uint16_t localPort, const std::string& password, bool debug) :
     m_address(address),
     m_port(port),
     m_debug(debug),
@@ -54,9 +54,9 @@ RPC::RPC(const std::string& address, uint16_t port, uint16_t localPort, const st
     m_frameQueue = new RawFrameQueue(m_socket, debug);
 }
 
-/* Finalizes a instance of the RPC class. */
+/* Finalizes a instance of the NetRPC class. */
 
-RPC::~RPC()
+NetRPC::~NetRPC()
 {
     if (m_frameQueue != nullptr) {
         delete m_frameQueue;
@@ -69,7 +69,7 @@ RPC::~RPC()
 
 /* Updates the timer by the passed number of milliseconds. */
 
-void RPC::clock(uint32_t ms)
+void NetRPC::clock(uint32_t ms)
 {
     sockaddr_storage address;
     uint32_t addrLen;
@@ -82,19 +82,19 @@ void RPC::clock(uint32_t ms)
     uint8_t* raw = buffer.get();
     if (length > 0) {
         if (length < RPC_HEADER_LENGTH_BYTES) {
-            LogError(LOG_NET, "RPC::clock(), message received from network is malformed! %u bytes != %u bytes", 
+            LogError(LOG_NET, "NetRPC::clock(), message received from network is malformed! %u bytes != %u bytes", 
                 RPC_HEADER_LENGTH_BYTES, length);
             return;
         }
 
         // decode RTP header
         if (!rpcHeader.decode(buffer.get())) {
-            LogError(LOG_NET, "RPC::clock(), invalid RPC packet received from network");
+            LogError(LOG_NET, "NetRPC::clock(), invalid RPC packet received from network");
             return;
         }
 
         if (m_debug) {
-            LogDebugEx(LOG_NET, "RPC::clock()", "received RPC, %s:%u, func = $%04X, messageLength = %u", 
+            LogDebugEx(LOG_NET, "NetRPC::clock()", "received RPC, %s:%u, func = $%04X, messageLength = %u", 
                 udp::Socket::address(address).c_str(), udp::Socket::port(address), rpcHeader.getFunction(), rpcHeader.getMessageLength());
         }
 
@@ -105,11 +105,11 @@ void RPC::clock(uint32_t ms)
 
         uint16_t calc = edac::CRC::createCRC16(message.get(), messageLength * 8U);
         if (m_debug) {
-            LogDebugEx(LOG_NET, "RPC::clock()", "RPC, calc = $%04X, crc = $%04X", calc, rpcHeader.getCRC());
+            LogDebugEx(LOG_NET, "NetRPC::clock()", "RPC, calc = $%04X, crc = $%04X", calc, rpcHeader.getCRC());
         }
 
         if (calc != rpcHeader.getCRC()) {
-            LogError(LOG_NET, "RPC::clock(), failed CRC CCITT-162 check");
+            LogError(LOG_NET, "NetRPC::clock(), failed CRC CCITT-162 check");
             return;
         }
 
@@ -119,13 +119,13 @@ void RPC::clock(uint32_t ms)
         json::value v;
         std::string err = json::parse(v, content);
         if (!err.empty()) {
-            LogError(LOG_NET, "RPC::clock(), invalid RPC JSON payload, %s", err.c_str());
+            LogError(LOG_NET, "NetRPC::clock(), invalid RPC JSON payload, %s", err.c_str());
             return;
         }
 
         // ensure parsed JSON is an object
         if (!v.is<json::object>()) {
-            LogError(LOG_NET, "RPC::clock(), invalid RPC JSON payload, request was not a JSON object");
+            LogError(LOG_NET, "NetRPC::clock(), invalid RPC JSON payload, request was not a JSON object");
             return;
         }
 
@@ -158,7 +158,7 @@ void RPC::clock(uint32_t ms)
                 }
 
                 int status = request["status"].get<int>();
-                if (status != network::RPC::OK) {
+                if (status != network::NetRPC::OK) {
                     if (request["message"].is<std::string>()) {
                         std::string retMsg = request["message"].get<std::string>();
                         ::LogError(LOG_NET, "RPC %s:%u failed, %s", udp::Socket::address(address).c_str(), udp::Socket::port(address), retMsg.c_str());
@@ -166,14 +166,14 @@ void RPC::clock(uint32_t ms)
                 }
             }
             else
-                LogWarning(LOG_NET, "RPC::clock(), ignoring unhandled function, func = $%04X, reply = %u", rpcHeader.getFunction() & 0x3FFFU, isReply);
+                LogWarning(LOG_NET, "NetRPC::clock(), ignoring unhandled function, func = $%04X, reply = %u", rpcHeader.getFunction() & 0x3FFFU, isReply);
         }
     }
 }
 
 /* Writes an RPC request to the network. */
 
-bool RPC::req(uint16_t func, const json::object& request, RPCType reply, std::string address, uint16_t port,
+bool NetRPC::req(uint16_t func, const json::object& request, RPCType reply, std::string address, uint16_t port,
     bool blocking)
 {
     sockaddr_storage addr;
@@ -187,14 +187,14 @@ bool RPC::req(uint16_t func, const json::object& request, RPCType reply, std::st
 
 /* Writes an RPC request to the network. */
 
-bool RPC::req(uint16_t func, const json::object& request, RPCType reply, sockaddr_storage& address, uint32_t addrLen,
+bool NetRPC::req(uint16_t func, const json::object& request, RPCType reply, sockaddr_storage& address, uint32_t addrLen,
     bool blocking)
 {
     json::value v = json::value(request);
     std::string json = v.serialize();
 
     if (m_debug) {
-        LogDebugEx(LOG_NET, "RPC::req()", "sending RPC, %s:%u, func = $%04X, messageLength = %u", 
+        LogDebugEx(LOG_NET, "NetRPC::req()", "sending RPC, %s:%u, func = $%04X, messageLength = %u", 
             udp::Socket::address(address).c_str(), udp::Socket::port(address), func, json.length() + 1U);
     }
 
@@ -217,7 +217,7 @@ bool RPC::req(uint16_t func, const json::object& request, RPCType reply, sockadd
 
     uint16_t crc = edac::CRC::createCRC16((uint8_t*)message, (json.length() + 1U) * 8U);
     if (m_debug) {
-        LogDebugEx(LOG_NET, "RPC::req()", "RPC, crc = $%04X", crc);
+        LogDebugEx(LOG_NET, "NetRPC::req()", "RPC, crc = $%04X", crc);
     }
 
     header.setCRC(crc);
@@ -252,7 +252,7 @@ bool RPC::req(uint16_t func, const json::object& request, RPCType reply, sockadd
                 }
 
                 if (m_debug)
-                    LogDebugEx(LOG_HOST, "RPC::req()", "blocking = %u, to = %d", blocking, timeout);
+                    LogDebugEx(LOG_HOST, "NetRPC::req()", "blocking = %u, to = %d", blocking, timeout);
 
                 timeout--;
                 Thread::sleep(1);
@@ -274,7 +274,7 @@ bool RPC::req(uint16_t func, const json::object& request, RPCType reply, sockadd
 
 /* Helper to generate a default response error payload. */
 
-void RPC::defaultResponse(json::object& reply, std::string message, StatusType status)
+void NetRPC::defaultResponse(json::object& reply, std::string message, StatusType status)
 {
     reply = json::object();
 
@@ -285,7 +285,7 @@ void RPC::defaultResponse(json::object& reply, std::string message, StatusType s
 
 /* Opens connection to the network. */
 
-bool RPC::open()
+bool NetRPC::open()
 {
     if (m_debug)
         LogMessage(LOG_NET, "Opening RPC network");
@@ -312,7 +312,7 @@ bool RPC::open()
 
 /* Closes connection to the network. */
 
-void RPC::close()
+void NetRPC::close()
 {
     if (m_debug)
         LogMessage(LOG_NET, "Closing RPC network");
@@ -327,7 +327,7 @@ void RPC::close()
 
 /* Writes an RPC reply to the network. */
 
-bool RPC::reply(uint16_t func, json::object& reply, sockaddr_storage& address, uint32_t addrLen)
+bool NetRPC::reply(uint16_t func, json::object& reply, sockaddr_storage& address, uint32_t addrLen)
 {
     json::value v = json::value(reply);
     std::string json = v.serialize();
@@ -358,7 +358,7 @@ bool RPC::reply(uint16_t func, json::object& reply, sockaddr_storage& address, u
 
 /* Default status response handler. */
 
-void RPC::defaultHandler(json::object& request, json::object& reply)
+void NetRPC::defaultHandler(json::object& request, json::object& reply)
 {
     reply = json::object();
 

@@ -31,7 +31,7 @@
 #include "common/lookups/IdenTableLookup.h"
 #include "common/lookups/RadioIdLookup.h"
 #include "common/lookups/TalkgroupRulesLookup.h"
-#include "common/network/RPC.h"
+#include "common/network/NetRPC.h"
 #include "common/network/RTPFNEHeader.h"
 #include "common/network/Network.h"
 #include "common/p25/SiteData.h"
@@ -380,6 +380,7 @@ namespace p25
 
         bool m_notifyCC;
 
+        bool m_ccDebug;
         bool m_verbose;
         bool m_debug;
 

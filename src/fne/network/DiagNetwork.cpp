@@ -231,7 +231,7 @@ void* DiagNetwork::threadedNetworkRx(void* arg)
                                                             .field("identity", connection->identity())
                                                             .field("msg", payload)
                                                         .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
-                                                    .request(network->m_influxServer);
+                                                    .requestAsync(network->m_influxServer);
                                             }
 
                                             // repeat traffic to the connected SysView peers
@@ -301,7 +301,7 @@ void* DiagNetwork::threadedNetworkRx(void* arg)
                                                             .field("identity", connection->identity())
                                                             .field("msg", payload)
                                                         .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
-                                                    .request(network->m_influxServer);
+                                                    .requestAsync(network->m_influxServer);
                                             }
                                         }
                                         else {

@@ -168,9 +168,10 @@ namespace nxdn
             /**
              * @brief Helper to write a unit registration response packet.
              * @param srcId Source Radio ID.
+             * @param dstId Destination ID.
              * @param locId Location ID.
              */
-            void writeRF_Message_U_Reg_Rsp(uint32_t srcId, uint32_t locId);
+            void writeRF_Message_U_Reg_Rsp(uint32_t srcId, uint32_t dstId, uint32_t locId);
 
             /**
              * @brief Helper to write a CC SITE_INFO broadcast packet on the RF interface.

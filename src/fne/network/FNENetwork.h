@@ -175,7 +175,7 @@ namespace network
         bool hasStreamPktSeq(uint64_t streamId)
         {
             bool ret = false;
-            m_streamSeqMutex.try_lock_for(std::chrono::milliseconds(60));
+            bool locked = m_streamSeqMutex.try_lock_for(std::chrono::milliseconds(60));
 
             // determine if the stream has a current sequence no and return
             {
@@ -188,7 +188,8 @@ namespace network
                 }
             }
 
-            m_streamSeqMutex.unlock();
+            if (locked)
+                m_streamSeqMutex.unlock();
 
             return ret;
         }
@@ -200,7 +201,7 @@ namespace network
          */
         uint16_t getStreamPktSeq(uint64_t streamId)
         {
-            m_streamSeqMutex.try_lock_for(std::chrono::milliseconds(60));
+            bool locked = m_streamSeqMutex.try_lock_for(std::chrono::milliseconds(60));
 
             // find the current sequence no and return
             uint32_t pktSeq = 0U;
@@ -213,7 +214,8 @@ namespace network
                 }
             }
 
-            m_streamSeqMutex.unlock();
+            if (locked)
+                m_streamSeqMutex.unlock();
 
             return pktSeq;
         }
@@ -226,7 +228,7 @@ namespace network
          */
         uint16_t incStreamPktSeq(uint64_t streamId, uint16_t initialSeq)
         {
-            m_streamSeqMutex.try_lock_for(std::chrono::milliseconds(60));
+            bool locked = m_streamSeqMutex.try_lock_for(std::chrono::milliseconds(60));
 
             // find the current sequence no, increment and return
             uint32_t pktSeq = 0U;
@@ -246,7 +248,8 @@ namespace network
                 }
             }
 
-            m_streamSeqMutex.unlock();
+            if (locked)
+                m_streamSeqMutex.unlock();
 
             return pktSeq;
         }
@@ -257,7 +260,7 @@ namespace network
          */
         void eraseStreamPktSeq(uint64_t streamId)
         {
-            m_streamSeqMutex.try_lock_for(std::chrono::milliseconds(60));
+            bool locked = m_streamSeqMutex.try_lock_for(std::chrono::milliseconds(60));
 
             // find the sequence no and erase
             {
@@ -267,7 +270,8 @@ namespace network
                 }
             }
 
-            m_streamSeqMutex.unlock();
+            if (locked)
+                m_streamSeqMutex.unlock();
         }
 
     public:

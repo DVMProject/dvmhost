@@ -13,6 +13,7 @@ file(GLOB dvmfne_SRC
     "src/fne/network/callhandler/packetdata/*.h"
     "src/fne/network/callhandler/packetdata/*.cpp"
     "src/fne/network/influxdb/*.h"
+    "src/fne/network/influxdb/*.cpp"
     "src/fne/network/*.h"
     "src/fne/network/*.cpp"
     "src/fne/xml/*.h"
