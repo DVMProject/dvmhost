@@ -392,6 +392,8 @@ namespace network
         frame::RTPFNEHeader fneHeader;      //! RTP FNE Header
         int length = 0U;                    //! Length of raw data buffer
         uint8_t* buffer = nullptr;          //! Raw data buffer
+
+        uint64_t pktRxTime;                 //! Packet receive time
     };
 
     // ---------------------------------------------------------------------------

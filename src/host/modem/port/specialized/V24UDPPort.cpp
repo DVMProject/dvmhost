@@ -31,7 +31,7 @@ using namespace network::udp;
 //  Constants
 // ---------------------------------------------------------------------------
 
-#define MAX_THREAD_CNT 8U
+#define MAX_THREAD_CNT 4U
 #define RTP_END_OF_CALL_SEQ 65535
 
 const uint32_t BUFFER_LENGTH = 2000U;

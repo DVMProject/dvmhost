@@ -63,7 +63,7 @@ namespace network
         //  Constants
         // ---------------------------------------------------------------------------
 
-        #define MAX_INFLUXQL_THREAD_CNT 64U
+        #define MAX_INFLUXQL_THREAD_CNT 16U
         #define MAX_INFLUXQL_QUEUED_CNT 256U
 
         // ---------------------------------------------------------------------------

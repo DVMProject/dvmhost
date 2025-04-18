@@ -38,6 +38,8 @@ const uint32_t MAX_HARD_CONN_CAP = 250U;
 const uint8_t MAX_PEER_LIST_BEFORE_FLUSH = 10U;
 const uint32_t MAX_RID_LIST_CHUNK = 50U;
 
+const uint64_t PACKET_LATE_TIME = 200U; // 200ms
+
 // ---------------------------------------------------------------------------
 //  Static Class Members
 // ---------------------------------------------------------------------------
@@ -261,6 +263,8 @@ void FNENetwork::processNetwork()
         req->addrLen = addrLen;
         req->rtpHeader = rtpHeader;
         req->fneHeader = fneHeader;
+
+        req->pktRxTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
         req->length = length;
         req->buffer = new uint8_t[length];
@@ -522,6 +526,14 @@ void FNENetwork::taskNetworkRx(void* arg)
         if (req->length > 0) {
             uint32_t peerId = req->fneHeader.getPeerId();
             uint32_t streamId = req->fneHeader.getStreamId();
+
+            // determine if this packet is late (i.e. are we processing this packet more than 200ms after it was received?)
+            uint64_t dt = req->pktRxTime + PACKET_LATE_TIME;
+            if (dt < now) {
+                std::string peerIdentity = network->resolvePeerIdentity(peerId);
+                LogWarning(LOG_NET, "PEER %u (%s) packet processing latency >200ms, dt = %u, now = %u", peerId, peerIdentity.c_str(),
+                    dt, now);
+            }
 
             // update current peer packet sequence and stream ID
             if (peerId > 0 && (network->m_peers.find(peerId) != network->m_peers.end()) && streamId != 0U) {
