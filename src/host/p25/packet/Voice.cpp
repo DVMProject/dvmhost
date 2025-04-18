@@ -35,7 +35,7 @@ using namespace p25::packet;
 //  Constants
 // ---------------------------------------------------------------------------
 
-const uint32_t VOC_LDU1_COUNT = 3U;
+const uint32_t PKT_LDU1_COUNT = 3U;
 const uint32_t ROAM_LDU1_COUNT = 1U;
 
 // ---------------------------------------------------------------------------
@@ -59,7 +59,8 @@ void Voice::resetRF()
     m_rfErrs = 0U;
     m_rfBits = 1U;
     m_rfUndecodableLC = 0U;
-    m_vocLDU1Count = 0U;
+    m_pktLDU1Count = 0U;
+    m_grpUpdtCount = 0U;
     m_roamLDU1Count = 0U;
 
     m_inbound = false;
@@ -80,7 +81,8 @@ void Voice::resetNet()
 
     m_netFrames = 0U;
     m_netLost = 0U;
-    m_vocLDU1Count = 0U;
+    m_pktLDU1Count = 0U;
+    m_grpUpdtCount = 0U;
     m_roamLDU1Count = 0U;
     m_p25->m_networkWatchdog.stop();
 
@@ -599,7 +601,8 @@ bool Voice::process(uint8_t* data, uint32_t len)
             m_rfErrs = 0U;
             m_rfBits = 1U;
             m_rfUndecodableLC = 0U;
-            m_vocLDU1Count = 0U;
+            m_pktLDU1Count = 0U;
+            m_grpUpdtCount = 0U;
             m_roamLDU1Count = 0U;
             m_p25->m_rfTimeout.start();
             m_lastDUID = DUID::HDU;
@@ -693,14 +696,40 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 m_p25->notifyCC_TouchGrant(m_rfLC.getDstId());
             }
 
-            // conventional registration or DVRS support?
-            if ((m_p25->m_enableControl && !m_p25->m_dedicatedControl) || m_p25->m_voiceOnControl) {
-                // per TIA-102.AABD-B transmit RFSS_STS_BCAST every 3 superframes (e.g. every 3 LDU1s)
-                m_vocLDU1Count++;
-                if (m_vocLDU1Count > VOC_LDU1_COUNT) {
-                    m_vocLDU1Count = 0U;
+            // are we swapping the LC out for the RFSS_STS_BCAST or LC_GROUP_UPDT?
+            m_pktLDU1Count++;
+            if (m_pktLDU1Count > PKT_LDU1_COUNT) {
+                m_pktLDU1Count = 0U;
+
+                // conventional registration or DVRS support?
+                if ((m_p25->m_enableControl && !m_p25->m_dedicatedControl) || m_p25->m_voiceOnControl) {
+                    // per TIA-102.AABD-B transmit RFSS_STS_BCAST every 3 superframes (e.g. every 3 LDU1s)
                     m_rfLC.setMFId(MFG_STANDARD);
                     m_rfLC.setLCO(LCO::RFSS_STS_BCAST);
+                }
+                else {
+                    std::lock_guard<std::mutex> lock(m_p25->m_activeTGLock);
+                    if (m_p25->m_activeTG.size() > 0) {
+                        if (m_grpUpdtCount > m_p25->m_activeTG.size())
+                            m_grpUpdtCount = 0U;
+
+                        if (m_p25->m_activeTG.size() < 2) {
+                            uint32_t dstId = m_p25->m_activeTG.at(0);
+                            m_rfLC.setMFId(MFG_STANDARD);
+                            m_rfLC.setLCO(LCO::GROUP_UPDT);
+                            m_rfLC.setDstId(dstId);
+                        }
+                        else {
+                            uint32_t dstId = m_p25->m_activeTG.at(m_grpUpdtCount);
+                            uint32_t dstIdB = m_p25->m_activeTG.at(m_grpUpdtCount + 1U);
+                            m_rfLC.setMFId(MFG_STANDARD);
+                            m_rfLC.setLCO(LCO::GROUP_UPDT);
+                            m_rfLC.setDstId(dstId);
+                            m_rfLC.setDstIdB(dstIdB);
+
+                            m_grpUpdtCount++;
+                        }
+                    }
                 }
             }
 
@@ -988,7 +1017,8 @@ bool Voice::process(uint8_t* data, uint32_t len)
             m_rfErrs = 0U;
             m_rfBits = 1U;
             m_rfUndecodableLC = 0U;
-            m_vocLDU1Count = 0U;
+            m_pktLDU1Count = 0U;
+            m_grpUpdtCount = 0U;
             m_roamLDU1Count = 0U;
             m_p25->m_rfTimeout.start();
             m_lastDUID = DUID::HDU;
@@ -1478,7 +1508,8 @@ Voice::Voice(Control* p25, bool debug, bool verbose) :
     m_hadVoice(false),
     m_lastRejectId(0U),
     m_silenceThreshold(DEFAULT_SILENCE_THRESHOLD),
-    m_vocLDU1Count(0U),
+    m_pktLDU1Count(0U),
+    m_grpUpdtCount(0U),
     m_roamLDU1Count(0U),
     m_inbound(false),
     m_verbose(verbose),
@@ -1831,7 +1862,8 @@ void Voice::writeNet_LDU1()
         m_p25->m_netTimeout.start();
         m_netFrames = 0U;
         m_netLost = 0U;
-        m_vocLDU1Count = 0U;
+        m_pktLDU1Count = 0U;
+        m_grpUpdtCount = 0U;
         m_roamLDU1Count = 0U;
 
         if (!m_p25->m_disableNetworkHDU) {
@@ -1911,14 +1943,40 @@ void Voice::writeNet_LDU1()
         sysId = lc::LC::getSiteData().sysId();
     }
 
-    // conventional registration or DVRS support?
-    if ((m_p25->m_enableControl && !m_p25->m_dedicatedControl) || m_p25->m_voiceOnControl) {
-        // per TIA-102.AABD-B transmit RFSS_STS_BCAST every 3 superframes (e.g. every 3 LDU1s)
-        m_vocLDU1Count++;
-        if (m_vocLDU1Count > VOC_LDU1_COUNT) {
-            m_vocLDU1Count = 0U;
+    // are we swapping the LC out for the RFSS_STS_BCAST or LC_GROUP_UPDT?
+    m_pktLDU1Count++;
+    if (m_pktLDU1Count > PKT_LDU1_COUNT) {
+        m_pktLDU1Count = 0U;
+
+        // conventional registration or DVRS support?
+        if ((m_p25->m_enableControl && !m_p25->m_dedicatedControl) || m_p25->m_voiceOnControl) {
+            // per TIA-102.AABD-B transmit RFSS_STS_BCAST every 3 superframes (e.g. every 3 LDU1s)
             m_netLC.setMFId(MFG_STANDARD);
             m_netLC.setLCO(LCO::RFSS_STS_BCAST);
+        }
+        else {
+            std::lock_guard<std::mutex> lock(m_p25->m_activeTGLock);
+            if (m_p25->m_activeTG.size() > 0) {
+                if (m_grpUpdtCount > m_p25->m_activeTG.size())
+                    m_grpUpdtCount = 0U;
+
+                if (m_p25->m_activeTG.size() < 2) {
+                    uint32_t dstId = m_p25->m_activeTG.at(0);
+                    m_netLC.setMFId(MFG_STANDARD);
+                    m_netLC.setLCO(LCO::GROUP_UPDT);
+                    m_netLC.setDstId(dstId);
+                }
+                else {
+                    uint32_t dstId = m_p25->m_activeTG.at(m_grpUpdtCount);
+                    uint32_t dstIdB = m_p25->m_activeTG.at(m_grpUpdtCount + 1U);
+                    m_netLC.setMFId(MFG_STANDARD);
+                    m_netLC.setLCO(LCO::GROUP_UPDT);
+                    m_netLC.setDstId(dstId);
+                    m_netLC.setDstIdB(dstIdB);
+
+                    m_grpUpdtCount++;
+                }
+            }
         }
     }
 

@@ -26,12 +26,13 @@ using namespace network::callhandler;
 
 /* Initializes a new instance of the DiagNetwork class. */
 
-DiagNetwork::DiagNetwork(HostFNE* host, FNENetwork* fneNetwork, const std::string& address, uint16_t port) :
+DiagNetwork::DiagNetwork(HostFNE* host, FNENetwork* fneNetwork, const std::string& address, uint16_t port, uint16_t workerCnt) :
     BaseNetwork(fneNetwork->m_peerId, true, fneNetwork->m_debug, true, true, fneNetwork->m_allowActivityTransfer, fneNetwork->m_allowDiagnosticTransfer),
     m_fneNetwork(fneNetwork),
     m_host(host),
     m_address(address),
-    m_port(port)
+    m_port(port),
+    m_threadPool(workerCnt, "diag")
 {
     assert(fneNetwork != nullptr);
     assert(host != nullptr);
@@ -73,6 +74,7 @@ void DiagNetwork::processNetwork()
         uint32_t peerId = fneHeader.getPeerId();
 
         NetPacketRequest* req = new NetPacketRequest();
+        req->obj = m_fneNetwork;
         req->peerId = peerId;
 
         req->address = address;
@@ -84,11 +86,14 @@ void DiagNetwork::processNetwork()
         req->buffer = new uint8_t[length];
         ::memcpy(req->buffer, buffer.get(), length);
 
-        if (!Thread::runAsThread(m_fneNetwork, threadedNetworkRx, req)) {
-            if (req->buffer != nullptr)
-                delete[] req->buffer;
-            delete req;
-            return;
+        if (!m_threadPool.enqueue(new_pooltask(taskNetworkRx, req))) {
+            LogError(LOG_NET, "Failed to task enqueue network packet request, peerId = %u, %s:%u", peerId, 
+                udp::Socket::address(address).c_str(), udp::Socket::port(address));
+            if (req != nullptr) {
+                if (req->buffer != nullptr)
+                    delete[] req->buffer;
+                delete req;
+            }
         }
     }
 }
@@ -108,6 +113,8 @@ bool DiagNetwork::open()
 {
     if (m_debug)
         LogMessage(LOG_NET, "Opening Network");
+
+    m_threadPool.start();
 
     m_status = NET_STAT_MST_RUNNING;
 
@@ -134,6 +141,9 @@ void DiagNetwork::close()
     if (m_debug)
         LogMessage(LOG_NET, "Closing Network");
 
+    m_threadPool.stop();
+    m_threadPool.wait();
+    
     m_socket->close();
 
     m_status = NET_STAT_INVALID;
@@ -145,16 +155,10 @@ void DiagNetwork::close()
 
 /* Process a data frames from the network. */
 
-void* DiagNetwork::threadedNetworkRx(void* arg)
+void DiagNetwork::taskNetworkRx(void* arg)
 {
     NetPacketRequest* req = (NetPacketRequest*)arg;
     if (req != nullptr) {
-#if defined(_WIN32)
-        ::CloseHandle(req->thread);
-#else
-        ::pthread_detach(req->thread);
-#endif // defined(_WIN32)
-
         FNENetwork* network = static_cast<FNENetwork*>(req->obj);
         if (network == nullptr) {
             if (req != nullptr) {
@@ -163,20 +167,14 @@ void* DiagNetwork::threadedNetworkRx(void* arg)
                 delete req;
             }
 
-            return nullptr;
+            return;
         }
 
         if (req == nullptr)
-            return nullptr;
+            return;
 
         if (req->length > 0) {
             uint32_t peerId = req->fneHeader.getPeerId();
-
-            std::stringstream peerName;
-            peerName << peerId << ":diag-rx-pckt";
-#ifdef _GNU_SOURCE
-            ::pthread_setname_np(req->thread, peerName.str().c_str());
-#endif // _GNU_SOURCE
 
             // process incoming message function opcodes
             switch (req->fneHeader.getFunction()) {
@@ -422,6 +420,4 @@ void* DiagNetwork::threadedNetworkRx(void* arg)
             delete[] req->buffer;
         delete req;
     }
-
-    return nullptr;
 }

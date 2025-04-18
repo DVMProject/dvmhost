@@ -31,6 +31,7 @@ using namespace network::udp;
 //  Constants
 // ---------------------------------------------------------------------------
 
+#define MAX_THREAD_CNT 8U
 #define RTP_END_OF_CALL_SEQ 65535
 
 const uint32_t BUFFER_LENGTH = 2000U;
@@ -80,6 +81,8 @@ V24UDPPort::V24UDPPort(uint32_t peerId, const std::string& address, uint16_t mod
     m_fscState(CS_NOT_CONNECTED),
     m_modemState(STATE_P25),
     m_tx(false),
+    m_ctrlThreadPool(MAX_THREAD_CNT, "v24cc"),
+    m_vcThreadPool(MAX_THREAD_CNT, "v24vc"),
     m_debug(debug)
 {
     assert(peerId > 0U);
@@ -205,6 +208,9 @@ bool V24UDPPort::openFSC()
         return false;
     }
 
+    m_ctrlThreadPool.start();
+    m_vcThreadPool.start();
+
     if (m_controlSocket != nullptr) {
         return m_controlSocket->open(m_controlAddr);
     }
@@ -219,6 +225,8 @@ bool V24UDPPort::open()
     if (m_controlSocket != nullptr) {
         return true; // FSC mode always returns that the port was opened
     } else {
+        m_vcThreadPool.start();
+
         if (m_addrLen == 0U) {
             LogError(LOG_NET, "Unable to resolve the address of the modem");
             return false;
@@ -317,6 +325,12 @@ void V24UDPPort::closeFSC()
             Thread::sleep(500U);
         }
 
+        m_ctrlThreadPool.stop();
+        m_ctrlThreadPool.wait();
+
+        m_vcThreadPool.stop();
+        m_vcThreadPool.wait();
+
         m_controlSocket->close();
     }
 }
@@ -325,6 +339,9 @@ void V24UDPPort::closeFSC()
 
 void V24UDPPort::close()
 {
+    m_vcThreadPool.stop();
+    m_vcThreadPool.wait();
+
     if (m_socket != nullptr)
         m_socket->close();
 }
@@ -348,6 +365,8 @@ void V24UDPPort::processCtrlNetwork()
             Utils::dump(1U, "FSC Control Network Message", buffer.get(), length);
 
         V24PacketRequest* req = new V24PacketRequest();
+        req->obj = this;
+
         req->address = address;
         req->addrLen = addrLen;
 
@@ -355,30 +374,29 @@ void V24UDPPort::processCtrlNetwork()
         req->buffer = new uint8_t[length];
         ::memcpy(req->buffer, buffer.get(), length);
 
-        if (!Thread::runAsThread(this, threadedCtrlNetworkRx, req)) {
-            delete[] req->buffer;
-            delete req;
-            return;
+        // enqueue the task
+        if (!m_ctrlThreadPool.enqueue(new_pooltask(taskCtrlNetworkRx, req))) {
+            LogError(LOG_NET, "Failed to task enqueue control network packet request, %s:%u", 
+                udp::Socket::address(address).c_str(), udp::Socket::port(address));
+            if (req != nullptr) {
+                if (req->buffer != nullptr)
+                    delete[] req->buffer;
+                delete req;
+            }
         }
     }
 }
 
 /* Process a data frames from the network. */
 
-void* V24UDPPort::threadedCtrlNetworkRx(void* arg)
+void V24UDPPort::taskCtrlNetworkRx(void* arg)
 {
     V24PacketRequest* req = (V24PacketRequest*)arg;
     if (req != nullptr) {
-#if defined(_WIN32)
-        ::CloseHandle(req->thread);
-#else
-        ::pthread_detach(req->thread);
-#endif // defined(_WIN32)
-
         V24UDPPort* network = static_cast<V24UDPPort*>(req->obj);
         if (network == nullptr) {
             delete req;
-            return nullptr;
+            return;
         }
 
         if (req->length > 0) {
@@ -625,8 +643,6 @@ void* V24UDPPort::threadedCtrlNetworkRx(void* arg)
             delete[] req->buffer;
         delete req;
     }
-
-    return nullptr;
 }
 
 /* Process voice conveyance frames from the network. */
@@ -652,6 +668,8 @@ void V24UDPPort::processVCNetwork()
                     Utils::dump("!!! Rx Incoming DFSI UDP", data, ret);
 
                 V24PacketRequest* req = new V24PacketRequest();
+                req->obj = this;
+
                 req->address = addr;
                 req->addrLen = addrLen;
 
@@ -672,10 +690,15 @@ void V24UDPPort::processVCNetwork()
 
                 ::memcpy(req->buffer, data + RTP_HEADER_LENGTH_BYTES, req->length);
 
-                if (!Thread::runAsThread(this, threadedVCNetworkRx, req)) {
-                    delete[] req->buffer;
-                    delete req;
-                    return;
+                // enqueue the task
+                if (!m_vcThreadPool.enqueue(new_pooltask(taskVCNetworkRx, req))) {
+                    LogError(LOG_NET, "Failed to task enqueue voice network packet request, %s:%u", 
+                        udp::Socket::address(addr).c_str(), udp::Socket::port(addr));
+                    if (req != nullptr) {
+                        if (req->buffer != nullptr)
+                            delete[] req->buffer;
+                        delete req;
+                    }
                 }
             }
         }
@@ -684,20 +707,14 @@ void V24UDPPort::processVCNetwork()
 
 /* Process a data frames from the network. */
 
-void* V24UDPPort::threadedVCNetworkRx(void* arg)
+void V24UDPPort::taskVCNetworkRx(void* arg)
 {
     V24PacketRequest* req = (V24PacketRequest*)arg;
     if (req != nullptr) {
-#if defined(_WIN32)
-        ::CloseHandle(req->thread);
-#else
-        ::pthread_detach(req->thread);
-#endif // defined(_WIN32)
-
         V24UDPPort* network = static_cast<V24UDPPort*>(req->obj);
         if (network == nullptr) {
             delete req;
-            return nullptr;
+            return;
         }
 
         if (req->length > 0) {
@@ -726,8 +743,6 @@ void* V24UDPPort::threadedVCNetworkRx(void* arg)
             delete[] req->buffer;
         delete req;
     }
-
-    return nullptr;
 }
 
 /* Internal helper to setup the local voice channel port. */

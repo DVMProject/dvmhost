@@ -101,7 +101,7 @@ public:
     /**
      * @brief Executes the specified start routine to run as a thread.
      *  On POSIX, if the thread fails to spawn for any reason, the caller should clean up the passed thread_t
-     *  argument.
+     *  argument. This shouldn't be used for spawning threads used for things like packet processing.
      * @param obj Instance of a object to pass to the threaded function.
      * @param startRoutine Represents the function that executes on a thread.
      * @param[out] thread Instance of the thread data.

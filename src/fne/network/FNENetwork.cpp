@@ -53,7 +53,7 @@ std::timed_mutex FNENetwork::m_keyQueueMutex;
 
 FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port, uint32_t peerId, const std::string& password,
     bool debug, bool verbose, bool reportPeerPing, bool dmr, bool p25, bool nxdn, uint32_t parrotDelay, bool parrotGrantDemand,
-    bool allowActivityTransfer, bool allowDiagnosticTransfer, uint32_t pingTime, uint32_t updateLookupTime) :
+    bool allowActivityTransfer, bool allowDiagnosticTransfer, uint32_t pingTime, uint32_t updateLookupTime, uint16_t workerCnt) :
     BaseNetwork(peerId, true, debug, true, true, allowActivityTransfer, allowDiagnosticTransfer),
     m_tagDMR(nullptr),
     m_tagP25(nullptr),
@@ -100,6 +100,7 @@ FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port,
     m_influxOrg("dvm"),
     m_influxBucket("dvm"),
     m_influxLogRawData(false),
+    m_threadPool(workerCnt, "fne"),
     m_disablePacketData(false),
     m_dumpPacketData(false),
     m_verbosePacketData(false),
@@ -253,6 +254,7 @@ void FNENetwork::processNetwork()
         uint32_t peerId = fneHeader.getPeerId();
 
         NetPacketRequest* req = new NetPacketRequest();
+        req->obj = this;
         req->peerId = peerId;
 
         req->address = address;
@@ -264,11 +266,15 @@ void FNENetwork::processNetwork()
         req->buffer = new uint8_t[length];
         ::memcpy(req->buffer, buffer.get(), length);
 
-        if (!Thread::runAsThread(this, threadedNetworkRx, req)) {
-            if (req->buffer != nullptr)
-                delete[] req->buffer;
-            delete req;
-            return;
+        // enqueue the task
+        if (!m_threadPool.enqueue(new_pooltask(taskNetworkRx, req))) {
+            LogError(LOG_NET, "Failed to task enqueue network packet request, peerId = %u, %s:%u", peerId, 
+                udp::Socket::address(address).c_str(), udp::Socket::port(address));
+            if (req != nullptr) {
+                if (req->buffer != nullptr)
+                    delete[] req->buffer;
+                delete req;
+            }
         }
     }
 }
@@ -426,6 +432,14 @@ bool FNENetwork::open()
     if (m_debug)
         LogMessage(LOG_NET, "Opening Network");
 
+    // start thread pool
+    m_threadPool.start();
+
+    // start FluxQL thread pool
+    if (m_enableInfluxDB) {
+        influxdb::detail::TSCaller::start();
+    }
+
     m_status = NET_STAT_MST_RUNNING;
     m_maintainenceTimer.start();
 
@@ -462,9 +476,19 @@ void FNENetwork::close()
         }
     }
 
-    m_socket->close();
-
     m_maintainenceTimer.stop();
+
+    // stop thread pool
+    m_threadPool.stop();
+    m_threadPool.wait();
+
+    // stop FluxQL thread pool
+    if (m_enableInfluxDB) {
+        influxdb::detail::TSCaller::stop();
+        influxdb::detail::TSCaller::wait();
+    }
+
+    m_socket->close();
 
     m_status = NET_STAT_INVALID;
 }
@@ -475,16 +499,10 @@ void FNENetwork::close()
 
 /* Process a data frames from the network. */
 
-void* FNENetwork::threadedNetworkRx(void* arg)
+void FNENetwork::taskNetworkRx(void* arg)
 {
     NetPacketRequest* req = (NetPacketRequest*)arg;
     if (req != nullptr) {
-#if defined(_WIN32)
-        ::CloseHandle(req->thread);
-#else
-        ::pthread_detach(req->thread);
-#endif // defined(_WIN32)
-
         uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
         FNENetwork* network = static_cast<FNENetwork*>(req->obj);
@@ -495,21 +513,15 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                 delete req;
             }
 
-            return nullptr;
+            return;
         }
 
         if (req == nullptr)
-            return nullptr;
+            return;
 
         if (req->length > 0) {
             uint32_t peerId = req->fneHeader.getPeerId();
             uint32_t streamId = req->fneHeader.getStreamId();
-
-            std::stringstream peerName;
-            peerName << peerId << ":rx-pckt";
-#ifdef _GNU_SOURCE
-            ::pthread_setname_np(req->thread, peerName.str().c_str());
-#endif // _GNU_SOURCE
 
             // update current peer packet sequence and stream ID
             if (peerId > 0 && (network->m_peers.find(peerId) != network->m_peers.end()) && streamId != 0U) {
@@ -548,7 +560,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                     delete[] req->buffer;
                 delete req;
 
-                return nullptr;
+                return;
             }
 
             // process incoming message function opcodes
@@ -1606,8 +1618,6 @@ void* FNENetwork::threadedNetworkRx(void* arg)
             delete[] req->buffer;
         delete req;
     }
-
-    return nullptr;
 }
 
 /* Checks if the passed peer ID is blocked from unit-to-unit traffic. */
@@ -1810,43 +1820,32 @@ void FNENetwork::setupRepeaterLogin(uint32_t peerId, uint32_t streamId, FNEPeerC
 void FNENetwork::peerACLUpdate(uint32_t peerId)
 {
     ACLUpdateRequest* req = new ACLUpdateRequest();
+    req->obj = this;
     req->peerId = peerId;
 
-    std::stringstream peerName;
-    peerName << peerId << ":acl-update";
-
-    if (!Thread::runAsThread(this, threadedACLUpdate, req)) {
-        delete req;
-        return;
+    // enqueue the task
+    if (!m_threadPool.enqueue(new_pooltask(taskACLUpdate, req))) {
+        LogError(LOG_NET, "Failed to task enqueue ACL update, peerId = %u", peerId);
+        if (req != nullptr)
+            delete req;
     }
-
-    // pthread magic to rename the thread properly
-#ifdef _GNU_SOURCE
-    ::pthread_setname_np(req->thread, peerName.str().c_str());
-#endif // _GNU_SOURCE
 }
 
 /* Helper to send the ACL lists to the specified peer in a separate thread. */
 
-void* FNENetwork::threadedACLUpdate(void* arg)
+void FNENetwork::taskACLUpdate(void* arg)
 {
     ACLUpdateRequest* req = (ACLUpdateRequest*)arg;
     if (req != nullptr) {
-#if defined(_WIN32)
-        ::CloseHandle(req->thread);
-#else
-        ::pthread_detach(req->thread);
-#endif // defined(_WIN32)
-
         FNENetwork* network = static_cast<FNENetwork*>(req->obj);
         if (network == nullptr) {
             if (req != nullptr)
                 delete req;
-            return nullptr;
+            return;
         }
 
         if (req == nullptr)
-            return nullptr;
+            return;
 
         std::string peerIdentity = network->resolvePeerIdentity(req->peerId);
 
@@ -1875,8 +1874,6 @@ void* FNENetwork::threadedACLUpdate(void* arg)
 
         delete req;
     }
-
-    return nullptr;
 }
 
 /* Helper to send the list of whitelisted RIDs to the specified peer. */

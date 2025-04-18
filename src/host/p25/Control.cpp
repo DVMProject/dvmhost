@@ -42,6 +42,7 @@ const uint32_t MAX_PREAMBLE_TDU_CNT = 64U;
 // ---------------------------------------------------------------------------
 
 std::mutex Control::m_queueLock;
+std::mutex Control::m_activeTGLock;
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -85,6 +86,7 @@ Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t q
     m_affiliations(this, chLookup, verbose),
     m_controlChData(),
     m_idenEntry(),
+    m_activeTG(),
     m_txImmQueue(queueSize, "P25 Imm Frame"),
     m_txQueue(queueSize, "P25 Frame"),
     m_rfState(RS_RF_LISTENING),
@@ -163,6 +165,7 @@ Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t q
 
     // register RPC handlers
     g_RPC->registerHandler(RPC_PERMIT_P25_TG, RPC_FUNC_BIND(Control::RPC_permittedTG, this));
+    g_RPC->registerHandler(RPC_ACTIVE_P25_TG, RPC_FUNC_BIND(Control::RPC_activeTG, this));
     g_RPC->registerHandler(RPC_RELEASE_P25_TG, RPC_FUNC_BIND(Control::RPC_releaseGrantTG, this));
     g_RPC->registerHandler(RPC_TOUCH_P25_TG, RPC_FUNC_BIND(Control::RPC_touchGrantTG, this));
 }
@@ -1049,6 +1052,48 @@ void Control::clockSiteData(uint32_t ms)
                 m_control->m_adjSiteUpdateTimer.setTimeout(m_control->m_adjSiteUpdateInterval);
                 m_control->m_adjSiteUpdateTimer.start();
             }
+
+            // do we have any granted channels?
+            if (m_affiliations.getGrantedRFChCnt() > 0U) {
+                uint8_t activeCnt = m_affiliations.getGrantedRFChCnt();
+                std::unordered_map<uint32_t, uint32_t> grantTable = m_affiliations.grantTable();
+
+                // iterate dynamic channel grant table entries
+                json::array active = json::array();
+                for (auto entry : grantTable) {
+                    uint32_t dstId = entry.first;
+                    active.push_back(json::value((double)dstId));
+                }
+
+                std::unordered_map<uint32_t, ::lookups::VoiceChData> voiceChs = m_affiliations.rfCh()->rfChDataTable();
+                for (auto entry : voiceChs) {
+                    ::lookups::VoiceChData voiceChData = entry.second;
+
+                    // callback RPC to transmit active TG list to the voice channels
+                    if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0) {
+                        json::object req = json::object();
+                        req["active"].set<json::array>(active);
+
+                        g_RPC->req(RPC_ACTIVE_P25_TG, req, [=](json::object& req, json::object& reply) {
+                            if (!req["status"].is<int>()) {
+                                ::LogError(LOG_P25, "failed to send active TG list to VC %s:%u, invalid RPC response", voiceChData.address().c_str(), voiceChData.port());
+                                return;
+                            }
+
+                            int status = req["status"].get<int>();
+                            if (status != network::NetRPC::OK) {
+                                ::LogError(LOG_P25, "failed to send active TG list to VC %s:%u", voiceChData.address().c_str(), voiceChData.port());
+                                if (req["message"].is<std::string>()) {
+                                    std::string retMsg = req["message"].get<std::string>();
+                                    ::LogError(LOG_P25, "RPC failed, %s", retMsg.c_str());
+                                }
+                            } 
+                            else
+                                ::LogMessage(LOG_P25, "VC %s:%u, active TG update, activeCnt = %u", voiceChData.address().c_str(), voiceChData.port(), activeCnt);
+                        }, voiceChData.address(), voiceChData.port());
+                    }
+                }
+            }
         }
     }
 }
@@ -1821,6 +1866,33 @@ void Control::RPC_permittedTG(json::object& req, json::object& reply)
     // LogDebugEx(LOG_P25, "Control::RPC_permittedTG()", "callback, dstId = %u, dataPermit = %u", dstId, dataPermit);
 
     permittedTG(dstId, dataPermit);
+}
+
+/* (RPC Handler) Active TGID list from the authoritative CC host. */
+
+void Control::RPC_activeTG(json::object& req, json::object& reply)
+{
+    g_RPC->defaultResponse(reply, "OK", network::NetRPC::OK);
+
+    if (!req["active"].is<json::array>()) {
+        g_RPC->defaultResponse(reply, "\"active\" was not a valid JSON array", network::NetRPC::INVALID_ARGS);
+        return;
+    }
+    json::array active = req["active"].get<json::array>();
+
+    std::lock_guard<std::mutex> lock(m_activeTGLock);
+    m_activeTG.clear();
+
+    if (active.size() > 0) {
+        for (auto entry : active) {
+            if (!entry.is<uint32_t>()) {
+                g_RPC->defaultResponse(reply, "active TG was not a valid number", network::NetRPC::INVALID_ARGS);
+                continue;
+            }
+
+            m_activeTG.push_back(entry.get<uint32_t>());
+        }
+    }
 }
 
 /* (RPC Handler) Releases a granted TG. */

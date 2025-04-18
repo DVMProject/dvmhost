@@ -32,6 +32,7 @@
 #include "common/lookups/TalkgroupRulesLookup.h"
 #include "common/lookups/PeerListLookup.h"
 #include "common/network/Network.h"
+#include "common/ThreadPool.h"
 #include "fne/network/influxdb/InfluxDB.h"
 #include "fne/CryptoContainer.h"
 
@@ -422,10 +423,11 @@ namespace network
          * @param allowDiagnosticTransfer Flag indicating that the system diagnostic logs will be sent to the network.
          * @param pingTime 
          * @param updateLookupTime 
+         * @param workerCnt Number of worker threads.
          */
         FNENetwork(HostFNE* host, const std::string& address, uint16_t port, uint32_t peerId, const std::string& password,
             bool debug, bool verbose, bool reportPeerPing, bool dmr, bool p25, bool nxdn, uint32_t parrotDelay, bool parrotGrantDemand,
-            bool allowActivityTransfer, bool allowDiagnosticTransfer, uint32_t pingTime, uint32_t updateLookupTime);
+            bool allowActivityTransfer, bool allowDiagnosticTransfer, uint32_t pingTime, uint32_t updateLookupTime, uint16_t workerCnt);
         /**
          * @brief Finalizes a instance of the FNENetwork class.
          */
@@ -590,6 +592,8 @@ namespace network
         bool m_influxLogRawData;
         influxdb::ServerInfo m_influxServer;
 
+        ThreadPool m_threadPool;
+
         bool m_disablePacketData;
         bool m_dumpPacketData;
         bool m_verbosePacketData;
@@ -600,9 +604,8 @@ namespace network
         /**
          * @brief Entry point to process a given network packet.
          * @param arg Instance of the NetPacketRequest structure.
-         * @returns void* (Ignore)
          */
-        static void* threadedNetworkRx(void* arg);
+        static void taskNetworkRx(void* arg);
 
         /**
          * @brief Checks if the passed peer ID is blocked from unit-to-unit traffic.
@@ -660,9 +663,8 @@ namespace network
         /**
          * @brief Entry point to send the ACL lists to the specified peer in a separate thread.
          * @param arg Instance of the ACLUpdateRequest structure.
-         * @returns void* (Ignore)
          */
-        static void* threadedACLUpdate(void* arg);
+        static void taskACLUpdate(void* arg);
 
         /**
          * @brief Helper to send the list of whitelisted RIDs to the specified peer.

@@ -39,6 +39,9 @@ using namespace lookups;
 //  Constants
 // ---------------------------------------------------------------------------
 
+#define MIN_WORKER_CNT 4U
+#define MAX_WORKER_CNT 128U
+
 #define THREAD_CYCLE_THRESHOLD 2U
 
 #define IDLE_WARMUP_MS 5U
@@ -502,6 +505,15 @@ bool HostFNE::createMasterNetwork()
     std::string password = masterConf["password"].as<std::string>();
     bool verbose = masterConf["verbose"].as<bool>(false);
     bool debug = masterConf["debug"].as<bool>(false);
+    uint16_t workerCnt = (uint16_t)masterConf["workers"].as<uint32_t>(16U);
+
+    // clamp worker thread count properly
+    if (workerCnt > MAX_WORKER_CNT)
+        workerCnt = MAX_WORKER_CNT;
+    if (workerCnt > 64U)
+        LogWarning(LOG_HOST, "Packet worker thread count >64 threads, this is excessive and may result in poor performance.");
+    if (workerCnt < MIN_WORKER_CNT)
+        workerCnt = MIN_WORKER_CNT;
 
     bool reportPeerPing = masterConf["reportPeerPing"].as<bool>(false);
 
@@ -563,6 +575,8 @@ bool HostFNE::createMasterNetwork()
     LogInfo("    Parrot Repeat Delay: %u ms", parrotDelay);
     LogInfo("    Parrot Grant Demand: %s", parrotGrantDemand ? "yes" : "no");
 
+    LogInfo("    Worker Threads: %u", workerCnt);
+
     LogInfo("    Encrypted: %s", encrypted ? "yes" : "no");
 
     LogInfo("    Report Peer Pings: %s", reportPeerPing ? "yes" : "no");
@@ -577,7 +591,7 @@ bool HostFNE::createMasterNetwork()
 
     // initialize networking
     m_network = new FNENetwork(this, address, port, id, password, debug, verbose, reportPeerPing, m_dmrEnabled, m_p25Enabled, m_nxdnEnabled, 
-        parrotDelay, parrotGrantDemand, m_allowActivityTransfer, m_allowDiagnosticTransfer, m_pingTime, m_updateLookupTime);
+        parrotDelay, parrotGrantDemand, m_allowActivityTransfer, m_allowDiagnosticTransfer, m_pingTime, m_updateLookupTime, workerCnt);
     m_network->setOptions(masterConf, true);
 
     m_network->setLookups(m_ridLookup, m_tidLookup, m_peerListLookup, m_cryptoLookup);
@@ -600,7 +614,7 @@ bool HostFNE::createMasterNetwork()
 
     // setup alternate port for diagnostics/activity logging
     if (m_useAlternatePortForDiagnostics) {
-        m_diagNetwork = new DiagNetwork(this, m_network, address, port + 1U);
+        m_diagNetwork = new DiagNetwork(this, m_network, address, port + 1U, workerCnt);
 
         bool ret = m_diagNetwork->open();
         if (!ret) {

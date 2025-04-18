@@ -29,7 +29,7 @@ using namespace network::influxdb;
 //  Static Class Members
 // ---------------------------------------------------------------------------
 
-int32_t detail::TSCaller::m_currThreadCnt = 0U;
+ThreadPool detail::TSCaller::m_fluxReqThreadPool{MAX_INFLUXQL_THREAD_CNT, "fluxql"};
 
 /* Generates a InfluxDB REST API request. */
 

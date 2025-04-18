@@ -320,6 +320,8 @@ namespace p25
 
         ::lookups::IdenTable m_idenEntry;
 
+        std::vector<uint32_t> m_activeTG;
+
         RingBuffer<uint8_t> m_txImmQueue;
         RingBuffer<uint8_t> m_txQueue;
         static std::mutex m_queueLock;
@@ -377,6 +379,8 @@ namespace p25
         uint8_t m_minRSSI;
         uint32_t m_aveRSSI;
         uint32_t m_rssiCount;
+
+        static std::mutex m_activeTGLock;
 
         bool m_notifyCC;
 
@@ -454,6 +458,12 @@ namespace p25
          * @param reply JSON response.
          */
         void RPC_permittedTG(json::object& req, json::object& reply);
+        /**
+         * @brief (RPC Handler) Active TGID list from the authoritative CC host.
+         * @param req JSON request.
+         * @param reply JSON response.
+         */
+        void RPC_activeTG(json::object& req, json::object& reply);
         /**
          * @brief (RPC Handler) Releases a granted TG.
          * @param req JSON request.

@@ -42,6 +42,7 @@
 #define RPC_PERMIT_NXDN_TG          0x0003U
 
 #define RPC_DMR_TSCC_PAYLOAD_ACT    0x0010U
+#define RPC_ACTIVE_P25_TG           0x0020U
 
 /** @} */
 

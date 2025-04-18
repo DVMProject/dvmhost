@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (c) 2010-2018 <http://ez8.co> <orca.zhang@yahoo.com>
- *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2024-2025 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -21,7 +21,7 @@
 
 #include "fne/Defines.h"
 #include "common/Log.h"
-#include "common/Thread.h"
+#include "common/ThreadPool.h"
 
 #include <sstream>
 #include <cstring>
@@ -63,7 +63,8 @@ namespace network
         //  Constants
         // ---------------------------------------------------------------------------
 
-        #define MAX_INFLUXQL_THREAD_CNT 125 // Extreme maximum number of pending Flux queries
+        #define MAX_INFLUXQL_THREAD_CNT 64U
+        #define MAX_INFLUXQL_QUEUED_CNT 256U
 
         // ---------------------------------------------------------------------------
         //  Class Declaration
@@ -430,54 +431,43 @@ namespace network
                 int request(const ServerInfo& si, std::string* resp = nullptr)  { return detail::inner::request("POST", "write", "", m_lines.str(), si, resp); }
                 int requestAsync(const ServerInfo& si) 
                 {
-                    if (m_currThreadCnt < 0) {
-                        m_currThreadCnt = 0;
-                    }
-
-                    if (m_currThreadCnt >= MAX_INFLUXQL_THREAD_CNT) {
-                        ::LogError(LOG_HOST, "Maximum concurrent FluxQL thread count reached, dropping request!");
-                        return 1;
-                    }
-            
                     TSCallerRequest* req = new TSCallerRequest();
                     req->obj = this;
 
                     req->si = ServerInfo(si.host(), si.port(), si.org(), si.token(), si.bucket());
                     req->lines = std::string(m_lines.str());
 
-                    if (!Thread::runAsThread(this, threadedRequest, req)) {
-                        delete req;
+                    // enqueue the task
+                    if (!m_fluxReqThreadPool.enqueue(new_pooltask(taskFluxRequest, req))) {
+                        LogError(LOG_NET, "Failed to task enqueue Influx query request");
+                        if (req != nullptr)
+                            delete req;
                         return 1;
-                    } else {
-                        m_currThreadCnt++;
                     }
             
                     return 0; 
                 }
 
+                static void start() 
+                { 
+                    m_fluxReqThreadPool.setMaxQueuedTasks(MAX_INFLUXQL_QUEUED_CNT);
+                    m_fluxReqThreadPool.start(); 
+                }
+                static void stop() { m_fluxReqThreadPool.stop(); }
+                static void wait() { m_fluxReqThreadPool.wait(); }
+
             private:
-                static int32_t m_currThreadCnt;
+                static ThreadPool m_fluxReqThreadPool;
 
                 /**
                  * @brief 
                  */
-                static void* threadedRequest(void* arg)
+                static void taskFluxRequest(void* arg)
                 {
                     TSCallerRequest* req = (TSCallerRequest*)arg;
                     if (req != nullptr) {
-                #if defined(_WIN32)
-                        ::CloseHandle(req->thread);
-                #else
-                        ::pthread_detach(req->thread);
-                #endif // defined(_WIN32)
-
-                #ifdef _GNU_SOURCE
-                        ::pthread_setname_np(req->thread, "fluxql:request");
-                #endif // _GNU_SOURCE
-
                         if (req == nullptr) {
-                            m_currThreadCnt--;
-                            return nullptr;
+                            return;
                         }
 
                         TSCaller* caller = static_cast<TSCaller*>(req->obj);
@@ -486,8 +476,7 @@ namespace network
                                 delete req;
                             }
 
-                            m_currThreadCnt--;
-                            return nullptr;
+                            return;
                         }
 
                         const ServerInfo& si = req->si;
@@ -495,9 +484,6 @@ namespace network
 
                         delete req;
                     }
-
-                    m_currThreadCnt--;
-                    return nullptr;
                 }
             };
 
