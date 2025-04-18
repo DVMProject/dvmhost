@@ -348,6 +348,7 @@ namespace p25
         Timer m_networkWatchdog;
 
         Timer m_adjSiteUpdate;
+        Timer m_activeTGUpdate;
 
         Timer m_ccPacketInterval;
 

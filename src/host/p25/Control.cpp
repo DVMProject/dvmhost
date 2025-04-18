@@ -107,6 +107,7 @@ Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t q
     m_netTGHang(1000U, 2U),
     m_networkWatchdog(1000U, 0U, 1500U),
     m_adjSiteUpdate(1000U, 75U),
+    m_activeTGUpdate(1000U, 5U),
     m_ccPacketInterval(1000U, 0U, 10U),
     m_interval(),
     m_hangCount(3U * 8U),
@@ -1053,44 +1054,53 @@ void Control::clockSiteData(uint32_t ms)
                 m_control->m_adjSiteUpdateTimer.start();
             }
 
-            // do we have any granted channels?
-            if (m_affiliations.getGrantedRFChCnt() > 0U) {
-                uint8_t activeCnt = m_affiliations.getGrantedRFChCnt();
-                std::unordered_map<uint32_t, uint32_t> grantTable = m_affiliations.grantTable();
+            if (!m_activeTGUpdate.isRunning()) {
+                m_activeTGUpdate.start();
+            }
 
-                // iterate dynamic channel grant table entries
-                json::array active = json::array();
-                for (auto entry : grantTable) {
-                    uint32_t dstId = entry.first;
-                    active.push_back(json::value((double)dstId));
-                }
+            m_activeTGUpdate.clock(ms);
+            if (m_activeTGUpdate.isRunning() && m_activeTGUpdate.hasExpired()) {
+                m_activeTGUpdate.start();
 
-                std::unordered_map<uint32_t, ::lookups::VoiceChData> voiceChs = m_affiliations.rfCh()->rfChDataTable();
-                for (auto entry : voiceChs) {
-                    ::lookups::VoiceChData voiceChData = entry.second;
+                // do we have any granted channels?
+                if (m_affiliations.getGrantedRFChCnt() > 0U) {
+                    uint8_t activeCnt = m_affiliations.getGrantedRFChCnt();
+                    std::unordered_map<uint32_t, uint32_t> grantTable = m_affiliations.grantTable();
 
-                    // callback RPC to transmit active TG list to the voice channels
-                    if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0) {
-                        json::object req = json::object();
-                        req["active"].set<json::array>(active);
+                    // iterate dynamic channel grant table entries
+                    json::array active = json::array();
+                    for (auto entry : grantTable) {
+                        uint32_t dstId = entry.first;
+                        active.push_back(json::value((double)dstId));
+                    }
 
-                        g_RPC->req(RPC_ACTIVE_P25_TG, req, [=](json::object& req, json::object& reply) {
-                            if (!req["status"].is<int>()) {
-                                ::LogError(LOG_P25, "failed to send active TG list to VC %s:%u, invalid RPC response", voiceChData.address().c_str(), voiceChData.port());
-                                return;
-                            }
+                    std::unordered_map<uint32_t, ::lookups::VoiceChData> voiceChs = m_affiliations.rfCh()->rfChDataTable();
+                    for (auto entry : voiceChs) {
+                        ::lookups::VoiceChData voiceChData = entry.second;
 
-                            int status = req["status"].get<int>();
-                            if (status != network::NetRPC::OK) {
-                                ::LogError(LOG_P25, "failed to send active TG list to VC %s:%u", voiceChData.address().c_str(), voiceChData.port());
-                                if (req["message"].is<std::string>()) {
-                                    std::string retMsg = req["message"].get<std::string>();
-                                    ::LogError(LOG_P25, "RPC failed, %s", retMsg.c_str());
+                        // callback RPC to transmit active TG list to the voice channels
+                        if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0) {
+                            json::object req = json::object();
+                            req["active"].set<json::array>(active);
+
+                            g_RPC->req(RPC_ACTIVE_P25_TG, req, [=](json::object& req, json::object& reply) {
+                                if (!req["status"].is<int>()) {
+                                    ::LogError(LOG_P25, "failed to send active TG list to VC %s:%u, invalid RPC response", voiceChData.address().c_str(), voiceChData.port());
+                                    return;
                                 }
-                            } 
-                            else
-                                ::LogMessage(LOG_P25, "VC %s:%u, active TG update, activeCnt = %u", voiceChData.address().c_str(), voiceChData.port(), activeCnt);
-                        }, voiceChData.address(), voiceChData.port());
+
+                                int status = req["status"].get<int>();
+                                if (status != network::NetRPC::OK) {
+                                    ::LogError(LOG_P25, "failed to send active TG list to VC %s:%u", voiceChData.address().c_str(), voiceChData.port());
+                                    if (req["message"].is<std::string>()) {
+                                        std::string retMsg = req["message"].get<std::string>();
+                                        ::LogError(LOG_P25, "RPC failed, %s", retMsg.c_str());
+                                    }
+                                } 
+                                else
+                                    ::LogMessage(LOG_P25, "VC %s:%u, active TG update, activeCnt = %u", voiceChData.address().c_str(), voiceChData.port(), activeCnt);
+                            }, voiceChData.address(), voiceChData.port());
+                        }
                     }
                 }
             }
