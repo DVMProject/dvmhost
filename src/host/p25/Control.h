@@ -382,6 +382,7 @@ namespace p25
         uint32_t m_rssiCount;
 
         static std::mutex m_activeTGLock;
+        bool m_ccNotifyActiveTG;
 
         bool m_notifyCC;
 
@@ -465,6 +466,12 @@ namespace p25
          * @param reply JSON response.
          */
         void RPC_activeTG(json::object& req, json::object& reply);
+        /**
+         * @brief (RPC Handler) Clear active TGID list from the authoritative CC host.
+         * @param req JSON request.
+         * @param reply JSON response.
+         */
+        void RPC_clearActiveTG(json::object& req, json::object& reply);
         /**
          * @brief (RPC Handler) Releases a granted TG.
          * @param req JSON request.

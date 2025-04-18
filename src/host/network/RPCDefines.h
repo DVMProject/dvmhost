@@ -43,6 +43,7 @@
 
 #define RPC_DMR_TSCC_PAYLOAD_ACT    0x0010U
 #define RPC_ACTIVE_P25_TG           0x0020U
+#define RPC_CLEAR_ACTIVE_P25_TG     0x0021U
 
 /** @} */
 
