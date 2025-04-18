@@ -49,7 +49,7 @@ ThreadPool::~ThreadPool() = default;
 
 /* Enqueue a thread pool task. */
 
-bool ThreadPool::enqueue(ThreadPoolCallback* task)
+bool ThreadPool::enqueue(ThreadPoolTask* task)
 {
     // scope is intentional
     {
@@ -91,7 +91,7 @@ bool ThreadPool::enqueue(ThreadPoolCallback* task)
             return false;
         }
 
-        m_tasks.emplace(std::unique_ptr<ThreadPoolCallback>(task));
+        m_tasks.emplace(std::unique_ptr<ThreadPoolTask>(task));
     }
 
     m_cond.notify_one();
@@ -107,8 +107,7 @@ void ThreadPool::start()
         std::unique_lock<std::mutex> lock(m_queueMutex);
         m_poolState = RUNNING;
 
-        uint32_t numWorkingThreads = m_maxWorkerCnt < m_tasks.size() ? m_maxWorkerCnt : m_tasks.size();
-        for (uint32_t i = m_workers.size(); i < numWorkingThreads; i++) {
+        for (uint32_t i = m_workers.size(); i < m_maxWorkerCnt; i++) {
             thread_t* thread = new thread_t();
             thread->obj = this;
         
@@ -195,7 +194,7 @@ void* ThreadPool::worker(void* arg)
     ::pthread_setname_np(thread->thread, threadName.str().c_str());
 #endif // _GNU_SOURCE
 
-    ThreadPoolCallback* callback;
+    ThreadPoolTask* task = nullptr;
     while (threadPool->m_poolState != STOP) {
         // scope is intentional
         {
@@ -210,11 +209,15 @@ void* ThreadPool::worker(void* arg)
 #endif // defined(_WIN32)
             }
 
-            callback = (threadPool->m_tasks.front()).release();
+            task = (threadPool->m_tasks.front()).release();
             threadPool->m_tasks.pop();
         }
 
-        callback->run();
+        if (task == nullptr)
+            continue;
+
+        task->run();
+        delete task;
     }
 
 #if defined(_WIN32)

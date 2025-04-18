@@ -33,21 +33,21 @@
  * @brief Represents a task run by a thread pool worker thread.
  * @ingroup threading
  */
-class HOST_SW_API ThreadPoolCallback {
+class HOST_SW_API ThreadPoolTask {
 public:
     /**
-     * @brief Initializes a new instance of the ThreadPoolCallback class.
+     * @brief Initializes a new instance of the ThreadPoolTask class.
      * @tparam F 
      * @tparam Args 
      * @param f 
      * @param args 
      */
     template<class F, class... Args>
-    ThreadPoolCallback(F&& f, Args&&... args) 
+    ThreadPoolTask(F&& f, Args&&... args) 
     {
         task = std::bind(std::forward<F>(f), std::forward<Args>(args)...);
     }
-    virtual ~ThreadPoolCallback() = default;
+    virtual ~ThreadPoolTask() = default;
 
     /**
      * @brief Starts the task function.
@@ -64,10 +64,10 @@ private:
  * @tparam Args 
  * @param f 
  * @param args 
- * @return ThreadPoolCallback* 
+ * @return ThreadPoolTask* 
  */
 template<class F, class... Args>
-ThreadPoolCallback* new_pooltask(F&& f, Args&&... args) { return new ThreadPoolCallback(f, args...); }
+ThreadPoolTask* new_pooltask(F&& f, Args&&... args) { return new ThreadPoolTask(f, args...); }
 
 // ---------------------------------------------------------------------------
 //  Class Declaration
@@ -95,7 +95,7 @@ public:
      * @param task Task to enqueue.
      * @returns bool True, if task enqueued otherwise false.
      */
-    bool enqueue(ThreadPoolCallback* task);
+    bool enqueue(ThreadPoolTask* task);
 
     /**
      * @brief Starts the thread pool.
@@ -135,7 +135,7 @@ private:
     PoolState m_poolState;
 
     std::vector<pthread_t> m_workers;
-    std::queue<std::unique_ptr<ThreadPoolCallback>> m_tasks;
+    std::queue<std::unique_ptr<ThreadPoolTask>> m_tasks;
 
     std::mutex m_workerMutex;
     std::mutex m_queueMutex;

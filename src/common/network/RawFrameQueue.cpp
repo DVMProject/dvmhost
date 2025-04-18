@@ -106,6 +106,7 @@ bool RawFrameQueue::write(const uint8_t* message, uint32_t length, sockaddr_stor
         ret = false;
     }
 
+    delete[] buffer;
     return ret;
 }
 
