@@ -389,9 +389,8 @@ void V24UDPPort::processCtrlNetwork()
 
 /* Process a data frames from the network. */
 
-void V24UDPPort::taskCtrlNetworkRx(void* arg)
+void V24UDPPort::taskCtrlNetworkRx(V24PacketRequest* req)
 {
-    V24PacketRequest* req = (V24PacketRequest*)arg;
     if (req != nullptr) {
         V24UDPPort* network = static_cast<V24UDPPort*>(req->obj);
         if (network == nullptr) {
@@ -707,9 +706,8 @@ void V24UDPPort::processVCNetwork()
 
 /* Process a data frames from the network. */
 
-void V24UDPPort::taskVCNetworkRx(void* arg)
+void V24UDPPort::taskVCNetworkRx(V24PacketRequest* req)
 {
-    V24PacketRequest* req = (V24PacketRequest*)arg;
     if (req != nullptr) {
         V24UDPPort* network = static_cast<V24UDPPort*>(req->obj);
         if (network == nullptr) {

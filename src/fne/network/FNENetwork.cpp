@@ -503,9 +503,8 @@ void FNENetwork::close()
 
 /* Process a data frames from the network. */
 
-void FNENetwork::taskNetworkRx(void* arg)
+void FNENetwork::taskNetworkRx(NetPacketRequest* req)
 {
-    NetPacketRequest* req = (NetPacketRequest*)arg;
     if (req != nullptr) {
         uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
@@ -1845,9 +1844,8 @@ void FNENetwork::peerACLUpdate(uint32_t peerId)
 
 /* Helper to send the ACL lists to the specified peer in a separate thread. */
 
-void FNENetwork::taskACLUpdate(void* arg)
+void FNENetwork::taskACLUpdate(ACLUpdateRequest* req)
 {
-    ACLUpdateRequest* req = (ACLUpdateRequest*)arg;
     if (req != nullptr) {
         FNENetwork* network = static_cast<FNENetwork*>(req->obj);
         if (network == nullptr) {

@@ -103,9 +103,9 @@ namespace network
 
         /**
          * @brief Entry point to process a given network packet.
-         * @param arg Instance of the NetPacketRequest structure.
+         * @param req Instance of the NetPacketRequest structure.
          */
-        static void taskNetworkRx(void* arg);
+        static void taskNetworkRx(NetPacketRequest* req);
     };
 } // namespace network
 

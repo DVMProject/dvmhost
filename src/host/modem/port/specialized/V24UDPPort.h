@@ -198,7 +198,7 @@ namespace modem
                  * @brief Entry point to process a given network packet.
                  * @param arg Instance of the V24PacketRequest structure.
                  */
-                static void taskCtrlNetworkRx(void* arg);
+                static void taskCtrlNetworkRx(V24PacketRequest* req);
 
                 /**
                  * @brief Process voice conveyance frames from the network.
@@ -207,9 +207,9 @@ namespace modem
 
                 /**
                  * @brief Entry point to process a given network packet.
-                 * @param arg Instance of the V24PacketRequest structure.
+                 * @param req Instance of the V24PacketRequest structure.
                  */
-                static void taskVCNetworkRx(void* arg);
+                static void taskVCNetworkRx(V24PacketRequest* req);
 
                 /**
                  * @brief Internal helper to setup the local voice channel port.

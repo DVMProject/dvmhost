@@ -155,9 +155,8 @@ void DiagNetwork::close()
 
 /* Process a data frames from the network. */
 
-void DiagNetwork::taskNetworkRx(void* arg)
+void DiagNetwork::taskNetworkRx(NetPacketRequest* req)
 {
-    NetPacketRequest* req = (NetPacketRequest*)arg;
     if (req != nullptr) {
         FNENetwork* network = static_cast<FNENetwork*>(req->obj);
         if (network == nullptr) {

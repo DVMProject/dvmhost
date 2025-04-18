@@ -605,9 +605,9 @@ namespace network
 
         /**
          * @brief Entry point to process a given network packet.
-         * @param arg Instance of the NetPacketRequest structure.
+         * @param req Instance of the NetPacketRequest structure.
          */
-        static void taskNetworkRx(void* arg);
+        static void taskNetworkRx(NetPacketRequest* req);
 
         /**
          * @brief Checks if the passed peer ID is blocked from unit-to-unit traffic.
@@ -664,9 +664,9 @@ namespace network
         void peerACLUpdate(uint32_t peerId);
         /**
          * @brief Entry point to send the ACL lists to the specified peer in a separate thread.
-         * @param arg Instance of the ACLUpdateRequest structure.
+         * @param req Instance of the ACLUpdateRequest structure.
          */
-        static void taskACLUpdate(void* arg);
+        static void taskACLUpdate(ACLUpdateRequest* req);
 
         /**
          * @brief Helper to send the list of whitelisted RIDs to the specified peer.
