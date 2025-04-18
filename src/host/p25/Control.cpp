@@ -1080,26 +1080,28 @@ void Control::clockSiteData(uint32_t ms)
 
                         // callback RPC to transmit active TG list to the voice channels
                         if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0) {
-                            json::object req = json::object();
-                            req["active"].set<json::array>(active);
+                            if (voiceChData.address() != "0.0.0.0") {
+                                json::object req = json::object();
+                                req["active"].set<json::array>(active);
 
-                            g_RPC->req(RPC_ACTIVE_P25_TG, req, [=](json::object& req, json::object& reply) {
-                                if (!req["status"].is<int>()) {
-                                    ::LogError(LOG_P25, "failed to send active TG list to VC %s:%u, invalid RPC response", voiceChData.address().c_str(), voiceChData.port());
-                                    return;
-                                }
-
-                                int status = req["status"].get<int>();
-                                if (status != network::NetRPC::OK) {
-                                    ::LogError(LOG_P25, "failed to send active TG list to VC %s:%u", voiceChData.address().c_str(), voiceChData.port());
-                                    if (req["message"].is<std::string>()) {
-                                        std::string retMsg = req["message"].get<std::string>();
-                                        ::LogError(LOG_P25, "RPC failed, %s", retMsg.c_str());
+                                g_RPC->req(RPC_ACTIVE_P25_TG, req, [=](json::object& req, json::object& reply) {
+                                    if (!req["status"].is<int>()) {
+                                        ::LogError(LOG_P25, "failed to send active TG list to VC %s:%u, invalid RPC response", voiceChData.address().c_str(), voiceChData.port());
+                                        return;
                                     }
-                                } 
-                                else
-                                    ::LogMessage(LOG_P25, "VC %s:%u, active TG update, activeCnt = %u", voiceChData.address().c_str(), voiceChData.port(), activeCnt);
-                            }, voiceChData.address(), voiceChData.port());
+
+                                    int status = req["status"].get<int>();
+                                    if (status != network::NetRPC::OK) {
+                                        ::LogError(LOG_P25, "failed to send active TG list to VC %s:%u", voiceChData.address().c_str(), voiceChData.port());
+                                        if (req["message"].is<std::string>()) {
+                                            std::string retMsg = req["message"].get<std::string>();
+                                            ::LogError(LOG_P25, "RPC failed, %s", retMsg.c_str());
+                                        }
+                                    } 
+                                    else
+                                        ::LogMessage(LOG_P25, "VC %s:%u, active TG update, activeCnt = %u", voiceChData.address().c_str(), voiceChData.port(), activeCnt);
+                                }, voiceChData.address(), voiceChData.port());
+                            }
                         }
                     }
                 }
