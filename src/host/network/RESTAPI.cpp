@@ -195,7 +195,12 @@ RESTAPI::RESTAPI(const std::string& address, uint16_t port, const std::string& p
 
 /* Finalizes a instance of the RESTAPI class. */
 
-RESTAPI::~RESTAPI() = default;
+RESTAPI::~RESTAPI()
+{
+    if (m_passwordHash != nullptr) {
+        delete[] m_passwordHash;
+    }
+}
 
 /* Sets the instances of the Radio ID and Talkgroup ID lookup tables. */
 
