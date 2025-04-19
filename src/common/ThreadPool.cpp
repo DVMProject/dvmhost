@@ -178,14 +178,22 @@ void* ThreadPool::worker(void* arg)
     thread_t* thread = (thread_t*)arg;
     if (thread == nullptr) {
         LogError(LOG_HOST, "Fatal error starting thread pool worker! No thread!");
+#if defined(_WIN32)
+        return 0UL;
+#else
         return nullptr;
+#endif // defined(_WIN32)
     }
 
     ThreadPool* threadPool = (ThreadPool*)thread->obj;
     if (threadPool == nullptr) {
         LogError(LOG_HOST, "Fatal error starting thread pool worker! No thread pool owner!");
         delete thread;
+#if defined(_WIN32)
+        return 0UL;
+#else
         return nullptr;
+#endif // defined(_WIN32)
     }
 
     std::stringstream threadName;

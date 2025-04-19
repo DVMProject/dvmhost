@@ -80,6 +80,17 @@ network:
     # Flag indicating UDP audio should follow the USRP format.
     udpUsrp: false
 
+    # Delay in-between UDP audio frames (in ms).
+    #   (Some applications will send RTP/PCM audio too fast, requiring a delay in-between packets to 
+    #    be added for appropriate IMBE audio pacing. For most cases a 20ms delay will properly pace 
+    #    audio frames. If set to 0, no frame pacing or jitter buffer will be applied and audio will be 
+    #    encoded as fast as it is received.)
+    udpInterFrameDelay: 0
+    # Jitter Buffer Length (in ms).
+    #   (This is only applied if utilizing inter frame delay, otherwise packet timing is assumed to be
+    #    properly handled by the source.)
+    udpJitter: 200
+
     # Flag indicating the UDP audio will be padded with silence during hang time before end of call.
     udpHangSilence: true
 

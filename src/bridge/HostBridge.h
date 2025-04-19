@@ -36,6 +36,7 @@
 #include <unordered_map>
 #include <vector>
 #include <mutex>
+#include <deque>
 
 #if defined(_WIN32)
 #define WIN32_LEAN_AND_MEAN
@@ -120,6 +121,24 @@ uint8_t encodeMuLaw(short pcm);
 short decodeMuLaw(uint8_t ulaw);
 
 // ---------------------------------------------------------------------------
+//  Structure Declaration
+// ---------------------------------------------------------------------------
+
+/**
+ * @brief Represents the data required for a network packet handler thread.
+ * @ingroup bridge
+ */
+struct NetPacketRequest {
+    uint32_t srcId;
+    uint32_t dstId;
+
+    int pcmLength = 0U;                 //! Length of PCM data buffer
+    uint8_t* pcm = nullptr;             //! Raw PCM buffer
+
+    uint64_t pktRxTime;                 //! Packet receive time
+};
+
+// ---------------------------------------------------------------------------
 //  Class Declaration
 // ---------------------------------------------------------------------------
 
@@ -166,7 +185,10 @@ private:
     bool m_udpUseULaw;
     bool m_udpRTPFrames;
     bool m_udpUsrp;
+    uint8_t m_udpInterFrameDelay;
+    uint16_t m_udpJitter;
     bool m_udpSilenceDuringHang;
+    uint64_t m_lastUdpFrameTime;
 
     uint8_t m_tekAlgoId;
     uint16_t m_tekKeyId;
@@ -219,6 +241,7 @@ private:
 
     RingBuffer<short> m_inputAudio;
     RingBuffer<short> m_outputAudio;
+    std::deque<NetPacketRequest*> m_udpPackets;
 
     vocoder::MBEDecoder* m_decoder;
     vocoder::MBEEncoder* m_encoder;
@@ -502,6 +525,13 @@ private:
      * @returns void* (Ignore)
      */
     static void* threadAudioProcess(void* arg);
+
+    /**
+     * @brief Entry point to UDP audio processing thread.
+     * @param arg Instance of the thread_t structure.
+     * @returns void* (Ignore)
+     */
+    static void* threadUDPAudioProcess(void* arg);
 
     /**
      * @brief Entry point to network processing thread.
