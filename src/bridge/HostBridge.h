@@ -285,7 +285,6 @@ private:
 
     static std::mutex m_audioMutex;
     static std::mutex m_networkMutex;
-    static std::mutex m_udpAudioMutex;
 
 #if defined(_WIN32)
     void* m_decoderState;

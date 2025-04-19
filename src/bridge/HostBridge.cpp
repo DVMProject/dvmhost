@@ -81,7 +81,6 @@ const uint8_t RTP_G711_PAYLOAD_TYPE = 0x00U;
 
 std::mutex HostBridge::m_audioMutex;
 std::mutex HostBridge::m_networkMutex;
-std::mutex HostBridge::m_udpAudioMutex;
 
 // ---------------------------------------------------------------------------
 //  Global Functions
@@ -1407,11 +1406,7 @@ void HostBridge::processUDPAudio()
             req->srcId = __GET_UINT32(buffer, pcmLength + 8U);
         }
 
-        // scope is intentional
-        {
-            std::lock_guard<std::mutex> lock(m_udpAudioMutex);
-            m_udpPackets.push_back(req);
-        }
+        m_udpPackets.push_back(req);
     }
 }
 
@@ -3039,11 +3034,7 @@ void* HostBridge::threadUDPAudioProcess(void* arg)
                         }
                     }
 
-                    // scope is intentional
-                    {
-                        std::lock_guard<std::mutex> lock(m_udpAudioMutex);
-                        bridge->m_udpPackets.pop_front();
-                    }
+                    bridge->m_udpPackets.pop_front();
 
                     bridge->m_udpDstId = bridge->m_dstId;
 
