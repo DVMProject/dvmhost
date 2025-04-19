@@ -81,6 +81,7 @@ const uint8_t RTP_G711_PAYLOAD_TYPE = 0x00U;
 
 std::mutex HostBridge::m_audioMutex;
 std::mutex HostBridge::m_networkMutex;
+std::mutex HostBridge::m_udpAudioMutex;
 
 // ---------------------------------------------------------------------------
 //  Global Functions
@@ -1406,7 +1407,11 @@ void HostBridge::processUDPAudio()
             req->srcId = __GET_UINT32(buffer, pcmLength + 8U);
         }
 
-        m_udpPackets.push_back(req);
+        // scope is intentional
+        {
+            std::lock_guard<std::mutex> lock(m_udpAudioMutex);
+            m_udpPackets.push_back(req);
+        }
     }
 }
 
@@ -3033,8 +3038,12 @@ void* HostBridge::threadUDPAudioProcess(void* arg)
                             continue;
                         }
                     }
-                    
-                    bridge->m_udpPackets.pop_front();
+
+                    // scope is intentional
+                    {
+                        std::lock_guard<std::mutex> lock(m_udpAudioMutex);
+                        bridge->m_udpPackets.pop_front();
+                    }
 
                     bridge->m_udpDstId = bridge->m_dstId;
 
@@ -3069,7 +3078,7 @@ void* HostBridge::threadUDPAudioProcess(void* arg)
                     short samples[MBE_SAMPLES_LENGTH];
                     if (bridge->m_udpUseULaw) {
                         if (bridge->m_trace)
-                            Utils::dump(1U, "HostBridge()::processUDPAudio() uLaw Audio", req->pcm, MBE_SAMPLES_LENGTH * 2U);
+                            Utils::dump(1U, "HostBridge()::threadUDPAudioProcess() uLaw Audio", req->pcm, MBE_SAMPLES_LENGTH * 2U);
 
                         for (uint32_t pcmIdx = 0; pcmIdx < MBE_SAMPLES_LENGTH; pcmIdx++) {
                             samples[smpIdx] = decodeMuLaw(req->pcm[pcmIdx]);
