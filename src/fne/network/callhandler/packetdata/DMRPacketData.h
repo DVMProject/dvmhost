@@ -18,6 +18,8 @@
 
 #include "fne/Defines.h"
 #include "common/Clock.h"
+#include "common/concurrent/deque.h"
+#include "common/concurrent/unordered_map.h"
 #include "common/dmr/DMRDefines.h"
 #include "common/dmr/data/DataHeader.h"
 #include "network/FNENetwork.h"
@@ -115,7 +117,7 @@ namespace network
                     }
                 };
                 typedef std::pair<const uint32_t, RxStatus*> StatusMapPair;
-                std::unordered_map<uint32_t, RxStatus*> m_status;
+                concurrent::unordered_map<uint32_t, RxStatus*> m_status;
 
                 bool m_debug;
 

@@ -124,6 +124,74 @@ namespace concurrent
         }
 
         /**
+         * @brief Returns a read/write iterator that points to the first
+         *  element in the deque. Iteration is done in ordinary
+         *  element order.
+         * @returns iterator 
+         */
+        iterator begin()
+        {
+            __spinlock();
+            return m_deque.begin();
+        }
+        /**
+         * @brief Returns a read-only (constant) iterator that points to the
+         *  first element in the deque. Iteration is done in ordinary
+         *  element order.
+         * @returns const_iterator 
+         */
+        const_iterator begin() const
+        {
+            __spinlock();
+            return m_deque.begin();
+        }
+        /**
+         * @brief Returns a read/write iterator that points one past the last
+         *  element in the deque. Iteration is done in ordinary
+         *  element order.
+         * @returns iterator 
+         */
+        iterator end()
+        {
+            __spinlock();
+            return m_deque.end();
+        }
+        /**
+         * @brief Returns a read-only (constant) iterator that points one past
+         *  the last element in the deque. Iteration is done in ordinary
+         *  element order.
+         * @returns const_iterator 
+         */
+        const_iterator end() const
+        {
+            __spinlock();
+            return m_deque.end();
+        }
+
+        /**
+         * @brief Returns a read-only (constant) iterator that points to the
+         *  first element in the deque. Iteration is done in ordinary
+         *  element order.
+         * @returns const_iterator 
+         */
+        const_iterator cbegin() const
+        {
+            __spinlock();
+            return m_deque.cbegin();
+        }
+        /**
+         * @brief Returns a read-only (constant) iterator that points one past
+         *  the last element in the deque. Iteration is done in ordinary
+         *  element order.
+         * @returns const_iterator 
+         */
+        const_iterator cend() const
+        {
+            __spinlock();
+            return m_deque.cend();
+        }
+
+        /**
          * @brief Gets the total number of elements in the deque.
          * @returns size_t Total number of elements in the deque.
          */

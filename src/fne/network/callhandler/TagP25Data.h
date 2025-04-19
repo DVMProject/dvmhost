@@ -18,6 +18,8 @@
 
 #include "fne/Defines.h"
 #include "common/Clock.h"
+#include "common/concurrent/deque.h"
+#include "common/concurrent/unordered_map.h"
 #include "common/p25/P25Defines.h"
 #include "common/p25/data/DataHeader.h"
 #include "common/p25/data/LowSpeedData.h"
@@ -28,8 +30,6 @@
 #include "common/p25/lc/TDULC.h"
 #include "network/FNENetwork.h"
 #include "network/callhandler/packetdata/P25PacketData.h"
-
-#include <deque>
 
 namespace network
 {
@@ -164,7 +164,7 @@ namespace network
                  */
                 uint32_t dstId;
             };
-            std::deque<ParrotFrame> m_parrotFrames;
+            concurrent::deque<ParrotFrame> m_parrotFrames;
             bool m_parrotFramesReady;
             bool m_parrotFirstFrame;
 
@@ -209,7 +209,7 @@ namespace network
                 }
             };
             typedef std::pair<const uint32_t, RxStatus> StatusMapPair;
-            std::unordered_map<uint32_t, RxStatus> m_status;
+            concurrent::unordered_map<uint32_t, RxStatus> m_status;
 
             friend class packetdata::P25PacketData;
             packetdata::P25PacketData* m_packetData;

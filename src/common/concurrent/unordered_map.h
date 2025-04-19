@@ -170,7 +170,7 @@ namespace concurrent
 
         /**
          * @brief Returns a read-only (constant) iterator that points to the
-         *  first element in the vector. Iteration is done in ordinary
+         *  first element in the unordered_map. Iteration is done in ordinary
          *  element order.
          * @returns const_iterator 
          */
@@ -181,7 +181,7 @@ namespace concurrent
         }
         /**
          * @brief Returns a read-only (constant) iterator that points one past
-         *  the last element in the vector. Iteration is done in ordinary
+         *  the last element in the unordered_map. Iteration is done in ordinary
          *  element order.
          * @returns const_iterator 
          */
