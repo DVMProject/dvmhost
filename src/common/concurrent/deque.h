@@ -355,18 +355,20 @@ namespace concurrent
         }
 
     private:
-        mutable std::mutex m_mutex;     //! Mutex used for hard locking.
-        mutable bool m_locked = false;  //! Flag used for soft locking (prevents find lookups), should be used when atomic operations (add/erase/etc) are being used.
+        mutable std::mutex m_mutex;     //! Mutex used for change locking.
+        mutable bool m_locked = false;  //! Flag used for read locking (prevents find lookups), should be used when atomic operations (add/erase/etc) are being used.
 
         std::deque<T> m_deque;
 
         /**
-         * @brief Locks the deque.
+         * @brief Lock the vector.
+         * @param readLock Flag indicating whether or not to use read locking.
          */
-        inline void __lock() const
+        inline void __lock(bool readLock = false) const
         {
             m_mutex.lock();
-            m_locked = true;
+            if (!readLock)
+                m_locked = true;
         }
         /**
          * @brief Unlocks the deque.
@@ -377,7 +379,7 @@ namespace concurrent
             m_locked = false;
         }
         /**
-         * @brief Spins until the deque is unlocked.
+         * @brief Spins until the deque is read unlocked.
          */
         inline void __spinlock() const
         {

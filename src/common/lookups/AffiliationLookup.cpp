@@ -345,11 +345,13 @@ bool AffiliationLookup::releaseGrant(uint32_t dstId, bool releaseAll)
     if (dstId == 0U && releaseAll) {
         LogWarning(LOG_HOST, "%s, force releasing all channel grants", m_name.c_str());
 
+        m_grantChTable.lock();
         std::vector<uint32_t> gntsToRel = std::vector<uint32_t>();
         for (auto entry : m_grantChTable) {
             uint32_t dstId = entry.first;
             gntsToRel.push_back(dstId);
         }
+        m_grantChTable.unlock();
 
         // release grants
         for (uint32_t dstId : gntsToRel) {
@@ -530,7 +532,10 @@ uint32_t AffiliationLookup::getGrantedSrcId(uint32_t dstId)
 
 void AffiliationLookup::clock(uint32_t ms)
 {
+    m_grantChTable.spinlock();
+
     // clock all the grant timers
+    m_grantChTable.lock(false);
     std::vector<uint32_t> gntsToRel = std::vector<uint32_t>();
     for (auto entry : m_grantChTable) {
         uint32_t dstId = entry.first;
@@ -540,6 +545,7 @@ void AffiliationLookup::clock(uint32_t ms)
             gntsToRel.push_back(dstId);
         }
     }
+    m_grantChTable.unlock();
 
     // release grants that have timed out
     for (uint32_t dstId : gntsToRel) {
@@ -547,7 +553,10 @@ void AffiliationLookup::clock(uint32_t ms)
     }
 
     if (!m_disableUnitRegTimeout) {
+        m_unitRegTable.spinlock();
+
         // clock all the unit registration timers
+        m_unitRegTable.lock(false);
         std::vector<uint32_t> unitsToDereg = std::vector<uint32_t>();
         for (uint32_t srcId : m_unitRegTable) {
             m_unitRegTimers[srcId].clock(ms);
@@ -555,6 +564,7 @@ void AffiliationLookup::clock(uint32_t ms)
                 unitsToDereg.push_back(srcId);
             }
         }
+        m_unitRegTable.unlock();
 
         // release units registrations that have timed out
         for (uint32_t srcId : unitsToDereg) {

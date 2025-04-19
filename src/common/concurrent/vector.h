@@ -433,19 +433,40 @@ namespace concurrent
             return m_vector;
         }
 
+        /**
+         * @brief Locks the vector.
+         * @param readLock Flag indicating whether or not to use read locking.
+         */
+        void lock(bool readLock = true) const { __lock(readLock); }
+        /**
+         * @brief Unlocks the vector.
+         */
+        void unlock() const { __unlock(); }
+        /**
+         * @brief Flag indicating whether or not the vector is read locked.
+         * @return bool True if the vector is read locked, false otherwise.
+         */
+        bool isReadLocked() const { return m_locked; }
+        /**
+         * @brief Spins until the vector is unlocked.
+         */
+        void spinlock() const { __spinlock(); }
+
     private:
-        mutable std::mutex m_mutex;     //! Mutex used for hard locking.
-        mutable bool m_locked = false;  //! Flag used for soft locking (prevents find lookups), should be used when atomic operations (add/erase/etc) are being used.
+        mutable std::mutex m_mutex;     //! Mutex used for change locking.
+        mutable bool m_locked = false;  //! Flag used for read locking (prevents find lookups), should be used when atomic operations (add/erase/etc) are being used.
 
         std::vector<T> m_vector;
 
         /**
          * @brief Lock the vector.
+         * @param readLock Flag indicating whether or not to use read locking.
          */
-        inline void __lock() const
+        inline void __lock(bool readLock = true) const
         {
             m_mutex.lock();
-            m_locked = true;
+            if (readLock)
+                m_locked = true;
         }
 
         /**
@@ -458,7 +479,7 @@ namespace concurrent
         }
 
         /**
-         * @brief Spins until the vector is unlocked.
+         * @brief Spins until the vector is read unlocked.
          */
         inline void __spinlock() const
         {

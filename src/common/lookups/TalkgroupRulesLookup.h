@@ -643,8 +643,8 @@ namespace lookups
         bool m_acl;
         bool m_stop;
 
-        static std::mutex m_mutex;  //! Mutex used for hard locking.
-        static bool m_locked;       //! Flag used for soft locking (prevents find lookups), should be used when atomic operations (add/erase/etc) are being used.
+        static std::mutex m_mutex;  //! Mutex used for change locking.
+        static bool m_locked;       //! Flag used for read locking (prevents find lookups), should be used when atomic operations (add/erase/etc) are being used.
 
         /**
          * @brief Loads the table from the passed lookup table file.

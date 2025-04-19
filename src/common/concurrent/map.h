@@ -371,19 +371,40 @@ namespace concurrent
             return m_map;
         }
 
+        /**
+         * @brief Locks the map.
+         * @param readLock Flag indicating whether or not to use read locking.
+         */
+        void lock(bool readLock = false) const { __lock(readLock); }
+        /**
+         * @brief Unlocks the map.
+         */
+        void unlock() const { __unlock(); }
+        /**
+         * @brief Flag indicating whether or not the map is read locked.
+         * @return bool True if the map is read locked, false otherwise.
+         */
+        bool isReadLocked() const { return m_locked; }
+        /**
+         * @brief Spins until the map is unlocked.
+         */
+        void spinlock() const { __spinlock(); }
+
     private:
-        mutable std::mutex m_mutex;     //! Mutex used for hard locking.
-        mutable bool m_locked = false;  //! Flag used for soft locking (prevents find lookups), should be used when atomic operations (add/erase/etc) are being used.
+        mutable std::mutex m_mutex;     //! Mutex used for change locking.
+        mutable bool m_locked = false;  //! Flag used for read locking (prevents find lookups), should be used when atomic operations (add/erase/etc) are being used.
 
         std::map<Key, T> m_map;
 
         /**
-         * @brief Locks the map.
+         * @brief Lock the vector.
+         * @param readLock Flag indicating whether or not to use read locking.
          */
-        inline void __lock() const
+        inline void __lock(bool readLock = false) const
         {
             m_mutex.lock();
-            m_locked = true;
+            if (readLock)
+                m_locked = true;
         }
         /**
          * @brief Unlocks the map.
@@ -394,7 +415,7 @@ namespace concurrent
             m_locked = false;
         }
         /**
-         * @brief Spins until the map is unlocked.
+         * @brief Spins until the map is read unlocked.
          */
         inline void __spinlock() const
         {

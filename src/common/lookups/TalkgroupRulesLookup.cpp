@@ -37,7 +37,7 @@ bool TalkgroupRulesLookup::m_locked = false;
 // Unlock the table.
 #define __UNLOCK_TABLE() m_locked = false;
 
-// Spinlock wait for table to be released.
+// Spinlock wait for table to be read unlocked.
 #define __SPINLOCK()                            \
     if (m_locked) {                             \
         while (m_locked)                        \
