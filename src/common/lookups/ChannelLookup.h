@@ -24,14 +24,11 @@
 #define __CHANNEL_LOOKUP_H__
 
 #include "common/Defines.h"
+#include "common/concurrent/vector.h"
+#include "common/concurrent/unordered_map.h"
 #include "common/Timer.h"
 
 #include <cstdio>
-#include <unordered_map>
-#include <algorithm>
-#include <vector>
-#include <functional>
-#include <mutex>
 
 namespace lookups
 {
@@ -163,7 +160,7 @@ namespace lookups
          * @brief Gets the RF channel data table.
          * @returns std::unordered_map<uint32_t, VoiceChData> RF channel data table.
          */
-        std::unordered_map<uint32_t, VoiceChData> rfChDataTable() const { return m_rfChDataTable; }
+        std::unordered_map<uint32_t, VoiceChData> rfChDataTable() const { return m_rfChDataTable.get(); }
         /**
          * @brief Helper to set RF channel data.
          * @param chData RF Channel data table.
@@ -196,7 +193,7 @@ namespace lookups
          * @brief Gets the RF channels table.
          * @returns std::vector<uint32_t> RF channel table.
          */
-        std::vector<uint32_t> rfChTable() const { return m_rfChTable; }
+        std::vector<uint32_t> rfChTable() const { return m_rfChTable.get(); }
         /**
          * @brief Helper to add a RF channel.
          * @param chNo Channel Number.
@@ -218,10 +215,8 @@ namespace lookups
         /** @} */
 
     private:
-        std::vector<uint32_t> m_rfChTable;
-        std::unordered_map<uint32_t, VoiceChData> m_rfChDataTable;
-
-        static std::mutex m_mutex;
+        concurrent::vector<uint32_t> m_rfChTable;
+        concurrent::unordered_map<uint32_t, VoiceChData> m_rfChDataTable;
     };
 } // namespace lookups
 

@@ -201,7 +201,7 @@ namespace nxdn
          * @brief Gets instance of the AffiliationLookup class.
          * @returns AffiliationLookup Instance of the AffiliationLookup class.
          */
-        lookups::AffiliationLookup affiliations() { return m_affiliations; }
+        lookups::AffiliationLookup* affiliations() { return m_affiliations; }
 
         /**
          * @brief Returns the current operating RF state of the NXDN controller.
@@ -291,7 +291,7 @@ namespace nxdn
         lookups::IdenTableLookup* m_idenTable;
         lookups::RadioIdLookup* m_ridLookup;
         lookups::TalkgroupRulesLookup* m_tidLookup;
-        lookups::AffiliationLookup m_affiliations;
+        lookups::AffiliationLookup* m_affiliations;
         ::lookups::VoiceChData m_controlChData;
 
         lookups::IdenTable m_idenEntry;

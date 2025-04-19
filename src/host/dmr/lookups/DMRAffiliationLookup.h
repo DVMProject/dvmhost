@@ -73,10 +73,9 @@ namespace dmr
              * @brief Helper to release the channel grant for the destination ID.
              * @param dstId Destination Address.
              * @param releaseAll Flag indicating all channel grants should be released.
-             * @param noLock Flag indicating no mutex lock operation should be performed while releasing.
              * @returns bool True, if channel grant was released, otherwise false.
              */
-            bool releaseGrant(uint32_t dstId, bool releaseAll, bool noLock = false) override;
+            bool releaseGrant(uint32_t dstId, bool releaseAll) override;
             /**
              * @brief Helper to determine if the channel number is busy.
              * @param chNo Channel Number.
@@ -111,7 +110,7 @@ namespace dmr
             uint8_t getAvailableSlotForChannel(uint32_t chNo) const;
 
         protected:
-            std::unordered_map<uint32_t, std::tuple<uint32_t, uint8_t>> m_grantChSlotTable;
+            concurrent::unordered_map<uint32_t, std::tuple<uint32_t, uint8_t>> m_grantChSlotTable;
 
             uint32_t m_tsccChNo;
             uint8_t m_tsccSlot;

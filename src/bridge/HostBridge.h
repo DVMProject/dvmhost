@@ -17,6 +17,7 @@
 #define __HOST_BRIDGE_H__
 
 #include "Defines.h"
+#include "common/concurrent/deque.h"
 #include "common/dmr/data/EmbeddedData.h"
 #include "common/dmr/lc/LC.h"
 #include "common/dmr/lc/PrivacyLC.h"
@@ -33,10 +34,7 @@
 #include "network/PeerNetwork.h"
 
 #include <string>
-#include <unordered_map>
-#include <vector>
 #include <mutex>
-#include <deque>
 
 #if defined(_WIN32)
 #define WIN32_LEAN_AND_MEAN
@@ -241,7 +239,7 @@ private:
 
     RingBuffer<short> m_inputAudio;
     RingBuffer<short> m_outputAudio;
-    std::deque<NetPacketRequest*> m_udpPackets;
+    concurrent::deque<NetPacketRequest*> m_udpPackets;
 
     vocoder::MBEDecoder* m_decoder;
     vocoder::MBEEncoder* m_encoder;

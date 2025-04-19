@@ -25,6 +25,7 @@
 #define __FNE_NETWORK_H__
 
 #include "fne/Defines.h"
+#include "common/concurrent/unordered_map.h"
 #include "common/network/BaseNetwork.h"
 #include "common/network/json/json.h"
 #include "common/lookups/AffiliationLookup.h"
@@ -552,13 +553,12 @@ namespace network
 
         NET_CONN_STATUS m_status;
 
-        static std::mutex m_peerMutex;
         typedef std::pair<const uint32_t, network::FNEPeerConnection*> PeerMapPair;
-        std::unordered_map<uint32_t, FNEPeerConnection*> m_peers;
-        std::unordered_map<uint32_t, json::array> m_peerLinkPeers;
+        concurrent::unordered_map<uint32_t, FNEPeerConnection*> m_peers;
+        concurrent::unordered_map<uint32_t, json::array> m_peerLinkPeers;
         typedef std::pair<const uint32_t, lookups::AffiliationLookup*> PeerAffiliationMapPair;
-        std::unordered_map<uint32_t, lookups::AffiliationLookup*> m_peerAffiliations;
-        std::unordered_map<uint32_t, std::vector<uint32_t>> m_ccPeerMap;
+        concurrent::unordered_map<uint32_t, lookups::AffiliationLookup*> m_peerAffiliations;
+        concurrent::unordered_map<uint32_t, std::vector<uint32_t>> m_ccPeerMap;
         static std::timed_mutex m_keyQueueMutex;
         std::unordered_map<uint32_t, uint16_t> m_peerLinkKeyQueue;
 

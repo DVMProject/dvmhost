@@ -87,6 +87,7 @@ file(GLOB common_INCLUDE
     "src/common/nxdn/lc/rcch/*.h"
 
     # Core
+    "src/common/concurrent/*.h"
     "src/common/edac/*.h"
     "src/common/edac/rs/*.h"
     "src/common/lookups/*.h"

@@ -21,15 +21,14 @@
 #define __AFFILIATION_LOOKUP_H__
 
 #include "common/Defines.h"
+#include "common/concurrent/vector.h"
+#include "common/concurrent/unordered_map.h"
 #include "common/lookups/ChannelLookup.h"
 #include "common/Timer.h"
 
 #include <cstdio>
-#include <unordered_map>
 #include <algorithm>
-#include <vector>
 #include <functional>
-#include <mutex>
 
 namespace lookups
 {
@@ -66,7 +65,7 @@ namespace lookups
          * @brief Gets the unit registration table.
          * @returns std::vector<uint32> Unit Registration Table.
          */
-        std::vector<uint32_t> unitRegTable() const { return m_unitRegTable; }
+        std::vector<uint32_t> unitRegTable() const { return m_unitRegTable.get(); }
         /**
          * @brief Helper to register a source ID.
          * @param srcId Source Radio ID.
@@ -118,7 +117,7 @@ namespace lookups
          * @brief Gets the group affiliation table.
          * @returns std::unordered_map<uint32_t, uint32_t> Group Affiliation Table.
          */
-        std::unordered_map<uint32_t, uint32_t> grpAffTable() const { return m_grpAffTable; }
+        std::unordered_map<uint32_t, uint32_t> grpAffTable() const { return m_grpAffTable.get(); }
         /**
          * @brief Helper to group affiliate a source ID.
          * @param srcId Source Radio ID.
@@ -163,7 +162,7 @@ namespace lookups
          * @brief Gets the grant table.
          * @returns std::unordered_map<uint32_t, uint32_t> Channel Grant Table.
          */
-        std::unordered_map<uint32_t, uint32_t> grantTable() const { return m_grantChTable; }
+        std::unordered_map<uint32_t, uint32_t> grantTable() const { return m_grantChTable.get(); }
         /**
          * @brief Helper to grant a channel.
          * @param dstId Destination Address.
@@ -183,10 +182,9 @@ namespace lookups
          * @brief Helper to release the channel grant for the destination ID.
          * @param dstId Destination Address.
          * @param releaseAll Flag indicating all channel grants should be released.
-         * @param noLock Flag indicating no mutex lock operation should be performed while releasing.
          * @returns bool True, if channel grant was released, otherwise false.
          */
-        virtual bool releaseGrant(uint32_t dstId, bool releaseAll, bool noLock = false);
+        virtual bool releaseGrant(uint32_t dstId, bool releaseAll);
         /**
          * @brief Helper to determine if the channel number is busy.
          * @param chNo Channel Number.
@@ -279,15 +277,15 @@ namespace lookups
     protected:
         uint8_t m_rfGrantChCnt;
 
-        std::vector<uint32_t> m_unitRegTable;
-        std::unordered_map<uint32_t, Timer> m_unitRegTimers;
-        std::unordered_map<uint32_t, uint32_t> m_grpAffTable;
+        concurrent::vector<uint32_t> m_unitRegTable;
+        concurrent::unordered_map<uint32_t, Timer> m_unitRegTimers;
+        concurrent::unordered_map<uint32_t, uint32_t> m_grpAffTable;
 
-        std::unordered_map<uint32_t, uint32_t> m_grantChTable;
-        std::unordered_map<uint32_t, uint32_t> m_grantSrcIdTable;
-        std::unordered_map<uint32_t, bool> m_uuGrantedTable;
-        std::unordered_map<uint32_t, bool> m_netGrantedTable;
-        std::unordered_map<uint32_t, Timer> m_grantTimers;
+        concurrent::unordered_map<uint32_t, uint32_t> m_grantChTable;
+        concurrent::unordered_map<uint32_t, uint32_t> m_grantSrcIdTable;
+        concurrent::unordered_map<uint32_t, bool> m_uuGrantedTable;
+        concurrent::unordered_map<uint32_t, bool> m_netGrantedTable;
+        concurrent::unordered_map<uint32_t, Timer> m_grantTimers;
 
         //                 chNo      dstId     slot
         std::function<void(uint32_t, uint32_t, uint8_t)> m_releaseGrant;
@@ -300,8 +298,6 @@ namespace lookups
         bool m_disableUnitRegTimeout;
 
         bool m_verbose;
-
-        static std::mutex m_mutex;
     };
 } // namespace lookups
 

@@ -1355,7 +1355,7 @@ json::object Host::getStatus()
             uint32_t dstId = 0U, srcId = 0U;
 
             // fetch affiliations from DMR if we're a DMR CC
-            if (m_dmrTSCCData) {
+            if (m_dmrTSCCData && m_dmr->affiliations() != nullptr) {
                 if (m_dmr->affiliations()->isChBusy(chNo)) {
                     chData["tx"].set<bool>(_true);
                 } else {
@@ -1368,29 +1368,29 @@ json::object Host::getStatus()
             }
 
             // fetch affiliations from P25 if we're a P25 CC
-            if (m_p25CCData) {
-                if (m_p25->affiliations().isChBusy(chNo)) {
+            if (m_p25CCData && m_p25->affiliations() != nullptr) {
+                if (m_p25->affiliations()->isChBusy(chNo)) {
                     chData["tx"].set<bool>(_true);
                 } else {
                     chData["tx"].set<bool>(_false);
                 }
 
-                dstId = m_p25->affiliations().getGrantedDstByCh(chNo);
+                dstId = m_p25->affiliations()->getGrantedDstByCh(chNo);
                 if (dstId > 0U)
-                    srcId = m_p25->affiliations().getGrantedSrcId(dstId);
+                    srcId = m_p25->affiliations()->getGrantedSrcId(dstId);
             }
 
             // fetch affiliations from NXDN if we're a NXDN CC
-            if (m_nxdnCCData) {
-                if (m_nxdn->affiliations().isChBusy(chNo)) {
+            if (m_nxdnCCData && m_nxdn->affiliations() != nullptr) {
+                if (m_nxdn->affiliations()->isChBusy(chNo)) {
                     chData["tx"].set<bool>(_true);
                 } else {
                     chData["tx"].set<bool>(_false);
                 }
 
-                dstId = m_nxdn->affiliations().getGrantedDstByCh(chNo);
+                dstId = m_nxdn->affiliations()->getGrantedDstByCh(chNo);
                 if (dstId > 0U)
-                    srcId = m_nxdn->affiliations().getGrantedSrcId(dstId);
+                    srcId = m_nxdn->affiliations()->getGrantedSrcId(dstId);
             }
 
             chData["lastDstId"].set<uint32_t>(dstId);

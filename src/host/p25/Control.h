@@ -228,7 +228,7 @@ namespace p25
          * @brief Gets instance of the P25AffiliationLookup class.
          * @returns P25AffiliationLookup Instance of the P25AffiliationLookup class.
          */
-        lookups::P25AffiliationLookup affiliations() { return m_affiliations; }
+        lookups::P25AffiliationLookup* affiliations() { return m_affiliations; }
 
         /**
          * @brief Returns the current operating RF state of the P25 controller.
@@ -315,7 +315,7 @@ namespace p25
         ::lookups::IdenTableLookup* m_idenTable;
         ::lookups::RadioIdLookup* m_ridLookup;
         ::lookups::TalkgroupRulesLookup* m_tidLookup;
-        lookups::P25AffiliationLookup m_affiliations;
+        lookups::P25AffiliationLookup* m_affiliations;
         ::lookups::VoiceChData m_controlChData;
 
         ::lookups::IdenTable m_idenEntry;

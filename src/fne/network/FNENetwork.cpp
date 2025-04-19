@@ -44,7 +44,6 @@ const uint64_t PACKET_LATE_TIME = 200U; // 200ms
 //  Static Class Members
 // ---------------------------------------------------------------------------
 
-std::mutex FNENetwork::m_peerMutex;
 std::timed_mutex FNENetwork::m_keyQueueMutex;
 
 // ---------------------------------------------------------------------------
@@ -1652,7 +1651,6 @@ void FNENetwork::eraseStreamPktSeq(uint32_t peerId, uint32_t streamId)
     if (peerId > 0 && (m_peers.find(peerId) != m_peers.end())) {
         FNEPeerConnection* connection = m_peers[peerId];
         if (connection != nullptr) {
-            std::lock_guard<std::mutex> lock(m_peerMutex);
             connection->eraseStreamPktSeq(streamId);
         }
     }
@@ -1664,7 +1662,6 @@ void FNENetwork::createPeerAffiliations(uint32_t peerId, std::string peerName)
 {
     erasePeerAffiliations(peerId);
 
-    std::lock_guard<std::mutex> lock(m_peerMutex);
     lookups::ChannelLookup* chLookup = new lookups::ChannelLookup();
     m_peerAffiliations[peerId] = new lookups::AffiliationLookup(peerName, chLookup, m_verbose);
     m_peerAffiliations[peerId]->setDisableUnitRegTimeout(true); // FNE doesn't allow unit registration timeouts (notification must come from the peers)
@@ -1674,7 +1671,6 @@ void FNENetwork::createPeerAffiliations(uint32_t peerId, std::string peerName)
 
 bool FNENetwork::erasePeerAffiliations(uint32_t peerId)
 {
-    std::lock_guard<std::mutex> lock(m_peerMutex);
     auto it = std::find_if(m_peerAffiliations.begin(), m_peerAffiliations.end(), [&](PeerAffiliationMapPair x) { return x.first == peerId; });
     if (it != m_peerAffiliations.end()) {
         lookups::AffiliationLookup* aff = m_peerAffiliations[peerId];
@@ -1696,7 +1692,6 @@ bool FNENetwork::erasePeerAffiliations(uint32_t peerId)
 
 bool FNENetwork::erasePeer(uint32_t peerId)
 {
-    std::lock_guard<std::mutex> lock(m_peerMutex);
     {
         auto it = std::find_if(m_peers.begin(), m_peers.end(), [&](PeerMapPair x) { return x.first == peerId; });
         if (it != m_peers.end()) {
@@ -1793,7 +1788,6 @@ bool FNENetwork::resetPeer(uint32_t peerId)
 
 std::string FNENetwork::resolvePeerIdentity(uint32_t peerId)
 {
-    std::lock_guard<std::mutex> lock(m_peerMutex);
     auto it = std::find_if(m_peers.begin(), m_peers.end(), [&](PeerMapPair x) { return x.first == peerId; });
     if (it != m_peers.end()) {
         if (it->second != nullptr) {

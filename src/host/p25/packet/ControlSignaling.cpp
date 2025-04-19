@@ -63,7 +63,7 @@ using namespace p25::packet;
 #define VALID_DSTID(_PCKT_STR, _PCKT, _SRCID, _DSTID)                                   \
     if (!acl::AccessControl::validateSrcId(_DSTID)) {                                   \
         LogWarning(LOG_RF, P25_TSDU_STR ", %s denial, RID rejection, dstId = %u", _PCKT_STR.c_str(), _DSTID); \
-        writeRF_TSDU_Deny(_SRCID, _DSTID, ReasonCode::DENY_TGT_UNIT_NOT_VALID, _PCKT);      \
+        writeRF_TSDU_Deny(_SRCID, _DSTID, ReasonCode::DENY_TGT_UNIT_NOT_VALID, _PCKT);  \
         m_p25->m_rfState = RS_RF_REJECTED;                                              \
         return false;                                                                   \
     }
@@ -72,14 +72,14 @@ using namespace p25::packet;
 #define VALID_TGID(_PCKT_STR, _PCKT, _SRCID, _DSTID)                                    \
     if (!acl::AccessControl::validateTGId(_DSTID)) {                                    \
         LogWarning(LOG_RF, P25_TSDU_STR ", %s denial, TGID rejection, dstId = %u", _PCKT_STR.c_str(), _DSTID); \
-        writeRF_TSDU_Deny(_SRCID, _DSTID, ReasonCode::DENY_TGT_GROUP_NOT_VALID, _PCKT);     \
+        writeRF_TSDU_Deny(_SRCID, _DSTID, ReasonCode::DENY_TGT_GROUP_NOT_VALID, _PCKT); \
         m_p25->m_rfState = RS_RF_REJECTED;                                              \
         return false;                                                                   \
     }
 
 // Verify the source RID is registered.
 #define VERIFY_SRCID_REG(_PCKT_STR, _PCKT, _SRCID)                                      \
-    if (!m_p25->m_affiliations.isUnitReg(_SRCID) && m_verifyReg) {                      \
+    if (!m_p25->m_affiliations->isUnitReg(_SRCID) && m_verifyReg) {                     \
         LogWarning(LOG_RF, P25_TSDU_STR ", %s denial, RID not registered, srcId = %u", _PCKT_STR.c_str(), _SRCID); \
         writeRF_TSDU_Deny(_SRCID, WUID_FNE, ReasonCode::DENY_REQ_UNIT_NOT_AUTH, _PCKT); \
         writeRF_TSDU_U_Reg_Cmd(_SRCID);                                                 \
@@ -89,9 +89,9 @@ using namespace p25::packet;
 
 // Verify the source RID is affiliated.
 #define VERIFY_SRCID_AFF(_PCKT_STR, _PCKT, _SRCID, _DSTID)                              \
-    if (!m_p25->m_affiliations.isGroupAff(_SRCID, _DSTID) && m_verifyAff) {             \
+    if (!m_p25->m_affiliations->isGroupAff(_SRCID, _DSTID) && m_verifyAff) {            \
         LogWarning(LOG_RF, P25_TSDU_STR ", %s denial, RID not affiliated to TGID, srcId = %u, dstId = %u", _PCKT_STR.c_str(), _SRCID, _DSTID); \
-        writeRF_TSDU_Deny(_SRCID, _DSTID, ReasonCode::DENY_REQ_UNIT_NOT_AUTH, _PCKT);       \
+        writeRF_TSDU_Deny(_SRCID, _DSTID, ReasonCode::DENY_REQ_UNIT_NOT_AUTH, _PCKT);   \
         writeRF_TSDU_U_Reg_Cmd(_SRCID);                                                 \
         m_p25->m_rfState = RS_RF_REJECTED;                                              \
         return false;                                                                   \
@@ -209,7 +209,7 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
         uint32_t srcId = tsbk->getSrcId();
         uint32_t dstId = tsbk->getDstId();
 
-        m_p25->m_affiliations.touchUnitReg(srcId);
+        m_p25->m_affiliations->touchUnitReg(srcId);
         m_lastMFID = tsbk->getMFId();
 
         // handle standard P25 reference opcodes
@@ -570,9 +570,9 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
 
                 ::ActivityLog("P25", true, "group affiliation query response from %u to %s %u", srcId, "TG ", dstId);
 
-                if (!m_p25->m_affiliations.isGroupAff(srcId, dstId)) {
+                if (!m_p25->m_affiliations->isGroupAff(srcId, dstId)) {
                     // update dynamic affiliation table
-                    m_p25->m_affiliations.groupAff(srcId, dstId);
+                    m_p25->m_affiliations->groupAff(srcId, dstId);
 
                     if (m_p25->m_network != nullptr)
                         m_p25->m_network->announceGroupAffiliation(srcId, dstId);
@@ -792,7 +792,7 @@ bool ControlSignaling::processNetwork(uint8_t* data, uint32_t len, lc::LC& contr
                         {
                             if (m_p25->m_dedicatedControl) {
                                 // is the specified channel granted?
-                                if (/*m_p25->m_affiliations.isChBusy(chNo) &&*/ m_p25->m_affiliations.isGranted(dstId)) {
+                                if (/*m_p25->m_affiliations->isChBusy(chNo) &&*/ m_p25->m_affiliations->isGranted(dstId)) {
                                     uint32_t chNo = tsbk->getGrpVchNo();
 
                                     if (m_verbose) {
@@ -800,7 +800,7 @@ bool ControlSignaling::processNetwork(uint8_t* data, uint32_t len, lc::LC& contr
                                             tsbk->toString().c_str(), chNo, srcId, dstId);
                                     }
 
-                                    m_p25->m_affiliations.releaseGrant(dstId, false);
+                                    m_p25->m_affiliations->releaseGrant(dstId, false);
                                 }
                             }
                             
@@ -824,7 +824,7 @@ bool ControlSignaling::processNetwork(uint8_t* data, uint32_t len, lc::LC& contr
                     case TSBKO::IOSP_UU_VCH:
                     {
                         if (m_p25->m_enableControl && m_p25->m_dedicatedControl) {
-                            if (!m_p25->m_affiliations.isGranted(dstId)) {
+                            if (!m_p25->m_affiliations->isGranted(dstId)) {
                                 if (m_verbose) {
                                     LogMessage(LOG_NET, P25_TSDU_STR ", %s, emerg = %u, encrypt = %u, prio = %u, chNo = %u, srcId = %u, dstId = %u",
                                         tsbk->toString(true).c_str(), tsbk->getEmergency(), tsbk->getEncrypted(), tsbk->getPriority(), tsbk->getGrpVchNo(), srcId, dstId);
@@ -1829,7 +1829,7 @@ void ControlSignaling::writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adj
         break;
     /** update data */
     case 5:
-        if (m_p25->m_affiliations.grantSize() > 0) {
+        if (m_p25->m_affiliations->grantSize() > 0) {
             writeRF_TSDU_Grant_Update();
         }
         break;
@@ -2198,12 +2198,12 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
             }
         }
 
-        if (!m_p25->m_affiliations.isGranted(dstId)) {
+        if (!m_p25->m_affiliations->isGranted(dstId)) {
             if (grp && !m_p25->m_ignoreAffiliationCheck) {
                 // is this an affiliation required group?
                 ::lookups::TalkgroupRuleGroupVoice tid = m_p25->m_tidLookup->find(dstId);
                 if (tid.config().affiliated()) {
-                    if (!m_p25->m_affiliations.hasGroupAff(dstId)) {
+                    if (!m_p25->m_affiliations->hasGroupAff(dstId)) {
                         LogWarning(LOG_NET, P25_TSDU_STR ", TSBKO, IOSP_GRP_VCH (Group Voice Channel Request) ignored, no group affiliations, dstId = %u", dstId);
                         return false;
                     }
@@ -2212,13 +2212,13 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
 
             if (!grp && !m_p25->m_ignoreAffiliationCheck) {
                 // is this the target registered?
-                if (!m_p25->m_affiliations.isUnitReg(dstId)) {
+                if (!m_p25->m_affiliations->isUnitReg(dstId)) {
                     LogWarning(LOG_NET, P25_TSDU_STR ", TSBKO, IOSP_UU_VCH (Unit-to-Unit Voice Channel Request) ignored, no unit registration, dstId = %u", dstId);
                     return false;
                 }
             }
 
-            if (!m_p25->m_affiliations.rfCh()->isRFChAvailable()) {
+            if (!m_p25->m_affiliations->rfCh()->isRFChAvailable()) {
                 if (grp) {
                     if (!net) {
                         LogWarning(LOG_RF, P25_TSDU_STR ", TSBKO, IOSP_GRP_VCH (Group Voice Channel Request) denied, no channels available, dstId = %u", dstId);
@@ -2249,9 +2249,9 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
                 }
             }
             else {
-                if (m_p25->m_affiliations.grantCh(dstId, srcId, GRANT_TIMER_TIMEOUT, grp, net)) {
-                    chNo = m_p25->m_affiliations.getGrantedCh(dstId);
-                    m_p25->m_siteData.setChCnt(m_p25->m_affiliations.rfCh()->rfChSize() + m_p25->m_affiliations.getGrantedRFChCnt());
+                if (m_p25->m_affiliations->grantCh(dstId, srcId, GRANT_TIMER_TIMEOUT, grp, net)) {
+                    chNo = m_p25->m_affiliations->getGrantedCh(dstId);
+                    m_p25->m_siteData.setChCnt(m_p25->m_affiliations->rfCh()->rfChSize() + m_p25->m_affiliations->getGrantedRFChCnt());
                 }
             }
         }
@@ -2259,7 +2259,7 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
             if (!m_disableGrantSrcIdCheck && !net) {
                 // do collision check between grants to see if a SU is attempting a "grant retry" or if this is a
                 // different source from the original grant
-                uint32_t grantedSrcId = m_p25->m_affiliations.getGrantedSrcId(dstId);
+                uint32_t grantedSrcId = m_p25->m_affiliations->getGrantedSrcId(dstId);
                 if (srcId != grantedSrcId) {
                     if (!net) {
                         LogWarning(LOG_RF, P25_TSDU_STR ", TSBKO, IOSP_GRP_VCH (Group Voice Channel Request) denied, traffic collision, dstId = %u", dstId);
@@ -2276,14 +2276,14 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
                 }
             }
 
-            chNo = m_p25->m_affiliations.getGrantedCh(dstId);
-            m_p25->m_affiliations.touchGrant(dstId);
+            chNo = m_p25->m_affiliations->getGrantedCh(dstId);
+            m_p25->m_affiliations->touchGrant(dstId);
         }
     }
     else {
-        if (m_p25->m_affiliations.isGranted(dstId)) {
-            chNo = m_p25->m_affiliations.getGrantedCh(dstId);
-            m_p25->m_affiliations.touchGrant(dstId);
+        if (m_p25->m_affiliations->isGranted(dstId)) {
+            chNo = m_p25->m_affiliations->getGrantedCh(dstId);
+            m_p25->m_affiliations->touchGrant(dstId);
         }
         else {
             return false;
@@ -2291,7 +2291,7 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
     }
 
     if (chNo > 0U) {
-        ::lookups::VoiceChData voiceChData = m_p25->m_affiliations.rfCh()->getRFChData(chNo);
+        ::lookups::VoiceChData voiceChData = m_p25->m_affiliations->rfCh()->getRFChData(chNo);
 
         if (grp) {
             // callback RPC to permit the granted TG on the specified voice channel
@@ -2323,7 +2323,7 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
                     if (requestFailed) {
                         ::LogError((net) ? LOG_NET : LOG_RF, P25_TSDU_STR ", TSBKO, IOSP_GRP_VCH (Group Voice Channel Request), failed to permit TG for use, chNo = %u", chNo);
 
-                        m_p25->m_affiliations.releaseGrant(dstId, false);
+                        m_p25->m_affiliations->releaseGrant(dstId, false);
                         if (!net) {
                             writeRF_TSDU_Deny(srcId, dstId, ReasonCode::DENY_PTT_BONK, (grp) ? TSBKO::IOSP_GRP_VCH : TSBKO::IOSP_UU_VCH, grp, true);
                             m_p25->m_rfState = RS_RF_REJECTED;
@@ -2393,7 +2393,7 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
                     if (requestFailed) {
                         ::LogError((net) ? LOG_NET : LOG_RF, P25_TSDU_STR ", TSBKO, IOSP_UU_VCH (Unit-to-Unit Voice Channel Request), failed to permit TG for use, chNo = %u", chNo);
 
-                        m_p25->m_affiliations.releaseGrant(dstId, false);
+                        m_p25->m_affiliations->releaseGrant(dstId, false);
                         if (!net) {
                             writeRF_TSDU_Deny(srcId, dstId, ReasonCode::DENY_PTT_BONK, (grp) ? TSBKO::IOSP_GRP_VCH : TSBKO::IOSP_UU_VCH, grp, true);
                             m_p25->m_rfState = RS_RF_REJECTED;
@@ -2446,15 +2446,15 @@ void ControlSignaling::writeRF_TSDU_Grant_Update()
         return;
 
     // write group voice grant update
-    if (m_p25->m_affiliations.grantSize() > 0) {
-        if (m_mbfGrpGrntCnt >= m_p25->m_affiliations.grantSize())
+    if (m_p25->m_affiliations->grantSize() > 0) {
+        if (m_mbfGrpGrntCnt >= m_p25->m_affiliations->grantSize())
             m_mbfGrpGrntCnt = 0U;
 
         std::unique_ptr<lc::TSBK> osp;
 
         bool noData = false;
         uint8_t i = 0U;
-        std::unordered_map<uint32_t, uint32_t> grantTable = m_p25->m_affiliations.grantTable();
+        std::unordered_map<uint32_t, uint32_t> grantTable = m_p25->m_affiliations->grantTable();
         for (auto entry : grantTable) {
             // no good very bad way of skipping entries...
             if (i != m_mbfGrpGrntCnt) {
@@ -2464,9 +2464,9 @@ void ControlSignaling::writeRF_TSDU_Grant_Update()
             else {
                 uint32_t dstId = entry.first;
                 uint32_t chNo = entry.second;
-                bool grp = m_p25->m_affiliations.isGroup(dstId);
+                bool grp = m_p25->m_affiliations->isGroup(dstId);
 
-                ::lookups::VoiceChData voiceChData = m_p25->m_affiliations.rfCh()->getRFChData(chNo);
+                ::lookups::VoiceChData voiceChData = m_p25->m_affiliations->rfCh()->getRFChData(chNo);
 
                 if (chNo == 0U) {
                     noData = true;
@@ -2487,7 +2487,7 @@ void ControlSignaling::writeRF_TSDU_Grant_Update()
                         m_mbfGrpGrntCnt++;
                         break;
                     } else {
-                        uint32_t srcId = m_p25->m_affiliations.getGrantedSrcId(dstId);
+                        uint32_t srcId = m_p25->m_affiliations->getGrantedSrcId(dstId);
 
                         osp = std::make_unique<OSP_UU_VCH_GRANT_UPD>();
                         DEBUG_LOG_TSBK(osp->toString());
@@ -2542,8 +2542,8 @@ bool ControlSignaling::writeRF_TSDU_SNDCP_Grant(uint32_t srcId, bool skip, uint3
             return false;
         }
 
-        if (!m_p25->m_affiliations.isGranted(srcId)) {
-            if (!m_p25->m_affiliations.rfCh()->isRFChAvailable()) {
+        if (!m_p25->m_affiliations->isGranted(srcId)) {
+            if (!m_p25->m_affiliations->rfCh()->isRFChAvailable()) {
                 LogWarning(LOG_RF, P25_TSDU_STR ", TSBKO, ISP_SNDCP_CH_REQ (SNDCP Data Channel Request) denied, no channels available, srcId = %u", srcId);
                 writeRF_TSDU_Deny(WUID_FNE, srcId, ReasonCode::DENY_NO_RF_RSRC_AVAIL, TSBKO::ISP_SNDCP_CH_REQ, false, true);
 
@@ -2552,31 +2552,31 @@ bool ControlSignaling::writeRF_TSDU_SNDCP_Grant(uint32_t srcId, bool skip, uint3
                 return false;
             }
             else {
-                if (m_p25->m_affiliations.grantCh(srcId, srcId, GRANT_TIMER_TIMEOUT, false, false)) {
-                    chNo = m_p25->m_affiliations.getGrantedCh(srcId);
-                    ::lookups::VoiceChData voiceChData = m_p25->m_affiliations.rfCh()->getRFChData(chNo);
+                if (m_p25->m_affiliations->grantCh(srcId, srcId, GRANT_TIMER_TIMEOUT, false, false)) {
+                    chNo = m_p25->m_affiliations->getGrantedCh(srcId);
+                    ::lookups::VoiceChData voiceChData = m_p25->m_affiliations->rfCh()->getRFChData(chNo);
 
                     osp->setGrpVchId(voiceChData.chId());
                     osp->setGrpVchNo(chNo);
                     osp->setDataChnNo(chNo);
-                    m_p25->m_siteData.setChCnt(m_p25->m_affiliations.rfCh()->rfChSize() + m_p25->m_affiliations.getGrantedRFChCnt());
+                    m_p25->m_siteData.setChCnt(m_p25->m_affiliations->rfCh()->rfChSize() + m_p25->m_affiliations->getGrantedRFChCnt());
                 }
             }
         }
         else {
-            chNo = m_p25->m_affiliations.getGrantedCh(srcId);
-            ::lookups::VoiceChData voiceChData = m_p25->m_affiliations.rfCh()->getRFChData(chNo);
+            chNo = m_p25->m_affiliations->getGrantedCh(srcId);
+            ::lookups::VoiceChData voiceChData = m_p25->m_affiliations->rfCh()->getRFChData(chNo);
 
             osp->setGrpVchId(voiceChData.chId());
             osp->setGrpVchNo(chNo);
             osp->setDataChnNo(chNo);
 
-            m_p25->m_affiliations.touchGrant(srcId);
+            m_p25->m_affiliations->touchGrant(srcId);
         }
     }
 
     if (chNo > 0U) {
-        ::lookups::VoiceChData voiceChData = m_p25->m_affiliations.rfCh()->getRFChData(chNo);
+        ::lookups::VoiceChData voiceChData = m_p25->m_affiliations->rfCh()->getRFChData(chNo);
 
         // callback RPC to permit the granted TG on the specified voice channel
         if (m_p25->m_authoritative && m_p25->m_supervisor) {
@@ -2611,7 +2611,7 @@ bool ControlSignaling::writeRF_TSDU_SNDCP_Grant(uint32_t srcId, bool skip, uint3
                 if (requestFailed) {
                     ::LogError(LOG_RF, P25_TSDU_STR ", TSBKO, ISP_SNDCP_CH_REQ (SNDCP Data Channel Request), failed to permit for use, chNo = %u", chNo);
 
-                    m_p25->m_affiliations.releaseGrant(srcId, false);
+                    m_p25->m_affiliations->releaseGrant(srcId, false);
                     writeRF_TSDU_Deny(srcId, srcId, ReasonCode::DENY_PTT_BONK, TSBKO::ISP_SNDCP_CH_REQ, false, true);
                     m_p25->m_rfState = RS_RF_REJECTED;
 
@@ -2717,7 +2717,7 @@ uint8_t ControlSignaling::writeRF_TSDU_Grp_Aff_Rsp(uint32_t srcId, uint32_t dstI
     }
 
     // register the RID if the MFID is $90 (this is typically DVRS, and DVRS won't unit register so we'll do it for them)
-    if (!m_p25->m_affiliations.isUnitReg(srcId) && m_lastMFID == MFG_MOT) {
+    if (!m_p25->m_affiliations->isUnitReg(srcId) && m_lastMFID == MFG_MOT) {
         // validate the source RID
         if (!acl::AccessControl::validateSrcId(srcId)) {
             LogWarning(LOG_RF, P25_TSDU_STR ", %s denial, RID rejection, srcId = %u", iosp->toString().c_str(), srcId);
@@ -2727,8 +2727,8 @@ uint8_t ControlSignaling::writeRF_TSDU_Grp_Aff_Rsp(uint32_t srcId, uint32_t dstI
         }
         else {
             // update dynamic unit registration table
-            if (!m_p25->m_affiliations.isUnitReg(srcId)) {
-                m_p25->m_affiliations.unitReg(srcId);
+            if (!m_p25->m_affiliations->isUnitReg(srcId)) {
+                m_p25->m_affiliations->unitReg(srcId);
             }
 
             if (m_p25->m_network != nullptr)
@@ -2737,7 +2737,7 @@ uint8_t ControlSignaling::writeRF_TSDU_Grp_Aff_Rsp(uint32_t srcId, uint32_t dstI
     }
 
     // validate the source RID is registered
-    if (!m_p25->m_affiliations.isUnitReg(srcId) && m_verifyReg) {
+    if (!m_p25->m_affiliations->isUnitReg(srcId) && m_verifyReg) {
         LogWarning(LOG_RF, P25_TSDU_STR ", %s denial, RID not registered, srcId = %u", iosp->toString().c_str(), srcId);
         ::ActivityLog("P25", true, "group affiliation request from %u to %s %u denied", srcId, "TG ", dstId);
         iosp->setResponse(ResponseCode::REFUSED);
@@ -2774,7 +2774,7 @@ uint8_t ControlSignaling::writeRF_TSDU_Grp_Aff_Rsp(uint32_t srcId, uint32_t dstI
         ::ActivityLog("P25", true, "group affiliation request from %u to %s %u", srcId, "TG ", dstId);
 
         // update dynamic affiliation table
-        m_p25->m_affiliations.groupAff(srcId, dstId);
+        m_p25->m_affiliations->groupAff(srcId, dstId);
 
         if (m_p25->m_network != nullptr)
             m_p25->m_network->announceGroupAffiliation(srcId, dstId);
@@ -2816,8 +2816,8 @@ void ControlSignaling::writeRF_TSDU_U_Reg_Rsp(uint32_t srcId, uint32_t sysId)
         ::ActivityLog("P25", true, "unit registration request from %u", srcId);
 
         // update dynamic unit registration table
-        if (!m_p25->m_affiliations.isUnitReg(srcId)) {
-            m_p25->m_affiliations.unitReg(srcId);
+        if (!m_p25->m_affiliations->isUnitReg(srcId)) {
+            m_p25->m_affiliations->unitReg(srcId);
         }
 
         if (m_p25->m_network != nullptr)
@@ -2839,7 +2839,7 @@ void ControlSignaling::writeRF_TSDU_U_Dereg_Ack(uint32_t srcId)
     bool dereged = false;
 
     // remove dynamic unit registration table entry
-    dereged = m_p25->m_affiliations.unitDereg(srcId);
+    dereged = m_p25->m_affiliations->unitDereg(srcId);
 
     if (dereged) {
         std::unique_ptr<OSP_U_DEREG_ACK> osp = std::make_unique<OSP_U_DEREG_ACK>();
@@ -2903,7 +2903,7 @@ bool ControlSignaling::writeRF_TSDU_Loc_Reg_Rsp(uint32_t srcId, uint32_t dstId, 
     }
 
     // validate the source RID is registered
-    if (!m_p25->m_affiliations.isUnitReg(srcId)) {
+    if (!m_p25->m_affiliations->isUnitReg(srcId)) {
         LogWarning(LOG_RF, P25_TSDU_STR ", %s denial, RID not registered, srcId = %u", osp->toString().c_str(), srcId);
         ::ActivityLog("P25", true, "location registration request from %u denied", srcId);
         writeRF_TSDU_U_Reg_Cmd(srcId);
@@ -2941,7 +2941,7 @@ bool ControlSignaling::writeRF_TSDU_Loc_Reg_Rsp(uint32_t srcId, uint32_t dstId, 
         ::ActivityLog("P25", true, "location registration request from %u", srcId);
 
         // update dynamic affiliation table
-        m_p25->m_affiliations.groupAff(srcId, dstId);
+        m_p25->m_affiliations->groupAff(srcId, dstId);
 
         if (m_p25->m_network != nullptr)
             m_p25->m_network->announceGroupAffiliation(srcId, dstId);
@@ -2990,8 +2990,8 @@ void ControlSignaling::writeRF_TSDU_Auth_Dmd(uint32_t srcId)
 bool ControlSignaling::writeNet_TSDU_Call_Term(uint32_t srcId, uint32_t dstId)
 {
     // is the specified channel granted?
-    if (m_p25->m_affiliations.isGranted(dstId)) {
-        m_p25->m_affiliations.releaseGrant(dstId, false);
+    if (m_p25->m_affiliations->isGranted(dstId)) {
+        m_p25->m_affiliations->releaseGrant(dstId, false);
     }
 
     std::unique_ptr<OSP_DVM_LC_CALL_TERM> osp = std::make_unique<OSP_DVM_LC_CALL_TERM>();
