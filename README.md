@@ -220,7 +220,7 @@ There is no other real configuration for a `dvmbridge` instance other then setti
 ### dvmhost Command Line Parameters
 
 ```
-usage: ./dvmhost [-vhdf][--syslog][--setup][-c <configuration file>][--remote [-a <address>] [-p <port>]]
+usage: ./dvmhost/dvmhost [-vhdf] [--syslog] [--setup] [--cal][--boot] [-c <configuration file>] [--remote [-a <address>] [-p <port>]]
 
   -v        show version information
   -h        show this screen
@@ -229,13 +229,17 @@ usage: ./dvmhost [-vhdf][--syslog][--setup][-c <configuration file>][--remote [-
 
   --syslog  force logging to syslog
 
-  --setup   setup and calibration mode
+  --setup   TUI setup and calibration mode
+
+  --cal     simple calibration mode
+  --boot    connects to modem and reboots into bootloader mode
 
   -c <file> specifies the configuration file to use
 
   --remote  remote modem mode
   -a        remote modem command address
   -p        remote modem command port
+  -P        remote modem command port (local listening port)
 
   --        stop handling options
 ```
