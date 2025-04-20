@@ -55,6 +55,8 @@ std::string g_remoteAddress = std::string("127.0.0.1");
 uint16_t g_remotePort = REMOTE_MODEM_PORT;
 uint16_t g_remoteLocalPort = 0U;
 
+bool g_bootloader = false;
+
 bool g_fireDMRBeacon = false;
 bool g_fireP25Control = false;
 bool g_fireNXDNControl = false;
@@ -113,15 +115,15 @@ void usage(const char* message, const char* arg)
     }
 
     ::fprintf(stdout, 
-        "usage: %s [-vhdf]"
-        "[--syslog]"
+        "usage: %s [-vhdf] "
+        " [--syslog] "
 #if defined(ENABLE_SETUP_TUI)
         "[--setup]"
-#else
-        "[--cal]"
 #endif
-        "[-c <configuration file>]"
-        "[--remote [-a <address>] [-p <port>]]"
+        "[--cal]"
+        "[--boot]"
+        " [-c <configuration file>]"
+        " [--remote [-a <address>] [-p <port>]]"
         "\n\n"
         "  -v        show version information\n"
         "  -h        show this screen\n"
@@ -131,10 +133,10 @@ void usage(const char* message, const char* arg)
         "  --syslog  force logging to syslog\n"
         "\n"
 #if defined(ENABLE_SETUP_TUI)
-        "  --setup   setup and calibration mode\n"
-#else
-        "  --cal     old calibration mode\n"
+        "  --setup   TUI setup and calibration mode\n"
 #endif
+        "  --cal     simple calibration mode\n"
+        "  --boot    connects to modem and reboots into bootloader mode\n"
         "\n"
         "  -c <file> specifies the configuration file to use\n"
         "\n"
@@ -186,6 +188,11 @@ int checkArgs(int argc, char* argv[])
 #else
             g_calibrate = true;
 #endif // defined(ENABLE_SETUP_TUI)
+        }
+        else if (IS("--boot")) {
+            g_bootloader = true;
+            g_calibrate = true;
+            g_setup = false;
         }
         else if (IS("-c")) {
             if (argc-- <= 0)

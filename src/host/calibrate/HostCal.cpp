@@ -121,6 +121,15 @@ int HostCal::run(int argc, char **argv)
         return 1;
     }
 
+    if (g_bootloader) {
+        writeBootload();
+
+        m_isConnected = false;
+        m_modem->close();
+        m_console.close();
+        return 0;
+    }
+
     readFlash();
 
     writeFifoLength();
