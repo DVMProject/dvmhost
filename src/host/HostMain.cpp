@@ -115,12 +115,12 @@ void usage(const char* message, const char* arg)
     }
 
     ::fprintf(stdout, 
-        "usage: %s [-vhdf] "
-        " [--syslog] "
+        "usage: %s [-vhdf]"
+        " [--syslog]"
 #if defined(ENABLE_SETUP_TUI)
-        "[--setup]"
+        " [--setup]"
 #endif
-        "[--cal]"
+        " [--cal]"
         "[--boot]"
         " [-c <configuration file>]"
         " [--remote [-a <address>] [-p <port>]]"
@@ -134,6 +134,7 @@ void usage(const char* message, const char* arg)
         "\n"
 #if defined(ENABLE_SETUP_TUI)
         "  --setup   TUI setup and calibration mode\n"
+        "\n"
 #endif
         "  --cal     simple calibration mode\n"
         "  --boot    connects to modem and reboots into bootloader mode\n"
