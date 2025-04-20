@@ -12,7 +12,7 @@
  * @defgroup threading Threading
  * @brief Defines and implements threading routines.
  * @ingroup common
-
+ *
  * @file Thread.h
  * @ingroup threading
  * @file Thread.cpp
