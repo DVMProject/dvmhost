@@ -462,28 +462,25 @@ namespace network
                 /**
                  * @brief 
                  */
-                static void taskFluxRequest(void* arg)
+                static void taskFluxRequest(TSCallerRequest* req)
                 {
-                    TSCallerRequest* req = (TSCallerRequest*)arg;
-                    if (req != nullptr) {
-                        if (req == nullptr) {
-                            return;
-                        }
-
-                        TSCaller* caller = static_cast<TSCaller*>(req->obj);
-                        if (caller == nullptr) {
-                            if (req != nullptr) {
-                                delete req;
-                            }
-
-                            return;
-                        }
-
-                        const ServerInfo& si = req->si;
-                        detail::inner::request("POST", "write", "", req->lines, si, nullptr);
-
-                        delete req;
+                    if (req == nullptr) {
+                        return;
                     }
+
+                    TSCaller* caller = static_cast<TSCaller*>(req->obj);
+                    if (caller == nullptr) {
+                        if (req != nullptr) {
+                            delete req;
+                        }
+
+                        return;
+                    }
+
+                    const ServerInfo& si = req->si;
+                    detail::inner::request("POST", "write", "", req->lines, si, nullptr);
+
+                    delete req;
                 }
             };
 
