@@ -220,7 +220,7 @@ There is no other real configuration for a `dvmbridge` instance other then setti
 ### dvmhost Command Line Parameters
 
 ```
-usage: ./dvmhost/dvmhost [-vhdf] [--syslog] [--setup] [--cal][--boot] [-c <configuration file>] [--remote [-a <address>] [-p <port>]]
+usage: ./dvmhost [-vhdf] [--syslog] [--setup] [--cal][--boot] [-c <configuration file>] [--remote [-a <address>] [-p <port>]]
 
   -v        show version information
   -h        show this screen
