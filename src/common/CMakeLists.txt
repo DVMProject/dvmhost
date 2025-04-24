@@ -50,6 +50,7 @@ file(GLOB common_SRC
     "src/common/network/udp/*.cpp"
     "src/common/network/viface/*.cpp"
     "src/common/yaml/*.cpp"
+    "src/common/zlib/*.cpp"
     "src/common/zlib/*.c"
     "src/common/*.cpp"
 )

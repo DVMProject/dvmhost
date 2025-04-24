@@ -8,7 +8,7 @@
  *
  */
 #include "fne/Defines.h"
-#include "common/zlib/zlib.h"
+#include "common/zlib/Compression.h"
 #include "common/Log.h"
 #include "common/Utils.h"
 #include "network/DiagNetwork.h"
@@ -17,6 +17,7 @@
 
 using namespace network;
 using namespace network::callhandler;
+using namespace compress;
 
 #include <cassert>
 
@@ -460,66 +461,13 @@ void DiagNetwork::taskNetworkRx(NetPacketRequest* req)
                                         ::memcpy(buffer + offs, pkt.fragments[i], PEER_LINK_BLOCK_SIZE);
                                     }
 
-                                    // Utils::dump(1U, "Compressed Payload", buffer, pkt.compressedSize);
-
-                                    // handle last block
-                                    // compression structures
-                                    z_stream strm;
-                                    strm.zalloc = Z_NULL;
-                                    strm.zfree = Z_NULL;
-                                    strm.opaque = Z_NULL;
-
-                                    // set input data
-                                    strm.avail_in = pkt.compressedSize;
-                                    strm.next_in = buffer;
-
-                                    // initialize decompression
-                                    int ret = inflateInit(&strm);
-                                    if (ret != Z_OK) {
-                                        LogError(LOG_NET, "PEER %u error initializing ZLIB", peerId);
-
-                                        pkt.size = 0U;
-                                        pkt.compressedSize = 0U;
-
-                                        delete[] buffer;
-                                        for (auto& frag : pkt.fragments) {
-                                            if (frag.second != nullptr)
-                                                delete[] frag.second;
-                                        }
-
-                                        network->m_peerLinkActPkt.erase(peerId);
-                                        break;
-                                    }
-
-                                    // decompress data
-                                    std::vector<uint8_t> decompressedData;
-                                    uint8_t outbuffer[1024];
-                                    do {
-                                        strm.avail_out = sizeof(outbuffer);
-                                        strm.next_out = outbuffer;
-
-                                        ret = inflate(&strm, Z_NO_FLUSH);
-                                        if (ret == Z_STREAM_ERROR) {
-                                            LogError(LOG_NET, "PEER %u error decompressing peer active list", peerId);
-                                            inflateEnd(&strm);
-                                            goto pal_lookup_cleanup; // yes - I hate myself; but this is quick
-                                        }
-
-                                        decompressedData.insert(decompressedData.end(), outbuffer, outbuffer + sizeof(outbuffer) - strm.avail_out);
-                                    } while (ret != Z_STREAM_END);
-
-                                    // cleanup
-                                    inflateEnd(&strm);
-
                                     // scope is intentional
                                     {
-                                        uint32_t decompressedLen = strm.total_out;
-                                        uint8_t* decompressed = decompressedData.data();
-
-                                        // Utils::dump(1U, "Raw Peer Link Active Peer Data", decompressed + 8U, decompressedLen - 8U);
+                                        uint32_t decompressedLen = 0U;
+                                        uint8_t* decompressed = Compression::decompress(buffer, pkt.compressedSize, &decompressedLen);
 
                                         // check that we got the appropriate data
-                                        if (decompressedLen == pkt.size) {
+                                        if (decompressedLen == pkt.size && decompressed != nullptr) {
                                             std::string payload(decompressed + 8U, decompressed + decompressedLen);
 
                                             // parse JSON body

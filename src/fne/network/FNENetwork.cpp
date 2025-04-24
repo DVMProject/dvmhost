@@ -11,7 +11,7 @@
 #include "common/edac/SHA256.h"
 #include "common/network/json/json.h"
 #include "common/p25/kmm/KMMFactory.h"
-#include "common/zlib/zlib.h"
+#include "common/zlib/Compression.h"
 #include "common/Log.h"
 #include "common/Utils.h"
 #include "network/FNENetwork.h"
@@ -23,6 +23,7 @@
 
 using namespace network;
 using namespace network::callhandler;
+using namespace compress;
 
 #include <cassert>
 #include <cerrno>
@@ -1916,84 +1917,47 @@ void FNENetwork::writeWhitelistRIDs(uint32_t peerId, uint32_t streamId, bool isE
             ::memset(buffer, 0x00U, len);
             ::memcpy(buffer, b.str().data(), len);
 
-            // compression structures
-            z_stream strm;
-            strm.zalloc = Z_NULL;
-            strm.zfree = Z_NULL;
-            strm.opaque = Z_NULL;
+            uint32_t compressedLen = 0U;
+            uint8_t* compressed = Compression::compress((uint8_t*)buffer, len, &compressedLen);
 
-            // initialize compression
-            if (deflateInit(&strm, Z_DEFAULT_COMPRESSION) != Z_OK) {
-                LogError(LOG_NET, "PEER %u (%s) error initializing ZLIB", peerId, connection->identity().c_str());
-                return;
-            }
+            if (compressed != nullptr) {
+                // transmit TGIDs
+                uint8_t blockCnt = (compressedLen / PEER_LINK_BLOCK_SIZE) + (compressedLen % PEER_LINK_BLOCK_SIZE ? 1U : 0U);
+                uint32_t offs = 0U;
+                for (uint8_t i = 0U; i < blockCnt; i++) {
+                    // build dataset
+                    uint16_t bufSize = 10U + (PEER_LINK_BLOCK_SIZE);
+                    UInt8Array __payload = std::make_unique<uint8_t[]>(bufSize);
+                    uint8_t* payload = __payload.get();
+                    ::memset(payload, 0x00U, bufSize);
 
-            // set input data
-            strm.avail_in = len;
-            strm.next_in = buffer;
+                    if (i == 0U) {
+                        __SET_UINT32(len, payload, 0U);
+                        __SET_UINT32(compressedLen, payload, 4U);
+                    }
 
-            // compress data
-            std::vector<uint8_t> compressedData;
-            int ret;
-            do {
-                // resize the output buffer as needed
-                compressedData.resize(compressedData.size() + 16384);
-                strm.avail_out = 16384;
-                strm.next_out = compressedData.data() + compressedData.size() - 16384;
+                    payload[8U] = i;
+                    payload[9U] = blockCnt - 1U;
 
-                ret = deflate(&strm, Z_FINISH);
-                if (ret == Z_STREAM_ERROR) {
-                    LogError(LOG_NET, "PEER %u (%s) error compressing TGID list", peerId, connection->identity().c_str());
-                    deflateEnd(&strm);
-                    return;
-                }
-            } while (ret != Z_STREAM_END);
+                    uint32_t blockSize = PEER_LINK_BLOCK_SIZE;
+                    if (offs + PEER_LINK_BLOCK_SIZE > compressedLen)
+                        blockSize = PEER_LINK_BLOCK_SIZE - ((offs + PEER_LINK_BLOCK_SIZE) - compressedLen);
 
-            // resize the output buffer to the actual compressed data size
-            compressedData.resize(strm.total_out);
+                    ::memcpy(payload + 10U, compressed + offs, blockSize);
 
-            // cleanup
-            deflateEnd(&strm);
+                    if (m_debug)
+                        Utils::dump(1U, "Peer-Link RID Block Payload", payload, bufSize);
 
-            uint32_t compressedLen = strm.total_out;
-            uint8_t* compressed = compressedData.data();
+                    offs += PEER_LINK_BLOCK_SIZE;
 
-            // Utils::dump(1U, "Compressed Payload", compressed, compressedLen);
-
-            // transmit TGIDs
-            uint8_t blockCnt = (compressedLen / PEER_LINK_BLOCK_SIZE) + (compressedLen % PEER_LINK_BLOCK_SIZE ? 1U : 0U);
-            uint32_t offs = 0U;
-            for (uint8_t i = 0U; i < blockCnt; i++) {
-                // build dataset
-                uint16_t bufSize = 10U + (PEER_LINK_BLOCK_SIZE);
-                UInt8Array __payload = std::make_unique<uint8_t[]>(bufSize);
-                uint8_t* payload = __payload.get();
-                ::memset(payload, 0x00U, bufSize);
-
-                if (i == 0U) {
-                    __SET_UINT32(len, payload, 0U);
-                    __SET_UINT32(compressedLen, payload, 4U);
+                    writePeer(peerId, { NET_FUNC::PEER_LINK, NET_SUBFUNC::PL_RID_LIST }, 
+                        payload, bufSize, 0U, streamId, false, true, true);
                 }
 
-                payload[8U] = i;
-                payload[9U] = blockCnt - 1U;
-
-                uint32_t blockSize = PEER_LINK_BLOCK_SIZE;
-                if (offs + PEER_LINK_BLOCK_SIZE > compressedLen)
-                    blockSize = PEER_LINK_BLOCK_SIZE - ((offs + PEER_LINK_BLOCK_SIZE) - compressedLen);
-
-                ::memcpy(payload + 10U, compressed + offs, blockSize);
-
-                if (m_debug)
-                    Utils::dump(1U, "Peer-Link RID Block Payload", payload, bufSize);
-
-                offs += PEER_LINK_BLOCK_SIZE;
-
-                writePeer(peerId, { NET_FUNC::PEER_LINK, NET_SUBFUNC::PL_RID_LIST }, 
-                    payload, bufSize, 0U, streamId, false, true, true);
+                connection->lastPing(now);
+            } else {
+                LogError(LOG_NET, "PEER %u error compressing RID list", peerId);
             }
-
-            connection->lastPing(now);
         }
 
         return;
@@ -2178,84 +2142,47 @@ void FNENetwork::writeTGIDs(uint32_t peerId, uint32_t streamId, bool isExternalP
             ::memset(buffer, 0x00U, len);
             ::memcpy(buffer, b.str().data(), len);
 
-            // compression structures
-            z_stream strm;
-            strm.zalloc = Z_NULL;
-            strm.zfree = Z_NULL;
-            strm.opaque = Z_NULL;
+            uint32_t compressedLen = 0U;
+            uint8_t* compressed = Compression::compress((uint8_t*)buffer, len, &compressedLen);
 
-            // initialize compression
-            if (deflateInit(&strm, Z_DEFAULT_COMPRESSION) != Z_OK) {
-                LogError(LOG_NET, "PEER %u (%s) error initializing ZLIB", peerId, connection->identity().c_str());
-                return;
-            }
+            if (compressed != nullptr) {
+                // transmit TGIDs
+                uint8_t blockCnt = (compressedLen / PEER_LINK_BLOCK_SIZE) + (compressedLen % PEER_LINK_BLOCK_SIZE ? 1U : 0U);
+                uint32_t offs = 0U;
+                for (uint8_t i = 0U; i < blockCnt; i++) {
+                    // build dataset
+                    uint16_t bufSize = 10U + (PEER_LINK_BLOCK_SIZE);
+                    UInt8Array __payload = std::make_unique<uint8_t[]>(bufSize);
+                    uint8_t* payload = __payload.get();
+                    ::memset(payload, 0x00U, bufSize);
 
-            // set input data
-            strm.avail_in = len;
-            strm.next_in = buffer;
+                    if (i == 0U) {
+                        __SET_UINT32(len, payload, 0U);
+                        __SET_UINT32(compressedLen, payload, 4U);
+                    }
 
-            // compress data
-            std::vector<uint8_t> compressedData;
-            int ret;
-            do {
-                // resize the output buffer as needed
-                compressedData.resize(compressedData.size() + 16384);
-                strm.avail_out = 16384;
-                strm.next_out = compressedData.data() + compressedData.size() - 16384;
+                    payload[8U] = i;
+                    payload[9U] = blockCnt - 1U;
 
-                ret = deflate(&strm, Z_FINISH);
-                if (ret == Z_STREAM_ERROR) {
-                    LogError(LOG_NET, "PEER %u (%s) error compressing TGID list", peerId, connection->identity().c_str());
-                    deflateEnd(&strm);
-                    return;
-                }
-            } while (ret != Z_STREAM_END);
+                    uint32_t blockSize = PEER_LINK_BLOCK_SIZE;
+                    if (offs + PEER_LINK_BLOCK_SIZE > compressedLen)
+                        blockSize = PEER_LINK_BLOCK_SIZE - ((offs + PEER_LINK_BLOCK_SIZE) - compressedLen);
 
-            // resize the output buffer to the actual compressed data size
-            compressedData.resize(strm.total_out);
+                    ::memcpy(payload + 10U, compressed + offs, blockSize);
 
-            // cleanup
-            deflateEnd(&strm);
+                    if (m_debug)
+                        Utils::dump(1U, "Peer-Link TGID Block Payload", payload, bufSize);
 
-            uint32_t compressedLen = strm.total_out;
-            uint8_t* compressed = compressedData.data();
+                    offs += PEER_LINK_BLOCK_SIZE;
 
-            // Utils::dump(1U, "Compressed Payload", compressed, compressedLen);
-
-            // transmit TGIDs
-            uint8_t blockCnt = (compressedLen / PEER_LINK_BLOCK_SIZE) + (compressedLen % PEER_LINK_BLOCK_SIZE ? 1U : 0U);
-            uint32_t offs = 0U;
-            for (uint8_t i = 0U; i < blockCnt; i++) {
-                // build dataset
-                uint16_t bufSize = 10U + (PEER_LINK_BLOCK_SIZE);
-                UInt8Array __payload = std::make_unique<uint8_t[]>(bufSize);
-                uint8_t* payload = __payload.get();
-                ::memset(payload, 0x00U, bufSize);
-
-                if (i == 0U) {
-                    __SET_UINT32(len, payload, 0U);
-                    __SET_UINT32(compressedLen, payload, 4U);
+                    writePeer(peerId, { NET_FUNC::PEER_LINK, NET_SUBFUNC::PL_TALKGROUP_LIST }, 
+                        payload, bufSize, 0U, streamId, false, true, true);
                 }
 
-                payload[8U] = i;
-                payload[9U] = blockCnt - 1U;
-
-                uint32_t blockSize = PEER_LINK_BLOCK_SIZE;
-                if (offs + PEER_LINK_BLOCK_SIZE > compressedLen)
-                    blockSize = PEER_LINK_BLOCK_SIZE - ((offs + PEER_LINK_BLOCK_SIZE) - compressedLen);
-
-                ::memcpy(payload + 10U, compressed + offs, blockSize);
-
-                if (m_debug)
-                    Utils::dump(1U, "Peer-Link TGID Block Payload", payload, bufSize);
-
-                offs += PEER_LINK_BLOCK_SIZE;
-
-                writePeer(peerId, { NET_FUNC::PEER_LINK, NET_SUBFUNC::PL_TALKGROUP_LIST }, 
-                    payload, bufSize, 0U, streamId, false, true, true);
+                connection->lastPing(now);
+            } else {
+                LogError(LOG_NET, "PEER %u error compressing TGID list", peerId);
             }
-
-            connection->lastPing(now);
         }
 
         return;
@@ -2429,85 +2356,48 @@ void FNENetwork::writePeerList(uint32_t peerId, uint32_t streamId)
         ::memset(buffer, 0x00U, len);
         ::memcpy(buffer, b.str().data(), len);
 
-        // compression structures
-        z_stream strm;
-        strm.zalloc = Z_NULL;
-        strm.zfree = Z_NULL;
-        strm.opaque = Z_NULL;
+        uint32_t compressedLen = 0U;
+        uint8_t* compressed = Compression::compress((uint8_t*)buffer, len, &compressedLen);
 
-        // initialize compression
-        if (deflateInit(&strm, Z_DEFAULT_COMPRESSION) != Z_OK) {
-            LogError(LOG_NET, "PEER %u (%s) error initializing ZLIB", peerId, connection->identity().c_str());
-            return;
-        }
+        if (compressed != nullptr) {
+            // transmit PIDs
+            uint8_t blockCnt = (compressedLen / PEER_LINK_BLOCK_SIZE) + (compressedLen % PEER_LINK_BLOCK_SIZE ? 1U : 0U);
+            uint32_t offs = 0U;
+            for (uint8_t i = 0U; i < blockCnt; i++) {
+                // build dataset
+                uint16_t bufSize = 10U + (PEER_LINK_BLOCK_SIZE);
+                UInt8Array __payload = std::make_unique<uint8_t[]>(bufSize);
+                uint8_t* payload = __payload.get();
+                ::memset(payload, 0x00U, bufSize);
 
-        // set input data
-        strm.avail_in = len;
-        strm.next_in = buffer;
+                if (i == 0U) {
+                    __SET_UINT32(len, payload, 0U);
+                    __SET_UINT32(compressedLen, payload, 4U);
+                }
 
-        // compress data
-        std::vector<uint8_t> compressedData;
-        int ret;
-        do {
-            // resize the output buffer as needed
-            compressedData.resize(compressedData.size() + 16384);
-            strm.avail_out = 16384;
-            strm.next_out = compressedData.data() + compressedData.size() - 16384;
+                payload[8U] = i;
+                payload[9U] = blockCnt - 1U;
 
-            ret = deflate(&strm, Z_FINISH);
-            if (ret == Z_STREAM_ERROR) {
-                LogError(LOG_NET, "PEER %u (%s) error compressing TGID list", peerId, connection->identity().c_str());
-                deflateEnd(&strm);
-                return;
-            }
-        } while (ret != Z_STREAM_END);
+                uint32_t blockSize = PEER_LINK_BLOCK_SIZE;
+                if (offs + PEER_LINK_BLOCK_SIZE > compressedLen)
+                    blockSize = PEER_LINK_BLOCK_SIZE - ((offs + PEER_LINK_BLOCK_SIZE) - compressedLen);
 
-        // resize the output buffer to the actual compressed data size
-        compressedData.resize(strm.total_out);
+                ::memcpy(payload + 10U, compressed + offs, blockSize);
 
-        // cleanup
-        deflateEnd(&strm);
+                if (m_debug)
+                    Utils::dump(1U, "Peer-Link Peer List Block Payload", payload, bufSize);
 
-        uint32_t compressedLen = strm.total_out;
-        uint8_t* compressed = compressedData.data();
+                offs += PEER_LINK_BLOCK_SIZE;
 
-        // Utils::dump(1U, "Compressed Payload", compressed, compressedLen);
-
-        // transmit TGIDs
-        uint8_t blockCnt = (compressedLen / PEER_LINK_BLOCK_SIZE) + (compressedLen % PEER_LINK_BLOCK_SIZE ? 1U : 0U);
-        uint32_t offs = 0U;
-        for (uint8_t i = 0U; i < blockCnt; i++) {
-            // build dataset
-            uint16_t bufSize = 10U + (PEER_LINK_BLOCK_SIZE);
-            UInt8Array __payload = std::make_unique<uint8_t[]>(bufSize);
-            uint8_t* payload = __payload.get();
-            ::memset(payload, 0x00U, bufSize);
-
-            if (i == 0U) {
-                __SET_UINT32(len, payload, 0U);
-                __SET_UINT32(compressedLen, payload, 4U);
+                writePeer(peerId, { NET_FUNC::PEER_LINK, NET_SUBFUNC::PL_PEER_LIST }, 
+                    payload, bufSize, 0U, streamId, false, true, true);
             }
 
-            payload[8U] = i;
-            payload[9U] = blockCnt - 1U;
-
-            uint32_t blockSize = PEER_LINK_BLOCK_SIZE;
-            if (offs + PEER_LINK_BLOCK_SIZE > compressedLen)
-                blockSize = PEER_LINK_BLOCK_SIZE - ((offs + PEER_LINK_BLOCK_SIZE) - compressedLen);
-
-            ::memcpy(payload + 10U, compressed + offs, blockSize);
-
-            if (m_debug)
-                Utils::dump(1U, "Peer-Link Peer List Block Payload", payload, bufSize);
-
-            offs += PEER_LINK_BLOCK_SIZE;
-
-            writePeer(peerId, { NET_FUNC::PEER_LINK, NET_SUBFUNC::PL_PEER_LIST }, 
-                payload, bufSize, 0U, streamId, false, true, true);
+            connection->lastPing(now);
+        } else {
+            LogError(LOG_NET, "PEER %u error compressing PID list", peerId);
         }
-
-        connection->lastPing(now);
-    }
+}
 
     return;
 }
