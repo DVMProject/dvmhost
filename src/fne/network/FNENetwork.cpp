@@ -354,6 +354,7 @@ void FNENetwork::clock(uint32_t ms)
 
         // send active peer list to Peer-Link masters
         if (m_host->m_peerNetworks.size() > 0) {
+            json::array peers = json::array();
             for (auto peer : m_host->m_peerNetworks) {
                 if (peer.second != nullptr) {
                     if (peer.second->isEnabled() && peer.second->isPeerLink()) {
@@ -364,8 +365,7 @@ void FNENetwork::clock(uint32_t ms)
                             });
                         }
 
-                        if (m_peers.size() > 0) {
-                            json::array peers = json::array();
+                        if (m_peers.size() > 0 && peers.size() == 0) {
                             for (auto entry : m_peers) {
                                 uint32_t peerId = entry.first;
                                 network::FNEPeerConnection* peerConn = entry.second;
@@ -376,7 +376,9 @@ void FNENetwork::clock(uint32_t ms)
                                     peers.push_back(json::value(peerObj));
                                 }
                             }
+                        }
 
+                        if (peers.size() > 0) {
                             peer.second->writePeerLinkPeers(&peers);
                         }
                     }
