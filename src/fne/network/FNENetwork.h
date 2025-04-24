@@ -562,6 +562,38 @@ namespace network
         static std::timed_mutex m_keyQueueMutex;
         std::unordered_map<uint32_t, uint16_t> m_peerLinkKeyQueue;
 
+        /**
+         * @brief Represents a Peer-Link Active Peer List fragment packet.
+         */
+        class PLActPeerPkt {
+        public:
+            /**
+             * @brief Compressed size of the packet.
+             */
+            uint32_t compressedSize;
+            /**
+             * @brief Uncompressed size of the packet.
+             */
+            uint32_t size;
+
+            /**
+             * @brief Last block of the packet.
+             */
+            uint8_t lastBlock;
+            /**
+             * @brief Stream ID of the packet.
+             */
+            uint32_t streamId;
+
+            /**
+             * @brief Packet fragments.
+             */
+            std::unordered_map<uint8_t, uint8_t*> fragments;
+
+            bool locked;
+        };
+        concurrent::unordered_map<uint32_t, PLActPeerPkt> m_peerLinkActPkt;
+
         Timer m_maintainenceTimer;
 
         uint32_t m_updateLookupTime;

@@ -108,6 +108,11 @@ UInt8Array FrameQueue::read(int& messageLength, sockaddr_storage& address, uint3
             return nullptr;
         }
 
+        if (_fneHeader.getMessageLength() == 0U) {
+            LogError(LOG_NET, "FrameQueue::read(), invalid FNE packet length received from network");
+            return nullptr;
+        }
+
         if (fneHeader != nullptr) {
             *fneHeader = _fneHeader;
         }

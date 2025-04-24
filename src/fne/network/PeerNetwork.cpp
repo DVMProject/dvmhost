@@ -113,14 +113,93 @@ bool PeerNetwork::writePeerLinkPeers(json::array* peerList)
         json::value v = json::value(*peerList);
         std::string json = std::string(v.serialize());
 
-        CharArray __buffer = std::make_unique<char[]>(json.length() + 9U);
+        size_t len = json.length() + 9U;
+        CharArray __buffer = std::make_unique<char[]>(len);
         char* buffer = __buffer.get();
 
         ::memcpy(buffer + 0U, TAG_PEER_LINK, 4U);
         ::snprintf(buffer + 8U, json.length() + 1U, "%s", json.c_str());
 
-        return writeMaster({ NET_FUNC::PEER_LINK, NET_SUBFUNC::PL_ACT_PEER_LIST }, 
-            (uint8_t*)buffer, json.length() + 8U, RTP_END_OF_CALL_SEQ, createStreamId(), false, true);
+        // compression structures
+        z_stream strm;
+        strm.zalloc = Z_NULL;
+        strm.zfree = Z_NULL;
+        strm.opaque = Z_NULL;
+
+        // initialize compression
+        if (deflateInit(&strm, Z_DEFAULT_COMPRESSION) != Z_OK) {
+            LogError(LOG_NET, "PEER %u error initializing ZLIB", m_peerId);
+            return false;
+        }
+
+        // set input data
+        strm.avail_in = len;
+        strm.next_in = (uint8_t*)buffer;
+
+        // compress data
+        std::vector<uint8_t> compressedData;
+        int ret;
+        do {
+            // resize the output buffer as needed
+            compressedData.resize(compressedData.size() + 16384);
+            strm.avail_out = 16384;
+            strm.next_out = compressedData.data() + compressedData.size() - 16384;
+
+            ret = deflate(&strm, Z_FINISH);
+            if (ret == Z_STREAM_ERROR) {
+                LogError(LOG_NET, "PEER %u error compressing active peer list", m_peerId);
+                deflateEnd(&strm);
+                return false;
+            }
+        } while (ret != Z_STREAM_END);
+
+        // resize the output buffer to the actual compressed data size
+        compressedData.resize(strm.total_out);
+
+        // cleanup
+        deflateEnd(&strm);
+
+        uint32_t compressedLen = strm.total_out;
+        uint8_t* compressed = compressedData.data();
+
+        // Utils::dump(1U, "Compressed Payload", compressed, compressedLen);
+
+        // transmit peer link active peer list
+        uint32_t streamId = createStreamId();
+        uint8_t blockCnt = (compressedLen / PEER_LINK_BLOCK_SIZE) + (compressedLen % PEER_LINK_BLOCK_SIZE ? 1U : 0U);
+        uint32_t offs = 0U;
+        for (uint8_t i = 0U; i < blockCnt; i++) {
+            // build dataset
+            uint16_t bufSize = 10U + (PEER_LINK_BLOCK_SIZE);
+            UInt8Array __payload = std::make_unique<uint8_t[]>(bufSize);
+            uint8_t* payload = __payload.get();
+            ::memset(payload, 0x00U, bufSize);
+
+            if (i == 0U) {
+                __SET_UINT32(len, payload, 0U);
+                __SET_UINT32(compressedLen, payload, 4U);
+            }
+
+            payload[8U] = i;
+            payload[9U] = blockCnt - 1U;
+
+            uint32_t blockSize = PEER_LINK_BLOCK_SIZE;
+            if (offs + PEER_LINK_BLOCK_SIZE > compressedLen)
+                blockSize = PEER_LINK_BLOCK_SIZE - ((offs + PEER_LINK_BLOCK_SIZE) - compressedLen);
+
+            ::memcpy(payload + 10U, compressed + offs, blockSize);
+
+            if (m_debug)
+                Utils::dump(1U, "Peer-Link Active Peer Payload", payload, bufSize);
+
+            offs += PEER_LINK_BLOCK_SIZE;
+
+            writeMaster({ NET_FUNC::PEER_LINK, NET_SUBFUNC::PL_ACT_PEER_LIST }, 
+               payload, bufSize, RTP_END_OF_CALL_SEQ, streamId, false, true);
+            Thread::sleep(60U); // pace block transmission
+        }
+
+        return true;
     }
 
     return false;
