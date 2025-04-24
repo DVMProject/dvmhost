@@ -98,7 +98,7 @@ bool AffiliationLookup::unitDereg(uint32_t srcId, bool automatic)
     m_unitRegTimers[srcId].stop();
 
     // remove dynamic unit registration table entry
-    m_unitRegTable.lock(true);
+    m_unitRegTable.lock(false);
     if (std::find(m_unitRegTable.begin(), m_unitRegTable.end(), srcId) != m_unitRegTable.end()) {
         auto it = std::find(m_unitRegTable.begin(), m_unitRegTable.end(), srcId);
         m_unitRegTable.unlock();

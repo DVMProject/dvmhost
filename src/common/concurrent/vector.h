@@ -18,7 +18,8 @@
 #if !defined(__CONCURRENCY_VECTOR_H__)
 #define __CONCURRENCY_VECTOR_H__
 
-#include <common/Thread.h>
+#include "common/concurrent/concurrent_lock.h"
+#include "common/Thread.h"
 
 #include <vector>
 #include <mutex>
@@ -34,7 +35,7 @@ namespace concurrent
      * @ingroup concurrency
      */
     template <typename T>
-    class vector
+    class vector : public concurrent_lock
     {
         using __std = std::vector<T>;
     public:
@@ -44,9 +45,7 @@ namespace concurrent
         /**
          * @brief Initializes a new instance of the vector class.
          */
-        vector() : 
-            m_mutex(),
-            m_locked(false),
+        vector() : concurrent_lock(),
             m_vector()
         {
             /* stub */
@@ -55,9 +54,7 @@ namespace concurrent
          * @brief Initializes a new instance of the vector class.
          * @param size Initial size of the vector.
          */
-        vector(size_t size) : 
-            m_mutex(),
-            m_locked(false),
+        vector(size_t size) : concurrent_lock(),
             m_vector(size)
         {
             /* stub */
@@ -76,7 +73,7 @@ namespace concurrent
          */
         vector& operator=(const vector& other)
         {
-            __lock();
+            __lock(false);
             m_vector = other.m_vector;
             __unlock();
             return *this;
@@ -87,7 +84,7 @@ namespace concurrent
          */
         vector& operator=(const std::vector<T>& other)
         {
-            __lock();
+            __lock(false);
             m_vector = other;
             __unlock();
             return *this;
@@ -98,7 +95,7 @@ namespace concurrent
          */
         vector& operator=(vector& other)
         {
-            __lock();
+            __lock(false);
             m_vector = other.m_vector;
             __unlock();
             return *this;
@@ -109,7 +106,7 @@ namespace concurrent
          */
         vector& operator=(std::vector<T>& other)
         {
-            __lock();
+            __lock(false);
             m_vector = other;
             __unlock();
             return *this;
@@ -122,7 +119,7 @@ namespace concurrent
          */
         void assign(size_t size, const T& value)
         {
-            __lock();
+            __lock(false);
             m_vector.assign(size, value);
             __unlock();
         }
@@ -210,7 +207,7 @@ namespace concurrent
          */        
         void resize(size_t size)
         {
-            __lock();
+            __lock(false);
             m_vector.resize(size);
             __unlock();
         }
@@ -322,7 +319,7 @@ namespace concurrent
          */
         void push_back(const T& value)
         {
-            __lock();
+            __lock(false);
             m_vector.push_back(value);
             __unlock();
         }
@@ -332,7 +329,7 @@ namespace concurrent
          */
         void push_back(T&& value)
         {
-            __lock();
+            __lock(false);
             m_vector.push_back(std::move(value));
             __unlock();
         }
@@ -342,7 +339,7 @@ namespace concurrent
          */
         void pop_back()
         {
-            __lock();
+            __lock(false);
             m_vector.pop_back();
             __unlock();
         }
@@ -355,7 +352,7 @@ namespace concurrent
          */       
         iterator insert(iterator position, const T& value)
         {
-            __lock();
+            __lock(false);
             auto it = m_vector.insert(position, value);
             __unlock();
             return it;
@@ -367,7 +364,7 @@ namespace concurrent
          */
         void erase(size_t index)
         {
-            __lock();
+            __lock(false);
             m_vector.erase(m_vector.begin() + index);
             __unlock();
         }
@@ -377,7 +374,7 @@ namespace concurrent
          */
         void erase(const_iterator position)
         {
-            __lock();
+            __lock(false);
             m_vector.erase(position);
             __unlock();
         }
@@ -388,7 +385,7 @@ namespace concurrent
          */
         void erase(const_iterator first, const_iterator last)
         {
-            __lock();
+            __lock(false);
             m_vector.erase(first, last);
             __unlock();
         }
@@ -399,7 +396,7 @@ namespace concurrent
          */
         void swap(vector& other)
         {
-            __lock();
+            __lock(false);
             m_vector.swap(other.m_vector);
             __unlock();
         }
@@ -409,7 +406,7 @@ namespace concurrent
          */
         void clear()
         {
-            __lock();
+            __lock(false);
             m_vector.clear();
             __unlock();
         }
@@ -433,61 +430,8 @@ namespace concurrent
             return m_vector;
         }
 
-        /**
-         * @brief Locks the vector.
-         * @param readLock Flag indicating whether or not to use read locking.
-         */
-        void lock(bool readLock = true) const { __lock(readLock); }
-        /**
-         * @brief Unlocks the vector.
-         */
-        void unlock() const { __unlock(); }
-        /**
-         * @brief Flag indicating whether or not the vector is read locked.
-         * @return bool True if the vector is read locked, false otherwise.
-         */
-        bool isReadLocked() const { return m_locked; }
-        /**
-         * @brief Spins until the vector is unlocked.
-         */
-        void spinlock() const { __spinlock(); }
-
     private:
-        mutable std::mutex m_mutex;     //! Mutex used for change locking.
-        mutable bool m_locked = false;  //! Flag used for read locking (prevents find lookups), should be used when atomic operations (add/erase/etc) are being used.
-
         std::vector<T> m_vector;
-
-        /**
-         * @brief Lock the vector.
-         * @param readLock Flag indicating whether or not to use read locking.
-         */
-        inline void __lock(bool readLock = true) const
-        {
-            m_mutex.lock();
-            if (readLock)
-                m_locked = true;
-        }
-
-        /**
-         * @brief Unlock the vector.
-         */
-        inline void __unlock() const
-        {
-            m_mutex.unlock();
-            m_locked = false;
-        }
-
-        /**
-         * @brief Spins until the vector is read unlocked.
-         */
-        inline void __spinlock() const
-        {
-            if (m_locked) {
-                while (m_locked)
-                    Thread::sleep(1U);
-            }
-        }
     };
 } // namespace concurrent
 

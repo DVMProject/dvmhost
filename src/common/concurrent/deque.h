@@ -14,6 +14,7 @@
 #if !defined(__CONCURRENCY_DEQUE_H__)
 #define __CONCURRENCY_DEQUE_H__
 
+#include "common/concurrent/concurrent_lock.h"
 #include "common/Thread.h"
 
 #include <deque>
@@ -30,7 +31,7 @@ namespace concurrent
      * @ingroup concurrency
      */
     template <typename T>
-    class deque
+    class deque : public concurrent_lock
     {
         using __std = std::deque<T>;
     public:
@@ -40,9 +41,7 @@ namespace concurrent
         /**
          * @brief Initializes a new instance of the deque class.
          */
-        deque() :
-            m_mutex(),
-            m_locked(false),
+        deque() : concurrent_lock(),
             m_deque()
         {
             /* stub */
@@ -51,9 +50,7 @@ namespace concurrent
          * @brief Initializes a new instance of the deque class.
          * @param size Initial size of the deque.
          */
-        deque(size_t size) :
-            m_mutex(),
-            m_locked(false),
+        deque(size_t size) : concurrent_lock(),
             m_deque(size)
         {
             /* stub */
@@ -72,7 +69,7 @@ namespace concurrent
          */
         deque& operator=(const deque& other)
         {
-            __lock();
+            __lock(false);
             m_deque = other.m_deque;
             __unlock();
             return *this;
@@ -83,7 +80,7 @@ namespace concurrent
          */
         deque& operator=(const std::deque<T>& other)
         {
-            __lock();
+            __lock(false);
             m_deque = other;
             __unlock();
             return *this;
@@ -94,7 +91,7 @@ namespace concurrent
          */
         deque& operator=(deque& other)
         {
-            __lock();
+            __lock(false);
             m_deque = other.m_deque;
             __unlock();
             return *this;
@@ -105,7 +102,7 @@ namespace concurrent
          */
         deque& operator=(std::deque<T>& other)
         {
-            __lock();
+            __lock(false);
             m_deque = other;
             __unlock();
             return *this;
@@ -118,7 +115,7 @@ namespace concurrent
          */
         void assign(size_t size, const T& value)
         {
-            __lock();
+            __lock(false);
             m_deque.assign(size, value);
             __unlock();
         }
@@ -206,7 +203,7 @@ namespace concurrent
          */
         void resize(size_t size)
         {
-            __lock();
+            __lock(false);
             m_deque.resize(size);
             __unlock();
         }
@@ -280,7 +277,7 @@ namespace concurrent
          */
         void push_back(const T& value)
         {
-            __lock();
+            __lock(false);
             m_deque.push_back(value);
             __unlock();
         }
@@ -290,7 +287,7 @@ namespace concurrent
          */
         void push_front(const T& value)
         {
-            __lock();
+            __lock(false);
             m_deque.push_front(value);
             __unlock();
         }
@@ -299,7 +296,7 @@ namespace concurrent
          */
         void pop_back()
         {
-            __lock();
+            __lock(false);
             m_deque.pop_back();
             __unlock();
         }
@@ -308,7 +305,7 @@ namespace concurrent
          */
         void pop_front()
         {
-            __lock();
+            __lock(false);
             m_deque.pop_front();
             __unlock();
         }
@@ -356,7 +353,7 @@ namespace concurrent
          */
         void erase(size_t index)
         {
-            __lock();
+            __lock(false);
             m_deque.erase(m_deque.begin() + index);
             __unlock();
         }
@@ -366,7 +363,7 @@ namespace concurrent
          */
         void erase(const_iterator position)
         {
-            __lock();
+            __lock(false);
             m_deque.erase(position);
             __unlock();
         }
@@ -377,7 +374,7 @@ namespace concurrent
          */
         void erase(const_iterator first, const_iterator last)
         {
-            __lock();
+            __lock(false);
             m_deque.erase(first, last);
             __unlock();
         }
@@ -388,7 +385,7 @@ namespace concurrent
          */
         void swap(deque& other)
         {
-            __lock();
+            __lock(false);
             m_deque.swap(other.m_deque);
             __unlock();
         }
@@ -398,7 +395,7 @@ namespace concurrent
          */
         void clear()
         {
-            __lock();
+            __lock(false);
             m_deque.clear();
             __unlock();
         }
@@ -423,39 +420,7 @@ namespace concurrent
         }
 
     private:
-        mutable std::mutex m_mutex;     //! Mutex used for change locking.
-        mutable bool m_locked = false;  //! Flag used for read locking (prevents find lookups), should be used when atomic operations (add/erase/etc) are being used.
-
         std::deque<T> m_deque;
-
-        /**
-         * @brief Lock the vector.
-         * @param readLock Flag indicating whether or not to use read locking.
-         */
-        inline void __lock(bool readLock = false) const
-        {
-            m_mutex.lock();
-            if (!readLock)
-                m_locked = true;
-        }
-        /**
-         * @brief Unlocks the deque.
-         */
-        inline void __unlock() const
-        {
-            m_mutex.unlock();
-            m_locked = false;
-        }
-        /**
-         * @brief Spins until the deque is read unlocked.
-         */
-        inline void __spinlock() const
-        {
-            if (m_locked) {
-                while (m_locked)
-                    Thread::sleep(1U);
-            }
-        }
     };
 } // namespace concurrent
 

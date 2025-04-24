@@ -14,6 +14,7 @@
 #if !defined(__CONCURRENCY_MAP_H__)
 #define __CONCURRENCY_MAP_H__
 
+#include "common/concurrent/concurrent_lock.h"
 #include "common/Thread.h"
 
 #include <map>
@@ -30,7 +31,7 @@ namespace concurrent
      * @ingroup concurrency
      */
     template <typename Key, typename T>
-    class map
+    class map : public concurrent_lock
     {
         using __std = std::map<Key, T>;
     public:
@@ -40,9 +41,7 @@ namespace concurrent
         /**
          * @brief Initializes a new instance of the map class.
          */
-        map() :
-            m_mutex(),
-            m_locked(false),
+        map() : concurrent_lock(),
             m_map()
         {
             /* stub */
@@ -51,9 +50,7 @@ namespace concurrent
          * @brief Initializes a new instance of the map class.
          * @param size Initial size of the map.
          */
-        map(size_t size) :
-            m_mutex(),
-            m_locked(false),
+        map(size_t size) : concurrent_lock(),
             m_map(size)
         {
             /* stub */
@@ -72,7 +69,7 @@ namespace concurrent
          */
         map& operator=(const map& other)
         {
-            __lock();
+            __lock(false);
             m_map = other.m_map;
             __unlock();
             return *this;
@@ -83,7 +80,7 @@ namespace concurrent
          */
         map& operator=(const std::map<Key, T>& other)
         {
-            __lock();
+            __lock(false);
             m_map = other;
             __unlock();
             return *this;
@@ -94,7 +91,7 @@ namespace concurrent
          */
         map& operator=(map& other)
         {
-            __lock();
+            __lock(false);
             m_map = other.m_map;
             __unlock();
             return *this;
@@ -105,7 +102,7 @@ namespace concurrent
          */
         map& operator=(std::map<Key, T>& other)
         {
-            __lock();
+            __lock(false);
             m_map = other;
             __unlock();
             return *this;
@@ -118,7 +115,7 @@ namespace concurrent
          */
         void assign(size_t size, const T& value)
         {
-            __lock();
+            __lock(false);
             m_map.assign(size, value);
             __unlock();
         }
@@ -271,7 +268,7 @@ namespace concurrent
          */
         void insert(const Key& key, const T& value)
         {
-            __lock();
+            __lock(false);
             m_map.insert({key, value});
             __unlock();
         }
@@ -282,7 +279,7 @@ namespace concurrent
          */
         void erase(const Key& key)
         {
-            __lock();
+            __lock(false);
             m_map.erase(key);
             __unlock();
         }
@@ -292,7 +289,7 @@ namespace concurrent
          */
         void erase(const_iterator position)
         {
-            __lock();
+            __lock(false);
             m_map.erase(position);
             __unlock();
         }
@@ -303,7 +300,7 @@ namespace concurrent
          */
         void erase(const_iterator first, const_iterator last)
         {
-            __lock();
+            __lock(false);
             m_map.erase(first, last);
             __unlock();
         }
@@ -313,7 +310,7 @@ namespace concurrent
          */
         void clear()
         {
-            __lock();
+            __lock(false);
             m_map.clear();
             __unlock();
         }
@@ -371,59 +368,8 @@ namespace concurrent
             return m_map;
         }
 
-        /**
-         * @brief Locks the map.
-         * @param readLock Flag indicating whether or not to use read locking.
-         */
-        void lock(bool readLock = false) const { __lock(readLock); }
-        /**
-         * @brief Unlocks the map.
-         */
-        void unlock() const { __unlock(); }
-        /**
-         * @brief Flag indicating whether or not the map is read locked.
-         * @return bool True if the map is read locked, false otherwise.
-         */
-        bool isReadLocked() const { return m_locked; }
-        /**
-         * @brief Spins until the map is unlocked.
-         */
-        void spinlock() const { __spinlock(); }
-
     private:
-        mutable std::mutex m_mutex;     //! Mutex used for change locking.
-        mutable bool m_locked = false;  //! Flag used for read locking (prevents find lookups), should be used when atomic operations (add/erase/etc) are being used.
-
         std::map<Key, T> m_map;
-
-        /**
-         * @brief Lock the vector.
-         * @param readLock Flag indicating whether or not to use read locking.
-         */
-        inline void __lock(bool readLock = false) const
-        {
-            m_mutex.lock();
-            if (readLock)
-                m_locked = true;
-        }
-        /**
-         * @brief Unlocks the map.
-         */
-        inline void __unlock() const
-        {
-            m_mutex.unlock();
-            m_locked = false;
-        }
-        /**
-         * @brief Spins until the map is read unlocked.
-         */
-        inline void __spinlock() const
-        {
-            if (m_locked) {
-                while (m_locked)
-                    Thread::sleep(1U);
-            }
-        }
     };
 } // namespace concurrent
 
