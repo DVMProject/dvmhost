@@ -98,11 +98,14 @@ bool AffiliationLookup::unitDereg(uint32_t srcId, bool automatic)
     m_unitRegTimers[srcId].stop();
 
     // remove dynamic unit registration table entry
+    m_unitRegTable.lock(true);
     if (std::find(m_unitRegTable.begin(), m_unitRegTable.end(), srcId) != m_unitRegTable.end()) {
         auto it = std::find(m_unitRegTable.begin(), m_unitRegTable.end(), srcId);
+        m_unitRegTable.unlock();
         m_unitRegTable.erase(it);
         ret = true;
     }
+    m_unitRegTable.unlock();
 
     if (ret) {
         if (m_unitDereg != nullptr) {
@@ -161,10 +164,13 @@ uint32_t AffiliationLookup::unitRegTimer(uint32_t srcId)
 bool AffiliationLookup::isUnitReg(uint32_t srcId) const
 {
     // lookup dynamic unit registration table entry
+    m_unitRegTable.lock(false);
     if (std::find(m_unitRegTable.begin(), m_unitRegTable.end(), srcId) != m_unitRegTable.end()) {
+        m_unitRegTable.unlock();
         return true;
     }
     else {
+        m_unitRegTable.unlock();
         return false;
     }
 }
@@ -224,11 +230,15 @@ bool AffiliationLookup::groupUnaff(uint32_t srcId)
 
 bool AffiliationLookup::hasGroupAff(uint32_t dstId) const
 {
+    // lookup dynamic affiliation table entry
+    m_grpAffTable.lock(false);
     for (auto entry : m_grpAffTable) {
         if (entry.second == dstId) {
+            m_grpAffTable.unlock();
             return true;
         }
     }
+    m_grpAffTable.unlock();
 
     return false;
 }
@@ -238,15 +248,15 @@ bool AffiliationLookup::hasGroupAff(uint32_t dstId) const
 bool AffiliationLookup::isGroupAff(uint32_t srcId, uint32_t dstId) const
 {
     // lookup dynamic affiliation table entry
+    m_grpAffTable.lock(false);
     if (m_grpAffTable.find(srcId) != m_grpAffTable.end()) {
         uint32_t tblDstId = m_grpAffTable.at(srcId);
         if (tblDstId == dstId) {
+            m_grpAffTable.unlock();
             return true;
         }
-        else {
-            return false;
-        }
     }
+    m_grpAffTable.unlock();
 
     return false;
 }
@@ -403,11 +413,14 @@ bool AffiliationLookup::isChBusy(uint32_t chNo) const
     }
 
     // lookup dynamic channel grant table entry
+    m_grantChTable.lock(false);
     for (auto entry : m_grantChTable) {
         if (entry.second == chNo) {
+            m_grantChTable.unlock();
             return true;
         }
     }
+    m_grantChTable.unlock();
 
     return false;
 }
@@ -421,17 +434,19 @@ bool AffiliationLookup::isGranted(uint32_t dstId) const
     }
 
     // lookup dynamic channel grant table entry
-    try {
-        uint32_t chNo = m_grantChTable.at(dstId);
-        if (chNo != 0U) {
+    m_grantChTable.lock(false);
+    for (auto entry : m_grantChTable) {
+        uint32_t gntDstId = entry.first;
+        uint32_t chNo = entry.second;
+
+        if (gntDstId == dstId && chNo != 0U) {
+            m_grantChTable.unlock();
             return true;
         }
-        else {
-            return false;
-        }
-    } catch (...) {
-        return false;
     }
+    m_grantChTable.unlock();
+
+    return false;
 }
 
 /* Helper to determine if the destination ID is network granted. */
@@ -442,13 +457,20 @@ bool AffiliationLookup::isGroup(uint32_t dstId) const
         return true;
     }
 
-    // lookup dynamic channel grant table entry
-    try {
-        bool uu = m_uuGrantedTable.at(dstId);
-        return !uu;
-    } catch (...) {
-        return true;
+    // lookup U-U grant flag table entry
+    m_uuGrantedTable.lock(false);
+    for (auto entry : m_uuGrantedTable) {
+        uint32_t gntDstId = entry.first;
+        bool uu = entry.second;
+
+        if (gntDstId == dstId) {
+            m_uuGrantedTable.unlock();
+            return !uu;
+        }
     }
+    m_uuGrantedTable.unlock();
+
+    return true;
 }
 
 /* Helper to determine if the destination ID is network granted. */
@@ -459,13 +481,20 @@ bool AffiliationLookup::isNetGranted(uint32_t dstId) const
         return false;
     }
 
-    // lookup dynamic channel grant table entry
-    try {
-        bool net = m_netGrantedTable.at(dstId);
-        return net;
-    } catch (...) {
-        return false;
+    // lookup net granted flag table entry
+    m_netGrantedTable.lock(false);
+    for (auto entry : m_netGrantedTable) {
+        uint32_t gntDstId = entry.first;
+        bool net = entry.second;
+
+        if (gntDstId == dstId) {
+            m_netGrantedTable.unlock();
+            return net;
+        }
     }
+    m_netGrantedTable.unlock();
+
+    return false;
 }
 
 /* Helper to get the channel granted for the given destination ID. */
@@ -487,10 +516,15 @@ uint32_t AffiliationLookup::getGrantedCh(uint32_t dstId)
 
 uint32_t AffiliationLookup::getGrantedDstByCh(uint32_t chNo)
 {
+    // lookup dynamic channel grant table entry
+    m_grantChTable.lock(false);
     for (auto entry : m_grantChTable) {
-        if (entry.second == chNo)
+        if (entry.second == chNo) {
+            m_grantChTable.unlock();
             return entry.first;
+        }
     }
+    m_grantChTable.unlock();
 
     return 0U;
 }
@@ -503,12 +537,15 @@ uint32_t AffiliationLookup::getGrantedBySrcId(uint32_t srcId)
         return 0U;
     }
 
-    // lookup dynamic channel grant table entry
+    // lookup dynamic channel grant source table entry
+    m_grantSrcIdTable.lock(false);
     for (auto entry : m_grantSrcIdTable) {
         if (entry.second == srcId) {
+            m_grantSrcIdTable.unlock();
             return entry.first;
         }
     }
+    m_grantSrcIdTable.unlock();
 
     return 0U;
 }
