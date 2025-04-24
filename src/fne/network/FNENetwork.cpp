@@ -2397,7 +2397,7 @@ void FNENetwork::writePeerList(uint32_t peerId, uint32_t streamId)
         } else {
             LogError(LOG_NET, "PEER %u error compressing PID list", peerId);
         }
-}
+    }
 
     return;
 }
