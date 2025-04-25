@@ -14,6 +14,7 @@
 #include "network/RTPHeader.h"
 #include "network/RTPExtensionHeader.h"
 #include "network/RTPFNEHeader.h"
+#include "Clock.h"
 #include "Log.h"
 #include "Utils.h"
 
@@ -22,12 +23,6 @@ using namespace network::frame;
 
 #include <cassert>
 #include <cstring>
-
-// ---------------------------------------------------------------------------
-//  Static Class Members
-// ---------------------------------------------------------------------------
-
-std::mutex FrameQueue::m_fqTimestampLock;
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -189,7 +184,6 @@ void FrameQueue::enqueueMessage(const uint8_t* message, uint32_t length, uint32_
 
 void FrameQueue::clearTimestamps()
 {
-    std::lock_guard<std::mutex> lock(m_fqTimestampLock);
     m_streamTimestamps.clear();
 }
 
@@ -207,7 +201,6 @@ uint8_t* FrameQueue::generateMessage(const uint8_t* message, uint32_t length, ui
 
     uint32_t timestamp = INVALID_TS;
     if (streamId != 0U) {
-        std::lock_guard<std::mutex> lock(m_fqTimestampLock);
         m_streamTimestamps.lock(false);
         auto entry = m_streamTimestamps.find(streamId);
         if (entry != m_streamTimestamps.end()) {
@@ -235,16 +228,19 @@ uint8_t* FrameQueue::generateMessage(const uint8_t* message, uint32_t length, ui
     header.setSequence(rtpSeq);
     header.setSSRC(ssrc);
 
-    header.encode(buffer);
-
     if (streamId != 0U && timestamp == INVALID_TS && rtpSeq != RTP_END_OF_CALL_SEQ) {
         if (m_debug)
             LogDebugEx(LOG_NET, "FrameQueue::generateMessage()", "RTP streamId = %u, initial TS = %u, rtpSeq = %u", streamId, header.getTimestamp(), rtpSeq);
-        m_streamTimestamps[streamId] = header.getTimestamp();
+
+        timestamp = (uint32_t)system_clock::ntp::now();
+        header.setTimestamp(timestamp);
+
+        m_streamTimestamps.insert(streamId, timestamp);
     }
 
+    header.encode(buffer);
+
     if (streamId != 0U && rtpSeq == RTP_END_OF_CALL_SEQ) {
-        std::lock_guard<std::mutex> lock(m_fqTimestampLock);
         m_streamTimestamps.lock(false);
         auto entry = m_streamTimestamps.find(streamId);
         if (entry != m_streamTimestamps.end()) {

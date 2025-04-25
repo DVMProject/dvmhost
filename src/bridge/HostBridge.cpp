@@ -22,9 +22,10 @@
 #include "common/p25/P25Utils.h"
 #include "common/network/RTPHeader.h"
 #include "common/network/udp/Socket.h"
-#include "common/Log.h"
+#include "common/Clock.h"
 #include "common/StopWatch.h"
 #include "common/Thread.h"
+#include "common/Log.h"
 #include "common/Utils.h"
 #include "bridge/ActivityLog.h"
 #include "HostBridge.h"
@@ -2708,13 +2709,17 @@ uint8_t* HostBridge::generateRTPHeaders(uint8_t msgLen, uint16_t& rtpSeq)
     uint8_t* buffer = new uint8_t[RTP_HEADER_LENGTH_BYTES + msgLen];
     ::memset(buffer, 0x00U, RTP_HEADER_LENGTH_BYTES + msgLen);
 
-    header.encode(buffer);
-
     if (timestamp == INVALID_TS) {
         if (m_debug)
             LogDebugEx(LOG_NET, "HostBridge::generateRTPHeaders()", "RTP, initial TS = %u, rtpSeq = %u", header.getTimestamp(), rtpSeq);
+
+        timestamp = (uint32_t)system_clock::ntp::now();
+        header.setTimestamp(timestamp);
+
         m_rtpTimestamp = header.getTimestamp();
     }
+
+    header.encode(buffer);
 
     return buffer;
 }

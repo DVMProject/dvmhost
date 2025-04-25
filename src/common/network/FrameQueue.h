@@ -22,8 +22,6 @@
 #include "common/network/RTPFNEHeader.h"
 #include "common/network/RawFrameQueue.h"
 
-#include <mutex>
-
 namespace network
 {
     // ---------------------------------------------------------------------------
@@ -116,8 +114,8 @@ namespace network
 
     private:
         uint32_t m_peerId;
+
         concurrent::unordered_map<uint32_t, uint32_t> m_streamTimestamps;
-        static std::mutex m_fqTimestampLock;
 
         /**
          * @brief Generate RTP message for the frame queue.
