@@ -446,7 +446,7 @@ void DiagNetwork::taskNetworkRx(NetPacketRequest* req)
                                         buffer = new uint8_t[pkt.size + 1U];
 
                                     ::memcpy(buffer, rawPayload + 10U, PEER_LINK_BLOCK_SIZE);
-                                     Utils::dump(1U, "Block Payload", buffer, PEER_LINK_BLOCK_SIZE);
+                                    // Utils::dump(1U, "Block Payload", buffer, PEER_LINK_BLOCK_SIZE);
                                     pkt.fragments.insert({curBlock, buffer});
                                 }
 
