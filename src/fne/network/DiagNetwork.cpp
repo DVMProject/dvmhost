@@ -446,7 +446,7 @@ void DiagNetwork::taskNetworkRx(NetPacketRequest* req)
                                         buffer = new uint8_t[pkt.size + 1U];
 
                                     ::memcpy(buffer, rawPayload + 10U, PEER_LINK_BLOCK_SIZE);
-                                    // Utils::dump(1U, "Block Payload", buffer, PEER_LINK_BLOCK_SIZE);
+                                     Utils::dump(1U, "Block Payload", buffer, PEER_LINK_BLOCK_SIZE);
                                     pkt.fragments.insert({curBlock, buffer});
                                 }
 
@@ -454,12 +454,29 @@ void DiagNetwork::taskNetworkRx(NetPacketRequest* req)
 
                                 // do we have all the blocks?
                                 if (pkt.fragments.size() == blockCnt + 1U) {
-                                    uint8_t* buffer = new uint8_t[pkt.size + 1U];
-                                    ::memset(buffer, 0x00U, pkt.size + 1U);
-                                    for (uint8_t i = 0U; i < pkt.fragments.size(); i++) {
-                                        uint32_t offs = i * PEER_LINK_BLOCK_SIZE;
-                                        ::memcpy(buffer + offs, pkt.fragments[i], PEER_LINK_BLOCK_SIZE);
+                                    uint8_t* buffer = nullptr;
+                                    if (pkt.size == 0U) {
+                                        LogError(LOG_NET, "PEER %u Peer-Link, Active Peer List, error missing size information", peerId);
+                                        goto pl_act_cleanup;
                                     }
+
+                                    if (pkt.compressedSize == 0U) {
+                                        LogError(LOG_NET, "PEER %u Peer-Link, Active Peer List, error missing compressed size information", peerId);
+                                        goto pl_act_cleanup;
+                                    }
+
+                                    buffer = new uint8_t[pkt.size + 1U];
+                                    ::memset(buffer, 0x00U, pkt.size + 1U);
+                                    if (pkt.fragments.size() == 1U) {
+                                        ::memcpy(buffer, pkt.fragments[0U], pkt.size);
+                                    } else {
+                                        for (uint8_t i = 0U; i < pkt.fragments.size(); i++) {
+                                            uint32_t offs = i * PEER_LINK_BLOCK_SIZE;
+                                            ::memcpy(buffer + offs, pkt.fragments[i], PEER_LINK_BLOCK_SIZE);
+                                        }
+                                    }
+
+                                    // Utils::dump(1U, "Peer-Link Active Peer List", buffer, pkt.size + 1U);
 
                                     // scope is intentional
                                     {
@@ -495,10 +512,12 @@ void DiagNetwork::taskNetworkRx(NetPacketRequest* req)
                                         }
                                     }
 
+                                pl_act_cleanup:
                                     pkt.size = 0U;
                                     pkt.compressedSize = 0U;
 
-                                    delete[] buffer;
+                                    if (buffer != nullptr)
+                                        delete[] buffer;
                                     for (auto& frag : pkt.fragments) {
                                         if (frag.second != nullptr)
                                             delete[] frag.second;

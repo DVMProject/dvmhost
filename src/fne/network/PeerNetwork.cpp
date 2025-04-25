@@ -123,8 +123,7 @@ bool PeerNetwork::writePeerLinkPeers(json::array* peerList)
 
         uint32_t compressedLen = 0U;
         uint8_t* compressed = Compression::compress((uint8_t*)buffer, len, &compressedLen);
-        if (compressed != nullptr)
-        {
+        if (compressed != nullptr) {
             // transmit peer link active peer list
             uint32_t streamId = createStreamId();
             uint8_t blockCnt = (compressedLen / PEER_LINK_BLOCK_SIZE) + (compressedLen % PEER_LINK_BLOCK_SIZE ? 1U : 0U);
