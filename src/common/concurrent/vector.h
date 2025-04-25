@@ -73,7 +73,7 @@ namespace concurrent
          */
         vector& operator=(const vector& other)
         {
-            __lock(false);
+            __lock();
             m_vector = other.m_vector;
             __unlock();
             return *this;
@@ -84,7 +84,7 @@ namespace concurrent
          */
         vector& operator=(const std::vector<T>& other)
         {
-            __lock(false);
+            __lock();
             m_vector = other;
             __unlock();
             return *this;
@@ -95,7 +95,7 @@ namespace concurrent
          */
         vector& operator=(vector& other)
         {
-            __lock(false);
+            __lock();
             m_vector = other.m_vector;
             __unlock();
             return *this;
@@ -106,7 +106,7 @@ namespace concurrent
          */
         vector& operator=(std::vector<T>& other)
         {
-            __lock(false);
+            __lock();
             m_vector = other;
             __unlock();
             return *this;
@@ -119,7 +119,7 @@ namespace concurrent
          */
         void assign(size_t size, const T& value)
         {
-            __lock(false);
+            __lock();
             m_vector.assign(size, value);
             __unlock();
         }
@@ -207,7 +207,7 @@ namespace concurrent
          */        
         void resize(size_t size)
         {
-            __lock(false);
+            __lock();
             m_vector.resize(size);
             __unlock();
         }
@@ -319,7 +319,7 @@ namespace concurrent
          */
         void push_back(const T& value)
         {
-            __lock(false);
+            __lock();
             m_vector.push_back(value);
             __unlock();
         }
@@ -329,7 +329,7 @@ namespace concurrent
          */
         void push_back(T&& value)
         {
-            __lock(false);
+            __lock();
             m_vector.push_back(std::move(value));
             __unlock();
         }
@@ -339,7 +339,7 @@ namespace concurrent
          */
         void pop_back()
         {
-            __lock(false);
+            __lock();
             m_vector.pop_back();
             __unlock();
         }
@@ -352,7 +352,7 @@ namespace concurrent
          */       
         iterator insert(iterator position, const T& value)
         {
-            __lock(false);
+            __lock();
             auto it = m_vector.insert(position, value);
             __unlock();
             return it;
@@ -364,7 +364,7 @@ namespace concurrent
          */
         void erase(size_t index)
         {
-            __lock(false);
+            __lock();
             m_vector.erase(m_vector.begin() + index);
             __unlock();
         }
@@ -374,7 +374,7 @@ namespace concurrent
          */
         void erase(const_iterator position)
         {
-            __lock(false);
+            __lock();
             m_vector.erase(position);
             __unlock();
         }
@@ -385,7 +385,7 @@ namespace concurrent
          */
         void erase(const_iterator first, const_iterator last)
         {
-            __lock(false);
+            __lock();
             m_vector.erase(first, last);
             __unlock();
         }
@@ -396,7 +396,7 @@ namespace concurrent
          */
         void swap(vector& other)
         {
-            __lock(false);
+            __lock();
             m_vector.swap(other.m_vector);
             __unlock();
         }
@@ -406,7 +406,7 @@ namespace concurrent
          */
         void clear()
         {
-            __lock(false);
+            __lock();
             m_vector.clear();
             __unlock();
         }

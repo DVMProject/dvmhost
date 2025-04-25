@@ -495,7 +495,6 @@ void DiagNetwork::taskNetworkRx(NetPacketRequest* req)
                                         }
                                     }
 
-                                pal_lookup_cleanup:
                                     pkt.size = 0U;
                                     pkt.compressedSize = 0U;
 

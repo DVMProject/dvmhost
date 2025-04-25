@@ -69,7 +69,7 @@ namespace concurrent
          */
         unordered_map& operator=(const unordered_map& other)
         {
-            __lock(false);
+            __lock();
             m_map = other.m_map;
             __unlock();
             return *this;
@@ -80,7 +80,7 @@ namespace concurrent
          */
         unordered_map& operator=(const std::unordered_map<Key, T>& other)
         {
-            __lock(false);
+            __lock();
             m_map = other;
             __unlock();
             return *this;
@@ -91,7 +91,7 @@ namespace concurrent
          */
         unordered_map& operator=(unordered_map& other)
         {
-            __lock(false);
+            __lock();
             m_map = other.m_map;
             __unlock();
             return *this;
@@ -102,7 +102,7 @@ namespace concurrent
          */
         unordered_map& operator=(std::unordered_map<Key, T>& other)
         {
-            __lock(false);
+            __lock();
             m_map = other;
             __unlock();
             return *this;
@@ -115,7 +115,7 @@ namespace concurrent
          */
         void assign(size_t size, const T& value)
         {
-            __lock(false);
+            __lock();
             m_map.assign(size, value);
             __unlock();
         }
@@ -268,7 +268,7 @@ namespace concurrent
          */
         void insert(const Key& key, const T& value)
         {
-            __lock(false);
+            __lock();
             m_map.insert({key, value});
             __unlock();
         }
@@ -279,7 +279,7 @@ namespace concurrent
          */
         void erase(const Key& key)
         {
-            __lock(false);
+            __lock();
             m_map.erase(key);
             __unlock();
         }
@@ -289,7 +289,7 @@ namespace concurrent
          */
         void erase(const_iterator position)
         {
-            __lock(false);
+            __lock();
             m_map.erase(position);
             __unlock();
         }
@@ -300,7 +300,7 @@ namespace concurrent
          */
         void erase(const_iterator first, const_iterator last)
         {
-            __lock(false);
+            __lock();
             m_map.erase(first, last);
             __unlock();
         }
@@ -310,7 +310,7 @@ namespace concurrent
          */
         void clear()
         {
-            __lock(false);
+            __lock();
             m_map.clear();
             __unlock();
         }

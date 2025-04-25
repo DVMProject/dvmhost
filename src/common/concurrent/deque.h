@@ -69,7 +69,7 @@ namespace concurrent
          */
         deque& operator=(const deque& other)
         {
-            __lock(false);
+            __lock();
             m_deque = other.m_deque;
             __unlock();
             return *this;
@@ -80,7 +80,7 @@ namespace concurrent
          */
         deque& operator=(const std::deque<T>& other)
         {
-            __lock(false);
+            __lock();
             m_deque = other;
             __unlock();
             return *this;
@@ -91,7 +91,7 @@ namespace concurrent
          */
         deque& operator=(deque& other)
         {
-            __lock(false);
+            __lock();
             m_deque = other.m_deque;
             __unlock();
             return *this;
@@ -102,7 +102,7 @@ namespace concurrent
          */
         deque& operator=(std::deque<T>& other)
         {
-            __lock(false);
+            __lock();
             m_deque = other;
             __unlock();
             return *this;
@@ -115,7 +115,7 @@ namespace concurrent
          */
         void assign(size_t size, const T& value)
         {
-            __lock(false);
+            __lock();
             m_deque.assign(size, value);
             __unlock();
         }
@@ -203,7 +203,7 @@ namespace concurrent
          */
         void resize(size_t size)
         {
-            __lock(false);
+            __lock();
             m_deque.resize(size);
             __unlock();
         }
@@ -277,7 +277,7 @@ namespace concurrent
          */
         void push_back(const T& value)
         {
-            __lock(false);
+            __lock();
             m_deque.push_back(value);
             __unlock();
         }
@@ -287,7 +287,7 @@ namespace concurrent
          */
         void push_front(const T& value)
         {
-            __lock(false);
+            __lock();
             m_deque.push_front(value);
             __unlock();
         }
@@ -296,7 +296,7 @@ namespace concurrent
          */
         void pop_back()
         {
-            __lock(false);
+            __lock();
             m_deque.pop_back();
             __unlock();
         }
@@ -305,7 +305,7 @@ namespace concurrent
          */
         void pop_front()
         {
-            __lock(false);
+            __lock();
             m_deque.pop_front();
             __unlock();
         }
@@ -353,7 +353,7 @@ namespace concurrent
          */
         void erase(size_t index)
         {
-            __lock(false);
+            __lock();
             m_deque.erase(m_deque.begin() + index);
             __unlock();
         }
@@ -363,7 +363,7 @@ namespace concurrent
          */
         void erase(const_iterator position)
         {
-            __lock(false);
+            __lock();
             m_deque.erase(position);
             __unlock();
         }
@@ -374,7 +374,7 @@ namespace concurrent
          */
         void erase(const_iterator first, const_iterator last)
         {
-            __lock(false);
+            __lock();
             m_deque.erase(first, last);
             __unlock();
         }
@@ -385,7 +385,7 @@ namespace concurrent
          */
         void swap(deque& other)
         {
-            __lock(false);
+            __lock();
             m_deque.swap(other.m_deque);
             __unlock();
         }
@@ -395,7 +395,7 @@ namespace concurrent
          */
         void clear()
         {
-            __lock(false);
+            __lock();
             m_deque.clear();
             __unlock();
         }
