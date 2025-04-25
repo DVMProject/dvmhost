@@ -208,6 +208,7 @@ uint8_t* FrameQueue::generateMessage(const uint8_t* message, uint32_t length, ui
     uint32_t timestamp = INVALID_TS;
     if (streamId != 0U) {
         std::lock_guard<std::mutex> lock(m_fqTimestampLock);
+        m_streamTimestamps.lock(false);
         auto entry = m_streamTimestamps.find(streamId);
         if (entry != m_streamTimestamps.end()) {
             timestamp = entry->second;
@@ -219,6 +220,7 @@ uint8_t* FrameQueue::generateMessage(const uint8_t* message, uint32_t length, ui
                 LogDebugEx(LOG_NET, "FrameQueue::generateMessage()", "RTP streamId = %u, previous TS = %u, TS = %u, rtpSeq = %u", streamId, m_streamTimestamps[streamId], timestamp, rtpSeq);
             m_streamTimestamps[streamId] = timestamp;
         }
+        m_streamTimestamps.unlock();
     }
 
     uint32_t bufferLen = RTP_HEADER_LENGTH_BYTES + RTP_EXTENSION_HEADER_LENGTH_BYTES + RTP_FNE_HEADER_LENGTH_BYTES + length;
@@ -243,12 +245,15 @@ uint8_t* FrameQueue::generateMessage(const uint8_t* message, uint32_t length, ui
 
     if (streamId != 0U && rtpSeq == RTP_END_OF_CALL_SEQ) {
         std::lock_guard<std::mutex> lock(m_fqTimestampLock);
+        m_streamTimestamps.lock(false);
         auto entry = m_streamTimestamps.find(streamId);
         if (entry != m_streamTimestamps.end()) {
             if (m_debug)
                 LogDebugEx(LOG_NET, "FrameQueue::generateMessage()", "RTP streamId = %u, rtpSeq = %u", streamId, rtpSeq);
+            m_streamTimestamps.unlock();
             m_streamTimestamps.erase(streamId);
         }
+        m_streamTimestamps.unlock();
     }
 
     RTPFNEHeader fneHeader = RTPFNEHeader();
