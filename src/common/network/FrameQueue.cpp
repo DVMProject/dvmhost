@@ -136,8 +136,14 @@ UInt8Array FrameQueue::read(int& messageLength, sockaddr_storage& address, uint3
 bool FrameQueue::write(const uint8_t* message, uint32_t length, uint32_t streamId, uint32_t peerId,
     uint32_t ssrc, OpcodePair opcode, uint16_t rtpSeq, sockaddr_storage& addr, uint32_t addrLen)
 {
-    assert(message != nullptr);
-    assert(length > 0U);
+    if (message == nullptr) {
+        LogError(LOG_NET, "FrameQueue::write(), message is null");
+        return false;
+    }
+    if (length == 0U) {
+        LogError(LOG_NET, "FrameQueue::write(), message length is zero");
+        return false;
+    }
 
     uint32_t bufferLen = 0U;
     uint8_t* buffer = generateMessage(message, length, streamId, peerId, ssrc, opcode, rtpSeq, &bufferLen);
@@ -165,8 +171,14 @@ void FrameQueue::enqueueMessage(const uint8_t* message, uint32_t length, uint32_
 void FrameQueue::enqueueMessage(const uint8_t* message, uint32_t length, uint32_t streamId, uint32_t peerId,
     uint32_t ssrc, OpcodePair opcode, uint16_t rtpSeq, sockaddr_storage& addr, uint32_t addrLen)
 {
-    assert(message != nullptr);
-    assert(length > 0U);
+    if (message == nullptr) {
+        LogError(LOG_NET, "FrameQueue::enqueueMessage(), message is null");
+        return;
+    }
+    if (length == 0U) {
+        LogError(LOG_NET, "FrameQueue::enqueueMessage(), message length is zero");
+        return;
+    }
 
     uint32_t bufferLen = 0U;
     uint8_t* buffer = generateMessage(message, length, streamId, peerId, ssrc, opcode, rtpSeq, &bufferLen);
@@ -196,8 +208,14 @@ void FrameQueue::clearTimestamps()
 uint8_t* FrameQueue::generateMessage(const uint8_t* message, uint32_t length, uint32_t streamId, uint32_t peerId,
     uint32_t ssrc, OpcodePair opcode, uint16_t rtpSeq, uint32_t* outBufferLen)
 {
-    assert(message != nullptr);
-    assert(length > 0U);
+    if (message == nullptr) {
+        LogError(LOG_NET, "FrameQueue::generateMessage(), message is null");
+        return nullptr;
+    }
+    if (length == 0U) {
+        LogError(LOG_NET, "FrameQueue::generateMessage(), message length is zero");
+        return nullptr;
+    }
 
     uint32_t timestamp = INVALID_TS;
     if (streamId != 0U) {
