@@ -931,11 +931,6 @@ bool TagP25Data::isPeerPermitted(uint32_t peerId, lc::LC& control, DUID::E duid,
                     return true;
                 }
 
-                tg = m_network->m_tidLookup->findByRewrite(peerId, control.getDstId());
-                if (!tg.isInvalid()) {
-                    return true;
-                }
-
                 // is this peer excluded from the group?
                 std::vector<uint32_t> exclusion = tg.config().exclusion();
                 if (exclusion.size() > 0) {
@@ -943,6 +938,11 @@ bool TagP25Data::isPeerPermitted(uint32_t peerId, lc::LC& control, DUID::E duid,
                     if (it != exclusion.end()) {
                         return false;
                     }
+                }
+
+                tg = m_network->m_tidLookup->findByRewrite(peerId, control.getDstId());
+                if (!tg.isInvalid()) {
+                    return true;
                 }
 
                 // is this a U2U call?
@@ -973,11 +973,6 @@ bool TagP25Data::isPeerPermitted(uint32_t peerId, lc::LC& control, DUID::E duid,
                     return true;
                 }
 
-                tg = m_network->m_tidLookup->findByRewrite(peerId, control.getDstId());
-                if (!tg.isInvalid()) {
-                    return true;
-                }
-
                 // is this peer excluded from the group?
                 std::vector<uint32_t> exclusion = tg.config().exclusion();
                 if (exclusion.size() > 0) {
@@ -985,6 +980,11 @@ bool TagP25Data::isPeerPermitted(uint32_t peerId, lc::LC& control, DUID::E duid,
                     if (it != exclusion.end()) {
                         return false;
                     }
+                }
+
+                tg = m_network->m_tidLookup->findByRewrite(peerId, control.getDstId());
+                if (!tg.isInvalid()) {
+                    return true;
                 }
 
                 // is this a U2U call?
