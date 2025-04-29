@@ -142,3 +142,15 @@ else ()
     target_link_libraries(dvmbridge PRIVATE common vocoder ${OPENSSL_LIBRARIES} dl asio::asio Threads::Threads)
 endif (COMPILE_WIN32)
 target_include_directories(dvmbridge PRIVATE ${OPENSSL_INCLUDE_DIR} src src/bridge)
+
+#
+## dvmpatch
+#
+include(src/patch/CMakeLists.txt)
+add_executable(dvmpatch ${common_INCLUDE} ${patch_SRC})
+if (COMPILE_WIN32)
+    target_link_libraries(dvmpatch PRIVATE common ${OPENSSL_LIBRARIES} asio::asio Threads::Threads)
+else ()
+    target_link_libraries(dvmpatch PRIVATE common ${OPENSSL_LIBRARIES} dl asio::asio Threads::Threads)
+endif (COMPILE_WIN32)
+target_include_directories(dvmpatch PRIVATE ${OPENSSL_INCLUDE_DIR} src src/patch)
