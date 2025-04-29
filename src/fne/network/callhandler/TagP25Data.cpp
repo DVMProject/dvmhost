@@ -936,6 +936,15 @@ bool TagP25Data::isPeerPermitted(uint32_t peerId, lc::LC& control, DUID::E duid,
                     return true;
                 }
 
+                // is this peer excluded from the group?
+                std::vector<uint32_t> exclusion = tg.config().exclusion();
+                if (exclusion.size() > 0) {
+                    auto it = std::find(exclusion.begin(), exclusion.end(), peerId);
+                    if (it != exclusion.end()) {
+                        return false;
+                    }
+                }
+
                 // is this a U2U call?
                 lookups::RadioId rid = m_network->m_ridLookup->find(control.getDstId());
                 if (!rid.radioDefault() && rid.radioEnabled()) {
@@ -967,6 +976,15 @@ bool TagP25Data::isPeerPermitted(uint32_t peerId, lc::LC& control, DUID::E duid,
                 tg = m_network->m_tidLookup->findByRewrite(peerId, control.getDstId());
                 if (!tg.isInvalid()) {
                     return true;
+                }
+
+                // is this peer excluded from the group?
+                std::vector<uint32_t> exclusion = tg.config().exclusion();
+                if (exclusion.size() > 0) {
+                    auto it = std::find(exclusion.begin(), exclusion.end(), peerId);
+                    if (it != exclusion.end()) {
+                        return false;
+                    }
                 }
 
                 // is this a U2U call?
