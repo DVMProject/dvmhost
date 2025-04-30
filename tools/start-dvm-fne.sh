@@ -39,7 +39,7 @@ if [ -z $2 ]; then
 fi
 
 COMMAND="${R_PATH}/bin/dvmfne -c ${R_PATH}/${CONFIG}"
-nice -n -20 ${COMMAND}
+nice -n -10 ${COMMAND}
 
 if [ -e /tmp/${CONFIG}.pid ]; then rm -f /tmp/${CONFIG}.pid; fi
 
