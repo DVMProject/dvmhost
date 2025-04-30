@@ -471,6 +471,19 @@ bool TagNXDNData::isPeerPermitted(uint32_t peerId, lc::RTCH& lc, uint8_t message
         return false;
     }
 
+    FNEPeerConnection* connection = nullptr;
+    if (peerId > 0 && (m_network->m_peers.find(peerId) != m_network->m_peers.end())) {
+        connection = m_network->m_peers[peerId];
+    }
+
+    // is this peer a Peer-Link peer?
+    if (connection != nullptr) {
+        if (connection->isPeerLink()) {
+            return true; // Peer Link peers are *always* allowed to receive traffic and no other rules may filter
+                         // these peers
+        }
+    }
+
     // is this a group call?
     if (lc.getGroup()) {
         lookups::TalkgroupRuleGroupVoice tg = m_network->m_tidLookup->find(lc.getDstId());
@@ -501,11 +514,6 @@ bool TagNXDNData::isPeerPermitted(uint32_t peerId, lc::RTCH& lc, uint8_t message
             if (it != alwaysSend.end()) {
                 return true; // skip any following checks and always send traffic
             }
-        }
-
-        FNEPeerConnection* connection = nullptr;
-        if (peerId > 0 && (m_network->m_peers.find(peerId) != m_network->m_peers.end())) {
-            connection = m_network->m_peers[peerId];
         }
 
         // is this peer a conventional peer?

@@ -918,6 +918,19 @@ bool TagP25Data::isPeerPermitted(uint32_t peerId, lc::LC& control, DUID::E duid,
         return false;
     }
 
+    FNEPeerConnection* connection = nullptr;
+    if (peerId > 0 && (m_network->m_peers.find(peerId) != m_network->m_peers.end())) {
+        connection = m_network->m_peers[peerId];
+    }
+
+    // is this peer a Peer-Link peer?
+    if (connection != nullptr) {
+        if (connection->isPeerLink()) {
+            return true; // Peer Link peers are *always* allowed to receive traffic and no other rules may filter
+                         // these peers
+        }
+    }
+
     // always permit a TSDU or PDU
     if (duid == DUID::TSDU || duid == DUID::PDU)
         return true;
@@ -1023,18 +1036,13 @@ bool TagP25Data::isPeerPermitted(uint32_t peerId, lc::LC& control, DUID::E duid,
         }
     }
 
-    // peer always send list takes priority over any following affiliation rules
+    // peer always send list takes priority over any other rules
     std::vector<uint32_t> alwaysSend = tg.config().alwaysSend();
     if (alwaysSend.size() > 0) {
         auto it = std::find(alwaysSend.begin(), alwaysSend.end(), peerId);
         if (it != alwaysSend.end()) {
             return true; // skip any following checks and always send traffic
         }
-    }
-
-    FNEPeerConnection* connection = nullptr;
-    if (peerId > 0 && (m_network->m_peers.find(peerId) != m_network->m_peers.end())) {
-        connection = m_network->m_peers[peerId];
     }
 
     // is this peer a conventional peer?

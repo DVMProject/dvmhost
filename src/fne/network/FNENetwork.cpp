@@ -339,12 +339,10 @@ void FNENetwork::clock(uint32_t ms)
         // remove any peers
         for (uint32_t peerId : peersToRemove) {
             FNEPeerConnection* connection = m_peers[peerId];
-            m_peers.erase(peerId);
+            erasePeer(peerId);
             if (connection != nullptr) {
                 delete connection;
             }
-
-            erasePeerAffiliations(peerId);
         }
 
         // roll the RTP timestamp if no call is in progress
@@ -701,8 +699,8 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
 
                                 network->writePeerNAK(peerId, TAG_REPEATER_LOGIN, NET_CONN_NAK_PEER_ACL, req->address, req->addrLen);
 
-                                delete connection;
                                 network->erasePeer(peerId);
+                                delete connection;
                             }
                         }
                     }
@@ -738,8 +736,8 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
 
                                             network->writePeerNAK(peerId, TAG_REPEATER_LOGIN, NET_CONN_NAK_PEER_ACL, req->address, req->addrLen);
 
-                                            delete connection;
                                             network->erasePeer(peerId);
+                                            delete connection;
                                         }
                                     }
                                 } else {
@@ -748,8 +746,8 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                     LogWarning(LOG_NET, "PEER %u (%s) RPTL NAK, bad connection state, connectionState = %u", peerId, connection->identity().c_str(),
                                         connection->connectionState());
 
-                                    delete connection;
                                     network->erasePeer(peerId);
+                                    delete connection;
                                 }
                             } else {
                                 network->writePeerNAK(peerId, TAG_REPEATER_LOGIN, NET_CONN_NAK_BAD_CONN_STATE, req->address, req->addrLen);
@@ -856,8 +854,8 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                 LogWarning(LOG_NET, "PEER %u RPTK NAK, login exchange while in an incorrect state, connectionState = %u", peerId, connection->connectionState());
                                 network->writePeerNAK(peerId, TAG_REPEATER_AUTH, NET_CONN_NAK_BAD_CONN_STATE, req->address, req->addrLen);
 
-                                delete connection;
                                 network->erasePeer(peerId);
+                                delete connection;
                             }
                         }
                     }
@@ -890,6 +888,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                     LogWarning(LOG_NET, "PEER %u RPTC NAK, supplied invalid configuration data", peerId);
                                     network->writePeerNAK(peerId, TAG_REPEATER_AUTH, NET_CONN_NAK_INVALID_CONFIG_DATA, req->address, req->addrLen);
                                     network->erasePeer(peerId);
+                                    delete connection;
                                 }
                                 else  {
                                     // ensure parsed JSON is an object
@@ -897,6 +896,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                         LogWarning(LOG_NET, "PEER %u RPTC NAK, supplied invalid configuration data", peerId);
                                         network->writePeerNAK(peerId, TAG_REPEATER_AUTH, NET_CONN_NAK_INVALID_CONFIG_DATA, req->address, req->addrLen);
                                         network->erasePeer(peerId);
+                                        delete connection;
                                     }
                                     else {
                                         connection->config(v.get<json::object>());
@@ -986,6 +986,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                     connection->connectionState());
                                 network->writePeerNAK(peerId, TAG_REPEATER_CONFIG, NET_CONN_NAK_BAD_CONN_STATE, req->address, req->addrLen);
                                 network->erasePeer(peerId);
+                                delete connection;
                             }
                         }
                     }
@@ -1006,10 +1007,8 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                             // validate peer (simple validation really)
                             if (connection->connected() && connection->address() == ip) {
                                 LogInfoEx(LOG_NET, "PEER %u (%s) is closing down", peerId, connection->identity().c_str());
-                                if (network->erasePeer(peerId)) {
-                                    network->erasePeerAffiliations(peerId);
-                                    delete connection;
-                                }
+                                network->erasePeer(peerId);
+                                delete connection;
                             }
                         }
                     }
@@ -1692,7 +1691,7 @@ bool FNENetwork::erasePeerAffiliations(uint32_t peerId)
 
 /* Helper to erase the peer from the peers list. */
 
-bool FNENetwork::erasePeer(uint32_t peerId)
+void FNENetwork::erasePeer(uint32_t peerId)
 {
     {
         auto it = std::find_if(m_peers.begin(), m_peers.end(), [&](PeerMapPair x) { return x.first == peerId; });
@@ -1717,7 +1716,8 @@ bool FNENetwork::erasePeer(uint32_t peerId)
         }
     }
 
-    return true;
+    // cleanup peer affiliations
+    erasePeerAffiliations(peerId);
 }
 
 
@@ -1775,8 +1775,8 @@ bool FNENetwork::resetPeer(uint32_t peerId)
 
             writePeerNAK(peerId, TAG_REPEATER_LOGIN, NET_CONN_NAK_PEER_RESET, addr, addrLen);
 
-            delete connection;
             erasePeer(peerId);
+            delete connection;
 
             return true;
         }

@@ -669,10 +669,11 @@ namespace network
         bool erasePeerAffiliations(uint32_t peerId);
         /**
          * @brief Helper to erase the peer from the peers list.
+         * @note This does not delete or otherwise free the FNEConnection instance!
          * @param peerId Peer ID.
          * @returns bool True, if peer was deleted, otherwise false.
          */
-        bool erasePeer(uint32_t peerId);
+        void erasePeer(uint32_t peerId);
 
         /**
          * @brief Helper to resolve the peer ID to its identity string.
