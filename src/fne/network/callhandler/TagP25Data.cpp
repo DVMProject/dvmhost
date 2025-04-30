@@ -918,7 +918,9 @@ bool TagP25Data::isPeerPermitted(uint32_t peerId, lc::LC& control, DUID::E duid,
         return false;
     }
 
-    FNEPeerConnection* connection = nullptr;
+    FNEPeerConnection* connection = nullptr; // bryanb: this is a possible null ref concurrency issue
+                                             //     it is possible if the timing is just right to get a valid 
+                                             //     connection back initially, and then for it to be deleted
     if (peerId > 0 && (m_network->m_peers.find(peerId) != m_network->m_peers.end())) {
         connection = m_network->m_peers[peerId];
     }
