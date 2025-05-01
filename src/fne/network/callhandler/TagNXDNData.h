@@ -18,12 +18,12 @@
 
 #include "fne/Defines.h"
 #include "common/Clock.h"
+#include "common/concurrent/deque.h"
+#include "common/concurrent/unordered_map.h"
 #include "common/nxdn/NXDNDefines.h"
 #include "common/nxdn/lc/RTCH.h"
 #include "common/nxdn/lc/RCCH.h"
 #include "network/FNENetwork.h"
-
-#include <deque>
 
 namespace network
 {
@@ -116,7 +116,7 @@ namespace network
                  */
                 uint32_t dstId;
             };
-            std::deque<ParrotFrame> m_parrotFrames;
+            concurrent::deque<ParrotFrame> m_parrotFrames;
             bool m_parrotFramesReady;
 
             /**
@@ -160,7 +160,7 @@ namespace network
                 }
             };
             typedef std::pair<const uint32_t, RxStatus> StatusMapPair;
-            std::unordered_map<uint32_t, RxStatus> m_status;
+            concurrent::unordered_map<uint32_t, RxStatus> m_status;
 
             bool m_debug;
 

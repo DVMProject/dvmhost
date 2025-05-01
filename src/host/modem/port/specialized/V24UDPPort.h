@@ -26,7 +26,7 @@
 #include "common/network/RTPHeader.h"
 #include "common/RingBuffer.h"
 #include "common/Timer.h"
-#include "common/Thread.h"
+#include "common/ThreadPool.h"
 #include "modem/port/IModemPort.h"
 
 #include <string>
@@ -182,6 +182,9 @@ namespace modem
                 uint8_t m_modemState;
                 bool m_tx;
 
+                ThreadPool m_ctrlThreadPool;
+                ThreadPool m_vcThreadPool;
+
                 bool m_debug;
 
                 static std::mutex m_bufferMutex;
@@ -193,10 +196,9 @@ namespace modem
 
                 /**
                  * @brief Entry point to process a given network packet.
-                 * @param arg Instance of the NetPacketRequest structure.
-                 * @returns void* (Ignore)
+                 * @param arg Instance of the V24PacketRequest structure.
                  */
-                static void* threadedCtrlNetworkRx(void* arg);
+                static void taskCtrlNetworkRx(V24PacketRequest* req);
 
                 /**
                  * @brief Process voice conveyance frames from the network.
@@ -205,10 +207,9 @@ namespace modem
 
                 /**
                  * @brief Entry point to process a given network packet.
-                 * @param arg Instance of the NetPacketRequest structure.
-                 * @returns void* (Ignore)
+                 * @param req Instance of the V24PacketRequest structure.
                  */
-                static void* threadedVCNetworkRx(void* arg);
+                static void taskVCNetworkRx(V24PacketRequest* req);
 
                 /**
                  * @brief Internal helper to setup the local voice channel port.

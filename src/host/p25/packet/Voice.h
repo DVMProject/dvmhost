@@ -125,7 +125,8 @@ namespace p25
 
             uint32_t m_silenceThreshold;
 
-            uint8_t m_vocLDU1Count;
+            uint8_t m_pktLDU1Count;
+            uint8_t m_grpUpdtCount;
             uint8_t m_roamLDU1Count;
 
             bool m_inbound;

@@ -25,6 +25,7 @@
 #define __FNE_NETWORK_H__
 
 #include "fne/Defines.h"
+#include "common/concurrent/unordered_map.h"
 #include "common/network/BaseNetwork.h"
 #include "common/network/json/json.h"
 #include "common/lookups/AffiliationLookup.h"
@@ -32,6 +33,7 @@
 #include "common/lookups/TalkgroupRulesLookup.h"
 #include "common/lookups/PeerListLookup.h"
 #include "common/network/Network.h"
+#include "common/ThreadPool.h"
 #include "fne/network/influxdb/InfluxDB.h"
 #include "fne/CryptoContainer.h"
 
@@ -391,6 +393,8 @@ namespace network
         frame::RTPFNEHeader fneHeader;      //! RTP FNE Header
         int length = 0U;                    //! Length of raw data buffer
         uint8_t* buffer = nullptr;          //! Raw data buffer
+
+        uint64_t pktRxTime;                 //! Packet receive time
     };
 
     // ---------------------------------------------------------------------------
@@ -422,10 +426,11 @@ namespace network
          * @param allowDiagnosticTransfer Flag indicating that the system diagnostic logs will be sent to the network.
          * @param pingTime 
          * @param updateLookupTime 
+         * @param workerCnt Number of worker threads.
          */
         FNENetwork(HostFNE* host, const std::string& address, uint16_t port, uint32_t peerId, const std::string& password,
             bool debug, bool verbose, bool reportPeerPing, bool dmr, bool p25, bool nxdn, uint32_t parrotDelay, bool parrotGrantDemand,
-            bool allowActivityTransfer, bool allowDiagnosticTransfer, uint32_t pingTime, uint32_t updateLookupTime);
+            bool allowActivityTransfer, bool allowDiagnosticTransfer, uint32_t pingTime, uint32_t updateLookupTime, uint16_t workerCnt);
         /**
          * @brief Finalizes a instance of the FNENetwork class.
          */
@@ -548,15 +553,46 @@ namespace network
 
         NET_CONN_STATUS m_status;
 
-        static std::mutex m_peerMutex;
         typedef std::pair<const uint32_t, network::FNEPeerConnection*> PeerMapPair;
-        std::unordered_map<uint32_t, FNEPeerConnection*> m_peers;
-        std::unordered_map<uint32_t, json::array> m_peerLinkPeers;
+        concurrent::unordered_map<uint32_t, FNEPeerConnection*> m_peers;
+        concurrent::unordered_map<uint32_t, json::array> m_peerLinkPeers;
         typedef std::pair<const uint32_t, lookups::AffiliationLookup*> PeerAffiliationMapPair;
-        std::unordered_map<uint32_t, lookups::AffiliationLookup*> m_peerAffiliations;
-        std::unordered_map<uint32_t, std::vector<uint32_t>> m_ccPeerMap;
+        concurrent::unordered_map<uint32_t, lookups::AffiliationLookup*> m_peerAffiliations;
+        concurrent::unordered_map<uint32_t, std::vector<uint32_t>> m_ccPeerMap;
         static std::timed_mutex m_keyQueueMutex;
         std::unordered_map<uint32_t, uint16_t> m_peerLinkKeyQueue;
+
+        /**
+         * @brief Represents a Peer-Link Active Peer List fragment packet.
+         */
+        class PLActPeerPkt {
+        public:
+            /**
+             * @brief Compressed size of the packet.
+             */
+            uint32_t compressedSize;
+            /**
+             * @brief Uncompressed size of the packet.
+             */
+            uint32_t size;
+
+            /**
+             * @brief Last block of the packet.
+             */
+            uint8_t lastBlock;
+            /**
+             * @brief Stream ID of the packet.
+             */
+            uint32_t streamId;
+
+            /**
+             * @brief Packet fragments.
+             */
+            std::unordered_map<uint8_t, uint8_t*> fragments;
+
+            bool locked;
+        };
+        concurrent::unordered_map<uint32_t, PLActPeerPkt> m_peerLinkActPkt;
 
         Timer m_maintainenceTimer;
 
@@ -590,6 +626,8 @@ namespace network
         bool m_influxLogRawData;
         influxdb::ServerInfo m_influxServer;
 
+        ThreadPool m_threadPool;
+
         bool m_disablePacketData;
         bool m_dumpPacketData;
         bool m_verbosePacketData;
@@ -599,10 +637,9 @@ namespace network
 
         /**
          * @brief Entry point to process a given network packet.
-         * @param arg Instance of the NetPacketRequest structure.
-         * @returns void* (Ignore)
+         * @param req Instance of the NetPacketRequest structure.
          */
-        static void* threadedNetworkRx(void* arg);
+        static void taskNetworkRx(NetPacketRequest* req);
 
         /**
          * @brief Checks if the passed peer ID is blocked from unit-to-unit traffic.
@@ -632,10 +669,11 @@ namespace network
         bool erasePeerAffiliations(uint32_t peerId);
         /**
          * @brief Helper to erase the peer from the peers list.
+         * @note This does not delete or otherwise free the FNEConnection instance!
          * @param peerId Peer ID.
          * @returns bool True, if peer was deleted, otherwise false.
          */
-        bool erasePeer(uint32_t peerId);
+        void erasePeer(uint32_t peerId);
 
         /**
          * @brief Helper to resolve the peer ID to its identity string.
@@ -659,10 +697,9 @@ namespace network
         void peerACLUpdate(uint32_t peerId);
         /**
          * @brief Entry point to send the ACL lists to the specified peer in a separate thread.
-         * @param arg Instance of the ACLUpdateRequest structure.
-         * @returns void* (Ignore)
+         * @param req Instance of the ACLUpdateRequest structure.
          */
-        static void* threadedACLUpdate(void* arg);
+        static void taskACLUpdate(ACLUpdateRequest* req);
 
         /**
          * @brief Helper to send the list of whitelisted RIDs to the specified peer.

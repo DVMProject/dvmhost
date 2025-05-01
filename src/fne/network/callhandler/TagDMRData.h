@@ -17,14 +17,14 @@
 #define __CALLHANDLER__TAG_DMR_DATA_H__
 
 #include "fne/Defines.h"
+#include "common/concurrent/deque.h"
+#include "common/concurrent/unordered_map.h"
 #include "common/dmr/DMRDefines.h"
 #include "common/dmr/data/NetData.h"
 #include "common/dmr/lc/CSBK.h"
 #include "common/Clock.h"
 #include "network/FNENetwork.h"
 #include "network/callhandler/packetdata/DMRPacketData.h"
-
-#include <deque>
 
 namespace network
 {
@@ -147,7 +147,7 @@ namespace network
                  */
                 uint32_t dstId;
             };
-            std::deque<ParrotFrame> m_parrotFrames;
+            concurrent::deque<ParrotFrame> m_parrotFrames;
             bool m_parrotFramesReady;
 
             /**
@@ -196,7 +196,7 @@ namespace network
                 }
             };
             typedef std::pair<const uint32_t, RxStatus> StatusMapPair;
-            std::unordered_map<uint32_t, RxStatus> m_status;
+            concurrent::unordered_map<uint32_t, RxStatus> m_status;
 
             friend class packetdata::DMRPacketData;
             packetdata::DMRPacketData* m_packetData;

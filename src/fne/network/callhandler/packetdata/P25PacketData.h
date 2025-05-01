@@ -18,6 +18,8 @@
 
 #include "fne/Defines.h"
 #include "common/Clock.h"
+#include "common/concurrent/deque.h"
+#include "common/concurrent/unordered_map.h"
 #include "common/p25/P25Defines.h"
 #include "common/p25/data/DataBlock.h"
 #include "common/p25/data/DataHeader.h"
@@ -103,7 +105,7 @@ namespace network
 
                     uint64_t timestamp;         //! Timestamp in milliseconds
                 };
-                std::deque<VTUNDataFrame*> m_dataFrames;
+                concurrent::deque<VTUNDataFrame*> m_dataFrames;
 
                 /**
                  * @brief Represents the receive status of a call.
@@ -162,7 +164,7 @@ namespace network
                     }
                 };
                 typedef std::pair<const uint32_t, RxStatus*> StatusMapPair;
-                std::unordered_map<uint32_t, RxStatus*> m_status;
+                concurrent::unordered_map<uint32_t, RxStatus*> m_status;
 
                 typedef std::pair<const uint32_t, uint32_t> ArpTablePair;
                 std::unordered_map<uint32_t, uint32_t> m_arpTable;

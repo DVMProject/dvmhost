@@ -228,7 +228,7 @@ namespace p25
          * @brief Gets instance of the P25AffiliationLookup class.
          * @returns P25AffiliationLookup Instance of the P25AffiliationLookup class.
          */
-        lookups::P25AffiliationLookup affiliations() { return m_affiliations; }
+        lookups::P25AffiliationLookup* affiliations() { return m_affiliations; }
 
         /**
          * @brief Returns the current operating RF state of the P25 controller.
@@ -315,10 +315,12 @@ namespace p25
         ::lookups::IdenTableLookup* m_idenTable;
         ::lookups::RadioIdLookup* m_ridLookup;
         ::lookups::TalkgroupRulesLookup* m_tidLookup;
-        lookups::P25AffiliationLookup m_affiliations;
+        lookups::P25AffiliationLookup* m_affiliations;
         ::lookups::VoiceChData m_controlChData;
 
         ::lookups::IdenTable m_idenEntry;
+
+        std::vector<uint32_t> m_activeTG;
 
         RingBuffer<uint8_t> m_txImmQueue;
         RingBuffer<uint8_t> m_txQueue;
@@ -346,6 +348,7 @@ namespace p25
         Timer m_networkWatchdog;
 
         Timer m_adjSiteUpdate;
+        Timer m_activeTGUpdate;
 
         Timer m_ccPacketInterval;
 
@@ -377,6 +380,9 @@ namespace p25
         uint8_t m_minRSSI;
         uint32_t m_aveRSSI;
         uint32_t m_rssiCount;
+
+        static std::mutex m_activeTGLock;
+        bool m_ccNotifyActiveTG;
 
         bool m_notifyCC;
 
@@ -454,6 +460,18 @@ namespace p25
          * @param reply JSON response.
          */
         void RPC_permittedTG(json::object& req, json::object& reply);
+        /**
+         * @brief (RPC Handler) Active TGID list from the authoritative CC host.
+         * @param req JSON request.
+         * @param reply JSON response.
+         */
+        void RPC_activeTG(json::object& req, json::object& reply);
+        /**
+         * @brief (RPC Handler) Clear active TGID list from the authoritative CC host.
+         * @param req JSON request.
+         * @param reply JSON response.
+         */
+        void RPC_clearActiveTG(json::object& req, json::object& reply);
         /**
          * @brief (RPC Handler) Releases a granted TG.
          * @param req JSON request.

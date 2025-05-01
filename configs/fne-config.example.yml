@@ -46,6 +46,9 @@ master:
     # Flag indicating whether or not verbose debug logging is enabled.
     debug: false
 
+    # Maximum number of concurrent packet processing workers.
+    workers: 16
+
     # Maximum permitted connections (hard maximum is 250 peers).
     connectionLimit: 100
 

@@ -59,7 +59,7 @@ using namespace nxdn::packet;
         }                                                                               \
                                                                                         \
         if (m_nxdn->m_enableControl && _DST_ID == m_nxdn->m_netLastDstId) {             \
-            if (m_nxdn->m_affiliations.isNetGranted(_DST_ID)) {                         \
+            if (m_nxdn->m_affiliations->isNetGranted(_DST_ID)) {                        \
                 LogWarning(LOG_RF, "Traffic collision detect, preempting new RF traffic to existing granted network traffic (Are we in a voting condition?), rfSrcId = %u, rfDstId = %u, netSrcId = %u, netDstId = %u", _SRC_ID, _DST_ID, \
                     m_nxdn->m_netLC.getSrcId(), m_nxdn->m_netLastDstId);                \
                 resetRF();                                                              \

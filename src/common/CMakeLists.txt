@@ -50,6 +50,7 @@ file(GLOB common_SRC
     "src/common/network/udp/*.cpp"
     "src/common/network/viface/*.cpp"
     "src/common/yaml/*.cpp"
+    "src/common/zlib/*.cpp"
     "src/common/zlib/*.c"
     "src/common/*.cpp"
 )
@@ -87,6 +88,7 @@ file(GLOB common_INCLUDE
     "src/common/nxdn/lc/rcch/*.h"
 
     # Core
+    "src/common/concurrent/*.h"
     "src/common/edac/*.h"
     "src/common/edac/rs/*.h"
     "src/common/lookups/*.h"

@@ -13,12 +13,6 @@
 using namespace lookups;
 
 // ---------------------------------------------------------------------------
-//  Static Class Members
-// ---------------------------------------------------------------------------
-
-std::mutex ChannelLookup::m_mutex;
-
-// ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
@@ -39,8 +33,6 @@ ChannelLookup::~ChannelLookup() = default;
 
 VoiceChData ChannelLookup::getRFChData(uint32_t chNo) const
 {
-    std::lock_guard<std::mutex> lock(m_mutex);
-
     if (chNo == 0U) {
         return VoiceChData();
     }
@@ -59,8 +51,6 @@ VoiceChData ChannelLookup::getRFChData(uint32_t chNo) const
 
 bool ChannelLookup::addRFCh(uint32_t chNo, bool force)
 { 
-    std::lock_guard<std::mutex> lock(m_mutex);
-
     if (chNo == 0U) {
         return false;
     }
@@ -83,8 +73,6 @@ bool ChannelLookup::addRFCh(uint32_t chNo, bool force)
 
 bool ChannelLookup::removeRFCh(uint32_t chNo)
 {
-    std::lock_guard<std::mutex> lock(m_mutex);
-
     if (chNo == 0U) {
         return false;
     }

@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2024-2025 Bryan Biedenkapp, N2PLL
  *
  */
 #include "Defines.h"
@@ -90,8 +90,14 @@ UInt8Array RawFrameQueue::read(int& messageLength, sockaddr_storage& address, ui
 
 bool RawFrameQueue::write(const uint8_t* message, uint32_t length, sockaddr_storage& addr, uint32_t addrLen, ssize_t* lenWritten)
 {
-    assert(message != nullptr);
-    assert(length > 0U);
+    if (message == nullptr) {
+        LogError(LOG_NET, "RawFrameQueue::write(), message is null");
+        return false;
+    }
+    if (length == 0U) {
+        LogError(LOG_NET, "RawFrameQueue::write(), message length is zero");
+        return false;
+    }
 
     uint8_t* buffer = new uint8_t[length];
     ::memset(buffer, 0x00U, length);
@@ -106,6 +112,7 @@ bool RawFrameQueue::write(const uint8_t* message, uint32_t length, sockaddr_stor
         ret = false;
     }
 
+    delete[] buffer;
     return ret;
 }
 
@@ -113,8 +120,14 @@ bool RawFrameQueue::write(const uint8_t* message, uint32_t length, sockaddr_stor
 
 void RawFrameQueue::enqueueMessage(const uint8_t* message, uint32_t length, sockaddr_storage& addr, uint32_t addrLen)
 {
-    assert(message != nullptr);
-    assert(length > 0U);
+    if (message == nullptr) {
+        LogError(LOG_NET, "RawFrameQueue::enqueueMessage(), message is null");
+        return;
+    }
+    if (length == 0U) {
+        LogError(LOG_NET, "RawFrameQueue::enqueueMessage(), message length is zero");
+        return;
+    }
 
     // if the queue is flushing -- don't attempt to enqueue any messages
     if (m_queueFlushing) {

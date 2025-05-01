@@ -195,7 +195,12 @@ RESTAPI::RESTAPI(const std::string& address, uint16_t port, const std::string& p
 
 /* Finalizes a instance of the RESTAPI class. */
 
-RESTAPI::~RESTAPI() = default;
+RESTAPI::~RESTAPI()
+{
+    if (m_passwordHash != nullptr) {
+        delete[] m_passwordHash;
+    }
+}
 
 /* Sets the instances of the Radio ID and Talkgroup ID lookup tables. */
 
@@ -934,11 +939,13 @@ void RESTAPI::restAPI_GetReleaseGrants(const HTTPPayload& request, HTTPPayload& 
     }
 
     if (m_p25 != nullptr) {
-        m_p25->affiliations().releaseGrant(0, true);
+        if (m_p25->affiliations() != nullptr)
+            m_p25->affiliations()->releaseGrant(0, true);
     }
 
     if (m_nxdn != nullptr) {
-        m_nxdn->affiliations().releaseGrant(0, true);
+        if (m_nxdn->affiliations() != nullptr)
+            m_nxdn->affiliations()->releaseGrant(0, true);
     }
 }
 
@@ -957,11 +964,13 @@ void RESTAPI::restAPI_GetReleaseAffs(const HTTPPayload& request, HTTPPayload& re
     }
 
     if (m_p25 != nullptr) {
-        m_p25->affiliations().clearGroupAff(0, true);
+        if (m_p25->affiliations() != nullptr)
+            m_p25->affiliations()->clearGroupAff(0, true);
     }
 
     if (m_nxdn != nullptr) {
-        m_nxdn->affiliations().clearGroupAff(0, true);
+        if (m_nxdn->affiliations() != nullptr)
+            m_nxdn->affiliations()->clearGroupAff(0, true);
     }
 }
 
@@ -1620,17 +1629,19 @@ void RESTAPI::restAPI_GetP25AffList(const HTTPPayload& request, HTTPPayload& rep
     setResponseDefaultStatus(response);
 
     json::array affs = json::array();
-    std::unordered_map<uint32_t, uint32_t> affTable = m_p25->affiliations().grpAffTable();
-    if (affTable.size() > 0) {
-        for (auto entry : affTable) {
-            uint32_t srcId = entry.first;
-            uint32_t grpId = entry.second;
+    if (m_p25->affiliations() != nullptr) {
+        std::unordered_map<uint32_t, uint32_t> affTable = m_p25->affiliations()->grpAffTable();
+        if (affTable.size() > 0) {
+            for (auto entry : affTable) {
+                uint32_t srcId = entry.first;
+                uint32_t grpId = entry.second;
 
-            json::object aff = json::object();
-            aff["srcId"].set<uint32_t>(srcId);
-            aff["grpId"].set<uint32_t>(grpId);
+                json::object aff = json::object();
+                aff["srcId"].set<uint32_t>(srcId);
+                aff["grpId"].set<uint32_t>(grpId);
 
-            affs.push_back(json::value(aff));
+                affs.push_back(json::value(aff));
+            }
         }
     }
 
@@ -1787,17 +1798,19 @@ void RESTAPI::restAPI_GetNXDNAffList(const HTTPPayload& request, HTTPPayload& re
     setResponseDefaultStatus(response);
 
     json::array affs = json::array();
-    std::unordered_map<uint32_t, uint32_t> affTable = m_nxdn->affiliations().grpAffTable();
-    if (affTable.size() > 0) {
-        for (auto entry : affTable) {
-            uint32_t srcId = entry.first;
-            uint32_t grpId = entry.second;
+    if (m_nxdn->affiliations() != nullptr) {
+        std::unordered_map<uint32_t, uint32_t> affTable = m_nxdn->affiliations()->grpAffTable();
+        if (affTable.size() > 0) {
+            for (auto entry : affTable) {
+                uint32_t srcId = entry.first;
+                uint32_t grpId = entry.second;
 
-            json::object aff = json::object();
-            aff["srcId"].set<uint32_t>(srcId);
-            aff["grpId"].set<uint32_t>(grpId);
+                json::object aff = json::object();
+                aff["srcId"].set<uint32_t>(srcId);
+                aff["grpId"].set<uint32_t>(grpId);
 
-            affs.push_back(json::value(aff));
+                affs.push_back(json::value(aff));
+            }
         }
     }
 

@@ -17,12 +17,10 @@
 #define __FRAME_QUEUE_H__
 
 #include "common/Defines.h"
+#include "common/concurrent/unordered_map.h"
 #include "common/network/RTPHeader.h"
 #include "common/network/RTPFNEHeader.h"
 #include "common/network/RawFrameQueue.h"
-
-#include <mutex>
-#include <unordered_map>
 
 namespace network
 {
@@ -116,8 +114,8 @@ namespace network
 
     private:
         uint32_t m_peerId;
-        std::unordered_map<uint32_t, uint32_t> m_streamTimestamps;
-        static std::mutex m_fqTimestampLock;
+
+        concurrent::unordered_map<uint32_t, uint32_t> m_streamTimestamps;
 
         /**
          * @brief Generate RTP message for the frame queue.

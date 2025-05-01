@@ -14,6 +14,7 @@
 #include "network/RTPHeader.h"
 #include "network/RTPExtensionHeader.h"
 #include "network/RTPFNEHeader.h"
+#include "Clock.h"
 #include "Log.h"
 #include "Utils.h"
 
@@ -22,12 +23,6 @@ using namespace network::frame;
 
 #include <cassert>
 #include <cstring>
-
-// ---------------------------------------------------------------------------
-//  Static Class Members
-// ---------------------------------------------------------------------------
-
-std::mutex FrameQueue::m_fqTimestampLock;
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -108,6 +103,11 @@ UInt8Array FrameQueue::read(int& messageLength, sockaddr_storage& address, uint3
             return nullptr;
         }
 
+        if (_fneHeader.getMessageLength() == 0U) {
+            LogError(LOG_NET, "FrameQueue::read(), invalid FNE packet length received from network");
+            return nullptr;
+        }
+
         if (fneHeader != nullptr) {
             *fneHeader = _fneHeader;
         }
@@ -136,8 +136,14 @@ UInt8Array FrameQueue::read(int& messageLength, sockaddr_storage& address, uint3
 bool FrameQueue::write(const uint8_t* message, uint32_t length, uint32_t streamId, uint32_t peerId,
     uint32_t ssrc, OpcodePair opcode, uint16_t rtpSeq, sockaddr_storage& addr, uint32_t addrLen)
 {
-    assert(message != nullptr);
-    assert(length > 0U);
+    if (message == nullptr) {
+        LogError(LOG_NET, "FrameQueue::write(), message is null");
+        return false;
+    }
+    if (length == 0U) {
+        LogError(LOG_NET, "FrameQueue::write(), message length is zero");
+        return false;
+    }
 
     uint32_t bufferLen = 0U;
     uint8_t* buffer = generateMessage(message, length, streamId, peerId, ssrc, opcode, rtpSeq, &bufferLen);
@@ -165,8 +171,14 @@ void FrameQueue::enqueueMessage(const uint8_t* message, uint32_t length, uint32_
 void FrameQueue::enqueueMessage(const uint8_t* message, uint32_t length, uint32_t streamId, uint32_t peerId,
     uint32_t ssrc, OpcodePair opcode, uint16_t rtpSeq, sockaddr_storage& addr, uint32_t addrLen)
 {
-    assert(message != nullptr);
-    assert(length > 0U);
+    if (message == nullptr) {
+        LogError(LOG_NET, "FrameQueue::enqueueMessage(), message is null");
+        return;
+    }
+    if (length == 0U) {
+        LogError(LOG_NET, "FrameQueue::enqueueMessage(), message length is zero");
+        return;
+    }
 
     uint32_t bufferLen = 0U;
     uint8_t* buffer = generateMessage(message, length, streamId, peerId, ssrc, opcode, rtpSeq, &bufferLen);
@@ -184,7 +196,6 @@ void FrameQueue::enqueueMessage(const uint8_t* message, uint32_t length, uint32_
 
 void FrameQueue::clearTimestamps()
 {
-    std::lock_guard<std::mutex> lock(m_fqTimestampLock);
     m_streamTimestamps.clear();
 }
 
@@ -197,12 +208,18 @@ void FrameQueue::clearTimestamps()
 uint8_t* FrameQueue::generateMessage(const uint8_t* message, uint32_t length, uint32_t streamId, uint32_t peerId,
     uint32_t ssrc, OpcodePair opcode, uint16_t rtpSeq, uint32_t* outBufferLen)
 {
-    assert(message != nullptr);
-    assert(length > 0U);
+    if (message == nullptr) {
+        LogError(LOG_NET, "FrameQueue::generateMessage(), message is null");
+        return nullptr;
+    }
+    if (length == 0U) {
+        LogError(LOG_NET, "FrameQueue::generateMessage(), message length is zero");
+        return nullptr;
+    }
 
     uint32_t timestamp = INVALID_TS;
     if (streamId != 0U) {
-        std::lock_guard<std::mutex> lock(m_fqTimestampLock);
+        m_streamTimestamps.lock(false);
         auto entry = m_streamTimestamps.find(streamId);
         if (entry != m_streamTimestamps.end()) {
             timestamp = entry->second;
@@ -214,6 +231,7 @@ uint8_t* FrameQueue::generateMessage(const uint8_t* message, uint32_t length, ui
                 LogDebugEx(LOG_NET, "FrameQueue::generateMessage()", "RTP streamId = %u, previous TS = %u, TS = %u, rtpSeq = %u", streamId, m_streamTimestamps[streamId], timestamp, rtpSeq);
             m_streamTimestamps[streamId] = timestamp;
         }
+        m_streamTimestamps.unlock();
     }
 
     uint32_t bufferLen = RTP_HEADER_LENGTH_BYTES + RTP_EXTENSION_HEADER_LENGTH_BYTES + RTP_FNE_HEADER_LENGTH_BYTES + length;
@@ -228,22 +246,28 @@ uint8_t* FrameQueue::generateMessage(const uint8_t* message, uint32_t length, ui
     header.setSequence(rtpSeq);
     header.setSSRC(ssrc);
 
-    header.encode(buffer);
-
     if (streamId != 0U && timestamp == INVALID_TS && rtpSeq != RTP_END_OF_CALL_SEQ) {
         if (m_debug)
             LogDebugEx(LOG_NET, "FrameQueue::generateMessage()", "RTP streamId = %u, initial TS = %u, rtpSeq = %u", streamId, header.getTimestamp(), rtpSeq);
-        m_streamTimestamps[streamId] = header.getTimestamp();
+
+        timestamp = (uint32_t)system_clock::ntp::now();
+        header.setTimestamp(timestamp);
+
+        m_streamTimestamps.insert(streamId, timestamp);
     }
 
+    header.encode(buffer);
+
     if (streamId != 0U && rtpSeq == RTP_END_OF_CALL_SEQ) {
-        std::lock_guard<std::mutex> lock(m_fqTimestampLock);
+        m_streamTimestamps.lock(false);
         auto entry = m_streamTimestamps.find(streamId);
         if (entry != m_streamTimestamps.end()) {
             if (m_debug)
                 LogDebugEx(LOG_NET, "FrameQueue::generateMessage()", "RTP streamId = %u, rtpSeq = %u", streamId, rtpSeq);
+            m_streamTimestamps.unlock();
             m_streamTimestamps.erase(streamId);
         }
+        m_streamTimestamps.unlock();
     }
 
     RTPFNEHeader fneHeader = RTPFNEHeader();

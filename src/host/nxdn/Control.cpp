@@ -80,7 +80,7 @@ Control::Control(bool authoritative, uint32_t ran, uint32_t callHang, uint32_t q
     m_idenTable(idenTable),
     m_ridLookup(ridLookup),
     m_tidLookup(tidLookup),
-    m_affiliations("NXDN Affiliations", chLookup, verbose),
+    m_affiliations(nullptr),
     m_controlChData(),
     m_idenEntry(),
     m_txImmQueue(queueSize, "NXDN Imm Frame"),
@@ -125,6 +125,8 @@ Control::Control(bool authoritative, uint32_t ran, uint32_t callHang, uint32_t q
     assert(idenTable != nullptr);
     assert(rssiMapper != nullptr);
 
+    m_affiliations = new lookups::AffiliationLookup("NXDN Affiliations", chLookup, verbose);
+
     m_interval.start();
 
     acl::AccessControl::init(m_ridLookup, m_tidLookup);
@@ -146,6 +148,10 @@ Control::Control(bool authoritative, uint32_t ran, uint32_t callHang, uint32_t q
 
 Control::~Control()
 {
+    if (m_affiliations != nullptr) {
+        delete m_affiliations;
+    }
+
     if (m_voice != nullptr) {
         delete m_voice;
     }
@@ -262,13 +268,13 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
     m_controlChData = controlChData;
 
     bool disableUnitRegTimeout = nxdnProtocol["disableUnitRegTimeout"].as<bool>(false);
-    m_affiliations.setDisableUnitRegTimeout(disableUnitRegTimeout);
+    m_affiliations->setDisableUnitRegTimeout(disableUnitRegTimeout);
 
     // set the grant release callback
-    m_affiliations.setReleaseGrantCallback([=](uint32_t chNo, uint32_t dstId, uint8_t slot) {
+    m_affiliations->setReleaseGrantCallback([=](uint32_t chNo, uint32_t dstId, uint8_t slot) {
         // callback REST API to clear TG permit for the granted TG on the specified voice channel
         if (m_authoritative && m_supervisor) {
-            ::lookups::VoiceChData voiceChData = m_affiliations.rfCh()->getRFChData(chNo);
+            ::lookups::VoiceChData voiceChData = m_affiliations->rfCh()->getRFChData(chNo);
             if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0 &&
                 chNo != m_siteData.channelNo()) {
                 json::object req = json::object();
@@ -284,7 +290,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
     });
 
     // set the unit deregistration callback
-    m_affiliations.setUnitDeregCallback([=](uint32_t srcId, bool automatic) {
+    m_affiliations->setUnitDeregCallback([=](uint32_t srcId, bool automatic) {
         if (m_network != nullptr)
             m_network->announceUnitDeregistration(srcId);
     });
@@ -609,8 +615,8 @@ void Control::clock()
         if (m_adjSiteUpdate.isRunning() && m_adjSiteUpdate.hasExpired()) {
             if (m_rfState == RS_RF_LISTENING && m_netState == RS_NET_IDLE) {
                 if (m_network != nullptr) {
-                    if (m_affiliations.grpAffSize() > 0) {
-                        auto affs = m_affiliations.grpAffTable();
+                    if (m_affiliations->grpAffSize() > 0) {
+                        auto affs = m_affiliations->grpAffTable();
                         m_network->announceAffiliationUpdate(affs);
                     }
                 }
@@ -692,7 +698,7 @@ void Control::clock()
             m_networkWatchdog.stop();
 
             if (m_enableControl) {
-                m_affiliations.releaseGrant(m_netLC.getDstId(), false);
+                m_affiliations->releaseGrant(m_netLC.getDstId(), false);
             }
 
             if (m_dedicatedControl) {
@@ -726,7 +732,7 @@ void Control::clockSiteData(uint32_t ms)
 {
     if (m_enableControl) {
         // clock all the grant timers
-        m_affiliations.clock(ms);
+        m_affiliations->clock(ms);
     }
 }
 
@@ -1000,7 +1006,7 @@ void Control::processFrameLoss()
         LogMessage(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_TX_REL ", total frames: %d, bits: %d, undecodable LC: %d, errors: %d, BER: %.4f%%",
             m_voice->m_rfFrames, m_voice->m_rfBits, m_voice->m_rfUndecodableLC, m_voice->m_rfErrs, float(m_voice->m_rfErrs * 100U) / float(m_voice->m_rfBits));
 
-        m_affiliations.releaseGrant(m_rfLC.getDstId(), false);
+        m_affiliations->releaseGrant(m_rfLC.getDstId(), false);
         if (m_notifyCC) {
             notifyCC_ReleaseGrant(m_rfLC.getDstId());
         }
@@ -1027,8 +1033,8 @@ void Control::processInCallCtrl(network::NET_ICC::ENUM command, uint32_t dstId)
         {
             if (m_rfState == RS_RF_AUDIO && m_rfLC.getDstId() == dstId) {
                 LogWarning(LOG_P25, "network requested in-call traffic reject, dstId = %u", dstId);
-                if (m_affiliations.isGranted(dstId)) {
-                    m_affiliations.releaseGrant(dstId, false);
+                if (m_affiliations->isGranted(dstId)) {
+                    m_affiliations->releaseGrant(dstId, false);
                     if (!m_enableControl) {
                         notifyCC_ReleaseGrant(dstId);
                     }
@@ -1185,16 +1191,16 @@ void Control::RPC_releaseGrantTG(json::object& req, json::object& reply)
         LogMessage(LOG_P25, "VC request, release TG grant, dstId = %u", dstId);
     }
 
-    if (m_affiliations.isGranted(dstId)) {
-        uint32_t chNo = m_affiliations.getGrantedCh(dstId);
-        uint32_t srcId = m_affiliations.getGrantedSrcId(dstId);
-        ::lookups::VoiceChData voiceCh = m_affiliations.rfCh()->getRFChData(chNo);
+    if (m_affiliations->isGranted(dstId)) {
+        uint32_t chNo = m_affiliations->getGrantedCh(dstId);
+        uint32_t srcId = m_affiliations->getGrantedSrcId(dstId);
+        ::lookups::VoiceChData voiceCh = m_affiliations->rfCh()->getRFChData(chNo);
 
         if (m_verbose) {
             LogMessage(LOG_P25, "VC %s:%u, TG grant released, srcId = %u, dstId = %u, chId = %u, chNo = %u", voiceCh.address().c_str(), voiceCh.port(), srcId, dstId, voiceCh.chId(), chNo);
         }
 
-        m_affiliations.releaseGrant(dstId, false);
+        m_affiliations->releaseGrant(dstId, false);
     }
 }
 
@@ -1224,16 +1230,16 @@ void Control::RPC_touchGrantTG(json::object& req, json::object& reply)
 
     // LogDebugEx(LOG_NXDN, "Control::RPC_touchGrantTG()", "callback, dstId = %u", dstId);
 
-    if (m_affiliations.isGranted(dstId)) {
-        uint32_t chNo = m_affiliations.getGrantedCh(dstId);
-        uint32_t srcId = m_affiliations.getGrantedSrcId(dstId);
-        ::lookups::VoiceChData voiceCh = m_affiliations.rfCh()->getRFChData(chNo);
+    if (m_affiliations->isGranted(dstId)) {
+        uint32_t chNo = m_affiliations->getGrantedCh(dstId);
+        uint32_t srcId = m_affiliations->getGrantedSrcId(dstId);
+        ::lookups::VoiceChData voiceCh = m_affiliations->rfCh()->getRFChData(chNo);
 
         if (m_verbose) {
             LogMessage(LOG_P25, "VC %s:%u, call in progress, srcId = %u, dstId = %u, chId = %u, chNo = %u", voiceCh.address().c_str(), voiceCh.port(), srcId, dstId, voiceCh.chId(), chNo);
         }
 
-        m_affiliations.touchGrant(dstId);
+        m_affiliations->touchGrant(dstId);
     }
 }
 

@@ -4,7 +4,7 @@
 # * GPLv2 Open Source. Use is subject to license terms.
 # * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 # *
-# *  Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
+# *  Copyright (C) 2022,2024,2025 Bryan Biedenkapp, N2PLL
 # *  Copyright (C) 2022 Natalie Moore
 # *
 # */
@@ -267,7 +267,8 @@ install(TARGETS sysview DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
 install(TARGETS tged DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
 endif (ENABLE_TUI_SUPPORT AND (NOT DISABLE_TUI_APPS))
 install(TARGETS dvmbridge DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
-install(FILES configs/config.example.yml configs/fne-config.example.yml configs/fne-sysview.example.yml configs/monitor-config.example.yml configs/iden_table.example.dat configs/RSSI.dat configs/rid_acl.example.dat configs/talkgroup_rules.example.yml configs/bridge-config.example.yml DESTINATION ${CMAKE_INSTALL_PREFIX}/etc)
+install(TARGETS dvmpatch DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
+install(FILES configs/config.example.yml configs/fne-config.example.yml configs/fne-sysview.example.yml configs/monitor-config.example.yml configs/iden_table.example.dat configs/RSSI.dat configs/rid_acl.example.dat configs/talkgroup_rules.example.yml configs/bridge-config.example.yml configs/patch-config.example.yml DESTINATION ${CMAKE_INSTALL_PREFIX}/etc)
 install(PROGRAMS tools/start-dvm.sh tools/stop-dvm.sh tools/dvm-watchdog.sh tools/stop-watchdog.sh tools/fne-watchdog.sh tools/start-dvm-fne.sh DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
 install(CODE "execute_process(COMMAND bash \"-c\" \"sed -i 's/filePath: ./filePath: \\\\/var\\\\/log\\\\//' /usr/local/etc/config.example.yml\")")
 install(CODE "execute_process(COMMAND bash \"-c\" \"sed -i 's/activityFilePath: ./activityFilePath: \\\\/var\\\\/log\\\\//' /usr/local/etc/config.example.yml\")")
@@ -289,13 +290,15 @@ if (NOT TARGET strip)
                     COMMAND arm-linux-gnueabihf-strip -s sysview
                     COMMAND arm-linux-gnueabihf-strip -s tged
                     COMMAND arm-linux-gnueabihf-strip -s peered
-                    COMMAND arm-linux-gnueabihf-strip -s dvmbridge)
+                    COMMAND arm-linux-gnueabihf-strip -s dvmbridge
+                    COMMAND arm-linux-gnueabihf-strip -s dvmpatch)
         else()
             add_custom_target(strip
                     COMMAND arm-linux-gnueabihf-strip -s dvmhost
                     COMMAND arm-linux-gnueabihf-strip -s dvmfne
                     COMMAND arm-linux-gnueabihf-strip -s dvmcmd
-                    COMMAND arm-linux-gnueabihf-strip -s dvmbridge)
+                    COMMAND arm-linux-gnueabihf-strip -s dvmbridge
+                    COMMAND arm-linux-gnueabihf-strip -s dvmpatch)
         endif (ENABLE_TUI_SUPPORT AND (NOT DISABLE_TUI_APPS))
     elseif (CROSS_COMPILE_AARCH64)
         if (ENABLE_TUI_SUPPORT AND (NOT DISABLE_TUI_APPS))
@@ -307,13 +310,15 @@ if (NOT TARGET strip)
                 COMMAND aarch64-linux-gnu-strip -s sysview
                 COMMAND aarch64-linux-gnu-strip -s tged
                 COMMAND aarch64-linux-gnu-strip -s peered
-                COMMAND aarch64-linux-gnu-strip -s dvmbridge)
+                COMMAND aarch64-linux-gnu-strip -s dvmbridge
+                COMMAND aarch64-linux-gnu-strip -s dvmpatch)
         else()
             add_custom_target(strip
                 COMMAND aarch64-linux-gnu-strip -s dvmhost
                 COMMAND aarch64-linux-gnu-strip -s dvmfne
                 COMMAND aarch64-linux-gnu-strip -s dvmcmd
-                COMMAND aarch64-linux-gnu-strip -s dvmbridge)
+                COMMAND aarch64-linux-gnu-strip -s dvmbridge
+                COMMAND aarch64-linux-gnu-strip -s dvmpatch)
         endif (ENABLE_TUI_SUPPORT AND (NOT DISABLE_TUI_APPS))
     elseif (CROSS_COMPILE_RPI_ARM)
         if (NOT WITH_RPI_ARM_TOOLS)
@@ -321,13 +326,15 @@ if (NOT TARGET strip)
                 COMMAND ${CMAKE_CURRENT_BINARY_DIR}/_deps/rpitools-src/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-strip -s dvmhost
                 COMMAND ${CMAKE_CURRENT_BINARY_DIR}/_deps/rpitools-src/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-strip -s dvmfne
                 COMMAND ${CMAKE_CURRENT_BINARY_DIR}/_deps/rpitools-src/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-strip -s dvmcmd
-                COMMAND ${CMAKE_CURRENT_BINARY_DIR}/_deps/rpitools-src/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-strip -s dvmbridge)
+                COMMAND ${CMAKE_CURRENT_BINARY_DIR}/_deps/rpitools-src/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-strip -s dvmbridge
+                COMMAND ${CMAKE_CURRENT_BINARY_DIR}/_deps/rpitools-src/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-strip -s dvmpatch)
         else()
             add_custom_target(strip
                 COMMAND ${RPI_ARM_TOOLS}/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-strip -s dvmhost
                 COMMAND ${RPI_ARM_TOOLS}/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-strip -s dvmfne
                 COMMAND ${RPI_ARM_TOOLS}/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-strip -s dvmcmd
-                COMMAND ${RPI_ARM_TOOLS}/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-strip -s dvmbridge)
+                COMMAND ${RPI_ARM_TOOLS}/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-strip -s dvmbridge
+                COMMAND ${RPI_ARM_TOOLS}/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-strip -s dvmpatch)
         endif ()
     else()
         if (ENABLE_TUI_SUPPORT AND (NOT DISABLE_TUI_APPS))
@@ -339,13 +346,15 @@ if (NOT TARGET strip)
                 COMMAND strip -s sysview
                 COMMAND strip -s tged
                 COMMAND strip -s peered
-                COMMAND strip -s dvmbridge)
+                COMMAND strip -s dvmbridge
+                COMMAND strip -s dvmpatch)
         else()
             add_custom_target(strip
                 COMMAND strip -s dvmhost
                 COMMAND strip -s dvmfne
                 COMMAND strip -s dvmcmd
-                COMMAND strip -s dvmbridge)
+                COMMAND strip -s dvmbridge
+                COMMAND strip -s dvmpatch)
         endif (ENABLE_TUI_SUPPORT AND (NOT DISABLE_TUI_APPS))
     endif (CROSS_COMPILE_ARM)
 endif (NOT TARGET strip)
@@ -375,6 +384,7 @@ if (NOT TARGET tarball)
             COMMAND cp -v peered ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
             COMMAND cp -v dvmfne ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
             COMMAND cp -v dvmbridge ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
+            COMMAND cp -v dvmpatch ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
             COMMAND cp ${CMAKE_SOURCE_DIR}/tools/*.sh ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
             COMMAND chmod +x ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/*.sh
             COMMAND cp -v ${CMAKE_SOURCE_DIR}/configs/*.yml ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
@@ -408,6 +418,7 @@ if (NOT TARGET tarball)
             COMMAND cp -v dvmcmd ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
             COMMAND cp -v dvmfne ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
             COMMAND cp -v dvmbridge ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
+            COMMAND cp -v dvmpatch ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
             COMMAND cp ${CMAKE_SOURCE_DIR}/tools/*.sh ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
             COMMAND chmod +x ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/*.sh
             COMMAND cp -v ${CMAKE_SOURCE_DIR}/configs/*.yml ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
@@ -454,6 +465,7 @@ if (NOT TARGET tarball_notools)
             COMMAND cp -v peered ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
             COMMAND cp -v dvmfne ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
             COMMAND cp -v dvmbridge ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
+            COMMAND cp -v dvmpatch ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
             COMMAND cp -v ${CMAKE_SOURCE_DIR}/configs/*.yml ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
             COMMAND mkdir -p ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/schema
             COMMAND cp -v ${CMAKE_SOURCE_DIR}/configs/schema/*.json ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/schema
@@ -485,6 +497,7 @@ if (NOT TARGET tarball_notools)
             COMMAND cp -v dvmcmd ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
             COMMAND cp -v dvmfne ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
             COMMAND cp -v dvmbridge ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
+            COMMAND cp -v dvmpatch ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
             COMMAND cp -v ${CMAKE_SOURCE_DIR}/configs/*.yml ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
             COMMAND mkdir -p ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/schema
             COMMAND cp -v ${CMAKE_SOURCE_DIR}/configs/schema/*.json ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/schema
@@ -530,6 +543,7 @@ add_custom_target(old_install
     COMMAND install -m 755 peered ${CMAKE_LEGACY_INSTALL_PREFIX}/bin
     COMMAND install -m 755 dvmfne ${CMAKE_LEGACY_INSTALL_PREFIX}/bin
     COMMAND install -m 755 dvmbridge ${CMAKE_LEGACY_INSTALL_PREFIX}/bin
+    COMMAND install -m 755 dvmpatch ${CMAKE_LEGACY_INSTALL_PREFIX}/bin
     COMMAND install -m 644 ${CMAKE_SOURCE_DIR}/configs/config.example.yml ${CMAKE_LEGACY_INSTALL_PREFIX}/config.example.yml
     COMMAND install -m 644 ${CMAKE_SOURCE_DIR}/configs/fne-config.example.yml ${CMAKE_LEGACY_INSTALL_PREFIX}/fne-config.example.yml
     COMMAND install -m 644 ${CMAKE_SOURCE_DIR}/configs/fne-sysview.example.yml ${CMAKE_LEGACY_INSTALL_PREFIX}/fne-sysview.example.yml
@@ -539,6 +553,7 @@ add_custom_target(old_install
     COMMAND install -m 644 ${CMAKE_SOURCE_DIR}/configs/rid_acl.example.dat ${CMAKE_LEGACY_INSTALL_PREFIX}/rid_acl.dat
     COMMAND install -m 644 ${CMAKE_SOURCE_DIR}/configs/talkgroup_rules.example.yml ${CMAKE_LEGACY_INSTALL_PREFIX}/talkgroup_rules.example.yml
     COMMAND install -m 644 ${CMAKE_SOURCE_DIR}/configs/bridge-config.example.yml ${CMAKE_LEGACY_INSTALL_PREFIX}/bridge-config.example.yml
+    COMMAND install -m 644 ${CMAKE_SOURCE_DIR}/configs/patch-config.example.yml ${CMAKE_LEGACY_INSTALL_PREFIX}/patch-config.example.yml
     COMMAND install -m 644 ${CMAKE_SOURCE_DIR}/configs/schema/talkgroup_rules.yaml_schema.json ${CMAKE_LEGACY_INSTALL_PREFIX}/schema/talkgroup_rules.yaml_schema.json
     COMMAND install -m 755 ${CMAKE_SOURCE_DIR}/tools/start-dvm.sh ${CMAKE_LEGACY_INSTALL_PREFIX}
     COMMAND install -m 755 ${CMAKE_SOURCE_DIR}/tools/stop-dvm.sh ${CMAKE_LEGACY_INSTALL_PREFIX}
@@ -581,6 +596,7 @@ add_custom_target(old_install-service
     COMMAND chown dvmhost:dvmhost ${CMAKE_LEGACY_INSTALL_PREFIX}/rid_acl.example.dat
     COMMAND chown dvmhost:dvmhost ${CMAKE_LEGACY_INSTALL_PREFIX}/talkgroup_rules.example.yml
     COMMAND chown dvmhost:dvmhost ${CMAKE_LEGACY_INSTALL_PREFIX}/bridge-config.example.yml
+    COMMAND chown dvmhost:dvmhost ${CMAKE_LEGACY_INSTALL_PREFIX}/patch-config.example.yml
     COMMAND chown dvmhost:dvmhost ${CMAKE_LEGACY_INSTALL_PREFIX}/log
     COMMAND cp ../linux/dvmhost.service /lib/systemd/system/
     COMMAND bash \"-c\" \"sed -i 's/\\\\/usr\\\\/local\\\\/bin/\\\\/opt\\\\/dvm\\\\/bin/' /lib/systemd/system/dvmhost.service\"

@@ -72,10 +72,9 @@ namespace p25
              * @brief Helper to release the channel grant for the destination ID.
              * @param dstId Destination Address.
              * @param releaseAll Flag indicating all channel grants should be released.
-             * @param noLock Flag indicating no mutex lock operation should be performed while releasing.
              * @returns bool True, if channel grant was released, otherwise false.
              */
-            bool releaseGrant(uint32_t dstId, bool releaseAll, bool noLock = false) override;
+            bool releaseGrant(uint32_t dstId, bool releaseAll) override;
             /** @} */
 
         protected:

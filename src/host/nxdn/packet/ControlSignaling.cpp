@@ -37,13 +37,13 @@ using namespace nxdn::packet;
 #define IS_SUPPORT_CONTROL_CHECK(_PCKT_STR, _PCKT, _SRCID)                              \
     if (!m_nxdn->m_enableControl) {                                                     \
         LogWarning(LOG_RF, "NXDN, %s denial, unsupported service, srcId = %u", _PCKT_STR.c_str(), _SRCID); \
-        writeRF_Message_Deny(0U, _SRCID, CauseResponse::SVC_UNAVAILABLE, _PCKT);            \
+        writeRF_Message_Deny(0U, _SRCID, CauseResponse::SVC_UNAVAILABLE, _PCKT);        \
         m_nxdn->m_rfState = RS_RF_REJECTED;                                             \
         return false;                                                                   \
     }
 
 // Validate the source RID.
-#define VALID_SRCID(_PCKT_STR, _PCKT, _SRCID, _RSN)                                      \
+#define VALID_SRCID(_PCKT_STR, _PCKT, _SRCID, _RSN)                                     \
     if (!acl::AccessControl::validateSrcId(_SRCID)) {                                   \
         LogWarning(LOG_RF, "NXDN, %s denial, RID rejection, srcId = %u", _PCKT_STR.c_str(), _SRCID); \
         writeRF_Message_Deny(0U, _SRCID, _RSN, _PCKT);                                  \
@@ -71,7 +71,7 @@ using namespace nxdn::packet;
 
 // Verify the source RID is registered.
 #define VERIFY_SRCID_REG(_PCKT_STR, _PCKT, _SRCID, _RSN)                                \
-    if (!m_nxdn->m_affiliations.isUnitReg(_SRCID) && m_verifyReg) {                     \
+    if (!m_nxdn->m_affiliations->isUnitReg(_SRCID) && m_verifyReg) {                    \
         LogWarning(LOG_RF, "NXDN, %s denial, RID not registered, srcId = %u", _PCKT_STR.c_str(), _SRCID); \
         writeRF_Message_Deny(0U, _SRCID, _RSN, _PCKT);                                  \
         m_nxdn->m_rfState = RS_RF_REJECTED;                                             \
@@ -80,7 +80,7 @@ using namespace nxdn::packet;
 
 // Verify the source RID is affiliated.
 #define VERIFY_SRCID_AFF(_PCKT_STR, _PCKT, _SRCID, _DSTID, _RSN)                        \
-    if (!m_nxdn->m_affiliations.isGroupAff(_SRCID, _DSTID) && m_verifyAff) {            \
+    if (!m_nxdn->m_affiliations->isGroupAff(_SRCID, _DSTID) && m_verifyAff) {           \
         LogWarning(LOG_RF, "NXDN, %s denial, RID not affiliated to TGID, srcId = %u, dstId = %u", _PCKT_STR.c_str(), _SRCID, _DSTID); \
         writeRF_Message_Deny(0U, _SRCID, _RSN, _PCKT);                                  \
         m_nxdn->m_rfState = RS_RF_REJECTED;                                             \
@@ -96,7 +96,7 @@ using namespace nxdn::packet;
 // Macro helper to verbose log a generic message.
 #define VERBOSE_LOG_MSG_DST(_PCKT_STR, _DSTID)                                          \
     if (m_verbose) {                                                                    \
-        LogMessage(LOG_RF, "NXDN, %s, dstId = %u", _PCKT_STR.c_str(), _DSTID); \
+        LogMessage(LOG_RF, "NXDN, %s, dstId = %u", _PCKT_STR.c_str(), _DSTID);          \
     }
 
 // Macro helper to verbose log a generic network message.
@@ -108,7 +108,7 @@ using namespace nxdn::packet;
 // Macro helper to verbose log a generic network message.
 #define DEBUG_LOG_MSG(_PCKT_STR)                                                        \
     if (m_debug) {                                                                      \
-        LogMessage(LOG_RF, "NXDN, %s", _PCKT_STR.c_str());                             \
+        LogMessage(LOG_RF, "NXDN, %s", _PCKT_STR.c_str());                              \
     }
 
 // ---------------------------------------------------------------------------
@@ -156,7 +156,7 @@ bool ControlSignaling::process(FuncChannelType::E fct, ChOption::E option, uint8
 
     uint16_t srcId = rcch->getSrcId();
     uint16_t dstId = rcch->getDstId();
-    m_nxdn->m_affiliations.touchUnitReg(srcId);
+    m_nxdn->m_affiliations->touchUnitReg(srcId);
 
     switch (rcch->getMessageType()) {
         case MessageType::RTCH_VCALL:
@@ -250,7 +250,7 @@ bool ControlSignaling::processNetwork(FuncChannelType::E fct, ChOption::E option
             case MessageType::RTCH_VCALL:
             {
                 if (m_nxdn->m_dedicatedControl) {
-                    if (!m_nxdn->m_affiliations.isGranted(dstId)) {
+                    if (!m_nxdn->m_affiliations->isGranted(dstId)) {
                         if (m_verbose) {
                             LogMessage(LOG_NET, "NXDN, %s, emerg = %u, encrypt = %u, prio = %u, chNo = %u, srcId = %u, dstId = %u",
                                 rcch->toString().c_str(), rcch->getEmergency(), rcch->getEncrypted(), rcch->getPriority(), rcch->getGrpVchNo(), srcId, dstId);
@@ -473,12 +473,12 @@ bool ControlSignaling::writeRF_Message_Grant(uint32_t srcId, uint32_t dstId, uin
             }
         }
 
-        if (!m_nxdn->m_affiliations.isGranted(dstId)) {
+        if (!m_nxdn->m_affiliations->isGranted(dstId)) {
             if (grp && !m_nxdn->m_ignoreAffiliationCheck) {
                 // is this an affiliation required group?
                 ::lookups::TalkgroupRuleGroupVoice tid = m_nxdn->m_tidLookup->find(dstId);
                 if (tid.config().affiliated()) {
-                    if (!m_nxdn->m_affiliations.hasGroupAff(dstId)) {
+                    if (!m_nxdn->m_affiliations->hasGroupAff(dstId)) {
                         LogWarning(LOG_RF, "NXDN, %s ignored, no group affiliations, dstId = %u", rcch->toString().c_str(), dstId);
                         return false;
                     }
@@ -487,13 +487,13 @@ bool ControlSignaling::writeRF_Message_Grant(uint32_t srcId, uint32_t dstId, uin
 
             if (!grp && !m_nxdn->m_ignoreAffiliationCheck) {
                 // is this the target registered?
-                if (!m_nxdn->m_affiliations.isUnitReg(dstId)) {
+                if (!m_nxdn->m_affiliations->isUnitReg(dstId)) {
                     LogWarning(LOG_RF, "NXDN, %s ignored, no unit registration, dstId = %u", rcch->toString().c_str(), dstId);
                     return false;
                 }
             }
 
-            if (!m_nxdn->m_affiliations.rfCh()->isRFChAvailable()) {
+            if (!m_nxdn->m_affiliations->rfCh()->isRFChAvailable()) {
                 if (grp) {
                     if (!net) {
                         LogWarning(LOG_RF, "NXDN, %s queued, no channels available, dstId = %u", rcch->toString().c_str(), dstId);
@@ -518,8 +518,8 @@ bool ControlSignaling::writeRF_Message_Grant(uint32_t srcId, uint32_t dstId, uin
                 }
             }
             else {
-                if (m_nxdn->m_affiliations.grantCh(dstId, srcId, GRANT_TIMER_TIMEOUT, grp, net)) {
-                    chNo = m_nxdn->m_affiliations.getGrantedCh(dstId);
+                if (m_nxdn->m_affiliations->grantCh(dstId, srcId, GRANT_TIMER_TIMEOUT, grp, net)) {
+                    chNo = m_nxdn->m_affiliations->getGrantedCh(dstId);
                 }
             }
         }
@@ -527,7 +527,7 @@ bool ControlSignaling::writeRF_Message_Grant(uint32_t srcId, uint32_t dstId, uin
             if (!m_disableGrantSrcIdCheck && !net) {
                 // do collision check between grants to see if a SU is attempting a "grant retry" or if this is a
                 // different source from the original grant
-                uint32_t grantedSrcId = m_nxdn->m_affiliations.getGrantedSrcId(dstId);
+                uint32_t grantedSrcId = m_nxdn->m_affiliations->getGrantedSrcId(dstId);
                 if (srcId != grantedSrcId) {
                     if (!net) {
                         LogWarning(LOG_RF, "NXDN, %s denied, traffic in progress, dstId = %u", rcch->toString().c_str(), dstId);
@@ -541,14 +541,14 @@ bool ControlSignaling::writeRF_Message_Grant(uint32_t srcId, uint32_t dstId, uin
                 }
             }
 
-            chNo = m_nxdn->m_affiliations.getGrantedCh(dstId);
-            m_nxdn->m_affiliations.touchGrant(dstId);
+            chNo = m_nxdn->m_affiliations->getGrantedCh(dstId);
+            m_nxdn->m_affiliations->touchGrant(dstId);
         }
     }
     else {
-        if (m_nxdn->m_affiliations.isGranted(dstId)) {
-            chNo = m_nxdn->m_affiliations.getGrantedCh(dstId);
-            m_nxdn->m_affiliations.touchGrant(dstId);
+        if (m_nxdn->m_affiliations->isGranted(dstId)) {
+            chNo = m_nxdn->m_affiliations->getGrantedCh(dstId);
+            m_nxdn->m_affiliations->touchGrant(dstId);
         }
         else {
             return false;
@@ -568,7 +568,7 @@ bool ControlSignaling::writeRF_Message_Grant(uint32_t srcId, uint32_t dstId, uin
 
     // callback RPC to permit the granted TG on the specified voice channel
     if (m_nxdn->m_authoritative && m_nxdn->m_supervisor) {
-        ::lookups::VoiceChData voiceChData = m_nxdn->m_affiliations.rfCh()->getRFChData(chNo);
+        ::lookups::VoiceChData voiceChData = m_nxdn->m_affiliations->rfCh()->getRFChData(chNo);
         if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0 &&
             chNo != m_nxdn->m_siteData.channelNo()) {
             json::object req = json::object();
@@ -596,7 +596,7 @@ bool ControlSignaling::writeRF_Message_Grant(uint32_t srcId, uint32_t dstId, uin
             if (requestFailed) {
                 ::LogError((net) ? LOG_NET : LOG_RF, "NXDN, %s, failed to permit TG for use, chNo = %u", rcch->toString().c_str(), chNo);
 
-                m_nxdn->m_affiliations.releaseGrant(dstId, false);
+                m_nxdn->m_affiliations->releaseGrant(dstId, false);
                 if (!net) {
                     writeRF_Message_Deny(0U, srcId, CauseResponse::VD_QUE_GRP_BUSY, MessageType::RTCH_VCALL);
                     m_nxdn->m_rfState = RS_RF_REJECTED;
@@ -680,7 +680,7 @@ bool ControlSignaling::writeRF_Message_Grp_Reg_Rsp(uint32_t srcId, uint32_t dstI
     }
 
     // validate the source RID is registered
-    if (!m_nxdn->m_affiliations.isUnitReg(srcId) && m_verifyReg) {
+    if (!m_nxdn->m_affiliations->isUnitReg(srcId) && m_verifyReg) {
         LogWarning(LOG_RF, "NXDN, %s denial, RID not registered, srcId = %u", rcch->toString().c_str(), srcId);
         ::ActivityLog("NXDN", true, "group affiliation request from %u to %s %u denied", srcId, "TG ", dstId);
         rcch->setCauseResponse(CauseResponse::MM_REG_REFUSED);
@@ -705,7 +705,7 @@ bool ControlSignaling::writeRF_Message_Grp_Reg_Rsp(uint32_t srcId, uint32_t dstI
         ret = true;
 
         // update dynamic affiliation table
-        m_nxdn->m_affiliations.groupAff(srcId, dstId);
+        m_nxdn->m_affiliations->groupAff(srcId, dstId);
 
         if (m_nxdn->m_network != nullptr)
             m_nxdn->m_network->announceGroupAffiliation(srcId, dstId);
@@ -757,8 +757,8 @@ void ControlSignaling::writeRF_Message_U_Reg_Rsp(uint32_t srcId, uint32_t dstId,
         ::ActivityLog("NXDN", true, "unit registration request from %u", srcId);
 
         // update dynamic unit registration table
-        if (!m_nxdn->m_affiliations.isUnitReg(srcId)) {
-            m_nxdn->m_affiliations.unitReg(srcId);
+        if (!m_nxdn->m_affiliations->isUnitReg(srcId)) {
+            m_nxdn->m_affiliations->unitReg(srcId);
         }
 
         if (m_nxdn->m_network != nullptr)

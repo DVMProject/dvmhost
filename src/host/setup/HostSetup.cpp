@@ -2051,6 +2051,8 @@ bool HostSetup::writeFlash()
 void HostSetup::writeBootload()
 {
     m_reqBootload = true;
+    LogMessage(LOG_CAL, "Rebooting modem into ST bootloader mode...");
+
     if (writeFlash()) {
         uint8_t buffer[4U];
         ::memset(buffer, 0x00U, 4U);

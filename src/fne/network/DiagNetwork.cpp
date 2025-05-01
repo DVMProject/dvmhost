@@ -8,7 +8,7 @@
  *
  */
 #include "fne/Defines.h"
-#include "common/zlib/zlib.h"
+#include "common/zlib/Compression.h"
 #include "common/Log.h"
 #include "common/Utils.h"
 #include "network/DiagNetwork.h"
@@ -17,6 +17,7 @@
 
 using namespace network;
 using namespace network::callhandler;
+using namespace compress;
 
 #include <cassert>
 
@@ -26,12 +27,13 @@ using namespace network::callhandler;
 
 /* Initializes a new instance of the DiagNetwork class. */
 
-DiagNetwork::DiagNetwork(HostFNE* host, FNENetwork* fneNetwork, const std::string& address, uint16_t port) :
+DiagNetwork::DiagNetwork(HostFNE* host, FNENetwork* fneNetwork, const std::string& address, uint16_t port, uint16_t workerCnt) :
     BaseNetwork(fneNetwork->m_peerId, true, fneNetwork->m_debug, true, true, fneNetwork->m_allowActivityTransfer, fneNetwork->m_allowDiagnosticTransfer),
     m_fneNetwork(fneNetwork),
     m_host(host),
     m_address(address),
-    m_port(port)
+    m_port(port),
+    m_threadPool(workerCnt, "diag")
 {
     assert(fneNetwork != nullptr);
     assert(host != nullptr);
@@ -73,6 +75,7 @@ void DiagNetwork::processNetwork()
         uint32_t peerId = fneHeader.getPeerId();
 
         NetPacketRequest* req = new NetPacketRequest();
+        req->obj = m_fneNetwork;
         req->peerId = peerId;
 
         req->address = address;
@@ -84,11 +87,14 @@ void DiagNetwork::processNetwork()
         req->buffer = new uint8_t[length];
         ::memcpy(req->buffer, buffer.get(), length);
 
-        if (!Thread::runAsThread(m_fneNetwork, threadedNetworkRx, req)) {
-            if (req->buffer != nullptr)
-                delete[] req->buffer;
-            delete req;
-            return;
+        if (!m_threadPool.enqueue(new_pooltask(taskNetworkRx, req))) {
+            LogError(LOG_NET, "Failed to task enqueue network packet request, peerId = %u, %s:%u", peerId, 
+                udp::Socket::address(address).c_str(), udp::Socket::port(address));
+            if (req != nullptr) {
+                if (req->buffer != nullptr)
+                    delete[] req->buffer;
+                delete req;
+            }
         }
     }
 }
@@ -108,6 +114,8 @@ bool DiagNetwork::open()
 {
     if (m_debug)
         LogMessage(LOG_NET, "Opening Network");
+
+    m_threadPool.start();
 
     m_status = NET_STAT_MST_RUNNING;
 
@@ -134,6 +142,9 @@ void DiagNetwork::close()
     if (m_debug)
         LogMessage(LOG_NET, "Closing Network");
 
+    m_threadPool.stop();
+    m_threadPool.wait();
+    
     m_socket->close();
 
     m_status = NET_STAT_INVALID;
@@ -145,16 +156,9 @@ void DiagNetwork::close()
 
 /* Process a data frames from the network. */
 
-void* DiagNetwork::threadedNetworkRx(void* arg)
+void DiagNetwork::taskNetworkRx(NetPacketRequest* req)
 {
-    NetPacketRequest* req = (NetPacketRequest*)arg;
     if (req != nullptr) {
-#if defined(_WIN32)
-        ::CloseHandle(req->thread);
-#else
-        ::pthread_detach(req->thread);
-#endif // defined(_WIN32)
-
         FNENetwork* network = static_cast<FNENetwork*>(req->obj);
         if (network == nullptr) {
             if (req != nullptr) {
@@ -163,20 +167,15 @@ void* DiagNetwork::threadedNetworkRx(void* arg)
                 delete req;
             }
 
-            return nullptr;
+            return;
         }
 
         if (req == nullptr)
-            return nullptr;
+            return;
 
         if (req->length > 0) {
             uint32_t peerId = req->fneHeader.getPeerId();
-
-            std::stringstream peerName;
-            peerName << peerId << ":diag-rx-pckt";
-#ifdef _GNU_SOURCE
-            ::pthread_setname_np(req->thread, peerName.str().c_str());
-#endif // _GNU_SOURCE
+            uint32_t streamId = req->fneHeader.getStreamId();
 
             // process incoming message function opcodes
             switch (req->fneHeader.getFunction()) {
@@ -381,27 +380,155 @@ void* DiagNetwork::threadedNetworkRx(void* arg)
                             // validate peer (simple validation really)
                             if (connection->connected() && connection->address() == ip && connection->isExternalPeer() &&
                                 connection->isPeerLink()) {
-                                UInt8Array __rawPayload = std::make_unique<uint8_t[]>(req->length - 8U);
+                                UInt8Array __rawPayload = std::make_unique<uint8_t[]>(req->length);
                                 uint8_t* rawPayload = __rawPayload.get();
-                                ::memset(rawPayload, 0x00U, req->length - 8U);
-                                ::memcpy(rawPayload, req->buffer + 8U, req->length - 8U);
-                                std::string payload(rawPayload, rawPayload + (req->length - 8U));
+                                ::memset(rawPayload, 0x00U, req->length);
+                                ::memcpy(rawPayload, req->buffer, req->length);
 
-                                // parse JSON body
-                                json::value v;
-                                std::string err = json::parse(v, payload);
-                                if (!err.empty()) {
-                                    break;
-                                }
-                                else  {
-                                    // ensure parsed JSON is an array
-                                    if (!v.is<json::array>()) {
+                                // Utils::dump(1U, "Raw Payload", rawPayload, req->length);
+
+                                uint8_t curBlock = rawPayload[8U];
+                                uint8_t blockCnt = rawPayload[9U];
+
+                                if (network->m_peerLinkActPkt.find(peerId) == network->m_peerLinkActPkt.end()) {
+                                    network->m_peerLinkActPkt.insert(peerId, FNENetwork::PLActPeerPkt());
+
+                                    FNENetwork::PLActPeerPkt& pkt = network->m_peerLinkActPkt[peerId];
+                                    pkt.fragments = std::unordered_map<uint8_t, uint8_t*>();
+                                    pkt.streamId = streamId;
+
+                                    pkt.locked = false;
+                                } else {
+                                    FNENetwork::PLActPeerPkt& pkt = network->m_peerLinkActPkt[peerId];
+                                    if (!pkt.locked && pkt.streamId != streamId) {
+                                        LogError(LOG_NET, "PEER %u Peer-Link, Active Peer List, stream ID mismatch, expected %u, got %u", peerId, pkt.streamId, streamId);
+
+                                        for (auto& frag : pkt.fragments) {
+                                            if (frag.second != nullptr)
+                                                delete[] frag.second;
+                                        }
+
+                                        pkt.fragments = std::unordered_map<uint8_t, uint8_t*>();
+                                        pkt.streamId = streamId;
+                                    }
+
+                                    if (pkt.streamId != streamId) {
+                                        // otherwise drop the packet
                                         break;
                                     }
-                                    else {
-                                        json::array arr = v.get<json::array>();
-                                        network->m_peerLinkPeers[peerId] = arr;
+                                }
+
+                                FNENetwork::PLActPeerPkt& pkt = network->m_peerLinkActPkt[peerId];
+                                if (pkt.locked) {
+                                    while (pkt.locked)
+                                        Thread::sleep(1U);
+                                }
+
+                                pkt.locked = true;
+
+                                // if this is the first block store sizes and initialize temp buffer
+                                if (curBlock == 0U) {
+                                    uint32_t size = __GET_UINT32(rawPayload, 0U);
+                                    uint32_t compressedSize = __GET_UINT32(rawPayload, 4U);
+
+                                    FNENetwork::PLActPeerPkt& pkt = network->m_peerLinkActPkt[peerId];
+                                    pkt.size = size;
+                                    pkt.compressedSize = compressedSize;
+                                }
+
+                                // scope is intentional
+                                {
+                                    pkt.lastBlock = curBlock;
+                                    uint8_t* buffer = nullptr;
+                                    if (pkt.size < PEER_LINK_BLOCK_SIZE)
+                                        buffer = new uint8_t[PEER_LINK_BLOCK_SIZE + 1U];
+                                    else 
+                                        buffer = new uint8_t[pkt.size + 1U];
+
+                                    ::memcpy(buffer, rawPayload + 10U, PEER_LINK_BLOCK_SIZE);
+                                    // Utils::dump(1U, "Block Payload", buffer, PEER_LINK_BLOCK_SIZE);
+                                    pkt.fragments.insert({curBlock, buffer});
+                                }
+
+                                LogInfoEx(LOG_NET, "PEER %u Peer-Link, Active Peer List, block %u of %u, rxFragments = %u, streamId = %u", peerId, curBlock, blockCnt, pkt.fragments.size(), streamId);
+
+                                // do we have all the blocks?
+                                if (pkt.fragments.size() == blockCnt + 1U) {
+                                    uint8_t* buffer = nullptr;
+                                    if (pkt.size == 0U) {
+                                        LogError(LOG_NET, "PEER %u Peer-Link, Active Peer List, error missing size information", peerId);
+                                        goto pl_act_cleanup;
                                     }
+
+                                    if (pkt.compressedSize == 0U) {
+                                        LogError(LOG_NET, "PEER %u Peer-Link, Active Peer List, error missing compressed size information", peerId);
+                                        goto pl_act_cleanup;
+                                    }
+
+                                    buffer = new uint8_t[pkt.size + 1U];
+                                    ::memset(buffer, 0x00U, pkt.size + 1U);
+                                    if (pkt.fragments.size() == 1U) {
+                                        ::memcpy(buffer, pkt.fragments[0U], pkt.size);
+                                    } else {
+                                        for (uint8_t i = 0U; i < pkt.fragments.size(); i++) {
+                                            uint32_t offs = i * PEER_LINK_BLOCK_SIZE;
+                                            ::memcpy(buffer + offs, pkt.fragments[i], PEER_LINK_BLOCK_SIZE);
+                                        }
+                                    }
+
+                                    // Utils::dump(1U, "Peer-Link Active Peer List", buffer, pkt.size + 1U);
+
+                                    // scope is intentional
+                                    {
+                                        uint32_t decompressedLen = 0U;
+                                        uint8_t* decompressed = Compression::decompress(buffer, pkt.compressedSize, &decompressedLen);
+
+                                        // check that we got the appropriate data
+                                        if (decompressedLen == pkt.size && decompressed != nullptr) {
+                                            std::string payload(decompressed + 8U, decompressed + decompressedLen);
+
+                                            // parse JSON body
+                                            json::value v;
+                                            std::string err = json::parse(v, payload);
+                                            if (!err.empty()) {
+                                                LogError(LOG_NET, "PEER %u error parsing active peer list, %s", peerId, err.c_str());
+                                                break;
+                                            }
+                                            else  {
+                                                // ensure parsed JSON is an array
+                                                if (!v.is<json::array>()) {
+                                                    LogError(LOG_NET, "PEER %u error parsing active peer list, data was not valid", peerId);
+                                                    break;
+                                                }
+                                                else {
+                                                    json::array arr = v.get<json::array>();
+                                                    LogInfoEx(LOG_NET, "PEER %u Peer-Link, Active Peer List, updating %u peer entries", peerId, arr.size());
+                                                    network->m_peerLinkPeers[peerId] = arr;
+                                                }
+                                            }
+                                        }
+                                        else {
+                                            LogError(LOG_NET, "PEER %u Peer-Link, error decompressed list, was not of expected size! %u != %u", peerId, decompressedLen, pkt.size);
+                                        }
+                                    }
+
+                                pl_act_cleanup:
+                                    pkt.size = 0U;
+                                    pkt.compressedSize = 0U;
+
+                                    if (buffer != nullptr)
+                                        delete[] buffer;
+                                    for (auto& frag : pkt.fragments) {
+                                        if (frag.second != nullptr)
+                                            delete[] frag.second;
+                                    }
+
+                                    pkt.fragments = std::unordered_map<uint8_t, uint8_t*>();
+                                    pkt.streamId = 0U;
+
+                                    network->m_peerLinkActPkt.erase(peerId);
+                                } else {
+                                    pkt.locked = false;
                                 }
                             }
                             else {
@@ -422,6 +549,4 @@ void* DiagNetwork::threadedNetworkRx(void* arg)
             delete[] req->buffer;
         delete req;
     }
-
-    return nullptr;
 }

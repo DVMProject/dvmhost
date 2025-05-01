@@ -15,6 +15,7 @@ This project suite generates a few executables:
 - `dvmhost` host software that connects to the DVM modems (both air interface for repeater and hotspot or P25 DFSI for commerical P25 hardware) and is the primary data processing application for digital modes. [See configuration](#dvmhost-configuration) to configure and calibrate.
 - `dvmfne` a network "core", this provides a central server for `dvmhost` instances to connect to and be networked with, allowing relay of traffic and other data between `dvmhost` instances and other `dvmfne` instances. [See configuration](#dvmfne-configuration) to configure.
 - `dvmbridge` a analog/PCM audio bridge, this provides the capability for analog or PCM audio resources to be connected to a `dvmfne` instance, allowing realtime vocoding of traffic. [See configuration](#dvmbridge-configuration) to configure.
+- `dvmpatch` a talkgroup patching utility, this provides the capability to manually patch talkgroups of the same digital mode together. [See configuration](#dvmpatch-configuration) to configure.
 - `dvmcmd` a simple command-line utility to send remote control commands to a `dvmhost` or `dvmfne` instance with REST API configured.
 
 ### Supplementary Support Applications
@@ -215,12 +216,18 @@ using the command line parameter `-wasapi` will force `dvmbridge` to utilize WAS
 
 There is no other real configuration for a `dvmbridge` instance other then setting the appropriate parameters within the configuration files.
 
+## dvmpatch Configuration
+
+This source repository contains configuration example files within the configs folder, please review `patch-config.example.yml` for the `dvmpatch` for details on various configurable options.
+
+There is no other real configuration for a `dvmpatch` instance other then setting the appropriate parameters within the configuration files.
+
 ## Command Line Parameters
 
 ### dvmhost Command Line Parameters
 
 ```
-usage: ./dvmhost [-vhdf][--syslog][--setup][-c <configuration file>][--remote [-a <address>] [-p <port>]]
+usage: ./dvmhost [-vhdf] [--syslog] [--setup] [--cal][--boot] [-c <configuration file>] [--remote [-a <address>] [-p <port>]]
 
   -v        show version information
   -h        show this screen
@@ -229,13 +236,17 @@ usage: ./dvmhost [-vhdf][--syslog][--setup][-c <configuration file>][--remote [-
 
   --syslog  force logging to syslog
 
-  --setup   setup and calibration mode
+  --setup   TUI setup and calibration mode
+
+  --cal     simple calibration mode
+  --boot    connects to modem and reboots into bootloader mode
 
   -c <file> specifies the configuration file to use
 
   --remote  remote modem mode
   -a        remote modem command address
   -p        remote modem command port
+  -P        remote modem command port (local listening port)
 
   --        stop handling options
 ```
@@ -279,6 +290,20 @@ Audio Input Devices:
 
 Audio Output Devices:
     ... <list of audio output devices> ...
+```
+
+### dvmpatch Command Line Parameters
+
+```
+usage: ./dvmpatch [-vhf][-c <configuration file>]
+
+  -v        show version information
+  -h        show this screen
+  -f        foreground mode
+
+  -c <file> specifies the configuration file to use
+
+  --        stop handling options
 ```
 
 ### dvmcmd Command Line Parameters

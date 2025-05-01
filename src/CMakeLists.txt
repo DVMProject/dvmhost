@@ -60,7 +60,7 @@ set(CPACK_PACKAGE_VENDOR "DVMProject")
 
 set(CPACK_DEBIAN_PACKAGE_DESCRIPTION "The DVM Host software provides the host computer implementation of a mixed-mode DMR, P25 and/or NXDN or dedicated-mode DMR, P25 or NXDN repeater system that talks to the actual modem hardware. The host software; is the portion of a complete Over-The-Air modem implementation that performs the data processing, decision making and FEC correction for a digital repeater.")
 set(CPACK_DEBIAN_PACKAGE_MAINTAINER "DVMProject Authors")
-set(CPACK_DEBIAN_PACKAGE_VERSION "R04Axx")
+set(CPACK_DEBIAN_PACKAGE_VERSION "R04Hxx")
 set(CPACK_DEBIAN_PACKAGE_RELEASE "0")
 set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://github.com/dvmproject")
 
@@ -142,3 +142,15 @@ else ()
     target_link_libraries(dvmbridge PRIVATE common vocoder ${OPENSSL_LIBRARIES} dl asio::asio Threads::Threads)
 endif (COMPILE_WIN32)
 target_include_directories(dvmbridge PRIVATE ${OPENSSL_INCLUDE_DIR} src src/bridge)
+
+#
+## dvmpatch
+#
+include(src/patch/CMakeLists.txt)
+add_executable(dvmpatch ${common_INCLUDE} ${patch_SRC})
+if (COMPILE_WIN32)
+    target_link_libraries(dvmpatch PRIVATE common ${OPENSSL_LIBRARIES} asio::asio Threads::Threads)
+else ()
+    target_link_libraries(dvmpatch PRIVATE common ${OPENSSL_LIBRARIES} dl asio::asio Threads::Threads)
+endif (COMPILE_WIN32)
+target_include_directories(dvmpatch PRIVATE ${OPENSSL_INCLUDE_DIR} src src/patch)

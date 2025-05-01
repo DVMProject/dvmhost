@@ -52,6 +52,9 @@ extern uint16_t g_remotePort;
 /** @brief (Global) Local Remote Modem Port (Listening Port). */
 extern uint16_t g_remoteLocalPort;
 
+/** @brief (Global) Set Modem into Bootloader Mode. */
+extern bool g_bootloader;
+
 /** @brief (Global) Fire DMR beacon flag. */
 extern bool g_fireDMRBeacon;
 /** @brief (Global) Fire P25 control flag. */

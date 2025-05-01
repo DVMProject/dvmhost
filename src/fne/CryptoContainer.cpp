@@ -451,6 +451,7 @@ bool CryptoContainer::load()
                 ::memcpy(key, keyIv, keyLength);
                 ::memcpy(iv, keyIv + keyLength, EVP_MAX_IV_LENGTH);
             }
+            free(salt); // base64Decode allocates memory with malloc()
 
             // get inner container encrypted data
             // bryanb: annoying levels of XML encapsulation...
@@ -476,6 +477,7 @@ bool CryptoContainer::load()
             // decrypt inner container
             AES aes = AES(AESKeyLength::AES_256);
             uint8_t* innerContainer = aes.decryptCBC(innerContainerCrypted, innerContainerLen, key, iv);
+            free(innerContainerCrypted); // base64Decode allocates memory with malloc()
 
             /*
             ** bryanb: this is probably slightly error prone...
@@ -553,6 +555,8 @@ bool CryptoContainer::load()
                     }
                 }
             }
+
+            delete[] innerContainer;
         }
     } catch(const std::exception& e) {
         ::LogError(LOG_HOST, "Error opening EKC: %s", e.what());

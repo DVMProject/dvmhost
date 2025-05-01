@@ -35,7 +35,7 @@ using namespace p25::packet;
 //  Constants
 // ---------------------------------------------------------------------------
 
-const uint32_t VOC_LDU1_COUNT = 3U;
+const uint32_t PKT_LDU1_COUNT = 3U;
 const uint32_t ROAM_LDU1_COUNT = 1U;
 
 // ---------------------------------------------------------------------------
@@ -59,7 +59,8 @@ void Voice::resetRF()
     m_rfErrs = 0U;
     m_rfBits = 1U;
     m_rfUndecodableLC = 0U;
-    m_vocLDU1Count = 0U;
+    m_pktLDU1Count = 0U;
+    m_grpUpdtCount = 0U;
     m_roamLDU1Count = 0U;
 
     m_inbound = false;
@@ -80,7 +81,8 @@ void Voice::resetNet()
 
     m_netFrames = 0U;
     m_netLost = 0U;
-    m_vocLDU1Count = 0U;
+    m_pktLDU1Count = 0U;
+    m_grpUpdtCount = 0U;
     m_roamLDU1Count = 0U;
     m_p25->m_networkWatchdog.stop();
 
@@ -160,7 +162,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 LogWarning(LOG_RF, "Traffic collision detect, preempting existing network traffic to new RF traffic, rfDstId = %u, netDstId = %u", lc.getDstId(),
                     m_p25->m_netLastDstId);
                 if (!m_p25->m_dedicatedControl) {
-                    m_p25->m_affiliations.releaseGrant(m_p25->m_netLastDstId, false);
+                    m_p25->m_affiliations->releaseGrant(m_p25->m_netLastDstId, false);
                 }
 
                 resetNet();
@@ -256,7 +258,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
                     LogWarning(LOG_RF, "Traffic collision detect, preempting existing network traffic to new RF traffic, rfDstId = %u, netDstId = %u", dstId,
                         m_p25->m_netLastDstId);
                     if (!m_p25->m_dedicatedControl) {
-                        m_p25->m_affiliations.releaseGrant(m_p25->m_netLastDstId, false);
+                        m_p25->m_affiliations->releaseGrant(m_p25->m_netLastDstId, false);
                     }
 
                     resetNet();
@@ -272,7 +274,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
 
                 // is control is enabled, and the group was granted by network already ignore RF traffic
                 if (m_p25->m_enableControl && dstId == m_p25->m_netLastDstId) {
-                    if (m_p25->m_affiliations.isNetGranted(dstId)) {
+                    if (m_p25->m_affiliations->isNetGranted(dstId)) {
                         LogWarning(LOG_RF, "Traffic collision detect, preempting new RF traffic to existing granted network traffic (Are we in a voting condition?), rfSrcId = %u, rfDstId = %u, netSrcId = %u, netDstId = %u", srcId, dstId,
                             m_netLC.getSrcId(), m_p25->m_netLastDstId);
                         resetRF();
@@ -363,7 +365,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
             // verify the source RID is affiliated to the group TGID; only if control data
             // is supported
             if (group && m_p25->m_enableControl) {
-                if (!m_p25->m_affiliations.isGroupAff(srcId, dstId) && m_p25->m_control->m_verifyAff) {
+                if (!m_p25->m_affiliations->isGroupAff(srcId, dstId) && m_p25->m_control->m_verifyAff) {
                     if (m_lastRejectId == 0 || m_lastRejectId != srcId) {
                         LogWarning(LOG_RF, P25_HDU_STR " denial, RID not affiliated to TGID, srcId = %u, dstId = %u", srcId, dstId);
                         m_p25->m_control->writeRF_TSDU_Deny(srcId, dstId, ReasonCode::DENY_REQ_UNIT_NOT_AUTH, TSBKO::IOSP_GRP_VCH, true, true);
@@ -414,11 +416,11 @@ bool Voice::process(uint8_t* data, uint32_t len)
 
             if (m_p25->m_enableControl) {
                 // if the group wasn't granted out -- explicitly grant the group
-                if (!m_p25->m_affiliations.isGranted(dstId)) {
+                if (!m_p25->m_affiliations->isGranted(dstId)) {
                     if (m_p25->m_legacyGroupGrnt) {
                         // are we auto-registering legacy radios to groups?
                         if (m_p25->m_legacyGroupReg && group) {
-                            if (!m_p25->m_affiliations.isGroupAff(srcId, dstId)) {
+                            if (!m_p25->m_affiliations->isGroupAff(srcId, dstId)) {
                                 if (m_p25->m_control->writeRF_TSDU_Grp_Aff_Rsp(srcId, dstId) != ResponseCode::ACCEPT) {
                                     LogWarning(LOG_RF, P25_HDU_STR " denial, conventional affiliation required, not affiliated to TGID, srcId = %u, dstId = %u", srcId, dstId);
                                     m_p25->m_rfLastDstId = 0U;
@@ -447,15 +449,15 @@ bool Voice::process(uint8_t* data, uint32_t len)
 
             // conventional registration or DVRS support?
             if ((m_p25->m_enableControl && !m_p25->m_dedicatedControl) || m_p25->m_voiceOnControl) {
-                if (!m_p25->m_affiliations.isGranted(dstId)) {
+                if (!m_p25->m_affiliations->isGranted(dstId)) {
                     m_p25->m_control->writeRF_TSDU_Grant(srcId, dstId, serviceOptions, group, false, true);
                 }
 
                 // if voice on control; insert grant updates before voice traffic
                 if (m_p25->m_voiceOnControl) {
-                    uint32_t chNo = m_p25->m_affiliations.getGrantedCh(dstId);
-                    ::lookups::VoiceChData voiceChData = m_p25->m_affiliations.rfCh()->getRFChData(chNo);
-                    bool grp = m_p25->m_affiliations.isGroup(dstId);
+                    uint32_t chNo = m_p25->m_affiliations->getGrantedCh(dstId);
+                    ::lookups::VoiceChData voiceChData = m_p25->m_affiliations->rfCh()->getRFChData(chNo);
+                    bool grp = m_p25->m_affiliations->isGroup(dstId);
 
                     std::unique_ptr<lc::TSBK> osp;
 
@@ -469,7 +471,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
                         osp->setGrpVchNo(chNo);
                     }
                     else {
-                        uint32_t srcId = m_p25->m_affiliations.getGrantedSrcId(dstId);
+                        uint32_t srcId = m_p25->m_affiliations->getGrantedSrcId(dstId);
 
                         osp = std::make_unique<lc::tsbk::OSP_UU_VCH_GRANT_UPD>();
 
@@ -558,9 +560,9 @@ bool Voice::process(uint8_t* data, uint32_t len)
 
             // if voice on control; insert group voice channel updates directly after HDU but before LDUs
             if (m_p25->m_voiceOnControl) {
-                uint32_t chNo = m_p25->m_affiliations.getGrantedCh(dstId);
-                ::lookups::VoiceChData voiceChData = m_p25->m_affiliations.rfCh()->getRFChData(chNo);
-                bool grp = m_p25->m_affiliations.isGroup(dstId);
+                uint32_t chNo = m_p25->m_affiliations->getGrantedCh(dstId);
+                ::lookups::VoiceChData voiceChData = m_p25->m_affiliations->rfCh()->getRFChData(chNo);
+                bool grp = m_p25->m_affiliations->isGroup(dstId);
 
                 std::unique_ptr<lc::TSBK> osp;
 
@@ -574,7 +576,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
                     osp->setGrpVchNo(chNo);
                 }
                 else {
-                    uint32_t srcId = m_p25->m_affiliations.getGrantedSrcId(dstId);
+                    uint32_t srcId = m_p25->m_affiliations->getGrantedSrcId(dstId);
 
                     osp = std::make_unique<lc::tsbk::OSP_UU_VCH_GRANT_UPD>();
 
@@ -599,7 +601,8 @@ bool Voice::process(uint8_t* data, uint32_t len)
             m_rfErrs = 0U;
             m_rfBits = 1U;
             m_rfUndecodableLC = 0U;
-            m_vocLDU1Count = 0U;
+            m_pktLDU1Count = 0U;
+            m_grpUpdtCount = 0U;
             m_roamLDU1Count = 0U;
             m_p25->m_rfTimeout.start();
             m_lastDUID = DUID::HDU;
@@ -629,7 +632,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
 
                 // is control is enabled, and the group was granted by network already ignore RF traffic
                 if (m_p25->m_enableControl && m_rfLC.getDstId() == m_p25->m_netLastDstId) {
-                    if (m_p25->m_affiliations.isNetGranted(m_rfLC.getDstId())) {
+                    if (m_p25->m_affiliations->isNetGranted(m_rfLC.getDstId())) {
                         LogWarning(LOG_RF, "Traffic collision detect, preempting new RF traffic to existing granted network traffic (Are we in a voting condition?), rfSrcId = %u, rfDstId = %u, netSrcId = %u, netDstId = %u", m_rfLC.getSrcId(), m_rfLC.getDstId(),
                             m_netLC.getSrcId(), m_p25->m_netLastDstId);
                         resetRF();
@@ -686,21 +689,47 @@ bool Voice::process(uint8_t* data, uint32_t len)
             alreadyDecoded = false;
 
             if (m_p25->m_enableControl) {
-                m_p25->m_affiliations.touchGrant(m_rfLC.getDstId());
+                m_p25->m_affiliations->touchGrant(m_rfLC.getDstId());
             }
 
             if (m_p25->m_notifyCC) {
                 m_p25->notifyCC_TouchGrant(m_rfLC.getDstId());
             }
 
-            // conventional registration or DVRS support?
-            if ((m_p25->m_enableControl && !m_p25->m_dedicatedControl) || m_p25->m_voiceOnControl) {
-                // per TIA-102.AABD-B transmit RFSS_STS_BCAST every 3 superframes (e.g. every 3 LDU1s)
-                m_vocLDU1Count++;
-                if (m_vocLDU1Count > VOC_LDU1_COUNT) {
-                    m_vocLDU1Count = 0U;
+            // are we swapping the LC out for the RFSS_STS_BCAST or LC_GROUP_UPDT?
+            m_pktLDU1Count++;
+            if (m_pktLDU1Count > PKT_LDU1_COUNT) {
+                m_pktLDU1Count = 0U;
+
+                // conventional registration or DVRS support?
+                if ((m_p25->m_enableControl && !m_p25->m_dedicatedControl) || m_p25->m_voiceOnControl) {
+                    // per TIA-102.AABD-B transmit RFSS_STS_BCAST every 3 superframes (e.g. every 3 LDU1s)
                     m_rfLC.setMFId(MFG_STANDARD);
                     m_rfLC.setLCO(LCO::RFSS_STS_BCAST);
+                }
+                else {
+                    std::lock_guard<std::mutex> lock(m_p25->m_activeTGLock);
+                    if (m_p25->m_activeTG.size() > 0) {
+                        if (m_grpUpdtCount > m_p25->m_activeTG.size())
+                            m_grpUpdtCount = 0U;
+
+                        if (m_p25->m_activeTG.size() < 2) {
+                            uint32_t dstId = m_p25->m_activeTG.at(0);
+                            m_rfLC.setMFId(MFG_STANDARD);
+                            m_rfLC.setLCO(LCO::GROUP_UPDT);
+                            m_rfLC.setDstId(dstId);
+                        }
+                        else {
+                            uint32_t dstId = m_p25->m_activeTG.at(m_grpUpdtCount);
+                            uint32_t dstIdB = m_p25->m_activeTG.at(m_grpUpdtCount + 1U);
+                            m_rfLC.setMFId(MFG_STANDARD);
+                            m_rfLC.setLCO(LCO::GROUP_UPDT);
+                            m_rfLC.setDstId(dstId);
+                            m_rfLC.setDstIdB(dstIdB);
+
+                            m_grpUpdtCount++;
+                        }
+                    }
                 }
             }
 
@@ -988,7 +1017,8 @@ bool Voice::process(uint8_t* data, uint32_t len)
             m_rfErrs = 0U;
             m_rfBits = 1U;
             m_rfUndecodableLC = 0U;
-            m_vocLDU1Count = 0U;
+            m_pktLDU1Count = 0U;
+            m_grpUpdtCount = 0U;
             m_roamLDU1Count = 0U;
             m_p25->m_rfTimeout.start();
             m_lastDUID = DUID::HDU;
@@ -1070,7 +1100,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
     }
     else if (duid == DUID::TDU || duid == DUID::TDULC) {
         if (!m_p25->m_enableControl) {
-            m_p25->m_affiliations.releaseGrant(m_rfLC.getDstId(), false);
+            m_p25->m_affiliations->releaseGrant(m_rfLC.getDstId(), false);
         }
 
         if (m_p25->m_notifyCC) {
@@ -1275,7 +1305,7 @@ bool Voice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
 
                 if (m_p25->m_enableControl) {
                     lc::LC control = lc::LC(*m_dfsiLC.control());
-                    m_p25->m_affiliations.touchGrant(control.getDstId());
+                    m_p25->m_affiliations->touchGrant(control.getDstId());
                 }
 
                 if (m_p25->m_notifyCC) {
@@ -1349,7 +1379,7 @@ bool Voice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
 
                 if (m_p25->m_enableControl) {
                     lc::LC control = lc::LC(*m_dfsiLC.control());
-                    m_p25->m_affiliations.touchGrant(control.getDstId());
+                    m_p25->m_affiliations->touchGrant(control.getDstId());
                 }
 
                 if (m_p25->m_notifyCC) {
@@ -1419,7 +1449,7 @@ bool Voice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
             m_netLastDUID = duid;
 
             if (!m_p25->m_enableControl) {
-                m_p25->m_affiliations.releaseGrant(m_netLC.getDstId(), false);
+                m_p25->m_affiliations->releaseGrant(m_netLC.getDstId(), false);
             }
 
             if (m_p25->m_notifyCC) {
@@ -1478,7 +1508,8 @@ Voice::Voice(Control* p25, bool debug, bool verbose) :
     m_hadVoice(false),
     m_lastRejectId(0U),
     m_silenceThreshold(DEFAULT_SILENCE_THRESHOLD),
-    m_vocLDU1Count(0U),
+    m_pktLDU1Count(0U),
+    m_grpUpdtCount(0U),
     m_roamLDU1Count(0U),
     m_inbound(false),
     m_verbose(verbose),
@@ -1749,7 +1780,7 @@ void Voice::writeNet_LDU1()
                 (m_netLC.getEncrypted() ? 0x40U : 0x00U) +                          // Encrypted Flag
                 (m_netLC.getPriority() & 0x07U);                                    // Priority
 
-            if (!m_p25->m_affiliations.isGranted(dstId)) {
+            if (!m_p25->m_affiliations->isGranted(dstId)) {
                 if (!m_p25->m_control->writeRF_TSDU_Grant(srcId, dstId, serviceOptions, group, true)) {
                     LogError(LOG_NET, P25_HDU_STR " call rejected, network call not granted, dstId = %u", dstId);
 
@@ -1785,9 +1816,9 @@ void Voice::writeNet_LDU1()
 
             // if voice on control; insert grant updates before voice traffic
             if (m_p25->m_voiceOnControl) {
-                uint32_t chNo = m_p25->m_affiliations.getGrantedCh(dstId);
-                ::lookups::VoiceChData voiceChData = m_p25->m_affiliations.rfCh()->getRFChData(chNo);
-                bool grp = m_p25->m_affiliations.isGroup(dstId);
+                uint32_t chNo = m_p25->m_affiliations->getGrantedCh(dstId);
+                ::lookups::VoiceChData voiceChData = m_p25->m_affiliations->rfCh()->getRFChData(chNo);
+                bool grp = m_p25->m_affiliations->isGroup(dstId);
 
                 std::unique_ptr<lc::TSBK> osp;
 
@@ -1801,7 +1832,7 @@ void Voice::writeNet_LDU1()
                     osp->setGrpVchNo(chNo);
                 }
                 else {
-                    uint32_t srcId = m_p25->m_affiliations.getGrantedSrcId(dstId);
+                    uint32_t srcId = m_p25->m_affiliations->getGrantedSrcId(dstId);
 
                     osp = std::make_unique<lc::tsbk::OSP_UU_VCH_GRANT_UPD>();
 
@@ -1831,7 +1862,8 @@ void Voice::writeNet_LDU1()
         m_p25->m_netTimeout.start();
         m_netFrames = 0U;
         m_netLost = 0U;
-        m_vocLDU1Count = 0U;
+        m_pktLDU1Count = 0U;
+        m_grpUpdtCount = 0U;
         m_roamLDU1Count = 0U;
 
         if (!m_p25->m_disableNetworkHDU) {
@@ -1911,14 +1943,40 @@ void Voice::writeNet_LDU1()
         sysId = lc::LC::getSiteData().sysId();
     }
 
-    // conventional registration or DVRS support?
-    if ((m_p25->m_enableControl && !m_p25->m_dedicatedControl) || m_p25->m_voiceOnControl) {
-        // per TIA-102.AABD-B transmit RFSS_STS_BCAST every 3 superframes (e.g. every 3 LDU1s)
-        m_vocLDU1Count++;
-        if (m_vocLDU1Count > VOC_LDU1_COUNT) {
-            m_vocLDU1Count = 0U;
+    // are we swapping the LC out for the RFSS_STS_BCAST or LC_GROUP_UPDT?
+    m_pktLDU1Count++;
+    if (m_pktLDU1Count > PKT_LDU1_COUNT) {
+        m_pktLDU1Count = 0U;
+
+        // conventional registration or DVRS support?
+        if ((m_p25->m_enableControl && !m_p25->m_dedicatedControl) || m_p25->m_voiceOnControl) {
+            // per TIA-102.AABD-B transmit RFSS_STS_BCAST every 3 superframes (e.g. every 3 LDU1s)
             m_netLC.setMFId(MFG_STANDARD);
             m_netLC.setLCO(LCO::RFSS_STS_BCAST);
+        }
+        else {
+            std::lock_guard<std::mutex> lock(m_p25->m_activeTGLock);
+            if (m_p25->m_activeTG.size() > 0) {
+                if (m_grpUpdtCount > m_p25->m_activeTG.size())
+                    m_grpUpdtCount = 0U;
+
+                if (m_p25->m_activeTG.size() < 2) {
+                    uint32_t dstId = m_p25->m_activeTG.at(0);
+                    m_netLC.setMFId(MFG_STANDARD);
+                    m_netLC.setLCO(LCO::GROUP_UPDT);
+                    m_netLC.setDstId(dstId);
+                }
+                else {
+                    uint32_t dstId = m_p25->m_activeTG.at(m_grpUpdtCount);
+                    uint32_t dstIdB = m_p25->m_activeTG.at(m_grpUpdtCount + 1U);
+                    m_netLC.setMFId(MFG_STANDARD);
+                    m_netLC.setLCO(LCO::GROUP_UPDT);
+                    m_netLC.setDstId(dstId);
+                    m_netLC.setDstIdB(dstIdB);
+
+                    m_grpUpdtCount++;
+                }
+            }
         }
     }
 

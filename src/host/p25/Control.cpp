@@ -42,6 +42,7 @@ const uint32_t MAX_PREAMBLE_TDU_CNT = 64U;
 // ---------------------------------------------------------------------------
 
 std::mutex Control::m_queueLock;
+std::mutex Control::m_activeTGLock;
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -82,9 +83,10 @@ Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t q
     m_idenTable(idenTable),
     m_ridLookup(ridLookup),
     m_tidLookup(tidLookup),
-    m_affiliations(this, chLookup, verbose),
+    m_affiliations(nullptr),
     m_controlChData(),
     m_idenEntry(),
+    m_activeTG(),
     m_txImmQueue(queueSize, "P25 Imm Frame"),
     m_txQueue(queueSize, "P25 Frame"),
     m_rfState(RS_RF_LISTENING),
@@ -105,6 +107,7 @@ Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t q
     m_netTGHang(1000U, 2U),
     m_networkWatchdog(1000U, 0U, 1500U),
     m_adjSiteUpdate(1000U, 75U),
+    m_activeTGUpdate(1000U, 5U),
     m_ccPacketInterval(1000U, 0U, 10U),
     m_interval(),
     m_hangCount(3U * 8U),
@@ -126,6 +129,7 @@ Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t q
     m_minRSSI(0U),
     m_aveRSSI(0U),
     m_rssiCount(0U),
+    m_ccNotifyActiveTG(false),
     m_notifyCC(true),
     m_ccDebug(debug),
     m_verbose(verbose),
@@ -136,6 +140,8 @@ Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t q
     assert(tidLookup != nullptr);
     assert(idenTable != nullptr);
     assert(rssiMapper != nullptr);
+
+    m_affiliations = new lookups::P25AffiliationLookup(this, chLookup, verbose);
 
     // bryanb: this is a hacky check to see if the modem is a ModemV24 or not...
     modem::ModemV24* modemV24 = dynamic_cast<modem::ModemV24*>(modem);
@@ -163,6 +169,8 @@ Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t q
 
     // register RPC handlers
     g_RPC->registerHandler(RPC_PERMIT_P25_TG, RPC_FUNC_BIND(Control::RPC_permittedTG, this));
+    g_RPC->registerHandler(RPC_ACTIVE_P25_TG, RPC_FUNC_BIND(Control::RPC_activeTG, this));
+    g_RPC->registerHandler(RPC_CLEAR_ACTIVE_P25_TG, RPC_FUNC_BIND(Control::RPC_clearActiveTG, this));
     g_RPC->registerHandler(RPC_RELEASE_P25_TG, RPC_FUNC_BIND(Control::RPC_releaseGrantTG, this));
     g_RPC->registerHandler(RPC_TOUCH_P25_TG, RPC_FUNC_BIND(Control::RPC_touchGrantTG, this));
 }
@@ -171,6 +179,10 @@ Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t q
 
 Control::~Control()
 {
+    if (m_affiliations != nullptr) {
+        delete m_affiliations;
+    }
+
     if (m_voice != nullptr) {
         delete m_voice;
     }
@@ -313,6 +325,8 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
     m_control->m_redundantGrant = control["redundantGrantTransmit"].as<bool>(false);
     m_ccDebug = control["debug"].as<bool>(false);
 
+    m_ccNotifyActiveTG = control["notifyActiveTG"].as<bool>(true);
+
     m_allowExplicitSourceId = p25Protocol["allowExplicitSourceId"].as<bool>(true);
     m_convNetGrantDemand = p25Protocol["convNetGrantDemand"].as<bool>(false);
 
@@ -410,18 +424,18 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
         }
     }
 
-    m_siteData.setChCnt((uint8_t)m_affiliations.rfCh()->rfChSize());
+    m_siteData.setChCnt((uint8_t)m_affiliations->rfCh()->rfChSize());
 
     m_controlChData = controlChData;
 
     bool disableUnitRegTimeout = p25Protocol["disableUnitRegTimeout"].as<bool>(false);
-    m_affiliations.setDisableUnitRegTimeout(disableUnitRegTimeout);
+    m_affiliations->setDisableUnitRegTimeout(disableUnitRegTimeout);
 
     // set the grant release callback
-    m_affiliations.setReleaseGrantCallback([=](uint32_t chNo, uint32_t dstId, uint8_t slot) {
+    m_affiliations->setReleaseGrantCallback([=](uint32_t chNo, uint32_t dstId, uint8_t slot) {
         // callback REST API to clear TG permit for the granted TG on the specified voice channel
         if (m_authoritative && m_supervisor) {
-            ::lookups::VoiceChData voiceChData = m_affiliations.rfCh()->getRFChData(chNo);
+            ::lookups::VoiceChData voiceChData = m_affiliations->rfCh()->getRFChData(chNo);
             if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0 &&
                 chNo != m_siteData.channelNo()) {
                 json::object req = json::object();
@@ -437,7 +451,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
     });
 
     // set the unit deregistration callback
-    m_affiliations.setUnitDeregCallback([=](uint32_t srcId, bool automatic) {
+    m_affiliations->setUnitDeregCallback([=](uint32_t srcId, bool automatic) {
         if (m_network != nullptr)
             m_network->announceUnitDeregistration(srcId);
 
@@ -510,6 +524,8 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
         LogInfo("    Explicit Source ID Support: %s", m_allowExplicitSourceId ? "yes" : "no");
         LogInfo("    Conventional Network Grant Demand: %s", m_convNetGrantDemand ? "yes" : "no");
         LogInfo("    Demand Unit Registration for Refused Affiliation: %s", m_demandUnitRegForRefusedAff ? "yes" : "no");
+
+        LogInfo("    Notify VCs of Active TGs: %s", m_ccNotifyActiveTG ? "yes" : "no");
 
         if (disableUnitRegTimeout) {
             LogInfo("    Disable Unit Registration Timeout: yes");
@@ -677,7 +693,7 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
             if (!m_dedicatedControl || m_control->m_convFallback)
                 ret = m_voice->process(data, len);
             else {
-                if (m_voiceOnControl && m_affiliations.isChBusy(m_siteData.channelNo()))
+                if (m_voiceOnControl && m_affiliations->isChBusy(m_siteData.channelNo()))
                     ret = m_voice->process(data, len);
             }
             break;
@@ -941,7 +957,7 @@ void Control::clock()
             }
 
             m_networkWatchdog.stop();
-            m_affiliations.releaseGrant(m_voice->m_netLC.getDstId(), false);
+            m_affiliations->releaseGrant(m_voice->m_netLC.getDstId(), false);
 
             if (m_dedicatedControl) {
                 if (m_network != nullptr)
@@ -980,7 +996,7 @@ void Control::clockSiteData(uint32_t ms)
 {
     if (m_enableControl) {
         // clock all the grant timers
-        m_affiliations.clock(ms);
+        m_affiliations->clock(ms);
     }
 
     if (m_control != nullptr) {
@@ -995,8 +1011,8 @@ void Control::clockSiteData(uint32_t ms)
             if (m_rfState == RS_RF_LISTENING && m_netState == RS_NET_IDLE) {
                 m_control->writeAdjSSNetwork();
                 if (m_network != nullptr) {
-                    if (m_affiliations.grpAffSize() > 0) {
-                        auto affs = m_affiliations.grpAffTable();
+                    if (m_affiliations->grpAffSize() > 0) {
+                        auto affs = m_affiliations->grpAffTable();
                         m_network->announceAffiliationUpdate(affs);
                     }
                 }
@@ -1048,6 +1064,91 @@ void Control::clockSiteData(uint32_t ms)
 
                 m_control->m_adjSiteUpdateTimer.setTimeout(m_control->m_adjSiteUpdateInterval);
                 m_control->m_adjSiteUpdateTimer.start();
+            }
+
+            if (m_ccNotifyActiveTG) {
+                if (!m_activeTGUpdate.isRunning()) {
+                    m_activeTGUpdate.start();
+                }
+
+                m_activeTGUpdate.clock(ms);
+                if (m_activeTGUpdate.isRunning() && m_activeTGUpdate.hasExpired()) {
+                    m_activeTGUpdate.start();
+
+                    // do we have any granted channels?
+                    if (m_affiliations->getGrantedRFChCnt() > 0U) {
+                        uint8_t activeCnt = m_affiliations->getGrantedRFChCnt();
+                        std::unordered_map<uint32_t, uint32_t> grantTable = m_affiliations->grantTable();
+
+                        // iterate dynamic channel grant table entries
+                        json::array active = json::array();
+                        for (auto entry : grantTable) {
+                            uint32_t dstId = entry.first;
+                            active.push_back(json::value((double)dstId));
+                        }
+
+                        std::unordered_map<uint32_t, ::lookups::VoiceChData> voiceChs = m_affiliations->rfCh()->rfChDataTable();
+                        for (auto entry : voiceChs) {
+                            ::lookups::VoiceChData voiceChData = entry.second;
+
+                            // callback RPC to transmit active TG list to the voice channels
+                            if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0) {
+                                if (voiceChData.address() != "0.0.0.0") {
+                                    json::object req = json::object();
+                                    req["active"].set<json::array>(active);
+
+                                    g_RPC->req(RPC_ACTIVE_P25_TG, req, [=](json::object& req, json::object& reply) {
+                                        if (!req["status"].is<int>()) {
+                                            ::LogError(LOG_P25, "failed to send active TG list to VC %s:%u, invalid RPC response", voiceChData.address().c_str(), voiceChData.port());
+                                            return;
+                                        }
+
+                                        int status = req["status"].get<int>();
+                                        if (status != network::NetRPC::OK) {
+                                            ::LogError(LOG_P25, "failed to send active TG list to VC %s:%u", voiceChData.address().c_str(), voiceChData.port());
+                                            if (req["message"].is<std::string>()) {
+                                                std::string retMsg = req["message"].get<std::string>();
+                                                ::LogError(LOG_P25, "RPC failed, %s", retMsg.c_str());
+                                            }
+                                        } 
+                                        else
+                                            ::LogMessage(LOG_P25, "VC %s:%u, active TG update, activeCnt = %u", voiceChData.address().c_str(), voiceChData.port(), activeCnt);
+                                    }, voiceChData.address(), voiceChData.port());
+                                }
+                            }
+                        }
+                    } else {
+                        std::unordered_map<uint32_t, ::lookups::VoiceChData> voiceChs = m_affiliations->rfCh()->rfChDataTable();
+                        for (auto entry : voiceChs) {
+                            ::lookups::VoiceChData voiceChData = entry.second;
+
+                            // callback RPC to transmit active TG list to the voice channels
+                            if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0) {
+                                if (voiceChData.address() != "0.0.0.0") {
+                                    json::object req = json::object();
+
+                                    g_RPC->req(RPC_CLEAR_ACTIVE_P25_TG, req, [=](json::object& req, json::object& reply) {
+                                        if (!req["status"].is<int>()) {
+                                            ::LogError(LOG_P25, "failed to send clear active TG list to VC %s:%u, invalid RPC response", voiceChData.address().c_str(), voiceChData.port());
+                                            return;
+                                        }
+
+                                        int status = req["status"].get<int>();
+                                        if (status != network::NetRPC::OK) {
+                                            ::LogError(LOG_P25, "failed to send clear active TG list to VC %s:%u", voiceChData.address().c_str(), voiceChData.port());
+                                            if (req["message"].is<std::string>()) {
+                                                std::string retMsg = req["message"].get<std::string>();
+                                                ::LogError(LOG_P25, "RPC failed, %s", retMsg.c_str());
+                                            }
+                                        } 
+                                        else
+                                            ::LogMessage(LOG_P25, "VC %s:%u, clear active TG update", voiceChData.address().c_str(), voiceChData.port());
+                                    }, voiceChData.address(), voiceChData.port());
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -1486,7 +1587,7 @@ void Control::processFrameLoss()
         LogMessage(LOG_RF, P25_TDU_STR ", total frames: %d, bits: %d, undecodable LC: %d, errors: %d, BER: %.4f%%",
             m_voice->m_rfFrames, m_voice->m_rfBits, m_voice->m_rfUndecodableLC, m_voice->m_rfErrs, float(m_voice->m_rfErrs * 100U) / float(m_voice->m_rfBits));
 
-        m_affiliations.releaseGrant(m_voice->m_rfLC.getDstId(), false);
+        m_affiliations->releaseGrant(m_voice->m_rfLC.getDstId(), false);
         if (!m_enableControl) {
             notifyCC_ReleaseGrant(m_voice->m_rfLC.getDstId());
         }
@@ -1543,10 +1644,10 @@ void Control::processInCallCtrl(network::NET_ICC::ENUM command, uint32_t dstId)
         {
             if (m_rfState == RS_RF_AUDIO && m_voice->m_rfLC.getDstId() == dstId) {
                 LogWarning(LOG_P25, "network requested in-call traffic reject, dstId = %u", dstId);
-                if (m_affiliations.isGranted(dstId)) {
-                    uint32_t srcId = m_affiliations.getGrantedSrcId(dstId);
+                if (m_affiliations->isGranted(dstId)) {
+                    uint32_t srcId = m_affiliations->getGrantedSrcId(dstId);
 
-                    m_affiliations.releaseGrant(dstId, false);
+                    m_affiliations->releaseGrant(dstId, false);
                     if (!m_enableControl) {
                         notifyCC_ReleaseGrant(dstId);
                     }
@@ -1823,6 +1924,47 @@ void Control::RPC_permittedTG(json::object& req, json::object& reply)
     permittedTG(dstId, dataPermit);
 }
 
+/* (RPC Handler) Active TGID list from the authoritative CC host. */
+
+void Control::RPC_activeTG(json::object& req, json::object& reply)
+{
+    g_RPC->defaultResponse(reply, "OK", network::NetRPC::OK);
+
+    if (!req["active"].is<json::array>()) {
+        g_RPC->defaultResponse(reply, "\"active\" was not a valid JSON array", network::NetRPC::INVALID_ARGS);
+        return;
+    }
+    json::array active = req["active"].get<json::array>();
+
+    std::lock_guard<std::mutex> lock(m_activeTGLock);
+    m_activeTG.clear();
+
+    if (active.size() > 0) {
+        for (auto entry : active) {
+            if (!entry.is<uint32_t>()) {
+                g_RPC->defaultResponse(reply, "active TG was not a valid number", network::NetRPC::INVALID_ARGS);
+                continue;
+            }
+
+            m_activeTG.push_back(entry.get<uint32_t>());
+        }
+    }
+
+    ::LogMessage(LOG_P25, "active TG update, activeCnt = %u", m_activeTG.size());
+}
+
+/* (RPC Handler) Clear active TGID list from the authoritative CC host. */
+
+void Control::RPC_clearActiveTG(json::object& req, json::object& reply)
+{
+    g_RPC->defaultResponse(reply, "OK", network::NetRPC::OK);
+
+    if (m_activeTG.size() > 0) {
+        std::lock_guard<std::mutex> lock(m_activeTGLock);
+        m_activeTG.clear();
+    }
+}
+
 /* (RPC Handler) Releases a granted TG. */
 
 void Control::RPC_releaseGrantTG(json::object& req, json::object& reply)
@@ -1853,16 +1995,16 @@ void Control::RPC_releaseGrantTG(json::object& req, json::object& reply)
         LogMessage(LOG_P25, "VC request, release TG grant, dstId = %u", dstId);
     }
 
-    if (m_affiliations.isGranted(dstId)) {
-        uint32_t chNo = m_affiliations.getGrantedCh(dstId);
-        uint32_t srcId = m_affiliations.getGrantedSrcId(dstId);
-        ::lookups::VoiceChData voiceCh = m_affiliations.rfCh()->getRFChData(chNo);
+    if (m_affiliations->isGranted(dstId)) {
+        uint32_t chNo = m_affiliations->getGrantedCh(dstId);
+        uint32_t srcId = m_affiliations->getGrantedSrcId(dstId);
+        ::lookups::VoiceChData voiceCh = m_affiliations->rfCh()->getRFChData(chNo);
 
         if (m_verbose) {
             LogMessage(LOG_P25, "VC %s:%u, TG grant released, srcId = %u, dstId = %u, chId = %u, chNo = %u", voiceCh.address().c_str(), voiceCh.port(), srcId, dstId, voiceCh.chId(), chNo);
         }
 
-        m_affiliations.releaseGrant(dstId, false);
+        m_affiliations->releaseGrant(dstId, false);
     }
 }
 
@@ -1892,16 +2034,16 @@ void Control::RPC_touchGrantTG(json::object& req, json::object& reply)
 
     // LogDebugEx(LOG_P25, "Control::RPC_touchGrantTG()", "callback, dstId = %u", dstId);
 
-    if (m_affiliations.isGranted(dstId)) {
-        uint32_t chNo = m_affiliations.getGrantedCh(dstId);
-        uint32_t srcId = m_affiliations.getGrantedSrcId(dstId);
-        ::lookups::VoiceChData voiceCh = m_affiliations.rfCh()->getRFChData(chNo);
+    if (m_affiliations->isGranted(dstId)) {
+        uint32_t chNo = m_affiliations->getGrantedCh(dstId);
+        uint32_t srcId = m_affiliations->getGrantedSrcId(dstId);
+        ::lookups::VoiceChData voiceCh = m_affiliations->rfCh()->getRFChData(chNo);
 
         if (m_verbose) {
             LogMessage(LOG_P25, "VC %s:%u, call in progress, srcId = %u, dstId = %u, chId = %u, chNo = %u", voiceCh.address().c_str(), voiceCh.port(), srcId, dstId, voiceCh.chId(), chNo);
         }
 
-        m_affiliations.touchGrant(dstId);
+        m_affiliations->touchGrant(dstId);
     }
 }
 

@@ -1,0 +1,81 @@
+#
+# Digital Voice Modem - TG Patch
+#
+
+# Flag indicating whether the host will run as a background or foreground task.
+daemon: true
+
+#
+# Logging Configuration
+#
+#   Logging Levels:
+#     1 - Debug
+#     2 - Message
+#     3 - Informational
+#     4 - Warning
+#     5 - Error
+#     6 - Fatal
+#
+log:
+    # Console display logging level (used when in foreground).
+    displayLevel: 1
+    # File logging level.
+    fileLevel: 1
+    # Flag indicating file logs should be sent to syslog instead of a file.
+    useSyslog: false
+    # Full path for the directory to store the log files.
+    filePath: .
+    # Full path for the directory to store the activity log files.
+    activityFilePath: .
+    # Log filename prefix.
+    fileRoot: dvmpatch
+
+#
+# Network Configuration
+#
+network:
+    # Network Peer ID
+    id: 9000123
+    # Hostname/IP address of FNE master to connect to.
+    address: 127.0.0.1
+    # Port number to connect to.
+    port: 62031
+    # FNE access password.
+    password: RPT1234
+    
+    # Flag indicating whether or not host endpoint networking is encrypted.
+    encrypted: false
+    # AES-256 32-byte Preshared Key
+    #   (This field *must* be 32 hex bytes in length or 64 characters
+    #    0 - 9, A - F.)
+    presharedKey: "000102030405060708090A0B0C0D0E0F000102030405060708090A0B0C0D0E0F"
+
+    # Flag indicating whether or not the host diagnostic log will be sent to the network.
+    allowDiagnosticTransfer: true
+
+    # Flag indicating whether or not verbose debug logging is enabled.
+    debug: false
+
+    # Source Talkgroup ID for transmitted/received audio frames.
+    sourceTGID: 1
+    # Source Slot for received/transmitted audio frames.
+    sourceSlot: 1
+    # Destination Talkgroup ID for transmitted/received audio frames.
+    destinationTGID: 1
+    # Destination Slot for received/transmitted audio frames.
+    destinationSlot: 1
+
+    # Flag indicating whether or not the patch is two-way.
+    twoWay: false
+
+system:
+    # Textual Name
+    identity: PATCH
+
+    # Digital mode (1 - DMR, 2 - P25).
+    digiMode: 1
+
+    # Flag indicating whether or not trace logging is enabled.
+    trace: false
+    # Flag indicating whether or not debug logging is enabled.
+    debug: false

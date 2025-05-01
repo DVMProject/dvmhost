@@ -37,7 +37,7 @@ bool TalkgroupRulesLookup::m_locked = false;
 // Unlock the table.
 #define __UNLOCK_TABLE() m_locked = false;
 
-// Spinlock wait for table to be released.
+// Spinlock wait for table to be read unlocked.
 #define __SPINLOCK()                            \
     if (m_locked) {                             \
         while (m_locked)                        \
@@ -232,6 +232,7 @@ TalkgroupRuleGroupVoice TalkgroupRulesLookup::find(uint32_t id, uint8_t slot)
 
     __SPINLOCK();
 
+    std::lock_guard<std::mutex> lock(m_mutex);
     auto it = std::find_if(m_groupVoice.begin(), m_groupVoice.end(),
         [&](TalkgroupRuleGroupVoice x)
         {
@@ -258,6 +259,7 @@ TalkgroupRuleGroupVoice TalkgroupRulesLookup::findByRewrite(uint32_t peerId, uin
 
     __SPINLOCK();
 
+    std::lock_guard<std::mutex> lock(m_mutex);
     auto it = std::find_if(m_groupVoice.begin(), m_groupVoice.end(),
         [&](TalkgroupRuleGroupVoice x)
         {

@@ -18,6 +18,7 @@
 
 #include "fne/Defines.h"
 #include "common/network/BaseNetwork.h"
+#include "common/ThreadPool.h"
 #include "fne/network/FNENetwork.h"
 
 #include <string>
@@ -46,8 +47,9 @@ namespace network
          * @param network Instance of the FNENetwork class.
          * @param address Network Hostname/IP address to listen on.
          * @param port Network port number.
+         * @param workerCnt Number of worker threads.
          */
-        DiagNetwork(HostFNE* host, FNENetwork* fneNetwork, const std::string& address, uint16_t port);
+        DiagNetwork(HostFNE* host, FNENetwork* fneNetwork, const std::string& address, uint16_t port, uint16_t workerCnt);
         /**
          * @brief Finalizes a instance of the DiagNetwork class.
          */
@@ -97,12 +99,13 @@ namespace network
 
         NET_CONN_STATUS m_status;
 
+        ThreadPool m_threadPool;
+
         /**
          * @brief Entry point to process a given network packet.
-         * @param arg Instance of the NetPacketRequest structure.
-         * @returns void* (Ignore)
+         * @param req Instance of the NetPacketRequest structure.
          */
-        static void* threadedNetworkRx(void* arg);
+        static void taskNetworkRx(NetPacketRequest* req);
     };
 } // namespace network
 
