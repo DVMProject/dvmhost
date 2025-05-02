@@ -773,6 +773,11 @@ void Network::clock(uint32_t ms)
                             m_useAlternatePortForDiagnostics = (buffer[6U] & 0x80U) == 0x80U;
                             if (m_useAlternatePortForDiagnostics) {
                                 LogMessage(LOG_NET, "PEER %u RPTC ACK, master commanded alternate port for diagnostics and activity logging, remotePeerId = %u", m_peerId, rtpHeader.getSSRC());
+                            } else {
+                                // disable diagnostic and activity logging automatically if the master doesn't utilize the alternate port
+                                m_allowDiagnosticTransfer = false;
+                                m_allowActivityTransfer = false;
+                                LogWarning(LOG_NET, "PEER %u RPTC ACK, master does not enable alternate port for diagnostics and activity logging, diagnostic and activity logging are disabled, remotePeerId = %u", m_peerId, rtpHeader.getSSRC());
                             }
                         }
                         break;

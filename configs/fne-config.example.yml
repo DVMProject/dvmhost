@@ -38,6 +38,8 @@ master:
     # Hostname/IP address to listen on (blank for all).
     address: 0.0.0.0
     # Port number to listen on.
+    # NOTE: This port number includes itself for traffic, and master port + 1 for diagnostics and activity logging. (For 
+    #   example, a master port of 62031 will use 62032 for diagnostic and activity messages.)
     port: 62031
     # FNE access password.
     password: RPT1234
@@ -217,16 +219,6 @@ system:
     # Flag indicating the TGID information for this master will be sent to its peers.
     sendTalkgroups: true
 
-    # Flag indicating the FNE should use an alternate port dedicated to diagnostic and activity
-    # log processing. This port number is always: master port + 1 (so for example, a master port
-    # of 62031 will use 62032 for diagnostic and activity messages.)
-    # NOTE: Disabling useAlternatePortForDiagnostics will result in some tools like, SysView, to stop working properly.
-    #   SysView requires useAlternatePortForDiagnostics to receive peer status updates.
-    useAlternatePortForDiagnostics: true
-    # Flag indicating whether or not the host activity log will be sent to the network.
-    # NOTE: Disabling allowActivityTransfer will result in some tools like, SysView, to stop working properly.
-    #   SysView requires allowActivityTransfer to receive peer status updates.
-    allowActivityTransfer: true
     # Flag indicating whether or not the host diagnostic log will be sent to the network.
     allowDiagnosticTransfer: true
 

@@ -347,6 +347,16 @@ bool HostFNE::readParams()
     m_allowActivityTransfer = systemConf["allowActivityTransfer"].as<bool>(true);
     m_allowDiagnosticTransfer = systemConf["allowDiagnosticTransfer"].as<bool>(true);
 
+    if (!m_useAlternatePortForDiagnostics) {
+        LogWarning(LOG_HOST, "Alternate port for diagnostics and activity logging is disabled, this severely limits functionality and will prevent peer connections from transmitting diagnostic and activity logging to this FNE!");
+        LogWarning(LOG_HOST, "It is *not* recommended to disable the \"useAlternatePortForDiagnostics\" option.");
+    }
+
+    if (!m_allowActivityTransfer) {
+        LogWarning(LOG_HOST, "Peer activity logging is disabled, this severely limits functionality and can prevent proper operations by prohibiting activity logging to this FNE!");
+        LogWarning(LOG_HOST, "It is *not* recommended to disable the \"allowActivityTransfer\" option.");
+    }
+
     LogInfo("General Parameters");
     LogInfo("    Peer Ping Time: %us", m_pingTime);
     LogInfo("    Maximum Missed Pings: %u", m_maxMissedPings);
@@ -354,8 +364,14 @@ bool HostFNE::readParams()
 
     LogInfo("    Send Talkgroups: %s", sendTalkgroups ? "yes" : "no");
 
-    LogInfo("    Use Alternate Port for Diagnostics: %s", m_useAlternatePortForDiagnostics ? "yes" : "no");
-    LogInfo("    Allow Activity Log Transfer: %s", m_allowActivityTransfer ? "yes" : "no");
+    if (m_useAlternatePortForDiagnostics)
+        LogInfo("    Use Alternate Port for Diagnostics: yes");
+    else
+        LogInfo(" !! Use Alternate Port for Diagnostics: no");
+    if (m_allowActivityTransfer)
+        LogInfo("    Allow Activity Log Transfer: yes");
+    else
+        LogInfo(" !! Allow Activity Log Transfer: no");
     LogInfo("    Allow Diagnostic Log Transfer: %s", m_allowDiagnosticTransfer ? "yes" : "no");
 
     // attempt to load and populate routing rules
