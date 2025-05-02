@@ -148,6 +148,10 @@ bool FrameQueue::write(const uint8_t* message, uint32_t length, uint32_t streamI
     uint32_t bufferLen = 0U;
     uint8_t* buffer = generateMessage(message, length, streamId, peerId, ssrc, opcode, rtpSeq, &bufferLen);
 
+    if (bufferLen > (DATA_PACKET_LENGTH / 2U)) {
+        LogWarning(LOG_NET, "FrameQueue::write(), packet length is possibly oversized, possible data truncation");
+    }
+
     bool ret = true;
     if (!m_socket->write(buffer, bufferLen, addr, addrLen)) {
         // LogError(LOG_NET, "Failed writing data to the network");
@@ -182,6 +186,10 @@ void FrameQueue::enqueueMessage(const uint8_t* message, uint32_t length, uint32_
 
     uint32_t bufferLen = 0U;
     uint8_t* buffer = generateMessage(message, length, streamId, peerId, ssrc, opcode, rtpSeq, &bufferLen);
+
+    if (bufferLen > (DATA_PACKET_LENGTH / 2U)) {
+        LogWarning(LOG_NET, "FrameQueue::enqueueMessage(), packet length is possibly oversized, possible data truncation");
+    }
 
     udp::UDPDatagram *dgram = new udp::UDPDatagram;
     dgram->buffer = buffer;
