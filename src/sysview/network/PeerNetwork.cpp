@@ -38,7 +38,9 @@ PeerNetwork::PeerNetwork(const std::string& address, uint16_t port, uint16_t loc
     bool duplex, bool debug, bool dmr, bool p25, bool nxdn, bool slot1, bool slot2, bool allowActivityTransfer, bool allowDiagnosticTransfer, bool updateLookup, bool saveLookup) :
     Network(address, port, localPort, peerId, password, duplex, debug, dmr, p25, nxdn, slot1, slot2, allowActivityTransfer, allowDiagnosticTransfer, updateLookup, saveLookup),
     peerStatus(),
-    m_peerLink(false)
+    m_peerLink(false),
+    m_tgidPkt(true, "Peer-Link, TGID List"),
+    m_ridPkt(true, "Peer-Link, RID List")
 {
     assert(!address.empty());
     assert(port > 0U);
@@ -130,6 +132,7 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
                     LogError(LOG_NET, "Talkgroup ID lookups not available yet.");
                     m_tgidPkt.clear();
                     delete[] decompressed;
+                    break;
                 }
 
                 // store to file
@@ -151,6 +154,7 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
                     LogError(LOG_NET, "Cannot open the talkgroup ID lookup file - %s", filename.c_str());
                     m_tgidPkt.clear();
                     delete[] decompressed;
+                    break;
                 }
 
                 file << str;
@@ -167,7 +171,7 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
                 ::remove(filename.c_str());
                 m_tgidPkt.clear();
                 delete[] decompressed;
-        }
+            }
         }
         break;
 
@@ -181,6 +185,7 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
                     LogError(LOG_NET, "Radio ID lookups not available yet.");
                     m_ridPkt.clear();
                     delete[] decompressed;
+                    break;
                 }
 
                 // store to file
@@ -202,6 +207,7 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
                     LogError(LOG_NET, "Cannot open the radio ID lookup file - %s", filename.c_str());
                     m_ridPkt.clear();
                     delete[] decompressed;
+                    break;
                 }
 
                 file << str;
@@ -218,7 +224,7 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
                 ::remove(filename.c_str());
                 m_ridPkt.clear();
                 delete[] decompressed;
-        }
+            }
         }
         break;
 

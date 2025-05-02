@@ -140,9 +140,9 @@ namespace network
         lookups::PeerListLookup* m_pidLookup;
         bool m_peerLink;
 
-        PacketBuffer m_tgidPkt{true, "Peer-Link, TGID List"};
-        PacketBuffer m_ridPkt{true, "Peer-Link, RID List"};
-        PacketBuffer m_pidPkt{true, "Peer-Link, PID List"};
+        PacketBuffer m_tgidPkt;
+        PacketBuffer m_ridPkt;
+        PacketBuffer m_pidPkt;
     };
 } // namespace network
 

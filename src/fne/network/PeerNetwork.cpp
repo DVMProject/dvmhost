@@ -35,7 +35,10 @@ PeerNetwork::PeerNetwork(const std::string& address, uint16_t port, uint16_t loc
     m_attachedKeyRSPHandler(false),
     m_blockTrafficToTable(),
     m_pidLookup(nullptr),
-    m_peerLink(false)
+    m_peerLink(false),
+    m_tgidPkt(true, "Peer-Link, TGID List"),
+    m_ridPkt(true, "Peer-Link, RID List"),
+    m_pidPkt(true, "Peer-Link, PID List")
 {
     assert(!address.empty());
     assert(port > 0U);
@@ -112,7 +115,7 @@ bool PeerNetwork::writePeerLinkPeers(json::array* peerList)
         ::memcpy(buffer + 0U, TAG_PEER_LINK, 4U);
         ::snprintf(buffer + 8U, json.length() + 1U, "%s", json.c_str());
 
-        PacketBuffer pkt{true, "Peer-Link, Active Peer List"};
+        PacketBuffer pkt(true, "Peer-Link, Active Peer List");
         pkt.encode((uint8_t*)buffer, len);
 
         uint32_t streamId = createStreamId();

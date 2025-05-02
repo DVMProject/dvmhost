@@ -102,8 +102,8 @@ namespace network
         static std::mutex m_peerStatusMutex;
         bool m_peerLink;
 
-        PacketBuffer m_tgidPkt{true, "Peer-Link, TGID List"};
-        PacketBuffer m_ridPkt{true, "Peer-Link, RID List"};
+        PacketBuffer m_tgidPkt;
+        PacketBuffer m_ridPkt;
     };
 } // namespace network
 
