@@ -128,7 +128,7 @@ bool PacketBuffer::decode(const uint8_t* data, uint8_t** message, uint32_t* outL
                 }
 
                 fragments.unlock();
-                fragments.clear();
+                clear();
                 return true;
             }
         }
@@ -139,7 +139,7 @@ bool PacketBuffer::decode(const uint8_t* data, uint8_t** message, uint32_t* outL
             }
 
             fragments.unlock();
-            fragments.clear();
+            clear();
             return true;
         }
 
