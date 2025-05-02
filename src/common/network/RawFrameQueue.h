@@ -110,4 +110,4 @@ namespace network
     };
 } // namespace network
 
-#endif // __FRAME_QUEUE_H__
+#endif // __RAW_FRAME_QUEUE_H__

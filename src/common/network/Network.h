@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
+/*
  * Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-*  Copyright (C) 2017-2025 Bryan Biedenkapp, N2PLL
-*
-*/
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2017-2025 Bryan Biedenkapp, N2PLL
+ *
+ */
 /**
  * @file Network.h
  * @ingroup network_core
