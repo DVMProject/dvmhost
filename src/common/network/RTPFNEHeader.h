@@ -27,8 +27,6 @@
 //  Constants
 // ---------------------------------------------------------------------------
 
-#define PEER_LINK_BLOCK_SIZE 534
-
 #define RTP_FNE_HEADER_LENGTH_BYTES 16
 #define RTP_FNE_HEADER_LENGTH_EXT_LEN 4
 

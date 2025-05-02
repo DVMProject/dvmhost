@@ -19,6 +19,7 @@
 #include "Defines.h"
 #include "common/lookups/PeerListLookup.h"
 #include "common/network/Network.h"
+#include "common/network/PacketBuffer.h"
 
 #include <string>
 #include <cstdint>
@@ -139,20 +140,9 @@ namespace network
         lookups::PeerListLookup* m_pidLookup;
         bool m_peerLink;
 
-        uint32_t m_tgidCompressedSize;
-        uint32_t m_tgidSize;
-
-        uint8_t* m_tgidBuffer;
-
-        uint32_t m_ridCompressedSize;
-        uint32_t m_ridSize;
-
-        uint8_t* m_ridBuffer;
-
-        uint32_t m_pidCompressedSize;
-        uint32_t m_pidSize;
-
-        uint8_t* m_pidBuffer;
+        PacketBuffer m_tgidPkt{true, "Peer-Link, TGID List"};
+        PacketBuffer m_ridPkt{true, "Peer-Link, RID List"};
+        PacketBuffer m_pidPkt{true, "Peer-Link, PID List"};
     };
 } // namespace network
 

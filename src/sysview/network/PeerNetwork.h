@@ -22,6 +22,7 @@
 
 #include "Defines.h"
 #include "common/network/Network.h"
+#include "common/network/PacketBuffer.h"
 
 #include <string>
 #include <cstdint>
@@ -101,15 +102,8 @@ namespace network
         static std::mutex m_peerStatusMutex;
         bool m_peerLink;
 
-        uint32_t m_tgidCompressedSize;
-        uint32_t m_tgidSize;
-
-        uint8_t* m_tgidBuffer;
-
-        uint32_t m_ridCompressedSize;
-        uint32_t m_ridSize;
-
-        uint8_t* m_ridBuffer;
+        PacketBuffer m_tgidPkt{true, "Peer-Link, TGID List"};
+        PacketBuffer m_ridPkt{true, "Peer-Link, RID List"};
     };
 } // namespace network
 

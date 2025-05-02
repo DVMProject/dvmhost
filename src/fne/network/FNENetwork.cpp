@@ -1915,46 +1915,15 @@ void FNENetwork::writeWhitelistRIDs(uint32_t peerId, uint32_t streamId, bool isE
             ::memset(buffer, 0x00U, len);
             ::memcpy(buffer, b.str().data(), len);
 
-            uint32_t compressedLen = 0U;
-            uint8_t* compressed = Compression::compress((uint8_t*)buffer, len, &compressedLen);
+            PacketBuffer pkt{true, "Peer-Link, RID List"};
+            pkt.encode((uint8_t*)buffer, len);
 
-            if (compressed != nullptr) {
-                // transmit TGIDs
-                uint8_t blockCnt = (compressedLen / PEER_LINK_BLOCK_SIZE) + (compressedLen % PEER_LINK_BLOCK_SIZE ? 1U : 0U);
-                uint32_t offs = 0U;
-                for (uint8_t i = 0U; i < blockCnt; i++) {
-                    // build dataset
-                    uint16_t bufSize = 10U + (PEER_LINK_BLOCK_SIZE);
-                    UInt8Array __payload = std::make_unique<uint8_t[]>(bufSize);
-                    uint8_t* payload = __payload.get();
-                    ::memset(payload, 0x00U, bufSize);
-
-                    if (i == 0U) {
-                        __SET_UINT32(len, payload, 0U);
-                        __SET_UINT32(compressedLen, payload, 4U);
-                    }
-
-                    payload[8U] = i;
-                    payload[9U] = blockCnt - 1U;
-
-                    uint32_t blockSize = PEER_LINK_BLOCK_SIZE;
-                    if (offs + PEER_LINK_BLOCK_SIZE > compressedLen)
-                        blockSize = PEER_LINK_BLOCK_SIZE - ((offs + PEER_LINK_BLOCK_SIZE) - compressedLen);
-
-                    ::memcpy(payload + 10U, compressed + offs, blockSize);
-
-                    if (m_debug)
-                        Utils::dump(1U, "Peer-Link RID Block Payload", payload, bufSize);
-
-                    offs += PEER_LINK_BLOCK_SIZE;
-
+            if (pkt.fragments.size() > 0U) {
+                for (auto frag : pkt.fragments) {
                     writePeer(peerId, { NET_FUNC::PEER_LINK, NET_SUBFUNC::PL_RID_LIST }, 
-                        payload, bufSize, 0U, streamId, false, true, true);
+                        frag.second->data, FRAG_SIZE, 0U, streamId, false, true, true);
+                    Thread::sleep(60U); // pace block transmission
                 }
-
-                connection->lastPing(now);
-            } else {
-                LogError(LOG_NET, "PEER %u error compressing RID list", peerId);
             }
         }
 
@@ -2140,46 +2109,15 @@ void FNENetwork::writeTGIDs(uint32_t peerId, uint32_t streamId, bool isExternalP
             ::memset(buffer, 0x00U, len);
             ::memcpy(buffer, b.str().data(), len);
 
-            uint32_t compressedLen = 0U;
-            uint8_t* compressed = Compression::compress((uint8_t*)buffer, len, &compressedLen);
+            PacketBuffer pkt{true, "Peer-Link, TGID List"};
+            pkt.encode((uint8_t*)buffer, len);
 
-            if (compressed != nullptr) {
-                // transmit TGIDs
-                uint8_t blockCnt = (compressedLen / PEER_LINK_BLOCK_SIZE) + (compressedLen % PEER_LINK_BLOCK_SIZE ? 1U : 0U);
-                uint32_t offs = 0U;
-                for (uint8_t i = 0U; i < blockCnt; i++) {
-                    // build dataset
-                    uint16_t bufSize = 10U + (PEER_LINK_BLOCK_SIZE);
-                    UInt8Array __payload = std::make_unique<uint8_t[]>(bufSize);
-                    uint8_t* payload = __payload.get();
-                    ::memset(payload, 0x00U, bufSize);
-
-                    if (i == 0U) {
-                        __SET_UINT32(len, payload, 0U);
-                        __SET_UINT32(compressedLen, payload, 4U);
-                    }
-
-                    payload[8U] = i;
-                    payload[9U] = blockCnt - 1U;
-
-                    uint32_t blockSize = PEER_LINK_BLOCK_SIZE;
-                    if (offs + PEER_LINK_BLOCK_SIZE > compressedLen)
-                        blockSize = PEER_LINK_BLOCK_SIZE - ((offs + PEER_LINK_BLOCK_SIZE) - compressedLen);
-
-                    ::memcpy(payload + 10U, compressed + offs, blockSize);
-
-                    if (m_debug)
-                        Utils::dump(1U, "Peer-Link TGID Block Payload", payload, bufSize);
-
-                    offs += PEER_LINK_BLOCK_SIZE;
-
+            if (pkt.fragments.size() > 0U) {
+                for (auto frag : pkt.fragments) {
                     writePeer(peerId, { NET_FUNC::PEER_LINK, NET_SUBFUNC::PL_TALKGROUP_LIST }, 
-                        payload, bufSize, 0U, streamId, false, true, true);
+                        frag.second->data, FRAG_SIZE, 0U, streamId, false, true, true);
+                    Thread::sleep(60U); // pace block transmission
                 }
-
-                connection->lastPing(now);
-            } else {
-                LogError(LOG_NET, "PEER %u error compressing TGID list", peerId);
             }
         }
 
@@ -2354,46 +2292,15 @@ void FNENetwork::writePeerList(uint32_t peerId, uint32_t streamId)
         ::memset(buffer, 0x00U, len);
         ::memcpy(buffer, b.str().data(), len);
 
-        uint32_t compressedLen = 0U;
-        uint8_t* compressed = Compression::compress((uint8_t*)buffer, len, &compressedLen);
+        PacketBuffer pkt{true, "Peer-Link, PID List"};
+        pkt.encode((uint8_t*)buffer, len);
 
-        if (compressed != nullptr) {
-            // transmit PIDs
-            uint8_t blockCnt = (compressedLen / PEER_LINK_BLOCK_SIZE) + (compressedLen % PEER_LINK_BLOCK_SIZE ? 1U : 0U);
-            uint32_t offs = 0U;
-            for (uint8_t i = 0U; i < blockCnt; i++) {
-                // build dataset
-                uint16_t bufSize = 10U + (PEER_LINK_BLOCK_SIZE);
-                UInt8Array __payload = std::make_unique<uint8_t[]>(bufSize);
-                uint8_t* payload = __payload.get();
-                ::memset(payload, 0x00U, bufSize);
-
-                if (i == 0U) {
-                    __SET_UINT32(len, payload, 0U);
-                    __SET_UINT32(compressedLen, payload, 4U);
-                }
-
-                payload[8U] = i;
-                payload[9U] = blockCnt - 1U;
-
-                uint32_t blockSize = PEER_LINK_BLOCK_SIZE;
-                if (offs + PEER_LINK_BLOCK_SIZE > compressedLen)
-                    blockSize = PEER_LINK_BLOCK_SIZE - ((offs + PEER_LINK_BLOCK_SIZE) - compressedLen);
-
-                ::memcpy(payload + 10U, compressed + offs, blockSize);
-
-                if (m_debug)
-                    Utils::dump(1U, "Peer-Link Peer List Block Payload", payload, bufSize);
-
-                offs += PEER_LINK_BLOCK_SIZE;
-
+        if (pkt.fragments.size() > 0U) {
+            for (auto frag : pkt.fragments) {
                 writePeer(peerId, { NET_FUNC::PEER_LINK, NET_SUBFUNC::PL_PEER_LIST }, 
-                    payload, bufSize, 0U, streamId, false, true, true);
+                    frag.second->data, FRAG_SIZE, 0U, streamId, false, true, true);
+                Thread::sleep(60U); // pace block transmission
             }
-
-            connection->lastPing(now);
-        } else {
-            LogError(LOG_NET, "PEER %u error compressing PID list", peerId);
         }
     }
 

@@ -33,6 +33,7 @@
 #include "common/lookups/TalkgroupRulesLookup.h"
 #include "common/lookups/PeerListLookup.h"
 #include "common/network/Network.h"
+#include "common/network/PacketBuffer.h"
 #include "common/ThreadPool.h"
 #include "fne/network/influxdb/InfluxDB.h"
 #include "fne/CryptoContainer.h"
@@ -563,36 +564,23 @@ namespace network
         std::unordered_map<uint32_t, uint16_t> m_peerLinkKeyQueue;
 
         /**
-         * @brief Represents a Peer-Link Active Peer List fragment packet.
+         * @brief Represents a packet buffer entry in a map.
          */
-        class PLActPeerPkt {
+        class PacketBufferEntry {
         public:
-            /**
-             * @brief Compressed size of the packet.
-             */
-            uint32_t compressedSize;
-            /**
-             * @brief Uncompressed size of the packet.
-             */
-            uint32_t size;
-
-            /**
-             * @brief Last block of the packet.
-             */
-            uint8_t lastBlock;
             /**
              * @brief Stream ID of the packet.
              */
             uint32_t streamId;
 
             /**
-             * @brief Packet fragments.
+             * @brief Packet fragment buffer.
              */
-            std::unordered_map<uint8_t, uint8_t*> fragments;
+            PacketBuffer* buffer;
 
             bool locked;
         };
-        concurrent::unordered_map<uint32_t, PLActPeerPkt> m_peerLinkActPkt;
+        concurrent::unordered_map<uint32_t, PacketBufferEntry> m_peerLinkActPkt;
 
         Timer m_maintainenceTimer;
 
