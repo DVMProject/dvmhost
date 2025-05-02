@@ -116,6 +116,7 @@ bool PeerNetwork::writePeerLinkPeers(json::array* peerList)
         pkt.encode((uint8_t*)buffer, len);
 
         uint32_t streamId = createStreamId();
+        LogInfoEx(LOG_NET, "PEER %u Peer-Link, Active Peer List, blocks %u, streamId = %u", m_peerId, pkt.fragments.size(), streamId);
         if (pkt.fragments.size() > 0U) {
             for (auto frag : pkt.fragments) {
                 writeMaster({ NET_FUNC::PEER_LINK, NET_SUBFUNC::PL_ACT_PEER_LIST }, 

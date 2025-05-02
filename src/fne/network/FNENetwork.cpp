@@ -1918,6 +1918,7 @@ void FNENetwork::writeWhitelistRIDs(uint32_t peerId, uint32_t streamId, bool isE
             PacketBuffer pkt{true, "Peer-Link, RID List"};
             pkt.encode((uint8_t*)buffer, len);
 
+            LogInfoEx(LOG_NET, "PEER %u Peer-Link, RID List, blocks %u, streamId = %u", peerId, pkt.fragments.size(), streamId);
             if (pkt.fragments.size() > 0U) {
                 for (auto frag : pkt.fragments) {
                     writePeer(peerId, { NET_FUNC::PEER_LINK, NET_SUBFUNC::PL_RID_LIST }, 
@@ -2112,6 +2113,7 @@ void FNENetwork::writeTGIDs(uint32_t peerId, uint32_t streamId, bool isExternalP
             PacketBuffer pkt{true, "Peer-Link, TGID List"};
             pkt.encode((uint8_t*)buffer, len);
 
+            LogInfoEx(LOG_NET, "PEER %u Peer-Link, TGID List, blocks %u, streamId = %u", peerId, pkt.fragments.size(), streamId);
             if (pkt.fragments.size() > 0U) {
                 for (auto frag : pkt.fragments) {
                     writePeer(peerId, { NET_FUNC::PEER_LINK, NET_SUBFUNC::PL_TALKGROUP_LIST }, 
@@ -2295,6 +2297,7 @@ void FNENetwork::writePeerList(uint32_t peerId, uint32_t streamId)
         PacketBuffer pkt{true, "Peer-Link, PID List"};
         pkt.encode((uint8_t*)buffer, len);
 
+        LogInfoEx(LOG_NET, "PEER %u Peer-Link, PID List, blocks %u, streamId = %u", peerId, pkt.fragments.size(), streamId);
         if (pkt.fragments.size() > 0U) {
             for (auto frag : pkt.fragments) {
                 writePeer(peerId, { NET_FUNC::PEER_LINK, NET_SUBFUNC::PL_PEER_LIST }, 

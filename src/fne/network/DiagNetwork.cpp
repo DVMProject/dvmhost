@@ -387,9 +387,6 @@ void DiagNetwork::taskNetworkRx(NetPacketRequest* req)
 
                                 // Utils::dump(1U, "Raw Payload", rawPayload, req->length);
 
-                                uint8_t curBlock = rawPayload[8U];
-                                uint8_t blockCnt = rawPayload[9U];
-
                                 if (network->m_peerLinkActPkt.find(peerId) == network->m_peerLinkActPkt.end()) {
                                     network->m_peerLinkActPkt.insert(peerId, FNENetwork::PacketBufferEntry());
 
@@ -419,8 +416,6 @@ void DiagNetwork::taskNetworkRx(NetPacketRequest* req)
                                 }
 
                                 pkt.locked = true;
-
-                                LogInfoEx(LOG_NET, "PEER %u Peer-Link, Active Peer List, block %u of %u, streamId = %u", peerId, curBlock, blockCnt, streamId);
 
                                 uint32_t decompressedLen = 0U;
                                 uint8_t* decompressed = nullptr;
