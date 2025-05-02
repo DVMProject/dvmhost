@@ -475,7 +475,7 @@ void FNENetwork::close()
 
         uint32_t streamId = createStreamId();
         for (auto peer : m_peers) {
-            writePeer(peer.first, { NET_FUNC::MST_CLOSING, NET_SUBFUNC::NOP }, buffer, 1U, RTP_END_OF_CALL_SEQ, streamId, false);
+            writePeer(peer.first, { NET_FUNC::MST_DISC, NET_SUBFUNC::NOP }, buffer, 1U, RTP_END_OF_CALL_SEQ, streamId, false);
         }
     }
 
@@ -997,7 +997,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                 }
                 break;
 
-            case NET_FUNC::RPT_CLOSING:                                 // Repeater Closing (Disconnect)
+            case NET_FUNC::RPT_DISC:                                    // Repeater Disconnect
                 {
                     if (peerId > 0 && (network->m_peers.find(peerId) != network->m_peers.end())) {
                         FNEPeerConnection* connection = network->m_peers[peerId];
@@ -1006,7 +1006,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
 
                             // validate peer (simple validation really)
                             if (connection->connected() && connection->address() == ip) {
-                                LogInfoEx(LOG_NET, "PEER %u (%s) is closing down", peerId, connection->identity().c_str());
+                                LogInfoEx(LOG_NET, "PEER %u (%s) disconnected", peerId, connection->identity().c_str());
                                 network->erasePeer(peerId);
                                 delete connection;
                             }

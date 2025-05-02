@@ -781,9 +781,9 @@ void Network::clock(uint32_t ms)
                 }
             }
             break;
-        case NET_FUNC::MST_CLOSING:                                     // Master Shutdown
+        case NET_FUNC::MST_DISC:                                        // Master Disconnect
             {
-                LogError(LOG_NET, "PEER %u master is closing down, remotePeerId = %u", m_peerId, m_remotePeerId);
+                LogError(LOG_NET, "PEER %u master disconnect, remotePeerId = %u", m_peerId, m_remotePeerId);
                 m_status = NET_STAT_WAITING_CONNECT;
 
                 // fire off peer disconnected callback if we have one
@@ -895,7 +895,7 @@ void Network::close()
         uint8_t buffer[1U];
         ::memset(buffer, 0x00U, 1U);
 
-        writeMaster({ NET_FUNC::RPT_CLOSING, NET_SUBFUNC::NOP }, buffer, 1U, pktSeq(true), createStreamId());
+        writeMaster({ NET_FUNC::RPT_DISC, NET_SUBFUNC::NOP }, buffer, 1U, pktSeq(true), createStreamId());
     }
 
     m_socket->close();

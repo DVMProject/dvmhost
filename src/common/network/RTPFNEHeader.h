@@ -46,7 +46,7 @@ namespace network
         enum ENUM : uint8_t {
             ILLEGAL = 0xFFU,                        //! Illegal Function
 
-            PROTOCOL = 0x00U,                       //! Network Protocol Function
+            PROTOCOL = 0x00U,                       //! Digital Protocol Function
 
             MASTER = 0x01U,                         //! Network Master Function
 
@@ -54,8 +54,8 @@ namespace network
             RPTK = 0x61U,                           //! Repeater Authorisation
             RPTC = 0x62U,                           //! Repeater Configuration
 
-            RPT_CLOSING = 0x70U,                    //! Repeater Closing
-            MST_CLOSING = 0x71U,                    //! Master Closing
+            RPT_DISC = 0x70U,                       //! Repeater Disconnect
+            MST_DISC = 0x71U,                       //! Master Disconnect
 
             PING = 0x74U,                           //! Ping
             PONG = 0x75U,                           //! Pong
