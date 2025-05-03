@@ -127,6 +127,7 @@ int detail::inner::request(const char* method, const char* uri, const std::strin
     struct timeval tv;
 
     // connect to the server
+    uint8_t retryCnt = 0U;
     ret = connect(fd, addr->ai_addr, addr->ai_addrlen);
     if (ret < 0) {
         if (errno == EINPROGRESS) {
@@ -138,6 +139,18 @@ int detail::inner::request(const char* method, const char* uri, const std::strin
                 FD_SET(fd, &fdset);
 
                 ret = select(fd + 1, NULL, &fdset, NULL, &tv);
+                if (errno == EINTR) {
+                    ++retryCnt;
+
+                    if (retryCnt > 5U) {
+                        ::LogError(LOG_HOST, "Failed to connect to InfluxDB server, timed out while connecting");
+                        closesocket(fd);
+                        return 1;
+                    }
+
+                    Thread::sleep(1U);
+                }
+
                 if (ret < 0 && errno != EINTR) {
 #if defined(_WIN32)
                     ::LogError(LOG_HOST, "Failed to connect to InfluxDB server, err: %lu", ::GetLastError());
