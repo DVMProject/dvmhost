@@ -244,6 +244,7 @@ int detail::inner::request(const char* method, const char* uri, const std::strin
     ret = 0;
 
     if (writev(fd, iv, 2) < (int)(iv[0].iov_len + iv[1].iov_len)) {
+        ::LogError(LOG_HOST, "Failed to write statistical data to InfluxDB server, err: %d", errno);
         ret = -6;
     }
 
