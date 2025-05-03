@@ -199,11 +199,13 @@ int detail::inner::request(const char* method, const char* uri, const std::strin
 
     // ensure the remaining TCP operations timeout
 #if defined(_WIN32)
-    int sendTimeout = SOCK_CONNECT_TIMEOUT;
-    setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, (const char*)&sendTimeout, sizeof(sendTimeout));
+    int timeout = SOCK_CONNECT_TIMEOUT;
+    setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&timeout, sizeof(timeout));
+    setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, (const char*)&timeout, sizeof(timeout));
 #else
     tv.tv_sec = SOCK_CONNECT_TIMEOUT;
     tv.tv_usec = 0;
+    setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
     setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
 #endif // defined(_WIN32)
 
