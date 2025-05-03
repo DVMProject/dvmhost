@@ -34,16 +34,13 @@ ThreadPool detail::TSCaller::m_fluxReqThreadPool{MAX_INFLUXQL_THREAD_CNT, "fluxq
 /* Generates a InfluxDB REST API request. */
 
 int detail::inner::request(const char* method, const char* uri, const std::string& queryString, const std::string& body, 
-    const ServerInfo& si, std::string* resp) 
+    const ServerInfo& si) 
 {
     std::string header;
     struct iovec iv[2];
     int fd, contentLength = 0, len = 0;
     char ch;
     unsigned char chunked = 0;
-
-    if (resp)
-        resp->clear();
 
     struct addrinfo hints, *addr = nullptr;
     struct in6_addr serverAddr;
@@ -246,70 +243,12 @@ int detail::inner::request(const char* method, const char* uri, const std::strin
     iv[1].iov_base = (void*)&body[0];
     iv[1].iov_len = body.length();
 
+    ret = 0;
+
     if (writev(fd, iv, 2) < (int)(iv[0].iov_len + iv[1].iov_len)) {
         ret = -6;
-        goto END;
     }
 
-    iv[0].iov_len = len;
-
-#define _NO_MORE() (len >= (int)iv[0].iov_len && (iv[0].iov_len = recv(fd, &header[0], header.length(), len = 0)) == size_t(-1))
-#define _GET_NEXT_CHAR() (ch = _NO_MORE() ? 0 : header[len++])
-#define _LOOP_NEXT(statement) for(;;) { if(!(_GET_NEXT_CHAR())) { ret = -7; goto END; } statement }
-#define _UNTIL(c) _LOOP_NEXT( if(ch == c) break; )
-#define _GET_NUMBER(n) _LOOP_NEXT( if(ch >= '0' && ch <= '9') n = n * 10 + (ch - '0'); else break; )
-#define _GET_CHUNKED_LEN(n, c) _LOOP_NEXT( if(ch >= '0' && ch <= '9') n = n * 16 + (ch - '0'); \
-else if(ch >= 'A' && ch <= 'F') n = n * 16 + (ch - 'A') + 10; \
-else if(ch >= 'a' && ch <= 'f') n = n * 16 + (ch - 'a') + 10; else {if(ch != c) { ret = -8; goto END; } break;} )
-#define _(c) if((_GET_NEXT_CHAR()) != c) break;
-#define __(c) if((_GET_NEXT_CHAR()) != c) { ret = -9; goto END; }
-
-    if (resp)
-        resp->clear();
-
-    _UNTIL(' ')_GET_NUMBER(ret)
-    while (true) {
-        _UNTIL('\n')
-        switch (_GET_NEXT_CHAR()) {
-            case 'C':_('o')_('n')_('t')_('e')_('n')_('t')_('-')
-                _('L')_('e')_('n')_('g')_('t')_('h')_(':')_(' ')
-                _GET_NUMBER(contentLength)
-                break;
-            case 'T':_('r')_('a')_('n')_('s')_('f')_('e')_('r')_('-')
-                _('E')_('n')_('c')_('o')_('d')_('i')_('n')_('g')_(':')
-                _(' ')_('c')_('h')_('u')_('n')_('k')_('e')_('d')
-                chunked = 1;
-                break;
-            case '\r':__('\n')
-                switch (chunked) {
-                    do {__('\r')__('\n')
-                    case 1:
-                        _GET_CHUNKED_LEN(contentLength, '\r')__('\n')
-                        if (!contentLength) {
-                            __('\r')__('\n')
-                            goto END;
-                        }
-                    case 0:
-                        while (contentLength > 0 && !_NO_MORE()) {
-                            //contentLength -= (iv[1].iov_len = std::min(contentLength, (int)iv[0].iov_len - len));
-                            contentLength -= (iv[1].iov_len = (((contentLength) < ((int)iv[0].iov_len - len)) ? (contentLength) : ((int)iv[0].iov_len - len)));
-                            if (resp)
-                                resp->append(&header[len], iv[1].iov_len);
-                            len += iv[1].iov_len;
-                        }
-                    } while(chunked);
-                }
-                goto END;
-        }
-
-        if (!ch) {
-            ret = -10;
-            goto END;
-        }
-    }
-
-    ret = -11;
-END:
     // set SO_LINGER option
     struct linger sl;
     sl.l_onoff = 1;     /* non-zero value enables linger option in kernel */
@@ -321,13 +260,5 @@ END:
 #endif
     // close socket
     closesocket(fd);
-    return ret / 100 == 2 ? 0 : ret;
-#undef _NO_MORE
-#undef _GET_NEXT_CHAR
-#undef _LOOP_NEXT
-#undef _UNTIL
-#undef _GET_NUMBER
-#undef _GET_CHUNKED_LEN
-#undef _
-#undef __
+    return ret;
 }

@@ -148,12 +148,11 @@ namespace network
                  * @param uri URI.
                  * @param queryString Query.
                  * @param body Content body.
-                 * @param si 
-                 * @param resp 
+                 * @param si Server Information.
                  * @returns int 
                  */
                 static int request(const char* method, const char* uri, const std::string& queryString, const std::string& body, 
-                    const ServerInfo& si, std::string* resp);
+                    const ServerInfo& si);
             
             private:
                 /**
@@ -188,23 +187,6 @@ namespace network
                     out.append(src.c_str() + start, src.length() - start);
                 }
             };
-
-            /**
-             * @brief Helper to generate a InfluxDB query.
-             * @param resp 
-             * @param query 
-             * @param si 
-             */
-            inline int fluxQL(std::string& resp, const std::string& query, const ServerInfo& si) 
-            {
-                // query JSON body
-                std::stringstream body;
-                body << "{\"query\": \"";
-                body << query;
-                body << "\", \"type\": \"flux\" }";
-
-                return detail::inner::request("POST", "query", "", body.str(), si, &resp);
-            }
         } // namespace detail
 
         // ---------------------------------------------------------------------------
@@ -428,7 +410,7 @@ namespace network
             struct HOST_SW_API TSCaller : public QueryBuilder
             {                
                 detail::TagCaller& meas(const std::string& m)                   { m_lines << '\n'; return this->m(m); }
-                int request(const ServerInfo& si, std::string* resp = nullptr)  { return detail::inner::request("POST", "write", "", m_lines.str(), si, resp); }
+                int request(const ServerInfo& si)  { return detail::inner::request("POST", "write", "", m_lines.str(), si); }
                 int requestAsync(const ServerInfo& si) 
                 {
                     TSCallerRequest* req = new TSCallerRequest();
@@ -478,7 +460,7 @@ namespace network
                     }
 
                     const ServerInfo& si = req->si;
-                    detail::inner::request("POST", "write", "", req->lines, si, nullptr);
+                    detail::inner::request("POST", "write", "", req->lines, si);
 
                     delete req;
                 }
