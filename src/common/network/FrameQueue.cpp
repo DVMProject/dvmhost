@@ -148,8 +148,10 @@ bool FrameQueue::write(const uint8_t* message, uint32_t length, uint32_t streamI
     uint32_t bufferLen = 0U;
     uint8_t* buffer = generateMessage(message, length, streamId, peerId, ssrc, opcode, rtpSeq, &bufferLen);
 
-    if (bufferLen > (DATA_PACKET_LENGTH / 2U)) {
-        LogWarning(LOG_NET, "FrameQueue::write(), packet length is possibly oversized, possible data truncation");
+    // bryanb: this is really a developer warning not a end-user warning, there's nothing the end-users can do about
+    //  this message
+    if (bufferLen > (DATA_PACKET_LENGTH - OVERSIZED_PACKET_WARN)) {
+        LogDebug(LOG_NET, "FrameQueue::write(), WARN: packet length is possibly oversized, possible data truncation - BUGBUG");
     }
 
     bool ret = true;
@@ -187,8 +189,10 @@ void FrameQueue::enqueueMessage(const uint8_t* message, uint32_t length, uint32_
     uint32_t bufferLen = 0U;
     uint8_t* buffer = generateMessage(message, length, streamId, peerId, ssrc, opcode, rtpSeq, &bufferLen);
 
-    if (bufferLen > (DATA_PACKET_LENGTH / 2U)) {
-        LogWarning(LOG_NET, "FrameQueue::enqueueMessage(), packet length is possibly oversized, possible data truncation");
+    // bryanb: this is really a developer warning not a end-user warning, there's nothing the end-users can do about
+    //  this message
+    if (bufferLen > (DATA_PACKET_LENGTH - OVERSIZED_PACKET_WARN)) {
+        LogDebug(LOG_NET, "FrameQueue::enqueueMessage(), WARN: packet length is possibly oversized, possible data truncation - BUGBUG");
     }
 
     udp::UDPDatagram *dgram = new udp::UDPDatagram;
