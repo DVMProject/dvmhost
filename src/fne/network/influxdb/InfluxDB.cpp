@@ -38,9 +38,7 @@ int detail::inner::request(const char* method, const char* uri, const std::strin
 {
     std::string header;
     struct iovec iv[2];
-    int fd, contentLength = 0, len = 0;
-    char ch;
-    unsigned char chunked = 0;
+    int fd, len = 0;
 
     struct addrinfo hints, *addr = nullptr;
     struct in6_addr serverAddr;
