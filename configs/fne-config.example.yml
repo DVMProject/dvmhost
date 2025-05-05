@@ -219,6 +219,10 @@ system:
     # Flag indicating the TGID information for this master will be sent to its peers.
     sendTalkgroups: true
 
+    # Flag indicating when this FNE instance receives peer link configuration updates, it will save those
+    # peer link configurations.
+    peerLinkSaveACL: false
+
     # Flag indicating whether or not the host diagnostic log will be sent to the network.
     allowDiagnosticTransfer: true
 

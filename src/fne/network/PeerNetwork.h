@@ -110,6 +110,12 @@ namespace network
          */
         bool isPeerLink() const { return m_peerLink; }
 
+        /**
+         * @brief Enables the option that will save the pushed peer link ACL data to the local ACL files.
+         * @param enabled Flag to enable ACL data saving.
+         */
+        void setPeerLinkSaveACL(bool enabled) { m_peerLinkSavesACL = enabled; }
+
     public:
         /**
          * @brief Flag indicating whether or not this peer network has a key response handler attached.
@@ -139,6 +145,7 @@ namespace network
     private:
         lookups::PeerListLookup* m_pidLookup;
         bool m_peerLink;
+        bool m_peerLinkSavesACL;
 
         PacketBuffer m_tgidPkt;
         PacketBuffer m_ridPkt;

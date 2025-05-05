@@ -36,6 +36,7 @@ PeerNetwork::PeerNetwork(const std::string& address, uint16_t port, uint16_t loc
     m_blockTrafficToTable(),
     m_pidLookup(nullptr),
     m_peerLink(false),
+    m_peerLinkSavesACL(false),
     m_tgidPkt(true, "Peer-Link, TGID List"),
     m_ridPkt(true, "Peer-Link, RID List"),
     m_pidPkt(true, "Peer-Link, PID List")
@@ -167,10 +168,14 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
 
                 // randomize filename
                 std::ostringstream s;
-                std::random_device rd;
-                std::mt19937 mt(rd());
-                std::uniform_int_distribution<uint32_t> dist(0x00U, 0xFFFFFFFFU);
-                s << "/tmp/talkgroup_rules.yml." << dist(mt);
+                if (!m_peerLinkSavesACL) {
+                    std::random_device rd;
+                    std::mt19937 mt(rd());
+                    std::uniform_int_distribution<uint32_t> dist(0x00U, 0xFFFFFFFFU);
+                    s << "/tmp/talkgroup_rules.yml." << dist(mt);
+                } else {
+                    s << m_tidLookup->filename();
+                }
 
                 std::string filename = s.str();
                 std::ofstream file(filename, std::ofstream::out);
@@ -221,10 +226,14 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
 
                 // randomize filename
                 std::ostringstream s;
-                std::random_device rd;
-                std::mt19937 mt(rd());
-                std::uniform_int_distribution<uint32_t> dist(0x00U, 0xFFFFFFFFU);
-                s << "/tmp/rid_acl.dat." << dist(mt);
+                if (!m_peerLinkSavesACL) {
+                    std::random_device rd;
+                    std::mt19937 mt(rd());
+                    std::uniform_int_distribution<uint32_t> dist(0x00U, 0xFFFFFFFFU);
+                    s << "/tmp/rid_acl.dat." << dist(mt);
+                } else {
+                    s << m_ridLookup->filename();
+                }
 
                 std::string filename = s.str();
                 std::ofstream file(filename, std::ofstream::out);
@@ -275,10 +284,14 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
 
                 // randomize filename
                 std::ostringstream s;
-                std::random_device rd;
-                std::mt19937 mt(rd());
-                std::uniform_int_distribution<uint32_t> dist(0x00U, 0xFFFFFFFFU);
-                s << "/tmp/peer_list.dat." << dist(mt);
+                if (!m_peerLinkSavesACL) {
+                    std::random_device rd;
+                    std::mt19937 mt(rd());
+                    std::uniform_int_distribution<uint32_t> dist(0x00U, 0xFFFFFFFFU);
+                    s << "/tmp/peer_list.dat." << dist(mt);
+                } else {
+                    s << m_pidLookup->filename();
+                }
 
                 std::string filename = s.str();
                 std::ofstream file(filename, std::ofstream::out);
