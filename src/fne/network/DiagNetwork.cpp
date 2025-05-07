@@ -450,6 +450,7 @@ void DiagNetwork::taskNetworkRx(NetPacketRequest* req)
                                     }
 
                                     pkt.buffer->clear();
+                                    delete pkt.buffer;
                                     pkt.streamId = 0U;
                                     network->m_peerLinkActPkt.erase(peerId);
                                 } else {
