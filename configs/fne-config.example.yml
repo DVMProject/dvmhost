@@ -213,8 +213,8 @@ system:
     # Maximum number of missable pings before a peer is considered disconnected.
     maxMissedPings: 10
 
-    # Time in minutes between updates of the talkgroup rules.
-    tgRuleUpdateTime: 10
+    # Time in minutes between updates of the ACL rules.
+    aclRuleUpdateTime: 10
 
     # Flag indicating the TGID information for this master will be sent to its peers.
     sendTalkgroups: true

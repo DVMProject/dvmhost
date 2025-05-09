@@ -329,7 +329,7 @@ bool HostFNE::readParams()
     yaml::Node systemConf = m_conf["system"];
     m_pingTime = systemConf["pingTime"].as<uint32_t>(5U);
     m_maxMissedPings = systemConf["maxMissedPings"].as<uint32_t>(5U);
-    m_updateLookupTime = systemConf["tgRuleUpdateTime"].as<uint32_t>(10U);
+    m_updateLookupTime = systemConf["aclRuleUpdateTime"].as<uint32_t>(10U);
     bool sendTalkgroups = systemConf["sendTalkgroups"].as<bool>(true);
     m_peerLinkSavesACL = systemConf["peerLinkSaveACL"].as<bool>(false);
 
@@ -362,7 +362,7 @@ bool HostFNE::readParams()
     LogInfo("General Parameters");
     LogInfo("    Peer Ping Time: %us", m_pingTime);
     LogInfo("    Maximum Missed Pings: %u", m_maxMissedPings);
-    LogInfo("    Talkgroup Rule Update Time: %u mins", m_updateLookupTime);
+    LogInfo("    ACL Rule Update Time: %u mins", m_updateLookupTime);
 
     LogInfo("    Send Talkgroups: %s", sendTalkgroups ? "yes" : "no");
     LogInfo("    Peer Link ACL is retained: %s", m_peerLinkSavesACL ? "yes" : "no");

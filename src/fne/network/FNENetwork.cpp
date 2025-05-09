@@ -39,6 +39,8 @@ const uint32_t MAX_HARD_CONN_CAP = 250U;
 const uint8_t MAX_PEER_LIST_BEFORE_FLUSH = 10U;
 const uint32_t MAX_RID_LIST_CHUNK = 50U;
 
+const uint32_t MAX_MISSED_ACL_UPDATES = 10U;
+
 const uint64_t PACKET_LATE_TIME = 200U; // 200ms
 
 // ---------------------------------------------------------------------------
@@ -82,7 +84,7 @@ FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port,
     m_peerLinkKeyQueue(),
     m_peerLinkActPkt(),
     m_maintainenceTimer(1000U, pingTime),
-    m_updateLookupTime(updateLookupTime * 60U),
+    m_updateLookupTimer(1000U, (updateLookupTime * 60U)),
     m_softConnLimit(0U),
     m_callInProgress(false),
     m_disallowAdjStsBcast(false),
@@ -383,25 +385,42 @@ void FNENetwork::clock(uint32_t ms)
             }
         }
 
-        // send ACL updates forcibly to any Peer-Link peers
+        m_maintainenceTimer.start();
+    }
+
+    m_updateLookupTimer.clock(ms);
+    if (m_updateLookupTimer.isRunning() && m_updateLookupTimer.hasExpired()) {
+        // send ACL updates to peers
+        m_peers.lock(false);
         for (auto peer : m_peers) {
             uint32_t id = peer.first;
             FNEPeerConnection* connection = peer.second;
             if (connection != nullptr) {
+                // if this connection is a peer link *always* send the update -- no stream checking
                 if (connection->connected() && connection->isPeerLink()) {
-                    // does this peer need an ACL update?
-                    uint64_t dt = connection->lastACLUpdate() + (m_updateLookupTime * 1000);
-                    if (dt < now) {
-                        LogInfoEx(LOG_NET, "PEER %u (%s) updating ACL list, dt = %u, now = %u", id, connection->identity().c_str(),
-                            dt, now);
+                    LogInfoEx(LOG_NET, "PEER %u (%s), Peer-Link, updating ACL list", id, connection->identity().c_str());
+
+                    peerACLUpdate(id);
+                    connection->missedACLUpdates(0U);
+                    continue;
+                }
+
+                if (connection->connected()) {
+                    if ((connection->streamCount() <= 1) || (connection->missedACLUpdates() > MAX_MISSED_ACL_UPDATES)) {
+                        LogInfoEx(LOG_NET, "PEER %u (%s) updating ACL list", id, connection->identity().c_str());
                         peerACLUpdate(id);
-                        connection->lastACLUpdate(now);
+                        connection->missedACLUpdates(0U);
+                    } else {
+                        uint32_t missed = connection->missedACLUpdates();
+                        missed++;
+
+                        LogInfoEx(LOG_NET, "PEER %u (%s) skipped for ACL update, traffic in progress", id, connection->identity().c_str());
+                        connection->missedACLUpdates(missed);
                     }
                 }
             }
         }
-
-        m_maintainenceTimer.start();
+        m_peers.unlock();
     }
 
     m_parrotDelayTimer.clock(ms);
@@ -904,7 +923,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                         connection->connected(true);
                                         connection->pingsReceived(0U);
                                         connection->lastPing(now);
-                                        connection->lastACLUpdate(now);
+                                        connection->missedACLUpdates(0U);
                                         network->m_peers[peerId] = connection;
 
                                         // attach extra notification data to the RPTC ACK to notify the peer of 
@@ -1029,22 +1048,6 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
 
                                 connection->pingsReceived(pingsRx);
                                 connection->lastPing(now);
-
-                                // does this peer need an ACL update?
-                                uint64_t dt = connection->lastACLUpdate() + (network->m_updateLookupTime * 1000);
-                                if (dt < now) {
-                                    if (connection->streamCount() <= 1 || ((dt * 2) < now)) {
-                                        if ((dt * 2) < now)
-                                            LogInfoEx(LOG_NET, "PEER %u (%s) late updating ACL list, dt = %u, ddt = %u, now = %u", peerId, connection->identity().c_str(),
-                                                dt, dt * 2, now);
-                                        else
-                                            LogInfoEx(LOG_NET, "PEER %u (%s) updating ACL list, dt = %u,  now = %u", peerId, connection->identity().c_str(),
-                                                dt, now);
-
-                                        network->peerACLUpdate(peerId);
-                                        connection->lastACLUpdate(now);
-                                    }
-                                }
 
                                 uint8_t payload[8U];
                                 ::memset(payload, 0x00U, 8U);

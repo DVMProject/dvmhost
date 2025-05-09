@@ -117,7 +117,7 @@ namespace network
             m_connectionState(NET_STAT_INVALID),
             m_pingsReceived(0U),
             m_lastPing(0U),
-            m_lastACLUpdate(0U),
+            m_missedACLUpdates(0U),
             m_isExternalPeer(false),
             m_isConventionalPeer(false),
             m_isSysView(false),
@@ -146,7 +146,7 @@ namespace network
             m_connectionState(NET_STAT_INVALID),
             m_pingsReceived(0U),
             m_lastPing(0U),
-            m_lastACLUpdate(0U),
+            m_missedACLUpdates(0U),
             m_isExternalPeer(false),
             m_isConventionalPeer(false),
             m_isSysView(false),
@@ -333,9 +333,9 @@ namespace network
         __PROPERTY_PLAIN(uint64_t, lastPing);
 
         /**
-         * @brief Last ACL update sent.
+         * @brief Number of missed ACL updates.
          */
-        __PROPERTY_PLAIN(uint64_t, lastACLUpdate);
+        __PROPERTY_PLAIN(uint32_t, missedACLUpdates);
 
         /**
          * @brief Flag indicating this connection is from an external peer.
@@ -583,8 +583,8 @@ namespace network
         concurrent::unordered_map<uint32_t, PacketBufferEntry> m_peerLinkActPkt;
 
         Timer m_maintainenceTimer;
+        Timer m_updateLookupTimer;
 
-        uint32_t m_updateLookupTime;
         uint32_t m_softConnLimit;
 
         bool m_callInProgress;
