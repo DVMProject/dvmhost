@@ -865,7 +865,7 @@ void* threadNetworkPump(void* arg)
                                 case P25DEF::TSBKO::OSP_ADJ_STS_BCAST:
                                 {
                                     lc::tsbk::OSP_ADJ_STS_BCAST* osp = static_cast<lc::tsbk::OSP_ADJ_STS_BCAST*>(tsbk.get());
-                                    LogMessage(LOG_NET, P25_TSDU_STR ", %s, sysId = $%03X, rfss = $%02X, site = $%02X, chId = %u, chNo = %u, svcClass = $%02X", tsbk->toString().c_str(),
+                                    LogMessage(LOG_NET, P25_TSDU_STR ", %s, sysId = $%03X, rfss = $%02X, site = $%02X, chNo = %u-%u, svcClass = $%02X", tsbk->toString().c_str(),
                                         osp->getAdjSiteSysId(), osp->getAdjSiteRFSSId(), osp->getAdjSiteId(), osp->getAdjSiteChnId(), osp->getAdjSiteChnNo(), osp->getAdjSiteSvcClass());
 
                                     // generate a net event for this

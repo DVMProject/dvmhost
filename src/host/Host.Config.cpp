@@ -264,7 +264,7 @@ bool Host::readParams()
                 }
             }
 
-            ::LogInfoEx(LOG_HOST, "Voice Channel Id %u Channel No $%04X RPC Address %s:%u", chId, chNo, rpcApiAddress.c_str(), rpcApiPort);
+            ::LogInfoEx(LOG_HOST, "Voice Channel Id %u Channel No $%04X (%u-%u) RPC Address %s:%u", chId, chNo, chId, chNo, rpcApiAddress.c_str(), rpcApiPort);
 
             VoiceChData data = VoiceChData(chId, chNo, rpcApiAddress, rpcApiPort, rpcApiPassword);
             m_channelLookup->setRFChData(chNo, data);
@@ -279,7 +279,7 @@ bool Host::readParams()
 
             char hexStr[29];
 
-            ::sprintf(hexStr, "$%01X.%01X (%u.%u)", voiceChData.chId(), chNo, voiceChData.chId(), chNo);
+            ::sprintf(hexStr, "$%01X-%04X (%u-%u)", voiceChData.chId(), chNo, voiceChData.chId(), chNo);
 
             strVoiceChNo.append(std::string(hexStr));
             strVoiceChNo.append(",");
