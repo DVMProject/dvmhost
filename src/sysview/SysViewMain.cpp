@@ -583,8 +583,8 @@ void* threadNetworkPump(void* arg)
                                 case P25DEF::TSBKO::IOSP_GRP_VCH:
                                 case P25DEF::TSBKO::IOSP_UU_VCH:
                                 {
-                                    LogMessage(LOG_NET, P25_TSDU_STR ", %s, emerg = %u, encrypt = %u, prio = %u, chNo = %u, srcId = %u (%s), dstId = %u (%s)",
-                                        tsbk->toString(true).c_str(), tsbk->getEmergency(), tsbk->getEncrypted(), tsbk->getPriority(), tsbk->getGrpVchNo(), 
+                                    LogMessage(LOG_NET, P25_TSDU_STR ", %s, emerg = %u, encrypt = %u, prio = %u, chNo = %u-%u, srcId = %u (%s), dstId = %u (%s)",
+                                        tsbk->toString(true).c_str(), tsbk->getEmergency(), tsbk->getEncrypted(), tsbk->getPriority(), tsbk->getGrpVchId(), tsbk->getGrpVchNo(), 
                                         srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str());
 
                                     // generate a net event for this
@@ -595,6 +595,8 @@ void* threadNetworkPump(void* arg)
                                         netEvent["encry"].set<bool>(encry);
                                         uint8_t prio = tsbk->getPriority();
                                         netEvent["prio"].set<uint8_t>(prio);
+                                        uint8_t chId = tsbk->getGrpVchId();
+                                        netEvent["chId"].set<uint32_t>(chId);
                                         uint32_t chNo = tsbk->getGrpVchNo();
                                         netEvent["chNo"].set<uint32_t>(chNo);
 

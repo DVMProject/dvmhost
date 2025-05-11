@@ -637,8 +637,8 @@ void TagP25Data::routeRewrite(uint8_t* buffer, uint32_t peerId, uint8_t duid, ui
                 switch (tsbk->getLCO()) {
                     case TSBKO::IOSP_GRP_VCH:
                     {
-                        LogMessage(LOG_NET, P25_TSDU_STR ", %s, emerg = %u, encrypt = %u, prio = %u, chNo = %u, srcId = %u, dstId = %u",
-                            tsbk->toString(true).c_str(), tsbk->getEmergency(), tsbk->getEncrypted(), tsbk->getPriority(), tsbk->getGrpVchNo(), srcId, rewriteDstId);
+                        LogMessage(LOG_NET, P25_TSDU_STR ", %s, emerg = %u, encrypt = %u, prio = %u, chNo = %u-%u, srcId = %u, dstId = %u",
+                            tsbk->toString(true).c_str(), tsbk->getEmergency(), tsbk->getEncrypted(), tsbk->getPriority(), tsbk->getGrpVchId(), tsbk->getGrpVchNo(), srcId, rewriteDstId);
 
                         tsbk->setDstId(rewriteDstId);
                     }
@@ -1411,8 +1411,8 @@ bool TagP25Data::write_TSDU_Grant(uint32_t peerId, uint32_t srcId, uint32_t dstI
         iosp->setPriority(priority);
 
         if (m_network->m_verbose) {
-            LogMessage(LOG_NET, P25_TSDU_STR ", %s, emerg = %u, encrypt = %u, prio = %u, chNo = %u, srcId = %u, dstId = %u, peerId = %u",
-                iosp->toString().c_str(), iosp->getEmergency(), iosp->getEncrypted(), iosp->getPriority(), iosp->getGrpVchNo(), iosp->getSrcId(), iosp->getDstId(), peerId);
+            LogMessage(LOG_NET, P25_TSDU_STR ", %s, emerg = %u, encrypt = %u, prio = %u, chNo = %u-%u, srcId = %u, dstId = %u, peerId = %u",
+                iosp->toString().c_str(), iosp->getEmergency(), iosp->getEncrypted(), iosp->getPriority(), iosp->getGrpVchId(), iosp->getGrpVchNo(), iosp->getSrcId(), iosp->getDstId(), peerId);
         }
 
         write_TSDU(peerId, iosp.get());
@@ -1428,8 +1428,8 @@ bool TagP25Data::write_TSDU_Grant(uint32_t peerId, uint32_t srcId, uint32_t dstI
         iosp->setPriority(priority);
 
         if (m_network->m_verbose) {
-            LogMessage(LOG_NET, P25_TSDU_STR ", %s, emerg = %u, encrypt = %u, prio = %u, chNo = %u, srcId = %u, dstId = %u, peerId = %u",
-                iosp->toString().c_str(), iosp->getEmergency(), iosp->getEncrypted(), iosp->getPriority(), iosp->getGrpVchNo(), iosp->getSrcId(), iosp->getDstId(), peerId);
+            LogMessage(LOG_NET, P25_TSDU_STR ", %s, emerg = %u, encrypt = %u, prio = %u, chNo = %u-%u, srcId = %u, dstId = %u, peerId = %u",
+                iosp->toString().c_str(), iosp->getEmergency(), iosp->getEncrypted(), iosp->getPriority(), iosp->getGrpVchId(), iosp->getGrpVchNo(), iosp->getSrcId(), iosp->getDstId(), peerId);
         }
 
         write_TSDU(peerId, iosp.get());
