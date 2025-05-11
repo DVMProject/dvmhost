@@ -595,7 +595,7 @@ void* threadNetworkPump(void* arg)
                                         netEvent["encry"].set<bool>(encry);
                                         uint8_t prio = tsbk->getPriority();
                                         netEvent["prio"].set<uint8_t>(prio);
-                                        uint8_t chId = tsbk->getGrpVchId();
+                                        uint32_t chId = tsbk->getGrpVchId();
                                         netEvent["chId"].set<uint32_t>(chId);
                                         uint32_t chNo = tsbk->getGrpVchNo();
                                         netEvent["chNo"].set<uint32_t>(chNo);
