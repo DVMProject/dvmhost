@@ -421,6 +421,8 @@ void FNENetwork::clock(uint32_t ms)
             }
         }
         m_peers.unlock();
+
+        m_updateLookupTimer.start();
     }
 
     m_parrotDelayTimer.clock(ms);
@@ -464,6 +466,7 @@ bool FNENetwork::open()
 
     m_status = NET_STAT_MST_RUNNING;
     m_maintainenceTimer.start();
+    m_updateLookupTimer.start();
 
     m_socket = new udp::Socket(m_address, m_port);
 
@@ -499,6 +502,7 @@ void FNENetwork::close()
     }
 
     m_maintainenceTimer.stop();
+    m_updateLookupTimer.stop();
 
     // stop thread pool
     m_threadPool.stop();
