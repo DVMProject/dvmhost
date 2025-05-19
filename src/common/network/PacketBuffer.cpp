@@ -205,6 +205,8 @@ void PacketBuffer::encode(uint8_t* data, uint32_t length)
         fragments.insert(i, frag);
         LogInfoEx(LOG_NET, "%s, Outbound Packet Fragment, block %u of %u, txFragments = %u", m_name, i, blockCnt - 1U, fragments.size());
     }
+
+    delete[] buffer;
 }
 
 /* Helper to clear currently buffered fragments. */
