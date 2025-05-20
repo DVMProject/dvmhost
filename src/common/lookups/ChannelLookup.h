@@ -48,6 +48,8 @@ namespace lookups
         VoiceChData() :
             m_chId(0U),
             m_chNo(0U),
+            m_rxChId(0xFFU),
+            m_rxChNo(0xFFFFU),
             m_address(),
             m_port(),
             m_password(),
@@ -67,6 +69,29 @@ namespace lookups
         VoiceChData(uint8_t chId, uint32_t chNo, std::string address, uint16_t port, std::string password, bool ssl = false) :
             m_chId(chId),
             m_chNo(chNo),
+            m_rxChId(0xFFU),
+            m_rxChNo(0xFFFFU),
+            m_address(address),
+            m_port(port),
+            m_password(password),
+            m_ssl(ssl)
+        {
+            /* stub */
+        }
+        /**
+         * @brief Initializes a new instance of the VoiceChData class.
+         * @param chId Voice Channel Identity.
+         * @param chNo Voice Channel Number.
+         * @param chId Voice Rx Channel Identity.
+         * @param chNo Voice Rx Channel Number.
+         * @param address RPC/REST API Address.
+         * @param port RPC/REST API Port.
+         * @param password RPC/REST API Password.
+         * @param ssl Flag indicating REST is using SSL.
+         */
+        VoiceChData(uint8_t chId, uint32_t chNo, uint8_t rxChId, uint32_t rxChNo, std::string address, uint16_t port, std::string password, bool ssl = false) :
+            m_chId(chId),
+            m_chNo(chNo),
             m_address(address),
             m_port(port),
             m_password(password),
@@ -84,6 +109,8 @@ namespace lookups
             if (this != &data) {
                 m_chId = data.m_chId;
                 m_chNo = data.m_chNo;
+                m_rxChId = data.m_rxChId;
+                m_rxChNo = data.m_rxChNo;
                 m_address = data.m_address;
                 m_port = data.m_port;
                 m_password = data.m_password;
@@ -103,6 +130,22 @@ namespace lookups
          * @returns True, if channel is valid, otherwise false.
          */
         bool isValidCh() const { return m_chNo != 0U; }
+        /**
+         * @brief Helper to determine if the Rx channel identity is valid.
+         * @returns True, if channel identity is valid, otherwise false.
+         */
+        bool isValidRxChId() const { return m_rxChId != 0U && m_rxChId != 0xFFU; }
+        /**
+         * @brief Helper to determine if the Rx channel is valid.
+         * @returns True, if channel is valid, otherwise false.
+         */
+        bool isValidRxCh() const { return m_rxChNo != 0U && m_rxChNo != 0xFFFFU; }
+
+        /**
+         * @brief Helper to determine if the channel is explicitly defined with independant Rx and Tx channels.
+         * @returns True, if channel is explicit, otherwise false.
+         */
+        bool isExplicitCh() const { return (m_rxChId != 0xFFU && m_rxChId > 0U) && (m_rxChNo != 0xFFFFU && m_rxChNo > 0U); }
 
     public:
         /**
@@ -113,6 +156,14 @@ namespace lookups
          * @brief Voice Channel Number.
          */
         __READONLY_PROPERTY_PLAIN(uint32_t, chNo);
+        /**
+         * @brief Voice Rx Channel Identity.
+         */
+        __READONLY_PROPERTY_PLAIN(uint8_t, rxChId);
+        /**
+         * @brief Voice Rx Channel Number.
+         */
+        __READONLY_PROPERTY_PLAIN(uint32_t, rxChNo);
         /**
          * @brief RPC/REST API Address.
          */
