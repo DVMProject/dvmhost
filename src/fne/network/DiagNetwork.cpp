@@ -430,6 +430,9 @@ void DiagNetwork::taskNetworkRx(NetPacketRequest* req)
                                         LogError(LOG_NET, "PEER %u error parsing active peer list, %s", peerId, err.c_str());
                                         pkt.buffer->clear();
                                         pkt.streamId = 0U;
+                                        if (decompressed != nullptr) {
+                                            delete[] decompressed;
+                                        }
                                         network->m_peerLinkActPkt.erase(peerId);
                                         break;
                                     }
@@ -439,6 +442,9 @@ void DiagNetwork::taskNetworkRx(NetPacketRequest* req)
                                             LogError(LOG_NET, "PEER %u error parsing active peer list, data was not valid", peerId);
                                             pkt.buffer->clear();
                                             pkt.streamId = 0U;
+                                            if (decompressed != nullptr) {
+                                                delete[] decompressed;
+                                            }
                                             network->m_peerLinkActPkt.erase(peerId);
                                             break;
                                         }
