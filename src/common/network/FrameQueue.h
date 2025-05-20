@@ -115,7 +115,8 @@ namespace network
     private:
         uint32_t m_peerId;
 
-        concurrent::unordered_map<uint32_t, uint32_t> m_streamTimestamps;
+        std::mutex m_streamTSMtx;
+        std::unordered_map<uint32_t, uint32_t> m_streamTimestamps;
 
         /**
          * @brief Generate RTP message for the frame queue.

@@ -324,7 +324,7 @@ HostBridge::HostBridge(const std::string& confFile) :
     m_voxSampleLevel(30.0f),
     m_dropTimeMS(180U),
     m_localDropTime(1000U, 0U, 180U),
-    m_udpCallClock(1000U, 0U, 80U),
+    m_udpCallClock(1000U, 0U, 160U),
     m_udpHangTime(1000U, 0U, 180U),
     m_udpDropTime(1000U, 0U, 180U),
     m_detectAnalogMDC1200(false),
@@ -1099,9 +1099,6 @@ bool HostBridge::createNetwork()
 
     if (m_udpUseULaw && m_udpMetadata)
         m_udpMetadata = false; // metadata isn't supported when encoding uLaw
-
-    if (m_udpSilenceDuringHang && m_udpRTPFrames)
-        m_udpCallClock = Timer(1000U, 0U, 160U); // packets every 160ms
 
     yaml::Node tekConf = networkConf["tek"];
     bool tekEnable = tekConf["enable"].as<bool>(false);
@@ -3095,7 +3092,6 @@ void* HostBridge::threadUDPAudioProcess(void* arg)
                         }
                     }
 
-                    bridge->m_inputAudio.addData(samples, MBE_SAMPLES_LENGTH);
                     bridge->m_trafficFromUDP = true;
 
                     // force start a call if one isn't already in progress
