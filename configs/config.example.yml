@@ -403,8 +403,10 @@ system:
         supervisor: false
 
         # Channel Identity (corresponds to the appropriate entry in the iden_table file).
+        # Note: When using explicit channels, this represents the transmit channel number.
         channelId: 2
         # Channel Number (used to calculate actual host frequency based on the identity table).
+        # Note: When using explicit channels, this represents the transmit channel number.
         channelNo: 1
 
         #
@@ -431,9 +433,17 @@ system:
         #
         voiceChNo:
               # Channel Identity (corresponds to the appropriate entry in the iden_table file).
+              # Note: When using explicit channels, this represents the transmit channel identity.
             - channelId: 2
               # Channel Number (used to calculate actual host frequency based on the identity table).
+              # Note: When using explicit channels, this represents the transmit channel number.
               channelNo: 1
+              # Rx Channel Identity (corresponds to the appropriate entry in the iden_table file).
+              # Note: When this is defined, the voice channel is using explicit channel frequencies.
+              #rxChannelId: 2
+              # Rx Channel Number (used to calculate actual host frequency based on the identity table).
+              # Note: when this is defined, the voice channel is using explicit channel frequencies.
+              #rxChannelNo: 2
               # RPC IP Address for voice channel.
               rpcAddress: 127.0.0.1
               # RPC Port number for voice channel.

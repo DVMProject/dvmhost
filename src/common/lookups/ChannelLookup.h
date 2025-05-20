@@ -92,6 +92,8 @@ namespace lookups
         VoiceChData(uint8_t chId, uint32_t chNo, uint8_t rxChId, uint32_t rxChNo, std::string address, uint16_t port, std::string password, bool ssl = false) :
             m_chId(chId),
             m_chNo(chNo),
+            m_rxChId(rxChId),
+            m_rxChNo(rxChNo),
             m_address(address),
             m_port(port),
             m_password(password),

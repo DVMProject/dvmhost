@@ -2349,6 +2349,34 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
                 ::ActivityLog("P25", true, "group grant request from %u to TG %u", srcId, dstId);
             }
 
+            if (voiceChData.isExplicitCh()) {
+                std::unique_ptr<MBT_OSP_GRP_VCH_GRANT> osp = std::make_unique<MBT_OSP_GRP_VCH_GRANT>();
+                osp->setMFId(m_lastMFID);
+                osp->setSrcId(srcId);
+                osp->setDstId(dstId);
+                osp->setGrpVchId(voiceChData.chId());
+                osp->setGrpVchNo(chNo);
+                osp->setRxGrpVchId(voiceChData.rxChId());
+                osp->setRxGrpVchNo(voiceChData.rxChNo());
+                osp->setEmergency(emergency);
+                osp->setEncrypted(encryption);
+                osp->setPriority(priority);
+
+                osp->setForceChannelId(true);
+
+                if (m_verbose) {
+                    LogMessage((net) ? LOG_NET : LOG_RF, P25_TSDU_STR ", %s, emerg = %u, encrypt = %u, prio = %u, chNo = %u-%u, srcId = %u, dstId = %u",
+                        osp->toString().c_str(), osp->getEmergency(), osp->getEncrypted(), osp->getPriority(), osp->getGrpVchId(), osp->getGrpVchNo(), osp->getSrcId(), osp->getDstId());
+                }
+
+                // transmit group grant
+                writeRF_TSDU_AMBT(osp.get(), true);
+                if (m_redundantGrant) {
+                    for (int i = 0; i < 3; i++)
+                        writeRF_TSDU_AMBT(osp.get(), true);
+                }
+            }
+
             std::unique_ptr<IOSP_GRP_VCH> iosp = std::make_unique<IOSP_GRP_VCH>();
             iosp->setMFId(m_lastMFID);
             iosp->setSrcId(srcId);
@@ -2359,16 +2387,22 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
             iosp->setEncrypted(encryption);
             iosp->setPriority(priority);
 
-            if (m_verbose) {
-                LogMessage((net) ? LOG_NET : LOG_RF, P25_TSDU_STR ", %s, emerg = %u, encrypt = %u, prio = %u, chNo = %u-%u, srcId = %u, dstId = %u",
-                    iosp->toString().c_str(), iosp->getEmergency(), iosp->getEncrypted(), iosp->getPriority(), iosp->getGrpVchId(), iosp->getGrpVchNo(), iosp->getSrcId(), iosp->getDstId());
-            }
+            if (!voiceChData.isExplicitCh()) {
+                if (m_verbose) {
+                    LogMessage((net) ? LOG_NET : LOG_RF, P25_TSDU_STR ", %s, emerg = %u, encrypt = %u, prio = %u, chNo = %u-%u, srcId = %u, dstId = %u",
+                        iosp->toString().c_str(), iosp->getEmergency(), iosp->getEncrypted(), iosp->getPriority(), iosp->getGrpVchId(), iosp->getGrpVchNo(), iosp->getSrcId(), iosp->getDstId());
+                }
 
-            // transmit group grant
-            writeRF_TSDU_SBF_Imm(iosp.get(), net);
-            if (m_redundantGrant) {
-                for (int i = 0; i < 3; i++)
-                    writeRF_TSDU_SBF(iosp.get(), net);
+                // transmit group grant
+                writeRF_TSDU_SBF_Imm(iosp.get(), net);
+                if (m_redundantGrant) {
+                    for (int i = 0; i < 3; i++)
+                        writeRF_TSDU_SBF(iosp.get(), net);
+                }
+            } else {
+                if (!net) {
+                    writeNet_TSDU(iosp.get());
+                }
             }
         }
         else {
@@ -2419,6 +2453,34 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
                 ::ActivityLog("P25", true, "unit-to-unit grant request from %u to %u", srcId, dstId);
             }
 
+            if (voiceChData.isExplicitCh()) {
+                std::unique_ptr<MBT_OSP_UU_VCH_GRANT> osp = std::make_unique<MBT_OSP_UU_VCH_GRANT>();
+                osp->setMFId(m_lastMFID);
+                osp->setSrcId(srcId);
+                osp->setDstId(dstId);
+                osp->setGrpVchId(voiceChData.chId());
+                osp->setGrpVchNo(chNo);
+                osp->setRxGrpVchId(voiceChData.rxChId());
+                osp->setRxGrpVchNo(voiceChData.rxChNo());
+                osp->setEmergency(emergency);
+                osp->setEncrypted(encryption);
+                osp->setPriority(priority);
+
+                osp->setForceChannelId(true);
+
+                if (m_verbose) {
+                    LogMessage((net) ? LOG_NET : LOG_RF, P25_TSDU_STR ", %s, emerg = %u, encrypt = %u, prio = %u, chNo = %u-%u, srcId = %u, dstId = %u",
+                        osp->toString().c_str(), osp->getEmergency(), osp->getEncrypted(), osp->getPriority(), osp->getGrpVchId(), osp->getGrpVchNo(), osp->getSrcId(), osp->getDstId());
+                }
+
+                // transmit private grant
+                writeRF_TSDU_AMBT(osp.get(), true);
+                if (m_redundantGrant) {
+                    for (int i = 0; i < 3; i++)
+                        writeRF_TSDU_AMBT(osp.get(), true);
+                }
+            }
+
             std::unique_ptr<IOSP_UU_VCH> iosp = std::make_unique<IOSP_UU_VCH>();
             iosp->setMFId(m_lastMFID);
             iosp->setSrcId(srcId);
@@ -2429,16 +2491,22 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
             iosp->setEncrypted(encryption);
             iosp->setPriority(priority);
 
-            if (m_verbose) {
-                LogMessage((net) ? LOG_NET : LOG_RF, P25_TSDU_STR ", %s, emerg = %u, encrypt = %u, prio = %u, chNo = %u-%u, srcId = %u, dstId = %u",
-                    iosp->toString().c_str(), iosp->getEmergency(), iosp->getEncrypted(), iosp->getPriority(), iosp->getGrpVchId(), iosp->getGrpVchNo(), iosp->getSrcId(), iosp->getDstId());
-            }
+            if (!voiceChData.isExplicitCh()) {
+                if (m_verbose) {
+                    LogMessage((net) ? LOG_NET : LOG_RF, P25_TSDU_STR ", %s, emerg = %u, encrypt = %u, prio = %u, chNo = %u-%u, srcId = %u, dstId = %u",
+                        iosp->toString().c_str(), iosp->getEmergency(), iosp->getEncrypted(), iosp->getPriority(), iosp->getGrpVchId(), iosp->getGrpVchNo(), iosp->getSrcId(), iosp->getDstId());
+                }
 
-            // transmit private grant
-            writeRF_TSDU_SBF_Imm(iosp.get(), net);
-            if (m_redundantGrant) {
-                for (int i = 0; i < 3; i++)
-                    writeRF_TSDU_SBF(iosp.get(), net);
+                // transmit private grant
+                writeRF_TSDU_SBF_Imm(iosp.get(), net);
+                if (m_redundantGrant) {
+                    for (int i = 0; i < 3; i++)
+                        writeRF_TSDU_SBF(iosp.get(), net);
+                }
+            } else {
+                if (!net) {
+                    writeNet_TSDU(iosp.get());
+                }
             }
         }
     }
