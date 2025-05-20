@@ -224,6 +224,8 @@ protocols:
             enableTimeDateAnn: false
             # Flag indicating whether or not the source ID validation before granting disabled.
             disableGrantSourceIdCheck: false
+            # Flag indicating whether or not the adjacent site broadcasts are disabled.
+            disableAdjSiteBroadcast: false
             # Flag indicating immediate TSDUs will be sent twice.
             redundantImmediate: true
             # Flag indicating whether redundant grant responses should be transmitted.

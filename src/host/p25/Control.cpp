@@ -130,6 +130,7 @@ Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t q
     m_aveRSSI(0U),
     m_rssiCount(0U),
     m_ccNotifyActiveTG(false),
+    m_disableAdjSiteBroadcast(false),
     m_notifyCC(true),
     m_ccDebug(debug),
     m_verbose(verbose),
@@ -334,6 +335,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
     m_control->m_adjSiteUpdateInterval += ccBcstInterval;
 
     m_control->m_disableGrantSrcIdCheck = p25Protocol["control"]["disableGrantSourceIdCheck"].as<bool>(false);
+    m_disableAdjSiteBroadcast = p25Protocol["disableAdjSiteBroadcast"].as<bool>(false);
 
     yaml::Node controlCh = rfssConfig["controlCh"];
     m_notifyCC = controlCh["notifyEnable"].as<bool>(false);
@@ -529,6 +531,10 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
 
         if (disableUnitRegTimeout) {
             LogInfo("    Disable Unit Registration Timeout: yes");
+        }
+
+        if (m_disableAdjSiteBroadcast) {
+            LogInfo("    Disable Adjacent Site Broadcast: yes");
         }
 
         LogInfo("    Redundant Immediate: %s", m_control->m_redundantImmediate ? "yes" : "no");

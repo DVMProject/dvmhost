@@ -736,6 +736,10 @@ bool ControlSignaling::processNetwork(uint8_t* data, uint32_t len, lc::LC& contr
                         return false;
                     }
 
+                    if (m_p25->m_disableAdjSiteBroadcast) {
+                        return false;
+                    }
+
                     OSP_ADJ_STS_BCAST* osp = static_cast<OSP_ADJ_STS_BCAST*>(tsbk.get());
                     if (osp->getAdjSiteId() != m_p25->m_siteData.siteId()) {
                         // update site table data
@@ -1040,6 +1044,10 @@ bool ControlSignaling::processMBT(DataHeader& dataHeader, DataBlock* blocks)
 void ControlSignaling::writeAdjSSNetwork()
 {
     if (!m_p25->m_enableControl) {
+        return;
+    }
+
+    if (m_p25->m_disableAdjSiteBroadcast) {
         return;
     }
 

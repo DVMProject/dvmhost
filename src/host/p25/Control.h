@@ -384,6 +384,8 @@ namespace p25
         static std::mutex m_activeTGLock;
         bool m_ccNotifyActiveTG;
 
+        bool m_disableAdjSiteBroadcast;
+
         bool m_notifyCC;
 
         bool m_ccDebug;
