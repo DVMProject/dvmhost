@@ -128,12 +128,14 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 return false;
             }
 
-            if (m_verbose && m_debug) {
+            if (m_verbose) {
                 uint8_t mi[MI_LENGTH_BYTES];
                 ::memset(mi, 0x00U, MI_LENGTH_BYTES);
+
                 lc.getMI(mi);
 
-                Utils::dump(1U, "P25 HDU MI read from RF", mi, MI_LENGTH_BYTES);
+                LogDebug(LOG_RF, P25_HDU_STR ", MI %02X %02X %02X %02X %02X %02X %02X %02X %02X", 
+                    mi[0U], mi[1U], mi[2U], mi[3U], mi[4U], mi[5U], mi[6U], mi[7U], mi[8U]);
             }
 
             if (m_verbose) {
@@ -855,12 +857,14 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 m_rfFirstLDU2 = false;
             }
 
-            if (m_verbose && m_debug) {
+            if (m_verbose) {
                 uint8_t mi[MI_LENGTH_BYTES];
                 ::memset(mi, 0x00U, MI_LENGTH_BYTES);
+
                 m_rfLC.getMI(mi);
 
-                Utils::dump(1U, "P25 LDU2 MI read from RF", mi, MI_LENGTH_BYTES);
+                LogDebug(LOG_RF, P25_LDU2_STR ", MI %02X %02X %02X %02X %02X %02X %02X %02X %02X", 
+                    mi[0U], mi[1U], mi[2U], mi[3U], mi[4U], mi[5U], mi[6U], mi[7U], mi[8U]);
             }
 
             m_inbound = true;
@@ -1745,8 +1749,9 @@ void Voice::writeNet_LDU1()
         // restore MI from member variable
         ::memcpy(mi, m_lastMI, MI_LENGTH_BYTES);
 
-        if (m_verbose && m_debug) {
-            Utils::dump(1U, "P25 HDU MI from network to RF", mi, MI_LENGTH_BYTES);
+        if (m_verbose) {
+            LogDebug(LOG_NET, P25_HDU_STR ", MI %02X %02X %02X %02X %02X %02X %02X %02X %02X", 
+                mi[0U], mi[1U], mi[2U], mi[3U], mi[4U], mi[5U], mi[6U], mi[7U], mi[8U]);
         }
 
         m_netLC.setMI(mi);
@@ -2079,8 +2084,9 @@ void Voice::writeNet_LDU2()
     uint8_t mi[MI_LENGTH_BYTES];
     control.getMI(mi);
 
-    if (m_verbose && m_debug) {
-        Utils::dump(1U, "Network LDU2 MI", mi, MI_LENGTH_BYTES);
+    if (m_verbose) {
+        LogDebug(LOG_NET, P25_LDU2_STR ", MI %02X %02X %02X %02X %02X %02X %02X %02X %02X", 
+            mi[0U], mi[1U], mi[2U], mi[3U], mi[4U], mi[5U], mi[6U], mi[7U], mi[8U]);
     }
 
     m_netLC.setMI(mi);
