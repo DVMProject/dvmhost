@@ -855,6 +855,14 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 m_rfFirstLDU2 = false;
             }
 
+            if (m_verbose && m_debug) {
+                uint8_t mi[MI_LENGTH_BYTES];
+                ::memset(mi, 0x00U, MI_LENGTH_BYTES);
+                m_rfLC.getMI(mi);
+
+                Utils::dump(1U, "P25 LDU2 MI read from RF", mi, MI_LENGTH_BYTES);
+            }
+
             m_inbound = true;
 
             // generate Sync

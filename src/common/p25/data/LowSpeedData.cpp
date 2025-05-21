@@ -11,6 +11,7 @@
 #include "Defines.h"
 #include "p25/data/LowSpeedData.h"
 #include "p25/P25Utils.h"
+#include "Utils.h"
 
 using namespace p25;
 using namespace p25::data;
@@ -104,6 +105,8 @@ void LowSpeedData::process(uint8_t* data)
             break;
         }
     }
+
+    // Utils::dump(1U, "P25 Low Speed Data", lsd, 4U);
 
     m_lsd1 = lsd[0U];
     m_lsd2 = lsd[2U];
