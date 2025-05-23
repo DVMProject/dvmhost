@@ -7,7 +7,7 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*  Copyright (C) 2021 Bryan Biedenkapp, N2PLL
+*  Copyright (C) 2021,2025 Bryan Biedenkapp, N2PLL
 *
 */
 /**
@@ -64,6 +64,19 @@ namespace dmr
              * @param[out] bits Boolean bit buffer containing LC data.
              */
             void getData(bool* bits) const;
+
+            /** @name Encryption data */
+            /**
+             * @brief Sets the encryption message indicator.
+             * @param[in] mi Buffer containing the 9-byte Message Indicator.
+             */
+            void setMI(const uint8_t* mi);
+            /**
+             * @brief Gets the encryption message indicator.
+             * @param[out] mi Buffer containing the 9-byte Message Indicator.
+             */
+            void getMI(uint8_t* mi) const;
+            /** @} */
 
         public:
             /** @name Common Data */

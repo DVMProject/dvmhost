@@ -255,6 +255,12 @@ bool Voice::process(uint8_t* data, uint32_t len)
             if (m_verbose) {
                 LogMessage(LOG_RF, DMR_DT_VOICE_PI_HEADER ", slot = %u, algId = %u, kId = %u, dstId = %u", m_slot->m_slotNo,
                     m_slot->m_rfPrivacyLC->getAlgId(), m_slot->m_rfPrivacyLC->getKId(), m_slot->m_rfPrivacyLC->getDstId());
+
+                uint8_t mi[MI_LENGTH_BYTES];
+                m_slot->m_rfPrivacyLC->getMI(mi);
+
+                LogMessage(LOG_RF, DMR_DT_VOICE_PI_HEADER ", slot = %u, Enc Sync, MI = %02X %02X %02X %02X", 
+                    m_slot->m_slotNo, mi[0U], mi[1U], mi[2U], mi[3U]);
             }
 
             return true;
@@ -845,6 +851,12 @@ void Voice::processNetwork(const data::NetData& dmrData)
         if (m_verbose) {
             LogMessage(LOG_NET, DMR_DT_VOICE_PI_HEADER ", slot = %u, algId = %u, kId = %u, dstId = %u", m_slot->m_slotNo,
                 m_slot->m_netPrivacyLC->getAlgId(), m_slot->m_netPrivacyLC->getKId(), m_slot->m_netPrivacyLC->getDstId());
+
+            uint8_t mi[MI_LENGTH_BYTES];
+            m_slot->m_netPrivacyLC->getMI(mi);
+
+            LogMessage(LOG_NET, DMR_DT_VOICE_PI_HEADER ", slot = %u, Enc Sync, MI = %02X %02X %02X %02X", 
+                m_slot->m_slotNo, mi[0U], mi[1U], mi[2U], mi[3U]);
         }
     }
     else if (dataType == DataType::VOICE_SYNC) {
