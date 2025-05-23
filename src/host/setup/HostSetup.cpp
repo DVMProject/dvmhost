@@ -1126,6 +1126,14 @@ void HostSetup::processP25BER(const uint8_t* buffer)
         }
         else {
             LogMessage(LOG_CAL, P25_HDU_STR ", dstId = %u, algo = %X, kid = %X", lc.getDstId(), lc.getAlgId(), lc.getKId());
+
+            uint8_t mi[MI_LENGTH_BYTES];
+            ::memset(mi, 0x00U, MI_LENGTH_BYTES);
+
+            lc.getMI(mi);
+
+            LogMessage(LOG_CAL, P25_HDU_STR ", MI %02X %02X %02X %02X %02X %02X %02X %02X %02X", 
+                mi[0U], mi[1U], mi[2U], mi[3U], mi[4U], mi[5U], mi[6U], mi[7U], mi[8U]);
         }
 
         m_berBits = 0U;
@@ -1218,6 +1226,14 @@ void HostSetup::processP25BER(const uint8_t* buffer)
         else {
             LogMessage(LOG_CAL, P25_LDU2_STR " LC, mfId = $%02X, algo = %X, kid = %X",
                 lc.getMFId(), lc.getAlgId(), lc.getKId());
+
+            uint8_t mi[MI_LENGTH_BYTES];
+            ::memset(mi, 0x00U, MI_LENGTH_BYTES);
+
+            lc.getMI(mi);
+
+            LogMessage(LOG_CAL, P25_LDU2_STR ", MI %02X %02X %02X %02X %02X %02X %02X %02X %02X", 
+                mi[0U], mi[1U], mi[2U], mi[3U], mi[4U], mi[5U], mi[6U], mi[7U], mi[8U]);
         }
 
         P25Utils::decode(buffer, imbe, 114U, 262U);
