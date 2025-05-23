@@ -32,7 +32,9 @@ using namespace network::frame;
 
 FrameQueue::FrameQueue(udp::Socket* socket, uint32_t peerId, bool debug) : RawFrameQueue(socket, debug),
     m_peerId(peerId),
+#if defined(_WIN32)
     m_streamTSMtx(),
+#endif // defined(_WIN32)
     m_streamTimestamps()
 {
     assert(peerId < 999999999U);
@@ -232,7 +234,11 @@ uint8_t* FrameQueue::generateMessage(const uint8_t* message, uint32_t length, ui
 
     uint32_t timestamp = INVALID_TS;
     if (streamId != 0U) {
+#if defined(_WIN32)
         std::lock_guard<std::mutex> lock(m_streamTSMtx);
+#else
+        m_streamTimestamps.lock(false);
+#endif // defined(_WIN32)
         auto entry = m_streamTimestamps.find(streamId);
         if (entry != m_streamTimestamps.end()) {
             timestamp = entry->second;
@@ -244,6 +250,9 @@ uint8_t* FrameQueue::generateMessage(const uint8_t* message, uint32_t length, ui
                 LogDebugEx(LOG_NET, "FrameQueue::generateMessage()", "RTP streamId = %u, previous TS = %u, TS = %u, rtpSeq = %u", streamId, m_streamTimestamps[streamId], timestamp, rtpSeq);
             m_streamTimestamps[streamId] = timestamp;
         }
+#if !defined(_WIN32)
+        m_streamTimestamps.unlock();
+#endif // defined(_WIN32)
     }
 
     uint32_t bufferLen = RTP_HEADER_LENGTH_BYTES + RTP_EXTENSION_HEADER_LENGTH_BYTES + RTP_FNE_HEADER_LENGTH_BYTES + length;
@@ -265,20 +274,34 @@ uint8_t* FrameQueue::generateMessage(const uint8_t* message, uint32_t length, ui
         timestamp = (uint32_t)system_clock::ntp::now();
         header.setTimestamp(timestamp);
 
+#if defined(_WIN32)
         std::lock_guard<std::mutex> lock(m_streamTSMtx);
         m_streamTimestamps.insert({ streamId, timestamp });
+#else
+        m_streamTimestamps.insert(streamId, timestamp);
+#endif // defined(_WIN32)
     }
 
     header.encode(buffer);
 
     if (streamId != 0U && rtpSeq == RTP_END_OF_CALL_SEQ) {
+#if defined(_WIN32)
         std::lock_guard<std::mutex> lock(m_streamTSMtx);
+#else
+        m_streamTimestamps.lock(false);
+#endif // defined(_WIN32)
         auto entry = m_streamTimestamps.find(streamId);
         if (entry != m_streamTimestamps.end()) {
             if (m_debug)
                 LogDebugEx(LOG_NET, "FrameQueue::generateMessage()", "RTP streamId = %u, rtpSeq = %u", streamId, rtpSeq);
+#if !defined(_WIN32)
+            m_streamTimestamps.unlock();
+#endif // defined(_WIN32)
             m_streamTimestamps.erase(streamId);
         }
+#if !defined(_WIN32)
+        m_streamTimestamps.unlock();
+#endif // defined(_WIN32)
     }
 
     RTPFNEHeader fneHeader = RTPFNEHeader();
