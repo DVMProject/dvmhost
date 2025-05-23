@@ -857,16 +857,6 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 m_rfFirstLDU2 = false;
             }
 
-            if (m_verbose && (m_rfLC.getAlgId() != ALGO_UNENCRYPT)) {
-                uint8_t mi[MI_LENGTH_BYTES];
-                ::memset(mi, 0x00U, MI_LENGTH_BYTES);
-
-                m_rfLC.getMI(mi);
-
-                LogMessage(LOG_RF, P25_LDU2_STR ", Enc Sync, MI: %02X %02X %02X %02X %02X %02X %02X %02X %02X", 
-                    mi[0U], mi[1U], mi[2U], mi[3U], mi[4U], mi[5U], mi[6U], mi[7U], mi[8U]);
-            }
-
             m_inbound = true;
 
             // generate Sync
@@ -931,6 +921,16 @@ bool Voice::process(uint8_t* data, uint32_t len)
             if (m_verbose) {
                 LogMessage(LOG_RF, P25_LDU2_STR ", audio, algo = $%02X, kid = $%04X, errs = %u/1233 (%.1f%%)",
                     m_rfLC.getAlgId(), m_rfLC.getKId(), errors, float(errors) / 12.33F);
+
+                if (m_rfLC.getAlgId() != ALGO_UNENCRYPT) {
+                    uint8_t mi[MI_LENGTH_BYTES];
+                    ::memset(mi, 0x00U, MI_LENGTH_BYTES);
+
+                    m_rfLC.getMI(mi);
+
+                    LogMessage(LOG_RF, P25_LDU2_STR ", Enc Sync, MI: %02X %02X %02X %02X %02X %02X %02X %02X %02X", 
+                        mi[0U], mi[1U], mi[2U], mi[3U], mi[4U], mi[5U], mi[6U], mi[7U], mi[8U]);
+                }
             }
 
             return true;
@@ -2084,11 +2084,6 @@ void Voice::writeNet_LDU2()
     uint8_t mi[MI_LENGTH_BYTES];
     control.getMI(mi);
 
-    if (m_verbose  && (control.getAlgId() != ALGO_UNENCRYPT)) {
-        LogMessage(LOG_NET, P25_LDU2_STR ", Enc Sync, MI: %02X %02X %02X %02X %02X %02X %02X %02X %02X", 
-            mi[0U], mi[1U], mi[2U], mi[3U], mi[4U], mi[5U], mi[6U], mi[7U], mi[8U]);
-    }
-
     m_netLC.setMI(mi);
     m_netLC.setAlgId(control.getAlgId());
     m_netLC.setKId(control.getKId());
@@ -2131,6 +2126,11 @@ void Voice::writeNet_LDU2()
 
     if (m_verbose) {
         LogMessage(LOG_NET, P25_LDU2_STR " audio, algo = $%02X, kid = $%04X", m_netLC.getAlgId(), m_netLC.getKId());
+
+        if (control.getAlgId() != ALGO_UNENCRYPT) {
+            LogMessage(LOG_NET, P25_LDU2_STR ", Enc Sync, MI: %02X %02X %02X %02X %02X %02X %02X %02X %02X", 
+                mi[0U], mi[1U], mi[2U], mi[3U], mi[4U], mi[5U], mi[6U], mi[7U], mi[8U]);
+        }
     }
 
     resetWithNullAudio(m_netLDU2, m_netLC.getAlgId() != P25DEF::ALGO_UNENCRYPT);
