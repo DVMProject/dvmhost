@@ -128,7 +128,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 return false;
             }
 
-            if (m_verbose) {
+            if (m_verbose && (m_rfLC.getAlgId() != ALGO_UNENCRYPT)) {
                 uint8_t mi[MI_LENGTH_BYTES];
                 ::memset(mi, 0x00U, MI_LENGTH_BYTES);
 
@@ -857,7 +857,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 m_rfFirstLDU2 = false;
             }
 
-            if (m_verbose) {
+            if (m_verbose && (m_rfLC.getAlgId() != ALGO_UNENCRYPT)) {
                 uint8_t mi[MI_LENGTH_BYTES];
                 ::memset(mi, 0x00U, MI_LENGTH_BYTES);
 
@@ -1749,7 +1749,7 @@ void Voice::writeNet_LDU1()
         // restore MI from member variable
         ::memcpy(mi, m_lastMI, MI_LENGTH_BYTES);
 
-        if (m_verbose) {
+        if (m_verbose && (control.getAlgId() != ALGO_UNENCRYPT)) {
             LogMessage(LOG_NET, P25_HDU_STR ", MI %02X %02X %02X %02X %02X %02X %02X %02X %02X", 
                 mi[0U], mi[1U], mi[2U], mi[3U], mi[4U], mi[5U], mi[6U], mi[7U], mi[8U]);
         }
@@ -2084,7 +2084,7 @@ void Voice::writeNet_LDU2()
     uint8_t mi[MI_LENGTH_BYTES];
     control.getMI(mi);
 
-    if (m_verbose) {
+    if (m_verbose  && (control.getAlgId() != ALGO_UNENCRYPT)) {
         LogMessage(LOG_NET, P25_LDU2_STR ", MI %02X %02X %02X %02X %02X %02X %02X %02X %02X", 
             mi[0U], mi[1U], mi[2U], mi[3U], mi[4U], mi[5U], mi[6U], mi[7U], mi[8U]);
     }
