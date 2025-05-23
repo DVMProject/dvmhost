@@ -128,7 +128,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 return false;
             }
 
-            if (m_verbose && (m_rfLC.getAlgId() != ALGO_UNENCRYPT)) {
+            if (m_verbose && (lc.getAlgId() != ALGO_UNENCRYPT)) {
                 uint8_t mi[MI_LENGTH_BYTES];
                 ::memset(mi, 0x00U, MI_LENGTH_BYTES);
 
