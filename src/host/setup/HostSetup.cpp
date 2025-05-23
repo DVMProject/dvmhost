@@ -414,7 +414,11 @@ bool HostSetup::portModemHandler(Modem* modem, uint32_t ms, RESP_TYPE_DVM rspTyp
 
         /** Project 25 */
         case CMD_P25_DATA:
-            processP25BER(buffer + 4U);
+            if (rspDblLen) {
+                processP25BER(buffer + 5U);
+            } else {
+                processP25BER(buffer + 4U);
+            }
             break;
 
         case CMD_P25_LOST:
@@ -1282,22 +1286,25 @@ void HostSetup::processP25BER(const uint8_t* buffer)
         timerStop();
 
         // note: for the calibrator we will only process the PDU header -- and not the PDU data
-        uint8_t pduBuffer[P25_LDU_FRAME_LENGTH_BYTES];
-        uint32_t bits = P25Utils::decode(buffer, pduBuffer, 0, P25_LDU_FRAME_LENGTH_BITS);
+        uint8_t pduBuffer[P25_PDU_FRAME_LENGTH_BYTES];
+        ::memset(pduBuffer, 0x00U, P25_PDU_FRAME_LENGTH_BYTES);
+
+        uint32_t bits = P25Utils::decode(buffer, pduBuffer, 0, P25_PDU_FRAME_LENGTH_BITS);
+
+        Utils::dump(1U, "Raw PDU Dump", buffer, P25_PDU_FRAME_LENGTH_BYTES);
 
         uint8_t* rfPDU = new uint8_t[P25_MAX_PDU_BLOCKS * P25_PDU_CONFIRMED_LENGTH_BYTES + 2U];
         ::memset(rfPDU, 0x00U, P25_MAX_PDU_BLOCKS * P25_PDU_CONFIRMED_LENGTH_BYTES + 2U);
+
         uint32_t rfPDUBits = 0U;
+        rfPDUBits = Utils::getBits(pduBuffer, rfPDU, 0U, bits);
 
-        for (uint32_t i = 0U; i < bits; i++, rfPDUBits++) {
-            bool b = READ_BIT(buffer, i);
-            WRITE_BIT(rfPDU, rfPDUBits, b);
-        }
-
-        bool ret = dataHeader.decode(rfPDU + P25_SYNC_LENGTH_BYTES + P25_NID_LENGTH_BYTES);
+        ::memset(pduBuffer, 0x00U, P25_PDU_FEC_LENGTH_BYTES);
+        Utils::getBitRange(rfPDU, pduBuffer, P25_PREAMBLE_LENGTH_BITS, P25_PDU_FEC_LENGTH_BITS);
+        bool ret = dataHeader.decode(pduBuffer);
         if (!ret) {
-            LogWarning(LOG_RF, P25_PDU_STR ", unfixable RF 1/2 rate header data");
-            Utils::dump(1U, "Unfixable PDU Data", rfPDU + P25_SYNC_LENGTH_BYTES + P25_NID_LENGTH_BYTES, P25_PDU_HEADER_LENGTH_BYTES);
+            LogWarning(LOG_CAL, P25_PDU_STR ", unfixable RF 1/2 rate header data");
+            Utils::dump(1U, "Unfixable PDU Data", pduBuffer, P25_PDU_FEC_LENGTH_BYTES);
         }
         else {
             LogMessage(LOG_CAL, P25_PDU_STR ", ack = %u, outbound = %u, fmt = $%02X, mfId = $%02X, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padLength = %u, n = %u, seqNo = %u, lastFragment = %u, hdrOffset = %u",

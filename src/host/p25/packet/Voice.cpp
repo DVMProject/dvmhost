@@ -134,7 +134,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
 
                 lc.getMI(mi);
 
-                LogDebug(LOG_RF, P25_HDU_STR ", MI %02X %02X %02X %02X %02X %02X %02X %02X %02X", 
+                LogMessage(LOG_RF, P25_HDU_STR ", MI %02X %02X %02X %02X %02X %02X %02X %02X %02X", 
                     mi[0U], mi[1U], mi[2U], mi[3U], mi[4U], mi[5U], mi[6U], mi[7U], mi[8U]);
             }
 
@@ -863,7 +863,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
 
                 m_rfLC.getMI(mi);
 
-                LogDebug(LOG_RF, P25_LDU2_STR ", MI %02X %02X %02X %02X %02X %02X %02X %02X %02X", 
+                LogMessage(LOG_RF, P25_LDU2_STR ", MI %02X %02X %02X %02X %02X %02X %02X %02X %02X", 
                     mi[0U], mi[1U], mi[2U], mi[3U], mi[4U], mi[5U], mi[6U], mi[7U], mi[8U]);
             }
 
@@ -1750,7 +1750,7 @@ void Voice::writeNet_LDU1()
         ::memcpy(mi, m_lastMI, MI_LENGTH_BYTES);
 
         if (m_verbose) {
-            LogDebug(LOG_NET, P25_HDU_STR ", MI %02X %02X %02X %02X %02X %02X %02X %02X %02X", 
+            LogMessage(LOG_NET, P25_HDU_STR ", MI %02X %02X %02X %02X %02X %02X %02X %02X %02X", 
                 mi[0U], mi[1U], mi[2U], mi[3U], mi[4U], mi[5U], mi[6U], mi[7U], mi[8U]);
         }
 
@@ -2085,7 +2085,7 @@ void Voice::writeNet_LDU2()
     control.getMI(mi);
 
     if (m_verbose) {
-        LogDebug(LOG_NET, P25_LDU2_STR ", MI %02X %02X %02X %02X %02X %02X %02X %02X %02X", 
+        LogMessage(LOG_NET, P25_LDU2_STR ", MI %02X %02X %02X %02X %02X %02X %02X %02X %02X", 
             mi[0U], mi[1U], mi[2U], mi[3U], mi[4U], mi[5U], mi[6U], mi[7U], mi[8U]);
     }
 
