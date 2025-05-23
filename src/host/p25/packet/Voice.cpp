@@ -137,7 +137,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
 
                     lc.getMI(mi);
 
-                    LogMessage(LOG_RF, P25_HDU_STR ", Enc Sync, MI: %02X %02X %02X %02X %02X %02X %02X %02X %02X", 
+                    LogMessage(LOG_RF, P25_HDU_STR ", Enc Sync, MI = %02X %02X %02X %02X %02X %02X %02X %02X %02X", 
                         mi[0U], mi[1U], mi[2U], mi[3U], mi[4U], mi[5U], mi[6U], mi[7U], mi[8U]);
                 }
             }
@@ -928,7 +928,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
 
                     m_rfLC.getMI(mi);
 
-                    LogMessage(LOG_RF, P25_LDU2_STR ", Enc Sync, MI: %02X %02X %02X %02X %02X %02X %02X %02X %02X", 
+                    LogMessage(LOG_RF, P25_LDU2_STR ", Enc Sync, MI = %02X %02X %02X %02X %02X %02X %02X %02X %02X", 
                         mi[0U], mi[1U], mi[2U], mi[3U], mi[4U], mi[5U], mi[6U], mi[7U], mi[8U]);
                 }
             }
@@ -1900,7 +1900,7 @@ void Voice::writeNet_LDU1()
                     LogMessage(LOG_NET, P25_HDU_STR ", dstId = %u, algo = $%02X, kid = $%04X", m_netLC.getDstId(), m_netLC.getAlgId(), m_netLC.getKId());
 
                     if (control.getAlgId() != ALGO_UNENCRYPT) {
-                        LogMessage(LOG_NET, P25_HDU_STR ", Enc Sync, MI: %02X %02X %02X %02X %02X %02X %02X %02X %02X", 
+                        LogMessage(LOG_NET, P25_HDU_STR ", Enc Sync, MI = %02X %02X %02X %02X %02X %02X %02X %02X %02X", 
                             mi[0U], mi[1U], mi[2U], mi[3U], mi[4U], mi[5U], mi[6U], mi[7U], mi[8U]);
                     }
                 }
@@ -2128,7 +2128,7 @@ void Voice::writeNet_LDU2()
         LogMessage(LOG_NET, P25_LDU2_STR " audio, algo = $%02X, kid = $%04X", m_netLC.getAlgId(), m_netLC.getKId());
 
         if (control.getAlgId() != ALGO_UNENCRYPT) {
-            LogMessage(LOG_NET, P25_LDU2_STR ", Enc Sync, MI: %02X %02X %02X %02X %02X %02X %02X %02X %02X", 
+            LogMessage(LOG_NET, P25_LDU2_STR ", Enc Sync, MI = %02X %02X %02X %02X %02X %02X %02X %02X %02X", 
                 mi[0U], mi[1U], mi[2U], mi[3U], mi[4U], mi[5U], mi[6U], mi[7U], mi[8U]);
         }
     }
