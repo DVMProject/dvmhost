@@ -4,6 +4,8 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
+ *  Copyright (c) 2011 Matthew Kaufman
+ *
  */
 /*-
  * mdc_encode.c
