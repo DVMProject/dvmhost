@@ -71,13 +71,13 @@ namespace p25
             /**
              * @brief 
              */
-            __PROTECTED_PROPERTY(uint8_t, inventoryType, InventoryType);
+            DECLARE_PROTECTED_PROPERTY(uint8_t, inventoryType, InventoryType);
             /**
              * @brief 
              */
-            __PROTECTED_PROPERTY(uint16_t, numberOfItems, NumberOfItems);
+            DECLARE_PROTECTED_PROPERTY(uint16_t, numberOfItems, NumberOfItems);
 
-            __PROTECTED_COPY(KMMInventoryResponseHeader);
+            DECLARE_PROTECTED_COPY(KMMInventoryResponseHeader);
         };
     } // namespace kmm
 } // namespace p25

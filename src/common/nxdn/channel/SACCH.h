@@ -82,11 +82,11 @@ namespace nxdn
             /**
              * @brief Radio Access Number
              */
-            __PROPERTY(uint8_t, ran, RAN);
+            DECLARE_PROPERTY(uint8_t, ran, RAN);
             /**
              * @brief Channel Structure
              */
-            __PROPERTY(defines::ChStructure::E, structure, Structure);
+            DECLARE_PROPERTY(defines::ChStructure::E, structure, Structure);
 
         private:
             uint8_t* m_data;

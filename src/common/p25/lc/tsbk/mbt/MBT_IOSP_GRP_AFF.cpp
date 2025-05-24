@@ -35,9 +35,7 @@ bool MBT_IOSP_GRP_AFF::decodeMBT(const data::DataHeader& dataHeader, const data:
 {
     assert(blocks != nullptr);
 
-    UInt8Array __pduUserData = std::make_unique<uint8_t[]>(P25_PDU_UNCONFIRMED_LENGTH_BYTES * dataHeader.getBlocksToFollow());
-    uint8_t* pduUserData = __pduUserData.get();
-    ::memset(pduUserData, 0x00U, P25_PDU_UNCONFIRMED_LENGTH_BYTES * dataHeader.getBlocksToFollow());
+    DECLARE_UINT8_ARRAY(pduUserData, P25_PDU_UNCONFIRMED_LENGTH_BYTES * dataHeader.getBlocksToFollow());
 
     bool ret = AMBT::decode(dataHeader, blocks, pduUserData);
     if (!ret)
@@ -69,9 +67,9 @@ void MBT_IOSP_GRP_AFF::encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUserD
         ((m_siteData.sysId() >> 8) & 0xFFU);                                        // System ID (b11-b8)
     pduUserData[1U] = (m_siteData.sysId() & 0xFFU);                                 // System ID (b7-b0)
 
-    __SET_UINT16B(m_dstId, pduUserData, 2U);                                        // Group ID
-    __SET_UINT16B(m_announceGroup, pduUserData, 4U);                                // Announcement Group
-    __SET_UINT16B(m_dstId, pduUserData, 6U);                                        // Talkgroup Address
+    SET_UINT16(m_dstId, pduUserData, 2U);                                           // Group ID
+    SET_UINT16(m_announceGroup, pduUserData, 4U);                                   // Announcement Group
+    SET_UINT16(m_dstId, pduUserData, 6U);                                           // Talkgroup Address
 
     /** Block 2 */
     ::memset(pduUserData + 12U, 0x00U, 7U);

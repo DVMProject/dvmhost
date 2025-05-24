@@ -34,9 +34,7 @@ bool MBT_ISP_AUTH_SU_DMD::decodeMBT(const data::DataHeader& dataHeader, const da
 {
     assert(blocks != nullptr);
 
-    UInt8Array __pduUserData = std::make_unique<uint8_t[]>(P25_PDU_UNCONFIRMED_LENGTH_BYTES * dataHeader.getBlocksToFollow());
-    uint8_t* pduUserData = __pduUserData.get();
-    ::memset(pduUserData, 0x00U, P25_PDU_UNCONFIRMED_LENGTH_BYTES * dataHeader.getBlocksToFollow());
+    DECLARE_UINT8_ARRAY(pduUserData, P25_PDU_UNCONFIRMED_LENGTH_BYTES * dataHeader.getBlocksToFollow());
 
     bool ret = AMBT::decode(dataHeader, blocks, pduUserData);
     if (!ret)

@@ -78,19 +78,19 @@ namespace p25
                 /**
                  * @brief 
                  */
-                __PROPERTY(uint8_t, marker, Marker);
+                DECLARE_PROPERTY(uint8_t, marker, Marker);
                 /**
                  * @brief RT/RT Flag.
                  */
-                __PROPERTY(RTFlag::E, rt, RT);
+                DECLARE_PROPERTY(RTFlag::E, rt, RT);
                 /**
                  * @brief Start/Stop.
                  */
-                __PROPERTY(StartStopFlag::E, startStop, StartStop);
+                DECLARE_PROPERTY(StartStopFlag::E, startStop, StartStop);
                 /**
                  * @brief Stream Type.
                  */
-                __PROPERTY(StreamTypeFlag::E, streamType, StreamType);
+                DECLARE_PROPERTY(StreamTypeFlag::E, streamType, StreamType);
             };
         } // namespace frames
     } // namespace dfsi

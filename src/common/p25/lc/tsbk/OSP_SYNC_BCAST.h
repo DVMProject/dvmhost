@@ -65,9 +65,9 @@ namespace p25
                 /**
                  * @brief Microslot count.
                  */
-                __PROPERTY(uint16_t, microslotCount, MicroslotCount);
+                DECLARE_PROPERTY(uint16_t, microslotCount, MicroslotCount);
 
-                __COPY(OSP_SYNC_BCAST);
+                DECLARE_COPY(OSP_SYNC_BCAST);
             };
         } // namespace tsbk
     } // namespace lc

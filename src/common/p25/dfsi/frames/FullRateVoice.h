@@ -231,27 +231,27 @@ namespace p25
                 /**
                  * @brief Frame Type.
                  */
-                __PROPERTY(defines::DFSIFrameType::E, frameType, FrameType);
+                DECLARE_PROPERTY(defines::DFSIFrameType::E, frameType, FrameType);
                 /**
                  * @brief Total errors detected in the frame.
                  */
-                __PROPERTY(uint8_t, totalErrors, TotalErrors);
+                DECLARE_PROPERTY(uint8_t, totalErrors, TotalErrors);
                 /**
                  * @brief Flag indicating the frame should be muted.
                  */
-                __PROPERTY(bool, muteFrame, MuteFrame);
+                DECLARE_PROPERTY(bool, muteFrame, MuteFrame);
                 /**
                  * @brief Flag indicating the frame was lost.
                  */
-                __PROPERTY(bool, lostFrame, LostFrame);
+                DECLARE_PROPERTY(bool, lostFrame, LostFrame);
                 /**
                  * @brief Superframe Counter.
                  */
-                __PROPERTY(uint8_t, superframeCnt, SuperframeCnt);
+                DECLARE_PROPERTY(uint8_t, superframeCnt, SuperframeCnt);
                 /**
                  * @brief Busy Status.
                  */
-                __PROPERTY(uint8_t, busy, Busy);
+                DECLARE_PROPERTY(uint8_t, busy, Busy);
 
             private:
                 /**

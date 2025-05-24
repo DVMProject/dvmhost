@@ -104,82 +104,82 @@ namespace nxdn
             /**
              * @brief Message Type
              */
-            __PROTECTED_PROPERTY(uint8_t, messageType, MessageType);
+            DECLARE_PROTECTED_PROPERTY(uint8_t, messageType, MessageType);
 
             /**
              * @brief Source ID.
              */
-            __PROTECTED_PROPERTY(uint16_t, srcId, SrcId);
+            DECLARE_PROTECTED_PROPERTY(uint16_t, srcId, SrcId);
             /**
              * @brief Destination ID.
              */
-            __PROTECTED_PROPERTY(uint16_t, dstId, DstId);
+            DECLARE_PROTECTED_PROPERTY(uint16_t, dstId, DstId);
 
             /**
              * @brief Location ID.
              */
-            __PROTECTED_PROPERTY(uint32_t, locId, LocId);
+            DECLARE_PROTECTED_PROPERTY(uint32_t, locId, LocId);
             /**
              * @brief Registration Option.
              */
-            __PROTECTED_PROPERTY(uint8_t, regOption, RegOption);
+            DECLARE_PROTECTED_PROPERTY(uint8_t, regOption, RegOption);
 
             /**
              * @brief Version Number.
              */
-            __PROTECTED_PROPERTY(uint8_t, version, Version);
+            DECLARE_PROTECTED_PROPERTY(uint8_t, version, Version);
 
             /**
              * @brief Cause Response.
              */
-            __PROTECTED_PROPERTY(uint8_t, causeRsp, CauseResponse);
+            DECLARE_PROTECTED_PROPERTY(uint8_t, causeRsp, CauseResponse);
 
             /**
              * @brief Voice channel number.
              */
-            __PROTECTED_PROPERTY(uint32_t, grpVchNo, GrpVchNo);
+            DECLARE_PROTECTED_PROPERTY(uint32_t, grpVchNo, GrpVchNo);
             /** @} */
 
             /** @name Call Data */
             /**
              * @brief Call Type
              */
-            __PROTECTED_PROPERTY(uint8_t, callType, CallType);
+            DECLARE_PROTECTED_PROPERTY(uint8_t, callType, CallType);
             /** @} */
 
             /** @name Common Call Options */
             /**
              * @brief Flag indicating the emergency bits are set.
              */
-            __PROTECTED_PROPERTY(bool, emergency, Emergency);
+            DECLARE_PROTECTED_PROPERTY(bool, emergency, Emergency);
             /**
              * @brief Flag indicating that encryption is enabled.
              */
-            __PROTECTED_PROPERTY(bool, encrypted, Encrypted);
+            DECLARE_PROTECTED_PROPERTY(bool, encrypted, Encrypted);
             /**
              * @brief Flag indicating priority paging.
              */
-            __PROTECTED_PROPERTY(bool, priority, Priority);
+            DECLARE_PROTECTED_PROPERTY(bool, priority, Priority);
             /**
              * @brief Flag indicating a group/talkgroup operation.
              */
-            __PROTECTED_PROPERTY(bool, group, Group);
+            DECLARE_PROTECTED_PROPERTY(bool, group, Group);
             /**
              * @brief Flag indicating a half/full duplex operation.
              */
-            __PROTECTED_PROPERTY(bool, duplex, Duplex);
+            DECLARE_PROTECTED_PROPERTY(bool, duplex, Duplex);
 
             /**
              * @brief Transmission mode.
              */
-            __PROTECTED_PROPERTY(uint8_t, transmissionMode, TransmissionMode);
+            DECLARE_PROTECTED_PROPERTY(uint8_t, transmissionMode, TransmissionMode);
             /** @} */
 
             /** @name Local Site data */
             /**
              * @brief Local Site Identity Entry.
              */
-            __PROTECTED_PROPERTY_PLAIN(lookups::IdenTable, siteIdenEntry);
+            DECLARE_PROTECTED_PROPERTY_PLAIN(lookups::IdenTable, siteIdenEntry);
             /** @} */
 
         protected:
@@ -206,7 +206,7 @@ namespace nxdn
              */
             void encode(uint8_t* data, const uint8_t* rcch, uint32_t length, uint32_t offset = 0U);
 
-            __PROTECTED_COPY(RCCH);
+            DECLARE_PROTECTED_COPY(RCCH);
         };
     } // namespace lc
 } // namespace nxdn

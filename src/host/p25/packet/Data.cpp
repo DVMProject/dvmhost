@@ -408,11 +408,11 @@ bool Data::process(uint8_t* data, uint32_t len)
                         ::memset(arpPacket, 0x00U, P25_PDU_ARP_PCKT_LENGTH);
                         ::memcpy(arpPacket, m_rfPduUserData + P25_PDU_HEADER_LENGTH_BYTES, P25_PDU_ARP_PCKT_LENGTH);
 
-                        uint16_t opcode = __GET_UINT16B(arpPacket, 6U);
-                        uint32_t srcHWAddr = __GET_UINT16(arpPacket, 8U);
-                        uint32_t srcProtoAddr = __GET_UINT32(arpPacket, 11U);
-                        //uint32_t tgtHWAddr = __GET_UINT16(arpPacket, 15U);
-                        uint32_t tgtProtoAddr = __GET_UINT32(arpPacket, 18U);
+                        uint16_t opcode = GET_UINT16(arpPacket, 6U);
+                        uint32_t srcHWAddr = GET_UINT24(arpPacket, 8U);
+                        uint32_t srcProtoAddr = GET_UINT32(arpPacket, 11U);
+                        //uint32_t tgtHWAddr = GET_UINT24(arpPacket, 15U);
+                        uint32_t tgtProtoAddr = GET_UINT32(arpPacket, 18U);
 
                         if (m_verbose) {
                             if (opcode == P25_PDU_ARP_REQUEST) {
@@ -755,11 +755,11 @@ bool Data::processNetwork(uint8_t* data, uint32_t len, uint32_t blockLength)
                 ::memset(arpPacket, 0x00U, P25_PDU_ARP_PCKT_LENGTH);
                 ::memcpy(arpPacket, m_netPduUserData + P25_PDU_HEADER_LENGTH_BYTES, P25_PDU_ARP_PCKT_LENGTH);
 
-                uint16_t opcode = __GET_UINT16B(arpPacket, 6U);
-                uint32_t srcHWAddr = __GET_UINT16(arpPacket, 8U);
-                uint32_t srcProtoAddr = __GET_UINT32(arpPacket, 11U);
-                //uint32_t tgtHWAddr = __GET_UINT16(arpPacket, 15U);
-                uint32_t tgtProtoAddr = __GET_UINT32(arpPacket, 18U);
+                uint16_t opcode = GET_UINT16(arpPacket, 6U);
+                uint32_t srcHWAddr = GET_UINT24(arpPacket, 8U);
+                uint32_t srcProtoAddr = GET_UINT32(arpPacket, 11U);
+                //uint32_t tgtHWAddr = GET_UINT24(arpPacket, 15U);
+                uint32_t tgtProtoAddr = GET_UINT32(arpPacket, 18U);
 
                 if (m_verbose) {
                     if (opcode == P25_PDU_ARP_REQUEST) {
@@ -831,10 +831,8 @@ void Data::writeRF_PDU_User(data::DataHeader& dataHeader, bool extendedAddress, 
 
     uint32_t offset = P25_PREAMBLE_LENGTH_BITS;
 
-    UInt8Array __data = std::make_unique<uint8_t[]>((bitLength / 8U) + 1U);
-    uint8_t* data = __data.get();
+    DECLARE_UINT8_ARRAY(data, (bitLength / 8U) + 1U);
 
-    ::memset(data, 0x00U, bitLength / 8U);
     uint8_t block[P25_PDU_FEC_LENGTH_BYTES];
     ::memset(block, 0x00U, P25_PDU_FEC_LENGTH_BYTES);
 
@@ -1467,10 +1465,8 @@ void Data::writeNet_PDU_Buffered()
 
     uint32_t offset = P25_PREAMBLE_LENGTH_BITS;
 
-    UInt8Array __data = std::make_unique<uint8_t[]>((bitLength / 8U) + 1U);
-    uint8_t* data = __data.get();
+    DECLARE_UINT8_ARRAY(data, (bitLength / 8U) + 1U);
 
-    ::memset(data, 0x00U, bitLength / 8U);
     uint8_t block[P25_PDU_FEC_LENGTH_BYTES];
     ::memset(block, 0x00U, P25_PDU_FEC_LENGTH_BYTES);
 
@@ -1561,10 +1557,8 @@ void Data::writeRF_PDU_Buffered()
 
     uint32_t offset = P25_PREAMBLE_LENGTH_BITS;
 
-    UInt8Array __data = std::make_unique<uint8_t[]>((bitLength / 8U) + 1U);
-    uint8_t* data = __data.get();
+    DECLARE_UINT8_ARRAY(data, (bitLength / 8U) + 1U);
 
-    ::memset(data, 0x00U, bitLength / 8U);
     uint8_t block[P25_PDU_FEC_LENGTH_BYTES];
     ::memset(block, 0x00U, P25_PDU_FEC_LENGTH_BYTES);
 
@@ -1688,10 +1682,8 @@ void Data::writeRF_PDU_Ack_Response(uint8_t ackClass, uint8_t ackType, uint8_t a
     uint32_t bitLength = (1U * P25_PDU_FEC_LENGTH_BITS) + P25_PREAMBLE_LENGTH_BITS;
     uint32_t offset = P25_PREAMBLE_LENGTH_BITS;
 
-    UInt8Array __data = std::make_unique<uint8_t[]>((bitLength / 8U) + 1U);
-    uint8_t* data = __data.get();
+    DECLARE_UINT8_ARRAY(data, (bitLength / 8U) + 1U);
 
-    ::memset(data, 0x00U, bitLength / 8U);
     uint8_t block[P25_PDU_FEC_LENGTH_BYTES];
     ::memset(block, 0x00U, P25_PDU_FEC_LENGTH_BYTES);
 

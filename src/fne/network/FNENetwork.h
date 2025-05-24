@@ -281,84 +281,84 @@ namespace network
         /**
          * @brief Peer ID.
          */
-        __PROPERTY_PLAIN(uint32_t, id);
+        DECLARE_PROPERTY_PLAIN(uint32_t, id);
         /**
          * @brief Peer Identity.
          */
-        __PROPERTY_PLAIN(std::string, identity);
+        DECLARE_PROPERTY_PLAIN(std::string, identity);
 
         /**
          * @brief Control Channel Peer ID.
          */
-        __PROPERTY_PLAIN(uint32_t, ccPeerId);
+        DECLARE_PROPERTY_PLAIN(uint32_t, ccPeerId);
 
         /**
          * @brief Unix socket storage containing the connected address.
          */
-        __PROPERTY_PLAIN(sockaddr_storage, socketStorage);
+        DECLARE_PROPERTY_PLAIN(sockaddr_storage, socketStorage);
         /**
          * @brief Length of the sockaddr_storage structure.
          */
-        __PROPERTY_PLAIN(uint32_t, sockStorageLen);
+        DECLARE_PROPERTY_PLAIN(uint32_t, sockStorageLen);
 
         /**
          * @brief         */
-        __PROPERTY_PLAIN(std::string, address);
+        DECLARE_PROPERTY_PLAIN(std::string, address);
         /**
          * @brief Port number peer connected with.
          */
-        __PROPERTY_PLAIN(uint16_t, port);
+        DECLARE_PROPERTY_PLAIN(uint16_t, port);
 
         /**
          * @brief Salt value used for peer authentication.
          */
-        __PROPERTY_PLAIN(uint32_t, salt);
+        DECLARE_PROPERTY_PLAIN(uint32_t, salt);
 
         /**
          * @brief Flag indicating whether or not the peer is connected.
          */
-        __PROPERTY_PLAIN(bool, connected);
+        DECLARE_PROPERTY_PLAIN(bool, connected);
         /**
          * @brief Connection state.
          */
-        __PROPERTY_PLAIN(NET_CONN_STATUS, connectionState);
+        DECLARE_PROPERTY_PLAIN(NET_CONN_STATUS, connectionState);
 
         /**
          * @brief Number of pings received.
          */
-        __PROPERTY_PLAIN(uint32_t, pingsReceived);
+        DECLARE_PROPERTY_PLAIN(uint32_t, pingsReceived);
         /**
          * @brief Last ping received.
          */
-        __PROPERTY_PLAIN(uint64_t, lastPing);
+        DECLARE_PROPERTY_PLAIN(uint64_t, lastPing);
 
         /**
          * @brief Number of missed ACL updates.
          */
-        __PROPERTY_PLAIN(uint32_t, missedACLUpdates);
+        DECLARE_PROPERTY_PLAIN(uint32_t, missedACLUpdates);
 
         /**
          * @brief Flag indicating this connection is from an external peer.
          */
-        __PROPERTY_PLAIN(bool, isExternalPeer);
+        DECLARE_PROPERTY_PLAIN(bool, isExternalPeer);
         /**
          * @brief Flag indicating this connection is from an conventional peer.
          */
-        __PROPERTY_PLAIN(bool, isConventionalPeer);
+        DECLARE_PROPERTY_PLAIN(bool, isConventionalPeer);
         /**
          * @brief Flag indicating this connection is from an SysView peer.
          */
-        __PROPERTY_PLAIN(bool, isSysView);
+        DECLARE_PROPERTY_PLAIN(bool, isSysView);
 
         /**
          * @brief Flag indicating this connection is from an external peer that is peer link enabled.
          */
-        __PROPERTY_PLAIN(bool, isPeerLink);
+        DECLARE_PROPERTY_PLAIN(bool, isPeerLink);
 
         /**
          * @brief JSON objecting containing peer configuration information.
          */
-        __PROPERTY_PLAIN(json::object, config);
+        DECLARE_PROPERTY_PLAIN(json::object, config);
 
     private:
         std::timed_mutex m_streamSeqMutex;

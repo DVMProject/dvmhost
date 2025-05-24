@@ -47,7 +47,7 @@ bool StartOfStream::decode(const uint8_t* data)
 {
     assert(data != nullptr);
 
-    m_nid = __GET_UINT16B(data, 0U);                            // Network Identifier
+    m_nid = GET_UINT16(data, 0U);                               // Network Identifier
     m_errorCount = (data[2U] & 0x0FU);                          // Error Count
 
     return true;
@@ -59,6 +59,6 @@ void StartOfStream::encode(uint8_t* data)
 {
     assert(data != nullptr);
 
-    __SET_UINT16B(m_nid, data, 0U);                             // Network Identifier
+    SET_UINT16(m_nid, data, 0U);                                // Network Identifier
     data[2U] = m_errorCount & 0x0FU;                            // Error Count
 }

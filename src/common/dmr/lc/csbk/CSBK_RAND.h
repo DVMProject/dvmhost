@@ -61,17 +61,17 @@ namespace dmr
                 /**
                  * @brief Service Options.
                  */
-                __PROPERTY(uint8_t, serviceOptions, ServiceOptions);
+                DECLARE_PROPERTY(uint8_t, serviceOptions, ServiceOptions);
                 /**
                  * @brief Service Extra Options.
                  */
-                __PROPERTY(uint8_t, serviceExtra, ServiceExtra);
+                DECLARE_PROPERTY(uint8_t, serviceExtra, ServiceExtra);
                 /**
                  * @brief Service Kind.
                  */
-                __PROPERTY(uint8_t, serviceKind, ServiceKind);
+                DECLARE_PROPERTY(uint8_t, serviceKind, ServiceKind);
 
-                __COPY(CSBK_RAND);
+                DECLARE_COPY(CSBK_RAND);
             };
         } // namespace csbk
     } // namespace lc

@@ -41,8 +41,8 @@ bool FSCConnect::decode(const uint8_t* data)
     assert(data != nullptr);
     FSCMessage::decode(data);
 
-    m_vcBasePort = __GET_UINT16B(data, 3U);                     // Voice Conveyance RTP Port
-    m_vcSSRC = __GET_UINT32(data, 5U);                          // Voice Conveyance SSRC
+    m_vcBasePort = GET_UINT16(data, 3U);                        // Voice Conveyance RTP Port
+    m_vcSSRC = GET_UINT32(data, 5U);                            // Voice Conveyance SSRC
     m_fsHeartbeatPeriod = data[9U];                             // Fixed Station Heartbeat Period
     m_hostHeartbeatPeriod = data[10U];                          // Host Heartbeat Period
 
@@ -56,8 +56,8 @@ void FSCConnect::encode(uint8_t* data)
     assert(data != nullptr);
     FSCMessage::encode(data);
 
-    __SET_UINT16B(m_vcBasePort, data, 3U);                      // Voice Conveyance RTP Port
-    __SET_UINT32(m_vcSSRC, data, 5U);                           // Voice Conveyance SSRC
+    SET_UINT16(m_vcBasePort, data, 3U);                         // Voice Conveyance RTP Port
+    SET_UINT32(m_vcSSRC, data, 5U);                             // Voice Conveyance SSRC
     data[9U] = m_fsHeartbeatPeriod;                             // Fixed Station Heartbeat Period
     data[10U] = m_hostHeartbeatPeriod;                          // Host Heartbeat Period
 }

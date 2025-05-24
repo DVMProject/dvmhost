@@ -106,82 +106,82 @@ namespace dmr
             /**
              * @brief Flag indicating whether the data header is group or individual.
              */
-            __PROPERTY(bool, GI, GI);
+            DECLARE_PROPERTY(bool, GI, GI);
             /**
              * @brief Flag indicating whether the data header requires acknowledgement.
              */
-            __PROPERTY(bool, A, A);
+            DECLARE_PROPERTY(bool, A, A);
 
             /**
              * @brief Data packet format.
              */
-            __PROPERTY(defines::DPF::E, DPF, DPF);
+            DECLARE_PROPERTY(defines::DPF::E, DPF, DPF);
 
             /**
              * @brief Service access point.
              */
-            __PROPERTY(uint8_t, sap, SAP);
+            DECLARE_PROPERTY(uint8_t, sap, SAP);
             /**
              * @brief Fragment Sequence Number.
              */
-            __PROPERTY(uint8_t, fsn, FSN);
+            DECLARE_PROPERTY(uint8_t, fsn, FSN);
             /**
              * @brief Send Sequence Number.
              */
-            __PROPERTY(uint8_t, Ns, Ns);
+            DECLARE_PROPERTY(uint8_t, Ns, Ns);
 
             /**
              * @brief Gets the number of data blocks following the header.
              */
-            __PROPERTY(uint32_t, blocksToFollow, BlocksToFollow);
+            DECLARE_PROPERTY(uint32_t, blocksToFollow, BlocksToFollow);
             /**
              * @brief Count of block padding.
              */
-            __PROPERTY(uint8_t, padLength, PadLength);
+            DECLARE_PROPERTY(uint8_t, padLength, PadLength);
             /**
              * @brief Full Message Flag.
              */
-            __PROPERTY(bool, F, FullMesage);
+            DECLARE_PROPERTY(bool, F, FullMesage);
             /**
              * @brief Synchronize Flag.
              */
-            __PROPERTY(bool, S, Synchronize);
+            DECLARE_PROPERTY(bool, S, Synchronize);
 
             /**
              * @brief Unified Data or Defined Data Format.
              */
-            __PROPERTY(uint8_t, dataFormat, DataFormat);
+            DECLARE_PROPERTY(uint8_t, dataFormat, DataFormat);
 
             /**
              * @brief Source ID.
              */
-            __PROPERTY(uint32_t, srcId, SrcId);
+            DECLARE_PROPERTY(uint32_t, srcId, SrcId);
             /**
              * @brief Destination ID.
              */
-            __PROPERTY(uint32_t, dstId, DstId);
+            DECLARE_PROPERTY(uint32_t, dstId, DstId);
 
             /**
              * @brief Response class.
              */
-            __PROPERTY(uint8_t, rspClass, ResponseClass);
+            DECLARE_PROPERTY(uint8_t, rspClass, ResponseClass);
             /**
              * @brief Response type.
              */
-            __PROPERTY(uint8_t, rspType, ResponseType);
+            DECLARE_PROPERTY(uint8_t, rspType, ResponseType);
             /**
              * @brief Response status.
              */
-            __PROPERTY(uint8_t, rspStatus, ResponseStatus);
+            DECLARE_PROPERTY(uint8_t, rspStatus, ResponseStatus);
 
             /**
              * @brief Source Port.
              */
-            __PROPERTY(uint8_t, srcPort, SrcPort);
+            DECLARE_PROPERTY(uint8_t, srcPort, SrcPort);
             /**
              * @brief Destination Port.
              */
-            __PROPERTY(uint8_t, dstPort, DstPort);
+            DECLARE_PROPERTY(uint8_t, dstPort, DstPort);
 
         private:
             edac::BPTC19696 m_bptc;

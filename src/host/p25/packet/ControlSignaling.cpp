@@ -659,7 +659,7 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
                 }
 
                 uint8_t RC[AUTH_RAND_CHLNG_LENGTH_BYTES];
-                __SET_UINT32(challenge >> 8, RC, 0);
+                SET_UINT32(challenge >> 8, RC, 0);
                 RC[4U] = (uint8_t)(challenge & 0xFFU);
 
                 // expand RAND1 to 16 bytes
@@ -3042,12 +3042,12 @@ void ControlSignaling::writeRF_TSDU_Auth_Dmd(uint32_t srcId)
     uint8_t RC[AUTH_RAND_CHLNG_LENGTH_BYTES];
     std::uniform_int_distribution<uint32_t> dist(DVM_RAND_MIN, DVM_RAND_MAX);
     uint32_t rnd = dist(m_p25->m_random);
-    __SET_UINT32(rnd, RC, 0U);
+    SET_UINT32(rnd, RC, 0U);
 
     rnd = dist(m_p25->m_random);
     RC[4U] = (uint8_t)(rnd & 0xFFU);
 
-    ulong64_t challenge = __GET_UINT32(RC, 0U);
+    ulong64_t challenge = GET_UINT32(RC, 0U);
     challenge = (challenge << 8) + RC[4U];
 
     osp->setAuthRC(RC);

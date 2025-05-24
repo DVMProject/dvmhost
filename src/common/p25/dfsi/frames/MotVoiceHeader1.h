@@ -96,19 +96,19 @@ namespace p25
                 /**
                  * @brief 
                  */
-                __PROPERTY(ICWFlag::E, icw, ICW);
+                DECLARE_PROPERTY(ICWFlag::E, icw, ICW);
                 /**
                  * @brief RSSI Value.
                  */
-                __PROPERTY(uint8_t, rssi, RSSI);
+                DECLARE_PROPERTY(uint8_t, rssi, RSSI);
                 /**
                  * @brief Flag indicating whether or not the RSSI field is valid.
                  */
-                __PROPERTY(RssiValidityFlag::E, rssiValidity, RSSIValidity);
+                DECLARE_PROPERTY(RssiValidityFlag::E, rssiValidity, RSSIValidity);
                 /**
                  * @brief 
                  */
-                __PROPERTY(uint8_t, nRssi, NRSSI);
+                DECLARE_PROPERTY(uint8_t, nRssi, NRSSI);
             };
         } // namespace frames
     } // namespace dfsi

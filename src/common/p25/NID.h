@@ -65,7 +65,7 @@ namespace p25
         /**
          * @brief Data unit ID.
          */
-        __READONLY_PROPERTY(defines::DUID::E, duid, DUID);
+        DECLARE_RO_PROPERTY(defines::DUID::E, duid, DUID);
 
     private:
         uint32_t m_nac;

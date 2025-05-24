@@ -70,7 +70,7 @@ void SNDCPCtxActAccept::encode(uint8_t* data)
 
     data[10U] = (m_mdpco & 0x0FU);                                                  // MDPCO
 
-    __SET_UINT16B(m_sndcpDAC, data, 11U);                                           // Data Access Control
+    SET_UINT16(m_sndcpDAC, data, 11U);                                              // Data Access Control
 }
 
 // ---------------------------------------------------------------------------

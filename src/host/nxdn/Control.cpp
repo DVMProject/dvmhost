@@ -933,8 +933,8 @@ void Control::processNetwork()
     // process network message header
     uint8_t messageType = buffer[4U];
 
-    uint32_t srcId = __GET_UINT16(buffer, 5U);
-    uint32_t dstId = __GET_UINT16(buffer, 8U);
+    uint32_t srcId = GET_UINT24(buffer, 5U);
+    uint32_t dstId = GET_UINT24(buffer, 8U);
 
     if (m_debug) {
         LogDebug(LOG_NET, "NXDN, messageType = $%02X, srcId = %u, dstId = %u, len = %u", messageType, srcId, dstId, length);

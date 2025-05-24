@@ -122,34 +122,34 @@ public:
     /**
      * @brief 
      */
-    __PROPERTY_PLAIN(uint32_t, id);
+    DECLARE_PROPERTY_PLAIN(uint32_t, id);
     /**
      * @brief 
      */
-    __PROPERTY_PLAIN(std::string, name);
+    DECLARE_PROPERTY_PLAIN(std::string, name);
 
     /**
      * @brief 
      */
-    __PROPERTY_PLAIN(uint32_t, keysetId);
+    DECLARE_PROPERTY_PLAIN(uint32_t, keysetId);
     /**
      * @brief 
      */
-    __PROPERTY_PLAIN(uint32_t, sln);
+    DECLARE_PROPERTY_PLAIN(uint32_t, sln);
 
     /**
      * @brief Encryption algorithm ID.
      */
-    __PROPERTY_PLAIN(uint8_t, algId);
+    DECLARE_PROPERTY_PLAIN(uint8_t, algId);
     /**
      * @brief Encryption key ID.
      */
-    __PROPERTY_PLAIN(uint32_t, kId);
+    DECLARE_PROPERTY_PLAIN(uint32_t, kId);
 
     /**
      * @brief Encryption key material.
      */
-    __PROPERTY_PLAIN(std::string, keyMaterial);
+    DECLARE_PROPERTY_PLAIN(std::string, keyMaterial);
 };
 
 // ---------------------------------------------------------------------------
@@ -252,7 +252,7 @@ public:
     /**
      * @brief List of keys.
      */
-    __PROPERTY_PLAIN(std::vector<KeyItem>, keys);
+    DECLARE_PROPERTY_PLAIN(std::vector<KeyItem>, keys);
 };
 
 #endif // __CRYPTO_CONTAINER_H__

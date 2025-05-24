@@ -71,13 +71,13 @@ namespace p25
             /**
              * @brief 
              */
-            __PROPERTY(uint8_t, bodyFormat, BodyFormat);
+            DECLARE_PROPERTY(uint8_t, bodyFormat, BodyFormat);
             /**
              * @brief 
              */
-            __PROPERTY(uint32_t, kmfRSI, KMFRSI);
+            DECLARE_PROPERTY(uint32_t, kmfRSI, KMFRSI);
 
-            __COPY(KMMDeregistrationCommand);
+            DECLARE_COPY(KMMDeregistrationCommand);
         };
     } // namespace kmm
 } // namespace p25

@@ -72,15 +72,15 @@ namespace p25
                 /**
                  * @brief 
                  */
-                __PROPERTY(bool, signal, Signal);
+                DECLARE_PROPERTY(bool, signal, Signal);
                 /**
                  * @brief Indicates a compact (1) or verbose (0) block header.
                  */
-                __PROPERTY(bool, compact, Compact);
+                DECLARE_PROPERTY(bool, compact, Compact);
                 /**
                  * @brief Number of block headers following this control octet.
                  */
-                __PROPERTY(uint8_t, blockHeaderCnt, BlockHeaderCnt);
+                DECLARE_PROPERTY(uint8_t, blockHeaderCnt, BlockHeaderCnt);
             };
         } // namespace frames
     } // namespace dfsi

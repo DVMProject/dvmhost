@@ -91,11 +91,11 @@ namespace lookups
         /**
          * @brief Talkgroup ID.
          */
-        __PROPERTY_PLAIN(uint32_t, tgId);
+        DECLARE_PROPERTY_PLAIN(uint32_t, tgId);
         /**
          * @brief Talkgroup DMR slot.
          */
-        __PROPERTY_PLAIN(uint8_t, tgSlot);
+        DECLARE_PROPERTY_PLAIN(uint8_t, tgSlot);
     };
 
     // ---------------------------------------------------------------------------
@@ -160,15 +160,15 @@ namespace lookups
         /**
          * @brief Peer ID.
          */
-        __PROPERTY_PLAIN(uint32_t, peerId);
+        DECLARE_PROPERTY_PLAIN(uint32_t, peerId);
         /**
          * @brief Talkgroup ID.
          */
-        __PROPERTY_PLAIN(uint32_t, tgId);
+        DECLARE_PROPERTY_PLAIN(uint32_t, tgId);
         /**
          * @brief Talkgroup DMR slot.
          */
-        __PROPERTY_PLAIN(uint8_t, tgSlot);
+        DECLARE_PROPERTY_PLAIN(uint8_t, tgSlot);
     };
 
     // ---------------------------------------------------------------------------
@@ -382,45 +382,45 @@ namespace lookups
         /**
          * @brief Flag indicating whether the rule is active.
          */
-        __PROPERTY_PLAIN(bool, active);
+        DECLARE_PROPERTY_PLAIN(bool, active);
         /**
          * @brief Flag indicating whether this talkgroup will only repeat with affiliations.
          */
-        __PROPERTY_PLAIN(bool, affiliated);
+        DECLARE_PROPERTY_PLAIN(bool, affiliated);
         /**
          * @brief Flag indicating whether or not the talkgroup is a parrot.
          */
-        __PROPERTY_PLAIN(bool, parrot);
+        DECLARE_PROPERTY_PLAIN(bool, parrot);
         /**
          * @brief List of peer IDs included by this rule.
          */
-        __PROPERTY_PLAIN(std::vector<uint32_t>, inclusion);
+        DECLARE_PROPERTY_PLAIN(std::vector<uint32_t>, inclusion);
         /**
          * @brief List of peer IDs excluded by this rule.
          */
-        __PROPERTY_PLAIN(std::vector<uint32_t>, exclusion);
+        DECLARE_PROPERTY_PLAIN(std::vector<uint32_t>, exclusion);
         /**
          * @brief List of rewrites performed by this rule.
          */
-        __PROPERTY_PLAIN(std::vector<TalkgroupRuleRewrite>, rewrite);
+        DECLARE_PROPERTY_PLAIN(std::vector<TalkgroupRuleRewrite>, rewrite);
         /**
          * @brief List of always send performed by this rule.
          */
-        __PROPERTY_PLAIN(std::vector<uint32_t>, alwaysSend);
+        DECLARE_PROPERTY_PLAIN(std::vector<uint32_t>, alwaysSend);
         /**
          * @brief List of peer IDs preferred by this rule.
          */
-        __PROPERTY_PLAIN(std::vector<uint32_t>, preferred);
+        DECLARE_PROPERTY_PLAIN(std::vector<uint32_t>, preferred);
 
         /**
          * @brief List of radios IDs permitted to transmit on the talkgroup.
          */
-        __PROPERTY_PLAIN(std::vector<uint32_t>, permittedRIDs);
+        DECLARE_PROPERTY_PLAIN(std::vector<uint32_t>, permittedRIDs);
 
         /**
          * @brief Flag indicating whether or not the talkgroup is a non-preferred.
          */
-        __PROPERTY_PLAIN(bool, nonPreferred);
+        DECLARE_PROPERTY_PLAIN(bool, nonPreferred);
     };
 
     // ---------------------------------------------------------------------------
@@ -506,19 +506,19 @@ namespace lookups
         /**
          * @brief Textual name for the routing rule.
          */
-        __PROPERTY_PLAIN(std::string, name);
+        DECLARE_PROPERTY_PLAIN(std::string, name);
         /**
          * @brief (Optional) Secondary textual name for the routing rule.
          */
-        __PROPERTY_PLAIN(std::string, nameAlias);
+        DECLARE_PROPERTY_PLAIN(std::string, nameAlias);
         /**
          * @brief Configuration for the routing rule.
          */
-        __PROPERTY_PLAIN(TalkgroupRuleConfig, config);
+        DECLARE_PROPERTY_PLAIN(TalkgroupRuleConfig, config);
         /**
          * @brief Source talkgroup information for the routing rule.
          */
-        __PROPERTY_PLAIN(TalkgroupRuleGroupVoiceSource, source);
+        DECLARE_PROPERTY_PLAIN(TalkgroupRuleGroupVoiceSource, source);
     };
 
     // ---------------------------------------------------------------------------
@@ -661,15 +661,15 @@ namespace lookups
         /**
          * @brief Number indicating the number of seconds to hang on a talkgroup.
          */
-        __PROPERTY_PLAIN(uint32_t, groupHangTime);
+        DECLARE_PROPERTY_PLAIN(uint32_t, groupHangTime);
         /**
          * @brief Flag indicating whether or not the network layer should send the talkgroups to peers.
          */
-        __PROPERTY_PLAIN(bool, sendTalkgroups);
+        DECLARE_PROPERTY_PLAIN(bool, sendTalkgroups);
         /**
          * @brief List of group voice rules.
          */
-        __PROPERTY_PLAIN(std::vector<TalkgroupRuleGroupVoice>, groupVoice);
+        DECLARE_PROPERTY_PLAIN(std::vector<TalkgroupRuleGroupVoice>, groupVoice);
     };
 } // namespace lookups
 

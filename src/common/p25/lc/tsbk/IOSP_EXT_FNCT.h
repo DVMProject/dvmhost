@@ -66,9 +66,9 @@ namespace p25
                 /**
                  * @brief Extended function opcode.
                  */
-                __PROPERTY(uint32_t, extendedFunction, ExtendedFunction);
+                DECLARE_PROPERTY(uint32_t, extendedFunction, ExtendedFunction);
 
-                __COPY(IOSP_EXT_FNCT);
+                DECLARE_COPY(IOSP_EXT_FNCT);
             };
         } // namespace tsbk
     } // namespace lc

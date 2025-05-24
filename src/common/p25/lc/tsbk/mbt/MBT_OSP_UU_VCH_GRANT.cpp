@@ -83,17 +83,17 @@ void MBT_OSP_UU_VCH_GRANT::encodeMBT(data::DataHeader& dataHeader, uint8_t* pduU
     pduUserData[2U] = ((m_siteData.netId() & 0x0FU) << 4) +                         // Source Network ID (b3-b0)
         ((m_siteData.sysId() >> 8) & 0xFFU);                                        // Source System ID (b11-b8)
     pduUserData[3U] = (m_siteData.sysId() & 0xFFU);                                 // Source System ID (b7-b0)
-    __SET_UINT16(m_srcId, pduUserData, 4U);                                         // Source Radio Address
-    __SET_UINT16(m_dstId, pduUserData, 7U);                                         // Target Radio Address
-    __SET_UINT16B(txFrequency, pduUserData, 10U);                                   // Transmit Frequency
+    SET_UINT24(m_srcId, pduUserData, 4U);                                           // Source Radio Address
+    SET_UINT24(m_dstId, pduUserData, 7U);                                           // Target Radio Address
+    SET_UINT16(txFrequency, pduUserData, 10U);                                      // Transmit Frequency
 
     /** Block 2 */
-    __SET_UINT16B(rxFrequency, pduUserData, 12U);                                   // Receive Frequency
+    SET_UINT16(rxFrequency, pduUserData, 12U);                                      // Receive Frequency
     pduUserData[14U] = ((m_siteData.netId() >> 4) & 0xFFU);                         // Target Network ID (b11-b4)
     pduUserData[15U] = ((m_siteData.netId() & 0x0FU) << 4) +                        // Target Network ID (b3-b0)
         ((m_siteData.sysId() >> 8) & 0xFFU);                                        // Target System ID (b11-b8)
     pduUserData[16U] = (m_siteData.sysId() & 0xFFU);                                // Target System ID (b7-b0)
-    __SET_UINT16(m_dstId, pduUserData, 17U);                                        // Target Radio Address
+    SET_UINT24(m_dstId, pduUserData, 17U);                                          // Target Radio Address
 
     AMBT::encode(dataHeader, pduUserData);
 }

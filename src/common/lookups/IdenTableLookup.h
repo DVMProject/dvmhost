@@ -91,23 +91,23 @@ namespace lookups
         /**
          * @brief Channel ID for this entry.
          */
-        __READONLY_PROPERTY_PLAIN(uint8_t, channelId);
+        DECLARE_RO_PROPERTY_PLAIN(uint8_t, channelId);
         /**
          * @brief Base frequency for this entry.
          */
-        __READONLY_PROPERTY_PLAIN(uint32_t, baseFrequency);
+        DECLARE_RO_PROPERTY_PLAIN(uint32_t, baseFrequency);
         /**
          * @brief Channel spacing in kHz for this entry.
          */
-        __READONLY_PROPERTY_PLAIN(float, chSpaceKhz);
+        DECLARE_RO_PROPERTY_PLAIN(float, chSpaceKhz);
         /**
          * @brief Channel transmit offset in MHz for this entry.
          */
-        __READONLY_PROPERTY_PLAIN(float, txOffsetMhz);
+        DECLARE_RO_PROPERTY_PLAIN(float, txOffsetMhz);
         /**
          * @brief Channel bandwith in kHz for this entry.
          */
-        __READONLY_PROPERTY_PLAIN(float, chBandwidthKhz);
+        DECLARE_RO_PROPERTY_PLAIN(float, chBandwidthKhz);
     };
 
     // ---------------------------------------------------------------------------

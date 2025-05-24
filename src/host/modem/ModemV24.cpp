@@ -441,9 +441,7 @@ int ModemV24::write(const uint8_t* data, uint32_t length)
     }
 
     if (modemCommand == CMD_P25_DATA) {
-        UInt8Array __buffer = std::make_unique<uint8_t[]>(length);
-        uint8_t* buffer = __buffer.get();
-        ::memset(buffer, 0x00U, length);
+        DECLARE_UINT8_ARRAY(buffer, length);
         ::memcpy(buffer, data + 2U, length);
 
         if (m_useTIAFormat)
@@ -517,8 +515,7 @@ int ModemV24::writeSerial()
         m_txP25Queue.get(lengthTagTs, 11U);
         
         // Get the actual data
-        UInt8Array __buffer = std::make_unique<uint8_t[]>(len);
-        uint8_t* buffer = __buffer.get();
+        DECLARE_UINT8_ARRAY(buffer, len);
         m_txP25Queue.get(buffer, len);
         
         // Sanity check on data tag
@@ -587,9 +584,7 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
     ::memset(buffer, 0x00U, P25_PDU_FRAME_LENGTH_BYTES + 2U);
 
     // get the DFSI data (skip the 0x00 padded byte at the start)
-    UInt8Array __dfsiData = std::make_unique<uint8_t[]>(length - 1U);
-    uint8_t* dfsiData = __dfsiData.get();
-    ::memset(dfsiData, 0x00U, length - 1U);
+    DECLARE_UINT8_ARRAY(dfsiData, length - 1U);
     ::memcpy(dfsiData, data + 1U, length - 1U);
 
     if (m_debug)
@@ -678,8 +673,8 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
 
                     m_rxCall->mfId = vhdr[9U];
                     m_rxCall->algoId = vhdr[10U];
-                    m_rxCall->kId = __GET_UINT16B(vhdr, 11U);
-                    m_rxCall->dstId = __GET_UINT16B(vhdr, 13U);
+                    m_rxCall->kId = GET_UINT16(vhdr, 11U);
+                    m_rxCall->dstId = GET_UINT16(vhdr, 13U);
 
                     if (m_debug) {
                         LogDebug(LOG_MODEM, "P25, VHDR algId = $%02X, kId = $%04X, dstId = $%04X", m_rxCall->algoId, m_rxCall->kId, m_rxCall->dstId);
@@ -742,10 +737,8 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
                 uint32_t bitLength = ((dataHeader.getBlocksToFollow() + 1U) * P25_PDU_FEC_LENGTH_BITS) + P25_PREAMBLE_LENGTH_BITS;
                 uint32_t offset = P25_PREAMBLE_LENGTH_BITS;
 
-                UInt8Array __data = std::make_unique<uint8_t[]>((bitLength / 8U) + 1U);
-                uint8_t* data = __data.get();
+                DECLARE_UINT8_ARRAY(data, (bitLength / 8U) + 1U);
 
-                ::memset(data, 0x00U, bitLength / 8U);
                 uint8_t block[P25_PDU_FEC_LENGTH_BYTES];
                 ::memset(block, 0x00U, P25_PDU_FEC_LENGTH_BYTES);
 
@@ -860,7 +853,7 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
                 {
                     ::memcpy(m_rxCall->netLDU1 + 80U, voice.imbeData, RAW_IMBE_LENGTH_BYTES);
                     if (voice.additionalData != nullptr) {
-                        m_rxCall->dstId = __GET_UINT16(voice.additionalData, 0U);
+                        m_rxCall->dstId = GET_UINT24(voice.additionalData, 0U);
                     } else {
                         LogWarning(LOG_MODEM, "V.24/DFSI VC4 traffic missing metadata");
                     }
@@ -870,7 +863,7 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
                 {
                     ::memcpy(m_rxCall->netLDU1 + 105U, voice.imbeData, RAW_IMBE_LENGTH_BYTES);
                     if (voice.additionalData != nullptr) {
-                        m_rxCall->srcId = __GET_UINT16(voice.additionalData, 0U);
+                        m_rxCall->srcId = GET_UINT24(voice.additionalData, 0U);
                     } else {
                         LogWarning(LOG_MODEM, "V.24/DFSI VC5 traffic missing metadata");
                     }
@@ -942,7 +935,7 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
                     ::memcpy(m_rxCall->netLDU2 + 130U, voice.imbeData, RAW_IMBE_LENGTH_BYTES);
                     if (voice.additionalData != nullptr) {
                         m_rxCall->algoId = voice.additionalData[0U];
-                        m_rxCall->kId = __GET_UINT16B(voice.additionalData, 1U);
+                        m_rxCall->kId = GET_UINT16(voice.additionalData, 1U);
                     } else {
                         LogWarning(LOG_MODEM, "V.24/DFSI VC15 traffic missing metadata");
                     }
@@ -1115,9 +1108,7 @@ void ModemV24::convertToAirTIA(const uint8_t *data, uint32_t length)
     ::memset(buffer, 0x00U, P25_PDU_FRAME_LENGTH_BYTES + 2U);
 
     // get the DFSI data (skip the 0x00 padded byte at the start)
-    UInt8Array __dfsiData = std::make_unique<uint8_t[]>(length - 1U);
-    uint8_t* dfsiData = __dfsiData.get();
-    ::memset(dfsiData, 0x00U, length - 1U);
+    DECLARE_UINT8_ARRAY(dfsiData, length - 1U);
     ::memcpy(dfsiData, data + 1U, length - 1U);
 
     if (m_debug)
@@ -1242,8 +1233,8 @@ void ModemV24::convertToAirTIA(const uint8_t *data, uint32_t length)
 
                     m_rxCall->mfId = vhdr[9U];
                     m_rxCall->algoId = vhdr[10U];
-                    m_rxCall->kId = __GET_UINT16B(vhdr, 11U);
-                    m_rxCall->dstId = __GET_UINT16B(vhdr, 13U);
+                    m_rxCall->kId = GET_UINT16(vhdr, 11U);
+                    m_rxCall->dstId = GET_UINT16(vhdr, 13U);
 
                     if (m_debug) {
                         LogDebug(LOG_MODEM, "P25, VHDR algId = $%02X, kId = $%04X, dstId = $%04X", m_rxCall->algoId, m_rxCall->kId, m_rxCall->dstId);
@@ -1320,7 +1311,7 @@ void ModemV24::convertToAirTIA(const uint8_t *data, uint32_t length)
             {
                 ::memcpy(m_rxCall->netLDU1 + 80U, voice.imbeData, RAW_IMBE_LENGTH_BYTES);
                 if (voice.additionalData != nullptr) {
-                    m_rxCall->dstId = __GET_UINT16(voice.additionalData, 0U);
+                    m_rxCall->dstId = GET_UINT24(voice.additionalData, 0U);
                 } else {
                     LogWarning(LOG_MODEM, "V.24/DFSI VC4 traffic missing metadata");
                 }
@@ -1330,7 +1321,7 @@ void ModemV24::convertToAirTIA(const uint8_t *data, uint32_t length)
             {
                 ::memcpy(m_rxCall->netLDU1 + 105U, voice.imbeData, RAW_IMBE_LENGTH_BYTES);
                 if (voice.additionalData != nullptr) {
-                    m_rxCall->srcId = __GET_UINT16(voice.additionalData, 0U);
+                    m_rxCall->srcId = GET_UINT24(voice.additionalData, 0U);
                 } else {
                     LogWarning(LOG_MODEM, "V.24/DFSI VC5 traffic missing metadata");
                 }
@@ -1408,7 +1399,7 @@ void ModemV24::convertToAirTIA(const uint8_t *data, uint32_t length)
                 ::memcpy(m_rxCall->netLDU2 + 130U, voice.imbeData, RAW_IMBE_LENGTH_BYTES);
                 if (voice.additionalData != nullptr) {
                     m_rxCall->algoId = voice.additionalData[0U];
-                    m_rxCall->kId = __GET_UINT16B(voice.additionalData, 1U);
+                    m_rxCall->kId = GET_UINT16(voice.additionalData, 1U);
                 } else {
                     LogWarning(LOG_MODEM, "V.24/DFSI VC15 traffic missing metadata");
                 }
@@ -1690,8 +1681,8 @@ void ModemV24::startOfStream(const p25::lc::LC& control)
 
     vhdr[9U] = control.getMFId();
     vhdr[10U] = control.getAlgId();
-    __SET_UINT16B(control.getKId(), vhdr, 11U);
-    __SET_UINT16B(control.getDstId(), vhdr, 13U);
+    SET_UINT16(control.getKId(), vhdr, 11U);
+    SET_UINT16(control.getDstId(), vhdr, 13U);
 
     // perform RS encoding
     m_rs.encode362017(vhdr);
@@ -1771,7 +1762,7 @@ uint16_t ModemV24::generateNID(DUID::E duid)
     nid[1U] = (m_p25NAC << 4) & 0xF0U;
     nid[1U] |= duid;
 
-    return __GET_UINT16B(nid, 0U);
+    return GET_UINT16(nid, 0U);
 }
 
 /* Send a start of stream sequence (HDU, etc) to the connected UDP TIA-102 device. */
@@ -1821,8 +1812,8 @@ void ModemV24::startOfStreamTIA(const p25::lc::LC& control)
 
     vhdr[9U] = control.getMFId();
     vhdr[10U] = control.getAlgId();
-    __SET_UINT16B(control.getKId(), vhdr, 11U);
-    __SET_UINT16B(control.getDstId(), vhdr, 13U);
+    SET_UINT16(control.getKId(), vhdr, 11U);
+    SET_UINT16(control.getDstId(), vhdr, 13U);
 
     // perform RS encoding
     m_rs.encode362017(vhdr);

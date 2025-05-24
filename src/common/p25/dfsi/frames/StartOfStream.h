@@ -72,11 +72,11 @@ namespace p25
                 /**
                  * @brief Network Identifier.
                  */
-                __PROPERTY(uint16_t, nid, NID);
+                DECLARE_PROPERTY(uint16_t, nid, NID);
                 /**
                  * @brief Error count.
                  */
-                __PROPERTY(uint8_t, errorCount, ErrorCount);
+                DECLARE_PROPERTY(uint8_t, errorCount, ErrorCount);
             };
         } // namespace frames
     } // namespace dfsi

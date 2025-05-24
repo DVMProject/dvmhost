@@ -65,9 +65,9 @@ namespace p25
             /**
              * @brief
              */
-            __PROPERTY(std::vector<uint8_t>, keysetIds, KeysetIds);
+            DECLARE_PROPERTY(std::vector<uint8_t>, keysetIds, KeysetIds);
 
-            __COPY(KMMInventoryResponseListKeysets);
+            DECLARE_COPY(KMMInventoryResponseListKeysets);
         };
     } // namespace kmm
 } // namespace p25

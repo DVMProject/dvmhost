@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2015,2016,2017 Jonathan Naylor, G4KLX
- *  Copyright (C) 2018-2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2018-2025 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -21,6 +21,7 @@
  * @file Defines.h
  * @ingroup common
  */
+#pragma once
 #if !defined(__COMMON_DEFINES_H__)
 #define __COMMON_DEFINES_H__
 
@@ -92,6 +93,14 @@ typedef unsigned long long  ulong64_t;
 #else
 #define PACK(decl) __pragma(pack(push, 1)) decl __pragma(pack(pop))
 #endif
+
+// ---------------------------------------------------------------------------
+//  Common Core Includes
+// ---------------------------------------------------------------------------
+
+#include "common/ClassProperties.h"
+#include "common/BitManipulation.h"
+#include "common/VariableLengthArray.h"
 
 // ---------------------------------------------------------------------------
 //  Constants
@@ -193,121 +202,6 @@ const uint8_t   IP_COMPRESS_NONE = 0x00U;
 const uint8_t   IP_COMPRESS_RFC1144_COMPRESS = 0x01U;
 const uint8_t   IP_COMPRESS_RFC1144_UNCOMPRESS = 0x02U;
 
-// ---------------------------------------------------------------------------
-//  Class Helper Macros
-// ---------------------------------------------------------------------------
-
-/**
- * Class Copy Code Pattern
- */
-
-/**
- * @brief Creates a private copy implementation.
- * This requires the copy(const type& data) to be declared in the class definition.
- * @param type Atomic type.
- */
-#define __COPY(type)                                                                    \
-        private: virtual void copy(const type& data);                                   \
-        public: __forceinline type& operator=(const type& data) {                       \
-            if (this != &data) {                                                        \
-                copy(data);                                                             \
-            }                                                                           \
-            return *this;                                                               \
-        }
-/**
- * @brief Creates a protected copy implementation.
- * This requires the copy(const type& data) to be declared in the class definition.
- * @param type Atomic type.
- */
-#define __PROTECTED_COPY(type)                                                          \
-        protected: virtual void copy(const type& data);                                 \
-        public: __forceinline type& operator=(const type& data) {                       \
-            if (this != &data) {                                                        \
-                copy(data);                                                             \
-            }                                                                           \
-            return *this;                                                               \
-        }
-
-/**
- * Property Creation
- *  These macros should always be used LAST in the "public" section of a class definition.
- */
-
-/**
- * @brief Creates a read-only get property.
- * @param type Atomic type for property.
- * @param variableName Variable name for property.
- * @param propName Property name.
- */
-#define __READONLY_PROPERTY(type, variableName, propName)                               \
-        private: type m_##variableName;                                                 \
-        public: __forceinline type get##propName(void) const { return m_##variableName; }
-/**
- * @brief Creates a read-only get property.
- * @param type Atomic type for property.
- * @param variableName Variable name for property.
- * @param propName Property name.
- */
-#define __PROTECTED_READONLY_PROPERTY(type, variableName, propName)                     \
-        protected: type m_##variableName;                                               \
-        public: __forceinline type get##propName(void) const { return m_##variableName; }
-
-/**
- * @brief Creates a read-only get property, does not use "get".
- * @param type Atomic type for property.
- * @param variableName Variable name for property.
- */
-#define __PROTECTED_READONLY_PROPERTY_PLAIN(type, variableName)                         \
-        protected: type m_##variableName;                                               \
-        public: __forceinline type variableName(void) const { return m_##variableName; }
-/**
- * @brief Creates a read-only get property, does not use "get".
- * @param type Atomic type for property.
- * @param variableName Variable name for property.
- */
-#define __READONLY_PROPERTY_PLAIN(type, variableName)                                   \
-        private: type m_##variableName;                                                 \
-        public: __forceinline type variableName(void) const { return m_##variableName; }
-
-/**
- * @brief Creates a get and set private property.
- * @param type Atomic type for property.
- * @param variableName Variable name for property.
- * @param propName Property name.
- */
-#define __PROPERTY(type, variableName, propName)                                        \
-        private: type m_##variableName;                                                 \
-        public: __forceinline type get##propName(void) const { return m_##variableName; } \
-                __forceinline void set##propName(type val) { m_##variableName = val; }
-/**
- * @brief Creates a get and set protected property.
- * @param type Atomic type for property.
- * @param variableName Variable name for property.
- * @param propName Property name.
- */
-#define __PROTECTED_PROPERTY(type, variableName, propName)                              \
-        protected: type m_##variableName;                                               \
-        public: __forceinline type get##propName(void) const { return m_##variableName; } \
-                __forceinline void set##propName(type val) { m_##variableName = val; }
-
-/**
- * @brief Creates a get and set private property, does not use "get"/"set".
- * @param type Atomic type for property.
- * @param variableName Variable name for property.
- */
-#define __PROPERTY_PLAIN(type, variableName)                                            \
-        private: type m_##variableName;                                                 \
-        public: __forceinline type variableName(void) const { return m_##variableName; }\
-                __forceinline void variableName(type val) { m_##variableName = val; }
-/**
- * @brief Creates a get and set protected property, does not use "get"/"set".
- * @param type Atomic type for property.
- * @param variableName Variable name for property.
- */
-#define __PROTECTED_PROPERTY_PLAIN(type, variableName)                                  \
-        protected: type m_##variableName;                                               \
-        public: __forceinline type variableName(void) const { return m_##variableName; }\
-                __forceinline void variableName(type val) { m_##variableName = val; }
-
 /** @} */
+
 #endif // __COMMON_DEFINES_H__

@@ -71,9 +71,9 @@ namespace p25
             /**
              * @brief 
              */
-            __PROPERTY(uint8_t, inventoryType, InventoryType);
+            DECLARE_PROPERTY(uint8_t, inventoryType, InventoryType);
 
-            __COPY(KMMInventoryCommand);
+            DECLARE_COPY(KMMInventoryCommand);
         };
     } // namespace kmm
 } // namespace p25

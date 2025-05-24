@@ -129,97 +129,97 @@ namespace p25
             /**
              * @brief Flag indicating if acknowledgement is needed.
              */
-            __PROPERTY(bool, ackNeeded, AckNeeded);
+            DECLARE_PROPERTY(bool, ackNeeded, AckNeeded);
             /**
              * @brief Flag indicating if this is an outbound data packet.
              */
-            __PROPERTY(bool, outbound, Outbound);
+            DECLARE_PROPERTY(bool, outbound, Outbound);
             /**
              * @brief Data packet format.
              */
-            __PROPERTY(uint8_t, fmt, Format);
+            DECLARE_PROPERTY(uint8_t, fmt, Format);
             /**
              * @brief Service access point.
              */
-            __PROPERTY(uint8_t, sap, SAP);
+            DECLARE_PROPERTY(uint8_t, sap, SAP);
             /**
              * @brief Manufacturer ID.
              */
-            __PROPERTY(uint8_t, mfId, MFId);
+            DECLARE_PROPERTY(uint8_t, mfId, MFId);
             /**
              * @brief Logical link ID.
              */
-            __PROPERTY(uint32_t, llId, LLId);
+            DECLARE_PROPERTY(uint32_t, llId, LLId);
             /**
              * @brief Total number of blocks following this header.
              */
-            __PROPERTY(uint8_t, blocksToFollow, BlocksToFollow);
+            DECLARE_PROPERTY(uint8_t, blocksToFollow, BlocksToFollow);
             /**
              * @brief Total number of padding bytes.
              */
-            __PROPERTY(uint8_t, padLength, PadLength);
+            DECLARE_PROPERTY(uint8_t, padLength, PadLength);
             /**
              * @brief Flag indicating whether or not this data packet is a full message.
              */
-            __PROPERTY(bool, F, FullMessage);
+            DECLARE_PROPERTY(bool, F, FullMessage);
             /**
              * @brief Synchronize Flag.
              */
-            __PROPERTY(bool, S, Synchronize);
+            DECLARE_PROPERTY(bool, S, Synchronize);
             /**
              * @brief Fragment Sequence Number.
              */
-            __PROPERTY(uint8_t, fsn, FSN);
+            DECLARE_PROPERTY(uint8_t, fsn, FSN);
             /**
              * @brief Send Sequence Number.
              */
-            __PROPERTY(uint8_t, Ns, Ns);
+            DECLARE_PROPERTY(uint8_t, Ns, Ns);
             /**
              * @brief Flag indicating whether or not this is the last fragment in a message.
              */
-            __PROPERTY(bool, lastFragment, LastFragment);
+            DECLARE_PROPERTY(bool, lastFragment, LastFragment);
             /**
              * @brief Offset of the header.
              */
-            __PROPERTY(uint8_t, headerOffset, HeaderOffset);
+            DECLARE_PROPERTY(uint8_t, headerOffset, HeaderOffset);
 
             // Extended Addressing Data
             /**
              * @brief Service access point.
              */
-            __PROPERTY(uint8_t, exSap, EXSAP);
+            DECLARE_PROPERTY(uint8_t, exSap, EXSAP);
             /**
              * @brief Source Logical link ID.
              */
-            __PROPERTY(uint32_t, srcLlId, SrcLLId);
+            DECLARE_PROPERTY(uint32_t, srcLlId, SrcLLId);
 
             // Response Data
             /**
              * @brief Response class.
              */
-            __PROPERTY(uint8_t, rspClass, ResponseClass);
+            DECLARE_PROPERTY(uint8_t, rspClass, ResponseClass);
             /**
              * @brief Response type.
              */
-            __PROPERTY(uint8_t, rspType, ResponseType);
+            DECLARE_PROPERTY(uint8_t, rspType, ResponseType);
             /**
              * @brief Response status.
              */
-            __PROPERTY(uint8_t, rspStatus, ResponseStatus);
+            DECLARE_PROPERTY(uint8_t, rspStatus, ResponseStatus);
             
             // AMBT Data
             /**
              * @brief Alternate Trunking Block Opcode
              */
-            __PROPERTY(uint8_t, ambtOpcode, AMBTOpcode);
+            DECLARE_PROPERTY(uint8_t, ambtOpcode, AMBTOpcode);
             /**
              * @brief Alternate Trunking Block Field 8
              */
-            __PROPERTY(uint8_t, ambtField8, AMBTField8);
+            DECLARE_PROPERTY(uint8_t, ambtField8, AMBTField8);
             /**
              * @brief Alternate Trunking Block Field 9
              */
-            __PROPERTY(uint8_t, ambtField9, AMBTField9);
+            DECLARE_PROPERTY(uint8_t, ambtField9, AMBTField9);
 
         private:
             edac::Trellis m_trellis;

@@ -65,9 +65,9 @@ namespace p25
                 /**
                  * @brief Announcement group.
                  */
-                __PROPERTY(uint32_t, announceGroup, AnnounceGroup);
+                DECLARE_PROPERTY(uint32_t, announceGroup, AnnounceGroup);
 
-                __COPY(ISP_GRP_AFF_Q_RSP);
+                DECLARE_COPY(ISP_GRP_AFF_Q_RSP);
             };
         } // namespace tsbk
     } // namespace lc

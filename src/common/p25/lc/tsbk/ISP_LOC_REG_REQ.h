@@ -65,9 +65,9 @@ namespace p25
                 /**
                  * @brief Location registration area.
                  */
-                __PROPERTY(uint8_t, lra, LRA);
+                DECLARE_PROPERTY(uint8_t, lra, LRA);
 
-                __COPY(ISP_LOC_REG_REQ);
+                DECLARE_COPY(ISP_LOC_REG_REQ);
             };
         } // namespace tsbk
     } // namespace lc

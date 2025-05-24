@@ -56,8 +56,8 @@ bool PacketBuffer::decode(const uint8_t* data, uint8_t** message, uint32_t* outL
 
     // if this is the first block store sizes and initialize temp buffer
     if (curBlock == 0U) {
-        uint32_t size = __GET_UINT32(data, 0U);
-        uint32_t compressedSize = __GET_UINT32(data, 4U);
+        uint32_t size = GET_UINT32(data, 0U);
+        uint32_t compressedSize = GET_UINT32(data, 4U);
 
         frag->size = size;
         frag->compressedSize = compressedSize;
@@ -185,9 +185,9 @@ void PacketBuffer::encode(uint8_t* data, uint32_t length)
         ::memset(frag->data, 0x00U, bufSize);
 
         if (i == 0U) {
-            __SET_UINT32(length, frag->data, 0U);
+            SET_UINT32(length, frag->data, 0U);
             frag->size = length;
-            __SET_UINT32(compressedLen, frag->data, 4U);
+            SET_UINT32(compressedLen, frag->data, 4U);
             frag->compressedSize = compressedLen;
         }
 

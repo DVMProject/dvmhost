@@ -40,8 +40,8 @@ bool RPCHeader::decode(const uint8_t* data)
     assert(data != nullptr);
 
     m_crc16 = (data[0U] << 8) | (data[1U] << 0);                                // CRC-16
-    m_func = __GET_UINT16B(data, 2U);                                           // Function
-    m_messageLength = __GET_UINT32(data, 4U);                                   // Message Length
+    m_func = GET_UINT16(data, 2U);                                              // Function
+    m_messageLength = GET_UINT32(data, 4U);                                     // Message Length
 
     return true;
 }
@@ -54,7 +54,7 @@ void RPCHeader::encode(uint8_t* data)
 
     data[0U] = (m_crc16 >> 8) & 0xFFU;                                          // CRC-16 MSB
     data[1U] = (m_crc16 >> 0) & 0xFFU;                                          // CRC-16 LSB
-    __SET_UINT16B(m_func, data, 2U);                                            // Function
+    SET_UINT16(m_func, data, 2U);                                               // Function
 
-    __SET_UINT32(m_messageLength, data, 4U);                                    // Message Length
+    SET_UINT32(m_messageLength, data, 4U);                                      // Message Length
 }

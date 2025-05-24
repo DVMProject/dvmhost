@@ -109,15 +109,15 @@ namespace p25
             /**
              * @brief 
              */
-            __PROPERTY_PLAIN(uint8_t, keyFormat);
+            DECLARE_PROPERTY_PLAIN(uint8_t, keyFormat);
             /**
              * @brief 
              */
-            __PROPERTY_PLAIN(uint16_t, sln);
+            DECLARE_PROPERTY_PLAIN(uint16_t, sln);
             /**
              * @brief 
              */
-            __PROPERTY_PLAIN(uint16_t, kId);
+            DECLARE_PROPERTY_PLAIN(uint16_t, kId);
 
         private:
             uint32_t m_keyLength;
@@ -195,20 +195,20 @@ namespace p25
             /**
              * @brief 
              */
-            __PROPERTY_PLAIN(uint8_t, keysetId);
+            DECLARE_PROPERTY_PLAIN(uint8_t, keysetId);
             /**
              * @brief Encryption algorithm ID.
              */
-            __PROPERTY_PLAIN(uint8_t, algId);
+            DECLARE_PROPERTY_PLAIN(uint8_t, algId);
             /**
              * @brief 
              */
-            __PROPERTY_PLAIN(uint8_t, keyLength);
+            DECLARE_PROPERTY_PLAIN(uint8_t, keyLength);
 
             /**
              * @brief List of keys.
              */
-            __PROPERTY_PLAIN(std::vector<KeyItem>, keys);
+            DECLARE_PROPERTY_PLAIN(std::vector<KeyItem>, keys);
         };
     } // namespace kmm
 } // namespace p25

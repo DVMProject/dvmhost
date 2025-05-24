@@ -424,7 +424,7 @@ void V24UDPPort::taskCtrlNetworkRx(V24PacketRequest* req)
                                 switch (ackMessage->getAckMessageId()) {
                                     case FSCMessageType::FSC_CONNECT:
                                     {
-                                        uint16_t vcBasePort = __GET_UINT16B(ackMessage->responseData, 1U);
+                                        uint16_t vcBasePort = GET_UINT16(ackMessage->responseData, 1U);
 
                                         if (network->m_socket != nullptr) {
                                             network->m_socket->close();
@@ -548,7 +548,7 @@ void V24UDPPort::taskCtrlNetworkRx(V24PacketRequest* req)
                         ::memset(respData, 0x00U, 3U);
 
                         respData[0U] = 1U; // Version 1
-                        __SET_UINT16B(network->m_localPort, respData, 1U);
+                        SET_UINT16(network->m_localPort, respData, 1U);
 
                         // pack ack
                         ackResp.setResponseLength(3U);
@@ -717,8 +717,7 @@ void V24UDPPort::taskVCNetworkRx(V24PacketRequest* req)
 
         if (req->length > 0) {
             if (udp::Socket::match(req->address, network->m_remoteRTPAddr)) {
-                UInt8Array __reply = std::make_unique<uint8_t[]>(req->length + 4U);
-                uint8_t* reply = __reply.get();
+                DECLARE_UINT8_ARRAY(reply, req->length + 4U);
 
                 reply[0U] = DVM_SHORT_FRAME_START;
                 reply[1U] = (req->length + 4U) & 0xFFU;

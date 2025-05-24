@@ -444,34 +444,34 @@ namespace network
         /**
          * @brief Gets the peer ID of the network.
          */
-        __PROTECTED_READONLY_PROPERTY(uint32_t, peerId, PeerId);
+        DECLARE_PROTECTED_RO_PROPERTY(uint32_t, peerId, PeerId);
         /**
          * @brief Gets the current status of the network.
          */
-        __PROTECTED_READONLY_PROPERTY(NET_CONN_STATUS, status, Status);
+        DECLARE_PROTECTED_RO_PROPERTY(NET_CONN_STATUS, status, Status);
 
         /**
          * @brief Unix socket storage containing the connected address.
          */
-        __PROTECTED_READONLY_PROPERTY_PLAIN(sockaddr_storage, addr);
+        DECLARE_PROTECTED_RO_PROPERTY_PLAIN(sockaddr_storage, addr);
         /**
          * @brief Length of the sockaddr_storage structure.
          */
-        __PROTECTED_READONLY_PROPERTY_PLAIN(uint32_t, addrLen);
+        DECLARE_PROTECTED_RO_PROPERTY_PLAIN(uint32_t, addrLen);
 
         /**
          * @brief Flag indicating whether network DMR slot 1 traffic is permitted.
          */
-        __PROTECTED_READONLY_PROPERTY(bool, slot1, DMRSlot1);
+        DECLARE_PROTECTED_RO_PROPERTY(bool, slot1, DMRSlot1);
         /**
          * @brief Flag indicating whether network DMR slot 2 traffic is permitted.
          */
-        __PROTECTED_READONLY_PROPERTY(bool, slot2, DMRSlot2);
+        DECLARE_PROTECTED_RO_PROPERTY(bool, slot2, DMRSlot2);
 
         /**
          * @brief Flag indicating whether network traffic is duplex.
          */
-        __PROTECTED_READONLY_PROPERTY(bool, duplex, Duplex);
+        DECLARE_PROTECTED_RO_PROPERTY(bool, duplex, Duplex);
 
     protected:
         bool m_useAlternatePortForDiagnostics;

@@ -77,7 +77,7 @@ namespace vocoder
         /**
          * @brief Gain adjustment.
          */
-        __PROPERTY(float, gainAdjust, GainAdjust);
+        DECLARE_PROPERTY(float, gainAdjust, GainAdjust);
     };
 } // namespace vocoder
 

@@ -179,7 +179,7 @@ int HostSetup::run(int argc, char** argv)
     }
 
     ::LogInfo(__PROG_NAME__ " " __VER__ " (built " __BUILD__ ")\r\n" \
-        "Copyright (c) 2017-2024 Bryan Biedenkapp, N2PLL and DVMProject (https://github.com/dvmproject) Authors.\r\n" \
+        "Copyright (c) 2017-2025 Bryan Biedenkapp, N2PLL and DVMProject (https://github.com/dvmproject) Authors.\r\n" \
         "Portions Copyright (c) 2015-2021 by Jonathan Naylor, G4KLX and others\r\n" \
         ">> Modem Setup\r\n");
 
@@ -2006,9 +2006,9 @@ bool HostSetup::writeFlash()
     buffer[24U] = (uint8_t)m_modem->m_adfGainMode;
 
     uint32_t txTuning = (uint32_t)m_modem->m_txTuning;
-    __SET_UINT32(txTuning, buffer, 25U);
+    SET_UINT32(txTuning, buffer, 25U);
     uint32_t rxTuning = (uint32_t)m_modem->m_rxTuning;
-    __SET_UINT32(rxTuning, buffer, 29U);
+    SET_UINT32(rxTuning, buffer, 29U);
 
     // symbol adjust
     buffer[35U] = (uint8_t)(m_modem->m_dmrSymLevel3Adj + 128);

@@ -46,7 +46,7 @@ bool KMMNegativeAck::decode(const uint8_t* data)
     KMMFrame::decodeHeader(data);
 
     m_messageId = data[10U];                                    // Message ID
-    m_messageNo = __GET_UINT16B(data, 11U);                     // Message Number
+    m_messageNo = GET_UINT16(data, 11U);                        // Message Number
     m_status = data[13U];                                       // Status
 
     return true;
@@ -62,7 +62,7 @@ void KMMNegativeAck::encode(uint8_t* data)
     KMMFrame::encodeHeader(data);
 
     data[10U] = m_messageId;                                    // Message ID
-    __SET_UINT16B(m_messageNo, data, 11U);                      // Message Number
+    SET_UINT16(m_messageNo, data, 11U);                         // Message Number
     data[13U] = m_status;
 }
 

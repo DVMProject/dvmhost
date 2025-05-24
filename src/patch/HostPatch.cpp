@@ -415,8 +415,8 @@ void HostPatch::processDMRNetwork(uint8_t* buffer, uint32_t length)
     // process network message header
     uint32_t seqNo = buffer[4U];
 
-    uint32_t srcId = __GET_UINT16(buffer, 5U);
-    uint32_t dstId = __GET_UINT16(buffer, 8U);
+    uint32_t srcId = GET_UINT24(buffer, 5U);
+    uint32_t dstId = GET_UINT24(buffer, 8U);
 
     uint8_t controlByte = buffer[14U];
 
@@ -725,8 +725,8 @@ void HostPatch::processP25Network(uint8_t* buffer, uint32_t length)
     // handle LDU, TDU or TSDU frame
     uint8_t lco = buffer[4U];
 
-    uint32_t srcId = __GET_UINT16(buffer, 5U);
-    uint32_t dstId = __GET_UINT16(buffer, 8U);
+    uint32_t srcId = GET_UINT24(buffer, 5U);
+    uint32_t dstId = GET_UINT24(buffer, 8U);
 
     uint8_t lsd1 = buffer[20U];
     uint8_t lsd2 = buffer[21U];
@@ -888,7 +888,7 @@ void HostPatch::processP25Network(uint8_t* buffer, uint32_t length)
                 if (frameType == FrameType::HDU_VALID) {
                     uint8_t algoId = buffer[181U];
                     if (algoId != ALGO_UNENCRYPT) {
-                        uint16_t kid = __GET_UINT16B(buffer, 182U);
+                        uint16_t kid = GET_UINT16(buffer, 182U);
 
                         uint8_t mi[MI_LENGTH_BYTES];
                         ::memset(mi, 0x00U, MI_LENGTH_BYTES);

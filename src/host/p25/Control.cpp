@@ -1409,7 +1409,7 @@ void Control::processNetwork()
             return;
         }
 
-        uint32_t blockLength = __GET_UINT16(buffer, 8U);
+        uint32_t blockLength = GET_UINT24(buffer, 8U);
 
         if (m_debug) {
             LogDebug(LOG_NET, "P25, duid = $%02X, MFId = $%02X, blockLength = %u, len = %u", duid, MFId, blockLength, length);
@@ -1424,11 +1424,11 @@ void Control::processNetwork()
     // handle LDU, TDU or TSDU frame
     uint8_t lco = buffer[4U];
 
-    uint32_t srcId = __GET_UINT16(buffer, 5U);
-    uint32_t dstId = __GET_UINT16(buffer, 8U);
+    uint32_t srcId = GET_UINT24(buffer, 5U);
+    uint32_t dstId = GET_UINT24(buffer, 8U);
 
     uint32_t sysId = (buffer[11U] << 8) | (buffer[12U] << 0);
-    uint32_t netId = __GET_UINT16(buffer, 16U);
+    uint32_t netId = GET_UINT24(buffer, 16U);
 
     uint8_t lsd1 = buffer[20U];
     uint8_t lsd2 = buffer[21U];
@@ -2076,10 +2076,10 @@ void Control::generateLLA_AM1_Parameters()
     uint8_t RS[AUTH_RAND_SEED_LENGTH_BYTES];
     std::uniform_int_distribution<uint32_t> dist(DVM_RAND_MIN, DVM_RAND_MAX);
     uint32_t rnd = dist(m_random);
-    __SET_UINT32(rnd, RS, 0U);
+    SET_UINT32(rnd, RS, 0U);
 
     rnd = dist(m_random);
-    __SET_UINT32(rnd, RS, 4U);
+    SET_UINT32(rnd, RS, 4U);
 
     rnd = dist(m_random);
     RS[9U] = (uint8_t)(rnd & 0xFFU);

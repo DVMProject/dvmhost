@@ -57,7 +57,7 @@ bool KMMFrame::decodeHeader(const uint8_t* data)
     assert(data != nullptr);
 
     m_messageId = data[0U];                                                         // Message ID
-    m_messageLength = __GET_UINT16B(data, 1U);                                      // Message Length
+    m_messageLength = GET_UINT16(data, 1U);                                         // Message Length
 
     m_respKind = (data[3U] >> 6U) & 0x03U;                                          // Response Kind
     m_mfMessageNumber = (data[3U] >> 4U) & 0x03U;                                   // Message Number
@@ -69,8 +69,8 @@ bool KMMFrame::decodeHeader(const uint8_t* data)
     else
         m_complete = false;
 
-    m_dstLlId = __GET_UINT16(data, 4U);                                             // Destination RSI
-    m_srcLlId = __GET_UINT16(data, 7U);                                             // Source RSI
+    m_dstLlId = GET_UINT24(data, 4U);                                               // Destination RSI
+    m_srcLlId = GET_UINT24(data, 7U);                                               // Source RSI
 
     return true;
 }
@@ -82,15 +82,15 @@ void KMMFrame::encodeHeader(uint8_t* data)
     assert(data != nullptr);
 
     data[0U] = m_messageId;                                                         // Message ID
-    __SET_UINT16B(m_messageLength, data, 1U);                                       // Message Length
+    SET_UINT16(m_messageLength, data, 1U);                                          // Message Length
 
     data[3U] = ((m_respKind & 0x03U) << 6U) +                                       // Response Kind
         ((m_mfMessageNumber & 0x03U) << 4U) +                                       // Message Number
         ((m_mfMac & 0x03U) << 2U) +                                                 // MAC
         ((!m_complete) ? 0x01U : 0x00U);                                            // Done Flag
 
-    __SET_UINT16(m_dstLlId, data, 4U);                                              // Destination RSI
-    __SET_UINT16(m_srcLlId, data, 7U);                                              // Source RSI
+    SET_UINT24(m_dstLlId, data, 4U);                                                // Destination RSI
+    SET_UINT24(m_srcLlId, data, 7U);                                                // Source RSI
 }
 
 /* Internal helper to copy the the class. */

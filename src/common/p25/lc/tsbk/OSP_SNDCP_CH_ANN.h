@@ -68,14 +68,14 @@ namespace p25
                 /**
                  * @brief Flag indicating explicit channel frequncies should not be transmitted.
                  */
-                __PROPERTY(bool, implicitChannel, ImplicitChannel);
+                DECLARE_PROPERTY(bool, implicitChannel, ImplicitChannel);
 
             private:
                 bool m_sndcpAutoAccess;
                 bool m_sndcpRequestedAccess;
                 uint16_t m_sndcpDAC;
 
-                __COPY(OSP_SNDCP_CH_ANN);
+                DECLARE_COPY(OSP_SNDCP_CH_ANN);
             };
         } // namespace tsbk
     } // namespace lc

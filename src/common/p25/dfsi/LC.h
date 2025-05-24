@@ -103,21 +103,21 @@ namespace p25
             /**
              * @brief Frame Type.
              */
-            __PROPERTY(defines::DFSIFrameType::E, frameType, FrameType);
+            DECLARE_PROPERTY(defines::DFSIFrameType::E, frameType, FrameType);
 
             /**
              * @brief RSSI.
              */
-            __PROPERTY(uint8_t, rssi, RSSI);
+            DECLARE_PROPERTY(uint8_t, rssi, RSSI);
 
             /**
              * @brief Link control data.
              */
-            __READONLY_PROPERTY_PLAIN(p25::lc::LC*, control);
+            DECLARE_RO_PROPERTY_PLAIN(p25::lc::LC*, control);
             /**
              * @brief Low speed data.
              */
-            __READONLY_PROPERTY_PLAIN(p25::data::LowSpeedData*, lsd);
+            DECLARE_RO_PROPERTY_PLAIN(p25::data::LowSpeedData*, lsd);
 
         private:
             edac::RS634717 m_rs;

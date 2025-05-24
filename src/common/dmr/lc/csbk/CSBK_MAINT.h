@@ -64,9 +64,9 @@ namespace dmr
                 /**
                  * @brief Maintainence Kind.
                  */
-                __PROPERTY(uint8_t, maintKind, MaintKind);
+                DECLARE_PROPERTY(uint8_t, maintKind, MaintKind);
 
-                __COPY(CSBK_MAINT);
+                DECLARE_COPY(CSBK_MAINT);
             };
         } // namespace csbk
     } // namespace lc

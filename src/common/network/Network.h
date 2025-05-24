@@ -222,7 +222,7 @@ namespace network
         /**
          * @brief Last received RTP sequence number.
          */
-        __READONLY_PROPERTY_PLAIN(uint16_t, pktLastSeq);
+        DECLARE_RO_PROPERTY_PLAIN(uint16_t, pktLastSeq);
 
     protected:
         std::string m_address;

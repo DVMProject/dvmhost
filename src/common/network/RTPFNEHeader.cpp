@@ -55,9 +55,9 @@ bool RTPFNEHeader::decode(const uint8_t* data)
     m_crc16 = (data[4U] << 8) | (data[5U] << 0);                                // CRC-16
     m_func = (NET_FUNC::ENUM)data[6U];                                          // Function
     m_subFunc = (NET_SUBFUNC::ENUM)data[7U];                                    // Sub-Function
-    m_streamId = __GET_UINT32(data, 8U);                                        // Stream ID
-    m_peerId = __GET_UINT32(data, 12U);                                         // Peer ID
-    m_messageLength = __GET_UINT32(data, 16U);                                  // Message Length
+    m_streamId = GET_UINT32(data, 8U);                                          // Stream ID
+    m_peerId = GET_UINT32(data, 12U);                                           // Peer ID
+    m_messageLength = GET_UINT32(data, 16U);                                    // Message Length
 
     return true;
 }
@@ -77,7 +77,7 @@ void RTPFNEHeader::encode(uint8_t* data)
     data[6U] = m_func;                                                          // Function
     data[7U] = m_subFunc;                                                       // Sub-Function
 
-    __SET_UINT32(m_streamId, data, 8U);                                         // Stream ID
-    __SET_UINT32(m_peerId, data, 12U);                                          // Peer ID
-    __SET_UINT32(m_messageLength, data, 16U);                                   // Message Length
+    SET_UINT32(m_streamId, data, 8U);                                           // Stream ID
+    SET_UINT32(m_peerId, data, 12U);                                            // Peer ID
+    SET_UINT32(m_messageLength, data, 16U);                                     // Message Length
 }

@@ -57,9 +57,9 @@ namespace p25
             /**
              * @brief Reject Code
              */
-            __PROPERTY(uint8_t, rejectCode, RejectCode);
+            DECLARE_PROPERTY(uint8_t, rejectCode, RejectCode);
 
-            __COPY(SNDCPCtxActReject);
+            DECLARE_COPY(SNDCPCtxActReject);
         };
     } // namespace sndcp
 } // namespace p25

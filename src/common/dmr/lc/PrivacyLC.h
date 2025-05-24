@@ -83,30 +83,30 @@ namespace dmr
             /**
              * @brief Feature ID
              */
-            __PROPERTY(uint8_t, FID, FID);
+            DECLARE_PROPERTY(uint8_t, FID, FID);
 
             /**
              * @brief Destination ID.
              */
-            __PROPERTY(uint32_t, dstId, DstId);
+            DECLARE_PROPERTY(uint32_t, dstId, DstId);
             /** @} */
 
             /** @name Service Options */
             /**
              * @brief Flag indicating a group/talkgroup operation.
              */
-            __PROPERTY(bool, group, Group);
+            DECLARE_PROPERTY(bool, group, Group);
             /** @} */
 
             /** @name Encryption data */
             /**
              * @brief Encryption algorithm ID.
              */
-            __PROPERTY(uint8_t, algId, AlgId);
+            DECLARE_PROPERTY(uint8_t, algId, AlgId);
             /**
              * @brief Encryption key ID.
              */
-            __PROPERTY(uint32_t, kId, KId);
+            DECLARE_PROPERTY(uint32_t, kId, KId);
             /** @} */
 
         private:

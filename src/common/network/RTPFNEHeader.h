@@ -182,27 +182,27 @@ namespace network
             /**
              * @brief Traffic payload packet CRC-16.
              */
-            __PROPERTY(uint16_t, crc16, CRC);
+            DECLARE_PROPERTY(uint16_t, crc16, CRC);
             /**
              * @brief Function.
              */
-            __PROPERTY(NET_FUNC::ENUM, func, Function);
+            DECLARE_PROPERTY(NET_FUNC::ENUM, func, Function);
             /**
              * @brief Sub-function.
              */
-            __PROPERTY(NET_SUBFUNC::ENUM, subFunc, SubFunction);
+            DECLARE_PROPERTY(NET_SUBFUNC::ENUM, subFunc, SubFunction);
             /**
              * @brief Traffic Stream ID.
              */
-            __PROPERTY(uint32_t, streamId, StreamId);
+            DECLARE_PROPERTY(uint32_t, streamId, StreamId);
             /**
              * @brief Traffic Peer ID.
              */
-            __PROPERTY(uint32_t, peerId, PeerId);
+            DECLARE_PROPERTY(uint32_t, peerId, PeerId);
             /**
              * @brief Traffic Message Length.
              */
-            __PROPERTY(uint32_t, messageLength, MessageLength);
+            DECLARE_PROPERTY(uint32_t, messageLength, MessageLength);
         };
     } // namespace frame
 } // namespace network

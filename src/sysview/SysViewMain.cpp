@@ -318,8 +318,8 @@ void* threadNetworkPump(void* arg)
 
                     uint8_t seqNo = dmrBuffer[4U];
 
-                    uint32_t srcId = __GET_UINT16(dmrBuffer, 5U);
-                    uint32_t dstId = __GET_UINT16(dmrBuffer, 8U);
+                    uint32_t srcId = GET_UINT24(dmrBuffer, 5U);
+                    uint32_t dstId = GET_UINT24(dmrBuffer, 8U);
 
                     DMRDEF::FLCO::E flco = (dmrBuffer[15U] & 0x40U) == 0x40U ? DMRDEF::FLCO::PRIVATE : DMRDEF::FLCO::GROUP;
 
@@ -497,11 +497,11 @@ void* threadNetworkPump(void* arg)
 
                     uint8_t lco = p25Buffer[4U];
 
-                    uint32_t srcId = __GET_UINT16(p25Buffer, 5U);
-                    uint32_t dstId = __GET_UINT16(p25Buffer, 8U);
+                    uint32_t srcId = GET_UINT24(p25Buffer, 5U);
+                    uint32_t dstId = GET_UINT24(p25Buffer, 8U);
 
                     uint32_t sysId = (p25Buffer[11U] << 8) | (p25Buffer[12U] << 0);
-                    uint32_t netId = __GET_UINT16(p25Buffer, 16U);
+                    uint32_t netId = GET_UINT24(p25Buffer, 16U);
 
                     // log call status
                     if (duid != P25DEF::DUID::TSDU && duid != P25DEF::DUID::PDU) {
@@ -922,8 +922,8 @@ void* threadNetworkPump(void* arg)
 
                     uint8_t messageType = nxdnBuffer[4U];
 
-                    uint32_t srcId = __GET_UINT16(nxdnBuffer, 5U);
-                    uint32_t dstId = __GET_UINT16(nxdnBuffer, 8U);
+                    uint32_t srcId = GET_UINT24(nxdnBuffer, 5U);
+                    uint32_t dstId = GET_UINT24(nxdnBuffer, 8U);
 
                     lc::RTCH lc;
 

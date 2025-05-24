@@ -156,27 +156,27 @@ namespace dmr
         /**
          * @brief DMR site model type.
          */
-        __READONLY_PROPERTY_PLAIN(defines::SiteModel::E, siteModel);
+        DECLARE_RO_PROPERTY_PLAIN(defines::SiteModel::E, siteModel);
         /**
          * @brief DMR site network ID.
          */
-        __READONLY_PROPERTY_PLAIN(uint16_t, netId);
+        DECLARE_RO_PROPERTY_PLAIN(uint16_t, netId);
         /**
          * @brief DMR site ID.
          */
-        __READONLY_PROPERTY_PLAIN(uint16_t, siteId);
+        DECLARE_RO_PROPERTY_PLAIN(uint16_t, siteId);
         /**
          * @brief DMR partition ID.
          */
-        __READONLY_PROPERTY_PLAIN(uint8_t, parId);
+        DECLARE_RO_PROPERTY_PLAIN(uint8_t, parId);
         /**
          * @brief DMR require registration.
          */
-        __READONLY_PROPERTY_PLAIN(bool, requireReg);
+        DECLARE_RO_PROPERTY_PLAIN(bool, requireReg);
         /**
          * @brief Flag indicating whether this site is a linked active network member.
          */
-        __READONLY_PROPERTY_PLAIN(bool, netActive);
+        DECLARE_RO_PROPERTY_PLAIN(bool, netActive);
         /** @} */
     };
 } // namespace dmr

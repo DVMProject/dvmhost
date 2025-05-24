@@ -96,11 +96,11 @@ namespace dmr
             /**
              * @brief Flag indicating whether or not the embedded data is valid.
              */
-            __READONLY_PROPERTY_PLAIN(bool, valid);
+            DECLARE_RO_PROPERTY_PLAIN(bool, valid);
             /**
              * @brief Full-link control opcode.
              */
-            __READONLY_PROPERTY(defines::FLCO::E, FLCO, FLCO);
+            DECLARE_RO_PROPERTY(defines::FLCO::E, FLCO, FLCO);
 
         private:
             LC_STATE m_state;

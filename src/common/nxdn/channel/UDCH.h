@@ -80,7 +80,7 @@ namespace nxdn
             /**
              * @brief Radio Access Number
              */
-            __PROPERTY(uint8_t, ran, RAN);
+            DECLARE_PROPERTY(uint8_t, ran, RAN);
 
         private:
             uint8_t* m_data;

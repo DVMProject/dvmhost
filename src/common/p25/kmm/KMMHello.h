@@ -71,9 +71,9 @@ namespace p25
             /**
              * @brief 
              */
-            __PROPERTY(uint8_t, flag, Flag);
+            DECLARE_PROPERTY(uint8_t, flag, Flag);
 
-            __COPY(KMMHello);
+            DECLARE_COPY(KMMHello);
         };
     } // namespace kmm
 } // namespace p25

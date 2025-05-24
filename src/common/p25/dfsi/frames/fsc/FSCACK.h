@@ -65,23 +65,23 @@ namespace p25
                     /**
                      * @brief Acknowledged Message ID.
                      */
-                    __PROPERTY(FSCMessageType::E, ackMessageId, AckMessageId);
+                    DECLARE_PROPERTY(FSCMessageType::E, ackMessageId, AckMessageId);
                     /**
                      * @brief Acknowledged Message Version.
                      */
-                    __READONLY_PROPERTY(uint8_t, ackVersion, AckVersion);
+                    DECLARE_RO_PROPERTY(uint8_t, ackVersion, AckVersion);
                     /**
                      * @brief 
                      */
-                    __PROPERTY(uint8_t, ackCorrelationTag, AckCorrelationTag);
+                    DECLARE_PROPERTY(uint8_t, ackCorrelationTag, AckCorrelationTag);
                     /**
                      * @brief Response code.
                      */
-                    __PROPERTY(FSCAckResponseCode::E, responseCode, ResponseCode);
+                    DECLARE_PROPERTY(FSCAckResponseCode::E, responseCode, ResponseCode);
                     /**
                      * @brief Response Data Length.
                      */
-                    __PROPERTY(uint8_t, respLength, ResponseLength);
+                    DECLARE_PROPERTY(uint8_t, respLength, ResponseLength);
                 };
             } // namespace fsc
         } // namespace frames

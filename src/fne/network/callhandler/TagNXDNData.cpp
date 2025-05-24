@@ -63,15 +63,13 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
 {
     hrc::hrc_t pktTime = hrc::now();
 
-    UInt8Array __buffer = std::make_unique<uint8_t[]>(len);
-    uint8_t* buffer = __buffer.get();
-    ::memset(buffer, 0x00U, len);
+    DECLARE_UINT8_ARRAY(buffer, len);
     ::memcpy(buffer, data, len);
 
     uint8_t messageType = data[4U];
 
-    uint32_t srcId = __GET_UINT16(data, 5U);
-    uint32_t dstId = __GET_UINT16(data, 8U);
+    uint32_t srcId = GET_UINT24(data, 5U);
+    uint32_t dstId = GET_UINT24(data, 8U);
 
     if (messageType == MessageType::RTCH_DCALL_HDR ||
         messageType == MessageType::RTCH_DCALL_DATA) {
@@ -81,7 +79,7 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
 
     // perform TGID route rewrites if configured
     routeRewrite(buffer, peerId, messageType, dstId, false);
-    dstId = __GET_UINT16(buffer, 8U);
+    dstId = GET_UINT24(buffer, 8U);
 
     lc::RTCH lc;
 
@@ -257,9 +255,7 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                         m_network->m_frameQueue->flushQueue();
                     }
 
-                    UInt8Array __outboundPeerBuffer = std::make_unique<uint8_t[]>(len);
-                    uint8_t* outboundPeerBuffer = __outboundPeerBuffer.get();
-                    ::memset(outboundPeerBuffer, 0x00U, len);
+                    DECLARE_UINT8_ARRAY(outboundPeerBuffer, len);
                     ::memcpy(outboundPeerBuffer, buffer, len);
 
                     // perform TGID route rewrites if configured
@@ -302,9 +298,7 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                         continue;
                     }
 
-                    UInt8Array __outboundPeerBuffer = std::make_unique<uint8_t[]>(len);
-                    uint8_t* outboundPeerBuffer = __outboundPeerBuffer.get();
-                    ::memset(outboundPeerBuffer, 0x00U, len);
+                    DECLARE_UINT8_ARRAY(outboundPeerBuffer, len);
                     ::memcpy(outboundPeerBuffer, buffer, len);
 
                     // perform TGID route rewrites if configured
@@ -423,7 +417,7 @@ void TagNXDNData::routeRewrite(uint8_t* buffer, uint32_t peerId, uint8_t message
     // does the data require route writing?
     if (peerRewrite(peerId, rewriteDstId, outbound)) {
         // rewrite destination TGID in the frame
-        __SET_UINT16(rewriteDstId, buffer, 8U);
+        SET_UINT24(rewriteDstId, buffer, 8U);
     }
 }
 

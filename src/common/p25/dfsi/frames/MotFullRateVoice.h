@@ -97,11 +97,11 @@ namespace p25
                 /**
                  * @brief Frame Type.
                  */
-                __PROPERTY(defines::DFSIFrameType::E, frameType, FrameType);
+                DECLARE_PROPERTY(defines::DFSIFrameType::E, frameType, FrameType);
                 /**
                  * @brief V.24 Data Source.
                  */
-                __PROPERTY(SourceFlag::E, source, Source);
+                DECLARE_PROPERTY(SourceFlag::E, source, Source);
 
             private:
                 /**

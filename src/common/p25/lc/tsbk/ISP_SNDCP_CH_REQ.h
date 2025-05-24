@@ -65,13 +65,13 @@ namespace p25
                 /**
                  * @brief SNDCP Data Service Options
                  */
-                __PROPERTY(uint8_t, dataServiceOptions, DataServiceOptions);
+                DECLARE_PROPERTY(uint8_t, dataServiceOptions, DataServiceOptions);
                 /**
                  * @brief SNDCP Data Access Control
                  */
-                __PROPERTY(uint16_t, dataAccessControl, DataAccessControl);
+                DECLARE_PROPERTY(uint16_t, dataAccessControl, DataAccessControl);
 
-                __COPY(ISP_SNDCP_CH_REQ);
+                DECLARE_COPY(ISP_SNDCP_CH_REQ);
             };
         } // namespace tsbk
     } // namespace lc

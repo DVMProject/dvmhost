@@ -1497,8 +1497,7 @@ bool Modem::writeP25Frame(const uint8_t* data, uint32_t length)
             return false;
         }
 
-        UInt8Array __buffer = std::make_unique<uint8_t[]>(MAX_LENGTH);
-        uint8_t* buffer = __buffer.get();
+        DECLARE_UINT8_ARRAY(buffer, MAX_LENGTH);
 
         if (length < 252U) {
             buffer[0U] = DVM_SHORT_FRAME_START;
@@ -2268,10 +2267,10 @@ void Modem::processFlashConfig(const uint8_t *buffer)
     ADF_GAIN_MODE adfGainMode = (ADF_GAIN_MODE)buffer[24U];
     FLASH_VALUE_CHECK(m_adfGainMode, adfGainMode, ADF_GAIN_AUTO, "adfGainMode");
 
-    uint32_t txTuningRaw = __GET_UINT32(buffer, 25U);
+    uint32_t txTuningRaw = GET_UINT32(buffer, 25U);
     int txTuning = int(txTuningRaw);
     FLASH_VALUE_CHECK(m_txTuning, txTuning, 0, "txTuning");
-    uint32_t rxTuningRaw = __GET_UINT32(buffer, 29U);
+    uint32_t rxTuningRaw = GET_UINT32(buffer, 29U);
     int rxTuning = int(rxTuningRaw);
     FLASH_VALUE_CHECK(m_rxTuning, rxTuning, 0, "rxTuning");
 

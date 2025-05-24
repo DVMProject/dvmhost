@@ -71,9 +71,9 @@ namespace p25
             /**
              * @brief 
              */
-            __PROPERTY(uint8_t, status, Status);
+            DECLARE_PROPERTY(uint8_t, status, Status);
 
-            __COPY(KMMRegistrationResponse);
+            DECLARE_COPY(KMMRegistrationResponse);
         };
     } // namespace kmm
 } // namespace p25

@@ -153,35 +153,35 @@ namespace lookups
         /**
          * @brief Voice Channel Identity.
          */
-        __READONLY_PROPERTY_PLAIN(uint8_t, chId);
+        DECLARE_RO_PROPERTY_PLAIN(uint8_t, chId);
         /**
          * @brief Voice Channel Number.
          */
-        __READONLY_PROPERTY_PLAIN(uint32_t, chNo);
+        DECLARE_RO_PROPERTY_PLAIN(uint32_t, chNo);
         /**
          * @brief Voice Rx Channel Identity.
          */
-        __READONLY_PROPERTY_PLAIN(uint8_t, rxChId);
+        DECLARE_RO_PROPERTY_PLAIN(uint8_t, rxChId);
         /**
          * @brief Voice Rx Channel Number.
          */
-        __READONLY_PROPERTY_PLAIN(uint32_t, rxChNo);
+        DECLARE_RO_PROPERTY_PLAIN(uint32_t, rxChNo);
         /**
          * @brief RPC/REST API Address.
          */
-        __PROPERTY_PLAIN(std::string, address);
+        DECLARE_PROPERTY_PLAIN(std::string, address);
         /**
          * @brief RPC/REST API Port.
          */
-        __PROPERTY_PLAIN(uint16_t, port);
+        DECLARE_PROPERTY_PLAIN(uint16_t, port);
         /**
          * @brief RPC/REST API Password.
          */
-        __READONLY_PROPERTY_PLAIN(std::string, password);
+        DECLARE_RO_PROPERTY_PLAIN(std::string, password);
         /**
          * @brief Flag indicating REST is using SSL.
          */
-        __PROPERTY_PLAIN(bool, ssl);
+        DECLARE_PROPERTY_PLAIN(bool, ssl);
     };
 
     // ---------------------------------------------------------------------------

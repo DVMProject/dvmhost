@@ -111,23 +111,23 @@ namespace network
             /**
              * @brief Hostname/IP Address.
              */
-            __PROPERTY_PLAIN(std::string, host);
+            DECLARE_PROPERTY_PLAIN(std::string, host);
             /**
              * @brief Port.
              */
-            __PROPERTY_PLAIN(uint16_t, port);
+            DECLARE_PROPERTY_PLAIN(uint16_t, port);
             /**
              * @brief Organization.
              */
-            __PROPERTY_PLAIN(std::string, org);
+            DECLARE_PROPERTY_PLAIN(std::string, org);
             /**
              * @brief Bucket.
              */
-            __PROPERTY_PLAIN(std::string, bucket);
+            DECLARE_PROPERTY_PLAIN(std::string, bucket);
             /**
              * @brief Token.
              */
-            __PROPERTY_PLAIN(std::string, token);
+            DECLARE_PROPERTY_PLAIN(std::string, token);
         };
 
         namespace detail

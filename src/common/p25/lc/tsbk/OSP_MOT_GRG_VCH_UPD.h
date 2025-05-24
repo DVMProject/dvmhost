@@ -65,13 +65,13 @@ namespace p25
                 /**
                  * @brief 1st patch group ID.
                  */
-                __PROPERTY(uint32_t, patchGroup1Id, PatchGroup1Id);
+                DECLARE_PROPERTY(uint32_t, patchGroup1Id, PatchGroup1Id);
                 /**
                  * @brief 2nd patch group ID.
                  */
-                __PROPERTY(uint32_t, patchGroup2Id, PatchGroup2Id);
+                DECLARE_PROPERTY(uint32_t, patchGroup2Id, PatchGroup2Id);
 
-                __COPY(OSP_MOT_GRG_VCH_UPD);
+                DECLARE_COPY(OSP_MOT_GRG_VCH_UPD);
             };
         } // namespace tsbk
     } // namespace lc

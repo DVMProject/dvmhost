@@ -65,7 +65,7 @@ namespace p25
                 /**
                  * @brief Roamer Reaccess Method.
                  */
-                __PROPERTY(bool, roamerReaccess, RoamerReaccess);
+                DECLARE_PROPERTY(bool, roamerReaccess, RoamerReaccess);
             };
         } // namespace tsbk
     } // namespace lc

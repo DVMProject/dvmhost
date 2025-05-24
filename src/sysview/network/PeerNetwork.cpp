@@ -64,9 +64,7 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
         switch (opcode.second) {
         case NET_SUBFUNC::TRANSFER_SUBFUNC_ACTIVITY:
         {
-            UInt8Array __rawPayload = std::make_unique<uint8_t[]>(length - 11U);
-            uint8_t* rawPayload = __rawPayload.get();
-            ::memset(rawPayload, 0x00U, length - 11U);
+            DECLARE_UINT8_ARRAY(rawPayload, length - 11U);
             ::memcpy(rawPayload, data + 11U, length - 11U);
             std::string payload(rawPayload, rawPayload + (length - 11U));
 
@@ -85,9 +83,7 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
 
         case NET_SUBFUNC::TRANSFER_SUBFUNC_STATUS:
         {
-            UInt8Array __rawPayload = std::make_unique<uint8_t[]>(length - 11U);
-            uint8_t* rawPayload = __rawPayload.get();
-            ::memset(rawPayload, 0x00U, length - 11U);
+            DECLARE_UINT8_ARRAY(rawPayload, length - 11U);
             ::memcpy(rawPayload, data + 11U, length - 11U);
             std::string payload(rawPayload, rawPayload + (length - 11U));
 
@@ -136,8 +132,7 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
                 }
 
                 // store to file
-                std::unique_ptr<char[]> __str = std::make_unique<char[]>(decompressedLen + 1U);
-                char* str = __str.get();
+                DECLARE_CHAR_ARRAY(str, decompressedLen + 1U);
                 ::memcpy(str, decompressed, decompressedLen);
                 str[decompressedLen] = 0; // null termination
 
@@ -189,8 +184,7 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
                 }
 
                 // store to file
-                std::unique_ptr<char[]> __str = std::make_unique<char[]>(decompressedLen + 1U);
-                char* str = __str.get();
+                DECLARE_CHAR_ARRAY(str, decompressedLen + 1U);
                 ::memcpy(str, decompressed, decompressedLen);
                 str[decompressedLen] = 0; // null termination
 
@@ -295,8 +289,7 @@ bool PeerNetwork::writeConfig()
     json::value v = json::value(config);
     std::string json = v.serialize();
 
-    CharArray __buffer = std::make_unique<char[]>(json.length() + 9U);
-    char* buffer = __buffer.get();
+    DECLARE_CHAR_ARRAY(buffer, json.length() + 9U);
 
     ::memcpy(buffer + 0U, TAG_REPEATER_CONFIG, 4U);
     ::snprintf(buffer + 8U, json.length() + 1U, "%s", json.c_str());

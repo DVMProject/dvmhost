@@ -61,9 +61,9 @@ namespace dmr
                 /**
                  * @brief Service Kind.
                  */
-                __PROPERTY(uint8_t, serviceKind, ServiceKind);
+                DECLARE_PROPERTY(uint8_t, serviceKind, ServiceKind);
 
-                __COPY(CSBK_NACK_RSP);
+                DECLARE_COPY(CSBK_NACK_RSP);
             };
         } // namespace csbk
     } // namespace lc

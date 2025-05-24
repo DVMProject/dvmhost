@@ -210,8 +210,7 @@ bool NetRPC::req(uint16_t func, const json::object& request, RPCType reply, sock
     header.setMessageLength(json.length() + 1U);
 
     // generate message
-    CharArray __message = std::make_unique<char[]>(json.length() + 1U);
-    char* message = __message.get();
+    DECLARE_CHAR_ARRAY(message, json.length() + 1U);
 
     ::snprintf(message, json.length() + 1U, "%s", json.c_str());
 
@@ -223,8 +222,7 @@ bool NetRPC::req(uint16_t func, const json::object& request, RPCType reply, sock
     header.setCRC(crc);
 
     // generate RPC message
-    UInt8Array __buffer = std::make_unique<uint8_t[]>(json.length() + 9U);
-    uint8_t* buffer = __buffer.get();
+    DECLARE_UINT8_ARRAY(buffer, json.length() + 9U);
 
     header.encode(buffer);
     ::memcpy(buffer + 8U, message, json.length() + 1U);
@@ -338,8 +336,7 @@ bool NetRPC::reply(uint16_t func, json::object& reply, sockaddr_storage& address
     header.setMessageLength(json.length() + 1U);
 
     // generate message
-    CharArray __message = std::make_unique<char[]>(json.length() + 1U);
-    char* message = __message.get();
+    DECLARE_CHAR_ARRAY(message, json.length() + 1U);
 
     ::snprintf(message, json.length() + 1U, "%s", json.c_str());
 
@@ -347,8 +344,7 @@ bool NetRPC::reply(uint16_t func, json::object& reply, sockaddr_storage& address
     header.setCRC(crc);
 
     // generate RPC message
-    UInt8Array __buffer = std::make_unique<uint8_t[]>(json.length() + 9U);
-    uint8_t* buffer = __buffer.get();
+    DECLARE_UINT8_ARRAY(buffer, json.length() + 9U);
 
     header.encode(buffer);
     ::memcpy(buffer + 8U, message, json.length() + 1U);

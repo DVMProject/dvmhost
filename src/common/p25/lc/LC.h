@@ -146,89 +146,89 @@ namespace p25
             /**
              * @brief Flag indicating the link control data is protected.
              */
-            __PROPERTY(bool, protect, Protect);
+            DECLARE_PROPERTY(bool, protect, Protect);
             /**
              * @brief Link control opcode.
              */
-            __PROPERTY(uint8_t, lco, LCO);
+            DECLARE_PROPERTY(uint8_t, lco, LCO);
             /**
              * @brief Manufacturer ID.
              */
-            __PROPERTY(uint8_t, mfId, MFId);
+            DECLARE_PROPERTY(uint8_t, mfId, MFId);
 
             /**
              * @brief Source ID.
              */
-            __PROPERTY(uint32_t, srcId, SrcId);
+            DECLARE_PROPERTY(uint32_t, srcId, SrcId);
             /**
              * @brief Destination ID.
              */
-            __PROPERTY(uint32_t, dstId, DstId);
+            DECLARE_PROPERTY(uint32_t, dstId, DstId);
 
             /**
              * @brief Voice channel number.
              */
-            __PROPERTY(uint32_t, grpVchNo, GrpVchNo);
+            DECLARE_PROPERTY(uint32_t, grpVchNo, GrpVchNo);
 
             /**
              * @brief Voice channel number.
              */
-            __PROPERTY(uint32_t, grpVchNoB, GrpVchNoB);
+            DECLARE_PROPERTY(uint32_t, grpVchNoB, GrpVchNoB);
             /**
              * @brief Destination ID.
              */
-            __PROPERTY(uint32_t, dstIdB, DstIdB);
+            DECLARE_PROPERTY(uint32_t, dstIdB, DstIdB);
 
             /**
              * @brief Flag indicating explicit addressing.
              */
-            __PROPERTY(bool, explicitId, ExplicitId);
+            DECLARE_PROPERTY(bool, explicitId, ExplicitId);
 
             /**
              * @brief Network ID.
              */
-            __PROPERTY(uint32_t, netId, NetId);
+            DECLARE_PROPERTY(uint32_t, netId, NetId);
             /**
              * @brief System ID.
              */
-            __PROPERTY(uint32_t, sysId, SysId);
+            DECLARE_PROPERTY(uint32_t, sysId, SysId);
             /** @} */
 
             /** @name Service Options */
             /**
              * @brief Flag indicating the emergency bits are set.
              */
-            __PROPERTY(bool, emergency, Emergency);
+            DECLARE_PROPERTY(bool, emergency, Emergency);
             /**
              * @brief Flag indicating that encryption is enabled.
              */
-            __PROPERTY(bool, encrypted, Encrypted);
+            DECLARE_PROPERTY(bool, encrypted, Encrypted);
             /**
              * @brief Priority level for the traffic.
              */
-            __PROPERTY(uint8_t, priority, Priority);
+            DECLARE_PROPERTY(uint8_t, priority, Priority);
             /**
              * @brief Flag indicating a group/talkgroup operation.
              */
-            __PROPERTY(bool, group, Group);
+            DECLARE_PROPERTY(bool, group, Group);
             /** @} */
 
             /** @name Encryption data */
             /**
              * @brief Encryption algorithm ID.
              */
-            __PROPERTY(uint8_t, algId, AlgId);
+            DECLARE_PROPERTY(uint8_t, algId, AlgId);
             /**
              * @brief Encryption key ID.
              */
-            __PROPERTY(uint32_t, kId, KId);
+            DECLARE_PROPERTY(uint32_t, kId, KId);
             /** @} */
 
             /** @name Packed RS Data */
             /**
              * @brief Packed RS Data.
              */
-            __PROPERTY(ulong64_t, rsValue, RS);
+            DECLARE_PROPERTY(ulong64_t, rsValue, RS);
             /** @} */
 
         private:

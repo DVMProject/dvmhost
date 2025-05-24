@@ -67,15 +67,13 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
 {
     hrc::hrc_t pktTime = hrc::now();
 
-    UInt8Array __buffer = std::make_unique<uint8_t[]>(len);
-    uint8_t* buffer = __buffer.get();
-    ::memset(buffer, 0x00U, len);
+    DECLARE_UINT8_ARRAY(buffer, len);
     ::memcpy(buffer, data, len);
 
     uint8_t seqNo = data[4U];
 
-    uint32_t srcId = __GET_UINT16(data, 5U);
-    uint32_t dstId = __GET_UINT16(data, 8U);
+    uint32_t srcId = GET_UINT24(data, 5U);
+    uint32_t dstId = GET_UINT24(data, 8U);
 
     FLCO::E flco = (data[15U] & 0x40U) == 0x40U ? FLCO::PRIVATE : FLCO::GROUP;
 
@@ -124,7 +122,7 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
 
     // perform TGID route rewrites if configured
     routeRewrite(buffer, peerId, dmrData, dataType, dstId, slotNo, false);
-    dstId = __GET_UINT16(buffer, 8U);
+    dstId = GET_UINT24(buffer, 8U);
 
     // is the stream valid?
     if (validate(peerId, dmrData, streamId)) {
@@ -312,9 +310,7 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                         m_network->m_frameQueue->flushQueue();
                     }
 
-                    UInt8Array __outboundPeerBuffer = std::make_unique<uint8_t[]>(len);
-                    uint8_t* outboundPeerBuffer = __outboundPeerBuffer.get();
-                    ::memset(outboundPeerBuffer, 0x00U, len);
+                    DECLARE_UINT8_ARRAY(outboundPeerBuffer, len);
                     ::memcpy(outboundPeerBuffer, buffer, len);
 
                     // perform TGID route rewrites if configured
@@ -357,9 +353,7 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                         continue;
                     }
 
-                    UInt8Array __outboundPeerBuffer = std::make_unique<uint8_t[]>(len);
-                    uint8_t* outboundPeerBuffer = __outboundPeerBuffer.get();
-                    ::memset(outboundPeerBuffer, 0x00U, len);
+                    DECLARE_UINT8_ARRAY(outboundPeerBuffer, len);
                     ::memcpy(outboundPeerBuffer, buffer, len);
 
                     // perform TGID route rewrites if configured
@@ -510,7 +504,7 @@ void TagDMRData::routeRewrite(uint8_t* buffer, uint32_t peerId, dmr::data::NetDa
     // does the data require route rewriting?
     if (peerRewrite(peerId, rewriteDstId, rewriteSlotNo, outbound)) {
         // rewrite destination TGID in the frame
-        __SET_UINT16(rewriteDstId, buffer, 8U);
+        SET_UINT24(rewriteDstId, buffer, 8U);
 
         // set or clear the e.Slot flag (if 0x80 is set Slot 2 otherwise Slot 1)
         if (rewriteSlotNo == 2 && (buffer[15U] & 0x80U) == 0x00U)

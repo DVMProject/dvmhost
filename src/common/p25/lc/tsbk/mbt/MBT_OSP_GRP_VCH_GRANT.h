@@ -64,17 +64,17 @@ namespace p25
                 /**
                  * @brief Flag forcing the use of the group voice channel ID regardless of value.
                  */
-                __PROPERTY(bool, forceChannelId, ForceChannelId);
+                DECLARE_PROPERTY(bool, forceChannelId, ForceChannelId);
 
                 /** @name Common Data */
                 /**
                  * @brief Rx Voice channel ID.
                  */
-                __PROTECTED_PROPERTY(uint8_t, rxGrpVchId, RxGrpVchId);
+                DECLARE_PROTECTED_PROPERTY(uint8_t, rxGrpVchId, RxGrpVchId);
                 /**
                  * @brief Rx Voice channel number.
                  */
-                __PROTECTED_PROPERTY(uint32_t, rxGrpVchNo, RxGrpVchNo);
+                DECLARE_PROTECTED_PROPERTY(uint32_t, rxGrpVchNo, RxGrpVchNo);
                 /** @} */
             };
         } // namespace tsbk

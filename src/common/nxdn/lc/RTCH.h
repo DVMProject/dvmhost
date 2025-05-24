@@ -89,92 +89,92 @@ namespace nxdn
             /**
              * @brief Message Type
              */
-            __PROPERTY(uint8_t, messageType, MessageType);
+            DECLARE_PROPERTY(uint8_t, messageType, MessageType);
 
             /**
              * @brief Call Type
              */
-            __PROPERTY(uint8_t, callType, CallType);
+            DECLARE_PROPERTY(uint8_t, callType, CallType);
 
             /**
              * @brief Source ID.
              */
-            __PROPERTY(uint16_t, srcId, SrcId);
+            DECLARE_PROPERTY(uint16_t, srcId, SrcId);
             /**
              * @brief Destination ID.
              */
-            __PROPERTY(uint16_t, dstId, DstId);
+            DECLARE_PROPERTY(uint16_t, dstId, DstId);
             /** @} */
 
             /** @name Common Call Options */
             /**
              * @brief Flag indicating the emergency bits are set.
              */
-            __PROPERTY(bool, emergency, Emergency);
+            DECLARE_PROPERTY(bool, emergency, Emergency);
             /**
              * @brief Flag indicating that encryption is enabled.
              */
-            __PROPERTY(bool, encrypted, Encrypted);
+            DECLARE_PROPERTY(bool, encrypted, Encrypted);
             /**
              * @brief Flag indicating priority paging.
              */
-            __PROPERTY(bool, priority, Priority);
+            DECLARE_PROPERTY(bool, priority, Priority);
             /**
              * @brief Flag indicating a group/talkgroup operation.
              */
-            __PROPERTY(bool, group, Group);
+            DECLARE_PROPERTY(bool, group, Group);
             /**
              * @brief Flag indicating a half/full duplex operation.
              */
-            __PROPERTY(bool, duplex, Duplex);
+            DECLARE_PROPERTY(bool, duplex, Duplex);
 
             /**
              * @brief Transmission mode.
              */
-            __PROPERTY(uint8_t, transmissionMode, TransmissionMode);
+            DECLARE_PROPERTY(uint8_t, transmissionMode, TransmissionMode);
             /** @} */
 
             /** @name Data Call Data */
             /**
              * @brief Data packet information.
              */
-            __PROPERTY(PacketInformation, packetInfo, PacketInfo);
+            DECLARE_PROPERTY(PacketInformation, packetInfo, PacketInfo);
             /**
              * @brief Data packet information.
              */
-            __PROPERTY(PacketInformation, rsp, Response);
+            DECLARE_PROPERTY(PacketInformation, rsp, Response);
             /**
              * @brief Data packet frame number.
              */
-            __PROPERTY(uint8_t, dataFrameNumber, DataFrameNumber);
+            DECLARE_PROPERTY(uint8_t, dataFrameNumber, DataFrameNumber);
             /**
              * @brief Data packet block number.
              */
-            __PROPERTY(uint8_t, dataBlockNumber, DataBlockNumber);
+            DECLARE_PROPERTY(uint8_t, dataBlockNumber, DataBlockNumber);
             /** @} */
 
             /** @name Header Delay Data */
             /**
              * @brief Delay count.
              */
-            __PROPERTY(uint16_t, delayCount, DelayCount);
+            DECLARE_PROPERTY(uint16_t, delayCount, DelayCount);
             /** @} */
 
             /** @name Encryption data */
             /**
              * @brief Encryption algorithm ID.
              */
-            __PROPERTY(uint8_t, algId, AlgId);
+            DECLARE_PROPERTY(uint8_t, algId, AlgId);
             /**
              * @brief Encryption key ID.
              */
-            __PROPERTY(uint8_t, kId, KId);
+            DECLARE_PROPERTY(uint8_t, kId, KId);
             /** @} */
 
             /**
              * @brief Cause Response.
              */
-            __PROPERTY(uint8_t, causeRsp, CauseResponse);
+            DECLARE_PROPERTY(uint8_t, causeRsp, CauseResponse);
 
         private:
             static bool m_verbose;

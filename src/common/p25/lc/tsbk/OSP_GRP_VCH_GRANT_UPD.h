@@ -65,15 +65,15 @@ namespace p25
                 /**
                  * @brief Voice channel ID.
                  */
-                __PROPERTY(uint8_t, grpVchIdB, GrpVchIdB);
+                DECLARE_PROPERTY(uint8_t, grpVchIdB, GrpVchIdB);
                 /**
                  * @brief Voice channel number.
                  */
-                __PROPERTY(uint32_t, grpVchNoB, GrpVchNoB);
+                DECLARE_PROPERTY(uint32_t, grpVchNoB, GrpVchNoB);
                 /**
                  * @brief Destination ID.
                  */
-                __PROPERTY(uint32_t, dstIdB, DstIdB);
+                DECLARE_PROPERTY(uint32_t, dstIdB, DstIdB);
             };
         } // namespace tsbk
     } // namespace lc

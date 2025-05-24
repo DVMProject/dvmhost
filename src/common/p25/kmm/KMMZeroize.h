@@ -68,7 +68,7 @@ namespace p25
             void encode(uint8_t* data) override;
 
         public:
-            __COPY(KMMZeroize);
+            DECLARE_COPY(KMMZeroize);
         };
     } // namespace kmm
 } // namespace p25

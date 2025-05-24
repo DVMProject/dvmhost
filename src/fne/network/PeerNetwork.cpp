@@ -110,8 +110,7 @@ bool PeerNetwork::writePeerLinkPeers(json::array* peerList)
         std::string json = std::string(v.serialize());
 
         size_t len = json.length() + 9U;
-        CharArray __buffer = std::make_unique<char[]>(len);
-        char* buffer = __buffer.get();
+        DECLARE_CHAR_ARRAY(buffer, len);
 
         ::memcpy(buffer + 0U, TAG_PEER_LINK, 4U);
         ::snprintf(buffer + 8U, json.length() + 1U, "%s", json.c_str());
@@ -161,8 +160,7 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
                 }
 
                 // store to file
-                std::unique_ptr<char[]> __str = std::make_unique<char[]>(decompressedLen + 1U);
-                char* str = __str.get();
+                DECLARE_CHAR_ARRAY(str, decompressedLen + 1U);
                 ::memcpy(str, decompressed, decompressedLen);
                 str[decompressedLen] = 0; // null termination
 
@@ -219,8 +217,7 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
                 }
 
                 // store to file
-                std::unique_ptr<char[]> __str = std::make_unique<char[]>(decompressedLen + 1U);
-                char* str = __str.get();
+                DECLARE_CHAR_ARRAY(str, decompressedLen + 1U);
                 ::memcpy(str, decompressed, decompressedLen);
                 str[decompressedLen] = 0; // null termination
 
@@ -277,8 +274,7 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
                 }
 
                 // store to file
-                std::unique_ptr<char[]> __str = std::make_unique<char[]>(decompressedLen + 1U);
-                char* str = __str.get();
+                DECLARE_CHAR_ARRAY(str, decompressedLen + 1U);
                 ::memcpy(str, decompressed, decompressedLen);
                 str[decompressedLen] = 0; // null termination
 
@@ -384,8 +380,7 @@ bool PeerNetwork::writeConfig()
     json::value v = json::value(config);
     std::string json = v.serialize();
 
-    CharArray __buffer = std::make_unique<char[]>(json.length() + 9U);
-    char* buffer = __buffer.get();
+    DECLARE_CHAR_ARRAY(buffer, json.length() + 9U);
 
     ::memcpy(buffer + 0U, TAG_REPEATER_CONFIG, 4U);
     ::snprintf(buffer + 8U, json.length() + 1U, "%s", json.c_str());

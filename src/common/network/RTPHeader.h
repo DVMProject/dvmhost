@@ -85,39 +85,39 @@ namespace network
             /**
              * @brief RTP Protocol Version.
              */
-            __READONLY_PROPERTY(uint8_t, version, Version);
+            DECLARE_RO_PROPERTY(uint8_t, version, Version);
             /**
              * @brief Flag indicating if the packet has trailing padding.
              */
-            __READONLY_PROPERTY(bool, padding, Padding);
+            DECLARE_RO_PROPERTY(bool, padding, Padding);
             /**
              * @brief Flag indicating the presence of an extension header.
              */
-            __PROPERTY(bool, extension, Extension);
+            DECLARE_PROPERTY(bool, extension, Extension);
             /**
              * @brief Count of contributing source IDs that follow the SSRC.
              */
-            __READONLY_PROPERTY(uint8_t, cc, CSRCCount);
+            DECLARE_RO_PROPERTY(uint8_t, cc, CSRCCount);
             /**
              * @brief Flag indicating application-specific behavior.
              */
-            __PROPERTY(bool, marker, Marker);
+            DECLARE_PROPERTY(bool, marker, Marker);
             /**
              * @brief Format of the payload contained within the packet.
              */
-            __PROPERTY(uint8_t, payloadType, PayloadType);
+            DECLARE_PROPERTY(uint8_t, payloadType, PayloadType);
             /**
              * @brief Sequence number for the RTP packet.
              */
-            __PROPERTY(uint16_t, seq, Sequence);
+            DECLARE_PROPERTY(uint16_t, seq, Sequence);
             /**
              * @brief RTP packet timestamp.
              */
-            __PROPERTY(uint32_t, timestamp, Timestamp);
+            DECLARE_PROPERTY(uint32_t, timestamp, Timestamp);
             /**
              * @brief Synchronization Source ID.
              */
-            __PROPERTY(uint32_t, ssrc, SSRC);
+            DECLARE_PROPERTY(uint32_t, ssrc, SSRC);
         
         private:
             static std::chrono::time_point<std::chrono::high_resolution_clock> m_wcStart;

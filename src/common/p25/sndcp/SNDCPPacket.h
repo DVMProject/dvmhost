@@ -70,15 +70,15 @@ namespace p25
             /**
              * @brief SNDCP PDU Type.
              */
-            __PROTECTED_PROPERTY(uint8_t, pduType, PDUType);
+            DECLARE_PROTECTED_PROPERTY(uint8_t, pduType, PDUType);
             /**
              * @brief Link control opcode.
              */
-            __READONLY_PROPERTY(uint8_t, sndcpVersion, SNDCPVersion);
+            DECLARE_RO_PROPERTY(uint8_t, sndcpVersion, SNDCPVersion);
             /**
              * @brief Network Service Access Point Identifier
              */
-            __PROTECTED_PROPERTY(uint8_t, nsapi, NSAPI);
+            DECLARE_PROTECTED_PROPERTY(uint8_t, nsapi, NSAPI);
 
         protected:
             /**
@@ -95,7 +95,7 @@ namespace p25
              */
             void encodeHeader(uint8_t* data, bool outbound = false);
 
-            __PROTECTED_COPY(SNDCPPacket);
+            DECLARE_PROTECTED_COPY(SNDCPPacket);
         };
     } // namespace sndcp
 } // namespace p25

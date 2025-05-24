@@ -80,49 +80,49 @@ namespace dmr
             /**
              * @brief Flag indicating whether link protection is enabled.
              */
-            __PROPERTY(bool, PF, PF);
+            DECLARE_PROPERTY(bool, PF, PF);
 
             /**
              * @brief Full-link control opcode.
              */
-            __PROPERTY(defines::FLCO::E, FLCO, FLCO);
+            DECLARE_PROPERTY(defines::FLCO::E, FLCO, FLCO);
 
             /**
              * @brief Feature ID
              */
-            __PROPERTY(uint8_t, FID, FID);
+            DECLARE_PROPERTY(uint8_t, FID, FID);
 
             /**
              * @brief Source ID.
              */
-            __PROPERTY(uint32_t, srcId, SrcId);
+            DECLARE_PROPERTY(uint32_t, srcId, SrcId);
             /**
              * @brief Destination ID.
              */
-            __PROPERTY(uint32_t, dstId, DstId);
+            DECLARE_PROPERTY(uint32_t, dstId, DstId);
             /** @} */
 
             /** @name Service Options */
             /**
              * @brief Flag indicating the emergency bits are set.
              */
-            __PROPERTY(bool, emergency, Emergency);
+            DECLARE_PROPERTY(bool, emergency, Emergency);
             /**
              * @brief Flag indicating that encryption is enabled.
              */
-            __PROPERTY(bool, encrypted, Encrypted);
+            DECLARE_PROPERTY(bool, encrypted, Encrypted);
             /**
              * @brief Flag indicating broadcast operation.
              */
-            __PROPERTY(bool, broadcast, Broadcast);
+            DECLARE_PROPERTY(bool, broadcast, Broadcast);
             /**
              * @brief Flag indicating OVCM operation.
              */
-            __PROPERTY(bool, ovcm, OVCM);
+            DECLARE_PROPERTY(bool, ovcm, OVCM);
             /**
              * @brief Priority level for the traffic.
              */
-            __PROPERTY(uint8_t, priority, Priority);
+            DECLARE_PROPERTY(uint8_t, priority, Priority);
             /** @} */
 
         private:

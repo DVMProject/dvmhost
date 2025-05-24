@@ -444,10 +444,10 @@ void Network::clock(uint32_t ms)
 
                             if (m_ridLookup != nullptr) {
                                 // update RID lists
-                                uint32_t len = __GET_UINT32(buffer, 6U);
+                                uint32_t len = GET_UINT32(buffer, 6U);
                                 uint32_t offs = 11U;
                                 for (uint32_t i = 0; i < len; i++) {
-                                    uint32_t id = __GET_UINT16(buffer, offs);
+                                    uint32_t id = GET_UINT24(buffer, offs);
                                     m_ridLookup->toggleEntry(id, true);
                                     offs += 4U;
                                 }
@@ -470,10 +470,10 @@ void Network::clock(uint32_t ms)
 
                             if (m_ridLookup != nullptr) {
                                 // update RID lists
-                                uint32_t len = __GET_UINT32(buffer, 6U);
+                                uint32_t len = GET_UINT32(buffer, 6U);
                                 uint32_t offs = 11U;
                                 for (uint32_t i = 0; i < len; i++) {
-                                    uint32_t id = __GET_UINT16(buffer, offs);
+                                    uint32_t id = GET_UINT24(buffer, offs);
                                     m_ridLookup->toggleEntry(id, false);
                                     offs += 4U;
                                 }
@@ -497,10 +497,10 @@ void Network::clock(uint32_t ms)
 
                             if (m_tidLookup != nullptr) {
                                 // update TGID lists
-                                uint32_t len = __GET_UINT32(buffer, 6U);
+                                uint32_t len = GET_UINT32(buffer, 6U);
                                 uint32_t offs = 11U;
                                 for (uint32_t i = 0; i < len; i++) {
-                                    uint32_t id = __GET_UINT16(buffer, offs);
+                                    uint32_t id = GET_UINT24(buffer, offs);
                                     uint8_t slot = (buffer[offs + 3U]) & 0x03U;
                                     bool affiliated = (buffer[offs + 3U] & 0x40U) == 0x40U;
                                     bool nonPreferred = (buffer[offs + 3U] & 0x80U) == 0x80U;
@@ -547,10 +547,10 @@ void Network::clock(uint32_t ms)
 
                             if (m_tidLookup != nullptr) {
                                 // update TGID lists
-                                uint32_t len = __GET_UINT32(buffer, 6U);
+                                uint32_t len = GET_UINT32(buffer, 6U);
                                 uint32_t offs = 11U;
                                 for (uint32_t i = 0; i < len; i++) {
-                                    uint32_t id = __GET_UINT16(buffer, offs);
+                                    uint32_t id = GET_UINT24(buffer, offs);
                                     uint8_t slot = (buffer[offs + 3U]);
 
                                     lookups::TalkgroupRuleGroupVoice tid = m_tidLookup->find(id, slot);
@@ -588,7 +588,7 @@ void Network::clock(uint32_t ms)
                     {
                         if (m_enabled && m_dmrEnabled) {
                             NET_ICC::ENUM command = (NET_ICC::ENUM)buffer[10U];
-                            uint32_t dstId = __GET_UINT16(buffer, 11U);
+                            uint32_t dstId = GET_UINT24(buffer, 11U);
                             uint8_t slot = buffer[14U];
 
                             // fire off DMR in-call callback if we have one
@@ -602,7 +602,7 @@ void Network::clock(uint32_t ms)
                     {
                         if (m_enabled && m_p25Enabled) {
                             NET_ICC::ENUM command = (NET_ICC::ENUM)buffer[10U];
-                            uint32_t dstId = __GET_UINT16(buffer, 11U);
+                            uint32_t dstId = GET_UINT24(buffer, 11U);
 
                             // fire off P25 in-call callback if we have one
                             if (m_p25InCallCallback != nullptr) {
@@ -615,7 +615,7 @@ void Network::clock(uint32_t ms)
                     {
                         if (m_enabled && m_nxdnEnabled) {
                             NET_ICC::ENUM command = (NET_ICC::ENUM)buffer[10U];
-                            uint32_t dstId = __GET_UINT16(buffer, 11U);
+                            uint32_t dstId = GET_UINT24(buffer, 11U);
 
                             // fire off NXDN in-call callback if we have one
                             if (m_nxdnInCallCallback != nullptr) {
@@ -677,7 +677,7 @@ void Network::clock(uint32_t ms)
                 // then 10 bytes and process the reason value
                 uint16_t reason = 0U;
                 if (length > 10) {
-                    reason = __GET_UINT16B(buffer, 10U);
+                    reason = GET_UINT16(buffer, 10U);
                     switch (reason) {
                     case NET_CONN_NAK_MODE_NOT_ENABLED:
                         LogWarning(LOG_NET, "PEER %u master NAK; digital mode not enabled on FNE, remotePeerId = %u", m_peerId, rtpHeader.getSSRC());
@@ -939,7 +939,7 @@ bool Network::writeLogin()
 
     uint8_t buffer[8U];
     ::memcpy(buffer + 0U, TAG_REPEATER_LOGIN, 4U);
-    __SET_UINT32(m_peerId, buffer, 4U);                                             // Peer ID
+    SET_UINT32(m_peerId, buffer, 4U);                                               // Peer ID
 
     if (m_debug)
         Utils::dump(1U, "Network Message, Login", buffer, 8U);
@@ -967,7 +967,7 @@ bool Network::writeAuthorisation()
 
     uint8_t out[40U];
     ::memcpy(out + 0U, TAG_REPEATER_AUTH, 4U);
-    __SET_UINT32(m_peerId, out, 4U);                                                // Peer ID
+    SET_UINT32(m_peerId, out, 4U);                                                  // Peer ID
 
     edac::SHA256 sha256;
     sha256.buffer(in, (uint32_t)(size + sizeof(uint32_t)), out + 8U);
@@ -1030,8 +1030,7 @@ bool Network::writeConfig()
     json::value v = json::value(config);
     std::string json = v.serialize();
 
-    CharArray __buffer = std::make_unique<char[]>(json.length() + 9U);
-    char* buffer = __buffer.get();
+    DECLARE_CHAR_ARRAY(buffer, json.length() + 9U);
 
     ::memcpy(buffer + 0U, TAG_REPEATER_CONFIG, 4U);
     ::snprintf(buffer + 8U, json.length() + 1U, "%s", json.c_str());

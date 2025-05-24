@@ -75,9 +75,9 @@ void MBT_OSP_GRP_VCH_GRANT::encodeMBT(data::DataHeader& dataHeader, uint8_t* pdu
     rxFrequency = (rxFrequency << 12) + m_rxGrpVchNo;                               // Rx Channel Number
 
     /** Block 1 */
-    __SET_UINT16B(txFrequency, pduUserData, 2U);                                    // Transmit Frequency
-    __SET_UINT16B(rxFrequency, pduUserData, 4U);                                    // Receive Frequency
-    __SET_UINT16B(m_dstId, pduUserData, 6U);                                        // Talkgroup Address
+    SET_UINT16(txFrequency, pduUserData, 2U);                                       // Transmit Frequency
+    SET_UINT16(rxFrequency, pduUserData, 4U);                                       // Receive Frequency
+    SET_UINT16(m_dstId, pduUserData, 6U);                                           // Talkgroup Address
 
     AMBT::encode(dataHeader, pduUserData);
 }

@@ -260,55 +260,55 @@ namespace p25
         /**
          * @brief P25 location resource area.
          */
-        __READONLY_PROPERTY_PLAIN(uint8_t, lra);
+        DECLARE_RO_PROPERTY_PLAIN(uint8_t, lra);
         /**
          * @brief P25 network ID.
          */
-        __READONLY_PROPERTY_PLAIN(uint32_t, netId);
+        DECLARE_RO_PROPERTY_PLAIN(uint32_t, netId);
         /**
          * @brief Gets the P25 system ID.
          */
-        __READONLY_PROPERTY_PLAIN(uint32_t, sysId);
+        DECLARE_RO_PROPERTY_PLAIN(uint32_t, sysId);
         /**
          * @brief P25 RFSS ID.
          */
-        __READONLY_PROPERTY_PLAIN(uint8_t, rfssId);
+        DECLARE_RO_PROPERTY_PLAIN(uint8_t, rfssId);
         /**
          * @brief P25 site ID.
          */
-        __READONLY_PROPERTY_PLAIN(uint8_t, siteId);
+        DECLARE_RO_PROPERTY_PLAIN(uint8_t, siteId);
         /**
          * @brief Channel ID.
          */
-        __READONLY_PROPERTY_PLAIN(uint8_t, channelId);
+        DECLARE_RO_PROPERTY_PLAIN(uint8_t, channelId);
         /**
          * @brief Channel number.
          */
-        __READONLY_PROPERTY_PLAIN(uint32_t, channelNo);
+        DECLARE_RO_PROPERTY_PLAIN(uint32_t, channelNo);
         /**
          * @brief Service class.
          */
-        __READONLY_PROPERTY_PLAIN(uint8_t, serviceClass);
+        DECLARE_RO_PROPERTY_PLAIN(uint8_t, serviceClass);
         /**
          * @brief Flag indicating whether this site data is for an adjacent site.
          */
-        __READONLY_PROPERTY_PLAIN(bool, isAdjSite);
+        DECLARE_RO_PROPERTY_PLAIN(bool, isAdjSite);
         /**
          * @brief Callsign.
          */
-        __READONLY_PROPERTY_PLAIN(std::string, callsign);
+        DECLARE_RO_PROPERTY_PLAIN(std::string, callsign);
         /**
          * @brief Count of available channels.
          */
-        __READONLY_PROPERTY_PLAIN(uint8_t, chCnt);
+        DECLARE_RO_PROPERTY_PLAIN(uint8_t, chCnt);
         /**
          * @brief Flag indicating whether this site is a linked active network member.
          */
-        __READONLY_PROPERTY_PLAIN(bool, netActive);
+        DECLARE_RO_PROPERTY_PLAIN(bool, netActive);
         /**
          * @brief Local Time Offset.
          */
-        __READONLY_PROPERTY_PLAIN(int8_t, lto);
+        DECLARE_RO_PROPERTY_PLAIN(int8_t, lto);
         /** @} */
     };
 } // namespace p25

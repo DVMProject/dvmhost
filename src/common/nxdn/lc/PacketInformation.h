@@ -65,45 +65,45 @@ namespace nxdn
             /**
              * @brief Flag indicating if confirmed delivery is needed.
              */
-            __PROPERTY(bool, delivery, Delivery);
+            DECLARE_PROPERTY(bool, delivery, Delivery);
             /**
              * @brief Flag indicating if the packet is a selective retry packet.
              */
-            __PROPERTY(bool, selectiveRetry, SelectiveRetry);
+            DECLARE_PROPERTY(bool, selectiveRetry, SelectiveRetry);
             /**
              * @brief Count of data blocks in t he transmission packet.
              */
-            __PROPERTY(uint8_t, blockCount, BlockCount);
+            DECLARE_PROPERTY(uint8_t, blockCount, BlockCount);
             /**
              * @brief Number of padding octets of the last block.
              */
-            __PROPERTY(uint8_t, padCount, PadCount);
+            DECLARE_PROPERTY(uint8_t, padCount, PadCount);
             /**
              * @brief Flag indicating the first fragment.
              */
-            __PROPERTY(bool, start, Start);
+            DECLARE_PROPERTY(bool, start, Start);
             /**
              * @brief Flag indicating if the Tx fragment count circulates.
              */
-            __PROPERTY(bool, circular, Circular);
+            DECLARE_PROPERTY(bool, circular, Circular);
             /**
              * @brief The number and sequence of fragments.
              */
-            __PROPERTY(uint16_t, fragmentCount, FragmentCount);
+            DECLARE_PROPERTY(uint16_t, fragmentCount, FragmentCount);
 
             // Response Data
             /**
              * @brief Response class.
              */
-            __PROPERTY(uint8_t, rspClass, ResponseClass);
+            DECLARE_PROPERTY(uint8_t, rspClass, ResponseClass);
             /**
              * @brief Response type.
              */
-            __PROPERTY(uint8_t, rspType, ResponseType);
+            DECLARE_PROPERTY(uint8_t, rspType, ResponseType);
             /**
              * @brief Error Block Flag.
              */
-            __PROPERTY(uint16_t, rspErrorBlock, ResponseErrorBlock);
+            DECLARE_PROPERTY(uint16_t, rspErrorBlock, ResponseErrorBlock);
         };
     } // namespace lc
 } // namespace nxdn

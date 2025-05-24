@@ -61,9 +61,9 @@ namespace dmr
                 /**
                  * @brief Base Station ID.
                  */
-                __READONLY_PROPERTY(uint32_t, bsId, BSId);
+                DECLARE_RO_PROPERTY(uint32_t, bsId, BSId);
 
-                __COPY(CSBK_BSDWNACT);
+                DECLARE_COPY(CSBK_BSDWNACT);
             };
         } // namespace csbk
     } // namespace lc
