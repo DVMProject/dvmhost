@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPL-2.0-only
 /*
  * Digital Voice Modem - Common Library
  * MIT Open Source. Use is subject to license terms.
