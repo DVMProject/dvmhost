@@ -121,8 +121,12 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
             }
 
             if (m_debug) {
-                LogDebug(LOG_NET, "P25, HDU algId = $%02X, kId = $%02X", algId, kid);
-                Utils::dump(1U, "P25 HDU Network MI", mi, MI_LENGTH_BYTES);
+                LogDebug(LOG_NET, P25_HDU_STR ", HDU_BSDWNACT, dstId = %u, algo = $%02X, kid = $%04X", dstId, algId, kid);
+
+                if (algId != ALGO_UNENCRYPT) {
+                    LogDebug(LOG_NET, P25_HDU_STR ", Enc Sync, MI = %02X %02X %02X %02X %02X %02X %02X %02X %02X", 
+                        mi[0U], mi[1U], mi[2U], mi[3U], mi[4U], mi[5U], mi[6U], mi[7U], mi[8U]);
+                }
             }
 
             control.setAlgId(algId);
