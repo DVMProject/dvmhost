@@ -95,7 +95,7 @@ typedef unsigned long long  ulong64_t;
 #endif
 
 // ---------------------------------------------------------------------------
-//  Common Core Includes
+//  Meta-Programming Macro Includes
 // ---------------------------------------------------------------------------
 
 #include "common/ClassProperties.h"
