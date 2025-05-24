@@ -87,16 +87,16 @@ namespace p25
         public:
             // Common Data
             /**
-             * @brief 
+             * @brief KMM Message ID.
              */
             DECLARE_PROTECTED_PROPERTY(uint8_t, messageId, MessageId);
             /**
-             * @brief 
+             * @brief Message Length.
              */
             DECLARE_PROTECTED_PROPERTY(uint16_t, messageLength, MessageLength);
             
             /**
-             * @brief 
+             * @brief Response Kind.
              */
             DECLARE_PROTECTED_PROPERTY(uint8_t, respKind, ResponseKind);
 
@@ -110,7 +110,7 @@ namespace p25
             DECLARE_PROTECTED_PROPERTY(uint32_t, srcLlId, SrcLLId);
 
             /**
-             * @brief 
+             * @brief Flag indicating the KMM frame is complete.
              */
             DECLARE_PROTECTED_PROPERTY(bool, complete, Complete);
 

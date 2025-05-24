@@ -111,11 +111,11 @@ namespace p25
              */
             DECLARE_PROPERTY_PLAIN(uint8_t, keyFormat);
             /**
-             * @brief 
+             * @brief Slot Logical Number.
              */
             DECLARE_PROPERTY_PLAIN(uint16_t, sln);
             /**
-             * @brief 
+             * @brief Key ID.
              */
             DECLARE_PROPERTY_PLAIN(uint16_t, kId);
 
@@ -193,7 +193,7 @@ namespace p25
 
         public:
             /**
-             * @brief 
+             * @brief Encryption keyset ID.
              */
             DECLARE_PROPERTY_PLAIN(uint8_t, keysetId);
             /**

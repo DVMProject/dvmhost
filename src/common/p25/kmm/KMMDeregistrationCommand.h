@@ -73,7 +73,7 @@ namespace p25
              */
             DECLARE_PROPERTY(uint8_t, bodyFormat, BodyFormat);
             /**
-             * @brief 
+             * @brief KMF RSI.
              */
             DECLARE_PROPERTY(uint32_t, kmfRSI, KMFRSI);
 

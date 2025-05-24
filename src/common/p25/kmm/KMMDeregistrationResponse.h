@@ -69,7 +69,7 @@ namespace p25
 
         public:
             /**
-             * @brief 
+             * @brief Deregistration response status.
              */
             DECLARE_PROPERTY(uint8_t, status, Status);
 

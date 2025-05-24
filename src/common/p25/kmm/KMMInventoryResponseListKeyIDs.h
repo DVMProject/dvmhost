@@ -63,7 +63,7 @@ namespace p25
 
         public:
             /**
-             * @brief 
+             * @brief Encryption keyset ID.
              */
             DECLARE_PROPERTY(uint8_t, keysetId, KeysetId);
             /**
@@ -76,7 +76,7 @@ namespace p25
             DECLARE_PROPERTY(uint8_t, numberOfKeyIDs, NumberOfKeyIDs);
 
             /**
-             * @brief
+             * @brief List of key IDs.
              */
             DECLARE_PROPERTY(std::vector<uint16_t>, keyIds, KeyIds);
 

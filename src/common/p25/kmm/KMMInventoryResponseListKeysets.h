@@ -63,7 +63,7 @@ namespace p25
 
         public:
             /**
-             * @brief
+             * @brief List of keyset IDs.
              */
             DECLARE_PROPERTY(std::vector<uint8_t>, keysetIds, KeysetIds);
 

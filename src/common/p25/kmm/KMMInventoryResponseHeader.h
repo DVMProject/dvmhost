@@ -69,11 +69,11 @@ namespace p25
 
         public:
             /**
-             * @brief 
+             * @brief Inventory type.
              */
             DECLARE_PROTECTED_PROPERTY(uint8_t, inventoryType, InventoryType);
             /**
-             * @brief 
+             * @brief Number of items in the inventory response.
              */
             DECLARE_PROTECTED_PROPERTY(uint16_t, numberOfItems, NumberOfItems);
 

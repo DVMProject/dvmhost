@@ -69,7 +69,7 @@ namespace p25
 
         public:
             /**
-             * @brief 
+             * @brief Inventory type.
              */
             DECLARE_PROPERTY(uint8_t, inventoryType, InventoryType);
 
