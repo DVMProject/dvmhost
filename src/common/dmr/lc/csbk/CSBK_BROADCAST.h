@@ -61,36 +61,36 @@ namespace dmr
                 /**
                  * @brief Broadcast Announcment Type.
                  */
-                __PROPERTY(uint8_t, anncType, AnncType);
+                DECLARE_PROPERTY(uint8_t, anncType, AnncType);
                 /**
                  * @brief Broadcast Hibernation Flag.
                  */
-                __PROPERTY(bool, hibernating, Hibernating);
+                DECLARE_PROPERTY(bool, hibernating, Hibernating);
 
                 /**
                  * @brief Broadcast Announce/Withdraw Channel 1 Flag.
                  */
-                __PROPERTY(bool, annWdCh1, AnnWdCh1);
+                DECLARE_PROPERTY(bool, annWdCh1, AnnWdCh1);
                 /**
                  * @brief Broadcast Announce/Withdraw Channel 2 Flag.
                  */
-                __PROPERTY(bool, annWdCh2, AnnWdCh2);
+                DECLARE_PROPERTY(bool, annWdCh2, AnnWdCh2);
 
                 /**
                  * @brief Require Registration.
                  */
-                __PROPERTY(bool, requireReg, RequireReg);
+                DECLARE_PROPERTY(bool, requireReg, RequireReg);
                 /**
                  * @brief System Identity.
                  */
-                __PROPERTY(uint32_t, systemId, SystemId);
+                DECLARE_PROPERTY(uint32_t, systemId, SystemId);
 
                 /**
                  * @brief Backoff Number.
                  */
-                __PROPERTY(uint8_t, backoffNo, BackoffNo);
+                DECLARE_PROPERTY(uint8_t, backoffNo, BackoffNo);
 
-                __COPY(CSBK_BROADCAST);
+                DECLARE_COPY(CSBK_BROADCAST);
             };
         } // namespace csbk
     } // namespace lc

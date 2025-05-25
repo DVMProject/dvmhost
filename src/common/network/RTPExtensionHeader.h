@@ -73,11 +73,11 @@ namespace network
             /**
              * @brief Format of the extension header payload contained within the packet.
              */
-            __PROTECTED_PROPERTY(uint16_t, payloadType, PayloadType);
+            DECLARE_PROTECTED_PROPERTY(uint16_t, payloadType, PayloadType);
             /**
              * @brief Length of the extension header payload (in 32-bit units).
              */
-            __PROTECTED_PROPERTY(uint16_t, payloadLength, PayloadLength);
+            DECLARE_PROTECTED_PROPERTY(uint16_t, payloadLength, PayloadLength);
         };
     } // namespace frame
 } // namespace network

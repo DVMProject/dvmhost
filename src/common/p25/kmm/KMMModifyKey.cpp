@@ -70,7 +70,7 @@ bool KMMModifyKey::decode(const uint8_t* data)
 
     m_decryptInfoFmt = data[10U];                               // Decryption Instruction Format
     m_algId = data[11U];                                        // Algorithm ID
-    m_kId = __GET_UINT16B(data, 12U);                           // Key ID
+    m_kId = GET_UINT16(data, 12U);                              // Key ID
 
     uint16_t offset = 0U;
     if (m_decryptInfoFmt == KMM_DECRYPT_INSTRUCT_MI) {
@@ -87,18 +87,17 @@ bool KMMModifyKey::decode(const uint8_t* data)
     for (uint8_t i = 0U; i < keyCount; i++) {
         KeyItem key = KeyItem();
 
-        UInt8Array __keyPayload = std::make_unique<uint8_t[]>(m_keysetItem.keyLength());
-        uint8_t* keyPayload = __keyPayload.get();
+        DECLARE_UINT8_ARRAY(keyPayload, m_keysetItem.keyLength());
 
         uint8_t keyFormat = data[18U + offset];
         uint8_t keyNameLen = keyFormat & 0x1FU;
 
         key.keyFormat(keyFormat & 0xE0U);
 
-        uint16_t sln = __GET_UINT16B(data, 19U + offset);
+        uint16_t sln = GET_UINT16(data, 19U + offset);
         key.sln(sln);
 
-        uint16_t kId = __GET_UINT16B(data, 21U + offset);
+        uint16_t kId = GET_UINT16(data, 21U + offset);
         key.kId(kId);
 
         ::memcpy(keyPayload, data + (23U + offset), m_keysetItem.keyLength());
@@ -127,7 +126,7 @@ void KMMModifyKey::encode(uint8_t* data)
 
     data[10U] = m_decryptInfoFmt;                               // Decryption Instruction Format
     data[11U] = m_algId;                                        // Algorithm ID
-    __SET_UINT16B(m_kId, data, 12U);                            // Key ID
+    SET_UINT16(m_kId, data, 12U);                               // Key ID
 
     uint16_t offset = 0U;
     if (m_decryptInfoFmt == KMM_DECRYPT_INSTRUCT_MI) {
@@ -144,11 +143,10 @@ void KMMModifyKey::encode(uint8_t* data)
     for (auto key : m_keysetItem.keys()) {
         uint8_t keyNameLen = key.keyFormat() & 0x1FU;
         data[18U + offset] = key.keyFormat();
-        __SET_UINT16B(key.sln(), data, 19U + offset);
-        __SET_UINT16B(key.kId(), data, 21U + offset);
+        SET_UINT16(key.sln(), data, 19U + offset);
+        SET_UINT16(key.kId(), data, 21U + offset);
 
-        UInt8Array __keyPayload = std::make_unique<uint8_t[]>(m_keysetItem.keyLength());
-        uint8_t* keyPayload = __keyPayload.get();
+        DECLARE_UINT8_ARRAY(keyPayload, m_keysetItem.keyLength());
         key.getKey(keyPayload);
 
         ::memcpy(data + (23U + offset), keyPayload, m_keysetItem.keyLength());

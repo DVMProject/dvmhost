@@ -85,19 +85,19 @@ namespace p25
                  * @brief Payload type.
                  * This simple boolean marks this header as either IANA standard, or profile specific.
                  */
-                __PROPERTY(bool, payloadType, PayloadType);
+                DECLARE_PROPERTY(bool, payloadType, PayloadType);
                 /**
                  * @brief Block type.
                  */
-                __PROPERTY(BlockType::E, blockType, BlockType);
+                DECLARE_PROPERTY(BlockType::E, blockType, BlockType);
                 /**
                  * @brief Timestamp Offset.
                  */
-                __PROPERTY(uint16_t, timestampOffset, TimestampOffset);
+                DECLARE_PROPERTY(uint16_t, timestampOffset, TimestampOffset);
                 /**
                  * @brief Block length.
                  */
-                __PROPERTY(uint16_t, blockLength, BlockLength);
+                DECLARE_PROPERTY(uint16_t, blockLength, BlockLength);
             };
         } // namespace frames
     } // namespace dfsi

@@ -900,15 +900,15 @@ namespace modem
         /**
          * @brief Flag indicating if modem response trace is enabled.
          */
-        __PROTECTED_PROPERTY(bool, respTrace, ResponseTrace);
+        DECLARE_PROTECTED_PROPERTY(bool, respTrace, ResponseTrace);
         /**
          * @brief Flag indicating if modem trace is enabled.
          */
-        __PROTECTED_READONLY_PROPERTY(bool, trace, Trace);
+        DECLARE_PROTECTED_RO_PROPERTY(bool, trace, Trace);
         /**
          * @brief Flag indicating if modem debugging is enabled.
          */
-        __PROTECTED_READONLY_PROPERTY(bool, debug, Debug);
+        DECLARE_PROTECTED_RO_PROPERTY(bool, debug, Debug);
     };
 } // namespace modem
 

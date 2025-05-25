@@ -69,51 +69,51 @@ namespace dmr
             /**
              * @brief DMR slot number.
              */
-            __PROPERTY(uint32_t, slotNo, SlotNo);
+            DECLARE_PROPERTY(uint32_t, slotNo, SlotNo);
 
             /**
              * @brief Source ID.
              */
-            __PROPERTY(uint32_t, srcId, SrcId);
+            DECLARE_PROPERTY(uint32_t, srcId, SrcId);
             /**
              * @brief Destination ID.
              */
-            __PROPERTY(uint32_t, dstId, DstId);
+            DECLARE_PROPERTY(uint32_t, dstId, DstId);
 
             /**
              * @brief Sets the full-link control opcode.
              */
-            __PROPERTY(defines::FLCO::E, flco, FLCO);
+            DECLARE_PROPERTY(defines::FLCO::E, flco, FLCO);
 
             /**
              * @brief 
              */
-            __PROPERTY(uint8_t, control, Control);
+            DECLARE_PROPERTY(uint8_t, control, Control);
 
             /**
              * @brief 
              */
-            __PROPERTY(uint8_t, n, N);
+            DECLARE_PROPERTY(uint8_t, n, N);
 
             /**
              * @brief Sequence number.
              */
-            __PROPERTY(uint8_t, seqNo, SeqNo);
+            DECLARE_PROPERTY(uint8_t, seqNo, SeqNo);
 
             /**
              * @brief Embedded data type.
              */
-            __PROPERTY(defines::DataType::E, dataType, DataType);
+            DECLARE_PROPERTY(defines::DataType::E, dataType, DataType);
 
             /**
              * @brief Bit Error Rate.
              */
-            __PROPERTY(uint8_t, ber, BER);
+            DECLARE_PROPERTY(uint8_t, ber, BER);
 
             /**
              * @brief Received Signal Strength Indicator.
              */
-            __PROPERTY(uint8_t, rssi, RSSI);
+            DECLARE_PROPERTY(uint8_t, rssi, RSSI);
 
         private:
             uint8_t* m_data;

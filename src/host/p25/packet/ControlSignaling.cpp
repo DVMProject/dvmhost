@@ -659,7 +659,7 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
                 }
 
                 uint8_t RC[AUTH_RAND_CHLNG_LENGTH_BYTES];
-                __SET_UINT32(challenge >> 8, RC, 0);
+                SET_UINT32(challenge >> 8, RC, 0);
                 RC[4U] = (uint8_t)(challenge & 0xFFU);
 
                 // expand RAND1 to 16 bytes
@@ -736,6 +736,10 @@ bool ControlSignaling::processNetwork(uint8_t* data, uint32_t len, lc::LC& contr
                         return false;
                     }
 
+                    if (m_p25->m_disableAdjSiteBroadcast) {
+                        return false;
+                    }
+
                     OSP_ADJ_STS_BCAST* osp = static_cast<OSP_ADJ_STS_BCAST*>(tsbk.get());
                     if (osp->getAdjSiteId() != m_p25->m_siteData.siteId()) {
                         // update site table data
@@ -747,7 +751,7 @@ bool ControlSignaling::processNetwork(uint8_t* data, uint32_t len, lc::LC& contr
                         }
 
                         if (m_verbose) {
-                            LogMessage(LOG_NET, P25_TSDU_STR ", %s, sysId = $%03X, rfss = $%02X, site = $%02X, chId = %u, chNo = %u, svcClass = $%02X", tsbk->toString().c_str(),
+                            LogMessage(LOG_NET, P25_TSDU_STR ", %s, sysId = $%03X, rfss = $%02X, site = $%02X, chNo = %u-%u, svcClass = $%02X", tsbk->toString().c_str(),
                                 osp->getAdjSiteSysId(), osp->getAdjSiteRFSSId(), osp->getAdjSiteId(), osp->getAdjSiteChnId(), osp->getAdjSiteChnNo(), osp->getAdjSiteSvcClass());
                         }
 
@@ -769,7 +773,7 @@ bool ControlSignaling::processNetwork(uint8_t* data, uint32_t len, lc::LC& contr
                         }
 
                         if (m_verbose) {
-                            LogMessage(LOG_NET, P25_TSDU_STR ", %s, sysId = $%03X, rfss = $%02X, site = $%02X, chId = %u, chNo = %u, svcClass = $%02X", tsbk->toString().c_str(),
+                            LogMessage(LOG_NET, P25_TSDU_STR ", %s, sysId = $%03X, rfss = $%02X, site = $%02X, chNo = %u-%u, svcClass = $%02X", tsbk->toString().c_str(),
                                 osp->getAdjSiteSysId(), osp->getAdjSiteRFSSId(), osp->getAdjSiteId(), osp->getAdjSiteChnId(), osp->getAdjSiteChnNo(), osp->getAdjSiteSvcClass());
                         }
 
@@ -826,8 +830,8 @@ bool ControlSignaling::processNetwork(uint8_t* data, uint32_t len, lc::LC& contr
                         if (m_p25->m_enableControl && m_p25->m_dedicatedControl) {
                             if (!m_p25->m_affiliations->isGranted(dstId)) {
                                 if (m_verbose) {
-                                    LogMessage(LOG_NET, P25_TSDU_STR ", %s, emerg = %u, encrypt = %u, prio = %u, chNo = %u, srcId = %u, dstId = %u",
-                                        tsbk->toString(true).c_str(), tsbk->getEmergency(), tsbk->getEncrypted(), tsbk->getPriority(), tsbk->getGrpVchNo(), srcId, dstId);
+                                    LogMessage(LOG_NET, P25_TSDU_STR ", %s, emerg = %u, encrypt = %u, prio = %u, chNo = %u-%u, srcId = %u, dstId = %u",
+                                        tsbk->toString(true).c_str(), tsbk->getEmergency(), tsbk->getEncrypted(), tsbk->getPriority(), tsbk->getGrpVchId(), tsbk->getGrpVchNo(), srcId, dstId);
                                 }
 
                                 uint8_t serviceOptions = (tsbk->getEmergency() ? 0x80U : 0x00U) +   // Emergency Flag
@@ -1043,6 +1047,10 @@ void ControlSignaling::writeAdjSSNetwork()
         return;
     }
 
+    if (m_p25->m_disableAdjSiteBroadcast) {
+        return;
+    }
+
     if (m_p25->m_network != nullptr) {
         uint8_t cfva = CFVA::VALID;
         if (m_p25->m_enableControl && !m_p25->m_dedicatedControl) {
@@ -1061,7 +1069,7 @@ void ControlSignaling::writeAdjSSNetwork()
         osp->setAdjSiteSvcClass(m_p25->m_siteData.serviceClass());
 
         if (m_verbose) {
-            LogMessage(LOG_NET, P25_TSDU_STR ", %s, network announce, sysId = $%03X, rfss = $%02X, site = $%02X, chId = %u, chNo = %u, svcClass = $%02X", osp->toString().c_str(),
+            LogMessage(LOG_NET, P25_TSDU_STR ", %s, network announce, sysId = $%03X, rfss = $%02X, site = $%02X, chNo = %u-%u, svcClass = $%02X", osp->toString().c_str(),
                 m_p25->m_siteData.sysId(), m_p25->m_siteData.rfssId(), m_p25->m_siteData.siteId(), m_p25->m_siteData.channelId(), m_p25->m_siteData.channelNo(), m_p25->m_siteData.serviceClass());
         }
 
@@ -2321,7 +2329,7 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
 
                     // if the request failed block grant
                     if (requestFailed) {
-                        ::LogError((net) ? LOG_NET : LOG_RF, P25_TSDU_STR ", TSBKO, IOSP_GRP_VCH (Group Voice Channel Request), failed to permit TG for use, chNo = %u", chNo);
+                        ::LogError((net) ? LOG_NET : LOG_RF, P25_TSDU_STR ", TSBKO, IOSP_GRP_VCH (Group Voice Channel Request), failed to permit TG for use, chNo = %u-%u", voiceChData.chId(), chNo);
 
                         m_p25->m_affiliations->releaseGrant(dstId, false);
                         if (!net) {
@@ -2333,12 +2341,40 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
                     }
                 }
                 else {
-                    ::LogError((net) ? LOG_NET : LOG_RF, P25_TSDU_STR ", TSBKO, IOSP_GRP_VCH (Group Voice Channel Request), failed to permit TG for use, chNo = %u", chNo);
+                    ::LogError((net) ? LOG_NET : LOG_RF, P25_TSDU_STR ", TSBKO, IOSP_GRP_VCH (Group Voice Channel Request), failed to permit TG for use, chNo = %u-%u", voiceChData.chId(), chNo);
                 }
             }
 
             if (!net) {
                 ::ActivityLog("P25", true, "group grant request from %u to TG %u", srcId, dstId);
+            }
+
+            if (voiceChData.isExplicitCh()) {
+                std::unique_ptr<MBT_OSP_GRP_VCH_GRANT> osp = std::make_unique<MBT_OSP_GRP_VCH_GRANT>();
+                osp->setMFId(m_lastMFID);
+                osp->setSrcId(srcId);
+                osp->setDstId(dstId);
+                osp->setGrpVchId(voiceChData.chId());
+                osp->setGrpVchNo(chNo);
+                osp->setRxGrpVchId(voiceChData.rxChId());
+                osp->setRxGrpVchNo(voiceChData.rxChNo());
+                osp->setEmergency(emergency);
+                osp->setEncrypted(encryption);
+                osp->setPriority(priority);
+
+                osp->setForceChannelId(true);
+
+                if (m_verbose) {
+                    LogMessage((net) ? LOG_NET : LOG_RF, P25_TSDU_STR ", %s, emerg = %u, encrypt = %u, prio = %u, chNo = %u-%u, srcId = %u, dstId = %u",
+                        osp->toString().c_str(), osp->getEmergency(), osp->getEncrypted(), osp->getPriority(), osp->getGrpVchId(), osp->getGrpVchNo(), osp->getSrcId(), osp->getDstId());
+                }
+
+                // transmit group grant
+                writeRF_TSDU_AMBT(osp.get(), true);
+                if (m_redundantGrant) {
+                    for (int i = 0; i < 3; i++)
+                        writeRF_TSDU_AMBT(osp.get(), true);
+                }
             }
 
             std::unique_ptr<IOSP_GRP_VCH> iosp = std::make_unique<IOSP_GRP_VCH>();
@@ -2351,16 +2387,22 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
             iosp->setEncrypted(encryption);
             iosp->setPriority(priority);
 
-            if (m_verbose) {
-                LogMessage((net) ? LOG_NET : LOG_RF, P25_TSDU_STR ", %s, emerg = %u, encrypt = %u, prio = %u, chNo = %u, srcId = %u, dstId = %u",
-                    iosp->toString().c_str(), iosp->getEmergency(), iosp->getEncrypted(), iosp->getPriority(), iosp->getGrpVchNo(), iosp->getSrcId(), iosp->getDstId());
-            }
+            if (!voiceChData.isExplicitCh()) {
+                if (m_verbose) {
+                    LogMessage((net) ? LOG_NET : LOG_RF, P25_TSDU_STR ", %s, emerg = %u, encrypt = %u, prio = %u, chNo = %u-%u, srcId = %u, dstId = %u",
+                        iosp->toString().c_str(), iosp->getEmergency(), iosp->getEncrypted(), iosp->getPriority(), iosp->getGrpVchId(), iosp->getGrpVchNo(), iosp->getSrcId(), iosp->getDstId());
+                }
 
-            // transmit group grant
-            writeRF_TSDU_SBF_Imm(iosp.get(), net);
-            if (m_redundantGrant) {
-                for (int i = 0; i < 3; i++)
-                    writeRF_TSDU_SBF(iosp.get(), net);
+                // transmit group grant
+                writeRF_TSDU_SBF_Imm(iosp.get(), net);
+                if (m_redundantGrant) {
+                    for (int i = 0; i < 3; i++)
+                        writeRF_TSDU_SBF(iosp.get(), net);
+                }
+            } else {
+                if (!net) {
+                    writeNet_TSDU(iosp.get());
+                }
             }
         }
         else {
@@ -2391,7 +2433,7 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
 
                     // if the request failed block grant
                     if (requestFailed) {
-                        ::LogError((net) ? LOG_NET : LOG_RF, P25_TSDU_STR ", TSBKO, IOSP_UU_VCH (Unit-to-Unit Voice Channel Request), failed to permit TG for use, chNo = %u", chNo);
+                        ::LogError((net) ? LOG_NET : LOG_RF, P25_TSDU_STR ", TSBKO, IOSP_UU_VCH (Unit-to-Unit Voice Channel Request), failed to permit TG for use, chNo = %u-%u", voiceChData.chId(), chNo);
 
                         m_p25->m_affiliations->releaseGrant(dstId, false);
                         if (!net) {
@@ -2403,12 +2445,40 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
                     }
                 }
                 else {
-                    ::LogError((net) ? LOG_NET : LOG_RF, P25_TSDU_STR ", TSBKO, IOSP_UU_VCH (Unit-to-Unit Voice Channel Request), failed to permit TG for use, chNo = %u", chNo);
+                    ::LogError((net) ? LOG_NET : LOG_RF, P25_TSDU_STR ", TSBKO, IOSP_UU_VCH (Unit-to-Unit Voice Channel Request), failed to permit TG for use, chNo = %u-%u", voiceChData.chId(), chNo);
                 }
             }
 
             if (!net) {
                 ::ActivityLog("P25", true, "unit-to-unit grant request from %u to %u", srcId, dstId);
+            }
+
+            if (voiceChData.isExplicitCh()) {
+                std::unique_ptr<MBT_OSP_UU_VCH_GRANT> osp = std::make_unique<MBT_OSP_UU_VCH_GRANT>();
+                osp->setMFId(m_lastMFID);
+                osp->setSrcId(srcId);
+                osp->setDstId(dstId);
+                osp->setGrpVchId(voiceChData.chId());
+                osp->setGrpVchNo(chNo);
+                osp->setRxGrpVchId(voiceChData.rxChId());
+                osp->setRxGrpVchNo(voiceChData.rxChNo());
+                osp->setEmergency(emergency);
+                osp->setEncrypted(encryption);
+                osp->setPriority(priority);
+
+                osp->setForceChannelId(true);
+
+                if (m_verbose) {
+                    LogMessage((net) ? LOG_NET : LOG_RF, P25_TSDU_STR ", %s, emerg = %u, encrypt = %u, prio = %u, chNo = %u-%u, srcId = %u, dstId = %u",
+                        osp->toString().c_str(), osp->getEmergency(), osp->getEncrypted(), osp->getPriority(), osp->getGrpVchId(), osp->getGrpVchNo(), osp->getSrcId(), osp->getDstId());
+                }
+
+                // transmit private grant
+                writeRF_TSDU_AMBT(osp.get(), true);
+                if (m_redundantGrant) {
+                    for (int i = 0; i < 3; i++)
+                        writeRF_TSDU_AMBT(osp.get(), true);
+                }
             }
 
             std::unique_ptr<IOSP_UU_VCH> iosp = std::make_unique<IOSP_UU_VCH>();
@@ -2421,16 +2491,22 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
             iosp->setEncrypted(encryption);
             iosp->setPriority(priority);
 
-            if (m_verbose) {
-                LogMessage((net) ? LOG_NET : LOG_RF, P25_TSDU_STR ", %s, emerg = %u, encrypt = %u, prio = %u, chNo = %u, srcId = %u, dstId = %u",
-                    iosp->toString().c_str(), iosp->getEmergency(), iosp->getEncrypted(), iosp->getPriority(), iosp->getGrpVchNo(), iosp->getSrcId(), iosp->getDstId());
-            }
+            if (!voiceChData.isExplicitCh()) {
+                if (m_verbose) {
+                    LogMessage((net) ? LOG_NET : LOG_RF, P25_TSDU_STR ", %s, emerg = %u, encrypt = %u, prio = %u, chNo = %u-%u, srcId = %u, dstId = %u",
+                        iosp->toString().c_str(), iosp->getEmergency(), iosp->getEncrypted(), iosp->getPriority(), iosp->getGrpVchId(), iosp->getGrpVchNo(), iosp->getSrcId(), iosp->getDstId());
+                }
 
-            // transmit private grant
-            writeRF_TSDU_SBF_Imm(iosp.get(), net);
-            if (m_redundantGrant) {
-                for (int i = 0; i < 3; i++)
-                    writeRF_TSDU_SBF(iosp.get(), net);
+                // transmit private grant
+                writeRF_TSDU_SBF_Imm(iosp.get(), net);
+                if (m_redundantGrant) {
+                    for (int i = 0; i < 3; i++)
+                        writeRF_TSDU_SBF(iosp.get(), net);
+                }
+            } else {
+                if (!net) {
+                    writeNet_TSDU(iosp.get());
+                }
             }
         }
     }
@@ -2609,7 +2685,7 @@ bool ControlSignaling::writeRF_TSDU_SNDCP_Grant(uint32_t srcId, bool skip, uint3
 
                 // if the request failed block grant
                 if (requestFailed) {
-                    ::LogError(LOG_RF, P25_TSDU_STR ", TSBKO, ISP_SNDCP_CH_REQ (SNDCP Data Channel Request), failed to permit for use, chNo = %u", chNo);
+                    ::LogError(LOG_RF, P25_TSDU_STR ", TSBKO, ISP_SNDCP_CH_REQ (SNDCP Data Channel Request), failed to permit for use, chNo = %u-%u", voiceChData.chId(), chNo);
 
                     m_p25->m_affiliations->releaseGrant(srcId, false);
                     writeRF_TSDU_Deny(srcId, srcId, ReasonCode::DENY_PTT_BONK, TSBKO::ISP_SNDCP_CH_REQ, false, true);
@@ -2619,15 +2695,15 @@ bool ControlSignaling::writeRF_TSDU_SNDCP_Grant(uint32_t srcId, bool skip, uint3
                 }
             }
             else {
-                ::LogError(LOG_RF, P25_TSDU_STR ", TSBKO, ISP_SNDCP_CH_REQ (SNDCP Data Channel Request), failed to permit for use, chNo = %u", chNo);
+                ::LogError(LOG_RF, P25_TSDU_STR ", TSBKO, ISP_SNDCP_CH_REQ (SNDCP Data Channel Request), failed to permit for use, chNo = %u-%u", voiceChData.chId(), chNo);
             }
         }
 
         ::ActivityLog("P25", true, "SNDCP grant request from %u", srcId);
 
         if (m_verbose) {
-            LogMessage(LOG_RF, P25_TSDU_STR ", %s, chNo = %u, srcId = %u",
-                osp->toString().c_str(), osp->getDataChnNo(), osp->getSrcId());
+            LogMessage(LOG_RF, P25_TSDU_STR ", %s, chNo = %u-%u, srcId = %u",
+                osp->toString().c_str(), voiceChData.chId(), osp->getDataChnNo(), osp->getSrcId());
         }
 
         // transmit group grant
@@ -2966,12 +3042,12 @@ void ControlSignaling::writeRF_TSDU_Auth_Dmd(uint32_t srcId)
     uint8_t RC[AUTH_RAND_CHLNG_LENGTH_BYTES];
     std::uniform_int_distribution<uint32_t> dist(DVM_RAND_MIN, DVM_RAND_MAX);
     uint32_t rnd = dist(m_p25->m_random);
-    __SET_UINT32(rnd, RC, 0U);
+    SET_UINT32(rnd, RC, 0U);
 
     rnd = dist(m_p25->m_random);
     RC[4U] = (uint8_t)(rnd & 0xFFU);
 
-    ulong64_t challenge = __GET_UINT32(RC, 0U);
+    ulong64_t challenge = GET_UINT32(RC, 0U);
     challenge = (challenge << 8) + RC[4U];
 
     osp->setAuthRC(RC);

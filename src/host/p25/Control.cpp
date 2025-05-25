@@ -130,6 +130,7 @@ Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t q
     m_aveRSSI(0U),
     m_rssiCount(0U),
     m_ccNotifyActiveTG(false),
+    m_disableAdjSiteBroadcast(false),
     m_notifyCC(true),
     m_ccDebug(debug),
     m_verbose(verbose),
@@ -334,6 +335,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
     m_control->m_adjSiteUpdateInterval += ccBcstInterval;
 
     m_control->m_disableGrantSrcIdCheck = p25Protocol["control"]["disableGrantSourceIdCheck"].as<bool>(false);
+    m_disableAdjSiteBroadcast = p25Protocol["disableAdjSiteBroadcast"].as<bool>(false);
 
     yaml::Node controlCh = rfssConfig["controlCh"];
     m_notifyCC = controlCh["notifyEnable"].as<bool>(false);
@@ -529,6 +531,10 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
 
         if (disableUnitRegTimeout) {
             LogInfo("    Disable Unit Registration Timeout: yes");
+        }
+
+        if (m_disableAdjSiteBroadcast) {
+            LogInfo("    Disable Adjacent Site Broadcast: yes");
         }
 
         LogInfo("    Redundant Immediate: %s", m_control->m_redundantImmediate ? "yes" : "no");
@@ -909,6 +915,11 @@ void Control::clock()
             if (!m_authoritative && m_permittedDstId != 0U) {
                 m_permittedDstId = 0U;
             }
+
+            // has the talkgroup hang timer expired while the modem is in a non-listening state?
+            if (m_rfState != RS_RF_LISTENING) {
+                processFrameLoss();
+            }
         }
     }
 
@@ -1035,7 +1046,7 @@ void Control::clockSiteData(uint32_t ms)
 
                         if (updateCnt == 0U) {
                             SiteData siteData = m_control->m_adjSiteTable[siteId];
-                            LogWarning(LOG_NET, "P25, Adjacent Site Status Expired, no data [FAILED], sysId = $%03X, rfss = $%02X, site = $%02X, chId = %u, chNo = %u, svcClass = $%02X",
+                            LogWarning(LOG_NET, "P25, Adjacent Site Status Expired, no data [FAILED], sysId = $%03X, rfss = $%02X, site = $%02X, chNo = %u-%u, svcClass = $%02X",
                                 siteData.sysId(), siteData.rfssId(), siteData.siteId(), siteData.channelId(), siteData.channelNo(), siteData.serviceClass());
                         }
 
@@ -1054,7 +1065,7 @@ void Control::clockSiteData(uint32_t ms)
 
                         if (updateCnt == 0U) {
                             SiteData siteData = m_control->m_sccbTable[rfssId];
-                            LogWarning(LOG_NET, "P25, Secondary Control Channel Expired, no data [FAILED], sysId = $%03X, rfss = $%02X, site = $%02X, chId = %u, chNo = %u, svcClass = $%02X",
+                            LogWarning(LOG_NET, "P25, Secondary Control Channel Expired, no data [FAILED], sysId = $%03X, rfss = $%02X, site = $%02X, chNo = %u-%u, svcClass = $%02X",
                                 siteData.sysId(), siteData.rfssId(), siteData.siteId(), siteData.channelId(), siteData.channelNo(), siteData.serviceClass());
                         }
 
@@ -1398,7 +1409,7 @@ void Control::processNetwork()
             return;
         }
 
-        uint32_t blockLength = __GET_UINT16(buffer, 8U);
+        uint32_t blockLength = GET_UINT24(buffer, 8U);
 
         if (m_debug) {
             LogDebug(LOG_NET, "P25, duid = $%02X, MFId = $%02X, blockLength = %u, len = %u", duid, MFId, blockLength, length);
@@ -1413,11 +1424,11 @@ void Control::processNetwork()
     // handle LDU, TDU or TSDU frame
     uint8_t lco = buffer[4U];
 
-    uint32_t srcId = __GET_UINT16(buffer, 5U);
-    uint32_t dstId = __GET_UINT16(buffer, 8U);
+    uint32_t srcId = GET_UINT24(buffer, 5U);
+    uint32_t dstId = GET_UINT24(buffer, 8U);
 
     uint32_t sysId = (buffer[11U] << 8) | (buffer[12U] << 0);
-    uint32_t netId = __GET_UINT16(buffer, 16U);
+    uint32_t netId = GET_UINT24(buffer, 16U);
 
     uint8_t lsd1 = buffer[20U];
     uint8_t lsd2 = buffer[21U];
@@ -2001,7 +2012,7 @@ void Control::RPC_releaseGrantTG(json::object& req, json::object& reply)
         ::lookups::VoiceChData voiceCh = m_affiliations->rfCh()->getRFChData(chNo);
 
         if (m_verbose) {
-            LogMessage(LOG_P25, "VC %s:%u, TG grant released, srcId = %u, dstId = %u, chId = %u, chNo = %u", voiceCh.address().c_str(), voiceCh.port(), srcId, dstId, voiceCh.chId(), chNo);
+            LogMessage(LOG_P25, "VC %s:%u, TG grant released, srcId = %u, dstId = %u, chNo = %u-%u", voiceCh.address().c_str(), voiceCh.port(), srcId, dstId, voiceCh.chId(), chNo);
         }
 
         m_affiliations->releaseGrant(dstId, false);
@@ -2040,7 +2051,7 @@ void Control::RPC_touchGrantTG(json::object& req, json::object& reply)
         ::lookups::VoiceChData voiceCh = m_affiliations->rfCh()->getRFChData(chNo);
 
         if (m_verbose) {
-            LogMessage(LOG_P25, "VC %s:%u, call in progress, srcId = %u, dstId = %u, chId = %u, chNo = %u", voiceCh.address().c_str(), voiceCh.port(), srcId, dstId, voiceCh.chId(), chNo);
+            LogMessage(LOG_P25, "VC %s:%u, call in progress, srcId = %u, dstId = %u, chNo = %u-%u", voiceCh.address().c_str(), voiceCh.port(), srcId, dstId, voiceCh.chId(), chNo);
         }
 
         m_affiliations->touchGrant(dstId);
@@ -2065,10 +2076,10 @@ void Control::generateLLA_AM1_Parameters()
     uint8_t RS[AUTH_RAND_SEED_LENGTH_BYTES];
     std::uniform_int_distribution<uint32_t> dist(DVM_RAND_MIN, DVM_RAND_MAX);
     uint32_t rnd = dist(m_random);
-    __SET_UINT32(rnd, RS, 0U);
+    SET_UINT32(rnd, RS, 0U);
 
     rnd = dist(m_random);
-    __SET_UINT32(rnd, RS, 4U);
+    SET_UINT32(rnd, RS, 4U);
 
     rnd = dist(m_random);
     RS[9U] = (uint8_t)(rnd & 0xFFU);

@@ -57,24 +57,24 @@ namespace p25
             /**
              * @brief Network Address Type
              */
-            __PROPERTY(uint8_t, nat, NAT);
+            DECLARE_PROPERTY(uint8_t, nat, NAT);
             
             /**
              * @brief IP Address
              */
-            __PROPERTY(ulong64_t, ipAddress, IPAddress);
+            DECLARE_PROPERTY(ulong64_t, ipAddress, IPAddress);
 
             /**
              * @brief Data Subscriber Unit Type
              */
-            __PROPERTY(uint8_t, dsut, DSUT);
+            DECLARE_PROPERTY(uint8_t, dsut, DSUT);
 
             /**
              * @brief MDPCO
              */
-            __PROPERTY(uint8_t, mdpco, MDPCO);
+            DECLARE_PROPERTY(uint8_t, mdpco, MDPCO);
 
-            __COPY(SNDCPCtxActRequest);
+            DECLARE_COPY(SNDCPCtxActRequest);
         };
     } // namespace sndcp
 } // namespace p25

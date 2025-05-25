@@ -57,9 +57,9 @@ namespace p25
             /**
              * @brief Deactivation Type
              */
-            __PROPERTY(uint8_t, deactType, DeactType);
+            DECLARE_PROPERTY(uint8_t, deactType, DeactType);
 
-            __COPY(SNDCPCtxDeactivation);
+            DECLARE_COPY(SNDCPCtxDeactivation);
         };
     } // namespace sndcp
 } // namespace p25

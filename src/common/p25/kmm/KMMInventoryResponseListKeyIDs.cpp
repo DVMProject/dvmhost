@@ -68,7 +68,7 @@ bool KMMInventoryResponseListKeyIDs::decode(const uint8_t* data)
 
     uint16_t offset = 0U;
     for (uint16_t i = 0U; i < m_numberOfKeyIDs; i++) {
-        uint16_t keyId = __GET_UINT16B(data, 16U + offset);
+        uint16_t keyId = GET_UINT16(data, 16U + offset);
         m_keyIds.push_back(keyId);
         offset += 2U;
     }
@@ -92,7 +92,7 @@ void KMMInventoryResponseListKeyIDs::encode(uint8_t* data)
 
     uint16_t offset = 0U;
     for (auto entry : m_keyIds) {
-        __SET_UINT16B(entry, data, 16U + offset);
+        SET_UINT16(entry, data, 16U + offset);
         offset += 2U;
     }
 }

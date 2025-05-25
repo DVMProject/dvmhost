@@ -87,32 +87,32 @@ namespace p25
         public:
             // Common Data
             /**
-             * @brief 
+             * @brief KMM Message ID.
              */
-            __PROTECTED_PROPERTY(uint8_t, messageId, MessageId);
+            DECLARE_PROTECTED_PROPERTY(uint8_t, messageId, MessageId);
             /**
-             * @brief 
+             * @brief Message Length.
              */
-            __PROTECTED_PROPERTY(uint16_t, messageLength, MessageLength);
+            DECLARE_PROTECTED_PROPERTY(uint16_t, messageLength, MessageLength);
             
             /**
-             * @brief 
+             * @brief Response Kind.
              */
-            __PROTECTED_PROPERTY(uint8_t, respKind, ResponseKind);
+            DECLARE_PROTECTED_PROPERTY(uint8_t, respKind, ResponseKind);
 
             /**
              * @brief Destination Logical link ID.
              */
-            __PROTECTED_PROPERTY(uint32_t, dstLlId, DstLLId);
+            DECLARE_PROTECTED_PROPERTY(uint32_t, dstLlId, DstLLId);
             /**
              * @brief Source Logical link ID.
              */
-            __PROTECTED_PROPERTY(uint32_t, srcLlId, SrcLLId);
+            DECLARE_PROTECTED_PROPERTY(uint32_t, srcLlId, SrcLLId);
 
             /**
-             * @brief 
+             * @brief Flag indicating the KMM frame is complete.
              */
-            __PROTECTED_PROPERTY(bool, complete, Complete);
+            DECLARE_PROTECTED_PROPERTY(bool, complete, Complete);
 
         protected:
             uint8_t m_mfMessageNumber;
@@ -130,7 +130,7 @@ namespace p25
              */
             void encodeHeader(uint8_t* data);
 
-            __PROTECTED_COPY(KMMFrame);
+            DECLARE_PROTECTED_COPY(KMMFrame);
         };
     } // namespace kmm
 } // namespace p25

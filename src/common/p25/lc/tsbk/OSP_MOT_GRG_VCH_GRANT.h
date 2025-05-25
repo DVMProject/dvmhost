@@ -65,9 +65,9 @@ namespace p25
                 /**
                  * @brief Patch super group ID.
                  */
-                __PROPERTY(uint32_t, patchSuperGroupId, PatchSuperGroupId);
+                DECLARE_PROPERTY(uint32_t, patchSuperGroupId, PatchSuperGroupId);
 
-                __COPY(OSP_MOT_GRG_VCH_GRANT);
+                DECLARE_COPY(OSP_MOT_GRG_VCH_GRANT);
             };
         } // namespace tsbk
     } // namespace lc

@@ -56,17 +56,17 @@ namespace dmr
             /**
              * @brief DMR access color code.
              */
-            __PROPERTY(uint8_t, colorCode, ColorCode);
+            DECLARE_PROPERTY(uint8_t, colorCode, ColorCode);
 
             /**
              * @brief Flag indicating whether the privacy indicator is set or not.
              */
-            __PROPERTY(bool, PI, PI);
+            DECLARE_PROPERTY(bool, PI, PI);
 
             /**
              * @brief Link control start/stop.
              */
-            __PROPERTY(uint8_t, LCSS, LCSS);
+            DECLARE_PROPERTY(uint8_t, LCSS, LCSS);
         };
     } // namespace data
 } // namespace dmr

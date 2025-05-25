@@ -57,36 +57,36 @@ namespace p25
             /**
              * @brief Priority
              */
-            __PROPERTY(uint8_t, priority, Priority);
+            DECLARE_PROPERTY(uint8_t, priority, Priority);
             /**
              * @brief Ready Timer
              */
-            __PROPERTY(uint8_t, readyTimer, ReadyTimer);
+            DECLARE_PROPERTY(uint8_t, readyTimer, ReadyTimer);
             /**
              * @brief Ready Timer
              */
-            __PROPERTY(uint8_t, standbyTimer, StandbyTimer);
+            DECLARE_PROPERTY(uint8_t, standbyTimer, StandbyTimer);
             /**
              * @brief Network Address Type
              */
-            __PROPERTY(uint8_t, nat, NAT);
+            DECLARE_PROPERTY(uint8_t, nat, NAT);
 
             /**
              * @brief IP Address
              */
-            __PROPERTY(uint32_t, ipAddress, IPAddress);
+            DECLARE_PROPERTY(uint32_t, ipAddress, IPAddress);
 
             /**
              * @brief MTU
              */
-            __PROPERTY(uint8_t, mtu, MTU);
+            DECLARE_PROPERTY(uint8_t, mtu, MTU);
 
             /**
              * @brief MDPCO
              */
-            __PROPERTY(uint8_t, mdpco, MDPCO);
+            DECLARE_PROPERTY(uint8_t, mdpco, MDPCO);
 
-            __COPY(SNDCPCtxActAccept);
+            DECLARE_COPY(SNDCPCtxActAccept);
 
         private:
             uint16_t m_sndcpDAC;

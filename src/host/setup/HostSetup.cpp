@@ -179,7 +179,7 @@ int HostSetup::run(int argc, char** argv)
     }
 
     ::LogInfo(__PROG_NAME__ " " __VER__ " (built " __BUILD__ ")\r\n" \
-        "Copyright (c) 2017-2024 Bryan Biedenkapp, N2PLL and DVMProject (https://github.com/dvmproject) Authors.\r\n" \
+        "Copyright (c) 2017-2025 Bryan Biedenkapp, N2PLL and DVMProject (https://github.com/dvmproject) Authors.\r\n" \
         "Portions Copyright (c) 2015-2021 by Jonathan Naylor, G4KLX and others\r\n" \
         ">> Modem Setup\r\n");
 
@@ -414,7 +414,11 @@ bool HostSetup::portModemHandler(Modem* modem, uint32_t ms, RESP_TYPE_DVM rspTyp
 
         /** Project 25 */
         case CMD_P25_DATA:
-            processP25BER(buffer + 4U);
+            if (rspDblLen) {
+                processP25BER(buffer + 5U);
+            } else {
+                processP25BER(buffer + 4U);
+            }
             break;
 
         case CMD_P25_LOST:
@@ -1126,6 +1130,14 @@ void HostSetup::processP25BER(const uint8_t* buffer)
         }
         else {
             LogMessage(LOG_CAL, P25_HDU_STR ", dstId = %u, algo = %X, kid = %X", lc.getDstId(), lc.getAlgId(), lc.getKId());
+
+            uint8_t mi[MI_LENGTH_BYTES];
+            ::memset(mi, 0x00U, MI_LENGTH_BYTES);
+
+            lc.getMI(mi);
+
+            LogMessage(LOG_CAL, P25_HDU_STR ", MI %02X %02X %02X %02X %02X %02X %02X %02X %02X", 
+                mi[0U], mi[1U], mi[2U], mi[3U], mi[4U], mi[5U], mi[6U], mi[7U], mi[8U]);
         }
 
         m_berBits = 0U;
@@ -1218,6 +1230,14 @@ void HostSetup::processP25BER(const uint8_t* buffer)
         else {
             LogMessage(LOG_CAL, P25_LDU2_STR " LC, mfId = $%02X, algo = %X, kid = %X",
                 lc.getMFId(), lc.getAlgId(), lc.getKId());
+
+            uint8_t mi[MI_LENGTH_BYTES];
+            ::memset(mi, 0x00U, MI_LENGTH_BYTES);
+
+            lc.getMI(mi);
+
+            LogMessage(LOG_CAL, P25_LDU2_STR ", MI %02X %02X %02X %02X %02X %02X %02X %02X %02X", 
+                mi[0U], mi[1U], mi[2U], mi[3U], mi[4U], mi[5U], mi[6U], mi[7U], mi[8U]);
         }
 
         P25Utils::decode(buffer, imbe, 114U, 262U);
@@ -1266,22 +1286,25 @@ void HostSetup::processP25BER(const uint8_t* buffer)
         timerStop();
 
         // note: for the calibrator we will only process the PDU header -- and not the PDU data
-        uint8_t pduBuffer[P25_LDU_FRAME_LENGTH_BYTES];
-        uint32_t bits = P25Utils::decode(buffer, pduBuffer, 0, P25_LDU_FRAME_LENGTH_BITS);
+        uint8_t pduBuffer[P25_PDU_FRAME_LENGTH_BYTES];
+        ::memset(pduBuffer, 0x00U, P25_PDU_FRAME_LENGTH_BYTES);
+
+        uint32_t bits = P25Utils::decode(buffer, pduBuffer, 0, P25_PDU_FRAME_LENGTH_BITS);
+
+        Utils::dump(1U, "Raw PDU Dump", buffer, P25_PDU_FRAME_LENGTH_BYTES);
 
         uint8_t* rfPDU = new uint8_t[P25_MAX_PDU_BLOCKS * P25_PDU_CONFIRMED_LENGTH_BYTES + 2U];
         ::memset(rfPDU, 0x00U, P25_MAX_PDU_BLOCKS * P25_PDU_CONFIRMED_LENGTH_BYTES + 2U);
+
         uint32_t rfPDUBits = 0U;
+        rfPDUBits = Utils::getBits(pduBuffer, rfPDU, 0U, bits);
 
-        for (uint32_t i = 0U; i < bits; i++, rfPDUBits++) {
-            bool b = READ_BIT(buffer, i);
-            WRITE_BIT(rfPDU, rfPDUBits, b);
-        }
-
-        bool ret = dataHeader.decode(rfPDU + P25_SYNC_LENGTH_BYTES + P25_NID_LENGTH_BYTES);
+        ::memset(pduBuffer, 0x00U, P25_PDU_FEC_LENGTH_BYTES);
+        Utils::getBitRange(rfPDU, pduBuffer, P25_PREAMBLE_LENGTH_BITS, P25_PDU_FEC_LENGTH_BITS);
+        bool ret = dataHeader.decode(pduBuffer);
         if (!ret) {
-            LogWarning(LOG_RF, P25_PDU_STR ", unfixable RF 1/2 rate header data");
-            Utils::dump(1U, "Unfixable PDU Data", rfPDU + P25_SYNC_LENGTH_BYTES + P25_NID_LENGTH_BYTES, P25_PDU_HEADER_LENGTH_BYTES);
+            LogWarning(LOG_CAL, P25_PDU_STR ", unfixable RF 1/2 rate header data");
+            Utils::dump(1U, "Unfixable PDU Data", pduBuffer, P25_PDU_FEC_LENGTH_BYTES);
         }
         else {
             LogMessage(LOG_CAL, P25_PDU_STR ", ack = %u, outbound = %u, fmt = $%02X, mfId = $%02X, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padLength = %u, n = %u, seqNo = %u, lastFragment = %u, hdrOffset = %u",
@@ -1983,9 +2006,9 @@ bool HostSetup::writeFlash()
     buffer[24U] = (uint8_t)m_modem->m_adfGainMode;
 
     uint32_t txTuning = (uint32_t)m_modem->m_txTuning;
-    __SET_UINT32(txTuning, buffer, 25U);
+    SET_UINT32(txTuning, buffer, 25U);
     uint32_t rxTuning = (uint32_t)m_modem->m_rxTuning;
-    __SET_UINT32(rxTuning, buffer, 29U);
+    SET_UINT32(rxTuning, buffer, 29U);
 
     // symbol adjust
     buffer[35U] = (uint8_t)(m_modem->m_dmrSymLevel3Adj + 128);

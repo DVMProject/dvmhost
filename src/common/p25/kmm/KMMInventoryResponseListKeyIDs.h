@@ -63,24 +63,24 @@ namespace p25
 
         public:
             /**
-             * @brief 
+             * @brief Encryption keyset ID.
              */
-            __PROPERTY(uint8_t, keysetId, KeysetId);
+            DECLARE_PROPERTY(uint8_t, keysetId, KeysetId);
             /**
              * @brief Encryption algorithm ID.
              */
-            __PROPERTY(uint8_t, algId, AlgId);
+            DECLARE_PROPERTY(uint8_t, algId, AlgId);
             /**
              * @brief Encryption algorithm ID.
              */
-            __PROPERTY(uint8_t, numberOfKeyIDs, NumberOfKeyIDs);
+            DECLARE_PROPERTY(uint8_t, numberOfKeyIDs, NumberOfKeyIDs);
 
             /**
-             * @brief
+             * @brief List of key IDs.
              */
-            __PROPERTY(std::vector<uint16_t>, keyIds, KeyIds);
+            DECLARE_PROPERTY(std::vector<uint16_t>, keyIds, KeyIds);
 
-            __COPY(KMMInventoryResponseListKeyIDs);
+            DECLARE_COPY(KMMInventoryResponseListKeyIDs);
         };
     } // namespace kmm
 } // namespace p25

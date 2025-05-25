@@ -69,15 +69,13 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
 {
     hrc::hrc_t pktTime = hrc::now();
 
-    UInt8Array __buffer = std::make_unique<uint8_t[]>(len);
-    uint8_t* buffer = __buffer.get();
-    ::memset(buffer, 0x00U, len);
+    DECLARE_UINT8_ARRAY(buffer, len);
     ::memcpy(buffer, data, len);
 
     uint8_t lco = data[4U];
 
-    uint32_t srcId = __GET_UINT16(data, 5U);
-    uint32_t dstId = __GET_UINT16(data, 8U);
+    uint32_t srcId = GET_UINT24(data, 5U);
+    uint32_t dstId = GET_UINT24(data, 8U);
 
     uint8_t MFId = data[15U];
 
@@ -95,7 +93,7 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
 
     // perform TGID route rewrites if configured
     routeRewrite(buffer, peerId, duid, dstId, false);
-    dstId = __GET_UINT16(buffer, 8U);
+    dstId = GET_UINT24(buffer, 8U);
 
     lc::LC control;
     data::LowSpeedData lsd;
@@ -121,8 +119,12 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
             }
 
             if (m_debug) {
-                LogDebug(LOG_NET, "P25, HDU algId = $%02X, kId = $%02X", algId, kid);
-                Utils::dump(1U, "P25 HDU Network MI", mi, MI_LENGTH_BYTES);
+                LogDebug(LOG_NET, P25_HDU_STR ", HDU_BSDWNACT, dstId = %u, algo = $%02X, kid = $%04X", dstId, algId, kid);
+
+                if (algId != ALGO_UNENCRYPT) {
+                    LogDebug(LOG_NET, P25_HDU_STR ", Enc Sync, MI = %02X %02X %02X %02X %02X %02X %02X %02X %02X", 
+                        mi[0U], mi[1U], mi[2U], mi[3U], mi[4U], mi[5U], mi[6U], mi[7U], mi[8U]);
+                }
             }
 
             control.setAlgId(algId);
@@ -341,9 +343,7 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                         m_network->m_frameQueue->flushQueue();
                     }
 
-                    UInt8Array __outboundPeerBuffer = std::make_unique<uint8_t[]>(len);
-                    uint8_t* outboundPeerBuffer = __outboundPeerBuffer.get();
-                    ::memset(outboundPeerBuffer, 0x00U, len);
+                    DECLARE_UINT8_ARRAY(outboundPeerBuffer, len);
                     ::memcpy(outboundPeerBuffer, buffer, len);
 
                     // perform TGID route rewrites if configured
@@ -386,9 +386,7 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                         continue;
                     }
 
-                    UInt8Array __outboundPeerBuffer = std::make_unique<uint8_t[]>(len);
-                    uint8_t* outboundPeerBuffer = __outboundPeerBuffer.get();
-                    ::memset(outboundPeerBuffer, 0x00U, len);
+                    DECLARE_UINT8_ARRAY(outboundPeerBuffer, len);
                     ::memcpy(outboundPeerBuffer, buffer, len);
 
                     // perform TGID route rewrites if configured
@@ -615,7 +613,7 @@ void TagP25Data::write_TSDU_U_Reg_Cmd(uint32_t peerId, uint32_t dstId)
 
 void TagP25Data::routeRewrite(uint8_t* buffer, uint32_t peerId, uint8_t duid, uint32_t dstId, bool outbound)
 {
-    uint32_t srcId = __GET_UINT16(buffer, 5U);
+    uint32_t srcId = GET_UINT24(buffer, 5U);
     uint32_t frameLength = buffer[23U];
 
     uint32_t rewriteDstId = dstId;
@@ -623,7 +621,7 @@ void TagP25Data::routeRewrite(uint8_t* buffer, uint32_t peerId, uint8_t duid, ui
     // does the data require route writing?
     if (peerRewrite(peerId, rewriteDstId, outbound)) {
         // rewrite destination TGID in the frame
-        __SET_UINT16(rewriteDstId, buffer, 8U);
+        SET_UINT24(rewriteDstId, buffer, 8U);
 
         // are we receiving a TSDU?
         if (duid == DUID::TSDU) {
@@ -637,8 +635,8 @@ void TagP25Data::routeRewrite(uint8_t* buffer, uint32_t peerId, uint8_t duid, ui
                 switch (tsbk->getLCO()) {
                     case TSBKO::IOSP_GRP_VCH:
                     {
-                        LogMessage(LOG_NET, P25_TSDU_STR ", %s, emerg = %u, encrypt = %u, prio = %u, chNo = %u, srcId = %u, dstId = %u",
-                            tsbk->toString(true).c_str(), tsbk->getEmergency(), tsbk->getEncrypted(), tsbk->getPriority(), tsbk->getGrpVchNo(), srcId, rewriteDstId);
+                        LogMessage(LOG_NET, P25_TSDU_STR ", %s, emerg = %u, encrypt = %u, prio = %u, chNo = %u-%u, srcId = %u, dstId = %u",
+                            tsbk->toString(true).c_str(), tsbk->getEmergency(), tsbk->getEncrypted(), tsbk->getPriority(), tsbk->getGrpVchId(), tsbk->getGrpVchNo(), srcId, rewriteDstId);
 
                         tsbk->setDstId(rewriteDstId);
                     }
@@ -753,7 +751,7 @@ bool TagP25Data::processTSDUFrom(uint8_t* buffer, uint32_t peerId, uint8_t duid)
                         lc::tsbk::OSP_ADJ_STS_BCAST* osp = static_cast<lc::tsbk::OSP_ADJ_STS_BCAST*>(tsbk.get());
 
                         if (m_network->m_verbose) {
-                            LogMessage(LOG_NET, P25_TSDU_STR ", %s, sysId = $%03X, rfss = $%02X, site = $%02X, chId = %u, chNo = %u, svcClass = $%02X, peerId = %u", tsbk->toString().c_str(),
+                            LogMessage(LOG_NET, P25_TSDU_STR ", %s, sysId = $%03X, rfss = $%02X, site = $%02X, chNo = %u-%u, svcClass = $%02X, peerId = %u", tsbk->toString().c_str(),
                                 osp->getAdjSiteSysId(), osp->getAdjSiteRFSSId(), osp->getAdjSiteId(), osp->getAdjSiteChnId(), osp->getAdjSiteChnNo(), osp->getAdjSiteSvcClass(), peerId);
                         }
                     }
@@ -888,7 +886,7 @@ bool TagP25Data::processTSDUToExternal(uint8_t* buffer, uint32_t srcPeerId, uint
                         lc::tsbk::OSP_ADJ_STS_BCAST* osp = static_cast<lc::tsbk::OSP_ADJ_STS_BCAST*>(tsbk.get());
 
                         if (m_network->m_verbose) {
-                            LogMessage(LOG_NET, P25_TSDU_STR ", %s, sysId = $%03X, rfss = $%02X, site = $%02X, chId = %u, chNo = %u, svcClass = $%02X, peerId = %u", tsbk->toString().c_str(),
+                            LogMessage(LOG_NET, P25_TSDU_STR ", %s, sysId = $%03X, rfss = $%02X, site = $%02X, chNo = %u-%u, svcClass = $%02X, peerId = %u", tsbk->toString().c_str(),
                                 osp->getAdjSiteSysId(), osp->getAdjSiteRFSSId(), osp->getAdjSiteId(), osp->getAdjSiteChnId(), osp->getAdjSiteChnNo(), osp->getAdjSiteSvcClass(), srcPeerId);
                         }
                     }
@@ -1411,8 +1409,8 @@ bool TagP25Data::write_TSDU_Grant(uint32_t peerId, uint32_t srcId, uint32_t dstI
         iosp->setPriority(priority);
 
         if (m_network->m_verbose) {
-            LogMessage(LOG_NET, P25_TSDU_STR ", %s, emerg = %u, encrypt = %u, prio = %u, chNo = %u, srcId = %u, dstId = %u, peerId = %u",
-                iosp->toString().c_str(), iosp->getEmergency(), iosp->getEncrypted(), iosp->getPriority(), iosp->getGrpVchNo(), iosp->getSrcId(), iosp->getDstId(), peerId);
+            LogMessage(LOG_NET, P25_TSDU_STR ", %s, emerg = %u, encrypt = %u, prio = %u, chNo = %u-%u, srcId = %u, dstId = %u, peerId = %u",
+                iosp->toString().c_str(), iosp->getEmergency(), iosp->getEncrypted(), iosp->getPriority(), iosp->getGrpVchId(), iosp->getGrpVchNo(), iosp->getSrcId(), iosp->getDstId(), peerId);
         }
 
         write_TSDU(peerId, iosp.get());
@@ -1428,8 +1426,8 @@ bool TagP25Data::write_TSDU_Grant(uint32_t peerId, uint32_t srcId, uint32_t dstI
         iosp->setPriority(priority);
 
         if (m_network->m_verbose) {
-            LogMessage(LOG_NET, P25_TSDU_STR ", %s, emerg = %u, encrypt = %u, prio = %u, chNo = %u, srcId = %u, dstId = %u, peerId = %u",
-                iosp->toString().c_str(), iosp->getEmergency(), iosp->getEncrypted(), iosp->getPriority(), iosp->getGrpVchNo(), iosp->getSrcId(), iosp->getDstId(), peerId);
+            LogMessage(LOG_NET, P25_TSDU_STR ", %s, emerg = %u, encrypt = %u, prio = %u, chNo = %u-%u, srcId = %u, dstId = %u, peerId = %u",
+                iosp->toString().c_str(), iosp->getEmergency(), iosp->getEncrypted(), iosp->getPriority(), iosp->getGrpVchId(), iosp->getGrpVchNo(), iosp->getSrcId(), iosp->getDstId(), peerId);
         }
 
         write_TSDU(peerId, iosp.get());

@@ -65,13 +65,13 @@ namespace p25
                 /**
                  * @brief SCCB channel ID 1.
                  */
-                __PROPERTY(uint8_t, sccbChannelId1, SCCBChnId1);
+                DECLARE_PROPERTY(uint8_t, sccbChannelId1, SCCBChnId1);
                 /**
                  * @brief SCCB channel ID 2.
                  */
-                __PROPERTY(uint8_t, sccbChannelId2, SCCBChnId2);
+                DECLARE_PROPERTY(uint8_t, sccbChannelId2, SCCBChnId2);
 
-                __COPY(OSP_SCCB);
+                DECLARE_COPY(OSP_SCCB);
             };
         } // namespace tsbk
     } // namespace lc

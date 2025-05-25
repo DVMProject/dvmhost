@@ -39,6 +39,8 @@ const uint32_t MAX_HARD_CONN_CAP = 250U;
 const uint8_t MAX_PEER_LIST_BEFORE_FLUSH = 10U;
 const uint32_t MAX_RID_LIST_CHUNK = 50U;
 
+const uint32_t MAX_MISSED_ACL_UPDATES = 10U;
+
 const uint64_t PACKET_LATE_TIME = 200U; // 200ms
 
 // ---------------------------------------------------------------------------
@@ -82,7 +84,7 @@ FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port,
     m_peerLinkKeyQueue(),
     m_peerLinkActPkt(),
     m_maintainenceTimer(1000U, pingTime),
-    m_updateLookupTime(updateLookupTime * 60U),
+    m_updateLookupTimer(1000U, (updateLookupTime * 60U)),
     m_softConnLimit(0U),
     m_callInProgress(false),
     m_disallowAdjStsBcast(false),
@@ -383,25 +385,44 @@ void FNENetwork::clock(uint32_t ms)
             }
         }
 
-        // send ACL updates forcibly to any Peer-Link peers
+        m_maintainenceTimer.start();
+    }
+
+    m_updateLookupTimer.clock(ms);
+    if (m_updateLookupTimer.isRunning() && m_updateLookupTimer.hasExpired()) {
+        // send ACL updates to peers
+        m_peers.lock(false);
         for (auto peer : m_peers) {
             uint32_t id = peer.first;
             FNEPeerConnection* connection = peer.second;
             if (connection != nullptr) {
+                // if this connection is a peer link *always* send the update -- no stream checking
                 if (connection->connected() && connection->isPeerLink()) {
-                    // does this peer need an ACL update?
-                    uint64_t dt = connection->lastACLUpdate() + (m_updateLookupTime * 1000);
-                    if (dt < now) {
-                        LogInfoEx(LOG_NET, "PEER %u (%s) updating ACL list, dt = %u, now = %u", id, connection->identity().c_str(),
-                            dt, now);
+                    LogInfoEx(LOG_NET, "PEER %u (%s), Peer-Link, updating ACL list", id, connection->identity().c_str());
+
+                    peerACLUpdate(id);
+                    connection->missedACLUpdates(0U);
+                    continue;
+                }
+
+                if (connection->connected()) {
+                    if ((connection->streamCount() <= 1) || (connection->missedACLUpdates() > MAX_MISSED_ACL_UPDATES)) {
+                        LogInfoEx(LOG_NET, "PEER %u (%s) updating ACL list", id, connection->identity().c_str());
                         peerACLUpdate(id);
-                        connection->lastACLUpdate(now);
+                        connection->missedACLUpdates(0U);
+                    } else {
+                        uint32_t missed = connection->missedACLUpdates();
+                        missed++;
+
+                        LogInfoEx(LOG_NET, "PEER %u (%s) skipped for ACL update, traffic in progress", id, connection->identity().c_str());
+                        connection->missedACLUpdates(missed);
                     }
                 }
             }
         }
+        m_peers.unlock();
 
-        m_maintainenceTimer.start();
+        m_updateLookupTimer.start();
     }
 
     m_parrotDelayTimer.clock(ms);
@@ -445,6 +466,7 @@ bool FNENetwork::open()
 
     m_status = NET_STAT_MST_RUNNING;
     m_maintainenceTimer.start();
+    m_updateLookupTimer.start();
 
     m_socket = new udp::Socket(m_address, m_port);
 
@@ -475,11 +497,12 @@ void FNENetwork::close()
 
         uint32_t streamId = createStreamId();
         for (auto peer : m_peers) {
-            writePeer(peer.first, { NET_FUNC::MST_CLOSING, NET_SUBFUNC::NOP }, buffer, 1U, RTP_END_OF_CALL_SEQ, streamId, false);
+            writePeer(peer.first, { NET_FUNC::MST_DISC, NET_SUBFUNC::NOP }, buffer, 1U, RTP_END_OF_CALL_SEQ, streamId, false);
         }
     }
 
     m_maintainenceTimer.stop();
+    m_updateLookupTimer.stop();
 
     // stop thread pool
     m_threadPool.stop();
@@ -768,15 +791,13 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
 
                             if (connection->connectionState() == NET_STAT_WAITING_AUTHORISATION) {
                                 // get the hash from the frame message
-                                UInt8Array __hash = std::make_unique<uint8_t[]>(req->length - 8U);
-                                uint8_t* hash = __hash.get();
-                                ::memset(hash, 0x00U, req->length - 8U);
+                                DECLARE_UINT8_ARRAY(hash, req->length - 8U);
                                 ::memcpy(hash, req->buffer + 8U, req->length - 8U);
 
                                 // generate our own hash
                                 uint8_t salt[4U];
                                 ::memset(salt, 0x00U, 4U);
-                                __SET_UINT32(connection->salt(), salt, 0U);
+                                SET_UINT32(connection->salt(), salt, 0U);
 
                                 std::string passwordForPeer = network->m_password;
 
@@ -875,9 +896,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                             connection->lastPing(now);
 
                             if (connection->connectionState() == NET_STAT_WAITING_CONFIG) {
-                                UInt8Array __rawPayload = std::make_unique<uint8_t[]>(req->length - 8U);
-                                uint8_t* rawPayload = __rawPayload.get();
-                                ::memset(rawPayload, 0x00U, req->length - 8U);
+                                DECLARE_UINT8_ARRAY(rawPayload, req->length - 8U);
                                 ::memcpy(rawPayload, req->buffer + 8U, req->length - 8U);
                                 std::string payload(rawPayload, rawPayload + (req->length - 8U));
 
@@ -904,7 +923,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                         connection->connected(true);
                                         connection->pingsReceived(0U);
                                         connection->lastPing(now);
-                                        connection->lastACLUpdate(now);
+                                        connection->missedACLUpdates(0U);
                                         network->m_peers[peerId] = connection;
 
                                         // attach extra notification data to the RPTC ACK to notify the peer of 
@@ -997,7 +1016,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                 }
                 break;
 
-            case NET_FUNC::RPT_CLOSING:                                 // Repeater Closing (Disconnect)
+            case NET_FUNC::RPT_DISC:                                    // Repeater Disconnect
                 {
                     if (peerId > 0 && (network->m_peers.find(peerId) != network->m_peers.end())) {
                         FNEPeerConnection* connection = network->m_peers[peerId];
@@ -1006,7 +1025,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
 
                             // validate peer (simple validation really)
                             if (connection->connected() && connection->address() == ip) {
-                                LogInfoEx(LOG_NET, "PEER %u (%s) is closing down", peerId, connection->identity().c_str());
+                                LogInfoEx(LOG_NET, "PEER %u (%s) disconnected", peerId, connection->identity().c_str());
                                 network->erasePeer(peerId);
                                 delete connection;
                             }
@@ -1029,22 +1048,6 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
 
                                 connection->pingsReceived(pingsRx);
                                 connection->lastPing(now);
-
-                                // does this peer need an ACL update?
-                                uint64_t dt = connection->lastACLUpdate() + (network->m_updateLookupTime * 1000);
-                                if (dt < now) {
-                                    if (connection->streamCount() <= 1 || ((dt * 2) < now)) {
-                                        if ((dt * 2) < now)
-                                            LogInfoEx(LOG_NET, "PEER %u (%s) late updating ACL list, dt = %u, ddt = %u, now = %u", peerId, connection->identity().c_str(),
-                                                dt, dt * 2, now);
-                                        else
-                                            LogInfoEx(LOG_NET, "PEER %u (%s) updating ACL list, dt = %u,  now = %u", peerId, connection->identity().c_str(),
-                                                dt, now);
-
-                                        network->peerACLUpdate(peerId);
-                                        connection->lastACLUpdate(now);
-                                    }
-                                }
 
                                 uint8_t payload[8U];
                                 ::memset(payload, 0x00U, 8U);
@@ -1084,8 +1087,8 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
 
                             // validate peer (simple validation really)
                             if (connection->connected() && connection->address() == ip) {
-                                uint32_t srcId = __GET_UINT16(req->buffer, 11U);                // Source Address
-                                uint32_t dstId = __GET_UINT16(req->buffer, 15U);                // Destination Address
+                                uint32_t srcId = GET_UINT24(req->buffer, 11U);                  // Source Address
+                                uint32_t dstId = GET_UINT24(req->buffer, 15U);                  // Destination Address
 
                                 uint8_t slot = req->buffer[19U];
 
@@ -1261,104 +1264,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                 break;
 
             case NET_FUNC::TRANSFER:                                    // Transfer
-                {
-                    // are activity/diagnostic transfers occurring from the alternate port?
-                    if (network->m_host->m_useAlternatePortForDiagnostics) {
-                        break; // for performance and other reasons -- simply ignore the entire NET_FUNC::TRANSFER at this point
-                               // since they should be coming from the alternate port anyway
-                    }
-
-                    // process incoming message subfunction opcodes
-                    switch (req->fneHeader.getSubFunction()) {
-                    case NET_SUBFUNC::TRANSFER_SUBFUNC_ACTIVITY:        // Peer Activity Log Transfer
-                        {
-                            if (network->m_allowActivityTransfer) {
-                                if (peerId > 0 && (network->m_peers.find(peerId) != network->m_peers.end())) {
-                                    FNEPeerConnection* connection = network->m_peers[peerId];
-                                    if (connection != nullptr) {
-                                        std::string ip = udp::Socket::address(req->address);
-
-                                        // validate peer (simple validation really)
-                                        if (connection->connected() && connection->address() == ip) {
-                                            UInt8Array __rawPayload = std::make_unique<uint8_t[]>(req->length - 11U);
-                                            uint8_t* rawPayload = __rawPayload.get();
-                                            ::memset(rawPayload, 0x00U, req->length - 11U);
-                                            ::memcpy(rawPayload, req->buffer + 11U, req->length - 11U);
-                                            std::string payload(rawPayload, rawPayload + (req->length - 11U));
-
-                                            ::ActivityLog("%.9u (%8s) %s", peerId, connection->identity().c_str(), payload.c_str());
-
-                                            // report activity log to InfluxDB
-                                            if (network->m_enableInfluxDB) {
-                                                influxdb::QueryBuilder()
-                                                    .meas("activity")
-                                                        .tag("peerId", std::to_string(peerId))
-                                                            .field("identity", connection->identity())
-                                                            .field("msg", payload)
-                                                        .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
-                                                    .requestAsync(network->m_influxServer);
-                                            }
-                                        }
-                                        else {
-                                            network->writePeerNAK(peerId, streamId, TAG_TRANSFER_ACT_LOG, NET_CONN_NAK_FNE_UNAUTHORIZED);
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        break;
-
-                    case NET_SUBFUNC::TRANSFER_SUBFUNC_DIAG:            // Peer Diagnostic Log Transfer
-                        {
-                            if (network->m_allowDiagnosticTransfer) {
-                                if (peerId > 0 && (network->m_peers.find(peerId) != network->m_peers.end())) {
-                                    FNEPeerConnection* connection = network->m_peers[peerId];
-                                    if (connection != nullptr) {
-                                        std::string ip = udp::Socket::address(req->address);
-
-                                        // validate peer (simple validation really)
-                                        if (connection->connected() && connection->address() == ip) {
-                                            UInt8Array __rawPayload = std::make_unique<uint8_t[]>(req->length - 11U);
-                                            uint8_t* rawPayload = __rawPayload.get();
-                                            ::memset(rawPayload, 0x00U, req->length - 11U);
-                                            ::memcpy(rawPayload, req->buffer + 11U, req->length - 11U);
-                                            std::string payload(rawPayload, rawPayload + (req->length - 11U));
-
-                                            bool currState = g_disableTimeDisplay;
-                                            g_disableTimeDisplay = true;
-                                            ::Log(9999U, nullptr, nullptr, 0U, nullptr, "%.9u (%8s) %s", peerId, connection->identity().c_str(), payload.c_str());
-                                            g_disableTimeDisplay = currState;
-
-                                            // report diagnostic log to InfluxDB
-                                            if (network->m_enableInfluxDB) {
-                                                influxdb::QueryBuilder()
-                                                    .meas("diag")
-                                                        .tag("peerId", std::to_string(peerId))
-                                                            .field("identity", connection->identity())
-                                                            .field("msg", payload)
-                                                        .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
-                                                    .requestAsync(network->m_influxServer);
-                                            }
-                                        }
-                                        else {
-                                            network->writePeerNAK(peerId, streamId, TAG_TRANSFER_DIAG_LOG, NET_CONN_NAK_FNE_UNAUTHORIZED);
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        break;
-
-                    case NET_SUBFUNC::TRANSFER_SUBFUNC_STATUS:          // Peer Status Transfer
-                        // main traffic port status transfers aren't supported for performance reasons
-                        break;
-
-                    default:
-                        network->writePeerNAK(peerId, streamId, TAG_TRANSFER, NET_CONN_NAK_ILLEGAL_PACKET);
-                        Utils::dump("unknown transfer opcode from the peer", req->buffer, req->length);
-                        break;
-                    }
-                }
+                // transfer command is not supported for performance reasons on the main traffic port
                 break;
 
             case NET_FUNC::ANNOUNCE:                                    // Announce
@@ -1379,8 +1285,8 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
 
                                     // validate peer (simple validation really)
                                     if (connection->connected() && connection->address() == ip && aff != nullptr) {
-                                        uint32_t srcId = __GET_UINT16(req->buffer, 0U);             // Source Address
-                                        uint32_t dstId = __GET_UINT16(req->buffer, 3U);             // Destination Address
+                                        uint32_t srcId = GET_UINT24(req->buffer, 0U);           // Source Address
+                                        uint32_t dstId = GET_UINT24(req->buffer, 3U);           // Destination Address
                                         aff->groupUnaff(srcId);
                                         aff->groupAff(srcId, dstId);
 
@@ -1418,7 +1324,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
 
                                     // validate peer (simple validation really)
                                     if (connection->connected() && connection->address() == ip && aff != nullptr) {
-                                        uint32_t srcId = __GET_UINT16(req->buffer, 0U);             // Source Address
+                                        uint32_t srcId = GET_UINT24(req->buffer, 0U);           // Source Address
                                         aff->unitReg(srcId);
 
                                         // attempt to repeat traffic to Peer-Link masters
@@ -1454,7 +1360,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
 
                                     // validate peer (simple validation really)
                                     if (connection->connected() && connection->address() == ip && aff != nullptr) {
-                                        uint32_t srcId = __GET_UINT16(req->buffer, 0U);             // Source Address
+                                        uint32_t srcId = GET_UINT24(req->buffer, 0U);           // Source Address
                                         aff->unitDereg(srcId);
 
                                         // attempt to repeat traffic to Peer-Link masters
@@ -1491,7 +1397,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
 
                                     // validate peer (simple validation really)
                                     if (connection->connected() && connection->address() == ip && aff != nullptr) {
-                                        uint32_t srcId = __GET_UINT16(req->buffer, 0U);             // Source Address
+                                        uint32_t srcId = GET_UINT24(req->buffer, 0U);           // Source Address
                                         aff->groupUnaff(srcId);
 
                                         // attempt to repeat traffic to Peer-Link masters
@@ -1533,11 +1439,11 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                             aff->clearGroupAff(0U, true);
 
                                             // update TGID lists
-                                            uint32_t len = __GET_UINT32(req->buffer, 0U);
+                                            uint32_t len = GET_UINT32(req->buffer, 0U);
                                             uint32_t offs = 4U;
                                             for (uint32_t i = 0; i < len; i++) {
-                                                uint32_t srcId = __GET_UINT16(req->buffer, offs);
-                                                uint32_t dstId = __GET_UINT16(req->buffer, offs + 4U);
+                                                uint32_t srcId = GET_UINT24(req->buffer, offs);
+                                                uint32_t dstId = GET_UINT24(req->buffer, offs + 4U);
 
                                                 aff->groupAff(srcId, dstId);
                                                 offs += 8U;
@@ -1577,10 +1483,10 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                         std::vector<uint32_t> vcPeers;
 
                                         // update peer association
-                                        uint32_t len = __GET_UINT32(req->buffer, 0U);
+                                        uint32_t len = GET_UINT32(req->buffer, 0U);
                                         uint32_t offs = 4U;
                                         for (uint32_t i = 0; i < len; i++) {
-                                            uint32_t vcPeerId = __GET_UINT32(req->buffer, offs);
+                                            uint32_t vcPeerId = GET_UINT32(req->buffer, offs);
                                             if (vcPeerId > 0 && (network->m_peers.find(vcPeerId) != network->m_peers.end())) {
                                                 FNEPeerConnection* vcConnection = network->m_peers[vcPeerId];
                                                 if (vcConnection != nullptr) {
@@ -1816,7 +1722,7 @@ void FNENetwork::setupRepeaterLogin(uint32_t peerId, uint32_t streamId, FNEPeerC
     // transmit salt to peer
     uint8_t salt[4U];
     ::memset(salt, 0x00U, 4U);
-    __SET_UINT32(connection->salt(), salt, 0U);
+    SET_UINT32(connection->salt(), salt, 0U);
 
     writePeerACK(peerId, streamId, salt, 4U);
     LogInfoEx(LOG_NET, "PEER %u RPTL ACK, challenge response sent for login", peerId);
@@ -1910,51 +1816,19 @@ void FNENetwork::writeWhitelistRIDs(uint32_t peerId, uint32_t streamId, bool isE
 
             // convert to a byte array
             uint32_t len = b.str().size();
-            UInt8Array __buffer = std::make_unique<uint8_t[]>(len);
-            uint8_t* buffer = __buffer.get();
-            ::memset(buffer, 0x00U, len);
+            DECLARE_UINT8_ARRAY(buffer, len);
             ::memcpy(buffer, b.str().data(), len);
 
-            uint32_t compressedLen = 0U;
-            uint8_t* compressed = Compression::compress((uint8_t*)buffer, len, &compressedLen);
+            PacketBuffer pkt(true, "Peer-Link, RID List");
+            pkt.encode((uint8_t*)buffer, len);
 
-            if (compressed != nullptr) {
-                // transmit TGIDs
-                uint8_t blockCnt = (compressedLen / PEER_LINK_BLOCK_SIZE) + (compressedLen % PEER_LINK_BLOCK_SIZE ? 1U : 0U);
-                uint32_t offs = 0U;
-                for (uint8_t i = 0U; i < blockCnt; i++) {
-                    // build dataset
-                    uint16_t bufSize = 10U + (PEER_LINK_BLOCK_SIZE);
-                    UInt8Array __payload = std::make_unique<uint8_t[]>(bufSize);
-                    uint8_t* payload = __payload.get();
-                    ::memset(payload, 0x00U, bufSize);
-
-                    if (i == 0U) {
-                        __SET_UINT32(len, payload, 0U);
-                        __SET_UINT32(compressedLen, payload, 4U);
-                    }
-
-                    payload[8U] = i;
-                    payload[9U] = blockCnt - 1U;
-
-                    uint32_t blockSize = PEER_LINK_BLOCK_SIZE;
-                    if (offs + PEER_LINK_BLOCK_SIZE > compressedLen)
-                        blockSize = PEER_LINK_BLOCK_SIZE - ((offs + PEER_LINK_BLOCK_SIZE) - compressedLen);
-
-                    ::memcpy(payload + 10U, compressed + offs, blockSize);
-
-                    if (m_debug)
-                        Utils::dump(1U, "Peer-Link RID Block Payload", payload, bufSize);
-
-                    offs += PEER_LINK_BLOCK_SIZE;
-
+            LogInfoEx(LOG_NET, "PEER %u Peer-Link, RID List, blocks %u, streamId = %u", peerId, pkt.fragments.size(), streamId);
+            if (pkt.fragments.size() > 0U) {
+                for (auto frag : pkt.fragments) {
                     writePeer(peerId, { NET_FUNC::PEER_LINK, NET_SUBFUNC::PL_RID_LIST }, 
-                        payload, bufSize, 0U, streamId, false, true, true);
+                        frag.second->data, FRAG_SIZE, 0U, streamId, false, true, true);
+                    Thread::sleep(60U); // pace block transmission
                 }
-
-                connection->lastPing(now);
-            } else {
-                LogError(LOG_NET, "PEER %u error compressing RID list", peerId);
             }
         }
 
@@ -2002,11 +1876,9 @@ void FNENetwork::writeWhitelistRIDs(uint32_t peerId, uint32_t streamId, bool isE
 
             // build dataset
             uint16_t bufSize = 4U + (listSize * 4U);
-            UInt8Array __payload = std::make_unique<uint8_t[]>(bufSize);
-            uint8_t* payload = __payload.get();
-            ::memset(payload, 0x00U, bufSize);
+            DECLARE_UINT8_ARRAY(payload, bufSize);
 
-            __SET_UINT32(listSize, payload, 0U);
+            SET_UINT32(listSize, payload, 0U);
 
             // write whitelisted IDs to whitelist payload
             uint32_t offs = 4U;
@@ -2017,7 +1889,7 @@ void FNENetwork::writeWhitelistRIDs(uint32_t peerId, uint32_t streamId, bool isE
                     LogDebug(LOG_NET, "PEER %u (%s) whitelisting RID %u (%d / %d)", peerId, connection->identity().c_str(),
                         id, i, j);
 
-                __SET_UINT32(id, payload, offs);
+                SET_UINT32(id, payload, offs);
                 offs += 4U;
             }
 
@@ -2076,11 +1948,9 @@ void FNENetwork::writeBlacklistRIDs(uint32_t peerId, uint32_t streamId)
 
             // build dataset
             uint16_t bufSize = 4U + (listSize * 4U);
-            UInt8Array __payload = std::make_unique<uint8_t[]>(bufSize);
-            uint8_t* payload = __payload.get();
-            ::memset(payload, 0x00U, bufSize);
+            DECLARE_UINT8_ARRAY(payload, bufSize);
 
-            __SET_UINT32(listSize, payload, 0U);
+            SET_UINT32(listSize, payload, 0U);
 
             // write blacklisted IDs to blacklist payload
             uint32_t offs = 4U;
@@ -2091,7 +1961,7 @@ void FNENetwork::writeBlacklistRIDs(uint32_t peerId, uint32_t streamId)
                     LogDebug(LOG_NET, "PEER %u (%s) blacklisting RID %u (%d / %d)", peerId, connection->identity().c_str(),
                         id, i, j);
 
-                __SET_UINT32(id, payload, offs);
+                SET_UINT32(id, payload, offs);
                 offs += 4U;
             }
 
@@ -2135,51 +2005,19 @@ void FNENetwork::writeTGIDs(uint32_t peerId, uint32_t streamId, bool isExternalP
 
             // convert to a byte array
             uint32_t len = b.str().size();
-            UInt8Array __buffer = std::make_unique<uint8_t[]>(len);
-            uint8_t* buffer = __buffer.get();
-            ::memset(buffer, 0x00U, len);
+            DECLARE_UINT8_ARRAY(buffer, len);
             ::memcpy(buffer, b.str().data(), len);
 
-            uint32_t compressedLen = 0U;
-            uint8_t* compressed = Compression::compress((uint8_t*)buffer, len, &compressedLen);
+            PacketBuffer pkt(true, "Peer-Link, TGID List");
+            pkt.encode((uint8_t*)buffer, len);
 
-            if (compressed != nullptr) {
-                // transmit TGIDs
-                uint8_t blockCnt = (compressedLen / PEER_LINK_BLOCK_SIZE) + (compressedLen % PEER_LINK_BLOCK_SIZE ? 1U : 0U);
-                uint32_t offs = 0U;
-                for (uint8_t i = 0U; i < blockCnt; i++) {
-                    // build dataset
-                    uint16_t bufSize = 10U + (PEER_LINK_BLOCK_SIZE);
-                    UInt8Array __payload = std::make_unique<uint8_t[]>(bufSize);
-                    uint8_t* payload = __payload.get();
-                    ::memset(payload, 0x00U, bufSize);
-
-                    if (i == 0U) {
-                        __SET_UINT32(len, payload, 0U);
-                        __SET_UINT32(compressedLen, payload, 4U);
-                    }
-
-                    payload[8U] = i;
-                    payload[9U] = blockCnt - 1U;
-
-                    uint32_t blockSize = PEER_LINK_BLOCK_SIZE;
-                    if (offs + PEER_LINK_BLOCK_SIZE > compressedLen)
-                        blockSize = PEER_LINK_BLOCK_SIZE - ((offs + PEER_LINK_BLOCK_SIZE) - compressedLen);
-
-                    ::memcpy(payload + 10U, compressed + offs, blockSize);
-
-                    if (m_debug)
-                        Utils::dump(1U, "Peer-Link TGID Block Payload", payload, bufSize);
-
-                    offs += PEER_LINK_BLOCK_SIZE;
-
+            LogInfoEx(LOG_NET, "PEER %u Peer-Link, TGID List, blocks %u, streamId = %u", peerId, pkt.fragments.size(), streamId);
+            if (pkt.fragments.size() > 0U) {
+                for (auto frag : pkt.fragments) {
                     writePeer(peerId, { NET_FUNC::PEER_LINK, NET_SUBFUNC::PL_TALKGROUP_LIST }, 
-                        payload, bufSize, 0U, streamId, false, true, true);
+                        frag.second->data, FRAG_SIZE, 0U, streamId, false, true, true);
+                    Thread::sleep(60U); // pace block transmission
                 }
-
-                connection->lastPing(now);
-            } else {
-                LogError(LOG_NET, "PEER %u error compressing TGID list", peerId);
             }
         }
 
@@ -2238,11 +2076,9 @@ void FNENetwork::writeTGIDs(uint32_t peerId, uint32_t streamId, bool isExternalP
     }
 
     // build dataset
-    UInt8Array __payload = std::make_unique<uint8_t[]>(4U + (tgidList.size() * 5U));
-    uint8_t* payload = __payload.get();
-    ::memset(payload, 0x00U, 4U + (tgidList.size() * 5U));
+    DECLARE_UINT8_ARRAY(payload, 4U + (tgidList.size() * 5U));
 
-    __SET_UINT32(tgidList.size(), payload, 0U);
+    SET_UINT32(tgidList.size(), payload, 0U);
 
     // write talkgroup IDs to active TGID payload
     uint32_t offs = 4U;
@@ -2252,7 +2088,7 @@ void FNENetwork::writeTGIDs(uint32_t peerId, uint32_t streamId, bool isExternalP
             LogDebug(LOG_NET, "PEER %u (%s) activating TGID %u TS %u", peerId, peerIdentity.c_str(),
                 tg.first, tg.second);
         }
-        __SET_UINT32(tg.first, payload, offs);
+        SET_UINT32(tg.first, payload, offs);
         payload[offs + 4U] = tg.second;
         offs += 5U;
     }
@@ -2299,11 +2135,9 @@ void FNENetwork::writeDeactiveTGIDs(uint32_t peerId, uint32_t streamId)
     }
 
     // build dataset
-    UInt8Array __payload = std::make_unique<uint8_t[]>(4U + (tgidList.size() * 5U));
-    uint8_t* payload = __payload.get();
-    ::memset(payload, 0x00U, 4U + (tgidList.size() * 5U));
+    DECLARE_UINT8_ARRAY(payload, 4U + (tgidList.size() * 5U));
 
-    __SET_UINT32(tgidList.size(), payload, 0U);
+    SET_UINT32(tgidList.size(), payload, 0U);
 
     // write talkgroup IDs to deactive TGID payload
     uint32_t offs = 4U;
@@ -2313,7 +2147,7 @@ void FNENetwork::writeDeactiveTGIDs(uint32_t peerId, uint32_t streamId)
             LogDebug(LOG_NET, "PEER %u (%s) deactivating TGID %u TS %u", peerId, peerIdentity.c_str(),
                 tg.first, tg.second);
         }
-        __SET_UINT32(tg.first, payload, offs);
+        SET_UINT32(tg.first, payload, offs);
         payload[offs + 4U] = tg.second;
         offs += 5U;
     }
@@ -2349,51 +2183,19 @@ void FNENetwork::writePeerList(uint32_t peerId, uint32_t streamId)
 
         // convert to a byte array
         uint32_t len = b.str().size();
-        UInt8Array __buffer = std::make_unique<uint8_t[]>(len);
-        uint8_t* buffer = __buffer.get();
-        ::memset(buffer, 0x00U, len);
+        DECLARE_UINT8_ARRAY(buffer, len);
         ::memcpy(buffer, b.str().data(), len);
 
-        uint32_t compressedLen = 0U;
-        uint8_t* compressed = Compression::compress((uint8_t*)buffer, len, &compressedLen);
+        PacketBuffer pkt(true, "Peer-Link, PID List");
+        pkt.encode((uint8_t*)buffer, len);
 
-        if (compressed != nullptr) {
-            // transmit PIDs
-            uint8_t blockCnt = (compressedLen / PEER_LINK_BLOCK_SIZE) + (compressedLen % PEER_LINK_BLOCK_SIZE ? 1U : 0U);
-            uint32_t offs = 0U;
-            for (uint8_t i = 0U; i < blockCnt; i++) {
-                // build dataset
-                uint16_t bufSize = 10U + (PEER_LINK_BLOCK_SIZE);
-                UInt8Array __payload = std::make_unique<uint8_t[]>(bufSize);
-                uint8_t* payload = __payload.get();
-                ::memset(payload, 0x00U, bufSize);
-
-                if (i == 0U) {
-                    __SET_UINT32(len, payload, 0U);
-                    __SET_UINT32(compressedLen, payload, 4U);
-                }
-
-                payload[8U] = i;
-                payload[9U] = blockCnt - 1U;
-
-                uint32_t blockSize = PEER_LINK_BLOCK_SIZE;
-                if (offs + PEER_LINK_BLOCK_SIZE > compressedLen)
-                    blockSize = PEER_LINK_BLOCK_SIZE - ((offs + PEER_LINK_BLOCK_SIZE) - compressedLen);
-
-                ::memcpy(payload + 10U, compressed + offs, blockSize);
-
-                if (m_debug)
-                    Utils::dump(1U, "Peer-Link Peer List Block Payload", payload, bufSize);
-
-                offs += PEER_LINK_BLOCK_SIZE;
-
+        LogInfoEx(LOG_NET, "PEER %u Peer-Link, PID List, blocks %u, streamId = %u", peerId, pkt.fragments.size(), streamId);
+        if (pkt.fragments.size() > 0U) {
+            for (auto frag : pkt.fragments) {
                 writePeer(peerId, { NET_FUNC::PEER_LINK, NET_SUBFUNC::PL_PEER_LIST }, 
-                    payload, bufSize, 0U, streamId, false, true, true);
+                    frag.second->data, FRAG_SIZE, 0U, streamId, false, true, true);
+                Thread::sleep(60U); // pace block transmission
             }
-
-            connection->lastPing(now);
-        } else {
-            LogError(LOG_NET, "PEER %u error compressing PID list", peerId);
         }
     }
 
@@ -2414,9 +2216,9 @@ bool FNENetwork::writePeerICC(uint32_t peerId, uint32_t streamId, NET_SUBFUNC::E
     uint8_t buffer[DATA_PACKET_LENGTH];
     ::memset(buffer, 0x00U, DATA_PACKET_LENGTH);
 
-    __SET_UINT32(peerId, buffer, 6U);                                           // Peer ID
+    SET_UINT32(peerId, buffer, 6U);                                             // Peer ID
     buffer[10U] = (uint8_t)command;                                             // In-Call Control Command
-    __SET_UINT16(dstId, buffer, 11U);                                           // Destination ID
+    SET_UINT24(dstId, buffer, 11U);                                             // Destination ID
     buffer[14U] = slotNo;                                                       // DMR Slot No
 
     return writePeer(peerId, { NET_FUNC::INCALL_CTRL, subFunc }, buffer, 15U, RTP_END_OF_CALL_SEQ, streamId, false);
@@ -2482,7 +2284,7 @@ bool FNENetwork::writePeerACK(uint32_t peerId, uint32_t streamId, const uint8_t*
     uint8_t buffer[DATA_PACKET_LENGTH];
     ::memset(buffer, 0x00U, DATA_PACKET_LENGTH);
 
-    __SET_UINT32(peerId, buffer, 0U);                                           // Peer ID
+    SET_UINT32(peerId, buffer, 0U);                                           // Peer ID
 
     if (data != nullptr && length > 0U) {
         ::memcpy(buffer + 6U, data, length);
@@ -2541,8 +2343,8 @@ bool FNENetwork::writePeerNAK(uint32_t peerId, uint32_t streamId, const char* ta
     uint8_t buffer[DATA_PACKET_LENGTH];
     ::memset(buffer, 0x00U, DATA_PACKET_LENGTH);
 
-    __SET_UINT32(peerId, buffer, 6U);                                           // Peer ID
-    __SET_UINT16B((uint16_t)reason, buffer, 10U);                               // Reason
+    SET_UINT32(peerId, buffer, 6U);                                             // Peer ID
+    SET_UINT16((uint16_t)reason, buffer, 10U);                                  // Reason
 
     logPeerNAKReason(peerId, tag, reason);
     return writePeer(peerId, { NET_FUNC::NAK, NET_SUBFUNC::NOP }, buffer, 10U, RTP_END_OF_CALL_SEQ, streamId, false);
@@ -2560,8 +2362,8 @@ bool FNENetwork::writePeerNAK(uint32_t peerId, const char* tag, NET_CONN_NAK_REA
     uint8_t buffer[DATA_PACKET_LENGTH];
     ::memset(buffer, 0x00U, DATA_PACKET_LENGTH);
 
-    __SET_UINT32(peerId, buffer, 6U);                                           // Peer ID
-    __SET_UINT16B((uint16_t)reason, buffer, 10U);                               // Reason
+    SET_UINT32(peerId, buffer, 6U);                                             // Peer ID
+    SET_UINT16((uint16_t)reason, buffer, 10U);                                  // Reason
 
     logPeerNAKReason(peerId, tag, reason);
     LogWarning(LOG_NET, "PEER %u NAK %s -> %s:%u", peerId, tag, udp::Socket::address(addr).c_str(), udp::Socket::port(addr));

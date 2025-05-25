@@ -101,8 +101,8 @@ bool BaseNetwork::writeGrantReq(const uint8_t mode, const uint32_t srcId, const 
     uint8_t buffer[MSG_HDR_SIZE];
     ::memset(buffer, 0x00U, MSG_HDR_SIZE);
 
-    __SET_UINT32(srcId, buffer, 11U);                                               // Source Address
-    __SET_UINT32(dstId, buffer, 15U);                                               // Destination Address
+    SET_UINT32(srcId, buffer, 11U);                                                 // Source Address
+    SET_UINT32(dstId, buffer, 15U);                                                 // Destination Address
     buffer[19U] = slot;                                                             // Slot Number
 
     if (unitToUnit)
@@ -220,8 +220,8 @@ bool BaseNetwork::announceGroupAffiliation(uint32_t srcId, uint32_t dstId)
 
     uint8_t buffer[DATA_PACKET_LENGTH];
 
-    __SET_UINT16(srcId, buffer, 0U);
-    __SET_UINT16(dstId, buffer, 3U);
+    SET_UINT24(srcId, buffer, 0U);
+    SET_UINT24(dstId, buffer, 3U);
 
     return writeMaster({ NET_FUNC::ANNOUNCE, NET_SUBFUNC::ANNC_SUBFUNC_GRP_AFFIL }, buffer, MSG_ANNC_GRP_AFFIL, RTP_END_OF_CALL_SEQ, 0U);
 }
@@ -235,7 +235,7 @@ bool BaseNetwork::announceGroupAffiliationRemoval(uint32_t srcId)
 
     uint8_t buffer[DATA_PACKET_LENGTH];
 
-    __SET_UINT16(srcId, buffer, 0U);
+    SET_UINT24(srcId, buffer, 0U);
 
     return writeMaster({ NET_FUNC::ANNOUNCE, NET_SUBFUNC::ANNC_SUBFUNC_GRP_UNAFFIL }, buffer, MSG_ANNC_GRP_UNAFFIL, RTP_END_OF_CALL_SEQ, 0U);
 }
@@ -249,7 +249,7 @@ bool BaseNetwork::announceUnitRegistration(uint32_t srcId)
 
     uint8_t buffer[DATA_PACKET_LENGTH];
 
-    __SET_UINT16(srcId, buffer, 0U);
+    SET_UINT24(srcId, buffer, 0U);
 
     return writeMaster({ NET_FUNC::ANNOUNCE, NET_SUBFUNC::ANNC_SUBFUNC_UNIT_REG }, buffer, MSG_ANNC_UNIT_REG, RTP_END_OF_CALL_SEQ, 0U);
 }
@@ -263,7 +263,7 @@ bool BaseNetwork::announceUnitDeregistration(uint32_t srcId)
 
     uint8_t buffer[DATA_PACKET_LENGTH];
 
-    __SET_UINT16(srcId, buffer, 0U);
+    SET_UINT24(srcId, buffer, 0U);
 
     return writeMaster({ NET_FUNC::ANNOUNCE, NET_SUBFUNC::ANNC_SUBFUNC_UNIT_DEREG }, buffer, MSG_ANNC_UNIT_REG, RTP_END_OF_CALL_SEQ, 0U);
 }
@@ -275,17 +275,15 @@ bool BaseNetwork::announceAffiliationUpdate(const std::unordered_map<uint32_t, u
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
         return false;
 
-    UInt8Array __buffer = std::make_unique<uint8_t[]>(4U + (affs.size() * 8U));
-    uint8_t* buffer = __buffer.get();
-    ::memset(buffer, 0x00U, 4U + (affs.size() * 8U));
+    DECLARE_UINT8_ARRAY(buffer, 4U + (affs.size() * 8U));
 
-    __SET_UINT32(affs.size(), buffer, 0U);
+    SET_UINT32(affs.size(), buffer, 0U);
 
     // write talkgroup IDs to active TGID payload
     uint32_t offs = 4U;
     for (auto it : affs) {
-        __SET_UINT16(it.first, buffer, offs);
-        __SET_UINT16(it.second, buffer, offs + 4U);
+        SET_UINT24(it.first, buffer, offs);
+        SET_UINT24(it.second, buffer, offs + 4U);
         offs += 8U;
     }
 
@@ -299,16 +297,14 @@ bool BaseNetwork::announceSiteVCs(const std::vector<uint32_t> peers)
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
         return false;
 
-    UInt8Array __buffer = std::make_unique<uint8_t[]>(4U + (peers.size() * 4U));
-    uint8_t* buffer = __buffer.get();
-    ::memset(buffer, 0x00U, 4U + (peers.size() * 4U));
+    DECLARE_UINT8_ARRAY(buffer, 4U + (peers.size() * 4U));
 
-    __SET_UINT32(peers.size(), buffer, 0U);
+    SET_UINT32(peers.size(), buffer, 0U);
 
     // write peer IDs to active TGID payload
     uint32_t offs = 4U;
     for (auto it : peers) {
-        __SET_UINT32(it, buffer, offs);
+        SET_UINT32(it, buffer, offs);
         offs += 4U;
     }
 
@@ -762,10 +758,10 @@ UInt8Array BaseNetwork::createDMR_Message(uint32_t& length, const uint32_t strea
     ::memcpy(buffer + 0U, TAG_DMR_DATA, 4U);
 
     uint32_t srcId = data.getSrcId();                                               // Source Address
-    __SET_UINT16(srcId, buffer, 5U);
+    SET_UINT24(srcId, buffer, 5U);
 
     uint32_t dstId = data.getDstId();                                               // Target Address
-    __SET_UINT16(dstId, buffer, 8U);
+    SET_UINT24(dstId, buffer, 8U);
 
     uint32_t slotNo = data.getSlotNo();
 
@@ -826,20 +822,20 @@ void BaseNetwork::createP25_MessageHdr(uint8_t* buffer, p25::defines::DUID::E du
     buffer[4U] = control.getLCO();                                                  // LCO
 
     uint32_t srcId = control.getSrcId();                                            // Source Address
-    __SET_UINT16(srcId, buffer, 5U);
+    SET_UINT24(srcId, buffer, 5U);
 
     uint32_t dstId = control.getDstId();                                            // Target Address
-    __SET_UINT16(dstId, buffer, 8U);
+    SET_UINT24(dstId, buffer, 8U);
 
     uint16_t sysId = control.getSiteData().sysId();                                 // System ID
-    __SET_UINT16B(sysId, buffer, 11U);
+    SET_UINT16(sysId, buffer, 11U);
 
     buffer[14U] = 0U;                                                               // Control Bits
 
     buffer[15U] = control.getMFId();                                                // MFId
 
     uint32_t netId = control.getSiteData().netId();                                 // Network ID
-    __SET_UINT16(netId, buffer, 16U);
+    SET_UINT24(netId, buffer, 16U);
 
     buffer[20U] = lsd.getLSD1();                                                    // LSD 1
     buffer[21U] = lsd.getLSD2();                                                    // LSD 2
@@ -855,7 +851,7 @@ void BaseNetwork::createP25_MessageHdr(uint8_t* buffer, p25::defines::DUID::E du
         buffer[181U] = control.getAlgId();                                          // Algorithm ID
 
         uint32_t kid = control.getKId();
-        __SET_UINT16B(kid, buffer, 182U);                                           // Key ID
+        SET_UINT16(kid, buffer, 182U);                                              // Key ID
 
         // copy MI data
         uint8_t mi[MI_LENGTH_BYTES];
@@ -1125,7 +1121,7 @@ UInt8Array BaseNetwork::createP25_PDUMessage(uint32_t& length, const p25::data::
         buffer[4U] |= 0x80U;
     }
 
-    __SET_UINT16(len, buffer, 8U);                                                  // PDU Length [bytes]
+    SET_UINT24(len, buffer, 8U);                                                    // PDU Length [bytes]
 
     buffer[15U] = header.getMFId();                                                 // MFId
 
@@ -1164,10 +1160,10 @@ UInt8Array BaseNetwork::createNXDN_Message(uint32_t& length, const nxdn::lc::RTC
     buffer[4U] = lc.getMessageType();                                           // Message Type
 
     uint32_t srcId = lc.getSrcId();                                             // Source Address
-    __SET_UINT16(srcId, buffer, 5U);
+    SET_UINT24(srcId, buffer, 5U);
 
     uint32_t dstId = lc.getDstId();                                             // Target Address
-    __SET_UINT16(dstId, buffer, 8U);
+    SET_UINT24(dstId, buffer, 8U);
 
     buffer[14U] = 0U;                                                           // Control Bits
 

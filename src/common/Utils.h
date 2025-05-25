@@ -5,11 +5,11 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2009,2014,2015 Jonathan Naylor, G4KLX
- *  Copyright (C) 2018-2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2018-2025 Bryan Biedenkapp, N2PLL
  *
  */
 /**
- * @defgroup utils Utility Routines
+ * @defgroup utils Common Utility Routines
  * @brief Defines and implements utility routines.
  * @ingroup common
  * 
@@ -31,17 +31,24 @@
 #endif // !defined(WIN32)
 
 // ---------------------------------------------------------------------------
-//  Constants
+//  Macros
 // ---------------------------------------------------------------------------
 
 /**
- * @brief Bit mask table used for WRITE_BIT and READ_BIT.
+ * @brief Pointer magic to get the memory address of a floating point number.
  * @ingroup utils
+ * @param x Floating Point Variable
  */
-const uint8_t   BIT_MASK_TABLE[] = { 0x80U, 0x40U, 0x20U, 0x10U, 0x08U, 0x04U, 0x02U, 0x01U };
+#define __FLOAT_ADDR(x)  (*(uint32_t*)& x)
+/**
+ * @brief Pointer magic to get the memory address of a double precision number.
+ * @ingroup utils
+ * @param x Double Precision Variable
+ */
+#define __DOUBLE_ADDR(x) (*(uint64_t*)& x)
 
 // ---------------------------------------------------------------------------
-//  Inlines
+//  Inline Global Functions
 // ---------------------------------------------------------------------------
 
 /**
@@ -152,115 +159,6 @@ inline std::string strtoupper(const std::string value) {
     std::transform(v.begin(), v.end(), v.begin(), ::toupper);
     return v;
 }
-
-// ---------------------------------------------------------------------------
-//  Macros
-// ---------------------------------------------------------------------------
-
-/**
- * @brief Pointer magic to get the memory address of a floating point number.
- * @ingroup utils
- * @param x Floating Point Variable
- */
-#define __FLOAT_ADDR(x)  (*(uint32_t*)& x)
-/**
- * @brief Pointer magic to get the memory address of a double precision number.
- * @ingroup utils
- * @param x Double Precision Variable
- */
-#define __DOUBLE_ADDR(x) (*(uint64_t*)& x)
-
-/**
- * @brief Macro helper to write a specific bit in a byte array.
- * @ingroup utils
- * @param p Byte array.
- * @param i Bit offset.
- * @param b Bit to write.
- */
-#define WRITE_BIT(p, i, b) p[(i) >> 3] = (b) ? (p[(i) >> 3] | BIT_MASK_TABLE[(i) & 7]) : (p[(i) >> 3] & ~BIT_MASK_TABLE[(i) & 7])
-/**
- * @brief Macro helper to read a specific bit from a byte array.
- * @ingroup utils
- * @param p Byte array.
- * @param i Bit offset.
- * @returns bool Bit.
- */
-#define READ_BIT(p, i)     (p[(i) >> 3] & BIT_MASK_TABLE[(i) & 7])
-
-/**
- * @brief Sets a uint32_t into 4 bytes.
- * @ingroup utils
- * @param val uint32_t value to set
- * @param buffer uint8_t buffer to set value on
- * @param offset Offset within uint8_t buffer
- */
-#define __SET_UINT32(val, buffer, offset)               \
-            buffer[0U + offset] = (val >> 24) & 0xFFU;  \
-            buffer[1U + offset] = (val >> 16) & 0xFFU;  \
-            buffer[2U + offset] = (val >> 8) & 0xFFU;   \
-            buffer[3U + offset] = (val >> 0) & 0xFFU;
-/**
- * @brief Gets a uint32_t consisting of 4 bytes.
- * @ingroup utils
- * @param buffer uint8_t buffer to get value from
- * @param offset Offset within uint8_t buffer
- */
-#define __GET_UINT32(buffer, offset)                    \
-            (buffer[offset + 0U] << 24)     |           \
-            (buffer[offset + 1U] << 16)     |           \
-            (buffer[offset + 2U] << 8)      |           \
-            (buffer[offset + 3U] << 0);
-/**
- * @brief Sets a uint32_t into 3 bytes.
- * @ingroup utils
- * @param val uint32_t value to set
- * @param buffer uint8_t buffer to set value on
- * @param offset Offset within uint8_t buffer
- */
-#define __SET_UINT16(val, buffer, offset)               \
-            buffer[0U + offset] = (val >> 16) & 0xFFU;  \
-            buffer[1U + offset] = (val >> 8) & 0xFFU;   \
-            buffer[2U + offset] = (val >> 0) & 0xFFU;
-/**
- * @brief Gets a uint32_t consisting of 3 bytes. (This is a shortened uint32_t).
- * @ingroup utils
- * @param buffer uint8_t buffer to get value from
- * @param offset Offset within uint8_t buffer
- */
-#define __GET_UINT16(buffer, offset)                    \
-            (buffer[offset + 0U] << 16)     |           \
-            (buffer[offset + 1U] << 8)      |           \
-            (buffer[offset + 2U] << 0);
-/**
- * @brief Sets a uint16_t into 2 bytes.
- * @ingroup utils
- * @param val uint16_t value to set
- * @param buffer uint8_t buffer to set value on
- * @param offset Offset within uint8_t buffer
- */
-#define __SET_UINT16B(val, buffer, offset)              \
-            buffer[0U + offset] = (val >> 8) & 0xFFU;   \
-            buffer[1U + offset] = (val >> 0) & 0xFFU;
-/**
- * @brief Gets a uint16_t consisting of 2 bytes.
- * @ingroup utils
- * @param buffer uint8_t buffer to get value from
- * @param offset Offset within uint8_t buffer
- */
-#define __GET_UINT16B(buffer, offset)                   \
-            ((buffer[offset + 0U] << 8) & 0xFF00U)  |   \
-            ((buffer[offset + 1U] << 0) & 0x00FFU);
-
-/**
- * @brief Unique uint8_t array.
- * @ingroup utils
- */
-typedef std::unique_ptr<uint8_t[]> UInt8Array;
-/**
- * @brief Unique char array.
- * @ingroup utils
- */
-typedef std::unique_ptr<char[]> CharArray;
 
 // ---------------------------------------------------------------------------
 //  Class Declaration

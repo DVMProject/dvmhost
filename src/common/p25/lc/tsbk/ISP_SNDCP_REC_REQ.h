@@ -65,17 +65,17 @@ namespace p25
                 /**
                  * @brief Flag indicationg SU has buffered data to send
                  */
-                __PROPERTY(bool, dataToSend, DataToSend);
+                DECLARE_PROPERTY(bool, dataToSend, DataToSend);
                 /**
                  * @brief SNDCP Data Service Options
                  */
-                __PROPERTY(uint8_t, dataServiceOptions, DataServiceOptions);
+                DECLARE_PROPERTY(uint8_t, dataServiceOptions, DataServiceOptions);
                 /**
                  * @brief SNDCP Data Access Control
                  */
-                __PROPERTY(uint32_t, dataAccessControl, DataAccessControl);
+                DECLARE_PROPERTY(uint32_t, dataAccessControl, DataAccessControl);
 
-                __COPY(ISP_SNDCP_REC_REQ);
+                DECLARE_COPY(ISP_SNDCP_REC_REQ);
             };
         } // namespace tsbk
     } // namespace lc

@@ -263,7 +263,7 @@ int main(int argc, char** argv)
 #endif
 
     uint32_t hash = ::strtoul(__GIT_VER_HASH__, 0, 16);
-    __SET_UINT32(hash, g_gitHashBytes, 0U);
+    SET_UINT32(hash, g_gitHashBytes, 0U);
 
     if (argv[0] != nullptr && *argv[0] != 0)
         g_progExe = std::string(argv[0]);

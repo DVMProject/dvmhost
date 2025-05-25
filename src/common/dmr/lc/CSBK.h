@@ -117,116 +117,116 @@ namespace dmr
             /**
              * @brief DMR access color code.
              */
-            __PROTECTED_PROPERTY(uint8_t, colorCode, ColorCode);
+            DECLARE_PROTECTED_PROPERTY(uint8_t, colorCode, ColorCode);
 
             /**
              * @brief Flag indicating this is the last CSBK in a sequence of CSBKs.
              */
-            __PROTECTED_PROPERTY(bool, lastBlock, LastBlock);
+            DECLARE_PROTECTED_PROPERTY(bool, lastBlock, LastBlock);
             /**
              * @brief Flag indicating whether the CSBK is a Cdef block.
              */
-            __PROTECTED_PROPERTY(bool, Cdef, Cdef);
+            DECLARE_PROTECTED_PROPERTY(bool, Cdef, Cdef);
 
             /**
              * @brief CSBK opcode.
              */
-            __PROTECTED_PROPERTY(uint8_t, CSBKO, CSBKO);
+            DECLARE_PROTECTED_PROPERTY(uint8_t, CSBKO, CSBKO);
             /**
              * @brief             */
-            __PROTECTED_PROPERTY(uint8_t, FID, FID);
+            DECLARE_PROTECTED_PROPERTY(uint8_t, FID, FID);
 
             /**
              * @brief Flag indicating whether the CSBK is group or individual.
              */
-            __PROTECTED_PROPERTY(bool, GI, GI);
+            DECLARE_PROTECTED_PROPERTY(bool, GI, GI);
 
             /**
              * @brief Source ID.
              */
-            __PROTECTED_PROPERTY(uint32_t, srcId, SrcId);
+            DECLARE_PROTECTED_PROPERTY(uint32_t, srcId, SrcId);
             /**
              * @brief Destination ID.
              */
-            __PROTECTED_PROPERTY(uint32_t, dstId, DstId);
+            DECLARE_PROTECTED_PROPERTY(uint32_t, dstId, DstId);
 
             /**
              * @brief 
              */
-            __PROTECTED_READONLY_PROPERTY(bool, dataContent, DataContent);
+            DECLARE_PROTECTED_RO_PROPERTY(bool, dataContent, DataContent);
 
             /**
              * @brief Number of blocks to follow.
              */
-            __PROTECTED_PROPERTY(uint8_t, CBF, CBF);
+            DECLARE_PROTECTED_PROPERTY(uint8_t, CBF, CBF);
 
             /**
              * @brief Data type for this CSBK.
              */
-            __PROTECTED_PROPERTY(defines::DataType::E, dataType, DataType);
+            DECLARE_PROTECTED_PROPERTY(defines::DataType::E, dataType, DataType);
             /** @} */
 
             /** @name Common Service Options */
             /**
              * @brief Flag indicating the emergency bits are set.
              */
-            __PROTECTED_PROPERTY(bool, emergency, Emergency);
+            DECLARE_PROTECTED_PROPERTY(bool, emergency, Emergency);
             /**
              * @brief Flag indicating that privacy is enabled.
              */
-            __PROTECTED_PROPERTY(bool, privacy, Privacy);
+            DECLARE_PROTECTED_PROPERTY(bool, privacy, Privacy);
             /**
              * @brief Flag indicating that supplementary data is required.
              */
-            __PROTECTED_PROPERTY(bool, supplementData, SupplementData);
+            DECLARE_PROTECTED_PROPERTY(bool, supplementData, SupplementData);
             /**
              * @brief Priority level for the traffic.
              */
-            __PROTECTED_PROPERTY(uint8_t, priority, Priority);
+            DECLARE_PROTECTED_PROPERTY(uint8_t, priority, Priority);
             /**
              * @brief Flag indicating a broadcast service.
              */
-            __PROTECTED_PROPERTY(bool, broadcast, Broadcast);
+            DECLARE_PROTECTED_PROPERTY(bool, broadcast, Broadcast);
             /**
              * @brief Flag indicating a proxy.
              */
-            __PROTECTED_PROPERTY(bool, proxy, Proxy);
+            DECLARE_PROTECTED_PROPERTY(bool, proxy, Proxy);
 
             /**
              * @brief Response information.
              */
-            __PROTECTED_PROPERTY(uint8_t, response, Response);
+            DECLARE_PROTECTED_PROPERTY(uint8_t, response, Response);
             /**
              * @brief Reason type.
              */
-            __PROTECTED_PROPERTY(uint8_t, reason, Reason);
+            DECLARE_PROTECTED_PROPERTY(uint8_t, reason, Reason);
             /** @} */
 
             /** @name Tier 3 */
             /**
              * @brief Site offset timing.
              */
-            __PROTECTED_PROPERTY(bool, siteOffsetTiming, SiteOffsetTiming);
+            DECLARE_PROTECTED_PROPERTY(bool, siteOffsetTiming, SiteOffsetTiming);
 
             /**
              * @brief Broadcast Logical Channel ID 1.
              */
-            __PROTECTED_PROPERTY(uint16_t, logicalCh1, LogicalCh1);
+            DECLARE_PROTECTED_PROPERTY(uint16_t, logicalCh1, LogicalCh1);
             /**
              * @brief Broadcast Logical Channel ID 2.
              */
-            __PROTECTED_PROPERTY(uint16_t, logicalCh2, LogicalCh2);
+            DECLARE_PROTECTED_PROPERTY(uint16_t, logicalCh2, LogicalCh2);
             /**
              * @brief Logical Channel Slot Number.
              */
-            __PROTECTED_PROPERTY(uint8_t, slotNo, SlotNo);
+            DECLARE_PROTECTED_PROPERTY(uint8_t, slotNo, SlotNo);
             /** @} */
 
             /** @name Local Site data */
             /**
              * @brief Local Site Identity Entry.
              */
-            __PROTECTED_PROPERTY_PLAIN(::lookups::IdenTable, siteIdenEntry);
+            DECLARE_PROTECTED_PROPERTY_PLAIN(::lookups::IdenTable, siteIdenEntry);
             /** @} */
 
         protected:
@@ -261,7 +261,7 @@ namespace dmr
              */
             void encode(uint8_t* data, const uint8_t* payload);
 
-            __PROTECTED_COPY(CSBK);
+            DECLARE_PROTECTED_COPY(CSBK);
 
         private:
             uint8_t* m_raw;

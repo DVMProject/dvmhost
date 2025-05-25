@@ -115,11 +115,11 @@ public:
     /**
      * @brief Maximum number of worker threads.
      */
-    __PROPERTY(uint16_t, maxWorkerCnt, MaxWorkerCnt);
+    DECLARE_PROPERTY(uint16_t, maxWorkerCnt, MaxWorkerCnt);
     /**
      * @brief Maximum number of queued tasks.
      */
-    __PROPERTY(uint16_t, maxQueuedTasks, MaxQueuedTasks);
+    DECLARE_PROPERTY(uint16_t, maxQueuedTasks, MaxQueuedTasks);
 
 private:
 

@@ -61,9 +61,9 @@ namespace dmr
                 /**
                  * @brief Extended function opcode.
                  */
-                __PROPERTY(uint8_t, extendedFunction, ExtendedFunction);
+                DECLARE_PROPERTY(uint8_t, extendedFunction, ExtendedFunction);
 
-                __COPY(CSBK_EXT_FNCT);
+                DECLARE_COPY(CSBK_EXT_FNCT);
             };
         } // namespace csbk
     } // namespace lc

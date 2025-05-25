@@ -45,7 +45,7 @@ bool KMMRegistrationCommand::decode(const uint8_t* data)
     KMMFrame::decodeHeader(data);
 
     m_bodyFormat = data[10U];                                   // Body Format
-    m_kmfRSI = __GET_UINT16(data, 11U);                         // KMF RSI
+    m_kmfRSI = GET_UINT24(data, 11U);                           // KMF RSI
 
     return true;
 }
@@ -61,7 +61,7 @@ void KMMRegistrationCommand::encode(uint8_t* data)
     KMMFrame::encodeHeader(data);
 
     data[10U] = m_bodyFormat;                                   // Body Format
-    __SET_UINT16(m_kmfRSI, data, 11U);                          // KMF RSI
+    SET_UINT24(m_kmfRSI, data, 11U);                            // KMF RSI
 }
 
 // ---------------------------------------------------------------------------

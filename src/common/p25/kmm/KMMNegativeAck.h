@@ -71,17 +71,17 @@ namespace p25
             /**
              * @brief 
              */
-            __PROPERTY(uint8_t, messageId, MessageId);
+            DECLARE_PROPERTY(uint8_t, messageId, MessageId);
             /**
              * @brief 
              */
-            __PROPERTY(uint16_t, messageNo, MessageNumber);
+            DECLARE_PROPERTY(uint16_t, messageNo, MessageNumber);
             /**
              * @brief 
              */
-            __PROPERTY(uint8_t, status, Status);
+            DECLARE_PROPERTY(uint8_t, status, Status);
 
-            __COPY(KMMNegativeAck);
+            DECLARE_COPY(KMMNegativeAck);
         };
     } // namespace kmm
 } // namespace p25

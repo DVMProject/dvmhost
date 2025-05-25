@@ -91,7 +91,7 @@ namespace p25
                 uint8_t* m_authRS;
                 uint8_t* m_authRC;
 
-                __COPY(MBT_OSP_AUTH_DMD);
+                DECLARE_COPY(MBT_OSP_AUTH_DMD);
             };
         } // namespace tsbk
     } // namespace lc

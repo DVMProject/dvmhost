@@ -66,25 +66,25 @@ namespace nxdn
                 /**
                  * @brief Count of BCCH frames per RCCH superframe.
                  */
-                __PROPERTY(uint8_t, bcchCnt, BcchCnt);
+                DECLARE_PROPERTY(uint8_t, bcchCnt, BcchCnt);
                 /**
                  * @brief Count of RCCH frame groupings per RCCH superframe.
                  */
-                __PROPERTY(uint8_t, rcchGroupingCnt, RcchGroupingCnt);
+                DECLARE_PROPERTY(uint8_t, rcchGroupingCnt, RcchGroupingCnt);
                 /**
                  * @brief Count of CCCH/UPCH paging frames per RCCH superframe.
                  */
-                __PROPERTY(uint8_t, ccchPagingCnt, CcchPagingCnt);
+                DECLARE_PROPERTY(uint8_t, ccchPagingCnt, CcchPagingCnt);
                 /**
                  * @brief Count of CCCH/UPCH multi-purpose frames per RCCH superframe.
                  */
-                __PROPERTY(uint8_t, ccchMultiCnt, CcchMultiCnt);
+                DECLARE_PROPERTY(uint8_t, ccchMultiCnt, CcchMultiCnt);
                 /**
                  * @brief Count of group iterations per RCCH superframe.
                  */
-                __PROPERTY(uint8_t, rcchIterateCnt, RcchIterateCount);
+                DECLARE_PROPERTY(uint8_t, rcchIterateCnt, RcchIterateCount);
 
-                __COPY(MESSAGE_TYPE_SITE_INFO);
+                DECLARE_COPY(MESSAGE_TYPE_SITE_INFO);
             };
         } // namespace rcch
     } // namespace lc

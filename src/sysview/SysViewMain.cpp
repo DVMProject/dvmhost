@@ -318,8 +318,8 @@ void* threadNetworkPump(void* arg)
 
                     uint8_t seqNo = dmrBuffer[4U];
 
-                    uint32_t srcId = __GET_UINT16(dmrBuffer, 5U);
-                    uint32_t dstId = __GET_UINT16(dmrBuffer, 8U);
+                    uint32_t srcId = GET_UINT24(dmrBuffer, 5U);
+                    uint32_t dstId = GET_UINT24(dmrBuffer, 8U);
 
                     DMRDEF::FLCO::E flco = (dmrBuffer[15U] & 0x40U) == 0x40U ? DMRDEF::FLCO::PRIVATE : DMRDEF::FLCO::GROUP;
 
@@ -497,11 +497,11 @@ void* threadNetworkPump(void* arg)
 
                     uint8_t lco = p25Buffer[4U];
 
-                    uint32_t srcId = __GET_UINT16(p25Buffer, 5U);
-                    uint32_t dstId = __GET_UINT16(p25Buffer, 8U);
+                    uint32_t srcId = GET_UINT24(p25Buffer, 5U);
+                    uint32_t dstId = GET_UINT24(p25Buffer, 8U);
 
                     uint32_t sysId = (p25Buffer[11U] << 8) | (p25Buffer[12U] << 0);
-                    uint32_t netId = __GET_UINT16(p25Buffer, 16U);
+                    uint32_t netId = GET_UINT24(p25Buffer, 16U);
 
                     // log call status
                     if (duid != P25DEF::DUID::TSDU && duid != P25DEF::DUID::PDU) {
@@ -583,8 +583,8 @@ void* threadNetworkPump(void* arg)
                                 case P25DEF::TSBKO::IOSP_GRP_VCH:
                                 case P25DEF::TSBKO::IOSP_UU_VCH:
                                 {
-                                    LogMessage(LOG_NET, P25_TSDU_STR ", %s, emerg = %u, encrypt = %u, prio = %u, chNo = %u, srcId = %u (%s), dstId = %u (%s)",
-                                        tsbk->toString(true).c_str(), tsbk->getEmergency(), tsbk->getEncrypted(), tsbk->getPriority(), tsbk->getGrpVchNo(), 
+                                    LogMessage(LOG_NET, P25_TSDU_STR ", %s, emerg = %u, encrypt = %u, prio = %u, chNo = %u-%u, srcId = %u (%s), dstId = %u (%s)",
+                                        tsbk->toString(true).c_str(), tsbk->getEmergency(), tsbk->getEncrypted(), tsbk->getPriority(), tsbk->getGrpVchId(), tsbk->getGrpVchNo(), 
                                         srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str());
 
                                     // generate a net event for this
@@ -595,6 +595,8 @@ void* threadNetworkPump(void* arg)
                                         netEvent["encry"].set<bool>(encry);
                                         uint8_t prio = tsbk->getPriority();
                                         netEvent["prio"].set<uint8_t>(prio);
+                                        uint32_t chId = tsbk->getGrpVchId();
+                                        netEvent["chId"].set<uint32_t>(chId);
                                         uint32_t chNo = tsbk->getGrpVchNo();
                                         netEvent["chNo"].set<uint32_t>(chNo);
 
@@ -865,7 +867,7 @@ void* threadNetworkPump(void* arg)
                                 case P25DEF::TSBKO::OSP_ADJ_STS_BCAST:
                                 {
                                     lc::tsbk::OSP_ADJ_STS_BCAST* osp = static_cast<lc::tsbk::OSP_ADJ_STS_BCAST*>(tsbk.get());
-                                    LogMessage(LOG_NET, P25_TSDU_STR ", %s, sysId = $%03X, rfss = $%02X, site = $%02X, chId = %u, chNo = %u, svcClass = $%02X", tsbk->toString().c_str(),
+                                    LogMessage(LOG_NET, P25_TSDU_STR ", %s, sysId = $%03X, rfss = $%02X, site = $%02X, chNo = %u-%u, svcClass = $%02X", tsbk->toString().c_str(),
                                         osp->getAdjSiteSysId(), osp->getAdjSiteRFSSId(), osp->getAdjSiteId(), osp->getAdjSiteChnId(), osp->getAdjSiteChnNo(), osp->getAdjSiteSvcClass());
 
                                     // generate a net event for this
@@ -920,8 +922,8 @@ void* threadNetworkPump(void* arg)
 
                     uint8_t messageType = nxdnBuffer[4U];
 
-                    uint32_t srcId = __GET_UINT16(nxdnBuffer, 5U);
-                    uint32_t dstId = __GET_UINT16(nxdnBuffer, 8U);
+                    uint32_t srcId = GET_UINT24(nxdnBuffer, 5U);
+                    uint32_t dstId = GET_UINT24(nxdnBuffer, 8U);
 
                     lc::RTCH lc;
 

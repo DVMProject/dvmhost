@@ -66,9 +66,9 @@ namespace p25
                 /**
                  * @brief Status value.
                  */
-                __PROPERTY(uint8_t, messageValue, Message);
+                DECLARE_PROPERTY(uint8_t, messageValue, Message);
 
-                __COPY(IOSP_MSG_UPDT);
+                DECLARE_COPY(IOSP_MSG_UPDT);
             };
         } // namespace tsbk
     } // namespace lc

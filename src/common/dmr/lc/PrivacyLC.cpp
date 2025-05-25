@@ -7,7 +7,7 @@
  * @package DVM / Common Library
  * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
  *
- *  Copyright (C) 2021,2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2021,2024,2025 Bryan Biedenkapp, N2PLL
  *
  */
 #include "Defines.h"
@@ -159,4 +159,26 @@ void PrivacyLC::getData(bool* bits) const
     Utils::byteToBitsBE(bytes[7U], bits + 56U);
     Utils::byteToBitsBE(bytes[8U], bits + 64U);
     Utils::byteToBitsBE(bytes[9U], bits + 72U);
+}
+
+/*
+** Encryption data 
+*/
+
+/* Sets the encryption message indicator. */
+
+void PrivacyLC::setMI(const uint8_t* mi)
+{
+    assert(mi != nullptr);
+
+    ::memcpy(m_mi, mi, MI_LENGTH_BYTES);
+}
+
+/* Gets the encryption message indicator. */
+
+void PrivacyLC::getMI(uint8_t* mi) const
+{
+    assert(mi != nullptr);
+
+    ::memcpy(mi, m_mi, MI_LENGTH_BYTES);
 }

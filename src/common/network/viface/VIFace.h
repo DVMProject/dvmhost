@@ -217,7 +217,7 @@ namespace network
             /** 
              * @brief Virtual Interface associated name.
              */
-            __PROPERTY(std::string, name, Name);
+            DECLARE_PROPERTY(std::string, name, Name);
 
         private:            
             struct viface_queues m_queues;

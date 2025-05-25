@@ -82,29 +82,29 @@ namespace nxdn
             /**
              * @brief Radio Access Number
              */
-            __PROPERTY(uint8_t, ran, RAN);
+            DECLARE_PROPERTY(uint8_t, ran, RAN);
             /**
              * @brief Channel Structure
              */
-            __PROPERTY(defines::ChStructure::E, structure, Structure);
+            DECLARE_PROPERTY(defines::ChStructure::E, structure, Structure);
             /**
              * @brief Flag indicating whether the inbound CAC is long or short.
              */
-            __PROPERTY(bool, longInbound, LongInbound);
+            DECLARE_PROPERTY(bool, longInbound, LongInbound);
 
             // Collision Control Field
             /**
              * @brief Idle/Busy.
              */
-            __PROPERTY(bool, idleBusy, IdleBusy);
+            DECLARE_PROPERTY(bool, idleBusy, IdleBusy);
             /**
              * @brief Tx Continuously.
              */
-            __PROPERTY(bool, txContinuous, TxContinuous);
+            DECLARE_PROPERTY(bool, txContinuous, TxContinuous);
             /**
              * @brief Receive/No Receive.
              */
-            __PROPERTY(bool, receive, Receive);
+            DECLARE_PROPERTY(bool, receive, Receive);
 
         private:
             uint8_t* m_data;

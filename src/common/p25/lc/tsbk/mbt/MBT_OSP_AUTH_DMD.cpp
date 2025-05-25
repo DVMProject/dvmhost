@@ -76,7 +76,7 @@ void MBT_OSP_AUTH_DMD::encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUserD
         ((m_siteData.sysId() >> 8) & 0xFFU);                                        // System ID (b11-b8)
     pduUserData[1U] = (m_siteData.sysId() & 0xFFU);                                 // System ID (b7-b0)
 
-    __SET_UINT16(m_dstId, pduUserData, 2U);                                         // Target Radio Address
+    SET_UINT24(m_dstId, pduUserData, 2U);                                           // Target Radio Address
 
     pduUserData[5U] = m_authRS[0U];                                                 // Random Salt b9
     pduUserData[6U] = m_authRS[1U];                                                 // Random Salt b8

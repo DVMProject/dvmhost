@@ -91,7 +91,7 @@ namespace p25
                 /**
                  * @brief V.24 Data Source.
                  */
-                __PROPERTY(SourceFlag::E, source, Source);
+                DECLARE_PROPERTY(SourceFlag::E, source, Source);
             };
         } // namespace frames
     } // namespace dfsi

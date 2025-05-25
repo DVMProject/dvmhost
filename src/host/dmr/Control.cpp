@@ -688,8 +688,8 @@ void Control::processNetwork()
     // process network message header
     uint8_t seqNo = buffer[4U];
 
-    uint32_t srcId = __GET_UINT16(buffer, 5U);
-    uint32_t dstId = __GET_UINT16(buffer, 8U);
+    uint32_t srcId = GET_UINT24(buffer, 5U);
+    uint32_t dstId = GET_UINT24(buffer, 8U);
 
     uint8_t controlByte = buffer[14U];
 

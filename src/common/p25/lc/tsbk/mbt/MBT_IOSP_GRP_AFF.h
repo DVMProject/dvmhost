@@ -65,7 +65,7 @@ namespace p25
                 /**
                  * @brief Announcement group.
                  */
-                __PROPERTY(uint32_t, announceGroup, AnnounceGroup);
+                DECLARE_PROPERTY(uint32_t, announceGroup, AnnounceGroup);
             };
         } // namespace tsbk
     } // namespace lc

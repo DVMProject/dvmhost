@@ -116,19 +116,19 @@ namespace lookups
         /**
          * @brief Flag indicating if the radio is enabled.
          */
-        __READONLY_PROPERTY_PLAIN(bool, radioEnabled);
+        DECLARE_RO_PROPERTY_PLAIN(bool, radioEnabled);
         /**
          * @brief Flag indicating if the radio is default.
          */
-        __READONLY_PROPERTY_PLAIN(bool, radioDefault);
+        DECLARE_RO_PROPERTY_PLAIN(bool, radioDefault);
         /**
          * @brief Alias for the radio.
          */
-        __READONLY_PROPERTY_PLAIN(std::string, radioAlias);
+        DECLARE_RO_PROPERTY_PLAIN(std::string, radioAlias);
         /**
          * @brief IP Address for the radio.
          */
-        __READONLY_PROPERTY_PLAIN(std::string, radioIPAddress);
+        DECLARE_RO_PROPERTY_PLAIN(std::string, radioIPAddress);
     };
 
     // ---------------------------------------------------------------------------

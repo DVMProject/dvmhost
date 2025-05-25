@@ -68,7 +68,7 @@ namespace p25
             void encode(uint8_t* data) override;
 
         public:
-            __COPY(KMMNoService);
+            DECLARE_COPY(KMMNoService);
         };
     } // namespace kmm
 } // namespace p25

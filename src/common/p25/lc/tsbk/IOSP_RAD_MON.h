@@ -67,9 +67,9 @@ namespace p25
                 /**
                  * @brief Radio Unit Monitor.
                  */
-                __PROPERTY(uint8_t, txMult, TxMult);
+                DECLARE_PROPERTY(uint8_t, txMult, TxMult);
 
-                __COPY(IOSP_RAD_MON);
+                DECLARE_COPY(IOSP_RAD_MON);
             };
         } // namespace tsbk
     } // namespace lc

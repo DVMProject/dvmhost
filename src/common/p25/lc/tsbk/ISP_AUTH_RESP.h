@@ -76,13 +76,13 @@ namespace p25
                 /**
                  * @brief Flag indicating authentication is standalone.
                  */
-                __PROPERTY(bool, authStandalone, AuthStandalone);
+                DECLARE_PROPERTY(bool, authStandalone, AuthStandalone);
 
             private:
                 // Authentication data
                 uint8_t* m_authRes;
 
-                __COPY(ISP_AUTH_RESP);
+                DECLARE_COPY(ISP_AUTH_RESP);
             };
         } // namespace tsbk
     } // namespace lc

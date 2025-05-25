@@ -76,7 +76,7 @@ namespace p25
                 // Authentication data
                 uint8_t* m_authRes;
 
-                __COPY(OSP_AUTH_FNE_RESP);
+                DECLARE_COPY(OSP_AUTH_FNE_RESP);
             };
         } // namespace tsbk
     } // namespace lc

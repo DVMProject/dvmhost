@@ -75,19 +75,19 @@ namespace nxdn
             /**
              * @brief RF Channel Type
              */
-            __PROPERTY(defines::RFChannelType::E, rfct, RFCT);
+            DECLARE_PROPERTY(defines::RFChannelType::E, rfct, RFCT);
             /**
              * @brief Functional Channel Type
              */
-            __PROPERTY(defines::FuncChannelType::E, fct, FCT);
+            DECLARE_PROPERTY(defines::FuncChannelType::E, fct, FCT);
             /**
              * @brief Channel Options
              */
-            __PROPERTY(defines::ChOption::E, option, Option);
+            DECLARE_PROPERTY(defines::ChOption::E, option, Option);
             /**
              * @brief Flag indicating outbound traffic direction
              */
-            __PROPERTY(bool, outbound, Outbound);
+            DECLARE_PROPERTY(bool, outbound, Outbound);
 
         private:
             uint8_t m_lich;

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPL-2.0-only
 /*
  * Digital Voice Modem - Common Library
  * MIT Open Source. Use is subject to license terms.
@@ -126,16 +126,16 @@ namespace p25
             /**
              * @brief Traffic Encryption Key Algorithm ID.
              */
-            __PROPERTY(uint8_t, tekAlgoId, TEKAlgoId);
+            DECLARE_PROPERTY(uint8_t, tekAlgoId, TEKAlgoId);
             /**
              * @brief Traffic Encryption Key ID.
              */
-            __PROPERTY(uint16_t, tekKeyId, TEKKeyId);
+            DECLARE_PROPERTY(uint16_t, tekKeyId, TEKKeyId);
 
             /**
              * @brief Traffic Encryption Key Length.
              */
-            __READONLY_PROPERTY(uint8_t, tekLength, TEKLength);
+            DECLARE_RO_PROPERTY(uint8_t, tekLength, TEKLength);
 
         private:
             uint8_t* m_keystream;

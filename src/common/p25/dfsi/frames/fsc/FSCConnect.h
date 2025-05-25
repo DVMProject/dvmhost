@@ -63,19 +63,19 @@ namespace p25
                     /**
                      * @brief Voice Conveyance RTP Port.
                      */
-                    __PROPERTY(uint16_t, vcBasePort, VCBasePort);
+                    DECLARE_PROPERTY(uint16_t, vcBasePort, VCBasePort);
                     /**
                      * @brief SSRC Identifier for all RTP transmissions.
                      */
-                    __PROPERTY(uint32_t, vcSSRC, VCSSRC);
+                    DECLARE_PROPERTY(uint32_t, vcSSRC, VCSSRC);
                     /**
                      * @brief Fixed Station Heartbeat Period.
                      */
-                    __PROPERTY(uint8_t, fsHeartbeatPeriod, FSHeartbeatPeriod);
+                    DECLARE_PROPERTY(uint8_t, fsHeartbeatPeriod, FSHeartbeatPeriod);
                     /**
                      * @brief Host Heartbeat Period.
                      */
-                    __PROPERTY(uint8_t, hostHeartbeatPeriod, HostHeartbeatPeriod);
+                    DECLARE_PROPERTY(uint8_t, hostHeartbeatPeriod, HostHeartbeatPeriod);
                 };
             } // namespace fsc
         } // namespace frames

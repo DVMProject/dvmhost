@@ -44,7 +44,7 @@ bool KMMInventoryResponseHeader::decode(const uint8_t* data)
     KMMFrame::decodeHeader(data);
 
     m_inventoryType = data[10U];                                // Inventory Type
-    m_numberOfItems = __GET_UINT16B(data, 11U);                 // Number of Items
+    m_numberOfItems = GET_UINT16(data, 11U);                    // Number of Items
 
     return true;
 }
@@ -59,7 +59,7 @@ void KMMInventoryResponseHeader::encode(uint8_t* data)
     KMMFrame::encodeHeader(data);
 
     data[10U] = m_inventoryType;                                // Inventory Type
-    __SET_UINT16B(m_numberOfItems, data, 11U);                  // Number of Items
+    SET_UINT16(m_numberOfItems, data, 11U);                     // Number of Items
 }
 
 // ---------------------------------------------------------------------------

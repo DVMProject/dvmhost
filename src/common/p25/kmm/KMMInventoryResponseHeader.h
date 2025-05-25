@@ -69,15 +69,15 @@ namespace p25
 
         public:
             /**
-             * @brief 
+             * @brief Inventory type.
              */
-            __PROTECTED_PROPERTY(uint8_t, inventoryType, InventoryType);
+            DECLARE_PROTECTED_PROPERTY(uint8_t, inventoryType, InventoryType);
             /**
-             * @brief 
+             * @brief Number of items in the inventory response.
              */
-            __PROTECTED_PROPERTY(uint16_t, numberOfItems, NumberOfItems);
+            DECLARE_PROTECTED_PROPERTY(uint16_t, numberOfItems, NumberOfItems);
 
-            __PROTECTED_COPY(KMMInventoryResponseHeader);
+            DECLARE_PROTECTED_COPY(KMMInventoryResponseHeader);
         };
     } // namespace kmm
 } // namespace p25

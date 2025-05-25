@@ -239,7 +239,7 @@ ssize_t Socket::read(uint8_t* buffer, uint32_t length, sockaddr_storage& address
         }
 
         // does the network packet contain the appropriate magic leader?
-        uint16_t magic = __GET_UINT16B(buffer, 0U);
+        uint16_t magic = GET_UINT16(buffer, 0U);
         if (magic == AES_WRAPPED_PCKT_MAGIC) {
             uint32_t cryptedLen = (len - 2U) * sizeof(uint8_t);
             uint8_t* cryptoBuffer = buffer + 2U;
@@ -347,7 +347,7 @@ bool Socket::write(const uint8_t* buffer, uint32_t length, const sockaddr_storag
         delete[] cryptoBuffer;
         if (crypted != nullptr) {
             ::memcpy(out.get() + 2U, crypted, cryptedLen);
-            __SET_UINT16B(AES_WRAPPED_PCKT_MAGIC, out.get(), 0U);
+            SET_UINT16(AES_WRAPPED_PCKT_MAGIC, out.get(), 0U);
             delete[] crypted;
             length = cryptedLen + 2U;
         } else {
@@ -494,10 +494,9 @@ bool Socket::write(BufferVector& buffers, ssize_t* lenWritten) noexcept
                 // Utils::dump(1U, "Socket::write() crypted", crypted, cryptedLen);
 
                 // finalize
-                UInt8Array __outBuf = std::make_unique<uint8_t[]>(cryptedLen + 2U);
-                uint8_t* out = __outBuf.get();
+                DECLARE_UINT8_ARRAY(out, cryptedLen + 2U);
                 ::memcpy(out + 2U, crypted, cryptedLen);
-                __SET_UINT16B(AES_WRAPPED_PCKT_MAGIC, out, 0U);
+                SET_UINT16(AES_WRAPPED_PCKT_MAGIC, out, 0U);
 
                 // cleanup buffers and replace with new
                 delete[] crypted;

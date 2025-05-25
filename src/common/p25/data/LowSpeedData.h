@@ -63,11 +63,11 @@ namespace p25
             /**
              * @brief Low speed data 1 value.
              */
-            __PROPERTY(uint8_t, lsd1, LSD1);
+            DECLARE_PROPERTY(uint8_t, lsd1, LSD1);
             /**
              * @brief Low speed data 2 value.
              */
-            __PROPERTY(uint8_t, lsd2, LSD2);
+            DECLARE_PROPERTY(uint8_t, lsd2, LSD2);
 
         private:
             /**

@@ -134,7 +134,7 @@ public:
     /**
      * @brief Flag indicating if the thread was started.
      */
-    __PROTECTED_READONLY_PROPERTY_PLAIN(bool, started);
+    DECLARE_PROTECTED_RO_PROPERTY_PLAIN(bool, started);
 };
 
 #endif // __THREAD_H__

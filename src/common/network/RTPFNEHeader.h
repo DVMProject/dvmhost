@@ -27,8 +27,6 @@
 //  Constants
 // ---------------------------------------------------------------------------
 
-#define PEER_LINK_BLOCK_SIZE 534
-
 #define RTP_FNE_HEADER_LENGTH_BYTES 16
 #define RTP_FNE_HEADER_LENGTH_EXT_LEN 4
 
@@ -48,7 +46,7 @@ namespace network
         enum ENUM : uint8_t {
             ILLEGAL = 0xFFU,                        //! Illegal Function
 
-            PROTOCOL = 0x00U,                       //! Network Protocol Function
+            PROTOCOL = 0x00U,                       //! Digital Protocol Function
 
             MASTER = 0x01U,                         //! Network Master Function
 
@@ -56,8 +54,8 @@ namespace network
             RPTK = 0x61U,                           //! Repeater Authorisation
             RPTC = 0x62U,                           //! Repeater Configuration
 
-            RPT_CLOSING = 0x70U,                    //! Repeater Closing
-            MST_CLOSING = 0x71U,                    //! Master Closing
+            RPT_DISC = 0x70U,                       //! Repeater Disconnect
+            MST_DISC = 0x71U,                       //! Master Disconnect
 
             PING = 0x74U,                           //! Ping
             PONG = 0x75U,                           //! Pong
@@ -184,27 +182,27 @@ namespace network
             /**
              * @brief Traffic payload packet CRC-16.
              */
-            __PROPERTY(uint16_t, crc16, CRC);
+            DECLARE_PROPERTY(uint16_t, crc16, CRC);
             /**
              * @brief Function.
              */
-            __PROPERTY(NET_FUNC::ENUM, func, Function);
+            DECLARE_PROPERTY(NET_FUNC::ENUM, func, Function);
             /**
              * @brief Sub-function.
              */
-            __PROPERTY(NET_SUBFUNC::ENUM, subFunc, SubFunction);
+            DECLARE_PROPERTY(NET_SUBFUNC::ENUM, subFunc, SubFunction);
             /**
              * @brief Traffic Stream ID.
              */
-            __PROPERTY(uint32_t, streamId, StreamId);
+            DECLARE_PROPERTY(uint32_t, streamId, StreamId);
             /**
              * @brief Traffic Peer ID.
              */
-            __PROPERTY(uint32_t, peerId, PeerId);
+            DECLARE_PROPERTY(uint32_t, peerId, PeerId);
             /**
              * @brief Traffic Message Length.
              */
-            __PROPERTY(uint32_t, messageLength, MessageLength);
+            DECLARE_PROPERTY(uint32_t, messageLength, MessageLength);
         };
     } // namespace frame
 } // namespace network

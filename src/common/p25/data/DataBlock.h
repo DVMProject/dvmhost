@@ -90,12 +90,12 @@ namespace p25
             /**
              * @brief Sets the data block serial number.
              */
-            __PROPERTY(uint8_t, serialNo, SerialNo);
+            DECLARE_PROPERTY(uint8_t, serialNo, SerialNo);
 
             /**
              * @brief Flag indicating this is the last block in a sequence of block.
              */
-            __PROPERTY(bool, lastBlock, LastBlock);
+            DECLARE_PROPERTY(bool, lastBlock, LastBlock);
 
         private:
             edac::Trellis m_trellis;

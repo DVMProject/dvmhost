@@ -64,8 +64,8 @@ bool DMRPacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
 
     uint8_t seqNo = data[4U];
 
-    uint32_t srcId = __GET_UINT16(data, 5U);
-    uint32_t dstId = __GET_UINT16(data, 8U);
+    uint32_t srcId = GET_UINT24(data, 5U);
+    uint32_t dstId = GET_UINT24(data, 8U);
 
     FLCO::E flco = (data[15U] & 0x40U) == 0x40U ? FLCO::PRIVATE : FLCO::GROUP;
 

@@ -56,12 +56,12 @@ namespace dmr
         /**
          * @brief DMR access color code.
          */
-        __PROPERTY(uint8_t, colorCode, ColorCode);
+        DECLARE_PROPERTY(uint8_t, colorCode, ColorCode);
 
         /**
          * @brief Slot data type.
          */
-        __PROPERTY(defines::DataType::E, dataType, DataType);
+        DECLARE_PROPERTY(defines::DataType::E, dataType, DataType);
     };
 } // namespace dmr
 

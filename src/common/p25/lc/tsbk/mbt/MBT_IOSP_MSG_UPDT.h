@@ -66,9 +66,9 @@ namespace p25
                 /**
                  * @brief Message value.
                  */
-                __PROPERTY(uint8_t, messageValue, Message);
+                DECLARE_PROPERTY(uint8_t, messageValue, Message);
 
-                __COPY(MBT_IOSP_MSG_UPDT);
+                DECLARE_COPY(MBT_IOSP_MSG_UPDT);
             };
         } // namespace tsbk
     } // namespace lc

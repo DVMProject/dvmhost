@@ -65,13 +65,13 @@ namespace p25
                 /**
                  * @brief Flag indicating authentication was successful.
                  */
-                __PROPERTY(bool, authSuccess, AuthSuccess);
+                DECLARE_PROPERTY(bool, authSuccess, AuthSuccess);
                 /**
                  * @brief Flag indicating authentication is standalone.
                  */
-                __PROPERTY(bool, authStandalone, AuthStandalone);
+                DECLARE_PROPERTY(bool, authStandalone, AuthStandalone);
 
-                __COPY(ISP_AUTH_FNE_RST);
+                DECLARE_COPY(ISP_AUTH_FNE_RST);
             };
         } // namespace tsbk
     } // namespace lc

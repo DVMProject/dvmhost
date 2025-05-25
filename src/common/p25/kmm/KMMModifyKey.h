@@ -91,22 +91,22 @@ namespace p25
             /**
              * @brief 
              */
-            __PROPERTY(uint8_t, decryptInfoFmt, DecryptInfoFmt);
+            DECLARE_PROPERTY(uint8_t, decryptInfoFmt, DecryptInfoFmt);
             /**
              * @brief Encryption algorithm ID.
              */
-            __PROPERTY(uint8_t, algId, AlgId);
+            DECLARE_PROPERTY(uint8_t, algId, AlgId);
             /**
              * @brief Encryption key ID.
              */
-            __PROPERTY(uint32_t, kId, KId);
+            DECLARE_PROPERTY(uint32_t, kId, KId);
 
             /**
              * @brief 
              */
-            __PROPERTY(KeysetItem, keysetItem, KeysetItem);
+            DECLARE_PROPERTY(KeysetItem, keysetItem, KeysetItem);
 
-            __COPY(KMMModifyKey);
+            DECLARE_COPY(KMMModifyKey);
 
         private:
             // Encryption data

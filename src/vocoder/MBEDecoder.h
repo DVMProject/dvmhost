@@ -130,11 +130,11 @@ namespace vocoder
         /**
          * @brief Gain adjustment.
          */
-        __PROPERTY(float, gainAdjust, GainAdjust);
+        DECLARE_PROPERTY(float, gainAdjust, GainAdjust);
         /**
          * @brief Flag indicating automatic gain adjustment is enabled.
          */
-        __PROPERTY(bool, autoGain, AutoGain);
+        DECLARE_PROPERTY(bool, autoGain, AutoGain);
     };
 } // namespace vocoder
 

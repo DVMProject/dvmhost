@@ -103,55 +103,55 @@ namespace p25
             /**
              * @brief Flag indicating the link control data is protected.
              */
-            __PROTECTED_PROPERTY(bool, protect, Protect);
+            DECLARE_PROTECTED_PROPERTY(bool, protect, Protect);
             /**
              * @brief Link control opcode.
              */
-            __PROTECTED_PROPERTY(uint8_t, lco, LCO);
+            DECLARE_PROTECTED_PROPERTY(uint8_t, lco, LCO);
             /**
              * @brief Manufacturer ID.
              */
-            __PROTECTED_PROPERTY(uint8_t, mfId, MFId);
+            DECLARE_PROTECTED_PROPERTY(uint8_t, mfId, MFId);
 
             /**
              * @brief Source ID.
              */
-            __PROTECTED_PROPERTY(uint32_t, srcId, SrcId);
+            DECLARE_PROTECTED_PROPERTY(uint32_t, srcId, SrcId);
             /**
              * @brief Destination ID.
              */
-            __PROTECTED_PROPERTY(uint32_t, dstId, DstId);
+            DECLARE_PROTECTED_PROPERTY(uint32_t, dstId, DstId);
 
             /**
              * @brief Voice channel number.
              */
-            __PROTECTED_PROPERTY(uint32_t, grpVchNo, GrpVchNo);
+            DECLARE_PROTECTED_PROPERTY(uint32_t, grpVchNo, GrpVchNo);
             /** @} */
 
             /** @name Service Options */
             /**
              * @brief Flag indicating the emergency bits are set.
              */
-            __PROTECTED_PROPERTY(bool, emergency, Emergency);
+            DECLARE_PROTECTED_PROPERTY(bool, emergency, Emergency);
             /**
              * @brief Flag indicating that encryption is enabled.
              */
-            __PROTECTED_PROPERTY(bool, encrypted, Encrypted);
+            DECLARE_PROTECTED_PROPERTY(bool, encrypted, Encrypted);
             /**
              * @brief Priority level for the traffic.
              */
-            __PROTECTED_PROPERTY(uint8_t, priority, Priority);
+            DECLARE_PROTECTED_PROPERTY(uint8_t, priority, Priority);
             /**
              * @brief Flag indicating a group/talkgroup operation.
              */
-            __PROTECTED_PROPERTY(bool, group, Group);
+            DECLARE_PROTECTED_PROPERTY(bool, group, Group);
             /** @} */
 
             /** @name Local Site data */
             /**
              * @brief Local Site Identity Entry.
              */
-            __PROTECTED_PROPERTY_PLAIN(::lookups::IdenTable, siteIdenEntry);
+            DECLARE_PROTECTED_PROPERTY_PLAIN(::lookups::IdenTable, siteIdenEntry);
             /** @} */
 
         protected:
@@ -193,7 +193,7 @@ namespace p25
              */
             void encode(uint8_t* data, const uint8_t* payload);
 
-            __PROTECTED_COPY(TDULC);
+            DECLARE_PROTECTED_COPY(TDULC);
         };
     } // namespace lc
 } // namespace p25

@@ -173,39 +173,39 @@ namespace nxdn
         /**
          * @brief NXDN location ID.
          */
-        __READONLY_PROPERTY_PLAIN(uint32_t, locId);
+        DECLARE_RO_PROPERTY_PLAIN(uint32_t, locId);
         /**
          * @brief Channel ID.
          */
-        __READONLY_PROPERTY_PLAIN(uint8_t, channelId);
+        DECLARE_RO_PROPERTY_PLAIN(uint8_t, channelId);
         /**
          * @brief Channel number.
          */
-        __READONLY_PROPERTY_PLAIN(uint32_t, channelNo);
+        DECLARE_RO_PROPERTY_PLAIN(uint32_t, channelNo);
         /**
          * @brief Site Information 1.
          */
-        __READONLY_PROPERTY_PLAIN(uint8_t, siteInfo1);
+        DECLARE_RO_PROPERTY_PLAIN(uint8_t, siteInfo1);
         /**
          * @brief Site Information 2.
          */
-        __READONLY_PROPERTY_PLAIN(uint8_t, siteInfo2);
+        DECLARE_RO_PROPERTY_PLAIN(uint8_t, siteInfo2);
         /**
          * @brief Flag indicating whether this site data is for an adjacent site.
          */
-        __READONLY_PROPERTY_PLAIN(bool, isAdjSite);
+        DECLARE_RO_PROPERTY_PLAIN(bool, isAdjSite);
         /**
          * @brief Callsign.
          */
-        __READONLY_PROPERTY_PLAIN(std::string, callsign);
+        DECLARE_RO_PROPERTY_PLAIN(std::string, callsign);
         /**
          * @brief NXDN require registration.
          */
-        __READONLY_PROPERTY_PLAIN(bool, requireReg);
+        DECLARE_RO_PROPERTY_PLAIN(bool, requireReg);
         /**
          * @brief Flag indicating whether this site is a linked active network member.
          */
-        __READONLY_PROPERTY_PLAIN(bool, netActive);
+        DECLARE_RO_PROPERTY_PLAIN(bool, netActive);
         /** @} */
     };
 } // namespace nxdn

@@ -128,16 +128,18 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 return false;
             }
 
-            if (m_verbose && m_debug) {
-                uint8_t mi[MI_LENGTH_BYTES];
-                ::memset(mi, 0x00U, MI_LENGTH_BYTES);
-                lc.getMI(mi);
-
-                Utils::dump(1U, "P25 HDU MI read from RF", mi, MI_LENGTH_BYTES);
-            }
-
             if (m_verbose) {
                 LogMessage(LOG_RF, P25_HDU_STR ", HDU_BSDWNACT, dstId = %u, algo = $%02X, kid = $%04X", lc.getDstId(), lc.getAlgId(), lc.getKId());
+
+                if (lc.getAlgId() != ALGO_UNENCRYPT) {
+                    uint8_t mi[MI_LENGTH_BYTES];
+                    ::memset(mi, 0x00U, MI_LENGTH_BYTES);
+
+                    lc.getMI(mi);
+
+                    LogMessage(LOG_RF, P25_HDU_STR ", Enc Sync, MI = %02X %02X %02X %02X %02X %02X %02X %02X %02X", 
+                        mi[0U], mi[1U], mi[2U], mi[3U], mi[4U], mi[5U], mi[6U], mi[7U], mi[8U]);
+                }
             }
 
             // don't process RF frames if this modem isn't authoritative
@@ -919,6 +921,16 @@ bool Voice::process(uint8_t* data, uint32_t len)
             if (m_verbose) {
                 LogMessage(LOG_RF, P25_LDU2_STR ", audio, algo = $%02X, kid = $%04X, errs = %u/1233 (%.1f%%)",
                     m_rfLC.getAlgId(), m_rfLC.getKId(), errors, float(errors) / 12.33F);
+
+                if (m_rfLC.getAlgId() != ALGO_UNENCRYPT) {
+                    uint8_t mi[MI_LENGTH_BYTES];
+                    ::memset(mi, 0x00U, MI_LENGTH_BYTES);
+
+                    m_rfLC.getMI(mi);
+
+                    LogMessage(LOG_RF, P25_LDU2_STR ", Enc Sync, MI = %02X %02X %02X %02X %02X %02X %02X %02X %02X", 
+                        mi[0U], mi[1U], mi[2U], mi[3U], mi[4U], mi[5U], mi[6U], mi[7U], mi[8U]);
+                }
             }
 
             return true;
@@ -1737,10 +1749,6 @@ void Voice::writeNet_LDU1()
         // restore MI from member variable
         ::memcpy(mi, m_lastMI, MI_LENGTH_BYTES);
 
-        if (m_verbose && m_debug) {
-            Utils::dump(1U, "P25 HDU MI from network to RF", mi, MI_LENGTH_BYTES);
-        }
-
         m_netLC.setMI(mi);
         m_rfLC.setMI(mi);
         m_netLC.setAlgId(control.getAlgId());
@@ -1890,6 +1898,11 @@ void Voice::writeNet_LDU1()
 
                 if (m_verbose) {
                     LogMessage(LOG_NET, P25_HDU_STR ", dstId = %u, algo = $%02X, kid = $%04X", m_netLC.getDstId(), m_netLC.getAlgId(), m_netLC.getKId());
+
+                    if (control.getAlgId() != ALGO_UNENCRYPT) {
+                        LogMessage(LOG_NET, P25_HDU_STR ", Enc Sync, MI = %02X %02X %02X %02X %02X %02X %02X %02X %02X", 
+                            mi[0U], mi[1U], mi[2U], mi[3U], mi[4U], mi[5U], mi[6U], mi[7U], mi[8U]);
+                    }
                 }
             }
             else {
@@ -2071,10 +2084,6 @@ void Voice::writeNet_LDU2()
     uint8_t mi[MI_LENGTH_BYTES];
     control.getMI(mi);
 
-    if (m_verbose && m_debug) {
-        Utils::dump(1U, "Network LDU2 MI", mi, MI_LENGTH_BYTES);
-    }
-
     m_netLC.setMI(mi);
     m_netLC.setAlgId(control.getAlgId());
     m_netLC.setKId(control.getKId());
@@ -2117,6 +2126,11 @@ void Voice::writeNet_LDU2()
 
     if (m_verbose) {
         LogMessage(LOG_NET, P25_LDU2_STR " audio, algo = $%02X, kid = $%04X", m_netLC.getAlgId(), m_netLC.getKId());
+
+        if (control.getAlgId() != ALGO_UNENCRYPT) {
+            LogMessage(LOG_NET, P25_LDU2_STR ", Enc Sync, MI = %02X %02X %02X %02X %02X %02X %02X %02X %02X", 
+                mi[0U], mi[1U], mi[2U], mi[3U], mi[4U], mi[5U], mi[6U], mi[7U], mi[8U]);
+        }
     }
 
     resetWithNullAudio(m_netLDU2, m_netLC.getAlgId() != P25DEF::ALGO_UNENCRYPT);

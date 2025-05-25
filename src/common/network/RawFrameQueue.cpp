@@ -106,6 +106,12 @@ bool RawFrameQueue::write(const uint8_t* message, uint32_t length, sockaddr_stor
     if (m_debug)
         Utils::dump(1U, "RawFrameQueue::write() Message", buffer, length);
 
+    // bryanb: this is really a developer warning not a end-user warning, there's nothing the end-users can do about
+    //  this message
+    if (length > (DATA_PACKET_LENGTH - OVERSIZED_PACKET_WARN)) {
+        LogDebug(LOG_NET, "RawFrameQueue::write(), WARN: packet length is possibly oversized, possible data truncation - BUGBUG");
+    }
+
     bool ret = true;
     if (!m_socket->write(buffer, length, addr, addrLen, lenWritten)) {
         // LogError(LOG_NET, "Failed writing data to the network");
@@ -134,6 +140,12 @@ void RawFrameQueue::enqueueMessage(const uint8_t* message, uint32_t length, sock
         LogWarning(LOG_NET, "RawFrameQueue::enqueueMessage() -- queue is flushing, waiting to enqueue message");
         while (m_queueFlushing)
             Thread::sleep(2U);
+    }
+
+    // bryanb: this is really a developer warning not a end-user warning, there's nothing the end-users can do about
+    //  this message
+    if (length > (DATA_PACKET_LENGTH - OVERSIZED_PACKET_WARN)) {
+        LogDebug(LOG_NET, "RawFrameQueue::enqueueMessage(), WARN: packet length is possibly oversized, possible data truncation - BUGBUG");
     }
 
     uint8_t* buffer = new uint8_t[length];

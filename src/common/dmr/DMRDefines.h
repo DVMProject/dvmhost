@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2015,2016 Jonathan Naylor, G4KLX
- *  Copyright (C) 2019-2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2019-2025 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -207,6 +207,15 @@ namespace dmr
         const uint8_t   FID_DMRA = 0x10U;
         /** @brief DVM; Omaha Communication Systems, LLC ($9C) */
         const uint8_t   FID_DVM_OCS = 0x9CU;
+        /** @} */
+
+        /** @name Encryption Algorithms */
+        /** @brief ARC4 */
+        const uint8_t   ALGO_ARC4 = 0x01U;
+        /** @brief DES-OFB */
+        const uint8_t   ALGO_DES = 0x02U;
+        /** @brief AES-256 */
+        const uint8_t   ALGO_AES_256 = 0x05U;
         /** @} */
 
         /** @name LC Service Options */

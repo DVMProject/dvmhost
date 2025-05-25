@@ -66,7 +66,7 @@ namespace p25
                 /**
                  * @brief Flag forcing the use of the group voice channel ID regardless of value.
                  */
-                __PROPERTY(bool, forceChannelId, ForceChannelId);
+                DECLARE_PROPERTY(bool, forceChannelId, ForceChannelId);
             };
         } // namespace tsbk
     } // namespace lc

@@ -61,9 +61,9 @@ namespace dmr
                 /**
                  * @brief Flag indicating whether the grant is a late entry.
                  */
-                __PROPERTY(bool, lateEntry, LateEntry);
+                DECLARE_PROPERTY(bool, lateEntry, LateEntry);
 
-                __COPY(CSBK_TV_GRANT);
+                DECLARE_COPY(CSBK_TV_GRANT);
             };
         } // namespace csbk
     } // namespace lc

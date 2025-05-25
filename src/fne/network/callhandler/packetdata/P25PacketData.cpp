@@ -78,7 +78,7 @@ bool P25PacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
 {
     hrc::hrc_t pktTime = hrc::now();
 
-    uint32_t blockLength = __GET_UINT16(data, 8U);
+    uint32_t blockLength = GET_UINT24(data, 8U);
 
     uint8_t currentBlock = data[21U];
 
@@ -447,9 +447,7 @@ void P25PacketData::clock(uint32_t ms)
             rspHeader.calculateLength(dataFrame->pktLen);
             uint32_t pduLength = rspHeader.getPDULength();
 
-            UInt8Array __pduUserData = std::make_unique<uint8_t[]>(pduLength);
-            uint8_t* pduUserData = __pduUserData.get();
-            ::memset(pduUserData, 0x00U, pduLength);
+            DECLARE_UINT8_ARRAY(pduUserData, pduLength);
             ::memcpy(pduUserData + 4U, dataFrame->buffer, dataFrame->pktLen);
 #if DEBUG_P25_PDU_DATA
             Utils::dump(1U, "P25PacketData::clock() pduUserData", pduUserData, pduLength);
@@ -539,11 +537,11 @@ void P25PacketData::dispatch(uint32_t peerId)
         ::memset(arpPacket, 0x00U, P25_PDU_ARP_PCKT_LENGTH);
         ::memcpy(arpPacket, status->pduUserData + 12U, P25_PDU_ARP_PCKT_LENGTH);
 
-        uint16_t opcode = __GET_UINT16B(arpPacket, 6U);
-        uint32_t srcHWAddr = __GET_UINT16(arpPacket, 8U);
-        uint32_t srcProtoAddr = __GET_UINT32(arpPacket, 11U);
-        //uint32_t tgtHWAddr = __GET_UINT16(arpPacket, 15U);
-        uint32_t tgtProtoAddr = __GET_UINT32(arpPacket, 18U);
+        uint16_t opcode = GET_UINT16(arpPacket, 6U);
+        uint32_t srcHWAddr = GET_UINT24(arpPacket, 8U);
+        uint32_t srcProtoAddr = GET_UINT32(arpPacket, 11U);
+        //uint32_t tgtHWAddr = GET_UINT24(arpPacket, 15U);
+        uint32_t tgtProtoAddr = GET_UINT32(arpPacket, 18U);
 
         if (opcode == P25_PDU_ARP_REQUEST) {
             LogMessage(LOG_NET, P25_PDU_STR ", ARP request, who has %s? tell %s (%u)", __IP_FROM_UINT(tgtProtoAddr).c_str(), __IP_FROM_UINT(srcProtoAddr).c_str(), srcHWAddr);
@@ -639,9 +637,7 @@ void P25PacketData::dispatch(uint32_t peerId)
         LogMessage(LOG_NET, "P25, PDU -> VTUN, IP Data, srcIp = %s (%u), dstIp = %s (%u), pktLen = %u, proto = %02X", 
             srcIp, status->header.getSrcLLId(), dstIp, status->header.getLLId(), pktLen, proto);
 
-        UInt8Array __ipFrame = std::make_unique<uint8_t[]>(pktLen);
-        uint8_t* ipFrame = __ipFrame.get();
-        ::memset(ipFrame, 0x00U, pktLen);
+        DECLARE_UINT8_ARRAY(ipFrame, pktLen);
         ::memcpy(ipFrame, status->pduUserData + dataPktOffset, pktLen);
 #if DEBUG_P25_PDU_DATA
         Utils::dump(1U, "P25PacketData::dispatch() ipFrame", ipFrame, pktLen);
@@ -849,9 +845,7 @@ bool P25PacketData::processKMM(RxStatus* status)
             dataHeader.calculateLength(KMM_NO_SERVICE_LENGTH);
             uint32_t pduLength = dataHeader.getPDULength();
 
-            UInt8Array __pduUserData = std::make_unique<uint8_t[]>(pduLength);
-            uint8_t* pduUserData = __pduUserData.get();
-            ::memset(pduUserData, 0x00U, pduLength);
+            DECLARE_UINT8_ARRAY(pduUserData, pduLength);
 
             uint8_t buffer[KMM_NO_SERVICE_LENGTH];
             KMMNoService outKmm = KMMNoService();
@@ -881,18 +875,18 @@ void P25PacketData::write_PDU_ARP(uint32_t addr)
     uint8_t arpPacket[P25_PDU_ARP_PCKT_LENGTH];
     ::memset(arpPacket, 0x00U, P25_PDU_ARP_PCKT_LENGTH);
 
-    __SET_UINT16B(P25_PDU_ARP_CAI_TYPE, arpPacket, 0U);         // Hardware Address Type
-    __SET_UINT16B(PDUSAP::PACKET_DATA, arpPacket, 2U);          // Protocol Address Type
+    SET_UINT16(P25_PDU_ARP_CAI_TYPE, arpPacket, 0U);            // Hardware Address Type
+    SET_UINT16(PDUSAP::PACKET_DATA, arpPacket, 2U);             // Protocol Address Type
     arpPacket[4U] = P25_PDU_ARP_HW_ADDR_LENGTH;                 // Hardware Address Length
     arpPacket[5U] = P25_PDU_ARP_PROTO_ADDR_LENGTH;              // Protocol Address Length
-    __SET_UINT16B(P25_PDU_ARP_REQUEST, arpPacket, 6U);          // Opcode
+    SET_UINT16(P25_PDU_ARP_REQUEST, arpPacket, 6U);             // Opcode
 
-    __SET_UINT16(WUID_FNE, arpPacket, 8U);                      // Sender Hardware Address
+    SET_UINT24(WUID_FNE, arpPacket, 8U);                        // Sender Hardware Address
 
     std::string fneIPv4 = m_network->m_host->m_tun->getIPv4();
-    __SET_UINT32(__IP_FROM_STR(fneIPv4), arpPacket, 11U);       // Sender Protocol Address
+    SET_UINT32(__IP_FROM_STR(fneIPv4), arpPacket, 11U);         // Sender Protocol Address
 
-    __SET_UINT32(addr, arpPacket, 18U);                         // Target Protocol Address
+    SET_UINT32(addr, arpPacket, 18U);                           // Target Protocol Address
 #if DEBUG_P25_PDU_DATA
     Utils::dump(1U, "P25PacketData::write_PDU_ARP() arpPacket", arpPacket, P25_PDU_ARP_PCKT_LENGTH);
 #endif
@@ -914,9 +908,7 @@ void P25PacketData::write_PDU_ARP(uint32_t addr)
     rspHeader.calculateLength(P25_PDU_ARP_PCKT_LENGTH);
     uint32_t pduLength = rspHeader.getPDULength();
 
-    UInt8Array __pduUserData = std::make_unique<uint8_t[]>(pduLength);
-    uint8_t* pduUserData = __pduUserData.get();
-    ::memset(pduUserData, 0x00U, pduLength);
+    DECLARE_UINT8_ARRAY(pduUserData, pduLength);
     ::memcpy(pduUserData + P25_PDU_HEADER_LENGTH_BYTES, arpPacket, P25_PDU_ARP_PCKT_LENGTH);
 
     dispatchUserFrameToFNE(rspHeader, true, pduUserData);
@@ -940,17 +932,17 @@ void P25PacketData::write_PDU_ARP_Reply(uint32_t targetAddr, uint32_t requestorL
     uint8_t arpPacket[P25_PDU_ARP_PCKT_LENGTH];
     ::memset(arpPacket, 0x00U, P25_PDU_ARP_PCKT_LENGTH);
 
-    __SET_UINT16B(P25_PDU_ARP_CAI_TYPE, arpPacket, 0U);         // Hardware Address Type
-    __SET_UINT16B(PDUSAP::PACKET_DATA, arpPacket, 2U);          // Protocol Address Type
+    SET_UINT16(P25_PDU_ARP_CAI_TYPE, arpPacket, 0U);            // Hardware Address Type
+    SET_UINT16(PDUSAP::PACKET_DATA, arpPacket, 2U);             // Protocol Address Type
     arpPacket[4U] = P25_PDU_ARP_HW_ADDR_LENGTH;                 // Hardware Address Length
     arpPacket[5U] = P25_PDU_ARP_PROTO_ADDR_LENGTH;              // Protocol Address Length
-    __SET_UINT16B(P25_PDU_ARP_REPLY, arpPacket, 6U);            // Opcode
+    SET_UINT16(P25_PDU_ARP_REPLY, arpPacket, 6U);               // Opcode
 
-    __SET_UINT16(tgtLlid, arpPacket, 8U);                       // Sender Hardware Address
-    __SET_UINT32(targetAddr, arpPacket, 11U);                   // Sender Protocol Address
+    SET_UINT24(tgtLlid, arpPacket, 8U);                         // Sender Hardware Address
+    SET_UINT32(targetAddr, arpPacket, 11U);                     // Sender Protocol Address
 
-    __SET_UINT16(requestorLlid, arpPacket, 15U);                // Requestor Hardware Address
-    __SET_UINT32(requestorAddr, arpPacket, 18U);                // Requestor Protocol Address
+    SET_UINT24(requestorLlid, arpPacket, 15U);                  // Requestor Hardware Address
+    SET_UINT32(requestorAddr, arpPacket, 18U);                  // Requestor Protocol Address
 #if DEBUG_P25_PDU_DATA
     Utils::dump(1U, "P25PacketData::write_PDU_ARP_Reply() arpPacket", arpPacket, P25_PDU_ARP_PCKT_LENGTH);
 #endif
@@ -972,9 +964,7 @@ void P25PacketData::write_PDU_ARP_Reply(uint32_t targetAddr, uint32_t requestorL
     rspHeader.calculateLength(P25_PDU_ARP_PCKT_LENGTH);
     uint32_t pduLength = rspHeader.getPDULength();
 
-    UInt8Array __pduUserData = std::make_unique<uint8_t[]>(pduLength);
-    uint8_t* pduUserData = __pduUserData.get();
-    ::memset(pduUserData, 0x00U, pduLength);
+    DECLARE_UINT8_ARRAY(pduUserData, pduLength);
     ::memcpy(pduUserData + P25_PDU_HEADER_LENGTH_BYTES, arpPacket, P25_PDU_ARP_PCKT_LENGTH);
 
     dispatchUserFrameToFNE(rspHeader, true, pduUserData);

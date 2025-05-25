@@ -72,15 +72,15 @@ namespace network
             /**
              * @brief Payload packet CRC-16.
              */
-            __PROPERTY(uint16_t, crc16, CRC);
+            DECLARE_PROPERTY(uint16_t, crc16, CRC);
             /**
              * @brief Function.
              */
-            __PROPERTY(uint16_t, func, Function);
+            DECLARE_PROPERTY(uint16_t, func, Function);
             /**
              * @brief Message Length.
              */
-            __PROPERTY(uint32_t, messageLength, MessageLength);
+            DECLARE_PROPERTY(uint32_t, messageLength, MessageLength);
         };
     } // namespace frame
 } // namespace network

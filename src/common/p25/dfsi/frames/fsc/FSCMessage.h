@@ -69,15 +69,15 @@ namespace p25
                     /**
                      * @brief Message ID.
                      */
-                    __PROTECTED_PROPERTY(FSCMessageType::E, messageId, MessageId);
+                    DECLARE_PROTECTED_PROPERTY(FSCMessageType::E, messageId, MessageId);
                     /**
                      * @brief Message Version.
                      */
-                    __PROTECTED_READONLY_PROPERTY(uint8_t, version, Version);
+                    DECLARE_PROTECTED_RO_PROPERTY(uint8_t, version, Version);
                     /**
                      * @brief 
                      */
-                    __PROPERTY(uint8_t, correlationTag, CorrelationTag);
+                    DECLARE_PROPERTY(uint8_t, correlationTag, CorrelationTag);
                 };
             } // namespace fsc
         } // namespace frames

@@ -66,8 +66,8 @@ bool RTPHeader::decode(const uint8_t* data)
     m_payloadType = (data[1U] & 0x7FU);                                         // Payload Type
     m_seq = (data[2U] << 8) | (data[3U] << 0);                                  // Sequence
 
-    m_timestamp = __GET_UINT32(data, 4U);                                       // Timestamp
-    m_ssrc = __GET_UINT32(data, 8U);                                            // Synchronization Source ID
+    m_timestamp = GET_UINT32(data, 4U);                                         // Timestamp
+    m_ssrc = GET_UINT32(data, 8U);                                              // Synchronization Source ID
 
     return true;
 }
@@ -93,8 +93,8 @@ void RTPHeader::encode(uint8_t* data)
         m_timestamp = uint32_t(microSeconds / 1000000);
     }
 
-    __SET_UINT32(m_timestamp, data, 4U);                                        // Timestamp
-    __SET_UINT32(m_ssrc, data, 8U);                                             // Synchronization Source Identifier
+    SET_UINT32(m_timestamp, data, 4U);                                          // Timestamp
+    SET_UINT32(m_ssrc, data, 8U);                                               // Synchronization Source Identifier
 }
 
 /* Helper to reset the start timestamp. */

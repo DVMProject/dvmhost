@@ -324,7 +324,7 @@ HostBridge::HostBridge(const std::string& confFile) :
     m_voxSampleLevel(30.0f),
     m_dropTimeMS(180U),
     m_localDropTime(1000U, 0U, 180U),
-    m_udpCallClock(1000U, 0U, 80U),
+    m_udpCallClock(1000U, 0U, 160U),
     m_udpHangTime(1000U, 0U, 180U),
     m_udpDropTime(1000U, 0U, 180U),
     m_detectAnalogMDC1200(false),
@@ -1100,9 +1100,6 @@ bool HostBridge::createNetwork()
     if (m_udpUseULaw && m_udpMetadata)
         m_udpMetadata = false; // metadata isn't supported when encoding uLaw
 
-    if (m_udpSilenceDuringHang && m_udpRTPFrames)
-        m_udpCallClock = Timer(1000U, 0U, 160U); // packets every 160ms
-
     yaml::Node tekConf = networkConf["tek"];
     bool tekEnable = tekConf["enable"].as<bool>(false);
     std::string tekAlgo = tekConf["tekAlgo"].as<std::string>();
@@ -1326,14 +1323,13 @@ void HostBridge::processUDPAudio()
         if (m_udpNoIncludeLength) {
             pcmLength = length;
         } else {
-            pcmLength = __GET_UINT32(buffer, 0U);
+            pcmLength = GET_UINT32(buffer, 0U);
         }
 
         if (m_udpRTPFrames || m_udpUsrp)
             pcmLength = MBE_SAMPLES_LENGTH * 2U;
 
-        UInt8Array __pcm = std::make_unique<uint8_t[]>(pcmLength);
-        uint8_t* pcm = __pcm.get();
+        DECLARE_UINT8_ARRAY(pcm, pcmLength);
         
         if (!m_udpUsrp) {
             if (m_udpRTPFrames) {
@@ -1404,7 +1400,7 @@ void HostBridge::processUDPAudio()
         }
 
         if (m_udpMetadata) {
-            req->srcId = __GET_UINT32(buffer, pcmLength + 8U);
+            req->srcId = GET_UINT32(buffer, pcmLength + 8U);
         }
 
         m_udpPackets.push_back(req);
@@ -1454,8 +1450,8 @@ void HostBridge::processDMRNetwork(uint8_t* buffer, uint32_t length)
     // process network message header
     uint8_t seqNo = buffer[4U];
 
-    uint32_t srcId = __GET_UINT16(buffer, 5U);
-    uint32_t dstId = __GET_UINT16(buffer, 8U);
+    uint32_t srcId = GET_UINT24(buffer, 5U);
+    uint32_t dstId = GET_UINT24(buffer, 8U);
 
     FLCO::E flco = (buffer[15U] & 0x40U) == 0x40U ? FLCO::PRIVATE : FLCO::GROUP;
 
@@ -1699,7 +1695,7 @@ void HostBridge::decodeDMRAudioFrame(uint8_t* ambe, uint32_t srcId, uint32_t dst
                             ::memcpy(audioData, pcm, MBE_SAMPLES_LENGTH);
                         }
                         else {
-                            __SET_UINT32(MBE_SAMPLES_LENGTH, audioData, 0U);
+                            SET_UINT32(MBE_SAMPLES_LENGTH, audioData, 0U);
                             ::memcpy(audioData + 4U, pcm, MBE_SAMPLES_LENGTH);
                         }
 
@@ -1720,19 +1716,19 @@ void HostBridge::decodeDMRAudioFrame(uint8_t* ambe, uint32_t srcId, uint32_t dst
                         }
                     }
                     else {
-                        __SET_UINT32((MBE_SAMPLES_LENGTH * 2U), audioData, 0U);
+                        SET_UINT32((MBE_SAMPLES_LENGTH * 2U), audioData, 0U);
                         ::memcpy(audioData + 4U, pcm, MBE_SAMPLES_LENGTH * 2U);
                     }
                 }
                 else {
                     length = (MBE_SAMPLES_LENGTH * 2U) + 12U;
                     audioData = new uint8_t[(MBE_SAMPLES_LENGTH * 2U) + 12U]; // PCM + (4 bytes (PCM length) + 4 bytes (srcId) + 4 bytes (dstId))
-                    __SET_UINT32((MBE_SAMPLES_LENGTH * 2U), audioData, 0U);
+                    SET_UINT32((MBE_SAMPLES_LENGTH * 2U), audioData, 0U);
                     ::memcpy(audioData + 4U, pcm, MBE_SAMPLES_LENGTH * 2U);
 
                     // embed destination and source IDs
-                    __SET_UINT32(dstId, audioData, ((MBE_SAMPLES_LENGTH * 2U) + 4U));
-                    __SET_UINT32(srcId, audioData, ((MBE_SAMPLES_LENGTH * 2U) + 8U));
+                    SET_UINT32(dstId, audioData, ((MBE_SAMPLES_LENGTH * 2U) + 4U));
+                    SET_UINT32(srcId, audioData, ((MBE_SAMPLES_LENGTH * 2U) + 8U));
                 }
             }
             else {
@@ -1743,7 +1739,7 @@ void HostBridge::decodeDMRAudioFrame(uint8_t* ambe, uint32_t srcId, uint32_t dst
 
                 m_usrpSeqNo++;
                 usrpHeader[15U] = 1; // set PTT state to true
-                __SET_UINT32(m_usrpSeqNo, usrpHeader, 4U);
+                SET_UINT32(m_usrpSeqNo, usrpHeader, 4U);
 
                 ::memcpy(usrpHeader, "USRP", 4);
                 ::memcpy(audioData, usrpHeader, USRP_HEADER_LENGTH); // copy USRP header into the UDP payload
@@ -1975,8 +1971,8 @@ void HostBridge::processP25Network(uint8_t* buffer, uint32_t length)
     // handle LDU, TDU or TSDU frame
     uint8_t lco = buffer[4U];
 
-    uint32_t srcId = __GET_UINT16(buffer, 5U);
-    uint32_t dstId = __GET_UINT16(buffer, 8U);
+    uint32_t srcId = GET_UINT24(buffer, 5U);
+    uint32_t dstId = GET_UINT24(buffer, 8U);
 
     uint8_t lsd1 = buffer[20U];
     uint8_t lsd2 = buffer[21U];
@@ -2026,7 +2022,7 @@ void HostBridge::processP25Network(uint8_t* buffer, uint32_t length)
             if (frameType == FrameType::HDU_VALID) {
                 m_callAlgoId = buffer[181U];
                 if (m_callAlgoId != ALGO_UNENCRYPT) {
-                    callKID = __GET_UINT16B(buffer, 182U);
+                    callKID = GET_UINT16(buffer, 182U);
 
                     if (m_callAlgoId != m_tekAlgoId && callKID != m_tekKeyId) {
                         m_callAlgoId = ALGO_UNENCRYPT;
@@ -2089,7 +2085,7 @@ void HostBridge::processP25Network(uint8_t* buffer, uint32_t length)
 
         if (duid == DUID::LDU2 && !m_ignoreCall) {
             m_callAlgoId = data[88U];
-            callKID = __GET_UINT16B(buffer, 89U);
+            callKID = GET_UINT16(buffer, 89U);
         }
 
         if (m_callAlgoId != ALGO_UNENCRYPT) {
@@ -2379,7 +2375,7 @@ void HostBridge::decodeP25AudioFrame(uint8_t* ldu, uint32_t srcId, uint32_t dstI
                             ::memcpy(audioData, pcm, MBE_SAMPLES_LENGTH);
                         }
                         else {
-                            __SET_UINT32(MBE_SAMPLES_LENGTH, audioData, 0U);
+                            SET_UINT32(MBE_SAMPLES_LENGTH, audioData, 0U);
                             ::memcpy(audioData + 4U, pcm, MBE_SAMPLES_LENGTH);
                         }
 
@@ -2400,19 +2396,19 @@ void HostBridge::decodeP25AudioFrame(uint8_t* ldu, uint32_t srcId, uint32_t dstI
                         }
                     }
                     else {
-                        __SET_UINT32((MBE_SAMPLES_LENGTH * 2U), audioData, 0U);
+                        SET_UINT32((MBE_SAMPLES_LENGTH * 2U), audioData, 0U);
                         ::memcpy(audioData + 4U, pcm, MBE_SAMPLES_LENGTH * 2U);
                     }
                 }
                 else {
                     length = (MBE_SAMPLES_LENGTH * 2U) + 12U;
                     audioData = new uint8_t[(MBE_SAMPLES_LENGTH * 2U) + 12U]; // PCM + (4 bytes (PCM length) + 4 bytes (srcId) + 4 bytes (dstId))
-                    __SET_UINT32((MBE_SAMPLES_LENGTH * 2U), audioData, 0U);
+                    SET_UINT32((MBE_SAMPLES_LENGTH * 2U), audioData, 0U);
                     ::memcpy(audioData + 4U, pcm, MBE_SAMPLES_LENGTH * 2U);
 
                     // embed destination and source IDs
-                    __SET_UINT32(dstId, audioData, ((MBE_SAMPLES_LENGTH * 2U) + 4U));
-                    __SET_UINT32(srcId, audioData, ((MBE_SAMPLES_LENGTH * 2U) + 8U));
+                    SET_UINT32(dstId, audioData, ((MBE_SAMPLES_LENGTH * 2U) + 4U));
+                    SET_UINT32(srcId, audioData, ((MBE_SAMPLES_LENGTH * 2U) + 8U));
                 }
             }
             else {
@@ -2423,7 +2419,7 @@ void HostBridge::decodeP25AudioFrame(uint8_t* ldu, uint32_t srcId, uint32_t dstI
 
                 m_usrpSeqNo++;
                 usrpHeader[15U] = 1; // set PTT state to true
-                __SET_UINT32(m_usrpSeqNo, usrpHeader, 4U);
+                SET_UINT32(m_usrpSeqNo, usrpHeader, 4U);
 
                 ::memcpy(usrpHeader, "USRP", 4);
                 ::memcpy(audioData, usrpHeader, USRP_HEADER_LENGTH); // copy USRP header into the UDP payload
@@ -2669,8 +2665,7 @@ void HostBridge::generatePreambleTone()
     ma_waveform_set_frequency(&m_maSineWaveform, m_preambleTone);
 
     ma_uint32 pcmBytes = frameCount * ma_get_bytes_per_frame(m_maDevice.capture.format, m_maDevice.capture.channels);
-    UInt8Array __sine = std::make_unique<uint8_t[]>(pcmBytes);
-    uint8_t* sine = __sine.get();
+    DECLARE_UINT8_ARRAY(sine, pcmBytes);
 
     ma_waveform_read_pcm_frames(&m_maSineWaveform, sine, frameCount, NULL);
 
@@ -2956,8 +2951,7 @@ void* HostBridge::threadAudioProcess(void* arg)
 
                     if (bridge->m_audioDetect && !bridge->m_callInProgress) {
                         ma_uint32 pcmBytes = MBE_SAMPLES_LENGTH * ma_get_bytes_per_frame(bridge->m_maDevice.capture.format, bridge->m_maDevice.capture.channels);
-                        UInt8Array __pcm = std::make_unique<uint8_t[]>(pcmBytes);
-                        uint8_t* pcm = __pcm.get();
+                        DECLARE_UINT8_ARRAY(pcm, pcmBytes);
 
                         int pcmIdx = 0;
                         for (uint32_t smpIdx = 0; smpIdx < MBE_SAMPLES_LENGTH; smpIdx++) {
@@ -3095,7 +3089,6 @@ void* HostBridge::threadUDPAudioProcess(void* arg)
                         }
                     }
 
-                    bridge->m_inputAudio.addData(samples, MBE_SAMPLES_LENGTH);
                     bridge->m_trafficFromUDP = true;
 
                     // force start a call if one isn't already in progress

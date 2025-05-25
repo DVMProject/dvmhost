@@ -63,11 +63,11 @@ namespace p25
                     /**
                      * @brief Receive Channel Number.
                      */
-                    __PROPERTY(uint8_t, rxChan, RxChan);
+                    DECLARE_PROPERTY(uint8_t, rxChan, RxChan);
                     /**
                      * @brief Transmit Channel Number.
                      */
-                    __PROPERTY(uint8_t, txChan, TxChan);
+                    DECLARE_PROPERTY(uint8_t, txChan, TxChan);
                 };
             } // namespace fsc
         } // namespace frames

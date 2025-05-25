@@ -69,11 +69,11 @@ namespace p25
 
         public:
             /**
-             * @brief 
+             * @brief Deregistration response status.
              */
-            __PROPERTY(uint8_t, status, Status);
+            DECLARE_PROPERTY(uint8_t, status, Status);
 
-            __COPY(KMMDeregistrationResponse);
+            DECLARE_COPY(KMMDeregistrationResponse);
         };
     } // namespace kmm
 } // namespace p25

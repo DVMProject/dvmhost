@@ -56,33 +56,33 @@ namespace p25
                 /**
                  * @brief Adjacent site CFVA flags.
                  */
-                __PROPERTY(uint8_t, adjCFVA, AdjSiteCFVA);
+                DECLARE_PROPERTY(uint8_t, adjCFVA, AdjSiteCFVA);
                 /**
                  * @brief Adjacent site system ID.
                  */
-                __PROPERTY(uint32_t, adjSysId, AdjSiteSysId);
+                DECLARE_PROPERTY(uint32_t, adjSysId, AdjSiteSysId);
                 /**
                  * @brief Adjacent site RFSS ID.
                  */
-                __PROPERTY(uint8_t, adjRfssId, AdjSiteRFSSId);
+                DECLARE_PROPERTY(uint8_t, adjRfssId, AdjSiteRFSSId);
                 /**
                  * @brief Adjacent site ID.
                  */
-                __PROPERTY(uint8_t, adjSiteId, AdjSiteId);
+                DECLARE_PROPERTY(uint8_t, adjSiteId, AdjSiteId);
                 /**
                  * @brief Adjacent site channel ID.
                  */
-                __PROPERTY(uint8_t, adjChannelId, AdjSiteChnId);
+                DECLARE_PROPERTY(uint8_t, adjChannelId, AdjSiteChnId);
                 /**
                  * @brief Adjacent site channel number.
                  */
-                __PROPERTY(uint32_t, adjChannelNo, AdjSiteChnNo);
+                DECLARE_PROPERTY(uint32_t, adjChannelNo, AdjSiteChnNo);
                 /**
                  * @brief Adjacent site service class.
                  */
-                __PROPERTY(uint8_t, adjServiceClass, AdjSiteSvcClass);
+                DECLARE_PROPERTY(uint8_t, adjServiceClass, AdjSiteSvcClass);
 
-                __COPY(LC_ADJ_STS_BCAST);
+                DECLARE_COPY(LC_ADJ_STS_BCAST);
             };
         } // namespace tdulc
     } // namespace lc

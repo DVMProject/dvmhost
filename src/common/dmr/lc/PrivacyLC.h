@@ -7,7 +7,7 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*  Copyright (C) 2021 Bryan Biedenkapp, N2PLL
+*  Copyright (C) 2021,2025 Bryan Biedenkapp, N2PLL
 *
 */
 /**
@@ -65,35 +65,48 @@ namespace dmr
              */
             void getData(bool* bits) const;
 
+            /** @name Encryption data */
+            /**
+             * @brief Sets the encryption message indicator.
+             * @param[in] mi Buffer containing the 9-byte Message Indicator.
+             */
+            void setMI(const uint8_t* mi);
+            /**
+             * @brief Gets the encryption message indicator.
+             * @param[out] mi Buffer containing the 9-byte Message Indicator.
+             */
+            void getMI(uint8_t* mi) const;
+            /** @} */
+
         public:
             /** @name Common Data */
             /**
              * @brief Feature ID
              */
-            __PROPERTY(uint8_t, FID, FID);
+            DECLARE_PROPERTY(uint8_t, FID, FID);
 
             /**
              * @brief Destination ID.
              */
-            __PROPERTY(uint32_t, dstId, DstId);
+            DECLARE_PROPERTY(uint32_t, dstId, DstId);
             /** @} */
 
             /** @name Service Options */
             /**
              * @brief Flag indicating a group/talkgroup operation.
              */
-            __PROPERTY(bool, group, Group);
+            DECLARE_PROPERTY(bool, group, Group);
             /** @} */
 
             /** @name Encryption data */
             /**
              * @brief Encryption algorithm ID.
              */
-            __PROPERTY(uint8_t, algId, AlgId);
+            DECLARE_PROPERTY(uint8_t, algId, AlgId);
             /**
              * @brief Encryption key ID.
              */
-            __PROPERTY(uint32_t, kId, KId);
+            DECLARE_PROPERTY(uint32_t, kId, KId);
             /** @} */
 
         private:

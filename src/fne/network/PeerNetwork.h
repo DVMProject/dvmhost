@@ -19,6 +19,7 @@
 #include "Defines.h"
 #include "common/lookups/PeerListLookup.h"
 #include "common/network/Network.h"
+#include "common/network/PacketBuffer.h"
 
 #include <string>
 #include <cstdint>
@@ -109,11 +110,17 @@ namespace network
          */
         bool isPeerLink() const { return m_peerLink; }
 
+        /**
+         * @brief Enables the option that will save the pushed peer link ACL data to the local ACL files.
+         * @param enabled Flag to enable ACL data saving.
+         */
+        void setPeerLinkSaveACL(bool enabled) { m_peerLinkSavesACL = enabled; }
+
     public:
         /**
          * @brief Flag indicating whether or not this peer network has a key response handler attached.
          */
-        __PROPERTY(bool, attachedKeyRSPHandler, AttachedKeyRSPHandler);
+        DECLARE_PROPERTY(bool, attachedKeyRSPHandler, AttachedKeyRSPHandler);
 
     protected:
         std::vector<uint32_t> m_blockTrafficToTable;
@@ -138,21 +145,11 @@ namespace network
     private:
         lookups::PeerListLookup* m_pidLookup;
         bool m_peerLink;
+        bool m_peerLinkSavesACL;
 
-        uint32_t m_tgidCompressedSize;
-        uint32_t m_tgidSize;
-
-        uint8_t* m_tgidBuffer;
-
-        uint32_t m_ridCompressedSize;
-        uint32_t m_ridSize;
-
-        uint8_t* m_ridBuffer;
-
-        uint32_t m_pidCompressedSize;
-        uint32_t m_pidSize;
-
-        uint8_t* m_pidBuffer;
+        PacketBuffer m_tgidPkt;
+        PacketBuffer m_ridPkt;
+        PacketBuffer m_pidPkt;
     };
 } // namespace network
 

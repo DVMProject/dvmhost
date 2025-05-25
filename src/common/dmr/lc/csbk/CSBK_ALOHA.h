@@ -61,22 +61,22 @@ namespace dmr
                 /**
                  * @brief Aloha Site Time Slot Synchronization.
                  */
-                __PROPERTY(bool, siteTSSync, SiteTSSync);
+                DECLARE_PROPERTY(bool, siteTSSync, SiteTSSync);
                 /**
                  * @brief Aloha MS mask.
                  */
-                __PROPERTY(uint8_t, alohaMask, AlohaMask);
+                DECLARE_PROPERTY(uint8_t, alohaMask, AlohaMask);
 
                 /**
                  * @brief Backoff Number.
                  */
-                __PROPERTY(uint8_t, backoffNo, BackoffNo);
+                DECLARE_PROPERTY(uint8_t, backoffNo, BackoffNo);
                 /**
                  * @brief Random Access Wait Delay.
                  */
-                __PROPERTY(uint8_t, nRandWait, NRandWait);
+                DECLARE_PROPERTY(uint8_t, nRandWait, NRandWait);
 
-                __COPY(CSBK_ALOHA);
+                DECLARE_COPY(CSBK_ALOHA);
             };
         } // namespace csbk
     } // namespace lc

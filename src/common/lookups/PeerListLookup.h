@@ -118,27 +118,27 @@ namespace lookups
         /**
          * @brief Peer ID.
          */
-        __PROPERTY_PLAIN(uint32_t, peerId);
+        DECLARE_PROPERTY_PLAIN(uint32_t, peerId);
         /**
          * @breif Peer Alias
          */
-        __PROPERTY_PLAIN(std::string, peerAlias);
+        DECLARE_PROPERTY_PLAIN(std::string, peerAlias);
         /**
          * @brief Per Peer Password.
          */
-        __PROPERTY_PLAIN(std::string, peerPassword);
+        DECLARE_PROPERTY_PLAIN(std::string, peerPassword);
         /**
          * @brief Flag indicating if the peer participates in peer link and should be sent configuration.
          */
-        __PROPERTY_PLAIN(bool, peerLink);
+        DECLARE_PROPERTY_PLAIN(bool, peerLink);
         /**
          * @brief Flag indicating if the peer can request encryption keys.
          */
-        __PROPERTY_PLAIN(bool, canRequestKeys);
+        DECLARE_PROPERTY_PLAIN(bool, canRequestKeys);
         /**
          * @brief Flag indicating if the peer is default.
          */
-        __READONLY_PROPERTY_PLAIN(bool, peerDefault);
+        DECLARE_RO_PROPERTY_PLAIN(bool, peerDefault);
     };
 
     // ---------------------------------------------------------------------------
