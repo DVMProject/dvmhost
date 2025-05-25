@@ -39,18 +39,10 @@ option(CROSS_COMPILE_AARCH64 "Cross-compile for 64-bit ARM" off)
 option(CROSS_COMPILE_RPI_ARM "Cross-compile for (old RPi) 32-bit ARM" off)
 option(COMPILE_WIN32 "Compile for Win32" off)
 
-message(CHECK_START "Architecture - ${CMAKE_SYSTEM_PROCESSOR}")
-if (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64")
-    set(ARCH amd64)
-    set(CMAKE_SYSTEM_PROCESSOR amd64)
-    set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE amd64)
-else()
-    set(ARCH ${CMAKE_SYSTEM_PROCESSOR})
-endif (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64")
-
 if (COMPILE_WIN32)
     set(ARCH amd64)
     set(CMAKE_SYSTEM_PROCESSOR amd64)
+    message(CHECK_START "Detect Architecture - ${ARCH}")
 
     # No TUI for this
     set(ENABLE_TUI_SUPPORT OFF)
@@ -58,7 +50,24 @@ if (COMPILE_WIN32)
 else()
     set(CMAKE_C_COMPILER /usr/bin/gcc CACHE STRING "C compiler")
     set(CMAKE_CXX_COMPILER /usr/bin/g++ CACHE STRING "C++ compiler")
+
+    # detect and set architecture
     set(ARCH amd64)
+
+    if (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64")
+        set(ARCH amd64)
+        set(CMAKE_SYSTEM_PROCESSOR amd64)
+        set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE amd64)
+    else()
+        if (CMAKE_SYSTEM_PROCESSOR MATCHES "")
+            execute_process(COMMAND uname -m OUTPUT_VARIABLE CMAKE_SYSTEM_PROCESSOR)
+            set(ARCH ${CMAKE_SYSTEM_PROCESSOR})
+        else()
+            set(ARCH ${CMAKE_SYSTEM_PROCESSOR})
+        endif (CMAKE_SYSTEM_PROCESSOR MATCHES "")
+    endif (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64")
+    message(CHECK_START "Detect Architecture - ${ARCH}")
+
     set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE amd64)
 endif (COMPILE_WIN32)
 
