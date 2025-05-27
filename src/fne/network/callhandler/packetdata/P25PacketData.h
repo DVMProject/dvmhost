@@ -119,6 +119,7 @@ namespace network
 
                     p25::data::DataBlock* blockData;
                     p25::data::DataHeader header;
+                    bool hasRxHeader;
                     bool extendedAddress;
                     uint32_t dataOffset;
                     uint8_t dataBlockCnt;
@@ -137,6 +138,7 @@ namespace network
                         peerId(0U),
                         blockData(nullptr),
                         header(),
+                        hasRxHeader(false),
                         extendedAddress(false),
                         dataOffset(0U),
                         dataBlockCnt(0U),
@@ -158,9 +160,12 @@ namespace network
                      */
                     ~RxStatus()
                     {
-                        delete[] blockData;
-                        delete[] netPDU;
-                        delete[] pduUserData;
+                        if (blockData != nullptr)
+                            delete[] blockData;
+                        if (netPDU != nullptr)
+                            delete[] netPDU;
+                        if (pduUserData != nullptr)
+                            delete[] pduUserData;
                     }
                 };
                 typedef std::pair<const uint32_t, RxStatus*> StatusMapPair;
