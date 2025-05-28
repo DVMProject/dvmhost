@@ -865,7 +865,7 @@ bool P25PacketData::processKMM(RxStatus* status)
             dataHeader.setAckNeeded(false);
             dataHeader.setOutbound(true);
             dataHeader.setSAP(PDUSAP::UNENC_KMM);
-            dataHeader.setLLId(WUID_ALL);
+            dataHeader.setLLId(status->llId);
             dataHeader.setBlocksToFollow(1U);
 
             dataHeader.calculateLength(KMM_NO_SERVICE_LENGTH);
