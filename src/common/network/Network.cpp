@@ -194,6 +194,18 @@ void Network::clock(uint32_t ms)
         return;
     }
 
+    // if we are waiting for a login response, check the timeout
+    if (m_status == NET_STAT_WAITING_LOGIN) {
+        m_retryTimer.clock(ms);
+        if (m_retryTimer.isRunning() && m_retryTimer.hasExpired()) {
+            LogError(LOG_NET, "PEER %u login attempt to the master has timed out, retrying connection", m_peerId);
+
+            close();
+            open();
+            return;
+        }
+    }
+
     // if we aren't enabled -- bail
     if (!m_enabled) {
         return;
