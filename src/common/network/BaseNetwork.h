@@ -69,6 +69,8 @@
 #define TAG_ANNOUNCE            "ANNC"
 #define TAG_PEER_LINK           "PRLNK"
 
+#define MAX_PEER_PING_TIME      60U // 60 seconds
+
 namespace network
 {
     // ---------------------------------------------------------------------------

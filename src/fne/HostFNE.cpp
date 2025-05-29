@@ -337,6 +337,11 @@ bool HostFNE::readParams()
         m_pingTime = 5U;
     }
 
+    if (m_pingTime > MAX_PEER_PING_TIME - 1U) {
+        LogWarning(LOG_HOST, "Peer ping time is set to %u seconds, this is beyond the allowable maximum of %u seconds. Defaulting.", m_pingTime, MAX_PEER_PING_TIME);
+        m_pingTime = MAX_PEER_PING_TIME - 1U;
+    }
+
     if (m_maxMissedPings == 0U) {
         m_maxMissedPings = 5U;
     }
