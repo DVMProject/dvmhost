@@ -48,7 +48,7 @@ namespace lookups
         /**
          * @brief Initializes a new instance of the LookupTable class.
          * @param filename Full-path to the lookup table file.
-         * @param reloadTime Interval of time to reload the channel identity table.
+         * @param reloadTime Interval of time to reload the lookup table.
          */
         LookupTable(const std::string& filename, uint32_t reloadTime) :
             Thread(),

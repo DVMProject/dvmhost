@@ -650,7 +650,6 @@ void RESTAPI::initializeEndpoints()
     m_dispatcher.match(FNE_PUT_PEER_ADD).put(REST_API_BIND(RESTAPI::restAPI_PutPeerAdd, this));
     m_dispatcher.match(FNE_PUT_PEER_DELETE).put(REST_API_BIND(RESTAPI::restAPI_PutPeerDelete, this));
     m_dispatcher.match(FNE_GET_PEER_COMMIT).get(REST_API_BIND(RESTAPI::restAPI_GetPeerCommit, this));
-    m_dispatcher.match(FNE_GET_PEER_MODE).get(REST_API_BIND(RESTAPI::restAPI_GetPeerMode, this));
 
     m_dispatcher.match(FNE_GET_FORCE_UPDATE).get(REST_API_BIND(RESTAPI::restAPI_GetForceUpdate, this));
 
@@ -1329,43 +1328,6 @@ void RESTAPI::restAPI_GetPeerCommit(const HTTPPayload& request, HTTPPayload& rep
 
     m_peerListLookup->commit();
 
-    reply.payload(response);
-}
-
-/* */
-
-void RESTAPI::restAPI_GetPeerMode(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
-{
-    if (!validateAuth(request, reply)) {
-        return;
-    }
-
-    json::object response = json::object();
-    setResponseDefaultStatus(response);
-
-    lookups::PeerListLookup::Mode mode = m_peerListLookup->getMode();
-    bool acl = m_peerListLookup->getACL();
-
-    std::string modeStr;
-
-    if (acl) {
-        switch (mode) {
-            case lookups::PeerListLookup::WHITELIST:
-                modeStr = "WHITELIST";
-                break;
-            case lookups::PeerListLookup::BLACKLIST:
-                modeStr = "BLACKLIST";
-                break;
-            default:
-                modeStr = "UNKNOWN";
-                break;
-        }
-    }
-    else {
-        modeStr = "DISABLED";
-    }
-
-    response["mode"].set<std::string>(modeStr);
     reply.payload(response);
 }
 

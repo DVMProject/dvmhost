@@ -394,15 +394,7 @@ bool HostFNE::readParams()
 
     std::string peerListLookupFile = systemConf["peer_acl"]["file"].as<std::string>();
     bool peerListLookupEnable = systemConf["peer_acl"]["enable"].as<bool>(false);
-    std::string peerListModeStr = systemConf["peer_acl"]["mode"].as<std::string>("whitelist");
     uint32_t peerListConfigReload = systemConf["peer_acl"]["time"].as<uint32_t>(30U);
-
-    lookups::PeerListLookup::Mode peerListMode;
-    if (peerListModeStr == "blacklist") {
-        peerListMode = lookups::PeerListLookup::BLACKLIST;
-    } else {
-        peerListMode = lookups::PeerListLookup::WHITELIST;
-    }
 
     LogInfo("Talkgroup Rule Lookups");
     LogInfo("    File: %s", talkgroupConfig.length() > 0U ? talkgroupConfig.c_str() : "None");
@@ -416,12 +408,11 @@ bool HostFNE::readParams()
     // try to load peer whitelist/blacklist
     LogInfo("Peer List Lookups");
     LogInfo("    Enabled: %s", peerListLookupEnable ? "yes" : "no");
-    LogInfo("    Mode: %s", peerListMode == lookups::PeerListLookup::BLACKLIST ? "blacklist" : "whitelist");
     LogInfo("    File: %s", peerListLookupFile.length() > 0U ? peerListLookupFile.c_str() : "None");
     if (peerListConfigReload > 0U)
         LogInfo("    Reload: %u mins", peerListConfigReload);
 
-    m_peerListLookup = new PeerListLookup(peerListLookupFile, peerListMode, peerListConfigReload, peerListLookupEnable);
+    m_peerListLookup = new PeerListLookup(peerListLookupFile, peerListConfigReload, peerListLookupEnable);
     m_peerListLookup->read();
 
     // try to load peer whitelist/blacklist

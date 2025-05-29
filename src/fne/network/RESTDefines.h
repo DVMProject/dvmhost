@@ -43,7 +43,6 @@
 #define FNE_PUT_PEER_ADD                "/peer/add"
 #define FNE_PUT_PEER_DELETE             "/peer/delete"
 #define FNE_GET_PEER_COMMIT             "/peer/commit"
-#define FNE_GET_PEER_MODE               "/peer/mode"
 
 #define FNE_GET_FORCE_UPDATE            "/force-update"
 
