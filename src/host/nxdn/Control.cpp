@@ -265,6 +265,8 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
     m_siteData = SiteData(locId, channelId, (channelNo & 0x3FF), siteInfo1, siteInfo2, false);
     m_siteData.setCallsign(cwCallsign);
 
+    lc::RCCH::setSiteData(m_siteData);
+
     m_controlChData = controlChData;
 
     bool disableUnitRegTimeout = nxdnProtocol["disableUnitRegTimeout"].as<bool>(false);
