@@ -269,13 +269,6 @@ private:
      * @param match HTTP request matcher.
      */
     void restAPI_GetPeerCommit(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
-    /**
-     * @brief 
-     * @param request HTTP request.
-     * @param reply HTTP reply.
-     * @param match HTTP request matcher.
-     */
-    void restAPI_GetPeerMode(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
 
     /**
      * @brief 

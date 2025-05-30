@@ -714,11 +714,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                             }
 
                             if (!network->m_peerListLookup->isPeerAllowed(peerId) && !network->m_peerListLookup->isPeerListEmpty()) {
-                                if (network->m_peerListLookup->getMode() == lookups::PeerListLookup::BLACKLIST) {
-                                    LogWarning(LOG_NET, "PEER %u RPTL, blacklisted from access", peerId);
-                                } else {
-                                    LogWarning(LOG_NET, "PEER %u RPTL, failed whitelist check", peerId);
-                                }
+                                LogWarning(LOG_NET, "PEER %u RPTL, failed peer ACL check", peerId);
 
                                 network->writePeerNAK(peerId, TAG_REPEATER_LOGIN, NET_CONN_NAK_PEER_ACL, req->address, req->addrLen);
 
@@ -751,11 +747,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                         }
 
                                         if (!network->m_peerListLookup->isPeerAllowed(peerId) && !network->m_peerListLookup->isPeerListEmpty()) {
-                                            if (network->m_peerListLookup->getMode() == lookups::PeerListLookup::BLACKLIST) {
-                                                LogWarning(LOG_NET, "PEER %u RPTL, blacklisted from access", peerId);
-                                            } else {
-                                                LogWarning(LOG_NET, "PEER %u RPTL, failed whitelist check", peerId);
-                                            }
+                                            LogWarning(LOG_NET, "PEER %u RPTL, failed peer ACL check", peerId);
 
                                             network->writePeerNAK(peerId, TAG_REPEATER_LOGIN, NET_CONN_NAK_PEER_ACL, req->address, req->addrLen);
 
@@ -805,12 +797,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                 bool validAcl = true;
                                 if (network->m_peerListLookup->getACL()) {
                                     if (!network->m_peerListLookup->isPeerAllowed(peerId) && !network->m_peerListLookup->isPeerListEmpty()) {
-                                        if (network->m_peerListLookup->getMode() == lookups::PeerListLookup::BLACKLIST) {
-                                            LogWarning(LOG_NET, "PEER %u RPTK, blacklisted from access", peerId);
-                                        } else {
-                                            LogWarning(LOG_NET, "PEER %u RPTK, failed whitelist check", peerId);
-                                        }
-
+                                        LogWarning(LOG_NET, "PEER %u RPTK, failed peer ACL check", peerId);
                                         validAcl = false;
                                     } else {
                                         lookups::PeerId peerEntry = network->m_peerListLookup->find(peerId);
@@ -1158,15 +1145,13 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                             if (connection->connected() && connection->address() == ip) {
                                 // is this peer allowed to request keys?
                                 if (network->m_peerListLookup->getACL()) {
-                                    if (network->m_peerListLookup->getMode() == lookups::PeerListLookup::WHITELIST) {
-                                        lookups::PeerId peerEntry = network->m_peerListLookup->find(peerId);
-                                        if (peerEntry.peerDefault()) {
+                                    lookups::PeerId peerEntry = network->m_peerListLookup->find(peerId);
+                                    if (peerEntry.peerDefault()) {
+                                        break;
+                                    } else {
+                                        if (!peerEntry.canRequestKeys()) {
+                                            LogError(LOG_NET, "PEER %u (%s) requested enc. key but is not allowed, no response", peerId, connection->identity().c_str());
                                             break;
-                                        } else {
-                                            if (!peerEntry.canRequestKeys()) {
-                                                LogError(LOG_NET, "PEER %u (%s) requested enc. key but is not allowed, no response", peerId, connection->identity().c_str());
-                                                break;
-                                            }
                                         }
                                     }
                                 }

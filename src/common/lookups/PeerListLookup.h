@@ -153,20 +153,12 @@ namespace lookups
     class HOST_SW_API PeerListLookup : public LookupTable<PeerId> {
     public:
         /**
-         * @brief Peer List Mode
-         */
-        enum Mode {
-            WHITELIST,      //! Peers listed are whitelisted
-            BLACKLIST       //! Peers listed are blacklisted
-        };
-
-        /**
          * @brief Initializes a new instance of the PeerListLookup class.
          * @param filename Full-path to the list file.
-         * @param mode Mode to operate in (WHITELIST or BLACKLIST).
-         * @param peerAcl Flag indicating if the lookup is enabled.
+         * @param reloadTime Interval of time to reload the lookup table.
+         * @param peerAcl Flag indicating these rules are enabled for enforcing access control.
          */
-        PeerListLookup(const std::string& filename, Mode mode, uint32_t reloadTime, bool peerAcl);
+        PeerListLookup(const std::string& filename, uint32_t reloadTime, bool peerAcl);
 
         /**
          * @brief Clears all entries from the list.
@@ -224,17 +216,6 @@ namespace lookups
         bool isPeerListEmpty() const { return m_table.size() == 0U; }
 
         /**
-         * @brief Sets the mode to either WHITELIST or BLACKLIST.
-         * @param mode The mode to set.
-         */
-        void setMode(Mode mode);
-        /**
-         * @brief Gets the current mode.
-         * @returns Mode Current peer list operational mode.
-         */
-        Mode getMode() const;
-
-        /**
          * @brief Gets the entire peer ID table.
          * @returns std::unordered_map<uint32_t, PeerId> 
          */
@@ -261,8 +242,6 @@ namespace lookups
         bool save() override;
 
     private:
-        Mode m_mode;
-
         static std::mutex m_mutex;  //! Mutex used for change locking.
         static bool m_locked;       //! Flag used for read locking (prevents find lookups), should be used when atomic operations (add/erase/etc) are being used.
     };

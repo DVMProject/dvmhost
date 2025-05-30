@@ -253,16 +253,14 @@ system:
         time: 2
 
     #
-    # Peer whitelist and blacklist configuration
+    # Peer ACL configuration
     #
     peer_acl:
         # Flag indicating whether or not the peer ACLs are enabled.
         enable: false
-        # Peer ACL mode: whitelist or blacklist
-        mode: whitelist
-        # Full path to the white/blacklist file.
+        # Full path to the peer ACL file.
         file: peer_list.dat
-        # Amount of time between updates of white/blacklist file. (minutes)
+        # Amount of time between updates of peer ACL file. (minutes)
         time: 2
 
 #

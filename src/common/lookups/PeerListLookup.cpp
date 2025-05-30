@@ -50,8 +50,8 @@ bool PeerListLookup::m_locked = false;
 
 /* Initializes a new instance of the PeerListLookup class. */
 
-PeerListLookup::PeerListLookup(const std::string& filename, Mode mode, uint32_t reloadTime, bool peerAcl) : LookupTable(filename, reloadTime),
-    m_acl(peerAcl), m_mode(mode)
+PeerListLookup::PeerListLookup(const std::string& filename, uint32_t reloadTime, bool peerAcl) : LookupTable(filename, reloadTime),
+    m_acl(peerAcl)
 {
     /* stub */
 }
@@ -158,32 +158,7 @@ bool PeerListLookup::isPeerAllowed(uint32_t id) const
         return true; // if not enabled, allow all peers
     }
 
-    bool allowed = false;
-    if (m_mode == WHITELIST) {
-        allowed = isPeerInList(id);
-    } else if (m_mode == BLACKLIST) {
-        allowed = !isPeerInList(id);
-    }
-
-    return allowed;
-}
-
-/* Sets the mode to either WHITELIST or BLACKLIST. */
-
-void PeerListLookup::setMode(Mode mode)
-{
-    __LOCK_TABLE();
-
-    m_mode = mode;
-
-    __UNLOCK_TABLE();
-}
-
-/* Gets the current mode. */
-
-PeerListLookup::Mode PeerListLookup::getMode() const 
-{
-    return m_mode;
+    return isPeerInList(id);
 }
 
 /* Gets the entire peer ID table. */
