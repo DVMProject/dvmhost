@@ -328,6 +328,11 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
             uint32_t i = 0U;
             for (auto peer : m_network->m_peers) {
                 if (peerId != peer.first) {
+                    if (ssrc == peer.first) {
+                        // skip the peer if it is the source peer
+                        continue;
+                    }
+
                     // is this peer ignored?
                     if (!isPeerPermitted(peer.first, control, duid, streamId)) {
                         continue;
