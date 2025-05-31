@@ -240,12 +240,6 @@ void Network::clock(uint32_t ms)
                 fneHeader.getStreamId(), fneHeader.getFunction(), fneHeader.getSubFunction());
         }
 
-        // ensure the RTP synchronization source ID matches the FNE peer ID
-        if (m_remotePeerId != 0U && rtpHeader.getSSRC() != m_remotePeerId) {
-            LogWarning(LOG_NET, "RTP header and traffic session do not agree on remote peer ID? %u != %u", rtpHeader.getSSRC(), m_remotePeerId);
-            // should this be a fatal error?
-        }
-
         // is this RTP packet destined for us?
         uint32_t peerId = fneHeader.getPeerId();
         if ((m_peerId != peerId) && !m_promiscuousPeer) {

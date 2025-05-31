@@ -2238,9 +2238,9 @@ bool FNENetwork::writePeer(uint32_t peerId, uint32_t srcPeerId, FrameQueue::Opco
             }
 
             if (directWrite)
-                return m_frameQueue->write(data, length, streamId, srcPeerId, m_peerId, opcode, pktSeq, addr, addrLen);
+                return m_frameQueue->write(data, length, streamId, peerId, srcPeerId, opcode, pktSeq, addr, addrLen);
             else {
-                m_frameQueue->enqueueMessage(data, length, streamId, srcPeerId, m_peerId, opcode, pktSeq, addr, addrLen);
+                m_frameQueue->enqueueMessage(data, length, streamId, peerId, srcPeerId, opcode, pktSeq, addr, addrLen);
                 if (queueOnly)
                     return true;
                 return m_frameQueue->flushQueue();
