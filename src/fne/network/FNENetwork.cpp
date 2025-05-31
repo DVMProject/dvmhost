@@ -97,6 +97,7 @@ FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port,
     m_enableInCallCtrl(true),
     m_rejectUnknownRID(false),
     m_maskOutboundPeerID(false),
+    m_maskOutboundPeerIDForNonPL(false),
     m_filterHeaders(true),
     m_filterTerminators(true),
     m_disallowU2U(false),
@@ -144,6 +145,7 @@ void FNENetwork::setOptions(yaml::Node& conf, bool printOptions)
     m_enableInCallCtrl = conf["enableInCallCtrl"].as<bool>(false);
     m_rejectUnknownRID = conf["rejectUnknownRID"].as<bool>(false);
     m_maskOutboundPeerID = conf["maskOutboundPeerID"].as<bool>(false);
+    m_maskOutboundPeerIDForNonPL = conf["maskOutboundPeerIDForNonPeerLink"].as<bool>(false);
     m_disallowCallTerm = conf["disallowCallTerm"].as<bool>(false);
     m_softConnLimit = conf["connectionLimit"].as<uint32_t>(MAX_HARD_CONN_CAP);
 
@@ -207,6 +209,9 @@ void FNENetwork::setOptions(yaml::Node& conf, bool printOptions)
         LogInfo("    Enable In-Call Control: %s", m_enableInCallCtrl ? "yes" : "no");
         LogInfo("    Reject Unknown RIDs: %s", m_rejectUnknownRID ? "yes" : "no");
         LogInfo("    Mask Outbound Traffic Peer ID: %s", m_maskOutboundPeerID ? "yes" : "no");
+        if (m_maskOutboundPeerIDForNonPL) {
+            LogInfo("    Mask Outbound Traffic Peer ID for Non-Peer Link: yes");
+        }
         LogInfo("    Restrict grant response by affiliation: %s", m_restrictGrantToAffOnly ? "yes" : "no");
         LogInfo("    Traffic Headers Filtered by Destination ID: %s", m_filterHeaders ? "yes" : "no");
         LogInfo("    Traffic Terminators Filtered by Destination ID: %s", m_filterTerminators ? "yes" : "no");
@@ -2240,7 +2245,7 @@ bool FNENetwork::writePeer(uint32_t peerId, uint32_t ssrc, FrameQueue::OpcodePai
             if (m_maskOutboundPeerID)
                 ssrc = m_peerId; // mask the source SSRC to our own peer ID
             else {
-                if (connection->isExternalPeer() && !connection->isPeerLink()) {
+                if ((connection->isExternalPeer() && !connection->isPeerLink()) && m_maskOutboundPeerIDForNonPL) {
                     // if the peer is an external peer, and not a Peer-Link peer, we need to send the packet
                     // to the external peer with our peer ID as the source instead of the originating peer
                     // because we have routed it

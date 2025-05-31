@@ -103,9 +103,12 @@ master:
     # Flag indicating whether or not a TDULC call terminations will pass to any peers.
     disallowCallTerm: false
 
-    # Flag indicating whether or not the FNE will mask outbound traffic to use the FNE's own peer ID.
+    # Flag indicating whether or not the FNE will mask all outbound traffic to use the FNE's own peer ID.
     #   (This is useful for FNEs that are public facing, and the originating traffic peer ID should be masked.)
     maskOutboundPeerID: false
+    # Flag indicating whether or not the FNE will mask only non-Peer-Link outbound traffic to use the FNE's own peer ID.
+    #   (This is useful for networked FNEs that are have a mix of connections, and the originating traffic peer ID to non-Peer-Link FNEs should be masked.)
+    maskOutboundPeerIDForNonPeerLink: false
 
     # Flag indicating that traffic headers will be filtered by destination ID (i.e. valid RID or valid TGID).
     filterHeaders: true
