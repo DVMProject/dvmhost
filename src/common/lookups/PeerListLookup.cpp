@@ -228,30 +228,30 @@ bool PeerListLookup::load()
             // parse tokenized line
             uint32_t id = ::atoi(parsed[0].c_str());
 
-            // Parse optional alias field (at end of line to avoid breaking change with existing lists)
+            // parse optional alias field (at end of line to avoid breaking change with existing lists)
             std::string alias = "";
             if (parsed.size() >= 4)
                 alias = parsed[3].c_str();
 
-            // Parse peer link flag
+            // parse peer link flag
             bool peerLink = false;
             if (parsed.size() >= 3)
                 peerLink = ::atoi(parsed[2].c_str()) == 1;
 
-            // Parse can request keys flag
+            // parse can request keys flag
             bool canRequestKeys = false;
             if (parsed.size() >= 5)
                 canRequestKeys = ::atoi(parsed[4].c_str()) == 1;
 
-            // Parse optional password
+            // parse optional password
             std::string password = "";
             if (parsed.size() >= 2)
                 password = parsed[1].c_str();
 
-            // Load into table
+            // load into table
             m_table[id] = PeerId(id, alias, password, peerLink, canRequestKeys, false);
 
-            // Log depending on what was loaded
+            // log depending on what was loaded
             LogMessage(LOG_HOST, "Loaded peer ID %u%s into peer ID lookup table, %s%s%s", id,
                 (!alias.empty() ? (" (" + alias + ")").c_str() : ""),
                 (!password.empty() ? "using unique peer password" : "using master password"),
@@ -296,43 +296,46 @@ bool PeerListLookup::save()
     std::string line;
     // iterate over each entry in the RID lookup and write it to the open file
     for (auto& entry: m_table) {
-        // Get the parameters
+        // get the parameters
         uint32_t peerId = entry.first;
         std::string alias = entry.second.peerAlias();
         std::string password = entry.second.peerPassword();
-        // Format into a string
+
+        // format into a string
         line = std::to_string(peerId) + ",";
-        // Add the password if we have one
+
+        // add the password if we have one
         if (password.length() > 0) {
             line += password;
         }
         line += ",";
-        // Add peerLink flag
+
+        // add peerLink flag
         bool peerLink = entry.second.peerLink();
         if (peerLink) {
             line += "1,";
         } else {
             line += "0,";
         }
-        // Add alias if we have one
+
+        // add alias if we have one
         if (alias.length() > 0) {
             line += alias;
             line += ",";
         } else {
             line += ",";
         }
-        // Add canRequestKeys flag
+
+        // add canRequestKeys flag
         bool canRequestKeys = entry.second.canRequestKeys();
         if (canRequestKeys) {
             line += "1,";
         } else {
             line += "0,";
         }
-        // Add the newline
+
         line += "\n";
-        // Write to file
         file << line;
-        // Increment
         lines++;
     }
 

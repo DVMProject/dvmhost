@@ -205,15 +205,16 @@ int HostSetup::run(int argc, char** argv)
     }
 
     g_logDisplayLevel = 0U;
-
     LogInfo("Iden Table Lookups");
     LogInfo("    File: %s", idenLookupFile.length() > 0U ? idenLookupFile.c_str() : "None");
     if (idenReloadTime > 0U)
         LogInfo("    Reload: %u mins", idenReloadTime);
 
+    g_logDisplayLevel = 1U;
     m_idenTable = new IdenTableLookup(idenLookupFile, idenReloadTime);
     m_idenTable->read();
 
+    g_logDisplayLevel = 0U;
     LogInfo("General Parameters");
 
     std::string identity = systemConf["identity"].as<std::string>();

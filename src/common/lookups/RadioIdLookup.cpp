@@ -209,6 +209,12 @@ bool RadioIdLookup::load()
             if (!next.empty())
                 parsed.push_back(next);
 
+            // ensure we have at least 2 fields
+            if (parsed.size() < 2) {
+                LogError(LOG_HOST, "Invalid entry in radio ID lookup table - %s", line.c_str());
+                continue;
+            }
+
             // parse tokenized line
             uint32_t id = ::atoi(parsed[0].c_str());
             bool radioEnabled = ::atoi(parsed[1].c_str()) == 1;
@@ -267,34 +273,29 @@ bool RadioIdLookup::save()
 
     // iterate over each entry in the RID lookup and write it to the open file
     for (auto& entry: m_table) {
-        // Get the parameters
+        // get the parameters
         uint32_t rid = entry.first;
         bool enabled = entry.second.radioEnabled();
         std::string alias = entry.second.radioAlias();
         std::string ipAddress = entry.second.radioIPAddress();
 
-        // Format into a string
+        // format into a string
         line = std::to_string(rid) + "," + std::to_string(enabled) + ",";
 
-        // Add the alias if we have one
+        // add the alias if we have one
         if (alias.length() > 0) {
             line += alias;
             line += ",";
         }
 
-        // Add the IP address if we have one
+        // add the IP address if we have one
         if (ipAddress.length() > 0) {
             line += ipAddress;
             line += ",";
         }
 
-        // Add the newline
         line += "\n";
-
-        // Write to file
         file << line;
-
-        // Increment
         lines++;
     }
 

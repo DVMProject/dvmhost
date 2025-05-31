@@ -130,6 +130,12 @@ bool IdenTableLookup::load()
             if (!next.empty())
                 parsed.push_back(next);
 
+            // ensure we have at least 5 fields
+            if (parsed.size() < 5) {
+                LogError(LOG_HOST, "Invalid entry in identity table lookup file - %s", line.c_str());
+                continue;
+            }
+
             // parse tokenized line
             uint8_t channelId = (uint8_t)::atoi(parsed[0].c_str());
             uint32_t baseFrequency = (uint32_t)::atoi(parsed[1].c_str());
