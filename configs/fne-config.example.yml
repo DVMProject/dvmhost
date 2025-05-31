@@ -150,6 +150,15 @@ master:
         # Amount of time between updates of talkgroup rules file. (minutes)
         time: 30
 
+    #
+    # Adj. Site Map Configuration
+    #
+    adj_site_map:
+        # Full path to the Adj. Site Map file.
+        file: adj_site_map.yml
+        # Amount of time between updates of Adj. Site Map file. (minutes)
+        time: 30
+
 #
 # External Peers
 #

@@ -754,6 +754,27 @@ bool TagP25Data::processTSDUFrom(uint8_t* buffer, uint32_t peerId, uint8_t duid)
                             LogMessage(LOG_NET, P25_TSDU_STR ", %s, sysId = $%03X, rfss = $%02X, site = $%02X, chNo = %u-%u, svcClass = $%02X, peerId = %u", tsbk->toString().c_str(),
                                 osp->getAdjSiteSysId(), osp->getAdjSiteRFSSId(), osp->getAdjSiteId(), osp->getAdjSiteChnId(), osp->getAdjSiteChnNo(), osp->getAdjSiteSvcClass(), peerId);
                         }
+
+                        // check if the sending peer is mapped
+                        lookups::AdjPeerMapEntry adjPeerMap = m_network->m_adjSiteMapLookup->find(peerId);
+                        if (!adjPeerMap.isEmpty()) {
+                            if (!adjPeerMap.active()) {
+                                // LogWarning(LOG_NET, "PEER %u, passing ADJ_STS_BCAST to other peers is disabled, dropping", peerId);
+                                return false;
+                            } else {
+                                // if the peer is mapped, we can repeat the ADJ_STS_BCAST to other peers
+                                if (m_network->m_peers.size() > 0U) {
+                                    for (auto peer : m_network->m_peers) {
+                                        if (peerId != peer.first) {
+                                            write_TSDU(peer.first, osp);
+                                        }
+                                    }
+
+                                    // this seems strange -- but we want to prevent the main processing loop from repeating the ADJ_STS_BCAST
+                                    return false;
+                                }
+                            }
+                        }
                     }
                 }
                 break;

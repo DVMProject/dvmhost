@@ -20,6 +20,7 @@
 #include "common/lookups/RadioIdLookup.h"
 #include "common/lookups/TalkgroupRulesLookup.h"
 #include "common/lookups/PeerListLookup.h"
+#include "common/lookups/AdjSiteMapLookup.h"
 #include "common/network/viface/VIFace.h"
 #include "common/yaml/Yaml.h"
 #include "common/Timer.h"
@@ -104,6 +105,7 @@ private:
     lookups::RadioIdLookup* m_ridLookup;
     lookups::TalkgroupRulesLookup* m_tidLookup;
     lookups::PeerListLookup* m_peerListLookup;
+    lookups::AdjSiteMapLookup* m_adjSiteMapLookup;
 
     CryptoContainer* m_cryptoLookup;
 
