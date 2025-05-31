@@ -249,14 +249,6 @@ int HostFNE::run()
             network::PeerNetwork* peerNetwork = network.second;
             if (peerNetwork != nullptr) {
                 peerNetwork->clock(ms);
-
-                // skip peer if it isn't enabled
-                if (!peerNetwork->isEnabled()) {
-                    continue;
-                }
-
-                // process peer network traffic
-                processPeer(peerNetwork);
             }
         }
 
@@ -839,6 +831,10 @@ bool HostFNE::createPeerNetworks()
                 network->setPresharedKey(presharedKey);
             }
 
+            network->setDMRCallback(std::bind(&HostFNE::processPeerDMR, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, std::placeholders::_6));
+            network->setP25Callback(std::bind(&HostFNE::processPeerP25, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, std::placeholders::_6));
+            network->setNXDNCallback(std::bind(&HostFNE::processPeerNXDN, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, std::placeholders::_6));
+
             /*
             ** Block Traffic To Peers
             */
@@ -1044,52 +1040,68 @@ void* HostFNE::threadVirtualNetworkingClock(void* arg)
 }
 #endif // !defined(_WIN32)
 
-/* Processes any peer network traffic. */
+/* Processes DMR peer network traffic. */
 
-void HostFNE::processPeer(network::PeerNetwork* peerNetwork)
+void HostFNE::processPeerDMR(network::PeerNetwork* peerNetwork, const uint8_t* data, uint32_t length, uint32_t streamId, 
+    const network::frame::RTPFNEHeader& fneHeader, const network::frame::RTPHeader& rtpHeader)
 {
     if (peerNetwork == nullptr)
         return; // this shouldn't happen...
+
+    // skip peer if it isn't enabled
+    if (!peerNetwork->isEnabled())
+        return;
+
     if (peerNetwork->getStatus() != NET_STAT_RUNNING)
         return;
 
     // process DMR data
-    if (peerNetwork->hasDMRData()) {
-        uint32_t length = 100U;
-        bool ret = false;
-        UInt8Array data = peerNetwork->readDMR(ret, length);
-        if (ret) {
-            uint32_t peerId = peerNetwork->getPeerId();
-            uint32_t slotNo = (data[15U] & 0x80U) == 0x80U ? 2U : 1U;
-            uint32_t streamId = peerNetwork->getRxDMRStreamId(slotNo);
-
-            m_network->dmrTrafficHandler()->processFrame(data.get(), length, peerId, peerNetwork->pktLastSeq(), streamId, true);
-        }
+    if (length > 0U) {
+        uint32_t peerId = peerNetwork->getPeerId();
+        m_network->dmrTrafficHandler()->processFrame(data, length, peerId, rtpHeader.getSSRC(), peerNetwork->pktLastSeq(), streamId, true);
     }
+}
+
+/* Processes P25 peer network traffic. */
+
+void HostFNE::processPeerP25(network::PeerNetwork* peerNetwork, const uint8_t* data, uint32_t length, uint32_t streamId, 
+    const network::frame::RTPFNEHeader& fneHeader, const network::frame::RTPHeader& rtpHeader)
+{
+    if (peerNetwork == nullptr)
+        return; // this shouldn't happen...
+
+    // skip peer if it isn't enabled
+    if (!peerNetwork->isEnabled())
+        return;
+
+    if (peerNetwork->getStatus() != NET_STAT_RUNNING)
+        return;
 
     // process P25 data
-    if (peerNetwork->hasP25Data()) {
-        uint32_t length = 100U;
-        bool ret = false;
-        UInt8Array data = peerNetwork->readP25(ret, length);
-        if (ret) {
-            uint32_t peerId = peerNetwork->getPeerId();
-            uint32_t streamId = peerNetwork->getRxP25StreamId();
-
-            m_network->p25TrafficHandler()->processFrame(data.get(), length, peerId, peerNetwork->pktLastSeq(), streamId, true);
-        }
+    if (length > 0U) {
+        uint32_t peerId = peerNetwork->getPeerId();
+        m_network->p25TrafficHandler()->processFrame(data, length, peerId, rtpHeader.getSSRC(), peerNetwork->pktLastSeq(), streamId, true);
     }
+}
+
+/* Processes NXDN peer network traffic. */
+
+void HostFNE::processPeerNXDN(network::PeerNetwork* peerNetwork, const uint8_t* data, uint32_t length, uint32_t streamId, 
+    const network::frame::RTPFNEHeader& fneHeader, const network::frame::RTPHeader& rtpHeader)
+{
+    if (peerNetwork == nullptr)
+        return; // this shouldn't happen...
+
+    // skip peer if it isn't enabled
+    if (!peerNetwork->isEnabled())
+        return;
+
+    if (peerNetwork->getStatus() != NET_STAT_RUNNING)
+        return;
 
     // process NXDN data
-    if (peerNetwork->hasNXDNData()) {
-        uint32_t length = 100U;
-        bool ret = false;
-        UInt8Array data = peerNetwork->readNXDN(ret, length);
-        if (ret) {
-            uint32_t peerId = peerNetwork->getPeerId();
-            uint32_t streamId = peerNetwork->getRxNXDNStreamId();
-
-            m_network->nxdnTrafficHandler()->processFrame(data.get(), length, peerId, peerNetwork->pktLastSeq(), streamId, true);
-        }
+    if (length > 0U) {
+        uint32_t peerId = peerNetwork->getPeerId();
+        m_network->nxdnTrafficHandler()->processFrame(data, length, peerId, rtpHeader.getSSRC(), peerNetwork->pktLastSeq(), streamId, true);
     }
 }

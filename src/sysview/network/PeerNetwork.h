@@ -88,9 +88,11 @@ namespace network
          * @param[in] data Buffer containing message to send to peer.
          * @param length Length of buffer.
          * @param streamId Stream ID.
+         * @param fneHeader RTP FNE Header.
+         * @param rtpHeader RTP Header.
          */
         void userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opcode, const uint8_t* data = nullptr, uint32_t length = 0U,
-            uint32_t streamId = 0U) override;
+            uint32_t streamId = 0U, const frame::RTPFNEHeader& fneHeader = frame::RTPFNEHeader(), const frame::RTPHeader& rtpHeader = frame::RTPHeader()) override;
 
         /**
          * @brief Writes configuration to the network.

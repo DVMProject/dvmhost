@@ -96,6 +96,7 @@ FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port,
     m_restrictGrantToAffOnly(false),
     m_enableInCallCtrl(true),
     m_rejectUnknownRID(false),
+    m_maskOutboundPeerID(false),
     m_filterHeaders(true),
     m_filterTerminators(true),
     m_disallowU2U(false),
@@ -142,6 +143,7 @@ void FNENetwork::setOptions(yaml::Node& conf, bool printOptions)
     m_allowConvSiteAffOverride = conf["allowConvSiteAffOverride"].as<bool>(true);
     m_enableInCallCtrl = conf["enableInCallCtrl"].as<bool>(false);
     m_rejectUnknownRID = conf["rejectUnknownRID"].as<bool>(false);
+    m_maskOutboundPeerID = conf["maskOutboundPeerID"].as<bool>(false);
     m_disallowCallTerm = conf["disallowCallTerm"].as<bool>(false);
     m_softConnLimit = conf["connectionLimit"].as<uint32_t>(MAX_HARD_CONN_CAP);
 
@@ -204,6 +206,7 @@ void FNENetwork::setOptions(yaml::Node& conf, bool printOptions)
         LogInfo("    Allow conventional sites to override affiliation and receive all traffic: %s", m_allowConvSiteAffOverride ? "yes" : "no");
         LogInfo("    Enable In-Call Control: %s", m_enableInCallCtrl ? "yes" : "no");
         LogInfo("    Reject Unknown RIDs: %s", m_rejectUnknownRID ? "yes" : "no");
+        LogInfo("    Mask Outbound Traffic Peer ID: %s", m_maskOutboundPeerID ? "yes" : "no");
         LogInfo("    Restrict grant response by affiliation: %s", m_restrictGrantToAffOnly ? "yes" : "no");
         LogInfo("    Traffic Headers Filtered by Destination ID: %s", m_filterHeaders ? "yes" : "no");
         LogInfo("    Traffic Terminators Filtered by Destination ID: %s", m_filterTerminators ? "yes" : "no");
@@ -2216,7 +2219,7 @@ bool FNENetwork::writePeerICC(uint32_t peerId, uint32_t streamId, NET_SUBFUNC::E
 
 /* Helper to send a data message to the specified peer with a explicit packet sequence. */
 
-bool FNENetwork::writePeer(uint32_t peerId, uint32_t srcPeerId, FrameQueue::OpcodePair opcode, const uint8_t* data,
+bool FNENetwork::writePeer(uint32_t peerId, uint32_t ssrc, FrameQueue::OpcodePair opcode, const uint8_t* data,
     uint32_t length, uint16_t pktSeq, uint32_t streamId, bool queueOnly, bool incPktSeq, bool directWrite) const
 {
     if (streamId == 0U) {
@@ -2234,17 +2237,26 @@ bool FNENetwork::writePeer(uint32_t peerId, uint32_t srcPeerId, FrameQueue::Opco
                 pktSeq = connection->incStreamPktSeq(streamId, pktSeq);
             }
 
-            if (connection->isExternalPeer() && !connection->isPeerLink()) {
-                // if the peer is an external peer, and not a Peer-Link peer, we need to send the packet
-                // to the external peer with our peer ID as the source instead of the originating peer
-                // because we have routed it
-                srcPeerId = m_peerId;
+            if (m_maskOutboundPeerID)
+                ssrc = m_peerId; // mask the source SSRC to our own peer ID
+            else {
+                if (connection->isExternalPeer() && !connection->isPeerLink()) {
+                    // if the peer is an external peer, and not a Peer-Link peer, we need to send the packet
+                    // to the external peer with our peer ID as the source instead of the originating peer
+                    // because we have routed it
+                    ssrc = m_peerId;
+                }
+
+                if (ssrc == 0U) {
+                    LogError(LOG_NET, "BUGBUG: PEER %u, trying to send data with a ssrc of 0?, pktSeq = %u, streamId = %u", peerId, pktSeq, streamId);
+                    ssrc = m_peerId; // fallback to our own peer ID
+                }
             }
 
             if (directWrite)
-                return m_frameQueue->write(data, length, streamId, peerId, srcPeerId, opcode, pktSeq, addr, addrLen);
+                return m_frameQueue->write(data, length, streamId, peerId, ssrc, opcode, pktSeq, addr, addrLen);
             else {
-                m_frameQueue->enqueueMessage(data, length, streamId, peerId, srcPeerId, opcode, pktSeq, addr, addrLen);
+                m_frameQueue->enqueueMessage(data, length, streamId, peerId, ssrc, opcode, pktSeq, addr, addrLen);
                 if (queueOnly)
                     return true;
                 return m_frameQueue->flushQueue();

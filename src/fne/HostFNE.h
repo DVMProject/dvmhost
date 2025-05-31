@@ -178,10 +178,35 @@ private:
     static void* threadVirtualNetworkingClock(void* arg);
 #endif // !defined(_WIN32)
     /**
-     * @brief Processes any peer network traffic.
-     * @param peerNetwork Instance of PeerNetwork to process traffic for.
+     * @brief Processes DMR peer network traffic.
+     * @param data Buffer containing DMR data.
+     * @param length Length of the buffer.
+     * @param streamId Stream ID.
+     * @param fneHeader FNE header for the packet.
+     * @param rtpHeader RTP header for the packet.
      */
-    void processPeer(network::PeerNetwork* peerNetwork);
+    void processPeerDMR(network::PeerNetwork* peerNetwork, const uint8_t* data, uint32_t length, uint32_t streamId, 
+        const network::frame::RTPFNEHeader& fneHeader, const network::frame::RTPHeader& rtpHeader);
+    /**
+     * @brief Processes P25 peer network traffic.
+     * @param data Buffer containing P25 data.
+     * @param length Length of the buffer.
+     * @param streamId Stream ID.
+     * @param fneHeader FNE header for the packet.
+     * @param rtpHeader RTP header for the packet.
+     */
+    void processPeerP25(network::PeerNetwork* peerNetwork, const uint8_t* data, uint32_t length, uint32_t streamId, 
+        const network::frame::RTPFNEHeader& fneHeader, const network::frame::RTPHeader& rtpHeader);
+    /**
+     * @brief Processes NXDN peer network traffic.
+     * @param data Buffer containing NXDN data.
+     * @param length Length of the buffer.
+     * @param streamId Stream ID.
+     * @param fneHeader FNE header for the packet.
+     * @param rtpHeader RTP header for the packet.
+     */
+    void processPeerNXDN(network::PeerNetwork* peerNetwork, const uint8_t* data, uint32_t length, uint32_t streamId, 
+        const network::frame::RTPFNEHeader& fneHeader, const network::frame::RTPHeader& rtpHeader);
 };
 
 #endif // __HOST_FNE_H__

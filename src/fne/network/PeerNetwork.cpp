@@ -50,6 +50,9 @@ PeerNetwork::PeerNetwork(const std::string& address, uint16_t port, uint16_t loc
 
     // never disable peer network services on ACL NAK from master
     m_neverDisableOnACLNAK = true;
+
+    // FNE peer network manually handle protocol packets
+    m_userHandleProtocol = true;
 }
 
 /* Sets the instances of the Peer List lookup tables. */
@@ -140,9 +143,42 @@ bool PeerNetwork::writePeerLinkPeers(json::array* peerList)
 
 /* User overrideable handler that allows user code to process network packets not handled by this class. */
 
-void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opcode, const uint8_t* data, uint32_t length, uint32_t streamId)
+void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opcode, const uint8_t* data, uint32_t length, uint32_t streamId, 
+    const frame::RTPFNEHeader& fneHeader, const frame::RTPHeader& rtpHeader)
 {
     switch (opcode.first) {
+    case NET_FUNC::PROTOCOL:                                        // Protocol
+        {
+            // process incomfing message subfunction opcodes
+            switch (opcode.second) {
+            case NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR:                 // Encapsulated DMR data frame
+                {
+                    if (m_dmrCallback != nullptr)
+                        m_dmrCallback(this, data, length, streamId, fneHeader, rtpHeader);
+                }
+                break;
+
+            case NET_SUBFUNC::PROTOCOL_SUBFUNC_P25:                 // Encapsulated P25 data frame
+                {
+                    if (m_p25Callback != nullptr)
+                        m_p25Callback(this, data, length, streamId, fneHeader, rtpHeader);
+                }
+                break;
+
+            case NET_SUBFUNC::PROTOCOL_SUBFUNC_NXDN:                // Encapsulated NXDN data frame
+                {
+                    if (m_nxdnCallback != nullptr)
+                        m_nxdnCallback(this, data, length, streamId, fneHeader, rtpHeader);
+                }
+                break;
+
+            default:
+                Utils::dump("unknown protocol opcode from the master", data, length);
+                break;
+            }
+        }
+        break;
+
     case NET_FUNC::PEER_LINK:
     {
         switch (opcode.second) {

@@ -18,6 +18,8 @@
 
 #include "common/Defines.h"
 #include "common/network/BaseNetwork.h"
+#include "common/network/RTPHeader.h"
+#include "common/network/RTPFNEHeader.h"
 #include "common/lookups/RadioIdLookup.h"
 #include "common/lookups/TalkgroupRulesLookup.h"
 #include "common/p25/kmm/KeysetItem.h"
@@ -312,9 +314,11 @@ namespace network
          * @param[in] data Buffer containing message to send to peer.
          * @param length Length of buffer.
          * @param streamId Stream ID.
+         * @param fneHeader RTP FNE Header.
+         * @param rtpHeader RTP Header.
          */
         virtual void userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opcode, const uint8_t* data = nullptr, uint32_t length = 0U,
-            uint32_t streamId = 0U);
+            uint32_t streamId = 0U, const frame::RTPFNEHeader& fneHeader = frame::RTPFNEHeader(), const frame::RTPHeader& rtpHeader = frame::RTPHeader());
 
         /**
          * @brief Writes login request to the network.

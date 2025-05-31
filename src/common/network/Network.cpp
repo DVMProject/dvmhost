@@ -9,8 +9,6 @@
  */
 #include "Defines.h"
 #include "common/edac/SHA256.h"
-#include "common/network/RTPHeader.h"
-#include "common/network/RTPFNEHeader.h"
 #include "common/network/json/json.h"
 #include "common/p25/kmm/KMMFactory.h"
 #include "common/Log.h"
@@ -267,7 +265,7 @@ void Network::clock(uint32_t ms)
                 // are protocol messages being user handled?
                 if (m_userHandleProtocol) {
                     userPacketHandler(fneHeader.getPeerId(), { fneHeader.getFunction(), fneHeader.getSubFunction() }, 
-                        buffer.get(), length, fneHeader.getStreamId());
+                        buffer.get(), length, fneHeader.getStreamId(), fneHeader, rtpHeader);
                     break;
                 }
 
@@ -832,7 +830,7 @@ void Network::clock(uint32_t ms)
             break;
         default:
             userPacketHandler(fneHeader.getPeerId(), { fneHeader.getFunction(), fneHeader.getSubFunction() }, 
-                buffer.get(), length, fneHeader.getStreamId());
+                buffer.get(), length, fneHeader.getStreamId(), fneHeader, rtpHeader);
             break;
         }
     }
@@ -930,7 +928,8 @@ void Network::enable(bool enabled)
 
 /* User overrideable handler that allows user code to process network packets not handled by this class. */
 
-void Network::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opcode, const uint8_t* data, uint32_t length, uint32_t streamId)
+void Network::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opcode, const uint8_t* data, uint32_t length, uint32_t streamId,
+    const frame::RTPFNEHeader& fneHeader, const frame::RTPHeader& rtpHeader)
 {
     Utils::dump("unknown opcode from the master", data, length);
 }

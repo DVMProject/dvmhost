@@ -82,6 +82,22 @@ namespace network
         uint32_t getRxNXDNStreamId() const { return m_rxNXDNStreamId; }
 
         /**
+         * @brief Helper to set the DMR protocol callback.
+         * @param callback 
+         */
+        void setDMRCallback(std::function<void(PeerNetwork*, const uint8_t*, uint32_t, uint32_t, const frame::RTPFNEHeader&, const frame::RTPHeader&)>&& callback) { m_dmrCallback = callback; }
+        /**
+         * @brief Helper to set the P25 protocol callback.
+         * @param callback 
+         */
+        void setP25Callback(std::function<void(PeerNetwork*, const uint8_t*, uint32_t, uint32_t, const frame::RTPFNEHeader&, const frame::RTPHeader&)>&& callback) { m_p25Callback = callback; }
+        /**
+         * @brief Helper to set the NXDN protocol callback.
+         * @param callback 
+         */
+        void setNXDNCallback(std::function<void(PeerNetwork*, const uint8_t*, uint32_t, uint32_t, const frame::RTPFNEHeader&, const frame::RTPHeader&)>&& callback) { m_nxdnCallback = callback; }
+
+        /**
          * @brief Gets the blocked traffic peer ID table.
          * @returns std::vector<uint32_t> List of peer IDs this peer network cannot send traffic to.
          */
@@ -126,15 +142,33 @@ namespace network
         std::vector<uint32_t> m_blockTrafficToTable;
 
         /**
+         * @brief DMR Protocol Callback.
+         *  (This is called when the master sends a DMR packet.)
+         */
+        std::function<void(PeerNetwork* peer, const uint8_t* data, uint32_t length, uint32_t streamId, const frame::RTPFNEHeader& fneHeader, const frame::RTPHeader& rtpHeader)> m_dmrCallback;
+        /**
+         * @brief P25 Protocol Callback.
+         *  (This is called when the master sends a P25 packet.)
+         */
+        std::function<void(PeerNetwork* peer, const uint8_t* data, uint32_t length, uint32_t streamId, const frame::RTPFNEHeader& fneHeader, const frame::RTPHeader& rtpHeader)> m_p25Callback;
+        /**
+         * @brief NXDN Protocol Callback.
+         *  (This is called when the master sends a NXDN packet.)
+         */
+        std::function<void(PeerNetwork* peer, const uint8_t* data, uint32_t length, uint32_t streamId, const frame::RTPFNEHeader& fneHeader, const frame::RTPHeader& rtpHeader)> m_nxdnCallback;
+
+        /**
          * @brief User overrideable handler that allows user code to process network packets not handled by this class.
          * @param peerId Peer ID.
          * @param opcode FNE network opcode pair.
          * @param[in] data Buffer containing message to send to peer.
          * @param length Length of buffer.
          * @param streamId Stream ID.
+         * @param fneHeader RTP FNE Header.
+         * @param rtpHeader RTP Header.
          */
         void userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opcode, const uint8_t* data = nullptr, uint32_t length = 0U,
-            uint32_t streamId = 0U) override;
+            uint32_t streamId = 0U, const frame::RTPFNEHeader& fneHeader = frame::RTPFNEHeader(), const frame::RTPHeader& rtpHeader = frame::RTPHeader()) override;
 
         /**
          * @brief Writes configuration to the network.

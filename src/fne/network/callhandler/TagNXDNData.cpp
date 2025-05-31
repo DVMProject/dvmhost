@@ -261,7 +261,7 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                     // perform TGID route rewrites if configured
                     routeRewrite(outboundPeerBuffer, peer.first, messageType, dstId);
 
-                    m_network->writePeer(peer.first, peerId, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_NXDN }, outboundPeerBuffer, len, pktSeq, streamId, true);
+                    m_network->writePeer(peer.first, ssrc, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_NXDN }, outboundPeerBuffer, len, pktSeq, streamId, true);
                     if (m_network->m_debug) {
                         LogDebug(LOG_NET, "NXDN, ssrc = %u, srcPeer = %u,  dstPeer = %u, messageType = $%02X, srcId = %u, dstId = %u, len = %u, pktSeq = %u, streamId = %u, external = %u", 
                             ssrc, peerId, peer.first, messageType, srcId, dstId, len, pktSeq, streamId, external);
@@ -304,7 +304,11 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                     // perform TGID route rewrites if configured
                     routeRewrite(outboundPeerBuffer, dstPeerId, messageType, dstId);
 
-                    peer.second->writeMaster({ NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_NXDN }, outboundPeerBuffer, len, pktSeq, streamId);
+                    // are we a peer link?
+                    if (peer.second->isPeerLink())
+                        peer.second->writeMaster({ NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_NXDN }, outboundPeerBuffer, len, pktSeq, streamId, false, false, 0U, ssrc);
+                    else
+                        peer.second->writeMaster({ NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_NXDN }, outboundPeerBuffer, len, pktSeq, streamId);
                     if (m_network->m_debug) {
                         LogDebug(LOG_NET, "NXDN, ssrc = %u, srcPeer = %u, dstPeer = %u, messageType = $%02X, srcId = %u, dstId = %u, len = %u, pktSeq = %u, streamId = %u, external = %u", 
                             ssrc, peerId, dstPeerId, messageType, srcId, dstId, len, pktSeq, streamId, external);

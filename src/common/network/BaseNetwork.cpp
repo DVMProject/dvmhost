@@ -363,10 +363,12 @@ uint32_t BaseNetwork::getDMRStreamId(uint32_t slotNo) const
 /* Helper to send a data message to the master. */
 
 bool BaseNetwork::writeMaster(FrameQueue::OpcodePair opcode, const uint8_t* data, uint32_t length, uint16_t pktSeq, uint32_t streamId, 
-    bool queueOnly, bool useAlternatePort, uint32_t peerId)
+    bool queueOnly, bool useAlternatePort, uint32_t peerId, uint32_t ssrc)
 {
     if (peerId == 0U)
         peerId = m_peerId;
+    if (ssrc == 0U)
+        ssrc = m_peerId;
 
     if (useAlternatePort) {
         sockaddr_storage addr;
@@ -377,14 +379,14 @@ bool BaseNetwork::writeMaster(FrameQueue::OpcodePair opcode, const uint8_t* data
 
         if (udp::Socket::lookup(address, port, addr, addrLen) == 0) {
             if (!queueOnly)
-                return m_frameQueue->write(data, length, streamId, peerId, m_peerId, opcode, pktSeq, addr, addrLen);
+                return m_frameQueue->write(data, length, streamId, peerId, ssrc, opcode, pktSeq, addr, addrLen);
             else
                 m_frameQueue->enqueueMessage(data, length, streamId, m_peerId, opcode, pktSeq, addr, addrLen);
         }
     }
     else {
         if (!queueOnly)
-            return m_frameQueue->write(data, length, streamId, peerId, m_peerId, opcode, pktSeq, m_addr, m_addrLen);
+            return m_frameQueue->write(data, length, streamId, peerId, ssrc, opcode, pktSeq, m_addr, m_addrLen);
         else
             m_frameQueue->enqueueMessage(data, length, streamId, m_peerId, opcode, pktSeq, m_addr, m_addrLen);
     }

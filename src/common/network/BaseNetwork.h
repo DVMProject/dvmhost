@@ -325,10 +325,12 @@ namespace network
          * @param queueOnly Flag indicating this message should be queued instead of send immediately.
          * @param useAlternatePort Flag indicating the message shuold be sent using the alternate port (mainly for activity and diagnostics).
          * @param peerId If non-zero, overrides the peer ID sent in the packet to the master.
+         * @param ssrc If non-zero, overrides the RTP synchronization source ID sent in the packet to the master.
          * @returns bool True, if message was sent, otherwise false. 
          */
         bool writeMaster(FrameQueue::OpcodePair opcode, const uint8_t* data, uint32_t length, 
-            uint16_t pktSeq, uint32_t streamId, bool queueOnly = false, bool useAlternatePort = false, uint32_t peerId = 0U);
+            uint16_t pktSeq, uint32_t streamId, bool queueOnly = false, bool useAlternatePort = false, uint32_t peerId = 0U,
+            uint32_t ssrc = 0U);
 
         // Digital Mobile Radio
         /**

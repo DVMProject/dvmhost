@@ -56,7 +56,8 @@ PeerNetwork::PeerNetwork(const std::string& address, uint16_t port, uint16_t loc
 
 /* User overrideable handler that allows user code to process network packets not handled by this class. */
 
-void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opcode, const uint8_t* data, uint32_t length, uint32_t streamId)
+void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opcode, const uint8_t* data, uint32_t length, uint32_t streamId,
+    const frame::RTPFNEHeader& fneHeader, const frame::RTPHeader& rtpHeader)
 {
     switch (opcode.first) {
     case NET_FUNC::TRANSFER:
