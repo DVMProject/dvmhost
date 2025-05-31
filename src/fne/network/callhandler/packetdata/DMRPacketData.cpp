@@ -283,7 +283,7 @@ void DMRPacketData::dispatchToFNE(uint32_t peerId, dmr::data::NetData& dmrData, 
                     m_network->m_frameQueue->flushQueue();
                 }
 
-                m_network->writePeer(peer.first, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR }, data, len, pktSeq, streamId, true);
+                m_network->writePeer(peer.first, peerId, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR }, data, len, pktSeq, streamId, true);
                 if (m_network->m_debug) {
                     LogDebug(LOG_NET, "DMR, srcPeer = %u, dstPeer = %u, seqNo = %u, srcId = %u, dstId = %u, slotNo = %u, len = %u, pktSeq = %u, stream = %u", 
                         peerId, peer.first, seqNo, srcId, dstId, status->slotNo, len, pktSeq, streamId);

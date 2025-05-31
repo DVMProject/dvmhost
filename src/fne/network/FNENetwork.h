@@ -736,7 +736,8 @@ namespace network
 
         /**
          * @brief Helper to send a data message to the specified peer with a explicit packet sequence.
-         * @param peerId Peer ID.
+         * @param peerId Destination Peer ID.
+         * @param srcPeerId Source Peer ID.
          * @param opcode FNE network opcode pair.
          * @param[in] data Buffer containing message to send to peer.
          * @param length Length of buffer.
@@ -746,7 +747,7 @@ namespace network
          * @param incPktSeq Flag indicating the message should increment the packet sequence after transmission.
          * @param directWrite Flag indicating this message should be immediately directly written.
          */
-        bool writePeer(uint32_t peerId, FrameQueue::OpcodePair opcode, const uint8_t* data, uint32_t length, 
+        bool writePeer(uint32_t peerId, uint32_t srcPeerId, FrameQueue::OpcodePair opcode, const uint8_t* data, uint32_t length, 
             uint16_t pktSeq, uint32_t streamId, bool queueOnly, bool incPktSeq = false, bool directWrite = false) const;
 
         /**

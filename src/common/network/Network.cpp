@@ -236,7 +236,7 @@ void Network::clock(uint32_t ms)
         }
 
         if (m_debug) {
-            LogDebugEx(LOG_NET, "Network::clock()", "RTP, peerId = %u, seq = %u, streamId = %u, func = %02X, subFunc = %02X", fneHeader.getPeerId(), rtpHeader.getSequence(),
+            LogDebugEx(LOG_NET, "Network::clock()", "RTP, peerId = %u, ssrc = %u, seq = %u, streamId = %u, func = %02X, subFunc = %02X", fneHeader.getPeerId(), rtpHeader.getSSRC(), rtpHeader.getSequence(),
                 fneHeader.getStreamId(), fneHeader.getFunction(), fneHeader.getSubFunction());
         }
 

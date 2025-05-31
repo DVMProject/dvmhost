@@ -497,7 +497,8 @@ void FNENetwork::close()
 
         uint32_t streamId = createStreamId();
         for (auto peer : m_peers) {
-            writePeer(peer.first, { NET_FUNC::MST_DISC, NET_SUBFUNC::NOP }, buffer, 1U, RTP_END_OF_CALL_SEQ, streamId, false);
+            writePeer(peer.first, m_peerId, { NET_FUNC::MST_DISC, NET_SUBFUNC::NOP }, buffer, 1U, RTP_END_OF_CALL_SEQ, 
+                streamId, false);
         }
     }
 
@@ -1208,7 +1209,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
 
                                                 modifyKeyRsp.encode(buffer + 11U);
 
-                                                network->writePeer(peerId, { NET_FUNC::KEY_RSP, NET_SUBFUNC::NOP }, buffer, modifyKeyRsp.length() + 11U, 
+                                                network->writePeer(peerId, network->m_peerId, { NET_FUNC::KEY_RSP, NET_SUBFUNC::NOP }, buffer, modifyKeyRsp.length() + 11U, 
                                                     RTP_END_OF_CALL_SEQ, network->createStreamId(), false, false, true);
                                             } else {
                                                 // attempt to forward KMM key request to Peer-Link masters
@@ -1810,7 +1811,7 @@ void FNENetwork::writeWhitelistRIDs(uint32_t peerId, uint32_t streamId, bool isE
             LogInfoEx(LOG_NET, "PEER %u Peer-Link, RID List, blocks %u, streamId = %u", peerId, pkt.fragments.size(), streamId);
             if (pkt.fragments.size() > 0U) {
                 for (auto frag : pkt.fragments) {
-                    writePeer(peerId, { NET_FUNC::PEER_LINK, NET_SUBFUNC::PL_RID_LIST }, 
+                    writePeer(peerId, m_peerId, { NET_FUNC::PEER_LINK, NET_SUBFUNC::PL_RID_LIST }, 
                         frag.second->data, FRAG_SIZE, 0U, streamId, false, true, true);
                     Thread::sleep(60U); // pace block transmission
                 }
@@ -1999,7 +2000,7 @@ void FNENetwork::writeTGIDs(uint32_t peerId, uint32_t streamId, bool isExternalP
             LogInfoEx(LOG_NET, "PEER %u Peer-Link, TGID List, blocks %u, streamId = %u", peerId, pkt.fragments.size(), streamId);
             if (pkt.fragments.size() > 0U) {
                 for (auto frag : pkt.fragments) {
-                    writePeer(peerId, { NET_FUNC::PEER_LINK, NET_SUBFUNC::PL_TALKGROUP_LIST }, 
+                    writePeer(peerId, m_peerId, { NET_FUNC::PEER_LINK, NET_SUBFUNC::PL_TALKGROUP_LIST }, 
                         frag.second->data, FRAG_SIZE, 0U, streamId, false, true, true);
                     Thread::sleep(60U); // pace block transmission
                 }
@@ -2177,7 +2178,7 @@ void FNENetwork::writePeerList(uint32_t peerId, uint32_t streamId)
         LogInfoEx(LOG_NET, "PEER %u Peer-Link, PID List, blocks %u, streamId = %u", peerId, pkt.fragments.size(), streamId);
         if (pkt.fragments.size() > 0U) {
             for (auto frag : pkt.fragments) {
-                writePeer(peerId, { NET_FUNC::PEER_LINK, NET_SUBFUNC::PL_PEER_LIST }, 
+                writePeer(peerId, m_peerId, { NET_FUNC::PEER_LINK, NET_SUBFUNC::PL_PEER_LIST }, 
                     frag.second->data, FRAG_SIZE, 0U, streamId, false, true, true);
                 Thread::sleep(60U); // pace block transmission
             }
@@ -2206,12 +2207,12 @@ bool FNENetwork::writePeerICC(uint32_t peerId, uint32_t streamId, NET_SUBFUNC::E
     SET_UINT24(dstId, buffer, 11U);                                             // Destination ID
     buffer[14U] = slotNo;                                                       // DMR Slot No
 
-    return writePeer(peerId, { NET_FUNC::INCALL_CTRL, subFunc }, buffer, 15U, RTP_END_OF_CALL_SEQ, streamId, false);
+    return writePeer(peerId, m_peerId, { NET_FUNC::INCALL_CTRL, subFunc }, buffer, 15U, RTP_END_OF_CALL_SEQ, streamId, false);
 }
 
 /* Helper to send a data message to the specified peer with a explicit packet sequence. */
 
-bool FNENetwork::writePeer(uint32_t peerId, FrameQueue::OpcodePair opcode, const uint8_t* data,
+bool FNENetwork::writePeer(uint32_t peerId, uint32_t srcPeerId, FrameQueue::OpcodePair opcode, const uint8_t* data,
     uint32_t length, uint16_t pktSeq, uint32_t streamId, bool queueOnly, bool incPktSeq, bool directWrite) const
 {
     if (streamId == 0U) {
@@ -2229,10 +2230,17 @@ bool FNENetwork::writePeer(uint32_t peerId, FrameQueue::OpcodePair opcode, const
                 pktSeq = connection->incStreamPktSeq(streamId, pktSeq);
             }
 
+            if (connection->isExternalPeer() && !connection->isPeerLink()) {
+                // if the peer is an external peer, and not a Peer-Link peer, we need to send the packet
+                // to the external peer with our peer ID as the source instead of the originating peer
+                // because we have routed it
+                srcPeerId = m_peerId;
+            }
+
             if (directWrite)
-                return m_frameQueue->write(data, length, streamId, peerId, m_peerId, opcode, pktSeq, addr, addrLen);
+                return m_frameQueue->write(data, length, streamId, srcPeerId, m_peerId, opcode, pktSeq, addr, addrLen);
             else {
-                m_frameQueue->enqueueMessage(data, length, streamId, peerId, m_peerId, opcode, pktSeq, addr, addrLen);
+                m_frameQueue->enqueueMessage(data, length, streamId, srcPeerId, m_peerId, opcode, pktSeq, addr, addrLen);
                 if (queueOnly)
                     return true;
                 return m_frameQueue->flushQueue();
@@ -2259,7 +2267,7 @@ bool FNENetwork::writePeerCommand(uint32_t peerId, FrameQueue::OpcodePair opcode
     }
 
     uint32_t len = length + 6U;
-    return writePeer(peerId, opcode, buffer, len, RTP_END_OF_CALL_SEQ, streamId, false, incPktSeq, true);
+    return writePeer(peerId, m_peerId, opcode, buffer, len, RTP_END_OF_CALL_SEQ, streamId, false, incPktSeq, true);
 }
 
 /* Helper to send a ACK response to the specified peer. */
@@ -2275,8 +2283,8 @@ bool FNENetwork::writePeerACK(uint32_t peerId, uint32_t streamId, const uint8_t*
         ::memcpy(buffer + 6U, data, length);
     }
 
-    return writePeer(peerId, { NET_FUNC::ACK, NET_SUBFUNC::NOP }, buffer, length + 10U, RTP_END_OF_CALL_SEQ, streamId, 
-        false, false, true);
+    return writePeer(peerId, m_peerId, { NET_FUNC::ACK, NET_SUBFUNC::NOP }, buffer, length + 10U, RTP_END_OF_CALL_SEQ, 
+        streamId, false, false, true);
 }
 
 /* Helper to log a warning specifying which NAK reason is being sent a peer. */
@@ -2332,7 +2340,7 @@ bool FNENetwork::writePeerNAK(uint32_t peerId, uint32_t streamId, const char* ta
     SET_UINT16((uint16_t)reason, buffer, 10U);                                  // Reason
 
     logPeerNAKReason(peerId, tag, reason);
-    return writePeer(peerId, { NET_FUNC::NAK, NET_SUBFUNC::NOP }, buffer, 10U, RTP_END_OF_CALL_SEQ, streamId, false);
+    return writePeer(peerId, m_peerId, { NET_FUNC::NAK, NET_SUBFUNC::NOP }, buffer, 10U, RTP_END_OF_CALL_SEQ, streamId, false);
 }
 
 /* Helper to send a NAK response to the specified peer. */
@@ -2410,7 +2418,7 @@ void FNENetwork::processTEKResponse(p25::kmm::KeyItem* rspKi, uint8_t algId, uin
 
             modifyKeyRsp.encode(buffer + 11U);
 
-            writePeer(peerId, { NET_FUNC::KEY_RSP, NET_SUBFUNC::NOP }, buffer, modifyKeyRsp.length() + 11U, 
+            writePeer(peerId, m_peerId, { NET_FUNC::KEY_RSP, NET_SUBFUNC::NOP }, buffer, modifyKeyRsp.length() + 11U, 
                 RTP_END_OF_CALL_SEQ, createStreamId(), false, false, true);
 
             peersToRemove.push_back(peerId);
