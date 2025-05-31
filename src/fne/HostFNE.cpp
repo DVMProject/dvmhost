@@ -42,6 +42,8 @@ using namespace lookups;
 #define MIN_WORKER_CNT 4U
 #define MAX_WORKER_CNT 128U
 
+#define MAX_RECOMMENDED_PEER_NETWORKS 8U
+
 #define THREAD_CYCLE_THRESHOLD 2U
 
 #define IDLE_WARMUP_MS 5U
@@ -765,6 +767,10 @@ bool HostFNE::createPeerNetworks()
 {
     yaml::Node& peerList = m_conf["peers"];
     if (peerList.size() > 0U) {
+        if (peerList.size() > MAX_RECOMMENDED_PEER_NETWORKS) {
+            LogWarning(LOG_HOST, "Peer network count (%zu) exceeds the recommended maximum of %u. This may result in poor performance.", peerList.size(), MAX_RECOMMENDED_PEER_NETWORKS);
+        }
+
         for (size_t i = 0; i < peerList.size(); i++) {
             yaml::Node& peerConf = peerList[i];
 
