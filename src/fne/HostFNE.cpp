@@ -388,6 +388,10 @@ bool HostFNE::readParams()
     std::string talkgroupConfig = talkgroupRules["file"].as<std::string>();
     uint32_t talkgroupConfigReload = talkgroupRules["time"].as<uint32_t>(30U);
 
+    yaml::Node adjSiteMapRules = masterConf["adj_site_map"];
+    std::string adjSiteMapConfig = adjSiteMapRules["file"].as<std::string>();
+    uint32_t adjSiteMapReload = adjSiteMapRules["time"].as<uint32_t>(30U);
+
     yaml::Node cryptoContainer = masterConf["crypto_container"];
     bool cryptoContainerEnabled = cryptoContainer["enable"].as<bool>(false);
 #if !defined(ENABLE_SSL)
@@ -419,6 +423,14 @@ bool HostFNE::readParams()
 
     m_peerListLookup = new PeerListLookup(peerListLookupFile, peerListConfigReload, peerListLookupEnable);
     m_peerListLookup->read();
+
+    LogInfo("Adjacent Site Map Lookups");
+    LogInfo("    File: %s", adjSiteMapConfig.length() > 0U ? adjSiteMapConfig.c_str() : "None");
+    if (adjSiteMapReload > 0U)
+        LogInfo("    Reload: %u mins", adjSiteMapReload);
+
+    m_adjSiteMapLookup = new AdjSiteMapLookup(adjSiteMapConfig, adjSiteMapReload);
+    m_adjSiteMapLookup->read();
 
     // try to load peer whitelist/blacklist
     LogInfo("Crypto Container Lookups");
@@ -609,7 +621,7 @@ bool HostFNE::createMasterNetwork()
         parrotDelay, parrotGrantDemand, m_allowActivityTransfer, m_allowDiagnosticTransfer, m_pingTime, m_updateLookupTime, workerCnt);
     m_network->setOptions(masterConf, true);
 
-    m_network->setLookups(m_ridLookup, m_tidLookup, m_peerListLookup, m_cryptoLookup);
+    m_network->setLookups(m_ridLookup, m_tidLookup, m_peerListLookup, m_cryptoLookup, m_adjSiteMapLookup);
 
     if (m_RESTAPI != nullptr) {
         m_RESTAPI->setNetwork(m_network);

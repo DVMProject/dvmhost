@@ -1,0 +1,14 @@
+#
+# Digital Voice Modem - Adj. Site Map
+#
+
+# 
+# Peer List
+#
+peers:
+    # Peer ID.
+  - peerId: 1234567
+    # Flag indicating whether this talkgroup is active or not.
+    active: true
+    # List of peer IDs that are neighbors for this peer.
+    neighbors: []

@@ -32,6 +32,7 @@
 #include "common/lookups/RadioIdLookup.h"
 #include "common/lookups/TalkgroupRulesLookup.h"
 #include "common/lookups/PeerListLookup.h"
+#include "common/lookups/AdjSiteMapLookup.h"
 #include "common/network/Network.h"
 #include "common/network/PacketBuffer.h"
 #include "common/ThreadPool.h"
@@ -472,9 +473,10 @@ namespace network
          * @param tidLookup Talkgroup Rules Lookup Table Instance
          * @param peerListLookup Peer List Lookup Table Instance
          * @param cryptoLookup Crypto Container Lookup Table Instance
+         * @param adjSiteMapLookup Adjacent Site Map Lookup Table Instance
          */
         void setLookups(lookups::RadioIdLookup* ridLookup, lookups::TalkgroupRulesLookup* tidLookup, lookups::PeerListLookup* peerListLookup,
-            CryptoContainer* cryptoLookup);
+            CryptoContainer* cryptoLookup, lookups::AdjSiteMapLookup* adjSiteMapLookup);
         /**
          * @brief Sets endpoint preshared encryption key.
          * @param presharedKey Encryption preshared key for networking.
@@ -549,6 +551,7 @@ namespace network
         lookups::RadioIdLookup* m_ridLookup;
         lookups::TalkgroupRulesLookup* m_tidLookup;
         lookups::PeerListLookup* m_peerListLookup;
+        lookups::AdjSiteMapLookup* m_adjSiteMapLookup;
 
         CryptoContainer* m_cryptoLookup;
 

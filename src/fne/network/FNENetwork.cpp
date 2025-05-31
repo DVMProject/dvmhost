@@ -76,6 +76,8 @@ FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port,
     m_ridLookup(nullptr),
     m_tidLookup(nullptr),
     m_peerListLookup(nullptr),
+    m_adjSiteMapLookup(nullptr),
+    m_cryptoLookup(nullptr),
     m_status(NET_STAT_INVALID),
     m_peers(),
     m_peerLinkPeers(),
@@ -221,12 +223,13 @@ void FNENetwork::setOptions(yaml::Node& conf, bool printOptions)
 /* Sets the instances of the Radio ID, Talkgroup ID Peer List, and Crypto lookup tables. */
 
 void FNENetwork::setLookups(lookups::RadioIdLookup* ridLookup, lookups::TalkgroupRulesLookup* tidLookup, lookups::PeerListLookup* peerListLookup,
-    CryptoContainer* cryptoLookup)
+    CryptoContainer* cryptoLookup, lookups::AdjSiteMapLookup* adjSiteMapLookup)
 {
     m_ridLookup = ridLookup;
     m_tidLookup = tidLookup;
     m_peerListLookup = peerListLookup;
     m_cryptoLookup = cryptoLookup;
+    m_adjSiteMapLookup = adjSiteMapLookup;
 }
 
 /* Sets endpoint preshared encryption key. */
