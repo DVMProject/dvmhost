@@ -63,7 +63,7 @@ TagDMRData::~TagDMRData()
 
 /* Process a data frame from the network. */
 
-bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint16_t pktSeq, uint32_t streamId, bool external)
+bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint32_t ssrc, uint16_t pktSeq, uint32_t streamId, bool external)
 {
     hrc::hrc_t pktTime = hrc::now();
 
@@ -134,7 +134,7 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
         // is this the end of the call stream?
         if (dataSync && (dataType == DataType::TERMINATOR_WITH_LC)) {
             if (srcId == 0U && dstId == 0U) {
-                LogWarning(LOG_NET, "DMR, invalid TERMINATOR, peer = %u, srcId = %u, dstId = %u, slot = %u, streamId = %u, external = %u", peerId, srcId, dstId, slotNo, streamId, external);
+                LogWarning(LOG_NET, "DMR, invalid TERMINATOR, peer = %u, ssrc = %u, srcId = %u, dstId = %u, slot = %u, streamId = %u, external = %u", peerId, ssrc, srcId, dstId, slotNo, streamId, external);
                 return false;
             }
 
@@ -147,8 +147,8 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                     return false;
                 });
                 if (it == m_status.end()) {
-                    LogError(LOG_NET, "DMR, tried to end call for non-existent call in progress?, peer = %u, srcId = %u, dstId = %u, slot = %u, streamId = %u, external = %u",
-                        peerId, srcId, dstId, slotNo, streamId, external);
+                    LogError(LOG_NET, "DMR, tried to end call for non-existent call in progress?, peer = %u, ssrc = %u, srcId = %u, dstId = %u, slot = %u, streamId = %u, external = %u",
+                        peerId, ssrc, srcId, dstId, slotNo, streamId, external);
                 }
                 else {
                     status = it->second;
@@ -172,13 +172,13 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                 if (tg.config().parrot()) {
                     if (m_parrotFrames.size() > 0) {
                         m_parrotFramesReady = true;
-                        LogMessage(LOG_NET, "DMR, Parrot Playback will Start, peer = %u, srcId = %u", peerId, srcId);
+                        LogMessage(LOG_NET, "DMR, Parrot Playback will Start, peer = %u, ssrc = %u, srcId = %u", peerId, ssrc, srcId);
                         m_network->m_parrotDelayTimer.start();
                     }
                 }
 
-                LogMessage(LOG_NET, "DMR, Call End, peer = %u, srcId = %u, dstId = %u, slot = %u, duration = %u, streamId = %u, external = %u",
-                            peerId, srcId, dstId, slotNo, duration / 1000, streamId, external);
+                LogMessage(LOG_NET, "DMR, Call End, peer = %u, ssrc = %u, srcId = %u, dstId = %u, slot = %u, duration = %u, streamId = %u, external = %u",
+                            peerId, ssrc, srcId, dstId, slotNo, duration / 1000, streamId, external);
 
                 // report call event to InfluxDB
                 if (m_network->m_enableInfluxDB) {
@@ -203,7 +203,7 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
         // is this a new call stream?
         if (dataSync && (dataType == DataType::VOICE_LC_HEADER)) {
             if (srcId == 0U && dstId == 0U) {
-                LogWarning(LOG_NET, "DMR, invalid call, peer = %u, srcId = %u, dstId = %u, streamId = %u, external = %u", peerId, srcId, dstId, streamId, external);
+                LogWarning(LOG_NET, "DMR, invalid call, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, external = %u", peerId, ssrc, srcId, dstId, streamId, external);
                 return false;
             }
 
@@ -225,8 +225,8 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                             m_network->m_callInProgress = false;
                         }
 
-                        LogWarning(LOG_NET, "DMR, Call Collision, peer = %u, srcId = %u, dstId = %u, slotNo = %u, streamId = %u, rxPeer = %u, rxSrcId = %u, rxDstId = %u, rxSlotNo = %u, rxStreamId = %u, external = %u",
-                            peerId, srcId, dstId, slotNo, streamId, status.peerId, status.srcId, status.dstId, status.slotNo, status.streamId, external);
+                        LogWarning(LOG_NET, "DMR, Call Collision, peer = %u, ssrc = %u, srcId = %u, dstId = %u, slotNo = %u, streamId = %u, rxPeer = %u, rxSrcId = %u, rxDstId = %u, rxSlotNo = %u, rxStreamId = %u, external = %u",
+                            peerId, ssrc, srcId, dstId, slotNo, streamId, status.peerId, status.srcId, status.dstId, status.slotNo, status.streamId, external);
                         return false;
                     }
                 }
@@ -256,7 +256,7 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                 m_status[dstId].peerId = peerId;
                 m_status[dstId].activeCall = true;
 
-                LogMessage(LOG_NET, "DMR, Call Start, peer = %u, srcId = %u, dstId = %u, streamId = %u, external = %u", peerId, srcId, dstId, streamId, external);
+                LogMessage(LOG_NET, "DMR, Call Start, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, external = %u", peerId, ssrc, srcId, dstId, streamId, external);
 
                 m_network->m_callInProgress = true;
             }
@@ -318,8 +318,8 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
 
                     m_network->writePeer(peer.first, peerId, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR }, outboundPeerBuffer, len, pktSeq, streamId, true);
                     if (m_network->m_debug) {
-                        LogDebug(LOG_NET, "DMR, srcPeer = %u, dstPeer = %u, seqNo = %u, srcId = %u, dstId = %u, flco = $%02X, slotNo = %u, len = %u, pktSeq = %u, stream = %u, external = %u", 
-                            peerId, peer.first, seqNo, srcId, dstId, flco, slotNo, len, pktSeq, streamId, external);
+                        LogDebug(LOG_NET, "DMR, ssrc = %u, srcPeer = %u, dstPeer = %u, seqNo = %u, srcId = %u, dstId = %u, flco = $%02X, slotNo = %u, len = %u, pktSeq = %u, stream = %u, external = %u", 
+                            ssrc, peerId, peer.first, seqNo, srcId, dstId, flco, slotNo, len, pktSeq, streamId, external);
                     }
 
                     if (!m_network->m_callInProgress)
@@ -361,8 +361,8 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
 
                     peer.second->writeMaster({ NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR }, outboundPeerBuffer, len, pktSeq, streamId);
                     if (m_network->m_debug) {
-                        LogDebug(LOG_NET, "DMR, srcPeer = %u, dstPeer = %u, seqNo = %u, srcId = %u, dstId = %u, flco = $%02X, slotNo = %u, len = %u, pktSeq = %u, stream = %u, external = %u", 
-                            peerId, dstPeerId, seqNo, srcId, dstId, flco, slotNo, len, pktSeq, streamId, external);
+                        LogDebug(LOG_NET, "DMR, ssrc = %u, srcPeer = %u, dstPeer = %u, seqNo = %u, srcId = %u, dstId = %u, flco = $%02X, slotNo = %u, len = %u, pktSeq = %u, stream = %u, external = %u", 
+                            ssrc, peerId, dstPeerId, seqNo, srcId, dstId, flco, slotNo, len, pktSeq, streamId, external);
                     }
 
                     if (!m_network->m_callInProgress)

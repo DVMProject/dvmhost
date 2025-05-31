@@ -56,12 +56,13 @@ namespace network
              * @param data Network data buffer.
              * @param len Length of data.
              * @param peerId Peer ID.
+             * @param ssrc RTP Synchronization Source ID.
              * @param pktSeq RTP packet sequence.
              * @param streamId Stream ID.
              * @param external Flag indicating traffic is from an external peer.
              * @returns bool True, if frame is processed, otherwise false.
              */
-            bool processFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint16_t pktSeq, uint32_t streamId, bool external = false);
+            bool processFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint32_t ssrc, uint16_t pktSeq, uint32_t streamId, bool external = false);
             /**
              * @brief Process a grant request frame from the network.
              * @param srcId Source Radio ID.

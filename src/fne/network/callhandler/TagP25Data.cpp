@@ -65,7 +65,7 @@ TagP25Data::~TagP25Data()
 
 /* Process a data frame from the network. */
 
-bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint16_t pktSeq, uint32_t streamId, bool external)
+bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint32_t ssrc, uint16_t pktSeq, uint32_t streamId, bool external)
 {
     hrc::hrc_t pktTime = hrc::now();
 
@@ -165,7 +165,7 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
             // is this the end of the call stream?
             if ((duid == DUID::TDU) || (duid == DUID::TDULC)) {
                 if (srcId == 0U && dstId == 0U) {
-                    LogWarning(LOG_NET, "P25, invalid TDU, peer = %u, srcId = %u, dstId = %u, streamId = %u, external = %u", peerId, srcId, dstId, streamId, external);
+                    LogWarning(LOG_NET, "P25, invalid TDU, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, external = %u", peerId, ssrc, srcId, dstId, streamId, external);
                     return false;
                 }
 
@@ -190,8 +190,8 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                 });
                 if (it != m_status.end()) {
                     if (grantDemand) {
-                        LogWarning(LOG_NET, "P25, Call Collision, peer = %u, srcId = %u, dstId = %u, streamId = %u, rxPeer = %u, rxSrcId = %u, rxDstId = %u, rxStreamId = %u, external = %u",
-                            peerId, srcId, dstId, streamId, status.peerId, status.srcId, status.dstId, status.streamId, external);
+                        LogWarning(LOG_NET, "P25, Call Collision, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, rxPeer = %u, rxSrcId = %u, rxDstId = %u, rxStreamId = %u, external = %u",
+                            peerId, ssrc, srcId, dstId, streamId, status.peerId, status.srcId, status.dstId, status.streamId, external);
                         return false;
                     }
                     else {
@@ -208,8 +208,8 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                             }
                         }
 
-                        LogMessage(LOG_NET, "P25, Call End, peer = %u, srcId = %u, dstId = %u, duration = %u, streamId = %u, external = %u",
-                            peerId, srcId, dstId, duration / 1000, streamId, external);
+                        LogMessage(LOG_NET, "P25, Call End, peer = %u, ssrc = %u, srcId = %u, dstId = %u, duration = %u, streamId = %u, external = %u",
+                            peerId, ssrc, srcId, dstId, duration / 1000, streamId, external);
 
                         // report call event to InfluxDB
                         if (m_network->m_enableInfluxDB) {
@@ -234,7 +234,7 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
             // is this a new call stream?
             if ((duid != DUID::TDU) && (duid != DUID::TDULC)) {
                 if (srcId == 0U && dstId == 0U) {
-                    LogWarning(LOG_NET, "P25, invalid call, peer = %u, srcId = %u, dstId = %u, streamId = %u, external = %u", peerId, srcId, dstId, streamId, external);
+                    LogWarning(LOG_NET, "P25, invalid call, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, external = %u", peerId, srcId, dstId, streamId, external);
                     return false;
                 }
 
@@ -256,8 +256,8 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                                 m_network->m_callInProgress = false;
                             }
 
-                            LogWarning(LOG_NET, "P25, Call Collision, peer = %u, srcId = %u, dstId = %u, streamId = %u, rxPeer = %u, rxSrcId = %u, rxDstId = %u, rxStreamId = %u, external = %u",
-                                peerId, srcId, dstId, streamId, status.peerId, status.srcId, status.dstId, status.streamId, external);
+                            LogWarning(LOG_NET, "P25, Call Collision, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, rxPeer = %u, rxSrcId = %u, rxDstId = %u, rxStreamId = %u, external = %u",
+                                peerId, ssrc, srcId, dstId, streamId, status.peerId, status.srcId, status.dstId, status.streamId, external);
                             return false;
                         }
                     }
@@ -285,7 +285,7 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                     m_status[dstId].peerId = peerId;
                     m_status[dstId].activeCall = true;
 
-                    LogMessage(LOG_NET, "P25, Call Start, peer = %u, srcId = %u, dstId = %u, streamId = %u, external = %u", peerId, srcId, dstId, streamId, external);
+                    LogMessage(LOG_NET, "P25, Call Start, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, external = %u", peerId, ssrc, srcId, dstId, streamId, external);
 
                     m_network->m_callInProgress = true;
                 }
@@ -351,8 +351,8 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
 
                     m_network->writePeer(peer.first, peerId, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25 }, outboundPeerBuffer, len, pktSeq, streamId, true);
                     if (m_network->m_debug) {
-                        LogDebug(LOG_NET, "P25, srcPeer = %u, dstPeer = %u, duid = $%02X, lco = $%02X, MFId = $%02X, srcId = %u, dstId = %u, len = %u, pktSeq = %u, streamId = %u, external = %u", 
-                            peerId, peer.first, duid, lco, MFId, srcId, dstId, len, pktSeq, streamId, external);
+                        LogDebug(LOG_NET, "P25, ssrc = %u, srcPeer = %u, dstPeer = %u, duid = $%02X, lco = $%02X, MFId = $%02X, srcId = %u, dstId = %u, len = %u, pktSeq = %u, streamId = %u, external = %u", 
+                            ssrc, peerId, peer.first, duid, lco, MFId, srcId, dstId, len, pktSeq, streamId, external);
                     }
 
                     if (!m_network->m_callInProgress)
@@ -396,8 +396,8 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                     if (processTSDUToExternal(outboundPeerBuffer, peerId, dstPeerId, duid)) {
                         peer.second->writeMaster({ NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25 }, outboundPeerBuffer, len, pktSeq, streamId);
                         if (m_network->m_debug) {
-                            LogDebug(LOG_NET, "P25, srcPeer = %u, dstPeer = %u, duid = $%02X, lco = $%02X, MFId = $%02X, srcId = %u, dstId = %u, len = %u, pktSeq = %u, streamId = %u, external = %u", 
-                                peerId, dstPeerId, duid, lco, MFId, srcId, dstId, len, pktSeq, streamId, external);
+                            LogDebug(LOG_NET, "P25, ssrc = %u, srcPeer = %u, dstPeer = %u, duid = $%02X, lco = $%02X, MFId = $%02X, srcId = %u, dstId = %u, len = %u, pktSeq = %u, streamId = %u, external = %u", 
+                                ssrc, peerId, dstPeerId, duid, lco, MFId, srcId, dstId, len, pktSeq, streamId, external);
                         }
                     }
 

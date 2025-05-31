@@ -547,6 +547,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
 
         if (req->length > 0) {
             uint32_t peerId = req->fneHeader.getPeerId();
+            uint32_t ssrc = req->rtpHeader.getSSRC();
             uint32_t streamId = req->fneHeader.getStreamId();
 
             // determine if this packet is late (i.e. are we processing this packet more than 200ms after it was received?)
@@ -615,7 +616,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                     if (connection->connected() && connection->address() == ip) {
                                         if (network->m_dmrEnabled) {
                                             if (network->m_tagDMR != nullptr) {
-                                                network->m_tagDMR->processFrame(req->buffer, req->length, peerId, req->rtpHeader.getSequence(), streamId);
+                                                network->m_tagDMR->processFrame(req->buffer, req->length, peerId, ssrc, req->rtpHeader.getSequence(), streamId);
                                             }
                                         } else {
                                             network->writePeerNAK(peerId, streamId, TAG_DMR_DATA, NET_CONN_NAK_MODE_NOT_ENABLED);
@@ -641,7 +642,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                     if (connection->connected() && connection->address() == ip) {
                                         if (network->m_p25Enabled) {
                                             if (network->m_tagP25 != nullptr) {
-                                                network->m_tagP25->processFrame(req->buffer, req->length, peerId, req->rtpHeader.getSequence(), streamId);
+                                                network->m_tagP25->processFrame(req->buffer, req->length, peerId, ssrc, req->rtpHeader.getSequence(), streamId);
                                             }
                                         } else {
                                             network->writePeerNAK(peerId, streamId, TAG_P25_DATA, NET_CONN_NAK_MODE_NOT_ENABLED);
@@ -667,7 +668,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                     if (connection->connected() && connection->address() == ip) {
                                         if (network->m_nxdnEnabled) {
                                             if (network->m_tagNXDN != nullptr) {
-                                                network->m_tagNXDN->processFrame(req->buffer, req->length, peerId, req->rtpHeader.getSequence(), streamId);
+                                                network->m_tagNXDN->processFrame(req->buffer, req->length, peerId, ssrc, req->rtpHeader.getSequence(), streamId);
                                             }
                                         } else {
                                             network->writePeerNAK(peerId, streamId, TAG_NXDN_DATA, NET_CONN_NAK_MODE_NOT_ENABLED);
