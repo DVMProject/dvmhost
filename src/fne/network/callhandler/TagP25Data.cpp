@@ -376,6 +376,11 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                 // don't try to repeat traffic to the source peer...if this traffic
                 // is coming from a external peer
                 if (dstPeerId != peerId) {
+                    if (ssrc == dstPeerId) {
+                        // skip the peer if it is the source peer
+                        continue;
+                    }
+
                     // is this peer ignored?
                     if (!isPeerPermitted(dstPeerId, control, duid, streamId, true)) {
                         continue;
