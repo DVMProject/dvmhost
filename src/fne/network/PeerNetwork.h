@@ -20,6 +20,7 @@
 #include "common/lookups/PeerListLookup.h"
 #include "common/network/Network.h"
 #include "common/network/PacketBuffer.h"
+#include "common/ThreadPool.h"
 
 #include <string>
 #include <cstdint>
@@ -27,6 +28,28 @@
 
 namespace network
 {
+    // ---------------------------------------------------------------------------
+    //  Structure Declaration
+    // ---------------------------------------------------------------------------
+
+    /**
+     * @brief Represents the data required for a network packet handler thread.
+     * @ingroup fne_network
+     */
+    struct PeerPacketRequest : thread_t {
+        uint32_t peerId;                    //! Peer ID for this request.
+        uint32_t streamId;                  //! Stream ID for this request.
+
+        frame::RTPHeader rtpHeader;         //! RTP Header
+        frame::RTPFNEHeader fneHeader;      //! RTP FNE Header
+        int length = 0U;                    //! Length of raw data buffer
+        uint8_t* buffer = nullptr;          //! Raw data buffer
+
+        network::NET_SUBFUNC::ENUM subFunc; //! Sub-function of the packet
+
+        uint64_t pktRxTime;                 //! Packet receive time
+    };
+
     // ---------------------------------------------------------------------------
     //  Class Declaration
     // ---------------------------------------------------------------------------
@@ -65,21 +88,15 @@ namespace network
         void setPeerLookups(lookups::PeerListLookup* pidLookup);
 
         /**
-         * @brief Gets the received DMR stream ID.
-         * @param slotNo DMR slot to get stream ID for.
-         * @return uint32_t Stream ID for the given DMR slot.
+         * @brief Opens connection to the network.
+         * @returns bool True, if networking has started, otherwise false.
          */
-        uint32_t getRxDMRStreamId(uint32_t slotNo) const;
+        bool open() override;
+
         /**
-         * @brief Gets the received P25 stream ID.
-         * @return uint32_t Stream ID.
+         * @brief Closes connection to the network.
          */
-        uint32_t getRxP25StreamId() const { return m_rxP25StreamId; }
-        /**
-         * @brief Gets the received NXDN stream ID.
-         * @return uint32_t Stream ID.
-         */
-        uint32_t getRxNXDNStreamId() const { return m_rxNXDNStreamId; }
+        void close() override;
 
         /**
          * @brief Helper to set the DMR protocol callback.
@@ -184,6 +201,14 @@ namespace network
         PacketBuffer m_tgidPkt;
         PacketBuffer m_ridPkt;
         PacketBuffer m_pidPkt;
+
+        ThreadPool m_threadPool;
+
+        /**
+         * @brief Entry point to process a given network packet.
+         * @param req Instance of the PeerPacketRequest structure.
+         */
+        static void taskNetworkRx(PeerPacketRequest* req);
     };
 } // namespace network
 

@@ -24,6 +24,14 @@ using namespace compress;
 #include <streambuf>
 
 // ---------------------------------------------------------------------------
+//  Constants
+// ---------------------------------------------------------------------------
+
+#define WORKER_CNT 8U
+
+const uint64_t PACKET_LATE_TIME = 200U; // 200ms
+
+// ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
@@ -39,7 +47,8 @@ PeerNetwork::PeerNetwork(const std::string& address, uint16_t port, uint16_t loc
     m_peerLinkSavesACL(false),
     m_tgidPkt(true, "Peer-Link, TGID List"),
     m_ridPkt(true, "Peer-Link, RID List"),
-    m_pidPkt(true, "Peer-Link, PID List")
+    m_pidPkt(true, "Peer-Link, PID List"),
+    m_threadPool(WORKER_CNT, "peer")
 {
     assert(!address.empty());
     assert(port > 0U);
@@ -62,18 +71,28 @@ void PeerNetwork::setPeerLookups(lookups::PeerListLookup* pidLookup)
     m_pidLookup = pidLookup;
 }
 
-/* Gets the received DMR stream ID. */
+/* Opens connection to the network. */
 
-uint32_t PeerNetwork::getRxDMRStreamId(uint32_t slotNo) const
+bool PeerNetwork::open()
 {
-    assert(slotNo == 1U || slotNo == 2U);
+    if (!m_enabled)
+        return false;
 
-    if (slotNo == 1U) {
-        return m_rxDMRStreamId[0U];
-    }
-    else {
-        return m_rxDMRStreamId[1U];
-    }
+    // start thread pool
+    m_threadPool.start();
+
+    return Network::open();
+}
+
+/* Closes connection to the network. */
+
+void PeerNetwork::close()
+{
+    // stop thread pool
+    m_threadPool.stop();
+    m_threadPool.wait();
+
+    Network::close();
 }
 
 /* Checks if the passed peer ID is blocked from sending to this peer. */
@@ -149,32 +168,30 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
     switch (opcode.first) {
     case NET_FUNC::PROTOCOL:                                        // Protocol
         {
-            // process incomfing message subfunction opcodes
-            switch (opcode.second) {
-            case NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR:                 // Encapsulated DMR data frame
-                {
-                    if (m_dmrCallback != nullptr)
-                        m_dmrCallback(this, data, length, streamId, fneHeader, rtpHeader);
-                }
-                break;
+            PeerPacketRequest* req = new PeerPacketRequest();
+            req->obj = this;
+            req->peerId = peerId;
+            req->streamId = streamId;
 
-            case NET_SUBFUNC::PROTOCOL_SUBFUNC_P25:                 // Encapsulated P25 data frame
-                {
-                    if (m_p25Callback != nullptr)
-                        m_p25Callback(this, data, length, streamId, fneHeader, rtpHeader);
-                }
-                break;
+            req->rtpHeader = rtpHeader;
+            req->fneHeader = fneHeader;
 
-            case NET_SUBFUNC::PROTOCOL_SUBFUNC_NXDN:                // Encapsulated NXDN data frame
-                {
-                    if (m_nxdnCallback != nullptr)
-                        m_nxdnCallback(this, data, length, streamId, fneHeader, rtpHeader);
-                }
-                break;
+            req->subFunc = opcode.second;
 
-            default:
-                Utils::dump("unknown protocol opcode from the master", data, length);
-                break;
+            req->pktRxTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+
+            req->length = length;
+            req->buffer = new uint8_t[length];
+            ::memcpy(req->buffer, data, length);
+
+            // enqueue the task
+            if (!m_threadPool.enqueue(new_pooltask(taskNetworkRx, req))) {
+                LogError(LOG_NET, "Failed to task enqueue network packet request, peerId = %u", peerId);
+                if (req != nullptr) {
+                    if (req->buffer != nullptr)
+                        delete[] req->buffer;
+                    delete req;
+                }
             }
         }
         break;
@@ -426,4 +443,71 @@ bool PeerNetwork::writeConfig()
     }
 
     return writeMaster({ NET_FUNC::RPTC, NET_SUBFUNC::NOP }, (uint8_t*)buffer, json.length() + 8U, pktSeq(), m_loginStreamId);
+}
+
+// ---------------------------------------------------------------------------
+//  Private Class Members
+// ---------------------------------------------------------------------------
+
+/* Process a data frames from the network. */
+
+void PeerNetwork::taskNetworkRx(PeerPacketRequest* req)
+{
+    if (req != nullptr) {
+        uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+
+        PeerNetwork* network = static_cast<PeerNetwork*>(req->obj);
+        if (network == nullptr) {
+            if (req != nullptr) {
+                if (req->buffer != nullptr)
+                    delete[] req->buffer;
+                delete req;
+            }
+
+            return;
+        }
+
+        if (req == nullptr)
+            return;
+
+        if (req->length > 0) {
+            // determine if this packet is late (i.e. are we processing this packet more than 200ms after it was received?)
+            uint64_t dt = req->pktRxTime + PACKET_LATE_TIME;
+            if (dt < now) {
+                LogWarning(LOG_NET, "PEER %u packet processing latency >200ms, dt = %u, now = %u", req->peerId, dt, now);
+            }
+
+            // process incomfing message subfunction opcodes
+            switch (req->subFunc) {
+            case NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR:                 // Encapsulated DMR data frame
+                {
+                    if (network->m_dmrCallback != nullptr)
+                        network->m_dmrCallback(network, req->buffer, req->length, req->streamId, req->fneHeader, req->rtpHeader);
+                }
+                break;
+
+            case NET_SUBFUNC::PROTOCOL_SUBFUNC_P25:                 // Encapsulated P25 data frame
+                {
+                    if (network->m_p25Callback != nullptr)
+                        network->m_p25Callback(network, req->buffer, req->length, req->streamId, req->fneHeader, req->rtpHeader);
+                }
+                break;
+
+            case NET_SUBFUNC::PROTOCOL_SUBFUNC_NXDN:                // Encapsulated NXDN data frame
+                {
+                    if (network->m_nxdnCallback != nullptr)
+                        network->m_nxdnCallback(network, req->buffer, req->length, req->streamId, req->fneHeader, req->rtpHeader);
+                }
+                break;
+
+            default:
+                Utils::dump("unknown protocol opcode from the master", req->buffer, req->length);
+                break;
+            }
+        }
+
+        if (req->buffer != nullptr)
+            delete[] req->buffer;
+        delete req;
+    }
 }
