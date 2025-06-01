@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2024-2025 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -20,6 +20,7 @@
 #include "common/network/rest/RequestDispatcher.h"
 #include "common/network/rest/http/HTTPServer.h"
 #include "common/network/rest/http/SecureHTTPServer.h"
+#include "common/lookups/AdjSiteMapLookup.h"
 #include "common/lookups/RadioIdLookup.h"
 #include "common/lookups/TalkgroupRulesLookup.h"
 #include "common/Thread.h"
@@ -69,8 +70,10 @@ public:
      * @param ridLookup Radio ID Lookup Table Instance
      * @param tidLookup Talkgroup Rules Lookup Table Instance
      * @param peerListLookup Peer List Lookup Table Instance
+     * @param adjPeerMapLookup Adjacent Site Map Lookup Table Instance
      */
-    void setLookups(::lookups::RadioIdLookup* ridLookup, ::lookups::TalkgroupRulesLookup* tidLookup, ::lookups::PeerListLookup* peerListLookup);
+    void setLookups(::lookups::RadioIdLookup* ridLookup, ::lookups::TalkgroupRulesLookup* tidLookup, 
+        ::lookups::PeerListLookup* peerListLookup, ::lookups::AdjSiteMapLookup* adjPeerMapLookup);
     /**
      * @brief Sets the instance of the FNE network.
      * @param network Instance oft he FNENetwork class.
@@ -110,6 +113,7 @@ private:
     ::lookups::RadioIdLookup* m_ridLookup;
     ::lookups::TalkgroupRulesLookup* m_tidLookup;
     ::lookups::PeerListLookup* m_peerListLookup;
+    ::lookups::AdjSiteMapLookup* m_adjSiteMapLookup;
 
     typedef std::unordered_map<std::string, uint64_t>::value_type AuthTokenValueType;
     std::unordered_map<std::string, uint64_t> m_authTokens;
@@ -269,6 +273,35 @@ private:
      * @param match HTTP request matcher.
      */
     void restAPI_GetPeerCommit(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+
+    /**
+     * @brief REST API endpoint; implements get adjacent site map list query request.
+     * @param request HTTP request.
+     * @param reply HTTP reply.
+     * @param match HTTP request matcher.
+     */
+    void restAPI_GetAdjMapList(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    /**
+     * @brief REST API endpoint; implements put adjacent site map add request.
+     * @param request HTTP request.
+     * @param reply HTTP reply.
+     * @param match HTTP request matcher.
+     */
+    void restAPI_PutAdjMapAdd(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    /**
+     * @brief REST API endpoint; implements put adjacent site map delete request.
+     * @param request HTTP request.
+     * @param reply HTTP reply.
+     * @param match HTTP request matcher.
+     */
+    void restAPI_PutAdjMapDelete(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    /**
+     * @brief REST API endpoint; implements put adjacent site map commit request.
+     * @param request HTTP request.
+     * @param reply HTTP reply.
+     * @param match HTTP request matcher.
+     */
+    void restAPI_GetAdjMapCommit(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
 
     /**
      * @brief 
