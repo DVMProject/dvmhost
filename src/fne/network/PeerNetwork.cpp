@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2024-2025 Bryan Biedenkapp, N2PLL
  *
  */
 #include "fne/Defines.h"
@@ -196,10 +196,10 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
         }
         break;
 
-    case NET_FUNC::PEER_LINK:
+    case NET_FUNC::PEER_LINK:                                       // Peer Link
     {
         switch (opcode.second) {
-        case NET_SUBFUNC::PL_TALKGROUP_LIST:
+        case NET_SUBFUNC::PL_TALKGROUP_LIST:                        // Talkgroup List
         {
             uint32_t decompressedLen = 0U;
             uint8_t* decompressed = nullptr;
@@ -256,7 +256,7 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
         }
         break;
 
-        case NET_SUBFUNC::PL_RID_LIST:
+        case NET_SUBFUNC::PL_RID_LIST:                              // Radio ID List
         {
             uint32_t decompressedLen = 0U;
             uint8_t* decompressed = nullptr;
@@ -313,7 +313,7 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
         }
         break;
 
-        case NET_SUBFUNC::PL_PEER_LIST:
+        case NET_SUBFUNC::PL_PEER_LIST:                             // Peer List
         {
             uint32_t decompressedLen = 0U;
             uint8_t* decompressed = nullptr;
