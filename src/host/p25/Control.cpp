@@ -80,6 +80,7 @@ Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t q
     m_sndcpSupport(false),
     m_ignoreAffiliationCheck(false),
     m_demandUnitRegForRefusedAff(true),
+    m_dfsiFDX(false),
     m_idenTable(idenTable),
     m_ridLookup(ridLookup),
     m_tidLookup(tidLookup),
@@ -230,6 +231,12 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
 {
     yaml::Node systemConf = conf["system"];
     yaml::Node p25Protocol = conf["protocols"]["p25"];
+
+    if (m_isModemDFSI) {
+        yaml::Node modemConf = systemConf["modem"];
+        yaml::Node dfsiConf = modemConf["dfsi"];
+        m_dfsiFDX = dfsiConf["fullDuplex"].as<bool>(false);
+    }
 
     m_supervisor = supervisor;
 
@@ -489,6 +496,10 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
 
         if (m_controlOnly) {
             LogInfo("    Control Data Only: yes");
+        }
+
+        if (m_isModemDFSI && m_dfsiFDX) {
+            LogInfo("    DFSI Full Duplex: yes");
         }
 
         LogInfo("    Patch Super Group: $%04X", m_control->m_patchSuperGroup);

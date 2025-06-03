@@ -311,6 +311,7 @@ namespace p25
         bool m_sndcpSupport;
         bool m_ignoreAffiliationCheck;
         bool m_demandUnitRegForRefusedAff;
+        bool m_dfsiFDX;
 
         ::lookups::IdenTableLookup* m_idenTable;
         ::lookups::RadioIdLookup* m_ridLookup;

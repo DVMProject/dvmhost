@@ -540,7 +540,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
 
                 writeNetwork(buffer, DUID::HDU);
 
-                if (m_p25->m_duplex && !m_p25->m_isModemDFSI) {
+                if (m_p25->m_duplex && (!m_p25->m_isModemDFSI || (m_p25->m_isModemDFSI && m_p25->m_dfsiFDX))) {
                     buffer[0U] = modem::TAG_DATA;
                     buffer[1U] = 0x00U;
 
@@ -794,7 +794,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
 
             writeNetwork(data + 2U, DUID::LDU1, frameType);
 
-            if (m_p25->m_duplex && !m_p25->m_isModemDFSI) {
+            if (m_p25->m_duplex && (!m_p25->m_isModemDFSI || (m_p25->m_isModemDFSI && m_p25->m_dfsiFDX))) {
                 data[0U] = modem::TAG_DATA;
                 data[1U] = 0x00U;
 
@@ -911,7 +911,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
 
             writeNetwork(data + 2U, DUID::LDU2);
 
-            if (m_p25->m_duplex && !m_p25->m_isModemDFSI) {
+            if (m_p25->m_duplex && (!m_p25->m_isModemDFSI || (m_p25->m_isModemDFSI && m_p25->m_dfsiFDX))) {
                 data[0U] = modem::TAG_DATA;
                 data[1U] = 0x00U;
 

@@ -626,6 +626,9 @@ system:
             jitter: 200
             # Timer which will reset local/remote call flags if frames aren't received longer than this time in ms
             callTimeout: 200
+            # Flag indicating whether or not the V.24 modem is operating in full-duplex mode.
+            #  (This enables DVM to repeat incoming V.24 frames back out after processing.)
+            fullDuplex: false
             # Flag indicating when operating in V.24 UDP mode, the FSC protocol should be used to negotiate connection.
             fsc: false
             # Sets the heartbeat interval for the FSC connection.
