@@ -532,8 +532,12 @@ system:
         # Amount of time to wait before starting DMR transmissions after a signal is received.
         dmrRxDelay: 7
         # Amount of packet correlations that should occur before P25 data is returned from the modem to the host.
-        # (Note: Changing this value will impact P25 protocol stability, and should not be altered.)
-        p25CorrCount: 8
+        #   (Note: Changing this value will impact P25 protocol stability, and should not be altered. This is set to
+        #     a default value of 2 for fast synchronization of a P25 signal, if the air modem is having difficulty
+        #     synchronizing to a P25 signal, this value can be increased to 3 or 4, or beyond. It should be noted that
+        #     increasing this value will increase the time it takes to synchronize to a P25 signal, and may cause
+        #     issues with P25 voice calls (especially encrypted voice calls).)
+        p25CorrCount: 2
         # Size (in bytes) of the DMR transmit FIFO buffer. It is not recommended to adjust this unless absolutely
         # necessary, excessive sizes will cause delays in transmitted frames due to excessive buffering.
         #   Calculation Formula: (DMR Frame Size (33 bytes) * x Frames) + Pad Bytes = FIFO Buffer Size Bytes
