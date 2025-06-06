@@ -1828,6 +1828,8 @@ void FNENetwork::writeWhitelistRIDs(uint32_t peerId, uint32_t streamId, bool isE
                     Thread::sleep(60U); // pace block transmission
                 }
             }
+
+            pkt.clear();
         }
 
         return;
@@ -2017,6 +2019,8 @@ void FNENetwork::writeTGIDs(uint32_t peerId, uint32_t streamId, bool isExternalP
                     Thread::sleep(60U); // pace block transmission
                 }
             }
+
+            pkt.clear();
         }
 
         return;
@@ -2195,6 +2199,8 @@ void FNENetwork::writePeerList(uint32_t peerId, uint32_t streamId)
                 Thread::sleep(60U); // pace block transmission
             }
         }
+
+        pkt.clear();
     }
 
     return;

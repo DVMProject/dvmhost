@@ -150,6 +150,7 @@ bool PeerNetwork::writePeerLinkPeers(json::array* peerList)
             }
         }
 
+        pkt.clear();
         return true;
     }
 
