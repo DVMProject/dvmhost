@@ -278,11 +278,17 @@ bool Voice::process(uint8_t* data, uint32_t len)
 
             uint32_t errors = 0U;
             uint8_t fid = m_slot->m_rfLC->getFID();
-            if (fid == FID_ETSI || fid == FID_DMRA) {
-                errors = m_fec.regenerateDMR(data + 2U);
+            bool pf = m_slot->m_rfLC->getPF();
+            if (fid == FID_ETSI || fid == FID_DMRA || fid == FID_KENWOOD) {
+                if (fid == FID_KENWOOD && pf)
+                    errors = 0U; // bryanb: for what we are assuming is Kenwood, these are encrypted frames
+                                 //     don't bother trying to regenerate or perform FEC
+                else
+                    errors = m_fec.regenerateDMR(data + 2U);
+
                 if (m_verbose) {
-                    LogMessage(LOG_RF, DMR_DT_VOICE_SYNC ", audio, slot = %u, srcId = %u, dstId = %u, seqNo = 0, errs = %u/141 (%.1f%%)", m_slot->m_slotNo, m_slot->m_rfLC->getSrcId(), m_slot->m_rfLC->getDstId(),
-                        errors, float(errors) / 1.41F);
+                    LogMessage(LOG_RF, DMR_DT_VOICE_SYNC ", audio, slot = %u, srcId = %u, dstId = %u, seqNo = 0, pf = %u, errs = %u/141 (%.1f%%)", m_slot->m_slotNo, m_slot->m_rfLC->getSrcId(), m_slot->m_rfLC->getDstId(),
+                        pf, errors, float(errors) / 1.41F);
                 }
 
                 if (errors > m_slot->m_silenceThreshold) {
@@ -340,11 +346,17 @@ bool Voice::process(uint8_t* data, uint32_t len)
 
             uint32_t errors = 0U;
             uint8_t fid = m_slot->m_rfLC->getFID();
-            if (fid == FID_ETSI || fid == FID_DMRA) {
-                errors = m_fec.regenerateDMR(data + 2U);
+            bool pf = m_slot->m_rfLC->getPF();
+            if (fid == FID_ETSI || fid == FID_DMRA || fid == FID_KENWOOD) {
+                if (fid == FID_KENWOOD && pf)
+                    errors = 0U; // bryanb: for what we are assuming is Kenwood, these are encrypted frames
+                                 //     don't bother trying to regenerate or perform FEC
+                else
+                    errors = m_fec.regenerateDMR(data + 2U);
+
                 if (m_verbose) {
-                    LogMessage(LOG_RF, DMR_DT_VOICE ", audio, slot = %u, srcId = %u, dstId = %u, seqNo = %u, errs = %u/141 (%.1f%%)", m_slot->m_slotNo, m_slot->m_rfLC->getSrcId(), m_slot->m_rfLC->getDstId(),
-                        m_rfN, errors, float(errors) / 1.41F);
+                    LogMessage(LOG_RF, DMR_DT_VOICE ", audio, slot = %u, srcId = %u, dstId = %u, seqNo = %u, pf = %u, errs = %u/141 (%.1f%%)", m_slot->m_slotNo, m_slot->m_rfLC->getSrcId(), m_slot->m_rfLC->getDstId(),
+                        m_rfN, pf,  errors, float(errors) / 1.41F);
                 }
 
                 if (errors > m_slot->m_silenceThreshold) {

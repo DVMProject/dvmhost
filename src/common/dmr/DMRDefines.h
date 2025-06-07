@@ -205,6 +205,8 @@ namespace dmr
         const uint8_t   FID_ETSI = 0x00U;
         /** @brief Motorola */
         const uint8_t   FID_DMRA = 0x10U;
+        /** @brief Kenwood ?? */
+        const uint8_t   FID_KENWOOD = 0x20U;
         /** @brief DVM; Omaha Communication Systems, LLC ($9C) */
         const uint8_t   FID_DVM_OCS = 0x9CU;
         /** @} */
