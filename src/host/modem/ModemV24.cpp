@@ -1210,7 +1210,7 @@ void ModemV24::convertToAirTIA(const uint8_t *data, uint32_t length)
 
             assert(vhdr != nullptr);
 
-            uint32_t offset = 0U;
+            uint32_t offset = 6U; // skip the first 6 bits  (extremely strange bit offset for TIA because of status bits)
             for (uint32_t i = 0; i < DFSI_VHDR_RAW_LEN; i++, offset += 6) {
                 Utils::hex2Bin(raw[i], vhdr, offset);
             }
@@ -1820,7 +1820,7 @@ void ModemV24::startOfStreamTIA(const p25::lc::LC& control)
 
     // convert the binary bytes to hex bytes
     uint8_t raw[DFSI_VHDR_RAW_LEN];
-    uint32_t offset = 0;
+    uint32_t offset = 6U; // skip the first 6 bits (extremely strange bit offset for TIA because of status bits)
     for (uint8_t i = 0; i < DFSI_VHDR_RAW_LEN; i++, offset += 6) {
         raw[i] = Utils::bin2Hex(vhdr, offset);
     }
