@@ -279,17 +279,12 @@ bool Voice::process(uint8_t* data, uint32_t len)
             uint32_t errors = 0U;
             uint8_t fid = m_slot->m_rfLC->getFID();
             bool pf = m_slot->m_rfLC->getPF();
-            if (fid == FID_ETSI || fid == FID_DMRA || fid == FID_KENWOOD) {
+            if (fid == FID_ETSI || fid == FID_MOT || fid == FID_KENWOOD) {
                 if (fid == FID_KENWOOD && pf)
                     errors = 0U; // bryanb: for what we are assuming is Kenwood, these are encrypted frames
                                  //     don't bother trying to regenerate or perform FEC
                 else
                     errors = m_fec.regenerateDMR(data + 2U);
-
-                if (m_verbose) {
-                    LogMessage(LOG_RF, DMR_DT_VOICE_SYNC ", audio, slot = %u, srcId = %u, dstId = %u, seqNo = 0, pf = %u, errs = %u/141 (%.1f%%)", m_slot->m_slotNo, m_slot->m_rfLC->getSrcId(), m_slot->m_rfLC->getDstId(),
-                        pf, errors, float(errors) / 1.41F);
-                }
 
                 if (errors > m_slot->m_silenceThreshold) {
                     insertNullAudio(data + 2U);
@@ -299,6 +294,11 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 }
 
                 m_slot->m_rfErrs += errors;
+            }
+
+            if (m_verbose) {
+                LogMessage(LOG_RF, DMR_DT_VOICE_SYNC ", audio, slot = %u, srcId = %u, dstId = %u, seqNo = 0, fid = $%02X, pf = %u, errs = %u/141 (%.1f%%)", m_slot->m_slotNo, m_slot->m_rfLC->getSrcId(), m_slot->m_rfLC->getDstId(),
+                    fid, pf, errors, float(errors) / 1.41F);
             }
 
             m_slot->m_rfBits += 141U;
@@ -347,17 +347,12 @@ bool Voice::process(uint8_t* data, uint32_t len)
             uint32_t errors = 0U;
             uint8_t fid = m_slot->m_rfLC->getFID();
             bool pf = m_slot->m_rfLC->getPF();
-            if (fid == FID_ETSI || fid == FID_DMRA || fid == FID_KENWOOD) {
+            if (fid == FID_ETSI || fid == FID_MOT || fid == FID_KENWOOD) {
                 if (fid == FID_KENWOOD && pf)
                     errors = 0U; // bryanb: for what we are assuming is Kenwood, these are encrypted frames
                                  //     don't bother trying to regenerate or perform FEC
                 else
                     errors = m_fec.regenerateDMR(data + 2U);
-
-                if (m_verbose) {
-                    LogMessage(LOG_RF, DMR_DT_VOICE ", audio, slot = %u, srcId = %u, dstId = %u, seqNo = %u, pf = %u, errs = %u/141 (%.1f%%)", m_slot->m_slotNo, m_slot->m_rfLC->getSrcId(), m_slot->m_rfLC->getDstId(),
-                        m_rfN, pf,  errors, float(errors) / 1.41F);
-                }
 
                 if (errors > m_slot->m_silenceThreshold) {
                     // get the LCSS from the EMB
@@ -374,6 +369,11 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 }
 
                 m_slot->m_rfErrs += errors;
+            }
+
+            if (m_verbose) {
+                LogMessage(LOG_RF, DMR_DT_VOICE ", audio, slot = %u, srcId = %u, dstId = %u, seqNo = %u, fid = $%02X, pf = %u, errs = %u/141 (%.1f%%)", m_slot->m_slotNo, m_slot->m_rfLC->getSrcId(), m_slot->m_rfLC->getDstId(),
+                    m_rfN, fid, pf,  errors, float(errors) / 1.41F);
             }
 
             m_slot->m_rfBits += 141U;
@@ -603,12 +603,13 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 // send the original audio frame out
                 uint32_t errors = 0U;
                 uint8_t fid = m_slot->m_rfLC->getFID();
-                if (fid == FID_ETSI || fid == FID_DMRA) {
-                    errors = m_fec.regenerateDMR(data + 2U);
-                    if (m_verbose) {
-                        LogMessage(LOG_RF, DMR_DT_VOICE ", audio, slot = %u, sequence no = %u, errs = %u/141 (%.1f%%)",
-                            m_slot->m_slotNo, m_rfN, errors, float(errors) / 1.41F);
-                    }
+                bool pf = m_slot->m_rfLC->getPF();
+                if (fid == FID_ETSI || fid == FID_MOT || fid == FID_KENWOOD) {
+                    if (fid == FID_KENWOOD && pf)
+                        errors = 0U; // bryanb: for what we are assuming is Kenwood, these are encrypted frames
+                                    //     don't bother trying to regenerate or perform FEC
+                    else
+                        errors = m_fec.regenerateDMR(data + 2U);
 
                     if (errors > m_slot->m_silenceThreshold) {
                         // get the LCSS from the EMB
@@ -625,6 +626,11 @@ bool Voice::process(uint8_t* data, uint32_t len)
                     }
 
                     m_slot->m_rfErrs += errors;
+                }
+
+                if (m_verbose) {
+                    LogMessage(LOG_RF, DMR_DT_VOICE ", audio, slot = %u, sequence no = %u, fid = $%02X, pf = %u, errs = %u/141 (%.1f%%)",
+                        m_slot->m_slotNo, m_rfN, fid, pf, errors, float(errors) / 1.41F);
                 }
 
                 m_slot->m_rfBits += 141U;
@@ -947,12 +953,18 @@ void Voice::processNetwork(const data::NetData& dmrData)
 
         if (m_slot->m_netState == RS_NET_AUDIO) {
             uint8_t fid = m_slot->m_netLC->getFID();
-            if (fid == FID_ETSI || fid == FID_DMRA) {
-                m_slot->m_netErrs += m_fec.regenerateDMR(data + 2U);
-                if (m_verbose) {
-                    LogMessage(LOG_NET, "DMR Slot %u, VOICE_SYNC audio, sequence no = %u, errs = %u/141 (%.1f%%)",
-                        m_slot->m_slotNo, m_netN, m_slot->m_netErrs, float(m_slot->m_netErrs) / 1.41F);
-                }
+            bool pf = m_slot->m_netLC->getPF();
+            if (fid == FID_ETSI || fid == FID_MOT || fid == FID_KENWOOD) {
+                if (fid == FID_KENWOOD && pf)
+                    m_slot->m_netErrs = 0U; // bryanb: for what we are assuming is Kenwood, these are encrypted frames
+                                            //     don't bother trying to regenerate or perform FEC
+                else
+                    m_slot->m_netErrs += m_fec.regenerateDMR(data + 2U);
+            }
+
+            if (m_verbose) {
+                LogMessage(LOG_NET, "DMR Slot %u, VOICE_SYNC audio, sequence no = %u, fid = $%02X, pf = %u, errs = %u/141 (%.1f%%)",
+                    m_slot->m_slotNo, m_netN, fid, pf, m_slot->m_netErrs, float(m_slot->m_netErrs) / 1.41F);
             }
 
             if (m_netN >= 5U) {
@@ -997,13 +1009,20 @@ void Voice::processNetwork(const data::NetData& dmrData)
             return;
 
         uint8_t fid = m_slot->m_netLC->getFID();
-        if (fid == FID_ETSI || fid == FID_DMRA) {
-            m_slot->m_netErrs += m_fec.regenerateDMR(data + 2U);
-            if (m_verbose) {
-                LogMessage(LOG_NET, DMR_DT_VOICE ", audio, slot = %u, srcId = %u, dstId = %u, seqNo = %u, errs = %u/141 (%.1f%%)", m_slot->m_slotNo, m_slot->m_netLC->getSrcId(), m_slot->m_netLC->getDstId(),
-                    m_netN, m_slot->m_netErrs, float(m_slot->m_netErrs) / 1.41F);
-            }
+        bool pf = m_slot->m_netLC->getPF();
+        if (fid == FID_ETSI || fid == FID_MOT || fid == FID_KENWOOD) {
+            if (fid == FID_KENWOOD && pf)
+                m_slot->m_netErrs = 0U; // bryanb: for what we are assuming is Kenwood, these are encrypted frames
+                                        //     don't bother trying to regenerate or perform FEC
+            else
+                m_slot->m_netErrs += m_fec.regenerateDMR(data + 2U);
         }
+
+        if (m_verbose) {
+            LogMessage(LOG_NET, DMR_DT_VOICE ", audio, slot = %u, srcId = %u, dstId = %u, seqNo = %u, fid = $%02X, pf = %u, errs = %u/141 (%.1f%%)", m_slot->m_slotNo, m_slot->m_netLC->getSrcId(), m_slot->m_netLC->getDstId(),
+                m_netN, fid, pf, m_slot->m_netErrs, float(m_slot->m_netErrs) / 1.41F);
+        }
+
         m_slot->m_netBits += 141U;
         m_slot->m_netTGHang.start();
 
@@ -1296,7 +1315,7 @@ void Voice::insertSilence(uint32_t count)
 
     for (uint32_t i = 0U; i < count; i++) {
         // only use our silence frame if its AMBE audio data
-        if (fid == FID_ETSI || fid == FID_DMRA) {
+        if (fid == FID_ETSI || fid == FID_MOT || fid == FID_KENWOOD) {
             if (i > 0U) {
                 ::memcpy(data, SILENCE_DATA, DMR_FRAME_LENGTH_BYTES + 2U);
                 m_lastFrameValid = false;

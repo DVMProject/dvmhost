@@ -188,7 +188,7 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len)
             break;
         case CSBKO::RAND:
         {
-            if (csbk->getFID() == FID_DMRA) {
+            if (csbk->getFID() == FID_MOT) {
                 if (m_verbose) {
                     LogMessage(LOG_RF, "DMR Slot %u, CSBK, %s, srcId = %u, dstId = %u",
                         m_slot->m_slotNo, csbk->toString().c_str(), srcId, dstId);
@@ -469,7 +469,7 @@ void ControlSignaling::processNetwork(const data::NetData& dmrData)
         break;
         case CSBKO::RAND:
         {
-            if (csbk->getFID() == FID_DMRA) {
+            if (csbk->getFID() == FID_MOT) {
                 if (m_verbose) {
                     LogMessage(LOG_NET, "DMR Slot %u, CSBK, %s, srcId = %u, dstId = %u",
                         m_slot->m_slotNo, csbk->toString().c_str(), srcId, dstId);

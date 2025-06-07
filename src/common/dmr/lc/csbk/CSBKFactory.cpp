@@ -93,10 +93,10 @@ std::unique_ptr<CSBK> CSBKFactory::createCSBK(const uint8_t* data, DataType::E d
         return decode(new CSBK_UU_ANS_RSP(), data);
     case CSBKO::PRECCSBK:
         return decode(new CSBK_PRECCSBK(), data);
-    case CSBKO::RAND: // CSBKO::CALL_ALRT when FID == FID_DMRA
+    case CSBKO::RAND: // CSBKO::CALL_ALRT when FID == FID_MOT
         switch (FID)
         {
-        case FID_DMRA:
+        case FID_MOT:
             return decode(new CSBK_CALL_ALRT(), data);
         case FID_ETSI:
         default:
