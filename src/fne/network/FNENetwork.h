@@ -603,7 +603,6 @@ namespace network
         bool m_maskOutboundPeerID;
         bool m_maskOutboundPeerIDForNonPL;
 
-        bool m_filterHeaders;
         bool m_filterTerminators;
 
         bool m_forceListUpdate;

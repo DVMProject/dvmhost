@@ -538,8 +538,6 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 // add status bits
                 P25Utils::addStatusBits(buffer + 2U, P25_HDU_FRAME_LENGTH_BITS, m_inbound, false);
 
-                writeNetwork(buffer, DUID::HDU);
-
                 if (m_p25->m_duplex && (!m_p25->m_isModemDFSI || (m_p25->m_isModemDFSI && m_p25->m_dfsiFDX))) {
                     buffer[0U] = modem::TAG_DATA;
                     buffer[1U] = 0x00U;
@@ -1007,8 +1005,6 @@ bool Voice::process(uint8_t* data, uint32_t len)
 
                 // add status bits
                 P25Utils::addStatusBits(buffer + 2U, P25_HDU_FRAME_LENGTH_BITS, m_inbound, false);
-
-                writeNetwork(buffer, DUID::HDU);
 
                 if (m_p25->m_duplex) {
                     buffer[0U] = modem::TAG_DATA;
@@ -1567,8 +1563,14 @@ void Voice::writeNetwork(const uint8_t *data, defines::DUID::E duid, defines::Fr
         case DUID::LDU1:
             m_p25->m_network->writeP25LDU1(m_rfLC, m_rfLSD, data, frameType);
             break;
+        case DUID::VSELP1:
+            // ignore VSELP1
+            break;
         case DUID::LDU2:
             m_p25->m_network->writeP25LDU2(m_rfLC, m_rfLSD, data);
+            break;
+        case DUID::VSELP2:
+            // ignore VSELP2
             break;
         case DUID::TDU:
         case DUID::TDULC:

@@ -69,6 +69,12 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
 {
     hrc::hrc_t pktTime = hrc::now();
 
+    // P25 network frame should never be less then 24 bytes
+    if (len < 24U) {
+        LogError(LOG_NET, "malformed P25 packet, len < 24, shouldn't happen");
+        return false;
+    }
+
     DECLARE_UINT8_ARRAY(buffer, len);
     ::memcpy(buffer, data, len);
 
@@ -141,7 +147,10 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
     lsd.setLSD1(lsd1);
     lsd.setLSD2(lsd2);
 
-    uint32_t frameLength = buffer[23U];
+    uint8_t frameLength = buffer[23U];
+
+    if (!m_network->validateP25FrameLength(frameLength, len, duid))
+        return false;
 
     // process a TSBK out into a class literal if possible
     std::unique_ptr<lc::TSBK> tsbk;
@@ -718,7 +727,7 @@ bool TagP25Data::processTSDUFrom(uint8_t* buffer, uint32_t peerId, uint8_t duid)
 {
     // are we receiving a TSDU?
     if (duid == DUID::TSDU) {
-        uint32_t frameLength = buffer[23U];
+        uint32_t frameLength = P25_TSDU_FRAME_LENGTH_BYTES;//buffer[23U];
 
         UInt8Array data = std::unique_ptr<uint8_t[]>(new uint8_t[frameLength]);
         ::memset(data.get(), 0x00U, frameLength);
@@ -835,7 +844,7 @@ bool TagP25Data::processTSDUTo(uint8_t* buffer, uint32_t peerId, uint8_t duid)
 {
     // are we receiving a TSDU?
     if (duid == DUID::TSDU) {
-        uint32_t frameLength = buffer[23U];
+        uint32_t frameLength = P25_TSDU_FRAME_LENGTH_BYTES;//buffer[23U];
 
         UInt8Array data = std::unique_ptr<uint8_t[]>(new uint8_t[frameLength]);
         ::memset(data.get(), 0x00U, frameLength);
@@ -948,6 +957,13 @@ bool TagP25Data::isPeerPermitted(uint32_t peerId, lc::LC& control, DUID::E duid,
             return false;
         if (!m_network->checkU2UDroppedPeer(peerId))
             return true;
+
+        // is this a U2U call?
+        lookups::RadioId rid = m_network->m_ridLookup->find(control.getDstId());
+        if (!rid.radioDefault() && rid.radioEnabled()) {
+            return true;
+        }
+
         return false;
     }
 
@@ -969,43 +985,6 @@ bool TagP25Data::isPeerPermitted(uint32_t peerId, lc::LC& control, DUID::E duid,
     // always permit a TSDU or PDU
     if (duid == DUID::TSDU || duid == DUID::PDU)
         return true;
-
-    if (duid == DUID::HDU) {
-        if (m_network->m_filterHeaders) {
-            if (control.getSrcId() != 0U && control.getDstId() != 0U) {
-                // is this a group call?
-                lookups::TalkgroupRuleGroupVoice tg = m_network->m_tidLookup->find(control.getDstId());
-                if (!tg.isInvalid()) {
-                    return true;
-                }
-
-                // is this peer excluded from the group?
-                std::vector<uint32_t> exclusion = tg.config().exclusion();
-                if (exclusion.size() > 0) {
-                    auto it = std::find(exclusion.begin(), exclusion.end(), peerId);
-                    if (it != exclusion.end()) {
-                        return false;
-                    }
-                }
-
-                tg = m_network->m_tidLookup->findByRewrite(peerId, control.getDstId());
-                if (!tg.isInvalid()) {
-                    return true;
-                }
-
-                // is this a U2U call?
-                lookups::RadioId rid = m_network->m_ridLookup->find(control.getDstId());
-                if (!rid.radioDefault() && rid.radioEnabled()) {
-                    return true;
-                }
-
-                return false;
-            }
-        }
-
-        // always permit a headers
-        return true;
-    }
 
     if (duid == DUID::TDULC) {
         // always permit a terminator

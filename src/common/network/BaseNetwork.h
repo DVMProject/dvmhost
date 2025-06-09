@@ -371,7 +371,7 @@ namespace network
          * @returns bool True, if message was sent, otherwise false.
          */
         virtual bool writeP25LDU1(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, const uint8_t* data, 
-            p25::defines::FrameType::E frameType);
+            P25DEF::FrameType::E frameType);
         /**
          * @brief Writes P25 LDU2 frame data to the network.
          * @param[in] control Instance of p25::lc::LC containing link control data.
@@ -419,6 +419,14 @@ namespace network
          * @returns bool True, if the network P25 ring buffer has data, otherwise false.
          */
         bool hasP25Data() const;
+
+        /**
+         * @brief Helper to validate a P25 network frame length.
+         * @param frameLength P25 encapsulated frame length.
+         * @param len Network packet length.
+         * @return bool True, if validated, otherwise false.
+         */
+        bool validateP25FrameLength(uint8_t& frameLength, const uint32_t len, const P25DEF::DUID::E duid);
 
         // Next Generation Digital Narrowband
         /**

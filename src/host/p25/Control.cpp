@@ -1392,6 +1392,12 @@ void Control::processNetwork()
     // process raw P25 data bytes
     UInt8Array data;
     uint8_t frameLength = buffer[23U];
+
+    if (!m_network->validateP25FrameLength(frameLength, length, duid)) {
+        m_network->resetP25();
+        return;
+    }
+
     if (duid == DUID::PDU) {
         frameLength = length;
         data = std::unique_ptr<uint8_t[]>(new uint8_t[length]);

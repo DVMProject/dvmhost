@@ -513,7 +513,7 @@ UInt8Array BaseNetwork::readP25(bool& ret, uint32_t& frameLength)
 
 /* Writes P25 LDU1 frame data to the network. */
 
-bool BaseNetwork::writeP25LDU1(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, const uint8_t* data, p25::defines::FrameType::E frameType)
+bool BaseNetwork::writeP25LDU1(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, const uint8_t* data, P25DEF::FrameType::E frameType)
 {
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
         return false;
@@ -651,6 +651,106 @@ bool BaseNetwork::hasP25Data() const
 {
     if (m_rxP25Data.isEmpty())
         return false;
+
+    return true;
+}
+
+bool BaseNetwork::validateP25FrameLength(uint8_t& frameLength, uint32_t len, const P25DEF::DUID::E duid)
+{
+    using namespace p25::defines;
+
+    // P25 network frame should never be less then 24 bytes
+    if (len < 24U) {
+        LogError(LOG_NET, "malformed P25 packet, len < 24, shouldn't happen");
+        return false;
+    }
+
+    // frame length should never be 0
+    if (frameLength == 0U) {
+        LogError(LOG_NET, "DUID $%02X, sent with frame length of 0?", duid);
+        return false;
+    }
+
+    // frame length should never be larger then the network packet length
+    if (frameLength > len) {
+        LogError(LOG_NET, "malformed P25 packet, frameLength > len (%u > %u), shouldn't happen", frameLength, len);
+        return false;
+    }
+
+    // validate frame length, because P25 has variable network frame lengths we should be validating
+    // the actual frame length to ensure we don't have buffer overflow vulnerabilities
+    switch (duid) {
+    case DUID::HDU:
+        // HDU's aren't actually ever sent over the network, they are packaged with the first LDU1 for the
+        // initating superframe
+        return false;
+    case DUID::TDU:
+        // TDUs are sent with the P25 message header only
+        if (frameLength != 24U) { 
+            LogError(LOG_NET, P25_TDU_STR ", malformed TDU, discard.");
+            break;
+        }
+        break;
+
+    case DUID::LDU1:
+        // LDU1 with message header only, this shouldn't happen
+        if (frameLength <= 24U) { 
+            LogError(LOG_NET, P25_LDU1_STR ", malformed LDU1, discard.");
+            break;
+        }
+        break;
+    case DUID::VSELP1:
+        // VSELP1 frames aren't actually sent over the network right now
+        return false;
+
+    case DUID::TSDU:
+        // oversized TSDU -- this shouldn't happen, truncate and only handle the size of the TSDU frame length
+        if (frameLength > P25_TSDU_FRAME_LENGTH_BYTES)
+            frameLength = P25_TSDU_FRAME_LENGTH_BYTES;
+
+        // TSDU with message header only, this shouldn't happen
+        if (frameLength <= 24U) { 
+            LogError(LOG_NET, P25_TSDU_STR ", malformed TSDU, discard.");
+            break;
+        }
+        break;
+
+    case DUID::LDU2:
+        // LDU2 with message header only, this shouldn't happen
+        if (frameLength <= 24U) { 
+            LogError(LOG_NET, P25_LDU2_STR ", malformed LDU2, discard.");
+            break;
+        }
+        break;
+    case DUID::VSELP2:
+        // VSELP2 frames aren't actually sent over the network right now
+        return false;
+
+    case DUID::PDU:
+        // PDU with message header only, this shouldn't happen
+        if (frameLength <= 24U) { 
+            LogError(LOG_NET, P25_PDU_STR ", malformed PDU, discard.");
+            break;
+        }
+        break;
+        
+
+    case DUID::TDULC:
+        // oversized TDULC -- this shouldn't happen, truncate and only handle the size of the TSDU frame length
+        if (frameLength > P25_TDULC_FRAME_LENGTH_BYTES)
+            frameLength = P25_TDULC_FRAME_LENGTH_BYTES;
+
+        // TDULC with message header only, this shouldn't happen
+        if (frameLength <= 24U) { 
+            LogError(LOG_NET, P25_TSDU_STR ", malformed TDULC, discard.");
+            break;
+        }
+        break;
+
+    default:
+        LogError(LOG_NET, "unsupported DUID $%02X", duid);
+        return false;
+    }
 
     return true;
 }
@@ -1056,12 +1156,9 @@ UInt8Array BaseNetwork::createP25_TSDUMessage(uint32_t& length, const p25::lc::L
     createP25_MessageHdr(buffer, DUID::TSDU, control, lsd, FrameType::TERMINATOR);
 
     // pack raw P25 TSDU bytes
-    uint32_t count = MSG_HDR_SIZE;
-
     ::memcpy(buffer + 24U, data, P25_TSDU_FRAME_LENGTH_BYTES);
-    count += P25_TSDU_FRAME_LENGTH_BYTES;
 
-    buffer[23U] = count;
+    buffer[23U] = P25_TSDU_FRAME_LENGTH_BYTES;
 
     if (m_debug)
         Utils::dump(1U, "Network Message, P25 TDSU", buffer, (P25_TSDU_PACKET_LENGTH + PACKET_PAD));
@@ -1085,12 +1182,9 @@ UInt8Array BaseNetwork::createP25_TDULCMessage(uint32_t& length, const p25::lc::
     createP25_MessageHdr(buffer, DUID::TDULC, control, lsd, FrameType::TERMINATOR);
 
     // pack raw P25 TSDU bytes
-    uint32_t count = MSG_HDR_SIZE;
-
     ::memcpy(buffer + 24U, data, P25_TDULC_FRAME_LENGTH_BYTES);
-    count += P25_TDULC_FRAME_LENGTH_BYTES;
 
-    buffer[23U] = count;
+    buffer[23U] = P25_TDULC_FRAME_LENGTH_BYTES;
 
     if (m_debug)
         Utils::dump(1U, "Network Message, P25 TDULC", buffer, (P25_TDULC_PACKET_LENGTH + PACKET_PAD));

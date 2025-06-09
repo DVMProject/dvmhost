@@ -110,9 +110,7 @@ master:
     #   (This is useful for networked FNEs that are have a mix of connections, and the originating traffic peer ID to non-Peer-Link FNEs should be masked.)
     maskOutboundPeerIDForNonPeerLink: false
 
-    # Flag indicating that traffic headers will be filtered by destination ID (i.e. valid RID or valid TGID).
-    filterHeaders: true
-    # Flag indicating that terminators will be filtered by destination ID (i.e. valid RID or valid TGID).
+    # Flag indicating that P25 terminators will be filtered by destination ID (i.e. valid RID or valid TGID).
     filterTerminators: true
 
     # Flag indicating the FNE will drop all inbound Unit-to-Unit calls.
