@@ -887,8 +887,13 @@ void HostPatch::processP25Network(uint8_t* buffer, uint32_t length)
 
             LogMessage(LOG_HOST, P25_TDU_STR);
 
-            uint8_t controlByte = 0x00U;
-            m_network->writeP25TDU(lc, lsd, controlByte);
+            if (m_mmdvmP25Reflector) {
+                m_mmdvmP25Net->writeTDU();
+            }
+            else {
+                uint8_t controlByte = 0x00U;
+                m_network->writeP25TDU(lc, lsd, controlByte);
+            }
 
             if (m_rxStartTime > 0U) {
                 uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
@@ -1108,7 +1113,7 @@ void HostPatch::writeNet_LDU1(bool toFNE)
             uint32_t dstId = GET_UINT24(m_netLDU1, 76U);
             uint32_t srcId = GET_UINT24(m_netLDU1, 101U);
 
-            LogMessage(LOG_HOST, "P25, call start, srcId = %u, dstId = %u", srcId, dstId);
+            LogMessage(LOG_HOST, "MMDVM P25, call start, srcId = %u, dstId = %u", srcId, dstId);
 
             lc::LC lc = lc::LC();
             m_netLC = lc;
@@ -1134,7 +1139,7 @@ void HostPatch::writeNet_LDU1(bool toFNE)
         lsd.setLSD1(m_netLDU1[201U]);
         lsd.setLSD2(m_netLDU1[202U]);
 
-        LogMessage(LOG_NET, P25_LDU1_STR " audio, srcId = %u, dstId = %u", m_netLC.getSrcId(), m_netLC.getDstId());
+        LogMessage(LOG_NET, "MMDVM " P25_LDU1_STR " audio, srcId = %u, dstId = %u", m_netLC.getSrcId(), m_netLC.getDstId());
 
         if (m_debug)
             Utils::dump(1U, "MMDVM -> DVM LDU1", m_netLDU1, 9U * 25U);
@@ -1190,7 +1195,7 @@ void HostPatch::writeNet_LDU2(bool toFNE)
         lsd.setLSD1(m_netLDU2[201U]);
         lsd.setLSD2(m_netLDU2[202U]);
 
-        LogMessage(LOG_NET, P25_LDU2_STR " audio");
+        LogMessage(LOG_NET, "MMDVM " P25_LDU2_STR " audio");
 
         if (m_debug)
             Utils::dump(1U, "MMDVM -> DVM LDU2", m_netLDU2, 9U * 25U);
@@ -1420,7 +1425,7 @@ void* HostPatch::threadMMDVMProcess(void* arg)
 
                             p25::data::LowSpeedData lsd = p25::data::LowSpeedData();
 
-                            LogMessage(LOG_HOST, P25_TDU_STR);
+                            LogMessage(LOG_HOST, "MMDVM " P25_TDU_STR);
 
                             uint8_t controlByte = 0x00U;
                             patch->m_network->writeP25TDU(patch->m_netLC, lsd, controlByte);
@@ -1429,7 +1434,7 @@ void* HostPatch::threadMMDVMProcess(void* arg)
                                 uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
                                 uint64_t diff = now - patch->m_rxStartTime;
 
-                                LogMessage(LOG_HOST, "P25, call end, srcId = %u, dstId = %u, dur = %us", patch->m_netLC.getSrcId(), patch->m_netLC.getDstId(), diff / 1000U);
+                                LogMessage(LOG_HOST, "MMDVM P25, call end, srcId = %u, dstId = %u, dur = %us", patch->m_netLC.getSrcId(), patch->m_netLC.getDstId(), diff / 1000U);
                             }
 
                             patch->m_rxStartTime = 0U;

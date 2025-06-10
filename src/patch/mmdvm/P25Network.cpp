@@ -424,6 +424,20 @@ bool P25Network::writeLDU2(const uint8_t* ldu2, const p25::lc::LC& control, cons
     return true;
 }
 
+/* Writes a TDU frame to the network. */
+
+bool P25Network::writeTDU()
+{
+    if (m_debug)
+        Utils::dump(1U, "MMDVM Network END Sent", REC80, 17U);
+
+    bool ret = m_socket.write(REC80, 17U, m_addr, m_addrLen);
+    if (!ret)
+        return false;
+
+    return true;
+}
+
 /* Updates the timer by the passed number of milliseconds. */
 
 void P25Network::clock(uint32_t ms)

@@ -81,6 +81,11 @@ namespace mmdvm
         bool writeLDU2(const uint8_t* ldu2, const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, bool end);
 
         /**
+         * @brief Writes a TDU frame to the network.
+         */
+        bool writeTDU();
+
+        /**
          * @brief Updates the timer by the passed number of milliseconds.
          * @param ms Number of milliseconds.
          */
