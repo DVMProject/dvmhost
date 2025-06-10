@@ -18,6 +18,7 @@
 #include "common/p25/dfsi/DFSIDefines.h"
 #include "common/p25/dfsi/LC.h"
 #include "common/p25/lc/LC.h"
+#include "common/p25/Sync.h"
 #include "common/p25/P25Utils.h"
 #include "common/network/RTPHeader.h"
 #include "common/network/udp/Socket.h"
@@ -64,6 +65,16 @@ HostPatch::HostPatch(const std::string& confFile) :
     m_srcSlot(1U),
     m_dstTGId(0U),
     m_dstSlot(1U),
+    m_twoWayPatch(false),
+    m_mmdvmP25Reflector(false),
+    m_mmdvmP25Net(nullptr),
+    m_netState(RS_NET_IDLE),
+    m_netLC(),
+    m_gotNetLDU1(false),
+    m_netLDU1(nullptr),
+    m_gotNetLDU2(false),
+    m_netLDU2(nullptr),
+    m_p25Audio(),
     m_identity(),
     m_digiMode(1U),
     m_dmrEmbeddedData(),
@@ -75,12 +86,22 @@ HostPatch::HostPatch(const std::string& confFile) :
     m_trace(false),
     m_debug(false)
 {
-    /* stub */
+    m_netLDU1 = new uint8_t[9U * 25U];
+    m_netLDU2 = new uint8_t[9U * 25U];
+
+    ::memset(m_netLDU1, 0x00U, 9U * 25U);
+    resetWithNullAudio(m_netLDU1, false);
+    ::memset(m_netLDU2, 0x00U, 9U * 25U);
+    resetWithNullAudio(m_netLDU2, false);
 }
 
 /* Finalizes a instance of the HostPatch class. */
 
-HostPatch::~HostPatch() = default;
+HostPatch::~HostPatch()
+{
+    delete[] m_netLDU1;
+    delete[] m_netLDU2;
+}
 
 /* Executes the main FNE processing loop. */
 
@@ -166,12 +187,24 @@ int HostPatch::run()
     if (!ret)
         return EXIT_FAILURE;
 
+    // initialize MMDVM P25 reflector networking
+    if (m_mmdvmP25Reflector) {
+        ret = createMMDVMP25Network();
+        if (!ret)
+            return EXIT_FAILURE;
+    }
+
     /*
     ** Initialize Threads
     */
 
     if (!Thread::runAsThread(this, threadNetworkProcess))
         return EXIT_FAILURE;
+
+    if (m_mmdvmP25Reflector) {
+        if (!Thread::runAsThread(this, threadMMDVMProcess))
+            return EXIT_FAILURE;
+    }
 
     ::LogInfoEx(LOG_HOST, "Patch is up and running");
 
@@ -194,6 +227,11 @@ int HostPatch::run()
         if (m_network != nullptr) {
             std::lock_guard<std::mutex> lock(HostPatch::m_networkMutex);
             m_network->clock(ms);
+        }
+
+        if (m_mmdvmP25Reflector) {
+            std::lock_guard<std::mutex> lock(HostPatch::m_networkMutex);
+            m_mmdvmP25Net->clock(ms);
         }
 
         if (ms < 2U)
@@ -229,12 +267,20 @@ bool HostPatch::readParams()
 
     m_grantDemand = systemConf["grantDemand"].as<bool>(false);
 
+    m_mmdvmP25Reflector = systemConf["mmdvmP25Reflector"].as<bool>(false);
+
+    if (m_mmdvmP25Reflector && m_digiMode != TX_MODE_P25) {
+        LogError(LOG_HOST, "Patch does not currently support MMDVM patching in any mode other then P25.");
+        return false;
+    }
+
     m_trace = systemConf["trace"].as<bool>(false);
     m_debug = systemConf["debug"].as<bool>(false);
 
     LogInfo("General Parameters");
     LogInfo("    Digital Mode: %s", m_digiMode == TX_MODE_DMR ? "DMR" : "P25");
     LogInfo("    Grant Demands: %s", m_grantDemand ? "yes" : "no");
+    LogInfo("    MMDVM P25 Reflector Patch: %s", m_mmdvmP25Reflector ? "yes" : "no");
 
     if (m_debug) {
         LogInfo("    Debug: yes");
@@ -397,6 +443,38 @@ bool HostPatch::createNetwork()
     }
 
     ::LogSetNetwork(m_network);
+
+    return true;
+}
+
+/* Initializes MMDVM network connectivity. */
+
+bool HostPatch::createMMDVMP25Network()
+{
+    yaml::Node networkConf = m_conf["network"];
+
+    std::string address = networkConf["mmdvmGatewayAddress"].as<std::string>();
+    uint16_t port = (uint16_t)networkConf["mmdvmGatewayPort"].as<uint32_t>(42020U);
+    bool debug = networkConf["debug"].as<bool>(false);
+
+    LogInfo("MMDVM Network Parameters");
+    LogInfo("    Address: %s", address.c_str());
+    LogInfo("    Port: %u", port);
+
+    if (debug) {
+        LogInfo("    Debug: yes");
+    }
+
+    // initialize networking
+    m_mmdvmP25Net = new mmdvm::P25Network(address, port, 0U, debug);
+
+    bool ret = m_mmdvmP25Net->open();
+    if (!ret) {
+        delete m_mmdvmP25Net;
+        m_mmdvmP25Net = nullptr;
+        LogError(LOG_HOST, "failed to initialize MMDVM networking!");
+        return false;
+    }
 
     return true;
 }
@@ -761,13 +839,16 @@ void HostPatch::processP25Network(uint8_t* buffer, uint32_t length)
         if (dstId != m_srcTGId && dstId != m_dstTGId)
             return;
 
-        uint32_t actualDstId = m_dstTGId;
-        if (m_twoWayPatch) {
-            if (dstId == m_dstTGId)
-                actualDstId = m_srcTGId;
-        } else {
-            if (dstId == m_dstTGId)
-                return;
+        uint32_t actualDstId = m_srcTGId;
+        if (!m_mmdvmP25Reflector) {
+            actualDstId = m_dstTGId;
+            if (m_twoWayPatch) {
+                if (dstId == m_dstTGId)
+                    actualDstId = m_srcTGId;
+            } else {
+                if (dstId == m_dstTGId)
+                    return;
+            }
         }
 
         if (m_network->getP25StreamId() != m_rxStreamId && ((duid != DUID::TDU) && (duid != DUID::TDULC))) {
@@ -902,7 +983,14 @@ void HostPatch::processP25Network(uint8_t* buffer, uint32_t length)
                     }
                 }
 
-                m_network->writeP25LDU1(control, lsd, netLDU, frameType);
+                if (m_mmdvmP25Reflector) {
+                    ::memcpy(m_netLDU1, netLDU, count);
+                    m_gotNetLDU1 = true;
+
+                    writeNet_LDU1(false);
+                } else {
+                    m_network->writeP25LDU1(control, lsd, netLDU, frameType);
+                }
             }
             break;
         case DUID::LDU2:
@@ -957,7 +1045,14 @@ void HostPatch::processP25Network(uint8_t* buffer, uint32_t length)
                 control.setSrcId(srcId);
                 control.setDstId(actualDstId);
 
-                m_network->writeP25LDU2(control, lsd, netLDU);
+                if (m_mmdvmP25Reflector) {
+                    ::memcpy(m_netLDU2, netLDU, count);
+                    m_gotNetLDU2 = true;
+
+                    writeNet_LDU2(false);
+                } else {
+                    m_network->writeP25LDU2(control, lsd, netLDU);
+                }
             }
             break;
 
@@ -972,6 +1067,188 @@ void HostPatch::processP25Network(uint8_t* buffer, uint32_t length)
             // this makes GCC happy
             break;
         }
+    }
+}
+
+/* Helper to check for an unflushed LDU1 packet. */
+
+void HostPatch::checkNet_LDU1()
+{
+    if (m_netState == RS_NET_IDLE)
+        return;
+
+    // check for an unflushed LDU1
+    if ((m_netLDU1[10U] != 0x00U || m_netLDU1[26U] != 0x00U || m_netLDU1[55U] != 0x00U ||
+        m_netLDU1[80U] != 0x00U || m_netLDU1[105U] != 0x00U || m_netLDU1[130U] != 0x00U ||
+        m_netLDU1[155U] != 0x00U || m_netLDU1[180U] != 0x00U || m_netLDU1[204U] != 0x00U) &&
+        m_gotNetLDU1)
+        writeNet_LDU1(false);
+}
+
+/* Helper to write a network P25 LDU1 packet. */
+
+void HostPatch::writeNet_LDU1(bool toFNE)
+{
+    using namespace p25;
+    using namespace p25::defines;
+    using namespace p25::dfsi::defines;
+
+    if (toFNE) {
+        if (m_netState == RS_NET_IDLE) {
+            m_callInProgress = true;
+
+            uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+            m_rxStartTime = now;
+
+            uint8_t lco = m_netLDU1[51U];
+            uint8_t mfId = m_netLDU1[52U];
+            uint32_t dstId = GET_UINT24(m_netLDU1, 76U);
+            uint32_t srcId = GET_UINT24(m_netLDU1, 101U);
+
+            LogMessage(LOG_HOST, "P25, call start, srcId = %u, dstId = %u", srcId, dstId);
+
+            lc::LC lc = lc::LC();
+            m_netLC = lc;
+            m_netLC.setLCO(lco);
+            m_netLC.setMFId(mfId);
+            m_netLC.setDstId(dstId);
+            m_netLC.setSrcId(srcId);
+
+            if (m_grantDemand) {
+                p25::lc::LC lc = p25::lc::LC();
+                lc.setLCO(p25::defines::LCO::GROUP);
+                lc.setDstId(dstId);
+                lc.setSrcId(srcId);
+
+                p25::data::LowSpeedData lsd = p25::data::LowSpeedData();
+
+                uint8_t controlByte = 0x80U;
+                m_network->writeP25TDU(lc, lsd, controlByte);
+            }
+        }
+
+        p25::data::LowSpeedData lsd = p25::data::LowSpeedData();
+        lsd.setLSD1(m_netLDU1[201U]);
+        lsd.setLSD2(m_netLDU1[202U]);
+
+        LogMessage(LOG_NET, P25_LDU1_STR " audio, srcId = %u, dstId = %u", m_netLC.getSrcId(), m_netLC.getDstId());
+
+        m_network->writeP25LDU1(m_netLC, lsd, m_netLDU1, FrameType::DATA_UNIT);
+
+        m_netState = RS_NET_AUDIO;
+        resetWithNullAudio(m_netLDU1, m_netLC.getAlgId() != P25DEF::ALGO_UNENCRYPT);
+        m_gotNetLDU1 = false;
+    }
+    else {
+        uint8_t buffer[P25_LDU_FRAME_LENGTH_BYTES + 2U];
+        ::memset(buffer, 0x00U, P25_LDU_FRAME_LENGTH_BYTES + 2U);
+
+        // generate Sync
+        Sync::addP25Sync(buffer + 2U);
+
+        // network bursts have no NID
+
+        m_netLC.encodeLDU1(buffer + 2U);
+
+        // add the Audio
+        m_p25Audio.encode(buffer + 2U, m_netLDU1 + 10U, 0U);
+        m_p25Audio.encode(buffer + 2U, m_netLDU1 + 26U, 1U);
+        m_p25Audio.encode(buffer + 2U, m_netLDU1 + 55U, 2U);
+        m_p25Audio.encode(buffer + 2U, m_netLDU1 + 80U, 3U);
+        m_p25Audio.encode(buffer + 2U, m_netLDU1 + 105U, 4U);
+        m_p25Audio.encode(buffer + 2U, m_netLDU1 + 130U, 5U);
+        m_p25Audio.encode(buffer + 2U, m_netLDU1 + 155U, 6U);
+        m_p25Audio.encode(buffer + 2U, m_netLDU1 + 180U, 7U);
+        m_p25Audio.encode(buffer + 2U, m_netLDU1 + 204U, 8U);
+
+        // add the Low Speed Data
+        p25::data::LowSpeedData lsd = p25::data::LowSpeedData();
+        lsd.setLSD1(m_netLDU1[201U]);
+        lsd.setLSD2(m_netLDU1[202U]);
+        lsd.encode(buffer + 2U);
+
+        // add status bits
+        P25Utils::addStatusBits(buffer + 2U, P25_LDU_FRAME_LENGTH_BITS, false, false);
+
+        m_mmdvmP25Net->writeLDU1(buffer, m_netLC, lsd, false);
+
+        resetWithNullAudio(m_netLDU1, m_netLC.getAlgId() != P25DEF::ALGO_UNENCRYPT);
+        m_gotNetLDU1 = false;
+    }
+}
+
+/* Helper to check for an unflushed LDU2 packet. */
+
+void HostPatch::checkNet_LDU2()
+{
+    if (m_netState == RS_NET_IDLE)
+        return;
+
+    // check for an unflushed LDU2
+    if ((m_netLDU2[10U] != 0x00U || m_netLDU2[26U] != 0x00U || m_netLDU2[55U] != 0x00U ||
+        m_netLDU2[80U] != 0x00U || m_netLDU2[105U] != 0x00U || m_netLDU2[130U] != 0x00U ||
+        m_netLDU2[155U] != 0x00U || m_netLDU2[180U] != 0x00U || m_netLDU2[204U] != 0x00U) &&
+        m_gotNetLDU2) {
+        writeNet_LDU2(false);
+    }
+}
+
+/* Helper to write a network P25 LDU2 packet. */
+
+void HostPatch::writeNet_LDU2(bool toFNE)
+{
+    using namespace p25;
+    using namespace p25::defines;
+    using namespace p25::dfsi::defines;
+
+    if (toFNE) {
+        p25::data::LowSpeedData lsd = p25::data::LowSpeedData();
+        lsd.setLSD1(m_netLDU2[201U]);
+        lsd.setLSD2(m_netLDU2[202U]);
+
+        LogMessage(LOG_NET, P25_LDU2_STR " audio");
+
+        m_network->writeP25LDU2(m_netLC, lsd, m_netLDU2);
+
+        resetWithNullAudio(m_netLDU2, m_netLC.getAlgId() != P25DEF::ALGO_UNENCRYPT);
+        m_gotNetLDU2 = false;
+    }
+    else {
+        uint8_t buffer[P25_LDU_FRAME_LENGTH_BYTES + 2U];
+        ::memset(buffer, 0x00U, P25_LDU_FRAME_LENGTH_BYTES + 2U);
+
+        // generate Sync
+        Sync::addP25Sync(buffer + 2U);
+
+        // network bursts have no NID
+
+        // generate LDU2 data
+        m_netLC.encodeLDU2(buffer + 2U);
+
+        // add the Audio
+        m_p25Audio.encode(buffer + 2U, m_netLDU2 + 10U, 0U);
+        m_p25Audio.encode(buffer + 2U, m_netLDU2 + 26U, 1U);
+        m_p25Audio.encode(buffer + 2U, m_netLDU2 + 55U, 2U);
+        m_p25Audio.encode(buffer + 2U, m_netLDU2 + 80U, 3U);
+        m_p25Audio.encode(buffer + 2U, m_netLDU2 + 105U, 4U);
+        m_p25Audio.encode(buffer + 2U, m_netLDU2 + 130U, 5U);
+        m_p25Audio.encode(buffer + 2U, m_netLDU2 + 155U, 6U);
+        m_p25Audio.encode(buffer + 2U, m_netLDU2 + 180U, 7U);
+        m_p25Audio.encode(buffer + 2U, m_netLDU2 + 204U, 8U);
+
+        // add the Low Speed Data
+        p25::data::LowSpeedData lsd = p25::data::LowSpeedData();
+        lsd.setLSD1(m_netLDU2[201U]);
+        lsd.setLSD2(m_netLDU2[202U]);
+        lsd.encode(buffer + 2U);
+
+        // add status bits
+        P25Utils::addStatusBits(buffer + 2U, P25_LDU_FRAME_LENGTH_BITS, false, false);
+
+        m_mmdvmP25Net->writeLDU2(buffer, m_netLC, lsd, false);
+
+        resetWithNullAudio(m_netLDU2, m_netLC.getAlgId() != P25DEF::ALGO_UNENCRYPT);
+        m_gotNetLDU2 = false;
     }
 }
 
@@ -1025,6 +1302,164 @@ void* HostPatch::threadNetworkProcess(void* arg)
                 UInt8Array p25Buffer = patch->m_network->readP25(netReadRet, length);
                 if (netReadRet) {
                     patch->processP25Network(p25Buffer.get(), length);
+                }
+            }
+
+            Thread::sleep(1U);
+        }
+
+        LogMessage(LOG_HOST, "[STOP] %s", threadName.c_str());
+        delete th;
+    }
+
+    return nullptr;
+}
+
+/* Entry point to MMDVM network processing thread. */
+
+void* HostPatch::threadMMDVMProcess(void* arg)
+{
+    using namespace p25;
+    using namespace p25::defines;
+    using namespace p25::dfsi::defines;
+
+    thread_t* th = (thread_t*)arg;
+    if (th != nullptr) {
+#if defined(_WIN32)
+        ::CloseHandle(th->thread);
+#else
+        ::pthread_detach(th->thread);
+#endif // defined(_WIN32)
+
+        std::string threadName("patch:mmdvm-net-process");
+        HostPatch* patch = static_cast<HostPatch*>(th->obj);
+        if (patch == nullptr) {
+            g_killed = true;
+            LogError(LOG_HOST, "[FAIL] %s", threadName.c_str());
+        }
+
+        if (g_killed) {
+            delete th;
+            return nullptr;
+        }
+
+        LogMessage(LOG_HOST, "[ OK ] %s", threadName.c_str());
+#ifdef _GNU_SOURCE
+        ::pthread_setname_np(th->thread, threadName.c_str());
+#endif // _GNU_SOURCE
+
+        while (!g_killed) {
+            if (!patch->m_running) {
+                Thread::sleep(1U);
+                continue;
+            }
+
+            uint32_t length = 0U;
+            bool netReadRet = false;
+            if (patch->m_digiMode == TX_MODE_P25) {
+                std::lock_guard<std::mutex> lock(HostPatch::m_networkMutex);
+
+                DECLARE_UINT8_ARRAY(buffer, 100U);
+                uint32_t len = patch->m_mmdvmP25Net->read(buffer, 100U);
+                if (len != 0U) {
+                    switch (buffer[0U]) {
+                    // LDU1
+                    case DFSIFrameType::LDU1_VOICE1:
+                        ::memcpy(patch->m_netLDU1 + 0U, buffer, 22U);
+                        patch->checkNet_LDU2();
+                        break;
+                    case DFSIFrameType::LDU1_VOICE2:
+                        ::memcpy(patch->m_netLDU1 + 25U, buffer, 14U);
+                        patch->checkNet_LDU2();
+                        break;
+                    case DFSIFrameType::LDU1_VOICE3:
+                        ::memcpy(patch->m_netLDU1 + 50U, buffer, 17U);
+                        patch->checkNet_LDU2();
+                        break;
+                    case DFSIFrameType::LDU1_VOICE4:
+                        ::memcpy(patch->m_netLDU1 + 75U, buffer, 17U);
+                        patch->checkNet_LDU2();
+                        break;
+                    case DFSIFrameType::LDU1_VOICE5:
+                        ::memcpy(patch->m_netLDU1 + 100U, buffer, 17U);
+                        patch->checkNet_LDU2();
+                        break;
+                    case DFSIFrameType::LDU1_VOICE6:
+                        ::memcpy(patch->m_netLDU1 + 125U, buffer, 17U);
+                        patch->checkNet_LDU2();
+                        break;
+                    case DFSIFrameType::LDU1_VOICE7:
+                        ::memcpy(patch->m_netLDU1 + 150U, buffer, 17U);
+                        patch->checkNet_LDU2();
+                        break;
+                    case DFSIFrameType::LDU1_VOICE8:
+                        ::memcpy(patch->m_netLDU1 + 175U, buffer, 17U);
+                        patch->checkNet_LDU2();
+                        break;
+                    case DFSIFrameType::LDU1_VOICE9:
+                        ::memcpy(patch->m_netLDU1 + 200U, buffer, 16U);
+                        patch->checkNet_LDU2();
+
+                        if (patch->m_netState != RS_NET_IDLE) {
+                            patch->m_gotNetLDU1 = true;
+                            patch->writeNet_LDU1(true);
+                        }
+                        break;
+
+                    // LDU2
+                    case DFSIFrameType::LDU2_VOICE10:
+                        ::memcpy(patch->m_netLDU2 + 0U, buffer, 22U);
+                        patch->checkNet_LDU1();
+                        break;
+                    case DFSIFrameType::LDU2_VOICE11:
+                        ::memcpy(patch->m_netLDU2 + 25U, buffer, 14U);
+                        patch->checkNet_LDU1();
+                        break;
+                    case DFSIFrameType::LDU2_VOICE12:
+                        ::memcpy(patch->m_netLDU2 + 50U, buffer, 17U);
+                        patch->checkNet_LDU1();
+                        break;
+                    case DFSIFrameType::LDU2_VOICE13:
+                        ::memcpy(patch->m_netLDU2 + 75U, buffer, 17U);
+                        patch->checkNet_LDU1();
+                        break;
+                    case DFSIFrameType::LDU2_VOICE14:
+                        ::memcpy(patch->m_netLDU2 + 100U, buffer, 17U);
+                        patch->checkNet_LDU1();
+                        break;
+                    case DFSIFrameType::LDU2_VOICE15:
+                        ::memcpy(patch->m_netLDU2 + 125U, buffer, 17U);
+                        patch->checkNet_LDU1();
+                        break;
+                    case DFSIFrameType::LDU2_VOICE16:
+                        ::memcpy(patch->m_netLDU2 + 150U, buffer, 17U);
+                        patch->checkNet_LDU1();
+                        break;
+                    case DFSIFrameType::LDU2_VOICE17:
+                        ::memcpy(patch->m_netLDU2 + 175U, buffer, 17U);
+                        patch->checkNet_LDU1();
+                        break;
+                    case DFSIFrameType::LDU2_VOICE18:
+                        ::memcpy(patch->m_netLDU2 + 200U, buffer, 16U);
+                        if (patch->m_netState == RS_NET_IDLE) {
+                            patch->writeNet_LDU1(true);
+                        } else {
+                            patch->checkNet_LDU1();
+                        }
+                        
+                        patch->writeNet_LDU2(true);
+                        break;
+
+                    case 0x80U:
+                        {
+                            patch->m_netState = RS_NET_IDLE;
+                            p25::data::LowSpeedData lsd = p25::data::LowSpeedData();
+                            patch->m_network->writeP25TDU(patch->m_netLC, lsd, 0U);
+                        }
+                        break;
+                    default:
+                        break;
+                    }
                 }
             }
 

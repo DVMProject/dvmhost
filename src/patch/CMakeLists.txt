@@ -8,6 +8,8 @@
 # *
 # */
 file(GLOB patch_SRC
+    "src/patch/mmdvm/*.h"
+    "src/patch/mmdvm/*.cpp"
     "src/patch/network/*.h"
     "src/patch/network/*.cpp"
     "src/patch/*.h"

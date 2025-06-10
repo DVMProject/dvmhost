@@ -68,12 +68,20 @@ network:
     # Flag indicating whether or not the patch is two-way.
     twoWay: false
 
+    # Hostname/IP address of MMDVM gateway to connect to.
+    mmdvmGatewayAddress: 127.0.0.1
+    # Port number to connect to.
+    mmdvmGatewayPort: 42020
+
 system:
     # Textual Name
     identity: PATCH
 
     # Digital mode (1 - DMR, 2 - P25).
     digiMode: 1
+
+    # Flag indicating whether or not the patch is from/to a MMDVM P25 reflector.
+    mmdvmP25Reflector: false
 
     # Flag indicating whether or not trace logging is enabled.
     trace: false

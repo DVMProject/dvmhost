@@ -9,7 +9,7 @@
  */
 /**
  * @defgroup patch_network Networking
- * @brief Implementation for the bridge networking.
+ * @brief Implementation for the patch networking.
  * @ingroup patch
  *
  * @file PeerNetwork.h
