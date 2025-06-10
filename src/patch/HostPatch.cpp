@@ -1417,8 +1417,27 @@ void* HostPatch::threadMMDVMProcess(void* arg)
                     case 0x80U:
                         {
                             patch->m_netState = RS_NET_IDLE;
+
                             p25::data::LowSpeedData lsd = p25::data::LowSpeedData();
-                            patch->m_network->writeP25TDU(patch->m_netLC, lsd, 0U);
+
+                            LogMessage(LOG_HOST, P25_TDU_STR);
+
+                            uint8_t controlByte = 0x00U;
+                            patch->m_network->writeP25TDU(patch->m_netLC, lsd, controlByte);
+
+                            if (patch->m_rxStartTime > 0U) {
+                                uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+                                uint64_t diff = now - patch->m_rxStartTime;
+
+                                LogMessage(LOG_HOST, "P25, call end, srcId = %u, dstId = %u, dur = %us", patch->m_netLC.getSrcId(), patch->m_netLC.getDstId(), diff / 1000U);
+                            }
+
+                            patch->m_rxStartTime = 0U;
+                            patch->m_rxStreamId = 0U;
+
+                            patch->m_callInProgress = false;
+                            patch->m_rxStartTime = 0U;
+                            patch->m_rxStreamId = 0U;
                         }
                         break;
 
