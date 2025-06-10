@@ -72,6 +72,8 @@ network:
     mmdvmGatewayAddress: 127.0.0.1
     # Port number to connect to.
     mmdvmGatewayPort: 42020
+    # Local port number for gateway to connect to.
+    localGatewayPort: 32010
 
 system:
     # Textual Name

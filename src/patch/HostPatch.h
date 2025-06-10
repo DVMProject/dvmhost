@@ -21,7 +21,6 @@
 #include "common/dmr/lc/LC.h"
 #include "common/dmr/lc/PrivacyLC.h"
 #include "common/p25/lc/LC.h"
-#include "common/p25/Audio.h"
 #include "common/network/udp/Socket.h"
 #include "common/yaml/Yaml.h"
 #include "common/Timer.h"
@@ -85,8 +84,6 @@ private:
     uint8_t* m_netLDU1;
     bool m_gotNetLDU2;
     uint8_t* m_netLDU2;
-
-    p25::Audio m_p25Audio;
 
     std::string m_identity;
 

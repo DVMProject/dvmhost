@@ -122,8 +122,7 @@ P25Network::P25Network(const std::string& gatewayAddress, uint16_t gatewayPort, 
     m_addr(),
     m_addrLen(0U),
     m_debug(debug),
-    m_buffer(1000U, "MMDVM P25 Network"),
-    m_audio()
+    m_buffer(1000U, "MMDVM P25 Network")
 {
     if (Socket::lookup(gatewayAddress, gatewayPort, m_addr, m_addrLen) != 0)
         m_addrLen = 0U;
@@ -149,7 +148,7 @@ uint32_t P25Network::read(uint8_t* data, uint32_t length)
         return 0U;
     }
 
-    if (c <= length) {
+    if (c > length) {
         return 0U;
     }
 
@@ -167,10 +166,10 @@ bool P25Network::writeLDU1(const uint8_t* ldu1, const p25::lc::LC& control, cons
 
     // The '62' record
     ::memcpy(buffer, REC62, 22U);
-    m_audio.decode(ldu1, buffer + 10U, 0U);
+    ::memcpy(buffer + 10U, ldu1 + 10U, RAW_IMBE_LENGTH_BYTES);
 
     if (m_debug)
-        Utils::dump(1U, "MMDVM Network LDU1 Sent", buffer, 22U);
+        Utils::dump(1U, "MMDVM Network $62 LDU1 Sent", buffer, 22U);
 
     bool ret = m_socket.write(buffer, 22U, m_addr, m_addrLen);
     if (!ret)
@@ -178,10 +177,10 @@ bool P25Network::writeLDU1(const uint8_t* ldu1, const p25::lc::LC& control, cons
 
     // The '63' record
     ::memcpy(buffer, REC63, 14U);
-    m_audio.decode(ldu1, buffer + 1U, 1U);
+    ::memcpy(buffer + 1U, ldu1 + 26U, RAW_IMBE_LENGTH_BYTES);
 
     if (m_debug)
-        Utils::dump(1U, "MMDVM Network LDU1 Sent", buffer, 14U);
+        Utils::dump(1U, "MMDVM Network $63 LDU1 Sent", buffer, 14U);
 
     ret = m_socket.write(buffer, 14U, m_addr, m_addrLen);
     if (!ret)
@@ -191,10 +190,10 @@ bool P25Network::writeLDU1(const uint8_t* ldu1, const p25::lc::LC& control, cons
     ::memcpy(buffer, REC64, 17U);
     buffer[1U] = control.getLCO();
     buffer[2U] = control.getMFId();
-    m_audio.decode(ldu1, buffer + 5U, 2U);
+    ::memcpy(buffer + 5U, ldu1 + 55U, RAW_IMBE_LENGTH_BYTES);
 
     if (m_debug)
-        Utils::dump(1U, "MMDVM Network LDU1 Sent", buffer, 17U);
+        Utils::dump(1U, "MMDVM Network $64 LDU1 Sent", buffer, 17U);
 
     ret = m_socket.write(buffer, 17U, m_addr, m_addrLen);
     if (!ret)
@@ -206,10 +205,10 @@ bool P25Network::writeLDU1(const uint8_t* ldu1, const p25::lc::LC& control, cons
     buffer[1U] = (id >> 16) & 0xFFU;
     buffer[2U] = (id >> 8) & 0xFFU;
     buffer[3U] = (id >> 0) & 0xFFU;
-    m_audio.decode(ldu1, buffer + 5U, 3U);
+    ::memcpy(buffer + 5U, ldu1 + 80U, RAW_IMBE_LENGTH_BYTES);
 
     if (m_debug)
-        Utils::dump(1U, "MMDVM Network LDU1 Sent", buffer, 17U);
+        Utils::dump(1U, "MMDVM Network $65 LDU1 Sent", buffer, 17U);
 
     ret = m_socket.write(buffer, 17U, m_addr, m_addrLen);
     if (!ret)
@@ -221,10 +220,10 @@ bool P25Network::writeLDU1(const uint8_t* ldu1, const p25::lc::LC& control, cons
     buffer[1U] = (id >> 16) & 0xFFU;
     buffer[2U] = (id >> 8) & 0xFFU;
     buffer[3U] = (id >> 0) & 0xFFU;
-    m_audio.decode(ldu1, buffer + 5U, 4U);
+    ::memcpy(buffer + 5U, ldu1 + 105U, RAW_IMBE_LENGTH_BYTES);
 
     if (m_debug)
-        Utils::dump(1U, "MMDVM Network LDU1 Sent", buffer, 17U);
+        Utils::dump(1U, "MMDVM Network $66 LDU1 Sent", buffer, 17U);
 
     ret = m_socket.write(buffer, 17U, m_addr, m_addrLen);
     if (!ret)
@@ -232,10 +231,10 @@ bool P25Network::writeLDU1(const uint8_t* ldu1, const p25::lc::LC& control, cons
 
     // The '67' record
     ::memcpy(buffer, REC67, 17U);
-    m_audio.decode(ldu1, buffer + 5U, 5U);
+    ::memcpy(buffer + 5U, ldu1 + 130U, RAW_IMBE_LENGTH_BYTES);
 
     if (m_debug)
-        Utils::dump(1U, "MMDVM Network LDU1 Sent", buffer, 17U);
+        Utils::dump(1U, "MMDVM Network $67 LDU1 Sent", buffer, 17U);
 
     ret = m_socket.write(buffer, 17U, m_addr, m_addrLen);
     if (!ret)
@@ -243,10 +242,10 @@ bool P25Network::writeLDU1(const uint8_t* ldu1, const p25::lc::LC& control, cons
 
     // The '68' record
     ::memcpy(buffer, REC68, 17U);
-    m_audio.decode(ldu1, buffer + 5U, 6U);
+    ::memcpy(buffer + 5U, ldu1 + 155U, RAW_IMBE_LENGTH_BYTES);
 
     if (m_debug)
-        Utils::dump(1U, "MMDVM Network LDU1 Sent", buffer, 17U);
+        Utils::dump(1U, "MMDVM Network $68 LDU1 Sent", buffer, 17U);
 
     ret = m_socket.write(buffer, 17U, m_addr, m_addrLen);
     if (!ret)
@@ -254,10 +253,10 @@ bool P25Network::writeLDU1(const uint8_t* ldu1, const p25::lc::LC& control, cons
 
     // The '69' record
     ::memcpy(buffer, REC69, 17U);
-    m_audio.decode(ldu1, buffer + 5U, 7U);
+    ::memcpy(buffer + 5U, ldu1 + 180U, RAW_IMBE_LENGTH_BYTES);
 
     if (m_debug)
-        Utils::dump(1U, "MMDVM Network LDU1 Sent", buffer, 17U);
+        Utils::dump(1U, "MMDVM Network $69 LDU1 Sent", buffer, 17U);
 
     ret = m_socket.write(buffer, 17U, m_addr, m_addrLen);
     if (!ret)
@@ -267,10 +266,10 @@ bool P25Network::writeLDU1(const uint8_t* ldu1, const p25::lc::LC& control, cons
     ::memcpy(buffer, REC6A, 16U);
     buffer[1U] = lsd.getLSD1();
     buffer[2U] = lsd.getLSD2();
-    m_audio.decode(ldu1, buffer + 4U, 8U);
+    ::memcpy(buffer + 5U, ldu1 + 204U, RAW_IMBE_LENGTH_BYTES);
 
     if (m_debug)
-        Utils::dump(1U, "MMDVM Network LDU1 Sent", buffer, 16U);
+        Utils::dump(1U, "MMDVM Network $6A LDU1 Sent", buffer, 16U);
 
     ret = m_socket.write(buffer, 16U, m_addr, m_addrLen);
     if (!ret)
@@ -298,10 +297,10 @@ bool P25Network::writeLDU2(const uint8_t* ldu2, const p25::lc::LC& control, cons
 
     // The '6B' record
     ::memcpy(buffer, REC6B, 22U);
-    m_audio.decode(ldu2, buffer + 10U, 0U);
+    ::memcpy(buffer + 10U, ldu2 + 10U, RAW_IMBE_LENGTH_BYTES);
 
     if (m_debug)
-        Utils::dump(1U, "MMDVM Network LDU2 Sent", buffer, 22U);
+        Utils::dump(1U, "MMDVM Network $6B LDU2 Sent", buffer, 22U);
 
     bool ret = m_socket.write(buffer, 22U, m_addr, m_addrLen);
     if (!ret)
@@ -309,10 +308,10 @@ bool P25Network::writeLDU2(const uint8_t* ldu2, const p25::lc::LC& control, cons
 
     // The '6C' record
     ::memcpy(buffer, REC6C, 14U);
-    m_audio.decode(ldu2, buffer + 1U, 1U);
+    ::memcpy(buffer + 1U, ldu2 + 26U, RAW_IMBE_LENGTH_BYTES);
 
     if (m_debug)
-        Utils::dump(1U, "MMDVM Network LDU2 Sent", buffer, 14U);
+        Utils::dump(1U, "MMDVM Network $6C LDU2 Sent", buffer, 14U);
 
     ret = m_socket.write(buffer, 14U, m_addr, m_addrLen);
     if (!ret)
@@ -326,10 +325,10 @@ bool P25Network::writeLDU2(const uint8_t* ldu2, const p25::lc::LC& control, cons
     buffer[1U] = mi[0U];
     buffer[2U] = mi[1U];
     buffer[3U] = mi[2U];
-    m_audio.decode(ldu2, buffer + 5U, 2U);
+    ::memcpy(buffer + 5U, ldu2 + 55U, RAW_IMBE_LENGTH_BYTES);
 
     if (m_debug)
-        Utils::dump(1U, "MMDVM Network LDU2 Sent", buffer, 17U);
+        Utils::dump(1U, "MMDVM Network $6D LDU2 Sent", buffer, 17U);
 
     ret = m_socket.write(buffer, 17U, m_addr, m_addrLen);
     if (!ret)
@@ -340,10 +339,10 @@ bool P25Network::writeLDU2(const uint8_t* ldu2, const p25::lc::LC& control, cons
     buffer[1U] = mi[3U];
     buffer[2U] = mi[4U];
     buffer[3U] = mi[5U];
-    m_audio.decode(ldu2, buffer + 5U, 3U);
+    ::memcpy(buffer + 5U, ldu2 + 80U, RAW_IMBE_LENGTH_BYTES);
 
     if (m_debug)
-        Utils::dump(1U, "MMDVM Network LDU2 Sent", buffer, 17U);
+        Utils::dump(1U, "MMDVM Network $6E LDU2 Sent", buffer, 17U);
 
     ret = m_socket.write(buffer, 17U, m_addr, m_addrLen);
     if (!ret)
@@ -354,10 +353,10 @@ bool P25Network::writeLDU2(const uint8_t* ldu2, const p25::lc::LC& control, cons
     buffer[1U] = mi[6U];
     buffer[2U] = mi[7U];
     buffer[3U] = mi[8U];
-    m_audio.decode(ldu2, buffer + 5U, 4U);
+    ::memcpy(buffer + 5U, ldu2 + 105U, RAW_IMBE_LENGTH_BYTES);
 
     if (m_debug)
-        Utils::dump(1U, "MMDVM Network LDU2 Sent", buffer, 17U);
+        Utils::dump(1U, "MMDVM Network $6F LDU2 Sent", buffer, 17U);
 
     ret = m_socket.write(buffer, 17U, m_addr, m_addrLen);
     if (!ret)
@@ -369,10 +368,10 @@ bool P25Network::writeLDU2(const uint8_t* ldu2, const p25::lc::LC& control, cons
     uint32_t id = control.getKId();
     buffer[2U] = (id >> 8) & 0xFFU;
     buffer[3U] = (id >> 0) & 0xFFU;
-    m_audio.decode(ldu2, buffer + 5U, 5U);
+    ::memcpy(buffer + 5U, ldu2 + 130U, RAW_IMBE_LENGTH_BYTES);
 
     if (m_debug)
-        Utils::dump(1U, "MMDVM Network LDU2 Sent", buffer, 17U);
+        Utils::dump(1U, "MMDVM Network $70 LDU2 Sent", buffer, 17U);
 
     ret = m_socket.write(buffer, 17U, m_addr, m_addrLen);
     if (!ret)
@@ -380,10 +379,10 @@ bool P25Network::writeLDU2(const uint8_t* ldu2, const p25::lc::LC& control, cons
 
     // The '71' record
     ::memcpy(buffer, REC71, 17U);
-    m_audio.decode(ldu2, buffer + 5U, 6U);
+    ::memcpy(buffer + 5U, ldu2 + 155U, RAW_IMBE_LENGTH_BYTES);
 
     if (m_debug)
-        Utils::dump(1U, "MMDVM Network LDU2 Sent", buffer, 17U);
+        Utils::dump(1U, "MMDVM Network $71 LDU2 Sent", buffer, 17U);
 
     ret = m_socket.write(buffer, 17U, m_addr, m_addrLen);
     if (!ret)
@@ -391,10 +390,10 @@ bool P25Network::writeLDU2(const uint8_t* ldu2, const p25::lc::LC& control, cons
 
     // The '72' record
     ::memcpy(buffer, REC72, 17U);
-    m_audio.decode(ldu2, buffer + 5U, 7U);
+    ::memcpy(buffer + 5U, ldu2 + 180U, RAW_IMBE_LENGTH_BYTES);
 
     if (m_debug)
-        Utils::dump(1U, "MMDVM Network LDU2 Sent", buffer, 17U);
+        Utils::dump(1U, "MMDVM Network $72 LDU2 Sent", buffer, 17U);
 
     ret = m_socket.write(buffer, 17U, m_addr, m_addrLen);
     if (!ret)
@@ -404,10 +403,10 @@ bool P25Network::writeLDU2(const uint8_t* ldu2, const p25::lc::LC& control, cons
     ::memcpy(buffer, REC73, 16U);
     buffer[1U] = lsd.getLSD1();
     buffer[2U] = lsd.getLSD2();
-    m_audio.decode(ldu2, buffer + 4U, 8U);
+    ::memcpy(buffer + 5U, ldu2 + 204U, RAW_IMBE_LENGTH_BYTES);
 
     if (m_debug)
-        Utils::dump(1U, "MMDVM Network LDU2 Sent", buffer, 16U);
+        Utils::dump(1U, "MMDVM Network $73 LDU2 Sent", buffer, 16U);
 
     ret = m_socket.write(buffer, 16U, m_addr, m_addrLen);
     if (!ret)

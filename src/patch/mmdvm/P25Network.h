@@ -22,7 +22,6 @@
 #define __P25_NETWORK_H__
 
 #include "Defines.h"
-#include "common/p25/Audio.h"
 #include "common/p25/data/LowSpeedData.h"
 #include "common/p25/lc/LC.h"
 #include "common/network/udp/Socket.h"
@@ -113,8 +112,6 @@ namespace mmdvm
         bool m_debug;
 
         RingBuffer<uint8_t> m_buffer;
-
-        p25::Audio m_audio;
     };
 } // namespace mmdvm
 
