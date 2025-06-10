@@ -1317,11 +1317,19 @@ void* HostPatch::threadMMDVMProcess(void* arg)
         ::pthread_setname_np(th->thread, threadName.c_str());
 #endif // _GNU_SOURCE
 
+        StopWatch stopWatch;
+        stopWatch.start();
+
         while (!g_killed) {
             if (!patch->m_running) {
                 Thread::sleep(1U);
                 continue;
             }
+
+            uint32_t ms = stopWatch.elapsed();
+
+            ms = stopWatch.elapsed();
+            stopWatch.start();
 
             uint32_t length = 0U;
             bool netReadRet = false;
@@ -1335,35 +1343,27 @@ void* HostPatch::threadMMDVMProcess(void* arg)
                     // LDU1
                     case DFSIFrameType::LDU1_VOICE1:
                         ::memcpy(patch->m_netLDU1 + 0U, buffer, 22U);
-                        patch->checkNet_LDU2();
                         break;
                     case DFSIFrameType::LDU1_VOICE2:
                         ::memcpy(patch->m_netLDU1 + 25U, buffer, 14U);
-                        patch->checkNet_LDU2();
                         break;
                     case DFSIFrameType::LDU1_VOICE3:
                         ::memcpy(patch->m_netLDU1 + 50U, buffer, 17U);
-                        patch->checkNet_LDU2();
                         break;
                     case DFSIFrameType::LDU1_VOICE4:
                         ::memcpy(patch->m_netLDU1 + 75U, buffer, 17U);
-                        patch->checkNet_LDU2();
                         break;
                     case DFSIFrameType::LDU1_VOICE5:
                         ::memcpy(patch->m_netLDU1 + 100U, buffer, 17U);
-                        patch->checkNet_LDU2();
                         break;
                     case DFSIFrameType::LDU1_VOICE6:
                         ::memcpy(patch->m_netLDU1 + 125U, buffer, 17U);
-                        patch->checkNet_LDU2();
                         break;
                     case DFSIFrameType::LDU1_VOICE7:
                         ::memcpy(patch->m_netLDU1 + 150U, buffer, 17U);
-                        patch->checkNet_LDU2();
                         break;
                     case DFSIFrameType::LDU1_VOICE8:
                         ::memcpy(patch->m_netLDU1 + 175U, buffer, 17U);
-                        patch->checkNet_LDU2();
                         break;
                     case DFSIFrameType::LDU1_VOICE9:
                         ::memcpy(patch->m_netLDU1 + 200U, buffer, 16U);
@@ -1378,35 +1378,27 @@ void* HostPatch::threadMMDVMProcess(void* arg)
                     // LDU2
                     case DFSIFrameType::LDU2_VOICE10:
                         ::memcpy(patch->m_netLDU2 + 0U, buffer, 22U);
-                        patch->checkNet_LDU1();
                         break;
                     case DFSIFrameType::LDU2_VOICE11:
                         ::memcpy(patch->m_netLDU2 + 25U, buffer, 14U);
-                        patch->checkNet_LDU1();
                         break;
                     case DFSIFrameType::LDU2_VOICE12:
                         ::memcpy(patch->m_netLDU2 + 50U, buffer, 17U);
-                        patch->checkNet_LDU1();
                         break;
                     case DFSIFrameType::LDU2_VOICE13:
                         ::memcpy(patch->m_netLDU2 + 75U, buffer, 17U);
-                        patch->checkNet_LDU1();
                         break;
                     case DFSIFrameType::LDU2_VOICE14:
                         ::memcpy(patch->m_netLDU2 + 100U, buffer, 17U);
-                        patch->checkNet_LDU1();
                         break;
                     case DFSIFrameType::LDU2_VOICE15:
                         ::memcpy(patch->m_netLDU2 + 125U, buffer, 17U);
-                        patch->checkNet_LDU1();
                         break;
                     case DFSIFrameType::LDU2_VOICE16:
                         ::memcpy(patch->m_netLDU2 + 150U, buffer, 17U);
-                        patch->checkNet_LDU1();
                         break;
                     case DFSIFrameType::LDU2_VOICE17:
                         ::memcpy(patch->m_netLDU2 + 175U, buffer, 17U);
-                        patch->checkNet_LDU1();
                         break;
                     case DFSIFrameType::LDU2_VOICE18:
                         ::memcpy(patch->m_netLDU2 + 200U, buffer, 16U);
@@ -1458,7 +1450,8 @@ void* HostPatch::threadMMDVMProcess(void* arg)
                 }
             }
 
-            Thread::sleep(1U);
+            if (ms < 5U)
+                Thread::sleep(5U);
         }
 
         LogMessage(LOG_HOST, "[STOP] %s", threadName.c_str());
