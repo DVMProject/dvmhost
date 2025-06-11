@@ -284,6 +284,17 @@ namespace nxdn
             };
         }
 
+        /** @brief Remote Control Commands */
+        namespace RemoteControlCommand {
+            /** @brief Remote Control Commands */
+            enum : uint8_t {
+                STUN = 0x00U,                           //! Stun
+                REVIVE = 0x01U,                         //! Revive
+                KILL = 0x02U,                           //! Kill
+                REMOTE_MONITOR = 0x04U                  //! Remote Monitor
+            };
+        }
+
         /** @brief Channel Access - Step */
         namespace ChAccessStep {
             /** @brief Channel Access - Step */
@@ -340,6 +351,8 @@ namespace nxdn
                 SRV_INFO = 0x19U,                       //! SRV_INFO - Service Information
                 CCH_INFO = 0x1AU,                       //! CCH_INFO - Control Channel Information
                 ADJ_SITE_INFO = 0x1BU,                  //! ADJ_SITE_INFO - Adjacent Site Information
+                REM_CON_REQ = 0x34U,                    //! REM_CON_REQ - Remote Control Request
+                REM_CON_RESP = 0x35U,                   //! REM_CON_RESP - Remote Control Response
 
             // Traffic Channel Message Types
                 RTCH_VCALL = 0x01U,                     //! VCALL - Voice Call

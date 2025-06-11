@@ -92,7 +92,7 @@ bool DMRPacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
     dmrData.getData(frame);
 
     // is the stream valid?
-    if (m_tag->validate(peerId, dmrData, streamId)) {
+    if (m_tag->validate(peerId, dmrData, nullptr, streamId)) {
         // is this peer ignored?
         if (!m_tag->isPeerPermitted(peerId, dmrData, streamId)) {
             return false;

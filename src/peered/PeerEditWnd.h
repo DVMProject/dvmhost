@@ -110,6 +110,7 @@ private:
     FButtonGroup m_configGroup{"Configuration", this};
     FCheckBox m_peerLinkEnabled{"Peer Link", &m_configGroup};
     FCheckBox m_canReqKeysEnabled{"Request Keys", &m_configGroup};
+    FCheckBox m_canInhibitEnabled{"Issue Inhibit", &m_configGroup};
 
     /**
      * @brief Initializes the window layout.
@@ -233,6 +234,12 @@ private:
             m_canReqKeysEnabled.addCallback("toggled", [&]() {
                 m_rule.canRequestKeys(m_canReqKeysEnabled.isChecked());
             });
+
+            m_canInhibitEnabled.setGeometry(FPoint(2, 3), FSize(10, 1));
+            m_canInhibitEnabled.setChecked(m_rule.canIssueInhibit());
+            m_canInhibitEnabled.addCallback("toggled", [&]() {
+                m_rule.canIssueInhibit(m_canInhibitEnabled.isChecked());
+            });
         }
 
         CloseWndBase::initControls();
@@ -314,7 +321,13 @@ private:
                 if (it != peers.end()) {
                     LogMessage(LOG_HOST, "Updating peer %s (%u) to %s (%u)", it->peerAlias().c_str(), it->peerId(), m_rule.peerAlias().c_str(), m_rule.peerId());
                     g_pidLookups->eraseEntry(m_origPeerId);
-                    g_pidLookups->addEntry(m_rule.peerId(), m_rule.peerAlias(), m_rule.peerPassword(), m_rule.peerLink(), m_rule.canRequestKeys());
+
+                    lookups::PeerId entry = lookups::PeerId(m_rule.peerId(), m_rule.peerAlias(), m_rule.peerPassword(), false);
+                    entry.peerLink(m_rule.peerLink());
+                    entry.canRequestKeys(m_rule.canRequestKeys());
+                    entry.canIssueInhibit(m_rule.canIssueInhibit());
+
+                    g_pidLookups->addEntry(m_rule.peerId(), entry);
 
                     logRuleInfo();
                 }
@@ -345,7 +358,13 @@ private:
                 } else {
                     LogMessage(LOG_HOST, "Adding Peer %s (%u)", m_rule.peerAlias().c_str(), m_rule.peerId());
                 }
-                g_pidLookups->addEntry(m_rule.peerId(), m_rule.peerAlias(), m_rule.peerPassword(), m_rule.peerLink(), m_rule.canRequestKeys());
+
+                lookups::PeerId entry = lookups::PeerId(m_rule.peerId(), m_rule.peerAlias(), m_rule.peerPassword(), false);
+                entry.peerLink(m_rule.peerLink());
+                entry.canRequestKeys(m_rule.canRequestKeys());
+                entry.canIssueInhibit(m_rule.canIssueInhibit());
+
+                g_pidLookups->addEntry(m_rule.peerId(), entry);
 
                 logRuleInfo();
 

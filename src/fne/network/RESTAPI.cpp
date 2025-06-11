@@ -1295,7 +1295,10 @@ void RESTAPI::restAPI_PutPeerAdd(const HTTPPayload& request, HTTPPayload& reply,
         peerPassword = req["peerPassword"].get<std::string>();
     }
 
-    m_peerListLookup->addEntry(peerId, peerAlias, peerPassword, peerLink);
+    PeerId entry = PeerId(peerId, peerAlias, peerPassword, false);
+    entry.peerLink(peerLink);
+
+    m_peerListLookup->addEntry(peerId, entry);
 }
 
 /* REST API endpoint; implements put peer delete request. */

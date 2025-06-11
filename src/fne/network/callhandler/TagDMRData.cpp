@@ -120,12 +120,18 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
     uint8_t frame[DMR_FRAME_LENGTH_BYTES];
     dmrData.getData(frame);
 
+    // process a CSBK out into a class literal if possible
+    std::unique_ptr<lc::CSBK> csbk;
+    if (dataType == DataType::CSBK) {
+        csbk = lc::csbk::CSBKFactory::createCSBK(frame, dataType);
+    }
+
     // perform TGID route rewrites if configured
     routeRewrite(buffer, peerId, dmrData, dataType, dstId, slotNo, false);
     dstId = GET_UINT24(buffer, 8U);
 
     // is the stream valid?
-    if (validate(peerId, dmrData, streamId)) {
+    if (validate(peerId, dmrData, csbk.get(), streamId)) {
         // is this peer ignored?
         if (!isPeerPermitted(peerId, dmrData, streamId, external)) {
             return false;
@@ -766,7 +772,7 @@ bool TagDMRData::isPeerPermitted(uint32_t peerId, data::NetData& data, uint32_t 
 
 /* Helper to validate the DMR call stream. */
 
-bool TagDMRData::validate(uint32_t peerId, data::NetData& data, uint32_t streamId)
+bool TagDMRData::validate(uint32_t peerId, data::NetData& data, lc::CSBK* csbk, uint32_t streamId)
 {
     // is the source ID a blacklisted ID?
     bool rejectUnknownBadCall = false;
@@ -803,6 +809,67 @@ bool TagDMRData::validate(uint32_t peerId, data::NetData& data, uint32_t streamI
     // always validate a terminator if the source is valid
     if (data.getDataType() == DataType::TERMINATOR_WITH_LC)
         return true;
+
+    // always validate a CSBK if the source is valid
+    if (data.getDataType() == DataType::CSBK) {
+        if (rejectUnknownBadCall)
+            return false;
+
+        if (csbk != nullptr) {
+            // handle standard DMR reference opcodes
+            switch (csbk->getCSBKO()) {
+                case CSBKO::PV_GRANT:
+                {
+                    // is the destination ID a blacklisted ID?
+                    lookups::RadioId rid = m_network->m_ridLookup->find(data.getDstId());
+                    if (!rid.radioDefault()) {
+                        if (!rid.radioEnabled()) {
+                            return false;
+                        }
+                    }
+                }
+                break;
+                case CSBKO::TV_GRANT:
+                {
+                    lookups::TalkgroupRuleGroupVoice tg = m_network->m_tidLookup->find(csbk->getDstId());
+
+                    // check TGID validity
+                    if (tg.isInvalid()) {
+                        return false;
+                    }
+
+                    if (!tg.config().active()) {
+                        return false;
+                    }
+                }
+                break;
+                case CSBKO::EXT_FNCT:
+                {
+                    if (csbk->getFID() == FID_MOT) {
+                        const lc::csbk::CSBK_EXT_FNCT* iosp = static_cast<const lc::csbk::CSBK_EXT_FNCT*>(csbk);
+                        if (iosp != nullptr) {
+                            lookups::PeerId pid = m_network->m_peerListLookup->find(peerId);
+                            uint32_t func = iosp->getExtendedFunction();
+                            switch (func) {
+                                case ExtendedFunctions::INHIBIT:
+                                case ExtendedFunctions::UNINHIBIT:
+                                    {
+                                        if (!pid.peerDefault() && !pid.canIssueInhibit()) {
+                                            LogWarning(LOG_NET, "DMR, PEER %u attempted inhibit/unhibit, not authorized", peerId);
+                                            return false;
+                                        }
+                                    }
+                                    break;
+                            }
+                        }
+                    }
+                }
+                break;
+            }
+        }
+
+        return true;
+    }
 
     // is this a private call?
     if (data.getFLCO() == FLCO::PRIVATE) {

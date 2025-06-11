@@ -247,10 +247,11 @@ namespace network
              * @brief Helper to validate the DMR call stream.
              * @param peerId Peer ID.
              * @param dmrData Instance of data::NetData DMR data container class.
+             * @param[in] csbk Instance of dmr::lc::CSBK.
              * @param streamId Stream ID.
              * @returns bool True, if valid, otherwise false.
              */
-            bool validate(uint32_t peerId, dmr::data::NetData& data, uint32_t streamId);
+            bool validate(uint32_t peerId, dmr::data::NetData& data, dmr::lc::CSBK* csbk, uint32_t streamId);
 
             /**
              * @brief Helper to write a grant packet.

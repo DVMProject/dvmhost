@@ -1256,6 +1256,26 @@ bool TagP25Data::validate(uint32_t peerId, lc::LC& control, DUID::E duid, const 
                     }
                 }
                 break;
+                case TSBKO::IOSP_EXT_FNCT:
+                {
+                    const lc::tsbk::IOSP_EXT_FNCT* iosp = static_cast<const lc::tsbk::IOSP_EXT_FNCT*>(tsbk);
+                    if (iosp != nullptr) {
+                        lookups::PeerId pid = m_network->m_peerListLookup->find(peerId);
+                        uint32_t func = iosp->getExtendedFunction();
+                        switch (func) {
+                            case ExtendedFunctions::INHIBIT:
+                            case ExtendedFunctions::UNINHIBIT:
+                                {
+                                    if (!pid.peerDefault() && !pid.canIssueInhibit()) {
+                                        LogWarning(LOG_NET, "P25, PEER %u attempted inhibit/unhibit, not authorized", peerId);
+                                        return false;
+                                    }
+                                }
+                                break;
+                        }
+                    }
+                }
+                break;
             }
 
             // handle validating DVM call termination packets
