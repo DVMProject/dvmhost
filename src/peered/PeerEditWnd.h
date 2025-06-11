@@ -254,8 +254,9 @@ private:
         uint32_t peerId = m_rule.peerId();
         bool peerLink = m_rule.peerLink();
         bool canRequestKeys = m_rule.canRequestKeys();
+        bool canIssueInhibit = m_rule.canIssueInhibit();
 
-        ::LogInfoEx(LOG_HOST, "Peer ALIAS: %s PEERID: %u PEER LINK: %u CAN REQUEST KEYS: %u", peerAlias.c_str(), peerId, peerLink, canRequestKeys);
+        ::LogInfoEx(LOG_HOST, "Peer ALIAS: %s PEERID: %u PEER LINK: %u CAN REQUEST KEYS: %u CAN ISSUE INHIBIT: %u", peerAlias.c_str(), peerId, peerLink, canRequestKeys, canIssueInhibit);
     }
 
     /*
