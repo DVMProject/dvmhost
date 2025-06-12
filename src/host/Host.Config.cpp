@@ -656,7 +656,7 @@ bool Host::createModem()
                 if (useFSCForUDP) {
                     modemPort = new port::specialized::V24UDPPort(id, g_remoteAddress, g_remotePort + 1U, g_remotePort, g_remoteLocalPort, true, fscInitiator, debug);
                     ((modem::port::specialized::V24UDPPort*)modemPort)->setHeartbeatInterval(fscHeartbeat);
-               } else {
+                } else {
                     modemPort = new port::specialized::V24UDPPort(id, g_remoteAddress, g_remotePort, 0U, 0U, false, false, debug);
                 }
                 m_udpDFSIRemotePort = modemPort;

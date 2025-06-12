@@ -518,11 +518,16 @@ void V24UDPPort::taskCtrlNetworkRx(V24PacketRequest* req)
                         network->m_heartbeatInterval = connMessage->getHostHeartbeatPeriod();
                         if (network->m_heartbeatInterval > 30U)
                             network->m_heartbeatInterval = 30U;
+                        if (network->m_heartbeatInterval < 5U)
+                            network->m_heartbeatInterval = 5U;
+
+                        // HACK: make sure the HB is always one second shorter then the requested value
+                        network->m_heartbeatInterval--;
 
                         uint16_t remoteCtrlPort = Socket::port(req->address);
                         network->m_remoteCtrlAddr = req->address;
                         network->m_remoteCtrlAddrLen = req->addrLen;
-    
+
                         LogMessage(LOG_MODEM, "V.24 UDP, Incoming DFSI FSC Connection, ctrlRemotePort = %u, vcLocalPort = %u, vcRemotePort = %u, hostHBInterval = %u", remoteCtrlPort, network->m_localPort, vcBasePort, connMessage->getHostHeartbeatPeriod());
 
                         // setup local RTP VC port (where we receive traffic)
