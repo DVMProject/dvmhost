@@ -1849,7 +1849,7 @@ void ModemV24::startOfStreamTIA(const p25::lc::LC& control)
     // prepare VHDR1
     buffer[3U] = DFSIFrameType::MOT_VHDR_1;
     ::memcpy(buffer + 4U, raw, 18U);
-    length += 19U; // 18 Golay + Block Type Marker
+    length += DFSI_TIA_VHDR_LEN; // 18 Golay + Block Type Marker
 
     start.encode(buffer + length);
     length += StartOfStream::LENGTH;
@@ -1878,7 +1878,7 @@ void ModemV24::startOfStreamTIA(const p25::lc::LC& control)
     // prepare VHDR2
     buffer[3U] = DFSIFrameType::MOT_VHDR_2;
     ::memcpy(buffer + 4U, raw + 18U, 18U);
-    length += 19U; // 18 Golay + Block Type Marker
+    length += DFSI_TIA_VHDR_LEN; // 18 Golay + Block Type Marker
 
     start.encode(buffer + length);
     length += StartOfStream::LENGTH;

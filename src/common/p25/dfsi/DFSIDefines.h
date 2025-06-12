@@ -43,6 +43,8 @@ namespace p25
             const uint32_t  DFSI_VHDR_RAW_LEN = 36U;
             const uint32_t  DFSI_VHDR_LEN = 27U;
 
+            const uint32_t  DFSI_TIA_VHDR_LEN = 22U;
+
             const uint32_t  DFSI_LDU1_VOICE1_FRAME_LENGTH_BYTES = 22U;
             const uint32_t  DFSI_LDU1_VOICE2_FRAME_LENGTH_BYTES = 14U;
             const uint32_t  DFSI_LDU1_VOICE3_FRAME_LENGTH_BYTES = 17U;

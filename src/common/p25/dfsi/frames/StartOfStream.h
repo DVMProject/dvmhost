@@ -45,7 +45,7 @@ namespace p25
              */
             class HOST_SW_API StartOfStream {
             public:
-                static const uint8_t LENGTH = 4U;
+                static const uint8_t LENGTH = 3U;
 
                 /**
                  * @brief Initializes a copy instance of the StartOfStream class.
