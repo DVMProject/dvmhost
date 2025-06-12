@@ -2548,7 +2548,7 @@ void ModemV24::convertFromAirTIA(uint8_t* data, uint32_t length)
 
             // generate control octet
             ControlOctet ctrl = ControlOctet();
-            ctrl.setBlockHeaderCnt(1U);
+            ctrl.setBlockHeaderCnt(2U);
             ctrl.encode(buffer);
             bufferSize += ControlOctet::LENGTH;
 
@@ -2557,11 +2557,20 @@ void ModemV24::convertFromAirTIA(uint8_t* data, uint32_t length)
             hdr.setBlockType(BlockType::FULL_RATE_VOICE);
             hdr.encode(buffer + 1U);
             bufferSize += BlockHeader::LENGTH;
+            hdr.setBlockType(BlockType::START_OF_STREAM);
+            hdr.encode(buffer + 2U);
+            bufferSize += BlockHeader::LENGTH;
 
             voice.setSuperframeCnt(m_superFrameCnt);
             voice.setBusy(1U); // Inbound Channel is Busy
             voice.encode(buffer + bufferSize);
             bufferSize += voice.getLength(); // 18, 17 or 14 depending on voice frame type
+
+            // generate start of stream
+            StartOfStream start = StartOfStream();
+            start.setNID(generateNID(duid));
+            start.encode(buffer + bufferSize);
+            bufferSize += StartOfStream::LENGTH;
 
             if (buffer != nullptr) {
                 if (m_trace) {
