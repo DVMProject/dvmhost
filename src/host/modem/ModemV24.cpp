@@ -1184,7 +1184,10 @@ void ModemV24::convertToAirTIA(const uint8_t *data, uint32_t length)
             ::memset(m_rxCall->VHDR1, 0x00U, 18U);
             ::memcpy(m_rxCall->VHDR1, dfsiData + dataOffs + 1U, 18U);
 
-            dataOffs += 19U; // 18 Golay + Block Type Marker
+            if (m_debug && m_trace)
+                Utils::dump("ModemV24::convertToAirTIA() VoiceHeader1", m_rxCall->VHDR1, 18U);
+
+            dataOffs += DFSI_TIA_VHDR_LEN; // 18 Golay + Block Type Marker
         }
         break;
         case BlockType::VOICE_HEADER_P2:
@@ -1193,7 +1196,10 @@ void ModemV24::convertToAirTIA(const uint8_t *data, uint32_t length)
             ::memset(m_rxCall->VHDR2, 0x00U, 18U);
             ::memcpy(m_rxCall->VHDR2, dfsiData + dataOffs + 1U, 18U);
 
-            dataOffs += 19U; // 18 Golay + Block Type Marker
+            if (m_debug && m_trace)
+                Utils::dump("ModemV24::convertToAirTIA() VoiceHeader1", m_rxCall->VHDR1, 18U);
+
+            dataOffs += DFSI_TIA_VHDR_LEN; // 18 Golay + Block Type Marker
 
             // buffer for raw VHDR data
             uint8_t raw[DFSI_VHDR_RAW_LEN];
@@ -1210,10 +1216,13 @@ void ModemV24::convertToAirTIA(const uint8_t *data, uint32_t length)
 
             assert(vhdr != nullptr);
 
-            uint32_t offset = 6U; // skip the first 6 bits  (extremely strange bit offset for TIA because of status bits)
+            uint32_t offset = 0U;
             for (uint32_t i = 0; i < DFSI_VHDR_RAW_LEN; i++, offset += 6) {
                 Utils::hex2Bin(raw[i], vhdr, offset);
             }
+
+            if (m_debug && m_trace)
+                Utils::dump("ModemV24::convertToAirTIA() VHDR Before FEC", vhdr, P25_HDU_LENGTH_BYTES);
 
             // try to decode the RS data
             try {
@@ -1221,6 +1230,9 @@ void ModemV24::convertToAirTIA(const uint8_t *data, uint32_t length)
                 if (!ret) {
                     LogError(LOG_MODEM, "V.24/DFSI traffic failed to decode RS (36,20,17) FEC");
                 } else {
+                    if (m_debug && m_trace)
+                        Utils::dump("ModemV24::convertToAirTIA() VHDR After FEC", vhdr, P25_HDU_LENGTH_BYTES);
+
                     // late entry?
                     if (!m_rxCallInProgress) {
                         m_rxCallInProgress = true;
@@ -1792,7 +1804,7 @@ void ModemV24::startOfStreamTIA(const p25::lc::LC& control)
 
     // generate start of stream
     StartOfStream start = StartOfStream();
-    start.setNID(generateNID());
+    start.setNID(generateNID(DUID::HDU));
     start.encode(buffer + 2U);
     length += StartOfStream::LENGTH;
 
@@ -1820,7 +1832,7 @@ void ModemV24::startOfStreamTIA(const p25::lc::LC& control)
 
     // convert the binary bytes to hex bytes
     uint8_t raw[DFSI_VHDR_RAW_LEN];
-    uint32_t offset = 6U; // skip the first 6 bits (extremely strange bit offset for TIA because of status bits)
+    uint32_t offset = 0U;
     for (uint8_t i = 0; i < DFSI_VHDR_RAW_LEN; i++, offset += 6) {
         raw[i] = Utils::bin2Hex(vhdr, offset);
     }
