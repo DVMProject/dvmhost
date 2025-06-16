@@ -435,6 +435,7 @@ void DiagNetwork::taskNetworkRx(NetPacketRequest* req)
                                         if (!v.is<json::array>()) {
                                             LogError(LOG_NET, "PEER %u error parsing active peer list, data was not valid", peerId);
                                             pkt.buffer->clear();
+                                            delete pkt.buffer;
                                             pkt.streamId = 0U;
                                             if (decompressed != nullptr) {
                                                 delete[] decompressed;

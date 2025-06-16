@@ -1975,8 +1975,6 @@ void FNENetwork::writeBlacklistRIDs(uint32_t peerId, uint32_t streamId)
 
 void FNENetwork::writeTGIDs(uint32_t peerId, uint32_t streamId, bool isExternalPeer)
 {
-    uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-
     if (!m_tidLookup->sendTalkgroups()) {
         return;
     }
@@ -2160,8 +2158,6 @@ void FNENetwork::writeDeactiveTGIDs(uint32_t peerId, uint32_t streamId)
 
 void FNENetwork::writePeerList(uint32_t peerId, uint32_t streamId)
 {
-    uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-
     // sending PEER_LINK style RID list to external peers
     FNEPeerConnection* connection = m_peers[peerId];
     if (connection != nullptr) {
