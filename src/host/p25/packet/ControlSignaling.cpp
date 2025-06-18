@@ -649,7 +649,7 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
                 uint8_t RES1[AUTH_RES_LENGTH_BYTES];
                 isp->getAuthRes(RES1);
 
-                // get challenge for our SU    
+                // get challenge for our SU
                 ulong64_t challenge = 0U;
                 try {
                     challenge = m_llaDemandTable.at(srcId);
@@ -681,6 +681,7 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
 
                 // cleanup buffers
                 delete[] XRES1;
+                delete aes;
 
                 if (!authFailed) {
                     writeRF_TSDU_U_Reg_Rsp(srcId, m_p25->m_siteData.sysId());

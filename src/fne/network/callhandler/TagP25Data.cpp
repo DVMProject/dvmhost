@@ -155,11 +155,10 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
     // process a TSBK out into a class literal if possible
     std::unique_ptr<lc::TSBK> tsbk;
     if (duid == DUID::TSDU) {
-        UInt8Array data = std::unique_ptr<uint8_t[]>(new uint8_t[frameLength]);
-        ::memset(data.get(), 0x00U, frameLength);
-        ::memcpy(data.get(), buffer + 24U, frameLength);
+        DECLARE_UINT8_ARRAY(data, frameLength);
+        ::memcpy(data, buffer + 24U, frameLength);
 
-        tsbk = lc::tsbk::TSBKFactory::createTSBK(data.get());
+        tsbk = lc::tsbk::TSBKFactory::createTSBK(data);
     }
 
     // is the stream valid?
@@ -648,11 +647,10 @@ void TagP25Data::routeRewrite(uint8_t* buffer, uint32_t peerId, uint8_t duid, ui
 
         // are we receiving a TSDU?
         if (duid == DUID::TSDU) {
-            UInt8Array data = std::unique_ptr<uint8_t[]>(new uint8_t[frameLength]);
-            ::memset(data.get(), 0x00U, frameLength);
-            ::memcpy(data.get(), buffer + 24U, frameLength);
+            DECLARE_UINT8_ARRAY(data, frameLength);
+            ::memcpy(data, buffer + 24U, frameLength);
 
-            std::unique_ptr<lc::TSBK> tsbk = lc::tsbk::TSBKFactory::createTSBK(data.get());
+            std::unique_ptr<lc::TSBK> tsbk = lc::tsbk::TSBKFactory::createTSBK(data);
             if (tsbk != nullptr) {
                 // handle standard P25 reference opcodes
                 switch (tsbk->getLCO()) {
@@ -729,11 +727,10 @@ bool TagP25Data::processTSDUFrom(uint8_t* buffer, uint32_t peerId, uint8_t duid)
     if (duid == DUID::TSDU) {
         uint32_t frameLength = P25_TSDU_FRAME_LENGTH_BYTES;//buffer[23U];
 
-        UInt8Array data = std::unique_ptr<uint8_t[]>(new uint8_t[frameLength]);
-        ::memset(data.get(), 0x00U, frameLength);
-        ::memcpy(data.get(), buffer + 24U, frameLength);
+        DECLARE_UINT8_ARRAY(data, frameLength);
+        ::memcpy(data, buffer + 24U, frameLength);
 
-        std::unique_ptr<lc::TSBK> tsbk = lc::tsbk::TSBKFactory::createTSBK(data.get());
+        std::unique_ptr<lc::TSBK> tsbk = lc::tsbk::TSBKFactory::createTSBK(data);
         if (tsbk != nullptr) {
             // report tsbk event to InfluxDB
             if (m_network->m_enableInfluxDB && m_network->m_influxLogRawData) {
@@ -814,11 +811,10 @@ bool TagP25Data::processTSDUFrom(uint8_t* buffer, uint32_t peerId, uint8_t duid)
     if (duid == DUID::TDULC) {
         uint32_t frameLength = buffer[23U];
 
-        UInt8Array data = std::unique_ptr<uint8_t[]>(new uint8_t[frameLength]);
-        ::memset(data.get(), 0x00U, frameLength);
-        ::memcpy(data.get(), buffer + 24U, frameLength);
+        DECLARE_UINT8_ARRAY(data, frameLength);
+        ::memcpy(data, buffer + 24U, frameLength);
 
-        std::unique_ptr<lc::TDULC> tdulc = lc::tdulc::TDULCFactory::createTDULC(data.get());
+        std::unique_ptr<lc::TDULC> tdulc = lc::tdulc::TDULCFactory::createTDULC(data);
         if (tdulc != nullptr) {
             // handle standard P25 reference opcodes
             switch (tdulc->getLCO()) {
@@ -846,11 +842,10 @@ bool TagP25Data::processTSDUTo(uint8_t* buffer, uint32_t peerId, uint8_t duid)
     if (duid == DUID::TSDU) {
         uint32_t frameLength = P25_TSDU_FRAME_LENGTH_BYTES;//buffer[23U];
 
-        UInt8Array data = std::unique_ptr<uint8_t[]>(new uint8_t[frameLength]);
-        ::memset(data.get(), 0x00U, frameLength);
-        ::memcpy(data.get(), buffer + 24U, frameLength);
+        DECLARE_UINT8_ARRAY(data, frameLength);
+        ::memcpy(data, buffer + 24U, frameLength);
 
-        std::unique_ptr<lc::TSBK> tsbk = lc::tsbk::TSBKFactory::createTSBK(data.get());
+        std::unique_ptr<lc::TSBK> tsbk = lc::tsbk::TSBKFactory::createTSBK(data);
         if (tsbk != nullptr) {
             //uint32_t srcId = tsbk->getSrcId();
             uint32_t dstId = tsbk->getDstId();
@@ -913,11 +908,10 @@ bool TagP25Data::processTSDUToExternal(uint8_t* buffer, uint32_t srcPeerId, uint
     if (duid == DUID::TSDU) {
         uint32_t frameLength = buffer[23U];
 
-        UInt8Array data = std::unique_ptr<uint8_t[]>(new uint8_t[frameLength]);
-        ::memset(data.get(), 0x00U, frameLength);
-        ::memcpy(data.get(), buffer + 24U, frameLength);
+        DECLARE_UINT8_ARRAY(data, frameLength);
+        ::memcpy(data, buffer + 24U, frameLength);
 
-        std::unique_ptr<lc::TSBK> tsbk = lc::tsbk::TSBKFactory::createTSBK(data.get());
+        std::unique_ptr<lc::TSBK> tsbk = lc::tsbk::TSBKFactory::createTSBK(data);
         if (tsbk != nullptr) {
             // handle standard P25 reference opcodes
             switch (tsbk->getLCO()) {
