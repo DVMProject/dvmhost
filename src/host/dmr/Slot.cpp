@@ -154,6 +154,7 @@ Slot::Slot(uint32_t slotNo, uint32_t timeout, uint32_t tgHang, uint32_t queueSiz
     m_ignoreAffiliationCheck(false),
     m_disableNetworkGrant(false),
     m_convNetGrantDemand(false),
+    m_legacyGroupReg(false),
     m_tsccPayloadDstId(0U),
     m_tsccPayloadSrcId(0U),
     m_tsccPayloadGroup(false),

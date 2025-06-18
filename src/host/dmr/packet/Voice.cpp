@@ -145,6 +145,25 @@ bool Voice::process(uint8_t* data, uint32_t len)
                     m_slot->m_rfState = RS_RF_REJECTED;
                     return false;
                 }
+
+                // are we auto-registering legacy radios to groups?
+                if (m_slot->m_legacyGroupReg) {
+                    if (!m_slot->m_affiliations->isGroupAff(srcId, dstId)) {
+                        // update dynamic unit registration table
+                        if (!m_slot->m_affiliations->isUnitReg(srcId)) {
+                            m_slot->m_affiliations->unitReg(srcId);
+                        }
+
+                        if (m_slot->m_network != nullptr)
+                            m_slot->m_network->announceUnitRegistration(srcId);
+
+                        // update dynamic affiliation table
+                        m_slot->m_affiliations->groupAff(srcId, dstId);
+
+                        if (m_slot->m_network != nullptr)
+                            m_slot->m_network->announceGroupAffiliation(srcId, dstId);
+                    }
+                }
             }
 
             m_slot->m_data->m_lastRejectId = 0U;

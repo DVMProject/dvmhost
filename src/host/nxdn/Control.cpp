@@ -71,6 +71,7 @@ Control::Control(bool authoritative, uint32_t ran, uint32_t callHang, uint32_t q
     m_enableControl(false),
     m_dedicatedControl(false),
     m_ignoreAffiliationCheck(false),
+    m_legacyGroupReg(false),
     m_rfLastLICH(),
     m_rfLC(),
     m_netLC(),
@@ -217,6 +218,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
     m_ccDebug = control["debug"].as<bool>(false);
 
     m_ignoreAffiliationCheck = nxdnProtocol["ignoreAffiliationCheck"].as<bool>(false);
+    m_legacyGroupReg = nxdnProtocol["legacyGroupReg"].as<bool>(false);
 
     yaml::Node rfssConfig = systemConf["config"];
     yaml::Node controlCh = rfssConfig["controlCh"];
@@ -327,6 +329,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
         }
 
         LogInfo("    Ignore Affiliation Check: %s", m_ignoreAffiliationCheck ? "yes" : "no");
+        LogInfo("    Legacy Group Registration: %s", m_legacyGroupReg ? "yes" : "no");
         LogInfo("    Notify Control: %s", m_notifyCC ? "yes" : "no");
         LogInfo("    Verify Affiliation: %s", m_control->m_verifyAff ? "yes" : "no");
         LogInfo("    Verify Registration: %s", m_control->m_verifyReg ? "yes" : "no");

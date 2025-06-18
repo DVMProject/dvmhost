@@ -278,6 +278,7 @@ namespace nxdn
         bool m_enableControl;
         bool m_dedicatedControl;
         bool m_ignoreAffiliationCheck;
+        bool m_legacyGroupReg;
 
         channel::LICH m_rfLastLICH;
         lc::RTCH m_rfLC;

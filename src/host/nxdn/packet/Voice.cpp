@@ -262,6 +262,25 @@ bool Voice::process(FuncChannelType::E fct, ChOption::E option, uint8_t* data, u
             return false;
         }
 
+        // are we auto-registering legacy radios to groups?
+        if (m_nxdn->m_legacyGroupReg && group) {
+            if (!m_nxdn->m_affiliations->isGroupAff(srcId, dstId)) {
+                // update dynamic unit registration table
+                if (!m_nxdn->m_affiliations->isUnitReg(srcId)) {
+                    m_nxdn->m_affiliations->unitReg(srcId);
+                }
+
+                if (m_nxdn->m_network != nullptr)
+                    m_nxdn->m_network->announceUnitRegistration(srcId);
+
+                // update dynamic affiliation table
+                m_nxdn->m_affiliations->groupAff(srcId, dstId);
+
+                if (m_nxdn->m_network != nullptr)
+                    m_nxdn->m_network->announceGroupAffiliation(srcId, dstId);
+            }
+        }
+
         m_nxdn->m_rfTGHang.start();
         m_nxdn->m_netTGHang.stop();
         m_nxdn->m_rfLastDstId = lc.getDstId();

@@ -155,6 +155,10 @@ protocols:
         ignoreAffiliationCheck: false
         # Flag indicating the host should send a network grant demand for conventional traffic.
         convNetGrantDemand: false
+        # Flag indicating the fallback legacy group registration for radios that do not support group affiliation. 
+        #   (Useful for alerting the FNE to affiliations to TGIDs for radios that do not properly support group 
+        #    affiliation.)
+        legacyGroupReg: false
         # Flag indicating whether or not received RF embedded LC data only should be transmitted.
         embeddedLCOnly: false
         # Flag indicating whether talker alias data should be dumped to the log.
@@ -245,7 +249,7 @@ protocols:
         # Flag indicating that the host will attempt to automatically inhibit unauthorized RIDs (those not in the
         # RID ACL list).
         inhibitUnauthorized: false
-        # Flag indicating the fallback legacy group grant for radios that do not support group affilition to 
+        # Flag indicating the fallback legacy group grant for radios that do not support group affiliation to 
         # have group grants transmitted. (Useful for alerting the FNE to affiliations to TGIDs for radios that
         # do not properly support group affiliation.)
         legacyGroupGrnt: true
@@ -319,6 +323,10 @@ protocols:
 
         # Flag indicating whether or not a TGID will be tested for affiliations before being granted.
         ignoreAffiliationCheck: false
+        # Flag indicating the fallback legacy group registration for radios that do not support group affiliation. 
+        #   (Useful for alerting the FNE to affiliations to TGIDs for radios that do not properly support group 
+        #    affiliation.)
+        legacyGroupReg: false
         # Flag indicating the host should verify group affiliation.
         verifyAff: false
         # Flag indicating the host should verify unit registration.

@@ -122,7 +122,7 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
 
     // process a CSBK out into a class literal if possible
     std::unique_ptr<lc::CSBK> csbk;
-    if (dataType == DataType::CSBK) {
+    if (dataSync && (dataType == DataType::CSBK)) {
         csbk = lc::csbk::CSBKFactory::createCSBK(frame, dataType);
     }
 

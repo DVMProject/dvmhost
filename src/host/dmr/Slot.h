@@ -256,6 +256,11 @@ namespace dmr
          * @param notifyCC Flag indicating whether the voice channels will notify the TSCC of traffic channel changes.
          */
         void setNotifyCC(bool notifyCC) { m_notifyCC = notifyCC; }
+        /**
+         * @brief Sets a flag indicating whether the legacy group registration is enabled.
+         * @param legacyGroupReg Flag indicating whether the legacy group registration is enabled.
+         */
+        void setLegacyGroupReg(bool legacyGroupReg) { m_legacyGroupReg = legacyGroupReg; }
 
         /**
          * @brief Sets a flag indicating whether the control message debug is enabled.
@@ -411,6 +416,7 @@ namespace dmr
         bool m_ignoreAffiliationCheck;
         bool m_disableNetworkGrant;
         bool m_convNetGrantDemand;
+        bool m_legacyGroupReg;
 
         uint32_t m_tsccPayloadDstId;
         uint32_t m_tsccPayloadSrcId;
