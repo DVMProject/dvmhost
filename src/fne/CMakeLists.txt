@@ -4,7 +4,7 @@
 # * GPLv2 Open Source. Use is subject to license terms.
 # * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 # *
-# *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+# *  Copyright (C) 2024,2025 Bryan Biedenkapp, N2PLL
 # *
 # */
 file(GLOB dvmfne_SRC
@@ -17,6 +17,14 @@ file(GLOB dvmfne_SRC
     "src/fne/network/*.h"
     "src/fne/network/*.cpp"
     "src/fne/xml/*.h"
+    "src/fne/win32/*.h"
     "src/fne/*.h"
     "src/fne/*.cpp"
+)
+
+#
+# Windows Resource Scripts
+#
+file(GLOB dvmfne_RC
+    "src/fne/win32/*.rc"
 )

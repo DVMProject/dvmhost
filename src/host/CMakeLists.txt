@@ -4,7 +4,7 @@
 # * GPLv2 Open Source. Use is subject to license terms.
 # * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 # *
-# *  Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
+# *  Copyright (C) 2022,2024,2025 Bryan Biedenkapp, N2PLL
 # *  Copyright (C) 2022 Natalie Moore
 # *
 # */
@@ -50,4 +50,12 @@ file(GLOB dvmhost_SRC
     "src/host/modem/port/specialized/*.cpp"
     "src/host/network/*.h"
     "src/host/network/*.cpp"
+    "src/host/win32/*.h"
+)
+
+#
+# Windows Resource Scripts
+#
+file(GLOB dvmhost_RC
+    "src/host/win32/*.rc"
 )

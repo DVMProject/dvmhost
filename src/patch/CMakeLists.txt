@@ -12,6 +12,14 @@ file(GLOB patch_SRC
     "src/patch/mmdvm/*.cpp"
     "src/patch/network/*.h"
     "src/patch/network/*.cpp"
+    "src/patch/win32/*.h"
     "src/patch/*.h"
     "src/patch/*.cpp"
+)
+
+#
+# Windows Resource Scripts
+#
+file(GLOB patch_RC
+    "src/patch/win32/*.rc"
 )
