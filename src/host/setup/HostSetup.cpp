@@ -1297,8 +1297,7 @@ void HostSetup::processP25BER(const uint8_t* buffer)
         uint8_t* rfPDU = new uint8_t[P25_MAX_PDU_BLOCKS * P25_PDU_CONFIRMED_LENGTH_BYTES + 2U];
         ::memset(rfPDU, 0x00U, P25_MAX_PDU_BLOCKS * P25_PDU_CONFIRMED_LENGTH_BYTES + 2U);
 
-        uint32_t rfPDUBits = 0U;
-        rfPDUBits = Utils::getBits(pduBuffer, rfPDU, 0U, bits);
+        Utils::getBits(pduBuffer, rfPDU, 0U, bits);
 
         ::memset(pduBuffer, 0x00U, P25_PDU_FEC_LENGTH_BYTES);
         Utils::getBitRange(rfPDU, pduBuffer, P25_PREAMBLE_LENGTH_BITS, P25_PDU_FEC_LENGTH_BITS);

@@ -500,8 +500,8 @@ void* threadNetworkPump(void* arg)
                     uint32_t srcId = GET_UINT24(p25Buffer, 5U);
                     uint32_t dstId = GET_UINT24(p25Buffer, 8U);
 
-                    uint32_t sysId = (p25Buffer[11U] << 8) | (p25Buffer[12U] << 0);
-                    uint32_t netId = GET_UINT24(p25Buffer, 16U);
+                    //uint32_t sysId = (p25Buffer[11U] << 8) | (p25Buffer[12U] << 0);
+                    //uint32_t netId = GET_UINT24(p25Buffer, 16U);
 
                     // log call status
                     if (duid != P25DEF::DUID::TSDU && duid != P25DEF::DUID::PDU) {

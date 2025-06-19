@@ -562,9 +562,7 @@ bool BaseNetwork::writeP25TDU(const p25::lc::LC& control, const p25::data::LowSp
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
         return false;
 
-    bool resetSeq = false;
     if (m_p25StreamId == 0U) {
-        resetSeq = true;
         m_p25StreamId = createStreamId();
     }
 

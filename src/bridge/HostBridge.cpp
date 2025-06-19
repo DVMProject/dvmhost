@@ -139,7 +139,7 @@ void mdcPacketDetected(int frameCount, mdc_u8_t op, mdc_u8_t arg, mdc_u16_t unit
         ::LogMessage(LOG_HOST, "Local Traffic, MDC Detect, unitId = $%04X", unitID);
 
         // HACK: nasty bullshit to convert MDC unitID to decimal
-        char* pCharRes = new (char);
+        char* pCharRes = new char[16]; // enough space for "0xFFFFFFFF"
         ::sprintf(pCharRes, "0x%X", unitID);
 
         uint32_t res = 0U;
@@ -151,6 +151,7 @@ void mdcPacketDetected(int frameCount, mdc_u8_t op, mdc_u8_t arg, mdc_u16_t unit
             res = (uint32_t)std::stoi(pCharRes, 0, 16);
         }
 
+        delete[] pCharRes;
         bridge->m_srcIdOverride = res;
         ::LogMessage(LOG_HOST, "Local Traffic, MDC Detect, converted srcId = %u", bridge->m_srcIdOverride);
     }
@@ -3025,7 +3026,7 @@ void* HostBridge::threadUDPAudioProcess(void* arg)
 
                 if (req != nullptr) {
                     if (bridge->m_udpInterFrameDelay > 0U) {
-                        int64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+                        uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
                         if (req->pktRxTime > now) {
                             Thread::sleep(1U);
@@ -3083,7 +3084,7 @@ void* HostBridge::threadUDPAudioProcess(void* arg)
                         }
                     }
                     else {
-                        for (uint32_t pcmIdx = 0; pcmIdx < req->pcmLength; pcmIdx += 2) {
+                        for (int pcmIdx = 0; pcmIdx < req->pcmLength; pcmIdx += 2) {
                             samples[smpIdx] = (short)((req->pcm[pcmIdx + 1] << 8) + req->pcm[pcmIdx + 0]);
                             smpIdx++;
                         }

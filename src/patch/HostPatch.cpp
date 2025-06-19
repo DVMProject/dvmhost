@@ -535,7 +535,7 @@ void HostPatch::processDMRNetwork(uint8_t* buffer, uint32_t length)
     UInt8Array data = std::unique_ptr<uint8_t[]>(new uint8_t[DMR_FRAME_LENGTH_BYTES]);
     ::memset(data.get(), 0x00U, DMR_FRAME_LENGTH_BYTES);
     DataType::E dataType = DataType::VOICE_SYNC;
-    uint8_t n = 0U;
+
     if (dataSync) {
         dataType = (DataType::E)(buffer[15U] & 0x0FU);
         ::memcpy(data.get(), buffer + 20U, DMR_FRAME_LENGTH_BYTES);
@@ -544,7 +544,6 @@ void HostPatch::processDMRNetwork(uint8_t* buffer, uint32_t length)
         ::memcpy(data.get(), buffer + 20U, DMR_FRAME_LENGTH_BYTES);
     }
     else {
-        n = buffer[15U] & 0x0FU;
         dataType = DataType::VOICE;
         ::memcpy(data.get(), buffer + 20U, DMR_FRAME_LENGTH_BYTES);
     }
@@ -1331,8 +1330,6 @@ void* HostPatch::threadMMDVMProcess(void* arg)
             ms = stopWatch.elapsed();
             stopWatch.start();
 
-            uint32_t length = 0U;
-            bool netReadRet = false;
             if (patch->m_digiMode == TX_MODE_P25) {
                 std::lock_guard<std::mutex> lock(HostPatch::m_networkMutex);
 
