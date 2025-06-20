@@ -47,7 +47,6 @@
 //  Constants
 // ---------------------------------------------------------------------------
 
-#define MBE_SAMPLES_LENGTH 160
 #define NO_BIT_STEAL 0
 
 #define ECMODE_NOISE_SUPPRESS 0x40
@@ -92,31 +91,6 @@ void audioCallback(ma_device* device, void* output, const void* input, ma_uint32
  */
 void mdcPacketDetected(int frameCount, mdc_u8_t op, mdc_u8_t arg, mdc_u16_t unitID,
     mdc_u8_t extra0, mdc_u8_t extra1, mdc_u8_t extra2, mdc_u8_t extra3, void* context);
-
-/**
- * @brief Helper to convert PCM into G.711 aLaw.
- * @param pcm PCM value.
- * @return uint8_t aLaw value.
- */
-uint8_t encodeALaw(short pcm);
-/**
- * @brief Helper to convert G.711 aLaw into PCM.
- * @param alaw aLaw value.
- * @return short PCM value.
- */
-short decodeALaw(uint8_t alaw);
-/**
- * @brief Helper to convert PCM into G.711 MuLaw.
- * @param pcm PCM value.
- * @return uint8_t MuLaw value.
- */
-uint8_t encodeMuLaw(short pcm);
-/**
- * @brief Helper to convert G.711 MuLaw into PCM.
- * @param ulaw MuLaw value.
- * @return short PCM value.
- */
-short decodeMuLaw(uint8_t ulaw);
 
 // ---------------------------------------------------------------------------
 //  Structure Declaration

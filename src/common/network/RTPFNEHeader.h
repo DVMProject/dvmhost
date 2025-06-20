@@ -87,6 +87,7 @@ namespace network
             PROTOCOL_SUBFUNC_DMR = 0x00U,           //! DMR
             PROTOCOL_SUBFUNC_P25 = 0x01U,           //! P25
             PROTOCOL_SUBFUNC_NXDN = 0x02U,          //! NXDN
+            PROTOCOL_SUBFUNC_ANALOG = 0x0FU,        //! Analog
 
             MASTER_SUBFUNC_WL_RID = 0x00U,          //! Whitelist RIDs
             MASTER_SUBFUNC_BL_RID = 0x01U,          //! Blacklist RIDs

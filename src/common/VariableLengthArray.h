@@ -41,6 +41,12 @@ typedef std::unique_ptr<uint8_t[]> UInt8Array;
  */
 typedef std::unique_ptr<char[]> CharArray;
 
+/**
+ * @brief Unique char array.
+ * @ingroup common
+ */
+typedef std::unique_ptr<short[]> ShortArray;
+
 /** @} */
 
 // ---------------------------------------------------------------------------
@@ -66,7 +72,7 @@ typedef std::unique_ptr<char[]> CharArray;
 
 /**
  * @brief Declares a unique char array/buffer.
- *  This macro creates a unique pointer to a uint8_t array of the specified length and initializes it to zero. 
+ *  This macro creates a unique pointer to a char array of the specified length and initializes it to zero. 
  *  The resulting pointer is named after the parameter name passed to the macro.
  * @ingroup common
  * @param name Name of array/buffer.
@@ -75,6 +81,19 @@ typedef std::unique_ptr<char[]> CharArray;
 #define DECLARE_CHAR_ARRAY(name, len)                                       \
     CharArray __##name##__CharArray = std::make_unique<char[]>(len);        \
     char* name = __##name##__CharArray.get();                               \
+    ::memset(name, 0, len);
+
+/**
+ * @brief Declares a unique short array/buffer.
+ *  This macro creates a unique pointer to a short array of the specified length and initializes it to zero. 
+ *  The resulting pointer is named after the parameter name passed to the macro.
+ * @ingroup common
+ * @param name Name of array/buffer.
+ * @param len Length of array/buffer.
+ */
+#define DECLARE_SHORT_ARRAY(name, len)                                      \
+    ShortArray __##name##__ShortArray = std::make_unique<short[]>(len);     \
+    short* name = __##name##__ShortArray.get();                             \
     ::memset(name, 0, len);
 
 /** @} */

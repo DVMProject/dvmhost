@@ -52,6 +52,7 @@
 #define TAG_DMR_DATA            "DMRD"
 #define TAG_P25_DATA            "P25D"
 #define TAG_NXDN_DATA           "NXDD"
+#define TAG_ANALOG_DATA         "ANOD"
 
 #define TAG_REPEATER_LOGIN      "RPTL"
 #define TAG_REPEATER_AUTH       "RPTK"
