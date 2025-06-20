@@ -70,6 +70,8 @@ master:
     allowP25Traffic: true
     # Flag indicating whether or not NXDN traffic will be passed.
     allowNXDNTraffic: true
+    # Flag indicating whether or not analog traffic will be passed.
+    allowAnalogTraffic: false
 
     # Flag indicating whether packet data will be passed.
     disablePacketData: false
