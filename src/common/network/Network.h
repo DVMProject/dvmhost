@@ -92,6 +92,7 @@ namespace network
          * @param dmr Flag indicating whether DMR is enabled.
          * @param p25 Flag indicating whether P25 is enabled.
          * @param nxdn Flag indicating whether NXDN is enabled.
+         * @param analog Flag indicating whether analog is enabled.
          * @param slot1 Flag indicating whether DMR slot 1 is enabled for network traffic.
          * @param slot2 Flag indicating whether DMR slot 2 is enabled for network traffic.
          * @param allowActivityTransfer Flag indicating that the system activity logs will be sent to the network.
@@ -99,7 +100,8 @@ namespace network
          * @param updateLookup Flag indicating that the system will accept radio ID and talkgroup ID lookups from the network.
          */
         Network(const std::string& address, uint16_t port, uint16_t localPort, uint32_t peerId, const std::string& password,
-            bool duplex, bool debug, bool dmr, bool p25, bool nxdn, bool slot1, bool slot2, bool allowActivityTransfer, bool allowDiagnosticTransfer, bool updateLookup, bool saveLookup);
+            bool duplex, bool debug, bool dmr, bool p25, bool nxdn, bool analog, bool slot1, bool slot2, 
+            bool allowActivityTransfer, bool allowDiagnosticTransfer, bool updateLookup, bool saveLookup);
         /**
          * @brief Finalizes a instance of the Network class.
          */
@@ -118,7 +120,11 @@ namespace network
          * @brief Resets the NXDN ring buffer.
          */
         void resetNXDN() override;
-
+        /**
+         * @brief Resets the analog ring buffer.
+         */
+        void resetAnalog() override;
+        
         /**
          * @brief Sets the instances of the Radio ID and Talkgroup ID lookup tables.
          * @param ridLookup Radio ID Lookup Table Instance
@@ -213,6 +219,11 @@ namespace network
          * @param callback 
          */
         void setNXDNICCCallback(std::function<void(NET_ICC::ENUM, uint32_t)>&& callback) { m_nxdnInCallCallback = callback; }
+        /**
+         * @brief Helper to set the analog In-Call Control callback.
+         * @param callback 
+         */
+        void setAnalogICCCallback(std::function<void(NET_ICC::ENUM, uint32_t)>&& callback) { m_analogInCallCallback = callback; }
 
         /**
          * @brief Helper to set the enc. key response callback.
@@ -237,6 +248,7 @@ namespace network
         bool m_dmrEnabled;
         bool m_p25Enabled;
         bool m_nxdnEnabled;
+        bool m_analogEnabled;
 
         bool m_updateLookup;
         bool m_saveLookup;
@@ -252,6 +264,7 @@ namespace network
         uint32_t* m_rxDMRStreamId;
         uint32_t m_rxP25StreamId;
         uint32_t m_rxNXDNStreamId;
+        uint32_t m_rxAnalogStreamId;
 
         uint16_t m_pktSeq;
         uint32_t m_loginStreamId;
@@ -300,6 +313,11 @@ namespace network
          *  (This is called once the master sends a In-Call Control request.)
          */
         std::function<void(NET_ICC::ENUM command, uint32_t dstId)> m_nxdnInCallCallback;
+        /**
+         * @brief Analog In-Call Control Function Callback.
+         *  (This is called once the master sends a In-Call Control request.)
+         */
+        std::function<void(NET_ICC::ENUM command, uint32_t dstId)> m_analogInCallCallback;
 
         /**
          * @brief Encryption Key Response Function Callback.

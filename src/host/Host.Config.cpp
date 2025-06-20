@@ -945,7 +945,7 @@ bool Host::createNetwork()
 
     // initialize networking
     if (netEnable) {
-        m_network = new Network(address, port, local, id, password, m_duplex, debug, m_dmrEnabled, m_p25Enabled, m_nxdnEnabled, slot1, slot2, 
+        m_network = new Network(address, port, local, id, password, m_duplex, debug, m_dmrEnabled, m_p25Enabled, m_nxdnEnabled, false, slot1, slot2, 
             allowActivityTransfer, allowDiagnosticTransfer, updateLookup, saveLookup);
 
         m_network->setLookups(m_ridLookup, m_tidLookup);

@@ -34,7 +34,8 @@ using namespace network;
 /* Initializes a new instance of the Network class. */
 
 Network::Network(const std::string& address, uint16_t port, uint16_t localPort, uint32_t peerId, const std::string& password,
-    bool duplex, bool debug, bool dmr, bool p25, bool nxdn, bool slot1, bool slot2, bool allowActivityTransfer, bool allowDiagnosticTransfer, bool updateLookup, bool saveLookup) :
+    bool duplex, bool debug, bool dmr, bool p25, bool nxdn, bool analog, bool slot1, bool slot2, 
+    bool allowActivityTransfer, bool allowDiagnosticTransfer, bool updateLookup, bool saveLookup) :
     BaseNetwork(peerId, duplex, debug, slot1, slot2, allowActivityTransfer, allowDiagnosticTransfer, localPort),
     m_pktLastSeq(0U),
     m_address(address),
@@ -44,6 +45,7 @@ Network::Network(const std::string& address, uint16_t port, uint16_t localPort, 
     m_dmrEnabled(dmr),
     m_p25Enabled(p25),
     m_nxdnEnabled(nxdn),
+    m_analogEnabled(analog),
     m_updateLookup(updateLookup),
     m_saveLookup(saveLookup),
     m_ridLookup(nullptr),
@@ -63,6 +65,7 @@ Network::Network(const std::string& address, uint16_t port, uint16_t localPort, 
     m_dmrInCallCallback(nullptr),
     m_p25InCallCallback(nullptr),
     m_nxdnInCallCallback(nullptr),
+    m_analogInCallCallback(nullptr),
     m_keyRespCallback(nullptr)
 {
     assert(!address.empty());
@@ -76,6 +79,7 @@ Network::Network(const std::string& address, uint16_t port, uint16_t localPort, 
     m_rxDMRStreamId[1U] = 0U;
     m_rxP25StreamId = 0U;
     m_rxNXDNStreamId = 0U;
+    m_rxAnalogStreamId = 0U;
 
     m_metadata = new PeerMetadata();
 }
@@ -118,6 +122,14 @@ void Network::resetNXDN()
 {
     BaseNetwork::resetNXDN();
     m_rxNXDNStreamId = 0U;
+}
+
+/* Resets the analog ring buffer. */
+
+void Network::resetAnalog()
+{
+    BaseNetwork::resetAnalog();
+    m_rxAnalogStreamId = 0U;
 }
 
 /* Sets the instances of the Radio ID and Talkgroup ID lookup tables. */
@@ -315,7 +327,7 @@ void Network::clock(uint32_t ms)
 
                             if (m_debug)
                                 Utils::dump(1U, "[Network::clock()] Network Received, DMR", buffer.get(), length);
-                            if (length > 255)
+                            if (length > (int)(DMR_PACKET_LENGTH + PACKET_PAD))
                                 LogError(LOG_NET, "DMR Stream %u, frame oversized? this shouldn't happen, pktSeq = %u, len = %u", streamId, m_pktSeq, length);
 
                             uint8_t len = length;
@@ -367,11 +379,20 @@ void Network::clock(uint32_t ms)
 
                             if (m_debug)
                                 Utils::dump(1U, "[Network::clock()] Network Received, P25", buffer.get(), length);
-                            if (length > 255)
+                            if (length > 512)
                                 LogError(LOG_NET, "P25 Stream %u, frame oversized? this shouldn't happen, pktSeq = %u, len = %u", streamId, m_pktSeq, length);
 
+                            // P25 frames can be up to 512 bytes, but we need to handle the case where the frame is larger than 255 bytes
                             uint8_t len = length;
-                            m_rxP25Data.addData(&len, 1U);
+                            if (length > 254) {
+                                len = 254U;
+                                m_rxP25Data.addData(&len, 1U);
+                                len = length - 254U;
+                                m_rxP25Data.addData(&len, 1U);
+                            } else {
+                                m_rxP25Data.addData(&len, 1U);
+                            }
+
                             m_rxP25Data.addData(buffer.get(), len);
                         }
                     }
@@ -419,12 +440,72 @@ void Network::clock(uint32_t ms)
 
                             if (m_debug)
                                 Utils::dump(1U, "[Network::clock()] Network Received, NXDN", buffer.get(), length);
-                            if (length > 255)
+                            if (length > (int)(NXDN_PACKET_LENGTH + PACKET_PAD))
                                 LogError(LOG_NET, "NXDN Stream %u, frame oversized? this shouldn't happen, pktSeq = %u, len = %u", streamId, m_pktSeq, length);
 
                             uint8_t len = length;
                             m_rxNXDNData.addData(&len, 1U);
                             m_rxNXDNData.addData(buffer.get(), len);
+                        }
+                    }
+                    break;
+
+                case NET_SUBFUNC::PROTOCOL_SUBFUNC_ANALOG:              // Encapsulated Analog data frame
+                    {
+                        if (m_enabled && m_analogEnabled) {
+                            if (m_debug) {
+                                LogDebug(LOG_NET, "Analog, peer = %u, len = %u, pktSeq = %u, streamId = %u", 
+                                    peerId, length, rtpHeader.getSequence(), streamId);
+                            }
+
+                            if (m_promiscuousPeer) {
+                                m_rxAnalogStreamId = streamId;
+                                m_pktLastSeq = m_pktSeq;
+                            }
+                            else {
+                                if (m_rxAnalogStreamId == 0U) {
+                                    if (rtpHeader.getSequence() == RTP_END_OF_CALL_SEQ) {
+                                        m_rxAnalogStreamId = 0U;
+                                    }
+                                    else {
+                                        m_rxAnalogStreamId = streamId;
+                                    }
+
+                                    m_pktLastSeq = m_pktSeq;
+                                }
+                                else {
+                                    if (m_rxAnalogStreamId == streamId) {
+                                        if (m_pktSeq != 0U && m_pktLastSeq != 0U) {
+                                            if (m_pktSeq >= 1U && ((m_pktSeq != m_pktLastSeq + 1) && (m_pktSeq - 1 != m_pktLastSeq + 1))) {
+                                                LogWarning(LOG_NET, "Analog Stream %u out-of-sequence; %u != %u", streamId, m_pktSeq, m_pktLastSeq + 1);
+                                            }
+                                        }
+
+                                        m_pktLastSeq = m_pktSeq;
+                                    }
+
+                                    if (rtpHeader.getSequence() == RTP_END_OF_CALL_SEQ) {
+                                        m_rxAnalogStreamId = 0U;
+                                    }
+                                }
+                            }
+
+                            if (m_debug)
+                                Utils::dump(1U, "[Network::clock()] Network Received, Analog", buffer.get(), length);
+                            if (length < (int)ANALOG_PACKET_LENGTH) {
+                                LogError(LOG_NET, "Analog Stream %u, frame too short? this shouldn't happen, pktSeq = %u, len = %u", streamId, m_pktSeq, length);
+                            } else {
+                                if (length > 512)
+                                    LogError(LOG_NET, "Analog Stream %u, frame oversized? this shouldn't happen, pktSeq = %u, len = %u", streamId, m_pktSeq, length);
+
+                                // Analog frames are larger then 254 bytes, but we need to handle the case where the frame is larger than 255 bytes
+                                uint8_t len = 254U;
+                                m_rxAnalogData.addData(&len, 1U);
+                                len = length - 254U;
+                                m_rxAnalogData.addData(&len, 1U);
+
+                                m_rxAnalogData.addData(buffer.get(), len);
+                            }
                         }
                     }
                     break;
@@ -624,6 +705,19 @@ void Network::clock(uint32_t ms)
                             // fire off NXDN in-call callback if we have one
                             if (m_nxdnInCallCallback != nullptr) {
                                 m_nxdnInCallCallback(command, dstId);
+                            }
+                        }
+                    }
+                    break;
+                case NET_SUBFUNC::PROTOCOL_SUBFUNC_ANALOG:              // Analog In-Call Control
+                    {
+                        if (m_enabled && m_nxdnEnabled) {
+                            NET_ICC::ENUM command = (NET_ICC::ENUM)buffer[10U];
+                            uint32_t dstId = GET_UINT24(buffer, 11U);
+
+                            // fire off analog in-call callback if we have one
+                            if (m_analogInCallCallback != nullptr) {
+                                m_analogInCallCallback(command, dstId);
                             }
                         }
                     }

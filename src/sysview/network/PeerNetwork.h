@@ -49,17 +49,12 @@ namespace network
          * @param password Network authentication password.
          * @param duplex Flag indicating full-duplex operation.
          * @param debug Flag indicating whether network debug is enabled.
-         * @param dmr Flag indicating whether DMR is enabled.
-         * @param p25 Flag indicating whether P25 is enabled.
-         * @param nxdn Flag indicating whether NXDN is enabled.
-         * @param slot1 Flag indicating whether DMR slot 1 is enabled for network traffic.
-         * @param slot2 Flag indicating whether DMR slot 2 is enabled for network traffic.
          * @param allowActivityTransfer Flag indicating that the system activity logs will be sent to the network.
          * @param allowDiagnosticTransfer Flag indicating that the system diagnostic logs will be sent to the network.
          * @param updateLookup Flag indicating that the system will accept radio ID and talkgroup ID lookups from the network.
          */
         PeerNetwork(const std::string& address, uint16_t port, uint16_t localPort, uint32_t peerId, const std::string& password,
-            bool duplex, bool debug, bool dmr, bool p25, bool nxdn, bool slot1, bool slot2, bool allowActivityTransfer, bool allowDiagnosticTransfer, bool updateLookup, bool saveLookup);
+            bool duplex, bool debug, bool allowActivityTransfer, bool allowDiagnosticTransfer, bool updateLookup, bool saveLookup);
 
         /**
          * @brief Flag indicating whether or not SysView has received Peer-Link data transfers.

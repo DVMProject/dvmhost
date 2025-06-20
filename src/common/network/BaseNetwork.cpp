@@ -10,6 +10,7 @@
  *
  */
 #include "Defines.h"
+#include "common/analog/AnalogDefines.h"
 #include "common/dmr/DMRDefines.h"
 #include "common/p25/P25Defines.h"
 #include "common/nxdn/NXDNDefines.h"
@@ -53,10 +54,12 @@ BaseNetwork::BaseNetwork(uint32_t peerId, bool duplex, bool debug, bool slot1, b
     m_rxDMRData(NET_RING_BUF_SIZE, "DMR Net Buffer"),
     m_rxP25Data(NET_RING_BUF_SIZE, "P25 Net Buffer"),
     m_rxNXDNData(NET_RING_BUF_SIZE, "NXDN Net Buffer"),
+    m_rxAnalogData(NET_RING_BUF_SIZE, "Analog Net Buffer"),
     m_random(),
     m_dmrStreamId(nullptr),
     m_p25StreamId(0U),
     m_nxdnStreamId(0U),
+    m_analogStreamId(0U),
     m_pktSeq(0U),
     m_audio()
 {
@@ -74,6 +77,7 @@ BaseNetwork::BaseNetwork(uint32_t peerId, bool duplex, bool debug, bool slot1, b
     m_dmrStreamId[1U] = createStreamId();
     m_p25StreamId = createStreamId();
     m_nxdnStreamId = createStreamId();
+    m_analogStreamId = createStreamId();
 }
 
 /* Finalizes a instance of the BaseNetwork class. */
@@ -346,6 +350,15 @@ void BaseNetwork::resetNXDN()
     m_rxNXDNData.clear();
 }
 
+/* Resets the analog ring buffer. */
+
+void BaseNetwork::resetAnalog()
+{
+    m_analogStreamId = createStreamId();
+    m_pktSeq = 0U;
+    m_rxAnalogData.clear();
+}
+
 /* Gets the current DMR stream ID. */
 
 uint32_t BaseNetwork::getDMRStreamId(uint32_t slotNo) const
@@ -502,6 +515,11 @@ UInt8Array BaseNetwork::readP25(bool& ret, uint32_t& frameLength)
         return nullptr;
     }
 
+    if (length == 254U) {
+        m_rxP25Data.get(&length, 1U); // read the next byte for the actual length
+        length += 254U; // a packet length of 254 is a special case for P25 frames, so we need to add the 254 to the length
+    }
+
     UInt8Array buffer;
     frameLength = length;
     buffer = std::unique_ptr<uint8_t[]>(new uint8_t[length]);
@@ -652,6 +670,8 @@ bool BaseNetwork::hasP25Data() const
 
     return true;
 }
+
+/* Helper to validate a P25 network frame length. */
 
 bool BaseNetwork::validateP25FrameLength(uint8_t& frameLength, uint32_t len, const P25DEF::DUID::E duid)
 {
@@ -820,6 +840,91 @@ bool BaseNetwork::writeNXDN(const nxdn::lc::RTCH& lc, const uint8_t* data, const
 bool BaseNetwork::hasNXDNData() const
 {
     if (m_rxNXDNData.isEmpty())
+        return false;
+
+    return true;
+}
+
+/* Reads analog raw frame data from the analog ring buffer. */
+
+UInt8Array BaseNetwork::readAnalog(bool& ret, uint32_t& frameLength)
+{
+    if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
+        return nullptr;
+
+    ret = true;
+    if (m_rxAnalogData.isEmpty()) {
+        ret = false;
+        return nullptr;
+    }
+
+    uint8_t length = 0U;
+    m_rxAnalogData.get(&length, 1U);
+    if (length == 0U) {
+        ret = false;
+        return nullptr;
+    }
+
+    if (length < 254U) {
+        // if the length is less than 254, the analog packet is malformed, analog packets should never be less than 254 bytes
+        LogError(LOG_NET, "malformed analog packet, length < 254 (%u), shouldn't happen", length);
+        ret = false;
+        return nullptr;
+    }
+
+    if (length == 254U) {
+        m_rxAnalogData.get(&length, 1U); // read the next byte for the actual length
+        length += 254U; // a packet length of 254 is a special case for P25 frames, so we need to add the 254 to the length
+    }
+
+    UInt8Array buffer;
+    frameLength = length;
+    buffer = std::unique_ptr<uint8_t[]>(new uint8_t[length]);
+    ::memset(buffer.get(), 0x00U, length);
+    m_rxAnalogData.get(buffer.get(), length);
+
+    return buffer;
+}
+
+/* Writes analog frame data to the network. */
+
+bool BaseNetwork::writeAnalog(const analog::data::NetData& data, bool noSequence)
+{
+    using namespace analog::defines;
+    if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
+        return false;
+
+    AudioFrameType::E frameType = data.getFrameType();
+
+    bool resetSeq = false;
+    if (m_analogStreamId == 0U) {
+        resetSeq = true;
+        m_analogStreamId = createStreamId();
+    }
+
+    uint32_t messageLength = 0U;
+    UInt8Array message = createAnalog_Message(messageLength, m_analogStreamId, data);
+    if (message == nullptr) {
+        return false;
+    }
+
+    uint16_t seq = pktSeq(resetSeq);
+    if (frameType == AudioFrameType::TERMINATOR) {
+        seq = RTP_END_OF_CALL_SEQ;
+    }
+
+    if (noSequence) {
+        seq = RTP_END_OF_CALL_SEQ;
+    }
+
+    return writeMaster({ NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_ANALOG }, message.get(), messageLength, seq, m_analogStreamId);
+}
+
+/* Helper to test if the analog ring buffer has data. */
+
+bool BaseNetwork::hasAnalogData() const
+{
+    if (m_rxAnalogData.isEmpty())
         return false;
 
     return true;
@@ -1245,8 +1350,8 @@ UInt8Array BaseNetwork::createNXDN_Message(uint32_t& length, const nxdn::lc::RTC
 {
     assert(data != nullptr);
 
-    uint8_t* buffer = new uint8_t[DATA_PACKET_LENGTH];
-    ::memset(buffer, 0x00U, DATA_PACKET_LENGTH);
+    uint8_t* buffer = new uint8_t[NXDN_PACKET_LENGTH + PACKET_PAD];
+    ::memset(buffer, 0x00U, NXDN_PACKET_LENGTH + PACKET_PAD);
 
     // construct NXDN message header
     ::memcpy(buffer + 0U, TAG_NXDN_DATA, 4U);
@@ -1272,8 +1377,43 @@ UInt8Array BaseNetwork::createNXDN_Message(uint32_t& length, const nxdn::lc::RTC
     buffer[23U] = count;
 
     if (m_debug)
-        Utils::dump(1U, "Network Message, NXDN", buffer, (count + PACKET_PAD));
+        Utils::dump(1U, "Network Message, NXDN", buffer, (NXDN_PACKET_LENGTH + PACKET_PAD));
 
-    length = (count + PACKET_PAD);
+    length = (NXDN_PACKET_LENGTH + PACKET_PAD);
+    return UInt8Array(buffer);
+}
+
+/* Creates an analog frame message. */
+
+UInt8Array BaseNetwork::createAnalog_Message(uint32_t& length, const uint32_t streamId, const analog::data::NetData& data)
+{
+    using namespace analog::defines;
+    uint8_t* buffer = new uint8_t[ANALOG_PACKET_LENGTH + PACKET_PAD];
+    ::memset(buffer, 0x00U, ANALOG_PACKET_LENGTH + PACKET_PAD);
+
+    // construct analog message header
+    ::memcpy(buffer + 0U, TAG_ANALOG_DATA, 4U);
+
+    uint32_t srcId = data.getSrcId();                                               // Source Address
+    SET_UINT24(srcId, buffer, 5U);
+
+    uint32_t dstId = data.getDstId();                                               // Target Address
+    SET_UINT24(dstId, buffer, 8U);
+
+    buffer[14U] = data.getControl();                                                // Control Bits
+
+    AudioFrameType::E frameType = data.getFrameType();
+    buffer[15U] = (uint8_t)frameType;                                               // Audio Frame Type
+    buffer[15U] |= data.getGroup() ? 0x00U : 0x40U;                                 // Group
+
+    buffer[4U] = data.getSeqNo();                                                   // Sequence Number
+
+    // pack raw audio message bytes
+    data.getAudio(buffer + 20U);
+
+    if (m_debug)
+        Utils::dump(1U, "Network Message, Analog", buffer, (ANALOG_PACKET_LENGTH + PACKET_PAD));
+
+    length = (ANALOG_PACKET_LENGTH + PACKET_PAD);
     return UInt8Array(buffer);
 }

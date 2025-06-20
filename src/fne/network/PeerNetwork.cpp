@@ -38,10 +38,14 @@ const uint64_t PACKET_LATE_TIME = 200U; // 200ms
 /* Initializes a new instance of the PeerNetwork class. */
 
 PeerNetwork::PeerNetwork(const std::string& address, uint16_t port, uint16_t localPort, uint32_t peerId, const std::string& password,
-    bool duplex, bool debug, bool dmr, bool p25, bool nxdn, bool slot1, bool slot2, bool allowActivityTransfer, bool allowDiagnosticTransfer, bool updateLookup, bool saveLookup) :
-    Network(address, port, localPort, peerId, password, duplex, debug, dmr, p25, nxdn, slot1, slot2, allowActivityTransfer, allowDiagnosticTransfer, updateLookup, saveLookup),
+    bool duplex, bool debug, bool dmr, bool p25, bool nxdn, bool analog, bool slot1, bool slot2, bool allowActivityTransfer, bool allowDiagnosticTransfer, bool updateLookup, bool saveLookup) :
+    Network(address, port, localPort, peerId, password, duplex, debug, dmr, p25, nxdn, analog, slot1, slot2, allowActivityTransfer, allowDiagnosticTransfer, updateLookup, saveLookup),
     m_attachedKeyRSPHandler(false),
     m_blockTrafficToTable(),
+    m_dmrCallback(nullptr),
+    m_p25Callback(nullptr),
+    m_nxdnCallback(nullptr),
+    m_analogCallback(nullptr),
     m_pidLookup(nullptr),
     m_peerLink(false),
     m_peerLinkSavesACL(false),
@@ -498,6 +502,13 @@ void PeerNetwork::taskNetworkRx(PeerPacketRequest* req)
                 {
                     if (network->m_nxdnCallback != nullptr)
                         network->m_nxdnCallback(network, req->buffer, req->length, req->streamId, req->fneHeader, req->rtpHeader);
+                }
+                break;
+
+            case NET_SUBFUNC::PROTOCOL_SUBFUNC_ANALOG:              // Encapsulated analog data frame
+                {
+                    if (network->m_analogCallback != nullptr)
+                        network->m_analogCallback(network, req->buffer, req->length, req->streamId, req->fneHeader, req->rtpHeader);
                 }
                 break;
 

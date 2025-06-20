@@ -8,9 +8,11 @@
  *
  */
 #include "Defines.h"
-#include "AnalogAudio.h"
+#include "analog/AnalogAudio.h"
 #include "Log.h"
 #include "Utils.h"
+
+using namespace analog;
 
 #include <cassert>
 #include <cstring>

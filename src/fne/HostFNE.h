@@ -43,6 +43,7 @@ namespace network { namespace callhandler { namespace packetdata { class HOST_SW
 namespace network { namespace callhandler { class HOST_SW_API TagP25Data; } }
 namespace network { namespace callhandler { namespace packetdata { class HOST_SW_API P25PacketData; } } }
 namespace network { namespace callhandler { class HOST_SW_API TagNXDNData; } }
+namespace network { namespace callhandler { class HOST_SW_API TagAnalogData; } }
 
 // ---------------------------------------------------------------------------
 //  Class Declaration
@@ -89,6 +90,7 @@ private:
     friend class network::callhandler::TagP25Data;
     friend class network::callhandler::packetdata::P25PacketData;
     friend class network::callhandler::TagNXDNData;
+    friend class network::callhandler::TagAnalogData;
     network::FNENetwork* m_network;
     network::DiagNetwork* m_diagNetwork;
 
@@ -101,6 +103,7 @@ private:
     bool m_dmrEnabled;
     bool m_p25Enabled;
     bool m_nxdnEnabled;
+    bool m_analogEnabled;
 
     lookups::RadioIdLookup* m_ridLookup;
     lookups::TalkgroupRulesLookup* m_tidLookup;
@@ -206,6 +209,16 @@ private:
      * @param rtpHeader RTP header for the packet.
      */
     void processPeerNXDN(network::PeerNetwork* peerNetwork, const uint8_t* data, uint32_t length, uint32_t streamId, 
+        const network::frame::RTPFNEHeader& fneHeader, const network::frame::RTPHeader& rtpHeader);
+    /**
+     * @brief Processes analog peer network traffic.
+     * @param data Buffer containing analog data.
+     * @param length Length of the buffer.
+     * @param streamId Stream ID.
+     * @param fneHeader FNE header for the packet.
+     * @param rtpHeader RTP header for the packet.
+     */
+    void processPeerAnalog(network::PeerNetwork* peerNetwork, const uint8_t* data, uint32_t length, uint32_t streamId, 
         const network::frame::RTPFNEHeader& fneHeader, const network::frame::RTPHeader& rtpHeader);
 };
 

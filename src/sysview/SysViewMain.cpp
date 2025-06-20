@@ -4,11 +4,12 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2024,2025 Bryan Biedenkapp, N2PLL
  *
  */
 #include "Defines.h"
 #include "common/Clock.h"
+#include "common/analog/AnalogDefines.h"
 #include "common/dmr/DMRDefines.h"
 #include "common/dmr/lc/csbk/CSBKFactory.h"
 #include "common/dmr/lc/LC.h"
@@ -93,6 +94,7 @@ typedef std::pair<const uint32_t, RxStatus> StatusMapPair;
 std::unordered_map<uint32_t, RxStatus> g_dmrStatus;
 std::unordered_map<uint32_t, RxStatus> g_p25Status;
 std::unordered_map<uint32_t, RxStatus> g_nxdnStatus;
+std::unordered_map<uint32_t, RxStatus> g_analogStatus;
 
 // ---------------------------------------------------------------------------
 //	Global Functions
@@ -237,7 +239,7 @@ bool createPeerNetwork()
     }
 
     // initialize networking
-    g_network = new PeerNetwork(address, port, 0U, id, password, true, g_debug, true, true, true, true, true, true, false, true, false);
+    g_network = new PeerNetwork(address, port, 0U, id, password, true, g_debug, true, false, true, false);
     g_network->setMetadata(identity, 0U, 0U, 0.0F, 0.0F, 0, 0, 0, 0.0F, 0.0F, 0, "");
     g_network->setLookups(g_ridLookup, g_tidLookup);
 
@@ -980,6 +982,58 @@ void* threadNetworkPump(void* arg)
 
                     if (g_debug)
                         LogMessage(LOG_NET, "NXDN, messageType = $%02X, srcId = %u, dstId = %u, len = %u", messageType, srcId, dstId, length);
+                }
+
+                UInt8Array analogBuffer = g_network->readAnalog(netReadRet, length);
+                if (netReadRet) {
+                    using namespace analog;
+
+                    uint32_t srcId = GET_UINT24(analogBuffer, 5U);
+                    uint32_t dstId = GET_UINT24(analogBuffer, 8U);
+
+                    ANODEF::AudioFrameType::E frameType = (ANODEF::AudioFrameType::E)(analogBuffer[15U] & 0x0FU);
+
+                    // specifically only check the following logic for end of call, voice or data frames
+                    if (frameType == ANODEF::AudioFrameType::TERMINATOR) {
+                        if (srcId == 0U && dstId == 0U) {
+                            LogWarning(LOG_NET, "Analog, invalid TX_REL, srcId = %u (%s), dstId = %u (%s)", 
+                                srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str());
+                        }
+
+                        RxStatus status = g_analogStatus[dstId];
+                        uint64_t duration = hrc::diff(pktTime, status.callStartTime);
+
+                        if (std::find_if(g_analogStatus.begin(), g_analogStatus.end(), [&](StatusMapPair x) { return x.second.dstId == dstId; }) != g_analogStatus.end()) {
+                            g_analogStatus.erase(dstId);
+
+                            LogMessage(LOG_NET, "Analog, Call End, srcId = %u (%s), dstId = %u (%s), duration = %u",
+                                srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str(), duration / 1000);
+                        }
+                    }
+
+                    // is this a new call stream?
+                    if (frameType == ANODEF::AudioFrameType::VOICE_START) {
+                        if (srcId == 0U && dstId == 0U) {
+                            LogWarning(LOG_NET, "Analog, invalid call, srcId = %u (%s), dstId = %u (%s)", 
+                                srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str());
+                        }
+
+                        auto it = std::find_if(g_analogStatus.begin(), g_analogStatus.end(), [&](StatusMapPair x) { return x.second.dstId == dstId; });
+                        if (it == g_analogStatus.end()) {
+                            // this is a new call stream
+                            RxStatus status = RxStatus();
+                            status.callStartTime = pktTime;
+                            status.srcId = srcId;
+                            status.dstId = dstId;
+                            g_analogStatus[dstId] = status;
+
+                            LogMessage(LOG_NET, "Analog, Call Start, srcId = %u (%s), dstId = %u (%s)", 
+                                srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str());
+                        }
+                    }
+
+                    if (g_debug)
+                        LogMessage(LOG_NET, "Analog, frameType = $%02X, srcId = %u, dstId = %u, len = %u", frameType, srcId, dstId, length);
                 }
             }
 

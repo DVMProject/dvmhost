@@ -4,7 +4,7 @@
 # * GPLv2 Open Source. Use is subject to license terms.
 # * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 # *
-# *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+# *  Copyright (C) 2024,2025 Bryan Biedenkapp, N2PLL
 # *
 # */
 file(GLOB common_SRC
@@ -38,6 +38,10 @@ file(GLOB common_SRC
     "src/common/nxdn/edac/*.cpp"
     "src/common/nxdn/lc/*.cpp"
     "src/common/nxdn/lc/rcch/*.cpp"
+
+    # Analog Module
+    "src/common/analog/*.cpp"
+    "src/common/analog/data/*.cpp"
 
     # Core
     "src/common/edac/*.cpp"
@@ -86,6 +90,10 @@ file(GLOB common_INCLUDE
     "src/common/nxdn/edac/*.h"
     "src/common/nxdn/lc/*.h"
     "src/common/nxdn/lc/rcch/*.h"
+
+    # Analog Module
+    "src/common/analog/*.h"
+    "src/common/analog/data/*.h"
 
     # Core
     "src/common/concurrent/*.h"

@@ -9,6 +9,8 @@
  *
  */
 #include "Defines.h"
+#include "common/analog/AnalogDefines.h"
+#include "common/analog/AnalogAudio.h"
 #include "common/dmr/DMRDefines.h"
 #include "common/dmr/data/EMB.h"
 #include "common/dmr/data/NetData.h"
@@ -22,7 +24,6 @@
 #include "common/p25/P25Utils.h"
 #include "common/network/RTPHeader.h"
 #include "common/network/udp/Socket.h"
-#include "common/AnalogAudio.h"
 #include "common/Clock.h"
 #include "common/StopWatch.h"
 #include "common/Thread.h"
@@ -32,6 +33,8 @@
 #include "HostBridge.h"
 #include "BridgeMain.h"
 
+using namespace analog;
+using namespace analog::defines;
 using namespace network;
 using namespace network::frame;
 using namespace network::udp;
@@ -1616,6 +1619,7 @@ void HostBridge::encodeDMRAudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32_
     assert(pcm != nullptr);
     using namespace dmr;
     using namespace dmr::defines;
+    using namespace dmr::data;
 
     uint32_t srcId = m_srcId;
     if (m_srcIdOverride != 0 && (m_overrideSrcIdFromMDC))
@@ -1656,7 +1660,7 @@ void HostBridge::encodeDMRAudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32_
             fullLC.encode(dmrLC, data, DataType::VOICE_LC_HEADER);
 
             // generate DMR network frame
-            data::NetData dmrData;
+            NetData dmrData;
             dmrData.setSlotNo(m_slot);
             dmrData.setDataType(DataType::VOICE_LC_HEADER);
             dmrData.setSrcId(srcId);
@@ -1701,7 +1705,7 @@ void HostBridge::encodeDMRAudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32_
             uint8_t lcss = m_dmrEmbeddedData.getData(data, m_dmrN);
 
             // generated embedded signalling
-            data::EMB emb = data::EMB();
+            EMB emb = EMB();
             emb.setColorCode(0U);
             emb.setLCSS(lcss);
             emb.encode(data);
@@ -1710,7 +1714,7 @@ void HostBridge::encodeDMRAudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32_
         LogMessage(LOG_HOST, DMR_DT_VOICE ", srcId = %u, dstId = %u, slot = %u, seqNo = %u", srcId, dstId, m_slot, m_dmrN);
 
         // generate DMR network frame
-        data::NetData dmrData;
+        NetData dmrData;
         dmrData.setSlotNo(m_slot);
         dmrData.setDataType(dataType);
         dmrData.setSrcId(srcId);
@@ -1769,6 +1773,7 @@ void HostBridge::processP25Network(uint8_t* buffer, uint32_t length)
     using namespace p25;
     using namespace p25::defines;
     using namespace p25::dfsi::defines;
+    using namespace p25::data;
 
     if (m_txMode != TX_MODE_P25)
         return;
@@ -1815,7 +1820,7 @@ void HostBridge::processP25Network(uint8_t* buffer, uint32_t length)
     uint8_t lsd2 = buffer[21U];
 
     lc::LC control;
-    data::LowSpeedData lsd;
+    LowSpeedData lsd;
 
     control.setLCO(lco);
     control.setSrcId(srcId);
@@ -2268,6 +2273,7 @@ void HostBridge::encodeP25AudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32_
     assert(pcm != nullptr);
     using namespace p25;
     using namespace p25::defines;
+    using namespace p25::data;
 
     if (m_p25N > 17)
         m_p25N = 0;
@@ -2423,7 +2429,7 @@ void HostBridge::encodeP25AudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32_
     m_p25Crypto->getMI(mi);
     lc.setMI(mi);
 
-    data::LowSpeedData lsd = data::LowSpeedData();
+    LowSpeedData lsd = LowSpeedData();
 
     // send P25 LDU1
     if (m_p25N == 8U) {
@@ -2703,7 +2709,7 @@ void* HostBridge::threadAudioProcess(void* arg)
 
                     // perform maximum sample detection
                     float maxSample = 0.0f;
-                    for (int i = 0; i < AUDIO_SAMPLES_LENGTH; i++) {
+                    for (int i = 0; i < (int)AUDIO_SAMPLES_LENGTH; i++) {
                         float sampleValue = fabs((float)samples[i]);
                         maxSample = fmax(maxSample, sampleValue);
                     }
@@ -3091,6 +3097,7 @@ void HostBridge::callEndSilence(uint32_t srcId, uint32_t dstId)
     {
         using namespace dmr;
         using namespace dmr::defines;
+        using namespace dmr::data;
 
         m_dmrN = (uint8_t)(m_dmrSeqNo % 6);
 
@@ -3120,7 +3127,7 @@ void HostBridge::callEndSilence(uint32_t srcId, uint32_t dstId)
             uint8_t lcss = m_dmrEmbeddedData.getData(data, m_dmrN);
 
             // generated embedded signalling
-            data::EMB emb = data::EMB();
+            EMB emb = EMB();
             emb.setColorCode(0U);
             emb.setLCSS(lcss);
             emb.encode(data);
@@ -3129,7 +3136,7 @@ void HostBridge::callEndSilence(uint32_t srcId, uint32_t dstId)
         LogMessage(LOG_HOST, DMR_DT_VOICE ", silence srcId = %u, dstId = %u, slot = %u, seqNo = %u", srcId, dstId, m_slot, m_dmrN);
 
         // generate DMR network frame
-        data::NetData dmrData;
+        NetData dmrData;
         dmrData.setSlotNo(m_slot);
         dmrData.setDataType(dataType);
         dmrData.setSrcId(srcId);
@@ -3152,6 +3159,7 @@ void HostBridge::callEndSilence(uint32_t srcId, uint32_t dstId)
     {
         using namespace p25;
         using namespace p25::defines;
+        using namespace p25::data;
 
         // fill the LDU buffers appropriately
         switch (m_p25N) {
@@ -3176,7 +3184,7 @@ void HostBridge::callEndSilence(uint32_t srcId, uint32_t dstId)
         lc.setAlgId(ALGO_UNENCRYPT);
         lc.setKId(0);
 
-        data::LowSpeedData lsd = data::LowSpeedData();
+        LowSpeedData lsd = LowSpeedData();
 
         // send P25 LDU1
         if (m_p25N == 0U) {

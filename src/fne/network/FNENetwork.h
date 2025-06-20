@@ -55,6 +55,7 @@ namespace network { namespace callhandler { namespace packetdata { class HOST_SW
 namespace network { namespace callhandler { class HOST_SW_API TagP25Data; } }
 namespace network { namespace callhandler { namespace packetdata { class HOST_SW_API P25PacketData; } } }
 namespace network { namespace callhandler { class HOST_SW_API TagNXDNData; } }
+namespace network { namespace callhandler { class HOST_SW_API TagAnalogData; } }
 
 namespace network
 {
@@ -422,6 +423,7 @@ namespace network
          * @param dmr Flag indicating whether DMR is enabled.
          * @param p25 Flag indicating whether P25 is enabled.
          * @param nxdn Flag indicating whether NXDN is enabled.
+         * @param analog Flag indicating whether analog is enabled.
          * @param parrotDelay Delay for end of call to parrot TG playback.
          * @param parrotGrantDemand Flag indicating whether a parrot TG will generate a grant demand.
          * @param allowActivityTransfer Flag indicating that the system activity logs will be sent to the network.
@@ -431,7 +433,7 @@ namespace network
          * @param workerCnt Number of worker threads.
          */
         FNENetwork(HostFNE* host, const std::string& address, uint16_t port, uint32_t peerId, const std::string& password,
-            bool debug, bool verbose, bool reportPeerPing, bool dmr, bool p25, bool nxdn, uint32_t parrotDelay, bool parrotGrantDemand,
+            bool debug, bool verbose, bool reportPeerPing, bool dmr, bool p25, bool nxdn, bool analog, uint32_t parrotDelay, bool parrotGrantDemand,
             bool allowActivityTransfer, bool allowDiagnosticTransfer, uint32_t pingTime, uint32_t updateLookupTime, uint16_t workerCnt);
         /**
          * @brief Finalizes a instance of the FNENetwork class.
@@ -466,6 +468,11 @@ namespace network
          * @returns callhandler::TagNXDNData* Instance of the TagNXDNData call handler.
          */
         callhandler::TagNXDNData* nxdnTrafficHandler() const { return m_tagNXDN; }
+        /**
+         * @brief Gets the instance of the analog call handler.
+         * @returns callhandler::TagAnalogData* Instance of the TagAnalogData call handler.
+         */
+        callhandler::TagAnalogData* analogTrafficHandler() const { return m_tagAnalog; }
 
         /**
          * @brief Sets the instances of the Radio ID, Talkgroup ID Peer List, and Crypto lookup tables.
@@ -530,6 +537,8 @@ namespace network
         callhandler::TagP25Data* m_tagP25;
         friend class callhandler::TagNXDNData;
         callhandler::TagNXDNData* m_tagNXDN;
+        friend class callhandler::TagAnalogData;
+        callhandler::TagAnalogData* m_tagAnalog;
         
         friend class ::RESTAPI;
         HostFNE* m_host;
@@ -542,6 +551,7 @@ namespace network
         bool m_dmrEnabled;
         bool m_p25Enabled;
         bool m_nxdnEnabled;
+        bool m_analogEnabled;
 
         uint32_t m_parrotDelay;
         Timer m_parrotDelayTimer;

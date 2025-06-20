@@ -25,6 +25,7 @@
 #define __BASE_NETWORK_H__
 
 #include "common/Defines.h"
+#include "common/analog/data/NetData.h"
 #include "common/dmr/data/NetData.h"
 #include "common/p25/data/DataHeader.h"
 #include "common/p25/data/LowSpeedData.h"
@@ -89,6 +90,8 @@ namespace network
     const uint32_t  P25_LDU2_PACKET_LENGTH = 181U;  // 24 byte header + DFSI data + 1 byte frame type
     const uint32_t  P25_TSDU_PACKET_LENGTH = 69U;   // 24 byte header + TSDU data
     const uint32_t  P25_TDULC_PACKET_LENGTH = 78U;  // 24 byte header + TDULC data
+    const uint32_t  NXDN_PACKET_LENGTH = 70U;       // 20 byte header + NXDN_FRAME_LENGTH_BYTES + 2 byte trailer
+    const uint32_t  ANALOG_PACKET_LENGTH = 324U;    // 20 byte header + AUDIO_SAMPLES_LENGTH_BYTES + 4 byte trailer
 
     /**
      * @brief Network Peer Connection Status
@@ -298,6 +301,10 @@ namespace network
          * @brief Resets the NXDN ring buffer.
          */
         virtual void resetNXDN();
+        /**
+         * @brief Resets the analog ring buffer.
+         */
+        virtual void resetAnalog();
 
         /**
          * @brief Gets the current DMR stream ID.
@@ -315,6 +322,11 @@ namespace network
          * @return uint32_t Stream ID.
          */
         uint32_t getNXDNStreamId() const { return m_nxdnStreamId; }
+        /**
+         * @brief Gets the current analog stream ID.
+         * @return uint32_t Stream ID.
+         */
+        uint32_t getAnalogtreamId() const { return m_analogStreamId; }
 
         /**
          * @brief Helper to send a data message to the master.
@@ -453,6 +465,28 @@ namespace network
          */
         bool hasNXDNData() const;
 
+        // Analog Audio
+        /**
+         * @brief Reads analog raw frame data from the analog ring buffer.
+         * @param[out] ret Flag indicating whether or not data was received.
+         * @param[out] frameLength Length in bytes of received frame.
+         * @returns UInt8Array Buffer containing received frame.
+         */
+        virtual UInt8Array readAnalog(bool& ret, uint32_t& frameLength);
+        /**
+         * @brief Writes analog frame data to the network.
+         * @param[in] data Instance of the analog::data::NetData class containing the analog message.
+         * @param noSequence Flag indicating the message should be sent with no RTP sequence (65535).
+         * @returns bool True, if message was sent, otherwise false.
+         */
+        virtual bool writeAnalog(const analog::data::NetData& data, bool noSequence = false);
+
+        /**
+         * @brief Helper to test if the analog ring buffer has data.
+         * @returns bool True, if the network analog ring buffer has data, otherwise false.
+         */
+        bool hasAnalogData() const;
+
     public:
         /**
          * @brief Gets the peer ID of the network.
@@ -500,12 +534,14 @@ namespace network
         RingBuffer<uint8_t> m_rxDMRData;
         RingBuffer<uint8_t> m_rxP25Data;
         RingBuffer<uint8_t> m_rxNXDNData;
+        RingBuffer<uint8_t> m_rxAnalogData;
 
         std::mt19937 m_random;
 
         uint32_t* m_dmrStreamId;
         uint32_t m_p25StreamId;
         uint32_t m_nxdnStreamId;
+        uint32_t m_analogStreamId;
 
         /**
          * @brief Helper to update the RTP packet sequence.
@@ -540,7 +576,7 @@ namespace network
          *      | Reserved                                                      |
          *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
          * 
-         *  The data starting at offset 20 for 33 bytes if the raw DMR frame.
+         *  The data starting at offset 20 for 33 bytes of the raw DMR frame.
          * 
          *  DMR frame message has 2 trailing bytes:
          * 
@@ -711,7 +747,7 @@ namespace network
          */
         UInt8Array createP25_PDUMessage(uint32_t& length, const p25::data::DataHeader& header, const uint8_t currentBlock,
             const uint8_t* data, const uint32_t len);
-        
+
         /**
          * @brief Creates an NXDN frame message.
          * \code{.unparsed}
@@ -743,7 +779,36 @@ namespace network
          * @returns UInt8Array Buffer containing the built network message.
          */
         UInt8Array createNXDN_Message(uint32_t& length, const nxdn::lc::RTCH& lc, const uint8_t* data, const uint32_t len);
-    
+
+        /**
+         * @brief Creates an analog frame message.
+         * \code{.unparsed}
+         *  Below is the representation of the data layout for the analog frame
+         *  message header. The header is 20 bytes in length.
+         * 
+         *  Byte 0               1               2               3
+         *  Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *      | Protocol Tag (ANOD)                                           |
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *      | Seq No.       | Source ID                                     |
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *      | Destination ID                                | Reserved      |
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *      | Reserved                      | Control Flags | R | Data Type |
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *      | Reserved                                                      |
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         * 
+         *  The data starting at offset 20 for 320 bytes of the raw analog frame.
+         * \endcode
+         * @param[out] length Length of network message buffer.
+         * @param streamId Stream ID.
+         * @param data Instance of the analog::data::Data class containing the analog message.
+         * @returns UInt8Array Buffer containing the built network message.
+         */
+        UInt8Array createAnalog_Message(uint32_t& length, const uint32_t streamId, const analog::data::NetData& data);
+
     private:
         uint16_t m_pktSeq;
 

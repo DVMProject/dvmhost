@@ -72,6 +72,7 @@ namespace network
          * @param dmr Flag indicating whether DMR is enabled.
          * @param p25 Flag indicating whether P25 is enabled.
          * @param nxdn Flag indicating whether NXDN is enabled.
+         * @param analog Flag indicating whether analog is enabled.
          * @param slot1 Flag indicating whether DMR slot 1 is enabled for network traffic.
          * @param slot2 Flag indicating whether DMR slot 2 is enabled for network traffic.
          * @param allowActivityTransfer Flag indicating that the system activity logs will be sent to the network.
@@ -79,7 +80,7 @@ namespace network
          * @param updateLookup Flag indicating that the system will accept radio ID and talkgroup ID lookups from the network.
          */
         PeerNetwork(const std::string& address, uint16_t port, uint16_t localPort, uint32_t peerId, const std::string& password,
-            bool duplex, bool debug, bool dmr, bool p25, bool nxdn, bool slot1, bool slot2, bool allowActivityTransfer, bool allowDiagnosticTransfer, bool updateLookup, bool saveLookup);
+            bool duplex, bool debug, bool dmr, bool p25, bool nxdn, bool analog, bool slot1, bool slot2, bool allowActivityTransfer, bool allowDiagnosticTransfer, bool updateLookup, bool saveLookup);
 
         /**
          * @brief Sets the instances of the Peer List lookup tables.
@@ -113,6 +114,11 @@ namespace network
          * @param callback 
          */
         void setNXDNCallback(std::function<void(PeerNetwork*, const uint8_t*, uint32_t, uint32_t, const frame::RTPFNEHeader&, const frame::RTPHeader&)>&& callback) { m_nxdnCallback = callback; }
+        /**
+         * @brief Helper to set the analog protocol callback.
+         * @param callback 
+         */
+        void setAnalogCallback(std::function<void(PeerNetwork*, const uint8_t*, uint32_t, uint32_t, const frame::RTPFNEHeader&, const frame::RTPHeader&)>&& callback) { m_analogCallback = callback; }
 
         /**
          * @brief Gets the blocked traffic peer ID table.
@@ -173,6 +179,11 @@ namespace network
          *  (This is called when the master sends a NXDN packet.)
          */
         std::function<void(PeerNetwork* peer, const uint8_t* data, uint32_t length, uint32_t streamId, const frame::RTPFNEHeader& fneHeader, const frame::RTPHeader& rtpHeader)> m_nxdnCallback;
+        /**
+         * @brief Analog Protocol Callback.
+         *  (This is called when the master sends a analog packet.)
+         */
+        std::function<void(PeerNetwork* peer, const uint8_t* data, uint32_t length, uint32_t streamId, const frame::RTPFNEHeader& fneHeader, const frame::RTPHeader& rtpHeader)> m_analogCallback;
 
         /**
          * @brief User overrideable handler that allows user code to process network packets not handled by this class.

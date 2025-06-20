@@ -29,7 +29,7 @@ using namespace network;
 
 PeerNetwork::PeerNetwork(const std::string& address, uint16_t port, uint16_t localPort, uint32_t peerId, const std::string& password,
     bool duplex, bool debug, bool dmr, bool p25, bool nxdn, bool slot1, bool slot2, bool allowActivityTransfer, bool allowDiagnosticTransfer, bool updateLookup, bool saveLookup) :
-    Network(address, port, localPort, peerId, password, duplex, debug, dmr, p25, nxdn, slot1, slot2, allowActivityTransfer, allowDiagnosticTransfer, updateLookup, saveLookup)
+    Network(address, port, localPort, peerId, password, duplex, debug, dmr, p25, nxdn, false, slot1, slot2, allowActivityTransfer, allowDiagnosticTransfer, updateLookup, saveLookup)
 {
     assert(!address.empty());
     assert(port > 0U);

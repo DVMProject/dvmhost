@@ -18,6 +18,7 @@
 #include "network/callhandler/TagDMRData.h"
 #include "network/callhandler/TagP25Data.h"
 #include "network/callhandler/TagNXDNData.h"
+#include "network/callhandler/TagAnalogData.h"
 #include "fne/ActivityLog.h"
 #include "HostFNE.h"
 
@@ -56,12 +57,13 @@ std::timed_mutex FNENetwork::m_keyQueueMutex;
 /* Initializes a new instance of the FNENetwork class. */
 
 FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port, uint32_t peerId, const std::string& password,
-    bool debug, bool verbose, bool reportPeerPing, bool dmr, bool p25, bool nxdn, uint32_t parrotDelay, bool parrotGrantDemand,
+    bool debug, bool verbose, bool reportPeerPing, bool dmr, bool p25, bool nxdn, bool analog, uint32_t parrotDelay, bool parrotGrantDemand,
     bool allowActivityTransfer, bool allowDiagnosticTransfer, uint32_t pingTime, uint32_t updateLookupTime, uint16_t workerCnt) :
     BaseNetwork(peerId, true, debug, true, true, allowActivityTransfer, allowDiagnosticTransfer),
     m_tagDMR(nullptr),
     m_tagP25(nullptr),
     m_tagNXDN(nullptr),
+    m_tagAnalog(nullptr),
     m_host(host),
     m_address(address),
     m_port(port),
@@ -69,6 +71,7 @@ FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port,
     m_dmrEnabled(dmr),
     m_p25Enabled(p25),
     m_nxdnEnabled(nxdn),
+    m_analogEnabled(analog),
     m_parrotDelay(parrotDelay),
     m_parrotDelayTimer(1000U, 0U, parrotDelay),
     m_parrotGrantDemand(parrotGrantDemand),
@@ -124,6 +127,7 @@ FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port,
     m_tagDMR = new TagDMRData(this, debug);
     m_tagP25 = new TagP25Data(this, debug);
     m_tagNXDN = new TagNXDNData(this, debug);
+    m_tagAnalog = new TagAnalogData(this, debug);
 }
 
 /* Finalizes a instance of the FNENetwork class. */
@@ -133,6 +137,7 @@ FNENetwork::~FNENetwork()
     delete m_tagDMR;
     delete m_tagP25;
     delete m_tagNXDN;
+    delete m_tagAnalog;
 }
 
 /* Helper to set configuration options. */
@@ -450,9 +455,14 @@ void FNENetwork::clock(uint32_t ms)
         if (m_tagNXDN->hasParrotFrames()) {
             m_tagNXDN->playbackParrot();
         }
+
+        // if the analog handler has parrot frames to playback, playback a frame
+        if (m_tagAnalog->hasParrotFrames()) {
+            m_tagAnalog->playbackParrot();
+        }
     }
 
-    if (!m_tagDMR->hasParrotFrames() && !m_tagP25->hasParrotFrames() && !m_tagNXDN->hasParrotFrames() &&
+    if (!m_tagDMR->hasParrotFrames() && !m_tagP25->hasParrotFrames() && !m_tagNXDN->hasParrotFrames() && !m_tagAnalog->hasParrotFrames() &&
         m_parrotDelayTimer.isRunning() && m_parrotDelayTimer.hasExpired()) {
         m_parrotDelayTimer.stop();
     }
@@ -687,6 +697,32 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                             }
                             else {
                                 network->writePeerNAK(peerId, TAG_NXDN_DATA, NET_CONN_NAK_FNE_UNAUTHORIZED, req->address, req->addrLen);
+                            }
+                        }
+                        break;
+
+                    case NET_SUBFUNC::PROTOCOL_SUBFUNC_ANALOG:          // Encapsulated analog data frame
+                        {
+                            if (peerId > 0 && (network->m_peers.find(peerId) != network->m_peers.end())) {
+                                FNEPeerConnection* connection = network->m_peers[peerId];
+                                if (connection != nullptr) {
+                                    std::string ip = udp::Socket::address(req->address);
+                                    connection->lastPing(now);
+
+                                    // validate peer (simple validation really)
+                                    if (connection->connected() && connection->address() == ip) {
+                                        if (network->m_analogEnabled) {
+                                            if (network->m_tagAnalog != nullptr) {
+                                                network->m_tagAnalog->processFrame(req->buffer, req->length, peerId, ssrc, req->rtpHeader.getSequence(), streamId);
+                                            }
+                                        } else {
+                                            network->writePeerNAK(peerId, streamId, TAG_ANALOG_DATA, NET_CONN_NAK_MODE_NOT_ENABLED);
+                                        }
+                                    }
+                                }
+                            }
+                            else {
+                                network->writePeerNAK(peerId, TAG_ANALOG_DATA, NET_CONN_NAK_FNE_UNAUTHORIZED, req->address, req->addrLen);
                             }
                         }
                         break;
