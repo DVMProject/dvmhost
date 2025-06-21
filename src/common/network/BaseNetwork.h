@@ -326,7 +326,7 @@ namespace network
          * @brief Gets the current analog stream ID.
          * @return uint32_t Stream ID.
          */
-        uint32_t getAnalogtreamId() const { return m_analogStreamId; }
+        uint32_t getAnalogStreamId() const { return m_analogStreamId; }
 
         /**
          * @brief Helper to send a data message to the master.
@@ -467,14 +467,14 @@ namespace network
 
         // Analog Audio
         /**
-         * @brief Reads analog raw frame data from the analog ring buffer.
+         * @brief Reads analog MuLaw audio frame data from the analog ring buffer.
          * @param[out] ret Flag indicating whether or not data was received.
          * @param[out] frameLength Length in bytes of received frame.
          * @returns UInt8Array Buffer containing received frame.
          */
         virtual UInt8Array readAnalog(bool& ret, uint32_t& frameLength);
         /**
-         * @brief Writes analog frame data to the network.
+         * @brief Writes analog MuLaw audio frame data to the network.
          * @param[in] data Instance of the analog::data::NetData class containing the analog message.
          * @param noSequence Flag indicating the message should be sent with no RTP sequence (65535).
          * @returns bool True, if message was sent, otherwise false.

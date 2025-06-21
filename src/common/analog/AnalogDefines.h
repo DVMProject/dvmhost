@@ -50,6 +50,9 @@ namespace analog
                 TERMINATOR = 0x02U,                     //! Voice End Frame / Call Terminator
             };
         }
+
+    #define ANO_TERMINATOR           "Analog, TERMINATOR (Terminator)"
+    #define ANO_VOICE                "Analog, VOICE (Voice Data)"
     } // namespace defines
 } // namespace analog
 

@@ -145,7 +145,7 @@ system:
     #   - (Not used when utilizing external USB vocoder!)
     vocoderEncoderAudioGain: 3.0
 
-    # Audio transmit mode (1 - DMR, 2 - P25).
+    # Audio transmit mode (1 - DMR, 2 - P25, 3 - Analog).
     txMode: 1
 
     # Relative sample level for VOX to activate.

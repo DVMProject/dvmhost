@@ -62,6 +62,7 @@ const uint8_t HALF_RATE_MODE = 0x01U;
 
 const uint8_t TX_MODE_DMR = 1U;
 const uint8_t TX_MODE_P25 = 2U;
+const uint8_t TX_MODE_ANALOG = 3U;
 
 
 // ---------------------------------------------------------------------------
@@ -233,6 +234,8 @@ private:
     uint8_t* m_netLDU2;
     uint32_t m_p25SeqNo;
     uint8_t m_p25N;
+
+    uint8_t m_analogN;
 
     bool m_audioDetect;
     bool m_trafficFromUDP;
@@ -459,12 +462,18 @@ private:
     void encodeP25AudioFrame(uint8_t* pcm, uint32_t forcedSrcId = 0U, uint32_t forcedDstId = 0U);
 
     /**
-     * @brief Helper to generate outgoing RTP headers.
-     * @param msgLen Message Length.
-     * @param rtpSeq RTP Sequence.
-     * @returns uint8_t* Buffer containing the encoded RTP headers.
+     * @brief Helper to process analog network traffic.
+     * @param buffer
+     * @param length
      */
-    uint8_t* generateRTPHeaders(uint8_t msgLen, uint16_t& rtpSeq);
+    void processAnalogNetwork(uint8_t* buffer, uint32_t length);
+    /**
+     * @brief Helper to encode analog network traffic audio frames.
+     * @param pcm
+     * @param forcedSrcId
+     * @param forcedDstId
+     */
+    void encodeAnalogAudioFrame(uint8_t* pcm, uint32_t forcedSrcId = 0U, uint32_t forcedDstId = 0U);
 
     /**
     * @brief Helper to generate USRP end of transmission
@@ -475,6 +484,14 @@ private:
      * @brief Helper to generate the single-tone preamble tone.
      */
     void generatePreambleTone();
+
+    /**
+     * @brief Helper to generate outgoing RTP headers.
+     * @param msgLen Message Length.
+     * @param rtpSeq RTP Sequence.
+     * @returns uint8_t* Buffer containing the encoded RTP headers.
+     */
+    uint8_t* generateRTPHeaders(uint8_t msgLen, uint16_t& rtpSeq);
 
     /**
      * @brief Helper to end a local or UDP call.

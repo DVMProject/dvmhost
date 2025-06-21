@@ -55,7 +55,7 @@ namespace analog
             NetData& operator=(const NetData& data);
 
             /**
-             * @brief Sets audio data.
+             * @brief Sets audio data. This data buffer should be MuLaw encoded.
              * @param[in] buffer Audio data buffer.
              */
             void setAudio(const uint8_t* buffer);

@@ -11,6 +11,7 @@
 #include "Defines.h"
 #include "common/analog/AnalogDefines.h"
 #include "common/analog/AnalogAudio.h"
+#include "common/analog/data/NetData.h"
 #include "common/dmr/DMRDefines.h"
 #include "common/dmr/data/EMB.h"
 #include "common/dmr/data/NetData.h"
@@ -224,6 +225,7 @@ HostBridge::HostBridge(const std::string& confFile) :
     m_netLDU2(nullptr),
     m_p25SeqNo(0U),
     m_p25N(0U),
+    m_analogN(0U),
     m_audioDetect(false),
     m_trafficFromUDP(false),
     m_udpSrcId(0U),
@@ -494,6 +496,10 @@ int HostBridge::run()
 
         if (m_txMode == TX_MODE_P25) {
             m_network->setP25ICCCallback([=](network::NET_ICC::ENUM command, uint32_t dstId) { processInCallCtrl(command, dstId, 0U); });
+        }
+
+        if (m_txMode == TX_MODE_ANALOG) {
+            m_network->setAnalogICCCallback([=](network::NET_ICC::ENUM command, uint32_t dstId) { processInCallCtrl(command, dstId, 0U); });
         }
     }
 
@@ -854,8 +860,8 @@ bool HostBridge::readParams()
     m_txMode = (uint8_t)systemConf["txMode"].as<uint32_t>(1U);
     if (m_txMode < TX_MODE_DMR)
         m_txMode = TX_MODE_DMR;
-    if (m_txMode > TX_MODE_P25)
-        m_txMode = TX_MODE_P25;
+    if (m_txMode > TX_MODE_ANALOG)
+        m_txMode = TX_MODE_ANALOG;
 
     m_voxSampleLevel = systemConf["voxSampleLevel"].as<float>(30.0f);
     m_dropTimeMS = (uint16_t)systemConf["dropTimeMs"].as<uint32_t>(180U);
@@ -874,6 +880,8 @@ bool HostBridge::readParams()
                 m_dropTimeMS = 360U; // drop time for UDP is minimum 360ms when using silence during hang time
             }
         }
+        break;
+    case TX_MODE_ANALOG:
         break;
     }
 
@@ -899,13 +907,19 @@ bool HostBridge::readParams()
     m_trace = systemConf["trace"].as<bool>(false);
     m_debug = systemConf["debug"].as<bool>(false);
 
+    std::string txModeStr = "DMR";
+    if (m_txMode == TX_MODE_P25)
+        txModeStr = "P25";
+    if (m_txMode == TX_MODE_ANALOG)
+        txModeStr = "Analog";
+
     LogInfo("General Parameters");
     LogInfo("    Rx Audio Gain: %.1f", m_rxAudioGain);
     LogInfo("    Vocoder Decoder Audio Gain: %.1f", m_vocoderDecoderAudioGain);
     LogInfo("    Vocoder Decoder Auto Gain: %s", m_vocoderDecoderAutoGain ? "yes" : "no");
     LogInfo("    Tx Audio Gain: %.1f", m_txAudioGain);
     LogInfo("    Vocoder Encoder Audio Gain: %.1f", m_vocoderEncoderAudioGain);
-    LogInfo("    Transmit Mode: %s", m_txMode == TX_MODE_DMR ? "DMR" : "P25");
+    LogInfo("    Transmit Mode: %s", txModeStr.c_str());
     LogInfo("    VOX Sample Level: %.1f", m_voxSampleLevel);
     LogInfo("    Drop Time: %ums", m_dropTimeMS);
     LogInfo("    Detect Analog MDC1200: %s", m_detectAnalogMDC1200 ? "yes" : "no");
@@ -992,6 +1006,13 @@ bool HostBridge::createNetwork()
         m_tekKeyId = 0U;
     }
 
+    // ensure encryption is currently disabled for analog (its not supported)
+    if (m_txMode == TX_MODE_ANALOG && m_tekAlgoId != p25::defines::ALGO_UNENCRYPT && m_tekKeyId > 0U) {
+        ::LogError(LOG_HOST, "Encryption is not supported for Analog. Disabling.");
+        m_tekAlgoId = p25::defines::ALGO_UNENCRYPT;
+        m_tekKeyId = 0U;
+    }
+
     m_srcId = (uint32_t)networkConf["sourceId"].as<uint32_t>(p25::defines::WUID_FNE);
     m_overrideSrcIdFromMDC = networkConf["overrideSourceIdFromMDC"].as<bool>(false);
     m_overrideSrcIdFromUDP = networkConf["overrideSourceIdFromUDP"].as<bool>(false);
@@ -1022,6 +1043,7 @@ bool HostBridge::createNetwork()
         }
         break;
     case TX_MODE_P25:
+    case TX_MODE_ANALOG:
         {
             if (m_dstId > 65535) {
                 ::LogError(LOG_HOST, "Bridge destination ID cannot be greater than 65535.");
@@ -1121,7 +1143,7 @@ bool HostBridge::createNetwork()
         LogInfo("    Debug: yes");
     }
 
-    bool dmr = false, p25 = false;
+    bool dmr = false, p25 = false, analog = false;
     switch (m_txMode) {
     case TX_MODE_DMR:
         dmr = true;
@@ -1129,10 +1151,13 @@ bool HostBridge::createNetwork()
     case TX_MODE_P25:
         p25 = true;
         break;
+    case TX_MODE_ANALOG:
+        analog = true;
+        break;
     }
 
     // initialize networking
-    m_network = new PeerNetwork(address, port, local, id, password, true, debug, dmr, p25, false, true, true, true, allowDiagnosticTransfer, true, false);
+    m_network = new PeerNetwork(address, port, local, id, password, true, debug, dmr, p25, false, analog, true, true, true, allowDiagnosticTransfer, true, false);
 
     m_network->setMetadata(m_identity, 0U, 0U, 0.0F, 0.0F, 0, 0, 0, 0.0F, 0.0F, 0, "");
     m_network->setConventional(true);
@@ -2448,6 +2473,271 @@ void HostBridge::encodeP25AudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32_
     m_p25N++;
 }
 
+/* Helper to process analog network traffic. */
+
+void HostBridge::processAnalogNetwork(uint8_t* buffer, uint32_t length)
+{
+    assert(buffer != nullptr);
+    using namespace analog;
+    using namespace analog::defines;
+
+    if (m_txMode != TX_MODE_ANALOG)
+        return;
+
+    // process network message header
+    uint8_t seqNo = buffer[4U];
+
+    uint32_t srcId = GET_UINT24(buffer, 5U);
+    uint32_t dstId = GET_UINT24(buffer, 8U);
+
+    bool individual = (buffer[15] & 0x40U) == 0x40U;
+
+    AudioFrameType::E frameType = (AudioFrameType::E)(buffer[15U] & 0x0FU);
+
+    data::NetData analogData;
+    analogData.setSeqNo(seqNo);
+    analogData.setSrcId(srcId);
+    analogData.setDstId(dstId);
+    analogData.setFrameType(frameType);
+
+    analogData.setAudio(buffer + 20U);
+
+    uint8_t frame[AUDIO_SAMPLES_LENGTH_BYTES];
+    analogData.getAudio(frame);
+
+    if (m_debug) {
+        LogDebug(LOG_NET, "Analog, seqNo = %u, srcId = %u, dstId = %u, len = %u", seqNo, srcId, dstId, length);
+    }
+
+    if (!individual) {
+        if (srcId == 0)
+            return;
+
+        // ensure destination ID matches and slot matches
+        if (dstId != m_dstId)
+            return;
+
+        // is this a new call stream?
+        if (m_network->getAnalogStreamId() != m_rxStreamId) {
+            m_callInProgress = true;
+            m_callAlgoId = 0U;
+
+            uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+            m_rxStartTime = now;
+
+            LogMessage(LOG_HOST, "Analog, call start, srcId = %u, dstId = %u", srcId, dstId);
+            if (m_preambleLeaderTone)
+                generatePreambleTone();
+        }
+
+        if (frameType == AudioFrameType::TERMINATOR) {
+            m_callInProgress = false;
+            m_ignoreCall = false;
+            m_callAlgoId = 0U;
+
+            if (m_rxStartTime > 0U) {
+                uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+                uint64_t diff = now - m_rxStartTime;
+
+                LogMessage(LOG_HOST, "Analog, call end, srcId = %u, dstId = %u, dur = %us", srcId, dstId, diff / 1000U);
+            }
+
+            m_rxStartTime = 0U;
+            m_rxStreamId = 0U;
+
+            m_rtpSeqNo = 0U;
+            m_rtpTimestamp = INVALID_TS;
+            return;
+        }
+
+        if (m_ignoreCall && m_callAlgoId == 0U)
+            m_ignoreCall = false;
+
+        if (m_ignoreCall)
+            return;
+
+        if (frameType == AudioFrameType::VOICE_START || frameType == AudioFrameType::VOICE) {
+            LogMessage(LOG_NET, ANO_VOICE ", audio, srcId = %u, dstId = %u, seqNo = %u", srcId, dstId, analogData.getSeqNo());
+
+            short samples[AUDIO_SAMPLES_LENGTH];
+            int smpIdx = 0;
+            for (uint32_t pcmIdx = 0; pcmIdx < AUDIO_SAMPLES_LENGTH; pcmIdx++) {
+                samples[smpIdx] = AnalogAudio::decodeMuLaw(frame[pcmIdx]);
+                smpIdx++;
+            }
+
+            // post-process: apply gain to decoded audio frames
+            AnalogAudio::gain(samples, AUDIO_SAMPLES_LENGTH, m_rxAudioGain);
+
+            if (m_localAudio) {
+                m_outputAudio.addData(samples, AUDIO_SAMPLES_LENGTH);
+            }
+
+            if (m_udpAudio) {
+                int pcmIdx = 0;
+                uint8_t pcm[AUDIO_SAMPLES_LENGTH * 2U];
+                if (m_udpUseULaw) {
+                    for (uint32_t smpIdx = 0; smpIdx < AUDIO_SAMPLES_LENGTH; smpIdx++) {
+                        pcm[smpIdx] = AnalogAudio::encodeMuLaw(samples[smpIdx]);
+                    }
+
+                    if (m_trace)
+                        Utils::dump(1U, "HostBridge()::processAnalogNetwork() Encoded uLaw Audio", pcm, AUDIO_SAMPLES_LENGTH);
+                }
+                else {
+                    for (uint32_t smpIdx = 0; smpIdx < AUDIO_SAMPLES_LENGTH; smpIdx++) {
+                        pcm[pcmIdx + 0] = (uint8_t)(samples[smpIdx] & 0xFF);
+                        pcm[pcmIdx + 1] = (uint8_t)((samples[smpIdx] >> 8) & 0xFF);
+                        pcmIdx += 2;
+                    }
+                }
+
+                uint32_t length = (AUDIO_SAMPLES_LENGTH * 2U) + 4U;
+                uint8_t* audioData = nullptr;
+
+                if (!m_udpUsrp) {
+                    if (!m_udpMetadata) {
+                        audioData = new uint8_t[(AUDIO_SAMPLES_LENGTH * 2U) + 4U]; // PCM + 4 bytes (PCM length)
+                        if (m_udpUseULaw) {
+                            length = (AUDIO_SAMPLES_LENGTH)+4U;
+                            if (m_udpNoIncludeLength) {
+                                length = AUDIO_SAMPLES_LENGTH;
+                                ::memcpy(audioData, pcm, AUDIO_SAMPLES_LENGTH);
+                            }
+                            else {
+                                SET_UINT32(AUDIO_SAMPLES_LENGTH, audioData, 0U);
+                                ::memcpy(audioData + 4U, pcm, AUDIO_SAMPLES_LENGTH);
+                            }
+
+                            // are we sending RTP audio frames?
+                            if (m_udpRTPFrames) {
+                                uint8_t* rtpFrame = generateRTPHeaders(AUDIO_SAMPLES_LENGTH, m_rtpSeqNo);
+                                if (rtpFrame != nullptr) {
+                                    length += RTP_HEADER_LENGTH_BYTES;
+                                    uint8_t* newAudioData = new uint8_t[length];
+                                    ::memcpy(newAudioData, rtpFrame, RTP_HEADER_LENGTH_BYTES);
+                                    ::memcpy(newAudioData + RTP_HEADER_LENGTH_BYTES, audioData, AUDIO_SAMPLES_LENGTH);
+                                    delete[] audioData;
+
+                                    audioData = newAudioData;
+                                }
+
+                                m_rtpSeqNo++;
+                            }
+                        }
+                        else {
+                            SET_UINT32((AUDIO_SAMPLES_LENGTH * 2U), audioData, 0U);
+                            ::memcpy(audioData + 4U, pcm, AUDIO_SAMPLES_LENGTH * 2U);
+                        }
+                    }
+                    else {
+                        length = (AUDIO_SAMPLES_LENGTH * 2U) + 12U;
+                        audioData = new uint8_t[(AUDIO_SAMPLES_LENGTH * 2U) + 12U]; // PCM + (4 bytes (PCM length) + 4 bytes (srcId) + 4 bytes (dstId))
+                        SET_UINT32((AUDIO_SAMPLES_LENGTH * 2U), audioData, 0U);
+                        ::memcpy(audioData + 4U, pcm, AUDIO_SAMPLES_LENGTH * 2U);
+
+                        // embed destination and source IDs
+                        SET_UINT32(dstId, audioData, ((AUDIO_SAMPLES_LENGTH * 2U) + 4U));
+                        SET_UINT32(srcId, audioData, ((AUDIO_SAMPLES_LENGTH * 2U) + 8U));
+                    }
+                }
+                else {
+                    uint8_t* usrpHeader = new uint8_t[USRP_HEADER_LENGTH];
+
+                    length = (AUDIO_SAMPLES_LENGTH * 2U) + USRP_HEADER_LENGTH;
+                    audioData = new uint8_t[(AUDIO_SAMPLES_LENGTH * 2U) + USRP_HEADER_LENGTH]; // PCM + 32 bytes (USRP Header)
+
+                    m_usrpSeqNo++;
+                    usrpHeader[15U] = 1; // set PTT state to true
+                    SET_UINT32(m_usrpSeqNo, usrpHeader, 4U);
+
+                    ::memcpy(usrpHeader, "USRP", 4);
+                    ::memcpy(audioData, usrpHeader, USRP_HEADER_LENGTH); // copy USRP header into the UDP payload
+                    ::memcpy(audioData + USRP_HEADER_LENGTH, pcm, AUDIO_SAMPLES_LENGTH * 2U);
+                }
+
+                sockaddr_storage addr;
+                uint32_t addrLen;
+
+                if (udp::Socket::lookup(m_udpSendAddress, m_udpSendPort, addr, addrLen) == 0) {
+                    m_udpAudioSocket->write(audioData, length, addr, addrLen);
+                }
+
+                delete[] audioData;
+            }
+        }
+
+        m_rxStreamId = m_network->getAnalogStreamId();
+    }
+}
+
+/* Helper to encode analog network traffic audio frames. */
+
+void HostBridge::encodeAnalogAudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32_t forcedDstId)
+{
+    assert(pcm != nullptr);
+    using namespace analog;
+    using namespace analog::defines;
+    using namespace analog::data;
+
+    if (m_analogN == 254U)
+        m_analogN = 0;
+
+    int smpIdx = 0;
+    short samples[AUDIO_SAMPLES_LENGTH];
+    for (uint32_t pcmIdx = 0; pcmIdx < (AUDIO_SAMPLES_LENGTH * 2U); pcmIdx += 2) {
+        samples[smpIdx] = (short)((pcm[pcmIdx + 1] << 8) + pcm[pcmIdx + 0]);
+        smpIdx++;
+    }
+
+    // pre-process: apply gain to PCM audio frames
+    AnalogAudio::gain(samples, AUDIO_SAMPLES_LENGTH, m_txAudioGain);
+
+    uint32_t srcId = m_srcId;
+    if (m_srcIdOverride != 0 && (m_overrideSrcIdFromMDC))
+        srcId = m_srcIdOverride;
+    if (m_overrideSrcIdFromUDP)
+        srcId = m_udpSrcId;
+    if (forcedSrcId > 0 && forcedSrcId != m_srcId)
+        srcId = forcedSrcId;
+    uint32_t dstId = m_dstId;
+    if (forcedDstId > 0 && forcedDstId != m_dstId)
+        dstId = forcedDstId;
+
+    // never allow a source ID of 0
+    if (srcId == 0U)
+        srcId = m_srcId;
+
+    data::NetData analogData;
+    analogData.setSeqNo(m_analogN);
+    analogData.setSrcId(srcId);
+    analogData.setDstId(dstId);
+    analogData.setControl(0U);
+    analogData.setFrameType(AudioFrameType::VOICE);
+    if (m_txStreamId <= 1U) {
+        analogData.setFrameType(AudioFrameType::VOICE_START);
+
+        if (m_grantDemand) {
+            analogData.setControl(0x80U); // analog remote grant demand flag
+        }
+    }
+
+    int pcmIdx = 0;
+    uint8_t outPcm[AUDIO_SAMPLES_LENGTH * 2U];
+    for (uint32_t smpIdx = 0; smpIdx < AUDIO_SAMPLES_LENGTH; smpIdx++) {
+        outPcm[smpIdx] = AnalogAudio::encodeMuLaw(samples[smpIdx]);
+    }
+
+    if (m_trace)
+        Utils::dump(1U, "HostBridge()::encodeAnalogAudioFrame() Encoded uLaw Audio", outPcm, AUDIO_SAMPLES_LENGTH);
+
+    analogData.setAudio(outPcm);
+
+    m_network->writeAnalog(analogData);
+    m_txStreamId = m_network->getAnalogStreamId();
+    m_analogN++;
+}
+
 /* Helper to send USRP end of transmission */
 
 void HostBridge::sendUsrpEot()
@@ -2559,47 +2849,67 @@ void HostBridge::callEnd(uint32_t srcId, uint32_t dstId)
     if (!m_callInProgress) {
         switch (m_txMode) {
         case TX_MODE_DMR:
-        {
-            dmr::defines::DataType::E dataType = dmr::defines::DataType::VOICE_SYNC;
-            if (m_dmrN == 0)
-                dataType = dmr::defines::DataType::VOICE_SYNC;
-            else {
-                dataType = dmr::defines::DataType::VOICE;
+            {
+                dmr::defines::DataType::E dataType = dmr::defines::DataType::VOICE_SYNC;
+                if (m_dmrN == 0)
+                    dataType = dmr::defines::DataType::VOICE_SYNC;
+                else {
+                    dataType = dmr::defines::DataType::VOICE;
+                }
+
+                dmr::data::NetData data = dmr::data::NetData();
+                data.setSlotNo(m_slot);
+                data.setDataType(dataType);
+                data.setSrcId(srcId);
+                data.setDstId(dstId);
+                data.setFLCO(dmr::defines::FLCO::GROUP);
+                data.setN(m_dmrN);
+                data.setSeqNo(m_dmrSeqNo);
+                data.setBER(0U);
+                data.setRSSI(0U);
+
+                LogMessage(LOG_HOST, DMR_DT_TERMINATOR_WITH_LC ", slot = %u, dstId = %u", m_slot, dstId);
+
+                m_network->writeDMRTerminator(data, &m_dmrSeqNo, &m_dmrN, m_dmrEmbeddedData);
+                m_network->resetDMR(data.getSlotNo());
             }
-
-            dmr::data::NetData data = dmr::data::NetData();
-            data.setSlotNo(m_slot);
-            data.setDataType(dataType);
-            data.setSrcId(srcId);
-            data.setDstId(dstId);
-            data.setFLCO(dmr::defines::FLCO::GROUP);
-            data.setN(m_dmrN);
-            data.setSeqNo(m_dmrSeqNo);
-            data.setBER(0U);
-            data.setRSSI(0U);
-
-            LogMessage(LOG_HOST, DMR_DT_TERMINATOR_WITH_LC ", slot = %u, dstId = %u", m_slot, dstId);
-
-            m_network->writeDMRTerminator(data, &m_dmrSeqNo, &m_dmrN, m_dmrEmbeddedData);
-            m_network->resetDMR(data.getSlotNo());
-        }
-        break;
+            break;
         case TX_MODE_P25:
-        {
-            p25::lc::LC lc = p25::lc::LC();
-            lc.setLCO(p25::defines::LCO::GROUP);
-            lc.setDstId(dstId);
-            lc.setSrcId(srcId);
+            {
+                p25::lc::LC lc = p25::lc::LC();
+                lc.setLCO(p25::defines::LCO::GROUP);
+                lc.setDstId(dstId);
+                lc.setSrcId(srcId);
 
-            p25::data::LowSpeedData lsd = p25::data::LowSpeedData();
+                p25::data::LowSpeedData lsd = p25::data::LowSpeedData();
 
-            LogMessage(LOG_HOST, P25_TDU_STR);
+                LogMessage(LOG_HOST, P25_TDU_STR);
 
-            uint8_t controlByte = 0x00U;
-            m_network->writeP25TDU(lc, lsd, controlByte);
-            m_network->resetP25();
-        }
-        break;
+                uint8_t controlByte = 0x00U;
+                m_network->writeP25TDU(lc, lsd, controlByte);
+                m_network->resetP25();
+            }
+            break;
+        case TX_MODE_ANALOG:
+            {
+                LogMessage(LOG_HOST, ANO_TERMINATOR);
+
+                uint8_t controlByte = 0x00U;
+                
+                data::NetData analogData;
+                analogData.setSeqNo(m_analogN);
+                analogData.setSrcId(srcId);
+                analogData.setDstId(dstId);
+                analogData.setFrameType(AudioFrameType::TERMINATOR);
+
+                uint8_t pcm[AUDIO_SAMPLES_LENGTH * 2U];
+                ::memset(pcm, 0x00U, AUDIO_SAMPLES_LENGTH * 2U);
+                analogData.setAudio(pcm);
+
+                m_network->writeAnalog(analogData, true);
+                m_network->resetAnalog();
+            }
+            break;
         }
     }
 
@@ -2615,6 +2925,7 @@ void HostBridge::callEnd(uint32_t srcId, uint32_t dstId)
     m_dmrN = 0U;
     m_p25SeqNo = 0U;
     m_p25N = 0U;
+    m_analogN = 0U;
 
     m_rtpSeqNo = 0U;
     m_rtpTimestamp = INVALID_TS;
@@ -2733,19 +3044,19 @@ void* HostBridge::threadAudioProcess(void* arg)
 
                             if (bridge->m_grantDemand) {
                                 switch (bridge->m_txMode) {
-                                case TX_MODE_P25:
-                                {
-                                    p25::lc::LC lc = p25::lc::LC();
-                                    lc.setLCO(p25::defines::LCO::GROUP);
-                                    lc.setDstId(dstId);
-                                    lc.setSrcId(srcId);
+                                    case TX_MODE_P25:
+                                    {
+                                        p25::lc::LC lc = p25::lc::LC();
+                                        lc.setLCO(p25::defines::LCO::GROUP);
+                                        lc.setDstId(dstId);
+                                        lc.setSrcId(srcId);
 
-                                    p25::data::LowSpeedData lsd = p25::data::LowSpeedData();
+                                        p25::data::LowSpeedData lsd = p25::data::LowSpeedData();
 
-                                    uint8_t controlByte = 0x80U;
-                                    bridge->m_network->writeP25TDU(lc, lsd, controlByte);
-                                }
-                                break;
+                                        uint8_t controlByte = 0x80U;
+                                        bridge->m_network->writeP25TDU(lc, lsd, controlByte);
+                                    }
+                                    break;
                                 }
                             }
                         }
@@ -2781,6 +3092,9 @@ void* HostBridge::threadAudioProcess(void* arg)
                             break;
                         case TX_MODE_P25:
                             bridge->encodeP25AudioFrame(pcm);
+                            break;
+                        case TX_MODE_ANALOG:
+                            bridge->encodeAnalogAudioFrame(pcm);
                             break;
                         }
                     }
@@ -2913,19 +3227,19 @@ void* HostBridge::threadUDPAudioProcess(void* arg)
                             LogMessage(LOG_HOST, "%s, call start, srcId = %u, dstId = %u", UDP_CALL, bridge->m_udpSrcId, bridge->m_udpDstId);
                             if (bridge->m_grantDemand) {
                                 switch (bridge->m_txMode) {
-                                case TX_MODE_P25:
-                                {
-                                    p25::lc::LC lc = p25::lc::LC();
-                                    lc.setLCO(p25::defines::LCO::GROUP);
-                                    lc.setDstId(bridge->m_udpDstId);
-                                    lc.setSrcId(bridge->m_udpSrcId);
+                                    case TX_MODE_P25:
+                                    {
+                                        p25::lc::LC lc = p25::lc::LC();
+                                        lc.setLCO(p25::defines::LCO::GROUP);
+                                        lc.setDstId(bridge->m_udpDstId);
+                                        lc.setSrcId(bridge->m_udpSrcId);
 
-                                    p25::data::LowSpeedData lsd = p25::data::LowSpeedData();
+                                        p25::data::LowSpeedData lsd = p25::data::LowSpeedData();
 
-                                    uint8_t controlByte = 0x80U;
-                                    bridge->m_network->writeP25TDU(lc, lsd, controlByte);
-                                }
-                                break;
+                                        uint8_t controlByte = 0x80U;
+                                        bridge->m_network->writeP25TDU(lc, lsd, controlByte);
+                                    }
+                                    break;
                                 }
                             }
                         }
@@ -2949,6 +3263,9 @@ void* HostBridge::threadUDPAudioProcess(void* arg)
                             break;
                         case TX_MODE_P25:
                             bridge->encodeP25AudioFrame(req->pcm, bridge->m_udpSrcId);
+                            break;
+                        case TX_MODE_ANALOG:
+                            bridge->encodeAnalogAudioFrame(req->pcm, bridge->m_udpSrcId);
                             break;
                         }
                     }
@@ -3039,6 +3356,14 @@ void* HostBridge::threadNetworkProcess(void* arg)
                 }
             }
 
+            if (bridge->m_txMode == TX_MODE_ANALOG) {
+                std::lock_guard<std::mutex> lock(HostBridge::m_networkMutex);
+                UInt8Array analogBuffer = bridge->m_network->readAnalog(netReadRet, length);
+                if (netReadRet) {
+                    bridge->processAnalogNetwork(analogBuffer.get(), length);
+                }
+            }
+
             Thread::sleep(1U);
         }
 
@@ -3094,115 +3419,115 @@ void HostBridge::callEndSilence(uint32_t srcId, uint32_t dstId)
 {
     switch (m_txMode) {
     case TX_MODE_DMR:
-    {
-        using namespace dmr;
-        using namespace dmr::defines;
-        using namespace dmr::data;
+        {
+            using namespace dmr;
+            using namespace dmr::defines;
+            using namespace dmr::data;
 
-        m_dmrN = (uint8_t)(m_dmrSeqNo % 6);
+            m_dmrN = (uint8_t)(m_dmrSeqNo % 6);
 
-        // send DMR voice
-        uint8_t data[DMR_FRAME_LENGTH_BYTES];
+            // send DMR voice
+            uint8_t data[DMR_FRAME_LENGTH_BYTES];
 
-        m_ambeCount = 0U;
+            m_ambeCount = 0U;
 
-        ::memcpy(m_ambeBuffer + (m_ambeCount * 9U), NULL_AMBE, RAW_AMBE_LENGTH_BYTES);
-        m_ambeCount++;
-        ::memcpy(m_ambeBuffer + (m_ambeCount * 9U), NULL_AMBE, RAW_AMBE_LENGTH_BYTES);
-        m_ambeCount++;
-        ::memcpy(m_ambeBuffer + (m_ambeCount * 9U), NULL_AMBE, RAW_AMBE_LENGTH_BYTES);
-        m_ambeCount++;
+            ::memcpy(m_ambeBuffer + (m_ambeCount * 9U), NULL_AMBE, RAW_AMBE_LENGTH_BYTES);
+            m_ambeCount++;
+            ::memcpy(m_ambeBuffer + (m_ambeCount * 9U), NULL_AMBE, RAW_AMBE_LENGTH_BYTES);
+            m_ambeCount++;
+            ::memcpy(m_ambeBuffer + (m_ambeCount * 9U), NULL_AMBE, RAW_AMBE_LENGTH_BYTES);
+            m_ambeCount++;
 
-        ::memcpy(data, m_ambeBuffer, 13U);
-        data[13U] = (uint8_t)(m_ambeBuffer[13U] & 0xF0);
-        data[19U] = (uint8_t)(m_ambeBuffer[13U] & 0x0F);
-        ::memcpy(data + 20U, m_ambeBuffer + 14U, 13U);
+            ::memcpy(data, m_ambeBuffer, 13U);
+            data[13U] = (uint8_t)(m_ambeBuffer[13U] & 0xF0);
+            data[19U] = (uint8_t)(m_ambeBuffer[13U] & 0x0F);
+            ::memcpy(data + 20U, m_ambeBuffer + 14U, 13U);
 
-        DataType::E dataType = DataType::VOICE_SYNC;
-        if (m_dmrN == 0)
-            dataType = DataType::VOICE_SYNC;
-        else {
-            dataType = DataType::VOICE;
+            DataType::E dataType = DataType::VOICE_SYNC;
+            if (m_dmrN == 0)
+                dataType = DataType::VOICE_SYNC;
+            else {
+                dataType = DataType::VOICE;
 
-            uint8_t lcss = m_dmrEmbeddedData.getData(data, m_dmrN);
+                uint8_t lcss = m_dmrEmbeddedData.getData(data, m_dmrN);
 
-            // generated embedded signalling
-            EMB emb = EMB();
-            emb.setColorCode(0U);
-            emb.setLCSS(lcss);
-            emb.encode(data);
+                // generated embedded signalling
+                EMB emb = EMB();
+                emb.setColorCode(0U);
+                emb.setLCSS(lcss);
+                emb.encode(data);
+            }
+
+            LogMessage(LOG_HOST, DMR_DT_VOICE ", silence srcId = %u, dstId = %u, slot = %u, seqNo = %u", srcId, dstId, m_slot, m_dmrN);
+
+            // generate DMR network frame
+            NetData dmrData;
+            dmrData.setSlotNo(m_slot);
+            dmrData.setDataType(dataType);
+            dmrData.setSrcId(srcId);
+            dmrData.setDstId(dstId);
+            dmrData.setFLCO(FLCO::GROUP);
+            dmrData.setN(m_dmrN);
+            dmrData.setSeqNo(m_dmrSeqNo);
+            dmrData.setBER(0U);
+            dmrData.setRSSI(0U);
+
+            dmrData.setData(data);
+
+            m_network->writeDMR(dmrData, false);
+            m_txStreamId = m_network->getDMRStreamId(m_slot);
+
+            m_dmrSeqNo++;
         }
-
-        LogMessage(LOG_HOST, DMR_DT_VOICE ", silence srcId = %u, dstId = %u, slot = %u, seqNo = %u", srcId, dstId, m_slot, m_dmrN);
-
-        // generate DMR network frame
-        NetData dmrData;
-        dmrData.setSlotNo(m_slot);
-        dmrData.setDataType(dataType);
-        dmrData.setSrcId(srcId);
-        dmrData.setDstId(dstId);
-        dmrData.setFLCO(FLCO::GROUP);
-        dmrData.setN(m_dmrN);
-        dmrData.setSeqNo(m_dmrSeqNo);
-        dmrData.setBER(0U);
-        dmrData.setRSSI(0U);
-
-        dmrData.setData(data);
-
-        m_network->writeDMR(dmrData, false);
-        m_txStreamId = m_network->getDMRStreamId(m_slot);
-
-        m_dmrSeqNo++;
-    }
-    break;
+        break;
     case TX_MODE_P25:
-    {
-        using namespace p25;
-        using namespace p25::defines;
-        using namespace p25::data;
+        {
+            using namespace p25;
+            using namespace p25::defines;
+            using namespace p25::data;
 
-        // fill the LDU buffers appropriately
-        switch (m_p25N) {
-            // LDU1
-        case 0:
-            resetWithNullAudio(m_netLDU1, false);
-            break;
+            // fill the LDU buffers appropriately
+            switch (m_p25N) {
+                // LDU1
+            case 0:
+                resetWithNullAudio(m_netLDU1, false);
+                break;
 
-            // LDU2
-        case 1:
-            resetWithNullAudio(m_netLDU2, false);
-            break;
+                // LDU2
+            case 1:
+                resetWithNullAudio(m_netLDU2, false);
+                break;
+            }
+
+            lc::LC lc = lc::LC();
+            lc.setLCO(LCO::GROUP);
+            lc.setGroup(true);
+            lc.setPriority(4U);
+            lc.setDstId(dstId);
+            lc.setSrcId(srcId);
+
+            lc.setAlgId(ALGO_UNENCRYPT);
+            lc.setKId(0);
+
+            LowSpeedData lsd = LowSpeedData();
+
+            // send P25 LDU1
+            if (m_p25N == 0U) {
+                LogMessage(LOG_HOST, P25_LDU1_STR " silence audio, srcId = %u, dstId = %u", srcId, dstId);
+                m_network->writeP25LDU1(lc, lsd, m_netLDU1, FrameType::DATA_UNIT);
+                m_p25N++;
+                break;
+            }
+
+            // send P25 LDU2
+            if (m_p25N == 1U) {
+                LogMessage(LOG_HOST, P25_LDU2_STR " silence audio, algo = $%02X, kid = $%04X", ALGO_UNENCRYPT, 0U);
+                m_network->writeP25LDU2(lc, lsd, m_netLDU2);
+                m_p25N = 0U;
+                break;
+            }
         }
-
-        lc::LC lc = lc::LC();
-        lc.setLCO(LCO::GROUP);
-        lc.setGroup(true);
-        lc.setPriority(4U);
-        lc.setDstId(dstId);
-        lc.setSrcId(srcId);
-
-        lc.setAlgId(ALGO_UNENCRYPT);
-        lc.setKId(0);
-
-        LowSpeedData lsd = LowSpeedData();
-
-        // send P25 LDU1
-        if (m_p25N == 0U) {
-            LogMessage(LOG_HOST, P25_LDU1_STR " silence audio, srcId = %u, dstId = %u", srcId, dstId);
-            m_network->writeP25LDU1(lc, lsd, m_netLDU1, FrameType::DATA_UNIT);
-            m_p25N++;
-            break;
-        }
-
-        // send P25 LDU2
-        if (m_p25N == 1U) {
-            LogMessage(LOG_HOST, P25_LDU2_STR " silence audio, algo = $%02X, kid = $%04X", ALGO_UNENCRYPT, 0U);
-            m_network->writeP25LDU2(lc, lsd, m_netLDU2);
-            m_p25N = 0U;
-            break;
-        }
-    }
-    break;
+        break;
     }
 }
 
@@ -3283,6 +3608,7 @@ void* HostBridge::threadCallWatchdog(void* arg)
 
                         bridge->m_dmrN = 0U;
                         bridge->m_p25N = 0U;
+                        bridge->m_analogN = 0U;
                     }
 
                     if (bridge->m_udpHangTime.isRunning())
