@@ -66,6 +66,18 @@ PeerNetwork::PeerNetwork(const std::string& address, uint16_t port, uint16_t loc
 
     // FNE peer network manually handle protocol packets
     m_userHandleProtocol = true;
+
+    // start thread pool
+    m_threadPool.start();
+}
+
+/* Finalizes a instance of the PeerNetwork class. */
+
+PeerNetwork::~PeerNetwork()
+{
+    // stop thread pool
+    m_threadPool.stop();
+    m_threadPool.wait();
 }
 
 /* Sets the instances of the Peer List lookup tables. */
@@ -82,9 +94,6 @@ bool PeerNetwork::open()
     if (!m_enabled)
         return false;
 
-    // start thread pool
-    m_threadPool.start();
-
     return Network::open();
 }
 
@@ -92,10 +101,6 @@ bool PeerNetwork::open()
 
 void PeerNetwork::close()
 {
-    // stop thread pool
-    m_threadPool.stop();
-    m_threadPool.wait();
-
     Network::close();
 }
 

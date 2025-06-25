@@ -117,12 +117,8 @@ namespace network
     private:
         uint32_t m_peerId;
 
-#if defined(_WIN32)
         std::mutex m_streamTSMtx;
         std::unordered_map<uint32_t, uint32_t> m_streamTimestamps;
-#else
-        concurrent::unordered_map<uint32_t, uint32_t> m_streamTimestamps;
-#endif // defined(_WIN32)
 
         /**
          * @brief Generate RTP message for the frame queue.

@@ -81,6 +81,10 @@ namespace network
          */
         PeerNetwork(const std::string& address, uint16_t port, uint16_t localPort, uint32_t peerId, const std::string& password,
             bool duplex, bool debug, bool dmr, bool p25, bool nxdn, bool analog, bool slot1, bool slot2, bool allowActivityTransfer, bool allowDiagnosticTransfer, bool updateLookup, bool saveLookup);
+        /**
+         * @brief Finalizes a instance of the PeerNetwork class.
+         */
+        ~PeerNetwork() override;
 
         /**
          * @brief Sets the instances of the Peer List lookup tables.
