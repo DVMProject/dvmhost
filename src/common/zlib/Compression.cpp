@@ -24,7 +24,7 @@ using namespace compress;
 
 /* Compress the given input buffer. */
 
-uint8_t* Compression::compress(const uint8_t* buffer, uint32_t len, uint32_t* compressedLen)
+UInt8Array Compression::compress(const uint8_t* buffer, uint32_t len, uint32_t* compressedLen)
 {
     assert(buffer != nullptr);
     assert(len > 0U);
@@ -87,18 +87,20 @@ uint8_t* Compression::compress(const uint8_t* buffer, uint32_t len, uint32_t* co
     Utils::dump(2U, "Compression::compress(), Compressed Data", compressed, strm.total_out);
 #endif
 
-    // reuse data buffer to return compressed data
     delete[] data;
-    data = new uint8_t[strm.total_out];
-    ::memset(data, 0x00U, strm.total_out);
-    ::memcpy(data, compressed, strm.total_out);
 
-    return data;
+    // return compressed data
+    UInt8Array out = std::make_unique<uint8_t[]>(strm.total_out);
+    ::memset(out.get(), 0x00U, strm.total_out);
+    ::memcpy(out.get(), compressed, strm.total_out);
+
+    compressedData.clear(); // clear the vector to release memory
+    return out;
 }
 
 /* Decompress the given input buffer. */
 
-uint8_t* Compression::decompress(const uint8_t* buffer, uint32_t len, uint32_t* decompressedLen)
+UInt8Array Compression::decompress(const uint8_t* buffer, uint32_t len, uint32_t* decompressedLen)
 {
     assert(buffer != nullptr);
     assert(len > 0U);
@@ -159,11 +161,13 @@ uint8_t* Compression::decompress(const uint8_t* buffer, uint32_t len, uint32_t* 
     Utils::dump(2U, "Compression::decompress(), Decompressed Data", decompressed, strm.total_out);
 #endif
 
-    // reuse data buffer to return decompressed data
     delete[] data;
-    data = new uint8_t[strm.total_out];
-    ::memset(data, 0x00U, strm.total_out);
-    ::memcpy(data, decompressed, strm.total_out);
 
-    return data;
+    // return decompressed data
+    UInt8Array out = std::make_unique<uint8_t[]>(strm.total_out);
+    ::memset(out.get(), 0x00U, strm.total_out);
+    ::memcpy(out.get(), decompressed, strm.total_out);
+
+    decompressedData.clear(); // clear the vector to release memory
+    return out;
 }
