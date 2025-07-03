@@ -28,6 +28,8 @@ namespace network
     //  Constants
     // ---------------------------------------------------------------------------
     
+    #define RTP_STREAM_COUNT_MAX 16384
+
     const uint8_t RTP_G711_PAYLOAD_TYPE = 0x00U;
 
     const uint8_t DVM_RTP_PAYLOAD_TYPE = 0x56U;
@@ -53,6 +55,10 @@ namespace network
          * @param peerId Unique ID of this modem on the network.
          */
         FrameQueue(udp::Socket* socket, uint32_t peerId, bool debug);
+        /**
+         * @brief Finalizes a instance of the FrameQueue class.
+         */
+        ~FrameQueue();
 
         /**
          * @brief Read message from the received UDP packet.
@@ -117,8 +123,37 @@ namespace network
     private:
         uint32_t m_peerId;
 
-        std::mutex m_streamTSMtx;
-        std::unordered_map<uint32_t, uint32_t> m_streamTimestamps;
+        std::mutex m_timestampMtx;
+
+        typedef struct {
+            uint32_t streamId;
+            uint32_t timestamp;
+        } Timestamp;
+        Timestamp* m_streamTimestamps;
+
+        /**
+         * @brief Search for a timestamp entry by stream ID.
+         * @param streamId Stream ID to find.
+         * @return Timestamp* Table entry.
+         */
+        Timestamp* findTimestamp(uint32_t streamId);
+        /**
+         * @brief Insert a timestamp for a stream ID.
+         * @param streamId Stream ID.
+         * @param timestamp Timestamp.
+         */
+        void insertTimestamp(uint32_t streamId, uint32_t timestamp);
+        /**
+         * @brief Update a timestamp for a stream ID.
+         * @param streamId Stream ID.
+         * @param timestamp Timestamp.
+         */
+        void updateTimestamp(uint32_t streamId, uint32_t timestamp);
+        /**
+         * @brief Erase a timestamp for a stream ID.
+         * @param streamId Stream ID.
+         */
+        void eraseTimestamp(uint32_t streamId);
 
         /**
          * @brief Generate RTP message for the frame queue.

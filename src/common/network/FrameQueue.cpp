@@ -32,10 +32,19 @@ using namespace network::frame;
 
 FrameQueue::FrameQueue(udp::Socket* socket, uint32_t peerId, bool debug) : RawFrameQueue(socket, debug),
     m_peerId(peerId),
-    m_streamTSMtx(),
-    m_streamTimestamps()
+    m_timestampMtx(),
+    m_streamTimestamps(nullptr)
 {
     assert(peerId < 999999999U);
+
+    m_streamTimestamps = new Timestamp[RTP_STREAM_COUNT_MAX];
+}
+
+/* Finalizes a instance of the FrameQueue class. */
+
+FrameQueue::~FrameQueue()
+{
+    delete[] m_streamTimestamps;
 }
 
 /* Read message from the received UDP packet. */
@@ -209,12 +218,70 @@ void FrameQueue::enqueueMessage(const uint8_t* message, uint32_t length, uint32_
 
 void FrameQueue::clearTimestamps()
 {
-    m_streamTimestamps.clear();
+    std::lock_guard<std::mutex> lock(m_timestampMtx);
+    for (size_t i = 0; i < RTP_STREAM_COUNT_MAX; i++) {
+        m_streamTimestamps[i].streamId = 0U;
+        m_streamTimestamps[i].timestamp = INVALID_TS;
+    }
 }
 
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------
+
+/* Search for a timestamp entry by stream ID. */
+
+FrameQueue::Timestamp* FrameQueue::findTimestamp(uint32_t streamId)
+{
+    std::lock_guard<std::mutex> lock(m_timestampMtx);
+    for (size_t i = 0; i < RTP_STREAM_COUNT_MAX; i++) {
+        if (m_streamTimestamps[i].streamId == streamId)
+            return &m_streamTimestamps[i];
+    }
+
+    return nullptr;
+}
+
+/* Insert a timestamp for a stream ID. */
+
+void FrameQueue::insertTimestamp(uint32_t streamId, uint32_t timestamp)
+{
+    std::lock_guard<std::mutex> lock(m_timestampMtx);
+    for (size_t i = 0; i < RTP_STREAM_COUNT_MAX; i++) {
+        if (m_streamTimestamps[i].streamId == 0U) {
+            m_streamTimestamps[i].streamId = streamId;
+            m_streamTimestamps[i].timestamp = timestamp;
+            break;
+        }
+    }
+}
+
+/* Update a timestamp for a stream ID. */
+
+void FrameQueue::updateTimestamp(uint32_t streamId, uint32_t timestamp)
+{
+    std::lock_guard<std::mutex> lock(m_timestampMtx);
+    for (size_t i = 0; i < RTP_STREAM_COUNT_MAX; i++) {
+        if (m_streamTimestamps[i].streamId == streamId) {
+            m_streamTimestamps[i].timestamp = timestamp;
+            break;
+        }
+    }
+}
+
+/* Erase a timestamp for a stream ID. */
+
+void FrameQueue::eraseTimestamp(uint32_t streamId)
+{
+    std::lock_guard<std::mutex> lock(m_timestampMtx);
+    for (size_t i = 0; i < RTP_STREAM_COUNT_MAX; i++) {
+        if (m_streamTimestamps[i].streamId == streamId) {
+            m_streamTimestamps[i].streamId = 0U;
+            m_streamTimestamps[i].timestamp = INVALID_TS;
+            break;
+        }
+    }
+}
 
 /* Generate RTP message for the frame queue. */
 
@@ -232,17 +299,16 @@ uint8_t* FrameQueue::generateMessage(const uint8_t* message, uint32_t length, ui
 
     uint32_t timestamp = INVALID_TS;
     if (streamId != 0U) {
-        std::lock_guard<std::mutex> lock(m_streamTSMtx);
-        auto entry = m_streamTimestamps.find(streamId);
-        if (entry != m_streamTimestamps.end()) {
-            timestamp = entry->second;
+        auto entry = findTimestamp(streamId);
+        if (entry != nullptr) {
+            timestamp = entry->timestamp;
         }
 
         if (timestamp != INVALID_TS) {
             timestamp += (RTP_GENERIC_CLOCK_RATE / 133);
             if (m_debug)
                 LogDebugEx(LOG_NET, "FrameQueue::generateMessage()", "RTP streamId = %u, previous TS = %u, TS = %u, rtpSeq = %u", streamId, m_streamTimestamps[streamId], timestamp, rtpSeq);
-            m_streamTimestamps[streamId] = timestamp;
+            updateTimestamp(streamId, timestamp);
         }
     }
 
@@ -265,19 +331,17 @@ uint8_t* FrameQueue::generateMessage(const uint8_t* message, uint32_t length, ui
         timestamp = (uint32_t)system_clock::ntp::now();
         header.setTimestamp(timestamp);
 
-        std::lock_guard<std::mutex> lock(m_streamTSMtx);
-        m_streamTimestamps.insert({ streamId, timestamp });
+        insertTimestamp(streamId, timestamp);
     }
 
     header.encode(buffer);
 
     if (streamId != 0U && rtpSeq == RTP_END_OF_CALL_SEQ) {
-        std::lock_guard<std::mutex> lock(m_streamTSMtx);
-        auto entry = m_streamTimestamps.find(streamId);
-        if (entry != m_streamTimestamps.end()) {
+        auto entry = findTimestamp(streamId);
+        if (entry != nullptr) {
             if (m_debug)
                 LogDebugEx(LOG_NET, "FrameQueue::generateMessage()", "RTP streamId = %u, rtpSeq = %u", streamId, rtpSeq);
-            m_streamTimestamps.erase(streamId);
+            eraseTimestamp(streamId);
         }
     }
 
