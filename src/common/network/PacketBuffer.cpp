@@ -106,7 +106,7 @@ bool PacketBuffer::decode(const uint8_t* data, uint8_t** message, uint32_t* outL
         uint32_t compressedLen = fragments[0]->compressedSize;
         uint32_t len = fragments[0]->size;
 
-        buffer = new uint8_t[len +1U];
+        buffer = new uint8_t[len + 1U];
         ::memset(buffer, 0x00U, len + 1U);
         if (fragments.size() == 1U) {
             ::memcpy(buffer, fragments[0U]->data, len);
@@ -168,8 +168,8 @@ void PacketBuffer::encode(uint8_t* data, uint32_t length)
     if (m_compression) {
         buffer = Compression::compress(data, length, &compressedLen);
     } else {
-        buffer = std::make_unique<uint8_t[]>(length);
-        ::memset(buffer.get(), 0x00U, length);
+        buffer = std::make_unique<uint8_t[]>(length + 1U);
+        ::memset(buffer.get(), 0x00U, length + 1U);
         ::memcpy(buffer.get(), data, length);
         compressedLen = length;
     }
