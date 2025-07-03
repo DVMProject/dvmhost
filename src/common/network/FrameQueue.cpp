@@ -44,6 +44,7 @@ FrameQueue::FrameQueue(udp::Socket* socket, uint32_t peerId, bool debug) : RawFr
 
 FrameQueue::~FrameQueue()
 {
+    std::lock_guard<std::mutex> lock(m_timestampMtx);
     delete[] m_streamTimestamps;
 }
 
@@ -219,6 +220,11 @@ void FrameQueue::enqueueMessage(const uint8_t* message, uint32_t length, uint32_
 void FrameQueue::clearTimestamps()
 {
     std::lock_guard<std::mutex> lock(m_timestampMtx);
+    if (m_streamTimestamps == nullptr) {
+        LogError(LOG_NET, "FrameQueue::clearTimestamps(), streamTimestamps is invalid, cannot clear timestamps");
+        return;
+    }
+
     for (size_t i = 0; i < RTP_STREAM_COUNT_MAX; i++) {
         m_streamTimestamps[i].streamId = 0U;
         m_streamTimestamps[i].timestamp = INVALID_TS;
@@ -234,6 +240,11 @@ void FrameQueue::clearTimestamps()
 FrameQueue::Timestamp* FrameQueue::findTimestamp(uint32_t streamId)
 {
     std::lock_guard<std::mutex> lock(m_timestampMtx);
+    if (m_streamTimestamps == nullptr) {
+        LogError(LOG_NET, "FrameQueue::findTimestamp(), streamTimestamps is invalid, cannot find timestamp for streamId %u", streamId);
+        return nullptr;
+    }
+
     for (size_t i = 0; i < RTP_STREAM_COUNT_MAX; i++) {
         if (m_streamTimestamps[i].streamId == streamId)
             return &m_streamTimestamps[i];
@@ -247,6 +258,11 @@ FrameQueue::Timestamp* FrameQueue::findTimestamp(uint32_t streamId)
 void FrameQueue::insertTimestamp(uint32_t streamId, uint32_t timestamp)
 {
     std::lock_guard<std::mutex> lock(m_timestampMtx);
+    if (m_streamTimestamps == nullptr) {
+        LogError(LOG_NET, "FrameQueue::insertTimestamp(), streamTimestamps is invalid, cannot insert timestamp for streamId %u", streamId);
+        return;
+    }
+
     for (size_t i = 0; i < RTP_STREAM_COUNT_MAX; i++) {
         if (m_streamTimestamps[i].streamId == 0U) {
             m_streamTimestamps[i].streamId = streamId;
@@ -261,6 +277,11 @@ void FrameQueue::insertTimestamp(uint32_t streamId, uint32_t timestamp)
 void FrameQueue::updateTimestamp(uint32_t streamId, uint32_t timestamp)
 {
     std::lock_guard<std::mutex> lock(m_timestampMtx);
+    if (m_streamTimestamps == nullptr) {
+        LogError(LOG_NET, "FrameQueue::updateTimestamp(), streamTimestamps is invalid, cannot update timestamp for streamId %u", streamId);
+        return;
+    }
+
     for (size_t i = 0; i < RTP_STREAM_COUNT_MAX; i++) {
         if (m_streamTimestamps[i].streamId == streamId) {
             m_streamTimestamps[i].timestamp = timestamp;
@@ -274,6 +295,11 @@ void FrameQueue::updateTimestamp(uint32_t streamId, uint32_t timestamp)
 void FrameQueue::eraseTimestamp(uint32_t streamId)
 {
     std::lock_guard<std::mutex> lock(m_timestampMtx);
+    if (m_streamTimestamps == nullptr) {
+        LogError(LOG_NET, "FrameQueue::eraseTimestamp(), streamTimestamps is invalid, cannot erase timestamp for streamId %u", streamId);
+        return;
+    }
+
     for (size_t i = 0; i < RTP_STREAM_COUNT_MAX; i++) {
         if (m_streamTimestamps[i].streamId == streamId) {
             m_streamTimestamps[i].streamId = 0U;
