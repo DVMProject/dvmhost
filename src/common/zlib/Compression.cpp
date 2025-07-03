@@ -33,8 +33,8 @@ UInt8Array Compression::compress(const uint8_t* buffer, uint32_t len, uint32_t* 
         *compressedLen = 0U;
     }
 
-    uint8_t* data = new uint8_t[len];
-    ::memset(data, 0x00U, len);
+    uint8_t* data = new uint8_t[len + 1U];
+    ::memset(data, 0x00U, len + 1U);
     ::memcpy(data, buffer, len);
 
     // compression structures
@@ -89,9 +89,14 @@ UInt8Array Compression::compress(const uint8_t* buffer, uint32_t len, uint32_t* 
 
     delete[] data;
 
+    if (strm.total_out == 0U) {
+        LogError(LOG_HOST, "ZLIB compression resulted in zero bytes of output");
+        return nullptr; // return nullptr if no data was compressed
+    }
+
     // return compressed data
-    UInt8Array out = std::make_unique<uint8_t[]>(strm.total_out);
-    ::memset(out.get(), 0x00U, strm.total_out);
+    UInt8Array out = std::make_unique<uint8_t[]>(strm.total_out + 1U);
+    ::memset(out.get(), 0x00U, strm.total_out + 1U);
     ::memcpy(out.get(), compressed, strm.total_out);
 
     compressedData.clear(); // clear the vector to release memory
@@ -109,8 +114,8 @@ UInt8Array Compression::decompress(const uint8_t* buffer, uint32_t len, uint32_t
         *decompressedLen = 0U;
     }
 
-    uint8_t* data = new uint8_t[len];
-    ::memset(data, 0x00U, len);
+    uint8_t* data = new uint8_t[len + 1U];
+    ::memset(data, 0x00U, len + 1U);
     ::memcpy(data, buffer, len);
 
     // compression structures
@@ -163,9 +168,14 @@ UInt8Array Compression::decompress(const uint8_t* buffer, uint32_t len, uint32_t
 
     delete[] data;
 
+    if (strm.total_out == 0U) {
+        LogError(LOG_HOST, "ZLIB decompression resulted in zero bytes of output");
+        return nullptr; // return nullptr if no data was decompressed
+    }
+
     // return decompressed data
-    UInt8Array out = std::make_unique<uint8_t[]>(strm.total_out);
-    ::memset(out.get(), 0x00U, strm.total_out);
+    UInt8Array out = std::make_unique<uint8_t[]>(strm.total_out + 1U);
+    ::memset(out.get(), 0x00U, strm.total_out + 1U);
     ::memcpy(out.get(), decompressed, strm.total_out);
 
     decompressedData.clear(); // clear the vector to release memory
