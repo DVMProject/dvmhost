@@ -45,6 +45,11 @@ namespace network
     class HOST_SW_API FrameQueue : public RawFrameQueue {
     public: typedef std::pair<const NET_FUNC::ENUM, const NET_SUBFUNC::ENUM> OpcodePair;
     public:
+        typedef struct {
+            uint32_t streamId;
+            uint32_t timestamp;
+        } Timestamp;
+
         auto operator=(FrameQueue&) -> FrameQueue& = delete;
         auto operator=(FrameQueue&&) -> FrameQueue& = delete;
         FrameQueue(FrameQueue&) = delete;
@@ -121,11 +126,7 @@ namespace network
 
         std::mutex m_timestampMtx;
 
-        typedef struct {
-            uint32_t streamId;
-            uint32_t timestamp;
-        } Timestamp;
-        std::vector<Timestamp> m_streamTimestamps;
+        static std::vector<Timestamp> m_streamTimestamps;
 
         /**
          * @brief Search for a timestamp entry by stream ID.

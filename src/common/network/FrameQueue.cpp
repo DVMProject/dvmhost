@@ -25,6 +25,12 @@ using namespace network::frame;
 #include <cstring>
 
 // ---------------------------------------------------------------------------
+//  Static Class Members
+// ---------------------------------------------------------------------------
+
+std::vector<FrameQueue::Timestamp> FrameQueue::m_streamTimestamps;
+
+// ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
@@ -32,8 +38,7 @@ using namespace network::frame;
 
 FrameQueue::FrameQueue(udp::Socket* socket, uint32_t peerId, bool debug) : RawFrameQueue(socket, debug),
     m_peerId(peerId),
-    m_timestampMtx(),
-    m_streamTimestamps()
+    m_timestampMtx()
 {
     assert(peerId < 999999999U);
 }
