@@ -674,7 +674,23 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
                     m_rxCall->mfId = vhdr[9U];
                     m_rxCall->algoId = vhdr[10U];
                     m_rxCall->kId = GET_UINT16(vhdr, 11U);
-                    m_rxCall->dstId = GET_UINT16(vhdr, 13U);
+
+                    if (m_rxCallInProgress && m_rxCall->dstId != 0U) {
+                        LogWarning(LOG_MODEM, "V.24/DFSI traffic sent voice header while call is in progress?, ignoring header TGID");
+                    } else {
+                        uint32_t dstId = GET_UINT32(vhdr, 13U);
+
+                        // if we have a destination ID in the VHDR, set it
+                        if (m_rxCall->dstId == 0U && dstId != 0U) {
+                            m_rxCall->dstId = dstId;
+                        }
+
+                        // if we don't have a destination ID, we can't continue
+                        if (dstId == 0U && m_rxCall->dstId == 0U && m_rxCallInProgress) {
+                            m_rxCall->dstId = 1U; // this is a terrible hack, but we need to have a destination ID to continue
+                            LogError(LOG_MODEM, "V.24/DFSI traffic has no destination ID in VHDR, setting to default TGID 1");
+                        }
+                    }
 
                     if (m_debug) {
                         LogDebug(LOG_MODEM, "P25, VHDR algId = $%02X, kId = $%04X, dstId = $%04X", m_rxCall->algoId, m_rxCall->kId, m_rxCall->dstId);
@@ -1246,7 +1262,23 @@ void ModemV24::convertToAirTIA(const uint8_t *data, uint32_t length)
                     m_rxCall->mfId = vhdr[9U];
                     m_rxCall->algoId = vhdr[10U];
                     m_rxCall->kId = GET_UINT16(vhdr, 11U);
-                    m_rxCall->dstId = GET_UINT16(vhdr, 13U);
+
+                    if (m_rxCallInProgress && m_rxCall->dstId != 0U) {
+                        LogWarning(LOG_MODEM, "V.24/DFSI traffic sent voice header while call is in progress?, ignoring header TGID");
+                    } else {
+                        uint32_t dstId = GET_UINT32(vhdr, 13U);
+
+                        // if we have a destination ID in the VHDR, set it
+                        if (m_rxCall->dstId == 0U && dstId != 0U) {
+                            m_rxCall->dstId = dstId;
+                        }
+
+                        // if we don't have a destination ID, we can't continue
+                        if (dstId == 0U && m_rxCall->dstId == 0U && m_rxCallInProgress) {
+                            m_rxCall->dstId = 1U; // this is a terrible hack, but we need to have a destination ID to continue
+                            LogError(LOG_MODEM, "V.24/DFSI traffic has no destination ID in VHDR, setting to default TGID 1");
+                        }
+                    }
 
                     if (m_debug) {
                         LogDebug(LOG_MODEM, "P25, VHDR algId = $%02X, kId = $%04X, dstId = $%04X", m_rxCall->algoId, m_rxCall->kId, m_rxCall->dstId);

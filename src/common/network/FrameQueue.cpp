@@ -33,19 +33,9 @@ using namespace network::frame;
 FrameQueue::FrameQueue(udp::Socket* socket, uint32_t peerId, bool debug) : RawFrameQueue(socket, debug),
     m_peerId(peerId),
     m_timestampMtx(),
-    m_streamTimestamps(nullptr)
+    m_streamTimestamps()
 {
     assert(peerId < 999999999U);
-
-    m_streamTimestamps = new Timestamp[RTP_STREAM_COUNT_MAX];
-}
-
-/* Finalizes a instance of the FrameQueue class. */
-
-FrameQueue::~FrameQueue()
-{
-    std::lock_guard<std::mutex> lock(m_timestampMtx);
-    delete[] m_streamTimestamps;
 }
 
 /* Read message from the received UDP packet. */
@@ -220,15 +210,7 @@ void FrameQueue::enqueueMessage(const uint8_t* message, uint32_t length, uint32_
 void FrameQueue::clearTimestamps()
 {
     std::lock_guard<std::mutex> lock(m_timestampMtx);
-    if (m_streamTimestamps == nullptr) {
-        LogError(LOG_NET, "FrameQueue::clearTimestamps(), streamTimestamps is invalid, cannot clear timestamps");
-        return;
-    }
-
-    for (size_t i = 0; i < RTP_STREAM_COUNT_MAX; i++) {
-        m_streamTimestamps[i].streamId = 0U;
-        m_streamTimestamps[i].timestamp = INVALID_TS;
-    }
+    m_streamTimestamps.clear();
 }
 
 // ---------------------------------------------------------------------------
@@ -240,12 +222,7 @@ void FrameQueue::clearTimestamps()
 FrameQueue::Timestamp* FrameQueue::findTimestamp(uint32_t streamId)
 {
     std::lock_guard<std::mutex> lock(m_timestampMtx);
-    if (m_streamTimestamps == nullptr) {
-        LogError(LOG_NET, "FrameQueue::findTimestamp(), streamTimestamps is invalid, cannot find timestamp for streamId %u", streamId);
-        return nullptr;
-    }
-
-    for (size_t i = 0; i < RTP_STREAM_COUNT_MAX; i++) {
+    for (size_t i = 0; i < m_streamTimestamps.size(); i++) {
         if (m_streamTimestamps[i].streamId == streamId)
             return &m_streamTimestamps[i];
     }
@@ -258,18 +235,13 @@ FrameQueue::Timestamp* FrameQueue::findTimestamp(uint32_t streamId)
 void FrameQueue::insertTimestamp(uint32_t streamId, uint32_t timestamp)
 {
     std::lock_guard<std::mutex> lock(m_timestampMtx);
-    if (m_streamTimestamps == nullptr) {
-        LogError(LOG_NET, "FrameQueue::insertTimestamp(), streamTimestamps is invalid, cannot insert timestamp for streamId %u", streamId);
+    if (streamId == 0U || timestamp == INVALID_TS) {
+        LogError(LOG_NET, "FrameQueue::insertTimestamp(), invalid streamId or timestamp");
         return;
     }
 
-    for (size_t i = 0; i < RTP_STREAM_COUNT_MAX; i++) {
-        if (m_streamTimestamps[i].streamId == 0U) {
-            m_streamTimestamps[i].streamId = streamId;
-            m_streamTimestamps[i].timestamp = timestamp;
-            break;
-        }
-    }
+    Timestamp entry = { streamId, timestamp };
+    m_streamTimestamps.push_back(entry);
 }
 
 /* Update a timestamp for a stream ID. */
@@ -277,12 +249,13 @@ void FrameQueue::insertTimestamp(uint32_t streamId, uint32_t timestamp)
 void FrameQueue::updateTimestamp(uint32_t streamId, uint32_t timestamp)
 {
     std::lock_guard<std::mutex> lock(m_timestampMtx);
-    if (m_streamTimestamps == nullptr) {
-        LogError(LOG_NET, "FrameQueue::updateTimestamp(), streamTimestamps is invalid, cannot update timestamp for streamId %u", streamId);
+    if (streamId == 0U || timestamp == INVALID_TS) {
+        LogError(LOG_NET, "FrameQueue::updateTimestamp(), invalid streamId or timestamp");
         return;
     }
 
-    for (size_t i = 0; i < RTP_STREAM_COUNT_MAX; i++) {
+    // find the timestamp entry and update it
+    for (size_t i = 0; i < m_streamTimestamps.size(); i++) {
         if (m_streamTimestamps[i].streamId == streamId) {
             m_streamTimestamps[i].timestamp = timestamp;
             break;
@@ -295,18 +268,10 @@ void FrameQueue::updateTimestamp(uint32_t streamId, uint32_t timestamp)
 void FrameQueue::eraseTimestamp(uint32_t streamId)
 {
     std::lock_guard<std::mutex> lock(m_timestampMtx);
-    if (m_streamTimestamps == nullptr) {
-        LogError(LOG_NET, "FrameQueue::eraseTimestamp(), streamTimestamps is invalid, cannot erase timestamp for streamId %u", streamId);
-        return;
-    }
-
-    for (size_t i = 0; i < RTP_STREAM_COUNT_MAX; i++) {
-        if (m_streamTimestamps[i].streamId == streamId) {
-            m_streamTimestamps[i].streamId = 0U;
-            m_streamTimestamps[i].timestamp = INVALID_TS;
-            break;
-        }
-    }
+    m_streamTimestamps.erase(
+        std::remove_if(m_streamTimestamps.begin(), m_streamTimestamps.end(),
+            [streamId](const Timestamp& entry) { return entry.streamId == streamId; }),
+        m_streamTimestamps.end());
 }
 
 /* Generate RTP message for the frame queue. */

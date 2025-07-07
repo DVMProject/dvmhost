@@ -17,18 +17,18 @@
 #define __FRAME_QUEUE_H__
 
 #include "common/Defines.h"
-#include "common/concurrent/unordered_map.h"
 #include "common/network/RTPHeader.h"
 #include "common/network/RTPFNEHeader.h"
 #include "common/network/RawFrameQueue.h"
+
+#include <mutex>
+#include <vector>
 
 namespace network
 {
     // ---------------------------------------------------------------------------
     //  Constants
     // ---------------------------------------------------------------------------
-    
-    #define RTP_STREAM_COUNT_MAX 16384
 
     const uint8_t RTP_G711_PAYLOAD_TYPE = 0x00U;
 
@@ -55,10 +55,6 @@ namespace network
          * @param peerId Unique ID of this modem on the network.
          */
         FrameQueue(udp::Socket* socket, uint32_t peerId, bool debug);
-        /**
-         * @brief Finalizes a instance of the FrameQueue class.
-         */
-        ~FrameQueue();
 
         /**
          * @brief Read message from the received UDP packet.
@@ -129,7 +125,7 @@ namespace network
             uint32_t streamId;
             uint32_t timestamp;
         } Timestamp;
-        Timestamp* m_streamTimestamps;
+        std::vector<Timestamp> m_streamTimestamps;
 
         /**
          * @brief Search for a timestamp entry by stream ID.
