@@ -669,14 +669,9 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
                             LogDebug(LOG_MODEM, "V24 RX VHDR late entry, resetting call data");
                     }
 
-                    ::memcpy(m_rxCall->MI, vhdr, MI_LENGTH_BYTES);
-
-                    m_rxCall->mfId = vhdr[9U];
-                    m_rxCall->algoId = vhdr[10U];
-                    m_rxCall->kId = GET_UINT16(vhdr, 11U);
-
                     if (m_rxCallInProgress && m_rxCall->dstId != 0U) {
                         LogWarning(LOG_MODEM, "V.24/DFSI traffic sent voice header while call is in progress?, ignoring header TGID");
+                        break;
                     } else {
                         uint32_t dstId = GET_UINT32(vhdr, 13U);
 
@@ -695,6 +690,12 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
                     if (m_debug) {
                         LogDebug(LOG_MODEM, "P25, VHDR algId = $%02X, kId = $%04X, dstId = $%04X", m_rxCall->algoId, m_rxCall->kId, m_rxCall->dstId);
                     }
+
+                    ::memcpy(m_rxCall->MI, vhdr, MI_LENGTH_BYTES);
+
+                    m_rxCall->mfId = vhdr[9U];
+                    m_rxCall->algoId = vhdr[10U];
+                    m_rxCall->kId = GET_UINT16(vhdr, 11U);
 
                     // generate a HDU
                     lc::LC lc = lc::LC();
@@ -1257,14 +1258,9 @@ void ModemV24::convertToAirTIA(const uint8_t *data, uint32_t length)
                             LogDebug(LOG_MODEM, "V24 RX VHDR late entry, resetting call data");
                     }
 
-                    ::memcpy(m_rxCall->MI, vhdr, MI_LENGTH_BYTES);
-
-                    m_rxCall->mfId = vhdr[9U];
-                    m_rxCall->algoId = vhdr[10U];
-                    m_rxCall->kId = GET_UINT16(vhdr, 11U);
-
                     if (m_rxCallInProgress && m_rxCall->dstId != 0U) {
                         LogWarning(LOG_MODEM, "V.24/DFSI traffic sent voice header while call is in progress?, ignoring header TGID");
+                        break;
                     } else {
                         uint32_t dstId = GET_UINT32(vhdr, 13U);
 
@@ -1279,6 +1275,12 @@ void ModemV24::convertToAirTIA(const uint8_t *data, uint32_t length)
                             LogError(LOG_MODEM, "V.24/DFSI traffic has no destination ID in VHDR, setting to default TGID 1");
                         }
                     }
+
+                    ::memcpy(m_rxCall->MI, vhdr, MI_LENGTH_BYTES);
+
+                    m_rxCall->mfId = vhdr[9U];
+                    m_rxCall->algoId = vhdr[10U];
+                    m_rxCall->kId = GET_UINT16(vhdr, 11U);
 
                     if (m_debug) {
                         LogDebug(LOG_MODEM, "P25, VHDR algId = $%02X, kId = $%04X, dstId = $%04X", m_rxCall->algoId, m_rxCall->kId, m_rxCall->dstId);
