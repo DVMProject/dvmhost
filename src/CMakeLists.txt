@@ -61,7 +61,7 @@ set(CPACK_PACKAGE_VENDOR "DVMProject")
 
 set(CPACK_DEBIAN_PACKAGE_DESCRIPTION "The DVM Host software provides the host computer implementation of a mixed-mode DMR, P25 and/or NXDN or dedicated-mode DMR, P25 or NXDN repeater system that talks to the actual modem hardware. The host software; is the portion of a complete Over-The-Air modem implementation that performs the data processing, decision making and FEC correction for a digital repeater.")
 set(CPACK_DEBIAN_PACKAGE_MAINTAINER "DVMProject Authors")
-set(CPACK_DEBIAN_PACKAGE_VERSION "R04Hxx")
+set(CPACK_DEBIAN_PACKAGE_VERSION "R04Jxx")
 set(CPACK_DEBIAN_PACKAGE_RELEASE "0")
 set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://github.com/dvmproject")
 
