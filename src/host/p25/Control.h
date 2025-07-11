@@ -312,6 +312,7 @@ namespace p25
         bool m_ignoreAffiliationCheck;
         bool m_demandUnitRegForRefusedAff;
         bool m_dfsiFDX;
+        bool m_forceAllowTG0;
 
         ::lookups::IdenTableLookup* m_idenTable;
         ::lookups::RadioIdLookup* m_ridLookup;

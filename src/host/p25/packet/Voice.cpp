@@ -345,7 +345,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
             }
             else {
                 // validate the target ID, if the target is a talkgroup
-                if (!acl::AccessControl::validateTGId(dstId)) {
+                if (!acl::AccessControl::validateTGId(dstId, m_p25->m_forceAllowTG0)) {
                     if (m_lastRejectId == 0 || m_lastRejectId != dstId) {
                         LogWarning(LOG_RF, P25_HDU_STR " denial, TGID rejection, dstId = %u", dstId);
                         if (m_p25->m_enableControl) {
@@ -362,6 +362,12 @@ bool Voice::process(uint8_t* data, uint32_t len)
                     m_p25->m_rfState = RS_RF_REJECTED;
                     return false;
                 }
+            }
+
+            if (group && dstId == 0U && m_p25->m_forceAllowTG0) {
+                LogWarning(LOG_RF, P25_HDU_STR " TGID 0 (P25 blackhole talkgroup) detected, srcId = %u", srcId);
+                dstId = 1U; // force destination ID to TGID 1 -- TGID 0 is not allowed in P25, and the network won't properly handle it
+                lc.setDstId(dstId);
             }
 
             // verify the source RID is affiliated to the group TGID; only if control data
