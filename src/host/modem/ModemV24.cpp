@@ -670,7 +670,7 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
                     }
 
                     uint32_t dstId = GET_UINT32(vhdr, 13U);
-                    if (m_rxCallInProgress && dstId != 0U) {
+                    if (m_rxCallInProgress && dstId == 0U) {
                         LogWarning(LOG_MODEM, "V.24/DFSI traffic sent voice header with no dstId while call is in progress?, ignoring header TGID");
                         break;
                     }
@@ -1248,7 +1248,7 @@ void ModemV24::convertToAirTIA(const uint8_t *data, uint32_t length)
                     }
 
                     uint32_t dstId = GET_UINT32(vhdr, 13U);
-                    if (m_rxCallInProgress && dstId != 0U) {
+                    if (m_rxCallInProgress && dstId == 0U) {
                         LogWarning(LOG_MODEM, "V.24/DFSI traffic sent voice header with no dstId while call is in progress?, ignoring header TGID");
                         break;
                     }
