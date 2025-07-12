@@ -669,7 +669,8 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
                             LogDebug(LOG_MODEM, "V24 RX VHDR late entry, resetting call data");
                     }
 
-                    if (m_rxCallInProgress && m_rxCall->dstId != 0U) {
+                    uint32_t dstId = GET_UINT32(vhdr, 13U);
+                    if (m_rxCallInProgress && dstId != 0U) {
                         LogWarning(LOG_MODEM, "V.24/DFSI traffic sent voice header with no dstId while call is in progress?, ignoring header TGID");
                         break;
                     }
@@ -679,7 +680,7 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
                     m_rxCall->mfId = vhdr[9U];
                     m_rxCall->algoId = vhdr[10U];
                     m_rxCall->kId = GET_UINT16(vhdr, 11U);
-                    m_rxCall->dstId = GET_UINT32(vhdr, 13U);
+                    m_rxCall->dstId = dstId;
 
                     if (m_debug) {
                         LogDebug(LOG_MODEM, "P25, VHDR algId = $%02X, kId = $%04X, dstId = $%04X", m_rxCall->algoId, m_rxCall->kId, m_rxCall->dstId);
@@ -1246,7 +1247,8 @@ void ModemV24::convertToAirTIA(const uint8_t *data, uint32_t length)
                             LogDebug(LOG_MODEM, "V24 RX VHDR late entry, resetting call data");
                     }
 
-                    if (m_rxCallInProgress && m_rxCall->dstId != 0U) {
+                    uint32_t dstId = GET_UINT32(vhdr, 13U);
+                    if (m_rxCallInProgress && dstId != 0U) {
                         LogWarning(LOG_MODEM, "V.24/DFSI traffic sent voice header with no dstId while call is in progress?, ignoring header TGID");
                         break;
                     }
@@ -1256,7 +1258,7 @@ void ModemV24::convertToAirTIA(const uint8_t *data, uint32_t length)
                     m_rxCall->mfId = vhdr[9U];
                     m_rxCall->algoId = vhdr[10U];
                     m_rxCall->kId = GET_UINT16(vhdr, 11U);
-                    m_rxCall->dstId = GET_UINT32(vhdr, 13U);
+                    m_rxCall->dstId = dstId;
 
                     if (m_debug) {
                         LogDebug(LOG_MODEM, "P25, VHDR algId = $%02X, kId = $%04X, dstId = $%04X", m_rxCall->algoId, m_rxCall->kId, m_rxCall->dstId);
