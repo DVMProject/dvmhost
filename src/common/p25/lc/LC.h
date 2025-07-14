@@ -128,6 +128,12 @@ namespace p25
             void getMI(uint8_t* mi) const;
             /** @} */
 
+            /** @name User Alias data */
+            /**
+             * @brief Gets the user alias.
+             */
+            std::string getUserAlias() const;
+
             /** @name Local Site data */
             /**
              * @brief Gets the local site data.
@@ -242,6 +248,11 @@ namespace p25
 
             // Encryption data
             uint8_t* m_mi;
+
+            // User Alias data
+            uint8_t* m_userAlias;
+            bool m_gotUserAliasPartA;
+            bool m_gotUserAlias;
 
             // Local Site data
             static SiteData m_siteData;

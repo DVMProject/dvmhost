@@ -112,6 +112,7 @@ namespace p25
         const uint8_t   ENCRYPTED_NULL_IMBE[] = { 0xFCU, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U };
 
         const uint8_t   MOT_CALLSIGN_LENGTH_BYTES = 8U;
+        const uint8_t   HARRIS_USER_ALIAS_LENGTH_BYTES = 14U;
 
         const uint8_t   AUTH_RES_LENGTH_BYTES = 4U;
         const uint8_t   AUTH_RAND_SEED_LENGTH_BYTES = 10U;
@@ -138,6 +139,8 @@ namespace p25
 
         /** @brief Motorola MFId */
         const uint8_t   MFG_MOT = 0x90U;
+        /** @brief L3Harris MFId */
+        const uint8_t   MFG_HARRIS = 0xA4U;
         /** @brief DVM; Omaha Communication Systems, LLC ($9C) */
         const uint8_t   MFG_DVM_OCS = 0x9CU;
         /** @} */
@@ -692,7 +695,21 @@ namespace p25
                 CONV_FALLBACK = 0x2AU,                  //! CONV FALLBACK - Conventional Fallback
 
             // LDUx/TDULC Motorola Link Control Opcode(s)
-                FAILSOFT = 0x02U                        //! FAILSOFT - Failsoft
+                FAILSOFT = 0x02U,                       //! FAILSOFT - Failsoft
+
+                MOT_PTT_LOC_HEADER = 0x29U,            //! MOT PTT LOC HEADER - Motorola PTT Location Header
+                MOT_PTT_LOC_PAYLOAD = 0x2AU,           //! MOT PTT LOC PAYLOAD - Motorola PTT Location Payload
+
+            // LDUx/TDULC Harris Link Control Opcode(s)
+                HARRIS_PTT_PA_ODD = 0x2AU,            //! HARRIS PTT PA ODD - Harris PTT Position and Altitude Odd
+                HARRIS_PTT_PB_ODD = 0x2BU,            //! HARRIS PTT PB ODD - Harris PTT Position and Bearing Odd
+                HARRIS_PTT_PA_EVEN = 0x2CU,           //! HARRIS PTT PA EVEN - Harris PTT Position and Altitude Even
+                HARRIS_PTT_PB_EVEN = 0x2DU,           //! HARRIS PTT PB EVEN - Harris PTT Position and Bearing Even
+
+                HARRIS_USER_ALIAS_PA_ODD = 0x32U,      //! HARRIS USER ALIAS PA ODD - Harris User Alias Position and Altitude Odd
+                HARRIS_USER_ALIAS_PB_ODD = 0x33U,      //! HARRIS USER ALIAS PB ODD - Harris User Alias Position and Bearing Odd
+                HARRIS_USER_ALIAS_PA_EVEN = 0x34U,     //! HARRIS USER ALIAS PA EVEN - Harris User Alias Position and Altitude Even
+                HARRIS_USER_ALIAS_PB_EVEN = 0x35U,     //! HARRIS USER ALIAS PB EVEN - Harris User Alias Position and Bearing Even
             };
         }
 

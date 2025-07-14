@@ -67,10 +67,16 @@ LC::LC() :
     m_encryptOverride(false),
     m_tsbkVendorSkip(false),
     m_callTimer(0U),
-    m_mi(nullptr)
+    m_mi(nullptr),
+    m_userAlias(nullptr),
+    m_gotUserAliasPartA(false),
+    m_gotUserAlias(false)
 {
     m_mi = new uint8_t[MI_LENGTH_BYTES];
     ::memset(m_mi, 0x00U, MI_LENGTH_BYTES);
+
+    m_userAlias = new uint8_t[HARRIS_USER_ALIAS_LENGTH_BYTES];
+    ::memset(m_userAlias, 0x00U, HARRIS_USER_ALIAS_LENGTH_BYTES);
 }
 
 /* Finalizes a instance of LC class. */
@@ -80,6 +86,11 @@ LC::~LC()
     if (m_mi != nullptr) {
         delete[] m_mi;
         m_mi = nullptr;
+    }
+
+    if (m_userAlias != nullptr) {
+        delete[] m_userAlias;
+        m_userAlias = nullptr;
     }
 }
 
@@ -484,6 +495,23 @@ void LC::getMI(uint8_t* mi) const
     ::memcpy(mi, m_mi, MI_LENGTH_BYTES);
 }
 
+/*
+** User Alias data
+*/
+
+/* Gets the user alias. */
+
+std::string LC::getUserAlias() const
+{
+    std::string alias;
+    if (m_gotUserAlias) {
+        for (uint32_t i = 0; i < HARRIS_USER_ALIAS_LENGTH_BYTES; i++)
+            alias[i] = m_userAlias[i];
+    }
+
+    return alias;
+}
+
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------
@@ -546,6 +574,20 @@ void LC::copy(const LC& data)
         }
     }
 
+    if (data.m_gotUserAlias && data.m_userAlias != nullptr) {
+        delete[] m_userAlias;
+
+        m_userAlias = new uint8_t[HARRIS_USER_ALIAS_LENGTH_BYTES];
+        ::memcpy(m_userAlias, data.m_userAlias, HARRIS_USER_ALIAS_LENGTH_BYTES);
+        m_gotUserAlias = data.m_gotUserAlias;
+    } else {
+        delete[] m_userAlias;
+
+        m_userAlias = new uint8_t[HARRIS_USER_ALIAS_LENGTH_BYTES];
+        ::memset(m_userAlias, 0x00U, HARRIS_USER_ALIAS_LENGTH_BYTES);
+        m_gotUserAlias = false;
+    }
+
     m_siteData = data.m_siteData;
 }
 
@@ -578,6 +620,34 @@ bool LC::decodeLC(const uint8_t* rs, bool rawOnly)
     // as the packed RS value)
     if ((m_mfId != MFG_STANDARD) && (m_mfId != MFG_STANDARD_ALT)) {
         //Utils::dump(1U, "Decoded P25 Non-Standard RS", rs, P25_LDU_LC_FEC_LENGTH_BYTES);
+        if (m_mfId == MFG_HARRIS) {
+            // Harris P25 opcodes
+            switch (m_lco) {
+            case LCO::HARRIS_USER_ALIAS_PA_ODD:
+            case LCO::HARRIS_USER_ALIAS_PA_EVEN:
+                m_gotUserAliasPartA = true;
+                m_gotUserAlias = false;
+
+                if (m_userAlias != nullptr) {
+                    ::memset(m_userAlias, 0x00U, HARRIS_USER_ALIAS_LENGTH_BYTES);
+                    ::memcpy(m_userAlias, rs + 2U, 7U);
+                    m_gotUserAlias = true;
+                }
+                break;
+
+            case LCO::HARRIS_USER_ALIAS_PB_ODD:
+            case LCO::HARRIS_USER_ALIAS_PB_EVEN:
+                if (m_gotUserAliasPartA && (m_userAlias != nullptr)) {
+                    ::memcpy(m_userAlias + 7U, rs + 2U, 7U);
+                    m_gotUserAlias = true;
+                }
+                break;
+
+            default:
+                break;
+            }
+        }
+
         return true;
     }
 
