@@ -720,6 +720,7 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
         case DFSIFrameType::LDU1_VOICE1:
         {
             MotStartVoiceFrame svf = MotStartVoiceFrame(dfsiData);
+            ::memset(m_rxCall->LDULC, 0x00U, P25DEF::P25_LDU_LC_FEC_LENGTH_BYTES);
             ::memcpy(m_rxCall->netLDU1 + 10U, svf.fullRateVoice->imbeData, RAW_IMBE_LENGTH_BYTES);
             m_rxCall->n++;
         }
@@ -727,6 +728,7 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
         case DFSIFrameType::LDU2_VOICE10:
         {
             MotStartVoiceFrame svf = MotStartVoiceFrame(dfsiData);
+            ::memset(m_rxCall->LDULC, 0x00U, P25DEF::P25_LDU_LC_FEC_LENGTH_BYTES);
             ::memcpy(m_rxCall->netLDU2 + 10U, svf.fullRateVoice->imbeData, RAW_IMBE_LENGTH_BYTES);
             m_rxCall->n++;
         }
@@ -850,6 +852,11 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
                         m_rxCall->lco = voice.additionalData[0U];
                         m_rxCall->mfId = voice.additionalData[1U];
                         m_rxCall->serviceOptions = voice.additionalData[2U];
+
+                        // copy LDU1 LC bytes into LDU LC buffer
+                        m_rxCall->LDULC[0U] = voice.additionalData[0U];
+                        m_rxCall->LDULC[1U] = voice.additionalData[1U];
+                        m_rxCall->LDULC[2U] = voice.additionalData[2U];
                     } else {
                         LogWarning(LOG_MODEM, "V.24/DFSI VC3 traffic missing metadata");
                     }
@@ -860,6 +867,11 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
                     ::memcpy(m_rxCall->netLDU1 + 80U, voice.imbeData, RAW_IMBE_LENGTH_BYTES);
                     if (voice.additionalData != nullptr) {
                         m_rxCall->dstId = GET_UINT24(voice.additionalData, 0U);
+
+                        // copy LDU1 LC bytes into LDU LC buffer
+                        m_rxCall->LDULC[3U] = voice.additionalData[0U];
+                        m_rxCall->LDULC[4U] = voice.additionalData[1U];
+                        m_rxCall->LDULC[5U] = voice.additionalData[2U];
                     } else {
                         LogWarning(LOG_MODEM, "V.24/DFSI VC4 traffic missing metadata");
                     }
@@ -870,6 +882,11 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
                     ::memcpy(m_rxCall->netLDU1 + 105U, voice.imbeData, RAW_IMBE_LENGTH_BYTES);
                     if (voice.additionalData != nullptr) {
                         m_rxCall->srcId = GET_UINT24(voice.additionalData, 0U);
+
+                        // copy LDU1 LC bytes into LDU LC buffer
+                        m_rxCall->LDULC[6U] = voice.additionalData[0U];
+                        m_rxCall->LDULC[7U] = voice.additionalData[1U];
+                        m_rxCall->LDULC[8U] = voice.additionalData[2U];
                     } else {
                         LogWarning(LOG_MODEM, "V.24/DFSI VC5 traffic missing metadata");
                     }
@@ -878,16 +895,40 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
                 case DFSIFrameType::LDU1_VOICE6:
                 {
                     ::memcpy(m_rxCall->netLDU1 + 130U, voice.imbeData, RAW_IMBE_LENGTH_BYTES);
+                    if (voice.additionalData != nullptr) {
+                        // copy LDU1 LC bytes into LDU LC buffer
+                        m_rxCall->LDULC[9U] = voice.additionalData[0U];
+                        m_rxCall->LDULC[10U] = voice.additionalData[1U];
+                        m_rxCall->LDULC[11U] = voice.additionalData[2U];
+                    } else {
+                        LogWarning(LOG_MODEM, "V.24/DFSI VC6 traffic missing metadata");
+                    }
                 }
                 break;
                 case DFSIFrameType::LDU1_VOICE7:
                 {
                     ::memcpy(m_rxCall->netLDU1 + 155U, voice.imbeData, RAW_IMBE_LENGTH_BYTES);
+                    if (voice.additionalData != nullptr) {
+                        // copy LDU1 LC bytes into LDU LC buffer
+                        m_rxCall->LDULC[12U] = voice.additionalData[0U];
+                        m_rxCall->LDULC[13U] = voice.additionalData[1U];
+                        m_rxCall->LDULC[14U] = voice.additionalData[2U];
+                    } else {
+                        LogWarning(LOG_MODEM, "V.24/DFSI VC7 traffic missing metadata");
+                    }
                 }
                 break;
                 case DFSIFrameType::LDU1_VOICE8:
                 {
                     ::memcpy(m_rxCall->netLDU1 + 180U, voice.imbeData, RAW_IMBE_LENGTH_BYTES);
+                    if (voice.additionalData != nullptr) {
+                        // copy LDU1 LC bytes into LDU LC buffer
+                        m_rxCall->LDULC[15U] = voice.additionalData[0U];
+                        m_rxCall->LDULC[16U] = voice.additionalData[1U];
+                        m_rxCall->LDULC[17U] = voice.additionalData[2U];
+                    } else {
+                        LogWarning(LOG_MODEM, "V.24/DFSI VC8 traffic missing metadata");
+                    }
                 }
                 break;
                 case DFSIFrameType::LDU1_VOICE9:
@@ -901,6 +942,7 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
                     }
                 }
                 break;
+
                 case DFSIFrameType::LDU2_VOICE11:
                 {
                     ::memcpy(m_rxCall->netLDU2 + 26U, voice.imbeData, RAW_IMBE_LENGTH_BYTES);
@@ -911,6 +953,12 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
                     ::memcpy(m_rxCall->netLDU2 + 55U, voice.imbeData, RAW_IMBE_LENGTH_BYTES);
                     if (voice.additionalData != nullptr) {
                         ::memcpy(m_rxCall->MI, voice.additionalData, 3U);
+
+                        // copy LDU2 LC bytes into LDU LC buffer
+                        ::memset(m_rxCall->LDULC, 0x00U, P25DEF::P25_LDU_LC_FEC_LENGTH_BYTES);
+                        m_rxCall->LDULC[0U] = voice.additionalData[0U];
+                        m_rxCall->LDULC[1U] = voice.additionalData[1U];
+                        m_rxCall->LDULC[2U] = voice.additionalData[2U];
                     } else {
                         LogWarning(LOG_MODEM, "V.24/DFSI VC12 traffic missing metadata");
                     }
@@ -921,6 +969,11 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
                     ::memcpy(m_rxCall->netLDU2 + 80U, voice.imbeData, RAW_IMBE_LENGTH_BYTES);
                     if (voice.additionalData != nullptr) {
                         ::memcpy(m_rxCall->MI + 3U, voice.additionalData, 3U);
+
+                        // copy LDU2 LC bytes into LDU LC buffer
+                        m_rxCall->LDULC[3U] = voice.additionalData[0U];
+                        m_rxCall->LDULC[4U] = voice.additionalData[1U];
+                        m_rxCall->LDULC[5U] = voice.additionalData[2U];
                     } else {
                         LogWarning(LOG_MODEM, "V.24/DFSI VC13 traffic missing metadata");
                     }
@@ -931,6 +984,11 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
                     ::memcpy(m_rxCall->netLDU2 + 105U, voice.imbeData, RAW_IMBE_LENGTH_BYTES);
                     if (voice.additionalData != nullptr) {
                         ::memcpy(m_rxCall->MI + 6U, voice.additionalData, 3U);
+
+                        // copy LDU2 LC bytes into LDU LC buffer
+                        m_rxCall->LDULC[6U] = voice.additionalData[0U];
+                        m_rxCall->LDULC[7U] = voice.additionalData[1U];
+                        m_rxCall->LDULC[8U] = voice.additionalData[2U];
                     } else {
                         LogWarning(LOG_MODEM, "V.24/DFSI VC14 traffic missing metadata");
                     }
@@ -942,6 +1000,11 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
                     if (voice.additionalData != nullptr) {
                         m_rxCall->algoId = voice.additionalData[0U];
                         m_rxCall->kId = GET_UINT16(voice.additionalData, 1U);
+
+                        // copy LDU2 LC bytes into LDU LC buffer
+                        m_rxCall->LDULC[9U] = voice.additionalData[0U];
+                        m_rxCall->LDULC[10U] = voice.additionalData[1U];
+                        m_rxCall->LDULC[11U] = voice.additionalData[2U];
                     } else {
                         LogWarning(LOG_MODEM, "V.24/DFSI VC15 traffic missing metadata");
                     }
@@ -950,11 +1013,27 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
                 case DFSIFrameType::LDU2_VOICE16:
                 {
                     ::memcpy(m_rxCall->netLDU2 + 155U, voice.imbeData, RAW_IMBE_LENGTH_BYTES);
+                    if (voice.additionalData != nullptr) {
+                        // copy LDU2 LC bytes into LDU LC buffer
+                        m_rxCall->LDULC[12U] = voice.additionalData[0U];
+                        m_rxCall->LDULC[13U] = voice.additionalData[1U];
+                        m_rxCall->LDULC[14U] = voice.additionalData[2U];
+                    } else {
+                        LogWarning(LOG_MODEM, "V.24/DFSI VC16 traffic missing metadata");
+                    }
                 }
                 break;
                 case DFSIFrameType::LDU2_VOICE17:
                 {
                     ::memcpy(m_rxCall->netLDU2 + 180U, voice.imbeData, RAW_IMBE_LENGTH_BYTES);
+                    if (voice.additionalData != nullptr) {
+                        // copy LDU2 LC bytes into LDU LC buffer
+                        m_rxCall->LDULC[15U] = voice.additionalData[0U];
+                        m_rxCall->LDULC[16U] = voice.additionalData[1U];
+                        m_rxCall->LDULC[17U] = voice.additionalData[2U];
+                    } else {
+                        LogWarning(LOG_MODEM, "V.24/DFSI VC17 traffic missing metadata");
+                    }
                 }
                 break;
                 case DFSIFrameType::LDU2_VOICE18:
@@ -981,6 +1060,19 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
 
     // encode LDU1 if ready
     if (m_rxCall->n == 9U) {
+        // decode RS (24,12,13) FEC
+        // bryanb: for now this won't abort the frame if RS fails, but maybe it should in the future, for now
+        //  we'll just log the error
+        try {
+            bool ret = m_rs.decode241213(m_rxCall->LDULC);
+            if (!ret) {
+                LogError(LOG_MODEM, "V.24/DFSI LDU1, failed to decode RS (24,12,13) FEC");
+            }
+        }
+        catch (...) {
+            Utils::dump(2U, "P25, RS excepted with input data", m_rxCall->LDULC, P25_LDU_LC_FEC_LENGTH_BYTES);
+        }
+
         lc::LC lc = lc::LC();
         lc.setLCO(m_rxCall->lco);
         lc.setMFId(m_rxCall->mfId);
@@ -1060,6 +1152,19 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
     
     // encode LDU2 if ready
     if (m_rxCall->n == 18U) {
+        // decode RS (24,16,9) FEC
+        // bryanb: for now this won't abort the frame if RS fails, but maybe it should in the future, for now
+        //  we'll just log the error
+        try {
+            bool ret = m_rs.decode24169(m_rxCall->LDULC);
+            if (!ret) {
+                LogError(LOG_MODEM, "V.24/DFSI LDU2, failed to decode RS (24,16,9) FEC");
+            }
+        }
+        catch (...) {
+            Utils::dump(2U, "P25, RS excepted with input data", m_rxCall->LDULC, P25_LDU_LC_FEC_LENGTH_BYTES);
+        }
+
         lc::LC lc = lc::LC();
         lc.setMI(m_rxCall->MI);
         lc.setAlgId(m_rxCall->algoId);
@@ -1311,6 +1416,7 @@ void ModemV24::convertToAirTIA(const uint8_t *data, uint32_t length)
             switch (frameType) {
             case DFSIFrameType::LDU1_VOICE1:
             {
+                ::memset(m_rxCall->LDULC, 0x00U, P25DEF::P25_LDU_LC_FEC_LENGTH_BYTES);
                 ::memcpy(m_rxCall->netLDU1 + 10U, voice.imbeData, RAW_IMBE_LENGTH_BYTES);
             }
             break;
@@ -1326,6 +1432,11 @@ void ModemV24::convertToAirTIA(const uint8_t *data, uint32_t length)
                     m_rxCall->lco = voice.additionalData[0U];
                     m_rxCall->mfId = voice.additionalData[1U];
                     m_rxCall->serviceOptions = voice.additionalData[2U];
+
+                    // copy LDU1 LC bytes into LDU LC buffer
+                    m_rxCall->LDULC[0U] = voice.additionalData[0U];
+                    m_rxCall->LDULC[1U] = voice.additionalData[1U];
+                    m_rxCall->LDULC[2U] = voice.additionalData[2U];
                 } else {
                     LogWarning(LOG_MODEM, "V.24/DFSI VC3 traffic missing metadata");
                 }
@@ -1336,6 +1447,12 @@ void ModemV24::convertToAirTIA(const uint8_t *data, uint32_t length)
                 ::memcpy(m_rxCall->netLDU1 + 80U, voice.imbeData, RAW_IMBE_LENGTH_BYTES);
                 if (voice.additionalData != nullptr) {
                     m_rxCall->dstId = GET_UINT24(voice.additionalData, 0U);
+
+                    // copy LDU1 LC bytes into LDU LC buffer
+                    ::memset(m_rxCall->LDULC, 0x00U, P25DEF::P25_LDU_LC_FEC_LENGTH_BYTES);
+                    m_rxCall->LDULC[3U] = voice.additionalData[0U];
+                    m_rxCall->LDULC[4U] = voice.additionalData[1U];
+                    m_rxCall->LDULC[5U] = voice.additionalData[2U];
                 } else {
                     LogWarning(LOG_MODEM, "V.24/DFSI VC4 traffic missing metadata");
                 }
@@ -1346,6 +1463,12 @@ void ModemV24::convertToAirTIA(const uint8_t *data, uint32_t length)
                 ::memcpy(m_rxCall->netLDU1 + 105U, voice.imbeData, RAW_IMBE_LENGTH_BYTES);
                 if (voice.additionalData != nullptr) {
                     m_rxCall->srcId = GET_UINT24(voice.additionalData, 0U);
+
+                    // copy LDU1 LC bytes into LDU LC buffer
+                    ::memset(m_rxCall->LDULC, 0x00U, P25DEF::P25_LDU_LC_FEC_LENGTH_BYTES);
+                    m_rxCall->LDULC[6U] = voice.additionalData[0U];
+                    m_rxCall->LDULC[7U] = voice.additionalData[1U];
+                    m_rxCall->LDULC[8U] = voice.additionalData[2U];
                 } else {
                     LogWarning(LOG_MODEM, "V.24/DFSI VC5 traffic missing metadata");
                 }
@@ -1354,16 +1477,40 @@ void ModemV24::convertToAirTIA(const uint8_t *data, uint32_t length)
             case DFSIFrameType::LDU1_VOICE6:
             {
                 ::memcpy(m_rxCall->netLDU1 + 130U, voice.imbeData, RAW_IMBE_LENGTH_BYTES);
+                if (voice.additionalData != nullptr) {
+                    // copy LDU1 LC bytes into LDU LC buffer
+                    m_rxCall->LDULC[9U] = voice.additionalData[0U];
+                    m_rxCall->LDULC[10U] = voice.additionalData[1U];
+                    m_rxCall->LDULC[11U] = voice.additionalData[2U];
+                } else {
+                    LogWarning(LOG_MODEM, "V.24/DFSI VC6 traffic missing metadata");
+                }
             }
             break;
             case DFSIFrameType::LDU1_VOICE7:
             {
                 ::memcpy(m_rxCall->netLDU1 + 155U, voice.imbeData, RAW_IMBE_LENGTH_BYTES);
+                if (voice.additionalData != nullptr) {
+                    // copy LDU1 LC bytes into LDU LC buffer
+                    m_rxCall->LDULC[12U] = voice.additionalData[0U];
+                    m_rxCall->LDULC[13U] = voice.additionalData[1U];
+                    m_rxCall->LDULC[14U] = voice.additionalData[2U];
+                } else {
+                    LogWarning(LOG_MODEM, "V.24/DFSI VC7 traffic missing metadata");
+                }
             }
             break;
             case DFSIFrameType::LDU1_VOICE8:
             {
                 ::memcpy(m_rxCall->netLDU1 + 180U, voice.imbeData, RAW_IMBE_LENGTH_BYTES);
+                if (voice.additionalData != nullptr) {
+                    // copy LDU1 LC bytes into LDU LC buffer
+                    m_rxCall->LDULC[15U] = voice.additionalData[0U];
+                    m_rxCall->LDULC[16U] = voice.additionalData[1U];
+                    m_rxCall->LDULC[17U] = voice.additionalData[2U];
+                } else {
+                    LogWarning(LOG_MODEM, "V.24/DFSI VC8 traffic missing metadata");
+                }
             }
             break;
             case DFSIFrameType::LDU1_VOICE9:
@@ -1380,6 +1527,7 @@ void ModemV24::convertToAirTIA(const uint8_t *data, uint32_t length)
 
             case DFSIFrameType::LDU2_VOICE10:
             {
+                ::memset(m_rxCall->LDULC, 0x00U, P25DEF::P25_LDU_LC_FEC_LENGTH_BYTES);
                 ::memcpy(m_rxCall->netLDU2 + 10U, voice.imbeData, RAW_IMBE_LENGTH_BYTES);
             }
             break;
@@ -1393,6 +1541,11 @@ void ModemV24::convertToAirTIA(const uint8_t *data, uint32_t length)
                 ::memcpy(m_rxCall->netLDU2 + 55U, voice.imbeData, RAW_IMBE_LENGTH_BYTES);
                 if (voice.additionalData != nullptr) {
                     ::memcpy(m_rxCall->MI, voice.additionalData, 3U);
+
+                    // copy LDU2 LC bytes into LDU LC buffer
+                    m_rxCall->LDULC[0U] = voice.additionalData[0U];
+                    m_rxCall->LDULC[1U] = voice.additionalData[1U];
+                    m_rxCall->LDULC[2U] = voice.additionalData[2U];
                 } else {
                     LogWarning(LOG_MODEM, "V.24/DFSI VC12 traffic missing metadata");
                 }
@@ -1403,6 +1556,11 @@ void ModemV24::convertToAirTIA(const uint8_t *data, uint32_t length)
                 ::memcpy(m_rxCall->netLDU2 + 80U, voice.imbeData, RAW_IMBE_LENGTH_BYTES);
                 if (voice.additionalData != nullptr) {
                     ::memcpy(m_rxCall->MI + 3U, voice.additionalData, 3U);
+
+                    // copy LDU2 LC bytes into LDU LC buffer
+                    m_rxCall->LDULC[3U] = voice.additionalData[0U];
+                    m_rxCall->LDULC[4U] = voice.additionalData[1U];
+                    m_rxCall->LDULC[5U] = voice.additionalData[2U];
                 } else {
                     LogWarning(LOG_MODEM, "V.24/DFSI VC13 traffic missing metadata");
                 }
@@ -1413,6 +1571,11 @@ void ModemV24::convertToAirTIA(const uint8_t *data, uint32_t length)
                 ::memcpy(m_rxCall->netLDU2 + 105U, voice.imbeData, RAW_IMBE_LENGTH_BYTES);
                 if (voice.additionalData != nullptr) {
                     ::memcpy(m_rxCall->MI + 6U, voice.additionalData, 3U);
+
+                    // copy LDU2 LC bytes into LDU LC buffer
+                    m_rxCall->LDULC[6U] = voice.additionalData[0U];
+                    m_rxCall->LDULC[7U] = voice.additionalData[1U];
+                    m_rxCall->LDULC[8U] = voice.additionalData[2U];
                 } else {
                     LogWarning(LOG_MODEM, "V.24/DFSI VC14 traffic missing metadata");
                 }
@@ -1424,6 +1587,11 @@ void ModemV24::convertToAirTIA(const uint8_t *data, uint32_t length)
                 if (voice.additionalData != nullptr) {
                     m_rxCall->algoId = voice.additionalData[0U];
                     m_rxCall->kId = GET_UINT16(voice.additionalData, 1U);
+
+                    // copy LDU2 LC bytes into LDU LC buffer
+                    m_rxCall->LDULC[9U] = voice.additionalData[0U];
+                    m_rxCall->LDULC[10U] = voice.additionalData[1U];
+                    m_rxCall->LDULC[11U] = voice.additionalData[2U];
                 } else {
                     LogWarning(LOG_MODEM, "V.24/DFSI VC15 traffic missing metadata");
                 }
@@ -1432,11 +1600,27 @@ void ModemV24::convertToAirTIA(const uint8_t *data, uint32_t length)
             case DFSIFrameType::LDU2_VOICE16:
             {
                 ::memcpy(m_rxCall->netLDU2 + 155U, voice.imbeData, RAW_IMBE_LENGTH_BYTES);
+                if (voice.additionalData != nullptr) {
+                    // copy LDU2 LC bytes into LDU LC buffer
+                    m_rxCall->LDULC[12U] = voice.additionalData[0U];
+                    m_rxCall->LDULC[13U] = voice.additionalData[1U];
+                    m_rxCall->LDULC[14U] = voice.additionalData[2U];
+                } else {
+                    LogWarning(LOG_MODEM, "V.24/DFSI VC16 traffic missing metadata");
+                }
             }
             break;
             case DFSIFrameType::LDU2_VOICE17:
             {
                 ::memcpy(m_rxCall->netLDU2 + 180U, voice.imbeData, RAW_IMBE_LENGTH_BYTES);
+                if (voice.additionalData != nullptr) {
+                    // copy LDU2 LC bytes into LDU LC buffer
+                    m_rxCall->LDULC[15U] = voice.additionalData[0U];
+                    m_rxCall->LDULC[16U] = voice.additionalData[1U];
+                    m_rxCall->LDULC[17U] = voice.additionalData[2U];
+                } else {
+                    LogWarning(LOG_MODEM, "V.24/DFSI VC17 traffic missing metadata");
+                }
             }
             break;
             case DFSIFrameType::LDU2_VOICE18:
@@ -1471,6 +1655,19 @@ void ModemV24::convertToAirTIA(const uint8_t *data, uint32_t length)
 
     // encode LDU1 if ready
     if (m_rxCall->n == 9U) {
+        // decode RS (24,12,13) FEC
+        // bryanb: for now this won't abort the frame if RS fails, but maybe it should in the future, for now
+        //  we'll just log the error
+        try {
+            bool ret = m_rs.decode241213(m_rxCall->LDULC);
+            if (!ret) {
+                LogError(LOG_MODEM, "V.24/DFSI LDU1, failed to decode RS (24,12,13) FEC");
+            }
+        }
+        catch (...) {
+            Utils::dump(2U, "P25, RS excepted with input data", m_rxCall->LDULC, P25_LDU_LC_FEC_LENGTH_BYTES);
+        }
+
         lc::LC lc = lc::LC();
         lc.setLCO(m_rxCall->lco);
         lc.setMFId(m_rxCall->mfId);
@@ -1550,6 +1747,19 @@ void ModemV24::convertToAirTIA(const uint8_t *data, uint32_t length)
     
     // encode LDU2 if ready
     if (m_rxCall->n == 18U) {
+        // decode RS (24,16,9) FEC
+        // bryanb: for now this won't abort the frame if RS fails, but maybe it should in the future, for now
+        //  we'll just log the error
+        try {
+            bool ret = m_rs.decode24169(m_rxCall->LDULC);
+            if (!ret) {
+                LogError(LOG_MODEM, "V.24/DFSI LDU2, failed to decode RS (24,16,9) FEC");
+            }
+        }
+        catch (...) {
+            Utils::dump(2U, "P25, RS excepted with input data", m_rxCall->LDULC, P25_LDU_LC_FEC_LENGTH_BYTES);
+        }
+
         lc::LC lc = lc::LC();
         lc.setMI(m_rxCall->MI);
         lc.setAlgId(m_rxCall->algoId);

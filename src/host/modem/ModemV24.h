@@ -85,6 +85,7 @@ namespace modem
             MI = new uint8_t[P25DEF::MI_LENGTH_BYTES];
             VHDR1 = new uint8_t[p25::dfsi::frames::MotVoiceHeader1::HCW_LENGTH];
             VHDR2 = new uint8_t[p25::dfsi::frames::MotVoiceHeader2::HCW_LENGTH];
+            LDULC = new uint8_t[P25DEF::P25_LDU_LC_FEC_LENGTH_BYTES];
 
             netLDU1 = new uint8_t[9U * 25U];
             netLDU2 = new uint8_t[9U * 25U];
@@ -105,6 +106,8 @@ namespace modem
                 delete[] VHDR1;
             if (VHDR2 != nullptr)
                 delete[] VHDR2;
+            if (LDULC != nullptr)
+                delete[] LDULC;
             if (netLDU1 != nullptr)
                 delete[] netLDU1;
             if (netLDU2 != nullptr)
@@ -135,6 +138,9 @@ namespace modem
                 ::memset(VHDR1, 0x00U, p25::dfsi::frames::MotVoiceHeader1::HCW_LENGTH);
             if (VHDR2 != nullptr)
                 ::memset(VHDR2, 0x00U, p25::dfsi::frames::MotVoiceHeader2::HCW_LENGTH);
+
+            if (LDULC != nullptr)
+                ::memset(LDULC, 0x00U, P25DEF::P25_LDU_LC_FEC_LENGTH_BYTES);
 
             if (netLDU1 != nullptr)
                 ::memset(netLDU1, 0x00U, 9U * 25U);
@@ -199,6 +205,11 @@ namespace modem
          * @brief Voice Header 2.
          */
         uint8_t* VHDR2;
+
+        /**
+         * @brief LDU LC.
+         */
+        uint8_t* LDULC;
 
         /**
          * @brief Sequence Number.
