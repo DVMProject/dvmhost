@@ -784,6 +784,9 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
                 uint8_t buffer[P25_PDU_FRAME_LENGTH_BYTES + 2U];
                 ::memset(buffer, 0x00U, P25_PDU_FRAME_LENGTH_BYTES + 2U);
 
+                buffer[0U] = modem::TAG_DATA;
+                buffer[1U] = 0x00U;
+
                 // add the data
                 uint32_t newBitLength = P25Utils::encodeByLength(data, buffer + 2U, bitLength);
                 uint32_t newByteLength = newBitLength / 8U;
