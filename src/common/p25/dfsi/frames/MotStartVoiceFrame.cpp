@@ -31,9 +31,8 @@ MotStartVoiceFrame::MotStartVoiceFrame() :
     startOfStream(nullptr),
     fullRateVoice(nullptr),
     m_icw(ICWFlag::DIU),
-    m_rssi(0U),
     m_rssiValidity(RssiValidityFlag::INVALID),
-    m_nRssi(0U),
+    m_rssi(0U),
     m_adjMM(0U)
 {
     startOfStream = new MotStartOfStream();
@@ -46,9 +45,8 @@ MotStartVoiceFrame::MotStartVoiceFrame(uint8_t* data) :
     startOfStream(nullptr),
     fullRateVoice(nullptr),
     m_icw(ICWFlag::DIU),
-    m_rssi(0U),
     m_rssiValidity(RssiValidityFlag::INVALID),
-    m_nRssi(0U),
+    m_rssi(0U),
     m_adjMM(0U)
 {
     decode(data);
@@ -95,11 +93,13 @@ bool MotStartVoiceFrame::decode(const uint8_t* data)
     fullRateVoice->decode(voiceBuffer, true);
 
     // get rest of data
-    m_icw = (ICWFlag::E)data[5U];
-    m_rssi = data[6U];
-    m_rssiValidity = (RssiValidityFlag::E)data[7U];
-    m_nRssi = data[8U];
-    m_adjMM = data[9U];
+    m_icw = (ICWFlag::E)data[5U];                       // this field is dubious and questionable
+    //data[6U];                                         // unknown -- based on testing this is not related to RSSI
+    m_rssiValidity = (RssiValidityFlag::E)data[7U];     // this field is dubious and questionable
+
+    m_rssi = data[8U];
+
+    m_adjMM = data[9U];                                 // this field is dubious and questionable
 
     return true;
 }
@@ -131,9 +131,11 @@ void MotStartVoiceFrame::encode(uint8_t* data)
     }
 
     // Copy the rest
-    data[5U] = m_icw;
-    data[6U] = m_rssi;
-    data[7U] = m_rssiValidity;
-    data[8U] = m_nRssi;
-    data[9U] = m_adjMM;
+    data[5U] = m_icw;                                   // this field is dubious and questionable
+    data[6U] = 0U;                                      // unknown -- based on testing this is not related to RSSI
+    data[7U] = m_rssiValidity;                          // this field is dubious and questionable
+
+    data[8U] = m_rssi;
+
+    data[9U] = m_adjMM;                                 // this field is dubious and questionable
 }

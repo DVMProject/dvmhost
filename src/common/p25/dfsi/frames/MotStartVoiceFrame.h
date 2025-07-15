@@ -91,22 +91,23 @@ namespace p25
 
                 /**
                  * @brief 
+                 * @note bryanb: I doubt the authenticity of this field.
                  */
                 DECLARE_PROPERTY(ICWFlag::E, icw, ICW);
+                /**
+                 * @brief Flag indicating whether or not the RSSI field is valid.
+                 * @note bryanb: I doubt the authenticity of this field.
+                 */
+                DECLARE_PROPERTY(RssiValidityFlag::E, rssiValidity, RSSIValidity);
+
                 /**
                  * @brief RSSI Value.
                  */
                 DECLARE_PROPERTY(uint8_t, rssi, RSSI);
-                /**
-                 * @brief Flag indicating whether or not the RSSI field is valid.
-                 */
-                DECLARE_PROPERTY(RssiValidityFlag::E, rssiValidity, RSSIValidity);
+
                 /**
                  * @brief 
-                 */
-                DECLARE_PROPERTY(uint8_t, nRssi, NRSSI);
-                /**
-                 * @brief 
+                 * @note bryanb: I doubt the authenticity of this field.
                  */
                 DECLARE_PROPERTY(uint8_t, adjMM, AdjMM);
             };

@@ -588,7 +588,7 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
     ::memcpy(dfsiData, data + 1U, length - 1U);
 
     if (m_debug)
-        Utils::dump("V24 RX data from board", dfsiData, length - 1U);
+        Utils::dump("V.24 RX data from board", dfsiData, length - 1U);
 
     DFSIFrameType::E frameType = (DFSIFrameType::E)dfsiData[0U];
     m_rxLastFrameTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
@@ -602,14 +602,14 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
                 m_rxCall->resetCallData();
                 m_rxCallInProgress = true;
                 if (m_debug) {
-                    LogDebug(LOG_MODEM, "V24 RX, ICW START, RT = $%02X, Type = $%02X", dfsiData[2U], dfsiData[4U]);
+                    ::LogDebugEx(LOG_MODEM, "ModemV24::convertToAir()", "V.24 RX, ICW START, RT = $%02X, Type = $%02X", dfsiData[2U], dfsiData[4U]);
                 }
             } else {
                 if (m_rxCallInProgress) {
                     m_rxCall->resetCallData();
                     m_rxCallInProgress = false;
                     if (m_debug) {
-                        LogDebug(LOG_MODEM, "V24 RX, ICW STOP, RT = $%02X, Type = $%02X", dfsiData[2U], dfsiData[4U]);
+                        ::LogDebugEx(LOG_MODEM, "ModemV24::convertToAir()", "V.24 RX, ICW STOP, RT = $%02X, Type = $%02X", dfsiData[2U], dfsiData[4U]);
                     }
                     // generate a TDU
                     create_TDU(buffer);
@@ -666,7 +666,7 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
                         m_rxCallInProgress = true;
                         m_rxCall->resetCallData();
                         if (m_debug)
-                            LogDebug(LOG_MODEM, "V24 RX VHDR late entry, resetting call data");
+                            ::LogDebugEx(LOG_MODEM, "ModemV24::convertToAir()", "V.24 RX VHDR late entry, resetting call data");
                     }
 
                     uint32_t dstId = GET_UINT32(vhdr, 13U);
@@ -722,6 +722,11 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
             MotStartVoiceFrame svf = MotStartVoiceFrame(dfsiData);
             ::memset(m_rxCall->LDULC, 0x00U, P25DEF::P25_LDU_LC_FEC_LENGTH_BYTES);
             ::memcpy(m_rxCall->netLDU1 + 10U, svf.fullRateVoice->imbeData, RAW_IMBE_LENGTH_BYTES);
+
+            if (m_debug) {
+                ::LogDebugEx(LOG_MODEM, "ModemV24::convertToAir()", "V.24 RX, Start of Voice LDU1, ICW = $%02X, RSSIValid = $%02X, RSSI = $%02X, AdjMM = $%02X", svf.getICW(), svf.getRSSIValidity(), svf.getRSSI(), svf.getAdjMM());
+            }
+
             m_rxCall->n++;
         }
         break;
@@ -730,6 +735,11 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
             MotStartVoiceFrame svf = MotStartVoiceFrame(dfsiData);
             ::memset(m_rxCall->LDULC, 0x00U, P25DEF::P25_LDU_LC_FEC_LENGTH_BYTES);
             ::memcpy(m_rxCall->netLDU2 + 10U, svf.fullRateVoice->imbeData, RAW_IMBE_LENGTH_BYTES);
+
+            if (m_debug) {
+                ::LogDebugEx(LOG_MODEM, "ModemV24::convertToAir()", "V.24 RX, Start of Voice LDU2, ICW = $%02X, RSSIValid = $%02X, RSSI = $%02X, AdjMM = $%02X", svf.getICW(), svf.getRSSIValidity(), svf.getRSSI(), svf.getAdjMM());
+            }
+
             m_rxCall->n++;
         }
         break;
@@ -2227,7 +2237,7 @@ void ModemV24::convertFromAir(uint8_t* data, uint32_t length)
             if (!m_txCallInProgress) {
                 startOfStream(lc);
                 if (m_debug)
-                    LogDebug(LOG_MODEM, "V24 TX VHDR late entry, resetting TX call data");
+                    ::LogDebugEx(LOG_MODEM, "ModemV24::convertFromAir()", "V.24 TX VHDR late entry, resetting TX call data");
             }
 
             // generate audio
@@ -2563,7 +2573,7 @@ void ModemV24::convertFromAirTIA(uint8_t* data, uint32_t length)
             if (!m_txCallInProgress) {
                 startOfStreamTIA(lc);
                 if (m_debug)
-                    LogDebug(LOG_MODEM, "V24 TX VHDR late entry, resetting TX call data");
+                    ::LogDebugEx(LOG_MODEM, "ModemV24::convertFromAirTIA()", "DFSI TX VHDR late entry, resetting TX call data");
             }
 
             // generate audio

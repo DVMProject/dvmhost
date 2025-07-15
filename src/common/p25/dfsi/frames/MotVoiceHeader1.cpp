@@ -31,9 +31,8 @@ MotVoiceHeader1::MotVoiceHeader1() :
     header(nullptr),
     startOfStream(nullptr),
     m_icw(ICWFlag::DIU),
-    m_rssi(0U),
     m_rssiValidity(RssiValidityFlag::INVALID),
-    m_nRssi(0U)
+    m_rssi(0U)
 {
     startOfStream = new MotStartOfStream();
 
@@ -47,9 +46,8 @@ MotVoiceHeader1::MotVoiceHeader1(uint8_t* data) :
     header(nullptr),
     startOfStream(nullptr),
     m_icw(ICWFlag::DIU),
-    m_rssi(0U),
     m_rssiValidity(RssiValidityFlag::INVALID),
-    m_nRssi(0U)
+    m_rssi(0U)
 {
     decode(data);
 }
@@ -78,15 +76,16 @@ bool MotVoiceHeader1::decode(const uint8_t* data)
     uint8_t buffer[MotStartOfStream::LENGTH];
     ::memset(buffer, 0x00U, MotStartOfStream::LENGTH);
     
-    // we copy the bytes from [1:4] 
+    // we copy the bytes from [1:4]
     ::memcpy(buffer + 1U, data + 1U, 4);
     startOfStream->decode(buffer);
 
     // decode the other stuff
-    m_icw = (ICWFlag::E)data[5U];
-    m_rssi = data[6U];
-    m_rssiValidity = (RssiValidityFlag::E)data[7U];
-    m_nRssi = data[8U];
+    m_icw = (ICWFlag::E)data[5U];                       // this field is dubious and questionable
+    //data[6U];                                         // unknown -- based on testing this is not related to RSSI
+    m_rssiValidity = (RssiValidityFlag::E)data[7U];     // this field is dubious and questionable
+
+    m_rssi = data[8U];
 
     // our header includes the trailing source and check bytes
     if (header != nullptr)
@@ -117,10 +116,11 @@ void MotVoiceHeader1::encode(uint8_t* data)
         ::memcpy(data + 1U, buffer + 1U, 4U);
     }
 
-    data[5U] = m_icw;
-    data[6U] = m_rssi;
-    data[7U] = m_rssiValidity;
-    data[8U] = m_nRssi;
+    data[5U] = m_icw;                                   // this field is dubious and questionable
+    data[6U] = 0U;                                      // unknown -- based on testing this is not related to RSSI
+    data[7U] = m_rssiValidity;                          // this field is dubious and questionable
+
+    data[8U] = m_rssi;
 
     // our header includes the trailing source and check bytes
     if (header != nullptr) {
