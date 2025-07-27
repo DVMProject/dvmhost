@@ -183,8 +183,8 @@ bool Voice::process(uint8_t* data, uint32_t len)
             m_p25->m_rfLastDstId = lc.getDstId();
             m_p25->m_rfLastSrcId = lc.getSrcId();
 
-            // is the TGID presented in the HDU valid?
-            if (!acl::AccessControl::validateTGId(lc.getDstId(), m_p25->m_forceAllowTG0)) {
+            // if we're DFSI/V.24 -- ignore the TGID presented in the HDU
+            if (m_p25->m_isModemDFSI) {
                 m_p25->m_rfLastDstId = 0U;
             }
 
@@ -299,12 +299,11 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 m_p25->m_txQueue.clear();
 
                 resetRF();
-            } else {
-                // is the TGID presented in the HDU valid?
-                if (m_p25->m_rfLastDstId == 0U && !acl::AccessControl::validateTGId(m_rfLastHDU.getDstId(), m_p25->m_forceAllowTG0)) {
-                    // the TGID in the HDU isn't valid -- we'll override it with the one in our LDU1
-                    m_p25->m_rfLastDstId = dstId;
-                }
+            }
+
+            if (m_p25->m_rfLastDstId == 0U && m_p25->m_isModemDFSI) {
+                // if we're DFSI/V.24 -- use the TGID presented in the LDU1
+                m_p25->m_rfLastDstId = dstId;
             }
 
             if (m_p25->m_enableControl) {
