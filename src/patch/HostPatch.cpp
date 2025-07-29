@@ -1307,7 +1307,7 @@ void HostPatch::cryptP25AudioFrame(uint8_t* ldu, bool reverseEncrypt, uint8_t p2
                     break;
                 }
             } else {
-                if (m_p25DstCrypto->getTEKLength() > 0U) {
+                if (reverseEncrypt && m_p25DstCrypto->getTEKLength() > 0U) {
                     switch (tekDstAlgoId) {
                     case p25::defines::ALGO_AES_256:
                         m_p25DstCrypto->cryptAES_IMBE(imbe, (p25N == 1U) ? DUID::LDU1 : DUID::LDU2);
@@ -1338,7 +1338,7 @@ void HostPatch::cryptP25AudioFrame(uint8_t* ldu, bool reverseEncrypt, uint8_t p2
                     break;
                 }
             } else {
-                if (m_p25SrcCrypto->getTEKLength() > 0U) {
+                if (reverseEncrypt && m_p25SrcCrypto->getTEKLength() > 0U) {
                     switch (tekSrcAlgoId) {
                     case p25::defines::ALGO_AES_256:
                         m_p25SrcCrypto->cryptAES_IMBE(imbe, (p25N == 1U) ? DUID::LDU1 : DUID::LDU2);
