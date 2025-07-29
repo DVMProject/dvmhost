@@ -1245,12 +1245,16 @@ void HostPatch::cryptP25AudioFrame(uint8_t* ldu, bool reverseEncrypt, uint8_t p2
     using namespace p25;
     using namespace p25::defines;
 
-    uint8_t tekAlgoId = m_tekSrcAlgoId;
-    uint16_t tekKeyId = m_tekSrcKeyId;
+    uint8_t tekSrcAlgoId = m_tekSrcAlgoId;
+    uint16_t tekSrcKeyId = m_tekSrcKeyId;
+    uint8_t tekDstAlgoId = m_tekDstAlgoId;
+    uint16_t tekDstKeyId = m_tekDstKeyId;
 
     if (reverseEncrypt) {
-        tekAlgoId = m_tekDstAlgoId;
-        tekKeyId = m_tekDstKeyId;
+        tekSrcAlgoId = m_tekDstAlgoId;
+        tekSrcKeyId = m_tekDstKeyId;
+        tekDstAlgoId = m_tekSrcAlgoId;
+        tekDstKeyId = m_tekSrcKeyId;
     }
 
     // decode 9 IMBE codewords into PCM samples
@@ -1289,9 +1293,9 @@ void HostPatch::cryptP25AudioFrame(uint8_t* ldu, bool reverseEncrypt, uint8_t p2
         // Utils::dump(1U, "IMBE", imbe, RAW_IMBE_LENGTH_BYTES);
 
         // first -- decrypt the IMBE codeword
-        if (tekAlgoId != p25::defines::ALGO_UNENCRYPT && tekKeyId > 0U) {
+        if (tekSrcAlgoId != p25::defines::ALGO_UNENCRYPT && tekSrcKeyId > 0U) {
             if (!reverseEncrypt && m_p25SrcCrypto->getTEKLength() > 0U) {
-                switch (tekAlgoId) {
+                switch (tekSrcAlgoId) {
                 case p25::defines::ALGO_AES_256:
                     m_p25SrcCrypto->cryptAES_IMBE(imbe, (p25N == 1U) ? DUID::LDU1 : DUID::LDU2);
                     break;
@@ -1299,12 +1303,12 @@ void HostPatch::cryptP25AudioFrame(uint8_t* ldu, bool reverseEncrypt, uint8_t p2
                     m_p25SrcCrypto->cryptARC4_IMBE(imbe, (p25N == 1U) ? DUID::LDU1 : DUID::LDU2);
                     break;
                 default:
-                    LogError(LOG_HOST, "unsupported TEK algorithm, tekAlgoId = $%02X", tekAlgoId);
+                    LogError(LOG_HOST, "unsupported TEK algorithm, tekAlgoId = $%02X", tekSrcAlgoId);
                     break;
                 }
             } else {
                 if (m_p25DstCrypto->getTEKLength() > 0U) {
-                    switch (tekAlgoId) {
+                    switch (tekDstAlgoId) {
                     case p25::defines::ALGO_AES_256:
                         m_p25DstCrypto->cryptAES_IMBE(imbe, (p25N == 1U) ? DUID::LDU1 : DUID::LDU2);
                         break;
@@ -1312,7 +1316,7 @@ void HostPatch::cryptP25AudioFrame(uint8_t* ldu, bool reverseEncrypt, uint8_t p2
                         m_p25DstCrypto->cryptARC4_IMBE(imbe, (p25N == 1U) ? DUID::LDU1 : DUID::LDU2);
                         break;
                     default:
-                        LogError(LOG_HOST, "unsupported TEK algorithm, tekAlgoId = $%02X", tekAlgoId);
+                        LogError(LOG_HOST, "unsupported TEK algorithm, tekAlgoId = $%02X", tekDstAlgoId);
                         break;
                     }
                 }
@@ -1320,9 +1324,9 @@ void HostPatch::cryptP25AudioFrame(uint8_t* ldu, bool reverseEncrypt, uint8_t p2
         }
 
         // second -- reencrypt the IMBE codeword
-        if (tekAlgoId != p25::defines::ALGO_UNENCRYPT && tekKeyId > 0U) {
+        if (tekDstAlgoId != p25::defines::ALGO_UNENCRYPT && tekDstKeyId > 0U) {
             if (!reverseEncrypt && m_p25DstCrypto->getTEKLength() > 0U) {
-                switch (tekAlgoId) {
+                switch (tekDstAlgoId) {
                 case p25::defines::ALGO_AES_256:
                     m_p25DstCrypto->cryptAES_IMBE(imbe, (p25N == 1U) ? DUID::LDU1 : DUID::LDU2);
                     break;
@@ -1330,12 +1334,12 @@ void HostPatch::cryptP25AudioFrame(uint8_t* ldu, bool reverseEncrypt, uint8_t p2
                     m_p25DstCrypto->cryptARC4_IMBE(imbe, (p25N == 1U) ? DUID::LDU1 : DUID::LDU2);
                     break;
                 default:
-                    LogError(LOG_HOST, "unsupported TEK algorithm, tekAlgoId = $%02X", tekAlgoId);
+                    LogError(LOG_HOST, "unsupported TEK algorithm, tekAlgoId = $%02X", tekDstAlgoId);
                     break;
                 }
             } else {
                 if (m_p25SrcCrypto->getTEKLength() > 0U) {
-                    switch (tekAlgoId) {
+                    switch (tekSrcAlgoId) {
                     case p25::defines::ALGO_AES_256:
                         m_p25SrcCrypto->cryptAES_IMBE(imbe, (p25N == 1U) ? DUID::LDU1 : DUID::LDU2);
                         break;
@@ -1343,7 +1347,7 @@ void HostPatch::cryptP25AudioFrame(uint8_t* ldu, bool reverseEncrypt, uint8_t p2
                         m_p25SrcCrypto->cryptARC4_IMBE(imbe, (p25N == 1U) ? DUID::LDU1 : DUID::LDU2);
                         break;
                     default:
-                        LogError(LOG_HOST, "unsupported TEK algorithm, tekAlgoId = $%02X", tekAlgoId);
+                        LogError(LOG_HOST, "unsupported TEK algorithm, tekAlgoId = $%02X", tekSrcAlgoId);
                         break;
                     }
                 }
