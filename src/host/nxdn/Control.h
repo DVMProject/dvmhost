@@ -280,6 +280,8 @@ namespace nxdn
         bool m_ignoreAffiliationCheck;
         bool m_legacyGroupReg;
 
+        uint32_t m_defaultNetIdleTalkgroup;
+
         channel::LICH m_rfLastLICH;
         lc::RTCH m_rfLC;
         lc::RTCH m_netLC;

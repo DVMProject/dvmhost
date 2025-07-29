@@ -1216,6 +1216,17 @@ bool Voice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
         m_p25->m_rfTGHang.stop();
     }
 
+    // don't process network frames if the RF TG hang timer isn't running, the default net idle talkgroup is set and
+    // the destination ID doesn't match the default net idle talkgroup
+    if (m_p25->m_defaultNetIdleTalkgroup != 0U && dstId != 0U && !m_p25->m_rfTGHang.isRunning()) {
+        if (m_p25->m_defaultNetIdleTalkgroup != dstId) {
+            resetNet();
+            if (m_p25->m_network != nullptr)
+                m_p25->m_network->resetP25();
+            return false;
+        }
+    }
+
     // perform authoritative network TG hangtimer and traffic preemption
     if (m_p25->m_authoritative) {
         // don't process network frames if the destination ID's don't match and the network TG hang timer is running

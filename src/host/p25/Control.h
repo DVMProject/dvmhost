@@ -314,6 +314,8 @@ namespace p25
         bool m_dfsiFDX;
         bool m_forceAllowTG0;
 
+        uint32_t m_defaultNetIdleTalkgroup;
+
         ::lookups::IdenTableLookup* m_idenTable;
         ::lookups::RadioIdLookup* m_ridLookup;
         ::lookups::TalkgroupRulesLookup* m_tidLookup;

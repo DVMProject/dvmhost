@@ -143,6 +143,10 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, ::lookups::VoiceChDa
     m_enableTSCC = enableTSCC;
 
     yaml::Node rfssConfig = systemConf["config"];
+    uint32_t defaultNetIdleTalkgroup = (uint32_t)::strtoul(rfssConfig["defaultNetIdleTalkgroup"].as<std::string>("0").c_str(), NULL, 16);
+    m_slot1->setDefaultNetIdleTG(defaultNetIdleTalkgroup);
+    m_slot2->setDefaultNetIdleTG(defaultNetIdleTalkgroup);
+
     yaml::Node controlCh = rfssConfig["controlCh"];
     bool notifyCC = controlCh["notifyEnable"].as<bool>(false);
     m_slot1->setNotifyCC(notifyCC);
@@ -220,6 +224,10 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, ::lookups::VoiceChDa
         }
         if (disableNetworkGrant) {
             LogInfo("    Disable Network Grants: yes");
+        }
+
+        if (defaultNetIdleTalkgroup != 0U) {
+            LogInfo("    Default Network Idle Talkgroup: $%04X", defaultNetIdleTalkgroup);
         }
 
         LogInfo("    Ignore Affiliation Check: %s", ignoreAffiliationCheck ? "yes" : "no");

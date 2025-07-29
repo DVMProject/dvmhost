@@ -82,6 +82,7 @@ Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t q
     m_demandUnitRegForRefusedAff(true),
     m_dfsiFDX(false),
     m_forceAllowTG0(false),
+    m_defaultNetIdleTalkgroup(0U),
     m_idenTable(idenTable),
     m_ridLookup(ridLookup),
     m_tidLookup(tidLookup),
@@ -246,6 +247,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
     yaml::Node rfssConfig = systemConf["config"];
     m_control->m_patchSuperGroup = (uint32_t)::strtoul(rfssConfig["pSuperGroup"].as<std::string>("FFFE").c_str(), NULL, 16);
     m_control->m_announcementGroup = (uint32_t)::strtoul(rfssConfig["announcementGroup"].as<std::string>("FFFE").c_str(), NULL, 16);
+    m_defaultNetIdleTalkgroup = (uint32_t)::strtoul(rfssConfig["defaultNetIdleTalkgroup"].as<std::string>("0").c_str(), NULL, 16);
 
     yaml::Node secureConfig = rfssConfig["secure"];
     std::string key = secureConfig["key"].as<std::string>();
@@ -514,6 +516,9 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
 
         LogInfo("    Patch Super Group: $%04X", m_control->m_patchSuperGroup);
         LogInfo("    Announcement Group: $%04X", m_control->m_announcementGroup);
+        if (m_defaultNetIdleTalkgroup != 0U) {
+            LogInfo("    Default Network Idle Talkgroup: $%04X", m_defaultNetIdleTalkgroup);
+        }
 
         LogInfo("    Notify Control: %s", m_notifyCC ? "yes" : "no");
         if (m_disableNetworkHDU) {

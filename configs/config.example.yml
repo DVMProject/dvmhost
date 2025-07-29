@@ -482,6 +482,10 @@ system:
         pSuperGroup: FFFE
         # Announcment Talkgroup Group.
         announcementGroup: FFFE
+        # Default Talkgroup for idle network traffic.
+        #   NOTE: TGID 0 is used here to indicate "promiscuous" mode, where first-come-first-serve traffic from the network
+        #     is allowed.
+        defaultNetIdleTalkgroup: 0
 
         # DMR network ID.
         dmrNetId: 1

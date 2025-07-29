@@ -31,10 +31,9 @@ using namespace nxdn::packet;
 //  Macros
 // ---------------------------------------------------------------------------
 
-// Don't process RF frames if the network isn't in a idle state and the RF destination
-// is the network destination and stop network frames from processing -- RF wants to
-// transmit on a different talkgroup
+// Helper macro to perform RF traffic collision checking.
 #define CHECK_TRAFFIC_COLLISION(_SRC_ID, _DST_ID)                                       \
+    /* don't process RF frames if the network isn't in a idle state and the RF destination is the network destination */ \
     if (m_nxdn->m_netState != RS_NET_IDLE && _DST_ID == m_nxdn->m_netLastDstId) {       \
         LogWarning(LOG_RF, "Traffic collision detect, preempting new RF traffic to existing network traffic!"); \
         resetRF();                                                                      \
@@ -42,6 +41,7 @@ using namespace nxdn::packet;
         return false;                                                                   \
     }                                                                                   \
                                                                                         \
+    /* stop network frames from processing -- RF wants to transmit on a different talkgroup */ \
     if (m_nxdn->m_netState != RS_NET_IDLE) {                                            \
         if (m_nxdn->m_netLC.getSrcId() == _SRC_ID && m_nxdn->m_netLastDstId == _DST_ID) { \
             LogWarning(LOG_RF, "Traffic collision detect, preempting new RF traffic to existing RF traffic (Are we in a voting condition?), rfSrcId = %u, rfDstId = %u, netSrcId = %u, netDstId = %u", _SRC_ID, _DST_ID, \
@@ -58,6 +58,7 @@ using namespace nxdn::packet;
                 m_nxdn->m_network->resetNXDN();                                         \
         }                                                                               \
                                                                                         \
+        /* is control is enabled, and the group was granted by network already ignore RF traffic */ \
         if (m_nxdn->m_enableControl && _DST_ID == m_nxdn->m_netLastDstId) {             \
             if (m_nxdn->m_affiliations->isNetGranted(_DST_ID)) {                        \
                 LogWarning(LOG_RF, "Traffic collision detect, preempting new RF traffic to existing granted network traffic (Are we in a voting condition?), rfSrcId = %u, rfDstId = %u, netSrcId = %u, netDstId = %u", _SRC_ID, _DST_ID, \
@@ -69,9 +70,9 @@ using namespace nxdn::packet;
         }                                                                               \
     }
 
-// Don't process network frames if the destination ID's don't match and the network TG hang
-// timer is running, and don't process network frames if the RF modem isn't in a listening state
+// Helper macro to perform network traffic collision checking.
 #define CHECK_NET_TRAFFIC_COLLISION(_LAYER3, _SRC_ID, _DST_ID)                          \
+    /* don't process network frames if the destination ID's don't match and the RF TG hang timer is running */ \
     if (m_nxdn->m_rfLastDstId != 0U) {                                                  \
         if (m_nxdn->m_rfLastDstId != _DST_ID && (m_nxdn->m_rfTGHang.isRunning() && !m_nxdn->m_rfTGHang.hasExpired())) { \
             resetNet();                                                                 \
@@ -83,6 +84,21 @@ using namespace nxdn::packet;
         }                                                                               \
     }                                                                                   \
                                                                                         \
+    /* bryanb: possible fix for a "tail ride" condition where network traffic immediately follows RF traffic *while* */ \
+    /* the RF TG hangtimer is running */                                                \
+    if (m_nxdn->m_rfTGHang.isRunning() && !m_nxdn->m_rfTGHang.hasExpired()) {           \
+        m_nxdn->m_rfTGHang.stop();                                                      \
+    }                                                                                   \
+                                                                                        \
+    /* don't process network frames if the RF TG hang timer isn't running, the default net idle talkgroup is set and */ \
+    /* the destination ID doesn't match the default net idle talkgroup */               \
+    if (m_nxdn->m_defaultNetIdleTalkgroup != 0U && dstId != 0U && !m_nxdn->m_rfTGHang.isRunning()) { \
+        if (m_nxdn->m_defaultNetIdleTalkgroup != dstId) {                               \
+            return false;                                                               \
+        }                                                                               \
+    }                                                                                   \
+                                                                                        \
+    /* perform authoritative network TG hangtimer and traffic preemption */             \
     if (m_nxdn->m_authoritative) {                                                      \
         if (m_nxdn->m_netLastDstId != 0U) {                                             \
             if (m_nxdn->m_netLastDstId != _DST_ID && (m_nxdn->m_netTGHang.isRunning() && !m_nxdn->m_netTGHang.hasExpired())) { \
@@ -94,6 +110,7 @@ using namespace nxdn::packet;
             }                                                                           \
         }                                                                               \
                                                                                         \
+        /* don't process network frames if the RF modem isn't in a listening state */   \
         if (m_nxdn->m_rfState != RS_RF_LISTENING) {                                     \
             if (_LAYER3.getSrcId() == _SRC_ID && _LAYER3.getDstId() == _DST_ID) {       \
                 LogWarning(LOG_RF, "Traffic collision detect, preempting new network traffic to existing RF traffic (Are we in a voting condition?), rfSrcId = %u, rfDstId = %u, netSrcId = %u, netDstId = %u", _LAYER3.getSrcId(), _LAYER3.getDstId(), \
@@ -114,6 +131,7 @@ using namespace nxdn::packet;
         }                                                                               \
     }                                                                                   \
                                                                                         \
+    /* don't process network frames if this modem isn't authoritative */                \
     if (!m_nxdn->m_authoritative && m_nxdn->m_permittedDstId != _DST_ID) {              \
         if (!g_disableNonAuthoritativeLogging)                                          \
             LogWarning(LOG_NET, "[NON-AUTHORITATIVE] Ignoring network traffic, destination not permitted, dstId = %u", _DST_ID); \

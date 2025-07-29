@@ -280,6 +280,12 @@ namespace dmr
         void setFrameLossThreshold(uint32_t threshold) { m_frameLossThreshold = threshold; }
 
         /**
+         * @brief Helper to set the default network idle talkgroup.
+         * @param tg Talkgroup ID.
+         */
+        void setDefaultNetIdleTG(uint32_t tg) { m_defaultNetIdleTalkgroup = tg; }
+
+        /**
          * @brief Helper to get the last transmitted destination ID.
          * @returns uint32_t Last transmitted Destination ID.
          */
@@ -417,6 +423,8 @@ namespace dmr
         bool m_disableNetworkGrant;
         bool m_convNetGrantDemand;
         bool m_legacyGroupReg;
+
+        uint32_t m_defaultNetIdleTalkgroup;
 
         uint32_t m_tsccPayloadDstId;
         uint32_t m_tsccPayloadSrcId;

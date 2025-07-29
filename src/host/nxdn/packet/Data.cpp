@@ -28,10 +28,9 @@ using namespace nxdn::packet;
 //  Macros
 // ---------------------------------------------------------------------------
 
-// Don't process RF frames if the network isn't in a idle state and the RF destination
-// is the network destination and stop network frames from processing -- RF wants to
-// transmit on a different talkgroup
+// Helper macro to perform RF traffic collision checking.
 #define CHECK_TRAFFIC_COLLISION(_SRC_ID, _DST_ID)                                       \
+    /* don't process RF frames if the network isn't in a idle state and the RF destination is the network destination */ \
     if (m_nxdn->m_netState != RS_NET_IDLE && _DST_ID == m_nxdn->m_netLastDstId) {       \
         LogWarning(LOG_RF, "Traffic collision detect, preempting new RF traffic to existing network traffic!"); \
         resetRF();                                                                      \
@@ -39,6 +38,7 @@ using namespace nxdn::packet;
         return false;                                                                   \
     }                                                                                   \
                                                                                         \
+    /* stop network frames from processing -- RF wants to transmit on a different talkgroup */ \
     if (m_nxdn->m_netState != RS_NET_IDLE) {                                            \
         if (m_nxdn->m_netLC.getSrcId() == _SRC_ID && m_nxdn->m_netLastDstId == _DST_ID) { \
             LogWarning(LOG_RF, "Traffic collision detect, preempting new RF traffic to existing RF traffic (Are we in a voting condition?), rfSrcId = %u, rfDstId = %u, netSrcId = %u, netDstId = %u", srcId, dstId, \
@@ -54,9 +54,9 @@ using namespace nxdn::packet;
         }                                                                               \
     }
 
-// Don't process network frames if the destination ID's don't match and the network TG hang
-// timer is running, and don't process network frames if the RF modem isn't in a listening state
+// Helper macro to perform network traffic collision checking.
 #define CHECK_NET_TRAFFIC_COLLISION(_LAYER3, _SRC_ID, _DST_ID)                          \
+    /* don't process network frames if the destination ID's don't match and the RF TG hang timer is running */ \
     if (m_nxdn->m_rfLastDstId != 0U) {                                                  \
         if (m_nxdn->m_rfLastDstId != dstId && (m_nxdn->m_rfTGHang.isRunning() && !m_nxdn->m_rfTGHang.hasExpired())) { \
             resetNet();                                                                 \
@@ -68,6 +68,7 @@ using namespace nxdn::packet;
         }                                                                               \
     }                                                                                   \
                                                                                         \
+    /* don't process network frames if the RF modem isn't in a listening state */       \
     if (m_nxdn->m_rfState != RS_RF_LISTENING) {                                         \
         if (_LAYER3.getSrcId() == srcId && _LAYER3.getDstId() == dstId) { \
             LogWarning(LOG_RF, "Traffic collision detect, preempting new network traffic to existing RF traffic (Are we in a voting condition?), rfSrcId = %u, rfDstId = %u, netSrcId = %u, netDstId = %u", _LAYER3.getSrcId(), _LAYER3.getDstId(), \

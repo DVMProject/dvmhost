@@ -72,6 +72,7 @@ Control::Control(bool authoritative, uint32_t ran, uint32_t callHang, uint32_t q
     m_dedicatedControl(false),
     m_ignoreAffiliationCheck(false),
     m_legacyGroupReg(false),
+    m_defaultNetIdleTalkgroup(0U),
     m_rfLastLICH(),
     m_rfLC(),
     m_netLC(),
@@ -221,6 +222,8 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
     m_legacyGroupReg = nxdnProtocol["legacyGroupReg"].as<bool>(false);
 
     yaml::Node rfssConfig = systemConf["config"];
+    m_defaultNetIdleTalkgroup = (uint32_t)::strtoul(rfssConfig["defaultNetIdleTalkgroup"].as<std::string>("0").c_str(), NULL, 16);
+
     yaml::Node controlCh = rfssConfig["controlCh"];
     m_notifyCC = controlCh["notifyEnable"].as<bool>(false);
 
@@ -326,6 +329,10 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
             }
             if (m_supervisor)
                 LogMessage(LOG_DMR, "Host is configured to operate as a NXDN control channel, site controller mode.");
+        }
+
+        if (m_defaultNetIdleTalkgroup != 0U) {
+            LogInfo("    Default Network Idle Talkgroup: $%04X", m_defaultNetIdleTalkgroup);
         }
 
         LogInfo("    Ignore Affiliation Check: %s", m_ignoreAffiliationCheck ? "yes" : "no");
