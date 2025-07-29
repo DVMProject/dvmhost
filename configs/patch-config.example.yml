@@ -60,10 +60,33 @@ network:
     sourceTGID: 1
     # Source Slot for received/transmitted audio frames.
     sourceSlot: 1
+
+    # Source Traffic Encryption
+    srcTek:
+      # Flag indicating whether or not traffic encryption is enabled.
+      enable: false
+      # Traffic Encryption Key Algorithm
+      #   aes - AES-256 Encryption
+      #   arc4 - ARC4/ADP Encryption
+      tekAlgo: "aes"
+      # Traffic Encryption Key ID
+      tekKeyId: 1
+
     # Destination Talkgroup ID for transmitted/received audio frames.
     destinationTGID: 1
     # Destination Slot for received/transmitted audio frames.
     destinationSlot: 1
+
+    # Destination Traffic Encryption
+    dstTek:
+      # Flag indicating whether or not traffic encryption is enabled.
+      enable: false
+      # Traffic Encryption Key Algorithm
+      #   aes - AES-256 Encryption
+      #   arc4 - ARC4/ADP Encryption
+      tekAlgo: "aes"
+      # Traffic Encryption Key ID
+      tekKeyId: 1
 
     # Flag indicating whether or not the patch is two-way.
     twoWay: false

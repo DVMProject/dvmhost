@@ -21,6 +21,7 @@
 #include "common/dmr/lc/LC.h"
 #include "common/dmr/lc/PrivacyLC.h"
 #include "common/p25/lc/LC.h"
+#include "common/p25/Crypto.h"
 #include "common/network/udp/Socket.h"
 #include "common/yaml/Yaml.h"
 #include "common/Timer.h"
@@ -94,8 +95,19 @@ private:
     bool m_grantDemand;
 
     bool m_callInProgress;
+    uint8_t m_callAlgoId;
     uint64_t m_rxStartTime;
     uint32_t m_rxStreamId;
+
+    uint8_t m_tekSrcAlgoId;
+    uint16_t m_tekSrcKeyId;
+    uint8_t m_tekDstAlgoId;
+    uint16_t m_tekDstKeyId;
+    bool m_requestedSrcTek;
+    bool m_requestedDstTek;
+
+    p25::crypto::P25Crypto* m_p25SrcCrypto;
+    p25::crypto::P25Crypto* m_p25DstCrypto;
 
     bool m_running;
     bool m_trace;
@@ -132,6 +144,22 @@ private:
      * @param length 
      */
     void processP25Network(uint8_t* buffer, uint32_t length);
+
+    /**
+     * @brief Helper to cross encrypt P25 network traffic audio frames.
+     * @param ldu 
+     * @param reverseEncrypt Flag indicating whether or not to reverse the encryption (i.e. use destination TEK vs source TEK).
+     * @param p25N 
+     */
+    void cryptP25AudioFrame(uint8_t* ldu, bool reverseEncrypt, uint8_t p25N);
+
+    /**
+     * @brief Helper to process a FNE KMM TEK response.
+     * @param ki Key Item.
+     * @param algId Algorithm ID.
+     * @param keyLength Length of key in bytes.
+     */
+    void processTEKResponse(p25::kmm::KeyItem* ki, uint8_t algId, uint8_t keyLength);
 
     /**
      * @brief Helper to check for an unflushed LDU1 packet.
