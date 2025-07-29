@@ -1021,6 +1021,7 @@ void HostPatch::processP25Network(uint8_t* buffer, uint32_t length)
             m_rxStreamId = 0U;
 
             m_callInProgress = false;
+            m_callAlgoId = ALGO_UNENCRYPT;
             m_rxStartTime = 0U;
             m_rxStreamId = 0U;
 
