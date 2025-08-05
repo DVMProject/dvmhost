@@ -2779,6 +2779,7 @@ void ModemV24::convertFromAirTIA(uint8_t* data, uint32_t length)
             uint16_t bufferSize = 0;
             FullRateVoice voice = FullRateVoice();
             voice.setBusy(DFSI_BUSY_BITS_BUSY);
+            voice.setSuperframeCnt(m_superFrameCnt);
 
             switch (n) {
                 case 0: // VOICE1/10
@@ -2905,11 +2906,11 @@ void ModemV24::convertFromAirTIA(uint8_t* data, uint32_t length)
             hdr.encode(buffer + 2U);
             bufferSize += BlockHeader::LENGTH;
 
-            voice.setSuperframeCnt(m_superFrameCnt);
+            // encode voice frame
             voice.encode(buffer + bufferSize);
             bufferSize += voice.getLength(); // 18, 17 or 14 depending on voice frame type
 
-            // generate start of stream
+            // generate start of stream and encode
             StartOfStream start = StartOfStream();
             start.setNID(generateNID(duid));
             start.encode(buffer + bufferSize);
