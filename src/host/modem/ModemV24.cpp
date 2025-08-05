@@ -2063,7 +2063,7 @@ uint16_t ModemV24::generateNID(DUID::E duid)
 void ModemV24::startOfStreamTIA(const p25::lc::LC& control)
 {
     m_txCallInProgress = true;
-    m_superFrameCnt = 0U;
+    m_superFrameCnt = 1U;
 
     p25::lc::LC lc = p25::lc::LC(control);
     
@@ -2186,7 +2186,7 @@ void ModemV24::startOfStreamTIA(const p25::lc::LC& control)
 
 void ModemV24::endOfStreamTIA()
 {
-    m_superFrameCnt = 0U;
+    m_superFrameCnt = 1U;
 
     uint16_t length = 0U;
     uint8_t buffer[2U];
@@ -2495,6 +2495,7 @@ void ModemV24::convertFromAirV24(uint8_t* data, uint32_t length)
             uint8_t* buffer = nullptr;
             uint16_t bufferSize = 0;
             MotFullRateVoice voice = MotFullRateVoice();
+            voice.setBusy(DFSI_BUSY_BITS_INBOUND);
 
             switch (n) {
                 case 0: // VOICE1/10
@@ -2777,6 +2778,7 @@ void ModemV24::convertFromAirTIA(uint8_t* data, uint32_t length)
             uint8_t* buffer = nullptr;
             uint16_t bufferSize = 0;
             FullRateVoice voice = FullRateVoice();
+            voice.setBusy(DFSI_BUSY_BITS_BUSY);
 
             switch (n) {
                 case 0: // VOICE1/10
@@ -2904,7 +2906,6 @@ void ModemV24::convertFromAirTIA(uint8_t* data, uint32_t length)
             bufferSize += BlockHeader::LENGTH;
 
             voice.setSuperframeCnt(m_superFrameCnt);
-            voice.setBusy(1U); // Inbound Channel is Busy
             voice.encode(buffer + bufferSize);
             bufferSize += voice.getLength(); // 18, 17 or 14 depending on voice frame type
 
@@ -2927,7 +2928,7 @@ void ModemV24::convertFromAirTIA(uint8_t* data, uint32_t length)
         // bryanb: this is a naive way of incrementing the superframe counter, we basically just increment it after
         // processing and LDU2
         if (duid == DUID::LDU2) {
-            if (m_superFrameCnt == 255U)
+            if (m_superFrameCnt == 3U)
                 m_superFrameCnt = 0U;
             else
                 m_superFrameCnt++;
