@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2024 Patrick McDonnell, W3AXL
- *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2024-2025 Bryan Biedenkapp, N2PLL
  *
  */
 #include "common/p25/dfsi/frames/MotStartVoiceFrame.h"
@@ -30,10 +30,7 @@ using namespace p25::dfsi::frames;
 MotStartVoiceFrame::MotStartVoiceFrame() :
     startOfStream(nullptr),
     fullRateVoice(nullptr),
-    m_icw(ICWFlag::DIU),
-    m_rssiValidity(RssiValidityFlag::INVALID),
-    m_rssi(0U),
-    m_adjMM(0U)
+    m_totalErrors(0U)
 {
     startOfStream = new MotStartOfStream();
     fullRateVoice = new MotFullRateVoice();
@@ -44,10 +41,7 @@ MotStartVoiceFrame::MotStartVoiceFrame() :
 MotStartVoiceFrame::MotStartVoiceFrame(uint8_t* data) :
     startOfStream(nullptr),
     fullRateVoice(nullptr),
-    m_icw(ICWFlag::DIU),
-    m_rssiValidity(RssiValidityFlag::INVALID),
-    m_rssi(0U),
-    m_adjMM(0U)
+    m_totalErrors(0U)
 {
     decode(data);
 }
@@ -74,9 +68,9 @@ bool MotStartVoiceFrame::decode(const uint8_t* data)
     startOfStream = new MotStartOfStream();
 
     // create a buffer to decode the start record skipping the 10th byte (adjMM)
-    uint8_t startBuffer[MotStartOfStream::LENGTH];
-    ::memset(startBuffer, 0x00U, MotStartOfStream::LENGTH);
-    ::memcpy(startBuffer, data, 9U);
+    uint8_t startBuffer[DFSI_MOT_START_LEN];
+    ::memset(startBuffer, 0x00U, DFSI_MOT_START_LEN);
+    ::memcpy(startBuffer, data, DFSI_MOT_START_LEN);
 
     // decode start of stream
     startOfStream->decode(startBuffer);
@@ -92,15 +86,6 @@ bool MotStartVoiceFrame::decode(const uint8_t* data)
     ::memcpy(voiceBuffer + 1U, data + 10U, MotFullRateVoice::SHORTENED_LENGTH - 1);
     fullRateVoice->decode(voiceBuffer, true);
 
-    // get rest of data
-    m_icw = (ICWFlag::E)data[5U];                       // this field is dubious and questionable
-    //data[6U];                                         // unknown -- based on testing this is not related to RSSI
-    m_rssiValidity = (RssiValidityFlag::E)data[7U];     // this field is dubious and questionable
-
-    m_rssi = data[8U];
-
-    m_adjMM = data[9U];                                 // this field is dubious and questionable
-
     return true;
 }
 
@@ -114,11 +99,11 @@ void MotStartVoiceFrame::encode(uint8_t* data)
 
     // encode start of stream - scope is intentional
     {
-        uint8_t buffer[MotStartOfStream::LENGTH];
+        uint8_t buffer[DFSI_MOT_START_LEN];
         startOfStream->encode(buffer);
 
-        // copy to data array (skipping first and last bytes)
-        ::memcpy(data + 1U, buffer + 1U, MotStartOfStream::LENGTH - 2);
+        // copy to data array (skipping first byte which is frame type)
+        ::memcpy(data + 1U, buffer + 1U, DFSI_MOT_START_LEN - 1U);
     }
 
     // encode full rate voice - scope is intentional
@@ -129,13 +114,4 @@ void MotStartVoiceFrame::encode(uint8_t* data)
         data[0U] = fullRateVoice->getFrameType();
         ::memcpy(data + 10U, buffer + 1U, MotFullRateVoice::SHORTENED_LENGTH - 1);
     }
-
-    // Copy the rest
-    data[5U] = m_icw;                                   // this field is dubious and questionable
-    data[6U] = 0U;                                      // unknown -- based on testing this is not related to RSSI
-    data[7U] = m_rssiValidity;                          // this field is dubious and questionable
-
-    data[8U] = m_rssi;
-
-    data[9U] = m_adjMM;                                 // this field is dubious and questionable
 }

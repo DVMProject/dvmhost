@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2024 Patrick McDonnell, W3AXL
- *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2024-2025 Bryan Biedenkapp, N2PLL
  *
  */
 #include "common/p25/dfsi/frames/MotStartOfStream.h"
@@ -28,23 +28,33 @@ using namespace p25::dfsi::frames;
 /* Initializes a instance of the MotStartOfStream class. */
 
 MotStartOfStream::MotStartOfStream() :
-    m_marker(FIXED_MARKER),
-    m_rt(RTFlag::DISABLED),
-    m_startStop(StartStopFlag::START),
-    m_streamType(StreamTypeFlag::VOICE)
+    m_format(DFSI_MOT_ICW_FMT_TYPE3),
+    m_opcode(MotStartStreamOpcode::TRANSMIT),
+    icw(nullptr)
 {
-    /* stub */
+    icw = new uint8_t[DFSI_MOT_ICW_LENGTH];
+    ::memset(icw, 0x00U, DFSI_MOT_ICW_LENGTH);
 }
 
 /* Initializes a instance of the MotStartOfStream class. */
 
 MotStartOfStream::MotStartOfStream(uint8_t* data) :
-    m_marker(FIXED_MARKER),
-    m_rt(RTFlag::DISABLED),
-    m_startStop(StartStopFlag::START),
-    m_streamType(StreamTypeFlag::VOICE)
+    m_format(DFSI_MOT_ICW_FMT_TYPE3),
+    m_opcode(MotStartStreamOpcode::TRANSMIT),
+    icw(nullptr)
 {
+    icw = new uint8_t[DFSI_MOT_ICW_LENGTH];
+    ::memset(icw, 0x00U, DFSI_MOT_ICW_LENGTH);
+
     decode(data);
+}
+
+/* Finalizes a instance of the MotStartOfStream class. */
+
+MotStartOfStream::~MotStartOfStream()
+{
+    if (icw != nullptr)
+        delete icw;
 }
 
 /* Decode a start of stream frame. */
@@ -53,9 +63,9 @@ bool MotStartOfStream::decode(const uint8_t* data)
 {
     assert(data != nullptr);
 
-    m_rt = (RTFlag::E)data[2U];
-    m_startStop = (StartStopFlag::E)data[3U];
-    m_streamType = (StreamTypeFlag::E)data[4U];
+    m_format = data[1U] & 0x3FU;
+    m_opcode = (MotStartStreamOpcode::E)data[2U];
+    ::memcpy(icw, data + 3U, DFSI_MOT_ICW_LENGTH);
 
     return true;
 }
@@ -67,8 +77,7 @@ void MotStartOfStream::encode(uint8_t* data)
     assert(data != nullptr);
 
     data[0U] = DFSIFrameType::MOT_START_STOP;
-    data[1U] = FIXED_MARKER;
-    data[2U] = m_rt;
-    data[3U] = m_startStop;
-    data[4U] = m_streamType;
+    data[1U] = m_format & 0x3FU;
+    data[2U] = m_opcode;
+    ::memcpy(data + 3U, icw, DFSI_MOT_ICW_LENGTH);
 }

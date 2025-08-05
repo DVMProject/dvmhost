@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2024 Patrick McDonnell, W3AXL
- *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2024-2025 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -39,20 +39,17 @@ namespace p25
              * Byte 0               1               2               3
              * Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 
              *     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-             *     |   Fixed Mark  |  RT Mode Flag |  Start/Stop   |  Type Flag    |
+             *     |       FT      |   ICW Format  |  Opcode       |  Param 1      |
              *     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-             *     |   Reserved                                                    |
-             *     +               +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-             *     |               |
+             *     |  Argment 1    |   Param 2     |  Argument 2   |  Param 3      |
+             *     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+             *     |  Argment 3    |
              *     +-+-+-+-+-+-+-+-+
              * \endcode
              * @ingroup dfsi_frames
              */
             class HOST_SW_API MotStartOfStream {
             public:
-                static const uint8_t LENGTH = 10U;
-                static const uint8_t FIXED_MARKER = 0x02U;
-
                 /**
                  * @brief Initializes a copy instance of the MotStartOfStream class.
                  */
@@ -62,6 +59,10 @@ namespace p25
                  * @param data Buffer to containing MotStartOfStream to decode.
                  */
                 MotStartOfStream(uint8_t* data);
+                /**
+                 * @brief Finalizes a instance of the MotStartOfStream class.
+                 */
+                ~MotStartOfStream();
 
                 /**
                  * @brief Decode a start of stream frame.
@@ -73,24 +74,92 @@ namespace p25
                  * @param[out] data Buffer to encode a MotStartOfStream.
                  */
                 void encode(uint8_t* data);
-            
+
+                /** @name Start of Stream Type 3 control word parameters. */
+                /**
+                 * @brief Helper to get parameter 1 of the control word.
+                 * @return uint8_t Parameter 1 of the control word.
+                 */
+                uint8_t getParam1() const { return icw[0U]; }
+                /**
+                 * @brief Helper to get the argument for parameter 1 of the control word.
+                 * @return uint8_t Argument 1 for parameter 1 of the control word.
+                 */
+                uint8_t getArgument1() const { return icw[1U]; }
+                /**
+                 * @brief Helper to set parameter 1 of the control word.
+                 * @param value Parameter 1 of the control word.
+                 */
+                void setParam1(uint8_t value) { icw[0U] = value; }
+                /**
+                 * @brief Helper to set the argument for parameter 1 of the control word.
+                 * @param value Argument 1 for parameter 1 of the control word.
+                 */
+                void setArgument1(uint8_t value) { icw[1U] = value; }
+
+                /**
+                 * @brief Helper to get parameter 2 of the control word.
+                 * @return uint8_t Parameter 2 of the control word.
+                 */
+                uint8_t getParam2() const { return icw[2U]; }
+                /**
+                 * @brief Helper to get the argument for parameter 2 of the control word.
+                 * @return uint8_t Argument 2 for parameter 2 of the control word.
+                 */
+                uint8_t getArgument2() const { return icw[3U]; }
+                /**
+                 * @brief Helper to set parameter 1 of the control word.
+                 * @param value Parameter 1 of the control word.
+                 */
+                void setParam2(uint8_t value) { icw[2U] = value; }
+                /**
+                 * @brief Helper to set the argument for parameter 2 of the control word.
+                 * @param value Argument for parameter 2 of the control word.
+                 */
+                void setArgument2(uint8_t value) { icw[3U] = value; }
+
+                /**
+                 * @brief Helper to get parameter 3 of the control word.
+                 * @return uint8_t Parameter 3 of the control word.
+                 */
+                uint8_t getParam3() const { return icw[4U]; }
+                /**
+                 * @brief Helper to get argument 3 for parameter 3 of the control word.
+                 * @return uint8_t Argument for parameter 3 of the control word.
+                 */
+                uint8_t getArgument3() const { return icw[5U]; }
+                /**
+                 * @brief Helper to set parameter 3 of the control word.
+                 * @param value Parameter 3 of the control word.
+                 */
+                void setParam3(uint8_t value) { icw[4U] = value; }
+                /**
+                 * @brief Helper to set the argument for parameter 3 of the control word.
+                 * @param value Argument for parameter 3 of the control word.
+                 */
+                void setArgument3(uint8_t value) { icw[5U] = value; }
+                /** @} */
+
+                /**
+                 * @brief Get the raw ICW parameter/argument buffer.
+                 * @return uint8_t* Raw ICW buffer.
+                 * @note The buffer is 6 bytes long and contains the parameters and arguments for the
+                 *      start of stream control word.
+                 */ 
+                uint8_t* getICW() const { return icw; }
+
             public:
                 /**
-                 * @brief 
+                 * @brief Format.
                  */
-                DECLARE_PROPERTY(uint8_t, marker, Marker);
+                DECLARE_PROPERTY(uint8_t, format, Format);
                 /**
-                 * @brief RT/RT Flag.
+                 * @brief Opcode.
                  */
-                DECLARE_PROPERTY(RTFlag::E, rt, RT);
-                /**
-                 * @brief Start/Stop.
-                 */
-                DECLARE_PROPERTY(StartStopFlag::E, startStop, StartStop);
-                /**
-                 * @brief Stream Type.
-                 */
-                DECLARE_PROPERTY(StreamTypeFlag::E, streamType, StreamType);
+                DECLARE_PROPERTY(MotStartStreamOpcode::E, opcode, Opcode);
+
+            private:
+                uint8_t* icw;
             };
         } // namespace frames
     } // namespace dfsi

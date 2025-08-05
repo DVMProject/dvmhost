@@ -18,8 +18,6 @@
 
 #include "Defines.h"
 #include "common/edac/RS634717.h"
-#include "common/p25/dfsi/frames/MotVoiceHeader1.h"
-#include "common/p25/dfsi/frames/MotVoiceHeader2.h"
 #include "common/p25/lc/LC.h"
 #include "common/p25/Audio.h"
 #include "common/p25/NID.h"
@@ -83,8 +81,8 @@ namespace modem
             netLDU2(nullptr)
         {
             MI = new uint8_t[P25DEF::MI_LENGTH_BYTES];
-            VHDR1 = new uint8_t[p25::dfsi::frames::MotVoiceHeader1::HCW_LENGTH];
-            VHDR2 = new uint8_t[p25::dfsi::frames::MotVoiceHeader2::HCW_LENGTH];
+            VHDR1 = new uint8_t[P25DFSIDEF::DFSI_TIA_VHDR_LEN];
+            VHDR2 = new uint8_t[P25DFSIDEF::DFSI_TIA_VHDR_LEN];
             LDULC = new uint8_t[P25DEF::P25_LDU_LC_FEC_LENGTH_BYTES];
 
             netLDU1 = new uint8_t[9U * 25U];
@@ -135,9 +133,9 @@ namespace modem
             kId = 0U;
 
             if (VHDR1 != nullptr)
-                ::memset(VHDR1, 0x00U, p25::dfsi::frames::MotVoiceHeader1::HCW_LENGTH);
+                ::memset(VHDR1, 0x00U, P25DFSIDEF::DFSI_TIA_VHDR_LEN);
             if (VHDR2 != nullptr)
-                ::memset(VHDR2, 0x00U, p25::dfsi::frames::MotVoiceHeader2::HCW_LENGTH);
+                ::memset(VHDR2, 0x00U, P25DFSIDEF::DFSI_TIA_VHDR_LEN);
 
             if (LDULC != nullptr)
                 ::memset(LDULC, 0x00U, P25DEF::P25_LDU_LC_FEC_LENGTH_BYTES);

@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2024 Patrick McDonnell, W3AXL
- *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2024-2025 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -41,16 +41,16 @@ namespace p25
              * Byte 0               1               2               3
              * Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 
              *     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-             *     |   Encoded Motorola Start of Stream                            |
-             *     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-             *     |   ICW Flag ?  |     RSSI      |  RSSI Valid   |     RSSI      |
-             *     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-             *     |   Adj MM ?    |    Full Rate Voice Frame                      |
-             *     +-+-+-+-+-+-+-+-+                                               +
+             *     |       FT      |  Encoded Motorola Start of Stream             |
+             *     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+--+-+-+-+-+-+-+--+-+-+-+-+-+-+-+-+
              *     |                                                               |
-             *     +                                                               +
+             *     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+             *     |               |    Full Rate Voice Frame                      |
+             *     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
              *     |                                                               |
-             *     +               +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+             *     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+             *     |                                                               |
+             *     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
              *     |               |
              *     +=+=+=+=+=+=+=+=+
              * \endcode
@@ -90,26 +90,9 @@ namespace p25
                 MotFullRateVoice* fullRateVoice; // ?? - this should probably be private with getters/setters
 
                 /**
-                 * @brief 
-                 * @note bryanb: I doubt the authenticity of this field.
+                 * @brief Total errors detected in the frame.
                  */
-                DECLARE_PROPERTY(ICWFlag::E, icw, ICW);
-                /**
-                 * @brief Flag indicating whether or not the RSSI field is valid.
-                 * @note bryanb: I doubt the authenticity of this field.
-                 */
-                DECLARE_PROPERTY(RssiValidityFlag::E, rssiValidity, RSSIValidity);
-
-                /**
-                 * @brief RSSI Value.
-                 */
-                DECLARE_PROPERTY(uint8_t, rssi, RSSI);
-
-                /**
-                 * @brief 
-                 * @note bryanb: I doubt the authenticity of this field.
-                 */
-                DECLARE_PROPERTY(uint8_t, adjMM, AdjMM);
+                DECLARE_PROPERTY(uint8_t, totalErrors, TotalErrors);
             };
         } // namespace frames
     } // namespace dfsi
