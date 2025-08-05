@@ -16,6 +16,7 @@
 #include "common/p25/dfsi/LC.h"
 #include "common/p25/dfsi/frames/Frames.h"
 #include "common/p25/lc/LC.h"
+#include "common/p25/lc/tdulc/TDULCFactory.h"
 #include "common/p25/lc/tsbk/TSBKFactory.h"
 #include "common/p25/NID.h"
 #include "common/p25/P25Utils.h"
@@ -197,7 +198,7 @@ void ModemV24::clock(uint32_t ms)
                 if (m_useTIAFormat)
                     convertToAirTIA(m_buffer + (cmdOffset + 1U), m_length - (cmdOffset + 1U));
                 else
-                    convertToAir(m_buffer + (cmdOffset + 1U), m_length - (cmdOffset + 1U));
+                    convertToAirV24(m_buffer + (cmdOffset + 1U), m_length - (cmdOffset + 1U));
                 if (m_trace)
                     Utils::dump(1U, "ModemV24::clock() RX P25 Data", m_buffer + (cmdOffset + 1U), m_length - (cmdOffset + 1U));
             }
@@ -447,7 +448,7 @@ int ModemV24::write(const uint8_t* data, uint32_t length)
         if (m_useTIAFormat)
             convertFromAirTIA(buffer, length);
         else
-            convertFromAir(buffer, length);
+            convertFromAirV24(buffer, length);
         return length;
     } else {
         return Modem::write(data, length);
@@ -575,7 +576,7 @@ void ModemV24::create_TDU(uint8_t* buffer)
 
 /* Internal helper to convert from V.24/DFSI to TIA-102 air interface. */
 
-void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
+void ModemV24::convertToAirV24(const uint8_t *data, uint32_t length)
 {
     assert(data != nullptr);
     assert(length > 0U);
@@ -602,14 +603,14 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
                 m_rxCall->resetCallData();
                 m_rxCallInProgress = true;
                 if (m_debug) {
-                    ::LogDebugEx(LOG_MODEM, "ModemV24::convertToAir()", "V.24 RX, ICW, opcode = $%02X, type = $%02X", start.getOpcode(), start.getArgument1());
+                    ::LogDebugEx(LOG_MODEM, "ModemV24::convertToAirV24()", "V.24 RX, ICW, opcode = $%02X, type = $%02X", start.getOpcode(), start.getArgument1());
                 }
             } else {
                 if (m_rxCallInProgress) {
                     m_rxCall->resetCallData();
                     m_rxCallInProgress = false;
                     if (m_debug) {
-                        ::LogDebugEx(LOG_MODEM, "ModemV24::convertToAir()", "V.24 RX, ICW, opcode = $%02X, type = $%02X", start.getOpcode(), start.getArgument1());
+                        ::LogDebugEx(LOG_MODEM, "ModemV24::convertToAirV24()", "V.24 RX, ICW, opcode = $%02X, type = $%02X", start.getOpcode(), start.getArgument1());
                     }
                     // generate a TDU
                     create_TDU(buffer);
@@ -674,7 +675,7 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
                         m_rxCallInProgress = true;
                         m_rxCall->resetCallData();
                         if (m_debug)
-                            ::LogDebugEx(LOG_MODEM, "ModemV24::convertToAir()", "V.24 RX VHDR late entry, resetting call data");
+                            ::LogDebugEx(LOG_MODEM, "ModemV24::convertToAirV24()", "V.24 RX VHDR late entry, resetting call data");
                     }
 
                     uint32_t dstId = GET_UINT16(vhdr, 13U);
@@ -752,14 +753,14 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
                         // don't do anything with this RSSI
                         break;
                     default:
-                        LogWarning(LOG_MODEM, "ModemV24::convertToAir() unknown ICW parameter $%02X with value %u", param, value);
+                        LogWarning(LOG_MODEM, "ModemV24::convertToAirV24() unknown ICW parameter $%02X with value %u", param, value);
                         break;
                     }
                 }
             }
 
             if (m_debug) {
-                ::LogDebugEx(LOG_MODEM, "ModemV24::convertToAir()", "V.24 RX, Start of Voice LDU1, ICW opcode = $%02X, rssi = %u", svf.startOfStream->getOpcode(), rssi);
+                ::LogDebugEx(LOG_MODEM, "ModemV24::convertToAirV24()", "V.24 RX, Start of Voice LDU1, ICW opcode = $%02X, rssi = %u", svf.startOfStream->getOpcode(), rssi);
             }
 
             if (svf.fullRateVoice->getTotalErrors() > 0U) {
@@ -796,14 +797,14 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
                         // don't do anything with this RSSI
                         break;
                     default:
-                        LogWarning(LOG_MODEM, "ModemV24::convertToAir() unknown ICW parameter $%02X with value %u", param, value);
+                        LogWarning(LOG_MODEM, "ModemV24::convertToAirV24() unknown ICW parameter $%02X with value %u", param, value);
                         break;
                     }
                 }
             }
 
             if (m_debug) {
-                ::LogDebugEx(LOG_MODEM, "ModemV24::convertToAir()", "V.24 RX, Start of Voice LDU2, ICW opcode = $%02X, rssi = %u", svf.startOfStream->getOpcode(), rssi);
+                ::LogDebugEx(LOG_MODEM, "ModemV24::convertToAirV24()", "V.24 RX, Start of Voice LDU2, ICW opcode = $%02X, rssi = %u", svf.startOfStream->getOpcode(), rssi);
             }
 
             if (svf.fullRateVoice->getTotalErrors() > 0U) {
@@ -813,6 +814,41 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
             m_rxCall->n++;
         }
         break;
+
+        case DFSIFrameType::MOT_TDULC:
+        {
+            MotTDULCFrame tf = MotTDULCFrame(dfsiData);
+            lc::tdulc::LC_TDULC_RAW tdulc = lc::tdulc::LC_TDULC_RAW();
+            if (!tdulc.decode(tf.tdulcData, true)) {
+                LogError(LOG_MODEM, "V.24/DFSI traffic failed to decode TDULC FEC");
+            } else {
+                uint8_t buffer[P25_TDULC_FRAME_LENGTH_BYTES + 2U];
+                ::memset(buffer, 0x00U, P25_TDULC_FRAME_LENGTH_BYTES + 2U);
+
+                buffer[0U] = modem::TAG_DATA;
+                buffer[1U] = 0x00U;
+
+                // generate Sync
+                Sync::addP25Sync(buffer + 2U);
+
+                // generate NID
+                m_nid->encode(buffer + 2U, DUID::TDULC);
+
+                // regenerate TDULC Data
+                tdulc.encode(buffer + 2U);
+
+                // add status bits
+                P25Utils::addStatusBits(buffer + 2U, P25_TDULC_FRAME_LENGTH_BYTES, false, true);
+                P25Utils::addIdleStatusBits(buffer + 2U, P25_TDULC_FRAME_LENGTH_BYTES);
+                P25Utils::setStatusBitsStartIdle(buffer + 2U);
+
+                storeConvertedRx(buffer, P25_TDULC_FRAME_LENGTH_BYTES + 2U);
+            }
+        }
+        break;
+
+        case DFSIFrameType::MOT_PDU_SINGLE:
+            break;
 
         case DFSIFrameType::MOT_TSBK:
         {
@@ -853,7 +889,7 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
             MotFullRateVoice voice = MotFullRateVoice(dfsiData);
 
             if (m_debug) {
-                LogDebugEx(LOG_MODEM, "ModemV24::convertToAir()", "Full Rate Voice, frameType = $%02X, errors = %u, busy = %u", voice.getFrameType(), voice.getTotalErrors(), voice.getBusy());
+                LogDebugEx(LOG_MODEM, "ModemV24::convertToAirV24()", "Full Rate Voice, frameType = $%02X, errors = %u, busy = %u", voice.getFrameType(), voice.getTotalErrors(), voice.getBusy());
                 Utils::dump(1U, "Full Rate Voice IMBE", voice.imbeData, RAW_IMBE_LENGTH_BYTES);
             }
 
@@ -1908,7 +1944,7 @@ void ModemV24::queueP25Frame(uint8_t* data, uint16_t len, SERIAL_TX_TYPE msgType
 
 /* Send a start of stream sequence (HDU, etc) to the connected serial V.24 device */
 
-void ModemV24::startOfStream(const p25::lc::LC& control)
+void ModemV24::startOfStreamV24(const p25::lc::LC& control)
 {
     m_txCallInProgress = true;
 
@@ -1923,7 +1959,7 @@ void ModemV24::startOfStream(const p25::lc::LC& control)
     start.encode(startBuf);
 
     if (m_trace)
-        Utils::dump(1U, "ModemV24::startOfStream() MotStartOfStream", startBuf, DFSI_MOT_START_LEN);
+        Utils::dump(1U, "ModemV24::startOfStreamV24() StartOfStream", startBuf, DFSI_MOT_START_LEN);
 
     queueP25Frame(startBuf, DFSI_MOT_START_LEN, STT_NON_IMBE);
 
@@ -1964,7 +2000,7 @@ void ModemV24::startOfStream(const p25::lc::LC& control)
     vhdr1Buf[20U + DFSI_MOT_START_LEN] = DFSI_BUSY_BITS_INBOUND;
 
     if (m_trace)
-        Utils::dump(1U, "ModemV24::startOfStream() MotVoiceHeader1", vhdr1Buf, DFSI_MOT_VHDR_1_LEN);
+        Utils::dump(1U, "ModemV24::startOfStreamV24() VoiceHeader1", vhdr1Buf, DFSI_MOT_VHDR_1_LEN);
 
     queueP25Frame(vhdr1Buf, DFSI_MOT_VHDR_1_LEN, STT_NON_IMBE);
 
@@ -1981,14 +2017,14 @@ void ModemV24::startOfStream(const p25::lc::LC& control)
 
     // send VHDR2
     if (m_trace)
-        Utils::dump(1U, "ModemV24::startOfStream() MotVoiceHeader2", vhdr2Buf, DFSI_MOT_VHDR_2_LEN);
+        Utils::dump(1U, "ModemV24::startOfStreamV24() VoiceHeader2", vhdr2Buf, DFSI_MOT_VHDR_2_LEN);
 
     queueP25Frame(vhdr2Buf, DFSI_MOT_VHDR_2_LEN, STT_NON_IMBE);
 }
 
 /* Send an end of stream sequence (TDU, etc) to the connected serial V.24 device */
 
-void ModemV24::endOfStream()
+void ModemV24::endOfStreamV24()
 {
     MotStartOfStream end = MotStartOfStream();
     end.setOpcode(m_rtrt ? MotStartStreamOpcode::TRANSMIT : MotStartStreamOpcode::RECEIVE);
@@ -2001,7 +2037,7 @@ void ModemV24::endOfStream()
     end.encode(endBuf);
 
     if (m_trace)
-        Utils::dump(1U, "ModemV24::endOfStream() MotStartOfStream", endBuf, DFSI_MOT_START_LEN);
+        Utils::dump(1U, "ModemV24::endOfStreamV24() StartOfStream", endBuf, DFSI_MOT_START_LEN);
 
     queueP25Frame(endBuf, DFSI_MOT_START_LEN, STT_NON_IMBE);
 
@@ -2204,13 +2240,13 @@ void ModemV24::ackStartOfStreamTIA()
 
 /* Internal helper to convert from TIA-102 air interface to V.24/DFSI. */
 
-void ModemV24::convertFromAir(uint8_t* data, uint32_t length)
+void ModemV24::convertFromAirV24(uint8_t* data, uint32_t length)
 {
     assert(data != nullptr);
     assert(length > 0U);
 
     if (m_trace)
-        Utils::dump(1U, "ModemV24::convertFromAir() data", data, length);
+        Utils::dump(1U, "ModemV24::convertFromAirV24() data", data, length);
 
     uint8_t ldu[9U * 25U];
     ::memset(ldu, 0x00U, 9 * 25U);
@@ -2233,7 +2269,7 @@ void ModemV24::convertFromAir(uint8_t* data, uint32_t length)
                 LogWarning(LOG_MODEM, P25_HDU_STR ", undecodable LC");
             }
 
-            startOfStream(lc);
+            startOfStreamV24(lc);
         }
         break;
         case DUID::LDU1:
@@ -2248,9 +2284,9 @@ void ModemV24::convertFromAir(uint8_t* data, uint32_t length)
 
             // late entry?
             if (!m_txCallInProgress) {
-                startOfStream(lc);
+                startOfStreamV24(lc);
                 if (m_debug)
-                    ::LogDebugEx(LOG_MODEM, "ModemV24::convertFromAir()", "V.24 TX VHDR late entry, resetting TX call data");
+                    ::LogDebugEx(LOG_MODEM, "ModemV24::convertFromAirV24()", "V.24 TX VHDR late entry, resetting TX call data");
             }
 
             // generate audio
@@ -2289,10 +2325,70 @@ void ModemV24::convertFromAir(uint8_t* data, uint32_t length)
         break;
 
         case DUID::TDU:
-        case DUID::TDULC:
             if (m_txCallInProgress)
-                endOfStream();
+                endOfStreamV24();
             break;
+
+        case DUID::TDULC:
+        {
+            if (m_txCallInProgress)
+                endOfStreamV24();
+
+            lc::tdulc::LC_TDULC_RAW tdulc = lc::tdulc::LC_TDULC_RAW();
+            if (!tdulc.decode(data + 2U)) {
+                LogWarning(LOG_MODEM, P25_TDULC_STR ", undecodable LC");
+                return;
+            }
+
+            MotStartOfStream start = MotStartOfStream();
+            start.setOpcode(m_rtrt ? MotStartStreamOpcode::TRANSMIT : MotStartStreamOpcode::RECEIVE);
+            start.setParam1(DSFI_MOT_ICW_PARM_PAYLOAD);
+            start.setArgument1(MotStreamPayload::TERM_LC);
+
+            // create buffer for bytes and encode
+            uint8_t startBuf[DFSI_MOT_START_LEN];
+            ::memset(startBuf, 0x00U, DFSI_MOT_START_LEN);
+            start.encode(startBuf);
+
+            if (m_trace)
+                Utils::dump(1U, "ModemV24::convertFromAirV24() TDULC MotStartOfStream", startBuf, DFSI_MOT_START_LEN);
+
+            queueP25Frame(startBuf, DFSI_MOT_START_LEN, STT_NON_IMBE_NO_JITTER);
+
+            MotTDULCFrame tf = MotTDULCFrame();
+            tf.startOfStream->setOpcode(m_rtrt ? MotStartStreamOpcode::TRANSMIT : MotStartStreamOpcode::RECEIVE);
+            tf.startOfStream->setParam1(DSFI_MOT_ICW_PARM_PAYLOAD);
+            tf.startOfStream->setArgument1(MotStreamPayload::TERM_LC);
+            delete[] tf.tdulcData;
+
+            tf.tdulcData = new uint8_t[P25_TDULC_PAYLOAD_LENGTH_BYTES];
+            ::memset(tf.tdulcData, 0x00U, P25_TDULC_PAYLOAD_LENGTH_BYTES);
+            ::memcpy(tf.tdulcData, tdulc.getDecodedRaw(), P25_TDULC_PAYLOAD_LENGTH_BYTES);
+
+            // create buffer and encode
+            uint8_t tdulcBuf[DFSI_MOT_TDULC_LEN];
+            ::memset(tdulcBuf, 0x00U, DFSI_MOT_TDULC_LEN);
+            tf.encode(tdulcBuf);
+
+            if (m_trace)
+                Utils::dump(1U, "ModemV24::convertFromAirV24() MotTDULCFrame", tdulcBuf, DFSI_MOT_TDULC_LEN);
+
+            queueP25Frame(tdulcBuf, DFSI_MOT_TDULC_LEN, STT_NON_IMBE_NO_JITTER);
+
+            MotStartOfStream end = MotStartOfStream();
+            end.setOpcode(m_rtrt ? MotStartStreamOpcode::TRANSMIT : MotStartStreamOpcode::RECEIVE);
+            end.setParam1(DFSI_MOT_ICW_PARM_STOP);
+            end.setArgument1(MotStreamPayload::TERM_LC);
+
+            // create buffer and encode
+            uint8_t endBuf[DFSI_MOT_START_LEN];
+            ::memset(endBuf, 0x00U, DFSI_MOT_START_LEN);
+            end.encode(endBuf);
+
+            queueP25Frame(endBuf, DFSI_MOT_START_LEN, STT_NON_IMBE_NO_JITTER);
+            queueP25Frame(endBuf, DFSI_MOT_START_LEN, STT_NON_IMBE_NO_JITTER);
+        }
+        break;
 
         case DUID::PDU:
             break;
@@ -2308,7 +2404,7 @@ void ModemV24::convertFromAir(uint8_t* data, uint32_t length)
             MotStartOfStream start = MotStartOfStream();
             start.setOpcode(m_rtrt ? MotStartStreamOpcode::TRANSMIT : MotStartStreamOpcode::RECEIVE);
             start.setParam1(DSFI_MOT_ICW_PARM_PAYLOAD);
-            start.setArgument1(MotStreamPayload::VOICE);
+            start.setArgument1(MotStreamPayload::TSBK);
 
             // create buffer for bytes and encode
             uint8_t startBuf[DFSI_MOT_START_LEN];
@@ -2316,7 +2412,7 @@ void ModemV24::convertFromAir(uint8_t* data, uint32_t length)
             start.encode(startBuf);
 
             if (m_trace)
-                Utils::dump(1U, "ModemV24::convertFromAir() TSBK MotStartOfStream", startBuf, DFSI_MOT_START_LEN);
+                Utils::dump(1U, "ModemV24::convertFromAirV24() TSBK StartOfStream", startBuf, DFSI_MOT_START_LEN);
 
             queueP25Frame(startBuf, DFSI_MOT_START_LEN, STT_NON_IMBE_NO_JITTER);
 
@@ -2336,7 +2432,7 @@ void ModemV24::convertFromAir(uint8_t* data, uint32_t length)
             tf.encode(tsbkBuf);
 
             if (m_trace)
-                Utils::dump(1U, "ModemV24::convertFromAir() MotTSBKFrame", tsbkBuf, DFSI_MOT_TSBK_LEN);
+                Utils::dump(1U, "ModemV24::convertFromAirV24() MotTSBKFrame", tsbkBuf, DFSI_MOT_TSBK_LEN);
 
             queueP25Frame(tsbkBuf, DFSI_MOT_TSBK_LEN, STT_NON_IMBE_NO_JITTER);
 
@@ -2364,7 +2460,7 @@ void ModemV24::convertFromAir(uint8_t* data, uint32_t length)
         ::memset(rs, 0x00U, P25_LDU_LC_FEC_LENGTH_BYTES);
 
         if (duid == DUID::LDU1) {
-            rs[0U] = lc.getLCO();                                               // LCO
+            rs[0U] = lc.getLCO();                                                   // LCO
 
             // split ulong64_t (8 byte) value into bytes
             rs[1U] = (uint8_t)((lc.getRS() >> 56) & 0xFFU);
@@ -2529,7 +2625,7 @@ void ModemV24::convertFromAir(uint8_t* data, uint32_t length)
 
             if (buffer != nullptr) {
                 if (m_trace) {
-                    Utils::dump("ModemV24::convertFromAir() Encoded V.24 Voice Frame Data", buffer, bufferSize);
+                    Utils::dump("ModemV24::convertFromAirV24() Encoded V.24 Voice Frame Data", buffer, bufferSize);
                 }
 
                 queueP25Frame(buffer, bufferSize, STT_IMBE);

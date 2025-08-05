@@ -35,7 +35,7 @@ namespace p25
             // ---------------------------------------------------------------------------
 
             /**
-             * @brief Implements a P25 Motorola full rate voice packet.
+             * @brief Implements a P25 Motorola/V.24 full rate voice packet.
              * \code{.unparsed}
              * Byte 0               1               2               3
              * Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 

@@ -235,6 +235,207 @@ namespace modem
 
     /**
      * @brief Implements the core interface to the V.24 modem hardware.
+     * \code{.unparsed}
+     * This is the format of the Motorola V.24 DFSI Voice Headers:
+     * 
+     * Voice Header 1 (VHDR1):
+     * Bit  7 6 5 4 3 2 1 0
+     *     +-+-+-+-+-+-+-+-+
+     *     |       FT      | 0
+     *     +-+-+-+-+-+-+-+-+
+     *     | Start of Strm | 1 - 9
+     *     +-+-+-+-+-+-+-+-+
+     *     |S0 |  G0       | 10
+     *     +-+-+-+-+-+-+-+-+
+     *     |S1 |  G1       | 11
+     *     +-+-+-+-+-+-+-+-+
+     *     |S2 |  G2       | 12
+     *     +-+-+-+-+-+-+-+-+
+     *     |S3 |  G3       | 13
+     *     +-+-+-+-+-+-+-+-+
+     *     |S4 |  G4       | 14
+     *     +-+-+-+-+-+-+-+-+
+     *     |S5 |  G5       | 15
+     *     +-+-+-+-+-+-+-+-+
+     *     |S6 |  G6       | 16
+     *     +-+-+-+-+-+-+-+-+
+     *     |S7 |  G7       | 17
+     *     +-+-+-+-+-+-+-+-+
+     *     |  S7...S0      | 18
+     *     +-+-+-+-+-+-+-+-+
+     *     |S8 |  G8       | 19
+     *     +-+-+-+-+-+-+-+-+
+     *     |S9 |  G9       | 20
+     *     +-+-+-+-+-+-+-+-+
+     *     |S10|  G10      | 21
+     *     +-+-+-+-+-+-+-+-+
+     *     |S11|  G11      | 22
+     *     +-+-+-+-+-+-+-+-+
+     *     |S12|  G12      | 23
+     *     +-+-+-+-+-+-+-+-+
+     *     |S13|  G13      | 24
+     *     +-+-+-+-+-+-+-+-+
+     *     |S14|  G14      | 25
+     *     +-+-+-+-+-+-+-+-+
+     *     |S15|  G15      | 26
+     *     +-+-+-+-+-+-+-+-+
+     *     |  S15...S8     | 27
+     *     +-+-+-+-+-+-+-+-+
+     *     |S16|  G16      | 26
+     *     +-+-+-+-+-+-+-+-+
+     *     |S17|  G17      | 28
+     *     +-+-+-+-+-+-+-+-+
+     *     |7|6| Rsvd  |Bsy| 29
+     *     +-+-+-+-+-+-+-+-+
+     *     |  Rsvd         | 30
+     *     +-+-+-+-+-+-+-+-+
+     *
+     * Voice Header 2 (VHDR2):
+     * Bit  7 6 5 4 3 2 1 0
+     *     +-+-+-+-+-+-+-+-+
+     *     |       FT      | 0
+     *     +-+-+-+-+-+-+-+-+
+     *     |S18|  G18      | 1
+     *     +-+-+-+-+-+-+-+-+
+     *     |S19|  G19      | 2
+     *     +-+-+-+-+-+-+-+-+
+     *     |S20|  G20      | 3
+     *     +-+-+-+-+-+-+-+-+
+     *     |S21|  G21      | 4
+     *     +-+-+-+-+-+-+-+-+
+     *     |S22|  G22      | 5
+     *     +-+-+-+-+-+-+-+-+
+     *     |S23|  G23      | 6
+     *     +-+-+-+-+-+-+-+-+
+     *     |S24|  G24      | 7
+     *     +-+-+-+-+-+-+-+-+
+     *     |S25|  G25      | 8
+     *     +-+-+-+-+-+-+-+-+
+     *     |  S25...S18    | 9
+     *     +-+-+-+-+-+-+-+-+
+     *     |S26|  G26      | 10
+     *     +-+-+-+-+-+-+-+-+
+     *     |S27|  G27      | 11
+     *     +-+-+-+-+-+-+-+-+
+     *     |S28|  G28      | 12
+     *     +-+-+-+-+-+-+-+-+
+     *     |S29|  G29      | 13
+     *     +-+-+-+-+-+-+-+-+
+     *     |S30|  G30      | 14
+     *     +-+-+-+-+-+-+-+-+
+     *     |S31|  G31      | 15
+     *     +-+-+-+-+-+-+-+-+
+     *     |S32|  G32      | 16
+     *     +-+-+-+-+-+-+-+-+
+     *     |S33|  G33      | 17
+     *     +-+-+-+-+-+-+-+-+
+     *     |  S33...S26    | 18
+     *     +-+-+-+-+-+-+-+-+
+     *     |S34|  G34      | 19
+     *     +-+-+-+-+-+-+-+-+
+     *     |S35|  G35      | 20
+     *     +-+-+-+-+-+-+-+-+
+     *     |5|4| Rsvd  |Bsy| 21
+     *     +-+-+-+-+-+-+-+-+
+     *
+     * This is the format of the TIA-102.BAHA DFSI Voice Headers:
+     * 
+     * TIA-102.BAHA Voice Header 1 (VHDR1):
+     * Bit  7 6 5 4 3 2 1 0
+     *     +-+-+-+-+-+-+-+-+
+     *     |       FT      | 0
+     *     +-+-+-+-+-+-+-+-+
+     *     |S0 |  G0       | 1
+     *     +-+-+-+-+-+-+-+-+
+     *     |S1 |  G1       | 2
+     *     +-+-+-+-+-+-+-+-+
+     *     |S2 |  G2       | 3
+     *     +-+-+-+-+-+-+-+-+
+     *     |S3 |  G3       | 4
+     *     +-+-+-+-+-+-+-+-+
+     *     |S4 |  G4       | 5
+     *     +-+-+-+-+-+-+-+-+
+     *     |S5 |  G5       | 6
+     *     +-+-+-+-+-+-+-+-+
+     *     |S6 |  G6       | 7
+     *     +-+-+-+-+-+-+-+-+
+     *     |S7 |  G7       | 8
+     *     +-+-+-+-+-+-+-+-+
+     *     |S8 |  G8       | 9
+     *     +-+-+-+-+-+-+-+-+
+     *     |S9 |  G9       | 10
+     *     +-+-+-+-+-+-+-+-+
+     *     |S10|  G10      | 11
+     *     +-+-+-+-+-+-+-+-+
+     *     |S11|  G11      | 12
+     *     +-+-+-+-+-+-+-+-+
+     *     |S12|  G12      | 13
+     *     +-+-+-+-+-+-+-+-+
+     *     |S13|  G13      | 14
+     *     +-+-+-+-+-+-+-+-+
+     *     |S14|  G14      | 15
+     *     +-+-+-+-+-+-+-+-+
+     *     |S15|  G15      | 16
+     *     +-+-+-+-+-+-+-+-+
+     *     |S16|  G16      | 17
+     *     +-+-+-+-+-+-+-+-+
+     *     |S17|  G17      | 18
+     *     +-+-+-+-+-+-+-+-+
+     *     | Rsvd      |7|6| 19
+     *     +-+-+-+-+-+-+-+-+
+     *     |  S15...S0     | 20
+     *     +-+-+-+-+-+-+-+-+
+     *     |  S15...S0     | 21
+     *     +-+-+-+-+-+-+-+-+
+     *
+     * TIA-102.BAHA Voice Header 2 (VHDR2):
+     * Bit  7 6 5 4 3 2 1 0
+     *     +-+-+-+-+-+-+-+-+
+     *     |       FT      | 0
+     *     +-+-+-+-+-+-+-+-+
+     *     |S18|  G18      | 1
+     *     +-+-+-+-+-+-+-+-+
+     *     |S19|  G19      | 2 
+     *     +-+-+-+-+-+-+-+-+
+     *     |S20|  G20      | 3
+     *     +-+-+-+-+-+-+-+-+
+     *     |S21|  G21      | 4
+     *     +-+-+-+-+-+-+-+-+
+     *     |S22|  G22      | 5
+     *     +-+-+-+-+-+-+-+-+
+     *     |S23|  G23      | 6
+     *     +-+-+-+-+-+-+-+-+
+     *     |S24|  G24      | 7
+     *     +-+-+-+-+-+-+-+-+
+     *     |S25|  G25      | 8
+     *     +-+-+-+-+-+-+-+-+
+     *     |S26|  G26      | 9
+     *     +-+-+-+-+-+-+-+-+
+     *     |S27|  G27      | 10
+     *     +-+-+-+-+-+-+-+-+
+     *     |S28|  G28      | 11
+     *     +-+-+-+-+-+-+-+-+
+     *     |S29|  G29      | 12
+     *     +-+-+-+-+-+-+-+-+
+     *     |S30|  G30      | 13
+     *     +-+-+-+-+-+-+-+-+
+     *     |S31|  G31      | 14
+     *     +-+-+-+-+-+-+-+-+ 
+     *     |S32|  G32      | 15
+     *     +-+-+-+-+-+-+-+-+
+     *     |S33|  G33      | 16
+     *     +-+-+-+-+-+-+-+-+
+     *     |S34|  G34      | 17
+     *     +-+-+-+-+-+-+-+-+
+     *     |S35|  G35      | 18
+     *     +-+-+-+-+-+-+-+-+
+     *     | Rsvd      |5|4| 19
+     *     +-+-+-+-+-+-+-+-+
+     *     |  S33...S18    | 20
+     *     +-+-+-+-+-+-+-+-+
+     *     |  S33...S18    | 21
+     *     +-+-+-+-+-+-+-+-+
+     * \endcode
      * @ingroup modem
      */
     class HOST_SW_API ModemV24 : public Modem {
@@ -358,7 +559,7 @@ namespace modem
          * @param data Buffer containing data to convert.
          * @param length Length of buffer.
          */
-        void convertToAir(const uint8_t *data, uint32_t length);
+        void convertToAirV24(const uint8_t *data, uint32_t length);
         /**
          * @brief Internal helper to convert from TIA-102 DFSI to TIA-102 air interface.
          * @param data Buffer containing data to convert.
@@ -378,11 +579,11 @@ namespace modem
          * @brief Send a start of stream sequence (HDU, etc) to the connected serial V24 device.
          * @param[in] control Instance of p25::lc::LC containing link control data.
          */
-        void startOfStream(const p25::lc::LC& control);
+        void startOfStreamV24(const p25::lc::LC& control);
         /**
          * @brief Send an end of stream sequence (TDU, etc) to the connected serial V24 device.
          */
-        void endOfStream();
+        void endOfStreamV24();
 
         /**
          * @brief Helper to generate the NID value.
@@ -410,7 +611,7 @@ namespace modem
          * @param data Buffer containing data to convert.
          * @param length Length of buffer.
          */
-        void convertFromAir(uint8_t* data, uint32_t length);
+        void convertFromAirV24(uint8_t* data, uint32_t length);
         /**
          * @brief Internal helper to convert from TIA-102 air interface to TIA-102 DFSI.
          * @param data Buffer containing data to convert.

@@ -43,10 +43,11 @@ namespace p25
             const uint32_t  DFSI_VHDR_RAW_LEN = 36U;
             const uint32_t  DFSI_VHDR_LEN = 27U;
 
-            const uint8_t   DFSI_MOT_START_LEN = 9U;
-            const uint8_t   DFSI_MOT_VHDR_1_LEN = 30U;
-            const uint8_t   DFSI_MOT_VHDR_2_LEN = 22U;
-            const uint8_t   DFSI_MOT_TSBK_LEN = 24U;
+            const uint32_t  DFSI_MOT_START_LEN = 9U;
+            const uint32_t  DFSI_MOT_VHDR_1_LEN = 30U;
+            const uint32_t  DFSI_MOT_VHDR_2_LEN = 22U;
+            const uint32_t  DFSI_MOT_TSBK_LEN = 24U;
+            const uint32_t  DFSI_MOT_TDULC_LEN = 21U;
 
             const uint32_t  DFSI_TIA_VHDR_LEN = 22U;
 
@@ -96,10 +97,10 @@ namespace p25
             namespace DFSIFrameType {
                 /** @brief DFSI Frame Type */
                 enum E : uint8_t {
-                    MOT_START_STOP = 0x00U,     // Motorola Start/Stop Stream
+                    MOT_START_STOP = 0x00U,     // Motorola/V.24 Start/Stop Stream
 
-                    MOT_VHDR_1 = 0x60U,         // Motorola Voice Header 1
-                    MOT_VHDR_2 = 0x61U,         // Motorola Voice Header 2
+                    MOT_VHDR_1 = 0x60U,         // Motorola/V.24 Voice Header 1
+                    MOT_VHDR_2 = 0x61U,         // Motorola/V.24 Voice Header 2
 
                     LDU1_VOICE1 = 0x62U,        // IMBE LDU1 - Voice 1
                     LDU1_VOICE2 = 0x63U,        // IMBE LDU1 - Voice 2
@@ -121,8 +122,9 @@ namespace p25
                     LDU2_VOICE17 = 0x72U,       // IMBE LDU2 - Voice 17 + Encryption Sync
                     LDU2_VOICE18 = 0x73U,       // IMBE LDU2 - Voice 18 + Low Speed Data
 
-                    MOT_PDU_SINGLE = 0x87U,     // Motorola PDU (Single Block)
-                    MOT_TSBK = 0xA1U            // Motorola TSBK (Single Block)
+                    MOT_TDULC = 0x74U,          // Motorola/V.24 TDULC
+                    MOT_PDU_SINGLE = 0x87U,     // Motorola/V.24 PDU (Single Block)
+                    MOT_TSBK = 0xA1U            // Motorola/V.24 TSBK (Single Block)
                 };
             }
 

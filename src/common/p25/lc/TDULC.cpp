@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2017-2025 Bryan Biedenkapp, N2PLL
  *
  */
 #include "Defines.h"
@@ -79,7 +79,8 @@ TDULC::TDULC() :
     m_siteIdenEntry(lookups::IdenTable()),
     m_rs(),
     m_implicit(false),
-    m_callTimer(0U)
+    m_callTimer(0U),
+    m_raw(nullptr)
 {
     m_grpVchNo = m_siteData.channelNo();
 }
@@ -88,7 +89,15 @@ TDULC::TDULC() :
 
 TDULC::~TDULC()
 {
-    /* stub */
+    if (m_raw != nullptr)
+        delete[] m_raw;
+}
+
+/* Returns a copy of the raw decoded TDULC bytes. */
+
+uint8_t* TDULC::getDecodedRaw() const
+{
+    return m_raw;
 }
 
 // ---------------------------------------------------------------------------
@@ -138,84 +147,99 @@ UInt8Array TDULC::fromValue(const ulong64_t value)
 
 /* Internal helper to decode a terminator data unit w/ link control. */
 
-bool TDULC::decode(const uint8_t* data, uint8_t* payload)
+bool TDULC::decode(const uint8_t* data, uint8_t* payload, bool rawTDULC)
 {
     assert(data != nullptr);
     assert(payload != nullptr);
 
-    uint8_t rs[P25_TDULC_LENGTH_BYTES];
-    ::memset(rs, 0x00U, P25_TDULC_LENGTH_BYTES);
+    if (rawTDULC) {
+        ::memcpy(payload, data, P25_TDULC_PAYLOAD_LENGTH_BYTES);
+        return true;
+    } else {
+        uint8_t rs[P25_TDULC_LENGTH_BYTES];
+        ::memset(rs, 0x00U, P25_TDULC_LENGTH_BYTES);
 
-    // deinterleave
-    uint8_t raw[P25_TDULC_FEC_LENGTH_BYTES + 1U];
-    P25Utils::decode(data, raw, 114U, 410U);
+        // deinterleave
+        uint8_t raw[P25_TDULC_FEC_LENGTH_BYTES + 1U];
+        P25Utils::decode(data, raw, 114U, 410U);
 
-    // decode Golay (24,12,8) FEC
-    edac::Golay24128::decode24128(rs, raw, P25_TDULC_LENGTH_BYTES);
+        // decode Golay (24,12,8) FEC
+        edac::Golay24128::decode24128(rs, raw, P25_TDULC_LENGTH_BYTES);
 
 #if DEBUG_P25_TDULC
-    Utils::dump(2U, "TDULC::decode(), TDULC RS", rs, P25_TDULC_LENGTH_BYTES);
+        Utils::dump(2U, "TDULC::decode(), TDULC RS", rs, P25_TDULC_LENGTH_BYTES);
 #endif
 
-    // decode RS (24,12,13) FEC
-    try {
-        bool ret = m_rs.decode241213(rs);
-        if (!ret) {
-            LogError(LOG_P25, "TDULC::decode(), failed to decode RS (24,12,13) FEC");
+        // decode RS (24,12,13) FEC
+        try {
+            bool ret = m_rs.decode241213(rs);
+            if (!ret) {
+                LogError(LOG_P25, "TDULC::decode(), failed to decode RS (24,12,13) FEC");
+                return false;
+            }
+        }
+        catch (...) {
+            Utils::dump(2U, "P25, RS excepted with input data", rs, P25_TDULC_LENGTH_BYTES);
             return false;
         }
-    }
-    catch (...) {
-        Utils::dump(2U, "P25, RS excepted with input data", rs, P25_TDULC_LENGTH_BYTES);
-        return false;
-    }
 
-    if (m_verbose) {
-        Utils::dump(2U, "TDULC::decode(), TDULC Value", rs, P25_TDULC_LENGTH_BYTES);
-    }
+        if (m_verbose) {
+            Utils::dump(2U, "TDULC::decode(), TDULC Value", rs, P25_TDULC_LENGTH_BYTES);
+        }
 
-    ::memcpy(payload, rs + 1U, P25_TDULC_PAYLOAD_LENGTH_BYTES);
-    return true;
+        if (m_raw != nullptr)
+            delete[] m_raw;
+        m_raw = new uint8_t[P25_TDULC_PAYLOAD_LENGTH_BYTES];
+        ::memcpy(m_raw, rs + 1U, P25_TDULC_PAYLOAD_LENGTH_BYTES);
+
+        ::memcpy(payload, rs + 1U, P25_TDULC_PAYLOAD_LENGTH_BYTES);
+        return true;
+    }
 }
 
 /* Internal helper to encode a terminator data unit w/ link control. */
 
-void TDULC::encode(uint8_t* data, const uint8_t* payload)
+void TDULC::encode(uint8_t* data, const uint8_t* payload, bool rawTDULC)
 {
     assert(data != nullptr);
     assert(payload != nullptr);
 
-    uint8_t rs[P25_TDULC_LENGTH_BYTES];
-    ::memset(rs, 0x00U, P25_TDULC_LENGTH_BYTES);
-    ::memcpy(rs + 1U, payload, P25_TDULC_PAYLOAD_LENGTH_BYTES);
+    if (rawTDULC) {
+        ::memcpy(data, payload, P25_TDULC_PAYLOAD_LENGTH_BYTES);
+        return;
+    } else {
+        uint8_t rs[P25_TDULC_LENGTH_BYTES];
+        ::memset(rs, 0x00U, P25_TDULC_LENGTH_BYTES);
+        ::memcpy(rs + 1U, payload, P25_TDULC_PAYLOAD_LENGTH_BYTES);
 
-    rs[0U] = m_lco;                                                                 // LCO
-    if (m_implicit)
-        rs[0U] |= 0x40U;                                                            // Implicit Operation
+        rs[0U] = m_lco;                                                                 // LCO
+        if (m_implicit)
+            rs[0U] |= 0x40U;                                                            // Implicit Operation
 
-    if (m_verbose) {
-        Utils::dump(2U, "TDULC::encode(), TDULC Value", rs, P25_TDULC_LENGTH_BYTES);
+        if (m_verbose) {
+            Utils::dump(2U, "TDULC::encode(), TDULC Value", rs, P25_TDULC_LENGTH_BYTES);
+        }
+
+        // encode RS (24,12,13) FEC
+        m_rs.encode241213(rs);
+
+#if DEBUG_P25_TDULC
+        Utils::dump(2U, "TDULC::encode(), TDULC RS", rs, P25_TDULC_LENGTH_BYTES);
+#endif
+
+        uint8_t raw[P25_TDULC_FEC_LENGTH_BYTES + 1U];
+        ::memset(raw, 0x00U, P25_TDULC_FEC_LENGTH_BYTES + 1U);
+
+        // encode Golay (24,12,8) FEC
+        edac::Golay24128::encode24128(raw, rs, P25_TDULC_LENGTH_BYTES);
+
+        // interleave
+        P25Utils::encode(raw, data, 114U, 410U);
+
+#if DEBUG_P25_TDULC
+        Utils::dump(2U, "TDULC::encode(), TDULC Interleave", data, P25_TDULC_FRAME_LENGTH_BYTES + P25_PREAMBLE_LENGTH_BYTES);
+#endif
     }
-
-    // encode RS (24,12,13) FEC
-    m_rs.encode241213(rs);
-
-#if DEBUG_P25_TDULC
-    Utils::dump(2U, "TDULC::encode(), TDULC RS", rs, P25_TDULC_LENGTH_BYTES);
-#endif
-
-    uint8_t raw[P25_TDULC_FEC_LENGTH_BYTES + 1U];
-    ::memset(raw, 0x00U, P25_TDULC_FEC_LENGTH_BYTES + 1U);
-
-    // encode Golay (24,12,8) FEC
-    edac::Golay24128::encode24128(raw, rs, P25_TDULC_LENGTH_BYTES);
-
-    // interleave
-    P25Utils::encode(raw, data, 114U, 410U);
-
-#if DEBUG_P25_TDULC
-    Utils::dump(2U, "TDULC::encode(), TDULC Interleave", data, P25_TDULC_FRAME_LENGTH_BYTES + P25_PREAMBLE_LENGTH_BYTES);
-#endif
 }
 
 /* Internal helper to copy the the class. */

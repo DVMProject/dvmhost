@@ -36,12 +36,12 @@ namespace p25
             // ---------------------------------------------------------------------------
 
             /**
-             * @brief Implements a P25 Motorola voice frame 1/10 start.
+             * @brief Implements a P25 Motorola/V.24 voice frame 1/10 start.
              * \code{.unparsed}
              * Byte 0               1               2               3
              * Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 
              *     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-             *     |       FT      |  Encoded Motorola Start of Stream             |
+             *     |       FT      |  Encoded V.24 Start of Stream                 |
              *     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+--+-+-+-+-+-+-+--+-+-+-+-+-+-+-+-+
              *     |                                                               |
              *     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+

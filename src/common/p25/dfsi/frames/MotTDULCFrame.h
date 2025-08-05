@@ -4,17 +4,17 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2024-2025 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2025 Bryan Biedenkapp, N2PLL
  *
  */
 /**
- * @file MotTSBKFrame.h
+ * @file MotTDULCFrame.h
  * @ingroup dfsi_frames
- * @file MotTSBKFrame.cpp
+ * @file MotTDULCFrame.cpp
  * @ingroup dfsi_frames
  */
-#if !defined(__MOT_TSBK_FRAME_H__)
-#define __MOT_TSBK_FRAME_H__
+#if !defined(__MOT_TDULC_FRAME_H__)
+#define __MOT_TDULC_FRAME_H__
 
 #include "Defines.h"
 #include "common/Defines.h"
@@ -35,7 +35,7 @@ namespace p25
             // ---------------------------------------------------------------------------
 
             /**
-             * @brief Implements a P25 Motorola/V.24 TSBK frame.
+             * @brief Implements a P25 Motorola/V.24 TDULC frame.
              * \code{.unparsed}
              * Byte 0               1               2               3
              * Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 
@@ -44,50 +44,48 @@ namespace p25
              *     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
              *     |                                                               |
              *     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-             *     |               |  TSBK                                         |
+             *     |               |  TDULC                                        |
              *     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
              *     |                                                               |
              *     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-             *     |                                                               |
+             *     |                               | Reserved                      |
              *     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-             *     |               | Reserved      |
-             *     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
              * \endcode
              * @ingroup dfsi_frames
              */
-            class HOST_SW_API MotTSBKFrame {
+            class HOST_SW_API MotTDULCFrame {
             public:
                 /**
-                 * @brief Initializes a copy instance of the MotTSBKFrame class.
+                 * @brief Initializes a copy instance of the MotTDULCFrame class.
                  */
-                MotTSBKFrame();
+                MotTDULCFrame();
                 /**
-                 * @brief Initializes a copy instance of the MotTSBKFrame class.
-                 * @param data Buffer to containing MotTSBKFrame to decode.
+                 * @brief Initializes a copy instance of the MotTDULCFrame class.
+                 * @param data Buffer to containing MotTDULCFrame to decode.
                  */
-                MotTSBKFrame(uint8_t* data);
+                MotTDULCFrame(uint8_t* data);
                 /**
-                 * @brief Finalizes a instance of the MotTSBKFrame class.
+                 * @brief Finalizes a instance of the MotTDULCFrame class.
                  */
-                ~MotTSBKFrame();
+                ~MotTDULCFrame();
 
                 /**
-                 * @brief Decode a TSBK frame.
-                 * @param[in] data Buffer to containing MotTSBKFrame to decode.
+                 * @brief Decode a TDULC frame.
+                 * @param[in] data Buffer to containing MotTDULCFrame to decode.
                  */
                 bool decode(const uint8_t* data);
                 /**
-                 * @brief Encode a TSBK frame.
-                 * @param[out] data Buffer to encode a MotTSBKFrame.
+                 * @brief Encode a TDULC frame.
+                 * @param[out] data Buffer to encode a MotTDULCFrame.
                  */
                 void encode(uint8_t* data);
             
             public:
                 MotStartOfStream* startOfStream; // ?? - this should probably be private with getters/setters
-                uint8_t* tsbkData; // ?? - this should probably be private with getters/setters
+                uint8_t* tdulcData; // ?? - this should probably be private with getters/setters
             };
         } // namespace frames
     } // namespace dfsi
 } // namespace p25
 
-#endif // __MOT_TSBK_FRAME_H__
+#endif // __MOT_TDULC_FRAME_H__

@@ -31,6 +31,7 @@
 #include "common/p25/lc/tdulc/LC_RFSS_STS_BCAST.h"
 #include "common/p25/lc/tdulc/LC_SYS_SRV_BCAST.h"
 #include "common/p25/lc/tdulc/LC_TEL_INT_VCH_USER.h"
+#include "common/p25/lc/tdulc/LC_TDULC_RAW.h"
 
 #include "common/p25/lc/tdulc/LC_FAILSOFT.h"
 

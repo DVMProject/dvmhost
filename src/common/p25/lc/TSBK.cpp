@@ -196,8 +196,7 @@ bool TSBK::decode(const uint8_t* data, uint8_t* payload, bool rawTSBK)
 
     uint8_t tsbk[P25_TSBK_LENGTH_BYTES];
     ::memset(tsbk, 0x00U, P25_TSBK_LENGTH_BYTES);
-    if (rawTSBK)
-    {
+    if (rawTSBK) {
         ::memcpy(tsbk, data, P25_TSBK_LENGTH_BYTES);
 
         bool ret = edac::CRC::checkCCITT162(tsbk, P25_TSBK_LENGTH_BYTES);
@@ -252,6 +251,8 @@ bool TSBK::decode(const uint8_t* data, uint8_t* payload, bool rawTSBK)
         Utils::dump(2U, "TSBK::decode(), TSBK Value", tsbk, P25_TSBK_LENGTH_BYTES);
     }
 
+    if (m_raw != nullptr)
+        delete[] m_raw;
     m_raw = new uint8_t[P25_TSBK_LENGTH_BYTES];
     ::memcpy(m_raw, tsbk, P25_TSBK_LENGTH_BYTES);
 

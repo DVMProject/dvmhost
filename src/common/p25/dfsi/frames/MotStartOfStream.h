@@ -34,7 +34,7 @@ namespace p25
             // ---------------------------------------------------------------------------
 
             /**
-             * @brief Implements a P25 Motorola start of stream packet.
+             * @brief Implements a P25 Motorola/V.24 start of stream packet.
              * \code{.unparsed}
              * Byte 0               1               2               3
              * Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 

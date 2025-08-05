@@ -23,6 +23,7 @@
 #include "common/p25/dfsi/frames/MotStartOfStream.h"
 #include "common/p25/dfsi/frames/MotStartVoiceFrame.h"
 #include "common/p25/dfsi/frames/MotFullRateVoice.h"
+#include "common/p25/dfsi/frames/MotTDULCFrame.h"
 #include "common/p25/dfsi/frames/MotTSBKFrame.h"
 
 // FSC
