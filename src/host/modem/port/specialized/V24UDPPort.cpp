@@ -83,6 +83,7 @@ V24UDPPort::V24UDPPort(uint32_t peerId, const std::string& address, uint16_t mod
     m_tx(false),
     m_ctrlThreadPool(MAX_THREAD_CNT, "v24cc"),
     m_vcThreadPool(MAX_THREAD_CNT, "v24vc"),
+    m_tiaMode(true),
     m_debug(debug)
 {
     assert(peerId > 0U);
@@ -827,6 +828,9 @@ uint8_t* V24UDPPort::generateMessage(const uint8_t* message, uint32_t length, ui
     }
 
     uint32_t bufferLen = RTP_HEADER_LENGTH_BYTES + length;
+    if (!m_tiaMode)
+        bufferLen += 8U;
+
     uint8_t* buffer = new uint8_t[bufferLen];
     ::memset(buffer, 0x00U, bufferLen);
 
@@ -837,6 +841,11 @@ uint8_t* V24UDPPort::generateMessage(const uint8_t* message, uint32_t length, ui
     header.setTimestamp(timestamp);
     header.setSequence(rtpSeq);
     header.setSSRC(ssrc);
+
+    if (!m_tiaMode) {
+        header.setExtension(true);
+        header.setPayloadType(DFSI_RTP_MOT_PAYLOAD_TYPE);
+    }
 
     header.encode(buffer);
 
@@ -852,7 +861,23 @@ uint8_t* V24UDPPort::generateMessage(const uint8_t* message, uint32_t length, ui
             LogDebugEx(LOG_NET, "V24UDPPort::generateMessage()", "RTP streamId = %u, rtpSeq = %u", streamId, rtpSeq);
     }
 
-    ::memcpy(buffer + RTP_HEADER_LENGTH_BYTES, message, length);
+    if (!m_tiaMode) {
+        uint8_t extBuffer[8U];
+        ::memset(extBuffer, 0x00U, 8U);
+
+        extBuffer[0U] = 0x02U;
+        extBuffer[3U] = 0x01U;
+
+        extBuffer[4U] = 0x7FU; // 127
+        extBuffer[5U] = 0x00U; // 0
+        extBuffer[6U] = 0x00U; // 0
+        extBuffer[7U] = 0x01U; // 1
+
+        ::memcpy(buffer + RTP_HEADER_LENGTH_BYTES, extBuffer, 8U);
+        ::memcpy(buffer + RTP_HEADER_LENGTH_BYTES + 8U, message, length);
+    } else {
+        ::memcpy(buffer + RTP_HEADER_LENGTH_BYTES, message, length);
+    }
 
     if (m_debug)
         Utils::dump(1U, "[V24UDPPort::generateMessage()] Buffered Message", buffer, bufferLen);

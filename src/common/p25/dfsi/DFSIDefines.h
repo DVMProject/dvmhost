@@ -79,6 +79,10 @@ namespace p25
              */
 
             const uint8_t   DFSI_RTP_PAYLOAD_TYPE = 0x64U;      //!
+            const uint8_t   DFSI_RTP_MOT_PAYLOAD_TYPE = 0x5DU;  //!
+
+            const uint8_t   DFSI_RTP_SEQ_HANDSHAKE = 0x00U;     //!
+            const uint8_t   DFSI_RTP_SEQ_STARTSTOP = 0x01U;     //!
 
             const uint8_t   DFSI_MOT_ICW_FMT_TYPE3 = 0x02U;     //!
 
