@@ -83,7 +83,8 @@ namespace p25
 
             const uint8_t   DFSI_MOT_ICW_PARM_NOP = 0x00U;      //! No Operation
             const uint8_t   DSFI_MOT_ICW_PARM_PAYLOAD = 0x0CU;  //! Stream Payload
-            const uint8_t   DFSI_MOT_ICW_PARM_RSSI = 0x1AU;     //! RSSI Data
+            const uint8_t   DFSI_MOT_ICW_PARM_RSSI1 = 0x1AU;    //! RSSI Data
+            const uint8_t   DFSI_MOT_ICW_PARM_RSSI2 = 0x1BU;    //! RSSI Data
             const uint8_t   DFSI_MOT_ICW_PARM_STOP = 0x25U;     //! Stop Stream
 
             const uint8_t   DFSI_BUSY_BITS_TALKAROUND = 0x00U;  //! Talkaround

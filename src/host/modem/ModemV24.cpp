@@ -745,8 +745,11 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
                     case DSFI_MOT_ICW_PARM_PAYLOAD:
                         payloadType = value;
                         break;
-                    case DFSI_MOT_ICW_PARM_RSSI:
+                    case DFSI_MOT_ICW_PARM_RSSI1:
                         rssi = value;
+                        break;
+                    case DFSI_MOT_ICW_PARM_RSSI2:
+                        // don't do anything with this RSSI
                         break;
                     default:
                         LogWarning(LOG_MODEM, "ModemV24::convertToAir() unknown ICW parameter $%02X with value %u", param, value);
@@ -757,6 +760,10 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
 
             if (m_debug) {
                 ::LogDebugEx(LOG_MODEM, "ModemV24::convertToAir()", "V.24 RX, Start of Voice LDU1, ICW opcode = $%02X, rssi = %u", svf.startOfStream->getOpcode(), rssi);
+            }
+
+            if (svf.fullRateVoice->getTotalErrors() > 0U) {
+                LogWarning(LOG_MODEM, "V.24/DFSI traffic has %u errors in frameType = $%02X", svf.fullRateVoice->getTotalErrors(), svf.fullRateVoice->getFrameType());
             }
 
             m_rxCall->n++;
@@ -782,8 +789,11 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
                     case DSFI_MOT_ICW_PARM_PAYLOAD:
                         payloadType = value;
                         break;
-                    case DFSI_MOT_ICW_PARM_RSSI:
+                    case DFSI_MOT_ICW_PARM_RSSI1:
                         rssi = value;
+                        break;
+                    case DFSI_MOT_ICW_PARM_RSSI2:
+                        // don't do anything with this RSSI
                         break;
                     default:
                         LogWarning(LOG_MODEM, "ModemV24::convertToAir() unknown ICW parameter $%02X with value %u", param, value);
@@ -794,6 +804,10 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
 
             if (m_debug) {
                 ::LogDebugEx(LOG_MODEM, "ModemV24::convertToAir()", "V.24 RX, Start of Voice LDU2, ICW opcode = $%02X, rssi = %u", svf.startOfStream->getOpcode(), rssi);
+            }
+
+            if (svf.fullRateVoice->getTotalErrors() > 0U) {
+                LogWarning(LOG_MODEM, "V.24/DFSI traffic has %u errors in frameType = $%02X", svf.fullRateVoice->getTotalErrors(), svf.fullRateVoice->getFrameType());
             }
 
             m_rxCall->n++;
@@ -841,6 +855,10 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
             if (m_debug) {
                 LogDebugEx(LOG_MODEM, "ModemV24::convertToAir()", "Full Rate Voice, frameType = $%02X, errors = %u, busy = %u", voice.getFrameType(), voice.getTotalErrors(), voice.getBusy());
                 Utils::dump(1U, "Full Rate Voice IMBE", voice.imbeData, RAW_IMBE_LENGTH_BYTES);
+            }
+
+            if (voice.getTotalErrors() > 0U) {
+                LogWarning(LOG_MODEM, "V.24/DFSI traffic has %u errors in frameType = $%02X", voice.getTotalErrors(), voice.getFrameType());
             }
 
             switch (frameType) {
