@@ -1960,6 +1960,7 @@ void ModemV24::startOfStream(const p25::lc::LC& control)
     ::memcpy(vhdr1Buf + DFSI_MOT_START_LEN + 9U,  raw + 8U,  8U);
     ::memcpy(vhdr1Buf + DFSI_MOT_START_LEN + 18U, raw + 16U, 2U);
 
+    vhdr1Buf[0U] = DFSIFrameType::MOT_VHDR_1;
     vhdr1Buf[20U + DFSI_MOT_START_LEN] = DFSI_BUSY_BITS_INBOUND;
 
     if (m_trace)
@@ -1971,10 +1972,11 @@ void ModemV24::startOfStream(const p25::lc::LC& control)
     uint8_t vhdr2Buf[DFSI_MOT_VHDR_2_LEN];
     ::memset(vhdr2Buf, 0x00U, DFSI_MOT_VHDR_2_LEN);
 
-    ::memcpy(vhdr2Buf + 0U,  raw + 18U, 8U);
-    ::memcpy(vhdr2Buf + 9U,  raw + 26U, 8U);
-    ::memcpy(vhdr2Buf + 18U, raw + 34U, 2U);
+    ::memcpy(vhdr2Buf + 1U,   raw + 18U, 8U);
+    ::memcpy(vhdr2Buf + 10U,  raw + 26U, 8U);
+    ::memcpy(vhdr2Buf + 19U,  raw + 34U, 2U);
 
+    vhdr2Buf[0U] = DFSIFrameType::MOT_VHDR_2;
     vhdr2Buf[21U] = DFSI_BUSY_BITS_INBOUND;
 
     // send VHDR2
