@@ -120,14 +120,14 @@ bool LC::decodeHDU(const uint8_t* data, bool rawOnly)
         P25Utils::decode(data, raw, 114U, 780U);
 
 #if DEBUG_P25_HDU
-    Utils::dump(2U, "LC::decodeHDU(), HDU Raw", raw, P25_HDU_LENGTH_BYTES);
+    Utils::dump(2U, "P25, LC::decodeHDU(), HDU Raw", raw, P25_HDU_LENGTH_BYTES);
 #endif
 
     // decode Golay (18,6,8) FEC
     decodeHDUGolay(raw, rs);
 
 #if DEBUG_P25_HDU
-    Utils::dump(2U, "LC::decodeHDU(), HDU RS", rs, P25_HDU_LENGTH_BYTES);
+    Utils::dump(2U, "P25, LC::decodeHDU(), HDU RS", rs, P25_HDU_LENGTH_BYTES);
 #endif
 
     // decode RS (36,20,17) FEC
@@ -139,12 +139,12 @@ bool LC::decodeHDU(const uint8_t* data, bool rawOnly)
         }
     }
     catch (...) {
-        Utils::dump(2U, "P25, RS excepted with input data", rs, P25_HDU_LENGTH_BYTES);
+        Utils::dump(2U, "P25, LC::decodeHDU(), RS excepted with input data", rs, P25_HDU_LENGTH_BYTES);
         return false;
     }
 
 #if DEBUG_P25_HDU
-    Utils::dump(2U, "LC::decodeHDU(), HDU", rs, P25_HDU_LENGTH_BYTES);
+    Utils::dump(2U, "P25, LC::decodeHDU(), HDU", rs, P25_HDU_LENGTH_BYTES);
 #endif
 
     m_mfId = rs[9U];                                                                // Mfg Id.
@@ -204,14 +204,14 @@ void LC::encodeHDU(uint8_t* data, bool rawOnly)
     rs[14U] = (m_dstId >> 0) & 0xFFU;                                               // ...
 
 #if DEBUG_P25_HDU
-    Utils::dump(2U, "LC::encodeHDU(), HDU", rs, P25_HDU_LENGTH_BYTES);
+    Utils::dump(2U, "P25, LC::encodeHDU(), HDU", rs, P25_HDU_LENGTH_BYTES);
 #endif
 
     // encode RS (36,20,17) FEC
     m_rs.encode362017(rs);
 
 #if DEBUG_P25_HDU
-    Utils::dump(2U, "LC::encodeHDU(), HDU RS", rs, P25_HDU_LENGTH_BYTES);
+    Utils::dump(2U, "P25, LC::encodeHDU(), HDU RS", rs, P25_HDU_LENGTH_BYTES);
 #endif
 
     uint8_t raw[P25_HDU_LENGTH_BYTES + 1U];
@@ -229,7 +229,7 @@ void LC::encodeHDU(uint8_t* data, bool rawOnly)
     P25Utils::encode(raw, data, 114U, 780U);
 
 #if DEBUG_P25_HDU
-    Utils::dump(2U, "LC::encodeHDU(), HDU Interleave", data, P25_HDU_FRAME_LENGTH_BYTES + P25_PREAMBLE_LENGTH_BYTES);
+    Utils::dump(2U, "P25, LC::encodeHDU(), HDU Interleave", data, P25_HDU_FRAME_LENGTH_BYTES + P25_PREAMBLE_LENGTH_BYTES);
 #endif
 }
 
@@ -262,7 +262,7 @@ bool LC::decodeLDU1(const uint8_t* data, bool rawOnly)
     decodeLDUHamming(raw, rs + 15U);
 
 #if DEBUG_P25_LDU1
-    Utils::dump(2U, "LC::decodeLDU1(), LDU1 RS", rs, P25_LDU_LC_FEC_LENGTH_BYTES);
+    Utils::dump(2U, "P25, LC::decodeLDU1(), LDU1 RS", rs, P25_LDU_LC_FEC_LENGTH_BYTES);
 #endif
 
     // decode RS (24,12,13) FEC
@@ -274,12 +274,12 @@ bool LC::decodeLDU1(const uint8_t* data, bool rawOnly)
         }
     }
     catch (...) {
-        Utils::dump(2U, "P25, RS excepted with input data", rs, P25_LDU_LC_FEC_LENGTH_BYTES);
+        Utils::dump(2U, "P25, LC::decodeLDU1(), RS excepted with input data", rs, P25_LDU_LC_FEC_LENGTH_BYTES);
         return false;
     }
 
 #if DEBUG_P25_LDU1
-    Utils::dump(2U, "LC::decodeLDU1(), LDU1 LC", rs, P25_LDU_LC_FEC_LENGTH_BYTES);
+    Utils::dump(2U, "P25, LC::decodeLDU1(), LDU1 LC", rs, P25_LDU_LC_FEC_LENGTH_BYTES);
 #endif
 
     return decodeLC(rs, rawOnly);
@@ -297,14 +297,14 @@ void LC::encodeLDU1(uint8_t* data)
     encodeLC(rs);
 
 #if DEBUG_P25_LDU1
-    Utils::dump(2U, "LC::encodeLDU1(), LDU1 LC", rs, P25_LDU_LC_FEC_LENGTH_BYTES);
+    Utils::dump(2U, "P25, LC::encodeLDU1(), LDU1 LC", rs, P25_LDU_LC_FEC_LENGTH_BYTES);
 #endif
 
     // encode RS (24,12,13) FEC
     m_rs.encode241213(rs);
 
 #if DEBUG_P25_LDU1
-    Utils::dump(2U, "LC::encodeLDU1(), LDU1 RS", rs, P25_LDU_LC_FEC_LENGTH_BYTES);
+    Utils::dump(2U, "P25, LC::encodeLDU1(), LDU1 RS", rs, P25_LDU_LC_FEC_LENGTH_BYTES);
 #endif
 
     // encode Hamming (10,6,3) FEC and interleave for LC data
@@ -328,7 +328,7 @@ void LC::encodeLDU1(uint8_t* data)
     P25Utils::encode(raw, data, 1356U, 1398U);
 
 #if DEBUG_P25_LDU1
-    Utils::dump(2U, "LC::encodeLDU1(), LDU1 Interleave", data, P25_LDU_FRAME_LENGTH_BYTES + P25_PREAMBLE_LENGTH_BYTES);
+    Utils::dump(2U, "P25, LC::encodeLDU1(), LDU1 Interleave", data, P25_LDU_FRAME_LENGTH_BYTES + P25_PREAMBLE_LENGTH_BYTES);
 #endif
 }
 
@@ -361,7 +361,7 @@ bool LC::decodeLDU2(const uint8_t* data)
     decodeLDUHamming(raw, rs + 15U);
 
 #if DEBUG_P25_LDU2
-    Utils::dump(2U, "LC::decodeLDU2(), LDU2 RS", rs, P25_LDU_LC_FEC_LENGTH_BYTES);
+    Utils::dump(2U, "P25, LC::decodeLDU2(), LDU2 RS", rs, P25_LDU_LC_FEC_LENGTH_BYTES);
 #endif
 
     // decode RS (24,16,9) FEC
@@ -373,12 +373,12 @@ bool LC::decodeLDU2(const uint8_t* data)
         }
     }
     catch (...) {
-        Utils::dump(2U, "P25, RS excepted with input data", rs, P25_LDU_LC_FEC_LENGTH_BYTES);
+        Utils::dump(2U, "P25, LC::decodeLDU2(), RS excepted with input data", rs, P25_LDU_LC_FEC_LENGTH_BYTES);
         return false;
     }
 
 #if DEBUG_P25_LDU2
-    Utils::dump(2U, "LC::decodeLDU2(), LDU2 LC", rs, P25_LDU_LC_FEC_LENGTH_BYTES);
+    Utils::dump(2U, "P25, LC::decodeLDU2(), LDU2 LC", rs, P25_LDU_LC_FEC_LENGTH_BYTES);
 #endif
 
     m_algId = rs[9U];                                                               // Algorithm ID
@@ -429,14 +429,14 @@ void LC::encodeLDU2(uint8_t* data)
     rs[11U] = (m_kId >> 0) & 0xFFU;                                                 // ...
 
 #if DEBUG_P25_LDU2
-    Utils::dump(2U, "LC::encodeLDU2(), LDU2 LC", rs, P25_LDU_LC_FEC_LENGTH_BYTES);
+    Utils::dump(2U, "P25, LC::encodeLDU2(), LDU2 LC", rs, P25_LDU_LC_FEC_LENGTH_BYTES);
 #endif
 
     // encode RS (24,16,9) FEC
     m_rs.encode24169(rs);
 
 #if DEBUG_P25_LDU2
-    Utils::dump(2U, "LC::encodeLDU2(), LDU2 RS", rs, P25_LDU_LC_FEC_LENGTH_BYTES);
+    Utils::dump(2U, "P25, LC::encodeLDU2(), LDU2 RS", rs, P25_LDU_LC_FEC_LENGTH_BYTES);
 #endif
 
     // encode Hamming (10,6,3) FEC and interleave for LC data
@@ -460,7 +460,7 @@ void LC::encodeLDU2(uint8_t* data)
     P25Utils::encode(raw, data, 1356U, 1398U);
 
 #if DEBUG_P25_LDU2
-    Utils::dump(2U, "LC::encodeLDU2(), LDU2 Interleave", data, P25_LDU_FRAME_LENGTH_BYTES + P25_PREAMBLE_LENGTH_BYTES);
+    Utils::dump(2U, "P25, LC::encodeLDU2(), LDU2 Interleave", data, P25_LDU_FRAME_LENGTH_BYTES + P25_PREAMBLE_LENGTH_BYTES);
 #endif
 }
 
@@ -619,7 +619,7 @@ bool LC::decodeLC(const uint8_t* rs, bool rawOnly)
     // non-standard P25 vendor opcodes (these are just detected for passthru, and stored
     // as the packed RS value)
     if ((m_mfId != MFG_STANDARD) && (m_mfId != MFG_STANDARD_ALT)) {
-        //Utils::dump(1U, "Decoded P25 Non-Standard RS", rs, P25_LDU_LC_FEC_LENGTH_BYTES);
+        //Utils::dump(1U, "P25, LC::decodeLC(), Decoded P25 Non-Standard RS", rs, P25_LDU_LC_FEC_LENGTH_BYTES);
         if (m_mfId == MFG_HARRIS) {
             // Harris P25 opcodes
             switch (m_lco) {
@@ -790,7 +790,7 @@ void LC::encodeLC(uint8_t* rs)
     rs[8U] = (uint8_t)((rsValue >> 0) & 0xFFU);
 /*
     if ((m_mfId != MFG_STANDARD) && (m_mfId != MFG_STANDARD_ALT)) {
-        Utils::dump(1U, "Encoded P25 Non-Standard RS", rs, P25_LDU_LC_FEC_LENGTH_BYTES);
+        Utils::dump(1U, "P25, LC::encodeLC(), Encoded P25 Non-Standard RS", rs, P25_LDU_LC_FEC_LENGTH_BYTES);
     }
 */
 }

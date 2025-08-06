@@ -139,7 +139,7 @@ bool SACCH::decode(const uint8_t* data)
     conv.chainback(m_data, NXDN_SACCH_CRC_LENGTH_BITS);
 
 #if DEBUG_NXDN_SACCH
-    Utils::dump(2U, "Decoded SACCH", m_data, NXDN_SACCH_CRC_LENGTH_BYTES);
+    Utils::dump(2U, "SACCH::decode(), Decoded SACCH", m_data, NXDN_SACCH_CRC_LENGTH_BYTES);
 #endif
 
     // check CRC-6
@@ -178,7 +178,7 @@ void SACCH::encode(uint8_t* data) const
     edac::CRC::addCRC6(buffer, NXDN_SACCH_LENGTH_BITS);
 
 #if DEBUG_NXDN_SACCH
-        Utils::dump(2U, "Encoded SACCH", buffer, NXDN_SACCH_CRC_LENGTH_BYTES);
+        Utils::dump(2U, "SACCH::encode(), Encoded SACCH", buffer, NXDN_SACCH_CRC_LENGTH_BYTES);
 #endif
 
     // encode convolution

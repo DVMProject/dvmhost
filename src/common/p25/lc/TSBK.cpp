@@ -242,13 +242,13 @@ bool TSBK::decode(const uint8_t* data, uint8_t* payload, bool rawTSBK)
                 return false;
         }
         catch (...) {
-            Utils::dump(2U, "P25, decoding excepted with input data", tsbk, P25_TSBK_LENGTH_BYTES);
+            Utils::dump(2U, "P25, TSBK::decode(), decoding excepted with input data", tsbk, P25_TSBK_LENGTH_BYTES);
             return false;
         }
     }
 
     if (m_verbose) {
-        Utils::dump(2U, "TSBK::decode(), TSBK Value", tsbk, P25_TSBK_LENGTH_BYTES);
+        Utils::dump(2U, "P25, TSBK::decode(), TSBK Value", tsbk, P25_TSBK_LENGTH_BYTES);
     }
 
     if (m_raw != nullptr)
@@ -283,7 +283,7 @@ void TSBK::encode(uint8_t* data, const uint8_t* payload, bool rawTSBK, bool noTr
     edac::CRC::addCCITT162(tsbk, P25_TSBK_LENGTH_BYTES);
 
     if (m_verbose) {
-        Utils::dump(2U, "TSBK::encode(), TSBK Value", tsbk, P25_TSBK_LENGTH_BYTES);
+        Utils::dump(2U, "P25, TSBK::encode(), TSBK Value", tsbk, P25_TSBK_LENGTH_BYTES);
     }
 
     uint8_t raw[P25_TSBK_FEC_LENGTH_BYTES];
@@ -306,7 +306,7 @@ void TSBK::encode(uint8_t* data, const uint8_t* payload, bool rawTSBK, bool noTr
         P25Utils::encode(raw, data, 114U, 318U);
 
 #if DEBUG_P25_TSBK
-        Utils::dump(2U, "TSBK::encode(), TSBK Interleave", data, P25_TSBK_FEC_LENGTH_BYTES + P25_PREAMBLE_LENGTH_BYTES);
+        Utils::dump(2U, "P25, TSBK::encode(), TSBK Interleave", data, P25_TSBK_FEC_LENGTH_BYTES + P25_PREAMBLE_LENGTH_BYTES);
 #endif
     }
 }

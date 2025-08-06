@@ -1210,7 +1210,7 @@ void HostBridge::processUDPAudio()
 
     if (length > 0) {
         if (m_trace)
-            Utils::dump(1U, "HostBridge()::processUDPAudio() Audio Network Packet", buffer, length);
+            Utils::dump(1U, "HostBridge()::processUDPAudio(), Audio Network Packet", buffer, length);
 
         uint32_t pcmLength = 0;
         if (m_udpNoIncludeLength) {
@@ -1255,7 +1255,7 @@ void HostBridge::processUDPAudio()
             delete[] usrpHeader;
         }
 
-        // Utils::dump(1U, "PCM RECV BYTE BUFFER", pcm, pcmLength);
+        // Utils::dump(1U, "HostBridge::processUDPAudio(), PCM RECV BYTE BUFFER", pcm, pcmLength);
 
         NetPacketRequest* req = new NetPacketRequest();
         req->pcm = new uint8_t[pcmLength];
@@ -1552,7 +1552,7 @@ void HostBridge::decodeDMRAudioFrame(uint8_t* ambe, uint32_t srcId, uint32_t dst
                 }
 
                 if (m_trace)
-                    Utils::dump(1U, "HostBridge()::decodeDMRAudioFrame() Encoded uLaw Audio", pcm, AUDIO_SAMPLES_LENGTH);
+                    Utils::dump(1U, "HostBridge()::decodeDMRAudioFrame(), Encoded uLaw Audio", pcm, AUDIO_SAMPLES_LENGTH);
             }
             else {
                 for (uint32_t smpIdx = 0; smpIdx < AUDIO_SAMPLES_LENGTH; smpIdx++) {
@@ -1784,7 +1784,7 @@ void HostBridge::encodeDMRAudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32_
     }
 #endif // defined(_WIN32)
 
-    // Utils::dump(1U, "Encoded AMBE", ambe, RAW_AMBE_LENGTH_BYTES);
+    // Utils::dump(1U, "HostBridge::encodeDMRAudioFrame(), Encoded AMBE", ambe, RAW_AMBE_LENGTH_BYTES);
 
     ::memcpy(m_ambeBuffer + (m_ambeCount * 9U), ambe, RAW_AMBE_LENGTH_BYTES);
     m_ambeCount++;
@@ -2157,7 +2157,7 @@ void HostBridge::decodeP25AudioFrame(uint8_t* ldu, uint32_t srcId, uint32_t dstI
             break;
         }
 
-        // Utils::dump(1U, "IMBE", imbe, RAW_IMBE_LENGTH_BYTES);
+        // Utils::dump(1U, "HostBridge::decodeP25AudioFrame(), IMBE", imbe, RAW_IMBE_LENGTH_BYTES);
 
         if (m_tekAlgoId != p25::defines::ALGO_UNENCRYPT && m_tekKeyId > 0U && m_p25Crypto->getTEKLength() > 0U) {
             switch (m_tekAlgoId) {
@@ -2205,7 +2205,7 @@ void HostBridge::decodeP25AudioFrame(uint8_t* ldu, uint32_t srcId, uint32_t dstI
                 }
 
                 if (m_trace)
-                    Utils::dump(1U, "HostBridge()::decodeP25AudioFrame() Encoded uLaw Audio", pcm, AUDIO_SAMPLES_LENGTH);
+                    Utils::dump(1U, "HostBridge()::decodeP25AudioFrame(), Encoded uLaw Audio", pcm, AUDIO_SAMPLES_LENGTH);
             }
             else {
                 for (uint32_t smpIdx = 0; smpIdx < AUDIO_SAMPLES_LENGTH; smpIdx++) {
@@ -2331,7 +2331,7 @@ void HostBridge::encodeP25AudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32_
     }
 #endif // defined(_WIN32)
 
-    // Utils::dump(1U, "Encoded IMBE", imbe, RAW_IMBE_LENGTH_BYTES);
+    // Utils::dump(1U, "HostBridge::encodeP25AudioFrame(), Encoded IMBE", imbe, RAW_IMBE_LENGTH_BYTES);
 
     if (m_tekAlgoId != p25::defines::ALGO_UNENCRYPT && m_tekKeyId > 0U && m_p25Crypto->getTEKLength() > 0U) {
         // generate initial MI for the HDU
@@ -2582,7 +2582,7 @@ void HostBridge::processAnalogNetwork(uint8_t* buffer, uint32_t length)
                     }
 
                     if (m_trace)
-                        Utils::dump(1U, "HostBridge()::processAnalogNetwork() Encoded uLaw Audio", pcm, AUDIO_SAMPLES_LENGTH);
+                        Utils::dump(1U, "HostBridge()::processAnalogNetwork(), Encoded uLaw Audio", pcm, AUDIO_SAMPLES_LENGTH);
                 }
                 else {
                     for (uint32_t smpIdx = 0; smpIdx < AUDIO_SAMPLES_LENGTH; smpIdx++) {
@@ -2729,7 +2729,7 @@ void HostBridge::encodeAnalogAudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint
     }
 
     if (m_trace)
-        Utils::dump(1U, "HostBridge()::encodeAnalogAudioFrame() Encoded uLaw Audio", outPcm, AUDIO_SAMPLES_LENGTH);
+        Utils::dump(1U, "HostBridge()::encodeAnalogAudioFrame(), Encoded uLaw Audio", outPcm, AUDIO_SAMPLES_LENGTH);
 
     analogData.setAudio(outPcm);
 
@@ -3196,7 +3196,7 @@ void* HostBridge::threadUDPAudioProcess(void* arg)
                     short samples[AUDIO_SAMPLES_LENGTH];
                     if (bridge->m_udpUseULaw) {
                         if (bridge->m_trace)
-                            Utils::dump(1U, "HostBridge()::threadUDPAudioProcess() uLaw Audio", req->pcm, AUDIO_SAMPLES_LENGTH * 2U);
+                            Utils::dump(1U, "HostBridge()::threadUDPAudioProcess(), uLaw Audio", req->pcm, AUDIO_SAMPLES_LENGTH * 2U);
 
                         for (uint32_t pcmIdx = 0; pcmIdx < AUDIO_SAMPLES_LENGTH; pcmIdx++) {
                             samples[smpIdx] = AnalogAudio::decodeMuLaw(req->pcm[pcmIdx]);

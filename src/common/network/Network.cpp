@@ -326,7 +326,7 @@ void Network::clock(uint32_t ms)
                             }
 
                             if (m_debug)
-                                Utils::dump(1U, "[Network::clock()] Network Received, DMR", buffer.get(), length);
+                                Utils::dump(1U, "Network::clock(), Network Rx, DMR", buffer.get(), length);
                             if (length > (int)(DMR_PACKET_LENGTH + PACKET_PAD))
                                 LogError(LOG_NET, "DMR Stream %u, frame oversized? this shouldn't happen, pktSeq = %u, len = %u", streamId, m_pktSeq, length);
 
@@ -378,7 +378,7 @@ void Network::clock(uint32_t ms)
                             }
 
                             if (m_debug)
-                                Utils::dump(1U, "[Network::clock()] Network Received, P25", buffer.get(), length);
+                                Utils::dump(1U, "Network::clock(), Network Rx, P25", buffer.get(), length);
                             if (length > 512)
                                 LogError(LOG_NET, "P25 Stream %u, frame oversized? this shouldn't happen, pktSeq = %u, len = %u", streamId, m_pktSeq, length);
 
@@ -439,7 +439,7 @@ void Network::clock(uint32_t ms)
                             }
 
                             if (m_debug)
-                                Utils::dump(1U, "[Network::clock()] Network Received, NXDN", buffer.get(), length);
+                                Utils::dump(1U, "Network::clock(), Network Rx, NXDN", buffer.get(), length);
                             if (length > (int)(NXDN_PACKET_LENGTH + PACKET_PAD))
                                 LogError(LOG_NET, "NXDN Stream %u, frame oversized? this shouldn't happen, pktSeq = %u, len = %u", streamId, m_pktSeq, length);
 
@@ -491,7 +491,7 @@ void Network::clock(uint32_t ms)
                             }
 
                             if (m_debug)
-                                Utils::dump(1U, "[Network::clock()] Network Received, Analog", buffer.get(), length);
+                                Utils::dump(1U, "Network::clock(), Network Rx, Analog", buffer.get(), length);
                             if (length < (int)ANALOG_PACKET_LENGTH) {
                                 LogError(LOG_NET, "Analog Stream %u, frame too short? this shouldn't happen, pktSeq = %u, len = %u", streamId, m_pktSeq, length);
                             } else {
@@ -525,7 +525,7 @@ void Network::clock(uint32_t ms)
                     {
                         if (m_enabled && m_updateLookup) {
                             if (m_debug)
-                                Utils::dump(1U, "Network Received, WL RID", buffer.get(), length);
+                                Utils::dump(1U, "Network::clock(), Network Rx, WL RID", buffer.get(), length);
 
                             if (m_ridLookup != nullptr) {
                                 // update RID lists
@@ -551,7 +551,7 @@ void Network::clock(uint32_t ms)
                     {
                         if (m_enabled && m_updateLookup) {
                             if (m_debug)
-                                Utils::dump(1U, "Network Received, BL RID", buffer.get(), length);
+                                Utils::dump(1U, "Network::clock(), Network Rx, BL RID", buffer.get(), length);
 
                             if (m_ridLookup != nullptr) {
                                 // update RID lists
@@ -578,7 +578,7 @@ void Network::clock(uint32_t ms)
                     {
                         if (m_enabled && m_updateLookup) {
                             if (m_debug)
-                                Utils::dump(1U, "Network Received, ACTIVE TGS", buffer.get(), length);
+                                Utils::dump(1U, "Network::clock(), Network Rx, ACTIVE TGS", buffer.get(), length);
 
                             if (m_tidLookup != nullptr) {
                                 // update TGID lists
@@ -628,7 +628,7 @@ void Network::clock(uint32_t ms)
                     {
                         if (m_enabled && m_updateLookup) {
                             if (m_debug)
-                                Utils::dump(1U, "Network Received, DEACTIVE TGS", buffer.get(), length);
+                                Utils::dump(1U, "Network::clock(), Network Rx, DEACTIVE TGS", buffer.get(), length);
 
                             if (m_tidLookup != nullptr) {
                                 // update TGID lists
@@ -902,7 +902,7 @@ void Network::clock(uint32_t ms)
             m_timeoutTimer.start();
             if (length >= 14) {
                 if (m_debug)
-                    Utils::dump(1U, "Network Received, PONG", buffer.get(), length);
+                    Utils::dump(1U, "Network::clock(), Network Rx, PONG", buffer.get(), length);
 
                 ulong64_t serverNow = 0U;
 
@@ -1025,7 +1025,7 @@ void Network::enable(bool enabled)
 void Network::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opcode, const uint8_t* data, uint32_t length, uint32_t streamId,
     const frame::RTPFNEHeader& fneHeader, const frame::RTPHeader& rtpHeader)
 {
-    Utils::dump("unknown opcode from the master", data, length);
+    Utils::dump("Unknown opcode from the master", data, length);
 }
 
 /* Writes login request to the network. */
@@ -1041,7 +1041,7 @@ bool Network::writeLogin()
     SET_UINT32(m_peerId, buffer, 4U);                                               // Peer ID
 
     if (m_debug)
-        Utils::dump(1U, "Network Message, Login", buffer, 8U);
+        Utils::dump(1U, "Network::writeLogin(), Message, Login", buffer, 8U);
 
     m_loginStreamId = createStreamId();
     m_remotePeerId = 0U;
@@ -1074,7 +1074,7 @@ bool Network::writeAuthorisation()
     delete[] in;
 
     if (m_debug)
-        Utils::dump(1U, "Network Message, Authorisation", out, 40U);
+        Utils::dump(1U, "Network::writeAuthorisation(), Message, Authorisation", out, 40U);
 
     return writeMaster({ NET_FUNC::RPTK, NET_SUBFUNC::NOP }, out, 40U, pktSeq(), m_loginStreamId);
 }
@@ -1135,7 +1135,7 @@ bool Network::writeConfig()
     ::snprintf(buffer + 8U, json.length() + 1U, "%s", json.c_str());
 
     if (m_debug) {
-        Utils::dump(1U, "Network Message, Configuration", (uint8_t*)buffer, json.length() + 8U);
+        Utils::dump(1U, "Network::writeConfig(), Message, Configuration", (uint8_t*)buffer, json.length() + 8U);
     }
 
     return writeMaster({ NET_FUNC::RPTC, NET_SUBFUNC::NOP }, (uint8_t*)buffer, json.length() + 8U, RTP_END_OF_CALL_SEQ, m_loginStreamId);

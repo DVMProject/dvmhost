@@ -70,7 +70,7 @@ void DiagNetwork::processNetwork()
     UInt8Array buffer = m_frameQueue->read(length, address, addrLen, &rtpHeader, &fneHeader);
     if (length > 0) {
         if (m_debug)
-            Utils::dump(1U, "Network Message", buffer.get(), length);
+            Utils::dump(1U, "DiagNetwork::processNetwork(), Network Message", buffer.get(), length);
 
         uint32_t peerId = fneHeader.getPeerId();
 
@@ -360,7 +360,7 @@ void DiagNetwork::taskNetworkRx(NetPacketRequest* req)
 
                     default:
                         network->writePeerNAK(peerId, network->createStreamId(), TAG_TRANSFER, NET_CONN_NAK_ILLEGAL_PACKET);
-                        Utils::dump("unknown transfer opcode from the peer", req->buffer, req->length);
+                        Utils::dump("Unknown transfer opcode from the peer", req->buffer, req->length);
                         break;
                     }
                 }
@@ -379,7 +379,7 @@ void DiagNetwork::taskNetworkRx(NetPacketRequest* req)
                                 DECLARE_UINT8_ARRAY(rawPayload, req->length);
                                 ::memcpy(rawPayload, req->buffer, req->length);
 
-                                // Utils::dump(1U, "Raw Payload", rawPayload, req->length);
+                                // Utils::dump(1U, "DiagNetwork::taskNetworkRx(), PEER_LINK, Raw Payload", rawPayload, req->length);
 
                                 if (network->m_peerLinkActPkt.find(peerId) == network->m_peerLinkActPkt.end()) {
                                     network->m_peerLinkActPkt.insert(peerId, FNENetwork::PacketBufferEntry());

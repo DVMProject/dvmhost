@@ -255,12 +255,12 @@ ssize_t Socket::read(uint8_t* buffer, uint32_t length, sockaddr_storage& address
                 ::memcpy(cryptoBuffer, buffer + 2U, len - 2U);
             }
 
-            // Utils::dump(1U, "Socket::read() crypted", cryptoBuffer, cryptedLen);
+            // Utils::dump(1U, "Socket::read(), crypted", cryptoBuffer, cryptedLen);
 
             // decrypt
             uint8_t* decrypted = m_aes->decryptECB(cryptoBuffer, cryptedLen, m_presharedKey);
 
-            // Utils::dump(1U, "Socket::read() decrypted", decrypted, cryptedLen);
+            // Utils::dump(1U, "Socket::read(), decrypted", decrypted, cryptedLen);
 
             // finalize, cleanup buffers and replace with new
             if (decrypted != nullptr) {
@@ -340,7 +340,7 @@ bool Socket::write(const uint8_t* buffer, uint32_t length, const sockaddr_storag
         // encrypt
         uint8_t* crypted = m_aes->encryptECB(cryptoBuffer, cryptedLen, m_presharedKey);
 
-        // Utils::dump(1U, "Socket::write() crypted", crypted, cryptedLen);
+        // Utils::dump(1U, "Socket::write(), crypted", crypted, cryptedLen);
 
         // finalize, cleanup buffers and replace with new
         out = std::unique_ptr<uint8_t[]>(new uint8_t[cryptedLen + 2U]);
@@ -491,7 +491,7 @@ bool Socket::write(BufferVector& buffers, ssize_t* lenWritten) noexcept
                     continue;
                 }
 
-                // Utils::dump(1U, "Socket::write() crypted", crypted, cryptedLen);
+                // Utils::dump(1U, "Socket::write(), crypted", crypted, cryptedLen);
 
                 // finalize
                 DECLARE_UINT8_ARRAY(out, cryptedLen + 2U);

@@ -114,7 +114,7 @@ void RTCH::decode(const uint8_t* data, uint32_t length, uint32_t offset)
     }
 
     if (m_verbose) {
-        Utils::dump(2U, "Decoded RTCH Data", rtch, NXDN_RTCH_LC_LENGTH_BYTES);
+        Utils::dump(2U, "NXDN, RTCH::decode(), Decoded RTCH Data", rtch, NXDN_RTCH_LC_LENGTH_BYTES);
     }
 
     decodeLC(rtch);
@@ -137,7 +137,7 @@ void RTCH::encode(uint8_t* data, uint32_t length, uint32_t offset)
     }
 
     if (m_verbose) {
-        Utils::dump(2U, "Encoded RTCH Data", data, length);
+        Utils::dump(2U, "NXDN, RTCH::encode(), Encoded RTCH Data", data, length);
     }
 }
 

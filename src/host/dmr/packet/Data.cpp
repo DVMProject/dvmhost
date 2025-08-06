@@ -319,7 +319,7 @@ bool Data::process(uint8_t* data, uint32_t len)
             }
 
             if (m_dumpDataPacket) {
-                Utils::dump(1U, "PDU Packet", m_pduUserData, m_pduDataOffset);
+                Utils::dump(1U, "DMR, PDU Packet", m_pduUserData, m_pduDataOffset);
             }
         }
 
@@ -559,7 +559,7 @@ void Data::processNetwork(const data::NetData& dmrData)
             }
 
             if (m_dumpDataPacket) {
-                Utils::dump(1U, "PDU Packet", m_pduUserData, m_pduDataOffset);
+                Utils::dump(1U, "DMR, PDU Packet", m_pduUserData, m_pduDataOffset);
             }
         }
 

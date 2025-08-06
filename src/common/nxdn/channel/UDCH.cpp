@@ -125,7 +125,7 @@ bool UDCH::decode(const uint8_t* data)
     }
 
 #if DEBUG_NXDN_UDCH
-    Utils::dump(2U, "UDCH::decode(), UDCH Raw", buffer, NXDN_UDCH_FEC_LENGTH_BYTES);
+    Utils::dump(2U, "NXDN, UDCH::decode(), UDCH Raw", buffer, NXDN_UDCH_FEC_LENGTH_BYTES);
 #endif
 
     // depuncture
@@ -163,7 +163,7 @@ bool UDCH::decode(const uint8_t* data)
     conv.chainback(m_data, NXDN_UDCH_CRC_LENGTH_BITS);
 
 #if DEBUG_NXDN_UDCH
-    Utils::dump(2U, "Decoded UDCH", m_data, NXDN_UDCH_CRC_LENGTH_BYTES);
+    Utils::dump(2U, "NXDN, UDCH::decode(), Decoded UDCH", m_data, NXDN_UDCH_CRC_LENGTH_BYTES);
 #endif
 
     // check CRC-15
@@ -193,7 +193,7 @@ void UDCH::encode(uint8_t* data) const
     edac::CRC::addCRC15(buffer, NXDN_UDCH_LENGTH_BITS);
 
 #if DEBUG_NXDN_UDCH
-    Utils::dump(2U, "Encoded UDCH", m_data, NXDN_UDCH_CRC_LENGTH_BYTES);
+    Utils::dump(2U, "NXDN, UDCH::encode(), Encoded UDCH", m_data, NXDN_UDCH_CRC_LENGTH_BYTES);
 #endif
 
     // encode convolution
@@ -226,7 +226,7 @@ void UDCH::encode(uint8_t* data) const
     }
 
 #if DEBUG_NXDN_UDCH
-    Utils::dump(2U, "UDCH::encode(), UDCH Puncture and Interleave", data, NXDN_UDCH_FEC_LENGTH_BYTES);
+    Utils::dump(2U, "NXDN, UDCH::encode(), UDCH Puncture and Interleave", data, NXDN_UDCH_FEC_LENGTH_BYTES);
 #endif
 }
 

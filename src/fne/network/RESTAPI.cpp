@@ -527,7 +527,7 @@ RESTAPI::RESTAPI(const std::string& address, uint16_t port, const std::string& p
     delete[] in;
 
     if (m_debug) {
-        Utils::dump("REST Password Hash", m_passwordHash, 32U);
+        Utils::dump("RESTAPI::RESTAPI(), REST Password Hash", m_passwordHash, 32U);
     }
 
 #if defined(ENABLE_SSL)
@@ -779,7 +779,7 @@ void RESTAPI::restAPI_PutAuth(const HTTPPayload& request, HTTPPayload& reply, co
     }
 
     if (m_debug) {
-        Utils::dump("Password Hash", passwordHash, 32U);
+        Utils::dump("RESTAPI::restAPI_PutAuth(), Password Hash", passwordHash, 32U);
     }
 
     // compare hashes

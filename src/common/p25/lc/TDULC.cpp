@@ -167,7 +167,7 @@ bool TDULC::decode(const uint8_t* data, uint8_t* payload, bool rawTDULC)
         edac::Golay24128::decode24128(rs, raw, P25_TDULC_LENGTH_BYTES);
 
 #if DEBUG_P25_TDULC
-        Utils::dump(2U, "TDULC::decode(), TDULC RS", rs, P25_TDULC_LENGTH_BYTES);
+        Utils::dump(2U, "P25, TDULC::decode(), TDULC RS", rs, P25_TDULC_LENGTH_BYTES);
 #endif
 
         // decode RS (24,12,13) FEC
@@ -179,12 +179,12 @@ bool TDULC::decode(const uint8_t* data, uint8_t* payload, bool rawTDULC)
             }
         }
         catch (...) {
-            Utils::dump(2U, "P25, RS excepted with input data", rs, P25_TDULC_LENGTH_BYTES);
+            Utils::dump(2U, "P25, TDULC::decode(), RS excepted with input data", rs, P25_TDULC_LENGTH_BYTES);
             return false;
         }
 
         if (m_verbose) {
-            Utils::dump(2U, "TDULC::decode(), TDULC Value", rs, P25_TDULC_LENGTH_BYTES);
+            Utils::dump(2U, "P25, TDULC::decode(), TDULC Value", rs, P25_TDULC_LENGTH_BYTES);
         }
 
         if (m_raw != nullptr)
@@ -217,14 +217,14 @@ void TDULC::encode(uint8_t* data, const uint8_t* payload, bool rawTDULC)
             rs[0U] |= 0x40U;                                                            // Implicit Operation
 
         if (m_verbose) {
-            Utils::dump(2U, "TDULC::encode(), TDULC Value", rs, P25_TDULC_LENGTH_BYTES);
+            Utils::dump(2U, "P25, TDULC::encode(), TDULC Value", rs, P25_TDULC_LENGTH_BYTES);
         }
 
         // encode RS (24,12,13) FEC
         m_rs.encode241213(rs);
 
 #if DEBUG_P25_TDULC
-        Utils::dump(2U, "TDULC::encode(), TDULC RS", rs, P25_TDULC_LENGTH_BYTES);
+        Utils::dump(2U, "P25, TDULC::encode(), TDULC RS", rs, P25_TDULC_LENGTH_BYTES);
 #endif
 
         uint8_t raw[P25_TDULC_FEC_LENGTH_BYTES + 1U];
@@ -237,7 +237,7 @@ void TDULC::encode(uint8_t* data, const uint8_t* payload, bool rawTDULC)
         P25Utils::encode(raw, data, 114U, 410U);
 
 #if DEBUG_P25_TDULC
-        Utils::dump(2U, "TDULC::encode(), TDULC Interleave", data, P25_TDULC_FRAME_LENGTH_BYTES + P25_PREAMBLE_LENGTH_BYTES);
+        Utils::dump(2U, "P25, TDULC::encode(), TDULC Interleave", data, P25_TDULC_FRAME_LENGTH_BYTES + P25_PREAMBLE_LENGTH_BYTES);
 #endif
     }
 }

@@ -1505,7 +1505,7 @@ void Control::processNetwork()
 
             if (m_debug) {
                 LogDebug(LOG_NET, "P25, HDU algId = $%02X, kId = $%02X", algId, kid);
-                Utils::dump(1U, "P25 HDU Network MI", mi, MI_LENGTH_BYTES);
+                Utils::dump(1U, "P25, HDU Network MI", mi, MI_LENGTH_BYTES);
             }
 
             control.setAlgId(algId);

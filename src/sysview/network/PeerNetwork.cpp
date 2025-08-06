@@ -230,7 +230,7 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
     break;
 
     default:
-        Utils::dump("unknown opcode from the master", data, length);
+        Utils::dump("Unknown opcode from the master", data, length);
         break;
     }
 }
@@ -296,7 +296,7 @@ bool PeerNetwork::writeConfig()
     ::snprintf(buffer + 8U, json.length() + 1U, "%s", json.c_str());
 
     if (m_debug) {
-        Utils::dump(1U, "Network Message, Configuration", (uint8_t*)buffer, json.length() + 8U);
+        Utils::dump(1U, "PeerNetwork::writeConfig(), Message, Configuration", (uint8_t*)buffer, json.length() + 8U);
     }
 
     return writeMaster({ NET_FUNC::RPTC, NET_SUBFUNC::NOP }, (uint8_t*)buffer, json.length() + 8U, RTP_END_OF_CALL_SEQ, m_loginStreamId);

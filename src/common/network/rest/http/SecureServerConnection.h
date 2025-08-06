@@ -154,7 +154,7 @@ namespace network
                                         ((m_request.method == HTTP_POST) || (m_request.method == HTTP_PUT))) {
                                         if (m_debug) {
                                             LogDebug(LOG_REST, "HTTPS Partial Request, recvLength = %u, consumed = %u, result = %u", recvLength, consumed, result);
-                                            Utils::dump(1U, "m_buffer", (uint8_t*)m_buffer.data(), recvLength);
+                                            Utils::dump(1U, "SecureServerConnection::read(), m_buffer", (uint8_t*)m_buffer.data(), recvLength);
                                         }
 
                                         result = HTTPLexer::INDETERMINATE;
@@ -163,7 +163,7 @@ namespace network
                                 } else {
                                     if (m_debug) {
                                         LogDebug(LOG_REST, "HTTP Partial Request, recvLength = %u, result = %u", recvLength, result);
-                                        Utils::dump(1U, "m_buffer", (uint8_t*)m_buffer.data(), recvLength);
+                                        Utils::dump(1U, "SecureServerConnection::read(), m_buffer", (uint8_t*)m_buffer.data(), recvLength);
                                     }
 
                                     if (m_contResult == HTTPLexer::INDETERMINATE) {
@@ -180,7 +180,7 @@ namespace network
 
                                 if (result == HTTPLexer::GOOD) {
                                     if (m_debug) {
-                                        Utils::dump(1U, "HTTPS Request Content", (uint8_t*)m_request.content.c_str(), m_request.content.length());
+                                        Utils::dump(1U, "SecureServerConnection::read(), HTTPS Request Content", (uint8_t*)m_request.content.c_str(), m_request.content.length());
                                     }
 
                                     m_continue = false;
@@ -188,7 +188,7 @@ namespace network
                                     m_requestHandler.handleRequest(m_request, m_reply);
 
                                     if (m_debug) {
-                                        Utils::dump(1U, "HTTP Reply Content", (uint8_t*)m_reply.content.c_str(), m_reply.content.length());
+                                        Utils::dump(1U, "SecureServerConnection::read(), HTTPS Reply Content", (uint8_t*)m_reply.content.c_str(), m_reply.content.length());
                                     }
 
                                     write();

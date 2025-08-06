@@ -71,7 +71,7 @@ UInt8Array RawFrameQueue::read(int& messageLength, sockaddr_storage& address, ui
 
     if (length > 0) {
         if (m_debug)
-            Utils::dump(1U, "Network Packet", buffer, length);
+            Utils::dump(1U, "RawFrameQueue::read(), Network Packet", buffer, length);
 
         m_failedReadCnt = 0U;
 
@@ -104,7 +104,7 @@ bool RawFrameQueue::write(const uint8_t* message, uint32_t length, sockaddr_stor
     ::memcpy(buffer, message, length);
 
     if (m_debug)
-        Utils::dump(1U, "RawFrameQueue::write() Message", buffer, length);
+        Utils::dump(1U, "RawFrameQueue::write(), Message", buffer, length);
 
     // bryanb: this is really a developer warning not a end-user warning, there's nothing the end-users can do about
     //  this message
@@ -153,7 +153,7 @@ void RawFrameQueue::enqueueMessage(const uint8_t* message, uint32_t length, sock
     ::memcpy(buffer, message, length);
 
     if (m_debug)
-        Utils::dump(1U, "RawFrameQueue::enqueueMessage() Buffered Message", buffer, length);
+        Utils::dump(1U, "RawFrameQueue::enqueueMessage(), Buffered Message", buffer, length);
 
     udp::UDPDatagram* dgram = new udp::UDPDatagram;
     dgram->buffer = buffer;

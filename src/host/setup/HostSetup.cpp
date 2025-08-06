@@ -513,7 +513,7 @@ bool HostSetup::portModemHandler(Modem* modem, uint32_t ms, RESP_TYPE_DVM rspTyp
         {
             uint8_t len = buffer[1U];
             if (m_debug) {
-                Utils::dump(1U, "Modem Flash Contents", buffer + 3U, len - 3U);
+                Utils::dump(1U, "HostSetup::portModemHandler(), Modem Flash Contents", buffer + 3U, len - 3U);
             }
             if (len == 249U) {
                 bool ret = edac::CRC::checkCCITT162(buffer + 3U, DVM_CONF_AREA_LEN);
@@ -569,7 +569,7 @@ bool HostSetup::portModemHandler(Modem* modem, uint32_t ms, RESP_TYPE_DVM rspTyp
 
         default:
             LogWarning(LOG_CAL, "Unknown message, type = %02X", buffer[2U]);
-            Utils::dump("Buffer dump", buffer, len);
+            Utils::dump("HostSetup::portModemHandler(), buffer", buffer, len);
             break;
         }
     }
@@ -1292,7 +1292,7 @@ void HostSetup::processP25BER(const uint8_t* buffer)
 
         uint32_t bits = P25Utils::decode(buffer, pduBuffer, 0, P25_PDU_FRAME_LENGTH_BITS);
 
-        Utils::dump(1U, "Raw PDU Dump", buffer, P25_PDU_FRAME_LENGTH_BYTES);
+        Utils::dump(1U, "P25, Raw PDU Dump", buffer, P25_PDU_FRAME_LENGTH_BYTES);
 
         uint8_t* rfPDU = new uint8_t[P25_MAX_PDU_BLOCKS * P25_PDU_CONFIRMED_LENGTH_BYTES + 2U];
         ::memset(rfPDU, 0x00U, P25_MAX_PDU_BLOCKS * P25_PDU_CONFIRMED_LENGTH_BYTES + 2U);
@@ -1304,7 +1304,7 @@ void HostSetup::processP25BER(const uint8_t* buffer)
         bool ret = dataHeader.decode(pduBuffer);
         if (!ret) {
             LogWarning(LOG_CAL, P25_PDU_STR ", unfixable RF 1/2 rate header data");
-            Utils::dump(1U, "Unfixable PDU Data", pduBuffer, P25_PDU_FEC_LENGTH_BYTES);
+            Utils::dump(1U, "P25, Unfixable PDU Data", pduBuffer, P25_PDU_FEC_LENGTH_BYTES);
         }
         else {
             LogMessage(LOG_CAL, P25_PDU_STR ", ack = %u, outbound = %u, fmt = $%02X, mfId = $%02X, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padLength = %u, n = %u, seqNo = %u, lastFragment = %u, hdrOffset = %u",
@@ -1320,7 +1320,7 @@ void HostSetup::processP25BER(const uint8_t* buffer)
 
         std::unique_ptr<lc::TSBK> tsbk = lc::tsbk::TSBKFactory::createTSBK(buffer);
 
-        Utils::dump(1U, "Raw TSBK Dump", buffer, P25_TSDU_FRAME_LENGTH_BYTES);
+        Utils::dump(1U, "P25, Raw TSBK Dump", buffer, P25_TSDU_FRAME_LENGTH_BYTES);
 
         if (tsbk == nullptr) {
             LogWarning(LOG_CAL, P25_TSDU_STR ", undecodable LC");

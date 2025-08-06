@@ -1290,7 +1290,7 @@ void HostPatch::cryptP25AudioFrame(uint8_t* ldu, bool reverseEncrypt, uint8_t p2
             break;
         }
 
-        // Utils::dump(1U, "IMBE", imbe, RAW_IMBE_LENGTH_BYTES);
+        // Utils::dump(1U, "P25, HostPatch::cryptP25AudioFrame(), IMBE", imbe, RAW_IMBE_LENGTH_BYTES);
 
         // first -- decrypt the IMBE codeword
         if (tekSrcAlgoId != p25::defines::ALGO_UNENCRYPT && tekSrcKeyId > 0U) {
@@ -1303,7 +1303,7 @@ void HostPatch::cryptP25AudioFrame(uint8_t* ldu, bool reverseEncrypt, uint8_t p2
                     m_p25SrcCrypto->cryptARC4_IMBE(imbe, (p25N == 1U) ? DUID::LDU1 : DUID::LDU2);
                     break;
                 default:
-                    LogError(LOG_HOST, "unsupported TEK algorithm, tekAlgoId = $%02X", tekSrcAlgoId);
+                    LogError(LOG_HOST, "Unsupported TEK algorithm, tekAlgoId = $%02X", tekSrcAlgoId);
                     break;
                 }
             } else {
@@ -1316,7 +1316,7 @@ void HostPatch::cryptP25AudioFrame(uint8_t* ldu, bool reverseEncrypt, uint8_t p2
                         m_p25DstCrypto->cryptARC4_IMBE(imbe, (p25N == 1U) ? DUID::LDU1 : DUID::LDU2);
                         break;
                     default:
-                        LogError(LOG_HOST, "unsupported TEK algorithm, tekAlgoId = $%02X", tekDstAlgoId);
+                        LogError(LOG_HOST, "Unsupported TEK algorithm, tekAlgoId = $%02X", tekDstAlgoId);
                         break;
                     }
                 }
@@ -1334,7 +1334,7 @@ void HostPatch::cryptP25AudioFrame(uint8_t* ldu, bool reverseEncrypt, uint8_t p2
                     m_p25DstCrypto->cryptARC4_IMBE(imbe, (p25N == 1U) ? DUID::LDU1 : DUID::LDU2);
                     break;
                 default:
-                    LogError(LOG_HOST, "unsupported TEK algorithm, tekAlgoId = $%02X", tekDstAlgoId);
+                    LogError(LOG_HOST, "Unsupported TEK algorithm, tekAlgoId = $%02X", tekDstAlgoId);
                     break;
                 }
             } else {
@@ -1347,7 +1347,7 @@ void HostPatch::cryptP25AudioFrame(uint8_t* ldu, bool reverseEncrypt, uint8_t p2
                         m_p25SrcCrypto->cryptARC4_IMBE(imbe, (p25N == 1U) ? DUID::LDU1 : DUID::LDU2);
                         break;
                     default:
-                        LogError(LOG_HOST, "unsupported TEK algorithm, tekAlgoId = $%02X", tekSrcAlgoId);
+                        LogError(LOG_HOST, "Unsupported TEK algorithm, tekAlgoId = $%02X", tekSrcAlgoId);
                         break;
                     }
                 }
@@ -1448,7 +1448,7 @@ void HostPatch::writeNet_LDU1(bool toFNE)
         LogMessage(LOG_NET, "MMDVM " P25_LDU1_STR " audio, srcId = %u, dstId = %u", m_netLC.getSrcId(), m_netLC.getDstId());
 
         if (m_debug)
-            Utils::dump(1U, "MMDVM -> DVM LDU1", m_netLDU1, 9U * 25U);
+            Utils::dump(1U, "P25, HostPatch::writeNet_LDU1(), MMDVM -> DVM LDU1", m_netLDU1, 9U * 25U);
 
         m_network->writeP25LDU1(m_netLC, lsd, m_netLDU1, FrameType::DATA_UNIT);
 
@@ -1458,7 +1458,7 @@ void HostPatch::writeNet_LDU1(bool toFNE)
     }
     else {
         if (m_debug)
-            Utils::dump(1U, "DVM -> MMDVM LDU1", m_netLDU1, 9U * 25U);
+            Utils::dump(1U, "P25, HostPatch::writeNet_LDU1(), DVM -> MMDVM LDU1", m_netLDU1, 9U * 25U);
 
         // add the Low Speed Data
         p25::data::LowSpeedData lsd = p25::data::LowSpeedData();
@@ -1504,7 +1504,7 @@ void HostPatch::writeNet_LDU2(bool toFNE)
         LogMessage(LOG_NET, "MMDVM " P25_LDU2_STR " audio");
 
         if (m_debug)
-            Utils::dump(1U, "MMDVM -> DVM LDU2", m_netLDU2, 9U * 25U);
+            Utils::dump(1U, "P25, HostPatch::writeNet_LDU2(), MMDVM -> DVM LDU2", m_netLDU2, 9U * 25U);
 
         m_network->writeP25LDU2(m_netLC, lsd, m_netLDU2);
 
@@ -1513,7 +1513,7 @@ void HostPatch::writeNet_LDU2(bool toFNE)
     }
     else {
         if (m_debug)
-            Utils::dump(1U, "DVM -> MMDVM LDU2", m_netLDU2, 9U * 25U);
+            Utils::dump(1U, "P25, HostPatch::writeNet_LDU2(), DVM -> MMDVM LDU2", m_netLDU2, 9U * 25U);
 
         // add the Low Speed Data
         p25::data::LowSpeedData lsd = p25::data::LowSpeedData();

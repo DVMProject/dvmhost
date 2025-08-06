@@ -131,7 +131,7 @@ bool DMRPacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
                 bool ret = status->header.decode(frame);
                 if (!ret) {
                     LogError(LOG_NET, "DMR Slot %u, DataType::DATA_HEADER, unable to decode the network data header", status->slotNo);
-                    Utils::dump(1U, "Unfixable PDU Data", frame, DMR_FRAME_LENGTH_BYTES);
+                    Utils::dump(1U, "DMR, Unfixable PDU Data", frame, DMR_FRAME_LENGTH_BYTES);
 
                     delete status;
                     m_status.erase(peerId);
@@ -254,7 +254,7 @@ void DMRPacketData::dispatch(uint32_t peerId, dmr::data::NetData& dmrData, const
         }
 
         if (m_network->m_dumpPacketData) {
-            Utils::dump(1U, "ISP PDU Packet", status->pduUserData, status->pduDataOffset);
+            Utils::dump(1U, "DMR, ISP PDU Packet", status->pduUserData, status->pduDataOffset);
         }
     }
 }

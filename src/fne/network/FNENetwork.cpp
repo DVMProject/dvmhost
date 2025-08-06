@@ -268,7 +268,7 @@ void FNENetwork::processNetwork()
     UInt8Array buffer = m_frameQueue->read(length, address, addrLen, &rtpHeader, &fneHeader);
     if (length > 0) {
         if (m_debug)
-            Utils::dump(1U, "Network Message", buffer.get(), length);
+            Utils::dump(1U, "FNENetwork::processNetwork(), Network Message", buffer.get(), length);
 
         uint32_t peerId = fneHeader.getPeerId();
 
@@ -728,7 +728,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                         break;
 
                     default:
-                        Utils::dump("unknown protocol opcode from peer", req->buffer, req->length);
+                        Utils::dump("Unknown protocol opcode from peer", req->buffer, req->length);
                         break;
                     }
                 }
@@ -1159,7 +1159,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                     break;
                                 default:
                                     network->writePeerNAK(peerId, streamId, TAG_REPEATER_GRANT, NET_CONN_NAK_ILLEGAL_PACKET);
-                                    Utils::dump("unknown state for grant request from the peer", req->buffer, req->length);
+                                    Utils::dump("Unknown state for grant request from the peer", req->buffer, req->length);
                                     break;
                                 }
                             }
@@ -1224,7 +1224,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
 
                                                 if (network->m_debug) {
                                                     LogDebugEx(LOG_HOST, "FNENetwork::threadedNetworkRx()", "keyLength = %u", keyLength);
-                                                    Utils::dump(1U, "Key", key, P25DEF::MAX_ENC_KEY_LENGTH_BYTES);
+                                                    Utils::dump(1U, "FNENetwork::taskNetworkRx(), Key", key, P25DEF::MAX_ENC_KEY_LENGTH_BYTES);
                                                 }
 
                                                 LogMessage(LOG_NET, "PEER %u (%s) local enc. key, algId = $%02X, kID = $%04X", peerId, connection->identity().c_str(),
@@ -1552,13 +1552,13 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                         break;
                     default:
                         network->writePeerNAK(peerId, streamId, TAG_ANNOUNCE, NET_CONN_NAK_ILLEGAL_PACKET);
-                        Utils::dump("unknown announcement opcode from the peer", req->buffer, req->length);
+                        Utils::dump("Unknown announcement opcode from the peer", req->buffer, req->length);
                     }
                 }
                 break;
 
             default:
-                Utils::dump("unknown opcode from the peer", req->buffer, req->length);
+                Utils::dump("Unknown opcode from the peer", req->buffer, req->length);
                 break;
             }
         }
@@ -2447,7 +2447,7 @@ void FNENetwork::processTEKResponse(p25::kmm::KeyItem* rspKi, uint8_t algId, uin
 
             if (m_debug) {
                 LogDebugEx(LOG_HOST, "FNENetwork::processTEKResponse()", "keyLength = %u", keyLength);
-                Utils::dump(1U, "Key", key, P25DEF::MAX_ENC_KEY_LENGTH_BYTES);
+                Utils::dump(1U, "FNENetwork::processTEKResponse(), Key", key, P25DEF::MAX_ENC_KEY_LENGTH_BYTES);
             }
 
             // build response buffer

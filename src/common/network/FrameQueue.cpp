@@ -70,7 +70,7 @@ UInt8Array FrameQueue::read(int& messageLength, sockaddr_storage& address, uint3
 
     if (length > 0) {
         if (m_debug)
-            Utils::dump(1U, "Network Packet", buffer, length);
+            Utils::dump(1U, "FrameQueue::read(), Network Packet", buffer, length);
 
         m_failedReadCnt = 0U;
 
@@ -355,7 +355,7 @@ uint8_t* FrameQueue::generateMessage(const uint8_t* message, uint32_t length, ui
     ::memcpy(buffer + RTP_HEADER_LENGTH_BYTES + RTP_EXTENSION_HEADER_LENGTH_BYTES + RTP_FNE_HEADER_LENGTH_BYTES, message, length);
 
     if (m_debug)
-        Utils::dump(1U, "FrameQueue::generateMessage() Buffered Message", buffer, bufferLen);
+        Utils::dump(1U, "FrameQueue::generateMessage(), Buffered Message", buffer, bufferLen);
 
     if (outBufferLen != nullptr) {
         *outBufferLen = bufferLen;

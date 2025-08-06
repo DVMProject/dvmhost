@@ -363,7 +363,7 @@ void V24UDPPort::processCtrlNetwork()
     UInt8Array buffer = m_ctrlFrameQueue->read(length, address, addrLen);
     if (length > 0) {
         if (m_debug)
-            Utils::dump(1U, "FSC Control Network Message", buffer.get(), length);
+            Utils::dump(1U, "V24UDPPort::processCtrlNetwork(), FSC Control Network Message", buffer.get(), length);
 
         V24PacketRequest* req = new V24PacketRequest();
         req->obj = this;
@@ -880,7 +880,7 @@ uint8_t* V24UDPPort::generateMessage(const uint8_t* message, uint32_t length, ui
     }
 
     if (m_debug)
-        Utils::dump(1U, "[V24UDPPort::generateMessage()] Buffered Message", buffer, bufferLen);
+        Utils::dump(1U, "V24UDPPort::generateMessage(), Buffered Message", buffer, bufferLen);
 
     if (outBufferLen != nullptr) {
         *outBufferLen = bufferLen;

@@ -859,8 +859,8 @@ bool Voice::process(uint8_t* data, uint32_t len)
 
                 getNextMI(lastMI, nextMI);
                 if (m_verbose && m_debug) {
-                    Utils::dump(1U, "Previous P25 MI", lastMI, MI_LENGTH_BYTES);
-                    Utils::dump(1U, "Calculated next P25 MI", nextMI, MI_LENGTH_BYTES);
+                    Utils::dump(1U, "P25, LDU2, Previous P25 MI", lastMI, MI_LENGTH_BYTES);
+                    Utils::dump(1U, "P25, LDU2, Calculated next P25 MI", nextMI, MI_LENGTH_BYTES);
                 }
 
                 m_rfLC.setMI(nextMI);

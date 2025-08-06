@@ -101,7 +101,7 @@ std::unique_ptr<TSBK> TSBKFactory::createTSBK(const uint8_t* data, bool rawTSBK)
                 return nullptr;
         }
         catch (...) {
-            Utils::dump(2U, "P25, decoding excepted with input data", tsbk, P25_TSBK_LENGTH_BYTES);
+            Utils::dump(2U, "P25, TSBKFactory::createTSBK(), decoding excepted with input data", tsbk, P25_TSBK_LENGTH_BYTES);
             return nullptr;
         }
     }

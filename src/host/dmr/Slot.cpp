@@ -1779,8 +1779,8 @@ void Slot::setShortLC_TSCC(SiteData siteData, uint16_t counter)
     lc[3U] = (uint8_t)((lcValue >> 0) & 0xFFU);
     lc[4U] = edac::CRC::crc8(lc, 4U);
 
-    //LogDebugEx(LOG_DMR, "Slot::setShortLC_TSCC()", "netId = %02X, siteId = %02X", siteData.netId(), siteData.siteId());
-    //Utils::dump(1U, "[Slot::shortLC_TSCC()]", lc, 5U);
+    // LogDebugEx(LOG_DMR, "Slot::setShortLC_TSCC()", "netId = %02X, siteId = %02X", siteData.netId(), siteData.siteId());
+    // Utils::dump(1U, "DMR, Slot::shortLC_TSCC(), LC", lc, 5U);
 
     uint8_t sLC[9U];
 
@@ -1839,8 +1839,8 @@ void Slot::setShortLC_Payload(SiteData siteData, uint16_t counter)
     lc[3U] = (uint8_t)((lcValue >> 0) & 0xFFU);
     lc[4U] = edac::CRC::crc8(lc, 4U);
 
-    //LogDebugEx(LOG_DMR, "Slot::setShortLC_Payload()", "netId = %02X, siteId = %02X", siteData.netId(), siteData.siteId());
-    //Utils::dump(1U, "[Slot::setShortLC_Payload()]", lc, 5U);
+    // LogDebugEx(LOG_DMR, "Slot::setShortLC_Payload()", "netId = %02X, siteId = %02X", siteData.netId(), siteData.siteId());
+    // Utils::dump(1U, "DMR, Slot::setShortLC_Payload(), LC", lc, 5U);
 
     uint8_t sLC[9U];
 

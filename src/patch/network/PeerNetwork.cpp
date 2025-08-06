@@ -198,7 +198,7 @@ bool PeerNetwork::writeConfig()
     ::snprintf(buffer + 8U, json.length() + 1U, "%s", json.c_str());
 
     if (m_debug) {
-        Utils::dump(1U, "Network Message, Configuration", (uint8_t*)buffer, json.length() + 8U);
+        Utils::dump(1U, "PeerNetowrk::writeConfig(), Message, Configuration", (uint8_t*)buffer, json.length() + 8U);
     }
 
     return writeMaster({ NET_FUNC::RPTC, NET_SUBFUNC::NOP }, (uint8_t*)buffer, json.length() + 8U, RTP_END_OF_CALL_SEQ, m_loginStreamId);
@@ -277,7 +277,7 @@ UInt8Array PeerNetwork::createP25_LDU1Message_Raw(uint32_t& length, const p25::l
     buffer[23U] = count;
 
     if (m_debug)
-        Utils::dump(1U, "Network Message, P25 LDU1", buffer, (P25_LDU1_PACKET_LENGTH + PACKET_PAD));
+        Utils::dump(1U, "PeerNetwork::createP25_LDU1Message_Raw(), Message, P25 LDU1", buffer, (P25_LDU1_PACKET_LENGTH + PACKET_PAD));
 
     length = (P25_LDU1_PACKET_LENGTH + PACKET_PAD);
     return UInt8Array(buffer);
@@ -352,7 +352,7 @@ UInt8Array PeerNetwork::createP25_LDU2Message_Raw(uint32_t& length, const p25::l
     buffer[23U] = count;
 
     if (m_debug)
-        Utils::dump(1U, "Network Message, P25 LDU2", buffer, (P25_LDU2_PACKET_LENGTH + PACKET_PAD));
+        Utils::dump(1U, "PeerNetwork::createP25_LDU2Message_Raw(), Message, P25 LDU2", buffer, (P25_LDU2_PACKET_LENGTH + PACKET_PAD));
 
     length = (P25_LDU2_PACKET_LENGTH + PACKET_PAD);
     return UInt8Array(buffer);
