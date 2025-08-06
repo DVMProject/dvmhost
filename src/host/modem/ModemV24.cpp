@@ -1474,6 +1474,10 @@ void ModemV24::convertToAirTIA(const uint8_t *data, uint32_t length)
                 Utils::dump(1U, "ModemV24::convertToAirTIA(), Full Rate Voice IMBE", voice.imbeData, RAW_IMBE_LENGTH_BYTES);
             }
 
+            if (voice.getTotalErrors() > 0U) {
+                LogWarning(LOG_MODEM, "TIA/DFSI traffic has %u errors in frameType = $%02X", voice.getTotalErrors(), voice.getFrameType());
+            }
+
             dataOffs += voice.getLength();
 
             DFSIFrameType::E frameType = voice.getFrameType();
