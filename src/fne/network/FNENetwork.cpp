@@ -116,6 +116,7 @@ FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port,
     m_disablePacketData(false),
     m_dumpPacketData(false),
     m_verbosePacketData(false),
+    m_logDenials(false),
     m_reportPeerPing(reportPeerPing),
     m_verbose(verbose)
 {
@@ -183,6 +184,8 @@ void FNENetwork::setOptions(yaml::Node& conf, bool printOptions)
     m_dumpPacketData = conf["dumpPacketData"].as<bool>(false);
     m_verbosePacketData = conf["verbosePacketData"].as<bool>(false);
 
+    m_logDenials = conf["logDenials"].as<bool>(false);
+
     /*
     ** Drop Unit to Unit Peers
     */
@@ -212,6 +215,7 @@ void FNENetwork::setOptions(yaml::Node& conf, bool printOptions)
         LogInfo("    Allow conventional sites to override affiliation and receive all traffic: %s", m_allowConvSiteAffOverride ? "yes" : "no");
         LogInfo("    Enable In-Call Control: %s", m_enableInCallCtrl ? "yes" : "no");
         LogInfo("    Reject Unknown RIDs: %s", m_rejectUnknownRID ? "yes" : "no");
+        LogInfo("    Log Traffic Denials: %s", m_logDenials ? "yes" : "no");
         LogInfo("    Mask Outbound Traffic Peer ID: %s", m_maskOutboundPeerID ? "yes" : "no");
         if (m_maskOutboundPeerIDForNonPL) {
             LogInfo("    Mask Outbound Traffic Peer ID for Non-Peer Link: yes");

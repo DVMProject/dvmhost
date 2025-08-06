@@ -635,6 +635,7 @@ namespace network
         bool m_dumpPacketData;
         bool m_verbosePacketData;
 
+        bool m_logDenials;
         bool m_reportPeerPing;
         bool m_verbose;
 

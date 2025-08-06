@@ -48,6 +48,10 @@ master:
     # Flag indicating whether or not verbose debug logging is enabled.
     debug: false
 
+    # Flag indicating whether or not denied traffic will be logged.
+    #   (This is useful for debugging talkgroup rules and other ACL issues, but can be very noisy on a busy system.)
+    logDenials: false
+
     # Maximum number of concurrent packet processing workers.
     workers: 16
 
