@@ -652,13 +652,13 @@ bool TagNXDNData::validate(uint32_t peerId, lc::RTCH& lc, uint8_t messageType, u
                             .tag("streamId", std::to_string(streamId))
                             .tag("srcId", std::to_string(lc.getSrcId()))
                             .tag("dstId", std::to_string(lc.getDstId()))
-                                .field("message", std::string(INFLUXDB_ERRSTR_DISABLED_SRC_RID))
+                                .field("message", std::string(INFLUXDB_ERRSTR_ILLEGAL_RID_ACCESS))
                             .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
                         .requestAsync(m_network->m_influxServer);
                 }
 
                 if (m_network->m_logDenials)
-                    LogWarning(LOG_NET, "NXDN, illegal/unknown RID attempted access, srcId = %u, dstId = %u", lc.getSrcId(), lc.getDstId());
+                    LogWarning(LOG_NET, "NXDN, " INFLUXDB_ERRSTR_ILLEGAL_RID_ACCESS ", srcId = %u, dstId = %u", lc.getSrcId(), lc.getDstId());
 
                 // report In-Call Control to the peer sending traffic
                 m_network->writePeerICC(peerId, streamId, NET_SUBFUNC::PROTOCOL_SUBFUNC_NXDN, NET_ICC::REJECT_TRAFFIC, lc.getDstId());
@@ -715,13 +715,13 @@ bool TagNXDNData::validate(uint32_t peerId, lc::RTCH& lc, uint8_t messageType, u
                     .tag("streamId", std::to_string(streamId))
                     .tag("srcId", std::to_string(lc.getSrcId()))
                     .tag("dstId", std::to_string(lc.getDstId()))
-                        .field("message", std::string(INFLUXDB_ERRSTR_DISABLED_SRC_RID))
+                        .field("message", std::string(INFLUXDB_ERRSTR_ILLEGAL_RID_ACCESS))
                     .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
                 .requestAsync(m_network->m_influxServer);
         }
 
         if (m_network->m_logDenials)
-            LogWarning(LOG_NET, "NXDN, illegal/unknown RID attempted access, srcId = %u, dstId = %u", lc.getSrcId(), lc.getDstId());
+            LogWarning(LOG_NET, "NXDN, " INFLUXDB_ERRSTR_ILLEGAL_RID_ACCESS ", srcId = %u, dstId = %u", lc.getSrcId(), lc.getDstId());
 
         // report In-Call Control to the peer sending traffic
         m_network->writePeerICC(peerId, streamId, NET_SUBFUNC::PROTOCOL_SUBFUNC_NXDN, NET_ICC::REJECT_TRAFFIC, lc.getDstId());

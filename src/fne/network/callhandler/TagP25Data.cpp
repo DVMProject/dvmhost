@@ -1218,13 +1218,13 @@ bool TagP25Data::validate(uint32_t peerId, lc::LC& control, DUID::E duid, const 
                             .tag("streamId", std::to_string(streamId))
                             .tag("srcId", std::to_string(control.getSrcId()))
                             .tag("dstId", std::to_string(control.getDstId()))
-                                .field("message", std::string(INFLUXDB_ERRSTR_DISABLED_SRC_RID))
+                                .field("message", std::string(INFLUXDB_ERRSTR_ILLEGAL_RID_ACCESS))
                             .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
                         .requestAsync(m_network->m_influxServer);
                 }
 
                 if (m_network->m_logDenials)
-                    LogWarning(LOG_NET, "P25, illegal/unknown RID attempted access, srcId = %u, dstId = %u", control.getSrcId(), control.getDstId());
+                    LogWarning(LOG_NET, "P25, " INFLUXDB_ERRSTR_ILLEGAL_RID_ACCESS ", srcId = %u, dstId = %u", control.getSrcId(), control.getDstId());
 
                 // report In-Call Control to the peer sending traffic
                 m_network->writePeerICC(peerId, streamId, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25, NET_ICC::REJECT_TRAFFIC, control.getDstId());
@@ -1349,13 +1349,13 @@ bool TagP25Data::validate(uint32_t peerId, lc::LC& control, DUID::E duid, const 
                     .tag("streamId", std::to_string(streamId))
                     .tag("srcId", std::to_string(control.getSrcId()))
                     .tag("dstId", std::to_string(control.getDstId()))
-                        .field("message", std::string(INFLUXDB_ERRSTR_DISABLED_SRC_RID))
+                        .field("message", std::string(INFLUXDB_ERRSTR_ILLEGAL_RID_ACCESS))
                     .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
                 .requestAsync(m_network->m_influxServer);
         }
 
         if (m_network->m_logDenials)
-            LogWarning(LOG_NET, "P25, illegal/unknown RID attempted access, srcId = %u, dstId = %u", control.getSrcId(), control.getDstId());
+            LogWarning(LOG_NET, "P25, " INFLUXDB_ERRSTR_ILLEGAL_RID_ACCESS ", srcId = %u, dstId = %u", control.getSrcId(), control.getDstId());
 
         // report In-Call Control to the peer sending traffic
         m_network->writePeerICC(peerId, streamId, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25, NET_ICC::REJECT_TRAFFIC, control.getDstId());

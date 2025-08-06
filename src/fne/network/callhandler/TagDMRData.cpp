@@ -912,14 +912,14 @@ bool TagDMRData::validate(uint32_t peerId, data::NetData& data, lc::CSBK* csbk, 
                             .tag("streamId", std::to_string(streamId))
                             .tag("srcId", std::to_string(data.getSrcId()))
                             .tag("dstId", std::to_string(data.getDstId()))
-                                .field("message", std::string(INFLUXDB_ERRSTR_DISABLED_SRC_RID))
+                                .field("message", std::string(INFLUXDB_ERRSTR_ILLEGAL_RID_ACCESS))
                                 .field("slot", std::to_string(data.getSlotNo()))
                             .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
                         .requestAsync(m_network->m_influxServer);
                 }
 
                 if (m_network->m_logDenials)
-                    LogWarning(LOG_NET, "DMR slot %s, illegal/unknown RID attempted access, srcId = %u, dstId = %u", data.getSlotNo(), data.getSrcId(), data.getDstId());
+                    LogWarning(LOG_NET, "DMR slot %s, " INFLUXDB_ERRSTR_ILLEGAL_RID_ACCESS ", srcId = %u, dstId = %u", data.getSlotNo(), data.getSrcId(), data.getDstId());
 
                 // report In-Call Control to the peer sending traffic
                 m_network->writePeerICC(peerId, streamId, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR, NET_ICC::REJECT_TRAFFIC, data.getDstId(), data.getSlotNo());
@@ -975,14 +975,14 @@ bool TagDMRData::validate(uint32_t peerId, data::NetData& data, lc::CSBK* csbk, 
                         .tag("streamId", std::to_string(streamId))
                         .tag("srcId", std::to_string(data.getSrcId()))
                         .tag("dstId", std::to_string(data.getDstId()))
-                            .field("message", std::string(INFLUXDB_ERRSTR_DISABLED_SRC_RID))
+                            .field("message", std::string(INFLUXDB_ERRSTR_ILLEGAL_RID_ACCESS))
                             .field("slot", std::to_string(data.getSlotNo()))
                         .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
                     .requestAsync(m_network->m_influxServer);
             }
 
             if (m_network->m_logDenials)
-                LogWarning(LOG_NET, "DMR slot %s, illegal/unknown RID attempted access, srcId = %u, dstId = %u", data.getSlotNo(), data.getSrcId(), data.getDstId());
+                LogWarning(LOG_NET, "DMR slot %s, " INFLUXDB_ERRSTR_ILLEGAL_RID_ACCESS ", srcId = %u, dstId = %u", data.getSlotNo(), data.getSrcId(), data.getDstId());
 
             // report In-Call Control to the peer sending traffic
             m_network->writePeerICC(peerId, streamId, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR, NET_ICC::REJECT_TRAFFIC, data.getDstId(), data.getSlotNo());
