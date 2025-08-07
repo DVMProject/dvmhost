@@ -4,17 +4,17 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2025 Bryan Biedenkapp, N2PLL
  *
  */
 /**
- * @file LC_GROUP_UPDT.h
+ * @file LC_EXPLICIT_SOURCE_ID.h
  * @ingroup p25_lc
- * @file LC_GROUP_UPDT.cpp
+ * @file LC_EXPLICIT_SOURCE_ID.cpp
  * @ingroup p25_lc
  */
-#if !defined(__P25_LC_TDULC__LC_GROUP_UPDT_H__)
-#define  __P25_LC_TDULC__LC_GROUP_UPDT_H__
+#if !defined(__P25_LC_TDULC__LC_EXPLICIT_SOURCE_ID_H__)
+#define  __P25_LC_TDULC__LC_EXPLICIT_SOURCE_ID_H__
 
 #include "common/Defines.h"
 #include "common/p25/lc/TDULC.h"
@@ -30,15 +30,15 @@ namespace p25
             // ---------------------------------------------------------------------------
 
             /**
-             * @brief Implements GRP VCH UPDT - Group Voice Channel Update
+             * @brief Implements EXPLICIT SOURCE ID - Explicit Source ID
              * @ingroup p25_lc
              */
-            class HOST_SW_API LC_GROUP_UPDT : public TDULC {
+            class HOST_SW_API LC_EXPLICIT_SOURCE_ID : public TDULC {
             public:
                 /**
-                 * @brief Initializes a new instance of the LC_GROUP_UPDT class.
+                 * @brief Initializes a new instance of the LC_EXPLICIT_SOURCE_ID class.
                  */
-                LC_GROUP_UPDT();
+                LC_EXPLICIT_SOURCE_ID();
 
                 /**
                  * @brief Decode a terminator data unit w/ link control.
@@ -56,4 +56,4 @@ namespace p25
     } // namespace lc
 } // namespace p25
 
-#endif // __P25_LC_TDULC__LC_GROUP_UPDT_H__
+#endif // __P25_LC_TDULC__LC_EXPLICIT_SOURCE_ID_H__

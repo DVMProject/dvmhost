@@ -48,7 +48,8 @@ bool LC_GROUP::decode(const uint8_t* data)
     m_emergency = (rs[2U] & 0x80U) == 0x80U;                                        // Emergency Flag
     m_encrypted = (rs[2U] & 0x40U) == 0x40U;                                        // Encryption Flag
     m_priority = (rs[2U] & 0x07U);                                                  // Priority
-    m_dstId = (uint32_t)((rsValue >> 24) & 0xFFFFU);                                // Talkgroup Address
+    m_explicitId = (rs[3U] & 0x01U) == 0x01U;                                       // Explicit Source ID Flag
+    m_dstId = (uint32_t)((rsValue >> 16) & 0xFFFFU);                                // Talkgroup Address
     m_srcId = (uint32_t)(rsValue & 0xFFFFFFU);                                      // Source Radio Address
 
     return true;
@@ -67,7 +68,8 @@ void LC_GROUP::encode(uint8_t* data)
         (m_emergency ? 0x80U : 0x00U) +                                             // Emergency Flag
         (m_encrypted ? 0x40U : 0x00U) +                                             // Encrypted Flag
         (m_priority & 0x07U);                                                       // Priority
-    rsValue = (rsValue << 24) + m_dstId;                                            // Talkgroup Address
+    rsValue = (rsValue << 8) + (m_explicitId ? 0x01U : 0x00U);                      // Explicit Source ID Flag
+    rsValue = (rsValue << 16) + m_dstId;                                            // Talkgroup Address
     rsValue = (rsValue << 24) + m_srcId;                                            // Source Radio Address
 
     std::unique_ptr<uint8_t[]> rs = TDULC::fromValue(rsValue);

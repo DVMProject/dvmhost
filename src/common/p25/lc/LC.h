@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2016 Jonathan Naylor, G4KLX
- *  Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2017-2025 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -114,6 +114,19 @@ namespace p25
              * @returns bool True, if the MFId contained for this LC is standard, otherwise false.
              */
             bool isStandardMFId() const;
+
+            /**
+             * @brief Decode link control.
+             * @param[in] rs Buffer containing the decoded Reed-Solomon LC data.
+             * @param rawOnly Flag indicating only the raw bytes of the LC should be decoded.
+             * @returns bool True, if LC is decoded, otherwise false.
+             */
+            bool decodeLC(const uint8_t* rs, bool rawOnly = false);
+            /**
+             * @brief Encode link control.
+             * @param[out] rs Buffer to encode LC data.
+             */
+            void encodeLC(uint8_t* rs);
 
             /** @name Encryption data */
             /**
@@ -261,19 +274,6 @@ namespace p25
              * @brief Internal helper to copy the class.
              */
             void copy(const LC& data);
-
-            /**
-             * @brief Decode link control.
-             * @param[in] rs Buffer containing the decoded Reed-Solomon LC data.
-             * @param rawOnly Flag indicating only the raw bytes of the LC should be decoded.
-             * @returns bool True, if LC is decoded, otherwise false.
-             */
-            bool decodeLC(const uint8_t* rs, bool rawOnly = false);
-            /**
-             * @brief Encode link control.
-             * @param[out] rs Buffer to encode LC data.
-             */
-            void encodeLC(uint8_t* rs);
 
             /**
              * @brief Decode LDU hamming FEC.

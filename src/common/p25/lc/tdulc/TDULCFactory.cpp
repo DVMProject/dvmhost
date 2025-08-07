@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2023,2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2023,2024,2025 Bryan Biedenkapp, N2PLL
  *
  */
 #include "Defines.h"
@@ -81,6 +81,8 @@ std::unique_ptr<TDULC> TDULCFactory::createTDULC(const uint8_t* data)
         return decode(new LC_TEL_INT_VCH_USER(), data);
     case LCO::CALL_TERM:
         return decode(new LC_CALL_TERM(), data);
+    case LCO::EXPLICIT_SOURCE_ID:
+        return decode(new LC_EXPLICIT_SOURCE_ID(), data);
     default:
         LogError(LOG_P25, "TDULCFactory::createTDULC(), unknown TDULC LCO value, lco = $%02X", lco);
         break;

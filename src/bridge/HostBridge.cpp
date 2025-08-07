@@ -172,11 +172,11 @@ HostBridge::HostBridge(const std::string& confFile) :
     m_udpJitter(200U),
     m_udpSilenceDuringHang(true),
     m_lastUdpFrameTime(0U),
-    m_tekAlgoId(p25::defines::ALGO_UNENCRYPT),
+    m_tekAlgoId(P25DEF::ALGO_UNENCRYPT),
     m_tekKeyId(0U),
     m_requestedTek(false),
     m_p25Crypto(nullptr),
-    m_srcId(p25::defines::WUID_FNE),
+    m_srcId(P25DEF::WUID_FNE),
     m_srcIdOverride(0U),
     m_overrideSrcIdFromMDC(false),
     m_overrideSrcIdFromUDP(false),
@@ -225,8 +225,8 @@ HostBridge::HostBridge(const std::string& confFile) :
     m_netLDU2(nullptr),
     m_p25SeqNo(0U),
     m_p25N(0U),
-    m_netId(0xBB800U),
-    m_sysId(1U),
+    m_netId(P25DEF::WACN_STD_DEFAULT),
+    m_sysId(P25DEF::SID_STD_DEFAULT),
     m_analogN(0U),
     m_audioDetect(false),
     m_trafficFromUDP(false),
@@ -234,7 +234,7 @@ HostBridge::HostBridge(const std::string& confFile) :
     m_udpDstId(0U),
     m_callInProgress(false),
     m_ignoreCall(false),
-    m_callAlgoId(p25::defines::ALGO_UNENCRYPT),
+    m_callAlgoId(P25DEF::ALGO_UNENCRYPT),
     m_rxStartTime(0U),
     m_rxStreamId(0U),
     m_txStreamId(0U),
@@ -1002,31 +1002,31 @@ bool HostBridge::createNetwork()
     m_tekKeyId = (uint32_t)::strtoul(tekConf["tekKeyId"].as<std::string>("0").c_str(), NULL, 16);
     if (tekEnable && m_tekKeyId > 0U) {
         if (tekAlgo == TEK_AES)
-            m_tekAlgoId = p25::defines::ALGO_AES_256;
+            m_tekAlgoId = P25DEF::ALGO_AES_256;
         else if (tekAlgo == TEK_ARC4)
-            m_tekAlgoId = p25::defines::ALGO_ARC4;
+            m_tekAlgoId = P25DEF::ALGO_ARC4;
         else {
             ::LogError(LOG_HOST, "Invalid TEK algorithm specified, must be \"aes\" or \"adp\".");
-            m_tekAlgoId = p25::defines::ALGO_UNENCRYPT;
+            m_tekAlgoId = P25DEF::ALGO_UNENCRYPT;
             m_tekKeyId = 0U;
         }
     }
 
     // ensure encryption is currently disabled for DMR (its not supported)
-    if (m_txMode == TX_MODE_DMR && m_tekAlgoId != p25::defines::ALGO_UNENCRYPT && m_tekKeyId > 0U) {
+    if (m_txMode == TX_MODE_DMR && m_tekAlgoId != P25DEF::ALGO_UNENCRYPT && m_tekKeyId > 0U) {
         ::LogError(LOG_HOST, "Encryption is not supported for DMR. Disabling.");
-        m_tekAlgoId = p25::defines::ALGO_UNENCRYPT;
+        m_tekAlgoId = P25DEF::ALGO_UNENCRYPT;
         m_tekKeyId = 0U;
     }
 
     // ensure encryption is currently disabled for analog (its not supported)
-    if (m_txMode == TX_MODE_ANALOG && m_tekAlgoId != p25::defines::ALGO_UNENCRYPT && m_tekKeyId > 0U) {
+    if (m_txMode == TX_MODE_ANALOG && m_tekAlgoId != P25DEF::ALGO_UNENCRYPT && m_tekKeyId > 0U) {
         ::LogError(LOG_HOST, "Encryption is not supported for Analog. Disabling.");
-        m_tekAlgoId = p25::defines::ALGO_UNENCRYPT;
+        m_tekAlgoId = P25DEF::ALGO_UNENCRYPT;
         m_tekKeyId = 0U;
     }
 
-    m_srcId = (uint32_t)networkConf["sourceId"].as<uint32_t>(p25::defines::WUID_FNE);
+    m_srcId = (uint32_t)networkConf["sourceId"].as<uint32_t>(P25DEF::WUID_FNE);
     m_overrideSrcIdFromMDC = networkConf["overrideSourceIdFromMDC"].as<bool>(false);
     m_overrideSrcIdFromUDP = networkConf["overrideSourceIdFromUDP"].as<bool>(false);
     m_resetCallForSourceIdChange = networkConf["resetCallForSourceIdChange"].as<bool>(false);
@@ -2172,12 +2172,12 @@ void HostBridge::decodeP25AudioFrame(uint8_t* ldu, uint32_t srcId, uint32_t dstI
 
         // Utils::dump(1U, "HostBridge::decodeP25AudioFrame(), IMBE", imbe, RAW_IMBE_LENGTH_BYTES);
 
-        if (m_tekAlgoId != p25::defines::ALGO_UNENCRYPT && m_tekKeyId > 0U && m_p25Crypto->getTEKLength() > 0U) {
+        if (m_tekAlgoId != P25DEF::ALGO_UNENCRYPT && m_tekKeyId > 0U && m_p25Crypto->getTEKLength() > 0U) {
             switch (m_tekAlgoId) {
-            case p25::defines::ALGO_AES_256:
+            case P25DEF::ALGO_AES_256:
                 m_p25Crypto->cryptAES_IMBE(imbe, (p25N == 1U) ? DUID::LDU1 : DUID::LDU2);
                 break;
-            case p25::defines::ALGO_ARC4:
+            case P25DEF::ALGO_ARC4:
                 m_p25Crypto->cryptARC4_IMBE(imbe, (p25N == 1U) ? DUID::LDU1 : DUID::LDU2);
                 break;
             default:
@@ -2346,7 +2346,7 @@ void HostBridge::encodeP25AudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32_
 
     // Utils::dump(1U, "HostBridge::encodeP25AudioFrame(), Encoded IMBE", imbe, RAW_IMBE_LENGTH_BYTES);
 
-    if (m_tekAlgoId != p25::defines::ALGO_UNENCRYPT && m_tekKeyId > 0U && m_p25Crypto->getTEKLength() > 0U) {
+    if (m_tekAlgoId != P25DEF::ALGO_UNENCRYPT && m_tekKeyId > 0U && m_p25Crypto->getTEKLength() > 0U) {
         // generate initial MI for the HDU
         if (m_p25N == 0U && !m_p25Crypto->hasValidKeystream()) {
             if (!m_p25Crypto->hasValidMI()) {
@@ -2357,10 +2357,10 @@ void HostBridge::encodeP25AudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32_
 
         // perform crypto
         switch (m_tekAlgoId) {
-        case p25::defines::ALGO_AES_256:
+        case P25DEF::ALGO_AES_256:
             m_p25Crypto->cryptAES_IMBE(imbe, (m_p25N < 9U) ? DUID::LDU1 : DUID::LDU2);
             break;
-        case p25::defines::ALGO_ARC4:
+        case P25DEF::ALGO_ARC4:
             m_p25Crypto->cryptARC4_IMBE(imbe, (m_p25N < 9U) ? DUID::LDU1 : DUID::LDU2);
             break;
         default:
@@ -2893,7 +2893,7 @@ void HostBridge::callEnd(uint32_t srcId, uint32_t dstId)
         case TX_MODE_P25:
             {
                 p25::lc::LC lc = p25::lc::LC();
-                lc.setLCO(p25::defines::LCO::GROUP);
+                lc.setLCO(P25DEF::LCO::GROUP);
                 lc.setDstId(dstId);
                 lc.setSrcId(srcId);
 
@@ -3063,7 +3063,7 @@ void* HostBridge::threadAudioProcess(void* arg)
                                     case TX_MODE_P25:
                                     {
                                         p25::lc::LC lc = p25::lc::LC();
-                                        lc.setLCO(p25::defines::LCO::GROUP);
+                                        lc.setLCO(P25DEF::LCO::GROUP);
                                         lc.setDstId(dstId);
                                         lc.setSrcId(srcId);
 
@@ -3246,7 +3246,7 @@ void* HostBridge::threadUDPAudioProcess(void* arg)
                                     case TX_MODE_P25:
                                     {
                                         p25::lc::LC lc = p25::lc::LC();
-                                        lc.setLCO(p25::defines::LCO::GROUP);
+                                        lc.setLCO(P25DEF::LCO::GROUP);
                                         lc.setDstId(bridge->m_udpDstId);
                                         lc.setSrcId(bridge->m_udpSrcId);
 
@@ -3345,7 +3345,7 @@ void* HostBridge::threadNetworkProcess(void* arg)
             }
 
             if (bridge->m_network->getStatus() == NET_STAT_RUNNING) {
-                if (bridge->m_tekAlgoId != p25::defines::ALGO_UNENCRYPT && bridge->m_tekKeyId > 0U) {
+                if (bridge->m_tekAlgoId != P25DEF::ALGO_UNENCRYPT && bridge->m_tekKeyId > 0U) {
                     if (bridge->m_p25Crypto->getTEKLength() == 0U && !bridge->m_requestedTek) {
                         bridge->m_requestedTek = true;
                         LogMessage(LOG_HOST, "Bridge encryption enabled, requesting TEK from network.");

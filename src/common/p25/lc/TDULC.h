@@ -133,6 +133,20 @@ namespace p25
              * @brief Voice channel number.
              */
             DECLARE_PROTECTED_PROPERTY(uint32_t, grpVchNo, GrpVchNo);
+
+            /**
+             * @brief Flag indicating explicit addressing.
+             */
+            DECLARE_PROTECTED_PROPERTY(bool, explicitId, ExplicitId);
+
+            /**
+             * @brief Network ID.
+             */
+            DECLARE_PROTECTED_PROPERTY(uint32_t, netId, NetId);
+            /**
+             * @brief System ID.
+             */
+            DECLARE_PROTECTED_PROPERTY(uint32_t, sysId, SysId);
             /** @} */
 
             /** @name Service Options */

@@ -5,7 +5,7 @@
 * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 *
 *   Copyright (C) 2016,2017 Jonathan Naylor, G4KLX
-*   Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2017-2025 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
@@ -473,128 +473,12 @@ bool LC::isStandardMFId() const
     return false;
 }
 
-/*
-** Encryption data 
-*/
-
-/* Sets the encryption message indicator. */
-
-void LC::setMI(const uint8_t* mi)
-{
-    assert(mi != nullptr);
-
-    ::memcpy(m_mi, mi, MI_LENGTH_BYTES);
-}
-
-/* Gets the encryption message indicator. */
-
-void LC::getMI(uint8_t* mi) const
-{
-    assert(mi != nullptr);
-
-    ::memcpy(mi, m_mi, MI_LENGTH_BYTES);
-}
-
-/*
-** User Alias data
-*/
-
-/* Gets the user alias. */
-
-std::string LC::getUserAlias() const
-{
-    std::string alias;
-    if (m_gotUserAlias) {
-        for (uint32_t i = 0; i < HARRIS_USER_ALIAS_LENGTH_BYTES; i++)
-            alias[i] = m_userAlias[i];
-    }
-
-    return alias;
-}
-
-// ---------------------------------------------------------------------------
-//  Private Class Members
-// ---------------------------------------------------------------------------
-
-/* Internal helper to copy the the class. */
-
-void LC::copy(const LC& data)
-{
-    m_lco = data.m_lco;
-
-    m_protect = data.m_protect;
-    m_mfId = data.m_mfId;
-
-    m_srcId = data.m_srcId;
-    m_dstId = data.m_dstId;
-
-    m_grpVchNo = data.m_grpVchNo;
-
-    m_grpVchNoB = data.m_grpVchNoB;
-    m_dstIdB = data.m_dstIdB;
-
-    m_explicitId = data.m_explicitId;
-
-    m_netId = data.m_netId;
-    m_sysId = data.m_sysId;
-
-    m_emergency = data.m_emergency;
-    m_encrypted = data.m_encrypted;
-    m_priority = data.m_priority;
-
-    m_group = data.m_group;
-
-    m_callTimer = data.m_callTimer;
-
-    m_rsValue = data.m_rsValue;
-
-    m_algId = data.m_algId;
-    if (m_algId != ALGO_UNENCRYPT) {
-        delete[] m_mi;
-
-        m_mi = new uint8_t[MI_LENGTH_BYTES];
-        ::memcpy(m_mi, data.m_mi, MI_LENGTH_BYTES);
-
-        m_kId = data.m_kId;
-        if (!m_encrypted) {
-            m_encryptOverride = true;
-            m_encrypted = true;
-        }
-    }
-    else {
-        delete[] m_mi;
-
-        m_mi = new uint8_t[MI_LENGTH_BYTES];
-        ::memset(m_mi, 0x00U, MI_LENGTH_BYTES);
-
-        m_kId = 0x0000U;
-        if (m_encrypted) {
-            m_encryptOverride = true;
-            m_encrypted = false;
-        }
-    }
-
-    if (data.m_gotUserAlias && data.m_userAlias != nullptr) {
-        delete[] m_userAlias;
-
-        m_userAlias = new uint8_t[HARRIS_USER_ALIAS_LENGTH_BYTES];
-        ::memcpy(m_userAlias, data.m_userAlias, HARRIS_USER_ALIAS_LENGTH_BYTES);
-        m_gotUserAlias = data.m_gotUserAlias;
-    } else {
-        delete[] m_userAlias;
-
-        m_userAlias = new uint8_t[HARRIS_USER_ALIAS_LENGTH_BYTES];
-        ::memset(m_userAlias, 0x00U, HARRIS_USER_ALIAS_LENGTH_BYTES);
-        m_gotUserAlias = false;
-    }
-
-    m_siteData = data.m_siteData;
-}
-
 /* Decode link control. */
 
 bool LC::decodeLC(const uint8_t* rs, bool rawOnly)
 {
+    assert(rs != nullptr);
+
     ulong64_t rsValue = 0U;
 
     // combine bytes into ulong64_t (8 byte) value
@@ -725,6 +609,8 @@ bool LC::decodeLC(const uint8_t* rs, bool rawOnly)
 
 void LC::encodeLC(uint8_t* rs)
 {
+    assert(rs != nullptr);
+
     ulong64_t rsValue = 0U;
     rs[0U] = m_lco;                                                                 // LCO
 
@@ -821,6 +707,124 @@ void LC::encodeLC(uint8_t* rs)
         Utils::dump(1U, "P25, LC::encodeLC(), Encoded P25 Non-Standard RS", rs, P25_LDU_LC_FEC_LENGTH_BYTES);
     }
 */
+}
+
+/*
+** Encryption data 
+*/
+
+/* Sets the encryption message indicator. */
+
+void LC::setMI(const uint8_t* mi)
+{
+    assert(mi != nullptr);
+
+    ::memcpy(m_mi, mi, MI_LENGTH_BYTES);
+}
+
+/* Gets the encryption message indicator. */
+
+void LC::getMI(uint8_t* mi) const
+{
+    assert(mi != nullptr);
+
+    ::memcpy(mi, m_mi, MI_LENGTH_BYTES);
+}
+
+/*
+** User Alias data
+*/
+
+/* Gets the user alias. */
+
+std::string LC::getUserAlias() const
+{
+    std::string alias;
+    if (m_gotUserAlias) {
+        for (uint32_t i = 0; i < HARRIS_USER_ALIAS_LENGTH_BYTES; i++)
+            alias[i] = m_userAlias[i];
+    }
+
+    return alias;
+}
+
+// ---------------------------------------------------------------------------
+//  Private Class Members
+// ---------------------------------------------------------------------------
+
+/* Internal helper to copy the the class. */
+
+void LC::copy(const LC& data)
+{
+    m_lco = data.m_lco;
+
+    m_protect = data.m_protect;
+    m_mfId = data.m_mfId;
+
+    m_srcId = data.m_srcId;
+    m_dstId = data.m_dstId;
+
+    m_grpVchNo = data.m_grpVchNo;
+
+    m_grpVchNoB = data.m_grpVchNoB;
+    m_dstIdB = data.m_dstIdB;
+
+    m_explicitId = data.m_explicitId;
+
+    m_netId = data.m_netId;
+    m_sysId = data.m_sysId;
+
+    m_emergency = data.m_emergency;
+    m_encrypted = data.m_encrypted;
+    m_priority = data.m_priority;
+
+    m_group = data.m_group;
+
+    m_callTimer = data.m_callTimer;
+
+    m_rsValue = data.m_rsValue;
+
+    m_algId = data.m_algId;
+    if (m_algId != ALGO_UNENCRYPT) {
+        delete[] m_mi;
+
+        m_mi = new uint8_t[MI_LENGTH_BYTES];
+        ::memcpy(m_mi, data.m_mi, MI_LENGTH_BYTES);
+
+        m_kId = data.m_kId;
+        if (!m_encrypted) {
+            m_encryptOverride = true;
+            m_encrypted = true;
+        }
+    }
+    else {
+        delete[] m_mi;
+
+        m_mi = new uint8_t[MI_LENGTH_BYTES];
+        ::memset(m_mi, 0x00U, MI_LENGTH_BYTES);
+
+        m_kId = 0x0000U;
+        if (m_encrypted) {
+            m_encryptOverride = true;
+            m_encrypted = false;
+        }
+    }
+
+    if (data.m_gotUserAlias && data.m_userAlias != nullptr) {
+        delete[] m_userAlias;
+
+        m_userAlias = new uint8_t[HARRIS_USER_ALIAS_LENGTH_BYTES];
+        ::memcpy(m_userAlias, data.m_userAlias, HARRIS_USER_ALIAS_LENGTH_BYTES);
+        m_gotUserAlias = data.m_gotUserAlias;
+    } else {
+        delete[] m_userAlias;
+
+        m_userAlias = new uint8_t[HARRIS_USER_ALIAS_LENGTH_BYTES];
+        ::memset(m_userAlias, 0x00U, HARRIS_USER_ALIAS_LENGTH_BYTES);
+        m_gotUserAlias = false;
+    }
+
+    m_siteData = data.m_siteData;
 }
 
 /* Decode LDU hamming FEC. */

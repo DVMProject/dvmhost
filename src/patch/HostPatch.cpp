@@ -86,19 +86,19 @@ HostPatch::HostPatch(const std::string& confFile) :
     m_dmrEmbeddedData(),
     m_grantDemand(false),
     m_callInProgress(false),
-    m_callAlgoId(p25::defines::ALGO_UNENCRYPT),
+    m_callAlgoId(P25DEF::ALGO_UNENCRYPT),
     m_rxStartTime(0U),
     m_rxStreamId(0U),
-    m_tekSrcAlgoId(p25::defines::ALGO_UNENCRYPT),
+    m_tekSrcAlgoId(P25DEF::ALGO_UNENCRYPT),
     m_tekSrcKeyId(0U),
-    m_tekDstAlgoId(p25::defines::ALGO_UNENCRYPT),
+    m_tekDstAlgoId(P25DEF::ALGO_UNENCRYPT),
     m_tekDstKeyId(0U),
     m_requestedSrcTek(false),
     m_requestedDstTek(false),
     m_p25SrcCrypto(nullptr),
     m_p25DstCrypto(nullptr),
-    m_netId(0xBB800U),
-    m_sysId(1U),
+    m_netId(P25DEF::WACN_STD_DEFAULT),
+    m_sysId(P25DEF::SID_STD_DEFAULT),
     m_running(false),
     m_trace(false),
     m_debug(false)
@@ -349,12 +349,12 @@ bool HostPatch::createNetwork()
     m_tekSrcKeyId = (uint32_t)::strtoul(srcTekConf["tekKeyId"].as<std::string>("0").c_str(), NULL, 16);
     if (tekSrcEnable && m_tekSrcKeyId > 0U) {
         if (tekSrcAlgo == TEK_AES)
-            m_tekSrcAlgoId = p25::defines::ALGO_AES_256;
+            m_tekSrcAlgoId = P25DEF::ALGO_AES_256;
         else if (tekSrcAlgo == TEK_ARC4)
-            m_tekSrcAlgoId = p25::defines::ALGO_ARC4;
+            m_tekSrcAlgoId = P25DEF::ALGO_ARC4;
         else {
             ::LogError(LOG_HOST, "Invalid TEK algorithm specified, must be \"aes\" or \"adp\".");
-            m_tekSrcAlgoId = p25::defines::ALGO_UNENCRYPT;
+            m_tekSrcAlgoId = P25DEF::ALGO_UNENCRYPT;
             m_tekSrcKeyId = 0U;
         }
     }
@@ -367,12 +367,12 @@ bool HostPatch::createNetwork()
     m_tekDstKeyId = (uint32_t)::strtoul(dstTekConf["tekKeyId"].as<std::string>("0").c_str(), NULL, 16);
     if (tekDstEnable && m_tekDstKeyId > 0U) {
         if (tekDstAlgo == TEK_AES)
-            m_tekDstAlgoId = p25::defines::ALGO_AES_256;
+            m_tekDstAlgoId = P25DEF::ALGO_AES_256;
         else if (tekDstAlgo == TEK_ARC4)
-            m_tekDstAlgoId = p25::defines::ALGO_ARC4;
+            m_tekDstAlgoId = P25DEF::ALGO_ARC4;
         else {
             ::LogError(LOG_HOST, "Invalid TEK algorithm specified, must be \"aes\" or \"adp\".");
-            m_tekDstAlgoId = p25::defines::ALGO_UNENCRYPT;
+            m_tekDstAlgoId = P25DEF::ALGO_UNENCRYPT;
             m_tekDstKeyId = 0U;
         }
     }
@@ -990,7 +990,7 @@ void HostPatch::processP25Network(uint8_t* buffer, uint32_t length)
 
             if (m_grantDemand) {
                 p25::lc::LC lc = p25::lc::LC();
-                lc.setLCO(p25::defines::LCO::GROUP);
+                lc.setLCO(P25DEF::LCO::GROUP);
                 lc.setDstId(dstId);
                 lc.setSrcId(srcId);
 
@@ -1007,7 +1007,7 @@ void HostPatch::processP25Network(uint8_t* buffer, uint32_t length)
                 return;
 
             p25::lc::LC lc = p25::lc::LC();
-            lc.setLCO(p25::defines::LCO::GROUP);
+            lc.setLCO(P25DEF::LCO::GROUP);
             lc.setDstId(actualDstId);
             lc.setSrcId(srcId);
 
@@ -1312,13 +1312,13 @@ void HostPatch::cryptP25AudioFrame(uint8_t* ldu, bool reverseEncrypt, uint8_t p2
         // Utils::dump(1U, "P25, HostPatch::cryptP25AudioFrame(), IMBE", imbe, RAW_IMBE_LENGTH_BYTES);
 
         // first -- decrypt the IMBE codeword
-        if (tekSrcAlgoId != p25::defines::ALGO_UNENCRYPT && tekSrcKeyId > 0U) {
+        if (tekSrcAlgoId != P25DEF::ALGO_UNENCRYPT && tekSrcKeyId > 0U) {
             if (!reverseEncrypt && m_p25SrcCrypto->getTEKLength() > 0U) {
                 switch (tekSrcAlgoId) {
-                case p25::defines::ALGO_AES_256:
+                case P25DEF::ALGO_AES_256:
                     m_p25SrcCrypto->cryptAES_IMBE(imbe, (p25N == 1U) ? DUID::LDU1 : DUID::LDU2);
                     break;
-                case p25::defines::ALGO_ARC4:
+                case P25DEF::ALGO_ARC4:
                     m_p25SrcCrypto->cryptARC4_IMBE(imbe, (p25N == 1U) ? DUID::LDU1 : DUID::LDU2);
                     break;
                 default:
@@ -1328,10 +1328,10 @@ void HostPatch::cryptP25AudioFrame(uint8_t* ldu, bool reverseEncrypt, uint8_t p2
             } else {
                 if (reverseEncrypt && m_p25DstCrypto->getTEKLength() > 0U) {
                     switch (tekDstAlgoId) {
-                    case p25::defines::ALGO_AES_256:
+                    case P25DEF::ALGO_AES_256:
                         m_p25DstCrypto->cryptAES_IMBE(imbe, (p25N == 1U) ? DUID::LDU1 : DUID::LDU2);
                         break;
-                    case p25::defines::ALGO_ARC4:
+                    case P25DEF::ALGO_ARC4:
                         m_p25DstCrypto->cryptARC4_IMBE(imbe, (p25N == 1U) ? DUID::LDU1 : DUID::LDU2);
                         break;
                     default:
@@ -1343,13 +1343,13 @@ void HostPatch::cryptP25AudioFrame(uint8_t* ldu, bool reverseEncrypt, uint8_t p2
         }
 
         // second -- reencrypt the IMBE codeword
-        if (tekDstAlgoId != p25::defines::ALGO_UNENCRYPT && tekDstKeyId > 0U) {
+        if (tekDstAlgoId != P25DEF::ALGO_UNENCRYPT && tekDstKeyId > 0U) {
             if (!reverseEncrypt && m_p25DstCrypto->getTEKLength() > 0U) {
                 switch (tekDstAlgoId) {
-                case p25::defines::ALGO_AES_256:
+                case P25DEF::ALGO_AES_256:
                     m_p25DstCrypto->cryptAES_IMBE(imbe, (p25N == 1U) ? DUID::LDU1 : DUID::LDU2);
                     break;
-                case p25::defines::ALGO_ARC4:
+                case P25DEF::ALGO_ARC4:
                     m_p25DstCrypto->cryptARC4_IMBE(imbe, (p25N == 1U) ? DUID::LDU1 : DUID::LDU2);
                     break;
                 default:
@@ -1359,10 +1359,10 @@ void HostPatch::cryptP25AudioFrame(uint8_t* ldu, bool reverseEncrypt, uint8_t p2
             } else {
                 if (reverseEncrypt && m_p25SrcCrypto->getTEKLength() > 0U) {
                     switch (tekSrcAlgoId) {
-                    case p25::defines::ALGO_AES_256:
+                    case P25DEF::ALGO_AES_256:
                         m_p25SrcCrypto->cryptAES_IMBE(imbe, (p25N == 1U) ? DUID::LDU1 : DUID::LDU2);
                         break;
-                    case p25::defines::ALGO_ARC4:
+                    case P25DEF::ALGO_ARC4:
                         m_p25SrcCrypto->cryptARC4_IMBE(imbe, (p25N == 1U) ? DUID::LDU1 : DUID::LDU2);
                         break;
                     default:
@@ -1449,7 +1449,7 @@ void HostPatch::writeNet_LDU1(bool toFNE)
 
             if (m_grantDemand) {
                 p25::lc::LC lc = p25::lc::LC();
-                lc.setLCO(p25::defines::LCO::GROUP);
+                lc.setLCO(P25DEF::LCO::GROUP);
                 lc.setDstId(dstId);
                 lc.setSrcId(srcId);
 
@@ -1583,7 +1583,7 @@ void* HostPatch::threadNetworkProcess(void* arg)
 
             if (patch->m_network->getStatus() == NET_STAT_RUNNING) {
                 // check if we need to request a TEK for the source TGID
-                if (patch->m_tekSrcAlgoId != p25::defines::ALGO_UNENCRYPT && patch->m_tekSrcKeyId > 0U) {
+                if (patch->m_tekSrcAlgoId != P25DEF::ALGO_UNENCRYPT && patch->m_tekSrcKeyId > 0U) {
                     if (patch->m_p25SrcCrypto->getTEKLength() == 0U && !patch->m_requestedSrcTek) {
                         patch->m_requestedSrcTek = true;
                         LogMessage(LOG_HOST, "Patch source TGID encryption enabled, requesting TEK from network.");
@@ -1592,7 +1592,7 @@ void* HostPatch::threadNetworkProcess(void* arg)
                 }
 
                 // check if we need to request a TEK for the destination TGID
-                if (patch->m_tekDstAlgoId != p25::defines::ALGO_UNENCRYPT && patch->m_tekDstKeyId > 0U) {
+                if (patch->m_tekDstAlgoId != P25DEF::ALGO_UNENCRYPT && patch->m_tekDstKeyId > 0U) {
                     if (patch->m_p25DstCrypto->getTEKLength() == 0U && !patch->m_requestedDstTek) {
                         patch->m_requestedDstTek = true;
                         LogMessage(LOG_HOST, "Patch destination TGID encryption enabled, requesting TEK from network.");
