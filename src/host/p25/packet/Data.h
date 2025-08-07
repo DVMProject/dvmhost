@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2016,2017 Jonathan Naylor, G4KLX
- *  Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2017-2025 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -88,6 +88,13 @@ namespace p25
              * @param imm Flag indicating the PDU should be written to the immediate queue.
              */
             void writeRF_PDU_User(data::DataHeader& dataHeader, bool extendedAddress, uint8_t* pduUserData, bool imm = false);
+            /**
+             * @brief Helper to write user data as a P25 PDU packet.
+             * @param dataHeader Instance of a PDU data header.
+             * @param extendedAddress Flag indicating whether or not to extended addressing is in use.
+             * @param pduUserData Buffer containing user data to transmit.
+             */
+            void writeNet_PDU_User(data::DataHeader& dataHeader, bool extendedAddress, uint8_t* pduUserData);
 
             /**
              * @brief Updates the processor by the passed number of milliseconds.
@@ -146,9 +153,6 @@ namespace p25
             uint32_t m_netPduUserDataLength;
 
             std::unordered_map<uint32_t, uint32_t> m_fneRegTable;
-
-            std::unordered_map<uint32_t, uint32_t> m_convRegQueueTable;
-            std::unordered_map<uint32_t, Timer> m_convRegTimerTable;
 
             std::unordered_map<uint32_t, defines::SNDCPState::E> m_sndcpStateTable;
             std::unordered_map<uint32_t, Timer> m_sndcpReadyTimers;
@@ -221,6 +225,7 @@ namespace p25
              * @param regType Registration Response.
              * @param llId Logical Link ID.
              * @param ipAddr 
+             * @param mfId 
              */
             void writeRF_PDU_Reg_Response(uint8_t regType, uint32_t llId, uint32_t ipAddr);
             /**
