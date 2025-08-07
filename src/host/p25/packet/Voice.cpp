@@ -1985,10 +1985,6 @@ void Voice::writeNet_LDU1()
             }
         }
     }
-    else {
-        netId = lc::LC::getSiteData().netId();
-        sysId = lc::LC::getSiteData().sysId();
-    }
 
     // are we swapping the LC out for the RFSS_STS_BCAST or LC_GROUP_UPDT?
     m_pktLDU1Count++;

@@ -85,6 +85,9 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
 
     uint8_t MFId = data[15U];
 
+    uint32_t sysId = (data[11U] << 8) | (data[12U] << 0);
+    uint32_t netId = GET_UINT24(data, 16U);
+
     uint8_t lsd1 = data[20U];
     uint8_t lsd2 = data[21U];
 
@@ -198,8 +201,8 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                 });
                 if (it != m_status.end()) {
                     if (grantDemand) {
-                        LogWarning(LOG_NET, "P25, Call Collision, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, rxPeer = %u, rxSrcId = %u, rxDstId = %u, rxStreamId = %u, external = %u",
-                            peerId, ssrc, srcId, dstId, streamId, status.peerId, status.srcId, status.dstId, status.streamId, external);
+                        LogWarning(LOG_NET, "P25, Call Collision, peer = %u, ssrc = %u, sysId = $%03X, netId = $%05X, srcId = %u, dstId = %u, streamId = %u, rxPeer = %u, rxSrcId = %u, rxDstId = %u, rxStreamId = %u, external = %u",
+                            peerId, ssrc, sysId, netId, srcId, dstId, streamId, status.peerId, status.srcId, status.dstId, status.streamId, external);
                         return false;
                     }
                     else {
@@ -216,8 +219,8 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                             }
                         }
 
-                        LogMessage(LOG_NET, "P25, Call End, peer = %u, ssrc = %u, srcId = %u, dstId = %u, duration = %u, streamId = %u, external = %u",
-                            peerId, ssrc, srcId, dstId, duration / 1000, streamId, external);
+                        LogMessage(LOG_NET, "P25, Call End, peer = %u, ssrc = %u, sysId = $%03X, netId = $%05X, srcId = %u, dstId = %u, duration = %u, streamId = %u, external = %u",
+                            peerId, ssrc, sysId, netId, srcId, dstId, duration / 1000, streamId, external);
 
                         // report call event to InfluxDB
                         if (m_network->m_enableInfluxDB) {
@@ -264,8 +267,8 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                                 m_network->m_callInProgress = false;
                             }
 
-                            LogWarning(LOG_NET, "P25, Call Collision, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, rxPeer = %u, rxSrcId = %u, rxDstId = %u, rxStreamId = %u, external = %u",
-                                peerId, ssrc, srcId, dstId, streamId, status.peerId, status.srcId, status.dstId, status.streamId, external);
+                            LogWarning(LOG_NET, "P25, Call Collision, peer = %u, ssrc = %u, sysId = $%03X, netId = $%05X, srcId = %u, dstId = %u, streamId = %u, rxPeer = %u, rxSrcId = %u, rxDstId = %u, rxStreamId = %u, external = %u",
+                                peerId, ssrc, sysId, netId, srcId, dstId, streamId, status.peerId, status.srcId, status.dstId, status.streamId, external);
                             return false;
                         }
                     }
@@ -293,7 +296,8 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                     m_status[dstId].peerId = peerId;
                     m_status[dstId].activeCall = true;
 
-                    LogMessage(LOG_NET, "P25, Call Start, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, external = %u", peerId, ssrc, srcId, dstId, streamId, external);
+                    LogMessage(LOG_NET, "P25, Call Start, peer = %u, ssrc = %u, sysId = $%03X, netId = $%05X, srcId = %u, dstId = %u, streamId = %u, external = %u", 
+                        peerId, ssrc, sysId, netId, srcId, dstId, streamId, external);
 
                     m_network->m_callInProgress = true;
                 }
