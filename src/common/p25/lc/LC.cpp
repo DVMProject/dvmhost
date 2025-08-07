@@ -611,7 +611,11 @@ bool LC::decodeLC(const uint8_t* rs, bool rawOnly)
     m_protect = (rs[0U] & 0x80U) == 0x80U;                                          // Protect Flag
     m_lco = rs[0U] & 0x3FU;                                                         // LCO
 
-    m_mfId = rs[1U];                                                                // Mfg Id.
+    bool sf = (rs[0U] & 0x40U) == 0x40U;                                            // Implicit/Explicit Operation
+    if (sf)
+        m_mfId = MFG_STANDARD;
+    else
+        m_mfId = rs[1U];                                                            // Mfg Id.
 
     if (rawOnly)
         return true;
@@ -692,6 +696,18 @@ bool LC::decodeLC(const uint8_t* rs, bool rawOnly)
         m_sysId = (uint32_t)((rsValue >> 24) & 0xFFFU);                             // System ID
         m_srcId = (uint32_t)(rsValue & 0xFFFFFFU);                                  // Source Radio Address
         break;
+    case LCO::PRIVATE_EXT:
+        m_explicitId = (rs[1U] & 0x01U) == 0x01U;                                   // Explicit Source ID Flag
+        m_group = false;
+        m_emergency = (rs[2U] & 0x80U) == 0x80U;                                    // Emergency Flag
+        if (!m_encryptOverride) {
+            m_encrypted = (rs[2U] & 0x40U) == 0x40U;                                // Encryption Flag
+        }
+        m_priority = (rs[2U] & 0x07U);                                              // Priority
+        m_explicitId = (rs[3U] & 0x01U) == 0x01U;                                   // Explicit Source ID Flag
+        m_dstId = (uint32_t)((rsValue >> 24) & 0xFFFFFFU);                          // Target Radio Address
+        m_srcId = (uint32_t)(rsValue & 0xFFFFFFU);                                  // Source Radio Address
+        break;
     default:
         LogError(LOG_P25, "LC::decodeLC(), unknown LC value, mfId = $%02X, lco = $%02X", m_mfId, m_lco);
         return false;
@@ -721,7 +737,8 @@ void LC::encodeLC(uint8_t* rs)
                 (m_emergency ? 0x80U : 0x00U) +                                     // Emergency Flag
                 (m_encrypted ? 0x40U : 0x00U) +                                     // Encrypted Flag
                 (m_priority & 0x07U);                                               // Priority
-            rsValue = (rsValue << 24) + m_dstId;                                    // Talkgroup Address
+            rsValue = (rsValue << 8) + (m_explicitId ? 0x01U : 0x00U);              // Explicit Source ID Flag
+            rsValue = (rsValue << 16) + m_dstId;                                    // Talkgroup Address
             rsValue = (rsValue << 24) + m_srcId;                                    // Source Radio Address
             break;
         case LCO::GROUP_UPDT:
@@ -752,8 +769,19 @@ void LC::encodeLC(uint8_t* rs)
             rsValue = (rsValue << 24) + m_srcId;                                    // Source/Target Radio Address
             break;
         case LCO::EXPLICIT_SOURCE_ID:
-            rsValue = m_netId;                                                      // Network ID
+            rs[0U] |= 0x40U;                                                        // Implicit Operation
+            rsValue = (rsValue << 8) + m_netId;                                     // Network ID
             rsValue = (rsValue << 12) + (m_sysId & 0xFFFU);                         // System ID
+            rsValue = (rsValue << 24) + m_srcId;                                    // Source Radio Address
+            break;
+        case LCO::PRIVATE_EXT:
+            rs[0U] |= 0x40U;                                                        // Implicit Operation
+            rsValue = (m_explicitId ? 0x01U : 0x00U);                               // Explicit Source ID Flag
+            rsValue = (rsValue << 8) +
+                (m_emergency ? 0x80U : 0x00U) +                                     // Emergency Flag
+                (m_encrypted ? 0x40U : 0x00U) +                                     // Encrypted Flag
+                (m_priority & 0x07U);                                               // Priority
+            rsValue = (rsValue << 24) + m_dstId;                                    // Target Radio Address
             rsValue = (rsValue << 24) + m_srcId;                                    // Source Radio Address
             break;
         case LCO::RFSS_STS_BCAST:

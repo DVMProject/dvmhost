@@ -686,6 +686,7 @@ namespace p25
                 TEL_INT_VCH_USER = 0x06U,               //! TEL INT VCH USER - Telephone Interconnect Voice Channel User / MOT GPS DATA - Motorola In-Band GPS Data
                 TEL_INT_ANS_RQST = 0x07U,               //! TEL INT ANS RQST - Telephone Interconnect Answer Request
                 EXPLICIT_SOURCE_ID = 0x09U,             //! EXPLICIT SOURCE ID - Explicit Source ID
+                PRIVATE_EXT = 0x0AU,                    //! UU VCH USER EXT - Unit-to-Unit Voice Channel User Extended
                 CALL_TERM = 0x0FU,                      //! CALL TERM - Call Termination or Cancellation
                 IDEN_UP = 0x18U,                        //! IDEN UP - Channel Identifier Update
                 SYS_SRV_BCAST = 0x20U,                  //! SYS SRV BCAST - System Service Broadcast

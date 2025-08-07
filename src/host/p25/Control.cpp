@@ -75,7 +75,7 @@ Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t q
     m_ackTSBKRequests(true),
     m_disableNetworkGrant(false),
     m_disableNetworkHDU(false),
-    m_allowExplicitSourceId(true),
+    m_allowExplicitSourceId(false),
     m_convNetGrantDemand(false),
     m_sndcpSupport(false),
     m_ignoreAffiliationCheck(false),
@@ -338,7 +338,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
 
     m_ccNotifyActiveTG = control["notifyActiveTG"].as<bool>(true);
 
-    m_allowExplicitSourceId = p25Protocol["allowExplicitSourceId"].as<bool>(true);
+    m_allowExplicitSourceId = p25Protocol["allowExplicitSourceId"].as<bool>(false);
     m_convNetGrantDemand = p25Protocol["convNetGrantDemand"].as<bool>(false);
 
     uint32_t ccBcstInterval = p25Protocol["control"]["interval"].as<uint32_t>(300U);

@@ -1977,6 +1977,11 @@ void Voice::writeNet_LDU1()
                 if (m_netLC.getLCO() == LCO::GROUP) {
                     m_netLC.setExplicitId(true);
                 }
+
+                if (m_netLC.getLCO() == LCO::PRIVATE) {
+                    m_netLC.setLCO(LCO::PRIVATE_EXT);
+                    m_netLC.setExplicitId(true);
+                }
             }
         }
     }
