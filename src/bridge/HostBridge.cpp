@@ -2866,11 +2866,11 @@ void HostBridge::callEnd(uint32_t srcId, uint32_t dstId)
         switch (m_txMode) {
         case TX_MODE_DMR:
             {
-                dmr::defines::DataType::E dataType = dmr::defines::DataType::VOICE_SYNC;
+                DMRDEF::DataType::E dataType = DMRDEF::DataType::VOICE_SYNC;
                 if (m_dmrN == 0)
-                    dataType = dmr::defines::DataType::VOICE_SYNC;
+                    dataType = DMRDEF::DataType::VOICE_SYNC;
                 else {
-                    dataType = dmr::defines::DataType::VOICE;
+                    dataType = DMRDEF::DataType::VOICE;
                 }
 
                 dmr::data::NetData data = dmr::data::NetData();
@@ -2878,7 +2878,7 @@ void HostBridge::callEnd(uint32_t srcId, uint32_t dstId)
                 data.setDataType(dataType);
                 data.setSrcId(srcId);
                 data.setDstId(dstId);
-                data.setFLCO(dmr::defines::FLCO::GROUP);
+                data.setFLCO(DMRDEF::FLCO::GROUP);
                 data.setN(m_dmrN);
                 data.setSeqNo(m_dmrSeqNo);
                 data.setBER(0U);
