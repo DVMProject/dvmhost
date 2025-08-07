@@ -235,6 +235,9 @@ private:
     uint32_t m_p25SeqNo;
     uint8_t m_p25N;
 
+    uint32_t m_netId;
+    uint32_t m_sysId;
+
     uint8_t m_analogN;
 
     bool m_audioDetect;

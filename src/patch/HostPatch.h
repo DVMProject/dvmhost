@@ -109,6 +109,9 @@ private:
     p25::crypto::P25Crypto* m_p25SrcCrypto;
     p25::crypto::P25Crypto* m_p25DstCrypto;
 
+    uint32_t m_netId;
+    uint32_t m_sysId;
+
     bool m_running;
     bool m_trace;
     bool m_debug;

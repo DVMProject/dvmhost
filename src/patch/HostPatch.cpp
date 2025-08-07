@@ -97,6 +97,8 @@ HostPatch::HostPatch(const std::string& confFile) :
     m_requestedDstTek(false),
     m_p25SrcCrypto(nullptr),
     m_p25DstCrypto(nullptr),
+    m_netId(0xBB800U),
+    m_sysId(1U),
     m_running(false),
     m_trace(false),
     m_debug(false)
@@ -278,6 +280,15 @@ bool HostPatch::readParams()
     yaml::Node systemConf = m_conf["system"];
 
     m_identity = systemConf["identity"].as<std::string>();
+
+    m_netId = (uint32_t)::strtoul(systemConf["netId"].as<std::string>("BB800").c_str(), NULL, 16);
+    m_netId = p25::P25Utils::netId(m_netId);
+    if (m_netId == 0xBEE00) {
+        ::fatal("error 4\n");
+    }
+
+    m_sysId = (uint32_t)::strtoul(systemConf["sysId"].as<std::string>("001").c_str(), NULL, 16);
+    m_sysId = p25::P25Utils::sysId(m_sysId);
     
     m_digiMode = (uint8_t)systemConf["digiMode"].as<uint32_t>(1U);
     if (m_digiMode < TX_MODE_DMR)
@@ -298,6 +309,8 @@ bool HostPatch::readParams()
     m_debug = systemConf["debug"].as<bool>(false);
 
     LogInfo("General Parameters");
+    LogInfo("    System Id: $%03X", m_sysId);
+    LogInfo("    P25 Network Id: $%05X", m_netId);
     LogInfo("    Digital Mode: %s", m_digiMode == TX_MODE_DMR ? "DMR" : "P25");
     LogInfo("    Grant Demands: %s", m_grantDemand ? "yes" : "no");
     LogInfo("    MMDVM P25 Reflector Patch: %s", m_mmdvmP25Reflector ? "yes" : "no");
@@ -1096,6 +1109,9 @@ void HostPatch::processP25Network(uint8_t* buffer, uint32_t length)
                 control.setSrcId(srcId);
                 control.setDstId(actualDstId);
 
+                control.setNetId(m_netId);
+                control.setSysId(m_sysId);
+
                 // if this is the beginning of a call and we have a valid HDU frame, extract the algo ID
                 if (frameType == FrameType::HDU_VALID) {
                     uint8_t algoId = buffer[181U];
@@ -1195,6 +1211,9 @@ void HostPatch::processP25Network(uint8_t* buffer, uint32_t length)
 
                 control.setSrcId(srcId);
                 control.setDstId(actualDstId);
+
+                control.setNetId(m_netId);
+                control.setSysId(m_sysId);
 
                 // set the algo ID and key ID
                 if (tekAlgoId != ALGO_UNENCRYPT && tekKeyId != 0U) {

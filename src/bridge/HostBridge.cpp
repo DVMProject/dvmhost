@@ -225,6 +225,8 @@ HostBridge::HostBridge(const std::string& confFile) :
     m_netLDU2(nullptr),
     m_p25SeqNo(0U),
     m_p25N(0U),
+    m_netId(0xBB800U),
+    m_sysId(1U),
     m_analogN(0U),
     m_audioDetect(false),
     m_trafficFromUDP(false),
@@ -851,6 +853,15 @@ bool HostBridge::readParams()
 
     m_identity = systemConf["identity"].as<std::string>();
 
+    m_netId = (uint32_t)::strtoul(systemConf["netId"].as<std::string>("BB800").c_str(), NULL, 16);
+    m_netId = p25::P25Utils::netId(m_netId);
+    if (m_netId == 0xBEE00) {
+        ::fatal("error 4\n");
+    }
+
+    m_sysId = (uint32_t)::strtoul(systemConf["sysId"].as<std::string>("001").c_str(), NULL, 16);
+    m_sysId = p25::P25Utils::sysId(m_sysId);
+
     m_rxAudioGain = systemConf["rxAudioGain"].as<float>(1.0f);
     m_vocoderDecoderAudioGain = systemConf["vocoderDecoderAudioGain"].as<float>(3.0f);
     m_vocoderDecoderAutoGain = systemConf["vocoderDecoderAutoGain"].as<bool>(false);
@@ -914,6 +925,8 @@ bool HostBridge::readParams()
         txModeStr = "Analog";
 
     LogInfo("General Parameters");
+    LogInfo("    System Id: $%03X", m_sysId);
+    LogInfo("    P25 Network Id: $%05X", m_netId);
     LogInfo("    Rx Audio Gain: %.1f", m_rxAudioGain);
     LogInfo("    Vocoder Decoder Audio Gain: %.1f", m_vocoderDecoderAudioGain);
     LogInfo("    Vocoder Decoder Auto Gain: %s", m_vocoderDecoderAutoGain ? "yes" : "no");
@@ -2449,6 +2462,9 @@ void HostBridge::encodeP25AudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32_
 
     lc.setAlgId(m_tekAlgoId);
     lc.setKId(m_tekKeyId);
+
+    lc.setSysId(m_sysId);
+    lc.setNetId(m_netId);
 
     uint8_t mi[MI_LENGTH_BYTES];
     m_p25Crypto->getMI(mi);

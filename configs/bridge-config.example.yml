@@ -125,6 +125,11 @@ system:
     # Textual Name
     identity: BRIDGE
 
+    # Network ID (WACN).
+    netId: BB800
+    # System ID.
+    sysId: 001
+
     # PCM audio gain for received (from digital network) audio frames.
     #   - This is used to apply gain to the decoded IMBE/AMBE audio, post-decoding.
     rxAudioGain: 1.0

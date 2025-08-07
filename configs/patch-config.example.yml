@@ -102,6 +102,11 @@ system:
     # Textual Name
     identity: PATCH
 
+    # Network ID (WACN).
+    netId: BB800
+    # System ID.
+    sysId: 001
+
     # Digital mode (1 - DMR, 2 - P25).
     digiMode: 1
 
