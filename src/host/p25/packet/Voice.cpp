@@ -1959,7 +1959,11 @@ void Voice::writeNet_LDU1()
     }
 
     uint32_t netId = control.getNetId();
+    if (netId == 0U)
+        netId = lc::LC::getSiteData().netId();
     uint32_t sysId = control.getSysId();
+    if (sysId == 0U)
+        sysId = lc::LC::getSiteData().sysId();
 
     // is the network peer a different WACN or system ID?
     if (m_p25->m_allowExplicitSourceId) {
