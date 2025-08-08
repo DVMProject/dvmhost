@@ -758,6 +758,10 @@ void ModemV24::convertToAirV24(const uint8_t *data, uint32_t length)
                     case DFSI_MOT_ICW_PARM_RSSI2:
                         // don't do anything with this RSSI
                         break;
+                    case DFSI_MOT_ICW_TX_ADDRESS:
+                    case DFSI_MOT_ICW_RX_ADDRESS:
+                        // don't do anything with this ICW
+                        break;
                     default:
                         LogWarning(LOG_MODEM, "ModemV24::convertToAirV24() unknown ICW parameter $%02X with value %u", param, value);
                         break;
@@ -801,6 +805,10 @@ void ModemV24::convertToAirV24(const uint8_t *data, uint32_t length)
                         break;
                     case DFSI_MOT_ICW_PARM_RSSI2:
                         // don't do anything with this RSSI
+                        break;
+                    case DFSI_MOT_ICW_TX_ADDRESS:
+                    case DFSI_MOT_ICW_RX_ADDRESS:
+                        // don't do anything with this ICW
                         break;
                     default:
                         LogWarning(LOG_MODEM, "ModemV24::convertToAirV24() unknown ICW parameter $%02X with value %u", param, value);

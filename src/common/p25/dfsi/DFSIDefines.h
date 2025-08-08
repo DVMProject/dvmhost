@@ -91,6 +91,8 @@ namespace p25
             const uint8_t   DFSI_MOT_ICW_PARM_RSSI1 = 0x1AU;    //! RSSI Data
             const uint8_t   DFSI_MOT_ICW_PARM_RSSI2 = 0x1BU;    //! RSSI Data
             const uint8_t   DFSI_MOT_ICW_PARM_STOP = 0x25U;     //! Stop Stream
+            const uint8_t   DFSI_MOT_ICW_TX_ADDRESS = 0x2CU;    //! Tx Device Address
+            const uint8_t   DFSI_MOT_ICW_RX_ADDRESS = 0x35U;    //! Rx Device Address
 
             const uint8_t   DFSI_BUSY_BITS_TALKAROUND = 0x00U;  //! Talkaround
             const uint8_t   DFSI_BUSY_BITS_BUSY = 0x01U;        //! Busy
