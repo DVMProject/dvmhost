@@ -368,6 +368,11 @@ bool HostPatch::createNetwork()
         }
     }
 
+    if (!tekSrcEnable)
+        m_tekSrcAlgoId = P25DEF::ALGO_UNENCRYPT;
+    if (m_tekSrcAlgoId == P25DEF::ALGO_UNENCRYPT)
+        m_tekSrcKeyId = 0U;
+
     // destination TEK parameters
     yaml::Node dstTekConf = networkConf["srcTek"];
     bool tekDstEnable = dstTekConf["enable"].as<bool>(false);
@@ -385,6 +390,11 @@ bool HostPatch::createNetwork()
             m_tekDstKeyId = 0U;
         }
     }
+
+    if (!tekDstEnable)
+        m_tekDstAlgoId = P25DEF::ALGO_UNENCRYPT;
+    if (m_tekDstAlgoId == P25DEF::ALGO_UNENCRYPT)
+        m_tekDstKeyId = 0U;
 
     m_twoWayPatch = networkConf["twoWay"].as<bool>(false);
 
