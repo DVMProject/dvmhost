@@ -1156,15 +1156,15 @@ void ModemV24::convertToAirV24(const uint8_t *data, uint32_t length)
             uint8_t rsBuffer[P25_LDU_LC_FEC_LENGTH_BYTES];
             ::memset(rsBuffer, 0x00U, P25_LDU_LC_FEC_LENGTH_BYTES);
 
-            rsBuffer[0U] = m_rxCall->lco;
-            rsBuffer[1U] = m_rxCall->mfId;
-            rsBuffer[2U] = m_rxCall->serviceOptions;
-            rsBuffer[3U] = (m_rxCall->dstId >> 16) & 0xFFU;
-            rsBuffer[4U] = (m_rxCall->dstId >> 8) & 0xFFU;
-            rsBuffer[5U] = (m_rxCall->dstId >> 0) & 0xFFU;
-            rsBuffer[6U] = (m_rxCall->srcId >> 16) & 0xFFU;
-            rsBuffer[7U] = (m_rxCall->srcId >> 8) & 0xFFU;
-            rsBuffer[8U] = (m_rxCall->srcId >> 0) & 0xFFU;
+            rsBuffer[0U] = m_rxCall->LDULC[0U];
+            rsBuffer[1U] = m_rxCall->LDULC[1U];
+            rsBuffer[2U] = m_rxCall->LDULC[2U];
+            rsBuffer[3U] = m_rxCall->LDULC[3U];
+            rsBuffer[4U] = m_rxCall->LDULC[4U];
+            rsBuffer[5U] = m_rxCall->LDULC[5U];
+            rsBuffer[6U] = m_rxCall->LDULC[6U];
+            rsBuffer[7U] = m_rxCall->LDULC[7U];
+            rsBuffer[8U] = m_rxCall->LDULC[8U];
 
             // combine bytes into ulong64_t (8 byte) value
             ulong64_t rsValue = 0U;
@@ -1755,15 +1755,15 @@ void ModemV24::convertToAirTIA(const uint8_t *data, uint32_t length)
             uint8_t rsBuffer[P25_LDU_LC_FEC_LENGTH_BYTES];
             ::memset(rsBuffer, 0x00U, P25_LDU_LC_FEC_LENGTH_BYTES);
 
-            rsBuffer[0U] = m_rxCall->lco;
-            rsBuffer[1U] = m_rxCall->mfId;
-            rsBuffer[2U] = m_rxCall->serviceOptions;
-            rsBuffer[3U] = (m_rxCall->dstId >> 16) & 0xFFU;
-            rsBuffer[4U] = (m_rxCall->dstId >> 8) & 0xFFU;
-            rsBuffer[5U] = (m_rxCall->dstId >> 0) & 0xFFU;
-            rsBuffer[6U] = (m_rxCall->srcId >> 16) & 0xFFU;
-            rsBuffer[7U] = (m_rxCall->srcId >> 8) & 0xFFU;
-            rsBuffer[8U] = (m_rxCall->srcId >> 0) & 0xFFU;
+            rsBuffer[0U] = m_rxCall->LDULC[0U];
+            rsBuffer[1U] = m_rxCall->LDULC[1U];
+            rsBuffer[2U] = m_rxCall->LDULC[2U];
+            rsBuffer[3U] = m_rxCall->LDULC[3U];
+            rsBuffer[4U] = m_rxCall->LDULC[4U];
+            rsBuffer[5U] = m_rxCall->LDULC[5U];
+            rsBuffer[6U] = m_rxCall->LDULC[6U];
+            rsBuffer[7U] = m_rxCall->LDULC[7U];
+            rsBuffer[8U] = m_rxCall->LDULC[8U];
 
             // combine bytes into ulong64_t (8 byte) value
             ulong64_t rsValue = 0U;
