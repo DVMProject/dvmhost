@@ -862,6 +862,15 @@ bool HostBridge::readParams()
     m_sysId = (uint32_t)::strtoul(systemConf["sysId"].as<std::string>("001").c_str(), NULL, 16);
     m_sysId = p25::P25Utils::sysId(m_sysId);
 
+    /*
+    ** Site Data
+    */
+    int8_t lto = (int8_t)systemConf["localTimeOffset"].as<int32_t>(0);
+    p25::SiteData siteData = p25::SiteData(m_netId, m_sysId, 1U, 1U, 0U, 0U, 1U, P25DEF::ServiceClass::VOICE, lto);
+    siteData.setNetActive(true);
+
+    p25::lc::LC::setSiteData(siteData);
+
     m_rxAudioGain = systemConf["rxAudioGain"].as<float>(1.0f);
     m_vocoderDecoderAudioGain = systemConf["vocoderDecoderAudioGain"].as<float>(3.0f);
     m_vocoderDecoderAutoGain = systemConf["vocoderDecoderAutoGain"].as<bool>(false);
@@ -2462,9 +2471,6 @@ void HostBridge::encodeP25AudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32_
 
     lc.setAlgId(m_tekAlgoId);
     lc.setKId(m_tekKeyId);
-
-    lc.setSysId(m_sysId);
-    lc.setNetId(m_netId);
 
     uint8_t mi[MI_LENGTH_BYTES];
     m_p25Crypto->getMI(mi);

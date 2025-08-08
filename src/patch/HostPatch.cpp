@@ -289,6 +289,15 @@ bool HostPatch::readParams()
 
     m_sysId = (uint32_t)::strtoul(systemConf["sysId"].as<std::string>("001").c_str(), NULL, 16);
     m_sysId = p25::P25Utils::sysId(m_sysId);
+
+    /*
+    ** Site Data
+    */
+    int8_t lto = (int8_t)systemConf["localTimeOffset"].as<int32_t>(0);
+    p25::SiteData siteData = p25::SiteData(m_netId, m_sysId, 1U, 1U, 0U, 0U, 1U, P25DEF::ServiceClass::VOICE, lto);
+    siteData.setNetActive(true);
+
+    p25::lc::LC::setSiteData(siteData);
     
     m_digiMode = (uint8_t)systemConf["digiMode"].as<uint32_t>(1U);
     if (m_digiMode < TX_MODE_DMR)
@@ -1109,9 +1118,6 @@ void HostPatch::processP25Network(uint8_t* buffer, uint32_t length)
                 control.setSrcId(srcId);
                 control.setDstId(actualDstId);
 
-                control.setNetId(m_netId);
-                control.setSysId(m_sysId);
-
                 // if this is the beginning of a call and we have a valid HDU frame, extract the algo ID
                 if (frameType == FrameType::HDU_VALID) {
                     uint8_t algoId = buffer[181U];
@@ -1211,9 +1217,6 @@ void HostPatch::processP25Network(uint8_t* buffer, uint32_t length)
 
                 control.setSrcId(srcId);
                 control.setDstId(actualDstId);
-
-                control.setNetId(m_netId);
-                control.setSysId(m_sysId);
 
                 // set the algo ID and key ID
                 if (tekAlgoId != ALGO_UNENCRYPT && tekKeyId != 0U) {
