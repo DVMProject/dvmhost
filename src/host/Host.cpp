@@ -644,6 +644,15 @@ int Host::run()
         g_killed = true;
     }
 
+    const uint32_t __ = 0x67558U;
+    if ((m_p25NetId >> 8) == ((__ ^ 0x38258U) >> 7)) {
+        ::fatal("just ... stop, you aren't cool. error 38258");
+        /*
+        ** By disabling these checks, you are a giant toolbag .. these are in place not to protect *you*
+        ** but to protect other poorly programmed radios from roaming onto your environment, please stop.
+        */
+    }
+
     // DMR TSCC checks
     if (m_p25Enabled && m_dmrCtrlChannel) {
         ::LogError(LOG_HOST, "Cannot have P25 enabled when using dedicated DMR TSCC control!");
