@@ -78,7 +78,8 @@ namespace modem
             VHDR1(nullptr),
             VHDR2(nullptr),
             netLDU1(nullptr),
-            netLDU2(nullptr)
+            netLDU2(nullptr),
+            bitErrs(0U)
         {
             MI = new uint8_t[P25DEF::MI_LENGTH_BYTES];
             VHDR1 = new uint8_t[P25DFSIDEF::DFSI_TIA_VHDR_LEN];
@@ -147,6 +148,8 @@ namespace modem
 
             n = 0U;
             seqNo = 0U;
+
+            bitErrs = 0U;
         }
 
     public:
@@ -226,6 +229,11 @@ namespace modem
          * @brief LDU2 Buffer.
          */
         uint8_t* netLDU2;
+
+        /**
+         * @brief Total bit errors for a given call sequence.
+         */
+        uint32_t bitErrs;
         /** @} */
     };
 
