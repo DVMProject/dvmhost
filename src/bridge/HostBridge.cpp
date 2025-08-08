@@ -1021,6 +1021,11 @@ bool HostBridge::createNetwork()
         }
     }
 
+    if (!tekEnable)
+        m_tekAlgoId = P25DEF::ALGO_UNENCRYPT;
+    if (m_tekAlgoId == P25DEF::ALGO_UNENCRYPT)
+        m_tekKeyId = 0U;
+
     // ensure encryption is currently disabled for DMR (its not supported)
     if (m_txMode == TX_MODE_DMR && m_tekAlgoId != P25DEF::ALGO_UNENCRYPT && m_tekKeyId > 0U) {
         ::LogError(LOG_HOST, "Encryption is not supported for DMR. Disabling.");
