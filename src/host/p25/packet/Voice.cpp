@@ -1974,13 +1974,10 @@ void Voice::writeNet_LDU1()
             }
             else {
                 // flag explicit block to follow in next LDU1
-                if (m_netLC.getLCO() == LCO::GROUP) {
-                    m_netLC.setExplicitId(true);
-                }
+                m_netLC.setExplicitId(true);
 
                 if (m_netLC.getLCO() == LCO::PRIVATE) {
                     m_netLC.setLCO(LCO::PRIVATE_EXT);
-                    m_netLC.setExplicitId(true);
                 }
             }
         }
