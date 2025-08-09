@@ -186,7 +186,6 @@ void Network::clock(uint32_t ms)
     if (m_status == NET_STAT_WAITING_CONNECT) {
         m_retryTimer.clock(ms);
         if (m_retryTimer.isRunning() && m_retryTimer.hasExpired()) {
-            LogDebugEx(LOG_NET, "Network::clock()", "called in retry, %u", m_retryCount);
             if (m_enabled) {
                 if (m_retryCount > MAX_RETRY_BEFORE_RECONNECT) {
                     m_retryCount = 0U;
