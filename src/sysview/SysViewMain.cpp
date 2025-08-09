@@ -502,8 +502,8 @@ void* threadNetworkPump(void* arg)
                     uint32_t srcId = GET_UINT24(p25Buffer, 5U);
                     uint32_t dstId = GET_UINT24(p25Buffer, 8U);
 
-                    //uint32_t sysId = (p25Buffer[11U] << 8) | (p25Buffer[12U] << 0);
-                    //uint32_t netId = GET_UINT24(p25Buffer, 16U);
+                    uint32_t sysId = (p25Buffer[11U] << 8) | (p25Buffer[12U] << 0);
+                    uint32_t netId = GET_UINT24(p25Buffer, 16U);
 
                     // log call status
                     if (duid != P25DEF::DUID::TSDU && duid != P25DEF::DUID::PDU) {
@@ -520,8 +520,8 @@ void* threadNetworkPump(void* arg)
                             if (std::find_if(g_p25Status.begin(), g_p25Status.end(), [&](StatusMapPair x) { return x.second.dstId == dstId; }) != g_p25Status.end()) {
                                 g_p25Status.erase(dstId);
 
-                                LogMessage(LOG_NET, "P25, Call End, srcId = %u (%s), dstId = %u (%s), duration = %u",
-                                    srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str(), duration / 1000);
+                                LogMessage(LOG_NET, "P25, Call End, srcId = %u (%s), dstId = %u (%s), sysId = $%03X, netId = $%05X, duration = %u",
+                                    srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str(), sysId, netId, duration / 1000);
                             }
                         }
 
@@ -541,8 +541,8 @@ void* threadNetworkPump(void* arg)
                                 status.dstId = dstId;
                                 g_p25Status[dstId] = status;
 
-                                LogMessage(LOG_NET, "P25, Call Start, srcId = %u (%s), dstId = %u (%s)", 
-                                    srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str());
+                                LogMessage(LOG_NET, "P25, Call Start, srcId = %u (%s), dstId = %u (%s), sysId = $%03X, netId = $%05X", 
+                                    srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str(), sysId, netId);
                             }
                         }
                     }
@@ -585,9 +585,9 @@ void* threadNetworkPump(void* arg)
                                 case P25DEF::TSBKO::IOSP_GRP_VCH:
                                 case P25DEF::TSBKO::IOSP_UU_VCH:
                                 {
-                                    LogMessage(LOG_NET, P25_TSDU_STR ", %s, emerg = %u, encrypt = %u, prio = %u, chNo = %u-%u, srcId = %u (%s), dstId = %u (%s)",
+                                    LogMessage(LOG_NET, P25_TSDU_STR ", %s, emerg = %u, encrypt = %u, prio = %u, chNo = %u-%u, srcId = %u (%s), dstId = %u (%s), sysId = $%03X, netId = $%05X",
                                         tsbk->toString(true).c_str(), tsbk->getEmergency(), tsbk->getEncrypted(), tsbk->getPriority(), tsbk->getGrpVchId(), tsbk->getGrpVchNo(), 
-                                        srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str());
+                                        srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str(), sysId, netId);
 
                                     // generate a net event for this
                                     if (g_netDataEvent != nullptr) {
