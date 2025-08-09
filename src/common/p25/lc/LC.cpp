@@ -508,6 +508,7 @@ bool LC::decodeLC(const uint8_t* rs, bool rawOnly)
     // as the packed RS value)
     if ((m_mfId != MFG_STANDARD) && (m_mfId != MFG_STANDARD_ALT)) {
         //Utils::dump(1U, "P25, LC::decodeLC(), Decoded P25 Non-Standard RS", rs, P25_LDU_LC_FEC_LENGTH_BYTES);
+        // Harris
         if (m_mfId == MFG_HARRIS) {
             // Harris P25 opcodes
             switch (m_lco) {
@@ -614,11 +615,54 @@ void LC::encodeLC(uint8_t* rs)
     ulong64_t rsValue = 0U;
     rs[0U] = m_lco;                                                                 // LCO
 
+    // non-standard P25 vendor opcodes (these are just detected for passthru, and stored
+    // as the packed RS value)
+    if ((m_mfId != MFG_STANDARD) && (m_mfId != MFG_STANDARD_ALT)) {
+        //Utils::dump(1U, "P25, LC::decodeLC(), Decoded P25 Non-Standard RS", rs, P25_LDU_LC_FEC_LENGTH_BYTES);
+        if (m_mfId == MFG_HARRIS) {
+            // Harris P25 opcodes
+            switch (m_lco) {
+            case LCO::HARRIS_USER_ALIAS_PA_ODD:
+            case LCO::HARRIS_USER_ALIAS_PA_EVEN:
+                if (m_userAlias != nullptr) {
+                    // split ulong64_t (8 byte) value into bytes
+                    rs[1U] = m_mfId;                                                // Manufacturer ID
+                    rs[2U] = m_userAlias[0U];
+                    rs[3U] = m_userAlias[1U];
+                    rs[4U] = m_userAlias[2U];
+                    rs[5U] = m_userAlias[3U];
+                    rs[6U] = m_userAlias[4U];
+                    rs[7U] = m_userAlias[5U];
+                    rs[8U] = m_userAlias[6U];
+                }
+                return;
+
+            case LCO::HARRIS_USER_ALIAS_PB_ODD:
+            case LCO::HARRIS_USER_ALIAS_PB_EVEN:
+                if (m_userAlias != nullptr) {
+                    // split ulong64_t (8 byte) value into bytes
+                    rs[1U] = m_mfId;                                                // Manufacturer ID
+                    rs[2U] = m_userAlias[7U];
+                    rs[3U] = m_userAlias[8U];
+                    rs[4U] = m_userAlias[9U];
+                    rs[5U] = m_userAlias[10U];
+                    rs[6U] = m_userAlias[11U];
+                    rs[7U] = m_userAlias[12U];
+                    rs[8U] = m_userAlias[13U];
+                }
+                return;
+
+            default:
+                break;
+            }
+        }
+    }
+
     if ((m_mfId == MFG_STANDARD) || (m_mfId == MFG_STANDARD_ALT)) {
         // standard P25 reference opcodes
         switch (m_lco) {
         case LCO::GROUP:
-            rsValue = m_mfId;
+            rsValue = m_mfId;                                                       // Manufacturer ID
             rsValue = (rsValue << 8) +
                 (m_emergency ? 0x80U : 0x00U) +                                     // Emergency Flag
                 (m_encrypted ? 0x40U : 0x00U) +                                     // Encrypted Flag
@@ -637,7 +681,7 @@ void LC::encodeLC(uint8_t* rs)
             rsValue = (rsValue << 16) + m_dstIdB;                                   // Group B - Talkgroup Address
             break;
         case LCO::PRIVATE:
-            rsValue = m_mfId;
+            rsValue = m_mfId;                                                       // Manufacturer ID
             rsValue = (rsValue << 8) +
                 (m_emergency ? 0x80U : 0x00U) +                                     // Emergency Flag
                 (m_encrypted ? 0x40U : 0x00U) +                                     // Encrypted Flag
@@ -748,6 +792,18 @@ std::string LC::getUserAlias() const
     return alias;
 }
 
+/* Sets the user alias. */
+
+void LC::setUserAlias(std::string alias)
+{
+    if (m_userAlias == nullptr)
+        m_userAlias = new uint8_t[HARRIS_USER_ALIAS_LENGTH_BYTES];
+
+    ::memset(m_userAlias, 0x00U, HARRIS_USER_ALIAS_LENGTH_BYTES);
+    for (uint32_t i = 0; i < HARRIS_USER_ALIAS_LENGTH_BYTES; i++)
+        m_userAlias[i] = alias[i];
+}
+
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------
@@ -810,6 +866,7 @@ void LC::copy(const LC& data)
         }
     }
 
+    // do we have user alias data to copy?
     if (data.m_gotUserAlias && data.m_userAlias != nullptr) {
         delete[] m_userAlias;
 

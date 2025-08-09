@@ -144,8 +144,14 @@ namespace p25
             /** @name User Alias data */
             /**
              * @brief Gets the user alias.
+             * @returns std::string User Alias.
              */
             std::string getUserAlias() const;
+            /**
+             * @brief Sets the user alias.
+             * @param alias User alias.
+             */
+            void setUserAlias(std::string alias);
 
             /** @name Local Site data */
             /**
