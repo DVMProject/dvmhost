@@ -25,6 +25,7 @@ using namespace network;
 //  Constants
 // ---------------------------------------------------------------------------
 
+#define MAX_RETRY_BEFORE_RECONNECT 4U
 #define MAX_SERVER_DIFF 360ULL // maximum difference in time between a server timestamp and local timestamp in milliseconds
 
 // ---------------------------------------------------------------------------
@@ -52,6 +53,7 @@ Network::Network(const std::string& address, uint16_t port, uint16_t localPort, 
     m_tidLookup(nullptr),
     m_salt(nullptr),
     m_retryTimer(1000U, 10U),
+    m_retryCount(0U),
     m_timeoutTimer(1000U, MAX_PEER_PING_TIME),
     m_pktSeq(0U),
     m_loginStreamId(0U),
@@ -184,12 +186,25 @@ void Network::clock(uint32_t ms)
     if (m_status == NET_STAT_WAITING_CONNECT) {
         m_retryTimer.clock(ms);
         if (m_retryTimer.isRunning() && m_retryTimer.hasExpired()) {
+            LogDebugEx(LOG_NET, "Network::clock()", "called in retry, %u", m_retryCount);
             if (m_enabled) {
+                if (m_retryCount > MAX_RETRY_BEFORE_RECONNECT) {
+                    m_retryCount = 0U;
+                    LogError(LOG_NET, "PEER %u connection to the master has timed out, retrying connection, remotePeerId = %u", m_peerId, m_remotePeerId);
+
+                    close();
+                    open();
+
+                    m_retryTimer.start();
+                    return;
+                }
+
                 bool ret = m_socket->open(m_addr.ss_family);
                 if (ret) {
                     ret = writeLogin();
                     if (!ret) {
                         m_retryTimer.start();
+                        m_retryCount++;
                         return;
                     }
 
@@ -199,6 +214,7 @@ void Network::clock(uint32_t ms)
             }
 
             m_retryTimer.start();
+            m_retryCount++;
         }
 
         return;
@@ -975,14 +991,15 @@ bool Network::open()
     if (m_debug)
         LogMessage(LOG_NET, "PEER %u opening network", m_peerId);
 
+    m_status = NET_STAT_WAITING_CONNECT;
+    m_timeoutTimer.start();
+    m_retryTimer.start();
+    m_retryCount = 0U;
+
     if (udp::Socket::lookup(m_address, m_port, m_addr, m_addrLen) != 0) {
         LogMessage(LOG_NET, "!!! Could not lookup the address of the master!");
         return false;
     }
-
-    m_status = NET_STAT_WAITING_CONNECT;
-    m_timeoutTimer.start();
-    m_retryTimer.start();
 
     return true;
 }

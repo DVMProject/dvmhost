@@ -145,7 +145,11 @@ bool Socket::open(const uint32_t af, const std::string& address, const uint16_t 
     if (port > 0U) {
         int reuse = 1;
         if (::setsockopt(m_fd, SOL_SOCKET, SO_REUSEADDR, (char*)& reuse, sizeof(reuse)) == -1) {
-            LogError(LOG_NET, "Cannot set the UDP socket option, err: %d", errno);
+#if defined(_WIN32)
+            LogError(LOG_NET, "Cannot bind the UDP socket option, err: %lu", ::GetLastError());
+#else
+            LogError(LOG_NET, "Cannot set the UDP socket option, err: %d (%s)", errno, strerror(errno));
+#endif // _WIN32
             return false;
         }
 
@@ -205,7 +209,7 @@ ssize_t Socket::read(uint8_t* buffer, uint32_t length, sockaddr_storage& address
 #if defined(_WIN32)
         LogError(LOG_NET, "Error returned from UDP poll, err: %lu", ::GetLastError());
 #else
-        LogError(LOG_NET, "Error returned from UDP poll, err: %d", errno);
+        LogError(LOG_NET, "Error returned from UDP poll, err: %d (%s)", errno, strerror(errno));
 #endif // defined(_WIN32)
         return -1;
     }
@@ -219,7 +223,7 @@ ssize_t Socket::read(uint8_t* buffer, uint32_t length, sockaddr_storage& address
 #if defined(_WIN32)
         LogError(LOG_NET, "Error returned from recvfrom, err: %lu", ::GetLastError());
 #else
-        LogError(LOG_NET, "Error returned from recvfrom, err: %d", errno);
+        LogError(LOG_NET, "Error returned from recvfrom, err: %d (%s)", errno, strerror(errno));
 #endif // defined(_WIN32)
 
         if (len == -1 && errno == ENOTSOCK) {
@@ -365,10 +369,16 @@ bool Socket::write(const uint8_t* buffer, uint32_t length, const sockaddr_storag
 
     ssize_t sent = ::sendto(m_fd, (char*)out.get(), length, 0, (sockaddr*)& address, addrLen);
     if (sent < 0) {
+        if (errno == ENETUNREACH || errno == EHOSTUNREACH) {
+            // if we were not able to send a frame and the network logging is enabled -- disable network logging
+            if (!g_disableNetworkLog)
+                g_disableNetworkLog = true;
+        }
+
 #if defined(_WIN32)
         LogError(LOG_NET, "Error returned from sendto, err: %lu", ::GetLastError());
 #else
-        LogError(LOG_NET, "Error returned from sendto, err: %d", errno);
+        LogError(LOG_NET, "Error returned from sendto, err: %d (%s)", errno, strerror(errno));
 #endif // defined(_WIN32)
 
         if (lenWritten != nullptr) {
@@ -376,6 +386,10 @@ bool Socket::write(const uint8_t* buffer, uint32_t length, const sockaddr_storag
         }
     }
     else {
+        // if we were able to send a frame and the network logging is disabled -- reenable network logging
+        if (g_disableNetworkLog)
+            g_disableNetworkLog = false;
+
         if (sent == ssize_t(length))
             result = true;
 
@@ -553,14 +567,22 @@ bool Socket::write(BufferVector& buffers, ssize_t* lenWritten) noexcept
     }
 
     if (sendmmsg(m_fd, headers, size, 0) < 0) {
-        LogError(LOG_NET, "Error returned from sendmmsg, err: %d", errno);
+#if defined(_WIN32)
+        LogError(LOG_NET, "Error returned from sendmmsg, err: %lu", ::GetLastError());
+#else
+        LogError(LOG_NET, "Error returned from sendmmsg, err: %d (%s)", errno, strerror(errno));
+#endif // _WIN32
         if (lenWritten != nullptr) {
             *lenWritten = -1;
         }
     }
 
     if (sent < 0) {
-        LogError(LOG_NET, "Error returned from sendmmsg, err: %d", errno);
+#if defined(_WIN32)
+        LogError(LOG_NET, "Error returned from sendmmsg, err: %lu", ::GetLastError());
+#else
+        LogError(LOG_NET, "Error returned from sendmmsg, err: %d (%s)", errno, strerror(errno));
+#endif // _WIN32
         if (lenWritten != nullptr) {
             *lenWritten = -1;
         }
@@ -655,7 +677,7 @@ std::string Socket::getLocalAddress()
             err = getnameinfo(ifa->ifa_addr, (family == AF_INET) ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6),
                 host, NI_MAXHOST, NULL, 0, NI_NUMERICHOST);
             if (err != 0) {
-                LogError(LOG_NET, "Cannot retreive system network interfaces, err: %d", errno);
+                LogError(LOG_NET, "Cannot retreive system network interfaces, err: %d (%s)", errno, strerror(errno));
                 break;
             }
 
@@ -800,7 +822,7 @@ bool Socket::initSocket(const int domain, const int type, const int protocol) no
     }
 #else
     if (m_fd < 0) {
-        LogError(LOG_NET, "Cannot create the UDP socket, err: %d", errno);
+        LogError(LOG_NET, "Cannot create the UDP socket, err: %d (%s)", errno, strerror(errno));
         return false;
     }
 #endif // defined(_WIN32)
@@ -825,7 +847,7 @@ bool Socket::bind(const std::string& ipAddr, const uint16_t port) noexcept(false
 #if defined(_WIN32)
         LogError(LOG_NET, "Cannot bind the UDP address, err: %lu", ::GetLastError());
 #else
-        LogError(LOG_NET, "Cannot bind the UDP address, err: %d", errno);
+        LogError(LOG_NET, "Cannot bind the UDP address, err: %d (%s)", errno, strerror(errno));
 #endif // defined(_WIN32)
         retval = false;
     }

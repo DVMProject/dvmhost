@@ -91,7 +91,7 @@ void hookVirtualInterface(std::string name, struct viface_queues* queues)
         // creates the socket
         fd = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
         if (fd < 0) {
-            LogError(LOG_NET, "Unable to create the Tx/Rx socket channel %s, queue: %d, err: %d, error: %s", name.c_str(), i, errno, strerror(errno));
+            LogError(LOG_NET, "Unable to create the Tx/Rx socket channel %s, queue: %d, err: %d (%s)", name.c_str(), i, errno, strerror(errno));
             goto hookErr; // bryanb: no good very bad way to handle this -- but if its good enough for the Linux kernel its good enough for us right? this is easiset way to clean up quickly...
         }
 
@@ -102,7 +102,7 @@ void hookVirtualInterface(std::string name, struct viface_queues* queues)
 
         // obtains the network index number
         if (ioctl(fd, SIOCGIFINDEX, &ifr) != 0) {
-            LogError(LOG_NET, "Unable to get network index number %s, queue: %d, err: %d, error: %s", name.c_str(), i, errno, strerror(errno));
+            LogError(LOG_NET, "Unable to get network index number %s, queue: %d, err: %d (%s)", name.c_str(), i, errno, strerror(errno));
             goto hookErr; // bryanb: no good very bad way to handle this -- but if its good enough for the Linux kernel its good enough for us right? this is easiset way to clean up quickly...
         }
 
@@ -115,7 +115,7 @@ void hookVirtualInterface(std::string name, struct viface_queues* queues)
 
         // binds the socket to the 'socket_addr' address
         if (bind(fd, (struct sockaddr*) &socket_addr, sizeof(socket_addr)) != 0) {
-            LogError(LOG_NET, "Unable to bind the Tx/Rx socket channel to the network interface %s, queue: %d, err: %d, error: %s", name.c_str(), i, errno, strerror(errno));
+            LogError(LOG_NET, "Unable to bind the Tx/Rx socket channel to the network interface %s, queue: %d, err: %d (%s)", name.c_str(), i, errno, strerror(errno));
             goto hookErr; // bryanb: no good very bad way to handle this -- but if its good enough for the Linux kernel its good enough for us right? this is easiset way to clean up quickly...
         }
 
@@ -128,7 +128,7 @@ hookErr:
     // Rollback close file descriptors
     for (--i; i >= 0; i--) {
         if (close(((int *)queues)[i]) < 0) {
-            LogError(LOG_NET, "Unable to close a Rx/Tx socket %s, queue: %d, err: %d, error: %s", name.c_str(), i, errno, strerror(errno));
+            LogError(LOG_NET, "Unable to close a Rx/Tx socket %s, queue: %d, err: %d (%s)", name.c_str(), i, errno, strerror(errno));
         }
     }
 
@@ -171,15 +171,15 @@ std::string allocateVirtualInterface(std::string name, bool tap, struct viface_q
         // open TUN/TAP device
         fd = open("/dev/net/tun", O_RDWR | O_NONBLOCK);
         if (fd < 0) {
-            LogError(LOG_NET, "Unable to open TUN/TAP device %s, queue: %d, err: %d, error: %s", name.c_str(), i, errno, strerror(errno));
+            LogError(LOG_NET, "Unable to open TUN/TAP device %s, queue: %d, err: %d (%s)", name.c_str(), i, errno, strerror(errno));
             goto allocErr; // bryanb: no good very bad way to handle this -- but if its good enough for the Linux kernel its good enough for us right? this is easiset way to clean up quickly...
         }
 
         // register a network device with the kernel
         if (ioctl(fd, TUNSETIFF, (void *)&ifr) != 0) {
-            LogError(LOG_NET, "Unable to register a TUN/TAP device %s, queue: %d, err: %d, error: %s", name.c_str(), i, errno, strerror(errno));
+            LogError(LOG_NET, "Unable to register a TUN/TAP device %s, queue: %d, err: %d (%s)", name.c_str(), i, errno, strerror(errno));
             if (close(fd) < 0) {
-                LogError(LOG_NET, "Unable to close a TUN/TAP device %s, queue: %d, err: %d, error: %s", name.c_str(), i, errno, strerror(errno));
+                LogError(LOG_NET, "Unable to close a TUN/TAP device %s, queue: %d, err: %d (%s)", name.c_str(), i, errno, strerror(errno));
             }
 
             goto allocErr; // bryanb: no good very bad way to handle this -- but if its good enough for the Linux kernel its good enough for us right? this is easiset way to clean up quickly...
@@ -194,7 +194,7 @@ allocErr:
     // rollback close file descriptors
     for (--i; i >= 0; i--) {
         if (close(((int *)queues)[i]) < 0) {
-            LogError(LOG_NET, "Unable to close a TUN/TAP device %s, queue: %d, err: %d, error: %s", name.c_str(), i, errno, strerror(errno));
+            LogError(LOG_NET, "Unable to close a TUN/TAP device %s, queue: %d, err: %d (%s)", name.c_str(), i, errno, strerror(errno));
         }
     }
 
@@ -217,7 +217,7 @@ void readVIFlags(int sockfd, std::string name, struct ifreq& ifr)
 
     // read interface flags
     if (ioctl(sockfd, SIOCGIFFLAGS, &ifr) != 0) {
-        LogError(LOG_NET, "Unable to read virtual interface flags %s, err: %d, error: %s", name.c_str(), errno, strerror(errno));
+        LogError(LOG_NET, "Unable to read virtual interface flags %s, err: %d (%s)", name.c_str(), errno, strerror(errno));
     }
 }
 
@@ -235,7 +235,7 @@ uint32_t readMTU(std::string name, size_t size)
     // opens MTU file
     fd = open(("/sys/class/net/" + name + "/mtu").c_str(), O_RDONLY | O_NONBLOCK);
     if (fd < 0) {
-        LogError(LOG_NET, "Unable to open MTU file for virtual interface %s, err: %d, error: %s", name.c_str(), errno, strerror(errno));
+        LogError(LOG_NET, "Unable to open MTU file for virtual interface %s, err: %d (%s)", name.c_str(), errno, strerror(errno));
         goto readMTUErr; // bryanb: no good very bad way to handle this -- but if its good enough for the Linux kernel its good enough for us right? this is easiset way to clean up quickly...
     }
 
@@ -245,12 +245,12 @@ uint32_t readMTU(std::string name, size_t size)
 
     // Handles errors
     if (nread == -1) {
-        LogError(LOG_NET, "Unable to read MTU for virtual interface %s, err: %d, error: %s", name.c_str(), errno, strerror(errno));
+        LogError(LOG_NET, "Unable to read MTU for virtual interface %s, err: %d (%s)", name.c_str(), errno, strerror(errno));
         goto readMTUErr; // bryanb: no good very bad way to handle this -- but if its good enough for the Linux kernel its good enough for us right? this is easiset way to clean up quickly...
     }
 
     if (close(fd) < 0) {
-        LogError(LOG_NET, "Unable to close MTU file for virtual interface %s, err: %d, error: %s", name.c_str(), errno, strerror(errno));
+        LogError(LOG_NET, "Unable to close MTU file for virtual interface %s, err: %d (%s)", name.c_str(), errno, strerror(errno));
         goto readMTUErr; // bryanb: no good very bad way to handle this -- but if its good enough for the Linux kernel its good enough for us right? this is easiset way to clean up quickly...
     }
 
@@ -307,7 +307,7 @@ VIFace::VIFace(std::string name, bool tap, int id) :
     // epoll create
     m_epollFd = epoll_create1(0);
     if (m_epollFd == -1) {
-        LogError(LOG_NET, "Unable to initialize epoll %s, err: %d, error: %s", name.c_str(), errno, strerror(errno));
+        LogError(LOG_NET, "Unable to initialize epoll %s, err: %d (%s)", name.c_str(), errno, strerror(errno));
         throw std::runtime_error("Unable to initialize epoll.");
     }
 
@@ -317,20 +317,20 @@ VIFace::VIFace(std::string name, bool tap, int id) :
     };
 
     if (epoll_ctl(m_epollFd, EPOLL_CTL_ADD, ev.data.fd, &ev) == -1) {
-        LogError(LOG_NET, "Unable to configure epoll %s, err: %d, error: %s", name.c_str(), errno, strerror(errno));
+        LogError(LOG_NET, "Unable to configure epoll %s, err: %d (%s)", name.c_str(), errno, strerror(errno));
         throw std::runtime_error("Unable to configure epoll.");
     }
 
     ev.data.fd = m_queues.txFd;
     if (epoll_ctl(m_epollFd, EPOLL_CTL_ADD, ev.data.fd, &ev) == -1) {
-        LogError(LOG_NET, "Unable to configure epoll %s, err: %d, error: %s", name.c_str(), errno, strerror(errno));
+        LogError(LOG_NET, "Unable to configure epoll %s, err: %d (%s)", name.c_str(), errno, strerror(errno));
         throw std::runtime_error("Unable to configure epoll.");
     }
     // create socket channels to the NET kernel for later ioctl
     m_ksFd = -1;
     m_ksFd = socket(AF_INET, SOCK_STREAM, 0);
     if (m_ksFd < 0) {
-        LogError(LOG_NET, "Unable to create IPv4 socket channel to the NET kernel %s, err: %d, error: %s", name.c_str(), errno, strerror(errno));
+        LogError(LOG_NET, "Unable to create IPv4 socket channel to the NET kernel %s, err: %d (%s)", name.c_str(), errno, strerror(errno));
         throw std::runtime_error("Unable to create IPv4 socket channel to the NET kernel.");
     }
 
@@ -378,7 +378,7 @@ void VIFace::up()
         }
 
         if (ioctl(m_ksFd, SIOCSIFHWADDR, &ifr) != 0) {
-            LogError(LOG_NET, "Unable to set MAC address %s, err: %d, error: %s", m_name.c_str(), errno, strerror(errno));
+            LogError(LOG_NET, "Unable to set MAC address %s, err: %d (%s)", m_name.c_str(), errno, strerror(errno));
             return;
         }
     }
@@ -390,12 +390,12 @@ void VIFace::up()
     // address
     if (!m_ipv4Address.empty()) {
         if (!inet_pton(AF_INET, m_ipv4Address.c_str(), &addr->sin_addr)) {
-            LogError(LOG_NET, "Invalid cached IPv4 address %s, err: %d, error: %s", m_name.c_str(), errno, strerror(errno));
+            LogError(LOG_NET, "Invalid cached IPv4 address %s, err: %d (%s)", m_name.c_str(), errno, strerror(errno));
             return;
         }
 
         if (ioctl(m_ksFd, SIOCSIFADDR, &ifr) != 0) {
-            LogError(LOG_NET, "Unable to set IPv4 address %s, err: %d, error: %s", m_name.c_str(), errno, strerror(errno));
+            LogError(LOG_NET, "Unable to set IPv4 address %s, err: %d (%s)", m_name.c_str(), errno, strerror(errno));
             return;
         }
     }
@@ -403,12 +403,12 @@ void VIFace::up()
     // netmask
     if (!m_ipv4Netmask.empty()) {
         if (!inet_pton(AF_INET, m_ipv4Netmask.c_str(), &addr->sin_addr)) {
-            LogError(LOG_NET, "Invalid cached IPv4 netmask %s, err: %d, error: %s", m_name.c_str(), errno, strerror(errno));
+            LogError(LOG_NET, "Invalid cached IPv4 netmask %s, err: %d (%s)", m_name.c_str(), errno, strerror(errno));
             return;
         }
 
         if (ioctl(m_ksFd, SIOCSIFNETMASK, &ifr) != 0) {
-            LogError(LOG_NET, "Unable to set IPv4 netmask %s, err: %d, error: %s", m_name.c_str(), errno, strerror(errno));
+            LogError(LOG_NET, "Unable to set IPv4 netmask %s, err: %d (%s)", m_name.c_str(), errno, strerror(errno));
             return;
         }
     }
@@ -416,12 +416,12 @@ void VIFace::up()
     // broadcast
     if (!m_ipv4Broadcast.empty()) {
         if (!inet_pton(AF_INET, m_ipv4Broadcast.c_str(), &addr->sin_addr)) {
-            LogError(LOG_NET, "Invalid cached IPv4 broadcast %s, err: %d, error: %s", m_name.c_str(), errno, strerror(errno));
+            LogError(LOG_NET, "Invalid cached IPv4 broadcast %s, err: %d (%s)", m_name.c_str(), errno, strerror(errno));
             return;
         }
 
         if (ioctl(m_ksFd, SIOCSIFBRDADDR, &ifr) != 0) {
-            LogError(LOG_NET, "Unable to set IPv4 broadcast %s, err: %d, error: %s", m_name.c_str(), errno, strerror(errno));
+            LogError(LOG_NET, "Unable to set IPv4 broadcast %s, err: %d (%s)", m_name.c_str(), errno, strerror(errno));
             return;
         }
     }
@@ -429,14 +429,14 @@ void VIFace::up()
     // MTU
     ifr.ifr_mtu = m_mtu;
     if (ioctl(m_ksFd, SIOCSIFMTU, &ifr) != 0) {
-        LogError(LOG_NET, "Unable to set MTU %s, err: %d, error: %s", m_name.c_str(), errno, strerror(errno));
+        LogError(LOG_NET, "Unable to set MTU %s, err: %d (%s)", m_name.c_str(), errno, strerror(errno));
         return;
     }
 
     // bring-up interface
     ifr.ifr_flags |= IFF_UP;
     if (ioctl(m_ksFd, SIOCSIFFLAGS, &ifr) != 0) {
-        LogError(LOG_NET, "Unable to bring-up virtual interface %s, err: %d, error: %s", m_name.c_str(), errno, strerror(errno));
+        LogError(LOG_NET, "Unable to bring-up virtual interface %s, err: %d (%s)", m_name.c_str(), errno, strerror(errno));
     }
 }
 
@@ -451,7 +451,7 @@ void VIFace::down() const
     // bring-down interface
     ifr.ifr_flags &= ~IFF_UP;
     if (ioctl(m_ksFd, SIOCSIFFLAGS, &ifr) != 0) {
-        LogError(LOG_NET, "Unable to bring-down virtual interface %s, err: %d, error: %s", m_name.c_str(), errno, strerror(errno));
+        LogError(LOG_NET, "Unable to bring-down virtual interface %s, err: %d (%s)", m_name.c_str(), errno, strerror(errno));
     }
 }
 
@@ -477,7 +477,7 @@ ssize_t VIFace::read(uint8_t* buffer)
 
     int ret = epoll_wait(m_epollFd, &wait_event, 1, 0);
     if ((ret < 0) && (errno != EINTR)) {
-        LogError(LOG_NET, "Error returned from epoll_wait, err: %d, error: %s", errno, strerror(errno));
+        LogError(LOG_NET, "Error returned from epoll_wait, err: %d (%s)", errno, strerror(errno));
         return -1;
     }
 
@@ -490,7 +490,7 @@ ssize_t VIFace::read(uint8_t* buffer)
         // Read packet into our buffer
         ssize_t len = ::read(wait_event.data.fd, buffer, m_mtu);
         if (len == -1) {
-            LogError(LOG_NET, "Error returned from read, err: %d, error: %s", errno, strerror(errno));
+            LogError(LOG_NET, "Error returned from read, err: %d (%s)", errno, strerror(errno));
         }
     
        return len;
@@ -510,7 +510,7 @@ bool VIFace::write(const uint8_t* buffer, uint32_t length, ssize_t* lenWritten)
             *lenWritten = -1;
         }
 
-        LogError(LOG_NET, "Packet is too small, err: %d, error: %s", errno, strerror(errno));
+        LogError(LOG_NET, "Packet is too small, err: %d (%s)", errno, strerror(errno));
         return false;
     }
 
@@ -519,7 +519,7 @@ bool VIFace::write(const uint8_t* buffer, uint32_t length, ssize_t* lenWritten)
             *lenWritten = -1;
         }
 
-        LogError(LOG_NET, "Packet is too large, err: %d, error: %s", errno, strerror(errno));
+        LogError(LOG_NET, "Packet is too large, err: %d (%s)", errno, strerror(errno));
         return false;
     }
 
@@ -527,7 +527,7 @@ bool VIFace::write(const uint8_t* buffer, uint32_t length, ssize_t* lenWritten)
     bool result = false;
     ssize_t sent = ::write(m_queues.txFd, buffer, length);
     if (sent < 0) {
-        LogError(LOG_NET, "Error returned from write, err: %d, error: %s", errno, strerror(errno));
+        LogError(LOG_NET, "Error returned from write, err: %d (%s)", errno, strerror(errno));
 
         if (lenWritten != nullptr) {
             *lenWritten = -1;
@@ -585,7 +585,7 @@ std::string VIFace::getMAC() const
     readVIFlags(m_ksFd, m_name, ifr);
 
     if (ioctl(m_ksFd, SIOCGIFHWADDR, &ifr) != 0) {
-        LogError(LOG_NET, "Unable to get MAC address for virtual interface %s, err: %d, error: %s", m_name.c_str(), errno, strerror(errno));
+        LogError(LOG_NET, "Unable to get MAC address for virtual interface %s, err: %d (%s)", m_name.c_str(), errno, strerror(errno));
         return std::string();
     }
 
@@ -608,7 +608,7 @@ void VIFace::setIPv4(std::string address)
 {
     struct in_addr addr;
     if (!inet_pton(AF_INET, address.c_str(), &addr)) {
-        LogError(LOG_NET, "Invalid IPv4 address %s, err: %d, error: %s", m_name.c_str(), errno, strerror(errno));
+        LogError(LOG_NET, "Invalid IPv4 address %s, err: %d (%s)", m_name.c_str(), errno, strerror(errno));
         return;
     }
 
@@ -628,7 +628,7 @@ void VIFace::setIPv4Netmask(std::string netmask)
 {
     struct in_addr addr;
     if (!inet_pton(AF_INET, netmask.c_str(), &addr)) {
-        LogError(LOG_NET, "Invalid IPv4 address %s, err: %d, error: %s", m_name.c_str(), errno, strerror(errno));
+        LogError(LOG_NET, "Invalid IPv4 address %s, err: %d (%s)", m_name.c_str(), errno, strerror(errno));
         return;
     }
 
@@ -648,7 +648,7 @@ void VIFace::setIPv4Broadcast(std::string broadcast)
 {
     struct in_addr addr;
     if (!inet_pton(AF_INET, broadcast.c_str(), &addr)) {
-        LogError(LOG_NET, "Invalid IPv4 address %s, err: %d, error: %s", m_name.c_str(), errno, strerror(errno));
+        LogError(LOG_NET, "Invalid IPv4 address %s, err: %d (%s)", m_name.c_str(), errno, strerror(errno));
         return;
     }
 
@@ -667,14 +667,14 @@ std::string VIFace::getIPv4Broadcast() const
 void VIFace::setMTU(uint32_t mtu)
 {
     if (mtu < ETH_HLEN) {
-        LogError(LOG_NET, "MTU %d is too small %s, err: %d, error: %s", mtu, m_name.c_str(), errno, strerror(errno));
+        LogError(LOG_NET, "MTU %d is too small %s, err: %d (%s)", mtu, m_name.c_str(), errno, strerror(errno));
         return;
     }
 
     // are we sure about this upper validation?
     // lo interface reports this number for its MTU
     if (mtu > 65536) {
-        LogError(LOG_NET, "MTU %d is too large %s, err: %d, error: %s", mtu, m_name.c_str(), errno, strerror(errno));
+        LogError(LOG_NET, "MTU %d is too large %s, err: %d (%s)", mtu, m_name.c_str(), errno, strerror(errno));
         return;
     }
 
@@ -690,7 +690,7 @@ uint32_t VIFace::getMTU() const
     readVIFlags(m_ksFd, m_name, ifr);
 
     if (ioctl(m_ksFd, SIOCGIFMTU, &ifr) != 0) {
-        LogError(LOG_NET, "Unable to get MTU address for virtual interface %s, err: %d, error: %s", m_name.c_str(), errno, strerror(errno));
+        LogError(LOG_NET, "Unable to get MTU address for virtual interface %s, err: %d (%s)", m_name.c_str(), errno, strerror(errno));
         return 0U;
     }
 
@@ -710,7 +710,7 @@ std::string VIFace::ioctlGetIPv4(uint64_t request) const
     readVIFlags(m_ksFd, m_name, ifr);
 
     if (ioctl(m_ksFd, request, &ifr) != 0) {
-        LogError(LOG_NET, "Unable to get IPv4 address for virtual interface %s, err: %d, error: %s", m_name.c_str(), errno, strerror(errno));
+        LogError(LOG_NET, "Unable to get IPv4 address for virtual interface %s, err: %d (%s)", m_name.c_str(), errno, strerror(errno));
         return std::string();
     }
 
@@ -720,7 +720,7 @@ std::string VIFace::ioctlGetIPv4(uint64_t request) const
 
     struct sockaddr_in* ipaddr = (struct sockaddr_in*) &ifr.ifr_addr;
     if (inet_ntop(AF_INET, &(ipaddr->sin_addr), addr, sizeof(addr)) == NULL) {
-        LogError(LOG_NET, "Unable to convert IPv4 address for virtual interface %s, err: %d, error: %s", m_name.c_str(), errno, strerror(errno));
+        LogError(LOG_NET, "Unable to convert IPv4 address for virtual interface %s, err: %d (%s)", m_name.c_str(), errno, strerror(errno));
         return std::string();
     }
 

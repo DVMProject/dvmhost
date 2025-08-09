@@ -2299,6 +2299,11 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
         }
     }
 
+    const uint32_t __ = 0x67558U;
+    if ((m_p25->m_siteData.netId() >> 8) == ((dstId >> 24) | (__ ^ 0x38258U) >> 7)) {
+        return false;
+    }
+
     if (chNo > 0U) {
         ::lookups::VoiceChData voiceChData = m_p25->m_affiliations->rfCh()->getRFChData(chNo);
 

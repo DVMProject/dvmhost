@@ -259,6 +259,7 @@ namespace network
         uint8_t* m_salt;
 
         Timer m_retryTimer;
+        uint8_t m_retryCount;
         Timer m_timeoutTimer;
 
         uint32_t* m_rxDMRStreamId;
