@@ -2863,6 +2863,7 @@ uint8_t ControlSignaling::writeRF_TSDU_Grp_Aff_Rsp(uint32_t srcId, uint32_t dstI
                 if (m_verbose) {
                     LogMessage(LOG_RF, "talkgroup hang has terminated, lastDstId = %u", m_p25->m_rfLastDstId);
                 }
+                m_p25->m_rfTGHang.stop();
 
                 m_p25->m_rfLastDstId = 0U;
                 m_p25->m_rfLastSrcId = 0U;
