@@ -2855,6 +2855,19 @@ uint8_t ControlSignaling::writeRF_TSDU_Grp_Aff_Rsp(uint32_t srcId, uint32_t dstI
 
         if (m_p25->m_network != nullptr)
             m_p25->m_network->announceGroupAffiliation(srcId, dstId);
+
+        // conventional registration or DVRS support?
+        if (m_p25->m_enableControl && !m_p25->m_dedicatedControl) {
+            // is the RF talkgroup hang timer running?
+            if (m_p25->m_rfTGHang.isRunning() && !m_p25->m_rfTGHang.hasExpired()) {
+                if (m_verbose) {
+                    LogMessage(LOG_RF, "talkgroup hang has terminated, lastDstId = %u", m_p25->m_rfLastDstId);
+                }
+
+                m_p25->m_rfLastDstId = 0U;
+                m_p25->m_rfLastSrcId = 0U;
+            }
+        }
     }
 
     writeRF_TSDU_SBF_Imm(iosp.get(), noNet);
