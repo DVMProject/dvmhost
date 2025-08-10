@@ -268,6 +268,8 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                         if (switchOver) {
                             status.streamId = streamId;
                             status.srcId = srcId;
+                            LogMessage(LOG_NET, "P25, Call Source Switched, peer = %u, ssrc = %u, sysId = $%03X, netId = $%05X, srcId = %u, dstId = %u, streamId = %u, rxPeer = %u, rxSrcId = %u, rxDstId = %u, rxStreamId = %u, external = %u",
+                                peerId, ssrc, sysId, netId, srcId, dstId, streamId, status.peerId, status.srcId, status.dstId, status.streamId, external);
                         }
 
                         if (status.srcId != 0U && status.srcId != srcId) {

@@ -177,6 +177,8 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                         if (switchOver) {
                             status.streamId = streamId;
                             status.srcId = srcId;
+                            LogMessage(LOG_NET, "NXDN, Call Source Switched, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, rxPeer = %u, rxSrcId = %u, rxDstId = %u, rxStreamId = %u, external = %u",
+                                peerId, ssrc, srcId, dstId, streamId, status.peerId, status.srcId, status.dstId, status.streamId, external);
                         }
 
                         if (status.srcId != 0U && status.srcId != srcId) {
