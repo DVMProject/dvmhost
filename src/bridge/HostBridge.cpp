@@ -1722,7 +1722,7 @@ void HostBridge::encodeDMRAudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32_
             uint8_t controlByte = 0U;
             if (m_grantDemand)
                 controlByte = network::NET_CTRL_GRANT_DEMAND;                       // Grant Demand Flag
-            controlByte = network::NET_CTRL_SWITCH_OVER;
+            controlByte |= network::NET_CTRL_SWITCH_OVER;
             dmrData.setControl(controlByte);
 
             dmrData.setN(m_dmrN);
