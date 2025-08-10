@@ -738,7 +738,7 @@ void ModemV24::convertToAirV24(const uint8_t *data, uint32_t length)
             ::memset(m_rxCall->LDULC, 0x00U, P25DEF::P25_LDU_LC_FEC_LENGTH_BYTES);
             ::memcpy(m_rxCall->netLDU1 + 10U, svf.fullRateVoice->imbeData, RAW_IMBE_LENGTH_BYTES);
 
-            m_rxCall->bitErrs = 0U;
+            m_rxCall->errors = 0U;
 
             // process start of stream ICW for the voice call
             uint8_t* icw = svf.startOfStream->getICW();
@@ -776,8 +776,9 @@ void ModemV24::convertToAirV24(const uint8_t *data, uint32_t length)
             }
 
             if (svf.fullRateVoice->getTotalErrors() > 0U) {
-                LogWarning(LOG_MODEM, "V.24/DFSI traffic has %u errors in frameType = $%02X", svf.fullRateVoice->getTotalErrors(), svf.fullRateVoice->getFrameType());
-                m_rxCall->bitErrs += svf.fullRateVoice->getTotalErrors();
+                if (m_debug)
+                    ::LogDebugEx(LOG_MODEM, "ModemV24::convertToAirV24()", "V.24/DFSI traffic has %u errors in frameType = $%02X", svf.fullRateVoice->getTotalErrors(), svf.fullRateVoice->getFrameType());
+                m_rxCall->errors += svf.fullRateVoice->getTotalErrors();
             }
 
             m_rxCall->n++;
@@ -789,7 +790,7 @@ void ModemV24::convertToAirV24(const uint8_t *data, uint32_t length)
             ::memset(m_rxCall->LDULC, 0x00U, P25DEF::P25_LDU_LC_FEC_LENGTH_BYTES);
             ::memcpy(m_rxCall->netLDU2 + 10U, svf.fullRateVoice->imbeData, RAW_IMBE_LENGTH_BYTES);
 
-            m_rxCall->bitErrs = 0U;
+            m_rxCall->errors = 0U;
 
             // process start of stream ICW for the voice call
             uint8_t* icw = svf.startOfStream->getICW();
@@ -827,8 +828,9 @@ void ModemV24::convertToAirV24(const uint8_t *data, uint32_t length)
             }
 
             if (svf.fullRateVoice->getTotalErrors() > 0U) {
-                LogWarning(LOG_MODEM, "V.24/DFSI traffic has %u errors in frameType = $%02X", svf.fullRateVoice->getTotalErrors(), svf.fullRateVoice->getFrameType());
-                m_rxCall->bitErrs += svf.fullRateVoice->getTotalErrors();
+                if (m_debug)
+                    ::LogDebugEx(LOG_MODEM, "ModemV24::convertToAirV24()", "V.24/DFSI traffic has %u errors in frameType = $%02X", svf.fullRateVoice->getTotalErrors(), svf.fullRateVoice->getFrameType());
+                m_rxCall->errors += svf.fullRateVoice->getTotalErrors();
             }
 
             m_rxCall->n++;
@@ -914,8 +916,9 @@ void ModemV24::convertToAirV24(const uint8_t *data, uint32_t length)
             }
 
             if (voice.getTotalErrors() > 0U) {
-                LogWarning(LOG_MODEM, "V.24/DFSI traffic has %u errors in frameType = $%02X", voice.getTotalErrors(), voice.getFrameType());
-                m_rxCall->bitErrs += voice.getTotalErrors();
+                if (m_debug)
+                    ::LogDebugEx(LOG_MODEM, "ModemV24::convertToAirV24()", "V.24/DFSI traffic has %u errors in frameType = $%02X", voice.getTotalErrors(), voice.getFrameType());
+                m_rxCall->errors += voice.getTotalErrors();
             }
 
             switch (frameType) {
@@ -1152,9 +1155,9 @@ void ModemV24::convertToAirV24(const uint8_t *data, uint32_t length)
             Utils::dump(2U, "Modem, V.24 LDU1 RS excepted with input data", m_rxCall->LDULC, P25_LDU_LC_FEC_LENGTH_BYTES);
         }
 
-        if (m_rxCall->bitErrs > 0U) {
-            LogWarning(LOG_MODEM, P25_DFSI_LDU1_STR ", V.24, bitErrs = %u", m_rxCall->bitErrs);
-            m_rxCall->bitErrs = 0U;
+        if (m_rxCall->errors > 0U) {
+            LogWarning(LOG_MODEM, P25_DFSI_LDU1_STR ", V.24, errs = %u/1233 (%.1f%%)", m_rxCall->errors, float(m_rxCall->errors) / 12.33F);
+            m_rxCall->errors = 0U;
         }
 
         lc::LC lc = lc::LC();
@@ -1249,9 +1252,9 @@ void ModemV24::convertToAirV24(const uint8_t *data, uint32_t length)
             Utils::dump(2U, "Modem, V.24 LDU2 RS excepted with input data", m_rxCall->LDULC, P25_LDU_LC_FEC_LENGTH_BYTES);
         }
 
-        if (m_rxCall->bitErrs > 0U) {
-            LogWarning(LOG_MODEM, P25_DFSI_LDU2_STR ", V.24, bitErrs = %u", m_rxCall->bitErrs);
-            m_rxCall->bitErrs = 0U;
+        if (m_rxCall->errors > 0U) {
+            LogWarning(LOG_MODEM, P25_DFSI_LDU2_STR ", V.24, errs = %u/1233 (%.1f%%)", m_rxCall->errors, float(m_rxCall->errors) / 12.33F);
+            m_rxCall->errors = 0U;
         }
 
         lc::LC lc = lc::LC();
@@ -1500,8 +1503,9 @@ void ModemV24::convertToAirTIA(const uint8_t *data, uint32_t length)
             }
 
             if (voice.getTotalErrors() > 0U) {
-                LogWarning(LOG_MODEM, "TIA/DFSI traffic has %u errors in frameType = $%02X", voice.getTotalErrors(), voice.getFrameType());
-                m_rxCall->bitErrs += voice.getTotalErrors();
+                if (m_debug)
+                    ::LogDebugEx(LOG_MODEM, "ModemV24::convertToAirTIA()", "TIA/DFSI traffic has %u errors in frameType = $%02X", voice.getTotalErrors(), voice.getFrameType());
+                m_rxCall->errors += voice.getTotalErrors();
             }
 
             dataOffs += voice.getLength();
@@ -1762,9 +1766,9 @@ void ModemV24::convertToAirTIA(const uint8_t *data, uint32_t length)
             Utils::dump(2U, "Modem, TIA LDU1, RS excepted with input data", m_rxCall->LDULC, P25_LDU_LC_FEC_LENGTH_BYTES);
         }
 
-        if (m_rxCall->bitErrs > 0U) {
-            LogWarning(LOG_MODEM, P25_DFSI_LDU1_STR ", TIA, bitErrs = %u", m_rxCall->bitErrs);
-            m_rxCall->bitErrs = 0U;
+        if (m_rxCall->errors > 0U) {
+            LogWarning(LOG_MODEM, P25_DFSI_LDU1_STR ", TIA, errs = %u/1233 (%.1f%%)", m_rxCall->errors, float(m_rxCall->errors) / 12.33F);
+            m_rxCall->errors = 0U;
         }
 
         lc::LC lc = lc::LC();
@@ -1859,9 +1863,9 @@ void ModemV24::convertToAirTIA(const uint8_t *data, uint32_t length)
             Utils::dump(2U, "Modem, TIA LDU2, RS excepted with input data", m_rxCall->LDULC, P25_LDU_LC_FEC_LENGTH_BYTES);
         }
 
-        if (m_rxCall->bitErrs > 0U) {
-            LogWarning(LOG_MODEM, P25_DFSI_LDU2_STR ", TIA, bitErrs = %u", m_rxCall->bitErrs);
-            m_rxCall->bitErrs = 0U;
+        if (m_rxCall->errors > 0U) {
+            LogWarning(LOG_MODEM, P25_DFSI_LDU2_STR ", TIA, errs = %u/1233 (%.1f%%)", m_rxCall->errors, float(m_rxCall->errors) / 12.33F);
+            m_rxCall->errors = 0U;
         }
 
         lc::LC lc = lc::LC();
