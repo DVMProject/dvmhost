@@ -135,6 +135,19 @@ namespace network
         NET_CONN_NAK_INVALID = 0xFFFF               //! Invalid
     };
 
+    /**
+     * @brief Network Control Enumerations
+     * @note These values are used typically for terminators to specify specific DVM in-band control operations.
+     * @ingroup network_core
+     */
+    enum CONTROL_BYTE {
+        NET_CTRL_GRANT_DEMAND = 0x80U,              //! Grant Demand
+        NET_CTRL_GRANT_DENIAL = 0x40U,              //! Grant Denial
+        NET_CTRL_SWITCH_OVER = 0x20U,               //! Call Source RID Switch Over
+        NET_CTRL_GRANT_ENCRYPT = 0x08U,             //! Grant Encrypt
+        NET_CTRL_U2U = 0x01U,                       //! Unit-to-Unit
+    };
+
     // ---------------------------------------------------------------------------
     //  Class Declaration
     // ---------------------------------------------------------------------------

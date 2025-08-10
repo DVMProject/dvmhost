@@ -1395,10 +1395,10 @@ void Control::processNetwork()
         return;
     }
 
-    bool grantDemand = (buffer[14U] & 0x80U) == 0x80U;
-    bool grantDenial = (buffer[14U] & 0x40U) == 0x40U;
-    bool grantEncrypt = (buffer[14U] & 0x08U) == 0x08U;
-    bool unitToUnit = (buffer[14U] & 0x01U) == 0x01U;
+    bool grantDemand = (buffer[14U] & network::NET_CTRL_GRANT_DEMAND) == network::NET_CTRL_GRANT_DEMAND;
+    bool grantDenial = (buffer[14U] & network::NET_CTRL_GRANT_DENIAL) == network::NET_CTRL_GRANT_DENIAL;
+    bool grantEncrypt = (buffer[14U] & network::NET_CTRL_GRANT_ENCRYPT) == network::NET_CTRL_GRANT_ENCRYPT;
+    bool unitToUnit = (buffer[14U] & network::NET_CTRL_U2U) == network::NET_CTRL_U2U;
 
     // process network message header
     DUID::E duid = (DUID::E)buffer[22U];

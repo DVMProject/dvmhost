@@ -257,7 +257,7 @@ bool Data::process(uint8_t* data, uint32_t len)
 
         uint8_t controlByte = 0U;
         if (m_slot->m_convNetGrantDemand)
-            controlByte |= 0x80U;                                            // Grant Demand Flag
+            controlByte |= network::NET_CTRL_GRANT_DEMAND;                          // Grant Demand Flag
 
         m_slot->writeNetwork(data, DataType::DATA_HEADER, controlByte);
 

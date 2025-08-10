@@ -410,11 +410,11 @@ bool Voice::process(uint8_t* data, uint32_t len)
             // send network grant demand TDU
             if (m_p25->m_network != nullptr) {
                 if (!m_p25->m_dedicatedControl && m_p25->m_convNetGrantDemand) {
-                    uint8_t controlByte = 0x80U;                                            // Grant Demand Flag
+                    uint8_t controlByte = network::NET_CTRL_GRANT_DEMAND;                   // Grant Demand Flag
                     if (encrypted)
-                        controlByte |= 0x08U;                                               // Grant Encrypt Flag
+                        controlByte |= network::NET_CTRL_GRANT_ENCRYPT;                     // Grant Encrypt Flag
                     if (!group)
-                        controlByte |= 0x01U;                                               // Unit-to-unit Flag
+                        controlByte |= network::NET_CTRL_U2U;                               // Unit-to-unit Flag
 
                     LogMessage(LOG_RF, P25_HDU_STR " remote grant demand, srcId = %u, dstId = %u", srcId, dstId);
                     m_p25->m_network->writeP25TDU(lc, m_rfLSD, controlByte);

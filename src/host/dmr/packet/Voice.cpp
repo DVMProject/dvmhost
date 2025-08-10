@@ -239,7 +239,9 @@ bool Voice::process(uint8_t* data, uint32_t len)
 
             uint8_t controlByte = 0U;
             if (m_slot->m_convNetGrantDemand)
-                controlByte |= 0x80U;                                            // Grant Demand Flag
+                controlByte |= network::NET_CTRL_GRANT_DEMAND;                      // Grant Demand Flag
+            if (flco == FLCO::PRIVATE)
+                controlByte |= network::NET_CTRL_U2U;                               // Unit-to-Unit Flag
 
             m_slot->writeNetwork(data, DataType::VOICE_LC_HEADER, controlByte);
 
@@ -623,7 +625,9 @@ bool Voice::process(uint8_t* data, uint32_t len)
 
                 uint8_t controlByte = 0U;
                 if (m_slot->m_convNetGrantDemand)
-                    controlByte |= 0x80U;                                            // Grant Demand Flag
+                    controlByte |= network::NET_CTRL_GRANT_DEMAND;                  // Grant Demand Flag
+                if (flco == FLCO::PRIVATE)
+                    controlByte |= network::NET_CTRL_U2U;                           // Unit-to-Unit Flag
 
                 m_slot->writeNetwork(start, DataType::VOICE_LC_HEADER, controlByte);
 

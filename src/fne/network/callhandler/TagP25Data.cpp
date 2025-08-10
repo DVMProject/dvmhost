@@ -511,7 +511,7 @@ void TagP25Data::playbackParrot()
                 // create empty LSD
                 data::LowSpeedData lsd = data::LowSpeedData();
 
-                uint8_t controlByte = 0x80U;
+                uint8_t controlByte = network::NET_CTRL_GRANT_DEMAND;
 
                 // send grant demand
                 uint32_t messageLength = 0U;

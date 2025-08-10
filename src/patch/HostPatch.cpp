@@ -875,9 +875,9 @@ void HostPatch::processP25Network(uint8_t* buffer, uint32_t length)
     if (m_digiMode != TX_MODE_P25)
         return;
 
-    bool grantDemand = (buffer[14U] & 0x80U) == 0x80U;
-    bool grantDenial = (buffer[14U] & 0x40U) == 0x40U;
-    bool unitToUnit = (buffer[14U] & 0x01U) == 0x01U;
+    bool grantDemand = (buffer[14U] & network::NET_CTRL_GRANT_DEMAND) == network::NET_CTRL_GRANT_DEMAND;
+    bool grantDenial = (buffer[14U] & network::NET_CTRL_GRANT_DENIAL) == network::NET_CTRL_GRANT_DENIAL;
+    bool unitToUnit = (buffer[14U] & network::NET_CTRL_U2U) == network::NET_CTRL_U2U;
 
     // process network message header
     DUID::E duid = (DUID::E)buffer[22U];
@@ -1015,7 +1015,9 @@ void HostPatch::processP25Network(uint8_t* buffer, uint32_t length)
 
                 p25::data::LowSpeedData lsd = p25::data::LowSpeedData();
 
-                uint8_t controlByte = 0x80U;
+                uint8_t controlByte = network::NET_CTRL_GRANT_DEMAND;               // Grant Demand Flag
+                if (m_callAlgoId != ALGO_UNENCRYPT)
+                    controlByte |= network::NET_CTRL_GRANT_ENCRYPT;                 // Grant Encrypt Flag
                 m_network->writeP25TDU(lc, lsd, controlByte);
             }
         }
@@ -1468,7 +1470,7 @@ void HostPatch::writeNet_LDU1(bool toFNE)
 
                 p25::data::LowSpeedData lsd = p25::data::LowSpeedData();
 
-                uint8_t controlByte = 0x80U;
+                uint8_t controlByte = network::NET_CTRL_GRANT_DEMAND;               // Grant Demand Flag
                 m_network->writeP25TDU(lc, lsd, controlByte);
             }
         }

@@ -446,8 +446,8 @@ void Slot::processNetwork(const data::NetData& dmrData)
         case DataType::VOICE_LC_HEADER:
         case DataType::DATA_HEADER:
             {
-                bool grantDemand = (dmrData.getControl() & 0x80U) == 0x80U;
-                bool unitToUnit = (dmrData.getControl() & 0x01U) == 0x01U;
+                bool grantDemand = (dmrData.getControl() & network::NET_CTRL_GRANT_DEMAND) == network::NET_CTRL_GRANT_DEMAND;
+                bool unitToUnit = (dmrData.getControl() & network::NET_CTRL_U2U) == network::NET_CTRL_U2U;
                 
                 if (grantDemand) {
                     if (m_disableNetworkGrant) {
