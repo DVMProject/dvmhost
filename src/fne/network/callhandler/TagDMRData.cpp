@@ -213,6 +213,8 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                 return false;
             }
 
+            bool switchOver = (data[14U] & network::NET_CTRL_SWITCH_OVER) == network::NET_CTRL_SWITCH_OVER;
+
             auto it = std::find_if(m_status.begin(), m_status.end(), [&](StatusMapPair x) {
                 if (x.second.dstId == dstId && x.second.slotNo == slotNo) {
                     if (x.second.activeCall)
@@ -223,6 +225,13 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
             if (it != m_status.end()) {
                 RxStatus status = it->second;
                 if (streamId != status.streamId) {
+                    // perform TG switch over -- this can happen in special conditions where a TG may rapidly switch
+                    // from one source to another (primarily from bridge resources)
+                    if (switchOver && status.slotNo == slotNo) {
+                        status.streamId = streamId;
+                        status.srcId = srcId;
+                    }
+
                     if (status.srcId != 0U && status.srcId != srcId) {
                         uint64_t lastPktDuration = hrc::diff(hrc::now(), status.lastPacket);
                         if ((lastPktDuration / 1000) > CALL_COLL_TIMEOUT) {

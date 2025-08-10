@@ -1718,11 +1718,13 @@ void HostBridge::encodeDMRAudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32_
             dmrData.setSrcId(srcId);
             dmrData.setDstId(dstId);
             dmrData.setFLCO(FLCO::GROUP);
-            if (m_grantDemand) {
-                dmrData.setControl(0x80U); // DMR remote grant demand flag
-            } else {
-                dmrData.setControl(0U);
-            }
+
+            uint8_t controlByte = 0U;
+            if (m_grantDemand)
+                controlByte = network::NET_CTRL_GRANT_DEMAND;                       // Grant Demand Flag
+            controlByte = network::NET_CTRL_SWITCH_OVER;
+            dmrData.setControl(controlByte);
+
             dmrData.setN(m_dmrN);
             dmrData.setSeqNo(m_dmrSeqNo);
             dmrData.setBER(0U);
@@ -2483,17 +2485,19 @@ void HostBridge::encodeP25AudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32_
 
     LowSpeedData lsd = LowSpeedData();
 
+    uint8_t controlByte = network::NET_CTRL_SWITCH_OVER;
+
     // send P25 LDU1
     if (m_p25N == 8U) {
         LogMessage(LOG_HOST, P25_LDU1_STR " audio, srcId = %u, dstId = %u", srcId, dstId);
-        m_network->writeP25LDU1(lc, lsd, m_netLDU1, FrameType::HDU_VALID);
+        m_network->writeP25LDU1(lc, lsd, m_netLDU1, FrameType::HDU_VALID, controlByte);
         m_txStreamId = m_network->getP25StreamId();
     }
 
     // send P25 LDU2
     if (m_p25N == 17U) {
         LogMessage(LOG_HOST, P25_LDU2_STR " audio, algo = $%02X, kid = $%04X", m_tekAlgoId, m_tekKeyId);
-        m_network->writeP25LDU2(lc, lsd, m_netLDU2);
+        m_network->writeP25LDU2(lc, lsd, m_netLDU2, controlByte);
     }
 
     m_p25SeqNo++;
@@ -3268,6 +3272,7 @@ void* HostBridge::threadUDPAudioProcess(void* arg)
                                         uint8_t controlByte = network::NET_CTRL_GRANT_DEMAND;
                                         if (bridge->m_tekAlgoId != P25DEF::ALGO_UNENCRYPT)
                                             controlByte |= network::NET_CTRL_GRANT_ENCRYPT;
+                                        controlByte |= network::NET_CTRL_SWITCH_OVER;
                                         bridge->m_network->writeP25TDU(lc, lsd, controlByte);
                                     }
                                     break;

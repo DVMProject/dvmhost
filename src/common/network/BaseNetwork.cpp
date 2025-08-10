@@ -531,7 +531,8 @@ UInt8Array BaseNetwork::readP25(bool& ret, uint32_t& frameLength)
 
 /* Writes P25 LDU1 frame data to the network. */
 
-bool BaseNetwork::writeP25LDU1(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, const uint8_t* data, P25DEF::FrameType::E frameType)
+bool BaseNetwork::writeP25LDU1(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, const uint8_t* data, 
+    P25DEF::FrameType::E frameType, uint8_t controlByte)
 {
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
         return false;
@@ -543,7 +544,7 @@ bool BaseNetwork::writeP25LDU1(const p25::lc::LC& control, const p25::data::LowS
     }
 
     uint32_t messageLength = 0U;
-    UInt8Array message = createP25_LDU1Message(messageLength, control, lsd, data, frameType);
+    UInt8Array message = createP25_LDU1Message(messageLength, control, lsd, data, frameType, controlByte);
     if (message == nullptr) {
         return false;
     }
@@ -553,7 +554,8 @@ bool BaseNetwork::writeP25LDU1(const p25::lc::LC& control, const p25::data::LowS
 
 /* Writes P25 LDU2 frame data to the network. */
 
-bool BaseNetwork::writeP25LDU2(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, const uint8_t* data)
+bool BaseNetwork::writeP25LDU2(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, const uint8_t* data,
+    uint8_t controlByte)
 {
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
         return false;
@@ -565,7 +567,7 @@ bool BaseNetwork::writeP25LDU2(const p25::lc::LC& control, const p25::data::LowS
     }
 
     uint32_t messageLength = 0U;
-    UInt8Array message = createP25_LDU2Message(messageLength, control, lsd, data);
+    UInt8Array message = createP25_LDU2Message(messageLength, control, lsd, data, controlByte);
     if (message == nullptr) {
         return false;
     }
@@ -1016,7 +1018,7 @@ UInt8Array BaseNetwork::createDMR_Message(uint32_t& length, const uint32_t strea
 /* Creates an P25 frame message header. */
 
 void BaseNetwork::createP25_MessageHdr(uint8_t* buffer, p25::defines::DUID::E duid, const p25::lc::LC& control, const p25::data::LowSpeedData& lsd,
-    p25::defines::FrameType::E frameType)
+    p25::defines::FrameType::E frameType, uint8_t controlByte)
 {
     using namespace p25::defines;
     assert(buffer != nullptr);
@@ -1035,7 +1037,7 @@ void BaseNetwork::createP25_MessageHdr(uint8_t* buffer, p25::defines::DUID::E du
     uint16_t sysId = control.getSiteData().sysId();                                 // System ID
     SET_UINT16(sysId, buffer, 11U);
 
-    buffer[14U] = 0U;                                                               // Control Bits
+    buffer[14U] = controlByte;                                                      // Control Bits
 
     buffer[15U] = control.getMFId();                                                // MFId
 
@@ -1076,7 +1078,7 @@ void BaseNetwork::createP25_MessageHdr(uint8_t* buffer, p25::defines::DUID::E du
 /* Creates an P25 LDU1 frame message. */
 
 UInt8Array BaseNetwork::createP25_LDU1Message(uint32_t& length, const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, 
-    const uint8_t* data, p25::defines::FrameType::E frameType)
+    const uint8_t* data, p25::defines::FrameType::E frameType, uint8_t controlByte)
 {
     using namespace p25::defines;
     using namespace p25::dfsi::defines;
@@ -1088,7 +1090,7 @@ UInt8Array BaseNetwork::createP25_LDU1Message(uint32_t& length, const p25::lc::L
     ::memset(buffer, 0x00U, P25_LDU1_PACKET_LENGTH + PACKET_PAD);
 
     // construct P25 message header
-    createP25_MessageHdr(buffer, DUID::LDU1, control, lsd, frameType);
+    createP25_MessageHdr(buffer, DUID::LDU1, control, lsd, frameType, controlByte);
 
     // pack DFSI data
     uint32_t count = MSG_HDR_SIZE;
@@ -1151,7 +1153,7 @@ UInt8Array BaseNetwork::createP25_LDU1Message(uint32_t& length, const p25::lc::L
 /* Creates an P25 LDU2 frame message. */
 
 UInt8Array BaseNetwork::createP25_LDU2Message(uint32_t& length, const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, 
-    const uint8_t* data)
+    const uint8_t* data, uint8_t controlByte)
 {
     using namespace p25::defines;
     using namespace p25::dfsi::defines;
@@ -1163,7 +1165,7 @@ UInt8Array BaseNetwork::createP25_LDU2Message(uint32_t& length, const p25::lc::L
     ::memset(buffer, 0x00U, P25_LDU2_PACKET_LENGTH + PACKET_PAD);
 
     // construct P25 message header
-    createP25_MessageHdr(buffer, DUID::LDU2, control, lsd, FrameType::DATA_UNIT);
+    createP25_MessageHdr(buffer, DUID::LDU2, control, lsd, FrameType::DATA_UNIT, controlByte);
 
     // pack DFSI data
     uint32_t count = MSG_HDR_SIZE;

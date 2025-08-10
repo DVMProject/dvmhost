@@ -184,13 +184,15 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                 uint64_t duration = hrc::diff(pktTime, status.callStartTime);
 
                 // perform a test for grant demands, and if the TG isn't valid ignore the demand
-                bool grantDemand = (data[14U] & 0x80U) == 0x80U;
+                bool grantDemand = (data[14U] & network::NET_CTRL_GRANT_DEMAND) == network::NET_CTRL_GRANT_DEMAND;
                 if (grantDemand) {
                     lookups::TalkgroupRuleGroupVoice tg = m_network->m_tidLookup->find(control.getDstId());
                     if (!tg.config().active()) {
                         return false;
                     }
                 }
+
+                bool switchOver = (data[14U] & network::NET_CTRL_SWITCH_OVER) == network::NET_CTRL_SWITCH_OVER;
 
                 auto it = std::find_if(m_status.begin(), m_status.end(), [&](StatusMapPair x) {
                     if (x.second.dstId == dstId) {
@@ -200,7 +202,7 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                     return false;
                 });
                 if (it != m_status.end()) {
-                    if (grantDemand) {
+                    if (grantDemand && !switchOver) {
                         LogWarning(LOG_NET, "P25, Call Collision, peer = %u, ssrc = %u, sysId = $%03X, netId = $%05X, srcId = %u, dstId = %u, streamId = %u, rxPeer = %u, rxSrcId = %u, rxDstId = %u, rxStreamId = %u, external = %u",
                             peerId, ssrc, sysId, netId, srcId, dstId, streamId, status.peerId, status.srcId, status.dstId, status.streamId, external);
                         return false;
@@ -249,6 +251,8 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                     return false;
                 }
 
+                bool switchOver = (data[14U] & network::NET_CTRL_SWITCH_OVER) == network::NET_CTRL_SWITCH_OVER;
+
                 auto it = std::find_if(m_status.begin(), m_status.end(), [&](StatusMapPair x) {
                     if (x.second.dstId == dstId) {
                         if (x.second.activeCall)
@@ -259,6 +263,13 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                 if (it != m_status.end()) {
                     RxStatus status = m_status[dstId];
                     if (streamId != status.streamId && ((duid != DUID::TDU) && (duid != DUID::TDULC))) {
+                        // perform TG switch over -- this can happen in special conditions where a TG may rapidly switch
+                        // from one source to another (primarily from bridge resources)
+                        if (switchOver) {
+                            status.streamId = streamId;
+                            status.srcId = srcId;
+                        }
+
                         if (status.srcId != 0U && status.srcId != srcId) {
                             uint64_t lastPktDuration = hrc::diff(hrc::now(), status.lastPacket);
                             if ((lastPktDuration / 1000) > CALL_COLL_TIMEOUT) {

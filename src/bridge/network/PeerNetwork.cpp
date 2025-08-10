@@ -38,7 +38,8 @@ PeerNetwork::PeerNetwork(const std::string& address, uint16_t port, uint16_t loc
 
 /* Writes P25 LDU1 frame data to the network. */
 
-bool PeerNetwork::writeP25LDU1(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, const uint8_t* data, p25::defines::FrameType::E frameType)
+bool PeerNetwork::writeP25LDU1(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, const uint8_t* data, 
+    P25DEF::FrameType::E frameType, uint8_t controlByte)
 {
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
         return false;
@@ -50,7 +51,7 @@ bool PeerNetwork::writeP25LDU1(const p25::lc::LC& control, const p25::data::LowS
     }
 
     uint32_t messageLength = 0U;
-    UInt8Array message = createP25_LDU1Message_Raw(messageLength, control, lsd, data, frameType);
+    UInt8Array message = createP25_LDU1Message_Raw(messageLength, control, lsd, data, frameType, controlByte);
     if (message == nullptr) {
         return false;
     }
@@ -60,7 +61,8 @@ bool PeerNetwork::writeP25LDU1(const p25::lc::LC& control, const p25::data::LowS
 
 /* Writes P25 LDU2 frame data to the network. */
 
-bool PeerNetwork::writeP25LDU2(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, const uint8_t* data)
+bool PeerNetwork::writeP25LDU2(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, const uint8_t* data,
+    uint8_t controlByte)
 {
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
         return false;
@@ -72,7 +74,7 @@ bool PeerNetwork::writeP25LDU2(const p25::lc::LC& control, const p25::data::LowS
     }
 
     uint32_t messageLength = 0U;
-    UInt8Array message = createP25_LDU2Message_Raw(messageLength, control, lsd, data);
+    UInt8Array message = createP25_LDU2Message_Raw(messageLength, control, lsd, data, controlByte);
     if (message == nullptr) {
         return false;
     }
@@ -211,7 +213,7 @@ bool PeerNetwork::writeConfig()
 /* Creates an P25 LDU1 frame message. */
 
 UInt8Array PeerNetwork::createP25_LDU1Message_Raw(uint32_t& length, const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, 
-    const uint8_t* data, p25::defines::FrameType::E frameType)
+    const uint8_t* data, p25::defines::FrameType::E frameType, uint8_t controlByte)
 {
     using namespace p25::defines;
     using namespace p25::dfsi::defines;
@@ -223,7 +225,7 @@ UInt8Array PeerNetwork::createP25_LDU1Message_Raw(uint32_t& length, const p25::l
     ::memset(buffer, 0x00U, P25_LDU1_PACKET_LENGTH + PACKET_PAD);
 
     // construct P25 message header
-    createP25_MessageHdr(buffer, DUID::LDU1, control, lsd, frameType);
+    createP25_MessageHdr(buffer, DUID::LDU1, control, lsd, frameType, controlByte);
 
     // pack DFSI data
     uint32_t count = MSG_HDR_SIZE;
@@ -286,7 +288,7 @@ UInt8Array PeerNetwork::createP25_LDU1Message_Raw(uint32_t& length, const p25::l
 /* Creates an P25 LDU2 frame message. */
 
 UInt8Array PeerNetwork::createP25_LDU2Message_Raw(uint32_t& length, const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, 
-    const uint8_t* data)
+    const uint8_t* data, uint8_t controlByte)
 {
     using namespace p25::defines;
     using namespace p25::dfsi::defines;
@@ -298,7 +300,7 @@ UInt8Array PeerNetwork::createP25_LDU2Message_Raw(uint32_t& length, const p25::l
     ::memset(buffer, 0x00U, P25_LDU2_PACKET_LENGTH + PACKET_PAD);
 
     // construct P25 message header
-    createP25_MessageHdr(buffer, DUID::LDU2, control, lsd, FrameType::DATA_UNIT);
+    createP25_MessageHdr(buffer, DUID::LDU2, control, lsd, FrameType::DATA_UNIT, controlByte);
 
     // pack DFSI data
     uint32_t count = MSG_HDR_SIZE;

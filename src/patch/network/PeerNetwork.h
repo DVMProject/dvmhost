@@ -63,18 +63,21 @@ namespace network
          * @param[in] lsd Instance of p25::data::LowSpeedData containing low speed data.
          * @param[in] data Buffer containing P25 LDU1 data to send.
          * @param[in] frameType DVM P25 frame type.
+         * @param[in] controlByte DVM Network Control Byte.
          * @returns bool True, if message was sent, otherwise false.
          */
         bool writeP25LDU1(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, const uint8_t* data, 
-            p25::defines::FrameType::E frameType) override;
+            P25DEF::FrameType::E frameType, uint8_t controlByte = 0U) override;
         /**
          * @brief Writes P25 LDU2 frame data to the network.
          * @param[in] control Instance of p25::lc::LC containing link control data.
          * @param[in] lsd Instance of p25::data::LowSpeedData containing low speed data.
          * @param[in] data Buffer containing P25 LDU2 data to send.
+         * @param[in] controlByte DVM Network Control Byte.
          * @returns bool True, if message was sent, otherwise false.
          */
-        bool writeP25LDU2(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, const uint8_t* data) override;
+        bool writeP25LDU2(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, const uint8_t* data,
+            uint8_t controlByte = 0U) override;
 
         /**
          * @brief Helper to send a DMR terminator with LC message.
@@ -104,10 +107,11 @@ namespace network
          * @param[in] lsd Instance of p25::data::LowSpeedData containing low speed data.
          * @param[in] data Buffer containing P25 LDU1 data to send.
          * @param[in] frameType DVM P25 frame type.
+         * @param[in] controlByte DVM Network Control Byte.
          * @returns UInt8Array Buffer containing the built network message.
          */
         UInt8Array createP25_LDU1Message_Raw(uint32_t& length, const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, 
-            const uint8_t* data, p25::defines::FrameType::E frameType);
+            const uint8_t* data, P25DEF::FrameType::E frameType, uint8_t controlByte);
         /**
          * @brief Creates an P25 LDU2 frame message.
          * 
@@ -118,10 +122,11 @@ namespace network
          * @param[in] control Instance of p25::lc::LC containing link control data.
          * @param[in] lsd Instance of p25::data::LowSpeedData containing low speed data.
          * @param[in] data Buffer containing P25 LDU2 data to send.
+         * @param[in] controlByte DVM Network Control Byte.
          * @returns UInt8Array Buffer containing the built network message.
          */
         UInt8Array createP25_LDU2Message_Raw(uint32_t& length, const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, 
-            const uint8_t* data);
+            const uint8_t* data, uint8_t controlByte);
     };
 } // namespace network
 
