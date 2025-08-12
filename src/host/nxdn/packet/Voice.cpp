@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2015-2020 Jonathan Naylor, G4KLX
- *  Copyright (C) 2022-2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2022-2025 Bryan Biedenkapp, N2PLL
  *
  */
 #include "Defines.h"
@@ -26,169 +26,6 @@ using namespace nxdn::packet;
 
 #include <cassert>
 #include <cstring>
-
-// ---------------------------------------------------------------------------
-//  Macros
-// ---------------------------------------------------------------------------
-
-// Helper macro to perform RF traffic collision checking.
-#define CHECK_TRAFFIC_COLLISION(_SRC_ID, _DST_ID)                                       \
-    /* don't process RF frames if the network isn't in a idle state and the RF destination is the network destination */ \
-    if (m_nxdn->m_netState != RS_NET_IDLE && _DST_ID == m_nxdn->m_netLastDstId) {       \
-        LogWarning(LOG_RF, "Traffic collision detect, preempting new RF traffic to existing network traffic!"); \
-        resetRF();                                                                      \
-        m_nxdn->m_rfState = RS_RF_LISTENING;                                            \
-        return false;                                                                   \
-    }                                                                                   \
-                                                                                        \
-    /* stop network frames from processing -- RF wants to transmit on a different talkgroup */ \
-    if (m_nxdn->m_netState != RS_NET_IDLE) {                                            \
-        if (m_nxdn->m_netLC.getSrcId() == _SRC_ID && m_nxdn->m_netLastDstId == _DST_ID) { \
-            LogWarning(LOG_RF, "Traffic collision detect, preempting new RF traffic to existing RF traffic (Are we in a voting condition?), rfSrcId = %u, rfDstId = %u, netSrcId = %u, netDstId = %u", _SRC_ID, _DST_ID, \
-                m_nxdn->m_netLC.getSrcId(), m_nxdn->m_netLastDstId);                    \
-            resetRF();                                                                  \
-            m_nxdn->m_rfState = RS_RF_LISTENING;                                        \
-            return false;                                                               \
-        }                                                                               \
-        else {                                                                          \
-            LogWarning(LOG_RF, "Traffic collision detect, preempting existing network traffic to new RF traffic, rfDstId = %u, netDstId = %u", _DST_ID, \
-                m_nxdn->m_netLastDstId);                                                \
-            resetNet();                                                                 \
-            if (m_nxdn->m_network != nullptr)                                           \
-                m_nxdn->m_network->resetNXDN();                                         \
-        }                                                                               \
-                                                                                        \
-        /* is control is enabled, and the group was granted by network already ignore RF traffic */ \
-        if (m_nxdn->m_enableControl && _DST_ID == m_nxdn->m_netLastDstId) {             \
-            if (m_nxdn->m_affiliations->isNetGranted(_DST_ID)) {                        \
-                LogWarning(LOG_RF, "Traffic collision detect, preempting new RF traffic to existing granted network traffic (Are we in a voting condition?), rfSrcId = %u, rfDstId = %u, netSrcId = %u, netDstId = %u", _SRC_ID, _DST_ID, \
-                    m_nxdn->m_netLC.getSrcId(), m_nxdn->m_netLastDstId);                \
-                resetRF();                                                              \
-                m_nxdn->m_rfState = RS_RF_LISTENING;                                    \
-                return false;                                                           \
-            }                                                                           \
-        }                                                                               \
-    }
-
-// Helper macro to perform network traffic collision checking.
-#define CHECK_NET_TRAFFIC_COLLISION(_LAYER3, _SRC_ID, _DST_ID)                          \
-    /* don't process network frames if the destination ID's don't match and the RF TG hang timer is running */ \
-    if (m_nxdn->m_rfLastDstId != 0U) {                                                  \
-        if (m_nxdn->m_rfLastDstId != _DST_ID && (m_nxdn->m_rfTGHang.isRunning() && !m_nxdn->m_rfTGHang.hasExpired())) { \
-            resetNet();                                                                 \
-            return false;                                                               \
-        }                                                                               \
-                                                                                        \
-        if (m_nxdn->m_rfLastDstId == _DST_ID && (m_nxdn->m_rfTGHang.isRunning() && !m_nxdn->m_rfTGHang.hasExpired())) { \
-            m_nxdn->m_rfTGHang.start();                                                 \
-        }                                                                               \
-    }                                                                                   \
-                                                                                        \
-    /* bryanb: possible fix for a "tail ride" condition where network traffic immediately follows RF traffic *while* */ \
-    /* the RF TG hangtimer is running */                                                \
-    if (m_nxdn->m_rfTGHang.isRunning() && !m_nxdn->m_rfTGHang.hasExpired()) {           \
-        m_nxdn->m_rfTGHang.stop();                                                      \
-    }                                                                                   \
-                                                                                        \
-    /* don't process network frames if the RF TG hang timer isn't running, the default net idle talkgroup is set and */ \
-    /* the destination ID doesn't match the default net idle talkgroup */               \
-    if (m_nxdn->m_defaultNetIdleTalkgroup != 0U && dstId != 0U && !m_nxdn->m_rfTGHang.isRunning()) { \
-        if (m_nxdn->m_defaultNetIdleTalkgroup != dstId) {                               \
-            return false;                                                               \
-        }                                                                               \
-    }                                                                                   \
-                                                                                        \
-    /* perform authoritative network TG hangtimer and traffic preemption */             \
-    if (m_nxdn->m_authoritative) {                                                      \
-        if (m_nxdn->m_netLastDstId != 0U) {                                             \
-            if (m_nxdn->m_netLastDstId != _DST_ID && (m_nxdn->m_netTGHang.isRunning() && !m_nxdn->m_netTGHang.hasExpired())) { \
-                return false;                                                           \
-            }                                                                           \
-                                                                                        \
-            if (m_nxdn->m_netLastDstId == _DST_ID && (m_nxdn->m_netTGHang.isRunning() && !m_nxdn->m_netTGHang.hasExpired())) { \
-                m_nxdn->m_netTGHang.start();                                            \
-            }                                                                           \
-        }                                                                               \
-                                                                                        \
-        /* don't process network frames if the RF modem isn't in a listening state */   \
-        if (m_nxdn->m_rfState != RS_RF_LISTENING) {                                     \
-            if (_LAYER3.getSrcId() == _SRC_ID && _LAYER3.getDstId() == _DST_ID) {       \
-                LogWarning(LOG_RF, "Traffic collision detect, preempting new network traffic to existing RF traffic (Are we in a voting condition?), rfSrcId = %u, rfDstId = %u, netSrcId = %u, netDstId = %u", _LAYER3.getSrcId(), _LAYER3.getDstId(), \
-                    _SRC_ID, _DST_ID);                                                  \
-                resetNet();                                                             \
-                if (m_nxdn->m_network != nullptr)                                       \
-                    m_nxdn->m_network->resetNXDN();                                     \
-                return false;                                                           \
-            }                                                                           \
-            else {                                                                      \
-                LogWarning(LOG_RF, "Traffic collision detect, preempting new network traffic to existing RF traffic, rfDstId = %u, netDstId = %u", _LAYER3.getDstId(), \
-                    _DST_ID);                                                           \
-                resetNet();                                                             \
-                if (m_nxdn->m_network != nullptr)                                       \
-                    m_nxdn->m_network->resetNXDN();                                     \
-                return false;                                                           \
-            }                                                                           \
-        }                                                                               \
-    }                                                                                   \
-                                                                                        \
-    /* don't process network frames if this modem isn't authoritative */                \
-    if (!m_nxdn->m_authoritative && m_nxdn->m_permittedDstId != _DST_ID) {              \
-        if (!g_disableNonAuthoritativeLogging)                                          \
-            LogWarning(LOG_NET, "[NON-AUTHORITATIVE] Ignoring network traffic, destination not permitted, dstId = %u", _DST_ID); \
-        resetNet();                                                                     \
-        if (m_nxdn->m_network != nullptr)                                               \
-            m_nxdn->m_network->resetNXDN();                                             \
-        return false;                                                                   \
-    }
-
-// Validate the source RID
-#define VALID_SRCID(_SRC_ID, _DST_ID, _GROUP)                                           \
-    if (!acl::AccessControl::validateSrcId(_SRC_ID)) {                                  \
-        if (m_lastRejectId == 0U || m_lastRejectId != _SRC_ID) {                        \
-            LogWarning(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL " denial, RID rejection, srcId = %u", _SRC_ID); \
-            ::ActivityLog("NXDN", true, "RF voice rejection from %u to %s%u ", _SRC_ID, _GROUP ? "TG " : "", _DST_ID); \
-            m_lastRejectId = _SRC_ID;                                                   \
-        }                                                                               \
-                                                                                        \
-        m_nxdn->m_rfLastDstId = 0U;                                                     \
-        m_nxdn->m_rfLastSrcId = 0U;                                                     \
-        m_nxdn->m_rfTGHang.stop();                                                      \
-        m_nxdn->m_rfState = RS_RF_REJECTED;                                             \
-        return false;                                                                   \
-    }
-
-// Validate the destination ID
-#define VALID_DSTID(_SRC_ID, _DST_ID, _GROUP)                                           \
-    if (!_GROUP) {                                                                      \
-        if (!acl::AccessControl::validateSrcId(_DST_ID)) {                              \
-            if (m_lastRejectId == 0 || m_lastRejectId != _DST_ID) {                     \
-                LogWarning(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL " denial, RID rejection, dstId = %u", _DST_ID); \
-                ::ActivityLog("NXDN", true, "RF voice rejection from %u to %s%u ", _SRC_ID, _GROUP ? "TG " : "", _DST_ID); \
-                m_lastRejectId = _DST_ID;                                               \
-            }                                                                           \
-                                                                                        \
-            m_nxdn->m_rfLastDstId = 0U;                                                 \
-            m_nxdn->m_rfLastSrcId = 0U;                                                 \
-            m_nxdn->m_rfTGHang.stop();                                                  \
-            m_nxdn->m_rfState = RS_RF_REJECTED;                                         \
-            return false;                                                               \
-        }                                                                               \
-    }                                                                                   \
-    else {                                                                              \
-        if (!acl::AccessControl::validateTGId(_DST_ID)) {                               \
-            if (m_lastRejectId == 0 || m_lastRejectId != _DST_ID) {                     \
-                LogWarning(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL " denial, TGID rejection, dstId = %u", _DST_ID); \
-                ::ActivityLog("NXDN", true, "RF voice rejection from %u to %s%u ", _SRC_ID, _GROUP ? "TG " : "", _DST_ID); \
-                m_lastRejectId = _DST_ID;                                               \
-            }                                                                           \
-                                                                                        \
-            m_nxdn->m_rfLastDstId = 0U;                                                 \
-            m_nxdn->m_rfLastSrcId = 0U;                                                 \
-            m_nxdn->m_rfTGHang.stop();                                                  \
-            m_nxdn->m_rfState = RS_RF_REJECTED;                                         \
-            return false;                                                               \
-        }                                                                               \
-    }
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -269,13 +106,55 @@ bool Voice::process(FuncChannelType::E fct, ChOption::E option, uint8_t* data, u
                 return false;
             }
         } else if (type == MessageType::RTCH_VCALL) {
-            CHECK_TRAFFIC_COLLISION(srcId, dstId);
+            if (checkRFTrafficCollision(srcId, dstId))
+                return false;
 
             // validate source RID
-            VALID_SRCID(srcId, dstId, group);
+            if (!acl::AccessControl::validateSrcId(srcId)) {
+                if (m_lastRejectId == 0U || m_lastRejectId != srcId) {
+                    LogWarning(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL " denial, RID rejection, srcId = %u", srcId);
+                    ::ActivityLog("NXDN", true, "RF voice rejection from %u to %s%u ", srcId, group ? "TG " : "", dstId);
+                    m_lastRejectId = srcId;
+                }
+
+                m_nxdn->m_rfLastDstId = 0U;
+                m_nxdn->m_rfLastSrcId = 0U;
+                m_nxdn->m_rfTGHang.stop();
+                m_nxdn->m_rfState = RS_RF_REJECTED;
+                return false;
+            }
 
             // validate destination ID
-            VALID_DSTID(srcId, dstId, group);
+            if (!group) {
+                if (!acl::AccessControl::validateSrcId(dstId)) {
+                    if (m_lastRejectId == 0 || m_lastRejectId != dstId) {
+                        LogWarning(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL " denial, RID rejection, dstId = %u", dstId);
+                        ::ActivityLog("NXDN", true, "RF voice rejection from %u to %s%u ", srcId, group? "TG " : "", dstId);
+                        m_lastRejectId = dstId;
+                    }
+
+                    m_nxdn->m_rfLastDstId = 0U;
+                    m_nxdn->m_rfLastSrcId = 0U;
+                    m_nxdn->m_rfTGHang.stop();
+                    m_nxdn->m_rfState = RS_RF_REJECTED;
+                    return false;
+                }
+            }
+            else {
+                if (!acl::AccessControl::validateTGId(dstId)) {
+                    if (m_lastRejectId == 0 || m_lastRejectId != dstId) {
+                        LogWarning(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL " denial, TGID rejection, dstId = %u", dstId);
+                        ::ActivityLog("NXDN", true, "RF voice rejection from %u to %s%u ", srcId, group ? "TG " : "", dstId);
+                        m_lastRejectId = dstId;
+                    }
+
+                    m_nxdn->m_rfLastDstId = 0U;
+                    m_nxdn->m_rfLastSrcId = 0U;
+                    m_nxdn->m_rfTGHang.stop();
+                    m_nxdn->m_rfState = RS_RF_REJECTED;
+                    return false;
+                }
+            }
         } else {
             return false;
         }
@@ -454,13 +333,55 @@ bool Voice::process(FuncChannelType::E fct, ChOption::E option, uint8_t* data, u
             bool group = m_nxdn->m_rfLC.getGroup();
             bool encrypted = m_nxdn->m_rfLC.getEncrypted();
 
-            CHECK_TRAFFIC_COLLISION(srcId, dstId);
+            if (checkRFTrafficCollision(srcId, dstId))
+                return false;
 
             // validate source RID
-            VALID_SRCID(srcId, dstId, group);
+            if (!acl::AccessControl::validateSrcId(srcId)) {
+                if (m_lastRejectId == 0U || m_lastRejectId != srcId) {
+                    LogWarning(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL " denial, RID rejection, srcId = %u", srcId);
+                    ::ActivityLog("NXDN", true, "RF voice rejection from %u to %s%u ", srcId, group ? "TG " : "", dstId);
+                    m_lastRejectId = srcId;
+                }
+
+                m_nxdn->m_rfLastDstId = 0U;
+                m_nxdn->m_rfLastSrcId = 0U;
+                m_nxdn->m_rfTGHang.stop();
+                m_nxdn->m_rfState = RS_RF_REJECTED;
+                return false;
+            }
 
             // validate destination ID
-            VALID_DSTID(srcId, dstId, group);
+            if (!group) {
+                if (!acl::AccessControl::validateSrcId(dstId)) {
+                    if (m_lastRejectId == 0 || m_lastRejectId != dstId) {
+                        LogWarning(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL " denial, RID rejection, dstId = %u", dstId);
+                        ::ActivityLog("NXDN", true, "RF voice rejection from %u to %s%u ", srcId, group? "TG " : "", dstId);
+                        m_lastRejectId = dstId;
+                    }
+
+                    m_nxdn->m_rfLastDstId = 0U;
+                    m_nxdn->m_rfLastSrcId = 0U;
+                    m_nxdn->m_rfTGHang.stop();
+                    m_nxdn->m_rfState = RS_RF_REJECTED;
+                    return false;
+                }
+            }
+            else {
+                if (!acl::AccessControl::validateTGId(dstId)) {
+                    if (m_lastRejectId == 0 || m_lastRejectId != dstId) {
+                        LogWarning(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL " denial, TGID rejection, dstId = %u", dstId);
+                        ::ActivityLog("NXDN", true, "RF voice rejection from %u to %s%u ", srcId, group ? "TG " : "", dstId);
+                        m_lastRejectId = dstId;
+                    }
+
+                    m_nxdn->m_rfLastDstId = 0U;
+                    m_nxdn->m_rfLastSrcId = 0U;
+                    m_nxdn->m_rfTGHang.stop();
+                    m_nxdn->m_rfState = RS_RF_REJECTED;
+                    return false;
+                }
+            }
 
             m_nxdn->m_rfTGHang.start();
             m_nxdn->m_netTGHang.stop();
@@ -741,13 +662,46 @@ bool Voice::processNetwork(FuncChannelType::E fct, ChOption::E option, lc::RTCH&
                 return false;
             }
         } else if (type == MessageType::RTCH_VCALL) {
-            CHECK_NET_TRAFFIC_COLLISION(lc, srcId, dstId);
+            if (checkNetTrafficCollision(lc, srcId, dstId))
+                return false;
 
             // validate source RID
-            VALID_SRCID(srcId, dstId, group);
+            if (!acl::AccessControl::validateSrcId(srcId)) {
+                if (m_lastRejectId == 0U || m_lastRejectId != srcId) {
+                    LogWarning(LOG_NET, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL " denial, RID rejection, srcId = %u", srcId);
+                    ::ActivityLog("NXDN", true, "network voice rejection from %u to %s%u ", srcId, group ? "TG " : "", dstId);
+                    m_lastRejectId = srcId;
+                }
+
+                resetNet();
+                return false;
+            }
 
             // validate destination ID
-            VALID_DSTID(srcId, dstId, group);
+            if (!group) {
+                if (!acl::AccessControl::validateSrcId(dstId)) {
+                    if (m_lastRejectId == 0 || m_lastRejectId != dstId) {
+                        LogWarning(LOG_NET, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL " denial, RID rejection, dstId = %u", dstId);
+                        ::ActivityLog("NXDN", true, "network voice rejection from %u to %s%u ", srcId, group? "TG " : "", dstId);
+                        m_lastRejectId = dstId;
+                    }
+
+                    resetNet();
+                    return false;
+                }
+            }
+            else {
+                if (!acl::AccessControl::validateTGId(dstId)) {
+                    if (m_lastRejectId == 0 || m_lastRejectId != dstId) {
+                        LogWarning(LOG_NET, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL " denial, TGID rejection, dstId = %u", dstId);
+                        ::ActivityLog("NXDN", true, "network voice rejection from %u to %s%u ", srcId, group ? "TG " : "", dstId);
+                        m_lastRejectId = dstId;
+                    }
+
+                    resetNet();
+                    return false;
+                }
+            }
         } else {
             return false;
         }
@@ -885,13 +839,46 @@ bool Voice::processNetwork(FuncChannelType::E fct, ChOption::E option, lc::RTCH&
             bool group = m_nxdn->m_netLC.getGroup();
             bool encrypted = m_nxdn->m_netLC.getEncrypted();
 
-            CHECK_NET_TRAFFIC_COLLISION(m_nxdn->m_netLC, srcId, dstId);
+            if (checkNetTrafficCollision(m_nxdn->m_netLC, srcId, dstId))
+                return false;
 
             // validate source RID
-            VALID_SRCID(srcId, dstId, group);
+            if (!acl::AccessControl::validateSrcId(srcId)) {
+                if (m_lastRejectId == 0U || m_lastRejectId != srcId) {
+                    LogWarning(LOG_NET, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL " denial, RID rejection, srcId = %u", srcId);
+                    ::ActivityLog("NXDN", true, "network voice rejection from %u to %s%u ", srcId, group ? "TG " : "", dstId);
+                    m_lastRejectId = srcId;
+                }
+
+                resetNet();
+                return false;
+            }
 
             // validate destination ID
-            VALID_DSTID(srcId, dstId, group);
+            if (!group) {
+                if (!acl::AccessControl::validateSrcId(dstId)) {
+                    if (m_lastRejectId == 0 || m_lastRejectId != dstId) {
+                        LogWarning(LOG_NET, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL " denial, RID rejection, dstId = %u", dstId);
+                        ::ActivityLog("NXDN", true, "network voice rejection from %u to %s%u ", srcId, group? "TG " : "", dstId);
+                        m_lastRejectId = dstId;
+                    }
+
+                    resetNet();
+                    return false;
+                }
+            }
+            else {
+                if (!acl::AccessControl::validateTGId(dstId)) {
+                    if (m_lastRejectId == 0 || m_lastRejectId != dstId) {
+                        LogWarning(LOG_NET, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL " denial, TGID rejection, dstId = %u", dstId);
+                        ::ActivityLog("NXDN", true, "network voice rejection from %u to %s%u ", srcId, group ? "TG " : "", dstId);
+                        m_lastRejectId = dstId;
+                    }
+
+                    resetNet();
+                    return false;
+                }
+            }
 
             m_nxdn->m_netTGHang.start();
             m_nxdn->m_netLastDstId = m_nxdn->m_netLC.getDstId();
@@ -1092,4 +1079,124 @@ void Voice::writeNetwork(const uint8_t *data, uint32_t len)
         return;
 
     m_nxdn->m_network->writeNXDN(m_nxdn->m_rfLC, data, len);
+}
+
+/* Helper to perform RF traffic collision checking. */
+
+bool Voice::checkRFTrafficCollision(uint32_t srcId, uint32_t dstId)
+{
+    // don't process RF frames if the network isn't in a idle state and the RF destination is the network destination
+    if (m_nxdn->m_netState != RS_NET_IDLE && dstId == m_nxdn->m_netLastDstId) {
+        LogWarning(LOG_RF, "Traffic collision detect, preempting new RF traffic to existing network traffic!");
+        resetRF();
+        m_nxdn->m_rfState = RS_RF_LISTENING;
+        return true;
+    }
+
+    // stop network frames from processing -- RF wants to transmit on a different talkgroup
+    if (m_nxdn->m_netState != RS_NET_IDLE) {
+        if (m_nxdn->m_netLC.getSrcId() == srcId && m_nxdn->m_netLastDstId == dstId) {
+            LogWarning(LOG_RF, "Traffic collision detect, preempting new RF traffic to existing RF traffic (Are we in a voting condition?), rfSrcId = %u, rfDstId = %u, netSrcId = %u, netDstId = %u", srcId, dstId,
+                m_nxdn->m_netLC.getSrcId(), m_nxdn->m_netLastDstId);
+            resetRF();
+            m_nxdn->m_rfState = RS_RF_LISTENING;
+            return true;
+        }
+        else {
+            LogWarning(LOG_RF, "Traffic collision detect, preempting existing network traffic to new RF traffic, rfDstId = %u, netDstId = %u", dstId,
+                m_nxdn->m_netLastDstId);
+            resetNet();
+            if (m_nxdn->m_network != nullptr)
+                m_nxdn->m_network->resetNXDN();
+        }
+
+        // is control is enabled, and the group was granted by network already ignore RF traffic
+        if (m_nxdn->m_enableControl && dstId == m_nxdn->m_netLastDstId) {
+            if (m_nxdn->m_affiliations->isNetGranted(dstId)) {
+                LogWarning(LOG_RF, "Traffic collision detect, preempting new RF traffic to existing granted network traffic (Are we in a voting condition?), rfSrcId = %u, rfDstId = %u, netSrcId = %u, netDstId = %u", srcId, dstId,
+                    m_nxdn->m_netLC.getSrcId(), m_nxdn->m_netLastDstId);
+                resetRF();
+                m_nxdn->m_rfState = RS_RF_LISTENING;
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+/* Helper to perform network traffic collision checking. */
+
+bool Voice::checkNetTrafficCollision(lc::RTCH lc, uint32_t srcId, uint32_t dstId)
+{
+    // don't process network frames if the destination ID's don't match and the RF TG hang timer is running
+    if (m_nxdn->m_rfLastDstId != 0U) {
+        if (m_nxdn->m_rfLastDstId != dstId && (m_nxdn->m_rfTGHang.isRunning() && !m_nxdn->m_rfTGHang.hasExpired())) {
+            resetNet();
+            return true;
+        }
+
+        if (m_nxdn->m_rfLastDstId == dstId && (m_nxdn->m_rfTGHang.isRunning() && !m_nxdn->m_rfTGHang.hasExpired())) {
+            m_nxdn->m_rfTGHang.start();
+        }
+    }
+
+    // bryanb: possible fix for a "tail ride" condition where network traffic immediately follows RF traffic *while*
+    // the RF TG hangtimer is running
+    if (m_nxdn->m_rfTGHang.isRunning() && !m_nxdn->m_rfTGHang.hasExpired()) {
+        m_nxdn->m_rfTGHang.stop();
+    }
+
+    // don't process network frames if the RF TG hang timer isn't running, the default net idle talkgroup is set and
+    // the destination ID doesn't match the default net idle talkgroup
+    if (m_nxdn->m_defaultNetIdleTalkgroup != 0U && dstId != 0U && !m_nxdn->m_rfTGHang.isRunning()) {
+        if (m_nxdn->m_defaultNetIdleTalkgroup != dstId) {
+            return true;
+        }
+    }
+
+    // perform authoritative network TG hangtimer and traffic preemption
+    if (m_nxdn->m_authoritative) {
+        if (m_nxdn->m_netLastDstId != 0U) {
+            if (m_nxdn->m_netLastDstId != dstId && (m_nxdn->m_netTGHang.isRunning() && !m_nxdn->m_netTGHang.hasExpired())) {
+                return true;
+            }
+
+            if (m_nxdn->m_netLastDstId == dstId && (m_nxdn->m_netTGHang.isRunning() && !m_nxdn->m_netTGHang.hasExpired())) {
+                m_nxdn->m_netTGHang.start();
+            }
+        }
+
+        // don't process network frames if the RF modem isn't in a listening state
+        if (m_nxdn->m_rfState != RS_RF_LISTENING) {
+            if (lc.getSrcId() == srcId && lc.getDstId() == dstId) {
+                LogWarning(LOG_RF, "Traffic collision detect, preempting new network traffic to existing RF traffic (Are we in a voting condition?), rfSrcId = %u, rfDstId = %u, netSrcId = %u, netDstId = %u", lc.getSrcId(), lc.getDstId(),
+                    srcId, dstId);
+                resetNet();
+                if (m_nxdn->m_network != nullptr)
+                    m_nxdn->m_network->resetNXDN();
+                return true;
+            }
+            else {
+                LogWarning(LOG_RF, "Traffic collision detect, preempting new network traffic to existing RF traffic, rfDstId = %u, netDstId = %u", lc.getDstId(),
+                    dstId);
+                resetNet();
+                if (m_nxdn->m_network != nullptr)
+                    m_nxdn->m_network->resetNXDN();
+                return true;
+            }
+        }
+    }
+
+    // don't process network frames if this modem isn't authoritative
+    if (!m_nxdn->m_authoritative && m_nxdn->m_permittedDstId != dstId) {
+        if (!g_disableNonAuthoritativeLogging)
+            LogWarning(LOG_NET, "[NON-AUTHORITATIVE] Ignoring network traffic, destination not permitted, dstId = %u", dstId);
+        resetNet();
+        if (m_nxdn->m_network != nullptr)
+            m_nxdn->m_network->resetNXDN();
+        return true;
+    }
+
+    return false;
 }

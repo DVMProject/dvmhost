@@ -48,52 +48,6 @@ using namespace dmr::packet;
         return;                                                                         \
     }
 
-// Helper macro to perform RF traffic collision checking.
-#define CHECK_TRAFFIC_COLLISION(_DST_ID)                                                \
-    /* don't process RF frames if the network isn't in a idle state and the RF destination is the network destination */ \
-    if (m_slot->m_netState != RS_NET_IDLE && _DST_ID == m_slot->m_netLastDstId) {       \
-        LogWarning(LOG_RF, "DMR Slot %u, Traffic collision detect, preempting new RF traffic to existing network traffic!", m_slot->m_slotNo); \
-        m_slot->m_rfState = RS_RF_LISTENING;                                            \
-        return false;                                                                   \
-    }                                                                                   \
-                                                                                        \
-    if (m_slot->m_enableTSCC && _DST_ID == m_slot->m_netLastDstId) {                    \
-        if (m_slot->m_affiliations->isNetGranted(_DST_ID)) {                            \
-            LogWarning(LOG_RF, "DMR Slot %u, Traffic collision detect, preempting new RF traffic to existing granted network traffic (Are we in a voting condition?)", m_slot->m_slotNo); \
-            m_slot->m_rfState = RS_RF_LISTENING;                                        \
-            return false;                                                               \
-        }                                                                               \
-    }
-
-// Helper macro to perform network traffic collision checking.
-#define CHECK_NET_TRAFFIC_COLLISION(_DST_ID)                                            \
-    /* don't process network frames if the destination ID's don't match and the RF TG hang timer is running */ \
-    if (m_slot->m_rfLastDstId != 0U) {                                                  \
-        if (m_slot->m_rfLastDstId != _DST_ID && (m_slot->m_rfTGHang.isRunning() && !m_slot->m_rfTGHang.hasExpired())) { \
-            return;                                                                     \
-        }                                                                               \
-    }                                                                                   \
-                                                                                        \
-    /* bryanb: possible fix for a "tail ride" condition where network traffic immediately follows RF traffic *while* */ \
-    /* the RF TG hangtimer is running */                                                \
-    if (m_slot->m_rfTGHang.isRunning() && !m_slot->m_rfTGHang.hasExpired()) {           \
-        m_slot->m_rfTGHang.stop();                                                      \
-    }                                                                                   \
-                                                                                        \
-    /* don't process network frames if the RF TG hang timer isn't running, the default net idle talkgroup is set and */ \
-    /* the destination ID doesn't match the default net idle talkgroup */               \
-    if (m_slot->m_defaultNetIdleTalkgroup != 0U && dstId != 0U && !m_slot->m_rfTGHang.isRunning()) { \
-        if (m_slot->m_defaultNetIdleTalkgroup != dstId) {                               \
-            return;                                                                     \
-        }                                                                               \
-    }                                                                                   \
-                                                                                        \
-    if (m_slot->m_netLastDstId != 0U) {                                                 \
-        if (m_slot->m_netLastDstId != _DST_ID && (m_slot->m_netTGHang.isRunning() && !m_slot->m_netTGHang.hasExpired())) { \
-            return;                                                                     \
-        }                                                                               \
-    }                                                                                   \
-
 // ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
@@ -128,7 +82,9 @@ bool Voice::process(uint8_t* data, uint32_t len)
             FLCO::E flco = lc->getFLCO();
 
             CHECK_AUTHORITATIVE(dstId);
-            CHECK_TRAFFIC_COLLISION(dstId);
+
+            if (checkRFTrafficCollision(dstId))
+                return false;
 
             if (m_slot->m_tsccPayloadDstId != 0U && m_slot->m_tsccPayloadActRetry.isRunning()) {
                 m_slot->m_tsccPayloadActRetry.stop();
@@ -557,7 +513,9 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 FLCO::E flco = lc->getFLCO();
 
                 CHECK_AUTHORITATIVE(dstId);
-                CHECK_TRAFFIC_COLLISION(dstId);
+
+                if (checkRFTrafficCollision(dstId))
+                    return false;
 
                 // validate the source RID
                 if (!acl::AccessControl::validateSrcId(srcId)) {
@@ -731,7 +689,9 @@ void Voice::processNetwork(const data::NetData& dmrData)
         FLCO::E flco = lc->getFLCO();
 
         CHECK_NET_AUTHORITATIVE(dstId);
-        CHECK_NET_TRAFFIC_COLLISION(dstId);
+
+        if (checkNetTrafficCollision(dstId))
+            return;
 
         if (m_slot->m_tsccPayloadDstId != 0U && m_slot->m_tsccPayloadActRetry.isRunning()) {
             m_slot->m_tsccPayloadActRetry.stop();
@@ -821,7 +781,9 @@ void Voice::processNetwork(const data::NetData& dmrData)
             uint32_t dstId = lc->getDstId();
 
             CHECK_NET_AUTHORITATIVE(dstId);
-            CHECK_NET_TRAFFIC_COLLISION(dstId);
+
+            if (checkNetTrafficCollision(dstId))
+                return;
 
             m_slot->m_netLC = std::move(lc);
 
@@ -1229,6 +1191,62 @@ Voice::~Voice()
 
     delete[] m_rfEmbeddedData;
     delete[] m_netEmbeddedData;
+}
+
+/* Helper to perform RF traffic collision checking. */
+
+bool Voice::checkRFTrafficCollision(uint32_t dstId)
+{
+    /* don't process RF frames if the network isn't in a idle state and the RF destination is the network destination */
+    if (m_slot->m_netState != RS_NET_IDLE && dstId == m_slot->m_netLastDstId) {
+        LogWarning(LOG_RF, "DMR Slot %u, Traffic collision detect, preempting new RF traffic to existing network traffic!", m_slot->m_slotNo);
+        m_slot->m_rfState = RS_RF_LISTENING;
+        return true;
+    }
+
+    if (m_slot->m_enableTSCC && dstId == m_slot->m_netLastDstId) {
+        if (m_slot->m_affiliations->isNetGranted(dstId)) {
+            LogWarning(LOG_RF, "DMR Slot %u, Traffic collision detect, preempting new RF traffic to existing granted network traffic (Are we in a voting condition?)", m_slot->m_slotNo);
+            m_slot->m_rfState = RS_RF_LISTENING;
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/* Helper to perform network traffic collision checking. */
+
+bool Voice::checkNetTrafficCollision(uint32_t dstId)
+{
+    // don't process network frames if the destination ID's don't match and the RF TG hang timer is running
+    if (m_slot->m_rfLastDstId != 0U) {
+        if (m_slot->m_rfLastDstId != dstId && (m_slot->m_rfTGHang.isRunning() && !m_slot->m_rfTGHang.hasExpired())) {
+            return true;
+        }
+    }
+
+    // bryanb: possible fix for a "tail ride" condition where network traffic immediately follows RF traffic *while*
+    // the RF TG hangtimer is running
+    if (m_slot->m_rfTGHang.isRunning() && !m_slot->m_rfTGHang.hasExpired()) {
+        m_slot->m_rfTGHang.stop();
+    }
+
+    // don't process network frames if the RF TG hang timer isn't running, the default net idle talkgroup is set and
+    // the destination ID doesn't match the default net idle talkgroup
+    if (m_slot->m_defaultNetIdleTalkgroup != 0U && dstId != 0U && !m_slot->m_rfTGHang.isRunning()) {
+        if (m_slot->m_defaultNetIdleTalkgroup != dstId) {
+            return true;
+        }
+    }
+
+    if (m_slot->m_netLastDstId != 0U) {
+        if (m_slot->m_netLastDstId != dstId && (m_slot->m_netTGHang.isRunning() && !m_slot->m_netTGHang.hasExpired())) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 /* */

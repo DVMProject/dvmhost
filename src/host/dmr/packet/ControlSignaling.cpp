@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2015,2016,2017,2018 Jonathan Naylor, G4KLX
- *  Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2017-2025 Bryan Biedenkapp, N2PLL
  *
  */
 #include "Defines.h"
@@ -32,22 +32,6 @@ using namespace dmr::packet;
 // ---------------------------------------------------------------------------
 //  Macros
 // ---------------------------------------------------------------------------
-
-// Helper macro to perform RF traffic collision checking.
-#define CHECK_TRAFFIC_COLLISION(_DST_ID)                                                \
-    /* don't process RF frames if the network isn't in a idle state and the RF destination is the network destination */ \
-    if (m_slot->m_netState != RS_NET_IDLE && _DST_ID == m_slot->m_netLastDstId) {       \
-        LogWarning(LOG_RF, "DMR Slot %u, Traffic collision detect, preempting new RF traffic to existing network traffic!", m_slot->m_slotNo); \
-        return false;                                                                   \
-    }
-
-// Helper macro to check if the RF talkgroup hang timer is running and the destination ID matches.
-#define CHECK_TG_HANG(_DST_ID)                                                          \
-    if (m_slot->m_rfLastDstId != 0U) {                                                  \
-        if (m_slot->m_rfLastDstId != _DST_ID && (m_slot->m_rfTGHang.isRunning() && !m_slot->m_rfTGHang.hasExpired())) { \
-            return;                                                                     \
-        }                                                                               \
-    }
 
 // Make sure control data is supported.
 #define IS_SUPPORT_CONTROL_CHECK(_PCKT_STR, _PCKT, _SRCID)                              \
@@ -154,7 +138,11 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len)
         m_slot->m_affiliations->touchUnitReg(srcId);
 
         if (srcId != 0U || dstId != 0U) {
-            CHECK_TRAFFIC_COLLISION(dstId);
+            // don't process RF frames if the network isn't in a idle state and the RF destination is the network destination
+            if (m_slot->m_netState != RS_NET_IDLE && dstId == m_slot->m_netLastDstId) {
+                LogWarning(LOG_RF, "DMR Slot %u, Traffic collision detect, preempting new RF traffic to existing network traffic!", m_slot->m_slotNo);
+                return false;
+            }
 
             // validate the source RID
             if (!acl::AccessControl::validateSrcId(srcId)) {
@@ -448,7 +436,11 @@ void ControlSignaling::processNetwork(const data::NetData& dmrData)
         uint32_t srcId = csbk->getSrcId();
         uint32_t dstId = csbk->getDstId();
 
-        CHECK_TG_HANG(dstId);
+        if (m_slot->m_rfLastDstId != 0U) {
+            if (m_slot->m_rfLastDstId != dstId && (m_slot->m_rfTGHang.isRunning() && !m_slot->m_rfTGHang.hasExpired())) {
+                return;
+            }
+        }
 
         // if data preamble, signal its existence
         if (csbk->getDataContent()) {
