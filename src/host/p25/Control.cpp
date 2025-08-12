@@ -1380,9 +1380,6 @@ void Control::addFrame(const uint8_t* data, uint32_t length, bool net, bool imm)
 
 void Control::processNetwork()
 {
-    if (m_rfState != RS_RF_LISTENING && m_netState == RS_NET_IDLE)
-        return;
-
     uint32_t length = 0U;
     bool ret = false;
     UInt8Array buffer = m_network->readP25(ret, length);
@@ -1391,6 +1388,12 @@ void Control::processNetwork()
     if (length == 0U)
         return;
     if (buffer == nullptr) {
+        m_network->resetP25();
+        return;
+    }
+
+    // don't process network frames if the RF modem isn't in a listening state
+    if (m_rfState != RS_RF_LISTENING && m_netState == RS_NET_IDLE) {
         m_network->resetP25();
         return;
     }

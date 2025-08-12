@@ -391,7 +391,7 @@ void Slot::processNetwork(const data::NetData& dmrData)
 {
     // don't process network frames if the RF modem isn't in a listening state
     if (m_rfState != RS_RF_LISTENING) {
-        LogWarning(LOG_NET, "DMR Slot %u, Traffic collision detect, preempting new network traffic to existing RF traffic!", m_slotNo);
+        m_network->resetDMR(m_slotNo);
         return;
     }
 
