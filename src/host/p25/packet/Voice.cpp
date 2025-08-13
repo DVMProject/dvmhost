@@ -235,61 +235,8 @@ bool Voice::process(uint8_t* data, uint32_t len)
 
             alreadyDecoded = true;
 
-            // don't process RF frames if this modem isn't authoritative
-            if (!m_p25->m_authoritative && m_p25->m_permittedDstId != lc.getDstId()) {
-                if (!g_disableNonAuthoritativeLogging)
-                    LogWarning(LOG_RF, "[NON-AUTHORITATIVE] Ignoring RF traffic, destination not permitted!");
-                resetRF();
-                m_p25->m_rfState = RS_RF_LISTENING;
+            if (checkRFTrafficCollision(srcId, dstId))
                 return false;
-            }
-
-            // don't process RF frames if the network isn't in a idle state and the RF destination is the network destination
-            if (m_p25->m_netState != RS_NET_IDLE && dstId == m_p25->m_netLastDstId) {
-                LogWarning(LOG_RF, "Traffic collision detect, preempting new RF traffic to existing network traffic!");
-                resetRF();
-                m_p25->m_rfState = RS_RF_LISTENING;
-                return false;
-            }
-
-            // stop network frames from processing -- RF wants to transmit on a different talkgroup
-            if (m_p25->m_netState != RS_NET_IDLE) {
-                if (m_netLC.getSrcId() == srcId && m_p25->m_netLastDstId == dstId) {
-                    LogWarning(LOG_RF, "Traffic collision detect, preempting new RF traffic to existing network traffic (Are we in a voting condition?), rfSrcId = %u, rfDstId = %u, netSrcId = %u, netDstId = %u", srcId, dstId,
-                        m_netLC.getSrcId(), m_p25->m_netLastDstId);
-                    resetRF();
-                    m_p25->m_rfState = RS_RF_LISTENING;
-                    return false;
-                }
-                else {
-                    LogWarning(LOG_RF, "Traffic collision detect, preempting existing network traffic to new RF traffic, rfDstId = %u, netDstId = %u", dstId,
-                        m_p25->m_netLastDstId);
-                    if (!m_p25->m_dedicatedControl) {
-                        m_p25->m_affiliations->releaseGrant(m_p25->m_netLastDstId, false);
-                    }
-
-                    resetNet();
-                    if (m_p25->m_network != nullptr)
-                        m_p25->m_network->resetP25();
-
-                    if (m_p25->m_duplex) {
-                        m_p25->writeRF_TDU(true);
-                    }
-
-                    m_p25->m_netTGHang.stop();
-                }
-
-                // is control is enabled, and the group was granted by network already ignore RF traffic
-                if (m_p25->m_enableControl && dstId == m_p25->m_netLastDstId) {
-                    if (m_p25->m_affiliations->isNetGranted(dstId)) {
-                        LogWarning(LOG_RF, "Traffic collision detect, preempting new RF traffic to existing granted network traffic (Are we in a voting condition?), rfSrcId = %u, rfDstId = %u, netSrcId = %u, netDstId = %u", srcId, dstId,
-                            m_netLC.getSrcId(), m_p25->m_netLastDstId);
-                        resetRF();
-                        m_p25->m_rfState = RS_RF_LISTENING;
-                        return false;
-                    }
-                }
-            }
 
             // if this is a late entry call, clear states
             if (m_rfLastHDU.getDstId() == 0U) {
@@ -1196,80 +1143,8 @@ bool Voice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
     uint32_t dstId = control.getDstId();
     uint32_t srcId = control.getSrcId();
 
-    // don't process network frames if the destination ID's don't match and the RF TG hang timer is running
-    if (m_p25->m_rfLastDstId != 0U && dstId != 0U) {
-        if (m_p25->m_rfLastDstId != dstId && (m_p25->m_rfTGHang.isRunning() && !m_p25->m_rfTGHang.hasExpired())) {
-            resetNet();
-            if (m_p25->m_network != nullptr)
-                m_p25->m_network->resetP25();
-            return false;
-        }
-
-        if (m_p25->m_rfLastDstId == dstId && (m_p25->m_rfTGHang.isRunning() && !m_p25->m_rfTGHang.hasExpired())) {
-            m_p25->m_rfTGHang.start();
-        }
-    }
-
-    // bryanb: possible fix for a "tail ride" condition where network traffic immediately follows RF traffic *while*
-    // the RF TG hangtimer is running
-    if (m_p25->m_rfTGHang.isRunning() && !m_p25->m_rfTGHang.hasExpired()) {
-        m_p25->m_rfTGHang.stop();
-    }
-
-    // don't process network frames if the RF TG hang timer isn't running, the default net idle talkgroup is set and
-    // the destination ID doesn't match the default net idle talkgroup
-    if (m_p25->m_defaultNetIdleTalkgroup != 0U && dstId != 0U && !m_p25->m_rfTGHang.isRunning()) {
-        if (m_p25->m_defaultNetIdleTalkgroup != dstId) {
-            resetNet();
-            if (m_p25->m_network != nullptr)
-                m_p25->m_network->resetP25();
-            return false;
-        }
-    }
-
-    // perform authoritative network TG hangtimer and traffic preemption
-    if (m_p25->m_authoritative) {
-        // don't process network frames if the destination ID's don't match and the network TG hang timer is running
-        if (m_p25->m_netLastDstId != 0U && dstId != 0U && (duid == DUID::LDU1 || duid == DUID::LDU2)) {
-            if (m_p25->m_netLastDstId != dstId && (m_p25->m_netTGHang.isRunning() && !m_p25->m_netTGHang.hasExpired())) {
-                return false;
-            }
-
-            if (m_p25->m_netLastDstId == dstId && (m_p25->m_netTGHang.isRunning() && !m_p25->m_netTGHang.hasExpired())) {
-                m_p25->m_netTGHang.start();
-            }
-        }
-
-        // don't process network frames if the RF modem isn't in a listening state
-        if (m_p25->m_rfState != RS_RF_LISTENING) {
-            if (m_rfLC.getSrcId() == srcId && m_rfLC.getDstId() == dstId) {
-                LogWarning(LOG_NET, "Traffic collision detect, preempting new network traffic to existing RF traffic (Are we in a voting condition?), rfSrcId = %u, rfDstId = %u, netSrcId = %u, netDstId = %u", m_rfLC.getSrcId(), m_rfLC.getDstId(),
-                    srcId, dstId);
-                resetNet();
-                if (m_p25->m_network != nullptr)
-                    m_p25->m_network->resetP25();
-                return false;
-            }
-            else {
-                LogWarning(LOG_NET, "Traffic collision detect, preempting new network traffic to existing RF traffic, rfDstId = %u, netDstId = %u", m_rfLC.getDstId(),
-                    dstId);
-                resetNet();
-                if (m_p25->m_network != nullptr)
-                    m_p25->m_network->resetP25();
-                return false;
-            }
-        }
-    }
-
-    // don't process network frames if this modem isn't authoritative
-    if (!m_p25->m_authoritative && m_p25->m_permittedDstId != dstId) {
-        if (!g_disableNonAuthoritativeLogging)
-            LogWarning(LOG_NET, "[NON-AUTHORITATIVE] Ignoring network traffic, destination not permitted, dstId = %u", dstId);
-        resetNet();
-        if (m_p25->m_network != nullptr)
-            m_p25->m_network->resetP25();
+    if (checkNetTrafficCollision(srcId, dstId, duid))
         return false;
-    }
 
     uint32_t count = 0U;
     switch (duid) {
@@ -1607,6 +1482,151 @@ void Voice::writeNetwork(const uint8_t *data, defines::DUID::E duid, defines::Fr
             LogError(LOG_NET, "P25 unhandled voice DUID, duid = $%02X", duid);
             break;
     }
+}
+
+/* Helper to perform RF traffic collision checking. */
+
+bool Voice::checkRFTrafficCollision(uint32_t srcId, uint32_t dstId)
+{
+    // don't process RF frames if this modem isn't authoritative
+    if (!m_p25->m_authoritative && m_p25->m_permittedDstId != dstId) {
+        if (!g_disableNonAuthoritativeLogging)
+            LogWarning(LOG_RF, "[NON-AUTHORITATIVE] Ignoring RF traffic, destination not permitted!");
+        resetRF();
+        m_p25->m_rfState = RS_RF_LISTENING;
+        return true;
+    }
+
+    // don't process RF frames if the network isn't in a idle state and the RF destination is the network destination
+    if (m_p25->m_netState != RS_NET_IDLE && dstId == m_p25->m_netLastDstId) {
+        LogWarning(LOG_RF, "Traffic collision detect, preempting new RF traffic to existing network traffic!");
+        resetRF();
+        m_p25->m_rfState = RS_RF_LISTENING;
+        return true;
+    }
+
+    // stop network frames from processing -- RF wants to transmit on a different talkgroup
+    if (m_p25->m_netState != RS_NET_IDLE) {
+        if (m_netLC.getSrcId() == srcId && m_p25->m_netLastDstId == dstId) {
+            LogWarning(LOG_RF, "Traffic collision detect, preempting new RF traffic to existing network traffic (Are we in a voting condition?), rfSrcId = %u, rfDstId = %u, netSrcId = %u, netDstId = %u", srcId, dstId,
+                m_netLC.getSrcId(), m_p25->m_netLastDstId);
+            resetRF();
+            m_p25->m_rfState = RS_RF_LISTENING;
+            return true;
+        }
+        else {
+            LogWarning(LOG_RF, "Traffic collision detect, preempting existing network traffic to new RF traffic, rfDstId = %u, netDstId = %u", dstId,
+                m_p25->m_netLastDstId);
+            if (!m_p25->m_dedicatedControl) {
+                m_p25->m_affiliations->releaseGrant(m_p25->m_netLastDstId, false);
+            }
+
+            resetNet();
+            if (m_p25->m_network != nullptr)
+                m_p25->m_network->resetP25();
+
+            if (m_p25->m_duplex) {
+                m_p25->writeRF_TDU(true);
+            }
+
+            m_p25->m_netTGHang.stop();
+        }
+
+        // is control is enabled, and the group was granted by network already ignore RF traffic
+        if (m_p25->m_enableControl && dstId == m_p25->m_netLastDstId) {
+            if (m_p25->m_affiliations->isNetGranted(dstId)) {
+                LogWarning(LOG_RF, "Traffic collision detect, preempting new RF traffic to existing granted network traffic (Are we in a voting condition?), rfSrcId = %u, rfDstId = %u, netSrcId = %u, netDstId = %u", srcId, dstId,
+                    m_netLC.getSrcId(), m_p25->m_netLastDstId);
+                resetRF();
+                m_p25->m_rfState = RS_RF_LISTENING;
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+/* Helper to perform network traffic collision checking. */
+
+bool Voice::checkNetTrafficCollision(uint32_t srcId, uint32_t dstId, defines::DUID::E duid)
+{
+    // don't process network frames if the destination ID's don't match and the RF TG hang timer is running
+    if (m_p25->m_rfLastDstId != 0U && dstId != 0U) {
+        if (m_p25->m_rfLastDstId != dstId && (m_p25->m_rfTGHang.isRunning() && !m_p25->m_rfTGHang.hasExpired())) {
+            resetNet();
+            if (m_p25->m_network != nullptr)
+                m_p25->m_network->resetP25();
+            return true;
+        }
+
+        if (m_p25->m_rfLastDstId == dstId && (m_p25->m_rfTGHang.isRunning() && !m_p25->m_rfTGHang.hasExpired())) {
+            m_p25->m_rfTGHang.start();
+        }
+    }
+
+    // bryanb: possible fix for a "tail ride" condition where network traffic immediately follows RF traffic *while*
+    // the RF TG hangtimer is running
+    if (m_p25->m_rfTGHang.isRunning() && !m_p25->m_rfTGHang.hasExpired()) {
+        m_p25->m_rfTGHang.stop();
+    }
+
+    // don't process network frames if the RF TG hang timer isn't running, the default net idle talkgroup is set and
+    // the destination ID doesn't match the default net idle talkgroup
+    if (m_p25->m_defaultNetIdleTalkgroup != 0U && dstId != 0U && !m_p25->m_rfTGHang.isRunning()) {
+        if (m_p25->m_defaultNetIdleTalkgroup != dstId) {
+            resetNet();
+            if (m_p25->m_network != nullptr)
+                m_p25->m_network->resetP25();
+            return true;
+        }
+    }
+
+    // perform authoritative network TG hangtimer and traffic preemption
+    if (m_p25->m_authoritative) {
+        // don't process network frames if the destination ID's don't match and the network TG hang timer is running
+        if (m_p25->m_netLastDstId != 0U && dstId != 0U && (duid == DUID::LDU1 || duid == DUID::LDU2)) {
+            if (m_p25->m_netLastDstId != dstId && (m_p25->m_netTGHang.isRunning() && !m_p25->m_netTGHang.hasExpired())) {
+                return true;
+            }
+
+            if (m_p25->m_netLastDstId == dstId && (m_p25->m_netTGHang.isRunning() && !m_p25->m_netTGHang.hasExpired())) {
+                m_p25->m_netTGHang.start();
+            }
+        }
+
+        // don't process network frames if the RF modem isn't in a listening state
+        if (m_p25->m_rfState != RS_RF_LISTENING) {
+            if (m_rfLC.getSrcId() == srcId && m_rfLC.getDstId() == dstId) {
+                LogWarning(LOG_NET, "Traffic collision detect, preempting new network traffic to existing RF traffic (Are we in a voting condition?), rfSrcId = %u, rfDstId = %u, netSrcId = %u, netDstId = %u", m_rfLC.getSrcId(), m_rfLC.getDstId(),
+                    srcId, dstId);
+                resetNet();
+                if (m_p25->m_network != nullptr)
+                    m_p25->m_network->resetP25();
+                return true;
+            }
+            else {
+                LogWarning(LOG_NET, "Traffic collision detect, preempting new network traffic to existing RF traffic, rfDstId = %u, netDstId = %u", m_rfLC.getDstId(),
+                    dstId);
+                resetNet();
+                if (m_p25->m_network != nullptr)
+                    m_p25->m_network->resetP25();
+                return true;
+            }
+        }
+    }
+
+    // don't process network frames if this modem isn't authoritative
+    if (!m_p25->m_authoritative && m_p25->m_permittedDstId != dstId) {
+        if (!g_disableNonAuthoritativeLogging)
+            LogWarning(LOG_NET, "[NON-AUTHORITATIVE] Ignoring network traffic, destination not permitted, dstId = %u", dstId);
+        resetNet();
+        if (m_p25->m_network != nullptr)
+            m_p25->m_network->resetP25();
+        return true;
+    }
+
+    return false;
 }
 
 /* Helper to write end of frame data. */

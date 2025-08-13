@@ -1197,7 +1197,7 @@ Voice::~Voice()
 
 bool Voice::checkRFTrafficCollision(uint32_t dstId)
 {
-    /* don't process RF frames if the network isn't in a idle state and the RF destination is the network destination */
+    // don't process RF frames if the network isn't in a idle state and the RF destination is the network destination
     if (m_slot->m_netState != RS_NET_IDLE && dstId == m_slot->m_netLastDstId) {
         LogWarning(LOG_RF, "DMR Slot %u, Traffic collision detect, preempting new RF traffic to existing network traffic!", m_slot->m_slotNo);
         m_slot->m_rfState = RS_RF_LISTENING;
