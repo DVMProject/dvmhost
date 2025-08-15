@@ -8,6 +8,8 @@
 # *
 # */
 file(GLOB dvmfne_SRC
+    "src/fne/lookups/*.h"
+    "src/fne/lookups/*.cpp"
     "src/fne/network/callhandler/*.h"
     "src/fne/network/callhandler/*.cpp"
     "src/fne/network/callhandler/packetdata/*.h"

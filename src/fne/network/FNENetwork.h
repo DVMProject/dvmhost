@@ -28,7 +28,6 @@
 #include "common/concurrent/unordered_map.h"
 #include "common/network/BaseNetwork.h"
 #include "common/network/json/json.h"
-#include "common/lookups/AffiliationLookup.h"
 #include "common/lookups/RadioIdLookup.h"
 #include "common/lookups/TalkgroupRulesLookup.h"
 #include "common/lookups/PeerListLookup.h"
@@ -36,6 +35,7 @@
 #include "common/network/Network.h"
 #include "common/network/PacketBuffer.h"
 #include "common/ThreadPool.h"
+#include "fne/lookups/AffiliationLookup.h"
 #include "fne/network/influxdb/InfluxDB.h"
 #include "fne/CryptoContainer.h"
 
@@ -572,7 +572,7 @@ namespace network
         concurrent::unordered_map<uint32_t, FNEPeerConnection*> m_peers;
         concurrent::unordered_map<uint32_t, json::array> m_peerLinkPeers;
         typedef std::pair<const uint32_t, lookups::AffiliationLookup*> PeerAffiliationMapPair;
-        concurrent::unordered_map<uint32_t, lookups::AffiliationLookup*> m_peerAffiliations;
+        concurrent::unordered_map<uint32_t, fne_lookups::AffiliationLookup*> m_peerAffiliations;
         concurrent::unordered_map<uint32_t, std::vector<uint32_t>> m_ccPeerMap;
         static std::timed_mutex m_keyQueueMutex;
         std::unordered_map<uint32_t, uint16_t> m_peerLinkKeyQueue;
@@ -679,6 +679,13 @@ namespace network
          * @returns bool True, if peer was deleted, otherwise false.
          */
         void erasePeer(uint32_t peerId);
+
+        /**
+         * @brief Helper to find the unit registration for the given source ID.
+         * @param srcId Source Radio ID.
+         * @returns uint32_t Peer ID, or 0 if not found.
+         */
+        uint32_t findPeerUnitReg(uint32_t srcId);
 
         /**
          * @brief Helper to resolve the peer ID to its identity string.

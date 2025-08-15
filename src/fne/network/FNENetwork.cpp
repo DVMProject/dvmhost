@@ -1352,7 +1352,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                 FNEPeerConnection* connection = network->m_peers[peerId];
                                 if (connection != nullptr) {
                                     std::string ip = udp::Socket::address(req->address);
-                                    lookups::AffiliationLookup* aff = network->m_peerAffiliations[peerId];
+                                    fne_lookups::AffiliationLookup* aff = network->m_peerAffiliations[peerId];
                                     if (aff == nullptr) {
                                         LogError(LOG_NET, "PEER %u (%s) has uninitialized affiliations lookup?", peerId, connection->identity().c_str());
                                         network->writePeerNAK(peerId, streamId, TAG_ANNOUNCE, NET_CONN_NAK_INVALID);
@@ -1361,7 +1361,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                     // validate peer (simple validation really)
                                     if (connection->connected() && connection->address() == ip && aff != nullptr) {
                                         uint32_t srcId = GET_UINT24(req->buffer, 0U);           // Source Address
-                                        aff->unitReg(srcId);
+                                        aff->unitReg(srcId, ssrc);
 
                                         // attempt to repeat traffic to Peer-Link masters
                                         if (network->m_host->m_peerNetworks.size() > 0) {
@@ -1606,7 +1606,7 @@ void FNENetwork::createPeerAffiliations(uint32_t peerId, std::string peerName)
     erasePeerAffiliations(peerId);
 
     lookups::ChannelLookup* chLookup = new lookups::ChannelLookup();
-    m_peerAffiliations[peerId] = new lookups::AffiliationLookup(peerName, chLookup, m_verbose);
+    m_peerAffiliations[peerId] = new fne_lookups::AffiliationLookup(peerName, chLookup, m_verbose);
     m_peerAffiliations[peerId]->setDisableUnitRegTimeout(true); // FNE doesn't allow unit registration timeouts (notification must come from the peers)
 }
 
@@ -1662,6 +1662,21 @@ void FNENetwork::erasePeer(uint32_t peerId)
     erasePeerAffiliations(peerId);
 }
 
+/* Helper to find the unit registration for the given source ID. */
+
+uint32_t FNENetwork::findPeerUnitReg(uint32_t srcId)
+{
+    for (auto it = m_peerAffiliations.begin(); it != m_peerAffiliations.end(); ++it) {
+        fne_lookups::AffiliationLookup* aff = it->second;
+        if (aff != nullptr) {
+            if (aff->isUnitReg(srcId)) {
+                return aff->getSSRCByUnitReg(srcId);
+            }
+        }
+    }
+
+    return 0U;
+}
 
 /* Helper to create a JSON representation of a FNE peer connection. */
 

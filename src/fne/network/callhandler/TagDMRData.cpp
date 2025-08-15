@@ -290,15 +290,18 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
 
                 // is this a private call?
                 if (flco == FLCO::PRIVATE) {
-                    auto it = std::find_if(m_statusPVCall.begin(), m_statusPVCall.end(), [&](StatusMapPair x) {
-                        if (x.second.dstId == dstId) {
-                            return true;
-                        }
-                        return false;
-                    });
-                    if (it == m_statusPVCall.end()) {
-                        m_statusPVCall[dstId] = m_status[dstId];
-                    }
+                    m_statusPVCall[dstId].callStartTime = pktTime;
+                    m_statusPVCall[dstId].srcId = srcId;
+                    m_statusPVCall[dstId].dstId = dstId;
+                    m_statusPVCall[dstId].slotNo = slotNo;
+                    m_statusPVCall[dstId].streamId = streamId;
+                    m_statusPVCall[dstId].peerId = peerId;
+                    m_statusPVCall[dstId].activeCall = true;
+
+                    // find the SSRC of the peer that registered this unit
+                    uint32_t regSSRC = m_network->findPeerUnitReg(srcId);
+                    m_statusPVCall[dstId].dstPeerId = regSSRC;
+
                     LogMessage(LOG_NET, "DMR, Private Call Start, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, external = %u",
                         peerId, ssrc, srcId, dstId, streamId, external);
                 }
