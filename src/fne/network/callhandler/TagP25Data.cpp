@@ -84,6 +84,8 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
     uint32_t srcId = GET_UINT24(data, 5U);
     uint32_t dstId = GET_UINT24(data, 8U);
 
+    uint8_t controlByte = data[14U];
+
     uint8_t MFId = data[15U];
 
     uint32_t sysId = (data[11U] << 8) | (data[12U] << 0);
@@ -147,6 +149,9 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
     control.setSrcId(srcId);
     control.setDstId(dstId);
     control.setMFId(MFId);
+
+    // set the LC group flag based on the control byte
+    control.setGroup((controlByte & NET_CTRL_U2U) != NET_CTRL_U2U);
 
     lsd.setLSD1(lsd1);
     lsd.setLSD2(lsd2);
@@ -334,7 +339,7 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                         m_statusPVCall[dstId].activeCall = true;
 
                         // find the SSRC of the peer that registered this unit
-                        uint32_t regSSRC = m_network->findPeerUnitReg(srcId);
+                        uint32_t regSSRC = m_network->findPeerUnitReg(dstId);
                         m_statusPVCall[dstId].dstPeerId = regSSRC;
 
                         LogMessage(LOG_NET, "P25, Private Call Start, peer = %u, ssrc = %u, sysId = $%03X, netId = $%05X, srcId = %u, dstId = %u, streamId = %u, external = %u",
@@ -1226,6 +1231,18 @@ bool TagP25Data::validate(uint32_t peerId, lc::LC& control, DUID::E duid, const 
     // always validate a terminator if the source is valid
     if (m_network->m_filterTerminators) {
         if ((duid == DUID::TDU || duid == DUID::TDULC) && control.getDstId() != 0U) {
+            // is this a private call?
+            auto it = std::find_if(m_statusPVCall.begin(), m_statusPVCall.end(), [&](StatusMapPair x) {
+                if (x.second.dstId == control.getDstId()) {
+                    if (x.second.activeCall)
+                        return true;
+                }
+                return false;
+            });
+            if (it != m_statusPVCall.end()) {
+                return true;
+            }
+
             // is this a group call?
             lookups::TalkgroupRuleGroupVoice tg = m_network->m_tidLookup->find(control.getDstId());
             if (!tg.isInvalid()) {
@@ -1234,12 +1251,6 @@ bool TagP25Data::validate(uint32_t peerId, lc::LC& control, DUID::E duid, const 
 
             tg = m_network->m_tidLookup->findByRewrite(peerId, control.getDstId());
             if (!tg.isInvalid()) {
-                return true;
-            }
-
-            // is this a U2U call?
-            lookups::RadioId rid = m_network->m_ridLookup->find(control.getDstId());
-            if (!rid.radioDefault() && rid.radioEnabled()) {
                 return true;
             }
 
@@ -1254,8 +1265,24 @@ bool TagP25Data::validate(uint32_t peerId, lc::LC& control, DUID::E duid, const 
             return true;
     }
 
+    // validate private call in-progress
+    bool privateCallInProgress = false;
+    if ((control.getLCO() != LCO::PRIVATE) && !control.getGroup()) {
+        // is this a private call? if so only repeat to the peer that registered the unit
+        auto it = std::find_if(m_statusPVCall.begin(), m_statusPVCall.end(), [&](StatusMapPair x) {
+            if (x.second.dstId == control.getDstId()) {
+                if (x.second.activeCall)
+                    return true;
+            }
+            return false;
+        });
+        if (it != m_statusPVCall.end()) {
+            privateCallInProgress = true;
+        }
+    }
+
     // is this a private call?
-    if (control.getLCO() == LCO::PRIVATE) {
+    if ((control.getLCO() == LCO::PRIVATE) || privateCallInProgress) {
         // is the destination ID a blacklisted ID?
         lookups::RadioId rid = m_network->m_ridLookup->find(control.getDstId());
         if (!rid.radioDefault()) {

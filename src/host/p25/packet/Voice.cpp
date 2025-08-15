@@ -1458,18 +1458,23 @@ void Voice::writeNetwork(const uint8_t *data, defines::DUID::E duid, defines::Fr
     if (m_p25->m_rfTimeout.isRunning() && m_p25->m_rfTimeout.hasExpired())
         return;
 
+    uint8_t controlByte = 0U;
     switch (duid) {
         case DUID::HDU:
             // ignore HDU
             break;
         case DUID::LDU1:
-            m_p25->m_network->writeP25LDU1(m_rfLC, m_rfLSD, data, frameType);
+            if (!m_rfLC.getGroup())
+                controlByte = network::NET_CTRL_U2U;
+            m_p25->m_network->writeP25LDU1(m_rfLC, m_rfLSD, data, frameType, controlByte);
             break;
         case DUID::VSELP1:
             // ignore VSELP1
             break;
         case DUID::LDU2:
-            m_p25->m_network->writeP25LDU2(m_rfLC, m_rfLSD, data);
+            if (!m_rfLC.getGroup())
+                controlByte = network::NET_CTRL_U2U;
+            m_p25->m_network->writeP25LDU2(m_rfLC, m_rfLSD, data, controlByte);
             break;
         case DUID::VSELP2:
             // ignore VSELP2
