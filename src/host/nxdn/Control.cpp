@@ -990,17 +990,23 @@ void Control::processNetwork()
     if (valid)
         m_rfLastLICH = lich;
 
-    FuncChannelType::E usc = m_rfLastLICH.getFCT();
+    RFChannelType::E rfct = m_rfLastLICH.getRFCT();
+    FuncChannelType::E fct = m_rfLastLICH.getFCT();
     ChOption::E option = m_rfLastLICH.getOption();
 
-    // forward onto the specific processor for final processing and delivery
-    switch (usc) {
-        case FuncChannelType::USC_UDCH:
-            ret = m_data->processNetwork(option, lc, data.get(), frameLength);
-            break;
-        default:
-            ret = m_voice->processNetwork(usc, option, lc, data.get(), frameLength);
-            break;
+    if (rfct == RFChannelType::RCCH) {
+        m_control->processNetwork(fct, option, lc, data.get(), frameLength);
+    }
+    else if (rfct == RFChannelType::RTCH || rfct == RFChannelType::RDCH) {
+        // forward onto the specific processor for final processing and delivery
+        switch (fct) {
+            case FuncChannelType::USC_UDCH:
+                m_data->processNetwork(option, lc, data.get(), frameLength);
+                break;
+            default:
+                m_voice->processNetwork(fct, option, lc, data.get(), frameLength);
+                break;
+        }
     }
 }
 

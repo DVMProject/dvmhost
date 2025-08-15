@@ -11,6 +11,8 @@
 #include "common/nxdn/NXDNDefines.h"
 #include "common/nxdn/channel/LICH.h"
 #include "common/nxdn/channel/CAC.h"
+#include "common/nxdn/channel/FACCH1.h"
+#include "common/nxdn/channel/UDCH.h"
 #include "common/nxdn/lc/rcch/RCCHFactory.h"
 #include "common/nxdn/lc/RTCH.h"
 #include "common/nxdn/NXDNUtils.h"
@@ -90,6 +92,95 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
 
     bool group = (data[15U] & 0x40U) == 0x40U ? false : true;
     lc.setGroup(group);
+
+    // process raw NXDN data bytes
+    UInt8Array frame;
+    uint8_t frameLength = buffer[23U];
+    if (frameLength <= 24) {
+        frame = std::unique_ptr<uint8_t[]>(new uint8_t[frameLength]);
+        ::memset(frame.get(), 0x00U, frameLength);
+    }
+    else {
+        frame = std::unique_ptr<uint8_t[]>(new uint8_t[frameLength]);
+        ::memset(frame.get(), 0x00U, frameLength);
+        ::memcpy(frame.get(), buffer + 24U, frameLength);
+    }
+
+    NXDNUtils::scrambler(frame.get() + 2U);
+
+    channel::LICH lich;
+    bool valid = lich.decode(frame.get() + 2U);
+
+    std::unique_ptr<lc::RCCH> rcch;
+    if (valid) {
+        RFChannelType::E rfct = lich.getRFCT();
+        FuncChannelType::E fct = lich.getFCT();
+        ChOption::E option = lich.getOption();
+
+        if (rfct == RFChannelType::RCCH) {
+            rcch = lc::rcch::RCCHFactory::createRCCH(frame.get(), frameLength);
+        }
+        else if (rfct == RFChannelType::RTCH || rfct == RFChannelType::RDCH) {
+            // forward onto the specific processor for final processing and delivery
+            switch (fct) {
+                case FuncChannelType::USC_UDCH:
+                {
+                    channel::UDCH udch;
+                    bool validUDCH = udch.decode(data + 2U);
+                    if (validUDCH) {
+                        // The layer3 data will only be correct if valid is true
+                        uint8_t buffer[NXDN_RTCH_LC_LENGTH_BYTES];
+                        udch.getData(buffer);
+
+                        lc.decode(buffer, NXDN_UDCH_LENGTH_BITS);
+                    }
+                }
+                break;
+                default:
+                {
+                    if (fct == FuncChannelType::USC_SACCH_NS) {
+                        // the SACCH on a non-superblock frame is usually an idle and not interesting apart from the RAN.
+                        channel::FACCH1 facch;
+                        bool valid = facch.decode(frame.get() + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS);
+                        if (!valid)
+                            valid = facch.decode(frame.get() + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS + NXDN_FACCH1_FEC_LENGTH_BITS);
+                        if (valid) {
+                            uint8_t buffer[10U];
+                            facch.getData(buffer);
+
+                            lc.decode(buffer, NXDN_FACCH1_FEC_LENGTH_BITS);
+                        }
+                    } else {
+                        channel::FACCH1 facch;
+                        bool valid = false;
+                        switch (option) {
+                        case ChOption::STEAL_FACCH:
+                            valid = facch.decode(frame.get() + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS);
+                            if (!valid)
+                                valid = facch.decode(frame.get() + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS + NXDN_FACCH1_FEC_LENGTH_BITS);
+                            break;
+                        case ChOption::STEAL_FACCH1_1:
+                            valid = facch.decode(frame.get() + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS);
+                            break;
+                        case ChOption::STEAL_FACCH1_2:
+                            valid = facch.decode(frame.get() + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS + NXDN_FACCH1_FEC_LENGTH_BITS);
+                            break;
+                        default:
+                            break;
+                        }
+
+                        if (valid) {
+                            uint8_t buffer[10U];
+                            facch.getData(buffer);
+
+                            lc.decode(buffer, NXDN_FACCH1_FEC_LENGTH_BITS);
+                        }
+                    }
+                }
+                break;
+            }
+        }
+    }
 
     // is the stream valid?
     if (validate(peerId, lc, messageType, streamId)) {
