@@ -47,6 +47,7 @@ TagDMRData::TagDMRData(FNENetwork* network, bool debug) :
     m_parrotFrames(),
     m_parrotFramesReady(false),
     m_status(),
+    m_statusPVCall(),
     m_debug(debug)
 {
     assert(network != nullptr);
@@ -183,8 +184,22 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                     }
                 }
 
-                LogMessage(LOG_NET, "DMR, Call End, peer = %u, ssrc = %u, srcId = %u, dstId = %u, slot = %u, duration = %u, streamId = %u, external = %u",
-                            peerId, ssrc, srcId, dstId, slotNo, duration / 1000, streamId, external);
+                // is this a private call?
+                auto it = std::find_if(m_statusPVCall.begin(), m_statusPVCall.end(), [&](StatusMapPair x) {
+                    if (x.second.dstId == dstId) {
+                        if (x.second.activeCall)
+                            return true;
+                    }
+                    return false;
+                });
+                if (it != m_statusPVCall.end()) {
+                    m_statusPVCall[dstId].reset();
+                    LogMessage(LOG_NET, "DMR, Private Call End, peer = %u, ssrc = %u, srcId = %u, dstId = %u, slot = %u, duration = %u, streamId = %u, external = %u",
+                        peerId, ssrc, srcId, dstId, slotNo, duration / 1000, streamId, external);
+                }
+                else
+                    LogMessage(LOG_NET, "DMR, Call End, peer = %u, ssrc = %u, srcId = %u, dstId = %u, slot = %u, duration = %u, streamId = %u, external = %u",
+                                peerId, ssrc, srcId, dstId, slotNo, duration / 1000, streamId, external);
 
                 // report call event to InfluxDB
                 if (m_network->m_enableInfluxDB) {
@@ -273,7 +288,22 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                 m_status[dstId].peerId = peerId;
                 m_status[dstId].activeCall = true;
 
-                LogMessage(LOG_NET, "DMR, Call Start, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, external = %u", peerId, ssrc, srcId, dstId, streamId, external);
+                // is this a private call?
+                if (flco == FLCO::PRIVATE) {
+                    auto it = std::find_if(m_statusPVCall.begin(), m_statusPVCall.end(), [&](StatusMapPair x) {
+                        if (x.second.dstId == dstId) {
+                            return true;
+                        }
+                        return false;
+                    });
+                    if (it == m_statusPVCall.end()) {
+                        m_statusPVCall[dstId] = m_status[dstId];
+                    }
+                    LogMessage(LOG_NET, "DMR, Private Call Start, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, external = %u",
+                        peerId, ssrc, srcId, dstId, streamId, external);
+                }
+                else
+                    LogMessage(LOG_NET, "DMR, Call Start, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, external = %u", peerId, ssrc, srcId, dstId, streamId, external);
 
                 m_network->m_callInProgress = true;
             }

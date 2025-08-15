@@ -193,6 +193,10 @@ namespace network
                  */
                 uint32_t peerId;
                 /**
+                 * @brief Destination Peer ID.
+                 */
+                uint32_t dstPeerId;
+                /**
                  * @brief Flag indicating this call is active with traffic currently in progress.
                  */
                 bool activeCall;
@@ -211,6 +215,7 @@ namespace network
             };
             typedef std::pair<const uint32_t, RxStatus> StatusMapPair;
             concurrent::unordered_map<uint32_t, RxStatus> m_status;
+            concurrent::unordered_map<uint32_t, RxStatus> m_statusPVCall;
 
             friend class packetdata::P25PacketData;
             packetdata::P25PacketData* m_packetData;

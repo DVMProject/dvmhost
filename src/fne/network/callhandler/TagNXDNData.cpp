@@ -48,7 +48,8 @@ TagNXDNData::TagNXDNData(FNENetwork* network, bool debug) :
     m_parrotFrames(),
     m_parrotFramesReady(false),
     m_status(),
-   m_debug(debug)
+    m_statusPVCall(),
+    m_debug(debug)
 {
     assert(network != nullptr);
 }
@@ -131,8 +132,22 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                         }
                     }
 
-                    LogMessage(LOG_NET, "NXDN, Call End, peer = %u, ssrc = %u, srcId = %u, dstId = %u, duration = %u, streamId = %u, external = %u",
-                        peerId, ssrc, srcId, dstId, duration / 1000, streamId, external);
+                    // is this a private call?
+                    auto it = std::find_if(m_statusPVCall.begin(), m_statusPVCall.end(), [&](StatusMapPair x) {
+                        if (x.second.dstId == dstId) {
+                            if (x.second.activeCall)
+                                return true;
+                        }
+                        return false;
+                    });
+                    if (it != m_statusPVCall.end()) {
+                        m_statusPVCall[dstId].reset();
+                        LogMessage(LOG_NET, "NXDN, Private Call End, peer = %u, ssrc = %u, srcId = %u, dstId = %u, duration = %u, streamId = %u, external = %u",
+                            peerId, ssrc, srcId, dstId, duration / 1000, streamId, external);
+                    }
+                    else
+                        LogMessage(LOG_NET, "NXDN, Call End, peer = %u, ssrc = %u, srcId = %u, dstId = %u, duration = %u, streamId = %u, external = %u",
+                            peerId, ssrc, srcId, dstId, duration / 1000, streamId, external);
 
                     // report call event to InfluxDB
                     if (m_network->m_enableInfluxDB) {
@@ -198,7 +213,7 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                 else {
                     // is this a parrot talkgroup? if so, clear any remaining frames from the buffer
                     lookups::TalkgroupRuleGroupVoice tg = m_network->m_tidLookup->find(dstId);
-                    if (tg.config().parrot()) {                    
+                    if (tg.config().parrot()) {
                         m_parrotFramesReady = false;
                         if (m_parrotFrames.size() > 0) {
                             for (auto& pkt : m_parrotFrames) {
@@ -218,7 +233,42 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                     m_status[dstId].peerId = peerId;
                     m_status[dstId].activeCall = true;
 
-                    LogMessage(LOG_NET, "NXDN, Call Start, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, external = %u", peerId, ssrc, srcId, dstId, streamId, external);
+                    // is this a private call?
+                    if (!group) {
+                        auto it = std::find_if(m_statusPVCall.begin(), m_statusPVCall.end(), [&](StatusMapPair x) {
+                            if (x.second.dstId == dstId) {
+                                if (x.second.activeCall)
+                                    return true;
+                            }
+                            return false;
+                        });
+                        if (it != m_statusPVCall.end()) {
+                            RxStatus status = m_statusPVCall[dstId];
+                            uint64_t lastPktDuration = hrc::diff(hrc::now(), status.lastPacket);
+                            if ((lastPktDuration / 1000) > CALL_COLL_TIMEOUT) {
+                                LogWarning(LOG_NET, "NXDN, Private Call Collision, lasted more then %us with no further updates, forcibly ending call");
+                                m_statusPVCall[dstId].reset();
+                            }
+                            else {
+                                LogWarning(LOG_NET, "NXDN, Private Call Collision, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, rxPeer = %u, rxSrcId = %u, rxDstId = %u, rxStreamId = %u, external = %u",
+                                    peerId, ssrc, srcId, dstId, streamId, status.peerId, status.srcId, status.dstId, status.streamId, external);
+                                return false;
+                            }
+                        }
+
+                        m_statusPVCall[dstId].callStartTime = pktTime;
+                        m_statusPVCall[dstId].srcId = srcId;
+                        m_statusPVCall[dstId].dstId = dstId;
+                        m_statusPVCall[dstId].streamId = streamId;
+                        m_statusPVCall[dstId].peerId = peerId;
+                        m_statusPVCall[dstId].activeCall = true;
+
+                        LogMessage(LOG_NET, "NXDN, Private Call Start, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, external = %u",
+                            peerId, ssrc, srcId, dstId, streamId, external);
+                    }
+                    else
+                        LogMessage(LOG_NET, "NXDN, Call Start, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, external = %u", 
+                            peerId, ssrc, srcId, dstId, streamId, external);
 
                     m_network->m_callInProgress = true;
                 }

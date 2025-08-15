@@ -48,6 +48,7 @@ TagP25Data::TagP25Data(FNENetwork* network, bool debug) :
     m_parrotFramesReady(false),
     m_parrotFirstFrame(true),
     m_status(),
+    m_statusPVCall(),
     m_packetData(nullptr),
     m_debug(debug)
 {
@@ -221,8 +222,22 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                             }
                         }
 
-                        LogMessage(LOG_NET, "P25, Call End, peer = %u, ssrc = %u, sysId = $%03X, netId = $%05X, srcId = %u, dstId = %u, duration = %u, streamId = %u, external = %u",
-                            peerId, ssrc, sysId, netId, srcId, dstId, duration / 1000, streamId, external);
+                        // is this a private call?
+                        auto it = std::find_if(m_statusPVCall.begin(), m_statusPVCall.end(), [&](StatusMapPair x) {
+                            if (x.second.dstId == dstId) {
+                                if (x.second.activeCall)
+                                    return true;
+                            }
+                            return false;
+                        });
+                        if (it != m_statusPVCall.end()) {
+                            m_statusPVCall[dstId].reset();
+                            LogMessage(LOG_NET, "P25, Private Call End, peer = %u, ssrc = %u, sysId = $%03X, netId = $%05X, srcId = %u, dstId = %u, duration = %u, streamId = %u, external = %u",
+                                peerId, ssrc, sysId, netId, srcId, dstId, duration / 1000, streamId, external);
+                        }
+                        else
+                            LogMessage(LOG_NET, "P25, Call End, peer = %u, ssrc = %u, sysId = $%03X, netId = $%05X, srcId = %u, dstId = %u, duration = %u, streamId = %u, external = %u",
+                                peerId, ssrc, sysId, netId, srcId, dstId, duration / 1000, streamId, external);
 
                         // report call event to InfluxDB
                         if (m_network->m_enableInfluxDB) {
@@ -309,8 +324,42 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                     m_status[dstId].peerId = peerId;
                     m_status[dstId].activeCall = true;
 
-                    LogMessage(LOG_NET, "P25, Call Start, peer = %u, ssrc = %u, sysId = $%03X, netId = $%05X, srcId = %u, dstId = %u, streamId = %u, external = %u", 
-                        peerId, ssrc, sysId, netId, srcId, dstId, streamId, external);
+                    // is this a private call?
+                    if (lco == LCO::PRIVATE) {
+                        auto it = std::find_if(m_statusPVCall.begin(), m_statusPVCall.end(), [&](StatusMapPair x) {
+                            if (x.second.dstId == dstId) {
+                                if (x.second.activeCall)
+                                    return true;
+                            }
+                            return false;
+                        });
+                        if (it != m_statusPVCall.end()) {
+                            RxStatus status = m_statusPVCall[dstId];
+                            uint64_t lastPktDuration = hrc::diff(hrc::now(), status.lastPacket);
+                            if ((lastPktDuration / 1000) > CALL_COLL_TIMEOUT) {
+                                LogWarning(LOG_NET, "P25, Private Call Collision, lasted more then %us with no further updates, forcibly ending call");
+                                m_statusPVCall[dstId].reset();
+                            }
+                            else {
+                                LogWarning(LOG_NET, "P25, Private Call Collision, peer = %u, ssrc = %u, sysId = $%03X, netId = $%05X, srcId = %u, dstId = %u, streamId = %u, rxPeer = %u, rxSrcId = %u, rxDstId = %u, rxStreamId = %u, external = %u",
+                                    peerId, ssrc, sysId, netId, srcId, dstId, streamId, status.peerId, status.srcId, status.dstId, status.streamId, external);
+                                return false;
+                            }
+                        }
+
+                        m_statusPVCall[dstId].callStartTime = pktTime;
+                        m_statusPVCall[dstId].srcId = srcId;
+                        m_statusPVCall[dstId].dstId = dstId;
+                        m_statusPVCall[dstId].streamId = streamId;
+                        m_statusPVCall[dstId].peerId = peerId;
+                        m_statusPVCall[dstId].activeCall = true;
+
+                        LogMessage(LOG_NET, "P25, Private Call Start, peer = %u, ssrc = %u, sysId = $%03X, netId = $%05X, srcId = %u, dstId = %u, streamId = %u, external = %u",
+                            peerId, ssrc, sysId, netId, srcId, dstId, streamId, external);
+                    }
+                    else
+                        LogMessage(LOG_NET, "P25, Call Start, peer = %u, ssrc = %u, sysId = $%03X, netId = $%05X, srcId = %u, dstId = %u, streamId = %u, external = %u", 
+                            peerId, ssrc, sysId, netId, srcId, dstId, streamId, external);
 
                     m_network->m_callInProgress = true;
                 }
