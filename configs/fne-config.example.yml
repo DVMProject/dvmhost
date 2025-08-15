@@ -93,6 +93,8 @@ master:
 
     # Flag indicating whether or not a grant responses will only be sent to TGs with affiliations, if the TG is configured for affiliation gating.
     restrictGrantToAffiliatedOnly: false
+    # Flag indicating whether or not a private call will only be routed to the network peers the RID registers with.
+    restrictPrivateCallToRegOnly: false
 
     # Flag indicating whether or not a adjacent site broadcasts will pass to any peers.
     disallowAdjStsBcast: false

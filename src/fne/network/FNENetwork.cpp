@@ -97,6 +97,7 @@ FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port,
     m_allowConvSiteAffOverride(false),
     m_disallowCallTerm(false),
     m_restrictGrantToAffOnly(false),
+    m_restrictPVCallToRegOnly(false),
     m_enableInCallCtrl(true),
     m_rejectUnknownRID(false),
     m_maskOutboundPeerID(false),
@@ -178,6 +179,7 @@ void FNENetwork::setOptions(yaml::Node& conf, bool printOptions)
 
     m_parrotOnlyOriginating = conf["parrotOnlyToOrginiatingPeer"].as<bool>(false);
     m_restrictGrantToAffOnly = conf["restrictGrantToAffiliatedOnly"].as<bool>(false);
+    m_restrictPVCallToRegOnly = conf["restrictPrivateCallToRegOnly"].as<bool>(false);
     m_filterTerminators = conf["filterTerminators"].as<bool>(true);
 
     m_disablePacketData = conf["disablePacketData"].as<bool>(false);
@@ -221,6 +223,7 @@ void FNENetwork::setOptions(yaml::Node& conf, bool printOptions)
             LogInfo("    Mask Outbound Traffic Peer ID for Non-Peer Link: yes");
         }
         LogInfo("    Restrict grant response by affiliation: %s", m_restrictGrantToAffOnly ? "yes" : "no");
+        LogInfo("    Restrict private call to registered units: %s", m_restrictPVCallToRegOnly ? "yes" : "no");
         LogInfo("    Traffic Terminators Filtered by Destination ID: %s", m_filterTerminators ? "yes" : "no");
         LogInfo("    Disallow Unit-to-Unit: %s", m_disallowU2U ? "yes" : "no");
         LogInfo("    InfluxDB Reporting Enabled: %s", m_enableInfluxDB ? "yes" : "no");

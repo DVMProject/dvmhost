@@ -608,6 +608,7 @@ namespace network
         bool m_allowConvSiteAffOverride;
         bool m_disallowCallTerm;
         bool m_restrictGrantToAffOnly;
+        bool m_restrictPVCallToRegOnly;
         bool m_enableInCallCtrl;
         bool m_rejectUnknownRID;
 

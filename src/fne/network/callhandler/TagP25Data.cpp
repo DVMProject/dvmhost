@@ -385,9 +385,35 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
             uint32_t i = 0U;
             for (auto peer : m_network->m_peers) {
                 if (peerId != peer.first) {
+                    FNEPeerConnection* conn = peer.second;
                     if (ssrc == peer.first) {
                         // skip the peer if it is the source peer
                         continue;
+                    }
+
+                    if (m_network->m_restrictPVCallToRegOnly) {
+                        // is this peer an external peer?
+                        bool external = false;
+                        if (conn != nullptr) {
+                            external = conn->isExternalPeer();
+                        }
+
+                        // is this a private call?
+                        if ((lco == LCO::PRIVATE) && !external) {
+                            // is this a private call? if so only repeat to the peer that registered the unit
+                            auto it = std::find_if(m_statusPVCall.begin(), m_statusPVCall.end(), [&](StatusMapPair x) {
+                                if (x.second.dstId == dstId) {
+                                    if (x.second.activeCall)
+                                        return true;
+                                }
+                                return false;
+                            });
+                            if (it != m_statusPVCall.end()) {
+                                if (peer.first != m_statusPVCall[dstId].dstPeerId) {
+                                    continue;
+                                }
+                            }
+                        }
                     }
 
                     // is this peer ignored?
