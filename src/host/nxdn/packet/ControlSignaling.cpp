@@ -287,10 +287,12 @@ bool ControlSignaling::processNetwork(FuncChannelType::E fct, ChOption::E option
 ControlSignaling::ControlSignaling(Control* nxdn, bool debug, bool verbose) :
     m_nxdn(nxdn),
     m_bcchCnt(1U),
-    m_rcchGroupingCnt(1U),
     m_ccchPagingCnt(2U),
     m_ccchMultiCnt(2U),
-    m_rcchIterateCnt(2U),
+    m_rcchGroupingCnt(1U),
+    m_rcchIterateCnt(4U),
+    m_pgRCCHQueue((NXDN_FRAME_LENGTH_BYTES + 2U) * 16U, "RCCH Paging Frame"),
+    m_mpRCCHQueue((NXDN_FRAME_LENGTH_BYTES + 2U) * 16U, "RCCH Multipurpose Frame"),
     m_verifyAff(false),
     m_verifyReg(false),
     m_disableGrantSrcIdCheck(false),
@@ -326,7 +328,7 @@ void ControlSignaling::writeNetwork(const uint8_t *data, uint32_t len)
 
 /* Helper to write a single-block RCCH packet. */
 
-void ControlSignaling::writeRF_Message(RCCH* rcch, bool noNetwork, bool imm)
+void ControlSignaling::writeRF_Message(RCCH* rcch, bool noNetwork, bool paging)
 {
     if (!m_nxdn->m_enableControl)
         return;
@@ -365,9 +367,10 @@ void ControlSignaling::writeRF_Message(RCCH* rcch, bool noNetwork, bool imm)
     if (!noNetwork)
         writeNetwork(data, NXDN_FRAME_LENGTH_BYTES + 2U);
 
-    if (m_nxdn->m_duplex) {
-        m_nxdn->addFrame(data, false, imm);
-    }
+    if (paging)
+        m_pgRCCHQueue.addData(data, NXDN_FRAME_LENGTH_BYTES + 2U);
+    else
+        m_mpRCCHQueue.addData(data, NXDN_FRAME_LENGTH_BYTES + 2U);
 }
 
 /*
@@ -376,10 +379,8 @@ void ControlSignaling::writeRF_Message(RCCH* rcch, bool noNetwork, bool imm)
 
 /* Helper to write control channel packet data. */
 
-void ControlSignaling::writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adjSS)
+void ControlSignaling::writeRF_ControlData(uint8_t n, bool first)
 {
-    uint8_t i = 0U, seqCnt = 0U;
-
     if (!m_nxdn->m_enableControl)
         return;
 
@@ -400,26 +401,42 @@ void ControlSignaling::writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adj
         return;
     }
 
-    do
-    {
-        if (m_debug) {
-            LogDebugEx(LOG_NXDN, "ControlSignaling::writeRF_ControlData()", "frameCnt = %u, seq = %u", frameCnt, n);
-        }
+    if (m_debug) {
+        LogDebugEx(LOG_NXDN, "ControlSignaling::writeRF_ControlData()", "seq = %u", n);
+    }
 
-        switch (n)
-        {
-        case 0:
-            writeRF_CC_Message_Site_Info();
-            break;
-        default:
-            writeRF_CC_Message_Service_Info();
-            break;
-        }
+    if (first) {
+        // transmit the BCCH frame
+        writeRF_CC_Message_Site_Info();
+    }
+    else {
+        if (n > 0U && n <= m_ccchPagingCnt - 1U) {
+            // transmit the next paging frame
+            if (!m_pgRCCHQueue.isEmpty()) {
+                uint8_t data[NXDN_FRAME_LENGTH_BYTES + 2U];
+                m_pgRCCHQueue.get(data, NXDN_FRAME_LENGTH_BYTES + 2U);
 
-        if (seqCnt > 0U)
-            n++;
-        i++;
-    } while (i <= seqCnt);
+                if (m_nxdn->m_duplex) {
+                    m_nxdn->addFrame(data);
+                }
+            }
+            else
+                writeRF_CC_Message_Service_Info();
+        }
+        else {
+            // transmit the next multipurpose frame
+            if (!m_mpRCCHQueue.isEmpty()) {
+                uint8_t data[NXDN_FRAME_LENGTH_BYTES + 2U];
+                m_mpRCCHQueue.get(data, NXDN_FRAME_LENGTH_BYTES + 2U);
+
+                if (m_nxdn->m_duplex) {
+                    m_nxdn->addFrame(data);
+                }
+            }
+            else
+                writeRF_CC_Message_Idle();
+        }
+    }
 
     lc::RCCH::setVerbose(rcchVerbose);
     m_nxdn->m_debug = m_debug = controlDebug;
@@ -433,7 +450,7 @@ bool ControlSignaling::writeRF_Message_Grant(uint32_t srcId, uint32_t dstId, uin
     bool encryption = ((serviceOptions & 0xFFU) & 0x40U) == 0x40U;          // Encryption Flag
     uint8_t priority = ((serviceOptions & 0xFFU) & 0x07U);                  // Priority
 
-    std::unique_ptr<rcch::MESSAGE_TYPE_VCALL_CONN> rcch = std::make_unique<rcch::MESSAGE_TYPE_VCALL_CONN>();
+    std::unique_ptr<rcch::MESSAGE_TYPE_VCALL_ASSGN> rcch = std::make_unique<rcch::MESSAGE_TYPE_VCALL_ASSGN>();
 
     // are we skipping checking?
     if (!skip) {
@@ -559,11 +576,19 @@ bool ControlSignaling::writeRF_Message_Grant(uint32_t srcId, uint32_t dstId, uin
         if (!net) {
             ::ActivityLog("NXDN", true, "group grant request from %u to TG %u", srcId, dstId);
         }
+
+        rcch->setCallType(CallType::CONFERENCE);
+        rcch->setDuplex(false);
+        rcch->setTransmissionMode(TransmissionMode::MODE_4800);
     }
     else {
         if (!net) {
             ::ActivityLog("NXDN", true, "unit-to-unit grant request from %u to %u", srcId, dstId);
         }
+
+        rcch->setCallType(CallType::INDIVIDUAL);
+        rcch->setDuplex(false);
+        rcch->setTransmissionMode(TransmissionMode::MODE_4800);
     }
 
     // callback RPC to permit the granted TG on the specified voice channel
@@ -610,7 +635,6 @@ bool ControlSignaling::writeRF_Message_Grant(uint32_t srcId, uint32_t dstId, uin
         }
     }
 
-    rcch->setMessageType(MessageType::RTCH_VCALL);
     rcch->setGrpVchNo(chNo);
     rcch->setGroup(grp);
     rcch->setSrcId(srcId);
@@ -626,7 +650,7 @@ bool ControlSignaling::writeRF_Message_Grant(uint32_t srcId, uint32_t dstId, uin
     }
 
     // transmit group grant
-    writeRF_Message_Imm(rcch.get(), net);
+    writeRF_Message(rcch.get(), net, true);
     return true;
 }
 
@@ -653,7 +677,7 @@ void ControlSignaling::writeRF_Message_Deny(uint32_t srcId, uint32_t dstId, uint
             service, srcId, dstId);
     }
 
-    writeRF_Message_Imm(rcch.get(), false);
+    writeRF_Message(rcch.get(), false);
 }
 
 /* Helper to write a group registration response packet. */
@@ -711,7 +735,7 @@ bool ControlSignaling::writeRF_Message_Grp_Reg_Rsp(uint32_t srcId, uint32_t dstI
             m_nxdn->m_network->announceGroupAffiliation(srcId, dstId);
     }
 
-    writeRF_Message_Imm(rcch.get(), false);
+    writeRF_Message(rcch.get(), false);
     return ret;
 }
 
@@ -768,7 +792,7 @@ void ControlSignaling::writeRF_Message_U_Reg_Rsp(uint32_t srcId, uint32_t dstId,
     rcch->setSrcId(srcId);
     rcch->setDstId(dstId);
 
-    writeRF_Message_Imm(rcch.get(), true);
+    writeRF_Message(rcch.get(), true);
 }
 
 /* Helper to write a CC SITE_INFO broadcast packet on the RF interface. */
@@ -840,6 +864,49 @@ void ControlSignaling::writeRF_CC_Message_Service_Info()
     ::memset(buffer, 0x00U, NXDN_RCCH_LC_LENGTH_BYTES);
 
     std::unique_ptr<rcch::MESSAGE_TYPE_SRV_INFO> rcch = std::make_unique<rcch::MESSAGE_TYPE_SRV_INFO>();
+    DEBUG_LOG_MSG(rcch->toString());
+    rcch->encode(buffer, NXDN_RCCH_LC_LENGTH_BITS / 2U);
+    //rcch->encode(buffer, NXDN_RCCH_LC_LENGTH_BITS / 2U, NXDN_RCCH_LC_LENGTH_BITS / 2U);
+
+    // generate the CAC
+    channel::CAC cac;
+    cac.setRAN(m_nxdn->m_ran);
+    cac.setStructure(ChStructure::SR_RCCH_SINGLE);
+    cac.setData(buffer);
+    cac.encode(data + 2U);
+
+    data[0U] = modem::TAG_DATA;
+    data[1U] = 0x00U;
+
+    NXDNUtils::scrambler(data + 2U);
+    NXDNUtils::addPostBits(data + 2U);
+
+    if (m_nxdn->m_duplex) {
+        m_nxdn->addFrame(data);
+    }
+}
+
+/* Helper to write a CC IDLE broadcast packet on the RF interface. */
+
+void ControlSignaling::writeRF_CC_Message_Idle()
+{
+    uint8_t data[NXDN_FRAME_LENGTH_BYTES + 2U];
+    ::memset(data + 2U, 0x00U, NXDN_FRAME_LENGTH_BYTES);
+
+    Sync::addNXDNSync(data + 2U);
+
+    // generate the LICH
+    channel::LICH lich;
+    lich.setRFCT(RFChannelType::RCCH);
+    lich.setFCT(FuncChannelType::CAC_OUTBOUND);
+    lich.setOption(ChOption::DATA_IDLE);
+    lich.setOutbound(true);
+    lich.encode(data + 2U);
+
+    uint8_t buffer[NXDN_RCCH_LC_LENGTH_BYTES];
+    ::memset(buffer, 0x00U, NXDN_RCCH_LC_LENGTH_BYTES);
+
+    std::unique_ptr<rcch::MESSAGE_TYPE_IDLE> rcch = std::make_unique<rcch::MESSAGE_TYPE_IDLE>();
     DEBUG_LOG_MSG(rcch->toString());
     rcch->encode(buffer, NXDN_RCCH_LC_LENGTH_BITS / 2U);
     //rcch->encode(buffer, NXDN_RCCH_LC_LENGTH_BITS / 2U, NXDN_RCCH_LC_LENGTH_BITS / 2U);

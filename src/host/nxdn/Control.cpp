@@ -106,8 +106,8 @@ Control::Control(bool authoritative, uint32_t ran, uint32_t callHang, uint32_t q
     m_interval(),
     m_frameLossCnt(0U),
     m_frameLossThreshold(DEFAULT_FRAME_LOSS_THRESHOLD),
-    m_ccFrameCnt(0U),
     m_ccSeq(0U),
+    m_ccIteration(0U),
     m_siteData(),
     m_rssiMapper(rssiMapper),
     m_rssi(0U),
@@ -256,7 +256,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
     uint8_t siteInfo1 = SiteInformation1::VOICE_CALL_SVC | SiteInformation1::DATA_CALL_SVC;
     uint8_t siteInfo2 = SiteInformation2::SHORT_DATA_CALL_SVC;
     if (m_enableControl) {
-        siteInfo1 |= SiteInformation1::LOC_REG_SVC;//| SiteInformation1::GRP_REG_SVC;
+        siteInfo1 |= SiteInformation1::LOC_REG_SVC;
     }
 
     /*
@@ -328,7 +328,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
                 LogInfo("    Disable Grant Source ID Check: yes");
             }
             if (m_supervisor)
-                LogMessage(LOG_DMR, "Host is configured to operate as a NXDN control channel, site controller mode.");
+                LogMessage(LOG_NXDN, "Host is configured to operate as a NXDN control channel, site controller mode.");
         }
 
         if (m_defaultNetIdleTalkgroup != 0U) {
@@ -1271,10 +1271,6 @@ bool Control::writeRF_ControlData()
     if (!m_enableControl)
         return false;
 
-    if (m_ccFrameCnt == 254U) {
-        m_ccFrameCnt = 0U;
-    }
-
     // don't add any frames if the queue is full
     uint8_t len = NXDN_FRAME_LENGTH_BYTES + 2U;
     uint32_t space = m_txQueue.freeSpace();
@@ -1282,20 +1278,21 @@ bool Control::writeRF_ControlData()
         return false;
     }
 
-    const uint8_t maxSeq = m_control->m_bcchCnt + (m_control->m_ccchPagingCnt + m_control->m_ccchMultiCnt) *
-        m_control->m_rcchGroupingCnt * m_control->m_rcchIterateCnt;
-    if (m_ccSeq == maxSeq) {
+    if (m_ccIteration > m_control->m_rcchIterateCnt) {
+        m_ccIteration = 0U;
         m_ccSeq = 0U;
     }
 
+    const uint8_t maxSeq = (m_control->m_ccchPagingCnt + m_control->m_ccchMultiCnt) * m_control->m_rcchGroupingCnt;
+    if (m_ccSeq > maxSeq) {
+        m_ccSeq = 1U;
+        m_ccIteration++;
+    }
+
     if (m_netState == RS_NET_IDLE && m_rfState == RS_RF_LISTENING) {
-        m_control->writeRF_ControlData(m_ccFrameCnt, m_ccSeq, true);
+        m_control->writeRF_ControlData(m_ccSeq, m_ccSeq == 0U);
 
         m_ccSeq++;
-        if (m_ccSeq == maxSeq) {
-            m_ccFrameCnt++;
-        }
-
         return true;
     }
 
