@@ -1372,7 +1372,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                                 if (peer.second != nullptr) {
                                                     if (peer.second->isEnabled() && peer.second->isPeerLink()) {
                                                         peer.second->writeMaster({ NET_FUNC::ANNOUNCE, NET_SUBFUNC::ANNC_SUBFUNC_UNIT_REG }, 
-                                                            req->buffer, req->length, req->rtpHeader.getSequence(), streamId, false, false);
+                                                            req->buffer, req->length, req->rtpHeader.getSequence(), streamId, false, false, 0U, ssrc);
                                                     }
                                                 }
                                             }
