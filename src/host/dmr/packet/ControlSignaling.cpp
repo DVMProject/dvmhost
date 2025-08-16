@@ -776,6 +776,12 @@ void ControlSignaling::writeRF_CSBK_ACK_RSP(uint32_t dstId, uint8_t reason, uint
     csbk->setSrcId(WUID_ALL); // hmmm...
     csbk->setDstId(dstId);
 
+    if (m_verbose) {
+        LogMessage(LOG_DMR, "DMR Slot %u, CSBK, %s, reason = $%02X (%s), srcId = %u, dstId = %u",
+            m_slot->m_slotNo, csbk->toString().c_str(), reason, DMRUtils::rsnToString(reason).c_str(),
+            csbk->getSrcId(), csbk->getDstId());
+    }
+
     writeRF_CSBK_Imm(csbk.get());
 }
 
@@ -788,6 +794,12 @@ void ControlSignaling::writeRF_CSBK_NACK_RSP(uint32_t dstId, uint8_t reason, uin
     csbk->setReason(reason);
     csbk->setSrcId(WUID_ALL); // hmmm...
     csbk->setDstId(dstId);
+
+    if (m_verbose) {
+        LogMessage(LOG_DMR, "DMR Slot %u, CSBK, %s, reason = $%02X (%s), srcId = %u, dstId = %u",
+            m_slot->m_slotNo, csbk->toString().c_str(), reason, DMRUtils::rsnToString(reason).c_str(),
+            csbk->getSrcId(), csbk->getDstId());
+    }
 
     writeRF_CSBK_Imm(csbk.get());
 }

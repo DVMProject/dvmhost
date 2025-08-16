@@ -673,8 +673,8 @@ void ControlSignaling::writeRF_Message_Deny(uint32_t srcId, uint32_t dstId, uint
     rcch->setDstId(dstId);
 
     if (m_verbose) {
-        LogMessage(LOG_RF, "NXDN, MSG_DENIAL (Message Denial), reason = $%02X, service = $%02X, srcId = %u, dstId = %u",
-            service, srcId, dstId);
+        LogMessage(LOG_RF, "NXDN, MSG_DENIAL (Message Denial), reason = $%02X (%s), service = $%02X, srcId = %u, dstId = %u",
+            reason, NXDNUtils::causeToString(reason), service, srcId, dstId);
     }
 
     writeRF_Message(rcch.get(), false);

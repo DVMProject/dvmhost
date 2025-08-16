@@ -2770,8 +2770,9 @@ void ControlSignaling::writeRF_TSDU_Deny(uint32_t srcId, uint32_t dstId, uint8_t
     osp->setGroup(grp);
 
     if (m_verbose) {
-        LogMessage(LOG_RF, P25_TSDU_STR ", %s, AIV = %u, reason = $%02X, srcId = %u, dstId = %u",
-            osp->toString().c_str(), osp->getAIV(), reason, osp->getSrcId(), osp->getDstId());
+        LogMessage(LOG_RF, P25_TSDU_STR ", %s, AIV = %u, reason = $%02X (%s), srcId = %u, dstId = %u",
+            osp->toString().c_str(), osp->getAIV(), reason, P25Utils::denyRsnToString(reason).c_str(),
+            osp->getSrcId(), osp->getDstId());
     }
 
     writeRF_TSDU_SBF_Imm(osp.get(), false);
@@ -2969,8 +2970,9 @@ void ControlSignaling::writeRF_TSDU_Queue(uint32_t srcId, uint32_t dstId, uint8_
     osp->setGroup(grp);
 
     if (m_verbose) {
-        LogMessage(LOG_RF, P25_TSDU_STR ", %s, AIV = %u, reason = $%02X, srcId = %u, dstId = %u",
-            osp->toString().c_str(), osp->getAIV(), reason, osp->getSrcId(), osp->getDstId());
+        LogMessage(LOG_RF, P25_TSDU_STR ", %s, AIV = %u, reason = $%02X (%s), srcId = %u, dstId = %u",
+            osp->toString().c_str(), osp->getAIV(), reason, P25Utils::queueRsnToString(reason).c_str(),
+            osp->getSrcId(), osp->getDstId());
     }
 
     writeRF_TSDU_SBF_Imm(osp.get(), false);

@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2021,2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2021,2024,2025 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -136,6 +136,13 @@ namespace dmr
 
             return id;
         }
+
+        /**
+         * @brief Helper to convert a reason code to a string.
+         * @param reason Reason code.
+         * @returns std::string Reason code string.
+         */
+        static std::string rsnToString(uint8_t reason);
     };
 } // namespace dmr
 

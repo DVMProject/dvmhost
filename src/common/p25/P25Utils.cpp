@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2016 Jonathan Naylor, G4KLX
- *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2024-2025 Bryan Biedenkapp, N2PLL
  *
  */
 #include "Defines.h"
@@ -241,4 +241,72 @@ uint32_t P25Utils::compare(const uint8_t* data1, const uint8_t* data2, uint32_t 
     }
 
     return errs;
+}
+
+/* Helper to convert a denial reason code to a string. */
+
+std::string P25Utils::denyRsnToString(uint8_t reason)
+{
+    switch (reason) {
+    case ReasonCode::DENY_REQ_UNIT_NOT_VALID:
+        return std::string("DENY_REQ_UNIT_NOT_VALID (Requesting Unit Not Valid)");
+    case ReasonCode::DENY_REQ_UNIT_NOT_AUTH:
+        return std::string("DENY_REQ_UNIT_NOT_AUTH (Requesting Unit Not Authenticated)");
+
+    case ReasonCode::DENY_TGT_UNIT_NOT_VALID:
+        return std::string("DENY_TGT_UNIT_NOT_VALID (Target Unit Not Valid)");
+    case ReasonCode::DENY_TGT_UNIT_NOT_AUTH:
+        return std::string("DENY_TGT_UNIT_NOT_AUTH (Target Unit Not Authenticated)");
+    case ReasonCode::DENY_SU_FAILED_AUTH:
+        return std::string("DENY_SU_FAILED_AUTH (Target Unit Failed Authentication)");
+    case ReasonCode::DENY_TGT_UNIT_REFUSED:
+        return std::string("DENY_TGT_UNIT_REFUSED (Target Unit Refused)");
+
+    case ReasonCode::DENY_TGT_GROUP_NOT_VALID:
+        return std::string("DENY_TGT_GROUP_NOT_VALID (Target Group Not Valid)");
+    case ReasonCode::DENY_TGT_GROUP_NOT_AUTH:
+        return std::string("DENY_TGT_GROUP_NOT_AUTH (Target Group Not Authenticated)");
+
+    case ReasonCode::DENY_NO_NET_RSRC_AVAIL:
+        return std::string("DENY_NO_NET_RSRC_AVAIL (Requested Network Resources Not Available)");
+    case ReasonCode::DENY_NO_RF_RSRC_AVAIL:
+        return std::string("DENY_NO_RF_RSRC_AVAIL (Requested RF Resources Not Available)");
+    case ReasonCode::DENY_SVC_IN_USE:
+        return std::string("DENY_SVC_IN_USE (Service In Use)");
+    
+    case ReasonCode::DENY_SITE_ACCESS_DENIAL:
+        return std::string("DENY_SITE_ACCESS_DENIAL (Site Access Denial)");
+
+    case ReasonCode::DENY_PTT_COLLIDE:
+        return std::string("DENY_PTT_COLLIDE (Push-to-Talk Collision)");
+    case ReasonCode::DENY_PTT_BONK:
+        return std::string("DENY_PTT_BONK (Push-to-Talk Denial/Bonk)");
+
+    case ReasonCode::DENY_SYS_UNSUPPORTED_SVC:
+        return std::string("DENY_SYS_UNSUPPORTED_SVC (Service Unsupported)");
+
+    default:
+        return std::string();
+    }
+}
+
+/* Helper to convert a queue reason code to a string. */
+
+std::string P25Utils::queueRsnToString(uint8_t reason)
+{
+    switch (reason) {
+    case ReasonCode::QUE_REQ_ACTIVE_SERVICE:
+        return std::string("QUE_REQ_ACTIVE_SERVICE (Requested Service Active)");
+    case ReasonCode::QUE_TGT_ACTIVE_SERVICE:
+        return std::string("QUE_TGT_ACTIVE_SERVICE (Target Service Active)");
+
+    case ReasonCode::QUE_TGT_UNIT_QUEUED:
+        return std::string("QUE_TGT_UNIT_QUEUED (Target Unit Queued)");
+
+    case ReasonCode::QUE_CHN_RESOURCE_NOT_AVAIL:
+        return std::string("QUE_CHN_RESOURCE_NOT_AVAIL (Channel Resource Not Available)");
+
+    default:
+        return std::string();
+    }
 }

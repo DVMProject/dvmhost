@@ -1006,8 +1006,8 @@ void TagNXDNData::write_Message_Deny(uint32_t peerId, uint32_t srcId, uint32_t d
     rcch->setDstId(dstId);
 
     if (m_network->m_verbose) {
-        LogMessage(LOG_RF, "NXDN, MSG_DENIAL (Message Denial), reason = $%02X, service = $%02X, srcId = %u, dstId = %u",
-            service, srcId, dstId);
+        LogMessage(LOG_RF, "NXDN, MSG_DENIAL (Message Denial), reason = $%02X (%s), service = $%02X, srcId = %u, dstId = %u",
+            reason, NXDNUtils::causeToString(reason), service, srcId, dstId);
     }
 
     write_Message(peerId, rcch.get());

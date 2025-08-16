@@ -1596,8 +1596,9 @@ void TagP25Data::write_TSDU_Deny(uint32_t peerId, uint32_t srcId, uint32_t dstId
     osp->setGroup(grp);
 
     if (m_network->m_verbose) {
-        LogMessage(LOG_RF, P25_TSDU_STR ", %s, AIV = %u, reason = $%02X, srcId = %u, dstId = %u",
-            osp->toString().c_str(), osp->getAIV(), reason, osp->getSrcId(), osp->getDstId());
+        LogMessage(LOG_RF, P25_TSDU_STR ", %s, AIV = %u, reason = $%02X (%s), srcId = %u, dstId = %u",
+            osp->toString().c_str(), osp->getAIV(), reason, P25Utils::denyRsnToString(reason).c_str(),
+            osp->getSrcId(), osp->getDstId());
     }
 
     write_TSDU(peerId, osp.get());
@@ -1616,8 +1617,9 @@ void TagP25Data::write_TSDU_Queue(uint32_t peerId, uint32_t srcId, uint32_t dstI
     osp->setGroup(grp);
 
     if (m_network->m_verbose) {
-        LogMessage(LOG_RF, P25_TSDU_STR ", %s, AIV = %u, reason = $%02X, srcId = %u, dstId = %u",
-            osp->toString().c_str(), osp->getAIV(), reason, osp->getSrcId(), osp->getDstId());
+        LogMessage(LOG_RF, P25_TSDU_STR ", %s, AIV = %u, reason = $%02X (%s), srcId = %u, dstId = %u",
+            osp->toString().c_str(), osp->getAIV(), reason, P25Utils::queueRsnToString(reason).c_str(),
+            osp->getSrcId(), osp->getDstId());
     }
 
     write_TSDU(peerId, osp.get());

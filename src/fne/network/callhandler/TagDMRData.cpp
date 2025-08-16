@@ -1209,7 +1209,7 @@ bool TagDMRData::write_CSBK_Grant(uint32_t peerId, uint32_t srcId, uint32_t dstI
 
 /* Helper to write a NACK RSP packet. */
 
-void TagDMRData::write_CSBK_NACK_RSP(uint32_t peerId, uint32_t dstId, uint8_t reason, uint8_t service)
+void TagDMRData::write_CSBK_NACK_RSP(uint32_t peerId, uint32_t dstId, uint8_t slot, uint8_t reason, uint8_t service)
 {
     std::unique_ptr<lc::csbk::CSBK_NACK_RSP> csbk = std::make_unique<lc::csbk::CSBK_NACK_RSP>();
     csbk->setServiceKind(service);
@@ -1217,7 +1217,13 @@ void TagDMRData::write_CSBK_NACK_RSP(uint32_t peerId, uint32_t dstId, uint8_t re
     csbk->setSrcId(WUID_ALL); // hmmm...
     csbk->setDstId(dstId);
 
-    write_CSBK(peerId, 1U, csbk.get());
+    if (m_network->m_verbose) {
+        LogMessage(LOG_DMR, "DMR Slot %u, CSBK, %s, reason = $%02X (%s), srcId = %u, dstId = %u",
+            slot, csbk->toString().c_str(), reason, DMRUtils::rsnToString(reason).c_str(),
+            csbk->getSrcId(), csbk->getDstId());
+    }
+
+    write_CSBK(peerId, slot, csbk.get());
 }
 
 /* Helper to write a network CSBK. */

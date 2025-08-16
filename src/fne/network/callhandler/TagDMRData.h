@@ -273,9 +273,10 @@ namespace network
              * @param peerId Peer ID.
              * @param dstId Destination ID.
              * @param reason Denial Reason.
+             * @param slot DMR slot number.
              * @param service Service being denied.
              */
-            void write_CSBK_NACK_RSP(uint32_t peerId, uint32_t dstId, uint8_t reason, uint8_t service);
+            void write_CSBK_NACK_RSP(uint32_t peerId, uint32_t dstId, uint8_t slot, uint8_t reason, uint8_t service);
 
             /**
              * @brief Helper to write a network CSBK.
