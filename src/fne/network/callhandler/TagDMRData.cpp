@@ -345,8 +345,47 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
 
         m_status[dstId].lastPacket = hrc::now();
 
+        bool noConnectedPeerRepeat = false;
+        bool privateCallInProgress = false;
+
+        // is this a private call in-progress?
+        if (m_network->m_restrictPVCallToRegOnly) {
+            if (flco == FLCO::PRIVATE) {
+                privateCallInProgress = true;
+            }
+
+            if (privateCallInProgress) {
+                // if we've not determined the destination peer, we have to repeat it everywhere
+                if (m_statusPVCall[dstId].dstPeerId == 0U) {
+                    noConnectedPeerRepeat = false;
+                    privateCallInProgress = false; // trick the system to repeat everywhere
+                } else {
+                    // if this is a private call, check if the destination peer is one directly connected to us, if not
+                    // flag the call so it only repeats to external peers
+                    if (m_network->m_peers.size() > 0U && !noConnectedPeerRepeat) {
+                        noConnectedPeerRepeat = true;
+                        for (auto peer : m_network->m_peers) {
+                            if (peerId != peer.first) {
+                                FNEPeerConnection* conn = peer.second;
+                                if (conn != nullptr) {
+                                    if (conn->isExternalPeer()) {
+                                        continue;
+                                    }
+                                }
+
+                                if (m_statusPVCall[dstId].dstPeerId == peer.first) {
+                                    noConnectedPeerRepeat = false;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         // repeat traffic to the connected peers
-        if (m_network->m_peers.size() > 0U) {
+        if (m_network->m_peers.size() > 0U && !noConnectedPeerRepeat) {
             uint32_t i = 0U;
             for (auto peer : m_network->m_peers) {
                 if (peerId != peer.first) {
@@ -409,6 +448,12 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                 }
             }
             m_network->m_frameQueue->flushQueue();
+        }
+
+        // if this is a private call, and we have already repeated to the connected peer that registered
+        // the unit, don't repeat to any external peers
+        if (privateCallInProgress && !noConnectedPeerRepeat) {
+            return true;
         }
 
         // repeat traffic to external peers
