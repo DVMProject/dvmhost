@@ -1033,6 +1033,8 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
                 req["group"].set<bool>(grp);
                 bool voice = true;
                 req["voice"].set<bool>(voice);
+                bool clear = false;
+                req["clear"].set<bool>(clear);
 
                 g_RPC->req(RPC_DMR_TSCC_PAYLOAD_ACT, req, nullptr, voiceChData.address(), voiceChData.port(), true);
             }
@@ -1124,6 +1126,8 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
                 req["group"].set<bool>(grp);
                 bool voice = true;
                 req["voice"].set<bool>(voice);
+                bool clear = false;
+                req["clear"].set<bool>(clear);
 
                 g_RPC->req(RPC_DMR_TSCC_PAYLOAD_ACT, req, nullptr, voiceChData.address(), voiceChData.port(), true);
             }
@@ -1276,6 +1280,8 @@ bool ControlSignaling::writeRF_CSBK_Data_Grant(uint32_t srcId, uint32_t dstId, u
                 req["group"].set<bool>(grp);
                 bool voice = false;
                 req["voice"].set<bool>(voice);
+                bool clear = false;
+                req["clear"].set<bool>(clear);
 
                 g_RPC->req(RPC_DMR_TSCC_PAYLOAD_ACT, req, nullptr, voiceChData.address(), voiceChData.port(), true);
             }
@@ -1322,6 +1328,8 @@ bool ControlSignaling::writeRF_CSBK_Data_Grant(uint32_t srcId, uint32_t dstId, u
                 req["group"].set<bool>(grp);
                 bool voice = false;
                 req["voice"].set<bool>(voice);
+                bool clear = false;
+                req["clear"].set<bool>(clear);
 
                 g_RPC->req(RPC_DMR_TSCC_PAYLOAD_ACT, req, nullptr, voiceChData.address(), voiceChData.port(), true);
             }
