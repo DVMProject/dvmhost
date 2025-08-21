@@ -750,7 +750,7 @@ bool Host::createModem()
         m_modem->setResponseHandler(MODEM_RESP_HANDLER_BIND(Host::rmtPortModemHandler, this));
     }
 
-    if (m_isModemDFSI && useFSCForUDP) {
+    if (g_remoteModemMode && m_isModemDFSI && useFSCForUDP) {
         modem::port::specialized::V24UDPPort* udpPort = dynamic_cast<modem::port::specialized::V24UDPPort*>(m_udpDFSIRemotePort);
         udpPort->openFSC();
     }
