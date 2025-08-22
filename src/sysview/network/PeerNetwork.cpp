@@ -35,8 +35,8 @@ std::mutex PeerNetwork::m_peerStatusMutex;
 /* Initializes a new instance of the PeerNetwork class. */
 
 PeerNetwork::PeerNetwork(const std::string& address, uint16_t port, uint16_t localPort, uint32_t peerId, const std::string& password,
-    bool duplex, bool debug, bool dmr, bool p25, bool nxdn, bool slot1, bool slot2, bool allowActivityTransfer, bool allowDiagnosticTransfer, bool updateLookup, bool saveLookup) :
-    Network(address, port, localPort, peerId, password, duplex, debug, dmr, p25, nxdn, slot1, slot2, allowActivityTransfer, allowDiagnosticTransfer, updateLookup, saveLookup),
+    bool duplex, bool debug, bool allowActivityTransfer, bool allowDiagnosticTransfer, bool updateLookup, bool saveLookup) :
+    Network(address, port, localPort, peerId, password, duplex, debug, true, true, true, true, true, true, allowActivityTransfer, allowDiagnosticTransfer, updateLookup, saveLookup),
     peerStatus(),
     m_peerLink(false),
     m_tgidPkt(true, "Peer-Link, TGID List"),
@@ -56,7 +56,8 @@ PeerNetwork::PeerNetwork(const std::string& address, uint16_t port, uint16_t loc
 
 /* User overrideable handler that allows user code to process network packets not handled by this class. */
 
-void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opcode, const uint8_t* data, uint32_t length, uint32_t streamId)
+void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opcode, const uint8_t* data, uint32_t length, uint32_t streamId,
+    const frame::RTPFNEHeader& fneHeader, const frame::RTPHeader& rtpHeader)
 {
     switch (opcode.first) {
     case NET_FUNC::TRANSFER:
@@ -229,7 +230,7 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
     break;
 
     default:
-        Utils::dump("unknown opcode from the master", data, length);
+        Utils::dump("Unknown opcode from the master", data, length);
         break;
     }
 }
@@ -295,7 +296,7 @@ bool PeerNetwork::writeConfig()
     ::snprintf(buffer + 8U, json.length() + 1U, "%s", json.c_str());
 
     if (m_debug) {
-        Utils::dump(1U, "Network Message, Configuration", (uint8_t*)buffer, json.length() + 8U);
+        Utils::dump(1U, "PeerNetwork::writeConfig(), Message, Configuration", (uint8_t*)buffer, json.length() + 8U);
     }
 
     return writeMaster({ NET_FUNC::RPTC, NET_SUBFUNC::NOP }, (uint8_t*)buffer, json.length() + 8U, RTP_END_OF_CALL_SEQ, m_loginStreamId);

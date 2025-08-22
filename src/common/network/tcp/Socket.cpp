@@ -110,7 +110,7 @@ int Socket::accept(sockaddr* address, socklen_t* addrlen) noexcept
 #if defined(_WIN32)
         LogError(LOG_NET, "Error returned from TCP poll, err: %lu", ::GetLastError());
 #else
-        LogError(LOG_NET, "Error returned from TCP poll, err: %d", errno);
+        LogError(LOG_NET, "Error returned from TCP poll, err: %d (%s)", errno, strerror(errno));
 #endif // defined(_WIN32)
         return -1;
     }
@@ -180,7 +180,7 @@ ssize_t Socket::listen(const std::string& ipAddr, const uint16_t port, int backl
 #if defined(_WIN32)
         LogError(LOG_NET, "Error returned from TCP poll, err: %lu", ::GetLastError());
 #else
-        LogError(LOG_NET, "Error returned from TCP poll, err: %d", errno);
+        LogError(LOG_NET, "Error returned from TCP poll, err: %d (%s)", errno, strerror(errno));
 #endif // defined(_WIN32)
         return -1;
     }
@@ -316,7 +316,7 @@ bool Socket::initSocket(const int domain, const int type, const int protocol)
     }
 #else
     if (m_fd < 0) {
-        LogError(LOG_NET, "Cannot create the TCP socket, err: %d", errno);
+        LogError(LOG_NET, "Cannot create the TCP socket, err: %d (%s)", errno, strerror(errno));
         return false;
     }
 #endif // defined(_WIN32)
@@ -340,7 +340,7 @@ bool Socket::bind(const std::string& ipAddr, const uint16_t port)
 #if defined(_WIN32)
         LogError(LOG_NET, "Cannot bind the TCP address, err: %lu", ::GetLastError());
 #else
-        LogError(LOG_NET, "Cannot bind the TCP address, err: %d", errno);
+        LogError(LOG_NET, "Cannot bind the TCP address, err: %d (%s)", errno, strerror(errno));
 #endif // defined(_WIN32)
         retval = false;
     }

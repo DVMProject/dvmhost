@@ -13,8 +13,8 @@
  * @file LC_ADJ_STS_BCAST.cpp
  * @ingroup p25_lc
  */
-#if !defined(__P25_LC_TSBK__LC_ADJ_STS_BCAST_H__)
-#define  __P25_LC_TSBK__LC_ADJ_STS_BCAST_H__
+#if !defined(__P25_LC_TDULC__LC_ADJ_STS_BCAST_H__)
+#define  __P25_LC_TDULC__LC_ADJ_STS_BCAST_H__
 
 #include "common/Defines.h"
 #include "common/p25/lc/TDULC.h"
@@ -88,4 +88,4 @@ namespace p25
     } // namespace lc
 } // namespace p25
 
-#endif // __P25_LC_TSBK__LC_ADJ_STS_BCAST_H__
+#endif // __P25_LC_TDULC__LC_ADJ_STS_BCAST_H__

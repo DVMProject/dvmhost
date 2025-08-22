@@ -200,11 +200,14 @@ namespace dmr
             };
         };
 
-        /** @name Feature IDs */
+        /** @name Feature Set IDs */
         /** @brief ETSI Standard Feature Set */
         const uint8_t   FID_ETSI = 0x00U;
+
         /** @brief Motorola */
-        const uint8_t   FID_DMRA = 0x10U;
+        const uint8_t   FID_MOT = 0x10U;
+        /** @brief Kenwood */
+        const uint8_t   FID_KENWOOD = 0x20U;
         /** @brief DVM; Omaha Communication Systems, LLC ($9C) */
         const uint8_t   FID_DVM_OCS = 0x9CU;
         /** @} */
@@ -259,9 +262,9 @@ namespace dmr
             };
         }
 
-        /** @brief FID_DMRA Extended Functions. */
+        /** @brief FID_MOT Extended Functions. */
         namespace ExtendedFunctions {
-            /** @brief FID_DMRA Extended Functions. */
+            /** @brief FID_MOT Extended Functions. */
             enum : uint16_t {
                 CHECK = 0x0000U,                        //! Radio Check
                 UNINHIBIT = 0x007EU,                    //! Radio Uninhibit

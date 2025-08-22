@@ -70,12 +70,12 @@ namespace network
                 // setup socket for non-blocking operations
                 int flags = fcntl(fd, F_GETFL, 0);
                 if (flags < 0) {
-                    LogError(LOG_NET, "failed fcntl(F_GETFL), err: %d", errno);
+                    LogError(LOG_NET, "failed fcntl(F_GETFL), err: %d (%s)", errno, strerror(errno));
                     throw std::runtime_error("Cannot accept SSL client");
                 }
 
                 if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) < 0) {
-                    LogError(LOG_NET, "failed fcntl(F_SETFL), err: %d", errno);
+                    LogError(LOG_NET, "failed fcntl(F_SETFL), err: %d (%s)", errno, strerror(errno));
                     throw std::runtime_error("Cannot accept SSL client");
                 }
 
@@ -139,12 +139,12 @@ namespace network
                 if (!nonBlocking) {
                     flags = fcntl(fd, F_GETFL, 0);
                     if (flags < 0) {
-                        LogError(LOG_NET, "failed fcntl(F_GETFL), err: %d", errno);
+                        LogError(LOG_NET, "failed fcntl(F_GETFL), err: %d (%s)", errno, strerror(errno));
                         throw std::runtime_error("Cannot accept SSL client");
                     }
 
                     if (fcntl(fd, F_SETFL, flags & (~O_NONBLOCK)) < 0) {
-                        LogError(LOG_NET, "failed fcntl(F_SETFL), err: %d", errno);
+                        LogError(LOG_NET, "failed fcntl(F_SETFL), err: %d (%s)", errno, strerror(errno));
                         throw std::runtime_error("Cannot accept SSL client");
                     }
                 }
@@ -176,7 +176,7 @@ namespace network
 
                 ssize_t ret = ::connect(m_fd, reinterpret_cast<sockaddr*>(&addr), sizeof(addr));
                 if (ret < 0) {
-                    LogError(LOG_NET, "Failed to connect to server, err: %d", errno);
+                    LogError(LOG_NET, "Failed to connect to server, err: %d (%s)", errno, strerror(errno));
                 }
 
                 initSsl(m_pSSLCtx);
@@ -189,12 +189,12 @@ namespace network
                 if (nonBlocking) {
                     int flags = fcntl(m_fd, F_GETFL, 0);
                     if (flags < 0) {
-                        LogError(LOG_NET, "failed fcntl(F_GETFL), err: %d", errno);
+                        LogError(LOG_NET, "failed fcntl(F_GETFL), err: %d (%s)", errno, strerror(errno));
                         throw std::runtime_error("Failed to set SSL server connection to non-blocking");
                     }
 
                     if (fcntl(m_fd, F_SETFL, flags | O_NONBLOCK) < 0) {
-                        LogError(LOG_NET, "failed fcntl(F_SETFL), err: %d", errno);
+                        LogError(LOG_NET, "failed fcntl(F_SETFL), err: %d (%s)", errno, strerror(errno));
                         throw std::runtime_error("Failed to set SSL server connection to non-blocking");
                     }
                 }
@@ -260,13 +260,13 @@ namespace network
             {
                 m_fd = ::socket(AF_INET, SOCK_STREAM, 0);
                 if (m_fd < 0) {
-                    LogError(LOG_NET, "Cannot create the TCP socket, err: %d", errno);
+                    LogError(LOG_NET, "Cannot create the TCP socket, err: %d (%s)", errno, strerror(errno));
                     throw std::runtime_error("Cannot create the TCP socket");
                 }
 
                 int reuse = 1;
                 if (::setsockopt(m_fd, IPPROTO_TCP, TCP_NODELAY, (char*)& reuse, sizeof(reuse)) != 0) {
-                    LogError(LOG_NET, "Cannot set the TCP socket option, err: %d", errno);
+                    LogError(LOG_NET, "Cannot set the TCP socket option, err: %d (%s)", errno, strerror(errno));
                     throw std::runtime_error("Cannot set the TCP socket option");
                 }
             }

@@ -52,7 +52,7 @@ namespace network
                 }
 #else
                 if (::setsockopt(m_fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, (char*)& reuse, sizeof(reuse)) != 0) {
-                    LogError(LOG_NET, "Cannot set the TCP socket option, err: %d", errno);
+                    LogError(LOG_NET, "Cannot set the TCP socket option, err: %d (%s)", errno, strerror(errno));
                     throw std::runtime_error("Cannot set the TCP socket option");
                 }
 #endif // defined(_WIN32)
@@ -68,7 +68,7 @@ namespace network
 #if defined(_WIN32)
                     LogError(LOG_NET, "Cannot to bind TCP server, err: %lu", ::GetLastError());
 #else
-                    LogError(LOG_NET, "Cannot to bind TCP server, err: %d", errno);
+                    LogError(LOG_NET, "Cannot to bind TCP server, err: %d (%s)", errno, strerror(errno));
 #endif // defined(_WIN32)
                     throw std::runtime_error("Cannot to bind TCP server");
                 }
@@ -85,7 +85,7 @@ namespace network
 #if defined(_WIN32)
                     LogError(LOG_NET, "Failed to listen on TCP server, err: %lu", ::GetLastError());
 #else
-                    LogError(LOG_NET, "Failed to listen on TCP server, err: %d", errno);
+                    LogError(LOG_NET, "Failed to listen on TCP server, err: %d (%s)", errno, strerror(errno));
 #endif // defined(_WIN32)
                     throw std::runtime_error("Failed to listen on TCP server.");
                 }

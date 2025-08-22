@@ -71,7 +71,7 @@ UInt8Array RawFrameQueue::read(int& messageLength, sockaddr_storage& address, ui
 
     if (length > 0) {
         if (m_debug)
-            Utils::dump(1U, "Network Packet", buffer, length);
+            Utils::dump(1U, "RawFrameQueue::read(), Network Packet", buffer, length);
 
         m_failedReadCnt = 0U;
 
@@ -104,7 +104,7 @@ bool RawFrameQueue::write(const uint8_t* message, uint32_t length, sockaddr_stor
     ::memcpy(buffer, message, length);
 
     if (m_debug)
-        Utils::dump(1U, "RawFrameQueue::write() Message", buffer, length);
+        Utils::dump(1U, "RawFrameQueue::write(), Message", buffer, length);
 
     // bryanb: this is really a developer warning not a end-user warning, there's nothing the end-users can do about
     //  this message
@@ -153,7 +153,7 @@ void RawFrameQueue::enqueueMessage(const uint8_t* message, uint32_t length, sock
     ::memcpy(buffer, message, length);
 
     if (m_debug)
-        Utils::dump(1U, "RawFrameQueue::enqueueMessage() Buffered Message", buffer, length);
+        Utils::dump(1U, "RawFrameQueue::enqueueMessage(), Buffered Message", buffer, length);
 
     udp::UDPDatagram* dgram = new udp::UDPDatagram;
     dgram->buffer = buffer;
@@ -169,29 +169,34 @@ void RawFrameQueue::enqueueMessage(const uint8_t* message, uint32_t length, sock
 bool RawFrameQueue::flushQueue()
 {
     bool ret = true;
-    std::lock_guard<std::mutex> lock(m_queueMutex);
-    m_queueFlushing = true;
 
-    if (m_buffers.empty()) {
-        return false;
-    }
+    // scope is intentional
+    {
+        std::lock_guard<std::mutex> lock(m_queueMutex);
+        m_queueFlushing = true;
 
-    // bryanb: this is the same as above -- but for some assinine reason prevents
-    // weirdness
-    if (m_buffers.size() == 0U) {
-        return false;
-    }
+        if (m_buffers.empty()) {
+            return false;
+        }
 
-    // LogDebug(LOG_NET, "m_buffers len = %u", m_buffers.size());
+        // bryanb: this is the same as above -- but for some assinine reason prevents
+        // weirdness
+        if (m_buffers.size() == 0U) {
+            return false;
+        }
 
-    ret = true;
-    if (!m_socket->write(m_buffers)) {
-        // LogError(LOG_NET, "Failed writing data to the network");
-        ret = false;
+        // LogDebug(LOG_NET, "m_buffers len = %u", m_buffers.size());
+
+        ret = true;
+        if (!m_socket->write(m_buffers)) {
+            // LogError(LOG_NET, "Failed writing data to the network");
+            ret = false;
+        }
+
+        m_queueFlushing = false;
     }
 
     deleteBuffers();
-    m_queueFlushing = false;
     return ret;
 }
 
@@ -203,6 +208,9 @@ bool RawFrameQueue::flushQueue()
 
 void RawFrameQueue::deleteBuffers()
 {
+    std::lock_guard<std::mutex> lock(m_queueMutex);
+    m_queueFlushing = true;
+
     for (auto& buffer : m_buffers) {
         if (buffer != nullptr) {
             // LogDebug(LOG_NET, "deleting buffer, addr %p len %u", buffer->buffer, buffer->length);
@@ -217,4 +225,5 @@ void RawFrameQueue::deleteBuffers()
         }
     }
     m_buffers.clear();
+    m_queueFlushing = false;
 }

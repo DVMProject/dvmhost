@@ -139,6 +139,10 @@ extern bool g_disableTimeDisplay;
  * @brief (Global) Flag indicating whether or not logging goes to the syslog.
  */
 extern bool g_useSyslog;
+/**
+ * @brief (Global) Flag indicating whether or not network logging is disabled.
+ */
+extern bool g_disableNetworkLog;
 
 // ---------------------------------------------------------------------------
 //  Global Functions

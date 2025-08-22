@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2024 Patrick McDonnell, W3AXL
- *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2024-2025 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -35,7 +35,7 @@ namespace p25
             // ---------------------------------------------------------------------------
 
             /**
-             * @brief Implements a P25 Motorola full rate voice packet.
+             * @brief Implements a P25 Motorola/V.24 full rate voice packet.
              * \code{.unparsed}
              * Byte 0               1               2               3
              * Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 
@@ -48,7 +48,7 @@ namespace p25
              *     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
              *     |    IMBE 8     |    IMBE 9     |    IMBE 10    |    IMBE 11    |
              *     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-             *     |    Src Flag   |
+             *     |    Busy Bits  |
              *     +=+=+=+=+=+=+=+=+
              * \endcode
              * @ingroup dfsi_frames
@@ -99,9 +99,13 @@ namespace p25
                  */
                 DECLARE_PROPERTY(defines::DFSIFrameType::E, frameType, FrameType);
                 /**
-                 * @brief V.24 Data Source.
+                 * @brief Total errors detected in the frame.
                  */
-                DECLARE_PROPERTY(SourceFlag::E, source, Source);
+                DECLARE_PROPERTY(uint8_t, totalErrors, TotalErrors);
+                /**
+                 * @brief Busy Status.
+                 */
+                DECLARE_PROPERTY(uint8_t, busy, Busy);
 
             private:
                 /**

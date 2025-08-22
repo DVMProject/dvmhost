@@ -240,17 +240,19 @@ namespace network
                 /**
                  * @brief Helper to write user data as a P25 PDU packet.
                  * @param peerId Peer ID.
+                 * @param srcPeerId Source Peer ID.
                  * @param peerNet Instance of PeerNetwork to use to send traffic.
                  * @param dataHeader Instance of a PDU data header.
                  * @param extendedAddress Flag indicating whether or not to extended addressing is in use.
                  * @param pduUserData Buffer containing user data to transmit.
                  */
-                void write_PDU_User(uint32_t peerId, network::PeerNetwork* peerNet, p25::data::DataHeader& dataHeader,
+                void write_PDU_User(uint32_t peerId, uint32_t srcPeerId, network::PeerNetwork* peerNet, p25::data::DataHeader& dataHeader,
                     bool extendedAddress, uint8_t* pduUserData, bool queueOnly = false);
 
                 /**
                  * @brief Write data processed to the network.
                  * @param peerId Peer ID.
+                 * @param srcPeerId Source Peer ID.
                  * @param peerNet Instance of PeerNetwork to use to send traffic.
                  * @param dataHeader Instance of a PDU data header.
                  * @param currentBlock Current Block ID.
@@ -259,7 +261,7 @@ namespace network
                  * @param pktSeq RTP packet sequence.
                  * @param streamId Stream ID.
                  */
-                bool writeNetwork(uint32_t peerId, network::PeerNetwork* peerNet, const p25::data::DataHeader& dataHeader, const uint8_t currentBlock, 
+                bool writeNetwork(uint32_t peerId, uint32_t srcPeerId, network::PeerNetwork* peerNet, const p25::data::DataHeader& dataHeader, const uint8_t currentBlock, 
                     const uint8_t* data, uint32_t len, uint16_t pktSeq, uint32_t streamId, bool queueOnly = false);
 
                 /**

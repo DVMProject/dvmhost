@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2020 Jonathan Naylor, G4KLX
- *  Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2022,2025 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -41,6 +41,13 @@ namespace nxdn
          * @param data Buffer to apply post field bits to.
          */
         static void addPostBits(uint8_t* data);
+
+        /**
+         * @brief Helper to convert a cause code to a string.
+         * @param cause Cause code.
+         * @returns std::string Cause code string.
+         */
+        static std::string causeToString(uint8_t cause);
     };
 } // namespace nxdn
 

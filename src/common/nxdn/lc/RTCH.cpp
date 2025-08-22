@@ -114,7 +114,7 @@ void RTCH::decode(const uint8_t* data, uint32_t length, uint32_t offset)
     }
 
     if (m_verbose) {
-        Utils::dump(2U, "Decoded RTCH Data", rtch, NXDN_RTCH_LC_LENGTH_BYTES);
+        Utils::dump(2U, "NXDN, RTCH::decode(), Decoded RTCH Data", rtch, NXDN_RTCH_LC_LENGTH_BYTES);
     }
 
     decodeLC(rtch);
@@ -137,7 +137,7 @@ void RTCH::encode(uint8_t* data, uint32_t length, uint32_t offset)
     }
 
     if (m_verbose) {
-        Utils::dump(2U, "Encoded RTCH Data", data, length);
+        Utils::dump(2U, "NXDN, RTCH::encode(), Encoded RTCH Data", data, length);
     }
 }
 
@@ -180,6 +180,10 @@ void RTCH::reset()
 bool RTCH::decodeLC(const uint8_t* data)
 {
     assert(data != nullptr);
+
+#if DEBUG_NXDN_RTCH
+    Utils::dump(2U, "NXDN, RTCH::decodeLC(), RTCH", data, NXDN_RTCH_LC_LENGTH_BYTES);
+#endif
 
     m_messageType = data[0U] & 0x3FU;                                               // Message Type
 
@@ -285,6 +289,12 @@ bool RTCH::decodeLC(const uint8_t* data)
         LogError(LOG_NXDN, "RTCH::decodeRTCH(), unknown RTCH value, messageType = $%02X", m_messageType);
         return false;
     }
+
+    // is this a private call?
+    if (m_callType == CallType::INDIVIDUAL)
+        m_group = false;
+    else
+        m_group = true;
 
     return true;
 }
@@ -405,6 +415,10 @@ void RTCH::encodeLC(uint8_t* data)
         LogError(LOG_NXDN, "RTCH::encodeRTCH(), unknown RTCH value, messageType = $%02X", m_messageType);
         return;
     }
+
+#if DEBUG_NXDN_RTCH
+    Utils::dump(2U, "NXDN, RTCH::encodeLC(), RTCH", data, NXDN_RTCH_LC_LENGTH_BYTES);
+#endif
 }
 
 /* Internal helper to copy the the class. */

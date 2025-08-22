@@ -214,7 +214,7 @@ int UARTPort::read(uint8_t* buffer, uint32_t length)
         }
 
         if (n < 0) {
-            ::LogError(LOG_HOST, "Error from select(), errno=%d", errno);
+            ::LogError(LOG_HOST, "Error from select(), errno: %d (%s)", errno, strerror(errno));
             return -1;
         }
 
@@ -222,7 +222,7 @@ int UARTPort::read(uint8_t* buffer, uint32_t length)
             ssize_t len = ::read(m_fd, buffer + offset, length - offset);
             if (len < 0) {
                 if (errno != EAGAIN) {
-                    ::LogError(LOG_HOST, "Error from read(), errno=%d", errno);
+                    ::LogError(LOG_HOST, "Error from read(), errno: %d (%s)", errno, strerror(errno));
                     return -1;
                 }
             }
@@ -277,7 +277,7 @@ int UARTPort::write(const uint8_t* buffer, uint32_t length)
             n = ::write(m_fd, buffer + ptr, length - ptr);
         if (n < 0) {
             if (errno != EAGAIN) {
-                ::LogError(LOG_HOST, "Error returned from write(), errno=%d (%s)", errno, strerror(errno));
+                ::LogError(LOG_HOST, "Error returned from write(), errno: %d (%s)", errno, strerror(errno));
                 return -1;
             }
         }

@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2024 Patrick McDonnell, W3AXL
- *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2024-2025 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -91,57 +91,23 @@ namespace p25
                 };
             }
 
-            /** @brief RT/RT Flag */
-            namespace RTFlag {
-                /** @brief RT/RT Flag */
+            /** @brief Motorola Start of Stream Operation */
+            namespace MotStartStreamOpcode {
+                /** @brief Motorola Start of Stream Operation */
                 enum E : uint8_t {
-                    ENABLED = 0x02U,                    //! RT/RT Enabled
-                    DISABLED = 0x04U                    //! RT/RT Disabled
+                    TRANSMIT = 0x02U,                   //! Transmit
+                    RECEIVE = 0x04U,                    //! Receive
                 };
             }
 
-            /** @brief Start/Stop Flag */
-            namespace StartStopFlag {
-                /** @brief Start/Stop Flag */
+            /** @brief Motorola Stream Payload */
+            namespace MotStreamPayload {
+                /** @brief Motorola Stream Payload */
                 enum E : uint8_t {
-                    START = 0x0CU,                      //! Start
-                    STOP = 0x25U                        //! Stop
-                };
-            }
-
-            /** @brief V.24 Data Stream Type */
-            namespace StreamTypeFlag {
-                /** @brief V.24 Data Stream Type  */
-                enum E : uint8_t {
-                    VOICE = 0x0BU,                      //! Voice
-                    TSBK = 0x0FU                        //! TSBK
-                };
-            }
-
-            /** @brief RSSI Data Validity */
-            namespace RssiValidityFlag {
-                /** @brief RSSI Data Validity */
-                enum E : uint8_t {
-                    INVALID = 0x00U,                    //! Invalid
-                    VALID = 0x1A                        //! Valid
-                };
-            }
-
-            /** @brief V.24 Data Source */
-            namespace SourceFlag {
-                /** @brief V.24 Data Source */
-                enum E : uint8_t {
-                    DIU = 0x00U,                        //! DIU
-                    QUANTAR = 0x02U                     //! Quantar
-                };
-            }
-
-            /** @brief  */
-            namespace ICWFlag {
-                /** @brief  */
-                enum E : uint8_t {
-                    DIU = 0x00U,                        //! DIU
-                    QUANTAR = 0x1B                      //! Quantar
+                    VOICE = 0x0BU,                      //! P25 Voice
+                    DATA = 0x0CU,                       //! P25 Data
+                    TERM_LC = 0x0EU,                    //! P25 Termination Link Control
+                    TSBK = 0x0FU                        //! P25 TSBK
                 };
             }
             /** @} */

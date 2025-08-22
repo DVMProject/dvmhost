@@ -72,7 +72,7 @@ bool PacketBuffer::decode(const uint8_t* data, uint8_t** message, uint32_t* outL
             frag->data = new uint8_t[frag->size + 1U];
 
         ::memcpy(frag->data, data + FRAG_HDR_SIZE, FRAG_BLOCK_SIZE);
-        // Utils::dump(1U, "Block Payload", frag->data, FRAG_BLOCK_SIZE);
+        // Utils::dump(1U, "PacketBuffer::decode(), Block Payload", frag->data, FRAG_BLOCK_SIZE);
         fragments.insert(curBlock, frag);
     }
 
@@ -106,7 +106,7 @@ bool PacketBuffer::decode(const uint8_t* data, uint8_t** message, uint32_t* outL
         uint32_t compressedLen = fragments[0]->compressedSize;
         uint32_t len = fragments[0]->size;
 
-        buffer = new uint8_t[len +1U];
+        buffer = new uint8_t[len + 1U];
         ::memset(buffer, 0x00U, len + 1U);
         if (fragments.size() == 1U) {
             ::memcpy(buffer, fragments[0U]->data, len);
@@ -119,7 +119,10 @@ bool PacketBuffer::decode(const uint8_t* data, uint8_t** message, uint32_t* outL
 
         if (m_compression) {
             uint32_t decompressedLen = 0U;
-            *message = Compression::decompress(buffer, compressedLen, &decompressedLen);
+            UInt8Array decompressed = Compression::decompress(buffer, compressedLen, &decompressedLen);
+            *message = new uint8_t[decompressedLen];
+            ::memset(*message, 0x00U, decompressedLen);
+            ::memcpy(*message, decompressed.get(), decompressedLen);
 
             // check that we got the appropriate data
             if (decompressedLen == len && message != nullptr) {
@@ -161,13 +164,13 @@ void PacketBuffer::encode(uint8_t* data, uint32_t length)
 
     // create temporary buffer
     uint32_t compressedLen = 0U;
-    uint8_t* buffer = nullptr;
+    UInt8Array buffer = nullptr;
     if (m_compression) {
         buffer = Compression::compress(data, length, &compressedLen);
     } else {
-        buffer = new uint8_t[length];
-        ::memset(buffer, 0x00U, length);
-        ::memcpy(buffer, data, length);
+        buffer = std::make_unique<uint8_t[]>(length + 1U);
+        ::memset(buffer.get(), 0x00U, length + 1U);
+        ::memcpy(buffer.get(), data, length);
         compressedLen = length;
     }
 
@@ -198,15 +201,13 @@ void PacketBuffer::encode(uint8_t* data, uint32_t length)
         if (offs + FRAG_BLOCK_SIZE > compressedLen)
             blockSize = FRAG_BLOCK_SIZE - ((offs + FRAG_BLOCK_SIZE) - compressedLen);
 
-        ::memcpy(frag->data + FRAG_HDR_SIZE, buffer + offs, blockSize);
+        ::memcpy(frag->data + FRAG_HDR_SIZE, buffer.get() + offs, blockSize);
 
         offs += FRAG_BLOCK_SIZE;
 
         fragments.insert(i, frag);
         LogInfoEx(LOG_NET, "%s, Outbound Packet Fragment, block %u of %u, txFragments = %u", m_name, i, blockCnt - 1U, fragments.size());
     }
-
-    delete[] buffer;
 }
 
 /* Helper to clear currently buffered fragments. */

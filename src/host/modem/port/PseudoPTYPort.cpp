@@ -50,7 +50,7 @@ bool PseudoPTYPort::open()
     char slave[300];
     int result = ::openpty(&m_fd, &slavefd, slave, NULL, NULL);
     if (result < 0) {
-        ::LogError(LOG_HOST, "Cannot open the pseudo tty - errno : %d", errno);
+        ::LogError(LOG_HOST, "Cannot open the pseudo tty, errno: %d (%s)", errno, strerror(errno));
         return false;
     }
 

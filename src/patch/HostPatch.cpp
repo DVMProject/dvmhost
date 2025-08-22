@@ -18,6 +18,7 @@
 #include "common/p25/dfsi/DFSIDefines.h"
 #include "common/p25/dfsi/LC.h"
 #include "common/p25/lc/LC.h"
+#include "common/p25/Sync.h"
 #include "common/p25/P25Utils.h"
 #include "common/network/RTPHeader.h"
 #include "common/network/udp/Socket.h"
@@ -45,6 +46,13 @@ using namespace network::udp;
 #endif // !defined(_WIN32)
 
 // ---------------------------------------------------------------------------
+//  Constants
+// ---------------------------------------------------------------------------
+
+#define TEK_AES "aes"
+#define TEK_ARC4 "arc4"
+
+// ---------------------------------------------------------------------------
 //  Static Class Members
 // ---------------------------------------------------------------------------
 
@@ -64,23 +72,58 @@ HostPatch::HostPatch(const std::string& confFile) :
     m_srcSlot(1U),
     m_dstTGId(0U),
     m_dstSlot(1U),
+    m_twoWayPatch(false),
+    m_mmdvmP25Reflector(false),
+    m_mmdvmP25Net(nullptr),
+    m_netState(RS_NET_IDLE),
+    m_netLC(),
+    m_gotNetLDU1(false),
+    m_netLDU1(nullptr),
+    m_gotNetLDU2(false),
+    m_netLDU2(nullptr),
     m_identity(),
     m_digiMode(1U),
     m_dmrEmbeddedData(),
     m_grantDemand(false),
     m_callInProgress(false),
+    m_callAlgoId(P25DEF::ALGO_UNENCRYPT),
     m_rxStartTime(0U),
     m_rxStreamId(0U),
+    m_tekSrcAlgoId(P25DEF::ALGO_UNENCRYPT),
+    m_tekSrcKeyId(0U),
+    m_tekDstAlgoId(P25DEF::ALGO_UNENCRYPT),
+    m_tekDstKeyId(0U),
+    m_requestedSrcTek(false),
+    m_requestedDstTek(false),
+    m_p25SrcCrypto(nullptr),
+    m_p25DstCrypto(nullptr),
+    m_netId(P25DEF::WACN_STD_DEFAULT),
+    m_sysId(P25DEF::SID_STD_DEFAULT),
     m_running(false),
     m_trace(false),
     m_debug(false)
 {
-    /* stub */
+    m_netLDU1 = new uint8_t[9U * 25U];
+    m_netLDU2 = new uint8_t[9U * 25U];
+
+    ::memset(m_netLDU1, 0x00U, 9U * 25U);
+    resetWithNullAudio(m_netLDU1, false);
+    ::memset(m_netLDU2, 0x00U, 9U * 25U);
+    resetWithNullAudio(m_netLDU2, false);
+
+    m_p25SrcCrypto = new p25::crypto::P25Crypto();
+    m_p25DstCrypto = new p25::crypto::P25Crypto();
 }
 
 /* Finalizes a instance of the HostPatch class. */
 
-HostPatch::~HostPatch() = default;
+HostPatch::~HostPatch()
+{
+    delete[] m_netLDU1;
+    delete[] m_netLDU2;
+    delete m_p25SrcCrypto;
+    delete m_p25DstCrypto;
+}
 
 /* Executes the main FNE processing loop. */
 
@@ -166,12 +209,24 @@ int HostPatch::run()
     if (!ret)
         return EXIT_FAILURE;
 
+    // initialize MMDVM P25 reflector networking
+    if (m_mmdvmP25Reflector) {
+        ret = createMMDVMP25Network();
+        if (!ret)
+            return EXIT_FAILURE;
+    }
+
     /*
     ** Initialize Threads
     */
 
     if (!Thread::runAsThread(this, threadNetworkProcess))
         return EXIT_FAILURE;
+
+    if (m_mmdvmP25Reflector) {
+        if (!Thread::runAsThread(this, threadMMDVMProcess))
+            return EXIT_FAILURE;
+    }
 
     ::LogInfoEx(LOG_HOST, "Patch is up and running");
 
@@ -194,6 +249,11 @@ int HostPatch::run()
         if (m_network != nullptr) {
             std::lock_guard<std::mutex> lock(HostPatch::m_networkMutex);
             m_network->clock(ms);
+        }
+
+        if (m_mmdvmP25Reflector) {
+            std::lock_guard<std::mutex> lock(HostPatch::m_networkMutex);
+            m_mmdvmP25Net->clock(ms);
         }
 
         if (ms < 2U)
@@ -220,6 +280,24 @@ bool HostPatch::readParams()
     yaml::Node systemConf = m_conf["system"];
 
     m_identity = systemConf["identity"].as<std::string>();
+
+    m_netId = (uint32_t)::strtoul(systemConf["netId"].as<std::string>("BB800").c_str(), NULL, 16);
+    m_netId = p25::P25Utils::netId(m_netId);
+    if (m_netId == 0xBEE00) {
+        ::fatal("error 4\n");
+    }
+
+    m_sysId = (uint32_t)::strtoul(systemConf["sysId"].as<std::string>("001").c_str(), NULL, 16);
+    m_sysId = p25::P25Utils::sysId(m_sysId);
+
+    /*
+    ** Site Data
+    */
+    int8_t lto = (int8_t)systemConf["localTimeOffset"].as<int32_t>(0);
+    p25::SiteData siteData = p25::SiteData(m_netId, m_sysId, 1U, 1U, 0U, 0U, 1U, P25DEF::ServiceClass::VOICE, lto);
+    siteData.setNetActive(true);
+
+    p25::lc::LC::setSiteData(siteData);
     
     m_digiMode = (uint8_t)systemConf["digiMode"].as<uint32_t>(1U);
     if (m_digiMode < TX_MODE_DMR)
@@ -229,12 +307,22 @@ bool HostPatch::readParams()
 
     m_grantDemand = systemConf["grantDemand"].as<bool>(false);
 
+    m_mmdvmP25Reflector = systemConf["mmdvmP25Reflector"].as<bool>(false);
+
+    if (m_mmdvmP25Reflector && m_digiMode != TX_MODE_P25) {
+        LogError(LOG_HOST, "Patch does not currently support MMDVM patching in any mode other then P25.");
+        return false;
+    }
+
     m_trace = systemConf["trace"].as<bool>(false);
     m_debug = systemConf["debug"].as<bool>(false);
 
     LogInfo("General Parameters");
+    LogInfo("    System Id: $%03X", m_sysId);
+    LogInfo("    P25 Network Id: $%05X", m_netId);
     LogInfo("    Digital Mode: %s", m_digiMode == TX_MODE_DMR ? "DMR" : "P25");
     LogInfo("    Grant Demands: %s", m_grantDemand ? "yes" : "no");
+    LogInfo("    MMDVM P25 Reflector Patch: %s", m_mmdvmP25Reflector ? "yes" : "no");
 
     if (m_debug) {
         LogInfo("    Debug: yes");
@@ -261,6 +349,53 @@ bool HostPatch::createNetwork()
     m_srcSlot = (uint8_t)networkConf["sourceSlot"].as<uint32_t>(1U);
     m_dstTGId = (uint32_t)networkConf["destinationTGID"].as<uint32_t>(1U);
     m_dstSlot = (uint8_t)networkConf["destinationSlot"].as<uint32_t>(1U);
+
+    // source TEK parameters
+    yaml::Node srcTekConf = networkConf["srcTek"];
+    bool tekSrcEnable = srcTekConf["enable"].as<bool>(false);
+    std::string tekSrcAlgo = srcTekConf["tekAlgo"].as<std::string>();
+    std::transform(tekSrcAlgo.begin(), tekSrcAlgo.end(), tekSrcAlgo.begin(), ::tolower);
+    m_tekSrcKeyId = (uint32_t)::strtoul(srcTekConf["tekKeyId"].as<std::string>("0").c_str(), NULL, 16);
+    if (tekSrcEnable && m_tekSrcKeyId > 0U) {
+        if (tekSrcAlgo == TEK_AES)
+            m_tekSrcAlgoId = P25DEF::ALGO_AES_256;
+        else if (tekSrcAlgo == TEK_ARC4)
+            m_tekSrcAlgoId = P25DEF::ALGO_ARC4;
+        else {
+            ::LogError(LOG_HOST, "Invalid TEK algorithm specified, must be \"aes\" or \"adp\".");
+            m_tekSrcAlgoId = P25DEF::ALGO_UNENCRYPT;
+            m_tekSrcKeyId = 0U;
+        }
+    }
+
+    if (!tekSrcEnable)
+        m_tekSrcAlgoId = P25DEF::ALGO_UNENCRYPT;
+    if (m_tekSrcAlgoId == P25DEF::ALGO_UNENCRYPT)
+        m_tekSrcKeyId = 0U;
+
+    // destination TEK parameters
+    yaml::Node dstTekConf = networkConf["srcTek"];
+    bool tekDstEnable = dstTekConf["enable"].as<bool>(false);
+    std::string tekDstAlgo = dstTekConf["tekAlgo"].as<std::string>();
+    std::transform(tekDstAlgo.begin(), tekDstAlgo.end(), tekDstAlgo.begin(), ::tolower);
+    m_tekDstKeyId = (uint32_t)::strtoul(dstTekConf["tekKeyId"].as<std::string>("0").c_str(), NULL, 16);
+    if (tekDstEnable && m_tekDstKeyId > 0U) {
+        if (tekDstAlgo == TEK_AES)
+            m_tekDstAlgoId = P25DEF::ALGO_AES_256;
+        else if (tekDstAlgo == TEK_ARC4)
+            m_tekDstAlgoId = P25DEF::ALGO_ARC4;
+        else {
+            ::LogError(LOG_HOST, "Invalid TEK algorithm specified, must be \"aes\" or \"adp\".");
+            m_tekDstAlgoId = P25DEF::ALGO_UNENCRYPT;
+            m_tekDstKeyId = 0U;
+        }
+    }
+
+    if (!tekDstEnable)
+        m_tekDstAlgoId = P25DEF::ALGO_UNENCRYPT;
+    if (m_tekDstAlgoId == P25DEF::ALGO_UNENCRYPT)
+        m_tekDstKeyId = 0U;
+
     m_twoWayPatch = networkConf["twoWay"].as<bool>(false);
 
     // make sure our destination ID is sane
@@ -359,8 +494,22 @@ bool HostPatch::createNetwork()
 
     LogInfo("    Source TGID: %u", m_srcTGId);
     LogInfo("    Source DMR Slot: %u", m_srcSlot);
+
+    LogInfo("    Source Traffic Encrypted: %s", tekSrcEnable ? "yes" : "no");
+    if (tekSrcEnable) {
+        LogInfo("    Source TEK Algorithm: %s", tekSrcAlgo.c_str());
+        LogInfo("    Source TEK Key ID: $%04X", m_tekSrcKeyId);
+    }
+
     LogInfo("    Destination TGID: %u", m_dstTGId);
     LogInfo("    Destination DMR Slot: %u", m_dstSlot);
+
+    LogInfo("    Destination Traffic Encrypted: %s", tekDstEnable ? "yes" : "no");
+    if (tekDstEnable) {
+        LogInfo("    Destination TEK Algorithm: %s", tekDstAlgo.c_str());
+        LogInfo("    Destination TEK Key ID: $%04X", m_tekDstKeyId);
+    }
+
     LogInfo("    Two-Way Patch: %s", m_twoWayPatch ? "yes" : "no");
 
     if (debug) {
@@ -382,6 +531,9 @@ bool HostPatch::createNetwork()
 
     m_network->setMetadata(m_identity, 0U, 0U, 0.0F, 0.0F, 0, 0, 0, 0.0F, 0.0F, 0, "");
     m_network->setConventional(true);
+    m_network->setKeyResponseCallback([=](p25::kmm::KeyItem ki, uint8_t algId, uint8_t keyLength) {
+        processTEKResponse(&ki, algId, keyLength);
+    });
 
     if (encrypted) {
         m_network->setPresharedKey(presharedKey);
@@ -397,6 +549,40 @@ bool HostPatch::createNetwork()
     }
 
     ::LogSetNetwork(m_network);
+
+    return true;
+}
+
+/* Initializes MMDVM network connectivity. */
+
+bool HostPatch::createMMDVMP25Network()
+{
+    yaml::Node networkConf = m_conf["network"];
+
+    std::string address = networkConf["mmdvmGatewayAddress"].as<std::string>();
+    uint16_t port = (uint16_t)networkConf["mmdvmGatewayPort"].as<uint32_t>(42020U);
+    uint16_t localPort = (uint16_t)networkConf["localGatewayPort"].as<uint32_t>(32010U);
+    bool debug = networkConf["debug"].as<bool>(false);
+
+    LogInfo("MMDVM Network Parameters");
+    LogInfo("    Address: %s", address.c_str());
+    LogInfo("    Port: %u", port);
+    LogInfo("    Local Port: %u", localPort);
+
+    if (debug) {
+        LogInfo("    Debug: yes");
+    }
+
+    // initialize networking
+    m_mmdvmP25Net = new mmdvm::P25Network(address, port, localPort, debug);
+
+    bool ret = m_mmdvmP25Net->open();
+    if (!ret) {
+        delete m_mmdvmP25Net;
+        m_mmdvmP25Net = nullptr;
+        LogError(LOG_HOST, "failed to initialize MMDVM networking!");
+        return false;
+    }
 
     return true;
 }
@@ -456,7 +642,7 @@ void HostPatch::processDMRNetwork(uint8_t* buffer, uint32_t length)
     UInt8Array data = std::unique_ptr<uint8_t[]>(new uint8_t[DMR_FRAME_LENGTH_BYTES]);
     ::memset(data.get(), 0x00U, DMR_FRAME_LENGTH_BYTES);
     DataType::E dataType = DataType::VOICE_SYNC;
-    uint8_t n = 0U;
+
     if (dataSync) {
         dataType = (DataType::E)(buffer[15U] & 0x0FU);
         ::memcpy(data.get(), buffer + 20U, DMR_FRAME_LENGTH_BYTES);
@@ -465,7 +651,6 @@ void HostPatch::processDMRNetwork(uint8_t* buffer, uint32_t length)
         ::memcpy(data.get(), buffer + 20U, DMR_FRAME_LENGTH_BYTES);
     }
     else {
-        n = buffer[15U] & 0x0FU;
         dataType = DataType::VOICE;
         ::memcpy(data.get(), buffer + 20U, DMR_FRAME_LENGTH_BYTES);
     }
@@ -690,9 +875,9 @@ void HostPatch::processP25Network(uint8_t* buffer, uint32_t length)
     if (m_digiMode != TX_MODE_P25)
         return;
 
-    bool grantDemand = (buffer[14U] & 0x80U) == 0x80U;
-    bool grantDenial = (buffer[14U] & 0x40U) == 0x40U;
-    bool unitToUnit = (buffer[14U] & 0x01U) == 0x01U;
+    bool grantDemand = (buffer[14U] & network::NET_CTRL_GRANT_DEMAND) == network::NET_CTRL_GRANT_DEMAND;
+    bool grantDenial = (buffer[14U] & network::NET_CTRL_GRANT_DENIAL) == network::NET_CTRL_GRANT_DENIAL;
+    bool unitToUnit = (buffer[14U] & network::NET_CTRL_U2U) == network::NET_CTRL_U2U;
 
     // process network message header
     DUID::E duid = (DUID::E)buffer[22U];
@@ -761,17 +946,61 @@ void HostPatch::processP25Network(uint8_t* buffer, uint32_t length)
         if (dstId != m_srcTGId && dstId != m_dstTGId)
             return;
 
-        uint32_t actualDstId = m_dstTGId;
-        if (m_twoWayPatch) {
-            if (dstId == m_dstTGId)
-                actualDstId = m_srcTGId;
-        } else {
-            if (dstId == m_dstTGId)
-                return;
+        bool reverseEncrypt = false;
+        uint32_t actualDstId = m_srcTGId;
+        uint8_t tekAlgoId = m_tekSrcAlgoId;
+        uint16_t tekKeyId = m_tekSrcKeyId;
+
+        if (!m_mmdvmP25Reflector) {
+            actualDstId = m_dstTGId;
+            if (m_twoWayPatch) {
+                if (dstId == m_dstTGId) {
+                    actualDstId = m_srcTGId;
+                    tekAlgoId = m_tekDstAlgoId;
+                    tekKeyId = m_tekDstKeyId;
+                    reverseEncrypt = true;
+                }
+            } else {
+                if (dstId == m_dstTGId)
+                    return;
+            }
         }
 
+        // is this a new call stream?
+        uint16_t callKID = 0U;
         if (m_network->getP25StreamId() != m_rxStreamId && ((duid != DUID::TDU) && (duid != DUID::TDULC))) {
             m_callInProgress = true;
+
+            // if this is the beginning of a call and we have a valid HDU frame, extract the algo ID
+            uint8_t frameType = buffer[180U];
+            if (frameType == FrameType::HDU_VALID) {
+                m_callAlgoId = buffer[181U];
+                if (m_callAlgoId != ALGO_UNENCRYPT) {
+                    callKID = GET_UINT16(buffer, 182U);
+
+                    if (m_callAlgoId != tekAlgoId && callKID != tekKeyId) {
+                        m_callAlgoId = ALGO_UNENCRYPT;
+                        m_callInProgress = false;
+
+                        LogWarning(LOG_HOST, "P25, call ignored, using different encryption parameters, callAlgoId = $%02X, callKID = $%04X, tekAlgoId = $%02X, tekKID = $%04X", m_callAlgoId, callKID, tekAlgoId, tekKeyId);
+                        return;
+                    } else {
+                        uint8_t mi[MI_LENGTH_BYTES];
+                        ::memset(mi, 0x00U, MI_LENGTH_BYTES);
+                        for (uint8_t i = 0; i < MI_LENGTH_BYTES; i++) {
+                            mi[i] = buffer[184U + i];
+                        }
+
+                        if (reverseEncrypt) {
+                            m_p25DstCrypto->setMI(mi);
+                            m_p25DstCrypto->generateKeystream();
+                        } else {
+                            m_p25SrcCrypto->setMI(mi);
+                            m_p25SrcCrypto->generateKeystream();
+                        }
+                    }
+                }
+            }
 
             uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
             m_rxStartTime = now;
@@ -780,13 +1009,15 @@ void HostPatch::processP25Network(uint8_t* buffer, uint32_t length)
 
             if (m_grantDemand) {
                 p25::lc::LC lc = p25::lc::LC();
-                lc.setLCO(p25::defines::LCO::GROUP);
+                lc.setLCO(P25DEF::LCO::GROUP);
                 lc.setDstId(dstId);
                 lc.setSrcId(srcId);
 
                 p25::data::LowSpeedData lsd = p25::data::LowSpeedData();
 
-                uint8_t controlByte = 0x80U;
+                uint8_t controlByte = network::NET_CTRL_GRANT_DEMAND;               // Grant Demand Flag
+                if (m_callAlgoId != ALGO_UNENCRYPT)
+                    controlByte |= network::NET_CTRL_GRANT_ENCRYPT;                 // Grant Encrypt Flag
                 m_network->writeP25TDU(lc, lsd, controlByte);
             }
         }
@@ -797,7 +1028,7 @@ void HostPatch::processP25Network(uint8_t* buffer, uint32_t length)
                 return;
 
             p25::lc::LC lc = p25::lc::LC();
-            lc.setLCO(p25::defines::LCO::GROUP);
+            lc.setLCO(P25DEF::LCO::GROUP);
             lc.setDstId(actualDstId);
             lc.setSrcId(srcId);
 
@@ -805,8 +1036,13 @@ void HostPatch::processP25Network(uint8_t* buffer, uint32_t length)
 
             LogMessage(LOG_HOST, P25_TDU_STR);
 
-            uint8_t controlByte = 0x00U;
-            m_network->writeP25TDU(lc, lsd, controlByte);
+            if (m_mmdvmP25Reflector) {
+                m_mmdvmP25Net->writeTDU();
+            }
+            else {
+                uint8_t controlByte = 0x00U;
+                m_network->writeP25TDU(lc, lsd, controlByte);
+            }
 
             if (m_rxStartTime > 0U) {
                 uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
@@ -819,8 +1055,14 @@ void HostPatch::processP25Network(uint8_t* buffer, uint32_t length)
             m_rxStreamId = 0U;
 
             m_callInProgress = false;
+            m_callAlgoId = ALGO_UNENCRYPT;
             m_rxStartTime = 0U;
             m_rxStreamId = 0U;
+
+            m_p25SrcCrypto->clearMI();
+            m_p25SrcCrypto->resetKeystream();
+            m_p25DstCrypto->clearMI();
+            m_p25DstCrypto->resetKeystream();
             return;
         }
 
@@ -879,6 +1121,10 @@ void HostPatch::processP25Network(uint8_t* buffer, uint32_t length)
 
                 LogMessage(LOG_NET, P25_LDU1_STR " audio, srcId = %u, dstId = %u", srcId, dstId);
 
+                if (tekAlgoId != ALGO_UNENCRYPT && tekKeyId != 0U) {
+                    cryptP25AudioFrame(netLDU, reverseEncrypt, 1U);
+                }
+
                 control = lc::LC(*dfsiLC.control());
 
                 control.setSrcId(srcId);
@@ -902,7 +1148,30 @@ void HostPatch::processP25Network(uint8_t* buffer, uint32_t length)
                     }
                 }
 
-                m_network->writeP25LDU1(control, lsd, netLDU, frameType);
+                // the previous is nice and all -- but if we're cross-encrypting, we need to use the TEK
+                if (tekAlgoId != ALGO_UNENCRYPT && tekKeyId != 0U) {
+                    control.setAlgId(tekAlgoId);
+                    control.setKId(tekKeyId);
+
+                    uint8_t mi[MI_LENGTH_BYTES];
+                    ::memset(mi, 0x00U, MI_LENGTH_BYTES);
+                    if (!reverseEncrypt)
+                        m_p25SrcCrypto->getMI(mi);
+                    else
+                        m_p25DstCrypto->getMI(mi);
+
+                    control.setMI(mi);
+                }
+
+                if (m_mmdvmP25Reflector) {
+                    ::memcpy(m_netLDU1, netLDU, 9U * 25U);
+                    m_gotNetLDU1 = true;
+                    m_netLC = control;
+
+                    writeNet_LDU1(false);
+                } else {
+                    m_network->writeP25LDU1(control, lsd, netLDU, frameType);
+                }
             }
             break;
         case DUID::LDU2:
@@ -952,12 +1221,39 @@ void HostPatch::processP25Network(uint8_t* buffer, uint32_t length)
 
                 LogMessage(LOG_NET, P25_LDU2_STR " audio, algo = $%02X, kid = $%04X", dfsiLC.control()->getAlgId(), dfsiLC.control()->getKId());
 
+                if (tekAlgoId != ALGO_UNENCRYPT && tekKeyId != 0U) {
+                    cryptP25AudioFrame(netLDU, reverseEncrypt, 2U);
+                }
+
                 control = lc::LC(*dfsiLC.control());
 
                 control.setSrcId(srcId);
                 control.setDstId(actualDstId);
 
-                m_network->writeP25LDU2(control, lsd, netLDU);
+                // set the algo ID and key ID
+                if (tekAlgoId != ALGO_UNENCRYPT && tekKeyId != 0U) {
+                    control.setAlgId(tekAlgoId);
+                    control.setKId(tekKeyId);
+
+                    uint8_t mi[MI_LENGTH_BYTES];
+                    ::memset(mi, 0x00U, MI_LENGTH_BYTES);
+                    if (!reverseEncrypt)
+                        m_p25SrcCrypto->getMI(mi);
+                    else
+                        m_p25DstCrypto->getMI(mi);
+
+                    control.setMI(mi);
+                }
+
+                if (m_mmdvmP25Reflector) {
+                    ::memcpy(m_netLDU2, netLDU, 9U * 25U);
+                    m_gotNetLDU2 = true;
+                    m_netLC = control;
+
+                    writeNet_LDU2(false);
+                } else {
+                    m_network->writeP25LDU2(control, lsd, netLDU);
+                }
             }
             break;
 
@@ -972,6 +1268,296 @@ void HostPatch::processP25Network(uint8_t* buffer, uint32_t length)
             // this makes GCC happy
             break;
         }
+    }
+}
+
+/* Helper to cross encrypt P25 network traffic audio frames. */
+
+void HostPatch::cryptP25AudioFrame(uint8_t* ldu, bool reverseEncrypt, uint8_t p25N)
+{
+    assert(ldu != nullptr);
+    using namespace p25;
+    using namespace p25::defines;
+
+    uint8_t tekSrcAlgoId = m_tekSrcAlgoId;
+    uint16_t tekSrcKeyId = m_tekSrcKeyId;
+    uint8_t tekDstAlgoId = m_tekDstAlgoId;
+    uint16_t tekDstKeyId = m_tekDstKeyId;
+
+    if (reverseEncrypt) {
+        tekSrcAlgoId = m_tekDstAlgoId;
+        tekSrcKeyId = m_tekDstKeyId;
+        tekDstAlgoId = m_tekSrcAlgoId;
+        tekDstKeyId = m_tekSrcKeyId;
+    }
+
+    // decode 9 IMBE codewords into PCM samples
+    for (int n = 0; n < 9; n++) {
+        uint8_t imbe[RAW_IMBE_LENGTH_BYTES];
+        switch (n) {
+        case 0:
+            ::memcpy(imbe, ldu + 10U, RAW_IMBE_LENGTH_BYTES);
+            break;
+        case 1:
+            ::memcpy(imbe, ldu + 26U, RAW_IMBE_LENGTH_BYTES);
+            break;
+        case 2:
+            ::memcpy(imbe, ldu + 55U, RAW_IMBE_LENGTH_BYTES);
+            break;
+        case 3:
+            ::memcpy(imbe, ldu + 80U, RAW_IMBE_LENGTH_BYTES);
+            break;
+        case 4:
+            ::memcpy(imbe, ldu + 105U, RAW_IMBE_LENGTH_BYTES);
+            break;
+        case 5:
+            ::memcpy(imbe, ldu + 130U, RAW_IMBE_LENGTH_BYTES);
+            break;
+        case 6:
+            ::memcpy(imbe, ldu + 155U, RAW_IMBE_LENGTH_BYTES);
+            break;
+        case 7:
+            ::memcpy(imbe, ldu + 180U, RAW_IMBE_LENGTH_BYTES);
+            break;
+        case 8:
+            ::memcpy(imbe, ldu + 204U, RAW_IMBE_LENGTH_BYTES);
+            break;
+        }
+
+        // Utils::dump(1U, "P25, HostPatch::cryptP25AudioFrame(), IMBE", imbe, RAW_IMBE_LENGTH_BYTES);
+
+        // first -- decrypt the IMBE codeword
+        if (tekSrcAlgoId != P25DEF::ALGO_UNENCRYPT && tekSrcKeyId > 0U) {
+            if (!reverseEncrypt && m_p25SrcCrypto->getTEKLength() > 0U) {
+                switch (tekSrcAlgoId) {
+                case P25DEF::ALGO_AES_256:
+                    m_p25SrcCrypto->cryptAES_IMBE(imbe, (p25N == 1U) ? DUID::LDU1 : DUID::LDU2);
+                    break;
+                case P25DEF::ALGO_ARC4:
+                    m_p25SrcCrypto->cryptARC4_IMBE(imbe, (p25N == 1U) ? DUID::LDU1 : DUID::LDU2);
+                    break;
+                default:
+                    LogError(LOG_HOST, "Unsupported TEK algorithm, tekAlgoId = $%02X", tekSrcAlgoId);
+                    break;
+                }
+            } else {
+                if (reverseEncrypt && m_p25DstCrypto->getTEKLength() > 0U) {
+                    switch (tekDstAlgoId) {
+                    case P25DEF::ALGO_AES_256:
+                        m_p25DstCrypto->cryptAES_IMBE(imbe, (p25N == 1U) ? DUID::LDU1 : DUID::LDU2);
+                        break;
+                    case P25DEF::ALGO_ARC4:
+                        m_p25DstCrypto->cryptARC4_IMBE(imbe, (p25N == 1U) ? DUID::LDU1 : DUID::LDU2);
+                        break;
+                    default:
+                        LogError(LOG_HOST, "Unsupported TEK algorithm, tekAlgoId = $%02X", tekDstAlgoId);
+                        break;
+                    }
+                }
+            }
+        }
+
+        // second -- reencrypt the IMBE codeword
+        if (tekDstAlgoId != P25DEF::ALGO_UNENCRYPT && tekDstKeyId > 0U) {
+            if (!reverseEncrypt && m_p25DstCrypto->getTEKLength() > 0U) {
+                switch (tekDstAlgoId) {
+                case P25DEF::ALGO_AES_256:
+                    m_p25DstCrypto->cryptAES_IMBE(imbe, (p25N == 1U) ? DUID::LDU1 : DUID::LDU2);
+                    break;
+                case P25DEF::ALGO_ARC4:
+                    m_p25DstCrypto->cryptARC4_IMBE(imbe, (p25N == 1U) ? DUID::LDU1 : DUID::LDU2);
+                    break;
+                default:
+                    LogError(LOG_HOST, "Unsupported TEK algorithm, tekAlgoId = $%02X", tekDstAlgoId);
+                    break;
+                }
+            } else {
+                if (reverseEncrypt && m_p25SrcCrypto->getTEKLength() > 0U) {
+                    switch (tekSrcAlgoId) {
+                    case P25DEF::ALGO_AES_256:
+                        m_p25SrcCrypto->cryptAES_IMBE(imbe, (p25N == 1U) ? DUID::LDU1 : DUID::LDU2);
+                        break;
+                    case P25DEF::ALGO_ARC4:
+                        m_p25SrcCrypto->cryptARC4_IMBE(imbe, (p25N == 1U) ? DUID::LDU1 : DUID::LDU2);
+                        break;
+                    default:
+                        LogError(LOG_HOST, "Unsupported TEK algorithm, tekAlgoId = $%02X", tekSrcAlgoId);
+                        break;
+                    }
+                }
+            }
+        }
+    }
+}
+
+/* Helper to process a FNE KMM TEK response. */
+
+void HostPatch::processTEKResponse(p25::kmm::KeyItem* ki, uint8_t algId, uint8_t keyLength)
+{
+    if (ki == nullptr)
+        return;
+
+    if (algId == m_tekSrcAlgoId && ki->kId() == m_tekSrcKeyId) {
+        LogMessage(LOG_HOST, "Source TEK loaded, algId = $%02X, kId = $%04X, sln = $%04X", algId, ki->kId(), ki->sln());
+        UInt8Array tek = std::make_unique<uint8_t[]>(keyLength);
+        ki->getKey(tek.get());
+
+        m_p25SrcCrypto->setTEKAlgoId(algId);
+        m_p25SrcCrypto->setTEKKeyId(ki->kId());
+        m_p25SrcCrypto->setKey(tek.get(), keyLength);
+    }
+
+    if (algId == m_tekDstAlgoId && ki->kId() == m_tekDstKeyId) {
+        LogMessage(LOG_HOST, "Destination TEK loaded, algId = $%02X, kId = $%04X, sln = $%04X", algId, ki->kId(), ki->sln());
+        UInt8Array tek = std::make_unique<uint8_t[]>(keyLength);
+        ki->getKey(tek.get());
+
+        m_p25DstCrypto->setTEKAlgoId(algId);
+        m_p25DstCrypto->setTEKKeyId(ki->kId());
+        m_p25DstCrypto->setKey(tek.get(), keyLength);
+    }
+}
+
+/* Helper to check for an unflushed LDU1 packet. */
+
+void HostPatch::checkNet_LDU1()
+{
+    if (m_netState == RS_NET_IDLE)
+        return;
+
+    // check for an unflushed LDU1
+    if ((m_netLDU1[10U] != 0x00U || m_netLDU1[26U] != 0x00U || m_netLDU1[55U] != 0x00U ||
+        m_netLDU1[80U] != 0x00U || m_netLDU1[105U] != 0x00U || m_netLDU1[130U] != 0x00U ||
+        m_netLDU1[155U] != 0x00U || m_netLDU1[180U] != 0x00U || m_netLDU1[204U] != 0x00U) &&
+        m_gotNetLDU1)
+        writeNet_LDU1(false);
+}
+
+/* Helper to write a network P25 LDU1 packet. */
+
+void HostPatch::writeNet_LDU1(bool toFNE)
+{
+    using namespace p25;
+    using namespace p25::defines;
+    using namespace p25::dfsi::defines;
+
+    if (toFNE) {
+        if (m_netState == RS_NET_IDLE) {
+            m_callInProgress = true;
+
+            uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+            m_rxStartTime = now;
+
+            uint8_t lco = m_netLDU1[51U];
+            uint8_t mfId = m_netLDU1[52U];
+            uint32_t dstId = GET_UINT24(m_netLDU1, 76U);
+            uint32_t srcId = GET_UINT24(m_netLDU1, 101U);
+
+            LogMessage(LOG_HOST, "MMDVM P25, call start, srcId = %u, dstId = %u", srcId, dstId);
+
+            lc::LC lc = lc::LC();
+            m_netLC = lc;
+            m_netLC.setLCO(lco);
+            m_netLC.setMFId(mfId);
+            m_netLC.setDstId(dstId);
+            m_netLC.setSrcId(srcId);
+
+            if (m_grantDemand) {
+                p25::lc::LC lc = p25::lc::LC();
+                lc.setLCO(P25DEF::LCO::GROUP);
+                lc.setDstId(dstId);
+                lc.setSrcId(srcId);
+
+                p25::data::LowSpeedData lsd = p25::data::LowSpeedData();
+
+                uint8_t controlByte = network::NET_CTRL_GRANT_DEMAND;               // Grant Demand Flag
+                m_network->writeP25TDU(lc, lsd, controlByte);
+            }
+        }
+
+        p25::data::LowSpeedData lsd = p25::data::LowSpeedData();
+        lsd.setLSD1(m_netLDU1[201U]);
+        lsd.setLSD2(m_netLDU1[202U]);
+
+        LogMessage(LOG_NET, "MMDVM " P25_LDU1_STR " audio, srcId = %u, dstId = %u", m_netLC.getSrcId(), m_netLC.getDstId());
+
+        if (m_debug)
+            Utils::dump(1U, "P25, HostPatch::writeNet_LDU1(), MMDVM -> DVM LDU1", m_netLDU1, 9U * 25U);
+
+        m_network->writeP25LDU1(m_netLC, lsd, m_netLDU1, FrameType::DATA_UNIT);
+
+        m_netState = RS_NET_AUDIO;
+        resetWithNullAudio(m_netLDU1, false);
+        m_gotNetLDU1 = false;
+    }
+    else {
+        if (m_debug)
+            Utils::dump(1U, "P25, HostPatch::writeNet_LDU1(), DVM -> MMDVM LDU1", m_netLDU1, 9U * 25U);
+
+        // add the Low Speed Data
+        p25::data::LowSpeedData lsd = p25::data::LowSpeedData();
+        lsd.setLSD1(m_netLDU1[201U]);
+        lsd.setLSD2(m_netLDU1[202U]);
+
+        m_mmdvmP25Net->writeLDU1(m_netLDU1, m_netLC, lsd, false);
+
+        resetWithNullAudio(m_netLDU1, false);
+        m_gotNetLDU1 = false;
+    }
+}
+
+/* Helper to check for an unflushed LDU2 packet. */
+
+void HostPatch::checkNet_LDU2()
+{
+    if (m_netState == RS_NET_IDLE)
+        return;
+
+    // check for an unflushed LDU2
+    if ((m_netLDU2[10U] != 0x00U || m_netLDU2[26U] != 0x00U || m_netLDU2[55U] != 0x00U ||
+        m_netLDU2[80U] != 0x00U || m_netLDU2[105U] != 0x00U || m_netLDU2[130U] != 0x00U ||
+        m_netLDU2[155U] != 0x00U || m_netLDU2[180U] != 0x00U || m_netLDU2[204U] != 0x00U) &&
+        m_gotNetLDU2) {
+        writeNet_LDU2(false);
+    }
+}
+
+/* Helper to write a network P25 LDU2 packet. */
+
+void HostPatch::writeNet_LDU2(bool toFNE)
+{
+    using namespace p25;
+    using namespace p25::defines;
+    using namespace p25::dfsi::defines;
+
+    if (toFNE) {
+        p25::data::LowSpeedData lsd = p25::data::LowSpeedData();
+        lsd.setLSD1(m_netLDU2[201U]);
+        lsd.setLSD2(m_netLDU2[202U]);
+
+        LogMessage(LOG_NET, "MMDVM " P25_LDU2_STR " audio");
+
+        if (m_debug)
+            Utils::dump(1U, "P25, HostPatch::writeNet_LDU2(), MMDVM -> DVM LDU2", m_netLDU2, 9U * 25U);
+
+        m_network->writeP25LDU2(m_netLC, lsd, m_netLDU2);
+
+        resetWithNullAudio(m_netLDU2, false);
+        m_gotNetLDU2 = false;
+    }
+    else {
+        if (m_debug)
+            Utils::dump(1U, "P25, HostPatch::writeNet_LDU2(), DVM -> MMDVM LDU2", m_netLDU2, 9U * 25U);
+
+        // add the Low Speed Data
+        p25::data::LowSpeedData lsd = p25::data::LowSpeedData();
+        lsd.setLSD1(m_netLDU2[201U]);
+        lsd.setLSD2(m_netLDU2[202U]);
+
+        m_mmdvmP25Net->writeLDU2(m_netLDU2, m_netLC, lsd, false);
+
+        resetWithNullAudio(m_netLDU2, false);
+        m_gotNetLDU2 = false;
     }
 }
 
@@ -1010,6 +1596,26 @@ void* HostPatch::threadNetworkProcess(void* arg)
                 continue;
             }
 
+            if (patch->m_network->getStatus() == NET_STAT_RUNNING) {
+                // check if we need to request a TEK for the source TGID
+                if (patch->m_tekSrcAlgoId != P25DEF::ALGO_UNENCRYPT && patch->m_tekSrcKeyId > 0U) {
+                    if (patch->m_p25SrcCrypto->getTEKLength() == 0U && !patch->m_requestedSrcTek) {
+                        patch->m_requestedSrcTek = true;
+                        LogMessage(LOG_HOST, "Patch source TGID encryption enabled, requesting TEK from network.");
+                        patch->m_network->writeKeyReq(patch->m_tekSrcKeyId, patch->m_tekSrcAlgoId);
+                    }
+                }
+
+                // check if we need to request a TEK for the destination TGID
+                if (patch->m_tekDstAlgoId != P25DEF::ALGO_UNENCRYPT && patch->m_tekDstKeyId > 0U) {
+                    if (patch->m_p25DstCrypto->getTEKLength() == 0U && !patch->m_requestedDstTek) {
+                        patch->m_requestedDstTek = true;
+                        LogMessage(LOG_HOST, "Patch destination TGID encryption enabled, requesting TEK from network.");
+                        patch->m_network->writeKeyReq(patch->m_tekDstKeyId, patch->m_tekDstAlgoId);
+                    }
+                }
+            }
+
             uint32_t length = 0U;
             bool netReadRet = false;
             if (patch->m_digiMode == TX_MODE_DMR) {
@@ -1029,6 +1635,181 @@ void* HostPatch::threadNetworkProcess(void* arg)
             }
 
             Thread::sleep(1U);
+        }
+
+        LogMessage(LOG_HOST, "[STOP] %s", threadName.c_str());
+        delete th;
+    }
+
+    return nullptr;
+}
+
+/* Entry point to MMDVM network processing thread. */
+
+void* HostPatch::threadMMDVMProcess(void* arg)
+{
+    using namespace p25;
+    using namespace p25::defines;
+    using namespace p25::dfsi::defines;
+
+    thread_t* th = (thread_t*)arg;
+    if (th != nullptr) {
+#if defined(_WIN32)
+        ::CloseHandle(th->thread);
+#else
+        ::pthread_detach(th->thread);
+#endif // defined(_WIN32)
+
+        std::string threadName("patch:mmdvm-net-process");
+        HostPatch* patch = static_cast<HostPatch*>(th->obj);
+        if (patch == nullptr) {
+            g_killed = true;
+            LogError(LOG_HOST, "[FAIL] %s", threadName.c_str());
+        }
+
+        if (g_killed) {
+            delete th;
+            return nullptr;
+        }
+
+        LogMessage(LOG_HOST, "[ OK ] %s", threadName.c_str());
+#ifdef _GNU_SOURCE
+        ::pthread_setname_np(th->thread, threadName.c_str());
+#endif // _GNU_SOURCE
+
+        StopWatch stopWatch;
+        stopWatch.start();
+
+        while (!g_killed) {
+            if (!patch->m_running) {
+                Thread::sleep(1U);
+                continue;
+            }
+
+            uint32_t ms = stopWatch.elapsed();
+
+            ms = stopWatch.elapsed();
+            stopWatch.start();
+
+            if (patch->m_digiMode == TX_MODE_P25) {
+                std::lock_guard<std::mutex> lock(HostPatch::m_networkMutex);
+
+                DECLARE_UINT8_ARRAY(buffer, 100U);
+                uint32_t len = patch->m_mmdvmP25Net->read(buffer, 100U);
+                if (len != 0U) {
+                    switch (buffer[0U]) {
+                    // LDU1
+                    case DFSIFrameType::LDU1_VOICE1:
+                        ::memcpy(patch->m_netLDU1 + 0U, buffer, 22U);
+                        break;
+                    case DFSIFrameType::LDU1_VOICE2:
+                        ::memcpy(patch->m_netLDU1 + 25U, buffer, 14U);
+                        break;
+                    case DFSIFrameType::LDU1_VOICE3:
+                        ::memcpy(patch->m_netLDU1 + 50U, buffer, 17U);
+                        break;
+                    case DFSIFrameType::LDU1_VOICE4:
+                        ::memcpy(patch->m_netLDU1 + 75U, buffer, 17U);
+                        break;
+                    case DFSIFrameType::LDU1_VOICE5:
+                        ::memcpy(patch->m_netLDU1 + 100U, buffer, 17U);
+                        break;
+                    case DFSIFrameType::LDU1_VOICE6:
+                        ::memcpy(patch->m_netLDU1 + 125U, buffer, 17U);
+                        break;
+                    case DFSIFrameType::LDU1_VOICE7:
+                        ::memcpy(patch->m_netLDU1 + 150U, buffer, 17U);
+                        break;
+                    case DFSIFrameType::LDU1_VOICE8:
+                        ::memcpy(patch->m_netLDU1 + 175U, buffer, 17U);
+                        break;
+                    case DFSIFrameType::LDU1_VOICE9:
+                        ::memcpy(patch->m_netLDU1 + 200U, buffer, 16U);
+                        patch->checkNet_LDU2();
+
+                        if (patch->m_netState != RS_NET_IDLE) {
+                            patch->m_gotNetLDU1 = true;
+                            patch->writeNet_LDU1(true);
+                        }
+                        break;
+
+                    // LDU2
+                    case DFSIFrameType::LDU2_VOICE10:
+                        ::memcpy(patch->m_netLDU2 + 0U, buffer, 22U);
+                        break;
+                    case DFSIFrameType::LDU2_VOICE11:
+                        ::memcpy(patch->m_netLDU2 + 25U, buffer, 14U);
+                        break;
+                    case DFSIFrameType::LDU2_VOICE12:
+                        ::memcpy(patch->m_netLDU2 + 50U, buffer, 17U);
+                        break;
+                    case DFSIFrameType::LDU2_VOICE13:
+                        ::memcpy(patch->m_netLDU2 + 75U, buffer, 17U);
+                        break;
+                    case DFSIFrameType::LDU2_VOICE14:
+                        ::memcpy(patch->m_netLDU2 + 100U, buffer, 17U);
+                        break;
+                    case DFSIFrameType::LDU2_VOICE15:
+                        ::memcpy(patch->m_netLDU2 + 125U, buffer, 17U);
+                        break;
+                    case DFSIFrameType::LDU2_VOICE16:
+                        ::memcpy(patch->m_netLDU2 + 150U, buffer, 17U);
+                        break;
+                    case DFSIFrameType::LDU2_VOICE17:
+                        ::memcpy(patch->m_netLDU2 + 175U, buffer, 17U);
+                        break;
+                    case DFSIFrameType::LDU2_VOICE18:
+                        ::memcpy(patch->m_netLDU2 + 200U, buffer, 16U);
+                        if (patch->m_netState == RS_NET_IDLE) {
+                            patch->writeNet_LDU1(true);
+                        } else {
+                            patch->checkNet_LDU1();
+                        }
+                        
+                        patch->writeNet_LDU2(true);
+                        break;
+
+                    case 0x80U:
+                        {
+                            patch->m_netState = RS_NET_IDLE;
+
+                            p25::data::LowSpeedData lsd = p25::data::LowSpeedData();
+
+                            LogMessage(LOG_HOST, "MMDVM " P25_TDU_STR);
+
+                            uint8_t controlByte = 0x00U;
+                            patch->m_network->writeP25TDU(patch->m_netLC, lsd, controlByte);
+
+                            if (patch->m_rxStartTime > 0U) {
+                                uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+                                uint64_t diff = now - patch->m_rxStartTime;
+
+                                LogMessage(LOG_HOST, "MMDVM P25, call end, srcId = %u, dstId = %u, dur = %us", patch->m_netLC.getSrcId(), patch->m_netLC.getDstId(), diff / 1000U);
+                            }
+
+                            patch->m_rxStartTime = 0U;
+                            patch->m_rxStreamId = 0U;
+
+                            patch->m_callInProgress = false;
+                            patch->m_rxStartTime = 0U;
+                            patch->m_rxStreamId = 0U;
+                        }
+                        break;
+
+                    case 0xF0U:
+                    case 0xF1U:
+                        // these are MMDVM control bytes -- we ignore these
+                        break;
+
+                    default:
+                        LogError(LOG_NET, "unknown opcode from MMDVM gateway $%02X", buffer[0U]);
+                        break;
+                    }
+                }
+            }
+
+            if (ms < 5U)
+                Thread::sleep(5U);
         }
 
         LogMessage(LOG_HOST, "[STOP] %s", threadName.c_str());

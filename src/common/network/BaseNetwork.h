@@ -25,6 +25,7 @@
 #define __BASE_NETWORK_H__
 
 #include "common/Defines.h"
+#include "common/analog/data/NetData.h"
 #include "common/dmr/data/NetData.h"
 #include "common/p25/data/DataHeader.h"
 #include "common/p25/data/LowSpeedData.h"
@@ -52,6 +53,7 @@
 #define TAG_DMR_DATA            "DMRD"
 #define TAG_P25_DATA            "P25D"
 #define TAG_NXDN_DATA           "NXDD"
+#define TAG_ANALOG_DATA         "ANOD"
 
 #define TAG_REPEATER_LOGIN      "RPTL"
 #define TAG_REPEATER_AUTH       "RPTK"
@@ -88,6 +90,8 @@ namespace network
     const uint32_t  P25_LDU2_PACKET_LENGTH = 181U;  // 24 byte header + DFSI data + 1 byte frame type
     const uint32_t  P25_TSDU_PACKET_LENGTH = 69U;   // 24 byte header + TSDU data
     const uint32_t  P25_TDULC_PACKET_LENGTH = 78U;  // 24 byte header + TDULC data
+    const uint32_t  NXDN_PACKET_LENGTH = 70U;       // 20 byte header + NXDN_FRAME_LENGTH_BYTES + 2 byte trailer
+    const uint32_t  ANALOG_PACKET_LENGTH = 324U;    // 20 byte header + AUDIO_SAMPLES_LENGTH_BYTES + 4 byte trailer
 
     /**
      * @brief Network Peer Connection Status
@@ -129,6 +133,19 @@ namespace network
         NET_CONN_NAK_FNE_MAX_CONN,                  //! FNE Maximum Connections
 
         NET_CONN_NAK_INVALID = 0xFFFF               //! Invalid
+    };
+
+    /**
+     * @brief Network Control Enumerations
+     * @note These values are used typically for terminators to specify specific DVM in-band control operations.
+     * @ingroup network_core
+     */
+    enum CONTROL_BYTE {
+        NET_CTRL_GRANT_DEMAND = 0x80U,              //! Grant Demand
+        NET_CTRL_GRANT_DENIAL = 0x40U,              //! Grant Denial
+        NET_CTRL_SWITCH_OVER = 0x20U,               //! Call Source RID Switch Over
+        NET_CTRL_GRANT_ENCRYPT = 0x08U,             //! Grant Encrypt
+        NET_CTRL_U2U = 0x01U,                       //! Unit-to-Unit
     };
 
     // ---------------------------------------------------------------------------
@@ -297,6 +314,10 @@ namespace network
          * @brief Resets the NXDN ring buffer.
          */
         virtual void resetNXDN();
+        /**
+         * @brief Resets the analog ring buffer.
+         */
+        virtual void resetAnalog();
 
         /**
          * @brief Gets the current DMR stream ID.
@@ -314,6 +335,11 @@ namespace network
          * @return uint32_t Stream ID.
          */
         uint32_t getNXDNStreamId() const { return m_nxdnStreamId; }
+        /**
+         * @brief Gets the current analog stream ID.
+         * @return uint32_t Stream ID.
+         */
+        uint32_t getAnalogStreamId() const { return m_analogStreamId; }
 
         /**
          * @brief Helper to send a data message to the master.
@@ -325,10 +351,12 @@ namespace network
          * @param queueOnly Flag indicating this message should be queued instead of send immediately.
          * @param useAlternatePort Flag indicating the message shuold be sent using the alternate port (mainly for activity and diagnostics).
          * @param peerId If non-zero, overrides the peer ID sent in the packet to the master.
+         * @param ssrc If non-zero, overrides the RTP synchronization source ID sent in the packet to the master.
          * @returns bool True, if message was sent, otherwise false. 
          */
         bool writeMaster(FrameQueue::OpcodePair opcode, const uint8_t* data, uint32_t length, 
-            uint16_t pktSeq, uint32_t streamId, bool queueOnly = false, bool useAlternatePort = false, uint32_t peerId = 0U);
+            uint16_t pktSeq, uint32_t streamId, bool queueOnly = false, bool useAlternatePort = false, uint32_t peerId = 0U,
+            uint32_t ssrc = 0U);
 
         // Digital Mobile Radio
         /**
@@ -366,18 +394,21 @@ namespace network
          * @param[in] lsd Instance of p25::data::LowSpeedData containing low speed data.
          * @param[in] data Buffer containing P25 LDU1 data to send.
          * @param[in] frameType DVM P25 frame type.
+         * @param[in] controlByte DVM Network Control Byte.
          * @returns bool True, if message was sent, otherwise false.
          */
         virtual bool writeP25LDU1(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, const uint8_t* data, 
-            p25::defines::FrameType::E frameType);
+            P25DEF::FrameType::E frameType, uint8_t controlByte = 0U);
         /**
          * @brief Writes P25 LDU2 frame data to the network.
          * @param[in] control Instance of p25::lc::LC containing link control data.
          * @param[in] lsd Instance of p25::data::LowSpeedData containing low speed data.
          * @param[in] data Buffer containing P25 LDU2 data to send.
+         * @param[in] controlByte DVM Network Control Byte.
          * @returns bool True, if message was sent, otherwise false.
          */
-        virtual bool writeP25LDU2(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, const uint8_t* data);
+        virtual bool writeP25LDU2(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, const uint8_t* data,
+            uint8_t controlByte = 0U);
         /**
          * @brief Writes P25 TDU frame data to the network.
          * @param[in] control Instance of p25::lc::LC containing link control data.
@@ -418,6 +449,14 @@ namespace network
          */
         bool hasP25Data() const;
 
+        /**
+         * @brief Helper to validate a P25 network frame length.
+         * @param frameLength P25 encapsulated frame length.
+         * @param len Network packet length.
+         * @return bool True, if validated, otherwise false.
+         */
+        bool validateP25FrameLength(uint8_t& frameLength, const uint32_t len, const P25DEF::DUID::E duid);
+
         // Next Generation Digital Narrowband
         /**
          * @brief Reads NXDN raw frame data from the NXDN ring buffer.
@@ -441,6 +480,28 @@ namespace network
          * @returns bool True, if the network NXDN ring buffer has data, otherwise false.
          */
         bool hasNXDNData() const;
+
+        // Analog Audio
+        /**
+         * @brief Reads analog MuLaw audio frame data from the analog ring buffer.
+         * @param[out] ret Flag indicating whether or not data was received.
+         * @param[out] frameLength Length in bytes of received frame.
+         * @returns UInt8Array Buffer containing received frame.
+         */
+        virtual UInt8Array readAnalog(bool& ret, uint32_t& frameLength);
+        /**
+         * @brief Writes analog MuLaw audio frame data to the network.
+         * @param[in] data Instance of the analog::data::NetData class containing the analog message.
+         * @param noSequence Flag indicating the message should be sent with no RTP sequence (65535).
+         * @returns bool True, if message was sent, otherwise false.
+         */
+        virtual bool writeAnalog(const analog::data::NetData& data, bool noSequence = false);
+
+        /**
+         * @brief Helper to test if the analog ring buffer has data.
+         * @returns bool True, if the network analog ring buffer has data, otherwise false.
+         */
+        bool hasAnalogData() const;
 
     public:
         /**
@@ -489,12 +550,14 @@ namespace network
         RingBuffer<uint8_t> m_rxDMRData;
         RingBuffer<uint8_t> m_rxP25Data;
         RingBuffer<uint8_t> m_rxNXDNData;
+        RingBuffer<uint8_t> m_rxAnalogData;
 
         std::mt19937 m_random;
 
         uint32_t* m_dmrStreamId;
         uint32_t m_p25StreamId;
         uint32_t m_nxdnStreamId;
+        uint32_t m_analogStreamId;
 
         /**
          * @brief Helper to update the RTP packet sequence.
@@ -529,7 +592,7 @@ namespace network
          *      | Reserved                                                      |
          *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
          * 
-         *  The data starting at offset 20 for 33 bytes if the raw DMR frame.
+         *  The data starting at offset 20 for 33 bytes of the raw DMR frame.
          * 
          *  DMR frame message has 2 trailing bytes:
          * 
@@ -591,9 +654,10 @@ namespace network
          * @param[in] control Instance of p25::lc::LC containing link control data.
          * @param[in] lsd Instance of p25::data::LowSpeedData containing low speed data.
          * @param[in] frameType DVM P25 frame type.
+         * @param[in] controlByte DVM Network Control Byte.
          */
         void createP25_MessageHdr(uint8_t* buffer, p25::defines::DUID::E duid, const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, 
-            p25::defines::FrameType::E frameType = p25::defines::FrameType::DATA_UNIT);
+            p25::defines::FrameType::E frameType = p25::defines::FrameType::DATA_UNIT, uint8_t controlByte = 0U);
 
         /**
          * @brief Creates an P25 LDU1 frame message.
@@ -606,10 +670,11 @@ namespace network
          * @param[in] lsd Instance of p25::data::LowSpeedData containing low speed data.
          * @param[in] data Buffer containing P25 LDU1 data to send.
          * @param[in] frameType DVM P25 frame type.
+         * @param[in] controlByte DVM Network Control Byte.
          * @returns UInt8Array Buffer containing the built network message.
          */
         UInt8Array createP25_LDU1Message(uint32_t& length, const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, 
-            const uint8_t* data, p25::defines::FrameType::E frameType);
+            const uint8_t* data, p25::defines::FrameType::E frameType, uint8_t controlByte = 0U);
         /**
          * @brief Creates an P25 LDU2 frame message.
          * 
@@ -620,10 +685,11 @@ namespace network
          * @param[in] control Instance of p25::lc::LC containing link control data.
          * @param[in] lsd Instance of p25::data::LowSpeedData containing low speed data.
          * @param[in] data Buffer containing P25 LDU2 data to send.
+         * @param[in] controlByte DVM Network Control Byte.
          * @returns UInt8Array Buffer containing the built network message.
          */
         UInt8Array createP25_LDU2Message(uint32_t& length, const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, 
-            const uint8_t* data);
+            const uint8_t* data, uint8_t controlByte = 0U);
 
         /**
          * @brief Creates an P25 TDU frame message.
@@ -700,7 +766,7 @@ namespace network
          */
         UInt8Array createP25_PDUMessage(uint32_t& length, const p25::data::DataHeader& header, const uint8_t currentBlock,
             const uint8_t* data, const uint32_t len);
-        
+
         /**
          * @brief Creates an NXDN frame message.
          * \code{.unparsed}
@@ -732,7 +798,36 @@ namespace network
          * @returns UInt8Array Buffer containing the built network message.
          */
         UInt8Array createNXDN_Message(uint32_t& length, const nxdn::lc::RTCH& lc, const uint8_t* data, const uint32_t len);
-    
+
+        /**
+         * @brief Creates an analog frame message.
+         * \code{.unparsed}
+         *  Below is the representation of the data layout for the analog frame
+         *  message header. The header is 20 bytes in length.
+         * 
+         *  Byte 0               1               2               3
+         *  Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *      | Protocol Tag (ANOD)                                           |
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *      | Seq No.       | Source ID                                     |
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *      | Destination ID                                | Reserved      |
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *      | Reserved                      | Control Flags | R | Data Type |
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *      | Reserved                                                      |
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         * 
+         *  The data starting at offset 20 for 320 bytes of the raw analog frame.
+         * \endcode
+         * @param[out] length Length of network message buffer.
+         * @param streamId Stream ID.
+         * @param data Instance of the analog::data::Data class containing the analog message.
+         * @returns UInt8Array Buffer containing the built network message.
+         */
+        UInt8Array createAnalog_Message(uint32_t& length, const uint32_t streamId, const analog::data::NetData& data);
+
     private:
         uint16_t m_pktSeq;
 

@@ -505,6 +505,7 @@ RESTAPI::RESTAPI(const std::string& address, uint16_t port, const std::string& p
     m_ridLookup(nullptr),
     m_tidLookup(nullptr),
     m_peerListLookup(nullptr),
+    m_adjSiteMapLookup(nullptr),
     m_authTokens()
 {
     assert(!address.empty());
@@ -526,7 +527,7 @@ RESTAPI::RESTAPI(const std::string& address, uint16_t port, const std::string& p
     delete[] in;
 
     if (m_debug) {
-        Utils::dump("REST Password Hash", m_passwordHash, 32U);
+        Utils::dump("RESTAPI::RESTAPI(), REST Password Hash", m_passwordHash, 32U);
     }
 
 #if defined(ENABLE_SSL)
@@ -554,11 +555,13 @@ RESTAPI::~RESTAPI()
 
 /* Sets the instances of the Radio ID and Talkgroup ID lookup tables. */
 
-void RESTAPI::setLookups(lookups::RadioIdLookup* ridLookup, lookups::TalkgroupRulesLookup* tidLookup, ::lookups::PeerListLookup* peerListLookup)
+void RESTAPI::setLookups(lookups::RadioIdLookup* ridLookup, lookups::TalkgroupRulesLookup* tidLookup, 
+    ::lookups::PeerListLookup* peerListLookup, ::lookups::AdjSiteMapLookup* adjMapLookup)
 {
     m_ridLookup = ridLookup;
     m_tidLookup = tidLookup;
     m_peerListLookup = peerListLookup;
+    m_adjSiteMapLookup = adjMapLookup;
 }
 
 /* Sets the instance of the FNE network. */
@@ -650,6 +653,11 @@ void RESTAPI::initializeEndpoints()
     m_dispatcher.match(FNE_PUT_PEER_ADD).put(REST_API_BIND(RESTAPI::restAPI_PutPeerAdd, this));
     m_dispatcher.match(FNE_PUT_PEER_DELETE).put(REST_API_BIND(RESTAPI::restAPI_PutPeerDelete, this));
     m_dispatcher.match(FNE_GET_PEER_COMMIT).get(REST_API_BIND(RESTAPI::restAPI_GetPeerCommit, this));
+
+    m_dispatcher.match(FNE_GET_ADJ_MAP_LIST).get(REST_API_BIND(RESTAPI::restAPI_GetAdjMapList, this));
+    m_dispatcher.match(FNE_PUT_ADJ_MAP_ADD).put(REST_API_BIND(RESTAPI::restAPI_PutAdjMapAdd, this));
+    m_dispatcher.match(FNE_PUT_ADJ_MAP_DELETE).put(REST_API_BIND(RESTAPI::restAPI_PutAdjMapDelete, this));
+    m_dispatcher.match(FNE_GET_ADJ_MAP_COMMIT).get(REST_API_BIND(RESTAPI::restAPI_GetAdjMapCommit, this));
 
     m_dispatcher.match(FNE_GET_FORCE_UPDATE).get(REST_API_BIND(RESTAPI::restAPI_GetForceUpdate, this));
 
@@ -771,7 +779,7 @@ void RESTAPI::restAPI_PutAuth(const HTTPPayload& request, HTTPPayload& reply, co
     }
 
     if (m_debug) {
-        Utils::dump("Password Hash", passwordHash, 32U);
+        Utils::dump("RESTAPI::restAPI_PutAuth(), Password Hash", passwordHash, 32U);
     }
 
     // compare hashes
@@ -1287,7 +1295,10 @@ void RESTAPI::restAPI_PutPeerAdd(const HTTPPayload& request, HTTPPayload& reply,
         peerPassword = req["peerPassword"].get<std::string>();
     }
 
-    m_peerListLookup->addEntry(peerId, peerAlias, peerPassword, peerLink);
+    PeerId entry = PeerId(peerId, peerAlias, peerPassword, false);
+    entry.peerLink(peerLink);
+
+    m_peerListLookup->addEntry(peerId, entry);
 }
 
 /* REST API endpoint; implements put peer delete request. */
@@ -1327,6 +1338,136 @@ void RESTAPI::restAPI_GetPeerCommit(const HTTPPayload& request, HTTPPayload& rep
     setResponseDefaultStatus(response);
 
     m_peerListLookup->commit();
+
+    reply.payload(response);
+}
+
+
+/* REST API endpoint; implements get adjacent site map query request. */
+
+void RESTAPI::restAPI_GetAdjMapList(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object response = json::object();
+    setResponseDefaultStatus(response);
+
+    json::array peers = json::array();
+    if (m_adjSiteMapLookup != nullptr) {
+        if (m_adjSiteMapLookup->adjPeerMap().size() > 0) {
+            for (auto entry : m_adjSiteMapLookup->adjPeerMap()) {
+                json::object peerObj = json::object();
+
+                uint32_t peerId = entry.peerId();
+                peerObj["peerId"].set<uint32_t>(peerId);
+
+                json::array neighbors = json::array();
+                std::vector<uint32_t> neighbor = entry.neighbors();
+                if (neighbor.size() > 0) {
+                    for (auto neighEntry : neighbor) {
+                        uint32_t peerId = neighEntry;
+                        neighbors.push_back(json::value((double)peerId));
+                    }
+                }
+                peerObj["neighbors"].set<json::array>(neighbors);
+                peers.push_back(json::value(peerObj));
+            }
+        }
+    }
+
+    response["peers"].set<json::array>(peers);
+    reply.payload(response);
+}
+
+/* REST API endpoint; implements put adjacent site map add request. */
+
+void RESTAPI::restAPI_PutAdjMapAdd(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object req = json::object();
+    if (!parseRequestBody(request, reply, req)) {
+        return;
+    }
+
+    errorPayload(reply, "OK", HTTPPayload::OK);
+
+    // Validate peer ID (required)
+    if (!req["peerId"].is<uint32_t>()) {
+        errorPayload(reply, "peerId was not a valid integer");
+        return;
+    }
+
+    // get
+    AdjPeerMapEntry entry = AdjPeerMapEntry();
+    uint32_t peerId = req["peerId"].get<uint32_t>();
+    entry.peerId(peerId);
+
+    if (!req["neighbors"].is<json::array>()) {
+        errorPayload(reply, "Peer \"neighbors\" was not a valid JSON array");
+        LogDebug(LOG_REST,  "Peer \"neighbors\" was not a valid JSON array");
+        return;
+    }
+    json::array neighbors = req["neighbors"].get<json::array>();
+
+    std::vector<uint32_t> neighbor = std::vector<uint32_t>();
+    if (neighbors.size() > 0) {
+        for (auto neighEntry : neighbors) {
+            if (!neighEntry.is<uint32_t>()) {
+                errorPayload(reply, "Peer neighbor value was not a valid number");
+                LogDebug(LOG_REST,  "Peer neighbor value was not a valid number (was %s)", neighEntry.to_type().c_str());
+                return;
+            }
+
+            neighbor.push_back(neighEntry.get<uint32_t>());
+        }
+        entry.neighbors(neighbor);
+    }
+
+    m_adjSiteMapLookup->addEntry(entry);
+}
+
+/* REST API endpoint; implements put adjacent site map delete request. */
+
+void RESTAPI::restAPI_PutAdjMapDelete(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object req = json::object();
+    if (!parseRequestBody(request, reply, req)) {
+        return;
+    }
+
+    errorPayload(reply, "OK", HTTPPayload::OK);
+
+    if (!req["peerId"].is<uint32_t>()) {
+        errorPayload(reply, "peerId was not a valid integer");
+        return;
+    }
+
+    uint32_t peerId = req["peerId"].get<uint32_t>();
+
+    m_adjSiteMapLookup->eraseEntry(peerId);
+}
+
+/* REST API endpoint; implements put adjacent site map commit request. */
+
+void RESTAPI::restAPI_GetAdjMapCommit(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object response = json::object();
+    setResponseDefaultStatus(response);
+
+    m_adjSiteMapLookup->commit();
 
     reply.payload(response);
 }

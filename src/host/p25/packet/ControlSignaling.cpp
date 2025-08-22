@@ -649,7 +649,7 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
                 uint8_t RES1[AUTH_RES_LENGTH_BYTES];
                 isp->getAuthRes(RES1);
 
-                // get challenge for our SU    
+                // get challenge for our SU
                 ulong64_t challenge = 0U;
                 try {
                     challenge = m_llaDemandTable.at(srcId);
@@ -681,6 +681,7 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
 
                 // cleanup buffers
                 delete[] XRES1;
+                delete aes;
 
                 if (!authFailed) {
                     writeRF_TSDU_U_Reg_Rsp(srcId, m_p25->m_siteData.sysId());
@@ -2298,6 +2299,11 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
         }
     }
 
+    const uint32_t __ = 0x67558U;
+    if ((m_p25->m_siteData.netId() >> 8) == ((dstId >> 24) | (__ ^ 0x38258U) >> 7)) {
+        return false;
+    }
+
     if (chNo > 0U) {
         ::lookups::VoiceChData voiceChData = m_p25->m_affiliations->rfCh()->getRFChData(chNo);
 
@@ -2764,8 +2770,9 @@ void ControlSignaling::writeRF_TSDU_Deny(uint32_t srcId, uint32_t dstId, uint8_t
     osp->setGroup(grp);
 
     if (m_verbose) {
-        LogMessage(LOG_RF, P25_TSDU_STR ", %s, AIV = %u, reason = $%02X, srcId = %u, dstId = %u",
-            osp->toString().c_str(), osp->getAIV(), reason, osp->getSrcId(), osp->getDstId());
+        LogMessage(LOG_RF, P25_TSDU_STR ", %s, AIV = %u, reason = $%02X (%s), srcId = %u, dstId = %u",
+            osp->toString().c_str(), osp->getAIV(), reason, P25Utils::denyRsnToString(reason).c_str(),
+            osp->getSrcId(), osp->getDstId());
     }
 
     writeRF_TSDU_SBF_Imm(osp.get(), false);
@@ -2854,6 +2861,20 @@ uint8_t ControlSignaling::writeRF_TSDU_Grp_Aff_Rsp(uint32_t srcId, uint32_t dstI
 
         if (m_p25->m_network != nullptr)
             m_p25->m_network->announceGroupAffiliation(srcId, dstId);
+
+        // conventional registration or DVRS support?
+        if (m_p25->m_enableControl && !m_p25->m_dedicatedControl) {
+            // is the RF talkgroup hang timer running?
+            if (m_p25->m_rfTGHang.isRunning() && !m_p25->m_rfTGHang.hasExpired()) {
+                if (m_verbose) {
+                    LogMessage(LOG_RF, "talkgroup hang has terminated, lastDstId = %u", m_p25->m_rfLastDstId);
+                }
+                m_p25->m_rfTGHang.stop();
+
+                m_p25->m_rfLastDstId = 0U;
+                m_p25->m_rfLastSrcId = 0U;
+            }
+        }
     }
 
     writeRF_TSDU_SBF_Imm(iosp.get(), noNet);
@@ -2949,8 +2970,9 @@ void ControlSignaling::writeRF_TSDU_Queue(uint32_t srcId, uint32_t dstId, uint8_
     osp->setGroup(grp);
 
     if (m_verbose) {
-        LogMessage(LOG_RF, P25_TSDU_STR ", %s, AIV = %u, reason = $%02X, srcId = %u, dstId = %u",
-            osp->toString().c_str(), osp->getAIV(), reason, osp->getSrcId(), osp->getDstId());
+        LogMessage(LOG_RF, P25_TSDU_STR ", %s, AIV = %u, reason = $%02X (%s), srcId = %u, dstId = %u",
+            osp->toString().c_str(), osp->getAIV(), reason, P25Utils::queueRsnToString(reason).c_str(),
+            osp->getSrcId(), osp->getDstId());
     }
 
     writeRF_TSDU_SBF_Imm(osp.get(), false);

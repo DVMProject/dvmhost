@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2023,2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2023,2024,2025 Bryan Biedenkapp, N2PLL
  *
  */
 #include "Defines.h"
@@ -53,19 +53,19 @@ std::unique_ptr<TDULC> TDULCFactory::createTDULC(const uint8_t* data)
     edac::Golay24128::decode24128(rs, raw, P25_TDULC_LENGTH_BYTES);
 
 #if DEBUG_P25_TDULC
-    Utils::dump(2U, "TDULCFactory::decode(), TDULC RS", rs, P25_TDULC_LENGTH_BYTES);
+    Utils::dump(2U, "P25, TDULCFactory::createTDULC(), TDULC RS", rs, P25_TDULC_LENGTH_BYTES);
 #endif
 
     // decode RS (24,12,13) FEC
     try {
         bool ret = m_rs.decode241213(rs);
         if (!ret) {
-            LogError(LOG_P25, "TDULCFactory::decode(), failed to decode RS (24,12,13) FEC");
+            LogError(LOG_P25, "TDULCFactory::createTDULC(), failed to decode RS (24,12,13) FEC");
             return nullptr;
         }
     }
     catch (...) {
-        Utils::dump(2U, "P25, RS excepted with input data", rs, P25_TDULC_LENGTH_BYTES);
+        Utils::dump(2U, "P25, TDULCFactory::createTDULC(), RS excepted with input data", rs, P25_TDULC_LENGTH_BYTES);
         return nullptr;
     }
 
@@ -81,8 +81,10 @@ std::unique_ptr<TDULC> TDULCFactory::createTDULC(const uint8_t* data)
         return decode(new LC_TEL_INT_VCH_USER(), data);
     case LCO::CALL_TERM:
         return decode(new LC_CALL_TERM(), data);
+    case LCO::EXPLICIT_SOURCE_ID:
+        return decode(new LC_EXPLICIT_SOURCE_ID(), data);
     default:
-        LogError(LOG_P25, "TDULCFactory::create(), unknown TDULC LCO value, lco = $%02X", lco);
+        LogError(LOG_P25, "TDULCFactory::createTDULC(), unknown TDULC LCO value, lco = $%02X", lco);
         break;
     }
 

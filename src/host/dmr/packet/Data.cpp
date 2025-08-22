@@ -32,45 +32,6 @@ using namespace dmr::packet;
 #include <algorithm>
 
 // ---------------------------------------------------------------------------
-//  Macros
-// ---------------------------------------------------------------------------
-
-#define CHECK_AUTHORITATIVE(_DST_ID)                                                    \
-    if (!m_slot->m_authoritative && m_slot->m_permittedDstId != dstId) {                \
-        if (!g_disableNonAuthoritativeLogging)                                          \
-            LogWarning(LOG_RF, "[NON-AUTHORITATIVE] Ignoring RF traffic, destination not permitted!"); \
-        m_slot->m_rfState = RS_RF_LISTENING;                                            \
-        return false;                                                                   \
-    }
-
-#define CHECK_NET_AUTHORITATIVE(_DST_ID)                                                \
-    if (!m_slot->m_authoritative && m_slot->m_permittedDstId != dstId) {                \
-        return;                                                                         \
-    }
-
-// Don't process RF frames if the network isn't in a idle state.
-#define CHECK_TRAFFIC_COLLISION(_DST_ID)                                                \
-    if (m_slot->m_netState != RS_NET_IDLE && _DST_ID == m_slot->m_netLastDstId) {       \
-        LogWarning(LOG_RF, "DMR Slot %u, Traffic collision detect, preempting new RF traffic to existing network traffic!", m_slot->m_slotNo); \
-        m_slot->m_rfState = RS_RF_LISTENING;                                            \
-        return false;                                                                   \
-    }                                                                                   \
-    if (m_slot->m_enableTSCC && _DST_ID == m_slot->m_netLastDstId) {                    \
-        if (m_slot->m_affiliations->isNetGranted(_DST_ID)) {                            \
-            LogWarning(LOG_RF, "DMR Slot %u, Traffic collision detect, preempting new RF traffic to existing granted network traffic (Are we in a voting condition?)", m_slot->m_slotNo); \
-            m_slot->m_rfState = RS_RF_LISTENING;                                        \
-            return false;                                                               \
-        }                                                                               \
-    }
-
-#define CHECK_TG_HANG(_DST_ID)                                                          \
-    if (m_slot->m_rfLastDstId != 0U) {                                                  \
-        if (m_slot->m_rfLastDstId != _DST_ID && (m_slot->m_rfTGHang.isRunning() && !m_slot->m_rfTGHang.hasExpired())) { \
-            return;                                                                     \
-        }                                                                               \
-    }
-
-// ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
@@ -163,8 +124,27 @@ bool Data::process(uint8_t* data, uint32_t len)
         uint32_t srcId = m_rfDataHeader.getSrcId();
         uint32_t dstId = m_rfDataHeader.getDstId();
 
-        CHECK_AUTHORITATIVE(dstId);
-        CHECK_TRAFFIC_COLLISION(dstId);
+        if (!m_slot->m_authoritative && m_slot->m_permittedDstId != dstId) {
+            if (!g_disableNonAuthoritativeLogging)
+                LogWarning(LOG_RF, "[NON-AUTHORITATIVE] Ignoring RF traffic, destination not permitted!");
+            m_slot->m_rfState = RS_RF_LISTENING;
+            return false;
+        }
+
+        // don't process RF frames if the network isn't in a idle state and the RF destination is the network destination
+        if (m_slot->m_netState != RS_NET_IDLE && dstId == m_slot->m_netLastDstId) {
+            LogWarning(LOG_RF, "DMR Slot %u, Traffic collision detect, preempting new RF traffic to existing network traffic!", m_slot->m_slotNo);
+            m_slot->m_rfState = RS_RF_LISTENING;
+            return false;
+        }
+
+        if (m_slot->m_enableTSCC && dstId == m_slot->m_netLastDstId) {
+            if (m_slot->m_affiliations->isNetGranted(dstId)) {
+                LogWarning(LOG_RF, "DMR Slot %u, Traffic collision detect, preempting new RF traffic to existing granted network traffic (Are we in a voting condition?)", m_slot->m_slotNo);
+                m_slot->m_rfState = RS_RF_LISTENING;
+                return false;
+            }
+        }
 
         if (m_slot->m_tsccPayloadDstId != 0U && m_slot->m_tsccPayloadActRetry.isRunning()) {
             m_slot->m_tsccPayloadActRetry.stop();
@@ -252,7 +232,7 @@ bool Data::process(uint8_t* data, uint32_t len)
 
         uint8_t controlByte = 0U;
         if (m_slot->m_convNetGrantDemand)
-            controlByte |= 0x80U;                                            // Grant Demand Flag
+            controlByte |= network::NET_CTRL_GRANT_DEMAND;                          // Grant Demand Flag
 
         m_slot->writeNetwork(data, DataType::DATA_HEADER, controlByte);
 
@@ -314,7 +294,7 @@ bool Data::process(uint8_t* data, uint32_t len)
             }
 
             if (m_dumpDataPacket) {
-                Utils::dump(1U, "PDU Packet", m_pduUserData, m_pduDataOffset);
+                Utils::dump(1U, "DMR, PDU Packet", m_pduUserData, m_pduDataOffset);
             }
         }
 
@@ -421,8 +401,15 @@ void Data::processNetwork(const data::NetData& dmrData)
         uint32_t srcId = m_netDataHeader.getSrcId();
         uint32_t dstId = m_netDataHeader.getDstId();
 
-        CHECK_NET_AUTHORITATIVE(dstId);
-        CHECK_TG_HANG(dstId);
+        if (!m_slot->m_authoritative && m_slot->m_permittedDstId != dstId) {
+            return;
+        }
+
+        if (m_slot->m_rfLastDstId != 0U) {
+            if (m_slot->m_rfLastDstId != dstId && (m_slot->m_rfTGHang.isRunning() && !m_slot->m_rfTGHang.hasExpired())) {
+                return;
+            }
+        }
 
         if (m_slot->m_tsccPayloadDstId != 0U && m_slot->m_tsccPayloadActRetry.isRunning()) {
             m_slot->m_tsccPayloadActRetry.stop();
@@ -554,7 +541,7 @@ void Data::processNetwork(const data::NetData& dmrData)
             }
 
             if (m_dumpDataPacket) {
-                Utils::dump(1U, "PDU Packet", m_pduUserData, m_pduDataOffset);
+                Utils::dump(1U, "DMR, PDU Packet", m_pduUserData, m_pduDataOffset);
             }
         }
 

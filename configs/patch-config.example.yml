@@ -60,20 +60,61 @@ network:
     sourceTGID: 1
     # Source Slot for received/transmitted audio frames.
     sourceSlot: 1
+
+    # Source Traffic Encryption
+    srcTek:
+      # Flag indicating whether or not traffic encryption is enabled.
+      enable: false
+      # Traffic Encryption Key Algorithm
+      #   aes - AES-256 Encryption
+      #   arc4 - ARC4/ADP Encryption
+      tekAlgo: "aes"
+      # Traffic Encryption Key ID
+      tekKeyId: 1
+
     # Destination Talkgroup ID for transmitted/received audio frames.
     destinationTGID: 1
     # Destination Slot for received/transmitted audio frames.
     destinationSlot: 1
 
+    # Destination Traffic Encryption
+    dstTek:
+      # Flag indicating whether or not traffic encryption is enabled.
+      enable: false
+      # Traffic Encryption Key Algorithm
+      #   aes - AES-256 Encryption
+      #   arc4 - ARC4/ADP Encryption
+      tekAlgo: "aes"
+      # Traffic Encryption Key ID
+      tekKeyId: 1
+
     # Flag indicating whether or not the patch is two-way.
     twoWay: false
+
+    # Hostname/IP address of MMDVM gateway to connect to.
+    mmdvmGatewayAddress: 127.0.0.1
+    # Port number to connect to.
+    mmdvmGatewayPort: 42020
+    # Local port number for gateway to connect to.
+    localGatewayPort: 32010
 
 system:
     # Textual Name
     identity: PATCH
 
+    # Network ID (WACN).
+    netId: BB800
+    # System ID.
+    sysId: 001
+
     # Digital mode (1 - DMR, 2 - P25).
     digiMode: 1
+
+    # Flag indicating whether a network grant demand packet will be sent before audio.
+    grantDemand: false
+
+    # Flag indicating whether or not the patch is from/to a MMDVM P25 reflector.
+    mmdvmP25Reflector: false
 
     # Flag indicating whether or not trace logging is enabled.
     trace: false

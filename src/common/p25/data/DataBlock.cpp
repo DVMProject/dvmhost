@@ -128,7 +128,7 @@ bool DataBlock::decode(const uint8_t* data, const DataHeader& header)
             ::memcpy(m_data, buffer, P25_PDU_UNCONFIRMED_LENGTH_BYTES);                     // Payload Data
         }
         catch (...) {
-            Utils::dump(2U, "P25, decoding excepted with input data", data, P25_PDU_UNCONFIRMED_LENGTH_BYTES);
+            Utils::dump(2U, "P25, DataBlock::decode(), decoding excepted with input data", data, P25_PDU_UNCONFIRMED_LENGTH_BYTES);
             return false;
         }
     }

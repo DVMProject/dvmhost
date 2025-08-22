@@ -106,7 +106,7 @@ void LowSpeedData::process(uint8_t* data)
         }
     }
 
-    // Utils::dump(1U, "P25 Low Speed Data", lsd, 4U);
+    // Utils::dump(1U, "P25, LowSpeedData::process(), Low Speed Data", lsd, 4U);
 
     m_lsd1 = lsd[0U];
     m_lsd2 = lsd[2U];

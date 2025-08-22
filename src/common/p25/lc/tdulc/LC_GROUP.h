@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2022-2025 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -13,8 +13,8 @@
  * @file LC_GROUP.cpp
  * @ingroup p25_lc
  */
-#if !defined(__P25_LC_TSBK__LC_GROUP_H__)
-#define  __P25_LC_TSBK__LC_GROUP_H__
+#if !defined(__P25_LC_TDULC__LC_GROUP_H__)
+#define  __P25_LC_TDULC__LC_GROUP_H__
 
 #include "common/Defines.h"
 #include "common/p25/lc/TDULC.h"
@@ -56,4 +56,4 @@ namespace p25
     } // namespace lc
 } // namespace p25
 
-#endif // __P25_LC_TSBK__LC_GROUP_H__
+#endif // __P25_LC_TDULC__LC_GROUP_H__

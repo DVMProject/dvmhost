@@ -139,7 +139,7 @@ std::vector<asio::const_buffer> SIPPayload::toBuffers()
 #if DEBUG_SIP_PAYLOAD
     ::LogDebugEx(LOG_SIP, "SIPPayload::toBuffers()", "content = %s", content.c_str());
     for (auto buffer : buffers)
-        Utils::dump("[SIPPayload::toBuffers()] buffer[]", (uint8_t*)buffer.data(), buffer.size());
+        Utils::dump("SIPPayload::toBuffers(), buffer[]", (uint8_t*)buffer.data(), buffer.size());
 #endif
 
     return buffers;

@@ -61,12 +61,13 @@ namespace network
              * @param data Network data buffer.
              * @param len Length of data.
              * @param peerId Peer ID.
+             * @param ssrc RTP Synchronization Source ID.
              * @param pktSeq RTP packet sequence.
              * @param streamId Stream ID.
              * @param external Flag indicating traffic is from an external peer.
              * @returns bool True, if frame is processed, otherwise false.
              */
-            bool processFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint16_t pktSeq, uint32_t streamId, bool external = false);
+            bool processFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint32_t ssrc, uint16_t pktSeq, uint32_t streamId, bool external = false);
             /**
              * @brief Process a grant request frame from the network.
              * @param srcId Source Radio ID.
@@ -192,6 +193,10 @@ namespace network
                  */
                 uint32_t peerId;
                 /**
+                 * @brief Destination Peer ID.
+                 */
+                uint32_t dstPeerId;
+                /**
                  * @brief Flag indicating this call is active with traffic currently in progress.
                  */
                 bool activeCall;
@@ -210,6 +215,7 @@ namespace network
             };
             typedef std::pair<const uint32_t, RxStatus> StatusMapPair;
             concurrent::unordered_map<uint32_t, RxStatus> m_status;
+            concurrent::unordered_map<uint32_t, RxStatus> m_statusPVCall;
 
             friend class packetdata::P25PacketData;
             packetdata::P25PacketData* m_packetData;

@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2024-2025 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -43,6 +43,11 @@
 #define FNE_PUT_PEER_ADD                "/peer/add"
 #define FNE_PUT_PEER_DELETE             "/peer/delete"
 #define FNE_GET_PEER_COMMIT             "/peer/commit"
+
+#define FNE_GET_ADJ_MAP_LIST            "/adjmap/list"
+#define FNE_PUT_ADJ_MAP_ADD             "/adjmap/add"
+#define FNE_PUT_ADJ_MAP_DELETE          "/adjmap/delete"
+#define FNE_GET_ADJ_MAP_COMMIT          "/adjmap/commit"
 
 #define FNE_GET_FORCE_UPDATE            "/force-update"
 

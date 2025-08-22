@@ -115,7 +115,7 @@ void RCCH::decode(const uint8_t* data, uint8_t* rcch, uint32_t length, uint32_t 
     }
 
     if (m_verbose) {
-        Utils::dump(2U, "Decoded RCCH Data", rcch, NXDN_RCCH_LC_LENGTH_BYTES);
+        Utils::dump(2U, "NXDN, RCCH::decode(), Decoded RCCH Data", rcch, NXDN_RCCH_LC_LENGTH_BYTES);
     }
 
     m_messageType = data[0U] & 0x3FU;                                               // Message Type
@@ -138,7 +138,7 @@ void RCCH::encode(uint8_t* data, const uint8_t* rcch, uint32_t length, uint32_t 
     }
 
     if (m_verbose) {
-        Utils::dump(2U, "Encoded RCCH Data", data, NXDN_RCCH_LC_LENGTH_BYTES);
+        Utils::dump(2U, "NXDN, RCCH::encode(), Encoded RCCH Data", data, NXDN_RCCH_LC_LENGTH_BYTES);
     }
 }
 

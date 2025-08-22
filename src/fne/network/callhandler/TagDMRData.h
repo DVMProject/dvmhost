@@ -8,9 +8,9 @@
  *
  */
 /**
- * @file TagNXDNData.h
+ * @file TagDMRData.h
  * @ingroup fne_callhandler
- * @file TagNXDNData.cpp
+ * @file TagDMRData.cpp
  * @ingroup fne_callhandler
  */
 #if !defined(__CALLHANDLER__TAG_DMR_DATA_H__)
@@ -56,12 +56,13 @@ namespace network
              * @param data Network data buffer.
              * @param len Length of data.
              * @param peerId Peer ID.
+             * @param ssrc RTP Synchronization Source ID.
              * @param pktSeq RTP packet sequence.
              * @param streamId Stream ID.
              * @param external Flag indicating traffic is from an external peer.
              * @returns bool True, if frame is processed, otherwise false.
              */
-            bool processFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint16_t pktSeq, uint32_t streamId, bool external = false);
+            bool processFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint32_t ssrc, uint16_t pktSeq, uint32_t streamId, bool external = false);
             /**
              * @brief Process a grant request frame from the network.
              * @param srcId Source Radio ID.
@@ -178,6 +179,10 @@ namespace network
                  */
                 uint32_t peerId;
                 /**
+                 * @brief Destination Peer ID.
+                 */
+                uint32_t dstPeerId;
+                /**
                  * @brief Flag indicating this call is active with traffic currently in progress.
                  */
                 bool activeCall;
@@ -197,6 +202,7 @@ namespace network
             };
             typedef std::pair<const uint32_t, RxStatus> StatusMapPair;
             concurrent::unordered_map<uint32_t, RxStatus> m_status;
+            concurrent::unordered_map<uint32_t, RxStatus> m_statusPVCall;
 
             friend class packetdata::DMRPacketData;
             packetdata::DMRPacketData* m_packetData;
@@ -236,7 +242,7 @@ namespace network
             /**
              * @brief Helper to determine if the peer is permitted for traffic.
              * @param peerId Peer ID.
-             * @param dmrData Instance of data::NetData DMR data container class.
+             * @param data Instance of data::NetData DMR data container class.
              * @param streamId Stream ID.
              * @param external Flag indicating this traffic came from an external peer.
              * @returns bool True, if valid, otherwise false.
@@ -245,11 +251,12 @@ namespace network
             /**
              * @brief Helper to validate the DMR call stream.
              * @param peerId Peer ID.
-             * @param dmrData Instance of data::NetData DMR data container class.
+             * @param data Instance of data::NetData DMR data container class.
+             * @param[in] csbk Instance of dmr::lc::CSBK.
              * @param streamId Stream ID.
              * @returns bool True, if valid, otherwise false.
              */
-            bool validate(uint32_t peerId, dmr::data::NetData& data, uint32_t streamId);
+            bool validate(uint32_t peerId, dmr::data::NetData& data, dmr::lc::CSBK* csbk, uint32_t streamId);
 
             /**
              * @brief Helper to write a grant packet.
@@ -266,9 +273,10 @@ namespace network
              * @param peerId Peer ID.
              * @param dstId Destination ID.
              * @param reason Denial Reason.
+             * @param slot DMR slot number.
              * @param service Service being denied.
              */
-            void write_CSBK_NACK_RSP(uint32_t peerId, uint32_t dstId, uint8_t reason, uint8_t service);
+            void write_CSBK_NACK_RSP(uint32_t peerId, uint32_t dstId, uint8_t slot, uint8_t reason, uint8_t service);
 
             /**
              * @brief Helper to write a network CSBK.

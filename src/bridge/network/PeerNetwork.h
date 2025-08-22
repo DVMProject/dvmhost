@@ -48,6 +48,7 @@ namespace network
          * @param dmr Flag indicating whether DMR is enabled.
          * @param p25 Flag indicating whether P25 is enabled.
          * @param nxdn Flag indicating whether NXDN is enabled.
+         * @param analog Flag indicating whether analog is enabled.
          * @param slot1 Flag indicating whether DMR slot 1 is enabled for network traffic.
          * @param slot2 Flag indicating whether DMR slot 2 is enabled for network traffic.
          * @param allowActivityTransfer Flag indicating that the system activity logs will be sent to the network.
@@ -55,7 +56,7 @@ namespace network
          * @param updateLookup Flag indicating that the system will accept radio ID and talkgroup ID lookups from the network.
          */
         PeerNetwork(const std::string& address, uint16_t port, uint16_t localPort, uint32_t peerId, const std::string& password,
-            bool duplex, bool debug, bool dmr, bool p25, bool nxdn, bool slot1, bool slot2, bool allowActivityTransfer, bool allowDiagnosticTransfer, bool updateLookup, bool saveLookup);
+            bool duplex, bool debug, bool dmr, bool p25, bool nxdn, bool analog, bool slot1, bool slot2, bool allowActivityTransfer, bool allowDiagnosticTransfer, bool updateLookup, bool saveLookup);
 
         /**
          * @brief Writes P25 LDU1 frame data to the network.
@@ -63,18 +64,21 @@ namespace network
          * @param[in] lsd Instance of p25::data::LowSpeedData containing low speed data.
          * @param[in] data Buffer containing P25 LDU1 data to send.
          * @param[in] frameType DVM P25 frame type.
+         * @param[in] controlByte DVM Network Control Byte.
          * @returns bool True, if message was sent, otherwise false.
          */
         bool writeP25LDU1(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, const uint8_t* data, 
-            p25::defines::FrameType::E frameType) override;
+            P25DEF::FrameType::E frameType, uint8_t controlByte = 0U) override;
         /**
          * @brief Writes P25 LDU2 frame data to the network.
          * @param[in] control Instance of p25::lc::LC containing link control data.
          * @param[in] lsd Instance of p25::data::LowSpeedData containing low speed data.
          * @param[in] data Buffer containing P25 LDU2 data to send.
+         * @param[in] controlByte DVM Network Control Byte.
          * @returns bool True, if message was sent, otherwise false.
          */
-        bool writeP25LDU2(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, const uint8_t* data) override;
+        bool writeP25LDU2(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, const uint8_t* data,
+            uint8_t controlByte = 0U) override;
 
         /**
          * @brief Helper to send a DMR terminator with LC message.
@@ -104,10 +108,11 @@ namespace network
          * @param[in] lsd Instance of p25::data::LowSpeedData containing low speed data.
          * @param[in] data Buffer containing P25 LDU1 data to send.
          * @param[in] frameType DVM P25 frame type.
+         * @param[in] controlByte DVM Network Control Byte.
          * @returns UInt8Array Buffer containing the built network message.
          */
         UInt8Array createP25_LDU1Message_Raw(uint32_t& length, const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, 
-            const uint8_t* data, p25::defines::FrameType::E frameType);
+            const uint8_t* data, P25DEF::FrameType::E frameType, uint8_t controlByte);
         /**
          * @brief Creates an P25 LDU2 frame message.
          * 
@@ -118,10 +123,11 @@ namespace network
          * @param[in] control Instance of p25::lc::LC containing link control data.
          * @param[in] lsd Instance of p25::data::LowSpeedData containing low speed data.
          * @param[in] data Buffer containing P25 LDU2 data to send.
+         * @param[in] controlByte DVM Network Control Byte.
          * @returns UInt8Array Buffer containing the built network message.
          */
         UInt8Array createP25_LDU2Message_Raw(uint32_t& length, const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, 
-            const uint8_t* data);
+            const uint8_t* data, uint8_t controlByte);
     };
 } // namespace network
 

@@ -7,7 +7,7 @@
 #*
 #*/
 #/*
-#*   Copyright (C) 2022 by Bryan Biedenkapp N2PLL
+#*   Copyright (C) 2022-2025 by Bryan Biedenkapp N2PLL
 #*
 #*   This program is free software; you can redistribute it and/or modify
 #*   it under the terms of the GNU General Public License as published by
@@ -25,10 +25,12 @@
 #*/
 LOG_COLOR="s#W:#\x1b[0m\x1b[1m\x1b[33m&#; s#E:#\x1b[0m\x1b[1m\x1b[31m&#; s#M:#\x1b[0m&#; s#I:#\x1b[0m&#; s#D:#\x1b[1m\x1b[34m&#; s#U:#\x1b[44m\x1b[1m\x1b[33m&#;"
 
+DMR_COLOR="s#VOICE#\x1b[36m&#; s#TERMINATOR_WITH_LC#\x1b[0m\x1b[32m&#; s#CSBK#\x1b[0m\x1b[35m&#"
 P25_COLOR="s#LDU#\x1b[36m&#; s#TDU#\x1b[0m\x1b[32m&#; s#HDU#\x1b[0m\x1b[32m&#; s#TSDU#\x1b[0m\x1b[35m&#"
-AFF_COLOR="s#Affiliations#\x1b[1m\x1b[36m&#;"
+NXDN_COLOR="s#VCALL#\x1b[36m&#; s#TX_REL#\x1b[0m\x1b[32m&#"
+AFF_COLOR="s#Affiliations#\x1b[1m\x1b[36m&#; s#Affiliation#\x1b[1m\x1b[36m&#;"
 
 RF_HIGHLIGHT="s#(RF)#\x1b[1m\x1b[34m&\x1b[0m#;"
 NET_HIGHLIGHT="s#(NET)#\x1b[1m\x1b[36m&\x1b[0m#;"
 
-sed "${LOG_COLOR}; ${RF_HIGHLIGHT}; ${NET_HIGHLIGHT}; ${P25_COLOR}; ${AFF_COLOR}"
+sed "${LOG_COLOR}; ${RF_HIGHLIGHT}; ${NET_HIGHLIGHT}; ${DMR_COLOR}; ${P25_COLOR}; ${NXDN_COLOR}; ${AFF_COLOR}"

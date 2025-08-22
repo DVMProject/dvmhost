@@ -53,11 +53,15 @@ bool AccessControl::validateSrcId(uint32_t id)
 
 /* Helper to validate a talkgroup ID. */
 
-bool AccessControl::validateTGId(uint32_t id)
+bool AccessControl::validateTGId(uint32_t id, bool allowZero)
 {
     // TG0 is never valid
-    if (id == 0U)
+    if (id == 0U && !allowZero)
         return false;
+
+    // TG0 is always valid if allow zero is set
+    if (id == 0U && allowZero)
+        return true;
 
     // check if TID ACLs are enabled
     if (!m_tidLookup->getACL()) {

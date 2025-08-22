@@ -11,6 +11,8 @@
 #include "common/nxdn/NXDNDefines.h"
 #include "common/nxdn/channel/LICH.h"
 #include "common/nxdn/channel/CAC.h"
+#include "common/nxdn/channel/FACCH1.h"
+#include "common/nxdn/channel/UDCH.h"
 #include "common/nxdn/lc/rcch/RCCHFactory.h"
 #include "common/nxdn/lc/RTCH.h"
 #include "common/nxdn/NXDNUtils.h"
@@ -48,7 +50,8 @@ TagNXDNData::TagNXDNData(FNENetwork* network, bool debug) :
     m_parrotFrames(),
     m_parrotFramesReady(false),
     m_status(),
-   m_debug(debug)
+    m_statusPVCall(),
+    m_debug(debug)
 {
     assert(network != nullptr);
 }
@@ -59,7 +62,7 @@ TagNXDNData::~TagNXDNData() = default;
 
 /* Process a data frame from the network. */
 
-bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint16_t pktSeq, uint32_t streamId, bool external)
+bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint32_t ssrc, uint16_t pktSeq, uint32_t streamId, bool external)
 {
     hrc::hrc_t pktTime = hrc::now();
 
@@ -90,6 +93,95 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
     bool group = (data[15U] & 0x40U) == 0x40U ? false : true;
     lc.setGroup(group);
 
+    // process raw NXDN data bytes
+    UInt8Array frame;
+    uint8_t frameLength = buffer[23U];
+    if (frameLength <= 24) {
+        frame = std::unique_ptr<uint8_t[]>(new uint8_t[frameLength]);
+        ::memset(frame.get(), 0x00U, frameLength);
+    }
+    else {
+        frame = std::unique_ptr<uint8_t[]>(new uint8_t[frameLength]);
+        ::memset(frame.get(), 0x00U, frameLength);
+        ::memcpy(frame.get(), buffer + 24U, frameLength);
+    }
+
+    NXDNUtils::scrambler(frame.get() + 2U);
+
+    channel::LICH lich;
+    bool valid = lich.decode(frame.get() + 2U);
+
+    std::unique_ptr<lc::RCCH> rcch;
+    if (valid) {
+        RFChannelType::E rfct = lich.getRFCT();
+        FuncChannelType::E fct = lich.getFCT();
+        ChOption::E option = lich.getOption();
+
+        if (rfct == RFChannelType::RCCH) {
+            rcch = lc::rcch::RCCHFactory::createRCCH(frame.get(), frameLength);
+        }
+        else if (rfct == RFChannelType::RTCH || rfct == RFChannelType::RDCH) {
+            // forward onto the specific processor for final processing and delivery
+            switch (fct) {
+                case FuncChannelType::USC_UDCH:
+                {
+                    channel::UDCH udch;
+                    bool validUDCH = udch.decode(data + 2U);
+                    if (validUDCH) {
+                        // The layer3 data will only be correct if valid is true
+                        uint8_t buffer[NXDN_RTCH_LC_LENGTH_BYTES];
+                        udch.getData(buffer);
+
+                        lc.decode(buffer, NXDN_UDCH_LENGTH_BITS);
+                    }
+                }
+                break;
+                default:
+                {
+                    if (fct == FuncChannelType::USC_SACCH_NS) {
+                        // the SACCH on a non-superblock frame is usually an idle and not interesting apart from the RAN.
+                        channel::FACCH1 facch;
+                        bool valid = facch.decode(frame.get() + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS);
+                        if (!valid)
+                            valid = facch.decode(frame.get() + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS + NXDN_FACCH1_FEC_LENGTH_BITS);
+                        if (valid) {
+                            uint8_t buffer[10U];
+                            facch.getData(buffer);
+
+                            lc.decode(buffer, NXDN_FACCH1_FEC_LENGTH_BITS);
+                        }
+                    } else {
+                        channel::FACCH1 facch;
+                        bool valid = false;
+                        switch (option) {
+                        case ChOption::STEAL_FACCH:
+                            valid = facch.decode(frame.get() + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS);
+                            if (!valid)
+                                valid = facch.decode(frame.get() + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS + NXDN_FACCH1_FEC_LENGTH_BITS);
+                            break;
+                        case ChOption::STEAL_FACCH1_1:
+                            valid = facch.decode(frame.get() + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS);
+                            break;
+                        case ChOption::STEAL_FACCH1_2:
+                            valid = facch.decode(frame.get() + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS + NXDN_FACCH1_FEC_LENGTH_BITS);
+                            break;
+                        default:
+                            break;
+                        }
+
+                        if (valid) {
+                            uint8_t buffer[10U];
+                            facch.getData(buffer);
+
+                            lc.decode(buffer, NXDN_FACCH1_FEC_LENGTH_BITS);
+                        }
+                    }
+                }
+                break;
+            }
+        }
+    }
+
     // is the stream valid?
     if (validate(peerId, lc, messageType, streamId)) {
         // is this peer ignored?
@@ -104,7 +196,7 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
             // is this the end of the call stream?
             if (messageType == MessageType::RTCH_TX_REL || messageType == MessageType::RTCH_TX_REL_EX) {
                 if (srcId == 0U && dstId == 0U) {
-                    LogWarning(LOG_NET, "NXDN, invalid TX_REL, peer = %u, srcId = %u, dstId = %u, streamId = %u, external = %u", peerId, srcId, dstId, streamId, external);
+                    LogWarning(LOG_NET, "NXDN, invalid TX_REL, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, external = %u", peerId, ssrc, srcId, dstId, streamId, external);
                     return false;
                 }
 
@@ -131,8 +223,22 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                         }
                     }
 
-                    LogMessage(LOG_NET, "NXDN, Call End, peer = %u, srcId = %u, dstId = %u, duration = %u, streamId = %u, external = %u",
-                        peerId, srcId, dstId, duration / 1000, streamId, external);
+                    // is this a private call?
+                    auto it = std::find_if(m_statusPVCall.begin(), m_statusPVCall.end(), [&](StatusMapPair x) {
+                        if (x.second.dstId == dstId) {
+                            if (x.second.activeCall)
+                                return true;
+                        }
+                        return false;
+                    });
+                    if (it != m_statusPVCall.end()) {
+                        m_statusPVCall[dstId].reset();
+                        LogMessage(LOG_NET, "NXDN, Private Call End, peer = %u, ssrc = %u, srcId = %u, dstId = %u, duration = %u, streamId = %u, external = %u",
+                            peerId, ssrc, srcId, dstId, duration / 1000, streamId, external);
+                    }
+                    else
+                        LogMessage(LOG_NET, "NXDN, Call End, peer = %u, ssrc = %u, srcId = %u, dstId = %u, duration = %u, streamId = %u, external = %u",
+                            peerId, ssrc, srcId, dstId, duration / 1000, streamId, external);
 
                     // report call event to InfluxDB
                     if (m_network->m_enableInfluxDB) {
@@ -156,9 +262,11 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
             // is this a new call stream?
             if ((messageType != MessageType::RTCH_TX_REL && messageType != MessageType::RTCH_TX_REL_EX)) {
                 if (srcId == 0U && dstId == 0U) {
-                    LogWarning(LOG_NET, "NXDN, invalid call, peer = %u, srcId = %u, dstId = %u, streamId = %u, external = %u", peerId, srcId, dstId, streamId, external);
+                    LogWarning(LOG_NET, "NXDN, invalid call, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, external = %u", peerId, ssrc, srcId, dstId, streamId, external);
                     return false;
                 }
+
+                bool switchOver = (data[14U] & network::NET_CTRL_SWITCH_OVER) == network::NET_CTRL_SWITCH_OVER;
 
                 auto it = std::find_if(m_status.begin(), m_status.end(), [&](StatusMapPair x) {
                     if (x.second.dstId == dstId) {
@@ -170,6 +278,15 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                 if (it != m_status.end()) {
                     RxStatus status = m_status[dstId];
                     if (streamId != status.streamId) {
+                        // perform TG switch over -- this can happen in special conditions where a TG may rapidly switch
+                        // from one source to another (primarily from bridge resources)
+                        if (switchOver) {
+                            status.streamId = streamId;
+                            status.srcId = srcId;
+                            LogMessage(LOG_NET, "NXDN, Call Source Switched, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, rxPeer = %u, rxSrcId = %u, rxDstId = %u, rxStreamId = %u, external = %u",
+                                peerId, ssrc, srcId, dstId, streamId, status.peerId, status.srcId, status.dstId, status.streamId, external);
+                        }
+
                         if (status.srcId != 0U && status.srcId != srcId) {
                             uint64_t lastPktDuration = hrc::diff(hrc::now(), status.lastPacket);
                             if ((lastPktDuration / 1000) > CALL_COLL_TIMEOUT) {
@@ -178,8 +295,8 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                                 m_network->m_callInProgress = false;
                             }
 
-                            LogWarning(LOG_NET, "NXDN, Call Collision, peer = %u, srcId = %u, dstId = %u, streamId = %u, rxPeer = %u, rxSrcId = %u, rxDstId = %u, rxStreamId = %u, external = %u",
-                                peerId, srcId, dstId, streamId, status.peerId, status.srcId, status.dstId, status.streamId, external);
+                            LogWarning(LOG_NET, "NXDN, Call Collision, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, rxPeer = %u, rxSrcId = %u, rxDstId = %u, rxStreamId = %u, external = %u",
+                                peerId, ssrc, srcId, dstId, streamId, status.peerId, status.srcId, status.dstId, status.streamId, external);
                             return false;
                         }
                     }
@@ -187,7 +304,7 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                 else {
                     // is this a parrot talkgroup? if so, clear any remaining frames from the buffer
                     lookups::TalkgroupRuleGroupVoice tg = m_network->m_tidLookup->find(dstId);
-                    if (tg.config().parrot()) {                    
+                    if (tg.config().parrot()) {
                         m_parrotFramesReady = false;
                         if (m_parrotFrames.size() > 0) {
                             for (auto& pkt : m_parrotFrames) {
@@ -207,7 +324,25 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                     m_status[dstId].peerId = peerId;
                     m_status[dstId].activeCall = true;
 
-                    LogMessage(LOG_NET, "NXDN, Call Start, peer = %u, srcId = %u, dstId = %u, streamId = %u, external = %u", peerId, srcId, dstId, streamId, external);
+                    // is this a private call?
+                    if (!group) {
+                        m_statusPVCall[dstId].callStartTime = pktTime;
+                        m_statusPVCall[dstId].srcId = srcId;
+                        m_statusPVCall[dstId].dstId = dstId;
+                        m_statusPVCall[dstId].streamId = streamId;
+                        m_statusPVCall[dstId].peerId = peerId;
+                        m_statusPVCall[dstId].activeCall = true;
+
+                        // find the SSRC of the peer that registered this unit
+                        uint32_t regSSRC = m_network->findPeerUnitReg(srcId);
+                        m_statusPVCall[dstId].dstPeerId = regSSRC;
+
+                        LogMessage(LOG_NET, "NXDN, Private Call Start, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, external = %u",
+                            peerId, ssrc, srcId, dstId, streamId, external);
+                    }
+                    else
+                        LogMessage(LOG_NET, "NXDN, Call Start, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, external = %u", 
+                            peerId, ssrc, srcId, dstId, streamId, external);
 
                     m_network->m_callInProgress = true;
                 }
@@ -240,11 +375,81 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
 
         m_status[dstId].lastPacket = hrc::now();
 
+        bool noConnectedPeerRepeat = false;
+        bool privateCallInProgress = false;
+
+        // is this a private call in-progress?
+        if (m_network->m_restrictPVCallToRegOnly) {
+            if (!group) {
+                privateCallInProgress = true;
+            }
+
+            if (privateCallInProgress) {
+                // if we've not determined the destination peer, we have to repeat it everywhere
+                if (m_statusPVCall[dstId].dstPeerId == 0U) {
+                    noConnectedPeerRepeat = false;
+                    privateCallInProgress = false; // trick the system to repeat everywhere
+                } else {
+                    // if this is a private call, check if the destination peer is one directly connected to us, if not
+                    // flag the call so it only repeats to external peers
+                    if (m_network->m_peers.size() > 0U && !noConnectedPeerRepeat) {
+                        noConnectedPeerRepeat = true;
+                        for (auto peer : m_network->m_peers) {
+                            if (peerId != peer.first) {
+                                FNEPeerConnection* conn = peer.second;
+                                if (conn != nullptr) {
+                                    if (conn->isExternalPeer()) {
+                                        continue;
+                                    }
+                                }
+
+                                if (m_statusPVCall[dstId].dstPeerId == peer.first) {
+                                    noConnectedPeerRepeat = false;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         // repeat traffic to the connected peers
-        if (m_network->m_peers.size() > 0U) {
+        if (m_network->m_peers.size() > 0U && !noConnectedPeerRepeat) {
             uint32_t i = 0U;
             for (auto peer : m_network->m_peers) {
                 if (peerId != peer.first) {
+                    FNEPeerConnection* conn = peer.second;
+                    if (ssrc == peer.first) {
+                        // skip the peer if it is the source peer
+                        continue;
+                    }
+
+                    if (m_network->m_restrictPVCallToRegOnly) {
+                        // is this peer an external peer?
+                        bool external = false;
+                        if (conn != nullptr) {
+                            external = conn->isExternalPeer();
+                        }
+
+                        // is this a private call?
+                        if (!group && !external) {
+                            // is this a private call? if so only repeat to the peer that registered the unit
+                            auto it = std::find_if(m_statusPVCall.begin(), m_statusPVCall.end(), [&](StatusMapPair x) {
+                                if (x.second.dstId == dstId) {
+                                    if (x.second.activeCall)
+                                        return true;
+                                }
+                                return false;
+                            });
+                            if (it != m_statusPVCall.end()) {
+                                if (peer.first != m_statusPVCall[dstId].dstPeerId) {
+                                    continue;
+                                }
+                            }
+                        }
+                    }
+
                     // is this peer ignored?
                     if (!isPeerPermitted(peer.first, lc, messageType, streamId)) {
                         continue;
@@ -261,10 +466,10 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                     // perform TGID route rewrites if configured
                     routeRewrite(outboundPeerBuffer, peer.first, messageType, dstId);
 
-                    m_network->writePeer(peer.first, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_NXDN }, outboundPeerBuffer, len, pktSeq, streamId, true);
+                    m_network->writePeer(peer.first, ssrc, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_NXDN }, outboundPeerBuffer, len, pktSeq, streamId, true);
                     if (m_network->m_debug) {
-                        LogDebug(LOG_NET, "NXDN, srcPeer = %u, dstPeer = %u, messageType = $%02X, srcId = %u, dstId = %u, len = %u, pktSeq = %u, streamId = %u, external = %u", 
-                            peerId, peer.first, messageType, srcId, dstId, len, pktSeq, streamId, external);
+                        LogDebug(LOG_NET, "NXDN, ssrc = %u, srcPeer = %u,  dstPeer = %u, messageType = $%02X, srcId = %u, dstId = %u, len = %u, pktSeq = %u, streamId = %u, external = %u", 
+                            ssrc, peerId, peer.first, messageType, srcId, dstId, len, pktSeq, streamId, external);
                     }
 
                     if (!m_network->m_callInProgress)
@@ -275,6 +480,12 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
             m_network->m_frameQueue->flushQueue();
         }
 
+        // if this is a private call, and we have already repeated to the connected peer that registered
+        // the unit, don't repeat to any external peers
+        if (privateCallInProgress && !noConnectedPeerRepeat) {
+            return true;
+        }
+
         // repeat traffic to external peers
         if (m_network->m_host->m_peerNetworks.size() > 0U && !tg.config().parrot()) {
             for (auto peer : m_network->m_host->m_peerNetworks) {
@@ -283,6 +494,11 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                 // don't try to repeat traffic to the source peer...if this traffic
                 // is coming from a external peer
                 if (dstPeerId != peerId) {
+                    if (ssrc == dstPeerId) {
+                        // skip the peer if it is the source peer
+                        continue;
+                    }
+
                     // is this peer ignored?
                     if (!isPeerPermitted(dstPeerId, lc, messageType, streamId, true)) {
                         continue;
@@ -304,10 +520,14 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                     // perform TGID route rewrites if configured
                     routeRewrite(outboundPeerBuffer, dstPeerId, messageType, dstId);
 
-                    peer.second->writeMaster({ NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_NXDN }, outboundPeerBuffer, len, pktSeq, streamId);
+                    // are we a peer link?
+                    if (peer.second->isPeerLink())
+                        peer.second->writeMaster({ NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_NXDN }, outboundPeerBuffer, len, pktSeq, streamId, false, false, 0U, ssrc);
+                    else
+                        peer.second->writeMaster({ NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_NXDN }, outboundPeerBuffer, len, pktSeq, streamId);
                     if (m_network->m_debug) {
-                        LogDebug(LOG_NET, "NXDN, srcPeer = %u, dstPeer = %u, messageType = $%02X, srcId = %u, dstId = %u, len = %u, pktSeq = %u, streamId = %u, external = %u", 
-                            peerId, dstPeerId, messageType, srcId, dstId, len, pktSeq, streamId, external);
+                        LogDebug(LOG_NET, "NXDN, ssrc = %u, srcPeer = %u, dstPeer = %u, messageType = $%02X, srcId = %u, dstId = %u, len = %u, pktSeq = %u, streamId = %u, external = %u", 
+                            ssrc, peerId, dstPeerId, messageType, srcId, dstId, len, pktSeq, streamId, external);
                     }
 
                     if (!m_network->m_callInProgress)
@@ -381,7 +601,7 @@ void TagNXDNData::playbackParrot()
     auto& pkt = m_parrotFrames[0];
     if (pkt.buffer != nullptr) {
         if (m_network->m_parrotOnlyOriginating) {
-            m_network->writePeer(pkt.peerId, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_NXDN }, pkt.buffer, pkt.bufferLen, pkt.pktSeq, pkt.streamId, false);
+            m_network->writePeer(pkt.peerId, pkt.peerId, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_NXDN }, pkt.buffer, pkt.bufferLen, pkt.pktSeq, pkt.streamId, false);
             if (m_network->m_debug) {
                 LogDebug(LOG_NET, "NXDN, parrot, dstPeer = %u, len = %u, pktSeq = %u, streamId = %u", 
                     pkt.peerId, pkt.bufferLen, pkt.pktSeq, pkt.streamId);
@@ -390,7 +610,7 @@ void TagNXDNData::playbackParrot()
         else {
             // repeat traffic to the connected peers
             for (auto peer : m_network->m_peers) {
-                m_network->writePeer(peer.first, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_NXDN }, pkt.buffer, pkt.bufferLen, pkt.pktSeq, pkt.streamId, false);
+                m_network->writePeer(peer.first, pkt.peerId, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_NXDN }, pkt.buffer, pkt.bufferLen, pkt.pktSeq, pkt.streamId, false);
                 if (m_network->m_debug) {
                     LogDebug(LOG_NET, "NXDN, parrot, dstPeer = %u, len = %u, pktSeq = %u, streamId = %u", 
                         peer.first, pkt.bufferLen, pkt.pktSeq, pkt.streamId);
@@ -579,6 +799,9 @@ bool TagNXDNData::validate(uint32_t peerId, lc::RTCH& lc, uint8_t messageType, u
                     .requestAsync(m_network->m_influxServer);
             }
 
+            if (m_network->m_logDenials)
+                LogError(LOG_NET, "NXDN, " INFLUXDB_ERRSTR_DISABLED_SRC_RID ", peer = %u, srcId = %u, dstId = %u", peerId, lc.getSrcId(), lc.getDstId());
+
             // report In-Call Control to the peer sending traffic
             m_network->writePeerICC(peerId, streamId, NET_SUBFUNC::PROTOCOL_SUBFUNC_NXDN, NET_ICC::REJECT_TRAFFIC, lc.getDstId());
             return false;
@@ -615,6 +838,9 @@ bool TagNXDNData::validate(uint32_t peerId, lc::RTCH& lc, uint8_t messageType, u
                         .requestAsync(m_network->m_influxServer);
                 }
 
+                if (m_network->m_logDenials)
+                    LogError(LOG_NET, "NXDN, " INFLUXDB_ERRSTR_DISABLED_DST_RID ", peer = %u, srcId = %u, dstId = %u", peerId, lc.getSrcId(), lc.getDstId());
+
                 // report In-Call Control to the peer sending traffic
                 m_network->writePeerICC(peerId, streamId, NET_SUBFUNC::PROTOCOL_SUBFUNC_NXDN, NET_ICC::REJECT_TRAFFIC, lc.getDstId());
                 return false;
@@ -632,12 +858,13 @@ bool TagNXDNData::validate(uint32_t peerId, lc::RTCH& lc, uint8_t messageType, u
                             .tag("streamId", std::to_string(streamId))
                             .tag("srcId", std::to_string(lc.getSrcId()))
                             .tag("dstId", std::to_string(lc.getDstId()))
-                                .field("message", std::string(INFLUXDB_ERRSTR_DISABLED_SRC_RID))
+                                .field("message", std::string(INFLUXDB_ERRSTR_ILLEGAL_RID_ACCESS))
                             .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
                         .requestAsync(m_network->m_influxServer);
                 }
 
-                LogWarning(LOG_NET, "NXDN, illegal/unknown RID attempted access, srcId = %u, dstId = %u", lc.getSrcId(), lc.getDstId());
+                if (m_network->m_logDenials)
+                    LogWarning(LOG_NET, "NXDN, " INFLUXDB_ERRSTR_ILLEGAL_RID_ACCESS ", srcId = %u, dstId = %u", lc.getSrcId(), lc.getDstId());
 
                 // report In-Call Control to the peer sending traffic
                 m_network->writePeerICC(peerId, streamId, NET_SUBFUNC::PROTOCOL_SUBFUNC_NXDN, NET_ICC::REJECT_TRAFFIC, lc.getDstId());
@@ -665,6 +892,9 @@ bool TagNXDNData::validate(uint32_t peerId, lc::RTCH& lc, uint8_t messageType, u
                 .requestAsync(m_network->m_influxServer);
         }
 
+        if (m_network->m_logDenials)
+            LogError(LOG_NET, "NXDN, " INFLUXDB_ERRSTR_INV_TALKGROUP ", peer = %u, srcId = %u, dstId = %u", peerId, lc.getSrcId(), lc.getDstId());
+
         // report In-Call Control to the peer sending traffic
         m_network->writePeerICC(peerId, streamId, NET_SUBFUNC::PROTOCOL_SUBFUNC_NXDN, NET_ICC::REJECT_TRAFFIC, lc.getDstId());
         return false;
@@ -691,12 +921,13 @@ bool TagNXDNData::validate(uint32_t peerId, lc::RTCH& lc, uint8_t messageType, u
                     .tag("streamId", std::to_string(streamId))
                     .tag("srcId", std::to_string(lc.getSrcId()))
                     .tag("dstId", std::to_string(lc.getDstId()))
-                        .field("message", std::string(INFLUXDB_ERRSTR_DISABLED_SRC_RID))
+                        .field("message", std::string(INFLUXDB_ERRSTR_ILLEGAL_RID_ACCESS))
                     .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
                 .requestAsync(m_network->m_influxServer);
         }
 
-        LogWarning(LOG_NET, "NXDN, illegal/unknown RID attempted access, srcId = %u, dstId = %u", lc.getSrcId(), lc.getDstId());
+        if (m_network->m_logDenials)
+            LogWarning(LOG_NET, "NXDN, " INFLUXDB_ERRSTR_ILLEGAL_RID_ACCESS ", srcId = %u, dstId = %u", lc.getSrcId(), lc.getDstId());
 
         // report In-Call Control to the peer sending traffic
         m_network->writePeerICC(peerId, streamId, NET_SUBFUNC::PROTOCOL_SUBFUNC_NXDN, NET_ICC::REJECT_TRAFFIC, lc.getDstId());
@@ -717,6 +948,9 @@ bool TagNXDNData::validate(uint32_t peerId, lc::RTCH& lc, uint8_t messageType, u
                     .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
                 .requestAsync(m_network->m_influxServer);
         }
+
+        if (m_network->m_logDenials)
+            LogError(LOG_NET, "NXDN, " INFLUXDB_ERRSTR_DISABLED_TALKGROUP ", peer = %u, srcId = %u, dstId = %u", peerId, lc.getSrcId(), lc.getDstId());
 
         // report In-Call Control to the peer sending traffic
         m_network->writePeerICC(peerId, streamId, NET_SUBFUNC::PROTOCOL_SUBFUNC_NXDN, NET_ICC::REJECT_TRAFFIC, lc.getDstId());
@@ -742,6 +976,9 @@ bool TagNXDNData::validate(uint32_t peerId, lc::RTCH& lc, uint8_t messageType, u
                             .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
                         .requestAsync(m_network->m_influxServer);
                 }
+
+                if (m_network->m_logDenials)
+                    LogError(LOG_NET, "NXDN, " INFLUXDB_ERRSTR_RID_NOT_PERMITTED ", peer = %u, srcId = %u, dstId = %u", peerId, lc.getSrcId(), lc.getDstId());
 
                 // report In-Call Control to the peer sending traffic
                 m_network->writePeerICC(peerId, streamId, NET_SUBFUNC::PROTOCOL_SUBFUNC_NXDN, NET_ICC::REJECT_TRAFFIC, lc.getDstId());
@@ -814,8 +1051,8 @@ void TagNXDNData::write_Message_Deny(uint32_t peerId, uint32_t srcId, uint32_t d
     rcch->setDstId(dstId);
 
     if (m_network->m_verbose) {
-        LogMessage(LOG_RF, "NXDN, MSG_DENIAL (Message Denial), reason = $%02X, service = $%02X, srcId = %u, dstId = %u",
-            service, srcId, dstId);
+        LogMessage(LOG_RF, "NXDN, MSG_DENIAL (Message Denial), reason = $%02X (%s), service = $%02X, srcId = %u, dstId = %u",
+            reason, NXDNUtils::causeToString(reason).c_str(), service, srcId, dstId);
     }
 
     write_Message(peerId, rcch.get());
@@ -865,5 +1102,5 @@ void TagNXDNData::write_Message(uint32_t peerId, lc::RCCH* rcch)
     }
 
     uint32_t streamId = m_network->createStreamId();
-    m_network->writePeer(peerId, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_NXDN }, message.get(), messageLength, RTP_END_OF_CALL_SEQ, streamId, false);
+    m_network->writePeer(peerId, m_network->m_peerId, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_NXDN }, message.get(), messageLength, RTP_END_OF_CALL_SEQ, streamId, false);
 }

@@ -51,6 +51,7 @@ namespace lookups
             m_peerPassword(),
             m_peerLink(false),
             m_canRequestKeys(false),
+            m_canIssueInhibit(false),
             m_peerDefault(false)
         {
             /* stub */
@@ -61,16 +62,15 @@ namespace lookups
          * @param peerAlias Peer alias
          * @param peerPassword Per Peer Password.
          * @param sendConfiguration Flag indicating this peer participates in peer link and should be sent configuration.
-         * @param peerLink lag indicating if the peer participates in peer link and should be sent configuration.
-         * @param canRequestKeys Flag indicating if the peer can request encryption keys.
          * @param peerDefault Flag indicating this is a "default" (i.e. undefined) peer.
          */
-        PeerId(uint32_t peerId, const std::string& peerAlias, const std::string& peerPassword, bool peerLink, bool canRequestKeys, bool peerDefault) :
+        PeerId(uint32_t peerId, const std::string& peerAlias, const std::string& peerPassword, bool peerDefault) :
             m_peerId(peerId),
             m_peerAlias(peerAlias),
             m_peerPassword(peerPassword),
-            m_peerLink(peerLink),
-            m_canRequestKeys(canRequestKeys),
+            m_peerLink(false),
+            m_canRequestKeys(false),
+            m_canIssueInhibit(false),
             m_peerDefault(peerDefault)
         {
             /* stub */
@@ -88,6 +88,7 @@ namespace lookups
                 m_peerPassword = data.m_peerPassword;
                 m_peerLink = data.m_peerLink;
                 m_canRequestKeys = data.m_canRequestKeys;
+                m_canIssueInhibit = data.m_canIssueInhibit;
                 m_peerDefault = data.m_peerDefault;
             }
 
@@ -100,17 +101,13 @@ namespace lookups
          * @param peerAlias Peer Alias
          * @param peerPassword Per Peer Password.
          * @param sendConfiguration Flag indicating this peer participates in peer link and should be sent configuration.
-         * @param peerLink lag indicating if the peer participates in peer link and should be sent configuration.
-         * @param canRequestKeys Flag indicating if the peer can request encryption keys.
          * @param peerDefault Flag indicating this is a "default" (i.e. undefined) peer.
          */
-        void set(uint32_t peerId, const std::string& peerAlias, const std::string& peerPassword, bool peerLink, bool canRequestKeys, bool peerDefault)
+        void set(uint32_t peerId, const std::string& peerAlias, const std::string& peerPassword, bool peerDefault)
         {
             m_peerId = peerId;
             m_peerAlias = peerAlias;
             m_peerPassword =  peerPassword;
-            m_peerLink = peerLink;
-            m_canRequestKeys = canRequestKeys;
             m_peerDefault = peerDefault;
         }
 
@@ -135,6 +132,10 @@ namespace lookups
          * @brief Flag indicating if the peer can request encryption keys.
          */
         DECLARE_PROPERTY_PLAIN(bool, canRequestKeys);
+        /**
+         * @brief Flag indicating if the peer can issue inhibit/uninhibit packets.
+         */
+        DECLARE_PROPERTY_PLAIN(bool, canIssueInhibit);
         /**
          * @brief Flag indicating if the peer is default.
          */
@@ -167,15 +168,13 @@ namespace lookups
 
         /**
          * @brief Adds a new entry to the list.
-         * @param peerId Unique peer ID to add.
-         * @param password Per Peer Password.
-         * @param peerLink Flag indicating this peer will participate in peer link and should be sent configuration.
-         * @param canRequestKeys Flag indicating if the peer can request encryption keys.
+         * @param id Unique peer ID to add.
+         * @param entry Peer ID entry to add.
          */
-        void addEntry(uint32_t id, const std::string& alias = "", const std::string& password = "", bool peerLink = false, bool canRequestKeys = false);
+        void addEntry(uint32_t id, PeerId entry);
         /**
          * @brief Removes an existing entry from the list.
-         * @param peerId Unique peer ID to remove.
+         * @param id Unique peer ID to remove.
          */
         void eraseEntry(uint32_t id);
         /**

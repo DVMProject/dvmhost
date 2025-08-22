@@ -17,17 +17,21 @@
 #define __FRAME_QUEUE_H__
 
 #include "common/Defines.h"
-#include "common/concurrent/unordered_map.h"
 #include "common/network/RTPHeader.h"
 #include "common/network/RTPFNEHeader.h"
 #include "common/network/RawFrameQueue.h"
+
+#include <mutex>
+#include <vector>
 
 namespace network
 {
     // ---------------------------------------------------------------------------
     //  Constants
     // ---------------------------------------------------------------------------
-    
+
+    const uint8_t RTP_G711_PAYLOAD_TYPE = 0x00U;
+
     const uint8_t DVM_RTP_PAYLOAD_TYPE = 0x56U;
 
     // ---------------------------------------------------------------------------
@@ -41,6 +45,11 @@ namespace network
     class HOST_SW_API FrameQueue : public RawFrameQueue {
     public: typedef std::pair<const NET_FUNC::ENUM, const NET_SUBFUNC::ENUM> OpcodePair;
     public:
+        typedef struct {
+            uint32_t streamId;
+            uint32_t timestamp;
+        } Timestamp;
+
         auto operator=(FrameQueue&) -> FrameQueue& = delete;
         auto operator=(FrameQueue&&) -> FrameQueue& = delete;
         FrameQueue(FrameQueue&) = delete;
@@ -115,12 +124,33 @@ namespace network
     private:
         uint32_t m_peerId;
 
-#if defined(_WIN32)
-        std::mutex m_streamTSMtx;
-        std::unordered_map<uint32_t, uint32_t> m_streamTimestamps;
-#else
-        concurrent::unordered_map<uint32_t, uint32_t> m_streamTimestamps;
-#endif // defined(_WIN32)
+        std::mutex m_timestampMtx;
+
+        static std::vector<Timestamp> m_streamTimestamps;
+
+        /**
+         * @brief Search for a timestamp entry by stream ID.
+         * @param streamId Stream ID to find.
+         * @return Timestamp* Table entry.
+         */
+        Timestamp* findTimestamp(uint32_t streamId);
+        /**
+         * @brief Insert a timestamp for a stream ID.
+         * @param streamId Stream ID.
+         * @param timestamp Timestamp.
+         */
+        void insertTimestamp(uint32_t streamId, uint32_t timestamp);
+        /**
+         * @brief Update a timestamp for a stream ID.
+         * @param streamId Stream ID.
+         * @param timestamp Timestamp.
+         */
+        void updateTimestamp(uint32_t streamId, uint32_t timestamp);
+        /**
+         * @brief Erase a timestamp for a stream ID.
+         * @param streamId Stream ID.
+         */
+        void eraseTimestamp(uint32_t streamId);
 
         /**
          * @brief Generate RTP message for the frame queue.

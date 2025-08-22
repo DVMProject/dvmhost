@@ -16,6 +16,7 @@
 #include "common/p25/dfsi/LC.h"
 #include "common/p25/dfsi/frames/Frames.h"
 #include "common/p25/lc/LC.h"
+#include "common/p25/lc/tdulc/TDULCFactory.h"
 #include "common/p25/lc/tsbk/TSBKFactory.h"
 #include "common/p25/NID.h"
 #include "common/p25/P25Utils.h"
@@ -197,9 +198,9 @@ void ModemV24::clock(uint32_t ms)
                 if (m_useTIAFormat)
                     convertToAirTIA(m_buffer + (cmdOffset + 1U), m_length - (cmdOffset + 1U));
                 else
-                    convertToAir(m_buffer + (cmdOffset + 1U), m_length - (cmdOffset + 1U));
+                    convertToAirV24(m_buffer + (cmdOffset + 1U), m_length - (cmdOffset + 1U));
                 if (m_trace)
-                    Utils::dump(1U, "ModemV24::clock() RX P25 Data", m_buffer + (cmdOffset + 1U), m_length - (cmdOffset + 1U));
+                    Utils::dump(1U, "ModemV24::clock(), RX P25 Data", m_buffer + (cmdOffset + 1U), m_length - (cmdOffset + 1U));
             }
         }
         break;
@@ -375,7 +376,7 @@ void ModemV24::clock(uint32_t ms)
 
         default:
             LogWarning(LOG_MODEM, "Unknown message, type = %02X", m_buffer[2U]);
-            Utils::dump("Buffer dump", m_buffer, m_length);
+            Utils::dump("ModemV24::clock(), m_buffer", m_buffer, m_length);
             if (m_rspState != RESP_START)
                 m_rspState = RESP_START;
             break;
@@ -447,7 +448,7 @@ int ModemV24::write(const uint8_t* data, uint32_t length)
         if (m_useTIAFormat)
             convertFromAirTIA(buffer, length);
         else
-            convertFromAir(buffer, length);
+            convertFromAirV24(buffer, length);
         return length;
     } else {
         return Modem::write(data, length);
@@ -545,7 +546,7 @@ void ModemV24::storeConvertedRx(const uint8_t* buffer, uint32_t length)
     storedLen[1U] = length & 0xFFU;
     m_rxP25Queue.addData(storedLen, 2U);
 
-    //Utils::dump("Storing converted RX data", buffer, length);
+    // Utils::dump("ModemV24::storeConvertedRx(), Storing Converted Rx Data", buffer, length);
 
     m_rxP25Queue.addData(buffer, length);
 }
@@ -575,7 +576,7 @@ void ModemV24::create_TDU(uint8_t* buffer)
 
 /* Internal helper to convert from V.24/DFSI to TIA-102 air interface. */
 
-void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
+void ModemV24::convertToAirV24(const uint8_t *data, uint32_t length)
 {
     assert(data != nullptr);
     assert(length > 0U);
@@ -588,7 +589,7 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
     ::memcpy(dfsiData, data + 1U, length - 1U);
 
     if (m_debug)
-        Utils::dump("V24 RX data from board", dfsiData, length - 1U);
+        Utils::dump("ModemV24::convertToAirV24(), V.24 RX Data From Modem", dfsiData, length - 1U);
 
     DFSIFrameType::E frameType = (DFSIFrameType::E)dfsiData[0U];
     m_rxLastFrameTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
@@ -598,18 +599,18 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
         case DFSIFrameType::MOT_START_STOP:
         {
             MotStartOfStream start = MotStartOfStream(dfsiData);
-            if (start.getStartStop() == StartStopFlag::START) {
+            if (start.getParam1() == DSFI_MOT_ICW_PARM_PAYLOAD) {
                 m_rxCall->resetCallData();
                 m_rxCallInProgress = true;
                 if (m_debug) {
-                    LogDebug(LOG_MODEM, "V24 RX, ICW START, RT = $%02X, Type = $%02X", dfsiData[2U], dfsiData[4U]);
+                    ::LogDebugEx(LOG_MODEM, "ModemV24::convertToAirV24()", "V.24 RX, ICW, opcode = $%02X, type = $%02X", start.getOpcode(), start.getArgument1());
                 }
             } else {
                 if (m_rxCallInProgress) {
                     m_rxCall->resetCallData();
                     m_rxCallInProgress = false;
                     if (m_debug) {
-                        LogDebug(LOG_MODEM, "V24 RX, ICW STOP, RT = $%02X, Type = $%02X", dfsiData[2U], dfsiData[4U]);
+                        ::LogDebugEx(LOG_MODEM, "ModemV24::convertToAirV24()", "V.24 RX, ICW, opcode = $%02X, type = $%02X", start.getOpcode(), start.getArgument1());
                     }
                     // generate a TDU
                     create_TDU(buffer);
@@ -621,32 +622,40 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
 
         case DFSIFrameType::MOT_VHDR_1:
         {
-            MotVoiceHeader1 vhdr1 = MotVoiceHeader1(dfsiData);
+            MotStartOfStream start = MotStartOfStream(dfsiData);
 
             // copy to call data VHDR1
-            ::memset(m_rxCall->VHDR1, 0x00U, MotVoiceHeader1::HCW_LENGTH);
-            ::memcpy(m_rxCall->VHDR1, vhdr1.header, MotVoiceHeader1::HCW_LENGTH);
+            ::memset(m_rxCall->VHDR1, 0x00U, DFSI_MOT_VHDR_1_LEN);
+            ::memcpy(m_rxCall->VHDR1, dfsiData + DFSI_MOT_START_LEN, DFSI_MOT_VHDR_1_LEN - DFSI_MOT_START_LEN);
+
+            if (m_debug && m_trace)
+                Utils::dump("ModemV24::convertToAirV24(), V.24 RX, VHDR1", m_rxCall->VHDR1, DFSI_MOT_VHDR_1_LEN);
         }
         break;
         case DFSIFrameType::MOT_VHDR_2:
         {
-            MotVoiceHeader2 vhdr2 = MotVoiceHeader2(dfsiData);
+            MotStartOfStream start = MotStartOfStream(dfsiData);
 
             // copy to call data VHDR2
-            ::memset(m_rxCall->VHDR2, 0x00U, MotVoiceHeader2::HCW_LENGTH);
-            ::memcpy(m_rxCall->VHDR2, vhdr2.header, MotVoiceHeader2::HCW_LENGTH);
+            ::memset(m_rxCall->VHDR2, 0x00U, DFSI_MOT_VHDR_2_LEN);
+            ::memcpy(m_rxCall->VHDR2, dfsiData + 1U, DFSI_MOT_VHDR_2_LEN);
+
+            if (m_debug && m_trace)
+                Utils::dump("ModemV24::convertToAirV24(), V.24 RX, VHDR2", m_rxCall->VHDR2, DFSI_MOT_VHDR_2_LEN);
 
             // buffer for raw VHDR data
             uint8_t raw[DFSI_VHDR_RAW_LEN];
             ::memset(raw, 0x00U, DFSI_VHDR_RAW_LEN);
 
-            ::memcpy(raw,       m_rxCall->VHDR1, 8U);
-            ::memcpy(raw + 8U,  m_rxCall->VHDR1 + 9U, 8U);
-            ::memcpy(raw + 16U, m_rxCall->VHDR1 + 18U, 2U);
+            ::memcpy(raw + 0U,  m_rxCall->VHDR1,        8U);
+            ::memcpy(raw + 8U,  m_rxCall->VHDR1 + 9U,   8U);
+            ::memcpy(raw + 16U, m_rxCall->VHDR1 + 18U,  2U);
 
-            ::memcpy(raw + 18U, m_rxCall->VHDR2, 8U);
-            ::memcpy(raw + 26U, m_rxCall->VHDR2 + 9U, 8U);
-            ::memcpy(raw + 34U, m_rxCall->VHDR2 + 18U, 2U);
+            ::memcpy(raw + 18U, m_rxCall->VHDR2,        8U);
+            ::memcpy(raw + 26U, m_rxCall->VHDR2 + 9U,   8U);
+            ::memcpy(raw + 34U, m_rxCall->VHDR2 + 18U,  2U);
+
+            // Utils::dump("ModemV24::convertToAirV24(), V.24 RX VHDR, raw", raw, DFSI_VHDR_RAW_LEN);
 
             // buffer for decoded VHDR data
             uint8_t vhdr[DFSI_VHDR_LEN];
@@ -655,18 +664,30 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
             for (uint32_t i = 0; i < DFSI_VHDR_RAW_LEN; i++, offset += 6)
                 Utils::hex2Bin(raw[i], vhdr, offset);
 
+            if (m_debug && m_trace)
+                Utils::dump("ModemV24::convertToAirV24() V.24 RX VHDR, VHDR Before FEC", vhdr, P25_HDU_LENGTH_BYTES);
+
             // try to decode the RS data
             try {
                 bool ret = m_rs.decode362017(vhdr);
                 if (!ret) {
                     LogError(LOG_MODEM, "V.24/DFSI traffic failed to decode RS (36,20,17) FEC");
                 } else {
+                    if (m_debug && m_trace)
+                        Utils::dump("ModemV24::convertToAirV24(), V.24 RX VHDR, VHDR After FEC", vhdr, P25_HDU_LENGTH_BYTES);
+
                     // late entry?
                     if (!m_rxCallInProgress) {
                         m_rxCallInProgress = true;
                         m_rxCall->resetCallData();
                         if (m_debug)
-                            LogDebug(LOG_MODEM, "V24 RX VHDR late entry, resetting call data");
+                            ::LogDebugEx(LOG_MODEM, "ModemV24::convertToAirV24()", "V.24 RX VHDR late entry, resetting call data");
+                    }
+
+                    uint32_t dstId = GET_UINT16(vhdr, 13U);
+                    if (m_rxCallInProgress && dstId == 0U) {
+                        LogWarning(LOG_MODEM, "V.24/DFSI traffic sent voice header with no dstId while call is in progress?, ignoring header TGID");
+                        break;
                     }
 
                     ::memcpy(m_rxCall->MI, vhdr, MI_LENGTH_BYTES);
@@ -674,7 +695,7 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
                     m_rxCall->mfId = vhdr[9U];
                     m_rxCall->algoId = vhdr[10U];
                     m_rxCall->kId = GET_UINT16(vhdr, 11U);
-                    m_rxCall->dstId = GET_UINT16(vhdr, 13U);
+                    m_rxCall->dstId = dstId;
 
                     if (m_debug) {
                         LogDebug(LOG_MODEM, "P25, VHDR algId = $%02X, kId = $%04X, dstId = $%04X", m_rxCall->algoId, m_rxCall->kId, m_rxCall->dstId);
@@ -714,81 +735,144 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
         case DFSIFrameType::LDU1_VOICE1:
         {
             MotStartVoiceFrame svf = MotStartVoiceFrame(dfsiData);
+            ::memset(m_rxCall->LDULC, 0x00U, P25DEF::P25_LDU_LC_FEC_LENGTH_BYTES);
             ::memcpy(m_rxCall->netLDU1 + 10U, svf.fullRateVoice->imbeData, RAW_IMBE_LENGTH_BYTES);
+
+            m_rxCall->errors = 0U;
+
+            // process start of stream ICW for the voice call
+            uint8_t* icw = svf.startOfStream->getICW();
+            uint8_t payloadType = MotStreamPayload::VOICE;
+            uint8_t rssi = 20U;
+
+            if (icw != nullptr) {
+                for (uint8_t i = 0U; i < 6U; i += 2U) {
+                    uint8_t param = icw[i];
+                    uint8_t value = icw[i + 1U];
+
+                    switch (param) {
+                    case DSFI_MOT_ICW_PARM_PAYLOAD:
+                        payloadType = value;
+                        break;
+                    case DFSI_MOT_ICW_PARM_RSSI1:
+                        rssi = value;
+                        break;
+                    case DFSI_MOT_ICW_PARM_RSSI2:
+                        // don't do anything with this RSSI
+                        break;
+                    case DFSI_MOT_ICW_TX_ADDRESS:
+                    case DFSI_MOT_ICW_RX_ADDRESS:
+                        // don't do anything with this ICW
+                        break;
+                    default:
+                        LogWarning(LOG_MODEM, "ModemV24::convertToAirV24() unknown ICW parameter $%02X with value %u", param, value);
+                        break;
+                    }
+                }
+            }
+
+            if (m_debug) {
+                ::LogDebugEx(LOG_MODEM, "ModemV24::convertToAirV24()", "V.24 RX, Start of Voice LDU1, ICW opcode = $%02X, rssi = %u", svf.startOfStream->getOpcode(), rssi);
+            }
+
+            if (svf.fullRateVoice->getTotalErrors() > 0U) {
+                if (m_debug)
+                    ::LogDebugEx(LOG_MODEM, "ModemV24::convertToAirV24()", "V.24/DFSI traffic has %u errors in frameType = $%02X", svf.fullRateVoice->getTotalErrors(), svf.fullRateVoice->getFrameType());
+                m_rxCall->errors += svf.fullRateVoice->getTotalErrors();
+            }
+
             m_rxCall->n++;
         }
         break;
         case DFSIFrameType::LDU2_VOICE10:
         {
             MotStartVoiceFrame svf = MotStartVoiceFrame(dfsiData);
+            ::memset(m_rxCall->LDULC, 0x00U, P25DEF::P25_LDU_LC_FEC_LENGTH_BYTES);
             ::memcpy(m_rxCall->netLDU2 + 10U, svf.fullRateVoice->imbeData, RAW_IMBE_LENGTH_BYTES);
+
+            m_rxCall->errors = 0U;
+
+            // process start of stream ICW for the voice call
+            uint8_t* icw = svf.startOfStream->getICW();
+            uint8_t payloadType = MotStreamPayload::VOICE;
+            uint8_t rssi = 20U;
+
+            if (icw != nullptr) {
+                for (uint8_t i = 0U; i < 6U; i += 2U) {
+                    uint8_t param = icw[i];
+                    uint8_t value = icw[i + 1U];
+
+                    switch (param) {
+                    case DSFI_MOT_ICW_PARM_PAYLOAD:
+                        payloadType = value;
+                        break;
+                    case DFSI_MOT_ICW_PARM_RSSI1:
+                        rssi = value;
+                        break;
+                    case DFSI_MOT_ICW_PARM_RSSI2:
+                        // don't do anything with this RSSI
+                        break;
+                    case DFSI_MOT_ICW_TX_ADDRESS:
+                    case DFSI_MOT_ICW_RX_ADDRESS:
+                        // don't do anything with this ICW
+                        break;
+                    default:
+                        LogWarning(LOG_MODEM, "ModemV24::convertToAirV24() unknown ICW parameter $%02X with value %u", param, value);
+                        break;
+                    }
+                }
+            }
+
+            if (m_debug) {
+                ::LogDebugEx(LOG_MODEM, "ModemV24::convertToAirV24()", "V.24 RX, Start of Voice LDU2, ICW opcode = $%02X, rssi = %u", svf.startOfStream->getOpcode(), rssi);
+            }
+
+            if (svf.fullRateVoice->getTotalErrors() > 0U) {
+                if (m_debug)
+                    ::LogDebugEx(LOG_MODEM, "ModemV24::convertToAirV24()", "V.24/DFSI traffic has %u errors in frameType = $%02X", svf.fullRateVoice->getTotalErrors(), svf.fullRateVoice->getFrameType());
+                m_rxCall->errors += svf.fullRateVoice->getTotalErrors();
+            }
+
             m_rxCall->n++;
         }
         break;
 
-        case DFSIFrameType::PDU:
+        case DFSIFrameType::MOT_TDULC:
         {
-            // bryanb: this is gonna be a complete clusterfuck...
-            MotPDUFrame pf = MotPDUFrame(dfsiData);
-            data::DataHeader dataHeader = data::DataHeader();
-            if (!dataHeader.decode(pf.pduHeaderData, true)) {
-                LogError(LOG_MODEM, "V.24/DFSI traffic failed to decode PDU FEC");
+            MotTDULCFrame tf = MotTDULCFrame(dfsiData);
+            lc::tdulc::LC_TDULC_RAW tdulc = lc::tdulc::LC_TDULC_RAW();
+            if (!tdulc.decode(tf.tdulcData, true)) {
+                LogError(LOG_MODEM, "V.24/DFSI traffic failed to decode TDULC FEC");
             } else {
-                uint32_t bitLength = ((dataHeader.getBlocksToFollow() + 1U) * P25_PDU_FEC_LENGTH_BITS) + P25_PREAMBLE_LENGTH_BITS;
-                uint32_t offset = P25_PREAMBLE_LENGTH_BITS;
+                uint8_t buffer[P25_TDULC_FRAME_LENGTH_BYTES + 2U];
+                ::memset(buffer, 0x00U, P25_TDULC_FRAME_LENGTH_BYTES + 2U);
 
-                DECLARE_UINT8_ARRAY(data, (bitLength / 8U) + 1U);
-
-                uint8_t block[P25_PDU_FEC_LENGTH_BYTES];
-                ::memset(block, 0x00U, P25_PDU_FEC_LENGTH_BYTES);
-
-                uint32_t blocksToFollow = dataHeader.getBlocksToFollow();
-
-                if (blocksToFollow > 0U) {
-                    uint32_t dataOffset = MotPDUFrame::LENGTH + 1U;
-
-                    // generate the PDU data
-                    for (uint32_t i = 0U; i < blocksToFollow; i++) {
-                        data::DataBlock dataBlock = data::DataBlock();
-                        dataBlock.setFormat(dataHeader);
-                        dataBlock.setSerialNo(i);
-                        dataBlock.setData(dfsiData + dataOffset);
-
-                        ::memset(block, 0x00U, P25_PDU_FEC_LENGTH_BYTES);
-                        dataBlock.encode(block);
-                        Utils::setBitRange(block, data, offset, P25_PDU_FEC_LENGTH_BITS);
-
-                        offset += P25_PDU_FEC_LENGTH_BITS;
-                        dataOffset += ((dataHeader.getFormat() == PDUFormatType::CONFIRMED) ? P25_PDU_CONFIRMED_DATA_LENGTH_BYTES : P25_PDU_UNCONFIRMED_LENGTH_BYTES) + 1U;
-                    }
-                }
-
-                uint8_t buffer[P25_PDU_FRAME_LENGTH_BYTES + 2U];
-                ::memset(buffer, 0x00U, P25_PDU_FRAME_LENGTH_BYTES + 2U);
-
-                // add the data
-                uint32_t newBitLength = P25Utils::encodeByLength(data, buffer + 2U, bitLength);
-                uint32_t newByteLength = newBitLength / 8U;
-                if ((newBitLength % 8U) > 0U)
-                    newByteLength++;
+                buffer[0U] = modem::TAG_DATA;
+                buffer[1U] = 0x00U;
 
                 // generate Sync
                 Sync::addP25Sync(buffer + 2U);
 
                 // generate NID
-                m_nid->encode(buffer + 2U, DUID::PDU);
+                m_nid->encode(buffer + 2U, DUID::TDULC);
+
+                // regenerate TDULC Data
+                tdulc.encode(buffer + 2U);
 
                 // add status bits
-                P25Utils::addStatusBits(buffer + 2U, newBitLength, false, false);
-                P25Utils::addIdleStatusBits(buffer + 2U, newBitLength);
+                P25Utils::addStatusBits(buffer + 2U, P25_TDULC_FRAME_LENGTH_BYTES, false, true);
+                P25Utils::addIdleStatusBits(buffer + 2U, P25_TDULC_FRAME_LENGTH_BYTES);
                 P25Utils::setStatusBitsStartIdle(buffer + 2U);
 
-                storeConvertedRx(buffer, P25_PDU_FRAME_LENGTH_BYTES + 2U);
+                storeConvertedRx(buffer, P25_TDULC_FRAME_LENGTH_BYTES + 2U);
             }
         }
         break;
 
-        case DFSIFrameType::TSBK:
+        case DFSIFrameType::MOT_PDU_SINGLE:
+            break;
+
+        case DFSIFrameType::MOT_TSBK:
         {
             MotTSBKFrame tf = MotTSBKFrame(dfsiData);
             lc::tsbk::OSP_TSBK_RAW tsbk = lc::tsbk::OSP_TSBK_RAW();
@@ -827,8 +911,14 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
             MotFullRateVoice voice = MotFullRateVoice(dfsiData);
 
             if (m_debug) {
-                LogDebugEx(LOG_MODEM, "ModemV24::convertToAir()", "Full Rate Voice, frameType = %x, source = %u", voice.getFrameType(), voice.getSource());
-                Utils::dump(1U, "Full Rate Voice IMBE", voice.imbeData, RAW_IMBE_LENGTH_BYTES);
+                LogDebugEx(LOG_MODEM, "ModemV24::convertToAirV24()", "Full Rate Voice, frameType = $%02X, errors = %u, busy = %u", voice.getFrameType(), voice.getTotalErrors(), voice.getBusy());
+                Utils::dump(1U, "ModemV24::converToAirV24(), Full Rate Voice IMBE", voice.imbeData, RAW_IMBE_LENGTH_BYTES);
+            }
+
+            if (voice.getTotalErrors() > 0U) {
+                if (m_debug)
+                    ::LogDebugEx(LOG_MODEM, "ModemV24::convertToAirV24()", "V.24/DFSI traffic has %u errors in frameType = $%02X", voice.getTotalErrors(), voice.getFrameType());
+                m_rxCall->errors += voice.getTotalErrors();
             }
 
             switch (frameType) {
@@ -844,6 +934,11 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
                         m_rxCall->lco = voice.additionalData[0U];
                         m_rxCall->mfId = voice.additionalData[1U];
                         m_rxCall->serviceOptions = voice.additionalData[2U];
+
+                        // copy LDU1 LC bytes into LDU LC buffer
+                        m_rxCall->LDULC[0U] = voice.additionalData[0U];
+                        m_rxCall->LDULC[1U] = voice.additionalData[1U];
+                        m_rxCall->LDULC[2U] = voice.additionalData[2U];
                     } else {
                         LogWarning(LOG_MODEM, "V.24/DFSI VC3 traffic missing metadata");
                     }
@@ -854,6 +949,11 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
                     ::memcpy(m_rxCall->netLDU1 + 80U, voice.imbeData, RAW_IMBE_LENGTH_BYTES);
                     if (voice.additionalData != nullptr) {
                         m_rxCall->dstId = GET_UINT24(voice.additionalData, 0U);
+
+                        // copy LDU1 LC bytes into LDU LC buffer
+                        m_rxCall->LDULC[3U] = voice.additionalData[0U];
+                        m_rxCall->LDULC[4U] = voice.additionalData[1U];
+                        m_rxCall->LDULC[5U] = voice.additionalData[2U];
                     } else {
                         LogWarning(LOG_MODEM, "V.24/DFSI VC4 traffic missing metadata");
                     }
@@ -864,6 +964,11 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
                     ::memcpy(m_rxCall->netLDU1 + 105U, voice.imbeData, RAW_IMBE_LENGTH_BYTES);
                     if (voice.additionalData != nullptr) {
                         m_rxCall->srcId = GET_UINT24(voice.additionalData, 0U);
+
+                        // copy LDU1 LC bytes into LDU LC buffer
+                        m_rxCall->LDULC[6U] = voice.additionalData[0U];
+                        m_rxCall->LDULC[7U] = voice.additionalData[1U];
+                        m_rxCall->LDULC[8U] = voice.additionalData[2U];
                     } else {
                         LogWarning(LOG_MODEM, "V.24/DFSI VC5 traffic missing metadata");
                     }
@@ -872,16 +977,40 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
                 case DFSIFrameType::LDU1_VOICE6:
                 {
                     ::memcpy(m_rxCall->netLDU1 + 130U, voice.imbeData, RAW_IMBE_LENGTH_BYTES);
+                    if (voice.additionalData != nullptr) {
+                        // copy LDU1 LC bytes into LDU LC buffer
+                        m_rxCall->LDULC[9U] = voice.additionalData[0U];
+                        m_rxCall->LDULC[10U] = voice.additionalData[1U];
+                        m_rxCall->LDULC[11U] = voice.additionalData[2U];
+                    } else {
+                        LogWarning(LOG_MODEM, "V.24/DFSI VC6 traffic missing metadata");
+                    }
                 }
                 break;
                 case DFSIFrameType::LDU1_VOICE7:
                 {
                     ::memcpy(m_rxCall->netLDU1 + 155U, voice.imbeData, RAW_IMBE_LENGTH_BYTES);
+                    if (voice.additionalData != nullptr) {
+                        // copy LDU1 LC bytes into LDU LC buffer
+                        m_rxCall->LDULC[12U] = voice.additionalData[0U];
+                        m_rxCall->LDULC[13U] = voice.additionalData[1U];
+                        m_rxCall->LDULC[14U] = voice.additionalData[2U];
+                    } else {
+                        LogWarning(LOG_MODEM, "V.24/DFSI VC7 traffic missing metadata");
+                    }
                 }
                 break;
                 case DFSIFrameType::LDU1_VOICE8:
                 {
                     ::memcpy(m_rxCall->netLDU1 + 180U, voice.imbeData, RAW_IMBE_LENGTH_BYTES);
+                    if (voice.additionalData != nullptr) {
+                        // copy LDU1 LC bytes into LDU LC buffer
+                        m_rxCall->LDULC[15U] = voice.additionalData[0U];
+                        m_rxCall->LDULC[16U] = voice.additionalData[1U];
+                        m_rxCall->LDULC[17U] = voice.additionalData[2U];
+                    } else {
+                        LogWarning(LOG_MODEM, "V.24/DFSI VC8 traffic missing metadata");
+                    }
                 }
                 break;
                 case DFSIFrameType::LDU1_VOICE9:
@@ -895,6 +1024,7 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
                     }
                 }
                 break;
+
                 case DFSIFrameType::LDU2_VOICE11:
                 {
                     ::memcpy(m_rxCall->netLDU2 + 26U, voice.imbeData, RAW_IMBE_LENGTH_BYTES);
@@ -905,6 +1035,12 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
                     ::memcpy(m_rxCall->netLDU2 + 55U, voice.imbeData, RAW_IMBE_LENGTH_BYTES);
                     if (voice.additionalData != nullptr) {
                         ::memcpy(m_rxCall->MI, voice.additionalData, 3U);
+
+                        // copy LDU2 LC bytes into LDU LC buffer
+                        ::memset(m_rxCall->LDULC, 0x00U, P25DEF::P25_LDU_LC_FEC_LENGTH_BYTES);
+                        m_rxCall->LDULC[0U] = voice.additionalData[0U];
+                        m_rxCall->LDULC[1U] = voice.additionalData[1U];
+                        m_rxCall->LDULC[2U] = voice.additionalData[2U];
                     } else {
                         LogWarning(LOG_MODEM, "V.24/DFSI VC12 traffic missing metadata");
                     }
@@ -915,6 +1051,11 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
                     ::memcpy(m_rxCall->netLDU2 + 80U, voice.imbeData, RAW_IMBE_LENGTH_BYTES);
                     if (voice.additionalData != nullptr) {
                         ::memcpy(m_rxCall->MI + 3U, voice.additionalData, 3U);
+
+                        // copy LDU2 LC bytes into LDU LC buffer
+                        m_rxCall->LDULC[3U] = voice.additionalData[0U];
+                        m_rxCall->LDULC[4U] = voice.additionalData[1U];
+                        m_rxCall->LDULC[5U] = voice.additionalData[2U];
                     } else {
                         LogWarning(LOG_MODEM, "V.24/DFSI VC13 traffic missing metadata");
                     }
@@ -925,6 +1066,11 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
                     ::memcpy(m_rxCall->netLDU2 + 105U, voice.imbeData, RAW_IMBE_LENGTH_BYTES);
                     if (voice.additionalData != nullptr) {
                         ::memcpy(m_rxCall->MI + 6U, voice.additionalData, 3U);
+
+                        // copy LDU2 LC bytes into LDU LC buffer
+                        m_rxCall->LDULC[6U] = voice.additionalData[0U];
+                        m_rxCall->LDULC[7U] = voice.additionalData[1U];
+                        m_rxCall->LDULC[8U] = voice.additionalData[2U];
                     } else {
                         LogWarning(LOG_MODEM, "V.24/DFSI VC14 traffic missing metadata");
                     }
@@ -936,6 +1082,11 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
                     if (voice.additionalData != nullptr) {
                         m_rxCall->algoId = voice.additionalData[0U];
                         m_rxCall->kId = GET_UINT16(voice.additionalData, 1U);
+
+                        // copy LDU2 LC bytes into LDU LC buffer
+                        m_rxCall->LDULC[9U] = voice.additionalData[0U];
+                        m_rxCall->LDULC[10U] = voice.additionalData[1U];
+                        m_rxCall->LDULC[11U] = voice.additionalData[2U];
                     } else {
                         LogWarning(LOG_MODEM, "V.24/DFSI VC15 traffic missing metadata");
                     }
@@ -944,11 +1095,27 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
                 case DFSIFrameType::LDU2_VOICE16:
                 {
                     ::memcpy(m_rxCall->netLDU2 + 155U, voice.imbeData, RAW_IMBE_LENGTH_BYTES);
+                    if (voice.additionalData != nullptr) {
+                        // copy LDU2 LC bytes into LDU LC buffer
+                        m_rxCall->LDULC[12U] = voice.additionalData[0U];
+                        m_rxCall->LDULC[13U] = voice.additionalData[1U];
+                        m_rxCall->LDULC[14U] = voice.additionalData[2U];
+                    } else {
+                        LogWarning(LOG_MODEM, "V.24/DFSI VC16 traffic missing metadata");
+                    }
                 }
                 break;
                 case DFSIFrameType::LDU2_VOICE17:
                 {
                     ::memcpy(m_rxCall->netLDU2 + 180U, voice.imbeData, RAW_IMBE_LENGTH_BYTES);
+                    if (voice.additionalData != nullptr) {
+                        // copy LDU2 LC bytes into LDU LC buffer
+                        m_rxCall->LDULC[15U] = voice.additionalData[0U];
+                        m_rxCall->LDULC[16U] = voice.additionalData[1U];
+                        m_rxCall->LDULC[17U] = voice.additionalData[2U];
+                    } else {
+                        LogWarning(LOG_MODEM, "V.24/DFSI VC17 traffic missing metadata");
+                    }
                 }
                 break;
                 case DFSIFrameType::LDU2_VOICE18:
@@ -975,6 +1142,24 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
 
     // encode LDU1 if ready
     if (m_rxCall->n == 9U) {
+        // decode RS (24,12,13) FEC
+        // bryanb: for now this won't abort the frame if RS fails, but maybe it should in the future, for now
+        //  we'll just log the error
+        try {
+            bool ret = m_rs.decode241213(m_rxCall->LDULC);
+            if (!ret) {
+                LogError(LOG_MODEM, "V.24/DFSI LDU1, failed to decode RS (24,12,13) FEC");
+            }
+        }
+        catch (...) {
+            Utils::dump(2U, "Modem, V.24 LDU1 RS excepted with input data", m_rxCall->LDULC, P25_LDU_LC_FEC_LENGTH_BYTES);
+        }
+
+        if (m_rxCall->errors > 0U) {
+            LogWarning(LOG_MODEM, P25_DFSI_LDU1_STR ", V.24, errs = %u/1233 (%.1f%%)", m_rxCall->errors, float(m_rxCall->errors) / 12.33F);
+            m_rxCall->errors = 0U;
+        }
+
         lc::LC lc = lc::LC();
         lc.setLCO(m_rxCall->lco);
         lc.setMFId(m_rxCall->mfId);
@@ -986,15 +1171,15 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
             uint8_t rsBuffer[P25_LDU_LC_FEC_LENGTH_BYTES];
             ::memset(rsBuffer, 0x00U, P25_LDU_LC_FEC_LENGTH_BYTES);
 
-            rsBuffer[0U] = m_rxCall->lco;
-            rsBuffer[1U] = m_rxCall->mfId;
-            rsBuffer[2U] = m_rxCall->serviceOptions;
-            rsBuffer[3U] = (m_rxCall->dstId >> 16) & 0xFFU;
-            rsBuffer[4U] = (m_rxCall->dstId >> 8) & 0xFFU;
-            rsBuffer[5U] = (m_rxCall->dstId >> 0) & 0xFFU;
-            rsBuffer[6U] = (m_rxCall->srcId >> 16) & 0xFFU;
-            rsBuffer[7U] = (m_rxCall->srcId >> 8) & 0xFFU;
-            rsBuffer[8U] = (m_rxCall->srcId >> 0) & 0xFFU;
+            rsBuffer[0U] = m_rxCall->LDULC[0U];
+            rsBuffer[1U] = m_rxCall->LDULC[1U];
+            rsBuffer[2U] = m_rxCall->LDULC[2U];
+            rsBuffer[3U] = m_rxCall->LDULC[3U];
+            rsBuffer[4U] = m_rxCall->LDULC[4U];
+            rsBuffer[5U] = m_rxCall->LDULC[5U];
+            rsBuffer[6U] = m_rxCall->LDULC[6U];
+            rsBuffer[7U] = m_rxCall->LDULC[7U];
+            rsBuffer[8U] = m_rxCall->LDULC[8U];
 
             // combine bytes into ulong64_t (8 byte) value
             ulong64_t rsValue = 0U;
@@ -1054,6 +1239,24 @@ void ModemV24::convertToAir(const uint8_t *data, uint32_t length)
     
     // encode LDU2 if ready
     if (m_rxCall->n == 18U) {
+        // decode RS (24,16,9) FEC
+        // bryanb: for now this won't abort the frame if RS fails, but maybe it should in the future, for now
+        //  we'll just log the error
+        try {
+            bool ret = m_rs.decode24169(m_rxCall->LDULC);
+            if (!ret) {
+                LogError(LOG_MODEM, "V.24/DFSI LDU2, failed to decode RS (24,16,9) FEC");
+            }
+        }
+        catch (...) {
+            Utils::dump(2U, "Modem, V.24 LDU2 RS excepted with input data", m_rxCall->LDULC, P25_LDU_LC_FEC_LENGTH_BYTES);
+        }
+
+        if (m_rxCall->errors > 0U) {
+            LogWarning(LOG_MODEM, P25_DFSI_LDU2_STR ", V.24, errs = %u/1233 (%.1f%%)", m_rxCall->errors, float(m_rxCall->errors) / 12.33F);
+            m_rxCall->errors = 0U;
+        }
+
         lc::LC lc = lc::LC();
         lc.setMI(m_rxCall->MI);
         lc.setAlgId(m_rxCall->algoId);
@@ -1112,7 +1315,7 @@ void ModemV24::convertToAirTIA(const uint8_t *data, uint32_t length)
     ::memcpy(dfsiData, data + 1U, length - 1U);
 
     if (m_debug)
-        Utils::dump("DFSI RX data from UDP", dfsiData, length - 1U);
+        Utils::dump("ModemV24::converToAirTIA(), DFSI RX Data From UDP", dfsiData, length - 1U);
 
     ControlOctet ctrl = ControlOctet();
     ctrl.decode(dfsiData);
@@ -1184,7 +1387,10 @@ void ModemV24::convertToAirTIA(const uint8_t *data, uint32_t length)
             ::memset(m_rxCall->VHDR1, 0x00U, 18U);
             ::memcpy(m_rxCall->VHDR1, dfsiData + dataOffs + 1U, 18U);
 
-            dataOffs += 19U; // 18 Golay + Block Type Marker
+            if (m_debug && m_trace)
+                Utils::dump("ModemV24::convertToAirTIA(), DFSI RX, VHDR1", m_rxCall->VHDR1, 18U);
+
+            dataOffs += DFSI_TIA_VHDR_LEN; // 18 Golay + Block Type Marker
         }
         break;
         case BlockType::VOICE_HEADER_P2:
@@ -1193,7 +1399,10 @@ void ModemV24::convertToAirTIA(const uint8_t *data, uint32_t length)
             ::memset(m_rxCall->VHDR2, 0x00U, 18U);
             ::memcpy(m_rxCall->VHDR2, dfsiData + dataOffs + 1U, 18U);
 
-            dataOffs += 19U; // 18 Golay + Block Type Marker
+            if (m_debug && m_trace)
+                Utils::dump("ModemV24::convertToAirTIA(), DFSI RX, VHDR2", m_rxCall->VHDR1, 18U);
+
+            dataOffs += DFSI_TIA_VHDR_LEN; // 18 Golay + Block Type Marker
 
             // buffer for raw VHDR data
             uint8_t raw[DFSI_VHDR_RAW_LEN];
@@ -1215,12 +1424,18 @@ void ModemV24::convertToAirTIA(const uint8_t *data, uint32_t length)
                 Utils::hex2Bin(raw[i], vhdr, offset);
             }
 
+            if (m_debug && m_trace)
+                Utils::dump("ModemV24::convertToAirTIA(), DFSI RX VHDR, VHDR Before FEC", vhdr, P25_HDU_LENGTH_BYTES);
+
             // try to decode the RS data
             try {
                 bool ret = m_rs.decode362017(vhdr);
                 if (!ret) {
                     LogError(LOG_MODEM, "V.24/DFSI traffic failed to decode RS (36,20,17) FEC");
                 } else {
+                    if (m_debug && m_trace)
+                        Utils::dump("ModemV24::convertToAirTIA(), DFSI RX VHDR, VHDR After FEC", vhdr, P25_HDU_LENGTH_BYTES);
+
                     // late entry?
                     if (!m_rxCallInProgress) {
                         m_rxCallInProgress = true;
@@ -1229,12 +1444,18 @@ void ModemV24::convertToAirTIA(const uint8_t *data, uint32_t length)
                             LogDebug(LOG_MODEM, "V24 RX VHDR late entry, resetting call data");
                     }
 
+                    uint32_t dstId = GET_UINT16(vhdr, 13U);
+                    if (m_rxCallInProgress && dstId == 0U) {
+                        LogWarning(LOG_MODEM, "TIA/DFSI traffic sent voice header with no dstId while call is in progress?, ignoring header TGID");
+                        break;
+                    }
+
                     ::memcpy(m_rxCall->MI, vhdr, MI_LENGTH_BYTES);
 
                     m_rxCall->mfId = vhdr[9U];
                     m_rxCall->algoId = vhdr[10U];
                     m_rxCall->kId = GET_UINT16(vhdr, 11U);
-                    m_rxCall->dstId = GET_UINT16(vhdr, 13U);
+                    m_rxCall->dstId = dstId;
 
                     if (m_debug) {
                         LogDebug(LOG_MODEM, "P25, VHDR algId = $%02X, kId = $%04X, dstId = $%04X", m_rxCall->algoId, m_rxCall->kId, m_rxCall->dstId);
@@ -1265,7 +1486,7 @@ void ModemV24::convertToAirTIA(const uint8_t *data, uint32_t length)
                 }
             }
             catch (...) {
-                LogError(LOG_MODEM, "V.24/DFSI RX traffic got exception while trying to decode RS data for VHDR");
+                LogError(LOG_MODEM, "TIA/DFSI RX traffic got exception while trying to decode RS data for VHDR");
             }
         }
         break;
@@ -1277,8 +1498,14 @@ void ModemV24::convertToAirTIA(const uint8_t *data, uint32_t length)
             voice.decode(dfsiData + dataOffs);
 
             if (m_debug) {
-                LogDebugEx(LOG_MODEM, "ModemV24::convertToAirTIA()", "Full Rate Voice, frameType = %x, busy = %u, lostFrame = %u, muteFrame = %u, superFrameCnt = %u", voice.getFrameType(), voice.getBusy(), voice.getLostFrame(), voice.getMuteFrame(), voice.getSuperframeCnt(), voice.getTotalErrors());
-                Utils::dump(1U, "Full Rate Voice IMBE", voice.imbeData, RAW_IMBE_LENGTH_BYTES);
+                LogDebugEx(LOG_MODEM, "ModemV24::convertToAirTIA()", "Full Rate Voice, frameType = $%02X, busy = %u, lostFrame = %u, muteFrame = %u, superFrameCnt = %u, errors = %u", voice.getFrameType(), voice.getBusy(), voice.getLostFrame(), voice.getMuteFrame(), voice.getSuperframeCnt(), voice.getTotalErrors());
+                Utils::dump(1U, "ModemV24::convertToAirTIA(), Full Rate Voice IMBE", voice.imbeData, RAW_IMBE_LENGTH_BYTES);
+            }
+
+            if (voice.getTotalErrors() > 0U) {
+                if (m_debug)
+                    ::LogDebugEx(LOG_MODEM, "ModemV24::convertToAirTIA()", "TIA/DFSI traffic has %u errors in frameType = $%02X", voice.getTotalErrors(), voice.getFrameType());
+                m_rxCall->errors += voice.getTotalErrors();
             }
 
             dataOffs += voice.getLength();
@@ -1287,6 +1514,7 @@ void ModemV24::convertToAirTIA(const uint8_t *data, uint32_t length)
             switch (frameType) {
             case DFSIFrameType::LDU1_VOICE1:
             {
+                ::memset(m_rxCall->LDULC, 0x00U, P25DEF::P25_LDU_LC_FEC_LENGTH_BYTES);
                 ::memcpy(m_rxCall->netLDU1 + 10U, voice.imbeData, RAW_IMBE_LENGTH_BYTES);
             }
             break;
@@ -1302,8 +1530,13 @@ void ModemV24::convertToAirTIA(const uint8_t *data, uint32_t length)
                     m_rxCall->lco = voice.additionalData[0U];
                     m_rxCall->mfId = voice.additionalData[1U];
                     m_rxCall->serviceOptions = voice.additionalData[2U];
+
+                    // copy LDU1 LC bytes into LDU LC buffer
+                    m_rxCall->LDULC[0U] = voice.additionalData[0U];
+                    m_rxCall->LDULC[1U] = voice.additionalData[1U];
+                    m_rxCall->LDULC[2U] = voice.additionalData[2U];
                 } else {
-                    LogWarning(LOG_MODEM, "V.24/DFSI VC3 traffic missing metadata");
+                    LogWarning(LOG_MODEM, "TIA/DFSI VC3 traffic missing metadata");
                 }
             }
             break;
@@ -1312,8 +1545,14 @@ void ModemV24::convertToAirTIA(const uint8_t *data, uint32_t length)
                 ::memcpy(m_rxCall->netLDU1 + 80U, voice.imbeData, RAW_IMBE_LENGTH_BYTES);
                 if (voice.additionalData != nullptr) {
                     m_rxCall->dstId = GET_UINT24(voice.additionalData, 0U);
+
+                    // copy LDU1 LC bytes into LDU LC buffer
+                    ::memset(m_rxCall->LDULC, 0x00U, P25DEF::P25_LDU_LC_FEC_LENGTH_BYTES);
+                    m_rxCall->LDULC[3U] = voice.additionalData[0U];
+                    m_rxCall->LDULC[4U] = voice.additionalData[1U];
+                    m_rxCall->LDULC[5U] = voice.additionalData[2U];
                 } else {
-                    LogWarning(LOG_MODEM, "V.24/DFSI VC4 traffic missing metadata");
+                    LogWarning(LOG_MODEM, "TIA/DFSI VC4 traffic missing metadata");
                 }
             }
             break;
@@ -1322,24 +1561,54 @@ void ModemV24::convertToAirTIA(const uint8_t *data, uint32_t length)
                 ::memcpy(m_rxCall->netLDU1 + 105U, voice.imbeData, RAW_IMBE_LENGTH_BYTES);
                 if (voice.additionalData != nullptr) {
                     m_rxCall->srcId = GET_UINT24(voice.additionalData, 0U);
+
+                    // copy LDU1 LC bytes into LDU LC buffer
+                    ::memset(m_rxCall->LDULC, 0x00U, P25DEF::P25_LDU_LC_FEC_LENGTH_BYTES);
+                    m_rxCall->LDULC[6U] = voice.additionalData[0U];
+                    m_rxCall->LDULC[7U] = voice.additionalData[1U];
+                    m_rxCall->LDULC[8U] = voice.additionalData[2U];
                 } else {
-                    LogWarning(LOG_MODEM, "V.24/DFSI VC5 traffic missing metadata");
+                    LogWarning(LOG_MODEM, "TIA/DFSI VC5 traffic missing metadata");
                 }
             }
             break;
             case DFSIFrameType::LDU1_VOICE6:
             {
                 ::memcpy(m_rxCall->netLDU1 + 130U, voice.imbeData, RAW_IMBE_LENGTH_BYTES);
+                if (voice.additionalData != nullptr) {
+                    // copy LDU1 LC bytes into LDU LC buffer
+                    m_rxCall->LDULC[9U] = voice.additionalData[0U];
+                    m_rxCall->LDULC[10U] = voice.additionalData[1U];
+                    m_rxCall->LDULC[11U] = voice.additionalData[2U];
+                } else {
+                    LogWarning(LOG_MODEM, "TIA/DFSI VC6 traffic missing metadata");
+                }
             }
             break;
             case DFSIFrameType::LDU1_VOICE7:
             {
                 ::memcpy(m_rxCall->netLDU1 + 155U, voice.imbeData, RAW_IMBE_LENGTH_BYTES);
+                if (voice.additionalData != nullptr) {
+                    // copy LDU1 LC bytes into LDU LC buffer
+                    m_rxCall->LDULC[12U] = voice.additionalData[0U];
+                    m_rxCall->LDULC[13U] = voice.additionalData[1U];
+                    m_rxCall->LDULC[14U] = voice.additionalData[2U];
+                } else {
+                    LogWarning(LOG_MODEM, "TIA/DFSI VC7 traffic missing metadata");
+                }
             }
             break;
             case DFSIFrameType::LDU1_VOICE8:
             {
                 ::memcpy(m_rxCall->netLDU1 + 180U, voice.imbeData, RAW_IMBE_LENGTH_BYTES);
+                if (voice.additionalData != nullptr) {
+                    // copy LDU1 LC bytes into LDU LC buffer
+                    m_rxCall->LDULC[15U] = voice.additionalData[0U];
+                    m_rxCall->LDULC[16U] = voice.additionalData[1U];
+                    m_rxCall->LDULC[17U] = voice.additionalData[2U];
+                } else {
+                    LogWarning(LOG_MODEM, "TIA/DFSI VC8 traffic missing metadata");
+                }
             }
             break;
             case DFSIFrameType::LDU1_VOICE9:
@@ -1349,13 +1618,14 @@ void ModemV24::convertToAirTIA(const uint8_t *data, uint32_t length)
                     m_rxCall->lsd1 = voice.additionalData[0U];
                     m_rxCall->lsd2 = voice.additionalData[1U];
                 } else {
-                    LogWarning(LOG_MODEM, "V.24/DFSI VC9 traffic missing metadata");
+                    LogWarning(LOG_MODEM, "TIA/DFSI VC9 traffic missing metadata");
                 }
             }
             break;
 
             case DFSIFrameType::LDU2_VOICE10:
             {
+                ::memset(m_rxCall->LDULC, 0x00U, P25DEF::P25_LDU_LC_FEC_LENGTH_BYTES);
                 ::memcpy(m_rxCall->netLDU2 + 10U, voice.imbeData, RAW_IMBE_LENGTH_BYTES);
             }
             break;
@@ -1369,8 +1639,13 @@ void ModemV24::convertToAirTIA(const uint8_t *data, uint32_t length)
                 ::memcpy(m_rxCall->netLDU2 + 55U, voice.imbeData, RAW_IMBE_LENGTH_BYTES);
                 if (voice.additionalData != nullptr) {
                     ::memcpy(m_rxCall->MI, voice.additionalData, 3U);
+
+                    // copy LDU2 LC bytes into LDU LC buffer
+                    m_rxCall->LDULC[0U] = voice.additionalData[0U];
+                    m_rxCall->LDULC[1U] = voice.additionalData[1U];
+                    m_rxCall->LDULC[2U] = voice.additionalData[2U];
                 } else {
-                    LogWarning(LOG_MODEM, "V.24/DFSI VC12 traffic missing metadata");
+                    LogWarning(LOG_MODEM, "TIA/DFSI VC12 traffic missing metadata");
                 }
             }
             break;
@@ -1379,8 +1654,13 @@ void ModemV24::convertToAirTIA(const uint8_t *data, uint32_t length)
                 ::memcpy(m_rxCall->netLDU2 + 80U, voice.imbeData, RAW_IMBE_LENGTH_BYTES);
                 if (voice.additionalData != nullptr) {
                     ::memcpy(m_rxCall->MI + 3U, voice.additionalData, 3U);
+
+                    // copy LDU2 LC bytes into LDU LC buffer
+                    m_rxCall->LDULC[3U] = voice.additionalData[0U];
+                    m_rxCall->LDULC[4U] = voice.additionalData[1U];
+                    m_rxCall->LDULC[5U] = voice.additionalData[2U];
                 } else {
-                    LogWarning(LOG_MODEM, "V.24/DFSI VC13 traffic missing metadata");
+                    LogWarning(LOG_MODEM, "TIA/DFSI VC13 traffic missing metadata");
                 }
             }
             break;
@@ -1389,8 +1669,13 @@ void ModemV24::convertToAirTIA(const uint8_t *data, uint32_t length)
                 ::memcpy(m_rxCall->netLDU2 + 105U, voice.imbeData, RAW_IMBE_LENGTH_BYTES);
                 if (voice.additionalData != nullptr) {
                     ::memcpy(m_rxCall->MI + 6U, voice.additionalData, 3U);
+
+                    // copy LDU2 LC bytes into LDU LC buffer
+                    m_rxCall->LDULC[6U] = voice.additionalData[0U];
+                    m_rxCall->LDULC[7U] = voice.additionalData[1U];
+                    m_rxCall->LDULC[8U] = voice.additionalData[2U];
                 } else {
-                    LogWarning(LOG_MODEM, "V.24/DFSI VC14 traffic missing metadata");
+                    LogWarning(LOG_MODEM, "TIA/DFSI VC14 traffic missing metadata");
                 }
             }
             break;
@@ -1400,19 +1685,40 @@ void ModemV24::convertToAirTIA(const uint8_t *data, uint32_t length)
                 if (voice.additionalData != nullptr) {
                     m_rxCall->algoId = voice.additionalData[0U];
                     m_rxCall->kId = GET_UINT16(voice.additionalData, 1U);
+
+                    // copy LDU2 LC bytes into LDU LC buffer
+                    m_rxCall->LDULC[9U] = voice.additionalData[0U];
+                    m_rxCall->LDULC[10U] = voice.additionalData[1U];
+                    m_rxCall->LDULC[11U] = voice.additionalData[2U];
                 } else {
-                    LogWarning(LOG_MODEM, "V.24/DFSI VC15 traffic missing metadata");
+                    LogWarning(LOG_MODEM, "TIA/DFSI VC15 traffic missing metadata");
                 }
             }
             break;
             case DFSIFrameType::LDU2_VOICE16:
             {
                 ::memcpy(m_rxCall->netLDU2 + 155U, voice.imbeData, RAW_IMBE_LENGTH_BYTES);
+                if (voice.additionalData != nullptr) {
+                    // copy LDU2 LC bytes into LDU LC buffer
+                    m_rxCall->LDULC[12U] = voice.additionalData[0U];
+                    m_rxCall->LDULC[13U] = voice.additionalData[1U];
+                    m_rxCall->LDULC[14U] = voice.additionalData[2U];
+                } else {
+                    LogWarning(LOG_MODEM, "TIA/DFSI VC16 traffic missing metadata");
+                }
             }
             break;
             case DFSIFrameType::LDU2_VOICE17:
             {
                 ::memcpy(m_rxCall->netLDU2 + 180U, voice.imbeData, RAW_IMBE_LENGTH_BYTES);
+                if (voice.additionalData != nullptr) {
+                    // copy LDU2 LC bytes into LDU LC buffer
+                    m_rxCall->LDULC[15U] = voice.additionalData[0U];
+                    m_rxCall->LDULC[16U] = voice.additionalData[1U];
+                    m_rxCall->LDULC[17U] = voice.additionalData[2U];
+                } else {
+                    LogWarning(LOG_MODEM, "TIA/DFSI VC17 traffic missing metadata");
+                }
             }
             break;
             case DFSIFrameType::LDU2_VOICE18:
@@ -1422,7 +1728,7 @@ void ModemV24::convertToAirTIA(const uint8_t *data, uint32_t length)
                     m_rxCall->lsd1 = voice.additionalData[0U];
                     m_rxCall->lsd2 = voice.additionalData[1U];
                 } else {
-                    LogWarning(LOG_MODEM, "V.24/DFSI VC18 traffic missing metadata");
+                    LogWarning(LOG_MODEM, "TIA/DFSI VC18 traffic missing metadata");
                 }
             }
             break;
@@ -1447,6 +1753,24 @@ void ModemV24::convertToAirTIA(const uint8_t *data, uint32_t length)
 
     // encode LDU1 if ready
     if (m_rxCall->n == 9U) {
+        // decode RS (24,12,13) FEC
+        // bryanb: for now this won't abort the frame if RS fails, but maybe it should in the future, for now
+        //  we'll just log the error
+        try {
+            bool ret = m_rs.decode241213(m_rxCall->LDULC);
+            if (!ret) {
+                LogError(LOG_MODEM, "TIA/DFSI LDU1, failed to decode RS (24,12,13) FEC");
+            }
+        }
+        catch (...) {
+            Utils::dump(2U, "Modem, TIA LDU1, RS excepted with input data", m_rxCall->LDULC, P25_LDU_LC_FEC_LENGTH_BYTES);
+        }
+
+        if (m_rxCall->errors > 0U) {
+            LogWarning(LOG_MODEM, P25_DFSI_LDU1_STR ", TIA, errs = %u/1233 (%.1f%%)", m_rxCall->errors, float(m_rxCall->errors) / 12.33F);
+            m_rxCall->errors = 0U;
+        }
+
         lc::LC lc = lc::LC();
         lc.setLCO(m_rxCall->lco);
         lc.setMFId(m_rxCall->mfId);
@@ -1458,15 +1782,15 @@ void ModemV24::convertToAirTIA(const uint8_t *data, uint32_t length)
             uint8_t rsBuffer[P25_LDU_LC_FEC_LENGTH_BYTES];
             ::memset(rsBuffer, 0x00U, P25_LDU_LC_FEC_LENGTH_BYTES);
 
-            rsBuffer[0U] = m_rxCall->lco;
-            rsBuffer[1U] = m_rxCall->mfId;
-            rsBuffer[2U] = m_rxCall->serviceOptions;
-            rsBuffer[3U] = (m_rxCall->dstId >> 16) & 0xFFU;
-            rsBuffer[4U] = (m_rxCall->dstId >> 8) & 0xFFU;
-            rsBuffer[5U] = (m_rxCall->dstId >> 0) & 0xFFU;
-            rsBuffer[6U] = (m_rxCall->srcId >> 16) & 0xFFU;
-            rsBuffer[7U] = (m_rxCall->srcId >> 8) & 0xFFU;
-            rsBuffer[8U] = (m_rxCall->srcId >> 0) & 0xFFU;
+            rsBuffer[0U] = m_rxCall->LDULC[0U];
+            rsBuffer[1U] = m_rxCall->LDULC[1U];
+            rsBuffer[2U] = m_rxCall->LDULC[2U];
+            rsBuffer[3U] = m_rxCall->LDULC[3U];
+            rsBuffer[4U] = m_rxCall->LDULC[4U];
+            rsBuffer[5U] = m_rxCall->LDULC[5U];
+            rsBuffer[6U] = m_rxCall->LDULC[6U];
+            rsBuffer[7U] = m_rxCall->LDULC[7U];
+            rsBuffer[8U] = m_rxCall->LDULC[8U];
 
             // combine bytes into ulong64_t (8 byte) value
             ulong64_t rsValue = 0U;
@@ -1526,6 +1850,24 @@ void ModemV24::convertToAirTIA(const uint8_t *data, uint32_t length)
     
     // encode LDU2 if ready
     if (m_rxCall->n == 18U) {
+        // decode RS (24,16,9) FEC
+        // bryanb: for now this won't abort the frame if RS fails, but maybe it should in the future, for now
+        //  we'll just log the error
+        try {
+            bool ret = m_rs.decode24169(m_rxCall->LDULC);
+            if (!ret) {
+                LogError(LOG_MODEM, "TIA/DFSI LDU2, failed to decode RS (24,16,9) FEC");
+            }
+        }
+        catch (...) {
+            Utils::dump(2U, "Modem, TIA LDU2, RS excepted with input data", m_rxCall->LDULC, P25_LDU_LC_FEC_LENGTH_BYTES);
+        }
+
+        if (m_rxCall->errors > 0U) {
+            LogWarning(LOG_MODEM, P25_DFSI_LDU2_STR ", TIA, errs = %u/1233 (%.1f%%)", m_rxCall->errors, float(m_rxCall->errors) / 12.33F);
+            m_rxCall->errors = 0U;
+        }
+
         lc::LC lc = lc::LC();
         lc.setMI(m_rxCall->MI);
         lc.setAlgId(m_rxCall->algoId);
@@ -1579,7 +1921,7 @@ void ModemV24::queueP25Frame(uint8_t* data, uint16_t len, SERIAL_TX_TYPE msgType
     if (m_debug)
         LogDebugEx(LOG_MODEM, "ModemV24::queueP25Frame()", "msgType = $%02X", msgType);
     if (m_trace)
-        Utils::dump(1U, "[ModemV24::queueP25Frame()] data", data, len);
+        Utils::dump(1U, "ModemV24::queueP25Frame(), data", data, len);
 
     // get current time in ms
     uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
@@ -1652,23 +1994,24 @@ void ModemV24::queueP25Frame(uint8_t* data, uint16_t len, SERIAL_TX_TYPE msgType
 
 /* Send a start of stream sequence (HDU, etc) to the connected serial V.24 device */
 
-void ModemV24::startOfStream(const p25::lc::LC& control)
+void ModemV24::startOfStreamV24(const p25::lc::LC& control)
 {
     m_txCallInProgress = true;
 
     MotStartOfStream start = MotStartOfStream();
-    start.setStartStop(StartStopFlag::START);
-    start.setRT(m_rtrt ? RTFlag::ENABLED : RTFlag::DISABLED);
+    start.setOpcode(m_rtrt ? MotStartStreamOpcode::TRANSMIT : MotStartStreamOpcode::RECEIVE);
+    start.setParam1(DSFI_MOT_ICW_PARM_PAYLOAD);
+    start.setArgument1(MotStreamPayload::VOICE);
 
     // create buffer for bytes and encode
-    uint8_t startBuf[start.LENGTH];
-    ::memset(startBuf, 0x00U, start.LENGTH);
+    uint8_t startBuf[DFSI_MOT_START_LEN];
+    ::memset(startBuf, 0x00U, DFSI_MOT_START_LEN);
     start.encode(startBuf);
 
     if (m_trace)
-        Utils::dump(1U, "ModemV24::startOfStream() MotStartOfStream", startBuf, MotStartOfStream::LENGTH);
+        Utils::dump(1U, "ModemV24::startOfStreamV24(), StartOfStream", startBuf, DFSI_MOT_START_LEN);
 
-    queueP25Frame(startBuf, MotStartOfStream::LENGTH, STT_NON_IMBE);
+    queueP25Frame(startBuf, DFSI_MOT_START_LEN, STT_NON_IMBE);
 
     uint8_t mi[MI_LENGTH_BYTES];
     ::memset(mi, 0x00U, MI_LENGTH_BYTES);
@@ -1695,58 +2038,58 @@ void ModemV24::startOfStream(const p25::lc::LC& control)
     }
 
     // prepare VHDR1
-    MotVoiceHeader1 vhdr1 = MotVoiceHeader1();
-    vhdr1.startOfStream->setStartStop(StartStopFlag::START);
-    vhdr1.startOfStream->setRT(m_rtrt ? RTFlag::ENABLED : RTFlag::DISABLED);
-    vhdr1.setICW(m_diu ? ICWFlag::DIU : ICWFlag::QUANTAR);
+    uint8_t vhdr1Buf[DFSI_MOT_VHDR_1_LEN];
+    ::memset(vhdr1Buf, 0x00U, DFSI_MOT_VHDR_1_LEN);
+    start.encode(vhdr1Buf);
 
-    ::memcpy(vhdr1.header, raw, 8U);
-    ::memcpy(vhdr1.header + 9U, raw + 8U, 8U);
-    ::memcpy(vhdr1.header + 18U, raw + 16U, 2U);
+    ::memcpy(vhdr1Buf + DFSI_MOT_START_LEN + 0U,  raw,       8U);
+    ::memcpy(vhdr1Buf + DFSI_MOT_START_LEN + 9U,  raw + 8U,  8U);
+    ::memcpy(vhdr1Buf + DFSI_MOT_START_LEN + 18U, raw + 16U, 2U);
 
-    // encode VHDR1 and send
-    uint8_t vhdr1Buf[vhdr1.LENGTH];
-    ::memset(vhdr1Buf, 0x00U, vhdr1.LENGTH);
-    vhdr1.encode(vhdr1Buf);
+    vhdr1Buf[0U] = DFSIFrameType::MOT_VHDR_1;
+    vhdr1Buf[20U + DFSI_MOT_START_LEN] = DFSI_BUSY_BITS_INBOUND;
 
     if (m_trace)
-        Utils::dump(1U, "ModemV24::startOfStream() MotVoiceHeader1", vhdr1Buf, MotVoiceHeader1::LENGTH);
+        Utils::dump(1U, "ModemV24::startOfStreamV24(), VoiceHeader1", vhdr1Buf, DFSI_MOT_VHDR_1_LEN);
 
-    queueP25Frame(vhdr1Buf, MotVoiceHeader1::LENGTH, STT_NON_IMBE);
+    queueP25Frame(vhdr1Buf, DFSI_MOT_VHDR_1_LEN, STT_NON_IMBE);
 
     // prepare VHDR2
-    MotVoiceHeader2 vhdr2 = MotVoiceHeader2();
-    ::memcpy(vhdr2.header, raw + 18U, 8U);
-    ::memcpy(vhdr2.header + 9U, raw + 26U, 8U);
-    ::memcpy(vhdr2.header + 18U, raw + 34U, 2U);
+    uint8_t vhdr2Buf[DFSI_MOT_VHDR_2_LEN];
+    ::memset(vhdr2Buf, 0x00U, DFSI_MOT_VHDR_2_LEN);
 
-    // encode VHDR2 and send
-    uint8_t vhdr2Buf[vhdr2.LENGTH];
-    ::memset(vhdr2Buf, 0x00U, vhdr2.LENGTH);
-    vhdr2.encode(vhdr2Buf);
+    ::memcpy(vhdr2Buf + 1U,   raw + 18U, 8U);
+    ::memcpy(vhdr2Buf + 10U,  raw + 26U, 8U);
+    ::memcpy(vhdr2Buf + 19U,  raw + 34U, 2U);
 
+    vhdr2Buf[0U] = DFSIFrameType::MOT_VHDR_2;
+    vhdr2Buf[21U] = DFSI_BUSY_BITS_INBOUND;
+
+    // send VHDR2
     if (m_trace)
-        Utils::dump(1U, "ModemV24::startOfStream() MotVoiceHeader2", vhdr2Buf, MotVoiceHeader2::LENGTH);
+        Utils::dump(1U, "ModemV24::startOfStreamV24(), VoiceHeader2", vhdr2Buf, DFSI_MOT_VHDR_2_LEN);
 
-    queueP25Frame(vhdr2Buf, MotVoiceHeader2::LENGTH, STT_NON_IMBE);
+    queueP25Frame(vhdr2Buf, DFSI_MOT_VHDR_2_LEN, STT_NON_IMBE);
 }
 
 /* Send an end of stream sequence (TDU, etc) to the connected serial V.24 device */
 
-void ModemV24::endOfStream()
+void ModemV24::endOfStreamV24()
 {
     MotStartOfStream end = MotStartOfStream();
-    end.setStartStop(StartStopFlag::STOP);
+    end.setOpcode(m_rtrt ? MotStartStreamOpcode::TRANSMIT : MotStartStreamOpcode::RECEIVE);
+    end.setParam1(DFSI_MOT_ICW_PARM_STOP);
+    end.setArgument1(MotStreamPayload::VOICE);
 
     // create buffer and encode
-    uint8_t endBuf[MotStartOfStream::LENGTH];
-    ::memset(endBuf, 0x00U, MotStartOfStream::LENGTH);
+    uint8_t endBuf[DFSI_MOT_START_LEN];
+    ::memset(endBuf, 0x00U, DFSI_MOT_START_LEN);
     end.encode(endBuf);
 
     if (m_trace)
-        Utils::dump(1U, "ModemV24::endOfStream() MotStartOfStream", endBuf, MotStartOfStream::LENGTH);
+        Utils::dump(1U, "ModemV24::endOfStreamV24(), StartOfStream", endBuf, DFSI_MOT_START_LEN);
 
-    queueP25Frame(endBuf, MotStartOfStream::LENGTH, STT_NON_IMBE);
+    queueP25Frame(endBuf, DFSI_MOT_START_LEN, STT_NON_IMBE);
 
     m_txCallInProgress = false;
 }
@@ -1770,7 +2113,7 @@ uint16_t ModemV24::generateNID(DUID::E duid)
 void ModemV24::startOfStreamTIA(const p25::lc::LC& control)
 {
     m_txCallInProgress = true;
-    m_superFrameCnt = 0U;
+    m_superFrameCnt = 1U;
 
     p25::lc::LC lc = p25::lc::LC(control);
     
@@ -1792,12 +2135,12 @@ void ModemV24::startOfStreamTIA(const p25::lc::LC& control)
 
     // generate start of stream
     StartOfStream start = StartOfStream();
-    start.setNID(generateNID());
+    start.setNID(generateNID(DUID::HDU));
     start.encode(buffer + 2U);
     length += StartOfStream::LENGTH;
 
     if (m_trace)
-        Utils::dump(1U, "ModemV24::startOfStreamTIA() StartOfStream", buffer, length);
+        Utils::dump(1U, "ModemV24::startOfStreamTIA(), StartOfStream", buffer, length);
 
     queueP25Frame(buffer, length, STT_NON_IMBE);
 
@@ -1820,7 +2163,7 @@ void ModemV24::startOfStreamTIA(const p25::lc::LC& control)
 
     // convert the binary bytes to hex bytes
     uint8_t raw[DFSI_VHDR_RAW_LEN];
-    uint32_t offset = 0;
+    uint32_t offset = 0U;
     for (uint8_t i = 0; i < DFSI_VHDR_RAW_LEN; i++, offset += 6) {
         raw[i] = Utils::bin2Hex(vhdr, offset);
     }
@@ -1849,13 +2192,13 @@ void ModemV24::startOfStreamTIA(const p25::lc::LC& control)
     // prepare VHDR1
     buffer[3U] = DFSIFrameType::MOT_VHDR_1;
     ::memcpy(buffer + 4U, raw, 18U);
-    length += 19U; // 18 Golay + Block Type Marker
+    length += DFSI_TIA_VHDR_LEN; // 18 Golay + Block Type Marker
 
     start.encode(buffer + length);
     length += StartOfStream::LENGTH;
 
     if (m_trace)
-        Utils::dump(1U, "ModemV24::startOfStreamTIA() VoiceHeader1", buffer, length);
+        Utils::dump(1U, "ModemV24::startOfStreamTIA(), VoiceHeader1", buffer, length);
 
     queueP25Frame(buffer, length, STT_NON_IMBE);
 
@@ -1878,13 +2221,13 @@ void ModemV24::startOfStreamTIA(const p25::lc::LC& control)
     // prepare VHDR2
     buffer[3U] = DFSIFrameType::MOT_VHDR_2;
     ::memcpy(buffer + 4U, raw + 18U, 18U);
-    length += 19U; // 18 Golay + Block Type Marker
+    length += DFSI_TIA_VHDR_LEN; // 18 Golay + Block Type Marker
 
     start.encode(buffer + length);
     length += StartOfStream::LENGTH;
 
     if (m_trace)
-        Utils::dump(1U, "ModemV24::startOfStreamTIA() VoiceHeader2", buffer, length);
+        Utils::dump(1U, "ModemV24::startOfStreamTIA(), VoiceHeader2", buffer, length);
 
     queueP25Frame(buffer, length, STT_NON_IMBE);
 }
@@ -1893,7 +2236,7 @@ void ModemV24::startOfStreamTIA(const p25::lc::LC& control)
 
 void ModemV24::endOfStreamTIA()
 {
-    m_superFrameCnt = 0U;
+    m_superFrameCnt = 1U;
 
     uint16_t length = 0U;
     uint8_t buffer[2U];
@@ -1912,7 +2255,7 @@ void ModemV24::endOfStreamTIA()
     length += BlockHeader::LENGTH;
 
     if (m_trace)
-        Utils::dump(1U, "ModemV24::endOfStreamTIA() EndOfStream", buffer, length);
+        Utils::dump(1U, "ModemV24::endOfStreamTIA(), EndOfStream", buffer, length);
 
     queueP25Frame(buffer, length, STT_NON_IMBE);
 
@@ -1940,20 +2283,20 @@ void ModemV24::ackStartOfStreamTIA()
     length += BlockHeader::LENGTH;
 
     if (m_trace)
-        Utils::dump(1U, "ModemV24::ackStartOfStreamTIA() Ack StartOfStream", buffer, length);
+        Utils::dump(1U, "ModemV24::ackStartOfStreamTIA(), Ack StartOfStream", buffer, length);
 
     queueP25Frame(buffer, length, STT_NON_IMBE_NO_JITTER);
 }
 
 /* Internal helper to convert from TIA-102 air interface to V.24/DFSI. */
 
-void ModemV24::convertFromAir(uint8_t* data, uint32_t length)
+void ModemV24::convertFromAirV24(uint8_t* data, uint32_t length)
 {
     assert(data != nullptr);
     assert(length > 0U);
 
     if (m_trace)
-        Utils::dump(1U, "ModemV24::convertFromAir() data", data, length);
+        Utils::dump(1U, "ModemV24::convertFromAirV24(), data", data, length);
 
     uint8_t ldu[9U * 25U];
     ::memset(ldu, 0x00U, 9 * 25U);
@@ -1976,7 +2319,7 @@ void ModemV24::convertFromAir(uint8_t* data, uint32_t length)
                 LogWarning(LOG_MODEM, P25_HDU_STR ", undecodable LC");
             }
 
-            startOfStream(lc);
+            startOfStreamV24(lc);
         }
         break;
         case DUID::LDU1:
@@ -1991,9 +2334,9 @@ void ModemV24::convertFromAir(uint8_t* data, uint32_t length)
 
             // late entry?
             if (!m_txCallInProgress) {
-                startOfStream(lc);
+                startOfStreamV24(lc);
                 if (m_debug)
-                    LogDebug(LOG_MODEM, "V24 TX VHDR late entry, resetting TX call data");
+                    ::LogDebugEx(LOG_MODEM, "ModemV24::convertFromAirV24()", "V.24 TX VHDR late entry, resetting TX call data");
             }
 
             // generate audio
@@ -2032,10 +2375,70 @@ void ModemV24::convertFromAir(uint8_t* data, uint32_t length)
         break;
 
         case DUID::TDU:
-        case DUID::TDULC:
             if (m_txCallInProgress)
-                endOfStream();
+                endOfStreamV24();
             break;
+
+        case DUID::TDULC:
+        {
+            if (m_txCallInProgress)
+                endOfStreamV24();
+
+            lc::tdulc::LC_TDULC_RAW tdulc = lc::tdulc::LC_TDULC_RAW();
+            if (!tdulc.decode(data + 2U)) {
+                LogWarning(LOG_MODEM, P25_TDULC_STR ", undecodable LC");
+                return;
+            }
+
+            MotStartOfStream start = MotStartOfStream();
+            start.setOpcode(m_rtrt ? MotStartStreamOpcode::TRANSMIT : MotStartStreamOpcode::RECEIVE);
+            start.setParam1(DSFI_MOT_ICW_PARM_PAYLOAD);
+            start.setArgument1(MotStreamPayload::TERM_LC);
+
+            // create buffer for bytes and encode
+            uint8_t startBuf[DFSI_MOT_START_LEN];
+            ::memset(startBuf, 0x00U, DFSI_MOT_START_LEN);
+            start.encode(startBuf);
+
+            if (m_trace)
+                Utils::dump(1U, "ModemV24::convertFromAirV24(), TDULC MotStartOfStream", startBuf, DFSI_MOT_START_LEN);
+
+            queueP25Frame(startBuf, DFSI_MOT_START_LEN, STT_NON_IMBE_NO_JITTER);
+
+            MotTDULCFrame tf = MotTDULCFrame();
+            tf.startOfStream->setOpcode(m_rtrt ? MotStartStreamOpcode::TRANSMIT : MotStartStreamOpcode::RECEIVE);
+            tf.startOfStream->setParam1(DSFI_MOT_ICW_PARM_PAYLOAD);
+            tf.startOfStream->setArgument1(MotStreamPayload::TERM_LC);
+            delete[] tf.tdulcData;
+
+            tf.tdulcData = new uint8_t[P25_TDULC_PAYLOAD_LENGTH_BYTES];
+            ::memset(tf.tdulcData, 0x00U, P25_TDULC_PAYLOAD_LENGTH_BYTES);
+            ::memcpy(tf.tdulcData, tdulc.getDecodedRaw(), P25_TDULC_PAYLOAD_LENGTH_BYTES);
+
+            // create buffer and encode
+            uint8_t tdulcBuf[DFSI_MOT_TDULC_LEN];
+            ::memset(tdulcBuf, 0x00U, DFSI_MOT_TDULC_LEN);
+            tf.encode(tdulcBuf);
+
+            if (m_trace)
+                Utils::dump(1U, "ModemV24::convertFromAirV24(), MotTDULCFrame", tdulcBuf, DFSI_MOT_TDULC_LEN);
+
+            queueP25Frame(tdulcBuf, DFSI_MOT_TDULC_LEN, STT_NON_IMBE_NO_JITTER);
+
+            MotStartOfStream end = MotStartOfStream();
+            end.setOpcode(m_rtrt ? MotStartStreamOpcode::TRANSMIT : MotStartStreamOpcode::RECEIVE);
+            end.setParam1(DFSI_MOT_ICW_PARM_STOP);
+            end.setArgument1(MotStreamPayload::TERM_LC);
+
+            // create buffer and encode
+            uint8_t endBuf[DFSI_MOT_START_LEN];
+            ::memset(endBuf, 0x00U, DFSI_MOT_START_LEN);
+            end.encode(endBuf);
+
+            queueP25Frame(endBuf, DFSI_MOT_START_LEN, STT_NON_IMBE_NO_JITTER);
+            queueP25Frame(endBuf, DFSI_MOT_START_LEN, STT_NON_IMBE_NO_JITTER);
+        }
+        break;
 
         case DUID::PDU:
             break;
@@ -2048,22 +2451,25 @@ void ModemV24::convertFromAir(uint8_t* data, uint32_t length)
                 return;
             }
 
-            MotStartOfStream startOfStream = MotStartOfStream();
-            startOfStream.setStartStop(StartStopFlag::START);
-            startOfStream.setRT(m_rtrt ? RTFlag::ENABLED : RTFlag::DISABLED);
-            startOfStream.setStreamType(StreamTypeFlag::TSBK);
+            MotStartOfStream start = MotStartOfStream();
+            start.setOpcode(m_rtrt ? MotStartStreamOpcode::TRANSMIT : MotStartStreamOpcode::RECEIVE);
+            start.setParam1(DSFI_MOT_ICW_PARM_PAYLOAD);
+            start.setArgument1(MotStreamPayload::TSBK);
 
-            // create buffer and encode
-            uint8_t startBuf[MotStartOfStream::LENGTH];
-            ::memset(startBuf, 0x00U, MotStartOfStream::LENGTH);
-            startOfStream.encode(startBuf);
+            // create buffer for bytes and encode
+            uint8_t startBuf[DFSI_MOT_START_LEN];
+            ::memset(startBuf, 0x00U, DFSI_MOT_START_LEN);
+            start.encode(startBuf);
 
-            queueP25Frame(startBuf, MotStartOfStream::LENGTH, STT_NON_IMBE_NO_JITTER);
+            if (m_trace)
+                Utils::dump(1U, "ModemV24::convertFromAirV24(), TSBK StartOfStream", startBuf, DFSI_MOT_START_LEN);
+
+            queueP25Frame(startBuf, DFSI_MOT_START_LEN, STT_NON_IMBE_NO_JITTER);
 
             MotTSBKFrame tf = MotTSBKFrame();
-            tf.startOfStream->setStartStop(StartStopFlag::START);
-            tf.startOfStream->setRT(m_rtrt ? RTFlag::ENABLED : RTFlag::DISABLED);
-            tf.startOfStream->setStreamType(StreamTypeFlag::TSBK);
+            tf.startOfStream->setOpcode(m_rtrt ? MotStartStreamOpcode::TRANSMIT : MotStartStreamOpcode::RECEIVE);
+            tf.startOfStream->setParam1(DSFI_MOT_ICW_PARM_PAYLOAD);
+            tf.startOfStream->setArgument1(MotStreamPayload::TSBK);
             delete[] tf.tsbkData;
 
             tf.tsbkData = new uint8_t[P25_TSBK_LENGTH_BYTES];
@@ -2071,27 +2477,27 @@ void ModemV24::convertFromAir(uint8_t* data, uint32_t length)
             ::memcpy(tf.tsbkData, tsbk.getDecodedRaw(), P25_TSBK_LENGTH_BYTES);
 
             // create buffer and encode
-            uint8_t tsbkBuf[MotTSBKFrame::LENGTH];
-            ::memset(tsbkBuf, 0x00U, MotTSBKFrame::LENGTH);
+            uint8_t tsbkBuf[DFSI_MOT_TSBK_LEN];
+            ::memset(tsbkBuf, 0x00U, DFSI_MOT_TSBK_LEN);
             tf.encode(tsbkBuf);
 
             if (m_trace)
-                Utils::dump(1U, "ModemV24::convertFromAir() MotTSBKFrame", tsbkBuf, MotTSBKFrame::LENGTH);
+                Utils::dump(1U, "ModemV24::convertFromAirV24(), MotTSBKFrame", tsbkBuf, DFSI_MOT_TSBK_LEN);
 
-            queueP25Frame(tsbkBuf, MotTSBKFrame::LENGTH, STT_NON_IMBE_NO_JITTER);
+            queueP25Frame(tsbkBuf, DFSI_MOT_TSBK_LEN, STT_NON_IMBE_NO_JITTER);
 
-            MotStartOfStream endOfStream = MotStartOfStream();
-            endOfStream.setStartStop(StartStopFlag::STOP);
-            endOfStream.setRT(m_rtrt ? RTFlag::ENABLED : RTFlag::DISABLED);
-            endOfStream.setStreamType(StreamTypeFlag::TSBK);
+            MotStartOfStream end = MotStartOfStream();
+            end.setOpcode(m_rtrt ? MotStartStreamOpcode::TRANSMIT : MotStartStreamOpcode::RECEIVE);
+            end.setParam1(DFSI_MOT_ICW_PARM_STOP);
+            end.setArgument1(MotStreamPayload::TSBK);
 
             // create buffer and encode
-            uint8_t endBuf[MotStartOfStream::LENGTH];
-            ::memset(endBuf, 0x00U, MotStartOfStream::LENGTH);
-            endOfStream.encode(endBuf);
+            uint8_t endBuf[DFSI_MOT_START_LEN];
+            ::memset(endBuf, 0x00U, DFSI_MOT_START_LEN);
+            end.encode(endBuf);
 
-            queueP25Frame(endBuf, MotStartOfStream::LENGTH, STT_NON_IMBE_NO_JITTER);
-            queueP25Frame(endBuf, MotStartOfStream::LENGTH, STT_NON_IMBE_NO_JITTER);
+            queueP25Frame(endBuf, DFSI_MOT_START_LEN, STT_NON_IMBE_NO_JITTER);
+            queueP25Frame(endBuf, DFSI_MOT_START_LEN, STT_NON_IMBE_NO_JITTER);
         }
         break;
 
@@ -2104,7 +2510,7 @@ void ModemV24::convertFromAir(uint8_t* data, uint32_t length)
         ::memset(rs, 0x00U, P25_LDU_LC_FEC_LENGTH_BYTES);
 
         if (duid == DUID::LDU1) {
-            rs[0U] = lc.getLCO();                                               // LCO
+            rs[0U] = lc.getLCO();                                                   // LCO
 
             // split ulong64_t (8 byte) value into bytes
             rs[1U] = (uint8_t)((lc.getRS() >> 56) & 0xFFU);
@@ -2139,6 +2545,7 @@ void ModemV24::convertFromAir(uint8_t* data, uint32_t length)
             uint8_t* buffer = nullptr;
             uint16_t bufferSize = 0;
             MotFullRateVoice voice = MotFullRateVoice();
+            voice.setBusy(DFSI_BUSY_BITS_INBOUND);
 
             switch (n) {
                 case 0: // VOICE1/10
@@ -2146,11 +2553,10 @@ void ModemV24::convertFromAir(uint8_t* data, uint32_t length)
                     voice.setFrameType((duid == DUID::LDU1) ? DFSIFrameType::LDU1_VOICE1 : DFSIFrameType::LDU2_VOICE10);
 
                     MotStartVoiceFrame svf = MotStartVoiceFrame();
-                    svf.startOfStream->setStartStop(StartStopFlag::START);
-                    svf.startOfStream->setRT(m_rtrt ? RTFlag::ENABLED : RTFlag::DISABLED);
+                    svf.startOfStream->setOpcode(m_rtrt ? MotStartStreamOpcode::TRANSMIT : MotStartStreamOpcode::RECEIVE);
+                    svf.startOfStream->setParam1(DSFI_MOT_ICW_PARM_PAYLOAD);
+                    svf.startOfStream->setArgument1(MotStreamPayload::VOICE);
                     svf.fullRateVoice->setFrameType(voice.getFrameType());
-                    svf.fullRateVoice->setSource(m_diu ? SourceFlag::DIU : SourceFlag::QUANTAR);
-                    svf.setICW(m_diu ? ICWFlag::DIU : ICWFlag::QUANTAR);
 
                     ::memcpy(svf.fullRateVoice->imbeData, ldu + 10U, RAW_IMBE_LENGTH_BYTES);
 
@@ -2163,7 +2569,6 @@ void ModemV24::convertFromAir(uint8_t* data, uint32_t length)
                 case 1: // VOICE2/11
                 {
                     voice.setFrameType((duid == DUID::LDU1) ? DFSIFrameType::LDU1_VOICE2 : DFSIFrameType::LDU2_VOICE11);
-                    voice.setSource(m_diu ? SourceFlag::DIU : SourceFlag::QUANTAR);
                     ::memcpy(voice.imbeData, ldu + 26U, RAW_IMBE_LENGTH_BYTES);
                 }
                 break;
@@ -2271,7 +2676,7 @@ void ModemV24::convertFromAir(uint8_t* data, uint32_t length)
 
             if (buffer != nullptr) {
                 if (m_trace) {
-                    Utils::dump("ModemV24::convertFromAir() Encoded V.24 Voice Frame Data", buffer, bufferSize);
+                    Utils::dump("ModemV24::convertFromAirV24(), Encoded V.24 Voice Frame Data", buffer, bufferSize);
                 }
 
                 queueP25Frame(buffer, bufferSize, STT_IMBE);
@@ -2289,7 +2694,7 @@ void ModemV24::convertFromAirTIA(uint8_t* data, uint32_t length)
     assert(length > 0U);
 
     if (m_trace)
-        Utils::dump(1U, "ModemV24::convertFromAirTIA() data", data, length);
+        Utils::dump(1U, "ModemV24::convertFromAirTIA(), data", data, length);
 
     uint8_t ldu[9U * 25U];
     ::memset(ldu, 0x00U, 9 * 25U);
@@ -2329,7 +2734,7 @@ void ModemV24::convertFromAirTIA(uint8_t* data, uint32_t length)
             if (!m_txCallInProgress) {
                 startOfStreamTIA(lc);
                 if (m_debug)
-                    LogDebug(LOG_MODEM, "V24 TX VHDR late entry, resetting TX call data");
+                    ::LogDebugEx(LOG_MODEM, "ModemV24::convertFromAirTIA()", "DFSI TX VHDR late entry, resetting TX call data");
             }
 
             // generate audio
@@ -2423,6 +2828,8 @@ void ModemV24::convertFromAirTIA(uint8_t* data, uint32_t length)
             uint8_t* buffer = nullptr;
             uint16_t bufferSize = 0;
             FullRateVoice voice = FullRateVoice();
+            voice.setBusy(DFSI_BUSY_BITS_BUSY);
+            voice.setSuperframeCnt(m_superFrameCnt);
 
             switch (n) {
                 case 0: // VOICE1/10
@@ -2536,7 +2943,7 @@ void ModemV24::convertFromAirTIA(uint8_t* data, uint32_t length)
 
             // generate control octet
             ControlOctet ctrl = ControlOctet();
-            ctrl.setBlockHeaderCnt(1U);
+            ctrl.setBlockHeaderCnt(2U);
             ctrl.encode(buffer);
             bufferSize += ControlOctet::LENGTH;
 
@@ -2545,15 +2952,23 @@ void ModemV24::convertFromAirTIA(uint8_t* data, uint32_t length)
             hdr.setBlockType(BlockType::FULL_RATE_VOICE);
             hdr.encode(buffer + 1U);
             bufferSize += BlockHeader::LENGTH;
+            hdr.setBlockType(BlockType::START_OF_STREAM);
+            hdr.encode(buffer + 2U);
+            bufferSize += BlockHeader::LENGTH;
 
-            voice.setSuperframeCnt(m_superFrameCnt);
-            voice.setBusy(1U); // Inbound Channel is Busy
+            // encode voice frame
             voice.encode(buffer + bufferSize);
             bufferSize += voice.getLength(); // 18, 17 or 14 depending on voice frame type
 
+            // generate start of stream and encode
+            StartOfStream start = StartOfStream();
+            start.setNID(generateNID(duid));
+            start.encode(buffer + bufferSize);
+            bufferSize += StartOfStream::LENGTH;
+
             if (buffer != nullptr) {
                 if (m_trace) {
-                    Utils::dump("ModemV24::convertFromAirTIA() Encoded V.24 Voice Frame Data", buffer, bufferSize);
+                    Utils::dump("ModemV24::convertFromAirTIA(), Encoded V.24 Voice Frame Data", buffer, bufferSize);
                 }
 
                 queueP25Frame(buffer, bufferSize, STT_IMBE);
@@ -2564,7 +2979,7 @@ void ModemV24::convertFromAirTIA(uint8_t* data, uint32_t length)
         // bryanb: this is a naive way of incrementing the superframe counter, we basically just increment it after
         // processing and LDU2
         if (duid == DUID::LDU2) {
-            if (m_superFrameCnt == 255U)
+            if (m_superFrameCnt == 3U)
                 m_superFrameCnt = 0U;
             else
                 m_superFrameCnt++;

@@ -153,6 +153,22 @@ namespace p25
              * @param frameType Frame Type.
              */
             void writeNetwork(const uint8_t* data, defines::DUID::E duid, defines::FrameType::E frameType = defines::FrameType::DATA_UNIT);
+            
+            /**
+             * @brief Helper to perform RF traffic collision checking.
+             * @param srcId Source ID.
+             * @param dstId Destination ID.
+             * @return bool True, if traffic collision, otherwise false.
+             */
+            bool checkRFTrafficCollision(uint32_t srcId, uint32_t dstId);
+            /**
+             * @brief Helper to perform network traffic collision checking.
+             * @param srcId Source ID.
+             * @param dstId Destination ID.
+             * @param duid DUID.
+             * @return bool True, if traffic collision, otherwise false.
+             */
+            bool checkNetTrafficCollision(uint32_t srcId, uint32_t dstId, defines::DUID::E duid);
 
             /**
              * @brief Helper to write end of voice frame data.

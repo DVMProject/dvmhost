@@ -420,7 +420,7 @@ bool TalkgroupRulesLookup::save()
         LogDebug(LOG_HOST, "Saved TGID config file to %s", m_rulesFile.c_str());
     }
     catch (yaml::OperationException const& e) {
-        LogError(LOG_HOST, "Cannot open the talkgroup rules lookup file - %s (%s)", m_rulesFile.c_str(), e.message());
+        LogError(LOG_HOST, "Cannot save the talkgroup rules lookup file - %s (%s)", m_rulesFile.c_str(), e.message());
         return false;
     }
 

@@ -23,6 +23,41 @@
 using namespace finalcut;
 
 // ---------------------------------------------------------------------------
+//  Global Functions
+// ---------------------------------------------------------------------------
+
+/* Helper to generate a mostly random password. */
+
+std::string randPasswordGen(int len)
+{
+    srand((unsigned int)(time(NULL)));
+
+    const char numbers[] = "0123456789";
+    const char letter[] = "abcdefghijklmnoqprstuvwyzx";
+    const char LETTER[] = "ABCDEFGHIJKLMNOQPRSTUYWVZX";
+
+    std::string password;
+    int randomizer = rand() % 6;
+
+    for (int i = 0; i < len; i++) {
+        if (randomizer == 1 || randomizer == 4) {
+            password.append(1U, numbers[rand() % 10]);
+            randomizer = rand() % 4;
+        }
+        else if (randomizer == 2 || randomizer == 5) {
+            password.append(1U, LETTER[rand() % 26]);
+            randomizer = rand() % 4;
+        }
+        else {
+            password.append(1U, letter[rand() % 26]);
+            randomizer = rand() % 4;
+        }
+    }
+
+    return password;
+}
+
+// ---------------------------------------------------------------------------
 //  Class Declaration
 // ---------------------------------------------------------------------------
 
@@ -80,11 +115,18 @@ public:
      */
     explicit PeerEditWnd(lookups::PeerId rule, FWidget* widget = nullptr) : CloseWndBase{widget}
     {
+        m_new = false;
         m_rule = rule;
-        if (m_rule.peerDefault()) {
+
+        if (m_rule.peerDefault() || (m_rule.peerId() == 0U)) {
             m_new = true;
         } else {
             m_origPeerId = m_rule.peerId();
+        }
+
+        if (m_new) {
+            std::string password = randPasswordGen(20);
+            m_rule.peerPassword(password);
         }
     }
 
@@ -110,6 +152,7 @@ private:
     FButtonGroup m_configGroup{"Configuration", this};
     FCheckBox m_peerLinkEnabled{"Peer Link", &m_configGroup};
     FCheckBox m_canReqKeysEnabled{"Request Keys", &m_configGroup};
+    FCheckBox m_canInhibitEnabled{"Issue Inhibit", &m_configGroup};
 
     /**
      * @brief Initializes the window layout.
@@ -117,7 +160,7 @@ private:
     void initLayout() override
     {
         FDialog::setText("Peer ID");
-        FDialog::setSize(FSize{60, 18});
+        FDialog::setSize(FSize{65, 18});
 
         m_enableSetButton = false;
         CloseWndBase::initLayout();
@@ -138,7 +181,7 @@ private:
         m_peerAlias.setShadow(false);
         m_peerAlias.addCallback("changed", [&]() { m_rule.peerAlias(m_peerAlias.getText().toString()); });
 
-        m_saveCopy.setGeometry(FPoint(36, 2), FSize(18, 1));
+        m_saveCopy.setGeometry(FPoint(41, 2), FSize(18, 1));
         m_saveCopy.addCallback("toggled", [&]() {
             if (m_saveCopy.isChecked()) {
                 m_incOnSave.setEnable();
@@ -149,14 +192,14 @@ private:
 
             redraw();
         });
-        m_incOnSave.setGeometry(FPoint(36, 3), FSize(18, 1));
+        m_incOnSave.setGeometry(FPoint(41, 3), FSize(18, 1));
         m_incOnSave.setDisable();
 
         // talkgroup source
         {
-            m_sourceGroup.setGeometry(FPoint(2, 5), FSize(30, 5));
+            m_sourceGroup.setGeometry(FPoint(2, 5), FSize(35, 5));
             m_peerIdLabel.setGeometry(FPoint(2, 1), FSize(10, 1));
-            m_peerId.setGeometry(FPoint(11, 1), FSize(17, 1));
+            m_peerId.setGeometry(FPoint(11, 1), FSize(22, 1));
             m_peerId.setAlignment(finalcut::Align::Right);
             if (!m_rule.peerDefault()) {
                 m_peerId.setText(std::to_string(m_rule.peerId()));
@@ -210,7 +253,7 @@ private:
             });
 
             m_peerPasswordLabel.setGeometry(FPoint(2, 2), FSize(10, 1));
-            m_peerPassword.setGeometry(FPoint(11, 2), FSize(17, 1));
+            m_peerPassword.setGeometry(FPoint(11, 2), FSize(22, 1));
             if (!m_rule.peerDefault()) {
                 m_peerPassword.setText(m_rule.peerPassword());
             }
@@ -220,7 +263,7 @@ private:
 
         // configuration
         {
-            m_configGroup.setGeometry(FPoint(34, 5), FSize(23, 5));
+            m_configGroup.setGeometry(FPoint(39, 5), FSize(23, 5));
 
             m_peerLinkEnabled.setGeometry(FPoint(2, 1), FSize(10, 1));
             m_peerLinkEnabled.setChecked(m_rule.peerLink());
@@ -232,6 +275,12 @@ private:
             m_canReqKeysEnabled.setChecked(m_rule.canRequestKeys());
             m_canReqKeysEnabled.addCallback("toggled", [&]() {
                 m_rule.canRequestKeys(m_canReqKeysEnabled.isChecked());
+            });
+
+            m_canInhibitEnabled.setGeometry(FPoint(2, 3), FSize(10, 1));
+            m_canInhibitEnabled.setChecked(m_rule.canIssueInhibit());
+            m_canInhibitEnabled.addCallback("toggled", [&]() {
+                m_rule.canIssueInhibit(m_canInhibitEnabled.isChecked());
             });
         }
 
@@ -247,8 +296,9 @@ private:
         uint32_t peerId = m_rule.peerId();
         bool peerLink = m_rule.peerLink();
         bool canRequestKeys = m_rule.canRequestKeys();
+        bool canIssueInhibit = m_rule.canIssueInhibit();
 
-        ::LogInfoEx(LOG_HOST, "Peer ALIAS: %s PEERID: %u PEER LINK: %u CAN REQUEST KEYS: %u", peerAlias.c_str(), peerId, peerLink, canRequestKeys);
+        ::LogInfoEx(LOG_HOST, "Peer ALIAS: %s PEERID: %u PEER LINK: %u CAN REQUEST KEYS: %u CAN ISSUE INHIBIT: %u", peerAlias.c_str(), peerId, peerLink, canRequestKeys, canIssueInhibit);
     }
 
     /*
@@ -314,7 +364,13 @@ private:
                 if (it != peers.end()) {
                     LogMessage(LOG_HOST, "Updating peer %s (%u) to %s (%u)", it->peerAlias().c_str(), it->peerId(), m_rule.peerAlias().c_str(), m_rule.peerId());
                     g_pidLookups->eraseEntry(m_origPeerId);
-                    g_pidLookups->addEntry(m_rule.peerId(), m_rule.peerAlias(), m_rule.peerPassword(), m_rule.peerLink(), m_rule.canRequestKeys());
+
+                    lookups::PeerId entry = lookups::PeerId(m_rule.peerId(), m_rule.peerAlias(), m_rule.peerPassword(), false);
+                    entry.peerLink(m_rule.peerLink());
+                    entry.canRequestKeys(m_rule.canRequestKeys());
+                    entry.canIssueInhibit(m_rule.canIssueInhibit());
+
+                    g_pidLookups->addEntry(m_rule.peerId(), entry);
 
                     logRuleInfo();
                 }
@@ -345,7 +401,13 @@ private:
                 } else {
                     LogMessage(LOG_HOST, "Adding Peer %s (%u)", m_rule.peerAlias().c_str(), m_rule.peerId());
                 }
-                g_pidLookups->addEntry(m_rule.peerId(), m_rule.peerAlias(), m_rule.peerPassword(), m_rule.peerLink(), m_rule.canRequestKeys());
+
+                lookups::PeerId entry = lookups::PeerId(m_rule.peerId(), m_rule.peerAlias(), m_rule.peerPassword(), false);
+                entry.peerLink(m_rule.peerLink());
+                entry.canRequestKeys(m_rule.canRequestKeys());
+                entry.canIssueInhibit(m_rule.canIssueInhibit());
+
+                g_pidLookups->addEntry(m_rule.peerId(), entry);
 
                 logRuleInfo();
 

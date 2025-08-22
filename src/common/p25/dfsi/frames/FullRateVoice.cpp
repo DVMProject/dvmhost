@@ -34,7 +34,7 @@ FullRateVoice::FullRateVoice() :
     m_muteFrame(false),
     m_lostFrame(false),
     m_superframeCnt(0U),
-    m_busy(0U)
+    m_busy(DFSI_BUSY_BITS_TALKAROUND)
 {
     imbeData = new uint8_t[IMBE_BUF_LEN];
     ::memset(imbeData, 0x00U, IMBE_BUF_LEN);
@@ -52,7 +52,7 @@ FullRateVoice::FullRateVoice(uint8_t* data) :
     m_muteFrame(false),
     m_lostFrame(false),
     m_superframeCnt(0U),
-    m_busy(0U)
+    m_busy(DFSI_BUSY_BITS_TALKAROUND)
 {
     decode(data);
 }

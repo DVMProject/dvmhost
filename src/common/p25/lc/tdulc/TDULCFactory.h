@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2023 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2023-2025 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -23,6 +23,7 @@
 #include "common/p25/lc/tdulc/LC_ADJ_STS_BCAST.h"
 #include "common/p25/lc/tdulc/LC_CALL_TERM.h"
 #include "common/p25/lc/tdulc/LC_CONV_FALLBACK.h"
+#include "common/p25/lc/tdulc/LC_EXPLICIT_SOURCE_ID.h"
 #include "common/p25/lc/tdulc/LC_GROUP_UPDT.h"
 #include "common/p25/lc/tdulc/LC_GROUP.h"
 #include "common/p25/lc/tdulc/LC_IDEN_UP.h"
@@ -31,6 +32,7 @@
 #include "common/p25/lc/tdulc/LC_RFSS_STS_BCAST.h"
 #include "common/p25/lc/tdulc/LC_SYS_SRV_BCAST.h"
 #include "common/p25/lc/tdulc/LC_TEL_INT_VCH_USER.h"
+#include "common/p25/lc/tdulc/LC_TDULC_RAW.h"
 
 #include "common/p25/lc/tdulc/LC_FAILSOFT.h"
 

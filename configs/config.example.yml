@@ -155,6 +155,10 @@ protocols:
         ignoreAffiliationCheck: false
         # Flag indicating the host should send a network grant demand for conventional traffic.
         convNetGrantDemand: false
+        # Flag indicating the fallback legacy group registration for radios that do not support group affiliation. 
+        #   (Useful for alerting the FNE to affiliations to TGIDs for radios that do not properly support group 
+        #    affiliation.)
+        legacyGroupReg: false
         # Flag indicating whether or not received RF embedded LC data only should be transmitted.
         embeddedLCOnly: false
         # Flag indicating whether talker alias data should be dumped to the log.
@@ -240,12 +244,16 @@ protocols:
         #   (This applies only in conventional operations where channel granting is utilized and RF-only talkgroup
         #    steering is required.)
         disableNetworkGrant: false
+        # Flag indicating whether or not TGID 0 (P25 blackhole talkgroup) will be allowed.
+        #   (Normally this should *never* be enabled, it is here to support poorly behaved systems that transmit
+        #    TGID 0 for some reason.)
+        forceAllowTG0: false
         # Flag indicating whether or not a TGID will be tested for affiliations before being granted.
         ignoreAffiliationCheck: false
         # Flag indicating that the host will attempt to automatically inhibit unauthorized RIDs (those not in the
         # RID ACL list).
         inhibitUnauthorized: false
-        # Flag indicating the fallback legacy group grant for radios that do not support group affilition to 
+        # Flag indicating the fallback legacy group grant for radios that do not support group affiliation to 
         # have group grants transmitted. (Useful for alerting the FNE to affiliations to TGIDs for radios that
         # do not properly support group affiliation.)
         legacyGroupGrnt: true
@@ -267,6 +275,8 @@ protocols:
         dumpDataPacket: false
         # Flag indicating whether or not this host will repeat P25 data traffic.
         repeatDataPacket: true
+        # Flag indicating whether or not the host will ignore CRC errors in P25 PDU data packets.
+        ignoreDataCRC: false
         # Flag indicating whether verbose dumping of P25 TSBK data is enabled.
         dumpTsbkData: false
         # Amount of time to hang after a voice call.
@@ -278,7 +288,7 @@ protocols:
         # Flag indicating that unit-to-unit availiability checks should be performed for a private call.
         unitToUnitAvailCheck: false
         # Flag indicating explicit source ID support is enabled.
-        allowExplicitSourceId: true
+        allowExplicitSourceId: false
         # Flag indicating whether or not the host will respond to SNDCP data requests.
         sndcpSupport: false
         # BER/Error threshold for silencing voice packets. (0 or 1233 disables)
@@ -319,6 +329,10 @@ protocols:
 
         # Flag indicating whether or not a TGID will be tested for affiliations before being granted.
         ignoreAffiliationCheck: false
+        # Flag indicating the fallback legacy group registration for radios that do not support group affiliation. 
+        #   (Useful for alerting the FNE to affiliations to TGIDs for radios that do not properly support group 
+        #    affiliation.)
+        legacyGroupReg: false
         # Flag indicating the host should verify group affiliation.
         verifyAff: false
         # Flag indicating the host should verify unit registration.
@@ -470,6 +484,10 @@ system:
         pSuperGroup: FFFE
         # Announcment Talkgroup Group.
         announcementGroup: FFFE
+        # Default Talkgroup for idle network traffic.
+        #   NOTE: TGID 0 is used here to indicate "promiscuous" mode, where first-come-first-serve traffic from the network
+        #     is allowed.
+        defaultNetIdleTalkgroup: 0
 
         # DMR network ID.
         dmrNetId: 1
@@ -532,8 +550,12 @@ system:
         # Amount of time to wait before starting DMR transmissions after a signal is received.
         dmrRxDelay: 7
         # Amount of packet correlations that should occur before P25 data is returned from the modem to the host.
-        # (Note: Changing this value will impact P25 protocol stability, and should not be altered.)
-        p25CorrCount: 8
+        #   (Note: Changing this value will impact P25 protocol stability, and should not be altered. This is set to
+        #     a default value of 2 for fast synchronization of a P25 signal, if the air modem is having difficulty
+        #     synchronizing to a P25 signal, this value can be increased to 3 or 4, or beyond. It should be noted that
+        #     increasing this value will increase the time it takes to synchronize to a P25 signal, and may cause
+        #     issues with P25 voice calls (especially encrypted voice calls).)
+        p25CorrCount: 2
         # Size (in bytes) of the DMR transmit FIFO buffer. It is not recommended to adjust this unless absolutely
         # necessary, excessive sizes will cause delays in transmitted frames due to excessive buffering.
         #   Calculation Formula: (DMR Frame Size (33 bytes) * x Frames) + Pad Bytes = FIFO Buffer Size Bytes
@@ -626,6 +648,9 @@ system:
             jitter: 200
             # Timer which will reset local/remote call flags if frames aren't received longer than this time in ms
             callTimeout: 200
+            # Flag indicating whether or not the V.24 modem is operating in full-duplex mode.
+            #  (This enables DVM to repeat incoming V.24 frames back out after processing.)
+            fullDuplex: false
             # Flag indicating when operating in V.24 UDP mode, the FSC protocol should be used to negotiate connection.
             fsc: false
             # Sets the heartbeat interval for the FSC connection.

@@ -656,7 +656,7 @@ bool Host::createModem()
                 if (useFSCForUDP) {
                     modemPort = new port::specialized::V24UDPPort(id, g_remoteAddress, g_remotePort + 1U, g_remotePort, g_remoteLocalPort, true, fscInitiator, debug);
                     ((modem::port::specialized::V24UDPPort*)modemPort)->setHeartbeatInterval(fscHeartbeat);
-               } else {
+                } else {
                     modemPort = new port::specialized::V24UDPPort(id, g_remoteAddress, g_remotePort, 0U, 0U, false, false, debug);
                 }
                 m_udpDFSIRemotePort = modemPort;
@@ -750,7 +750,7 @@ bool Host::createModem()
         m_modem->setResponseHandler(MODEM_RESP_HANDLER_BIND(Host::rmtPortModemHandler, this));
     }
 
-    if (useFSCForUDP) {
+    if (g_remoteModemMode && m_isModemDFSI && useFSCForUDP) {
         modem::port::specialized::V24UDPPort* udpPort = dynamic_cast<modem::port::specialized::V24UDPPort*>(m_udpDFSIRemotePort);
         udpPort->openFSC();
     }
@@ -945,7 +945,7 @@ bool Host::createNetwork()
 
     // initialize networking
     if (netEnable) {
-        m_network = new Network(address, port, local, id, password, m_duplex, debug, m_dmrEnabled, m_p25Enabled, m_nxdnEnabled, slot1, slot2, 
+        m_network = new Network(address, port, local, id, password, m_duplex, debug, m_dmrEnabled, m_p25Enabled, m_nxdnEnabled, false, slot1, slot2, 
             allowActivityTransfer, allowDiagnosticTransfer, updateLookup, saveLookup);
 
         m_network->setLookups(m_ridLookup, m_tidLookup);

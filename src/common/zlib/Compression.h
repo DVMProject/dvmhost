@@ -39,18 +39,18 @@ namespace compress
          * @param[in] buffer Buffer containing data to zlib compress.
          * @param[in] len Length of data to compress.
          * @param[out] compressedLen Length of compressed data.
-         * @returns uint8_t* Buffer containing compressed data.
+         * @returns UInt8Array Buffer containing compressed data.
          */
-        static uint8_t* compress(const uint8_t* buffer, uint32_t len, uint32_t* compressedLen);
+        static UInt8Array compress(const uint8_t* buffer, uint32_t len, uint32_t* compressedLen);
 
         /**
          * @brief Decompress the given input buffer using zlib compression.
          * @param[in] buffer Buffer containing zlib compressed data.
          * @param[in] len Length of compressed data.
          * @param[out] decompressedLen Length of decompressed data.
-         * @returns uint8_t* Buffer containing decompressed data.
+         * @returns UInt8Array Buffer containing decompressed data.
          */
-        static uint8_t* decompress(const uint8_t* buffer, uint32_t len, uint32_t* decompressedLen);
+        static UInt8Array decompress(const uint8_t* buffer, uint32_t len, uint32_t* decompressedLen);
     };
 } // namespace compress
 

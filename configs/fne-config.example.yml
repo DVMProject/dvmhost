@@ -48,6 +48,10 @@ master:
     # Flag indicating whether or not verbose debug logging is enabled.
     debug: false
 
+    # Flag indicating whether or not denied traffic will be logged.
+    #   (This is useful for debugging talkgroup rules and other ACL issues, but can be very noisy on a busy system.)
+    logDenials: false
+
     # Maximum number of concurrent packet processing workers.
     workers: 16
 
@@ -70,6 +74,8 @@ master:
     allowP25Traffic: true
     # Flag indicating whether or not NXDN traffic will be passed.
     allowNXDNTraffic: true
+    # Flag indicating whether or not analog traffic will be passed.
+    allowAnalogTraffic: false
 
     # Flag indicating whether packet data will be passed.
     disablePacketData: false
@@ -87,6 +93,8 @@ master:
 
     # Flag indicating whether or not a grant responses will only be sent to TGs with affiliations, if the TG is configured for affiliation gating.
     restrictGrantToAffiliatedOnly: false
+    # Flag indicating whether or not a private call will only be routed to the network peers the RID registers with.
+    restrictPrivateCallToRegOnly: false
 
     # Flag indicating whether or not a adjacent site broadcasts will pass to any peers.
     disallowAdjStsBcast: false
@@ -103,9 +111,14 @@ master:
     # Flag indicating whether or not a TDULC call terminations will pass to any peers.
     disallowCallTerm: false
 
-    # Flag indicating that traffic headers will be filtered by destination ID (i.e. valid RID or valid TGID).
-    filterHeaders: true
-    # Flag indicating that terminators will be filtered by destination ID (i.e. valid RID or valid TGID).
+    # Flag indicating whether or not the FNE will mask all outbound traffic to use the FNE's own peer ID.
+    #   (This is useful for FNEs that are public facing, and the originating traffic peer ID should be masked.)
+    maskOutboundPeerID: false
+    # Flag indicating whether or not the FNE will mask only non-Peer-Link outbound traffic to use the FNE's own peer ID.
+    #   (This is useful for networked FNEs that are have a mix of connections, and the originating traffic peer ID to non-Peer-Link FNEs should be masked.)
+    maskOutboundPeerIDForNonPeerLink: false
+
+    # Flag indicating that P25 terminators will be filtered by destination ID (i.e. valid RID or valid TGID).
     filterTerminators: true
 
     # Flag indicating the FNE will drop all inbound Unit-to-Unit calls.
@@ -148,6 +161,15 @@ master:
         # Full path to the talkgroup rules file.
         file: talkgroup_rules.yml
         # Amount of time between updates of talkgroup rules file. (minutes)
+        time: 30
+
+    #
+    # Adj. Site Map Configuration
+    #
+    adj_site_map:
+        # Full path to the Adj. Site Map file.
+        file: adj_site_map.yml
+        # Amount of time between updates of Adj. Site Map file. (minutes)
         time: 30
 
 #

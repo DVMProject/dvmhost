@@ -74,10 +74,13 @@ namespace nxdn
             Control* m_nxdn;
 
             uint8_t m_bcchCnt;
-            uint8_t m_rcchGroupingCnt;
             uint8_t m_ccchPagingCnt;
             uint8_t m_ccchMultiCnt;
+            uint8_t m_rcchGroupingCnt;
             uint8_t m_rcchIterateCnt;
+
+            RingBuffer<uint8_t> m_pgRCCHQueue;
+            RingBuffer<uint8_t> m_mpRCCHQueue;
 
             bool m_verifyAff;
             bool m_verifyReg;
@@ -113,18 +116,12 @@ namespace nxdn
             */
 
             /**
-             * @brief Helper to write a immediate single-block RCCH packet.
-             * @param rcch RCCH to write to the modem.
-             * @param noNetwork Flag indicating not to write the TSBK to the network.
-             */
-            void writeRF_Message_Imm(lc::RCCH *rcch, bool noNetwork) { writeRF_Message(rcch, noNetwork, true); }
-            /**
              * @brief Helper to write a single-block RCCH packet.
              * @param rcch RCCH to write to the modem.
-             * @param noNetwork Flag indicating not to write the TSBK to the network.
-             * @param imm Flag indicating the TSBK should be written to the immediate queue.
+             * @param noNetwork Flag indicating not to write the RCCH to the network.
+             * @param paging Flag indicating the RCCH should be written to the paging queue.
              */
-            void writeRF_Message(lc::RCCH* rcch, bool noNetwork, bool imm = false);
+            void writeRF_Message(lc::RCCH* rcch, bool noNetwork, bool paging = false);
 
             /*
             ** Control Signalling Logic
@@ -132,11 +129,10 @@ namespace nxdn
 
             /**
              * @brief Helper to write control channel packet data.
-             * @param frameCnt Frame counter.
              * @param n 
-             * @param adjSS Flag indicating whether or not adjacent site status should be broadcast.
+             * @param first 
              */
-            void writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adjSS);
+            void writeRF_ControlData(uint8_t n, bool first);
 
             /**
              * @brief Helper to write a grant packet.
@@ -181,6 +177,10 @@ namespace nxdn
              * @brief Helper to write a CC SRV_INFO broadcast packet on the RF interface.
              */
             void writeRF_CC_Message_Service_Info();
+            /**
+             * @brief Helper to write a CC IDLE broadcast packet on the RF interface.
+             */
+            void writeRF_CC_Message_Idle();
         };
     } // namespace packet
 } // namespace nxdn

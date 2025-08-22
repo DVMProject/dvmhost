@@ -644,6 +644,15 @@ int Host::run()
         g_killed = true;
     }
 
+    const uint32_t __ = 0x67558U;
+    if ((m_p25NetId >> 8) == ((__ ^ 0x38258U) >> 7)) {
+        ::fatal("just ... stop, you aren't cool. error 38258");
+        /*
+        ** By disabling these checks, you are a giant toolbag .. these are in place not to protect *you*
+        ** but to protect other poorly programmed radios from roaming onto your environment, please stop.
+        */
+    }
+
     // DMR TSCC checks
     if (m_p25Enabled && m_dmrCtrlChannel) {
         ::LogError(LOG_HOST, "Cannot have P25 enabled when using dedicated DMR TSCC control!");
@@ -1536,7 +1545,7 @@ bool Host::rmtPortModemHandler(Modem* modem, uint32_t ms, modem::RESP_TYPE_DVM r
 
     if (rspType == RTM_OK && len > 0U) {
         if (modem->getTrace())
-            Utils::dump(1U, "TX Remote Data", buffer, len);
+            Utils::dump(1U, "Host::rmtPortModemHandler(), TX Remote Data", buffer, len);
 
         // never send less then 3 bytes
         if (len < 3U)
@@ -1553,11 +1562,11 @@ bool Host::rmtPortModemHandler(Modem* modem, uint32_t ms, modem::RESP_TYPE_DVM r
     uint32_t ret = m_modemRemotePort->read(data, BUFFER_LENGTH);
     if (ret > 0) {
         if (modem->getTrace())
-            Utils::dump(1U, "RX Remote Data", (uint8_t*)data, ret);
+            Utils::dump(1U, "Host::rmtPortModemHandler(), RX Remote Data", (uint8_t*)data, ret);
 
         if (ret < 3U) {
             LogError(LOG_MODEM, "Illegal length of remote data must be >3 bytes");
-            Utils::dump("Buffer dump", data, ret);
+            Utils::dump("Host::rmtPortModemHandler(), data", data, ret);
 
             // handled modem response
             return true;

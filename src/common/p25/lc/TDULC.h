@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2017-2022 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2017-2025 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -80,6 +80,13 @@ namespace p25
             virtual void encode(uint8_t* data) = 0;
 
             /**
+             * @brief Returns a copy of the raw decoded TDULC bytes.
+             * This will only return data for a *decoded* TDULC, not a created or copied TDULC.
+             * @returns uint8_t* Raw decoded TDULC bytes.
+             */
+            uint8_t* getDecodedRaw() const;
+
+            /**
              * @brief Sets the flag indicating verbose log output.
              * @param verbose Flag indicating verbose log output.
              */
@@ -126,6 +133,20 @@ namespace p25
              * @brief Voice channel number.
              */
             DECLARE_PROTECTED_PROPERTY(uint32_t, grpVchNo, GrpVchNo);
+
+            /**
+             * @brief Flag indicating explicit addressing.
+             */
+            DECLARE_PROTECTED_PROPERTY(bool, explicitId, ExplicitId);
+
+            /**
+             * @brief Network ID.
+             */
+            DECLARE_PROTECTED_PROPERTY(uint32_t, netId, NetId);
+            /**
+             * @brief System ID.
+             */
+            DECLARE_PROTECTED_PROPERTY(uint32_t, sysId, SysId);
             /** @} */
 
             /** @name Service Options */
@@ -184,16 +205,21 @@ namespace p25
              * @brief Internal helper to decode terminator data unit w/ link control.
              * @param[in] data Raw data.
              * @param[out] payload TDULC payload buffer.
+             * @param rawTDULC Flag indicating whether or not the passed buffer is raw.
              */
-            bool decode(const uint8_t* data, uint8_t* payload);
+            bool decode(const uint8_t* data, uint8_t* payload, bool rawTDULC = false);
             /**
              * @brief Internal helper to encode terminator data unit w/ link control.
              * @param[out] data Raw data.
              * @param[in] payload TDULC payload buffer.
+             * @param rawTDULC Flag indicating whether or not the passed buffer is raw.
              */
-            void encode(uint8_t* data, const uint8_t* payload);
+            void encode(uint8_t* data, const uint8_t* payload, bool rawTDULC = false);
 
             DECLARE_PROTECTED_COPY(TDULC);
+
+        private:
+            uint8_t* m_raw;
         };
     } // namespace lc
 } // namespace p25

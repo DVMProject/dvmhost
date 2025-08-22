@@ -143,6 +143,10 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, ::lookups::VoiceChDa
     m_enableTSCC = enableTSCC;
 
     yaml::Node rfssConfig = systemConf["config"];
+    uint32_t defaultNetIdleTalkgroup = (uint32_t)::strtoul(rfssConfig["defaultNetIdleTalkgroup"].as<std::string>("0").c_str(), NULL, 16);
+    m_slot1->setDefaultNetIdleTG(defaultNetIdleTalkgroup);
+    m_slot2->setDefaultNetIdleTG(defaultNetIdleTalkgroup);
+
     yaml::Node controlCh = rfssConfig["controlCh"];
     bool notifyCC = controlCh["notifyEnable"].as<bool>(false);
     m_slot1->setNotifyCC(notifyCC);
@@ -186,6 +190,10 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, ::lookups::VoiceChDa
     m_slot1->m_ignoreAffiliationCheck = ignoreAffiliationCheck;
     m_slot2->m_ignoreAffiliationCheck = ignoreAffiliationCheck;
 
+    bool legacyGroupReg = dmrProtocol["legacyGroupReg"].as<bool>(false);
+    m_slot1->setLegacyGroupReg(legacyGroupReg);
+    m_slot2->setLegacyGroupReg(legacyGroupReg);
+
     // set the In-Call Control function callback
     if (m_network != nullptr) {
         m_network->setDMRICCCallback([=](network::NET_ICC::ENUM command, uint32_t dstId, uint8_t slotNo) { processInCallCtrl(command, dstId, slotNo); });
@@ -218,7 +226,12 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, ::lookups::VoiceChDa
             LogInfo("    Disable Network Grants: yes");
         }
 
+        if (defaultNetIdleTalkgroup != 0U) {
+            LogInfo("    Default Network Idle Talkgroup: $%04X", defaultNetIdleTalkgroup);
+        }
+
         LogInfo("    Ignore Affiliation Check: %s", ignoreAffiliationCheck ? "yes" : "no");
+        LogInfo("    Legacy Group Registration: %s", legacyGroupReg ? "yes" : "no");
         LogInfo("    Notify Control: %s", notifyCC ? "yes" : "no");
         LogInfo("    Silence Threshold: %u (%.1f%%)", silenceThreshold, float(silenceThreshold) / 1.41F);
         LogInfo("    Frame Loss Threshold: %u", frameLossThreshold);

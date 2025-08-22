@@ -33,6 +33,7 @@ using namespace dmr::packet;
 //  Macros
 // ---------------------------------------------------------------------------
 
+// Helper macro to check if the host is authoritative and the destination ID is permitted.
 #define CHECK_AUTHORITATIVE(_DST_ID)                                                    \
     if (!m_slot->m_authoritative && m_slot->m_permittedDstId != _DST_ID) {              \
         if (!g_disableNonAuthoritativeLogging)                                          \
@@ -41,39 +42,11 @@ using namespace dmr::packet;
         return false;                                                                   \
     }
 
+// Helper macro to check if the host is authoritative and the destination ID is permitted.
 #define CHECK_NET_AUTHORITATIVE(_DST_ID)                                                \
     if (!m_slot->m_authoritative && m_slot->m_permittedDstId != _DST_ID) {              \
         return;                                                                         \
     }
-
-#define CHECK_TRAFFIC_COLLISION(_DST_ID)                                                \
-    if (m_slot->m_netState != RS_NET_IDLE && _DST_ID == m_slot->m_netLastDstId) {       \
-        LogWarning(LOG_RF, "DMR Slot %u, Traffic collision detect, preempting new RF traffic to existing network traffic!", m_slot->m_slotNo); \
-        m_slot->m_rfState = RS_RF_LISTENING;                                            \
-        return false;                                                                   \
-    }                                                                                   \
-    if (m_slot->m_enableTSCC && _DST_ID == m_slot->m_netLastDstId) {                    \
-        if (m_slot->m_affiliations->isNetGranted(_DST_ID)) {                            \
-            LogWarning(LOG_RF, "DMR Slot %u, Traffic collision detect, preempting new RF traffic to existing granted network traffic (Are we in a voting condition?)", m_slot->m_slotNo); \
-            m_slot->m_rfState = RS_RF_LISTENING;                                        \
-            return false;                                                               \
-        }                                                                               \
-    }
-
-// Don't process network frames if the destination ID's don't match and the network TG hang
-// timer is running, and don't process network frames if the RF modem isn't in a listening state
-#define CHECK_NET_TRAFFIC_COLLISION(_DST_ID)                                            \
-    if (m_slot->m_rfLastDstId != 0U) {                                                  \
-        if (m_slot->m_rfLastDstId != _DST_ID && (m_slot->m_rfTGHang.isRunning() && !m_slot->m_rfTGHang.hasExpired())) { \
-            return;                                                                     \
-        }                                                                               \
-    }                                                                                   \
-                                                                                        \
-    if (m_slot->m_netLastDstId != 0U) {                                                 \
-        if (m_slot->m_netLastDstId != _DST_ID && (m_slot->m_netTGHang.isRunning() && !m_slot->m_netTGHang.hasExpired())) { \
-            return;                                                                     \
-        }                                                                               \
-    }                                                                                   \
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -109,7 +82,9 @@ bool Voice::process(uint8_t* data, uint32_t len)
             FLCO::E flco = lc->getFLCO();
 
             CHECK_AUTHORITATIVE(dstId);
-            CHECK_TRAFFIC_COLLISION(dstId);
+
+            if (checkRFTrafficCollision(dstId))
+                return false;
 
             if (m_slot->m_tsccPayloadDstId != 0U && m_slot->m_tsccPayloadActRetry.isRunning()) {
                 m_slot->m_tsccPayloadActRetry.stop();
@@ -144,6 +119,25 @@ bool Voice::process(uint8_t* data, uint32_t len)
 
                     m_slot->m_rfState = RS_RF_REJECTED;
                     return false;
+                }
+
+                // are we auto-registering legacy radios to groups?
+                if (m_slot->m_legacyGroupReg) {
+                    if (!m_slot->m_affiliations->isGroupAff(srcId, dstId)) {
+                        // update dynamic unit registration table
+                        if (!m_slot->m_affiliations->isUnitReg(srcId)) {
+                            m_slot->m_affiliations->unitReg(srcId);
+                        }
+
+                        if (m_slot->m_network != nullptr)
+                            m_slot->m_network->announceUnitRegistration(srcId);
+
+                        // update dynamic affiliation table
+                        m_slot->m_affiliations->groupAff(srcId, dstId);
+
+                        if (m_slot->m_network != nullptr)
+                            m_slot->m_network->announceGroupAffiliation(srcId, dstId);
+                    }
                 }
             }
 
@@ -201,7 +195,9 @@ bool Voice::process(uint8_t* data, uint32_t len)
 
             uint8_t controlByte = 0U;
             if (m_slot->m_convNetGrantDemand)
-                controlByte |= 0x80U;                                            // Grant Demand Flag
+                controlByte |= network::NET_CTRL_GRANT_DEMAND;                      // Grant Demand Flag
+            if (flco == FLCO::PRIVATE)
+                controlByte |= network::NET_CTRL_U2U;                               // Unit-to-Unit Flag
 
             m_slot->writeNetwork(data, DataType::VOICE_LC_HEADER, controlByte);
 
@@ -278,12 +274,13 @@ bool Voice::process(uint8_t* data, uint32_t len)
 
             uint32_t errors = 0U;
             uint8_t fid = m_slot->m_rfLC->getFID();
-            if (fid == FID_ETSI || fid == FID_DMRA) {
-                errors = m_fec.regenerateDMR(data + 2U);
-                if (m_verbose) {
-                    LogMessage(LOG_RF, DMR_DT_VOICE_SYNC ", audio, slot = %u, srcId = %u, dstId = %u, seqNo = 0, errs = %u/141 (%.1f%%)", m_slot->m_slotNo, m_slot->m_rfLC->getSrcId(), m_slot->m_rfLC->getDstId(),
-                        errors, float(errors) / 1.41F);
-                }
+            bool pf = m_slot->m_rfLC->getPF();
+            if (fid == FID_ETSI || fid == FID_MOT || fid == FID_KENWOOD) {
+                if (fid == FID_KENWOOD && pf)
+                    errors = 0U; // bryanb: for what we are assuming is Kenwood, these are encrypted frames
+                                 //     don't bother trying to regenerate or perform FEC
+                else
+                    errors = m_fec.regenerateDMR(data + 2U);
 
                 if (errors > m_slot->m_silenceThreshold) {
                     insertNullAudio(data + 2U);
@@ -293,6 +290,11 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 }
 
                 m_slot->m_rfErrs += errors;
+            }
+
+            if (m_verbose) {
+                LogMessage(LOG_RF, DMR_DT_VOICE_SYNC ", audio, slot = %u, srcId = %u, dstId = %u, seqNo = 0, fid = $%02X, pf = %u, errs = %u/141 (%.1f%%)", m_slot->m_slotNo, m_slot->m_rfLC->getSrcId(), m_slot->m_rfLC->getDstId(),
+                    fid, pf, errors, float(errors) / 1.41F);
             }
 
             m_slot->m_rfBits += 141U;
@@ -340,12 +342,13 @@ bool Voice::process(uint8_t* data, uint32_t len)
 
             uint32_t errors = 0U;
             uint8_t fid = m_slot->m_rfLC->getFID();
-            if (fid == FID_ETSI || fid == FID_DMRA) {
-                errors = m_fec.regenerateDMR(data + 2U);
-                if (m_verbose) {
-                    LogMessage(LOG_RF, DMR_DT_VOICE ", audio, slot = %u, srcId = %u, dstId = %u, seqNo = %u, errs = %u/141 (%.1f%%)", m_slot->m_slotNo, m_slot->m_rfLC->getSrcId(), m_slot->m_rfLC->getDstId(),
-                        m_rfN, errors, float(errors) / 1.41F);
-                }
+            bool pf = m_slot->m_rfLC->getPF();
+            if (fid == FID_ETSI || fid == FID_MOT || fid == FID_KENWOOD) {
+                if (fid == FID_KENWOOD && pf)
+                    errors = 0U; // bryanb: for what we are assuming is Kenwood, these are encrypted frames
+                                 //     don't bother trying to regenerate or perform FEC
+                else
+                    errors = m_fec.regenerateDMR(data + 2U);
 
                 if (errors > m_slot->m_silenceThreshold) {
                     // get the LCSS from the EMB
@@ -362,6 +365,11 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 }
 
                 m_slot->m_rfErrs += errors;
+            }
+
+            if (m_verbose) {
+                LogMessage(LOG_RF, DMR_DT_VOICE ", audio, slot = %u, srcId = %u, dstId = %u, seqNo = %u, fid = $%02X, pf = %u, errs = %u/141 (%.1f%%)", m_slot->m_slotNo, m_slot->m_rfLC->getSrcId(), m_slot->m_rfLC->getDstId(),
+                    m_rfN, fid, pf,  errors, float(errors) / 1.41F);
             }
 
             m_slot->m_rfBits += 141U;
@@ -505,7 +513,9 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 FLCO::E flco = lc->getFLCO();
 
                 CHECK_AUTHORITATIVE(dstId);
-                CHECK_TRAFFIC_COLLISION(dstId);
+
+                if (checkRFTrafficCollision(dstId))
+                    return false;
 
                 // validate the source RID
                 if (!acl::AccessControl::validateSrcId(srcId)) {
@@ -573,7 +583,9 @@ bool Voice::process(uint8_t* data, uint32_t len)
 
                 uint8_t controlByte = 0U;
                 if (m_slot->m_convNetGrantDemand)
-                    controlByte |= 0x80U;                                            // Grant Demand Flag
+                    controlByte |= network::NET_CTRL_GRANT_DEMAND;                  // Grant Demand Flag
+                if (flco == FLCO::PRIVATE)
+                    controlByte |= network::NET_CTRL_U2U;                           // Unit-to-Unit Flag
 
                 m_slot->writeNetwork(start, DataType::VOICE_LC_HEADER, controlByte);
 
@@ -591,12 +603,13 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 // send the original audio frame out
                 uint32_t errors = 0U;
                 uint8_t fid = m_slot->m_rfLC->getFID();
-                if (fid == FID_ETSI || fid == FID_DMRA) {
-                    errors = m_fec.regenerateDMR(data + 2U);
-                    if (m_verbose) {
-                        LogMessage(LOG_RF, DMR_DT_VOICE ", audio, slot = %u, sequence no = %u, errs = %u/141 (%.1f%%)",
-                            m_slot->m_slotNo, m_rfN, errors, float(errors) / 1.41F);
-                    }
+                bool pf = m_slot->m_rfLC->getPF();
+                if (fid == FID_ETSI || fid == FID_MOT || fid == FID_KENWOOD) {
+                    if (fid == FID_KENWOOD && pf)
+                        errors = 0U; // bryanb: for what we are assuming is Kenwood, these are encrypted frames
+                                    //     don't bother trying to regenerate or perform FEC
+                    else
+                        errors = m_fec.regenerateDMR(data + 2U);
 
                     if (errors > m_slot->m_silenceThreshold) {
                         // get the LCSS from the EMB
@@ -613,6 +626,11 @@ bool Voice::process(uint8_t* data, uint32_t len)
                     }
 
                     m_slot->m_rfErrs += errors;
+                }
+
+                if (m_verbose) {
+                    LogMessage(LOG_RF, DMR_DT_VOICE ", audio, slot = %u, sequence no = %u, fid = $%02X, pf = %u, errs = %u/141 (%.1f%%)",
+                        m_slot->m_slotNo, m_rfN, fid, pf, errors, float(errors) / 1.41F);
                 }
 
                 m_slot->m_rfBits += 141U;
@@ -659,8 +677,6 @@ void Voice::processNetwork(const data::NetData& dmrData)
         if (m_slot->m_netState == RS_NET_AUDIO)
             return;
 
-        
-
         lc::FullLC fullLC;
         std::unique_ptr<lc::LC> lc = fullLC.decode(data + 2U, DataType::VOICE_LC_HEADER);
         if (lc == nullptr) {
@@ -673,7 +689,9 @@ void Voice::processNetwork(const data::NetData& dmrData)
         FLCO::E flco = lc->getFLCO();
 
         CHECK_NET_AUTHORITATIVE(dstId);
-        CHECK_NET_TRAFFIC_COLLISION(dstId);
+
+        if (checkNetTrafficCollision(dstId))
+            return;
 
         if (m_slot->m_tsccPayloadDstId != 0U && m_slot->m_tsccPayloadActRetry.isRunning()) {
             m_slot->m_tsccPayloadActRetry.stop();
@@ -763,7 +781,9 @@ void Voice::processNetwork(const data::NetData& dmrData)
             uint32_t dstId = lc->getDstId();
 
             CHECK_NET_AUTHORITATIVE(dstId);
-            CHECK_NET_TRAFFIC_COLLISION(dstId);
+
+            if (checkNetTrafficCollision(dstId))
+                return;
 
             m_slot->m_netLC = std::move(lc);
 
@@ -935,12 +955,18 @@ void Voice::processNetwork(const data::NetData& dmrData)
 
         if (m_slot->m_netState == RS_NET_AUDIO) {
             uint8_t fid = m_slot->m_netLC->getFID();
-            if (fid == FID_ETSI || fid == FID_DMRA) {
-                m_slot->m_netErrs += m_fec.regenerateDMR(data + 2U);
-                if (m_verbose) {
-                    LogMessage(LOG_NET, "DMR Slot %u, VOICE_SYNC audio, sequence no = %u, errs = %u/141 (%.1f%%)",
-                        m_slot->m_slotNo, m_netN, m_slot->m_netErrs, float(m_slot->m_netErrs) / 1.41F);
-                }
+            bool pf = m_slot->m_netLC->getPF();
+            if (fid == FID_ETSI || fid == FID_MOT || fid == FID_KENWOOD) {
+                if (fid == FID_KENWOOD && pf)
+                    m_slot->m_netErrs = 0U; // bryanb: for what we are assuming is Kenwood, these are encrypted frames
+                                            //     don't bother trying to regenerate or perform FEC
+                else
+                    m_slot->m_netErrs += m_fec.regenerateDMR(data + 2U);
+            }
+
+            if (m_verbose) {
+                LogMessage(LOG_NET, "DMR Slot %u, VOICE_SYNC audio, sequence no = %u, fid = $%02X, pf = %u, errs = %u/141 (%.1f%%)",
+                    m_slot->m_slotNo, m_netN, fid, pf, m_slot->m_netErrs, float(m_slot->m_netErrs) / 1.41F);
             }
 
             if (m_netN >= 5U) {
@@ -985,13 +1011,20 @@ void Voice::processNetwork(const data::NetData& dmrData)
             return;
 
         uint8_t fid = m_slot->m_netLC->getFID();
-        if (fid == FID_ETSI || fid == FID_DMRA) {
-            m_slot->m_netErrs += m_fec.regenerateDMR(data + 2U);
-            if (m_verbose) {
-                LogMessage(LOG_NET, DMR_DT_VOICE ", audio, slot = %u, srcId = %u, dstId = %u, seqNo = %u, errs = %u/141 (%.1f%%)", m_slot->m_slotNo, m_slot->m_netLC->getSrcId(), m_slot->m_netLC->getDstId(),
-                    m_netN, m_slot->m_netErrs, float(m_slot->m_netErrs) / 1.41F);
-            }
+        bool pf = m_slot->m_netLC->getPF();
+        if (fid == FID_ETSI || fid == FID_MOT || fid == FID_KENWOOD) {
+            if (fid == FID_KENWOOD && pf)
+                m_slot->m_netErrs = 0U; // bryanb: for what we are assuming is Kenwood, these are encrypted frames
+                                        //     don't bother trying to regenerate or perform FEC
+            else
+                m_slot->m_netErrs += m_fec.regenerateDMR(data + 2U);
         }
+
+        if (m_verbose) {
+            LogMessage(LOG_NET, DMR_DT_VOICE ", audio, slot = %u, srcId = %u, dstId = %u, seqNo = %u, fid = $%02X, pf = %u, errs = %u/141 (%.1f%%)", m_slot->m_slotNo, m_slot->m_netLC->getSrcId(), m_slot->m_netLC->getDstId(),
+                m_netN, fid, pf, m_slot->m_netErrs, float(m_slot->m_netErrs) / 1.41F);
+        }
+
         m_slot->m_netBits += 141U;
         m_slot->m_netTGHang.start();
 
@@ -1160,6 +1193,62 @@ Voice::~Voice()
     delete[] m_netEmbeddedData;
 }
 
+/* Helper to perform RF traffic collision checking. */
+
+bool Voice::checkRFTrafficCollision(uint32_t dstId)
+{
+    // don't process RF frames if the network isn't in a idle state and the RF destination is the network destination
+    if (m_slot->m_netState != RS_NET_IDLE && dstId == m_slot->m_netLastDstId) {
+        LogWarning(LOG_RF, "DMR Slot %u, Traffic collision detect, preempting new RF traffic to existing network traffic!", m_slot->m_slotNo);
+        m_slot->m_rfState = RS_RF_LISTENING;
+        return true;
+    }
+
+    if (m_slot->m_enableTSCC && dstId == m_slot->m_netLastDstId) {
+        if (m_slot->m_affiliations->isNetGranted(dstId)) {
+            LogWarning(LOG_RF, "DMR Slot %u, Traffic collision detect, preempting new RF traffic to existing granted network traffic (Are we in a voting condition?)", m_slot->m_slotNo);
+            m_slot->m_rfState = RS_RF_LISTENING;
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/* Helper to perform network traffic collision checking. */
+
+bool Voice::checkNetTrafficCollision(uint32_t dstId)
+{
+    // don't process network frames if the destination ID's don't match and the RF TG hang timer is running
+    if (m_slot->m_rfLastDstId != 0U) {
+        if (m_slot->m_rfLastDstId != dstId && (m_slot->m_rfTGHang.isRunning() && !m_slot->m_rfTGHang.hasExpired())) {
+            return true;
+        }
+    }
+
+    // bryanb: possible fix for a "tail ride" condition where network traffic immediately follows RF traffic *while*
+    // the RF TG hangtimer is running
+    if (m_slot->m_rfTGHang.isRunning() && !m_slot->m_rfTGHang.hasExpired()) {
+        m_slot->m_rfTGHang.stop();
+    }
+
+    // don't process network frames if the RF TG hang timer isn't running, the default net idle talkgroup is set and
+    // the destination ID doesn't match the default net idle talkgroup
+    if (m_slot->m_defaultNetIdleTalkgroup != 0U && dstId != 0U && !m_slot->m_rfTGHang.isRunning()) {
+        if (m_slot->m_defaultNetIdleTalkgroup != dstId) {
+            return true;
+        }
+    }
+
+    if (m_slot->m_netLastDstId != 0U) {
+        if (m_slot->m_netLastDstId != dstId && (m_slot->m_netTGHang.isRunning() && !m_slot->m_netTGHang.hasExpired())) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 /* */
 
 void Voice::logGPSPosition(const uint32_t srcId, const uint8_t* data)
@@ -1284,7 +1373,7 @@ void Voice::insertSilence(uint32_t count)
 
     for (uint32_t i = 0U; i < count; i++) {
         // only use our silence frame if its AMBE audio data
-        if (fid == FID_ETSI || fid == FID_DMRA) {
+        if (fid == FID_ETSI || fid == FID_MOT || fid == FID_KENWOOD) {
             if (i > 0U) {
                 ::memcpy(data, SILENCE_DATA, DMR_FRAME_LENGTH_BYTES + 2U);
                 m_lastFrameValid = false;
