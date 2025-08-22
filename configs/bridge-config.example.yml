@@ -179,3 +179,9 @@ system:
     trace: false
     # Flag indicating whether or not debug logging is enabled.
     debug: false
+
+    # RTS PTT Configuration
+    # Flag indicating whether RTS PTT control is enabled.
+    rtsPttEnable: false
+    # Serial port device for RTS PTT control (e.g., /dev/ttyUSB0).
+    rtsPttPort: "/dev/ttyUSB0"

@@ -32,6 +32,7 @@
 #include "audio/miniaudio.h"
 #include "mdc/mdc_decode.h"
 #include "network/PeerNetwork.h"
+#include "RtsPttController.h"
 
 #include <string>
 #include <mutex>
@@ -278,6 +279,12 @@ private:
     bool m_trace;
     bool m_debug;
 
+    // RTS PTT Control
+    bool m_rtsPttEnable;
+    std::string m_rtsPttPort;
+    RtsPttController* m_rtsPttController;
+    bool m_rtsPttActive;
+
     uint16_t m_rtpSeqNo;
     uint32_t m_rtpTimestamp;
 
@@ -516,6 +523,20 @@ private:
      * @param keyLength Length of key in bytes.
      */
     void processTEKResponse(p25::kmm::KeyItem* ki, uint8_t algId, uint8_t keyLength);
+
+    /**
+     * @brief Helper to initialize RTS PTT control.
+     * @returns bool True, if RTS PTT was initialized successfully, otherwise false.
+     */
+    bool initializeRtsPtt();
+    /**
+     * @brief Helper to assert RTS PTT (start transmission).
+     */
+    void assertRtsPtt();
+    /**
+     * @brief Helper to deassert RTS PTT (stop transmission).
+     */
+    void deassertRtsPtt();
 
     /**
      * @brief Entry point to audio processing thread.
