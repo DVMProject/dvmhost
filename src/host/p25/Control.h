@@ -294,6 +294,8 @@ namespace p25
         bool m_isModemDFSI;
         network::Network* m_network;
 
+        bool m_ignorePDUCRC;
+
         bool m_inhibitUnauth;
         bool m_legacyGroupGrnt;
         bool m_legacyGroupReg;

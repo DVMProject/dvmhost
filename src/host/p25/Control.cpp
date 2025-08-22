@@ -65,6 +65,7 @@ Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t q
     m_modem(modem),
     m_isModemDFSI(false),
     m_network(network),
+    m_ignorePDUCRC(false),
     m_inhibitUnauth(false),
     m_legacyGroupGrnt(true),
     m_legacyGroupReg(false),
@@ -276,6 +277,8 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
     if (m_llaK != nullptr) {
         generateLLA_AM1_Parameters();
     }
+
+    m_ignorePDUCRC = p25Protocol["ignoreDataCRC"].as<bool>(false);
 
     m_inhibitUnauth = p25Protocol["inhibitUnauthorized"].as<bool>(false);
     m_legacyGroupGrnt = p25Protocol["legacyGroupGrnt"].as<bool>(true);
@@ -545,6 +548,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
 
         LogInfo("    SNDCP Support: %s", m_sndcpSupport ? "yes" : "no");
 
+        LogInfo("    Ignore Data PDU CRC Error: %s", m_ignorePDUCRC ? "yes" : "no");
         LogInfo("    Ignore Affiliation Check: %s", m_ignoreAffiliationCheck ? "yes" : "no");
         LogInfo("    No Status ACK: %s", m_control->m_noStatusAck ? "yes" : "no");
         LogInfo("    No Message ACK: %s", m_control->m_noMessageAck ? "yes" : "no");

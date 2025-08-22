@@ -290,7 +290,11 @@ bool Data::process(uint8_t* data, uint32_t len)
                     bool crcRet = edac::CRC::checkCRC32(m_rfPduUserData, m_rfPduUserDataLength);
                     if (!crcRet) {
                         LogWarning(LOG_RF, P25_PDU_STR ", failed CRC-32 check, blocks %u, len %u", m_rfDataHeader.getBlocksToFollow(), m_rfPduUserDataLength);
-                        writeRF_PDU_Ack_Response(PDUAckClass::NACK, PDUAckType::NACK_PACKET_CRC, m_rfDataHeader.getNs(), (m_rfExtendedAddress) ? m_rfDataHeader.getSrcLLId() : m_rfDataHeader.getLLId());
+                        if (!m_p25->m_ignorePDUCRC) {
+                            uint8_t sap = (m_rfExtendedAddress) ? m_rfDataHeader.getEXSAP() : m_rfDataHeader.getSAP();
+                            if (sap != PDUSAP::TRUNK_CTRL) // ignore CRC errors on TSBK data
+                                writeRF_PDU_Ack_Response(PDUAckClass::NACK, PDUAckType::NACK_PACKET_CRC, m_rfDataHeader.getNs(), (m_rfExtendedAddress) ? m_rfDataHeader.getSrcLLId() : m_rfDataHeader.getLLId());
+                        }
                     }
                 }
 

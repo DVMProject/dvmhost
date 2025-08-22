@@ -275,6 +275,8 @@ protocols:
         dumpDataPacket: false
         # Flag indicating whether or not this host will repeat P25 data traffic.
         repeatDataPacket: true
+        # Flag indicating whether or not the host will ignore CRC errors in P25 PDU data packets.
+        ignoreDataCRC: false
         # Flag indicating whether verbose dumping of P25 TSBK data is enabled.
         dumpTsbkData: false
         # Amount of time to hang after a voice call.
