@@ -113,6 +113,13 @@ void audioCallback(ma_device* device, void* output, const void* input, ma_uint32
             pcm[pcmIdx + 1] = (uint8_t)((samples[smpIdx] >> 8) & 0xFF);
             pcmIdx += 2;
         }
+
+        // Assert RTS PTT when audio is being sent to output
+        bridge->assertRtsPtt();
+    }
+    else {
+        // Deassert RTS PTT when no audio is being sent to output
+        bridge->deassertRtsPtt();
     }
 }
 
@@ -243,6 +250,10 @@ HostBridge::HostBridge(const std::string& confFile) :
     m_running(false),
     m_trace(false),
     m_debug(false),
+    m_rtsPttEnable(false),
+    m_rtsPttPort(),
+    m_rtsPttController(nullptr),
+    m_rtsPttActive(false),
     m_rtpSeqNo(0U),
     m_rtpTimestamp(INVALID_TS),
     m_usrpSeqNo(0U)
@@ -283,6 +294,12 @@ HostBridge::HostBridge(const std::string& confFile) :
 
 HostBridge::~HostBridge()
 {
+    if (m_rtsPttController != nullptr) {
+        m_rtsPttController->close();
+        delete m_rtsPttController;
+        m_rtsPttController = nullptr;
+    }
+
     delete[] m_ambeBuffer;
     delete[] m_netLDU1;
     delete[] m_netLDU2;
@@ -387,6 +404,11 @@ int HostBridge::run()
 
     // initialize peer networking
     ret = createNetwork();
+    if (!ret)
+        return EXIT_FAILURE;
+
+    // initialize RTS PTT control
+    ret = initializeRtsPtt();
     if (!ret)
         return EXIT_FAILURE;
 
@@ -927,6 +949,10 @@ bool HostBridge::readParams()
     m_trace = systemConf["trace"].as<bool>(false);
     m_debug = systemConf["debug"].as<bool>(false);
 
+    // RTS PTT Configuration
+    m_rtsPttEnable = systemConf["rtsPttEnable"].as<bool>(false);
+    m_rtsPttPort = systemConf["rtsPttPort"].as<std::string>("/dev/ttyUSB0");
+
     std::string txModeStr = "DMR";
     if (m_txMode == TX_MODE_P25)
         txModeStr = "P25";
@@ -952,6 +978,10 @@ bool HostBridge::readParams()
     LogInfo("    Grant Demands: %s", m_grantDemand ? "yes" : "no");
     LogInfo("    Local Audio: %s", m_localAudio ? "yes" : "no");
     LogInfo("    UDP Audio: %s", m_udpAudio ? "yes" : "no");
+    LogInfo("    RTS PTT Enable: %s", m_rtsPttEnable ? "yes" : "no");
+    if (m_rtsPttEnable) {
+        LogInfo("    RTS PTT Port: %s", m_rtsPttPort.c_str());
+    }
 
     if (m_debug) {
         LogInfo("    Debug: yes");
@@ -1568,6 +1598,8 @@ void HostBridge::decodeDMRAudioFrame(uint8_t* ambe, uint32_t srcId, uint32_t dst
 
         if (m_localAudio) {
             m_outputAudio.addData(samples, AUDIO_SAMPLES_LENGTH);
+            // Assert RTS PTT when audio is being sent to output
+            assertRtsPtt();
         }
 
         if (m_udpAudio) {
@@ -2223,6 +2255,8 @@ void HostBridge::decodeP25AudioFrame(uint8_t* ldu, uint32_t srcId, uint32_t dstI
 
         if (m_localAudio) {
             m_outputAudio.addData(samples, AUDIO_SAMPLES_LENGTH);
+            // Assert RTS PTT when audio is being sent to output
+            assertRtsPtt();
         }
 
         if (m_udpAudio) {
@@ -3689,4 +3723,54 @@ void* HostBridge::threadCallWatchdog(void* arg)
     }
 
     return nullptr;
+}
+
+/* Helper to initialize RTS PTT control. */
+
+bool HostBridge::initializeRtsPtt()
+{
+    if (!m_rtsPttEnable)
+        return true;
+
+    if (m_rtsPttPort.empty()) {
+        ::LogError(LOG_HOST, "RTS PTT port is not specified");
+        return false;
+    }
+
+    m_rtsPttController = new RtsPttController(m_rtsPttPort);
+    if (!m_rtsPttController->open()) {
+        ::LogError(LOG_HOST, "Failed to open RTS PTT port %s", m_rtsPttPort.c_str());
+        delete m_rtsPttController;
+        m_rtsPttController = nullptr;
+        return false;
+    }
+
+    ::LogInfo(LOG_HOST, "RTS PTT Controller initialized on %s", m_rtsPttPort.c_str());
+    return true;
+}
+
+/* Helper to assert RTS PTT (start transmission). */
+
+void HostBridge::assertRtsPtt()
+{
+    if (!m_rtsPttEnable || m_rtsPttController == nullptr || m_rtsPttActive)
+        return;
+
+    if (m_rtsPttController->setPTT()) {
+        m_rtsPttActive = true;
+        ::LogDebug(LOG_HOST, "RTS PTT asserted");
+    }
+}
+
+/* Helper to deassert RTS PTT (stop transmission). */
+
+void HostBridge::deassertRtsPtt()
+{
+    if (!m_rtsPttEnable || m_rtsPttController == nullptr || !m_rtsPttActive)
+        return;
+
+    if (m_rtsPttController->clearPTT()) {
+        m_rtsPttActive = false;
+        ::LogDebug(LOG_HOST, "RTS PTT deasserted");
+    }
 }

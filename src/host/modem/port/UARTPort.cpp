@@ -544,3 +544,63 @@ bool UARTPort::setTermios()
     m_isOpen = true;
     return true;
 }
+
+/* Sets RTS signal high (asserts RTS). */
+
+bool UARTPort::setRTS()
+{
+    if (!m_isOpen)
+        return false;
+
+#if defined(_WIN32)
+    if (::EscapeCommFunction(m_fd, SETRTS) == 0) {
+        ::LogError(LOG_HOST, "Cannot set RTS for %s, err=%04lx", m_device.c_str(), ::GetLastError());
+        return false;
+    }
+#else
+    uint32_t y;
+    if (::ioctl(m_fd, TIOCMGET, &y) < 0) {
+        ::LogError(LOG_HOST, "Cannot get the control attributes for %s", m_device.c_str());
+        return false;
+    }
+
+    y |= TIOCM_RTS;
+
+    if (::ioctl(m_fd, TIOCMSET, &y) < 0) {
+        ::LogError(LOG_HOST, "Cannot set RTS for %s", m_device.c_str());
+        return false;
+    }
+#endif // defined(_WIN32)
+
+    return true;
+}
+
+/* Sets RTS signal low (clears RTS). */
+
+bool UARTPort::clearRTS()
+{
+    if (!m_isOpen)
+        return false;
+
+#if defined(_WIN32)
+    if (::EscapeCommFunction(m_fd, CLRRTS) == 0) {
+        ::LogError(LOG_HOST, "Cannot clear RTS for %s, err=%04lx", m_device.c_str(), ::GetLastError());
+        return false;
+    }
+#else
+    uint32_t y;
+    if (::ioctl(m_fd, TIOCMGET, &y) < 0) {
+        ::LogError(LOG_HOST, "Cannot get the control attributes for %s", m_device.c_str());
+        return false;
+    }
+
+    y &= ~TIOCM_RTS;
+
+    if (::ioctl(m_fd, TIOCMSET, &y) < 0) {
+        ::LogError(LOG_HOST, "Cannot clear RTS for %s", m_device.c_str());
+        return false;
+    }
+#endif // defined(_WIN32)
+
+    return true;
+}
