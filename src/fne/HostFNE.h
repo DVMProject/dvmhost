@@ -173,12 +173,6 @@ private:
      * @returns void* (Ignore)
      */
     static void* threadVirtualNetworking(void* arg);
-    /**
-     * @brief Entry point to virtual networking clocking thread.
-     * @param arg Instance of the thread_t structure.
-     * @returns void* (Ignore)
-     */
-    static void* threadVirtualNetworkingClock(void* arg);
 #endif // !defined(_WIN32)
     /**
      * @brief Processes DMR peer network traffic.

@@ -85,27 +85,25 @@ namespace network
 
             private:
                 FNENetwork* m_network;
-                TagP25Data *m_tag;
+                TagP25Data* m_tag;
 
                 /**
                  * @brief Represents a queued data frame from the VTUN.
                  */
-                class VTUNDataFrame {
+                class QueuedDataFrame {
                 public:
-                    uint32_t srcHWAddr;         //! Source Hardware Address
-                    uint32_t srcProtoAddr;      //! Source Protocol Address
-                    uint32_t tgtHWAddr;         //! Target Hardware Address
-                    uint32_t tgtProtoAddr;      //! Target Protocol Address
+                    p25::data::DataHeader* header;  //! Instance of a PDU data header.
+                    bool extendedAddress;           //! Flag indicating whether or not to extended addressing is in use.
+                    uint32_t llId;                  //! Logical Link ID
+                    uint32_t tgtProtoAddr;          //! Target Protocol Address
 
-                    uint8_t* buffer;            //! Raw data buffer
-                    uint32_t bufferLen;         //! Length of raw data buffer
-                    
-                    uint16_t pktLen;            //! Packet Length
-                    uint8_t proto;              //! Packet Protocol
+                    uint8_t* userData;              //! Raw data buffer
+                    uint32_t userDataLen;           //! Length of raw data buffer
 
-                    uint64_t timestamp;         //! Timestamp in milliseconds
+                    uint64_t timestamp;             //! Timestamp in milliseconds
+                    uint8_t retryCnt;               //! Packet Retry Counter
                 };
-                concurrent::deque<VTUNDataFrame*> m_dataFrames;
+                concurrent::deque<QueuedDataFrame*> m_queuedFrames;
 
                 /**
                  * @brief Represents the receive status of a call.
@@ -178,8 +176,6 @@ namespace network
                 std::unordered_map<uint32_t, uint8_t> m_suSendSeq;
 
                 bool m_debug;
-
-                static std::timed_mutex m_vtunMutex;
 
                 /**
                  * @brief Helper to dispatch PDU user data.

@@ -217,8 +217,6 @@ int HostFNE::run()
 #if !defined(_WIN32)
     if (!Thread::runAsThread(this, threadVirtualNetworking))
         return EXIT_FAILURE;
-    if (!Thread::runAsThread(this, threadVirtualNetworkingClock))
-        return EXIT_FAILURE;
 #endif // !defined(_WIN32)
     /*
     ** Main execution loop
@@ -255,6 +253,20 @@ int HostFNE::run()
                 peerNetwork->clock(ms);
             }
         }
+
+#if !defined(_WIN32)
+        if (m_vtunEnabled) {
+            switch (m_packetDataMode) {
+            case PacketDataMode::DMR:
+                // TODO: not supported yet
+                break;
+
+            case PacketDataMode::PROJECT25:
+                m_network->p25TrafficHandler()->packetData()->clock(ms);
+                break;
+            }
+        }
+#endif // !defined(_WIN32)
 
         if (ms < 2U)
             Thread::sleep(1U);
@@ -976,67 +988,6 @@ void* HostFNE::threadVirtualNetworking(void* arg)
                         fne->m_network->p25TrafficHandler()->packetData()->processPacketFrame(packet, DEFAULT_MTU_SIZE);
                         break;
                     }
-                }
-
-                if (ms < THREAD_CYCLE_THRESHOLD)
-                    Thread::sleep(THREAD_CYCLE_THRESHOLD);
-            }
-        }
-
-        LogMessage(LOG_HOST, "[STOP] %s", threadName.c_str());
-        delete th;
-    }
-
-    return nullptr;
-}
-
-/* Entry point to virtual networking clocking thread. */
-
-void* HostFNE::threadVirtualNetworkingClock(void* arg)
-{
-    thread_t* th = (thread_t*)arg;
-    if (th != nullptr) {
-        ::pthread_detach(th->thread);
-
-        std::string threadName("fne:vt-clock");
-        HostFNE* fne = static_cast<HostFNE*>(th->obj);
-        if (fne == nullptr) {
-            g_killed = true;
-            LogError(LOG_HOST, "[FAIL] %s", threadName.c_str());
-        }
-
-        if (g_killed) {
-            delete th;
-            return nullptr;
-        }
-
-        if (!fne->m_vtunEnabled) {
-            delete th;
-            return nullptr;
-        }
-
-        LogMessage(LOG_HOST, "[ OK ] %s", threadName.c_str());
-#ifdef _GNU_SOURCE
-        ::pthread_setname_np(th->thread, threadName.c_str());
-#endif // _GNU_SOURCE
-
-        if (fne->m_tun != nullptr) {
-            StopWatch stopWatch;
-            stopWatch.start();
-
-            while (!g_killed) {
-                uint32_t ms = stopWatch.elapsed();
-                stopWatch.start();
-
-                // clock traffic handler
-                switch (fne->m_packetDataMode) {
-                case PacketDataMode::DMR:
-                    // TODO: not supported yet
-                    break;
-
-                case PacketDataMode::PROJECT25:
-                    fne->m_network->p25TrafficHandler()->packetData()->clock(ms);
-                    break;
                 }
 
                 if (ms < THREAD_CYCLE_THRESHOLD)

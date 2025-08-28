@@ -41,12 +41,7 @@ using namespace p25::sndcp;
 // ---------------------------------------------------------------------------
 
 const uint8_t DATA_CALL_COLL_TIMEOUT = 60U;
-
-// ---------------------------------------------------------------------------
-//  Static Class Members
-// ---------------------------------------------------------------------------
-
-std::timed_mutex P25PacketData::m_vtunMutex;
+const uint8_t MAX_PKT_RETRY_CNT = 5U;
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -57,7 +52,7 @@ std::timed_mutex P25PacketData::m_vtunMutex;
 P25PacketData::P25PacketData(FNENetwork* network, TagP25Data* tag, bool debug) :
     m_network(network),
     m_tag(tag),
-    m_dataFrames(),
+    m_queuedFrames(),
     m_status(),
     m_arpTable(),
     m_readyForNextPkt(),
@@ -371,30 +366,63 @@ void P25PacketData::processPacketFrame(const uint8_t* data, uint32_t len, bool a
     Utils::dump(1U, "P25, P25PacketData::processPacketFrame() packet", data, pktLen);
 #endif
 
-    VTUNDataFrame* dataFrame = new VTUNDataFrame();
-    dataFrame->buffer = new uint8_t[len];
-    ::memcpy(dataFrame->buffer, data, len);
-    dataFrame->bufferLen = len;
-    dataFrame->pktLen = pktLen;
-    dataFrame->proto = proto;
-
     uint32_t dstLlId = getLLIdAddress(Utils::reverseEndian(ipHeader->ip_dst.s_addr));
 
-    dataFrame->srcHWAddr = WUID_FNE;
-    dataFrame->srcProtoAddr = Utils::reverseEndian(ipHeader->ip_src.s_addr);
-    dataFrame->tgtHWAddr = dstLlId;
-    dataFrame->tgtProtoAddr = Utils::reverseEndian(ipHeader->ip_dst.s_addr);
+    dstLlId = 1234567U;
 
-    dataFrame->timestamp = now;
+    uint32_t srcProtoAddr = Utils::reverseEndian(ipHeader->ip_src.s_addr);
+    uint32_t tgtProtoAddr = Utils::reverseEndian(ipHeader->ip_dst.s_addr);
 
     if (dstLlId == 0U) {
         LogMessage(LOG_NET, "P25, no ARP entry for, dstIp = %s", dstIp);
         write_PDU_ARP(Utils::reverseEndian(ipHeader->ip_dst.s_addr));
     }
 
-    m_vtunMutex.try_lock_for(std::chrono::milliseconds(60));
-    m_dataFrames.push_back(dataFrame);
-    m_vtunMutex.unlock();
+    std::string srcIpStr = __IP_FROM_UINT(srcProtoAddr);
+    std::string tgtIpStr = __IP_FROM_UINT(tgtProtoAddr);
+
+    LogMessage(LOG_NET, "P25, VTUN -> PDU IP Data, srcIp = %s (%u), dstIp = %s (%u), pktLen = %u, proto = %02X", 
+        srcIpStr.c_str(), WUID_FNE, tgtIpStr.c_str(), dstLlId, pktLen, proto);
+
+    // assemble a P25 PDU frame header for transport...
+    data::DataHeader* pktHeader = new data::DataHeader();
+    pktHeader->setFormat(PDUFormatType::CONFIRMED);
+    pktHeader->setMFId(MFG_STANDARD);
+    pktHeader->setAckNeeded(true);
+    pktHeader->setOutbound(true);
+    pktHeader->setSAP(PDUSAP::EXT_ADDR);
+    pktHeader->setLLId(dstLlId);
+    pktHeader->setBlocksToFollow(1U);
+
+    pktHeader->setEXSAP(PDUSAP::PACKET_DATA);
+    pktHeader->setSrcLLId(WUID_FNE);
+
+    pktHeader->calculateLength(pktLen);
+    uint32_t pduLength = pktHeader->getPDULength();
+    if (pduLength < pktLen) {
+        LogWarning(LOG_NET, "P25, VTUN, data truncated!");
+        pktLen = pduLength; // don't overflow the buffer
+    }
+
+    DECLARE_UINT8_ARRAY(pduUserData, pduLength);
+    ::memcpy(pduUserData + 4U, data, pktLen);
+#if DEBUG_P25_PDU_DATA
+    Utils::dump(1U, "P25, P25PacketData::processPacketFrame(), pduUserData", pduUserData, pduLength);
+#endif
+
+    // queue frame for dispatch
+    QueuedDataFrame* qf = new QueuedDataFrame();
+    qf->timestamp = now;
+    qf->header = pktHeader;
+    qf->extendedAddress = true;
+    qf->llId = dstLlId;
+    qf->tgtProtoAddr = tgtProtoAddr;
+
+    qf->userData = new uint8_t[pduLength];
+    ::memcpy(qf->userData, pduUserData, pduLength);
+    qf->userDataLen = pduLength;
+
+    m_queuedFrames.push_back(qf);
 #endif // !defined(_WIN32)
 }
 
@@ -404,93 +432,73 @@ void P25PacketData::clock(uint32_t ms)
 {
     uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
-    if (m_dataFrames.size() == 0U) {
+    if (m_queuedFrames.size() == 0U) {
         return;
     }
 
     // transmit queued data frames
     bool processed = false;
-    bool locked = m_vtunMutex.try_lock_for(std::chrono::milliseconds(60));
-    
-    auto& dataFrame = m_dataFrames[0];
-    
-    if (locked)
-        m_vtunMutex.unlock();
 
-    if (dataFrame != nullptr) {
-        if (now > dataFrame->timestamp + 500U) {
+    auto& frame = m_queuedFrames[0];
+    if (frame != nullptr) {
+        if (now > frame->timestamp) {
             processed = true;
 
-            // do we have a valid target address?
-            if (dataFrame->tgtHWAddr == 0U) {
-                uint32_t dstLlId = getLLIdAddress(dataFrame->tgtProtoAddr);
-                if (dstLlId == 0U) {
-                    processed = false;
-                    goto pkt_clock_abort;
-                }
-
-                dataFrame->tgtHWAddr = dstLlId;
-            }
-
-            // is the SU ready for the next packet?
-            auto ready = std::find_if(m_readyForNextPkt.begin(), m_readyForNextPkt.end(), [=](ReadyForNextPktPair x) { return x.first == dataFrame->tgtHWAddr; });
-            if (ready != m_readyForNextPkt.end()) {
-                if (!ready->second) {
-                    processed = false;
-                    goto pkt_clock_abort;
-                }
-            } else {
-                processed = false;
+            if (frame->retryCnt >= MAX_PKT_RETRY_CNT) {
+                LogWarning(LOG_NET, "P25, max packet retry count exceeded, dropping packet, dstIp = %s", __IP_FROM_UINT(frame->tgtProtoAddr).c_str());
                 goto pkt_clock_abort;
             }
 
-            m_readyForNextPkt[dataFrame->tgtHWAddr] = false;
+            std::string tgtIpStr = __IP_FROM_UINT(frame->tgtProtoAddr);
+            LogMessage(LOG_NET, "P25, VTUN -> PDU IP Data, dstIp = %s (%u), userDataLen = %u, retries = %u", 
+                tgtIpStr.c_str(), frame->llId, frame->userDataLen, frame->retryCnt);
 
-            std::string srcIp = __IP_FROM_UINT(dataFrame->srcProtoAddr);
-            std::string tgtIp = __IP_FROM_UINT(dataFrame->tgtProtoAddr);
+            // do we have a valid target address?
+            if (frame->llId == 0U) {
+                frame->llId = getLLIdAddress(frame->tgtProtoAddr);
+                if (frame->llId == 0U) {
+                    LogWarning(LOG_NET, "P25, no ARP entry for, dstIp = %s", tgtIpStr.c_str());
+                    write_PDU_ARP(frame->tgtProtoAddr);
 
-            LogMessage(LOG_NET, "P25, VTUN -> PDU IP Data, srcIp = %s (%u), dstIp = %s (%u), pktLen = %u, proto = %02X", 
-                srcIp.c_str(), dataFrame->srcHWAddr, tgtIp.c_str(), dataFrame->tgtHWAddr, dataFrame->pktLen, dataFrame->proto);
+                    processed = false;
+                    frame->timestamp = now + 250U; // retry in 250ms
+                    frame->retryCnt++;
+                    goto pkt_clock_abort;
+                }
+                else {
+                    frame->header->setLLId(frame->llId);
+                }
+            }
 
-            // assemble a P25 PDU frame header for transport...
-            data::DataHeader rspHeader = data::DataHeader();
-            rspHeader.setFormat(PDUFormatType::CONFIRMED);
-            rspHeader.setMFId(MFG_STANDARD);
-            rspHeader.setAckNeeded(true);
-            rspHeader.setOutbound(true);
-            rspHeader.setSAP(PDUSAP::EXT_ADDR);
-            rspHeader.setLLId(dataFrame->tgtHWAddr);
-            rspHeader.setBlocksToFollow(1U);
+            // is the SU ready for the next packet?
+            /*auto ready = std::find_if(m_readyForNextPkt.begin(), m_readyForNextPkt.end(), [=](ReadyForNextPktPair x) { return x.first == frame->llId; });
+            if (ready != m_readyForNextPkt.end()) {
+                if (!ready->second) {
+                    LogWarning(LOG_NET, "P25, subscriber not ready, dstIp = %s", tgtIpStr.c_str());
+                    processed = false;
+                    frame->timestamp = now + 100U; // retry in 100ms
+                    frame->retryCnt++;
+                    goto pkt_clock_abort;
+                }
+            }
 
-            rspHeader.setEXSAP(PDUSAP::PACKET_DATA);
-            rspHeader.setSrcLLId(WUID_FNE);
-
-            rspHeader.calculateLength(dataFrame->pktLen);
-            uint32_t pduLength = rspHeader.getPDULength();
-
-            DECLARE_UINT8_ARRAY(pduUserData, pduLength);
-            ::memcpy(pduUserData + 4U, dataFrame->buffer, dataFrame->pktLen);
-#if DEBUG_P25_PDU_DATA
-            Utils::dump(1U, "P25, P25PacketData::clock(), pduUserData", pduUserData, pduLength);
-#endif
-            dispatchUserFrameToFNE(rspHeader, true, pduUserData);
+            m_readyForNextPkt[frame->llId] = false;*/
+            dispatchUserFrameToFNE(*frame->header, frame->extendedAddress, frame->userData);
         }
     }
 
 pkt_clock_abort:
-    locked = m_vtunMutex.try_lock_for(std::chrono::milliseconds(60));
-    m_dataFrames.pop_front();
+    m_queuedFrames.pop_front();
     if (processed) {
-        if (dataFrame->buffer != nullptr)
-            delete[] dataFrame->buffer;
-        delete dataFrame;
+        if (frame->userData != nullptr)
+            delete[] frame->userData;
+        if (frame->header != nullptr)
+            delete frame->header;
+        delete frame;
     } else {
         // requeue packet
-        m_dataFrames.push_back(dataFrame);
+        m_queuedFrames.push_back(frame);
     }
-
-    if (locked)
-        m_vtunMutex.unlock();
 }
 
 // ---------------------------------------------------------------------------
