@@ -314,8 +314,8 @@ bool Data::process(uint8_t* data, uint32_t len)
                                 m_rfDataHeader.getLLId(), m_rfDataHeader.getSrcLLId());
 
                         if (m_rfDataHeader.getResponseClass() == PDUAckClass::ACK && m_rfDataHeader.getResponseType() == PDUAckType::ACK) {
-                            LogMessage(LOG_RF, P25_PDU_STR ", ISP, response, OSP ACK, llId = %u",
-                                m_rfDataHeader.getLLId());
+                            LogMessage(LOG_RF, P25_PDU_STR ", ISP, response, OSP ACK, llId = %u, all blocks received OK, n = %u",
+                                m_rfDataHeader.getLLId(), m_rfDataHeader.getResponseStatus());
                             if (m_retryPDUData != nullptr && m_retryPDUBitLength > 0U) {
                                 delete m_retryPDUData;
                                 m_retryPDUData = nullptr;
@@ -334,17 +334,17 @@ bool Data::process(uint8_t* data, uint32_t len)
                                             m_rfDataHeader.getLLId());
                                         break;
                                     case PDUAckType::NACK_PACKET_CRC:
-                                        LogMessage(LOG_RF, P25_PDU_STR ", ISP, response, OSP NACK, packet CRC error, llId = %u",
-                                            m_rfDataHeader.getLLId());
+                                        LogMessage(LOG_RF, P25_PDU_STR ", ISP, response, OSP NACK, packet CRC error, llId = %u, n = %u",
+                                            m_rfDataHeader.getLLId(), m_rfDataHeader.getResponseStatus());
                                         break;
                                     case PDUAckType::NACK_SEQ:
                                     case PDUAckType::NACK_OUT_OF_SEQ:
-                                        LogMessage(LOG_RF, P25_PDU_STR ", ISP, response, OSP NACK, packet out of sequence, llId = %u",
-                                            m_rfDataHeader.getLLId());
+                                        LogMessage(LOG_RF, P25_PDU_STR ", ISP, response, OSP NACK, packet out of sequence, llId = %u, seqNo = %u",
+                                            m_rfDataHeader.getLLId(), m_rfDataHeader.getResponseStatus());
                                         break;
                                     case PDUAckType::NACK_UNDELIVERABLE:
-                                        LogMessage(LOG_RF, P25_PDU_STR ", ISP, response, OSP NACK, packet undeliverable, llId = %u",
-                                            m_rfDataHeader.getLLId());
+                                        LogMessage(LOG_RF, P25_PDU_STR ", ISP, response, OSP NACK, packet undeliverable, llId = %u, n = %u",
+                                            m_rfDataHeader.getLLId(), m_rfDataHeader.getResponseStatus());
                                         break;
 
                                     default:
