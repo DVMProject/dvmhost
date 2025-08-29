@@ -234,9 +234,11 @@ namespace p25
              * @param ackType Acknowledgement Type.
              * @param ackStatus 
              * @param llId Logical Link ID.
+             * @param extendedAddress Flag indicating whether or not to extended addressing is in use.
              * @param srcLlId Source Logical Link ID.
              */
-            void writeRF_PDU_Ack_Response(uint8_t ackClass, uint8_t ackType, uint8_t ackStatus, uint32_t llId, uint32_t srcLlId = 0U);
+            void writeRF_PDU_Ack_Response(uint8_t ackClass, uint8_t ackType, uint8_t ackStatus, uint32_t llId, bool extendedAddress,
+                uint32_t srcLlId = 0U);
         };
     } // namespace packet
 } // namespace p25

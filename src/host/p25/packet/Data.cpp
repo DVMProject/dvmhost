@@ -293,7 +293,8 @@ bool Data::process(uint8_t* data, uint32_t len)
                         if (!m_p25->m_ignorePDUCRC) {
                             uint8_t sap = (m_rfExtendedAddress) ? m_rfDataHeader.getEXSAP() : m_rfDataHeader.getSAP();
                             if (sap != PDUSAP::TRUNK_CTRL) // ignore CRC errors on TSBK data
-                                writeRF_PDU_Ack_Response(PDUAckClass::NACK, PDUAckType::NACK_PACKET_CRC, m_rfDataHeader.getNs(), (m_rfExtendedAddress) ? m_rfDataHeader.getSrcLLId() : m_rfDataHeader.getLLId());
+                                writeRF_PDU_Ack_Response(PDUAckClass::NACK, PDUAckType::NACK_PACKET_CRC, m_rfDataHeader.getNs(), (m_rfExtendedAddress) ? m_rfDataHeader.getSrcLLId() : m_rfDataHeader.getLLId(),
+                                    m_rfExtendedAddress, WUID_FNE);
                         }
                     }
                 }
@@ -308,76 +309,74 @@ bool Data::process(uint8_t* data, uint32_t len)
 
                 // did we receive a response header?
                 if (m_rfDataHeader.getFormat() == PDUFormatType::RSP) {
-                    if (m_verbose) {
-                        LogMessage(LOG_RF, P25_PDU_STR ", ISP, response, fmt = $%02X, rspClass = $%02X, rspType = $%02X, rspStatus = $%02X, llId = %u, srcLlId = %u",
-                                m_rfDataHeader.getFormat(), m_rfDataHeader.getResponseClass(), m_rfDataHeader.getResponseType(), m_rfDataHeader.getResponseStatus(),
-                                m_rfDataHeader.getLLId(), m_rfDataHeader.getSrcLLId());
+                    LogMessage(LOG_RF, P25_PDU_STR ", ISP, response, fmt = $%02X, rspClass = $%02X, rspType = $%02X, rspStatus = $%02X, llId = %u, srcLlId = %u",
+                            m_rfDataHeader.getFormat(), m_rfDataHeader.getResponseClass(), m_rfDataHeader.getResponseType(), m_rfDataHeader.getResponseStatus(),
+                            m_rfDataHeader.getLLId(), m_rfDataHeader.getSrcLLId());
 
-                        if (m_rfDataHeader.getResponseClass() == PDUAckClass::ACK && m_rfDataHeader.getResponseType() == PDUAckType::ACK) {
-                            LogMessage(LOG_RF, P25_PDU_STR ", ISP, response, OSP ACK, llId = %u, all blocks received OK, n = %u",
-                                m_rfDataHeader.getLLId(), m_rfDataHeader.getResponseStatus());
+                    if (m_rfDataHeader.getResponseClass() == PDUAckClass::ACK && m_rfDataHeader.getResponseType() == PDUAckType::ACK) {
+                        LogMessage(LOG_RF, P25_PDU_STR ", ISP, response, OSP ACK, llId = %u, all blocks received OK, n = %u",
+                            m_rfDataHeader.getLLId(), m_rfDataHeader.getResponseStatus());
+                        if (m_retryPDUData != nullptr && m_retryPDUBitLength > 0U) {
+                            delete m_retryPDUData;
+                            m_retryPDUData = nullptr;
+
+                            m_retryPDUBitLength = 0U;
+                            m_retryCount = 0U;
+                        }
+                    } else {
+                        if (m_rfDataHeader.getResponseClass() == PDUAckClass::NACK) {
+                            switch (m_rfDataHeader.getResponseType()) {
+                                case PDUAckType::NACK_ILLEGAL:
+                                    LogMessage(LOG_RF, P25_PDU_STR ", ISP, response, OSP NACK, illegal format, llId = %u",
+                                        m_rfDataHeader.getLLId());
+                                    break;
+                                case PDUAckType::NACK_PACKET_CRC:
+                                    LogMessage(LOG_RF, P25_PDU_STR ", ISP, response, OSP NACK, packet CRC error, llId = %u, n = %u",
+                                        m_rfDataHeader.getLLId(), m_rfDataHeader.getResponseStatus());
+                                    break;
+                                case PDUAckType::NACK_SEQ:
+                                case PDUAckType::NACK_OUT_OF_SEQ:
+                                    LogMessage(LOG_RF, P25_PDU_STR ", ISP, response, OSP NACK, packet out of sequence, llId = %u, seqNo = %u",
+                                        m_rfDataHeader.getLLId(), m_rfDataHeader.getResponseStatus());
+                                    break;
+                                case PDUAckType::NACK_UNDELIVERABLE:
+                                    LogMessage(LOG_RF, P25_PDU_STR ", ISP, response, OSP NACK, packet undeliverable, llId = %u, n = %u",
+                                        m_rfDataHeader.getLLId(), m_rfDataHeader.getResponseStatus());
+                                    break;
+
+                                default:
+                                    break;
+                                }
+                        } else if (m_rfDataHeader.getResponseClass() == PDUAckClass::ACK_RETRY) {
+                            LogMessage(LOG_RF, P25_PDU_STR ", ISP, response, OSP ACK RETRY, llId = %u",
+                                m_rfDataHeader.getLLId());
+
+                            // really this is supposed to check the bit field in the included response 
+                            // and only return those bits -- but we're responding with the entire previous packet...
                             if (m_retryPDUData != nullptr && m_retryPDUBitLength > 0U) {
-                                delete m_retryPDUData;
-                                m_retryPDUData = nullptr;
+                                if (m_retryCount < MAX_PDU_RETRY_CNT) {
+                                    m_p25->writeRF_Preamble();
+                                    writeRF_PDU(m_retryPDUData, m_retryPDUBitLength, false, true);
+                                    m_retryCount++;
+                                }
+                                else {
+                                    delete m_retryPDUData;
+                                    m_retryPDUData = nullptr;
 
-                                m_retryPDUBitLength = 0U;
-                                m_retryCount = 0U;
-                            }
+                                    m_retryPDUBitLength = 0U;
+                                    m_retryCount = 0U;
 
-                            // rewrite the response to the network
-                            writeNetwork(0U, buffer, P25_PDU_FEC_LENGTH_BYTES, true);
-                        } else {
-                            if (m_rfDataHeader.getResponseClass() == PDUAckClass::NACK) {
-                                switch (m_rfDataHeader.getResponseType()) {
-                                    case PDUAckType::NACK_ILLEGAL:
-                                        LogMessage(LOG_RF, P25_PDU_STR ", ISP, response, OSP NACK, illegal format, llId = %u",
-                                            m_rfDataHeader.getLLId());
-                                        break;
-                                    case PDUAckType::NACK_PACKET_CRC:
-                                        LogMessage(LOG_RF, P25_PDU_STR ", ISP, response, OSP NACK, packet CRC error, llId = %u, n = %u",
-                                            m_rfDataHeader.getLLId(), m_rfDataHeader.getResponseStatus());
-                                        break;
-                                    case PDUAckType::NACK_SEQ:
-                                    case PDUAckType::NACK_OUT_OF_SEQ:
-                                        LogMessage(LOG_RF, P25_PDU_STR ", ISP, response, OSP NACK, packet out of sequence, llId = %u, seqNo = %u",
-                                            m_rfDataHeader.getLLId(), m_rfDataHeader.getResponseStatus());
-                                        break;
-                                    case PDUAckType::NACK_UNDELIVERABLE:
-                                        LogMessage(LOG_RF, P25_PDU_STR ", ISP, response, OSP NACK, packet undeliverable, llId = %u, n = %u",
-                                            m_rfDataHeader.getLLId(), m_rfDataHeader.getResponseStatus());
-                                        break;
+                                    LogMessage(LOG_RF, P25_PDU_STR ", ISP, response, OSP ACK RETRY, llId = %u, exceeded retries, undeliverable",
+                                        m_rfDataHeader.getLLId());
 
-                                    default:
-                                        break;
-                                    }
-                            } else if (m_rfDataHeader.getResponseClass() == PDUAckClass::ACK_RETRY) {
-                                LogMessage(LOG_RF, P25_PDU_STR ", ISP, response, OSP ACK RETRY, llId = %u",
-                                    m_rfDataHeader.getLLId());
-
-                                // really this is supposed to check the bit field in the included response 
-                                // and only return those bits -- but we're responding with the entire previous packet...
-                                if (m_retryPDUData != nullptr && m_retryPDUBitLength > 0U) {
-                                    if (m_retryCount < MAX_PDU_RETRY_CNT) {
-                                        m_p25->writeRF_Preamble();
-                                        writeRF_PDU(m_retryPDUData, m_retryPDUBitLength, false, true);
-                                        m_retryCount++;
-                                    }
-                                    else {
-                                        delete m_retryPDUData;
-                                        m_retryPDUData = nullptr;
-
-                                        m_retryPDUBitLength = 0U;
-                                        m_retryCount = 0U;
-
-                                        LogMessage(LOG_RF, P25_PDU_STR ", ISP, response, OSP ACK RETRY, llId = %u, exceeded retries, undeliverable",
-                                            m_rfDataHeader.getLLId());
-
-                                        writeRF_PDU_Ack_Response(PDUAckClass::NACK, PDUAckType::NACK_UNDELIVERABLE, m_rfDataHeader.getNs(), m_rfDataHeader.getLLId(), m_rfDataHeader.getSrcLLId());
-                                    }
+                                    writeRF_PDU_Ack_Response(PDUAckClass::NACK, PDUAckType::NACK_UNDELIVERABLE, m_rfDataHeader.getNs(), m_rfDataHeader.getLLId(), m_rfDataHeader.getSrcLLId());
                                 }
                             }
                         }
                     }
+
+                    // rewrite the response to the network
+                    writeNetwork(0U, buffer, P25_PDU_FEC_LENGTH_BYTES, true);
 
                     // only repeat the PDU locally if the packet isn't for the FNE
                     if (m_repeatPDU && m_rfDataHeader.getLLId() != WUID_FNE) {
@@ -423,6 +422,7 @@ bool Data::process(uint8_t* data, uint32_t len)
                         }
 
                         processSNDCPControl(m_rfPduUserData);
+                        writeNet_PDU_User(m_rfDataHeader, m_rfExtendedAddress, m_rfPduUserData);
                     }
                     break;
                     case PDUSAP::CONV_DATA_REG:
@@ -433,6 +433,7 @@ bool Data::process(uint8_t* data, uint32_t len)
                         }
 
                         processConvDataReg(m_rfPduUserData);
+                        writeNet_PDU_User(m_rfDataHeader, m_rfExtendedAddress, m_rfPduUserData);
                     }
                     break;
                     case PDUSAP::UNENC_KMM:
@@ -508,6 +509,7 @@ bool Data::processNetwork(uint8_t* data, uint32_t len, uint32_t blockLength)
         ::memset(m_netPDU, 0x00U, P25_PDU_FRAME_LENGTH_BYTES + 2U);
 
         m_p25->m_netState = RS_NET_DATA;
+        m_inbound = false;
 
         uint8_t buffer[P25_PDU_FEC_LENGTH_BYTES];
         ::memset(buffer, 0x00U, P25_PDU_FEC_LENGTH_BYTES);
@@ -526,7 +528,7 @@ bool Data::processNetwork(uint8_t* data, uint32_t len, uint32_t blockLength)
         }
 
         if (m_verbose) {
-            LogMessage(LOG_NET, P25_PDU_STR ", ack = %u, outbound = %u, fmt = $%02X, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padLength = %u, packetLength = %u, S = %u, n = %u, seqNo = %u, hdrOffset = %u, llId = %u",
+            LogMessage(LOG_NET, P25_PDU_STR ", ISP, ack = %u, outbound = %u, fmt = $%02X, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padLength = %u, packetLength = %u, S = %u, n = %u, seqNo = %u, hdrOffset = %u, llId = %u",
                 m_netDataHeader.getAckNeeded(), m_netDataHeader.getOutbound(), m_netDataHeader.getFormat(), m_netDataHeader.getSAP(), m_netDataHeader.getFullMessage(),
                 m_netDataHeader.getBlocksToFollow(), m_netDataHeader.getPadLength(), m_netDataHeader.getPacketLength(), m_netDataHeader.getSynchronize(), m_netDataHeader.getNs(), m_netDataHeader.getFSN(),
                 m_netDataHeader.getHeaderOffset(), m_netDataHeader.getLLId());
@@ -570,8 +572,8 @@ bool Data::processNetwork(uint8_t* data, uint32_t len, uint32_t blockLength)
                         m_netDataHeader.getLLId(), m_netDataHeader.getSrcLLId());
 
                 if (m_netDataHeader.getResponseClass() == PDUAckClass::ACK && m_netDataHeader.getResponseType() == PDUAckType::ACK) {
-                    LogMessage(LOG_NET, P25_PDU_STR ", ISP, response, OSP ACK, llId = %u",
-                        m_netDataHeader.getLLId());
+                    LogMessage(LOG_NET, P25_PDU_STR ", ISP, response, OSP ACK, llId = %u, all blocks received OK, n = %u",
+                        m_netDataHeader.getLLId(), m_netDataHeader.getResponseStatus());
                 } else {
                     if (m_netDataHeader.getResponseClass() == PDUAckClass::NACK) {
                         switch (m_netDataHeader.getResponseType()) {
@@ -580,17 +582,17 @@ bool Data::processNetwork(uint8_t* data, uint32_t len, uint32_t blockLength)
                                     m_netDataHeader.getLLId());
                                 break;
                             case PDUAckType::NACK_PACKET_CRC:
-                                LogMessage(LOG_NET, P25_PDU_STR ", ISP, response, OSP NACK, packet CRC error, llId = %u",
-                                    m_netDataHeader.getLLId());
+                                LogMessage(LOG_NET, P25_PDU_STR ", ISP, response, OSP NACK, packet CRC error, llId = %u, n = %u",
+                                    m_netDataHeader.getLLId(), m_netDataHeader.getResponseStatus());
                                 break;
                             case PDUAckType::NACK_SEQ:
                             case PDUAckType::NACK_OUT_OF_SEQ:
-                                LogMessage(LOG_NET, P25_PDU_STR ", ISP, response, OSP NACK, packet out of sequence, llId = %u",
-                                    m_netDataHeader.getLLId());
+                                LogMessage(LOG_NET, P25_PDU_STR ", ISP, response, OSP NACK, packet out of sequence, llId = %u, seqNo = %u",
+                                    m_netDataHeader.getLLId(), m_netDataHeader.getResponseStatus());
                                 break;
                             case PDUAckType::NACK_UNDELIVERABLE:
-                                LogMessage(LOG_NET, P25_PDU_STR ", ISP, response, OSP NACK, packet undeliverable, llId = %u",
-                                    m_netDataHeader.getLLId());
+                                LogMessage(LOG_NET, P25_PDU_STR ", ISP, response, OSP NACK, packet undeliverable, llId = %u, n = %u",
+                                    m_netDataHeader.getLLId(), m_netDataHeader.getResponseStatus());
                                 break;
 
                             default:
@@ -601,7 +603,7 @@ bool Data::processNetwork(uint8_t* data, uint32_t len, uint32_t blockLength)
             }
 
             writeRF_PDU_Ack_Response(m_netDataHeader.getResponseClass(), m_netDataHeader.getResponseType(), m_netDataHeader.getResponseStatus(),
-                m_netDataHeader.getLLId(), m_netDataHeader.getSrcLLId());
+                m_netDataHeader.getLLId(), (m_netDataHeader.getSrcLLId() > 0U), m_netDataHeader.getSrcLLId());
 
             m_netDataHeader.reset();
             m_netExtendedAddress = false;
@@ -695,7 +697,7 @@ bool Data::processNetwork(uint8_t* data, uint32_t len, uint32_t blockLength)
                         m_netExtendedAddress = true;
                     }
                     else {
-                        LogMessage(LOG_NET, P25_PDU_STR ", block %u, fmt = $%02X, lastBlock = %u",
+                        LogMessage(LOG_NET, P25_PDU_STR ", ISP, block %u, fmt = $%02X, lastBlock = %u",
                             (m_netDataHeader.getFormat() == PDUFormatType::CONFIRMED) ? m_netData[i].getSerialNo() : m_netDataBlockCnt, m_netData[i].getFormat(),
                             m_netData[i].getLastBlock());
                     }
@@ -1262,7 +1264,7 @@ bool Data::processConvDataReg(const uint8_t* pduUserData)
         }
 
         // acknowledge
-        writeRF_PDU_Ack_Response(PDUAckClass::ACK, PDUAckType::ACK, m_rfDataHeader.getNs(), llId);
+        writeRF_PDU_Ack_Response(PDUAckClass::ACK, PDUAckType::ACK, m_rfDataHeader.getNs(), llId, false);
 
         if (hasLLIdFNEReg(llId)) {
             // remove dynamic FNE registration table entry
@@ -1415,7 +1417,7 @@ bool Data::processSNDCPControl(const uint8_t* pduUserData)
                     isp->getDeactType());
             }
 
-            writeRF_PDU_Ack_Response(PDUAckClass::ACK, PDUAckType::ACK, m_rfDataHeader.getNs(), llId);
+            writeRF_PDU_Ack_Response(PDUAckClass::ACK, PDUAckType::ACK, m_rfDataHeader.getNs(), llId, false);
             sndcpReset(llId, true);
         }
         break;
@@ -1728,7 +1730,7 @@ void Data::writeRF_PDU_Reg_Response(uint8_t regType, uint32_t llId, uint32_t ipA
 
 /* Helper to write a PDU acknowledge response. */
 
-void Data::writeRF_PDU_Ack_Response(uint8_t ackClass, uint8_t ackType, uint8_t ackStatus, uint32_t llId, uint32_t srcLlId)
+void Data::writeRF_PDU_Ack_Response(uint8_t ackClass, uint8_t ackType, uint8_t ackStatus, uint32_t llId, bool extendedAddress, uint32_t srcLlId)
 {
     if (ackClass == PDUAckClass::ACK && ackType != PDUAckType::ACK)
         return;
@@ -1752,7 +1754,11 @@ void Data::writeRF_PDU_Ack_Response(uint8_t ackClass, uint8_t ackType, uint8_t a
     if (srcLlId > 0U) {
         rspHeader.setSrcLLId(srcLlId);
     }
-    rspHeader.setFullMessage(true);
+
+    if (extendedAddress)
+        rspHeader.setFullMessage(false);
+    else
+        rspHeader.setFullMessage(true);
 
     rspHeader.setBlocksToFollow(0U);
 

@@ -102,6 +102,7 @@ namespace network
 
                     uint64_t timestamp;             //! Timestamp in milliseconds
                     uint8_t retryCnt;               //! Packet Retry Counter
+                    bool extendRetry;               //! Flag indicating whether or not to extend the retry count for this packet.
                 };
                 concurrent::deque<QueuedDataFrame*> m_queuedFrames;
 
@@ -196,6 +197,12 @@ namespace network
                 void dispatchUserFrameToFNE(p25::data::DataHeader& dataHeader, bool extendedAddress, uint8_t* pduUserData);
 
                 /**
+                 * @brief Helper used to process conventional data registration from PDU data.
+                 * @param status Instance of the RxStatus class.
+                 * @returns bool True, if conventional data registration data was processed, otherwise false.
+                 */
+                bool processConvDataReg(RxStatus* status);
+                /**
                  * @brief Helper used to process SNDCP control data from PDU data.
                  * @param status Instance of the RxStatus class.
                  * @returns bool True, if SNDCP control data was processed, otherwise false.
@@ -229,9 +236,11 @@ namespace network
                  * @param ackType Acknowledgement Type.
                  * @param ackStatus 
                  * @param llId Logical Link ID.
+                 * @param extendedAddress Flag indicating whether or not to extended addressing is in use.
                  * @param srcLlId Source Logical Link ID.
                  */
-                void write_PDU_Ack_Response(uint8_t ackClass, uint8_t ackType, uint8_t ackStatus, uint32_t llId, uint32_t srcLlId = 0U);
+                void write_PDU_Ack_Response(uint8_t ackClass, uint8_t ackType, uint8_t ackStatus, uint32_t llId, bool extendedAddress,
+                    uint32_t srcLlId = 0U);
 
                 /**
                  * @brief Helper to write user data as a P25 PDU packet.

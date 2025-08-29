@@ -1396,10 +1396,12 @@ void Control::processNetwork()
         return;
     }
 
-    // don't process network frames if the RF modem isn't in a listening state
-    if (m_rfState != RS_RF_LISTENING && m_netState == RS_NET_IDLE) {
-        m_network->resetP25();
-        return;
+    if (m_netState != RS_NET_DATA) {
+        // don't process network frames if the RF modem isn't in a listening state
+        if (m_rfState != RS_RF_LISTENING && m_netState == RS_NET_IDLE) {
+            m_network->resetP25();
+            return;
+        }
     }
 
     bool grantDemand = (buffer[14U] & network::NET_CTRL_GRANT_DEMAND) == network::NET_CTRL_GRANT_DEMAND;

@@ -43,6 +43,10 @@ using namespace p25::sndcp;
 const uint8_t DATA_CALL_COLL_TIMEOUT = 60U;
 const uint8_t MAX_PKT_RETRY_CNT = 5U;
 
+const uint32_t INTERPACKET_DELAY = 100U; // milliseconds
+const uint32_t ARP_RETRY_MS = 5000U; // milliseconds
+const uint32_t SUBSCRIBER_READY_RETRY_MS = 1000U; // milliseconds
+
 // ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
@@ -170,11 +174,6 @@ bool P25PacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
             return true;
         }
 
-        if (status->header.getSAP() != PDUSAP::EXT_ADDR &&
-            status->header.getFormat() != PDUFormatType::UNCONFIRMED) {
-            m_suSendSeq[status->llId] = 0U;
-        }
-
         LogMessage(LOG_NET, "P25, Data Call Start, peer = %u, llId = %u, streamId = %u, external = %u", peerId, status->llId, streamId, external);
         return true;
     }
@@ -242,7 +241,6 @@ bool P25PacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
 
             status->extendedAddress = true;
             status->llId = status->header.getSrcLLId();
-            m_suSendSeq[status->llId] = 0U;
 
             offset += P25_PDU_FEC_LENGTH_BYTES;
             blocksToFollow--;
@@ -405,7 +403,10 @@ void P25PacketData::processPacketFrame(const uint8_t* data, uint32_t len, bool a
 
     // queue frame for dispatch
     QueuedDataFrame* qf = new QueuedDataFrame();
-    qf->timestamp = now;
+    qf->retryCnt = 0U;
+    qf->extendRetry = false;
+    qf->timestamp = now + INTERPACKET_DELAY;
+
     qf->header = pktHeader;
     qf->extendedAddress = true;
     qf->llId = dstLlId;
@@ -437,8 +438,14 @@ void P25PacketData::clock(uint32_t ms)
         if (now > frame->timestamp) {
             processed = true;
 
-            if (frame->retryCnt >= MAX_PKT_RETRY_CNT) {
+            if (frame->retryCnt >= MAX_PKT_RETRY_CNT && !frame->extendRetry) {
                 LogWarning(LOG_NET, "P25, max packet retry count exceeded, dropping packet, dstIp = %s", __IP_FROM_UINT(frame->tgtProtoAddr).c_str());
+                goto pkt_clock_abort;
+            }
+
+            if (frame->retryCnt >= (MAX_PKT_RETRY_CNT * 2U) && frame->extendRetry) {
+                LogWarning(LOG_NET, "P25, max packet retry count exceeded, dropping packet, dstIp = %s", __IP_FROM_UINT(frame->tgtProtoAddr).c_str());
+                m_readyForNextPkt[frame->llId] = true; // force ready for next packet
                 goto pkt_clock_abort;
             }
 
@@ -454,7 +461,7 @@ void P25PacketData::clock(uint32_t ms)
                     write_PDU_ARP(frame->tgtProtoAddr);
 
                     processed = false;
-                    frame->timestamp = now + 1000U; // retry in 1s
+                    frame->timestamp = now + ARP_RETRY_MS;
                     frame->retryCnt++;
                     goto pkt_clock_abort;
                 }
@@ -469,7 +476,8 @@ void P25PacketData::clock(uint32_t ms)
                 if (!ready->second) {
                     LogWarning(LOG_NET, "P25, subscriber not ready, dstIp = %s", tgtIpStr.c_str());
                     processed = false;
-                    frame->timestamp = now + 500U; // retry in 500ms
+                    frame->timestamp = now + SUBSCRIBER_READY_RETRY_MS;
+                    frame->extendRetry = true;
                     frame->retryCnt++;
                     goto pkt_clock_abort;
                 }
@@ -512,33 +520,66 @@ void P25PacketData::dispatch(uint32_t peerId)
     bool crcValid = false;
     if (status->header.getBlocksToFollow() > 0U) {
         if (status->pduUserDataLength < 4U) {
-            LogError(LOG_NET, P25_PDU_STR ", illegal PDU packet length, blocks %u, len %u", status->header.getBlocksToFollow(), status->pduUserDataLength);
+            LogError(LOG_NET, P25_PDU_STR ", illegal PDU packet length, peer = %u, llId = %u, blocks %u, len %u", 
+                peerId, status->header.getLLId(), status->header.getBlocksToFollow(), status->pduUserDataLength);
             return;
         }
 
         crcValid = edac::CRC::checkCRC32(status->pduUserData, status->pduUserDataLength);
         if (!crcValid) {
-            LogError(LOG_NET, P25_PDU_STR ", failed CRC-32 check, blocks %u, len %u", status->header.getBlocksToFollow(), status->pduUserDataLength);
+            LogError(LOG_NET, P25_PDU_STR ", failed CRC-32 check, peer = %u, llId = %u, blocks %u, len %u", 
+                peerId, status->header.getLLId(), status->header.getBlocksToFollow(), status->pduUserDataLength);
             return;
         }
     }
 
     if (m_network->m_dumpPacketData && status->dataBlockCnt > 0U) {
         Utils::dump(1U, "P25, ISP PDU Packet", status->pduUserData, status->pduUserDataLength);
-    }    
+    }
 
     if (status->header.getFormat() == PDUFormatType::RSP) {
-        LogMessage(LOG_NET, P25_PDU_STR ", ISP, response, fmt = $%02X, rspClass = $%02X, rspType = $%02X, rspStatus = $%02X, llId = %u, srcLlId = %u",
-                status->header.getFormat(), status->header.getResponseClass(), status->header.getResponseType(), status->header.getResponseStatus(),
+        LogMessage(LOG_NET, P25_PDU_STR ", ISP, response, peer = %u, fmt = $%02X, rspClass = $%02X, rspType = $%02X, rspStatus = $%02X, llId = %u, srcLlId = %u",
+                peerId, status->header.getFormat(), status->header.getResponseClass(), status->header.getResponseType(), status->header.getResponseStatus(),
                 status->header.getLLId(), status->header.getSrcLLId());
 
+        // bryanb: this is naive and possibly error prone
+        m_readyForNextPkt[status->header.getSrcLLId()] = true;
+
         if (status->header.getResponseClass() == PDUAckClass::ACK && status->header.getResponseType() == PDUAckType::ACK) {
-            m_readyForNextPkt[status->header.getSrcLLId()] = true;
+            LogMessage(LOG_NET, P25_PDU_STR ", ISP, response, OSP ACK, peer = %u, llId = %u, all blocks received OK, n = %u",
+                peerId, status->header.getLLId(), status->header.getResponseStatus());
+        } else {
+            if (status->header.getResponseClass() == PDUAckClass::NACK) {
+                switch (status->header.getResponseType()) {
+                    case PDUAckType::NACK_ILLEGAL:
+                        LogMessage(LOG_NET, P25_PDU_STR ", ISP, response, OSP NACK, illegal format, peer = %u, llId = %u",
+                            peerId, status->header.getLLId());
+                        break;
+                    case PDUAckType::NACK_PACKET_CRC:
+                        LogMessage(LOG_NET, P25_PDU_STR ", ISP, response, OSP NACK, packet CRC error, peer = %u, llId = %u, n = %u",
+                            peerId, status->header.getLLId(), status->header.getResponseStatus());
+                        break;
+                    case PDUAckType::NACK_SEQ:
+                    case PDUAckType::NACK_OUT_OF_SEQ:
+                        LogMessage(LOG_NET, P25_PDU_STR ", ISP, response, OSP NACK, packet out of sequence, peer = %u, llId = %u, seqNo = %u",
+                            peerId, status->header.getLLId(), status->header.getResponseStatus());
+                        break;
+                    case PDUAckType::NACK_UNDELIVERABLE:
+                        LogMessage(LOG_NET, P25_PDU_STR ", ISP, response, OSP NACK, packet undeliverable, peer = %u, llId = %u, n = %u",
+                            peerId, status->header.getLLId(), status->header.getResponseStatus());
+                        break;
+
+                    default:
+                        break;
+                    }
+            }
         }
 
-        /*write_PDU_Ack_Response(status->header.getResponseClass(), status->header.getResponseType(), status->header.getResponseStatus(), 
-            status->header.getLLId(), status->header.getSrcLLId());*/
         return;
+    }
+
+    if (status->header.getFormat() == PDUFormatType::UNCONFIRMED) {
+        m_readyForNextPkt[status->header.getSrcLLId()] = true;
     }
 
     uint8_t sap = (status->extendedAddress) ? status->header.getEXSAP() : status->header.getSAP();
@@ -675,15 +716,24 @@ void P25PacketData::dispatch(uint32_t peerId)
 
         // if the packet is unhandled and sent off to VTUN; ack the packet so the sender knows we received it
         if (!handled) {
-            write_PDU_Ack_Response(PDUAckClass::ACK, PDUAckType::ACK, status->header.getNs(), status->header.getSrcLLId(), status->header.getLLId());
+            write_PDU_Ack_Response(PDUAckClass::ACK, PDUAckType::ACK, status->header.getNs(), status->header.getSrcLLId(),
+                true, status->header.getLLId());
         }
 #endif // !defined(_WIN32)
     }
     break;
+    case PDUSAP::CONV_DATA_REG:
+    {
+        LogMessage(LOG_NET, P25_PDU_STR ", CONV_DATA_REG (Conventional Data Registration), peer = %u, blocksToFollow = %u",
+            peerId, status->header.getBlocksToFollow());
+
+        processConvDataReg(status);
+    }
+    break;
     case PDUSAP::SNDCP_CTRL_DATA:
     {
-        LogMessage(LOG_NET, P25_PDU_STR ", SNDCP_CTRL_DATA (SNDCP Control Data), blocksToFollow = %u",
-            status->header.getBlocksToFollow());
+        LogMessage(LOG_NET, P25_PDU_STR ", SNDCP_CTRL_DATA (SNDCP Control Data), peer = %u, blocksToFollow = %u",
+            peerId, status->header.getBlocksToFollow());
 
         processSNDCPControl(status);
     }
@@ -691,8 +741,8 @@ void P25PacketData::dispatch(uint32_t peerId)
     case PDUSAP::UNENC_KMM:
     case PDUSAP::ENC_KMM:
     {
-        LogMessage(LOG_NET, P25_PDU_STR ", KMM (Key Management Message), blocksToFollow = %u",
-            status->header.getBlocksToFollow());
+        LogMessage(LOG_NET, P25_PDU_STR ", KMM (Key Management Message), peer = %u, blocksToFollow = %u",
+            peerId, status->header.getBlocksToFollow());
 
         processKMM(status);
     }
@@ -767,16 +817,15 @@ void P25PacketData::dispatchUserFrameToFNE(p25::data::DataHeader& dataHeader, bo
     uint32_t srcId = (extendedAddress) ? dataHeader.getSrcLLId() : dataHeader.getLLId();
     uint32_t dstId = dataHeader.getLLId();
 
-    uint8_t sendSeqNo = m_suSendSeq[srcId];
-    if (sendSeqNo == 0U) {
+    // update the sequence number
+    m_suSendSeq[srcId]++;
+    if (m_suSendSeq[srcId] >= 8U)
+    {
+        m_suSendSeq[srcId] = 0U;
         dataHeader.setSynchronize(true);
     }
 
-    dataHeader.setNs(sendSeqNo);
-    ++sendSeqNo;
-    if (sendSeqNo > 7U)
-        sendSeqNo = 0U;
-    m_suSendSeq[srcId] = sendSeqNo;
+    dataHeader.setNs(m_suSendSeq[srcId]);
 
     // repeat traffic to the connected peers
     if (m_network->m_peers.size() > 0U) {
@@ -797,6 +846,45 @@ void P25PacketData::dispatchUserFrameToFNE(p25::data::DataHeader& dataHeader, bo
         }
         m_network->m_frameQueue->flushQueue();
     }
+}
+
+
+/* Helper used to process conventional data registration from PDU data. */
+
+bool P25PacketData::processConvDataReg(RxStatus* status)
+{
+    uint8_t regType = (status->pduUserData[0U] >> 4) & 0x0F;
+    switch (regType) {
+    case PDURegType::CONNECT:
+    {
+        uint32_t llId = (status->pduUserData[1U] << 16) + (status->pduUserData[2U] << 8) + status->pduUserData[3U];
+        uint32_t ipAddr = (status->pduUserData[8U] << 24) + (status->pduUserData[9U] << 16) + (status->pduUserData[10U] << 8) + status->pduUserData[11U];
+
+        if (ipAddr == 0U) {
+            LogWarning(LOG_NET, P25_PDU_STR ", CONNECT (Registration Request Connect) with zero IP address, llId = %u", llId);
+            return false;
+        }
+
+        LogMessage(LOG_NET, P25_PDU_STR ", CONNECT (Registration Request Connect), llId = %u, ipAddr = %s", llId, __IP_FROM_UINT(ipAddr).c_str());
+
+        m_arpTable[llId] = ipAddr; // update ARP table
+    }
+    break;
+    case PDURegType::DISCONNECT:
+    {
+        uint32_t llId = (status->pduUserData[1U] << 16) + (status->pduUserData[2U] << 8) + status->pduUserData[3U];
+
+        LogMessage(LOG_NET, P25_PDU_STR ", DISCONNECT (Registration Request Disconnect), llId = %u", llId);
+
+        m_arpTable.erase(llId);
+    }
+    break;
+    default:
+        LogError(LOG_RF, "P25 unhandled PDU registration type, regType = $%02X", regType);
+        break;
+    }
+
+    return true;
 }
 
 /* Helper used to process SNDCP control data from PDU data. */
@@ -999,7 +1087,7 @@ void P25PacketData::write_PDU_ARP_Reply(uint32_t targetAddr, uint32_t requestorL
 
 /* Helper to write a PDU acknowledge response. */
 
-void P25PacketData::write_PDU_Ack_Response(uint8_t ackClass, uint8_t ackType, uint8_t ackStatus, uint32_t llId, uint32_t srcLlId)
+void P25PacketData::write_PDU_Ack_Response(uint8_t ackClass, uint8_t ackType, uint8_t ackStatus, uint32_t llId, bool extendedAddress, uint32_t srcLlId)
 {
     if (ackClass == PDUAckClass::ACK && ackType != PDUAckType::ACK)
         return;
@@ -1015,7 +1103,11 @@ void P25PacketData::write_PDU_Ack_Response(uint8_t ackClass, uint8_t ackType, ui
     if (srcLlId > 0U) {
         rspHeader.setSrcLLId(srcLlId);
     }
-    rspHeader.setFullMessage(true);
+
+    if (!extendedAddress)
+        rspHeader.setFullMessage(true);
+    else
+        rspHeader.setFullMessage(false);
 
     rspHeader.setBlocksToFollow(0U);
 

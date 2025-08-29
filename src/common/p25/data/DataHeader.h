@@ -160,6 +160,8 @@ namespace p25
             DECLARE_PROPERTY(uint8_t, padLength, PadLength);
             /**
              * @brief Flag indicating whether or not this data packet is a full message.
+             * @note This is used on extended addressing response packets to indicate whether or not
+             *      the response is for a extended addressing request.
              */
             DECLARE_PROPERTY(bool, F, FullMessage);
             /**
