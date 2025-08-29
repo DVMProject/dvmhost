@@ -368,8 +368,6 @@ void P25PacketData::processPacketFrame(const uint8_t* data, uint32_t len, bool a
 
     uint32_t dstLlId = getLLIdAddress(Utils::reverseEndian(ipHeader->ip_dst.s_addr));
 
-    dstLlId = 1234567U;
-
     uint32_t srcProtoAddr = Utils::reverseEndian(ipHeader->ip_src.s_addr);
     uint32_t tgtProtoAddr = Utils::reverseEndian(ipHeader->ip_dst.s_addr);
 
@@ -471,7 +469,7 @@ void P25PacketData::clock(uint32_t ms)
             }
 
             // is the SU ready for the next packet?
-            /*auto ready = std::find_if(m_readyForNextPkt.begin(), m_readyForNextPkt.end(), [=](ReadyForNextPktPair x) { return x.first == frame->llId; });
+            auto ready = std::find_if(m_readyForNextPkt.begin(), m_readyForNextPkt.end(), [=](ReadyForNextPktPair x) { return x.first == frame->llId; });
             if (ready != m_readyForNextPkt.end()) {
                 if (!ready->second) {
                     LogWarning(LOG_NET, "P25, subscriber not ready, dstIp = %s", tgtIpStr.c_str());
@@ -482,7 +480,7 @@ void P25PacketData::clock(uint32_t ms)
                 }
             }
 
-            m_readyForNextPkt[frame->llId] = false;*/
+            m_readyForNextPkt[frame->llId] = false;
             dispatchUserFrameToFNE(*frame->header, frame->extendedAddress, frame->userData);
         }
     }
