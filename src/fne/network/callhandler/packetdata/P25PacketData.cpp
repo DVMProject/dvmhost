@@ -364,7 +364,7 @@ void P25PacketData::processPacketFrame(const uint8_t* data, uint32_t len, bool a
     Utils::dump(1U, "P25, P25PacketData::processPacketFrame() packet", data, pktLen);
 #endif
 
-    uint32_t dstLlId = getLLIdAddress(Utils::reverseEndian(ipHeader->ip_dst.s_addr));
+    uint32_t llId = getLLIdAddress(Utils::reverseEndian(ipHeader->ip_dst.s_addr));
 
     uint32_t srcProtoAddr = Utils::reverseEndian(ipHeader->ip_src.s_addr);
     uint32_t tgtProtoAddr = Utils::reverseEndian(ipHeader->ip_dst.s_addr);
@@ -373,7 +373,7 @@ void P25PacketData::processPacketFrame(const uint8_t* data, uint32_t len, bool a
     std::string tgtIpStr = __IP_FROM_UINT(tgtProtoAddr);
 
     LogMessage(LOG_NET, "P25, VTUN -> PDU IP Data, srcIp = %s (%u), dstIp = %s (%u), pktLen = %u, proto = %02X", 
-        srcIpStr.c_str(), WUID_FNE, tgtIpStr.c_str(), dstLlId, pktLen, proto);
+        srcIpStr.c_str(), WUID_FNE, tgtIpStr.c_str(), llId, pktLen, proto);
 
     // assemble a P25 PDU frame header for transport...
     data::DataHeader* pktHeader = new data::DataHeader();
@@ -381,12 +381,9 @@ void P25PacketData::processPacketFrame(const uint8_t* data, uint32_t len, bool a
     pktHeader->setMFId(MFG_STANDARD);
     pktHeader->setAckNeeded(true);
     pktHeader->setOutbound(true);
-    pktHeader->setSAP(PDUSAP::EXT_ADDR);
-    pktHeader->setLLId(dstLlId);
+    pktHeader->setSAP(PDUSAP::PACKET_DATA);
+    pktHeader->setLLId(llId);
     pktHeader->setBlocksToFollow(1U);
-
-    pktHeader->setEXSAP(PDUSAP::PACKET_DATA);
-    pktHeader->setSrcLLId(WUID_FNE);
 
     pktHeader->calculateLength(pktLen);
     uint32_t pduLength = pktHeader->getPDULength();
@@ -396,7 +393,7 @@ void P25PacketData::processPacketFrame(const uint8_t* data, uint32_t len, bool a
     }
 
     DECLARE_UINT8_ARRAY(pduUserData, pduLength);
-    ::memcpy(pduUserData + 4U, data, pktLen);
+    ::memcpy(pduUserData, data, pktLen);
 #if DEBUG_P25_PDU_DATA
     Utils::dump(1U, "P25, P25PacketData::processPacketFrame(), pduUserData", pduUserData, pduLength);
 #endif
@@ -408,8 +405,7 @@ void P25PacketData::processPacketFrame(const uint8_t* data, uint32_t len, bool a
     qf->timestamp = now + INTERPACKET_DELAY;
 
     qf->header = pktHeader;
-    qf->extendedAddress = true;
-    qf->llId = dstLlId;
+    qf->llId = llId;
     qf->tgtProtoAddr = tgtProtoAddr;
 
     qf->userData = new uint8_t[pduLength];
@@ -484,7 +480,7 @@ void P25PacketData::clock(uint32_t ms)
             }
 
             m_readyForNextPkt[frame->llId] = false;
-            dispatchUserFrameToFNE(*frame->header, frame->extendedAddress, frame->userData);
+            dispatchUserFrameToFNE(*frame->header, false, frame->userData);
         }
     }
 
@@ -862,11 +858,10 @@ bool P25PacketData::processConvDataReg(RxStatus* status)
 
         if (ipAddr == 0U) {
             LogWarning(LOG_NET, P25_PDU_STR ", CONNECT (Registration Request Connect) with zero IP address, llId = %u", llId);
-            return false;
+            ipAddr = getIPAddress(llId);
         }
 
         LogMessage(LOG_NET, P25_PDU_STR ", CONNECT (Registration Request Connect), llId = %u, ipAddr = %s", llId, __IP_FROM_UINT(ipAddr).c_str());
-
         m_arpTable[llId] = ipAddr; // update ARP table
     }
     break;
@@ -1259,6 +1254,16 @@ uint32_t P25PacketData::getIPAddress(uint32_t llId)
 
     if (hasARPEntry(llId)) {
         return m_arpTable[llId];
+    } else {
+        // do we have a static entry for this LLID?
+        lookups::RadioId rid = m_network->m_ridLookup->find(llId);
+        if (!rid.radioDefault()) {
+            if (rid.radioEnabled()) {
+                std::string addr = rid.radioIPAddress();
+                uint32_t ipAddr = __IP_FROM_STR(addr);
+                return ipAddr;
+            }
+        }
     }
 
     return 0U;
@@ -1277,6 +1282,20 @@ uint32_t P25PacketData::getLLIdAddress(uint32_t addr)
         if (entry.second == addr) {
             return entry.first;
         }
+    }
+
+    // lookup IP from static RID table
+    std::string ipAddr = __IP_FROM_UINT(addr);
+    std::unordered_map<uint32_t, lookups::RadioId> ridTable = m_network->m_ridLookup->table();
+    auto it = std::find_if(ridTable.begin(), ridTable.end(), [&](std::pair<const uint32_t, lookups::RadioId> x) {
+        if (x.second.radioIPAddress() == ipAddr) {
+            if (x.second.radioEnabled() && !x.second.radioDefault())
+                return true;
+        }
+        return false; 
+    });
+    if (it != ridTable.end()) {
+        return it->first;
     }
 
     return 0U;

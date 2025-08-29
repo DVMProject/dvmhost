@@ -225,6 +225,9 @@ void DataHeader::encode(uint8_t* data, bool noTrellis)
         header[1U] = ((m_rspClass & 0x03U) << 6) +                              // Response Class
             ((m_rspType & 0x07U) << 3) +                                        // Response Type
             ((m_rspStatus & 0x07U));                                            // Response Status
+
+        // the "full message" flag in a response PDU indicates whether or not the response is to an
+        // extended addressing PDU
         if (!m_F) {
             header[7U] = (m_srcLlId >> 16) & 0xFFU;                             // Source Logical Link ID
             header[8U] = (m_srcLlId >> 8) & 0xFFU;

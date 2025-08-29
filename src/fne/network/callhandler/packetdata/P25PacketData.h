@@ -93,7 +93,6 @@ namespace network
                 class QueuedDataFrame {
                 public:
                     p25::data::DataHeader* header;  //! Instance of a PDU data header.
-                    bool extendedAddress;           //! Flag indicating whether or not to extended addressing is in use.
                     uint32_t llId;                  //! Logical Link ID
                     uint32_t tgtProtoAddr;          //! Target Protocol Address
 

@@ -206,22 +206,13 @@ bool PeerListLookup::load()
                 continue;
 
             // tokenize line
-            std::string next;
             std::vector<std::string> parsed;
+            std::stringstream ss(line);
+            std::string field;
             char delim = ',';
 
-            for (char c : line) {
-                if (c == delim) {
-                    //if (!next.empty()) {
-                        parsed.push_back(next);
-                        next.clear();
-                    //}
-                }
-                else
-                    next += c;
-            }
-            if (!next.empty())
-                parsed.push_back(next);
+            while (std::getline(ss, field, delim))
+                parsed.push_back(field);
 
             // parse tokenized line
             uint32_t id = ::atoi(parsed[0].c_str());

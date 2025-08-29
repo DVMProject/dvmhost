@@ -113,22 +113,13 @@ bool IdenTableLookup::load()
                 continue;
 
             // tokenize line
-            std::string next;
             std::vector<std::string> parsed;
+            std::stringstream ss(line);
+            std::string field;
             char delim = ',';
 
-            for (auto it = line.begin(); it != line.end(); it++) {
-                if (*it == delim) {
-                    if (!next.empty()) {
-                        parsed.push_back(next);
-                        next.clear();
-                    }
-                }
-                else
-                    next += *it;
-            }
-            if (!next.empty())
-                parsed.push_back(next);
+            while (std::getline(ss, field, delim))
+                parsed.push_back(field);
 
             // ensure we have at least 5 fields
             if (parsed.size() < 5) {
