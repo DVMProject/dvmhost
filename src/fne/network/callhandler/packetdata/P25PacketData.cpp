@@ -371,11 +371,6 @@ void P25PacketData::processPacketFrame(const uint8_t* data, uint32_t len, bool a
     uint32_t srcProtoAddr = Utils::reverseEndian(ipHeader->ip_src.s_addr);
     uint32_t tgtProtoAddr = Utils::reverseEndian(ipHeader->ip_dst.s_addr);
 
-    if (dstLlId == 0U) {
-        LogMessage(LOG_NET, "P25, no ARP entry for, dstIp = %s", dstIp);
-        write_PDU_ARP(Utils::reverseEndian(ipHeader->ip_dst.s_addr));
-    }
-
     std::string srcIpStr = __IP_FROM_UINT(srcProtoAddr);
     std::string tgtIpStr = __IP_FROM_UINT(tgtProtoAddr);
 
@@ -459,7 +454,7 @@ void P25PacketData::clock(uint32_t ms)
                     write_PDU_ARP(frame->tgtProtoAddr);
 
                     processed = false;
-                    frame->timestamp = now + 250U; // retry in 250ms
+                    frame->timestamp = now + 1000U; // retry in 1s
                     frame->retryCnt++;
                     goto pkt_clock_abort;
                 }
@@ -474,7 +469,7 @@ void P25PacketData::clock(uint32_t ms)
                 if (!ready->second) {
                     LogWarning(LOG_NET, "P25, subscriber not ready, dstIp = %s", tgtIpStr.c_str());
                     processed = false;
-                    frame->timestamp = now + 100U; // retry in 100ms
+                    frame->timestamp = now + 500U; // retry in 500ms
                     frame->retryCnt++;
                     goto pkt_clock_abort;
                 }
@@ -541,8 +536,8 @@ void P25PacketData::dispatch(uint32_t peerId)
             m_readyForNextPkt[status->header.getSrcLLId()] = true;
         }
 
-        write_PDU_Ack_Response(status->header.getResponseClass(), status->header.getResponseType(), status->header.getResponseStatus(), 
-            status->header.getLLId(), status->header.getSrcLLId());
+        /*write_PDU_Ack_Response(status->header.getResponseClass(), status->header.getResponseType(), status->header.getResponseStatus(), 
+            status->header.getLLId(), status->header.getSrcLLId());*/
         return;
     }
 

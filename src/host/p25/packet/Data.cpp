@@ -323,6 +323,9 @@ bool Data::process(uint8_t* data, uint32_t len)
                                 m_retryPDUBitLength = 0U;
                                 m_retryCount = 0U;
                             }
+
+                            // rewrite the response to the network
+                            writeNetwork(0U, buffer, P25_PDU_FEC_LENGTH_BYTES, true);
                         } else {
                             if (m_rfDataHeader.getResponseClass() == PDUAckClass::NACK) {
                                 switch (m_rfDataHeader.getResponseType()) {
