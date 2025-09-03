@@ -170,7 +170,7 @@ bool CAC::decode(const uint8_t* data, bool longInbound)
     }
 
 #if DEBUG_NXDN_CAC
-    Utils::dump(2U, "CAC::decode(), CAC Raw", buffer, NXDN_CAC_IN_FEC_LENGTH_BYTES);
+    Utils::dump(2U, "NXDN, CAC::decode(), CAC Raw", buffer, NXDN_CAC_IN_FEC_LENGTH_BYTES);
 #endif
 
     if (longInbound) {
@@ -213,7 +213,7 @@ bool CAC::decode(const uint8_t* data, bool longInbound)
         conv.chainback(m_data, NXDN_CAC_LONG_CRC_LENGTH_BITS);
 
 #if DEBUG_NXDN_CAC
-        Utils::dump(2U, "Decoded Long CAC", m_data, (NXDN_CAC_LONG_CRC_LENGTH_BITS / 8U) + 1U);
+        Utils::dump(2U, "NXDN, CAC::decode(), Decoded Long CAC", m_data, (NXDN_CAC_LONG_CRC_LENGTH_BITS / 8U) + 1U);
 #endif
 
         // check CRC-16
@@ -271,7 +271,7 @@ bool CAC::decode(const uint8_t* data, bool longInbound)
         conv.chainback(m_data, NXDN_CAC_SHORT_CRC_LENGTH_BITS);
 
 #if DEBUG_NXDN_CAC
-        Utils::dump(2U, "Decoded CAC", m_data, (NXDN_CAC_SHORT_CRC_LENGTH_BITS / 8U) + 1U);
+        Utils::dump(2U, "NXDN, CAC::decode(), Decoded CAC", m_data, (NXDN_CAC_SHORT_CRC_LENGTH_BITS / 8U) + 1U);
 #endif
 
         // check CRC-16
@@ -298,7 +298,7 @@ bool CAC::decode(const uint8_t* data, bool longInbound)
     }
 
 #if DEBUG_NXDN_CAC
-    Utils::dump(2U, "Raw CAC Buffer", m_data, NXDN_CAC_FEC_LENGTH_BYTES);
+    Utils::dump(2U, "NXDN, CAC::decode(), Raw CAC Buffer", m_data, NXDN_CAC_FEC_LENGTH_BYTES);
 #endif
 
     return true;
@@ -324,7 +324,7 @@ void CAC::encode(uint8_t* data) const
     uint16_t crc = edac::CRC::addCRC16(buffer, NXDN_CAC_LENGTH_BITS);
 
 #if DEBUG_NXDN_CAC
-    Utils::dump(2U, "Encoded CAC", buffer, NXDN_CAC_FEC_LENGTH_BYTES);
+    Utils::dump(2U, "NXDN, CAC::encode(), Encoded CAC", buffer, NXDN_CAC_FEC_LENGTH_BYTES);
 #endif
 
     // encode convolution
@@ -357,7 +357,7 @@ void CAC::encode(uint8_t* data) const
     }
 
 #if DEBUG_NXDN_CAC
-    Utils::dump(2U, "CAC::encode(), CAC Puncture and Interleave", data, NXDN_FRAME_LENGTH_BYTES);
+    Utils::dump(2U, "NXDN, CAC::encode(), CAC Puncture and Interleave", data, NXDN_FRAME_LENGTH_BYTES);
 #endif
 
     // apply control field
@@ -380,7 +380,7 @@ void CAC::encode(uint8_t* data) const
     }
 
 #if DEBUG_NXDN_CAC
-    Utils::dump(2U, "CAC::encode(), CAC + Control", data, NXDN_FRAME_LENGTH_BYTES);
+    Utils::dump(2U, "NXDN, CAC::encode(), CAC + Control", data, NXDN_FRAME_LENGTH_BYTES);
 #endif
 }
 

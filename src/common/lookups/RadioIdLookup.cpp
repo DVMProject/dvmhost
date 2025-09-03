@@ -192,22 +192,13 @@ bool RadioIdLookup::load()
                 continue;
 
             // tokenize line
-            std::string next;
             std::vector<std::string> parsed;
+            std::stringstream ss(line);
+            std::string field;
             char delim = ',';
 
-            for (char c : line) {
-                if (c == delim) {
-                    if (!next.empty()) {
-                        parsed.push_back(next);
-                        next.clear();
-                    }
-                }
-                else
-                    next += c;
-            }
-            if (!next.empty())
-                parsed.push_back(next);
+            while (std::getline(ss, field, delim))
+                parsed.push_back(field);
 
             // ensure we have at least 2 fields
             if (parsed.size() < 2) {
@@ -232,6 +223,7 @@ bool RadioIdLookup::load()
             }
 
             m_table[id] = RadioId(radioEnabled, false, alias, ipAddress);
+            //::LogInfoEx(LOG_HOST, "Radio NAME: %s RID: %u ENABLED: %u IPADDR: %s", alias.c_str(), id, radioEnabled, ipAddress.c_str());
         }
     }
 

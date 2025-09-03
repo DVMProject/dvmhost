@@ -26,7 +26,7 @@ using namespace dmr::lc::csbk;
 CSBK_CALL_ALRT::CSBK_CALL_ALRT() : CSBK()
 {
     m_CSBKO = CSBKO::RAND;
-    m_FID = FID_DMRA;
+    m_FID = FID_MOT;
 }
 
 /* Decode a control signalling block. */

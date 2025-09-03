@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2024-2025 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -20,6 +20,7 @@
 #include "common/lookups/PeerListLookup.h"
 #include "common/network/Network.h"
 #include "common/network/PacketBuffer.h"
+#include "common/ThreadPool.h"
 
 #include <string>
 #include <cstdint>
@@ -27,6 +28,28 @@
 
 namespace network
 {
+    // ---------------------------------------------------------------------------
+    //  Structure Declaration
+    // ---------------------------------------------------------------------------
+
+    /**
+     * @brief Represents the data required for a network packet handler thread.
+     * @ingroup fne_network
+     */
+    struct PeerPacketRequest : thread_t {
+        uint32_t peerId;                    //! Peer ID for this request.
+        uint32_t streamId;                  //! Stream ID for this request.
+
+        frame::RTPHeader rtpHeader;         //! RTP Header
+        frame::RTPFNEHeader fneHeader;      //! RTP FNE Header
+        int length = 0U;                    //! Length of raw data buffer
+        uint8_t* buffer = nullptr;          //! Raw data buffer
+
+        network::NET_SUBFUNC::ENUM subFunc; //! Sub-function of the packet
+
+        uint64_t pktRxTime;                 //! Packet receive time
+    };
+
     // ---------------------------------------------------------------------------
     //  Class Declaration
     // ---------------------------------------------------------------------------
@@ -49,6 +72,7 @@ namespace network
          * @param dmr Flag indicating whether DMR is enabled.
          * @param p25 Flag indicating whether P25 is enabled.
          * @param nxdn Flag indicating whether NXDN is enabled.
+         * @param analog Flag indicating whether analog is enabled.
          * @param slot1 Flag indicating whether DMR slot 1 is enabled for network traffic.
          * @param slot2 Flag indicating whether DMR slot 2 is enabled for network traffic.
          * @param allowActivityTransfer Flag indicating that the system activity logs will be sent to the network.
@@ -56,7 +80,11 @@ namespace network
          * @param updateLookup Flag indicating that the system will accept radio ID and talkgroup ID lookups from the network.
          */
         PeerNetwork(const std::string& address, uint16_t port, uint16_t localPort, uint32_t peerId, const std::string& password,
-            bool duplex, bool debug, bool dmr, bool p25, bool nxdn, bool slot1, bool slot2, bool allowActivityTransfer, bool allowDiagnosticTransfer, bool updateLookup, bool saveLookup);
+            bool duplex, bool debug, bool dmr, bool p25, bool nxdn, bool analog, bool slot1, bool slot2, bool allowActivityTransfer, bool allowDiagnosticTransfer, bool updateLookup, bool saveLookup);
+        /**
+         * @brief Finalizes a instance of the PeerNetwork class.
+         */
+        ~PeerNetwork() override;
 
         /**
          * @brief Sets the instances of the Peer List lookup tables.
@@ -65,21 +93,36 @@ namespace network
         void setPeerLookups(lookups::PeerListLookup* pidLookup);
 
         /**
-         * @brief Gets the received DMR stream ID.
-         * @param slotNo DMR slot to get stream ID for.
-         * @return uint32_t Stream ID for the given DMR slot.
+         * @brief Opens connection to the network.
+         * @returns bool True, if networking has started, otherwise false.
          */
-        uint32_t getRxDMRStreamId(uint32_t slotNo) const;
+        bool open() override;
+
         /**
-         * @brief Gets the received P25 stream ID.
-         * @return uint32_t Stream ID.
+         * @brief Closes connection to the network.
          */
-        uint32_t getRxP25StreamId() const { return m_rxP25StreamId; }
+        void close() override;
+
         /**
-         * @brief Gets the received NXDN stream ID.
-         * @return uint32_t Stream ID.
+         * @brief Helper to set the DMR protocol callback.
+         * @param callback 
          */
-        uint32_t getRxNXDNStreamId() const { return m_rxNXDNStreamId; }
+        void setDMRCallback(std::function<void(PeerNetwork*, const uint8_t*, uint32_t, uint32_t, const frame::RTPFNEHeader&, const frame::RTPHeader&)>&& callback) { m_dmrCallback = callback; }
+        /**
+         * @brief Helper to set the P25 protocol callback.
+         * @param callback 
+         */
+        void setP25Callback(std::function<void(PeerNetwork*, const uint8_t*, uint32_t, uint32_t, const frame::RTPFNEHeader&, const frame::RTPHeader&)>&& callback) { m_p25Callback = callback; }
+        /**
+         * @brief Helper to set the NXDN protocol callback.
+         * @param callback 
+         */
+        void setNXDNCallback(std::function<void(PeerNetwork*, const uint8_t*, uint32_t, uint32_t, const frame::RTPFNEHeader&, const frame::RTPHeader&)>&& callback) { m_nxdnCallback = callback; }
+        /**
+         * @brief Helper to set the analog protocol callback.
+         * @param callback 
+         */
+        void setAnalogCallback(std::function<void(PeerNetwork*, const uint8_t*, uint32_t, uint32_t, const frame::RTPFNEHeader&, const frame::RTPHeader&)>&& callback) { m_analogCallback = callback; }
 
         /**
          * @brief Gets the blocked traffic peer ID table.
@@ -126,15 +169,38 @@ namespace network
         std::vector<uint32_t> m_blockTrafficToTable;
 
         /**
+         * @brief DMR Protocol Callback.
+         *  (This is called when the master sends a DMR packet.)
+         */
+        std::function<void(PeerNetwork* peer, const uint8_t* data, uint32_t length, uint32_t streamId, const frame::RTPFNEHeader& fneHeader, const frame::RTPHeader& rtpHeader)> m_dmrCallback;
+        /**
+         * @brief P25 Protocol Callback.
+         *  (This is called when the master sends a P25 packet.)
+         */
+        std::function<void(PeerNetwork* peer, const uint8_t* data, uint32_t length, uint32_t streamId, const frame::RTPFNEHeader& fneHeader, const frame::RTPHeader& rtpHeader)> m_p25Callback;
+        /**
+         * @brief NXDN Protocol Callback.
+         *  (This is called when the master sends a NXDN packet.)
+         */
+        std::function<void(PeerNetwork* peer, const uint8_t* data, uint32_t length, uint32_t streamId, const frame::RTPFNEHeader& fneHeader, const frame::RTPHeader& rtpHeader)> m_nxdnCallback;
+        /**
+         * @brief Analog Protocol Callback.
+         *  (This is called when the master sends a analog packet.)
+         */
+        std::function<void(PeerNetwork* peer, const uint8_t* data, uint32_t length, uint32_t streamId, const frame::RTPFNEHeader& fneHeader, const frame::RTPHeader& rtpHeader)> m_analogCallback;
+
+        /**
          * @brief User overrideable handler that allows user code to process network packets not handled by this class.
          * @param peerId Peer ID.
          * @param opcode FNE network opcode pair.
          * @param[in] data Buffer containing message to send to peer.
          * @param length Length of buffer.
          * @param streamId Stream ID.
+         * @param fneHeader RTP FNE Header.
+         * @param rtpHeader RTP Header.
          */
         void userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opcode, const uint8_t* data = nullptr, uint32_t length = 0U,
-            uint32_t streamId = 0U) override;
+            uint32_t streamId = 0U, const frame::RTPFNEHeader& fneHeader = frame::RTPFNEHeader(), const frame::RTPHeader& rtpHeader = frame::RTPHeader()) override;
 
         /**
          * @brief Writes configuration to the network.
@@ -150,6 +216,14 @@ namespace network
         PacketBuffer m_tgidPkt;
         PacketBuffer m_ridPkt;
         PacketBuffer m_pidPkt;
+
+        ThreadPool m_threadPool;
+
+        /**
+         * @brief Entry point to process a given network packet.
+         * @param req Instance of the PeerPacketRequest structure.
+         */
+        static void taskNetworkRx(PeerPacketRequest* req);
     };
 } // namespace network
 

@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2016 Jonathan Naylor, G4KLX
- *  Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2017-2025 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -115,6 +115,19 @@ namespace p25
              */
             bool isStandardMFId() const;
 
+            /**
+             * @brief Decode link control.
+             * @param[in] rs Buffer containing the decoded Reed-Solomon LC data.
+             * @param rawOnly Flag indicating only the raw bytes of the LC should be decoded.
+             * @returns bool True, if LC is decoded, otherwise false.
+             */
+            bool decodeLC(const uint8_t* rs, bool rawOnly = false);
+            /**
+             * @brief Encode link control.
+             * @param[out] rs Buffer to encode LC data.
+             */
+            void encodeLC(uint8_t* rs);
+
             /** @name Encryption data */
             /**
              * @brief Sets the encryption message indicator.
@@ -127,6 +140,18 @@ namespace p25
              */
             void getMI(uint8_t* mi) const;
             /** @} */
+
+            /** @name User Alias data */
+            /**
+             * @brief Gets the user alias.
+             * @returns std::string User Alias.
+             */
+            std::string getUserAlias() const;
+            /**
+             * @brief Sets the user alias.
+             * @param alias User alias.
+             */
+            void setUserAlias(std::string alias);
 
             /** @name Local Site data */
             /**
@@ -243,6 +268,11 @@ namespace p25
             // Encryption data
             uint8_t* m_mi;
 
+            // User Alias data
+            uint8_t* m_userAlias;
+            bool m_gotUserAliasPartA;
+            bool m_gotUserAlias;
+
             // Local Site data
             static SiteData m_siteData;
 
@@ -250,19 +280,6 @@ namespace p25
              * @brief Internal helper to copy the class.
              */
             void copy(const LC& data);
-
-            /**
-             * @brief Decode link control.
-             * @param[in] rs Buffer containing the decoded Reed-Solomon LC data.
-             * @param rawOnly Flag indicating only the raw bytes of the LC should be decoded.
-             * @returns bool True, if LC is decoded, otherwise false.
-             */
-            bool decodeLC(const uint8_t* rs, bool rawOnly = false);
-            /**
-             * @brief Encode link control.
-             * @param[out] rs Buffer to encode LC data.
-             */
-            void encodeLC(uint8_t* rs);
 
             /**
              * @brief Decode LDU hamming FEC.

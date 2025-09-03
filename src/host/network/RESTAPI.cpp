@@ -176,7 +176,7 @@ RESTAPI::RESTAPI(const std::string& address, uint16_t port, const std::string& p
     delete[] in;
 
     if (m_debug) {
-        Utils::dump("REST Password Hash", m_passwordHash, 32U);
+        Utils::dump("RESTAPI::RESTAPI(), REST Password Hash", m_passwordHash, 32U);
     }
 
 #if defined(ENABLE_SSL)
@@ -432,7 +432,7 @@ void RESTAPI::restAPI_PutAuth(const HTTPPayload& request, HTTPPayload& reply, co
     }
 
     if (m_debug) {
-        Utils::dump("Password Hash", passwordHash, 32U);
+        Utils::dump("RESTAPI::restAPI_PutAuth(), Password Hash", passwordHash, 32U);
     }
 
     // compare hashes
@@ -1611,7 +1611,7 @@ void RESTAPI::restAPI_PutP25RawTSBK(const HTTPPayload& request, HTTPPayload& rep
     }
 
     if (m_debug) {
-        Utils::dump("Raw TSBK", tsbk, P25_TSBK_LENGTH_BYTES);
+        Utils::dump("RESTAPI::restAPI_PutP25RawTSBK(), Raw TSBK", tsbk, P25_TSBK_LENGTH_BYTES);
     }
 
     m_p25->control()->writeRF_TSDU_Raw(tsbk);

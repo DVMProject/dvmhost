@@ -272,7 +272,7 @@ bool CSBK::decode(const uint8_t* data, uint8_t* payload)
     }
 
     if (m_verbose) {
-        Utils::dump(2U, "Decoded CSBK", csbk, DMR_CSBK_LENGTH_BYTES);
+        Utils::dump(2U, "CSBK::decode(), Decoded CSBK", csbk, DMR_CSBK_LENGTH_BYTES);
     }
 
     m_raw = new uint8_t[DMR_CSBK_LENGTH_BYTES];
@@ -340,7 +340,7 @@ void CSBK::encode(uint8_t* data, const uint8_t* payload)
     }
 
     if (m_verbose) {
-        Utils::dump(2U, "Encoded CSBK", csbk, DMR_CSBK_LENGTH_BYTES);
+        Utils::dump(2U, "CSBK::encode(), Encoded CSBK", csbk, DMR_CSBK_LENGTH_BYTES);
     }
 
     // encode BPTC (196,96) FEC

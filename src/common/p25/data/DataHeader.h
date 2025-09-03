@@ -160,6 +160,8 @@ namespace p25
             DECLARE_PROPERTY(uint8_t, padLength, PadLength);
             /**
              * @brief Flag indicating whether or not this data packet is a full message.
+             * @note This is used on extended addressing response packets to indicate whether or not
+             *      the response is for a extended addressing request.
              */
             DECLARE_PROPERTY(bool, F, FullMessage);
             /**
@@ -183,7 +185,7 @@ namespace p25
              */
             DECLARE_PROPERTY(uint8_t, headerOffset, HeaderOffset);
 
-            // Extended Addressing Data
+            /** @name Symmetric Addressing Data */
             /**
              * @brief Service access point.
              */
@@ -192,8 +194,9 @@ namespace p25
              * @brief Source Logical link ID.
              */
             DECLARE_PROPERTY(uint32_t, srcLlId, SrcLLId);
+            /** @} */
 
-            // Response Data
+            /** @name Response Packet Data */
             /**
              * @brief Response class.
              */
@@ -206,8 +209,9 @@ namespace p25
              * @brief Response status.
              */
             DECLARE_PROPERTY(uint8_t, rspStatus, ResponseStatus);
+            /** @} */
             
-            // AMBT Data
+            /** @name AMBT Packet Data */
             /**
              * @brief Alternate Trunking Block Opcode
              */
@@ -220,6 +224,7 @@ namespace p25
              * @brief Alternate Trunking Block Field 9
              */
             DECLARE_PROPERTY(uint8_t, ambtField9, AMBTField9);
+            /** @} */
 
         private:
             edac::Trellis m_trellis;

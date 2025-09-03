@@ -32,6 +32,7 @@
 #include "audio/miniaudio.h"
 #include "mdc/mdc_decode.h"
 #include "network/PeerNetwork.h"
+#include "RtsPttController.h"
 
 #include <string>
 #include <mutex>
@@ -47,7 +48,6 @@
 //  Constants
 // ---------------------------------------------------------------------------
 
-#define MBE_SAMPLES_LENGTH 160
 #define NO_BIT_STEAL 0
 
 #define ECMODE_NOISE_SUPPRESS 0x40
@@ -63,6 +63,7 @@ const uint8_t HALF_RATE_MODE = 0x01U;
 
 const uint8_t TX_MODE_DMR = 1U;
 const uint8_t TX_MODE_P25 = 2U;
+const uint8_t TX_MODE_ANALOG = 3U;
 
 
 // ---------------------------------------------------------------------------
@@ -92,31 +93,6 @@ void audioCallback(ma_device* device, void* output, const void* input, ma_uint32
  */
 void mdcPacketDetected(int frameCount, mdc_u8_t op, mdc_u8_t arg, mdc_u16_t unitID,
     mdc_u8_t extra0, mdc_u8_t extra1, mdc_u8_t extra2, mdc_u8_t extra3, void* context);
-
-/**
- * @brief Helper to convert PCM into G.711 aLaw.
- * @param pcm PCM value.
- * @return uint8_t aLaw value.
- */
-uint8_t encodeALaw(short pcm);
-/**
- * @brief Helper to convert G.711 aLaw into PCM.
- * @param alaw aLaw value.
- * @return short PCM value.
- */
-short decodeALaw(uint8_t alaw);
-/**
- * @brief Helper to convert PCM into G.711 MuLaw.
- * @param pcm PCM value.
- * @return uint8_t MuLaw value.
- */
-uint8_t encodeMuLaw(short pcm);
-/**
- * @brief Helper to convert G.711 MuLaw into PCM.
- * @param ulaw MuLaw value.
- * @return short PCM value.
- */
-short decodeMuLaw(uint8_t ulaw);
 
 // ---------------------------------------------------------------------------
 //  Structure Declaration
@@ -260,6 +236,11 @@ private:
     uint32_t m_p25SeqNo;
     uint8_t m_p25N;
 
+    uint32_t m_netId;
+    uint32_t m_sysId;
+
+    uint8_t m_analogN;
+
     bool m_audioDetect;
     bool m_trafficFromUDP;
     uint32_t m_udpSrcId;
@@ -277,6 +258,12 @@ private:
     bool m_running;
     bool m_trace;
     bool m_debug;
+
+    // RTS PTT Control
+    bool m_rtsPttEnable;
+    std::string m_rtsPttPort;
+    RtsPttController* m_rtsPttController;
+    bool m_rtsPttActive;
 
     uint16_t m_rtpSeqNo;
     uint32_t m_rtpTimestamp;
@@ -485,12 +472,18 @@ private:
     void encodeP25AudioFrame(uint8_t* pcm, uint32_t forcedSrcId = 0U, uint32_t forcedDstId = 0U);
 
     /**
-     * @brief Helper to generate outgoing RTP headers.
-     * @param msgLen Message Length.
-     * @param rtpSeq RTP Sequence.
-     * @returns uint8_t* Buffer containing the encoded RTP headers.
+     * @brief Helper to process analog network traffic.
+     * @param buffer
+     * @param length
      */
-    uint8_t* generateRTPHeaders(uint8_t msgLen, uint16_t& rtpSeq);
+    void processAnalogNetwork(uint8_t* buffer, uint32_t length);
+    /**
+     * @brief Helper to encode analog network traffic audio frames.
+     * @param pcm
+     * @param forcedSrcId
+     * @param forcedDstId
+     */
+    void encodeAnalogAudioFrame(uint8_t* pcm, uint32_t forcedSrcId = 0U, uint32_t forcedDstId = 0U);
 
     /**
     * @brief Helper to generate USRP end of transmission
@@ -501,6 +494,14 @@ private:
      * @brief Helper to generate the single-tone preamble tone.
      */
     void generatePreambleTone();
+
+    /**
+     * @brief Helper to generate outgoing RTP headers.
+     * @param msgLen Message Length.
+     * @param rtpSeq RTP Sequence.
+     * @returns uint8_t* Buffer containing the encoded RTP headers.
+     */
+    uint8_t* generateRTPHeaders(uint8_t msgLen, uint16_t& rtpSeq);
 
     /**
      * @brief Helper to end a local or UDP call.
@@ -516,6 +517,20 @@ private:
      * @param keyLength Length of key in bytes.
      */
     void processTEKResponse(p25::kmm::KeyItem* ki, uint8_t algId, uint8_t keyLength);
+
+    /**
+     * @brief Helper to initialize RTS PTT control.
+     * @returns bool True, if RTS PTT was initialized successfully, otherwise false.
+     */
+    bool initializeRtsPtt();
+    /**
+     * @brief Helper to assert RTS PTT (start transmission).
+     */
+    void assertRtsPtt();
+    /**
+     * @brief Helper to deassert RTS PTT (stop transmission).
+     */
+    void deassertRtsPtt();
 
     /**
      * @brief Entry point to audio processing thread.

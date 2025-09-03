@@ -15,6 +15,7 @@
 #include "network/callhandler/TagDMRData.h"
 #include "network/callhandler/TagP25Data.h"
 #include "network/callhandler/TagNXDNData.h"
+#include "network/callhandler/TagAnalogData.h"
 #include "ActivityLog.h"
 #include "HostFNE.h"
 #include "FNEMain.h"
@@ -42,6 +43,8 @@ using namespace lookups;
 #define MIN_WORKER_CNT 4U
 #define MAX_WORKER_CNT 128U
 
+#define MAX_RECOMMENDED_PEER_NETWORKS 8U
+
 #define THREAD_CYCLE_THRESHOLD 2U
 
 #define IDLE_WARMUP_MS 5U
@@ -66,6 +69,7 @@ HostFNE::HostFNE(const std::string& confFile) :
     m_dmrEnabled(false),
     m_p25Enabled(false),
     m_nxdnEnabled(false),
+    m_analogEnabled(false),
     m_ridLookup(nullptr),
     m_tidLookup(nullptr),
     m_peerListLookup(nullptr),
@@ -213,8 +217,6 @@ int HostFNE::run()
 #if !defined(_WIN32)
     if (!Thread::runAsThread(this, threadVirtualNetworking))
         return EXIT_FAILURE;
-    if (!Thread::runAsThread(this, threadVirtualNetworkingClock))
-        return EXIT_FAILURE;
 #endif // !defined(_WIN32)
     /*
     ** Main execution loop
@@ -249,16 +251,22 @@ int HostFNE::run()
             network::PeerNetwork* peerNetwork = network.second;
             if (peerNetwork != nullptr) {
                 peerNetwork->clock(ms);
-
-                // skip peer if it isn't enabled
-                if (!peerNetwork->isEnabled()) {
-                    continue;
-                }
-
-                // process peer network traffic
-                processPeer(peerNetwork);
             }
         }
+
+#if !defined(_WIN32)
+        if (m_vtunEnabled) {
+            switch (m_packetDataMode) {
+            case PacketDataMode::DMR:
+                // TODO: not supported yet
+                break;
+
+            case PacketDataMode::PROJECT25:
+                m_network->p25TrafficHandler()->packetData()->clock(ms);
+                break;
+            }
+        }
+#endif // !defined(_WIN32)
 
         if (ms < 2U)
             Thread::sleep(1U);
@@ -388,6 +396,10 @@ bool HostFNE::readParams()
     std::string talkgroupConfig = talkgroupRules["file"].as<std::string>();
     uint32_t talkgroupConfigReload = talkgroupRules["time"].as<uint32_t>(30U);
 
+    yaml::Node adjSiteMapRules = masterConf["adj_site_map"];
+    std::string adjSiteMapConfig = adjSiteMapRules["file"].as<std::string>();
+    uint32_t adjSiteMapReload = adjSiteMapRules["time"].as<uint32_t>(30U);
+
     yaml::Node cryptoContainer = masterConf["crypto_container"];
     bool cryptoContainerEnabled = cryptoContainer["enable"].as<bool>(false);
 #if !defined(ENABLE_SSL)
@@ -419,6 +431,14 @@ bool HostFNE::readParams()
 
     m_peerListLookup = new PeerListLookup(peerListLookupFile, peerListConfigReload, peerListLookupEnable);
     m_peerListLookup->read();
+
+    LogInfo("Adjacent Site Map Lookups");
+    LogInfo("    File: %s", adjSiteMapConfig.length() > 0U ? adjSiteMapConfig.c_str() : "None");
+    if (adjSiteMapReload > 0U)
+        LogInfo("    Reload: %u mins", adjSiteMapReload);
+
+    m_adjSiteMapLookup = new AdjSiteMapLookup(adjSiteMapConfig, adjSiteMapReload);
+    m_adjSiteMapLookup->read();
 
     // try to load peer whitelist/blacklist
     LogInfo("Crypto Container Lookups");
@@ -493,7 +513,7 @@ bool HostFNE::initializeRESTAPI()
     // initialize network remote command
     if (restApiEnable) {
         m_RESTAPI = new RESTAPI(restApiAddress, restApiPort, restApiPassword, restApiSSLKey, restApiSSLCert, restApiEnableSSL, this, restApiDebug);
-        m_RESTAPI->setLookups(m_ridLookup, m_tidLookup, m_peerListLookup);
+        m_RESTAPI->setLookups(m_ridLookup, m_tidLookup, m_peerListLookup, m_adjSiteMapLookup);
         bool ret = m_RESTAPI->open();
         if (!ret) {
             delete m_RESTAPI;
@@ -572,6 +592,7 @@ bool HostFNE::createMasterNetwork()
     m_dmrEnabled = masterConf["allowDMRTraffic"].as<bool>(true);
     m_p25Enabled = masterConf["allowP25Traffic"].as<bool>(true);
     m_nxdnEnabled = masterConf["allowNXDNTraffic"].as<bool>(true);
+    m_analogEnabled = masterConf["allowAnalogTraffic"].as<bool>(false);
 
     uint32_t parrotDelay = masterConf["parrotDelay"].as<uint32_t>(2500U);
     if (m_pingTime * 1000U < parrotDelay) {
@@ -587,6 +608,7 @@ bool HostFNE::createMasterNetwork()
     LogInfo("    Allow DMR Traffic: %s", m_dmrEnabled ? "yes" : "no");
     LogInfo("    Allow P25 Traffic: %s", m_p25Enabled ? "yes" : "no");
     LogInfo("    Allow NXDN Traffic: %s", m_nxdnEnabled ? "yes" : "no");
+    LogInfo("    Allow Analog Traffic: %s", m_analogEnabled ? "yes" : "no");
     LogInfo("    Parrot Repeat Delay: %u ms", parrotDelay);
     LogInfo("    Parrot Grant Demand: %s", parrotGrantDemand ? "yes" : "no");
 
@@ -605,11 +627,11 @@ bool HostFNE::createMasterNetwork()
     }
 
     // initialize networking
-    m_network = new FNENetwork(this, address, port, id, password, debug, verbose, reportPeerPing, m_dmrEnabled, m_p25Enabled, m_nxdnEnabled, 
+    m_network = new FNENetwork(this, address, port, id, password, debug, verbose, reportPeerPing, m_dmrEnabled, m_p25Enabled, m_nxdnEnabled, m_analogEnabled,
         parrotDelay, parrotGrantDemand, m_allowActivityTransfer, m_allowDiagnosticTransfer, m_pingTime, m_updateLookupTime, workerCnt);
     m_network->setOptions(masterConf, true);
 
-    m_network->setLookups(m_ridLookup, m_tidLookup, m_peerListLookup, m_cryptoLookup);
+    m_network->setLookups(m_ridLookup, m_tidLookup, m_peerListLookup, m_cryptoLookup, m_adjSiteMapLookup);
 
     if (m_RESTAPI != nullptr) {
         m_RESTAPI->setNetwork(m_network);
@@ -761,6 +783,10 @@ bool HostFNE::createPeerNetworks()
 {
     yaml::Node& peerList = m_conf["peers"];
     if (peerList.size() > 0U) {
+        if (peerList.size() > MAX_RECOMMENDED_PEER_NETWORKS) {
+            LogWarning(LOG_HOST, "Peer network count (%zu) exceeds the recommended maximum of %u. This may result in poor performance.", peerList.size(), MAX_RECOMMENDED_PEER_NETWORKS);
+        }
+
         for (size_t i = 0; i < peerList.size(); i++) {
             yaml::Node& peerConf = peerList[i];
 
@@ -818,7 +844,8 @@ bool HostFNE::createPeerNetworks()
             }
 
             // initialize networking
-            network::PeerNetwork* network = new PeerNetwork(masterAddress, masterPort, 0U, id, password, true, debug, m_dmrEnabled, m_p25Enabled, m_nxdnEnabled, true, true, m_allowActivityTransfer, m_allowDiagnosticTransfer, false, false);
+            network::PeerNetwork* network = new PeerNetwork(masterAddress, masterPort, 0U, id, password, true, debug, m_dmrEnabled, m_p25Enabled, m_nxdnEnabled, m_analogEnabled, true, true, 
+                m_allowActivityTransfer, m_allowDiagnosticTransfer, false, false);
             network->setMetadata(identity, rxFrequency, txFrequency, 0.0F, 0.0F, 0, 0, 0, latitude, longitude, 0, location);
             network->setLookups(m_ridLookup, m_tidLookup);
             network->setPeerLookups(m_peerListLookup);
@@ -826,6 +853,11 @@ bool HostFNE::createPeerNetworks()
             if (encrypted) {
                 network->setPresharedKey(presharedKey);
             }
+
+            network->setDMRCallback(std::bind(&HostFNE::processPeerDMR, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, std::placeholders::_6));
+            network->setP25Callback(std::bind(&HostFNE::processPeerP25, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, std::placeholders::_6));
+            network->setNXDNCallback(std::bind(&HostFNE::processPeerNXDN, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, std::placeholders::_6));
+            network->setAnalogCallback(std::bind(&HostFNE::processPeerAnalog, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, std::placeholders::_6));
 
             /*
             ** Block Traffic To Peers
@@ -969,115 +1001,92 @@ void* HostFNE::threadVirtualNetworking(void* arg)
 
     return nullptr;
 }
-
-/* Entry point to virtual networking clocking thread. */
-
-void* HostFNE::threadVirtualNetworkingClock(void* arg)
-{
-    thread_t* th = (thread_t*)arg;
-    if (th != nullptr) {
-        ::pthread_detach(th->thread);
-
-        std::string threadName("fne:vt-clock");
-        HostFNE* fne = static_cast<HostFNE*>(th->obj);
-        if (fne == nullptr) {
-            g_killed = true;
-            LogError(LOG_HOST, "[FAIL] %s", threadName.c_str());
-        }
-
-        if (g_killed) {
-            delete th;
-            return nullptr;
-        }
-
-        if (!fne->m_vtunEnabled) {
-            delete th;
-            return nullptr;
-        }
-
-        LogMessage(LOG_HOST, "[ OK ] %s", threadName.c_str());
-#ifdef _GNU_SOURCE
-        ::pthread_setname_np(th->thread, threadName.c_str());
-#endif // _GNU_SOURCE
-
-        if (fne->m_tun != nullptr) {
-            StopWatch stopWatch;
-            stopWatch.start();
-
-            while (!g_killed) {
-                uint32_t ms = stopWatch.elapsed();
-                stopWatch.start();
-
-                // clock traffic handler
-                switch (fne->m_packetDataMode) {
-                case PacketDataMode::DMR:
-                    // TODO: not supported yet
-                    break;
-
-                case PacketDataMode::PROJECT25:
-                    fne->m_network->p25TrafficHandler()->packetData()->clock(ms);
-                    break;
-                }
-
-                if (ms < THREAD_CYCLE_THRESHOLD)
-                    Thread::sleep(THREAD_CYCLE_THRESHOLD);
-            }
-        }
-
-        LogMessage(LOG_HOST, "[STOP] %s", threadName.c_str());
-        delete th;
-    }
-
-    return nullptr;
-}
 #endif // !defined(_WIN32)
 
-/* Processes any peer network traffic. */
+/* Processes DMR peer network traffic. */
 
-void HostFNE::processPeer(network::PeerNetwork* peerNetwork)
+void HostFNE::processPeerDMR(network::PeerNetwork* peerNetwork, const uint8_t* data, uint32_t length, uint32_t streamId, 
+    const network::frame::RTPFNEHeader& fneHeader, const network::frame::RTPHeader& rtpHeader)
 {
     if (peerNetwork == nullptr)
         return; // this shouldn't happen...
+
+    // skip peer if it isn't enabled
+    if (!peerNetwork->isEnabled())
+        return;
+
     if (peerNetwork->getStatus() != NET_STAT_RUNNING)
         return;
 
     // process DMR data
-    if (peerNetwork->hasDMRData()) {
-        uint32_t length = 100U;
-        bool ret = false;
-        UInt8Array data = peerNetwork->readDMR(ret, length);
-        if (ret) {
-            uint32_t peerId = peerNetwork->getPeerId();
-            uint32_t slotNo = (data[15U] & 0x80U) == 0x80U ? 2U : 1U;
-            uint32_t streamId = peerNetwork->getRxDMRStreamId(slotNo);
-
-            m_network->dmrTrafficHandler()->processFrame(data.get(), length, peerId, peerNetwork->pktLastSeq(), streamId, true);
-        }
+    if (length > 0U) {
+        uint32_t peerId = peerNetwork->getPeerId();
+        m_network->dmrTrafficHandler()->processFrame(data, length, peerId, rtpHeader.getSSRC(), peerNetwork->pktLastSeq(), streamId, true);
     }
+}
+
+/* Processes P25 peer network traffic. */
+
+void HostFNE::processPeerP25(network::PeerNetwork* peerNetwork, const uint8_t* data, uint32_t length, uint32_t streamId, 
+    const network::frame::RTPFNEHeader& fneHeader, const network::frame::RTPHeader& rtpHeader)
+{
+    if (peerNetwork == nullptr)
+        return; // this shouldn't happen...
+
+    // skip peer if it isn't enabled
+    if (!peerNetwork->isEnabled())
+        return;
+
+    if (peerNetwork->getStatus() != NET_STAT_RUNNING)
+        return;
 
     // process P25 data
-    if (peerNetwork->hasP25Data()) {
-        uint32_t length = 100U;
-        bool ret = false;
-        UInt8Array data = peerNetwork->readP25(ret, length);
-        if (ret) {
-            uint32_t peerId = peerNetwork->getPeerId();
-            uint32_t streamId = peerNetwork->getRxP25StreamId();
-
-            m_network->p25TrafficHandler()->processFrame(data.get(), length, peerId, peerNetwork->pktLastSeq(), streamId, true);
-        }
+    if (length > 0U) {
+        uint32_t peerId = peerNetwork->getPeerId();
+        m_network->p25TrafficHandler()->processFrame(data, length, peerId, rtpHeader.getSSRC(), peerNetwork->pktLastSeq(), streamId, true);
     }
+}
+
+/* Processes NXDN peer network traffic. */
+
+void HostFNE::processPeerNXDN(network::PeerNetwork* peerNetwork, const uint8_t* data, uint32_t length, uint32_t streamId, 
+    const network::frame::RTPFNEHeader& fneHeader, const network::frame::RTPHeader& rtpHeader)
+{
+    if (peerNetwork == nullptr)
+        return; // this shouldn't happen...
+
+    // skip peer if it isn't enabled
+    if (!peerNetwork->isEnabled())
+        return;
+
+    if (peerNetwork->getStatus() != NET_STAT_RUNNING)
+        return;
 
     // process NXDN data
-    if (peerNetwork->hasNXDNData()) {
-        uint32_t length = 100U;
-        bool ret = false;
-        UInt8Array data = peerNetwork->readNXDN(ret, length);
-        if (ret) {
-            uint32_t peerId = peerNetwork->getPeerId();
-            uint32_t streamId = peerNetwork->getRxNXDNStreamId();
+    if (length > 0U) {
+        uint32_t peerId = peerNetwork->getPeerId();
+        m_network->nxdnTrafficHandler()->processFrame(data, length, peerId, rtpHeader.getSSRC(), peerNetwork->pktLastSeq(), streamId, true);
+    }
+}
 
-            m_network->nxdnTrafficHandler()->processFrame(data.get(), length, peerId, peerNetwork->pktLastSeq(), streamId, true);
-        }
+/* Processes analog peer network traffic. */
+
+void HostFNE::processPeerAnalog(network::PeerNetwork* peerNetwork, const uint8_t* data, uint32_t length, uint32_t streamId, 
+    const network::frame::RTPFNEHeader& fneHeader, const network::frame::RTPHeader& rtpHeader)
+{
+    if (peerNetwork == nullptr)
+        return; // this shouldn't happen...
+
+    // skip peer if it isn't enabled
+    if (!peerNetwork->isEnabled())
+        return;
+
+    if (peerNetwork->getStatus() != NET_STAT_RUNNING)
+        return;
+
+    // process analog data
+    if (length > 0U) {
+        uint32_t peerId = peerNetwork->getPeerId();
+        m_network->analogTrafficHandler()->processFrame(data, length, peerId, rtpHeader.getSSRC(), peerNetwork->pktLastSeq(), streamId, true);
     }
 }

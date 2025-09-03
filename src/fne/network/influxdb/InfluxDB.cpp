@@ -63,7 +63,11 @@ int detail::inner::request(const char* method, const char* uri, const std::strin
 
     ret = getaddrinfo(si.host().c_str(), std::to_string(si.port()).c_str(), &hints, &addr);
     if (ret != 0) {
-        ::LogError(LOG_HOST, "Failed to determine InfluxDB server host, err: %d", errno);
+#if defined(_WIN32)
+        ::LogError(LOG_HOST, "Failed to connect to InfluxDB server, err: %lu", ::GetLastError());
+#else
+        ::LogError(LOG_HOST, "Failed to determine InfluxDB server host, err: %d (%s)", errno, strerror(errno));
+#endif // defined(_WIN32)
         return 1;
     }
 
@@ -73,9 +77,11 @@ int detail::inner::request(const char* method, const char* uri, const std::strin
 #if defined(_WIN32)
         ::LogError(LOG_HOST, "Failed to connect to InfluxDB server, err: %lu", ::GetLastError());
 #else
-        ::LogError(LOG_HOST, "Failed to connect to InfluxDB server, err: %d", errno);
+        ::LogError(LOG_HOST, "Failed to connect to InfluxDB server, err: %d (%s)", errno, strerror(errno));
 #endif // defined(_WIN32)
         closesocket(fd);
+        if (addr != nullptr)
+            free(addr);
         return 1;
     }
 
@@ -85,12 +91,16 @@ int detail::inner::request(const char* method, const char* uri, const std::strin
     if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (char*)&sockOptVal, sizeof(int)) != 0) {
         ::LogError(LOG_HOST, "Failed to connect to InfluxDB server, err: %lu", ::GetLastError());
         closesocket(fd);
+        if (addr != nullptr)
+            free(addr);
         return 1;
     }
 #else
     if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &sockOptVal, sizeof(int)) < 0) {
-        ::LogError(LOG_HOST, "Failed to connect to InfluxDB server, err: %d", errno);
+        ::LogError(LOG_HOST, "Failed to connect to InfluxDB server, err: %d (%s)", errno, strerror(errno));
         closesocket(fd);
+        if (addr != nullptr)
+            free(addr);
         return 1;
     }
 #endif // defined(_WIN32)
@@ -99,21 +109,27 @@ int detail::inner::request(const char* method, const char* uri, const std::strin
 #if defined(_WIN32)
     u_long flags = 1;
     if (ioctlsocket(fd, FIONBIO, &flags) != 0) {
-        ::LogError(LOG_HOST, "Failed to connect to InfluxDB server, failed ioctlsocket, err: %d", errno);
+        ::LogError(LOG_HOST, "Failed to connect to InfluxDB server, failed ioctlsocket, err: %lu", ::GetLastError());
         closesocket(fd);
+        if (addr != nullptr)
+            free(addr);
         return 1;
     }
 #else
     int flags = fcntl(fd, F_GETFL, 0);
     if (flags < 0) {
-        ::LogError(LOG_HOST, "Failed to connect to InfluxDB server, failed fcntl(F_GETFL), err: %d", errno);
+        ::LogError(LOG_HOST, "Failed to connect to InfluxDB server, failed fcntl(F_GETFL), err: %d (%s)", errno, strerror(errno));
         closesocket(fd);
+        if (addr != nullptr)
+            free(addr);
         return 1;
     }
 
     if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) < 0) {
-        ::LogError(LOG_HOST, "Failed to connect to InfluxDB server, failed fcntl(F_SETFL), err: %d", errno);
+        ::LogError(LOG_HOST, "Failed to connect to InfluxDB server, failed fcntl(F_SETFL), err: %d (%s)", errno, strerror(errno));
         closesocket(fd);
+        if (addr != nullptr)
+            free(addr);
         return 1;
     }
 #endif // defined(_WIN32)
@@ -140,6 +156,8 @@ int detail::inner::request(const char* method, const char* uri, const std::strin
                     if (retryCnt > 5U) {
                         ::LogError(LOG_HOST, "Failed to connect to InfluxDB server, timed out while connecting");
                         closesocket(fd);
+                        if (addr != nullptr)
+                            free(addr);
                         return 1;
                     }
 
@@ -150,9 +168,11 @@ int detail::inner::request(const char* method, const char* uri, const std::strin
 #if defined(_WIN32)
                     ::LogError(LOG_HOST, "Failed to connect to InfluxDB server, err: %lu", ::GetLastError());
 #else
-                    ::LogError(LOG_HOST, "Failed to connect to InfluxDB server, err: %d", errno);
+                    ::LogError(LOG_HOST, "Failed to connect to InfluxDB server, err: %d (%s)", errno, strerror(errno));
 #endif // defined(_WIN32)
                     closesocket(fd);
+                    if (addr != nullptr)
+                        free(addr);
                     return 1;
                 } else if (ret > 0) {
 #if !defined(_WIN32)
@@ -161,14 +181,18 @@ int detail::inner::request(const char* method, const char* uri, const std::strin
                     socklen_t slen = sizeof(int);
 
                     if (getsockopt(fd, SOL_SOCKET, SO_ERROR, (void *)(&valopt), &slen) < 0) {
-                        ::LogError(LOG_HOST, "Failed to connect to InfluxDB server, err: %d", errno);
+                        ::LogError(LOG_HOST, "Failed to connect to InfluxDB server, err: %d (%s)", errno, strerror(errno));
                         closesocket(fd);
+                        if (addr != nullptr)
+                            free(addr);
                         return 1;
                     }
 
                     if (valopt) {
                         ::LogError(LOG_HOST, "Failed to connect to InfluxDB server, err: %d", valopt);
                         closesocket(fd);
+                        if (addr != nullptr)
+                            free(addr);
                         return 1;
                     }
 #endif // !defined(_WIN32)
@@ -176,6 +200,8 @@ int detail::inner::request(const char* method, const char* uri, const std::strin
                 } else {
                     ::LogError(LOG_HOST, "Failed to connect to InfluxDB server, timed out while connecting");
                     closesocket(fd);
+                    if (addr != nullptr)
+                        free(addr);
                     return 1;
                 }
             } while (true);
@@ -186,21 +212,27 @@ int detail::inner::request(const char* method, const char* uri, const std::strin
 #if defined(_WIN32)
     flags = 0;
     if (ioctlsocket(fd, FIONBIO, &flags) != 0) {
-        ::LogError(LOG_HOST, "Failed to connect to InfluxDB server, failed ioctlsocket, err: %d", errno);
+        ::LogError(LOG_HOST, "Failed to connect to InfluxDB server, failed ioctlsocket, err: %lu", ::GetLastError());
         closesocket(fd);
+        if (addr != nullptr)
+            free(addr);
         return 1;
     }
 #else
     flags = fcntl(fd, F_GETFL, 0);
     if (flags < 0) {
-        ::LogError(LOG_HOST, "Failed to connect to InfluxDB server, failed fcntl(F_GETFL), err: %d", errno);
+        ::LogError(LOG_HOST, "Failed to connect to InfluxDB server, failed fcntl(F_GETFL), err: %d (%s)", errno, strerror(errno));
         closesocket(fd);
+        if (addr != nullptr)
+            free(addr);
         return 1;
     }
 
     if (fcntl(fd, F_SETFL, flags & (~O_NONBLOCK)) < 0) {
-        ::LogError(LOG_HOST, "Failed to connect to InfluxDB server, failed fcntl(F_SETFL), err: %d", errno);
+        ::LogError(LOG_HOST, "Failed to connect to InfluxDB server, failed fcntl(F_SETFL), err: %d (%s)", errno, strerror(errno));
         closesocket(fd);
+        if (addr != nullptr)
+            free(addr);
         return 1;
     }
 #endif // defined(_WIN32)
@@ -244,7 +276,7 @@ int detail::inner::request(const char* method, const char* uri, const std::strin
     ret = 0;
 
     if (writev(fd, iv, 2) < (int)(iv[0].iov_len + iv[1].iov_len)) {
-        ::LogError(LOG_HOST, "Failed to write statistical data to InfluxDB server, err: %d", errno);
+        ::LogError(LOG_HOST, "Failed to write statistical data to InfluxDB server, err: %d (%s)", errno, strerror(errno));
         ret = -6;
     }
 
@@ -259,5 +291,7 @@ int detail::inner::request(const char* method, const char* uri, const std::strin
 #endif
     // close socket
     closesocket(fd);
+    if (addr != nullptr)
+        free(addr);
     return ret;
 }

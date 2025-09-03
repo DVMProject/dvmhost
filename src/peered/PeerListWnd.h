@@ -119,11 +119,12 @@ public:
             bool masterPassword = (entry.peerPassword().size() == 0U);
 
             // build list view entry
-            const std::array<std::string, 5U> columns = {
+            const std::array<std::string, 6U> columns = {
                 oss.str(),
                 (masterPassword) ? "X" : "",
                 (entry.peerLink()) ? "X" : "",
                 (entry.canRequestKeys()) ? "X" : "",
+                (entry.canIssueInhibit()) ? "X" : "",
                 entry.peerAlias()
             };
 
@@ -210,14 +211,16 @@ private:
         m_listView.addColumn("Peer ID", 10);
         m_listView.addColumn("Master Password", 16);
         m_listView.addColumn("Peer Link", 12);
-        m_listView.addColumn("Can Request Keys", 12);
+        m_listView.addColumn("Request Keys", 12);
+        m_listView.addColumn("Can Inhibit", 12);
         m_listView.addColumn("Alias", 40);
 
         // set right alignment for peer ID
         m_listView.setColumnAlignment(2, finalcut::Align::Center);
         m_listView.setColumnAlignment(3, finalcut::Align::Center);
         m_listView.setColumnAlignment(4, finalcut::Align::Center);
-        m_listView.setColumnAlignment(5, finalcut::Align::Left);
+        m_listView.setColumnAlignment(5, finalcut::Align::Center);
+        m_listView.setColumnAlignment(6, finalcut::Align::Left);
 
         // set type of sorting
         m_listView.setColumnSortType(1, finalcut::SortType::Name);

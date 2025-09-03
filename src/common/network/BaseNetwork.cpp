@@ -10,6 +10,7 @@
  *
  */
 #include "Defines.h"
+#include "common/analog/AnalogDefines.h"
 #include "common/dmr/DMRDefines.h"
 #include "common/p25/P25Defines.h"
 #include "common/nxdn/NXDNDefines.h"
@@ -53,10 +54,12 @@ BaseNetwork::BaseNetwork(uint32_t peerId, bool duplex, bool debug, bool slot1, b
     m_rxDMRData(NET_RING_BUF_SIZE, "DMR Net Buffer"),
     m_rxP25Data(NET_RING_BUF_SIZE, "P25 Net Buffer"),
     m_rxNXDNData(NET_RING_BUF_SIZE, "NXDN Net Buffer"),
+    m_rxAnalogData(NET_RING_BUF_SIZE, "Analog Net Buffer"),
     m_random(),
     m_dmrStreamId(nullptr),
     m_p25StreamId(0U),
     m_nxdnStreamId(0U),
+    m_analogStreamId(0U),
     m_pktSeq(0U),
     m_audio()
 {
@@ -74,6 +77,7 @@ BaseNetwork::BaseNetwork(uint32_t peerId, bool duplex, bool debug, bool slot1, b
     m_dmrStreamId[1U] = createStreamId();
     m_p25StreamId = createStreamId();
     m_nxdnStreamId = createStreamId();
+    m_analogStreamId = createStreamId();
 }
 
 /* Finalizes a instance of the BaseNetwork class. */
@@ -139,7 +143,7 @@ bool BaseNetwork::writeKeyReq(const uint16_t kId, const uint8_t algId)
 
     modifyKeyCmd.encode(buffer + 11U);
 
-    //Utils::dump("writeKeyReq", buffer, modifyKeyCmd.length() + 11U);
+    //Utils::dump("BaseNetwork::writeKeyReq(), KMM Buffer", buffer, modifyKeyCmd.length() + 11U);
 
     return writeMaster({ NET_FUNC::KEY_REQ, NET_SUBFUNC::NOP }, buffer, modifyKeyCmd.length() + 11U, RTP_END_OF_CALL_SEQ, 0U);
 }
@@ -346,6 +350,15 @@ void BaseNetwork::resetNXDN()
     m_rxNXDNData.clear();
 }
 
+/* Resets the analog ring buffer. */
+
+void BaseNetwork::resetAnalog()
+{
+    m_analogStreamId = createStreamId();
+    m_pktSeq = 0U;
+    m_rxAnalogData.clear();
+}
+
 /* Gets the current DMR stream ID. */
 
 uint32_t BaseNetwork::getDMRStreamId(uint32_t slotNo) const
@@ -363,10 +376,12 @@ uint32_t BaseNetwork::getDMRStreamId(uint32_t slotNo) const
 /* Helper to send a data message to the master. */
 
 bool BaseNetwork::writeMaster(FrameQueue::OpcodePair opcode, const uint8_t* data, uint32_t length, uint16_t pktSeq, uint32_t streamId, 
-    bool queueOnly, bool useAlternatePort, uint32_t peerId)
+    bool queueOnly, bool useAlternatePort, uint32_t peerId, uint32_t ssrc)
 {
     if (peerId == 0U)
         peerId = m_peerId;
+    if (ssrc == 0U)
+        ssrc = m_peerId;
 
     if (useAlternatePort) {
         sockaddr_storage addr;
@@ -377,14 +392,14 @@ bool BaseNetwork::writeMaster(FrameQueue::OpcodePair opcode, const uint8_t* data
 
         if (udp::Socket::lookup(address, port, addr, addrLen) == 0) {
             if (!queueOnly)
-                return m_frameQueue->write(data, length, streamId, peerId, m_peerId, opcode, pktSeq, addr, addrLen);
+                return m_frameQueue->write(data, length, streamId, peerId, ssrc, opcode, pktSeq, addr, addrLen);
             else
                 m_frameQueue->enqueueMessage(data, length, streamId, m_peerId, opcode, pktSeq, addr, addrLen);
         }
     }
     else {
         if (!queueOnly)
-            return m_frameQueue->write(data, length, streamId, peerId, m_peerId, opcode, pktSeq, m_addr, m_addrLen);
+            return m_frameQueue->write(data, length, streamId, peerId, ssrc, opcode, pktSeq, m_addr, m_addrLen);
         else
             m_frameQueue->enqueueMessage(data, length, streamId, m_peerId, opcode, pktSeq, m_addr, m_addrLen);
     }
@@ -500,6 +515,11 @@ UInt8Array BaseNetwork::readP25(bool& ret, uint32_t& frameLength)
         return nullptr;
     }
 
+    if (length == 254U) {
+        m_rxP25Data.get(&length, 1U); // read the next byte for the actual length
+        length += 254U; // a packet length of 254 is a special case for P25 frames, so we need to add the 254 to the length
+    }
+
     UInt8Array buffer;
     frameLength = length;
     buffer = std::unique_ptr<uint8_t[]>(new uint8_t[length]);
@@ -511,7 +531,8 @@ UInt8Array BaseNetwork::readP25(bool& ret, uint32_t& frameLength)
 
 /* Writes P25 LDU1 frame data to the network. */
 
-bool BaseNetwork::writeP25LDU1(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, const uint8_t* data, p25::defines::FrameType::E frameType)
+bool BaseNetwork::writeP25LDU1(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, const uint8_t* data, 
+    P25DEF::FrameType::E frameType, uint8_t controlByte)
 {
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
         return false;
@@ -523,7 +544,7 @@ bool BaseNetwork::writeP25LDU1(const p25::lc::LC& control, const p25::data::LowS
     }
 
     uint32_t messageLength = 0U;
-    UInt8Array message = createP25_LDU1Message(messageLength, control, lsd, data, frameType);
+    UInt8Array message = createP25_LDU1Message(messageLength, control, lsd, data, frameType, controlByte);
     if (message == nullptr) {
         return false;
     }
@@ -533,7 +554,8 @@ bool BaseNetwork::writeP25LDU1(const p25::lc::LC& control, const p25::data::LowS
 
 /* Writes P25 LDU2 frame data to the network. */
 
-bool BaseNetwork::writeP25LDU2(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, const uint8_t* data)
+bool BaseNetwork::writeP25LDU2(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, const uint8_t* data,
+    uint8_t controlByte)
 {
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
         return false;
@@ -545,7 +567,7 @@ bool BaseNetwork::writeP25LDU2(const p25::lc::LC& control, const p25::data::LowS
     }
 
     uint32_t messageLength = 0U;
-    UInt8Array message = createP25_LDU2Message(messageLength, control, lsd, data);
+    UInt8Array message = createP25_LDU2Message(messageLength, control, lsd, data, controlByte);
     if (message == nullptr) {
         return false;
     }
@@ -560,9 +582,7 @@ bool BaseNetwork::writeP25TDU(const p25::lc::LC& control, const p25::data::LowSp
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
         return false;
 
-    bool resetSeq = false;
     if (m_p25StreamId == 0U) {
-        resetSeq = true;
         m_p25StreamId = createStreamId();
     }
 
@@ -653,6 +673,108 @@ bool BaseNetwork::hasP25Data() const
     return true;
 }
 
+/* Helper to validate a P25 network frame length. */
+
+bool BaseNetwork::validateP25FrameLength(uint8_t& frameLength, uint32_t len, const P25DEF::DUID::E duid)
+{
+    using namespace p25::defines;
+
+    // P25 network frame should never be less then 24 bytes
+    if (len < 24U) {
+        LogError(LOG_NET, "malformed P25 packet, len < 24, shouldn't happen");
+        return false;
+    }
+
+    // frame length should never be 0
+    if (frameLength == 0U) {
+        LogError(LOG_NET, "DUID $%02X, sent with frame length of 0?", duid);
+        return false;
+    }
+
+    // frame length should never be larger then the network packet length
+    if (frameLength > len) {
+        LogError(LOG_NET, "malformed P25 packet, frameLength > len (%u > %u), shouldn't happen", frameLength, len);
+        return false;
+    }
+
+    // validate frame length, because P25 has variable network frame lengths we should be validating
+    // the actual frame length to ensure we don't have buffer overflow vulnerabilities
+    switch (duid) {
+    case DUID::HDU:
+        // HDU's aren't actually ever sent over the network, they are packaged with the first LDU1 for the
+        // initating superframe
+        return false;
+    case DUID::TDU:
+        // TDUs are sent with the P25 message header only
+        if (frameLength != 24U) { 
+            LogError(LOG_NET, P25_TDU_STR ", malformed TDU, discard.");
+            break;
+        }
+        break;
+
+    case DUID::LDU1:
+        // LDU1 with message header only, this shouldn't happen
+        if (frameLength <= 24U) { 
+            LogError(LOG_NET, P25_LDU1_STR ", malformed LDU1, discard.");
+            break;
+        }
+        break;
+    case DUID::VSELP1:
+        // VSELP1 frames aren't actually sent over the network right now
+        return false;
+
+    case DUID::TSDU:
+        // oversized TSDU -- this shouldn't happen, truncate and only handle the size of the TSDU frame length
+        if (frameLength > P25_TSDU_FRAME_LENGTH_BYTES)
+            frameLength = P25_TSDU_FRAME_LENGTH_BYTES;
+
+        // TSDU with message header only, this shouldn't happen
+        if (frameLength <= 24U) { 
+            LogError(LOG_NET, P25_TSDU_STR ", malformed TSDU, discard.");
+            break;
+        }
+        break;
+
+    case DUID::LDU2:
+        // LDU2 with message header only, this shouldn't happen
+        if (frameLength <= 24U) { 
+            LogError(LOG_NET, P25_LDU2_STR ", malformed LDU2, discard.");
+            break;
+        }
+        break;
+    case DUID::VSELP2:
+        // VSELP2 frames aren't actually sent over the network right now
+        return false;
+
+    case DUID::PDU:
+        // PDU with message header only, this shouldn't happen
+        if (frameLength <= 24U) { 
+            LogError(LOG_NET, P25_PDU_STR ", malformed PDU, discard.");
+            break;
+        }
+        break;
+        
+
+    case DUID::TDULC:
+        // oversized TDULC -- this shouldn't happen, truncate and only handle the size of the TSDU frame length
+        if (frameLength > P25_TDULC_FRAME_LENGTH_BYTES)
+            frameLength = P25_TDULC_FRAME_LENGTH_BYTES;
+
+        // TDULC with message header only, this shouldn't happen
+        if (frameLength <= 24U) { 
+            LogError(LOG_NET, P25_TSDU_STR ", malformed TDULC, discard.");
+            break;
+        }
+        break;
+
+    default:
+        LogError(LOG_NET, "unsupported DUID $%02X", duid);
+        return false;
+    }
+
+    return true;
+}
+
 /* Reads NXDN raw frame data from the NXDN ring buffer. */
 
 UInt8Array BaseNetwork::readNXDN(bool& ret, uint32_t& frameLength)
@@ -720,6 +842,91 @@ bool BaseNetwork::writeNXDN(const nxdn::lc::RTCH& lc, const uint8_t* data, const
 bool BaseNetwork::hasNXDNData() const
 {
     if (m_rxNXDNData.isEmpty())
+        return false;
+
+    return true;
+}
+
+/* Reads analog raw frame data from the analog ring buffer. */
+
+UInt8Array BaseNetwork::readAnalog(bool& ret, uint32_t& frameLength)
+{
+    if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
+        return nullptr;
+
+    ret = true;
+    if (m_rxAnalogData.isEmpty()) {
+        ret = false;
+        return nullptr;
+    }
+
+    uint8_t length = 0U;
+    m_rxAnalogData.get(&length, 1U);
+    if (length == 0U) {
+        ret = false;
+        return nullptr;
+    }
+
+    if (length < 254U) {
+        // if the length is less than 254, the analog packet is malformed, analog packets should never be less than 254 bytes
+        LogError(LOG_NET, "malformed analog packet, length < 254 (%u), shouldn't happen", length);
+        ret = false;
+        return nullptr;
+    }
+
+    if (length == 254U) {
+        m_rxAnalogData.get(&length, 1U); // read the next byte for the actual length
+        length += 254U; // a packet length of 254 is a special case for P25 frames, so we need to add the 254 to the length
+    }
+
+    UInt8Array buffer;
+    frameLength = length;
+    buffer = std::unique_ptr<uint8_t[]>(new uint8_t[length]);
+    ::memset(buffer.get(), 0x00U, length);
+    m_rxAnalogData.get(buffer.get(), length);
+
+    return buffer;
+}
+
+/* Writes analog frame data to the network. */
+
+bool BaseNetwork::writeAnalog(const analog::data::NetData& data, bool noSequence)
+{
+    using namespace analog::defines;
+    if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
+        return false;
+
+    AudioFrameType::E frameType = data.getFrameType();
+
+    bool resetSeq = false;
+    if (m_analogStreamId == 0U) {
+        resetSeq = true;
+        m_analogStreamId = createStreamId();
+    }
+
+    uint32_t messageLength = 0U;
+    UInt8Array message = createAnalog_Message(messageLength, m_analogStreamId, data);
+    if (message == nullptr) {
+        return false;
+    }
+
+    uint16_t seq = pktSeq(resetSeq);
+    if (frameType == AudioFrameType::TERMINATOR) {
+        seq = RTP_END_OF_CALL_SEQ;
+    }
+
+    if (noSequence) {
+        seq = RTP_END_OF_CALL_SEQ;
+    }
+
+    return writeMaster({ NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_ANALOG }, message.get(), messageLength, seq, m_analogStreamId);
+}
+
+/* Helper to test if the analog ring buffer has data. */
+
+bool BaseNetwork::hasAnalogData() const
+{
+    if (m_rxAnalogData.isEmpty())
         return false;
 
     return true;
@@ -802,7 +1009,7 @@ UInt8Array BaseNetwork::createDMR_Message(uint32_t& length, const uint32_t strea
     data.getData(buffer + 20U);
 
     if (m_debug)
-        Utils::dump(1U, "Network Message, DMR", buffer, (DMR_PACKET_LENGTH + PACKET_PAD));
+        Utils::dump(1U, "BaseNetwork::createDMR_Message(), Message", buffer, (DMR_PACKET_LENGTH + PACKET_PAD));
 
     length = (DMR_PACKET_LENGTH + PACKET_PAD);
     return UInt8Array(buffer);
@@ -811,7 +1018,7 @@ UInt8Array BaseNetwork::createDMR_Message(uint32_t& length, const uint32_t strea
 /* Creates an P25 frame message header. */
 
 void BaseNetwork::createP25_MessageHdr(uint8_t* buffer, p25::defines::DUID::E duid, const p25::lc::LC& control, const p25::data::LowSpeedData& lsd,
-    p25::defines::FrameType::E frameType)
+    p25::defines::FrameType::E frameType, uint8_t controlByte)
 {
     using namespace p25::defines;
     assert(buffer != nullptr);
@@ -830,7 +1037,7 @@ void BaseNetwork::createP25_MessageHdr(uint8_t* buffer, p25::defines::DUID::E du
     uint16_t sysId = control.getSiteData().sysId();                                 // System ID
     SET_UINT16(sysId, buffer, 11U);
 
-    buffer[14U] = 0U;                                                               // Control Bits
+    buffer[14U] = controlByte;                                                      // Control Bits
 
     buffer[15U] = control.getMFId();                                                // MFId
 
@@ -859,7 +1066,7 @@ void BaseNetwork::createP25_MessageHdr(uint8_t* buffer, p25::defines::DUID::E du
         control.getMI(mi);
 
         if (m_debug) {
-            Utils::dump(1U, "P25 HDU MI written to network", mi, MI_LENGTH_BYTES);
+            Utils::dump(1U, "BaseNetwork::createP25_Message(), HDU MI", mi, MI_LENGTH_BYTES);
         }
 
         for (uint8_t i = 0; i < MI_LENGTH_BYTES; i++) {
@@ -871,7 +1078,7 @@ void BaseNetwork::createP25_MessageHdr(uint8_t* buffer, p25::defines::DUID::E du
 /* Creates an P25 LDU1 frame message. */
 
 UInt8Array BaseNetwork::createP25_LDU1Message(uint32_t& length, const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, 
-    const uint8_t* data, p25::defines::FrameType::E frameType)
+    const uint8_t* data, p25::defines::FrameType::E frameType, uint8_t controlByte)
 {
     using namespace p25::defines;
     using namespace p25::dfsi::defines;
@@ -883,7 +1090,7 @@ UInt8Array BaseNetwork::createP25_LDU1Message(uint32_t& length, const p25::lc::L
     ::memset(buffer, 0x00U, P25_LDU1_PACKET_LENGTH + PACKET_PAD);
 
     // construct P25 message header
-    createP25_MessageHdr(buffer, DUID::LDU1, control, lsd, frameType);
+    createP25_MessageHdr(buffer, DUID::LDU1, control, lsd, frameType, controlByte);
 
     // pack DFSI data
     uint32_t count = MSG_HDR_SIZE;
@@ -937,7 +1144,7 @@ UInt8Array BaseNetwork::createP25_LDU1Message(uint32_t& length, const p25::lc::L
     buffer[23U] = count;
 
     if (m_debug)
-        Utils::dump(1U, "Network Message, P25 LDU1", buffer, (P25_LDU1_PACKET_LENGTH + PACKET_PAD));
+        Utils::dump(1U, "BaseNetwork::createP25_LDU1Message(), Message, LDU1", buffer, (P25_LDU1_PACKET_LENGTH + PACKET_PAD));
 
     length = (P25_LDU1_PACKET_LENGTH + PACKET_PAD);
     return UInt8Array(buffer);
@@ -946,7 +1153,7 @@ UInt8Array BaseNetwork::createP25_LDU1Message(uint32_t& length, const p25::lc::L
 /* Creates an P25 LDU2 frame message. */
 
 UInt8Array BaseNetwork::createP25_LDU2Message(uint32_t& length, const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, 
-    const uint8_t* data)
+    const uint8_t* data, uint8_t controlByte)
 {
     using namespace p25::defines;
     using namespace p25::dfsi::defines;
@@ -958,7 +1165,7 @@ UInt8Array BaseNetwork::createP25_LDU2Message(uint32_t& length, const p25::lc::L
     ::memset(buffer, 0x00U, P25_LDU2_PACKET_LENGTH + PACKET_PAD);
 
     // construct P25 message header
-    createP25_MessageHdr(buffer, DUID::LDU2, control, lsd, FrameType::DATA_UNIT);
+    createP25_MessageHdr(buffer, DUID::LDU2, control, lsd, FrameType::DATA_UNIT, controlByte);
 
     // pack DFSI data
     uint32_t count = MSG_HDR_SIZE;
@@ -1012,7 +1219,7 @@ UInt8Array BaseNetwork::createP25_LDU2Message(uint32_t& length, const p25::lc::L
     buffer[23U] = count;
 
     if (m_debug)
-        Utils::dump(1U, "Network Message, P25 LDU2", buffer, (P25_LDU2_PACKET_LENGTH + PACKET_PAD));
+        Utils::dump(1U, "BaseNetwork::createP25_LDU2Message(), Message, LDU2", buffer, (P25_LDU2_PACKET_LENGTH + PACKET_PAD));
 
     length = (P25_LDU2_PACKET_LENGTH + PACKET_PAD);
     return UInt8Array(buffer);
@@ -1033,7 +1240,7 @@ UInt8Array BaseNetwork::createP25_TDUMessage(uint32_t& length, const p25::lc::LC
     buffer[23U] = MSG_HDR_SIZE;
 
     if (m_debug)
-        Utils::dump(1U, "Network Message, P25 TDU", buffer, (MSG_HDR_SIZE + PACKET_PAD));
+        Utils::dump(1U, "BaseNetwork::createP25_TDUMessage(), Message, TDU", buffer, (MSG_HDR_SIZE + PACKET_PAD));
 
     length = (MSG_HDR_SIZE + PACKET_PAD);
     return UInt8Array(buffer);
@@ -1054,15 +1261,12 @@ UInt8Array BaseNetwork::createP25_TSDUMessage(uint32_t& length, const p25::lc::L
     createP25_MessageHdr(buffer, DUID::TSDU, control, lsd, FrameType::TERMINATOR);
 
     // pack raw P25 TSDU bytes
-    uint32_t count = MSG_HDR_SIZE;
-
     ::memcpy(buffer + 24U, data, P25_TSDU_FRAME_LENGTH_BYTES);
-    count += P25_TSDU_FRAME_LENGTH_BYTES;
 
-    buffer[23U] = count;
+    buffer[23U] = P25_TSDU_FRAME_LENGTH_BYTES;
 
     if (m_debug)
-        Utils::dump(1U, "Network Message, P25 TDSU", buffer, (P25_TSDU_PACKET_LENGTH + PACKET_PAD));
+        Utils::dump(1U, "BaseNetwork::createP25_TSDUMessage(), Message, TDSU", buffer, (P25_TSDU_PACKET_LENGTH + PACKET_PAD));
 
     length = (P25_TSDU_PACKET_LENGTH + PACKET_PAD);
     return UInt8Array(buffer);
@@ -1083,15 +1287,12 @@ UInt8Array BaseNetwork::createP25_TDULCMessage(uint32_t& length, const p25::lc::
     createP25_MessageHdr(buffer, DUID::TDULC, control, lsd, FrameType::TERMINATOR);
 
     // pack raw P25 TSDU bytes
-    uint32_t count = MSG_HDR_SIZE;
-
     ::memcpy(buffer + 24U, data, P25_TDULC_FRAME_LENGTH_BYTES);
-    count += P25_TDULC_FRAME_LENGTH_BYTES;
 
-    buffer[23U] = count;
+    buffer[23U] = P25_TDULC_FRAME_LENGTH_BYTES;
 
     if (m_debug)
-        Utils::dump(1U, "Network Message, P25 TDULC", buffer, (P25_TDULC_PACKET_LENGTH + PACKET_PAD));
+        Utils::dump(1U, "BaseNetwork::createP25_TDULCMessage(), Message, TDULC", buffer, (P25_TDULC_PACKET_LENGTH + PACKET_PAD));
 
     length = (P25_TDULC_PACKET_LENGTH + PACKET_PAD);
     return UInt8Array(buffer);
@@ -1139,7 +1340,7 @@ UInt8Array BaseNetwork::createP25_PDUMessage(uint32_t& length, const p25::data::
     buffer[23U] = count;
 
     if (m_debug)
-        Utils::dump(1U, "Network Message, P25 PDU", buffer, (count + PACKET_PAD));
+        Utils::dump(1U, "BaseNetwork::createP25_PDUMessage(), Message, PDU", buffer, (count + PACKET_PAD));
 
     length = (count + PACKET_PAD);
     return UInt8Array(buffer);
@@ -1151,8 +1352,8 @@ UInt8Array BaseNetwork::createNXDN_Message(uint32_t& length, const nxdn::lc::RTC
 {
     assert(data != nullptr);
 
-    uint8_t* buffer = new uint8_t[DATA_PACKET_LENGTH];
-    ::memset(buffer, 0x00U, DATA_PACKET_LENGTH);
+    uint8_t* buffer = new uint8_t[NXDN_PACKET_LENGTH + PACKET_PAD];
+    ::memset(buffer, 0x00U, NXDN_PACKET_LENGTH + PACKET_PAD);
 
     // construct NXDN message header
     ::memcpy(buffer + 0U, TAG_NXDN_DATA, 4U);
@@ -1178,8 +1379,43 @@ UInt8Array BaseNetwork::createNXDN_Message(uint32_t& length, const nxdn::lc::RTC
     buffer[23U] = count;
 
     if (m_debug)
-        Utils::dump(1U, "Network Message, NXDN", buffer, (count + PACKET_PAD));
+        Utils::dump(1U, "BaseNetwork::createNXDN_Message(), Message", buffer, (NXDN_PACKET_LENGTH + PACKET_PAD));
 
-    length = (count + PACKET_PAD);
+    length = (NXDN_PACKET_LENGTH + PACKET_PAD);
+    return UInt8Array(buffer);
+}
+
+/* Creates an analog frame message. */
+
+UInt8Array BaseNetwork::createAnalog_Message(uint32_t& length, const uint32_t streamId, const analog::data::NetData& data)
+{
+    using namespace analog::defines;
+    uint8_t* buffer = new uint8_t[ANALOG_PACKET_LENGTH + PACKET_PAD];
+    ::memset(buffer, 0x00U, ANALOG_PACKET_LENGTH + PACKET_PAD);
+
+    // construct analog message header
+    ::memcpy(buffer + 0U, TAG_ANALOG_DATA, 4U);
+
+    uint32_t srcId = data.getSrcId();                                               // Source Address
+    SET_UINT24(srcId, buffer, 5U);
+
+    uint32_t dstId = data.getDstId();                                               // Target Address
+    SET_UINT24(dstId, buffer, 8U);
+
+    buffer[14U] = data.getControl();                                                // Control Bits
+
+    AudioFrameType::E frameType = data.getFrameType();
+    buffer[15U] = (uint8_t)frameType;                                               // Audio Frame Type
+    buffer[15U] |= data.getGroup() ? 0x00U : 0x40U;                                 // Group
+
+    buffer[4U] = data.getSeqNo();                                                   // Sequence Number
+
+    // pack raw audio message bytes
+    data.getAudio(buffer + 20U);
+
+    if (m_debug)
+        Utils::dump(1U, "BaseNetwork::createAnalog_Message(), Message", buffer, (ANALOG_PACKET_LENGTH + PACKET_PAD));
+
+    length = (ANALOG_PACKET_LENGTH + PACKET_PAD);
     return UInt8Array(buffer);
 }

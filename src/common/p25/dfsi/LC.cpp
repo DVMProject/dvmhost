@@ -404,8 +404,8 @@ void LC::encodeLDU1(uint8_t* data, const uint8_t* imbe)
     }
 
 #if DEBUG_P25_DFSI
-    LogDebugEx(LOG_P25, "LC::encodeLDU1()", "frameType = $%02X", m_frameType);
-    Utils::dump(2U, "[LC::encodeLDU1()] DFSI LDU1 Frame", dfsiFrame, frameLength);
+    LogDebugEx(LOG_P25, "dfsi::LC::encodeLDU1()", "frameType = $%02X", m_frameType);
+    Utils::dump(2U, "P25, dfsi::LC::encodeLDU1(), DFSI LDU1 Frame", dfsiFrame, frameLength);
 #endif
 
     ::memcpy(data, dfsiFrame, frameLength);
@@ -644,8 +644,8 @@ void LC::encodeLDU2(uint8_t* data, const uint8_t* imbe)
     }
 
 #if DEBUG_P25_DFSI
-    LogDebugEx(LOG_P25, "LC::encodeLDU2()", "frameType = $%02X", m_frameType);
-    Utils::dump(2U, "[LC::encodeLDU2()] DFSI LDU2 Frame", dfsiFrame, frameLength);
+    LogDebugEx(LOG_P25, "dfsi::LC::encodeLDU2()", "frameType = $%02X", m_frameType);
+    Utils::dump(2U, "P25, dfsi::LC::encodeLDU2(), DFSI LDU2 Frame", dfsiFrame, frameLength);
 #endif
 
     ::memcpy(data, dfsiFrame, frameLength);

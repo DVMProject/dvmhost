@@ -92,7 +92,7 @@ bool DMRPacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
     dmrData.getData(frame);
 
     // is the stream valid?
-    if (m_tag->validate(peerId, dmrData, streamId)) {
+    if (m_tag->validate(peerId, dmrData, nullptr, streamId)) {
         // is this peer ignored?
         if (!m_tag->isPeerPermitted(peerId, dmrData, streamId)) {
             return false;
@@ -131,7 +131,7 @@ bool DMRPacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
                 bool ret = status->header.decode(frame);
                 if (!ret) {
                     LogError(LOG_NET, "DMR Slot %u, DataType::DATA_HEADER, unable to decode the network data header", status->slotNo);
-                    Utils::dump(1U, "Unfixable PDU Data", frame, DMR_FRAME_LENGTH_BYTES);
+                    Utils::dump(1U, "DMR, Unfixable PDU Data", frame, DMR_FRAME_LENGTH_BYTES);
 
                     delete status;
                     m_status.erase(peerId);
@@ -254,7 +254,7 @@ void DMRPacketData::dispatch(uint32_t peerId, dmr::data::NetData& dmrData, const
         }
 
         if (m_network->m_dumpPacketData) {
-            Utils::dump(1U, "ISP PDU Packet", status->pduUserData, status->pduDataOffset);
+            Utils::dump(1U, "DMR, ISP PDU Packet", status->pduUserData, status->pduDataOffset);
         }
     }
 }
@@ -283,7 +283,7 @@ void DMRPacketData::dispatchToFNE(uint32_t peerId, dmr::data::NetData& dmrData, 
                     m_network->m_frameQueue->flushQueue();
                 }
 
-                m_network->writePeer(peer.first, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR }, data, len, pktSeq, streamId, true);
+                m_network->writePeer(peer.first, peerId, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR }, data, len, pktSeq, streamId, true);
                 if (m_network->m_debug) {
                     LogDebug(LOG_NET, "DMR, srcPeer = %u, dstPeer = %u, seqNo = %u, srcId = %u, dstId = %u, slotNo = %u, len = %u, pktSeq = %u, stream = %u", 
                         peerId, peer.first, seqNo, srcId, dstId, status->slotNo, len, pktSeq, streamId);

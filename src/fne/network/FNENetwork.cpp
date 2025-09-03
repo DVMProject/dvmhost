@@ -18,6 +18,7 @@
 #include "network/callhandler/TagDMRData.h"
 #include "network/callhandler/TagP25Data.h"
 #include "network/callhandler/TagNXDNData.h"
+#include "network/callhandler/TagAnalogData.h"
 #include "fne/ActivityLog.h"
 #include "HostFNE.h"
 
@@ -56,12 +57,13 @@ std::timed_mutex FNENetwork::m_keyQueueMutex;
 /* Initializes a new instance of the FNENetwork class. */
 
 FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port, uint32_t peerId, const std::string& password,
-    bool debug, bool verbose, bool reportPeerPing, bool dmr, bool p25, bool nxdn, uint32_t parrotDelay, bool parrotGrantDemand,
+    bool debug, bool verbose, bool reportPeerPing, bool dmr, bool p25, bool nxdn, bool analog, uint32_t parrotDelay, bool parrotGrantDemand,
     bool allowActivityTransfer, bool allowDiagnosticTransfer, uint32_t pingTime, uint32_t updateLookupTime, uint16_t workerCnt) :
     BaseNetwork(peerId, true, debug, true, true, allowActivityTransfer, allowDiagnosticTransfer),
     m_tagDMR(nullptr),
     m_tagP25(nullptr),
     m_tagNXDN(nullptr),
+    m_tagAnalog(nullptr),
     m_host(host),
     m_address(address),
     m_port(port),
@@ -69,6 +71,7 @@ FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port,
     m_dmrEnabled(dmr),
     m_p25Enabled(p25),
     m_nxdnEnabled(nxdn),
+    m_analogEnabled(analog),
     m_parrotDelay(parrotDelay),
     m_parrotDelayTimer(1000U, 0U, parrotDelay),
     m_parrotGrantDemand(parrotGrantDemand),
@@ -76,6 +79,8 @@ FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port,
     m_ridLookup(nullptr),
     m_tidLookup(nullptr),
     m_peerListLookup(nullptr),
+    m_adjSiteMapLookup(nullptr),
+    m_cryptoLookup(nullptr),
     m_status(NET_STAT_INVALID),
     m_peers(),
     m_peerLinkPeers(),
@@ -92,10 +97,13 @@ FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port,
     m_allowConvSiteAffOverride(false),
     m_disallowCallTerm(false),
     m_restrictGrantToAffOnly(false),
+    m_restrictPVCallToRegOnly(false),
     m_enableInCallCtrl(true),
     m_rejectUnknownRID(false),
-    m_filterHeaders(true),
+    m_maskOutboundPeerID(false),
+    m_maskOutboundPeerIDForNonPL(false),
     m_filterTerminators(true),
+    m_forceListUpdate(false),
     m_disallowU2U(false),
     m_dropU2UPeerTable(),
     m_enableInfluxDB(false),
@@ -109,6 +117,7 @@ FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port,
     m_disablePacketData(false),
     m_dumpPacketData(false),
     m_verbosePacketData(false),
+    m_logDenials(false),
     m_reportPeerPing(reportPeerPing),
     m_verbose(verbose)
 {
@@ -120,6 +129,7 @@ FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port,
     m_tagDMR = new TagDMRData(this, debug);
     m_tagP25 = new TagP25Data(this, debug);
     m_tagNXDN = new TagNXDNData(this, debug);
+    m_tagAnalog = new TagAnalogData(this, debug);
 }
 
 /* Finalizes a instance of the FNENetwork class. */
@@ -129,6 +139,7 @@ FNENetwork::~FNENetwork()
     delete m_tagDMR;
     delete m_tagP25;
     delete m_tagNXDN;
+    delete m_tagAnalog;
 }
 
 /* Helper to set configuration options. */
@@ -140,6 +151,8 @@ void FNENetwork::setOptions(yaml::Node& conf, bool printOptions)
     m_allowConvSiteAffOverride = conf["allowConvSiteAffOverride"].as<bool>(true);
     m_enableInCallCtrl = conf["enableInCallCtrl"].as<bool>(false);
     m_rejectUnknownRID = conf["rejectUnknownRID"].as<bool>(false);
+    m_maskOutboundPeerID = conf["maskOutboundPeerID"].as<bool>(false);
+    m_maskOutboundPeerIDForNonPL = conf["maskOutboundPeerIDForNonPeerLink"].as<bool>(false);
     m_disallowCallTerm = conf["disallowCallTerm"].as<bool>(false);
     m_softConnLimit = conf["connectionLimit"].as<uint32_t>(MAX_HARD_CONN_CAP);
 
@@ -166,12 +179,14 @@ void FNENetwork::setOptions(yaml::Node& conf, bool printOptions)
 
     m_parrotOnlyOriginating = conf["parrotOnlyToOrginiatingPeer"].as<bool>(false);
     m_restrictGrantToAffOnly = conf["restrictGrantToAffiliatedOnly"].as<bool>(false);
-    m_filterHeaders = conf["filterHeaders"].as<bool>(true);
+    m_restrictPVCallToRegOnly = conf["restrictPrivateCallToRegOnly"].as<bool>(false);
     m_filterTerminators = conf["filterTerminators"].as<bool>(true);
 
     m_disablePacketData = conf["disablePacketData"].as<bool>(false);
     m_dumpPacketData = conf["dumpPacketData"].as<bool>(false);
     m_verbosePacketData = conf["verbosePacketData"].as<bool>(false);
+
+    m_logDenials = conf["logDenials"].as<bool>(false);
 
     /*
     ** Drop Unit to Unit Peers
@@ -202,8 +217,13 @@ void FNENetwork::setOptions(yaml::Node& conf, bool printOptions)
         LogInfo("    Allow conventional sites to override affiliation and receive all traffic: %s", m_allowConvSiteAffOverride ? "yes" : "no");
         LogInfo("    Enable In-Call Control: %s", m_enableInCallCtrl ? "yes" : "no");
         LogInfo("    Reject Unknown RIDs: %s", m_rejectUnknownRID ? "yes" : "no");
+        LogInfo("    Log Traffic Denials: %s", m_logDenials ? "yes" : "no");
+        LogInfo("    Mask Outbound Traffic Peer ID: %s", m_maskOutboundPeerID ? "yes" : "no");
+        if (m_maskOutboundPeerIDForNonPL) {
+            LogInfo("    Mask Outbound Traffic Peer ID for Non-Peer Link: yes");
+        }
         LogInfo("    Restrict grant response by affiliation: %s", m_restrictGrantToAffOnly ? "yes" : "no");
-        LogInfo("    Traffic Headers Filtered by Destination ID: %s", m_filterHeaders ? "yes" : "no");
+        LogInfo("    Restrict private call to registered units: %s", m_restrictPVCallToRegOnly ? "yes" : "no");
         LogInfo("    Traffic Terminators Filtered by Destination ID: %s", m_filterTerminators ? "yes" : "no");
         LogInfo("    Disallow Unit-to-Unit: %s", m_disallowU2U ? "yes" : "no");
         LogInfo("    InfluxDB Reporting Enabled: %s", m_enableInfluxDB ? "yes" : "no");
@@ -221,12 +241,13 @@ void FNENetwork::setOptions(yaml::Node& conf, bool printOptions)
 /* Sets the instances of the Radio ID, Talkgroup ID Peer List, and Crypto lookup tables. */
 
 void FNENetwork::setLookups(lookups::RadioIdLookup* ridLookup, lookups::TalkgroupRulesLookup* tidLookup, lookups::PeerListLookup* peerListLookup,
-    CryptoContainer* cryptoLookup)
+    CryptoContainer* cryptoLookup, lookups::AdjSiteMapLookup* adjSiteMapLookup)
 {
     m_ridLookup = ridLookup;
     m_tidLookup = tidLookup;
     m_peerListLookup = peerListLookup;
     m_cryptoLookup = cryptoLookup;
+    m_adjSiteMapLookup = adjSiteMapLookup;
 }
 
 /* Sets endpoint preshared encryption key. */
@@ -254,7 +275,7 @@ void FNENetwork::processNetwork()
     UInt8Array buffer = m_frameQueue->read(length, address, addrLen, &rtpHeader, &fneHeader);
     if (length > 0) {
         if (m_debug)
-            Utils::dump(1U, "Network Message", buffer.get(), length);
+            Utils::dump(1U, "FNENetwork::processNetwork(), Network Message", buffer.get(), length);
 
         uint32_t peerId = fneHeader.getPeerId();
 
@@ -441,9 +462,14 @@ void FNENetwork::clock(uint32_t ms)
         if (m_tagNXDN->hasParrotFrames()) {
             m_tagNXDN->playbackParrot();
         }
+
+        // if the analog handler has parrot frames to playback, playback a frame
+        if (m_tagAnalog->hasParrotFrames()) {
+            m_tagAnalog->playbackParrot();
+        }
     }
 
-    if (!m_tagDMR->hasParrotFrames() && !m_tagP25->hasParrotFrames() && !m_tagNXDN->hasParrotFrames() &&
+    if (!m_tagDMR->hasParrotFrames() && !m_tagP25->hasParrotFrames() && !m_tagNXDN->hasParrotFrames() && !m_tagAnalog->hasParrotFrames() &&
         m_parrotDelayTimer.isRunning() && m_parrotDelayTimer.hasExpired()) {
         m_parrotDelayTimer.stop();
     }
@@ -497,7 +523,8 @@ void FNENetwork::close()
 
         uint32_t streamId = createStreamId();
         for (auto peer : m_peers) {
-            writePeer(peer.first, { NET_FUNC::MST_DISC, NET_SUBFUNC::NOP }, buffer, 1U, RTP_END_OF_CALL_SEQ, streamId, false);
+            writePeer(peer.first, m_peerId, { NET_FUNC::MST_DISC, NET_SUBFUNC::NOP }, buffer, 1U, RTP_END_OF_CALL_SEQ, 
+                streamId, false);
         }
     }
 
@@ -546,6 +573,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
 
         if (req->length > 0) {
             uint32_t peerId = req->fneHeader.getPeerId();
+            uint32_t ssrc = req->rtpHeader.getSSRC();
             uint32_t streamId = req->fneHeader.getStreamId();
 
             // determine if this packet is late (i.e. are we processing this packet more than 200ms after it was received?)
@@ -614,7 +642,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                     if (connection->connected() && connection->address() == ip) {
                                         if (network->m_dmrEnabled) {
                                             if (network->m_tagDMR != nullptr) {
-                                                network->m_tagDMR->processFrame(req->buffer, req->length, peerId, req->rtpHeader.getSequence(), streamId);
+                                                network->m_tagDMR->processFrame(req->buffer, req->length, peerId, ssrc, req->rtpHeader.getSequence(), streamId);
                                             }
                                         } else {
                                             network->writePeerNAK(peerId, streamId, TAG_DMR_DATA, NET_CONN_NAK_MODE_NOT_ENABLED);
@@ -640,7 +668,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                     if (connection->connected() && connection->address() == ip) {
                                         if (network->m_p25Enabled) {
                                             if (network->m_tagP25 != nullptr) {
-                                                network->m_tagP25->processFrame(req->buffer, req->length, peerId, req->rtpHeader.getSequence(), streamId);
+                                                network->m_tagP25->processFrame(req->buffer, req->length, peerId, ssrc, req->rtpHeader.getSequence(), streamId);
                                             }
                                         } else {
                                             network->writePeerNAK(peerId, streamId, TAG_P25_DATA, NET_CONN_NAK_MODE_NOT_ENABLED);
@@ -666,7 +694,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                     if (connection->connected() && connection->address() == ip) {
                                         if (network->m_nxdnEnabled) {
                                             if (network->m_tagNXDN != nullptr) {
-                                                network->m_tagNXDN->processFrame(req->buffer, req->length, peerId, req->rtpHeader.getSequence(), streamId);
+                                                network->m_tagNXDN->processFrame(req->buffer, req->length, peerId, ssrc, req->rtpHeader.getSequence(), streamId);
                                             }
                                         } else {
                                             network->writePeerNAK(peerId, streamId, TAG_NXDN_DATA, NET_CONN_NAK_MODE_NOT_ENABLED);
@@ -680,8 +708,34 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                         }
                         break;
 
+                    case NET_SUBFUNC::PROTOCOL_SUBFUNC_ANALOG:          // Encapsulated analog data frame
+                        {
+                            if (peerId > 0 && (network->m_peers.find(peerId) != network->m_peers.end())) {
+                                FNEPeerConnection* connection = network->m_peers[peerId];
+                                if (connection != nullptr) {
+                                    std::string ip = udp::Socket::address(req->address);
+                                    connection->lastPing(now);
+
+                                    // validate peer (simple validation really)
+                                    if (connection->connected() && connection->address() == ip) {
+                                        if (network->m_analogEnabled) {
+                                            if (network->m_tagAnalog != nullptr) {
+                                                network->m_tagAnalog->processFrame(req->buffer, req->length, peerId, ssrc, req->rtpHeader.getSequence(), streamId);
+                                            }
+                                        } else {
+                                            network->writePeerNAK(peerId, streamId, TAG_ANALOG_DATA, NET_CONN_NAK_MODE_NOT_ENABLED);
+                                        }
+                                    }
+                                }
+                            }
+                            else {
+                                network->writePeerNAK(peerId, TAG_ANALOG_DATA, NET_CONN_NAK_FNE_UNAUTHORIZED, req->address, req->addrLen);
+                            }
+                        }
+                        break;
+
                     default:
-                        Utils::dump("unknown protocol opcode from peer", req->buffer, req->length);
+                        Utils::dump("Unknown protocol opcode from peer", req->buffer, req->length);
                         break;
                     }
                 }
@@ -1112,7 +1166,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                     break;
                                 default:
                                     network->writePeerNAK(peerId, streamId, TAG_REPEATER_GRANT, NET_CONN_NAK_ILLEGAL_PACKET);
-                                    Utils::dump("unknown state for grant request from the peer", req->buffer, req->length);
+                                    Utils::dump("Unknown state for grant request from the peer", req->buffer, req->length);
                                     break;
                                 }
                             }
@@ -1177,7 +1231,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
 
                                                 if (network->m_debug) {
                                                     LogDebugEx(LOG_HOST, "FNENetwork::threadedNetworkRx()", "keyLength = %u", keyLength);
-                                                    Utils::dump(1U, "Key", key, P25DEF::MAX_ENC_KEY_LENGTH_BYTES);
+                                                    Utils::dump(1U, "FNENetwork::taskNetworkRx(), Key", key, P25DEF::MAX_ENC_KEY_LENGTH_BYTES);
                                                 }
 
                                                 LogMessage(LOG_NET, "PEER %u (%s) local enc. key, algId = $%02X, kID = $%04X", peerId, connection->identity().c_str(),
@@ -1208,7 +1262,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
 
                                                 modifyKeyRsp.encode(buffer + 11U);
 
-                                                network->writePeer(peerId, { NET_FUNC::KEY_RSP, NET_SUBFUNC::NOP }, buffer, modifyKeyRsp.length() + 11U, 
+                                                network->writePeer(peerId, network->m_peerId, { NET_FUNC::KEY_RSP, NET_SUBFUNC::NOP }, buffer, modifyKeyRsp.length() + 11U, 
                                                     RTP_END_OF_CALL_SEQ, network->createStreamId(), false, false, true);
                                             } else {
                                                 // attempt to forward KMM key request to Peer-Link masters
@@ -1301,7 +1355,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                 FNEPeerConnection* connection = network->m_peers[peerId];
                                 if (connection != nullptr) {
                                     std::string ip = udp::Socket::address(req->address);
-                                    lookups::AffiliationLookup* aff = network->m_peerAffiliations[peerId];
+                                    fne_lookups::AffiliationLookup* aff = network->m_peerAffiliations[peerId];
                                     if (aff == nullptr) {
                                         LogError(LOG_NET, "PEER %u (%s) has uninitialized affiliations lookup?", peerId, connection->identity().c_str());
                                         network->writePeerNAK(peerId, streamId, TAG_ANNOUNCE, NET_CONN_NAK_INVALID);
@@ -1310,7 +1364,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                     // validate peer (simple validation really)
                                     if (connection->connected() && connection->address() == ip && aff != nullptr) {
                                         uint32_t srcId = GET_UINT24(req->buffer, 0U);           // Source Address
-                                        aff->unitReg(srcId);
+                                        aff->unitReg(srcId, ssrc);
 
                                         // attempt to repeat traffic to Peer-Link masters
                                         if (network->m_host->m_peerNetworks.size() > 0) {
@@ -1318,7 +1372,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                                 if (peer.second != nullptr) {
                                                     if (peer.second->isEnabled() && peer.second->isPeerLink()) {
                                                         peer.second->writeMaster({ NET_FUNC::ANNOUNCE, NET_SUBFUNC::ANNC_SUBFUNC_UNIT_REG }, 
-                                                            req->buffer, req->length, req->rtpHeader.getSequence(), streamId, false, false);
+                                                            req->buffer, req->length, req->rtpHeader.getSequence(), streamId, false, false, 0U, ssrc);
                                                     }
                                                 }
                                             }
@@ -1505,13 +1559,13 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                         break;
                     default:
                         network->writePeerNAK(peerId, streamId, TAG_ANNOUNCE, NET_CONN_NAK_ILLEGAL_PACKET);
-                        Utils::dump("unknown announcement opcode from the peer", req->buffer, req->length);
+                        Utils::dump("Unknown announcement opcode from the peer", req->buffer, req->length);
                     }
                 }
                 break;
 
             default:
-                Utils::dump("unknown opcode from the peer", req->buffer, req->length);
+                Utils::dump("Unknown opcode from the peer", req->buffer, req->length);
                 break;
             }
         }
@@ -1555,7 +1609,7 @@ void FNENetwork::createPeerAffiliations(uint32_t peerId, std::string peerName)
     erasePeerAffiliations(peerId);
 
     lookups::ChannelLookup* chLookup = new lookups::ChannelLookup();
-    m_peerAffiliations[peerId] = new lookups::AffiliationLookup(peerName, chLookup, m_verbose);
+    m_peerAffiliations[peerId] = new fne_lookups::AffiliationLookup(peerName, chLookup, m_verbose);
     m_peerAffiliations[peerId]->setDisableUnitRegTimeout(true); // FNE doesn't allow unit registration timeouts (notification must come from the peers)
 }
 
@@ -1611,6 +1665,21 @@ void FNENetwork::erasePeer(uint32_t peerId)
     erasePeerAffiliations(peerId);
 }
 
+/* Helper to find the unit registration for the given source ID. */
+
+uint32_t FNENetwork::findPeerUnitReg(uint32_t srcId)
+{
+    for (auto it = m_peerAffiliations.begin(); it != m_peerAffiliations.end(); ++it) {
+        fne_lookups::AffiliationLookup* aff = it->second;
+        if (aff != nullptr) {
+            if (aff->isUnitReg(srcId)) {
+                return aff->getSSRCByUnitReg(srcId);
+            }
+        }
+    }
+
+    return 0U;
+}
 
 /* Helper to create a JSON representation of a FNE peer connection. */
 
@@ -1810,11 +1879,13 @@ void FNENetwork::writeWhitelistRIDs(uint32_t peerId, uint32_t streamId, bool isE
             LogInfoEx(LOG_NET, "PEER %u Peer-Link, RID List, blocks %u, streamId = %u", peerId, pkt.fragments.size(), streamId);
             if (pkt.fragments.size() > 0U) {
                 for (auto frag : pkt.fragments) {
-                    writePeer(peerId, { NET_FUNC::PEER_LINK, NET_SUBFUNC::PL_RID_LIST }, 
+                    writePeer(peerId, m_peerId, { NET_FUNC::PEER_LINK, NET_SUBFUNC::PL_RID_LIST }, 
                         frag.second->data, FRAG_SIZE, 0U, streamId, false, true, true);
                     Thread::sleep(60U); // pace block transmission
                 }
             }
+
+            pkt.clear();
         }
 
         return;
@@ -1962,8 +2033,6 @@ void FNENetwork::writeBlacklistRIDs(uint32_t peerId, uint32_t streamId)
 
 void FNENetwork::writeTGIDs(uint32_t peerId, uint32_t streamId, bool isExternalPeer)
 {
-    uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-
     if (!m_tidLookup->sendTalkgroups()) {
         return;
     }
@@ -1999,11 +2068,13 @@ void FNENetwork::writeTGIDs(uint32_t peerId, uint32_t streamId, bool isExternalP
             LogInfoEx(LOG_NET, "PEER %u Peer-Link, TGID List, blocks %u, streamId = %u", peerId, pkt.fragments.size(), streamId);
             if (pkt.fragments.size() > 0U) {
                 for (auto frag : pkt.fragments) {
-                    writePeer(peerId, { NET_FUNC::PEER_LINK, NET_SUBFUNC::PL_TALKGROUP_LIST }, 
+                    writePeer(peerId, m_peerId, { NET_FUNC::PEER_LINK, NET_SUBFUNC::PL_TALKGROUP_LIST }, 
                         frag.second->data, FRAG_SIZE, 0U, streamId, false, true, true);
                     Thread::sleep(60U); // pace block transmission
                 }
             }
+
+            pkt.clear();
         }
 
         return;
@@ -2145,8 +2216,6 @@ void FNENetwork::writeDeactiveTGIDs(uint32_t peerId, uint32_t streamId)
 
 void FNENetwork::writePeerList(uint32_t peerId, uint32_t streamId)
 {
-    uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-
     // sending PEER_LINK style RID list to external peers
     FNEPeerConnection* connection = m_peers[peerId];
     if (connection != nullptr) {
@@ -2177,11 +2246,13 @@ void FNENetwork::writePeerList(uint32_t peerId, uint32_t streamId)
         LogInfoEx(LOG_NET, "PEER %u Peer-Link, PID List, blocks %u, streamId = %u", peerId, pkt.fragments.size(), streamId);
         if (pkt.fragments.size() > 0U) {
             for (auto frag : pkt.fragments) {
-                writePeer(peerId, { NET_FUNC::PEER_LINK, NET_SUBFUNC::PL_PEER_LIST }, 
+                writePeer(peerId, m_peerId, { NET_FUNC::PEER_LINK, NET_SUBFUNC::PL_PEER_LIST }, 
                     frag.second->data, FRAG_SIZE, 0U, streamId, false, true, true);
                 Thread::sleep(60U); // pace block transmission
             }
         }
+
+        pkt.clear();
     }
 
     return;
@@ -2206,12 +2277,12 @@ bool FNENetwork::writePeerICC(uint32_t peerId, uint32_t streamId, NET_SUBFUNC::E
     SET_UINT24(dstId, buffer, 11U);                                             // Destination ID
     buffer[14U] = slotNo;                                                       // DMR Slot No
 
-    return writePeer(peerId, { NET_FUNC::INCALL_CTRL, subFunc }, buffer, 15U, RTP_END_OF_CALL_SEQ, streamId, false);
+    return writePeer(peerId, m_peerId, { NET_FUNC::INCALL_CTRL, subFunc }, buffer, 15U, RTP_END_OF_CALL_SEQ, streamId, false);
 }
 
 /* Helper to send a data message to the specified peer with a explicit packet sequence. */
 
-bool FNENetwork::writePeer(uint32_t peerId, FrameQueue::OpcodePair opcode, const uint8_t* data,
+bool FNENetwork::writePeer(uint32_t peerId, uint32_t ssrc, FrameQueue::OpcodePair opcode, const uint8_t* data,
     uint32_t length, uint16_t pktSeq, uint32_t streamId, bool queueOnly, bool incPktSeq, bool directWrite) const
 {
     if (streamId == 0U) {
@@ -2229,10 +2300,26 @@ bool FNENetwork::writePeer(uint32_t peerId, FrameQueue::OpcodePair opcode, const
                 pktSeq = connection->incStreamPktSeq(streamId, pktSeq);
             }
 
-            if (directWrite)
-                return m_frameQueue->write(data, length, streamId, peerId, m_peerId, opcode, pktSeq, addr, addrLen);
+            if (m_maskOutboundPeerID)
+                ssrc = m_peerId; // mask the source SSRC to our own peer ID
             else {
-                m_frameQueue->enqueueMessage(data, length, streamId, peerId, m_peerId, opcode, pktSeq, addr, addrLen);
+                if ((connection->isExternalPeer() && !connection->isPeerLink()) && m_maskOutboundPeerIDForNonPL) {
+                    // if the peer is an external peer, and not a Peer-Link peer, we need to send the packet
+                    // to the external peer with our peer ID as the source instead of the originating peer
+                    // because we have routed it
+                    ssrc = m_peerId;
+                }
+
+                if (ssrc == 0U) {
+                    LogError(LOG_NET, "BUGBUG: PEER %u, trying to send data with a ssrc of 0?, pktSeq = %u, streamId = %u", peerId, pktSeq, streamId);
+                    ssrc = m_peerId; // fallback to our own peer ID
+                }
+            }
+
+            if (directWrite)
+                return m_frameQueue->write(data, length, streamId, peerId, ssrc, opcode, pktSeq, addr, addrLen);
+            else {
+                m_frameQueue->enqueueMessage(data, length, streamId, peerId, ssrc, opcode, pktSeq, addr, addrLen);
                 if (queueOnly)
                     return true;
                 return m_frameQueue->flushQueue();
@@ -2259,7 +2346,7 @@ bool FNENetwork::writePeerCommand(uint32_t peerId, FrameQueue::OpcodePair opcode
     }
 
     uint32_t len = length + 6U;
-    return writePeer(peerId, opcode, buffer, len, RTP_END_OF_CALL_SEQ, streamId, false, incPktSeq, true);
+    return writePeer(peerId, m_peerId, opcode, buffer, len, RTP_END_OF_CALL_SEQ, streamId, false, incPktSeq, true);
 }
 
 /* Helper to send a ACK response to the specified peer. */
@@ -2275,8 +2362,8 @@ bool FNENetwork::writePeerACK(uint32_t peerId, uint32_t streamId, const uint8_t*
         ::memcpy(buffer + 6U, data, length);
     }
 
-    return writePeer(peerId, { NET_FUNC::ACK, NET_SUBFUNC::NOP }, buffer, length + 10U, RTP_END_OF_CALL_SEQ, streamId, 
-        false, false, true);
+    return writePeer(peerId, m_peerId, { NET_FUNC::ACK, NET_SUBFUNC::NOP }, buffer, length + 10U, RTP_END_OF_CALL_SEQ, 
+        streamId, false, false, true);
 }
 
 /* Helper to log a warning specifying which NAK reason is being sent a peer. */
@@ -2332,7 +2419,7 @@ bool FNENetwork::writePeerNAK(uint32_t peerId, uint32_t streamId, const char* ta
     SET_UINT16((uint16_t)reason, buffer, 10U);                                  // Reason
 
     logPeerNAKReason(peerId, tag, reason);
-    return writePeer(peerId, { NET_FUNC::NAK, NET_SUBFUNC::NOP }, buffer, 10U, RTP_END_OF_CALL_SEQ, streamId, false);
+    return writePeer(peerId, m_peerId, { NET_FUNC::NAK, NET_SUBFUNC::NOP }, buffer, 10U, RTP_END_OF_CALL_SEQ, streamId, false);
 }
 
 /* Helper to send a NAK response to the specified peer. */
@@ -2382,7 +2469,7 @@ void FNENetwork::processTEKResponse(p25::kmm::KeyItem* rspKi, uint8_t algId, uin
 
             if (m_debug) {
                 LogDebugEx(LOG_HOST, "FNENetwork::processTEKResponse()", "keyLength = %u", keyLength);
-                Utils::dump(1U, "Key", key, P25DEF::MAX_ENC_KEY_LENGTH_BYTES);
+                Utils::dump(1U, "FNENetwork::processTEKResponse(), Key", key, P25DEF::MAX_ENC_KEY_LENGTH_BYTES);
             }
 
             // build response buffer
@@ -2410,7 +2497,7 @@ void FNENetwork::processTEKResponse(p25::kmm::KeyItem* rspKi, uint8_t algId, uin
 
             modifyKeyRsp.encode(buffer + 11U);
 
-            writePeer(peerId, { NET_FUNC::KEY_RSP, NET_SUBFUNC::NOP }, buffer, modifyKeyRsp.length() + 11U, 
+            writePeer(peerId, m_peerId, { NET_FUNC::KEY_RSP, NET_SUBFUNC::NOP }, buffer, modifyKeyRsp.length() + 11U, 
                 RTP_END_OF_CALL_SEQ, createStreamId(), false, false, true);
 
             peersToRemove.push_back(peerId);

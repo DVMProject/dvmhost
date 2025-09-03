@@ -28,13 +28,14 @@
 #include "common/concurrent/unordered_map.h"
 #include "common/network/BaseNetwork.h"
 #include "common/network/json/json.h"
-#include "common/lookups/AffiliationLookup.h"
 #include "common/lookups/RadioIdLookup.h"
 #include "common/lookups/TalkgroupRulesLookup.h"
 #include "common/lookups/PeerListLookup.h"
+#include "common/lookups/AdjSiteMapLookup.h"
 #include "common/network/Network.h"
 #include "common/network/PacketBuffer.h"
 #include "common/ThreadPool.h"
+#include "fne/lookups/AffiliationLookup.h"
 #include "fne/network/influxdb/InfluxDB.h"
 #include "fne/CryptoContainer.h"
 
@@ -54,6 +55,7 @@ namespace network { namespace callhandler { namespace packetdata { class HOST_SW
 namespace network { namespace callhandler { class HOST_SW_API TagP25Data; } }
 namespace network { namespace callhandler { namespace packetdata { class HOST_SW_API P25PacketData; } } }
 namespace network { namespace callhandler { class HOST_SW_API TagNXDNData; } }
+namespace network { namespace callhandler { class HOST_SW_API TagAnalogData; } }
 
 namespace network
 {
@@ -80,6 +82,7 @@ namespace network
     #define INFLUXDB_ERRSTR_DISABLED_TALKGROUP "disabled talkgroup"
     #define INFLUXDB_ERRSTR_INV_SLOT "invalid slot for talkgroup"
     #define INFLUXDB_ERRSTR_RID_NOT_PERMITTED "RID not permitted for talkgroup"
+    #define INFLUXDB_ERRSTR_ILLEGAL_RID_ACCESS "illegal/unknown RID attempted access"
 
     // ---------------------------------------------------------------------------
     //  Class Prototypes
@@ -421,6 +424,7 @@ namespace network
          * @param dmr Flag indicating whether DMR is enabled.
          * @param p25 Flag indicating whether P25 is enabled.
          * @param nxdn Flag indicating whether NXDN is enabled.
+         * @param analog Flag indicating whether analog is enabled.
          * @param parrotDelay Delay for end of call to parrot TG playback.
          * @param parrotGrantDemand Flag indicating whether a parrot TG will generate a grant demand.
          * @param allowActivityTransfer Flag indicating that the system activity logs will be sent to the network.
@@ -430,7 +434,7 @@ namespace network
          * @param workerCnt Number of worker threads.
          */
         FNENetwork(HostFNE* host, const std::string& address, uint16_t port, uint32_t peerId, const std::string& password,
-            bool debug, bool verbose, bool reportPeerPing, bool dmr, bool p25, bool nxdn, uint32_t parrotDelay, bool parrotGrantDemand,
+            bool debug, bool verbose, bool reportPeerPing, bool dmr, bool p25, bool nxdn, bool analog, uint32_t parrotDelay, bool parrotGrantDemand,
             bool allowActivityTransfer, bool allowDiagnosticTransfer, uint32_t pingTime, uint32_t updateLookupTime, uint16_t workerCnt);
         /**
          * @brief Finalizes a instance of the FNENetwork class.
@@ -465,6 +469,11 @@ namespace network
          * @returns callhandler::TagNXDNData* Instance of the TagNXDNData call handler.
          */
         callhandler::TagNXDNData* nxdnTrafficHandler() const { return m_tagNXDN; }
+        /**
+         * @brief Gets the instance of the analog call handler.
+         * @returns callhandler::TagAnalogData* Instance of the TagAnalogData call handler.
+         */
+        callhandler::TagAnalogData* analogTrafficHandler() const { return m_tagAnalog; }
 
         /**
          * @brief Sets the instances of the Radio ID, Talkgroup ID Peer List, and Crypto lookup tables.
@@ -472,9 +481,10 @@ namespace network
          * @param tidLookup Talkgroup Rules Lookup Table Instance
          * @param peerListLookup Peer List Lookup Table Instance
          * @param cryptoLookup Crypto Container Lookup Table Instance
+         * @param adjSiteMapLookup Adjacent Site Map Lookup Table Instance
          */
         void setLookups(lookups::RadioIdLookup* ridLookup, lookups::TalkgroupRulesLookup* tidLookup, lookups::PeerListLookup* peerListLookup,
-            CryptoContainer* cryptoLookup);
+            CryptoContainer* cryptoLookup, lookups::AdjSiteMapLookup* adjSiteMapLookup);
         /**
          * @brief Sets endpoint preshared encryption key.
          * @param presharedKey Encryption preshared key for networking.
@@ -528,6 +538,8 @@ namespace network
         callhandler::TagP25Data* m_tagP25;
         friend class callhandler::TagNXDNData;
         callhandler::TagNXDNData* m_tagNXDN;
+        friend class callhandler::TagAnalogData;
+        callhandler::TagAnalogData* m_tagAnalog;
         
         friend class ::RESTAPI;
         HostFNE* m_host;
@@ -540,6 +552,7 @@ namespace network
         bool m_dmrEnabled;
         bool m_p25Enabled;
         bool m_nxdnEnabled;
+        bool m_analogEnabled;
 
         uint32_t m_parrotDelay;
         Timer m_parrotDelayTimer;
@@ -549,6 +562,7 @@ namespace network
         lookups::RadioIdLookup* m_ridLookup;
         lookups::TalkgroupRulesLookup* m_tidLookup;
         lookups::PeerListLookup* m_peerListLookup;
+        lookups::AdjSiteMapLookup* m_adjSiteMapLookup;
 
         CryptoContainer* m_cryptoLookup;
 
@@ -558,7 +572,7 @@ namespace network
         concurrent::unordered_map<uint32_t, FNEPeerConnection*> m_peers;
         concurrent::unordered_map<uint32_t, json::array> m_peerLinkPeers;
         typedef std::pair<const uint32_t, lookups::AffiliationLookup*> PeerAffiliationMapPair;
-        concurrent::unordered_map<uint32_t, lookups::AffiliationLookup*> m_peerAffiliations;
+        concurrent::unordered_map<uint32_t, fne_lookups::AffiliationLookup*> m_peerAffiliations;
         concurrent::unordered_map<uint32_t, std::vector<uint32_t>> m_ccPeerMap;
         static std::timed_mutex m_keyQueueMutex;
         std::unordered_map<uint32_t, uint16_t> m_peerLinkKeyQueue;
@@ -594,10 +608,13 @@ namespace network
         bool m_allowConvSiteAffOverride;
         bool m_disallowCallTerm;
         bool m_restrictGrantToAffOnly;
+        bool m_restrictPVCallToRegOnly;
         bool m_enableInCallCtrl;
         bool m_rejectUnknownRID;
 
-        bool m_filterHeaders;
+        bool m_maskOutboundPeerID;
+        bool m_maskOutboundPeerIDForNonPL;
+
         bool m_filterTerminators;
 
         bool m_forceListUpdate;
@@ -620,6 +637,7 @@ namespace network
         bool m_dumpPacketData;
         bool m_verbosePacketData;
 
+        bool m_logDenials;
         bool m_reportPeerPing;
         bool m_verbose;
 
@@ -662,6 +680,13 @@ namespace network
          * @returns bool True, if peer was deleted, otherwise false.
          */
         void erasePeer(uint32_t peerId);
+
+        /**
+         * @brief Helper to find the unit registration for the given source ID.
+         * @param srcId Source Radio ID.
+         * @returns uint32_t Peer ID, or 0 if not found.
+         */
+        uint32_t findPeerUnitReg(uint32_t srcId);
 
         /**
          * @brief Helper to resolve the peer ID to its identity string.
@@ -736,7 +761,8 @@ namespace network
 
         /**
          * @brief Helper to send a data message to the specified peer with a explicit packet sequence.
-         * @param peerId Peer ID.
+         * @param peerId Destination Peer ID.
+         * @param ssrc RTP synchronization source ID.
          * @param opcode FNE network opcode pair.
          * @param[in] data Buffer containing message to send to peer.
          * @param length Length of buffer.
@@ -746,7 +772,7 @@ namespace network
          * @param incPktSeq Flag indicating the message should increment the packet sequence after transmission.
          * @param directWrite Flag indicating this message should be immediately directly written.
          */
-        bool writePeer(uint32_t peerId, FrameQueue::OpcodePair opcode, const uint8_t* data, uint32_t length, 
+        bool writePeer(uint32_t peerId, uint32_t ssrc, FrameQueue::OpcodePair opcode, const uint8_t* data, uint32_t length, 
             uint16_t pktSeq, uint32_t streamId, bool queueOnly, bool incPktSeq = false, bool directWrite = false) const;
 
         /**

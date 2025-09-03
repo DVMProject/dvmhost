@@ -154,6 +154,8 @@ Slot::Slot(uint32_t slotNo, uint32_t timeout, uint32_t tgHang, uint32_t queueSiz
     m_ignoreAffiliationCheck(false),
     m_disableNetworkGrant(false),
     m_convNetGrantDemand(false),
+    m_legacyGroupReg(false),
+    m_defaultNetIdleTalkgroup(0U),
     m_tsccPayloadDstId(0U),
     m_tsccPayloadSrcId(0U),
     m_tsccPayloadGroup(false),
@@ -389,7 +391,7 @@ void Slot::processNetwork(const data::NetData& dmrData)
 {
     // don't process network frames if the RF modem isn't in a listening state
     if (m_rfState != RS_RF_LISTENING) {
-        LogWarning(LOG_NET, "DMR Slot %u, Traffic collision detect, preempting new network traffic to existing RF traffic!", m_slotNo);
+        m_network->resetDMR(m_slotNo);
         return;
     }
 
@@ -444,8 +446,8 @@ void Slot::processNetwork(const data::NetData& dmrData)
         case DataType::VOICE_LC_HEADER:
         case DataType::DATA_HEADER:
             {
-                bool grantDemand = (dmrData.getControl() & 0x80U) == 0x80U;
-                bool unitToUnit = (dmrData.getControl() & 0x01U) == 0x01U;
+                bool grantDemand = (dmrData.getControl() & network::NET_CTRL_GRANT_DEMAND) == network::NET_CTRL_GRANT_DEMAND;
+                bool unitToUnit = (dmrData.getControl() & network::NET_CTRL_U2U) == network::NET_CTRL_U2U;
                 
                 if (grantDemand) {
                     if (m_disableNetworkGrant) {
@@ -1777,8 +1779,8 @@ void Slot::setShortLC_TSCC(SiteData siteData, uint16_t counter)
     lc[3U] = (uint8_t)((lcValue >> 0) & 0xFFU);
     lc[4U] = edac::CRC::crc8(lc, 4U);
 
-    //LogDebugEx(LOG_DMR, "Slot::setShortLC_TSCC()", "netId = %02X, siteId = %02X", siteData.netId(), siteData.siteId());
-    //Utils::dump(1U, "[Slot::shortLC_TSCC()]", lc, 5U);
+    // LogDebugEx(LOG_DMR, "Slot::setShortLC_TSCC()", "netId = %02X, siteId = %02X", siteData.netId(), siteData.siteId());
+    // Utils::dump(1U, "DMR, Slot::shortLC_TSCC(), LC", lc, 5U);
 
     uint8_t sLC[9U];
 
@@ -1837,8 +1839,8 @@ void Slot::setShortLC_Payload(SiteData siteData, uint16_t counter)
     lc[3U] = (uint8_t)((lcValue >> 0) & 0xFFU);
     lc[4U] = edac::CRC::crc8(lc, 4U);
 
-    //LogDebugEx(LOG_DMR, "Slot::setShortLC_Payload()", "netId = %02X, siteId = %02X", siteData.netId(), siteData.siteId());
-    //Utils::dump(1U, "[Slot::setShortLC_Payload()]", lc, 5U);
+    // LogDebugEx(LOG_DMR, "Slot::setShortLC_Payload()", "netId = %02X, siteId = %02X", siteData.netId(), siteData.siteId());
+    // Utils::dump(1U, "DMR, Slot::setShortLC_Payload(), LC", lc, 5U);
 
     uint8_t sLC[9U];
 

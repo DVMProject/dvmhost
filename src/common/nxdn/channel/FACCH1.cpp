@@ -99,7 +99,7 @@ bool FACCH1::decode(const uint8_t* data, uint32_t offset)
     }
 
 #if DEBUG_NXDN_FACCH1
-    Utils::dump(2U, "FACCH1::decode(), FACCH1 Raw", buffer, NXDN_FACCH1_FEC_LENGTH_BYTES);
+    Utils::dump(2U, "NXDN, FACCH1::decode(), FACCH1 Raw", buffer, NXDN_FACCH1_FEC_LENGTH_BYTES);
 #endif
 
     // depuncture
@@ -137,7 +137,7 @@ bool FACCH1::decode(const uint8_t* data, uint32_t offset)
     conv.chainback(m_data, NXDN_FACCH1_CRC_LENGTH_BITS);
 
 #if DEBUG_NXDN_FACCH1
-    Utils::dump(2U, "Decoded FACCH1", m_data, NXDN_FACCH1_CRC_LENGTH_BYTES);
+    Utils::dump(2U, "NXDN, FACCH1::decode(), Decoded FACCH1", m_data, NXDN_FACCH1_CRC_LENGTH_BYTES);
 #endif
 
     // check CRC-12
@@ -163,7 +163,7 @@ void FACCH1::encode(uint8_t* data, uint32_t offset) const
     edac::CRC::addCRC12(buffer, NXDN_FACCH1_LENGTH_BITS);
 
 #if DEBUG_NXDN_FACCH1
-    Utils::dump(2U, "Encoded FACCH1", buffer, NXDN_FACCH1_CRC_LENGTH_BYTES);
+    Utils::dump(2U, "NXDN, FACCH1::encode(), Encoded FACCH1", buffer, NXDN_FACCH1_CRC_LENGTH_BYTES);
 #endif
 
     // encode convolution
@@ -196,7 +196,7 @@ void FACCH1::encode(uint8_t* data, uint32_t offset) const
     }
 
 #if DEBUG_NXDN_SACCH
-    Utils::dump(2U, "FACCH1::encode(), FACCH1 Puncture and Interleave", data, NXDN_FACCH1_FEC_LENGTH_BYTES);
+    Utils::dump(2U, "NXDN, FACCH1::encode(), FACCH1 Puncture and Interleave", data, NXDN_FACCH1_FEC_LENGTH_BYTES);
 #endif
 }
 

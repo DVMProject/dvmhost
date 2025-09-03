@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2015-2020 Jonathan Naylor, G4KLX
- *  Copyright (C) 2022-2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2022-2025 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -112,6 +112,22 @@ namespace nxdn
              * @param len Length of data frame.
              */
             void writeNetwork(const uint8_t* data, uint32_t len);
+
+            /**
+             * @brief Helper to perform RF traffic collision checking.
+             * @param srcId Source ID.
+             * @param dstId Destination ID.
+             * @return bool True, if traffic collision, otherwise false.
+             */
+            bool checkRFTrafficCollision(uint32_t srcId, uint32_t dstId);
+            /**
+             * @brief Helper to perform network traffic collision checking.
+             * @param lc 
+             * @param srcId Source ID.
+             * @param dstId Destination ID.
+             * @return bool True, if traffic collision, otherwise false.
+             */
+            bool checkNetTrafficCollision(lc::RTCH lc, uint32_t srcId, uint32_t dstId);
         };
     } // namespace packet
 } // namespace nxdn

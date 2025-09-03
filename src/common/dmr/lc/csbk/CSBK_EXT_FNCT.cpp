@@ -27,7 +27,7 @@ CSBK_EXT_FNCT::CSBK_EXT_FNCT() : CSBK(),
     m_extendedFunction(ExtendedFunctions::CHECK)
 {
     m_CSBKO = CSBKO::EXT_FNCT;
-    m_FID = FID_DMRA;
+    m_FID = FID_MOT;
 }
 
 /* Decode a control signalling block. */

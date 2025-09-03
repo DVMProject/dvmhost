@@ -54,6 +54,7 @@ uint32_t g_logDisplayLevel = 2U;
 bool g_disableTimeDisplay = false;
 
 bool g_useSyslog = false;
+bool g_disableNetworkLog = false;
 
 static struct tm m_tm;
 
@@ -314,7 +315,7 @@ void Log(uint32_t level, const char *module, const char* file, const int lineNo,
         m_outStream << buffer << std::endl;
     }
 
-    if (m_network != nullptr) {
+    if (m_network != nullptr && !g_disableNetworkLog) {
         // don't transfer debug data...
         if (level > 1U) {
             m_network->writeDiagLog(buffer);

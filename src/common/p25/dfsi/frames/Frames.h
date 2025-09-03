@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2024 Patrick McDonnell, W3AXL
- *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2024-2025 Bryan Biedenkapp, N2PLL
  *
  */
 #if !defined(__DFSI_FRAMES_H__)
@@ -20,13 +20,11 @@
 #include "common/p25/dfsi/frames/FullRateVoice.h"
 
 // "The" Manufacturer
-#include "common/p25/dfsi/frames/MotFullRateVoice.h"
 #include "common/p25/dfsi/frames/MotStartOfStream.h"
 #include "common/p25/dfsi/frames/MotStartVoiceFrame.h"
-#include "common/p25/dfsi/frames/MotVoiceHeader1.h"
-#include "common/p25/dfsi/frames/MotVoiceHeader2.h"
+#include "common/p25/dfsi/frames/MotFullRateVoice.h"
+#include "common/p25/dfsi/frames/MotTDULCFrame.h"
 #include "common/p25/dfsi/frames/MotTSBKFrame.h"
-#include "common/p25/dfsi/frames/MotPDUFrame.h"
 
 // FSC
 #include "common/p25/dfsi/frames/fsc/FSCMessage.h"

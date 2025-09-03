@@ -108,6 +108,17 @@ namespace modem
              */
             void close() override;
 
+            /**
+             * @brief Sets RTS signal high (asserts RTS).
+             * @returns bool True, if RTS was set successfully, otherwise false.
+             */
+            bool setRTS() override;
+            /**
+             * @brief Sets RTS signal low (clears RTS).
+             * @returns bool True, if RTS was cleared successfully, otherwise false.
+             */
+            bool clearRTS() override;
+
 #if defined(__APPLE__)
             /**
              * @brief Helper on Apple to set serial port to non-blocking.

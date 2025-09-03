@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2016 Jonathan Naylor, G4KLX
- *  Copyright (C) 2021 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2021-2025 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -198,6 +198,19 @@ namespace p25
          * @returns uint32_t 
          */
         static uint32_t compare(const uint8_t* data1, const uint8_t* data2, uint32_t length);
+
+        /**
+         * @brief Helper to convert a denial reason code to a string.
+         * @param reason Reason code.
+         * @returns std::string Reason code string.
+         */
+        static std::string denyRsnToString(uint8_t reason);
+        /**
+         * @brief Helper to convert a queue reason code to a string.
+         * @param reason Reason code.
+         * @returns std::string Reason code string.
+         */
+        static std::string queueRsnToString(uint8_t reason);
     };
 } // namespace p25
 

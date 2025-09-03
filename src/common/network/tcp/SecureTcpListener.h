@@ -72,13 +72,13 @@ namespace network
 
                 m_fd = ::socket(AF_INET, SOCK_STREAM, 0);
                 if (m_fd < 0) {
-                    LogError(LOG_NET, "Cannot create the TCP socket, err: %d", errno);
+                    LogError(LOG_NET, "Cannot create the TCP socket, err: %d (%s)", errno, strerror(errno));
                     throw std::runtime_error("Cannot create the TCP socket");
                 }
                 
                 int reuse = 1;
                 if (::setsockopt(m_fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, (char*)& reuse, sizeof(reuse)) != 0) {
-                    LogError(LOG_NET, "Cannot set the TCP socket option, err: %d", errno);
+                    LogError(LOG_NET, "Cannot set the TCP socket option, err: %d (%s)", errno, strerror(errno));
                     throw std::runtime_error("Cannot set the TCP socket option");
                 }
 
@@ -94,7 +94,7 @@ namespace network
             SecureTcpListener(const std::string& keyFile, const std::string& certFile, const uint16_t port, const std::string& address = "0.0.0.0") : SecureTcpListener(keyFile, certFile)
             {
                 if (!bind(address, port)) {
-                    LogError(LOG_NET, "Cannot to bind secure TCP server, err: %d", errno);
+                    LogError(LOG_NET, "Cannot to bind secure TCP server, err: %d (%s)", errno, strerror(errno));
                     throw std::runtime_error("Cannot to bind secure TCP server");
                 }
             }

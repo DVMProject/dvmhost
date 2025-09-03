@@ -85,27 +85,25 @@ namespace network
 
             private:
                 FNENetwork* m_network;
-                TagP25Data *m_tag;
+                TagP25Data* m_tag;
 
                 /**
                  * @brief Represents a queued data frame from the VTUN.
                  */
-                class VTUNDataFrame {
+                class QueuedDataFrame {
                 public:
-                    uint32_t srcHWAddr;         //! Source Hardware Address
-                    uint32_t srcProtoAddr;      //! Source Protocol Address
-                    uint32_t tgtHWAddr;         //! Target Hardware Address
-                    uint32_t tgtProtoAddr;      //! Target Protocol Address
+                    p25::data::DataHeader* header;  //! Instance of a PDU data header.
+                    uint32_t llId;                  //! Logical Link ID
+                    uint32_t tgtProtoAddr;          //! Target Protocol Address
 
-                    uint8_t* buffer;            //! Raw data buffer
-                    uint32_t bufferLen;         //! Length of raw data buffer
-                    
-                    uint16_t pktLen;            //! Packet Length
-                    uint8_t proto;              //! Packet Protocol
+                    uint8_t* userData;              //! Raw data buffer
+                    uint32_t userDataLen;           //! Length of raw data buffer
 
-                    uint64_t timestamp;         //! Timestamp in milliseconds
+                    uint64_t timestamp;             //! Timestamp in milliseconds
+                    uint8_t retryCnt;               //! Packet Retry Counter
+                    bool extendRetry;               //! Flag indicating whether or not to extend the retry count for this packet.
                 };
-                concurrent::deque<VTUNDataFrame*> m_dataFrames;
+                concurrent::deque<QueuedDataFrame*> m_queuedFrames;
 
                 /**
                  * @brief Represents the receive status of a call.
@@ -179,8 +177,6 @@ namespace network
 
                 bool m_debug;
 
-                static std::timed_mutex m_vtunMutex;
-
                 /**
                  * @brief Helper to dispatch PDU user data.
                  * @param peerId Peer ID.
@@ -199,6 +195,12 @@ namespace network
                  */
                 void dispatchUserFrameToFNE(p25::data::DataHeader& dataHeader, bool extendedAddress, uint8_t* pduUserData);
 
+                /**
+                 * @brief Helper used to process conventional data registration from PDU data.
+                 * @param status Instance of the RxStatus class.
+                 * @returns bool True, if conventional data registration data was processed, otherwise false.
+                 */
+                bool processConvDataReg(RxStatus* status);
                 /**
                  * @brief Helper used to process SNDCP control data from PDU data.
                  * @param status Instance of the RxStatus class.
@@ -233,24 +235,28 @@ namespace network
                  * @param ackType Acknowledgement Type.
                  * @param ackStatus 
                  * @param llId Logical Link ID.
+                 * @param extendedAddress Flag indicating whether or not to extended addressing is in use.
                  * @param srcLlId Source Logical Link ID.
                  */
-                void write_PDU_Ack_Response(uint8_t ackClass, uint8_t ackType, uint8_t ackStatus, uint32_t llId, uint32_t srcLlId = 0U);
+                void write_PDU_Ack_Response(uint8_t ackClass, uint8_t ackType, uint8_t ackStatus, uint32_t llId, bool extendedAddress,
+                    uint32_t srcLlId = 0U);
 
                 /**
                  * @brief Helper to write user data as a P25 PDU packet.
                  * @param peerId Peer ID.
+                 * @param srcPeerId Source Peer ID.
                  * @param peerNet Instance of PeerNetwork to use to send traffic.
                  * @param dataHeader Instance of a PDU data header.
                  * @param extendedAddress Flag indicating whether or not to extended addressing is in use.
                  * @param pduUserData Buffer containing user data to transmit.
                  */
-                void write_PDU_User(uint32_t peerId, network::PeerNetwork* peerNet, p25::data::DataHeader& dataHeader,
+                void write_PDU_User(uint32_t peerId, uint32_t srcPeerId, network::PeerNetwork* peerNet, p25::data::DataHeader& dataHeader,
                     bool extendedAddress, uint8_t* pduUserData, bool queueOnly = false);
 
                 /**
                  * @brief Write data processed to the network.
                  * @param peerId Peer ID.
+                 * @param srcPeerId Source Peer ID.
                  * @param peerNet Instance of PeerNetwork to use to send traffic.
                  * @param dataHeader Instance of a PDU data header.
                  * @param currentBlock Current Block ID.
@@ -259,7 +265,7 @@ namespace network
                  * @param pktSeq RTP packet sequence.
                  * @param streamId Stream ID.
                  */
-                bool writeNetwork(uint32_t peerId, network::PeerNetwork* peerNet, const p25::data::DataHeader& dataHeader, const uint8_t currentBlock, 
+                bool writeNetwork(uint32_t peerId, uint32_t srcPeerId, network::PeerNetwork* peerNet, const p25::data::DataHeader& dataHeader, const uint8_t currentBlock, 
                     const uint8_t* data, uint32_t len, uint16_t pktSeq, uint32_t streamId, bool queueOnly = false);
 
                 /**

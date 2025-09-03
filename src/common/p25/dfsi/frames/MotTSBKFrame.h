@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2024-2025 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -35,30 +35,28 @@ namespace p25
             // ---------------------------------------------------------------------------
 
             /**
-             * @brief Implements a P25 Motorola TSBK frame.
+             * @brief Implements a P25 Motorola/V.24 TSBK frame.
              * \code{.unparsed}
              * Byte 0               1               2               3
              * Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 
              *     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-             *     |   Encoded Motorola Start of Stream                            |
+             *     |       FT      |  Encoded V.24 Start of Stream                 |
              *     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-             *     |   Reserved ?                                                  |
-             *     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-             *     |   TSBK                                                        |
-             *     +                                                               +
-             *     |                                                               |
-             *     +                                                               +
              *     |                                                               |
              *     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-             *     |  Unknown ?                                                    |
+             *     |               |  TSBK                                         |
              *     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+             *     |                                                               |
+             *     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+             *     |                                                               |
+             *     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+             *     |               | Reserved      |
+             *     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
              * \endcode
              * @ingroup dfsi_frames
              */
             class HOST_SW_API MotTSBKFrame {
             public:
-                static const uint8_t LENGTH = 24U;
-
                 /**
                  * @brief Initializes a copy instance of the MotTSBKFrame class.
                  */

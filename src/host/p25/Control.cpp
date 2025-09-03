@@ -65,6 +65,7 @@ Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t q
     m_modem(modem),
     m_isModemDFSI(false),
     m_network(network),
+    m_ignorePDUCRC(false),
     m_inhibitUnauth(false),
     m_legacyGroupGrnt(true),
     m_legacyGroupReg(false),
@@ -75,11 +76,14 @@ Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t q
     m_ackTSBKRequests(true),
     m_disableNetworkGrant(false),
     m_disableNetworkHDU(false),
-    m_allowExplicitSourceId(true),
+    m_allowExplicitSourceId(false),
     m_convNetGrantDemand(false),
     m_sndcpSupport(false),
     m_ignoreAffiliationCheck(false),
     m_demandUnitRegForRefusedAff(true),
+    m_dfsiFDX(false),
+    m_forceAllowTG0(false),
+    m_defaultNetIdleTalkgroup(0U),
     m_idenTable(idenTable),
     m_ridLookup(ridLookup),
     m_tidLookup(tidLookup),
@@ -231,6 +235,12 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
     yaml::Node systemConf = conf["system"];
     yaml::Node p25Protocol = conf["protocols"]["p25"];
 
+    if (m_isModemDFSI) {
+        yaml::Node modemConf = systemConf["modem"];
+        yaml::Node dfsiConf = modemConf["dfsi"];
+        m_dfsiFDX = dfsiConf["fullDuplex"].as<bool>(false);
+    }
+
     m_supervisor = supervisor;
 
     m_tduPreambleCount = p25Protocol["tduPreambleCount"].as<uint32_t>(8U);
@@ -238,6 +248,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
     yaml::Node rfssConfig = systemConf["config"];
     m_control->m_patchSuperGroup = (uint32_t)::strtoul(rfssConfig["pSuperGroup"].as<std::string>("FFFE").c_str(), NULL, 16);
     m_control->m_announcementGroup = (uint32_t)::strtoul(rfssConfig["announcementGroup"].as<std::string>("FFFE").c_str(), NULL, 16);
+    m_defaultNetIdleTalkgroup = (uint32_t)::strtoul(rfssConfig["defaultNetIdleTalkgroup"].as<std::string>("0").c_str(), NULL, 16);
 
     yaml::Node secureConfig = rfssConfig["secure"];
     std::string key = secureConfig["key"].as<std::string>();
@@ -266,6 +277,8 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
     if (m_llaK != nullptr) {
         generateLLA_AM1_Parameters();
     }
+
+    m_ignorePDUCRC = p25Protocol["ignoreDataCRC"].as<bool>(false);
 
     m_inhibitUnauth = p25Protocol["inhibitUnauthorized"].as<bool>(false);
     m_legacyGroupGrnt = p25Protocol["legacyGroupGrnt"].as<bool>(true);
@@ -328,7 +341,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
 
     m_ccNotifyActiveTG = control["notifyActiveTG"].as<bool>(true);
 
-    m_allowExplicitSourceId = p25Protocol["allowExplicitSourceId"].as<bool>(true);
+    m_allowExplicitSourceId = p25Protocol["allowExplicitSourceId"].as<bool>(false);
     m_convNetGrantDemand = p25Protocol["convNetGrantDemand"].as<bool>(false);
 
     uint32_t ccBcstInterval = p25Protocol["control"]["interval"].as<uint32_t>(300U);
@@ -344,6 +357,11 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
     if (m_voiceOnControl) {
         m_control->m_redundantGrant = true;
         m_notifyCC = false;
+    }
+
+    m_forceAllowTG0 = p25Protocol["forceAllowTG0"].as<bool>(false);
+    if (m_forceAllowTG0) {
+        LogWarning(LOG_P25, "TGID 0 (P25 blackhole talkgroup) will be allowed. This is not recommended, and can cause undesired behavior, it is typically only needed by poorly behaved systems.");
     }
 
     /*
@@ -491,8 +509,19 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
             LogInfo("    Control Data Only: yes");
         }
 
+        if (m_isModemDFSI && m_dfsiFDX) {
+            LogInfo("    DFSI Full Duplex: yes");
+        }
+
+        if (m_forceAllowTG0) {
+            LogInfo("    Force Allow TGID 0: yes");
+        }
+
         LogInfo("    Patch Super Group: $%04X", m_control->m_patchSuperGroup);
         LogInfo("    Announcement Group: $%04X", m_control->m_announcementGroup);
+        if (m_defaultNetIdleTalkgroup != 0U) {
+            LogInfo("    Default Network Idle Talkgroup: $%04X", m_defaultNetIdleTalkgroup);
+        }
 
         LogInfo("    Notify Control: %s", m_notifyCC ? "yes" : "no");
         if (m_disableNetworkHDU) {
@@ -519,6 +548,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
 
         LogInfo("    SNDCP Support: %s", m_sndcpSupport ? "yes" : "no");
 
+        LogInfo("    Ignore Data PDU CRC Error: %s", m_ignorePDUCRC ? "yes" : "no");
         LogInfo("    Ignore Affiliation Check: %s", m_ignoreAffiliationCheck ? "yes" : "no");
         LogInfo("    No Status ACK: %s", m_control->m_noStatusAck ? "yes" : "no");
         LogInfo("    No Message ACK: %s", m_control->m_noMessageAck ? "yes" : "no");
@@ -1354,9 +1384,6 @@ void Control::addFrame(const uint8_t* data, uint32_t length, bool net, bool imm)
 
 void Control::processNetwork()
 {
-    if (m_rfState != RS_RF_LISTENING && m_netState == RS_NET_IDLE)
-        return;
-
     uint32_t length = 0U;
     bool ret = false;
     UInt8Array buffer = m_network->readP25(ret, length);
@@ -1369,10 +1396,18 @@ void Control::processNetwork()
         return;
     }
 
-    bool grantDemand = (buffer[14U] & 0x80U) == 0x80U;
-    bool grantDenial = (buffer[14U] & 0x40U) == 0x40U;
-    bool grantEncrypt = (buffer[14U] & 0x08U) == 0x08U;
-    bool unitToUnit = (buffer[14U] & 0x01U) == 0x01U;
+    if (m_netState != RS_NET_DATA) {
+        // don't process network frames if the RF modem isn't in a listening state
+        if (m_rfState != RS_RF_LISTENING && m_netState == RS_NET_IDLE) {
+            m_network->resetP25();
+            return;
+        }
+    }
+
+    bool grantDemand = (buffer[14U] & network::NET_CTRL_GRANT_DEMAND) == network::NET_CTRL_GRANT_DEMAND;
+    bool grantDenial = (buffer[14U] & network::NET_CTRL_GRANT_DENIAL) == network::NET_CTRL_GRANT_DENIAL;
+    bool grantEncrypt = (buffer[14U] & network::NET_CTRL_GRANT_ENCRYPT) == network::NET_CTRL_GRANT_ENCRYPT;
+    bool unitToUnit = (buffer[14U] & network::NET_CTRL_U2U) == network::NET_CTRL_U2U;
 
     // process network message header
     DUID::E duid = (DUID::E)buffer[22U];
@@ -1381,6 +1416,12 @@ void Control::processNetwork()
     // process raw P25 data bytes
     UInt8Array data;
     uint8_t frameLength = buffer[23U];
+
+    if (!m_network->validateP25FrameLength(frameLength, length, duid)) {
+        m_network->resetP25();
+        return;
+    }
+
     if (duid == DUID::PDU) {
         frameLength = length;
         data = std::unique_ptr<uint8_t[]>(new uint8_t[length]);
@@ -1473,7 +1514,7 @@ void Control::processNetwork()
 
             if (m_debug) {
                 LogDebug(LOG_NET, "P25, HDU algId = $%02X, kId = $%02X", algId, kid);
-                Utils::dump(1U, "P25 HDU Network MI", mi, MI_LENGTH_BYTES);
+                Utils::dump(1U, "P25, HDU Network MI", mi, MI_LENGTH_BYTES);
             }
 
             control.setAlgId(algId);

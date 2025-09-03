@@ -71,6 +71,8 @@ Control::Control(bool authoritative, uint32_t ran, uint32_t callHang, uint32_t q
     m_enableControl(false),
     m_dedicatedControl(false),
     m_ignoreAffiliationCheck(false),
+    m_legacyGroupReg(false),
+    m_defaultNetIdleTalkgroup(0U),
     m_rfLastLICH(),
     m_rfLC(),
     m_netLC(),
@@ -104,8 +106,8 @@ Control::Control(bool authoritative, uint32_t ran, uint32_t callHang, uint32_t q
     m_interval(),
     m_frameLossCnt(0U),
     m_frameLossThreshold(DEFAULT_FRAME_LOSS_THRESHOLD),
-    m_ccFrameCnt(0U),
     m_ccSeq(0U),
+    m_ccIteration(0U),
     m_siteData(),
     m_rssiMapper(rssiMapper),
     m_rssi(0U),
@@ -217,8 +219,11 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
     m_ccDebug = control["debug"].as<bool>(false);
 
     m_ignoreAffiliationCheck = nxdnProtocol["ignoreAffiliationCheck"].as<bool>(false);
+    m_legacyGroupReg = nxdnProtocol["legacyGroupReg"].as<bool>(false);
 
     yaml::Node rfssConfig = systemConf["config"];
+    m_defaultNetIdleTalkgroup = (uint32_t)::strtoul(rfssConfig["defaultNetIdleTalkgroup"].as<std::string>("0").c_str(), NULL, 16);
+
     yaml::Node controlCh = rfssConfig["controlCh"];
     m_notifyCC = controlCh["notifyEnable"].as<bool>(false);
 
@@ -251,7 +256,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
     uint8_t siteInfo1 = SiteInformation1::VOICE_CALL_SVC | SiteInformation1::DATA_CALL_SVC;
     uint8_t siteInfo2 = SiteInformation2::SHORT_DATA_CALL_SVC;
     if (m_enableControl) {
-        siteInfo1 |= SiteInformation1::LOC_REG_SVC;//| SiteInformation1::GRP_REG_SVC;
+        siteInfo1 |= SiteInformation1::LOC_REG_SVC;
     }
 
     /*
@@ -323,10 +328,15 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
                 LogInfo("    Disable Grant Source ID Check: yes");
             }
             if (m_supervisor)
-                LogMessage(LOG_DMR, "Host is configured to operate as a NXDN control channel, site controller mode.");
+                LogMessage(LOG_NXDN, "Host is configured to operate as a NXDN control channel, site controller mode.");
+        }
+
+        if (m_defaultNetIdleTalkgroup != 0U) {
+            LogInfo("    Default Network Idle Talkgroup: $%04X", m_defaultNetIdleTalkgroup);
         }
 
         LogInfo("    Ignore Affiliation Check: %s", m_ignoreAffiliationCheck ? "yes" : "no");
+        LogInfo("    Legacy Group Registration: %s", m_legacyGroupReg ? "yes" : "no");
         LogInfo("    Notify Control: %s", m_notifyCC ? "yes" : "no");
         LogInfo("    Verify Affiliation: %s", m_control->m_verifyAff ? "yes" : "no");
         LogInfo("    Verify Registration: %s", m_control->m_verifyReg ? "yes" : "no");
@@ -917,9 +927,6 @@ void Control::addFrame(const uint8_t *data, bool net, bool imm)
 
 void Control::processNetwork()
 {
-    if (m_rfState != RS_RF_LISTENING && m_netState == RS_NET_IDLE)
-        return;
-
     uint32_t length = 0U;
     bool ret = false;
     UInt8Array buffer = m_network->readNXDN(ret, length);
@@ -928,6 +935,12 @@ void Control::processNetwork()
     if (length == 0U)
         return;
     if (buffer == nullptr) {
+        m_network->resetNXDN();
+        return;
+    }
+
+    // don't process network frames if the RF modem isn't in a listening state
+    if (m_rfState != RS_RF_LISTENING && m_netState == RS_NET_IDLE) {
         m_network->resetNXDN();
         return;
     }
@@ -977,17 +990,23 @@ void Control::processNetwork()
     if (valid)
         m_rfLastLICH = lich;
 
-    FuncChannelType::E usc = m_rfLastLICH.getFCT();
+    RFChannelType::E rfct = m_rfLastLICH.getRFCT();
+    FuncChannelType::E fct = m_rfLastLICH.getFCT();
     ChOption::E option = m_rfLastLICH.getOption();
 
-    // forward onto the specific processor for final processing and delivery
-    switch (usc) {
-        case FuncChannelType::USC_UDCH:
-            ret = m_data->processNetwork(option, lc, data.get(), frameLength);
-            break;
-        default:
-            ret = m_voice->processNetwork(usc, option, lc, data.get(), frameLength);
-            break;
+    if (rfct == RFChannelType::RCCH) {
+        m_control->processNetwork(fct, option, lc, data.get(), frameLength);
+    }
+    else if (rfct == RFChannelType::RTCH || rfct == RFChannelType::RDCH) {
+        // forward onto the specific processor for final processing and delivery
+        switch (fct) {
+            case FuncChannelType::USC_UDCH:
+                m_data->processNetwork(option, lc, data.get(), frameLength);
+                break;
+            default:
+                m_voice->processNetwork(fct, option, lc, data.get(), frameLength);
+                break;
+        }
     }
 }
 
@@ -1252,10 +1271,6 @@ bool Control::writeRF_ControlData()
     if (!m_enableControl)
         return false;
 
-    if (m_ccFrameCnt == 254U) {
-        m_ccFrameCnt = 0U;
-    }
-
     // don't add any frames if the queue is full
     uint8_t len = NXDN_FRAME_LENGTH_BYTES + 2U;
     uint32_t space = m_txQueue.freeSpace();
@@ -1263,20 +1278,21 @@ bool Control::writeRF_ControlData()
         return false;
     }
 
-    const uint8_t maxSeq = m_control->m_bcchCnt + (m_control->m_ccchPagingCnt + m_control->m_ccchMultiCnt) *
-        m_control->m_rcchGroupingCnt * m_control->m_rcchIterateCnt;
-    if (m_ccSeq == maxSeq) {
+    if (m_ccIteration > m_control->m_rcchIterateCnt) {
+        m_ccIteration = 0U;
         m_ccSeq = 0U;
     }
 
+    const uint8_t maxSeq = (m_control->m_ccchPagingCnt + m_control->m_ccchMultiCnt) * m_control->m_rcchGroupingCnt;
+    if (m_ccSeq > maxSeq) {
+        m_ccSeq = 1U;
+        m_ccIteration++;
+    }
+
     if (m_netState == RS_NET_IDLE && m_rfState == RS_RF_LISTENING) {
-        m_control->writeRF_ControlData(m_ccFrameCnt, m_ccSeq, true);
+        m_control->writeRF_ControlData(m_ccSeq, m_ccSeq == 0U);
 
         m_ccSeq++;
-        if (m_ccSeq == maxSeq) {
-            m_ccFrameCnt++;
-        }
-
         return true;
     }
 

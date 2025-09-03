@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2015,2016,2017 Jonathan Naylor, G4KLX
- *  Copyright (C) 2017-2022 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2017-2025 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -111,6 +111,19 @@ namespace dmr
              * @brief Finalizes a instance of the Voice class.
              */
             ~Voice();
+
+            /**
+             * @brief Helper to perform RF traffic collision checking.
+             * @param dstId Destination ID.
+             * @return bool True, if traffic collision, otherwise false.
+             */
+            bool checkRFTrafficCollision(uint32_t dstId);
+            /**
+             * @brief Helper to perform network traffic collision checking.
+             * @param dstId Destination ID.
+             * @return bool True, if traffic collision, otherwise false.
+             */
+            bool checkNetTrafficCollision(uint32_t dstId);
 
             /**
              * @brief Log GPS information.

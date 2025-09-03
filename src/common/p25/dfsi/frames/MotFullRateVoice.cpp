@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2024 Patrick McDonnell, W3AXL
- *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2024-2025 Bryan Biedenkapp, N2PLL
  *
  */
 #include "common/p25/dfsi/frames/MotFullRateVoice.h"
@@ -33,7 +33,8 @@ MotFullRateVoice::MotFullRateVoice() :
     imbeData(nullptr),
     additionalData(nullptr),
     m_frameType(DFSIFrameType::LDU1_VOICE1),
-    m_source(SourceFlag::QUANTAR)
+    m_totalErrors(0U),
+    m_busy(DFSI_BUSY_BITS_TALKAROUND)
 {
     imbeData = new uint8_t[RAW_IMBE_LENGTH_BYTES];
     ::memset(imbeData, 0x00U, RAW_IMBE_LENGTH_BYTES);
@@ -41,11 +42,17 @@ MotFullRateVoice::MotFullRateVoice() :
 
 /* Initializes a instance of the MotFullRateVoice class. */
 
-MotFullRateVoice::MotFullRateVoice(uint8_t* data)
+MotFullRateVoice::MotFullRateVoice(uint8_t* data) :
+    imbeData(nullptr),
+    additionalData(nullptr),
+    m_frameType(DFSIFrameType::LDU1_VOICE1),
+    m_totalErrors(0U),
+    m_busy(DFSI_BUSY_BITS_TALKAROUND)
 {
     // set our pointers to null since it doesn't get initialized otherwise
     imbeData = nullptr;
     additionalData = nullptr;
+
     // decode
     decode(data);
 }
@@ -100,11 +107,14 @@ bool MotFullRateVoice::decode(const uint8_t* data, bool shortened)
         
     if (shortened) {
         ::memcpy(imbeData, data + 1U, RAW_IMBE_LENGTH_BYTES);
-        m_source = (SourceFlag::E)data[12U];
-        // Forgot to set this originally and left additionalData uninitialized, whoops!
+
+        m_totalErrors = (uint8_t)((data[12U] >> 3) & 0x0FU);        // Total Errors
+        m_busy = (uint8_t)(data[13U] & 0x03U);                      // Busy Status
+
+        // forgot to set this originally and left additionalData uninitialized, whoops!
         additionalData = nullptr;
     } else {
-        // Frames 0x6A and 0x73 are missing the 0x00 padding byte, so we start IMBE data 1 byte earlier
+        // frames $6A and $73 are missing the 0x00 padding byte, so we start IMBE data 1 byte earlier
         uint8_t imbeStart = 5U;
         if (isVoice9or18()) {
             imbeStart = 4U;
@@ -119,7 +129,13 @@ bool MotFullRateVoice::decode(const uint8_t* data, bool shortened)
         // copy IMBE data based on our imbe start position
         ::memcpy(imbeData, data + imbeStart, RAW_IMBE_LENGTH_BYTES);
 
-        m_source = (SourceFlag::E)data[RAW_IMBE_LENGTH_BYTES + imbeStart];
+        if (isVoice9or18()) {
+            m_totalErrors = 0U; // these frames don't have total errors
+            m_busy = (uint8_t)(data[3U] & 0x03U);                   // Busy Status
+        } else {
+            m_totalErrors = (uint8_t)((data[imbeStart + RAW_IMBE_LENGTH_BYTES] >> 2) & 0x0FU); // Total Errors
+            m_busy = (uint8_t)(data[imbeStart + RAW_IMBE_LENGTH_BYTES] & 0x03U); // Busy Status
+        }
     }
 
     return true;
@@ -141,26 +157,28 @@ void MotFullRateVoice::encode(uint8_t* data, bool shortened)
     // copy based on shortened frame or not
     if (shortened) {
         ::memcpy(data + 1U, imbeData, RAW_IMBE_LENGTH_BYTES);
-        data[12U] = (uint8_t)m_source;
-    } 
+        data[13U] = (uint8_t)(m_busy & 0x03U);                      // Busy Status
+    }
     // if not shortened, our IMBE data start position depends on frame type
     else {
-        // Starting index for the IMBE data
+        // starting index for the IMBE data
         uint8_t imbeStart = 5U;
         if (isVoice9or18()) {
             imbeStart = 4U;
         }
 
-        // Check if we have additional data
+        // check if we have additional data
         if (additionalData != nullptr) {
             ::memcpy(data + 1U, additionalData, ADDITIONAL_LENGTH);
         }
 
-        // Copy rest of data
         ::memcpy(data + imbeStart, imbeData, RAW_IMBE_LENGTH_BYTES);
 
-        // Source byte at the end
-        data[11U + imbeStart] = (uint8_t)m_source;
+        if (isVoice9or18()) { 
+            data[3U] = (uint8_t)(m_busy & 0x03U);                   // Busy Status
+        } else {
+            data[imbeStart + RAW_IMBE_LENGTH_BYTES] = (uint8_t)(m_busy & 0x03U); // Busy Status
+        }
     }
 }
 

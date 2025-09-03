@@ -69,17 +69,15 @@ void PeerListLookup::clear()
 
 /* Adds a new entry to the list. */
 
-void PeerListLookup::addEntry(uint32_t id, const std::string& alias, const std::string& password, bool peerLink, bool canRequestKeys)
+void PeerListLookup::addEntry(uint32_t id, PeerId entry)
 {
-    PeerId entry = PeerId(id, alias, password, peerLink, canRequestKeys, false);
-
     __LOCK_TABLE();
 
     try {
         PeerId _entry = m_table.at(id);
         // if either the alias or the enabled flag doesn't match, update the entry
         if (_entry.peerId() == id) {
-            _entry = PeerId(id, alias, password, peerLink, canRequestKeys, false);
+            _entry = entry;
             m_table[id] = _entry;
         }
     } catch (...) {
@@ -117,7 +115,7 @@ PeerId PeerListLookup::find(uint32_t id)
     try {
         entry = m_table.at(id);
     } catch (...) {
-        entry = PeerId(0U, "", "", false, false, true);
+        entry = PeerId(0U, "", "", true);
     }
 
     return entry;
@@ -208,22 +206,13 @@ bool PeerListLookup::load()
                 continue;
 
             // tokenize line
-            std::string next;
             std::vector<std::string> parsed;
+            std::stringstream ss(line);
+            std::string field;
             char delim = ',';
 
-            for (char c : line) {
-                if (c == delim) {
-                    //if (!next.empty()) {
-                        parsed.push_back(next);
-                        next.clear();
-                    //}
-                }
-                else
-                    next += c;
-            }
-            if (!next.empty())
-                parsed.push_back(next);
+            while (std::getline(ss, field, delim))
+                parsed.push_back(field);
 
             // parse tokenized line
             uint32_t id = ::atoi(parsed[0].c_str());
@@ -243,20 +232,31 @@ bool PeerListLookup::load()
             if (parsed.size() >= 5)
                 canRequestKeys = ::atoi(parsed[4].c_str()) == 1;
 
+            // parse can issue inhibit flag
+            bool canIssueInhibit = false;
+            if (parsed.size() >= 6)
+                canIssueInhibit = ::atoi(parsed[5].c_str()) == 1;
+
             // parse optional password
             std::string password = "";
             if (parsed.size() >= 2)
                 password = parsed[1].c_str();
 
             // load into table
-            m_table[id] = PeerId(id, alias, password, peerLink, canRequestKeys, false);
+            PeerId entry = PeerId(id, alias, password, false);
+            entry.peerLink(peerLink);
+            entry.canRequestKeys(canRequestKeys);
+            entry.canIssueInhibit(canIssueInhibit);
+
+            m_table[id] = entry;
 
             // log depending on what was loaded
             LogMessage(LOG_HOST, "Loaded peer ID %u%s into peer ID lookup table, %s%s%s", id,
                 (!alias.empty() ? (" (" + alias + ")").c_str() : ""),
                 (!password.empty() ? "using unique peer password" : "using master password"),
                 (peerLink) ? ", Peer-Link Enabled" : "",
-                (canRequestKeys) ? ", Can Request Keys" : "");
+                (canRequestKeys) ? ", Can Request Keys" : "",
+                (canIssueInhibit) ? ", Can Issue Inhibit" : "");
         }
     }
 
@@ -329,6 +329,14 @@ bool PeerListLookup::save()
         // add canRequestKeys flag
         bool canRequestKeys = entry.second.canRequestKeys();
         if (canRequestKeys) {
+            line += "1,";
+        } else {
+            line += "0,";
+        }
+
+        // add canIssueInhibit flag
+        bool canIssueInhibit = entry.second.canIssueInhibit();
+        if (canIssueInhibit) {
             line += "1,";
         } else {
             line += "0,";

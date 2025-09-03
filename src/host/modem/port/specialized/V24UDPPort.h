@@ -87,6 +87,11 @@ namespace modem
                  * @brief Helper to set and configure the heartbeat interval for FSC connections.
                  */
                 void setHeartbeatInterval(uint32_t interval);
+                /**
+                 * @brief Helper to set TIA mode.
+                 * @param mode True to enable TIA mode, false to disable.
+                 */
+                void setTIAMode(bool mode) { m_tiaMode = mode; }
 
                 /**
                  * @brief Updates the timer by the passed number of milliseconds.
@@ -185,6 +190,7 @@ namespace modem
                 ThreadPool m_ctrlThreadPool;
                 ThreadPool m_vcThreadPool;
 
+                bool m_tiaMode;
                 bool m_debug;
 
                 static std::mutex m_bufferMutex;

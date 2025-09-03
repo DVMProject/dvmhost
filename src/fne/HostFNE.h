@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2023 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2023-2025 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -20,6 +20,7 @@
 #include "common/lookups/RadioIdLookup.h"
 #include "common/lookups/TalkgroupRulesLookup.h"
 #include "common/lookups/PeerListLookup.h"
+#include "common/lookups/AdjSiteMapLookup.h"
 #include "common/network/viface/VIFace.h"
 #include "common/yaml/Yaml.h"
 #include "common/Timer.h"
@@ -42,6 +43,7 @@ namespace network { namespace callhandler { namespace packetdata { class HOST_SW
 namespace network { namespace callhandler { class HOST_SW_API TagP25Data; } }
 namespace network { namespace callhandler { namespace packetdata { class HOST_SW_API P25PacketData; } } }
 namespace network { namespace callhandler { class HOST_SW_API TagNXDNData; } }
+namespace network { namespace callhandler { class HOST_SW_API TagAnalogData; } }
 
 // ---------------------------------------------------------------------------
 //  Class Declaration
@@ -88,6 +90,7 @@ private:
     friend class network::callhandler::TagP25Data;
     friend class network::callhandler::packetdata::P25PacketData;
     friend class network::callhandler::TagNXDNData;
+    friend class network::callhandler::TagAnalogData;
     network::FNENetwork* m_network;
     network::DiagNetwork* m_diagNetwork;
 
@@ -100,10 +103,12 @@ private:
     bool m_dmrEnabled;
     bool m_p25Enabled;
     bool m_nxdnEnabled;
+    bool m_analogEnabled;
 
     lookups::RadioIdLookup* m_ridLookup;
     lookups::TalkgroupRulesLookup* m_tidLookup;
     lookups::PeerListLookup* m_peerListLookup;
+    lookups::AdjSiteMapLookup* m_adjSiteMapLookup;
 
     CryptoContainer* m_cryptoLookup;
 
@@ -168,18 +173,47 @@ private:
      * @returns void* (Ignore)
      */
     static void* threadVirtualNetworking(void* arg);
-    /**
-     * @brief Entry point to virtual networking clocking thread.
-     * @param arg Instance of the thread_t structure.
-     * @returns void* (Ignore)
-     */
-    static void* threadVirtualNetworkingClock(void* arg);
 #endif // !defined(_WIN32)
     /**
-     * @brief Processes any peer network traffic.
-     * @param peerNetwork Instance of PeerNetwork to process traffic for.
+     * @brief Processes DMR peer network traffic.
+     * @param data Buffer containing DMR data.
+     * @param length Length of the buffer.
+     * @param streamId Stream ID.
+     * @param fneHeader FNE header for the packet.
+     * @param rtpHeader RTP header for the packet.
      */
-    void processPeer(network::PeerNetwork* peerNetwork);
+    void processPeerDMR(network::PeerNetwork* peerNetwork, const uint8_t* data, uint32_t length, uint32_t streamId, 
+        const network::frame::RTPFNEHeader& fneHeader, const network::frame::RTPHeader& rtpHeader);
+    /**
+     * @brief Processes P25 peer network traffic.
+     * @param data Buffer containing P25 data.
+     * @param length Length of the buffer.
+     * @param streamId Stream ID.
+     * @param fneHeader FNE header for the packet.
+     * @param rtpHeader RTP header for the packet.
+     */
+    void processPeerP25(network::PeerNetwork* peerNetwork, const uint8_t* data, uint32_t length, uint32_t streamId, 
+        const network::frame::RTPFNEHeader& fneHeader, const network::frame::RTPHeader& rtpHeader);
+    /**
+     * @brief Processes NXDN peer network traffic.
+     * @param data Buffer containing NXDN data.
+     * @param length Length of the buffer.
+     * @param streamId Stream ID.
+     * @param fneHeader FNE header for the packet.
+     * @param rtpHeader RTP header for the packet.
+     */
+    void processPeerNXDN(network::PeerNetwork* peerNetwork, const uint8_t* data, uint32_t length, uint32_t streamId, 
+        const network::frame::RTPFNEHeader& fneHeader, const network::frame::RTPHeader& rtpHeader);
+    /**
+     * @brief Processes analog peer network traffic.
+     * @param data Buffer containing analog data.
+     * @param length Length of the buffer.
+     * @param streamId Stream ID.
+     * @param fneHeader FNE header for the packet.
+     * @param rtpHeader RTP header for the packet.
+     */
+    void processPeerAnalog(network::PeerNetwork* peerNetwork, const uint8_t* data, uint32_t length, uint32_t streamId, 
+        const network::frame::RTPFNEHeader& fneHeader, const network::frame::RTPHeader& rtpHeader);
 };
 
 #endif // __HOST_FNE_H__

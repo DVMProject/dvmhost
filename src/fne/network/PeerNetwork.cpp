@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2024-2025 Bryan Biedenkapp, N2PLL
  *
  */
 #include "fne/Defines.h"
@@ -24,22 +24,35 @@ using namespace compress;
 #include <streambuf>
 
 // ---------------------------------------------------------------------------
+//  Constants
+// ---------------------------------------------------------------------------
+
+#define WORKER_CNT 8U
+
+const uint64_t PACKET_LATE_TIME = 200U; // 200ms
+
+// ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
 /* Initializes a new instance of the PeerNetwork class. */
 
 PeerNetwork::PeerNetwork(const std::string& address, uint16_t port, uint16_t localPort, uint32_t peerId, const std::string& password,
-    bool duplex, bool debug, bool dmr, bool p25, bool nxdn, bool slot1, bool slot2, bool allowActivityTransfer, bool allowDiagnosticTransfer, bool updateLookup, bool saveLookup) :
-    Network(address, port, localPort, peerId, password, duplex, debug, dmr, p25, nxdn, slot1, slot2, allowActivityTransfer, allowDiagnosticTransfer, updateLookup, saveLookup),
+    bool duplex, bool debug, bool dmr, bool p25, bool nxdn, bool analog, bool slot1, bool slot2, bool allowActivityTransfer, bool allowDiagnosticTransfer, bool updateLookup, bool saveLookup) :
+    Network(address, port, localPort, peerId, password, duplex, debug, dmr, p25, nxdn, analog, slot1, slot2, allowActivityTransfer, allowDiagnosticTransfer, updateLookup, saveLookup),
     m_attachedKeyRSPHandler(false),
     m_blockTrafficToTable(),
+    m_dmrCallback(nullptr),
+    m_p25Callback(nullptr),
+    m_nxdnCallback(nullptr),
+    m_analogCallback(nullptr),
     m_pidLookup(nullptr),
     m_peerLink(false),
     m_peerLinkSavesACL(false),
     m_tgidPkt(true, "Peer-Link, TGID List"),
     m_ridPkt(true, "Peer-Link, RID List"),
-    m_pidPkt(true, "Peer-Link, PID List")
+    m_pidPkt(true, "Peer-Link, PID List"),
+    m_threadPool(WORKER_CNT, "peer")
 {
     assert(!address.empty());
     assert(port > 0U);
@@ -50,6 +63,21 @@ PeerNetwork::PeerNetwork(const std::string& address, uint16_t port, uint16_t loc
 
     // never disable peer network services on ACL NAK from master
     m_neverDisableOnACLNAK = true;
+
+    // FNE peer network manually handle protocol packets
+    m_userHandleProtocol = true;
+
+    // start thread pool
+    m_threadPool.start();
+}
+
+/* Finalizes a instance of the PeerNetwork class. */
+
+PeerNetwork::~PeerNetwork()
+{
+    // stop thread pool
+    m_threadPool.stop();
+    m_threadPool.wait();
 }
 
 /* Sets the instances of the Peer List lookup tables. */
@@ -59,18 +87,21 @@ void PeerNetwork::setPeerLookups(lookups::PeerListLookup* pidLookup)
     m_pidLookup = pidLookup;
 }
 
-/* Gets the received DMR stream ID. */
+/* Opens connection to the network. */
 
-uint32_t PeerNetwork::getRxDMRStreamId(uint32_t slotNo) const
+bool PeerNetwork::open()
 {
-    assert(slotNo == 1U || slotNo == 2U);
+    if (!m_enabled)
+        return false;
 
-    if (slotNo == 1U) {
-        return m_rxDMRStreamId[0U];
-    }
-    else {
-        return m_rxDMRStreamId[1U];
-    }
+    return Network::open();
+}
+
+/* Closes connection to the network. */
+
+void PeerNetwork::close()
+{
+    Network::close();
 }
 
 /* Checks if the passed peer ID is blocked from sending to this peer. */
@@ -128,6 +159,7 @@ bool PeerNetwork::writePeerLinkPeers(json::array* peerList)
             }
         }
 
+        pkt.clear();
         return true;
     }
 
@@ -140,13 +172,44 @@ bool PeerNetwork::writePeerLinkPeers(json::array* peerList)
 
 /* User overrideable handler that allows user code to process network packets not handled by this class. */
 
-void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opcode, const uint8_t* data, uint32_t length, uint32_t streamId)
+void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opcode, const uint8_t* data, uint32_t length, uint32_t streamId, 
+    const frame::RTPFNEHeader& fneHeader, const frame::RTPHeader& rtpHeader)
 {
     switch (opcode.first) {
-    case NET_FUNC::PEER_LINK:
+    case NET_FUNC::PROTOCOL:                                        // Protocol
+        {
+            PeerPacketRequest* req = new PeerPacketRequest();
+            req->obj = this;
+            req->peerId = peerId;
+            req->streamId = streamId;
+
+            req->rtpHeader = rtpHeader;
+            req->fneHeader = fneHeader;
+
+            req->subFunc = opcode.second;
+
+            req->pktRxTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+
+            req->length = length;
+            req->buffer = new uint8_t[length];
+            ::memcpy(req->buffer, data, length);
+
+            // enqueue the task
+            if (!m_threadPool.enqueue(new_pooltask(taskNetworkRx, req))) {
+                LogError(LOG_NET, "Failed to task enqueue network packet request, peerId = %u", peerId);
+                if (req != nullptr) {
+                    if (req->buffer != nullptr)
+                        delete[] req->buffer;
+                    delete req;
+                }
+            }
+        }
+        break;
+
+    case NET_FUNC::PEER_LINK:                                       // Peer Link
     {
         switch (opcode.second) {
-        case NET_SUBFUNC::PL_TALKGROUP_LIST:
+        case NET_SUBFUNC::PL_TALKGROUP_LIST:                        // Talkgroup List
         {
             uint32_t decompressedLen = 0U;
             uint8_t* decompressed = nullptr;
@@ -203,7 +266,7 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
         }
         break;
 
-        case NET_SUBFUNC::PL_RID_LIST:
+        case NET_SUBFUNC::PL_RID_LIST:                              // Radio ID List
         {
             uint32_t decompressedLen = 0U;
             uint8_t* decompressed = nullptr;
@@ -260,7 +323,7 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
         }
         break;
 
-        case NET_SUBFUNC::PL_PEER_LIST:
+        case NET_SUBFUNC::PL_PEER_LIST:                             // Peer List
         {
             uint32_t decompressedLen = 0U;
             uint8_t* decompressed = nullptr;
@@ -324,7 +387,7 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
     break;
 
     default:
-        Utils::dump("unknown opcode from the master", data, length);
+        Utils::dump("Unknown opcode from the master", data, length);
         break;
     }
 }
@@ -386,8 +449,82 @@ bool PeerNetwork::writeConfig()
     ::snprintf(buffer + 8U, json.length() + 1U, "%s", json.c_str());
 
     if (m_debug) {
-        Utils::dump(1U, "Network Message, Configuration", (uint8_t*)buffer, json.length() + 8U);
+        Utils::dump(1U, "PeerNetwork::writeConfig(), Message, Configuration", (uint8_t*)buffer, json.length() + 8U);
     }
 
     return writeMaster({ NET_FUNC::RPTC, NET_SUBFUNC::NOP }, (uint8_t*)buffer, json.length() + 8U, pktSeq(), m_loginStreamId);
+}
+
+// ---------------------------------------------------------------------------
+//  Private Class Members
+// ---------------------------------------------------------------------------
+
+/* Process a data frames from the network. */
+
+void PeerNetwork::taskNetworkRx(PeerPacketRequest* req)
+{
+    if (req != nullptr) {
+        uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+
+        PeerNetwork* network = static_cast<PeerNetwork*>(req->obj);
+        if (network == nullptr) {
+            if (req != nullptr) {
+                if (req->buffer != nullptr)
+                    delete[] req->buffer;
+                delete req;
+            }
+
+            return;
+        }
+
+        if (req == nullptr)
+            return;
+
+        if (req->length > 0) {
+            // determine if this packet is late (i.e. are we processing this packet more than 200ms after it was received?)
+            uint64_t dt = req->pktRxTime + PACKET_LATE_TIME;
+            if (dt < now) {
+                LogWarning(LOG_NET, "PEER %u packet processing latency >200ms, dt = %u, now = %u", req->peerId, dt, now);
+            }
+
+            // process incomfing message subfunction opcodes
+            switch (req->subFunc) {
+            case NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR:                 // Encapsulated DMR data frame
+                {
+                    if (network->m_dmrCallback != nullptr)
+                        network->m_dmrCallback(network, req->buffer, req->length, req->streamId, req->fneHeader, req->rtpHeader);
+                }
+                break;
+
+            case NET_SUBFUNC::PROTOCOL_SUBFUNC_P25:                 // Encapsulated P25 data frame
+                {
+                    if (network->m_p25Callback != nullptr)
+                        network->m_p25Callback(network, req->buffer, req->length, req->streamId, req->fneHeader, req->rtpHeader);
+                }
+                break;
+
+            case NET_SUBFUNC::PROTOCOL_SUBFUNC_NXDN:                // Encapsulated NXDN data frame
+                {
+                    if (network->m_nxdnCallback != nullptr)
+                        network->m_nxdnCallback(network, req->buffer, req->length, req->streamId, req->fneHeader, req->rtpHeader);
+                }
+                break;
+
+            case NET_SUBFUNC::PROTOCOL_SUBFUNC_ANALOG:              // Encapsulated analog data frame
+                {
+                    if (network->m_analogCallback != nullptr)
+                        network->m_analogCallback(network, req->buffer, req->length, req->streamId, req->fneHeader, req->rtpHeader);
+                }
+                break;
+
+            default:
+                Utils::dump("Unknown protocol opcode from the master", req->buffer, req->length);
+                break;
+            }
+        }
+
+        if (req->buffer != nullptr)
+            delete[] req->buffer;
+        delete req;
+    }
 }

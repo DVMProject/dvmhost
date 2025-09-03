@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2022-2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2022-2025 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -43,6 +43,16 @@ namespace p25
             const uint32_t  DFSI_VHDR_RAW_LEN = 36U;
             const uint32_t  DFSI_VHDR_LEN = 27U;
 
+            const uint32_t  DFSI_MOT_START_LEN = 9U;
+            const uint32_t  DFSI_MOT_VHDR_1_LEN = 30U;
+            const uint32_t  DFSI_MOT_VHDR_2_LEN = 22U;
+            const uint32_t  DFSI_MOT_TSBK_LEN = 24U;
+            const uint32_t  DFSI_MOT_TDULC_LEN = 21U;
+
+            const uint32_t  DFSI_TIA_VHDR_LEN = 22U;
+
+            const uint32_t  DFSI_MOT_ICW_LENGTH = 6U;
+
             const uint32_t  DFSI_LDU1_VOICE1_FRAME_LENGTH_BYTES = 22U;
             const uint32_t  DFSI_LDU1_VOICE2_FRAME_LENGTH_BYTES = 14U;
             const uint32_t  DFSI_LDU1_VOICE3_FRAME_LENGTH_BYTES = 17U;
@@ -68,31 +78,35 @@ namespace p25
              * @{
              */
 
-            const uint8_t   DFSI_RTP_PAYLOAD_TYPE = 0x64U;  //!
+            const uint8_t   DFSI_RTP_PAYLOAD_TYPE = 0x64U;      //!
+            const uint8_t   DFSI_RTP_MOT_PAYLOAD_TYPE = 0x5DU;  //!
 
-            const uint8_t   DFSI_STATUS_NO_ERROR = 0x00U;   //!
-            const uint8_t   DFSI_STATUS_ERASE = 0x02U;      //!
+            const uint8_t   DFSI_RTP_SEQ_HANDSHAKE = 0x00U;     //!
+            const uint8_t   DFSI_RTP_SEQ_STARTSTOP = 0x01U;     //!
 
-            const uint8_t   DFSI_RT_ENABLED = 0x02U;        //!
-            const uint8_t   DFSI_RT_DISABLED = 0x04U;       //!
+            const uint8_t   DFSI_MOT_ICW_FMT_TYPE3 = 0x02U;     //!
 
-            const uint8_t   DFSI_START_FLAG = 0x0CU;        //!
-            const uint8_t   DFSI_STOP_FLAG = 0x25U;         //!
+            const uint8_t   DFSI_MOT_ICW_PARM_NOP = 0x00U;      //! No Operation
+            const uint8_t   DSFI_MOT_ICW_PARM_PAYLOAD = 0x0CU;  //! Stream Payload
+            const uint8_t   DFSI_MOT_ICW_PARM_RSSI1 = 0x1AU;    //! RSSI Data
+            const uint8_t   DFSI_MOT_ICW_PARM_RSSI2 = 0x1BU;    //! RSSI Data
+            const uint8_t   DFSI_MOT_ICW_PARM_STOP = 0x25U;     //! Stop Stream
+            const uint8_t   DFSI_MOT_ICW_TX_ADDRESS = 0x2CU;    //! Tx Device Address
+            const uint8_t   DFSI_MOT_ICW_RX_ADDRESS = 0x35U;    //! Rx Device Address
 
-            const uint8_t   DFSI_TYPE_DATA_PAYLOAD = 0x06U; //!
-            const uint8_t   DFSI_TYPE_VOICE = 0x0BU;        //!
-
-            const uint8_t   DFSI_DEF_ICW_SOURCE = 0x00U;    //! Infrastructure Source - Default Source
-            const uint8_t   DFSI_DEF_SOURCE = 0x00U;        //!
+            const uint8_t   DFSI_BUSY_BITS_TALKAROUND = 0x00U;  //! Talkaround
+            const uint8_t   DFSI_BUSY_BITS_BUSY = 0x01U;        //! Busy
+            const uint8_t   DFSI_BUSY_BITS_INBOUND = 0x02U;     //! Inbound
+            const uint8_t   DFSI_BUSY_BITS_IDLE = 0x03U;        //! Idle
 
             /** @brief DFSI Frame Type */
             namespace DFSIFrameType {
                 /** @brief DFSI Frame Type */
                 enum E : uint8_t {
-                    MOT_START_STOP = 0x00U,     // Motorola Start/Stop
+                    MOT_START_STOP = 0x00U,     // Motorola/V.24 Start/Stop Stream
 
-                    MOT_VHDR_1 = 0x60U,         // Motorola Voice Header 1
-                    MOT_VHDR_2 = 0x61U,         // Motorola Voice Header 2
+                    MOT_VHDR_1 = 0x60U,         // Motorola/V.24 Voice Header 1
+                    MOT_VHDR_2 = 0x61U,         // Motorola/V.24 Voice Header 2
 
                     LDU1_VOICE1 = 0x62U,        // IMBE LDU1 - Voice 1
                     LDU1_VOICE2 = 0x63U,        // IMBE LDU1 - Voice 2
@@ -114,8 +128,9 @@ namespace p25
                     LDU2_VOICE17 = 0x72U,       // IMBE LDU2 - Voice 17 + Encryption Sync
                     LDU2_VOICE18 = 0x73U,       // IMBE LDU2 - Voice 18 + Low Speed Data
 
-                    PDU = 0x87U,                // PDU
-                    TSBK = 0xA1U                // TSBK
+                    MOT_TDULC = 0x74U,          // Motorola/V.24 TDULC
+                    MOT_PDU_SINGLE = 0x87U,     // Motorola/V.24 PDU (Single Block)
+                    MOT_TSBK = 0xA1U            // Motorola/V.24 TSBK (Single Block)
                 };
             }
 

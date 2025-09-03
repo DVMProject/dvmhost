@@ -48,6 +48,7 @@ TagP25Data::TagP25Data(FNENetwork* network, bool debug) :
     m_parrotFramesReady(false),
     m_parrotFirstFrame(true),
     m_status(),
+    m_statusPVCall(),
     m_packetData(nullptr),
     m_debug(debug)
 {
@@ -65,9 +66,15 @@ TagP25Data::~TagP25Data()
 
 /* Process a data frame from the network. */
 
-bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint16_t pktSeq, uint32_t streamId, bool external)
+bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint32_t ssrc, uint16_t pktSeq, uint32_t streamId, bool external)
 {
     hrc::hrc_t pktTime = hrc::now();
+
+    // P25 network frame should never be less then 24 bytes
+    if (len < 24U) {
+        LogError(LOG_NET, "malformed P25 packet, len < 24, shouldn't happen");
+        return false;
+    }
 
     DECLARE_UINT8_ARRAY(buffer, len);
     ::memcpy(buffer, data, len);
@@ -77,7 +84,12 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
     uint32_t srcId = GET_UINT24(data, 5U);
     uint32_t dstId = GET_UINT24(data, 8U);
 
+    uint8_t controlByte = data[14U];
+
     uint8_t MFId = data[15U];
+
+    uint32_t sysId = (data[11U] << 8) | (data[12U] << 0);
+    uint32_t netId = GET_UINT24(data, 16U);
 
     uint8_t lsd1 = data[20U];
     uint8_t lsd2 = data[21U];
@@ -138,19 +150,24 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
     control.setDstId(dstId);
     control.setMFId(MFId);
 
+    // set the LC group flag based on the control byte
+    control.setGroup((controlByte & NET_CTRL_U2U) != NET_CTRL_U2U);
+
     lsd.setLSD1(lsd1);
     lsd.setLSD2(lsd2);
 
-    uint32_t frameLength = buffer[23U];
+    uint8_t frameLength = buffer[23U];
+
+    if (!m_network->validateP25FrameLength(frameLength, len, duid))
+        return false;
 
     // process a TSBK out into a class literal if possible
     std::unique_ptr<lc::TSBK> tsbk;
     if (duid == DUID::TSDU) {
-        UInt8Array data = std::unique_ptr<uint8_t[]>(new uint8_t[frameLength]);
-        ::memset(data.get(), 0x00U, frameLength);
-        ::memcpy(data.get(), buffer + 24U, frameLength);
+        DECLARE_UINT8_ARRAY(data, frameLength);
+        ::memcpy(data, buffer + 24U, frameLength);
 
-        tsbk = lc::tsbk::TSBKFactory::createTSBK(data.get());
+        tsbk = lc::tsbk::TSBKFactory::createTSBK(data);
     }
 
     // is the stream valid?
@@ -165,7 +182,7 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
             // is this the end of the call stream?
             if ((duid == DUID::TDU) || (duid == DUID::TDULC)) {
                 if (srcId == 0U && dstId == 0U) {
-                    LogWarning(LOG_NET, "P25, invalid TDU, peer = %u, srcId = %u, dstId = %u, streamId = %u, external = %u", peerId, srcId, dstId, streamId, external);
+                    LogWarning(LOG_NET, "P25, invalid TDU, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, external = %u", peerId, ssrc, srcId, dstId, streamId, external);
                     return false;
                 }
 
@@ -173,13 +190,15 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                 uint64_t duration = hrc::diff(pktTime, status.callStartTime);
 
                 // perform a test for grant demands, and if the TG isn't valid ignore the demand
-                bool grantDemand = (data[14U] & 0x80U) == 0x80U;
+                bool grantDemand = (data[14U] & network::NET_CTRL_GRANT_DEMAND) == network::NET_CTRL_GRANT_DEMAND;
                 if (grantDemand) {
                     lookups::TalkgroupRuleGroupVoice tg = m_network->m_tidLookup->find(control.getDstId());
                     if (!tg.config().active()) {
                         return false;
                     }
                 }
+
+                bool switchOver = (data[14U] & network::NET_CTRL_SWITCH_OVER) == network::NET_CTRL_SWITCH_OVER;
 
                 auto it = std::find_if(m_status.begin(), m_status.end(), [&](StatusMapPair x) {
                     if (x.second.dstId == dstId) {
@@ -189,9 +208,9 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                     return false;
                 });
                 if (it != m_status.end()) {
-                    if (grantDemand) {
-                        LogWarning(LOG_NET, "P25, Call Collision, peer = %u, srcId = %u, dstId = %u, streamId = %u, rxPeer = %u, rxSrcId = %u, rxDstId = %u, rxStreamId = %u, external = %u",
-                            peerId, srcId, dstId, streamId, status.peerId, status.srcId, status.dstId, status.streamId, external);
+                    if (grantDemand && !switchOver) {
+                        LogWarning(LOG_NET, "P25, Call Collision, peer = %u, ssrc = %u, sysId = $%03X, netId = $%05X, srcId = %u, dstId = %u, streamId = %u, rxPeer = %u, rxSrcId = %u, rxDstId = %u, rxStreamId = %u, external = %u",
+                            peerId, ssrc, sysId, netId, srcId, dstId, streamId, status.peerId, status.srcId, status.dstId, status.streamId, external);
                         return false;
                     }
                     else {
@@ -208,8 +227,22 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                             }
                         }
 
-                        LogMessage(LOG_NET, "P25, Call End, peer = %u, srcId = %u, dstId = %u, duration = %u, streamId = %u, external = %u",
-                            peerId, srcId, dstId, duration / 1000, streamId, external);
+                        // is this a private call?
+                        auto it = std::find_if(m_statusPVCall.begin(), m_statusPVCall.end(), [&](StatusMapPair x) {
+                            if (x.second.dstId == dstId) {
+                                if (x.second.activeCall)
+                                    return true;
+                            }
+                            return false;
+                        });
+                        if (it != m_statusPVCall.end()) {
+                            m_statusPVCall[dstId].reset();
+                            LogMessage(LOG_NET, "P25, Private Call End, peer = %u, ssrc = %u, sysId = $%03X, netId = $%05X, srcId = %u, dstId = %u, duration = %u, streamId = %u, external = %u",
+                                peerId, ssrc, sysId, netId, srcId, dstId, duration / 1000, streamId, external);
+                        }
+                        else
+                            LogMessage(LOG_NET, "P25, Call End, peer = %u, ssrc = %u, sysId = $%03X, netId = $%05X, srcId = %u, dstId = %u, duration = %u, streamId = %u, external = %u",
+                                peerId, ssrc, sysId, netId, srcId, dstId, duration / 1000, streamId, external);
 
                         // report call event to InfluxDB
                         if (m_network->m_enableInfluxDB) {
@@ -234,9 +267,11 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
             // is this a new call stream?
             if ((duid != DUID::TDU) && (duid != DUID::TDULC)) {
                 if (srcId == 0U && dstId == 0U) {
-                    LogWarning(LOG_NET, "P25, invalid call, peer = %u, srcId = %u, dstId = %u, streamId = %u, external = %u", peerId, srcId, dstId, streamId, external);
+                    LogWarning(LOG_NET, "P25, invalid call, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, external = %u", peerId, srcId, dstId, streamId, external);
                     return false;
                 }
+
+                bool switchOver = (data[14U] & network::NET_CTRL_SWITCH_OVER) == network::NET_CTRL_SWITCH_OVER;
 
                 auto it = std::find_if(m_status.begin(), m_status.end(), [&](StatusMapPair x) {
                     if (x.second.dstId == dstId) {
@@ -248,6 +283,15 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                 if (it != m_status.end()) {
                     RxStatus status = m_status[dstId];
                     if (streamId != status.streamId && ((duid != DUID::TDU) && (duid != DUID::TDULC))) {
+                        // perform TG switch over -- this can happen in special conditions where a TG may rapidly switch
+                        // from one source to another (primarily from bridge resources)
+                        if (switchOver) {
+                            status.streamId = streamId;
+                            status.srcId = srcId;
+                            LogMessage(LOG_NET, "P25, Call Source Switched, peer = %u, ssrc = %u, sysId = $%03X, netId = $%05X, srcId = %u, dstId = %u, streamId = %u, rxPeer = %u, rxSrcId = %u, rxDstId = %u, rxStreamId = %u, external = %u",
+                                peerId, ssrc, sysId, netId, srcId, dstId, streamId, status.peerId, status.srcId, status.dstId, status.streamId, external);
+                        }
+
                         if (status.srcId != 0U && status.srcId != srcId) {
                             uint64_t lastPktDuration = hrc::diff(hrc::now(), status.lastPacket);
                             if ((lastPktDuration / 1000) > CALL_COLL_TIMEOUT) {
@@ -256,8 +300,8 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                                 m_network->m_callInProgress = false;
                             }
 
-                            LogWarning(LOG_NET, "P25, Call Collision, peer = %u, srcId = %u, dstId = %u, streamId = %u, rxPeer = %u, rxSrcId = %u, rxDstId = %u, rxStreamId = %u, external = %u",
-                                peerId, srcId, dstId, streamId, status.peerId, status.srcId, status.dstId, status.streamId, external);
+                            LogWarning(LOG_NET, "P25, Call Collision, peer = %u, ssrc = %u, sysId = $%03X, netId = $%05X, srcId = %u, dstId = %u, streamId = %u, rxPeer = %u, rxSrcId = %u, rxDstId = %u, rxStreamId = %u, external = %u",
+                                peerId, ssrc, sysId, netId, srcId, dstId, streamId, status.peerId, status.srcId, status.dstId, status.streamId, external);
                             return false;
                         }
                     }
@@ -285,7 +329,25 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                     m_status[dstId].peerId = peerId;
                     m_status[dstId].activeCall = true;
 
-                    LogMessage(LOG_NET, "P25, Call Start, peer = %u, srcId = %u, dstId = %u, streamId = %u, external = %u", peerId, srcId, dstId, streamId, external);
+                    // is this a private call?
+                    if (lco == LCO::PRIVATE) {
+                        m_statusPVCall[dstId].callStartTime = pktTime;
+                        m_statusPVCall[dstId].srcId = srcId;
+                        m_statusPVCall[dstId].dstId = dstId;
+                        m_statusPVCall[dstId].streamId = streamId;
+                        m_statusPVCall[dstId].peerId = peerId;
+                        m_statusPVCall[dstId].activeCall = true;
+
+                        // find the SSRC of the peer that registered this unit
+                        uint32_t regSSRC = m_network->findPeerUnitReg(dstId);
+                        m_statusPVCall[dstId].dstPeerId = regSSRC;
+
+                        LogMessage(LOG_NET, "P25, Private Call Start, peer = %u, ssrc = %u, sysId = $%03X, netId = $%05X, srcId = %u, dstId = %u, streamId = %u, external = %u",
+                            peerId, ssrc, sysId, netId, srcId, dstId, streamId, external);
+                    }
+                    else
+                        LogMessage(LOG_NET, "P25, Call Start, peer = %u, ssrc = %u, sysId = $%03X, netId = $%05X, srcId = %u, dstId = %u, streamId = %u, external = %u", 
+                            peerId, ssrc, sysId, netId, srcId, dstId, streamId, external);
 
                     m_network->m_callInProgress = true;
                 }
@@ -323,11 +385,95 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
 
         m_status[dstId].lastPacket = hrc::now();
 
+        bool noConnectedPeerRepeat = false;
+        bool privateCallInProgress = false;
+
+        // is this a private call in-progress?
+        if (m_network->m_restrictPVCallToRegOnly) {
+            if ((control.getLCO() != LCO::PRIVATE) && !control.getGroup()) {
+                // is this a private call? if so only repeat to the peer that registered the unit
+                auto it = std::find_if(m_statusPVCall.begin(), m_statusPVCall.end(), [&](StatusMapPair x) {
+                    if (x.second.dstId == control.getDstId()) {
+                        if (x.second.activeCall)
+                            return true;
+                    }
+                    return false;
+                });
+                if (it != m_statusPVCall.end()) {
+                    privateCallInProgress = true;
+                }
+            } else {
+                if (lco == LCO::PRIVATE) {
+                    privateCallInProgress = true;
+                }
+            }
+
+            if (privateCallInProgress) {
+                // if we've not determined the destination peer, we have to repeat it everywhere
+                if (m_statusPVCall[dstId].dstPeerId == 0U) {
+                    noConnectedPeerRepeat = false;
+                    privateCallInProgress = false; // trick the system to repeat everywhere
+                } else {
+                    // if this is a private call, check if the destination peer is one directly connected to us, if not
+                    // flag the call so it only repeats to external peers
+                    if (m_network->m_peers.size() > 0U && !noConnectedPeerRepeat) {
+                        noConnectedPeerRepeat = true;
+                        for (auto peer : m_network->m_peers) {
+                            if (peerId != peer.first) {
+                                FNEPeerConnection* conn = peer.second;
+                                if (conn != nullptr) {
+                                    if (conn->isExternalPeer()) {
+                                        continue;
+                                    }
+                                }
+
+                                if (m_statusPVCall[dstId].dstPeerId == peer.first) {
+                                    noConnectedPeerRepeat = false;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         // repeat traffic to the connected peers
-        if (m_network->m_peers.size() > 0U) {
+        if (m_network->m_peers.size() > 0U && !noConnectedPeerRepeat) {
             uint32_t i = 0U;
             for (auto peer : m_network->m_peers) {
                 if (peerId != peer.first) {
+                    FNEPeerConnection* conn = peer.second;
+                    if (ssrc == peer.first) {
+                        // skip the peer if it is the source peer
+                        continue;
+                    }
+
+                    if (m_network->m_restrictPVCallToRegOnly) {
+                        // is this peer an external peer?
+                        bool external = false;
+                        if (conn != nullptr) {
+                            external = conn->isExternalPeer();
+                        }
+
+                        // is this a private call?
+                        if ((lco == LCO::PRIVATE) && !external) {
+                            // is this a private call? if so only repeat to the peer that registered the unit
+                            auto it = std::find_if(m_statusPVCall.begin(), m_statusPVCall.end(), [&](StatusMapPair x) {
+                                if (x.second.dstId == dstId) {
+                                    if (x.second.activeCall)
+                                        return true;
+                                }
+                                return false;
+                            });
+                            if (it != m_statusPVCall.end()) {
+                                if (peer.first != m_statusPVCall[dstId].dstPeerId) {
+                                    continue;
+                                }
+                            }
+                        }
+                    }
+
                     // is this peer ignored?
                     if (!isPeerPermitted(peer.first, control, duid, streamId)) {
                         continue;
@@ -349,10 +495,10 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                     // perform TGID route rewrites if configured
                     routeRewrite(outboundPeerBuffer, peer.first, duid, dstId);
 
-                    m_network->writePeer(peer.first, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25 }, outboundPeerBuffer, len, pktSeq, streamId, true);
+                    m_network->writePeer(peer.first, ssrc, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25 }, outboundPeerBuffer, len, pktSeq, streamId, true);
                     if (m_network->m_debug) {
-                        LogDebug(LOG_NET, "P25, srcPeer = %u, dstPeer = %u, duid = $%02X, lco = $%02X, MFId = $%02X, srcId = %u, dstId = %u, len = %u, pktSeq = %u, streamId = %u, external = %u", 
-                            peerId, peer.first, duid, lco, MFId, srcId, dstId, len, pktSeq, streamId, external);
+                        LogDebug(LOG_NET, "P25, ssrc = %u, srcPeer = %u, dstPeer = %u, duid = $%02X, lco = $%02X, MFId = $%02X, srcId = %u, dstId = %u, len = %u, pktSeq = %u, streamId = %u, external = %u", 
+                            ssrc, peerId, peer.first, duid, lco, MFId, srcId, dstId, len, pktSeq, streamId, external);
                     }
 
                     if (!m_network->m_callInProgress)
@@ -363,6 +509,12 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
             m_network->m_frameQueue->flushQueue();
         }
 
+        // if this is a private call, and we have already repeated to the connected peer that registered
+        // the unit, don't repeat to any external peers
+        if (privateCallInProgress && !noConnectedPeerRepeat) {
+            return true;
+        }
+
         // repeat traffic to external peers
         if (m_network->m_host->m_peerNetworks.size() > 0U && !tg.config().parrot()) {
             for (auto peer : m_network->m_host->m_peerNetworks) {
@@ -371,6 +523,11 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                 // don't try to repeat traffic to the source peer...if this traffic
                 // is coming from a external peer
                 if (dstPeerId != peerId) {
+                    if (ssrc == dstPeerId) {
+                        // skip the peer if it is the source peer
+                        continue;
+                    }
+
                     // is this peer ignored?
                     if (!isPeerPermitted(dstPeerId, control, duid, streamId, true)) {
                         continue;
@@ -394,10 +551,14 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
 
                     // process TSDUs going to external peers
                     if (processTSDUToExternal(outboundPeerBuffer, peerId, dstPeerId, duid)) {
-                        peer.second->writeMaster({ NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25 }, outboundPeerBuffer, len, pktSeq, streamId);
+                        // are we a peer link?
+                        if (peer.second->isPeerLink())
+                            peer.second->writeMaster({ NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25 }, outboundPeerBuffer, len, pktSeq, streamId, false, false, 0U, ssrc);
+                        else
+                            peer.second->writeMaster({ NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25 }, outboundPeerBuffer, len, pktSeq, streamId);
                         if (m_network->m_debug) {
-                            LogDebug(LOG_NET, "P25, srcPeer = %u, dstPeer = %u, duid = $%02X, lco = $%02X, MFId = $%02X, srcId = %u, dstId = %u, len = %u, pktSeq = %u, streamId = %u, external = %u", 
-                                peerId, dstPeerId, duid, lco, MFId, srcId, dstId, len, pktSeq, streamId, external);
+                            LogDebug(LOG_NET, "P25, ssrc = %u, srcPeer = %u, dstPeer = %u, duid = $%02X, lco = $%02X, MFId = $%02X, srcId = %u, dstId = %u, len = %u, pktSeq = %u, streamId = %u, external = %u", 
+                                ssrc, peerId, dstPeerId, duid, lco, MFId, srcId, dstId, len, pktSeq, streamId, external);
                         }
                     }
 
@@ -485,7 +646,7 @@ void TagP25Data::playbackParrot()
                 // create empty LSD
                 data::LowSpeedData lsd = data::LowSpeedData();
 
-                uint8_t controlByte = 0x80U;
+                uint8_t controlByte = network::NET_CTRL_GRANT_DEMAND;
 
                 // send grant demand
                 uint32_t messageLength = 0U;
@@ -493,13 +654,13 @@ void TagP25Data::playbackParrot()
                 if (message != nullptr) {
                     if (m_network->m_parrotOnlyOriginating) {
                         LogMessage(LOG_NET, "P25, Parrot Grant Demand, peer = %u, srcId = %u, dstId = %u", pkt.peerId, srcId, dstId);
-                        m_network->writePeer(pkt.peerId, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25 }, message.get(), messageLength,
+                        m_network->writePeer(pkt.peerId, pkt.peerId, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25 }, message.get(), messageLength,
                             RTP_END_OF_CALL_SEQ, m_network->createStreamId(), false);
                     } else {
                         // repeat traffic to the connected peers
                         for (auto peer : m_network->m_peers) {
                             LogMessage(LOG_NET, "P25, Parrot Grant Demand, peer = %u, srcId = %u, dstId = %u", peer.first, srcId, dstId);
-                            m_network->writePeer(peer.first, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25 }, message.get(), messageLength, 
+                            m_network->writePeer(peer.first, pkt.peerId, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25 }, message.get(), messageLength, 
                                 RTP_END_OF_CALL_SEQ, m_network->createStreamId(), false);
                         }
                     }
@@ -510,7 +671,7 @@ void TagP25Data::playbackParrot()
         }
 
         if (m_network->m_parrotOnlyOriginating) {
-            m_network->writePeer(pkt.peerId, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25 }, pkt.buffer, pkt.bufferLen, pkt.pktSeq, pkt.streamId, false);
+            m_network->writePeer(pkt.peerId, pkt.peerId, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25 }, pkt.buffer, pkt.bufferLen, pkt.pktSeq, pkt.streamId, false);
             if (m_network->m_debug) {
                 LogDebug(LOG_NET, "P25, parrot, dstPeer = %u, len = %u, pktSeq = %u, streamId = %u", 
                     pkt.peerId, pkt.bufferLen, pkt.pktSeq, pkt.streamId);
@@ -518,7 +679,7 @@ void TagP25Data::playbackParrot()
         } else {
             // repeat traffic to the connected peers
             for (auto peer : m_network->m_peers) {
-                m_network->writePeer(peer.first, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25 }, pkt.buffer, pkt.bufferLen, pkt.pktSeq, pkt.streamId, false);
+                m_network->writePeer(peer.first, pkt.peerId, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25 }, pkt.buffer, pkt.bufferLen, pkt.pktSeq, pkt.streamId, false);
                 if (m_network->m_debug) {
                     LogDebug(LOG_NET, "P25, parrot, dstPeer = %u, len = %u, pktSeq = %u, streamId = %u", 
                         peer.first, pkt.bufferLen, pkt.pktSeq, pkt.streamId);
@@ -625,11 +786,10 @@ void TagP25Data::routeRewrite(uint8_t* buffer, uint32_t peerId, uint8_t duid, ui
 
         // are we receiving a TSDU?
         if (duid == DUID::TSDU) {
-            UInt8Array data = std::unique_ptr<uint8_t[]>(new uint8_t[frameLength]);
-            ::memset(data.get(), 0x00U, frameLength);
-            ::memcpy(data.get(), buffer + 24U, frameLength);
+            DECLARE_UINT8_ARRAY(data, frameLength);
+            ::memcpy(data, buffer + 24U, frameLength);
 
-            std::unique_ptr<lc::TSBK> tsbk = lc::tsbk::TSBKFactory::createTSBK(data.get());
+            std::unique_ptr<lc::TSBK> tsbk = lc::tsbk::TSBKFactory::createTSBK(data);
             if (tsbk != nullptr) {
                 // handle standard P25 reference opcodes
                 switch (tsbk->getLCO()) {
@@ -704,13 +864,12 @@ bool TagP25Data::processTSDUFrom(uint8_t* buffer, uint32_t peerId, uint8_t duid)
 {
     // are we receiving a TSDU?
     if (duid == DUID::TSDU) {
-        uint32_t frameLength = buffer[23U];
+        uint32_t frameLength = P25_TSDU_FRAME_LENGTH_BYTES;//buffer[23U];
 
-        UInt8Array data = std::unique_ptr<uint8_t[]>(new uint8_t[frameLength]);
-        ::memset(data.get(), 0x00U, frameLength);
-        ::memcpy(data.get(), buffer + 24U, frameLength);
+        DECLARE_UINT8_ARRAY(data, frameLength);
+        ::memcpy(data, buffer + 24U, frameLength);
 
-        std::unique_ptr<lc::TSBK> tsbk = lc::tsbk::TSBKFactory::createTSBK(data.get());
+        std::unique_ptr<lc::TSBK> tsbk = lc::tsbk::TSBKFactory::createTSBK(data);
         if (tsbk != nullptr) {
             // report tsbk event to InfluxDB
             if (m_network->m_enableInfluxDB && m_network->m_influxLogRawData) {
@@ -754,6 +913,27 @@ bool TagP25Data::processTSDUFrom(uint8_t* buffer, uint32_t peerId, uint8_t duid)
                             LogMessage(LOG_NET, P25_TSDU_STR ", %s, sysId = $%03X, rfss = $%02X, site = $%02X, chNo = %u-%u, svcClass = $%02X, peerId = %u", tsbk->toString().c_str(),
                                 osp->getAdjSiteSysId(), osp->getAdjSiteRFSSId(), osp->getAdjSiteId(), osp->getAdjSiteChnId(), osp->getAdjSiteChnNo(), osp->getAdjSiteSvcClass(), peerId);
                         }
+
+                        // check if the sending peer is mapped
+                        lookups::AdjPeerMapEntry adjPeerMap = m_network->m_adjSiteMapLookup->find(peerId);
+                        if (!adjPeerMap.isEmpty()) {
+                            if (!adjPeerMap.active()) {
+                                // LogWarning(LOG_NET, "PEER %u, passing ADJ_STS_BCAST to other peers is disabled, dropping", peerId);
+                                return false;
+                            } else {
+                                // if the peer is mapped, we can repeat the ADJ_STS_BCAST to other peers
+                                if (m_network->m_peers.size() > 0U) {
+                                    for (auto peer : m_network->m_peers) {
+                                        if (peerId != peer.first) {
+                                            write_TSDU(peer.first, osp);
+                                        }
+                                    }
+
+                                    // this seems strange -- but we want to prevent the main processing loop from repeating the ADJ_STS_BCAST
+                                    return false;
+                                }
+                            }
+                        }
                     }
                 }
                 break;
@@ -770,11 +950,10 @@ bool TagP25Data::processTSDUFrom(uint8_t* buffer, uint32_t peerId, uint8_t duid)
     if (duid == DUID::TDULC) {
         uint32_t frameLength = buffer[23U];
 
-        UInt8Array data = std::unique_ptr<uint8_t[]>(new uint8_t[frameLength]);
-        ::memset(data.get(), 0x00U, frameLength);
-        ::memcpy(data.get(), buffer + 24U, frameLength);
+        DECLARE_UINT8_ARRAY(data, frameLength);
+        ::memcpy(data, buffer + 24U, frameLength);
 
-        std::unique_ptr<lc::TDULC> tdulc = lc::tdulc::TDULCFactory::createTDULC(data.get());
+        std::unique_ptr<lc::TDULC> tdulc = lc::tdulc::TDULCFactory::createTDULC(data);
         if (tdulc != nullptr) {
             // handle standard P25 reference opcodes
             switch (tdulc->getLCO()) {
@@ -800,13 +979,12 @@ bool TagP25Data::processTSDUTo(uint8_t* buffer, uint32_t peerId, uint8_t duid)
 {
     // are we receiving a TSDU?
     if (duid == DUID::TSDU) {
-        uint32_t frameLength = buffer[23U];
+        uint32_t frameLength = P25_TSDU_FRAME_LENGTH_BYTES;//buffer[23U];
 
-        UInt8Array data = std::unique_ptr<uint8_t[]>(new uint8_t[frameLength]);
-        ::memset(data.get(), 0x00U, frameLength);
-        ::memcpy(data.get(), buffer + 24U, frameLength);
+        DECLARE_UINT8_ARRAY(data, frameLength);
+        ::memcpy(data, buffer + 24U, frameLength);
 
-        std::unique_ptr<lc::TSBK> tsbk = lc::tsbk::TSBKFactory::createTSBK(data.get());
+        std::unique_ptr<lc::TSBK> tsbk = lc::tsbk::TSBKFactory::createTSBK(data);
         if (tsbk != nullptr) {
             //uint32_t srcId = tsbk->getSrcId();
             uint32_t dstId = tsbk->getDstId();
@@ -869,11 +1047,10 @@ bool TagP25Data::processTSDUToExternal(uint8_t* buffer, uint32_t srcPeerId, uint
     if (duid == DUID::TSDU) {
         uint32_t frameLength = buffer[23U];
 
-        UInt8Array data = std::unique_ptr<uint8_t[]>(new uint8_t[frameLength]);
-        ::memset(data.get(), 0x00U, frameLength);
-        ::memcpy(data.get(), buffer + 24U, frameLength);
+        DECLARE_UINT8_ARRAY(data, frameLength);
+        ::memcpy(data, buffer + 24U, frameLength);
 
-        std::unique_ptr<lc::TSBK> tsbk = lc::tsbk::TSBKFactory::createTSBK(data.get());
+        std::unique_ptr<lc::TSBK> tsbk = lc::tsbk::TSBKFactory::createTSBK(data);
         if (tsbk != nullptr) {
             // handle standard P25 reference opcodes
             switch (tsbk->getLCO()) {
@@ -913,6 +1090,13 @@ bool TagP25Data::isPeerPermitted(uint32_t peerId, lc::LC& control, DUID::E duid,
             return false;
         if (!m_network->checkU2UDroppedPeer(peerId))
             return true;
+
+        // is this a U2U call?
+        lookups::RadioId rid = m_network->m_ridLookup->find(control.getDstId());
+        if (!rid.radioDefault() && rid.radioEnabled()) {
+            return true;
+        }
+
         return false;
     }
 
@@ -934,43 +1118,6 @@ bool TagP25Data::isPeerPermitted(uint32_t peerId, lc::LC& control, DUID::E duid,
     // always permit a TSDU or PDU
     if (duid == DUID::TSDU || duid == DUID::PDU)
         return true;
-
-    if (duid == DUID::HDU) {
-        if (m_network->m_filterHeaders) {
-            if (control.getSrcId() != 0U && control.getDstId() != 0U) {
-                // is this a group call?
-                lookups::TalkgroupRuleGroupVoice tg = m_network->m_tidLookup->find(control.getDstId());
-                if (!tg.isInvalid()) {
-                    return true;
-                }
-
-                // is this peer excluded from the group?
-                std::vector<uint32_t> exclusion = tg.config().exclusion();
-                if (exclusion.size() > 0) {
-                    auto it = std::find(exclusion.begin(), exclusion.end(), peerId);
-                    if (it != exclusion.end()) {
-                        return false;
-                    }
-                }
-
-                tg = m_network->m_tidLookup->findByRewrite(peerId, control.getDstId());
-                if (!tg.isInvalid()) {
-                    return true;
-                }
-
-                // is this a U2U call?
-                lookups::RadioId rid = m_network->m_ridLookup->find(control.getDstId());
-                if (!rid.radioDefault() && rid.radioEnabled()) {
-                    return true;
-                }
-
-                return false;
-            }
-        }
-
-        // always permit a headers
-        return true;
-    }
 
     if (duid == DUID::TDULC) {
         // always permit a terminator
@@ -1119,6 +1266,9 @@ bool TagP25Data::validate(uint32_t peerId, lc::LC& control, DUID::E duid, const 
                         .requestAsync(m_network->m_influxServer);
                 }
 
+                if (m_network->m_logDenials)
+                    LogError(LOG_NET, "P25, " INFLUXDB_ERRSTR_DISABLED_SRC_RID ", peer = %u, srcId = %u, dstId = %u", peerId, control.getSrcId(), control.getDstId());
+
                 // report In-Call Control to the peer sending traffic
                 m_network->writePeerICC(peerId, streamId, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25, NET_ICC::REJECT_TRAFFIC, control.getDstId());
                 return false;
@@ -1140,6 +1290,18 @@ bool TagP25Data::validate(uint32_t peerId, lc::LC& control, DUID::E duid, const 
     // always validate a terminator if the source is valid
     if (m_network->m_filterTerminators) {
         if ((duid == DUID::TDU || duid == DUID::TDULC) && control.getDstId() != 0U) {
+            // is this a private call?
+            auto it = std::find_if(m_statusPVCall.begin(), m_statusPVCall.end(), [&](StatusMapPair x) {
+                if (x.second.dstId == control.getDstId()) {
+                    if (x.second.activeCall)
+                        return true;
+                }
+                return false;
+            });
+            if (it != m_statusPVCall.end()) {
+                return true;
+            }
+
             // is this a group call?
             lookups::TalkgroupRuleGroupVoice tg = m_network->m_tidLookup->find(control.getDstId());
             if (!tg.isInvalid()) {
@@ -1148,12 +1310,6 @@ bool TagP25Data::validate(uint32_t peerId, lc::LC& control, DUID::E duid, const 
 
             tg = m_network->m_tidLookup->findByRewrite(peerId, control.getDstId());
             if (!tg.isInvalid()) {
-                return true;
-            }
-
-            // is this a U2U call?
-            lookups::RadioId rid = m_network->m_ridLookup->find(control.getDstId());
-            if (!rid.radioDefault() && rid.radioEnabled()) {
                 return true;
             }
 
@@ -1168,8 +1324,24 @@ bool TagP25Data::validate(uint32_t peerId, lc::LC& control, DUID::E duid, const 
             return true;
     }
 
+    // validate private call in-progress
+    bool privateCallInProgress = false;
+    if ((control.getLCO() != LCO::PRIVATE) && !control.getGroup()) {
+        // is this a private call? if so only repeat to the peer that registered the unit
+        auto it = std::find_if(m_statusPVCall.begin(), m_statusPVCall.end(), [&](StatusMapPair x) {
+            if (x.second.dstId == control.getDstId()) {
+                if (x.second.activeCall)
+                    return true;
+            }
+            return false;
+        });
+        if (it != m_statusPVCall.end()) {
+            privateCallInProgress = true;
+        }
+    }
+
     // is this a private call?
-    if (control.getLCO() == LCO::PRIVATE) {
+    if ((control.getLCO() == LCO::PRIVATE) || privateCallInProgress) {
         // is the destination ID a blacklisted ID?
         lookups::RadioId rid = m_network->m_ridLookup->find(control.getDstId());
         if (!rid.radioDefault()) {
@@ -1186,6 +1358,9 @@ bool TagP25Data::validate(uint32_t peerId, lc::LC& control, DUID::E duid, const 
                             .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
                         .requestAsync(m_network->m_influxServer);
                 }
+
+                if (m_network->m_logDenials)
+                    LogError(LOG_NET, "P25, " INFLUXDB_ERRSTR_DISABLED_DST_RID ", peer = %u, srcId = %u, dstId = %u", peerId, control.getSrcId(), control.getDstId());
 
                 // report In-Call Control to the peer sending traffic
                 m_network->writePeerICC(peerId, streamId, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25, NET_ICC::REJECT_TRAFFIC, control.getDstId());
@@ -1204,12 +1379,13 @@ bool TagP25Data::validate(uint32_t peerId, lc::LC& control, DUID::E duid, const 
                             .tag("streamId", std::to_string(streamId))
                             .tag("srcId", std::to_string(control.getSrcId()))
                             .tag("dstId", std::to_string(control.getDstId()))
-                                .field("message", std::string(INFLUXDB_ERRSTR_DISABLED_SRC_RID))
+                                .field("message", std::string(INFLUXDB_ERRSTR_ILLEGAL_RID_ACCESS))
                             .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
                         .requestAsync(m_network->m_influxServer);
                 }
 
-                LogWarning(LOG_NET, "P25, illegal/unknown RID attempted access, srcId = %u, dstId = %u", control.getSrcId(), control.getDstId());
+                if (m_network->m_logDenials)
+                    LogWarning(LOG_NET, "P25, " INFLUXDB_ERRSTR_ILLEGAL_RID_ACCESS ", srcId = %u, dstId = %u", control.getSrcId(), control.getDstId());
 
                 // report In-Call Control to the peer sending traffic
                 m_network->writePeerICC(peerId, streamId, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25, NET_ICC::REJECT_TRAFFIC, control.getDstId());
@@ -1239,6 +1415,26 @@ bool TagP25Data::validate(uint32_t peerId, lc::LC& control, DUID::E duid, const 
 
                     if (!tg.config().active()) {
                         return false;
+                    }
+                }
+                break;
+                case TSBKO::IOSP_EXT_FNCT:
+                {
+                    const lc::tsbk::IOSP_EXT_FNCT* iosp = static_cast<const lc::tsbk::IOSP_EXT_FNCT*>(tsbk);
+                    if (iosp != nullptr) {
+                        lookups::PeerId pid = m_network->m_peerListLookup->find(peerId);
+                        uint32_t func = iosp->getExtendedFunction();
+                        switch (func) {
+                            case ExtendedFunctions::INHIBIT:
+                            case ExtendedFunctions::UNINHIBIT:
+                                {
+                                    if (!pid.peerDefault() && !pid.canIssueInhibit()) {
+                                        LogWarning(LOG_NET, "P25, PEER %u attempted inhibit/unhibit, not authorized", peerId);
+                                        return false;
+                                    }
+                                }
+                                break;
+                        }
                     }
                 }
                 break;
@@ -1285,6 +1481,9 @@ bool TagP25Data::validate(uint32_t peerId, lc::LC& control, DUID::E duid, const 
                 .requestAsync(m_network->m_influxServer);
         }
 
+        if (m_network->m_logDenials)
+            LogError(LOG_NET, "P25, " INFLUXDB_ERRSTR_INV_TALKGROUP ", peer = %u, srcId = %u, dstId = %u", peerId, control.getSrcId(), control.getDstId());
+
         // report In-Call Control to the peer sending traffic
         m_network->writePeerICC(peerId, streamId, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25, NET_ICC::REJECT_TRAFFIC, control.getDstId());
         return false;
@@ -1311,12 +1510,13 @@ bool TagP25Data::validate(uint32_t peerId, lc::LC& control, DUID::E duid, const 
                     .tag("streamId", std::to_string(streamId))
                     .tag("srcId", std::to_string(control.getSrcId()))
                     .tag("dstId", std::to_string(control.getDstId()))
-                        .field("message", std::string(INFLUXDB_ERRSTR_DISABLED_SRC_RID))
+                        .field("message", std::string(INFLUXDB_ERRSTR_ILLEGAL_RID_ACCESS))
                     .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
                 .requestAsync(m_network->m_influxServer);
         }
 
-        LogWarning(LOG_NET, "P25, illegal/unknown RID attempted access, srcId = %u, dstId = %u", control.getSrcId(), control.getDstId());
+        if (m_network->m_logDenials)
+            LogWarning(LOG_NET, "P25, " INFLUXDB_ERRSTR_ILLEGAL_RID_ACCESS ", srcId = %u, dstId = %u", control.getSrcId(), control.getDstId());
 
         // report In-Call Control to the peer sending traffic
         m_network->writePeerICC(peerId, streamId, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25, NET_ICC::REJECT_TRAFFIC, control.getDstId());
@@ -1337,6 +1537,9 @@ bool TagP25Data::validate(uint32_t peerId, lc::LC& control, DUID::E duid, const 
                     .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
                 .requestAsync(m_network->m_influxServer);
         }
+
+        if (m_network->m_logDenials)
+            LogError(LOG_NET, "P25, " INFLUXDB_ERRSTR_DISABLED_TALKGROUP ", peer = %u, srcId = %u, dstId = %u", peerId, control.getSrcId(), control.getDstId());
 
         // report In-Call Control to the peer sending traffic
         m_network->writePeerICC(peerId, streamId, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25, NET_ICC::REJECT_TRAFFIC, control.getDstId());
@@ -1362,6 +1565,9 @@ bool TagP25Data::validate(uint32_t peerId, lc::LC& control, DUID::E duid, const 
                             .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
                         .requestAsync(m_network->m_influxServer);
                 }
+
+                if (m_network->m_logDenials)
+                    LogError(LOG_NET, "P25, " INFLUXDB_ERRSTR_RID_NOT_PERMITTED ", peer = %u, srcId = %u, dstId = %u", peerId, control.getSrcId(), control.getDstId());
 
                 // report In-Call Control to the peer sending traffic
                 m_network->writePeerICC(peerId, streamId, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25, NET_ICC::REJECT_TRAFFIC, control.getDstId());
@@ -1449,8 +1655,9 @@ void TagP25Data::write_TSDU_Deny(uint32_t peerId, uint32_t srcId, uint32_t dstId
     osp->setGroup(grp);
 
     if (m_network->m_verbose) {
-        LogMessage(LOG_RF, P25_TSDU_STR ", %s, AIV = %u, reason = $%02X, srcId = %u, dstId = %u",
-            osp->toString().c_str(), osp->getAIV(), reason, osp->getSrcId(), osp->getDstId());
+        LogMessage(LOG_RF, P25_TSDU_STR ", %s, AIV = %u, reason = $%02X (%s), srcId = %u, dstId = %u",
+            osp->toString().c_str(), osp->getAIV(), reason, P25Utils::denyRsnToString(reason).c_str(),
+            osp->getSrcId(), osp->getDstId());
     }
 
     write_TSDU(peerId, osp.get());
@@ -1469,8 +1676,9 @@ void TagP25Data::write_TSDU_Queue(uint32_t peerId, uint32_t srcId, uint32_t dstI
     osp->setGroup(grp);
 
     if (m_network->m_verbose) {
-        LogMessage(LOG_RF, P25_TSDU_STR ", %s, AIV = %u, reason = $%02X, srcId = %u, dstId = %u",
-            osp->toString().c_str(), osp->getAIV(), reason, osp->getSrcId(), osp->getDstId());
+        LogMessage(LOG_RF, P25_TSDU_STR ", %s, AIV = %u, reason = $%02X (%s), srcId = %u, dstId = %u",
+            osp->toString().c_str(), osp->getAIV(), reason, P25Utils::queueRsnToString(reason).c_str(),
+            osp->getSrcId(), osp->getDstId());
     }
 
     write_TSDU(peerId, osp.get());
@@ -1518,7 +1726,7 @@ void TagP25Data::write_TSDU(uint32_t peerId, lc::TSBK* tsbk)
 
     uint32_t streamId = m_network->createStreamId();
     if (peerId > 0U) {
-        m_network->writePeer(peerId, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25 }, message.get(), messageLength,
+        m_network->writePeer(peerId, m_network->m_peerId, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25 }, message.get(), messageLength,
             RTP_END_OF_CALL_SEQ, streamId, false);
     } else {
         // repeat traffic to the connected peers
@@ -1530,7 +1738,7 @@ void TagP25Data::write_TSDU(uint32_t peerId, lc::TSBK* tsbk)
                     m_network->m_frameQueue->flushQueue();
                 }
 
-                m_network->writePeer(peer.first, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25 }, message.get(), messageLength, 
+                m_network->writePeer(peer.first, m_network->m_peerId, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25 }, message.get(), messageLength, 
                     RTP_END_OF_CALL_SEQ, streamId, true);
                 if (m_network->m_debug) {
                     LogDebug(LOG_NET, "P25, peer = %u, len = %u, streamId = %u", 

@@ -25,6 +25,12 @@ using namespace network::frame;
 #include <cstring>
 
 // ---------------------------------------------------------------------------
+//  Static Class Members
+// ---------------------------------------------------------------------------
+
+std::vector<FrameQueue::Timestamp> FrameQueue::m_streamTimestamps;
+
+// ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
@@ -32,10 +38,7 @@ using namespace network::frame;
 
 FrameQueue::FrameQueue(udp::Socket* socket, uint32_t peerId, bool debug) : RawFrameQueue(socket, debug),
     m_peerId(peerId),
-#if defined(_WIN32)
-    m_streamTSMtx(),
-#endif // defined(_WIN32)
-    m_streamTimestamps()
+    m_timestampMtx()
 {
     assert(peerId < 999999999U);
 }
@@ -67,7 +70,7 @@ UInt8Array FrameQueue::read(int& messageLength, sockaddr_storage& address, uint3
 
     if (length > 0) {
         if (m_debug)
-            Utils::dump(1U, "Network Packet", buffer, length);
+            Utils::dump(1U, "FrameQueue::read(), Network Packet", buffer, length);
 
         m_failedReadCnt = 0U;
 
@@ -211,12 +214,70 @@ void FrameQueue::enqueueMessage(const uint8_t* message, uint32_t length, uint32_
 
 void FrameQueue::clearTimestamps()
 {
+    std::lock_guard<std::mutex> lock(m_timestampMtx);
     m_streamTimestamps.clear();
 }
 
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------
+
+/* Search for a timestamp entry by stream ID. */
+
+FrameQueue::Timestamp* FrameQueue::findTimestamp(uint32_t streamId)
+{
+    std::lock_guard<std::mutex> lock(m_timestampMtx);
+    for (size_t i = 0; i < m_streamTimestamps.size(); i++) {
+        if (m_streamTimestamps[i].streamId == streamId)
+            return &m_streamTimestamps[i];
+    }
+
+    return nullptr;
+}
+
+/* Insert a timestamp for a stream ID. */
+
+void FrameQueue::insertTimestamp(uint32_t streamId, uint32_t timestamp)
+{
+    std::lock_guard<std::mutex> lock(m_timestampMtx);
+    if (streamId == 0U || timestamp == INVALID_TS) {
+        LogError(LOG_NET, "FrameQueue::insertTimestamp(), invalid streamId or timestamp");
+        return;
+    }
+
+    Timestamp entry = { streamId, timestamp };
+    m_streamTimestamps.push_back(entry);
+}
+
+/* Update a timestamp for a stream ID. */
+
+void FrameQueue::updateTimestamp(uint32_t streamId, uint32_t timestamp)
+{
+    std::lock_guard<std::mutex> lock(m_timestampMtx);
+    if (streamId == 0U || timestamp == INVALID_TS) {
+        LogError(LOG_NET, "FrameQueue::updateTimestamp(), invalid streamId or timestamp");
+        return;
+    }
+
+    // find the timestamp entry and update it
+    for (size_t i = 0; i < m_streamTimestamps.size(); i++) {
+        if (m_streamTimestamps[i].streamId == streamId) {
+            m_streamTimestamps[i].timestamp = timestamp;
+            break;
+        }
+    }
+}
+
+/* Erase a timestamp for a stream ID. */
+
+void FrameQueue::eraseTimestamp(uint32_t streamId)
+{
+    std::lock_guard<std::mutex> lock(m_timestampMtx);
+    m_streamTimestamps.erase(
+        std::remove_if(m_streamTimestamps.begin(), m_streamTimestamps.end(),
+            [streamId](const Timestamp& entry) { return entry.streamId == streamId; }),
+        m_streamTimestamps.end());
+}
 
 /* Generate RTP message for the frame queue. */
 
@@ -234,25 +295,17 @@ uint8_t* FrameQueue::generateMessage(const uint8_t* message, uint32_t length, ui
 
     uint32_t timestamp = INVALID_TS;
     if (streamId != 0U) {
-#if defined(_WIN32)
-        std::lock_guard<std::mutex> lock(m_streamTSMtx);
-#else
-        m_streamTimestamps.lock(false);
-#endif // defined(_WIN32)
-        auto entry = m_streamTimestamps.find(streamId);
-        if (entry != m_streamTimestamps.end()) {
-            timestamp = entry->second;
+        auto entry = findTimestamp(streamId);
+        if (entry != nullptr) {
+            timestamp = entry->timestamp;
         }
 
         if (timestamp != INVALID_TS) {
             timestamp += (RTP_GENERIC_CLOCK_RATE / 133);
             if (m_debug)
                 LogDebugEx(LOG_NET, "FrameQueue::generateMessage()", "RTP streamId = %u, previous TS = %u, TS = %u, rtpSeq = %u", streamId, m_streamTimestamps[streamId], timestamp, rtpSeq);
-            m_streamTimestamps[streamId] = timestamp;
+            updateTimestamp(streamId, timestamp);
         }
-#if !defined(_WIN32)
-        m_streamTimestamps.unlock();
-#endif // defined(_WIN32)
     }
 
     uint32_t bufferLen = RTP_HEADER_LENGTH_BYTES + RTP_EXTENSION_HEADER_LENGTH_BYTES + RTP_FNE_HEADER_LENGTH_BYTES + length;
@@ -274,34 +327,18 @@ uint8_t* FrameQueue::generateMessage(const uint8_t* message, uint32_t length, ui
         timestamp = (uint32_t)system_clock::ntp::now();
         header.setTimestamp(timestamp);
 
-#if defined(_WIN32)
-        std::lock_guard<std::mutex> lock(m_streamTSMtx);
-        m_streamTimestamps.insert({ streamId, timestamp });
-#else
-        m_streamTimestamps.insert(streamId, timestamp);
-#endif // defined(_WIN32)
+        insertTimestamp(streamId, timestamp);
     }
 
     header.encode(buffer);
 
     if (streamId != 0U && rtpSeq == RTP_END_OF_CALL_SEQ) {
-#if defined(_WIN32)
-        std::lock_guard<std::mutex> lock(m_streamTSMtx);
-#else
-        m_streamTimestamps.lock(false);
-#endif // defined(_WIN32)
-        auto entry = m_streamTimestamps.find(streamId);
-        if (entry != m_streamTimestamps.end()) {
+        auto entry = findTimestamp(streamId);
+        if (entry != nullptr) {
             if (m_debug)
                 LogDebugEx(LOG_NET, "FrameQueue::generateMessage()", "RTP streamId = %u, rtpSeq = %u", streamId, rtpSeq);
-#if !defined(_WIN32)
-            m_streamTimestamps.unlock();
-#endif // defined(_WIN32)
-            m_streamTimestamps.erase(streamId);
+            eraseTimestamp(streamId);
         }
-#if !defined(_WIN32)
-        m_streamTimestamps.unlock();
-#endif // defined(_WIN32)
     }
 
     RTPFNEHeader fneHeader = RTPFNEHeader();
@@ -318,7 +355,7 @@ uint8_t* FrameQueue::generateMessage(const uint8_t* message, uint32_t length, ui
     ::memcpy(buffer + RTP_HEADER_LENGTH_BYTES + RTP_EXTENSION_HEADER_LENGTH_BYTES + RTP_FNE_HEADER_LENGTH_BYTES, message, length);
 
     if (m_debug)
-        Utils::dump(1U, "FrameQueue::generateMessage() Buffered Message", buffer, bufferLen);
+        Utils::dump(1U, "FrameQueue::generateMessage(), Buffered Message", buffer, bufferLen);
 
     if (outBufferLen != nullptr) {
         *outBufferLen = bufferLen;

@@ -4,17 +4,17 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2025 Bryan Biedenkapp, N2PLL
  *
  */
 /**
- * @file MotPDUFrame.h
+ * @file MotTDULCFrame.h
  * @ingroup dfsi_frames
- * @file MotPDUFrame.cpp
+ * @file MotTDULCFrame.cpp
  * @ingroup dfsi_frames
  */
-#if !defined(__MOT_PDU_FRAME_H__)
-#define __MOT_PDU_FRAME_H__
+#if !defined(__MOT_TDULC_FRAME_H__)
+#define __MOT_TDULC_FRAME_H__
 
 #include "Defines.h"
 #include "common/Defines.h"
@@ -35,59 +35,57 @@ namespace p25
             // ---------------------------------------------------------------------------
 
             /**
-             * @brief Implements a P25 Motorola PDU frame.
+             * @brief Implements a P25 Motorola/V.24 TDULC frame.
              * \code{.unparsed}
              * Byte 0               1               2               3
              * Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 
              *     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-             *     |   Encoded Motorola Start of Stream                            |
+             *     |       FT      |  Encoded V.24 Start of Stream                 |
              *     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-             *     |   Reserved ?                                                  |
+             *     |                                                               |
              *     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-             *     |   PDU Header                                                  |
-             *     +                                                               +
+             *     |               |  TDULC                                        |
+             *     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
              *     |                                                               |
-             *     +                                                               +
-             *     |                                                               |
+             *     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+             *     |                               | Reserved                      |
              *     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
              * \endcode
              * @ingroup dfsi_frames
              */
-            class HOST_SW_API MotPDUFrame {
+            class HOST_SW_API MotTDULCFrame {
             public:
-                static const uint8_t LENGTH = 20U;
+                /**
+                 * @brief Initializes a copy instance of the MotTDULCFrame class.
+                 */
+                MotTDULCFrame();
+                /**
+                 * @brief Initializes a copy instance of the MotTDULCFrame class.
+                 * @param data Buffer to containing MotTDULCFrame to decode.
+                 */
+                MotTDULCFrame(uint8_t* data);
+                /**
+                 * @brief Finalizes a instance of the MotTDULCFrame class.
+                 */
+                ~MotTDULCFrame();
 
                 /**
-                 * @brief Initializes a copy instance of the MotPDUFrame class.
-                 */
-                MotPDUFrame();
-                /**
-                 * @brief Initializes a copy instance of the MotPDUFrame class.
-                 * @param data Buffer to containing MotPDUFrame to decode.
-                 */
-                MotPDUFrame(uint8_t* data);
-                /**
-                 * @brief Finalizes a instance of the MotPDUFrame class.
-                 */
-                ~MotPDUFrame();
-
-                /**
-                 * @brief Decode a PDU frame. (only the PDU data header...)
-                 * @param[in] data Buffer to containing MotPDUFrame to decode.
+                 * @brief Decode a TDULC frame.
+                 * @param[in] data Buffer to containing MotTDULCFrame to decode.
                  */
                 bool decode(const uint8_t* data);
                 /**
-                 * @brief Encode a PDU frame. (only the PDU data header...)
-                 * @param[out] data Buffer to encode a MotPDUFrame.
+                 * @brief Encode a TDULC frame.
+                 * @param[out] data Buffer to encode a MotTDULCFrame.
                  */
                 void encode(uint8_t* data);
             
             public:
                 MotStartOfStream* startOfStream; // ?? - this should probably be private with getters/setters
-                uint8_t* pduHeaderData; // ?? - this should probably be private with getters/setters
+                uint8_t* tdulcData; // ?? - this should probably be private with getters/setters
             };
         } // namespace frames
     } // namespace dfsi
 } // namespace p25
 
-#endif // __MOT_PDU_FRAME_H__
+#endif // __MOT_TDULC_FRAME_H__

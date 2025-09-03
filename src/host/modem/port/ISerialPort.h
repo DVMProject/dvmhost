@@ -62,6 +62,17 @@ namespace modem
              * @brief Closes the connection to the port.
              */
             virtual void close() = 0;
+
+            /**
+             * @brief Sets RTS signal high (asserts RTS).
+             * @returns bool True, if RTS was set successfully, otherwise false.
+             */
+            virtual bool setRTS() = 0;
+            /**
+             * @brief Sets RTS signal low (clears RTS).
+             * @returns bool True, if RTS was cleared successfully, otherwise false.
+             */
+            virtual bool clearRTS() = 0;
         };
     } // namespace port
 } // namespace modem

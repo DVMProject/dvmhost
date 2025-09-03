@@ -452,7 +452,7 @@ void HostWS::send(json::object obj)
             m_wsServer.send(*it, json, websocketpp::frame::opcode::text);
         }
     }
-    catch (websocketpp::exception) { /* stub */ }
+    catch (websocketpp::exception const&) { /* stub */ }
 }
 
 // ---------------------------------------------------------------------------

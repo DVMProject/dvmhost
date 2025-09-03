@@ -22,7 +22,7 @@ using namespace crypto;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/* Initializes a new instance of the AES class. */
+/* Initializes a new instance of the RC4 class. */
 
 RC4::RC4() = default;
 

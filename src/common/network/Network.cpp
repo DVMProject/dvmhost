@@ -9,8 +9,6 @@
  */
 #include "Defines.h"
 #include "common/edac/SHA256.h"
-#include "common/network/RTPHeader.h"
-#include "common/network/RTPFNEHeader.h"
 #include "common/network/json/json.h"
 #include "common/p25/kmm/KMMFactory.h"
 #include "common/Log.h"
@@ -27,6 +25,7 @@ using namespace network;
 //  Constants
 // ---------------------------------------------------------------------------
 
+#define MAX_RETRY_BEFORE_RECONNECT 4U
 #define MAX_SERVER_DIFF 360ULL // maximum difference in time between a server timestamp and local timestamp in milliseconds
 
 // ---------------------------------------------------------------------------
@@ -36,7 +35,8 @@ using namespace network;
 /* Initializes a new instance of the Network class. */
 
 Network::Network(const std::string& address, uint16_t port, uint16_t localPort, uint32_t peerId, const std::string& password,
-    bool duplex, bool debug, bool dmr, bool p25, bool nxdn, bool slot1, bool slot2, bool allowActivityTransfer, bool allowDiagnosticTransfer, bool updateLookup, bool saveLookup) :
+    bool duplex, bool debug, bool dmr, bool p25, bool nxdn, bool analog, bool slot1, bool slot2, 
+    bool allowActivityTransfer, bool allowDiagnosticTransfer, bool updateLookup, bool saveLookup) :
     BaseNetwork(peerId, duplex, debug, slot1, slot2, allowActivityTransfer, allowDiagnosticTransfer, localPort),
     m_pktLastSeq(0U),
     m_address(address),
@@ -46,12 +46,14 @@ Network::Network(const std::string& address, uint16_t port, uint16_t localPort, 
     m_dmrEnabled(dmr),
     m_p25Enabled(p25),
     m_nxdnEnabled(nxdn),
+    m_analogEnabled(analog),
     m_updateLookup(updateLookup),
     m_saveLookup(saveLookup),
     m_ridLookup(nullptr),
     m_tidLookup(nullptr),
     m_salt(nullptr),
     m_retryTimer(1000U, 10U),
+    m_retryCount(0U),
     m_timeoutTimer(1000U, MAX_PEER_PING_TIME),
     m_pktSeq(0U),
     m_loginStreamId(0U),
@@ -65,6 +67,7 @@ Network::Network(const std::string& address, uint16_t port, uint16_t localPort, 
     m_dmrInCallCallback(nullptr),
     m_p25InCallCallback(nullptr),
     m_nxdnInCallCallback(nullptr),
+    m_analogInCallCallback(nullptr),
     m_keyRespCallback(nullptr)
 {
     assert(!address.empty());
@@ -78,6 +81,7 @@ Network::Network(const std::string& address, uint16_t port, uint16_t localPort, 
     m_rxDMRStreamId[1U] = 0U;
     m_rxP25StreamId = 0U;
     m_rxNXDNStreamId = 0U;
+    m_rxAnalogStreamId = 0U;
 
     m_metadata = new PeerMetadata();
 }
@@ -120,6 +124,14 @@ void Network::resetNXDN()
 {
     BaseNetwork::resetNXDN();
     m_rxNXDNStreamId = 0U;
+}
+
+/* Resets the analog ring buffer. */
+
+void Network::resetAnalog()
+{
+    BaseNetwork::resetAnalog();
+    m_rxAnalogStreamId = 0U;
 }
 
 /* Sets the instances of the Radio ID and Talkgroup ID lookup tables. */
@@ -175,11 +187,23 @@ void Network::clock(uint32_t ms)
         m_retryTimer.clock(ms);
         if (m_retryTimer.isRunning() && m_retryTimer.hasExpired()) {
             if (m_enabled) {
+                if (m_retryCount > MAX_RETRY_BEFORE_RECONNECT) {
+                    m_retryCount = 0U;
+                    LogError(LOG_NET, "PEER %u connection to the master has timed out, retrying connection, remotePeerId = %u", m_peerId, m_remotePeerId);
+
+                    close();
+                    open();
+
+                    m_retryTimer.start();
+                    return;
+                }
+
                 bool ret = m_socket->open(m_addr.ss_family);
                 if (ret) {
                     ret = writeLogin();
                     if (!ret) {
                         m_retryTimer.start();
+                        m_retryCount++;
                         return;
                     }
 
@@ -189,6 +213,7 @@ void Network::clock(uint32_t ms)
             }
 
             m_retryTimer.start();
+            m_retryCount++;
         }
 
         return;
@@ -236,14 +261,8 @@ void Network::clock(uint32_t ms)
         }
 
         if (m_debug) {
-            LogDebugEx(LOG_NET, "Network::clock()", "RTP, peerId = %u, seq = %u, streamId = %u, func = %02X, subFunc = %02X", fneHeader.getPeerId(), rtpHeader.getSequence(),
+            LogDebugEx(LOG_NET, "Network::clock()", "RTP, peerId = %u, ssrc = %u, seq = %u, streamId = %u, func = %02X, subFunc = %02X", fneHeader.getPeerId(), rtpHeader.getSSRC(), rtpHeader.getSequence(),
                 fneHeader.getStreamId(), fneHeader.getFunction(), fneHeader.getSubFunction());
-        }
-
-        // ensure the RTP synchronization source ID matches the FNE peer ID
-        if (m_remotePeerId != 0U && rtpHeader.getSSRC() != m_remotePeerId) {
-            LogWarning(LOG_NET, "RTP header and traffic session do not agree on remote peer ID? %u != %u", rtpHeader.getSSRC(), m_remotePeerId);
-            // should this be a fatal error?
         }
 
         // is this RTP packet destined for us?
@@ -273,7 +292,7 @@ void Network::clock(uint32_t ms)
                 // are protocol messages being user handled?
                 if (m_userHandleProtocol) {
                     userPacketHandler(fneHeader.getPeerId(), { fneHeader.getFunction(), fneHeader.getSubFunction() }, 
-                        buffer.get(), length, fneHeader.getStreamId());
+                        buffer.get(), length, fneHeader.getStreamId(), fneHeader, rtpHeader);
                     break;
                 }
 
@@ -322,8 +341,8 @@ void Network::clock(uint32_t ms)
                             }
 
                             if (m_debug)
-                                Utils::dump(1U, "[Network::clock()] Network Received, DMR", buffer.get(), length);
-                            if (length > 255)
+                                Utils::dump(1U, "Network::clock(), Network Rx, DMR", buffer.get(), length);
+                            if (length > (int)(DMR_PACKET_LENGTH + PACKET_PAD))
                                 LogError(LOG_NET, "DMR Stream %u, frame oversized? this shouldn't happen, pktSeq = %u, len = %u", streamId, m_pktSeq, length);
 
                             uint8_t len = length;
@@ -374,12 +393,21 @@ void Network::clock(uint32_t ms)
                             }
 
                             if (m_debug)
-                                Utils::dump(1U, "[Network::clock()] Network Received, P25", buffer.get(), length);
-                            if (length > 255)
+                                Utils::dump(1U, "Network::clock(), Network Rx, P25", buffer.get(), length);
+                            if (length > 512)
                                 LogError(LOG_NET, "P25 Stream %u, frame oversized? this shouldn't happen, pktSeq = %u, len = %u", streamId, m_pktSeq, length);
 
+                            // P25 frames can be up to 512 bytes, but we need to handle the case where the frame is larger than 255 bytes
                             uint8_t len = length;
-                            m_rxP25Data.addData(&len, 1U);
+                            if (length > 254) {
+                                len = 254U;
+                                m_rxP25Data.addData(&len, 1U);
+                                len = length - 254U;
+                                m_rxP25Data.addData(&len, 1U);
+                            } else {
+                                m_rxP25Data.addData(&len, 1U);
+                            }
+
                             m_rxP25Data.addData(buffer.get(), len);
                         }
                     }
@@ -426,13 +454,73 @@ void Network::clock(uint32_t ms)
                             }
 
                             if (m_debug)
-                                Utils::dump(1U, "[Network::clock()] Network Received, NXDN", buffer.get(), length);
-                            if (length > 255)
+                                Utils::dump(1U, "Network::clock(), Network Rx, NXDN", buffer.get(), length);
+                            if (length > (int)(NXDN_PACKET_LENGTH + PACKET_PAD))
                                 LogError(LOG_NET, "NXDN Stream %u, frame oversized? this shouldn't happen, pktSeq = %u, len = %u", streamId, m_pktSeq, length);
 
                             uint8_t len = length;
                             m_rxNXDNData.addData(&len, 1U);
                             m_rxNXDNData.addData(buffer.get(), len);
+                        }
+                    }
+                    break;
+
+                case NET_SUBFUNC::PROTOCOL_SUBFUNC_ANALOG:              // Encapsulated Analog data frame
+                    {
+                        if (m_enabled && m_analogEnabled) {
+                            if (m_debug) {
+                                LogDebug(LOG_NET, "Analog, peer = %u, len = %u, pktSeq = %u, streamId = %u", 
+                                    peerId, length, rtpHeader.getSequence(), streamId);
+                            }
+
+                            if (m_promiscuousPeer) {
+                                m_rxAnalogStreamId = streamId;
+                                m_pktLastSeq = m_pktSeq;
+                            }
+                            else {
+                                if (m_rxAnalogStreamId == 0U) {
+                                    if (rtpHeader.getSequence() == RTP_END_OF_CALL_SEQ) {
+                                        m_rxAnalogStreamId = 0U;
+                                    }
+                                    else {
+                                        m_rxAnalogStreamId = streamId;
+                                    }
+
+                                    m_pktLastSeq = m_pktSeq;
+                                }
+                                else {
+                                    if (m_rxAnalogStreamId == streamId) {
+                                        if (m_pktSeq != 0U && m_pktLastSeq != 0U) {
+                                            if (m_pktSeq >= 1U && ((m_pktSeq != m_pktLastSeq + 1) && (m_pktSeq - 1 != m_pktLastSeq + 1))) {
+                                                LogWarning(LOG_NET, "Analog Stream %u out-of-sequence; %u != %u", streamId, m_pktSeq, m_pktLastSeq + 1);
+                                            }
+                                        }
+
+                                        m_pktLastSeq = m_pktSeq;
+                                    }
+
+                                    if (rtpHeader.getSequence() == RTP_END_OF_CALL_SEQ) {
+                                        m_rxAnalogStreamId = 0U;
+                                    }
+                                }
+                            }
+
+                            if (m_debug)
+                                Utils::dump(1U, "Network::clock(), Network Rx, Analog", buffer.get(), length);
+                            if (length < (int)ANALOG_PACKET_LENGTH) {
+                                LogError(LOG_NET, "Analog Stream %u, frame too short? this shouldn't happen, pktSeq = %u, len = %u", streamId, m_pktSeq, length);
+                            } else {
+                                if (length > 512)
+                                    LogError(LOG_NET, "Analog Stream %u, frame oversized? this shouldn't happen, pktSeq = %u, len = %u", streamId, m_pktSeq, length);
+
+                                // Analog frames are larger then 254 bytes, but we need to handle the case where the frame is larger than 255 bytes
+                                uint8_t len = 254U;
+                                m_rxAnalogData.addData(&len, 1U);
+                                len = length - 254U;
+                                m_rxAnalogData.addData(&len, 1U);
+
+                                m_rxAnalogData.addData(buffer.get(), len);
+                            }
                         }
                     }
                     break;
@@ -452,7 +540,7 @@ void Network::clock(uint32_t ms)
                     {
                         if (m_enabled && m_updateLookup) {
                             if (m_debug)
-                                Utils::dump(1U, "Network Received, WL RID", buffer.get(), length);
+                                Utils::dump(1U, "Network::clock(), Network Rx, WL RID", buffer.get(), length);
 
                             if (m_ridLookup != nullptr) {
                                 // update RID lists
@@ -478,7 +566,7 @@ void Network::clock(uint32_t ms)
                     {
                         if (m_enabled && m_updateLookup) {
                             if (m_debug)
-                                Utils::dump(1U, "Network Received, BL RID", buffer.get(), length);
+                                Utils::dump(1U, "Network::clock(), Network Rx, BL RID", buffer.get(), length);
 
                             if (m_ridLookup != nullptr) {
                                 // update RID lists
@@ -505,7 +593,7 @@ void Network::clock(uint32_t ms)
                     {
                         if (m_enabled && m_updateLookup) {
                             if (m_debug)
-                                Utils::dump(1U, "Network Received, ACTIVE TGS", buffer.get(), length);
+                                Utils::dump(1U, "Network::clock(), Network Rx, ACTIVE TGS", buffer.get(), length);
 
                             if (m_tidLookup != nullptr) {
                                 // update TGID lists
@@ -555,7 +643,7 @@ void Network::clock(uint32_t ms)
                     {
                         if (m_enabled && m_updateLookup) {
                             if (m_debug)
-                                Utils::dump(1U, "Network Received, DEACTIVE TGS", buffer.get(), length);
+                                Utils::dump(1U, "Network::clock(), Network Rx, DEACTIVE TGS", buffer.get(), length);
 
                             if (m_tidLookup != nullptr) {
                                 // update TGID lists
@@ -632,6 +720,19 @@ void Network::clock(uint32_t ms)
                             // fire off NXDN in-call callback if we have one
                             if (m_nxdnInCallCallback != nullptr) {
                                 m_nxdnInCallCallback(command, dstId);
+                            }
+                        }
+                    }
+                    break;
+                case NET_SUBFUNC::PROTOCOL_SUBFUNC_ANALOG:              // Analog In-Call Control
+                    {
+                        if (m_enabled && m_nxdnEnabled) {
+                            NET_ICC::ENUM command = (NET_ICC::ENUM)buffer[10U];
+                            uint32_t dstId = GET_UINT24(buffer, 11U);
+
+                            // fire off analog in-call callback if we have one
+                            if (m_analogInCallCallback != nullptr) {
+                                m_analogInCallCallback(command, dstId);
                             }
                         }
                     }
@@ -816,7 +917,7 @@ void Network::clock(uint32_t ms)
             m_timeoutTimer.start();
             if (length >= 14) {
                 if (m_debug)
-                    Utils::dump(1U, "Network Received, PONG", buffer.get(), length);
+                    Utils::dump(1U, "Network::clock(), Network Rx, PONG", buffer.get(), length);
 
                 ulong64_t serverNow = 0U;
 
@@ -838,7 +939,7 @@ void Network::clock(uint32_t ms)
             break;
         default:
             userPacketHandler(fneHeader.getPeerId(), { fneHeader.getFunction(), fneHeader.getSubFunction() }, 
-                buffer.get(), length, fneHeader.getStreamId());
+                buffer.get(), length, fneHeader.getStreamId(), fneHeader, rtpHeader);
             break;
         }
     }
@@ -889,14 +990,15 @@ bool Network::open()
     if (m_debug)
         LogMessage(LOG_NET, "PEER %u opening network", m_peerId);
 
+    m_status = NET_STAT_WAITING_CONNECT;
+    m_timeoutTimer.start();
+    m_retryTimer.start();
+    m_retryCount = 0U;
+
     if (udp::Socket::lookup(m_address, m_port, m_addr, m_addrLen) != 0) {
         LogMessage(LOG_NET, "!!! Could not lookup the address of the master!");
         return false;
     }
-
-    m_status = NET_STAT_WAITING_CONNECT;
-    m_timeoutTimer.start();
-    m_retryTimer.start();
 
     return true;
 }
@@ -936,9 +1038,10 @@ void Network::enable(bool enabled)
 
 /* User overrideable handler that allows user code to process network packets not handled by this class. */
 
-void Network::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opcode, const uint8_t* data, uint32_t length, uint32_t streamId)
+void Network::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opcode, const uint8_t* data, uint32_t length, uint32_t streamId,
+    const frame::RTPFNEHeader& fneHeader, const frame::RTPHeader& rtpHeader)
 {
-    Utils::dump("unknown opcode from the master", data, length);
+    Utils::dump("Unknown opcode from the master", data, length);
 }
 
 /* Writes login request to the network. */
@@ -954,7 +1057,7 @@ bool Network::writeLogin()
     SET_UINT32(m_peerId, buffer, 4U);                                               // Peer ID
 
     if (m_debug)
-        Utils::dump(1U, "Network Message, Login", buffer, 8U);
+        Utils::dump(1U, "Network::writeLogin(), Message, Login", buffer, 8U);
 
     m_loginStreamId = createStreamId();
     m_remotePeerId = 0U;
@@ -987,7 +1090,7 @@ bool Network::writeAuthorisation()
     delete[] in;
 
     if (m_debug)
-        Utils::dump(1U, "Network Message, Authorisation", out, 40U);
+        Utils::dump(1U, "Network::writeAuthorisation(), Message, Authorisation", out, 40U);
 
     return writeMaster({ NET_FUNC::RPTK, NET_SUBFUNC::NOP }, out, 40U, pktSeq(), m_loginStreamId);
 }
@@ -1048,7 +1151,7 @@ bool Network::writeConfig()
     ::snprintf(buffer + 8U, json.length() + 1U, "%s", json.c_str());
 
     if (m_debug) {
-        Utils::dump(1U, "Network Message, Configuration", (uint8_t*)buffer, json.length() + 8U);
+        Utils::dump(1U, "Network::writeConfig(), Message, Configuration", (uint8_t*)buffer, json.length() + 8U);
     }
 
     return writeMaster({ NET_FUNC::RPTC, NET_SUBFUNC::NOP }, (uint8_t*)buffer, json.length() + 8U, RTP_END_OF_CALL_SEQ, m_loginStreamId);

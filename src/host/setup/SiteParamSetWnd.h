@@ -217,7 +217,7 @@ private:
 
             m_p25RfssIdLabel.setGeometry(FPoint(2, 14), FSize(20, 1));
             m_p25RfssId.setGeometry(FPoint(23, 14), FSize(10, 1));
-            m_p25RfssId.setText(rfssConfig["dmrNetId"].as<std::string>("1").c_str());
+            m_p25RfssId.setText(rfssConfig["rfssId"].as<std::string>("1").c_str());
             m_p25RfssId.setShadow(false);
             m_p25RfssId.setMaxLength(3);
             m_p25RfssId.setInputFilter("[[:xdigit:]]");

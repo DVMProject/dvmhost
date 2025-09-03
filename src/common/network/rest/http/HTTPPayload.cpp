@@ -311,7 +311,7 @@ std::vector<asio::const_buffer> HTTPPayload::toBuffers()
 #if DEBUG_HTTP_PAYLOAD
     ::LogDebugEx(LOG_REST, "HTTPPayload::toBuffers()", "content = %s", content.c_str());
     for (auto buffer : buffers)
-        Utils::dump("[HTTPPayload::toBuffers()] buffer[]", (uint8_t*)buffer.data(), buffer.size());
+        Utils::dump("HTTPPayload::toBuffers(), buffer[]", (uint8_t*)buffer.data(), buffer.size());
 #endif
 
     return buffers;
