@@ -143,8 +143,7 @@ void TalkgroupRulesLookup::addEntry(uint32_t id, uint8_t slot, bool enabled, boo
     __LOCK_TABLE();
 
     auto it = std::find_if(m_groupVoice.begin(), m_groupVoice.end(),
-        [&](TalkgroupRuleGroupVoice x)
-        {
+        [&](TalkgroupRuleGroupVoice& x) {
             if (slot != 0U) {
                 return x.source().tgId() == id && x.source().tgSlot() == slot;
             }
@@ -192,8 +191,7 @@ void TalkgroupRulesLookup::addEntry(TalkgroupRuleGroupVoice groupVoice)
     __LOCK_TABLE();
 
     auto it = std::find_if(m_groupVoice.begin(), m_groupVoice.end(),
-        [&](TalkgroupRuleGroupVoice x)
-        {
+        [&](TalkgroupRuleGroupVoice& x) {
             if (slot != 0U) {
                 return x.source().tgId() == id && x.source().tgSlot() == slot;
             }
@@ -216,7 +214,10 @@ void TalkgroupRulesLookup::eraseEntry(uint32_t id, uint8_t slot)
 {
     __LOCK_TABLE();
 
-    auto it = std::find_if(m_groupVoice.begin(), m_groupVoice.end(), [&](TalkgroupRuleGroupVoice x) { return x.source().tgId() == id && x.source().tgSlot() == slot; });
+    auto it = std::find_if(m_groupVoice.begin(), m_groupVoice.end(),
+        [&](TalkgroupRuleGroupVoice& x) {
+            return x.source().tgId() == id && x.source().tgSlot() == slot;
+        });
     if (it != m_groupVoice.end()) {
         m_groupVoice.erase(it);
     }
@@ -234,7 +235,7 @@ TalkgroupRuleGroupVoice TalkgroupRulesLookup::find(uint32_t id, uint8_t slot)
 
     std::lock_guard<std::mutex> lock(m_mutex);
     auto it = std::find_if(m_groupVoice.begin(), m_groupVoice.end(),
-        [&](TalkgroupRuleGroupVoice x)
+        [&](TalkgroupRuleGroupVoice& x)
         {
             if (slot != 0U) {
                 return x.source().tgId() == id && x.source().tgSlot() == slot;
@@ -261,15 +262,13 @@ TalkgroupRuleGroupVoice TalkgroupRulesLookup::findByRewrite(uint32_t peerId, uin
 
     std::lock_guard<std::mutex> lock(m_mutex);
     auto it = std::find_if(m_groupVoice.begin(), m_groupVoice.end(),
-        [&](TalkgroupRuleGroupVoice x)
-        {
+        [&](TalkgroupRuleGroupVoice& x) {
             if (x.config().rewrite().size() == 0)
                 return false;
 
             std::vector<TalkgroupRuleRewrite> rewrite = x.config().rewrite();
             auto innerIt = std::find_if(rewrite.begin(), rewrite.end(),
-                [&](TalkgroupRuleRewrite y)
-                {
+                [&](TalkgroupRuleRewrite& y) {
                     if (slot != 0U) {
                         return y.peerId() == peerId && y.tgId() == id && y.tgSlot() == slot;
                     }

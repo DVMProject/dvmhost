@@ -133,8 +133,7 @@ void AdjSiteMapLookup::addEntry(AdjPeerMapEntry entry)
     __LOCK_TABLE();
 
     auto it = std::find_if(m_adjPeerMap.begin(), m_adjPeerMap.end(),
-        [&](AdjPeerMapEntry x)
-        {
+        [&](AdjPeerMapEntry& x) {
             return x.peerId() == id;
         });
     if (it != m_adjPeerMap.end()) {
@@ -153,7 +152,10 @@ void AdjSiteMapLookup::eraseEntry(uint32_t id)
 {
     __LOCK_TABLE();
 
-    auto it = std::find_if(m_adjPeerMap.begin(), m_adjPeerMap.end(), [&](AdjPeerMapEntry x) { return x.peerId() == id; });
+    auto it = std::find_if(m_adjPeerMap.begin(), m_adjPeerMap.end(),
+        [&](AdjPeerMapEntry& x) {
+            return x.peerId() == id;
+        });
     if (it != m_adjPeerMap.end()) {
         m_adjPeerMap.erase(it);
     }
@@ -171,8 +173,7 @@ AdjPeerMapEntry AdjSiteMapLookup::find(uint32_t id)
 
     std::lock_guard<std::mutex> lock(m_mutex);
     auto it = std::find_if(m_adjPeerMap.begin(), m_adjPeerMap.end(),
-        [&](AdjPeerMapEntry x)
-        {
+        [&](AdjPeerMapEntry& x) {
             return x.peerId() == id;
         });
     if (it != m_adjPeerMap.end()) {

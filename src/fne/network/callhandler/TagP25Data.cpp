@@ -200,7 +200,7 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
 
                 bool switchOver = (data[14U] & network::NET_CTRL_SWITCH_OVER) == network::NET_CTRL_SWITCH_OVER;
 
-                auto it = std::find_if(m_status.begin(), m_status.end(), [&](StatusMapPair x) {
+                auto it = std::find_if(m_status.begin(), m_status.end(), [&](StatusMapPair& x) {
                     if (x.second.dstId == dstId) {
                         if (x.second.activeCall)
                             return true;
@@ -228,7 +228,7 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                         }
 
                         // is this a private call?
-                        auto it = std::find_if(m_statusPVCall.begin(), m_statusPVCall.end(), [&](StatusMapPair x) {
+                        auto it = std::find_if(m_statusPVCall.begin(), m_statusPVCall.end(), [&](StatusMapPair& x) {
                             if (x.second.dstId == dstId) {
                                 if (x.second.activeCall)
                                     return true;
@@ -273,7 +273,7 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
 
                 bool switchOver = (data[14U] & network::NET_CTRL_SWITCH_OVER) == network::NET_CTRL_SWITCH_OVER;
 
-                auto it = std::find_if(m_status.begin(), m_status.end(), [&](StatusMapPair x) {
+                auto it = std::find_if(m_status.begin(), m_status.end(), [&](StatusMapPair& x) {
                     if (x.second.dstId == dstId) {
                         if (x.second.activeCall)
                             return true;
@@ -392,7 +392,7 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
         if (m_network->m_restrictPVCallToRegOnly) {
             if ((control.getLCO() != LCO::PRIVATE) && !control.getGroup()) {
                 // is this a private call? if so only repeat to the peer that registered the unit
-                auto it = std::find_if(m_statusPVCall.begin(), m_statusPVCall.end(), [&](StatusMapPair x) {
+                auto it = std::find_if(m_statusPVCall.begin(), m_statusPVCall.end(), [&](StatusMapPair& x) {
                     if (x.second.dstId == control.getDstId()) {
                         if (x.second.activeCall)
                             return true;
@@ -459,7 +459,7 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                         // is this a private call?
                         if ((lco == LCO::PRIVATE) && !external) {
                             // is this a private call? if so only repeat to the peer that registered the unit
-                            auto it = std::find_if(m_statusPVCall.begin(), m_statusPVCall.end(), [&](StatusMapPair x) {
+                            auto it = std::find_if(m_statusPVCall.begin(), m_statusPVCall.end(), [&](StatusMapPair& x) {
                                 if (x.second.dstId == dstId) {
                                     if (x.second.activeCall)
                                         return true;
@@ -579,7 +579,7 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
 bool TagP25Data::processGrantReq(uint32_t srcId, uint32_t dstId, bool unitToUnit, uint32_t peerId, uint16_t pktSeq, uint32_t streamId)
 {
     // if we have an Rx status for the destination deny the grant
-    auto it = std::find_if(m_status.begin(), m_status.end(), [&](StatusMapPair x) {
+    auto it = std::find_if(m_status.begin(), m_status.end(), [&](StatusMapPair& x) {
         if (x.second.dstId == dstId) {
             if (x.second.activeCall)
                 return true;
@@ -1291,7 +1291,7 @@ bool TagP25Data::validate(uint32_t peerId, lc::LC& control, DUID::E duid, const 
     if (m_network->m_filterTerminators) {
         if ((duid == DUID::TDU || duid == DUID::TDULC) && control.getDstId() != 0U) {
             // is this a private call?
-            auto it = std::find_if(m_statusPVCall.begin(), m_statusPVCall.end(), [&](StatusMapPair x) {
+            auto it = std::find_if(m_statusPVCall.begin(), m_statusPVCall.end(), [&](StatusMapPair& x) {
                 if (x.second.dstId == control.getDstId()) {
                     if (x.second.activeCall)
                         return true;
@@ -1328,7 +1328,7 @@ bool TagP25Data::validate(uint32_t peerId, lc::LC& control, DUID::E duid, const 
     bool privateCallInProgress = false;
     if ((control.getLCO() != LCO::PRIVATE) && !control.getGroup()) {
         // is this a private call? if so only repeat to the peer that registered the unit
-        auto it = std::find_if(m_statusPVCall.begin(), m_statusPVCall.end(), [&](StatusMapPair x) {
+        auto it = std::find_if(m_statusPVCall.begin(), m_statusPVCall.end(), [&](StatusMapPair& x) {
             if (x.second.dstId == control.getDstId()) {
                 if (x.second.activeCall)
                     return true;

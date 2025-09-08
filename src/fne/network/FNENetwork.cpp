@@ -1647,7 +1647,7 @@ void FNENetwork::erasePeer(uint32_t peerId)
 
     // erase any CC maps for this peer
     {
-        auto it = std::find_if(m_ccPeerMap.begin(), m_ccPeerMap.end(), [&](auto x) { return x.first == peerId; });
+        auto it = std::find_if(m_ccPeerMap.begin(), m_ccPeerMap.end(), [&](auto& x) { return x.first == peerId; });
         if (it != m_ccPeerMap.end()) {
             m_ccPeerMap.erase(peerId);
         }
@@ -1655,7 +1655,7 @@ void FNENetwork::erasePeer(uint32_t peerId)
 
     // erase any Peer-Link entries for this peer
     {
-        auto it = std::find_if(m_peerLinkPeers.begin(), m_peerLinkPeers.end(), [&](auto x) { return x.first == peerId; });
+        auto it = std::find_if(m_peerLinkPeers.begin(), m_peerLinkPeers.end(), [&](auto& x) { return x.first == peerId; });
         if (it != m_peerLinkPeers.end()) {
             m_peerLinkPeers.erase(peerId);
         }
@@ -1709,7 +1709,7 @@ json::object FNENetwork::fneConnObject(uint32_t peerId, FNEPeerConnection *conn)
     peerObj["config"].set<json::object>(peerConfig);
 
     json::array voiceChannels = json::array();
-    auto it = std::find_if(m_ccPeerMap.begin(), m_ccPeerMap.end(), [&](auto x) { return x.first == peerId; });
+    auto it = std::find_if(m_ccPeerMap.begin(), m_ccPeerMap.end(), [&](auto& x) { return x.first == peerId; });
     if (it != m_ccPeerMap.end()) {
         std::vector<uint32_t> vcPeers = m_ccPeerMap[peerId];
         for (uint32_t vcEntry : vcPeers) {

@@ -103,7 +103,7 @@ bool TagAnalogData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
             RxStatus status = m_status[dstId];
             uint64_t duration = hrc::diff(pktTime, status.callStartTime);
 
-            auto it = std::find_if(m_status.begin(), m_status.end(), [&](StatusMapPair x) {
+            auto it = std::find_if(m_status.begin(), m_status.end(), [&](StatusMapPair& x) {
                 if (x.second.dstId == dstId) {
                     if (x.second.activeCall)
                         return true;
@@ -152,7 +152,7 @@ bool TagAnalogData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
                 return false;
             }
 
-            auto it = std::find_if(m_status.begin(), m_status.end(), [&](StatusMapPair x) {
+            auto it = std::find_if(m_status.begin(), m_status.end(), [&](StatusMapPair& x) {
                 if (x.second.dstId == dstId) {
                     if (x.second.activeCall)
                         return true;

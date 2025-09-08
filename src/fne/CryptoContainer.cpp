@@ -237,7 +237,7 @@ void CryptoContainer::addEntry(KeyItem key)
 
     std::lock_guard<std::mutex> lock(m_mutex);
     auto it = std::find_if(m_keys.begin(), m_keys.end(),
-        [&](KeyItem x)
+        [&](KeyItem& x)
         {
             return x.id() == id && x.kId() == kId;
         });
@@ -254,7 +254,10 @@ void CryptoContainer::addEntry(KeyItem key)
 void CryptoContainer::eraseEntry(uint32_t id)
 {
     std::lock_guard<std::mutex> lock(m_mutex);
-    auto it = std::find_if(m_keys.begin(), m_keys.end(), [&](KeyItem x) { return x.id() == id; });
+    auto it = std::find_if(m_keys.begin(), m_keys.end(),
+        [&](KeyItem& x) {
+            return x.id() == id; 
+        });
     if (it != m_keys.end()) {
         m_keys.erase(it);
     }
@@ -268,8 +271,7 @@ KeyItem CryptoContainer::find(uint32_t kId)
 
     std::lock_guard<std::mutex> lock(m_mutex);
     auto it = std::find_if(m_keys.begin(), m_keys.end(),
-        [&](KeyItem x)
-        {
+        [&](KeyItem& x) {
             return x.kId() == kId;
         });
     if (it != m_keys.end()) {

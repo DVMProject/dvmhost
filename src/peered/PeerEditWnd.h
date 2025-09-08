@@ -357,8 +357,7 @@ private:
                 // update peer
                 auto peers = g_pidLookups->tableAsList();
                 auto it = std::find_if(peers.begin(), peers.end(),
-                    [&](lookups::PeerId x)
-                    {
+                    [&](lookups::PeerId& x) {
                         return x.peerId() == m_origPeerId;
                     });
                 if (it != peers.end()) {
@@ -383,8 +382,7 @@ private:
 
                 auto peers = g_pidLookups->tableAsList();
                 auto it = std::find_if(peers.begin(), peers.end(),
-                    [&](lookups::PeerId x)
-                    {
+                    [&](lookups::PeerId& x) {
                         return x.peerId() == m_rule.peerId();
                     });
                 if (it != peers.end()) {

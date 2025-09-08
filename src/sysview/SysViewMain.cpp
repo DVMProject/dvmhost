@@ -364,7 +364,7 @@ void* threadNetworkPump(void* arg)
                         }
 
                         RxStatus status;
-                        auto it = std::find_if(g_dmrStatus.begin(), g_dmrStatus.end(), [&](StatusMapPair x) { return (x.second.dstId == dstId && x.second.slotNo == slotNo); });
+                        auto it = std::find_if(g_dmrStatus.begin(), g_dmrStatus.end(), [&](StatusMapPair& x) { return (x.second.dstId == dstId && x.second.slotNo == slotNo); });
                         if (it == g_dmrStatus.end()) {
                             LogError(LOG_NET, "DMR, tried to end call for non-existent call in progress?, srcId = %u (%s), dstId = %u (%s)",
                                 srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str());
@@ -375,7 +375,7 @@ void* threadNetworkPump(void* arg)
 
                         uint64_t duration = hrc::diff(pktTime, status.callStartTime);
 
-                        if (std::find_if(g_dmrStatus.begin(), g_dmrStatus.end(), [&](StatusMapPair x) { return (x.second.dstId == dstId && x.second.slotNo == slotNo); }) != g_dmrStatus.end()) {
+                        if (std::find_if(g_dmrStatus.begin(), g_dmrStatus.end(), [&](StatusMapPair& x) { return (x.second.dstId == dstId && x.second.slotNo == slotNo); }) != g_dmrStatus.end()) {
                             g_dmrStatus.erase(dstId);
 
                             LogMessage(LOG_NET, "DMR, Call End, srcId = %u (%s), dstId = %u (%s), duration = %u",
@@ -390,7 +390,7 @@ void* threadNetworkPump(void* arg)
                                 srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str());
                         }
 
-                        auto it = std::find_if(g_dmrStatus.begin(), g_dmrStatus.end(), [&](StatusMapPair x) { return (x.second.dstId == dstId && x.second.slotNo == slotNo); });
+                        auto it = std::find_if(g_dmrStatus.begin(), g_dmrStatus.end(), [&](StatusMapPair& x) { return (x.second.dstId == dstId && x.second.slotNo == slotNo); });
                         if (it == g_dmrStatus.end()) {
                             // this is a new call stream
                             RxStatus status = RxStatus();
@@ -517,7 +517,7 @@ void* threadNetworkPump(void* arg)
                             RxStatus status = g_p25Status[dstId];
                             uint64_t duration = hrc::diff(pktTime, status.callStartTime);
 
-                            if (std::find_if(g_p25Status.begin(), g_p25Status.end(), [&](StatusMapPair x) { return x.second.dstId == dstId; }) != g_p25Status.end()) {
+                            if (std::find_if(g_p25Status.begin(), g_p25Status.end(), [&](StatusMapPair& x) { return x.second.dstId == dstId; }) != g_p25Status.end()) {
                                 g_p25Status.erase(dstId);
 
                                 LogMessage(LOG_NET, "P25, Call End, srcId = %u (%s), dstId = %u (%s), sysId = $%03X, netId = $%05X, duration = %u",
@@ -532,7 +532,7 @@ void* threadNetworkPump(void* arg)
                                     srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str());
                             }
 
-                            auto it = std::find_if(g_p25Status.begin(), g_p25Status.end(), [&](StatusMapPair x) { return x.second.dstId == dstId; });
+                            auto it = std::find_if(g_p25Status.begin(), g_p25Status.end(), [&](StatusMapPair& x) { return x.second.dstId == dstId; });
                             if (it == g_p25Status.end()) {
                                 // this is a new call stream
                                 RxStatus status = RxStatus();
@@ -950,7 +950,7 @@ void* threadNetworkPump(void* arg)
                             RxStatus status = g_nxdnStatus[dstId];
                             uint64_t duration = hrc::diff(pktTime, status.callStartTime);
 
-                            if (std::find_if(g_nxdnStatus.begin(), g_nxdnStatus.end(), [&](StatusMapPair x) { return x.second.dstId == dstId; }) != g_nxdnStatus.end()) {
+                            if (std::find_if(g_nxdnStatus.begin(), g_nxdnStatus.end(), [&](StatusMapPair& x) { return x.second.dstId == dstId; }) != g_nxdnStatus.end()) {
                                 g_nxdnStatus.erase(dstId);
 
                                 LogMessage(LOG_NET, "NXDN, Call End, srcId = %u (%s), dstId = %u (%s), duration = %u",
@@ -965,7 +965,7 @@ void* threadNetworkPump(void* arg)
                                     srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str());
                             }
 
-                            auto it = std::find_if(g_nxdnStatus.begin(), g_nxdnStatus.end(), [&](StatusMapPair x) { return x.second.dstId == dstId; });
+                            auto it = std::find_if(g_nxdnStatus.begin(), g_nxdnStatus.end(), [&](StatusMapPair& x) { return x.second.dstId == dstId; });
                             if (it == g_nxdnStatus.end()) {
                                 // this is a new call stream
                                 RxStatus status = RxStatus();
@@ -1003,7 +1003,7 @@ void* threadNetworkPump(void* arg)
                         RxStatus status = g_analogStatus[dstId];
                         uint64_t duration = hrc::diff(pktTime, status.callStartTime);
 
-                        if (std::find_if(g_analogStatus.begin(), g_analogStatus.end(), [&](StatusMapPair x) { return x.second.dstId == dstId; }) != g_analogStatus.end()) {
+                        if (std::find_if(g_analogStatus.begin(), g_analogStatus.end(), [&](StatusMapPair& x) { return x.second.dstId == dstId; }) != g_analogStatus.end()) {
                             g_analogStatus.erase(dstId);
 
                             LogMessage(LOG_NET, "Analog, Call End, srcId = %u (%s), dstId = %u (%s), duration = %u",
@@ -1018,7 +1018,7 @@ void* threadNetworkPump(void* arg)
                                 srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str());
                         }
 
-                        auto it = std::find_if(g_analogStatus.begin(), g_analogStatus.end(), [&](StatusMapPair x) { return x.second.dstId == dstId; });
+                        auto it = std::find_if(g_analogStatus.begin(), g_analogStatus.end(), [&](StatusMapPair& x) { return x.second.dstId == dstId; });
                         if (it == g_analogStatus.end()) {
                             // this is a new call stream
                             RxStatus status = RxStatus();

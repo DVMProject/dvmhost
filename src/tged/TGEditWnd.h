@@ -444,8 +444,7 @@ private:
                 // update TG
                 auto groupVoice = g_tidLookups->groupVoice();
                 auto it = std::find_if(groupVoice.begin(), groupVoice.end(),
-                    [&](lookups::TalkgroupRuleGroupVoice x)
-                    {
+                    [&](lookups::TalkgroupRuleGroupVoice& x) {
                         return x.source().tgId() == m_origTgId && x.source().tgSlot() == m_origTgSlot;
                     });
                 if (it != groupVoice.end()) {
@@ -464,8 +463,7 @@ private:
 
                 auto groupVoice = g_tidLookups->groupVoice();
                 auto it = std::find_if(groupVoice.begin(), groupVoice.end(),
-                    [&](lookups::TalkgroupRuleGroupVoice x)
-                    {
+                    [&](lookups::TalkgroupRuleGroupVoice& x) {
                         return x.source().tgId() == m_rule.source().tgId() && x.source().tgSlot() == m_rule.source().tgSlot();
                     });
                 if (it != groupVoice.end()) {
