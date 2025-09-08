@@ -211,9 +211,10 @@ namespace network
                 /**
                  * @brief Helper used to process KMM frames from PDU data.
                  * @param status Instance of the RxStatus class.
+                 * @param encrypted Flag indicating whether or not the KMM frame is encrypted.
                  * @returns bool True, if KMM data was processed, otherwise false.
                  */
-                bool processKMM(RxStatus* status);
+                bool processKMM(RxStatus* status, bool encrypted);
 
                 /**
                  * @brief Helper used to return a No-Service KMM to the calling SU.

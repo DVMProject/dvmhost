@@ -528,7 +528,7 @@ bool Data::processNetwork(uint8_t* data, uint32_t len, uint32_t blockLength)
         }
 
         if (m_verbose) {
-            LogMessage(LOG_NET, P25_PDU_STR ", ISP, ack = %u, outbound = %u, fmt = $%02X, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padLength = %u, packetLength = %u, S = %u, n = %u, seqNo = %u, hdrOffset = %u, llId = %u",
+            LogMessage(LOG_NET, P25_PDU_STR ", FNE ISP, ack = %u, outbound = %u, fmt = $%02X, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padLength = %u, packetLength = %u, S = %u, n = %u, seqNo = %u, hdrOffset = %u, llId = %u",
                 m_netDataHeader.getAckNeeded(), m_netDataHeader.getOutbound(), m_netDataHeader.getFormat(), m_netDataHeader.getSAP(), m_netDataHeader.getFullMessage(),
                 m_netDataHeader.getBlocksToFollow(), m_netDataHeader.getPadLength(), m_netDataHeader.getPacketLength(), m_netDataHeader.getSynchronize(), m_netDataHeader.getNs(), m_netDataHeader.getFSN(),
                 m_netDataHeader.getHeaderOffset(), m_netDataHeader.getLLId());
@@ -567,31 +567,31 @@ bool Data::processNetwork(uint8_t* data, uint32_t len, uint32_t blockLength)
             m_p25->m_netState = RS_NET_IDLE;
 
             if (m_verbose) {
-                LogMessage(LOG_NET, P25_PDU_STR ", ISP, response, fmt = $%02X, rspClass = $%02X, rspType = $%02X, rspStatus = $%02X, llId = %u, srcLlId = %u",
+                LogMessage(LOG_NET, P25_PDU_STR ", FNE ISP, response, fmt = $%02X, rspClass = $%02X, rspType = $%02X, rspStatus = $%02X, llId = %u, srcLlId = %u",
                         m_netDataHeader.getFormat(), m_netDataHeader.getResponseClass(), m_netDataHeader.getResponseType(), m_netDataHeader.getResponseStatus(),
                         m_netDataHeader.getLLId(), m_netDataHeader.getSrcLLId());
 
                 if (m_netDataHeader.getResponseClass() == PDUAckClass::ACK && m_netDataHeader.getResponseType() == PDUAckType::ACK) {
-                    LogMessage(LOG_NET, P25_PDU_STR ", ISP, response, OSP ACK, llId = %u, all blocks received OK, n = %u",
+                    LogMessage(LOG_NET, P25_PDU_STR ", FNE ISP, response, OSP ACK, llId = %u, all blocks received OK, n = %u",
                         m_netDataHeader.getLLId(), m_netDataHeader.getResponseStatus());
                 } else {
                     if (m_netDataHeader.getResponseClass() == PDUAckClass::NACK) {
                         switch (m_netDataHeader.getResponseType()) {
                             case PDUAckType::NACK_ILLEGAL:
-                                LogMessage(LOG_NET, P25_PDU_STR ", ISP, response, OSP NACK, illegal format, llId = %u",
+                                LogMessage(LOG_NET, P25_PDU_STR ", FNE ISP, response, OSP NACK, illegal format, llId = %u",
                                     m_netDataHeader.getLLId());
                                 break;
                             case PDUAckType::NACK_PACKET_CRC:
-                                LogMessage(LOG_NET, P25_PDU_STR ", ISP, response, OSP NACK, packet CRC error, llId = %u, n = %u",
+                                LogMessage(LOG_NET, P25_PDU_STR ", FNE ISP, response, OSP NACK, packet CRC error, llId = %u, n = %u",
                                     m_netDataHeader.getLLId(), m_netDataHeader.getResponseStatus());
                                 break;
                             case PDUAckType::NACK_SEQ:
                             case PDUAckType::NACK_OUT_OF_SEQ:
-                                LogMessage(LOG_NET, P25_PDU_STR ", ISP, response, OSP NACK, packet out of sequence, llId = %u, seqNo = %u",
+                                LogMessage(LOG_NET, P25_PDU_STR ", FNE ISP, response, OSP NACK, packet out of sequence, llId = %u, seqNo = %u",
                                     m_netDataHeader.getLLId(), m_netDataHeader.getResponseStatus());
                                 break;
                             case PDUAckType::NACK_UNDELIVERABLE:
-                                LogMessage(LOG_NET, P25_PDU_STR ", ISP, response, OSP NACK, packet undeliverable, llId = %u, n = %u",
+                                LogMessage(LOG_NET, P25_PDU_STR ", FNE ISP, response, OSP NACK, packet undeliverable, llId = %u, n = %u",
                                     m_netDataHeader.getLLId(), m_netDataHeader.getResponseStatus());
                                 break;
 
@@ -649,7 +649,7 @@ bool Data::processNetwork(uint8_t* data, uint32_t len, uint32_t blockLength)
                 }
 
                 if (m_verbose) {
-                    LogMessage(LOG_NET, P25_PDU_STR ", ISP, extended address, sap = $%02X, srcLlId = %u",
+                    LogMessage(LOG_NET, P25_PDU_STR ", FNE ISP, extended address, sap = $%02X, srcLlId = %u",
                         m_netDataHeader.getEXSAP(), m_netDataHeader.getSrcLLId());
                 }
 
@@ -690,14 +690,14 @@ bool Data::processNetwork(uint8_t* data, uint32_t len, uint32_t blockLength)
 
                         m_netDataHeader.decodeExtAddr(secondHeader);
                         if (m_verbose) {
-                            LogMessage(LOG_NET, P25_PDU_STR ", ISP, block %u, fmt = $%02X, lastBlock = %u, sap = $%02X, srcLlId = %u",
+                            LogMessage(LOG_NET, P25_PDU_STR ", FNE ISP, block %u, fmt = $%02X, lastBlock = %u, sap = $%02X, srcLlId = %u",
                                 m_netData[i].getSerialNo(), m_netData[i].getFormat(), m_netData[i].getLastBlock(), m_netDataHeader.getEXSAP(), m_netDataHeader.getSrcLLId());
                         }
 
                         m_netExtendedAddress = true;
                     }
                     else {
-                        LogMessage(LOG_NET, P25_PDU_STR ", ISP, block %u, fmt = $%02X, lastBlock = %u",
+                        LogMessage(LOG_NET, P25_PDU_STR ", FNE ISP, block %u, fmt = $%02X, lastBlock = %u",
                             (m_netDataHeader.getFormat() == PDUFormatType::CONFIRMED) ? m_netData[i].getSerialNo() : m_netDataBlockCnt, m_netData[i].getFormat(),
                             m_netData[i].getLastBlock());
                     }
@@ -927,7 +927,7 @@ void Data::writeNet_PDU_User(data::DataHeader& dataHeader, bool extendedAddress,
     uint32_t blocksToFollow = dataHeader.getBlocksToFollow();
 
     if (m_verbose) {
-        LogMessage(LOG_NET, P25_PDU_STR ", OSP, ack = %u, outbound = %u, fmt = $%02X, mfId = $%02X, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padLength = %u, packetLength = %u, S = %u, n = %u, seqNo = %u, lastFragment = %u, hdrOffset = %u, bitLength = %u, llId = %u",
+        LogMessage(LOG_NET, P25_PDU_STR ", FNE OSP, ack = %u, outbound = %u, fmt = $%02X, mfId = $%02X, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padLength = %u, packetLength = %u, S = %u, n = %u, seqNo = %u, lastFragment = %u, hdrOffset = %u, bitLength = %u, llId = %u",
             dataHeader.getAckNeeded(), dataHeader.getOutbound(), dataHeader.getFormat(), dataHeader.getMFId(), dataHeader.getSAP(), dataHeader.getFullMessage(),
             dataHeader.getBlocksToFollow(), dataHeader.getPadLength(), dataHeader.getPacketLength(), dataHeader.getSynchronize(), dataHeader.getNs(), dataHeader.getFSN(), dataHeader.getLastFragment(),
             dataHeader.getHeaderOffset(), bitLength, dataHeader.getLLId());
@@ -958,7 +958,7 @@ void Data::writeNet_PDU_User(data::DataHeader& dataHeader, bool extendedAddress,
             blocksToFollow--;
 
             if (m_verbose) {
-                LogMessage(LOG_NET, P25_PDU_STR ", OSP, extended address, sap = $%02X, srcLlId = %u",
+                LogMessage(LOG_NET, P25_PDU_STR ", FNE OSP, extended address, sap = $%02X, srcLlId = %u",
                     dataHeader.getEXSAP(), dataHeader.getSrcLLId());
             }
         }
@@ -968,7 +968,7 @@ void Data::writeNet_PDU_User(data::DataHeader& dataHeader, bool extendedAddress,
             dataHeader.encodeExtAddr(pduUserData);
 
             if (m_verbose) {
-                LogMessage(LOG_NET, P25_PDU_STR ", OSP, sap = $%02X, srcLlId = %u",
+                LogMessage(LOG_NET, P25_PDU_STR ", FNE OSP, sap = $%02X, srcLlId = %u",
                     dataHeader.getEXSAP(), dataHeader.getSrcLLId());
             }
         }
@@ -986,7 +986,7 @@ void Data::writeNet_PDU_User(data::DataHeader& dataHeader, bool extendedAddress,
             dataBlock.setLastBlock((i + 1U) == blocksToFollow);
 
             if (m_verbose) {
-                LogMessage(LOG_NET, P25_PDU_STR ", OSP, block %u, fmt = $%02X, lastBlock = %u",
+                LogMessage(LOG_NET, P25_PDU_STR ", FNE OSP, block %u, fmt = $%02X, lastBlock = %u",
                     (dataHeader.getFormat() == PDUFormatType::CONFIRMED) ? dataBlock.getSerialNo() : i, dataBlock.getFormat(),
                     dataBlock.getLastBlock());
             }
@@ -1456,6 +1456,9 @@ void Data::writeRF_PDU(const uint8_t* pdu, uint32_t bitLength, bool imm, bool ac
     assert(bitLength > 0U);
 
     m_p25->writeRF_TDU(true, imm);
+
+    for (uint8_t i = 0U; i < 5U; i++)
+        m_p25->writeRF_Nulls();
 
     if (!ackRetry) {
         if (m_retryPDUData != nullptr)

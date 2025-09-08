@@ -89,32 +89,10 @@ bool P25PacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
     ::memcpy(buffer, data + 24U, P25_PDU_FEC_LENGTH_BYTES);
 
     auto it = std::find_if(m_status.begin(), m_status.end(), [&](StatusMapPair x) { return x.second->peerId == peerId; });
-    if (it != m_status.end()) {
-        RxStatus* status = m_status[peerId];
-        if (streamId != status->streamId) {
-            LogWarning(LOG_NET, "P25, Data Call Collision, peer = %u, streamId = %u, rxPeer = %u, rxLlId = %u, rxStreamId = %u, external = %u",
-                peerId, streamId, status->peerId, status->llId, status->streamId, external);
-
-            LogWarning(LOG_NET, "P25, clearing previous data call, timeout, peer = %u, streamId = %u, rxPeer = %u, rxLlId = %u, rxStreamId = %u, external = %u",
-                peerId, streamId, status->peerId, status->llId, status->streamId, external);
-
-            delete status;
-            m_status.erase(peerId);
-
-            // create a new status entry
-            m_status.lock(true);
-            RxStatus *status = new RxStatus();
-            status->callStartTime = pktTime;
-            status->streamId = streamId;
-            status->peerId = peerId;
-            m_status.unlock();
-
-            m_status.insert(peerId, status);
-        }
-    } else {
+    if (it == m_status.end()) {
         // create a new status entry
         m_status.lock(true);
-        RxStatus *status = new RxStatus();
+        RxStatus* status = new RxStatus();
         status->callStartTime = pktTime;
         status->streamId = streamId;
         status->peerId = peerId;
@@ -124,6 +102,7 @@ bool P25PacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
     }
 
     RxStatus* status = m_status[peerId];
+    status->streamId = streamId;
 
     // make sure we don't get a PDU with more blocks then we support
     if (currentBlock >= P25_MAX_PDU_BLOCKS) {
@@ -580,12 +559,6 @@ void P25PacketData::dispatch(uint32_t peerId)
 
     uint8_t sap = (status->extendedAddress) ? status->header.getEXSAP() : status->header.getSAP();
 
-    // don't dispatch SNDCP control, conventional data registration or ARP
-    if (sap != PDUSAP::SNDCP_CTRL_DATA && sap != PDUSAP::CONV_DATA_REG &&
-        sap != PDUSAP::ARP) {
-        dispatchToFNE(peerId);
-    }
-
     // handle standard P25 service access points
     switch (sap) {
     case PDUSAP::ARP:
@@ -740,9 +713,11 @@ void P25PacketData::dispatch(uint32_t peerId)
         LogMessage(LOG_NET, P25_PDU_STR ", KMM (Key Management Message), peer = %u, blocksToFollow = %u",
             peerId, status->header.getBlocksToFollow());
 
-        processKMM(status);
+        processKMM(status, sap == PDUSAP::ENC_KMM);
     }
+    break;
     default:
+        dispatchToFNE(peerId);
         break;
     }
 }
@@ -924,7 +899,7 @@ bool P25PacketData::processSNDCPControl(RxStatus* status)
 
 /* Helper used to process KMM frames from PDU data. */
 
-bool P25PacketData::processKMM(RxStatus* status)
+bool P25PacketData::processKMM(RxStatus* status, bool encrypted)
 {
     std::unique_ptr<KMMFrame> frame = KMMFactory::create(status->pduUserData);
     if (frame == nullptr) {
@@ -933,6 +908,9 @@ bool P25PacketData::processKMM(RxStatus* status)
     }
 
     uint32_t llId = status->header.getLLId();
+
+    // ack KMM frame
+    write_PDU_Ack_Response(PDUAckClass::ACK, PDUAckType::ACK, status->header.getNs(), llId, false);
 
     switch (frame->getMessageId()) {
         case KMM_MessageType::HELLO:
@@ -959,9 +937,9 @@ void P25PacketData::write_PDU_KMM_NoService(uint32_t llId)
 {
     // assemble a P25 PDU frame header for transport...
     data::DataHeader dataHeader = data::DataHeader();
-    dataHeader.setFormat(PDUFormatType::UNCONFIRMED);
+    dataHeader.setFormat(PDUFormatType::CONFIRMED);
     dataHeader.setMFId(MFG_STANDARD);
-    dataHeader.setAckNeeded(false);
+    dataHeader.setAckNeeded(true);
     dataHeader.setOutbound(true);
     dataHeader.setSAP(PDUSAP::UNENC_KMM);
     dataHeader.setLLId(llId);
