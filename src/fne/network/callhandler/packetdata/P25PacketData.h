@@ -216,6 +216,12 @@ namespace network
                 bool processKMM(RxStatus* status);
 
                 /**
+                 * @brief Helper used to return a No-Service KMM to the calling SU.
+                 * @param llId Logical Link Address.
+                 */
+                void write_PDU_KMM_NoService(uint32_t llId);
+
+                /**
                  * @brief Helper write ARP request to the network.
                  * @param addr IP Address.
                  */

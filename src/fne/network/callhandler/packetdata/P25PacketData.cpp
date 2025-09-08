@@ -942,28 +942,7 @@ bool P25PacketData::processKMM(RxStatus* status)
                 kmm->getFlag());
 
             // respond with No-Service
-            // assemble a P25 PDU frame header for transport...
-            data::DataHeader dataHeader = data::DataHeader();
-            dataHeader.setFormat(PDUFormatType::UNCONFIRMED);
-            dataHeader.setMFId(MFG_STANDARD);
-            dataHeader.setAckNeeded(false);
-            dataHeader.setOutbound(true);
-            dataHeader.setSAP(PDUSAP::UNENC_KMM);
-            dataHeader.setLLId(status->llId);
-            dataHeader.setBlocksToFollow(1U);
-
-            dataHeader.calculateLength(KMM_NO_SERVICE_LENGTH);
-            uint32_t pduLength = dataHeader.getPDULength();
-
-            DECLARE_UINT8_ARRAY(pduUserData, pduLength);
-
-            uint8_t buffer[KMM_NO_SERVICE_LENGTH];
-            KMMNoService outKmm = KMMNoService();
-            outKmm.encode(buffer);
-
-            ::memcpy(pduUserData, buffer, KMM_NO_SERVICE_LENGTH);
-
-            dispatchUserFrameToFNE(dataHeader, false, pduUserData);
+            write_PDU_KMM_NoService(llId);
         }
         break;
 
@@ -972,6 +951,34 @@ bool P25PacketData::processKMM(RxStatus* status)
     } // switch (packet->getPDUType())
 
     return true;
+}
+
+/* Helper used to return a No-Service KMM to the calling SU. */
+
+void P25PacketData::write_PDU_KMM_NoService(uint32_t llId)
+{
+    // assemble a P25 PDU frame header for transport...
+    data::DataHeader dataHeader = data::DataHeader();
+    dataHeader.setFormat(PDUFormatType::UNCONFIRMED);
+    dataHeader.setMFId(MFG_STANDARD);
+    dataHeader.setAckNeeded(false);
+    dataHeader.setOutbound(true);
+    dataHeader.setSAP(PDUSAP::UNENC_KMM);
+    dataHeader.setLLId(llId);
+    dataHeader.setBlocksToFollow(1U);
+
+    dataHeader.calculateLength(KMM_NO_SERVICE_LENGTH);
+    uint32_t pduLength = dataHeader.getPDULength();
+
+    DECLARE_UINT8_ARRAY(pduUserData, pduLength);
+
+    uint8_t buffer[KMM_NO_SERVICE_LENGTH];
+    KMMNoService outKmm = KMMNoService();
+    outKmm.encode(buffer);
+
+    ::memcpy(pduUserData, buffer, KMM_NO_SERVICE_LENGTH);
+
+    dispatchUserFrameToFNE(dataHeader, false, pduUserData);
 }
 
 /* Helper write ARP request to the network. */
