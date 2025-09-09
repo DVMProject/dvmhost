@@ -920,7 +920,7 @@ bool P25PacketData::processKMM(RxStatus* status, bool encrypted)
                 kmm->getFlag());
 
             // respond with No-Service
-            write_PDU_KMM_NoService(llId);
+            write_PDU_KMM_NoService(llId, kmm->getSrcLLId());
         }
         break;
 
@@ -933,7 +933,7 @@ bool P25PacketData::processKMM(RxStatus* status, bool encrypted)
 
 /* Helper used to return a No-Service KMM to the calling SU. */
 
-void P25PacketData::write_PDU_KMM_NoService(uint32_t llId)
+void P25PacketData::write_PDU_KMM_NoService(uint32_t llId, uint32_t kmmRSI)
 {
     // assemble a P25 PDU frame header for transport...
     data::DataHeader dataHeader = data::DataHeader();
@@ -952,6 +952,9 @@ void P25PacketData::write_PDU_KMM_NoService(uint32_t llId)
 
     uint8_t buffer[KMM_NO_SERVICE_LENGTH];
     KMMNoService outKmm = KMMNoService();
+    outKmm.setSrcLLId(WUID_FNE);
+    outKmm.setDstLLId(kmmRSI);
+
     outKmm.encode(buffer);
 
     ::memcpy(pduUserData, buffer, KMM_NO_SERVICE_LENGTH);

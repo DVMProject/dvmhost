@@ -219,8 +219,9 @@ namespace network
                 /**
                  * @brief Helper used to return a No-Service KMM to the calling SU.
                  * @param llId Logical Link Address.
+                 * @param kmmRSI KMM Radio Set Identifier.
                  */
-                void write_PDU_KMM_NoService(uint32_t llId);
+                void write_PDU_KMM_NoService(uint32_t llId, uint32_t kmmRSI);
 
                 /**
                  * @brief Helper write ARP request to the network.
