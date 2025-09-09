@@ -16,6 +16,11 @@
 #include "Log.h"
 #include "Utils.h"
 
+#if defined(ENABLE_SSL)
+#include <openssl/aes.h>
+#include <openssl/evp.h>
+#endif // ENABLE_SSL
+
 using namespace ::crypto;
 using namespace p25;
 using namespace p25::defines;
@@ -193,6 +198,64 @@ void P25Crypto::resetKeystream()
         m_keystream = nullptr;
         m_keystreamPos = 0U;
     }
+}
+
+/* Helper to crypt a P25 TEK with the given AES-256 KEK. */
+
+UInt8Array P25Crypto::cryptAES_TEK(const uint8_t* kek, uint8_t* tek, uint8_t tekLen)
+{
+#if defined(ENABLE_SSL)
+    // static IV with $A6 pattern defined in TIA-102.AACA-C-2023 13.3
+    uint8_t iv[] = {
+        0xA6U, 0xA6U, 0xA6U, 0xA6U, 0xA6U, 0xA6U, 0xA6U, 0xA6U, 0xA6U, 0xA6U, 0xA6U, 0xA6U, 0xA6U, 0xA6U
+    };
+
+    int len;
+    uint8_t tempBuf[1024U];
+    ::memset(tempBuf, 0x00U, 1024U);
+
+    EVP_CIPHER_CTX* ctx;
+
+    // create and initialize a cipher context
+    if (!(ctx = EVP_CIPHER_CTX_new())) {
+        LogError(LOG_P25, "EVP_CIPHER_CTX_new(), failed to initialize cipher context");
+        return nullptr;
+    }
+
+    // initialize the wrapper context with AES-256-WRAP
+    if (EVP_EncryptInit_ex(ctx, EVP_aes_256_wrap(), NULL, kek, iv) != 1) {
+        LogError(LOG_P25, "EVP_EncryptInit_ex(), failed to initialize cipher wrapping context");
+        EVP_CIPHER_CTX_free(ctx);
+        return nullptr;
+    }
+
+    // perform the wrapping operation
+    if (EVP_EncryptUpdate(ctx, tempBuf, &len, tek, tekLen) != 1) {
+        LogError(LOG_P25, "EVP_EncryptUpdate(), failed to wrap TEK");
+        EVP_CIPHER_CTX_free(ctx);
+        return nullptr;
+    }
+
+    // finalize the wrapping (no output, just padding)
+    int tempLen;
+    if (EVP_EncryptFinal_ex(ctx, tempBuf + len, &tempLen) != 1) {
+        LogError(LOG_P25, "EVP_EncryptFinal_ex(), failed to finalize wrapping TEK");
+        EVP_CIPHER_CTX_free(ctx);
+        return nullptr;
+    }
+    len += tempLen;
+
+    EVP_CIPHER_CTX_free(ctx);
+
+    UInt8Array wrappedKey = std::unique_ptr<uint8_t[]>(new uint8_t[len]);
+    ::memset(wrappedKey.get(), 0x00U, len);
+    ::memcpy(wrappedKey.get(), tempBuf, len);
+
+    return wrappedKey;
+#else
+    LogError(LOG_P25, "No OpenSSL, TEK encryption is not supported!");
+    return nullptr;
+#endif // ENABLE_SSL
 }
 
 /* Helper to crypt IMBE audio using AES-256. */

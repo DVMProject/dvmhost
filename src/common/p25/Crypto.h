@@ -74,6 +74,16 @@ namespace p25
             void resetKeystream();
 
             /**
+             * @brief Helper to crypt a P25 TEK with the given AES-256 KEK.
+             * @note This assumes AES-256 KEK and will not work with other key types.
+             * @param kek Key Encryption Key
+             * @param tek Traffic Encryption Key
+             * @param tekLen Traffic Encryption Key Length
+             * @returns UInt8Array Buffer containing the encryption wrapped TEK.
+             */
+            UInt8Array cryptAES_TEK(const uint8_t* kek, uint8_t* tek, uint8_t tekLen);
+
+            /**
              * @brief Helper to crypt P25 IMBE audio using AES-256.
              * @param imbe Buffer containing IMBE to crypt.
              * @param duid P25 DUID.
