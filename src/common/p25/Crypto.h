@@ -82,6 +82,15 @@ namespace p25
              * @returns UInt8Array Buffer containing the encryption wrapped TEK.
              */
             UInt8Array cryptAES_TEK(const uint8_t* kek, uint8_t* tek, uint8_t tekLen);
+            /**
+             * @brief Helper to decrypt a P25 TEK with the given AES-256 KEK.
+             * @note This assumes AES-256 KEK and will not work with other key types.
+             * @param kek Key Encryption Key
+             * @param tek Wrapped Traffic Encryption Key
+             * @param tekLen Wrapped Traffic Encryption Key Length
+             * @returns UInt8Array Buffer containing the decrypted TEK.
+             */
+            UInt8Array decryptAES_TEK(const uint8_t* kek, uint8_t* tek, uint8_t tekLen);
 
             /**
              * @brief Helper to crypt P25 IMBE audio using AES-256.
