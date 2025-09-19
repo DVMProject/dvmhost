@@ -301,9 +301,10 @@ uint8_t* FrameQueue::generateMessage(const uint8_t* message, uint32_t length, ui
         }
 
         if (timestamp != INVALID_TS) {
+            uint32_t prevTimestamp = timestamp;
             timestamp += (RTP_GENERIC_CLOCK_RATE / 133);
             if (m_debug)
-                LogDebugEx(LOG_NET, "FrameQueue::generateMessage()", "RTP streamId = %u, previous TS = %u, TS = %u, rtpSeq = %u", streamId, m_streamTimestamps[streamId], timestamp, rtpSeq);
+                LogDebugEx(LOG_NET, "FrameQueue::generateMessage()", "RTP streamId = %u, previous TS = %u, TS = %u, rtpSeq = %u", streamId, prevTimestamp, timestamp, rtpSeq);
             updateTimestamp(streamId, timestamp);
         }
     }
