@@ -141,6 +141,10 @@ FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port,
 
 FNENetwork::~FNENetwork()
 {
+    if (m_kmfServicesEnabled) {
+        m_p25OTARService->close();
+    }
+
     delete m_p25OTARService;
 
     delete m_tagDMR;
@@ -188,6 +192,13 @@ void FNENetwork::setOptions(yaml::Node& conf, bool printOptions)
 
 #if defined(ENABLE_SSL)
     m_kmfServicesEnabled = conf["kmfServicesEnabled"].as<bool>(false);
+    uint16_t kmfOtarPort = conf["kmfOtarPort"].as<uint16_t>(64414U);
+    if (m_kmfServicesEnabled) {
+        if (!m_p25OTARService->open(m_address, kmfOtarPort)) {
+            m_kmfServicesEnabled = false;
+            LogError(LOG_P25, "FNE OTAR KMF services failed to start, OTAR service disabled.");
+        }
+    }
 #else
     m_kmfServicesEnabled = false;
     LogWarning(LOG_P25, "FNE is compiled without OpenSSL support, KMF services are unavailable.");
@@ -251,6 +262,8 @@ void FNENetwork::setOptions(yaml::Node& conf, bool printOptions)
         }
         LogInfo("    Parrot Repeat to Only Originating Peer: %s", m_parrotOnlyOriginating ? "yes" : "no");
         LogInfo("    P25 OTAR KMF Services Enabled: %s", m_kmfServicesEnabled ? "yes" : "no");
+        LogInfo("    P25 OTAR KMF Listening Address: %s", m_address.c_str());
+        LogInfo("    P25 OTAR KMF Listening Port: %u", kmfOtarPort);
     }
 }
 
@@ -489,6 +502,9 @@ void FNENetwork::clock(uint32_t ms)
         m_parrotDelayTimer.isRunning() && m_parrotDelayTimer.hasExpired()) {
         m_parrotDelayTimer.stop();
     }
+
+    if (m_kmfServicesEnabled)
+        m_p25OTARService->clock(ms);
 }
 
 /* Opens connection to the network. */

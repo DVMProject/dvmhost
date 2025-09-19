@@ -19,11 +19,28 @@
 #include "fne/Defines.h"
 #include "common/p25/P25Defines.h"
 #include "common/p25/Crypto.h"
+#include "common/network/udp/Socket.h"
+#include "common/network/RawFrameQueue.h"
 #include "network/FNENetwork.h"
 #include "network/callhandler/packetdata/P25PacketData.h"
 
 namespace network
 {
+    // ---------------------------------------------------------------------------
+    //  Structure Declaration
+    // ---------------------------------------------------------------------------
+
+    /**
+     * @brief Represents the data required for a OTAR network packet handler thread.
+     * @ingroup fne_network
+     */
+    struct OTARPacketRequest : thread_t {
+        sockaddr_storage address;               //! IP Address and Port. 
+        uint32_t addrLen;                       //!
+        int length = 0U;                        //! Length of raw data buffer
+        uint8_t *buffer;                        //! Raw data buffer
+    };
+
     // ---------------------------------------------------------------------------
     //  Class Declaration
     // ---------------------------------------------------------------------------
@@ -64,13 +81,47 @@ namespace network
          */
         void clock(uint32_t ms);
 
+        /**
+         * @brief Opens a connection to the OTAR port.
+         * @param address Hostname/IP address to listen on.
+         * @param port Port number.
+         * @returns bool True, if connection is opened, otherwise false.
+         */
+        bool open(const std::string& address, uint16_t port);
+
+        /**
+         * @brief Closes the connection to the OTAR port.
+         */
+        void close();
+
     private:
+        network::udp::Socket* m_socket;
+        network::RawFrameQueue* m_frameQueue;
+
+        ThreadPool m_threadPool;
+
         FNENetwork* m_network;
         network::callhandler::packetdata::P25PacketData* m_packetData;
 
-        p25::crypto::P25Crypto* m_crypto;
-
         bool m_debug;
+
+        /**
+         * @brief Entry point to process a given network packet.
+         * @param arg Instance of the OTARPacketRequest structure.
+         */
+        static void taskNetworkRx(OTARPacketRequest* req);
+
+        /**
+         * @brief Encrypt/decrypt KMM frame.
+         * @param[in] algoId Algorithm ID.
+         * @param[in] kid Key ID.
+         * @param mi Message Indicator.
+         * @param[in] buffer KMM frame buffer.
+         * @param len Length of KMM frame buffer.
+         * @param encrypt True to encrypt, false to decrypt.
+         * @returns UInt8Array Buffer containing the encrypted/decrypted KMM frame.
+         */
+        UInt8Array cryptKMM(uint8_t algoId, uint16_t kid, uint8_t* mi, const uint8_t* buffer, uint32_t len, bool encrypt = false);
 
         /**
          * @brief Helper used to process KMM frames.

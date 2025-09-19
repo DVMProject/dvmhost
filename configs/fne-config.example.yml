@@ -93,6 +93,8 @@ master:
 
     # Flag indicating whether or not P25 OTAR KMF services are enabled.
     kmfServicesEnabled: false
+    # Port number to listen on for P25 OTAR KMF services.
+    kmfOtarPort: 64414
 
     # Flag indicating whether or not a grant responses will only be sent to TGs with affiliations, if the TG is configured for affiliation gating.
     restrictGrantToAffiliatedOnly: false
