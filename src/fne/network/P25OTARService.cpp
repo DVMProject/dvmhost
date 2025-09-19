@@ -326,6 +326,9 @@ UInt8Array P25OTARService::processKMM(const uint8_t* data, uint32_t len, uint32_
             LogError(LOG_P25, "OTAR KMM, unable to decrypt KMM, algoId = $%02X, kID = $%04X", algoId, kid);
             return nullptr;
         }
+
+        if (m_debug)
+            Utils::dump(1U, "P25OTARService::processKMM(), (Decrypted) KMM Network Message", buffer.get(), len);
     }
 
     std::unique_ptr<KMMFrame> frame = KMMFactory::create(buffer.get());
