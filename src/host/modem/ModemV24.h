@@ -97,8 +97,8 @@ namespace modem
             ::memset(netLDU1, 0x00U, 9U * 25U);
             ::memset(netLDU2, 0x00U, 9U * 25U);
 
-            pduUserData = new uint8_t[P25_MAX_PDU_BLOCKS * P25_PDU_CONFIRMED_LENGTH_BYTES + 2U];
-            ::memset(pduUserData, 0x00U, P25_MAX_PDU_BLOCKS * P25_PDU_CONFIRMED_LENGTH_BYTES + 2U);
+            pduUserData = new uint8_t[P25DEF::P25_MAX_PDU_BLOCKS * P25DEF::P25_PDU_CONFIRMED_LENGTH_BYTES + 2U];
+            ::memset(pduUserData, 0x00U, P25DEF::P25_MAX_PDU_BLOCKS * P25DEF::P25_PDU_CONFIRMED_LENGTH_BYTES + 2U);
 
             resetCallData();
         }
@@ -160,7 +160,7 @@ namespace modem
             seqNo = 0U;
 
             if (pduUserData != nullptr)
-                ::memset(pduUserData, 0x00U, P25_MAX_PDU_BLOCKS * P25_PDU_CONFIRMED_LENGTH_BYTES + 2U);
+                ::memset(pduUserData, 0x00U, P25DEF::P25_MAX_PDU_BLOCKS * P25DEF::P25_PDU_CONFIRMED_LENGTH_BYTES + 2U);
             dataHeader.reset();
             dataCall = false;
 
@@ -252,7 +252,7 @@ namespace modem
         /**
          * @brief Data call header.
          */
-        data::DataHeader dataHeader;
+        p25::data::DataHeader dataHeader;
 
         /**
          * @brief Flag indicating the current call is a data call.
