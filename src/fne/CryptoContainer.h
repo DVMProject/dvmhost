@@ -157,9 +157,9 @@ public:
 // ---------------------------------------------------------------------------
 
 /**
- * @brief Implements a threading lookup table class that contains routing
- *  rules information.
- * @ingroup lookups_tgid
+ * @brief Implements a threading lookup class that contains encryption key container
+ *  information from KFDtool EKC files.
+ * @ingroup fne
  */
 class HOST_SW_API CryptoContainer : public Thread {
 public:
