@@ -60,6 +60,13 @@ void KMMHello::encode(uint8_t* data)
     data[10U] = m_flag;                                         // Hello Flag
 }
 
+/* Returns a string that represents the current KMM frame. */
+
+std::string KMMHello::toString()
+{
+    return std::string("KMM, HELLO (Hello)");
+}
+
 // ---------------------------------------------------------------------------
 //  Protected Class Members
 // ---------------------------------------------------------------------------

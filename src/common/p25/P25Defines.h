@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2016 Jonathan Naylor, G4KLX
- *  Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2017-2025 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -816,6 +816,8 @@ namespace p25
     #define P25_LDU2_STR    "P25, LDU2 (Logical Link Data Unit 2)"
     #define P25_PDU_STR     "P25, PDU (Packet Data Unit)"
     #define P25_TDULC_STR   "P25, TDULC (Terminator Data Unit with Link Control)"
+
+    #define P25_KMM_STR     "P25, KMM (Key Management Message)"
     } // namespace defines
 } // namespace p25
 

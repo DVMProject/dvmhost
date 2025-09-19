@@ -64,6 +64,13 @@ void KMMRegistrationCommand::encode(uint8_t* data)
     SET_UINT24(m_kmfRSI, data, 11U);                            // KMF RSI
 }
 
+/* Returns a string that represents the current KMM frame. */
+
+std::string KMMRegistrationCommand::toString()
+{
+    return std::string("KMM, REG_CMD (Registration Command)");
+}
+
 // ---------------------------------------------------------------------------
 //  Protected Class Members
 // ---------------------------------------------------------------------------

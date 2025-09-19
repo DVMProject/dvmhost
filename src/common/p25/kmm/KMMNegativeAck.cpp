@@ -66,6 +66,13 @@ void KMMNegativeAck::encode(uint8_t* data)
     data[13U] = m_status;
 }
 
+/* Returns a string that represents the current KMM frame. */
+
+std::string KMMNegativeAck::toString()
+{
+    return std::string("KMM, NAK (Negative Acknowledge)");
+}
+
 // ---------------------------------------------------------------------------
 //  Protected Class Members
 // ---------------------------------------------------------------------------

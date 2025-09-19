@@ -420,6 +420,7 @@ namespace network
          * @param peerId Unique ID on the network.
          * @param password Network authentication password.
          * @param debug Flag indicating whether network debug is enabled.
+         * @param kmfDebug Flag indicating whether P25 OTAR KMF services debug is enabled.
          * @param verbose Flag indicating whether network verbose logging is enabled.
          * @param reportPeerPing Flag indicating whether peer pinging is reported.
          * @param dmr Flag indicating whether DMR is enabled.
@@ -435,8 +436,9 @@ namespace network
          * @param workerCnt Number of worker threads.
          */
         FNENetwork(HostFNE* host, const std::string& address, uint16_t port, uint32_t peerId, const std::string& password,
-            bool debug, bool verbose, bool reportPeerPing, bool dmr, bool p25, bool nxdn, bool analog, uint32_t parrotDelay, bool parrotGrantDemand,
-            bool allowActivityTransfer, bool allowDiagnosticTransfer, uint32_t pingTime, uint32_t updateLookupTime, uint16_t workerCnt);
+            bool debug, bool kmfDebug, bool verbose, bool reportPeerPing, bool dmr, bool p25, bool nxdn, bool analog, 
+            uint32_t parrotDelay, bool parrotGrantDemand, bool allowActivityTransfer, bool allowDiagnosticTransfer, 
+            uint32_t pingTime, uint32_t updateLookupTime, uint16_t workerCnt);
         /**
          * @brief Finalizes a instance of the FNENetwork class.
          */

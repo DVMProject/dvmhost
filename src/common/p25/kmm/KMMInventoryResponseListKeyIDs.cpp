@@ -97,6 +97,13 @@ void KMMInventoryResponseListKeyIDs::encode(uint8_t* data)
     }
 }
 
+/* Returns a string that represents the current KMM frame. */
+
+std::string KMMInventoryResponseListKeyIDs::toString()
+{
+    return std::string("KMM, INVENTORY_RSP (Inventory Response, Active Key IDs)");
+}
+
 // ---------------------------------------------------------------------------
 //  Protected Class Members
 // ---------------------------------------------------------------------------

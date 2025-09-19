@@ -55,6 +55,13 @@ void KMMZeroize::encode(uint8_t* data)
     KMMFrame::encodeHeader(data);
 }
 
+/* Returns a string that represents the current KMM frame. */
+
+std::string KMMZeroize::toString()
+{
+    return std::string("KMM, ZEROIZE_CMD (Zeroize Command)");
+}
+
 // ---------------------------------------------------------------------------
 //  Protected Class Members
 // ---------------------------------------------------------------------------

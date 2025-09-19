@@ -84,6 +84,12 @@ namespace p25
              */
             virtual void encode(uint8_t* data) = 0;
 
+            /**
+             * @brief Returns a string that represents the current KMM frame.
+             * @returns std::string String representation of the KMM frame.
+             */
+            virtual std::string toString();
+
         public:
             // Common Data
             /**

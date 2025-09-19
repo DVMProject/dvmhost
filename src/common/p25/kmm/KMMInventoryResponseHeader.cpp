@@ -62,6 +62,13 @@ void KMMInventoryResponseHeader::encode(uint8_t* data)
     SET_UINT16(m_numberOfItems, data, 11U);                     // Number of Items
 }
 
+/* Returns a string that represents the current KMM frame. */
+
+std::string KMMInventoryResponseHeader::toString()
+{
+    return std::string("KMM, INVENTORY_RSP (Inventory Response)");
+}
+
 // ---------------------------------------------------------------------------
 //  Protected Class Members
 // ---------------------------------------------------------------------------

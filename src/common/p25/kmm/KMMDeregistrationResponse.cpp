@@ -60,6 +60,13 @@ void KMMDeregistrationResponse::encode(uint8_t* data)
     data[10U] = m_status;                                       // Status
 }
 
+/* Returns a string that represents the current KMM frame. */
+
+std::string KMMDeregistrationResponse::toString()
+{
+    return std::string("KMM, DEREG_RSP (Deregistration Response)");
+}
+
 // ---------------------------------------------------------------------------
 //  Protected Class Members
 // ---------------------------------------------------------------------------

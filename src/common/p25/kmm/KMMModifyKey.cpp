@@ -155,6 +155,13 @@ void KMMModifyKey::encode(uint8_t* data)
     }
 }
 
+/* Returns a string that represents the current KMM frame. */
+
+std::string KMMModifyKey::toString()
+{
+    return std::string("KMM, MODIFY_KEY_CMD (Modify Key)");
+}
+
 // ---------------------------------------------------------------------------
 //  Protected Class Members
 // ---------------------------------------------------------------------------

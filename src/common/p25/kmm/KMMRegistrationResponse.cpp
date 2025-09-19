@@ -27,7 +27,7 @@ using namespace p25::kmm;
 KMMRegistrationResponse::KMMRegistrationResponse() : KMMFrame(),
     m_status(KMM_Status::CMD_PERFORMED)
 {
-    m_messageId = KMM_MessageType::DEREG_RSP;
+    m_messageId = KMM_MessageType::REG_RSP;
     m_respKind = KMM_ResponseKind::IMMEDIATE;
 }
 
@@ -58,6 +58,13 @@ void KMMRegistrationResponse::encode(uint8_t* data)
     KMMFrame::encodeHeader(data);
 
     data[10U] = m_status;                                       // Status
+}
+
+/* Returns a string that represents the current KMM frame. */
+
+std::string KMMRegistrationResponse::toString()
+{
+    return std::string("KMM, REG_RSP (Registration Response)");
 }
 
 // ---------------------------------------------------------------------------

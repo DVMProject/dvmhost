@@ -67,6 +67,12 @@ namespace p25
              */
             void encode(uint8_t* data) override;
 
+            /**
+             * @brief Returns a string that represents the current KMM frame.
+             * @returns std::string String representation of the KMM frame.
+             */
+            virtual std::string toString() override;
+
         public:
             /**
              * @brief Inventory type.

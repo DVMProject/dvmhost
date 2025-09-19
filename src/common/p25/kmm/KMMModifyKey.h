@@ -74,6 +74,12 @@ namespace p25
              */
             void encode(uint8_t* data) override;
 
+            /**
+             * @brief Returns a string that represents the current KMM frame.
+             * @returns std::string String representation of the KMM frame.
+             */
+            std::string toString() override;
+
             /** @name Encryption data */
             /**
              * @brief Sets the encryption message indicator.

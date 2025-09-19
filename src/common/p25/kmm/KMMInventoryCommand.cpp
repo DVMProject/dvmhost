@@ -60,6 +60,13 @@ void KMMInventoryCommand::encode(uint8_t* data)
     data[10U] = m_inventoryType;                                // Inventory Type
 }
 
+/* Returns a string that represents the current KMM frame. */
+
+std::string KMMInventoryCommand::toString()
+{
+    return std::string("KMM, INVENTORY_CMD (Inventory Command)");
+}
+
 // ---------------------------------------------------------------------------
 //  Protected Class Members
 // ---------------------------------------------------------------------------

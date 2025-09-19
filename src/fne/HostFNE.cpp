@@ -540,6 +540,7 @@ bool HostFNE::createMasterNetwork()
     std::string password = masterConf["password"].as<std::string>();
     bool verbose = masterConf["verbose"].as<bool>(false);
     bool debug = masterConf["debug"].as<bool>(false);
+    bool kmfDebug = masterConf["kmfDebug"].as<bool>(false);
     uint16_t workerCnt = (uint16_t)masterConf["workers"].as<uint32_t>(16U);
 
     // clamp worker thread count properly
@@ -626,8 +627,12 @@ bool HostFNE::createMasterNetwork()
         LogInfo("    Debug: yes");
     }
 
+    if (kmfDebug) {
+        LogInfo("    P25 OTAR KMF Services Debug: yes");
+    }
+
     // initialize networking
-    m_network = new FNENetwork(this, address, port, id, password, debug, verbose, reportPeerPing, m_dmrEnabled, m_p25Enabled, m_nxdnEnabled, m_analogEnabled,
+    m_network = new FNENetwork(this, address, port, id, password, debug, kmfDebug, verbose, reportPeerPing, m_dmrEnabled, m_p25Enabled, m_nxdnEnabled, m_analogEnabled,
         parrotDelay, parrotGrantDemand, m_allowActivityTransfer, m_allowDiagnosticTransfer, m_pingTime, m_updateLookupTime, workerCnt);
     m_network->setOptions(masterConf, true);
 

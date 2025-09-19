@@ -30,6 +30,16 @@ using namespace p25::kmm;
 #include <chrono>
 
 // ---------------------------------------------------------------------------
+//  Macros
+// ---------------------------------------------------------------------------
+
+// Macro helper to verbose log a generic KMM.
+#define VERBOSE_LOG_KMM(_PCKT_STR, __LLID)                                              \
+    if (m_verbose) {                                                                    \
+        LogMessage(LOG_NET, "KMM, %s, llId = %u", _PCKT_STR.c_str(), __LLID);           \
+    }
+
+// ---------------------------------------------------------------------------
 //  Constants
 // ---------------------------------------------------------------------------
 
@@ -41,13 +51,14 @@ using namespace p25::kmm;
 
 /* Initializes a new instance of the P25OTARService class. */
 
-P25OTARService::P25OTARService(FNENetwork* network, P25PacketData* packetData, bool debug) :
+P25OTARService::P25OTARService(FNENetwork* network, P25PacketData* packetData, bool debug, bool verbose) :
     m_socket(nullptr),
     m_frameQueue(nullptr),
     m_threadPool(MAX_THREAD_CNT, "otar"),
     m_network(network),
     m_packetData(packetData),
-    m_debug(debug)
+    m_debug(debug),
+    m_verbose(verbose)
 {
     assert(network != nullptr);
     assert(packetData != nullptr);
@@ -92,7 +103,7 @@ bool P25OTARService::processDLD(const uint8_t* data, uint32_t len, uint32_t llId
         // re-encrypt the KMM response
         pduUserData = cryptKMM(algoId, kid, mi, pduUserData.get(), payloadSize, true);
         if (pduUserData == nullptr) {
-            LogError(LOG_P25, "OTAR KMM, unable to encrypt KMM response, algoId = $%02X, kID = $%04X", algoId, kid);
+            LogError(LOG_P25, P25_KMM_STR ", unable to encrypt KMM response, algoId = $%02X, kID = $%04X", algoId, kid);
             return false;
         }
     }
@@ -128,7 +139,7 @@ void P25OTARService::clock(uint32_t ms)
 
             // enqueue the task
             if (!m_threadPool.enqueue(new_pooltask(taskNetworkRx, req))) {
-                LogError(LOG_NET, "Failed to task enqueue control network packet request, %s:%u", 
+                LogError(LOG_P25, "Failed to task enqueue KMM network packet request, %s:%u", 
                     udp::Socket::address(address).c_str(), udp::Socket::port(address));
                 if (req != nullptr) {
                     if (req->buffer != nullptr)
@@ -211,7 +222,7 @@ void P25OTARService::taskNetworkRx(OTARPacketRequest* req)
             if (encrypted) {
                 buffer = network->cryptKMM(algoId, kid, mi, buffer.get(), req->length - 13U, false);
                 if (buffer == nullptr) {
-                    LogError(LOG_P25, "OTAR KMM, unable to decrypt KMM, algoId = $%02X, kID = $%04X", algoId, kid);
+                    LogError(LOG_P25, P25_KMM_STR ", unable to decrypt KMM, algoId = $%02X, kID = $%04X", algoId, kid);
                     if (req->buffer != nullptr)
                         delete[] req->buffer;
                     delete req;
@@ -226,7 +237,7 @@ void P25OTARService::taskNetworkRx(OTARPacketRequest* req)
                 // re-encrypt the KMM response
                 pduUserData = network->cryptKMM(algoId, kid, mi, pduUserData.get(), payloadSize, true);
                 if (pduUserData == nullptr) {
-                    LogError(LOG_P25, "OTAR KMM, unable to encrypt KMM response, algoId = $%02X, kID = $%04X", algoId, kid);
+                    LogError(LOG_P25, P25_KMM_STR ", unable to encrypt KMM response, algoId = $%02X, kID = $%04X", algoId, kid);
                     if (req->buffer != nullptr)
                         delete[] req->buffer;
                     delete req;
@@ -280,7 +291,7 @@ UInt8Array P25OTARService::cryptKMM(uint8_t algoId, uint16_t kid, uint8_t* mi, c
             Utils::dump(1U, "P25OTARService::cryptKMM(), Key", key, P25DEF::MAX_ENC_KEY_LENGTH_BYTES);
         }
 
-        LogMessage(LOG_P25, "OTAR KMM, algId = $%02X, kID = $%04X", algoId, kid);
+        LogMessage(LOG_P25, P25_KMM_STR ", algId = $%02X, kID = $%04X", algoId, kid);
         crypto.setKey(key, keyLength);
         crypto.generateKeystream();
 
@@ -323,7 +334,7 @@ UInt8Array P25OTARService::processKMM(const uint8_t* data, uint32_t len, uint32_
         // decrypt frame before processing
         buffer = cryptKMM(algoId, kid, mi, data + 10U, len - 10U, false);
         if (buffer == nullptr) {
-            LogError(LOG_P25, "OTAR KMM, unable to decrypt KMM, algoId = $%02X, kID = $%04X", algoId, kid);
+            LogError(LOG_P25, P25_KMM_STR ", unable to decrypt KMM, algoId = $%02X, kID = $%04X", algoId, kid);
             return nullptr;
         }
 
@@ -333,7 +344,7 @@ UInt8Array P25OTARService::processKMM(const uint8_t* data, uint32_t len, uint32_
 
     std::unique_ptr<KMMFrame> frame = KMMFactory::create(buffer.get());
     if (frame == nullptr) {
-        LogWarning(LOG_NET, P25_PDU_STR ", undecodable KMM packet");
+        LogWarning(LOG_P25, P25_KMM_STR ", undecodable KMM packet");
         return nullptr;
     }
 
@@ -345,8 +356,10 @@ UInt8Array P25OTARService::processKMM(const uint8_t* data, uint32_t len, uint32_
         case KMM_MessageType::HELLO:
         {
             KMMHello* kmm = static_cast<KMMHello*>(frame.get());
-            LogMessage(LOG_NET, P25_PDU_STR ", KMM Hello, llId = %u, flag = $%02X", llId,
-                kmm->getFlag());
+            if (m_verbose) {
+                LogMessage(LOG_P25, P25_KMM_STR ", %s, llId = %u, flag = $%02X", kmm->toString().c_str(),
+                    llId, kmm->getFlag());
+            }
 
             // respond with No-Service if KMF services are disabled
 //            if (!m_network->m_kmfServicesEnabled)
@@ -356,7 +369,7 @@ UInt8Array P25OTARService::processKMM(const uint8_t* data, uint32_t len, uint32_
 
         default:
         break;
-    } // switch (packet->getPDUType())
+    } // switch (frame->getMessageId())
 
     return nullptr;
 }
@@ -374,6 +387,11 @@ UInt8Array P25OTARService::write_KMM_NoService(uint32_t llId, uint32_t kmmRSI, u
     KMMNoService outKmm = KMMNoService();
     outKmm.setSrcLLId(WUID_FNE);
     outKmm.setDstLLId(kmmRSI);
+
+    if (m_verbose) {
+        LogMessage(LOG_P25, P25_KMM_STR ", %s, llId = %u, RSI = %u", outKmm.toString().c_str(),
+            outKmm.getSrcLLId(), outKmm.getDstLLId());
+    }
 
     outKmm.encode(buffer);
 

@@ -55,9 +55,10 @@ namespace network
          * @brief Initializes a new instance of the P25OTARService class.
          * @param network Instance of the FNENetwork class.
          * @param packetData Instance of the P25PacketData class.
-         * @param debug Flag indicating whether network debug is enabled.
+         * @param debug Flag indicating whether debug is enabled.
+         * @param verbose Flag indicating whether verbose logging is enabled.
          */
-        P25OTARService(FNENetwork* network, network::callhandler::packetdata::P25PacketData* packetData, bool debug);
+        P25OTARService(FNENetwork* network, network::callhandler::packetdata::P25PacketData* packetData, bool debug, bool verbose);
         /**
          * @brief Finalizes a instance of the P25OTARService class.
          */
@@ -104,6 +105,7 @@ namespace network
         network::callhandler::packetdata::P25PacketData* m_packetData;
 
         bool m_debug;
+        bool m_verbose;
 
         /**
          * @brief Entry point to process a given network packet.

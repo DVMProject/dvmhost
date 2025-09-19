@@ -55,6 +55,13 @@ void KMMNoService::encode(uint8_t* data)
     KMMFrame::encodeHeader(data);
 }
 
+/* Returns a string that represents the current KMM frame. */
+
+std::string KMMNoService::toString()
+{
+    return std::string("KMM, NO_SERVICE (No Service)");
+}
+
 // ---------------------------------------------------------------------------
 //  Protected Class Members
 // ---------------------------------------------------------------------------

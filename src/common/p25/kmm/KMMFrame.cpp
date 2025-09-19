@@ -46,6 +46,13 @@ KMMFrame::KMMFrame() :
 
 KMMFrame::~KMMFrame() = default;
 
+/* Returns a string that represents the current KMM frame. */
+
+std::string KMMFrame::toString()
+{
+    return std::string("KMM, UNKNOWN (Unknown KMM)");
+}
+
 // ---------------------------------------------------------------------------
 //  Protected Class Members
 // ---------------------------------------------------------------------------
