@@ -78,6 +78,27 @@ namespace network
                 void processPacketFrame(const uint8_t* data, uint32_t len, bool alreadyQueued = false);
 
                 /**
+                 * @brief Helper to write a PDU acknowledge response.
+                 * @param ackClass Acknowledgement Class.
+                 * @param ackType Acknowledgement Type.
+                 * @param ackStatus 
+                 * @param llId Logical Link ID.
+                 * @param extendedAddress Flag indicating whether or not to extended addressing is in use.
+                 * @param srcLlId Source Logical Link ID.
+                 */
+                void write_PDU_Ack_Response(uint8_t ackClass, uint8_t ackType, uint8_t ackStatus, uint32_t llId, bool extendedAddress,
+                    uint32_t srcLlId = 0U);
+
+                /**
+                 * @brief Helper used to return a KMM to the calling SU.
+                 * @param data Network data buffer.
+                 * @param len Length of data.
+                 * @param llId Logical Link ID.
+                 * @param encrypted Flag indicating whether or not the KMM frame is encrypted.
+                 */
+                void write_PDU_KMM(const uint8_t* data, uint32_t len, uint32_t llId, bool encrypted);
+
+                /**
                  * @brief Updates the timer by the passed number of milliseconds.
                  * @param ms Number of milliseconds.
                  */
@@ -209,21 +230,6 @@ namespace network
                 bool processSNDCPControl(RxStatus* status);
 
                 /**
-                 * @brief Helper used to process KMM frames from PDU data.
-                 * @param status Instance of the RxStatus class.
-                 * @param encrypted Flag indicating whether or not the KMM frame is encrypted.
-                 * @returns bool True, if KMM data was processed, otherwise false.
-                 */
-                bool processKMM(RxStatus* status, bool encrypted);
-
-                /**
-                 * @brief Helper used to return a No-Service KMM to the calling SU.
-                 * @param llId Logical Link Address.
-                 * @param kmmRSI KMM Radio Set Identifier.
-                 */
-                void write_PDU_KMM_NoService(uint32_t llId, uint32_t kmmRSI);
-
-                /**
                  * @brief Helper write ARP request to the network.
                  * @param addr IP Address.
                  */
@@ -236,18 +242,6 @@ namespace network
                  * @param targetLlId Target Logical Link Address.
                  */
                 void write_PDU_ARP_Reply(uint32_t targetAddr, uint32_t requestorLlid, uint32_t requestorAddr, uint32_t targetLlid = 0U);
-
-                /**
-                 * @brief Helper to write a PDU acknowledge response.
-                 * @param ackClass Acknowledgement Class.
-                 * @param ackType Acknowledgement Type.
-                 * @param ackStatus 
-                 * @param llId Logical Link ID.
-                 * @param extendedAddress Flag indicating whether or not to extended addressing is in use.
-                 * @param srcLlId Source Logical Link ID.
-                 */
-                void write_PDU_Ack_Response(uint8_t ackClass, uint8_t ackType, uint8_t ackStatus, uint32_t llId, bool extendedAddress,
-                    uint32_t srcLlId = 0U);
 
                 /**
                  * @brief Helper to write user data as a P25 PDU packet.

@@ -17,6 +17,7 @@
 #include "common/Thread.h"
 #include "common/Utils.h"
 #include "network/FNENetwork.h"
+#include "network/P25OTARService.h"
 #include "network/callhandler/packetdata/P25PacketData.h"
 #include "HostFNE.h"
 
@@ -395,6 +396,58 @@ void P25PacketData::processPacketFrame(const uint8_t* data, uint32_t len, bool a
 #endif // !defined(_WIN32)
 }
 
+/* Helper to write a PDU acknowledge response. */
+
+void P25PacketData::write_PDU_Ack_Response(uint8_t ackClass, uint8_t ackType, uint8_t ackStatus, uint32_t llId, bool extendedAddress, uint32_t srcLlId)
+{
+    if (ackClass == PDUAckClass::ACK && ackType != PDUAckType::ACK)
+        return;
+
+    data::DataHeader rspHeader = data::DataHeader();
+    rspHeader.setFormat(PDUFormatType::RSP);
+    rspHeader.setMFId(MFG_STANDARD);
+    rspHeader.setOutbound(true);
+    rspHeader.setResponseClass(ackClass);
+    rspHeader.setResponseType(ackType);
+    rspHeader.setResponseStatus(ackStatus);
+    rspHeader.setLLId(llId);
+    if (srcLlId > 0U) {
+        rspHeader.setSrcLLId(srcLlId);
+    }
+
+    if (!extendedAddress)
+        rspHeader.setFullMessage(true);
+    else
+        rspHeader.setFullMessage(false);
+
+    rspHeader.setBlocksToFollow(0U);
+
+    dispatchUserFrameToFNE(rspHeader, srcLlId > 0U, nullptr);
+}
+
+/* Helper used to return a KMM to the calling SU. */
+
+void P25PacketData::write_PDU_KMM(const uint8_t* data, uint32_t len, uint32_t llId, bool encrypted)
+{
+    // assemble a P25 PDU frame header for transport...
+    data::DataHeader dataHeader = data::DataHeader();
+    dataHeader.setFormat(PDUFormatType::CONFIRMED);
+    dataHeader.setMFId(MFG_STANDARD);
+    dataHeader.setAckNeeded(true);
+    dataHeader.setOutbound(true);
+    dataHeader.setSAP((encrypted) ? PDUSAP::ENC_KMM : PDUSAP::UNENC_KMM);
+    dataHeader.setLLId(llId);
+    dataHeader.setBlocksToFollow(1U);
+
+    dataHeader.calculateLength(len);
+    uint32_t pduLength = dataHeader.getPDULength();
+
+    DECLARE_UINT8_ARRAY(pduUserData, pduLength);
+    ::memcpy(pduUserData, data, len);
+
+    dispatchUserFrameToFNE(dataHeader, false, pduUserData);
+}
+
 /* Updates the timer by the passed number of milliseconds. */
 
 void P25PacketData::clock(uint32_t ms)
@@ -713,7 +766,8 @@ void P25PacketData::dispatch(uint32_t peerId)
         LogMessage(LOG_NET, P25_PDU_STR ", KMM (Key Management Message), peer = %u, blocksToFollow = %u",
             peerId, status->header.getBlocksToFollow());
 
-        processKMM(status, sap == PDUSAP::ENC_KMM);
+        bool encrypted = (sap == PDUSAP::ENC_KMM);
+        m_network->m_p25OTARService->processDLD(status->pduUserData, status->pduUserDataLength, status->llId, status->header.getNs(), encrypted);
     }
     break;
     default:
@@ -897,71 +951,6 @@ bool P25PacketData::processSNDCPControl(RxStatus* status)
     return true;
 }
 
-/* Helper used to process KMM frames from PDU data. */
-
-bool P25PacketData::processKMM(RxStatus* status, bool encrypted)
-{
-    std::unique_ptr<KMMFrame> frame = KMMFactory::create(status->pduUserData);
-    if (frame == nullptr) {
-        LogWarning(LOG_NET, P25_PDU_STR ", undecodable KMM packet");
-        return false;
-    }
-
-    uint32_t llId = status->header.getLLId();
-
-    // ack KMM frame
-    write_PDU_Ack_Response(PDUAckClass::ACK, PDUAckType::ACK, status->header.getNs(), llId, false);
-
-    switch (frame->getMessageId()) {
-        case KMM_MessageType::HELLO:
-        {
-            KMMHello* kmm = static_cast<KMMHello*>(frame.get());
-            LogMessage(LOG_NET, P25_PDU_STR ", KMM Hello, llId = %u, flag = $%02X", llId,
-                kmm->getFlag());
-
-            // respond with No-Service
-            write_PDU_KMM_NoService(llId, kmm->getSrcLLId());
-        }
-        break;
-
-        default:
-        break;
-    } // switch (packet->getPDUType())
-
-    return true;
-}
-
-/* Helper used to return a No-Service KMM to the calling SU. */
-
-void P25PacketData::write_PDU_KMM_NoService(uint32_t llId, uint32_t kmmRSI)
-{
-    // assemble a P25 PDU frame header for transport...
-    data::DataHeader dataHeader = data::DataHeader();
-    dataHeader.setFormat(PDUFormatType::CONFIRMED);
-    dataHeader.setMFId(MFG_STANDARD);
-    dataHeader.setAckNeeded(true);
-    dataHeader.setOutbound(true);
-    dataHeader.setSAP(PDUSAP::UNENC_KMM);
-    dataHeader.setLLId(llId);
-    dataHeader.setBlocksToFollow(1U);
-
-    dataHeader.calculateLength(KMM_NO_SERVICE_LENGTH);
-    uint32_t pduLength = dataHeader.getPDULength();
-
-    DECLARE_UINT8_ARRAY(pduUserData, pduLength);
-
-    uint8_t buffer[KMM_NO_SERVICE_LENGTH];
-    KMMNoService outKmm = KMMNoService();
-    outKmm.setSrcLLId(WUID_FNE);
-    outKmm.setDstLLId(kmmRSI);
-
-    outKmm.encode(buffer);
-
-    ::memcpy(pduUserData, buffer, KMM_NO_SERVICE_LENGTH);
-
-    dispatchUserFrameToFNE(dataHeader, false, pduUserData);
-}
-
 /* Helper write ARP request to the network. */
 
 void P25PacketData::write_PDU_ARP(uint32_t addr)
@@ -1066,35 +1055,6 @@ void P25PacketData::write_PDU_ARP_Reply(uint32_t targetAddr, uint32_t requestorL
     ::memcpy(pduUserData + P25_PDU_HEADER_LENGTH_BYTES, arpPacket, P25_PDU_ARP_PCKT_LENGTH);
 
     dispatchUserFrameToFNE(rspHeader, true, pduUserData);
-}
-
-/* Helper to write a PDU acknowledge response. */
-
-void P25PacketData::write_PDU_Ack_Response(uint8_t ackClass, uint8_t ackType, uint8_t ackStatus, uint32_t llId, bool extendedAddress, uint32_t srcLlId)
-{
-    if (ackClass == PDUAckClass::ACK && ackType != PDUAckType::ACK)
-        return;
-
-    data::DataHeader rspHeader = data::DataHeader();
-    rspHeader.setFormat(PDUFormatType::RSP);
-    rspHeader.setMFId(MFG_STANDARD);
-    rspHeader.setOutbound(true);
-    rspHeader.setResponseClass(ackClass);
-    rspHeader.setResponseType(ackType);
-    rspHeader.setResponseStatus(ackStatus);
-    rspHeader.setLLId(llId);
-    if (srcLlId > 0U) {
-        rspHeader.setSrcLLId(srcLlId);
-    }
-
-    if (!extendedAddress)
-        rspHeader.setFullMessage(true);
-    else
-        rspHeader.setFullMessage(false);
-
-    rspHeader.setBlocksToFollow(0U);
-
-    dispatchUserFrameToFNE(rspHeader, srcLlId > 0U, nullptr);
 }
 
 /* Helper to write user data as a P25 PDU packet. */

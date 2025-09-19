@@ -54,6 +54,7 @@ namespace network { namespace callhandler { class HOST_SW_API TagDMRData; } }
 namespace network { namespace callhandler { namespace packetdata { class HOST_SW_API DMRPacketData; } } }
 namespace network { namespace callhandler { class HOST_SW_API TagP25Data; } }
 namespace network { namespace callhandler { namespace packetdata { class HOST_SW_API P25PacketData; } } }
+namespace network { class HOST_SW_API P25OTARService; }
 namespace network { namespace callhandler { class HOST_SW_API TagNXDNData; } }
 namespace network { namespace callhandler { class HOST_SW_API TagAnalogData; } }
 
@@ -540,7 +541,10 @@ namespace network
         callhandler::TagNXDNData* m_tagNXDN;
         friend class callhandler::TagAnalogData;
         callhandler::TagAnalogData* m_tagAnalog;
-        
+
+        friend class P25OTARService;
+        P25OTARService* m_p25OTARService;
+
         friend class ::RESTAPI;
         HostFNE* m_host;
 
@@ -558,6 +562,8 @@ namespace network
         Timer m_parrotDelayTimer;
         bool m_parrotGrantDemand;
         bool m_parrotOnlyOriginating;
+
+        bool m_kmfServicesEnabled;
 
         lookups::RadioIdLookup* m_ridLookup;
         lookups::TalkgroupRulesLookup* m_tidLookup;

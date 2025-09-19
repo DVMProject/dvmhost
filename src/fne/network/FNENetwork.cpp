@@ -19,6 +19,7 @@
 #include "network/callhandler/TagP25Data.h"
 #include "network/callhandler/TagNXDNData.h"
 #include "network/callhandler/TagAnalogData.h"
+#include "network/P25OTARService.h"
 #include "fne/ActivityLog.h"
 #include "HostFNE.h"
 
@@ -64,6 +65,7 @@ FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port,
     m_tagP25(nullptr),
     m_tagNXDN(nullptr),
     m_tagAnalog(nullptr),
+    m_p25OTARService(nullptr),
     m_host(host),
     m_address(address),
     m_port(port),
@@ -76,6 +78,7 @@ FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port,
     m_parrotDelayTimer(1000U, 0U, parrotDelay),
     m_parrotGrantDemand(parrotGrantDemand),
     m_parrotOnlyOriginating(false),
+    m_kmfServicesEnabled(false),
     m_ridLookup(nullptr),
     m_tidLookup(nullptr),
     m_peerListLookup(nullptr),
@@ -130,12 +133,16 @@ FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port,
     m_tagP25 = new TagP25Data(this, debug);
     m_tagNXDN = new TagNXDNData(this, debug);
     m_tagAnalog = new TagAnalogData(this, debug);
+
+    m_p25OTARService = new P25OTARService(this, m_tagP25->packetData(), debug);
 }
 
 /* Finalizes a instance of the FNENetwork class. */
 
 FNENetwork::~FNENetwork()
 {
+    delete m_p25OTARService;
+
     delete m_tagDMR;
     delete m_tagP25;
     delete m_tagNXDN;
@@ -178,6 +185,9 @@ void FNENetwork::setOptions(yaml::Node& conf, bool printOptions)
     }
 
     m_parrotOnlyOriginating = conf["parrotOnlyToOrginiatingPeer"].as<bool>(false);
+
+    m_kmfServicesEnabled = conf["kmfServicesEnabled"].as<bool>(false);
+
     m_restrictGrantToAffOnly = conf["restrictGrantToAffiliatedOnly"].as<bool>(false);
     m_restrictPVCallToRegOnly = conf["restrictPrivateCallToRegOnly"].as<bool>(false);
     m_filterTerminators = conf["filterTerminators"].as<bool>(true);
@@ -235,6 +245,7 @@ void FNENetwork::setOptions(yaml::Node& conf, bool printOptions)
             LogInfo("    InfluxDB Log Raw TSBK/CSBK/RCCH: %s", m_influxLogRawData ? "yes" : "no");
         }
         LogInfo("    Parrot Repeat to Only Originating Peer: %s", m_parrotOnlyOriginating ? "yes" : "no");
+        LogInfo("    P25 OTAR KMF Services Enabled: %s", m_kmfServicesEnabled ? "yes" : "no");
     }
 }
 
