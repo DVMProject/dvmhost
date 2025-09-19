@@ -186,7 +186,12 @@ void FNENetwork::setOptions(yaml::Node& conf, bool printOptions)
 
     m_parrotOnlyOriginating = conf["parrotOnlyToOrginiatingPeer"].as<bool>(false);
 
+#if defined(ENABLE_SSL)
     m_kmfServicesEnabled = conf["kmfServicesEnabled"].as<bool>(false);
+#else
+    m_kmfServicesEnabled = false;
+    LogWarning(LOG_P25, "FNE is compiled without OpenSSL support, KMF services are unavailable.");
+#endif // ENABLE_SSL
 
     m_restrictGrantToAffOnly = conf["restrictGrantToAffiliatedOnly"].as<bool>(false);
     m_restrictPVCallToRegOnly = conf["restrictPrivateCallToRegOnly"].as<bool>(false);

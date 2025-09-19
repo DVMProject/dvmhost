@@ -35,6 +35,7 @@ using namespace p25::kmm;
 P25OTARService::P25OTARService(FNENetwork* network, P25PacketData* packetData, bool debug) :
     m_network(network),
     m_packetData(packetData),
+    m_crypto(),
     m_debug(debug)
 {
     assert(network != nullptr);

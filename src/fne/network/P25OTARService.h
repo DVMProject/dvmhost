@@ -18,6 +18,7 @@
 
 #include "fne/Defines.h"
 #include "common/p25/P25Defines.h"
+#include "common/p25/Crypto.h"
 #include "network/FNENetwork.h"
 #include "network/callhandler/packetdata/P25PacketData.h"
 
@@ -66,6 +67,8 @@ namespace network
     private:
         FNENetwork* m_network;
         network::callhandler::packetdata::P25PacketData* m_packetData;
+
+        p25::crypto::P25Crypto* m_crypto;
 
         bool m_debug;
 
