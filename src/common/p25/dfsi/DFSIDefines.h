@@ -78,59 +78,76 @@ namespace p25
              * @{
              */
 
-            const uint8_t   DFSI_RTP_PAYLOAD_TYPE = 0x64U;      //!
-            const uint8_t   DFSI_RTP_MOT_PAYLOAD_TYPE = 0x5DU;  //!
+            const uint8_t   DFSI_RTP_PAYLOAD_TYPE = 0x64U;              //!
+            const uint8_t   DFSI_RTP_MOT_PAYLOAD_TYPE = 0x5DU;          //!
+            const uint8_t   DFSI_RTP_MOT_DATA_PAYLOAD_TYPE = 0x5EU;     //!
 
-            const uint8_t   DFSI_RTP_SEQ_HANDSHAKE = 0x00U;     //!
-            const uint8_t   DFSI_RTP_SEQ_STARTSTOP = 0x01U;     //!
+            const uint8_t   DFSI_RTP_SEQ_HANDSHAKE = 0x00U;             //!
+            const uint8_t   DFSI_RTP_SEQ_STARTSTOP = 0x01U;             //!
 
-            const uint8_t   DFSI_MOT_ICW_FMT_TYPE3 = 0x02U;     //!
+            const uint8_t   DFSI_MOT_ICW_FMT_TYPE3 = 0x02U;             //!
 
-            const uint8_t   DFSI_MOT_ICW_PARM_NOP = 0x00U;      //! No Operation
-            const uint8_t   DSFI_MOT_ICW_PARM_PAYLOAD = 0x0CU;  //! Stream Payload
-            const uint8_t   DFSI_MOT_ICW_PARM_RSSI1 = 0x1AU;    //! RSSI Data
-            const uint8_t   DFSI_MOT_ICW_PARM_RSSI2 = 0x1BU;    //! RSSI Data
-            const uint8_t   DFSI_MOT_ICW_PARM_STOP = 0x25U;     //! Stop Stream
-            const uint8_t   DFSI_MOT_ICW_TX_ADDRESS = 0x2CU;    //! Tx Device Address
-            const uint8_t   DFSI_MOT_ICW_RX_ADDRESS = 0x35U;    //! Rx Device Address
+            const uint8_t   DFSI_MOT_ICW_PARM_NOP = 0x00U;              //! No Operation
+            const uint8_t   DSFI_MOT_ICW_PARM_PAYLOAD = 0x0CU;          //! Stream Payload
+            const uint8_t   DFSI_MOT_ICW_PARM_RSSI1 = 0x1AU;            //! RSSI Data
+            const uint8_t   DFSI_MOT_ICW_PARM_RSSI2 = 0x1BU;            //! RSSI Data
+            const uint8_t   DFSI_MOT_ICW_PARM_STOP = 0x25U;             //! Stop Stream
+            const uint8_t   DFSI_MOT_ICW_TX_ADDRESS = 0x2CU;            //! Tx Device Address
+            const uint8_t   DFSI_MOT_ICW_RX_ADDRESS = 0x35U;            //! Rx Device Address
 
-            const uint8_t   DFSI_BUSY_BITS_TALKAROUND = 0x00U;  //! Talkaround
-            const uint8_t   DFSI_BUSY_BITS_BUSY = 0x01U;        //! Busy
-            const uint8_t   DFSI_BUSY_BITS_INBOUND = 0x02U;     //! Inbound
-            const uint8_t   DFSI_BUSY_BITS_IDLE = 0x03U;        //! Idle
+            const uint8_t   DFSI_BUSY_BITS_TALKAROUND = 0x00U;          //! Talkaround
+            const uint8_t   DFSI_BUSY_BITS_BUSY = 0x01U;                //! Busy
+            const uint8_t   DFSI_BUSY_BITS_INBOUND = 0x02U;             //! Inbound
+            const uint8_t   DFSI_BUSY_BITS_IDLE = 0x03U;                //! Idle
 
             /** @brief DFSI Frame Type */
             namespace DFSIFrameType {
                 /** @brief DFSI Frame Type */
                 enum E : uint8_t {
-                    MOT_START_STOP = 0x00U,     // Motorola/V.24 Start/Stop Stream
+                    MOT_START_STOP = 0x00U,             // Motorola/V.24 Start/Stop Stream
 
-                    MOT_VHDR_1 = 0x60U,         // Motorola/V.24 Voice Header 1
-                    MOT_VHDR_2 = 0x61U,         // Motorola/V.24 Voice Header 2
+                    MOT_VHDR_1 = 0x60U,                 // Motorola/V.24 Voice Header 1
+                    MOT_VHDR_2 = 0x61U,                 // Motorola/V.24 Voice Header 2
 
-                    LDU1_VOICE1 = 0x62U,        // IMBE LDU1 - Voice 1
-                    LDU1_VOICE2 = 0x63U,        // IMBE LDU1 - Voice 2
-                    LDU1_VOICE3 = 0x64U,        // IMBE LDU1 - Voice 3 + Link Control
-                    LDU1_VOICE4 = 0x65U,        // IMBE LDU1 - Voice 4 + Link Control
-                    LDU1_VOICE5 = 0x66U,        // IMBE LDU1 - Voice 5 + Link Control
-                    LDU1_VOICE6 = 0x67U,        // IMBE LDU1 - Voice 6 + Link Control
-                    LDU1_VOICE7 = 0x68U,        // IMBE LDU1 - Voice 7 + Link Control
-                    LDU1_VOICE8 = 0x69U,        // IMBE LDU1 - Voice 8 + Link Control
-                    LDU1_VOICE9 = 0x6AU,        // IMBE LDU1 - Voice 9 + Low Speed Data
+                    LDU1_VOICE1 = 0x62U,                // IMBE LDU1 - Voice 1
+                    LDU1_VOICE2 = 0x63U,                // IMBE LDU1 - Voice 2
+                    LDU1_VOICE3 = 0x64U,                // IMBE LDU1 - Voice 3 + Link Control
+                    LDU1_VOICE4 = 0x65U,                // IMBE LDU1 - Voice 4 + Link Control
+                    LDU1_VOICE5 = 0x66U,                // IMBE LDU1 - Voice 5 + Link Control
+                    LDU1_VOICE6 = 0x67U,                // IMBE LDU1 - Voice 6 + Link Control
+                    LDU1_VOICE7 = 0x68U,                // IMBE LDU1 - Voice 7 + Link Control
+                    LDU1_VOICE8 = 0x69U,                // IMBE LDU1 - Voice 8 + Link Control
+                    LDU1_VOICE9 = 0x6AU,                // IMBE LDU1 - Voice 9 + Low Speed Data
 
-                    LDU2_VOICE10 = 0x6BU,       // IMBE LDU2 - Voice 10
-                    LDU2_VOICE11 = 0x6CU,       // IMBE LDU2 - Voice 11
-                    LDU2_VOICE12 = 0x6DU,       // IMBE LDU2 - Voice 12 + Encryption Sync
-                    LDU2_VOICE13 = 0x6EU,       // IMBE LDU2 - Voice 13 + Encryption Sync
-                    LDU2_VOICE14 = 0x6FU,       // IMBE LDU2 - Voice 14 + Encryption Sync
-                    LDU2_VOICE15 = 0x70U,       // IMBE LDU2 - Voice 15 + Encryption Sync
-                    LDU2_VOICE16 = 0x71U,       // IMBE LDU2 - Voice 16 + Encryption Sync
-                    LDU2_VOICE17 = 0x72U,       // IMBE LDU2 - Voice 17 + Encryption Sync
-                    LDU2_VOICE18 = 0x73U,       // IMBE LDU2 - Voice 18 + Low Speed Data
+                    LDU2_VOICE10 = 0x6BU,               // IMBE LDU2 - Voice 10
+                    LDU2_VOICE11 = 0x6CU,               // IMBE LDU2 - Voice 11
+                    LDU2_VOICE12 = 0x6DU,               // IMBE LDU2 - Voice 12 + Encryption Sync
+                    LDU2_VOICE13 = 0x6EU,               // IMBE LDU2 - Voice 13 + Encryption Sync
+                    LDU2_VOICE14 = 0x6FU,               // IMBE LDU2 - Voice 14 + Encryption Sync
+                    LDU2_VOICE15 = 0x70U,               // IMBE LDU2 - Voice 15 + Encryption Sync
+                    LDU2_VOICE16 = 0x71U,               // IMBE LDU2 - Voice 16 + Encryption Sync
+                    LDU2_VOICE17 = 0x72U,               // IMBE LDU2 - Voice 17 + Encryption Sync
+                    LDU2_VOICE18 = 0x73U,               // IMBE LDU2 - Voice 18 + Low Speed Data
 
-                    MOT_TDULC = 0x74U,          // Motorola/V.24 TDULC
-                    MOT_PDU_SINGLE = 0x87U,     // Motorola/V.24 PDU (Single Block)
-                    MOT_TSBK = 0xA1U            // Motorola/V.24 TSBK (Single Block)
+                    MOT_TDULC = 0x74U,                  // Motorola/V.24 TDULC
+
+                    MOT_PDU_UNCONF_HEADER = 0x80U,      // Motorola/V.24 PDU (Unconfirmed Block Header)
+                    MOT_PDU_UNCONF_BLOCK_1 = 0x81U,     // Motorola/V.24 PDU (Unconfirmed Block 1)
+                    MOT_PDU_UNCONF_BLOCK_2 = 0x82U,     // Motorola/V.24 PDU (Unconfirmed Block 2)
+                    MOT_PDU_UNCONF_BLOCK_3 = 0x83U,     // Motorola/V.24 PDU (Unconfirmed Block 3)
+                    MOT_PDU_UNCONF_BLOCK_4 = 0x84U,     // Motorola/V.24 PDU (Unconfirmed Block 4)
+                    MOT_PDU_UNCONF_END = 0x85U,         // Motorola/V.24 PDU (Unconfirmed Block End)
+                    MOT_PDU_SINGLE_UNCONF = 0x87U,      // Motorola/V.24 PDU (Single Unconfirmed Block)
+
+                    MOD_PDU_CONF_HEADER = 0x88U,        // Motorola/V.24 PDU (Confirmed Block Header)
+                    MOT_PDU_CONF_BLOCK_1 = 0x89U,       // Motorola/V.24 PDU (Confirmed Block 1)
+                    MOT_PDU_CONF_BLOCK_2 = 0x8AU,       // Motorola/V.24 PDU (Confirmed Block 2)
+                    MOT_PDU_CONF_BLOCK_3 = 0x8BU,       // Motorola/V.24 PDU (Confirmed Block 3)
+                    MOT_PDU_CONF_BLOCK_4 = 0x8CU,       // Motorola/V.24 PDU (Confirmed Block 4)
+                    MOT_PDU_CONF_END = 0x8DU,           // Motorola/V.24 PDU (Confirmed Block End)
+                    MOT_PDU_SINGLE_CONF = 0x8FU,        // Motorola/V.24 PDU (Single Confirmed Block)
+
+                    MOT_TSBK = 0xA1U                    // Motorola/V.24 TSBK (Single Block)
                 };
             }
 
