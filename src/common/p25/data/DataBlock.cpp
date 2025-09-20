@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2018-2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2018-2025 Bryan Biedenkapp, N2PLL
  *
  */
 #include "Defines.h"
@@ -48,7 +48,7 @@ DataBlock::~DataBlock()
 
 /* Decodes P25 PDU data block. */
 
-bool DataBlock::decode(const uint8_t* data, const DataHeader& header)
+bool DataBlock::decode(const uint8_t* data, const DataHeader& header, bool noTrellis)
 {
     assert(data != nullptr);
     assert(m_data != nullptr);
@@ -66,10 +66,14 @@ bool DataBlock::decode(const uint8_t* data, const DataHeader& header)
     if (m_fmt == PDUFormatType::CONFIRMED) {
         // decode 3/4 rate Trellis
         try {
-            bool valid = m_trellis.decode34(data, buffer);
-            if (!valid) {
-                LogError(LOG_P25, "DataBlock::decode(), failed to decode Trellis 3/4 rate coding");
-                return false;
+            if (!noTrellis) {
+                bool valid = m_trellis.decode34(data, buffer);
+                if (!valid) {
+                    LogError(LOG_P25, "DataBlock::decode(), failed to decode Trellis 3/4 rate coding");
+                    return false;
+                }
+            } else {
+                ::memcpy(buffer, data, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
             }
 
 #if DEBUG_P25_PDU_DATA
@@ -113,10 +117,14 @@ bool DataBlock::decode(const uint8_t* data, const DataHeader& header)
     else if ((m_fmt == PDUFormatType::UNCONFIRMED) || (m_fmt == PDUFormatType::RSP) || (m_fmt == PDUFormatType::AMBT)) {
         // decode 1/2 rate Trellis
         try {
-            bool valid = m_trellis.decode12(data, buffer);
-            if (!valid) {
-                LogError(LOG_P25, "DataBlock::decode(), failed to decode Trellis 1/2 rate coding");
-                return false;
+            if (!noTrellis) {
+                bool valid = m_trellis.decode12(data, buffer);
+                if (!valid) {
+                    LogError(LOG_P25, "DataBlock::decode(), failed to decode Trellis 1/2 rate coding");
+                    return false;
+                }
+            } else {
+                ::memcpy(buffer, data, P25_PDU_UNCONFIRMED_LENGTH_BYTES);
             }
 
             ::memset(m_data, 0x00U, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
@@ -141,7 +149,7 @@ bool DataBlock::decode(const uint8_t* data, const DataHeader& header)
 
 /* Encodes a P25 PDU data block. */
 
-void DataBlock::encode(uint8_t* data)
+void DataBlock::encode(uint8_t* data, bool noTrellis)
 {
     assert(data != nullptr);
     assert(m_data != nullptr);
@@ -175,7 +183,11 @@ void DataBlock::encode(uint8_t* data)
         Utils::dump(1U, "P25, DataBlock::encode(), Confirmed PDU Data Block", buffer, P25_PDU_CONFIRMED_LENGTH_BYTES);
 #endif
 
-        m_trellis.encode34(buffer, data);
+        if (!noTrellis) {
+            m_trellis.encode34(buffer, data);
+        } else {
+            ::memcpy(data, buffer, P25_PDU_CONFIRMED_LENGTH_BYTES);
+        }
     }
     else if (m_fmt == PDUFormatType::UNCONFIRMED || m_fmt == PDUFormatType::RSP || m_fmt == PDUFormatType::AMBT) {
         uint8_t buffer[P25_PDU_UNCONFIRMED_LENGTH_BYTES];
@@ -187,7 +199,11 @@ void DataBlock::encode(uint8_t* data)
         Utils::dump(1U, "P25, DataBlock::encode(), Unconfirmed PDU Data Block", buffer, P25_PDU_UNCONFIRMED_LENGTH_BYTES);
 #endif
 
-        m_trellis.encode12(buffer, data);
+        if (!noTrellis) {
+            m_trellis.encode12(buffer, data);
+        } else {
+            ::memcpy(data, buffer, P25_PDU_UNCONFIRMED_LENGTH_BYTES);
+        }
     }
     else {
         LogError(LOG_P25, "unknown FMT value in PDU, fmt = $%02X", m_fmt);

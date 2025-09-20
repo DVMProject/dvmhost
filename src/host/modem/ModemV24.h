@@ -84,6 +84,7 @@ namespace modem
             pduUserData(nullptr),
             dataHeader(),
             dataCall(false),
+            pduUserDataOffset(0U),
             errors(0U)
         {
             MI = new uint8_t[P25DEF::MI_LENGTH_BYTES];
@@ -162,7 +163,9 @@ namespace modem
             if (pduUserData != nullptr)
                 ::memset(pduUserData, 0x00U, P25DEF::P25_MAX_PDU_BLOCKS * P25DEF::P25_PDU_CONFIRMED_LENGTH_BYTES + 2U);
             dataHeader.reset();
+
             dataCall = false;
+            pduUserDataOffset = 0U;
 
             errors = 0U;
         }
@@ -258,6 +261,10 @@ namespace modem
          * @brief Flag indicating the current call is a data call.
          */
         bool dataCall;
+        /**
+         * @brief Offset index when populating the user data buffer.
+         */
+        uint32_t pduUserDataOffset;
 
         /**
          * @brief Total errors for a given call sequence.
