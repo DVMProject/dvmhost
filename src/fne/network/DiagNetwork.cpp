@@ -129,6 +129,8 @@ bool DiagNetwork::open()
 
     bool ret = m_socket->open();
     if (!ret) {
+        m_socket->recvBufSize(2097152U); // 2M recv buffer
+        m_socket->sendBufSize(2097152U); // 2M recv buffer
         m_status = NET_STAT_INVALID;
     }
 
