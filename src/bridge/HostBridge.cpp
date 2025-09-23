@@ -1230,6 +1230,13 @@ bool HostBridge::createNetwork()
     if (m_udpAudio) {
         m_udpAudioSocket = new Socket(m_udpReceiveAddress, m_udpReceivePort);
         m_udpAudioSocket->open();
+
+        /*
+        ** bryanb: resize the system UDP socket buffer used for receiving audio frames to 131K, this should hold
+        *   ~394 raw audio frames before filling
+        */
+        if (!m_udpAudioSocket->recvBufSize(131072))
+            LogWarning(LOG_HOST, "failed to resize UDP audio socket buffer size to 131K");
     }
 
     return true;

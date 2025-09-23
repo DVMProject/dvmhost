@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2006-2016,2020 Jonathan Naylor, G4KLX
- *  Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2017-2025 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -221,6 +221,19 @@ namespace network
              * @returns bool True, if UDP socket is opened, otherwise false.
              */
             bool open(const uint32_t af, const std::string& address, const uint16_t port) noexcept;
+
+            /**
+             * @brief Sets the socket receive buffer size.
+             * @param bufSize Buffer size to set.
+             * @returns bool True, if buffer size set, otherwise false.
+             */
+            bool recvBufSize(ssize_t bufSize);
+            /**
+             * @brief Sets the socket send buffer size.
+             * @param bufSize Buffer size to set.
+             * @returns bool True, if buffer size set, otherwise false.
+             */
+            bool sendBufSize(ssize_t bufSize);
 
             /**
              * @brief Closes the UDP socket connection.

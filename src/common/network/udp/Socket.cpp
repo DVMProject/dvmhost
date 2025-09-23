@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2006-2016,2020 Jonathan Naylor, G4KLX
- *  Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2017-2025 Bryan Biedenkapp, N2PLL
  *
  */
 #include "Defines.h"
@@ -159,6 +159,100 @@ bool Socket::open(const uint32_t af, const std::string& address, const uint16_t 
     }
 
     return true;
+}
+
+/* Sets the socket receive buffer size. */
+
+bool Socket::recvBufSize(ssize_t bufSize)
+{
+    int optVal = -1;
+    socklen_t optValLen = sizeof(optVal);
+
+    // get original buffer size
+    if (::getsockopt(m_fd, SOL_SOCKET, SO_RCVBUF, (char*)&optVal, &optValLen) == -1) {
+#if defined(_WIN32)
+        LogError(LOG_NET, "Cannot get the receive buffer size, err: %lu", ::GetLastError());
+#else
+        LogError(LOG_NET, "Cannot get the receive buffer size, err: %d (%s)", errno, strerror(errno));
+#endif // _WIN32
+        return false;
+    }
+
+    int recvBufSize = optVal;
+
+    // resize buffer
+    if (::setsockopt(m_fd, SOL_SOCKET, SO_RCVBUF, (char*)& bufSize, sizeof(bufSize)) == -1) {
+#if defined(_WIN32)
+        LogError(LOG_NET, "Cannot resize the receive buffer size, err: %lu", ::GetLastError());
+#else
+        LogError(LOG_NET, "Cannot resize the receive buffer size, err: %d (%s)", errno, strerror(errno));
+#endif // _WIN32
+        return false;
+    }
+
+    // get the buffer size after alteration
+    if (::getsockopt(m_fd, SOL_SOCKET, SO_RCVBUF, (char*)&optVal, &optValLen) == -1) {
+#if defined(_WIN32)
+        LogError(LOG_NET, "Cannot get the receive buffer size, err: %lu", ::GetLastError());
+#else
+        LogError(LOG_NET, "Cannot get the receive buffer size, err: %d (%s)", errno, strerror(errno));
+#endif // _WIN32
+        return false;
+    }
+
+    if (optVal == bufSize)
+        return true;
+    else
+        LogError(LOG_NET, "failed to resize socket recv buffer, %u != %u", recvBufSize, optVal);
+
+    return false;
+}
+
+/* Sets the socket send buffer size. */
+
+bool Socket::sendBufSize(ssize_t bufSize)
+{
+    int optVal = -1;
+    socklen_t optValLen = sizeof(optVal);
+
+    // get original buffer size
+    if (::getsockopt(m_fd, SOL_SOCKET, SO_SNDBUF, (char*)&optVal, &optValLen) == -1) {
+#if defined(_WIN32)
+        LogError(LOG_NET, "Cannot get the send buffer size, err: %lu", ::GetLastError());
+#else
+        LogError(LOG_NET, "Cannot get the send buffer size, err: %d (%s)", errno, strerror(errno));
+#endif // _WIN32
+        return false;
+    }
+
+    int recvBufSize = optVal;
+
+    // resize buffer
+    if (::setsockopt(m_fd, SOL_SOCKET, SO_SNDBUF, (char*)&bufSize, sizeof(bufSize)) == -1) {
+#if defined(_WIN32)
+        LogError(LOG_NET, "Cannot resize the send buffer size, err: %lu", ::GetLastError());
+#else
+        LogError(LOG_NET, "Cannot resize the send buffer size, err: %d (%s)", errno, strerror(errno));
+#endif // _WIN32
+        return false;
+    }
+
+    // get the buffer size after alteration
+    if (::getsockopt(m_fd, SOL_SOCKET, SO_SNDBUF, (char*)&optVal, &optValLen) == -1) {
+#if defined(_WIN32)
+        LogError(LOG_NET, "Cannot get the send buffer size, err: %lu", ::GetLastError());
+#else
+        LogError(LOG_NET, "Cannot get the send buffer size, err: %d (%s)", errno, strerror(errno));
+#endif // _WIN32
+        return false;
+    }
+
+    if (optVal == bufSize)
+        return true;
+    else
+        LogError(LOG_NET, "failed to resize socket send buffer, %u != %u", recvBufSize, optVal);
+
+    return false;
 }
 
 /* Closes the UDP socket connection. */
