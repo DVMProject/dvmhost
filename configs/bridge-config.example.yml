@@ -89,7 +89,7 @@ network:
     # Jitter Buffer Length (in ms).
     #   (This is only applied if utilizing inter frame delay, otherwise packet timing is assumed to be
     #    properly handled by the source.)
-    udpJitter: 200
+    udpJitter: 180
 
     # Flag indicating the UDP audio will be padded with silence during hang time before end of call.
     udpHangSilence: true

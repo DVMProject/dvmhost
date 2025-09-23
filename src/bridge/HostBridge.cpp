@@ -3259,28 +3259,27 @@ void* HostBridge::threadUDPAudioProcess(void* arg)
 
                     std::lock_guard<std::mutex> lock(m_audioMutex);
 
-                    int smpIdx = 0;
-                    short samples[AUDIO_SAMPLES_LENGTH];
+                    uint8_t pcm[AUDIO_SAMPLES_LENGTH_BYTES];
+                    ::memset(pcm, 0x00U, AUDIO_SAMPLES_LENGTH_BYTES);
+                    ::memcpy(pcm, req->pcm, AUDIO_SAMPLES_LENGTH_BYTES);
+
                     if (bridge->m_udpUseULaw) {
+                        int smpIdx = 0;
+                        short samples[AUDIO_SAMPLES_LENGTH];
+
                         if (bridge->m_trace)
-                            Utils::dump(1U, "HostBridge()::threadUDPAudioProcess(), uLaw Audio", req->pcm, AUDIO_SAMPLES_LENGTH * 2U);
+                            Utils::dump(1U, "HostBridge()::threadUDPAudioProcess(), uLaw Audio", pcm, AUDIO_SAMPLES_LENGTH * 2U);
 
                         for (uint32_t pcmIdx = 0; pcmIdx < AUDIO_SAMPLES_LENGTH; pcmIdx++) {
-                            samples[smpIdx] = AnalogAudio::decodeMuLaw(req->pcm[pcmIdx]);
+                            samples[smpIdx] = AnalogAudio::decodeMuLaw(pcm[pcmIdx]);
                             smpIdx++;
                         }
 
                         int pcmIdx = 0;
                         for (uint32_t smpIdx = 0; smpIdx < AUDIO_SAMPLES_LENGTH; smpIdx++) {
-                            req->pcm[pcmIdx + 0] = (uint8_t)(samples[smpIdx] & 0xFF);
-                            req->pcm[pcmIdx + 1] = (uint8_t)((samples[smpIdx] >> 8) & 0xFF);
+                            pcm[pcmIdx + 0] = (uint8_t)(samples[smpIdx] & 0xFF);
+                            pcm[pcmIdx + 1] = (uint8_t)((samples[smpIdx] >> 8) & 0xFF);
                             pcmIdx += 2;
-                        }
-                    }
-                    else {
-                        for (int pcmIdx = 0; pcmIdx < req->pcmLength; pcmIdx += 2) {
-                            samples[smpIdx] = (short)((req->pcm[pcmIdx + 1] << 8) + req->pcm[pcmIdx + 0]);
-                            smpIdx++;
                         }
                     }
 
@@ -3329,13 +3328,13 @@ void* HostBridge::threadUDPAudioProcess(void* arg)
 
                         switch (bridge->m_txMode) {
                         case TX_MODE_DMR:
-                            bridge->encodeDMRAudioFrame(req->pcm, bridge->m_udpSrcId);
+                            bridge->encodeDMRAudioFrame(pcm, bridge->m_udpSrcId);
                             break;
                         case TX_MODE_P25:
-                            bridge->encodeP25AudioFrame(req->pcm, bridge->m_udpSrcId);
+                            bridge->encodeP25AudioFrame(pcm, bridge->m_udpSrcId);
                             break;
                         case TX_MODE_ANALOG:
-                            bridge->encodeAnalogAudioFrame(req->pcm, bridge->m_udpSrcId);
+                            bridge->encodeAnalogAudioFrame(pcm, bridge->m_udpSrcId);
                             break;
                         }
                     }
