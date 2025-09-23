@@ -108,8 +108,6 @@ struct NetPacketRequest {
 
     int pcmLength = 0U;                 //! Length of PCM data buffer
     uint8_t* pcm = nullptr;             //! Raw PCM buffer
-
-    uint64_t pktRxTime;                 //! Packet receive time
 };
 
 // ---------------------------------------------------------------------------
@@ -159,10 +157,8 @@ private:
     bool m_udpUseULaw;
     bool m_udpRTPFrames;
     bool m_udpUsrp;
-    uint8_t m_udpInterFrameDelay;
-    uint16_t m_udpJitter;
-    bool m_udpSilenceDuringHang;
-    uint64_t m_lastUdpFrameTime;
+    bool m_udpFrameTiming;
+    uint32_t m_udpFrameCnt;
 
     uint8_t m_tekAlgoId;
     uint16_t m_tekKeyId;
@@ -190,8 +186,6 @@ private:
     float m_voxSampleLevel;
     uint16_t m_dropTimeMS;
     Timer m_localDropTime;
-    Timer m_udpCallClock;
-    Timer m_udpHangTime;
     Timer m_udpDropTime;
 
     bool m_detectAnalogMDC1200;
@@ -254,6 +248,8 @@ private:
 
     uint8_t m_detectedSampleCnt;
     bool m_dumpSampleLevel;
+
+    bool m_mtNoSleep;
 
     bool m_running;
     bool m_trace;
@@ -565,7 +561,7 @@ private:
      * @param srcId
      * @param dstId
      */
-    void callEndSilence(uint32_t srcId, uint32_t dstId);
+    void padSilenceAudio(uint32_t srcId, uint32_t dstId);
 
     /**
      * @brief Entry point to call watchdog handler thread.
