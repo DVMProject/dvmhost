@@ -196,7 +196,7 @@ bool Socket::recvBufSize(ssize_t bufSize)
     if (optVal >= bufSize)
         return true;
     else
-        LogError(LOG_NET, "failed to resize socket recv buffer, %u != %u", optVal, bufSize);
+        LogWarning(LOG_NET, "Could not resize socket recv buffer, %u != %u. This is suboptimal and may result in lost packets.", optVal, bufSize);
 
     return false;
 }
@@ -236,7 +236,7 @@ bool Socket::sendBufSize(ssize_t bufSize)
     if (optVal >= bufSize)
         return true;
     else
-        LogError(LOG_NET, "failed to resize socket send buffer, %u != %u", optVal, bufSize);
+        LogWarning(LOG_NET, "Could not resize socket send buffer, %u != %u. This is suboptimal and may result in lost packets.", optVal, bufSize);
 
     return false;
 }
