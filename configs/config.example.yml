@@ -640,10 +640,8 @@ system:
         # V.24 Modem Configuration
         #
         dfsi:
-            # RT/RT flag enabled (0x02) or disabled (0x04)
+            # RT/RT flag.
             rtrt: true
-            # Use the DIU source flag (0x00) instead of the quantar source flag (0x02)
-            diu: true
             # Jitter buffer length in ms
             jitter: 200
             # Timer which will reset local/remote call flags if frames aren't received longer than this time in ms

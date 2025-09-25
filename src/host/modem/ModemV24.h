@@ -498,7 +498,7 @@ namespace modem
          * @param debug Flag indicating whether air interface modem debug is enabled.
          */
         ModemV24(port::IModemPort* port, bool duplex, uint32_t p25QueueSize, uint32_t p25TxQueueSize,
-            bool rtrt, bool diu, uint16_t jitter, bool dumpModemStatus, bool trace, bool debug);
+            bool rtrt, uint16_t jitter, bool dumpModemStatus, bool trace, bool debug);
         /**
          * @brief Finalizes a instance of the ModemV24 class.
          */
@@ -554,7 +554,6 @@ namespace modem
 
     private:
         bool m_rtrt;
-        bool m_diu;
 
         uint8_t m_superFrameCnt;
 

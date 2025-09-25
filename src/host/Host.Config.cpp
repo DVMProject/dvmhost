@@ -511,7 +511,6 @@ bool Host::createModem()
     yaml::Node dfsiParams = modemConf["dfsi"];
 
     bool rtrt = dfsiParams["rtrt"].as<bool>(true);
-    bool diu = dfsiParams["diu"].as<bool>(true);
     uint16_t jitter = dfsiParams["jitter"].as<uint16_t>(200U);
     uint16_t dfsiCallTimeout = dfsiParams["callTimeout"].as<uint16_t>(200U);
     bool useFSCForUDP = dfsiParams["fsc"].as<bool>(false);
@@ -632,7 +631,6 @@ bool Host::createModem()
     if (modemMode == MODEM_MODE_DFSI) {
         m_isModemDFSI = true;
         LogInfo("    DFSI RT/RT: %s", rtrt ? "yes" : "no");
-        LogInfo("    DFSI DIU Flag: %s", diu ? "yes" : "no");
         LogInfo("    DFSI Jitter Size: %u ms", jitter);
         if (g_remoteModemMode) {
             LogInfo("    DFSI Use FSC: %s", useFSCForUDP ? "yes" : "no");
@@ -719,7 +717,7 @@ bool Host::createModem()
     }
 
     if (m_isModemDFSI) {
-        m_modem = new ModemV24(modemPort, m_duplex, m_p25QueueSizeBytes, m_p25QueueSizeBytes, rtrt, diu, jitter,
+        m_modem = new ModemV24(modemPort, m_duplex, m_p25QueueSizeBytes, m_p25QueueSizeBytes, rtrt, jitter,
             dumpModemStatus, trace, debug);
         ((ModemV24*)m_modem)->setCallTimeout(dfsiCallTimeout);
         ((ModemV24*)m_modem)->setTIAFormat(dfsiTIAMode);
