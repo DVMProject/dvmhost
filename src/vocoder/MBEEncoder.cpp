@@ -593,7 +593,6 @@ void MBEEncoder::encodeBits(uint8_t* bits, uint8_t* codeword)
     assert(bits != nullptr);
     assert(codeword != nullptr);
 
-    int32_t errs = 0;
     float samples[160U];
     ::memset(samples, 0x00U, 160U * sizeof(float));
 
@@ -702,7 +701,7 @@ void MBEEncoder::encode(int16_t* samples, uint8_t* codeword)
         uint8_t rawAmbe[9U];
         ::memset(rawAmbe, 0x00U, 9U);
 
-        for (int i = 0; i < 9; ++i) {
+        for (int i = 0; i < 7; ++i) {
             for (int j = 0; j < 8; ++j) {
                 rawAmbe[i] |= (bits[(i * 8) + j] << (7 - j));
             }
