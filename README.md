@@ -361,8 +361,8 @@ counts of up to 100,000+ calls on a x86_64 Server with 8GB RAM and 8-core proces
 
 - If you have old configuration files, missing comments or new parameters, there is a tool provided in the "tools" directory of the project called `config_annotator.py` this is a Python CLI tool designed to compare an existing configuration file against the example configuration file and recomment and add missing parameters (along with removing illegal/invalid parameters). It is recommended to backup your existing configuration file before running this tool on it. *This tool is only designed for the `dvmhost` configuration file, and no other configuration file!*
 
-- By default Linux may restrict the maximum size of the receive and send buffers used by the kernel for network traffic. Please check the limits with `sudo sysctl net.core.rmem_max` and `sudo sysctl net.core.wmem_max`, these should be at least 2MB (2097152), while DVM will operate in lower
-limits, you will see startup errors similar to: "failed to resize socket recv buffer, XXXXXX != 2097152", or "failed to resize socket send buffer, XXXXXX != 2097152". See the documentation for your specific distribution of Linux to adjust these parameters.
+- By default Linux may restrict the maximum size of the receive and send buffers used by the kernel for network traffic. Please check the limits with `sudo sysctl net.core.rmem_max` and `sudo sysctl net.core.wmem_max`, these should be at least 512K (524288), while DVM will operate in lower
+limits, you will see startup errors similar to: "Could not resize socket recv buffer, XXXXXX != 524288", or "Could not resize socket send buffer, XXXXXX != 524288". See the documentation for your specific distribution of Linux to adjust these parameters.
 
 ## Security Warnings
 
