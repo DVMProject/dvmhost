@@ -200,7 +200,7 @@ void Network::clock(uint32_t ms)
 
                 bool ret = m_socket->open(m_addr.ss_family);
                 if (ret) {
-                    m_socket->recvBufSize(2097152U); // 2M recv buffer
+                    m_socket->recvBufSize(262144U); // 256K recv buffer
                     ret = writeLogin();
                     if (!ret) {
                         m_retryTimer.start();
