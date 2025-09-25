@@ -2657,7 +2657,7 @@ void ModemV24::convertFromAirV24(uint8_t* data, uint32_t length)
                 }
 
                 if (blocksToFollow <= 3U) {
-                    DECLARE_UINT8_ARRAY(pduBuf, ((blocksToFollow + 1U) * (dataHeader.getFormat() == PDUFormatType::CONFIRMED) ? P25_PDU_CONFIRMED_LENGTH_BYTES : P25_PDU_UNCONFIRMED_LENGTH_BYTES) + 1U);
+                    DECLARE_UINT8_ARRAY(pduBuf, ((blocksToFollow + 1U) * ((dataHeader.getFormat() == PDUFormatType::CONFIRMED) ? P25_PDU_CONFIRMED_LENGTH_BYTES : P25_PDU_UNCONFIRMED_LENGTH_BYTES)) + 1U);
                     uint32_t pduLen = (blocksToFollow + 1U) * ((dataHeader.getFormat() == PDUFormatType::CONFIRMED) ? P25_PDU_CONFIRMED_LENGTH_BYTES : P25_PDU_UNCONFIRMED_LENGTH_BYTES);
 
                     pduBuf[0U] = (dataHeader.getFormat() == PDUFormatType::CONFIRMED) ? DFSIFrameType::MOT_PDU_SINGLE_CONF : DFSIFrameType::MOT_PDU_SINGLE_UNCONF;
