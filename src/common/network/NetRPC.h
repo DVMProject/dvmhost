@@ -70,6 +70,10 @@ namespace network
             UNHANDLED_REQUEST = 402,        //! Unhandled Request 402
         } status;
 
+        auto operator=(NetRPC&) -> NetRPC& = delete;
+        auto operator=(NetRPC&&) -> NetRPC& = delete;
+        NetRPC(NetRPC&) = delete;
+
         /**
          * @brief Initializes a new instance of the NetRPC class.
          * @param address Network Hostname/IP address to connect to.

@@ -54,6 +54,10 @@ namespace network
          */
         class HOST_SW_API VIFace {
         public:
+            auto operator=(VIFace&) -> VIFace& = delete;
+            auto operator=(VIFace&&) -> VIFace& = delete;
+            VIFace(VIFace&) = delete;
+
             /**
              * @brief Initializes a new instance of the VIFace class.
              * @param name Name of the virtual interface. The placeholder %d can be used and a number will be assigned to it.

@@ -42,6 +42,10 @@ namespace network
      */
     class HOST_SW_API PacketBuffer {
     public:
+        auto operator=(PacketBuffer&) -> PacketBuffer& = delete;
+        auto operator=(PacketBuffer&&) -> PacketBuffer& = delete;
+        PacketBuffer(PacketBuffer&) = delete;
+
         /**
          * @brief Initializes a new instance of the PacketBuffer class.
          * @param compression Flag indicating whether packet data should be compressed automatically.
