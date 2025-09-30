@@ -245,6 +245,7 @@ bool Data::process(uint8_t* data, uint32_t len)
         }
 
         ::ActivityLog("DMR", true, "Slot %u RF data header from %u to %s%u, %u blocks", m_slot->m_slotNo, srcId, gi ? "TG " : "", dstId, m_slot->m_rfFrames);
+        LogMessage(LOG_RF, "DMR Data Call, slot = %u, srcId = %u, dstId = %u", m_slot->m_slotNo, srcId, dstId);
 
         ::memset(m_pduUserData, 0x00U, MAX_PDU_COUNT * DMR_PDU_UNCODED_LENGTH_BYTES + 2U);
         m_pduDataOffset = 0U;
@@ -492,6 +493,7 @@ void Data::processNetwork(const data::NetData& dmrData)
 
         ::ActivityLog("DMR", false, "Slot %u network data header from %u to %s%u, %u blocks",
             m_slot->m_slotNo, srcId, gi ? "TG " : "", dstId, m_slot->m_netFrames);
+        LogMessage(LOG_NET, "DMR Data Call, slot = %u, srcId = %u, dstId = %u", m_slot->m_slotNo, srcId, dstId);
 
         ::memset(m_pduUserData, 0x00U, MAX_PDU_COUNT * DMR_PDU_UNCODED_LENGTH_BYTES + 2U);
         m_pduDataOffset = 0U;

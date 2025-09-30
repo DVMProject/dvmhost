@@ -152,6 +152,7 @@ bool Data::process(ChOption::E option, uint8_t* data, uint32_t len)
         }
 
         ::ActivityLog("NXDN", true, "RF data transmission from %u to %s%u", srcId, group ? "TG " : "", dstId);
+        LogMessage(LOG_RF, "NXDN Data Call, srcId = %u, dstId = %u", srcId, dstId);
 
         m_nxdn->m_rfLC = lc;
         m_nxdn->m_voice->m_rfFrames = 0U;
@@ -320,6 +321,7 @@ bool Data::processNetwork(ChOption::E option, lc::RTCH& netLC, uint8_t* data, ui
         }
 
         ::ActivityLog("NXDN", false, "network data transmission from %u to %s%u", srcId, group ? "TG " : "", dstId);
+        LogMessage(LOG_NET, "NXDN Data Call, srcId = %u, dstId = %u", srcId, dstId);
 
         m_nxdn->m_netLC = lc;
         m_nxdn->m_voice->m_netFrames = 0U;

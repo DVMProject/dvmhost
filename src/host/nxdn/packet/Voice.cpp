@@ -253,6 +253,7 @@ bool Voice::process(FuncChannelType::E fct, ChOption::E option, uint8_t* data, u
             }
 
             ::ActivityLog("NXDN", true, "RF %svoice transmission from %u to %s%u", encrypted ? "encrypted " : "", srcId, group ? "TG " : "", dstId);
+            LogMessage(LOG_RF, "NXDN Voice Call, srcId = %u, dstId = %u", srcId, dstId);
         }
 
         return true;
@@ -404,6 +405,7 @@ bool Voice::process(FuncChannelType::E fct, ChOption::E option, uint8_t* data, u
             }
 
             ::ActivityLog("NXDN", true, "RF %slate entry from %u to %s%u", encrypted ? "encrypted ": "", srcId, group ? "TG " : "", dstId);
+            LogMessage(LOG_RF, "NXDN Voice Call, srcId = %u, dstId = %u", srcId, dstId);
 
             // create a dummy start message
             uint8_t start[NXDN_FRAME_LENGTH_BYTES + 2U];
@@ -759,6 +761,7 @@ bool Voice::processNetwork(FuncChannelType::E fct, ChOption::E option, lc::RTCH&
             }
 
             ::ActivityLog("NXDN", false, "network %svoice transmission from %u to %s%u", encrypted ? "encrypted " : "", srcId, group ? "TG " : "", dstId);
+            LogMessage(LOG_NET, "NXDN Voice Call, srcId = %u, dstId = %u", srcId, dstId);
         }
 
         return true;
@@ -895,6 +898,7 @@ bool Voice::processNetwork(FuncChannelType::E fct, ChOption::E option, lc::RTCH&
             }
 
             ::ActivityLog("NXDN", false, "network %slate entry from %u to %s%u", encrypted ? "encrypted ": "", srcId, group ? "TG " : "", dstId);
+            LogMessage(LOG_NET, "NXDN Voice Call, srcId = %u, dstId = %u", srcId, dstId);
 
             // create a dummy start message
             uint8_t start[NXDN_FRAME_LENGTH_BYTES + 2U];

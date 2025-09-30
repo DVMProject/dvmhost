@@ -463,6 +463,7 @@ bool Data::process(uint8_t* data, uint32_t len)
                         // only repeat the PDU locally if the packet isn't for the FNE
                         if (m_repeatPDU && m_rfDataHeader.getLLId() != WUID_FNE) {
                             ::ActivityLog("P25", true, "RF data transmission from %u to %u, %u blocks", srcId, dstId, m_rfDataHeader.getBlocksToFollow());
+                            LogMessage(LOG_RF, "P25 Data Call, srcId = %u, dstId = %u", srcId, dstId);
 
                             if (m_verbose) {
                                 LogMessage(LOG_RF, P25_PDU_STR ", repeating PDU, llId = %u", (m_rfExtendedAddress) ? m_rfDataHeader.getSrcLLId() : m_rfDataHeader.getLLId());
@@ -770,6 +771,7 @@ bool Data::processNetwork(uint8_t* data, uint32_t len, uint32_t blockLength)
             break;
             default:
                 ::ActivityLog("P25", false, "Net data transmission from %u to %u, %u blocks", srcId, dstId, m_netDataHeader.getBlocksToFollow());
+                LogMessage(LOG_NET, "P25 Data Call, srcId = %u, dstId = %u", srcId, dstId);
 
                 if (m_verbose) {
                     LogMessage(LOG_NET, P25_PDU_STR ", transmitting network PDU, llId = %u", (m_netExtendedAddress) ? m_netDataHeader.getSrcLLId() : m_netDataHeader.getLLId());

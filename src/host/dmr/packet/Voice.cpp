@@ -215,6 +215,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
             }
 
             ::ActivityLog("DMR", true, "Slot %u RF %svoice header from %u to %s%u", m_slot->m_slotNo, encrypted ? "encrypted " : "", srcId, flco == FLCO::GROUP ? "TG " : "", dstId);
+            LogMessage(LOG_RF, "DMR Voice Call, slot = %u, srcId = %u, dstId = %u", m_slot->m_slotNo, srcId, dstId);
             return true;
         }
         else if (dataType == DataType::VOICE_PI_HEADER) {
@@ -656,6 +657,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 }
 
                 ::ActivityLog("DMR", true, "Slot %u RF late entry from %u to %s%u", m_slot->m_slotNo, srcId, flco == FLCO::GROUP ? "TG " : "", dstId);
+                LogMessage(LOG_RF, "DMR Voice Call, slot = %u, srcId = %u, dstId = %u", m_slot->m_slotNo, srcId, dstId);
                 return true;
             }
         }
@@ -772,6 +774,7 @@ void Voice::processNetwork(const data::NetData& dmrData)
         }
 
         ::ActivityLog("DMR", false, "Slot %u network voice header from %u to %s%u", m_slot->m_slotNo, srcId, flco == FLCO::GROUP ? "TG " : "", dstId);
+        LogMessage(LOG_NET, "DMR Voice Call, slot = %u, srcId = %u, dstId = %u", m_slot->m_slotNo, srcId, dstId);
     }
     else if (dataType == DataType::VOICE_PI_HEADER) {
         if (m_slot->m_netState != RS_NET_AUDIO) {
@@ -839,6 +842,7 @@ void Voice::processNetwork(const data::NetData& dmrData)
 
             ::ActivityLog("DMR", false, "Slot %u network late entry from %u to %s%u",
                 m_slot->m_slotNo, srcId, m_slot->m_netLC->getFLCO() == FLCO::GROUP ? "TG " : "", dstId);
+            LogMessage(LOG_NET, "DMR Voice Call, slot = %u, srcId = %u, dstId = %u", m_slot->m_slotNo, srcId, dstId);
         }
 
         lc::FullLC fullLC;
@@ -951,6 +955,7 @@ void Voice::processNetwork(const data::NetData& dmrData)
 
             ::ActivityLog("DMR", false, "Slot %u network late entry from %u to %s%u",
                 m_slot->m_slotNo, srcId, m_slot->m_netLC->getFLCO() == FLCO::GROUP ? "TG " : "", dstId);
+            LogMessage(LOG_NET, "DMR Voice Call, slot = %u, srcId = %u, dstId = %u", m_slot->m_slotNo, srcId, dstId);
         }
 
         if (m_slot->m_netState == RS_NET_AUDIO) {

@@ -374,6 +374,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
 
             m_lastRejectId = 0U;
             ::ActivityLog("P25", true, "RF %svoice transmission from %u to %s%u", encrypted ? "encrypted ": "", srcId, group ? "TG " : "", dstId);
+            LogMessage(LOG_RF, "P25 Voice Call, srcId = %u, dstId = %u", srcId, dstId);
 
             uint8_t serviceOptions = (m_rfLC.getEmergency() ? 0x80U : 0x00U) +       // Emergency Flag
                 (m_rfLC.getEncrypted() ? 0x40U : 0x00U) +                            // Encrypted Flag
@@ -1835,6 +1836,7 @@ void Voice::writeNet_LDU1()
         m_p25->writeRF_Preamble();
 
         ::ActivityLog("P25", false, "network %svoice transmission from %u to %s%u", m_netLC.getEncrypted() ? "encrypted " : "", srcId, group ? "TG " : "", dstId);
+        LogMessage(LOG_NET, "P25 Voice Call, srcId = %u, dstId = %u", srcId, dstId);
 
         // conventional registration or DVRS support?
         if (((m_p25->m_enableControl && !m_p25->m_dedicatedControl) || m_p25->m_voiceOnControl) && !m_p25->m_disableNetworkGrant) {
