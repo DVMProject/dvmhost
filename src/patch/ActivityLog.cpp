@@ -112,6 +112,11 @@ void log_internal::ActivityLogInternal(const std::string& log)
     if (CurrentLogFileLevel() == 0U)
         return;
 
+    if (LogGetNetwork() != nullptr) {
+        network::BaseNetwork* network = (network::BaseNetwork*)LogGetNetwork();
+        network->writeActLog(log.c_str());
+    }
+
     ::fprintf(m_actFpLog, "%s\n", log.c_str());
     ::fflush(m_actFpLog);
 
