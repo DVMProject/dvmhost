@@ -1026,7 +1026,7 @@ void Slot::init(Control* dmr, bool authoritative, uint32_t colorCode, SiteData s
     m_affiliations = new dmr::lookups::DMRAffiliationLookup(chLookup, verbose);
 
     // set the grant release callback
-    m_affiliations->setReleaseGrantCallback([=](uint32_t chNo, uint32_t dstId, uint8_t slot) {
+    m_affiliations->setReleaseGrantCallback([=](uint32_t chNo, uint32_t srcId, uint32_t dstId, uint8_t slot) {
         Slot* tscc = m_dmr->getTSCCSlot();
         if (tscc != nullptr) {
             if (chNo == tscc->m_channelNo) {

@@ -61,6 +61,8 @@ bool DMRAffiliationLookup::grantChSlot(uint32_t dstId, uint32_t srcId, uint8_t s
         return false;
     }
 
+    __lock();
+
     if (getAvailableSlotForChannel(chNo) == 0U || chNo == m_tsccChNo) {
         m_chLookup->removeRFCh(chNo);
     }
@@ -80,6 +82,8 @@ bool DMRAffiliationLookup::grantChSlot(uint32_t dstId, uint32_t srcId, uint8_t s
         LogMessage(LOG_HOST, "%s, granting channel, chNo = %u, slot = %u, dstId = %u, group = %u",
             m_name.c_str(), chNo, slot, dstId, grp);
     }
+
+    __unlock();
 
     return true;
 }
@@ -112,6 +116,7 @@ bool DMRAffiliationLookup::releaseGrant(uint32_t dstId, bool releaseAll)
 
     if (isGranted(dstId)) {
         uint32_t chNo = m_grantChTable.at(dstId);
+        uint32_t srcId = getGrantedSrcId(dstId);
         std::tuple<uint32_t, uint8_t> slotData = m_grantChSlotTable.at(dstId);
         uint8_t slot = std::get<1>(slotData);
 
@@ -121,8 +126,10 @@ bool DMRAffiliationLookup::releaseGrant(uint32_t dstId, bool releaseAll)
         }
 
         if (m_releaseGrant != nullptr) {
-            m_releaseGrant(chNo, dstId, slot);
+            m_releaseGrant(chNo, srcId, dstId, slot);
         }
+
+        __lock();
 
         m_grantChTable.erase(dstId);
         m_grantSrcIdTable.erase(dstId);
@@ -140,6 +147,8 @@ bool DMRAffiliationLookup::releaseGrant(uint32_t dstId, bool releaseAll)
 
         m_grantTimers[dstId].stop();
 
+        __unlock();
+
         return true;
     }
 
@@ -153,6 +162,8 @@ bool DMRAffiliationLookup::isChBusy(uint32_t chNo) const
     if (chNo == 0U) {
         return false;
     }
+
+    __spinlock();
 
     // lookup dynamic channel grant table entry
     for (auto grantEntry : m_grantChTable) {
@@ -187,6 +198,8 @@ uint8_t DMRAffiliationLookup::getGrantedSlot(uint32_t dstId) const
         return 0U;
     }
 
+    __spinlock();
+
     // lookup dynamic channel grant table entry
     for (auto entry : m_grantChSlotTable) {
         if (entry.first == dstId) {
@@ -218,6 +231,8 @@ uint32_t DMRAffiliationLookup::getAvailableChannelForSlot(uint8_t slot) const
     if (slot == 0U) {
         return 0U;
     }
+
+    __spinlock();
 
     uint32_t chNo = 0U;
     for (auto entry : m_chLookup->rfChDataTable()) {
@@ -259,6 +274,8 @@ uint8_t DMRAffiliationLookup::getAvailableSlotForChannel(uint32_t chNo) const
     if (chNo == 0U) {
         return 0U;
     }
+
+    __spinlock();
 
     uint8_t slot = 1U;
 

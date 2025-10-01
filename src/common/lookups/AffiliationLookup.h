@@ -21,6 +21,7 @@
 #define __AFFILIATION_LOOKUP_H__
 
 #include "common/Defines.h"
+#include "common/concurrent/concurrent_lock.h"
 #include "common/concurrent/vector.h"
 #include "common/concurrent/unordered_map.h"
 #include "common/lookups/ChannelLookup.h"
@@ -41,7 +42,7 @@ namespace lookups
      *  and group affiliation information.
      * @ingroup lookups_aff
      */
-    class HOST_SW_API AffiliationLookup {
+    class HOST_SW_API AffiliationLookup : public concurrent::concurrent_lock {
     public:
         /**
          * @brief Initializes a new instance of the AffiliationLookup class.
@@ -265,11 +266,15 @@ namespace lookups
 
         /**
          * @brief Helper to set the release grant callback.
+         * @note Do not call AffiliationLookup get functions from within this callback, deadlock protection
+         *  is not guaranteed.
          * @param callback Relase grant function callback.
          */
-        void setReleaseGrantCallback(std::function<void(uint32_t, uint32_t, uint8_t)>&& callback) { m_releaseGrant = callback; }
+        void setReleaseGrantCallback(std::function<void(uint32_t, uint32_t, uint32_t, uint8_t)>&& callback) { m_releaseGrant = callback; }
         /**
          * @brief Helper to set the unit deregistration callback.
+         * @note Do not call AffiliationLookup get functions from within this callback, deadlock protection
+         *  is not guaranteed.
          * @param callback Unit deregistration function callback.
          */
         void setUnitDeregCallback(std::function<void(uint32_t, bool)>&& callback) { m_unitDereg = callback; }
@@ -287,8 +292,8 @@ namespace lookups
         concurrent::unordered_map<uint32_t, bool> m_netGrantedTable;
         concurrent::unordered_map<uint32_t, Timer> m_grantTimers;
 
-        //                 chNo      dstId     slot
-        std::function<void(uint32_t, uint32_t, uint8_t)> m_releaseGrant;
+        //                 chNo      srcId     dstId     slot
+        std::function<void(uint32_t, uint32_t, uint32_t, uint8_t)> m_releaseGrant;
         //                 srcId     auto
         std::function<void(uint32_t, bool)> m_unitDereg;
 
