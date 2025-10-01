@@ -11,12 +11,6 @@
 #include "common/network/BaseNetwork.h"
 #include "common/Log.h" // for CurrentLogFileLevel() and LogGetNetwork()
 
-#if defined(_WIN32)
-#include "common/Clock.h"
-#else
-#include <sys/time.h>
-#endif // defined(_WIN32)
-
 #if defined(CATCH2_TEST_COMPILATION)
 #include <catch2/catch_test_macros.hpp>
 #endif
@@ -106,50 +100,23 @@ void ActivityLogFinalise()
 
 /* Writes a new entry to the activity log. */
 
-void ActivityLog(const char* msg, ...)
+void log_internal::ActivityLogInternal(const std::string& log)
 {
 #if defined(CATCH2_TEST_COMPILATION)
     return;
 #endif
-    assert(msg != nullptr);
-
-    char buffer[ACT_LOG_BUFFER_LEN];
-    time_t now;
-    ::time(&now);
-    struct tm* tm = ::localtime(&now);
-
-    struct timeval nowMillis;
-    ::gettimeofday(&nowMillis, NULL);
-
-    ::sprintf(buffer, "A: %04d-%02d-%02d %02d:%02d:%02d.%03lu ", tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec, nowMillis.tv_usec / 1000U);
-
-    va_list vl, vl_len;
-    va_start(vl, msg);
-    va_copy(vl_len, vl);
-
-    size_t len = ::vsnprintf(nullptr, 0U, msg, vl_len);
-    ::vsnprintf(buffer + ::strlen(buffer), len + 1U, msg, vl);
-
-    va_end(vl_len);
-    va_end(vl);
-
     bool ret = ::ActivityLogOpen();
     if (!ret)
         return;
 
-    if (LogGetNetwork() != nullptr) {
-        network::BaseNetwork* network = (network::BaseNetwork*)LogGetNetwork();;
-        network->writeActLog(buffer);
-    }
-
     if (CurrentLogFileLevel() == 0U)
         return;
 
-    ::fprintf(m_actFpLog, "%s\n", buffer);
+    ::fprintf(m_actFpLog, "%s\n", log.c_str());
     ::fflush(m_actFpLog);
 
     if (2U >= g_logDisplayLevel && g_logDisplayLevel != 0U) {
-        ::fprintf(stdout, "%s" EOL, buffer);
+        ::fprintf(stdout, "%s" EOL, log.c_str());
         ::fflush(stdout);
     }
 }

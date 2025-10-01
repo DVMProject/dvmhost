@@ -64,7 +64,7 @@ public:
      */
     explicit SysViewMainWnd(FWidget* widget = nullptr) : FWidget{widget}
     {
-        __InternalOutputStream(m_logWnd);
+        log_internal::SetInternalOutputStream(m_logWnd);
 
         // file menu
         m_statusMenu.addCallback("clicked", this, [&]() {

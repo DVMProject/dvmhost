@@ -77,7 +77,7 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
             if (it != g_peerIdentityNameMap.end())
                 identity = g_peerIdentityNameMap[peerId];
 
-            ::Log(9999U, nullptr, "%.9u (%8s) %s", peerId, identity.c_str(), payload.c_str());
+            ::Log(9999U, {nullptr, nullptr, 0U, nullptr}, "%.9u (%8s) %s", peerId, identity.c_str(), payload.c_str());
             g_disableTimeDisplay = currState;
         }
         break;

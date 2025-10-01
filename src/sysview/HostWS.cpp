@@ -260,7 +260,7 @@ int HostWS::run()
     g_logDisplayLevel = 0U;
 
     std::ostringstream logOutput;
-    __InternalOutputStream(logOutput);
+    log_internal::SetInternalOutputStream(logOutput);
 
     Timer peerListUpdate(1000U, 10U);
     peerListUpdate.start();

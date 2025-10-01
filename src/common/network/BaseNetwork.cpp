@@ -163,8 +163,15 @@ bool BaseNetwork::writeActLog(const char* message)
     char buffer[DATA_PACKET_LENGTH];
     uint32_t len = ::strlen(message);
 
+#if !defined(_WIN32)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstringop-truncation"
+#endif 
     ::strncpy(buffer + 11U, message, len);
-
+#if !defined(_WIN32)
+#pragma GCC diagnostic pop
+#endif 
+    
     return writeMaster({ NET_FUNC::TRANSFER, NET_SUBFUNC::TRANSFER_SUBFUNC_ACTIVITY }, (uint8_t*)buffer, (uint32_t)len + 11U,
         RTP_END_OF_CALL_SEQ, 0U, false, m_useAlternatePortForDiagnostics);
 }
@@ -184,7 +191,14 @@ bool BaseNetwork::writeDiagLog(const char* message)
     char buffer[DATA_PACKET_LENGTH];
     uint32_t len = ::strlen(message);
 
+#if !defined(_WIN32)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstringop-truncation"
+#endif 
     ::strncpy(buffer + 11U, message, len);
+#if !defined(_WIN32)
+#pragma GCC diagnostic pop
+#endif 
 
     return writeMaster({ NET_FUNC::TRANSFER, NET_SUBFUNC::TRANSFER_SUBFUNC_DIAG }, (uint8_t*)buffer, (uint32_t)len + 11U,
         RTP_END_OF_CALL_SEQ, 0U, false, m_useAlternatePortForDiagnostics);
@@ -209,7 +223,14 @@ bool BaseNetwork::writePeerStatus(json::object obj)
     char buffer[DATA_PACKET_LENGTH];
     uint32_t len = ::strlen(json.c_str());
 
+#if !defined(_WIN32)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstringop-truncation"
+#endif 
     ::strncpy(buffer + 11U, json.c_str(), len);
+#if !defined(_WIN32)
+#pragma GCC diagnostic pop
+#endif 
 
     return writeMaster({ NET_FUNC::TRANSFER, NET_SUBFUNC::TRANSFER_SUBFUNC_STATUS }, (uint8_t*)buffer, (uint32_t)len + 11U,
         RTP_END_OF_CALL_SEQ, 0U, false, m_useAlternatePortForDiagnostics);

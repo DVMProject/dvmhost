@@ -63,7 +63,7 @@ public:
     explicit SetupMainWnd(HostSetup* setup, FWidget* widget = nullptr) : FWidget{widget},
         m_setup(setup)
     {
-        __InternalOutputStream(m_logWnd);
+        log_internal::SetInternalOutputStream(m_logWnd);
         m_statusWnd.hide();
 
         resetBERWnd();

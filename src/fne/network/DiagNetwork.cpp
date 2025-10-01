@@ -287,7 +287,7 @@ void DiagNetwork::taskNetworkRx(NetPacketRequest* req)
 
                                             bool currState = g_disableTimeDisplay;
                                             g_disableTimeDisplay = true;
-                                            ::Log(9999U, nullptr, nullptr, 0U, nullptr, "%.9u (%8s) %s", peerId, connection->identity().c_str(), payload.c_str());
+                                            ::Log(9999U, {nullptr, nullptr, 0U, nullptr}, "%.9u (%8s) %s", peerId, connection->identity().c_str(), payload.c_str());
                                             g_disableTimeDisplay = currState;
 
                                             // report diagnostic log to InfluxDB

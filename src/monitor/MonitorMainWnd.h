@@ -58,7 +58,7 @@ public:
      */
     explicit MonitorMainWnd(FWidget* widget = nullptr) : FWidget{widget}
     {
-        __InternalOutputStream(m_logWnd);
+        log_internal::SetInternalOutputStream(m_logWnd);
 
         // file menu
         m_quitItem.addAccelerator(FKey::Meta_x); // Meta/Alt + X

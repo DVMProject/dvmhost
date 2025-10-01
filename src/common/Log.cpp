@@ -11,21 +11,17 @@
 #include "Log.h"
 #include "network/BaseNetwork.h"
 
-#if defined(_WIN32)
-#include "Clock.h"
-#else
-#include <sys/time.h>
-#include <syslog.h>
-#endif // defined(_WIN32)
-
 #if defined(CATCH2_TEST_COMPILATION)
 #include <catch2/catch_test_macros.hpp>
 #endif
 
+#if !defined(_WIN32)
+#include <syslog.h>
+#endif // defined(_WIN32)
+
 #include <cstdio>
 #include <cstdlib>
 #include <cstdarg>
-#include <ctime>
 #include <cassert>
 #include <cstring>
 #include <iostream>
@@ -59,8 +55,6 @@ bool g_disableNetworkLog = false;
 static struct tm m_tm;
 
 static std::ostream m_outStream { std::cerr.rdbuf() };
-
-static char LEVELS[] = " DMIWEF";
 
 // ---------------------------------------------------------------------------
 //  Global Functions
@@ -140,13 +134,6 @@ static bool LogOpen()
     }
 }
 
-/* Internal helper to set an output stream to direct logging to. */
-
-void __InternalOutputStream(std::ostream& stream)
-{
-    m_outStream.rdbuf(stream.rdbuf());
-}
-
 /* Gets the instance of the Network class to transfer the activity log with. */
 
 void* LogGetNetwork()
@@ -202,128 +189,30 @@ void LogFinalise()
 #endif // !defined(_WIN32)
 }
 
+/* Internal helper to set an output stream to direct logging to. */
+
+void log_internal::SetInternalOutputStream(std::ostream& stream)
+{
+    m_outStream.rdbuf(stream.rdbuf());
+}
+
 /* Writes a new entry to the diagnostics log. */
 
-void Log(uint32_t level, const char *module, const char* file, const int lineNo, const char* func, const char* fmt, ...)
+void log_internal::LogInternal(uint32_t level, const std::string& log)
 {
-    assert(fmt != nullptr);
-#if defined(CATCH2_TEST_COMPILATION)
-    g_disableTimeDisplay = true;
-#endif
-    char buffer[LOG_BUFFER_LEN];
-    if (!g_disableTimeDisplay && !g_useSyslog) {
-        time_t now;
-        ::time(&now);
-        struct tm* tm = ::localtime(&now);
-
-        struct timeval nowMillis;
-        ::gettimeofday(&nowMillis, NULL);
-
-        if (module != nullptr) {
-            // level 1 is DEBUG
-            if (level == 1U) {
-                // if we have a file and line number -- add that to the log entry
-                if (file != nullptr && lineNo > 0) {
-                    // if we have a function name add that to the log entry
-                    if (func != nullptr) {
-                        ::sprintf(buffer, "%c: %04d-%02d-%02d %02d:%02d:%02d.%03lu (%s)[%s:%u][%s] ", LEVELS[level], tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec, nowMillis.tv_usec / 1000U, module, file, lineNo, func);
-                    }
-                    else {
-                        ::sprintf(buffer, "%c: %04d-%02d-%02d %02d:%02d:%02d.%03lu (%s)[%s:%u] ", LEVELS[level], tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec, nowMillis.tv_usec / 1000U, module, file, lineNo);
-                    }
-                } else {
-                    ::sprintf(buffer, "%c: %04d-%02d-%02d %02d:%02d:%02d.%03lu (%s) ", LEVELS[level], tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec, nowMillis.tv_usec / 1000U, module);
-                }
-            } else {
-                ::sprintf(buffer, "%c: %04d-%02d-%02d %02d:%02d:%02d.%03lu (%s) ", LEVELS[level], tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec, nowMillis.tv_usec / 1000U, module);
-            }
-        }
-        else {
-            // level 1 is DEBUG
-            if (level == 1U) {
-                // if we have a file and line number -- add that to the log entry
-                if (file != nullptr && lineNo > 0) {
-                    // if we have a function name add that to the log entry
-                    if (func != nullptr) {
-                        ::sprintf(buffer, "%c: %04d-%02d-%02d %02d:%02d:%02d.%03lu [%s:%u][%s] ", LEVELS[level], tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec, nowMillis.tv_usec / 1000U, file, lineNo, func);
-                    }
-                    else {
-                        ::sprintf(buffer, "%c: %04d-%02d-%02d %02d:%02d:%02d.%03lu [%s:%u] ", LEVELS[level], tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec, nowMillis.tv_usec / 1000U, file, lineNo);
-                    }
-                } else {
-                    ::sprintf(buffer, "%c: %04d-%02d-%02d %02d:%02d:%02d.%03lu ", LEVELS[level], tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec, nowMillis.tv_usec / 1000U);
-                }
-            } else {
-                ::sprintf(buffer, "%c: %04d-%02d-%02d %02d:%02d:%02d.%03lu ", LEVELS[level], tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec, nowMillis.tv_usec / 1000U);
-            }
-        }
-    }
-    else {
-        if (module != nullptr) {
-            // level 1 is DEBUG
-            if (level == 1U) {
-                // if we have a file and line number -- add that to the log entry
-                if (file != nullptr && lineNo > 0) {
-                    // if we have a function name add that to the log entry
-                    if (func != nullptr) {
-                        ::sprintf(buffer, "%c: (%s)[%s:%u][%s] ", LEVELS[level], module, file, lineNo, func);
-                    }
-                    else {
-                        ::sprintf(buffer, "%c: (%s)[%s:%u] ", LEVELS[level], module, file, lineNo);
-                    }
-                }
-                else {
-                    ::sprintf(buffer, "%c: (%s) ", LEVELS[level], module);
-                }
-            } else {
-                ::sprintf(buffer, "%c: (%s) ", LEVELS[level], module);
-            }
-        }
-        else {
-            if (level >= 9999U) {
-                ::sprintf(buffer, "U: ");
-            }
-            else {
-                 // if we have a file and line number -- add that to the log entry
-                 if (file != nullptr && lineNo > 0) {
-                    // if we have a function name add that to the log entry
-                    if (func != nullptr) {
-                        ::sprintf(buffer, "%c: [%s:%u][%s] ", LEVELS[level], file, lineNo, func);
-                    }
-                    else {
-                        ::sprintf(buffer, "%c: [%s:%u] ", LEVELS[level], file, lineNo);
-                    }
-                }
-                else {
-                    ::sprintf(buffer, "%c: ", LEVELS[level]);
-                }
-            }
-        }
-    }
-
-    va_list vl, vl_len;
-    va_start(vl, fmt);
-    va_copy(vl_len, vl);
-
-    size_t len = ::vsnprintf(nullptr, 0U, fmt, vl_len);
-    ::vsnprintf(buffer + ::strlen(buffer), len + 1U, fmt, vl);
-
-    va_end(vl_len);
-    va_end(vl);
-
     if (m_outStream && g_logDisplayLevel == 0U) {
-        m_outStream << buffer << std::endl;
+        m_outStream << log << std::endl;
     }
 
     if (m_network != nullptr && !g_disableNetworkLog) {
         // don't transfer debug data...
         if (level > 1U) {
-            m_network->writeDiagLog(buffer);
+            m_network->writeDiagLog(log.c_str());
         }
     }
 
 #if defined(CATCH2_TEST_COMPILATION)
-    UNSCOPED_INFO(buffer);
+    UNSCOPED_INFO(log.c_str());
     return;
 #endif
 
@@ -334,7 +223,7 @@ void Log(uint32_t level, const char *module, const char* file, const int lineNo,
                 return;
 
             if (m_fpLog != nullptr) {
-                ::fprintf(m_fpLog, "%s\n", buffer);
+                ::fprintf(m_fpLog, "%s\n", log.c_str());
                 ::fflush(m_fpLog);
             }
         } else {
@@ -363,13 +252,13 @@ void Log(uint32_t level, const char *module, const char* file, const int lineNo,
                 break;
             }
 
-            syslog(syslogLevel, "%s", buffer);
+            syslog(syslogLevel, "%s", log.c_str());
 #endif // !defined(_WIN32)
         }
     }
 
     if (!g_useSyslog && level >= g_logDisplayLevel && g_logDisplayLevel != 0U) {
-        ::fprintf(stdout, "%s" EOL, buffer);
+        ::fprintf(stdout, "%s" EOL, log.c_str());
         ::fflush(stdout);
     }
 

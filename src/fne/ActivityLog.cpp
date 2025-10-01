@@ -98,25 +98,11 @@ void ActivityLogFinalise()
 
 /* Writes a new entry to the activity log. */
 
-void ActivityLog(const char* msg, ...)
+void log_internal::ActivityLogInternal(const std::string& log)
 {
 #if defined(CATCH2_TEST_COMPILATION)
     return;
 #endif
-    assert(msg != nullptr);
-
-    char buffer[ACT_LOG_BUFFER_LEN];
-
-    va_list vl, vl_len;
-    va_start(vl, msg);
-    va_copy(vl_len, vl);
-
-    size_t len = ::vsnprintf(nullptr, 0U, msg, vl_len);
-    ::vsnprintf(buffer, len + 1U, msg, vl);
-
-    va_end(vl_len);
-    va_end(vl);
-
     bool ret = ::ActivityLogOpen();
     if (!ret)
         return;
@@ -124,11 +110,11 @@ void ActivityLog(const char* msg, ...)
     if (CurrentLogFileLevel() == 0U)
         return;
 
-    ::fprintf(m_actFpLog, "%s\n", buffer);
+    ::fprintf(m_actFpLog, "%s\n", log.c_str());
     ::fflush(m_actFpLog);
 
     if (2U >= g_logDisplayLevel && g_logDisplayLevel != 0U) {
-        ::fprintf(stdout, "%s" EOL, buffer);
+        ::fprintf(stdout, "%s" EOL, log.c_str());
         ::fflush(stdout);
     }
 }
