@@ -377,11 +377,17 @@ void AffiliationLookup::touchGrant(uint32_t dstId)
         return;
     }
 
-    __spinlock();
+    /*
+    ** bryanb: this doesn't __spinlock(), this is dangerous but necessary
+    **  otherwise an affiliations lookup lock can cause audio cuts if this is
+    **  used in an audio processing chain
+    */
 
+    m_grantTimers.lock(false);
     if (isGranted(dstId)) {
         m_grantTimers[dstId].start();
     }
+    m_grantTimers.unlock();
 }
 
 /* Helper to release the channel grant for the destination ID. */
@@ -481,7 +487,11 @@ bool AffiliationLookup::isGranted(uint32_t dstId) const
         return false;
     }
 
-    __spinlock();
+    /*
+    ** bryanb: this doesn't __spinlock(), this is dangerous but necessary
+    **  otherwise an affiliations lookup lock can cause audio cuts if this is
+    **  used in an audio processing chain
+    */
 
     // lookup dynamic channel grant table entry
     m_grantChTable.lock(false);
