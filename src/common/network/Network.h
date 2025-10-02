@@ -40,33 +40,33 @@ namespace network
      */
     struct PeerMetadata {
         /** @name Identity and Frequency */
-        std::string identity;                   //! Peer Identity
-        uint32_t rxFrequency;                   //! Peer Rx Frequency
-        uint32_t txFrequency;                   //! Peer Tx Frequency
+        std::string identity;                   //!< Peer Identity
+        uint32_t rxFrequency;                   //!< Peer Rx Frequency
+        uint32_t txFrequency;                   //!< Peer Tx Frequency
         /** @} */
 
         /** @name System Info */
-        uint32_t power;                         //! Peer Tx Power (W)
-        float latitude;                         //! Location Latitude (decmial notation)
-        float longitude;                        //! Location Longitude (decmial notation)
-        int height;                             //! Height (M)
-        std::string location;                   //! Textual Location
+        uint32_t power;                         //!< Peer Tx Power (W)
+        float latitude;                         //!< Location Latitude (decmial notation)
+        float longitude;                        //!< Location Longitude (decmial notation)
+        int height;                             //!< Height (M)
+        std::string location;                   //!< Textual Location
         /** @} */
 
         /** @name Channel Data */
-        float txOffsetMhz;                      //! Tx Offset (MHz)
-        float chBandwidthKhz;                   //! Channel Bandwidth (kHz)
-        uint8_t channelId;                      //! Channel ID
-        uint32_t channelNo;                     //! Channel Number
+        float txOffsetMhz;                      //!< Tx Offset (MHz)
+        float chBandwidthKhz;                   //!< Channel Bandwidth (kHz)
+        uint8_t channelId;                      //!< Channel ID
+        uint32_t channelNo;                     //!< Channel Number
         /** @} */
 
         /** @name RCON */
-        std::string restApiPassword;            //! REST API Password
-        uint16_t restApiPort;                   //! REST API Port
+        std::string restApiPassword;            //!< REST API Password
+        uint16_t restApiPort;                   //!< REST API Port
         /** @} */
 
         /** @name Flags */
-        bool isConventional;                    //! Flag indicating peer is a conventional peer.
+        bool isConventional;                    //!< Flag indicating peer is a conventional peer.
         /** @} */
     };
 

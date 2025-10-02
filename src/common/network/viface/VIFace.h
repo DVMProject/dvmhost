@@ -39,8 +39,8 @@ namespace network
          */
         struct viface_queues
         {
-            int rxFd;               //! Receive Packet File Descriptor
-            int txFd;               //! Transmit Packet File Descriptor
+            int rxFd;               //!< Receive Packet File Descriptor
+            int txFd;               //!< Transmit Packet File Descriptor
         };
 
         // ---------------------------------------------------------------------------

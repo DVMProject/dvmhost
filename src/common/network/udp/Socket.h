@@ -51,8 +51,8 @@
  * @ingroup udp_socket
  */
 enum IPMATCHTYPE {
-    IMT_ADDRESS_AND_PORT,       //! Address and Port
-    IMT_ADDRESS_ONLY            //! Address Only
+    IMT_ADDRESS_AND_PORT,       //!< Address and Port
+    IMT_ADDRESS_ONLY            //!< Address Only
 };
 
 #if defined(_WIN32)
@@ -160,11 +160,11 @@ namespace network
          * @ingroup udp_socket
          */
         struct UDPDatagram {
-            uint8_t* buffer;            //! Message Buffer
-            size_t length;              //! Length of Message Buffer
+            uint8_t* buffer;            //!< Message Buffer
+            size_t length;              //!< Length of Message Buffer
 
-            sockaddr_storage address;   //! Address and Port
-            uint32_t addrLen;           //! Length of address structure
+            sockaddr_storage address;   //!< Address and Port
+            uint32_t addrLen;           //!< Length of address structure
         };
 
         /** @brief Vector of buffers that contain a full frames */

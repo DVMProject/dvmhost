@@ -63,11 +63,11 @@ namespace network
          * @brief Status/Response Codes
          */
         enum StatusType {
-            OK = 200,                       //! OK 200
+            OK = 200,                       //!< OK 200
 
-            BAD_REQUEST = 400,              //! Bad Request 400
-            INVALID_ARGS = 401,             //! Invalid Arguments 401
-            UNHANDLED_REQUEST = 402,        //! Unhandled Request 402
+            BAD_REQUEST = 400,              //!< Bad Request 400
+            INVALID_ARGS = 401,             //!< Invalid Arguments 401
+            UNHANDLED_REQUEST = 402,        //!< Unhandled Request 402
         } status;
 
         auto operator=(NetRPC&) -> NetRPC& = delete;

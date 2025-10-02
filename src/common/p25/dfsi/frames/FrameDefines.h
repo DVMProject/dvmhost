@@ -44,17 +44,17 @@ namespace p25
             namespace FSCMessageType {
                 /** @brief FSC Control Service Message.*/
                 enum E : uint8_t {
-                    FSC_CONNECT = 0,                    //! Establish connection with FSS
-                    FSC_HEARTBEAT = 1,                  //! Heartbeat/Connectivity Maintenance
-                    FSC_ACK = 2,                        //! Control Service Ack.
+                    FSC_CONNECT = 0,                    //!< Establish connection with FSS
+                    FSC_HEARTBEAT = 1,                  //!< Heartbeat/Connectivity Maintenance
+                    FSC_ACK = 2,                        //!< Control Service Ack.
 
-                    FSC_SEL_CHAN = 5,                   //! Channel Selection
+                    FSC_SEL_CHAN = 5,                   //!< Channel Selection
 
-                    FSC_REPORT_SEL_MODES = 8,           //! Report Selected Modes
+                    FSC_REPORT_SEL_MODES = 8,           //!< Report Selected Modes
 
-                    FSC_DISCONNECT = 9,                 //! Detach Control Service
+                    FSC_DISCONNECT = 9,                 //!< Detach Control Service
 
-                    FSC_INVALID = 127,                  //! Invalid Control Message
+                    FSC_INVALID = 127,                  //!< Invalid Control Message
                 };
             }
 
@@ -62,14 +62,14 @@ namespace p25
             namespace FSCAckResponseCode {
                 /** @brief FSC ACK/NAK Codes. */
                 enum E : uint8_t {
-                    CONTROL_ACK = 0,                    //! Acknowledgement.
-                    CONTROL_NAK = 1,                    //! Unspecified Negative Acknowledgement.
-                    CONTROL_NAK_CONNECTED = 2,          //! Server is connected to some other host.
-                    CONTROL_NAK_M_UNSUPP = 3,           //! Unsupported Manufactuerer Message.
-                    CONTROL_NAK_V_UNSUPP = 4,           //! Unsupported Message Version.
-                    CONTROL_NAK_F_UNSUPP = 5,           //! Unsupported Function.
-                    CONTROL_NAK_PARMS = 6,              //! Bad / Unsupported Command Parameters.
-                    CONTROL_NAK_BUSY = 7                //! FSS is currently busy with a function.
+                    CONTROL_ACK = 0,                    //!< Acknowledgement.
+                    CONTROL_NAK = 1,                    //!< Unspecified Negative Acknowledgement.
+                    CONTROL_NAK_CONNECTED = 2,          //!< Server is connected to some other host.
+                    CONTROL_NAK_M_UNSUPP = 3,           //!< Unsupported Manufactuerer Message.
+                    CONTROL_NAK_V_UNSUPP = 4,           //!< Unsupported Message Version.
+                    CONTROL_NAK_F_UNSUPP = 5,           //!< Unsupported Function.
+                    CONTROL_NAK_PARMS = 6,              //!< Bad / Unsupported Command Parameters.
+                    CONTROL_NAK_BUSY = 7                //!< FSS is currently busy with a function.
                 };
             }
 
@@ -77,17 +77,17 @@ namespace p25
             namespace BlockType {
                 /** @brief DFSI Block Types */
                 enum E : uint8_t {
-                    FULL_RATE_VOICE = 0,                //! Full Rate Voice
+                    FULL_RATE_VOICE = 0,                //!< Full Rate Voice
 
-                    VOICE_HEADER_P1 = 6,                //! Voice Header 1
-                    VOICE_HEADER_P2 = 7,                //! Voice Header 2
+                    VOICE_HEADER_P1 = 6,                //!< Voice Header 1
+                    VOICE_HEADER_P2 = 7,                //!< Voice Header 2
 
-                    START_OF_STREAM = 9,                //! Start of Stream
-                    END_OF_STREAM = 10,                 //! End of Stream
+                    START_OF_STREAM = 9,                //!< Start of Stream
+                    END_OF_STREAM = 10,                 //!< End of Stream
 
-                    START_OF_STREAM_ACK = 14,           //! Start of Stream Ack
+                    START_OF_STREAM_ACK = 14,           //!< Start of Stream Ack
 
-                    UNDEFINED = 127                     //! Undefined
+                    UNDEFINED = 127                     //!< Undefined
                 };
             }
 
@@ -95,8 +95,8 @@ namespace p25
             namespace MotStartStreamOpcode {
                 /** @brief Motorola Start of Stream Operation */
                 enum E : uint8_t {
-                    TRANSMIT = 0x02U,                   //! Transmit
-                    RECEIVE = 0x04U,                    //! Receive
+                    TRANSMIT = 0x02U,                   //!< Transmit
+                    RECEIVE = 0x04U,                    //!< Receive
                 };
             }
 
@@ -104,10 +104,10 @@ namespace p25
             namespace MotStreamPayload {
                 /** @brief Motorola Stream Payload */
                 enum E : uint8_t {
-                    VOICE = 0x0BU,                      //! P25 Voice
-                    DATA = 0x0CU,                       //! P25 Data
-                    TERM_LC = 0x0EU,                    //! P25 Termination Link Control
-                    TSBK = 0x0FU                        //! P25 TSBK
+                    VOICE = 0x0BU,                      //!< P25 Voice
+                    DATA = 0x0CU,                       //!< P25 Data
+                    TERM_LC = 0x0EU,                    //!< P25 Termination Link Control
+                    TSBK = 0x0FU                        //!< P25 TSBK
                 };
             }
             /** @} */

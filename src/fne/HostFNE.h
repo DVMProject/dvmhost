@@ -59,8 +59,8 @@ public:
      * @brief Virtual Network Packet Data Digital Mode
      */
     enum PacketDataMode {
-        DMR,            //! Digital Mobile Radio
-        PROJECT25       //! Project 25
+        DMR,            //!< Digital Mobile Radio
+        PROJECT25       //!< Project 25
     };
 
     /**

@@ -63,8 +63,8 @@ namespace vocoder
      * @brief Vocoder Decoding Mode
      */
     enum MBE_DECODER_MODE {
-        DECODE_DMR_AMBE,    //! DMR AMBE
-        DECODE_88BIT_IMBE   //! 88-bit IMBE (P25)
+        DECODE_DMR_AMBE,    //!< DMR AMBE
+        DECODE_88BIT_IMBE   //!< 88-bit IMBE (P25)
     };
 
     // ---------------------------------------------------------------------------

@@ -103,11 +103,11 @@ void mdcPacketDetected(int frameCount, mdc_u8_t op, mdc_u8_t arg, mdc_u16_t unit
  * @ingroup bridge
  */
 struct NetPacketRequest {
-    uint32_t srcId;
-    uint32_t dstId;
+    uint32_t srcId;                     //!< Source Address
+    uint32_t dstId;                     //!< Destination Address
 
-    int pcmLength = 0U;                 //! Length of PCM data buffer
-    uint8_t* pcm = nullptr;             //! Raw PCM buffer
+    int pcmLength = 0U;                 //!< Length of PCM data buffer
+    uint8_t* pcm = nullptr;             //!< Raw PCM buffer
 };
 
 // ---------------------------------------------------------------------------

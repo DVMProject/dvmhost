@@ -168,32 +168,32 @@ const uint32_t  RPC_DEFAULT_PORT = 9890;
  * @brief Operational Host States
  */
 enum HOST_STATE {
-    FNE_STATE = 240U,                   //! FNE (only used by dvmfne)
+    FNE_STATE = 240U,                   //!< FNE (only used by dvmfne)
 
-    HOST_STATE_LOCKOUT = 250U,          //! Lockout (dvmhost traffic lockout state)
-    HOST_STATE_ERROR = 254U,            //! Error (dvmhost error state)
-    HOST_STATE_QUIT = 255U,             //! Quit (dvmhost quit state)
+    HOST_STATE_LOCKOUT = 250U,          //!< Lockout (dvmhost traffic lockout state)
+    HOST_STATE_ERROR = 254U,            //!< Error (dvmhost error state)
+    HOST_STATE_QUIT = 255U,             //!< Quit (dvmhost quit state)
 };
 
 /**
  * @brief Operational RF States
  */
 enum RPT_RF_STATE {
-    RS_RF_LISTENING,                    //! Modem Listening
-    RS_RF_LATE_ENTRY,                   //! Traffic Late Entry
-    RS_RF_AUDIO,                        //! Audio
-    RS_RF_DATA,                         //! Data
-    RS_RF_REJECTED,                     //! Traffic Rejected
-    RS_RF_INVALID                       //! Traffic Invalid
+    RS_RF_LISTENING,                    //!< Modem Listening
+    RS_RF_LATE_ENTRY,                   //!< Traffic Late Entry
+    RS_RF_AUDIO,                        //!< Audio
+    RS_RF_DATA,                         //!< Data
+    RS_RF_REJECTED,                     //!< Traffic Rejected
+    RS_RF_INVALID                       //!< Traffic Invalid
 };
 
 /**
  * @brief Operational Network States
  */
 enum RPT_NET_STATE {
-    RS_NET_IDLE,                        //! Idle
-    RS_NET_AUDIO,                       //! Audio
-    RS_NET_DATA                         //! Data
+    RS_NET_IDLE,                        //!< Idle
+    RS_NET_AUDIO,                       //!< Audio
+    RS_NET_DATA                         //!< Data
 };
 
 const uint8_t   UDP_COMPRESS_NONE = 0x00U;

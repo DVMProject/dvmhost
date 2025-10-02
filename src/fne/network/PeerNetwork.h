@@ -37,17 +37,17 @@ namespace network
      * @ingroup fne_network
      */
     struct PeerPacketRequest : thread_t {
-        uint32_t peerId;                    //! Peer ID for this request.
-        uint32_t streamId;                  //! Stream ID for this request.
+        uint32_t peerId;                    //!< Peer ID for this request.
+        uint32_t streamId;                  //!< Stream ID for this request.
 
-        frame::RTPHeader rtpHeader;         //! RTP Header
-        frame::RTPFNEHeader fneHeader;      //! RTP FNE Header
-        int length = 0U;                    //! Length of raw data buffer
-        uint8_t* buffer = nullptr;          //! Raw data buffer
+        frame::RTPHeader rtpHeader;         //!< RTP Header
+        frame::RTPFNEHeader fneHeader;      //!< RTP FNE Header
+        int length = 0U;                    //!< Length of raw data buffer
+        uint8_t* buffer = nullptr;          //!< Raw data buffer
 
-        network::NET_SUBFUNC::ENUM subFunc; //! Sub-function of the packet
+        network::NET_SUBFUNC::ENUM subFunc; //!< Sub-function of the packet
 
-        uint64_t pktRxTime;                 //! Packet receive time
+        uint64_t pktRxTime;                 //!< Packet receive time
     };
 
     // ---------------------------------------------------------------------------

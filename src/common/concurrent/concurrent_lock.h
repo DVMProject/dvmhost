@@ -62,8 +62,8 @@ namespace concurrent
         void spinlock() const { __spinlock(); }
 
     protected:
-        mutable std::mutex m_mutex;     //! Mutex used for change locking.
-        mutable bool m_locked = false;  //! Flag used for read locking (prevents find lookups), should be used when atomic operations (add/erase/etc) are being used.
+        mutable std::mutex m_mutex;     //!< Mutex used for change locking.
+        mutable bool m_locked = false;  //!< Flag used for read locking (prevents find lookups), should be used when atomic operations (add/erase/etc) are being used.
 
         /**
          * @brief Lock the object.

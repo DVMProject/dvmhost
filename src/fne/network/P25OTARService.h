@@ -35,10 +35,10 @@ namespace network
      * @ingroup fne_network
      */
     struct OTARPacketRequest : thread_t {
-        sockaddr_storage address;               //! IP Address and Port. 
-        uint32_t addrLen;                       //!
-        int length = 0U;                        //! Length of raw data buffer
-        uint8_t *buffer;                        //! Raw data buffer
+        sockaddr_storage address;               //!< IP Address and Port. 
+        uint32_t addrLen;                       //!< 
+        int length = 0U;                        //!< Length of raw data buffer
+        uint8_t *buffer;                        //!< Raw data buffer
     };
 
     // ---------------------------------------------------------------------------

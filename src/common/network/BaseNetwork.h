@@ -99,19 +99,19 @@ namespace network
      */
     enum NET_CONN_STATUS {
         // Common States
-        NET_STAT_WAITING_CONNECT,                   //! Waiting for Connection
-        NET_STAT_WAITING_LOGIN,                     //! Waiting for Login
-        NET_STAT_WAITING_AUTHORISATION,             //! Waiting for Authorization
-        NET_STAT_WAITING_CONFIG,                    //! Waiting for Configuration
-        NET_STAT_RUNNING,                           //! Peer Running
+        NET_STAT_WAITING_CONNECT,                   //!< Waiting for Connection
+        NET_STAT_WAITING_LOGIN,                     //!< Waiting for Login
+        NET_STAT_WAITING_AUTHORISATION,             //!< Waiting for Authorization
+        NET_STAT_WAITING_CONFIG,                    //!< Waiting for Configuration
+        NET_STAT_RUNNING,                           //!< Peer Running
 
         // Master States
-        NET_STAT_RPTL_RECEIVED,                     //! Login Received
-        NET_STAT_CHALLENGE_SENT,                    //! Authentication Challenge Sent
+        NET_STAT_RPTL_RECEIVED,                     //!< Login Received
+        NET_STAT_CHALLENGE_SENT,                    //!< Authentication Challenge Sent
 
-        NET_STAT_MST_RUNNING,                       //! Master Running
+        NET_STAT_MST_RUNNING,                       //!< Master Running
 
-        NET_STAT_INVALID = 0x7FFFFFF                //! Invalid
+        NET_STAT_INVALID = 0x7FFFFFF                //!< Invalid
     };
 
     /**
@@ -119,20 +119,20 @@ namespace network
      * @ingroup network_core
      */
     enum NET_CONN_NAK_REASON {
-        NET_CONN_NAK_GENERAL_FAILURE,               //! General Failure
+        NET_CONN_NAK_GENERAL_FAILURE,               //!< General Failure
 
-        NET_CONN_NAK_MODE_NOT_ENABLED,              //! Mode Not Enabled
-        NET_CONN_NAK_ILLEGAL_PACKET,                //! Illegal Packet
+        NET_CONN_NAK_MODE_NOT_ENABLED,              //!< Mode Not Enabled
+        NET_CONN_NAK_ILLEGAL_PACKET,                //!< Illegal Packet
 
-        NET_CONN_NAK_FNE_UNAUTHORIZED,              //! FNE Unauthorized
-        NET_CONN_NAK_BAD_CONN_STATE,                //! Bad Connection State
-        NET_CONN_NAK_INVALID_CONFIG_DATA,           //! Invalid Configuration Data
-        NET_CONN_NAK_PEER_RESET,                    //! Peer Reset
-        NET_CONN_NAK_PEER_ACL,                      //! Peer ACL
+        NET_CONN_NAK_FNE_UNAUTHORIZED,              //!< FNE Unauthorized
+        NET_CONN_NAK_BAD_CONN_STATE,                //!< Bad Connection State
+        NET_CONN_NAK_INVALID_CONFIG_DATA,           //!< Invalid Configuration Data
+        NET_CONN_NAK_PEER_RESET,                    //!< Peer Reset
+        NET_CONN_NAK_PEER_ACL,                      //!< Peer ACL
 
-        NET_CONN_NAK_FNE_MAX_CONN,                  //! FNE Maximum Connections
+        NET_CONN_NAK_FNE_MAX_CONN,                  //!< FNE Maximum Connections
 
-        NET_CONN_NAK_INVALID = 0xFFFF               //! Invalid
+        NET_CONN_NAK_INVALID = 0xFFFF               //!< Invalid
     };
 
     /**
@@ -141,11 +141,11 @@ namespace network
      * @ingroup network_core
      */
     enum CONTROL_BYTE {
-        NET_CTRL_GRANT_DEMAND = 0x80U,              //! Grant Demand
-        NET_CTRL_GRANT_DENIAL = 0x40U,              //! Grant Denial
-        NET_CTRL_SWITCH_OVER = 0x20U,               //! Call Source RID Switch Over
-        NET_CTRL_GRANT_ENCRYPT = 0x08U,             //! Grant Encrypt
-        NET_CTRL_U2U = 0x01U,                       //! Unit-to-Unit
+        NET_CTRL_GRANT_DEMAND = 0x80U,              //!< Grant Demand
+        NET_CTRL_GRANT_DENIAL = 0x40U,              //!< Grant Denial
+        NET_CTRL_SWITCH_OVER = 0x20U,               //!< Call Source RID Switch Over
+        NET_CTRL_GRANT_ENCRYPT = 0x08U,             //!< Grant Encrypt
+        NET_CTRL_U2U = 0x01U,                       //!< Unit-to-Unit
     };
 
     // ---------------------------------------------------------------------------

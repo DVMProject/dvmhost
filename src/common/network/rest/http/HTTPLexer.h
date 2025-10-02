@@ -156,37 +156,37 @@ namespace network
                  */
                 enum state
                 {
-                    METHOD_START,               //! HTTP Method Start
-                    METHOD,                     //! HTTP Method
-                    URI,                        //! HTTP URI
+                    METHOD_START,               //!< HTTP Method Start
+                    METHOD,                     //!< HTTP Method
+                    URI,                        //!< HTTP URI
 
-                    HTTP_VERSION_H,             //! HTTP Version: H
-                    HTTP_VERSION_T_1,           //! HTTP Version: T
-                    HTTP_VERSION_T_2,           //! HTTP Version: T
-                    HTTP_VERSION_P,             //! HTTP Version: P
-                    HTTP_VERSION_SLASH,         //! HTTP Version: /
-                    HTTP_VERSION_MAJOR_START,   //! HTTP Version Major Start
-                    HTTP_VERSION_MAJOR,         //! HTTP Version Major
-                    HTTP_VERSION_MINOR_START,   //! HTTP Version Minor Start
-                    HTTP_VERSION_MINOR,         //! HTTP Version Minor
+                    HTTP_VERSION_H,             //!< HTTP Version: H
+                    HTTP_VERSION_T_1,           //!< HTTP Version: T
+                    HTTP_VERSION_T_2,           //!< HTTP Version: T
+                    HTTP_VERSION_P,             //!< HTTP Version: P
+                    HTTP_VERSION_SLASH,         //!< HTTP Version: /
+                    HTTP_VERSION_MAJOR_START,   //!< HTTP Version Major Start
+                    HTTP_VERSION_MAJOR,         //!< HTTP Version Major
+                    HTTP_VERSION_MINOR_START,   //!< HTTP Version Minor Start
+                    HTTP_VERSION_MINOR,         //!< HTTP Version Minor
 
-                    HTTP_STATUS_1,              //! Status Number 1
-                    HTTP_STATUS_2,              //! Status Number 2
-                    HTTP_STATUS_3,              //! Status Number 3
-                    HTTP_STATUS_END,            //! Status End
-                    HTTP_STATUS_MESSAGE_START,  //! Status Message Start
-                    HTTP_STATUS_MESSAGE,        //! Status Message End
+                    HTTP_STATUS_1,              //!< Status Number 1
+                    HTTP_STATUS_2,              //!< Status Number 2
+                    HTTP_STATUS_3,              //!< Status Number 3
+                    HTTP_STATUS_END,            //!< Status End
+                    HTTP_STATUS_MESSAGE_START,  //!< Status Message Start
+                    HTTP_STATUS_MESSAGE,        //!< Status Message End
 
-                    EXPECTING_NEWLINE_1,        //!
+                    EXPECTING_NEWLINE_1,        //!< 
 
-                    HEADER_LINE_START,          //! Header Line Start
-                    HEADER_LWS,                 //!
-                    HEADER_NAME,                //! Header Name
-                    SPACE_BEFORE_HEADER_VALUE,  //!
-                    HEADER_VALUE,               //! Header Value
+                    HEADER_LINE_START,          //!< Header Line Start
+                    HEADER_LWS,                 //!< 
+                    HEADER_NAME,                //!< Header Name
+                    SPACE_BEFORE_HEADER_VALUE,  //!< 
+                    HEADER_VALUE,               //!< Header Value
 
-                    EXPECTING_NEWLINE_2,        //!
-                    EXPECTING_NEWLINE_3         //!
+                    EXPECTING_NEWLINE_2,        //!< 
+                    EXPECTING_NEWLINE_3         //!< 
                 } m_state;
             };
         } // namespace http

@@ -103,159 +103,159 @@ namespace modem
      * @brief Modem response types.
      */
     enum RESP_TYPE_DVM {
-        RTM_OK,                             //! OK
-        RTM_TIMEOUT,                        //! Timeout
-        RTM_ERROR                           //! Error
+        RTM_OK,                             //!< OK
+        RTM_TIMEOUT,                        //!< Timeout
+        RTM_ERROR                           //!< Error
     };
 
     /**
      * @brief Modem operation states.
      */
     enum DVM_STATE {
-        STATE_IDLE = 0U,                    //! Idle
+        STATE_IDLE = 0U,                    //!< Idle
         // DMR
-        STATE_DMR = 1U,                     //! DMR
+        STATE_DMR = 1U,                     //!< DMR
         // Project 25
-        STATE_P25 = 2U,                     //! Project 25
+        STATE_P25 = 2U,                     //!< Project 25
         // NXDN
-        STATE_NXDN = 3U,                    //! NXDN
+        STATE_NXDN = 3U,                    //!< NXDN
 
         // CW
-        STATE_CW = 10U,                     //! Continuous Wave
+        STATE_CW = 10U,                     //!< Continuous Wave
 
         // Calibration States
-        STATE_P25_CAL_1K = 92U,             //! Project 25 Calibration 1K
+        STATE_P25_CAL_1K = 92U,             //!< Project 25 Calibration 1K
 
-        STATE_DMR_DMO_CAL_1K = 93U,         //! DMR DMO Calibration 1K
-        STATE_DMR_CAL_1K = 94U,             //! DMR Calibration 1K
-        STATE_DMR_LF_CAL = 95U,             //! DMR Low Frequency Calibration
+        STATE_DMR_DMO_CAL_1K = 93U,         //!< DMR DMO Calibration 1K
+        STATE_DMR_CAL_1K = 94U,             //!< DMR Calibration 1K
+        STATE_DMR_LF_CAL = 95U,             //!< DMR Low Frequency Calibration
 
-        STATE_RSSI_CAL = 96U,               //! RSSI Calibration
+        STATE_RSSI_CAL = 96U,               //!< RSSI Calibration
 
-        STATE_P25_CAL = 97U,                //! Project 25 Calibration
-        STATE_DMR_CAL = 98U,                //! DMR Calibration
-        STATE_NXDN_CAL = 99U                //! NXDN Calibration
+        STATE_P25_CAL = 97U,                //!< Project 25 Calibration
+        STATE_DMR_CAL = 98U,                //!< DMR Calibration
+        STATE_NXDN_CAL = 99U                //!< NXDN Calibration
     };
 
     /**
      * @brief Modem commands.
      */
     enum DVM_COMMANDS {
-        CMD_GET_VERSION = 0x00U,            //! Get Modem Version
-        CMD_GET_STATUS = 0x01U,             //! Get Modem Status
-        CMD_SET_CONFIG = 0x02U,             //! Set Modem Configuration
-        CMD_SET_MODE = 0x03U,               //! Set Modem Mode
+        CMD_GET_VERSION = 0x00U,            //!< Get Modem Version
+        CMD_GET_STATUS = 0x01U,             //!< Get Modem Status
+        CMD_SET_CONFIG = 0x02U,             //!< Set Modem Configuration
+        CMD_SET_MODE = 0x03U,               //!< Set Modem Mode
 
-        CMD_SET_SYMLVLADJ = 0x04U,          //! Set Symbol Level Adjustments
-        CMD_SET_RXLEVEL = 0x05U,            //! Set Rx Level
-        CMD_SET_RFPARAMS = 0x06U,           //! (Hotspot) Set RF Parameters
+        CMD_SET_SYMLVLADJ = 0x04U,          //!< Set Symbol Level Adjustments
+        CMD_SET_RXLEVEL = 0x05U,            //!< Set Rx Level
+        CMD_SET_RFPARAMS = 0x06U,           //!< (Hotspot) Set RF Parameters
 
-        CMD_CAL_DATA = 0x08U,               //! Calibration Data
-        CMD_RSSI_DATA = 0x09U,              //! RSSI Data
+        CMD_CAL_DATA = 0x08U,               //!< Calibration Data
+        CMD_RSSI_DATA = 0x09U,              //!< RSSI Data
 
-        CMD_SEND_CWID = 0x0AU,              //! Send Continous Wave ID (Morse)
+        CMD_SEND_CWID = 0x0AU,              //!< Send Continous Wave ID (Morse)
 
-        CMD_SET_BUFFERS = 0x0FU,            //! Set FIFO Buffer Lengths
+        CMD_SET_BUFFERS = 0x0FU,            //!< Set FIFO Buffer Lengths
 
-        CMD_DMR_DATA1 = 0x18U,              //! DMR Data Slot 1
-        CMD_DMR_LOST1 = 0x19U,              //! DMR Data Lost Slot 1
-        CMD_DMR_DATA2 = 0x1AU,              //! DMR Data Slot 2
-        CMD_DMR_LOST2 = 0x1BU,              //! DMR Data Lost Slot 2
-        CMD_DMR_SHORTLC = 0x1CU,            //! DMR Short Link Control
-        CMD_DMR_START = 0x1DU,              //! DMR Start Transmit
-        CMD_DMR_ABORT = 0x1EU,              //! DMR Abort
-        CMD_DMR_CACH_AT_CTRL = 0x1FU,       //! DMR Set CACH AT Control
-        CMD_DMR_CLEAR1 = 0x20U,             //! DMR Clear Slot 1 Buffer
-        CMD_DMR_CLEAR2 = 0x21U,             //! DMR Clear Slot 2 Buffer
+        CMD_DMR_DATA1 = 0x18U,              //!< DMR Data Slot 1
+        CMD_DMR_LOST1 = 0x19U,              //!< DMR Data Lost Slot 1
+        CMD_DMR_DATA2 = 0x1AU,              //!< DMR Data Slot 2
+        CMD_DMR_LOST2 = 0x1BU,              //!< DMR Data Lost Slot 2
+        CMD_DMR_SHORTLC = 0x1CU,            //!< DMR Short Link Control
+        CMD_DMR_START = 0x1DU,              //!< DMR Start Transmit
+        CMD_DMR_ABORT = 0x1EU,              //!< DMR Abort
+        CMD_DMR_CACH_AT_CTRL = 0x1FU,       //!< DMR Set CACH AT Control
+        CMD_DMR_CLEAR1 = 0x20U,             //!< DMR Clear Slot 1 Buffer
+        CMD_DMR_CLEAR2 = 0x21U,             //!< DMR Clear Slot 2 Buffer
 
-        CMD_P25_DATA = 0x31U,               //! Project 25 Data
-        CMD_P25_LOST = 0x32U,               //! Project 25 Data Lost
-        CMD_P25_CLEAR = 0x33U,              //! Project 25 Clear Buffer
+        CMD_P25_DATA = 0x31U,               //!< Project 25 Data
+        CMD_P25_LOST = 0x32U,               //!< Project 25 Data Lost
+        CMD_P25_CLEAR = 0x33U,              //!< Project 25 Clear Buffer
 
-        CMD_NXDN_DATA = 0x41U,              //! NXDN Data
-        CMD_NXDN_LOST = 0x42U,              //! NXDN Data Lost
-        CMD_NXDN_CLEAR = 0x43U,             //! NXDN Clear Buffer
+        CMD_NXDN_DATA = 0x41U,              //!< NXDN Data
+        CMD_NXDN_LOST = 0x42U,              //!< NXDN Data Lost
+        CMD_NXDN_CLEAR = 0x43U,             //!< NXDN Clear Buffer
 
-        CMD_ACK = 0x70U,                    //! Command ACK
-        CMD_NAK = 0x7FU,                    //! Command NACK
+        CMD_ACK = 0x70U,                    //!< Command ACK
+        CMD_NAK = 0x7FU,                    //!< Command NACK
 
-        CMD_FLSH_READ = 0xE0U,              //! Read Flash Partition
-        CMD_FLSH_WRITE = 0xE1U,             //! Write Flash Partition
+        CMD_FLSH_READ = 0xE0U,              //!< Read Flash Partition
+        CMD_FLSH_WRITE = 0xE1U,             //!< Write Flash Partition
 
-        CMD_RESET_MCU = 0xEAU,              //! Soft Reboot MCU
+        CMD_RESET_MCU = 0xEAU,              //!< Soft Reboot MCU
 
-        CMD_DEBUG1 = 0xF1U,                 //!
-        CMD_DEBUG2 = 0xF2U,                 //!
-        CMD_DEBUG3 = 0xF3U,                 //!
-        CMD_DEBUG4 = 0xF4U,                 //!
-        CMD_DEBUG5 = 0xF5U,                 //!
-        CMD_DEBUG_DUMP = 0xFAU,             //!
+        CMD_DEBUG1 = 0xF1U,                 //!< 
+        CMD_DEBUG2 = 0xF2U,                 //!< 
+        CMD_DEBUG3 = 0xF3U,                 //!< 
+        CMD_DEBUG4 = 0xF4U,                 //!< 
+        CMD_DEBUG5 = 0xF5U,                 //!< 
+        CMD_DEBUG_DUMP = 0xFAU,             //!< 
     };
 
     /**
      * @brief Modem command tags.
      */
     enum CMD_TAGS {
-        TAG_HEADER = 0x00U,                 //! Header
+        TAG_HEADER = 0x00U,                 //!< Header
 
-        TAG_DATA = 0x01U,                   //! Data
+        TAG_DATA = 0x01U,                   //!< Data
 
-        TAG_LOST = 0x02U,                   //! Lost Data
-        TAG_EOT = 0x03U,                    //! End of Transmission
+        TAG_LOST = 0x02U,                   //!< Lost Data
+        TAG_EOT = 0x03U,                    //!< End of Transmission
     };
 
     /**
      * @brief Modem response reason codes.
      */
     enum CMD_REASON_CODE {
-        RSN_OK = 0U,                        //! OK
-        RSN_NAK = 1U,                       //! Negative Acknowledge
+        RSN_OK = 0U,                        //!< OK
+        RSN_NAK = 1U,                       //!< Negative Acknowledge
 
-        RSN_ILLEGAL_LENGTH = 2U,            //! Illegal Length
-        RSN_INVALID_REQUEST = 4U,           //! Invalid Request
-        RSN_RINGBUFF_FULL = 8U,             //! Ring Buffer Full
+        RSN_ILLEGAL_LENGTH = 2U,            //!< Illegal Length
+        RSN_INVALID_REQUEST = 4U,           //!< Invalid Request
+        RSN_RINGBUFF_FULL = 8U,             //!< Ring Buffer Full
 
-        RSN_INVALID_FDMA_PREAMBLE = 10U,    //! Invalid FDMA Preamble Length
-        RSN_INVALID_MODE = 11U,             //! Invalid Mode
+        RSN_INVALID_FDMA_PREAMBLE = 10U,    //!< Invalid FDMA Preamble Length
+        RSN_INVALID_MODE = 11U,             //!< Invalid Mode
 
-        RSN_INVALID_DMR_CC = 12U,           //! Invalid DMR CC
-        RSN_INVALID_DMR_SLOT = 13U,         //! Invalid DMR Slot
-        RSN_INVALID_DMR_START = 14U,        //! Invaild DMR Start Transmit
-        RSN_INVALID_DMR_RX_DELAY = 15U,     //! Invalid DMR Rx Delay
+        RSN_INVALID_DMR_CC = 12U,           //!< Invalid DMR CC
+        RSN_INVALID_DMR_SLOT = 13U,         //!< Invalid DMR Slot
+        RSN_INVALID_DMR_START = 14U,        //!< Invaild DMR Start Transmit
+        RSN_INVALID_DMR_RX_DELAY = 15U,     //!< Invalid DMR Rx Delay
 
-        RSN_INVALID_P25_CORR_COUNT = 16U,   //! Invalid P25 Correlation Count
+        RSN_INVALID_P25_CORR_COUNT = 16U,   //!< Invalid P25 Correlation Count
 
-        RSN_NO_INTERNAL_FLASH = 20U,        //! No Internal Flash
-        RSN_FAILED_ERASE_FLASH = 21U,       //! Failed to erase flash partition
-        RSN_FAILED_WRITE_FLASH = 22U,       //! Failed to write flash partition
-        RSN_FLASH_WRITE_TOO_BIG = 23U,      //! Data to large for flash partition
+        RSN_NO_INTERNAL_FLASH = 20U,        //!< No Internal Flash
+        RSN_FAILED_ERASE_FLASH = 21U,       //!< Failed to erase flash partition
+        RSN_FAILED_WRITE_FLASH = 22U,       //!< Failed to write flash partition
+        RSN_FLASH_WRITE_TOO_BIG = 23U,      //!< Data to large for flash partition
 
-        RSN_HS_NO_DUAL_MODE = 32U,          //! (Hotspot) No Dual Mode Operation
+        RSN_HS_NO_DUAL_MODE = 32U,          //!< (Hotspot) No Dual Mode Operation
 
-        RSN_DMR_DISABLED = 63U,             //! DMR Disabled
-        RSN_P25_DISABLED = 64U,             //! Project 25 Disabled
-        RSN_NXDN_DISABLED = 65U             //! NXDN Disabled
+        RSN_DMR_DISABLED = 63U,             //!< DMR Disabled
+        RSN_P25_DISABLED = 64U,             //!< Project 25 Disabled
+        RSN_NXDN_DISABLED = 65U             //!< NXDN Disabled
     };
 
     /**
      * @brief Modem response state machine.
      */
     enum RESP_STATE {
-        RESP_START,                         //! Start Handling Frame
-        RESP_LENGTH1,                       //! Frame Length 1
-        RESP_LENGTH2,                       //! Frame Length 2
-        RESP_TYPE,                          //! Frame Type
-        RESP_DATA                           //! Frame Data
+        RESP_START,                         //!< Start Handling Frame
+        RESP_LENGTH1,                       //!< Frame Length 1
+        RESP_LENGTH2,                       //!< Frame Length 2
+        RESP_TYPE,                          //!< Frame Type
+        RESP_DATA                           //!< Frame Data
     };
 
     /**
      * @brief Hotspot gain modes.
      */
     enum ADF_GAIN_MODE {
-        ADF_GAIN_AUTO = 0U,                 //! Automatic
-        ADF_GAIN_AUTO_LIN = 1U,             //! Automatic (Linear)
-        ADF_GAIN_LOW = 2U,                  //! Low
-        ADF_GAIN_HIGH = 3U                  //! High
+        ADF_GAIN_AUTO = 0U,                 //!< Automatic
+        ADF_GAIN_AUTO_LIN = 1U,             //!< Automatic (Linear)
+        ADF_GAIN_LOW = 2U,                  //!< Low
+        ADF_GAIN_HIGH = 3U                  //!< High
     };
 
     const uint8_t DVM_SHORT_FRAME_START = 0xFEU;

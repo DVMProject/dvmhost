@@ -113,16 +113,16 @@ namespace network
                  */
                 class QueuedDataFrame {
                 public:
-                    p25::data::DataHeader* header;  //! Instance of a PDU data header.
-                    uint32_t llId;                  //! Logical Link ID
-                    uint32_t tgtProtoAddr;          //! Target Protocol Address
+                    p25::data::DataHeader* header;  //!< Instance of a PDU data header.
+                    uint32_t llId;                  //!< Logical Link ID
+                    uint32_t tgtProtoAddr;          //!< Target Protocol Address
 
-                    uint8_t* userData;              //! Raw data buffer
-                    uint32_t userDataLen;           //! Length of raw data buffer
+                    uint8_t* userData;              //!< Raw data buffer
+                    uint32_t userDataLen;           //!< Length of raw data buffer
 
-                    uint64_t timestamp;             //! Timestamp in milliseconds
-                    uint8_t retryCnt;               //! Packet Retry Counter
-                    bool extendRetry;               //! Flag indicating whether or not to extend the retry count for this packet.
+                    uint64_t timestamp;             //!< Timestamp in milliseconds
+                    uint8_t retryCnt;               //!< Packet Retry Counter
+                    bool extendRetry;               //!< Flag indicating whether or not to extend the retry count for this packet.
                 };
                 concurrent::deque<QueuedDataFrame*> m_queuedFrames;
 

@@ -56,25 +56,25 @@ namespace network
                  * @brief HTTP Status/Response Codes
                  */
                 enum StatusType {
-                    OK = 200,                       //! HTTP OK 200
-                    CREATED = 201,                  //! HTTP Created 201
-                    ACCEPTED = 202,                 //! HTTP Accepted 202
-                    NO_CONTENT = 204,               //! HTTP No Content 204
+                    OK = 200,                       //!< HTTP OK 200
+                    CREATED = 201,                  //!< HTTP Created 201
+                    ACCEPTED = 202,                 //!< HTTP Accepted 202
+                    NO_CONTENT = 204,               //!< HTTP No Content 204
                     
-                    MULTIPLE_CHOICES = 300,         //! HTTP Multiple Choices 300
-                    MOVED_PERMANENTLY = 301,        //! HTTP Moved Permenantly 301
-                    MOVED_TEMPORARILY = 302,        //! HTTP Moved Temporarily 302
-                    NOT_MODIFIED = 304,             //! HTTP Not Modified 304
+                    MULTIPLE_CHOICES = 300,         //!< HTTP Multiple Choices 300
+                    MOVED_PERMANENTLY = 301,        //!< HTTP Moved Permenantly 301
+                    MOVED_TEMPORARILY = 302,        //!< HTTP Moved Temporarily 302
+                    NOT_MODIFIED = 304,             //!< HTTP Not Modified 304
                     
-                    BAD_REQUEST = 400,              //! HTTP Bad Request 400
-                    UNAUTHORIZED = 401,             //! HTTP Unauthorized 401
-                    FORBIDDEN = 403,                //! HTTP Forbidden 403
-                    NOT_FOUND = 404,                //! HTTP Not Found 404
+                    BAD_REQUEST = 400,              //!< HTTP Bad Request 400
+                    UNAUTHORIZED = 401,             //!< HTTP Unauthorized 401
+                    FORBIDDEN = 403,                //!< HTTP Forbidden 403
+                    NOT_FOUND = 404,                //!< HTTP Not Found 404
                     
-                    INTERNAL_SERVER_ERROR = 500,    //! HTTP Internal Server Error 500
-                    NOT_IMPLEMENTED = 501,          //! HTTP Not Implemented 501
-                    BAD_GATEWAY = 502,              //! HTTP Bad Gateway 502
-                    SERVICE_UNAVAILABLE = 503       //! HTTP Service Unavailable 503
+                    INTERNAL_SERVER_ERROR = 500,    //!< HTTP Internal Server Error 500
+                    NOT_IMPLEMENTED = 501,          //!< HTTP Not Implemented 501
+                    BAD_GATEWAY = 502,              //!< HTTP Bad Gateway 502
+                    SERVICE_UNAVAILABLE = 503       //!< HTTP Service Unavailable 503
                 } status;
 
                 HTTPHeaders headers;

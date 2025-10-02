@@ -482,10 +482,10 @@ namespace dmr
          * @brief Short LC Activity Type
          */
         enum SLCO_ACT_TYPE {
-            NONE,       //! None
-            VOICE,      //! Voice
-            DATA,       //! Data
-            CSBK        //! CSBK
+            NONE,       //!< Slot Activity Type - None
+            VOICE,      //!< Slot Activity Type - Voice
+            DATA,       //!< Slot Activity Type - Data
+            CSBK        //!< Slot Activity Type - CSBK
         };
 
         static defines::FLCO::E m_flco1;

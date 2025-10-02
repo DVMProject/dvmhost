@@ -47,8 +47,8 @@ typedef HANDLE pthread_t;
  * @ingroup common
  */
 struct thread_t {
-    void* obj;                          //! Object that created this thread.
-    pthread_t thread;                   //! Thread Handle.
+    void* obj;                          //!< Object that created this thread.
+    pthread_t thread;                   //!< Thread Handle.
 };
 
 // ---------------------------------------------------------------------------

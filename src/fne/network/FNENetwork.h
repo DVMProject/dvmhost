@@ -68,13 +68,13 @@ namespace network
      * @brief DVM states.
      */
     enum DVM_STATE {
-        STATE_IDLE = 0U,        //! Idle
+        STATE_IDLE = 0U,        //!< Idle
         // DMR
-        STATE_DMR = 1U,         //! Digital Mobile Radio
+        STATE_DMR = 1U,         //!< Digital Mobile Radio
         // Project 25
-        STATE_P25 = 2U,         //! Project 25
+        STATE_P25 = 2U,         //!< Project 25
         // NXDN
-        STATE_NXDN = 3U,        //! NXDN
+        STATE_NXDN = 3U,        //!< NXDN
     };
 
     #define INFLUXDB_ERRSTR_DISABLED_SRC_RID "disabled source RID"
@@ -378,7 +378,7 @@ namespace network
      * @ingroup fne_network
      */
     struct ACLUpdateRequest : thread_t {
-        uint32_t peerId;        //! Peer ID for this request.
+        uint32_t peerId;        //!< Peer ID for this request.
     };
 
     // ---------------------------------------------------------------------------
@@ -390,16 +390,16 @@ namespace network
      * @ingroup fne_network
      */
     struct NetPacketRequest : thread_t {
-        uint32_t peerId;                    //! Peer ID for this request.
+        uint32_t peerId;                    //!< Peer ID for this request.
 
-        sockaddr_storage address;           //! IP Address and Port. 
-        uint32_t addrLen;                   //!
-        frame::RTPHeader rtpHeader;         //! RTP Header
-        frame::RTPFNEHeader fneHeader;      //! RTP FNE Header
-        int length = 0U;                    //! Length of raw data buffer
-        uint8_t* buffer = nullptr;          //! Raw data buffer
+        sockaddr_storage address;           //!< IP Address and Port. 
+        uint32_t addrLen;                   //!< 
+        frame::RTPHeader rtpHeader;         //!< RTP Header
+        frame::RTPFNEHeader fneHeader;      //!< RTP FNE Header
+        int length = 0U;                    //!< Length of raw data buffer
+        uint8_t* buffer = nullptr;          //!< Raw data buffer
 
-        uint64_t pktRxTime;                 //! Packet receive time
+        uint64_t pktRxTime;                 //!< Packet receive time
     };
 
     // ---------------------------------------------------------------------------

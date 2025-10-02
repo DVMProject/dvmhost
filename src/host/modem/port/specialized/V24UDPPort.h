@@ -48,11 +48,11 @@ namespace modem
              * @ingroup fne_network
              */
             struct V24PacketRequest : thread_t {
-                sockaddr_storage address;               //! IP Address and Port. 
-                uint32_t addrLen;                       //!
-                network::frame::RTPHeader rtpHeader;    //! RTP Header
-                int length = 0U;                        //! Length of raw data buffer
-                uint8_t *buffer;                        //! Raw data buffer
+                sockaddr_storage address;               //!< IP Address and Port. 
+                uint32_t addrLen;                       //!< 
+                network::frame::RTPHeader rtpHeader;    //!< RTP Header
+                int length = 0U;                        //!< Length of raw data buffer
+                uint8_t *buffer;                        //!< Raw data buffer
             };
 
             // ---------------------------------------------------------------------------
