@@ -195,7 +195,7 @@ void DiagNetwork::taskNetworkRx(NetPacketRequest* req)
                             if (network->m_peers.find(req->rtpHeader.getSSRC()) != network->m_peers.end()) {
                                 FNEPeerConnection* connection = network->m_peers[req->rtpHeader.getSSRC()];
                                 if (connection != nullptr) {
-                                    if (connection->isExternalPeer() && connection->isPeerLink()) {
+                                    if (connection->isExternalFNEPeer() && connection->isPeerLink()) {
                                         validPeerId = true;
                                         pktPeerId = req->rtpHeader.getSSRC();
                                     }
@@ -376,7 +376,7 @@ void DiagNetwork::taskNetworkRx(NetPacketRequest* req)
                             std::string ip = udp::Socket::address(req->address);
 
                             // validate peer (simple validation really)
-                            if (connection->connected() && connection->address() == ip && connection->isExternalPeer() &&
+                            if (connection->connected() && connection->address() == ip && connection->isExternalFNEPeer() &&
                                 connection->isPeerLink()) {
                                 DECLARE_UINT8_ARRAY(rawPayload, req->length);
                                 ::memcpy(rawPayload, req->buffer, req->length);

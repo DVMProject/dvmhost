@@ -49,6 +49,8 @@ std::string g_lockFile = std::string(DEFAULT_LOCK_FILE);
 bool g_foreground = false;
 bool g_killed = false;
 
+bool g_promiscuousHub = false;
+
 uint8_t* g_gitHashBytes = nullptr;
 
 // ---------------------------------------------------------------------------
@@ -98,12 +100,15 @@ void usage(const char* message, const char* arg)
 
     ::fprintf(stdout, 
         "usage: %s [-vhf]"
+        "[-p]"
         "[--syslog]"
         "[-c <configuration file>]"
         "\n\n"
         "  -v        show version information\n"
         "  -h        show this screen\n"
         "  -f        foreground mode\n"
+        "\n"
+        "  -p        promiscuous hub\n"
         "\n"
         "  --syslog  force logging to syslog\n"
         "\n"
@@ -136,6 +141,9 @@ int checkArgs(int argc, char* argv[])
         }
         else if (IS("-f")) {
             g_foreground = true;
+        }
+        else if (IS("-p")) {
+            g_promiscuousHub = true;
         }
         else if (IS("--syslog")) {
             g_useSyslog = true;

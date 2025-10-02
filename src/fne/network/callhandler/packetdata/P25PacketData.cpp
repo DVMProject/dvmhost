@@ -815,11 +815,6 @@ void P25PacketData::dispatchToFNE(uint32_t peerId)
             // don't try to repeat traffic to the source peer...if this traffic
             // is coming from a external peer
             if (dstPeerId != peerId) {
-                // check if the source peer is blocked from sending to this peer
-                if (peer.second->checkBlockedPeer(peerId)) {
-                    continue;
-                }
-
                 // skip peer if it isn't enabled
                 if (!peer.second->isEnabled()) {
                     continue;

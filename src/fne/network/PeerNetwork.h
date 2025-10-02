@@ -125,22 +125,6 @@ namespace network
         void setAnalogCallback(std::function<void(PeerNetwork*, const uint8_t*, uint32_t, uint32_t, const frame::RTPFNEHeader&, const frame::RTPHeader&)>&& callback) { m_analogCallback = callback; }
 
         /**
-         * @brief Gets the blocked traffic peer ID table.
-         * @returns std::vector<uint32_t> List of peer IDs this peer network cannot send traffic to.
-         */
-        std::vector<uint32_t> blockTrafficTo() const { return m_blockTrafficToTable; }
-        /**
-         * @brief Adds an entry to the blocked traffic peer ID table.
-         * @param peerId Peer ID to add to the blocked traffic table.
-         */
-        void addBlockedTrafficPeer(uint32_t peerId) { m_blockTrafficToTable.push_back(peerId); }
-        /**
-         * @brief Checks if the passed peer ID is blocked from sending to this peer.
-         * @returns bool True, if blocked peer table is cleared, otherwise false.
-         */
-        bool checkBlockedPeer(uint32_t peerId);
-
-        /**
          * @brief Writes a complete update of this CFNE's active peer list to the network.
          * @param peerList List of active peers.
          * @returns bool True, if list was sent, otherwise false.
@@ -166,8 +150,6 @@ namespace network
         DECLARE_PROPERTY(bool, attachedKeyRSPHandler, AttachedKeyRSPHandler);
 
     protected:
-        std::vector<uint32_t> m_blockTrafficToTable;
-
         /**
          * @brief DMR Protocol Callback.
          *  (This is called when the master sends a DMR packet.)

@@ -372,7 +372,14 @@ bool HostFNE::readParams()
         LogWarning(LOG_HOST, "It is *not* recommended to disable the \"allowActivityTransfer\" option.");
     }
 
+    if (g_promiscuousHub) {
+        LogWarning(LOG_HOST, "This FNE was started as a promiscuous hub! In this mode, the FNE will not apply any TG or RID ACL rules and will transparently pass *all* traffic.");
+        LogWarning(LOG_HOST, "Promiscuous Hub is intended as a loop breaking measure *only*!");
+    }
+
     LogInfo("General Parameters");
+    if (g_promiscuousHub)
+        LogInfo(" !! Promiscuous Hub: yes");
     LogInfo("    Peer Ping Time: %us", m_pingTime);
     LogInfo("    Maximum Missed Pings: %u", m_maxMissedPings);
     LogInfo("    ACL Rule Update Time: %u mins", m_updateLookupTime);
@@ -863,21 +870,6 @@ bool HostFNE::createPeerNetworks()
             network->setP25Callback(std::bind(&HostFNE::processPeerP25, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, std::placeholders::_6));
             network->setNXDNCallback(std::bind(&HostFNE::processPeerNXDN, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, std::placeholders::_6));
             network->setAnalogCallback(std::bind(&HostFNE::processPeerAnalog, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, std::placeholders::_6));
-
-            /*
-            ** Block Traffic To Peers
-            */
-
-            yaml::Node& blockTrafficTo = peerConf["blockTrafficTo"];
-            if (blockTrafficTo.size() > 0U) {
-                for (size_t i = 0; i < blockTrafficTo.size(); i++) {
-                    uint32_t peerId = (uint32_t)::strtoul(blockTrafficTo[i].as<std::string>("0").c_str(), NULL, 10);
-                    if (peerId != 0U) {
-                        ::LogInfoEx(LOG_HOST, "Peer ID %u Blocks Traffic To PEER %u", id, peerId);
-                        network->addBlockedTrafficPeer(peerId);
-                    }
-                }
-            }
 
             network->enable(enabled);
             if (enabled) {

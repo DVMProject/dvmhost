@@ -41,7 +41,6 @@ PeerNetwork::PeerNetwork(const std::string& address, uint16_t port, uint16_t loc
     bool duplex, bool debug, bool dmr, bool p25, bool nxdn, bool analog, bool slot1, bool slot2, bool allowActivityTransfer, bool allowDiagnosticTransfer, bool updateLookup, bool saveLookup) :
     Network(address, port, localPort, peerId, password, duplex, debug, dmr, p25, nxdn, analog, slot1, slot2, allowActivityTransfer, allowDiagnosticTransfer, updateLookup, saveLookup),
     m_attachedKeyRSPHandler(false),
-    m_blockTrafficToTable(),
     m_dmrCallback(nullptr),
     m_p25Callback(nullptr),
     m_nxdnCallback(nullptr),
@@ -102,29 +101,6 @@ bool PeerNetwork::open()
 void PeerNetwork::close()
 {
     Network::close();
-}
-
-/* Checks if the passed peer ID is blocked from sending to this peer. */
-
-bool PeerNetwork::checkBlockedPeer(uint32_t peerId)
-{
-    if (!m_enabled)
-        return false;
-
-    if (m_blockTrafficToTable.empty())
-        return false;
-
-    if (std::find(m_blockTrafficToTable.begin(), m_blockTrafficToTable.end(), peerId) != m_blockTrafficToTable.end()) {
-        if (m_debug) {
-            ::LogDebugEx(LOG_HOST, "PeerNetwork::checkBlockedPeer()", "PEER %u peerId = %u, blocking traffic", m_peerId, peerId);
-        }
-        return true;
-    }
-
-    if (m_debug) {
-        ::LogDebugEx(LOG_HOST, "PeerNetwork::checkBlockedPeer()", "PEER %u peerId = %u, passing traffic", m_peerId, peerId);
-    }
-    return false;
 }
 
 /* Writes a complete update of this CFNE's active peer list to the network. */
@@ -436,7 +412,7 @@ bool PeerNetwork::writeConfig()
 
     // Flags
     bool external = true;
-    config["externalPeer"].set<bool>(external);                                     // External Peer Marker
+    config["externalPeer"].set<bool>(external);                                     // External FNE Neighbor Peer Marker
 
     config["software"].set<std::string>(std::string(software));                     // Software ID
 

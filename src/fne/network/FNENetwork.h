@@ -122,7 +122,7 @@ namespace network
             m_pingsReceived(0U),
             m_lastPing(0U),
             m_missedACLUpdates(0U),
-            m_isExternalPeer(false),
+            m_isExternalFNEPeer(false),
             m_isConventionalPeer(false),
             m_isSysView(false),
             m_isPeerLink(false),
@@ -151,7 +151,7 @@ namespace network
             m_pingsReceived(0U),
             m_lastPing(0U),
             m_missedACLUpdates(0U),
-            m_isExternalPeer(false),
+            m_isExternalFNEPeer(false),
             m_isConventionalPeer(false),
             m_isSysView(false),
             m_isPeerLink(false),
@@ -342,9 +342,9 @@ namespace network
         DECLARE_PROPERTY_PLAIN(uint32_t, missedACLUpdates);
 
         /**
-         * @brief Flag indicating this connection is from an external peer.
+         * @brief Flag indicating this connection is from an external neighbor FNE peer.
          */
-        DECLARE_PROPERTY_PLAIN(bool, isExternalPeer);
+        DECLARE_PROPERTY_PLAIN(bool, isExternalFNEPeer);
         /**
          * @brief Flag indicating this connection is from an conventional peer.
          */

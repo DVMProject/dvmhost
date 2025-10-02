@@ -19,6 +19,7 @@
 #include "network/FNENetwork.h"
 #include "network/callhandler/TagDMRData.h"
 #include "HostFNE.h"
+#include "FNEMain.h"
 
 using namespace system_clock;
 using namespace network;
@@ -368,7 +369,7 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                             if (peerId != peer.first) {
                                 FNEPeerConnection* conn = peer.second;
                                 if (conn != nullptr) {
-                                    if (conn->isExternalPeer()) {
+                                    if (conn->isExternalFNEPeer()) {
                                         continue;
                                     }
                                 }
@@ -384,7 +385,11 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
             }
         }
 
-        // repeat traffic to the connected peers
+        /*
+        ** MASTER TRAFFIC
+        */
+
+        // repeat traffic to nodes peered to us as master
         if (m_network->m_peers.size() > 0U && !noConnectedPeerRepeat) {
             uint32_t i = 0U;
             for (auto peer : m_network->m_peers) {
@@ -399,7 +404,7 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                         // is this peer an external peer?
                         bool external = false;
                         if (conn != nullptr) {
-                            external = conn->isExternalPeer();
+                            external = conn->isExternalFNEPeer();
                         }
 
                         // is this a private call?
@@ -456,7 +461,11 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
             return true;
         }
 
-        // repeat traffic to external peers
+        /*
+        ** PEER TRAFFIC (e.g. networks this FNE is peered to)
+        */
+
+        // repeat traffic to master nodes we have connected to as a peer
         if (m_network->m_host->m_peerNetworks.size() > 0U && !tg.config().parrot()) {
             for (auto peer : m_network->m_host->m_peerNetworks) {
                 uint32_t dstPeerId = peer.second->getPeerId();
@@ -469,18 +478,13 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                         continue;
                     }
 
-                    // is this peer ignored?
-                    if (!isPeerPermitted(dstPeerId, dmrData, streamId, true)) {
-                        continue;
-                    }
-
-                    // check if the source peer is blocked from sending to this peer
-                    if (peer.second->checkBlockedPeer(peerId)) {
-                        continue;
-                    }
-
                     // skip peer if it isn't enabled
                     if (!peer.second->isEnabled()) {
+                        continue;
+                    }
+
+                    // is this peer ignored?
+                    if (!isPeerPermitted(dstPeerId, dmrData, streamId, true)) {
                         continue;
                     }
 
@@ -785,6 +789,10 @@ bool TagDMRData::processCSBK(uint8_t* buffer, uint32_t peerId, dmr::data::NetDat
 
 bool TagDMRData::isPeerPermitted(uint32_t peerId, data::NetData& data, uint32_t streamId, bool external)
 {
+    // promiscuous hub mode performs no ACL checking and will pass all traffic
+    if (g_promiscuousHub)
+        return true;
+
     if (data.getFLCO() == FLCO::PRIVATE) {
         if (m_network->m_disallowU2U)
             return false;
@@ -889,6 +897,10 @@ bool TagDMRData::isPeerPermitted(uint32_t peerId, data::NetData& data, uint32_t 
 
 bool TagDMRData::validate(uint32_t peerId, data::NetData& data, lc::CSBK* csbk, uint32_t streamId)
 {
+    // promiscuous hub mode performs no ACL checking and will pass all traffic
+    if (g_promiscuousHub)
+        return true;
+
     // is the source ID a blacklisted ID?
     bool rejectUnknownBadCall = false;
     lookups::RadioId rid = m_network->m_ridLookup->find(data.getSrcId());

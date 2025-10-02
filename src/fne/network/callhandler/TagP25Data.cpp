@@ -18,6 +18,7 @@
 #include "network/FNENetwork.h"
 #include "network/callhandler/TagP25Data.h"
 #include "HostFNE.h"
+#include "FNEMain.h"
 
 using namespace system_clock;
 using namespace network;
@@ -422,7 +423,7 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                             if (peerId != peer.first) {
                                 FNEPeerConnection* conn = peer.second;
                                 if (conn != nullptr) {
-                                    if (conn->isExternalPeer()) {
+                                    if (conn->isExternalFNEPeer()) {
                                         continue;
                                     }
                                 }
@@ -438,7 +439,11 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
             }
         }
 
-        // repeat traffic to the connected peers
+        /*
+        ** MASTER TRAFFIC
+        */
+
+        // repeat traffic to nodes connected to us as peers
         if (m_network->m_peers.size() > 0U && !noConnectedPeerRepeat) {
             uint32_t i = 0U;
             for (auto peer : m_network->m_peers) {
@@ -453,7 +458,7 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                         // is this peer an external peer?
                         bool external = false;
                         if (conn != nullptr) {
-                            external = conn->isExternalPeer();
+                            external = conn->isExternalFNEPeer();
                         }
 
                         // is this a private call?
@@ -515,7 +520,11 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
             return true;
         }
 
-        // repeat traffic to external peers
+        /*
+        ** PEER TRAFFIC (e.g. networks this FNE is peered to)
+        */
+
+        // repeat traffic to master nodes we have connected to as a peer
         if (m_network->m_host->m_peerNetworks.size() > 0U && !tg.config().parrot()) {
             for (auto peer : m_network->m_host->m_peerNetworks) {
                 uint32_t dstPeerId = peer.second->getPeerId();
@@ -528,18 +537,13 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                         continue;
                     }
 
-                    // is this peer ignored?
-                    if (!isPeerPermitted(dstPeerId, control, duid, streamId, true)) {
-                        continue;
-                    }
-
-                    // check if the source peer is blocked from sending to this peer
-                    if (peer.second->checkBlockedPeer(peerId)) {
-                        continue;
-                    }
-
                     // skip peer if it isn't enabled
                     if (!peer.second->isEnabled()) {
+                        continue;
+                    }
+
+                    // is this peer ignored?
+                    if (!isPeerPermitted(dstPeerId, control, duid, streamId, true)) {
                         continue;
                     }
 
@@ -1085,6 +1089,10 @@ bool TagP25Data::processTSDUToExternal(uint8_t* buffer, uint32_t srcPeerId, uint
 
 bool TagP25Data::isPeerPermitted(uint32_t peerId, lc::LC& control, DUID::E duid, uint32_t streamId, bool external)
 {
+    // promiscuous hub mode performs no ACL checking and will pass all traffic
+    if (g_promiscuousHub)
+        return true;
+
     if (control.getLCO() == LCO::PRIVATE) {
         if (m_network->m_disallowU2U)
             return false;
@@ -1240,6 +1248,10 @@ bool TagP25Data::isPeerPermitted(uint32_t peerId, lc::LC& control, DUID::E duid,
 
 bool TagP25Data::validate(uint32_t peerId, lc::LC& control, DUID::E duid, const p25::lc::TSBK* tsbk, uint32_t streamId)
 {
+    // promiscuous hub mode performs no ACL checking and will pass all traffic
+    if (g_promiscuousHub)
+        return true;
+
     bool skipRidCheck = false;
     if ((control.getMFId() == MFG_MOT && control.getSrcId() == 0U) || control.getSrcId() > WUID_FNE) {
         skipRidCheck = true;

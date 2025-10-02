@@ -254,11 +254,13 @@ usage: ./dvmhost [-vhdf] [--syslog] [--setup] [--cal][--boot] [-c <configuration
 ### dvmfne Command Line Parameters
 
 ```
-usage: ./dvmfne [-vhf][--syslog][-c <configuration file>]
+usage: ./dvmhost/dvmfne [-vhf][-p][--syslog][-c <configuration file>]
 
   -v        show version information
   -h        show this screen
   -f        foreground mode
+
+  -p        promiscuous hub mode
 
   --syslog  force logging to syslog
 

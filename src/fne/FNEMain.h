@@ -38,6 +38,9 @@ extern bool g_foreground;
 /** @brief (Global) Flag indicating the FNE should stop immediately. */
 extern bool g_killed;
 
+/** @brief (Global) Flag indicating the FNE is a promiscuous hub, and will pass all TGs and RIDs. */
+extern bool g_promiscuousHub;
+
 extern uint8_t* g_gitHashBytes;
 
 /**

@@ -285,18 +285,13 @@ bool TagAnalogData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
                         continue;
                     }
 
-                    // is this peer ignored?
-                    if (!isPeerPermitted(dstPeerId, analogData, streamId, true)) {
-                        continue;
-                    }
-
-                    // check if the source peer is blocked from sending to this peer
-                    if (peer.second->checkBlockedPeer(peerId)) {
-                        continue;
-                    }
-
                     // skip peer if it isn't enabled
                     if (!peer.second->isEnabled()) {
+                        continue;
+                    }
+
+                    // is this peer ignored?
+                    if (!isPeerPermitted(dstPeerId, analogData, streamId, true)) {
                         continue;
                     }
 

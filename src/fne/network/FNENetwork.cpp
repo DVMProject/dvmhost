@@ -363,7 +363,7 @@ void FNENetwork::clock(uint32_t ms)
             FNEPeerConnection* connection = peer.second;
             if (connection != nullptr) {
                 uint64_t dt = 0U;
-                if (connection->isExternalPeer() || connection->isPeerLink())
+                if (connection->isExternalFNEPeer() || connection->isPeerLink())
                     dt = connection->lastPing() + ((m_host->m_pingTime * 1000) * (m_host->m_maxMissedPings * 2U));
                 else
                     dt = connection->lastPing() + ((m_host->m_pingTime * 1000) * m_host->m_maxMissedPings);
@@ -376,9 +376,9 @@ void FNENetwork::clock(uint32_t ms)
                     connection->connected(false);
                     connection->connectionState(NET_STAT_INVALID);
 
-                    // if the connection was an external peer or a peer link -- be noisy about a possible
+                    // if the connection was an external FNE neighbor peer or a peer link -- be noisy about a possible
                     // netsplit
-                    if (connection->isExternalPeer() || connection->isPeerLink()) {
+                    if (connection->isExternalFNEPeer() || connection->isPeerLink()) {
                         for (uint8_t i = 0U; i < 3U; i++)
                             LogWarning(LOG_NET, "PEER %u (%s) downstream netsplit, dt = %u, now = %u", id, connection->identity().c_str(),
                                 dt, now);
@@ -1020,12 +1020,12 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                             LogInfoEx(LOG_NET, "PEER %u reports identity [%8s]", peerId, identity.c_str());
                                         }
 
-                                        // is the peer reporting it is an external peer?
+                                        // is the peer reporting it is an external FNE neighbor peer?
                                         if (peerConfig["externalPeer"].is<bool>()) {
                                             bool external = peerConfig["externalPeer"].get<bool>();
-                                            connection->isExternalPeer(external);
+                                            connection->isExternalFNEPeer(external);
                                             if (external)
-                                                LogInfoEx(LOG_NET, "PEER %u reports external peer", peerId);
+                                                LogInfoEx(LOG_NET, "PEER %u reports external FNE neighbor peer", peerId);
 
                                             // check if the peer is participating in peer link
                                             lookups::PeerId peerEntry = network->m_peerListLookup->find(req->peerId);
@@ -1856,7 +1856,7 @@ void FNENetwork::taskACLUpdate(ACLUpdateRequest* req)
 
             // if the connection is an external peer, and peer is participating in peer link,
             // send the peer proper configuration data
-            if (connection->isExternalPeer() && connection->isPeerLink()) {
+            if (connection->isExternalFNEPeer() && connection->isPeerLink()) {
                 LogInfoEx(LOG_NET, "PEER %u (%s) sending Peer-Link ACL list updates", req->peerId, peerIdentity.c_str());
 
                 network->writeWhitelistRIDs(req->peerId, aclStreamId, true);
@@ -2338,9 +2338,9 @@ bool FNENetwork::writePeer(uint32_t peerId, uint32_t ssrc, FrameQueue::OpcodePai
             if (m_maskOutboundPeerID)
                 ssrc = m_peerId; // mask the source SSRC to our own peer ID
             else {
-                if ((connection->isExternalPeer() && !connection->isPeerLink()) && m_maskOutboundPeerIDForNonPL) {
-                    // if the peer is an external peer, and not a Peer-Link peer, we need to send the packet
-                    // to the external peer with our peer ID as the source instead of the originating peer
+                if ((connection->isExternalFNEPeer() && !connection->isPeerLink()) && m_maskOutboundPeerIDForNonPL) {
+                    // if the peer is an external FNE neighbor peer, and not a Peer-Link peer, we need to send the packet
+                    // to the external FNE neighbor peer with our peer ID as the source instead of the originating peer
                     // because we have routed it
                     ssrc = m_peerId;
                 }
