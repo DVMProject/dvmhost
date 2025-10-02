@@ -254,7 +254,7 @@ usage: ./dvmhost [-vhdf] [--syslog] [--setup] [--cal][--boot] [-c <configuration
 ### dvmfne Command Line Parameters
 
 ```
-usage: ./dvmhost/dvmfne [-vhf][-p][--syslog][-c <configuration file>]
+usage: ./dvmfne [-vhf][-p][--syslog][-c <configuration file>]
 
   -v        show version information
   -h        show this screen
