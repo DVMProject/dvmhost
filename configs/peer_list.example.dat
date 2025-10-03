@@ -1,7 +1,24 @@
 #
-# This file sets the valid peer IDs allowed on a FNE.
+# Digital Voice Modem - Peer ID Access Control List
+#
+# This file sets the valid peer IDs allowed on a FNE. This file should always end with an empty line!
+#
+#   * PEER ID           [REQUIRED]  - Unique ID for a peer.
+#                                       Peer IDs are valid numbers between 1 and 999999999.
+#   * PEER PASSWORD     [REQUIRED]  - Unique password for this peer to use when authenticating.
+#   * PEER LINK         [OPTIONAL]  - Flag indicating whether or not the peer connection is another FNE, and will receive
+#                                       full configuration from this FNE. When peer link is set, and the connection is 
+#                                       another FNE, that FNE will receive all the talkgroups, radio ID lists, and 
+#                                       peer lists from this FNE.
+#   * CAN REQUEST KEYS  [OPTIONAL]  - Flag indicating the peer connection is allowed to request encryption keys.
+#                                       If this flag is disabled (0), and the connected peer requests and encryption key
+#                                       the encryption key request will be dropped and ignored.
+#   * CAN ISSUE INHIBIT [OPTIONAL]  - Flag indicating the peer connection is capable of transmitting inhibit packets.
+#                                       If this flag is disabled (0), and the connected peer issues an inhibit to the network
+#                                       this FNE will drop the packet and ignore it.
 #
 # Entry Format: "Peer ID,Peer Password,Peer Link (1 = Enabled / 0 = Disabled),Peer Alias (optional),Can Request Keys (1 = Enabled / 0 = Disabled),Can Issue Inhibit (1 = Enabled / 0 = Disabled)<newline>"
+# Examples:
 #1234,,0,,1,0,
 #5678,MYSECUREPASSWORD,0,,0,0,
 #9876,MYSECUREPASSWORD,1,,0,0,

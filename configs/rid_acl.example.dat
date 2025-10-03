@@ -1,6 +1,13 @@
 #
-# This file sets the valid Radio IDs allowed on a repeater.
+# Digital Voice Modem - Radio ID Access Control List
+#
+# This file sets the valid Radio IDs allowed on a repeater. This file should always end with an empty line!
+#
+#   * RID               [REQUIRED] - Unique Radio ID.
+#   * ENABLED           [REQUIRED] - Flag indicating whether or not this radio ID entry is enabled and valid.
+#   * ALIAS             [OPTIONAL] - Textual string representing an alias for this radio ID entry.
+#   * IP ADDRESS        [OPTIONAL] - IP Address assigned to this radio ID.
 #
 # Entry Format: "RID,Enabled (1 = Enabled / 0 = Disabled),Optional Alias,Optional IP Address,<newline>"
-#
+# Example:
 #1234,1,RID Alias,IP Address,
