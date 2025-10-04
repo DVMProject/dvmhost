@@ -347,17 +347,28 @@
 
 #include <basetsd.h>
 
-#ifdef _WIN64
+#if defined(_WIN32)
+#ifndef _SSIZE_T_DECLARED
 typedef SSIZE_T ssize_t;
-#else
-typedef int ssize_t;
+#define _SSIZE_T_DECLARED
 #endif
+#endif // defined(_WIN32)
 
-#ifndef NOMINMAX
+#define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
-#endif
 #include <windows.h>
 #include <winnt.h>
+
+/*
+** bryanb: because we've included Windows.h in a header -- take the nuclear option
+**  make sure Windows.h and any of its includes *DO NOT* define min/max macros
+*/
+#ifdef min
+#undef min
+#endif
+#ifdef max
+#undef max
+#endif
 
 #include <psapi.h>
 #include <signal.h>

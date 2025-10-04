@@ -24,8 +24,21 @@
 
 #if defined(_WIN32)
 #define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
 #include <Windows.h>
 #include <WinSock2.h>
+
+/*
+** bryanb: because we've included Windows.h in a header -- take the nuclear option
+**  make sure Windows.h and any of its includes *DO NOT* define min/max macros
+*/
+#ifdef min
+#undef min
+#endif
+#ifdef max
+#undef max
+#endif
+
 #else
 #include <sys/time.h>
 #endif // defined(_WIN32)

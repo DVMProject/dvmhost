@@ -201,6 +201,7 @@ void FNENetwork::setOptions(yaml::Node& conf, bool printOptions)
         }
     }
 #else
+    uint16_t kmfOtarPort = 64414U; // hardcoded
     m_kmfServicesEnabled = false;
     LogWarning(LOG_P25, "FNE is compiled without OpenSSL support, KMF services are unavailable.");
 #endif // ENABLE_SSL

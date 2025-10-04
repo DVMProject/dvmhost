@@ -653,7 +653,7 @@ namespace backtrace
             DuplicateHandle(GetCurrentProcess(), GetCurrentThread(), 
                 GetCurrentProcess(), &threadHandle(), 0, FALSE, DUPLICATE_SAME_ACCESS);
 
-            skip_recs() = skip;
+            skipRecs() = skip;
 
             {
                 std::unique_lock<std::mutex> lk(mtx());
@@ -682,7 +682,7 @@ namespace backtrace
             backward::Printer p;
 
             backward::StackTrace st;
-            st.set_machine_type(printer.resolver().machine_type());
+            st.set_machine_type(p.resolver().machine_type());
             st.set_thread_handle(threadHandle());
             st.load_here(32 + skipFrames, ctx());
             st.skip_n_firsts(skipFrames);
