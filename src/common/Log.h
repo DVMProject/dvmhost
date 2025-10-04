@@ -696,7 +696,6 @@ namespace backtrace
 
             // log stack trace to a file if we're using syslog
             FILE *stacktraceFp = log_internal::GetLogFile();
-            ::fprintf(stacktraceFp, "UNRECOVERABLE FATAL ERROR!\r\n");
             p.print(st, stacktraceFp);
             ::fflush(stacktraceFp);
             ::fclose(stacktraceFp);
