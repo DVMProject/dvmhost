@@ -379,19 +379,19 @@ namespace backtrace
                 p.print(st, stderr);
             }
 
+            std::string filePath = log_internal::GetLogFilePath();
+            std::string fileRoot = log_internal::GetLogFileRoot();
+
+            time_t now;
+            ::time(&now);
+
+            struct tm* tm = ::localtime(&now);
+
+            char filename[200U];
+            ::sprintf(filename, "%s/%s-%04d-%02d-%02d.stacktrace.log", filePath.c_str(), fileRoot.c_str(), tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday);
+
             // log stack trace to a file if we're using syslog
             if (g_useSyslog) {
-                std::string filePath = log_internal::GetLogFilePath();
-                std::string fileRoot = log_internal::GetLogFileRoot();
-
-                time_t now;
-                ::time(&now);
-
-                struct tm* tm = ::localtime(&now);
-
-                char filename[200U];
-                ::sprintf(filename, "%s/%s-%04d-%02d-%02d.stacktrace.log", filePath.c_str(), fileRoot.c_str(), tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday);
-
                 FILE* stacktraceFp = ::fopen(filename, "a+t");
                 ::fprintf(stacktraceFp, "UNRECOVERABLE FATAL ERROR!\r\n");
                 p.print(st, stacktraceFp);
@@ -399,6 +399,10 @@ namespace backtrace
                 ::fclose(stacktraceFp);
             } else {
                 FILE *stacktraceFp = log_internal::GetLogFile();
+                if (stacktraceFp == nullptr) {
+                    stacktraceFp = ::fopen(filename, "a+t");
+                    ::fprintf(stacktraceFp, "UNRECOVERABLE FATAL ERROR!\r\n");
+                }
                 p.print(st, stacktraceFp);
                 ::fflush(stacktraceFp);
                 ::fclose(stacktraceFp);
@@ -694,8 +698,24 @@ namespace backtrace
             log_internal::LogInternal(3U, "UNRECOVERABLE FATAL ERROR!");
             p.print(st, std::cerr);
 
+            std::string filePath = log_internal::GetLogFilePath();
+            std::string fileRoot = log_internal::GetLogFileRoot();
+
+            time_t now;
+            ::time(&now);
+
+            struct tm* tm = ::localtime(&now);
+
+            char filename[200U];
+            ::sprintf(filename, "%s/%s-%04d-%02d-%02d.stacktrace.log", filePath.c_str(), fileRoot.c_str(), tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday);
+
             // log stack trace to a file if we're using syslog
             FILE *stacktraceFp = log_internal::GetLogFile();
+            if (stacktraceFp == nullptr) {
+                stacktraceFp = ::fopen(filename, "a+t");
+                ::fprintf(stacktraceFp, "UNRECOVERABLE FATAL ERROR!\r\n");
+            }
+
             p.print(st, stacktraceFp);
             ::fflush(stacktraceFp);
             ::fclose(stacktraceFp);
