@@ -43,6 +43,8 @@ The DVM Host software requires the library dependancies below. Generally, the so
 
 Alternatively, if you download the ASIO library from the ASIO website and extract it to a location, you can specify the path to the ASIO library using: `-DWITH_ASIO=/path/to/asio`. This method is required when cross-compiling for old Raspberry Pi ARM 32 bit.
 
+If you want detailed stacktrace output on a crash, for compilation ensure `libdw-dev` is also installed. (`apt-get install libdw-dev`). For runtime you will need the `elfutils` package to be installed. (`apt-get install elfutils`).
+
 If cross-compiling ensure you install the appropriate libraries, for example for AARCH64/ARM64:
 ```
 sudo dpkg --add-architecture arm64

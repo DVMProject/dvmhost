@@ -39,6 +39,8 @@ option(CROSS_COMPILE_AARCH64 "Cross-compile for 64-bit ARM" off)
 option(CROSS_COMPILE_RPI_ARM "Cross-compile for (old RPi) 32-bit ARM" off)
 option(COMPILE_WIN32 "Compile for Win32" off)
 
+set(ENABLE_LIBDW_SUPPORT ON)
+
 if (COMPILE_WIN32)
     set(ARCH amd64)
     set(CMAKE_SYSTEM_PROCESSOR amd64)
@@ -133,6 +135,7 @@ if (CROSS_COMPILE_RPI_ARM)
 
     # No TUI for this
     set(ENABLE_TUI_SUPPORT OFF)
+    set(ENABLE_LIBDW_SUPPORT OFF)
     message(CHECK_START "Enable TUI support - no; for simplicity RPI_ARM cross-compiling does not support TUI.")
 endif (CROSS_COMPILE_RPI_ARM)
 
@@ -191,6 +194,7 @@ set(CMAKE_INSTALL_PREFIX "/usr/local")
 #
 # Library Inclusions
 #
+# ASIO
 if (NOT ASIO_INCLUDED)
     option(WITH_ASIO "Manually specify the location for the ASIO library" off)
     if (WITH_ASIO)
@@ -210,6 +214,7 @@ if (NOT ASIO_INCLUDED)
     endif (WITH_ASIO)
 endif (NOT ASIO_INCLUDED)
 
+# WebSocket++
 if (NOT DISABLE_WEBSOCKETS)
     if (NOT WEBSOCKETPP_INCLUDED)
         message("-- Cloning WebSocket++")
@@ -225,6 +230,27 @@ if (NOT DISABLE_WEBSOCKETS)
     endif (NOT WEBSOCKETPP_INCLUDED)
 endif (NOT DISABLE_WEBSOCKETS)
 
+# elfutils (libdw-dev)
+if (ENABLE_LIBDW_SUPPORT)
+    find_path(LIBDW_INCLUDE_DIR NAMES elfutils/libdw.h elfutils/libdwfl.h HINTS /usr /usr/local PATH_SUFFIXES include)
+
+    include(FindPackageHandleStandardArgs)
+    find_package_handle_standard_args(Libdw DEFAULT_MSG LIBDW_INCLUDE_DIR)
+
+    if (LIBDW_FOUND)
+        message("-- libdw (libdw-dev) found, detailed backtrace support enabled")
+        add_definitions(-DBACKWARD_HAS_DW=1)
+        set(LIBDW_LIBRARY "dw")
+    else()
+        message("-- libdw (libdw-dev) not found, simple backtrace only")
+        set(LIBDW_INCLUDE_DIR "")
+        set(LIBDW_LIBRARY "")
+    endif (LIBDW_FOUND)
+
+    mark_as_advanced(LIBDW_INCLUDE_DIR LIBDW_LIBRARY)
+endif (ENABLE_LIBDW_SUPPORT)
+
+# FinalCut
 if (ENABLE_TUI_SUPPORT AND NOT FC_INCLUDED)
     message("-- Cloning finalcut")
     include(FetchContent)

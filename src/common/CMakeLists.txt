@@ -108,6 +108,7 @@ file(GLOB common_INCLUDE
     "src/common/network/tcp/*.h"
     "src/common/network/udp/*.h"
     "src/common/network/viface/*.h"
+    "src/common/backtrace/*.h"
     "src/common/yaml/*.h"
     "src/common/zlib/*.h"
     "src/common/*.h"

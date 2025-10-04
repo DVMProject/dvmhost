@@ -56,6 +56,8 @@ static struct tm m_tm;
 
 static std::ostream m_outStream { std::cerr.rdbuf() };
 
+bool backtrace::SignalHandling::m_foreground = false;
+
 // ---------------------------------------------------------------------------
 //  Global Functions
 // ---------------------------------------------------------------------------
@@ -272,4 +274,25 @@ void log_internal::LogInternal(uint32_t level, const std::string& log)
 #endif // !defined(_WIN32)
         exit(1);
     }
+}
+
+/* Internal helper to get the log file path. */
+
+std::string log_internal::GetLogFilePath()
+{
+    return m_filePath;
+}
+
+/* Internal helper to get the log file root name. */
+
+std::string log_internal::GetLogFileRoot()
+{
+    return m_fileRoot;
+}
+
+/* Internal helper to get the log file handle pointer. */
+
+FILE* log_internal::GetLogFile()
+{
+    return m_fpLog;
 }
