@@ -228,11 +228,11 @@ bool AffiliationLookup::groupUnaff(uint32_t srcId)
     __lock();
 
     // lookup dynamic affiliation table entry
-    if (m_grpAffTable.find(srcId) != m_grpAffTable.end()) {
-        uint32_t tblDstId = m_grpAffTable.at(srcId);
+    auto it = m_grpAffTable.find(srcId);
+    if (it != m_grpAffTable.end()) {
         if (m_verbose) {
             LogMessage(LOG_HOST, "%s, group unaffiliation, srcId = %u, dstId = %u",
-                m_name.c_str(), srcId, tblDstId);
+                m_name.c_str(), srcId, it->second);
         }
     } else {
         __unlock();
@@ -280,9 +280,9 @@ bool AffiliationLookup::isGroupAff(uint32_t srcId, uint32_t dstId) const
 
     // lookup dynamic affiliation table entry
     m_grpAffTable.lock(false);
-    if (m_grpAffTable.find(srcId) != m_grpAffTable.end()) {
-        uint32_t tblDstId = m_grpAffTable.at(srcId);
-        if (tblDstId == dstId) {
+    auto it = m_grpAffTable.find(srcId);
+    if (it != m_grpAffTable.end()) {
+        if (it->second == dstId) {
             m_grpAffTable.unlock();
             return true;
         }
@@ -402,7 +402,7 @@ bool AffiliationLookup::releaseGrant(uint32_t dstId, bool releaseAll)
     if (dstId == 0U && releaseAll) {
         LogWarning(LOG_HOST, "%s, force releasing all channel grants", m_name.c_str());
 
-        m_grantChTable.lock();
+        m_grantChTable.lock(false);
         std::vector<uint32_t> gntsToRel = std::vector<uint32_t>();
         for (auto entry : m_grantChTable) {
             uint32_t dstId = entry.first;
@@ -419,7 +419,16 @@ bool AffiliationLookup::releaseGrant(uint32_t dstId, bool releaseAll)
     }
 
     if (isGranted(dstId)) {
-        uint32_t chNo = m_grantChTable.at(dstId);
+        uint32_t chNo = 0U;
+        m_grantChTable.lock(false);
+        for (auto entry : m_grantChTable) {
+            if (entry.first == dstId) {
+                chNo = entry.second;
+                break;
+            }
+        }
+        m_grantChTable.unlock();
+
         uint32_t srcId = getGrantedSrcId(dstId);
 
         if (m_verbose) {

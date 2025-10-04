@@ -573,7 +573,7 @@ bool Socket::write(BufferVector& buffers, ssize_t* lenWritten) noexcept
                     // reallocate buffer and copy
                     cryptoBuffer = new uint8_t[cryptedLen];
                     ::memset(cryptoBuffer, 0x00U, cryptedLen);
-                    ::memcpy(cryptoBuffer, buffers.at(i)->buffer, length);
+                    ::memcpy(cryptoBuffer, buffers[i]->buffer, length);
                 }
 
                 // encrypt
@@ -607,12 +607,12 @@ bool Socket::write(BufferVector& buffers, ssize_t* lenWritten) noexcept
                 buffers[i]->length = cryptedLen + 2U;
             }
 
-            chunks[i].iov_len = buffers.at(i)->length;
-            chunks[i].iov_base = buffers.at(i)->buffer;
-            sent += buffers.at(i)->length;
+            chunks[i].iov_len = buffers[i]->length;
+            chunks[i].iov_base = buffers[i]->buffer;
+            sent += buffers[i]->length;
 
-            headers[i].msg_hdr.msg_name = (void*)&buffers.at(i)->address;
-            headers[i].msg_hdr.msg_namelen = buffers.at(i)->addrLen;
+            headers[i].msg_hdr.msg_name = (void*)&buffers[i]->address;
+            headers[i].msg_hdr.msg_namelen = buffers[i]->addrLen;
             headers[i].msg_hdr.msg_iov = &chunks[i];
             headers[i].msg_hdr.msg_iovlen = 1;
             headers[i].msg_hdr.msg_control = 0;
