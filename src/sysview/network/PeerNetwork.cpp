@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2024-2025 Bryan Biedenkapp, N2PLL
  *
  */
 #include "sysview/Defines.h"
@@ -38,9 +38,9 @@ PeerNetwork::PeerNetwork(const std::string& address, uint16_t port, uint16_t loc
     bool duplex, bool debug, bool allowActivityTransfer, bool allowDiagnosticTransfer, bool updateLookup, bool saveLookup) :
     Network(address, port, localPort, peerId, password, duplex, debug, true, true, true, true, true, true, allowActivityTransfer, allowDiagnosticTransfer, updateLookup, saveLookup),
     peerStatus(),
-    m_peerLink(false),
-    m_tgidPkt(true, "Peer-Link, TGID List"),
-    m_ridPkt(true, "Peer-Link, RID List")
+    m_peerReplica(false),
+    m_tgidPkt(true, "Peer Replication, TGID List"),
+    m_ridPkt(true, "Peer Replication, RID List")
 {
     assert(!address.empty());
     assert(port > 0U);
@@ -116,10 +116,10 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
     }
     break;
     
-    case NET_FUNC::PEER_LINK:
+    case NET_FUNC::REPL:
     {
         switch (opcode.second) {
-        case NET_SUBFUNC::PL_TALKGROUP_LIST:
+        case NET_SUBFUNC::REPL_TALKGROUP_LIST:
         {
             uint32_t decompressedLen = 0U;
             uint8_t* decompressed = nullptr;
@@ -160,8 +160,8 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
                 m_tidLookup->filename(filename);
                 m_tidLookup->reload();
 
-                // flag this peer as Peer-Link enabled
-                m_peerLink = true;
+                // flag this peer as replica enabled
+                m_peerReplica = true;
 
                 // cleanup temporary file
                 ::remove(filename.c_str());
@@ -171,7 +171,7 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
         }
         break;
 
-        case NET_SUBFUNC::PL_RID_LIST:
+        case NET_SUBFUNC::REPL_RID_LIST:
         {
             uint32_t decompressedLen = 0U;
             uint8_t* decompressed = nullptr;
@@ -212,8 +212,8 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
                 m_ridLookup->filename(filename);
                 m_ridLookup->reload();
 
-                // flag this peer as Peer-Link enabled
-                m_peerLink = true;
+                // flag this peer as replica enabled
+                m_peerReplica = true;
 
                 // cleanup temporary file
                 ::remove(filename.c_str());

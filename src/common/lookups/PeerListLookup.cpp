@@ -223,9 +223,9 @@ bool PeerListLookup::load()
                 alias = parsed[3].c_str();
 
             // parse peer link flag
-            bool peerLink = false;
+            bool peerReplica = false;
             if (parsed.size() >= 3)
-                peerLink = ::atoi(parsed[2].c_str()) == 1;
+                peerReplica = ::atoi(parsed[2].c_str()) == 1;
 
             // parse can request keys flag
             bool canRequestKeys = false;
@@ -244,7 +244,7 @@ bool PeerListLookup::load()
 
             // load into table
             PeerId entry = PeerId(id, alias, password, false);
-            entry.peerLink(peerLink);
+            entry.peerReplica(peerReplica);
             entry.canRequestKeys(canRequestKeys);
             entry.canIssueInhibit(canIssueInhibit);
 
@@ -254,7 +254,7 @@ bool PeerListLookup::load()
             LogMessage(LOG_HOST, "Loaded peer ID %u%s into peer ID lookup table, %s%s%s", id,
                 (!alias.empty() ? (" (" + alias + ")").c_str() : ""),
                 (!password.empty() ? "using unique peer password" : "using master password"),
-                (peerLink) ? ", Peer-Link Enabled" : "",
+                (peerReplica) ? ", Replication Enabled" : "",
                 (canRequestKeys) ? ", Can Request Keys" : "",
                 (canIssueInhibit) ? ", Can Issue Inhibit" : "");
         }
@@ -310,9 +310,9 @@ bool PeerListLookup::save()
         }
         line += ",";
 
-        // add peerLink flag
-        bool peerLink = entry.second.peerLink();
-        if (peerLink) {
+        // add peer replication flag
+        bool peerReplica = entry.second.peerReplica();
+        if (peerReplica) {
             line += "1,";
         } else {
             line += "0,";

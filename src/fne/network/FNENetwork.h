@@ -125,7 +125,7 @@ namespace network
             m_isExternalFNEPeer(false),
             m_isConventionalPeer(false),
             m_isSysView(false),
-            m_isPeerLink(false),
+            m_isPeerReplica(false),
             m_config(),
             m_streamSeqMutex(),
             m_streamSeqNos()
@@ -154,7 +154,7 @@ namespace network
             m_isExternalFNEPeer(false),
             m_isConventionalPeer(false),
             m_isSysView(false),
-            m_isPeerLink(false),
+            m_isPeerReplica(false),
             m_config(),
             m_streamSeqMutex(),
             m_streamSeqNos()
@@ -355,9 +355,9 @@ namespace network
         DECLARE_PROPERTY_PLAIN(bool, isSysView);
 
         /**
-         * @brief Flag indicating this connection is from an external peer that is peer link enabled.
+         * @brief Flag indicating this connection is from a neighbor FNE peer that is replica enabled.
          */
-        DECLARE_PROPERTY_PLAIN(bool, isPeerLink);
+        DECLARE_PROPERTY_PLAIN(bool, isPeerReplica);
 
         /**
          * @brief JSON objecting containing peer configuration information.
@@ -578,12 +578,12 @@ namespace network
 
         typedef std::pair<const uint32_t, network::FNEPeerConnection*> PeerMapPair;
         concurrent::unordered_map<uint32_t, FNEPeerConnection*> m_peers;
-        concurrent::unordered_map<uint32_t, json::array> m_peerLinkPeers;
+        concurrent::unordered_map<uint32_t, json::array> m_peerReplicaPeers;
         typedef std::pair<const uint32_t, lookups::AffiliationLookup*> PeerAffiliationMapPair;
         concurrent::unordered_map<uint32_t, fne_lookups::AffiliationLookup*> m_peerAffiliations;
         concurrent::unordered_map<uint32_t, std::vector<uint32_t>> m_ccPeerMap;
         static std::timed_mutex m_keyQueueMutex;
-        std::unordered_map<uint32_t, uint16_t> m_peerLinkKeyQueue;
+        std::unordered_map<uint32_t, uint16_t> m_peerReplicaKeyQueue;
 
         /**
          * @brief Represents a packet buffer entry in a map.
@@ -602,7 +602,7 @@ namespace network
 
             bool locked;
         };
-        concurrent::unordered_map<uint32_t, PacketBufferEntry> m_peerLinkActPkt;
+        concurrent::unordered_map<uint32_t, PacketBufferEntry> m_peerReplicaActPkt;
 
         Timer m_maintainenceTimer;
         Timer m_updateLookupTimer;

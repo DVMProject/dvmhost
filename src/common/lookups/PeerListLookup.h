@@ -49,7 +49,7 @@ namespace lookups
             m_peerId(0U),
             m_peerAlias(),
             m_peerPassword(),
-            m_peerLink(false),
+            m_peerReplica(false),
             m_canRequestKeys(false),
             m_canIssueInhibit(false),
             m_peerDefault(false)
@@ -68,7 +68,7 @@ namespace lookups
             m_peerId(peerId),
             m_peerAlias(peerAlias),
             m_peerPassword(peerPassword),
-            m_peerLink(false),
+            m_peerReplica(false),
             m_canRequestKeys(false),
             m_canIssueInhibit(false),
             m_peerDefault(peerDefault)
@@ -86,7 +86,7 @@ namespace lookups
                 m_peerId = data.m_peerId;
                 m_peerAlias = data.m_peerAlias;
                 m_peerPassword = data.m_peerPassword;
-                m_peerLink = data.m_peerLink;
+                m_peerReplica = data.m_peerReplica;
                 m_canRequestKeys = data.m_canRequestKeys;
                 m_canIssueInhibit = data.m_canIssueInhibit;
                 m_peerDefault = data.m_peerDefault;
@@ -125,9 +125,9 @@ namespace lookups
          */
         DECLARE_PROPERTY_PLAIN(std::string, peerPassword);
         /**
-         * @brief Flag indicating if the peer participates in peer link and should be sent configuration.
+         * @brief Flag indicating if the peer participates in peer replication and should be sent configuration.
          */
-        DECLARE_PROPERTY_PLAIN(bool, peerLink);
+        DECLARE_PROPERTY_PLAIN(bool, peerReplica);
         /**
          * @brief Flag indicating if the peer can request encryption keys.
          */

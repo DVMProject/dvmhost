@@ -46,8 +46,8 @@ PeerNetwork::PeerNetwork(const std::string& address, uint16_t port, uint16_t loc
     m_nxdnCallback(nullptr),
     m_analogCallback(nullptr),
     m_pidLookup(nullptr),
-    m_peerLink(false),
-    m_peerLinkSavesACL(false),
+    m_peerReplica(false),
+    m_peerReplicaSavesACL(false),
     m_tgidPkt(true, "Peer-Link, TGID List"),
     m_ridPkt(true, "Peer-Link, RID List"),
     m_pidPkt(true, "Peer-Link, PID List"),
@@ -112,24 +112,24 @@ bool PeerNetwork::writePeerLinkPeers(json::array* peerList)
     if (peerList->size() == 0)
         return false;
 
-    if (peerList->size() > 0 && m_peerLink) {
+    if (peerList->size() > 0 && m_peerReplica) {
         json::value v = json::value(*peerList);
         std::string json = std::string(v.serialize());
 
         size_t len = json.length() + 9U;
         DECLARE_CHAR_ARRAY(buffer, len);
 
-        ::memcpy(buffer + 0U, TAG_PEER_LINK, 4U);
+        ::memcpy(buffer + 0U, TAG_PEER_REPLICA, 4U);
         ::snprintf(buffer + 8U, json.length() + 1U, "%s", json.c_str());
 
-        PacketBuffer pkt(true, "Peer-Link, Active Peer List");
+        PacketBuffer pkt(true, "Peer Replication, Active Peer List");
         pkt.encode((uint8_t*)buffer, len);
 
         uint32_t streamId = createStreamId();
-        LogInfoEx(LOG_NET, "PEER %u Peer-Link, Active Peer List, blocks %u, streamId = %u", m_peerId, pkt.fragments.size(), streamId);
+        LogInfoEx(LOG_NET, "PEER %u Peer Replication, Active Peer List, blocks %u, streamId = %u", m_peerId, pkt.fragments.size(), streamId);
         if (pkt.fragments.size() > 0U) {
             for (auto frag : pkt.fragments) {
-                writeMaster({ NET_FUNC::PEER_LINK, NET_SUBFUNC::PL_ACT_PEER_LIST }, 
+                writeMaster({ NET_FUNC::REPL, NET_SUBFUNC::REPL_ACT_PEER_LIST }, 
                     frag.second->data, FRAG_SIZE, RTP_END_OF_CALL_SEQ, streamId, false, true);
                 Thread::sleep(60U); // pace block transmission
             }
@@ -182,10 +182,10 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
         }
         break;
 
-    case NET_FUNC::PEER_LINK:                                       // Peer Link
+    case NET_FUNC::REPL:                                            // Peer Replication
     {
         switch (opcode.second) {
-        case NET_SUBFUNC::PL_TALKGROUP_LIST:                        // Talkgroup List
+        case NET_SUBFUNC::REPL_TALKGROUP_LIST:                      // Talkgroup List
         {
             uint32_t decompressedLen = 0U;
             uint8_t* decompressed = nullptr;
@@ -205,7 +205,7 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
 
                 // randomize filename
                 std::ostringstream s;
-                if (!m_peerLinkSavesACL) {
+                if (!m_peerReplicaSavesACL) {
                     std::random_device rd;
                     std::mt19937 mt(rd());
                     std::uniform_int_distribution<uint32_t> dist(0x00U, 0xFFFFFFFFU);
@@ -231,8 +231,8 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
                 m_tidLookup->filename(filename);
                 m_tidLookup->reload();
 
-                // flag this peer as Peer-Link enabled
-                m_peerLink = true;
+                // flag this peer as replica enabled
+                m_peerReplica = true;
 
                 // cleanup temporary file
                 ::remove(filename.c_str());
@@ -242,7 +242,7 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
         }
         break;
 
-        case NET_SUBFUNC::PL_RID_LIST:                              // Radio ID List
+        case NET_SUBFUNC::REPL_RID_LIST:                            // Radio ID List
         {
             uint32_t decompressedLen = 0U;
             uint8_t* decompressed = nullptr;
@@ -262,7 +262,7 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
 
                 // randomize filename
                 std::ostringstream s;
-                if (!m_peerLinkSavesACL) {
+                if (!m_peerReplicaSavesACL) {
                     std::random_device rd;
                     std::mt19937 mt(rd());
                     std::uniform_int_distribution<uint32_t> dist(0x00U, 0xFFFFFFFFU);
@@ -288,8 +288,8 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
                 m_ridLookup->filename(filename);
                 m_ridLookup->reload();
 
-                // flag this peer as Peer-Link enabled
-                m_peerLink = true;
+                // flag this peer as replica enabled
+                m_peerReplica= true;
 
                 // cleanup temporary file
                 ::remove(filename.c_str());
@@ -299,7 +299,7 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
         }
         break;
 
-        case NET_SUBFUNC::PL_PEER_LIST:                             // Peer List
+        case NET_SUBFUNC::REPL_PEER_LIST:                           // Peer List
         {
             uint32_t decompressedLen = 0U;
             uint8_t* decompressed = nullptr;
@@ -319,7 +319,7 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
 
                 // randomize filename
                 std::ostringstream s;
-                if (!m_peerLinkSavesACL) {
+                if (!m_peerReplicaSavesACL) {
                     std::random_device rd;
                     std::mt19937 mt(rd());
                     std::uniform_int_distribution<uint32_t> dist(0x00U, 0xFFFFFFFFU);
@@ -345,8 +345,8 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
                 m_pidLookup->filename(filename);
                 m_pidLookup->reload();
 
-                // flag this peer as Peer-Link enabled
-                m_peerLink = true;
+                // flag this peer as replica enabled
+                m_peerReplica = true;
 
                 // cleanup temporary file
                 ::remove(filename.c_str());

@@ -132,16 +132,16 @@ namespace network
         bool writePeerLinkPeers(json::array* peerList);
 
         /**
-         * @brief Returns flag indicating whether or not this peer connection is Peer-Link enabled.
-         * @returns bool True, if Peer-Link enabled, otherwise false.
+         * @brief Returns flag indicating whether or not this peer connection is peer replication enabled.
+         * @returns bool True, if peer replication enabled, otherwise false.
          */
-        bool isPeerLink() const { return m_peerLink; }
+        bool isPeerReplica() const { return m_peerReplica; }
 
         /**
-         * @brief Enables the option that will save the pushed peer link ACL data to the local ACL files.
-         * @param enabled Flag to enable ACL data saving.
+         * @brief Enables the option that will save replicated ACL data to the local ACL files.
+         * @param enabled Flag to enable replicated ACL data saving.
          */
-        void setPeerLinkSaveACL(bool enabled) { m_peerLinkSavesACL = enabled; }
+        void setPeerReplicationSaveACL(bool enabled) { m_peerReplicaSavesACL = enabled; }
 
     public:
         /**
@@ -192,8 +192,8 @@ namespace network
 
     private:
         lookups::PeerListLookup* m_pidLookup;
-        bool m_peerLink;
-        bool m_peerLinkSavesACL;
+        bool m_peerReplica;
+        bool m_peerReplicaSavesACL;
 
         PacketBuffer m_tgidPkt;
         PacketBuffer m_ridPkt;

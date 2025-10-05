@@ -301,8 +301,8 @@ bool TagAnalogData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
                     // perform TGID route rewrites if configured
                     routeRewrite(outboundPeerBuffer, dstPeerId, dstId);
 
-                    // are we a peer link?
-                    if (peer.second->isPeerLink())
+                    // are we a replica peer?
+                    if (peer.second->isPeerReplica())
                         peer.second->writeMaster({ NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_ANALOG }, outboundPeerBuffer, len, pktSeq, streamId, false, false, 0U, ssrc);
                     else
                         peer.second->writeMaster({ NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_ANALOG }, outboundPeerBuffer, len, pktSeq, streamId);
@@ -426,10 +426,10 @@ bool TagAnalogData::isPeerPermitted(uint32_t peerId, data::NetData& data, uint32
         connection = m_network->m_peers[peerId];
     }
 
-    // is this peer a Peer-Link peer?
+    // is this peer a replica peer?
     if (connection != nullptr) {
-        if (connection->isPeerLink()) {
-            return true; // Peer Link peers are *always* allowed to receive traffic and no other rules may filter
+        if (connection->isPeerReplica()) {
+            return true; // replica peers are *always* allowed to receive traffic and no other rules may filter
                          // these peers
         }
     }

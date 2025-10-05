@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2024-2025 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -57,9 +57,9 @@ namespace network
             bool duplex, bool debug, bool allowActivityTransfer, bool allowDiagnosticTransfer, bool updateLookup, bool saveLookup);
 
         /**
-         * @brief Flag indicating whether or not SysView has received Peer-Link data transfers.
+         * @brief Flag indicating whether or not SysView has received peer replication data transfers.
          */
-        bool hasPeerLink() const { return m_peerLink; }
+        bool hasPeerReplica() const { return m_peerReplica; }
 
         /**
          * @brief Helper to lock the peer status mutex.
@@ -97,7 +97,7 @@ namespace network
 
     private:
         static std::mutex m_peerStatusMutex;
-        bool m_peerLink;
+        bool m_peerReplica;
 
         PacketBuffer m_tgidPkt;
         PacketBuffer m_ridPkt;

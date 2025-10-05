@@ -118,7 +118,7 @@ private:
     uint32_t m_maxMissedPings;
     uint32_t m_updateLookupTime;
 
-    bool m_peerLinkSavesACL;
+    bool m_peerReplicaSavesACL;
 
     bool m_useAlternatePortForDiagnostics;
 

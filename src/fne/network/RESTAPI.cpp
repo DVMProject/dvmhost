@@ -873,9 +873,9 @@ void RESTAPI::restAPI_GetPeerQuery(const HTTPPayload& request, HTTPPayload& repl
             LogDebug(LOG_REST, "No peers connected to this FNE");
         }
 
-        // report any Peer-Link reported peers
-        if (m_network->m_peerLinkPeers.size() > 0) {
-            for (auto entry : m_network->m_peerLinkPeers) {
+        // report any peers from replica peers
+        if (m_network->m_peerReplicaPeers.size() > 0) {
+            for (auto entry : m_network->m_peerReplicaPeers) {
                 json::array peerObjs = entry.second;
                 if (entry.second.size() > 0) {
                     for (auto linkEntry : entry.second) {
@@ -1221,11 +1221,11 @@ void RESTAPI::restAPI_GetPeerList(const HTTPPayload& request, HTTPPayload& reply
 
                 uint32_t peerId = entry.first;
                 std::string peerAlias = entry.second.peerAlias();
-                bool peerLink = entry.second.peerLink();
+                bool peerReplica = entry.second.peerReplica();
                 bool peerPassword = !entry.second.peerPassword().empty();   // True if password is not empty, otherwise false
                 peerObj["peerId"].set<uint32_t>(peerId);
                 peerObj["peerAlias"].set<std::string>(peerAlias);
-                peerObj["peerLink"].set<bool>(peerLink);
+                peerObj["peerReplica"].set<bool>(peerReplica);
                 peerObj["peerPassword"].set<bool>(peerPassword);
                 peers.push_back(json::value(peerObj));
             }
@@ -1272,15 +1272,15 @@ void RESTAPI::restAPI_PutPeerAdd(const HTTPPayload& request, HTTPPayload& reply,
     }
 
     // Get peer link setting (optional)
-    bool peerLink = false;
-    if (req.find("peerLink") != req.end()) {
+    bool peerReplica = false;
+    if (req.find("peerReplica") != req.end()) {
         // Validate
-        if (!req["peerLink"].is<bool>()) {
-            errorPayload(reply, "peerLink was not a valid boolean");
+        if (!req["peerReplica"].is<bool>()) {
+            errorPayload(reply, "peerReplica was not a valid boolean");
             return;
         }
         // Get
-        peerLink = req["peerLink"].get<bool>();
+        peerReplica = req["peerReplica"].get<bool>();
     }
 
     // Get peer password (optional)
@@ -1296,7 +1296,7 @@ void RESTAPI::restAPI_PutPeerAdd(const HTTPPayload& request, HTTPPayload& reply,
     }
 
     PeerId entry = PeerId(peerId, peerAlias, peerPassword, false);
-    entry.peerLink(peerLink);
+    entry.peerReplica(peerReplica);
 
     m_peerListLookup->addEntry(peerId, entry);
 }

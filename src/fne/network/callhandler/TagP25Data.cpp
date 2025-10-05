@@ -555,8 +555,8 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
 
                     // process TSDUs going to external peers
                     if (processTSDUToExternal(outboundPeerBuffer, peerId, dstPeerId, duid)) {
-                        // are we a peer link?
-                        if (peer.second->isPeerLink())
+                        // are we a replica peer?
+                        if (peer.second->isPeerReplica())
                             peer.second->writeMaster({ NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25 }, outboundPeerBuffer, len, pktSeq, streamId, false, false, 0U, ssrc);
                         else
                             peer.second->writeMaster({ NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25 }, outboundPeerBuffer, len, pktSeq, streamId);
@@ -1115,10 +1115,10 @@ bool TagP25Data::isPeerPermitted(uint32_t peerId, lc::LC& control, DUID::E duid,
         connection = m_network->m_peers[peerId];
     }
 
-    // is this peer a Peer-Link peer?
+    // is this peer a replica peer?
     if (connection != nullptr) {
-        if (connection->isPeerLink()) {
-            return true; // Peer Link peers are *always* allowed to receive traffic and no other rules may filter
+        if (connection->isPeerReplica()) {
+            return true; // replica peers are *always* allowed to receive traffic and no other rules may filter
                          // these peers
         }
     }

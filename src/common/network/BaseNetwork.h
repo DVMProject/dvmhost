@@ -69,7 +69,7 @@
 #define TAG_TRANSFER_STATUS     "TRNSSTS"
 
 #define TAG_ANNOUNCE            "ANNC"
-#define TAG_PEER_LINK           "PRLNK"
+#define TAG_PEER_REPLICA        "REPL"
 
 #define MAX_PEER_PING_TIME      60U // 60 seconds
 

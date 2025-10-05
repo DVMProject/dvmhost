@@ -122,7 +122,7 @@ public:
             const std::array<std::string, 6U> columns = {
                 oss.str(),
                 (masterPassword) ? "X" : "",
-                (entry.peerLink()) ? "X" : "",
+                (entry.peerReplica()) ? "X" : "",
                 (entry.canRequestKeys()) ? "X" : "",
                 (entry.canIssueInhibit()) ? "X" : "",
                 entry.peerAlias()
@@ -210,7 +210,7 @@ private:
         // configure list view columns
         m_listView.addColumn("Peer ID", 10);
         m_listView.addColumn("Master Password", 16);
-        m_listView.addColumn("Peer Link", 12);
+        m_listView.addColumn("Peer Replica", 12);
         m_listView.addColumn("Request Keys", 12);
         m_listView.addColumn("Can Inhibit", 12);
         m_listView.addColumn("Alias", 40);

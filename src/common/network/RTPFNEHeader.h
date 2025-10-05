@@ -72,7 +72,7 @@ namespace network
 
             ANNOUNCE = 0x91U,                       //!< Network Announce Function
 
-            PEER_LINK = 0x92U                       //!< FNE Peer-Link Function
+            REPL = 0x92U                            //!< FNE Replication Function
         };
     };
 
@@ -105,11 +105,11 @@ namespace network
             ANNC_SUBFUNC_AFFILS = 0x90U,            //!< Update All Affiliations
             ANNC_SUBFUNC_SITE_VC = 0x9AU,           //!< Announce Site VCs
 
-            PL_TALKGROUP_LIST = 0x00U,              //!< FNE Peer-Link Talkgroup Transfer
-            PL_RID_LIST = 0x01U,                    //!< FNE Peer-Link Radio ID Transfer
-            PL_PEER_LIST = 0x02U,                   //!< FNE Peer-Link Peer List Transfer
+            REPL_TALKGROUP_LIST = 0x00U,            //!< FNE Replication Talkgroup Transfer
+            REPL_RID_LIST = 0x01U,                  //!< FNE Replication Radio ID Transfer
+            REPL_PEER_LIST = 0x02U,                 //!< FNE Replication Peer List Transfer
 
-            PL_ACT_PEER_LIST = 0xA2U,               //!< FNE Peer-Link Active Peer List Transfer
+            REPL_ACT_PEER_LIST = 0xA2U,             //!< FNE Replication Active Peer List Transfer
         };
     };
 

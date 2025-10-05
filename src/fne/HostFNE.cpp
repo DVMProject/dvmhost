@@ -78,7 +78,7 @@ HostFNE::HostFNE(const std::string& confFile) :
     m_pingTime(5U),
     m_maxMissedPings(5U),
     m_updateLookupTime(10U),
-    m_peerLinkSavesACL(false),
+    m_peerReplicaSavesACL(false),
     m_useAlternatePortForDiagnostics(false),
     m_allowActivityTransfer(false),
     m_allowDiagnosticTransfer(false),
@@ -339,7 +339,7 @@ bool HostFNE::readParams()
     m_maxMissedPings = systemConf["maxMissedPings"].as<uint32_t>(5U);
     m_updateLookupTime = systemConf["aclRuleUpdateTime"].as<uint32_t>(10U);
     bool sendTalkgroups = systemConf["sendTalkgroups"].as<bool>(true);
-    m_peerLinkSavesACL = systemConf["peerLinkSaveACL"].as<bool>(false);
+    m_peerReplicaSavesACL = systemConf["peerReplicaSaveACL"].as<bool>(false);
 
     if (m_pingTime == 0U) {
         m_pingTime = 5U;
@@ -385,7 +385,7 @@ bool HostFNE::readParams()
     LogInfo("    ACL Rule Update Time: %u mins", m_updateLookupTime);
 
     LogInfo("    Send Talkgroups: %s", sendTalkgroups ? "yes" : "no");
-    LogInfo("    Peer Link ACL is retained: %s", m_peerLinkSavesACL ? "yes" : "no");
+    LogInfo("    Peer Replication ACL is retained: %s", m_peerReplicaSavesACL ? "yes" : "no");
 
     if (m_useAlternatePortForDiagnostics)
         LogInfo("    Use Alternate Port for Diagnostics: yes");
@@ -861,7 +861,7 @@ bool HostFNE::createPeerNetworks()
             network->setMetadata(identity, rxFrequency, txFrequency, 0.0F, 0.0F, 0, 0, 0, latitude, longitude, 0, location);
             network->setLookups(m_ridLookup, m_tidLookup);
             network->setPeerLookups(m_peerListLookup);
-            network->setPeerLinkSaveACL(m_peerLinkSavesACL);
+            network->setPeerReplicationSaveACL(m_peerReplicaSavesACL);
             if (encrypted) {
                 network->setPresharedKey(presharedKey);
             }

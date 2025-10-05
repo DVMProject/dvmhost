@@ -150,7 +150,7 @@ private:
     FLineEdit m_peerPassword{&m_sourceGroup};
 
     FButtonGroup m_configGroup{"Configuration", this};
-    FCheckBox m_peerLinkEnabled{"Peer Link", &m_configGroup};
+    FCheckBox m_peerReplicaEnabled{"Peer Replica", &m_configGroup};
     FCheckBox m_canReqKeysEnabled{"Request Keys", &m_configGroup};
     FCheckBox m_canInhibitEnabled{"Issue Inhibit", &m_configGroup};
 
@@ -265,10 +265,10 @@ private:
         {
             m_configGroup.setGeometry(FPoint(39, 5), FSize(23, 5));
 
-            m_peerLinkEnabled.setGeometry(FPoint(2, 1), FSize(10, 1));
-            m_peerLinkEnabled.setChecked(m_rule.peerLink());
-            m_peerLinkEnabled.addCallback("toggled", [&]() {
-                m_rule.peerLink(m_peerLinkEnabled.isChecked());
+            m_peerReplicaEnabled.setGeometry(FPoint(2, 1), FSize(10, 1));
+            m_peerReplicaEnabled.setChecked(m_rule.peerReplica());
+            m_peerReplicaEnabled.addCallback("toggled", [&]() {
+                m_rule.peerReplica(m_peerReplicaEnabled.isChecked());
             });
 
             m_canReqKeysEnabled.setGeometry(FPoint(2, 2), FSize(10, 1));
@@ -294,11 +294,11 @@ private:
     {
         std::string peerAlias = m_rule.peerAlias();
         uint32_t peerId = m_rule.peerId();
-        bool peerLink = m_rule.peerLink();
+        bool peerReplica = m_rule.peerReplica();
         bool canRequestKeys = m_rule.canRequestKeys();
         bool canIssueInhibit = m_rule.canIssueInhibit();
 
-        ::LogInfoEx(LOG_HOST, "Peer ALIAS: %s PEERID: %u PEER LINK: %u CAN REQUEST KEYS: %u CAN ISSUE INHIBIT: %u", peerAlias.c_str(), peerId, peerLink, canRequestKeys, canIssueInhibit);
+        ::LogInfoEx(LOG_HOST, "Peer ALIAS: %s PEERID: %u REPLICA: %u CAN REQUEST KEYS: %u CAN ISSUE INHIBIT: %u", peerAlias.c_str(), peerId, peerReplica, canRequestKeys, canIssueInhibit);
     }
 
     /*
@@ -365,7 +365,7 @@ private:
                     g_pidLookups->eraseEntry(m_origPeerId);
 
                     lookups::PeerId entry = lookups::PeerId(m_rule.peerId(), m_rule.peerAlias(), m_rule.peerPassword(), false);
-                    entry.peerLink(m_rule.peerLink());
+                    entry.peerReplica(m_rule.peerReplica());
                     entry.canRequestKeys(m_rule.canRequestKeys());
                     entry.canIssueInhibit(m_rule.canIssueInhibit());
 
@@ -401,7 +401,7 @@ private:
                 }
 
                 lookups::PeerId entry = lookups::PeerId(m_rule.peerId(), m_rule.peerAlias(), m_rule.peerPassword(), false);
-                entry.peerLink(m_rule.peerLink());
+                entry.peerReplica(m_rule.peerReplica());
                 entry.canRequestKeys(m_rule.canRequestKeys());
                 entry.canIssueInhibit(m_rule.canIssueInhibit());
 
