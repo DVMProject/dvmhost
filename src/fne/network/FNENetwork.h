@@ -182,10 +182,10 @@ namespace network
         {
             if (isSysView())
                 return "@" + identity();
-            if (isExternalFNEPeer())
-                return "+" + identity();
             if (isPeerReplica())
                 return "%" + identity();
+            if (isExternalFNEPeer())
+                return "+" + identity();
 
             return " " + m_identity;
         }
