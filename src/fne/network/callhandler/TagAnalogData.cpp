@@ -192,13 +192,14 @@ bool TagAnalogData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
                 }
 
                 // this is a new call stream
-                // bryanb: this could be problematic and is naive, if a dstId appears on both slots (which shouldn't happen)
+                m_status.lock(false);
                 m_status[dstId].callStartTime = pktTime;
                 m_status[dstId].srcId = srcId;
                 m_status[dstId].dstId = dstId;
                 m_status[dstId].streamId = streamId;
                 m_status[dstId].peerId = peerId;
                 m_status[dstId].activeCall = true;
+                m_status.unlock();
 
                 LogMessage(LOG_NET, "Analog, Call Start, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, external = %u", peerId, ssrc, srcId, dstId, streamId, external);
 
@@ -230,7 +231,9 @@ bool TagAnalogData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
             }
         }
 
+        m_status.lock(false);
         m_status[dstId].lastPacket = hrc::now();
+        m_status.unlock();
 
         // repeat traffic to the connected peers
         if (m_network->m_peers.size() > 0U) {

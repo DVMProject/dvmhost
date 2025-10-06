@@ -285,6 +285,7 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
 
                 // this is a new call stream
                 // bryanb: this could be problematic and is naive, if a dstId appears on both slots (which shouldn't happen)
+                m_status.lock(false);
                 m_status[dstId].callStartTime = pktTime;
                 m_status[dstId].srcId = srcId;
                 m_status[dstId].dstId = dstId;
@@ -292,9 +293,11 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                 m_status[dstId].streamId = streamId;
                 m_status[dstId].peerId = peerId;
                 m_status[dstId].activeCall = true;
+                m_status.unlock();
 
                 // is this a private call?
                 if (flco == FLCO::PRIVATE) {
+                    m_statusPVCall.lock(false);
                     m_statusPVCall[dstId].callStartTime = pktTime;
                     m_statusPVCall[dstId].srcId = srcId;
                     m_statusPVCall[dstId].dstId = dstId;
@@ -306,6 +309,7 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                     // find the SSRC of the peer that registered this unit
                     uint32_t regSSRC = m_network->findPeerUnitReg(srcId);
                     m_statusPVCall[dstId].dstPeerId = regSSRC;
+                    m_statusPVCall.unlock();
 
                     LogMessage(LOG_NET, "DMR, Private Call Start, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, external = %u",
                         peerId, ssrc, srcId, dstId, streamId, external);
@@ -348,7 +352,9 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
             return false;
         }
 
+        m_status.lock(false);
         m_status[dstId].lastPacket = hrc::now();
+        m_status.unlock();
 
         bool noConnectedPeerRepeat = false;
         bool privateCallInProgress = false;

@@ -322,15 +322,18 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                     }
 
                     // this is a new call stream
+                    m_status.lock(false);
                     m_status[dstId].callStartTime = pktTime;
                     m_status[dstId].srcId = srcId;
                     m_status[dstId].dstId = dstId;
                     m_status[dstId].streamId = streamId;
                     m_status[dstId].peerId = peerId;
                     m_status[dstId].activeCall = true;
+                    m_status.unlock();
 
                     // is this a private call?
                     if (!group) {
+                        m_statusPVCall.lock(false);
                         m_statusPVCall[dstId].callStartTime = pktTime;
                         m_statusPVCall[dstId].srcId = srcId;
                         m_statusPVCall[dstId].dstId = dstId;
@@ -341,6 +344,7 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                         // find the SSRC of the peer that registered this unit
                         uint32_t regSSRC = m_network->findPeerUnitReg(srcId);
                         m_statusPVCall[dstId].dstPeerId = regSSRC;
+                        m_statusPVCall.unlock();
 
                         LogMessage(LOG_NET, "NXDN, Private Call Start, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, external = %u",
                             peerId, ssrc, srcId, dstId, streamId, external);
@@ -378,7 +382,9 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
             }
         }
 
+        m_status.lock(false);
         m_status[dstId].lastPacket = hrc::now();
+        m_status.unlock();
 
         bool noConnectedPeerRepeat = false;
         bool privateCallInProgress = false;
