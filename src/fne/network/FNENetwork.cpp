@@ -1914,7 +1914,7 @@ void FNENetwork::writeWhitelistRIDs(uint32_t peerId, uint32_t streamId, bool isE
 {
     uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
-    // sending PEER_LINK style RID list to external peers
+    // sending REPL style RID list to external peers
     if (isExternalPeer) {
         FNEPeerConnection* connection = m_peers[peerId];
         if (connection != nullptr) {
@@ -1942,7 +1942,8 @@ void FNENetwork::writeWhitelistRIDs(uint32_t peerId, uint32_t streamId, bool isE
             PacketBuffer pkt(true, "Peer Replication, RID List");
             pkt.encode((uint8_t*)buffer, len);
 
-            LogInfoEx(LOG_NET, "PEER %u Peer Replication, RID List, blocks %u, streamId = %u", peerId, pkt.fragments.size(), streamId);
+            LogInfoEx(LOG_NET, "PEER %u (%s) Peer Replication, RID List, blocks %u, streamId = %u", peerId, connection->identWithQualifier().c_str(),
+                pkt.fragments.size(), streamId);
             if (pkt.fragments.size() > 0U) {
                 for (auto frag : pkt.fragments) {
                     writePeer(peerId, m_peerId, { NET_FUNC::REPL, NET_SUBFUNC::REPL_RID_LIST }, 
@@ -2103,7 +2104,7 @@ void FNENetwork::writeTGIDs(uint32_t peerId, uint32_t streamId, bool isExternalP
         return;
     }
 
-    // sending PEER_LINK style TGID list to external peers
+    // sending REPL style TGID list to external peers
     if (isExternalPeer) {
         FNEPeerConnection* connection = m_peers[peerId];
         if (connection != nullptr) {
@@ -2131,7 +2132,8 @@ void FNENetwork::writeTGIDs(uint32_t peerId, uint32_t streamId, bool isExternalP
             PacketBuffer pkt(true, "Peer Replication, TGID List");
             pkt.encode((uint8_t*)buffer, len);
 
-            LogInfoEx(LOG_NET, "PEER %u Peer Replication, TGID List, blocks %u, streamId = %u", peerId, pkt.fragments.size(), streamId);
+            LogInfoEx(LOG_NET, "PEER %u (%s) Peer Replication, TGID List, blocks %u, streamId = %u", peerId, connection->identWithQualifier().c_str(),
+                pkt.fragments.size(), streamId);
             if (pkt.fragments.size() > 0U) {
                 for (auto frag : pkt.fragments) {
                     writePeer(peerId, m_peerId, { NET_FUNC::REPL, NET_SUBFUNC::REPL_TALKGROUP_LIST }, 
@@ -2282,7 +2284,7 @@ void FNENetwork::writeDeactiveTGIDs(uint32_t peerId, uint32_t streamId)
 
 void FNENetwork::writePeerList(uint32_t peerId, uint32_t streamId)
 {
-    // sending PEER_LINK style RID list to external peers
+    // sending REPL style RID list to external peers
     FNEPeerConnection* connection = m_peers[peerId];
     if (connection != nullptr) {
         std::string filename = m_peerListLookup->filename();
@@ -2309,7 +2311,8 @@ void FNENetwork::writePeerList(uint32_t peerId, uint32_t streamId)
         PacketBuffer pkt(true, "Peer Replication, PID List");
         pkt.encode((uint8_t*)buffer, len);
 
-        LogInfoEx(LOG_NET, "PEER %u Peer Replication, PID List, blocks %u, streamId = %u", peerId, pkt.fragments.size(), streamId);
+        LogInfoEx(LOG_NET, "PEER %u (%s) Peer Replication, PID List, blocks %u, streamId = %u", peerId, connection->identWithQualifier().c_str(),
+            pkt.fragments.size(), streamId);
         if (pkt.fragments.size() > 0U) {
             for (auto frag : pkt.fragments) {
                 writePeer(peerId, m_peerId, { NET_FUNC::REPL, NET_SUBFUNC::REPL_PEER_LIST }, 
