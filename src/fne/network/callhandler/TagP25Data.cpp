@@ -287,10 +287,14 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                         // perform TG switch over -- this can happen in special conditions where a TG may rapidly switch
                         // from one source to another (primarily from bridge resources)
                         if (switchOver) {
-                            LogMessage(LOG_NET, "P25, Call Source Switched, peer = %u, ssrc = %u, sysId = $%03X, netId = $%05X, srcId = %u, dstId = %u, streamId = %u, rxPeer = %u, rxSrcId = %u, rxDstId = %u, rxStreamId = %u, external = %u",
-                                peerId, ssrc, sysId, netId, srcId, dstId, streamId, status.peerId, status.srcId, status.dstId, status.streamId, external);
                             status.streamId = streamId;
-                            status.srcId = srcId;
+                            if (status.srcId == 0U)
+                                status.srcId = srcId;
+                            if (status.srcId != srcId) {
+                                LogMessage(LOG_NET, "P25, Call Source Switched, peer = %u, ssrc = %u, sysId = $%03X, netId = $%05X, srcId = %u, dstId = %u, streamId = %u, rxPeer = %u, rxSrcId = %u, rxDstId = %u, rxStreamId = %u, external = %u",
+                                    peerId, ssrc, sysId, netId, srcId, dstId, streamId, status.peerId, status.srcId, status.dstId, status.streamId, external);
+                                status.srcId = srcId;
+                            }
                         }
 
                         if (status.srcId != 0U && status.srcId != srcId) {

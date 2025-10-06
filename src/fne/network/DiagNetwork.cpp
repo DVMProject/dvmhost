@@ -191,7 +191,7 @@ void DiagNetwork::taskNetworkRx(NetPacketRequest* req)
                         pktPeerId = peerId;
                     } else {
                         if (peerId > 0) {
-                            // this could be a peer-link transfer -- in which case, we need to check the SSRC of the packet not the peer ID
+                            // this could be a replica transfer -- in which case, we need to check the SSRC of the packet not the peer ID
                             if (network->m_peers.find(req->rtpHeader.getSSRC()) != network->m_peers.end()) {
                                 FNEPeerConnection* connection = network->m_peers[req->rtpHeader.getSSRC()];
                                 if (connection != nullptr) {
@@ -220,7 +220,7 @@ void DiagNetwork::taskNetworkRx(NetPacketRequest* req)
                                             ::memcpy(rawPayload, req->buffer + 11U, req->length - 11U);
                                             std::string payload(rawPayload, rawPayload + (req->length - 11U));
 
-                                            ::ActivityLog("%.9u (%8s) %s", pktPeerId, connection->identity().c_str(), payload.c_str());
+                                            ::ActivityLog("%.9u (%8s) %s", pktPeerId, connection->identWithQualifier().c_str(), payload.c_str());
 
                                             // report activity log to InfluxDB
                                             if (network->m_enableInfluxDB) {
@@ -250,7 +250,7 @@ void DiagNetwork::taskNetworkRx(NetPacketRequest* req)
                                                 }
                                             }
 
-                                            // attempt to repeat traffic to Peer-Link masters
+                                            // attempt to repeat traffic to replica masters
                                             if (network->m_host->m_peerNetworks.size() > 0) {
                                                 for (auto peer : network->m_host->m_peerNetworks) {
                                                     if (peer.second != nullptr) {
@@ -287,7 +287,7 @@ void DiagNetwork::taskNetworkRx(NetPacketRequest* req)
 
                                             bool currState = g_disableTimeDisplay;
                                             g_disableTimeDisplay = true;
-                                            ::Log(9999U, {nullptr, nullptr, 0U, nullptr}, "%.9u (%8s) %s", peerId, connection->identity().c_str(), payload.c_str());
+                                            ::Log(9999U, {nullptr, nullptr, 0U, nullptr}, "%.9u (%8s) %s", peerId, connection->identWithQualifier().c_str(), payload.c_str());
                                             g_disableTimeDisplay = currState;
 
                                             // report diagnostic log to InfluxDB
@@ -339,7 +339,7 @@ void DiagNetwork::taskNetworkRx(NetPacketRequest* req)
                                                 }
                                             }
 
-                                            // attempt to repeat status traffic to Peer-Link masters
+                                            // attempt to repeat status traffic to replica masters
                                             if (network->m_host->m_peerNetworks.size() > 0) {
                                                 for (auto peer : network->m_host->m_peerNetworks) {
                                                     if (peer.second != nullptr) {

@@ -370,7 +370,7 @@ void FNENetwork::clock(uint32_t ms)
                     dt = connection->lastPing() + ((m_host->m_pingTime * 1000) * m_host->m_maxMissedPings);
 
                 if (dt < now) {
-                    LogInfoEx(LOG_NET, "PEER %u (%s) timed out, dt = %u, now = %u", id, connection->identity().c_str(),
+                    LogInfoEx(LOG_NET, "PEER %u (%s) timed out, dt = %u, now = %u", id, connection->identWithQualifier().c_str(),
                         dt, now);
 
                     // set connection states for this stale connection
@@ -381,7 +381,7 @@ void FNENetwork::clock(uint32_t ms)
                     // netsplit
                     if (connection->isExternalFNEPeer() || connection->isPeerReplica()) {
                         for (uint8_t i = 0U; i < 3U; i++)
-                            LogWarning(LOG_NET, "PEER %u (%s) downstream netsplit, dt = %u, now = %u", id, connection->identity().c_str(),
+                            LogWarning(LOG_NET, "PEER %u (%s) downstream netsplit, dt = %u, now = %u", id, connection->identWithQualifier().c_str(),
                                 dt, now);
                     }
 
@@ -405,7 +405,7 @@ void FNENetwork::clock(uint32_t ms)
             m_frameQueue->clearTimestamps();
         }
 
-        // send active peer list to Peer-Link masters
+        // send active peer list to replica masters
         if (m_host->m_peerNetworks.size() > 0) {
             for (auto peer : m_host->m_peerNetworks) {
                 if (peer.second != nullptr) {
@@ -450,7 +450,7 @@ void FNENetwork::clock(uint32_t ms)
             if (connection != nullptr) {
                 // if this connection is a peer replica *always* send the update -- no stream checking
                 if (connection->connected() && connection->isPeerReplica()) {
-                    LogInfoEx(LOG_NET, "PEER %u (%s), Peer-Link, updating ACL list", id, connection->identity().c_str());
+                    LogInfoEx(LOG_NET, "PEER %u (%s), Peer Replication, updating ACL list", id, connection->identWithQualifier().c_str());
 
                     peerACLUpdate(id);
                     connection->missedACLUpdates(0U);
@@ -459,14 +459,14 @@ void FNENetwork::clock(uint32_t ms)
 
                 if (connection->connected()) {
                     if ((connection->streamCount() <= 1) || (connection->missedACLUpdates() > MAX_MISSED_ACL_UPDATES)) {
-                        LogInfoEx(LOG_NET, "PEER %u (%s) updating ACL list", id, connection->identity().c_str());
+                        LogInfoEx(LOG_NET, "PEER %u (%s) updating ACL list", id, connection->identWithQualifier().c_str());
                         peerACLUpdate(id);
                         connection->missedACLUpdates(0U);
                     } else {
                         uint32_t missed = connection->missedACLUpdates();
                         missed++;
 
-                        LogInfoEx(LOG_NET, "PEER %u (%s) skipped for ACL update, traffic in progress", id, connection->identity().c_str());
+                        LogInfoEx(LOG_NET, "PEER %u (%s) skipped for ACL update, traffic in progress", id, connection->identWithQualifier().c_str());
                         connection->missedACLUpdates(missed);
                     }
                 }
@@ -633,15 +633,40 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                             connection->eraseStreamPktSeq(streamId); // attempt to erase packet sequence for the stream
                         }
                     } else {
+                        bool skip = false;
                         if (connection->hasStreamPktSeq(streamId)) {
                             uint16_t currPkt = connection->getStreamPktSeq(streamId);
                             if ((pktSeq != currPkt) && (pktSeq != (RTP_END_OF_CALL_SEQ - 1U)) && pktSeq != 0U) {
-                                LogWarning(LOG_NET, "PEER %u (%s) stream %u out-of-sequence; %u != %u", peerId, connection->identity().c_str(),
+                                LogWarning(LOG_NET, "PEER %u (%s) stream %u out-of-sequence; got %u, expected %u", peerId, connection->identWithQualifier().c_str(),
                                     streamId, pktSeq, currPkt);
+
+                                if (req->fneHeader.getFunction() == NET_FUNC::PROTOCOL) {
+                                    // possibly lost frames
+                                    if (pktSeq > currPkt) {
+                                        LogError(LOG_NET, "PEER %u (%s) stream %u possible lost frames; got %u, expected %u, resetting sequence to %u", peerId, connection->identWithQualifier().c_str(),
+                                            streamId, pktSeq, currPkt, pktSeq);
+                                        connection->setStreamPktSeq(streamId, pktSeq + 1U, true);
+                                        skip = true; // don't alter the packet sequence any further
+                                    }
+
+                                    // received out of order frames
+                                    if (pktSeq < currPkt) {
+                                        LogError(LOG_NET, "PEER %u (%s) stream %u out-of-order; got %u, expected %u, dropped", peerId, connection->identWithQualifier().c_str(),
+                                            streamId, pktSeq, currPkt);
+
+                                        // don't process blatently out-of-order frames
+                                        if (req->buffer != nullptr)
+                                            delete[] req->buffer;
+                                        delete req;
+
+                                        return;
+                                    }
+                                }
                             }
                         }
 
-                        connection->incStreamPktSeq(streamId, pktSeq + 1U);
+                        if (!skip)
+                            connection->setStreamPktSeq(streamId, pktSeq + 1U);
                     }
                 }
 
@@ -820,7 +845,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                             FNEPeerConnection* connection = network->m_peers[peerId];
                             if (connection != nullptr) {
                                 if (connection->connectionState() == NET_STAT_RUNNING) {
-                                    LogMessage(LOG_NET, "PEER %u (%s) resetting peer connection, connectionState = %u", peerId, connection->identity().c_str(),
+                                    LogMessage(LOG_NET, "PEER %u (%s) resetting peer connection, connectionState = %u", peerId, connection->identWithQualifier().c_str(),
                                         connection->connectionState());
                                     delete connection;
 
@@ -848,7 +873,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                 } else {
                                     network->writePeerNAK(peerId, TAG_REPEATER_LOGIN, NET_CONN_NAK_BAD_CONN_STATE, req->address, req->addrLen);
 
-                                    LogWarning(LOG_NET, "PEER %u (%s) RPTL NAK, bad connection state, connectionState = %u", peerId, connection->identity().c_str(),
+                                    LogWarning(LOG_NET, "PEER %u (%s) RPTL NAK, bad connection state, connectionState = %u", peerId, connection->identWithQualifier().c_str(),
                                         connection->connectionState());
 
                                     network->erasePeer(peerId);
@@ -1078,7 +1103,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                 }
                             }
                             else {
-                                LogWarning(LOG_NET, "PEER %u (%s) RPTC NAK, login exchange while in an incorrect state, connectionState = %u", peerId, connection->identity().c_str(),
+                                LogWarning(LOG_NET, "PEER %u (%s) RPTC NAK, login exchange while in an incorrect state, connectionState = %u", peerId, connection->identWithQualifier().c_str(),
                                     connection->connectionState());
                                 network->writePeerNAK(peerId, TAG_REPEATER_CONFIG, NET_CONN_NAK_BAD_CONN_STATE, req->address, req->addrLen);
                                 network->erasePeer(peerId);
@@ -1102,7 +1127,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
 
                             // validate peer (simple validation really)
                             if (connection->connected() && connection->address() == ip) {
-                                LogInfoEx(LOG_NET, "PEER %u (%s) disconnected", peerId, connection->identity().c_str());
+                                LogInfoEx(LOG_NET, "PEER %u (%s) disconnected", peerId, connection->identWithQualifier().c_str());
                                 network->erasePeer(peerId);
                                 delete connection;
                             }
@@ -1143,7 +1168,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                 network->writePeerCommand(peerId, { NET_FUNC::PONG, NET_SUBFUNC::NOP }, payload, 8U, streamId, false);
 
                                 if (network->m_reportPeerPing) {
-                                    LogInfoEx(LOG_NET, "PEER %u (%s) ping, pingsReceived = %u, lastPing = %u, now = %u", peerId, connection->identity().c_str(),
+                                    LogInfoEx(LOG_NET, "PEER %u (%s) ping, pingsReceived = %u, lastPing = %u, now = %u", peerId, connection->identWithQualifier().c_str(),
                                         connection->pingsReceived(), lastPing, now);
                                 }
                             }
@@ -1240,7 +1265,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                         break;
                                     } else {
                                         if (!peerEntry.canRequestKeys()) {
-                                            LogError(LOG_NET, "PEER %u (%s) requested enc. key but is not allowed, no response", peerId, connection->identity().c_str());
+                                            LogError(LOG_NET, "PEER %u (%s) requested enc. key but is not allowed, no response", peerId, connection->identWithQualifier().c_str());
                                             break;
                                         }
                                     }
@@ -1248,7 +1273,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
 
                                 std::unique_ptr<KMMFrame> frame = KMMFactory::create(req->buffer + 11U);
                                 if (frame == nullptr) {
-                                    LogWarning(LOG_NET, "PEER %u (%s), undecodable KMM frame from peer", peerId, connection->identity().c_str());
+                                    LogWarning(LOG_NET, "PEER %u (%s), undecodable KMM frame from peer", peerId, connection->identWithQualifier().c_str());
                                     break;
                                 }
 
@@ -1257,7 +1282,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                     {
                                         KMMModifyKey* modifyKey = static_cast<KMMModifyKey*>(frame.get());
                                         if (modifyKey->getAlgId() > 0U && modifyKey->getKId() > 0U) {
-                                            LogMessage(LOG_NET, "PEER %u (%s) requested enc. key, algId = $%02X, kID = $%04X", peerId, connection->identity().c_str(),
+                                            LogMessage(LOG_NET, "PEER %u (%s) requested enc. key, algId = $%02X, kID = $%04X", peerId, connection->identWithQualifier().c_str(),
                                                 modifyKey->getAlgId(), modifyKey->getKId());
                                             ::KeyItem keyItem = network->m_cryptoLookup->find(modifyKey->getKId());
                                             if (!keyItem.isInvalid()) {
@@ -1270,7 +1295,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                                     Utils::dump(1U, "FNENetwork::taskNetworkRx(), Key", key, P25DEF::MAX_ENC_KEY_LENGTH_BYTES);
                                                 }
 
-                                                LogMessage(LOG_NET, "PEER %u (%s) local enc. key, algId = $%02X, kID = $%04X", peerId, connection->identity().c_str(),
+                                                LogMessage(LOG_NET, "PEER %u (%s) local enc. key, algId = $%02X, kID = $%04X", peerId, connection->identWithQualifier().c_str(),
                                                     modifyKey->getAlgId(), modifyKey->getKId());
 
                                                 // build response buffer
@@ -1301,12 +1326,12 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                                 network->writePeer(peerId, network->m_peerId, { NET_FUNC::KEY_RSP, NET_SUBFUNC::NOP }, buffer, modifyKeyRsp.length() + 11U, 
                                                     RTP_END_OF_CALL_SEQ, network->createStreamId(), false, false, true);
                                             } else {
-                                                // attempt to forward KMM key request to Peer-Link masters
+                                                // attempt to forward KMM key request to replica masters
                                                 if (network->m_host->m_peerNetworks.size() > 0) {
                                                     for (auto peer : network->m_host->m_peerNetworks) {
                                                         if (peer.second != nullptr) {
                                                             if (peer.second->isEnabled() && peer.second->isPeerReplica()) {
-                                                                LogMessage(LOG_NET, "PEER %u (%s) no local key or container, requesting key from upstream master, algId = $%02X, kID = $%04X", peerId, connection->identity().c_str(),
+                                                                LogMessage(LOG_NET, "PEER %u (%s) no local key or container, requesting key from upstream master, algId = $%02X, kID = $%04X", peerId, connection->identWithQualifier().c_str(),
                                                                     modifyKey->getAlgId(), modifyKey->getKId());
 
                                                                 bool locked = network->m_keyQueueMutex.try_lock_for(std::chrono::milliseconds(60));
@@ -1354,7 +1379,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                     std::string ip = udp::Socket::address(req->address);
                                     lookups::AffiliationLookup* aff = network->m_peerAffiliations[peerId];
                                     if (aff == nullptr) {
-                                        LogError(LOG_NET, "PEER %u (%s) has uninitialized affiliations lookup?", peerId, connection->identity().c_str());
+                                        LogError(LOG_NET, "PEER %u (%s) has uninitialized affiliations lookup?", peerId, connection->identWithQualifier().c_str());
                                         network->writePeerNAK(peerId, streamId, TAG_ANNOUNCE, NET_CONN_NAK_INVALID);
                                     }
 
@@ -1365,7 +1390,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                         aff->groupUnaff(srcId);
                                         aff->groupAff(srcId, dstId);
 
-                                        // attempt to repeat traffic to Peer-Link masters
+                                        // attempt to repeat traffic to replica masters
                                         if (network->m_host->m_peerNetworks.size() > 0) {
                                             for (auto peer : network->m_host->m_peerNetworks) {
                                                 if (peer.second != nullptr) {
@@ -1393,7 +1418,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                     std::string ip = udp::Socket::address(req->address);
                                     fne_lookups::AffiliationLookup* aff = network->m_peerAffiliations[peerId];
                                     if (aff == nullptr) {
-                                        LogError(LOG_NET, "PEER %u (%s) has uninitialized affiliations lookup?", peerId, connection->identity().c_str());
+                                        LogError(LOG_NET, "PEER %u (%s) has uninitialized affiliations lookup?", peerId, connection->identWithQualifier().c_str());
                                         network->writePeerNAK(peerId, streamId, TAG_ANNOUNCE, NET_CONN_NAK_INVALID);
                                     }
 
@@ -1402,7 +1427,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                         uint32_t srcId = GET_UINT24(req->buffer, 0U);           // Source Address
                                         aff->unitReg(srcId, ssrc);
 
-                                        // attempt to repeat traffic to Peer-Link masters
+                                        // attempt to repeat traffic to replica masters
                                         if (network->m_host->m_peerNetworks.size() > 0) {
                                             for (auto peer : network->m_host->m_peerNetworks) {
                                                 if (peer.second != nullptr) {
@@ -1429,7 +1454,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                     std::string ip = udp::Socket::address(req->address);
                                     lookups::AffiliationLookup* aff = network->m_peerAffiliations[peerId];
                                     if (aff == nullptr) {
-                                        LogError(LOG_NET, "PEER %u (%s) has uninitialized affiliations lookup?", peerId, connection->identity().c_str());
+                                        LogError(LOG_NET, "PEER %u (%s) has uninitialized affiliations lookup?", peerId, connection->identWithQualifier().c_str());
                                         network->writePeerNAK(peerId, streamId, TAG_ANNOUNCE, NET_CONN_NAK_INVALID);
                                     }
 
@@ -1438,7 +1463,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                         uint32_t srcId = GET_UINT24(req->buffer, 0U);           // Source Address
                                         aff->unitDereg(srcId);
 
-                                        // attempt to repeat traffic to Peer-Link masters
+                                        // attempt to repeat traffic to replica masters
                                         if (network->m_host->m_peerNetworks.size() > 0) {
                                             for (auto peer : network->m_host->m_peerNetworks) {
                                                 if (peer.second != nullptr) {
@@ -1466,7 +1491,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                     std::string ip = udp::Socket::address(req->address);
                                     lookups::AffiliationLookup* aff = network->m_peerAffiliations[peerId];
                                     if (aff == nullptr) {
-                                        LogError(LOG_NET, "PEER %u (%s) has uninitialized affiliations lookup?", peerId, connection->identity().c_str());
+                                        LogError(LOG_NET, "PEER %u (%s) has uninitialized affiliations lookup?", peerId, connection->identWithQualifier().c_str());
                                         network->writePeerNAK(peerId, streamId, TAG_ANNOUNCE, NET_CONN_NAK_INVALID);
                                     }
 
@@ -1475,7 +1500,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                         uint32_t srcId = GET_UINT24(req->buffer, 0U);           // Source Address
                                         aff->groupUnaff(srcId);
 
-                                        // attempt to repeat traffic to Peer-Link masters
+                                        // attempt to repeat traffic to replica masters
                                         if (network->m_host->m_peerNetworks.size() > 0) {
                                             for (auto peer : network->m_host->m_peerNetworks) {
                                                 if (peer.second != nullptr) {
@@ -1506,7 +1531,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                     if (connection->connected() && connection->address() == ip) {
                                         lookups::AffiliationLookup* aff = network->m_peerAffiliations[peerId];
                                         if (aff == nullptr) {
-                                            LogError(LOG_NET, "PEER %u (%s) has uninitialized affiliations lookup?", peerId, connection->identity().c_str());
+                                            LogError(LOG_NET, "PEER %u (%s) has uninitialized affiliations lookup?", peerId, connection->identWithQualifier().c_str());
                                             network->writePeerNAK(peerId, streamId, TAG_ANNOUNCE, NET_CONN_NAK_INVALID);
                                         }
 
@@ -1523,9 +1548,9 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                                 aff->groupAff(srcId, dstId);
                                                 offs += 8U;
                                             }
-                                            LogMessage(LOG_NET, "PEER %u (%s) announced %u affiliations", peerId, connection->identity().c_str(), len);
+                                            LogMessage(LOG_NET, "PEER %u (%s) announced %u affiliations", peerId, connection->identWithQualifier().c_str(), len);
 
-                                            // attempt to repeat traffic to Peer-Link masters
+                                            // attempt to repeat traffic to replica masters
                                             if (network->m_host->m_peerNetworks.size() > 0) {
                                                 for (auto peer : network->m_host->m_peerNetworks) {
                                                     if (peer.second != nullptr) {
@@ -1571,10 +1596,10 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                             }
                                             offs += 4U;
                                         }
-                                        LogMessage(LOG_NET, "PEER %u (%s) announced %u VCs", peerId, connection->identity().c_str(), len);
+                                        LogMessage(LOG_NET, "PEER %u (%s) announced %u VCs", peerId, connection->identWithQualifier().c_str(), len);
                                         network->m_ccPeerMap[peerId] = vcPeers;
 
-                                        // attempt to repeat traffic to Peer-Link masters
+                                        // attempt to repeat traffic to replica masters
                                         if (network->m_host->m_peerNetworks.size() > 0) {
                                             for (auto peer : network->m_host->m_peerNetworks) {
                                                 if (peer.second != nullptr) {
@@ -1767,7 +1792,7 @@ bool FNENetwork::resetPeer(uint32_t peerId)
             sockaddr_storage addr = connection->socketStorage();
             uint32_t addrLen = connection->sockStorageLen();
 
-            LogInfoEx(LOG_NET, "PEER %u (%s) resetting peer connection", peerId, connection->identity().c_str());
+            LogInfoEx(LOG_NET, "PEER %u (%s) resetting peer connection", peerId, connection->identWithQualifier().c_str());
 
             writePeerNAK(peerId, TAG_REPEATER_LOGIN, NET_CONN_NAK_PEER_RESET, addr, addrLen);
 
@@ -1790,7 +1815,7 @@ std::string FNENetwork::resolvePeerIdentity(uint32_t peerId)
     if (it != m_peers.end()) {
         if (it->second != nullptr) {
             FNEPeerConnection* peer = it->second;
-            return peer->identity();
+            return peer->identWithQualifier();
         }
     }
 
@@ -1858,7 +1883,7 @@ void FNENetwork::taskACLUpdate(ACLUpdateRequest* req)
             // if the connection is an external peer, and peer is participating in peer link,
             // send the peer proper configuration data
             if (connection->isExternalFNEPeer() && connection->isPeerReplica()) {
-                LogInfoEx(LOG_NET, "PEER %u (%s) sending Peer-Link ACL list updates", req->peerId, peerIdentity.c_str());
+                LogInfoEx(LOG_NET, "PEER %u (%s) sending replica ACL list updates", req->peerId, peerIdentity.c_str());
 
                 network->writeWhitelistRIDs(req->peerId, aclStreamId, true);
                 network->writeTGIDs(req->peerId, aclStreamId, true);
@@ -1978,7 +2003,7 @@ void FNENetwork::writeWhitelistRIDs(uint32_t peerId, uint32_t streamId, bool isE
                 uint32_t id = ridWhitelist.at(j + (i * MAX_RID_LIST_CHUNK));
 
                 if (m_debug)
-                    LogDebug(LOG_NET, "PEER %u (%s) whitelisting RID %u (%d / %d)", peerId, connection->identity().c_str(),
+                    LogDebug(LOG_NET, "PEER %u (%s) whitelisting RID %u (%d / %d)", peerId, connection->identWithQualifier().c_str(),
                         id, i, j);
 
                 SET_UINT32(id, payload, offs);
@@ -2050,7 +2075,7 @@ void FNENetwork::writeBlacklistRIDs(uint32_t peerId, uint32_t streamId)
                 uint32_t id = ridBlacklist.at(j + (i * MAX_RID_LIST_CHUNK));
 
                 if (m_debug)
-                    LogDebug(LOG_NET, "PEER %u (%s) blacklisting RID %u (%d / %d)", peerId, connection->identity().c_str(),
+                    LogDebug(LOG_NET, "PEER %u (%s) blacklisting RID %u (%d / %d)", peerId, connection->identWithQualifier().c_str(),
                         id, i, j);
 
                 SET_UINT32(id, payload, offs);
@@ -2333,14 +2358,14 @@ bool FNENetwork::writePeer(uint32_t peerId, uint32_t ssrc, FrameQueue::OpcodePai
             uint32_t addrLen = connection->sockStorageLen();
 
             if (incPktSeq) {
-                pktSeq = connection->incStreamPktSeq(streamId, pktSeq);
+                pktSeq = connection->setStreamPktSeq(streamId, pktSeq);
             }
 
             if (m_maskOutboundPeerID)
                 ssrc = m_peerId; // mask the source SSRC to our own peer ID
             else {
                 if ((connection->isExternalFNEPeer() && !connection->isPeerReplica()) && m_maskOutboundPeerIDForNonPL) {
-                    // if the peer is an external FNE neighbor peer, and not a Peer-Link peer, we need to send the packet
+                    // if the peer is an external FNE neighbor peer, and not a replica peer, we need to send the packet
                     // to the external FNE neighbor peer with our peer ID as the source instead of the originating peer
                     // because we have routed it
                     ssrc = m_peerId;

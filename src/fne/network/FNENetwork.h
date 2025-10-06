@@ -175,6 +175,22 @@ namespace network
         }
 
         /**
+         * @brief Returns the identity with qualifier symbols.
+         * @return std::string Identity with qualifier.
+         */
+        std::string identWithQualifier() const 
+        {
+            if (isSysView())
+                return "@" + identity();
+            if (isExternalFNEPeer())
+                return "+" + identity();
+            if (isPeerReplica())
+                return "%" + identity();
+
+            return " " + m_identity;
+        }
+
+        /**
          * @brief Helper to determine if the stream ID has a stored RTP sequence.
          * @param streamId Stream ID.
          * @returns bool  
@@ -228,12 +244,13 @@ namespace network
         }
 
         /**
-         * @brief Helper to increment the stored RTP sequence for the given stream ID.
+         * @brief Helper to set/increment the stored RTP sequence for the given stream ID.
          * @param streamId Stream ID.
          * @param initialSeq Initial sequence number to set.
+         * @param force Force sequence number to be reset to the value provided by initialSeq.
          * @returns uint16_t 
          */
-        uint16_t incStreamPktSeq(uint64_t streamId, uint16_t initialSeq)
+        uint16_t setStreamPktSeq(uint64_t streamId, uint16_t initialSeq, bool force = false)
         {
             bool locked = m_streamSeqMutex.try_lock_for(std::chrono::milliseconds(60));
 
@@ -244,9 +261,13 @@ namespace network
                 if (it == m_streamSeqNos.end()) {
                     m_streamSeqNos.insert({streamId, initialSeq});
                 } else {
-                    pktSeq = m_streamSeqNos[streamId];
+                    if (!force) {
+                        pktSeq = m_streamSeqNos[streamId];
+                        ++pktSeq;
+                    } else {
+                        pktSeq = initialSeq;
+                    }
 
-                    ++pktSeq;
                     if (pktSeq > RTP_END_OF_CALL_SEQ) {
                         pktSeq = 0U;
                     }

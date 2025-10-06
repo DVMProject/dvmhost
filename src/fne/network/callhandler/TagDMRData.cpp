@@ -244,10 +244,14 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                     // perform TG switch over -- this can happen in special conditions where a TG may rapidly switch
                     // from one source to another (primarily from bridge resources)
                     if (switchOver && status.slotNo == slotNo) {
-                        LogMessage(LOG_NET, "DMR, Call Source Switched, peer = %u, ssrc = %u, srcId = %u, dstId = %u, slotNo = %u, streamId = %u, rxPeer = %u, rxSrcId = %u, rxDstId = %u, rxSlotNo = %u, rxStreamId = %u, external = %u",
-                            peerId, ssrc, srcId, dstId, slotNo, streamId, status.peerId, status.srcId, status.dstId, status.slotNo, status.streamId, external);
                         status.streamId = streamId;
-                        status.srcId = srcId;
+                        if (status.srcId == 0U)
+                            status.srcId = srcId;
+                        if (status.srcId != srcId) {
+                            LogMessage(LOG_NET, "DMR, Call Source Switched, peer = %u, ssrc = %u, srcId = %u, dstId = %u, slotNo = %u, streamId = %u, rxPeer = %u, rxSrcId = %u, rxDstId = %u, rxSlotNo = %u, rxStreamId = %u, external = %u",
+                                peerId, ssrc, srcId, dstId, slotNo, streamId, status.peerId, status.srcId, status.dstId, status.slotNo, status.streamId, external);
+                            status.srcId = srcId;
+                        }
                     }
 
                     if (status.srcId != 0U && status.srcId != srcId) {

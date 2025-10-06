@@ -48,9 +48,9 @@ PeerNetwork::PeerNetwork(const std::string& address, uint16_t port, uint16_t loc
     m_pidLookup(nullptr),
     m_peerReplica(false),
     m_peerReplicaSavesACL(false),
-    m_tgidPkt(true, "Peer-Link, TGID List"),
-    m_ridPkt(true, "Peer-Link, RID List"),
-    m_pidPkt(true, "Peer-Link, PID List"),
+    m_tgidPkt(true, "Peer Replication, TGID List"),
+    m_ridPkt(true, "Peer Replication, RID List"),
+    m_pidPkt(true, "Peer Replication, PID List"),
     m_threadPool(WORKER_CNT, "peer")
 {
     assert(!address.empty());
