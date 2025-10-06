@@ -621,7 +621,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
             }
 
             // update current peer packet sequence and stream ID
-            if (peerId > 0 && (network->m_peers.find(peerId) != network->m_peers.end()) && streamId != 0U) {
+            if (peerId > 0U && (network->m_peers.find(peerId) != network->m_peers.end()) && streamId != 0U) {
                 FNEPeerConnection* connection = network->m_peers[peerId];
                 uint16_t pktSeq = req->rtpHeader.getSequence();
 
@@ -636,35 +636,40 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                         bool skip = false;
                         if (connection->hasStreamPktSeq(streamId)) {
                             uint16_t currPkt = connection->getStreamPktSeq(streamId);
-                            if ((pktSeq != currPkt) && (pktSeq != (RTP_END_OF_CALL_SEQ - 1U)) && pktSeq != 0U) {
-                                LogWarning(LOG_NET, "PEER %u (%s) stream %u out-of-sequence; got %u, expected %u", peerId, connection->identWithQualifier().c_str(),
-                                    streamId, pktSeq, currPkt);
 
-                                if (req->fneHeader.getFunction() == NET_FUNC::PROTOCOL) {
-                                    // possibly lost frames
-                                    if (pktSeq > currPkt) {
-                                        LogError(LOG_NET, "PEER %u (%s) stream %u possible lost frames; got %u, expected %u, resetting sequence to %u", peerId, connection->identWithQualifier().c_str(),
-                                            streamId, pktSeq, currPkt, pktSeq);
-                                        connection->setStreamPktSeq(streamId, pktSeq + 1U, true);
-                                        skip = true; // don't alter the packet sequence any further
-                                    }
+                            if (currPkt == RTP_END_OF_CALL_SEQ) {
+                                // update the expected current packet sequence for the next sequence number
+                                connection->setStreamPktSeq(streamId, 0U, true);
+                                skip = true; // don't alter the packet sequence any further
+                            }
+                            else {
+                                if ((pktSeq != currPkt) && (pktSeq != (RTP_END_OF_CALL_SEQ - 1U)) && pktSeq != 0U) {
+                                    LogWarning(LOG_NET, "PEER %u (%s) stream %u out-of-sequence; got %u, expected %u", peerId, connection->identWithQualifier().c_str(),
+                                        streamId, pktSeq, currPkt);
 
-                                    // received out of order frames
-                                    if (pktSeq < currPkt) {
-                                        LogError(LOG_NET, "PEER %u (%s) stream %u out-of-order; got %u, expected %u, dropped", peerId, connection->identWithQualifier().c_str(),
-                                            streamId, pktSeq, currPkt);
+                                    if (req->fneHeader.getFunction() == NET_FUNC::PROTOCOL) {
+                                        // possibly lost frames
+                                        if (pktSeq > currPkt) {
+                                            LogError(LOG_NET, "PEER %u (%s) stream %u possible lost frames; got %u, expected %u, resetting sequence to %u", peerId, connection->identWithQualifier().c_str(),
+                                                streamId, pktSeq, currPkt, pktSeq);
 
-                                        // don't process blatently out-of-order frames
-                                        if (req->buffer != nullptr)
-                                            delete[] req->buffer;
-                                        delete req;
+                                            // update the expected current packet sequence for the next sequence number
+                                            connection->setStreamPktSeq(streamId, pktSeq + 1U, true);
+                                            skip = true; // don't alter the packet sequence any further
+                                        }
 
-                                        return;
+                                        // received out of order frames
+                                        if (pktSeq < currPkt) {
+                                            LogError(LOG_NET, "PEER %u (%s) stream %u out-of-order; got %u, expected %u", peerId, connection->identWithQualifier().c_str(),
+                                                streamId, pktSeq, currPkt);
+                                            skip = true; // don't alter the packet sequence -- this can result in odd behavior
+                                        }
                                     }
                                 }
                             }
                         }
 
+                        // update the expected current packet sequence for the next sequence number
                         if (!skip)
                             connection->setStreamPktSeq(streamId, pktSeq + 1U);
                     }
