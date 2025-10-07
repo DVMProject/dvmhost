@@ -705,7 +705,8 @@ void Network::clock(uint32_t ms)
 
                                 std::string address = __IP_FROM_UINT(ipAddr);
 
-                                LogDebugEx(LOG_NET, "Network::clock()", "HA PARAMS, %s:%u", address.c_str(), port);
+                                if (m_debug)
+                                    LogDebugEx(LOG_NET, "Network::clock()", "HA PARAMS, %s:%u", address.c_str(), port);
 
                                 m_haIPs.push_back(PeerHAIPEntry(address, port));
                                 i++;

@@ -514,9 +514,11 @@ void DiagNetwork::taskNetworkRx(NetPacketRequest* req)
                                             network->m_peerReplicaHAParams.push_back(param);
                                         }
 
-                                        std::string address = __IP_FROM_UINT(rxEntry.masterIP);
-                                        LogDebugEx(LOG_NET, "DiagNetwork::taskNetworkRx", "PEER %u (%s) Peer Replication, HA Parameters, %s:%u", peerId, connection->identWithQualifier().c_str(),
-                                            address.c_str(), rxEntry.masterPort);
+                                        if (network->m_debug) {
+                                            std::string address = __IP_FROM_UINT(rxEntry.masterIP);
+                                            LogDebugEx(LOG_NET, "DiagNetwork::taskNetworkRx", "PEER %u (%s) Peer Replication, HA Parameters, %s:%u", peerId, connection->identWithQualifier().c_str(),
+                                                address.c_str(), rxEntry.masterPort);
+                                        }
                                     }
 
                                     if (receivedParams.size() > 0) {
