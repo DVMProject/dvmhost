@@ -104,7 +104,7 @@ FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port,
     m_updateLookupTimer(1000U, (updateLookupTime * 60U)),
     m_haUpdateTimer(1000U, FIXED_HA_UPDATE_INTERVAL),
     m_softConnLimit(0U),
-    m_callInProgress(false),
+    m_callCollisionTimeout(5U),
     m_disallowAdjStsBcast(false),
     m_disallowExtAdjStsBcast(true),
     m_allowConvSiteAffOverride(false),
@@ -221,6 +221,8 @@ void FNENetwork::setOptions(yaml::Node& conf, bool printOptions)
     LogWarning(LOG_P25, "FNE is compiled without OpenSSL support, KMF services are unavailable.");
 #endif // ENABLE_SSL
 
+    m_callCollisionTimeout = conf["callCollisionTimeout"].as<uint32_t>(5U);
+
     m_restrictGrantToAffOnly = conf["restrictGrantToAffiliatedOnly"].as<bool>(false);
     m_restrictPVCallToRegOnly = conf["restrictPrivateCallToRegOnly"].as<bool>(false);
     m_filterTerminators = conf["filterTerminators"].as<bool>(true);
@@ -275,6 +277,10 @@ void FNENetwork::setOptions(yaml::Node& conf, bool printOptions)
         LogInfo("    Mask Outbound Traffic Peer ID: %s", m_maskOutboundPeerID ? "yes" : "no");
         if (m_maskOutboundPeerIDForNonPL) {
             LogInfo("    Mask Outbound Traffic Peer ID for Non-Peer Link: yes");
+        }
+        LogInfo("    Call Collision Timeout: %us", m_callCollisionTimeout);
+        if (m_callCollisionTimeout == 0U) {
+            LogWarning(LOG_NET, "Call Collisions are disabled because the call collision timeout is set to 0 seconds. This is not recommended, and can cause undesired behavior.");
         }
         LogInfo("    Restrict grant response by affiliation: %s", m_restrictGrantToAffOnly ? "yes" : "no");
         LogInfo("    Restrict private call to registered units: %s", m_restrictPVCallToRegOnly ? "yes" : "no");
@@ -428,12 +434,6 @@ void FNENetwork::clock(uint32_t ms)
             if (connection != nullptr) {
                 delete connection;
             }
-        }
-
-        // roll the RTP timestamp if no call is in progress
-        if (!m_callInProgress) {
-            frame::RTPHeader::resetStartTime();
-            m_frameQueue->clearTimestamps();
         }
 
         // send peer updates to replica peers

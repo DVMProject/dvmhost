@@ -289,8 +289,6 @@ void DMRPacketData::dispatchToFNE(uint32_t peerId, dmr::data::NetData& dmrData, 
                         peerId, peer.first, seqNo, srcId, dstId, status->slotNo, len, pktSeq, streamId);
                 }
 
-                if (!m_network->m_callInProgress)
-                    m_network->m_callInProgress = true;
                 i++;
             }
         }
@@ -320,9 +318,6 @@ void DMRPacketData::dispatchToFNE(uint32_t peerId, dmr::data::NetData& dmrData, 
                     LogDebug(LOG_NET, "DMR, srcPeer = %u, dstPeer = %u, seqNo = %u, srcId = %u, dstId = %u, slotNo = %u, len = %u, pktSeq = %u, stream = %u", 
                         peerId, dstPeerId, seqNo, srcId, dstId, status->slotNo, len, pktSeq, streamId);
                 }
-
-                if (!m_network->m_callInProgress)
-                    m_network->m_callInProgress = true;
             }
         }
     }

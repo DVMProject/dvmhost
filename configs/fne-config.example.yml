@@ -111,6 +111,9 @@ master:
     # Flag indicating whether or not verbose debug logging for P25 OTAR KMF services is enabled.
     kmfDebug: false
 
+    # Amount of time in seconds for a call collision to last before switching over the source of a call.
+    callCollisionTimeout: 5
+
     # Flag indicating whether or not a grant responses will only be sent to TGs with affiliations, if the TG is configured for affiliation gating.
     restrictGrantToAffiliatedOnly: false
     # Flag indicating whether or not a private call will only be routed to the network peers the RID registers with.

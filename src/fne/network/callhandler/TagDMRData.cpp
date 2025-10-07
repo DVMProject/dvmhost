@@ -32,12 +32,6 @@ using namespace dmr::defines;
 #include <chrono>
 
 // ---------------------------------------------------------------------------
-//  Constants
-// ---------------------------------------------------------------------------
-
-const uint32_t CALL_COLL_TIMEOUT = 10U;
-
-// ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
@@ -218,7 +212,6 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                 }
 
                 m_network->eraseStreamPktSeq(peerId, streamId);
-                m_network->m_callInProgress = false;
             }
         }
 
@@ -244,27 +237,40 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                     // perform TG switch over -- this can happen in special conditions where a TG may rapidly switch
                     // from one source to another (primarily from bridge resources)
                     if (switchOver && status.slotNo == slotNo) {
-                        status.streamId = streamId;
+                        m_status.lock(false);
+                        m_status[dstId].streamId = streamId;
                         if (status.srcId == 0U)
-                            status.srcId = srcId;
+                            m_status[dstId].srcId = srcId;
                         if (status.srcId != srcId) {
                             LogMessage(LOG_NET, "DMR, Call Source Switched, peer = %u, ssrc = %u, srcId = %u, dstId = %u, slotNo = %u, streamId = %u, rxPeer = %u, rxSrcId = %u, rxDstId = %u, rxSlotNo = %u, rxStreamId = %u, external = %u",
                                 peerId, ssrc, srcId, dstId, slotNo, streamId, status.peerId, status.srcId, status.dstId, status.slotNo, status.streamId, external);
-                            status.srcId = srcId;
+                            m_status[dstId].srcId = srcId;
                         }
+                        m_status.unlock();
                     }
+                    else {
+                        if (status.srcId != 0U && status.srcId != srcId) {
+                            if (m_network->m_callCollisionTimeout > 0U) {
+                                uint64_t lastPktDuration = hrc::diff(hrc::now(), status.lastPacket);
+                                if ((lastPktDuration / 1000) > m_network->m_callCollisionTimeout) {
+                                    LogWarning(LOG_NET, "DMR, Call Collision, lasted more then %us with no further updates, resetting call source", m_network->m_callCollisionTimeout);
 
-                    if (status.srcId != 0U && status.srcId != srcId) {
-                        uint64_t lastPktDuration = hrc::diff(hrc::now(), status.lastPacket);
-                        if ((lastPktDuration / 1000) > CALL_COLL_TIMEOUT) {
-                            LogWarning(LOG_NET, "DMR, Call Collision, lasted more then %us with no further updates, forcibly ending call");
-                            m_status[dstId].reset();
-                            m_network->m_callInProgress = false;
+                                    m_status.lock(false);
+                                    m_status[dstId].streamId = streamId;
+                                    m_status[dstId].srcId = srcId;
+                                    m_status.unlock();
+                                } else {
+                                    LogWarning(LOG_NET, "DMR, Call Collision, peer = %u, ssrc = %u, srcId = %u, dstId = %u, slotNo = %u, streamId = %u, rxPeer = %u, rxSrcId = %u, rxDstId = %u, rxSlotNo = %u, rxStreamId = %u, external = %u",
+                                        peerId, ssrc, srcId, dstId, slotNo, streamId, status.peerId, status.srcId, status.dstId, status.slotNo, status.streamId, external);
+                                    return false;
+                                }
+                            } else {
+                                m_status.lock(false);
+                                m_status[dstId].streamId = streamId;
+                                m_status[dstId].srcId = srcId;
+                                m_status.unlock();
+                            }
                         }
-
-                        LogWarning(LOG_NET, "DMR, Call Collision, peer = %u, ssrc = %u, srcId = %u, dstId = %u, slotNo = %u, streamId = %u, rxPeer = %u, rxSrcId = %u, rxDstId = %u, rxSlotNo = %u, rxStreamId = %u, external = %u",
-                            peerId, ssrc, srcId, dstId, slotNo, streamId, status.peerId, status.srcId, status.dstId, status.slotNo, status.streamId, external);
-                        return false;
                     }
                 }
             }
@@ -316,8 +322,6 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                 }
                 else
                     LogMessage(LOG_NET, "DMR, Call Start, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, external = %u", peerId, ssrc, srcId, dstId, streamId, external);
-
-                m_network->m_callInProgress = true;
             }
         }
 
@@ -457,8 +461,6 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                             ssrc, peerId, peer.first, seqNo, srcId, dstId, flco, slotNo, len, pktSeq, streamId, external);
                     }
 
-                    if (!m_network->m_callInProgress)
-                        m_network->m_callInProgress = true;
                     i++;
                 }
             }
@@ -513,9 +515,6 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                         LogDebug(LOG_NET, "DMR, ssrc = %u, srcPeer = %u, dstPeer = %u, seqNo = %u, srcId = %u, dstId = %u, flco = $%02X, slotNo = %u, len = %u, pktSeq = %u, stream = %u, external = %u", 
                             ssrc, peerId, dstPeerId, seqNo, srcId, dstId, flco, slotNo, len, pktSeq, streamId, external);
                     }
-
-                    if (!m_network->m_callInProgress)
-                        m_network->m_callInProgress = true;
                 }
             }
         }

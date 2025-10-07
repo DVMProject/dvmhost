@@ -28,12 +28,6 @@ using namespace analog::defines;
 #include <chrono>
 
 // ---------------------------------------------------------------------------
-//  Constants
-// ---------------------------------------------------------------------------
-
-const uint32_t CALL_COLL_TIMEOUT = 10U;
-
-// ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
@@ -141,7 +135,6 @@ bool TagAnalogData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
                 }
 
                 m_network->eraseStreamPktSeq(peerId, streamId);
-                m_network->m_callInProgress = false;
             }
         }
 
@@ -163,16 +156,27 @@ bool TagAnalogData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
                 RxStatus status = it->second;
                 if (streamId != status.streamId) {
                     if (status.srcId != 0U && status.srcId != srcId) {
-                        uint64_t lastPktDuration = hrc::diff(hrc::now(), status.lastPacket);
-                        if ((lastPktDuration / 1000) > CALL_COLL_TIMEOUT) {
-                            LogWarning(LOG_NET, "Analog, Call Collision, lasted more then %us with no further updates, forcibly ending call");
-                            m_status[dstId].reset();
-                            m_network->m_callInProgress = false;
-                        }
+                        if (m_network->m_callCollisionTimeout > 0U) {
+                            uint64_t lastPktDuration = hrc::diff(hrc::now(), status.lastPacket);
+                            if ((lastPktDuration / 1000) > m_network->m_callCollisionTimeout) {
+                                LogWarning(LOG_NET, "Analog, Call Collision, lasted more then %us with no further updates, resetting call source", m_network->m_callCollisionTimeout);
 
-                        LogWarning(LOG_NET, "Analog, Call Collision, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, rxPeer = %u, rxSrcId = %u, rxDstId = %u, rxStreamId = %u, external = %u",
-                            peerId, ssrc, srcId, dstId, streamId, status.peerId, status.srcId, status.dstId, status.streamId, external);
-                        return false;
+                                m_status.lock(false);
+                                m_status[dstId].streamId = streamId;
+                                m_status[dstId].srcId = srcId;
+                                m_status.unlock();
+                            }
+                            else {
+                                LogWarning(LOG_NET, "Analog, Call Collision, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, rxPeer = %u, rxSrcId = %u, rxDstId = %u, rxStreamId = %u, external = %u",
+                                    peerId, ssrc, srcId, dstId, streamId, status.peerId, status.srcId, status.dstId, status.streamId, external);
+                                return false;
+                            }
+                        } else {
+                            m_status.lock(false);
+                            m_status[dstId].streamId = streamId;
+                            m_status[dstId].srcId = srcId;
+                            m_status.unlock();
+                        }
                     }
                 }
             }
@@ -202,8 +206,6 @@ bool TagAnalogData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
                 m_status.unlock();
 
                 LogMessage(LOG_NET, "Analog, Call Start, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, external = %u", peerId, ssrc, srcId, dstId, streamId, external);
-
-                m_network->m_callInProgress = true;
             }
         }
 
@@ -271,8 +273,6 @@ bool TagAnalogData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
                             ssrc, peerId, peer.first, seqNo, srcId, dstId, len, pktSeq, streamId, external);
                     }
 
-                    if (!m_network->m_callInProgress)
-                        m_network->m_callInProgress = true;
                     i++;
                 }
             }
@@ -321,9 +321,6 @@ bool TagAnalogData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
                         LogDebug(LOG_NET, "Analog, ssrc = %u, srcPeer = %u, dstPeer = %u, seqNo = %u, srcId = %u, dstId = %u, len = %u, pktSeq = %u, stream = %u, external = %u", 
                             ssrc, peerId, dstPeerId, seqNo, srcId, dstId, len, pktSeq, streamId, external);
                     }
-
-                    if (!m_network->m_callInProgress)
-                        m_network->m_callInProgress = true;
                 }
             }
         }

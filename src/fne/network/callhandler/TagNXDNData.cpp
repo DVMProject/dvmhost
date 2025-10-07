@@ -35,12 +35,6 @@ using namespace nxdn::defines;
 #include <chrono>
 
 // ---------------------------------------------------------------------------
-//  Constants
-// ---------------------------------------------------------------------------
-
-const uint32_t CALL_COLL_TIMEOUT = 10U;
-
-// ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
@@ -256,7 +250,6 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                     }
 
                     m_network->eraseStreamPktSeq(peerId, streamId);
-                    m_network->m_callInProgress = false;
                 }
             }
 
@@ -282,27 +275,40 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                         // perform TG switch over -- this can happen in special conditions where a TG may rapidly switch
                         // from one source to another (primarily from bridge resources)
                         if (switchOver) {
-                            status.streamId = streamId;
+                            m_status.lock(false);
+                            m_status[dstId].streamId = streamId;
                             if (status.srcId == 0U)
-                                status.srcId = srcId;
+                                m_status[dstId].srcId = srcId;
                             if (status.srcId != srcId) {
                                 LogMessage(LOG_NET, "NXDN, Call Source Switched, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, rxPeer = %u, rxSrcId = %u, rxDstId = %u, rxStreamId = %u, external = %u",
                                     peerId, ssrc, srcId, dstId, streamId, status.peerId, status.srcId, status.dstId, status.streamId, external);
-                                status.srcId = srcId;
+                                m_status[dstId].srcId = srcId;
                             }
+                            m_status.unlock();
                         }
+                        else {
+                            if (status.srcId != 0U && status.srcId != srcId) {
+                                if (m_network->m_callCollisionTimeout > 0U) {
+                                    uint64_t lastPktDuration = hrc::diff(hrc::now(), status.lastPacket);
+                                    if ((lastPktDuration / 1000) > m_network->m_callCollisionTimeout) {
+                                        LogWarning(LOG_NET, "NXDN, Call Collision, lasted more then %us with no further updates, resetting call source", m_network->m_callCollisionTimeout);
 
-                        if (status.srcId != 0U && status.srcId != srcId) {
-                            uint64_t lastPktDuration = hrc::diff(hrc::now(), status.lastPacket);
-                            if ((lastPktDuration / 1000) > CALL_COLL_TIMEOUT) {
-                                LogWarning(LOG_NET, "NXDN, Call Collision, lasted more then %us with no further updates, forcibly ending call");
-                                m_status[dstId].reset();
-                                m_network->m_callInProgress = false;
+                                        m_status.lock(false);
+                                        m_status[dstId].streamId = streamId;
+                                        m_status[dstId].srcId = srcId;
+                                        m_status.unlock();
+                                    } else {
+                                        LogWarning(LOG_NET, "NXDN, Call Collision, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, rxPeer = %u, rxSrcId = %u, rxDstId = %u, rxStreamId = %u, external = %u",
+                                            peerId, ssrc, srcId, dstId, streamId, status.peerId, status.srcId, status.dstId, status.streamId, external);
+                                        return false;
+                                    }
+                                } else {
+                                    m_status.lock(false);
+                                    m_status[dstId].streamId = streamId;
+                                    m_status[dstId].srcId = srcId;
+                                    m_status.unlock();
+                                }
                             }
-
-                            LogWarning(LOG_NET, "NXDN, Call Collision, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, rxPeer = %u, rxSrcId = %u, rxDstId = %u, rxStreamId = %u, external = %u",
-                                peerId, ssrc, srcId, dstId, streamId, status.peerId, status.srcId, status.dstId, status.streamId, external);
-                            return false;
                         }
                     }
                 }
@@ -352,8 +358,6 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                     else
                         LogMessage(LOG_NET, "NXDN, Call Start, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, external = %u", 
                             peerId, ssrc, srcId, dstId, streamId, external);
-
-                    m_network->m_callInProgress = true;
                 }
             }
         }
@@ -487,8 +491,6 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                             ssrc, peerId, peer.first, messageType, srcId, dstId, len, pktSeq, streamId, external);
                     }
 
-                    if (!m_network->m_callInProgress)
-                        m_network->m_callInProgress = true;
                     i++;
                 }
             }
@@ -543,9 +545,6 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                         LogDebug(LOG_NET, "NXDN, ssrc = %u, srcPeer = %u, dstPeer = %u, messageType = $%02X, srcId = %u, dstId = %u, len = %u, pktSeq = %u, streamId = %u, external = %u", 
                             ssrc, peerId, dstPeerId, messageType, srcId, dstId, len, pktSeq, streamId, external);
                     }
-
-                    if (!m_network->m_callInProgress)
-                        m_network->m_callInProgress = true;
                 }
             }
         }

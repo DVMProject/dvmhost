@@ -637,7 +637,7 @@ namespace network
 
         uint32_t m_softConnLimit;
 
-        bool m_callInProgress;
+        uint32_t m_callCollisionTimeout;
 
         bool m_disallowAdjStsBcast;
         bool m_disallowExtAdjStsBcast;
