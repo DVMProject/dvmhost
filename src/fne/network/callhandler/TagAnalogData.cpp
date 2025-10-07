@@ -235,7 +235,11 @@ bool TagAnalogData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
         m_status[dstId].lastPacket = hrc::now();
         m_status.unlock();
 
-        // repeat traffic to the connected peers
+        /*
+        ** MASTER TRAFFIC
+        */
+
+        // repeat traffic to nodes peered to us as master
         if (m_network->m_peers.size() > 0U) {
             uint32_t i = 0U;
             for (auto peer : m_network->m_peers) {
@@ -275,7 +279,11 @@ bool TagAnalogData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
             m_network->m_frameQueue->flushQueue();
         }
 
-        // repeat traffic to external peers
+        /*
+        ** PEER TRAFFIC (e.g. networks this FNE is peered to)
+        */
+
+        // repeat traffic to master nodes we have connected to as a peer
         if (m_network->m_host->m_peerNetworks.size() > 0U && !tg.config().parrot()) {
             for (auto peer : m_network->m_host->m_peerNetworks) {
                 uint32_t dstPeerId = peer.second->getPeerId();
