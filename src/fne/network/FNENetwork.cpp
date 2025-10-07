@@ -13,6 +13,7 @@
 #include "common/p25/kmm/KMMFactory.h"
 #include "common/zlib/Compression.h"
 #include "common/Log.h"
+#include "common/StopWatch.h"
 #include "common/Utils.h"
 #include "network/FNENetwork.h"
 #include "network/callhandler/TagDMRData.h"
@@ -22,6 +23,7 @@
 #include "network/P25OTARService.h"
 #include "fne/ActivityLog.h"
 #include "HostFNE.h"
+#include "FNEMain.h"
 
 using namespace network;
 using namespace network::callhandler;
@@ -44,6 +46,8 @@ const uint32_t MAX_RID_LIST_CHUNK = 50U;
 const uint32_t MAX_MISSED_ACL_UPDATES = 10U;
 
 const uint64_t PACKET_LATE_TIME = 200U; // 200ms
+
+const uint32_t FIXED_HA_UPDATE_INTERVAL = 30U; // 30s
 
 // ---------------------------------------------------------------------------
 //  Static Class Members
@@ -92,8 +96,13 @@ FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port,
     m_ccPeerMap(),
     m_peerReplicaKeyQueue(),
     m_peerReplicaActPkt(),
+    m_peerReplicaHAParams(),
+    m_advertisedHAAddress(),
+    m_advertisedHAPort(TRAFFIC_DEFAULT_PORT),
+    m_haEnabled(false),
     m_maintainenceTimer(1000U, pingTime),
     m_updateLookupTimer(1000U, (updateLookupTime * 60U)),
+    m_haUpdateTimer(1000U, FIXED_HA_UPDATE_INTERVAL),
     m_softConnLimit(0U),
     m_callInProgress(false),
     m_disallowAdjStsBcast(false),
@@ -136,6 +145,12 @@ FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port,
     m_tagAnalog = new TagAnalogData(this, debug);
 
     m_p25OTARService = new P25OTARService(this, m_tagP25->packetData(), kmfDebug, verbose);
+
+    /*
+    ** Initialize Threads
+    */
+
+    Thread::runAsThread(this, threadParrotHandler);
 }
 
 /* Finalizes a instance of the FNENetwork class. */
@@ -232,6 +247,17 @@ void FNENetwork::setOptions(yaml::Node& conf, bool printOptions)
         }
     }
 
+    yaml::Node& haParams = conf["ha"];
+    m_advertisedHAAddress = haParams["advertisedWANAddress"].as<std::string>();
+    m_advertisedHAPort = (uint16_t)haParams["advertisedWANPort"].as<uint32_t>(TRAFFIC_DEFAULT_PORT);
+    m_haEnabled = haParams["enable"].as<bool>(false);
+
+    if (m_haEnabled) {
+        uint32_t ipAddr = __IP_FROM_STR(m_advertisedHAAddress);
+        HAParameters params = HAParameters(m_peerId, ipAddr, m_advertisedHAPort);
+        m_peerReplicaHAParams.push_back(params);
+    }
+
     if (printOptions) {
         LogInfo("    Maximum Permitted Connections: %u", m_softConnLimit);
         LogInfo("    Disable adjacent site broadcasts to any peers: %s", m_disallowAdjStsBcast ? "yes" : "no");
@@ -266,6 +292,11 @@ void FNENetwork::setOptions(yaml::Node& conf, bool printOptions)
         LogInfo("    P25 OTAR KMF Services Enabled: %s", m_kmfServicesEnabled ? "yes" : "no");
         LogInfo("    P25 OTAR KMF Listening Address: %s", m_address.c_str());
         LogInfo("    P25 OTAR KMF Listening Port: %u", kmfOtarPort);
+        LogInfo("    High Availability Enabled: %s", m_haEnabled ? "yes" : "no");
+        if (m_haEnabled) {
+            LogInfo("    Advertised HA WAN IP: %s", m_advertisedHAAddress.c_str());
+            LogInfo("    Advertised HA WAN Port: %u", m_advertisedHAPort);
+        }
     }
 }
 
@@ -350,7 +381,7 @@ void FNENetwork::clock(uint32_t ms)
 
     if (m_forceListUpdate) {
         for (auto peer : m_peers) {
-            peerACLUpdate(peer.first);
+            peerMetadataUpdate(peer.first);
         }
         m_forceListUpdate = false;
     }
@@ -405,7 +436,7 @@ void FNENetwork::clock(uint32_t ms)
             m_frameQueue->clearTimestamps();
         }
 
-        // send active peer list to replica masters
+        // send peer updates to replica peers
         if (m_host->m_peerNetworks.size() > 0) {
             for (auto peer : m_host->m_peerNetworks) {
                 if (peer.second != nullptr) {
@@ -442,7 +473,7 @@ void FNENetwork::clock(uint32_t ms)
 
     m_updateLookupTimer.clock(ms);
     if (m_updateLookupTimer.isRunning() && m_updateLookupTimer.hasExpired()) {
-        // send ACL updates to peers
+        // send network metadata updates to peers
         m_peers.lock(false);
         for (auto peer : m_peers) {
             uint32_t id = peer.first;
@@ -450,24 +481,24 @@ void FNENetwork::clock(uint32_t ms)
             if (connection != nullptr) {
                 // if this connection is a peer replica *always* send the update -- no stream checking
                 if (connection->connected() && connection->isPeerReplica()) {
-                    LogInfoEx(LOG_NET, "PEER %u (%s), Peer Replication, updating ACL list", id, connection->identWithQualifier().c_str());
+                    LogInfoEx(LOG_NET, "PEER %u (%s), Peer Replication, updating network metadata", id, connection->identWithQualifier().c_str());
 
-                    peerACLUpdate(id);
-                    connection->missedACLUpdates(0U);
+                    peerMetadataUpdate(id);
+                    connection->missedMetadataUpdates(0U);
                     continue;
                 }
 
                 if (connection->connected()) {
-                    if ((connection->streamCount() <= 1) || (connection->missedACLUpdates() > MAX_MISSED_ACL_UPDATES)) {
+                    if ((connection->streamCount() <= 1) || (connection->missedMetadataUpdates() > MAX_MISSED_ACL_UPDATES)) {
                         LogInfoEx(LOG_NET, "PEER %u (%s) updating ACL list", id, connection->identWithQualifier().c_str());
-                        peerACLUpdate(id);
-                        connection->missedACLUpdates(0U);
+                        peerMetadataUpdate(id);
+                        connection->missedMetadataUpdates(0U);
                     } else {
-                        uint32_t missed = connection->missedACLUpdates();
+                        uint32_t missed = connection->missedMetadataUpdates();
                         missed++;
 
-                        LogInfoEx(LOG_NET, "PEER %u (%s) skipped for ACL update, traffic in progress", id, connection->identWithQualifier().c_str());
-                        connection->missedACLUpdates(missed);
+                        LogInfoEx(LOG_NET, "PEER %u (%s) skipped for metadata update, traffic in progress", id, connection->identWithQualifier().c_str());
+                        connection->missedMetadataUpdates(missed);
                     }
                 }
             }
@@ -477,32 +508,30 @@ void FNENetwork::clock(uint32_t ms)
         m_updateLookupTimer.start();
     }
 
-    m_parrotDelayTimer.clock(ms);
-    if (m_parrotDelayTimer.isRunning() && m_parrotDelayTimer.hasExpired()) {
-        // if the DMR handler has parrot frames to playback, playback a frame
-        if (m_tagDMR->hasParrotFrames()) {
-            m_tagDMR->playbackParrot();
-        }
+    // if HA is enabled perform HA parameter updates
+    if (m_haEnabled) {
+        m_haUpdateTimer.clock(ms);
+        if (m_haUpdateTimer.isRunning() && m_haUpdateTimer.hasExpired()) {
+            // send peer updates to replica peers
+            if (m_host->m_peerNetworks.size() > 0) {
+                for (auto peer : m_host->m_peerNetworks) {
+                    if (peer.second != nullptr) {
+                        if (peer.second->isEnabled() && peer.second->isPeerReplica()) {
+                            std::vector<HAParameters> haParams;
+                            m_peerReplicaHAParams.lock(false);
+                            for (auto entry : m_peerReplicaHAParams) {
+                                haParams.push_back(entry);
+                            }
+                            m_peerReplicaHAParams.unlock();
 
-        // if the P25 handler has parrot frames to playback, playback a frame
-        if (m_tagP25->hasParrotFrames()) {
-            m_tagP25->playbackParrot();
-        }
+                            peer.second->writeHAParams(haParams);
+                        }
+                    }
+                }
+            }
 
-        // if the NXDN handler has parrot frames to playback, playback a frame
-        if (m_tagNXDN->hasParrotFrames()) {
-            m_tagNXDN->playbackParrot();
+            m_haUpdateTimer.start();
         }
-
-        // if the analog handler has parrot frames to playback, playback a frame
-        if (m_tagAnalog->hasParrotFrames()) {
-            m_tagAnalog->playbackParrot();
-        }
-    }
-
-    if (!m_tagDMR->hasParrotFrames() && !m_tagP25->hasParrotFrames() && !m_tagNXDN->hasParrotFrames() && !m_tagAnalog->hasParrotFrames() &&
-        m_parrotDelayTimer.isRunning() && m_parrotDelayTimer.hasExpired()) {
-        m_parrotDelayTimer.stop();
     }
 
     if (m_kmfServicesEnabled)
@@ -527,6 +556,10 @@ bool FNENetwork::open()
     m_status = NET_STAT_MST_RUNNING;
     m_maintainenceTimer.start();
     m_updateLookupTimer.start();
+    
+    if (m_haEnabled) {
+        m_haUpdateTimer.start();
+    }
 
     m_socket = new udp::Socket(m_address, m_port);
 
@@ -585,6 +618,82 @@ void FNENetwork::close()
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------
+
+/* Entry point to parrot handler thread. */
+
+void* FNENetwork::threadParrotHandler(void* arg)
+{
+    thread_t* th = (thread_t*)arg;
+    if (th != nullptr) {
+#if defined(_WIN32)
+        ::CloseHandle(th->thread);
+#else
+        ::pthread_detach(th->thread);
+#endif // defined(_WIN32)
+
+        std::string threadName("fne:parrot");
+        FNENetwork* fne = static_cast<FNENetwork*>(th->obj);
+        if (fne == nullptr) {
+            g_killed = true;
+            LogError(LOG_HOST, "[FAIL] %s", threadName.c_str());
+        }
+
+        if (g_killed) {
+            delete th;
+            return nullptr;
+        }
+
+        LogMessage(LOG_HOST, "[ OK ] %s", threadName.c_str());
+#ifdef _GNU_SOURCE
+        ::pthread_setname_np(th->thread, threadName.c_str());
+#endif // _GNU_SOURCE
+
+        StopWatch stopWatch;
+        stopWatch.start();
+
+        if (fne != nullptr) {
+            while (!g_killed) {
+                uint32_t ms = stopWatch.elapsed();
+                stopWatch.start();
+
+                fne->m_parrotDelayTimer.clock(ms);
+                if (fne->m_parrotDelayTimer.isRunning() && fne->m_parrotDelayTimer.hasExpired()) {
+                    // if the DMR handler has parrot frames to playback, playback a frame
+                    if (fne->m_tagDMR->hasParrotFrames()) {
+                        fne->m_tagDMR->playbackParrot();
+                    }
+
+                    // if the P25 handler has parrot frames to playback, playback a frame
+                    if (fne->m_tagP25->hasParrotFrames()) {
+                        fne->m_tagP25->playbackParrot();
+                    }
+
+                    // if the NXDN handler has parrot frames to playback, playback a frame
+                    if (fne->m_tagNXDN->hasParrotFrames()) {
+                        fne->m_tagNXDN->playbackParrot();
+                    }
+
+                    // if the analog handler has parrot frames to playback, playback a frame
+                    if (fne->m_tagAnalog->hasParrotFrames()) {
+                        fne->m_tagAnalog->playbackParrot();
+                    }
+                }
+
+                if (!fne->m_tagDMR->hasParrotFrames() && !fne->m_tagP25->hasParrotFrames() && !fne->m_tagNXDN->hasParrotFrames() && !fne->m_tagAnalog->hasParrotFrames() &&
+                    fne->m_parrotDelayTimer.isRunning() && fne->m_parrotDelayTimer.hasExpired()) {
+                    fne->m_parrotDelayTimer.stop();
+                }
+
+                Thread::sleep(1U);
+            }
+        }
+
+        LogMessage(LOG_HOST, "[STOP] %s", threadName.c_str());
+        delete th;
+    }
+
+    return nullptr;
+}
 
 /* Process a data frames from the network. */
 
@@ -1030,7 +1139,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                         connection->connected(true);
                                         connection->pingsReceived(0U);
                                         connection->lastPing(now);
-                                        connection->missedACLUpdates(0U);
+                                        connection->missedMetadataUpdates(0U);
                                         network->m_peers[peerId] = connection;
 
                                         // attach extra notification data to the RPTC ACK to notify the peer of 
@@ -1102,8 +1211,8 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                         peerName << "PEER " << peerId;
                                         network->createPeerAffiliations(peerId, peerName.str());
 
-                                        // spin up a thread and send ACL list over to peer
-                                        network->peerACLUpdate(peerId);
+                                        // spin up a thread and send metadata over to peer
+                                        network->peerMetadataUpdate(peerId);
                                     }
                                 }
                             }
@@ -1727,6 +1836,14 @@ void FNENetwork::erasePeer(uint32_t peerId)
         }
     }
 
+    // erase any HA parameters for this peer
+    {
+        auto it = std::find_if(m_peerReplicaHAParams.begin(), m_peerReplicaHAParams.end(), [&](auto& x) { return x.peerId == peerId; });
+        if (it != m_peerReplicaHAParams.end()) {
+            m_peerReplicaHAParams.erase(it);
+        }
+    }
+
     // cleanup peer affiliations
     erasePeerAffiliations(peerId);
 }
@@ -1848,25 +1965,25 @@ void FNENetwork::setupRepeaterLogin(uint32_t peerId, uint32_t streamId, FNEPeerC
     LogInfoEx(LOG_NET, "PEER %u RPTL ACK, challenge response sent for login", peerId);
 }
 
-/* Helper to send the ACL lists to the specified peer in a separate thread. */
+/* Helper to send the network metadata to the specified peer in a separate thread. */
 
-void FNENetwork::peerACLUpdate(uint32_t peerId)
+void FNENetwork::peerMetadataUpdate(uint32_t peerId)
 {
-    ACLUpdateRequest* req = new ACLUpdateRequest();
+    MetadataUpdateRequest* req = new MetadataUpdateRequest();
     req->obj = this;
     req->peerId = peerId;
 
     // enqueue the task
-    if (!m_threadPool.enqueue(new_pooltask(taskACLUpdate, req))) {
-        LogError(LOG_NET, "Failed to task enqueue ACL update, peerId = %u", peerId);
+    if (!m_threadPool.enqueue(new_pooltask(taskMetadataUpdate, req))) {
+        LogError(LOG_NET, "Failed to task enqueue metadata update, peerId = %u", peerId);
         if (req != nullptr)
             delete req;
     }
 }
 
-/* Helper to send the ACL lists to the specified peer in a separate thread. */
+/* Helper to send the network metadata to the specified peer in a separate thread. */
 
-void FNENetwork::taskACLUpdate(ACLUpdateRequest* req)
+void FNENetwork::taskMetadataUpdate(MetadataUpdateRequest* req)
 {
     if (req != nullptr) {
         FNENetwork* network = static_cast<FNENetwork*>(req->obj);
@@ -1883,24 +2000,28 @@ void FNENetwork::taskACLUpdate(ACLUpdateRequest* req)
 
         FNEPeerConnection* connection = network->m_peers[req->peerId];
         if (connection != nullptr) {
-            uint32_t aclStreamId = network->createStreamId();
+            uint32_t streamId = network->createStreamId();
 
             // if the connection is an external peer, and peer is participating in peer link,
             // send the peer proper configuration data
             if (connection->isExternalFNEPeer() && connection->isPeerReplica()) {
-                LogInfoEx(LOG_NET, "PEER %u (%s) sending replica ACL list updates", req->peerId, peerIdentity.c_str());
+                LogInfoEx(LOG_NET, "PEER %u (%s) sending replica network metadata updates", req->peerId, peerIdentity.c_str());
 
-                network->writeWhitelistRIDs(req->peerId, aclStreamId, true);
-                network->writeTGIDs(req->peerId, aclStreamId, true);
-                network->writePeerList(req->peerId, aclStreamId);
+                network->writeWhitelistRIDs(req->peerId, streamId, true);
+                network->writeTGIDs(req->peerId, streamId, true);
+                network->writePeerList(req->peerId, streamId);
+
+                network->writeHAParameters(req->peerId, streamId, true);
             }
             else {
-                LogInfoEx(LOG_NET, "PEER %u (%s) sending ACL list updates", req->peerId, peerIdentity.c_str());
+                LogInfoEx(LOG_NET, "PEER %u (%s) sending network metadata updates", req->peerId, peerIdentity.c_str());
 
-                network->writeWhitelistRIDs(req->peerId, aclStreamId, false);
-                network->writeBlacklistRIDs(req->peerId, aclStreamId);
-                network->writeTGIDs(req->peerId, aclStreamId, false);
-                network->writeDeactiveTGIDs(req->peerId, aclStreamId);
+                network->writeWhitelistRIDs(req->peerId, streamId, false);
+                network->writeBlacklistRIDs(req->peerId, streamId);
+                network->writeTGIDs(req->peerId, streamId, false);
+                network->writeDeactiveTGIDs(req->peerId, streamId);
+
+                network->writeHAParameters(req->peerId, streamId, false);
             }
         }
 
@@ -1910,12 +2031,12 @@ void FNENetwork::taskACLUpdate(ACLUpdateRequest* req)
 
 /* Helper to send the list of whitelisted RIDs to the specified peer. */
 
-void FNENetwork::writeWhitelistRIDs(uint32_t peerId, uint32_t streamId, bool isExternalPeer)
+void FNENetwork::writeWhitelistRIDs(uint32_t peerId, uint32_t streamId, bool sendISSI)
 {
     uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
     // sending REPL style RID list to external peers
-    if (isExternalPeer) {
+    if (sendISSI) {
         FNEPeerConnection* connection = m_peers[peerId];
         if (connection != nullptr) {
             std::string filename = m_ridLookup->filename();
@@ -2098,14 +2219,14 @@ void FNENetwork::writeBlacklistRIDs(uint32_t peerId, uint32_t streamId)
 
 /* Helper to send the list of active TGIDs to the specified peer. */
 
-void FNENetwork::writeTGIDs(uint32_t peerId, uint32_t streamId, bool isExternalPeer)
+void FNENetwork::writeTGIDs(uint32_t peerId, uint32_t streamId, bool sendISSI)
 {
     if (!m_tidLookup->sendTalkgroups()) {
         return;
     }
 
     // sending REPL style TGID list to external peers
-    if (isExternalPeer) {
+    if (sendISSI) {
         FNEPeerConnection* connection = m_peers[peerId];
         if (connection != nullptr) {
             std::string filename = m_tidLookup->filename();
@@ -2325,6 +2446,48 @@ void FNENetwork::writePeerList(uint32_t peerId, uint32_t streamId)
     }
 
     return;
+}
+
+/* Helper to send the HA parameters to the specified peer. */
+
+void FNENetwork::writeHAParameters(uint32_t peerId, uint32_t streamId, bool sendISSI)
+{
+    if (!m_haEnabled) {
+        return;
+    }
+
+    uint32_t len = 4U + (m_peerReplicaHAParams.size() * HA_PARAMS_ENTRY_LEN);
+    DECLARE_UINT8_ARRAY(buffer, len);
+
+    SET_UINT32((len - 4U), buffer, 0U);
+
+    uint32_t offs = 4U;
+    m_peerReplicaHAParams.lock(false);
+    for (uint8_t i = 0U; i < m_peerReplicaHAParams.size(); i++) {
+        uint32_t peerId = m_peerReplicaHAParams[i].peerId;
+        uint32_t ipAddr = m_peerReplicaHAParams[i].masterIP;
+        uint16_t port = m_peerReplicaHAParams[i].masterPort;
+
+        SET_UINT32(peerId, buffer, offs);
+        SET_UINT32(ipAddr, buffer, offs + 4U);
+        SET_UINT16(port, buffer, offs + 8U);
+
+        offs += HA_PARAMS_ENTRY_LEN;
+    }
+    m_peerReplicaHAParams.unlock();
+
+    // sending REPL style HA parameters list to external peers
+    if (sendISSI) {
+        FNEPeerConnection* connection = m_peers[peerId];
+        if (connection != nullptr) {
+            LogInfoEx(LOG_NET, "PEER %u (%s) Peer Replication, HA parameters, streamId = %u", peerId, connection->identWithQualifier().c_str(), streamId);
+            writePeer(peerId, m_peerId, { NET_FUNC::REPL, NET_SUBFUNC::REPL_HA_PARAMS}, 
+                buffer, len, 0U, streamId, false, true, true);
+        }
+    }
+
+    writePeerCommand(peerId, { NET_FUNC::MASTER, NET_SUBFUNC::MASTER_HA_PARAMS },
+        buffer, len, streamId, true);
 }
 
 /* Helper to send a In-Call Control command to the specified peer. */

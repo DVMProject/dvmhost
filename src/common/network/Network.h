@@ -71,6 +71,57 @@ namespace network
     };
 
     // ---------------------------------------------------------------------------
+    //  Structure Declaration
+    // ---------------------------------------------------------------------------
+
+    /**
+     * @brief Represents high availiability IP address data.
+     * @ingroup network_core
+     */
+    struct PeerHAIPEntry {
+    public:
+        /**
+         * @brief Initializes a new instance of the PeerHAIPEntry class
+         */
+        PeerHAIPEntry() :
+            masterAddress(),
+            masterPort(TRAFFIC_DEFAULT_PORT)
+        {
+            /* stub **/
+        }
+
+        /**
+         * @brief Initializes a new instance of the PeerHAIPEntry class
+         * @param address Master IP Address.
+         * @param port Master Port.
+         */
+        PeerHAIPEntry(std::string address, uint16_t port) :
+            masterAddress(address),
+            masterPort(port)
+        {
+            /* stub */
+        }
+
+        /**
+         * @brief Equals operator. Copies this PeerHAIPEntry to another PeerHAIPEntry.
+         * @param data Instance of PeerHAIPEntry to copy.
+         */
+        PeerHAIPEntry& operator=(const PeerHAIPEntry& data)
+        {
+            if (this != &data) {
+                masterAddress = data.masterAddress;
+                masterPort = data.masterPort;
+            }
+
+            return *this;
+        }
+
+    public:
+        std::string masterAddress;  //!< Master IP Address.
+        uint16_t masterPort;        //!< Master Port.
+    };
+
+    // ---------------------------------------------------------------------------
     //  Class Declaration
     // ---------------------------------------------------------------------------
 
@@ -241,6 +292,12 @@ namespace network
         std::string m_address;
         uint16_t m_port;
 
+        std::string m_configuredAddress;
+        uint16_t m_configuredPort;
+
+        std::vector<PeerHAIPEntry> m_haIPs;
+        uint8_t m_currentHAIP;
+
         std::string m_password;
 
         bool m_enabled;
@@ -260,6 +317,7 @@ namespace network
 
         Timer m_retryTimer;
         uint8_t m_retryCount;
+        uint8_t m_maxRetryCount;
         Timer m_timeoutTimer;
 
         uint32_t* m_rxDMRStreamId;

@@ -26,6 +26,7 @@ using namespace network;
 // ---------------------------------------------------------------------------
 
 #define MAX_RETRY_BEFORE_RECONNECT 4U
+#define MAX_RETRY_HA_RECONNECT 2U
 #define MAX_SERVER_DIFF 360ULL // maximum difference in time between a server timestamp and local timestamp in milliseconds
 
 // ---------------------------------------------------------------------------
@@ -41,6 +42,10 @@ Network::Network(const std::string& address, uint16_t port, uint16_t localPort, 
     m_pktLastSeq(0U),
     m_address(address),
     m_port(port),
+    m_configuredAddress(address),
+    m_configuredPort(port),
+    m_haIPs(),
+    m_currentHAIP(0U),
     m_password(password),
     m_enabled(false),
     m_dmrEnabled(dmr),
@@ -54,6 +59,7 @@ Network::Network(const std::string& address, uint16_t port, uint16_t localPort, 
     m_salt(nullptr),
     m_retryTimer(1000U, 10U),
     m_retryCount(0U),
+    m_maxRetryCount(MAX_RETRY_BEFORE_RECONNECT),
     m_timeoutTimer(1000U, MAX_PEER_PING_TIME),
     m_pktSeq(0U),
     m_loginStreamId(0U),
@@ -187,13 +193,13 @@ void Network::clock(uint32_t ms)
         m_retryTimer.clock(ms);
         if (m_retryTimer.isRunning() && m_retryTimer.hasExpired()) {
             if (m_enabled) {
-                if (m_retryCount > MAX_RETRY_BEFORE_RECONNECT) {
-                    m_retryCount = 0U;
+                if (m_retryCount > m_maxRetryCount) {
                     LogError(LOG_NET, "PEER %u connection to the master has timed out, retrying connection, remotePeerId = %u", m_peerId, m_remotePeerId);
 
                     close();
                     open();
 
+                    m_retryCount = 0U;
                     m_retryTimer.start();
                     return;
                 }
@@ -674,6 +680,46 @@ void Network::clock(uint32_t ms)
                     }
                     break;
 
+                case NET_SUBFUNC::MASTER_HA_PARAMS:                     // HA Parameters
+                    {
+                        if (m_enabled) {
+                            if (m_debug)
+                                Utils::dump(1U, "Network::clock(), Network Rx, HA PARAMS", buffer.get(), length);
+
+                            m_haIPs.clear();
+                            m_currentHAIP = 0U;
+                            m_maxRetryCount = MAX_RETRY_HA_RECONNECT;
+
+                            // always add the configured address to the HA IP list
+                            m_haIPs.push_back(PeerHAIPEntry(m_configuredAddress, m_configuredPort));
+
+                            uint32_t len = GET_UINT32(buffer, 6U);
+                            if (len > 0U) {
+                                len /= HA_PARAMS_ENTRY_LEN;
+                            }
+
+                            uint8_t offs = 10U;
+                            for (uint8_t i = 0U; i < len; i++, offs += HA_PARAMS_ENTRY_LEN) {
+                                uint32_t ipAddr = GET_UINT32(buffer, offs + 4U);
+                                uint16_t port = GET_UINT16(buffer, offs + 8U);
+
+                                std::string address = __IP_FROM_UINT(ipAddr);
+
+                                LogDebugEx(LOG_NET, "Network::clock()", "HA PARAMS, %s:%u", address.c_str(), port);
+
+                                m_haIPs.push_back(PeerHAIPEntry(address, port));
+                                i++;
+                            }
+
+                            if (m_haIPs.size() > 1U) {
+                                m_currentHAIP = 1U; // because the first entry is our configured entry, set
+                                                    // the current HA IP to the next available
+                                LogMessage(LOG_NET, "Loaded %u HA IPs from master", m_haIPs.size() - 1U);
+                            }
+                        }
+                    }
+                    break;
+
                 default:
                     Utils::dump("unknown master control opcode from the master", buffer.get(), length);
                     break;
@@ -995,6 +1041,23 @@ bool Network::open()
     m_timeoutTimer.start();
     m_retryTimer.start();
     m_retryCount = 0U;
+
+    // are we rotating IPs for HA reconnect?
+    if (m_haIPs.size() > 0 && m_retryCount > 0U &&
+        m_maxRetryCount == MAX_RETRY_HA_RECONNECT) {
+
+        PeerHAIPEntry entry = m_haIPs[m_currentHAIP];
+        m_currentHAIP++;
+
+        if (m_currentHAIP > m_haIPs.size()) {
+            m_currentHAIP = 0U;
+        }
+
+        LogMessage(LOG_NET, "PEER %u connection to the master has timed out, %s:%u is non-responsive, trying next HA %s:%u", m_peerId,
+            m_address.c_str(), m_port, entry.masterAddress.c_str(), entry.masterPort);
+        m_address = entry.masterAddress;
+        m_port = entry.masterPort;
+    }
 
     if (udp::Socket::lookup(m_address, m_port, m_addr, m_addrLen) != 0) {
         LogMessage(LOG_NET, "!!! Could not lookup the address of the master!");

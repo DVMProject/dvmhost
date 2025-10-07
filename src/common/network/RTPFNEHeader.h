@@ -93,6 +93,7 @@ namespace network
             MASTER_SUBFUNC_BL_RID = 0x01U,          //!< Blacklist RIDs
             MASTER_SUBFUNC_ACTIVE_TGS = 0x02U,      //!< Active TGIDs
             MASTER_SUBFUNC_DEACTIVE_TGS = 0x03U,    //!< Deactive TGIDs
+            MASTER_HA_PARAMS = 0xA3U,               //!< HA Parameters
 
             TRANSFER_SUBFUNC_ACTIVITY = 0x01U,      //!< Activity Log Transfer
             TRANSFER_SUBFUNC_DIAG = 0x02U,          //!< Diagnostic Log Transfer
@@ -110,6 +111,7 @@ namespace network
             REPL_PEER_LIST = 0x02U,                 //!< FNE Replication Peer List Transfer
 
             REPL_ACT_PEER_LIST = 0xA2U,             //!< FNE Replication Active Peer List Transfer
+            REPL_HA_PARAMS = 0xA3U,                 //!< FNE Replication HA Parameters
         };
     };
 

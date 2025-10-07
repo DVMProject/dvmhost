@@ -93,6 +93,8 @@ namespace network
     const uint32_t  NXDN_PACKET_LENGTH = 70U;       // 20 byte header + NXDN_FRAME_LENGTH_BYTES + 2 byte trailer
     const uint32_t  ANALOG_PACKET_LENGTH = 324U;    // 20 byte header + AUDIO_SAMPLES_LENGTH_BYTES + 4 byte trailer
 
+    const uint32_t  HA_PARAMS_ENTRY_LEN = 20U;
+
     /**
      * @brief Network Peer Connection Status
      * @ingroup network_core

@@ -142,6 +142,42 @@ bool PeerNetwork::writePeerLinkPeers(json::array* peerList)
     return false;
 }
 
+/* Writes a complete update of this CFNE's HA parameters to the network. */
+
+bool PeerNetwork::writeHAParams(std::vector<HAParameters>& haParams)
+{
+    if (haParams.size() == 0)
+        return false;
+
+    if (haParams.size() > 0 && m_peerReplica) {
+        uint32_t len = 4U + (haParams.size() * HA_PARAMS_ENTRY_LEN);
+        DECLARE_UINT8_ARRAY(buffer, len);
+
+        SET_UINT32((len - 4U), buffer, 0U);
+
+        uint32_t offs = 4U;
+        for (uint8_t i = 0U; i < haParams.size(); i++) {
+            uint32_t peerId = haParams[i].peerId;
+            uint32_t ipAddr = haParams[i].masterIP;
+            uint16_t port = haParams[i].masterPort;
+
+            SET_UINT32(peerId, buffer, offs);
+            SET_UINT32(ipAddr, buffer, offs + 4U);
+            SET_UINT16(port, buffer, offs + 8U);
+
+            offs += HA_PARAMS_ENTRY_LEN;
+        }
+
+        // bryanb: this should probably be packet buffered
+        writeMaster({ NET_FUNC::REPL, NET_SUBFUNC::REPL_HA_PARAMS }, 
+            buffer, len, RTP_END_OF_CALL_SEQ, createStreamId(), false, true);
+
+        return true;
+    }
+
+    return false;
+}
+
 // ---------------------------------------------------------------------------
 //  Protected Class Members
 // ---------------------------------------------------------------------------

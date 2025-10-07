@@ -21,6 +21,7 @@
 #include "common/network/Network.h"
 #include "common/network/PacketBuffer.h"
 #include "common/ThreadPool.h"
+#include "fne/network/HAParameters.h"
 
 #include <string>
 #include <cstdint>
@@ -130,6 +131,12 @@ namespace network
          * @returns bool True, if list was sent, otherwise false.
          */
         bool writePeerLinkPeers(json::array* peerList);
+        /**
+         * @brief Writes a complete update of this CFNE's HA parameters to the network.
+         * @param haParams List of HA parameters.
+         * @returns bool True, if list was sent, otherwise false.
+         */
+        bool writeHAParams(std::vector<HAParameters>& haParams);
 
         /**
          * @brief Returns flag indicating whether or not this peer connection is peer replication enabled.

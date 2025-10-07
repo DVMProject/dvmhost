@@ -48,6 +48,19 @@ master:
     # Flag indicating whether or not verbose debug logging is enabled.
     debug: false
 
+    #
+    # High Availability
+    #
+    ha:
+      # Flag indicating high availability advertisements are enabled.
+      enable: false
+      # WAN IP address of this FNE master.
+      #   This IP address is advertised to the network as a globally WAN accessible IP.
+      advertisedWANAddress: 1.2.3.4
+      # WAN port for this FNE master.
+      #   This port is advertised to the network as a globally WAN accessible port.
+      advertisedWANPort: 62031
+
     # Flag indicating whether or not denied traffic will be logged.
     #   (This is useful for debugging talkgroup rules and other ACL issues, but can be very noisy on a busy system.)
     logDenials: false

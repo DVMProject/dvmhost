@@ -37,6 +37,7 @@
 #include "common/ThreadPool.h"
 #include "fne/lookups/AffiliationLookup.h"
 #include "fne/network/influxdb/InfluxDB.h"
+#include "fne/network/HAParameters.h"
 #include "fne/CryptoContainer.h"
 
 #include <string>
@@ -121,7 +122,7 @@ namespace network
             m_connectionState(NET_STAT_INVALID),
             m_pingsReceived(0U),
             m_lastPing(0U),
-            m_missedACLUpdates(0U),
+            m_missedMetadataUpdates(0U),
             m_isExternalFNEPeer(false),
             m_isConventionalPeer(false),
             m_isSysView(false),
@@ -150,7 +151,7 @@ namespace network
             m_connectionState(NET_STAT_INVALID),
             m_pingsReceived(0U),
             m_lastPing(0U),
-            m_missedACLUpdates(0U),
+            m_missedMetadataUpdates(0U),
             m_isExternalFNEPeer(false),
             m_isConventionalPeer(false),
             m_isSysView(false),
@@ -358,9 +359,9 @@ namespace network
         DECLARE_PROPERTY_PLAIN(uint64_t, lastPing);
 
         /**
-         * @brief Number of missed ACL updates.
+         * @brief Number of missed network metadata updates.
          */
-        DECLARE_PROPERTY_PLAIN(uint32_t, missedACLUpdates);
+        DECLARE_PROPERTY_PLAIN(uint32_t, missedMetadataUpdates);
 
         /**
          * @brief Flag indicating this connection is from an external neighbor FNE peer.
@@ -395,10 +396,10 @@ namespace network
     // ---------------------------------------------------------------------------
 
     /**
-     * @brief Represents the data required for a peer ACL update request thread.
+     * @brief Represents the data required for a network metadata update request thread.
      * @ingroup fne_network
      */
-    struct ACLUpdateRequest : thread_t {
+    struct MetadataUpdateRequest : thread_t {
         uint32_t peerId;        //!< Peer ID for this request.
     };
 
@@ -625,8 +626,14 @@ namespace network
         };
         concurrent::unordered_map<uint32_t, PacketBufferEntry> m_peerReplicaActPkt;
 
+        concurrent::vector<HAParameters> m_peerReplicaHAParams;
+        std::string m_advertisedHAAddress;
+        uint16_t m_advertisedHAPort;
+        bool m_haEnabled;
+
         Timer m_maintainenceTimer;
         Timer m_updateLookupTimer;
+        Timer m_haUpdateTimer;
 
         uint32_t m_softConnLimit;
 
@@ -670,6 +677,12 @@ namespace network
         bool m_reportPeerPing;
         bool m_verbose;
 
+        /**
+         * @brief Entry point to parrot handler thread.
+         * @param arg Instance of the thread_t structure.
+         * @returns void* (Ignore)
+         */
+        static void* threadParrotHandler(void* arg);
         /**
          * @brief Entry point to process a given network packet.
          * @param req Instance of the NetPacketRequest structure.
@@ -733,15 +746,15 @@ namespace network
         void setupRepeaterLogin(uint32_t peerId, uint32_t streamId, FNEPeerConnection* connection);
 
         /**
-         * @brief Helper to send the ACL lists to the specified peer in a separate thread.
+         * @brief Helper to send the network metadata to the specified peer in a separate thread.
          * @param peerId Peer ID.
          */
-        void peerACLUpdate(uint32_t peerId);
+        void peerMetadataUpdate(uint32_t peerId);
         /**
-         * @brief Entry point to send the ACL lists to the specified peer in a separate thread.
-         * @param req Instance of the ACLUpdateRequest structure.
+         * @brief Entry point to send the network metadata to the specified peer in a separate thread.
+         * @param req Instance of the MetadataUpdateRequest structure.
          */
-        static void taskACLUpdate(ACLUpdateRequest* req);
+        static void taskMetadataUpdate(MetadataUpdateRequest* req);
 
         /**
          * @brief Helper to send the list of whitelisted RIDs to the specified peer.
@@ -775,7 +788,14 @@ namespace network
          * @param streamId Stream ID for this message.
          */
         void writePeerList(uint32_t peerId, uint32_t streamId);
-        
+        /**
+         * @brief Helper to send the HA parameters to the specified peer.
+         * @param peerId Peer ID.
+         * @param streamId Stream ID for this message.
+         * @param sendISSI Flag indicating the HA transfer is to an external peer via ISSI.
+         */
+        void writeHAParameters(uint32_t peerId, uint32_t streamId, bool sendISSI);
+
         /**
          * @brief Helper to send a In-Call Control command to the specified peer.
          * @param peerId Peer ID.
