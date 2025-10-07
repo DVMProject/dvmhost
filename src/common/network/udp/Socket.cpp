@@ -546,14 +546,15 @@ bool Socket::write(BufferVector& buffers, ssize_t* lenWritten) noexcept
 
     // create mmsghdrs from input buffers and send them at once
     int size = buffers.size();
-    for (size_t i = 0; i < buffers.size(); ++i) {
-        if (buffers[i] == nullptr) {
+    for (size_t i = 0U; i < buffers.size(); ++i) {
+        UDPDatagram* packet = buffers[i];
+        if (packet == nullptr) {
             --size;
             continue;
         }
 
-        uint32_t length = buffers[i]->length;
-        if (buffers[i]->buffer == nullptr) {
+        uint32_t length = packet->length;
+        if (packet->buffer == nullptr) {
             LogError(LOG_NET, "discarding buffered message with len = %u, but deleted buffer?", length);
             --size;
             continue;
@@ -563,7 +564,7 @@ bool Socket::write(BufferVector& buffers, ssize_t* lenWritten) noexcept
             // are we crypto wrapped?
             if (m_isCryptoWrapped && m_presharedKey != nullptr) {
                 uint32_t cryptedLen = length * sizeof(uint8_t);
-                uint8_t* cryptoBuffer = buffers[i]->buffer;
+                uint8_t* cryptoBuffer = packet->buffer;
 
                 // do we need to pad the original buffer to be block aligned?
                 if (cryptedLen % crypto::AES::BLOCK_BYTES_LEN != 0) {
@@ -573,7 +574,7 @@ bool Socket::write(BufferVector& buffers, ssize_t* lenWritten) noexcept
                     // reallocate buffer and copy
                     cryptoBuffer = new uint8_t[cryptedLen];
                     ::memset(cryptoBuffer, 0x00U, cryptedLen);
-                    ::memcpy(cryptoBuffer, buffers[i]->buffer, length);
+                    ::memcpy(cryptoBuffer, packet->buffer, length);
                 }
 
                 // encrypt
@@ -594,25 +595,25 @@ bool Socket::write(BufferVector& buffers, ssize_t* lenWritten) noexcept
 
                 // cleanup buffers and replace with new
                 delete[] crypted;
-                //delete buffers[i]->buffer;
+                //delete packet->buffer;
 
                 // this should never happen...
-                if (buffers[i] == nullptr) {
+                if (packet == nullptr) {
                     --size;
                     continue;
                 }
 
-                buffers[i]->buffer = new uint8_t[cryptedLen + 2U];
-                ::memcpy(buffers[i]->buffer, out, cryptedLen + 2U);
-                buffers[i]->length = cryptedLen + 2U;
+                packet->buffer = new uint8_t[cryptedLen + 2U];
+                ::memcpy(packet->buffer, out, cryptedLen + 2U);
+                packet->length = cryptedLen + 2U;
             }
 
-            chunks[i].iov_len = buffers[i]->length;
-            chunks[i].iov_base = buffers[i]->buffer;
-            sent += buffers[i]->length;
+            chunks[i].iov_len = packet->length;
+            chunks[i].iov_base = packet->buffer;
+            sent += packet->length;
 
-            headers[i].msg_hdr.msg_name = (void*)&buffers[i]->address;
-            headers[i].msg_hdr.msg_namelen = buffers[i]->addrLen;
+            headers[i].msg_hdr.msg_name = (void*)&packet->address;
+            headers[i].msg_hdr.msg_namelen = packet->addrLen;
             headers[i].msg_hdr.msg_iov = &chunks[i];
             headers[i].msg_hdr.msg_iovlen = 1;
             headers[i].msg_hdr.msg_control = 0;
