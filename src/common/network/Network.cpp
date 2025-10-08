@@ -368,13 +368,13 @@ void Network::clock(uint32_t ms)
                                         }
                                     }
                                 }
-                            }
 
-                            // check if we need to skip this stream -- a non-zero stream ID means the network client is locked
-                            // to receiving a specific stream; a zero stream ID means the network is promiscuously
-                            // receiving streams sent to this peer
-                            if (m_rxDMRStreamId[slotNo] != 0U && m_rxDMRStreamId[slotNo] != streamId) {
-                                break;
+                                // check if we need to skip this stream -- a non-zero stream ID means the network client is locked
+                                // to receiving a specific stream; a zero stream ID means the network is promiscuously
+                                // receiving streams sent to this peer
+                                if (m_rxDMRStreamId[slotNo] != 0U && m_rxDMRStreamId[slotNo] != streamId) {
+                                    break;
+                                }
                             }
 
                             if (m_debug)
@@ -452,15 +452,15 @@ void Network::clock(uint32_t ms)
                                         }
                                     }
                                 }
+
+                                // check if we need to skip this stream -- a non-zero stream ID means the network client is locked
+                                // to receiving a specific stream; a zero stream ID means the network is promiscuously
+                                // receiving streams sent to this peer
+                                if (m_rxP25StreamId != 0U && m_rxP25StreamId != streamId) {
+                                    break;
+                                }
                             }
 
-                            // check if we need to skip this stream -- a non-zero stream ID means the network client is locked
-                            // to receiving a specific stream; a zero stream ID means the network is promiscuously
-                            // receiving streams sent to this peer
-                            if (m_rxP25StreamId != 0U && m_rxP25StreamId != streamId)
-                            {
-                                break;
-                            }
 
                             if (m_debug)
                                 Utils::dump(1U, "Network::clock(), Network Rx, P25", buffer.get(), length);
@@ -546,13 +546,13 @@ void Network::clock(uint32_t ms)
                                         }
                                     }
                                 }
-                            }
 
-                            // check if we need to skip this stream -- a non-zero stream ID means the network client is locked
-                            // to receiving a specific stream; a zero stream ID means the network is promiscuously
-                            // receiving streams sent to this peer
-                            if (m_rxNXDNStreamId != 0U && m_rxNXDNStreamId != streamId) {
-                                break;
+                                // check if we need to skip this stream -- a non-zero stream ID means the network client is locked
+                                // to receiving a specific stream; a zero stream ID means the network is promiscuously
+                                // receiving streams sent to this peer
+                                if (m_rxNXDNStreamId != 0U && m_rxNXDNStreamId != streamId) {
+                                    break;
+                                }
                             }
 
                             if (m_debug)
@@ -630,13 +630,13 @@ void Network::clock(uint32_t ms)
                                         }
                                     }
                                 }
-                            }
 
-                            // check if we need to skip this stream -- a non-zero stream ID means the network client is locked
-                            // to receiving a specific stream; a zero stream ID means the network is promiscuously
-                            // receiving streams sent to this peer
-                            if (m_rxAnalogStreamId != 0U && m_rxAnalogStreamId != streamId) {
-                                break;
+                                // check if we need to skip this stream -- a non-zero stream ID means the network client is locked
+                                // to receiving a specific stream; a zero stream ID means the network is promiscuously
+                                // receiving streams sent to this peer
+                                if (m_rxAnalogStreamId != 0U && m_rxAnalogStreamId != streamId) {
+                                    break;
+                                }
                             }
 
                             if (m_debug)
