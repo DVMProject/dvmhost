@@ -974,6 +974,14 @@ void Control::clock()
                 if (m_verbose) {
                     LogMessage(LOG_NET, "talkgroup hang has expired, lastDstId = %u", m_netLastDstId);
                 }
+
+                // if the group is still granted at this point -- forcibly release it
+                if (m_affiliations->isGranted(m_netLastDstId)) {
+                    if (!m_dedicatedControl) {
+                        m_affiliations->releaseGrant(m_netLastDstId, false);
+                    }
+                }
+
                 m_netLastDstId = 0U;
                 m_netLastSrcId = 0U;
             }

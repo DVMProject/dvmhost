@@ -1359,7 +1359,7 @@ bool Voice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
 
             m_netLastDUID = duid;
 
-            if (!m_p25->m_enableControl) {
+            if (!m_p25->m_dedicatedControl) {
                 m_p25->m_affiliations->releaseGrant(m_netLC.getDstId(), false);
             }
 
