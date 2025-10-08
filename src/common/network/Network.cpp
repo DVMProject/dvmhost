@@ -101,6 +101,7 @@ Network::~Network()
     delete[] m_salt;
     delete[] m_rxDMRStreamId;
     delete m_metadata;
+    delete m_mux;
 }
 
 /* Resets the DMR ring buffer for the given slot. */
@@ -288,11 +289,6 @@ void Network::clock(uint32_t ms)
         }
 
         m_pktSeq = rtpHeader.getSequence();
-        
-        if (m_pktSeq == RTP_END_OF_CALL_SEQ) {
-            m_pktSeq = 0U;
-            m_pktLastSeq = 0U;
-        }
 
         // process incoming message function opcodes
         switch (fneHeader.getFunction()) {
@@ -351,19 +347,34 @@ void Network::clock(uint32_t ms)
                                 }
                                 else {
                                     if (m_rxDMRStreamId[slotNo] == streamId) {
-                                        if (m_pktSeq != 0U && m_pktLastSeq != 0U) {
-                                            if (m_pktSeq >= 1U && ((m_pktSeq != m_pktLastSeq + 1) && (m_pktSeq - 1 != m_pktLastSeq + 1))) {
-                                                LogWarning(LOG_NET, "DMR Stream %u out-of-sequence; %u != %u", streamId, m_pktSeq, m_pktLastSeq + 1);
-                                            }
+                                        uint16_t lastRxSeq = 0U;
+
+                                        MULTIPLEX_RET_CODE ret = verifyStream(&lastRxSeq);
+                                        if (ret == MUX_LOST_FRAMES) {
+                                            LogWarning(LOG_NET, "DMR Slot %u stream %u possible lost frames; got %u, expected %u", 
+                                                slotNo, streamId, m_pktSeq, lastRxSeq);
                                         }
-
-                                        m_pktLastSeq = m_pktSeq;
-                                    }
-
-                                    if (rtpHeader.getSequence() == RTP_END_OF_CALL_SEQ) {
-                                        m_rxDMRStreamId[slotNo] = 0U;
+                                        else if (ret == MUX_OUT_OF_ORDER) {
+                                            LogWarning(LOG_NET, "DMR Slot %u stream %u out-of-order; got %u, expected %u", 
+                                                slotNo, streamId, m_pktSeq, lastRxSeq);
+                                        }
+#if DEBUG_RTP_MUX
+                                        else {
+                                            LogDebugEx(LOG_NET, "Network::clock()", "DMR Slot %u valid seq, seq = %u, streamId = %u", slotNo, rtpHeader.getSequence(), streamId);
+                                        }
+#endif
+                                        if (rtpHeader.getSequence() == RTP_END_OF_CALL_SEQ) {
+                                            m_rxDMRStreamId[slotNo] = 0U;
+                                        }
                                     }
                                 }
+                            }
+
+                            // check if we need to skip this stream -- a non-zero stream ID means the network client is locked
+                            // to receiving a specific stream; a zero stream ID means the network is promiscuously
+                            // receiving streams sent to this peer
+                            if (m_rxDMRStreamId[slotNo] != 0U && m_rxDMRStreamId[slotNo] != streamId) {
+                                break;
                             }
 
                             if (m_debug)
@@ -420,19 +431,35 @@ void Network::clock(uint32_t ms)
                                 }
                                 else {
                                     if (m_rxP25StreamId == streamId) {
-                                        if (m_pktSeq != 0U && m_pktLastSeq != 0U) {
-                                            if (m_pktSeq >= 1U && ((m_pktSeq != m_pktLastSeq + 1) && (m_pktSeq - 1 != m_pktLastSeq + 1))) {
-                                                LogWarning(LOG_NET, "P25 Stream %u out-of-sequence; %u != %u", streamId, m_pktSeq, m_pktLastSeq + 1);
-                                            }
+                                        uint16_t lastRxSeq = 0U;
+
+                                        MULTIPLEX_RET_CODE ret = verifyStream(&lastRxSeq);
+                                        if (ret == MUX_LOST_FRAMES) {
+                                            LogWarning(LOG_NET, "P25 stream %u possible lost frames; got %u, expected %u", 
+                                                streamId, m_pktSeq, lastRxSeq);
                                         }
-
-                                        m_pktLastSeq = m_pktSeq;
-                                    }
-
-                                    if (rtpHeader.getSequence() == RTP_END_OF_CALL_SEQ) {
-                                        m_rxP25StreamId = 0U;
+                                        else if (ret == MUX_OUT_OF_ORDER) {
+                                            LogWarning(LOG_NET, "P25 stream %u out-of-order; got %u, expected %u", 
+                                                streamId, m_pktSeq, lastRxSeq);
+                                        }
+#if DEBUG_RTP_MUX
+                                        else {
+                                            LogDebugEx(LOG_NET, "Network::clock()", "P25 valid seq, seq = %u, streamId = %u", rtpHeader.getSequence(), streamId);
+                                        }
+#endif
+                                        if (rtpHeader.getSequence() == RTP_END_OF_CALL_SEQ) {
+                                            m_rxP25StreamId = 0U;
+                                        }
                                     }
                                 }
+                            }
+
+                            // check if we need to skip this stream -- a non-zero stream ID means the network client is locked
+                            // to receiving a specific stream; a zero stream ID means the network is promiscuously
+                            // receiving streams sent to this peer
+                            if (m_rxP25StreamId != 0U && m_rxP25StreamId != streamId)
+                            {
+                                break;
                             }
 
                             if (m_debug)
@@ -498,19 +525,34 @@ void Network::clock(uint32_t ms)
                                 }
                                 else {
                                     if (m_rxNXDNStreamId == streamId) {
-                                        if (m_pktSeq != 0U && m_pktLastSeq != 0U) {
-                                            if (m_pktSeq >= 1U && ((m_pktSeq != m_pktLastSeq + 1) && (m_pktSeq - 1 != m_pktLastSeq + 1))) {
-                                                LogWarning(LOG_NET, "NXDN Stream %u out-of-sequence; %u != %u", streamId, m_pktSeq, m_pktLastSeq + 1);
-                                            }
+                                        uint16_t lastRxSeq = 0U;
+
+                                        MULTIPLEX_RET_CODE ret = verifyStream(&lastRxSeq);
+                                        if (ret == MUX_LOST_FRAMES) {
+                                            LogWarning(LOG_NET, "NXDN stream %u possible lost frames; got %u, expected %u", 
+                                                streamId, m_pktSeq, lastRxSeq);
                                         }
-
-                                        m_pktLastSeq = m_pktSeq;
-                                    }
-
-                                    if (rtpHeader.getSequence() == RTP_END_OF_CALL_SEQ) {
-                                        m_rxNXDNStreamId = 0U;
+                                        else if (ret == MUX_OUT_OF_ORDER) {
+                                            LogWarning(LOG_NET, "NXDN stream %u out-of-order; got %u, expected %u", 
+                                                streamId, m_pktSeq, lastRxSeq);
+                                        }
+#if DEBUG_RTP_MUX
+                                        else {
+                                            LogDebugEx(LOG_NET, "Network::clock()", "NXDN valid seq, seq = %u, streamId = %u", rtpHeader.getSequence(), streamId);
+                                        }
+#endif
+                                        if (rtpHeader.getSequence() == RTP_END_OF_CALL_SEQ) {
+                                            m_rxNXDNStreamId = 0U;
+                                        }
                                     }
                                 }
+                            }
+
+                            // check if we need to skip this stream -- a non-zero stream ID means the network client is locked
+                            // to receiving a specific stream; a zero stream ID means the network is promiscuously
+                            // receiving streams sent to this peer
+                            if (m_rxNXDNStreamId != 0U && m_rxNXDNStreamId != streamId) {
+                                break;
                             }
 
                             if (m_debug)
@@ -567,19 +609,34 @@ void Network::clock(uint32_t ms)
                                 }
                                 else {
                                     if (m_rxAnalogStreamId == streamId) {
-                                        if (m_pktSeq != 0U && m_pktLastSeq != 0U) {
-                                            if (m_pktSeq >= 1U && ((m_pktSeq != m_pktLastSeq + 1) && (m_pktSeq - 1 != m_pktLastSeq + 1))) {
-                                                LogWarning(LOG_NET, "Analog Stream %u out-of-sequence; %u != %u", streamId, m_pktSeq, m_pktLastSeq + 1);
-                                            }
+                                        uint16_t lastRxSeq = 0U;
+
+                                        MULTIPLEX_RET_CODE ret = verifyStream(&lastRxSeq);
+                                        if (ret == MUX_LOST_FRAMES) {
+                                            LogWarning(LOG_NET, "Analog stream %u possible lost frames; got %u, expected %u", 
+                                                streamId, m_pktSeq, lastRxSeq);
                                         }
-
-                                        m_pktLastSeq = m_pktSeq;
-                                    }
-
-                                    if (rtpHeader.getSequence() == RTP_END_OF_CALL_SEQ) {
-                                        m_rxAnalogStreamId = 0U;
+                                        else if (ret == MUX_OUT_OF_ORDER) {
+                                            LogWarning(LOG_NET, "Analog stream %u out-of-order; got %u, expected %u", 
+                                                streamId, m_pktSeq, lastRxSeq);
+                                        }
+#if DEBUG_RTP_MUX
+                                        else {
+                                            LogDebugEx(LOG_NET, "Network::clock()", "Analog valid seq, seq = %u, streamId = %u", rtpHeader.getSequence(), streamId);
+                                        }
+#endif
+                                        if (rtpHeader.getSequence() == RTP_END_OF_CALL_SEQ) {
+                                            m_rxAnalogStreamId = 0U;
+                                        }
                                     }
                                 }
+                            }
+
+                            // check if we need to skip this stream -- a non-zero stream ID means the network client is locked
+                            // to receiving a specific stream; a zero stream ID means the network is promiscuously
+                            // receiving streams sent to this peer
+                            if (m_rxAnalogStreamId != 0U && m_rxAnalogStreamId != streamId) {
+                                break;
                             }
 
                             if (m_debug)
@@ -1170,6 +1227,38 @@ void Network::enable(bool enabled)
 // ---------------------------------------------------------------------------
 //  Protected Class Members
 // ---------------------------------------------------------------------------
+
+/* Helper to verify the given RTP sequence for the given RTP stream. */
+
+MULTIPLEX_RET_CODE Network::verifyStream(uint16_t* lastRxSeq)
+{
+    MULTIPLEX_RET_CODE ret = MUX_VALID_SUCCESS;
+    if (m_pktSeq == RTP_END_OF_CALL_SEQ) {
+        // reset the received sequence back to 0
+        m_pktLastSeq = 0U;
+    }
+    else {
+        *lastRxSeq = m_pktLastSeq;
+
+        if ((m_pktSeq >= m_pktLastSeq) || (m_pktSeq == 0U)) {
+            // if the sequence isn't 0, and is greater then the last received sequence + 1 frame
+            // assume a packet was lost
+            if ((m_pktSeq != 0U) && m_pktSeq > m_pktLastSeq + 1U) {
+                ret = MUX_LOST_FRAMES;
+            }
+
+            m_pktLastSeq = m_pktSeq;
+        }
+        else {
+            if (m_pktSeq < m_pktLastSeq) {
+                ret = MUX_OUT_OF_ORDER;
+            }
+        }
+    }
+
+    m_pktLastSeq = m_pktSeq;
+    return ret;
+}
 
 /* User overrideable handler that allows user code to process network packets not handled by this class. */
 

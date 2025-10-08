@@ -504,7 +504,7 @@ void PeerNetwork::taskNetworkRx(PeerPacketRequest* req)
             MULTIPLEX_RET_CODE ret = network->m_mux->verifyStream(req->streamId, req->rtpHeader.getSequence(), req->fneHeader.getFunction(), &lastRxSeq);
             if (ret == MUX_LOST_FRAMES) {
                 LogError(LOG_NET, "PEER %u stream %u possible lost frames; got %u, expected %u", req->fneHeader.getPeerId(),
-                    req->streamId, req->rtpHeader.getSequence(), lastRxSeq, req->rtpHeader.getSequence());
+                    req->streamId, req->rtpHeader.getSequence(), lastRxSeq);
             }
             else if (ret == MUX_OUT_OF_ORDER) {
                 LogError(LOG_NET, "PEER %u stream %u out-of-order; got %u, expected >%u", req->fneHeader.getPeerId(),

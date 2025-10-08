@@ -740,7 +740,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                     MULTIPLEX_RET_CODE ret = connection->verifyStream(streamId, pktSeq, req->fneHeader.getFunction(), &lastRxSeq);
                     if (ret == MUX_LOST_FRAMES) {
                         LogError(LOG_NET, "PEER %u (%s) stream %u possible lost frames; got %u, expected %u", peerId, connection->identWithQualifier().c_str(),
-                            streamId, pktSeq, lastRxSeq, pktSeq);
+                            streamId, pktSeq, lastRxSeq);
                     }
                     else if (ret == MUX_OUT_OF_ORDER) {
                         LogError(LOG_NET, "PEER %u (%s) stream %u out-of-order; got %u, expected >%u", peerId, connection->identWithQualifier().c_str(),

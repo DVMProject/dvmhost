@@ -184,6 +184,13 @@ namespace network
         {
             /* stub */
         }
+        /**
+         * @brief Finalizes a instance of the RTPStreamMultiplex class.
+         */
+        ~RTPStreamMultiplex()
+        {
+            m_streamSeqNos.clear();
+        }
 
         /**
          * @brief Helper to verify the given RTP sequence for the given multiplexed RTP stream.

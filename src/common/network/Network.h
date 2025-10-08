@@ -386,6 +386,13 @@ namespace network
         std::function<void(p25::kmm::KeyItem ki, uint8_t algId, uint8_t keyLength)> m_keyRespCallback;
 
         /**
+         * @brief Helper to verify the given RTP sequence for the given RTP stream.
+         * @param[out] lastRxSeq Last Received Sequence.
+         * @return MULTIPLEX_RET_CODE Return code.
+         */
+        MULTIPLEX_RET_CODE verifyStream(uint16_t* lastRxSeq);
+
+        /**
          * @brief User overrideable handler that allows user code to process network packets not handled by this class.
          * @param peerId Peer ID.
          * @param opcode FNE network opcode pair.
