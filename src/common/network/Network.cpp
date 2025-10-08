@@ -64,6 +64,7 @@ Network::Network(const std::string& address, uint16_t port, uint16_t localPort, 
     m_pktSeq(0U),
     m_loginStreamId(0U),
     m_metadata(nullptr),
+    m_mux(nullptr),
     m_remotePeerId(0U),
     m_promiscuousPeer(false),
     m_userHandleProtocol(false),
@@ -90,6 +91,7 @@ Network::Network(const std::string& address, uint16_t port, uint16_t localPort, 
     m_rxAnalogStreamId = 0U;
 
     m_metadata = new PeerMetadata();
+    m_mux = new RTPStreamMultiplex();
 }
 
 /* Finalizes a instance of the Network class. */
@@ -318,6 +320,23 @@ void Network::clock(uint32_t ms)
                             if (m_promiscuousPeer) {
                                 m_rxDMRStreamId[slotNo] = streamId;
                                 m_pktLastSeq = m_pktSeq;
+
+                                uint16_t lastRxSeq = 0U;
+
+                                MULTIPLEX_RET_CODE ret = m_mux->verifyStream(streamId, rtpHeader.getSequence(), fneHeader.getFunction(), &lastRxSeq);
+                                if (ret == MUX_LOST_FRAMES) {
+                                    LogError(LOG_NET, "PEER %u stream %u possible lost frames; got %u, expected %u", peerId,
+                                        streamId, rtpHeader.getSequence(), lastRxSeq, rtpHeader.getSequence());
+                                }
+                                else if (ret == MUX_OUT_OF_ORDER) {
+                                    LogError(LOG_NET, "PEER %u stream %u out-of-order; got %u, expected >%u", peerId,
+                                        streamId, rtpHeader.getSequence(), lastRxSeq);
+                                }
+#if DEBUG_RTP_MUX
+                                else {
+                                    LogDebugEx(LOG_NET, "Network::clock()", "PEER %u valid mux, seq = %u, streamId = %u", peerId, rtpHeader.getSequence(), streamId);
+                                }
+#endif
                             }
                             else {
                                 if (m_rxDMRStreamId[slotNo] == 0U) {
@@ -370,6 +389,23 @@ void Network::clock(uint32_t ms)
                             if (m_promiscuousPeer) {
                                 m_rxP25StreamId = streamId;
                                 m_pktLastSeq = m_pktSeq;
+
+                                uint16_t lastRxSeq = 0U;
+
+                                MULTIPLEX_RET_CODE ret = m_mux->verifyStream(streamId, rtpHeader.getSequence(), fneHeader.getFunction(), &lastRxSeq);
+                                if (ret == MUX_LOST_FRAMES) {
+                                    LogError(LOG_NET, "PEER %u stream %u possible lost frames; got %u, expected %u", peerId,
+                                        streamId, rtpHeader.getSequence(), lastRxSeq, rtpHeader.getSequence());
+                                }
+                                else if (ret == MUX_OUT_OF_ORDER) {
+                                    LogError(LOG_NET, "PEER %u stream %u out-of-order; got %u, expected >%u", peerId,
+                                        streamId, rtpHeader.getSequence(), lastRxSeq);
+                                }
+#if DEBUG_RTP_MUX
+                                else {
+                                    LogDebugEx(LOG_NET, "Network::clock()", "PEER %u valid mux, seq = %u, streamId = %u", peerId, rtpHeader.getSequence(), streamId);
+                                }
+#endif
                             }
                             else {
                                 if (m_rxP25StreamId == 0U) {
@@ -431,6 +467,23 @@ void Network::clock(uint32_t ms)
                             if (m_promiscuousPeer) {
                                 m_rxNXDNStreamId = streamId;
                                 m_pktLastSeq = m_pktSeq;
+
+                                uint16_t lastRxSeq = 0U;
+
+                                MULTIPLEX_RET_CODE ret = m_mux->verifyStream(streamId, rtpHeader.getSequence(), fneHeader.getFunction(), &lastRxSeq);
+                                if (ret == MUX_LOST_FRAMES) {
+                                    LogError(LOG_NET, "PEER %u stream %u possible lost frames; got %u, expected %u", peerId,
+                                        streamId, rtpHeader.getSequence(), lastRxSeq, rtpHeader.getSequence());
+                                }
+                                else if (ret == MUX_OUT_OF_ORDER) {
+                                    LogError(LOG_NET, "PEER %u stream %u out-of-order; got %u, expected >%u", peerId,
+                                        streamId, rtpHeader.getSequence(), lastRxSeq);
+                                }
+#if DEBUG_RTP_MUX
+                                else {
+                                    LogDebugEx(LOG_NET, "Network::clock()", "PEER %u valid mux, seq = %u, streamId = %u", peerId, rtpHeader.getSequence(), streamId);
+                                }
+#endif
                             }
                             else {
                                 if (m_rxNXDNStreamId == 0U) {
@@ -483,6 +536,23 @@ void Network::clock(uint32_t ms)
                             if (m_promiscuousPeer) {
                                 m_rxAnalogStreamId = streamId;
                                 m_pktLastSeq = m_pktSeq;
+
+                                uint16_t lastRxSeq = 0U;
+
+                                MULTIPLEX_RET_CODE ret = m_mux->verifyStream(streamId, rtpHeader.getSequence(), fneHeader.getFunction(), &lastRxSeq);
+                                if (ret == MUX_LOST_FRAMES) {
+                                    LogError(LOG_NET, "PEER %u stream %u possible lost frames; got %u, expected %u", peerId,
+                                        streamId, rtpHeader.getSequence(), lastRxSeq, rtpHeader.getSequence());
+                                }
+                                else if (ret == MUX_OUT_OF_ORDER) {
+                                    LogError(LOG_NET, "PEER %u stream %u out-of-order; got %u, expected >%u", peerId,
+                                        streamId, rtpHeader.getSequence(), lastRxSeq);
+                                }
+#if DEBUG_RTP_MUX
+                                else {
+                                    LogDebugEx(LOG_NET, "Network::clock()", "PEER %u valid mux, seq = %u, streamId = %u", peerId, rtpHeader.getSequence(), streamId);
+                                }
+#endif
                             }
                             else {
                                 if (m_rxAnalogStreamId == 0U) {

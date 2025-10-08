@@ -329,6 +329,7 @@ namespace network
         uint32_t m_loginStreamId;
 
         PeerMetadata* m_metadata;
+        RTPStreamMultiplex* m_mux;
 
         uint32_t m_remotePeerId;
 

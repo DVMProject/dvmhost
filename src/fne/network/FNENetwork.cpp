@@ -735,52 +735,16 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                 uint16_t pktSeq = req->rtpHeader.getSequence();
 
                 if (connection != nullptr) {
-                    if (pktSeq == RTP_END_OF_CALL_SEQ) {
-                        // only reset packet sequences if we're a PROTOCOL or RPTC function
-                        if ((req->fneHeader.getFunction() == NET_FUNC::PROTOCOL) ||
-                            (req->fneHeader.getFunction() == NET_FUNC::RPTC)) {
-                            connection->eraseStreamPktSeq(streamId); // attempt to erase packet sequence for the stream
-                        }
-                    } else {
-                        bool skip = false;
-                        if (connection->hasStreamPktSeq(streamId)) {
-                            uint16_t currPkt = connection->getStreamPktSeq(streamId);
+                    uint16_t lastRxSeq = 0U;
 
-                            if (currPkt == RTP_END_OF_CALL_SEQ) {
-                                // update the expected current packet sequence for the next sequence number
-                                connection->setStreamPktSeq(streamId, 0U, true);
-                                skip = true; // don't alter the packet sequence any further
-                            }
-                            else {
-                                if ((pktSeq != currPkt) && (pktSeq != (RTP_END_OF_CALL_SEQ - 1U)) && pktSeq != 0U) {
-                                    LogWarning(LOG_NET, "PEER %u (%s) stream %u out-of-sequence; got %u, expected %u", peerId, connection->identWithQualifier().c_str(),
-                                        streamId, pktSeq, currPkt);
-
-                                    if (req->fneHeader.getFunction() == NET_FUNC::PROTOCOL) {
-                                        // possibly lost frames
-                                        if (pktSeq > currPkt) {
-                                            LogError(LOG_NET, "PEER %u (%s) stream %u possible lost frames; got %u, expected %u, resetting sequence to %u", peerId, connection->identWithQualifier().c_str(),
-                                                streamId, pktSeq, currPkt, pktSeq);
-
-                                            // update the expected current packet sequence for the next sequence number
-                                            connection->setStreamPktSeq(streamId, pktSeq + 1U, true);
-                                            skip = true; // don't alter the packet sequence any further
-                                        }
-
-                                        // received out of order frames
-                                        if (pktSeq < currPkt) {
-                                            LogError(LOG_NET, "PEER %u (%s) stream %u out-of-order; got %u, expected %u", peerId, connection->identWithQualifier().c_str(),
-                                                streamId, pktSeq, currPkt);
-                                            skip = true; // don't alter the packet sequence -- this can result in odd behavior
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        // update the expected current packet sequence for the next sequence number
-                        if (!skip)
-                            connection->setStreamPktSeq(streamId, pktSeq + 1U);
+                    MULTIPLEX_RET_CODE ret = connection->verifyStream(streamId, pktSeq, req->fneHeader.getFunction(), &lastRxSeq);
+                    if (ret == MUX_LOST_FRAMES) {
+                        LogError(LOG_NET, "PEER %u (%s) stream %u possible lost frames; got %u, expected %u", peerId, connection->identWithQualifier().c_str(),
+                            streamId, pktSeq, lastRxSeq, pktSeq);
+                    }
+                    else if (ret == MUX_OUT_OF_ORDER) {
+                        LogError(LOG_NET, "PEER %u (%s) stream %u out-of-order; got %u, expected >%u", peerId, connection->identWithQualifier().c_str(),
+                            streamId, pktSeq, lastRxSeq);
                     }
                 }
 
@@ -1772,7 +1736,7 @@ void FNENetwork::eraseStreamPktSeq(uint32_t peerId, uint32_t streamId)
     if (peerId > 0 && (m_peers.find(peerId) != m_peers.end())) {
         FNEPeerConnection* connection = m_peers[peerId];
         if (connection != nullptr) {
-            connection->eraseStreamPktSeq(streamId);
+            connection->erasePktSeq(streamId);
         }
     }
 }
@@ -2528,10 +2492,13 @@ bool FNENetwork::writePeer(uint32_t peerId, uint32_t ssrc, FrameQueue::OpcodePai
             sockaddr_storage addr = connection->socketStorage();
             uint32_t addrLen = connection->sockStorageLen();
 
-            if (incPktSeq) {
-                pktSeq = connection->setStreamPktSeq(streamId, pktSeq);
+            if (incPktSeq && pktSeq != RTP_END_OF_CALL_SEQ) {
+                pktSeq = connection->incPktSeq(streamId);
             }
-
+#if DEBUG_RTP_MUX
+            if (m_debug)
+                LogDebugEx(LOG_NET, "FNENetwork::writePeer()", "PEER %u, streamId = %u, pktSeq = %u", peerId, streamId, pktSeq);
+#endif
             if (m_maskOutboundPeerID)
                 ssrc = m_peerId; // mask the source SSRC to our own peer ID
             else {

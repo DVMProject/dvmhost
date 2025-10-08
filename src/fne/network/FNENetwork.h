@@ -101,7 +101,7 @@ namespace network
      * @brief Represents an peer connection to the FNE.
      * @ingroup fne_network
      */
-    class HOST_SW_API FNEPeerConnection {
+    class HOST_SW_API FNEPeerConnection : public RTPStreamMultiplex {
     public:
         auto operator=(FNEPeerConnection&) -> FNEPeerConnection& = delete;
         auto operator=(FNEPeerConnection&&) -> FNEPeerConnection& = delete;
@@ -110,7 +110,8 @@ namespace network
         /**
          * @brief Initializes a new instance of the FNEPeerConnection class.
          */
-        FNEPeerConnection() :
+        FNEPeerConnection() : 
+            RTPStreamMultiplex(),
             m_id(0U),
             m_ccPeerId(0U),
             m_socketStorage(),
@@ -127,9 +128,7 @@ namespace network
             m_isConventionalPeer(false),
             m_isSysView(false),
             m_isPeerReplica(false),
-            m_config(),
-            m_streamSeqMutex(),
-            m_streamSeqNos()
+            m_config()
         {
             /* stub */
         }
@@ -140,6 +139,7 @@ namespace network
          * @param sockStorageLen 
          */
         FNEPeerConnection(uint32_t id, sockaddr_storage& socketStorage, uint32_t sockStorageLen) :
+            RTPStreamMultiplex(),
             m_id(id),
             m_ccPeerId(0U),
             m_socketStorage(socketStorage),
@@ -156,23 +156,12 @@ namespace network
             m_isConventionalPeer(false),
             m_isSysView(false),
             m_isPeerReplica(false),
-            m_config(),
-            m_streamSeqMutex(),
-            m_streamSeqNos()
+            m_config()
         {
             assert(id > 0U);
             assert(sockStorageLen > 0U);
             assert(!m_address.empty());
             assert(m_port > 0U);
-        }
-
-        /**
-         * @brief Helper to return the current count of mapped RTP streams.
-         * @returns size_t 
-         */
-        size_t streamCount()
-        {
-            return m_streamSeqNos.size();
         }
 
         /**
@@ -189,118 +178,6 @@ namespace network
                 return "+" + identity();
 
             return " " + m_identity;
-        }
-
-        /**
-         * @brief Helper to determine if the stream ID has a stored RTP sequence.
-         * @param streamId Stream ID.
-         * @returns bool  
-         */
-        bool hasStreamPktSeq(uint64_t streamId)
-        {
-            bool ret = false;
-            bool locked = m_streamSeqMutex.try_lock_for(std::chrono::milliseconds(60));
-
-            // determine if the stream has a current sequence no and return
-            {
-                auto it = m_streamSeqNos.find(streamId);
-                if (it == m_streamSeqNos.end()) {
-                    ret = false;
-                }
-                else {
-                    ret = true;
-                }
-            }
-
-            if (locked)
-                m_streamSeqMutex.unlock();
-
-            return ret;
-        }
-
-        /**
-         * @brief Helper to get the stored RTP sequence for the given stream ID.
-         * @param streamId Stream ID.
-         * @returns uint16_t 
-         */
-        uint16_t getStreamPktSeq(uint64_t streamId)
-        {
-            bool locked = m_streamSeqMutex.try_lock_for(std::chrono::milliseconds(60));
-
-            // find the current sequence no and return
-            uint32_t pktSeq = 0U;
-            {
-                auto it = m_streamSeqNos.find(streamId);
-                if (it == m_streamSeqNos.end()) {
-                    pktSeq = RTP_END_OF_CALL_SEQ;
-                } else {
-                    pktSeq = m_streamSeqNos[streamId];
-                }
-            }
-
-            if (locked)
-                m_streamSeqMutex.unlock();
-
-            return pktSeq;
-        }
-
-        /**
-         * @brief Helper to set/increment the stored RTP sequence for the given stream ID.
-         * @param streamId Stream ID.
-         * @param initialSeq Initial sequence number to set.
-         * @param force Force sequence number to be reset to the value provided by initialSeq.
-         * @returns uint16_t 
-         */
-        uint16_t setStreamPktSeq(uint64_t streamId, uint16_t initialSeq, bool force = false)
-        {
-            bool locked = m_streamSeqMutex.try_lock_for(std::chrono::milliseconds(60));
-
-            // find the current sequence no, increment and return
-            uint32_t pktSeq = 0U;
-            {
-                auto it = m_streamSeqNos.find(streamId);
-                if (it == m_streamSeqNos.end()) {
-                    m_streamSeqNos.insert({streamId, initialSeq});
-                } else {
-                    if (!force) {
-                        pktSeq = m_streamSeqNos[streamId];
-                        ++pktSeq;
-                    } else {
-                        pktSeq = initialSeq;
-                    }
-
-                    if (pktSeq > RTP_END_OF_CALL_SEQ) {
-                        pktSeq = 0U;
-                    }
-
-                    m_streamSeqNos[streamId] = pktSeq;
-                }
-            }
-
-            if (locked)
-                m_streamSeqMutex.unlock();
-
-            return pktSeq;
-        }
-        /**
-         * @brief Helper to erase the stored RTP sequence for the given stream ID.
-         * @param streamId Stream ID.
-         * @returns uint16_t 
-         */
-        void eraseStreamPktSeq(uint64_t streamId)
-        {
-            bool locked = m_streamSeqMutex.try_lock_for(std::chrono::milliseconds(60));
-
-            // find the sequence no and erase
-            {
-                auto entry = m_streamSeqNos.find(streamId);
-                if (entry != m_streamSeqNos.end()) {
-                    m_streamSeqNos.erase(streamId);
-                }
-            }
-
-            if (locked)
-                m_streamSeqMutex.unlock();
         }
 
     public:
@@ -385,10 +262,6 @@ namespace network
          * @brief JSON objecting containing peer configuration information.
          */
         DECLARE_PROPERTY_PLAIN(json::object, config);
-
-    private:
-        std::timed_mutex m_streamSeqMutex;
-        std::unordered_map<uint64_t, uint16_t> m_streamSeqNos;
     };
 
     // ---------------------------------------------------------------------------

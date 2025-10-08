@@ -499,6 +499,22 @@ void PeerNetwork::taskNetworkRx(PeerPacketRequest* req)
                 LogWarning(LOG_NET, "PEER %u packet processing latency >200ms, dt = %u, now = %u", req->peerId, dt, now);
             }
 
+            uint16_t lastRxSeq = 0U;
+
+            MULTIPLEX_RET_CODE ret = network->m_mux->verifyStream(req->streamId, req->rtpHeader.getSequence(), req->fneHeader.getFunction(), &lastRxSeq);
+            if (ret == MUX_LOST_FRAMES) {
+                LogError(LOG_NET, "PEER %u stream %u possible lost frames; got %u, expected %u", req->fneHeader.getPeerId(),
+                    req->streamId, req->rtpHeader.getSequence(), lastRxSeq, req->rtpHeader.getSequence());
+            }
+            else if (ret == MUX_OUT_OF_ORDER) {
+                LogError(LOG_NET, "PEER %u stream %u out-of-order; got %u, expected >%u", req->fneHeader.getPeerId(),
+                    req->streamId, req->rtpHeader.getSequence(), lastRxSeq);
+            }
+#if DEBUG_RTP_MUX
+            else {
+                LogDebugEx(LOG_NET, "PeerNetwork::taskNetworkRx()", "PEER %u valid mux, seq = %u, streamId = %u", req->fneHeader.getPeerId(), req->rtpHeader.getSequence(), req->streamId);
+            }
+#endif
             // process incomfing message subfunction opcodes
             switch (req->subFunc) {
             case NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR:                 // Encapsulated DMR data frame

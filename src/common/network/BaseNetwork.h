@@ -150,6 +150,207 @@ namespace network
         NET_CTRL_U2U = 0x01U,                       //!< Unit-to-Unit
     };
 
+    /**
+     * @brief RTP Stream Multiplex Validation Return Codes
+     * @ingroup network_core
+     */
+    enum MULTIPLEX_RET_CODE {
+        MUX_VALID_SUCCESS = 0U,                     //!< Successful Validation
+
+        MUX_LOST_FRAMES = 1U,                       //!< Lost Frames
+        MUX_OUT_OF_ORDER = 2U                       //!< Out-of-Order
+    };
+
+    // ---------------------------------------------------------------------------
+    //  Class Declaration
+    // ---------------------------------------------------------------------------
+
+    /**
+     * @brief Handles dealing with maintaining RTP sequencing for multiple multiplexed RTP streams.
+     * @ingroup fne_network
+     */
+    class HOST_SW_API RTPStreamMultiplex {
+    public:
+        auto operator=(RTPStreamMultiplex&) -> RTPStreamMultiplex& = delete;
+        auto operator=(RTPStreamMultiplex&&) -> RTPStreamMultiplex& = delete;
+        RTPStreamMultiplex(RTPStreamMultiplex&) = delete;
+
+        /**
+         * @brief Initializes a new instance of the RTPStreamMultiplex class.
+         */
+        RTPStreamMultiplex() :
+            m_mutex(),
+            m_streamSeqNos()
+        {
+            /* stub */
+        }
+
+        /**
+         * @brief Helper to verify the given RTP sequence for the given multiplexed RTP stream.
+         * @param streamId Stream ID.
+         * @param pktSeq Packet Sequence.
+         * @param func Network function.
+         * @param[out] lastRxSeq Last Received Sequence.
+         * @return MULTIPLEX_RET_CODE Return code.
+         */
+        MULTIPLEX_RET_CODE verifyStream(uint64_t streamId, uint16_t pktSeq, uint8_t func, uint16_t* lastRxSeq)
+        {
+            MULTIPLEX_RET_CODE ret = MUX_VALID_SUCCESS;
+            if (pktSeq == RTP_END_OF_CALL_SEQ) {
+                // only reset packet sequences if we're a PROTOCOL or RPTC function
+                if ((func == NET_FUNC::PROTOCOL) || (func == NET_FUNC::RPTC)) {
+                    erasePktSeq(streamId); // attempt to erase packet sequence for the stream
+                }
+            } else {
+                if (hasPktSeq(streamId)) {
+                    *lastRxSeq = getPktSeq(streamId);
+
+                    if (*lastRxSeq == RTP_END_OF_CALL_SEQ) {
+                        // reset the received sequence back to 0
+                        setPktSeq(streamId, 0U);
+                    }
+                    else {
+                        if ((pktSeq >= *lastRxSeq) || (pktSeq == 0U)) {
+                            // if the sequence isn't 0, and is greater then the last received sequence + 1 frame
+                            // assume a packet was lost
+                            if ((pktSeq != 0U) && pktSeq >= *lastRxSeq + 1U) {
+                                ret = MUX_LOST_FRAMES;
+                            }
+
+                            setPktSeq(streamId, pktSeq);
+                        }
+                        else {
+                            if (pktSeq < *lastRxSeq) {
+                                ret = MUX_OUT_OF_ORDER;
+                            }
+                        }
+                    }
+                }
+            }
+
+            return ret;
+        }
+
+        /**
+         * @brief Helper to return the current count of multiplexed RTP streams.
+         * @returns size_t Count of stored streams.
+         */
+        size_t streamCount()
+        {
+            return m_streamSeqNos.size();
+        }
+
+        /**
+         * @brief Helper to determine if the given multiplexed stream has a stored RTP sequence.
+         * @param streamId Stream ID.
+         * @returns bool True, if stream ID has a stored RTP sequence, otherwise false.
+         */
+        bool hasPktSeq(uint64_t streamId)
+        {
+            bool ret = false;
+            std::lock_guard<std::recursive_mutex> lock(m_mutex);
+
+            // determine if the stream has a current sequence no and return
+            {
+                auto it = m_streamSeqNos.find(streamId);
+                if (it == m_streamSeqNos.end()) {
+                    ret = false;
+                }
+                else {
+                    ret = true;
+                }
+            }
+
+            return ret;
+        }
+
+        /**
+         * @brief Helper to get the stored RTP sequence for the given multiplexed stream.
+         * @param streamId Stream ID.
+         * @returns uint16_t Sequence number.
+         */
+        uint16_t getPktSeq(uint64_t streamId)
+        {
+            std::lock_guard<std::recursive_mutex> lock(m_mutex);
+
+            // find the current sequence no and return
+            uint32_t pktSeq = 0U;
+            {
+                auto it = m_streamSeqNos.find(streamId);
+                if (it == m_streamSeqNos.end()) {
+                    pktSeq = RTP_END_OF_CALL_SEQ;
+                } else {
+                    pktSeq = m_streamSeqNos[streamId];
+                }
+            }
+
+            return pktSeq;
+        }
+
+        /**
+         * @brief Helper to set the stored RTP sequence for the given multiplexed stream.
+         * @param streamId Stream ID.
+         * @param seq Sequence number.
+         */
+        void setPktSeq(uint64_t streamId, uint16_t seq)
+        {
+            std::lock_guard<std::recursive_mutex> lock(m_mutex);
+            auto it = m_streamSeqNos.find(streamId);
+            if (it == m_streamSeqNos.end()) {
+                m_streamSeqNos.insert({streamId, seq});
+            } else {
+                m_streamSeqNos[streamId] = seq;
+            }
+        }
+
+        /**
+         * @brief Helper to increment the stored RTP sequence for the given multiplexed stream.
+         * @param streamId Stream ID.
+         * @returns uint16_t Incremented packet sequence.
+         */
+        uint16_t incPktSeq(uint64_t streamId)
+        {
+            std::lock_guard<std::recursive_mutex> lock(m_mutex);
+
+            uint32_t pktSeq = 0U;
+            auto it = m_streamSeqNos.find(streamId);
+            if (it == m_streamSeqNos.end()) {
+                m_streamSeqNos.insert({streamId, pktSeq});
+            } else {
+                pktSeq = m_streamSeqNos[streamId];
+                ++pktSeq;
+
+                if (pktSeq > (RTP_END_OF_CALL_SEQ - 1U))
+                    pktSeq = 0U;
+
+                m_streamSeqNos[streamId] = pktSeq;
+            }
+
+            return pktSeq;
+        }
+
+        /**
+         * @brief Helper to erase the stored RTP sequence for the given multiplexed stream.
+         * @param streamId Stream ID.
+         */
+        void erasePktSeq(uint64_t streamId)
+        {
+            std::lock_guard<std::recursive_mutex> lock(m_mutex);
+
+            // find the sequence no and erase
+            {
+                auto entry = m_streamSeqNos.find(streamId);
+                if (entry != m_streamSeqNos.end()) {
+                    m_streamSeqNos.erase(streamId);
+                }
+            }
+        }
+
+    private:
+        std::recursive_mutex m_mutex;
+        std::unordered_map<uint64_t, uint16_t> m_streamSeqNos;
+    };
+
     // ---------------------------------------------------------------------------
     //  Class Declaration
     // ---------------------------------------------------------------------------
