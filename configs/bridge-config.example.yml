@@ -180,3 +180,5 @@ system:
     rtsPttEnable: false
     # Serial port device for RTS PTT control (e.g., /dev/ttyUSB0).
     rtsPttPort: "/dev/ttyUSB0"
+    # Hold-off time (ms) before clearing RTS PTT after last audio output.
+    rtsPttHoldoffMs: 250
