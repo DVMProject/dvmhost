@@ -80,7 +80,6 @@ bool PacketBuffer::decode(const uint8_t* data, uint8_t** message, uint32_t* outL
 
     // do we have all the blocks?
     if (fragments.size() == blockCnt + 1U) {
-        uint8_t* buffer = nullptr;
         fragments.lock(false);
         if (fragments[0] == nullptr) {
             LogError(LOG_NET, "%s, Packet Fragment, error missing block 0? Packet dropped.", m_name);
@@ -106,8 +105,7 @@ bool PacketBuffer::decode(const uint8_t* data, uint8_t** message, uint32_t* outL
         uint32_t compressedLen = fragments[0]->compressedSize;
         uint32_t len = fragments[0]->size;
 
-        buffer = new uint8_t[len + 1U];
-        ::memset(buffer, 0x00U, len + 1U);
+        DECLARE_UINT8_ARRAY(buffer, len + 1U);
         if (fragments.size() == 1U) {
             ::memcpy(buffer, fragments[0U]->data, len);
         } else {
@@ -136,7 +134,11 @@ bool PacketBuffer::decode(const uint8_t* data, uint8_t** message, uint32_t* outL
             }
         }
         else {
-            *message = buffer;
+            uint8_t* outBuf = new uint8_t[len + 1U];
+            ::memset(outBuf, 0x00U, len + 1U);
+            ::memcpy(outBuf, buffer, len);
+
+            *message = outBuf;
             if (outLength != nullptr) {
                 *outLength = len;
             }
