@@ -2045,9 +2045,7 @@ void FNENetwork::writeWhitelistRIDs(uint32_t peerId, uint32_t streamId, bool sen
 
     // send radio ID white/black lists
     std::vector<uint32_t> ridWhitelist;
-
-    auto ridLookups = m_ridLookup->table();
-    for (auto entry : ridLookups) {
+    for (auto entry : m_ridLookup->table()) {
         uint32_t id = entry.first;
         if (entry.second.radioEnabled()) {
             ridWhitelist.push_back(id);
@@ -2117,9 +2115,7 @@ void FNENetwork::writeBlacklistRIDs(uint32_t peerId, uint32_t streamId)
 
     // send radio ID blacklist
     std::vector<uint32_t> ridBlacklist;
-
-    auto ridLookups = m_ridLookup->table();
-    for (auto entry : ridLookups) {
+    for (auto entry : m_ridLookup->table()) {
         uint32_t id = entry.first;
         if (!entry.second.radioEnabled()) {
             ridBlacklist.push_back(id);
@@ -2234,8 +2230,7 @@ void FNENetwork::writeTGIDs(uint32_t peerId, uint32_t streamId, bool sendISSI)
     }
 
     std::vector<std::pair<uint32_t, uint8_t>> tgidList;
-    auto groupVoice = m_tidLookup->groupVoice();
-    for (auto entry : groupVoice) {
+    for (auto entry : m_tidLookup->groupVoice()) {
         std::vector<uint32_t> inclusion = entry.config().inclusion();
         std::vector<uint32_t> exclusion = entry.config().exclusion();
         std::vector<uint32_t> preferred = entry.config().preferred();
@@ -2315,8 +2310,7 @@ void FNENetwork::writeDeactiveTGIDs(uint32_t peerId, uint32_t streamId)
     }
 
     std::vector<std::pair<uint32_t, uint8_t>> tgidList;
-    auto groupVoice = m_tidLookup->groupVoice();
-    for (auto entry : groupVoice) {
+    for (auto entry : m_tidLookup->groupVoice()) {
         std::vector<uint32_t> inclusion = entry.config().inclusion();
         std::vector<uint32_t> exclusion = entry.config().exclusion();
 
