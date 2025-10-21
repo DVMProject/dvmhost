@@ -465,7 +465,10 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
         // repeat traffic to nodes connected to us as peers
         if (m_network->m_peers.size() > 0U && !noConnectedPeerRepeat) {
             uint32_t i = 0U;
+            m_network->m_peers.lock(false);
             for (auto peer : m_network->m_peers) {
+                if (peer.second == nullptr)
+                    continue;
                 if (peerId != peer.first) {
                     FNEPeerConnection* conn = peer.second;
                     if (ssrc == peer.first) {
@@ -529,6 +532,7 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                 }
             }
             m_network->m_frameQueue->flushQueue();
+            m_network->m_peers.unlock();
         }
 
         // if this is a private call, and we have already repeated to the connected peer that registered
