@@ -223,7 +223,7 @@ namespace log_internal
     extern HOST_SW_API FILE* GetLogFile();
 } // namespace log_internal
 
-namespace backtrace
+namespace log_stacktrace
 {
 #if !defined(CATCH2_TEST_COMPILATION)
 #if defined(BACKWARD_SYSTEM_LINUX) || defined(BACKWARD_SYSTEM_DARWIN)

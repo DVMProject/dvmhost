@@ -50,6 +50,7 @@ If cross-compiling ensure you install the appropriate libraries, for example for
 sudo dpkg --add-architecture arm64
 sudo apt-get update
 sudo apt-get install libasio-dev:arm64 libncurses-dev:arm64 libssl-dev:arm64
+sudo apt-get install libdw-dev:arm64
 ```
 
 ### Build Instructions

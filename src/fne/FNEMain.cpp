@@ -218,7 +218,7 @@ int main(int argc, char** argv)
         }
     }
 
-    backtrace::SignalHandling sh(g_foreground);
+    log_stacktrace::SignalHandling sh(g_foreground);
 
     ::signal(SIGINT, sigHandler);
     ::signal(SIGTERM, sigHandler);

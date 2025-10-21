@@ -243,11 +243,17 @@ if (ENABLE_LIBDW_SUPPORT)
         set(LIBDW_LIBRARY "dw")
     else()
         message("-- libdw (libdw-dev) not found, simple backtrace only")
+        add_definitions(-DBACKWARD_HAS_DW=0 -DBACKWARD_HAS_BACKTRACE_SYMBOL=1)
         set(LIBDW_INCLUDE_DIR "")
         set(LIBDW_LIBRARY "")
     endif (LIBDW_FOUND)
 
     mark_as_advanced(LIBDW_INCLUDE_DIR LIBDW_LIBRARY)
+else()
+    message("-- libdw (libdw-dev) disabled, simple backtrace only")
+    add_definitions(-DBACKWARD_HAS_DW=0 -DBACKWARD_HAS_BACKTRACE_SYMBOL=1)
+    set(LIBDW_INCLUDE_DIR "")
+    set(LIBDW_LIBRARY "")
 endif (ENABLE_LIBDW_SUPPORT)
 
 # FinalCut

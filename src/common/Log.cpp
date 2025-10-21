@@ -56,7 +56,7 @@ static struct tm m_tm;
 
 static std::ostream m_outStream { std::cerr.rdbuf() };
 
-bool backtrace::SignalHandling::m_foreground = false;
+bool log_stacktrace::SignalHandling::m_foreground = false;
 
 // ---------------------------------------------------------------------------
 //  Global Functions
