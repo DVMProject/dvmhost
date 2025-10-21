@@ -979,6 +979,7 @@ void Control::clock()
                 if (m_affiliations->isGranted(m_netLastDstId)) {
                     if (!m_dedicatedControl) {
                         m_affiliations->releaseGrant(m_netLastDstId, false);
+                        m_network->resetP25();
                     }
                 }
 
