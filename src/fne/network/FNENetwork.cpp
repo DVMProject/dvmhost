@@ -2007,9 +2007,9 @@ void FNENetwork::taskMetadataUpdate(MetadataUpdateRequest* req)
         std::string peerIdentity = network->resolvePeerIdentity(req->peerId);
 
         FNEPeerConnection* connection = network->m_peers[req->peerId];
-        connection->lock();
         if (connection != nullptr) {
             if (connection->connected()) {
+                connection->lock();
                 uint32_t streamId = network->createStreamId();
 
                 // if the connection is an external peer, and peer is participating in peer link,
@@ -2033,9 +2033,9 @@ void FNENetwork::taskMetadataUpdate(MetadataUpdateRequest* req)
 
                     network->writeHAParameters(req->peerId, streamId, false);
                 }
-            }
 
-            connection->unlock();
+                connection->unlock();
+            }
         }
 
         delete req;
