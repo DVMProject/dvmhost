@@ -129,7 +129,8 @@ namespace network
             m_isConventionalPeer(false),
             m_isSysView(false),
             m_isPeerReplica(false),
-            m_config()
+            m_config(),
+            m_peerLockMtx()
         {
             /* stub */
         }
@@ -157,7 +158,8 @@ namespace network
             m_isConventionalPeer(false),
             m_isSysView(false),
             m_isPeerReplica(false),
-            m_config()
+            m_config(),
+            m_peerLockMtx()
         {
             assert(id > 0U);
             assert(sockStorageLen > 0U);
@@ -180,6 +182,15 @@ namespace network
 
             return " " + m_identity;
         }
+
+        /**
+         * @brief Lock the peer.
+         */
+        inline void lock() const { m_peerLockMtx.lock(); }
+        /**
+         * @brief Unlock the peer.
+         */
+        inline void unlock() const { m_peerLockMtx.unlock(); }
 
     public:
         /**
@@ -263,6 +274,9 @@ namespace network
          * @brief JSON objecting containing peer configuration information.
          */
         DECLARE_PROPERTY_PLAIN(json::object, config);
+
+    private:
+        mutable std::mutex m_peerLockMtx;
     };
 
     // ---------------------------------------------------------------------------
