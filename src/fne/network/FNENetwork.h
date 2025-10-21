@@ -26,6 +26,7 @@
 
 #include "fne/Defines.h"
 #include "common/concurrent/unordered_map.h"
+#include "common/concurrent/shared_unordered_map.h"
 #include "common/network/BaseNetwork.h"
 #include "common/network/json/json.h"
 #include "common/lookups/RadioIdLookup.h"
@@ -472,7 +473,7 @@ namespace network
         NET_CONN_STATUS m_status;
 
         typedef std::pair<const uint32_t, network::FNEPeerConnection*> PeerMapPair;
-        concurrent::unordered_map<uint32_t, FNEPeerConnection*> m_peers;
+        concurrent::shared_unordered_map<uint32_t, FNEPeerConnection*> m_peers;
         concurrent::unordered_map<uint32_t, json::array> m_peerReplicaPeers;
         typedef std::pair<const uint32_t, lookups::AffiliationLookup*> PeerAffiliationMapPair;
         concurrent::unordered_map<uint32_t, fne_lookups::AffiliationLookup*> m_peerAffiliations;

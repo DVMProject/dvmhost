@@ -474,7 +474,7 @@ void FNENetwork::clock(uint32_t ms)
     m_updateLookupTimer.clock(ms);
     if (m_updateLookupTimer.isRunning() && m_updateLookupTimer.hasExpired()) {
         // send network metadata updates to peers
-        m_peers.lock(false);
+        m_peers.shared_lock();
         for (auto peer : m_peers) {
             uint32_t id = peer.first;
             FNEPeerConnection* connection = peer.second;
@@ -503,7 +503,7 @@ void FNENetwork::clock(uint32_t ms)
                 }
             }
         }
-        m_peers.unlock();
+        m_peers.shared_unlock();
 
         m_updateLookupTimer.start();
     }

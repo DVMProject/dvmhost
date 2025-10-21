@@ -244,7 +244,7 @@ bool TagAnalogData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
         // repeat traffic to nodes peered to us as master
         if (m_network->m_peers.size() > 0U) {
             uint32_t i = 0U;
-            m_network->m_peers.lock(false);
+            m_network->m_peers.shared_lock();
             for (auto peer : m_network->m_peers) {
                 if (peer.second == nullptr)
                     continue;
@@ -280,7 +280,7 @@ bool TagAnalogData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
                 }
             }
             m_network->m_frameQueue->flushQueue();
-            m_network->m_peers.unlock();
+            m_network->m_peers.shared_unlock();
         }
 
         /*
