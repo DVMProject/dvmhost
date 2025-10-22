@@ -1204,7 +1204,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
 
                                         if (peerConfig["software"].is<std::string>()) {
                                             std::string software = peerConfig["software"].get<std::string>();
-                                            LogInfoEx(LOG_NET, "PEER %u >> Software Verison [%s]", peerId, software.c_str());
+                                            LogInfoEx(LOG_NET, "PEER %u >> Software Version [%s]", peerId, software.c_str());
                                         }
 
                                         // setup the affiliations list for this peer
