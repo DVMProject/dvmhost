@@ -210,7 +210,7 @@ peers:
       password: RPT1234
       # Textual identity of this peer.
       identity: EXPEER
-      # Network Peer ID
+      # Network Peer ID of this peer on the upstream FNE master.
       peerId: 9000990
 
       # Flag indicating whether or not peer endpoint networking is encrypted.

@@ -438,10 +438,11 @@ void FNENetwork::clock(uint32_t ms)
             }
         }
 
-        // send peer updates to replica peers
+        // send peer updates to external FNE peers
         if (m_host->m_peerNetworks.size() > 0) {
             for (auto peer : m_host->m_peerNetworks) {
                 if (peer.second != nullptr) {
+                    // perform peer replica maintainence tasks
                     if (peer.second->isEnabled() && peer.second->isPeerReplica()) {
                         if (!peer.second->getAttachedKeyRSPHandler()) {
                             peer.second->setAttachedKeyRSPHandler(true); // this is the only place this should happen
@@ -1157,7 +1158,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                         if (peerConfig["identity"].is<std::string>()) {
                                             std::string identity = peerConfig["identity"].get<std::string>();
                                             connection->identity(identity);
-                                            LogInfoEx(LOG_NET, "PEER %u reports identity [%8s]", peerId, identity.c_str());
+                                            LogInfoEx(LOG_NET, "PEER %u >> Identity [%8s]", peerId, identity.c_str());
                                         }
 
                                         // is the peer reporting it is an external FNE neighbor peer?
@@ -1165,7 +1166,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                             bool external = peerConfig["externalPeer"].get<bool>();
                                             connection->isExternalFNEPeer(external);
                                             if (external)
-                                                LogInfoEx(LOG_NET, "PEER %u reports external FNE neighbor peer", peerId);
+                                                LogInfoEx(LOG_NET, "PEER %u >> External FNE Neighbor Peer", peerId);
 
                                             // check if the peer is participating in peer link
                                             lookups::PeerId peerEntry = network->m_peerListLookup->find(req->peerId);
@@ -1174,7 +1175,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                                     if (network->m_host->m_useAlternatePortForDiagnostics) {
                                                         connection->isPeerReplica(true);
                                                         if (external)
-                                                            LogInfoEx(LOG_NET, "PEER %u configured for peer replication", peerId);
+                                                            LogInfoEx(LOG_NET, "PEER %u >> Participates in Peer Replication", peerId);
                                                     } else {
                                                         LogError(LOG_NET, "PEER %u, Peer replication operations *require* the alternate diagnostics port option to be enabled.", peerId);
                                                         LogError(LOG_NET, "PEER %u, will not receive peer replication ACL updates.", peerId);
@@ -1189,7 +1190,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                                 bool convPeer = peerConfig["conventionalPeer"].get<bool>();
                                                 connection->isConventionalPeer(convPeer);
                                                 if (convPeer)
-                                                    LogInfoEx(LOG_NET, "PEER %u reports conventional peer", peerId);
+                                                    LogInfoEx(LOG_NET, "PEER %u >> Conventional Peer", peerId);
                                             }
                                         }
 
@@ -1198,12 +1199,12 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                             bool sysView = peerConfig["sysView"].get<bool>();
                                             connection->isSysView(sysView);
                                             if (sysView)
-                                                LogInfoEx(LOG_NET, "PEER %u reports SysView peer", peerId);
+                                                LogInfoEx(LOG_NET, "PEER %u >> SysView Peer", peerId);
                                         }
 
                                         if (peerConfig["software"].is<std::string>()) {
                                             std::string software = peerConfig["software"].get<std::string>();
-                                            LogInfoEx(LOG_NET, "PEER %u reports software %s", peerId, software.c_str());
+                                            LogInfoEx(LOG_NET, "PEER %u >> Software Verison [%s]", peerId, software.c_str());
                                         }
 
                                         // setup the affiliations list for this peer

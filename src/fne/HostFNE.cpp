@@ -587,7 +587,7 @@ bool HostFNE::createMasterNetwork()
             }
         }
         else {
-            LogWarning(LOG_HOST, "Invalid master  network preshared encryption key length, key should be 32 hex pairs, or 64 characters. Encryption disabled.");
+            LogWarning(LOG_HOST, "Invalid master network preshared encryption key length, key should be 32 hex pairs, or 64 characters. Encryption disabled.");
             encrypted = false;
         }
     }
