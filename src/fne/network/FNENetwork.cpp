@@ -1195,6 +1195,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
 
                                             // master peer ID should never be zero for an external peer -- use the peer ID instead
                                             if (masterPeerId == 0U) {
+                                                LogWarning(LOG_NET, "PEER %u is an external FNE neighbor peer but has not supplied a valid masterPeerId, using own peerId as masterPeerId (old FNE perhaps?)", peerId);
                                                 masterPeerId = peerId;
                                             }
 
