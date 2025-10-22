@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2023,2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2023,2024,2025 Bryan Biedenkapp, N2PLL
  *
  */
 #include "remote/RESTClient.h"
@@ -52,6 +52,8 @@
 #define RCD_FNE_SAVE_RID_ACL            "fne-rid-commit"
 #define RCD_FNE_SAVE_TGID_ACL           "fne-tgid-commit"
 #define RCD_FNE_SAVE_PEER_ACL           "fne-peer-commit"
+
+#define RCD_FNE_GET_MASTERTREE          "fne-master-tree"
 
 #define RCD_MODE                        "mdm-mode"
 #define RCD_MODE_OPT_IDLE               "idle"
@@ -219,6 +221,8 @@ void usage(const char* message, const char* arg)
     reply += "  fne-rid-commit              Saves the current RID ACL to permenant storage (Converged FNE only)\r\n";
     reply += "  fne-tgid-commit             Saves the current TGID ACL to permenant storage (Converged FNE only)\r\n";
     reply += "  fne-peer-commit             Saves the current peer ACL to permenant storage (Converged FNE only)\r\n";
+    reply += "\r\n";
+    reply += "  fne-master-tree             Retrieves the current master FNE tree (Converged FNE only)\r\n";
     reply += "\r\n";
     reply += "  mdm-mode <mode>             Set current mode of host (idle, lockout, dmr, p25, nxdn)\r\n";
     reply += "  mdm-kill                    Causes the host to quit\r\n";
@@ -915,6 +919,9 @@ int main(int argc, char** argv)
         }
         else if (rcom == RCD_FNE_SAVE_PEER_ACL) {
             retCode = client->send(HTTP_GET, FNE_GET_PEER_COMMIT, json::object(), response);
+        }
+        else if (rcom == RCD_FNE_GET_MASTERTREE) {
+            retCode = client->send(HTTP_GET, FNE_GET_MASTER_TREE, json::object(), response);
         }
         else {
             args.clear();

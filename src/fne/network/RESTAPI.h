@@ -334,6 +334,14 @@ private:
      */
     void restAPI_GetAffList(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
 
+    /**
+     * @brief REST API endpoint; implements get master tree list request.
+     * @param request HTTP request.
+     * @param reply HTTP reply.
+     * @param match HTTP request matcher.
+     */
+    void restAPI_GetMasterTree(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+
     /*
     ** Digital Mobile Radio
     */

@@ -56,4 +56,6 @@
 
 #define FNE_GET_AFF_LIST                "/report-affiliations"
 
+#define FNE_GET_MASTER_TREE             "/rerpot-master-tree"
+
 #endif // __FNE_REST_DEFINES_H__
