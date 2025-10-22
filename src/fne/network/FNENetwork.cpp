@@ -1179,6 +1179,14 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                             LogInfoEx(LOG_NET, "PEER %u >> Software Version [%s]", peerId, software.c_str());
                                         }
 
+                                        // is the peer reporting it is a SysView peer?
+                                        if (peerConfig["sysView"].is<bool>()) {
+                                            bool sysView = peerConfig["sysView"].get<bool>();
+                                            connection->isSysView(sysView);
+                                            if (sysView)
+                                                LogInfoEx(LOG_NET, "PEER %u >> SysView Peer", peerId);
+                                        }
+
                                         // is the peer reporting it is an external FNE neighbor peer?
                                         if (peerConfig["externalPeer"].is<bool>()) {
                                             bool external = peerConfig["externalPeer"].get<bool>();
@@ -1214,7 +1222,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                                 }
                                             }
 
-                                            if (network->m_enableSpanningTree) {
+                                            if (network->m_enableSpanningTree && !connection->isSysView()) {
                                                 // check if this peer is already connected via another peer
                                                 MasterTree* tree = MasterTree::findByMasterID(masterPeerId);
                                                 if (tree != nullptr) {
@@ -1244,14 +1252,6 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                                 if (convPeer)
                                                     LogInfoEx(LOG_NET, "PEER %u >> Conventional Peer", peerId);
                                             }
-                                        }
-
-                                        // is the peer reporting it is a SysView peer?
-                                        if (peerConfig["sysView"].is<bool>()) {
-                                            bool sysView = peerConfig["sysView"].get<bool>();
-                                            connection->isSysView(sysView);
-                                            if (sysView)
-                                                LogInfoEx(LOG_NET, "PEER %u >> SysView Peer", peerId);
                                         }
 
                                         // setup the affiliations list for this peer
