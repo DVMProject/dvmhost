@@ -390,7 +390,7 @@ void FNENetwork::processNetwork()
 
 /* Process network tree disconnect notification. */
 
-void FNENetwork::processNetworkTreeDisconnect(uint32_t offendingPeerId)
+void FNENetwork::processNetworkTreeDisconnect(uint32_t peerId, uint32_t offendingPeerId)
 {
     if (m_status != NET_STAT_MST_RUNNING) {
         return;
@@ -408,10 +408,28 @@ void FNENetwork::processNetworkTreeDisconnect(uint32_t offendingPeerId)
                 connection->connectionState());
             writePeerNAK(offendingPeerId, createStreamId(), TAG_REPEATER_CONFIG, NET_CONN_NAK_FNE_DUPLICATE_CONN);
             disconnectPeer(offendingPeerId, connection);
+
+            if (m_logSpanningTreeChanges && m_fneTree->hasChildren()) {
+                LogInfoEx(LOG_NET, "Network Tree, Tree Change, current tree:");
+                MasterTree::visualizeTreeToLog(m_fneTree);
+            }
         } else {
             LogError(LOG_NET, "Network Tree Disconnect, upstream master requested disconnect for PEER %u, but connection is null", offendingPeerId);
         }
     } else {
+        // is this perhaps a peer connection of ours?
+        if (m_host->m_peerNetworks.size() > 0) {
+            for (auto peer : m_host->m_peerNetworks) {
+                if (peer.second != nullptr) {
+                    if (peer.second->getPeerId() == peerId) {
+                        LogWarning(LOG_NET, "PEER %u, upstream master requested disconnect for our peer connection, duplicate connection dropped", peerId);
+                        peer.second->close();
+                        return;
+                    }
+                }
+            }
+        }
+
         LogError(LOG_NET, "Network Tree Disconnect, upstream master requested disconnect for unknown PEER %u", offendingPeerId);
     }
 }
@@ -1201,8 +1219,8 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                                     break;
                                                 } else {
                                                     new MasterTree(peerId, masterPeerId, network->m_fneTree);
-                                                    if (network->m_logSpanningTreeChanges) {
-                                                        LogInfoEx(LOG_NET, "PEER %u (%s) Network Tree, Tree List, current tree:", peerId, connection->identWithQualifier().c_str());
+                                                    if (network->m_logSpanningTreeChanges && network->m_fneTree->hasChildren()) {
+                                                        LogInfoEx(LOG_NET, "PEER %u (%s) Network Tree, Tree Change, current tree:", peerId, connection->identWithQualifier().c_str());
                                                         MasterTree::visualizeTreeToLog(network->m_fneTree);
                                                     }
                                                 }
@@ -1904,8 +1922,8 @@ void FNENetwork::erasePeer(uint32_t peerId)
             MasterTree::erasePeer(peerId);
         }
 
-        if (m_logSpanningTreeChanges) {
-            LogInfoEx(LOG_NET, "PEER %u Network Tree, Tree List, current tree:", peerId);
+        if (m_logSpanningTreeChanges && m_fneTree->hasChildren()) {
+            LogInfoEx(LOG_NET, "PEER %u Network Tree, Tree Change, current tree:", peerId);
             MasterTree::visualizeTreeToLog(m_fneTree);
         }
     }

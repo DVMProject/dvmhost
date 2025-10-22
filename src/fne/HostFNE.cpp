@@ -1099,6 +1099,6 @@ void HostFNE::processPeerAnalog(network::PeerNetwork* peerNetwork, const uint8_t
 void HostFNE::processNetworkTreeDisconnect(network::PeerNetwork* peerNetwork, const uint32_t offendingPeerId)
 {
     if (m_network != nullptr) {
-        m_network->processNetworkTreeDisconnect(offendingPeerId);
+        m_network->processNetworkTreeDisconnect(peerNetwork->getPeerId(), offendingPeerId);
     }
 }

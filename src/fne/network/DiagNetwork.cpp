@@ -652,14 +652,14 @@ void DiagNetwork::taskNetworkRx(NetPacketRequest* req)
                                             std::vector<uint32_t> duplicatePeers;
                                             MasterTree::deserializeTree(arr, network->m_fneTree, &duplicatePeers);
 
-                                            if (network->m_logSpanningTreeChanges) {
-                                                LogInfoEx(LOG_NET, "PEER %u (%s) Network Tree, Tree List, current tree:", peerId, connection->identWithQualifier().c_str());
+                                            if (network->m_logSpanningTreeChanges && network->m_fneTree->hasChildren()) {
+                                                LogInfoEx(LOG_NET, "PEER %u (%s) Network Tree, Tree Change, current tree:", peerId, connection->identWithQualifier().c_str());
                                                 MasterTree::visualizeTreeToLog(network->m_fneTree);
                                             }
 
                                             if (duplicatePeers.size() > 0U) {
                                                 for (auto dupPeerId : duplicatePeers) {
-                                                    LogWarning(LOG_NET, "PEER %u (%s) Network Tree, Tree List, disconnecting duplicate peer connection for PEER %u to prevent network loop",
+                                                    LogWarning(LOG_NET, "PEER %u (%s) Network Tree, Tree Change, disconnecting duplicate peer connection for PEER %u to prevent network loop",
                                                         peerId, connection->identWithQualifier().c_str(), dupPeerId);
                                                     network->writeTreeDisconnect(peerId, dupPeerId);
                                                 }

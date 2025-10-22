@@ -447,7 +447,7 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
         case NET_SUBFUNC::NET_TREE_DISC:                          // Network Tree Disconnect
         {
             uint32_t offendingPeerId = GET_UINT32(data, 6U);
-            LogWarning(LOG_NET, "PEER %u Network Tree Disconnect, requested from upstream master, posssible duplicate connection for PEER %u", m_peerId, offendingPeerId);
+            LogWarning(LOG_NET, "PEER %u Network Tree Disconnect, requested from upstream master, possible duplicate connection for PEER %u", m_peerId, offendingPeerId);
 
             if (m_netTreeDiscCallback != nullptr) {
                 m_netTreeDiscCallback(this, offendingPeerId);

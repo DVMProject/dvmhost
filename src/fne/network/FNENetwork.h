@@ -231,7 +231,7 @@ namespace network
          * @brief Process network tree disconnect notification.
          * @param offendingPeerId Offending Peer ID.
          */
-        void processNetworkTreeDisconnect(uint32_t offendingPeerId);
+        void processNetworkTreeDisconnect(uint32_t peerId, uint32_t offendingPeerId);
 
         /**
          * @brief Updates the timer by the passed number of milliseconds.
