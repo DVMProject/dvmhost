@@ -280,6 +280,7 @@ bool PeerNetwork::writeConfig()
     // Flags
     bool external = true;
     config["externalPeer"].set<bool>(external);                                     // External Peer Marker
+    config["masterPeerId"].set<uint32_t>(m_peerId);                                 // Master Peer ID
     bool convPeer = true;
     config["conventionalPeer"].set<bool>(convPeer);                                 // Conventional Peer Marker
     bool sysView = true;
