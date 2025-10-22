@@ -25,8 +25,12 @@ using namespace network;
 //  Constants
 // ---------------------------------------------------------------------------
 
+#define DEFAULT_RETRY_TIME 10U // 10 seconds
+#define DUPLICATE_CONN_RETRY_TIME 1800U // 30 minutes
+
 #define MAX_RETRY_BEFORE_RECONNECT 4U
 #define MAX_RETRY_HA_RECONNECT 2U
+#define MAX_RETRY_DUPLICATE_CONN 3U
 #define MAX_SERVER_DIFF 360ULL // maximum difference in time between a server timestamp and local timestamp in milliseconds
 
 // ---------------------------------------------------------------------------
@@ -57,9 +61,10 @@ Network::Network(const std::string& address, uint16_t port, uint16_t localPort, 
     m_ridLookup(nullptr),
     m_tidLookup(nullptr),
     m_salt(nullptr),
-    m_retryTimer(1000U, 10U),
+    m_retryTimer(1000U, DEFAULT_RETRY_TIME),
     m_retryCount(0U),
     m_maxRetryCount(MAX_RETRY_BEFORE_RECONNECT),
+    m_duplicateConnCount(0U),
     m_timeoutTimer(1000U, MAX_PEER_PING_TIME),
     m_pktSeq(0U),
     m_loginStreamId(0U),
@@ -219,6 +224,15 @@ void Network::clock(uint32_t ms)
 
                     m_status = NET_STAT_WAITING_LOGIN;
                     m_timeoutTimer.start();
+                }
+
+                if (m_duplicateConnCount >= MAX_RETRY_DUPLICATE_CONN) {
+                    LogError(LOG_NET, "PEER %u exceeded maximum duplicate connection retries, disabling network connection", m_peerId);
+                    m_enabled = false;
+                    m_duplicateConnCount = 0U;
+                    m_retryTimer.stop();
+                    close();
+                    return;
                 }
             }
 
@@ -997,11 +1011,13 @@ void Network::clock(uint32_t ms)
                         break;
 
                     case NET_CONN_NAK_FNE_DUPLICATE_CONN:
-                        LogWarning(LOG_NET, "PEER %u master NAK; duplicate connection from FNE, remotePeerId = %u", m_peerId, rtpHeader.getSSRC());
-                        m_status = NET_STAT_WAITING_CONNECT;
-                        m_enabled = false; // duplicate connection give up stop trying to connect
+                        LogWarning(LOG_NET, "PEER %u master NAK; duplicate connection to FNE, remotePeerId = %u", m_peerId, rtpHeader.getSSRC());
+                        m_status = NET_STAT_WAITING_LOGIN;
+                        m_remotePeerId = 0U;
+                        m_duplicateConnCount++;
                         m_retryTimer.stop();
-                        close();
+                        m_retryTimer.setTimeout(DUPLICATE_CONN_RETRY_TIME);
+                        m_retryTimer.start();
                         break;
 
                     case NET_CONN_NAK_GENERAL_FAILURE:
@@ -1063,7 +1079,10 @@ void Network::clock(uint32_t ms)
 
                         m_status = NET_STAT_RUNNING;
                         m_timeoutTimer.start();
+                        m_retryTimer.setTimeout(DEFAULT_RETRY_TIME);
                         m_retryTimer.start();
+
+                        m_duplicateConnCount = 0U;
 
                         if (length > 6) {
                             m_useAlternatePortForDiagnostics = (buffer[6U] & 0x80U) == 0x80U;
@@ -1284,6 +1303,11 @@ bool Network::writeLogin()
     if (!m_enabled) {
         return false;
     }
+
+    // reset retry timer default timeout
+    if (m_retryTimer.isRunning())
+        m_retryTimer.stop();
+    m_retryTimer.setTimeout(DEFAULT_RETRY_TIME);
 
     uint8_t buffer[8U];
     ::memcpy(buffer + 0U, TAG_REPEATER_LOGIN, 4U);

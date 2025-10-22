@@ -318,6 +318,7 @@ namespace network
         Timer m_retryTimer;
         uint8_t m_retryCount;
         uint8_t m_maxRetryCount;
+        uint8_t m_duplicateConnCount;
         Timer m_timeoutTimer;
 
         uint32_t* m_rxDMRStreamId;
