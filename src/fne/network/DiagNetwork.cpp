@@ -33,6 +33,9 @@ DiagNetwork::DiagNetwork(HostFNE* host, FNENetwork* fneNetwork, const std::strin
     m_host(host),
     m_address(address),
     m_port(port),
+    m_status(NET_STAT_INVALID),
+    m_peerReplicaActPkt(),
+    m_peerTreeListPkt(),
     m_threadPool(workerCnt, "diag")
 {
     assert(fneNetwork != nullptr);
@@ -76,6 +79,7 @@ void DiagNetwork::processNetwork()
 
         NetPacketRequest* req = new NetPacketRequest();
         req->obj = m_fneNetwork;
+        req->diagObj = this;
         req->peerId = peerId;
 
         req->address = address;
@@ -163,6 +167,17 @@ void DiagNetwork::taskNetworkRx(NetPacketRequest* req)
     if (req != nullptr) {
         FNENetwork* network = static_cast<FNENetwork*>(req->obj);
         if (network == nullptr) {
+            if (req != nullptr) {
+                if (req->buffer != nullptr)
+                    delete[] req->buffer;
+                delete req;
+            }
+
+            return;
+        }
+
+        DiagNetwork* diagNetwork = static_cast<DiagNetwork*>(req->diagObj);
+        if (diagNetwork == nullptr) {
             if (req != nullptr) {
                 if (req->buffer != nullptr)
                     delete[] req->buffer;
@@ -383,16 +398,16 @@ void DiagNetwork::taskNetworkRx(NetPacketRequest* req)
 
                                 // Utils::dump(1U, "DiagNetwork::taskNetworkRx(), REPL_ACT_PEER_LIST, Raw Payload", rawPayload, req->length);
 
-                                if (network->m_peerReplicaActPkt.find(peerId) == network->m_peerReplicaActPkt.end()) {
-                                    network->m_peerReplicaActPkt.insert(peerId, FNENetwork::PacketBufferEntry());
+                                if (diagNetwork->m_peerReplicaActPkt.find(peerId) == diagNetwork->m_peerReplicaActPkt.end()) {
+                                    diagNetwork->m_peerReplicaActPkt.insert(peerId, DiagNetwork::PacketBufferEntry());
 
-                                    FNENetwork::PacketBufferEntry& pkt = network->m_peerReplicaActPkt[peerId];
+                                    DiagNetwork::PacketBufferEntry& pkt = diagNetwork->m_peerReplicaActPkt[peerId];
                                     pkt.buffer = new PacketBuffer(true, "Peer Replication, Active Peer List");
                                     pkt.streamId = streamId;
 
                                     pkt.locked = false;
                                 } else {
-                                    FNENetwork::PacketBufferEntry& pkt = network->m_peerReplicaActPkt[peerId];
+                                    DiagNetwork::PacketBufferEntry& pkt = diagNetwork->m_peerReplicaActPkt[peerId];
                                     if (!pkt.locked && pkt.streamId != streamId) {
                                         LogError(LOG_NET, "PEER %u (%s) Peer Replication, Active Peer List, stream ID mismatch, expected %u, got %u", peerId,
                                             connection->identWithQualifier().c_str(), pkt.streamId, streamId);
@@ -406,7 +421,7 @@ void DiagNetwork::taskNetworkRx(NetPacketRequest* req)
                                     }
                                 }
 
-                                FNENetwork::PacketBufferEntry& pkt = network->m_peerReplicaActPkt[peerId];
+                                DiagNetwork::PacketBufferEntry& pkt = diagNetwork->m_peerReplicaActPkt[peerId];
                                 if (pkt.locked) {
                                     while (pkt.locked)
                                         Thread::sleep(1U);
@@ -430,7 +445,7 @@ void DiagNetwork::taskNetworkRx(NetPacketRequest* req)
                                         if (decompressed != nullptr) {
                                             delete[] decompressed;
                                         }
-                                        network->m_peerReplicaActPkt.erase(peerId);
+                                        diagNetwork->m_peerReplicaActPkt.erase(peerId);
                                         break;
                                     }
                                     else  {
@@ -443,7 +458,7 @@ void DiagNetwork::taskNetworkRx(NetPacketRequest* req)
                                             if (decompressed != nullptr) {
                                                 delete[] decompressed;
                                             }
-                                            network->m_peerReplicaActPkt.erase(peerId);
+                                            diagNetwork->m_peerReplicaActPkt.erase(peerId);
                                             break;
                                         }
                                         else {
@@ -459,7 +474,7 @@ void DiagNetwork::taskNetworkRx(NetPacketRequest* req)
                                     if (decompressed != nullptr) {
                                         delete[] decompressed;
                                     }
-                                    network->m_peerReplicaActPkt.erase(peerId);
+                                    diagNetwork->m_peerReplicaActPkt.erase(peerId);
                                 } else {
                                     pkt.locked = false;
                                 }
@@ -545,6 +560,125 @@ void DiagNetwork::taskNetworkRx(NetPacketRequest* req)
                                     }
                                 }
                             } else {
+                                network->writePeerNAK(peerId, 0U, TAG_PEER_REPLICA, NET_CONN_NAK_FNE_UNAUTHORIZED);
+                            }
+                        }
+                    }
+                }
+                break;
+
+            case NET_FUNC::NET_TREE:
+                if (!network->m_enableSpanningTree)
+                    break;
+                if (req->fneHeader.getSubFunction() == NET_SUBFUNC::NET_TREE_LIST) { // FNE Network Tree List
+                    if (peerId > 0 && (network->m_peers.find(peerId) != network->m_peers.end())) {
+                        FNEPeerConnection* connection = network->m_peers[peerId];
+                        if (connection != nullptr) {
+                            std::string ip = udp::Socket::address(req->address);
+
+                            // validate peer (simple validation really)
+                            if (connection->connected() && connection->address() == ip && connection->isExternalFNEPeer()) {
+                                DECLARE_UINT8_ARRAY(rawPayload, req->length);
+                                ::memcpy(rawPayload, req->buffer, req->length);
+
+                                // Utils::dump(1U, "DiagNetwork::taskNetworkRx(), NET_TREE_LIST, Raw Payload", rawPayload, req->length);
+
+                                if (diagNetwork->m_peerTreeListPkt.find(peerId) == diagNetwork->m_peerTreeListPkt.end()) {
+                                    diagNetwork->m_peerTreeListPkt.insert(peerId, DiagNetwork::PacketBufferEntry());
+
+                                    DiagNetwork::PacketBufferEntry& pkt = diagNetwork->m_peerTreeListPkt[peerId];
+                                    pkt.buffer = new PacketBuffer(true, "Network Tree, Tree List");
+                                    pkt.streamId = streamId;
+
+                                    pkt.locked = false;
+                                } else {
+                                    DiagNetwork::PacketBufferEntry& pkt = diagNetwork->m_peerTreeListPkt[peerId];
+                                    if (!pkt.locked && pkt.streamId != streamId) {
+                                        LogError(LOG_NET, "PEER %u (%s) Network Tree, Tree List, stream ID mismatch, expected %u, got %u", peerId,
+                                            connection->identWithQualifier().c_str(), pkt.streamId, streamId);
+                                        pkt.buffer->clear();
+                                        pkt.streamId = streamId;
+                                    }
+
+                                    if (pkt.streamId != streamId) {
+                                        // otherwise drop the packet
+                                        break;
+                                    }
+                                }
+
+                                DiagNetwork::PacketBufferEntry& pkt = diagNetwork->m_peerTreeListPkt[peerId];
+                                if (pkt.locked) {
+                                    while (pkt.locked)
+                                        Thread::sleep(1U);
+                                }
+
+                                pkt.locked = true;
+
+                                uint32_t decompressedLen = 0U;
+                                uint8_t* decompressed = nullptr;
+
+                                if (pkt.buffer->decode(rawPayload, &decompressed, &decompressedLen)) {
+                                    std::string payload(decompressed + 8U, decompressed + decompressedLen);
+
+                                    // parse JSON body
+                                    json::value v;
+                                    std::string err = json::parse(v, payload);
+                                    if (!err.empty()) {
+                                        LogError(LOG_NET, "PEER %u (%s) error parsing network tree list, %s", peerId, connection->identWithQualifier().c_str(), err.c_str());
+                                        pkt.buffer->clear();
+                                        pkt.streamId = 0U;
+                                        if (decompressed != nullptr) {
+                                            delete[] decompressed;
+                                        }
+                                        diagNetwork->m_peerTreeListPkt.erase(peerId);
+                                        break;
+                                    }
+                                    else  {
+                                        // ensure parsed JSON is an array
+                                        if (!v.is<json::array>()) {
+                                            LogError(LOG_NET, "PEER %u (%s) error parsing network tree list, data was not valid", peerId, connection->identWithQualifier().c_str());
+                                            pkt.buffer->clear();
+                                            delete pkt.buffer;
+                                            pkt.streamId = 0U;
+                                            if (decompressed != nullptr) {
+                                                delete[] decompressed;
+                                            }
+                                            diagNetwork->m_peerTreeListPkt.erase(peerId);
+                                            break;
+                                        }
+                                        else {
+                                            json::array arr = v.get<json::array>();
+                                            LogInfoEx(LOG_NET, "PEER %u (%s) Network Tree, Tree List, updating %u peer entries", peerId, connection->identWithQualifier().c_str(), arr.size());
+                                            std::vector<uint32_t> duplicatePeers;
+                                            MasterTree::deserializeTree(arr, network->m_fneTree, &duplicatePeers);
+
+                                            if (network->m_logSpanningTreeChanges) {
+                                                LogInfoEx(LOG_NET, "PEER %u (%s) Network Tree, Tree List, current tree:", peerId, connection->identWithQualifier().c_str());
+                                                MasterTree::visualizeTreeToLog(network->m_fneTree);
+                                            }
+
+                                            if (duplicatePeers.size() > 0U) {
+                                                for (auto dupPeerId : duplicatePeers) {
+                                                    LogWarning(LOG_NET, "PEER %u (%s) Network Tree, Tree List, disconnecting duplicate peer connection for PEER %u to prevent network loop",
+                                                        peerId, connection->identWithQualifier().c_str(), dupPeerId);
+                                                    network->writeTreeDisconnect(peerId, dupPeerId);
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    pkt.buffer->clear();
+                                    delete pkt.buffer;
+                                    pkt.streamId = 0U;
+                                    if (decompressed != nullptr) {
+                                        delete[] decompressed;
+                                    }
+                                    diagNetwork->m_peerTreeListPkt.erase(peerId);
+                                } else {
+                                    pkt.locked = false;
+                                }
+                            }
+                            else {
                                 network->writePeerNAK(peerId, 0U, TAG_PEER_REPLICA, NET_CONN_NAK_FNE_UNAUTHORIZED);
                             }
                         }

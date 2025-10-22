@@ -793,6 +793,9 @@ void* HostFNE::threadDiagNetwork(void* arg)
 
 bool HostFNE::createPeerNetworks()
 {
+    yaml::Node masterConf = m_conf["master"];
+    uint32_t masterPeerId = masterConf["peerId"].as<uint32_t>(1001U);
+
     yaml::Node& peerList = m_conf["peers"];
     if (peerList.size() > 0U) {
         if (peerList.size() > MAX_RECOMMENDED_PEER_NETWORKS) {
@@ -860,6 +863,7 @@ bool HostFNE::createPeerNetworks()
                 m_allowActivityTransfer, m_allowDiagnosticTransfer, false, false);
             network->setMetadata(identity, rxFrequency, txFrequency, 0.0F, 0.0F, 0, 0, 0, latitude, longitude, 0, location);
             network->setLookups(m_ridLookup, m_tidLookup);
+            network->setMasterPeerId(masterPeerId);
             network->setPeerLookups(m_peerListLookup);
             network->setPeerReplicationSaveACL(m_peerReplicaSavesACL);
             if (encrypted) {
@@ -870,6 +874,8 @@ bool HostFNE::createPeerNetworks()
             network->setP25Callback(std::bind(&HostFNE::processPeerP25, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, std::placeholders::_6));
             network->setNXDNCallback(std::bind(&HostFNE::processPeerNXDN, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, std::placeholders::_6));
             network->setAnalogCallback(std::bind(&HostFNE::processPeerAnalog, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, std::placeholders::_6));
+
+            network->setNetTreeDiscCallback(std::bind(&HostFNE::processNetworkTreeDisconnect, this, std::placeholders::_1, std::placeholders::_2));
 
             network->enable(enabled);
             if (enabled) {
@@ -1085,5 +1091,14 @@ void HostFNE::processPeerAnalog(network::PeerNetwork* peerNetwork, const uint8_t
     if (length > 0U) {
         uint32_t peerId = peerNetwork->getPeerId();
         m_network->analogTrafficHandler()->processFrame(data, length, peerId, rtpHeader.getSSRC(), rtpHeader.getSequence(), streamId, true);
+    }
+}
+
+/* Processes network tree disconnect notification. */
+
+void HostFNE::processNetworkTreeDisconnect(network::PeerNetwork* peerNetwork, const uint32_t offendingPeerId)
+{
+    if (m_network != nullptr) {
+        m_network->processNetworkTreeDisconnect(offendingPeerId);
     }
 }

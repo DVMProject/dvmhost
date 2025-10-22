@@ -72,7 +72,8 @@ namespace network
 
             ANNOUNCE = 0x91U,                       //!< Network Announce Function
 
-            REPL = 0x92U                            //!< FNE Replication Function
+            REPL = 0x92U,                           //!< FNE Replication Function
+            NET_TREE = 0x93U                        //!< FNE Network Tree Function
         };
     };
 
@@ -112,6 +113,9 @@ namespace network
 
             REPL_ACT_PEER_LIST = 0xA2U,             //!< FNE Replication Active Peer List Transfer
             REPL_HA_PARAMS = 0xA3U,                 //!< FNE Replication HA Parameters
+
+            NET_TREE_LIST = 0x00U,                  //!< FNE Network Tree List
+            NET_TREE_DISC = 0x01U                   //!< FNE Network Tree Disconnect
         };
     };
 

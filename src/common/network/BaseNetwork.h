@@ -133,6 +133,7 @@ namespace network
         NET_CONN_NAK_PEER_ACL,                      //!< Peer ACL
 
         NET_CONN_NAK_FNE_MAX_CONN,                  //!< FNE Maximum Connections
+        NET_CONN_NAK_FNE_DUPLICATE_CONN,            //!< FNE Duplicate Connection
 
         NET_CONN_NAK_INVALID = 0xFFFF               //!< Invalid
     };

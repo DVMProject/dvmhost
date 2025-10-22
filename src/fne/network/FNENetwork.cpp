@@ -95,7 +95,7 @@ FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port,
     m_peerAffiliations(),
     m_ccPeerMap(),
     m_peerReplicaKeyQueue(),
-    m_peerReplicaActPkt(),
+    m_fneTree(nullptr),
     m_peerReplicaHAParams(),
     m_advertisedHAAddress(),
     m_advertisedHAPort(TRAFFIC_DEFAULT_PORT),
@@ -146,6 +146,8 @@ FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port,
 
     m_p25OTARService = new P25OTARService(this, m_tagP25->packetData(), kmfDebug, verbose);
 
+    m_fneTree = new MasterTree(peerId, peerId, nullptr);
+
     /*
     ** Initialize Threads
     */
@@ -186,6 +188,14 @@ void FNENetwork::setOptions(yaml::Node& conf, bool printOptions)
     if (m_softConnLimit > MAX_HARD_CONN_CAP) {
         m_softConnLimit = MAX_HARD_CONN_CAP;
     }
+
+    m_enableSpanningTree = conf["enableSpanningTree"].as<bool>(true);
+
+    if (!m_enableSpanningTree) {
+        LogWarning(LOG_NET, "WARNING: Disabling the peer spanning tree is not recommended! This can cause network loops and other issues in a multi-peer FNE network.");
+    }
+
+    m_logSpanningTreeChanges = conf["logSpanningTreeChanges"].as<bool>(false);
 
     // always force disable ADJ_STS_BCAST to external peers if the all option
     // is enabled
@@ -262,6 +272,8 @@ void FNENetwork::setOptions(yaml::Node& conf, bool printOptions)
 
     if (printOptions) {
         LogInfo("    Maximum Permitted Connections: %u", m_softConnLimit);
+        LogInfo("    Enable Peer Spanning Tree: %s", m_enableSpanningTree ? "yes" : "no");
+        LogInfo("    Log Spanning Tree Changes: %s", m_logSpanningTreeChanges ? "yes" : "no");
         LogInfo("    Disable adjacent site broadcasts to any peers: %s", m_disallowAdjStsBcast ? "yes" : "no");
         if (m_disallowAdjStsBcast) {
             LogWarning(LOG_NET, "NOTICE: All P25 ADJ_STS_BCAST messages will be blocked and dropped!");
@@ -349,6 +361,7 @@ void FNENetwork::processNetwork()
 
         NetPacketRequest* req = new NetPacketRequest();
         req->obj = this;
+        req->diagObj = m_host->m_diagNetwork;
         req->peerId = peerId;
 
         req->address = address;
@@ -372,6 +385,34 @@ void FNENetwork::processNetwork()
                 delete req;
             }
         }
+    }
+}
+
+/* Process network tree disconnect notification. */
+
+void FNENetwork::processNetworkTreeDisconnect(uint32_t offendingPeerId)
+{
+    if (m_status != NET_STAT_MST_RUNNING) {
+        return;
+    }
+
+    if (!m_enableSpanningTree) {
+        LogWarning(LOG_NET, "FNENetwork::processNetworkTreeDisconnect(), ignoring disconnect request for PEER %u, spanning tree is disabled", offendingPeerId);
+        return;
+    }
+
+    if (offendingPeerId > 0 && (m_peers.find(offendingPeerId) != m_peers.end())) {
+        FNEPeerConnection* connection = m_peers[offendingPeerId];
+        if (connection != nullptr) {
+            LogWarning(LOG_NET, "PEER %u (%s) NAK, server already connected via upstream master, duplicate connection dropped, connectionState = %u", offendingPeerId, connection->identWithQualifier().c_str(),
+                connection->connectionState());
+            writePeerNAK(offendingPeerId, createStreamId(), TAG_REPEATER_CONFIG, NET_CONN_NAK_FNE_DUPLICATE_CONN);
+            disconnectPeer(offendingPeerId, connection);
+        } else {
+            LogError(LOG_NET, "Network Tree Disconnect, upstream master requested disconnect for PEER %u, but connection is null", offendingPeerId);
+        }
+    } else {
+        LogError(LOG_NET, "Network Tree Disconnect, upstream master requested disconnect for unknown PEER %u", offendingPeerId);
     }
 }
 
@@ -430,20 +471,22 @@ void FNENetwork::clock(uint32_t ms)
         // remove any peers
         for (uint32_t peerId : peersToRemove) {
             FNEPeerConnection* connection = m_peers[peerId];
-            connection->lock();
-            erasePeer(peerId);
-            connection->unlock();
-            if (connection != nullptr) {
-                delete connection;
-            }
+            disconnectPeer(peerId, connection);
         }
 
         // send peer updates to external FNE peers
         if (m_host->m_peerNetworks.size() > 0) {
             for (auto peer : m_host->m_peerNetworks) {
                 if (peer.second != nullptr) {
+                    // perform master tree maintainence tasks
+                    if (peer.second->isEnabled() && peer.second->getRemotePeerId() > 0U &&
+                        m_enableSpanningTree) {
+                        peer.second->writeMasterTree(m_fneTree);
+                    }
+
                     // perform peer replica maintainence tasks
-                    if (peer.second->isEnabled() && peer.second->isPeerReplica()) {
+                    if (peer.second->isEnabled() && peer.second->getRemotePeerId() > 0U &&
+                        peer.second->isPeerReplica()) {
                         if (!peer.second->getAttachedKeyRSPHandler()) {
                             peer.second->setAttachedKeyRSPHandler(true); // this is the only place this should happen
                             peer.second->setKeyResponseCallback([=](p25::kmm::KeyItem ki, uint8_t algId, uint8_t keyLength) {
@@ -913,13 +956,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                 LogWarning(LOG_NET, "PEER %u RPTL, failed peer ACL check", peerId);
 
                                 network->writePeerNAK(peerId, TAG_REPEATER_LOGIN, NET_CONN_NAK_PEER_ACL, req->address, req->addrLen);
-
-                                connection->lock();
-                                connection->connected(false);
-                                network->erasePeer(peerId);
-                                connection->unlock();
-
-                                delete connection;
+                                network->disconnectPeer(peerId, connection);
                             }
                         }
                     }
@@ -950,13 +987,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                             LogWarning(LOG_NET, "PEER %u RPTL, failed peer ACL check", peerId);
 
                                             network->writePeerNAK(peerId, TAG_REPEATER_LOGIN, NET_CONN_NAK_PEER_ACL, req->address, req->addrLen);
-
-                                            connection->lock();
-                                            connection->connected(false);
-                                            network->erasePeer(peerId);
-                                            connection->unlock();
-
-                                            delete connection;
+                                            network->disconnectPeer(peerId, connection);
                                         }
                                     }
                                 } else {
@@ -964,17 +995,10 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
 
                                     LogWarning(LOG_NET, "PEER %u (%s) RPTL NAK, bad connection state, connectionState = %u", peerId, connection->identWithQualifier().c_str(),
                                         connection->connectionState());
-
-                                    connection->lock();
-                                    connection->connected(false);
-                                    network->erasePeer(peerId);
-                                    connection->unlock();
-
-                                    delete connection;
+                                    network->disconnectPeer(peerId, connection);
                                 }
                             } else {
                                 network->writePeerNAK(peerId, TAG_REPEATER_LOGIN, NET_CONN_NAK_BAD_CONN_STATE, req->address, req->addrLen);
-
                                 network->erasePeer(peerId);
                                 LogWarning(LOG_NET, "PEER %u RPTL NAK, having no connection", peerId);
                             }
@@ -1059,39 +1083,22 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                     else {
                                         LogWarning(LOG_NET, "PEER %u RPTK NAK, failed the login exchange", peerId);
                                         network->writePeerNAK(peerId, TAG_REPEATER_AUTH, NET_CONN_NAK_FNE_UNAUTHORIZED, req->address, req->addrLen);
-                                        connection->lock();
-                                        connection->connected(false);
-                                        network->erasePeer(peerId);
-                                        connection->unlock();
-
-                                        delete connection;
+                                        network->disconnectPeer(peerId, connection);
                                     }
                                 } else {
                                     network->writePeerNAK(peerId, TAG_REPEATER_AUTH, NET_CONN_NAK_PEER_ACL, req->address, req->addrLen);
-                                    connection->lock();
-                                    connection->connected(false);
-                                    network->erasePeer(peerId);
-                                    connection->unlock();
-
-                                    delete connection;
+                                    network->disconnectPeer(peerId, connection);
                                 }
                             }
                             else {
                                 LogWarning(LOG_NET, "PEER %u RPTK NAK, login exchange while in an incorrect state, connectionState = %u", peerId, connection->connectionState());
                                 network->writePeerNAK(peerId, TAG_REPEATER_AUTH, NET_CONN_NAK_BAD_CONN_STATE, req->address, req->addrLen);
-
-                                connection->lock();
-                                connection->connected(false);
-                                network->erasePeer(peerId);
-                                connection->unlock();
-
-                                delete connection;
+                                network->disconnectPeer(peerId, connection);
                             }
                         }
                     }
                     else {
                         network->writePeerNAK(peerId, TAG_REPEATER_AUTH, NET_CONN_NAK_BAD_CONN_STATE, req->address, req->addrLen);
-
                         network->erasePeer(peerId);
                         LogWarning(LOG_NET, "PEER %u RPTK NAK, having no connection", peerId);
                     }
@@ -1115,24 +1122,14 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                 if (!err.empty()) {
                                     LogWarning(LOG_NET, "PEER %u RPTC NAK, supplied invalid configuration data", peerId);
                                     network->writePeerNAK(peerId, TAG_REPEATER_AUTH, NET_CONN_NAK_INVALID_CONFIG_DATA, req->address, req->addrLen);
-                                    connection->lock();
-                                    connection->connected(false);
-                                    network->erasePeer(peerId);
-                                    connection->unlock();
-
-                                    delete connection;
+                                    network->disconnectPeer(peerId, connection);
                                 }
                                 else  {
                                     // ensure parsed JSON is an object
                                     if (!v.is<json::object>()) {
                                         LogWarning(LOG_NET, "PEER %u RPTC NAK, supplied invalid configuration data", peerId);
                                         network->writePeerNAK(peerId, TAG_REPEATER_AUTH, NET_CONN_NAK_INVALID_CONFIG_DATA, req->address, req->addrLen);
-                                        connection->lock();
-                                        connection->connected(false);
-                                        network->erasePeer(peerId);
-                                        connection->unlock();
-
-                                        delete connection;
+                                        network->disconnectPeer(peerId, connection);
                                     }
                                     else {
                                         connection->config(v.get<json::object>());
@@ -1151,14 +1148,17 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                             buffer[0U] = 0x80U;
                                         }
 
-                                        network->writePeerACK(peerId, streamId, buffer, 1U);
-                                        LogInfoEx(LOG_NET, "PEER %u RPTC ACK, completed the configuration exchange", peerId);
-
                                         json::object peerConfig = connection->config();
+
                                         if (peerConfig["identity"].is<std::string>()) {
                                             std::string identity = peerConfig["identity"].get<std::string>();
                                             connection->identity(identity);
                                             LogInfoEx(LOG_NET, "PEER %u >> Identity [%8s]", peerId, identity.c_str());
+                                        }
+
+                                        if (peerConfig["software"].is<std::string>()) {
+                                            std::string software = peerConfig["software"].get<std::string>();
+                                            LogInfoEx(LOG_NET, "PEER %u >> Software Version [%s]", peerId, software.c_str());
                                         }
 
                                         // is the peer reporting it is an external FNE neighbor peer?
@@ -1168,7 +1168,14 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                             if (external)
                                                 LogInfoEx(LOG_NET, "PEER %u >> External FNE Neighbor Peer", peerId);
 
-                                            // check if the peer is participating in peer link
+                                            uint32_t masterPeerId = 0U;
+                                            if (peerConfig["masterPeerId"].is<uint32_t>()) {
+                                                masterPeerId = peerConfig["masterPeerId"].get<uint32_t>();
+                                                connection->masterId(masterPeerId);
+                                                LogInfoEx(LOG_NET, "PEER %u >> Master Peer ID [%u]", peerId, masterPeerId);
+                                            }
+
+                                            // check if the peer a peer replication participant
                                             lookups::PeerId peerEntry = network->m_peerListLookup->find(req->peerId);
                                             if (!peerEntry.peerDefault()) {
                                                 if (peerEntry.peerReplica()) {
@@ -1182,7 +1189,28 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                                     }
                                                 }
                                             }
+
+                                            if (network->m_enableSpanningTree) {
+                                                // check if this peer is already connected via another peer
+                                                MasterTree* tree = MasterTree::findByMasterID(masterPeerId);
+                                                if (tree != nullptr) {
+                                                    LogWarning(LOG_NET, "PEER %u (%s) RPTC NAK, server already connected via PEER %u, duplicate connection denied, connectionState = %u", peerId, connection->identWithQualifier().c_str(),
+                                                        tree->id(), connection->connectionState());
+                                                    network->writePeerNAK(peerId, TAG_REPEATER_CONFIG, NET_CONN_NAK_FNE_DUPLICATE_CONN, req->address, req->addrLen);
+                                                    network->disconnectPeer(peerId, connection);
+                                                    break;
+                                                } else {
+                                                    new MasterTree(peerId, masterPeerId, network->m_fneTree);
+                                                    if (network->m_logSpanningTreeChanges) {
+                                                        LogInfoEx(LOG_NET, "PEER %u (%s) Network Tree, Tree List, current tree:", peerId, connection->identWithQualifier().c_str());
+                                                        MasterTree::visualizeTreeToLog(network->m_fneTree);
+                                                    }
+                                                }
+                                            }
                                         }
+
+                                        network->writePeerACK(peerId, streamId, buffer, 1U);
+                                        LogInfoEx(LOG_NET, "PEER %u RPTC ACK, completed the configuration exchange", peerId);
 
                                         // is the peer reporting it is a conventional peer?
                                         if (peerConfig["conventionalPeer"].is<bool>()) {
@@ -1202,11 +1230,6 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                                 LogInfoEx(LOG_NET, "PEER %u >> SysView Peer", peerId);
                                         }
 
-                                        if (peerConfig["software"].is<std::string>()) {
-                                            std::string software = peerConfig["software"].get<std::string>();
-                                            LogInfoEx(LOG_NET, "PEER %u >> Software Version [%s]", peerId, software.c_str());
-                                        }
-
                                         // setup the affiliations list for this peer
                                         std::stringstream peerName;
                                         peerName << "PEER " << peerId;
@@ -1221,12 +1244,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                 LogWarning(LOG_NET, "PEER %u (%s) RPTC NAK, login exchange while in an incorrect state, connectionState = %u", peerId, connection->identWithQualifier().c_str(),
                                     connection->connectionState());
                                 network->writePeerNAK(peerId, TAG_REPEATER_CONFIG, NET_CONN_NAK_BAD_CONN_STATE, req->address, req->addrLen);
-                                connection->lock();
-                                connection->connected(false);
-                                network->erasePeer(peerId);
-                                connection->unlock();
-
-                                delete connection;
+                                network->disconnectPeer(peerId, connection);
                             }
                         }
                     }
@@ -1247,12 +1265,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                             // validate peer (simple validation really)
                             if (connection->connected() && connection->address() == ip) {
                                 LogInfoEx(LOG_NET, "PEER %u (%s) disconnected", peerId, connection->identWithQualifier().c_str());
-                                connection->lock();
-                                connection->connected(false);
-                                network->erasePeer(peerId);
-                                connection->unlock();
-
-                                delete connection;
+                                network->disconnectPeer(peerId, connection);
                             }
                         }
                     }
@@ -1818,13 +1831,35 @@ bool FNENetwork::erasePeerAffiliations(uint32_t peerId)
     return false;
 }
 
+/* Helper to disconnect a downstream peer. */
+
+void FNENetwork::disconnectPeer(uint32_t peerId, FNEPeerConnection* connection)
+{
+    if (peerId == 0U)
+        return;
+    if (connection == nullptr)
+        return;
+
+    connection->connected(false);
+    connection->connectionState(NET_STAT_INVALID);
+
+    connection->lock();
+    erasePeer(peerId);
+    connection->unlock();
+    if (connection != nullptr) {
+        delete connection;
+    }
+}
+
 /* Helper to erase the peer from the peers list. */
 
 void FNENetwork::erasePeer(uint32_t peerId)
 {
+    bool isExternalFNEPeer = false;
     {
         auto it = std::find_if(m_peers.begin(), m_peers.end(), [&](PeerMapPair x) { return x.first == peerId; });
         if (it != m_peers.end()) {
+            isExternalFNEPeer = it->second->isExternalFNEPeer();
             m_peers.erase(peerId);
         }
     }
@@ -1850,6 +1885,28 @@ void FNENetwork::erasePeer(uint32_t peerId)
         auto it = std::find_if(m_peerReplicaHAParams.begin(), m_peerReplicaHAParams.end(), [&](auto& x) { return x.peerId == peerId; });
         if (it != m_peerReplicaHAParams.end()) {
             m_peerReplicaHAParams.erase(it);
+        }
+    }
+
+    if (isExternalFNEPeer && m_enableSpanningTree) {
+        // erase this peer from the master tree
+        MasterTree* tree = MasterTree::findByPeerID(peerId);
+        if (tree != nullptr) {
+            if (tree->hasChildren()) {
+                uint32_t totalChildren = tree->countChildren(tree);
+
+                // netsplit be as noisy as possible about it...
+                for (uint8_t i = 0U; i < 3U; i++)
+                    LogWarning(LOG_NET, "PEER %u downstream netsplit, lost %u downstream connections", peerId, totalChildren);
+            }
+
+            LogWarning(LOG_NET, "PEER %u downstream netsplit, disconnected", peerId);
+            MasterTree::erasePeer(peerId);
+        }
+
+        if (m_logSpanningTreeChanges) {
+            LogInfoEx(LOG_NET, "PEER %u Network Tree, Tree List, current tree:", peerId);
+            MasterTree::visualizeTreeToLog(m_fneTree);
         }
     }
 
@@ -1926,7 +1983,6 @@ bool FNENetwork::resetPeer(uint32_t peerId)
             LogInfoEx(LOG_NET, "PEER %u (%s) resetting peer connection", peerId, connection->identWithQualifier().c_str());
 
             writePeerNAK(peerId, TAG_REPEATER_LOGIN, NET_CONN_NAK_PEER_RESET, addr, addrLen);
-
             erasePeer(peerId);
             delete connection;
 
@@ -2498,6 +2554,26 @@ void FNENetwork::writeHAParameters(uint32_t peerId, uint32_t streamId, bool send
         buffer, len, streamId, true);
 }
 
+/* Helper to send a network tree disconnect to the specified peer. */
+
+void FNENetwork::writeTreeDisconnect(uint32_t peerId, uint32_t offendingPeerId)
+{
+    if (!m_enableSpanningTree)
+        return;
+
+    if (peerId == 0)
+        return;
+    if (offendingPeerId == 0U)
+        return;
+
+    uint8_t buffer[DATA_PACKET_LENGTH];
+    ::memset(buffer, 0x00U, DATA_PACKET_LENGTH);
+
+    SET_UINT32(offendingPeerId, buffer, 0U);                                   // Offending Peer ID
+
+    writePeerCommand(peerId, { NET_FUNC::NET_TREE, NET_SUBFUNC::NET_TREE_DISC }, buffer, 4U, RTP_END_OF_CALL_SEQ, createStreamId());
+}
+
 /* Helper to send a In-Call Control command to the specified peer. */
 
 bool FNENetwork::writePeerICC(uint32_t peerId, uint32_t streamId, NET_SUBFUNC::ENUM subFunc, NET_ICC::ENUM command, uint32_t dstId, uint8_t slotNo)
@@ -2639,6 +2715,10 @@ void FNENetwork::logPeerNAKReason(uint32_t peerId, const char* tag, NET_CONN_NAK
         LogWarning(LOG_NET, "PEER %u NAK %s, reason = %u; ACL rejection", peerId, tag, (uint16_t)reason);
         break;
 
+    case NET_CONN_NAK_FNE_DUPLICATE_CONN:
+        LogWarning(LOG_NET, "PEER %u NAK %s, reason = %u; duplicate connection drop", peerId, tag, (uint16_t)reason);
+        break;
+
     case NET_CONN_NAK_GENERAL_FAILURE:
     default:
         LogWarning(LOG_NET, "PEER %u NAK %s, reason = %u; general failure", peerId, tag, (uint16_t)reason);
@@ -2662,7 +2742,7 @@ bool FNENetwork::writePeerNAK(uint32_t peerId, uint32_t streamId, const char* ta
     SET_UINT16((uint16_t)reason, buffer, 10U);                                  // Reason
 
     logPeerNAKReason(peerId, tag, reason);
-    return writePeer(peerId, m_peerId, { NET_FUNC::NAK, NET_SUBFUNC::NOP }, buffer, 10U, RTP_END_OF_CALL_SEQ, streamId, false);
+    return writePeer(peerId, m_peerId, { NET_FUNC::NAK, NET_SUBFUNC::NOP }, buffer, 12U, RTP_END_OF_CALL_SEQ, streamId, false);
 }
 
 /* Helper to send a NAK response to the specified peer. */

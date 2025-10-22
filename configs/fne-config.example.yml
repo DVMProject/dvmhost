@@ -38,8 +38,8 @@ master:
     # Hostname/IP address to listen on (blank for all).
     address: 0.0.0.0
     # Port number to listen on.
-    # NOTE: This port number includes itself for traffic, and master port + 1 for diagnostics and activity logging. (For 
-    #   example, a master port of 62031 will use 62032 for diagnostic and activity messages.)
+    #   NOTE: This port number includes itself for traffic, and master port + 1 for diagnostics and activity logging. (For 
+    #     example, a master port of 62031 will use 62032 for diagnostic and activity messages.)
     port: 62031
     # FNE access password.
     password: RPT1234
@@ -70,6 +70,13 @@ master:
 
     # Maximum permitted connections (hard maximum is 250 peers).
     connectionLimit: 100
+
+    # Flag indicating whether or not the peer spanning tree is enabled.
+    #   NOTE: This should not be disabled. Disabling this can cause network loops
+    #         and other issues in a multi-peer FNE network.
+    enableSpanningTree: true
+    # Flag indicating whether or not spanning tree changes will be logged.
+    logSpanningTreeChanges: false
 
     # Flag indicating whether or not peer pinging will be reported.
     reportPeerPing: true

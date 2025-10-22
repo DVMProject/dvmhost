@@ -38,6 +38,8 @@
 #include "common/ThreadPool.h"
 #include "fne/lookups/AffiliationLookup.h"
 #include "fne/network/influxdb/InfluxDB.h"
+#include "fne/network/FNEPeerConnection.h"
+#include "fne/network/MasterTree.h"
 #include "fne/network/HAParameters.h"
 #include "fne/CryptoContainer.h"
 
@@ -95,191 +97,6 @@ namespace network
     class HOST_SW_API FNENetwork;
 
     // ---------------------------------------------------------------------------
-    //  Class Declaration
-    // ---------------------------------------------------------------------------
-
-    /**
-     * @brief Represents an peer connection to the FNE.
-     * @ingroup fne_network
-     */
-    class HOST_SW_API FNEPeerConnection : public RTPStreamMultiplex {
-    public:
-        auto operator=(FNEPeerConnection&) -> FNEPeerConnection& = delete;
-        auto operator=(FNEPeerConnection&&) -> FNEPeerConnection& = delete;
-        FNEPeerConnection(FNEPeerConnection&) = delete;
-
-        /**
-         * @brief Initializes a new instance of the FNEPeerConnection class.
-         */
-        FNEPeerConnection() : 
-            RTPStreamMultiplex(),
-            m_id(0U),
-            m_ccPeerId(0U),
-            m_socketStorage(),
-            m_sockStorageLen(0U),
-            m_address(),
-            m_port(),
-            m_salt(0U),
-            m_connected(false),
-            m_connectionState(NET_STAT_INVALID),
-            m_pingsReceived(0U),
-            m_lastPing(0U),
-            m_missedMetadataUpdates(0U),
-            m_isExternalFNEPeer(false),
-            m_isConventionalPeer(false),
-            m_isSysView(false),
-            m_isPeerReplica(false),
-            m_config(),
-            m_peerLockMtx()
-        {
-            /* stub */
-        }
-        /**
-         * @brief Initializes a new instance of the FNEPeerConnection class.
-         * @param id Unique ID of this modem on the network.
-         * @param socketStorage 
-         * @param sockStorageLen 
-         */
-        FNEPeerConnection(uint32_t id, sockaddr_storage& socketStorage, uint32_t sockStorageLen) :
-            RTPStreamMultiplex(),
-            m_id(id),
-            m_ccPeerId(0U),
-            m_socketStorage(socketStorage),
-            m_sockStorageLen(sockStorageLen),
-            m_address(udp::Socket::address(socketStorage)),
-            m_port(udp::Socket::port(socketStorage)),
-            m_salt(0U),
-            m_connected(false),
-            m_connectionState(NET_STAT_INVALID),
-            m_pingsReceived(0U),
-            m_lastPing(0U),
-            m_missedMetadataUpdates(0U),
-            m_isExternalFNEPeer(false),
-            m_isConventionalPeer(false),
-            m_isSysView(false),
-            m_isPeerReplica(false),
-            m_config(),
-            m_peerLockMtx()
-        {
-            assert(id > 0U);
-            assert(sockStorageLen > 0U);
-            assert(!m_address.empty());
-            assert(m_port > 0U);
-        }
-
-        /**
-         * @brief Returns the identity with qualifier symbols.
-         * @return std::string Identity with qualifier.
-         */
-        std::string identWithQualifier() const 
-        {
-            if (isSysView())
-                return "@" + identity();
-            if (isPeerReplica())
-                return "%" + identity();
-            if (isExternalFNEPeer())
-                return "+" + identity();
-
-            return " " + m_identity;
-        }
-
-        /**
-         * @brief Lock the peer.
-         */
-        inline void lock() const { m_peerLockMtx.lock(); }
-        /**
-         * @brief Unlock the peer.
-         */
-        inline void unlock() const { m_peerLockMtx.unlock(); }
-
-    public:
-        /**
-         * @brief Peer ID.
-         */
-        DECLARE_PROPERTY_PLAIN(uint32_t, id);
-        /**
-         * @brief Peer Identity.
-         */
-        DECLARE_PROPERTY_PLAIN(std::string, identity);
-
-        /**
-         * @brief Control Channel Peer ID.
-         */
-        DECLARE_PROPERTY_PLAIN(uint32_t, ccPeerId);
-
-        /**
-         * @brief Unix socket storage containing the connected address.
-         */
-        DECLARE_PROPERTY_PLAIN(sockaddr_storage, socketStorage);
-        /**
-         * @brief Length of the sockaddr_storage structure.
-         */
-        DECLARE_PROPERTY_PLAIN(uint32_t, sockStorageLen);
-
-        /**
-         * @brief         */
-        DECLARE_PROPERTY_PLAIN(std::string, address);
-        /**
-         * @brief Port number peer connected with.
-         */
-        DECLARE_PROPERTY_PLAIN(uint16_t, port);
-
-        /**
-         * @brief Salt value used for peer authentication.
-         */
-        DECLARE_PROPERTY_PLAIN(uint32_t, salt);
-
-        /**
-         * @brief Flag indicating whether or not the peer is connected.
-         */
-        DECLARE_PROPERTY_PLAIN(bool, connected);
-        /**
-         * @brief Connection state.
-         */
-        DECLARE_PROPERTY_PLAIN(NET_CONN_STATUS, connectionState);
-
-        /**
-         * @brief Number of pings received.
-         */
-        DECLARE_PROPERTY_PLAIN(uint32_t, pingsReceived);
-        /**
-         * @brief Last ping received.
-         */
-        DECLARE_PROPERTY_PLAIN(uint64_t, lastPing);
-
-        /**
-         * @brief Number of missed network metadata updates.
-         */
-        DECLARE_PROPERTY_PLAIN(uint32_t, missedMetadataUpdates);
-
-        /**
-         * @brief Flag indicating this connection is from an external neighbor FNE peer.
-         */
-        DECLARE_PROPERTY_PLAIN(bool, isExternalFNEPeer);
-        /**
-         * @brief Flag indicating this connection is from an conventional peer.
-         */
-        DECLARE_PROPERTY_PLAIN(bool, isConventionalPeer);
-        /**
-         * @brief Flag indicating this connection is from an SysView peer.
-         */
-        DECLARE_PROPERTY_PLAIN(bool, isSysView);
-
-        /**
-         * @brief Flag indicating this connection is from a neighbor FNE peer that is replica enabled.
-         */
-        DECLARE_PROPERTY_PLAIN(bool, isPeerReplica);
-
-        /**
-         * @brief JSON objecting containing peer configuration information.
-         */
-        DECLARE_PROPERTY_PLAIN(json::object, config);
-
-    private:
-        mutable std::mutex m_peerLockMtx;
-    };
-
-    // ---------------------------------------------------------------------------
     //  Structure Declaration
     // ---------------------------------------------------------------------------
 
@@ -301,6 +118,7 @@ namespace network
      */
     struct NetPacketRequest : thread_t {
         uint32_t peerId;                    //!< Peer ID for this request.
+        void* diagObj;                      //!< Network diagnostics network object.
 
         sockaddr_storage address;           //!< IP Address and Port. 
         uint32_t addrLen;                   //!< 
@@ -410,6 +228,12 @@ namespace network
         void processNetwork();
 
         /**
+         * @brief Process network tree disconnect notification.
+         * @param offendingPeerId Offending Peer ID.
+         */
+        void processNetworkTreeDisconnect(uint32_t offendingPeerId);
+
+        /**
          * @brief Updates the timer by the passed number of milliseconds.
          * @param ms Number of milliseconds.
          */
@@ -495,24 +319,7 @@ namespace network
         static std::timed_mutex m_keyQueueMutex;
         std::unordered_map<uint32_t, uint16_t> m_peerReplicaKeyQueue;
 
-        /**
-         * @brief Represents a packet buffer entry in a map.
-         */
-        class PacketBufferEntry {
-        public:
-            /**
-             * @brief Stream ID of the packet.
-             */
-            uint32_t streamId;
-
-            /**
-             * @brief Packet fragment buffer.
-             */
-            PacketBuffer* buffer;
-
-            bool locked;
-        };
-        concurrent::unordered_map<uint32_t, PacketBufferEntry> m_peerReplicaActPkt;
+        MasterTree* m_fneTree;
 
         concurrent::vector<HAParameters> m_peerReplicaHAParams;
         std::string m_advertisedHAAddress;
@@ -524,6 +331,9 @@ namespace network
         Timer m_haUpdateTimer;
 
         uint32_t m_softConnLimit;
+
+        bool m_enableSpanningTree;
+        bool m_logSpanningTreeChanges;
 
         uint32_t m_callCollisionTimeout;
 
@@ -604,6 +414,12 @@ namespace network
          */
         bool erasePeerAffiliations(uint32_t peerId);
         /**
+         * @brief Helper to disconnect a downstream peer.
+         * @param peerId Peer ID.
+         * @param connection Instance of the FNEPeerConnection class.
+         */
+        void disconnectPeer(uint32_t peerId, FNEPeerConnection* connection);
+        /**
          * @brief Helper to erase the peer from the peers list.
          * @note This does not delete or otherwise free the FNEConnection instance!
          * @param peerId Peer ID.
@@ -683,6 +499,14 @@ namespace network
          * @param sendISSI Flag indicating the HA transfer is to an external peer via ISSI.
          */
         void writeHAParameters(uint32_t peerId, uint32_t streamId, bool sendISSI);
+
+        /**
+         * @brief Helper to send a network tree disconnect to the specified peer.
+         *  This will cause the peer to issue a link disconnect to the offending peer to prevent network loops.
+         * @param peerId Peer ID.
+         * @param offendingPeerId Offending Peer ID.
+         */
+        void writeTreeDisconnect(uint32_t peerId, uint32_t offendingPeerId);
 
         /**
          * @brief Helper to send a In-Call Control command to the specified peer.

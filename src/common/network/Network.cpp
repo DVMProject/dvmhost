@@ -996,6 +996,14 @@ void Network::clock(uint32_t ms)
                         }
                         break;
 
+                    case NET_CONN_NAK_FNE_DUPLICATE_CONN:
+                        LogWarning(LOG_NET, "PEER %u master NAK; duplicate connection from FNE, remotePeerId = %u", m_peerId, rtpHeader.getSSRC());
+                        m_status = NET_STAT_WAITING_CONNECT;
+                        m_enabled = false; // duplicate connection give up stop trying to connect
+                        m_retryTimer.stop();
+                        close();
+                        break;
+
                     case NET_CONN_NAK_GENERAL_FAILURE:
                     default:
                         LogWarning(LOG_NET, "PEER %u master NAK; general failure, remotePeerId = %u", m_peerId, rtpHeader.getSSRC());
@@ -1215,6 +1223,7 @@ void Network::close()
     m_timeoutTimer.stop();
 
     m_status = NET_STAT_WAITING_CONNECT;
+    m_remotePeerId = 0U;
 }
 
 /* Sets flag enabling network communication. */

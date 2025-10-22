@@ -11,8 +11,8 @@
  * @file HAParameters.h
  * @ingroup fne_network
  */
-#if !defined(__HA_PARAMETERS__)
-#define __HA_PARAMETERS__
+#if !defined(__HA_PARAMETERS_H__)
+#define __HA_PARAMETERS_H__
 
 #include "fne/Defines.h"
 
@@ -76,4 +76,4 @@ namespace network
     };
 } // namespace network
 
-#endif // __HA_PARAMETERS__
+#endif // __HA_PARAMETERS_H__

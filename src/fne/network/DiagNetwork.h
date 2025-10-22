@@ -99,6 +99,26 @@ namespace network
 
         NET_CONN_STATUS m_status;
 
+        /**
+         * @brief Represents a packet buffer entry in a map.
+         */
+        class PacketBufferEntry {
+        public:
+            /**
+             * @brief Stream ID of the packet.
+             */
+            uint32_t streamId;
+
+            /**
+             * @brief Packet fragment buffer.
+             */
+            PacketBuffer* buffer;
+
+            bool locked;
+        };
+        concurrent::unordered_map<uint32_t, PacketBufferEntry> m_peerReplicaActPkt;
+        concurrent::unordered_map<uint32_t, PacketBufferEntry> m_peerTreeListPkt;
+
         ThreadPool m_threadPool;
 
         /**

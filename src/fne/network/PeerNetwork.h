@@ -21,6 +21,7 @@
 #include "common/network/Network.h"
 #include "common/network/PacketBuffer.h"
 #include "common/ThreadPool.h"
+#include "fne/network/MasterTree.h"
 #include "fne/network/HAParameters.h"
 
 #include <string>
@@ -88,6 +89,11 @@ namespace network
         ~PeerNetwork() override;
 
         /**
+         * @brief Set the peer ID of this FNE's master.
+         * @param masterPeerId Master Peer ID.
+         */
+        void setMasterPeerId(uint32_t masterPeerId) { m_masterPeerId = masterPeerId; }
+        /**
          * @brief Sets the instances of the Peer List lookup tables.
          * @param pidLookup Peer List Lookup Table Instance
          */
@@ -126,11 +132,23 @@ namespace network
         void setAnalogCallback(std::function<void(PeerNetwork*, const uint8_t*, uint32_t, uint32_t, const frame::RTPFNEHeader&, const frame::RTPHeader&)>&& callback) { m_analogCallback = callback; }
 
         /**
+         * @brief Helper to set the network tree disconnect callback.
+         * @param callback 
+         */
+        void setNetTreeDiscCallback(std::function<void(PeerNetwork*, const uint32_t offendingPeerId)>&& callback) { m_netTreeDiscCallback = callback; }
+
+        /**
          * @brief Writes a complete update of this CFNE's active peer list to the network.
          * @param peerList List of active peers.
          * @returns bool True, if list was sent, otherwise false.
          */
         bool writePeerLinkPeers(json::array* peerList);
+        /**
+         * @brief Writes a complete update of this CFNE's known master FNE tree upstream to the network.
+         * @param treeRoot Root of the master tree.
+         * @returns bool True, if list was sent, otherwise false.
+         */
+        bool writeMasterTree(MasterTree* treeRoot);
         /**
          * @brief Writes a complete update of this CFNE's HA parameters to the network.
          * @param haParams List of HA parameters.
@@ -149,6 +167,12 @@ namespace network
          * @param enabled Flag to enable replicated ACL data saving.
          */
         void setPeerReplicationSaveACL(bool enabled) { m_peerReplicaSavesACL = enabled; }
+
+        /**
+         * @brief Gets the remote peer ID.
+         * @returns uint32_t Remote Peer ID.
+         */
+        uint32_t getRemotePeerId() const { return m_remotePeerId; }
 
     public:
         /**
@@ -179,6 +203,11 @@ namespace network
         std::function<void(PeerNetwork* peer, const uint8_t* data, uint32_t length, uint32_t streamId, const frame::RTPFNEHeader& fneHeader, const frame::RTPHeader& rtpHeader)> m_analogCallback;
 
         /**
+         * @brief Network Tree Disconnect Callback.
+         */
+        std::function<void(PeerNetwork* peer, const uint32_t offendingPeerId)> m_netTreeDiscCallback;
+
+        /**
          * @brief User overrideable handler that allows user code to process network packets not handled by this class.
          * @param peerId Peer ID.
          * @param opcode FNE network opcode pair.
@@ -198,6 +227,8 @@ namespace network
         bool writeConfig() override;
 
     private:
+        uint32_t m_masterPeerId;
+
         lookups::PeerListLookup* m_pidLookup;
         bool m_peerReplica;
         bool m_peerReplicaSavesACL;

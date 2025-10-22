@@ -214,6 +214,13 @@ private:
      */
     void processPeerAnalog(network::PeerNetwork* peerNetwork, const uint8_t* data, uint32_t length, uint32_t streamId, 
         const network::frame::RTPFNEHeader& fneHeader, const network::frame::RTPHeader& rtpHeader);
+
+    /**
+     * @brief Processes network tree disconnect notification.
+     * @param peerNetwork Peer network instance.
+     * @param offendingPeerId Offending peer ID.
+     */
+    void processNetworkTreeDisconnect(network::PeerNetwork* peerNetwork, const uint32_t offendingPeerId);
 };
 
 #endif // __HOST_FNE_H__

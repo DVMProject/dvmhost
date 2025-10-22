@@ -45,6 +45,7 @@ PeerNetwork::PeerNetwork(const std::string& address, uint16_t port, uint16_t loc
     m_p25Callback(nullptr),
     m_nxdnCallback(nullptr),
     m_analogCallback(nullptr),
+    m_masterPeerId(0U),
     m_pidLookup(nullptr),
     m_peerReplica(false),
     m_peerReplicaSavesACL(false),
@@ -130,6 +131,48 @@ bool PeerNetwork::writePeerLinkPeers(json::array* peerList)
         if (pkt.fragments.size() > 0U) {
             for (auto frag : pkt.fragments) {
                 writeMaster({ NET_FUNC::REPL, NET_SUBFUNC::REPL_ACT_PEER_LIST }, 
+                    frag.second->data, FRAG_SIZE, RTP_END_OF_CALL_SEQ, streamId, false, true);
+                Thread::sleep(60U); // pace block transmission
+            }
+        }
+
+        pkt.clear();
+        return true;
+    }
+
+    return false;
+}
+
+/* Writes a complete update of this CFNE's known master FNE tree upstream to the network. */
+
+bool PeerNetwork::writeMasterTree(MasterTree* treeRoot)
+{
+    if (treeRoot == nullptr)
+        return false;
+    if (treeRoot->m_children.size() == 0)
+        return false;
+
+    if (treeRoot->m_children.size() > 0) {
+        json::array jsonArray;
+        MasterTree::serializeTree(treeRoot, jsonArray);
+
+        json::value v = json::value(jsonArray);
+        std::string json = std::string(v.serialize());
+
+        size_t len = json.length() + 9U;
+        DECLARE_CHAR_ARRAY(buffer, len);
+
+        ::memcpy(buffer + 0U, TAG_PEER_REPLICA, 4U);
+        ::snprintf(buffer + 8U, json.length() + 1U, "%s", json.c_str());
+
+        PacketBuffer pkt(true, "Network Tree, Tree List");
+        pkt.encode((uint8_t*)buffer, len);
+
+        uint32_t streamId = createStreamId();
+        LogInfoEx(LOG_NET, "PEER %u Network Tree, Tree List, blocks %u, streamId = %u", m_peerId, pkt.fragments.size(), streamId);
+        if (pkt.fragments.size() > 0U) {
+            for (auto frag : pkt.fragments) {
+                writeMaster({ NET_FUNC::NET_TREE, NET_SUBFUNC::NET_TREE_LIST }, 
                     frag.second->data, FRAG_SIZE, RTP_END_OF_CALL_SEQ, streamId, false, true);
                 Thread::sleep(60U); // pace block transmission
             }
@@ -398,6 +441,26 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
     }
     break;
 
+    case NET_FUNC::NET_TREE:                                      // Network Tree
+    {
+        switch (opcode.second) {
+        case NET_SUBFUNC::NET_TREE_DISC:                          // Network Tree Disconnect
+        {
+            uint32_t offendingPeerId = GET_UINT32(data, 6U);
+            LogWarning(LOG_NET, "PEER %u Network Tree Disconnect, requested from upstream master, posssible duplicate connection for PEER %u", m_peerId, offendingPeerId);
+
+            if (m_netTreeDiscCallback != nullptr) {
+                m_netTreeDiscCallback(this, offendingPeerId);
+            }
+        }
+        break;
+
+        default:
+            break;
+        }
+    }
+    break;
+
     default:
         Utils::dump("Unknown opcode from the master", data, length);
         break;
@@ -449,6 +512,7 @@ bool PeerNetwork::writeConfig()
     // Flags
     bool external = true;
     config["externalPeer"].set<bool>(external);                                     // External FNE Neighbor Peer Marker
+    config["masterPeerId"].set<uint32_t>(m_masterPeerId);                           // Master Peer ID
 
     config["software"].set<std::string>(std::string(software));                     // Software ID
 
