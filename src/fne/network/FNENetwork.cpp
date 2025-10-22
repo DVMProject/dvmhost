@@ -1193,6 +1193,11 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                                 LogInfoEx(LOG_NET, "PEER %u >> Master Peer ID [%u]", peerId, masterPeerId);
                                             }
 
+                                            // master peer ID should never be zero for an external peer -- use the peer ID instead
+                                            if (masterPeerId == 0U) {
+                                                masterPeerId = peerId;
+                                            }
+
                                             // check if the peer a peer replication participant
                                             lookups::PeerId peerEntry = network->m_peerListLookup->find(req->peerId);
                                             if (!peerEntry.peerDefault()) {
