@@ -342,6 +342,7 @@ namespace network
 
         bool m_enableSpanningTree;
         bool m_logSpanningTreeChanges;
+        bool m_spanningTreeFastReconnect;
 
         uint32_t m_callCollisionTimeout;
 

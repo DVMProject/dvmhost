@@ -106,6 +106,9 @@ FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port,
     m_updateLookupTimer(1000U, (updateLookupTime * 60U)),
     m_haUpdateTimer(1000U, FIXED_HA_UPDATE_INTERVAL),
     m_softConnLimit(0U),
+    m_enableSpanningTree(true),
+    m_logSpanningTreeChanges(false),
+    m_spanningTreeFastReconnect(true),
     m_callCollisionTimeout(5U),
     m_disallowAdjStsBcast(false),
     m_disallowExtAdjStsBcast(true),
@@ -198,6 +201,7 @@ void FNENetwork::setOptions(yaml::Node& conf, bool printOptions)
     }
 
     m_logSpanningTreeChanges = conf["logSpanningTreeChanges"].as<bool>(false);
+    m_spanningTreeFastReconnect = conf["spanningTreeFastReconnect"].as<bool>(true);
 
     // always force disable ADJ_STS_BCAST to neighbor FNE peers if the all option
     // is enabled
@@ -276,6 +280,7 @@ void FNENetwork::setOptions(yaml::Node& conf, bool printOptions)
         LogInfo("    Maximum Permitted Connections: %u", m_softConnLimit);
         LogInfo("    Enable Peer Spanning Tree: %s", m_enableSpanningTree ? "yes" : "no");
         LogInfo("    Log Spanning Tree Changes: %s", m_logSpanningTreeChanges ? "yes" : "no");
+        LogInfo("    Spanning Tree Allow Fast Reconnect: %s", m_spanningTreeFastReconnect ? "yes" : "no");
         LogInfo("    Disable adjacent site broadcasts to any peers: %s", m_disallowAdjStsBcast ? "yes" : "no");
         if (m_disallowAdjStsBcast) {
             LogWarning(LOG_MASTER, "NOTICE: All P25 ADJ_STS_BCAST messages will be blocked and dropped!");
@@ -1232,9 +1237,13 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                                 // check if this peer is already connected via another peer
                                                 MasterTree* tree = MasterTree::findByMasterID(masterPeerId);
                                                 if (tree != nullptr) {
-                                                    if (tree->id() != peerId && tree->masterId() == masterPeerId) {
-                                                        LogWarning(LOG_MASTER, "PEER %u (%s) RPTC NAK, server already connected via PEER %u, duplicate connection denied, connectionState = %u", peerId, connection->identWithQualifier().c_str(),
-                                                            tree->id(), connection->connectionState());
+                                                    if ((tree->id() == peerId && tree->masterId() == masterPeerId) &&
+                                                        network->m_spanningTreeFastReconnect) {
+                                                        LogWarning(LOG_MASTER, "PEER %u (%s) RPTC NAK, server already announced in server tree, fast peer reconnect, peerId = %u, masterId = %u, treePeerId = %u, treeMasterId = %u, connectionState = %u", peerId, connection->identWithQualifier().c_str(),
+                                                            peerId, masterPeerId, tree->id(), tree->masterId(), connection->connectionState());
+                                                    } else {
+                                                        LogWarning(LOG_MASTER, "PEER %u (%s) RPTC NAK, server already connected via PEER %u, duplicate connection denied, peerId = %u, masterId = %u, treePeerId = %u, treeMasterId = %u, connectionState = %u", peerId, connection->identWithQualifier().c_str(),
+                                                            peerId, masterPeerId, tree->id(), tree->masterId(), tree->id(), connection->connectionState());
                                                         network->writePeerNAK(peerId, TAG_REPEATER_CONFIG, NET_CONN_NAK_FNE_DUPLICATE_CONN, req->address, req->addrLen);
                                                         network->disconnectPeer(peerId, connection);
                                                         break;

@@ -78,6 +78,10 @@ master:
     enableSpanningTree: true
     # Flag indicating whether or not spanning tree changes will be logged.
     logSpanningTreeChanges: false
+    # Flag indicating whether or not the spanning tree allows fast peer reconnects.
+    #   (This is mainly useful for a peer announcing the same master to reconnect rapidly, inbetween
+    #    spanning tree updates.)
+    spanningTreeFastReconnect: true
 
     # Flag indicating whether or not peer pinging will be reported.
     reportPeerPing: true
