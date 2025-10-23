@@ -49,7 +49,7 @@ TagAnalogData::~TagAnalogData() = default;
 
 /* Process a data frame from the network. */
 
-bool TagAnalogData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint32_t ssrc, uint16_t pktSeq, uint32_t streamId, bool external)
+bool TagAnalogData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint32_t ssrc, uint16_t pktSeq, uint32_t streamId, bool fromUpstream)
 {
     hrc::hrc_t pktTime = hrc::now();
 
@@ -83,14 +83,14 @@ bool TagAnalogData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
     // is the stream valid?
     if (validate(peerId, analogData, streamId)) {
         // is this peer ignored?
-        if (!isPeerPermitted(peerId, analogData, streamId, external)) {
+        if (!isPeerPermitted(peerId, analogData, streamId, fromUpstream)) {
             return false;
         }
 
         // is this the end of the call stream?
         if (frameType == AudioFrameType::TERMINATOR) {
             if (srcId == 0U && dstId == 0U) {
-                LogWarning(LOG_NET, "Analog, invalid TERMINATOR, peer = %u, ssrc = %u, srcId = %u, dstId = %u, slot = %u, streamId = %u, external = %u", peerId, ssrc, srcId, dstId, streamId, external);
+                LogWarning(LOG_NET, "Analog, invalid TERMINATOR, peer = %u, ssrc = %u, srcId = %u, dstId = %u, slot = %u, streamId = %u, fromUpstream = %u", peerId, ssrc, srcId, dstId, streamId, fromUpstream);
                 return false;
             }
 
@@ -117,8 +117,8 @@ bool TagAnalogData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
                     }
                 }
 
-                LogMessage(LOG_NET, "Analog, Call End, peer = %u, ssrc = %u, srcId = %u, dstId = %u, duration = %u, streamId = %u, external = %u",
-                            peerId, ssrc, srcId, dstId, duration / 1000, streamId, external);
+                LogMessage(LOG_NET, "Analog, Call End, peer = %u, ssrc = %u, srcId = %u, dstId = %u, duration = %u, streamId = %u, fromUpstream = %u",
+                            peerId, ssrc, srcId, dstId, duration / 1000, streamId, fromUpstream);
 
                 // report call event to InfluxDB
                 if (m_network->m_enableInfluxDB) {
@@ -141,7 +141,7 @@ bool TagAnalogData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
         // is this a new call stream?
         if (frameType == AudioFrameType::VOICE_START) {
             if (srcId == 0U && dstId == 0U) {
-                LogWarning(LOG_NET, "Analog, invalid call, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, external = %u", peerId, ssrc, srcId, dstId, streamId, external);
+                LogWarning(LOG_NET, "Analog, invalid call, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, fromUpstream = %u", peerId, ssrc, srcId, dstId, streamId, fromUpstream);
                 return false;
             }
 
@@ -167,8 +167,8 @@ bool TagAnalogData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
                                 m_status.unlock();
                             }
                             else {
-                                LogWarning(LOG_NET, "Analog, Call Collision, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, rxPeer = %u, rxSrcId = %u, rxDstId = %u, rxStreamId = %u, external = %u",
-                                    peerId, ssrc, srcId, dstId, streamId, status.peerId, status.srcId, status.dstId, status.streamId, external);
+                                LogWarning(LOG_NET, "Analog, Call Collision, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, rxPeer = %u, rxSrcId = %u, rxDstId = %u, rxStreamId = %u, fromUpstream = %u",
+                                    peerId, ssrc, srcId, dstId, streamId, status.peerId, status.srcId, status.dstId, status.streamId, fromUpstream);
                                 return false;
                             }
                         } else {
@@ -205,7 +205,7 @@ bool TagAnalogData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
                 m_status[dstId].activeCall = true;
                 m_status.unlock();
 
-                LogMessage(LOG_NET, "Analog, Call Start, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, external = %u", peerId, ssrc, srcId, dstId, streamId, external);
+                LogMessage(LOG_NET, "Analog, Call Start, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, fromUpstream = %u", peerId, ssrc, srcId, dstId, streamId, fromUpstream);
             }
         }
 
@@ -272,8 +272,8 @@ bool TagAnalogData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
 
                     m_network->writePeer(peer.first, ssrc, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_ANALOG }, outboundPeerBuffer, len, pktSeq, streamId, true);
                     if (m_network->m_debug) {
-                        LogDebug(LOG_NET, "Analog, ssrc = %u, srcPeer = %u, dstPeer = %u, seqNo = %u, srcId = %u, dstId = %u, len = %u, pktSeq = %u, stream = %u, external = %u", 
-                            ssrc, peerId, peer.first, seqNo, srcId, dstId, len, pktSeq, streamId, external);
+                        LogDebug(LOG_NET, "Analog, ssrc = %u, srcPeer = %u, dstPeer = %u, seqNo = %u, srcId = %u, dstId = %u, len = %u, pktSeq = %u, stream = %u, fromUpstream = %u", 
+                            ssrc, peerId, peer.first, seqNo, srcId, dstId, len, pktSeq, streamId, fromUpstream);
                     }
 
                     i++;
@@ -284,7 +284,7 @@ bool TagAnalogData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
         }
 
         /*
-        ** PEER TRAFFIC (e.g. networks this FNE is peered to)
+        ** PEER TRAFFIC (e.g. upstream networks this FNE is peered to)
         */
 
         // repeat traffic to master nodes we have connected to as a peer
@@ -293,7 +293,7 @@ bool TagAnalogData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
                 uint32_t dstPeerId = peer.second->getPeerId();
 
                 // don't try to repeat traffic to the source peer...if this traffic
-                // is coming from a external peer
+                // is coming from a neighbor FNE peer
                 if (dstPeerId != peerId) {
                     if (ssrc == dstPeerId) {
                         // skip the peer if it is the source peer
@@ -322,8 +322,8 @@ bool TagAnalogData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
                     else
                         peer.second->writeMaster({ NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_ANALOG }, outboundPeerBuffer, len, pktSeq, streamId);
                     if (m_network->m_debug) {
-                        LogDebug(LOG_NET, "Analog, ssrc = %u, srcPeer = %u, dstPeer = %u, seqNo = %u, srcId = %u, dstId = %u, len = %u, pktSeq = %u, stream = %u, external = %u", 
-                            ssrc, peerId, dstPeerId, seqNo, srcId, dstId, len, pktSeq, streamId, external);
+                        LogDebug(LOG_NET, "Analog, ssrc = %u, srcPeer = %u, dstPeer = %u, seqNo = %u, srcId = %u, dstId = %u, len = %u, pktSeq = %u, stream = %u, fromUpstream = %u", 
+                            ssrc, peerId, dstPeerId, seqNo, srcId, dstId, len, pktSeq, streamId, fromUpstream);
                     }
                 }
             }
@@ -421,7 +421,7 @@ bool TagAnalogData::peerRewrite(uint32_t peerId, uint32_t& dstId, bool outbound)
 
 /* Helper to determine if the peer is permitted for traffic. */
 
-bool TagAnalogData::isPeerPermitted(uint32_t peerId, data::NetData& data, uint32_t streamId, bool external)
+bool TagAnalogData::isPeerPermitted(uint32_t peerId, data::NetData& data, uint32_t streamId, bool fromUpstream)
 {
     if (!data.getGroup()) {
         if (m_network->m_disallowU2U)
@@ -482,8 +482,8 @@ bool TagAnalogData::isPeerPermitted(uint32_t peerId, data::NetData& data, uint32
         if (m_network->m_allowConvSiteAffOverride) {
             if (connection != nullptr) {
                 if (connection->isConventionalPeer()) {
-                    external = true; // we'll just set the external flag to disable the affiliation check
-                                     // for conventional peers
+                    fromUpstream = true; // we'll just set the fromUpstream flag to disable the affiliation check
+                                         // for conventional peers
                 }
             }
         }
@@ -491,14 +491,14 @@ bool TagAnalogData::isPeerPermitted(uint32_t peerId, data::NetData& data, uint32
         // is this peer a SysView peer?
         if (connection != nullptr) {
             if (connection->isSysView()) {
-                external = true; // we'll just set the external flag to disable the affiliation check
-                                 // for SysView peers
+                fromUpstream = true; // we'll just set the fromUpstream flag to disable the affiliation check
+                                     // for SysView peers
             }
         }
 
         // is this a TG that requires affiliations to repeat?
-        // NOTE: external peers *always* repeat traffic regardless of affiliation
-        if (tg.config().affiliated() && !external) {
+        // NOTE: neighbor FNE peers *always* repeat traffic regardless of affiliation
+        if (tg.config().affiliated() && !fromUpstream) {
             uint32_t lookupPeerId = peerId;
             if (connection != nullptr) {
                 if (connection->ccPeerId() > 0U)

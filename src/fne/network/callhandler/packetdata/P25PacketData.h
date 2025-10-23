@@ -64,10 +64,10 @@ namespace network
                  * @param peerId Peer ID.
                  * @param pktSeq RTP packet sequence.
                  * @param streamId Stream ID.
-                 * @param external Flag indicating traffic is from an external peer.
+                 * @param fromUpstream Flag indicating traffic is from a upstream master.
                  * @returns bool True, if frame is processed, otherwise false.
                  */
-                bool processFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint16_t pktSeq, uint32_t streamId, bool external = false);
+                bool processFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint16_t pktSeq, uint32_t streamId, bool fromUpstream = false);
 
                 /**
                  * @brief Process a data frame from the virtual IP network.
@@ -209,7 +209,7 @@ namespace network
                  */
                 void dispatchToFNE(uint32_t peerId);
                 /**
-                 * @brief Helper to dispatch PDU user data back to the local FNE network. (Will not transmit to external peers.)
+                 * @brief Helper to dispatch PDU user data back to the local FNE network. (Will not transmit to neighbor FNE peers.)
                  * @param dataHeader Instance of a PDU data header.
                  * @param extendedAddress Flag indicating whether or not to extended addressing is in use.
                  * @param pduUserData Buffer containing user data to transmit.

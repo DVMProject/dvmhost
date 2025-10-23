@@ -74,7 +74,7 @@ P25PacketData::~P25PacketData() = default;
 
 /* Process a data frame from the network. */
 
-bool P25PacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint16_t pktSeq, uint32_t streamId, bool external)
+bool P25PacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint16_t pktSeq, uint32_t streamId, bool fromUpstream)
 {
     hrc::hrc_t pktTime = hrc::now();
 
@@ -154,7 +154,7 @@ bool P25PacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
             return true;
         }
 
-        LogMessage(LOG_NET, "P25, Data Call Start, peer = %u, llId = %u, streamId = %u, external = %u", peerId, status->llId, streamId, external);
+        LogMessage(LOG_NET, "P25, Data Call Start, peer = %u, llId = %u, streamId = %u, fromUpstream = %u", peerId, status->llId, streamId, fromUpstream);
         return true;
     }
 
@@ -298,8 +298,8 @@ bool P25PacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
         uint64_t duration = hrc::diff(pktTime, status->callStartTime);
         uint32_t srcId = (status->extendedAddress) ? status->header.getSrcLLId() : status->header.getLLId();
         uint32_t dstId = status->header.getLLId();
-        LogMessage(LOG_NET, "P25, Data Call End, peer = %u, srcId = %u, dstId = %u, blocks = %u, duration = %u, streamId = %u, external = %u",
-            peerId, srcId, dstId, status->header.getBlocksToFollow(), duration / 1000, streamId, external);
+        LogMessage(LOG_NET, "P25, Data Call End, peer = %u, srcId = %u, dstId = %u, blocks = %u, duration = %u, streamId = %u, fromUpstream = %u",
+            peerId, srcId, dstId, status->header.getBlocksToFollow(), duration / 1000, streamId, fromUpstream);
 
         // report call event to InfluxDB
         if (m_network->m_enableInfluxDB) {
@@ -807,13 +807,13 @@ void P25PacketData::dispatchToFNE(uint32_t peerId)
         m_network->m_frameQueue->flushQueue();
     }
 
-    // repeat traffic to external peers
+    // repeat traffic to neighbor FNE peers
     if (m_network->m_host->m_peerNetworks.size() > 0U) {
         for (auto peer : m_network->m_host->m_peerNetworks) {
             uint32_t dstPeerId = peer.second->getPeerId();
 
             // don't try to repeat traffic to the source peer...if this traffic
-            // is coming from a external peer
+            // is coming from a neighbor FNE peer
             if (dstPeerId != peerId) {
                 // skip peer if it isn't enabled
                 if (!peer.second->isEnabled()) {
@@ -830,7 +830,7 @@ void P25PacketData::dispatchToFNE(uint32_t peerId)
     }
 }
 
-/* Helper to dispatch PDU user data back to the local FNE network. (Will not transmit to external peers.) */
+/* Helper to dispatch PDU user data back to the local FNE network. (Will not transmit to neighbor FNE peers.) */
 
 void P25PacketData::dispatchUserFrameToFNE(p25::data::DataHeader& dataHeader, bool extendedAddress, uint8_t* pduUserData)
 {

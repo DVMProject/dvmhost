@@ -63,10 +63,10 @@ namespace network
                  * @param peerId Peer ID.
                  * @param pktSeq RTP packet sequence.
                  * @param streamId Stream ID.
-                 * @param external Flag indicating traffic is from an external peer.
+                 * @param fromUpstream Flag indicating traffic is from a upstream master.
                  * @returns bool True, if frame is processed, otherwise false.
                  */
-                bool processFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint16_t pktSeq, uint32_t streamId, bool external = false);
+                bool processFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint16_t pktSeq, uint32_t streamId, bool fromUpstream = false);
 
             private:
                 FNENetwork* m_network;

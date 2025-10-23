@@ -518,6 +518,10 @@ bool PeerNetwork::writeConfig()
     config["rcon"].set<json::object>(rcon);
 
     // Flags
+    /*
+    ** bryanb: don't change externalPeer to neighborPeer -- this will break backward
+    **  compat with older FNE versions (we're stuck with this naming :()
+    */
     bool external = true;
     config["externalPeer"].set<bool>(external);                                     // External FNE Neighbor Peer Marker
     config["masterPeerId"].set<uint32_t>(m_masterPeerId);                           // Master Peer ID

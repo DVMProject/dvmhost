@@ -58,10 +58,10 @@ namespace network
              * @param ssrc RTP Synchronization Source ID.
              * @param pktSeq RTP packet sequence.
              * @param streamId Stream ID.
-             * @param external Flag indicating traffic is from an external peer.
+             * @param fromUpstream Flag indicating traffic is from a upstream master.
              * @returns bool True, if frame is processed, otherwise false.
              */
-            bool processFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint32_t ssrc, uint16_t pktSeq, uint32_t streamId, bool external = false);
+            bool processFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint32_t ssrc, uint16_t pktSeq, uint32_t streamId, bool fromUpstream = false);
             /**
              * @brief Process a grant request frame from the network.
              * @param srcId Source Radio ID.
@@ -194,10 +194,10 @@ namespace network
              * @param lc Instance of nxdn::lc::RTCH.
              * @param messageType Message Type.
              * @param streamId Stream ID.
-             * @param external Flag indicating this traffic came from an external peer.
+             * @param fromUpstream Flag indicating traffic is from a upstream master.
              * @returns bool True, if permitted, otherwise false.
              */
-            bool isPeerPermitted(uint32_t peerId, nxdn::lc::RTCH& lc, uint8_t messageType, uint32_t streamId, bool external = false);
+            bool isPeerPermitted(uint32_t peerId, nxdn::lc::RTCH& lc, uint8_t messageType, uint32_t streamId, bool fromUpstream = false);
             /**
              * @brief Helper to validate the NXDN call stream.
              * @param peerId Peer ID.

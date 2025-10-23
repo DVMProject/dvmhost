@@ -54,7 +54,7 @@ namespace network
             m_pingsReceived(0U),
             m_lastPing(0U),
             m_missedMetadataUpdates(0U),
-            m_isExternalFNEPeer(false),
+            m_isNeighborFNEPeer(false),
             m_isConventionalPeer(false),
             m_isSysView(false),
             m_isPeerReplica(false),
@@ -84,7 +84,7 @@ namespace network
             m_pingsReceived(0U),
             m_lastPing(0U),
             m_missedMetadataUpdates(0U),
-            m_isExternalFNEPeer(false),
+            m_isNeighborFNEPeer(false),
             m_isConventionalPeer(false),
             m_isSysView(false),
             m_isPeerReplica(false),
@@ -107,7 +107,7 @@ namespace network
                 return "@" + identity();
             if (isPeerReplica())
                 return "%" + identity();
-            if (isExternalFNEPeer())
+            if (isNeighborFNEPeer())
                 return "+" + identity();
 
             return " " + m_identity;
@@ -187,9 +187,9 @@ namespace network
         DECLARE_PROPERTY_PLAIN(uint32_t, missedMetadataUpdates);
 
         /**
-         * @brief Flag indicating this connection is from an external neighbor FNE peer.
+         * @brief Flag indicating this connection is from an downstream neighbor FNE peer.
          */
-        DECLARE_PROPERTY_PLAIN(bool, isExternalFNEPeer);
+        DECLARE_PROPERTY_PLAIN(bool, isNeighborFNEPeer);
         /**
          * @brief Flag indicating this connection is from an conventional peer.
          */

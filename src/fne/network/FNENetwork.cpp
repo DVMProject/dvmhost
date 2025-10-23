@@ -199,7 +199,7 @@ void FNENetwork::setOptions(yaml::Node& conf, bool printOptions)
 
     m_logSpanningTreeChanges = conf["logSpanningTreeChanges"].as<bool>(false);
 
-    // always force disable ADJ_STS_BCAST to external peers if the all option
+    // always force disable ADJ_STS_BCAST to neighbor FNE peers if the all option
     // is enabled
     if (m_disallowAdjStsBcast) {
         m_disallowExtAdjStsBcast = true;
@@ -282,7 +282,7 @@ void FNENetwork::setOptions(yaml::Node& conf, bool printOptions)
         }
         LogInfo("    Disable Packet Data: %s", m_disablePacketData ? "yes" : "no");
         LogInfo("    Dump Packet Data: %s", m_dumpPacketData ? "yes" : "no");
-        LogInfo("    Disable P25 ADJ_STS_BCAST to external peers: %s", m_disallowExtAdjStsBcast ? "yes" : "no");
+        LogInfo("    Disable P25 ADJ_STS_BCAST to neighbor peers: %s", m_disallowExtAdjStsBcast ? "yes" : "no");
         LogInfo("    Disable P25 TDULC call termination broadcasts to any peers: %s", m_disallowCallTerm ? "yes" : "no");
         LogInfo("    Allow conventional sites to override affiliation and receive all traffic: %s", m_allowConvSiteAffOverride ? "yes" : "no");
         LogInfo("    Enable In-Call Control: %s", m_enableInCallCtrl ? "yes" : "no");
@@ -462,7 +462,7 @@ void FNENetwork::clock(uint32_t ms)
             FNEPeerConnection* connection = peer.second;
             if (connection != nullptr) {
                 uint64_t dt = 0U;
-                if (connection->isExternalFNEPeer() || connection->isPeerReplica())
+                if (connection->isNeighborFNEPeer() || connection->isPeerReplica())
                     dt = connection->lastPing() + ((m_host->m_pingTime * 1000) * (m_host->m_maxMissedPings * 2U));
                 else
                     dt = connection->lastPing() + ((m_host->m_pingTime * 1000) * m_host->m_maxMissedPings);
@@ -475,9 +475,9 @@ void FNENetwork::clock(uint32_t ms)
                     connection->connected(false);
                     connection->connectionState(NET_STAT_INVALID);
 
-                    // if the connection was an external FNE neighbor peer or a peer replica -- be noisy about a possible
+                    // if the connection was an downstream FNE neighbor peer or a peer replica -- be noisy about a possible
                     // netsplit
-                    if (connection->isExternalFNEPeer() || connection->isPeerReplica()) {
+                    if (connection->isNeighborFNEPeer() || connection->isPeerReplica()) {
                         for (uint8_t i = 0U; i < 3U; i++)
                             LogWarning(LOG_NET, "PEER %u (%s) downstream netsplit, dt = %u, now = %u", id, connection->identWithQualifier().c_str(),
                                 dt, now);
@@ -494,7 +494,7 @@ void FNENetwork::clock(uint32_t ms)
             disconnectPeer(peerId, connection);
         }
 
-        // send peer updates to external FNE peers
+        // send peer updates to neighbor FNE peers
         if (m_host->m_peerNetworks.size() > 0) {
             for (auto peer : m_host->m_peerNetworks) {
                 if (peer.second != nullptr) {
@@ -1189,12 +1189,16 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                                 LogInfoEx(LOG_NET, "PEER %u >> SysView Peer", peerId);
                                         }
 
-                                        // is the peer reporting it is an external FNE neighbor peer?
+                                        // is the peer reporting it is an downstream FNE neighbor peer?
+                                        /*
+                                        ** bryanb: don't change externalPeer to neighborPeer -- this will break backward
+                                        **  compat with older FNE versions (we're stuck with this naming :()
+                                        */
                                         if (peerConfig["externalPeer"].is<bool>()) {
-                                            bool external = peerConfig["externalPeer"].get<bool>();
-                                            connection->isExternalFNEPeer(external);
-                                            if (external)
-                                                LogInfoEx(LOG_NET, "PEER %u >> External FNE Neighbor Peer", peerId);
+                                            bool neighbor = peerConfig["externalPeer"].get<bool>();
+                                            connection->isNeighborFNEPeer(neighbor);
+                                            if (neighbor)
+                                                LogInfoEx(LOG_NET, "PEER %u >> Downstream Neighbor FNE Peer", peerId);
 
                                             uint32_t masterPeerId = 0U;
                                             if (peerConfig["masterPeerId"].is<uint32_t>()) {
@@ -1203,9 +1207,9 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                                 LogInfoEx(LOG_NET, "PEER %u >> Master Peer ID [%u]", peerId, masterPeerId);
                                             }
 
-                                            // master peer ID should never be zero for an external peer -- use the peer ID instead
+                                            // master peer ID should never be zero for an neighbor peer -- use the peer ID instead
                                             if (masterPeerId == 0U) {
-                                                LogWarning(LOG_NET, "PEER %u is an external FNE neighbor peer but has not supplied a valid masterPeerId, using own peerId as masterPeerId (old FNE perhaps?)", peerId);
+                                                LogWarning(LOG_NET, "PEER %u reports to be a downstream FNE neighbor peer but has not supplied a valid masterPeerId, using own peerId as masterPeerId (old FNE perhaps?)", peerId);
                                                 masterPeerId = peerId;
                                             }
 
@@ -1215,7 +1219,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                                 if (peerEntry.peerReplica()) {
                                                     if (network->m_host->m_useAlternatePortForDiagnostics) {
                                                         connection->isPeerReplica(true);
-                                                        if (external)
+                                                        if (neighbor)
                                                             LogInfoEx(LOG_NET, "PEER %u >> Participates in Peer Replication", peerId);
                                                     } else {
                                                         LogError(LOG_NET, "PEER %u, Peer replication operations *require* the alternate diagnostics port option to be enabled.", peerId);
@@ -1881,11 +1885,11 @@ void FNENetwork::disconnectPeer(uint32_t peerId, FNEPeerConnection* connection)
 
 void FNENetwork::erasePeer(uint32_t peerId)
 {
-    bool isExternalFNEPeer = false;
+    bool neighborFNE = false;
     {
         auto it = std::find_if(m_peers.begin(), m_peers.end(), [&](PeerMapPair x) { return x.first == peerId; });
         if (it != m_peers.end()) {
-            isExternalFNEPeer = it->second->isExternalFNEPeer();
+            neighborFNE = it->second->isNeighborFNEPeer();
             m_peers.erase(peerId);
         }
     }
@@ -1914,7 +1918,7 @@ void FNENetwork::erasePeer(uint32_t peerId)
         }
     }
 
-    if (isExternalFNEPeer && m_enableSpanningTree) {
+    if (neighborFNE && m_enableSpanningTree) {
         // erase this peer from the master tree
         MasterTree* tree = MasterTree::findByPeerID(peerId);
         if (tree != nullptr) {
@@ -2020,15 +2024,22 @@ bool FNENetwork::resetPeer(uint32_t peerId)
     return false;
 }
 
-/* Helper to set the master is peer replica flag. */
+/* Helper to set the master is upstream peer replica flag. */
 
 void FNENetwork::setPeerReplica(bool peerReplica)
 {
     if (!m_isPeerReplica && peerReplica) {
-        LogInfoEx(LOG_NET, "MASTER set to peer replica, receiving ACL updates from upstream master");
+        LogInfoEx(LOG_NET, "MASTER set to upstream peer replica, receiving ACL updates from upstream master");
     }
 
     m_isPeerReplica = peerReplica;
+
+    // be very noisy about being a peer replica and having multiple upstream peers
+    if (m_isPeerReplica) {
+        if (m_host->m_peerNetworks.size() > 1) {
+            LogWarning(LOG_NET, "We are a upstream peer replica, and have multiple upstream peers? This is a bad idea. Peer Replica FNEs should have a single upstream peer connection.");
+        }
+    }
 }
 
 /* Helper to resolve the peer ID to its identity string. */
@@ -2106,9 +2117,9 @@ void FNENetwork::taskMetadataUpdate(MetadataUpdateRequest* req)
                 connection->lock();
                 uint32_t streamId = network->createStreamId();
 
-                // if the connection is an external peer, and peer is participating in peer link,
+                // if the connection is a downstream neighbor FNE peer, and peer is participating in peer link,
                 // send the peer proper configuration data
-                if (connection->isExternalFNEPeer() && connection->isPeerReplica()) {
+                if (connection->isNeighborFNEPeer() && connection->isPeerReplica()) {
                     LogInfoEx(LOG_NET, "PEER %u (%s) sending replica network metadata updates", req->peerId, peerIdentity.c_str());
 
                     network->writeWhitelistRIDs(req->peerId, streamId, true);
@@ -2138,12 +2149,12 @@ void FNENetwork::taskMetadataUpdate(MetadataUpdateRequest* req)
 
 /* Helper to send the list of whitelisted RIDs to the specified peer. */
 
-void FNENetwork::writeWhitelistRIDs(uint32_t peerId, uint32_t streamId, bool sendISSI)
+void FNENetwork::writeWhitelistRIDs(uint32_t peerId, uint32_t streamId, bool sendReplica)
 {
     uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
-    // sending REPL style RID list to external peers
-    if (sendISSI) {
+    // sending REPL style RID list to replica neighbor FNE peers
+    if (sendReplica) {
         FNEPeerConnection* connection = m_peers[peerId];
         if (connection != nullptr) {
             // save out radio ID table to disk
@@ -2338,14 +2349,14 @@ void FNENetwork::writeBlacklistRIDs(uint32_t peerId, uint32_t streamId)
 
 /* Helper to send the list of active TGIDs to the specified peer. */
 
-void FNENetwork::writeTGIDs(uint32_t peerId, uint32_t streamId, bool sendISSI)
+void FNENetwork::writeTGIDs(uint32_t peerId, uint32_t streamId, bool sendReplica)
 {
     if (!m_tidLookup->sendTalkgroups()) {
         return;
     }
 
-    // sending REPL style TGID list to external peers
-    if (sendISSI) {
+    // sending REPL style TGID list to replica neighbor FNE peers
+    if (sendReplica) {
         FNEPeerConnection* connection = m_peers[peerId];
         if (connection != nullptr) {
             std::string tempFile;
@@ -2537,7 +2548,7 @@ void FNENetwork::writeDeactiveTGIDs(uint32_t peerId, uint32_t streamId)
 
 void FNENetwork::writePeerList(uint32_t peerId, uint32_t streamId)
 {
-    // sending REPL style RID list to external peers
+    // sending REPL style PID list to replica neighbor FNE peers
     FNEPeerConnection* connection = m_peers[peerId];
     if (connection != nullptr) {
         std::string tempFile;
@@ -2597,7 +2608,7 @@ void FNENetwork::writePeerList(uint32_t peerId, uint32_t streamId)
 
 /* Helper to send the HA parameters to the specified peer. */
 
-void FNENetwork::writeHAParameters(uint32_t peerId, uint32_t streamId, bool sendISSI)
+void FNENetwork::writeHAParameters(uint32_t peerId, uint32_t streamId, bool sendReplica)
 {
     if (!m_haEnabled) {
         return;
@@ -2623,8 +2634,8 @@ void FNENetwork::writeHAParameters(uint32_t peerId, uint32_t streamId, bool send
     }
     m_peerReplicaHAParams.unlock();
 
-    // sending REPL style HA parameters list to external peers
-    if (sendISSI) {
+    // sending REPL style HA parameters list to replica neighbor FNE peers
+    if (sendReplica) {
         FNEPeerConnection* connection = m_peers[peerId];
         if (connection != nullptr) {
             LogInfoEx(LOG_NET, "PEER %u (%s) Peer Replication, HA parameters, streamId = %u", peerId, connection->identWithQualifier().c_str(), streamId);
@@ -2705,9 +2716,9 @@ bool FNENetwork::writePeer(uint32_t peerId, uint32_t ssrc, FrameQueue::OpcodePai
             if (m_maskOutboundPeerID)
                 ssrc = m_peerId; // mask the source SSRC to our own peer ID
             else {
-                if ((connection->isExternalFNEPeer() && !connection->isPeerReplica()) && m_maskOutboundPeerIDForNonPL) {
-                    // if the peer is an external FNE neighbor peer, and not a replica peer, we need to send the packet
-                    // to the external FNE neighbor peer with our peer ID as the source instead of the originating peer
+                if ((connection->isNeighborFNEPeer() && !connection->isPeerReplica()) && m_maskOutboundPeerIDForNonPL) {
+                    // if the peer is a downstream FNE neighbor peer, and not a replica peer, we need to send the packet
+                    // to the neighbor FNE peer with our peer ID as the source instead of the originating peer
                     // because we have routed it
                     ssrc = m_peerId;
                 }

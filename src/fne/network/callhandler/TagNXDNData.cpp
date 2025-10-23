@@ -57,7 +57,7 @@ TagNXDNData::~TagNXDNData() = default;
 
 /* Process a data frame from the network. */
 
-bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint32_t ssrc, uint16_t pktSeq, uint32_t streamId, bool external)
+bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint32_t ssrc, uint16_t pktSeq, uint32_t streamId, bool fromUpstream)
 {
     hrc::hrc_t pktTime = hrc::now();
 
@@ -180,7 +180,7 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
     // is the stream valid?
     if (validate(peerId, lc, messageType, streamId)) {
         // is this peer ignored?
-        if (!isPeerPermitted(peerId, lc, messageType, streamId, external)) {
+        if (!isPeerPermitted(peerId, lc, messageType, streamId, fromUpstream)) {
             return false;
         }
 
@@ -191,7 +191,7 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
             // is this the end of the call stream?
             if (messageType == MessageType::RTCH_TX_REL || messageType == MessageType::RTCH_TX_REL_EX) {
                 if (srcId == 0U && dstId == 0U) {
-                    LogWarning(LOG_NET, "NXDN, invalid TX_REL, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, external = %u", peerId, ssrc, srcId, dstId, streamId, external);
+                    LogWarning(LOG_NET, "NXDN, invalid TX_REL, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, fromUpstream = %u", peerId, ssrc, srcId, dstId, streamId, fromUpstream);
                     return false;
                 }
 
@@ -228,12 +228,12 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                     });
                     if (it != m_statusPVCall.end()) {
                         m_statusPVCall[dstId].reset();
-                        LogMessage(LOG_NET, "NXDN, Private Call End, peer = %u, ssrc = %u, srcId = %u, dstId = %u, duration = %u, streamId = %u, external = %u",
-                            peerId, ssrc, srcId, dstId, duration / 1000, streamId, external);
+                        LogMessage(LOG_NET, "NXDN, Private Call End, peer = %u, ssrc = %u, srcId = %u, dstId = %u, duration = %u, streamId = %u, fromUpstream = %u",
+                            peerId, ssrc, srcId, dstId, duration / 1000, streamId, fromUpstream);
                     }
                     else
-                        LogMessage(LOG_NET, "NXDN, Call End, peer = %u, ssrc = %u, srcId = %u, dstId = %u, duration = %u, streamId = %u, external = %u",
-                            peerId, ssrc, srcId, dstId, duration / 1000, streamId, external);
+                        LogMessage(LOG_NET, "NXDN, Call End, peer = %u, ssrc = %u, srcId = %u, dstId = %u, duration = %u, streamId = %u, fromUpstream = %u",
+                            peerId, ssrc, srcId, dstId, duration / 1000, streamId, fromUpstream);
 
                     // report call event to InfluxDB
                     if (m_network->m_enableInfluxDB) {
@@ -256,7 +256,7 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
             // is this a new call stream?
             if ((messageType != MessageType::RTCH_TX_REL && messageType != MessageType::RTCH_TX_REL_EX)) {
                 if (srcId == 0U && dstId == 0U) {
-                    LogWarning(LOG_NET, "NXDN, invalid call, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, external = %u", peerId, ssrc, srcId, dstId, streamId, external);
+                    LogWarning(LOG_NET, "NXDN, invalid call, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, fromUpstream = %u", peerId, ssrc, srcId, dstId, streamId, fromUpstream);
                     return false;
                 }
 
@@ -280,8 +280,8 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                             if (status.srcId == 0U)
                                 m_status[dstId].srcId = srcId;
                             if (status.srcId != srcId) {
-                                LogMessage(LOG_NET, "NXDN, Call Source Switched, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, rxPeer = %u, rxSrcId = %u, rxDstId = %u, rxStreamId = %u, external = %u",
-                                    peerId, ssrc, srcId, dstId, streamId, status.peerId, status.srcId, status.dstId, status.streamId, external);
+                                LogMessage(LOG_NET, "NXDN, Call Source Switched, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, rxPeer = %u, rxSrcId = %u, rxDstId = %u, rxStreamId = %u, fromUpstream = %u",
+                                    peerId, ssrc, srcId, dstId, streamId, status.peerId, status.srcId, status.dstId, status.streamId, fromUpstream);
                                 m_status[dstId].srcId = srcId;
                             }
                             m_status.unlock();
@@ -298,8 +298,8 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                                         m_status[dstId].srcId = srcId;
                                         m_status.unlock();
                                     } else {
-                                        LogWarning(LOG_NET, "NXDN, Call Collision, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, rxPeer = %u, rxSrcId = %u, rxDstId = %u, rxStreamId = %u, external = %u",
-                                            peerId, ssrc, srcId, dstId, streamId, status.peerId, status.srcId, status.dstId, status.streamId, external);
+                                        LogWarning(LOG_NET, "NXDN, Call Collision, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, rxPeer = %u, rxSrcId = %u, rxDstId = %u, rxStreamId = %u, fromUpstream = %u",
+                                            peerId, ssrc, srcId, dstId, streamId, status.peerId, status.srcId, status.dstId, status.streamId, fromUpstream);
                                         return false;
                                     }
                                 } else {
@@ -352,12 +352,12 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                         m_statusPVCall[dstId].dstPeerId = regSSRC;
                         m_statusPVCall.unlock();
 
-                        LogMessage(LOG_NET, "NXDN, Private Call Start, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, external = %u",
-                            peerId, ssrc, srcId, dstId, streamId, external);
+                        LogMessage(LOG_NET, "NXDN, Private Call Start, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, fromUpstream = %u",
+                            peerId, ssrc, srcId, dstId, streamId, fromUpstream);
                     }
                     else
-                        LogMessage(LOG_NET, "NXDN, Call Start, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, external = %u", 
-                            peerId, ssrc, srcId, dstId, streamId, external);
+                        LogMessage(LOG_NET, "NXDN, Call Start, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, fromUpstream = %u", 
+                            peerId, ssrc, srcId, dstId, streamId, fromUpstream);
                 }
             }
         }
@@ -406,14 +406,14 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                     privateCallInProgress = false; // trick the system to repeat everywhere
                 } else {
                     // if this is a private call, check if the destination peer is one directly connected to us, if not
-                    // flag the call so it only repeats to external peers
+                    // flag the call so it only repeats to neighbor FNE peers
                     if (m_network->m_peers.size() > 0U && !noConnectedPeerRepeat) {
                         noConnectedPeerRepeat = true;
                         for (auto peer : m_network->m_peers) {
                             if (peerId != peer.first) {
                                 FNEPeerConnection* conn = peer.second;
                                 if (conn != nullptr) {
-                                    if (conn->isExternalFNEPeer()) {
+                                    if (conn->isNeighborFNEPeer()) {
                                         continue;
                                     }
                                 }
@@ -448,14 +448,14 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                     }
 
                     if (m_network->m_restrictPVCallToRegOnly) {
-                        // is this peer an external peer?
-                        bool external = false;
+                        // is this peer an upstream neighbor peer?
+                        bool neighbor = false;
                         if (conn != nullptr) {
-                            external = conn->isExternalFNEPeer();
+                            neighbor = conn->isNeighborFNEPeer();
                         }
 
                         // is this a private call?
-                        if (!group && !external) {
+                        if (!group && !neighbor) {
                             // is this a private call? if so only repeat to the peer that registered the unit
                             auto it = std::find_if(m_statusPVCall.begin(), m_statusPVCall.end(), [&](StatusMapPair& x) {
                                 if (x.second.dstId == dstId) {
@@ -490,8 +490,8 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
 
                     m_network->writePeer(peer.first, ssrc, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_NXDN }, outboundPeerBuffer, len, pktSeq, streamId, true);
                     if (m_network->m_debug) {
-                        LogDebug(LOG_NET, "NXDN, ssrc = %u, srcPeer = %u,  dstPeer = %u, messageType = $%02X, srcId = %u, dstId = %u, len = %u, pktSeq = %u, streamId = %u, external = %u", 
-                            ssrc, peerId, peer.first, messageType, srcId, dstId, len, pktSeq, streamId, external);
+                        LogDebug(LOG_NET, "NXDN, ssrc = %u, srcPeer = %u,  dstPeer = %u, messageType = $%02X, srcId = %u, dstId = %u, len = %u, pktSeq = %u, streamId = %u, fromUpstream = %u", 
+                            ssrc, peerId, peer.first, messageType, srcId, dstId, len, pktSeq, streamId, fromUpstream);
                     }
 
                     i++;
@@ -502,13 +502,13 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
         }
 
         // if this is a private call, and we have already repeated to the connected peer that registered
-        // the unit, don't repeat to any external peers
+        // the unit, don't repeat to any neighbor FNE peers
         if (privateCallInProgress && !noConnectedPeerRepeat) {
             return true;
         }
 
         /*
-        ** PEER TRAFFIC (e.g. networks this FNE is peered to)
+        ** PEER TRAFFIC (e.g. upstream networks this FNE is peered to)
         */
 
         // repeat traffic to master nodes we have connected to as a peer
@@ -517,7 +517,7 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                 uint32_t dstPeerId = peer.second->getPeerId();
 
                 // don't try to repeat traffic to the source peer...if this traffic
-                // is coming from a external peer
+                // is coming from a neighbor FNE peer
                 if (dstPeerId != peerId) {
                     if (ssrc == dstPeerId) {
                         // skip the peer if it is the source peer
@@ -546,8 +546,8 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                     else
                         peer.second->writeMaster({ NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_NXDN }, outboundPeerBuffer, len, pktSeq, streamId);
                     if (m_network->m_debug) {
-                        LogDebug(LOG_NET, "NXDN, ssrc = %u, srcPeer = %u, dstPeer = %u, messageType = $%02X, srcId = %u, dstId = %u, len = %u, pktSeq = %u, streamId = %u, external = %u", 
-                            ssrc, peerId, dstPeerId, messageType, srcId, dstId, len, pktSeq, streamId, external);
+                        LogDebug(LOG_NET, "NXDN, ssrc = %u, srcPeer = %u, dstPeer = %u, messageType = $%02X, srcId = %u, dstId = %u, len = %u, pktSeq = %u, streamId = %u, fromUpstream = %u", 
+                            ssrc, peerId, dstPeerId, messageType, srcId, dstId, len, pktSeq, streamId, fromUpstream);
                     }
                 }
             }
@@ -692,7 +692,7 @@ bool TagNXDNData::peerRewrite(uint32_t peerId, uint32_t& dstId, bool outbound)
 
 /* Helper to determine if the peer is permitted for traffic. */
 
-bool TagNXDNData::isPeerPermitted(uint32_t peerId, lc::RTCH& lc, uint8_t messageType, uint32_t streamId, bool external)
+bool TagNXDNData::isPeerPermitted(uint32_t peerId, lc::RTCH& lc, uint8_t messageType, uint32_t streamId, bool fromUpstream)
 {
     // promiscuous hub mode performs no ACL checking and will pass all traffic
     if (g_promiscuousHub)
@@ -757,8 +757,8 @@ bool TagNXDNData::isPeerPermitted(uint32_t peerId, lc::RTCH& lc, uint8_t message
         if (m_network->m_allowConvSiteAffOverride) {
             if (connection != nullptr) {
                 if (connection->isConventionalPeer()) {
-                    external = true; // we'll just set the external flag to disable the affiliation check
-                                     // for conventional peers
+                    fromUpstream = true; // we'll just set the fromUpstream flag to disable the affiliation check
+                                         // for conventional peers
                 }
             }
         }
@@ -766,14 +766,14 @@ bool TagNXDNData::isPeerPermitted(uint32_t peerId, lc::RTCH& lc, uint8_t message
         // is this peer a SysView peer?
         if (connection != nullptr) {
             if (connection->isSysView()) {
-                external = true; // we'll just set the external flag to disable the affiliation check
-                                 // for SysView peers
+                fromUpstream = true; // we'll just set the fromUpstream flag to disable the affiliation check
+                                     // for SysView peers
             }
         }
 
         // is this a TG that requires affiliations to repeat?
-        // NOTE: external peers *always* repeat traffic regardless of affiliation
-        if (tg.config().affiliated() && !external) {
+        // NOTE: neighbor FNE peers *always* repeat traffic regardless of affiliation
+        if (tg.config().affiliated() && !fromUpstream) {
             uint32_t lookupPeerId = peerId;
             if (connection != nullptr) {
                 if (connection->ccPeerId() > 0U)

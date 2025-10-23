@@ -59,10 +59,10 @@ namespace network
              * @param ssrc RTP Synchronization Source ID.
              * @param pktSeq RTP packet sequence.
              * @param streamId Stream ID.
-             * @param external Flag indicating traffic is from an external peer.
+             * @param fromUpstream Flag indicating traffic is from a upstream master.
              * @returns bool True, if frame is processed, otherwise false.
              */
-            bool processFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint32_t ssrc, uint16_t pktSeq, uint32_t streamId, bool external = false);
+            bool processFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint32_t ssrc, uint16_t pktSeq, uint32_t streamId, bool fromUpstream = false);
 
             /**
              * @brief Helper to playback a parrot frame to the network.
@@ -177,10 +177,10 @@ namespace network
              * @param peerId Peer ID.
              * @param data Instance of data::NetData Analog data container class.
              * @param streamId Stream ID.
-             * @param external Flag indicating this traffic came from an external peer.
+             * @param fromUpstream Flag indicating traffic is from a upstream master.
              * @returns bool True, if valid, otherwise false.
              */
-            bool isPeerPermitted(uint32_t peerId, analog::data::NetData& data, uint32_t streamId, bool external = false);
+            bool isPeerPermitted(uint32_t peerId, analog::data::NetData& data, uint32_t streamId, bool fromUpstream = false);
             /**
              * @brief Helper to validate the DMR call stream.
              * @param peerId Peer ID.

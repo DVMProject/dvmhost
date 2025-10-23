@@ -256,7 +256,7 @@ namespace network
          * @param conn FNE Peer Connection.
          * @return json::object 
          */
-        json::object fneConnObject(uint32_t peerId, FNEPeerConnection *conn);
+        json::object fneConnObject(uint32_t peerId, FNEPeerConnection* conn);
 
         /**
          * @brief Helper to reset a peer connection.
@@ -266,7 +266,7 @@ namespace network
         bool resetPeer(uint32_t peerId);
 
         /**
-         * @brief Helper to set the master is peer replica flag.
+         * @brief Helper to set the master is upstream peer replica flag.
          * @param peerReplica Flag indicating the master is a peer replica.
          */
         void setPeerReplica(bool peerReplica);
@@ -472,9 +472,9 @@ namespace network
          * @brief Helper to send the list of whitelisted RIDs to the specified peer.
          * @param peerId Peer ID.
          * @param streamId Stream ID for this message.
-         * @param sendISSI Flag indicating the RID transfer is to an external peer via ISSI.
+         * @param sendReplica Flag indicating the RID transfer is to an neighbor replica peer.
          */
-        void writeWhitelistRIDs(uint32_t peerId, uint32_t streamId, bool sendISSI);
+        void writeWhitelistRIDs(uint32_t peerId, uint32_t streamId, bool sendReplica);
         /**
          * @brief Helper to send the list of blacklisted RIDs to the specified peer.
          * @param peerId Peer ID.
@@ -485,9 +485,9 @@ namespace network
          * @brief Helper to send the list of active TGIDs to the specified peer.
          * @param peerId Peer ID.
          * @param streamId Stream ID for this message.
-         * @param sendISSI Flag indicating the TGID transfer is to an external peer via ISSI.
+         * @param sendReplica Flag indicating the TGID transfer is to an neighbor replica peer.
          */
-        void writeTGIDs(uint32_t peerId, uint32_t streamId, bool sendISSI);
+        void writeTGIDs(uint32_t peerId, uint32_t streamId, bool sendReplica);
         /**
          * @brief Helper to send the list of deactivated TGIDs to the specified peer.
          * @param peerId Peer ID.
@@ -504,9 +504,9 @@ namespace network
          * @brief Helper to send the HA parameters to the specified peer.
          * @param peerId Peer ID.
          * @param streamId Stream ID for this message.
-         * @param sendISSI Flag indicating the HA transfer is to an external peer via ISSI.
+         * @param sendReplica Flag indicating the HA transfer is to an neighbor replica peer.
          */
-        void writeHAParameters(uint32_t peerId, uint32_t streamId, bool sendISSI);
+        void writeHAParameters(uint32_t peerId, uint32_t streamId, bool sendReplica);
 
         /**
          * @brief Helper to send a network tree disconnect to the specified peer.

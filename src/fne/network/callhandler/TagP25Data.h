@@ -64,10 +64,10 @@ namespace network
              * @param ssrc RTP Synchronization Source ID.
              * @param pktSeq RTP packet sequence.
              * @param streamId Stream ID.
-             * @param external Flag indicating traffic is from an external peer.
+             * @param fromUpstream Flag indicating traffic is from a upstream master.
              * @returns bool True, if frame is processed, otherwise false.
              */
-            bool processFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint32_t ssrc, uint16_t pktSeq, uint32_t streamId, bool external = false);
+            bool processFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint32_t ssrc, uint16_t pktSeq, uint32_t streamId, bool fromUpstream = false);
             /**
              * @brief Process a grant request frame from the network.
              * @param srcId Source Radio ID.
@@ -257,14 +257,14 @@ namespace network
              */
             bool processTSDUTo(uint8_t* buffer, uint32_t peerId, uint8_t duid);
             /**
-             * @brief Helper to process TSDUs being passed to an external peer.
+             * @brief Helper to process TSDUs being passed to a neighbor FNE peer.
              * @param buffer Frame buffer.
              * @param srcPeerId Source Peer ID.
              * @param dstPeerID Destination Peer ID.
              * @param duid DUID.
              * @returns bool True, if allowed to pass, otherwise false.
              */
-            bool processTSDUToExternal(uint8_t* buffer, uint32_t srcPeerId, uint32_t dstPeerId, uint8_t duid);
+            bool processTSDUToNeighbor(uint8_t* buffer, uint32_t srcPeerId, uint32_t dstPeerId, uint8_t duid);
 
             /**
              * @brief Helper to determine if the peer is permitted for traffic.
@@ -272,10 +272,10 @@ namespace network
              * @param control Instance of p25::lc::LC.
              * @param duid DUID.
              * @param streamId Stream ID.
-             * @param external Flag indicating this traffic came from an external peer.
+             * @param fromUpstream Flag indicating traffic is from a upstream master.
              * @returns bool True, if permitted, otherwise false.
              */
-            bool isPeerPermitted(uint32_t peerId, p25::lc::LC& control, P25DEF::DUID::E duid, uint32_t streamId, bool external = false);
+            bool isPeerPermitted(uint32_t peerId, p25::lc::LC& control, P25DEF::DUID::E duid, uint32_t streamId, bool fromUpstream = false);
             /**
              * @brief Helper to validate the P25 call stream.
              * @param peerId Peer ID.

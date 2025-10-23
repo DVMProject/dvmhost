@@ -31,6 +31,7 @@ log:
 
 #
 # Master
+#   (This is the endpoint that downstream peers connect to for this FNE instance.)
 #
 master:
     # Network Peer ID
@@ -203,7 +204,8 @@ master:
         time: 30
 
 #
-# FNE Neighbor Peers
+# Upstream FNE Neighbor Peering
+#   (This is the list of connections to upstream FNEs this FNE instance should be connected to.)
 #
 peers:
     - name: EXAMPLEPEER

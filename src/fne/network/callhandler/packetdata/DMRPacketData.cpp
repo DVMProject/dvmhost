@@ -58,7 +58,7 @@ DMRPacketData::~DMRPacketData() = default;
 
 /* Process a data frame from the network. */
 
-bool DMRPacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint16_t pktSeq, uint32_t streamId, bool external)
+bool DMRPacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint16_t pktSeq, uint32_t streamId, bool fromUpstream)
 {
     hrc::hrc_t pktTime = hrc::now();
 
@@ -102,14 +102,14 @@ bool DMRPacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
         if (it != m_status.end()) {
             RxStatus* status = m_status[peerId];
             if (streamId != status->streamId) {
-                LogWarning(LOG_NET, "DMR, Data Call Collision, peer = %u, streamId = %u, rxPeer = %u, rxLlId = %u, rxSlotNo = %u, rxStreamId = %u, external = %u",
-                    peerId, streamId, status->peerId, status->srcId, status->slotNo, status->streamId, external);
+                LogWarning(LOG_NET, "DMR, Data Call Collision, peer = %u, streamId = %u, rxPeer = %u, rxLlId = %u, rxSlotNo = %u, rxStreamId = %u, fromUpstream = %u",
+                    peerId, streamId, status->peerId, status->srcId, status->slotNo, status->streamId, fromUpstream);
 
                 uint64_t duration = hrc::diff(pktTime, status->callStartTime);
 
                 if ((duration / 1000) > DATA_CALL_COLL_TIMEOUT) {
-                    LogWarning(LOG_NET, "DMR, force clearing stuck data call, timeout, peer = %u, streamId = %u, rxPeer = %u, rxLlId = %u, rxStreamId = %u, external = %u",
-                        peerId, streamId, status->peerId, status->srcId, status->slotNo, status->streamId, external);
+                    LogWarning(LOG_NET, "DMR, force clearing stuck data call, timeout, peer = %u, streamId = %u, rxPeer = %u, rxLlId = %u, rxStreamId = %u, fromUpstream = %u",
+                        peerId, streamId, status->peerId, status->srcId, status->slotNo, status->streamId, fromUpstream);
 
                     delete status;
                     m_status.erase(peerId);
@@ -157,7 +157,7 @@ bool DMRPacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
 
                 m_status[peerId] = status;
                 
-                LogMessage(LOG_NET, "DMR, Data Call Start, peer = %u, slot = %u, srcId = %u, dstId = %u, group = %u, streamId = %u, external = %u", peerId, status->slotNo, status->srcId, status->dstId, gi, streamId, external);
+                LogMessage(LOG_NET, "DMR, Data Call Start, peer = %u, slot = %u, srcId = %u, dstId = %u, group = %u, streamId = %u, fromUpstream = %u", peerId, status->slotNo, status->srcId, status->dstId, gi, streamId, fromUpstream);
                 dispatchToFNE(peerId, dmrData, data, len, seqNo, pktSeq, streamId);
 
                 return true;
@@ -170,8 +170,8 @@ bool DMRPacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
 
         // a PDU header only with no blocks to follow is usually a response header
         if (status->header.getBlocksToFollow() == 0U) {
-            LogMessage(LOG_NET, "DMR, Data Call End, peer = %u, slot = %u, srcId = %u, dstId = %u, streamId = %u, external = %u",
-                peerId, status->slotNo, status->srcId, status->dstId, streamId, external);
+            LogMessage(LOG_NET, "DMR, Data Call End, peer = %u, slot = %u, srcId = %u, dstId = %u, streamId = %u, fromUpstream = %u",
+                peerId, status->slotNo, status->srcId, status->dstId, streamId, fromUpstream);
 
             delete status;
             m_status.erase(peerId);
@@ -211,8 +211,8 @@ bool DMRPacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
             bool gi = status->header.getGI();
             uint32_t srcId = status->header.getSrcId();
             uint32_t dstId = status->header.getDstId();
-            LogMessage(LOG_NET, "P25, Data Call End, peer = %u, slot = %u, srcId = %u, dstId = %u, group = %u, blocks = %u, duration = %u, streamId = %u, external = %u",
-                peerId, srcId, dstId, gi, status->header.getBlocksToFollow(), duration / 1000, streamId, external);
+            LogMessage(LOG_NET, "P25, Data Call End, peer = %u, slot = %u, srcId = %u, dstId = %u, group = %u, blocks = %u, duration = %u, streamId = %u, fromUpstream = %u",
+                peerId, srcId, dstId, gi, status->header.getBlocksToFollow(), duration / 1000, streamId, fromUpstream);
 
             // report call event to InfluxDB
             if (m_network->m_enableInfluxDB) {
@@ -295,13 +295,13 @@ void DMRPacketData::dispatchToFNE(uint32_t peerId, dmr::data::NetData& dmrData, 
         m_network->m_frameQueue->flushQueue();
     }
 
-    // repeat traffic to external peers
+    // repeat traffic to neighbor FNE peers
     if (m_network->m_host->m_peerNetworks.size() > 0U) {
         for (auto peer : m_network->m_host->m_peerNetworks) {
             uint32_t dstPeerId = peer.second->getPeerId();
 
             // don't try to repeat traffic to the source peer...if this traffic
-            // is coming from a external peer
+            // is coming from a neighbor FNE peer
             if (dstPeerId != peerId) {
                 // skip peer if it isn't enabled
                 if (!peer.second->isEnabled()) {
