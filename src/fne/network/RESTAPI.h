@@ -186,6 +186,13 @@ private:
      * @param match HTTP request matcher.
      */
     void restAPI_PutPeerReset(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    /**
+     * @brief REST API endpoint; implements put reset upstream peer connection request.
+     * @param request HTTP request.
+     * @param reply HTTP reply.
+     * @param match HTTP request matcher.
+     */
+    void restAPI_PutPeerResetConn(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
 
     /**
      * @brief REST API endpoint; implements get radio ID query request.

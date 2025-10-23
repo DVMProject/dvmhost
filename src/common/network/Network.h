@@ -245,6 +245,11 @@ namespace network
         void enable(bool enabled);
 
         /**
+         * @brief Helper to clear the duplicate connection flag.
+         */
+        void clearDuplicateConnFlag() { m_flaggedDuplicateConn = false; }
+
+        /**
          * @brief Helper to set the peer connected callback.
          * @param callback 
          */
@@ -318,8 +323,10 @@ namespace network
         Timer m_retryTimer;
         uint8_t m_retryCount;
         uint8_t m_maxRetryCount;
-        uint8_t m_duplicateConnCount;
+        bool m_flaggedDuplicateConn;
         Timer m_timeoutTimer;
+
+        uint32_t m_pingsReceived;
 
         uint32_t* m_rxDMRStreamId;
         uint32_t m_rxP25StreamId;

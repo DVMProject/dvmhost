@@ -639,6 +639,7 @@ void RESTAPI::initializeEndpoints()
     m_dispatcher.match(FNE_GET_PEER_QUERY).get(REST_API_BIND(RESTAPI::restAPI_GetPeerQuery, this));
     m_dispatcher.match(FNE_GET_PEER_COUNT).get(REST_API_BIND(RESTAPI::restAPI_GetPeerCount, this));
     m_dispatcher.match(FNE_PUT_PEER_RESET).put(REST_API_BIND(RESTAPI::restAPI_PutPeerReset, this));
+    m_dispatcher.match(FNE_PUT_PEER_RESET_CONN).put(REST_API_BIND(RESTAPI::restAPI_PutPeerResetConn, this));
 
     m_dispatcher.match(FNE_GET_RID_QUERY).get(REST_API_BIND(RESTAPI::restAPI_GetRIDQuery, this));
     m_dispatcher.match(FNE_PUT_RID_ADD).put(REST_API_BIND(RESTAPI::restAPI_PutRIDAdd, this));
@@ -941,6 +942,45 @@ void RESTAPI::restAPI_PutPeerReset(const HTTPPayload& request, HTTPPayload& repl
     uint32_t peerId = req["peerId"].get<uint32_t>();
 
     m_network->resetPeer(peerId);
+}
+
+/* REST API endpoint; implements put reset upstream peer connection request.*/
+
+void RESTAPI::restAPI_PutPeerResetConn(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object req = json::object();
+    if (!parseRequestBody(request, reply, req)) {
+        return;
+    }
+
+    errorPayload(reply, "OK", HTTPPayload::OK);
+
+    if (!req["peerId"].is<uint32_t>()) {
+        errorPayload(reply, "peerId was not a valid integer");
+        return;
+    }
+
+    uint32_t peerId = req["peerId"].get<uint32_t>();
+
+    if (m_host->m_peerNetworks.size() > 0) {
+        for (auto peer : m_host->m_peerNetworks) {
+            if (peer.second != nullptr) {
+                if (peer.second->getPeerId() == peerId) {
+                    LogInfoEx(LOG_NET, "PEER %u, request to reset upstream peer connection", peerId);
+                    
+                    peer.second->clearDuplicateConnFlag();
+
+                    peer.second->close();
+                    peer.second->open();
+                    break;
+                }
+            }
+        }
+    }
 }
 
 /* REST API endpoint; implements get radio ID query request. */

@@ -48,6 +48,7 @@
 #define RCD_FNE_PUT_RESETPEER           "fne-reset-peer"
 #define RCD_FNE_PUT_PEER_ACL_ADD        "fne-peer-acl-add"
 #define RCD_FNE_PUT_PEER_ACL_DELETE     "fne-peer-acl-del"
+#define RCD_FNE_PUT_PEER_RESET_CONN     "fne-peer-reset-conn"
 
 #define RCD_FNE_SAVE_RID_ACL            "fne-rid-commit"
 #define RCD_FNE_SAVE_TGID_ACL           "fne-tgid-commit"
@@ -217,6 +218,7 @@ void usage(const char* message, const char* arg)
     reply += "  fne-reset-peer <pid>        Forces the FNE to reset the connection of the given peer ID (Converged FNE only)\r\n";
     reply += "  fne-peer-acl-add <pid>      Adds the specified peer ID to the FNE ACL tables (Converged FNE only)\r\n";
     reply += "  fne-peer-acl-del <pid>      Removes the specified peer ID to the FNE ACL tables (Converged FNE only)\r\n";
+    reply += "  fne-peer-reset-conn <pid>   Forces the FNE to reset a upstream peer connection of the given peer ID (Converged FNE only)\r\n";
     reply += "\r\n";
     reply += "  fne-rid-commit              Saves the current RID ACL to permenant storage (Converged FNE only)\r\n";
     reply += "  fne-tgid-commit             Saves the current TGID ACL to permenant storage (Converged FNE only)\r\n";
@@ -896,6 +898,13 @@ int main(int argc, char** argv)
             req["peerId"].set<uint32_t>(peerId);
 
             retCode = client->send(HTTP_PUT, FNE_PUT_PEER_RESET, req, response);
+        }
+        else if (rcom == RCD_FNE_PUT_PEER_RESET_CONN && argCnt >= 1U) {
+            uint32_t peerId = getArgUInt32(args, 0U);
+            json::object req = json::object();
+            req["peerId"].set<uint32_t>(peerId);
+
+            retCode = client->send(HTTP_PUT, FNE_PUT_PEER_RESET_CONN, req, response);
         }
         else if (rcom == RCD_FNE_PUT_PEER_ACL_ADD && argCnt >= 1U) {
             uint32_t peerId = getArgUInt32(args, 0U);

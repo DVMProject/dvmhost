@@ -28,6 +28,7 @@
 #define FNE_GET_PEER_QUERY              "/peer/query"
 #define FNE_GET_PEER_COUNT              "/peer/count"
 #define FNE_PUT_PEER_RESET              "/peer/reset"
+#define FNE_PUT_PEER_RESET_CONN         "/peer/connreset"
 
 #define FNE_GET_RID_QUERY               "/rid/query"
 #define FNE_PUT_RID_ADD                 "/rid/add"
@@ -56,6 +57,6 @@
 
 #define FNE_GET_AFF_LIST                "/report-affiliations"
 
-#define FNE_GET_MASTER_TREE             "/rerpot-master-tree"
+#define FNE_GET_MASTER_TREE             "/report-master-tree"
 
 #endif // __FNE_REST_DEFINES_H__

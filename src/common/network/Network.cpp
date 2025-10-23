@@ -26,11 +26,12 @@ using namespace network;
 // ---------------------------------------------------------------------------
 
 #define DEFAULT_RETRY_TIME 10U // 10 seconds
-#define DUPLICATE_CONN_RETRY_TIME 1800U // 30 minutes
+#define DUPLICATE_CONN_RETRY_TIME 3600U // 60 minutes
 
 #define MAX_RETRY_BEFORE_RECONNECT 4U
 #define MAX_RETRY_HA_RECONNECT 2U
-#define MAX_RETRY_DUPLICATE_CONN 3U
+#define MAX_RETRY_DUP_RECONNECT 2U
+
 #define MAX_SERVER_DIFF 360ULL // maximum difference in time between a server timestamp and local timestamp in milliseconds
 
 // ---------------------------------------------------------------------------
@@ -64,7 +65,7 @@ Network::Network(const std::string& address, uint16_t port, uint16_t localPort, 
     m_retryTimer(1000U, DEFAULT_RETRY_TIME),
     m_retryCount(0U),
     m_maxRetryCount(MAX_RETRY_BEFORE_RECONNECT),
-    m_duplicateConnCount(0U),
+    m_flaggedDuplicateConn(false),
     m_timeoutTimer(1000U, MAX_PEER_PING_TIME),
     m_pktSeq(0U),
     m_loginStreamId(0U),
@@ -202,6 +203,10 @@ void Network::clock(uint32_t ms)
         if (m_retryTimer.isRunning() && m_retryTimer.hasExpired()) {
             if (m_enabled) {
                 if (m_retryCount > m_maxRetryCount) {
+                    if (m_flaggedDuplicateConn) {
+                        LogError(LOG_NET, "PEER %u exceeded maximum duplicate connection retries, increasing delay between connection attempts", m_peerId);
+                    }
+
                     LogError(LOG_NET, "PEER %u connection to the master has timed out, retrying connection, remotePeerId = %u", m_peerId, m_remotePeerId);
 
                     close();
@@ -224,15 +229,6 @@ void Network::clock(uint32_t ms)
 
                     m_status = NET_STAT_WAITING_LOGIN;
                     m_timeoutTimer.start();
-                }
-
-                if (m_duplicateConnCount >= MAX_RETRY_DUPLICATE_CONN) {
-                    LogError(LOG_NET, "PEER %u exceeded maximum duplicate connection retries, disabling network connection", m_peerId);
-                    m_enabled = false;
-                    m_duplicateConnCount = 0U;
-                    m_retryTimer.stop();
-                    close();
-                    return;
                 }
             }
 
@@ -1012,13 +1008,12 @@ void Network::clock(uint32_t ms)
 
                     case NET_CONN_NAK_FNE_DUPLICATE_CONN:
                         LogWarning(LOG_NET, "PEER %u master NAK; duplicate connection to FNE, remotePeerId = %u", m_peerId, rtpHeader.getSSRC());
-                        m_status = NET_STAT_WAITING_LOGIN;
+                        m_status = NET_STAT_WAITING_CONNECT;
                         m_remotePeerId = 0U;
-                        m_duplicateConnCount++;
-                        m_retryTimer.stop();
-                        m_retryTimer.setTimeout(DUPLICATE_CONN_RETRY_TIME);
+                        m_flaggedDuplicateConn = true;
+                        m_maxRetryCount = MAX_RETRY_DUP_RECONNECT;
                         m_retryTimer.start();
-                        break;
+                        return;
 
                     case NET_CONN_NAK_GENERAL_FAILURE:
                     default:
@@ -1027,7 +1022,8 @@ void Network::clock(uint32_t ms)
                     }
                 }
 
-                if (m_status == NET_STAT_RUNNING && (reason == NET_CONN_NAK_FNE_MAX_CONN)) {
+                if (m_status == NET_STAT_RUNNING && (reason == NET_CONN_NAK_FNE_MAX_CONN))
+                {
                     LogWarning(LOG_NET, "PEER %u master NAK; attemping to relogin, remotePeerId = %u", m_peerId, rtpHeader.getSSRC());
                     m_status = NET_STAT_WAITING_LOGIN;
                     m_timeoutTimer.start();
@@ -1082,8 +1078,6 @@ void Network::clock(uint32_t ms)
                         m_retryTimer.setTimeout(DEFAULT_RETRY_TIME);
                         m_retryTimer.start();
 
-                        m_duplicateConnCount = 0U;
-
                         if (length > 6) {
                             m_useAlternatePortForDiagnostics = (buffer[6U] & 0x80U) == 0x80U;
                             if (m_useAlternatePortForDiagnostics) {
@@ -1137,6 +1131,13 @@ void Network::clock(uint32_t ms)
                 uint64_t dt = (uint64_t)fabs((double)now - (double)serverNow);
                 if (dt > MAX_SERVER_DIFF)
                     LogWarning(LOG_NET, "PEER %u pong, time delay greater than %llums, now = %llu, server = %llu, dt = %llu", m_peerId, MAX_SERVER_DIFF, now, serverNow, dt);
+
+                ++m_pingsReceived;
+
+                // if we've been connected for at least 10 PING/PONG cycles and we're flagged duplicate connection, clear the flag
+                if (m_pingsReceived > 10U && m_flaggedDuplicateConn) {
+                    m_flaggedDuplicateConn = false;
+                }
             }
             break;
         default:
@@ -1193,12 +1194,9 @@ bool Network::open()
         LogMessage(LOG_NET, "PEER %u opening network", m_peerId);
 
     m_status = NET_STAT_WAITING_CONNECT;
-    m_timeoutTimer.start();
-    m_retryTimer.start();
-    m_retryCount = 0U;
 
     // are we rotating IPs for HA reconnect?
-    if (m_haIPs.size() > 0 && m_retryCount > 0U &&
+    if (m_haIPs.size() > 0 && m_retryCount > 0U && !m_flaggedDuplicateConn &&
         m_maxRetryCount == MAX_RETRY_HA_RECONNECT) {
 
         PeerHAIPEntry entry = m_haIPs[m_currentHAIP];
@@ -1213,6 +1211,12 @@ bool Network::open()
         m_address = entry.masterAddress;
         m_port = entry.masterPort;
     }
+
+    m_timeoutTimer.start();
+    m_retryTimer.start();
+    m_retryCount = 0U;
+
+    m_pingsReceived = 0U;
 
     if (udp::Socket::lookup(m_address, m_port, m_addr, m_addrLen) != 0) {
         LogMessage(LOG_NET, "!!! Could not lookup the address of the master!");
@@ -1239,6 +1243,13 @@ void Network::close()
     m_socket->close();
 
     m_retryTimer.stop();
+    if (m_flaggedDuplicateConn) {
+        // if we were flagged a duplicate connection, increase the retry time to avoid rapid reconnect attempts
+        m_retryTimer.setTimeout(DUPLICATE_CONN_RETRY_TIME);
+    }
+    else {
+        m_retryTimer.setTimeout(DEFAULT_RETRY_TIME);
+    }
     m_timeoutTimer.stop();
 
     m_status = NET_STAT_WAITING_CONNECT;
