@@ -876,6 +876,7 @@ bool HostFNE::createPeerNetworks()
             network->setAnalogCallback(std::bind(&HostFNE::processPeerAnalog, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, std::placeholders::_6));
 
             network->setNetTreeDiscCallback(std::bind(&HostFNE::processNetworkTreeDisconnect, this, std::placeholders::_1, std::placeholders::_2));
+            network->setNotifyPeerReplicaCallback(std::bind(&HostFNE::processPeerReplicaNotify, this, std::placeholders::_1));
 
             network->enable(enabled);
             if (enabled) {
@@ -1100,5 +1101,14 @@ void HostFNE::processNetworkTreeDisconnect(network::PeerNetwork* peerNetwork, co
 {
     if (m_network != nullptr) {
         m_network->processNetworkTreeDisconnect(peerNetwork->getPeerId(), offendingPeerId);
+    }
+}
+
+/* Processes network tree disconnect notification. */
+
+void HostFNE::processPeerReplicaNotify(network::PeerNetwork* peerNetwork)
+{
+    if (m_network != nullptr) {
+        m_network->setPeerReplica(true);
     }
 }

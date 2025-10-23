@@ -136,6 +136,11 @@ namespace network
          * @param callback 
          */
         void setNetTreeDiscCallback(std::function<void(PeerNetwork*, const uint32_t offendingPeerId)>&& callback) { m_netTreeDiscCallback = callback; }
+        /**
+         * @brief Helper to set the peer replica notification callback.
+         * @param callback 
+         */
+        void setNotifyPeerReplicaCallback(std::function<void(PeerNetwork*)>&& callback) { m_peerReplicaCallback = callback; }
 
         /**
          * @brief Writes a complete update of this CFNE's active peer list to the network.
@@ -206,6 +211,10 @@ namespace network
          * @brief Network Tree Disconnect Callback.
          */
         std::function<void(PeerNetwork* peer, const uint32_t offendingPeerId)> m_netTreeDiscCallback;
+        /**
+         * @brief Peer Replica Notification Callback.
+         */
+        std::function<void(PeerNetwork* peer)> m_peerReplicaCallback;
 
         /**
          * @brief User overrideable handler that allows user code to process network packets not handled by this class.

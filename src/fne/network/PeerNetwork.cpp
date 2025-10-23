@@ -45,6 +45,8 @@ PeerNetwork::PeerNetwork(const std::string& address, uint16_t port, uint16_t loc
     m_p25Callback(nullptr),
     m_nxdnCallback(nullptr),
     m_analogCallback(nullptr),
+    m_netTreeDiscCallback(nullptr),
+    m_peerReplicaCallback(nullptr),
     m_masterPeerId(0U),
     m_pidLookup(nullptr),
     m_peerReplica(false),
@@ -312,6 +314,8 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
 
                 // flag this peer as replica enabled
                 m_peerReplica = true;
+                if (m_peerReplicaCallback != nullptr)
+                    m_peerReplicaCallback(this);
 
                 // cleanup temporary file
                 ::remove(filename.c_str());
@@ -368,7 +372,9 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
                 m_ridLookup->reload();
 
                 // flag this peer as replica enabled
-                m_peerReplica= true;
+                m_peerReplica = true;
+                if (m_peerReplicaCallback != nullptr)
+                    m_peerReplicaCallback(this);
 
                 // cleanup temporary file
                 ::remove(filename.c_str());
@@ -426,6 +432,8 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
 
                 // flag this peer as replica enabled
                 m_peerReplica = true;
+                if (m_peerReplicaCallback != nullptr)
+                    m_peerReplicaCallback(this);
 
                 // cleanup temporary file
                 ::remove(filename.c_str());

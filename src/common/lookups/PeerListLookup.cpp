@@ -123,9 +123,9 @@ PeerId PeerListLookup::find(uint32_t id)
 
 /* Commit the table. */
 
-void PeerListLookup::commit()
+void PeerListLookup::commit(bool quiet)
 {
-    save();
+    save(quiet);
 }
 
 /* Gets whether the lookup is enabled. */
@@ -273,7 +273,7 @@ bool PeerListLookup::load()
 
 /* Saves the table to the passed lookup table file. */
 
-bool PeerListLookup::save()
+bool PeerListLookup::save(bool quiet)
 {
     if (m_filename.empty()) {
         return false;
@@ -285,7 +285,8 @@ bool PeerListLookup::save()
         return false;
     }
 
-    LogMessage(LOG_HOST, "Saving peer lookup file to %s", m_filename.c_str());
+    if (!quiet)
+        LogMessage(LOG_HOST, "Saving peer lookup file to %s", m_filename.c_str());
 
     // Counter for lines written
     unsigned int lines = 0;
@@ -352,7 +353,8 @@ bool PeerListLookup::save()
     if (lines != m_table.size())
         return false;
 
-    LogInfoEx(LOG_HOST, "Saved %u entries to lookup table file %s", lines, m_filename.c_str());
+    if (!quiet)
+        LogInfoEx(LOG_HOST, "Saved %u entries to lookup table file %s", lines, m_filename.c_str());
 
     return true;
 }

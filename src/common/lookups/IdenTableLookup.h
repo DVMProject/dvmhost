@@ -154,9 +154,10 @@ namespace lookups
 
         /**
          * @brief Saves the table to the passed lookup table file.
+         * @param quiet Disable logging during save operation.
          * @returns bool True, if lookup table was saved, otherwise false.
          */
-        bool save() override;
+        bool save(bool quiet = false) override;
 
     private:
         static std::mutex m_mutex;

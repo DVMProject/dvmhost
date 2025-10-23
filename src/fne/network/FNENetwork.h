@@ -265,6 +265,12 @@ namespace network
          */
         bool resetPeer(uint32_t peerId);
 
+        /**
+         * @brief Helper to set the master is peer replica flag.
+         * @param peerReplica Flag indicating the master is a peer replica.
+         */
+        void setPeerReplica(bool peerReplica);
+
     private:
         friend class DiagNetwork;
         friend class callhandler::TagDMRData;
@@ -288,6 +294,8 @@ namespace network
         uint16_t m_port;
 
         std::string m_password;
+
+        bool m_isPeerReplica;
 
         bool m_dmrEnabled;
         bool m_p25Enabled;

@@ -221,6 +221,11 @@ private:
      * @param offendingPeerId Offending peer ID.
      */
     void processNetworkTreeDisconnect(network::PeerNetwork* peerNetwork, const uint32_t offendingPeerId);
+    /**
+     * @brief Processes peer replica notification.
+     * @param peerNetwork Peer network instance.
+     */
+    void processPeerReplicaNotify(network::PeerNetwork* peerNetwork);
 };
 
 #endif // __HOST_FNE_H__

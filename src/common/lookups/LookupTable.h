@@ -199,9 +199,10 @@ namespace lookups
 
         /**
          * @brief Saves the table from the lookup table in memory.
+         * @param quiet Disable logging during save operation.
          * @returns bool True, if lookup table was saved, otherwise false.
          */
-        virtual bool save() = 0;
+        virtual bool save(bool quiet = false) = 0;
     };
 } // namespace lookups
 

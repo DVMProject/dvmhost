@@ -186,8 +186,9 @@ namespace lookups
 
         /**
          * @brief Commit the table.
+         * @param quiet Disable logging during save operation.
          */
-        void commit();
+        void commit(bool quiet = false);
 
         /**
          * @brief Gets whether the lookup is enabled.
@@ -236,9 +237,10 @@ namespace lookups
 
         /**
          * @brief Saves the table to the passed lookup table file.
+         * @param quiet Disable logging during save operation.
          * @return True, if lookup table was saved, otherwise false.
          */
-        bool save() override;
+        bool save(bool quiet = false) override;
 
     private:
         static std::mutex m_mutex;  //!< Mutex used for change locking.

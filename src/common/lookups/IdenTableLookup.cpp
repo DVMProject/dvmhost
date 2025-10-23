@@ -163,7 +163,7 @@ bool IdenTableLookup::load()
 
 /* Saves the table to the passed lookup table file. */
 
-bool IdenTableLookup::save()
+bool IdenTableLookup::save(bool quiet)
 {
     return false;
 }

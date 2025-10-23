@@ -31,6 +31,7 @@ using namespace compress;
 
 #include <cassert>
 #include <cerrno>
+#include <cstdio>
 #include <chrono>
 #include <fstream>
 #include <streambuf>
@@ -75,6 +76,7 @@ FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port,
     m_address(address),
     m_port(port),
     m_password(password),
+    m_isPeerReplica(false),
     m_dmrEnabled(dmr),
     m_p25Enabled(p25),
     m_nxdnEnabled(nxdn),
@@ -2018,6 +2020,17 @@ bool FNENetwork::resetPeer(uint32_t peerId)
     return false;
 }
 
+/* Helper to set the master is peer replica flag. */
+
+void FNENetwork::setPeerReplica(bool peerReplica)
+{
+    if (!m_isPeerReplica && peerReplica) {
+        LogInfoEx(LOG_NET, "MASTER set to peer replica, receiving ACL updates from upstream master");
+    }
+
+    m_isPeerReplica = peerReplica;
+}
+
 /* Helper to resolve the peer ID to its identity string. */
 
 std::string FNENetwork::resolvePeerIdentity(uint32_t peerId)
@@ -2133,14 +2146,27 @@ void FNENetwork::writeWhitelistRIDs(uint32_t peerId, uint32_t streamId, bool sen
     if (sendISSI) {
         FNEPeerConnection* connection = m_peers[peerId];
         if (connection != nullptr) {
-            std::string filename = m_ridLookup->filename();
-            if (filename.empty()) {
-                return;
+            // save out radio ID table to disk
+            std::string tempFile;
+            if (m_isPeerReplica) {
+                std::ostringstream s;
+                std::random_device rd;
+                std::mt19937 mt(rd());
+                std::uniform_int_distribution<uint32_t> dist(0x00U, 0xFFFFFFFFU);
+                s << "/tmp/rid_acl.dat." << dist(mt);
+
+                tempFile = s.str();
+                std::string origFile = m_ridLookup->filename();
+                m_ridLookup->filename(tempFile);
+                m_ridLookup->commit(true);
+                m_ridLookup->filename(origFile);
+            } else {
+                tempFile = m_ridLookup->filename();
             }
 
             // read entire file into string buffer
             std::stringstream b;
-            std::ifstream stream(filename);
+            std::ifstream stream(tempFile);
             if (stream.is_open()) {
                 while (stream.peek() != EOF) {
                     b << (char)stream.get();
@@ -2148,6 +2174,9 @@ void FNENetwork::writeWhitelistRIDs(uint32_t peerId, uint32_t streamId, bool sen
 
                 stream.close();
             }
+
+            if (m_isPeerReplica)
+                ::remove(tempFile.c_str());
 
             // convert to a byte array
             uint32_t len = b.str().size();
@@ -2319,14 +2348,26 @@ void FNENetwork::writeTGIDs(uint32_t peerId, uint32_t streamId, bool sendISSI)
     if (sendISSI) {
         FNEPeerConnection* connection = m_peers[peerId];
         if (connection != nullptr) {
-            std::string filename = m_tidLookup->filename();
-            if (filename.empty()) {
-                return;
+            std::string tempFile;
+            if (m_isPeerReplica) {
+                std::ostringstream s;
+                std::random_device rd;
+                std::mt19937 mt(rd());
+                std::uniform_int_distribution<uint32_t> dist(0x00U, 0xFFFFFFFFU);
+                s << "/tmp/talkgroup_rules.yml." << dist(mt);
+
+                tempFile = s.str();
+                std::string origFile = m_tidLookup->filename();
+                m_tidLookup->filename(tempFile);
+                m_tidLookup->commit(true);
+                m_tidLookup->filename(origFile);
+            } else {
+                tempFile = m_tidLookup->filename();
             }
 
             // read entire file into string buffer
             std::stringstream b;
-            std::ifstream stream(filename);
+            std::ifstream stream(tempFile);
             if (stream.is_open()) {
                 while (stream.peek() != EOF) {
                     b << (char)stream.get();
@@ -2334,6 +2375,9 @@ void FNENetwork::writeTGIDs(uint32_t peerId, uint32_t streamId, bool sendISSI)
 
                 stream.close();
             }
+
+            if (m_isPeerReplica)
+                ::remove(tempFile.c_str());
 
             // convert to a byte array
             uint32_t len = b.str().size();
@@ -2496,14 +2540,26 @@ void FNENetwork::writePeerList(uint32_t peerId, uint32_t streamId)
     // sending REPL style RID list to external peers
     FNEPeerConnection* connection = m_peers[peerId];
     if (connection != nullptr) {
-        std::string filename = m_peerListLookup->filename();
-        if (filename.empty()) {
-            return;
+        std::string tempFile;
+        if (m_isPeerReplica) {
+            std::ostringstream s;
+            std::random_device rd;
+            std::mt19937 mt(rd());
+            std::uniform_int_distribution<uint32_t> dist(0x00U, 0xFFFFFFFFU);
+            s << "/tmp/peer_list.dat." << dist(mt);
+
+            tempFile = s.str();
+            std::string origFile = m_peerListLookup->filename();
+            m_peerListLookup->filename(tempFile);
+            m_peerListLookup->commit(true);
+            m_peerListLookup->filename(origFile);
+        } else {
+            tempFile = m_peerListLookup->filename();
         }
 
         // read entire file into string buffer
         std::stringstream b;
-        std::ifstream stream(filename);
+        std::ifstream stream(tempFile);
         if (stream.is_open()) {
             while (stream.peek() != EOF) {
                 b << (char)stream.get();
@@ -2511,6 +2567,9 @@ void FNENetwork::writePeerList(uint32_t peerId, uint32_t streamId)
 
             stream.close();
         }
+
+        if (m_isPeerReplica)
+            ::remove(tempFile.c_str());
 
         // convert to a byte array
         uint32_t len = b.str().size();

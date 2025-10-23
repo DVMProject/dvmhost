@@ -609,8 +609,9 @@ namespace lookups
 
         /**
          * @brief Saves loaded talkgroup rules.
+         * @param quiet Disable logging during save operation.
          */
-        bool commit();
+        bool commit(bool quiet = false);
 
         /**
          * @brief Flag indicating whether talkgroup ID access control is enabled or not.
@@ -653,9 +654,10 @@ namespace lookups
         bool load();
         /**
          * @brief Saves the table to the passed lookup table file.
+         * @param quiet Disable logging during save operation.
          * @return True, if lookup table was saved, otherwise false.
          */
-        bool save();
+        bool save(bool quiet = false);
 
     public:
         /**

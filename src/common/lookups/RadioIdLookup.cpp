@@ -148,9 +148,9 @@ RadioId RadioIdLookup::find(uint32_t id)
 
 /* Saves loaded talkgroup rules. */
 
-void RadioIdLookup::commit()
+void RadioIdLookup::commit(bool quiet)
 {
-    save();
+    save(quiet);
 }
 
 /* Flag indicating whether radio ID access control is enabled or not. */
@@ -241,7 +241,7 @@ bool RadioIdLookup::load()
 
 /* Saves the table to the passed lookup table file. */
 
-bool RadioIdLookup::save()
+bool RadioIdLookup::save(bool quiet)
 {
     if (m_filename.empty()) {
         return false;
@@ -253,7 +253,8 @@ bool RadioIdLookup::save()
         return false;
     }
 
-    LogMessage(LOG_HOST, "Saving RID lookup file to %s", m_filename.c_str());
+    if (!quiet)
+        LogMessage(LOG_HOST, "Saving RID lookup file to %s", m_filename.c_str());
 
     // Counter for lines written
     unsigned int lines = 0;
@@ -296,7 +297,8 @@ bool RadioIdLookup::save()
     if (lines != m_table.size())
         return false;
 
-    LogInfoEx(LOG_HOST, "Saved %u entries to lookup table file %s", lines, m_filename.c_str());
+    if (!quiet)
+        LogInfoEx(LOG_HOST, "Saved %u entries to lookup table file %s", lines, m_filename.c_str());
 
     return true;
 }

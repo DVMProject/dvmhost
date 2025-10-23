@@ -291,9 +291,9 @@ TalkgroupRuleGroupVoice TalkgroupRulesLookup::findByRewrite(uint32_t peerId, uin
 
 /* Saves loaded talkgroup rules. */
 
-bool TalkgroupRulesLookup::commit()
+bool TalkgroupRulesLookup::commit(bool quiet)
 {
-    return save();
+    return save(quiet);
 }
 
 /* Flag indicating whether talkgroup ID access control is enabled or not. */
@@ -383,7 +383,7 @@ bool TalkgroupRulesLookup::load()
 
 /* Saves the table to the passed lookup table file. */
 
-bool TalkgroupRulesLookup::save()
+bool TalkgroupRulesLookup::save(bool quiet)
 {
     // Make sure file is valid
     if (m_rulesFile.length() <= 0) {
@@ -414,9 +414,9 @@ bool TalkgroupRulesLookup::save()
     }
 
     try {
-        LogMessage(LOG_HOST, "Saving talkgroup rules file to %s", m_rulesFile.c_str());
+        if (!quiet)
+            LogMessage(LOG_HOST, "Saving talkgroup rules file to %s", m_rulesFile.c_str());
         yaml::Serialize(newRules, m_rulesFile.c_str());
-        LogDebug(LOG_HOST, "Saved TGID config file to %s", m_rulesFile.c_str());
     }
     catch (yaml::OperationException const& e) {
         LogError(LOG_HOST, "Cannot save the talkgroup rules lookup file - %s (%s)", m_rulesFile.c_str(), e.message());
