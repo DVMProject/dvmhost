@@ -130,7 +130,7 @@ bool DMRPacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
 
                 bool ret = status->header.decode(frame);
                 if (!ret) {
-                    LogError(LOG_NET, "DMR Slot %u, DataType::DATA_HEADER, unable to decode the network data header", status->slotNo);
+                    LogError(LOG_DMR, "DMR Slot %u, DataType::DATA_HEADER, unable to decode the network data header", status->slotNo);
                     Utils::dump(1U, "DMR, Unfixable PDU Data", frame, DMR_FRAME_LENGTH_BYTES);
 
                     delete status;
@@ -145,19 +145,19 @@ bool DMRPacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
                 uint32_t srcId = status->header.getSrcId();
                 uint32_t dstId = status->header.getDstId();
 
-                LogMessage(LOG_NET, DMR_DT_DATA_HEADER ", peerId = %u, slot = %u, dpf = $%02X, ack = %u, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padLength = %u, packetLength = %u, seqNo = %u, dstId = %u, srcId = %u, group = %u",
+                LogMessage(LOG_DMR, DMR_DT_DATA_HEADER ", peerId = %u, slot = %u, dpf = $%02X, ack = %u, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padLength = %u, packetLength = %u, seqNo = %u, dstId = %u, srcId = %u, group = %u",
                     peerId, status->slotNo, status->header.getDPF(), status->header.getA(), status->header.getSAP(), status->header.getFullMesage(), status->header.getBlocksToFollow(), status->header.getPadLength(), status->header.getPacketLength(),
                     status->header.getFSN(), dstId, srcId, gi);
 
                 // make sure we don't get a PDU with more blocks then we support
                 if (status->header.getBlocksToFollow() >= MAX_PDU_COUNT) {
-                    LogError(LOG_NET, P25_PDU_STR ", too many PDU blocks to process, %u > %u", status->header.getBlocksToFollow(), MAX_PDU_COUNT);
+                    LogError(LOG_DMR, DMR_DT_DATA_HEADER ", too many PDU blocks to process, %u > %u", status->header.getBlocksToFollow(), MAX_PDU_COUNT);
                     return false;
                 }
 
                 m_status[peerId] = status;
                 
-                LogMessage(LOG_NET, "DMR, Data Call Start, peer = %u, slot = %u, srcId = %u, dstId = %u, group = %u, streamId = %u, fromUpstream = %u", peerId, status->slotNo, status->srcId, status->dstId, gi, streamId, fromUpstream);
+                LogMessage((fromUpstream) ? LOG_PEER : LOG_MASTER, "DMR, Data Call Start, peer = %u, slot = %u, srcId = %u, dstId = %u, group = %u, streamId = %u, fromUpstream = %u", peerId, status->slotNo, status->srcId, status->dstId, gi, streamId, fromUpstream);
                 dispatchToFNE(peerId, dmrData, data, len, seqNo, pktSeq, streamId);
 
                 return true;
@@ -170,7 +170,7 @@ bool DMRPacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
 
         // a PDU header only with no blocks to follow is usually a response header
         if (status->header.getBlocksToFollow() == 0U) {
-            LogMessage(LOG_NET, "DMR, Data Call End, peer = %u, slot = %u, srcId = %u, dstId = %u, streamId = %u, fromUpstream = %u",
+            LogMessage((fromUpstream) ? LOG_PEER : LOG_MASTER, "DMR, Data Call End, peer = %u, slot = %u, srcId = %u, dstId = %u, streamId = %u, fromUpstream = %u",
                 peerId, status->slotNo, status->srcId, status->dstId, streamId, fromUpstream);
 
             delete status;
@@ -191,12 +191,12 @@ bool DMRPacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
                 dataBlock.setLastBlock(true);
 
             if (dataType == DataType::RATE_34_DATA) {
-                LogMessage(LOG_NET, DMR_DT_RATE_34_DATA ", ISP, block %u, peer = %u, dataType = $%02X, dpf = $%02X", status->dataBlockCnt, peerId, dataBlock.getDataType(), dataBlock.getFormat());
+                LogMessage(LOG_DMR, DMR_DT_RATE_34_DATA ", ISP, block %u, peer = %u, dataType = $%02X, dpf = $%02X", status->dataBlockCnt, peerId, dataBlock.getDataType(), dataBlock.getFormat());
             } else if (dataType == DataType::RATE_12_DATA) {
-                LogMessage(LOG_NET, DMR_DT_RATE_12_DATA ", ISP, block %u, peer = %u, dataType = $%02X, dpf = $%02X", status->dataBlockCnt, peerId, dataBlock.getDataType(), dataBlock.getFormat());
+                LogMessage(LOG_DMR, DMR_DT_RATE_12_DATA ", ISP, block %u, peer = %u, dataType = $%02X, dpf = $%02X", status->dataBlockCnt, peerId, dataBlock.getDataType(), dataBlock.getFormat());
             }
             else {
-                LogMessage(LOG_NET, DMR_DT_RATE_1_DATA ", ISP, block %u, peer = %u, dataType = $%02X, dpf = $%02X", status->dataBlockCnt, peerId, dataBlock.getDataType(), dataBlock.getFormat());
+                LogMessage(LOG_DMR, DMR_DT_RATE_1_DATA ", ISP, block %u, peer = %u, dataType = $%02X, dpf = $%02X", status->dataBlockCnt, peerId, dataBlock.getDataType(), dataBlock.getFormat());
             }
 
             dispatchToFNE(peerId, dmrData, data, len, seqNo, pktSeq, streamId);
@@ -211,7 +211,7 @@ bool DMRPacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
             bool gi = status->header.getGI();
             uint32_t srcId = status->header.getSrcId();
             uint32_t dstId = status->header.getDstId();
-            LogMessage(LOG_NET, "P25, Data Call End, peer = %u, slot = %u, srcId = %u, dstId = %u, group = %u, blocks = %u, duration = %u, streamId = %u, fromUpstream = %u",
+            LogMessage((fromUpstream) ? LOG_PEER : LOG_MASTER, "DMR, Data Call End, peer = %u, slot = %u, srcId = %u, dstId = %u, group = %u, blocks = %u, duration = %u, streamId = %u, fromUpstream = %u",
                 peerId, srcId, dstId, gi, status->header.getBlocksToFollow(), duration / 1000, streamId, fromUpstream);
 
             // report call event to InfluxDB
@@ -250,7 +250,7 @@ void DMRPacketData::dispatch(uint32_t peerId, dmr::data::NetData& dmrData, const
     if (status->header.getBlocksToFollow() > 0U && status->frames == 0U) {
         bool crcRet = edac::CRC::checkCRC32(status->pduUserData, status->pduDataOffset);
         if (!crcRet) {
-            LogWarning(LOG_NET, P25_PDU_STR ", failed CRC-32 check, blocks %u, len %u", status->header.getBlocksToFollow(), status->pduDataOffset);
+            LogWarning(LOG_DMR, "DMR Data, failed CRC-32 check, blocks %u, len %u", status->header.getBlocksToFollow(), status->pduDataOffset);
         }
 
         if (m_network->m_dumpPacketData) {
@@ -267,6 +267,10 @@ void DMRPacketData::dispatchToFNE(uint32_t peerId, dmr::data::NetData& dmrData, 
 
     uint32_t srcId = status->header.getSrcId();
     uint32_t dstId = status->header.getDstId();
+
+    /*
+    ** MASTER TRAFFIC
+    */
 
     // repeat traffic to the connected peers
     if (m_network->m_peers.size() > 0U) {
@@ -285,7 +289,7 @@ void DMRPacketData::dispatchToFNE(uint32_t peerId, dmr::data::NetData& dmrData, 
 
                 m_network->writePeer(peer.first, peerId, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR }, data, len, pktSeq, streamId, true);
                 if (m_network->m_debug) {
-                    LogDebug(LOG_NET, "DMR, srcPeer = %u, dstPeer = %u, seqNo = %u, srcId = %u, dstId = %u, slotNo = %u, len = %u, pktSeq = %u, stream = %u", 
+                    LogDebugEx(LOG_DMR, "DMRPacketData::dispatchToFNE()", "Master, srcPeer = %u, dstPeer = %u, seqNo = %u, srcId = %u, dstId = %u, slotNo = %u, len = %u, pktSeq = %u, stream = %u", 
                         peerId, peer.first, seqNo, srcId, dstId, status->slotNo, len, pktSeq, streamId);
                 }
 
@@ -294,6 +298,10 @@ void DMRPacketData::dispatchToFNE(uint32_t peerId, dmr::data::NetData& dmrData, 
         }
         m_network->m_frameQueue->flushQueue();
     }
+
+    /*
+    ** PEER TRAFFIC (e.g. upstream networks this FNE is peered to)
+    */
 
     // repeat traffic to neighbor FNE peers
     if (m_network->m_host->m_peerNetworks.size() > 0U) {
@@ -315,7 +323,7 @@ void DMRPacketData::dispatchToFNE(uint32_t peerId, dmr::data::NetData& dmrData, 
 
                 peer.second->writeMaster({ NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR }, data, len, pktSeq, streamId);
                 if (m_network->m_debug) {
-                    LogDebug(LOG_NET, "DMR, srcPeer = %u, dstPeer = %u, seqNo = %u, srcId = %u, dstId = %u, slotNo = %u, len = %u, pktSeq = %u, stream = %u", 
+                    LogDebugEx(LOG_DMR, "DMRPacketData::dispatchToFNE()", "Peers, srcPeer = %u, dstPeer = %u, seqNo = %u, srcId = %u, dstId = %u, slotNo = %u, len = %u, pktSeq = %u, stream = %u", 
                         peerId, dstPeerId, seqNo, srcId, dstId, status->slotNo, len, pktSeq, streamId);
                 }
             }

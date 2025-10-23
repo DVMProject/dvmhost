@@ -129,7 +129,7 @@ bool PeerNetwork::writePeerLinkPeers(json::array* peerList)
         pkt.encode((uint8_t*)buffer, len);
 
         uint32_t streamId = createStreamId();
-        LogInfoEx(LOG_NET, "PEER %u Peer Replication, Active Peer List, blocks %u, streamId = %u", m_peerId, pkt.fragments.size(), streamId);
+        LogInfoEx(LOG_PEER, "PEER %u Peer Replication, Active Peer List, blocks %u, streamId = %u", m_peerId, pkt.fragments.size(), streamId);
         if (pkt.fragments.size() > 0U) {
             for (auto frag : pkt.fragments) {
                 writeMaster({ NET_FUNC::REPL, NET_SUBFUNC::REPL_ACT_PEER_LIST }, 
@@ -171,7 +171,7 @@ bool PeerNetwork::writeMasterTree(MasterTree* treeRoot)
         pkt.encode((uint8_t*)buffer, len);
 
         uint32_t streamId = createStreamId();
-        LogInfoEx(LOG_NET, "PEER %u Network Tree, Tree List, blocks %u, streamId = %u", m_peerId, pkt.fragments.size(), streamId);
+        LogInfoEx(LOG_PEER, "PEER %u Network Tree, Tree List, blocks %u, streamId = %u", m_peerId, pkt.fragments.size(), streamId);
         if (pkt.fragments.size() > 0U) {
             for (auto frag : pkt.fragments) {
                 writeMaster({ NET_FUNC::NET_TREE, NET_SUBFUNC::NET_TREE_LIST }, 
@@ -253,7 +253,7 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
 
             // enqueue the task
             if (!m_threadPool.enqueue(new_pooltask(taskNetworkRx, req))) {
-                LogError(LOG_NET, "Failed to task enqueue network packet request, peerId = %u", peerId);
+                LogError(LOG_PEER, "Failed to task enqueue network packet request, peerId = %u", peerId);
                 if (req != nullptr) {
                     if (req->buffer != nullptr)
                         delete[] req->buffer;
@@ -273,7 +273,7 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
 
             if (m_tgidPkt.decode(data, &decompressed, &decompressedLen)) {
                 if (m_tidLookup == nullptr) {
-                    LogError(LOG_NET, "Talkgroup ID lookup not available yet.");
+                    LogError(LOG_PEER, "Talkgroup ID lookup not available yet.");
                     m_tgidPkt.clear();
                     delete[] decompressed;
                     break;
@@ -298,7 +298,7 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
                 std::string filename = s.str();
                 std::ofstream file(filename, std::ofstream::out);
                 if (file.fail()) {
-                    LogError(LOG_NET, "Cannot open the talkgroup ID lookup file - %s", filename.c_str());
+                    LogError(LOG_PEER, "Cannot open the talkgroup ID lookup file - %s", filename.c_str());
                     m_tgidPkt.clear();
                     delete[] decompressed;
                     break;
@@ -332,7 +332,7 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
 
             if (m_ridPkt.decode(data, &decompressed, &decompressedLen)) {
                 if (m_ridLookup == nullptr) {
-                    LogError(LOG_NET, "Radio ID lookup not available yet.");
+                    LogError(LOG_PEER, "Radio ID lookup not available yet.");
                     m_ridPkt.clear();
                     delete[] decompressed;
                     break;
@@ -357,7 +357,7 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
                 std::string filename = s.str();
                 std::ofstream file(filename, std::ofstream::out);
                 if (file.fail()) {
-                    LogError(LOG_NET, "Cannot open the radio ID lookup file - %s", filename.c_str());
+                    LogError(LOG_PEER, "Cannot open the radio ID lookup file - %s", filename.c_str());
                     m_ridPkt.clear();
                     delete[] decompressed;
                     break;
@@ -391,7 +391,7 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
 
             if (m_pidPkt.decode(data, &decompressed, &decompressedLen)) {
                 if (m_pidLookup == nullptr) {
-                    LogError(LOG_NET, "Peer ID lookup not available yet.");
+                    LogError(LOG_PEER, "Peer ID lookup not available yet.");
                     m_pidPkt.clear();
                     delete[] decompressed;
                     break;
@@ -416,7 +416,7 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
                 std::string filename = s.str();
                 std::ofstream file(filename, std::ofstream::out);
                 if (file.fail()) {
-                    LogError(LOG_NET, "Cannot open the peer ID lookup file - %s", filename.c_str());
+                    LogError(LOG_PEER, "Cannot open the peer ID lookup file - %s", filename.c_str());
                     m_pidPkt.clear();
                     delete[] decompressed;
                     break;
@@ -455,7 +455,7 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
         case NET_SUBFUNC::NET_TREE_DISC:                          // Network Tree Disconnect
         {
             uint32_t offendingPeerId = GET_UINT32(data, 6U);
-            LogWarning(LOG_NET, "PEER %u Network Tree Disconnect, requested from upstream master, possible duplicate connection for PEER %u", m_peerId, offendingPeerId);
+            LogWarning(LOG_PEER, "PEER %u Network Tree Disconnect, requested from upstream master, possible duplicate connection for PEER %u", m_peerId, offendingPeerId);
 
             if (m_netTreeDiscCallback != nullptr) {
                 m_netTreeDiscCallback(this, offendingPeerId);
@@ -572,23 +572,23 @@ void PeerNetwork::taskNetworkRx(PeerPacketRequest* req)
             // determine if this packet is late (i.e. are we processing this packet more than 200ms after it was received?)
             uint64_t dt = req->pktRxTime + PACKET_LATE_TIME;
             if (dt < now) {
-                LogWarning(LOG_NET, "PEER %u packet processing latency >200ms, dt = %u, now = %u", req->peerId, dt, now);
+                LogWarning(LOG_PEER, "PEER %u packet processing latency >200ms, dt = %u, now = %u", req->peerId, dt, now);
             }
 
             uint16_t lastRxSeq = 0U;
 
             MULTIPLEX_RET_CODE ret = network->m_mux->verifyStream(req->streamId, req->rtpHeader.getSequence(), req->fneHeader.getFunction(), &lastRxSeq);
             if (ret == MUX_LOST_FRAMES) {
-                LogError(LOG_NET, "PEER %u stream %u possible lost frames; got %u, expected %u", req->fneHeader.getPeerId(),
+                LogError(LOG_PEER, "PEER %u stream %u possible lost frames; got %u, expected %u", req->fneHeader.getPeerId(),
                     req->streamId, req->rtpHeader.getSequence(), lastRxSeq);
             }
             else if (ret == MUX_OUT_OF_ORDER) {
-                LogError(LOG_NET, "PEER %u stream %u out-of-order; got %u, expected >%u", req->fneHeader.getPeerId(),
+                LogError(LOG_PEER, "PEER %u stream %u out-of-order; got %u, expected >%u", req->fneHeader.getPeerId(),
                     req->streamId, req->rtpHeader.getSequence(), lastRxSeq);
             }
 #if DEBUG_RTP_MUX
             else {
-                LogDebugEx(LOG_NET, "PeerNetwork::taskNetworkRx()", "PEER %u valid mux, seq = %u, streamId = %u", req->fneHeader.getPeerId(), req->rtpHeader.getSequence(), req->streamId);
+                LogDebugEx(LOG_PEER, "PeerNetwork::taskNetworkRx()", "PEER %u valid mux, seq = %u, streamId = %u", req->fneHeader.getPeerId(), req->rtpHeader.getSequence(), req->streamId);
             }
 #endif
             // process incomfing message subfunction opcodes

@@ -175,7 +175,7 @@ void MasterTree::deserializeTree(json::array& jsonArray, MasterTree* parent, std
             existingNode = new MasterTree(id, masterId, parent);
 
         json::array childArray = obj["children"].get<json::array>();
-        //LogDebugEx(LOG_NET, "MasterTree::deserializeTree()", "peerId = %u, masterId = %u, childrenCnt = %u", 
+        //LogDebugEx(LOG_STP, "MasterTree::deserializeTree()", "peerId = %u, masterId = %u, childrenCnt = %u", 
         //    existingNode->id(), existingNode->masterId(), childArray.size());
         if (childArray.size() > 0U)
             deserializeTree(childArray, existingNode, duplicatePeers);
@@ -193,7 +193,7 @@ void MasterTree::visualizeTreeToLog(MasterTree* node, uint32_t level)
     }
 
     if (level == 0U)
-        LogInfoEx(LOG_NET, "Peer ID: %u, Master Peer ID: %u, Children: %u, IsRoot: %u", 
+        LogInfoEx(LOG_STP, "Peer ID: %u, Master Peer ID: %u, Children: %u, IsRoot: %u", 
             node->id(), node->masterId(), node->m_children.size(), node->isRoot());
 
     std::string indent;
@@ -202,7 +202,7 @@ void MasterTree::visualizeTreeToLog(MasterTree* node, uint32_t level)
     }
 
     for (auto child : node->m_children) {
-        LogInfoEx(LOG_NET, "%s- Peer ID: %u, Master Peer ID: %u, Children: %u, IsRoot: %u", 
+        LogInfoEx(LOG_STP, "%s- Peer ID: %u, Master Peer ID: %u, Children: %u, IsRoot: %u", 
             indent.c_str(), child->id(), child->masterId(), child->m_children.size(), child->isRoot());
         visualizeTreeToLog(child, level + 1U);
     }

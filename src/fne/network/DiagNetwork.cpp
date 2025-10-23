@@ -117,7 +117,7 @@ void DiagNetwork::clock(uint32_t ms)
 bool DiagNetwork::open()
 {
     if (m_debug)
-        LogMessage(LOG_NET, "Opening Network");
+        LogMessage(LOG_DIAG, "Opening Network");
 
     m_threadPool.start();
 
@@ -146,7 +146,7 @@ bool DiagNetwork::open()
 void DiagNetwork::close()
 {
     if (m_debug)
-        LogMessage(LOG_NET, "Closing Network");
+        LogMessage(LOG_DIAG, "Closing Network");
 
     m_threadPool.stop();
     m_threadPool.wait();
@@ -343,7 +343,7 @@ void DiagNetwork::taskNetworkRx(NetPacketRequest* req)
                                                         uint32_t addrLen = peer.second->sockStorageLen();
 
                                                         if (network->m_debug) {
-                                                            LogDebug(LOG_NET, "SysView, srcPeer = %u, dstPeer = %u, peer status message, len = %u", 
+                                                            LogDebug(LOG_DIAG, "SysView, srcPeer = %u, dstPeer = %u, peer status message, len = %u", 
                                                                 pktPeerId, peer.first, req->length);
                                                         }
                                                         network->m_frameQueue->write(req->buffer, req->length, network->createStreamId(), pktPeerId, network->m_peerId, 
@@ -409,7 +409,7 @@ void DiagNetwork::taskNetworkRx(NetPacketRequest* req)
                                 } else {
                                     DiagNetwork::PacketBufferEntry& pkt = diagNetwork->m_peerReplicaActPkt[peerId];
                                     if (!pkt.locked && pkt.streamId != streamId) {
-                                        LogError(LOG_NET, "PEER %u (%s) Peer Replication, Active Peer List, stream ID mismatch, expected %u, got %u", peerId,
+                                        LogError(LOG_REPL, "PEER %u (%s) Peer Replication, Active Peer List, stream ID mismatch, expected %u, got %u", peerId,
                                             connection->identWithQualifier().c_str(), pkt.streamId, streamId);
                                         pkt.buffer->clear();
                                         pkt.streamId = streamId;
@@ -439,7 +439,7 @@ void DiagNetwork::taskNetworkRx(NetPacketRequest* req)
                                     json::value v;
                                     std::string err = json::parse(v, payload);
                                     if (!err.empty()) {
-                                        LogError(LOG_NET, "PEER %u (%s) error parsing active peer list, %s", peerId, connection->identWithQualifier().c_str(), err.c_str());
+                                        LogError(LOG_REPL, "PEER %u (%s) error parsing active peer list, %s", peerId, connection->identWithQualifier().c_str(), err.c_str());
                                         pkt.buffer->clear();
                                         pkt.streamId = 0U;
                                         if (decompressed != nullptr) {
@@ -451,7 +451,7 @@ void DiagNetwork::taskNetworkRx(NetPacketRequest* req)
                                     else  {
                                         // ensure parsed JSON is an array
                                         if (!v.is<json::array>()) {
-                                            LogError(LOG_NET, "PEER %u (%s) error parsing active peer list, data was not valid", peerId, connection->identWithQualifier().c_str());
+                                            LogError(LOG_REPL, "PEER %u (%s) error parsing active peer list, data was not valid", peerId, connection->identWithQualifier().c_str());
                                             pkt.buffer->clear();
                                             delete pkt.buffer;
                                             pkt.streamId = 0U;
@@ -463,7 +463,7 @@ void DiagNetwork::taskNetworkRx(NetPacketRequest* req)
                                         }
                                         else {
                                             json::array arr = v.get<json::array>();
-                                            LogInfoEx(LOG_NET, "PEER %u (%s) Peer Replication, Active Peer List, updating %u peer entries", peerId, connection->identWithQualifier().c_str(), arr.size());
+                                            LogInfoEx(LOG_REPL, "PEER %u (%s) Peer Replication, Active Peer List, updating %u peer entries", peerId, connection->identWithQualifier().c_str(), arr.size());
                                             network->m_peerReplicaPeers[peerId] = arr;
                                         }
                                     }
@@ -531,13 +531,13 @@ void DiagNetwork::taskNetworkRx(NetPacketRequest* req)
 
                                         if (network->m_debug) {
                                             std::string address = __IP_FROM_UINT(rxEntry.masterIP);
-                                            LogDebugEx(LOG_NET, "DiagNetwork::taskNetworkRx", "PEER %u (%s) Peer Replication, HA Parameters, %s:%u", peerId, connection->identWithQualifier().c_str(),
+                                            LogDebugEx(LOG_REPL, "DiagNetwork::taskNetworkRx", "PEER %u (%s) Peer Replication, HA Parameters, %s:%u", peerId, connection->identWithQualifier().c_str(),
                                                 address.c_str(), rxEntry.masterPort);
                                         }
                                     }
 
                                     if (receivedParams.size() > 0) {
-                                        LogInfoEx(LOG_NET, "PEER %u (%s) Peer Replication, HA Parameters, updating %u entries, %u entries", peerId, connection->identWithQualifier().c_str(), receivedParams.size(),
+                                        LogInfoEx(LOG_REPL, "PEER %u (%s) Peer Replication, HA Parameters, updating %u entries, %u entries", peerId, connection->identWithQualifier().c_str(), receivedParams.size(),
                                             network->m_peerReplicaHAParams.size());
 
                                         // send peer updates to replica peers
@@ -594,7 +594,7 @@ void DiagNetwork::taskNetworkRx(NetPacketRequest* req)
                                 } else {
                                     DiagNetwork::PacketBufferEntry& pkt = diagNetwork->m_peerTreeListPkt[peerId];
                                     if (!pkt.locked && pkt.streamId != streamId) {
-                                        LogError(LOG_NET, "PEER %u (%s) Network Tree, Tree List, stream ID mismatch, expected %u, got %u", peerId,
+                                        LogError(LOG_STP, "PEER %u (%s) Network Tree, Tree List, stream ID mismatch, expected %u, got %u", peerId,
                                             connection->identWithQualifier().c_str(), pkt.streamId, streamId);
                                         pkt.buffer->clear();
                                         pkt.streamId = streamId;
@@ -624,7 +624,7 @@ void DiagNetwork::taskNetworkRx(NetPacketRequest* req)
                                     json::value v;
                                     std::string err = json::parse(v, payload);
                                     if (!err.empty()) {
-                                        LogError(LOG_NET, "PEER %u (%s) error parsing network tree list, %s", peerId, connection->identWithQualifier().c_str(), err.c_str());
+                                        LogError(LOG_STP, "PEER %u (%s) error parsing network tree list, %s", peerId, connection->identWithQualifier().c_str(), err.c_str());
                                         pkt.buffer->clear();
                                         pkt.streamId = 0U;
                                         if (decompressed != nullptr) {
@@ -636,7 +636,7 @@ void DiagNetwork::taskNetworkRx(NetPacketRequest* req)
                                     else  {
                                         // ensure parsed JSON is an array
                                         if (!v.is<json::array>()) {
-                                            LogError(LOG_NET, "PEER %u (%s) error parsing network tree list, data was not valid", peerId, connection->identWithQualifier().c_str());
+                                            LogError(LOG_STP, "PEER %u (%s) error parsing network tree list, data was not valid", peerId, connection->identWithQualifier().c_str());
                                             pkt.buffer->clear();
                                             delete pkt.buffer;
                                             pkt.streamId = 0U;
@@ -648,18 +648,18 @@ void DiagNetwork::taskNetworkRx(NetPacketRequest* req)
                                         }
                                         else {
                                             json::array arr = v.get<json::array>();
-                                            LogInfoEx(LOG_NET, "PEER %u (%s) Network Tree, Tree List, updating %u peer entries", peerId, connection->identWithQualifier().c_str(), arr.size());
+                                            LogInfoEx(LOG_STP, "PEER %u (%s) Network Tree, Tree List, updating %u peer entries", peerId, connection->identWithQualifier().c_str(), arr.size());
                                             std::vector<uint32_t> duplicatePeers;
                                             MasterTree::deserializeTree(arr, network->m_fneTree, &duplicatePeers);
 
                                             if (network->m_logSpanningTreeChanges && network->m_fneTree->hasChildren()) {
-                                                LogInfoEx(LOG_NET, "PEER %u (%s) Network Tree, Tree Change, current tree:", peerId, connection->identWithQualifier().c_str());
+                                                LogInfoEx(LOG_STP, "PEER %u (%s) Network Tree, Tree Change, Current Tree", peerId, connection->identWithQualifier().c_str());
                                                 MasterTree::visualizeTreeToLog(network->m_fneTree);
                                             }
 
                                             if (duplicatePeers.size() > 0U) {
                                                 for (auto dupPeerId : duplicatePeers) {
-                                                    LogWarning(LOG_NET, "PEER %u (%s) Network Tree, Tree Change, disconnecting duplicate peer connection for PEER %u to prevent network loop",
+                                                    LogWarning(LOG_STP, "PEER %u (%s) Network Tree, Tree Change, disconnecting duplicate peer connection for PEER %u to prevent network loop",
                                                         peerId, connection->identWithQualifier().c_str(), dupPeerId);
                                                     network->writeTreeDisconnect(peerId, dupPeerId);
                                                 }

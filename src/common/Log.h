@@ -54,6 +54,7 @@
 #define LOG_P25     "P25"
 #define LOG_NXDN    "NXDN"
 #define LOG_DMR     "DMR"
+#define LOG_ANALOG  "ANALOG"
 #define LOG_CAL     "CAL"
 #define LOG_SETUP   "SETUP"
 #define LOG_SERIAL  "SERIAL"

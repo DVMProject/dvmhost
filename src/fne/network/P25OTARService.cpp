@@ -36,7 +36,7 @@ using namespace p25::kmm;
 // Macro helper to verbose log a generic KMM.
 #define VERBOSE_LOG_KMM(_PCKT_STR, __LLID)                                              \
     if (m_verbose) {                                                                    \
-        LogMessage(LOG_NET, "KMM, %s, llId = %u", _PCKT_STR.c_str(), __LLID);           \
+        LogMessage(LOG_P25, "KMM, %s, llId = %u", _PCKT_STR.c_str(), __LLID);           \
     }
 
 // ---------------------------------------------------------------------------
@@ -287,7 +287,7 @@ UInt8Array P25OTARService::cryptKMM(uint8_t algoId, uint16_t kid, uint8_t* mi, c
         uint8_t keyLength = keyItem.getKey(key);
 
         if (m_network->m_debug) {
-            LogDebugEx(LOG_HOST, "P25OTARService::cryptKMM()", "keyLength = %u", keyLength);
+            LogDebugEx(LOG_P25, "P25OTARService::cryptKMM()", "keyLength = %u", keyLength);
             Utils::dump(1U, "P25OTARService::cryptKMM(), Key", key, P25DEF::MAX_ENC_KEY_LENGTH_BYTES);
         }
 
@@ -300,7 +300,7 @@ UInt8Array P25OTARService::cryptKMM(uint8_t algoId, uint16_t kid, uint8_t* mi, c
             // TODO: implement handling AES-256 KMM encryption/decryption for data blocks
             return outBuffer;
         default:
-            LogError(LOG_HOST, "unsupported KEK algorithm, algoId = $%02X", algoId);
+            LogError(LOG_P25, "unsupported KEK algorithm, algoId = $%02X", algoId);
             break;
         }
     }
