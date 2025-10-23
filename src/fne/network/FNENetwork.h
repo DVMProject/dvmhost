@@ -267,9 +267,9 @@ namespace network
 
         /**
          * @brief Helper to set the master is upstream peer replica flag.
-         * @param peerReplica Flag indicating the master is a peer replica.
+         * @param replica Flag indicating the master is a peer replica.
          */
-        void setPeerReplica(bool peerReplica);
+        void setPeerReplica(bool replica);
 
     private:
         friend class DiagNetwork;
@@ -295,7 +295,7 @@ namespace network
 
         std::string m_password;
 
-        bool m_isPeerReplica;
+        bool m_isReplica;
 
         bool m_dmrEnabled;
         bool m_p25Enabled;

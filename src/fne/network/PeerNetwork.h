@@ -165,7 +165,7 @@ namespace network
          * @brief Returns flag indicating whether or not this peer connection is peer replication enabled.
          * @returns bool True, if peer replication enabled, otherwise false.
          */
-        bool isPeerReplica() const { return m_peerReplica; }
+        bool isReplica() const { return m_peerReplica; }
 
         /**
          * @brief Enables the option that will save replicated ACL data to the local ACL files.

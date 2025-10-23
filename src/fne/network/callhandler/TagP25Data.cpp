@@ -577,7 +577,7 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                     // process TSDUs going to neighbor FNE peers
                     if (processTSDUToNeighbor(outboundPeerBuffer, peerId, dstPeerId, duid)) {
                         // are we a replica peer?
-                        if (peer.second->isPeerReplica())
+                        if (peer.second->isReplica())
                             peer.second->writeMaster({ NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25 }, outboundPeerBuffer, len, pktSeq, streamId, false, false, 0U, ssrc);
                         else
                             peer.second->writeMaster({ NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25 }, outboundPeerBuffer, len, pktSeq, streamId);
@@ -1135,7 +1135,7 @@ bool TagP25Data::isPeerPermitted(uint32_t peerId, lc::LC& control, DUID::E duid,
 
     // is this peer a replica peer?
     if (connection != nullptr) {
-        if (connection->isPeerReplica()) {
+        if (connection->isReplica()) {
             return true; // replica peers are *always* allowed to receive traffic and no other rules may filter
                          // these peers
         }

@@ -210,7 +210,7 @@ void DiagNetwork::taskNetworkRx(NetPacketRequest* req)
                             if (network->m_peers.find(req->rtpHeader.getSSRC()) != network->m_peers.end()) {
                                 FNEPeerConnection* connection = network->m_peers[req->rtpHeader.getSSRC()];
                                 if (connection != nullptr) {
-                                    if (connection->isNeighborFNEPeer() && connection->isPeerReplica()) {
+                                    if (connection->isNeighborFNEPeer() && connection->isReplica()) {
                                         validPeerId = true;
                                         pktPeerId = req->rtpHeader.getSSRC();
                                     }
@@ -269,7 +269,7 @@ void DiagNetwork::taskNetworkRx(NetPacketRequest* req)
                                             if (network->m_host->m_peerNetworks.size() > 0) {
                                                 for (auto peer : network->m_host->m_peerNetworks) {
                                                     if (peer.second != nullptr) {
-                                                        if (peer.second->isEnabled() && peer.second->isPeerReplica()) {
+                                                        if (peer.second->isEnabled() && peer.second->isReplica()) {
                                                             peer.second->writeMaster({ NET_FUNC::TRANSFER, NET_SUBFUNC::TRANSFER_SUBFUNC_ACTIVITY }, 
                                                                 req->buffer, req->length, RTP_END_OF_CALL_SEQ, 0U, false, true, pktPeerId);
                                                         }
@@ -358,7 +358,7 @@ void DiagNetwork::taskNetworkRx(NetPacketRequest* req)
                                             if (network->m_host->m_peerNetworks.size() > 0) {
                                                 for (auto peer : network->m_host->m_peerNetworks) {
                                                     if (peer.second != nullptr) {
-                                                        if (peer.second->isEnabled() && peer.second->isPeerReplica()) {
+                                                        if (peer.second->isEnabled() && peer.second->isReplica()) {
                                                             peer.second->writeMaster({ NET_FUNC::TRANSFER, NET_SUBFUNC::TRANSFER_SUBFUNC_STATUS }, 
                                                                 req->buffer, req->length, RTP_END_OF_CALL_SEQ, 0U, false, true, pktPeerId);
                                                         }
@@ -392,7 +392,7 @@ void DiagNetwork::taskNetworkRx(NetPacketRequest* req)
 
                             // validate peer (simple validation really)
                             if (connection->connected() && connection->address() == ip && connection->isNeighborFNEPeer() &&
-                                connection->isPeerReplica()) {
+                                connection->isReplica()) {
                                 DECLARE_UINT8_ARRAY(rawPayload, req->length);
                                 ::memcpy(rawPayload, req->buffer, req->length);
 
@@ -493,7 +493,7 @@ void DiagNetwork::taskNetworkRx(NetPacketRequest* req)
 
                             // validate peer (simple validation really)
                             if (connection->connected() && connection->address() == ip && connection->isNeighborFNEPeer() &&
-                                connection->isPeerReplica()) {
+                                connection->isReplica()) {
                                 DECLARE_UINT8_ARRAY(rawPayload, req->length);
                                 ::memcpy(rawPayload, req->buffer, req->length);
 
@@ -544,7 +544,7 @@ void DiagNetwork::taskNetworkRx(NetPacketRequest* req)
                                         if (network->m_host->m_peerNetworks.size() > 0) {
                                             for (auto peer : network->m_host->m_peerNetworks) {
                                                 if (peer.second != nullptr) {
-                                                    if (peer.second->isEnabled() && peer.second->isPeerReplica()) {
+                                                    if (peer.second->isEnabled() && peer.second->isReplica()) {
                                                         std::vector<HAParameters> haParams;
                                                         network->m_peerReplicaHAParams.lock(false);
                                                         for (auto entry : network->m_peerReplicaHAParams) {

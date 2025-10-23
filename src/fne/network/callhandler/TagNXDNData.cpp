@@ -541,7 +541,7 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                     routeRewrite(outboundPeerBuffer, dstPeerId, messageType, dstId);
 
                     // are we a replica peer?
-                    if (peer.second->isPeerReplica())
+                    if (peer.second->isReplica())
                         peer.second->writeMaster({ NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_NXDN }, outboundPeerBuffer, len, pktSeq, streamId, false, false, 0U, ssrc);
                     else
                         peer.second->writeMaster({ NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_NXDN }, outboundPeerBuffer, len, pktSeq, streamId);
@@ -715,7 +715,7 @@ bool TagNXDNData::isPeerPermitted(uint32_t peerId, lc::RTCH& lc, uint8_t message
 
     // is this peer a replica peer?
     if (connection != nullptr) {
-        if (connection->isPeerReplica()) {
+        if (connection->isReplica()) {
             return true; // replica peers are *always* allowed to receive traffic and no other rules may filter
                          // these peers
         }

@@ -55,9 +55,9 @@ namespace network
             m_lastPing(0U),
             m_missedMetadataUpdates(0U),
             m_isNeighborFNEPeer(false),
+            m_isReplica(false),
             m_isConventionalPeer(false),
             m_isSysView(false),
-            m_isPeerReplica(false),
             m_config(),
             m_peerLockMtx()
         {
@@ -85,9 +85,9 @@ namespace network
             m_lastPing(0U),
             m_missedMetadataUpdates(0U),
             m_isNeighborFNEPeer(false),
+            m_isReplica(false),
             m_isConventionalPeer(false),
             m_isSysView(false),
-            m_isPeerReplica(false),
             m_config(),
             m_peerLockMtx()
         {
@@ -105,7 +105,7 @@ namespace network
         {
             if (isSysView())
                 return "@" + identity();
-            if (isPeerReplica())
+            if (isReplica())
                 return "%" + identity();
             if (isNeighborFNEPeer())
                 return "+" + identity();
@@ -191,6 +191,11 @@ namespace network
          */
         DECLARE_PROPERTY_PLAIN(bool, isNeighborFNEPeer);
         /**
+         * @brief Flag indicating this connection is from a neighbor FNE peer that is replica enabled.
+         */
+        DECLARE_PROPERTY_PLAIN(bool, isReplica);
+
+        /**
          * @brief Flag indicating this connection is from an conventional peer.
          */
         DECLARE_PROPERTY_PLAIN(bool, isConventionalPeer);
@@ -198,11 +203,6 @@ namespace network
          * @brief Flag indicating this connection is from an SysView peer.
          */
         DECLARE_PROPERTY_PLAIN(bool, isSysView);
-
-        /**
-         * @brief Flag indicating this connection is from a neighbor FNE peer that is replica enabled.
-         */
-        DECLARE_PROPERTY_PLAIN(bool, isPeerReplica);
 
         /**
          * @brief JSON objecting containing peer configuration information.

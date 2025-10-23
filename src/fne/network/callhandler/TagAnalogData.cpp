@@ -317,7 +317,7 @@ bool TagAnalogData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
                     routeRewrite(outboundPeerBuffer, dstPeerId, dstId);
 
                     // are we a replica peer?
-                    if (peer.second->isPeerReplica())
+                    if (peer.second->isReplica())
                         peer.second->writeMaster({ NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_ANALOG }, outboundPeerBuffer, len, pktSeq, streamId, false, false, 0U, ssrc);
                     else
                         peer.second->writeMaster({ NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_ANALOG }, outboundPeerBuffer, len, pktSeq, streamId);
@@ -440,7 +440,7 @@ bool TagAnalogData::isPeerPermitted(uint32_t peerId, data::NetData& data, uint32
 
     // is this peer a replica peer?
     if (connection != nullptr) {
-        if (connection->isPeerReplica()) {
+        if (connection->isReplica()) {
             return true; // replica peers are *always* allowed to receive traffic and no other rules may filter
                          // these peers
         }
