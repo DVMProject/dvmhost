@@ -23,12 +23,15 @@
 #*   along with this program; if not, write to the Free Software
 #*   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #*/
-LOG_COLOR="s#W:#\x1b[0m\x1b[1m\x1b[33m&#; s#E:#\x1b[0m\x1b[1m\x1b[31m&#; s#M:#\x1b[0m&#; s#I:#\x1b[0m&#; s#D:#\x1b[1m\x1b[34m&#; s#U:#\x1b[44m\x1b[1m\x1b[33m&#;"
+CLEAR_ID="s/ID: /ID /g;"
+LOG_COLOR="s#W:#\x1b[0m\x1b[1m\x1b[33m&\x1b[0m#; s#E:#\x1b[0m\x1b[1m\x1b[31m&\x1b[0m#; s#M:#\x1b[0m&#; s#I:#\x1b[0m&#; s#D:#\x1b[1m\x1b[34m&\x1b[0m#; s#U:#\x1b[44m\x1b[1m\x1b[33m&#;"
 
 DMR_COLOR="s#VOICE#\x1b[36m&#; s#TERMINATOR_WITH_LC#\x1b[0m\x1b[32m&#; s#CSBK#\x1b[0m\x1b[35m&#"
 P25_COLOR="s#LDU#\x1b[36m&#; s#TDU#\x1b[0m\x1b[32m&#; s#HDU#\x1b[0m\x1b[32m&#; s#TSDU#\x1b[0m\x1b[35m&#"
 NXDN_COLOR="s#VCALL#\x1b[36m&#; s#TX_REL#\x1b[0m\x1b[32m&#"
 AFF_COLOR="s#Affiliations#\x1b[1m\x1b[36m&#; s#Affiliation#\x1b[1m\x1b[36m&#;"
+
+NAK_COLOR="s#NAK#\x1b[0m\x1b[1m\x1b[31m&\x1b[0m#;"
 
 HOST_HIGHLIGHT="s#(HOST)#\x1b[1m\x1b[37m&\x1b[0m#;"
 
@@ -40,4 +43,4 @@ PEER_HIGHLIGHT="s#(PEER)#\x1b[1m\x1b[36m&\x1b[0m#;"
 STP_HIGHLIGHT="s#(STP)#\x1b[1m\x1b[32m&\x1b[0m#;"
 REPL_HIGHLIGHT="s#(REPL)#\x1b[1m\x1b[33m&\x1b[0m#;"
 
-sed "${LOG_COLOR}; ${HOST_HIGHLIGHT}; ${RF_HIGHLIGHT}; ${NET_HIGHLIGHT}; ${MASTER_HIGHLIGHT}; ${PEER_HIGHLIGHT}; ${STP_HIGHLIGHT}; ${REPL_HIGHLIGHT}; ${DMR_COLOR}; ${P25_COLOR}; ${NXDN_COLOR}; ${AFF_COLOR}"
+sed "${CLEAR_ID}; ${LOG_COLOR}; ${NAK_COLOR}; ${HOST_HIGHLIGHT}; ${RF_HIGHLIGHT}; ${NET_HIGHLIGHT}; ${MASTER_HIGHLIGHT}; ${PEER_HIGHLIGHT}; ${STP_HIGHLIGHT}; ${REPL_HIGHLIGHT}; ${DMR_COLOR}; ${P25_COLOR}; ${NXDN_COLOR}; ${AFF_COLOR}"
