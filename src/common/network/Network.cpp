@@ -846,7 +846,6 @@ void Network::clock(uint32_t ms)
                                     LogDebugEx(LOG_NET, "Network::clock()", "HA PARAMS, %s:%u", address.c_str(), port);
 
                                 m_haIPs.push_back(PeerHAIPEntry(address, port));
-                                i++;
                             }
 
                             if (m_haIPs.size() > 1U) {
