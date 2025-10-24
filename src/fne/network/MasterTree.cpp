@@ -179,21 +179,82 @@ void MasterTree::deserializeTree(json::array& jsonArray, MasterTree* parent, std
         if (existingNode == nullptr)
             existingNode = new MasterTree(id, masterId, parent);
         else {
-            if (existingNode->m_updatesBeforeReparent >= m_maxUpdatesBeforeReparent) {
-                existingNode->m_updatesBeforeReparent = 0U;
+            // are the parents different? if so, start counting down to reparenting
+            if (existingNode->m_parent != parent) {
+                if (existingNode->m_updatesBeforeReparent >= m_maxUpdatesBeforeReparent) {
+                    existingNode->m_updatesBeforeReparent = 0U;
 
-                // reparent the node if necessary
-                moveParent(existingNode, parent);
-            } else {
-                existingNode->m_updatesBeforeReparent++;
+                    // reparent the node if necessary
+                    moveParent(existingNode, parent);
+                } else {
+                    existingNode->m_updatesBeforeReparent++;
+                }
             }
         }
 
+        // process children
         json::array childArray = obj["children"].get<json::array>();
-        //LogDebugEx(LOG_STP, "MasterTree::deserializeTree()", "peerId = %u, masterId = %u, childrenCnt = %u", 
-        //    existingNode->id(), existingNode->masterId(), childArray.size());
-        if (childArray.size() > 0U)
+        //LogDebugEx(LOG_STP, "MasterTree::deserializeTree()", "peerId = %u, masterId = %u, parent = %u, childrenCnt = %u",
+        //    existingNode->id(), existingNode->masterId(), parent->id(), childArray.size());
+        if (childArray.size() > 0U) {
             deserializeTree(childArray, existingNode, duplicatePeers);
+
+            // does the announced array disagree with our current count of children?
+            if (childArray.size() < existingNode->m_children.size()) {
+                /*
+                ** bryanb: this is doing some array comparision/differencing non-sense and IMHO is probably
+                **  bad and slow as balls...
+                */
+
+                // enumerate the peer IDs in the announced children
+                std::vector<uint32_t> announcedChildren;
+                for (auto& child : childArray) {
+                    if (!child.is<json::object>())
+                        continue;
+
+                    json::object obj = child.get<json::object>();
+                    if (!obj["id"].is<uint32_t>())
+                        continue;
+
+                    uint32_t childId = obj["id"].get<uint32_t>();
+                    announcedChildren.push_back(childId);
+                }
+
+                // iterate over the nodes children and remove entries
+                std::vector<MasterTree*> childrenToErase;
+                for (auto child : existingNode->m_children) {
+                    if (child != nullptr) {
+                        auto it = std::find(announcedChildren.begin(), announcedChildren.end(), child->id());
+                        if (it == announcedChildren.end()) {
+                            childrenToErase.push_back(child);
+                        }
+                    }
+                }
+
+                if (childrenToErase.size() > 0) {
+                    for (auto child : childrenToErase) {
+                        if (child != nullptr) {
+                            auto it = std::find_if(existingNode->m_children.begin(), existingNode->m_children.end(),
+                                [&](MasterTree* x) {
+                                    if (x != nullptr) {
+                                        return x->id() == child->id();
+                                    }
+
+                                    return false;
+                                });
+                            if (it != existingNode->m_children.end()) {
+                                existingNode->m_children.erase(it);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        else {
+            // did the node report children atsome point and is no longer reporting them?
+            if (childArray.size() == 0U && existingNode->hasChildren())
+                eraseChildren(existingNode);
+        }
     }
 }
 
