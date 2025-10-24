@@ -404,6 +404,12 @@ namespace network
         bool checkU2UDroppedPeer(uint32_t peerId);
 
         /**
+         * @brief Helper to dump the current spanning tree configuration to the log.
+         * @param connection Instance of the FNEPeerConnection class.
+         */
+        void logSpanningTree(FNEPeerConnection* connection = nullptr);
+
+        /**
          * @brief Erases a stream ID from the given peer ID connection.
          * @param peerId Peer ID.
          * @param streamId Stream ID.

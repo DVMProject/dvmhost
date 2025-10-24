@@ -652,10 +652,7 @@ void DiagNetwork::taskNetworkRx(NetPacketRequest* req)
                                             std::vector<uint32_t> duplicatePeers;
                                             MasterTree::deserializeTree(arr, network->m_fneTree, &duplicatePeers);
 
-                                            if (network->m_logSpanningTreeChanges && network->m_fneTree->hasChildren()) {
-                                                LogInfoEx(LOG_STP, "PEER %u (%s) Network Tree, Tree Change, Current Tree", peerId, connection->identWithQualifier().c_str());
-                                                MasterTree::visualizeTreeToLog(network->m_fneTree);
-                                            }
+                                            network->logSpanningTree(connection);
 
                                             if (duplicatePeers.size() > 0U) {
                                                 for (auto dupPeerId : duplicatePeers) {

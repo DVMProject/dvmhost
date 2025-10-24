@@ -133,6 +133,13 @@ namespace network
         static void deserializeTree(json::array& jsonArray, MasterTree* parent, std::vector<uint32_t>* duplicatePeers);
 
         /**
+         * @brief Helper to move the master tree node to a different parent master tree node.
+         * @param node Pointer to a MasterTree node.
+         * @param parent Pointer to new parent MasterTree Node.
+         */
+        static void moveParent(MasterTree* node, MasterTree* parent);
+
+        /**
          * @brief Helper to visualize the tree structure in the log.
          * @param node Pointer to MasterTree node.
          * @param level Current tree level.
@@ -144,6 +151,7 @@ namespace network
         std::vector<MasterTree*> m_children;    //!< Child master tree nodes. (i.e. peer FNEs below this)
 
         static std::unordered_map<uint32_t, MasterTree*> m_masterTrees; //!< Static map of all master trees by peer ID.
+        static uint8_t m_maxUpdatesBeforeReparent; //!< Maximum count of updates before allowing node reparenting.
 
         /**
          * @brief Peer ID.
@@ -155,6 +163,8 @@ namespace network
         DECLARE_PROPERTY_PLAIN(uint32_t, masterId);
 
     private:
+        uint8_t m_updatesBeforeReparent;
+
         /**
          * @brief Helper to erase all children of a master tree node.
          * @param node Pointer to MasterTree node.

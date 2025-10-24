@@ -18,6 +18,7 @@ using namespace network;
 // ---------------------------------------------------------------------------
 
 std::unordered_map<uint32_t, MasterTree*> MasterTree::m_masterTrees = std::unordered_map<uint32_t, MasterTree*>();
+uint8_t MasterTree::m_maxUpdatesBeforeReparent = 5U;
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -29,7 +30,8 @@ MasterTree::MasterTree(uint32_t id, uint32_t masterId, MasterTree* parent) :
     m_parent(parent),
     m_children(),
     m_id(id),
-    m_masterId(masterId)
+    m_masterId(masterId),
+    m_updatesBeforeReparent(0U)
 {
     m_masterTrees[id] = this;
     if (m_parent != nullptr)
@@ -163,6 +165,9 @@ void MasterTree::deserializeTree(json::array& jsonArray, MasterTree* parent, std
         // check if this peer is already connected via another peer
         MasterTree* tree = MasterTree::findByMasterID(masterId);
         if (tree != nullptr) {
+            // is this a fast reconnect? (this happens when a connecting peer
+            //  uses the same peer ID and master ID already announced in the tree, but
+            //  the tree entry wasn't yet erased)
             if (tree->id() != id) {
                 if (duplicatePeers != nullptr)
                     duplicatePeers->push_back(id);
@@ -173,12 +178,75 @@ void MasterTree::deserializeTree(json::array& jsonArray, MasterTree* parent, std
         MasterTree* existingNode = findByPeerID(id);
         if (existingNode == nullptr)
             existingNode = new MasterTree(id, masterId, parent);
+        else {
+            if (existingNode->m_updatesBeforeReparent >= m_maxUpdatesBeforeReparent) {
+                existingNode->m_updatesBeforeReparent = 0U;
+
+                // reparent the node if necessary
+                moveParent(existingNode, parent);
+            } else {
+                existingNode->m_updatesBeforeReparent++;
+            }
+        }
 
         json::array childArray = obj["children"].get<json::array>();
         //LogDebugEx(LOG_STP, "MasterTree::deserializeTree()", "peerId = %u, masterId = %u, childrenCnt = %u", 
         //    existingNode->id(), existingNode->masterId(), childArray.size());
         if (childArray.size() > 0U)
             deserializeTree(childArray, existingNode, duplicatePeers);
+    }
+}
+
+/* Helper to move the master tree node to a different parent master tree node. */
+
+void MasterTree::moveParent(MasterTree* node, MasterTree* parent)
+{
+    if (node == nullptr)
+        return;
+    if (parent == nullptr)
+        return;
+
+    // the root node cannot be moved
+    if (node->m_parent == nullptr) {
+        LogError(LOG_STP, "PEER %u is a root tree node, can't be moved. BUGBUG.", node->id());
+        return;
+    }
+
+    if (node->m_parent != parent) {
+        // find the node in the parent children and remove it
+        MasterTree* nodeParent = node->m_parent;
+        uint32_t nodeParentId = 0U;
+        bool hasReleasedFromParent = false;
+
+        if (nodeParent != nullptr) {
+            nodeParentId = nodeParent->id();
+            auto it = std::find_if(nodeParent->m_children.begin(), nodeParent->m_children.end(), [&](MasterTree* childNode) {
+                if (childNode == node)
+                    return true;
+                return false;
+            });
+            if (it != nodeParent->m_children.end()) {
+                nodeParent->m_children.erase(it);
+                hasReleasedFromParent = true;
+            } else {
+                LogError(LOG_STP, "PEER %u failed to release ownership from PEER %u, tree is potentially inconsistent",
+                    node->id(), nodeParent->id());
+            }
+        }
+
+        if (hasReleasedFromParent) {
+            // reparent existing node
+            node->m_parent = parent;
+            if (node->m_parent != nullptr)
+                node->m_parent->m_children.push_back(node);
+
+            // reset update counter
+            if (node->m_updatesBeforeReparent > 0U)
+                node->m_updatesBeforeReparent = 0U;
+
+            LogWarning(LOG_STP, "PEER %u ownership has changed from PEER %u to PEER %u; this normally shouldn't happen",
+                    node->id(), nodeParentId, parent->id());
+        }
     }
 }
 
