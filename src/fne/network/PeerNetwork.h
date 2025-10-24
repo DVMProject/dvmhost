@@ -21,7 +21,7 @@
 #include "common/network/Network.h"
 #include "common/network/PacketBuffer.h"
 #include "common/ThreadPool.h"
-#include "fne/network/MasterTree.h"
+#include "fne/network/SpanningTree.h"
 #include "fne/network/HAParameters.h"
 
 #include <string>
@@ -149,11 +149,11 @@ namespace network
          */
         bool writePeerLinkPeers(json::array* peerList);
         /**
-         * @brief Writes a complete update of this CFNE's known master FNE tree upstream to the network.
+         * @brief Writes a complete update of this CFNE's known spanning tree upstream to the network.
          * @param treeRoot Root of the master tree.
          * @returns bool True, if list was sent, otherwise false.
          */
-        bool writeMasterTree(MasterTree* treeRoot);
+        bool writeSpanningTree(SpanningTree* treeRoot);
         /**
          * @brief Writes a complete update of this CFNE's HA parameters to the network.
          * @param haParams List of HA parameters.

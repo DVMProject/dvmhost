@@ -9,7 +9,7 @@
  */
 #include "fne/Defines.h"
 #include "common/Log.h"
-#include "network/MasterTree.h"
+#include "network/SpanningTree.h"
 
 using namespace network;
 
@@ -17,30 +17,30 @@ using namespace network;
 //  Static Class Members
 // ---------------------------------------------------------------------------
 
-std::unordered_map<uint32_t, MasterTree*> MasterTree::m_masterTrees = std::unordered_map<uint32_t, MasterTree*>();
-uint8_t MasterTree::m_maxUpdatesBeforeReparent = 5U;
+std::unordered_map<uint32_t, SpanningTree*> SpanningTree::m_SpanningTrees = std::unordered_map<uint32_t, SpanningTree*>();
+uint8_t SpanningTree::m_maxUpdatesBeforeReparent = 5U;
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/* Initializes a new instance of the MasterTree class. */
+/* Initializes a new instance of the SpanningTree class. */
 
-MasterTree::MasterTree(uint32_t id, uint32_t masterId, MasterTree* parent) :
+SpanningTree::SpanningTree(uint32_t id, uint32_t masterId, SpanningTree* parent) :
     m_parent(parent),
     m_children(),
     m_id(id),
     m_masterId(masterId),
     m_updatesBeforeReparent(0U)
 {
-    m_masterTrees[id] = this;
+    m_SpanningTrees[id] = this;
     if (m_parent != nullptr)
         m_parent->m_children.push_back(this);
 }
 
-/* Finalizes a instance of the MasterTree class. */
+/* Finalizes a instance of the SpanningTree class. */
 
-MasterTree::~MasterTree()
+SpanningTree::~SpanningTree()
 {
     for (auto child : m_children) {
         if (child != nullptr) {
@@ -51,24 +51,24 @@ MasterTree::~MasterTree()
     m_children.clear();
 }
 
-/* Find a peer master tree by peer ID. */
+/* Find a peer tree by peer ID. */
 
-MasterTree* MasterTree::findByPeerID(const uint32_t peerId)
+SpanningTree* SpanningTree::findByPeerID(const uint32_t peerId)
 {
-    auto it = m_masterTrees.find(peerId);
-    if (it != m_masterTrees.end()) {
+    auto it = m_SpanningTrees.find(peerId);
+    if (it != m_SpanningTrees.end()) {
         return it->second;
     }
 
     return nullptr;
 }
 
-/* Find a peer master tree by master peer ID. */
+/* Find a peer tree by master peer ID. */
 
-MasterTree* MasterTree::findByMasterID(const uint32_t masterId)
+SpanningTree* SpanningTree::findByMasterID(const uint32_t masterId)
 {
-    for (auto it : m_masterTrees) {
-        MasterTree* tree = it.second;
+    for (auto it : m_SpanningTrees) {
+        SpanningTree* tree = it.second;
         if (tree != nullptr) {
             if (tree->masterId() == masterId) {
                 return tree;
@@ -79,9 +79,9 @@ MasterTree* MasterTree::findByMasterID(const uint32_t masterId)
     return nullptr;
 }
 
-/* Count all children of a master tree node. */
+/* Count all children of a tree node. */
 
-uint32_t MasterTree::countChildren(MasterTree* node)
+uint32_t SpanningTree::countChildren(SpanningTree* node)
 {
     if (node == nullptr)
         return 0U;
@@ -99,11 +99,11 @@ uint32_t MasterTree::countChildren(MasterTree* node)
 
 /* Erase a peer from the tree. */
 
-void MasterTree::erasePeer(const uint32_t peerId)
+void SpanningTree::erasePeer(const uint32_t peerId)
 {
-    auto it = m_masterTrees.find(peerId);
-    if (it != m_masterTrees.end()) {
-        MasterTree* tree = it->second;
+    auto it = m_SpanningTrees.find(peerId);
+    if (it != m_SpanningTrees.end()) {
+        SpanningTree* tree = it->second;
         if (tree != nullptr) {
             if (tree->m_parent != nullptr) {
                 auto& siblings = tree->m_parent->m_children;
@@ -117,13 +117,13 @@ void MasterTree::erasePeer(const uint32_t peerId)
             delete tree;
         }
 
-        m_masterTrees.erase(it);
+        m_SpanningTrees.erase(it);
     }
 }
 
-/* Helper to recursively serialize master tree node to JSON array. */
+/* Helper to recursively serialize tree node to JSON array. */
 
-void MasterTree::serializeTree(MasterTree* node, json::array& jsonArray)
+void SpanningTree::serializeTree(SpanningTree* node, json::array& jsonArray)
 {
     if (node == nullptr)
         return;
@@ -143,9 +143,9 @@ void MasterTree::serializeTree(MasterTree* node, json::array& jsonArray)
     jsonArray.push_back(json::value(obj));
 }
 
-/* Helper to recursively deserialize master tree node from JSON array. */
+/* Helper to recursively deserialize tree node from JSON array. */
 
-void MasterTree::deserializeTree(json::array& jsonArray, MasterTree* parent, std::vector<uint32_t>* duplicatePeers)
+void SpanningTree::deserializeTree(json::array& jsonArray, SpanningTree* parent, std::vector<uint32_t>* duplicatePeers)
 {
     for (auto& v : jsonArray) {
         if (!v.is<json::object>())
@@ -163,7 +163,7 @@ void MasterTree::deserializeTree(json::array& jsonArray, MasterTree* parent, std
         uint32_t masterId = obj["masterId"].get<uint32_t>();
 
         // check if this peer is already connected via another peer
-        MasterTree* tree = MasterTree::findByMasterID(masterId);
+        SpanningTree* tree = SpanningTree::findByMasterID(masterId);
         if (tree != nullptr) {
             // is this a fast reconnect? (this happens when a connecting peer
             //  uses the same peer ID and master ID already announced in the tree, but
@@ -175,9 +175,9 @@ void MasterTree::deserializeTree(json::array& jsonArray, MasterTree* parent, std
             }
         }
 
-        MasterTree* existingNode = findByPeerID(id);
+        SpanningTree* existingNode = findByPeerID(id);
         if (existingNode == nullptr)
-            existingNode = new MasterTree(id, masterId, parent);
+            existingNode = new SpanningTree(id, masterId, parent);
         else {
             // are the parents different? if so, start counting down to reparenting
             if (existingNode->m_parent != parent) {
@@ -194,7 +194,7 @@ void MasterTree::deserializeTree(json::array& jsonArray, MasterTree* parent, std
 
         // process children
         json::array childArray = obj["children"].get<json::array>();
-        //LogDebugEx(LOG_STP, "MasterTree::deserializeTree()", "peerId = %u, masterId = %u, parent = %u, childrenCnt = %u",
+        //LogDebugEx(LOG_STP, "SpanningTree::deserializeTree()", "peerId = %u, masterId = %u, parent = %u, childrenCnt = %u",
         //    existingNode->id(), existingNode->masterId(), parent->id(), childArray.size());
         if (childArray.size() > 0U) {
             deserializeTree(childArray, existingNode, duplicatePeers);
@@ -221,7 +221,7 @@ void MasterTree::deserializeTree(json::array& jsonArray, MasterTree* parent, std
                 }
 
                 // iterate over the nodes children and remove entries
-                std::vector<MasterTree*> childrenToErase;
+                std::vector<SpanningTree*> childrenToErase;
                 for (auto child : existingNode->m_children) {
                     if (child != nullptr) {
                         auto it = std::find(announcedChildren.begin(), announcedChildren.end(), child->id());
@@ -235,7 +235,7 @@ void MasterTree::deserializeTree(json::array& jsonArray, MasterTree* parent, std
                     for (auto child : childrenToErase) {
                         if (child != nullptr) {
                             auto it = std::find_if(existingNode->m_children.begin(), existingNode->m_children.end(),
-                                [&](MasterTree* x) {
+                                [&](SpanningTree* x) {
                                     if (x != nullptr) {
                                         return x->id() == child->id();
                                     }
@@ -258,9 +258,9 @@ void MasterTree::deserializeTree(json::array& jsonArray, MasterTree* parent, std
     }
 }
 
-/* Helper to move the master tree node to a different parent master tree node. */
+/* Helper to move the tree node to a different parent tree node. */
 
-void MasterTree::moveParent(MasterTree* node, MasterTree* parent)
+void SpanningTree::moveParent(SpanningTree* node, SpanningTree* parent)
 {
     if (node == nullptr)
         return;
@@ -275,13 +275,13 @@ void MasterTree::moveParent(MasterTree* node, MasterTree* parent)
 
     if (node->m_parent != parent) {
         // find the node in the parent children and remove it
-        MasterTree* nodeParent = node->m_parent;
+        SpanningTree* nodeParent = node->m_parent;
         uint32_t nodeParentId = 0U;
         bool hasReleasedFromParent = false;
 
         if (nodeParent != nullptr) {
             nodeParentId = nodeParent->id();
-            auto it = std::find_if(nodeParent->m_children.begin(), nodeParent->m_children.end(), [&](MasterTree* childNode) {
+            auto it = std::find_if(nodeParent->m_children.begin(), nodeParent->m_children.end(), [&](SpanningTree* childNode) {
                 if (childNode == node)
                     return true;
                 return false;
@@ -313,7 +313,7 @@ void MasterTree::moveParent(MasterTree* node, MasterTree* parent)
 
 /* Debug helper to visualize the tree structure in the log. */
 
-void MasterTree::visualizeTreeToLog(MasterTree* node, uint32_t level)
+void SpanningTree::visualizeTreeToLog(SpanningTree* node, uint32_t level)
 {
     if (node == nullptr)
         return;
@@ -341,9 +341,9 @@ void MasterTree::visualizeTreeToLog(MasterTree* node, uint32_t level)
 //  Private Static Class Members
 // ---------------------------------------------------------------------------
 
-/* Erase all children of a master tree node. */
+/* Erase all children of a spanning tree node. */
 
-void MasterTree::eraseChildren(MasterTree* node)
+void SpanningTree::eraseChildren(SpanningTree* node)
 {
     if (node == nullptr)
         return;

@@ -39,7 +39,7 @@
 #include "fne/lookups/AffiliationLookup.h"
 #include "fne/network/influxdb/InfluxDB.h"
 #include "fne/network/FNEPeerConnection.h"
-#include "fne/network/MasterTree.h"
+#include "fne/network/SpanningTree.h"
 #include "fne/network/HAParameters.h"
 #include "fne/CryptoContainer.h"
 
@@ -327,7 +327,7 @@ namespace network
         static std::timed_mutex m_keyQueueMutex;
         std::unordered_map<uint32_t, uint16_t> m_peerReplicaKeyQueue;
 
-        MasterTree* m_fneTree;
+        SpanningTree* m_treeRoot;
 
         concurrent::vector<HAParameters> m_peerReplicaHAParams;
         std::string m_advertisedHAAddress;

@@ -8,13 +8,13 @@
  *
  */
 /**
- * @file MasterTree.h
+ * @file SpanningTree.h
  * @ingroup fne_network
- * @file MasterTree.cpp
+ * @file SpanningTree.cpp
  * @ingroup fne_network
  */
-#if !defined(__MASTER_TREE_H__)
-#define __MASTER_TREE_H__
+#if !defined(__SPANNING_TREE_H__)
+#define __SPANNING_TREE_H__
 
 #include "fne/Defines.h"
 #include "common/network/json/json.h"
@@ -34,9 +34,9 @@ namespace network
      * @ingroup fne_network
      * @remarks
      * This class implements a extremely rudimentary spanning tree structure to represent
-     * the master FNE tree topology.
+     *  the linked FNE tree topology.
      * 
-     * Each MasterTree node represents a single FNE in the tree. The root node is the master FNE
+     * Each node represents a master FNE in the tree. The root node is the master FNE
      * at the top of the tree. Each node contains a list of child nodes that are directly connected
      * to it downstream.
      * 
@@ -56,29 +56,28 @@ namespace network
      * Child nodes always send their data upstream to their parent node. The tree is always a top-down
      * structure, with data flowing from the leaves up to the root. The root node does not have a parent.
      * 
-     * Root nodes can have multiple child nodes, and child nodes can have their own children, forming a hierarchical tree.
-     * Root nodes determine duplicate connections and enforce tree integrity.
-     * 
-     * Each node in the tree assumes it is a root of its own subtree. For instance, B considers itself
-     * the root of the subtree containing B, D, E, and G. This allows for easy traversal and management of
-     * the tree structure.
+     * - Nodes can have multiple child nodes, and child nodes can have their own children, forming a hierarchical tree.
+     * - Nodes with child nodes can determine duplicate connections and enforce tree integrity.     * 
+     * - Each node in the tree assumes it is the root of its own subtree. For instance, B considers itself
+     *      the root of the subtree containing B, D, E, and G. This allows for easy traversal and management of
+     *      the tree structure.
      */
-    class HOST_SW_API MasterTree {
+    class HOST_SW_API SpanningTree {
     public:
-        auto operator=(MasterTree&) -> MasterTree& = delete;
-        auto operator=(MasterTree&&) -> MasterTree& = delete;
-        MasterTree(MasterTree&) = delete;
+        auto operator=(SpanningTree&) -> SpanningTree& = delete;
+        auto operator=(SpanningTree&&) -> SpanningTree& = delete;
+        SpanningTree(SpanningTree&) = delete;
 
         /**
-         * @brief Initializes a new instance of the MasterTree class
+         * @brief Initializes a new instance of the SpanningTree class
          * @param id Peer ID.
          * @param parent Parent server tree node.
          */
-        MasterTree(uint32_t id, uint32_t masterId, MasterTree* parent);
+        SpanningTree(uint32_t id, uint32_t masterId, SpanningTree* parent);
         /**
-         * @brief Finalizes a instance of the MasterTree class
+         * @brief Finalizes a instance of the SpanningTree class
          */
-        ~MasterTree();
+        ~SpanningTree();
 
         /**
          * @brief Flag indicating whether or not this server is a tree root.
@@ -92,24 +91,24 @@ namespace network
         bool hasChildren() const { return !m_children.empty(); }
 
         /**
-         * @brief Find a peer master tree by peer ID.
+         * @brief Find a peer tree by peer ID.
          * @param peerId Peer ID.
-         * @return MasterTree* Pointer to the MasterTree instance, or nullptr if not found.
+         * @return SpanningTree* Pointer to the SpanningTree instance, or nullptr if not found.
          */
-        static MasterTree* findByPeerID(const uint32_t peerId);
+        static SpanningTree* findByPeerID(const uint32_t peerId);
         /**
-         * @brief Find a peer master tree by master peer ID.
+         * @brief Find a peer tree by master peer ID.
          * @param masterId Master Peer ID.
-         * @return MasterTree* Pointer to the MasterTree instance, or nullptr if not found.
+         * @return SpanningTree* Pointer to the SpanningTree instance, or nullptr if not found.
          */
-        static MasterTree* findByMasterID(const uint32_t masterId);
+        static SpanningTree* findByMasterID(const uint32_t masterId);
 
         /**
-         * @brief Count all children of a master tree node.
-         * @param node Pointer to MasterTree node.
+         * @brief Count all children of a tree node.
+         * @param node Pointer to SpanningTree node.
          * @return uint32_t Number of child nodes.
          */
-        static uint32_t countChildren(MasterTree* node);
+        static uint32_t countChildren(SpanningTree* node);
 
         /**
          * @brief Erase a peer from the tree.
@@ -118,39 +117,39 @@ namespace network
         static void erasePeer(const uint32_t peerId);
 
         /**
-         * @brief Helper to recursively serialize master tree node to JSON array.
-         * @param node Pointer to MasterTree node.
+         * @brief Helper to recursively serialize tree node to JSON array.
+         * @param node Pointer to SpanningTree node.
          * @param jsonArray JSON array to write node to.
          */
-        static void serializeTree(MasterTree* node, json::array& jsonArray);
+        static void serializeTree(SpanningTree* node, json::array& jsonArray);
 
         /**
-         * @brief Helper to recursively deserialize master tree node from JSON array.
+         * @brief Helper to recursively deserialize tree node from JSON array.
          * @param jsonArray JSON array to read node from.
-         * @param parent Pointer to parent MasterTree node.
+         * @param parent Pointer to parent SpanningTree node.
          * @param duplicatePeers Pointer to vector to receive duplicate peer IDs found during deserialization.
          */
-        static void deserializeTree(json::array& jsonArray, MasterTree* parent, std::vector<uint32_t>* duplicatePeers);
+        static void deserializeTree(json::array& jsonArray, SpanningTree* parent, std::vector<uint32_t>* duplicatePeers);
 
         /**
-         * @brief Helper to move the master tree node to a different parent master tree node.
-         * @param node Pointer to a MasterTree node.
-         * @param parent Pointer to new parent MasterTree Node.
+         * @brief Helper to move the tree node to a different parent tree node.
+         * @param node Pointer to a SpanningTree node.
+         * @param parent Pointer to new parent SpanningTree Node.
          */
-        static void moveParent(MasterTree* node, MasterTree* parent);
+        static void moveParent(SpanningTree* node, SpanningTree* parent);
 
         /**
          * @brief Helper to visualize the tree structure in the log.
-         * @param node Pointer to MasterTree node.
+         * @param node Pointer to SpanningTree node.
          * @param level Current tree level.
          */
-        static void visualizeTreeToLog(MasterTree* node, uint32_t level = 0U);
+        static void visualizeTreeToLog(SpanningTree* node, uint32_t level = 0U);
 
     public:
-        MasterTree* m_parent;                   //!< Parent master tree node. (i.e. master FNE above this)
-        std::vector<MasterTree*> m_children;    //!< Child master tree nodes. (i.e. peer FNEs below this)
+        SpanningTree* m_parent;                   //!< Parent tree node. (i.e. master FNE above this)
+        std::vector<SpanningTree*> m_children;    //!< Child tree nodes. (i.e. peer FNEs below this)
 
-        static std::unordered_map<uint32_t, MasterTree*> m_masterTrees; //!< Static map of all master trees by peer ID.
+        static std::unordered_map<uint32_t, SpanningTree*> m_SpanningTrees; //!< Static map of all trees by peer ID.
         static uint8_t m_maxUpdatesBeforeReparent; //!< Maximum count of updates before allowing node reparenting.
 
         /**
@@ -166,11 +165,11 @@ namespace network
         uint8_t m_updatesBeforeReparent;
 
         /**
-         * @brief Helper to erase all children of a master tree node.
-         * @param node Pointer to MasterTree node.
+         * @brief Helper to erase all children of a spanning tree node.
+         * @param node Pointer to SpanningTree node.
          */
-        static void eraseChildren(MasterTree* node);
+        static void eraseChildren(SpanningTree* node);
     };
 } // namespace network
 
-#endif // __MASTER_TREE_H__
+#endif // __SPANNING_TREE_H__

@@ -17,7 +17,7 @@
 #include "fne/network/callhandler/TagDMRData.h"
 #include "fne/network/callhandler/TagP25Data.h"
 #include "fne/network/RESTAPI.h"
-#include "fne/network/MasterTree.h"
+#include "fne/network/SpanningTree.h"
 #include "HostFNE.h"
 
 using namespace network;
@@ -668,7 +668,7 @@ void RESTAPI::initializeEndpoints()
 
     m_dispatcher.match(FNE_GET_AFF_LIST).get(REST_API_BIND(RESTAPI::restAPI_GetAffList, this));
 
-    m_dispatcher.match(FNE_GET_MASTER_TREE).get(REST_API_BIND(RESTAPI::restAPI_GetMasterTree, this));
+    m_dispatcher.match(FNE_GET_SPANNING_TREE).get(REST_API_BIND(RESTAPI::restAPI_GetSpanningTree, this));
 
     /*
     ** Digital Mobile Radio
@@ -1619,9 +1619,9 @@ void RESTAPI::restAPI_GetAffList(const HTTPPayload& request, HTTPPayload& reply,
     reply.payload(response);
 }
 
-/* REST API endpoint; implements get master tree list request. */
+/* REST API endpoint; implements get spanning tree list request. */
 
-void RESTAPI::restAPI_GetMasterTree(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+void RESTAPI::restAPI_GetSpanningTree(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
         return;
@@ -1632,7 +1632,7 @@ void RESTAPI::restAPI_GetMasterTree(const HTTPPayload& request, HTTPPayload& rep
 
     json::array tree = json::array();
     if (m_network != nullptr) {
-        MasterTree::serializeTree(m_network->m_fneTree, tree);
+        SpanningTree::serializeTree(m_network->m_treeRoot, tree);
     }
 
     response["masterTree"].set<json::array>(tree);

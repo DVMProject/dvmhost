@@ -97,7 +97,7 @@ FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port,
     m_peerAffiliations(),
     m_ccPeerMap(),
     m_peerReplicaKeyQueue(),
-    m_fneTree(nullptr),
+    m_treeRoot(nullptr),
     m_peerReplicaHAParams(),
     m_advertisedHAAddress(),
     m_advertisedHAPort(TRAFFIC_DEFAULT_PORT),
@@ -151,8 +151,8 @@ FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port,
 
     m_p25OTARService = new P25OTARService(this, m_tagP25->packetData(), kmfDebug, verbose);
 
-    MasterTree::m_maxUpdatesBeforeReparent = (uint8_t)host->m_maxMissedPings;
-    m_fneTree = new MasterTree(peerId, peerId, nullptr);
+    SpanningTree::m_maxUpdatesBeforeReparent = (uint8_t)host->m_maxMissedPings;
+    m_treeRoot = new SpanningTree(peerId, peerId, nullptr);
 
     /*
     ** Initialize Threads
@@ -503,7 +503,7 @@ void FNENetwork::clock(uint32_t ms)
                     // perform master tree maintainence tasks
                     if (peer.second->isEnabled() && peer.second->getRemotePeerId() > 0U &&
                         m_enableSpanningTree) {
-                        peer.second->writeMasterTree(m_fneTree);
+                        peer.second->writeSpanningTree(m_treeRoot);
                     }
 
                     // perform peer replica maintainence tasks
@@ -1232,7 +1232,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
 
                                             if (network->m_enableSpanningTree && !connection->isSysView()) {
                                                 // check if this peer is already connected via another peer
-                                                MasterTree* tree = MasterTree::findByMasterID(masterPeerId);
+                                                SpanningTree* tree = SpanningTree::findByMasterID(masterPeerId);
                                                 if (tree != nullptr) {
                                                     // are we allowing a fast reconnect? (this happens when a connecting peer
                                                     //  uses the same peer ID and master ID already announced in the tree, but
@@ -1241,7 +1241,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                                         network->m_spanningTreeFastReconnect) {
                                                         LogWarning(LOG_STP, "PEER %u (%s) server already announced in server tree, fast peer reconnect, peerId = %u, masterId = %u, treePeerId = %u, treeMasterId = %u, connectionState = %u", peerId, connection->identWithQualifier().c_str(),
                                                             peerId, masterPeerId, tree->id(), tree->masterId(), connection->connectionState());
-                                                        MasterTree::moveParent(tree, network->m_fneTree);
+                                                        SpanningTree::moveParent(tree, network->m_treeRoot);
                                                         network->logSpanningTree(connection);
                                                     } else {
                                                         LogWarning(LOG_STP, "PEER %u (%s) RPTC NAK, server already connected via PEER %u, duplicate connection denied, peerId = %u, masterId = %u, treePeerId = %u, treeMasterId = %u, connectionState = %u", peerId, connection->identWithQualifier().c_str(),
@@ -1251,7 +1251,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                                         break;
                                                     }
                                                 } else {
-                                                    new MasterTree(peerId, masterPeerId, network->m_fneTree);
+                                                    new SpanningTree(peerId, masterPeerId, network->m_treeRoot);
                                                     network->logSpanningTree(connection);
                                                 }
                                             }
@@ -1834,12 +1834,12 @@ void FNENetwork::logSpanningTree(FNEPeerConnection* connection)
     if (!m_enableSpanningTree)
         return;
 
-    if (m_logSpanningTreeChanges && m_fneTree->hasChildren()) {
+    if (m_logSpanningTreeChanges && m_treeRoot->hasChildren()) {
         if (connection != nullptr)
             LogInfoEx(LOG_STP, "PEER %u (%s) Network Tree, Tree Change, Current Tree", connection->id(), connection->identWithQualifier().c_str());
         else
             LogInfoEx(LOG_STP, "PEER %u Network Tree, Tree Display, Current Tree", m_peerId);
-        MasterTree::visualizeTreeToLog(m_fneTree);
+        SpanningTree::visualizeTreeToLog(m_treeRoot);
     }
 }
 
@@ -1946,7 +1946,7 @@ void FNENetwork::erasePeer(uint32_t peerId)
 
     if (neighborFNE && m_enableSpanningTree) {
         // erase this peer from the master tree
-        MasterTree* tree = MasterTree::findByPeerID(peerId);
+        SpanningTree* tree = SpanningTree::findByPeerID(peerId);
         if (tree != nullptr) {
             if (tree->hasChildren()) {
                 uint32_t totalChildren = tree->countChildren(tree);
@@ -1957,7 +1957,7 @@ void FNENetwork::erasePeer(uint32_t peerId)
             }
 
             LogWarning(LOG_MASTER, "PEER %u downstream netsplit, disconnected", peerId);
-            MasterTree::erasePeer(peerId);
+            SpanningTree::erasePeer(peerId);
         }
 
         logSpanningTree();

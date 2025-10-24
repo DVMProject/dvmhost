@@ -145,9 +145,9 @@ bool PeerNetwork::writePeerLinkPeers(json::array* peerList)
     return false;
 }
 
-/* Writes a complete update of this CFNE's known master FNE tree upstream to the network. */
+/* Writes a complete update of this CFNE's known spanning tree upstream to the network. */
 
-bool PeerNetwork::writeMasterTree(MasterTree* treeRoot)
+bool PeerNetwork::writeSpanningTree(SpanningTree* treeRoot)
 {
     if (treeRoot == nullptr)
         return false;
@@ -156,7 +156,7 @@ bool PeerNetwork::writeMasterTree(MasterTree* treeRoot)
 
     if (treeRoot->m_children.size() > 0) {
         json::array jsonArray;
-        MasterTree::serializeTree(treeRoot, jsonArray);
+        SpanningTree::serializeTree(treeRoot, jsonArray);
 
         json::value v = json::value(jsonArray);
         std::string json = std::string(v.serialize());

@@ -650,7 +650,7 @@ void DiagNetwork::taskNetworkRx(NetPacketRequest* req)
                                             json::array arr = v.get<json::array>();
                                             LogInfoEx(LOG_STP, "PEER %u (%s) Network Tree, Tree List, updating %u peer entries", peerId, connection->identWithQualifier().c_str(), arr.size());
                                             std::vector<uint32_t> duplicatePeers;
-                                            MasterTree::deserializeTree(arr, network->m_fneTree, &duplicatePeers);
+                                            SpanningTree::deserializeTree(arr, network->m_treeRoot, &duplicatePeers);
 
                                             network->logSpanningTree(connection);
 
