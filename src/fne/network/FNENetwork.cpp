@@ -1239,7 +1239,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                                 if (tree != nullptr) {
                                                     if ((tree->id() == peerId && tree->masterId() == masterPeerId) &&
                                                         network->m_spanningTreeFastReconnect) {
-                                                        LogWarning(LOG_MASTER, "PEER %u (%s) RPTC NAK, server already announced in server tree, fast peer reconnect, peerId = %u, masterId = %u, treePeerId = %u, treeMasterId = %u, connectionState = %u", peerId, connection->identWithQualifier().c_str(),
+                                                        LogWarning(LOG_MASTER, "PEER %u (%s) server already announced in server tree, fast peer reconnect, peerId = %u, masterId = %u, treePeerId = %u, treeMasterId = %u, connectionState = %u", peerId, connection->identWithQualifier().c_str(),
                                                             peerId, masterPeerId, tree->id(), tree->masterId(), connection->connectionState());
                                                     } else {
                                                         LogWarning(LOG_MASTER, "PEER %u (%s) RPTC NAK, server already connected via PEER %u, duplicate connection denied, peerId = %u, masterId = %u, treePeerId = %u, treeMasterId = %u, connectionState = %u", peerId, connection->identWithQualifier().c_str(),
