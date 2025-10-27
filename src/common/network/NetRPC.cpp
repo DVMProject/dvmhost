@@ -286,7 +286,7 @@ void NetRPC::defaultResponse(json::object& reply, std::string message, StatusTyp
 bool NetRPC::open()
 {
     if (m_debug)
-        LogMessage(LOG_NET, "Opening RPC network");
+        LogInfoEx(LOG_NET, "Opening RPC network");
 
     // generate AES256 key
     size_t size = m_password.size();
@@ -313,7 +313,7 @@ bool NetRPC::open()
 void NetRPC::close()
 {
     if (m_debug)
-        LogMessage(LOG_NET, "Closing RPC network");
+        LogInfoEx(LOG_NET, "Closing RPC network");
 
     m_socket->close();
 }

@@ -90,25 +90,25 @@ using namespace nxdn::packet;
 // Macro helper to verbose log a generic message.
 #define VERBOSE_LOG_MSG(_PCKT_STR, _SRCID, _DSTID)                                      \
     if (m_verbose) {                                                                    \
-        LogMessage(LOG_RF, "NXDN, %s, srcId = %u, dstId = %u", _PCKT_STR.c_str(), _SRCID, _DSTID); \
+        LogInfoEx(LOG_RF, "NXDN, %s, srcId = %u, dstId = %u", _PCKT_STR.c_str(), _SRCID, _DSTID); \
     }
 
 // Macro helper to verbose log a generic message.
 #define VERBOSE_LOG_MSG_DST(_PCKT_STR, _DSTID)                                          \
     if (m_verbose) {                                                                    \
-        LogMessage(LOG_RF, "NXDN, %s, dstId = %u", _PCKT_STR.c_str(), _DSTID);          \
+        LogInfoEx(LOG_RF, "NXDN, %s, dstId = %u", _PCKT_STR.c_str(), _DSTID);          \
     }
 
 // Macro helper to verbose log a generic network message.
 #define VERBOSE_LOG_MSG_NET(_PCKT_STR, _SRCID, _DSTID)                                  \
     if (m_verbose) {                                                                    \
-        LogMessage(LOG_NET, "NXDN, %s, srcId = %u, dstId = %u", _PCKT_STR.c_str(), _SRCID, _DSTID); \
+        LogInfoEx(LOG_NET, "NXDN, %s, srcId = %u, dstId = %u", _PCKT_STR.c_str(), _SRCID, _DSTID); \
     }
 
 // Macro helper to verbose log a generic network message.
 #define DEBUG_LOG_MSG(_PCKT_STR)                                                        \
     if (m_debug) {                                                                      \
-        LogMessage(LOG_RF, "NXDN, %s", _PCKT_STR.c_str());                              \
+        LogInfoEx(LOG_RF, "NXDN, %s", _PCKT_STR.c_str());                              \
     }
 
 // ---------------------------------------------------------------------------
@@ -192,7 +192,7 @@ bool ControlSignaling::process(FuncChannelType::E fct, ChOption::E option, uint8
             IS_SUPPORT_CONTROL_CHECK(rcch->toString(true), MessageType::RCCH_REG, srcId);
 
             if (m_verbose) {
-                LogMessage(LOG_RF, "NXDN, %s, srcId = %u, locId = $%06X, regOption = $%02X", 
+                LogInfoEx(LOG_RF, "NXDN, %s, srcId = %u, locId = $%06X, regOption = $%02X", 
                     rcch->toString(true).c_str(), srcId, rcch->getLocId(), rcch->getRegOption());
             }
 
@@ -205,7 +205,7 @@ bool ControlSignaling::process(FuncChannelType::E fct, ChOption::E option, uint8
             IS_SUPPORT_CONTROL_CHECK(rcch->toString(true), MessageType::RCCH_GRP_REG, srcId);
 
             if (m_verbose) {
-                LogMessage(LOG_RF, "NXDN, %s, srcId = %u, dstId = %u, locId = $%06X", 
+                LogInfoEx(LOG_RF, "NXDN, %s, srcId = %u, dstId = %u, locId = $%06X", 
                     rcch->toString(true).c_str(), srcId, dstId, rcch->getLocId());
             }
 
@@ -252,7 +252,7 @@ bool ControlSignaling::processNetwork(FuncChannelType::E fct, ChOption::E option
                 if (m_nxdn->m_dedicatedControl) {
                     if (!m_nxdn->m_affiliations->isGranted(dstId)) {
                         if (m_verbose) {
-                            LogMessage(LOG_NET, "NXDN, %s, emerg = %u, encrypt = %u, prio = %u, chNo = %u, srcId = %u, dstId = %u",
+                            LogInfoEx(LOG_NET, "NXDN, %s, emerg = %u, encrypt = %u, prio = %u, chNo = %u, srcId = %u, dstId = %u",
                                 rcch->toString().c_str(), rcch->getEmergency(), rcch->getEncrypted(), rcch->getPriority(), rcch->getGrpVchNo(), srcId, dstId);
                         }
 
@@ -645,7 +645,7 @@ bool ControlSignaling::writeRF_Message_Grant(uint32_t srcId, uint32_t dstId, uin
     rcch->setPriority(priority);
 
     if (m_verbose) {
-        LogMessage((net) ? LOG_NET : LOG_RF, "NXDN, %s, emerg = %u, encrypt = %u, prio = %u, chNo = %u, srcId = %u, dstId = %u",
+        LogInfoEx((net) ? LOG_NET : LOG_RF, "NXDN, %s, emerg = %u, encrypt = %u, prio = %u, chNo = %u, srcId = %u, dstId = %u",
             rcch->toString().c_str(), rcch->getEmergency(), rcch->getEncrypted(), rcch->getPriority(), rcch->getGrpVchNo(), rcch->getSrcId(), rcch->getDstId());
     }
 
@@ -673,7 +673,7 @@ void ControlSignaling::writeRF_Message_Deny(uint32_t srcId, uint32_t dstId, uint
     rcch->setDstId(dstId);
 
     if (m_verbose) {
-        LogMessage(LOG_RF, "NXDN, MSG_DENIAL (Message Denial), reason = $%02X (%s), service = $%02X, srcId = %u, dstId = %u",
+        LogInfoEx(LOG_RF, "NXDN, MSG_DENIAL (Message Denial), reason = $%02X (%s), service = $%02X, srcId = %u, dstId = %u",
             reason, NXDNUtils::causeToString(reason).c_str(), service, srcId, dstId);
     }
 
@@ -774,7 +774,7 @@ void ControlSignaling::writeRF_Message_U_Reg_Rsp(uint32_t srcId, uint32_t dstId,
 
     if (rcch->getCauseResponse() == CauseResponse::MM_REG_ACCEPTED) {
         if (m_verbose) {
-            LogMessage(LOG_RF, "NXDN, %s, srcId = %u, locId = $%06X", 
+            LogInfoEx(LOG_RF, "NXDN, %s, srcId = %u, locId = $%06X", 
                 rcch->toString().c_str(), srcId, locId);
         }
 

@@ -210,12 +210,12 @@ bool Voice::process(uint8_t* data, uint32_t len)
             }
 
             if (m_verbose) {
-                LogMessage(LOG_RF, DMR_DT_VOICE_LC_HEADER ", slot = %u, srcId = %u, dstId = %u, FLCO = $%02X, FID = $%02X, PF = %u", m_slot->m_slotNo,
+                LogInfoEx(LOG_RF, DMR_DT_VOICE_LC_HEADER ", slot = %u, srcId = %u, dstId = %u, FLCO = $%02X, FID = $%02X, PF = %u", m_slot->m_slotNo,
                     m_slot->m_rfLC->getSrcId(), m_slot->m_rfLC->getDstId(), m_slot->m_rfLC->getFLCO(), m_slot->m_rfLC->getFID(), m_slot->m_rfLC->getPF());
             }
 
             ::ActivityLog("DMR", true, "Slot %u RF %svoice header from %u to %s%u", m_slot->m_slotNo, encrypted ? "encrypted " : "", srcId, flco == FLCO::GROUP ? "TG " : "", dstId);
-            LogMessage(LOG_RF, "DMR Voice Call, slot = %u, srcId = %u, dstId = %u", m_slot->m_slotNo, srcId, dstId);
+            LogInfoEx(LOG_RF, "DMR Voice Call, slot = %u, srcId = %u, dstId = %u", m_slot->m_slotNo, srcId, dstId);
             return true;
         }
         else if (dataType == DataType::VOICE_PI_HEADER) {
@@ -250,13 +250,13 @@ bool Voice::process(uint8_t* data, uint32_t len)
             m_slot->writeNetwork(data, DataType::VOICE_PI_HEADER, 0U);
 
             if (m_verbose) {
-                LogMessage(LOG_RF, DMR_DT_VOICE_PI_HEADER ", slot = %u, algId = %u, kId = %u, dstId = %u", m_slot->m_slotNo,
+                LogInfoEx(LOG_RF, DMR_DT_VOICE_PI_HEADER ", slot = %u, algId = %u, kId = %u, dstId = %u", m_slot->m_slotNo,
                     m_slot->m_rfPrivacyLC->getAlgId(), m_slot->m_rfPrivacyLC->getKId(), m_slot->m_rfPrivacyLC->getDstId());
 
                 uint8_t mi[MI_LENGTH_BYTES];
                 m_slot->m_rfPrivacyLC->getMI(mi);
 
-                LogMessage(LOG_RF, DMR_DT_VOICE_PI_HEADER ", slot = %u, Enc Sync, MI = %02X %02X %02X %02X", 
+                LogInfoEx(LOG_RF, DMR_DT_VOICE_PI_HEADER ", slot = %u, Enc Sync, MI = %02X %02X %02X %02X", 
                     m_slot->m_slotNo, mi[0U], mi[1U], mi[2U], mi[3U]);
             }
 
@@ -294,7 +294,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
             }
 
             if (m_verbose) {
-                LogMessage(LOG_RF, DMR_DT_VOICE_SYNC ", audio, slot = %u, srcId = %u, dstId = %u, seqNo = 0, fid = $%02X, pf = %u, errs = %u/141 (%.1f%%)", m_slot->m_slotNo, m_slot->m_rfLC->getSrcId(), m_slot->m_rfLC->getDstId(),
+                LogInfoEx(LOG_RF, DMR_DT_VOICE_SYNC ", audio, slot = %u, srcId = %u, dstId = %u, seqNo = 0, fid = $%02X, pf = %u, errs = %u/141 (%.1f%%)", m_slot->m_slotNo, m_slot->m_rfLC->getSrcId(), m_slot->m_rfLC->getDstId(),
                     fid, pf, errors, float(errors) / 1.41F);
             }
 
@@ -369,7 +369,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
             }
 
             if (m_verbose) {
-                LogMessage(LOG_RF, DMR_DT_VOICE ", audio, slot = %u, srcId = %u, dstId = %u, seqNo = %u, fid = $%02X, pf = %u, errs = %u/141 (%.1f%%)", m_slot->m_slotNo, m_slot->m_rfLC->getSrcId(), m_slot->m_rfLC->getDstId(),
+                LogInfoEx(LOG_RF, DMR_DT_VOICE ", audio, slot = %u, srcId = %u, dstId = %u, seqNo = %u, fid = $%02X, pf = %u, errs = %u/141 (%.1f%%)", m_slot->m_slotNo, m_slot->m_rfLC->getSrcId(), m_slot->m_rfLC->getDstId(),
                     m_rfN, fid, pf,  errors, float(errors) / 1.41F);
             }
 
@@ -630,7 +630,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 }
 
                 if (m_verbose) {
-                    LogMessage(LOG_RF, DMR_DT_VOICE ", audio, slot = %u, sequence no = %u, fid = $%02X, pf = %u, errs = %u/141 (%.1f%%)",
+                    LogInfoEx(LOG_RF, DMR_DT_VOICE ", audio, slot = %u, sequence no = %u, fid = $%02X, pf = %u, errs = %u/141 (%.1f%%)",
                         m_slot->m_slotNo, m_rfN, fid, pf, errors, float(errors) / 1.41F);
                 }
 
@@ -657,7 +657,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 }
 
                 ::ActivityLog("DMR", true, "Slot %u RF late entry from %u to %s%u", m_slot->m_slotNo, srcId, flco == FLCO::GROUP ? "TG " : "", dstId);
-                LogMessage(LOG_RF, "DMR Voice Call, slot = %u, srcId = %u, dstId = %u", m_slot->m_slotNo, srcId, dstId);
+                LogInfoEx(LOG_RF, "DMR Voice Call, slot = %u, srcId = %u, dstId = %u", m_slot->m_slotNo, srcId, dstId);
                 return true;
             }
         }
@@ -705,7 +705,7 @@ void Voice::processNetwork(const data::NetData& dmrData)
                 srcId, flco == FLCO::GROUP ? "TG" : "", dstId);
 
         if (m_verbose) {
-            LogMessage(LOG_NET, "DMR Slot %u, VOICE_LC_HEADER, srcId = %u, dstId = %u, FLCO = $%02X, FID = $%02X, PF = %u", m_slot->m_slotNo, lc->getSrcId(), lc->getDstId(), lc->getFLCO(), lc->getFID(), lc->getPF());
+            LogInfoEx(LOG_NET, "DMR Slot %u, VOICE_LC_HEADER, srcId = %u, dstId = %u, FLCO = $%02X, FID = $%02X, PF = %u", m_slot->m_slotNo, lc->getSrcId(), lc->getDstId(), lc->getFLCO(), lc->getFID(), lc->getPF());
         }
 
         m_slot->m_netLC = std::move(lc);
@@ -769,12 +769,12 @@ void Voice::processNetwork(const data::NetData& dmrData)
         m_slot->setShortLC(m_slot->m_slotNo, dstId, flco, Slot::SLCO_ACT_TYPE::VOICE);
 
         if (m_verbose) {
-            LogMessage(LOG_NET, DMR_DT_VOICE_LC_HEADER ", slot = %u, srcId = %u, dstId = %u, FLCO = $%02X, FID = $%02X, PF = %u", m_slot->m_slotNo,
+            LogInfoEx(LOG_NET, DMR_DT_VOICE_LC_HEADER ", slot = %u, srcId = %u, dstId = %u, FLCO = $%02X, FID = $%02X, PF = %u", m_slot->m_slotNo,
                 m_slot->m_netLC->getSrcId(), m_slot->m_netLC->getDstId(), m_slot->m_netLC->getFLCO(), m_slot->m_netLC->getFID(), m_slot->m_netLC->getPF());
         }
 
         ::ActivityLog("DMR", false, "Slot %u network voice header from %u to %s%u", m_slot->m_slotNo, srcId, flco == FLCO::GROUP ? "TG " : "", dstId);
-        LogMessage(LOG_NET, "DMR Voice Call, slot = %u, srcId = %u, dstId = %u", m_slot->m_slotNo, srcId, dstId);
+        LogInfoEx(LOG_NET, "DMR Voice Call, slot = %u, srcId = %u, dstId = %u", m_slot->m_slotNo, srcId, dstId);
     }
     else if (dataType == DataType::VOICE_PI_HEADER) {
         if (m_slot->m_netState != RS_NET_AUDIO) {
@@ -842,7 +842,7 @@ void Voice::processNetwork(const data::NetData& dmrData)
 
             ::ActivityLog("DMR", false, "Slot %u network late entry from %u to %s%u",
                 m_slot->m_slotNo, srcId, m_slot->m_netLC->getFLCO() == FLCO::GROUP ? "TG " : "", dstId);
-            LogMessage(LOG_NET, "DMR Voice Call, slot = %u, srcId = %u, dstId = %u", m_slot->m_slotNo, srcId, dstId);
+            LogInfoEx(LOG_NET, "DMR Voice Call, slot = %u, srcId = %u, dstId = %u", m_slot->m_slotNo, srcId, dstId);
         }
 
         lc::FullLC fullLC;
@@ -873,13 +873,13 @@ void Voice::processNetwork(const data::NetData& dmrData)
         m_slot->addFrame(data, true);
 
         if (m_verbose) {
-            LogMessage(LOG_NET, DMR_DT_VOICE_PI_HEADER ", slot = %u, algId = %u, kId = %u, dstId = %u", m_slot->m_slotNo,
+            LogInfoEx(LOG_NET, DMR_DT_VOICE_PI_HEADER ", slot = %u, algId = %u, kId = %u, dstId = %u", m_slot->m_slotNo,
                 m_slot->m_netPrivacyLC->getAlgId(), m_slot->m_netPrivacyLC->getKId(), m_slot->m_netPrivacyLC->getDstId());
 
             uint8_t mi[MI_LENGTH_BYTES];
             m_slot->m_netPrivacyLC->getMI(mi);
 
-            LogMessage(LOG_NET, DMR_DT_VOICE_PI_HEADER ", slot = %u, Enc Sync, MI = %02X %02X %02X %02X", 
+            LogInfoEx(LOG_NET, DMR_DT_VOICE_PI_HEADER ", slot = %u, Enc Sync, MI = %02X %02X %02X %02X", 
                 m_slot->m_slotNo, mi[0U], mi[1U], mi[2U], mi[3U]);
         }
     }
@@ -955,7 +955,7 @@ void Voice::processNetwork(const data::NetData& dmrData)
 
             ::ActivityLog("DMR", false, "Slot %u network late entry from %u to %s%u",
                 m_slot->m_slotNo, srcId, m_slot->m_netLC->getFLCO() == FLCO::GROUP ? "TG " : "", dstId);
-            LogMessage(LOG_NET, "DMR Voice Call, slot = %u, srcId = %u, dstId = %u", m_slot->m_slotNo, srcId, dstId);
+            LogInfoEx(LOG_NET, "DMR Voice Call, slot = %u, srcId = %u, dstId = %u", m_slot->m_slotNo, srcId, dstId);
         }
 
         if (m_slot->m_netState == RS_NET_AUDIO) {
@@ -970,7 +970,7 @@ void Voice::processNetwork(const data::NetData& dmrData)
             }
 
             if (m_verbose) {
-                LogMessage(LOG_NET, "DMR Slot %u, VOICE_SYNC audio, sequence no = %u, fid = $%02X, pf = %u, errs = %u/141 (%.1f%%)",
+                LogInfoEx(LOG_NET, "DMR Slot %u, VOICE_SYNC audio, sequence no = %u, fid = $%02X, pf = %u, errs = %u/141 (%.1f%%)",
                     m_slot->m_slotNo, m_netN, fid, pf, m_slot->m_netErrs, float(m_slot->m_netErrs) / 1.41F);
             }
 
@@ -1026,7 +1026,7 @@ void Voice::processNetwork(const data::NetData& dmrData)
         }
 
         if (m_verbose) {
-            LogMessage(LOG_NET, DMR_DT_VOICE ", audio, slot = %u, srcId = %u, dstId = %u, seqNo = %u, fid = $%02X, pf = %u, errs = %u/141 (%.1f%%)", m_slot->m_slotNo, m_slot->m_netLC->getSrcId(), m_slot->m_netLC->getDstId(),
+            LogInfoEx(LOG_NET, DMR_DT_VOICE ", audio, slot = %u, srcId = %u, dstId = %u, seqNo = %u, fid = $%02X, pf = %u, errs = %u/141 (%.1f%%)", m_slot->m_slotNo, m_slot->m_netLC->getSrcId(), m_slot->m_netLC->getDstId(),
                 m_netN, fid, pf, m_slot->m_netErrs, float(m_slot->m_netErrs) / 1.41F);
         }
 
@@ -1300,7 +1300,7 @@ void Voice::logGPSPosition(const uint32_t srcId, const uint8_t* data)
     longitude *= float(longitudeVal);
     latitude *= float(latitudeVal);
 
-    LogMessage(LOG_DMR, "GPS position for %u [lat %f, long %f] (Position error %s)", srcId, latitude, longitude, error);
+    LogInfoEx(LOG_DMR, "GPS position for %u [lat %f, long %f] (Position error %s)", srcId, latitude, longitude, error);
 }
 
 /* Helper to insert AMBE null frames for missing audio. */

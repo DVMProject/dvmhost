@@ -254,7 +254,7 @@ bool RadioIdLookup::save(bool quiet)
     }
 
     if (!quiet)
-        LogMessage(LOG_HOST, "Saving RID lookup file to %s", m_filename.c_str());
+        LogInfoEx(LOG_HOST, "Saving RID lookup file to %s", m_filename.c_str());
 
     // Counter for lines written
     unsigned int lines = 0;

@@ -287,7 +287,7 @@ bool HostSetup::portModemOpen(Modem* modem)
         }
     }
 
-    LogMessage(LOG_MODEM, "Modem Ready [Calibration Mode]");
+    LogInfoEx(LOG_MODEM, "Modem Ready [Calibration Mode]");
 
     // handled modem open
     return true;
@@ -363,7 +363,7 @@ bool HostSetup::portModemHandler(Modem* modem, uint32_t ms, RESP_TYPE_DVM rspTyp
             short low = buffer[6U] << 8 | buffer[7U];
             short diff = high - low;
             short centre = (high + low) / 2;
-            LogMessage(LOG_CAL, "Levels: inverted: %s, max: %d, min: %d, diff: %d, centre: %d", inverted ? "yes" : "no", high, low, diff, centre);
+            LogInfoEx(LOG_CAL, "Levels: inverted: %s, max: %d, min: %d, diff: %d, centre: %d", inverted ? "yes" : "no", high, low, diff, centre);
         }
         break;
         case CMD_RSSI_DATA:
@@ -376,7 +376,7 @@ bool HostSetup::portModemHandler(Modem* modem, uint32_t ms, RESP_TYPE_DVM rspTyp
             uint16_t max = buffer[3U] << 8 | buffer[4U];
             uint16_t min = buffer[5U] << 8 | buffer[6U];
             uint16_t ave = buffer[7U] << 8 | buffer[8U];
-            LogMessage(LOG_CAL, "RSSI: max: %u, min: %u, ave: %u", max, min, ave);
+            LogInfoEx(LOG_CAL, "RSSI: max: %u, min: %u, ave: %u", max, min, ave);
         }
         break;
 
@@ -401,7 +401,7 @@ bool HostSetup::portModemHandler(Modem* modem, uint32_t ms, RESP_TYPE_DVM rspTyp
                 break;
             }
 
-            LogMessage(LOG_CAL, "DMR Transmission lost, total frames: %d, bits: %d, uncorrectable frames: %d, undecodable LC: %d, errors: %d, BER: %.4f%%", m_berFrames, m_berBits, m_berUncorrectable, m_berUndecodableLC, m_berErrs, float(m_berErrs * 100U) / float(m_berBits));
+            LogInfoEx(LOG_CAL, "DMR Transmission lost, total frames: %d, bits: %d, uncorrectable frames: %d, undecodable LC: %d, errors: %d, BER: %.4f%%", m_berFrames, m_berBits, m_berUncorrectable, m_berUndecodableLC, m_berErrs, float(m_berErrs * 100U) / float(m_berBits));
 
             if (m_dmrEnabled) {
                 m_berBits = 0U;
@@ -429,7 +429,7 @@ bool HostSetup::portModemHandler(Modem* modem, uint32_t ms, RESP_TYPE_DVM rspTyp
                 break;
             }
 
-            LogMessage(LOG_CAL, "P25 Transmission lost, total frames: %d, bits: %d, uncorrectable frames: %d, undecodable LC: %d, errors: %d, BER: %.4f%%", m_berFrames, m_berBits, m_berUncorrectable, m_berUndecodableLC, m_berErrs, float(m_berErrs * 100U) / float(m_berBits));
+            LogInfoEx(LOG_CAL, "P25 Transmission lost, total frames: %d, bits: %d, uncorrectable frames: %d, undecodable LC: %d, errors: %d, BER: %.4f%%", m_berFrames, m_berBits, m_berUncorrectable, m_berUndecodableLC, m_berErrs, float(m_berErrs * 100U) / float(m_berBits));
 
             if (m_p25Enabled) {
                 m_berBits = 0U;
@@ -460,7 +460,7 @@ bool HostSetup::portModemHandler(Modem* modem, uint32_t ms, RESP_TYPE_DVM rspTyp
                 break;
             }
 
-            LogMessage(LOG_CAL, "NXDN Transmission lost, total frames: %d, bits: %d, uncorrectable frames: %d, undecodable LC: %d, errors: %d, BER: %.4f%%", m_berFrames, m_berBits, m_berUncorrectable, m_berUndecodableLC, m_berErrs, float(m_berErrs * 100U) / float(m_berBits));
+            LogInfoEx(LOG_CAL, "NXDN Transmission lost, total frames: %d, bits: %d, uncorrectable frames: %d, undecodable LC: %d, errors: %d, BER: %.4f%%", m_berFrames, m_berBits, m_berUncorrectable, m_berUndecodableLC, m_berErrs, float(m_berErrs * 100U) / float(m_berBits));
 
             if (m_nxdnEnabled) {
                 m_berBits = 0U;
@@ -500,7 +500,7 @@ bool HostSetup::portModemHandler(Modem* modem, uint32_t ms, RESP_TYPE_DVM rspTyp
             m_modem->m_nxdnSpace = buffer[11U] * (nxdn::defines::NXDN_FRAME_LENGTH_BYTES);
 
             if (m_hasFetchedStatus && m_requestedStatus) {
-                LogMessage(LOG_CAL, "Diagnostic Values [Modem State: %u, Transmitting: %d, ADC Overflow: %d, Rx Overflow: %d, Tx Overflow: %d, DAC Overflow: %d, HS: %u]",
+                LogInfoEx(LOG_CAL, "Diagnostic Values [Modem State: %u, Transmitting: %d, ADC Overflow: %d, Rx Overflow: %d, Tx Overflow: %d, DAC Overflow: %d, HS: %u]",
                     modemState, tx, adcOverflow, rxOverflow, txOverflow, dacOverflow, m_isHotspot);
             }
 
@@ -593,10 +593,10 @@ void HostSetup::saveConfig()
     }
     
     yaml::Serialize(m_conf, m_confFile.c_str(), yaml::SerializeConfig(4, 64, false, false));
-    LogMessage(LOG_CAL, " - Saved configuration to %s", m_confFile.c_str());
+    LogInfoEx(LOG_CAL, " - Saved configuration to %s", m_confFile.c_str());
     if (m_isConnected) {
         if (writeFlash()) {
-            LogMessage(LOG_CAL, " - Wrote configuration area on modem");
+            LogInfoEx(LOG_CAL, " - Wrote configuration area on modem");
         }
     }
 }
@@ -907,9 +907,9 @@ bool HostSetup::setTransmit()
 
     if (m_p25Enabled && m_p25TduTest) {
         if (m_transmit)
-            LogMessage(LOG_CAL, " - Modem start transmitting");
+            LogInfoEx(LOG_CAL, " - Modem start transmitting");
         else
-            LogMessage(LOG_CAL, " - Modem stop transmitting");
+            LogInfoEx(LOG_CAL, " - Modem stop transmitting");
 
         m_modem->clock(0U);
         return true;
@@ -929,9 +929,9 @@ bool HostSetup::setTransmit()
     sleep(25U);
 
     if (m_transmit)
-        LogMessage(LOG_CAL, " - Modem start transmitting");
+        LogInfoEx(LOG_CAL, " - Modem start transmitting");
     else
-        LogMessage(LOG_CAL, " - Modem stop transmitting");
+        LogInfoEx(LOG_CAL, " - Modem stop transmitting");
 
     m_modem->clock(0U);
 
@@ -971,7 +971,7 @@ void HostSetup::processDMRBER(const uint8_t* buffer, uint8_t seq)
     if (seq == 65U) {
         timerStart();
 
-        LogMessage(LOG_CAL, "DMR voice header received");
+        LogInfoEx(LOG_CAL, "DMR voice header received");
 
         m_berBits = 0U;
         m_berErrs = 0U;
@@ -982,7 +982,7 @@ void HostSetup::processDMRBER(const uint8_t* buffer, uint8_t seq)
     }
     else if (seq == 66U) {
         if (m_berFrames != 0U) {
-            LogMessage(LOG_CAL, "DMR voice end received, total frames: %d, total bits: %d, uncorrectable frames: %d, errors: %d, BER: %.4f%%", m_berFrames, m_berBits, m_berUncorrectable, m_berErrs, float(m_berErrs * 100U) / float(m_berBits));
+            LogInfoEx(LOG_CAL, "DMR voice end received, total frames: %d, total bits: %d, uncorrectable frames: %d, errors: %d, BER: %.4f%%", m_berFrames, m_berBits, m_berUncorrectable, m_berErrs, float(m_berErrs * 100U) / float(m_berBits));
         }
 
         timerStop();
@@ -1005,7 +1005,7 @@ void HostSetup::processDMRBER(const uint8_t* buffer, uint8_t seq)
 
     float ber = float(errs) / 1.41F;
     if (ber < 10.0F)
-        LogMessage(LOG_CAL, "DMR audio seq. %d, FEC BER %% (errs): %.3f%% (%u/141)", seq & 0x0FU, ber, errs);
+        LogInfoEx(LOG_CAL, "DMR audio seq. %d, FEC BER %% (errs): %.3f%% (%u/141)", seq & 0x0FU, ber, errs);
     else {
         LogWarning(LOG_CAL, "uncorrectable DMR audio seq. %d", seq & 0x0FU);
         m_berUncorrectable++;
@@ -1040,7 +1040,7 @@ void HostSetup::processDMR1KBER(const uint8_t* buffer, uint8_t seq)
         m_berErrs += errs;
         m_berBits += 264;
         m_berFrames++;
-        LogMessage(LOG_CAL, "DMR voice header received, 1031 Test Pattern BER %% (errs): %.3f%% (%u/264)", float(errs) / 2.64F, errs);
+        LogInfoEx(LOG_CAL, "DMR voice header received, 1031 Test Pattern BER %% (errs): %.3f%% (%u/264)", float(errs) / 2.64F, errs);
     }
     else if (seq == 66U) {
         for (uint32_t i = 0U; i < 33U; i++)
@@ -1051,7 +1051,7 @@ void HostSetup::processDMR1KBER(const uint8_t* buffer, uint8_t seq)
         m_berFrames++;
 
         if (m_berFrames != 0U) {
-            LogMessage(LOG_CAL, "DMR voice end received, total frames: %d, total bits: %d, uncorrectable frames: %d, errors: %d, BER: %.4f%%", m_berFrames, m_berBits, m_berUncorrectable, m_berErrs, float(m_berErrs * 100U) / float(m_berBits));
+            LogInfoEx(LOG_CAL, "DMR voice end received, total frames: %d, total bits: %d, uncorrectable frames: %d, errors: %d, BER: %.4f%%", m_berFrames, m_berBits, m_berUncorrectable, m_berErrs, float(m_berErrs * 100U) / float(m_berBits));
         }
 
         timerStop();
@@ -1085,7 +1085,7 @@ void HostSetup::processDMR1KBER(const uint8_t* buffer, uint8_t seq)
     m_berFrames++;
 
     if (ber < 10.0F)
-        LogMessage(LOG_CAL, "DMR audio seq. %d, 1031 Test Pattern BER %% (errs): %.3f%% (%u/264)", seq & 0x0FU, ber, errs);
+        LogInfoEx(LOG_CAL, "DMR audio seq. %d, 1031 Test Pattern BER %% (errs): %.3f%% (%u/264)", seq & 0x0FU, ber, errs);
     else {
         LogWarning(LOG_CAL, "uncorrectable DMR audio seq. %d", seq & 0x0FU);
         m_berUncorrectable++;
@@ -1109,7 +1109,7 @@ void HostSetup::processP25BER(const uint8_t* buffer)
     for (uint8_t i = 0U; i < P25_SYNC_LENGTH_BYTES; i++)
         syncErrs += Utils::countBits8(sync[i] ^ P25_SYNC_BYTES[i]);
 
-    LogMessage(LOG_CAL, "P25, sync word, errs = %u, sync word = %02X %02X %02X %02X %02X %02X", syncErrs,
+    LogInfoEx(LOG_CAL, "P25, sync word, errs = %u, sync word = %02X %02X %02X %02X %02X %02X", syncErrs,
         sync[0U], sync[1U], sync[2U], sync[3U], sync[4U], sync[5U]);
 
     uint8_t nid[P25_NID_LENGTH_BYTES];
@@ -1130,14 +1130,14 @@ void HostSetup::processP25BER(const uint8_t* buffer)
             m_berUndecodableLC++;
         }
         else {
-            LogMessage(LOG_CAL, P25_HDU_STR ", dstId = %u, algo = %X, kid = %X", lc.getDstId(), lc.getAlgId(), lc.getKId());
+            LogInfoEx(LOG_CAL, P25_HDU_STR ", dstId = %u, algo = %X, kid = %X", lc.getDstId(), lc.getAlgId(), lc.getKId());
 
             uint8_t mi[MI_LENGTH_BYTES];
             ::memset(mi, 0x00U, MI_LENGTH_BYTES);
 
             lc.getMI(mi);
 
-            LogMessage(LOG_CAL, P25_HDU_STR ", MI %02X %02X %02X %02X %02X %02X %02X %02X %02X", 
+            LogInfoEx(LOG_CAL, P25_HDU_STR ", MI %02X %02X %02X %02X %02X %02X %02X %02X %02X", 
                 mi[0U], mi[1U], mi[2U], mi[3U], mi[4U], mi[5U], mi[6U], mi[7U], mi[8U]);
         }
 
@@ -1149,7 +1149,7 @@ void HostSetup::processP25BER(const uint8_t* buffer)
     }
     else if (duid == DUID::TDU) {
         if (m_berFrames != 0U) {
-            LogMessage(LOG_CAL, P25_TDU_STR ", total frames: %d, bits: %d, uncorrectable frames: %d, undecodable LC: %d, errors: %d, BER: %.4f%%", m_berFrames, m_berBits, m_berUncorrectable, m_berUndecodableLC, m_berErrs, float(m_berErrs * 100U) / float(m_berBits));
+            LogInfoEx(LOG_CAL, P25_TDU_STR ", total frames: %d, bits: %d, uncorrectable frames: %d, undecodable LC: %d, errors: %d, BER: %.4f%%", m_berFrames, m_berBits, m_berUncorrectable, m_berUndecodableLC, m_berErrs, float(m_berErrs * 100U) / float(m_berBits));
         }
 
         timerStop();
@@ -1174,7 +1174,7 @@ void HostSetup::processP25BER(const uint8_t* buffer)
             m_berUndecodableLC++;
         }
         else {
-            LogMessage(LOG_CAL, P25_LDU1_STR " LC, mfId = $%02X, lco = $%02X, emerg = %u, encrypt = %u, prio = %u, group = %u, srcId = %u, dstId = %u",
+            LogInfoEx(LOG_CAL, P25_LDU1_STR " LC, mfId = $%02X, lco = $%02X, emerg = %u, encrypt = %u, prio = %u, group = %u, srcId = %u, dstId = %u",
                 lc.getMFId(), lc.getLCO(), lc.getEmergency(), lc.getEncrypted(), lc.getPriority(), lc.getGroup(), lc.getSrcId(), lc.getDstId());
         }
 
@@ -1207,7 +1207,7 @@ void HostSetup::processP25BER(const uint8_t* buffer)
 
         float ber = float(errs) / 12.33F;
         if (ber < 10.0F)
-            LogMessage(LOG_CAL, P25_LDU1_STR ", audio FEC BER (errs): %.3f%% (%u/1233)", ber, errs);
+            LogInfoEx(LOG_CAL, P25_LDU1_STR ", audio FEC BER (errs): %.3f%% (%u/1233)", ber, errs);
         else {
             LogWarning(LOG_CAL, P25_LDU1_STR ", uncorrectable audio");
             m_berUncorrectable++;
@@ -1229,7 +1229,7 @@ void HostSetup::processP25BER(const uint8_t* buffer)
             m_berUndecodableLC++;
         }
         else {
-            LogMessage(LOG_CAL, P25_LDU2_STR " LC, mfId = $%02X, algo = %X, kid = %X",
+            LogInfoEx(LOG_CAL, P25_LDU2_STR " LC, mfId = $%02X, algo = %X, kid = %X",
                 lc.getMFId(), lc.getAlgId(), lc.getKId());
 
             uint8_t mi[MI_LENGTH_BYTES];
@@ -1237,7 +1237,7 @@ void HostSetup::processP25BER(const uint8_t* buffer)
 
             lc.getMI(mi);
 
-            LogMessage(LOG_CAL, P25_LDU2_STR ", MI %02X %02X %02X %02X %02X %02X %02X %02X %02X", 
+            LogInfoEx(LOG_CAL, P25_LDU2_STR ", MI %02X %02X %02X %02X %02X %02X %02X %02X %02X", 
                 mi[0U], mi[1U], mi[2U], mi[3U], mi[4U], mi[5U], mi[6U], mi[7U], mi[8U]);
         }
 
@@ -1270,7 +1270,7 @@ void HostSetup::processP25BER(const uint8_t* buffer)
 
         float ber = float(errs) / 12.33F;
         if (ber < 10.0F)
-            LogMessage(LOG_CAL, P25_LDU2_STR ", audio FEC BER (errs): %.3f%% (%u/1233)", ber, errs);
+            LogInfoEx(LOG_CAL, P25_LDU2_STR ", audio FEC BER (errs): %.3f%% (%u/1233)", ber, errs);
         else {
             LogWarning(LOG_CAL, P25_LDU2_STR ", uncorrectable audio");
             m_berUncorrectable++;
@@ -1307,7 +1307,7 @@ void HostSetup::processP25BER(const uint8_t* buffer)
             Utils::dump(1U, "P25, Unfixable PDU Data", pduBuffer, P25_PDU_FEC_LENGTH_BYTES);
         }
         else {
-            LogMessage(LOG_CAL, P25_PDU_STR ", ack = %u, outbound = %u, fmt = $%02X, mfId = $%02X, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padLength = %u, n = %u, seqNo = %u, lastFragment = %u, hdrOffset = %u",
+            LogInfoEx(LOG_CAL, P25_PDU_STR ", ack = %u, outbound = %u, fmt = $%02X, mfId = $%02X, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padLength = %u, n = %u, seqNo = %u, lastFragment = %u, hdrOffset = %u",
                 dataHeader.getAckNeeded(), dataHeader.getOutbound(), dataHeader.getFormat(), dataHeader.getMFId(), dataHeader.getSAP(), dataHeader.getFullMessage(),
                 dataHeader.getBlocksToFollow(), dataHeader.getPadLength(), dataHeader.getNs(), dataHeader.getFSN(), dataHeader.getLastFragment(),
                 dataHeader.getHeaderOffset());
@@ -1327,7 +1327,7 @@ void HostSetup::processP25BER(const uint8_t* buffer)
             m_berUndecodableLC++;
         }
         else {
-            LogMessage(LOG_CAL, P25_TSDU_STR ", mfId = $%02X, lco = $%02X, srcId = %u, dstId = %u, service = %u, netId = %u, sysId = %u",
+            LogInfoEx(LOG_CAL, P25_TSDU_STR ", mfId = $%02X, lco = $%02X, srcId = %u, dstId = %u, service = %u, netId = %u, sysId = %u",
                 tsbk->getMFId(), tsbk->getLCO(), tsbk->getSrcId(), tsbk->getDstId(), tsbk->getService(), tsbk->getNetId(), tsbk->getSysId());
         }
     }
@@ -1356,7 +1356,7 @@ void HostSetup::processP251KBER(const uint8_t* buffer)
             m_berUndecodableLC++;
         }
         else {
-            LogMessage(LOG_RF, P25_HDU_STR ", dstId = %u, algo = %X, kid = %X", lc.getDstId(), lc.getAlgId(), lc.getKId());
+            LogInfoEx(LOG_RF, P25_HDU_STR ", dstId = %u, algo = %X, kid = %X", lc.getDstId(), lc.getAlgId(), lc.getKId());
         }
 
         m_berBits = 0U;
@@ -1367,7 +1367,7 @@ void HostSetup::processP251KBER(const uint8_t* buffer)
     }
     else if (duid == DUID::TDU) {
         if (m_berFrames != 0U) {
-            LogMessage(LOG_CAL, P25_TDU_STR ", total frames: %d, bits: %d, uncorrectable frames: %d, undecodable LC: %d, errors: %d, BER: %.4f%%", m_berFrames, m_berBits, m_berUncorrectable, m_berUndecodableLC, m_berErrs, float(m_berErrs * 100U) / float(m_berBits));
+            LogInfoEx(LOG_CAL, P25_TDU_STR ", total frames: %d, bits: %d, uncorrectable frames: %d, undecodable LC: %d, errors: %d, BER: %.4f%%", m_berFrames, m_berBits, m_berUncorrectable, m_berUndecodableLC, m_berErrs, float(m_berErrs * 100U) / float(m_berBits));
         }
 
         timerStop();
@@ -1392,7 +1392,7 @@ void HostSetup::processP251KBER(const uint8_t* buffer)
             m_berUndecodableLC++;
         }
         else {
-            LogMessage(LOG_CAL, P25_LDU1_STR " LC, mfId = $%02X, lco = $%02X, emerg = %u, encrypt = %u, prio = %u, group = %u, srcId = %u, dstId = %u",
+            LogInfoEx(LOG_CAL, P25_LDU1_STR " LC, mfId = $%02X, lco = $%02X, emerg = %u, encrypt = %u, prio = %u, group = %u, srcId = %u, dstId = %u",
                 lc.getMFId(), lc.getLCO(), lc.getEmergency(), lc.getEncrypted(), lc.getPriority(), lc.getGroup(), lc.getSrcId(), lc.getDstId());
         }
 
@@ -1401,7 +1401,7 @@ void HostSetup::processP251KBER(const uint8_t* buffer)
 
         float ber = float(errs) / 12.33F;
         if (ber < 10.0F)
-            LogMessage(LOG_CAL, P25_LDU1_STR ", 1011 Test Pattern BER (errs): %.3f%% (%u/1233)", ber, errs);
+            LogInfoEx(LOG_CAL, P25_LDU1_STR ", 1011 Test Pattern BER (errs): %.3f%% (%u/1233)", ber, errs);
         else {
             LogWarning(LOG_CAL, P25_LDU1_STR ", uncorrectable audio");
             m_berUncorrectable++;
@@ -1423,7 +1423,7 @@ void HostSetup::processP251KBER(const uint8_t* buffer)
             m_berUndecodableLC++;
         }
         else {
-            LogMessage(LOG_CAL, P25_LDU2_STR " LC, mfId = $%02X, algo = %X, kid = %X",
+            LogInfoEx(LOG_CAL, P25_LDU2_STR " LC, mfId = $%02X, algo = %X, kid = %X",
                 lc.getMFId(), lc.getAlgId(), lc.getKId());
         }
 
@@ -1432,7 +1432,7 @@ void HostSetup::processP251KBER(const uint8_t* buffer)
 
         float ber = float(errs) / 12.33F;
         if (ber < 10.0F)
-            LogMessage(LOG_CAL, P25_LDU2_STR ", 1011 Test Pattern BER (errs): %.3f%% (%u/1233)", ber, errs);
+            LogInfoEx(LOG_CAL, P25_LDU2_STR ", 1011 Test Pattern BER (errs): %.3f%% (%u/1233)", ber, errs);
         else {
             LogWarning(LOG_CAL, P25_LDU2_STR ", uncorrectable audio");
             m_berUncorrectable++;
@@ -1467,7 +1467,7 @@ void HostSetup::processNXDNBER(const uint8_t* buffer)
 
         if (usc == FuncChannelType::USC_SACCH_NS) {
             if (m_berFrames == 0U) {
-                LogMessage(LOG_CAL, "NXDN VCALL (Voice Call), BER Start");
+                LogInfoEx(LOG_CAL, "NXDN VCALL (Voice Call), BER Start");
 
                 timerStart();
                 m_berErrs = 0U;
@@ -1476,7 +1476,7 @@ void HostSetup::processNXDNBER(const uint8_t* buffer)
                 return;
             } else {
                 float ber = float(m_berErrs * 100U) / float(m_berBits);
-                LogMessage(LOG_CAL, "NXDN TX_REL (Transmission Release), BER Test, frames: %u, errs: %.3f%% (%u/%u)", m_berFrames, ber, m_berErrs, m_berBits);
+                LogInfoEx(LOG_CAL, "NXDN TX_REL (Transmission Release), BER Test, frames: %u, errs: %.3f%% (%u/%u)", m_berFrames, ber, m_berErrs, m_berBits);
 
                 // handle displaying TUI
                 updateTUIBER(ber);
@@ -1502,7 +1502,7 @@ void HostSetup::processNXDNBER(const uint8_t* buffer)
             m_berFrames++;
 
             float ber = float(errors) / 1.88F;
-            LogMessage(LOG_CAL, "NXDN VCALL (Voice Call), BER Test, (errs): %.3f%% (%u/188)", ber, errors);
+            LogInfoEx(LOG_CAL, "NXDN VCALL (Voice Call), BER Test, (errs): %.3f%% (%u/188)", ber, errors);
 
             // handle displaying TUI
             updateTUIBER(ber);
@@ -1813,7 +1813,7 @@ bool HostSetup::readFlash()
 void HostSetup::processFlashConfig(const uint8_t *buffer)
 {
     if (m_updateConfigFromModem) {
-        LogMessage(LOG_CAL, " - Restoring local configuration from configuration area on modem");
+        LogInfoEx(LOG_CAL, " - Restoring local configuration from configuration area on modem");
 
         // general config
         m_modem->m_rxInvert = (buffer[3U] & 0x01U) == 0x01U;
@@ -1949,7 +1949,7 @@ bool HostSetup::eraseFlash()
     sleep(1000U);
 
     m_updateConfigFromModem = false;
-    LogMessage(LOG_CAL, " - Erased configuration area on modem");
+    LogInfoEx(LOG_CAL, " - Erased configuration area on modem");
 
     m_modem->clock(0U);
     return true;
@@ -2074,7 +2074,7 @@ bool HostSetup::writeFlash()
 void HostSetup::writeBootload()
 {
     m_reqBootload = true;
-    LogMessage(LOG_CAL, "Rebooting modem into ST bootloader mode...");
+    LogInfoEx(LOG_CAL, "Rebooting modem into ST bootloader mode...");
 
     if (writeFlash()) {
         uint8_t buffer[4U];
@@ -2097,7 +2097,7 @@ void HostSetup::timerClock()
         m_timer += 1U;
 
         if (m_timer >= m_timeout) {
-            LogMessage(LOG_CAL, "Transmission lost, total frames: %d, bits: %d, uncorrectable frames: %d, undecodable LC: %d, errors: %d, BER: %.4f%%", m_berFrames, m_berBits, m_berUncorrectable, m_berUndecodableLC, m_berErrs, float(m_berErrs * 100U) / float(m_berBits));
+            LogInfoEx(LOG_CAL, "Transmission lost, total frames: %d, bits: %d, uncorrectable frames: %d, undecodable LC: %d, errors: %d, BER: %.4f%%", m_berFrames, m_berBits, m_berUncorrectable, m_berUndecodableLC, m_berErrs, float(m_berErrs * 100U) / float(m_berBits));
 
             m_berBits = 0U;
             m_berErrs = 0U;

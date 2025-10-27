@@ -231,7 +231,7 @@ bool Voice::process(FuncChannelType::E fct, ChOption::E option, uint8_t* data, u
                     float(m_rfFrames) / 12.5F, float(m_rfErrs * 100U) / float(m_rfBits));
             }
 
-            LogMessage(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_TX_REL ", total frames: %d, bits: %d, undecodable LC: %d, errors: %d, BER: %.4f%%",
+            LogInfoEx(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_TX_REL ", total frames: %d, bits: %d, undecodable LC: %d, errors: %d, BER: %.4f%%",
                 m_rfFrames, m_rfBits, m_rfUndecodableLC, m_rfErrs, float(m_rfErrs * 100U) / float(m_rfBits));
 
             m_nxdn->writeEndRF();
@@ -248,12 +248,12 @@ bool Voice::process(FuncChannelType::E fct, ChOption::E option, uint8_t* data, u
             m_nxdn->m_rssiCount = 1U;
 
             if (m_verbose) {
-                LogMessage(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL ", srcId = %u, dstId = %u, group = %u, emerg = %u, encrypt = %u, prio = %u, algo = $%02X, kid = $%02X",
+                LogInfoEx(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL ", srcId = %u, dstId = %u, group = %u, emerg = %u, encrypt = %u, prio = %u, algo = $%02X, kid = $%02X",
                     srcId, dstId, group, lc.getEmergency(), encrypted, lc.getPriority(), lc.getAlgId(), lc.getKId());
             }
 
             ::ActivityLog("NXDN", true, "RF %svoice transmission from %u to %s%u", encrypted ? "encrypted " : "", srcId, group ? "TG " : "", dstId);
-            LogMessage(LOG_RF, "NXDN Voice Call, srcId = %u, dstId = %u", srcId, dstId);
+            LogInfoEx(LOG_RF, "NXDN Voice Call, srcId = %u, dstId = %u", srcId, dstId);
         }
 
         return true;
@@ -400,12 +400,12 @@ bool Voice::process(FuncChannelType::E fct, ChOption::E option, uint8_t* data, u
             m_nxdn->m_rssiCount = 1U;
 
             if (m_verbose) {
-                LogMessage(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL ", srcId = %u, dstId = %u, group = %u, emerg = %u, encrypt = %u, prio = %u, algo = $%02X, kid = $%04X",
+                LogInfoEx(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL ", srcId = %u, dstId = %u, group = %u, emerg = %u, encrypt = %u, prio = %u, algo = $%02X, kid = $%04X",
                     srcId, dstId, group, m_nxdn->m_rfLC.getEmergency(), encrypted, m_nxdn->m_rfLC.getPriority(), m_nxdn->m_rfLC.getAlgId(), m_nxdn->m_rfLC.getKId());
             }
 
             ::ActivityLog("NXDN", true, "RF %slate entry from %u to %s%u", encrypted ? "encrypted ": "", srcId, group ? "TG " : "", dstId);
-            LogMessage(LOG_RF, "NXDN Voice Call, srcId = %u, dstId = %u", srcId, dstId);
+            LogInfoEx(LOG_RF, "NXDN Voice Call, srcId = %u, dstId = %u", srcId, dstId);
 
             // create a dummy start message
             uint8_t start[NXDN_FRAME_LENGTH_BYTES + 2U];
@@ -504,7 +504,7 @@ bool Voice::process(FuncChannelType::E fct, ChOption::E option, uint8_t* data, u
             m_rfBits += 188U;
 
             if (m_verbose) {
-                LogMessage(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL ", audio, srcId = %u, dstId = %u, errs = %u/188 (%.1f%%)", m_nxdn->m_rfLC.getSrcId(), m_nxdn->m_rfLC.getDstId(), errors, float(errors) / 1.88F);
+                LogInfoEx(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL ", audio, srcId = %u, dstId = %u, errs = %u/188 (%.1f%%)", m_nxdn->m_rfLC.getSrcId(), m_nxdn->m_rfLC.getDstId(), errors, float(errors) / 1.88F);
             }
         } else if (option == ChOption::STEAL_FACCH1_1) {
             channel::FACCH1 facch11;
@@ -534,7 +534,7 @@ bool Voice::process(FuncChannelType::E fct, ChOption::E option, uint8_t* data, u
             m_rfBits += 94U;
 
             if (m_verbose) {
-                LogMessage(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL ", audio, srcId = %u, dstId = %u, errs = %u/94 (%.1f%%)", m_nxdn->m_rfLC.getSrcId(), m_nxdn->m_rfLC.getDstId(), errors, float(errors) / 0.94F);
+                LogInfoEx(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL ", audio, srcId = %u, dstId = %u, errs = %u/94 (%.1f%%)", m_nxdn->m_rfLC.getSrcId(), m_nxdn->m_rfLC.getDstId(), errors, float(errors) / 0.94F);
             }
         } else if (option == ChOption::STEAL_FACCH1_2) {
             edac::AMBEFEC ambe;
@@ -559,7 +559,7 @@ bool Voice::process(FuncChannelType::E fct, ChOption::E option, uint8_t* data, u
             m_rfBits += 94U;
 
             if (m_verbose) {
-                LogMessage(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL ", srcId = %u, dstId = %u, audio, errs = %u/94 (%.1f%%)", m_nxdn->m_rfLC.getSrcId(), m_nxdn->m_rfLC.getDstId(), errors, float(errors) / 0.94F);
+                LogInfoEx(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL ", srcId = %u, dstId = %u, audio, errs = %u/94 (%.1f%%)", m_nxdn->m_rfLC.getSrcId(), m_nxdn->m_rfLC.getDstId(), errors, float(errors) / 0.94F);
             }
 
             channel::FACCH1 facch12;
@@ -747,7 +747,7 @@ bool Voice::processNetwork(FuncChannelType::E fct, ChOption::E option, lc::RTCH&
             ::ActivityLog("NXDN", false, "network end of transmission, %.1f seconds",
                 float(m_netFrames) / 12.5F);
 
-            LogMessage(LOG_NET, "NXDN, " NXDN_RTCH_MSG_TYPE_TX_REL ", total frames: %d", m_netFrames);
+            LogInfoEx(LOG_NET, "NXDN, " NXDN_RTCH_MSG_TYPE_TX_REL ", total frames: %d", m_netFrames);
 
             m_nxdn->writeEndNet();
         } else {
@@ -756,12 +756,12 @@ bool Voice::processNetwork(FuncChannelType::E fct, ChOption::E option, lc::RTCH&
             m_nxdn->m_netState = RS_NET_AUDIO;
 
             if (m_verbose) {
-                LogMessage(LOG_NET, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL ", srcId = %u, dstId = %u, group = %u, emerg = %u, encrypt = %u, prio = %u, algo = $%02X, kid = $%02X",
+                LogInfoEx(LOG_NET, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL ", srcId = %u, dstId = %u, group = %u, emerg = %u, encrypt = %u, prio = %u, algo = $%02X, kid = $%02X",
                     srcId, dstId, group, lc.getEmergency(), encrypted, lc.getPriority(), lc.getAlgId(), lc.getKId());
             }
 
             ::ActivityLog("NXDN", false, "network %svoice transmission from %u to %s%u", encrypted ? "encrypted " : "", srcId, group ? "TG " : "", dstId);
-            LogMessage(LOG_NET, "NXDN Voice Call, srcId = %u, dstId = %u", srcId, dstId);
+            LogInfoEx(LOG_NET, "NXDN Voice Call, srcId = %u, dstId = %u", srcId, dstId);
         }
 
         return true;
@@ -893,12 +893,12 @@ bool Voice::processNetwork(FuncChannelType::E fct, ChOption::E option, lc::RTCH&
             m_nxdn->m_netState = RS_NET_AUDIO;
 
             if (m_verbose) {
-                LogMessage(LOG_NET, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL ", srcId = %u, dstId = %u, group = %u, emerg = %u, encrypt = %u, prio = %u, algo = $%02X, kid = $%04X",
+                LogInfoEx(LOG_NET, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL ", srcId = %u, dstId = %u, group = %u, emerg = %u, encrypt = %u, prio = %u, algo = $%02X, kid = $%04X",
                     srcId, dstId, group, m_nxdn->m_netLC.getEmergency(), encrypted, m_nxdn->m_netLC.getPriority(), m_nxdn->m_netLC.getAlgId(), m_nxdn->m_netLC.getKId());
             }
 
             ::ActivityLog("NXDN", false, "network %slate entry from %u to %s%u", encrypted ? "encrypted ": "", srcId, group ? "TG " : "", dstId);
-            LogMessage(LOG_NET, "NXDN Voice Call, srcId = %u, dstId = %u", srcId, dstId);
+            LogInfoEx(LOG_NET, "NXDN Voice Call, srcId = %u, dstId = %u", srcId, dstId);
 
             // create a dummy start message
             uint8_t start[NXDN_FRAME_LENGTH_BYTES + 2U];
@@ -975,7 +975,7 @@ bool Voice::processNetwork(FuncChannelType::E fct, ChOption::E option, lc::RTCH&
             m_rfBits += 188U;
 
             if (m_verbose) {
-                LogMessage(LOG_NET, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL ", audio, srcId = %u, dstId = %u, errs = %u/141 (%.1f%%)", m_nxdn->m_netLC.getSrcId(), m_nxdn->m_netLC.getDstId(), errors, float(errors) / 1.88F);
+                LogInfoEx(LOG_NET, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL ", audio, srcId = %u, dstId = %u, errs = %u/141 (%.1f%%)", m_nxdn->m_netLC.getSrcId(), m_nxdn->m_netLC.getDstId(), errors, float(errors) / 1.88F);
             }
         } else if (option == ChOption::STEAL_FACCH1_1) {
             channel::FACCH1 facch1;
@@ -994,7 +994,7 @@ bool Voice::processNetwork(FuncChannelType::E fct, ChOption::E option, lc::RTCH&
             m_rfBits += 94U;
 
             if (m_verbose) {
-                LogMessage(LOG_NET, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL ", audio, srcId = %u, dstId = %u, errs = %u/94 (%.1f%%)", m_nxdn->m_netLC.getSrcId(), m_nxdn->m_netLC.getDstId(), errors, float(errors) / 0.94F);
+                LogInfoEx(LOG_NET, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL ", audio, srcId = %u, dstId = %u, errs = %u/94 (%.1f%%)", m_nxdn->m_netLC.getSrcId(), m_nxdn->m_netLC.getDstId(), errors, float(errors) / 0.94F);
             }
         } else if (option == ChOption::STEAL_FACCH1_2) {
             edac::AMBEFEC ambe;
@@ -1008,7 +1008,7 @@ bool Voice::processNetwork(FuncChannelType::E fct, ChOption::E option, lc::RTCH&
             m_rfBits += 94U;
 
             if (m_verbose) {
-                LogMessage(LOG_NET, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL ", audio, srcId = %u, dstId = %u, errs = %u/94 (%.1f%%)", m_nxdn->m_netLC.getSrcId(), m_nxdn->m_netLC.getDstId(), errors, float(errors) / 0.94F);
+                LogInfoEx(LOG_NET, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL ", audio, srcId = %u, dstId = %u, errs = %u/94 (%.1f%%)", m_nxdn->m_netLC.getSrcId(), m_nxdn->m_netLC.getDstId(), errors, float(errors) / 0.94F);
             }
             channel::FACCH1 facch1;
             bool valid = facch1.decode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS + NXDN_FACCH1_FEC_LENGTH_BITS);

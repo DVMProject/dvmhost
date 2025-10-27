@@ -147,12 +147,12 @@ bool Data::process(ChOption::E option, uint8_t* data, uint32_t len)
         }
 
         if (m_verbose) {
-            LogMessage(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_DCALL_HDR ", srcId = %u, dstId = %u, ack = %u, blocksToFollow = %u, padCount = %u, firstFragment = %u, fragmentCount = %u",
+            LogInfoEx(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_DCALL_HDR ", srcId = %u, dstId = %u, ack = %u, blocksToFollow = %u, padCount = %u, firstFragment = %u, fragmentCount = %u",
                 srcId, dstId, lc.getPacketInfo().getDelivery(), lc.getPacketInfo().getBlockCount(), lc.getPacketInfo().getPadCount(), lc.getPacketInfo().getStart(), lc.getPacketInfo().getFragmentCount());
         }
 
         ::ActivityLog("NXDN", true, "RF data transmission from %u to %s%u", srcId, group ? "TG " : "", dstId);
-        LogMessage(LOG_RF, "NXDN Data Call, srcId = %u, dstId = %u", srcId, dstId);
+        LogInfoEx(LOG_RF, "NXDN Data Call, srcId = %u, dstId = %u", srcId, dstId);
 
         m_nxdn->m_rfLC = lc;
         m_nxdn->m_voice->m_rfFrames = 0U;
@@ -199,7 +199,7 @@ bool Data::process(ChOption::E option, uint8_t* data, uint32_t len)
     if (data[0U] == modem::TAG_EOT) {
         ::ActivityLog("NXDN", true, "RF ended RF data transmission");
 
-        LogMessage(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_TX_REL ", total frames: %d",
+        LogInfoEx(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_TX_REL ", total frames: %d",
             m_nxdn->m_voice->m_rfFrames);
 
         m_nxdn->writeEndRF();
@@ -316,12 +316,12 @@ bool Data::processNetwork(ChOption::E option, lc::RTCH& netLC, uint8_t* data, ui
         }
 
         if (m_verbose) {
-            LogMessage(LOG_NET, "NXDN, " NXDN_RTCH_MSG_TYPE_DCALL_HDR ", srcId = %u, dstId = %u, ack = %u, blocksToFollow = %u, padCount = %u, firstFragment = %u, fragmentCount = %u",
+            LogInfoEx(LOG_NET, "NXDN, " NXDN_RTCH_MSG_TYPE_DCALL_HDR ", srcId = %u, dstId = %u, ack = %u, blocksToFollow = %u, padCount = %u, firstFragment = %u, fragmentCount = %u",
                 srcId, dstId, lc.getPacketInfo().getDelivery(), lc.getPacketInfo().getBlockCount(), lc.getPacketInfo().getPadCount(), lc.getPacketInfo().getStart(), lc.getPacketInfo().getFragmentCount());
         }
 
         ::ActivityLog("NXDN", false, "network data transmission from %u to %s%u", srcId, group ? "TG " : "", dstId);
-        LogMessage(LOG_NET, "NXDN Data Call, srcId = %u, dstId = %u", srcId, dstId);
+        LogInfoEx(LOG_NET, "NXDN Data Call, srcId = %u, dstId = %u", srcId, dstId);
 
         m_nxdn->m_netLC = lc;
         m_nxdn->m_voice->m_netFrames = 0U;
@@ -364,7 +364,7 @@ bool Data::processNetwork(ChOption::E option, lc::RTCH& netLC, uint8_t* data, ui
     if (data[0U] == modem::TAG_EOT) {
         ::ActivityLog("NXDN", true, "network ended RF data transmission");
 
-        LogMessage(LOG_NET, "NXDN, " NXDN_RTCH_MSG_TYPE_TX_REL ", total frames: %d",
+        LogInfoEx(LOG_NET, "NXDN, " NXDN_RTCH_MSG_TYPE_TX_REL ", total frames: %d",
             m_nxdn->m_voice->m_netFrames);
 
         m_nxdn->writeEndNet();

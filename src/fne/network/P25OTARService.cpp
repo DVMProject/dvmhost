@@ -36,7 +36,7 @@ using namespace p25::kmm;
 // Macro helper to verbose log a generic KMM.
 #define VERBOSE_LOG_KMM(_PCKT_STR, __LLID)                                              \
     if (m_verbose) {                                                                    \
-        LogMessage(LOG_P25, "KMM, %s, llId = %u", _PCKT_STR.c_str(), __LLID);           \
+        LogInfoEx(LOG_P25, "KMM, %s, llId = %u", _PCKT_STR.c_str(), __LLID);           \
     }
 
 // ---------------------------------------------------------------------------
@@ -291,7 +291,7 @@ UInt8Array P25OTARService::cryptKMM(uint8_t algoId, uint16_t kid, uint8_t* mi, c
             Utils::dump(1U, "P25OTARService::cryptKMM(), Key", key, P25DEF::MAX_ENC_KEY_LENGTH_BYTES);
         }
 
-        LogMessage(LOG_P25, P25_KMM_STR ", algId = $%02X, kID = $%04X", algoId, kid);
+        LogInfoEx(LOG_P25, P25_KMM_STR ", algId = $%02X, kID = $%04X", algoId, kid);
         crypto.setKey(key, keyLength);
         crypto.generateKeystream();
 
@@ -357,7 +357,7 @@ UInt8Array P25OTARService::processKMM(const uint8_t* data, uint32_t len, uint32_
         {
             KMMHello* kmm = static_cast<KMMHello*>(frame.get());
             if (m_verbose) {
-                LogMessage(LOG_P25, P25_KMM_STR ", %s, llId = %u, flag = $%02X", kmm->toString().c_str(),
+                LogInfoEx(LOG_P25, P25_KMM_STR ", %s, llId = %u, flag = $%02X", kmm->toString().c_str(),
                     llId, kmm->getFlag());
             }
 
@@ -389,7 +389,7 @@ UInt8Array P25OTARService::write_KMM_NoService(uint32_t llId, uint32_t kmmRSI, u
     outKmm.setDstLLId(kmmRSI);
 
     if (m_verbose) {
-        LogMessage(LOG_P25, P25_KMM_STR ", %s, llId = %u, RSI = %u", outKmm.toString().c_str(),
+        LogInfoEx(LOG_P25, P25_KMM_STR ", %s, llId = %u, RSI = %u", outKmm.toString().c_str(),
             outKmm.getSrcLLId(), outKmm.getDstLLId());
     }
 

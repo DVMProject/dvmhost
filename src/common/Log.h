@@ -84,14 +84,6 @@
  */
 #define LogDebugEx(_module, _func, fmt, ...)    Log(1U, {_module, __FILE__, __LINE__, _func}, fmt, ##__VA_ARGS__)
 /**
- * @brief Macro helper to create a message log entry.
- * @param _module Name of module generating log entry.
- * @param fmt String format.
- * 
- * This is a variable argument function.
- */
-#define LogMessage(_module, fmt, ...)           Log(2U, {_module, nullptr, 0, nullptr}, fmt, ##__VA_ARGS__)
-/**
  * @brief Macro helper to create a informational log entry.
  * @param _module Name of module generating log entry.
  * @param fmt String format.
@@ -99,7 +91,7 @@
  * This is a variable argument function. LogInfo() does not use a module
  * name when creating a log entry.
  */
-#define LogInfo(fmt, ...)                       Log(3U, {nullptr, nullptr, 0, nullptr}, fmt, ##__VA_ARGS__)
+#define LogInfo(fmt, ...)                       Log(2U, {nullptr, nullptr, 0, nullptr}, fmt, ##__VA_ARGS__)
 /**
  * @brief Macro helper to create a informational log entry with module name.
  * @param _module Name of module generating log entry.
@@ -107,7 +99,7 @@
  * 
  * This is a variable argument function.
  */
-#define LogInfoEx(_module, fmt, ...)            Log(3U, {_module, nullptr, 0, nullptr}, fmt, ##__VA_ARGS__)
+#define LogInfoEx(_module, fmt, ...)            Log(2U, {_module, nullptr, 0, nullptr}, fmt, ##__VA_ARGS__)
 /**
  * @brief Macro helper to create a warning log entry.
  * @param _module Name of module generating log entry.
@@ -115,7 +107,7 @@
  * 
  * This is a variable argument function.
  */
-#define LogWarning(_module, fmt, ...)           Log(4U, {_module, nullptr, 0, nullptr}, fmt, ##__VA_ARGS__)
+#define LogWarning(_module, fmt, ...)           Log(3U, {_module, nullptr, 0, nullptr}, fmt, ##__VA_ARGS__)
 /**
  * @brief Macro helper to create a error log entry.
  * @param _module Name of module generating log entry.
@@ -123,7 +115,7 @@
  * 
  * This is a variable argument function.
  */
-#define LogError(_module, fmt, ...)             Log(5U, {_module, nullptr, 0, nullptr}, fmt, ##__VA_ARGS__)
+#define LogError(_module, fmt, ...)             Log(4U, {_module, nullptr, 0, nullptr}, fmt, ##__VA_ARGS__)
 /**
  * @brief Macro helper to create a fatal log entry.
  * @param _module Name of module generating log entry.
@@ -131,7 +123,7 @@
  * 
  * This is a variable argument function.
  */
-#define LogFatal(_module, fmt, ...)             Log(6U, {_module, nullptr, 0, nullptr}, fmt, ##__VA_ARGS__)
+#define LogFatal(_module, fmt, ...)             Log(5U, {_module, nullptr, 0, nullptr}, fmt, ##__VA_ARGS__)
 
 // ---------------------------------------------------------------------------
 //  Externs
@@ -156,7 +148,7 @@ extern bool g_disableNetworkLog;
 
 namespace log_internal
 {
-    constexpr static char LOG_LEVELS[] = " DMIWEF";
+    constexpr static char LOG_LEVELS[] = " DIWEF";
 
     // ---------------------------------------------------------------------------
     //  Structure Declaration
@@ -375,7 +367,7 @@ namespace log_stacktrace
             p.snippet = false;
             p.color_mode = backward::ColorMode::never;
 
-            log_internal::LogInternal(3U, "UNRECOVERABLE FATAL ERROR!");
+            log_internal::LogInternal(2U, "UNRECOVERABLE FATAL ERROR!");
             if (m_foreground > 0) {
                 p.print(st, stderr);
             }
@@ -696,7 +688,7 @@ namespace log_stacktrace
             p.snippet = false;
             p.color_mode = backward::ColorMode::never;
 
-            log_internal::LogInternal(3U, "UNRECOVERABLE FATAL ERROR!");
+            log_internal::LogInternal(2U, "UNRECOVERABLE FATAL ERROR!");
             p.print(st, std::cerr);
 
             std::string filePath = log_internal::GetLogFilePath();
@@ -837,8 +829,8 @@ HOST_SW_API void Log(uint32_t level, log_internal::SourceLocation sourceLoc, con
         struct timeval nowMillis;
         ::gettimeofday(&nowMillis, NULL);
 
-        if (level > 7U)
-            level = 3U; // default this sort of log message to INFO
+        if (level > 6U)
+            level = 2U; // default this sort of log message to INFO
 
         if (sourceLoc.module != nullptr) {
             // level 1 is DEBUG
@@ -895,8 +887,8 @@ HOST_SW_API void Log(uint32_t level, log_internal::SourceLocation sourceLoc, con
     }
     else {
         if (sourceLoc.module != nullptr) {
-            if (level > 7U)
-                level = 3U; // default this sort of log message to INFO
+            if (level > 6U)
+                level = 2U; // default this sort of log message to INFO
 
             // level 1 is DEBUG
             if (level == 1U) {
@@ -926,8 +918,8 @@ HOST_SW_API void Log(uint32_t level, log_internal::SourceLocation sourceLoc, con
                 prefixLen = ::sprintf(prefixBuf, "U: ");
             }
             else {
-                if (level > 7U)
-                    level = 3U; // default this sort of log message to INFO
+                if (level > 6U)
+                    level = 2U; // default this sort of log message to INFO
 
                  // if we have a file and line number -- add that to the log entry
                  if (sourceLoc.filename != nullptr && sourceLoc.line > 0) {

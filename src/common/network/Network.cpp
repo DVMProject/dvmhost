@@ -697,7 +697,7 @@ void Network::clock(uint32_t ms)
                                     offs += 4U;
                                 }
 
-                                LogMessage(LOG_NET, "Network Announced %u whitelisted RIDs", len);
+                                LogInfoEx(LOG_NET, "Network Announced %u whitelisted RIDs", len);
 
                                 // save to file if enabled and we got RIDs
                                 if (m_saveLookup && len > 0) {
@@ -723,7 +723,7 @@ void Network::clock(uint32_t ms)
                                     offs += 4U;
                                 }
 
-                                LogMessage(LOG_NET, "Network Announced %u blacklisted RIDs", len);
+                                LogInfoEx(LOG_NET, "Network Announced %u blacklisted RIDs", len);
 
                                 // save to file if enabled and we got RIDs
                                 if (m_saveLookup && len > 0) {
@@ -766,7 +766,7 @@ void Network::clock(uint32_t ms)
                                             m_tidLookup->eraseEntry(id, slot);
                                         }
 
-                                        LogMessage(LOG_NET, "Activated%s%s TG %u TS %u in TGID table", 
+                                        LogInfoEx(LOG_NET, "Activated%s%s TG %u TS %u in TGID table", 
                                             (nonPreferred) ? " non-preferred" : "", (affiliated) ? " affiliated" : "", id, slot);
                                         m_tidLookup->addEntry(id, slot, true, affiliated, nonPreferred);
                                     }
@@ -774,7 +774,7 @@ void Network::clock(uint32_t ms)
                                     offs += 5U;
                                 }
 
-                                LogMessage(LOG_NET, "Activated %u TGs; loaded %u entries into talkgroup rules table", len, m_tidLookup->groupVoice().size());
+                                LogInfoEx(LOG_NET, "Activated %u TGs; loaded %u entries into talkgroup rules table", len, m_tidLookup->groupVoice().size());
 
                                 // save if saving from network is enabled
                                 if (m_saveLookup && len > 0) {
@@ -800,14 +800,14 @@ void Network::clock(uint32_t ms)
 
                                     lookups::TalkgroupRuleGroupVoice tid = m_tidLookup->find(id, slot);
                                     if (!tid.isInvalid()) {
-                                        LogMessage(LOG_NET, "Deactivated TG %u TS %u in TGID table", id, slot);
+                                        LogInfoEx(LOG_NET, "Deactivated TG %u TS %u in TGID table", id, slot);
                                         m_tidLookup->eraseEntry(id, slot);
                                     }
 
                                     offs += 5U;
                                 }
 
-                                LogMessage(LOG_NET, "Deactivated %u TGs; loaded %u entries into talkgroup rules table", len, m_tidLookup->groupVoice().size());
+                                LogInfoEx(LOG_NET, "Deactivated %u TGs; loaded %u entries into talkgroup rules table", len, m_tidLookup->groupVoice().size());
 
                                 // save if saving from network is enabled
                                 if (m_saveLookup && len > 0) {
@@ -852,7 +852,7 @@ void Network::clock(uint32_t ms)
                             if (m_haIPs.size() > 1U) {
                                 m_currentHAIP = 1U; // because the first entry is our configured entry, set
                                                     // the current HA IP to the next available
-                                LogMessage(LOG_NET, "Loaded %u HA IPs from master", m_haIPs.size() - 1U);
+                                LogInfoEx(LOG_NET, "Loaded %u HA IPs from master", m_haIPs.size() - 1U);
                             }
                         }
                     }
@@ -950,7 +950,7 @@ void Network::clock(uint32_t ms)
                                 if (ks.keys().size() > 0U) {
                                     // fetch first key (a master response should never really send back more then one key)
                                     KeyItem ki = ks.keys()[0];
-                                    LogMessage(LOG_NET, "PEER %u, master reported enc. key, algId = $%02X, kID = $%04X", m_peerId,
+                                    LogInfoEx(LOG_NET, "PEER %u, master reported enc. key, algId = $%02X, kID = $%04X", m_peerId,
                                         ks.algId(), ki.kId());
 
                                     // fire off key response callback if we have one
@@ -1042,7 +1042,7 @@ void Network::clock(uint32_t ms)
             {
                 switch (m_status) {
                     case NET_STAT_WAITING_LOGIN:
-                        LogMessage(LOG_NET, "PEER %u RPTL ACK, performing login exchange, remotePeerId = %u", m_peerId, rtpHeader.getSSRC());
+                        LogInfoEx(LOG_NET, "PEER %u RPTL ACK, performing login exchange, remotePeerId = %u", m_peerId, rtpHeader.getSSRC());
 
                         ::memcpy(m_salt, buffer.get() + 6U, sizeof(uint32_t));
                         writeAuthorisation();
@@ -1052,7 +1052,7 @@ void Network::clock(uint32_t ms)
                         m_retryTimer.start();
                         break;
                     case NET_STAT_WAITING_AUTHORISATION:
-                        LogMessage(LOG_NET, "PEER %u RPTK ACK, performing configuration exchange, remotePeerId = %u", m_peerId, rtpHeader.getSSRC());
+                        LogInfoEx(LOG_NET, "PEER %u RPTK ACK, performing configuration exchange, remotePeerId = %u", m_peerId, rtpHeader.getSSRC());
 
                         writeConfig();
 
@@ -1061,7 +1061,7 @@ void Network::clock(uint32_t ms)
                         m_retryTimer.start();
                         break;
                     case NET_STAT_WAITING_CONFIG:
-                        LogMessage(LOG_NET, "PEER %u RPTC ACK, logged into the master successfully, remotePeerId = %u", m_peerId, rtpHeader.getSSRC());
+                        LogInfoEx(LOG_NET, "PEER %u RPTC ACK, logged into the master successfully, remotePeerId = %u", m_peerId, rtpHeader.getSSRC());
                         m_loginStreamId = 0U;
                         m_remotePeerId = rtpHeader.getSSRC();
 
@@ -1080,7 +1080,7 @@ void Network::clock(uint32_t ms)
                         if (length > 6) {
                             m_useAlternatePortForDiagnostics = (buffer[6U] & 0x80U) == 0x80U;
                             if (m_useAlternatePortForDiagnostics) {
-                                LogMessage(LOG_NET, "PEER %u RPTC ACK, master commanded alternate port for diagnostics and activity logging, remotePeerId = %u", m_peerId, rtpHeader.getSSRC());
+                                LogInfoEx(LOG_NET, "PEER %u RPTC ACK, master commanded alternate port for diagnostics and activity logging, remotePeerId = %u", m_peerId, rtpHeader.getSSRC());
                             } else {
                                 // disable diagnostic and activity logging automatically if the master doesn't utilize the alternate port
                                 m_allowDiagnosticTransfer = false;
@@ -1190,7 +1190,7 @@ bool Network::open()
     if (!m_enabled)
         return false;
     if (m_debug)
-        LogMessage(LOG_NET, "PEER %u opening network", m_peerId);
+        LogInfoEx(LOG_NET, "PEER %u opening network", m_peerId);
 
     m_status = NET_STAT_WAITING_CONNECT;
 
@@ -1205,7 +1205,7 @@ bool Network::open()
             m_currentHAIP = 0U;
         }
 
-        LogMessage(LOG_NET, "PEER %u connection to the master has timed out, %s:%u is non-responsive, trying next HA %s:%u", m_peerId,
+        LogInfoEx(LOG_NET, "PEER %u connection to the master has timed out, %s:%u is non-responsive, trying next HA %s:%u", m_peerId,
             m_address.c_str(), m_port, entry.masterAddress.c_str(), entry.masterPort);
         m_address = entry.masterAddress;
         m_port = entry.masterPort;
@@ -1218,7 +1218,7 @@ bool Network::open()
     m_pingsReceived = 0U;
 
     if (udp::Socket::lookup(m_address, m_port, m_addr, m_addrLen) != 0) {
-        LogMessage(LOG_NET, "!!! Could not lookup the address of the master!");
+        LogInfoEx(LOG_NET, "!!! Could not lookup the address of the master!");
         return false;
     }
 
@@ -1230,7 +1230,7 @@ bool Network::open()
 void Network::close()
 {
     if (m_debug)
-        LogMessage(LOG_NET, "PEER %u closing Network", m_peerId);
+        LogInfoEx(LOG_NET, "PEER %u closing Network", m_peerId);
 
     if (m_status == NET_STAT_RUNNING) {
         uint8_t buffer[1U];

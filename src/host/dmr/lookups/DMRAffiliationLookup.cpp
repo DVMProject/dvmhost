@@ -79,7 +79,7 @@ bool DMRAffiliationLookup::grantChSlot(uint32_t dstId, uint32_t srcId, uint8_t s
     m_grantTimers[dstId].start();
 
     if (m_verbose) {
-        LogMessage(LOG_HOST, "%s, granting channel, chNo = %u, slot = %u, dstId = %u, group = %u",
+        LogInfoEx(LOG_HOST, "%s, granting channel, chNo = %u, slot = %u, dstId = %u, group = %u",
             m_name.c_str(), chNo, slot, dstId, grp);
     }
 
@@ -121,7 +121,7 @@ bool DMRAffiliationLookup::releaseGrant(uint32_t dstId, bool releaseAll)
         uint8_t slot = std::get<1>(slotData);
 
         if (m_verbose) {
-            LogMessage(LOG_HOST, "%s, releasing channel grant, chNo = %u, slot = %u, dstId = %u",
+            LogInfoEx(LOG_HOST, "%s, releasing channel grant, chNo = %u, slot = %u, dstId = %u",
                 m_name.c_str(), chNo, slot, dstId);
         }
 

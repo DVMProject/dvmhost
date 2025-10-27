@@ -114,25 +114,25 @@ using namespace p25::packet;
 // Macro helper to verbose log a generic TSBK.
 #define VERBOSE_LOG_TSBK(_PCKT_STR, _SRCID, _DSTID)                                     \
     if (m_verbose) {                                                                    \
-        LogMessage(LOG_RF, P25_TSDU_STR ", %s, srcId = %u, dstId = %u", _PCKT_STR.c_str(), _SRCID, _DSTID); \
+        LogInfoEx(LOG_RF, P25_TSDU_STR ", %s, srcId = %u, dstId = %u", _PCKT_STR.c_str(), _SRCID, _DSTID); \
     }
 
 // Macro helper to verbose log a generic TSBK.
 #define VERBOSE_LOG_TSBK_DST(_PCKT_STR, _DSTID)                                         \
     if (m_verbose) {                                                                    \
-        LogMessage(LOG_RF, P25_TSDU_STR ", %s, dstId = %u", _PCKT_STR.c_str(), _DSTID); \
+        LogInfoEx(LOG_RF, P25_TSDU_STR ", %s, dstId = %u", _PCKT_STR.c_str(), _DSTID); \
     }
 
 // Macro helper to verbose log a generic network TSBK.
 #define VERBOSE_LOG_TSBK_NET(_PCKT_STR, _SRCID, _DSTID)                                 \
     if (m_verbose) {                                                                    \
-        LogMessage(LOG_NET, P25_TSDU_STR ", %s, srcId = %u, dstId = %u", _PCKT_STR.c_str(), _SRCID, _DSTID); \
+        LogInfoEx(LOG_NET, P25_TSDU_STR ", %s, srcId = %u, dstId = %u", _PCKT_STR.c_str(), _SRCID, _DSTID); \
     }
 
 // Macro helper to verbose log a generic network TSBK.
 #define DEBUG_LOG_TSBK(_PCKT_STR)                                                       \
     if (m_debug) {                                                                      \
-        LogMessage(LOG_RF, P25_TSDU_STR ", %s", _PCKT_STR.c_str());                     \
+        LogInfoEx(LOG_RF, P25_TSDU_STR ", %s", _PCKT_STR.c_str());                     \
     }
 
 #define RF_TO_WRITE_NET(OSP)                                                            \
@@ -286,7 +286,7 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
 
                 IOSP_UU_ANS* iosp = static_cast<IOSP_UU_ANS*>(tsbk.get());
                 if (m_verbose) {
-                    LogMessage(LOG_RF, P25_TSDU_STR ", %s, response = $%02X, srcId = %u, dstId = %u",
+                    LogInfoEx(LOG_RF, P25_TSDU_STR ", %s, response = $%02X, srcId = %u, dstId = %u",
                         tsbk->toString(true).c_str(), iosp->getResponse(), srcId, dstId);
                 }
 
@@ -331,7 +331,7 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
 
                 ISP_SNDCP_CH_REQ* isp = static_cast<ISP_SNDCP_CH_REQ*>(tsbk.get());
                 if (m_verbose) {
-                    LogMessage(LOG_RF, P25_TSDU_STR ", %s, dataServiceOptions = $%02X, dataAccessControl = $%04X, srcId = %u",
+                    LogInfoEx(LOG_RF, P25_TSDU_STR ", %s, dataServiceOptions = $%02X, dataAccessControl = $%04X, srcId = %u",
                         tsbk->toString(true).c_str(), isp->getDataServiceOptions(), isp->getDataAccessControl(), srcId);
                 }
 
@@ -353,7 +353,7 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
 
                 ISP_SNDCP_CH_REQ* isp = static_cast<ISP_SNDCP_CH_REQ*>(tsbk.get());
                 if (m_verbose) {
-                    LogMessage(LOG_RF, P25_TSDU_STR ", %s, dataServiceOptions = $%02X, dataAccessControl = %u, srcId = %u",
+                    LogInfoEx(LOG_RF, P25_TSDU_STR ", %s, dataServiceOptions = $%02X, dataAccessControl = %u, srcId = %u",
                         tsbk->toString(true).c_str(), isp->getDataServiceOptions(), isp->getDataAccessControl(), srcId);
                 }
 
@@ -372,7 +372,7 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
 
                 IOSP_STS_UPDT* iosp = static_cast<IOSP_STS_UPDT*>(tsbk.get());
                 if (m_verbose) {
-                    LogMessage(LOG_RF, P25_TSDU_STR ", %s, status = $%02X, srcId = %u", 
+                    LogInfoEx(LOG_RF, P25_TSDU_STR ", %s, status = $%02X, srcId = %u", 
                         tsbk->toString(true).c_str(), iosp->getStatus(), srcId);
                 }
 
@@ -392,7 +392,7 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
 
                 IOSP_MSG_UPDT* iosp = static_cast<IOSP_MSG_UPDT*>(tsbk.get());
                 if (m_verbose) {
-                    LogMessage(LOG_RF, P25_TSDU_STR ", %s, message = $%02X, srcId = %u, dstId = %u",
+                    LogInfoEx(LOG_RF, P25_TSDU_STR ", %s, message = $%02X, srcId = %u, dstId = %u",
                         tsbk->toString(true).c_str(), iosp->getMessage(), srcId, dstId);
                 }
 
@@ -415,7 +415,7 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
 
                 IOSP_RAD_MON* iosp = static_cast<IOSP_RAD_MON*>(tsbk.get());
                 if (m_verbose) {
-                    LogMessage(LOG_RF, P25_TSDU_STR ", %s, srcId = %u, dstId = %u, txMult = %u", 
+                    LogInfoEx(LOG_RF, P25_TSDU_STR ", %s, srcId = %u, dstId = %u, txMult = %u", 
                         tsbk->toString(true).c_str(), srcId, dstId, iosp->getTxMult());
                 }
 
@@ -448,7 +448,7 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
 
                 IOSP_ACK_RSP* iosp = static_cast<IOSP_ACK_RSP*>(tsbk.get());
                 if (m_verbose) {
-                    LogMessage(LOG_RF, P25_TSDU_STR ", %s, AIV = %u, serviceType = $%02X, srcId = %u, dstId = %u",
+                    LogInfoEx(LOG_RF, P25_TSDU_STR ", %s, AIV = %u, serviceType = $%02X, srcId = %u, dstId = %u",
                         tsbk->toString(true).c_str(), iosp->getAIV(), iosp->getService(), srcId, dstId);
                 }
 
@@ -469,7 +469,7 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
             {
                 ISP_CAN_SRV_REQ* isp = static_cast<ISP_CAN_SRV_REQ*>(tsbk.get());
                 if (m_verbose) {
-                    LogMessage(LOG_RF, P25_TSDU_STR ", %s, AIV = %u, serviceType = $%02X, reason = $%02X, srcId = %u, dstId = %u",
+                    LogInfoEx(LOG_RF, P25_TSDU_STR ", %s, AIV = %u, serviceType = $%02X, reason = $%02X, srcId = %u, dstId = %u",
                         tsbk->toString(true).c_str(), isp->getAIV(), isp->getService(), isp->getResponse(), srcId, dstId);
                 }
 
@@ -482,7 +482,7 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
             {
                 IOSP_EXT_FNCT* iosp = static_cast<IOSP_EXT_FNCT*>(tsbk.get());
                 if (m_verbose) {
-                    LogMessage(LOG_RF, P25_TSDU_STR ", %s, op = $%02X, arg = %u, tgt = %u",
+                    LogInfoEx(LOG_RF, P25_TSDU_STR ", %s, op = $%02X, arg = %u, tgt = %u",
                         tsbk->toString(true).c_str(), iosp->getExtendedFunction(), srcId, dstId);
                 }
 
@@ -564,7 +564,7 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
 
                 ISP_GRP_AFF_Q_RSP* isp = static_cast<ISP_GRP_AFF_Q_RSP*>(tsbk.get());
                 if (m_verbose) {
-                    LogMessage(LOG_RF, P25_TSDU_STR ", %s, srcId = %u, dstId = %u, anncId = %u", 
+                    LogInfoEx(LOG_RF, P25_TSDU_STR ", %s, srcId = %u, dstId = %u, anncId = %u", 
                         tsbk->toString(true).c_str(), srcId, dstId, isp->getAnnounceGroup());
                 }
 
@@ -588,7 +588,7 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
                 VALID_SRCID(tsbk->toString(true), TSBKO::ISP_U_DEREG_REQ, srcId);
 
                 if (m_verbose) {
-                    LogMessage(LOG_RF, P25_TSDU_STR ", %s, srcId = %u, sysId = $%03X, netId = $%05X",
+                    LogInfoEx(LOG_RF, P25_TSDU_STR ", %s, srcId = %u, sysId = $%03X, netId = $%05X",
                         tsbk->toString(true).c_str(), srcId, tsbk->getSysId(), tsbk->getNetId());
                 }
 
@@ -605,7 +605,7 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
                 IS_SUPPORT_CONTROL_CHECK(tsbk->toString(true), TSBKO::IOSP_U_REG, srcId);
 
                 if (m_verbose) {
-                    LogMessage(LOG_RF, P25_TSDU_STR ", %s, srcId = %u, sysId = $%03X, netId = $%05X",
+                    LogInfoEx(LOG_RF, P25_TSDU_STR ", %s, srcId = %u, sysId = $%03X, netId = $%05X",
                         tsbk->toString(true).c_str(), srcId, tsbk->getSysId(), tsbk->getNetId());
                 }
 
@@ -637,7 +637,7 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
 
                 ISP_AUTH_RESP* isp = static_cast<ISP_AUTH_RESP*>(tsbk.get());
                 if (m_verbose) {
-                    LogMessage(LOG_RF, P25_TSDU_STR ", %s, srcId = %u", 
+                    LogInfoEx(LOG_RF, P25_TSDU_STR ", %s, srcId = %u", 
                         tsbk->toString(true).c_str(), srcId);
                 }
 
@@ -752,7 +752,7 @@ bool ControlSignaling::processNetwork(uint8_t* data, uint32_t len, lc::LC& contr
                         }
 
                         if (m_verbose) {
-                            LogMessage(LOG_NET, P25_TSDU_STR ", %s, sysId = $%03X, rfss = $%02X, site = $%02X, chNo = %u-%u, svcClass = $%02X", tsbk->toString().c_str(),
+                            LogInfoEx(LOG_NET, P25_TSDU_STR ", %s, sysId = $%03X, rfss = $%02X, site = $%02X, chNo = %u-%u, svcClass = $%02X", tsbk->toString().c_str(),
                                 osp->getAdjSiteSysId(), osp->getAdjSiteRFSSId(), osp->getAdjSiteId(), osp->getAdjSiteChnId(), osp->getAdjSiteChnNo(), osp->getAdjSiteSvcClass());
                         }
 
@@ -774,7 +774,7 @@ bool ControlSignaling::processNetwork(uint8_t* data, uint32_t len, lc::LC& contr
                         }
 
                         if (m_verbose) {
-                            LogMessage(LOG_NET, P25_TSDU_STR ", %s, sysId = $%03X, rfss = $%02X, site = $%02X, chNo = %u-%u, svcClass = $%02X", tsbk->toString().c_str(),
+                            LogInfoEx(LOG_NET, P25_TSDU_STR ", %s, sysId = $%03X, rfss = $%02X, site = $%02X, chNo = %u-%u, svcClass = $%02X", tsbk->toString().c_str(),
                                 osp->getAdjSiteSysId(), osp->getAdjSiteRFSSId(), osp->getAdjSiteId(), osp->getAdjSiteChnId(), osp->getAdjSiteChnNo(), osp->getAdjSiteSvcClass());
                         }
 
@@ -801,7 +801,7 @@ bool ControlSignaling::processNetwork(uint8_t* data, uint32_t len, lc::LC& contr
                                     uint32_t chNo = tsbk->getGrpVchNo();
 
                                     if (m_verbose) {
-                                        LogMessage(LOG_NET, P25_TSDU_STR ", %s, chNo = %u, srcId = %u, dstId = %u", 
+                                        LogInfoEx(LOG_NET, P25_TSDU_STR ", %s, chNo = %u, srcId = %u, dstId = %u", 
                                             tsbk->toString().c_str(), chNo, srcId, dstId);
                                     }
 
@@ -831,7 +831,7 @@ bool ControlSignaling::processNetwork(uint8_t* data, uint32_t len, lc::LC& contr
                         if (m_p25->m_enableControl && m_p25->m_dedicatedControl) {
                             if (!m_p25->m_affiliations->isGranted(dstId)) {
                                 if (m_verbose) {
-                                    LogMessage(LOG_NET, P25_TSDU_STR ", %s, emerg = %u, encrypt = %u, prio = %u, chNo = %u-%u, srcId = %u, dstId = %u",
+                                    LogInfoEx(LOG_NET, P25_TSDU_STR ", %s, emerg = %u, encrypt = %u, prio = %u, chNo = %u-%u, srcId = %u, dstId = %u",
                                         tsbk->toString(true).c_str(), tsbk->getEmergency(), tsbk->getEncrypted(), tsbk->getPriority(), tsbk->getGrpVchId(), tsbk->getGrpVchNo(), srcId, dstId);
                                 }
 
@@ -852,7 +852,7 @@ bool ControlSignaling::processNetwork(uint8_t* data, uint32_t len, lc::LC& contr
                         IOSP_UU_ANS* iosp = static_cast<IOSP_UU_ANS*>(tsbk.get());
                         if (iosp->getResponse() > 0U) {
                             if (m_verbose) {
-                                LogMessage(LOG_NET, P25_TSDU_STR ", %s, response = $%02X, srcId = %u, dstId = %u",
+                                LogInfoEx(LOG_NET, P25_TSDU_STR ", %s, response = $%02X, srcId = %u, dstId = %u",
                                     tsbk->toString(true).c_str(), iosp->getResponse(), srcId, dstId);
                             }
                         }
@@ -868,7 +868,7 @@ bool ControlSignaling::processNetwork(uint8_t* data, uint32_t len, lc::LC& contr
 
                         IOSP_STS_UPDT* iosp = static_cast<IOSP_STS_UPDT*>(tsbk.get());
                         if (m_verbose) {
-                            LogMessage(LOG_NET, P25_TSDU_STR ", %s, status = $%02X, srcId = %u",
+                            LogInfoEx(LOG_NET, P25_TSDU_STR ", %s, status = $%02X, srcId = %u",
                                 tsbk->toString(true).c_str(), iosp->getStatus(), srcId);
                         }
 
@@ -882,7 +882,7 @@ bool ControlSignaling::processNetwork(uint8_t* data, uint32_t len, lc::LC& contr
 
                         IOSP_MSG_UPDT* iosp = static_cast<IOSP_MSG_UPDT*>(tsbk.get());
                         if (m_verbose) {
-                            LogMessage(LOG_NET, P25_TSDU_STR ", %s, message = $%02X, srcId = %u, dstId = %u",
+                            LogInfoEx(LOG_NET, P25_TSDU_STR ", %s, message = $%02X, srcId = %u, dstId = %u",
                                 tsbk->toString(true).c_str(), iosp->getMessage(), srcId, dstId);
                         }
 
@@ -933,7 +933,7 @@ bool ControlSignaling::processNetwork(uint8_t* data, uint32_t len, lc::LC& contr
 
                         IOSP_ACK_RSP* iosp = static_cast<IOSP_ACK_RSP*>(tsbk.get());
                         if (m_verbose) {
-                            LogMessage(LOG_NET, P25_TSDU_STR ", %s, AIV = %u, serviceType = $%02X, srcId = %u, dstId = %u",
+                            LogInfoEx(LOG_NET, P25_TSDU_STR ", %s, AIV = %u, serviceType = $%02X, srcId = %u, dstId = %u",
                                 tsbk->toString(true).c_str(), iosp->getAIV(), iosp->getService(), dstId, srcId);
                         }
 
@@ -947,7 +947,7 @@ bool ControlSignaling::processNetwork(uint8_t* data, uint32_t len, lc::LC& contr
 
                         IOSP_EXT_FNCT* iosp = static_cast<IOSP_EXT_FNCT*>(tsbk.get());
                         if (m_verbose) {
-                            LogMessage(LOG_NET, P25_TSDU_STR ", %s, serviceType = $%02X, arg = %u, tgt = %u",
+                            LogInfoEx(LOG_NET, P25_TSDU_STR ", %s, serviceType = $%02X, arg = %u, tgt = %u",
                                 tsbk->toString(true).c_str(), iosp->getService(), srcId, dstId);
                         }
 
@@ -1070,7 +1070,7 @@ void ControlSignaling::writeAdjSSNetwork()
         osp->setAdjSiteSvcClass(m_p25->m_siteData.serviceClass());
 
         if (m_verbose) {
-            LogMessage(LOG_NET, P25_TSDU_STR ", %s, network announce, sysId = $%03X, rfss = $%02X, site = $%02X, chNo = %u-%u, svcClass = $%02X", osp->toString().c_str(),
+            LogInfoEx(LOG_NET, P25_TSDU_STR ", %s, network announce, sysId = $%03X, rfss = $%02X, site = $%02X, chNo = %u-%u, svcClass = $%02X", osp->toString().c_str(),
                 m_p25->m_siteData.sysId(), m_p25->m_siteData.rfssId(), m_p25->m_siteData.siteId(), m_p25->m_siteData.channelId(), m_p25->m_siteData.channelNo(), m_p25->m_siteData.serviceClass());
         }
 
@@ -1107,7 +1107,7 @@ void ControlSignaling::writeRF_TSDU_Radio_Mon(uint32_t srcId, uint32_t dstId, ui
     iosp->setTxMult(txMult);
 
     if (m_verbose) {
-        LogMessage(LOG_RF, P25_TSDU_STR ", %s, srcId = %u, dstId = %u, txMult = %u", iosp->toString().c_str(), srcId, dstId, txMult);
+        LogInfoEx(LOG_RF, P25_TSDU_STR ", %s, srcId = %u, dstId = %u, txMult = %u", iosp->toString().c_str(), srcId, dstId, txMult);
     }
 
     ::ActivityLog("P25", true, "Radio Unit Monitor request from %u to %u", srcId, dstId);
@@ -1135,7 +1135,7 @@ void ControlSignaling::writeRF_TSDU_Ext_Func(uint32_t func, uint32_t arg, uint32
     }
 
     if (m_verbose) {
-        LogMessage(LOG_RF, P25_TSDU_STR ", %s, mfId = $%02X, op = $%02X, arg = %u, tgt = %u",
+        LogInfoEx(LOG_RF, P25_TSDU_STR ", %s, mfId = $%02X, op = $%02X, arg = %u, tgt = %u",
             iosp->toString().c_str(), iosp->getMFId(), iosp->getExtendedFunction(), iosp->getSrcId(), iosp->getDstId());
     }
 
@@ -1409,7 +1409,7 @@ void ControlSignaling::writeRF_TDULC(lc::TDULC* lc, bool noNetwork)
     }
 
     //if (m_verbose) {
-    //    LogMessage(LOG_RF, P25_TDULC_STR ", lc = $%02X, srcId = %u", m_rfTDULC.getLCO(), m_rfTDULC.getSrcId());
+    //    LogInfoEx(LOG_RF, P25_TDULC_STR ", lc = $%02X, srcId = %u", m_rfTDULC.getLCO(), m_rfTDULC.getSrcId());
     //}
 }
 
@@ -1438,7 +1438,7 @@ void ControlSignaling::writeNet_TDULC(lc::TDULC* lc)
     m_p25->addFrame(buffer, P25_TDULC_FRAME_LENGTH_BYTES + 2U, true);
 
     if (m_verbose) {
-        LogMessage(LOG_NET, P25_TDULC_STR ", lc = $%02X, srcId = %u", lc->getLCO(), lc->getSrcId());
+        LogInfoEx(LOG_NET, P25_TDULC_STR ", lc = $%02X, srcId = %u", lc->getLCO(), lc->getSrcId());
     }
 
     if (m_p25->m_voice->m_netFrames > 0) {
@@ -1744,7 +1744,7 @@ void ControlSignaling::writeRF_TDULC_ChanRelease(bool grp, uint32_t srcId, uint3
     }
 
     if (m_verbose) {
-        LogMessage(LOG_RF, P25_TDULC_STR ", CALL_TERM (Call Termination), srcId = %u, dstId = %u", srcId, dstId);
+        LogInfoEx(LOG_RF, P25_TDULC_STR ", CALL_TERM (Call Termination), srcId = %u, dstId = %u", srcId, dstId);
     }
 
     lc = std::make_unique<lc::tdulc::LC_CALL_TERM>();
@@ -2371,7 +2371,7 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
                 osp->setForceChannelId(true);
 
                 if (m_verbose) {
-                    LogMessage((net) ? LOG_NET : LOG_RF, P25_TSDU_STR ", %s, emerg = %u, encrypt = %u, prio = %u, chNo = %u-%u, srcId = %u, dstId = %u",
+                    LogInfoEx((net) ? LOG_NET : LOG_RF, P25_TSDU_STR ", %s, emerg = %u, encrypt = %u, prio = %u, chNo = %u-%u, srcId = %u, dstId = %u",
                         osp->toString().c_str(), osp->getEmergency(), osp->getEncrypted(), osp->getPriority(), osp->getGrpVchId(), osp->getGrpVchNo(), osp->getSrcId(), osp->getDstId());
                 }
 
@@ -2395,7 +2395,7 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
 
             if (!voiceChData.isExplicitCh()) {
                 if (m_verbose) {
-                    LogMessage((net) ? LOG_NET : LOG_RF, P25_TSDU_STR ", %s, emerg = %u, encrypt = %u, prio = %u, chNo = %u-%u, srcId = %u, dstId = %u",
+                    LogInfoEx((net) ? LOG_NET : LOG_RF, P25_TSDU_STR ", %s, emerg = %u, encrypt = %u, prio = %u, chNo = %u-%u, srcId = %u, dstId = %u",
                         iosp->toString().c_str(), iosp->getEmergency(), iosp->getEncrypted(), iosp->getPriority(), iosp->getGrpVchId(), iosp->getGrpVchNo(), iosp->getSrcId(), iosp->getDstId());
                 }
 
@@ -2475,7 +2475,7 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
                 osp->setForceChannelId(true);
 
                 if (m_verbose) {
-                    LogMessage((net) ? LOG_NET : LOG_RF, P25_TSDU_STR ", %s, emerg = %u, encrypt = %u, prio = %u, chNo = %u-%u, srcId = %u, dstId = %u",
+                    LogInfoEx((net) ? LOG_NET : LOG_RF, P25_TSDU_STR ", %s, emerg = %u, encrypt = %u, prio = %u, chNo = %u-%u, srcId = %u, dstId = %u",
                         osp->toString().c_str(), osp->getEmergency(), osp->getEncrypted(), osp->getPriority(), osp->getGrpVchId(), osp->getGrpVchNo(), osp->getSrcId(), osp->getDstId());
                 }
 
@@ -2499,7 +2499,7 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
 
             if (!voiceChData.isExplicitCh()) {
                 if (m_verbose) {
-                    LogMessage((net) ? LOG_NET : LOG_RF, P25_TSDU_STR ", %s, emerg = %u, encrypt = %u, prio = %u, chNo = %u-%u, srcId = %u, dstId = %u",
+                    LogInfoEx((net) ? LOG_NET : LOG_RF, P25_TSDU_STR ", %s, emerg = %u, encrypt = %u, prio = %u, chNo = %u-%u, srcId = %u, dstId = %u",
                         iosp->toString().c_str(), iosp->getEmergency(), iosp->getEncrypted(), iosp->getPriority(), iosp->getGrpVchId(), iosp->getGrpVchNo(), iosp->getSrcId(), iosp->getDstId());
                 }
 
@@ -2708,7 +2708,7 @@ bool ControlSignaling::writeRF_TSDU_SNDCP_Grant(uint32_t srcId, bool skip, uint3
         ::ActivityLog("P25", true, "SNDCP grant request from %u", srcId);
 
         if (m_verbose) {
-            LogMessage(LOG_RF, P25_TSDU_STR ", %s, chNo = %u-%u, srcId = %u",
+            LogInfoEx(LOG_RF, P25_TSDU_STR ", %s, chNo = %u-%u, srcId = %u",
                 osp->toString().c_str(), voiceChData.chId(), osp->getDataChnNo(), osp->getSrcId());
         }
 
@@ -2750,7 +2750,7 @@ void ControlSignaling::writeRF_TSDU_ACK_FNE(uint32_t srcId, uint32_t service, bo
     }
 
     if (m_verbose) {
-        LogMessage(LOG_RF, P25_TSDU_STR ", %s, AIV = %u, EX = %u, serviceType = $%02X, srcId = %u",
+        LogInfoEx(LOG_RF, P25_TSDU_STR ", %s, AIV = %u, EX = %u, serviceType = $%02X, srcId = %u",
             iosp->toString().c_str(), iosp->getAIV(), iosp->getEX(), iosp->getService(), srcId);
     }
 
@@ -2770,7 +2770,7 @@ void ControlSignaling::writeRF_TSDU_Deny(uint32_t srcId, uint32_t dstId, uint8_t
     osp->setGroup(grp);
 
     if (m_verbose) {
-        LogMessage(LOG_RF, P25_TSDU_STR ", %s, AIV = %u, reason = $%02X (%s), srcId = %u, dstId = %u",
+        LogInfoEx(LOG_RF, P25_TSDU_STR ", %s, AIV = %u, reason = $%02X (%s), srcId = %u, dstId = %u",
             osp->toString().c_str(), osp->getAIV(), reason, P25Utils::denyRsnToString(reason).c_str(),
             osp->getSrcId(), osp->getDstId());
     }
@@ -2850,7 +2850,7 @@ uint8_t ControlSignaling::writeRF_TSDU_Grp_Aff_Rsp(uint32_t srcId, uint32_t dstI
 
     if (iosp->getResponse() == ResponseCode::ACCEPT) {
         if (m_verbose) {
-            LogMessage(LOG_RF, P25_TSDU_STR ", %s, anncId = %u, srcId = %u, dstId = %u",
+            LogInfoEx(LOG_RF, P25_TSDU_STR ", %s, anncId = %u, srcId = %u, dstId = %u",
                 iosp->toString().c_str(), m_announcementGroup, srcId, dstId);
         }
 
@@ -2867,7 +2867,7 @@ uint8_t ControlSignaling::writeRF_TSDU_Grp_Aff_Rsp(uint32_t srcId, uint32_t dstI
             // is the RF talkgroup hang timer running?
             if (m_p25->m_rfTGHang.isRunning() && !m_p25->m_rfTGHang.hasExpired()) {
                 if (m_verbose) {
-                    LogMessage(LOG_RF, "talkgroup hang has terminated, lastDstId = %u", m_p25->m_rfLastDstId);
+                    LogInfoEx(LOG_RF, "talkgroup hang has terminated, lastDstId = %u", m_p25->m_rfLastDstId);
                 }
                 m_p25->m_rfTGHang.stop();
 
@@ -2907,7 +2907,7 @@ void ControlSignaling::writeRF_TSDU_U_Reg_Rsp(uint32_t srcId, uint32_t sysId)
 
     if (iosp->getResponse() == ResponseCode::ACCEPT) {
         if (m_verbose) {
-            LogMessage(LOG_RF, P25_TSDU_STR ", %s, srcId = %u, sysId = $%03X", iosp->toString().c_str(), srcId, sysId);
+            LogInfoEx(LOG_RF, P25_TSDU_STR ", %s, srcId = %u, sysId = $%03X", iosp->toString().c_str(), srcId, sysId);
         }
 
         ::ActivityLog("P25", true, "unit registration request from %u", srcId);
@@ -2945,7 +2945,7 @@ void ControlSignaling::writeRF_TSDU_U_Dereg_Ack(uint32_t srcId)
         osp->setDstId(srcId);
 
         if (m_verbose) {
-            LogMessage(LOG_RF, P25_TSDU_STR ", %s, srcId = %u", osp->toString().c_str(), srcId);
+            LogInfoEx(LOG_RF, P25_TSDU_STR ", %s, srcId = %u", osp->toString().c_str(), srcId);
         }
 
         ::ActivityLog("P25", true, "unit deregistration request from %u", srcId);
@@ -2970,7 +2970,7 @@ void ControlSignaling::writeRF_TSDU_Queue(uint32_t srcId, uint32_t dstId, uint8_
     osp->setGroup(grp);
 
     if (m_verbose) {
-        LogMessage(LOG_RF, P25_TSDU_STR ", %s, AIV = %u, reason = $%02X (%s), srcId = %u, dstId = %u",
+        LogInfoEx(LOG_RF, P25_TSDU_STR ", %s, AIV = %u, reason = $%02X (%s), srcId = %u, dstId = %u",
             osp->toString().c_str(), osp->getAIV(), reason, P25Utils::queueRsnToString(reason).c_str(),
             osp->getSrcId(), osp->getDstId());
     }
@@ -3033,7 +3033,7 @@ bool ControlSignaling::writeRF_TSDU_Loc_Reg_Rsp(uint32_t srcId, uint32_t dstId, 
 
     if (osp->getResponse() == ResponseCode::ACCEPT) {
         if (m_verbose) {
-            LogMessage(LOG_RF, P25_TSDU_STR ", %s, srcId = %u, dstId = %u", osp->toString().c_str(), srcId, dstId);
+            LogInfoEx(LOG_RF, P25_TSDU_STR ", %s, srcId = %u, dstId = %u", osp->toString().c_str(), srcId, dstId);
         }
 
         ::ActivityLog("P25", true, "location registration request from %u", srcId);
@@ -3077,7 +3077,7 @@ void ControlSignaling::writeRF_TSDU_Auth_Dmd(uint32_t srcId)
     m_llaDemandTable[srcId] = challenge;
 
     if (m_verbose) {
-        LogMessage(LOG_RF, P25_TSDU_STR ", %s, srcId = %u, RC = %X", osp->toString().c_str(), srcId, challenge);
+        LogInfoEx(LOG_RF, P25_TSDU_STR ", %s, srcId = %u, RC = %X", osp->toString().c_str(), srcId, challenge);
     }
 
     writeRF_TSDU_AMBT(osp.get(), true);

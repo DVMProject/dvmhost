@@ -706,7 +706,7 @@ void* HostFNE::threadMasterNetwork(void* arg)
             return nullptr;
         }
 
-        LogMessage(LOG_HOST, "[ OK ] %s", threadName.c_str());
+        LogInfoEx(LOG_HOST, "[ OK ] %s", threadName.c_str());
 #ifdef _GNU_SOURCE
         ::pthread_setname_np(th->thread, threadName.c_str());
 #endif // _GNU_SOURCE
@@ -726,7 +726,7 @@ void* HostFNE::threadMasterNetwork(void* arg)
             }
         }
 
-        LogMessage(LOG_HOST, "[STOP] %s", threadName.c_str());
+        LogInfoEx(LOG_HOST, "[STOP] %s", threadName.c_str());
         delete th;
     }
 
@@ -762,7 +762,7 @@ void* HostFNE::threadDiagNetwork(void* arg)
             return nullptr;
         }
 
-        LogMessage(LOG_HOST, "[ OK ] %s", threadName.c_str());
+        LogInfoEx(LOG_HOST, "[ OK ] %s", threadName.c_str());
 #ifdef _GNU_SOURCE
         ::pthread_setname_np(th->thread, threadName.c_str());
 #endif // _GNU_SOURCE
@@ -782,7 +782,7 @@ void* HostFNE::threadDiagNetwork(void* arg)
             }
         }
 
-        LogMessage(LOG_HOST, "[STOP] %s", threadName.c_str());
+        LogInfoEx(LOG_HOST, "[STOP] %s", threadName.c_str());
         delete th;
     }
 
@@ -965,7 +965,7 @@ void* HostFNE::threadVirtualNetworking(void* arg)
             return nullptr;
         }
 
-        LogMessage(LOG_HOST, "[ OK ] %s", threadName.c_str());
+        LogInfoEx(LOG_HOST, "[ OK ] %s", threadName.c_str());
 #ifdef _GNU_SOURCE
         ::pthread_setname_np(th->thread, threadName.c_str());
 #endif // _GNU_SOURCE
@@ -999,7 +999,7 @@ void* HostFNE::threadVirtualNetworking(void* arg)
             }
         }
 
-        LogMessage(LOG_HOST, "[STOP] %s", threadName.c_str());
+        LogInfoEx(LOG_HOST, "[STOP] %s", threadName.c_str());
         delete th;
     }
 

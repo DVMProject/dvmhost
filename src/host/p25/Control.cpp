@@ -502,7 +502,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
                 LogInfo("    Disable Grant Source ID Check: yes");
             }
             if (m_supervisor)
-                LogMessage(LOG_P25, "Host is configured to operate as a P25 control channel, site controller mode.");
+                LogInfoEx(LOG_P25, "Host is configured to operate as a P25 control channel, site controller mode.");
         }
 
         if (m_controlOnly) {
@@ -580,7 +580,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
     // are we overriding the NAC for split NAC operations?
     uint32_t txNAC = (uint32_t)::strtoul(systemConf["config"]["txNAC"].as<std::string>("F7E").c_str(), NULL, 16);
     if (txNAC != NAC_DIGITAL_SQ && txNAC != m_nac) {
-        LogMessage(LOG_P25, "Split NAC operations, setting Tx NAC to $%03X", txNAC);
+        LogInfoEx(LOG_P25, "Split NAC operations, setting Tx NAC to $%03X", txNAC);
         m_txNAC = txNAC;
         m_nid.setTxNAC(m_txNAC);
     }
@@ -684,7 +684,7 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
         // Convert the raw RSSI to dBm
         int rssi = m_rssiMapper->interpolate(raw);
         if (m_verbose) {
-            LogMessage(LOG_RF, "P25, raw RSSI = %u, reported RSSI = %d dBm", raw, rssi);
+            LogInfoEx(LOG_RF, "P25, raw RSSI = %u, reported RSSI = %d dBm", raw, rssi);
         }
 
         // RSSI is always reported as positive
@@ -936,7 +936,7 @@ void Control::clock()
         if (m_rfTGHang.hasExpired()) {
             m_rfTGHang.stop();
             if (m_verbose) {
-                LogMessage(LOG_RF, "talkgroup hang has expired, lastDstId = %u", m_rfLastDstId);
+                LogInfoEx(LOG_RF, "talkgroup hang has expired, lastDstId = %u", m_rfLastDstId);
             }
             m_rfLastDstId = 0U;
             m_rfLastSrcId = 0U;
@@ -972,7 +972,7 @@ void Control::clock()
             if (m_netTGHang.hasExpired()) {
                 m_netTGHang.stop();
                 if (m_verbose) {
-                    LogMessage(LOG_NET, "talkgroup hang has expired, lastDstId = %u", m_netLastDstId);
+                    LogInfoEx(LOG_NET, "talkgroup hang has expired, lastDstId = %u", m_netLastDstId);
                 }
 
                 // if the group is still granted at this point -- forcibly release it
@@ -1162,7 +1162,7 @@ void Control::clockSiteData(uint32_t ms)
                                             }
                                         } 
                                         else
-                                            ::LogMessage(LOG_P25, "VC %s:%u, active TG update, activeCnt = %u", voiceChData.address().c_str(), voiceChData.port(), activeCnt);
+                                            ::LogInfoEx(LOG_P25, "VC %s:%u, active TG update, activeCnt = %u", voiceChData.address().c_str(), voiceChData.port(), activeCnt);
                                     }, voiceChData.address(), voiceChData.port());
                                 }
                             }
@@ -1192,7 +1192,7 @@ void Control::clockSiteData(uint32_t ms)
                                             }
                                         } 
                                         else
-                                            ::LogMessage(LOG_P25, "VC %s:%u, clear active TG update", voiceChData.address().c_str(), voiceChData.port());
+                                            ::LogInfoEx(LOG_P25, "VC %s:%u, clear active TG update", voiceChData.address().c_str(), voiceChData.port());
                                     }, voiceChData.address(), voiceChData.port());
                                 }
                             }
@@ -1214,9 +1214,9 @@ void Control::permittedTG(uint32_t dstId, bool dataPermit)
 
     if (m_verbose) {
         if (dstId == 0U)
-            LogMessage(LOG_P25, "non-authoritative TG unpermit");
+            LogInfoEx(LOG_P25, "non-authoritative TG unpermit");
         else
-            LogMessage(LOG_P25, "non-authoritative TG permit, dstId = %u", dstId);
+            LogInfoEx(LOG_P25, "non-authoritative TG permit, dstId = %u", dstId);
     }
 
     m_permittedDstId = dstId;
@@ -1236,7 +1236,7 @@ void Control::grantTG(uint32_t srcId, uint32_t dstId, bool grp)
     }
 
     if (m_verbose) {
-        LogMessage(LOG_P25, "network TG grant demand, srcId = %u, dstId = %u", srcId, dstId);
+        LogInfoEx(LOG_P25, "network TG grant demand, srcId = %u, dstId = %u", srcId, dstId);
     }
 
     m_control->writeRF_TSDU_Grant(srcId, dstId, 4U, grp);
@@ -1598,7 +1598,7 @@ void Control::processNetwork()
                     (control.getPriority() & 0x07U);                                    // Priority
 
                 if (m_verbose) {
-                    LogMessage(LOG_NET, P25_TSDU_STR " remote grant demand, srcId = %u, dstId = %u, unitToUnit = %u, encrypted = %u", srcId, dstId, unitToUnit, grantEncrypt);
+                    LogInfoEx(LOG_NET, P25_TSDU_STR " remote grant demand, srcId = %u, dstId = %u, unitToUnit = %u, encrypted = %u", srcId, dstId, unitToUnit, grantEncrypt);
                 }
 
                 // are we denying the grant?
@@ -1645,7 +1645,7 @@ void Control::processFrameLoss()
                 float(m_voice->m_rfFrames) / 5.56F, float(m_voice->m_rfErrs * 100U) / float(m_voice->m_rfBits), m_frameLossCnt);
         }
 
-        LogMessage(LOG_RF, P25_TDU_STR ", total frames: %d, bits: %d, undecodable LC: %d, errors: %d, BER: %.4f%%",
+        LogInfoEx(LOG_RF, P25_TDU_STR ", total frames: %d, bits: %d, undecodable LC: %d, errors: %d, BER: %.4f%%",
             m_voice->m_rfFrames, m_voice->m_rfBits, m_voice->m_rfUndecodableLC, m_voice->m_rfErrs, float(m_voice->m_rfErrs * 100U) / float(m_voice->m_rfBits));
 
         m_affiliations->releaseGrant(m_voice->m_rfLC.getDstId(), false);
@@ -1750,7 +1750,7 @@ void Control::notifyCC_ReleaseGrant(uint32_t dstId)
     }
 
     if (m_verbose) {
-        LogMessage(LOG_P25, "CC %s:%u, notifying CC of call termination, dstId = %u", m_controlChData.address().c_str(), m_controlChData.port(), dstId);
+        LogInfoEx(LOG_P25, "CC %s:%u, notifying CC of call termination, dstId = %u", m_controlChData.address().c_str(), m_controlChData.port(), dstId);
     }
 
     // callback REST API to release the granted TG on the specified control channel
@@ -1772,7 +1772,7 @@ void Control::notifyCC_ReleaseGrant(uint32_t dstId)
             }
         } 
         else
-            ::LogMessage(LOG_P25, "CC %s:%u, released grant, dstId = %u", m_controlChData.address().c_str(), m_controlChData.port(), dstId);
+            ::LogInfoEx(LOG_P25, "CC %s:%u, released grant, dstId = %u", m_controlChData.address().c_str(), m_controlChData.port(), dstId);
     }, m_controlChData.address(), m_controlChData.port());
 
     m_rfLastDstId = 0U;
@@ -1816,7 +1816,7 @@ void Control::notifyCC_TouchGrant(uint32_t dstId)
             }
         }
         else
-            ::LogMessage(LOG_P25, "CC %s:%u, touched grant, dstId = %u", m_controlChData.address().c_str(), m_controlChData.port(), dstId);
+            ::LogInfoEx(LOG_P25, "CC %s:%u, touched grant, dstId = %u", m_controlChData.address().c_str(), m_controlChData.port(), dstId);
     }, m_controlChData.address(), m_controlChData.port());
 }
 
@@ -2011,7 +2011,7 @@ void Control::RPC_activeTG(json::object& req, json::object& reply)
         }
     }
 
-    ::LogMessage(LOG_P25, "active TG update, activeCnt = %u", m_activeTG.size());
+    ::LogInfoEx(LOG_P25, "active TG update, activeCnt = %u", m_activeTG.size());
 }
 
 /* (RPC Handler) Clear active TGID list from the authoritative CC host. */
@@ -2053,7 +2053,7 @@ void Control::RPC_releaseGrantTG(json::object& req, json::object& reply)
     // LogDebugEx(LOG_P25, "Control::RPC_releaseGrantTG()", "callback, dstId = %u", dstId);
 
     if (m_verbose) {
-        LogMessage(LOG_P25, "VC request, release TG grant, dstId = %u", dstId);
+        LogInfoEx(LOG_P25, "VC request, release TG grant, dstId = %u", dstId);
     }
 
     if (m_affiliations->isGranted(dstId)) {
@@ -2062,7 +2062,7 @@ void Control::RPC_releaseGrantTG(json::object& req, json::object& reply)
         ::lookups::VoiceChData voiceCh = m_affiliations->rfCh()->getRFChData(chNo);
 
         if (m_verbose) {
-            LogMessage(LOG_P25, "VC %s:%u, TG grant released, srcId = %u, dstId = %u, chNo = %u-%u", voiceCh.address().c_str(), voiceCh.port(), srcId, dstId, voiceCh.chId(), chNo);
+            LogInfoEx(LOG_P25, "VC %s:%u, TG grant released, srcId = %u, dstId = %u, chNo = %u-%u", voiceCh.address().c_str(), voiceCh.port(), srcId, dstId, voiceCh.chId(), chNo);
         }
 
         m_affiliations->releaseGrant(dstId, false);
@@ -2101,7 +2101,7 @@ void Control::RPC_touchGrantTG(json::object& req, json::object& reply)
         ::lookups::VoiceChData voiceCh = m_affiliations->rfCh()->getRFChData(chNo);
 
         if (m_verbose) {
-            LogMessage(LOG_P25, "VC %s:%u, call in progress, srcId = %u, dstId = %u, chNo = %u-%u", voiceCh.address().c_str(), voiceCh.port(), srcId, dstId, voiceCh.chId(), chNo);
+            LogInfoEx(LOG_P25, "VC %s:%u, call in progress, srcId = %u, dstId = %u, chNo = %u-%u", voiceCh.address().c_str(), voiceCh.port(), srcId, dstId, voiceCh.chId(), chNo);
         }
 
         m_affiliations->touchGrant(dstId);
@@ -2147,7 +2147,7 @@ void Control::generateLLA_AM1_Parameters()
     ::memcpy(m_llaKS, KS, AUTH_KEY_LENGTH_BYTES);
 
     if (m_verbose) {
-        LogMessage(LOG_P25, "P25, generated LLA AM1 parameters");
+        LogInfoEx(LOG_P25, "P25, generated LLA AM1 parameters");
     }
 
     // cleanup

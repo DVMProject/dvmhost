@@ -178,7 +178,7 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                 if (tg.config().parrot() && !m_parrotPlayback) {
                     if (m_parrotFrames.size() > 0) {
                         m_parrotFramesReady = true;
-                        LogMessage(LOG_NET, "DMR, Parrot Playback will Start, peer = %u, ssrc = %u, srcId = %u", peerId, ssrc, srcId);
+                        LogInfoEx(LOG_NET, "DMR, Parrot Playback will Start, peer = %u, ssrc = %u, srcId = %u", peerId, ssrc, srcId);
                         m_network->m_parrotDelayTimer.start();
                     }
                 }
@@ -193,11 +193,11 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                 });
                 if (it != m_statusPVCall.end()) {
                     m_statusPVCall[dstId].reset();
-                    LogMessage((fromUpstream) ? LOG_PEER : LOG_MASTER, "DMR, Private Call End, peer = %u, ssrc = %u, srcId = %u, dstId = %u, slot = %u, duration = %u, streamId = %u, fromUpstream = %u",
+                    LogInfoEx((fromUpstream) ? LOG_PEER : LOG_MASTER, "DMR, Private Call End, peer = %u, ssrc = %u, srcId = %u, dstId = %u, slot = %u, duration = %u, streamId = %u, fromUpstream = %u",
                         peerId, ssrc, srcId, dstId, slotNo, duration / 1000, streamId, fromUpstream);
                 }
                 else
-                    LogMessage((fromUpstream) ? LOG_PEER : LOG_MASTER, "DMR, Call End, peer = %u, ssrc = %u, srcId = %u, dstId = %u, slot = %u, duration = %u, streamId = %u, fromUpstream = %u",
+                    LogInfoEx((fromUpstream) ? LOG_PEER : LOG_MASTER, "DMR, Call End, peer = %u, ssrc = %u, srcId = %u, dstId = %u, slot = %u, duration = %u, streamId = %u, fromUpstream = %u",
                                 peerId, ssrc, srcId, dstId, slotNo, duration / 1000, streamId, fromUpstream);
 
                 // report call event to InfluxDB
@@ -246,7 +246,7 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                         if (status.srcId == 0U)
                             m_status[dstId].srcId = srcId;
                         if (status.srcId != srcId) {
-                            LogMessage((fromUpstream) ? LOG_PEER : LOG_MASTER, "DMR, Call Source Switched, peer = %u, ssrc = %u, srcId = %u, dstId = %u, slotNo = %u, streamId = %u, rxPeer = %u, rxSrcId = %u, rxDstId = %u, rxSlotNo = %u, rxStreamId = %u, fromUpstream = %u",
+                            LogInfoEx((fromUpstream) ? LOG_PEER : LOG_MASTER, "DMR, Call Source Switched, peer = %u, ssrc = %u, srcId = %u, dstId = %u, slotNo = %u, streamId = %u, rxPeer = %u, rxSrcId = %u, rxDstId = %u, rxSlotNo = %u, rxStreamId = %u, fromUpstream = %u",
                                 peerId, ssrc, srcId, dstId, slotNo, streamId, status.peerId, status.srcId, status.dstId, status.slotNo, status.streamId, fromUpstream);
                             m_status[dstId].srcId = srcId;
                         }
@@ -323,11 +323,11 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                     m_statusPVCall[dstId].dstPeerId = regSSRC;
                     m_statusPVCall.unlock();
 
-                    LogMessage((fromUpstream) ? LOG_PEER : LOG_MASTER, "DMR, Private Call Start, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, fromUpstream = %u",
+                    LogInfoEx((fromUpstream) ? LOG_PEER : LOG_MASTER, "DMR, Private Call Start, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, fromUpstream = %u",
                         peerId, ssrc, srcId, dstId, streamId, fromUpstream);
                 }
                 else
-                    LogMessage((fromUpstream) ? LOG_PEER : LOG_MASTER, "DMR, Call Start, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, fromUpstream = %u", peerId, ssrc, srcId, dstId, streamId, fromUpstream);
+                    LogInfoEx((fromUpstream) ? LOG_PEER : LOG_MASTER, "DMR, Call Start, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, fromUpstream = %u", peerId, ssrc, srcId, dstId, streamId, fromUpstream);
             }
         }
 
@@ -635,7 +635,7 @@ void TagDMRData::write_Ext_Func(uint32_t peerId, uint8_t slot, uint32_t func, ui
     csbk->setSrcId(arg);
     csbk->setDstId(dstId);
 
-    LogMessage(LOG_DMR, "DMR Slot %u, DT_CSBK, %s, op = $%02X, arg = %u, tgt = %u",
+    LogInfoEx(LOG_DMR, "DMR Slot %u, DT_CSBK, %s, op = $%02X, arg = %u, tgt = %u",
         slot, csbk->toString().c_str(), func, arg, dstId);
 
     write_CSBK(peerId, slot, csbk.get());
@@ -650,7 +650,7 @@ void TagDMRData::write_Call_Alrt(uint32_t peerId, uint8_t slot, uint32_t srcId, 
     csbk->setSrcId(srcId);
     csbk->setDstId(dstId);
 
-    LogMessage(LOG_DMR, "DMR Slot %u, DT_CSBK, %s, srcId = %u, dstId = %u",
+    LogInfoEx(LOG_DMR, "DMR Slot %u, DT_CSBK, %s, srcId = %u, dstId = %u",
         slot, csbk->toString().c_str(), srcId, dstId);
 
     write_CSBK(peerId, slot, csbk.get());
@@ -793,7 +793,7 @@ bool TagDMRData::processCSBK(uint8_t* buffer, uint32_t peerId, dmr::data::NetDat
                             return false;
                         } else {
                             if (m_network->m_verbose) {
-                                LogMessage(LOG_DMR, "DMR Slot %u, DT_CSBK, %s, sysId = $%03X, chNo = %u, peerId = %u", dmrData.getSlotNo(), csbk->toString().c_str(),
+                                LogInfoEx(LOG_DMR, "DMR Slot %u, DT_CSBK, %s, sysId = $%03X, chNo = %u, peerId = %u", dmrData.getSlotNo(), csbk->toString().c_str(),
                                     osp->getSystemId(), osp->getLogicalCh1(), peerId);
                             }
                         }
@@ -1261,7 +1261,7 @@ bool TagDMRData::write_CSBK_Grant(uint32_t peerId, uint32_t srcId, uint32_t dstI
         csbk->setSlotNo(slot);
 
         if (m_network->m_verbose) {
-            LogMessage(LOG_DMR, "DMR, CSBK, %s, emerg = %u, privacy = %u, broadcast = %u, prio = %u, chNo = %u, slot = %u, srcId = %u, dstId = %u, peerId = %u",
+            LogInfoEx(LOG_DMR, "DMR, CSBK, %s, emerg = %u, privacy = %u, broadcast = %u, prio = %u, chNo = %u, slot = %u, srcId = %u, dstId = %u, peerId = %u",
                 csbk->toString().c_str(), emergency, privacy, broadcast, priority, csbk->getLogicalCh1(), csbk->getSlotNo(), srcId, dstId, peerId);
         }
 
@@ -1277,7 +1277,7 @@ bool TagDMRData::write_CSBK_Grant(uint32_t peerId, uint32_t srcId, uint32_t dstI
         csbk->setSlotNo(slot);
 
         if (m_network->m_verbose) {
-            LogMessage(LOG_DMR, "DMR, CSBK, %s, emerg = %u, privacy = %u, broadcast = %u, prio = %u, chNo = %u, slot = %u, srcId = %u, dstId = %u, peerId = %u",
+            LogInfoEx(LOG_DMR, "DMR, CSBK, %s, emerg = %u, privacy = %u, broadcast = %u, prio = %u, chNo = %u, slot = %u, srcId = %u, dstId = %u, peerId = %u",
                 csbk->toString().c_str(), emergency, privacy, broadcast, priority, csbk->getLogicalCh1(), csbk->getSlotNo(), srcId, dstId, peerId);
         }
 
@@ -1302,7 +1302,7 @@ void TagDMRData::write_CSBK_NACK_RSP(uint32_t peerId, uint32_t dstId, uint8_t sl
     csbk->setDstId(dstId);
 
     if (m_network->m_verbose) {
-        LogMessage(LOG_DMR, "DMR Slot %u, CSBK, %s, reason = $%02X (%s), srcId = %u, dstId = %u",
+        LogInfoEx(LOG_DMR, "DMR Slot %u, CSBK, %s, reason = $%02X (%s), srcId = %u, dstId = %u",
             slot, csbk->toString().c_str(), reason, DMRUtils::rsnToString(reason).c_str(),
             csbk->getSrcId(), csbk->getDstId());
     }

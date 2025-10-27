@@ -75,7 +75,7 @@ bool Data::process(uint8_t* data, uint32_t len)
         }
 
         if (m_verbose) {
-            LogMessage(LOG_RF, DMR_DT_TERMINATOR_WITH_LC ", slot = %u, dstId = %u", m_slot->m_slotNo, m_slot->m_rfLC->getDstId());
+            LogInfoEx(LOG_RF, DMR_DT_TERMINATOR_WITH_LC ", slot = %u, dstId = %u", m_slot->m_slotNo, m_slot->m_rfLC->getDstId());
         }
 
         // release trunked grant (if necessary)
@@ -97,7 +97,7 @@ bool Data::process(uint8_t* data, uint32_t len)
                 m_slot->m_slotNo, float(m_slot->m_rfFrames) / 16.667F, float(m_slot->m_rfErrs * 100U) / float(m_slot->m_rfBits));
         }
 
-        LogMessage(LOG_RF, "DMR Slot %u, total frames: %d, total bits: %d, errors: %d, BER: %.4f%%",
+        LogInfoEx(LOG_RF, "DMR Slot %u, total frames: %d, total bits: %d, errors: %d, BER: %.4f%%",
             m_slot->m_slotNo, m_slot->m_rfFrames, m_slot->m_rfBits, m_slot->m_rfErrs, float(m_slot->m_rfErrs * 100U) / float(m_slot->m_rfBits));
 
         m_slot->m_dmr->tsccClearActivatedSlot(m_slot->m_slotNo);
@@ -173,7 +173,7 @@ bool Data::process(uint8_t* data, uint32_t len)
         m_slot->m_rfLC = std::make_unique<lc::LC>(gi ? FLCO::GROUP : FLCO::PRIVATE, srcId, dstId);
 
         if (m_verbose) {
-            LogMessage(LOG_RF, DMR_DT_DATA_HEADER ", slot = %u, dpf = $%02X, ack = %u, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padLength = %u, packetLength = %u, seqNo = %u, dstId = %u, srcId = %u, group = %u",
+            LogInfoEx(LOG_RF, DMR_DT_DATA_HEADER ", slot = %u, dpf = $%02X, ack = %u, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padLength = %u, packetLength = %u, seqNo = %u, dstId = %u, srcId = %u, group = %u",
                 m_slot->m_slotNo, m_rfDataHeader.getDPF(), m_rfDataHeader.getA(), m_rfDataHeader.getSAP(), m_rfDataHeader.getFullMesage(), m_rfDataHeader.getBlocksToFollow(), m_rfDataHeader.getPadLength(), m_rfDataHeader.getPacketLength(),
                 m_rfDataHeader.getFSN(), dstId, srcId, gi);
         }
@@ -181,26 +181,26 @@ bool Data::process(uint8_t* data, uint32_t len)
         // did we receive a response header?
         if (m_rfDataHeader.getDPF() == DPF::RESPONSE) {
             if (m_verbose) {
-                LogMessage(LOG_RF, DMR_DT_DATA_HEADER " ISP, response, slot = %u, sap = $%02X, rspClass = $%02X, rspType = $%02X, rspStatus = $%02X, dstId = %u, srcId = %u, group = %u",
+                LogInfoEx(LOG_RF, DMR_DT_DATA_HEADER " ISP, response, slot = %u, sap = $%02X, rspClass = $%02X, rspType = $%02X, rspStatus = $%02X, dstId = %u, srcId = %u, group = %u",
                         m_slot->m_slotNo, m_rfDataHeader.getSAP(), m_rfDataHeader.getResponseClass(), m_rfDataHeader.getResponseType(), m_rfDataHeader.getResponseStatus(),
                         dstId, srcId, gi);
 
                 if (m_rfDataHeader.getResponseClass() == PDUResponseClass::ACK && m_rfDataHeader.getResponseType() == PDUResponseType::ACK) {
-                    LogMessage(LOG_RF, DMR_DT_DATA_HEADER " ISP, response, OSP ACK, slot = %u, dstId = %u, srcId = %u, group = %u",
+                    LogInfoEx(LOG_RF, DMR_DT_DATA_HEADER " ISP, response, OSP ACK, slot = %u, dstId = %u, srcId = %u, group = %u",
                         m_slot->m_slotNo, dstId, srcId, gi);
                 } else {
                     if (m_rfDataHeader.getResponseClass() == PDUResponseClass::NACK) {
                         switch (m_rfDataHeader.getResponseType()) {
                             case PDUResponseType::NACK_ILLEGAL:
-                                LogMessage(LOG_RF, DMR_DT_DATA_HEADER " ISP, response, OSP NACK, illegal format, slot = %u, dstId = %u, srcId = %u, group = %u",
+                                LogInfoEx(LOG_RF, DMR_DT_DATA_HEADER " ISP, response, OSP NACK, illegal format, slot = %u, dstId = %u, srcId = %u, group = %u",
                                     m_slot->m_slotNo, dstId, srcId, gi);
                                 break;
                             case PDUResponseType::NACK_PACKET_CRC:
-                                LogMessage(LOG_RF, DMR_DT_DATA_HEADER " ISP, response, OSP NACK, packet CRC error, slot = %u, dstId = %u, srcId = %u, group = %u",
+                                LogInfoEx(LOG_RF, DMR_DT_DATA_HEADER " ISP, response, OSP NACK, packet CRC error, slot = %u, dstId = %u, srcId = %u, group = %u",
                                     m_slot->m_slotNo, dstId, srcId, gi);
                                 break;
                             case PDUResponseType::NACK_UNDELIVERABLE:
-                                LogMessage(LOG_RF, DMR_DT_DATA_HEADER " ISP, response, OSP NACK, packet undeliverable, slot = %u, dstId = %u, srcId = %u, group = %u",
+                                LogInfoEx(LOG_RF, DMR_DT_DATA_HEADER " ISP, response, OSP NACK, packet undeliverable, slot = %u, dstId = %u, srcId = %u, group = %u",
                                     m_slot->m_slotNo, dstId, srcId, gi);
                                 break;
 
@@ -208,7 +208,7 @@ bool Data::process(uint8_t* data, uint32_t len)
                                 break;
                             }
                     } else if (m_rfDataHeader.getResponseClass() == PDUResponseClass::ACK_RETRY) {
-                        LogMessage(LOG_RF, DMR_DT_DATA_HEADER " ISP, response, OSP ACK RETRY, slot = %u, dstId = %u, srcId = %u, group = %u",
+                        LogInfoEx(LOG_RF, DMR_DT_DATA_HEADER " ISP, response, OSP ACK RETRY, slot = %u, dstId = %u, srcId = %u, group = %u",
                             m_slot->m_slotNo, dstId, srcId, gi);
                     }
                 }
@@ -245,7 +245,7 @@ bool Data::process(uint8_t* data, uint32_t len)
         }
 
         ::ActivityLog("DMR", true, "Slot %u RF data header from %u to %s%u, %u blocks", m_slot->m_slotNo, srcId, gi ? "TG " : "", dstId, m_slot->m_rfFrames);
-        LogMessage(LOG_RF, "DMR Data Call, slot = %u, srcId = %u, dstId = %u", m_slot->m_slotNo, srcId, dstId);
+        LogInfoEx(LOG_RF, "DMR Data Call, slot = %u, srcId = %u, dstId = %u", m_slot->m_slotNo, srcId, dstId);
 
         ::memset(m_pduUserData, 0x00U, MAX_PDU_COUNT * DMR_PDU_UNCODED_LENGTH_BYTES + 2U);
         m_pduDataOffset = 0U;
@@ -275,12 +275,12 @@ bool Data::process(uint8_t* data, uint32_t len)
 
             if (m_verbose) {
                 if (dataType == DataType::RATE_34_DATA) {
-                    LogMessage(LOG_RF, DMR_DT_RATE_34_DATA ", ISP, block %u, dataType = $%02X, dpf = $%02X", m_rfDataBlockCnt, dataBlock.getDataType(), dataBlock.getFormat());
+                    LogInfoEx(LOG_RF, DMR_DT_RATE_34_DATA ", ISP, block %u, dataType = $%02X, dpf = $%02X", m_rfDataBlockCnt, dataBlock.getDataType(), dataBlock.getFormat());
                 } else if (dataType == DataType::RATE_12_DATA) {
-                    LogMessage(LOG_RF, DMR_DT_RATE_12_DATA ", ISP, block %u, dataType = $%02X, dpf = $%02X", m_rfDataBlockCnt, dataBlock.getDataType(), dataBlock.getFormat());
+                    LogInfoEx(LOG_RF, DMR_DT_RATE_12_DATA ", ISP, block %u, dataType = $%02X, dpf = $%02X", m_rfDataBlockCnt, dataBlock.getDataType(), dataBlock.getFormat());
                 }
                 else {
-                    LogMessage(LOG_RF, DMR_DT_RATE_1_DATA ", ISP, block %u, dataType = $%02X, dpf = $%02X", m_rfDataBlockCnt, dataBlock.getDataType(), dataBlock.getFormat());
+                    LogInfoEx(LOG_RF, DMR_DT_RATE_1_DATA ", ISP, block %u, dataType = $%02X, dpf = $%02X", m_rfDataBlockCnt, dataBlock.getDataType(), dataBlock.getFormat());
                 }
             }
 
@@ -315,7 +315,7 @@ bool Data::process(uint8_t* data, uint32_t len)
         }
 
         if (m_slot->m_rfFrames == 0U) {
-            LogMessage(LOG_RF, "DMR Slot %u, RATE_12/34_DATA, ended data transmission", m_slot->m_slotNo);
+            LogInfoEx(LOG_RF, "DMR Slot %u, RATE_12/34_DATA, ended data transmission", m_slot->m_slotNo);
             m_slot->writeEndRF();
         }
 
@@ -366,7 +366,7 @@ void Data::processNetwork(const data::NetData& dmrData)
         }
 
         if (m_verbose) {
-            LogMessage(LOG_RF, DMR_DT_TERMINATOR_WITH_LC ", slot = %u, dstId = %u", m_slot->m_slotNo, m_slot->m_netLC->getDstId());
+            LogInfoEx(LOG_RF, DMR_DT_TERMINATOR_WITH_LC ", slot = %u, dstId = %u", m_slot->m_slotNo, m_slot->m_netLC->getDstId());
         }
 
         // release trunked grant (if necessary)
@@ -424,26 +424,26 @@ void Data::processNetwork(const data::NetData& dmrData)
         // did we receive a response header?
         if (m_netDataHeader.getDPF() == DPF::RESPONSE) {
             if (m_verbose) {
-                LogMessage(LOG_NET, DMR_DT_DATA_HEADER " ISP, response, slot = %u, sap = $%02X, rspClass = $%02X, rspType = $%02X, rspStatus = $%02X, dstId = %u, srcId = %u, group = %u",
+                LogInfoEx(LOG_NET, DMR_DT_DATA_HEADER " ISP, response, slot = %u, sap = $%02X, rspClass = $%02X, rspType = $%02X, rspStatus = $%02X, dstId = %u, srcId = %u, group = %u",
                         m_slot->m_slotNo, m_netDataHeader.getSAP(), m_netDataHeader.getResponseClass(), m_netDataHeader.getResponseType(), m_netDataHeader.getResponseStatus(),
                         dstId, srcId, gi);
 
                 if (m_netDataHeader.getResponseClass() == PDUResponseClass::ACK && m_netDataHeader.getResponseType() == PDUResponseType::ACK) {
-                    LogMessage(LOG_NET, DMR_DT_DATA_HEADER " ISP, response, OSP ACK, slot = %u, dstId = %u, srcId = %u, group = %u",
+                    LogInfoEx(LOG_NET, DMR_DT_DATA_HEADER " ISP, response, OSP ACK, slot = %u, dstId = %u, srcId = %u, group = %u",
                         m_slot->m_slotNo, dstId, srcId, gi);
                 } else {
                     if (m_netDataHeader.getResponseClass() == PDUResponseClass::NACK) {
                         switch (m_netDataHeader.getResponseType()) {
                             case PDUResponseType::NACK_ILLEGAL:
-                                LogMessage(LOG_NET, DMR_DT_DATA_HEADER " ISP, response, OSP NACK, illegal format, slot = %u, dstId = %u, srcId = %u, group = %u",
+                                LogInfoEx(LOG_NET, DMR_DT_DATA_HEADER " ISP, response, OSP NACK, illegal format, slot = %u, dstId = %u, srcId = %u, group = %u",
                                     m_slot->m_slotNo, dstId, srcId, gi);
                                 break;
                             case PDUResponseType::NACK_PACKET_CRC:
-                                LogMessage(LOG_NET, DMR_DT_DATA_HEADER " ISP, response, OSP NACK, packet CRC error, slot = %u, dstId = %u, srcId = %u, group = %u",
+                                LogInfoEx(LOG_NET, DMR_DT_DATA_HEADER " ISP, response, OSP NACK, packet CRC error, slot = %u, dstId = %u, srcId = %u, group = %u",
                                     m_slot->m_slotNo, dstId, srcId, gi);
                                 break;
                             case PDUResponseType::NACK_UNDELIVERABLE:
-                                LogMessage(LOG_NET, DMR_DT_DATA_HEADER " ISP, response, OSP NACK, packet undeliverable, slot = %u, dstId = %u, srcId = %u, group = %u",
+                                LogInfoEx(LOG_NET, DMR_DT_DATA_HEADER " ISP, response, OSP NACK, packet undeliverable, slot = %u, dstId = %u, srcId = %u, group = %u",
                                     m_slot->m_slotNo, dstId, srcId, gi);
                                 break;
 
@@ -451,7 +451,7 @@ void Data::processNetwork(const data::NetData& dmrData)
                                 break;
                             }
                     } else if (m_netDataHeader.getResponseClass() == PDUResponseClass::ACK_RETRY) {
-                        LogMessage(LOG_NET, DMR_DT_DATA_HEADER " ISP, response, OSP ACK RETRY, slot = %u, dstId = %u, srcId = %u, group = %u",
+                        LogInfoEx(LOG_NET, DMR_DT_DATA_HEADER " ISP, response, OSP ACK RETRY, slot = %u, dstId = %u, srcId = %u, group = %u",
                             m_slot->m_slotNo, dstId, srcId, gi);
                     }
                 }
@@ -486,14 +486,14 @@ void Data::processNetwork(const data::NetData& dmrData)
         m_slot->setShortLC(m_slot->m_slotNo, dstId, gi ? FLCO::GROUP : FLCO::PRIVATE, Slot::SLCO_ACT_TYPE::DATA);
 
         if (m_verbose) {
-            LogMessage(LOG_NET, DMR_DT_DATA_HEADER ", slot = %u, dpf = $%02X, ack = %u, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padLength = %u, packetLength = %u, seqNo = %u, dstId = %u, srcId = %u, group = %u",
+            LogInfoEx(LOG_NET, DMR_DT_DATA_HEADER ", slot = %u, dpf = $%02X, ack = %u, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padLength = %u, packetLength = %u, seqNo = %u, dstId = %u, srcId = %u, group = %u",
                 m_slot->m_slotNo, m_netDataHeader.getDPF(), m_netDataHeader.getA(), m_netDataHeader.getSAP(), m_netDataHeader.getFullMesage(), m_netDataHeader.getBlocksToFollow(), m_netDataHeader.getPadLength(), m_netDataHeader.getPacketLength(),
                 m_netDataHeader.getFSN(), dstId, srcId, gi);
         }
 
         ::ActivityLog("DMR", false, "Slot %u network data header from %u to %s%u, %u blocks",
             m_slot->m_slotNo, srcId, gi ? "TG " : "", dstId, m_slot->m_netFrames);
-        LogMessage(LOG_NET, "DMR Data Call, slot = %u, srcId = %u, dstId = %u", m_slot->m_slotNo, srcId, dstId);
+        LogInfoEx(LOG_NET, "DMR Data Call, slot = %u, srcId = %u, dstId = %u", m_slot->m_slotNo, srcId, dstId);
 
         ::memset(m_pduUserData, 0x00U, MAX_PDU_COUNT * DMR_PDU_UNCODED_LENGTH_BYTES + 2U);
         m_pduDataOffset = 0U;
@@ -523,12 +523,12 @@ void Data::processNetwork(const data::NetData& dmrData)
 
             if (m_verbose) {
                 if (dataType == DataType::RATE_34_DATA) {
-                    LogMessage(LOG_NET, DMR_DT_RATE_34_DATA ", ISP, block %u, dataType = $%02X, dpf = $%02X", m_netDataBlockCnt, dataBlock.getDataType(), dataBlock.getFormat());
+                    LogInfoEx(LOG_NET, DMR_DT_RATE_34_DATA ", ISP, block %u, dataType = $%02X, dpf = $%02X", m_netDataBlockCnt, dataBlock.getDataType(), dataBlock.getFormat());
                 } else if (dataType == DataType::RATE_12_DATA) {
-                    LogMessage(LOG_NET, DMR_DT_RATE_12_DATA ", ISP, block %u, dataType = $%02X, dpf = $%02X", m_netDataBlockCnt, dataBlock.getDataType(), dataBlock.getFormat());
+                    LogInfoEx(LOG_NET, DMR_DT_RATE_12_DATA ", ISP, block %u, dataType = $%02X, dpf = $%02X", m_netDataBlockCnt, dataBlock.getDataType(), dataBlock.getFormat());
                 }
                 else {
-                    LogMessage(LOG_NET, DMR_DT_RATE_1_DATA ", ISP, block %u, dataType = $%02X, dpf = $%02X", m_netDataBlockCnt, dataBlock.getDataType(), dataBlock.getFormat());
+                    LogInfoEx(LOG_NET, DMR_DT_RATE_1_DATA ", ISP, block %u, dataType = $%02X, dpf = $%02X", m_netDataBlockCnt, dataBlock.getDataType(), dataBlock.getFormat());
                 }
             }
 
@@ -564,7 +564,7 @@ void Data::processNetwork(const data::NetData& dmrData)
         }
 
         if (m_slot->m_netFrames == 0U) {
-            LogMessage(LOG_NET, "DMR Slot %u, RATE_12/34_DATA, ended data transmission", m_slot->m_slotNo);
+            LogInfoEx(LOG_NET, "DMR Slot %u, RATE_12/34_DATA, ended data transmission", m_slot->m_slotNo);
             m_slot->writeEndNet();
         }
     }

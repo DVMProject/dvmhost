@@ -415,7 +415,7 @@ bool TalkgroupRulesLookup::save(bool quiet)
 
     try {
         if (!quiet)
-            LogMessage(LOG_HOST, "Saving talkgroup rules file to %s", m_rulesFile.c_str());
+            LogInfoEx(LOG_HOST, "Saving talkgroup rules file to %s", m_rulesFile.c_str());
         yaml::Serialize(newRules, m_rulesFile.c_str());
     }
     catch (yaml::OperationException const& e) {

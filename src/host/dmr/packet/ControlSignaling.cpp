@@ -76,25 +76,25 @@ using namespace dmr::packet;
 // Macro helper to verbose log a generic CSBK.
 #define VERBOSE_LOG_CSBK(_PCKT_STR, _SRCID, _DSTID)                                     \
     if (m_verbose) {                                                                    \
-        LogMessage(LOG_RF, "DMR Slot %u, CSBK, %s, srcId = %u, dstId = %u", m_slot->m_slotNo, _PCKT_STR.c_str(), _SRCID, _DSTID); \
+        LogInfoEx(LOG_RF, "DMR Slot %u, CSBK, %s, srcId = %u, dstId = %u", m_slot->m_slotNo, _PCKT_STR.c_str(), _SRCID, _DSTID); \
     }
 
 // Macro helper to verbose log a generic CSBK.
 #define VERBOSE_LOG_CSBK_DST(_PCKT_STR, _DSTID)                                         \
     if (m_verbose) {                                                                    \
-        LogMessage(LOG_RF, "DMR Slot %u, CSBK, %s, dstId = %u", m_slot->m_slotNo, _PCKT_STR.c_str(), _DSTID);   \
+        LogInfoEx(LOG_RF, "DMR Slot %u, CSBK, %s, dstId = %u", m_slot->m_slotNo, _PCKT_STR.c_str(), _DSTID);   \
     }
 
 // Macro helper to verbose log a generic network CSBK.
 #define VERBOSE_LOG_CSBK_NET(_PCKT_STR, _SRCID, _DSTID)                                 \
     if (m_verbose) {                                                                    \
-        LogMessage(LOG_NET, "DMR Slot %u, CSBK, %s, srcId = %u, dstId = %u", m_slot->m_slotNo, _PCKT_STR.c_str(), _SRCID, _DSTID); \
+        LogInfoEx(LOG_NET, "DMR Slot %u, CSBK, %s, srcId = %u, dstId = %u", m_slot->m_slotNo, _PCKT_STR.c_str(), _SRCID, _DSTID); \
     }
 
 // Macro helper to verbose log a generic network CSBK.
 #define DEBUG_LOG_CSBK(_PCKT_STR)                                                       \
     if (m_debug) {                                                                      \
-        LogMessage(LOG_RF, "DMR Slot %u, CSBK, %s", m_slot->m_slotNo, _PCKT_STR.c_str());    \
+        LogInfoEx(LOG_RF, "DMR Slot %u, CSBK, %s", m_slot->m_slotNo, _PCKT_STR.c_str());    \
     }
 
 // ---------------------------------------------------------------------------
@@ -180,7 +180,7 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len)
         {
             if (csbk->getFID() == FID_MOT) {
                 if (m_verbose) {
-                    LogMessage(LOG_RF, "DMR Slot %u, CSBK, %s, srcId = %u, dstId = %u",
+                    LogInfoEx(LOG_RF, "DMR Slot %u, CSBK, %s, srcId = %u, dstId = %u",
                         m_slot->m_slotNo, csbk->toString().c_str(), srcId, dstId);
                 }
 
@@ -190,7 +190,7 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len)
 
                 CSBK_RAND* isp = static_cast<CSBK_RAND*>(csbk.get());
                 if (m_verbose) {
-                    LogMessage(LOG_RF, "DMR Slot %u, CSBK, RAND (Random Access), serviceKind = $%02X, serviceOptions = $%02X, serviceExtra = $%02X, srcId = %u, dstId = %u",
+                    LogInfoEx(LOG_RF, "DMR Slot %u, CSBK, RAND (Random Access), serviceKind = $%02X, serviceOptions = $%02X, serviceExtra = $%02X, srcId = %u, dstId = %u",
                         m_slot->m_slotNo, isp->getServiceKind(), isp->getServiceOptions(), isp->getServiceExtra(), isp->getSrcId(), isp->getDstId());
                 }
 
@@ -293,7 +293,7 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len)
         {
             CSBK_EXT_FNCT* isp = static_cast<CSBK_EXT_FNCT*>(csbk.get());
             if (m_verbose) {
-                LogMessage(LOG_RF, "DMR Slot %u, CSBK, %s, op = $%02X, arg = %u, tgt = %u",
+                LogInfoEx(LOG_RF, "DMR Slot %u, CSBK, %s, op = $%02X, arg = %u, tgt = %u",
                     m_slot->m_slotNo, csbk->toString().c_str(), isp->getExtendedFunction(), dstId, srcId);
             }
 
@@ -332,7 +332,7 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len)
         {
             CSBK_MAINT* isp = static_cast<CSBK_MAINT*>(csbk.get());
             if (m_verbose) {
-                LogMessage(LOG_RF, "DMR Slot %u, CSBK, %s, kind = $%02X, srcId = %u",
+                LogInfoEx(LOG_RF, "DMR Slot %u, CSBK, %s, kind = $%02X, srcId = %u",
                     m_slot->m_slotNo, csbk->toString().c_str(), isp->getMaintKind(), srcId);
             }
         }
@@ -340,7 +340,7 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len)
         case CSBKO::PRECCSBK:
         {
             if (m_verbose) {
-                LogMessage(LOG_RF, "DMR Slot %u, CSBK, PRECCSBK (%s Preamble CSBK), toFollow = %u, srcId = %u, dstId = %u",
+                LogInfoEx(LOG_RF, "DMR Slot %u, CSBK, PRECCSBK (%s Preamble CSBK), toFollow = %u, srcId = %u, dstId = %u",
                     m_slot->m_slotNo, csbk->getDataContent() ? "Data" : "CSBK", csbk->getCBF(), srcId, dstId);
             }
         }
@@ -416,7 +416,7 @@ void ControlSignaling::processNetwork(const data::NetData& dmrData)
                     }
 
                     if (m_verbose) {
-                        LogMessage(LOG_NET, "DMR Slot %u, CSBK, %s, sysId = $%03X, chNo = %u", m_slot->m_slotNo, csbk->toString().c_str(),
+                        LogInfoEx(LOG_NET, "DMR Slot %u, CSBK, %s, sysId = $%03X, chNo = %u", m_slot->m_slotNo, csbk->toString().c_str(),
                             osp->getSystemId(), osp->getLogicalCh1());
                     }
 
@@ -465,7 +465,7 @@ void ControlSignaling::processNetwork(const data::NetData& dmrData)
         {
             if (csbk->getFID() == FID_MOT) {
                 if (m_verbose) {
-                    LogMessage(LOG_NET, "DMR Slot %u, CSBK, %s, srcId = %u, dstId = %u",
+                    LogInfoEx(LOG_NET, "DMR Slot %u, CSBK, %s, srcId = %u, dstId = %u",
                         m_slot->m_slotNo, csbk->toString().c_str(), srcId, dstId);
                 }
 
@@ -473,7 +473,7 @@ void ControlSignaling::processNetwork(const data::NetData& dmrData)
             } else {
                 CSBK_RAND* isp = static_cast<CSBK_RAND*>(csbk.get());
                 if (m_verbose) {
-                    LogMessage(LOG_NET, "DMR Slot %u, CSBK, RAND (Random Access), serviceKind = $%02X, serviceOptions = $%02X, serviceExtra = $%02X, srcId = %u, dstId = %u",
+                    LogInfoEx(LOG_NET, "DMR Slot %u, CSBK, RAND (Random Access), serviceKind = $%02X, serviceOptions = $%02X, serviceExtra = $%02X, srcId = %u, dstId = %u",
                         m_slot->m_slotNo, isp->getServiceKind(), isp->getServiceOptions(), isp->getServiceExtra(), isp->getSrcId(), isp->getDstId());
                 }
 
@@ -526,7 +526,7 @@ void ControlSignaling::processNetwork(const data::NetData& dmrData)
         {
             CSBK_EXT_FNCT* isp = static_cast<CSBK_EXT_FNCT*>(csbk.get());
             if (m_verbose) {
-                LogMessage(LOG_NET, "DMR Slot %u, CSBK, %s, op = $%02X, arg = %u, tgt = %u",
+                LogInfoEx(LOG_NET, "DMR Slot %u, CSBK, %s, op = $%02X, arg = %u, tgt = %u",
                     m_slot->m_slotNo, csbk->toString().c_str(), isp->getExtendedFunction(), dstId, srcId);
             }
 
@@ -564,7 +564,7 @@ void ControlSignaling::processNetwork(const data::NetData& dmrData)
         case CSBKO::PRECCSBK:
         {
             if (m_verbose) {
-                LogMessage(LOG_NET, "DMR Slot %u, CSBK, PRECCSBK (%s Preamble CSBK), toFollow = %u, srcId = %u, dstId = %u",
+                LogInfoEx(LOG_NET, "DMR Slot %u, CSBK, PRECCSBK (%s Preamble CSBK), toFollow = %u, srcId = %u, dstId = %u",
                     m_slot->m_slotNo, csbk->getDataContent() ? "Data" : "CSBK", csbk->getCBF(), srcId, dstId);
             }
         }
@@ -620,7 +620,7 @@ void ControlSignaling::writeAdjSSNetwork()
         csbk->setRequireReg(m_slot->m_siteData.requireReg());
 
         if (m_verbose) {
-            LogMessage(LOG_NET, "DMR Slot %u, CSBK, %s, network announce, sysId = $%03X, chNo = %u", m_slot->m_slotNo, csbk->toString().c_str(),
+            LogInfoEx(LOG_NET, "DMR Slot %u, CSBK, %s, network announce, sysId = $%03X, chNo = %u", m_slot->m_slotNo, csbk->toString().c_str(),
                 m_slot->m_siteData.systemIdentity(), m_slot->m_channelNo);
         }
 
@@ -639,7 +639,7 @@ void ControlSignaling::writeRF_Ext_Func(uint32_t func, uint32_t arg, uint32_t ds
     csbk->setDstId(dstId);
 
     if (m_verbose) {
-        LogMessage(LOG_RF, "DMR Slot %u, CSBK, %s, op = $%02X, arg = %u, tgt = %u",
+        LogInfoEx(LOG_RF, "DMR Slot %u, CSBK, %s, op = $%02X, arg = %u, tgt = %u",
             m_slot->m_slotNo, csbk->toString().c_str(), func, arg, dstId);
     }
 
@@ -777,7 +777,7 @@ void ControlSignaling::writeRF_CSBK_ACK_RSP(uint32_t dstId, uint8_t reason, uint
     csbk->setDstId(dstId);
 
     if (m_verbose) {
-        LogMessage(LOG_DMR, "DMR Slot %u, CSBK, %s, reason = $%02X (%s), srcId = %u, dstId = %u",
+        LogInfoEx(LOG_DMR, "DMR Slot %u, CSBK, %s, reason = $%02X (%s), srcId = %u, dstId = %u",
             m_slot->m_slotNo, csbk->toString().c_str(), reason, DMRUtils::rsnToString(reason).c_str(),
             csbk->getSrcId(), csbk->getDstId());
     }
@@ -796,7 +796,7 @@ void ControlSignaling::writeRF_CSBK_NACK_RSP(uint32_t dstId, uint8_t reason, uin
     csbk->setDstId(dstId);
 
     if (m_verbose) {
-        LogMessage(LOG_DMR, "DMR Slot %u, CSBK, %s, reason = $%02X (%s), srcId = %u, dstId = %u",
+        LogInfoEx(LOG_DMR, "DMR Slot %u, CSBK, %s, reason = $%02X (%s), srcId = %u, dstId = %u",
             m_slot->m_slotNo, csbk->toString().c_str(), reason, DMRUtils::rsnToString(reason).c_str(),
             csbk->getSrcId(), csbk->getDstId());
     }
@@ -1010,7 +1010,7 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
         csbk->setSlotNo(slot);
 
         if (m_verbose) {
-            LogMessage((net) ? LOG_NET : LOG_RF, "DMR Slot %u, CSBK, %s, emerg = %u, privacy = %u, broadcast = %u, prio = %u, chNo = %u, slot = %u, srcId = %u, dstId = %u",
+            LogInfoEx((net) ? LOG_NET : LOG_RF, "DMR Slot %u, CSBK, %s, emerg = %u, privacy = %u, broadcast = %u, prio = %u, chNo = %u, slot = %u, srcId = %u, dstId = %u",
                 tscc->m_slotNo, csbk->toString().c_str(), emergency, privacy, broadcast, priority, csbk->getLogicalCh1(), csbk->getSlotNo(), srcId, dstId);
         }
 
@@ -1103,7 +1103,7 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
         csbk->setSlotNo(slot);
 
         if (m_verbose) {
-            LogMessage((net) ? LOG_NET : LOG_RF, "DMR Slot %u, CSBK, %s, emerg = %u, privacy = %u, broadcast = %u, prio = %u, chNo = %u, slot = %u, srcId = %u, dstId = %u",
+            LogInfoEx((net) ? LOG_NET : LOG_RF, "DMR Slot %u, CSBK, %s, emerg = %u, privacy = %u, broadcast = %u, prio = %u, chNo = %u, slot = %u, srcId = %u, dstId = %u",
                 tscc->m_slotNo, csbk->toString().c_str(), emergency, privacy, broadcast, priority, csbk->getLogicalCh1(), csbk->getSlotNo(), srcId, dstId);
         }
 
@@ -1257,7 +1257,7 @@ bool ControlSignaling::writeRF_CSBK_Data_Grant(uint32_t srcId, uint32_t dstId, u
         csbk->setSlotNo(slot);
 
         if (m_verbose) {
-            LogMessage((net) ? LOG_NET : LOG_RF, "DMR Slot %u, CSBK, %s, emerg = %u, privacy = %u, broadcast = %u, prio = %u, chNo = %u, slot = %u, srcId = %u, dstId = %u",
+            LogInfoEx((net) ? LOG_NET : LOG_RF, "DMR Slot %u, CSBK, %s, emerg = %u, privacy = %u, broadcast = %u, prio = %u, chNo = %u, slot = %u, srcId = %u, dstId = %u",
                 tscc->m_slotNo, csbk->toString().c_str(), emergency, privacy, broadcast, priority, csbk->getLogicalCh1(), csbk->getSlotNo(), srcId, dstId);
         }
 
@@ -1305,7 +1305,7 @@ bool ControlSignaling::writeRF_CSBK_Data_Grant(uint32_t srcId, uint32_t dstId, u
         csbk->setSlotNo(slot);
 
         if (m_verbose) {
-            LogMessage((net) ? LOG_NET : LOG_RF, "DMR Slot %u, CSBK, %s, emerg = %u, privacy = %u, broadcast = %u, prio = %u, chNo = %u, slot = %u, srcId = %u, dstId = %u",
+            LogInfoEx((net) ? LOG_NET : LOG_RF, "DMR Slot %u, CSBK, %s, emerg = %u, privacy = %u, broadcast = %u, prio = %u, chNo = %u, slot = %u, srcId = %u, dstId = %u",
                 tscc->m_slotNo, csbk->toString().c_str(), emergency, privacy, broadcast, priority, csbk->getLogicalCh1(), csbk->getSlotNo(), srcId, dstId);
         }
 
@@ -1360,7 +1360,7 @@ void ControlSignaling::writeRF_CSBK_U_Reg_Rsp(uint32_t srcId, uint8_t serviceOpt
         csbk->setReason(ReasonCode::TS_DENY_RSN_REG_DENIED);
 
         if (m_verbose) {
-            LogMessage(LOG_RF, "DMR Slot %u, CSBK, %s, SU power saving unsupported, srcId = %u, serviceOptions = $%02X", tscc->m_slotNo, csbk->toString().c_str(), srcId, serviceOptions);
+            LogInfoEx(LOG_RF, "DMR Slot %u, CSBK, %s, SU power saving unsupported, srcId = %u, serviceOptions = $%02X", tscc->m_slotNo, csbk->toString().c_str(), srcId, serviceOptions);
         }
 
         csbk->setSrcId(WUID_REGI);
@@ -1376,7 +1376,7 @@ void ControlSignaling::writeRF_CSBK_U_Reg_Rsp(uint32_t srcId, uint8_t serviceOpt
 
     if (!dereg) {
         if (m_verbose) {
-            LogMessage(LOG_RF, "DMR Slot %u, CSBK, %s, srcId = %u, serviceOptions = $%02X", tscc->m_slotNo, csbk->toString().c_str(), srcId, serviceOptions);
+            LogInfoEx(LOG_RF, "DMR Slot %u, CSBK, %s, srcId = %u, serviceOptions = $%02X", tscc->m_slotNo, csbk->toString().c_str(), srcId, serviceOptions);
         }
 
         // remove dynamic unit registration table entry
@@ -1400,7 +1400,7 @@ void ControlSignaling::writeRF_CSBK_U_Reg_Rsp(uint32_t srcId, uint8_t serviceOpt
 
         if (csbk->getReason() == ReasonCode::TS_ACK_RSN_REG) {
             if (m_verbose) {
-                LogMessage(LOG_RF, "DMR Slot %u, CSBK, %s, srcId = %u, serviceOptions = $%02X", tscc->m_slotNo, csbk->toString().c_str(), srcId, serviceOptions);
+                LogInfoEx(LOG_RF, "DMR Slot %u, CSBK, %s, srcId = %u, serviceOptions = $%02X", tscc->m_slotNo, csbk->toString().c_str(), srcId, serviceOptions);
             }
 
             ::ActivityLog("DMR", true, "unit registration request from %u", srcId);
@@ -1487,7 +1487,7 @@ void ControlSignaling::writeRF_CSBK_Payload_Activate(uint32_t dstId, uint32_t sr
     csbk->setDstId(dstId);
 
     if (m_verbose) {
-        LogMessage(LOG_RF, "DMR Slot %u, CSBK, %s, csbko = $%02X, chNo = %u, slot = %u, srcId = %u, dstId = %u",
+        LogInfoEx(LOG_RF, "DMR Slot %u, CSBK, %s, csbko = $%02X, chNo = %u, slot = %u, srcId = %u, dstId = %u",
             m_slot->m_slotNo, csbk->toString().c_str(), csbk->getCSBKO(), csbk->getLogicalCh1(), csbk->getSlotNo(), srcId, dstId);
     }
 
@@ -1513,7 +1513,7 @@ void ControlSignaling::writeRF_CSBK_Payload_Clear(uint32_t dstId, uint32_t srcId
     csbk->setDstId(dstId);
 
     if (m_verbose) {
-        LogMessage(LOG_RF, "DMR Slot %u, CSBK, %s, group = %u, chNo = %u, slot = %u, srcId = %u, dstId = %u",
+        LogInfoEx(LOG_RF, "DMR Slot %u, CSBK, %s, group = %u, chNo = %u, slot = %u, srcId = %u, dstId = %u",
             m_slot->m_slotNo, csbk->toString().c_str(), csbk->getGI(), csbk->getLogicalCh1(), csbk->getSlotNo(), srcId, dstId);
     }
 
@@ -1549,7 +1549,7 @@ void ControlSignaling::writeRF_TSCC_Bcast_Ann_Wd(uint32_t channelNo, bool annWd,
     csbk->setRequireReg(requireReg);
 
     if (m_debug) {
-        LogMessage(LOG_RF, "DMR Slot %u, CSBK, %s, channelNo = %u, annWd = %u",
+        LogInfoEx(LOG_RF, "DMR Slot %u, CSBK, %s, channelNo = %u, annWd = %u",
             m_slot->m_slotNo, csbk->toString().c_str(), channelNo, annWd);
     }
 

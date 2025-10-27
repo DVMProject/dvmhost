@@ -237,16 +237,13 @@ void log_internal::LogInternal(uint32_t level, const std::string& log)
                 syslogLevel = LOG_DEBUG;
                 break;
             case 2U:
-                syslogLevel = LOG_NOTICE;
-                break;
-            case 3U:
             case 9999U: // in-band U: messages should also be info level
                 syslogLevel = LOG_INFO;
                 break;
-            case 4U:
+            case 3U:
                 syslogLevel = LOG_WARNING;
                 break;
-            case 5U:
+            case 4U:
                 syslogLevel = LOG_ERR;
                 break;
             default:
@@ -265,7 +262,7 @@ void log_internal::LogInternal(uint32_t level, const std::string& log)
     }
 
     // fatal error (specially allow any log levels above 9999)
-    if (level >= 6U && level < 9999U) {
+    if (level >= 5U && level < 9999U) {
         if (m_fpLog != nullptr)
             ::fclose(m_fpLog);
 #if !defined(_WIN32)

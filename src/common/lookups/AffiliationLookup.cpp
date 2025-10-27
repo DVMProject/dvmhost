@@ -75,7 +75,7 @@ void AffiliationLookup::unitReg(uint32_t srcId)
     m_unitRegTimers[srcId].start();
 
     if (m_verbose) {
-        LogMessage(LOG_HOST, "%s, unit registration, srcId = %u",
+        LogInfoEx(LOG_HOST, "%s, unit registration, srcId = %u",
             m_name.c_str(), srcId);
     }
 
@@ -97,7 +97,7 @@ bool AffiliationLookup::unitDereg(uint32_t srcId, bool automatic)
     __lock();
 
     if (m_verbose) {
-        LogMessage(LOG_HOST, "%s, unit deregistration, srcId = %u",
+        LogInfoEx(LOG_HOST, "%s, unit deregistration, srcId = %u",
             m_name.c_str(), srcId);
     }
 
@@ -213,7 +213,7 @@ void AffiliationLookup::groupAff(uint32_t srcId, uint32_t dstId)
         m_grpAffTable[srcId] = dstId;
 
         if (m_verbose) {
-            LogMessage(LOG_HOST, "%s, group affiliation, srcId = %u, dstId = %u",
+            LogInfoEx(LOG_HOST, "%s, group affiliation, srcId = %u, dstId = %u",
                 m_name.c_str(), srcId, dstId);
         }
 
@@ -231,7 +231,7 @@ bool AffiliationLookup::groupUnaff(uint32_t srcId)
     auto it = m_grpAffTable.find(srcId);
     if (it != m_grpAffTable.end()) {
         if (m_verbose) {
-            LogMessage(LOG_HOST, "%s, group unaffiliation, srcId = %u, dstId = %u",
+            LogInfoEx(LOG_HOST, "%s, group unaffiliation, srcId = %u, dstId = %u",
                 m_name.c_str(), srcId, it->second);
         }
     } else {
@@ -360,7 +360,7 @@ bool AffiliationLookup::grantCh(uint32_t dstId, uint32_t srcId, uint32_t grantTi
     m_grantTimers[dstId].start();
 
     if (m_verbose) {
-        LogMessage(LOG_HOST, "%s, granting channel, chNo = %u, dstId = %u, srcId = %u, group = %u",
+        LogInfoEx(LOG_HOST, "%s, granting channel, chNo = %u, dstId = %u, srcId = %u, group = %u",
             m_name.c_str(), chNo, dstId, srcId, grp);
     }
 
@@ -432,7 +432,7 @@ bool AffiliationLookup::releaseGrant(uint32_t dstId, bool releaseAll)
         uint32_t srcId = getGrantedSrcId(dstId);
 
         if (m_verbose) {
-            LogMessage(LOG_HOST, "%s, releasing channel grant, chNo = %u, dstId = %u",
+            LogInfoEx(LOG_HOST, "%s, releasing channel grant, chNo = %u, dstId = %u",
                 m_name.c_str(), chNo, dstId);
         }
 

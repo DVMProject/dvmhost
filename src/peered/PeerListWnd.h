@@ -306,7 +306,7 @@ private:
         if (m_selected.peerDefault())
             return;
 
-        LogMessage(LOG_HOST, "Deleting peer ID %s (%u)", m_selected.peerAlias().c_str(), m_selected.peerId());
+        LogInfoEx(LOG_HOST, "Deleting peer ID %s (%u)", m_selected.peerAlias().c_str(), m_selected.peerId());
         g_pidLookups->eraseEntry(m_selected.peerId());
 
         // bryanb: HACK -- use HackTheGibson to access the private current listview iterator to get the scroll position

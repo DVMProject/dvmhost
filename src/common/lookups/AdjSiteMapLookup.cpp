@@ -276,7 +276,7 @@ bool AdjSiteMapLookup::save()
     }
 
     try {
-        LogMessage(LOG_HOST, "Saving adjacent site map file to %s", m_rulesFile.c_str());
+        LogInfoEx(LOG_HOST, "Saving adjacent site map file to %s", m_rulesFile.c_str());
         yaml::Serialize(newRules, m_rulesFile.c_str());
         LogDebug(LOG_HOST, "Saved adj. site map file to %s", m_rulesFile.c_str());
     }

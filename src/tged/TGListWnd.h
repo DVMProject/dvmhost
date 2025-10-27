@@ -177,7 +177,7 @@ public:
                 std::vector<uint32_t> inclusions = config.inclusion();
                 auto it = std::find_if(inclusions.begin(), inclusions.end(), [&](uint32_t x) { return x == wnd.peerId; });
                 if (it == inclusions.end()) {
-                    LogMessage(LOG_HOST, "Updating TG %s (%u) adding inclusion peer %u", rule.name().c_str(), rule.source().tgId(), peerId);
+                    LogInfoEx(LOG_HOST, "Updating TG %s (%u) adding inclusion peer %u", rule.name().c_str(), rule.source().tgId(), peerId);
                     inclusions.push_back(peerId);
                 }
 
@@ -216,7 +216,7 @@ public:
                 std::vector<uint32_t> inclusions = config.inclusion();
                 auto it = std::find_if(inclusions.begin(), inclusions.end(), [&](uint32_t x) { return x == wnd.peerId; });
                 if (it != inclusions.end()) {
-                    LogMessage(LOG_HOST, "Updating TG %s (%u) removing inclusion peer %u", rule.name().c_str(), rule.source().tgId(), peerId);
+                    LogInfoEx(LOG_HOST, "Updating TG %s (%u) removing inclusion peer %u", rule.name().c_str(), rule.source().tgId(), peerId);
                     inclusions.erase(it);
                 }
 
@@ -259,7 +259,7 @@ public:
                 std::vector<uint32_t> alwaysSend = config.alwaysSend();
                 auto it = std::find_if(alwaysSend.begin(), alwaysSend.end(), [&](uint32_t x) { return x == wnd.peerId; });
                 if (it == alwaysSend.end()) {
-                    LogMessage(LOG_HOST, "Updating TG %s (%u) adding always peer %u", rule.name().c_str(), rule.source().tgId(), peerId);
+                    LogInfoEx(LOG_HOST, "Updating TG %s (%u) adding always peer %u", rule.name().c_str(), rule.source().tgId(), peerId);
                     alwaysSend.push_back(peerId);
                 }
 
@@ -302,7 +302,7 @@ public:
                 std::vector<uint32_t> alwaysSend = config.alwaysSend();
                 auto it = std::find_if(alwaysSend.begin(), alwaysSend.end(), [&](uint32_t x) { return x == wnd.peerId; });
                 if (it != alwaysSend.end()) {
-                    LogMessage(LOG_HOST, "Updating TG %s (%u) removing always peer %u", rule.name().c_str(), rule.source().tgId(), peerId);
+                    LogInfoEx(LOG_HOST, "Updating TG %s (%u) removing always peer %u", rule.name().c_str(), rule.source().tgId(), peerId);
                     alwaysSend.erase(it);
                 }
 
@@ -414,7 +414,7 @@ private:
                         m_selected = entry;
 /*
                         if (m_selectedTgId != tgid)
-                            LogMessage(LOG_HOST, "Selected TG %s (%u) for editing", m_selected.name().c_str(), m_selected.source().tgId());
+                            LogInfoEx(LOG_HOST, "Selected TG %s (%u) for editing", m_selected.name().c_str(), m_selected.source().tgId());
 */
                         m_selectedTgId = tgid;
 
@@ -482,7 +482,7 @@ private:
         if (m_selected.isInvalid())
             return;
 
-        LogMessage(LOG_HOST, "Deleting TG %s (%u)", m_selected.name().c_str(), m_selected.source().tgId());
+        LogInfoEx(LOG_HOST, "Deleting TG %s (%u)", m_selected.name().c_str(), m_selected.source().tgId());
         g_tidLookups->eraseEntry(m_selected.source().tgId(), m_selected.source().tgSlot());
 
         // bryanb: HACK -- use HackTheGibson to access the private current listview iterator to get the scroll position

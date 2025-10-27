@@ -307,7 +307,7 @@ ssize_t Socket::read(uint8_t* buffer, uint32_t length, sockaddr_storage& address
 #endif // defined(_WIN32)
 
         if (len == -1 && errno == ENOTSOCK) {
-            LogMessage(LOG_NET, "Re-opening UDP port on %u", m_localPort);
+            LogInfoEx(LOG_NET, "Re-opening UDP port on %u", m_localPort);
             close();
             open();
         }

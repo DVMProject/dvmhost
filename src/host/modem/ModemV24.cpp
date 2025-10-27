@@ -102,7 +102,7 @@ void ModemV24::setTIAFormat(bool set)
 
 bool ModemV24::open()
 {
-    LogMessage(LOG_MODEM, "Initializing modem");
+    LogInfoEx(LOG_MODEM, "Initializing modem");
     m_gotModemStatus = false;
 
     bool ret = m_port->open();
@@ -137,9 +137,9 @@ bool ModemV24::open()
     m_error = false;
 
     if (m_useTIAFormat)
-        LogMessage(LOG_MODEM, "Modem Ready [Direct Mode / TIA-102]");
+        LogInfoEx(LOG_MODEM, "Modem Ready [Direct Mode / TIA-102]");
     else
-        LogMessage(LOG_MODEM, "Modem Ready [Direct Mode / V.24]");
+        LogInfoEx(LOG_MODEM, "Modem Ready [Direct Mode / V.24]");
     return true;
 }
 
@@ -409,7 +409,7 @@ void ModemV24::clock(uint32_t ms)
 
 void ModemV24::close()
 {
-    LogMessage(LOG_MODEM, "Closing the modem");
+    LogInfoEx(LOG_MODEM, "Closing the modem");
     m_port->close();
 
     m_gotModemStatus = false;

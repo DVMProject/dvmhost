@@ -127,7 +127,7 @@ public:
             updateDuplexState();
             resetBERWnd();
 
-            LogMessage(LOG_CAL, " - %s", m_setup->m_modeStr.c_str());
+            LogInfoEx(LOG_CAL, " - %s", m_setup->m_modeStr.c_str());
             m_setup->writeConfig();
         });
         m_p25Cal.addCallback("toggled", [&]() {
@@ -144,7 +144,7 @@ public:
             updateDuplexState();
             resetBERWnd();
 
-            LogMessage(LOG_CAL, " - %s", m_setup->m_modeStr.c_str());
+            LogInfoEx(LOG_CAL, " - %s", m_setup->m_modeStr.c_str());
             m_setup->writeConfig();
         });
         m_dmrLFCal.addCallback("toggled", [&]() {
@@ -161,7 +161,7 @@ public:
             updateDuplexState();
             resetBERWnd();
 
-            LogMessage(LOG_CAL, " - %s", m_setup->m_modeStr.c_str());
+            LogInfoEx(LOG_CAL, " - %s", m_setup->m_modeStr.c_str());
             m_setup->writeConfig();
         });
         m_dmrCal1K.addCallback("toggled", [&]() {
@@ -178,7 +178,7 @@ public:
             updateDuplexState();
             resetBERWnd();
 
-            LogMessage(LOG_CAL, " - %s", m_setup->m_modeStr.c_str());
+            LogInfoEx(LOG_CAL, " - %s", m_setup->m_modeStr.c_str());
             m_setup->writeConfig();
         });
         m_dmrDMOCal1K.addCallback("toggled", [&]() {
@@ -195,7 +195,7 @@ public:
             updateDuplexState();
             resetBERWnd();
 
-            LogMessage(LOG_CAL, " - %s", m_setup->m_modeStr.c_str());
+            LogInfoEx(LOG_CAL, " - %s", m_setup->m_modeStr.c_str());
             m_setup->writeConfig();
         });
         m_p25Cal1K.addCallback("toggled", [&]() {
@@ -212,7 +212,7 @@ public:
             updateDuplexState();
             resetBERWnd();
 
-            LogMessage(LOG_CAL, " - %s", m_setup->m_modeStr.c_str());
+            LogInfoEx(LOG_CAL, " - %s", m_setup->m_modeStr.c_str());
             m_setup->writeConfig();
         });
         m_p25TDUTest.addCallback("toggled", [&]() {
@@ -229,7 +229,7 @@ public:
 
             m_setup->m_queue.clear();
 
-            LogMessage(LOG_CAL, " - %s", m_setup->m_modeStr.c_str());
+            LogInfoEx(LOG_CAL, " - %s", m_setup->m_modeStr.c_str());
             m_setup->writeConfig();
         });
         m_nxdnCal1K.addCallback("toggled", [&]() {
@@ -248,7 +248,7 @@ public:
                 updateDuplexState();
                 resetBERWnd();
 
-                LogMessage(LOG_CAL, " - %s", m_setup->m_modeStr.c_str());
+                LogInfoEx(LOG_CAL, " - %s", m_setup->m_modeStr.c_str());
                 m_setup->writeConfig();
             }
             else {
@@ -267,7 +267,7 @@ public:
             updateDuplexState();
             resetBERWnd(true);
 
-            LogMessage(LOG_CAL, " - %s", m_setup->m_modeStr.c_str());
+            LogInfoEx(LOG_CAL, " - %s", m_setup->m_modeStr.c_str());
             m_setup->writeConfig();
         });
         m_dmrFEC1K.addCallback("toggled", [&]() {
@@ -282,7 +282,7 @@ public:
             updateDuplexState();
             resetBERWnd(true);
 
-            LogMessage(LOG_CAL, " - %s", m_setup->m_modeStr.c_str());
+            LogInfoEx(LOG_CAL, " - %s", m_setup->m_modeStr.c_str());
             m_setup->writeConfig();
         });
         m_p25FEC.addCallback("toggled", [&]() {
@@ -298,7 +298,7 @@ public:
             updateDuplexState();
             resetBERWnd(true);
 
-            LogMessage(LOG_CAL, " - %s", m_setup->m_modeStr.c_str());
+            LogInfoEx(LOG_CAL, " - %s", m_setup->m_modeStr.c_str());
             m_setup->writeConfig();
         });
         m_p25FEC1K.addCallback("toggled", [&]() {
@@ -314,7 +314,7 @@ public:
             updateDuplexState();
             resetBERWnd(true);
 
-            LogMessage(LOG_CAL, " - %s", m_setup->m_modeStr.c_str());
+            LogInfoEx(LOG_CAL, " - %s", m_setup->m_modeStr.c_str());
             m_setup->writeConfig();
         });
         m_nxdnFEC.addCallback("toggled", [&]() {
@@ -332,7 +332,7 @@ public:
                 updateDuplexState();
                 resetBERWnd(true);
 
-                LogMessage(LOG_CAL, " - %s", m_setup->m_modeStr.c_str());
+                LogInfoEx(LOG_CAL, " - %s", m_setup->m_modeStr.c_str());
                 m_setup->writeConfig();
             }
             else {
@@ -351,42 +351,42 @@ public:
 
             resetBERWnd();
 
-            LogMessage(LOG_CAL, " - %s", m_setup->m_modeStr.c_str());
+            LogInfoEx(LOG_CAL, " - %s", m_setup->m_modeStr.c_str());
             m_setup->writeConfig();
         });
 
         m_toggleTxInvert.addCallback("toggled", this, [&]() {
             if (!m_setup->m_isHotspot) {
                 m_setup->m_modem->m_txInvert = !m_setup->m_modem->m_txInvert;
-                LogMessage(LOG_CAL, "Tx Invert: %s", m_setup->m_modem->m_txInvert ? "on" : "off");
+                LogInfoEx(LOG_CAL, "Tx Invert: %s", m_setup->m_modem->m_txInvert ? "on" : "off");
                 m_setup->writeConfig();
             }
         });
         m_toggleRxInvert.addCallback("toggled", this, [&]() {
             if (!m_setup->m_isHotspot) {
                 m_setup->m_modem->m_rxInvert = !m_setup->m_modem->m_rxInvert;
-                LogMessage(LOG_CAL, "Rx Invert: %s", m_setup->m_modem->m_rxInvert ? "on" : "off");
+                LogInfoEx(LOG_CAL, "Rx Invert: %s", m_setup->m_modem->m_rxInvert ? "on" : "off");
                 m_setup->writeConfig();
             }
         });
         m_togglePTTInvert.addCallback("toggled", this, [&]() {
             if (!m_setup->m_isHotspot) {
                 m_setup->m_modem->m_pttInvert = !m_setup->m_modem->m_pttInvert;
-                LogMessage(LOG_CAL, "PTT Invert: %s", m_setup->m_modem->m_pttInvert ? "on" : "off");
+                LogInfoEx(LOG_CAL, "PTT Invert: %s", m_setup->m_modem->m_pttInvert ? "on" : "off");
                 m_setup->writeConfig();
             }
         });
         m_toggleDCBlocker.addCallback("toggled", this, [&]() {
             if (!m_setup->m_isHotspot) {
                 m_setup->m_modem->m_dcBlocker = !m_setup->m_modem->m_dcBlocker;
-                LogMessage(LOG_CAL, "DC Blocker: %s", m_setup->m_modem->m_dcBlocker ? "on" : "off");
+                LogInfoEx(LOG_CAL, "DC Blocker: %s", m_setup->m_modem->m_dcBlocker ? "on" : "off");
                 m_setup->writeConfig();
             }
         });
         m_toggleDuplex.addCallback("toggled", this, [&]() {
             if (m_setup->m_isHotspot && m_setup->m_isConnected) {
                 m_setup->m_duplex = !m_setup->m_duplex;
-                LogMessage(LOG_CAL, "Hotspot Rx: %s", m_setup->m_duplex ? "Rx Antenna" : "Tx Antenna");
+                LogInfoEx(LOG_CAL, "Hotspot Rx: %s", m_setup->m_duplex ? "Rx Antenna" : "Tx Antenna");
                 m_setup->writeConfig();
             }
         });

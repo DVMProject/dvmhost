@@ -124,7 +124,7 @@ bool Data::process(uint8_t* data, uint32_t len)
             }
 
             if (m_verbose) {
-                LogMessage(LOG_RF, P25_PDU_STR ", ISP, ack = %u, outbound = %u, fmt = $%02X, mfId = $%02X, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padLength = %u, packetLength = %u, S = %u, n = %u, seqNo = %u, lastFragment = %u, hdrOffset = %u, llId = %u",
+                LogInfoEx(LOG_RF, P25_PDU_STR ", ISP, ack = %u, outbound = %u, fmt = $%02X, mfId = $%02X, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padLength = %u, packetLength = %u, S = %u, n = %u, seqNo = %u, lastFragment = %u, hdrOffset = %u, llId = %u",
                     m_rfDataHeader.getAckNeeded(), m_rfDataHeader.getOutbound(), m_rfDataHeader.getFormat(), m_rfDataHeader.getMFId(), m_rfDataHeader.getSAP(), m_rfDataHeader.getFullMessage(),
                     m_rfDataHeader.getBlocksToFollow(), m_rfDataHeader.getPadLength(), m_rfDataHeader.getPacketLength(), m_rfDataHeader.getSynchronize(), m_rfDataHeader.getNs(), m_rfDataHeader.getFSN(), m_rfDataHeader.getLastFragment(),
                     m_rfDataHeader.getHeaderOffset(), m_rfDataHeader.getLLId());
@@ -181,7 +181,7 @@ bool Data::process(uint8_t* data, uint32_t len)
                 }
 
                 if (m_verbose) {
-                    LogMessage(LOG_RF, P25_PDU_STR ", ISP, extended address, sap = $%02X, srcLlId = %u",
+                    LogInfoEx(LOG_RF, P25_PDU_STR ", ISP, extended address, sap = $%02X, srcLlId = %u",
                         m_rfDataHeader.getEXSAP(), m_rfDataHeader.getSrcLLId());
                 }
 
@@ -236,7 +236,7 @@ bool Data::process(uint8_t* data, uint32_t len)
 
                             m_rfDataHeader.decodeExtAddr(secondHeader);
                             if (m_verbose) {
-                                LogMessage(LOG_RF, P25_PDU_STR ", ISP, block %u, fmt = $%02X, lastBlock = %u, sap = $%02X, srcLlId = %u",
+                                LogInfoEx(LOG_RF, P25_PDU_STR ", ISP, block %u, fmt = $%02X, lastBlock = %u, sap = $%02X, srcLlId = %u",
                                     m_rfData[i].getSerialNo(), m_rfData[i].getFormat(), m_rfData[i].getLastBlock(), m_rfDataHeader.getEXSAP(), m_rfDataHeader.getSrcLLId());
                             }
 
@@ -245,7 +245,7 @@ bool Data::process(uint8_t* data, uint32_t len)
                         }
                         else {
                             if (m_verbose) {
-                                LogMessage(LOG_RF, P25_PDU_STR ", ISP, block %u, fmt = $%02X, lastBlock = %u",
+                                LogInfoEx(LOG_RF, P25_PDU_STR ", ISP, block %u, fmt = $%02X, lastBlock = %u",
                                     (m_rfDataHeader.getFormat() == PDUFormatType::CONFIRMED) ? m_rfData[i].getSerialNo() : m_rfDataBlockCnt, m_rfData[i].getFormat(),
                                     m_rfData[i].getLastBlock());
                             }
@@ -309,12 +309,12 @@ bool Data::process(uint8_t* data, uint32_t len)
 
                 // did we receive a response header?
                 if (m_rfDataHeader.getFormat() == PDUFormatType::RSP) {
-                    LogMessage(LOG_RF, P25_PDU_STR ", ISP, response, fmt = $%02X, rspClass = $%02X, rspType = $%02X, rspStatus = $%02X, llId = %u, srcLlId = %u",
+                    LogInfoEx(LOG_RF, P25_PDU_STR ", ISP, response, fmt = $%02X, rspClass = $%02X, rspType = $%02X, rspStatus = $%02X, llId = %u, srcLlId = %u",
                             m_rfDataHeader.getFormat(), m_rfDataHeader.getResponseClass(), m_rfDataHeader.getResponseType(), m_rfDataHeader.getResponseStatus(),
                             m_rfDataHeader.getLLId(), m_rfDataHeader.getSrcLLId());
 
                     if (m_rfDataHeader.getResponseClass() == PDUAckClass::ACK && m_rfDataHeader.getResponseType() == PDUAckType::ACK) {
-                        LogMessage(LOG_RF, P25_PDU_STR ", ISP, response, OSP ACK, llId = %u, all blocks received OK, n = %u",
+                        LogInfoEx(LOG_RF, P25_PDU_STR ", ISP, response, OSP ACK, llId = %u, all blocks received OK, n = %u",
                             m_rfDataHeader.getLLId(), m_rfDataHeader.getResponseStatus());
                         if (m_retryPDUData != nullptr && m_retryPDUBitLength > 0U) {
                             delete m_retryPDUData;
@@ -327,20 +327,20 @@ bool Data::process(uint8_t* data, uint32_t len)
                         if (m_rfDataHeader.getResponseClass() == PDUAckClass::NACK) {
                             switch (m_rfDataHeader.getResponseType()) {
                                 case PDUAckType::NACK_ILLEGAL:
-                                    LogMessage(LOG_RF, P25_PDU_STR ", ISP, response, OSP NACK, illegal format, llId = %u",
+                                    LogInfoEx(LOG_RF, P25_PDU_STR ", ISP, response, OSP NACK, illegal format, llId = %u",
                                         m_rfDataHeader.getLLId());
                                     break;
                                 case PDUAckType::NACK_PACKET_CRC:
-                                    LogMessage(LOG_RF, P25_PDU_STR ", ISP, response, OSP NACK, packet CRC error, llId = %u, n = %u",
+                                    LogInfoEx(LOG_RF, P25_PDU_STR ", ISP, response, OSP NACK, packet CRC error, llId = %u, n = %u",
                                         m_rfDataHeader.getLLId(), m_rfDataHeader.getResponseStatus());
                                     break;
                                 case PDUAckType::NACK_SEQ:
                                 case PDUAckType::NACK_OUT_OF_SEQ:
-                                    LogMessage(LOG_RF, P25_PDU_STR ", ISP, response, OSP NACK, packet out of sequence, llId = %u, seqNo = %u",
+                                    LogInfoEx(LOG_RF, P25_PDU_STR ", ISP, response, OSP NACK, packet out of sequence, llId = %u, seqNo = %u",
                                         m_rfDataHeader.getLLId(), m_rfDataHeader.getResponseStatus());
                                     break;
                                 case PDUAckType::NACK_UNDELIVERABLE:
-                                    LogMessage(LOG_RF, P25_PDU_STR ", ISP, response, OSP NACK, packet undeliverable, llId = %u, n = %u",
+                                    LogInfoEx(LOG_RF, P25_PDU_STR ", ISP, response, OSP NACK, packet undeliverable, llId = %u, n = %u",
                                         m_rfDataHeader.getLLId(), m_rfDataHeader.getResponseStatus());
                                     break;
 
@@ -348,7 +348,7 @@ bool Data::process(uint8_t* data, uint32_t len)
                                     break;
                                 }
                         } else if (m_rfDataHeader.getResponseClass() == PDUAckClass::ACK_RETRY) {
-                            LogMessage(LOG_RF, P25_PDU_STR ", ISP, response, OSP ACK RETRY, llId = %u",
+                            LogInfoEx(LOG_RF, P25_PDU_STR ", ISP, response, OSP ACK RETRY, llId = %u",
                                 m_rfDataHeader.getLLId());
 
                             // really this is supposed to check the bit field in the included response 
@@ -366,7 +366,7 @@ bool Data::process(uint8_t* data, uint32_t len)
                                     m_retryPDUBitLength = 0U;
                                     m_retryCount = 0U;
 
-                                    LogMessage(LOG_RF, P25_PDU_STR ", ISP, response, OSP ACK RETRY, llId = %u, exceeded retries, undeliverable",
+                                    LogInfoEx(LOG_RF, P25_PDU_STR ", ISP, response, OSP ACK RETRY, llId = %u, exceeded retries, undeliverable",
                                         m_rfDataHeader.getLLId());
 
                                     writeRF_PDU_Ack_Response(PDUAckClass::NACK, PDUAckType::NACK_UNDELIVERABLE, m_rfDataHeader.getNs(), m_rfDataHeader.getLLId(), m_rfDataHeader.getSrcLLId());
@@ -404,9 +404,9 @@ bool Data::process(uint8_t* data, uint32_t len)
 
                         if (m_verbose) {
                             if (opcode == P25_PDU_ARP_REQUEST) {
-                                LogMessage(LOG_RF, P25_PDU_STR ", ARP request, who has %s? tell %s (%u)", __IP_FROM_UINT(tgtProtoAddr).c_str(), __IP_FROM_UINT(srcProtoAddr).c_str(), srcHWAddr);
+                                LogInfoEx(LOG_RF, P25_PDU_STR ", ARP request, who has %s? tell %s (%u)", __IP_FROM_UINT(tgtProtoAddr).c_str(), __IP_FROM_UINT(srcProtoAddr).c_str(), srcHWAddr);
                             } else if (opcode == P25_PDU_ARP_REPLY) {
-                                LogMessage(LOG_RF, P25_PDU_STR ", ARP reply, %s is at %u", __IP_FROM_UINT(srcProtoAddr).c_str(), srcHWAddr);
+                                LogInfoEx(LOG_RF, P25_PDU_STR ", ARP reply, %s is at %u", __IP_FROM_UINT(srcProtoAddr).c_str(), srcHWAddr);
                             }
                         }
 
@@ -417,7 +417,7 @@ bool Data::process(uint8_t* data, uint32_t len)
                     case PDUSAP::SNDCP_CTRL_DATA:
                     {
                         if (m_verbose) {
-                            LogMessage(LOG_RF, P25_PDU_STR ", SNDCP_CTRL_DATA (SNDCP Control Data), blocksToFollow = %u",
+                            LogInfoEx(LOG_RF, P25_PDU_STR ", SNDCP_CTRL_DATA (SNDCP Control Data), blocksToFollow = %u",
                                 m_rfDataHeader.getBlocksToFollow());
                         }
 
@@ -428,7 +428,7 @@ bool Data::process(uint8_t* data, uint32_t len)
                     case PDUSAP::CONV_DATA_REG:
                     {
                         if (m_verbose) {
-                            LogMessage(LOG_RF, P25_PDU_STR ", CONV_DATA_REG (Conventional Data Registration), blocksToFollow = %u",
+                            LogInfoEx(LOG_RF, P25_PDU_STR ", CONV_DATA_REG (Conventional Data Registration), blocksToFollow = %u",
                                 m_rfDataHeader.getBlocksToFollow());
                         }
 
@@ -440,7 +440,7 @@ bool Data::process(uint8_t* data, uint32_t len)
                     case PDUSAP::ENC_KMM:
                     {
                         if (m_verbose) {
-                            LogMessage(LOG_RF, P25_PDU_STR ", KMM (Key Management Message), blocksToFollow = %u",
+                            LogInfoEx(LOG_RF, P25_PDU_STR ", KMM (Key Management Message), blocksToFollow = %u",
                                 m_rfDataHeader.getBlocksToFollow());
                         }
 
@@ -450,7 +450,7 @@ bool Data::process(uint8_t* data, uint32_t len)
                     case PDUSAP::TRUNK_CTRL:
                     {
                         if (m_verbose) {
-                            LogMessage(LOG_RF, P25_PDU_STR ", TRUNK_CTRL (Alternate MBT Packet), lco = $%02X, blocksToFollow = %u",
+                            LogInfoEx(LOG_RF, P25_PDU_STR ", TRUNK_CTRL (Alternate MBT Packet), lco = $%02X, blocksToFollow = %u",
                                 m_rfDataHeader.getAMBTOpcode(), m_rfDataHeader.getBlocksToFollow());
                         }
 
@@ -463,10 +463,10 @@ bool Data::process(uint8_t* data, uint32_t len)
                         // only repeat the PDU locally if the packet isn't for the FNE
                         if (m_repeatPDU && m_rfDataHeader.getLLId() != WUID_FNE) {
                             ::ActivityLog("P25", true, "RF data transmission from %u to %u, %u blocks", srcId, dstId, m_rfDataHeader.getBlocksToFollow());
-                            LogMessage(LOG_RF, "P25 Data Call, srcId = %u, dstId = %u", srcId, dstId);
+                            LogInfoEx(LOG_RF, "P25 Data Call, srcId = %u, dstId = %u", srcId, dstId);
 
                             if (m_verbose) {
-                                LogMessage(LOG_RF, P25_PDU_STR ", repeating PDU, llId = %u", (m_rfExtendedAddress) ? m_rfDataHeader.getSrcLLId() : m_rfDataHeader.getLLId());
+                                LogInfoEx(LOG_RF, P25_PDU_STR ", repeating PDU, llId = %u", (m_rfExtendedAddress) ? m_rfDataHeader.getSrcLLId() : m_rfDataHeader.getLLId());
                             }
 
                             writeRF_PDU_Buffered(); // re-generate buffered PDU and send it on
@@ -529,7 +529,7 @@ bool Data::processNetwork(uint8_t* data, uint32_t len, uint32_t blockLength)
         }
 
         if (m_verbose) {
-            LogMessage(LOG_NET, P25_PDU_STR ", FNE ISP, ack = %u, outbound = %u, fmt = $%02X, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padLength = %u, packetLength = %u, S = %u, n = %u, seqNo = %u, hdrOffset = %u, llId = %u",
+            LogInfoEx(LOG_NET, P25_PDU_STR ", FNE ISP, ack = %u, outbound = %u, fmt = $%02X, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padLength = %u, packetLength = %u, S = %u, n = %u, seqNo = %u, hdrOffset = %u, llId = %u",
                 m_netDataHeader.getAckNeeded(), m_netDataHeader.getOutbound(), m_netDataHeader.getFormat(), m_netDataHeader.getSAP(), m_netDataHeader.getFullMessage(),
                 m_netDataHeader.getBlocksToFollow(), m_netDataHeader.getPadLength(), m_netDataHeader.getPacketLength(), m_netDataHeader.getSynchronize(), m_netDataHeader.getNs(), m_netDataHeader.getFSN(),
                 m_netDataHeader.getHeaderOffset(), m_netDataHeader.getLLId());
@@ -568,31 +568,31 @@ bool Data::processNetwork(uint8_t* data, uint32_t len, uint32_t blockLength)
             m_p25->m_netState = RS_NET_IDLE;
 
             if (m_verbose) {
-                LogMessage(LOG_NET, P25_PDU_STR ", FNE ISP, response, fmt = $%02X, rspClass = $%02X, rspType = $%02X, rspStatus = $%02X, llId = %u, srcLlId = %u",
+                LogInfoEx(LOG_NET, P25_PDU_STR ", FNE ISP, response, fmt = $%02X, rspClass = $%02X, rspType = $%02X, rspStatus = $%02X, llId = %u, srcLlId = %u",
                         m_netDataHeader.getFormat(), m_netDataHeader.getResponseClass(), m_netDataHeader.getResponseType(), m_netDataHeader.getResponseStatus(),
                         m_netDataHeader.getLLId(), m_netDataHeader.getSrcLLId());
 
                 if (m_netDataHeader.getResponseClass() == PDUAckClass::ACK && m_netDataHeader.getResponseType() == PDUAckType::ACK) {
-                    LogMessage(LOG_NET, P25_PDU_STR ", FNE ISP, response, OSP ACK, llId = %u, all blocks received OK, n = %u",
+                    LogInfoEx(LOG_NET, P25_PDU_STR ", FNE ISP, response, OSP ACK, llId = %u, all blocks received OK, n = %u",
                         m_netDataHeader.getLLId(), m_netDataHeader.getResponseStatus());
                 } else {
                     if (m_netDataHeader.getResponseClass() == PDUAckClass::NACK) {
                         switch (m_netDataHeader.getResponseType()) {
                             case PDUAckType::NACK_ILLEGAL:
-                                LogMessage(LOG_NET, P25_PDU_STR ", FNE ISP, response, OSP NACK, illegal format, llId = %u",
+                                LogInfoEx(LOG_NET, P25_PDU_STR ", FNE ISP, response, OSP NACK, illegal format, llId = %u",
                                     m_netDataHeader.getLLId());
                                 break;
                             case PDUAckType::NACK_PACKET_CRC:
-                                LogMessage(LOG_NET, P25_PDU_STR ", FNE ISP, response, OSP NACK, packet CRC error, llId = %u, n = %u",
+                                LogInfoEx(LOG_NET, P25_PDU_STR ", FNE ISP, response, OSP NACK, packet CRC error, llId = %u, n = %u",
                                     m_netDataHeader.getLLId(), m_netDataHeader.getResponseStatus());
                                 break;
                             case PDUAckType::NACK_SEQ:
                             case PDUAckType::NACK_OUT_OF_SEQ:
-                                LogMessage(LOG_NET, P25_PDU_STR ", FNE ISP, response, OSP NACK, packet out of sequence, llId = %u, seqNo = %u",
+                                LogInfoEx(LOG_NET, P25_PDU_STR ", FNE ISP, response, OSP NACK, packet out of sequence, llId = %u, seqNo = %u",
                                     m_netDataHeader.getLLId(), m_netDataHeader.getResponseStatus());
                                 break;
                             case PDUAckType::NACK_UNDELIVERABLE:
-                                LogMessage(LOG_NET, P25_PDU_STR ", FNE ISP, response, OSP NACK, packet undeliverable, llId = %u, n = %u",
+                                LogInfoEx(LOG_NET, P25_PDU_STR ", FNE ISP, response, OSP NACK, packet undeliverable, llId = %u, n = %u",
                                     m_netDataHeader.getLLId(), m_netDataHeader.getResponseStatus());
                                 break;
 
@@ -650,7 +650,7 @@ bool Data::processNetwork(uint8_t* data, uint32_t len, uint32_t blockLength)
                 }
 
                 if (m_verbose) {
-                    LogMessage(LOG_NET, P25_PDU_STR ", FNE ISP, extended address, sap = $%02X, srcLlId = %u",
+                    LogInfoEx(LOG_NET, P25_PDU_STR ", FNE ISP, extended address, sap = $%02X, srcLlId = %u",
                         m_netDataHeader.getEXSAP(), m_netDataHeader.getSrcLLId());
                 }
 
@@ -691,14 +691,14 @@ bool Data::processNetwork(uint8_t* data, uint32_t len, uint32_t blockLength)
 
                         m_netDataHeader.decodeExtAddr(secondHeader);
                         if (m_verbose) {
-                            LogMessage(LOG_NET, P25_PDU_STR ", FNE ISP, block %u, fmt = $%02X, lastBlock = %u, sap = $%02X, srcLlId = %u",
+                            LogInfoEx(LOG_NET, P25_PDU_STR ", FNE ISP, block %u, fmt = $%02X, lastBlock = %u, sap = $%02X, srcLlId = %u",
                                 m_netData[i].getSerialNo(), m_netData[i].getFormat(), m_netData[i].getLastBlock(), m_netDataHeader.getEXSAP(), m_netDataHeader.getSrcLLId());
                         }
 
                         m_netExtendedAddress = true;
                     }
                     else {
-                        LogMessage(LOG_NET, P25_PDU_STR ", FNE ISP, block %u, fmt = $%02X, lastBlock = %u",
+                        LogInfoEx(LOG_NET, P25_PDU_STR ", FNE ISP, block %u, fmt = $%02X, lastBlock = %u",
                             (m_netDataHeader.getFormat() == PDUFormatType::CONFIRMED) ? m_netData[i].getSerialNo() : m_netDataBlockCnt, m_netData[i].getFormat(),
                             m_netData[i].getLastBlock());
                     }
@@ -760,9 +760,9 @@ bool Data::processNetwork(uint8_t* data, uint32_t len, uint32_t blockLength)
 
                 if (m_verbose) {
                     if (opcode == P25_PDU_ARP_REQUEST) {
-                        LogMessage(LOG_NET, P25_PDU_STR ", ARP request, who has %s? tell %s (%u)", __IP_FROM_UINT(tgtProtoAddr).c_str(), __IP_FROM_UINT(srcProtoAddr).c_str(), srcHWAddr);
+                        LogInfoEx(LOG_NET, P25_PDU_STR ", ARP request, who has %s? tell %s (%u)", __IP_FROM_UINT(tgtProtoAddr).c_str(), __IP_FROM_UINT(srcProtoAddr).c_str(), srcHWAddr);
                     } else if (opcode == P25_PDU_ARP_REPLY) {
-                        LogMessage(LOG_NET, P25_PDU_STR ", ARP reply, %s is at %u", __IP_FROM_UINT(srcProtoAddr).c_str(), srcHWAddr);
+                        LogInfoEx(LOG_NET, P25_PDU_STR ", ARP reply, %s is at %u", __IP_FROM_UINT(srcProtoAddr).c_str(), srcHWAddr);
                     }
                 }
 
@@ -771,10 +771,10 @@ bool Data::processNetwork(uint8_t* data, uint32_t len, uint32_t blockLength)
             break;
             default:
                 ::ActivityLog("P25", false, "Net data transmission from %u to %u, %u blocks", srcId, dstId, m_netDataHeader.getBlocksToFollow());
-                LogMessage(LOG_NET, "P25 Data Call, srcId = %u, dstId = %u", srcId, dstId);
+                LogInfoEx(LOG_NET, "P25 Data Call, srcId = %u, dstId = %u", srcId, dstId);
 
                 if (m_verbose) {
-                    LogMessage(LOG_NET, P25_PDU_STR ", transmitting network PDU, llId = %u", (m_netExtendedAddress) ? m_netDataHeader.getSrcLLId() : m_netDataHeader.getLLId());
+                    LogInfoEx(LOG_NET, P25_PDU_STR ", transmitting network PDU, llId = %u", (m_netExtendedAddress) ? m_netDataHeader.getSrcLLId() : m_netDataHeader.getLLId());
                 }
 
                 writeNet_PDU_Buffered(); // re-generate buffered PDU and send it on
@@ -837,7 +837,7 @@ void Data::writeRF_PDU_User(data::DataHeader& dataHeader, bool extendedAddress, 
     uint32_t blocksToFollow = dataHeader.getBlocksToFollow();
 
     if (m_verbose) {
-        LogMessage(LOG_RF, P25_PDU_STR ", OSP, ack = %u, outbound = %u, fmt = $%02X, mfId = $%02X, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padLength = %u, packetLength = %u, S = %u, n = %u, seqNo = %u, lastFragment = %u, hdrOffset = %u, bitLength = %u, llId = %u",
+        LogInfoEx(LOG_RF, P25_PDU_STR ", OSP, ack = %u, outbound = %u, fmt = $%02X, mfId = $%02X, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padLength = %u, packetLength = %u, S = %u, n = %u, seqNo = %u, lastFragment = %u, hdrOffset = %u, bitLength = %u, llId = %u",
             dataHeader.getAckNeeded(), dataHeader.getOutbound(), dataHeader.getFormat(), dataHeader.getMFId(), dataHeader.getSAP(), dataHeader.getFullMessage(),
             dataHeader.getBlocksToFollow(), dataHeader.getPadLength(), dataHeader.getPacketLength(), dataHeader.getSynchronize(), dataHeader.getNs(), dataHeader.getFSN(), dataHeader.getLastFragment(),
             dataHeader.getHeaderOffset(), bitLength, dataHeader.getLLId());
@@ -868,7 +868,7 @@ void Data::writeRF_PDU_User(data::DataHeader& dataHeader, bool extendedAddress, 
             blocksToFollow--;
 
             if (m_verbose) {
-                LogMessage(LOG_RF, P25_PDU_STR ", OSP, extended address, sap = $%02X, srcLlId = %u",
+                LogInfoEx(LOG_RF, P25_PDU_STR ", OSP, extended address, sap = $%02X, srcLlId = %u",
                     dataHeader.getEXSAP(), dataHeader.getSrcLLId());
             }
         }
@@ -878,7 +878,7 @@ void Data::writeRF_PDU_User(data::DataHeader& dataHeader, bool extendedAddress, 
             dataHeader.encodeExtAddr(pduUserData);
 
             if (m_verbose) {
-                LogMessage(LOG_RF, P25_PDU_STR ", OSP, sap = $%02X, srcLlId = %u",
+                LogInfoEx(LOG_RF, P25_PDU_STR ", OSP, sap = $%02X, srcLlId = %u",
                     dataHeader.getEXSAP(), dataHeader.getSrcLLId());
             }
         }
@@ -896,7 +896,7 @@ void Data::writeRF_PDU_User(data::DataHeader& dataHeader, bool extendedAddress, 
             dataBlock.setLastBlock((i + 1U) == blocksToFollow);
 
             if (m_verbose) {
-                LogMessage(LOG_RF, P25_PDU_STR ", OSP, block %u, fmt = $%02X, lastBlock = %u",
+                LogInfoEx(LOG_RF, P25_PDU_STR ", OSP, block %u, fmt = $%02X, lastBlock = %u",
                     (dataHeader.getFormat() == PDUFormatType::CONFIRMED) ? dataBlock.getSerialNo() : i, dataBlock.getFormat(),
                     dataBlock.getLastBlock());
             }
@@ -929,7 +929,7 @@ void Data::writeNet_PDU_User(data::DataHeader& dataHeader, bool extendedAddress,
     uint32_t blocksToFollow = dataHeader.getBlocksToFollow();
 
     if (m_verbose) {
-        LogMessage(LOG_NET, P25_PDU_STR ", FNE OSP, ack = %u, outbound = %u, fmt = $%02X, mfId = $%02X, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padLength = %u, packetLength = %u, S = %u, n = %u, seqNo = %u, lastFragment = %u, hdrOffset = %u, bitLength = %u, llId = %u",
+        LogInfoEx(LOG_NET, P25_PDU_STR ", FNE OSP, ack = %u, outbound = %u, fmt = $%02X, mfId = $%02X, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padLength = %u, packetLength = %u, S = %u, n = %u, seqNo = %u, lastFragment = %u, hdrOffset = %u, bitLength = %u, llId = %u",
             dataHeader.getAckNeeded(), dataHeader.getOutbound(), dataHeader.getFormat(), dataHeader.getMFId(), dataHeader.getSAP(), dataHeader.getFullMessage(),
             dataHeader.getBlocksToFollow(), dataHeader.getPadLength(), dataHeader.getPacketLength(), dataHeader.getSynchronize(), dataHeader.getNs(), dataHeader.getFSN(), dataHeader.getLastFragment(),
             dataHeader.getHeaderOffset(), bitLength, dataHeader.getLLId());
@@ -960,7 +960,7 @@ void Data::writeNet_PDU_User(data::DataHeader& dataHeader, bool extendedAddress,
             blocksToFollow--;
 
             if (m_verbose) {
-                LogMessage(LOG_NET, P25_PDU_STR ", FNE OSP, extended address, sap = $%02X, srcLlId = %u",
+                LogInfoEx(LOG_NET, P25_PDU_STR ", FNE OSP, extended address, sap = $%02X, srcLlId = %u",
                     dataHeader.getEXSAP(), dataHeader.getSrcLLId());
             }
         }
@@ -970,7 +970,7 @@ void Data::writeNet_PDU_User(data::DataHeader& dataHeader, bool extendedAddress,
             dataHeader.encodeExtAddr(pduUserData);
 
             if (m_verbose) {
-                LogMessage(LOG_NET, P25_PDU_STR ", FNE OSP, sap = $%02X, srcLlId = %u",
+                LogInfoEx(LOG_NET, P25_PDU_STR ", FNE OSP, sap = $%02X, srcLlId = %u",
                     dataHeader.getEXSAP(), dataHeader.getSrcLLId());
             }
         }
@@ -988,7 +988,7 @@ void Data::writeNet_PDU_User(data::DataHeader& dataHeader, bool extendedAddress,
             dataBlock.setLastBlock((i + 1U) == blocksToFollow);
 
             if (m_verbose) {
-                LogMessage(LOG_NET, P25_PDU_STR ", FNE OSP, block %u, fmt = $%02X, lastBlock = %u",
+                LogInfoEx(LOG_NET, P25_PDU_STR ", FNE OSP, block %u, fmt = $%02X, lastBlock = %u",
                     (dataHeader.getFormat() == PDUFormatType::CONFIRMED) ? dataBlock.getSerialNo() : i, dataBlock.getFormat(),
                     dataBlock.getLastBlock());
             }
@@ -1044,7 +1044,7 @@ void Data::clock(uint32_t ms)
                         m_sndcpReadyTimers[llId].start();
                         m_sndcpStateTable[llId] = SNDCPState::READY_S;
                         if (m_verbose) {
-                            LogMessage(LOG_RF, P25_PDU_STR ", SNDCP, llId = %u, state = %u", llId, (uint8_t)state);
+                            LogInfoEx(LOG_RF, P25_PDU_STR ", SNDCP, llId = %u, state = %u", llId, (uint8_t)state);
                         }
                     }
                 }
@@ -1056,7 +1056,7 @@ void Data::clock(uint32_t ms)
                         m_sndcpStateTable[llId] = SNDCPState::IDLE;
 
                         if (m_verbose) {
-                            LogMessage(LOG_RF, P25_TDULC_STR ", CALL_TERM (Call Termination), llId = %u", llId);
+                            LogInfoEx(LOG_RF, P25_TDULC_STR ", CALL_TERM (Call Termination), llId = %u", llId);
                         }
 
                         std::unique_ptr<lc::TDULC> lc = std::make_unique<lc::tdulc::LC_CALL_TERM>();
@@ -1099,7 +1099,7 @@ void Data::sndcpInitialize(uint32_t llId)
         m_sndcpStandbyTimers[llId] = Timer(1000U, SNDCP_STANDBY_TIMEOUT);
 
         if (m_verbose) {
-            LogMessage(LOG_RF, P25_PDU_STR ", SNDCP, first initialize, llId = %u, state = %u", llId, (uint8_t)SNDCPState::IDLE);
+            LogInfoEx(LOG_RF, P25_PDU_STR ", SNDCP, first initialize, llId = %u, state = %u", llId, (uint8_t)SNDCPState::IDLE);
         }
     }
 }
@@ -1122,7 +1122,7 @@ void Data::sndcpReset(uint32_t llId, bool callTerm)
 {
     if (isSNDCPInitialized(llId)) {
         if (m_verbose) {
-            LogMessage(LOG_RF, P25_PDU_STR ", SNDCP, reset, llId = %u, state = %u", llId, (uint8_t)m_sndcpStateTable[llId]);
+            LogInfoEx(LOG_RF, P25_PDU_STR ", SNDCP, reset, llId = %u, state = %u", llId, (uint8_t)m_sndcpStateTable[llId]);
         }
 
         m_sndcpStateTable[llId] = SNDCPState::CLOSED;
@@ -1131,7 +1131,7 @@ void Data::sndcpReset(uint32_t llId, bool callTerm)
 
         if (callTerm) {
             if (m_verbose) {
-                LogMessage(LOG_RF, P25_TDULC_STR ", CALL_TERM (Call Termination), llId = %u", llId);
+                LogInfoEx(LOG_RF, P25_TDULC_STR ", CALL_TERM (Call Termination), llId = %u", llId);
             }
 
             std::unique_ptr<lc::TDULC> lc = std::make_unique<lc::tdulc::LC_CALL_TERM>();
@@ -1236,7 +1236,7 @@ bool Data::processConvDataReg(const uint8_t* pduUserData)
         uint32_t ipAddr = (pduUserData[8U] << 24) + (pduUserData[9U] << 16) + (pduUserData[10U] << 8) + pduUserData[11U];
 
         if (m_verbose) {
-            LogMessage(LOG_RF, P25_PDU_STR ", CONNECT (Registration Request Connect), llId = %u, ipAddr = %s", llId, __IP_FROM_UINT(ipAddr).c_str());
+            LogInfoEx(LOG_RF, P25_PDU_STR ", CONNECT (Registration Request Connect), llId = %u, ipAddr = %s", llId, __IP_FROM_UINT(ipAddr).c_str());
         }
 
         if (!acl::AccessControl::validateSrcId(llId)) {
@@ -1250,7 +1250,7 @@ bool Data::processConvDataReg(const uint8_t* pduUserData)
             }
 
             if (m_verbose) {
-                LogMessage(LOG_RF, P25_PDU_STR ", ACCEPT (Registration Response Accept), llId = %u, ipAddr = %s", llId, __IP_FROM_UINT(ipAddr).c_str());
+                LogInfoEx(LOG_RF, P25_PDU_STR ", ACCEPT (Registration Response Accept), llId = %u, ipAddr = %s", llId, __IP_FROM_UINT(ipAddr).c_str());
             }
 
             writeRF_PDU_Reg_Response(PDURegType::ACCEPT, llId, ipAddr);
@@ -1262,7 +1262,7 @@ bool Data::processConvDataReg(const uint8_t* pduUserData)
         uint32_t llId = (pduUserData[1U] << 16) + (pduUserData[2U] << 8) + pduUserData[3U];
 
         if (m_verbose) {
-            LogMessage(LOG_RF, P25_PDU_STR ", DISCONNECT (Registration Request Disconnect), llId = %u", llId);
+            LogInfoEx(LOG_RF, P25_PDU_STR ", DISCONNECT (Registration Request Disconnect), llId = %u", llId);
         }
 
         // acknowledge
@@ -1312,7 +1312,7 @@ bool Data::processSNDCPControl(const uint8_t* pduUserData)
         {
             SNDCPCtxActRequest* isp = static_cast<SNDCPCtxActRequest*>(packet.get());
             if (m_verbose) {
-                LogMessage(LOG_RF, P25_PDU_STR ", SNDCP context activation request, llId = %u, nsapi = %u, ipAddr = %s, nat = $%02X, dsut = $%02X, mdpco = $%02X", llId,
+                LogInfoEx(LOG_RF, P25_PDU_STR ", SNDCP context activation request, llId = %u, nsapi = %u, ipAddr = %s, nat = $%02X, dsut = $%02X, mdpco = $%02X", llId,
                     isp->getNSAPI(), __IP_FROM_UINT(isp->getIPAddress()).c_str(), isp->getNAT(), isp->getDSUT(), isp->getMDPCO());
             }
 
@@ -1415,7 +1415,7 @@ bool Data::processSNDCPControl(const uint8_t* pduUserData)
         {
             SNDCPCtxDeactivation* isp = static_cast<SNDCPCtxDeactivation*>(packet.get());
             if (m_verbose) {
-                LogMessage(LOG_RF, P25_PDU_STR ", SNDCP context deactivation request, llId = %u, deactType = %02X", llId,
+                LogInfoEx(LOG_RF, P25_PDU_STR ", SNDCP context deactivation request, llId = %u, deactType = %02X", llId,
                     isp->getDeactType());
             }
 
@@ -1476,7 +1476,7 @@ void Data::writeRF_PDU(const uint8_t* pdu, uint32_t bitLength, bool imm, bool ac
         m_retryPDUData = new uint8_t[retryByteLength];
         ::memcpy(m_retryPDUData, pdu, retryByteLength);
     } else {
-        LogMessage(LOG_RF, P25_PDU_STR ", OSP, ack retry, bitLength = %u",
+        LogInfoEx(LOG_RF, P25_PDU_STR ", OSP, ack retry, bitLength = %u",
                    m_retryPDUBitLength);
     }
 
@@ -1529,7 +1529,7 @@ void Data::writeNet_PDU_Buffered()
     uint32_t blocksToFollow = m_netDataHeader.getBlocksToFollow();
 
     if (m_verbose) {
-        LogMessage(LOG_NET, P25_PDU_STR ", OSP, ack = %u, outbound = %u, fmt = $%02X, mfId = $%02X, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padLength = %u, n = %u, seqNo = %u, lastFragment = %u, hdrOffset = %u, bitLength = %u, llId = %u",
+        LogInfoEx(LOG_NET, P25_PDU_STR ", OSP, ack = %u, outbound = %u, fmt = $%02X, mfId = $%02X, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padLength = %u, n = %u, seqNo = %u, lastFragment = %u, hdrOffset = %u, bitLength = %u, llId = %u",
             m_netDataHeader.getAckNeeded(), m_netDataHeader.getOutbound(), m_netDataHeader.getFormat(), m_netDataHeader.getMFId(), m_netDataHeader.getSAP(), m_netDataHeader.getFullMessage(),
             m_netDataHeader.getBlocksToFollow(), m_netDataHeader.getPadLength(), m_netDataHeader.getNs(), m_netDataHeader.getFSN(), m_netDataHeader.getLastFragment(),
             m_netDataHeader.getHeaderOffset(), bitLength, m_netDataHeader.getLLId());
@@ -1558,7 +1558,7 @@ void Data::writeNet_PDU_Buffered()
             blocksToFollow--;
 
             if (m_verbose) {
-                LogMessage(LOG_NET, P25_PDU_STR ", OSP, extended address, sap = $%02X, srcLlId = %u",
+                LogInfoEx(LOG_NET, P25_PDU_STR ", OSP, extended address, sap = $%02X, srcLlId = %u",
                     m_netDataHeader.getEXSAP(), m_netDataHeader.getSrcLLId());
             }
         }
@@ -1568,7 +1568,7 @@ void Data::writeNet_PDU_Buffered()
             m_netDataHeader.encodeExtAddr(m_netPduUserData);
 
             if (m_verbose) {
-                LogMessage(LOG_NET, P25_PDU_STR ", OSP, extended address, sap = $%02X, srcLlId = %u",
+                LogInfoEx(LOG_NET, P25_PDU_STR ", OSP, extended address, sap = $%02X, srcLlId = %u",
                     m_netDataHeader.getEXSAP(), m_netDataHeader.getSrcLLId());
             }
         }
@@ -1586,7 +1586,7 @@ void Data::writeNet_PDU_Buffered()
             m_netData[i].setData(m_netPduUserData + dataOffset);
 
             if (m_verbose) {
-                LogMessage(LOG_NET, P25_PDU_STR ", OSP, block %u, fmt = $%02X, lastBlock = %u",
+                LogInfoEx(LOG_NET, P25_PDU_STR ", OSP, block %u, fmt = $%02X, lastBlock = %u",
                     (m_netDataHeader.getFormat() == PDUFormatType::CONFIRMED) ? m_netData[i].getSerialNo() : i, m_netData[i].getFormat(),
                     m_netData[i].getLastBlock());
             }
@@ -1621,7 +1621,7 @@ void Data::writeRF_PDU_Buffered()
     uint32_t blocksToFollow = m_rfDataHeader.getBlocksToFollow();
 
     if (m_verbose) {
-        LogMessage(LOG_RF, P25_PDU_STR ", OSP, ack = %u, outbound = %u, fmt = $%02X, mfId = $%02X, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padLength = %u, n = %u, seqNo = %u, lastFragment = %u, hdrOffset = %u, bitLength = %u, llId = %u",
+        LogInfoEx(LOG_RF, P25_PDU_STR ", OSP, ack = %u, outbound = %u, fmt = $%02X, mfId = $%02X, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padLength = %u, n = %u, seqNo = %u, lastFragment = %u, hdrOffset = %u, bitLength = %u, llId = %u",
             m_rfDataHeader.getAckNeeded(), m_rfDataHeader.getOutbound(), m_rfDataHeader.getFormat(), m_rfDataHeader.getMFId(), m_rfDataHeader.getSAP(), m_rfDataHeader.getFullMessage(),
             m_rfDataHeader.getBlocksToFollow(), m_rfDataHeader.getPadLength(), m_rfDataHeader.getNs(), m_rfDataHeader.getFSN(), m_rfDataHeader.getLastFragment(),
             m_rfDataHeader.getHeaderOffset(), bitLength, m_rfDataHeader.getLLId());
@@ -1650,7 +1650,7 @@ void Data::writeRF_PDU_Buffered()
             blocksToFollow--;
 
             if (m_verbose) {
-                LogMessage(LOG_RF, P25_PDU_STR ", OSP, extended address, sap = $%02X, srcLlId = %u",
+                LogInfoEx(LOG_RF, P25_PDU_STR ", OSP, extended address, sap = $%02X, srcLlId = %u",
                     m_rfDataHeader.getEXSAP(), m_rfDataHeader.getSrcLLId());
             }
         }
@@ -1660,7 +1660,7 @@ void Data::writeRF_PDU_Buffered()
             m_rfDataHeader.encodeExtAddr(m_rfPduUserData);
 
             if (m_verbose) {
-                LogMessage(LOG_RF, P25_PDU_STR ", OSP, extended address, sap = $%02X, srcLlId = %u",
+                LogInfoEx(LOG_RF, P25_PDU_STR ", OSP, extended address, sap = $%02X, srcLlId = %u",
                     m_rfDataHeader.getEXSAP(), m_rfDataHeader.getSrcLLId());
             }
         }
@@ -1679,7 +1679,7 @@ void Data::writeRF_PDU_Buffered()
             m_rfData[i].setLastBlock((i + 1U) == blocksToFollow);
 
             if (m_verbose) {
-                LogMessage(LOG_RF, P25_PDU_STR ", OSP, block %u, fmt = $%02X, lastBlock = %u",
+                LogInfoEx(LOG_RF, P25_PDU_STR ", OSP, block %u, fmt = $%02X, lastBlock = %u",
                     (m_rfDataHeader.getFormat() == PDUFormatType::CONFIRMED) ? m_rfData[i].getSerialNo() : i, m_rfData[i].getFormat(),
                     m_rfData[i].getLastBlock());
             }
@@ -1772,7 +1772,7 @@ void Data::writeRF_PDU_Ack_Response(uint8_t ackClass, uint8_t ackType, uint8_t a
     Utils::setBitRange(block, data, offset, P25_PDU_FEC_LENGTH_BITS);
 
     if (m_verbose) {
-        LogMessage(LOG_RF, P25_PDU_STR ", OSP, response, rspClass = $%02X, rspType = $%02X, rspStatus = $%02X, llId = %u, srcLLId = %u",
+        LogInfoEx(LOG_RF, P25_PDU_STR ", OSP, response, rspClass = $%02X, rspType = $%02X, rspStatus = $%02X, llId = %u, srcLLId = %u",
             rspHeader.getResponseClass(), rspHeader.getResponseType(), rspHeader.getResponseStatus(), rspHeader.getLLId(), rspHeader.getSrcLLId());
     }
 

@@ -89,7 +89,7 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
             std::string payload(rawPayload, rawPayload + (length - 11U));
 
             if (g_debug)
-                LogMessage(LOG_NET, "Peer Status, peerId = %u", peerId);
+                LogInfoEx(LOG_NET, "Peer Status, peerId = %u", peerId);
 
             // parse JSON body
             json::value v;

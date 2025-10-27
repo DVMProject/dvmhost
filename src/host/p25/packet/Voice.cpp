@@ -129,7 +129,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
             }
 
             if (m_verbose) {
-                LogMessage(LOG_RF, P25_HDU_STR ", HDU_BSDWNACT, dstId = %u, algo = $%02X, kid = $%04X", lc.getDstId(), lc.getAlgId(), lc.getKId());
+                LogInfoEx(LOG_RF, P25_HDU_STR ", HDU_BSDWNACT, dstId = %u, algo = $%02X, kid = $%04X", lc.getDstId(), lc.getAlgId(), lc.getKId());
 
                 if (lc.getAlgId() != ALGO_UNENCRYPT) {
                     uint8_t mi[MI_LENGTH_BYTES];
@@ -137,7 +137,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
 
                     lc.getMI(mi);
 
-                    LogMessage(LOG_RF, P25_HDU_STR ", Enc Sync, MI = %02X %02X %02X %02X %02X %02X %02X %02X %02X", 
+                    LogInfoEx(LOG_RF, P25_HDU_STR ", Enc Sync, MI = %02X %02X %02X %02X %02X %02X %02X %02X %02X", 
                         mi[0U], mi[1U], mi[2U], mi[3U], mi[4U], mi[5U], mi[6U], mi[7U], mi[8U]);
                 }
             }
@@ -350,7 +350,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
 
             // bryanb: due to moronic reasons -- if this case happens, default the RID to something sane
             if (srcId == 0U && !lc.isStandardMFId()) {
-                LogMessage(LOG_RF, P25_HDU_STR " ** source RID was 0 with non-standard MFId defaulting source RID, dstId = %u, mfId = $%02X", dstId, lc.getMFId());
+                LogInfoEx(LOG_RF, P25_HDU_STR " ** source RID was 0 with non-standard MFId defaulting source RID, dstId = %u, mfId = $%02X", dstId, lc.getMFId());
                 srcId = WUID_FNE;
             }
 
@@ -363,7 +363,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
                     if (!group)
                         controlByte |= network::NET_CTRL_U2U;                               // Unit-to-unit Flag
 
-                    LogMessage(LOG_RF, P25_HDU_STR " remote grant demand, srcId = %u, dstId = %u", srcId, dstId);
+                    LogInfoEx(LOG_RF, P25_HDU_STR " remote grant demand, srcId = %u, dstId = %u", srcId, dstId);
                     m_p25->m_network->writeP25TDU(lc, m_rfLSD, controlByte);
                 }
             }
@@ -374,7 +374,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
 
             m_lastRejectId = 0U;
             ::ActivityLog("P25", true, "RF %svoice transmission from %u to %s%u", encrypted ? "encrypted ": "", srcId, group ? "TG " : "", dstId);
-            LogMessage(LOG_RF, "P25 Voice Call, srcId = %u, dstId = %u", srcId, dstId);
+            LogInfoEx(LOG_RF, "P25 Voice Call, srcId = %u, dstId = %u", srcId, dstId);
 
             uint8_t serviceOptions = (m_rfLC.getEmergency() ? 0x80U : 0x00U) +       // Emergency Flag
                 (m_rfLC.getEncrypted() ? 0x40U : 0x00U) +                            // Encrypted Flag
@@ -512,7 +512,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 frameType = FrameType::HDU_VALID;
 
                 if (m_verbose) {
-                    LogMessage(LOG_RF, P25_HDU_STR ", dstId = %u, algo = $%02X, kid = $%04X", m_rfLC.getDstId(), m_rfLC.getAlgId(), m_rfLC.getKId());
+                    LogInfoEx(LOG_RF, P25_HDU_STR ", dstId = %u, algo = $%02X, kid = $%04X", m_rfLC.getDstId(), m_rfLC.getAlgId(), m_rfLC.getKId());
                 }
             }
             else {
@@ -764,7 +764,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
             }
 
             if (m_verbose) {
-                LogMessage(LOG_RF, P25_LDU1_STR ", audio, mfId = $%02X srcId = %u, dstId = %u, group = %u, emerg = %u, encrypt = %u, prio = %u, errs = %u/1233 (%.1f%%)",
+                LogInfoEx(LOG_RF, P25_LDU1_STR ", audio, mfId = $%02X srcId = %u, dstId = %u, group = %u, emerg = %u, encrypt = %u, prio = %u, errs = %u/1233 (%.1f%%)",
                     m_rfLC.getMFId(), m_rfLC.getSrcId(), m_rfLC.getDstId(), m_rfLC.getGroup(), m_rfLC.getEmergency(), m_rfLC.getEncrypted(), m_rfLC.getPriority(), errors, float(errors) / 12.33F);
             }
 
@@ -881,7 +881,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
             }
 
             if (m_verbose) {
-                LogMessage(LOG_RF, P25_LDU2_STR ", audio, algo = $%02X, kid = $%04X, errs = %u/1233 (%.1f%%)",
+                LogInfoEx(LOG_RF, P25_LDU2_STR ", audio, algo = $%02X, kid = $%04X, errs = %u/1233 (%.1f%%)",
                     m_rfLC.getAlgId(), m_rfLC.getKId(), errors, float(errors) / 12.33F);
 
                 if (m_rfLC.getAlgId() != ALGO_UNENCRYPT) {
@@ -890,7 +890,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
 
                     m_rfLC.getMI(mi);
 
-                    LogMessage(LOG_RF, P25_LDU2_STR ", Enc Sync, MI = %02X %02X %02X %02X %02X %02X %02X %02X %02X", 
+                    LogInfoEx(LOG_RF, P25_LDU2_STR ", Enc Sync, MI = %02X %02X %02X %02X %02X %02X %02X %02X %02X", 
                         mi[0U], mi[1U], mi[2U], mi[3U], mi[4U], mi[5U], mi[6U], mi[7U], mi[8U]);
                 }
             }
@@ -978,7 +978,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 }
 
                 if (m_verbose) {
-                    LogMessage(LOG_RF, P25_HDU_STR ", dstId = %u, algo = $%02X, kid = $%04X", m_rfLC.getDstId(), m_rfLC.getAlgId(), m_rfLC.getKId());
+                    LogInfoEx(LOG_RF, P25_HDU_STR ", dstId = %u, algo = $%02X, kid = $%04X", m_rfLC.getDstId(), m_rfLC.getAlgId(), m_rfLC.getKId());
                 }
             }
             else {
@@ -1022,7 +1022,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
             }
 
             if (m_verbose) {
-                LogMessage(LOG_RF, P25_VSELP1_STR ", audio");
+                LogInfoEx(LOG_RF, P25_VSELP1_STR ", audio");
             }
 
             return true;
@@ -1064,7 +1064,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
             }
 
             if (m_verbose) {
-                LogMessage(LOG_RF, P25_VSELP2_STR ", audio");
+                LogInfoEx(LOG_RF, P25_VSELP2_STR ", audio");
             }
 
             return true;
@@ -1107,7 +1107,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
                     float(m_rfFrames) / 5.56F, float(m_rfErrs * 100U) / float(m_rfBits));
             }
 
-            LogMessage(LOG_RF, P25_TDU_STR ", total frames: %d, bits: %d, undecodable LC: %d, errors: %d, BER: %.4f%%",
+            LogInfoEx(LOG_RF, P25_TDU_STR ", total frames: %d, bits: %d, undecodable LC: %d, errors: %d, BER: %.4f%%",
                 m_rfFrames, m_rfBits, m_rfUndecodableLC, m_rfErrs, float(m_rfErrs * 100U) / float(m_rfBits));
 
             if (m_p25->m_dedicatedControl) {
@@ -1677,7 +1677,7 @@ void Voice::writeNet_TDU()
     m_p25->addFrame(buffer, P25_TDU_FRAME_LENGTH_BYTES + 2U, true);
 
     if (m_verbose) {
-        LogMessage(LOG_NET, P25_TDU_STR ", srcId = %u", m_netLC.getSrcId());
+        LogInfoEx(LOG_NET, P25_TDU_STR ", srcId = %u", m_netLC.getSrcId());
     }
 
     if (m_netFrames > 0) {
@@ -1741,7 +1741,7 @@ void Voice::writeNet_LDU1()
     if (m_netLastLDU1.getDstId() != 0U) {
         if (dstId != m_netLastLDU1.getDstId() && control.isStandardMFId()) {
             if (m_verbose) {
-                LogMessage(LOG_NET, P25_LDU1_STR ", dstId = %u doesn't match last LDU1 dstId = %u, fixing",
+                LogInfoEx(LOG_NET, P25_LDU1_STR ", dstId = %u doesn't match last LDU1 dstId = %u, fixing",
                     dstId, m_netLastLDU1.getDstId());
             }
             dstId = m_netLastLDU1.getDstId();
@@ -1752,7 +1752,7 @@ void Voice::writeNet_LDU1()
     if (m_netLastLDU1.getSrcId() != 0U) {
         if (srcId != m_netLastLDU1.getSrcId() && control.isStandardMFId()) {
             if (m_verbose) {
-                LogMessage(LOG_NET, P25_LDU1_STR ", srcId = %u doesn't match last LDU1 srcId = %u, fixing",
+                LogInfoEx(LOG_NET, P25_LDU1_STR ", srcId = %u doesn't match last LDU1 srcId = %u, fixing",
                     srcId, m_netLastLDU1.getSrcId());
             }
             srcId = m_netLastLDU1.getSrcId();
@@ -1760,7 +1760,7 @@ void Voice::writeNet_LDU1()
     }
 
     if (m_debug) {
-        LogMessage(LOG_NET, P25_LDU1_STR " service flags, emerg = %u, encrypt = %u, prio = %u, DFSI emerg = %u, DFSI encrypt = %u, DFSI prio = %u",
+        LogInfoEx(LOG_NET, P25_LDU1_STR " service flags, emerg = %u, encrypt = %u, prio = %u, DFSI emerg = %u, DFSI encrypt = %u, DFSI prio = %u",
             control.getEmergency(), control.getEncrypted(), control.getPriority(),
             m_dfsiLC.control()->getEmergency(), m_dfsiLC.control()->getEncrypted(), m_dfsiLC.control()->getPriority());
     }
@@ -1836,7 +1836,7 @@ void Voice::writeNet_LDU1()
         m_p25->writeRF_Preamble();
 
         ::ActivityLog("P25", false, "network %svoice transmission from %u to %s%u", m_netLC.getEncrypted() ? "encrypted " : "", srcId, group ? "TG " : "", dstId);
-        LogMessage(LOG_NET, "P25 Voice Call, srcId = %u, dstId = %u", srcId, dstId);
+        LogInfoEx(LOG_NET, "P25 Voice Call, srcId = %u, dstId = %u", srcId, dstId);
 
         // conventional registration or DVRS support?
         if (((m_p25->m_enableControl && !m_p25->m_dedicatedControl) || m_p25->m_voiceOnControl) && !m_p25->m_disableNetworkGrant) {
@@ -1953,23 +1953,23 @@ void Voice::writeNet_LDU1()
                 m_p25->addFrame(buffer, P25_HDU_FRAME_LENGTH_BYTES + 2U, true);
 
                 if (m_verbose) {
-                    LogMessage(LOG_NET, P25_HDU_STR ", dstId = %u, algo = $%02X, kid = $%04X", m_netLC.getDstId(), m_netLC.getAlgId(), m_netLC.getKId());
+                    LogInfoEx(LOG_NET, P25_HDU_STR ", dstId = %u, algo = $%02X, kid = $%04X", m_netLC.getDstId(), m_netLC.getAlgId(), m_netLC.getKId());
 
                     if (control.getAlgId() != ALGO_UNENCRYPT) {
-                        LogMessage(LOG_NET, P25_HDU_STR ", Enc Sync, MI = %02X %02X %02X %02X %02X %02X %02X %02X %02X", 
+                        LogInfoEx(LOG_NET, P25_HDU_STR ", Enc Sync, MI = %02X %02X %02X %02X %02X %02X %02X %02X %02X", 
                             mi[0U], mi[1U], mi[2U], mi[3U], mi[4U], mi[5U], mi[6U], mi[7U], mi[8U]);
                     }
                 }
             }
             else {
                 if (m_verbose) {
-                    LogMessage(LOG_NET, P25_HDU_STR ", not transmitted; network HDU late entry, dstId = %u, algo = $%02X, kid = $%04X", m_netLC.getDstId(), m_netLC.getAlgId(), m_netLC.getKId());
+                    LogInfoEx(LOG_NET, P25_HDU_STR ", not transmitted; network HDU late entry, dstId = %u, algo = $%02X, kid = $%04X", m_netLC.getDstId(), m_netLC.getAlgId(), m_netLC.getKId());
                 }
             }
         }
         else {
             if (m_verbose) {
-                LogMessage(LOG_NET, P25_HDU_STR ", not transmitted; network HDU disabled, dstId = %u, algo = $%02X, kid = $%04X", m_netLC.getDstId(), m_netLC.getAlgId(), m_netLC.getKId());
+                LogInfoEx(LOG_NET, P25_HDU_STR ", not transmitted; network HDU disabled, dstId = %u, algo = $%02X, kid = $%04X", m_netLC.getDstId(), m_netLC.getAlgId(), m_netLC.getKId());
             }
         }
     }
@@ -2095,7 +2095,7 @@ void Voice::writeNet_LDU1()
     m_p25->addFrame(buffer, P25_LDU_FRAME_LENGTH_BYTES + 2U, true);
 
     if (m_verbose) {
-        LogMessage(LOG_NET, P25_LDU1_STR " audio, mfId = $%02X, srcId = %u, dstId = %u, group = %u, emerg = %u, encrypt = %u, prio = %u, sysId = $%03X, netId = $%05X",
+        LogInfoEx(LOG_NET, P25_LDU1_STR " audio, mfId = $%02X, srcId = %u, dstId = %u, group = %u, emerg = %u, encrypt = %u, prio = %u, sysId = $%03X, netId = $%05X",
             m_netLC.getMFId(), m_netLC.getSrcId(), m_netLC.getDstId(), m_netLC.getGroup(), m_netLC.getEmergency(), m_netLC.getEncrypted(), m_netLC.getPriority(),
             sysId, netId);
     }
@@ -2183,10 +2183,10 @@ void Voice::writeNet_LDU2()
     m_p25->addFrame(buffer, P25_LDU_FRAME_LENGTH_BYTES + 2U, true);
 
     if (m_verbose) {
-        LogMessage(LOG_NET, P25_LDU2_STR " audio, algo = $%02X, kid = $%04X", m_netLC.getAlgId(), m_netLC.getKId());
+        LogInfoEx(LOG_NET, P25_LDU2_STR " audio, algo = $%02X, kid = $%04X", m_netLC.getAlgId(), m_netLC.getKId());
 
         if (control.getAlgId() != ALGO_UNENCRYPT) {
-            LogMessage(LOG_NET, P25_LDU2_STR ", Enc Sync, MI = %02X %02X %02X %02X %02X %02X %02X %02X %02X", 
+            LogInfoEx(LOG_NET, P25_LDU2_STR ", Enc Sync, MI = %02X %02X %02X %02X %02X %02X %02X %02X %02X", 
                 mi[0U], mi[1U], mi[2U], mi[3U], mi[4U], mi[5U], mi[6U], mi[7U], mi[8U]);
         }
     }

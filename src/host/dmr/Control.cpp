@@ -220,7 +220,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, ::lookups::VoiceChDa
                 LogInfo("    TSCC Disable Grant Source ID Check: yes");
             }
             if (m_supervisor)
-                LogMessage(LOG_DMR, "Host is configured to operate as a DMR TSCC, site controller mode.");
+                LogInfoEx(LOG_DMR, "Host is configured to operate as a DMR TSCC, site controller mode.");
         }
         if (disableNetworkGrant) {
             LogInfo("    Disable Network Grants: yes");
@@ -316,7 +316,7 @@ bool Control::processWakeup(const uint8_t* data)
     }
 
     if (m_verbose) {
-        LogMessage(LOG_RF, "DMR, CSBKO, BSDWNACT, srcId = %u", srcId);
+        LogInfoEx(LOG_RF, "DMR, CSBKO, BSDWNACT, srcId = %u", srcId);
     }
 
     return true;
@@ -531,7 +531,7 @@ Slot* Control::getTSCCSlot() const
 void Control::tsccActivateSlot(uint32_t slotNo, uint32_t dstId, uint32_t srcId, bool group, bool voice)
 {
     if (m_verbose) {
-        LogMessage(LOG_DMR, "DMR Slot %u, payload activation, srcId = %u, group = %u, dstId = %u",
+        LogInfoEx(LOG_DMR, "DMR Slot %u, payload activation, srcId = %u, group = %u, dstId = %u",
             slotNo, srcId, group, dstId);
     }
 
@@ -561,7 +561,7 @@ void Control::tsccActivateSlot(uint32_t slotNo, uint32_t dstId, uint32_t srcId, 
 void Control::tsccClearActivatedSlot(uint32_t slotNo)
 {
     if (m_verbose) {
-        LogMessage(LOG_DMR, "DMR Slot %u, payload activation clear", slotNo);
+        LogInfoEx(LOG_DMR, "DMR Slot %u, payload activation clear", slotNo);
     }
 
     switch (slotNo) {

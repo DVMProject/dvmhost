@@ -117,7 +117,7 @@ void DiagNetwork::clock(uint32_t ms)
 bool DiagNetwork::open()
 {
     if (m_debug)
-        LogMessage(LOG_DIAG, "Opening Network");
+        LogInfoEx(LOG_DIAG, "Opening Network");
 
     m_threadPool.start();
 
@@ -146,7 +146,7 @@ bool DiagNetwork::open()
 void DiagNetwork::close()
 {
     if (m_debug)
-        LogMessage(LOG_DIAG, "Closing Network");
+        LogInfoEx(LOG_DIAG, "Closing Network");
 
     m_threadPool.stop();
     m_threadPool.wait();

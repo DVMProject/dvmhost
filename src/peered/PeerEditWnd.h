@@ -361,7 +361,7 @@ private:
                         return x.peerId() == m_origPeerId;
                     });
                 if (it != peers.end()) {
-                    LogMessage(LOG_HOST, "Updating peer %s (%u) to %s (%u)", it->peerAlias().c_str(), it->peerId(), m_rule.peerAlias().c_str(), m_rule.peerId());
+                    LogInfoEx(LOG_HOST, "Updating peer %s (%u) to %s (%u)", it->peerAlias().c_str(), it->peerId(), m_rule.peerAlias().c_str(), m_rule.peerId());
                     g_pidLookups->eraseEntry(m_origPeerId);
 
                     lookups::PeerId entry = lookups::PeerId(m_rule.peerId(), m_rule.peerAlias(), m_rule.peerPassword(), false);
@@ -395,9 +395,9 @@ private:
 
                 // add new peer
                 if (m_saveCopy.isChecked()) {
-                    LogMessage(LOG_HOST, "Copying Peer. Adding Peer %s (%u)", m_rule.peerAlias().c_str(), m_rule.peerId());
+                    LogInfoEx(LOG_HOST, "Copying Peer. Adding Peer %s (%u)", m_rule.peerAlias().c_str(), m_rule.peerId());
                 } else {
-                    LogMessage(LOG_HOST, "Adding Peer %s (%u)", m_rule.peerAlias().c_str(), m_rule.peerId());
+                    LogInfoEx(LOG_HOST, "Adding Peer %s (%u)", m_rule.peerAlias().c_str(), m_rule.peerId());
                 }
 
                 lookups::PeerId entry = lookups::PeerId(m_rule.peerId(), m_rule.peerAlias(), m_rule.peerPassword(), false);

@@ -997,7 +997,7 @@ int Host::run()
                     m_nxdnBcastDurationTimer.stop();
                 }
 
-                LogMessage(LOG_HOST, "CW, start transmitting");
+                LogInfoEx(LOG_HOST, "CW, start transmitting");
                 m_isTxCW = true;
                 std::lock_guard<std::mutex> lock(m_clockingMutex);
 
@@ -1021,7 +1021,7 @@ int Host::run()
                     m_modem->clock(ms);
 
                     if (!first && !m_modem->hasTX()) {
-                        LogMessage(LOG_HOST, "CW, finished transmitting");
+                        LogInfoEx(LOG_HOST, "CW, finished transmitting");
                         break;
                     }
 
@@ -1073,10 +1073,10 @@ int Host::run()
 
                     g_fireDMRBeacon = false;
                     if (m_dmrTSCCData) {
-                        LogMessage(LOG_HOST, "DMR, start CC broadcast");
+                        LogInfoEx(LOG_HOST, "DMR, start CC broadcast");
                     }
                     else {
-                        LogMessage(LOG_HOST, "DMR, roaming beacon burst");
+                        LogInfoEx(LOG_HOST, "DMR, roaming beacon burst");
                     }
                     dmrBeaconIntervalTimer.start();
                     m_dmrBeaconDurationTimer.start();
@@ -1134,7 +1134,7 @@ int Host::run()
 
                             // hide this message for continuous CC -- otherwise display every time we process
                             if (!m_p25CtrlChannel) {
-                                LogMessage(LOG_HOST, "P25, start CC broadcast");
+                                LogInfoEx(LOG_HOST, "P25, start CC broadcast");
                             }
 
                             g_fireP25Control = false;
@@ -1188,7 +1188,7 @@ int Host::run()
 
                             // hide this message for continuous CC -- otherwise display every time we process
                             if (!m_nxdnCtrlChannel) {
-                                LogMessage(LOG_HOST, "NXDN, start CC broadcast");
+                                LogInfoEx(LOG_HOST, "NXDN, start CC broadcast");
                             }
 
                             g_fireNXDNControl = false;
@@ -1519,7 +1519,7 @@ bool Host::rmtPortModemOpen(Modem* modem)
     if (!ret)
         return false;
 
-    LogMessage(LOG_MODEM, "Modem Ready [Remote Mode]");
+    LogInfoEx(LOG_MODEM, "Modem Ready [Remote Mode]");
 
     // handled modem open
     return true;
@@ -1756,7 +1756,7 @@ void* Host::threadRPC(void* arg)
             return nullptr;
         }
 
-        LogMessage(LOG_HOST, "[ OK ] %s", threadName.c_str());
+        LogInfoEx(LOG_HOST, "[ OK ] %s", threadName.c_str());
 #ifdef _GNU_SOURCE
         ::pthread_setname_np(th->thread, threadName.c_str());
 #endif // _GNU_SOURCE
@@ -1783,7 +1783,7 @@ void* Host::threadRPC(void* arg)
                 Thread::sleep(m_idleTickDelay);
         }
 
-        LogMessage(LOG_HOST, "[STOP] %s", threadName.c_str());
+        LogInfoEx(LOG_HOST, "[STOP] %s", threadName.c_str());
         delete th;
     }
 
@@ -1814,7 +1814,7 @@ void* Host::threadModem(void* arg)
             return nullptr;
         }
 
-        LogMessage(LOG_HOST, "[ OK ] %s", threadName.c_str());
+        LogInfoEx(LOG_HOST, "[ OK ] %s", threadName.c_str());
 #ifdef _GNU_SOURCE
         ::pthread_setname_np(th->thread, threadName.c_str());
 #endif // _GNU_SOURCE
@@ -1843,7 +1843,7 @@ void* Host::threadModem(void* arg)
                 Thread::sleep(m_idleTickDelay);
         }
 
-        LogMessage(LOG_HOST, "[STOP] %s", threadName.c_str());
+        LogInfoEx(LOG_HOST, "[STOP] %s", threadName.c_str());
         delete th;
     }
 
@@ -1874,7 +1874,7 @@ void* Host::threadWatchdog(void* arg)
             return nullptr;
         }
 
-        LogMessage(LOG_HOST, "[ OK ] %s", threadName.c_str());
+        LogInfoEx(LOG_HOST, "[ OK ] %s", threadName.c_str());
 #ifdef _GNU_SOURCE
         ::pthread_setname_np(th->thread, threadName.c_str());
 #endif // _GNU_SOURCE
@@ -2058,7 +2058,7 @@ void* Host::threadWatchdog(void* arg)
                 Thread::sleep(m_idleTickDelay);
         }
 
-        LogMessage(LOG_HOST, "[STOP] %s", threadName.c_str());
+        LogInfoEx(LOG_HOST, "[STOP] %s", threadName.c_str());
         delete th;
     }
 
@@ -2089,7 +2089,7 @@ void* Host::threadSiteData(void* arg)
             return nullptr;
         }
 
-        LogMessage(LOG_HOST, "[ OK ] %s", threadName.c_str());
+        LogInfoEx(LOG_HOST, "[ OK ] %s", threadName.c_str());
 #ifdef _GNU_SOURCE
         ::pthread_setname_np(th->thread, threadName.c_str());
 #endif // _GNU_SOURCE
@@ -2127,7 +2127,7 @@ void* Host::threadSiteData(void* arg)
                 Thread::sleep(m_idleTickDelay);
         }
 
-        LogMessage(LOG_HOST, "[STOP] %s", threadName.c_str());
+        LogInfoEx(LOG_HOST, "[STOP] %s", threadName.c_str());
         delete th;
     }
 
@@ -2158,7 +2158,7 @@ void* Host::threadPresence(void* arg)
             return nullptr;
         }
 
-        LogMessage(LOG_HOST, "[ OK ] %s", threadName.c_str());
+        LogInfoEx(LOG_HOST, "[ OK ] %s", threadName.c_str());
 #ifdef _GNU_SOURCE
         ::pthread_setname_np(th->thread, threadName.c_str());
 #endif // _GNU_SOURCE
@@ -2219,12 +2219,12 @@ void* Host::threadPresence(void* arg)
                 host->rfCh()->setRFChData(channelNo, voiceCh);
 
                 host->m_voiceChPeerId[channelNo] = peerId;
-                LogMessage(LOG_REST, "VC %s:%u, registration notice, peerId = %u, chNo = %u-%u", voiceCh.address().c_str(), voiceCh.port(), peerId, voiceCh.chId(), channelNo);
+                LogInfoEx(LOG_REST, "VC %s:%u, registration notice, peerId = %u, chNo = %u-%u", voiceCh.address().c_str(), voiceCh.port(), peerId, voiceCh.chId(), channelNo);
                 LogInfoEx(LOG_HOST, "Voice Channel Id %u Channel No $%04X REST API Address %s:%u", voiceCh.chId(), channelNo, voiceCh.address().c_str(), voiceCh.port());
 
                 g_fireCCVCNotification = true; // announce this registration immediately to the FNE
             } else {
-                LogMessage(LOG_REST, "VC, registration rejected, peerId = %u, chNo = %u, VC wasn't a defined member of the CC voice channel list", peerId, channelNo);
+                LogInfoEx(LOG_REST, "VC, registration rejected, peerId = %u, chNo = %u, VC wasn't a defined member of the CC voice channel list", peerId, channelNo);
                 g_RPC->defaultResponse(reply, "registration rejected", network::NetRPC::BAD_REQUEST);
             } 
         });
@@ -2248,7 +2248,7 @@ void* Host::threadPresence(void* arg)
                 if (!host->m_controlChData.address().empty() && host->m_controlChData.port() != 0 && host->m_network != nullptr && 
                     !host->m_dmrCtrlChannel && !host->m_p25CtrlChannel && !host->m_nxdnCtrlChannel) {
                     if ((presenceNotifyTimer.isRunning() && presenceNotifyTimer.hasExpired()) || !hasInitialRegistered) {
-                        LogMessage(LOG_HOST, "CC %s:%u, notifying CC of VC registration, peerId = %u", host->m_controlChData.address().c_str(), host->m_controlChData.port(), host->m_network->getPeerId());
+                        LogInfoEx(LOG_HOST, "CC %s:%u, notifying CC of VC registration, peerId = %u", host->m_controlChData.address().c_str(), host->m_controlChData.port(), host->m_network->getPeerId());
                         hasInitialRegistered = true;
 
                         std::string localAddress = network::udp::Socket::getLocalAddress();
@@ -2279,7 +2279,7 @@ void* Host::threadPresence(void* arg)
                                 }
                             }
                             else
-                                ::LogMessage(LOG_HOST, "CC %s:%u, VC registered, peerId = %u", host->m_controlChData.address().c_str(), host->m_controlChData.port(), host->m_network->getPeerId());
+                                ::LogInfoEx(LOG_HOST, "CC %s:%u, VC registered, peerId = %u", host->m_controlChData.address().c_str(), host->m_controlChData.port(), host->m_network->getPeerId());
                         }, host->m_controlChData.address(), host->m_controlChData.port());
 
                         presenceNotifyTimer.start();
@@ -2291,7 +2291,7 @@ void* Host::threadPresence(void* arg)
                     if ((presenceNotifyTimer.isRunning() && presenceNotifyTimer.hasExpired()) || g_fireCCVCNotification) {
                         g_fireCCVCNotification = false;
                         if (host->m_network != nullptr && host->m_voiceChPeerId.size() > 0) {
-                            LogMessage(LOG_HOST, "notifying FNE of VC registrations, peerId = %u", host->m_network->getPeerId());
+                            LogInfoEx(LOG_HOST, "notifying FNE of VC registrations, peerId = %u", host->m_network->getPeerId());
 
                             std::vector<uint32_t> peers;
                             for (auto it : host->m_voiceChPeerId) {
@@ -2312,7 +2312,7 @@ void* Host::threadPresence(void* arg)
                 Thread::sleep(m_idleTickDelay);
         }
 
-        LogMessage(LOG_HOST, "[STOP] %s", threadName.c_str());
+        LogInfoEx(LOG_HOST, "[STOP] %s", threadName.c_str());
         delete th;
     }
 

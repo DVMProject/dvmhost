@@ -116,12 +116,12 @@ bool TagAnalogData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
                 if (tg.config().parrot() && !m_parrotPlayback) {
                     if (m_parrotFrames.size() > 0) {
                         m_parrotFramesReady = true;
-                        LogMessage(LOG_NET, "Analog, Parrot Playback will Start, peer = %u, ssrc = %u, srcId = %u", peerId, ssrc, srcId);
+                        LogInfoEx(LOG_NET, "Analog, Parrot Playback will Start, peer = %u, ssrc = %u, srcId = %u", peerId, ssrc, srcId);
                         m_network->m_parrotDelayTimer.start();
                     }
                 }
 
-                LogMessage((fromUpstream) ? LOG_PEER : LOG_MASTER, "Analog, Call End, peer = %u, ssrc = %u, srcId = %u, dstId = %u, duration = %u, streamId = %u, fromUpstream = %u",
+                LogInfoEx((fromUpstream) ? LOG_PEER : LOG_MASTER, "Analog, Call End, peer = %u, ssrc = %u, srcId = %u, dstId = %u, duration = %u, streamId = %u, fromUpstream = %u",
                             peerId, ssrc, srcId, dstId, duration / 1000, streamId, fromUpstream);
 
                 // report call event to InfluxDB
@@ -211,7 +211,7 @@ bool TagAnalogData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
                 m_status[dstId].activeCall = true;
                 m_status.unlock();
 
-                LogMessage((fromUpstream) ? LOG_PEER : LOG_MASTER, "Analog, Call Start, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, fromUpstream = %u", peerId, ssrc, srcId, dstId, streamId, fromUpstream);
+                LogInfoEx((fromUpstream) ? LOG_PEER : LOG_MASTER, "Analog, Call Start, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, fromUpstream = %u", peerId, ssrc, srcId, dstId, streamId, fromUpstream);
             }
         }
 

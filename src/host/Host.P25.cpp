@@ -45,7 +45,7 @@ void* Host::threadP25Reader(void* arg)
             return nullptr;
         }
 
-        LogMessage(LOG_HOST, "[ OK ] %s", threadName.c_str());
+        LogInfoEx(LOG_HOST, "[ OK ] %s", threadName.c_str());
 #ifdef _GNU_SOURCE
         ::pthread_setname_np(th->thread, threadName.c_str());
 #endif // _GNU_SOURCE
@@ -156,7 +156,7 @@ void* Host::threadP25Reader(void* arg)
                             if (host->m_p25->getRFState() == RS_RF_REJECTED) {
                                 host->m_p25RejectTimer.clock(ms);
                                 if (host->m_p25RejectTimer.hasExpired()) {
-                                    LogMessage(LOG_HOST, "P25, reset from previous call reject, frames = %u", host->m_p25RejCnt);
+                                    LogInfoEx(LOG_HOST, "P25, reset from previous call reject, frames = %u", host->m_p25RejCnt);
                                     host->m_p25RejectTimer.stop();
                                     host->m_p25->clearRFReject();
                                     host->m_p25RejCnt = 0U;
@@ -173,7 +173,7 @@ void* Host::threadP25Reader(void* arg)
             }
         }
 
-        LogMessage(LOG_HOST, "[STOP] %s", threadName.c_str());
+        LogInfoEx(LOG_HOST, "[STOP] %s", threadName.c_str());
         delete th;
     }
 
@@ -204,7 +204,7 @@ void* Host::threadP25Writer(void* arg)
             return nullptr;
         }
 
-        LogMessage(LOG_HOST, "[ OK ] %s", threadName.c_str());
+        LogInfoEx(LOG_HOST, "[ OK ] %s", threadName.c_str());
 #ifdef _GNU_SOURCE
         ::pthread_setname_np(th->thread, threadName.c_str());
 #endif // _GNU_SOURCE
@@ -332,7 +332,7 @@ void* Host::threadP25Writer(void* arg)
             }
         }
 
-        LogMessage(LOG_HOST, "[STOP] %s", threadName.c_str());
+        LogInfoEx(LOG_HOST, "[STOP] %s", threadName.c_str());
         delete th;
     }
 

@@ -250,7 +250,7 @@ protected:
         csbk->setSrcId(arg);
         csbk->setDstId(dstId);
 
-        LogMessage(LOG_RF, "DMR Slot %u, CSBK, %s, op = $%02X, arg = %u, tgt = %u",
+        LogInfoEx(LOG_RF, "DMR Slot %u, CSBK, %s, op = $%02X, arg = %u, tgt = %u",
             slot, csbk->toString().c_str(), func, arg, dstId);
 
         write_CSBK(slot, csbk.get());
@@ -320,7 +320,7 @@ protected:
             iosp->setMFId(MFG_MOT);
         }
 
-        LogMessage(LOG_RF, P25_TSDU_STR ", %s, mfId = $%02X, op = $%02X, arg = %u, tgt = %u",
+        LogInfoEx(LOG_RF, P25_TSDU_STR ", %s, mfId = $%02X, op = $%02X, arg = %u, tgt = %u",
             iosp->toString().c_str(), iosp->getMFId(), iosp->getExtendedFunction(), iosp->getSrcId(), iosp->getDstId());
 
         write_TSDU(iosp.get());

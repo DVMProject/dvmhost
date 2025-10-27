@@ -143,7 +143,7 @@ bool IdenTableLookup::load()
 
             IdenTable entry = IdenTable(channelId, baseFrequency, chSpaceKhz, txOffsetMhz, chBandwidthKhz);
 
-            LogMessage(LOG_HOST, "Channel Id %u: BaseFrequency = %uHz, TXOffsetMhz = %fMHz, BandwidthKhz = %fKHz, SpaceKhz = %fKHz",
+            LogInfoEx(LOG_HOST, "Channel Id %u: BaseFrequency = %uHz, TXOffsetMhz = %fMHz, BandwidthKhz = %fKHz, SpaceKhz = %fKHz",
                 entry.channelId(), entry.baseFrequency(), entry.txOffsetMhz(), entry.chBandwidthKhz(), entry.chSpaceKhz());
 
             m_table[channelId] = entry;

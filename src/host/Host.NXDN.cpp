@@ -44,7 +44,7 @@ void* Host::threadNXDNReader(void* arg)
             return nullptr;
         }
 
-        LogMessage(LOG_HOST, "[ OK ] %s", threadName.c_str());
+        LogInfoEx(LOG_HOST, "[ OK ] %s", threadName.c_str());
 #ifdef _GNU_SOURCE
         ::pthread_setname_np(th->thread, threadName.c_str());
 #endif // _GNU_SOURCE
@@ -114,7 +114,7 @@ void* Host::threadNXDNReader(void* arg)
                             if (host->m_nxdn->getRFState() == RS_RF_REJECTED) {
                                 host->m_nxdnRejectTimer.clock(ms);
                                 if (host->m_nxdnRejectTimer.hasExpired()) {
-                                    LogMessage(LOG_HOST, "NXDN, reset from previous call reject, frames = %u", host->m_nxdnRejCnt);
+                                    LogInfoEx(LOG_HOST, "NXDN, reset from previous call reject, frames = %u", host->m_nxdnRejCnt);
                                     host->m_nxdnRejectTimer.stop();
                                     host->m_nxdn->clearRFReject();
                                     host->m_nxdnRejCnt = 0U;
@@ -131,7 +131,7 @@ void* Host::threadNXDNReader(void* arg)
             }
         }
 
-        LogMessage(LOG_HOST, "[STOP] %s", threadName.c_str());
+        LogInfoEx(LOG_HOST, "[STOP] %s", threadName.c_str());
         delete th;
     }
 
@@ -162,7 +162,7 @@ void* Host::threadNXDNWriter(void* arg)
             return nullptr;
         }
 
-        LogMessage(LOG_HOST, "[ OK ] %s", threadName.c_str());
+        LogInfoEx(LOG_HOST, "[ OK ] %s", threadName.c_str());
 #ifdef _GNU_SOURCE
         ::pthread_setname_np(th->thread, threadName.c_str());
 #endif // _GNU_SOURCE
@@ -247,7 +247,7 @@ void* Host::threadNXDNWriter(void* arg)
             }
         }
 
-        LogMessage(LOG_HOST, "[STOP] %s", threadName.c_str());
+        LogInfoEx(LOG_HOST, "[STOP] %s", threadName.c_str());
         delete th;
     }
 

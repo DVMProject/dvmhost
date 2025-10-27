@@ -217,7 +217,7 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                     if (tg.config().parrot() && !m_parrotPlayback) {
                         if (m_parrotFrames.size() > 0) {
                             m_parrotFramesReady = true;
-                            LogMessage(LOG_NET, "NXDN, Parrot Playback will Start, peer = %u, srcId = %u", peerId, srcId);
+                            LogInfoEx(LOG_NET, "NXDN, Parrot Playback will Start, peer = %u, srcId = %u", peerId, srcId);
                             m_network->m_parrotDelayTimer.start();
                         }
                     }
@@ -232,11 +232,11 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                     });
                     if (it != m_statusPVCall.end()) {
                         m_statusPVCall[dstId].reset();
-                        LogMessage((fromUpstream) ? LOG_PEER : LOG_MASTER, "NXDN, Private Call End, peer = %u, ssrc = %u, srcId = %u, dstId = %u, duration = %u, streamId = %u, fromUpstream = %u",
+                        LogInfoEx((fromUpstream) ? LOG_PEER : LOG_MASTER, "NXDN, Private Call End, peer = %u, ssrc = %u, srcId = %u, dstId = %u, duration = %u, streamId = %u, fromUpstream = %u",
                             peerId, ssrc, srcId, dstId, duration / 1000, streamId, fromUpstream);
                     }
                     else
-                        LogMessage((fromUpstream) ? LOG_PEER : LOG_MASTER, "NXDN, Call End, peer = %u, ssrc = %u, srcId = %u, dstId = %u, duration = %u, streamId = %u, fromUpstream = %u",
+                        LogInfoEx((fromUpstream) ? LOG_PEER : LOG_MASTER, "NXDN, Call End, peer = %u, ssrc = %u, srcId = %u, dstId = %u, duration = %u, streamId = %u, fromUpstream = %u",
                             peerId, ssrc, srcId, dstId, duration / 1000, streamId, fromUpstream);
 
                     // report call event to InfluxDB
@@ -284,7 +284,7 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                             if (status.srcId == 0U)
                                 m_status[dstId].srcId = srcId;
                             if (status.srcId != srcId) {
-                                LogMessage((fromUpstream) ? LOG_PEER : LOG_MASTER, "NXDN, Call Source Switched, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, rxPeer = %u, rxSrcId = %u, rxDstId = %u, rxStreamId = %u, fromUpstream = %u",
+                                LogInfoEx((fromUpstream) ? LOG_PEER : LOG_MASTER, "NXDN, Call Source Switched, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, rxPeer = %u, rxSrcId = %u, rxDstId = %u, rxStreamId = %u, fromUpstream = %u",
                                     peerId, ssrc, srcId, dstId, streamId, status.peerId, status.srcId, status.dstId, status.streamId, fromUpstream);
                                 m_status[dstId].srcId = srcId;
                             }
@@ -358,11 +358,11 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                         m_statusPVCall[dstId].dstPeerId = regSSRC;
                         m_statusPVCall.unlock();
 
-                        LogMessage((fromUpstream) ? LOG_PEER : LOG_MASTER, "NXDN, Private Call Start, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, fromUpstream = %u",
+                        LogInfoEx((fromUpstream) ? LOG_PEER : LOG_MASTER, "NXDN, Private Call Start, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, fromUpstream = %u",
                             peerId, ssrc, srcId, dstId, streamId, fromUpstream);
                     }
                     else
-                        LogMessage((fromUpstream) ? LOG_PEER : LOG_MASTER, "NXDN, Call Start, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, fromUpstream = %u", 
+                        LogInfoEx((fromUpstream) ? LOG_PEER : LOG_MASTER, "NXDN, Call Start, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, fromUpstream = %u", 
                             peerId, ssrc, srcId, dstId, streamId, fromUpstream);
                 }
             }
@@ -1063,7 +1063,7 @@ bool TagNXDNData::write_Message_Grant(uint32_t peerId, uint32_t srcId, uint32_t 
     rcch->setPriority(priority);
 
     if (m_network->m_verbose) {
-        LogMessage(LOG_NXDN, "%s, emerg = %u, encrypt = %u, prio = %u, chNo = %u, srcId = %u, dstId = %u, peerId = %u",
+        LogInfoEx(LOG_NXDN, "%s, emerg = %u, encrypt = %u, prio = %u, chNo = %u, srcId = %u, dstId = %u, peerId = %u",
             rcch->toString().c_str(), rcch->getEmergency(), rcch->getEncrypted(), rcch->getPriority(), rcch->getGrpVchNo(), rcch->getSrcId(), rcch->getDstId(), peerId);
     }
 
@@ -1090,7 +1090,7 @@ void TagNXDNData::write_Message_Deny(uint32_t peerId, uint32_t srcId, uint32_t d
     rcch->setDstId(dstId);
 
     if (m_network->m_verbose) {
-        LogMessage(LOG_NXDN, "MSG_DENIAL (Message Denial), reason = $%02X (%s), service = $%02X, srcId = %u, dstId = %u",
+        LogInfoEx(LOG_NXDN, "MSG_DENIAL (Message Denial), reason = $%02X (%s), service = $%02X, srcId = %u, dstId = %u",
             reason, NXDNUtils::causeToString(reason).c_str(), service, srcId, dstId);
     }
 

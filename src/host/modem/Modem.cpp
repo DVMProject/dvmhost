@@ -449,7 +449,7 @@ void Modem::setCloseHandler(std::function<MODEM_OC_PORT_HANDLER> handler)
 
 bool Modem::open()
 {
-    LogMessage(LOG_MODEM, "Initializing modem");
+    LogInfoEx(LOG_MODEM, "Initializing modem");
     m_gotModemStatus = false;
 
     bool ret = m_port->open();
@@ -512,7 +512,7 @@ bool Modem::open()
 
     m_error = false;
 
-    LogMessage(LOG_MODEM, "Modem Ready [Direct Mode]");
+    LogInfoEx(LOG_MODEM, "Modem Ready [Direct Mode]");
     return true;
 }
 
@@ -907,7 +907,7 @@ void Modem::clock(uint32_t ms)
 
 void Modem::close()
 {
-    LogMessage(LOG_MODEM, "Closing the modem");
+    LogInfoEx(LOG_MODEM, "Closing the modem");
     m_port->close();
 
     m_gotModemStatus = false;
@@ -1821,7 +1821,7 @@ bool Modem::getFirmwareVersion()
                 continue;
 
             if (resp == RTM_OK && m_buffer[2U] == CMD_GET_VERSION) {
-                LogMessage(LOG_MODEM, "Protocol: %02x, CPU: %02X", m_buffer[3U], m_buffer[4U]);
+                LogInfoEx(LOG_MODEM, "Protocol: %02x, CPU: %02X", m_buffer[3U], m_buffer[4U]);
                 m_protoVer = m_buffer[3U];
 
                 if (m_protoVer >= 2U) {
@@ -1832,19 +1832,19 @@ bool Modem::getFirmwareVersion()
 
                     switch (m_buffer[4U]) {
                     case 0U:
-                        LogMessage(LOG_MODEM, "Atmel ARM, UDID: %02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X", m_buffer[5U], m_buffer[6U], m_buffer[7U], m_buffer[8U], m_buffer[9U], m_buffer[10U], m_buffer[11U], m_buffer[12U], m_buffer[13U], m_buffer[14U], m_buffer[15U], m_buffer[16U], m_buffer[17U], m_buffer[18U], m_buffer[19U], m_buffer[20U]);
+                        LogInfoEx(LOG_MODEM, "Atmel ARM, UDID: %02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X", m_buffer[5U], m_buffer[6U], m_buffer[7U], m_buffer[8U], m_buffer[9U], m_buffer[10U], m_buffer[11U], m_buffer[12U], m_buffer[13U], m_buffer[14U], m_buffer[15U], m_buffer[16U], m_buffer[17U], m_buffer[18U], m_buffer[19U], m_buffer[20U]);
                         break;
                     case 1U:
-                        LogMessage(LOG_MODEM, "NXP ARM, UDID: %02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X", m_buffer[5U], m_buffer[6U], m_buffer[7U], m_buffer[8U], m_buffer[9U], m_buffer[10U], m_buffer[11U], m_buffer[12U], m_buffer[13U], m_buffer[14U], m_buffer[15U], m_buffer[16U], m_buffer[17U], m_buffer[18U], m_buffer[19U], m_buffer[20U]);
+                        LogInfoEx(LOG_MODEM, "NXP ARM, UDID: %02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X", m_buffer[5U], m_buffer[6U], m_buffer[7U], m_buffer[8U], m_buffer[9U], m_buffer[10U], m_buffer[11U], m_buffer[12U], m_buffer[13U], m_buffer[14U], m_buffer[15U], m_buffer[16U], m_buffer[17U], m_buffer[18U], m_buffer[19U], m_buffer[20U]);
                         break;
                     case 2U:
-                        LogMessage(LOG_MODEM, "ST-Micro ARM, UDID: %02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X", m_buffer[5U], m_buffer[6U], m_buffer[7U], m_buffer[8U], m_buffer[9U], m_buffer[10U], m_buffer[11U], m_buffer[12U], m_buffer[13U], m_buffer[14U], m_buffer[15U], m_buffer[16U]);
+                        LogInfoEx(LOG_MODEM, "ST-Micro ARM, UDID: %02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X", m_buffer[5U], m_buffer[6U], m_buffer[7U], m_buffer[8U], m_buffer[9U], m_buffer[10U], m_buffer[11U], m_buffer[12U], m_buffer[13U], m_buffer[14U], m_buffer[15U], m_buffer[16U]);
                         break;
                     case 15U:
-                        LogMessage(LOG_MODEM, "Null Modem, UDID: N/A");
+                        LogInfoEx(LOG_MODEM, "Null Modem, UDID: N/A");
                         break;
                     default:
-                        LogMessage(LOG_MODEM, "Unknown CPU type: %u", m_buffer[4U]);
+                        LogInfoEx(LOG_MODEM, "Unknown CPU type: %u", m_buffer[4U]);
                         break;
                     }
 
@@ -2206,7 +2206,7 @@ bool Modem::readFlash()
 void Modem::processFlashConfig(const uint8_t *buffer)
 {
     if (m_ignoreModemConfigArea) {
-        LogMessage(LOG_MODEM, "Modem configuration area checking is disabled!");
+        LogInfoEx(LOG_MODEM, "Modem configuration area checking is disabled!");
         return;
     }
 

@@ -288,7 +288,7 @@ void* threadNetworkPump(void* arg)
             return nullptr;
         }
 
-        LogMessage(LOG_HOST, "[ OK ] %s", threadName.c_str());
+        LogInfoEx(LOG_HOST, "[ OK ] %s", threadName.c_str());
 #ifdef _GNU_SOURCE
         ::pthread_setname_np(th->thread, threadName.c_str());
 #endif // _GNU_SOURCE
@@ -378,7 +378,7 @@ void* threadNetworkPump(void* arg)
                         if (std::find_if(g_dmrStatus.begin(), g_dmrStatus.end(), [&](StatusMapPair& x) { return (x.second.dstId == dstId && x.second.slotNo == slotNo); }) != g_dmrStatus.end()) {
                             g_dmrStatus.erase(dstId);
 
-                            LogMessage(LOG_NET, "DMR, Call End, srcId = %u (%s), dstId = %u (%s), duration = %u",
+                            LogInfoEx(LOG_NET, "DMR, Call End, srcId = %u (%s), dstId = %u (%s), duration = %u",
                                         srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str(), duration / 1000);
                         }
                     }
@@ -400,7 +400,7 @@ void* threadNetworkPump(void* arg)
                             status.slotNo = slotNo;
                             g_dmrStatus[dstId] = status; // this *could* be an issue if a dstId appears on both slots somehow...
 
-                            LogMessage(LOG_NET, "DMR, Call Start, srcId = %u (%s), dstId = %u (%s)", 
+                            LogInfoEx(LOG_NET, "DMR, Call Start, srcId = %u (%s), dstId = %u (%s)", 
                                 srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str());
                         }
                     }
@@ -428,7 +428,7 @@ void* threadNetworkPump(void* arg)
                                 {
                                     lc::csbk::CSBK_BROADCAST* osp = static_cast<lc::csbk::CSBK_BROADCAST*>(csbk.get());
                                     if (osp->getAnncType() == DMRDEF::BroadcastAnncType::ANN_WD_TSCC) {
-                                        LogMessage(LOG_NET, "DMR Slot %u, DT_CSBK, %s, sysId = $%03X, chNo = %u", dmrData.getSlotNo(), csbk->toString().c_str(),
+                                        LogInfoEx(LOG_NET, "DMR Slot %u, DT_CSBK, %s, sysId = $%03X, chNo = %u", dmrData.getSlotNo(), csbk->toString().c_str(),
                                             osp->getSystemId(), osp->getLogicalCh1());
 
                                         // generate a net event for this
@@ -445,7 +445,7 @@ void* threadNetworkPump(void* arg)
                                 break;
                             default:
                                 {
-                                    LogMessage(LOG_NET, "DMR Slot %u, DT_CSBK, %s, srcId = %u (%s), dstId = %u (%s)", dmrData.getSlotNo(), csbk->toString().c_str(), 
+                                    LogInfoEx(LOG_NET, "DMR Slot %u, DT_CSBK, %s, srcId = %u (%s), dstId = %u (%s)", dmrData.getSlotNo(), csbk->toString().c_str(), 
                                         srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str());
 
                                     // generate a net event for this
@@ -466,7 +466,7 @@ void* threadNetworkPump(void* arg)
                     }
 
                     if (g_debug)
-                        LogMessage(LOG_NET, "DMR, slotNo = %u, seqNo = %u, flco = $%02X, srcId = %u, dstId = %u, len = %u", slotNo, seqNo, flco, srcId, dstId, length);
+                        LogInfoEx(LOG_NET, "DMR, slotNo = %u, seqNo = %u, flco = $%02X, srcId = %u, dstId = %u, len = %u", slotNo, seqNo, flco, srcId, dstId, length);
                 }
 
                 UInt8Array p25Buffer = g_network->readP25(netReadRet, length);
@@ -520,7 +520,7 @@ void* threadNetworkPump(void* arg)
                             if (std::find_if(g_p25Status.begin(), g_p25Status.end(), [&](StatusMapPair& x) { return x.second.dstId == dstId; }) != g_p25Status.end()) {
                                 g_p25Status.erase(dstId);
 
-                                LogMessage(LOG_NET, "P25, Call End, srcId = %u (%s), dstId = %u (%s), sysId = $%03X, netId = $%05X, duration = %u",
+                                LogInfoEx(LOG_NET, "P25, Call End, srcId = %u (%s), dstId = %u (%s), sysId = $%03X, netId = $%05X, duration = %u",
                                     srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str(), sysId, netId, duration / 1000);
                             }
                         }
@@ -541,7 +541,7 @@ void* threadNetworkPump(void* arg)
                                 status.dstId = dstId;
                                 g_p25Status[dstId] = status;
 
-                                LogMessage(LOG_NET, "P25, Call Start, srcId = %u (%s), dstId = %u (%s), sysId = $%03X, netId = $%05X", 
+                                LogInfoEx(LOG_NET, "P25, Call Start, srcId = %u (%s), dstId = %u (%s), sysId = $%03X, netId = $%05X", 
                                     srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str(), sysId, netId);
                             }
                         }
@@ -551,7 +551,7 @@ void* threadNetworkPump(void* arg)
                     case P25DEF::DUID::TDU:
                     case P25DEF::DUID::TDULC:
                         if (duid == P25DEF::DUID::TDU) {
-                            LogMessage(LOG_NET, P25_TDU_STR ", srcId = %u (%s), dstId = %u (%s)", 
+                            LogInfoEx(LOG_NET, P25_TDU_STR ", srcId = %u (%s), dstId = %u (%s)", 
                                     srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str());
                         }
                         else {
@@ -560,7 +560,7 @@ void* threadNetworkPump(void* arg)
                                 LogWarning(LOG_NET, P25_TDULC_STR ", undecodable TDULC");
                             }
                             else {
-                                LogMessage(LOG_NET, P25_TDULC_STR ", srcId = %u (%s), dstId = %u (%s)", 
+                                LogInfoEx(LOG_NET, P25_TDULC_STR ", srcId = %u (%s), dstId = %u (%s)", 
                                     srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str());
                             }
                         }
@@ -585,7 +585,7 @@ void* threadNetworkPump(void* arg)
                                 case P25DEF::TSBKO::IOSP_GRP_VCH:
                                 case P25DEF::TSBKO::IOSP_UU_VCH:
                                 {
-                                    LogMessage(LOG_NET, P25_TSDU_STR ", %s, emerg = %u, encrypt = %u, prio = %u, chNo = %u-%u, srcId = %u (%s), dstId = %u (%s), sysId = $%03X, netId = $%05X",
+                                    LogInfoEx(LOG_NET, P25_TSDU_STR ", %s, emerg = %u, encrypt = %u, prio = %u, chNo = %u-%u, srcId = %u (%s), dstId = %u (%s), sysId = $%03X, netId = $%05X",
                                         tsbk->toString(true).c_str(), tsbk->getEmergency(), tsbk->getEncrypted(), tsbk->getPriority(), tsbk->getGrpVchId(), tsbk->getGrpVchNo(), 
                                         srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str(), sysId, netId);
 
@@ -617,7 +617,7 @@ void* threadNetworkPump(void* arg)
                                 {
                                     lc::tsbk::IOSP_UU_ANS* iosp = static_cast<lc::tsbk::IOSP_UU_ANS*>(tsbk.get());
                                     if (iosp->getResponse() > 0U) {
-                                        LogMessage(LOG_NET, P25_TSDU_STR ", %s, response = $%02X, srcId = %u (%s), dstId = %u (%s)",
+                                        LogInfoEx(LOG_NET, P25_TSDU_STR ", %s, response = $%02X, srcId = %u (%s), dstId = %u (%s)",
                                             tsbk->toString(true).c_str(), iosp->getResponse(),
                                             srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str());
 
@@ -641,7 +641,7 @@ void* threadNetworkPump(void* arg)
                                 case P25DEF::TSBKO::IOSP_STS_UPDT:
                                 {
                                     lc::tsbk::IOSP_STS_UPDT* iosp = static_cast<lc::tsbk::IOSP_STS_UPDT*>(tsbk.get());
-                                    LogMessage(LOG_NET, P25_TSDU_STR ", %s, status = $%02X, srcId = %u (%s)",
+                                    LogInfoEx(LOG_NET, P25_TSDU_STR ", %s, status = $%02X, srcId = %u (%s)",
                                         tsbk->toString(true).c_str(), iosp->getStatus(), srcId, resolveRID(srcId).c_str());
 
                                     // generate a net event for this
@@ -663,7 +663,7 @@ void* threadNetworkPump(void* arg)
                                 case P25DEF::TSBKO::IOSP_MSG_UPDT:
                                 {
                                     lc::tsbk::IOSP_MSG_UPDT* iosp = static_cast<lc::tsbk::IOSP_MSG_UPDT*>(tsbk.get());
-                                    LogMessage(LOG_NET, P25_TSDU_STR ", %s, message = $%02X, srcId = %u (%s), dstId = %u (%s)",
+                                    LogInfoEx(LOG_NET, P25_TSDU_STR ", %s, message = $%02X, srcId = %u (%s), dstId = %u (%s)",
                                         tsbk->toString(true).c_str(), iosp->getMessage(), 
                                         srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str());
 
@@ -686,7 +686,7 @@ void* threadNetworkPump(void* arg)
                                 case P25DEF::TSBKO::IOSP_RAD_MON:
                                 {
                                     //lc::tsbk::IOSP_RAD_MON* iosp = static_cast<lc::tsbk::IOSP_RAD_MON*>(tsbk.get());
-                                    LogMessage(LOG_NET, P25_TSDU_STR ", %s, srcId = %u (%s), dstId = %u (%s)", tsbk->toString(true).c_str(), 
+                                    LogInfoEx(LOG_NET, P25_TSDU_STR ", %s, srcId = %u (%s), dstId = %u (%s)", tsbk->toString(true).c_str(), 
                                         srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str());
 
                                     // generate a net event for this
@@ -704,7 +704,7 @@ void* threadNetworkPump(void* arg)
                                 break;
                                 case P25DEF::TSBKO::IOSP_CALL_ALRT:
                                 {
-                                    LogMessage(LOG_NET, P25_TSDU_STR ", %s, srcId = %u (%s), dstId = %u (%s)", tsbk->toString(true).c_str(), 
+                                    LogInfoEx(LOG_NET, P25_TSDU_STR ", %s, srcId = %u (%s), dstId = %u (%s)", tsbk->toString(true).c_str(), 
                                         srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str());
                                 
                                     // generate a net event for this
@@ -723,7 +723,7 @@ void* threadNetworkPump(void* arg)
                                 case P25DEF::TSBKO::IOSP_ACK_RSP:
                                 {
                                     lc::tsbk::IOSP_ACK_RSP* iosp = static_cast<lc::tsbk::IOSP_ACK_RSP*>(tsbk.get());
-                                    LogMessage(LOG_NET, P25_TSDU_STR ", %s, AIV = %u, serviceType = $%02X, srcId = %u (%s), dstId = %u (%s)",
+                                    LogInfoEx(LOG_NET, P25_TSDU_STR ", %s, AIV = %u, serviceType = $%02X, srcId = %u (%s), dstId = %u (%s)",
                                         tsbk->toString(true).c_str(), iosp->getAIV(), iosp->getService(), 
                                         srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str());
 
@@ -746,7 +746,7 @@ void* threadNetworkPump(void* arg)
                                 case P25DEF::TSBKO::IOSP_EXT_FNCT:
                                 {
                                     lc::tsbk::IOSP_EXT_FNCT* iosp = static_cast<lc::tsbk::IOSP_EXT_FNCT*>(tsbk.get());
-                                    LogMessage(LOG_NET, P25_TSDU_STR ", %s, serviceType = $%02X, arg = %u, tgt = %u",
+                                    LogInfoEx(LOG_NET, P25_TSDU_STR ", %s, serviceType = $%02X, arg = %u, tgt = %u",
                                         tsbk->toString(true).c_str(), iosp->getService(), srcId, dstId);
 
                                     // generate a net event for this
@@ -769,7 +769,7 @@ void* threadNetworkPump(void* arg)
                                     // non-emergency mode is a TSBKO::OSP_DENY_RSP
                                     if (!tsbk->getEmergency()) {
                                         lc::tsbk::OSP_DENY_RSP* osp = static_cast<lc::tsbk::OSP_DENY_RSP*>(tsbk.get());
-                                        LogMessage(LOG_NET, P25_TSDU_STR ", %s, AIV = %u, reason = $%02X, srcId = %u (%s), dstId = %u (%s)",
+                                        LogInfoEx(LOG_NET, P25_TSDU_STR ", %s, AIV = %u, reason = $%02X, srcId = %u (%s), dstId = %u (%s)",
                                             osp->toString().c_str(), osp->getAIV(), osp->getResponse(), 
                                             osp->getSrcId(), resolveRID(osp->getSrcId()).c_str(), osp->getDstId(), resolveTGID(osp->getDstId()).c_str());
 
@@ -788,7 +788,7 @@ void* threadNetworkPump(void* arg)
                                             g_netDataEvent(netEvent);
                                         }
                                     } else {
-                                        LogMessage(LOG_NET, P25_TSDU_STR ", %s, srcId = %u (%s), dstId = %u (%s)", tsbk->toString().c_str(), 
+                                        LogInfoEx(LOG_NET, P25_TSDU_STR ", %s, srcId = %u (%s), dstId = %u (%s)", tsbk->toString().c_str(), 
                                             srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str());
 
                                         // generate a net event for this
@@ -808,7 +808,7 @@ void* threadNetworkPump(void* arg)
                                 case P25DEF::TSBKO::IOSP_GRP_AFF:
                                 {
                                     lc::tsbk::OSP_GRP_AFF* iosp = static_cast<lc::tsbk::OSP_GRP_AFF*>(tsbk.get());
-                                    LogMessage(LOG_NET, P25_TSDU_STR ", %s, anncId = %u (%s), srcId = %u (%s), dstId = %u (%s), response = $%02X", tsbk->toString().c_str(),
+                                    LogInfoEx(LOG_NET, P25_TSDU_STR ", %s, anncId = %u (%s), srcId = %u (%s), dstId = %u (%s), response = $%02X", tsbk->toString().c_str(),
                                             iosp->getAnnounceGroup(), resolveTGID(iosp->getAnnounceGroup()).c_str(),
                                             srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str(),
                                             iosp->getResponse());
@@ -834,7 +834,7 @@ void* threadNetworkPump(void* arg)
                                 case P25DEF::TSBKO::OSP_U_DEREG_ACK:
                                 {
                                     //lc::tsbk::OSP_U_DEREG_ACK* iosp = static_cast<lc::tsbk::OSP_U_DEREG_ACK*>(tsbk.get());
-                                    LogMessage(LOG_NET, P25_TSDU_STR ", %s, srcId = %u (%s)",
+                                    LogInfoEx(LOG_NET, P25_TSDU_STR ", %s, srcId = %u (%s)",
                                         tsbk->toString(true).c_str(), srcId, resolveRID(srcId).c_str());
 
                                     // generate a net event for this
@@ -850,7 +850,7 @@ void* threadNetworkPump(void* arg)
                                 case P25DEF::TSBKO::OSP_LOC_REG_RSP:
                                 {
                                     lc::tsbk::OSP_LOC_REG_RSP* osp = static_cast<lc::tsbk::OSP_LOC_REG_RSP*>(tsbk.get());
-                                    LogMessage(LOG_NET, P25_TSDU_STR ", %s, srcId = %u (%s), dstId = %u (%s)", osp->toString().c_str(), 
+                                    LogInfoEx(LOG_NET, P25_TSDU_STR ", %s, srcId = %u (%s), dstId = %u (%s)", osp->toString().c_str(), 
                                         srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str());
 
                                     // generate a net event for this
@@ -869,7 +869,7 @@ void* threadNetworkPump(void* arg)
                                 case P25DEF::TSBKO::OSP_ADJ_STS_BCAST:
                                 {
                                     lc::tsbk::OSP_ADJ_STS_BCAST* osp = static_cast<lc::tsbk::OSP_ADJ_STS_BCAST*>(tsbk.get());
-                                    LogMessage(LOG_NET, P25_TSDU_STR ", %s, sysId = $%03X, rfss = $%02X, site = $%02X, chNo = %u-%u, svcClass = $%02X", tsbk->toString().c_str(),
+                                    LogInfoEx(LOG_NET, P25_TSDU_STR ", %s, sysId = $%03X, rfss = $%02X, site = $%02X, chNo = %u-%u, svcClass = $%02X", tsbk->toString().c_str(),
                                         osp->getAdjSiteSysId(), osp->getAdjSiteRFSSId(), osp->getAdjSiteId(), osp->getAdjSiteChnId(), osp->getAdjSiteChnNo(), osp->getAdjSiteSvcClass());
 
                                     // generate a net event for this
@@ -893,7 +893,7 @@ void* threadNetworkPump(void* arg)
                                 break;
                                 default:
                                     {
-                                        LogMessage(LOG_NET, P25_TSDU_STR ", %s, srcId = %u (%s), dstId = %u (%s)", tsbk->toString().c_str(), 
+                                        LogInfoEx(LOG_NET, P25_TSDU_STR ", %s, srcId = %u (%s), dstId = %u (%s)", tsbk->toString().c_str(), 
                                             srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str());
 
                                         // generate a net event for this
@@ -915,7 +915,7 @@ void* threadNetworkPump(void* arg)
                     }
 
                     if (g_debug)
-                        LogMessage(LOG_NET, "P25, duid = $%02X, lco = $%02X, MFId = $%02X, srcId = %u, dstId = %u, len = %u", duid, lco, MFId, srcId, dstId, length);
+                        LogInfoEx(LOG_NET, "P25, duid = $%02X, lco = $%02X, MFId = $%02X, srcId = %u, dstId = %u, len = %u", duid, lco, MFId, srcId, dstId, length);
                 }
 
                 UInt8Array nxdnBuffer = g_network->readNXDN(netReadRet, length);
@@ -953,7 +953,7 @@ void* threadNetworkPump(void* arg)
                             if (std::find_if(g_nxdnStatus.begin(), g_nxdnStatus.end(), [&](StatusMapPair& x) { return x.second.dstId == dstId; }) != g_nxdnStatus.end()) {
                                 g_nxdnStatus.erase(dstId);
 
-                                LogMessage(LOG_NET, "NXDN, Call End, srcId = %u (%s), dstId = %u (%s), duration = %u",
+                                LogInfoEx(LOG_NET, "NXDN, Call End, srcId = %u (%s), dstId = %u (%s), duration = %u",
                                     srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str(), duration / 1000);
                             }
                         }
@@ -974,14 +974,14 @@ void* threadNetworkPump(void* arg)
                                 status.dstId = dstId;
                                 g_nxdnStatus[dstId] = status;
 
-                                LogMessage(LOG_NET, "NXDN, Call Start, srcId = %u (%s), dstId = %u (%s)", 
+                                LogInfoEx(LOG_NET, "NXDN, Call Start, srcId = %u (%s), dstId = %u (%s)", 
                                     srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str());
                             }
                         }
                     }
 
                     if (g_debug)
-                        LogMessage(LOG_NET, "NXDN, messageType = $%02X, srcId = %u, dstId = %u, len = %u", messageType, srcId, dstId, length);
+                        LogInfoEx(LOG_NET, "NXDN, messageType = $%02X, srcId = %u, dstId = %u, len = %u", messageType, srcId, dstId, length);
                 }
 
                 UInt8Array analogBuffer = g_network->readAnalog(netReadRet, length);
@@ -1006,7 +1006,7 @@ void* threadNetworkPump(void* arg)
                         if (std::find_if(g_analogStatus.begin(), g_analogStatus.end(), [&](StatusMapPair& x) { return x.second.dstId == dstId; }) != g_analogStatus.end()) {
                             g_analogStatus.erase(dstId);
 
-                            LogMessage(LOG_NET, "Analog, Call End, srcId = %u (%s), dstId = %u (%s), duration = %u",
+                            LogInfoEx(LOG_NET, "Analog, Call End, srcId = %u (%s), dstId = %u (%s), duration = %u",
                                 srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str(), duration / 1000);
                         }
                     }
@@ -1027,13 +1027,13 @@ void* threadNetworkPump(void* arg)
                             status.dstId = dstId;
                             g_analogStatus[dstId] = status;
 
-                            LogMessage(LOG_NET, "Analog, Call Start, srcId = %u (%s), dstId = %u (%s)", 
+                            LogInfoEx(LOG_NET, "Analog, Call Start, srcId = %u (%s), dstId = %u (%s)", 
                                 srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str());
                         }
                     }
 
                     if (g_debug)
-                        LogMessage(LOG_NET, "Analog, frameType = $%02X, srcId = %u, dstId = %u, len = %u", frameType, srcId, dstId, length);
+                        LogInfoEx(LOG_NET, "Analog, frameType = $%02X, srcId = %u, dstId = %u, len = %u", frameType, srcId, dstId, length);
                 }
             }
 
@@ -1041,7 +1041,7 @@ void* threadNetworkPump(void* arg)
                 Thread::sleep(1U);
         }
 
-        LogMessage(LOG_HOST, "[STOP] %s", threadName.c_str());
+        LogInfoEx(LOG_HOST, "[STOP] %s", threadName.c_str());
         delete th;
     }
 

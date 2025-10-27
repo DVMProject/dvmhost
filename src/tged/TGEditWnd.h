@@ -301,7 +301,7 @@ private:
             auto config = m_rule.config();
             config.inclusion(wnd.peerList);
             m_rule.config(config);
-            LogMessage(LOG_HOST, "Updated %s (%u) peer inclusion list, %u inclusions.", m_rule.name().c_str(), m_rule.source().tgId(), m_rule.config().inclusionSize());
+            LogInfoEx(LOG_HOST, "Updated %s (%u) peer inclusion list, %u inclusions.", m_rule.name().c_str(), m_rule.source().tgId(), m_rule.config().inclusionSize());
         });
 
         m_exclusionList.setGeometry(FPoint(20, 10), FSize(16, 1));
@@ -312,7 +312,7 @@ private:
             auto config = m_rule.config();
             config.exclusion(wnd.peerList);
             m_rule.config(config);
-            LogMessage(LOG_HOST, "Updated %s (%u) peer exclusion list, %u exclusions.", m_rule.name().c_str(), m_rule.source().tgId(), m_rule.config().exclusionSize());
+            LogInfoEx(LOG_HOST, "Updated %s (%u) peer exclusion list, %u exclusions.", m_rule.name().c_str(), m_rule.source().tgId(), m_rule.config().exclusionSize());
         });
 
         m_alwaysList.setGeometry(FPoint(2, 12), FSize(16, 1));
@@ -323,7 +323,7 @@ private:
             auto config = m_rule.config();
             config.alwaysSend(wnd.peerList);
             m_rule.config(config);
-            LogMessage(LOG_HOST, "Updated %s (%u) peer always receiving list, %u always.", m_rule.name().c_str(), m_rule.source().tgId(), m_rule.config().alwaysSendSize());
+            LogInfoEx(LOG_HOST, "Updated %s (%u) peer always receiving list, %u always.", m_rule.name().c_str(), m_rule.source().tgId(), m_rule.config().alwaysSendSize());
         });
 
         m_preferredList.setGeometry(FPoint(20, 12), FSize(16, 1));
@@ -334,7 +334,7 @@ private:
             auto config = m_rule.config();
             config.preferred(wnd.peerList);
             m_rule.config(config);
-            LogMessage(LOG_HOST, "Updated %s (%u) peer preference list, %u preferred.", m_rule.name().c_str(), m_rule.source().tgId(), m_rule.config().preferredSize());
+            LogInfoEx(LOG_HOST, "Updated %s (%u) peer preference list, %u preferred.", m_rule.name().c_str(), m_rule.source().tgId(), m_rule.config().preferredSize());
         });
 
         m_rewriteList.setGeometry(FPoint(2, 14), FSize(16, 1));
@@ -351,7 +351,7 @@ private:
             auto config = m_rule.config();
             config.permittedRIDs(wnd.ridList);
             m_rule.config(config);
-            LogMessage(LOG_HOST, "Updated %s (%u) permitted radio list, %u permitted.", m_rule.name().c_str(), m_rule.source().tgId(), m_rule.config().permittedRIDsSize());
+            LogInfoEx(LOG_HOST, "Updated %s (%u) permitted radio list, %u permitted.", m_rule.name().c_str(), m_rule.source().tgId(), m_rule.config().permittedRIDsSize());
         });
 
         CloseWndBase::initControls();
@@ -448,7 +448,7 @@ private:
                         return x.source().tgId() == m_origTgId && x.source().tgSlot() == m_origTgSlot;
                     });
                 if (it != groupVoice.end()) {
-                    LogMessage(LOG_HOST, "Updating TG %s (%u) to %s (%u)", it->name().c_str(), it->source().tgId(), m_rule.name().c_str(), m_rule.source().tgId());
+                    LogInfoEx(LOG_HOST, "Updating TG %s (%u) to %s (%u)", it->name().c_str(), it->source().tgId(), m_rule.name().c_str(), m_rule.source().tgId());
                     g_tidLookups->eraseEntry(m_origTgId, m_origTgSlot);
                     g_tidLookups->addEntry(m_rule);
 
@@ -476,9 +476,9 @@ private:
 
                 // add new TG
                 if (m_saveCopy.isChecked()) {
-                    LogMessage(LOG_HOST, "Copying TG. Adding TG %s (%u)", m_rule.name().c_str(), m_rule.source().tgId());
+                    LogInfoEx(LOG_HOST, "Copying TG. Adding TG %s (%u)", m_rule.name().c_str(), m_rule.source().tgId());
                 } else {
-                    LogMessage(LOG_HOST, "Adding TG %s (%u)", m_rule.name().c_str(), m_rule.source().tgId());
+                    LogInfoEx(LOG_HOST, "Adding TG %s (%u)", m_rule.name().c_str(), m_rule.source().tgId());
                 }
                 g_tidLookups->addEntry(m_rule);
 

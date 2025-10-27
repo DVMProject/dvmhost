@@ -145,7 +145,7 @@ bool DMRPacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
                 uint32_t srcId = status->header.getSrcId();
                 uint32_t dstId = status->header.getDstId();
 
-                LogMessage(LOG_DMR, DMR_DT_DATA_HEADER ", peerId = %u, slot = %u, dpf = $%02X, ack = %u, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padLength = %u, packetLength = %u, seqNo = %u, dstId = %u, srcId = %u, group = %u",
+                LogInfoEx(LOG_DMR, DMR_DT_DATA_HEADER ", peerId = %u, slot = %u, dpf = $%02X, ack = %u, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padLength = %u, packetLength = %u, seqNo = %u, dstId = %u, srcId = %u, group = %u",
                     peerId, status->slotNo, status->header.getDPF(), status->header.getA(), status->header.getSAP(), status->header.getFullMesage(), status->header.getBlocksToFollow(), status->header.getPadLength(), status->header.getPacketLength(),
                     status->header.getFSN(), dstId, srcId, gi);
 
@@ -157,7 +157,7 @@ bool DMRPacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
 
                 m_status[peerId] = status;
                 
-                LogMessage((fromUpstream) ? LOG_PEER : LOG_MASTER, "DMR, Data Call Start, peer = %u, slot = %u, srcId = %u, dstId = %u, group = %u, streamId = %u, fromUpstream = %u", peerId, status->slotNo, status->srcId, status->dstId, gi, streamId, fromUpstream);
+                LogInfoEx((fromUpstream) ? LOG_PEER : LOG_MASTER, "DMR, Data Call Start, peer = %u, slot = %u, srcId = %u, dstId = %u, group = %u, streamId = %u, fromUpstream = %u", peerId, status->slotNo, status->srcId, status->dstId, gi, streamId, fromUpstream);
                 dispatchToFNE(peerId, dmrData, data, len, seqNo, pktSeq, streamId);
 
                 return true;
@@ -170,7 +170,7 @@ bool DMRPacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
 
         // a PDU header only with no blocks to follow is usually a response header
         if (status->header.getBlocksToFollow() == 0U) {
-            LogMessage((fromUpstream) ? LOG_PEER : LOG_MASTER, "DMR, Data Call End, peer = %u, slot = %u, srcId = %u, dstId = %u, streamId = %u, fromUpstream = %u",
+            LogInfoEx((fromUpstream) ? LOG_PEER : LOG_MASTER, "DMR, Data Call End, peer = %u, slot = %u, srcId = %u, dstId = %u, streamId = %u, fromUpstream = %u",
                 peerId, status->slotNo, status->srcId, status->dstId, streamId, fromUpstream);
 
             delete status;
@@ -191,12 +191,12 @@ bool DMRPacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
                 dataBlock.setLastBlock(true);
 
             if (dataType == DataType::RATE_34_DATA) {
-                LogMessage(LOG_DMR, DMR_DT_RATE_34_DATA ", ISP, block %u, peer = %u, dataType = $%02X, dpf = $%02X", status->dataBlockCnt, peerId, dataBlock.getDataType(), dataBlock.getFormat());
+                LogInfoEx(LOG_DMR, DMR_DT_RATE_34_DATA ", ISP, block %u, peer = %u, dataType = $%02X, dpf = $%02X", status->dataBlockCnt, peerId, dataBlock.getDataType(), dataBlock.getFormat());
             } else if (dataType == DataType::RATE_12_DATA) {
-                LogMessage(LOG_DMR, DMR_DT_RATE_12_DATA ", ISP, block %u, peer = %u, dataType = $%02X, dpf = $%02X", status->dataBlockCnt, peerId, dataBlock.getDataType(), dataBlock.getFormat());
+                LogInfoEx(LOG_DMR, DMR_DT_RATE_12_DATA ", ISP, block %u, peer = %u, dataType = $%02X, dpf = $%02X", status->dataBlockCnt, peerId, dataBlock.getDataType(), dataBlock.getFormat());
             }
             else {
-                LogMessage(LOG_DMR, DMR_DT_RATE_1_DATA ", ISP, block %u, peer = %u, dataType = $%02X, dpf = $%02X", status->dataBlockCnt, peerId, dataBlock.getDataType(), dataBlock.getFormat());
+                LogInfoEx(LOG_DMR, DMR_DT_RATE_1_DATA ", ISP, block %u, peer = %u, dataType = $%02X, dpf = $%02X", status->dataBlockCnt, peerId, dataBlock.getDataType(), dataBlock.getFormat());
             }
 
             dispatchToFNE(peerId, dmrData, data, len, seqNo, pktSeq, streamId);
@@ -211,7 +211,7 @@ bool DMRPacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
             bool gi = status->header.getGI();
             uint32_t srcId = status->header.getSrcId();
             uint32_t dstId = status->header.getDstId();
-            LogMessage((fromUpstream) ? LOG_PEER : LOG_MASTER, "DMR, Data Call End, peer = %u, slot = %u, srcId = %u, dstId = %u, group = %u, blocks = %u, duration = %u, streamId = %u, fromUpstream = %u",
+            LogInfoEx((fromUpstream) ? LOG_PEER : LOG_MASTER, "DMR, Data Call End, peer = %u, slot = %u, srcId = %u, dstId = %u, group = %u, blocks = %u, duration = %u, streamId = %u, fromUpstream = %u",
                 peerId, srcId, dstId, gi, status->header.getBlocksToFollow(), duration / 1000, streamId, fromUpstream);
 
             // report call event to InfluxDB

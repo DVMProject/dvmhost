@@ -243,7 +243,7 @@ bool Slot::processFrame(uint8_t *data, uint32_t len)
         // Convert the raw RSSI to dBm
         int rssi = m_rssiMapper->interpolate(raw);
         if (m_verbose) {
-            LogMessage(LOG_RF, "DMR Slot %u, raw RSSI = %u, reported RSSI = %d dBm", m_slotNo, raw, rssi);
+            LogInfoEx(LOG_RF, "DMR Slot %u, raw RSSI = %u, reported RSSI = %d dBm", m_slotNo, raw, rssi);
         }
 
         // RSSI is always reported as positive
@@ -471,7 +471,7 @@ void Slot::processNetwork(const data::NetData& dmrData)
                     }
 
                     if (m_verbose) {
-                        LogMessage(LOG_NET, "DMR Slot %u, remote grant demand, srcId = %u, dstId = %u, unitToUnit = %u",
+                        LogInfoEx(LOG_NET, "DMR Slot %u, remote grant demand, srcId = %u, dstId = %u, unitToUnit = %u",
                                    m_slotNo, dmrData.getSrcId(), dmrData.getDstId(), unitToUnit);
                     }
 
@@ -660,7 +660,7 @@ void Slot::clock()
 
     if (m_rfTimeoutTimer.isRunning() && m_rfTimeoutTimer.hasExpired()) {
         if (!m_rfTimeout) {
-            LogMessage(LOG_RF, "DMR Slot %u, user has timed out", m_slotNo);
+            LogInfoEx(LOG_RF, "DMR Slot %u, user has timed out", m_slotNo);
             m_rfTimeout = true;
         }
     }
@@ -683,7 +683,7 @@ void Slot::clock()
         if (m_rfTGHang.hasExpired()) {
             m_rfTGHang.stop();
             if (m_verbose) {
-                LogMessage(LOG_RF, "Slot %u, talkgroup hang has expired, lastDstId = %u", m_slotNo, m_rfLastDstId);
+                LogInfoEx(LOG_RF, "Slot %u, talkgroup hang has expired, lastDstId = %u", m_slotNo, m_rfLastDstId);
             }
             m_rfLastDstId = 0U;
             m_rfLastSrcId = 0U;
@@ -697,7 +697,7 @@ void Slot::clock()
 
     if (m_netTimeoutTimer.isRunning() && m_netTimeoutTimer.hasExpired()) {
         if (!m_netTimeout) {
-            LogMessage(LOG_NET, "DMR Slot %u, user has timed out", m_slotNo);
+            LogInfoEx(LOG_NET, "DMR Slot %u, user has timed out", m_slotNo);
             m_netTimeout = true;
         }
     }
@@ -709,7 +709,7 @@ void Slot::clock()
             if (m_netTGHang.hasExpired()) {
                 m_netTGHang.stop();
                 if (m_verbose) {
-                    LogMessage(LOG_NET, "Slot %u, talkgroup hang has expired, lastDstId = %u", m_slotNo, m_netLastDstId);
+                    LogInfoEx(LOG_NET, "Slot %u, talkgroup hang has expired, lastDstId = %u", m_slotNo, m_netLastDstId);
                 }
                 m_netLastDstId = 0U;
                 m_netLastSrcId = 0U;
@@ -829,9 +829,9 @@ void Slot::permittedTG(uint32_t dstId)
 
     if (m_verbose) {
         if (dstId == 0U)
-            LogMessage(LOG_DMR, "DMR Slot %u, non-authoritative TG unpermit", m_slotNo);
+            LogInfoEx(LOG_DMR, "DMR Slot %u, non-authoritative TG unpermit", m_slotNo);
         else
-            LogMessage(LOG_DMR, "DMR Slot %u, non-authoritative TG permit, dstId = %u", m_slotNo, dstId);
+            LogInfoEx(LOG_DMR, "DMR Slot %u, non-authoritative TG permit, dstId = %u", m_slotNo, dstId);
     }
 
     m_permittedDstId = dstId;
@@ -846,7 +846,7 @@ void Slot::grantTG(uint32_t srcId, uint32_t dstId, bool grp)
     }
 
     if (m_verbose) {
-        LogMessage(LOG_DMR, "DMR Slot %u, network TG grant demand, srcId = %u, dstId = %u", m_slotNo, srcId, dstId);
+        LogInfoEx(LOG_DMR, "DMR Slot %u, network TG grant demand, srcId = %u, dstId = %u", m_slotNo, srcId, dstId);
     }
 
     m_control->writeRF_CSBK_Grant(srcId, dstId, 4U, grp);
@@ -861,7 +861,7 @@ void Slot::releaseGrantTG(uint32_t dstId)
     }
 
     if (m_verbose) {
-        LogMessage(LOG_DMR, "DMR Slot %u, VC request, release TG grant, dstId = %u", m_slotNo, dstId);
+        LogInfoEx(LOG_DMR, "DMR Slot %u, VC request, release TG grant, dstId = %u", m_slotNo, dstId);
     }
 
     if (m_affiliations->isGranted(dstId)) {
@@ -870,7 +870,7 @@ void Slot::releaseGrantTG(uint32_t dstId)
         ::lookups::VoiceChData voiceCh = m_affiliations->rfCh()->getRFChData(chNo);
 
         if (m_verbose) {
-            LogMessage(LOG_DMR, "DMR Slot %u, VC %s:%u, TG grant released, srcId = %u, dstId = %u, chNo = %u-%u", m_slotNo, voiceCh.address().c_str(), voiceCh.port(), srcId, dstId, voiceCh.chId(), chNo);
+            LogInfoEx(LOG_DMR, "DMR Slot %u, VC %s:%u, TG grant released, srcId = %u, dstId = %u, chNo = %u-%u", m_slotNo, voiceCh.address().c_str(), voiceCh.port(), srcId, dstId, voiceCh.chId(), chNo);
         }
     
         m_affiliations->releaseGrant(dstId, false);
@@ -891,7 +891,7 @@ void Slot::touchGrantTG(uint32_t dstId)
         ::lookups::VoiceChData voiceCh = m_affiliations->rfCh()->getRFChData(chNo);
 
         if (m_verbose) {
-            LogMessage(LOG_DMR, "DMR Slot %u, VC %s:%u, call in progress, srcId = %u, dstId = %u, chNo = %u-%u", m_slotNo, voiceCh.address().c_str(), voiceCh.port(), srcId, dstId, voiceCh.chId(), chNo);
+            LogInfoEx(LOG_DMR, "DMR Slot %u, VC %s:%u, call in progress, srcId = %u, dstId = %u, chNo = %u-%u", m_slotNo, voiceCh.address().c_str(), voiceCh.port(), srcId, dstId, voiceCh.chId(), chNo);
         }
 
         m_affiliations->touchGrant(dstId);
@@ -1202,7 +1202,7 @@ void Slot::processFrameLoss()
                 m_slotNo, float(m_rfFrames) / 16.667F, float(m_rfErrs * 100U) / float(m_rfBits), m_frameLossCnt);
         }
 
-        LogMessage(LOG_RF, "DMR Slot %u, total frames: %d, total bits: %d, errors: %d, BER: %.4f%%",
+        LogInfoEx(LOG_RF, "DMR Slot %u, total frames: %d, total bits: %d, errors: %d, BER: %.4f%%",
             m_slotNo, m_rfFrames, m_rfBits, m_rfErrs, float(m_rfErrs * 100U) / float(m_rfBits));
 
         // release trunked grant (if necessary)
@@ -1255,7 +1255,7 @@ void Slot::notifyCC_ReleaseGrant(uint32_t dstId)
     }
 
     if (m_verbose) {
-        LogMessage(LOG_DMR, "DMR Slot %u, CC %s:%u, notifying CC of call termination, dstId = %u", m_slotNo, m_controlChData.address().c_str(), m_controlChData.port(), dstId);
+        LogInfoEx(LOG_DMR, "DMR Slot %u, CC %s:%u, notifying CC of call termination, dstId = %u", m_slotNo, m_controlChData.address().c_str(), m_controlChData.port(), dstId);
     }
 
     // callback REST API to release the granted TG on the specified control channel
@@ -1279,7 +1279,7 @@ void Slot::notifyCC_ReleaseGrant(uint32_t dstId)
             }
         }
         else
-            ::LogMessage(LOG_DMR, "DMR Slot %u, CC %s:%u, released grant, dstId = %u", m_slotNo, m_controlChData.address().c_str(), m_controlChData.port(), dstId);
+            ::LogInfoEx(LOG_DMR, "DMR Slot %u, CC %s:%u, released grant, dstId = %u", m_slotNo, m_controlChData.address().c_str(), m_controlChData.port(), dstId);
     }, m_controlChData.address(), m_controlChData.port());
 
     m_rfLastDstId = 0U;
@@ -1326,7 +1326,7 @@ void Slot::notifyCC_TouchGrant(uint32_t dstId)
             }
         }
         else
-            ::LogMessage(LOG_DMR, "DMR Slot %u, CC %s:%u, touched grant, dstId = %u", m_slotNo, m_controlChData.address().c_str(), m_controlChData.port(), dstId);
+            ::LogInfoEx(LOG_DMR, "DMR Slot %u, CC %s:%u, touched grant, dstId = %u", m_slotNo, m_controlChData.address().c_str(), m_controlChData.port(), dstId);
     }, m_controlChData.address(), m_controlChData.port());
 }
 

@@ -681,7 +681,7 @@ void HostPatch::processDMRNetwork(uint8_t* buffer, uint32_t length)
             uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
             m_rxStartTime = now;
 
-            LogMessage(LOG_HOST, "DMR, call start, srcId = %u, dstId = %u, slot = %u", srcId, dstId, slotNo);
+            LogInfoEx(LOG_HOST, "DMR, call start, srcId = %u, dstId = %u, slot = %u", srcId, dstId, slotNo);
         }
 
         if (dataSync && (dataType == DataType::TERMINATOR_WITH_LC)) {
@@ -710,7 +710,7 @@ void HostPatch::processDMRNetwork(uint8_t* buffer, uint32_t length)
                 uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
                 uint64_t diff = now - m_rxStartTime;
 
-                LogMessage(LOG_HOST, "DMR, call end, srcId = %u, dstId = %u, dur = %us", srcId, dstId, diff / 1000U);
+                LogInfoEx(LOG_HOST, "DMR, call end, srcId = %u, dstId = %u, dur = %us", srcId, dstId, diff / 1000U);
             }
 
             m_callInProgress = false;
@@ -729,7 +729,7 @@ void HostPatch::processDMRNetwork(uint8_t* buffer, uint32_t length)
             lc::FullLC fullLC = lc::FullLC();
             lc = *fullLC.decode(data.get(), DataType::VOICE_LC_HEADER);
 
-            LogMessage(LOG_HOST, DMR_DT_VOICE_LC_HEADER ", slot = %u, srcId = %u, dstId = %u, FLCO = $%02X", m_srcSlot,
+            LogInfoEx(LOG_HOST, DMR_DT_VOICE_LC_HEADER ", slot = %u, srcId = %u, dstId = %u, FLCO = $%02X", m_srcSlot,
                 lc.getSrcId(), lc.getDstId(), flco);
 
             // send DMR voice header
@@ -778,7 +778,7 @@ void HostPatch::processDMRNetwork(uint8_t* buffer, uint32_t length)
             lc::FullLC fullLC = lc::FullLC();
             lc = *fullLC.decodePI(data.get());
 
-            LogMessage(LOG_HOST, DMR_DT_VOICE_PI_HEADER ", slot = %u, algId = %u, kId = %u, dstId = %u", m_srcSlot,
+            LogInfoEx(LOG_HOST, DMR_DT_VOICE_PI_HEADER ", slot = %u, algId = %u, kId = %u, dstId = %u", m_srcSlot,
                 lc.getAlgId(), lc.getKId(), lc.getDstId());
 
             // send DMR voice header
@@ -842,7 +842,7 @@ void HostPatch::processDMRNetwork(uint8_t* buffer, uint32_t length)
                 emb.encode(buffer);
             }
 
-            LogMessage(LOG_HOST, DMR_DT_VOICE ", srcId = %u, dstId = %u, slot = %u, seqNo = %u", srcId, dstId, m_srcSlot, seqNo);
+            LogInfoEx(LOG_HOST, DMR_DT_VOICE ", srcId = %u, dstId = %u, slot = %u, seqNo = %u", srcId, dstId, m_srcSlot, seqNo);
 
             // generate DMR network frame
             data::NetData dmrData;
@@ -1005,7 +1005,7 @@ void HostPatch::processP25Network(uint8_t* buffer, uint32_t length)
             uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
             m_rxStartTime = now;
 
-            LogMessage(LOG_HOST, "P25, call start, srcId = %u, dstId = %u", srcId, dstId);
+            LogInfoEx(LOG_HOST, "P25, call start, srcId = %u, dstId = %u", srcId, dstId);
 
             if (m_grantDemand) {
                 p25::lc::LC lc = p25::lc::LC();
@@ -1034,7 +1034,7 @@ void HostPatch::processP25Network(uint8_t* buffer, uint32_t length)
 
             p25::data::LowSpeedData lsd = p25::data::LowSpeedData();
 
-            LogMessage(LOG_HOST, P25_TDU_STR);
+            LogInfoEx(LOG_HOST, P25_TDU_STR);
 
             if (m_mmdvmP25Reflector) {
                 m_mmdvmP25Net->writeTDU();
@@ -1048,7 +1048,7 @@ void HostPatch::processP25Network(uint8_t* buffer, uint32_t length)
                 uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
                 uint64_t diff = now - m_rxStartTime;
 
-                LogMessage(LOG_HOST, "P25, call end, srcId = %u, dstId = %u, dur = %us", srcId, dstId, diff / 1000U);
+                LogInfoEx(LOG_HOST, "P25, call end, srcId = %u, dstId = %u, dur = %us", srcId, dstId, diff / 1000U);
             }
 
             m_rxStartTime = 0U;
@@ -1119,7 +1119,7 @@ void HostPatch::processP25Network(uint8_t* buffer, uint32_t length)
                 dfsiLC.decodeLDU1(data.get() + count, netLDU + 204U);
                 count += DFSI_LDU1_VOICE9_FRAME_LENGTH_BYTES;
 
-                LogMessage(LOG_NET, P25_LDU1_STR " audio, srcId = %u, dstId = %u", srcId, dstId);
+                LogInfoEx(LOG_NET, P25_LDU1_STR " audio, srcId = %u, dstId = %u", srcId, dstId);
 
                 if (tekAlgoId != ALGO_UNENCRYPT && tekKeyId != 0U) {
                     cryptP25AudioFrame(netLDU, reverseEncrypt, 1U);
@@ -1219,7 +1219,7 @@ void HostPatch::processP25Network(uint8_t* buffer, uint32_t length)
                 dfsiLC.decodeLDU2(data.get() + count, netLDU + 204U);
                 count += DFSI_LDU2_VOICE18_FRAME_LENGTH_BYTES;
 
-                LogMessage(LOG_NET, P25_LDU2_STR " audio, algo = $%02X, kid = $%04X", dfsiLC.control()->getAlgId(), dfsiLC.control()->getKId());
+                LogInfoEx(LOG_NET, P25_LDU2_STR " audio, algo = $%02X, kid = $%04X", dfsiLC.control()->getAlgId(), dfsiLC.control()->getKId());
 
                 if (tekAlgoId != ALGO_UNENCRYPT && tekKeyId != 0U) {
                     cryptP25AudioFrame(netLDU, reverseEncrypt, 2U);
@@ -1398,7 +1398,7 @@ void HostPatch::processTEKResponse(p25::kmm::KeyItem* ki, uint8_t algId, uint8_t
         return;
 
     if (algId == m_tekSrcAlgoId && ki->kId() == m_tekSrcKeyId) {
-        LogMessage(LOG_HOST, "Source TEK loaded, algId = $%02X, kId = $%04X, sln = $%04X", algId, ki->kId(), ki->sln());
+        LogInfoEx(LOG_HOST, "Source TEK loaded, algId = $%02X, kId = $%04X, sln = $%04X", algId, ki->kId(), ki->sln());
         UInt8Array tek = std::make_unique<uint8_t[]>(keyLength);
         ki->getKey(tek.get());
 
@@ -1408,7 +1408,7 @@ void HostPatch::processTEKResponse(p25::kmm::KeyItem* ki, uint8_t algId, uint8_t
     }
 
     if (algId == m_tekDstAlgoId && ki->kId() == m_tekDstKeyId) {
-        LogMessage(LOG_HOST, "Destination TEK loaded, algId = $%02X, kId = $%04X, sln = $%04X", algId, ki->kId(), ki->sln());
+        LogInfoEx(LOG_HOST, "Destination TEK loaded, algId = $%02X, kId = $%04X, sln = $%04X", algId, ki->kId(), ki->sln());
         UInt8Array tek = std::make_unique<uint8_t[]>(keyLength);
         ki->getKey(tek.get());
 
@@ -1453,7 +1453,7 @@ void HostPatch::writeNet_LDU1(bool toFNE)
             uint32_t dstId = GET_UINT24(m_netLDU1, 76U);
             uint32_t srcId = GET_UINT24(m_netLDU1, 101U);
 
-            LogMessage(LOG_HOST, "MMDVM P25, call start, srcId = %u, dstId = %u", srcId, dstId);
+            LogInfoEx(LOG_HOST, "MMDVM P25, call start, srcId = %u, dstId = %u", srcId, dstId);
 
             lc::LC lc = lc::LC();
             m_netLC = lc;
@@ -1479,7 +1479,7 @@ void HostPatch::writeNet_LDU1(bool toFNE)
         lsd.setLSD1(m_netLDU1[201U]);
         lsd.setLSD2(m_netLDU1[202U]);
 
-        LogMessage(LOG_NET, "MMDVM " P25_LDU1_STR " audio, srcId = %u, dstId = %u", m_netLC.getSrcId(), m_netLC.getDstId());
+        LogInfoEx(LOG_NET, "MMDVM " P25_LDU1_STR " audio, srcId = %u, dstId = %u", m_netLC.getSrcId(), m_netLC.getDstId());
 
         if (m_debug)
             Utils::dump(1U, "P25, HostPatch::writeNet_LDU1(), MMDVM -> DVM LDU1", m_netLDU1, 9U * 25U);
@@ -1535,7 +1535,7 @@ void HostPatch::writeNet_LDU2(bool toFNE)
         lsd.setLSD1(m_netLDU2[201U]);
         lsd.setLSD2(m_netLDU2[202U]);
 
-        LogMessage(LOG_NET, "MMDVM " P25_LDU2_STR " audio");
+        LogInfoEx(LOG_NET, "MMDVM " P25_LDU2_STR " audio");
 
         if (m_debug)
             Utils::dump(1U, "P25, HostPatch::writeNet_LDU2(), MMDVM -> DVM LDU2", m_netLDU2, 9U * 25U);
@@ -1585,7 +1585,7 @@ void* HostPatch::threadNetworkProcess(void* arg)
             return nullptr;
         }
 
-        LogMessage(LOG_HOST, "[ OK ] %s", threadName.c_str());
+        LogInfoEx(LOG_HOST, "[ OK ] %s", threadName.c_str());
 #ifdef _GNU_SOURCE
         ::pthread_setname_np(th->thread, threadName.c_str());
 #endif // _GNU_SOURCE
@@ -1601,7 +1601,7 @@ void* HostPatch::threadNetworkProcess(void* arg)
                 if (patch->m_tekSrcAlgoId != P25DEF::ALGO_UNENCRYPT && patch->m_tekSrcKeyId > 0U) {
                     if (patch->m_p25SrcCrypto->getTEKLength() == 0U && !patch->m_requestedSrcTek) {
                         patch->m_requestedSrcTek = true;
-                        LogMessage(LOG_HOST, "Patch source TGID encryption enabled, requesting TEK from network.");
+                        LogInfoEx(LOG_HOST, "Patch source TGID encryption enabled, requesting TEK from network.");
                         patch->m_network->writeKeyReq(patch->m_tekSrcKeyId, patch->m_tekSrcAlgoId);
                     }
                 }
@@ -1610,7 +1610,7 @@ void* HostPatch::threadNetworkProcess(void* arg)
                 if (patch->m_tekDstAlgoId != P25DEF::ALGO_UNENCRYPT && patch->m_tekDstKeyId > 0U) {
                     if (patch->m_p25DstCrypto->getTEKLength() == 0U && !patch->m_requestedDstTek) {
                         patch->m_requestedDstTek = true;
-                        LogMessage(LOG_HOST, "Patch destination TGID encryption enabled, requesting TEK from network.");
+                        LogInfoEx(LOG_HOST, "Patch destination TGID encryption enabled, requesting TEK from network.");
                         patch->m_network->writeKeyReq(patch->m_tekDstKeyId, patch->m_tekDstAlgoId);
                     }
                 }
@@ -1637,7 +1637,7 @@ void* HostPatch::threadNetworkProcess(void* arg)
             Thread::sleep(1U);
         }
 
-        LogMessage(LOG_HOST, "[STOP] %s", threadName.c_str());
+        LogInfoEx(LOG_HOST, "[STOP] %s", threadName.c_str());
         delete th;
     }
 
@@ -1672,7 +1672,7 @@ void* HostPatch::threadMMDVMProcess(void* arg)
             return nullptr;
         }
 
-        LogMessage(LOG_HOST, "[ OK ] %s", threadName.c_str());
+        LogInfoEx(LOG_HOST, "[ OK ] %s", threadName.c_str());
 #ifdef _GNU_SOURCE
         ::pthread_setname_np(th->thread, threadName.c_str());
 #endif // _GNU_SOURCE
@@ -1775,7 +1775,7 @@ void* HostPatch::threadMMDVMProcess(void* arg)
 
                             p25::data::LowSpeedData lsd = p25::data::LowSpeedData();
 
-                            LogMessage(LOG_HOST, "MMDVM " P25_TDU_STR);
+                            LogInfoEx(LOG_HOST, "MMDVM " P25_TDU_STR);
 
                             uint8_t controlByte = 0x00U;
                             patch->m_network->writeP25TDU(patch->m_netLC, lsd, controlByte);
@@ -1784,7 +1784,7 @@ void* HostPatch::threadMMDVMProcess(void* arg)
                                 uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
                                 uint64_t diff = now - patch->m_rxStartTime;
 
-                                LogMessage(LOG_HOST, "MMDVM P25, call end, srcId = %u, dstId = %u, dur = %us", patch->m_netLC.getSrcId(), patch->m_netLC.getDstId(), diff / 1000U);
+                                LogInfoEx(LOG_HOST, "MMDVM P25, call end, srcId = %u, dstId = %u, dur = %us", patch->m_netLC.getSrcId(), patch->m_netLC.getDstId(), diff / 1000U);
                             }
 
                             patch->m_rxStartTime = 0U;
@@ -1812,7 +1812,7 @@ void* HostPatch::threadMMDVMProcess(void* arg)
                 Thread::sleep(5U);
         }
 
-        LogMessage(LOG_HOST, "[STOP] %s", threadName.c_str());
+        LogInfoEx(LOG_HOST, "[STOP] %s", threadName.c_str());
         delete th;
     }
 

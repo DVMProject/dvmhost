@@ -451,7 +451,7 @@ void P25Network::clock(uint32_t ms)
         return;
 
     if (!Socket::match(m_addr, address)) {
-        LogMessage(LOG_NET, "MMDVM, packet received from an invalid source");
+        LogInfoEx(LOG_NET, "MMDVM, packet received from an invalid source");
         return;
     }
 
@@ -480,7 +480,7 @@ bool P25Network::open()
         return false;
     }
 
-    LogMessage(LOG_NET, "MMDVM, Opening P25 network connection");
+    LogInfoEx(LOG_NET, "MMDVM, Opening P25 network connection");
 
     return m_socket.open(m_addr);
 }
@@ -491,5 +491,5 @@ void P25Network::close()
 {
     m_socket.close();
 
-    LogMessage(LOG_NET, "MMDVM, Closing P25 network connection");
+    LogInfoEx(LOG_NET, "MMDVM, Closing P25 network connection");
 }

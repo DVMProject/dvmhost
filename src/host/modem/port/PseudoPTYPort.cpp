@@ -64,7 +64,7 @@ bool PseudoPTYPort::open()
         return false;
     }
 
-    ::LogMessage(LOG_HOST, "Made symbolic link from %s to %s", slave, m_symlink.c_str());
+    ::LogInfoEx(LOG_HOST, "Made symbolic link from %s to %s", slave, m_symlink.c_str());
     m_device = std::string(::ttyname(m_fd));
     return setTermios();
 }

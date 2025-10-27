@@ -175,7 +175,7 @@ int HostCal::run(int argc, char **argv)
         {
             if (!m_isHotspot) {
                 m_modem->m_txInvert = !m_modem->m_txInvert;
-                LogMessage(LOG_CAL, " - TX Invert: %s", m_modem->m_txInvert ? "On" : "Off");
+                LogInfoEx(LOG_CAL, " - TX Invert: %s", m_modem->m_txInvert ? "On" : "Off");
                 writeConfig();
             }
         }
@@ -184,7 +184,7 @@ int HostCal::run(int argc, char **argv)
         {
             if (!m_isHotspot) {
                 m_modem->m_rxInvert = !m_modem->m_rxInvert;
-                LogMessage(LOG_CAL, " - RX Invert: %s", m_modem->m_rxInvert ? "On" : "Off");
+                LogInfoEx(LOG_CAL, " - RX Invert: %s", m_modem->m_rxInvert ? "On" : "Off");
                 writeConfig();
             }
         }
@@ -193,7 +193,7 @@ int HostCal::run(int argc, char **argv)
         {
             if (!m_isHotspot) {
                 m_modem->m_pttInvert = !m_modem->m_pttInvert;
-                LogMessage(LOG_CAL, " - PTT Invert: %s", m_modem->m_pttInvert ? "On" : "Off");
+                LogInfoEx(LOG_CAL, " - PTT Invert: %s", m_modem->m_pttInvert ? "On" : "Off");
                 writeConfig();
             }
         }
@@ -202,7 +202,7 @@ int HostCal::run(int argc, char **argv)
         {
             if (!m_isHotspot) {
                 m_modem->m_dcBlocker = !m_modem->m_dcBlocker;
-                LogMessage(LOG_CAL, " - DC Blocker: %s", m_modem->m_dcBlocker ? "On" : "Off");
+                LogInfoEx(LOG_CAL, " - DC Blocker: %s", m_modem->m_dcBlocker ? "On" : "Off");
                 writeConfig();
             }
         }
@@ -210,7 +210,7 @@ int HostCal::run(int argc, char **argv)
         case 'D':
         {
             m_debug = !m_debug;
-            LogMessage(LOG_CAL, " - Modem Debug: %s", m_debug ? "On" : "Off");
+            LogInfoEx(LOG_CAL, " - Modem Debug: %s", m_debug ? "On" : "Off");
             writeConfig();
         }
         break;
@@ -486,7 +486,7 @@ int HostCal::run(int argc, char **argv)
             m_p25TduTest = false;
             m_nxdnEnabled = false;
 
-            LogMessage(LOG_CAL, " - %s", m_modeStr.c_str());
+            LogInfoEx(LOG_CAL, " - %s", m_modeStr.c_str());
             writeConfig();
         }
         break;
@@ -502,7 +502,7 @@ int HostCal::run(int argc, char **argv)
             m_p25TduTest = false;
             m_nxdnEnabled = false;
 
-            LogMessage(LOG_CAL, " - %s", m_modeStr.c_str());
+            LogInfoEx(LOG_CAL, " - %s", m_modeStr.c_str());
             writeConfig();
         }
         break;
@@ -518,7 +518,7 @@ int HostCal::run(int argc, char **argv)
             m_p25TduTest = false;
             m_nxdnEnabled = false;
 
-            LogMessage(LOG_CAL, " - %s", m_modeStr.c_str());
+            LogInfoEx(LOG_CAL, " - %s", m_modeStr.c_str());
             writeConfig();
         }
         break;
@@ -534,7 +534,7 @@ int HostCal::run(int argc, char **argv)
             m_p25TduTest = false;
             m_nxdnEnabled = false;
 
-            LogMessage(LOG_CAL, " - %s", m_modeStr.c_str());
+            LogInfoEx(LOG_CAL, " - %s", m_modeStr.c_str());
             writeConfig();
         }
         break;
@@ -550,7 +550,7 @@ int HostCal::run(int argc, char **argv)
             m_p25TduTest = false;
             m_nxdnEnabled = false;
 
-            LogMessage(LOG_CAL, " - %s", m_modeStr.c_str());
+            LogInfoEx(LOG_CAL, " - %s", m_modeStr.c_str());
             writeConfig();
         }
         break;
@@ -566,7 +566,7 @@ int HostCal::run(int argc, char **argv)
             m_p25TduTest = false;
             m_nxdnEnabled = false;
 
-            LogMessage(LOG_CAL, " - %s", m_modeStr.c_str());
+            LogInfoEx(LOG_CAL, " - %s", m_modeStr.c_str());
             writeConfig();
         }
         break;
@@ -584,7 +584,7 @@ int HostCal::run(int argc, char **argv)
                 m_p25TduTest = false;
                 m_nxdnEnabled = false;
 
-                LogMessage(LOG_CAL, " - %s", m_modeStr.c_str());
+                LogInfoEx(LOG_CAL, " - %s", m_modeStr.c_str());
                 writeConfig();
             }
             else {
@@ -610,7 +610,7 @@ int HostCal::run(int argc, char **argv)
             m_p25Enabled = false;
             m_nxdnEnabled = false;
 
-            LogMessage(LOG_CAL, " - %s", m_modeStr.c_str());
+            LogInfoEx(LOG_CAL, " - %s", m_modeStr.c_str());
             writeConfig();
         }
         break;
@@ -633,7 +633,7 @@ int HostCal::run(int argc, char **argv)
             m_p25TduTest = false;
             m_nxdnEnabled = false;
 
-            LogMessage(LOG_CAL, " - %s", m_modeStr.c_str());
+            LogInfoEx(LOG_CAL, " - %s", m_modeStr.c_str());
             writeConfig();
         }
         break;
@@ -651,7 +651,7 @@ int HostCal::run(int argc, char **argv)
                 m_p25TduTest = false;
                 m_nxdnEnabled = true;
 
-                LogMessage(LOG_CAL, " - %s", m_modeStr.c_str());
+                LogInfoEx(LOG_CAL, " - %s", m_modeStr.c_str());
                 writeConfig();
             }
             else {
@@ -671,7 +671,7 @@ int HostCal::run(int argc, char **argv)
             m_p25Rx1K = false;
             m_p25TduTest = false;
 
-            LogMessage(LOG_CAL, " - %s", m_modeStr.c_str());
+            LogInfoEx(LOG_CAL, " - %s", m_modeStr.c_str());
             writeConfig();
         }
         break;
@@ -757,65 +757,65 @@ int HostCal::run(int argc, char **argv)
 
 void HostCal::displayHelp()
 {
-    LogMessage(LOG_CAL, "General Commands:");
-    LogMessage(LOG_CAL, "    <space>  Toggle transmit");
-    LogMessage(LOG_CAL, "    `        Display current settings and operation mode");
-    LogMessage(LOG_CAL, "    !        Restart into Bootloader Mode (wipes configuration area!)");
-    LogMessage(LOG_CAL, "    V        Display version of host");
-    LogMessage(LOG_CAL, "    v        Display version of firmware");
-    LogMessage(LOG_CAL, "    H/h      Display help");
-    LogMessage(LOG_CAL, "    S/s      Save calibration settings to configuration file");
+    LogInfoEx(LOG_CAL, "General Commands:");
+    LogInfoEx(LOG_CAL, "    <space>  Toggle transmit");
+    LogInfoEx(LOG_CAL, "    `        Display current settings and operation mode");
+    LogInfoEx(LOG_CAL, "    !        Restart into Bootloader Mode (wipes configuration area!)");
+    LogInfoEx(LOG_CAL, "    V        Display version of host");
+    LogInfoEx(LOG_CAL, "    v        Display version of firmware");
+    LogInfoEx(LOG_CAL, "    H/h      Display help");
+    LogInfoEx(LOG_CAL, "    S/s      Save calibration settings to configuration file");
     if (!m_modem->m_flashDisabled) {
-        LogMessage(LOG_CAL, "    U        Read modem configuration area and reset local configuration");
+        LogInfoEx(LOG_CAL, "    U        Read modem configuration area and reset local configuration");
     }
-    LogMessage(LOG_CAL, "    )        Swap Duplex Flag (depending on mode this will enable/disable duplex)");
-    LogMessage(LOG_CAL, "    Q/q      Quit");
-    LogMessage(LOG_CAL, "Level Adjustment Commands:");
+    LogInfoEx(LOG_CAL, "    )        Swap Duplex Flag (depending on mode this will enable/disable duplex)");
+    LogInfoEx(LOG_CAL, "    Q/q      Quit");
+    LogInfoEx(LOG_CAL, "Level Adjustment Commands:");
     if (!m_isHotspot) {
-        LogMessage(LOG_CAL, "    I        Toggle transmit inversion");
-        LogMessage(LOG_CAL, "    i        Toggle receive inversion");
-        LogMessage(LOG_CAL, "    p        Toggle PTT inversion");
-        LogMessage(LOG_CAL, "    d        Toggle DC blocker");
+        LogInfoEx(LOG_CAL, "    I        Toggle transmit inversion");
+        LogInfoEx(LOG_CAL, "    i        Toggle receive inversion");
+        LogInfoEx(LOG_CAL, "    p        Toggle PTT inversion");
+        LogInfoEx(LOG_CAL, "    d        Toggle DC blocker");
     }
     if (!m_isHotspot) {
-        LogMessage(LOG_CAL, "    R/r      Increase/Decrease receive level");
-        LogMessage(LOG_CAL, "    T/t      Increase/Decrease transmit level");
+        LogInfoEx(LOG_CAL, "    R/r      Increase/Decrease receive level");
+        LogInfoEx(LOG_CAL, "    T/t      Increase/Decrease transmit level");
     } else {
-        LogMessage(LOG_CAL, "    T/t      Increase/Decrease deviation level");
+        LogInfoEx(LOG_CAL, "    T/t      Increase/Decrease deviation level");
     }
     if (!m_isHotspot) {
-        LogMessage(LOG_CAL, "    C/c      Increase/Decrease RX DC offset level");
-        LogMessage(LOG_CAL, "    O/o      Increase/Decrease TX DC offset level");
+        LogInfoEx(LOG_CAL, "    C/c      Increase/Decrease RX DC offset level");
+        LogInfoEx(LOG_CAL, "    O/o      Increase/Decrease TX DC offset level");
     }
-    LogMessage(LOG_CAL, "    X        Set FDMA Preambles");
-    LogMessage(LOG_CAL, "    W        Set DMR Rx Delay");
+    LogInfoEx(LOG_CAL, "    X        Set FDMA Preambles");
+    LogInfoEx(LOG_CAL, "    W        Set DMR Rx Delay");
     if (!m_isHotspot) {
-        LogMessage(LOG_CAL, "    w        Set P25 Correlation Count");
+        LogInfoEx(LOG_CAL, "    w        Set P25 Correlation Count");
     }
     if (m_isHotspot) {
-        LogMessage(LOG_CAL, "    F        Set Rx Frequency Adjustment");
-        LogMessage(LOG_CAL, "    f        Set Tx Frequency Adjustment");
+        LogInfoEx(LOG_CAL, "    F        Set Rx Frequency Adjustment");
+        LogInfoEx(LOG_CAL, "    f        Set Tx Frequency Adjustment");
     }
     if (!m_isHotspot) {
-        LogMessage(LOG_CAL, "    1/2      Increase/Decrease receive coarse level");
-        LogMessage(LOG_CAL, "    3/4      Increase/Decrease receive fine level");
-        LogMessage(LOG_CAL, "    5/6      Increase/Decrease transmit coarse level");
-        LogMessage(LOG_CAL, "    9/0      Increase/Decrease RSSI coarse level");
+        LogInfoEx(LOG_CAL, "    1/2      Increase/Decrease receive coarse level");
+        LogInfoEx(LOG_CAL, "    3/4      Increase/Decrease receive fine level");
+        LogInfoEx(LOG_CAL, "    5/6      Increase/Decrease transmit coarse level");
+        LogInfoEx(LOG_CAL, "    9/0      Increase/Decrease RSSI coarse level");
     }
-    LogMessage(LOG_CAL, "Mode Commands:");
-    LogMessage(LOG_CAL, "    Z        %s", DMR_CAL_STR);
-    LogMessage(LOG_CAL, "    z        %s", P25_CAL_STR);
-    LogMessage(LOG_CAL, "    L        %s", DMR_LF_CAL_STR);
-    LogMessage(LOG_CAL, "    M        %s", DMR_CAL_1K_STR);
-    LogMessage(LOG_CAL, "    m        %s", DMR_DMO_CAL_1K_STR);
-    LogMessage(LOG_CAL, "    P        %s", P25_CAL_1K_STR);
-    LogMessage(LOG_CAL, "    N        %s", NXDN_CAL_1K_STR);
-    LogMessage(LOG_CAL, "    B        %s", DMR_FEC_STR);
-    LogMessage(LOG_CAL, "    J        %s", DMR_FEC_1K_STR);
-    LogMessage(LOG_CAL, "    b        %s", P25_FEC_STR);
-    LogMessage(LOG_CAL, "    j        %s", P25_FEC_1K_STR);
-    LogMessage(LOG_CAL, "    n        %s", NXDN_FEC_STR);
-    LogMessage(LOG_CAL, "    x        %s", RSSI_CAL_STR);
+    LogInfoEx(LOG_CAL, "Mode Commands:");
+    LogInfoEx(LOG_CAL, "    Z        %s", DMR_CAL_STR);
+    LogInfoEx(LOG_CAL, "    z        %s", P25_CAL_STR);
+    LogInfoEx(LOG_CAL, "    L        %s", DMR_LF_CAL_STR);
+    LogInfoEx(LOG_CAL, "    M        %s", DMR_CAL_1K_STR);
+    LogInfoEx(LOG_CAL, "    m        %s", DMR_DMO_CAL_1K_STR);
+    LogInfoEx(LOG_CAL, "    P        %s", P25_CAL_1K_STR);
+    LogInfoEx(LOG_CAL, "    N        %s", NXDN_CAL_1K_STR);
+    LogInfoEx(LOG_CAL, "    B        %s", DMR_FEC_STR);
+    LogInfoEx(LOG_CAL, "    J        %s", DMR_FEC_1K_STR);
+    LogInfoEx(LOG_CAL, "    b        %s", P25_FEC_STR);
+    LogInfoEx(LOG_CAL, "    j        %s", P25_FEC_1K_STR);
+    LogInfoEx(LOG_CAL, "    n        %s", NXDN_FEC_STR);
+    LogInfoEx(LOG_CAL, "    x        %s", RSSI_CAL_STR);
 }
 
 /* Helper to change the Rx level. */
@@ -829,7 +829,7 @@ bool HostCal::setTXLevel(int incr)
         if (m_modem->m_cwIdTXLevel > 100.0F)
             m_modem->m_cwIdTXLevel = 100.0F;
 
-        LogMessage(LOG_CAL, " - TX Level: %.1f%%", m_modem->m_cwIdTXLevel);
+        LogInfoEx(LOG_CAL, " - TX Level: %.1f%%", m_modem->m_cwIdTXLevel);
         return writeConfig();
     }
 
@@ -840,7 +840,7 @@ bool HostCal::setTXLevel(int incr)
         if (m_modem->m_cwIdTXLevel < 0.0F)
             m_modem->m_cwIdTXLevel = 0.0F;
 
-        LogMessage(LOG_CAL, " - TX Level: %.1f%%", m_modem->m_cwIdTXLevel);
+        LogInfoEx(LOG_CAL, " - TX Level: %.1f%%", m_modem->m_cwIdTXLevel);
         return writeConfig();
     }
 
@@ -858,7 +858,7 @@ bool HostCal::setRXLevel(int incr)
         if (m_modem->m_rxLevel > 100.0F)
             m_modem->m_rxLevel = 100.0F;
 
-        LogMessage(LOG_CAL, " - RX Level: %.1f%%", m_modem->m_rxLevel);
+        LogInfoEx(LOG_CAL, " - RX Level: %.1f%%", m_modem->m_rxLevel);
         return writeConfig();
     }
 
@@ -869,7 +869,7 @@ bool HostCal::setRXLevel(int incr)
         if (m_modem->m_rxLevel < 0.0F)
             m_modem->m_rxLevel = 0.0F;
 
-        LogMessage(LOG_CAL, " - RX Level: %.1f%%", m_modem->m_rxLevel);
+        LogInfoEx(LOG_CAL, " - RX Level: %.1f%%", m_modem->m_rxLevel);
         return writeConfig();
     }
 
@@ -882,13 +882,13 @@ bool HostCal::setTXDCOffset(int incr)
 {
     if (incr > 0 && m_modem->m_txDCOffset < 127) {
         m_modem->m_txDCOffset++;
-        LogMessage(LOG_CAL, " - TX DC Offset: %d", m_modem->m_txDCOffset);
+        LogInfoEx(LOG_CAL, " - TX DC Offset: %d", m_modem->m_txDCOffset);
         return writeConfig();
     }
 
     if (incr < 0 && m_modem->m_txDCOffset > -127) {
         m_modem->m_txDCOffset--;
-        LogMessage(LOG_CAL, " - TX DC Offset: %d", m_modem->m_txDCOffset);
+        LogInfoEx(LOG_CAL, " - TX DC Offset: %d", m_modem->m_txDCOffset);
         return writeConfig();
     }
 
@@ -901,13 +901,13 @@ bool HostCal::setRXDCOffset(int incr)
 {
     if (incr > 0 && m_modem->m_rxDCOffset < 127) {
         m_modem->m_rxDCOffset++;
-        LogMessage(LOG_CAL, " - RX DC Offset: %d", m_modem->m_rxDCOffset);
+        LogInfoEx(LOG_CAL, " - RX DC Offset: %d", m_modem->m_rxDCOffset);
         return writeConfig();
     }
 
     if (incr < 0 && m_modem->m_rxDCOffset > -127) {
         m_modem->m_rxDCOffset--;
-        LogMessage(LOG_CAL, " - RX DC Offset: %d", m_modem->m_rxDCOffset);
+        LogInfoEx(LOG_CAL, " - RX DC Offset: %d", m_modem->m_rxDCOffset);
         return writeConfig();
     }
 
@@ -923,7 +923,7 @@ bool HostCal::setRXCoarseLevel(int incr)
             m_modem->m_rxCoarsePot += 1U;
         }
 
-        LogMessage(LOG_CAL, " - RX Coarse Level: %u", m_modem->m_rxCoarsePot);
+        LogInfoEx(LOG_CAL, " - RX Coarse Level: %u", m_modem->m_rxCoarsePot);
         return writeConfig();
     }
 
@@ -932,7 +932,7 @@ bool HostCal::setRXCoarseLevel(int incr)
             m_modem->m_rxCoarsePot -= 1U;
         }
 
-        LogMessage(LOG_CAL, " - RX Coarse Level: %u", m_modem->m_rxCoarsePot);
+        LogInfoEx(LOG_CAL, " - RX Coarse Level: %u", m_modem->m_rxCoarsePot);
         return writeConfig();
     }
 
@@ -948,7 +948,7 @@ bool HostCal::setRXFineLevel(int incr)
             m_modem->m_rxFinePot += 1U;
         }
 
-        LogMessage(LOG_CAL, " - RX Fine Level: %u", m_modem->m_rxFinePot);
+        LogInfoEx(LOG_CAL, " - RX Fine Level: %u", m_modem->m_rxFinePot);
         return writeConfig();
     }
 
@@ -957,7 +957,7 @@ bool HostCal::setRXFineLevel(int incr)
             m_modem->m_rxFinePot -= 1U;
         }
 
-        LogMessage(LOG_CAL, " - RX Fine Level: %u", m_modem->m_rxFinePot);
+        LogInfoEx(LOG_CAL, " - RX Fine Level: %u", m_modem->m_rxFinePot);
         return writeConfig();
     }
 
@@ -973,7 +973,7 @@ bool HostCal::setTXCoarseLevel(int incr)
             m_modem->m_txCoarsePot += 1U;
         }
 
-        LogMessage(LOG_CAL, " - TX Coarse Level: %u", m_modem->m_txCoarsePot);
+        LogInfoEx(LOG_CAL, " - TX Coarse Level: %u", m_modem->m_txCoarsePot);
         return writeConfig();
     }
 
@@ -982,7 +982,7 @@ bool HostCal::setTXCoarseLevel(int incr)
             m_modem->m_txCoarsePot -= 1U;
         }
 
-        LogMessage(LOG_CAL, " - TX Coarse Level: %u", m_modem->m_txCoarsePot);
+        LogInfoEx(LOG_CAL, " - TX Coarse Level: %u", m_modem->m_txCoarsePot);
         return writeConfig();
     }
 
@@ -998,7 +998,7 @@ bool HostCal::setRSSICoarseLevel(int incr)
             m_modem->m_rssiCoarsePot += 1U;
         }
 
-        LogMessage(LOG_CAL, " - RSSI Coarse Level: %u", m_modem->m_rssiCoarsePot);
+        LogInfoEx(LOG_CAL, " - RSSI Coarse Level: %u", m_modem->m_rssiCoarsePot);
         return writeConfig();
     }
 
@@ -1007,7 +1007,7 @@ bool HostCal::setRSSICoarseLevel(int incr)
             m_modem->m_rssiCoarsePot -= 1U;
         }
 
-        LogMessage(LOG_CAL, " - RSSI Coarse Level: %u", m_modem->m_rssiCoarsePot);
+        LogInfoEx(LOG_CAL, " - RSSI Coarse Level: %u", m_modem->m_rssiCoarsePot);
         return writeConfig();
     }
 
@@ -1027,61 +1027,61 @@ void HostCal::printStatus()
         std::string modemPort = uartConfig["port"].as<std::string>();
         uint32_t portSpeed = uartConfig["speed"].as<uint32_t>(115200U);
 
-        LogMessage(LOG_CAL, " - Operating Mode: %s, Port Type: %s, Modem Port: %s, Port Speed: %u, Proto Ver: %u", m_modeStr.c_str(), type.c_str(), modemPort.c_str(), portSpeed, m_modem->getVersion());
+        LogInfoEx(LOG_CAL, " - Operating Mode: %s, Port Type: %s, Modem Port: %s, Port Speed: %u, Proto Ver: %u", m_modeStr.c_str(), type.c_str(), modemPort.c_str(), portSpeed, m_modem->getVersion());
     }
 
     {
         if (!m_isHotspot) {
-            LogMessage(LOG_CAL, " - PTT Invert: %s, RX Invert: %s, TX Invert: %s, DC Blocker: %s",
+            LogInfoEx(LOG_CAL, " - PTT Invert: %s, RX Invert: %s, TX Invert: %s, DC Blocker: %s",
                 m_modem->m_pttInvert ? "yes" : "no", m_modem->m_rxInvert ? "yes" : "no", m_modem->m_txInvert ? "yes" : "no", m_modem->m_dcBlocker ? "yes" : "no");
         }
-        LogMessage(LOG_CAL, " - RX Level: %.1f%%, TX Level: %.1f%%, TX DC Offset: %d, RX DC Offset: %d",
+        LogInfoEx(LOG_CAL, " - RX Level: %.1f%%, TX Level: %.1f%%, TX DC Offset: %d, RX DC Offset: %d",
             m_modem->m_rxLevel, m_modem->m_cwIdTXLevel, m_modem->m_txDCOffset, m_modem->m_rxDCOffset);
         if (!m_isHotspot) {
-            LogMessage(LOG_CAL, " - RX Coarse Level: %u, RX Fine Level: %u, TX Coarse Level: %u, RSSI Coarse Level: %u",
+            LogInfoEx(LOG_CAL, " - RX Coarse Level: %u, RX Fine Level: %u, TX Coarse Level: %u, RSSI Coarse Level: %u",
                 m_modem->m_rxCoarsePot, m_modem->m_rxFinePot, m_modem->m_txCoarsePot, m_modem->m_rssiCoarsePot);
-            LogMessage(LOG_CAL, " - DMR Symbol +/- 3 Level Adj.: %d, DMR Symbol +/- 1 Level Adj.: %d, P25 Symbol +/- 3 Level Adj.: %d, P25 Symbol +/- 1 Level Adj.: %d",
+            LogInfoEx(LOG_CAL, " - DMR Symbol +/- 3 Level Adj.: %d, DMR Symbol +/- 1 Level Adj.: %d, P25 Symbol +/- 3 Level Adj.: %d, P25 Symbol +/- 1 Level Adj.: %d",
                 m_modem->m_dmrSymLevel3Adj, m_modem->m_dmrSymLevel1Adj, m_modem->m_p25SymLevel3Adj, m_modem->m_p25SymLevel1Adj);
 
             // are we on a protocol version 3 firmware?
             if (m_modem->getVersion() >= 3U) {
-                LogMessage(LOG_CAL, " - NXDN Symbol +/- 3 Level Adj.: %d, NXDN Symbol +/- 1 Level Adj.: %d",
+                LogInfoEx(LOG_CAL, " - NXDN Symbol +/- 3 Level Adj.: %d, NXDN Symbol +/- 1 Level Adj.: %d",
                     m_modem->m_nxdnSymLevel3Adj, m_modem->m_nxdnSymLevel1Adj);
             }
         }
         if (m_isHotspot) {
-            LogMessage(LOG_CAL, " - DMR Disc. BW: %d, P25 Disc. BW: %d, DMR Post Demod BW: %d, P25 Post Demod BW: %d",
+            LogInfoEx(LOG_CAL, " - DMR Disc. BW: %d, P25 Disc. BW: %d, DMR Post Demod BW: %d, P25 Post Demod BW: %d",
                 m_modem->m_dmrDiscBWAdj, m_modem->m_p25DiscBWAdj, m_modem->m_dmrPostBWAdj, m_modem->m_p25PostBWAdj);
 
             // are we on a protocol version 3 firmware?
             if (m_modem->getVersion() >= 3U) {
-                LogMessage(LOG_CAL, " - NXDN Disc. BW: %d, NXDN Post Demod BW: %d",
+                LogInfoEx(LOG_CAL, " - NXDN Disc. BW: %d, NXDN Post Demod BW: %d",
                     m_modem->m_nxdnDiscBWAdj, m_modem->m_nxdnPostBWAdj);
 
-                LogMessage(LOG_CAL, " - AFC Enabled: %u, AFC KI: %u, AFC KP: %u, AFC Range: %u",
+                LogInfoEx(LOG_CAL, " - AFC Enabled: %u, AFC KI: %u, AFC KP: %u, AFC Range: %u",
                     m_modem->m_afcEnable, m_modem->m_afcKI, m_modem->m_afcKP, m_modem->m_afcRange);
             }
 
             switch (m_modem->m_adfGainMode) {
                 case ADF_GAIN_AUTO_LIN:
-                    LogMessage(LOG_CAL, " - ADF7021 Gain Mode: Auto High Linearity");
+                    LogInfoEx(LOG_CAL, " - ADF7021 Gain Mode: Auto High Linearity");
                     break;
                 case ADF_GAIN_LOW:
-                    LogMessage(LOG_CAL, " - ADF7021 Gain Mode: Low");
+                    LogInfoEx(LOG_CAL, " - ADF7021 Gain Mode: Low");
                     break;
                 case ADF_GAIN_HIGH:
-                    LogMessage(LOG_CAL, " - ADF7021 Gain Mode: High");
+                    LogInfoEx(LOG_CAL, " - ADF7021 Gain Mode: High");
                     break;
                 case ADF_GAIN_AUTO:
                 default:
-                    LogMessage(LOG_CAL, " - ADF7021 Gain Mode: Auto");
+                    LogInfoEx(LOG_CAL, " - ADF7021 Gain Mode: Auto");
                     break;
             }
         }
-        LogMessage(LOG_CAL, " - FDMA Preambles: %u (%.1fms), DMR Rx Delay: %u (%.1fms), P25 Corr. Count: %u (%.1fms)", m_modem->m_fdmaPreamble, float(m_modem->m_fdmaPreamble) * 0.2222F, m_modem->m_dmrRxDelay, float(m_modem->m_dmrRxDelay) * 0.0416666F,
+        LogInfoEx(LOG_CAL, " - FDMA Preambles: %u (%.1fms), DMR Rx Delay: %u (%.1fms), P25 Corr. Count: %u (%.1fms)", m_modem->m_fdmaPreamble, float(m_modem->m_fdmaPreamble) * 0.2222F, m_modem->m_dmrRxDelay, float(m_modem->m_dmrRxDelay) * 0.0416666F,
             m_modem->m_p25CorrCount, float(m_modem->m_p25CorrCount) * 0.667F);
-        LogMessage(LOG_CAL, " - Rx Freq: %uHz, Tx Freq: %uHz, Rx Offset: %dHz, Tx Offset: %dHz", m_modem->m_rxFrequency, m_modem->m_txFrequency, m_modem->m_rxTuning, m_modem->m_txTuning);
-        LogMessage(LOG_CAL, " - Rx Effective Freq: %uHz, Tx Effective Freq: %uHz", m_rxAdjustedFreq, m_txAdjustedFreq);
+        LogInfoEx(LOG_CAL, " - Rx Freq: %uHz, Tx Freq: %uHz, Rx Offset: %dHz, Tx Offset: %dHz", m_modem->m_rxFrequency, m_modem->m_txFrequency, m_modem->m_rxTuning, m_modem->m_txTuning);
+        LogInfoEx(LOG_CAL, " - Rx Effective Freq: %uHz, Tx Effective Freq: %uHz", m_rxAdjustedFreq, m_txAdjustedFreq);
     }
 
     getStatus();

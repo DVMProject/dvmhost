@@ -313,7 +313,7 @@ void V24UDPPort::closeFSC()
 {
     if (m_controlSocket != nullptr) {
         if (m_fscState == CS_CONNECTED) {
-            LogMessage(LOG_MODEM, "V.24 UDP, Closing DFSI FSC Connection, vcBasePort = %u", m_localPort);
+            LogInfoEx(LOG_MODEM, "V.24 UDP, Closing DFSI FSC Connection, vcBasePort = %u", m_localPort);
 
             FSCDisconnect discoMessage = FSCDisconnect();
 
@@ -450,7 +450,7 @@ void V24UDPPort::taskCtrlNetworkRx(V24PacketRequest* req)
                                         network->m_heartbeatTimer.start();
                                         network->m_timeoutTimer.start();
 
-                                        LogMessage(LOG_MODEM, "V.24 UDP, Established DFSI FSC Connection, ctrlRemotePort = %u, vcLocalPort = %u, vcRemotePort = %u", remoteCtrlPort, network->m_localPort, vcBasePort);
+                                        LogInfoEx(LOG_MODEM, "V.24 UDP, Established DFSI FSC Connection, ctrlRemotePort = %u, vcLocalPort = %u, vcRemotePort = %u", remoteCtrlPort, network->m_localPort, vcBasePort);
                                     }
                                     break;
 
@@ -529,7 +529,7 @@ void V24UDPPort::taskCtrlNetworkRx(V24PacketRequest* req)
                         network->m_remoteCtrlAddr = req->address;
                         network->m_remoteCtrlAddrLen = req->addrLen;
 
-                        LogMessage(LOG_MODEM, "V.24 UDP, Incoming DFSI FSC Connection, ctrlRemotePort = %u, vcLocalPort = %u, vcRemotePort = %u, hostHBInterval = %u", remoteCtrlPort, network->m_localPort, vcBasePort, connMessage->getHostHeartbeatPeriod());
+                        LogInfoEx(LOG_MODEM, "V.24 UDP, Incoming DFSI FSC Connection, ctrlRemotePort = %u, vcLocalPort = %u, vcRemotePort = %u, hostHBInterval = %u", remoteCtrlPort, network->m_localPort, vcBasePort, connMessage->getHostHeartbeatPeriod());
 
                         // setup local RTP VC port (where we receive traffic)
                         network->createVCPort(network->m_localPort);
@@ -565,7 +565,7 @@ void V24UDPPort::taskCtrlNetworkRx(V24PacketRequest* req)
                         ackResp.encode(buffer);
 
                         if (network->m_ctrlFrameQueue->write(buffer, FSCACK::LENGTH + 3U, req->address, req->addrLen))
-                            LogMessage(LOG_MODEM, "V.24 UDP, Established DFSI FSC Connection, ctrlRemotePort = %u, vcLocalPort = %u, vcRemotePort = %u", remoteCtrlPort, network->m_localPort, vcBasePort);
+                            LogInfoEx(LOG_MODEM, "V.24 UDP, Established DFSI FSC Connection, ctrlRemotePort = %u, vcLocalPort = %u, vcRemotePort = %u", remoteCtrlPort, network->m_localPort, vcBasePort);
                     }
                     break;
 
@@ -619,7 +619,7 @@ void V24UDPPort::taskCtrlNetworkRx(V24PacketRequest* req)
 
                     case FSCMessageType::FSC_DISCONNECT:
                     {
-                        LogMessage(LOG_MODEM, "V.24 UDP, DFSI FSC Disconnect, vcBasePort = %u", network->m_localPort);
+                        LogInfoEx(LOG_MODEM, "V.24 UDP, DFSI FSC Disconnect, vcBasePort = %u", network->m_localPort);
 
                         if (network->m_socket != nullptr) {
                             network->m_socket->close();
@@ -780,7 +780,7 @@ void V24UDPPort::createRemoteVCPort(std::string address, uint16_t port)
 
 void V24UDPPort::writeConnect()
 {
-    LogMessage(LOG_MODEM, "V.24 UDP, Attempting DFSI FSC Connection, peerId = %u, vcBasePort = %u", m_peerId, m_localPort);
+    LogInfoEx(LOG_MODEM, "V.24 UDP, Attempting DFSI FSC Connection, peerId = %u, vcBasePort = %u", m_peerId, m_localPort);
 
     FSCConnect connect = FSCConnect();
     connect.setFSHeartbeatPeriod(m_heartbeatInterval);

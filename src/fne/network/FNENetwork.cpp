@@ -609,7 +609,7 @@ void FNENetwork::clock(uint32_t ms)
 bool FNENetwork::open()
 {
     if (m_debug)
-        LogMessage(LOG_MASTER, "Opening Network");
+        LogInfoEx(LOG_MASTER, "Opening Network");
 
     // start thread pool
     m_threadPool.start();
@@ -650,7 +650,7 @@ bool FNENetwork::open()
 void FNENetwork::close()
 {
     if (m_debug)
-        LogMessage(LOG_MASTER, "Closing Network");
+        LogInfoEx(LOG_MASTER, "Closing Network");
 
     if (m_status == NET_STAT_MST_RUNNING) {
         uint8_t buffer[1U];
@@ -709,7 +709,7 @@ void* FNENetwork::threadParrotHandler(void* arg)
             return nullptr;
         }
 
-        LogMessage(LOG_HOST, "[ OK ] %s", threadName.c_str());
+        LogInfoEx(LOG_HOST, "[ OK ] %s", threadName.c_str());
 #ifdef _GNU_SOURCE
         ::pthread_setname_np(th->thread, threadName.c_str());
 #endif // _GNU_SOURCE
@@ -754,7 +754,7 @@ void* FNENetwork::threadParrotHandler(void* arg)
                     // if the DMR handle is marked as playing back parrot frames, but has no more frames in the queue
                     // clear the playback flag
                     if (fne->m_tagDMR->isParrotPlayback() && !fne->m_tagDMR->hasParrotFrames()) {
-                        LogMessage(LOG_MASTER, "DMR, Parrot Call End, peer = %u, srcId = %u, dstId = %u",
+                        LogInfoEx(LOG_MASTER, "DMR, Parrot Call End, peer = %u, srcId = %u, dstId = %u",
                                    fne->m_tagDMR->lastParrotPeerId(), fne->m_tagDMR->lastParrotSrcId(), fne->m_tagDMR->lastParrotDstId());
                         fne->m_tagDMR->clearParrotPlayback();
                     }
@@ -762,7 +762,7 @@ void* FNENetwork::threadParrotHandler(void* arg)
                     // if the P25 handle is marked as playing back parrot frames, but has no more frames in the queue
                     // clear the playback flag
                     if (fne->m_tagP25->isParrotPlayback() && !fne->m_tagDMR->hasParrotFrames()) {
-                        LogMessage(LOG_MASTER, "P25, Parrot Call End, peer = %u, srcId = %u, dstId = %u",
+                        LogInfoEx(LOG_MASTER, "P25, Parrot Call End, peer = %u, srcId = %u, dstId = %u",
                                    fne->m_tagP25->lastParrotPeerId(), fne->m_tagP25->lastParrotSrcId(), fne->m_tagP25->lastParrotDstId());
                         fne->m_tagP25->clearParrotPlayback();
                     }
@@ -770,7 +770,7 @@ void* FNENetwork::threadParrotHandler(void* arg)
                     // if the NXDN handle is marked as playing back parrot frames, but has no more frames in the queue
                     // clear the playback flag
                     if (fne->m_tagNXDN->isParrotPlayback() && !fne->m_tagDMR->hasParrotFrames()) {
-                        LogMessage(LOG_MASTER, "NXDN, Parrot Call End, peer = %u, srcId = %u, dstId = %u",
+                        LogInfoEx(LOG_MASTER, "NXDN, Parrot Call End, peer = %u, srcId = %u, dstId = %u",
                                    fne->m_tagNXDN->lastParrotPeerId(), fne->m_tagNXDN->lastParrotSrcId(), fne->m_tagNXDN->lastParrotDstId());
                         fne->m_tagNXDN->clearParrotPlayback();
                     }
@@ -778,7 +778,7 @@ void* FNENetwork::threadParrotHandler(void* arg)
                     // if the analog handle is marked as playing back parrot frames, but has no more frames in the queue
                     // clear the playback flag
                     if (fne->m_tagAnalog->isParrotPlayback() && !fne->m_tagDMR->hasParrotFrames()) {
-                        LogMessage(LOG_MASTER, "Analog, Parrot Call End, peer = %u, srcId = %u, dstId = %u",
+                        LogInfoEx(LOG_MASTER, "Analog, Parrot Call End, peer = %u, srcId = %u, dstId = %u",
                                    fne->m_tagAnalog->lastParrotPeerId(), fne->m_tagAnalog->lastParrotSrcId(), fne->m_tagAnalog->lastParrotDstId());
                         fne->m_tagAnalog->clearParrotPlayback();
                     }
@@ -788,7 +788,7 @@ void* FNENetwork::threadParrotHandler(void* arg)
             }
         }
 
-        LogMessage(LOG_HOST, "[STOP] %s", threadName.c_str());
+        LogInfoEx(LOG_HOST, "[STOP] %s", threadName.c_str());
         delete th;
     }
 
@@ -1021,7 +1021,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                             FNEPeerConnection* connection = network->m_peers[peerId];
                             if (connection != nullptr) {
                                 if (connection->connectionState() == NET_STAT_RUNNING) {
-                                    LogMessage(LOG_MASTER, "PEER %u (%s) resetting peer connection, connectionState = %u", peerId, connection->identWithQualifier().c_str(),
+                                    LogInfoEx(LOG_MASTER, "PEER %u (%s) resetting peer connection, connectionState = %u", peerId, connection->identWithQualifier().c_str(),
                                         connection->connectionState());
                                     delete connection;
 
@@ -1492,7 +1492,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                     {
                                         KMMModifyKey* modifyKey = static_cast<KMMModifyKey*>(frame.get());
                                         if (modifyKey->getAlgId() > 0U && modifyKey->getKId() > 0U) {
-                                            LogMessage(LOG_MASTER, "PEER %u (%s) requested enc. key, algId = $%02X, kID = $%04X", peerId, connection->identWithQualifier().c_str(),
+                                            LogInfoEx(LOG_MASTER, "PEER %u (%s) requested enc. key, algId = $%02X, kID = $%04X", peerId, connection->identWithQualifier().c_str(),
                                                 modifyKey->getAlgId(), modifyKey->getKId());
                                             ::KeyItem keyItem = network->m_cryptoLookup->find(modifyKey->getKId());
                                             if (!keyItem.isInvalid()) {
@@ -1505,7 +1505,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                                     Utils::dump(1U, "FNENetwork::taskNetworkRx(), Key", key, P25DEF::MAX_ENC_KEY_LENGTH_BYTES);
                                                 }
 
-                                                LogMessage(LOG_MASTER, "PEER %u (%s) local enc. key, algId = $%02X, kID = $%04X", peerId, connection->identWithQualifier().c_str(),
+                                                LogInfoEx(LOG_MASTER, "PEER %u (%s) local enc. key, algId = $%02X, kID = $%04X", peerId, connection->identWithQualifier().c_str(),
                                                     modifyKey->getAlgId(), modifyKey->getKId());
 
                                                 // build response buffer
@@ -1541,7 +1541,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                                     for (auto peer : network->m_host->m_peerNetworks) {
                                                         if (peer.second != nullptr) {
                                                             if (peer.second->isEnabled() && peer.second->isReplica()) {
-                                                                LogMessage(LOG_PEER, "PEER %u (%s) no local key or container, requesting key from upstream master, algId = $%02X, kID = $%04X", peerId, connection->identWithQualifier().c_str(),
+                                                                LogInfoEx(LOG_PEER, "PEER %u (%s) no local key or container, requesting key from upstream master, algId = $%02X, kID = $%04X", peerId, connection->identWithQualifier().c_str(),
                                                                     modifyKey->getAlgId(), modifyKey->getKId());
 
                                                                 bool locked = network->m_keyQueueMutex.try_lock_for(std::chrono::milliseconds(60));
@@ -1758,7 +1758,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                                 aff->groupAff(srcId, dstId);
                                                 offs += 8U;
                                             }
-                                            LogMessage(LOG_MASTER, "PEER %u (%s) announced %u affiliations", peerId, connection->identWithQualifier().c_str(), len);
+                                            LogInfoEx(LOG_MASTER, "PEER %u (%s) announced %u affiliations", peerId, connection->identWithQualifier().c_str(), len);
 
                                             // attempt to repeat traffic to replica masters
                                             if (network->m_host->m_peerNetworks.size() > 0) {
@@ -1806,7 +1806,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                             }
                                             offs += 4U;
                                         }
-                                        LogMessage(LOG_MASTER, "PEER %u (%s) announced %u VCs", peerId, connection->identWithQualifier().c_str(), len);
+                                        LogInfoEx(LOG_MASTER, "PEER %u (%s) announced %u VCs", peerId, connection->identWithQualifier().c_str(), len);
                                         network->m_ccPeerMap[peerId] = vcPeers;
 
                                         // attempt to repeat traffic to replica masters
@@ -2927,7 +2927,7 @@ void FNENetwork::processTEKResponse(p25::kmm::KeyItem* rspKi, uint8_t algId, uin
     if (rspKi == nullptr)
         return;
 
-    LogMessage(LOG_PEER, "upstream master enc. key, algId = $%02X, kID = $%04X", algId, rspKi->kId());
+    LogInfoEx(LOG_PEER, "upstream master enc. key, algId = $%02X, kID = $%04X", algId, rspKi->kId());
 
     m_keyQueueMutex.lock();
 

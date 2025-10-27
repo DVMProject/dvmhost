@@ -210,7 +210,7 @@ int main(int argc, char** argv)
 
     g_pidLookups = new PeerListLookup(g_iniFile, 0U, false);
     g_pidLookups->read();
-    LogMessage(LOG_HOST, "Loaded peer ID file: %s", g_iniFile.c_str());
+    LogInfoEx(LOG_HOST, "Loaded peer ID file: %s", g_iniFile.c_str());
 
     // show and start the application
     wnd.show();

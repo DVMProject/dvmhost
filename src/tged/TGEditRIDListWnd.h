@@ -173,7 +173,7 @@ private:
         m_entry.addCallback("return-pressed", [&]() { 
             size_t curItem = m_listBox.currentItem();
             auto item = m_listBox.getItem(curItem);
-            LogMessage(LOG_HOST, "Updating %s radio ID %s to %s for TG %s (%u)", m_title.c_str(), item.getText().c_str(), m_entry.getText().c_str(),
+            LogInfoEx(LOG_HOST, "Updating %s radio ID %s to %s for TG %s (%u)", m_title.c_str(), item.getText().c_str(), m_entry.getText().c_str(),
                 m_rule.name().c_str(), m_rule.source().tgId());
             item.setText(m_entry.getText());
             
@@ -238,7 +238,7 @@ private:
 
         size_t curItem = m_listBox.currentItem();
         auto item = m_listBox.getItem(curItem);
-        LogMessage(LOG_HOST, "Removing %s radio ID %s from TG %s (%u)", m_title.c_str(), item.getText().c_str(),
+        LogInfoEx(LOG_HOST, "Removing %s radio ID %s from TG %s (%u)", m_title.c_str(), item.getText().c_str(),
             m_rule.name().c_str(), m_rule.source().tgId());
         m_listBox.remove(curItem);
 
@@ -288,7 +288,7 @@ private:
             auto item = m_listBox.getItem(i + 1U);
             if (item.getText() != "") {
                 uint32_t peerId = ::atoi(item.getText().c_str());
-                LogMessage(LOG_HOST, "%s radio ID %s for TG %s (%u)", m_title.c_str(), item.getText().c_str(),
+                LogInfoEx(LOG_HOST, "%s radio ID %s for TG %s (%u)", m_title.c_str(), item.getText().c_str(),
                     m_rule.name().c_str(), m_rule.source().tgId());
                 ridList.push_back(peerId);
             }

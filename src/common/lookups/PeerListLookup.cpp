@@ -251,7 +251,7 @@ bool PeerListLookup::load()
             m_table[id] = entry;
 
             // log depending on what was loaded
-            LogMessage(LOG_HOST, "Loaded peer ID %u%s into peer ID lookup table, %s%s%s", id,
+            LogInfoEx(LOG_HOST, "Loaded peer ID %u%s into peer ID lookup table, %s%s%s", id,
                 (!alias.empty() ? (" (" + alias + ")").c_str() : ""),
                 (!password.empty() ? "using unique peer password" : "using master password"),
                 (peerReplica) ? ", Replication Enabled" : "",
@@ -286,7 +286,7 @@ bool PeerListLookup::save(bool quiet)
     }
 
     if (!quiet)
-        LogMessage(LOG_HOST, "Saving peer lookup file to %s", m_filename.c_str());
+        LogInfoEx(LOG_HOST, "Saving peer lookup file to %s", m_filename.c_str());
 
     // Counter for lines written
     unsigned int lines = 0;
