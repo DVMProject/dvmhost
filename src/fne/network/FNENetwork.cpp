@@ -98,6 +98,7 @@ FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port,
     m_ccPeerMap(),
     m_peerReplicaKeyQueue(),
     m_treeRoot(nullptr),
+    m_treeLock(),
     m_peerReplicaHAParams(),
     m_advertisedHAAddress(),
     m_advertisedHAPort(TRAFFIC_DEFAULT_PORT),
@@ -497,6 +498,7 @@ void FNENetwork::clock(uint32_t ms)
                     // perform master tree maintainence tasks
                     if (peer.second->isEnabled() && peer.second->getRemotePeerId() > 0U &&
                         m_enableSpanningTree) {
+                        std::lock_guard<std::mutex> guard(m_treeLock);
                         peer.second->writeSpanningTree(m_treeRoot);
                     }
 
@@ -1261,6 +1263,8 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                             }
 
                                             if (network->m_enableSpanningTree && !connection->isSysView()) {
+                                                std::lock_guard<std::mutex> guard(network->m_treeLock);
+
                                                 // check if this peer is already connected via another peer
                                                 SpanningTree* tree = SpanningTree::findByMasterID(masterPeerId);
                                                 if (tree != nullptr) {

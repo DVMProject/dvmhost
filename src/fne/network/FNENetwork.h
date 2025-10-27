@@ -328,6 +328,7 @@ namespace network
         std::unordered_map<uint32_t, uint16_t> m_peerReplicaKeyQueue;
 
         SpanningTree* m_treeRoot;
+        std::mutex m_treeLock;
 
         concurrent::vector<HAParameters> m_peerReplicaHAParams;
         std::string m_advertisedHAAddress;
