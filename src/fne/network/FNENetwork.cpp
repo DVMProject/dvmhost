@@ -459,6 +459,7 @@ void FNENetwork::clock(uint32_t ms)
     if (m_maintainenceTimer.isRunning() && m_maintainenceTimer.hasExpired()) {
         // check to see if any peers have been quiet (no ping) longer than allowed
         std::vector<uint32_t> peersToRemove = std::vector<uint32_t>();
+        m_peers.shared_lock();
         for (auto peer : m_peers) {
             uint32_t id = peer.first;
             FNEPeerConnection* connection = peer.second;
@@ -477,18 +478,11 @@ void FNENetwork::clock(uint32_t ms)
                     connection->connected(false);
                     connection->connectionState(NET_STAT_INVALID);
 
-                    // if the connection was an downstream FNE neighbor peer or a peer replica -- be noisy about a possible
-                    // netsplit
-                    if (connection->isNeighborFNEPeer() || connection->isReplica()) {
-                        for (uint8_t i = 0U; i < 3U; i++)
-                            LogWarning(LOG_MASTER, "PEER %u (%s) downstream netsplit, dt = %u, now = %u", id, connection->identWithQualifier().c_str(),
-                                dt, now);
-                    }
-
                     peersToRemove.push_back(id);
                 }
             }
         }
+        m_peers.shared_unlock();
 
         // remove any peers
         for (uint32_t peerId : peersToRemove) {
@@ -518,16 +512,18 @@ void FNENetwork::clock(uint32_t ms)
 
                         if (m_peers.size() > 0) {
                             json::array peers = json::array();
+                            m_peers.shared_lock();
                             for (auto entry : m_peers) {
                                 uint32_t peerId = entry.first;
-                                network::FNEPeerConnection* peerConn = entry.second;
-                                if (peerConn != nullptr) {
-                                    json::object peerObj = fneConnObject(peerId, peerConn);
+                                network::FNEPeerConnection* connection = entry.second;
+                                if (connection != nullptr) {
+                                    json::object peerObj = fneConnObject(peerId, connection);
                                     uint32_t peerNetPeerId = peer.second->getPeerId();
                                     peerObj["parentPeerId"].set<uint32_t>(peerNetPeerId);
                                     peers.push_back(json::value(peerObj));
                                 }
                             }
+                            m_peers.shared_unlock();
 
                             peer.second->writePeerLinkPeers(&peers);
                         }
