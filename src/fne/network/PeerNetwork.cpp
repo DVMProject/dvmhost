@@ -129,7 +129,7 @@ bool PeerNetwork::writePeerLinkPeers(json::array* peerList)
         pkt.encode((uint8_t*)buffer, len);
 
         uint32_t streamId = createStreamId();
-        LogInfoEx(LOG_PEER, "PEER %u Peer Replication, Active Peer List, blocks %u, streamId = %u", m_peerId, pkt.fragments.size(), streamId);
+        LogInfoEx(LOG_REPL, "PEER %u Peer Replication, Active Peer List, blocks %u, streamId = %u", m_peerId, pkt.fragments.size(), streamId);
         if (pkt.fragments.size() > 0U) {
             for (auto frag : pkt.fragments) {
                 writeMaster({ NET_FUNC::REPL, NET_SUBFUNC::REPL_ACT_PEER_LIST }, 
@@ -171,7 +171,7 @@ bool PeerNetwork::writeSpanningTree(SpanningTree* treeRoot)
         pkt.encode((uint8_t*)buffer, len);
 
         uint32_t streamId = createStreamId();
-        LogInfoEx(LOG_PEER, "PEER %u Network Tree, Tree List, blocks %u, streamId = %u", m_peerId, pkt.fragments.size(), streamId);
+        LogInfoEx(LOG_STP, "PEER %u Network Tree, Tree List, blocks %u, streamId = %u", m_peerId, pkt.fragments.size(), streamId);
         if (pkt.fragments.size() > 0U) {
             for (auto frag : pkt.fragments) {
                 writeMaster({ NET_FUNC::NET_TREE, NET_SUBFUNC::NET_TREE_LIST }, 
