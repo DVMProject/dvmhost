@@ -41,6 +41,10 @@ TagDMRData::TagDMRData(FNENetwork* network, bool debug) :
     m_network(network),
     m_parrotFrames(),
     m_parrotFramesReady(false),
+    m_parrotPlayback(false),
+    m_lastParrotPeerId(0U),
+    m_lastParrotSrcId(0U),
+    m_lastParrotDstId(0U),
     m_status(),
     m_statusPVCall(),
     m_debug(debug)
@@ -171,7 +175,7 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
 
                 // is this a parrot talkgroup? if so, clear any remaining frames from the buffer
                 lookups::TalkgroupRuleGroupVoice tg = m_network->m_tidLookup->find(dstId);
-                if (tg.config().parrot()) {
+                if (tg.config().parrot() && !m_parrotPlayback) {
                     if (m_parrotFrames.size() > 0) {
                         m_parrotFramesReady = true;
                         LogMessage(LOG_NET, "DMR, Parrot Playback will Start, peer = %u, ssrc = %u, srcId = %u", peerId, ssrc, srcId);
@@ -277,14 +281,16 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
             else {
                 // is this a parrot talkgroup? if so, clear any remaining frames from the buffer
                 lookups::TalkgroupRuleGroupVoice tg = m_network->m_tidLookup->find(dstId);
-                if (tg.config().parrot()) {
+                if (tg.config().parrot() && !m_parrotPlayback) {
                     m_parrotFramesReady = false;
                     if (m_parrotFrames.size() > 0) {
+                        m_parrotFrames.lock(false);
                         for (auto& pkt : m_parrotFrames) {
                             if (pkt.buffer != nullptr) {
                                 delete[] pkt.buffer;
                             }
                         }
+                        m_parrotFrames.unlock();
                         m_parrotFrames.clear();
                     }
                 }
@@ -585,8 +591,15 @@ void TagDMRData::playbackParrot()
         return;
     }
 
+    m_parrotPlayback = true;
+
     auto& pkt = m_parrotFrames[0];
+    m_parrotFrames.lock();
     if (pkt.buffer != nullptr) {
+        m_lastParrotPeerId = pkt.peerId;
+        m_lastParrotSrcId = pkt.srcId;
+        m_lastParrotDstId = pkt.dstId;
+
         if (m_network->m_parrotOnlyOriginating) {
             m_network->writePeer(pkt.peerId, pkt.peerId, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR }, pkt.buffer, pkt.bufferLen, pkt.pktSeq, pkt.streamId, false);
             if (m_network->m_debug) {
@@ -608,6 +621,7 @@ void TagDMRData::playbackParrot()
         delete[] pkt.buffer;
     }
     Thread::sleep(60);
+    m_parrotFrames.unlock();
     m_parrotFrames.pop_front();
 }
 

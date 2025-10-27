@@ -67,6 +67,7 @@ Network::Network(const std::string& address, uint16_t port, uint16_t localPort, 
     m_maxRetryCount(MAX_RETRY_BEFORE_RECONNECT),
     m_flaggedDuplicateConn(false),
     m_timeoutTimer(1000U, MAX_PEER_PING_TIME),
+    m_pingsReceived(0U),
     m_pktSeq(0U),
     m_loginStreamId(0U),
     m_metadata(nullptr),
@@ -1021,8 +1022,7 @@ void Network::clock(uint32_t ms)
                     }
                 }
 
-                if (m_status == NET_STAT_RUNNING && (reason == NET_CONN_NAK_FNE_MAX_CONN))
-                {
+                if (m_status == NET_STAT_RUNNING && (reason == NET_CONN_NAK_FNE_MAX_CONN)) {
                     LogWarning(LOG_NET, "PEER %u master NAK; attemping to relogin, remotePeerId = %u", m_peerId, rtpHeader.getSSRC());
                     m_status = NET_STAT_WAITING_LOGIN;
                     m_timeoutTimer.start();

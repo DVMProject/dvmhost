@@ -74,6 +74,38 @@ namespace network
              */
             bool hasParrotFrames() const { return m_parrotFramesReady && !m_parrotFrames.empty(); }
 
+            /**
+             * @brief Helper to determine if the parrot is playing back frames.
+             * @returns True, if parrot playback was started, otherwise false.
+             */
+            bool isParrotPlayback() const { return m_parrotPlayback; }
+            /**
+             * @brief Helper to clear the parrot playback flag.
+             */
+            void clearParrotPlayback()
+            {
+                m_parrotPlayback = false;
+                m_lastParrotPeerId = 0U;
+                m_lastParrotSrcId = 0U;
+                m_lastParrotDstId = 0U;
+            }
+
+            /**
+             * @brief Returns the last processed peer ID for a parrot frame.
+             * @return uint32_t Peer ID.
+             */
+            uint32_t lastParrotPeerId() const { return m_lastParrotPeerId; }
+            /**
+             * @brief Returns the last processed source ID for a parrot frame.
+             * @return uint32_t Source ID.
+             */
+            uint32_t lastParrotSrcId() const { return m_lastParrotSrcId; }
+            /**
+             * @brief Returns the last processed destination ID for a parrot frame.
+             * @return uint32_t Destination ID.
+             */
+            uint32_t lastParrotDstId() const { return m_lastParrotDstId; }
+
         private:
             FNENetwork* m_network;
 
@@ -109,6 +141,10 @@ namespace network
             };
             concurrent::deque<ParrotFrame> m_parrotFrames;
             bool m_parrotFramesReady;
+            bool m_parrotPlayback;
+            uint32_t m_lastParrotPeerId;
+            uint32_t m_lastParrotSrcId;
+            uint32_t m_lastParrotDstId;
 
             /**
              * @brief Represents the receive status of a call.

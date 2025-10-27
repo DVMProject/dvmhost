@@ -752,6 +752,40 @@ void* FNENetwork::threadParrotHandler(void* arg)
                     fne->m_parrotDelayTimer.stop();
                 }
 
+                if (!fne->m_parrotDelayTimer.isRunning()) {
+                    // if the DMR handle is marked as playing back parrot frames, but has no more frames in the queue
+                    // clear the playback flag
+                    if (fne->m_tagDMR->isParrotPlayback() && !fne->m_tagDMR->hasParrotFrames()) {
+                        LogMessage(LOG_MASTER, "DMR, Parrot Call End, peer = %u, srcId = %u, dstId = %u",
+                                   fne->m_tagDMR->lastParrotPeerId(), fne->m_tagDMR->lastParrotSrcId(), fne->m_tagDMR->lastParrotDstId());
+                        fne->m_tagDMR->clearParrotPlayback();
+                    }
+
+                    // if the P25 handle is marked as playing back parrot frames, but has no more frames in the queue
+                    // clear the playback flag
+                    if (fne->m_tagP25->isParrotPlayback() && !fne->m_tagDMR->hasParrotFrames()) {
+                        LogMessage(LOG_MASTER, "P25, Parrot Call End, peer = %u, srcId = %u, dstId = %u",
+                                   fne->m_tagP25->lastParrotPeerId(), fne->m_tagP25->lastParrotSrcId(), fne->m_tagP25->lastParrotDstId());
+                        fne->m_tagP25->clearParrotPlayback();
+                    }
+
+                    // if the NXDN handle is marked as playing back parrot frames, but has no more frames in the queue
+                    // clear the playback flag
+                    if (fne->m_tagNXDN->isParrotPlayback() && !fne->m_tagDMR->hasParrotFrames()) {
+                        LogMessage(LOG_MASTER, "NXDN, Parrot Call End, peer = %u, srcId = %u, dstId = %u",
+                                   fne->m_tagNXDN->lastParrotPeerId(), fne->m_tagNXDN->lastParrotSrcId(), fne->m_tagNXDN->lastParrotDstId());
+                        fne->m_tagNXDN->clearParrotPlayback();
+                    }
+
+                    // if the analog handle is marked as playing back parrot frames, but has no more frames in the queue
+                    // clear the playback flag
+                    if (fne->m_tagAnalog->isParrotPlayback() && !fne->m_tagDMR->hasParrotFrames()) {
+                        LogMessage(LOG_MASTER, "Analog, Parrot Call End, peer = %u, srcId = %u, dstId = %u",
+                                   fne->m_tagAnalog->lastParrotPeerId(), fne->m_tagAnalog->lastParrotSrcId(), fne->m_tagAnalog->lastParrotDstId());
+                        fne->m_tagAnalog->clearParrotPlayback();
+                    }
+                }
+
                 Thread::sleep(1U);
             }
         }
