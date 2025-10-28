@@ -415,21 +415,104 @@ namespace network
 
         /**
          * @brief Writes login request to the network.
+         * \code{.unparsed}
+         *  Below is the representation of the data layout for the repeater/end point login message.
+         *  The message is 8 bytes in length.
+         * 
+         *  Byte 0               1               2               3
+         *  Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *      | Protocol Tag (RPTL)                                           |
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *      | Peer ID                                                       |
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         * \endcode
          * @returns bool True, if login request was sent, otherwise false.
          */
         bool writeLogin();
         /**
          * @brief Writes network authentication challenge.
+         * \code{.unparsed}
+         *  Below is the representation of the data layout for the repeater/end point login message.
+         *  The message is 40 bytes in length.
+         * 
+         *  Byte 0               1               2               3
+         *  Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *      | Protocol Tag (RPTK)                                           |
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *      | Peer ID                                                       |
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *      | 30 bytes of SHA-256 ......................................... |
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         * \endcode
          * @returns bool True, if authorization response was sent, otherwise false.
          */
         bool writeAuthorisation();
         /**
          * @brief Writes modem configuration to the network.
+         * \code{.unparsed}
+         *  Below is the representation of the data layout for the repeater/end point login message.
+         *  The message is 40 bytes in length.
+         * 
+         *  Byte 0               1               2               3
+         *  Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *      | Protocol Tag (RPTC)                                           |
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *      | Reserved                                                      |
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *      | Variable Length JSON Payload ................................ |
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         * 
+         * The JSON payload is variable length and looks like this:
+         *  {
+         *      "identity": "<Peer Identity String>",
+         *      "rxFrequency": <Peer Rx Frequency in Hz>,
+         *      "txFrequency": <Peer Tx Frequency in Hz>,
+         *      "info":
+         *      {
+         *          "latitude": <Peer Geographical Latitude>,
+         *          "longitude": <Peer Geographical Longitude>,
+         *          "height": <Peer Height (in meters)>,
+         *          "location": "<Textual String Describing Peer Location>"
+         *      },
+         *      "channel":
+         *      {
+         *          "txPower": <Peer Transmit Power (in W)>,
+         *          "txOffsetMhz": <Peer Transmit Offset (in MHz)>,
+         *          "chBandwidthKhz": <Peer Channel Bandwidth (in KHz>,
+         *          "channelId": <Channel ID from the IDEN channel bandplan>,
+         *          "channelNo": <Channel Number from the IDEN channel bandplan>,
+         *      },
+         *      "software": "<Textual hardcoded string containing software watermark>",
+         *  }
+         * 
+         * These are extra parameters used in the root of the above JSON.
+         *  {
+         *      "externalPeer": <Boolean flag indicating whether or not this peer is a linked CFNE peer>,
+         *      "masterPeerId": <Linked CFNE peer's FNE master peer ID>,
+         * 
+         *      "conventionalPeer": <Boolean flag indicating whether or not this is a conventional peer>,
+         * 
+         *      "sysView": <Boolean flag indicating whether or not this peer is a SysView peer>,
+         *  }
+         * \endcode
          * @returns bool True, if configuration response was sent, otherwise false.
          */
         virtual bool writeConfig();
         /**
          * @brief Writes a network stay-alive ping.
+         * \code{.unparsed}
+         *  Below is the representation of the data layout for the repeater/end point login message.
+         *  The message is 1 bytes in length.
+         * 
+         *  Byte 0
+         *  Bit  7 6 5 4 3 2 1 0
+         *      +-+-+-+-+-+-+-+-+
+         *      | Reserved      |
+         *      +-+-+-+-+-+-+-+-+
+         * \endcode
          * @returns bool True, if stay-alive ping was sent, otherwise false.
          */
         bool writePing();
