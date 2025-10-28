@@ -540,6 +540,9 @@ bool HostFNE::initializeRESTAPI()
 
 bool HostFNE::createMasterNetwork()
 {
+    yaml::Node systemConf = m_conf["system"];
+    std::string identity = systemConf["identity"].as<std::string>();
+
     yaml::Node masterConf = m_conf["master"];
     std::string address = masterConf["address"].as<std::string>();
     uint16_t port = (uint16_t)masterConf["port"].as<uint32_t>(TRAFFIC_DEFAULT_PORT);
@@ -610,6 +613,7 @@ bool HostFNE::createMasterNetwork()
     bool parrotGrantDemand = masterConf["parrotGrantDemand"].as<bool>(true);
 
     LogInfo("Network Parameters");
+    LogInfo("    Identity: %s", identity.c_str());
     LogInfo("    Peer ID: %u", id);
     LogInfo("    Address: %s", address.c_str());
     LogInfo("    Port: %u", port);
@@ -851,7 +855,7 @@ bool HostFNE::createPeerNetworks()
             float longitude = peerConf["longitude"].as<float>(0.0F);
             std::string location = peerConf["location"].as<std::string>();
 
-            ::LogInfoEx(LOG_HOST, "Peer ID %u Master Address %s Master Port %u Identity %s Enabled %u Encrypted %u", id, masterAddress.c_str(), masterPort, identity.c_str(), enabled, encrypted);
+            ::LogInfoEx(LOG_HOST, "Peer ID %u Master Address %s Master Port %u Enabled %u Encrypted %u", id, masterAddress.c_str(), masterPort, enabled, encrypted);
 
             if (id > 999999999U) {
                 ::LogError(LOG_HOST, "Network Peer ID cannot be greater then 999999999.");
