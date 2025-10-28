@@ -72,14 +72,16 @@ namespace dmr
 
             /**
              * @brief Gets the total length in bytes of enclosed packet data.
+             * @param dataType DMR Data Type.
              * @returns uint32_t Total length of packet in bytes.
              */
-            uint32_t getPacketLength() const;
+            uint32_t getPacketLength(defines::DataType::E dataType) const;
             /**
              * @brief Gets the total length in bytes of entire PDU.
+             * @param dataType DMR Data Type.
              * @returns uint32_t Total length of PDU in bytes.
              */
-            uint32_t getPDULength() const;
+            uint32_t getPDULength(defines::DataType::E dataType) const;
 
             /**
              * @brief Gets the raw header data.
@@ -90,17 +92,19 @@ namespace dmr
 
             /**
              * @brief Helper to calculate the number of blocks to follow and padding length for a PDU.
+             * @param dataType DMR Data Type.
              * @param packetLength Length of PDU.
              */
-            void calculateLength(uint32_t packetLength);
+            void calculateLength(defines::DataType::E dataType, uint32_t packetLength);
 
             /**
              * @brief Helper to determine the pad length for a given packet length.
              * @param dpf PDU format type.
+             * @param dataType DMR Data Type.
              * @param packetLength Length of PDU.
              * @returns uint32_t Number of pad bytes.
              */
-            static uint32_t calculatePadLength(defines::DPF::E dpf, uint32_t packetLength);
+            static uint32_t calculatePadLength(defines::DPF::E dpf, defines::DataType::E dataType, uint32_t packetLength);
 
         public:
             /**

@@ -99,6 +99,10 @@ bool DataBlock::decode(const uint8_t* data, const DataHeader& header, bool noTre
                 }
             }
 
+#if DEBUG_P25_PDU_DATA
+            Utils::dump(2U, "P25, CRC Bit Buffer", crcBuffer, P25_PDU_CONFIRMED_LENGTH_BYTES);
+#endif
+
             // compute CRC-9 for the packet
             uint16_t calculated = edac::CRC::createCRC9(crcBuffer, 135U);
             if ((crc ^ calculated) != 0) {

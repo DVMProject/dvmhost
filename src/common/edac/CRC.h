@@ -93,11 +93,24 @@ namespace edac
          */
         static bool checkCRC32(const uint8_t* in, uint32_t length);
         /**
+         * @brief Check 32-bit CRC (inverted).
+         * @param[in] in Input byte array.
+         * @param length Length of byte array.
+         * @returns bool True, if CRC is valid, otherwise false.
+         */
+        static bool checkInvertedCRC32(const uint8_t* in, uint32_t length);
+        /**
          * @brief Encode 32-bit CRC.
          * @param[out] in Input byte array.
          * @param length Length of byte array.
          */
         static void addCRC32(uint8_t* in, uint32_t length);
+        /**
+         * @brief Encode 32-bit CRC (inverted).
+         * @param[out] in Input byte array.
+         * @param length Length of byte array.
+         */
+        static void addInvertedCRC32(uint8_t* in, uint32_t length);
 
         /**
          * @brief Generate 8-bit CRC.

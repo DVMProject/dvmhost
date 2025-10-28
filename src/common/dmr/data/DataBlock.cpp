@@ -88,9 +88,11 @@ bool DataBlock::decode(const uint8_t* data, const DataHeader& header)
 
             ::memset(m_data, 0x00U, DMR_PDU_UNCODED_LENGTH_BYTES);
             if (m_dataType == DataType::RATE_34_DATA)
-                ::memcpy(m_data, buffer + 2U, DMR_PDU_CONFIRMED_DATA_LENGTH_BYTES);         // Payload Data
+                ::memcpy(m_data, buffer + 2U, DMR_PDU_CONFIRMED_TQ_DATA_LENGTH_BYTES);      // Payload Data
             else if (m_dataType == DataType::RATE_12_DATA)
-                ::memcpy(m_data, buffer + 2U, DMR_PDU_UNCONFIRMED_LENGTH_BYTES);            // Payload Data
+                ::memcpy(m_data, buffer + 2U, DMR_PDU_CONFIRMED_HR_DATA_LENGTH_BYTES);      // Payload Data
+            else if (m_dataType == DataType::RATE_1_DATA)
+                ::memcpy(m_data, buffer + 2U, DMR_PDU_CONFIRMED_UNCODED_DATA_LENGTH_BYTES); // Payload Data
             else {
                 LogError(LOG_DMR, "DataBlock::decode(), failed to decode block, invalid dataType = $%02X", m_dataType);
                 return false;
@@ -100,22 +102,40 @@ bool DataBlock::decode(const uint8_t* data, const DataHeader& header)
             ::memset(crcBuffer, 0x00U, DMR_PDU_UNCODED_LENGTH_BYTES);
 
             // generate CRC buffer
-            uint32_t crcBitLength = 144U;
+            if (m_dataType == DataType::RATE_34_DATA) {
+                ::memcpy(crcBuffer, buffer + 2U, DMR_PDU_CONFIRMED_TQ_DATA_LENGTH_BYTES);
+                for (uint32_t i = 0U; i < 7U; i++) {
+                    bool b = READ_BIT(buffer, i);
+                    WRITE_BIT(crcBuffer, i + 128U, b);
+                }
+            }
+            else if (m_dataType == DataType::RATE_12_DATA) {
+                ::memcpy(crcBuffer, buffer + 2U, DMR_PDU_CONFIRMED_HR_DATA_LENGTH_BYTES);
+                for (uint32_t i = 0U; i < 7U; i++) {
+                    bool b = READ_BIT(buffer, i);
+                    WRITE_BIT(crcBuffer, i + 80U, b);
+                }
+            }
+            else if (m_dataType == DataType::RATE_1_DATA) {
+                ::memcpy(crcBuffer, buffer + 2U, DMR_PDU_CONFIRMED_UNCODED_DATA_LENGTH_BYTES);
+                for (uint32_t i = 0U; i < 7U; i++) {
+                    bool b = READ_BIT(buffer, i);
+                    WRITE_BIT(crcBuffer, i + 176U, b);
+                }
+            }
+
+#if DEBUG_DMR_PDU_DATA
+            Utils::dump(2U, "DMR, CRC Bit Buffer", crcBuffer, DMR_PDU_UNCODED_LENGTH_BYTES);
+#endif
+
+            uint32_t crcBitLength = 135U; // 3/4 Rate
             if (m_dataType == DataType::RATE_12_DATA)
-                crcBitLength = 96U;
-
-            for (uint32_t i = 16U; i < crcBitLength; i++) {
-                bool b = READ_BIT(buffer, i);
-                WRITE_BIT(crcBuffer, i - 16U, b);
-            }
-
-            for (uint32_t i = 0U; i < 6U; i++) {
-                bool b = READ_BIT(buffer, i);
-                WRITE_BIT(crcBuffer, i + (crcBitLength - 16U), b);
-            }
+                crcBitLength = 87U;
+            if (m_dataType == DataType::RATE_1_DATA)
+                crcBitLength = 183U;
 
             // compute CRC-9 for the packet
-            uint16_t calculated = edac::CRC::createCRC9(crcBuffer, crcBitLength - 9U);
+            uint16_t calculated = edac::CRC::createCRC9(crcBuffer, crcBitLength);
             calculated = ~calculated & 0x1FFU;
 
             if ((crc ^ calculated) != 0) {
@@ -151,9 +171,9 @@ bool DataBlock::decode(const uint8_t* data, const DataHeader& header)
 
             ::memset(m_data, 0x00U, DMR_PDU_UNCODED_LENGTH_BYTES);
             if (m_dataType == DataType::RATE_34_DATA)
-                ::memcpy(m_data, buffer, DMR_PDU_CONFIRMED_DATA_LENGTH_BYTES);              // Payload Data
+                ::memcpy(m_data, buffer, DMR_PDU_THREEQUARTER_LENGTH_BYTES);                // Payload Data
             else if (m_dataType == DataType::RATE_12_DATA)
-                ::memcpy(m_data, buffer, DMR_PDU_UNCONFIRMED_LENGTH_BYTES);                 // Payload Data
+                ::memcpy(m_data, buffer, DMR_PDU_HALFRATE_LENGTH_BYTES);                    // Payload Data
             else {
                 LogError(LOG_DMR, "DataBlock::decode(), failed to decode block, invalid dataType = $%02X", m_dataType);
                 return false;
@@ -180,98 +200,122 @@ void DataBlock::encode(uint8_t* data)
 
     if (m_DPF == DPF::CONFIRMED_DATA) {
         if (m_dataType == DataType::RATE_34_DATA) {
-            uint8_t buffer[DMR_PDU_CONFIRMED_LENGTH_BYTES];
-            ::memset(buffer, 0x00U, DMR_PDU_CONFIRMED_LENGTH_BYTES);
+            uint8_t buffer[DMR_PDU_THREEQUARTER_LENGTH_BYTES];
+            ::memset(buffer, 0x00U, DMR_PDU_THREEQUARTER_LENGTH_BYTES);
 
             buffer[0U] = ((m_serialNo << 1) & 0xFEU);                                           // Confirmed Data Serial No.
 
-            ::memcpy(buffer + 2U, m_data, DMR_PDU_CONFIRMED_DATA_LENGTH_BYTES);                 // Payload Data
+            ::memcpy(buffer + 2U, m_data, DMR_PDU_CONFIRMED_TQ_DATA_LENGTH_BYTES);              // Payload Data
 
             uint8_t crcBuffer[DMR_PDU_UNCODED_LENGTH_BYTES];
             ::memset(crcBuffer, 0x00U, DMR_PDU_UNCODED_LENGTH_BYTES);
 
             // generate CRC buffer
-            uint32_t bufferLen = DMR_PDU_CONFIRMED_DATA_LENGTH_BYTES;
-            uint32_t crcBitLength = 144U;
-
-            for (uint32_t i = 2U; i < bufferLen; i++)
-                crcBuffer[i - 2U] = buffer[2U];
-            for (uint32_t i = 0; i < 6U; i++) {
+            ::memcpy(crcBuffer, buffer + 2U, DMR_PDU_CONFIRMED_TQ_DATA_LENGTH_BYTES);
+            for (uint32_t i = 0U; i < 7U; i++) {
                 bool b = READ_BIT(buffer, i);
-                WRITE_BIT(crcBuffer, i + (crcBitLength - 15U), b);
+                WRITE_BIT(crcBuffer, i + 128U, b);
             }
 
             uint16_t crc = edac::CRC::createCRC9(crcBuffer, 135U);
+            crc = ~crc & 0x1FFU;
+
             buffer[0U] = buffer[0U] + ((crc >> 8) & 0x01U);                                     // CRC-9 Check Sum (b8)
             buffer[1U] = (crc & 0xFFU);                                                         // CRC-9 Check Sum (b0 - b7)
 
 #if DEBUG_DMR_PDU_DATA
-            Utils::dump(1U, "DMR, DataBlock::encode(), Confirmed PDU Data Block", buffer, DMR_PDU_CONFIRMED_LENGTH_BYTES);
+            Utils::dump(1U, "DMR, DataBlock::encode(), Confirmed 3/4 Rate PDU Data Block", buffer, DMR_PDU_THREEQUARTER_LENGTH_BYTES);
 #endif
 
             m_trellis.encode34(buffer, data, true);
         }
         else if (m_dataType == DataType::RATE_12_DATA) {
-            uint8_t buffer[DMR_PDU_UNCONFIRMED_LENGTH_BYTES];
-            ::memset(buffer, 0x00U, DMR_PDU_UNCONFIRMED_LENGTH_BYTES);
+            uint8_t buffer[DMR_PDU_HALFRATE_LENGTH_BYTES];
+            ::memset(buffer, 0x00U, DMR_PDU_HALFRATE_LENGTH_BYTES);
 
             buffer[0U] = ((m_serialNo << 1) & 0xFEU);                                           // Confirmed Data Serial No.
 
-            ::memcpy(buffer + 2U, m_data, DMR_PDU_CONFIRMED_HALFRATE_DATA_LENGTH_BYTES);        // Payload Data
+            ::memcpy(buffer + 2U, m_data, DMR_PDU_CONFIRMED_HR_DATA_LENGTH_BYTES);              // Payload Data
 
             uint8_t crcBuffer[DMR_PDU_UNCODED_LENGTH_BYTES];
             ::memset(crcBuffer, 0x00U, DMR_PDU_UNCODED_LENGTH_BYTES);
 
             // generate CRC buffer
-            uint32_t bufferLen = DMR_PDU_CONFIRMED_HALFRATE_DATA_LENGTH_BYTES;
-            uint32_t crcBitLength = 96U;
-
-            for (uint32_t i = 2U; i < bufferLen; i++)
-                crcBuffer[i - 2U] = buffer[2U];
-            for (uint32_t i = 0; i < 6U; i++) {
+            ::memcpy(crcBuffer, buffer + 2U, DMR_PDU_CONFIRMED_HR_DATA_LENGTH_BYTES);
+            for (uint32_t i = 0U; i < 7U; i++) {
                 bool b = READ_BIT(buffer, i);
-                WRITE_BIT(crcBuffer, i + (crcBitLength - 15U), b);
+                WRITE_BIT(crcBuffer, i + 80U, b);
             }
 
             uint16_t crc = edac::CRC::createCRC9(crcBuffer, 87U);
+            crc = ~crc & 0x1FFU;
+
             buffer[0U] = buffer[0U] + ((crc >> 8) & 0x01U);                                     // CRC-9 Check Sum (b8)
             buffer[1U] = (crc & 0xFFU);                                                         // CRC-9 Check Sum (b0 - b7)
 
-            ::memcpy(buffer, m_data, DMR_PDU_UNCONFIRMED_LENGTH_BYTES);
+            ::memcpy(buffer, m_data, DMR_PDU_HALFRATE_LENGTH_BYTES);
 
 #if DEBUG_DMR_PDU_DATA
-            Utils::dump(1U, "DMR, DataBlock::encode(), Unconfirmed PDU Data Block", buffer, DMR_PDU_UNCONFIRMED_LENGTH_BYTES);
+            Utils::dump(1U, "DMR, DataBlock::encode(), Confirmed 1/2 Rate PDU Data Block", buffer, DMR_PDU_HALFRATE_LENGTH_BYTES);
 #endif
 
             m_bptc.encode(buffer, data);
         }
-        else {
-            LogError(LOG_DMR, "DataBlock::encode(), cowardly refusing to encode confirmed full-rate (rate 1) data");
-            return;
+        else if (m_dataType == DataType::RATE_1_DATA) {
+            uint8_t buffer[DMR_PDU_UNCODED_LENGTH_BYTES];
+            ::memset(buffer, 0x00U, DMR_PDU_UNCODED_LENGTH_BYTES);
+
+            buffer[0U] = ((m_serialNo << 1) & 0xFEU);                                           // Confirmed Data Serial No.
+
+            ::memcpy(buffer + 2U, m_data, DMR_PDU_CONFIRMED_UNCODED_DATA_LENGTH_BYTES);         // Payload Data
+
+            uint8_t crcBuffer[DMR_PDU_UNCODED_LENGTH_BYTES];
+            ::memset(crcBuffer, 0x00U, DMR_PDU_UNCODED_LENGTH_BYTES);
+
+            // generate CRC buffer
+            ::memcpy(crcBuffer, buffer + 2U, DMR_PDU_CONFIRMED_UNCODED_DATA_LENGTH_BYTES);
+            for (uint32_t i = 0U; i < 7U; i++) {
+                bool b = READ_BIT(buffer, i);
+                WRITE_BIT(crcBuffer, i + 176U, b);
+            }
+
+            uint16_t crc = edac::CRC::createCRC9(crcBuffer, 183U);
+            crc = ~crc & 0x1FFU;
+
+            buffer[0U] = buffer[0U] + ((crc >> 8) & 0x01U);                                     // CRC-9 Check Sum (b8)
+            buffer[1U] = (crc & 0xFFU);                                                         // CRC-9 Check Sum (b0 - b7)
+
+            ::memcpy(buffer, m_data, DMR_PDU_UNCODED_LENGTH_BYTES);
+
+#if DEBUG_DMR_PDU_DATA
+            Utils::dump(1U, "DMR, DataBlock::encode(), Confirmed 1 Rate PDU Data Block", buffer, DMR_PDU_UNCODED_LENGTH_BYTES);
+#endif
+
+            ::memcpy(data, buffer, DMR_PDU_UNCODED_LENGTH_BYTES);
         }
     }
     else if (m_DPF == DPF::UNCONFIRMED_DATA || m_DPF == DPF::RESPONSE || m_DPF == DPF::DEFINED_RAW ||
              m_DPF == DPF::DEFINED_SHORT || m_DPF == DPF::UDT) {
         if (m_dataType == DataType::RATE_34_DATA) {
-            uint8_t buffer[DMR_PDU_CONFIRMED_LENGTH_BYTES];
-            ::memset(buffer, 0x00U, DMR_PDU_CONFIRMED_LENGTH_BYTES);
+            uint8_t buffer[DMR_PDU_THREEQUARTER_LENGTH_BYTES];
+            ::memset(buffer, 0x00U, DMR_PDU_THREEQUARTER_LENGTH_BYTES);
 
-            ::memcpy(buffer, m_data, DMR_PDU_CONFIRMED_LENGTH_BYTES);
+            ::memcpy(buffer, m_data, DMR_PDU_THREEQUARTER_LENGTH_BYTES);
 
 #if DEBUG_DMR_PDU_DATA
-            Utils::dump(1U, "DMR, DataBlock::encode(), Unconfirmed PDU Data Block", buffer, DMR_PDU_CONFIRMED_LENGTH_BYTES);
+            Utils::dump(1U, "DMR, DataBlock::encode(), Unconfirmed 3/4 Rate PDU Data Block", buffer, DMR_PDU_THREEQUARTER_LENGTH_BYTES);
 #endif
 
             m_trellis.encode34(buffer, data, true);
         }
         else if (m_dataType == DataType::RATE_12_DATA) {
-            uint8_t buffer[DMR_PDU_UNCONFIRMED_LENGTH_BYTES];
-            ::memset(buffer, 0x00U, DMR_PDU_UNCONFIRMED_LENGTH_BYTES);
+            uint8_t buffer[DMR_PDU_HALFRATE_LENGTH_BYTES];
+            ::memset(buffer, 0x00U, DMR_PDU_HALFRATE_LENGTH_BYTES);
 
-            ::memcpy(buffer, m_data, DMR_PDU_UNCONFIRMED_LENGTH_BYTES);
+            ::memcpy(buffer, m_data, DMR_PDU_HALFRATE_LENGTH_BYTES);
 
 #if DEBUG_DMR_PDU_DATA
-            Utils::dump(1U, "DMR, DataBlock::encode(), Unconfirmed PDU Data Block", buffer, DMR_PDU_UNCONFIRMED_LENGTH_BYTES);
+            Utils::dump(1U, "DMR, DataBlock::encode(), Unconfirmed 1/2 Rate PDU Data Block", buffer, DMR_PDU_HALFRATE_LENGTH_BYTES);
 #endif
 
             m_bptc.encode(buffer, data);
@@ -283,6 +327,10 @@ void DataBlock::encode(uint8_t* data)
             ::memcpy(buffer, m_data, DMR_PDU_UNCODED_LENGTH_BYTES);
 
             ::memcpy(data, buffer, DMR_PDU_UNCODED_LENGTH_BYTES);
+
+#if DEBUG_DMR_PDU_DATA
+            Utils::dump(1U, "DMR, DataBlock::encode(), Unconfirmed 1 Rate PDU Data Block", buffer, DMR_PDU_UNCODED_LENGTH_BYTES);
+#endif
         }
     }
     else {
@@ -333,14 +381,25 @@ void DataBlock::setData(const uint8_t* buffer)
     assert(buffer != nullptr);
     assert(m_data != nullptr);
 
-    if (m_dataType == DataType::RATE_34_DATA)
-        ::memcpy(m_data, buffer, DMR_PDU_CONFIRMED_DATA_LENGTH_BYTES);
-    else if (m_dataType == DataType::RATE_12_DATA)
-        ::memcpy(m_data, buffer, DMR_PDU_UNCONFIRMED_LENGTH_BYTES);
-    else if (m_dataType == DataType::RATE_1_DATA)
-        ::memcpy(m_data, buffer, DMR_PDU_UNCODED_LENGTH_BYTES);
-    else
-        LogError(LOG_DMR, "unknown dataType value in PDU, dataType = $%02X", m_dataType);
+    if (m_DPF == DPF::CONFIRMED_DATA) {
+        if (m_dataType == DataType::RATE_34_DATA)
+            ::memcpy(m_data, buffer, DMR_PDU_CONFIRMED_TQ_DATA_LENGTH_BYTES);
+        else if (m_dataType == DataType::RATE_12_DATA)
+            ::memcpy(m_data, buffer, DMR_PDU_CONFIRMED_HR_DATA_LENGTH_BYTES);
+        else if (m_dataType == DataType::RATE_1_DATA)
+            ::memcpy(m_data, buffer, DMR_PDU_CONFIRMED_UNCODED_DATA_LENGTH_BYTES);
+        else
+            LogError(LOG_DMR, "unknown dataType value in PDU, dataType = $%02X", m_dataType);
+    } else {
+        if (m_dataType == DataType::RATE_34_DATA)
+            ::memcpy(m_data, buffer, DMR_PDU_THREEQUARTER_LENGTH_BYTES);
+        else if (m_dataType == DataType::RATE_12_DATA)
+            ::memcpy(m_data, buffer, DMR_PDU_HALFRATE_LENGTH_BYTES);
+        else if (m_dataType == DataType::RATE_1_DATA)
+            ::memcpy(m_data, buffer, DMR_PDU_UNCODED_LENGTH_BYTES);
+        else
+            LogError(LOG_DMR, "unknown dataType value in PDU, dataType = $%02X", m_dataType);
+    }
 }
 
 /* Gets the raw data stored in the data block. */
@@ -350,17 +409,33 @@ uint32_t DataBlock::getData(uint8_t* buffer) const
     assert(buffer != nullptr);
     assert(m_data != nullptr);
 
-    if (m_dataType == DataType::RATE_34_DATA) {
-        ::memcpy(buffer, m_data, DMR_PDU_CONFIRMED_DATA_LENGTH_BYTES);
-        return DMR_PDU_CONFIRMED_DATA_LENGTH_BYTES;
-    } else if (m_dataType == DataType::RATE_12_DATA) {
-        ::memcpy(buffer, m_data, DMR_PDU_UNCONFIRMED_LENGTH_BYTES);
-        return DMR_PDU_UNCONFIRMED_LENGTH_BYTES;
-    } else if (m_dataType == DataType::RATE_1_DATA) {
-        ::memcpy(buffer, m_data, DMR_PDU_UNCODED_LENGTH_BYTES);
-        return DMR_PDU_UNCODED_LENGTH_BYTES;
+    if (m_DPF == DPF::CONFIRMED_DATA) {
+        if (m_dataType == DataType::RATE_34_DATA) {
+            ::memcpy(buffer, m_data, DMR_PDU_CONFIRMED_TQ_DATA_LENGTH_BYTES);
+            return DMR_PDU_CONFIRMED_TQ_DATA_LENGTH_BYTES;
+        } else if (m_dataType == DataType::RATE_12_DATA) {
+            ::memcpy(buffer, m_data, DMR_PDU_CONFIRMED_HR_DATA_LENGTH_BYTES);
+            return DMR_PDU_CONFIRMED_HR_DATA_LENGTH_BYTES;
+        } else if (m_dataType == DataType::RATE_1_DATA) {
+            ::memcpy(buffer, m_data, DMR_PDU_CONFIRMED_UNCODED_DATA_LENGTH_BYTES);
+            return DMR_PDU_CONFIRMED_UNCODED_DATA_LENGTH_BYTES;
+        } else {
+            LogError(LOG_DMR, "unknown dataType value in PDU, dataType = $%02X", m_dataType);
+            return 0U;
+        }
     } else {
-        LogError(LOG_DMR, "unknown dataType value in PDU, dataType = $%02X", m_dataType);
-        return 0U;
+        if (m_dataType == DataType::RATE_34_DATA) {
+            ::memcpy(buffer, m_data, DMR_PDU_THREEQUARTER_LENGTH_BYTES);
+            return DMR_PDU_THREEQUARTER_LENGTH_BYTES;
+        } else if (m_dataType == DataType::RATE_12_DATA) {
+            ::memcpy(buffer, m_data, DMR_PDU_HALFRATE_LENGTH_BYTES);
+            return DMR_PDU_HALFRATE_LENGTH_BYTES;
+        } else if (m_dataType == DataType::RATE_1_DATA) {
+            ::memcpy(buffer, m_data, DMR_PDU_UNCODED_LENGTH_BYTES);
+            return DMR_PDU_UNCODED_LENGTH_BYTES;
+        } else {
+            LogError(LOG_DMR, "unknown dataType value in PDU, dataType = $%02X", m_dataType);
+            return 0U;
+        }
     }
 }

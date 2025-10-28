@@ -320,6 +320,36 @@ bool CRC::checkCRC32(const uint8_t *in, uint32_t length)
     return crc8[0U] == in[length - 1U] && crc8[1U] == in[length - 2U] && crc8[2U] == in[length - 3U] && crc8[3U] == in[length - 4U];
 }
 
+/* Check 32-bit CRC (inverted). */
+
+bool CRC::checkInvertedCRC32(const uint8_t *in, uint32_t length)
+{
+    assert(in != nullptr);
+    assert(length > 4U);
+
+    union {
+        uint32_t crc32;
+        uint8_t  crc8[4U];
+    };
+
+    uint32_t i = 0;
+    crc32 = 0x00000000U;
+
+    for (uint32_t j = (length - 4U); j-- > 0; i++) {
+        uint32_t idx = ((crc32 >> 24) ^ in[i]) & 0xFFU;
+        crc32 = (CRC32_TABLE[idx] ^ (crc32 << 8)) & 0xFFFFFFFFU;
+    }
+
+    crc32 &= 0xFFFFFFFFU;
+
+#if DEBUG_CRC_CHECK
+    uint32_t inCrc = (in[length - 4U] << 24) | (in[length - 3U] << 16) | (in[length - 2U] << 8) | (in[length - 1U] << 0);
+    LogDebugEx(LOG_HOST, "CRC::checkInvertedCRC32()", "crc = $%08X, in = $%08X, len = %u", crc32, inCrc, length);
+#endif
+
+    return crc8[0U] == in[length - 1U] && crc8[1U] == in[length - 2U] && crc8[2U] == in[length - 3U] && crc8[3U] == in[length - 4U];
+}
+
 /* Encode 32-bit CRC. */
 
 void CRC::addCRC32(uint8_t* in, uint32_t length)
@@ -345,6 +375,38 @@ void CRC::addCRC32(uint8_t* in, uint32_t length)
 
 #if DEBUG_CRC_ADD
     LogDebugEx(LOG_HOST, "CRC::addCRC32()", "crc = $%08X, len = %u", crc32, length);
+#endif
+
+    in[length - 1U] = crc8[0U];
+    in[length - 2U] = crc8[1U];
+    in[length - 3U] = crc8[2U];
+    in[length - 4U] = crc8[3U];
+}
+
+/* Encode 32-bit CRC (inverted). */
+
+void CRC::addInvertedCRC32(uint8_t* in, uint32_t length)
+{
+    assert(in != nullptr);
+    assert(length > 4U);
+
+    union {
+        uint32_t crc32;
+        uint8_t  crc8[4U];
+    };
+
+    uint32_t i = 0;
+    crc32 = 0x00000000U;
+
+    for (uint32_t j = (length - 4U); j-- > 0; i++) {
+        uint32_t idx = ((crc32 >> 24) ^ in[i]) & 0xFFU;
+        crc32 = (CRC32_TABLE[idx] ^ (crc32 << 8)) & 0xFFFFFFFFU;
+    }
+
+    crc32 &= 0xFFFFFFFFU;
+
+#if DEBUG_CRC_ADD
+    LogDebugEx(LOG_HOST, "CRC::addInvertedCRC32()", "crc = $%08X, len = %u", crc32, length);
 #endif
 
     in[length - 1U] = crc8[0U];

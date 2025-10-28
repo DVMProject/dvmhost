@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  * 
- *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2024-2025 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -85,6 +85,7 @@ namespace network
                     uint32_t peerId;
 
                     dmr::data::DataHeader header;
+                    bool hasRxHeader;
                     uint8_t dataBlockCnt;
                     uint8_t frames;
 
@@ -101,6 +102,7 @@ namespace network
                         streamId(0U),
                         peerId(0U),
                         header(),
+                        hasRxHeader(false),
                         dataBlockCnt(0U),
                         pduUserData(nullptr),
                         pduDataOffset(0U)

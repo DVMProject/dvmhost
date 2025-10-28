@@ -91,120 +91,115 @@ bool DMRPacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
     uint8_t frame[DMR_FRAME_LENGTH_BYTES];
     dmrData.getData(frame);
 
-    // is the stream valid?
-    if (m_tag->validate(peerId, dmrData, nullptr, streamId)) {
-        // is this peer ignored?
-        if (!m_tag->isPeerPermitted(peerId, dmrData, streamId)) {
-            return false;
-        }
-
+    if (dataSync) {
         auto it = std::find_if(m_status.begin(), m_status.end(), [&](StatusMapPair x) { return x.second->peerId == peerId; });
-        if (it != m_status.end()) {
-            RxStatus* status = m_status[peerId];
-            if (streamId != status->streamId) {
-                LogWarning(LOG_NET, "DMR, Data Call Collision, peer = %u, streamId = %u, rxPeer = %u, rxLlId = %u, rxSlotNo = %u, rxStreamId = %u, fromUpstream = %u",
-                    peerId, streamId, status->peerId, status->srcId, status->slotNo, status->streamId, fromUpstream);
+        if (it == m_status.end()) {
+            // this is a new call stream
+            m_status.lock();
+            RxStatus* status = new RxStatus();
+            status->callStartTime = pktTime;
+            status->srcId = srcId;
+            status->dstId = dstId;
+            status->slotNo = slotNo;
+            status->streamId = streamId;
+            status->peerId = peerId;
+            m_status.unlock();
 
-                uint64_t duration = hrc::diff(pktTime, status->callStartTime);
-
-                if ((duration / 1000) > DATA_CALL_COLL_TIMEOUT) {
-                    LogWarning(LOG_NET, "DMR, force clearing stuck data call, timeout, peer = %u, streamId = %u, rxPeer = %u, rxLlId = %u, rxStreamId = %u, fromUpstream = %u",
-                        peerId, streamId, status->peerId, status->srcId, status->slotNo, status->streamId, fromUpstream);
-
-                    delete status;
-                    m_status.erase(peerId);
-                }
-
-                return false;
-            }
-        } else {
-            if (dataSync && (dataType == DataType::DATA_HEADER)) {
-                // this is a new call stream
-                RxStatus* status = new RxStatus();
-                status->callStartTime = pktTime;
-                status->srcId = srcId;
-                status->dstId = dstId;
-                status->slotNo = slotNo;
-                status->streamId = streamId;
-                status->peerId = peerId;
-
-                bool ret = status->header.decode(frame);
-                if (!ret) {
-                    LogError(LOG_DMR, "DMR Slot %u, DataType::DATA_HEADER, unable to decode the network data header", status->slotNo);
-                    Utils::dump(1U, "DMR, Unfixable PDU Data", frame, DMR_FRAME_LENGTH_BYTES);
-
-                    delete status;
-                    m_status.erase(peerId);
-                    return false;
-                }
-
-                status->frames = status->header.getBlocksToFollow();
-                status->dataBlockCnt = 0U;
-
-                bool gi = status->header.getGI();
-                uint32_t srcId = status->header.getSrcId();
-                uint32_t dstId = status->header.getDstId();
-
-                LogInfoEx(LOG_DMR, DMR_DT_DATA_HEADER ", peerId = %u, slot = %u, dpf = $%02X, ack = %u, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padLength = %u, packetLength = %u, seqNo = %u, dstId = %u, srcId = %u, group = %u",
-                    peerId, status->slotNo, status->header.getDPF(), status->header.getA(), status->header.getSAP(), status->header.getFullMesage(), status->header.getBlocksToFollow(), status->header.getPadLength(), status->header.getPacketLength(),
-                    status->header.getFSN(), dstId, srcId, gi);
-
-                // make sure we don't get a PDU with more blocks then we support
-                if (status->header.getBlocksToFollow() >= MAX_PDU_COUNT) {
-                    LogError(LOG_DMR, DMR_DT_DATA_HEADER ", too many PDU blocks to process, %u > %u", status->header.getBlocksToFollow(), MAX_PDU_COUNT);
-                    return false;
-                }
-
-                m_status[peerId] = status;
-                
-                LogInfoEx((fromUpstream) ? LOG_PEER : LOG_MASTER, "DMR, Data Call Start, peer = %u, slot = %u, srcId = %u, dstId = %u, group = %u, streamId = %u, fromUpstream = %u", peerId, status->slotNo, status->srcId, status->dstId, gi, streamId, fromUpstream);
-                dispatchToFNE(peerId, dmrData, data, len, seqNo, pktSeq, streamId);
-
-                return true;
-            } else {
-                return false;
-            }
+            m_status.insert(peerId, status);
         }
 
         RxStatus* status = m_status[peerId];
+        status->streamId = streamId;
 
-        // a PDU header only with no blocks to follow is usually a response header
-        if (status->header.getBlocksToFollow() == 0U) {
-            LogInfoEx((fromUpstream) ? LOG_PEER : LOG_MASTER, "DMR, Data Call End, peer = %u, slot = %u, srcId = %u, dstId = %u, streamId = %u, fromUpstream = %u",
-                peerId, status->slotNo, status->srcId, status->dstId, streamId, fromUpstream);
+        if (dataType == DataType::DATA_HEADER) {
+            bool ret = status->header.decode(frame);
+            if (!ret) {
+                LogError(LOG_DMR, "DMR Slot %u, DataType::DATA_HEADER, unable to decode the network data header", status->slotNo);
+                Utils::dump(1U, "DMR, Unfixable PDU Data", frame, DMR_FRAME_LENGTH_BYTES);
 
-            delete status;
-            m_status.erase(peerId);
+                delete status;
+                m_status.erase(peerId);
+                return false;
+            }
+
+            status->frames = status->header.getBlocksToFollow();
+            status->dataBlockCnt = 0U;
+            status->hasRxHeader = true;
+
+            bool gi = status->header.getGI();
+            uint32_t srcId = status->header.getSrcId();
+            uint32_t dstId = status->header.getDstId();
+
+            LogInfoEx(LOG_DMR, DMR_DT_DATA_HEADER ", peerId = %u, slot = %u, dpf = $%02X, ack = %u, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padLength = %u, packetLength = %u, seqNo = %u, dstId = %u, srcId = %u, group = %u",
+                peerId, status->slotNo, status->header.getDPF(), status->header.getA(), status->header.getSAP(), status->header.getFullMesage(), status->header.getBlocksToFollow(), status->header.getPadLength(), status->header.getPacketLength(dataType),
+                status->header.getFSN(), dstId, srcId, gi);
+
+            // make sure we don't get a PDU with more blocks then we support
+            if (status->header.getBlocksToFollow() >= MAX_PDU_COUNT) {
+                LogError(LOG_DMR, DMR_DT_DATA_HEADER ", too many PDU blocks to process, %u > %u", status->header.getBlocksToFollow(), MAX_PDU_COUNT);
+                return false;
+            }
+
+            m_status[peerId] = status;
+
+            dispatchToFNE(peerId, dmrData, data, len, seqNo, pktSeq, streamId);
+
+            // a PDU header only with no blocks to follow is usually a response header
+            if (status->header.getBlocksToFollow() == 0U) {
+                delete status;
+                m_status.erase(peerId);
+                return true;
+            }
+
+            LogInfoEx((fromUpstream) ? LOG_PEER : LOG_MASTER, "DMR, Data Call Start, peer = %u, slot = %u, srcId = %u, dstId = %u, group = %u, streamId = %u, fromUpstream = %u", peerId, status->slotNo, status->srcId, status->dstId, gi, streamId, fromUpstream);
             return true;
         }
 
-        data::DataBlock dataBlock;
-        dataBlock.setDataType(dataType);
-
-        bool ret = dataBlock.decode(frame, status->header);
-        if (ret) {
-            uint32_t blockLen = dataBlock.getData(status->pduUserData + status->pduDataOffset);
-            status->pduDataOffset += blockLen;
-
-            status->frames--;
-            if (status->frames == 0U)
-                dataBlock.setLastBlock(true);
-
-            if (dataType == DataType::RATE_34_DATA) {
-                LogInfoEx(LOG_DMR, DMR_DT_RATE_34_DATA ", ISP, block %u, peer = %u, dataType = $%02X, dpf = $%02X", status->dataBlockCnt, peerId, dataBlock.getDataType(), dataBlock.getFormat());
-            } else if (dataType == DataType::RATE_12_DATA) {
-                LogInfoEx(LOG_DMR, DMR_DT_RATE_12_DATA ", ISP, block %u, peer = %u, dataType = $%02X, dpf = $%02X", status->dataBlockCnt, peerId, dataBlock.getDataType(), dataBlock.getFormat());
-            }
-            else {
-                LogInfoEx(LOG_DMR, DMR_DT_RATE_1_DATA ", ISP, block %u, peer = %u, dataType = $%02X, dpf = $%02X", status->dataBlockCnt, peerId, dataBlock.getDataType(), dataBlock.getFormat());
-            }
-
+        if ((dataType == DataType::RATE_34_DATA) ||
+            (dataType == DataType::RATE_12_DATA) ||
+            (dataType == DataType::RATE_1_DATA)) {
             dispatchToFNE(peerId, dmrData, data, len, seqNo, pktSeq, streamId);
-            status->dataBlockCnt++;
+
+            data::DataBlock dataBlock;
+            dataBlock.setDataType(dataType);
+
+            bool ret = dataBlock.decode(frame, status->header);
+            if (ret) {
+                uint32_t blockLen = dataBlock.getData(status->pduUserData + status->pduDataOffset);
+                status->pduDataOffset += blockLen;
+
+                status->frames--;
+                if (status->frames == 0U)
+                    dataBlock.setLastBlock(true);
+                status->dataBlockCnt++;
+            }
         }
 
         // dispatch the PDU data
-        if (status->dataBlockCnt > 0U && status->frames == 0U) {
+        if (status->hasRxHeader && status->dataBlockCnt > 0U && status->frames == 0U) {
+            // is the source ID a blacklisted ID?
+            lookups::RadioId rid = m_network->m_ridLookup->find(status->header.getSrcId());
+            if (!rid.radioDefault()) {
+                if (!rid.radioEnabled()) {
+                    // report error event to InfluxDB
+                    if (m_network->m_enableInfluxDB) {
+                        influxdb::QueryBuilder()
+                            .meas("call_error_event")
+                                .tag("peerId", std::to_string(peerId))
+                                .tag("streamId", std::to_string(streamId))
+                                .tag("srcId", std::to_string(status->header.getSrcId()))
+                                .tag("dstId", std::to_string(status->header.getDstId()))
+                                    .field("message", INFLUXDB_ERRSTR_DISABLED_SRC_RID)
+                                .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
+                            .requestAsync(m_network->m_influxServer);
+                    }
+
+                    delete status;
+                    m_status.erase(peerId);
+                    return false;
+                }
+            }
+
             dispatch(peerId, dmrData, data, len);
 
             uint64_t duration = hrc::diff(pktTime, status->callStartTime);
@@ -248,7 +243,20 @@ void DMRPacketData::dispatch(uint32_t peerId, dmr::data::NetData& dmrData, const
     RxStatus *status = m_status[peerId];
 
     if (status->header.getBlocksToFollow() > 0U && status->frames == 0U) {
-        bool crcRet = edac::CRC::checkCRC32(status->pduUserData, status->pduDataOffset);
+        // ooookay -- lets do the insane, and ridiculously stupid, ETSI Big-Endian reversed byte ordering bullshit for the CRC-32
+        uint8_t crcBytes[MAX_PDU_COUNT * DMR_PDU_UNCODED_LENGTH_BYTES + 2U];
+        ::memset(crcBytes, 0x00U, MAX_PDU_COUNT * DMR_PDU_UNCODED_LENGTH_BYTES + 2U);
+        for (uint8_t i = 0U; i < status->pduDataOffset - 4U; i += 2U) {
+            crcBytes[i + 1U] = status->pduUserData[i];
+            crcBytes[i] = status->pduUserData[i + 1U];
+        }
+
+        crcBytes[status->pduDataOffset - 1U] = status->pduUserData[status->pduDataOffset - 4U];
+        crcBytes[status->pduDataOffset - 2U] = status->pduUserData[status->pduDataOffset - 3U];
+        crcBytes[status->pduDataOffset - 3U] = status->pduUserData[status->pduDataOffset - 2U];
+        crcBytes[status->pduDataOffset - 4U] = status->pduUserData[status->pduDataOffset - 1U];
+
+        bool crcRet = edac::CRC::checkInvertedCRC32(crcBytes, status->pduDataOffset);
         if (!crcRet) {
             LogWarning(LOG_DMR, "DMR Data, failed CRC-32 check, blocks %u, len %u", status->header.getBlocksToFollow(), status->pduDataOffset);
         }

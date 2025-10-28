@@ -112,11 +112,13 @@ namespace dmr
 
         const uint32_t  MAX_PDU_COUNT = 32U;
 
-        const uint32_t  DMR_PDU_UNCONFIRMED_LENGTH_BYTES = 12U;
-        const uint32_t  DMR_PDU_CONFIRMED_LENGTH_BYTES = 18U;
-        const uint32_t  DMR_PDU_CONFIRMED_DATA_LENGTH_BYTES = 16U;
-        const uint32_t  DMR_PDU_CONFIRMED_HALFRATE_DATA_LENGTH_BYTES = 10U;
+        const uint32_t  DMR_PDU_HALFRATE_LENGTH_BYTES = 12U;
+        const uint32_t  DMR_PDU_THREEQUARTER_LENGTH_BYTES = 18U;
         const uint32_t  DMR_PDU_UNCODED_LENGTH_BYTES = 24U;
+
+        const uint32_t  DMR_PDU_CONFIRMED_TQ_DATA_LENGTH_BYTES = 16U;
+        const uint32_t  DMR_PDU_CONFIRMED_HR_DATA_LENGTH_BYTES = 10U;
+        const uint32_t  DMR_PDU_CONFIRMED_UNCODED_DATA_LENGTH_BYTES = 22U;
 
         const uint32_t  MI_LENGTH_BYTES = 4U;           // This was guessed based on OTA data captures -- the message indicator seems to be the same length as a source/destination address
         const uint32_t  RAW_AMBE_LENGTH_BYTES = 9U;
@@ -302,7 +304,8 @@ namespace dmr
                 */
 
                 VOICE_SYNC = 0xF0U,                     //!< Internal - Voice Sync
-                VOICE = 0xF1U                           //!< Internal - Voice
+                VOICE = 0xF1U,                          //!< Internal - Voice
+                GENERIC_DATA = 0xF2U                    //!< Internal - Data
             };
         }
 

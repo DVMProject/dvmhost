@@ -174,7 +174,7 @@ bool Data::process(uint8_t* data, uint32_t len)
 
         if (m_verbose) {
             LogInfoEx(LOG_RF, DMR_DT_DATA_HEADER ", slot = %u, dpf = $%02X, ack = %u, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padLength = %u, packetLength = %u, seqNo = %u, dstId = %u, srcId = %u, group = %u",
-                m_slot->m_slotNo, m_rfDataHeader.getDPF(), m_rfDataHeader.getA(), m_rfDataHeader.getSAP(), m_rfDataHeader.getFullMesage(), m_rfDataHeader.getBlocksToFollow(), m_rfDataHeader.getPadLength(), m_rfDataHeader.getPacketLength(),
+                m_slot->m_slotNo, m_rfDataHeader.getDPF(), m_rfDataHeader.getA(), m_rfDataHeader.getSAP(), m_rfDataHeader.getFullMesage(), m_rfDataHeader.getBlocksToFollow(), m_rfDataHeader.getPadLength(), m_rfDataHeader.getPacketLength(dataType),
                 m_rfDataHeader.getFSN(), dstId, srcId, gi);
         }
 
@@ -289,7 +289,20 @@ bool Data::process(uint8_t* data, uint32_t len)
         }
 
         if (m_rfDataHeader.getBlocksToFollow() > 0U && m_slot->m_rfFrames == 0U) {
-            bool crcRet = edac::CRC::checkCRC32(m_pduUserData, m_pduDataOffset);
+            // ooookay -- lets do the insane, and ridiculously stupid, ETSI Big-Endian reversed byte ordering bullshit for the CRC-32
+            uint8_t crcBytes[MAX_PDU_COUNT * DMR_PDU_UNCODED_LENGTH_BYTES + 2U];
+            ::memset(crcBytes, 0x00U, MAX_PDU_COUNT * DMR_PDU_UNCODED_LENGTH_BYTES + 2U);
+            for (uint8_t i = 0U; i < m_pduDataOffset - 4U; i += 2U) {
+                crcBytes[i + 1U] = m_pduUserData[i];
+                crcBytes[i] = m_pduUserData[i + 1U];
+            }
+
+            crcBytes[m_pduDataOffset - 1U] = m_pduUserData[m_pduDataOffset - 4U];
+            crcBytes[m_pduDataOffset - 2U] = m_pduUserData[m_pduDataOffset - 3U];
+            crcBytes[m_pduDataOffset - 3U] = m_pduUserData[m_pduDataOffset - 2U];
+            crcBytes[m_pduDataOffset - 4U] = m_pduUserData[m_pduDataOffset - 1U];
+
+            bool crcRet = edac::CRC::checkInvertedCRC32(crcBytes, m_pduDataOffset);
             if (!crcRet) {
                 LogWarning(LOG_RF, P25_PDU_STR ", failed CRC-32 check, blocks %u, len %u", m_rfDataHeader.getBlocksToFollow(), m_pduDataOffset);
             }
@@ -487,7 +500,7 @@ void Data::processNetwork(const data::NetData& dmrData)
 
         if (m_verbose) {
             LogInfoEx(LOG_NET, DMR_DT_DATA_HEADER ", slot = %u, dpf = $%02X, ack = %u, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padLength = %u, packetLength = %u, seqNo = %u, dstId = %u, srcId = %u, group = %u",
-                m_slot->m_slotNo, m_netDataHeader.getDPF(), m_netDataHeader.getA(), m_netDataHeader.getSAP(), m_netDataHeader.getFullMesage(), m_netDataHeader.getBlocksToFollow(), m_netDataHeader.getPadLength(), m_netDataHeader.getPacketLength(),
+                m_slot->m_slotNo, m_netDataHeader.getDPF(), m_netDataHeader.getA(), m_netDataHeader.getSAP(), m_netDataHeader.getFullMesage(), m_netDataHeader.getBlocksToFollow(), m_netDataHeader.getPadLength(), m_netDataHeader.getPacketLength(dataType),
                 m_netDataHeader.getFSN(), dstId, srcId, gi);
         }
 
@@ -537,7 +550,20 @@ void Data::processNetwork(const data::NetData& dmrData)
         }
 
         if (m_netDataHeader.getBlocksToFollow() > 0U && m_slot->m_netFrames == 0U) {
-            bool crcRet = edac::CRC::checkCRC32(m_pduUserData, m_pduDataOffset);
+            // ooookay -- lets do the insane, and ridiculously stupid, ETSI Big-Endian reversed byte ordering bullshit for the CRC-32
+            uint8_t crcBytes[MAX_PDU_COUNT * DMR_PDU_UNCODED_LENGTH_BYTES + 2U];
+            ::memset(crcBytes, 0x00U, MAX_PDU_COUNT * DMR_PDU_UNCODED_LENGTH_BYTES + 2U);
+            for (uint8_t i = 0U; i < m_pduDataOffset - 4U; i += 2U) {
+                crcBytes[i + 1U] = m_pduUserData[i];
+                crcBytes[i] = m_pduUserData[i + 1U];
+            }
+
+            crcBytes[m_pduDataOffset - 1U] = m_pduUserData[m_pduDataOffset - 4U];
+            crcBytes[m_pduDataOffset - 2U] = m_pduUserData[m_pduDataOffset - 3U];
+            crcBytes[m_pduDataOffset - 3U] = m_pduUserData[m_pduDataOffset - 2U];
+            crcBytes[m_pduDataOffset - 4U] = m_pduUserData[m_pduDataOffset - 1U];
+
+            bool crcRet = edac::CRC::checkInvertedCRC32(crcBytes, m_pduDataOffset);
             if (!crcRet) {
                 LogWarning(LOG_NET, P25_PDU_STR ", failed CRC-32 check, blocks %u, len %u", m_netDataHeader.getBlocksToFollow(), m_pduDataOffset);
             }
@@ -676,8 +702,8 @@ void Data::writeRF_PDU_Ack_Response(uint8_t rspClass, uint8_t rspType, uint8_t r
     ::memset(data + 2U, 0x00U, DMR_FRAME_LENGTH_BYTES);
 
     // decode the BPTC (196,96) FEC
-    uint8_t payload[DMR_PDU_UNCONFIRMED_LENGTH_BYTES];
-    ::memset(payload, 0x00U, DMR_PDU_UNCONFIRMED_LENGTH_BYTES);
+    uint8_t payload[DMR_PDU_UNCODED_LENGTH_BYTES];
+    ::memset(payload, 0x00U, DMR_PDU_UNCODED_LENGTH_BYTES);
 
     // encode the BPTC (196,96) FEC
     bptc.encode(payload, data + 2U);
