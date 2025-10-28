@@ -10,11 +10,10 @@ daemon: true
 #
 #   Logging Levels:
 #     1 - Debug
-#     2 - Message
-#     3 - Informational
-#     4 - Warning
-#     5 - Error
-#     6 - Fatal
+#     2 - Informational
+#     3 - Warning
+#     4 - Error
+#     5 - Fatal
 #
 log:
     # Console display logging level (used when in foreground).
