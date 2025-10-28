@@ -982,7 +982,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                 }
                 break;
 
-            case NET_FUNC::RPTL:                                        // Repeater Login
+            case NET_FUNC::RPTL:                                        // Repeater/Peer Login
                 {
                     if (peerId > 0 && (network->m_peers.find(peerId) == network->m_peers.end())) {
                         if (network->m_peers.size() >= MAX_HARD_CONN_CAP) {
@@ -1062,7 +1062,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                     }
                 }
                 break;
-            case NET_FUNC::RPTK:                                        // Repeater Authentication
+            case NET_FUNC::RPTK:                                        // Repeater/Peer Authentication
                 {
                     if (peerId > 0 && (network->m_peers.find(peerId) != network->m_peers.end())) {
                         FNEPeerConnection* connection = network->m_peers[peerId];
@@ -1160,7 +1160,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                     }
                 }
                 break;
-            case NET_FUNC::RPTC:                                        // Repeater Configuration
+            case NET_FUNC::RPTC:                                        // Repeater/Peer Configuration
                 {
                     if (peerId > 0 && (network->m_peers.find(peerId) != network->m_peers.end())) {
                         FNEPeerConnection* connection = network->m_peers[peerId];
@@ -1336,7 +1336,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                 }
                 break;
 
-            case NET_FUNC::RPT_DISC:                                    // Repeater Disconnect
+            case NET_FUNC::RPT_DISC:                                    // Repeater/Peer Disconnect
                 {
                     if (peerId > 0 && (network->m_peers.find(peerId) != network->m_peers.end())) {
                         FNEPeerConnection* connection = network->m_peers[peerId];
@@ -1352,7 +1352,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                     }
                 }
                 break;
-            case NET_FUNC::PING:                                        // Repeater Ping
+            case NET_FUNC::PING:                                        // Ping
                 {
                     if (peerId > 0 && (network->m_peers.find(peerId) != network->m_peers.end())) {
                         FNEPeerConnection* connection = network->m_peers[peerId];
@@ -1397,7 +1397,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                 }
                 break;
 
-            case NET_FUNC::GRANT_REQ:                                   // Repeater Grant Request
+            case NET_FUNC::GRANT_REQ:                                   // Grant Request
                 {
                     if (peerId > 0 && (network->m_peers.find(peerId) != network->m_peers.end())) {
                         FNEPeerConnection* connection = network->m_peers[peerId];
