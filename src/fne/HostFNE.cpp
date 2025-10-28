@@ -793,6 +793,9 @@ void* HostFNE::threadDiagNetwork(void* arg)
 
 bool HostFNE::createPeerNetworks()
 {
+    yaml::Node systemConf = m_conf["system"];
+    std::string identity = systemConf["identity"].as<std::string>();
+
     yaml::Node masterConf = m_conf["master"];
     uint32_t masterPeerId = masterConf["peerId"].as<uint32_t>(1001U);
 
@@ -844,9 +847,6 @@ bool HostFNE::createPeerNetworks()
                 }
             }
 
-            std::string identity = peerConf["identity"].as<std::string>();
-            uint32_t rxFrequency = peerConf["rxFrequency"].as<uint32_t>(0U);
-            uint32_t txFrequency = peerConf["txFrequency"].as<uint32_t>(0U);
             float latitude = peerConf["latitude"].as<float>(0.0F);
             float longitude = peerConf["longitude"].as<float>(0.0F);
             std::string location = peerConf["location"].as<std::string>();
@@ -861,7 +861,7 @@ bool HostFNE::createPeerNetworks()
             // initialize networking
             network::PeerNetwork* network = new PeerNetwork(masterAddress, masterPort, 0U, id, password, true, debug, m_dmrEnabled, m_p25Enabled, m_nxdnEnabled, m_analogEnabled, true, true, 
                 m_allowActivityTransfer, m_allowDiagnosticTransfer, false, false);
-            network->setMetadata(identity, rxFrequency, txFrequency, 0.0F, 0.0F, 0, 0, 0, latitude, longitude, 0, location);
+            network->setMetadata(identity, 0U, 0U, 0.0F, 0.0F, 0, 0, 0, latitude, longitude, 0, location);
             network->setLookups(m_ridLookup, m_tidLookup);
             network->setMasterPeerId(masterPeerId);
             network->setPeerLookups(m_peerListLookup);
