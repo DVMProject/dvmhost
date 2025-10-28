@@ -394,6 +394,26 @@ namespace network
 
         /**
          * @brief Writes a grant request to the network.
+         * \code{.unparsed}
+         *  Below is the representation of the data layout for the group affiliation
+         *  announcement message. The message is 24 bytes in length.
+         * 
+         *  Byte 0               1               2               3
+         *  Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *      | Reserved                                                      |
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *      |                                                               |
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *      |                               | Source ID                     |
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *      | Source ID                     | Destination ID                |
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *      | Destination ID                | Reserved      |S| Reserverd   |
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *      | Mode          | Reserved                                      |
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         * \endcode
          * @param mode Digital Mode.
          * @param srcId Source Radio ID.
          * @param dstId Destination Radio ID.
@@ -413,6 +433,22 @@ namespace network
 
         /**
          * @brief Writes the local activity log to the network.
+         * \code{.unparsed}
+         *  Below is the representation of the data layout for the activity log message.
+         *  The message is variable length bytes.
+         * 
+         *  Byte 0               1               2               3
+         *  Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *      | Reserved                                                      |
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *      |                                                               |
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *      |                                               | Variable      |
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *      | Length Activity Log Message ................................. |
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         * \endcode
          * @param message Textual string to send as activity log information.
          * @returns bool True, if message was sent, otherwise false. 
          */
@@ -420,13 +456,100 @@ namespace network
 
         /**
          * @brief Writes the local diagnostic logs to the network.
-         * @param message Textual string to send as diagnostic log information.
+         * \code{.unparsed}
+         *  Below is the representation of the data layout for the diagnostic log message.
+         *  The message is variable length bytes.
+         * 
+         *  Byte 0               1               2               3
+         *  Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *      | Reserved                                                      |
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *      |                                                               |
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *      |                                               | Variable      |
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *      | Length Diagnostics Message .................................. |
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         * \endcode
          * @returns bool True, if message was sent, otherwise false. 
          */
         virtual bool writeDiagLog(const char* message);
 
         /**
          * @brief Writes the local status to the network.
+         * \code{.unparsed}
+         *  Below is the representation of the data layout for the peer status message.
+         *  The message is variable length bytes.
+         * 
+         *  Byte 0               1               2               3
+         *  Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *      | Reserved                                                      |
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *      |                                                               |
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *      |                                               | Variable      |
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *      | Length JSON Payload ......................................... |
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         * 
+         * The JSON payload is variable length and looks like this:
+         *  {
+         *      "state": <Modem State>,
+         *      "isTxCW": <Boolean flag indicating if the end-point is transmitting CW>,
+         *      "fixedMode": <Boolean flag indicating if the end-point is operating in fixed mode>,
+         *      "dmrTSCCEnable": <Boolean flag indicating whether or not dedicated DMR TSCC is enabled>,
+         *      "dmrCC": <Boolean flag indicating whether or not DMR CC is enabled>,
+         *      "p25CtrlEnable": <Boolean flag indicating whether or not dedicatd P25 control is enabled>,
+         *      "p25CC": <Boolean flag indicating whether or not P25 CC is enabled>,
+         *      "nxdnCtrlEnable": <Boolean flag indicating whether or not dedicatd NXDN control is enabled>,
+         *      "nxdnCC": <Boolean flag indicating whether or not NXDN CC is enabled>,
+         *      "tx": <Boolean flag indicating whether end-point is transmitting>,
+         *      "channelId": <Channel ID from the IDEN channel bandplan>,
+         *      "channelNo": <Channel Number from the IDEN channel bandplan>,
+         *      "lastDstId": <Last destination ID transmitted, may revert to 0 after a call ends>,
+         *      "lastSrcId": <Last source ID transmitted, may revert to 0 after a call ends>,
+         *      "peerId": <Unique Peer Identification Number>,
+         *      "sysId": <System ID>,
+         *      "siteId": <Site ID>,
+         *      "p25RfssId": <P25 RFSS ID>,
+         *      "p25NetId": <P25 WACN/Network ID>,
+         *      "p25NAC": <P25 NAC>,
+         *      "vcChannels": [
+         *          {
+         *              "channelId": <Channel ID from the IDEN channel bandplan>,
+         *              "channelNo": <Channel Number from the IDEN channel bandplan>,
+         *              "tx": <Boolean flag indicating whether end-point is transmitting>,
+         *              "lastDstId": <Last destination ID transmitted, may revert to 0 after a call ends>,
+         *              "lastSrcId": <Last source ID transmitted, may revert to 0 after a call ends>,
+         *          }
+         *      ],
+         *      "modem": {
+         *          "portType": "<Port Type>",
+         *          "modemPort": "<Modem Port>",
+         *          "portSpeed": <Port Speed>,
+         *          "rxLevel": <Configured Rx Level>,
+         *          "cwTxLevel": <Configured CWID Tx Level>,
+         *          "dmrTxLevel": <Configured DMR Tx Level>,
+         *          "p25TxLevel": <Configured P25 Tx Level>,
+         *          "nxdnTxLevel": <Configured NXDN Tx Level>,
+         *          "rxDCOffset": <Configured Rx DC Offset>,
+         *          "txDCOffset": <Configured Tx DC Offset>,
+         *          "fdmaPremables": <Configured FDMA Preambles>,
+         *          "dmrRxDelay": <Configured DMR Rx Delay>,
+         *          "p25CorrCount": <Configured P25 Correlation Count>,
+         *          "rxFrequency": <Peer Rx Frequency in Hz>,
+         *          "txFrequency": <Peer Tx Frequency in Hz>,
+         *          "rxTuning": <Peer Rx Tuning Offset>,
+         *          "txTuning": <Peer Tx Tuning Offset>,
+         *          "rxFrequencyEffective": <Peer Rx Effective Frequency in Hz>,
+         *          "txFrequencyEffective": <Peer Tx Effective Frequency in Hz>,
+         *          "v24Connected": <Boolean indicating V.24 is connected (if a V.24 modem)>,
+         *          "protoVer": <Protocol version>
+         *      }
+         *  }
+         * \endcode
          * @param obj JSON object representing the local peer status.
          * @returns bool True, if peer status was sent, otherwise false. 
          */
@@ -453,6 +576,16 @@ namespace network
         virtual bool announceGroupAffiliation(uint32_t srcId, uint32_t dstId);
         /**
          * @brief Writes a group affiliation removal to the network.
+         * \code{.unparsed}
+         *  Below is the representation of the data layout for the unit registration
+         *  announcement message. The message is 3 bytes in length.
+         * 
+         *  Byte 0               1               2
+         *  Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *      | Source ID                                     |
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         * \endcode
          * @param srcId Source Radio ID.
          * @returns bool True, if group affiliation announcement was sent, otherwise false. 
          */
@@ -476,6 +609,16 @@ namespace network
         virtual bool announceUnitRegistration(uint32_t srcId);
         /**
          * @brief Writes a unit deregistration to the network.
+         * \code{.unparsed}
+         *  Below is the representation of the data layout for the unit deregistration
+         *  announcement message. The message is 3 bytes in length.
+         * 
+         *  Byte 0               1               2
+         *  Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *      | Source ID                                     |
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         * \endcode
          * @param srcId Source Radio ID.
          * @returns bool True, if unit deregistration announcement was sent, otherwise false. 
          */
@@ -483,6 +626,20 @@ namespace network
 
         /**
          * @brief Writes a complete update of the peer affiliation list to the network.
+         * \code{.unparsed}
+         *  Below is the representation of the data layout for the repeater/end point login message.
+         *  The message is variable bytes in length.
+         * 
+         *  Byte 0               1               2               3
+         *  Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *      | Number of entries                                             |
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *      | Entry: Source ID                                | E: Dst Id   |
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *      | Entry: Destination ID                           |
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         * \endcode
          * @param affs Complete map of peer unit affiliations.
          * @returns bool True, if affiliation update announcement was sent, otherwise false. 
          */
@@ -490,6 +647,18 @@ namespace network
 
         /**
          * @brief Writes a complete update of the peer's voice channel list to the network.
+         * \code{.unparsed}
+         *  Below is the representation of the data layout for the repeater/end point login message.
+         *  The message is variable bytes in length.
+         * 
+         *  Byte 0               1               2               3
+         *  Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *      | Number of entries                                             |
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *      | Entry: Peer ID                                                |
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         * \endcode
          * @param peers List of voice channel peers.
          * @returns bool True, if peer update announcement was sent, otherwise false. 
          */

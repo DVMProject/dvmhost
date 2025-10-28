@@ -144,18 +144,93 @@ namespace network
 
         /**
          * @brief Writes a complete update of this CFNE's active peer list to the network.
+         * \code{.unparsed}
+         *  Below is the representation of the data layout for the active peer listmessage.
+         *  The active peer list message is a JSON body, and is a packet buffer compressed message.
+         *
+         *  Byte 0               1               2               3
+         *  Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *      | Protocol Tag (REPL)                                           |
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *      | Reserved                                                      |
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *      | Variable Length JSON Payload ................................ |
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *
+         * The JSON payload is variable length and looks like this:
+         *  {
+         *      "peerId": <Peer ID>,
+         *      "address": "<Peer IP Address>",
+         *      "port": <Peer Port>,
+         *      "connected": <Boolean flag indicating whether or not this peer is connected>,
+         *      "connectionState": <Numerical connection state value>,
+         *      "pingsReceived": <Number of pings received>,
+         *      "lastPing": <Last ping time>,
+         *      "controlChannel": <Control Channel Peer ID>,
+         *      "config": {
+         *          <This is the JSON object from writeConfig()>
+         *      },
+         *      "voiceChannels": [
+         *          <Peer ID>,
+         *      ]
+         *  }
+         * \endcode
          * @param peerList List of active peers.
          * @returns bool True, if list was sent, otherwise false.
          */
         bool writePeerLinkPeers(json::array* peerList);
         /**
          * @brief Writes a complete update of this CFNE's known spanning tree upstream to the network.
+         * \code{.unparsed}
+         *  Below is the representation of the data layout for the spanning tree message.
+         *  The spanning tree message is a JSON body, and is a packet buffer compressed message.
+         * 
+         *  Byte 0               1               2               3
+         *  Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *      | Protocol Tag (REPL)                                           |
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *      | Reserved                                                      |
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *      | Variable Length JSON Payload ................................ |
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         * 
+         * The JSON payload is variable length and looks like this:
+         *  {
+         *      "id": <FNE Peer ID>,
+         *      "masterId": <FNE Master ID>,
+         *      "identity": "<FNE Peer Identity>",
+         *      "children": [
+         *          "id": <FNE Peer ID>,
+         *          "masterId": <FNE Master ID>,
+         *          "identity": "<FNE Peer Identity>",
+         *          "children": [],
+         *      ]
+         *  }
+         * \endcode
          * @param treeRoot Root of the master tree.
          * @returns bool True, if list was sent, otherwise false.
          */
         bool writeSpanningTree(SpanningTree* treeRoot);
         /**
          * @brief Writes a complete update of this CFNE's HA parameters to the network.
+         * \code{.unparsed}
+         *  Below is the representation of the data layout for the repeater/end point login message.
+         *  The message is variable bytes in length.
+         * 
+         *  Byte 0               1               2               3
+         *  Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *      | Total length of all included entries                          |
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *      | Entry: Peer ID                                                |
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *      | Entry: IP Address                                             |
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *      | Entry: Port                   |
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         * \endcode
          * @param haParams List of HA parameters.
          * @returns bool True, if list was sent, otherwise false.
          */
