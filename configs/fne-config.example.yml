@@ -211,7 +211,8 @@ master:
 #   (This is the list of connections to upstream FNEs this FNE instance should be connected to.)
 #
 peers:
-    - # Flag indicating whether or not the peer is enabled.
+    - name: MASTERFNE
+      # Flag indicating whether or not the peer is enabled.
       enable: true
       # Hostname/IP address of the FNE master to connect to.
       masterAddress: 127.0.0.1
