@@ -480,6 +480,23 @@ namespace network
 
         /**
          * @brief Helper to send the list of whitelisted RIDs to the specified peer.
+         * \code{.unparsed}
+         *  Below is the representation of the data layout for the active/whitelisted RIDs message.
+         *  The message is variable bytes in length. This layout does not apply for peer replication
+         *  messages, as those messages are a packet buffered message of the entire RID ACL file.
+         * 
+         *  The RID ACL is chunked and sent in blocks of a maximum of 50 RIDs per message.
+         * 
+         *  Each radio ID ACL entry is 4 bytes.
+         * 
+         *  Byte 0               1               2               3
+         *  Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *      | Number of entries                                             |
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *      | Entry: Radio ID                                 |
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         * \endcode
          * @param peerId Peer ID.
          * @param streamId Stream ID for this message.
          * @param sendReplica Flag indicating the RID transfer is to an neighbor replica peer.
@@ -487,12 +504,47 @@ namespace network
         void writeWhitelistRIDs(uint32_t peerId, uint32_t streamId, bool sendReplica);
         /**
          * @brief Helper to send the list of blacklisted RIDs to the specified peer.
+         * \code{.unparsed}
+         *  Below is the representation of the data layout for the deactivated/blacklisted RIDs message.
+         *  The message is variable bytes in length. 
+         * 
+         *  The RID ACL is chunked and sent in blocks of a maximum of 50 RIDs per message.
+         * 
+         *  Each radio ID ACL entry is 4 bytes.
+         * 
+         *  Byte 0               1               2               3
+         *  Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *      | Number of entries                                             |
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *      | Entry: Radio ID                                 |
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         * \endcode
          * @param peerId Peer ID.
          * @param streamId Stream ID for this message.
          */
         void writeBlacklistRIDs(uint32_t peerId, uint32_t streamId);
         /**
          * @brief Helper to send the list of active TGIDs to the specified peer.
+         * \code{.unparsed}
+         *  Below is the representation of the data layout for the active TGs message.
+         *  The message is variable bytes in length. This layout does not apply for peer replication
+         *  messages, as those messages are a packet buffered message of the entire talkgroup ACL file.
+         * 
+         *  Each talkgroup ACL entry is 5 bytes.
+         * 
+         *  Byte 0               1               2               3
+         *  Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *      | Number of entries                                             |
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *      | Entry: Talkgroup ID                             |N|A| Slot    |
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         * 
+         *  N = Non-Preferred Flag
+         *  A = Affiliated Flag
+         * 
+         * \endcode
          * @param peerId Peer ID.
          * @param streamId Stream ID for this message.
          * @param sendReplica Flag indicating the TGID transfer is to an neighbor replica peer.
@@ -500,18 +552,49 @@ namespace network
         void writeTGIDs(uint32_t peerId, uint32_t streamId, bool sendReplica);
         /**
          * @brief Helper to send the list of deactivated TGIDs to the specified peer.
+         * \code{.unparsed}
+         *  Below is the representation of the data layout for the deactivated TGs message.
+         *  The message is variable bytes in length.
+         * 
+         *  Each talkgroup ACL entry is 5 bytes.
+         * 
+         *  Byte 0               1               2               3
+         *  Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *      | Number of entries                                             |
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *      | Entry: Talkgroup ID                             | R | Slot    |
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         * \endcode
          * @param peerId Peer ID.
          * @param streamId Stream ID for this message.
          */
         void writeDeactiveTGIDs(uint32_t peerId, uint32_t streamId);
         /**
          * @brief Helper to send the list of peers to the specified peer.
+         * @note This doesn't have a data layout document because it is *only* sent as a packet buffered message.
          * @param peerId Peer ID.
          * @param streamId Stream ID for this message.
          */
         void writePeerList(uint32_t peerId, uint32_t streamId);
         /**
          * @brief Helper to send the HA parameters to the specified peer.
+         * \code{.unparsed}
+         *  Below is the representation of the data layout for the HA parameters message.
+         *  The message is variable bytes in length.
+         * 
+         *  Byte 0               1               2               3
+         *  Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *      | Total length of all included entries                          |
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *      | Entry: Peer ID                                                |
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *      | Entry: IP Address                                             |
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *      | Entry: Port                   |
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         * \endcode
          * @param peerId Peer ID.
          * @param streamId Stream ID for this message.
          * @param sendReplica Flag indicating the HA transfer is to an neighbor replica peer.
@@ -521,6 +604,16 @@ namespace network
         /**
          * @brief Helper to send a network tree disconnect to the specified peer.
          *  This will cause the peer to issue a link disconnect to the offending peer to prevent network loops.
+         * \code{.unparsed}
+         *  Below is the representation of the data layout for the tree disconnect message.
+         *  The message is 4 bytes in length.
+         * 
+         *  Byte 0               1               2               3
+         *  Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *      | Offending Peer ID                                             |
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         * \endcode
          * @param peerId Peer ID.
          * @param offendingPeerId Offending Peer ID.
          */
@@ -528,6 +621,22 @@ namespace network
 
         /**
          * @brief Helper to send a In-Call Control command to the specified peer.
+         * \code{.unparsed}
+         *  Below is the representation of the data layout for the In-Call control message.
+         *  The message is 15 bytes in length.
+         * 
+         *  Byte 0               1               2               3
+         *  Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *      | Reserved                                                      |
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *      |                               | Peer ID                       |
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *      | Peer ID                       | ICC Command   | Destination   |
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *      | Destination ID                | Slot          |
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         * \endcode
          * @param peerId Peer ID.
          * @param streamId Stream ID for this message.
          * @param subFunc Network Sub-Function.

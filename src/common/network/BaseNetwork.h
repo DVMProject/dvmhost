@@ -444,9 +444,9 @@ namespace network
          *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
          *      |                                                               |
          *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-         *      |                                               | Variable      |
+         *      |                                               | Log Message . |
          *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-         *      | Length Activity Log Message ................................. |
+         *      | Log Message ................................................. |
          *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
          * \endcode
          * @param message Textual string to send as activity log information.
@@ -467,9 +467,9 @@ namespace network
          *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
          *      |                                                               |
          *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-         *      |                                               | Variable      |
+         *      |                                               | Log Message . |
          *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-         *      | Length Diagnostics Message .................................. |
+         *      | Log Message ................................................. |
          *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
          * \endcode
          * @returns bool True, if message was sent, otherwise false. 
@@ -630,6 +630,8 @@ namespace network
          *  Below is the representation of the data layout for the repeater/end point login message.
          *  The message is variable bytes in length.
          * 
+         *  Each affiliation update entry is 7 bytes.
+         * 
          *  Byte 0               1               2               3
          *  Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0
          *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -650,6 +652,8 @@ namespace network
          * \code{.unparsed}
          *  Below is the representation of the data layout for the repeater/end point login message.
          *  The message is variable bytes in length.
+         * 
+         *  Each peer ID entry is 4 bytes.
          * 
          *  Byte 0               1               2               3
          *  Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0
@@ -972,6 +976,9 @@ namespace network
          *      | Reserved                                                      |
          *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
          * 
+         *  S = Slot Number (clear Slot 1, set Slot 2)
+         *  G = Group Flag
+         * 
          *  The data starting at offset 20 for 33 bytes of the raw DMR frame.
          * 
          *  DMR frame message has 2 trailing bytes:
@@ -1134,6 +1141,8 @@ namespace network
          *      | Blk to Flw    | Current Block | DUID          | Frame Length  |
          *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
          * 
+         *  C = Confirmed PDU Flag
+         * 
          *  The data starting at offset 24 for variable number of bytes (DUID dependant)
          *  is the P25 frame.
          * \endcode
@@ -1168,6 +1177,8 @@ namespace network
          *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
          *      |                                               | Frame Length  |
          *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         * 
+         *  G = Group Flag
          * 
          *  The data starting at offset 24 for 48 bytes if the raw NXDN frame.
          * \endcode

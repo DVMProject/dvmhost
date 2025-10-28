@@ -29,7 +29,7 @@ uint8_t SpanningTree::m_maxUpdatesBeforeReparent = 5U;
 SpanningTree::SpanningTree(uint32_t id, uint32_t masterId, SpanningTree* parent) :
     m_parent(parent),
     m_children(),
-    m_identity("UNK"),
+    m_identity("CHANGEME"),
     m_id(id),
     m_masterId(masterId),
     m_updatesBeforeReparent(0U)
