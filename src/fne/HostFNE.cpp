@@ -541,7 +541,7 @@ bool HostFNE::initializeRESTAPI()
 bool HostFNE::createMasterNetwork()
 {
     yaml::Node systemConf = m_conf["system"];
-    std::string identity = systemConf["identity"].as<std::string>();
+    std::string identity = systemConf["identity"].as<std::string>("CHANGEME");
 
     yaml::Node masterConf = m_conf["master"];
     std::string address = masterConf["address"].as<std::string>();
@@ -643,8 +643,10 @@ bool HostFNE::createMasterNetwork()
     }
 
     // initialize networking
-    m_network = new FNENetwork(this, address, port, id, password, debug, kmfDebug, verbose, reportPeerPing, m_dmrEnabled, m_p25Enabled, m_nxdnEnabled, m_analogEnabled,
-        parrotDelay, parrotGrantDemand, m_allowActivityTransfer, m_allowDiagnosticTransfer, m_pingTime, m_updateLookupTime, workerCnt);
+    m_network = new FNENetwork(this, address, port, id, password, identity, debug, kmfDebug, verbose, reportPeerPing,
+        m_dmrEnabled, m_p25Enabled, m_nxdnEnabled, m_analogEnabled,
+        parrotDelay, parrotGrantDemand, m_allowActivityTransfer, m_allowDiagnosticTransfer,
+        m_pingTime, m_updateLookupTime, workerCnt);
     m_network->setOptions(masterConf, true);
 
     m_network->setLookups(m_ridLookup, m_tidLookup, m_peerListLookup, m_cryptoLookup, m_adjSiteMapLookup);
@@ -798,7 +800,7 @@ void* HostFNE::threadDiagNetwork(void* arg)
 bool HostFNE::createPeerNetworks()
 {
     yaml::Node systemConf = m_conf["system"];
-    std::string identity = systemConf["identity"].as<std::string>();
+    std::string identity = systemConf["identity"].as<std::string>("CHANGEME");
 
     yaml::Node masterConf = m_conf["master"];
     uint32_t masterPeerId = masterConf["peerId"].as<uint32_t>(1001U);
@@ -856,6 +858,12 @@ bool HostFNE::createPeerNetworks()
             std::string location = peerConf["location"].as<std::string>();
 
             ::LogInfoEx(LOG_HOST, "Peer ID %u Master Address %s Master Port %u Enabled %u Encrypted %u", id, masterAddress.c_str(), masterPort, enabled, encrypted);
+
+            std::string identOverride = peerConf["identity"].as<std::string>();
+            if (identOverride != "") {
+                identity = identOverride;
+                ::LogInfoEx(LOG_HOST, "Peer ID %u overrides global identity, Identity %s", id, identity.c_str());
+            }
 
             if (id > 999999999U) {
                 ::LogError(LOG_HOST, "Network Peer ID cannot be greater then 999999999.");

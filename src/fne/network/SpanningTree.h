@@ -153,6 +153,10 @@ namespace network
         static uint8_t m_maxUpdatesBeforeReparent; //!< Maximum count of updates before allowing node reparenting.
 
         /**
+         * @brief Peer Identity.
+         */
+        DECLARE_PROPERTY_PLAIN(std::string, identity);
+        /**
          * @brief Peer ID.
          */
         DECLARE_PROPERTY_PLAIN(uint32_t, id);

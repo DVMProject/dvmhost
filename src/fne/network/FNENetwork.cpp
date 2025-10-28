@@ -63,7 +63,8 @@ std::timed_mutex FNENetwork::m_keyQueueMutex;
 /* Initializes a new instance of the FNENetwork class. */
 
 FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port, uint32_t peerId, const std::string& password,
-    bool debug, bool kmfDebug, bool verbose, bool reportPeerPing, bool dmr, bool p25, bool nxdn, bool analog, 
+    std::string identity, bool debug, bool kmfDebug, bool verbose, bool reportPeerPing,
+    bool dmr, bool p25, bool nxdn, bool analog,
     uint32_t parrotDelay, bool parrotGrantDemand, bool allowActivityTransfer, bool allowDiagnosticTransfer, 
     uint32_t pingTime, uint32_t updateLookupTime, uint16_t workerCnt) :
     BaseNetwork(peerId, true, debug, true, true, allowActivityTransfer, allowDiagnosticTransfer),
@@ -154,6 +155,7 @@ FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port,
 
     SpanningTree::m_maxUpdatesBeforeReparent = (uint8_t)host->m_maxMissedPings;
     m_treeRoot = new SpanningTree(peerId, peerId, nullptr);
+    m_treeRoot->identity(identity);
 
     /*
     ** Initialize Threads
@@ -1204,8 +1206,9 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
 
                                         json::object peerConfig = connection->config();
 
+                                        std::string identity = "* UNK *";
                                         if (peerConfig["identity"].is<std::string>()) {
-                                            std::string identity = peerConfig["identity"].get<std::string>();
+                                            identity = peerConfig["identity"].getDefault<std::string>("* UNK *");
                                             connection->identity(identity);
                                             LogInfoEx(LOG_MASTER, "PEER %u >> Identity [%8s]", peerId, identity.c_str());
                                         }
@@ -1275,6 +1278,9 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                                         network->m_spanningTreeFastReconnect) {
                                                         LogWarning(LOG_STP, "PEER %u (%s) server already announced in server tree, fast peer reconnect, peerId = %u, masterId = %u, treePeerId = %u, treeMasterId = %u, connectionState = %u", peerId, connection->identWithQualifier().c_str(),
                                                             peerId, masterPeerId, tree->id(), tree->masterId(), connection->connectionState());
+                                                        if (identity != tree->identity()) {
+                                                            LogWarning(LOG_STP, "PEER %u (%s) why has this server's announced identity changed? *big hmmmm*", peerId, connection->identWithQualifier().c_str());
+                                                        }
                                                         SpanningTree::moveParent(tree, network->m_treeRoot);
                                                         network->logSpanningTree(connection);
                                                     } else {
@@ -1285,7 +1291,8 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                                         break;
                                                     }
                                                 } else {
-                                                    new SpanningTree(peerId, masterPeerId, network->m_treeRoot);
+                                                    SpanningTree* node = new SpanningTree(peerId, masterPeerId, network->m_treeRoot);
+                                                    node->identity(identity);
                                                     network->logSpanningTree(connection);
                                                 }
                                             }

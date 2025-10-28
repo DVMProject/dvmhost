@@ -29,6 +29,7 @@ uint8_t SpanningTree::m_maxUpdatesBeforeReparent = 5U;
 SpanningTree::SpanningTree(uint32_t id, uint32_t masterId, SpanningTree* parent) :
     m_parent(parent),
     m_children(),
+    m_identity("UNK"),
     m_id(id),
     m_masterId(masterId),
     m_updatesBeforeReparent(0U)
@@ -133,6 +134,8 @@ void SpanningTree::serializeTree(SpanningTree* node, json::array& jsonArray)
     obj["id"].set<uint32_t>(id);
     uint32_t masterId = node->masterId();
     obj["masterId"].set<uint32_t>(masterId);
+    std::string identity = node->identity();
+    obj["identity"].set<std::string>(identity);
 
     json::array childArray;
     for (auto child : node->m_children) {
@@ -161,6 +164,9 @@ void SpanningTree::deserializeTree(json::array& jsonArray, SpanningTree* parent,
 
         uint32_t id = obj["id"].get<uint32_t>();
         uint32_t masterId = obj["masterId"].get<uint32_t>();
+        std::string identity = "* UNK *";
+        if (obj["identity"].is<std::string>())
+            identity = obj["identity"].getDefault<std::string>("* UNK *");
 
         // check if this peer is already connected via another peer
         SpanningTree* tree = SpanningTree::findByMasterID(masterId);
@@ -176,8 +182,10 @@ void SpanningTree::deserializeTree(json::array& jsonArray, SpanningTree* parent,
         }
 
         SpanningTree* existingNode = findByPeerID(id);
-        if (existingNode == nullptr)
+        if (existingNode == nullptr) {
             existingNode = new SpanningTree(id, masterId, parent);
+            existingNode->identity(identity);
+        }
         else {
             // are the parents different? if so, start counting down to reparenting
             if (existingNode->m_parent != parent) {
@@ -269,7 +277,7 @@ void SpanningTree::moveParent(SpanningTree* node, SpanningTree* parent)
 
     // the root node cannot be moved
     if (node->m_parent == nullptr) {
-        LogError(LOG_STP, "PEER %u is a root tree node, can't be moved. BUGBUG.", node->id());
+        LogError(LOG_STP, "PEER %u (%s) is a root tree node, can't be moved. BUGBUG.", node->id(), node->identity().c_str());
         return;
     }
 
@@ -290,8 +298,8 @@ void SpanningTree::moveParent(SpanningTree* node, SpanningTree* parent)
                 nodeParent->m_children.erase(it);
                 hasReleasedFromParent = true;
             } else {
-                LogError(LOG_STP, "PEER %u failed to release ownership from PEER %u, tree is potentially inconsistent",
-                    node->id(), nodeParent->id());
+                LogError(LOG_STP, "PEER %u (%s) failed to release ownership from PEER %u, tree is potentially inconsistent",
+                    node->id(), node->identity().c_str(), nodeParent->id());
             }
         }
 
@@ -305,8 +313,8 @@ void SpanningTree::moveParent(SpanningTree* node, SpanningTree* parent)
             if (node->m_updatesBeforeReparent > 0U)
                 node->m_updatesBeforeReparent = 0U;
 
-            LogWarning(LOG_STP, "PEER %u ownership has changed from PEER %u to PEER %u; this normally shouldn't happen",
-                    node->id(), nodeParentId, parent->id());
+            LogWarning(LOG_STP, "PEER %u (%s) ownership has changed from PEER %u to PEER %u; this normally shouldn't happen",
+                    node->id(), node->identity().c_str(), nodeParentId, parent->id());
         }
     }
 }
@@ -322,8 +330,8 @@ void SpanningTree::visualizeTreeToLog(SpanningTree* node, uint32_t level)
     }
 
     if (level == 0U)
-        LogInfoEx(LOG_STP, "Peer ID: %u, Master Peer ID: %u, Children: %u, IsRoot: %u", 
-            node->id(), node->masterId(), node->m_children.size(), node->isRoot());
+        LogInfoEx(LOG_STP, "Peer ID: %u, Master Peer ID: %u (%s), Children: %u, IsRoot: %u", 
+            node->id(), node->masterId(), node->identity().c_str(), node->m_children.size(), node->isRoot());
 
     std::string indent;
     for (uint32_t i = 0U; i < level; i++) {
@@ -331,8 +339,8 @@ void SpanningTree::visualizeTreeToLog(SpanningTree* node, uint32_t level)
     }
 
     for (auto child : node->m_children) {
-        LogInfoEx(LOG_STP, "%s- Peer ID: %u, Master Peer ID: %u, Children: %u, IsRoot: %u", 
-            indent.c_str(), child->id(), child->masterId(), child->m_children.size(), child->isRoot());
+        LogInfoEx(LOG_STP, "%s- Peer ID: %u, Master Peer ID: %u (%s), Children: %u, IsRoot: %u", 
+            indent.c_str(), child->id(), child->masterId(), child->identity().c_str(), child->m_children.size(), child->isRoot());
         visualizeTreeToLog(child, level + 1U);
     }
 }
