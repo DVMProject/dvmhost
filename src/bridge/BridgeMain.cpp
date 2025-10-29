@@ -118,7 +118,7 @@ void usage(const char* message, const char* arg)
         "  -o        output audio device\n"
 #ifdef _WIN32
         "\n"
-        "  -wasapi   use WASAPI on Windows\n"
+        "  -winmm    use WinMM audio on Windows\n"
 #endif
         "\n"
         "  -c <file> specifies the configuration file to use\n"
@@ -204,10 +204,10 @@ int checkArgs(int argc, char* argv[])
             p += 2;
         }
 #ifdef _WIN32
-        else if (IS("-wasapi")) {
+        else if (IS("-winmm")) {
             // Windows
-            g_backends[0] = ma_backend_wasapi;
-            g_backends[1] = ma_backend_winmm;
+            g_backends[0] = ma_backend_winmm;
+            g_backends[1] = ma_backend_wasapi;
             g_backends[2] = ma_backend_null;
         }
 #endif
@@ -246,8 +246,8 @@ int main(int argc, char** argv)
 
 #ifdef _WIN32
     // Windows
-    g_backends[0] = ma_backend_winmm;
-    g_backends[1] = ma_backend_wasapi;
+    g_backends[0] = ma_backend_wasapi;
+    g_backends[1] = ma_backend_winmm;
     g_backends[2] = ma_backend_null;
 #else
     // Linux
