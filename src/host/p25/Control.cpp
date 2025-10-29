@@ -1460,13 +1460,14 @@ void Control::processNetwork()
         }
 
         uint32_t blockLength = GET_UINT24(buffer, 8U);
+        uint8_t currentBlock = buffer[21U];
 
         if (m_debug) {
             LogDebug(LOG_NET, "P25, duid = $%02X, MFId = $%02X, blockLength = %u, len = %u", duid, MFId, blockLength, length);
         }
 
         if (!m_dedicatedControl)
-            m_data->processNetwork(data.get(), frameLength, blockLength);
+            m_data->processNetwork(data.get(), frameLength, currentBlock, blockLength);
 
         return;
     }

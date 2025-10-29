@@ -463,7 +463,7 @@ bool Data::process(uint8_t* data, uint32_t len)
                         // only repeat the PDU locally if the packet isn't for the FNE
                         if (m_repeatPDU && m_rfDataHeader.getLLId() != WUID_FNE) {
                             ::ActivityLog("P25", true, "RF data transmission from %u to %u, %u blocks", srcId, dstId, m_rfDataHeader.getBlocksToFollow());
-                            LogInfoEx(LOG_RF, "P25 Data Call, srcId = %u, dstId = %u", srcId, dstId);
+                            LogInfoEx(LOG_RF, "P25 Data Call (Local Repeat), srcId = %u, dstId = %u", srcId, dstId);
 
                             if (m_verbose) {
                                 LogInfoEx(LOG_RF, P25_PDU_STR ", repeating PDU, llId = %u", (m_rfExtendedAddress) ? m_rfDataHeader.getSrcLLId() : m_rfDataHeader.getLLId());
@@ -483,7 +483,7 @@ bool Data::process(uint8_t* data, uint32_t len)
                 m_rfPDUBits = 0U;
                 m_rfPduUserDataLength = 0U;
 
-                m_p25->m_rfState = m_prevRfState;
+                m_p25->m_rfState = RS_RF_LISTENING;
             } // switch (m_rfDataHeader.getSAP())
         }
 
@@ -499,9 +499,9 @@ bool Data::process(uint8_t* data, uint32_t len)
 
 /* Process a data frame from the network. */
 
-bool Data::processNetwork(uint8_t* data, uint32_t len, uint32_t blockLength)
+bool Data::processNetwork(uint8_t* data, uint32_t len, uint8_t currentBlock, uint32_t blockLength)
 {
-    if (m_p25->m_netState != RS_NET_DATA) {
+    if ((m_p25->m_netState != RS_NET_DATA) || (currentBlock == 0U)) {
         m_netDataHeader.reset();
         m_netDataOffset = 0U;
         m_netDataBlockCnt = 0U;
@@ -618,8 +618,13 @@ bool Data::processNetwork(uint8_t* data, uint32_t len, uint32_t blockLength)
     }
 
     if (m_p25->m_netState == RS_NET_DATA) {
+        // block 0 is always the PDU header block -- if we got here with that bail bail bail
+        if (currentBlock == 0U) {
+            return false; // bail
+        }
+
         m_inbound = false; // forcibly set inbound to false
-        ::memcpy(m_netPDU + m_netDataOffset, data + 24U, blockLength);
+        ::memcpy(m_netPDU + ((currentBlock - 1U) * blockLength), data + 24U, blockLength);
         m_netDataOffset += blockLength;
         m_netPDUCount++;
         m_netDataBlockCnt++;
@@ -791,6 +796,7 @@ bool Data::processNetwork(uint8_t* data, uint32_t len, uint32_t blockLength)
             m_netPduUserDataLength = 0U;
 
             m_p25->m_netState = RS_NET_IDLE;
+            m_p25->m_network->resetP25();
         }
     }
 

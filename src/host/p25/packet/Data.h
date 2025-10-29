@@ -67,10 +67,11 @@ namespace p25
              * @brief Process a data frame from the network.
              * @param data Buffer containing data frame.
              * @param len Length of data frame.
+             * @param currentBlock 
              * @param blockLength 
              * @returns bool True, if data frame is processed, otherwise false.
              */
-            bool processNetwork(uint8_t* data, uint32_t len, uint32_t blockLength);
+            bool processNetwork(uint8_t* data, uint32_t len, uint8_t currentBlock, uint32_t blockLength);
             /** @} */
 
             /**

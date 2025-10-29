@@ -42,7 +42,7 @@ using namespace p25::sndcp;
 // ---------------------------------------------------------------------------
 
 const uint8_t DATA_CALL_COLL_TIMEOUT = 60U;
-const uint8_t MAX_PKT_RETRY_CNT = 5U;
+const uint8_t MAX_PKT_RETRY_CNT = 2U;
 
 const uint32_t INTERPACKET_DELAY = 100U; // milliseconds
 const uint32_t ARP_RETRY_MS = 5000U; // milliseconds
@@ -158,7 +158,7 @@ bool P25PacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
         return true;
     }
 
-    ::memcpy(status->netPDU + status->dataOffset, data + 24U, blockLength);
+    ::memcpy(status->netPDU + ((currentBlock - 1U) * blockLength), data + 24U, blockLength);
     status->dataOffset += blockLength;
     status->netPDUCount++;
     status->dataBlockCnt++;
@@ -374,9 +374,9 @@ void P25PacketData::processPacketFrame(const uint8_t* data, uint32_t len, bool a
 
     DECLARE_UINT8_ARRAY(pduUserData, pduLength);
     ::memcpy(pduUserData, data, pktLen);
-#if DEBUG_P25_PDU_DATA
+//#if DEBUG_P25_PDU_DATA
     Utils::dump(1U, "P25, P25PacketData::processPacketFrame(), pduUserData", pduUserData, pduLength);
-#endif
+//#endif
 
     // queue frame for dispatch
     QueuedDataFrame* qf = new QueuedDataFrame();
@@ -676,6 +676,13 @@ void P25PacketData::dispatch(uint32_t peerId)
         if (status->header.getFormat() == PDUFormatType::UNCONFIRMED && status->extendedAddress)
             dataPktOffset = 12U;
 
+        uint32_t srcLlId = status->header.getSrcLLId();
+        if (!status->extendedAddress)
+            srcLlId = status->header.getLLId();
+        uint32_t dstLlId = status->header.getLLId();
+        if (!status->extendedAddress)
+            dstLlId = WUID_FNE;
+
         struct ip* ipHeader = (struct ip*)(status->pduUserData + dataPktOffset);
 
         char srcIp[INET_ADDRSTRLEN];
@@ -725,7 +732,7 @@ void P25PacketData::dispatch(uint32_t peerId)
 
         // transmit packet to IP network
         LogInfoEx(LOG_P25, "PDU -> VTUN, IP Data, srcIp = %s (%u), dstIp = %s (%u), pktLen = %u, proto = %02X", 
-            srcIp, status->header.getSrcLLId(), dstIp, status->header.getLLId(), pktLen, proto);
+            srcIp, srcLlId, dstIp, dstLlId, pktLen, proto);
 
         DECLARE_UINT8_ARRAY(ipFrame, pktLen);
         ::memcpy(ipFrame, status->pduUserData + dataPktOffset, pktLen);
@@ -738,8 +745,14 @@ void P25PacketData::dispatch(uint32_t peerId)
 
         // if the packet is unhandled and sent off to VTUN; ack the packet so the sender knows we received it
         if (!handled) {
-            write_PDU_Ack_Response(PDUAckClass::ACK, PDUAckType::ACK, status->header.getNs(), status->header.getSrcLLId(),
-                true, status->header.getLLId());
+            if (status->extendedAddress) {
+                m_readyForNextPkt[srcLlId] = true;
+                write_PDU_Ack_Response(PDUAckClass::ACK, PDUAckType::ACK, status->header.getNs(), srcLlId,
+                    true, dstLlId);
+            } else {
+                m_readyForNextPkt[srcLlId] = true;
+                write_PDU_Ack_Response(PDUAckClass::ACK, PDUAckType::ACK, status->header.getNs(), srcLlId, false);
+            }
         }
 #endif // !defined(_WIN32)
     }
@@ -1070,6 +1083,9 @@ void P25PacketData::write_PDU_User(uint32_t peerId, uint32_t srcPeerId, network:
 {
     uint32_t streamId = m_network->createStreamId();
     uint16_t pktSeq = 0U;
+
+    if (pduUserData == nullptr)
+        pktSeq = RTP_END_OF_CALL_SEQ;
 
     uint8_t buffer[P25_PDU_FEC_LENGTH_BYTES];
     ::memset(buffer, 0x00U, P25_PDU_FEC_LENGTH_BYTES);

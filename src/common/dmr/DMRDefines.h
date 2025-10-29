@@ -202,6 +202,11 @@ namespace dmr
             };
         };
 
+        /** @brief ARP Request */
+        const uint8_t   DMR_PDU_ARP_REQUEST = 0x01U;
+        /** @brief ARP Reply */
+        const uint8_t   DMR_PDU_ARP_REPLY = 0x02U;
+
         /** @name Feature Set IDs */
         /** @brief ETSI Standard Feature Set */
         const uint8_t   FID_ETSI = 0x00U;
