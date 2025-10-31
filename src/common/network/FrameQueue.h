@@ -90,6 +90,7 @@ namespace network
 
         /**
          * @brief Cache message to frame queue.
+         * @param[in] queue Queue of messages.
          * @param[in] message Message buffer to frame and queue.
          * @param length Length of message.
          * @param streamId Message stream ID.
@@ -99,10 +100,11 @@ namespace network
          * @param addr IP address to write data to.
          * @param addrLen 
          */
-        void enqueueMessage(const uint8_t* message, uint32_t length, uint32_t streamId, uint32_t peerId,
-            OpcodePair opcode, uint16_t rtpSeq, sockaddr_storage& addr, uint32_t addrLen);
+        void enqueueMessage(udp::BufferQueue* queue, const uint8_t* message, uint32_t length, uint32_t streamId, 
+            uint32_t peerId, OpcodePair opcode, uint16_t rtpSeq, sockaddr_storage& addr, uint32_t addrLen);
         /**
          * @brief Cache message to frame queue.
+         * @param[in] queue Queue of messages.
          * @param[in] message Message buffer to frame and queue.
          * @param length Length of message.
          * @param streamId Message stream ID.
@@ -113,8 +115,8 @@ namespace network
          * @param addr IP address to write data to.
          * @param addrLen 
          */
-        void enqueueMessage(const uint8_t* message, uint32_t length, uint32_t streamId, uint32_t peerId,
-            uint32_t ssrc, OpcodePair opcode, uint16_t rtpSeq, sockaddr_storage& addr, uint32_t addrLen);
+        void enqueueMessage(udp::BufferQueue* queue, const uint8_t* message, uint32_t length, uint32_t streamId, 
+            uint32_t peerId, uint32_t ssrc, OpcodePair opcode, uint16_t rtpSeq, sockaddr_storage& addr, uint32_t addrLen);
 
         /**
          * @brief Helper method to clear any tracked stream timestamps.

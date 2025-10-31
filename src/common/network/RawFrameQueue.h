@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2024-2025 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -78,36 +78,30 @@ namespace network
 
         /**
          * @brief Cache message to frame queue.
+         * @param[in] queue Queue of messages.
          * @param[in] message Message buffer to frame and queue.
          * @param length Length of message.
          * @param addr IP address to write data to.
          * @param addrLen 
          */
-        void enqueueMessage(const uint8_t* message, uint32_t length, sockaddr_storage& addr, uint32_t addrLen);
+        void enqueueMessage(udp::BufferQueue* queue, const uint8_t* message, uint32_t length, sockaddr_storage& addr, uint32_t addrLen);
 
         /**
          * @brief Flush the message queue.
+         * @param[in] queue Queue of messages.
          */
-        bool flushQueue();
+        bool flushQueue(udp::BufferQueue* queue);
 
     protected:
         sockaddr_storage m_addr;
         uint32_t m_addrLen;
         udp::Socket* m_socket;
 
-        static std::mutex m_queueMutex;
-        static bool m_queueFlushing;
-        udp::BufferVector m_buffers;
+        static std::mutex s_flushMtx;
 
         uint32_t m_failedReadCnt;
 
         bool m_debug;
-
-    private:
-        /**
-         * @brief Helper to ensure buffers are deleted.
-         */
-        void deleteBuffers();
     };
 } // namespace network
 

@@ -25,7 +25,7 @@
 #include "common/AESCrypto.h"
 
 #include <string>
-#include <vector>
+#include <queue>
 
 #if defined(_WIN32)
 #pragma comment(lib, "Ws2_32.lib")
@@ -167,8 +167,8 @@ namespace network
             uint32_t addrLen;           //!< Length of address structure
         };
 
-        /** @brief Vector of buffers that contain a full frames */
-        typedef std::vector<UDPDatagram*> BufferVector;
+        /** @brief Queue of buffers that contain a UDP datagram. */
+        typedef std::queue<UDPDatagram*> BufferQueue;
 
         // ---------------------------------------------------------------------------
         //  Class Declaration
@@ -261,11 +261,11 @@ namespace network
             virtual bool write(const uint8_t* buffer, uint32_t length, const sockaddr_storage& address, uint32_t addrLen, ssize_t* lenWritten = nullptr) noexcept;
             /**
              * @brief Write data to the UDP socket.
-             * @param[in] buffers Vector of buffers to write to socket.
+             * @param[in] buffers Queue of buffers to write to socket.
              * @param[out] lenWritten Total number of bytes written.
              * @returns bool True, if messages were sent otherwise, false.
              */
-            virtual bool write(BufferVector& buffers, ssize_t* lenWritten = nullptr) noexcept;
+            virtual bool write(BufferQueue* buffers, ssize_t* lenWritten = nullptr) noexcept;
 
             /**
              * @brief Sets the preshared encryption key.

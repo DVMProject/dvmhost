@@ -172,17 +172,21 @@ bool FrameQueue::write(const uint8_t* message, uint32_t length, uint32_t streamI
 
 /* Cache message to frame queue. */
 
-void FrameQueue::enqueueMessage(const uint8_t* message, uint32_t length, uint32_t streamId, uint32_t peerId,
-    OpcodePair opcode, uint16_t rtpSeq, sockaddr_storage& addr, uint32_t addrLen)
+void FrameQueue::enqueueMessage(udp::BufferQueue* queue, const uint8_t* message, uint32_t length, uint32_t streamId, 
+    uint32_t peerId, OpcodePair opcode, uint16_t rtpSeq, sockaddr_storage& addr, uint32_t addrLen)
 {
-    enqueueMessage(message, length, streamId, peerId, peerId, opcode, rtpSeq, addr, addrLen);
+    enqueueMessage(queue, message, length, streamId, peerId, peerId, opcode, rtpSeq, addr, addrLen);
 }
 
 /* Cache message to frame queue. */
 
-void FrameQueue::enqueueMessage(const uint8_t* message, uint32_t length, uint32_t streamId, uint32_t peerId,
-    uint32_t ssrc, OpcodePair opcode, uint16_t rtpSeq, sockaddr_storage& addr, uint32_t addrLen)
+void FrameQueue::enqueueMessage(udp::BufferQueue* queue, const uint8_t* message, uint32_t length, uint32_t streamId, 
+    uint32_t peerId, uint32_t ssrc, OpcodePair opcode, uint16_t rtpSeq, sockaddr_storage& addr, uint32_t addrLen)
 {
+    if (queue == nullptr) {
+        LogError(LOG_NET, "FrameQueue::enqueueMessage(), queue is null");
+        return;
+    }
     if (message == nullptr) {
         LogError(LOG_NET, "FrameQueue::enqueueMessage(), message is null");
         return;
@@ -207,7 +211,7 @@ void FrameQueue::enqueueMessage(const uint8_t* message, uint32_t length, uint32_
     dgram->address = addr;
     dgram->addrLen = addrLen;
 
-    m_buffers.push_back(dgram);
+    queue->push(dgram);
 }
 
 /* Helper method to clear any tracked stream timestamps. */

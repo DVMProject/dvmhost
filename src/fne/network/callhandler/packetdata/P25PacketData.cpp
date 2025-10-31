@@ -804,24 +804,15 @@ void P25PacketData::dispatchToFNE(uint32_t peerId)
 
     // repeat traffic to the connected peers
     if (m_network->m_peers.size() > 0U) {
-        uint32_t i = 0U;
         for (auto peer : m_network->m_peers) {
             if (peerId != peer.first) {
-                // every 2 peers flush the queue
-                if (i % 2U == 0U) {
-                    m_network->m_frameQueue->flushQueue();
-                }
-
-                write_PDU_User(peer.first, peerId, nullptr, status->header, status->extendedAddress, status->pduUserData, true);
+                write_PDU_User(peer.first, peerId, nullptr, status->header, status->extendedAddress, status->pduUserData);
                 if (m_network->m_debug) {
                     LogDebug(LOG_P25, "srcPeer = %u, dstPeer = %u, duid = $%02X, srcId = %u, dstId = %u", 
                         peerId, peer.first, DUID::PDU, srcId, dstId);
                 }
-
-                i++;
             }
         }
-        m_network->m_frameQueue->flushQueue();
     }
 
     /*
@@ -874,22 +865,13 @@ void P25PacketData::dispatchUserFrameToFNE(p25::data::DataHeader& dataHeader, bo
 
     // repeat traffic to the connected peers
     if (m_network->m_peers.size() > 0U) {
-        uint32_t i = 0U;
         for (auto peer : m_network->m_peers) {
-            // every 2 peers flush the queue
-            if (i % 2U == 0U) {
-                m_network->m_frameQueue->flushQueue();
-            }
-
-            write_PDU_User(peer.first, m_network->m_peerId, nullptr, dataHeader, extendedAddress, pduUserData, true);
+            write_PDU_User(peer.first, m_network->m_peerId, nullptr, dataHeader, extendedAddress, pduUserData);
             if (m_network->m_debug) {
                 LogDebug(LOG_P25, "dstPeer = %u, duid = $%02X, srcId = %u, dstId = %u", 
                     peer.first, DUID::PDU, srcId, dstId);
             }
-
-            i++;
         }
-        m_network->m_frameQueue->flushQueue();
     }
 }
 
@@ -1079,7 +1061,7 @@ void P25PacketData::write_PDU_ARP_Reply(uint32_t targetAddr, uint32_t requestorL
 /* Helper to write user data as a P25 PDU packet. */
 
 void P25PacketData::write_PDU_User(uint32_t peerId, uint32_t srcPeerId, network::PeerNetwork* peerNet, data::DataHeader& dataHeader,
-    bool extendedAddress, uint8_t* pduUserData, bool queueOnly)
+    bool extendedAddress, uint8_t* pduUserData)
 {
     uint32_t streamId = m_network->createStreamId();
     uint16_t pktSeq = 0U;
@@ -1100,7 +1082,7 @@ void P25PacketData::write_PDU_User(uint32_t peerId, uint32_t srcPeerId, network:
 
     // generate the PDU header and 1/2 rate Trellis
     dataHeader.encode(buffer);
-    writeNetwork(peerId, srcPeerId, peerNet, dataHeader, 0U, buffer, P25_PDU_FEC_LENGTH_BYTES, pktSeq, streamId, queueOnly);
+    writeNetwork(peerId, srcPeerId, peerNet, dataHeader, 0U, buffer, P25_PDU_FEC_LENGTH_BYTES, pktSeq, streamId);
 
     if (pduUserData == nullptr)
         return;
@@ -1118,7 +1100,7 @@ void P25PacketData::write_PDU_User(uint32_t peerId, uint32_t srcPeerId, network:
 
             ::memset(buffer, 0x00U, P25_PDU_FEC_LENGTH_BYTES);
             dataHeader.encodeExtAddr(buffer);
-            writeNetwork(peerId, srcPeerId, peerNet, dataHeader, 1U, buffer, P25_PDU_FEC_LENGTH_BYTES, pktSeq, streamId, queueOnly);
+            writeNetwork(peerId, srcPeerId, peerNet, dataHeader, 1U, buffer, P25_PDU_FEC_LENGTH_BYTES, pktSeq, streamId);
             ++pktSeq;
 
             dataOffset += P25_PDU_HEADER_LENGTH_BYTES;
@@ -1175,7 +1157,7 @@ void P25PacketData::write_PDU_User(uint32_t peerId, uint32_t srcPeerId, network:
 /* Write data processed to the network. */
 
 bool P25PacketData::writeNetwork(uint32_t peerId, uint32_t srcPeerId, network::PeerNetwork* peerNet, const p25::data::DataHeader& dataHeader, const uint8_t currentBlock, 
-    const uint8_t *data, uint32_t len, uint16_t pktSeq, uint32_t streamId, bool queueOnly)
+    const uint8_t *data, uint32_t len, uint16_t pktSeq, uint32_t streamId)
 {
     assert(data != nullptr);
 
@@ -1188,7 +1170,7 @@ bool P25PacketData::writeNetwork(uint32_t peerId, uint32_t srcPeerId, network::P
     if (peerNet != nullptr) {
         return peerNet->writeMaster({ NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25 }, message.get(), messageLength, pktSeq, streamId);
     } else {
-        return m_network->writePeer(peerId, srcPeerId, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25 }, message.get(), messageLength, pktSeq, streamId, false);
+        return m_network->writePeer(peerId, srcPeerId, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25 }, message.get(), messageLength, pktSeq, streamId);
     }
 }
 

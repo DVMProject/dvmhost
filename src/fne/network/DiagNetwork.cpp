@@ -271,7 +271,7 @@ void DiagNetwork::taskNetworkRx(NetPacketRequest* req)
                                                     if (peer.second != nullptr) {
                                                         if (peer.second->isEnabled() && peer.second->isReplica()) {
                                                             peer.second->writeMaster({ NET_FUNC::TRANSFER, NET_SUBFUNC::TRANSFER_SUBFUNC_ACTIVITY }, 
-                                                                req->buffer, req->length, RTP_END_OF_CALL_SEQ, 0U, false, true, pktPeerId);
+                                                                req->buffer, req->length, RTP_END_OF_CALL_SEQ, 0U, true, pktPeerId);
                                                         }
                                                     }
                                                 }
@@ -360,7 +360,7 @@ void DiagNetwork::taskNetworkRx(NetPacketRequest* req)
                                                     if (peer.second != nullptr) {
                                                         if (peer.second->isEnabled() && peer.second->isReplica()) {
                                                             peer.second->writeMaster({ NET_FUNC::TRANSFER, NET_SUBFUNC::TRANSFER_SUBFUNC_STATUS }, 
-                                                                req->buffer, req->length, RTP_END_OF_CALL_SEQ, 0U, false, true, pktPeerId);
+                                                                req->buffer, req->length, RTP_END_OF_CALL_SEQ, 0U, true, pktPeerId);
                                                         }
                                                     }
                                                 }

@@ -23,8 +23,7 @@ using namespace network;
 //  Static Class Members
 // ---------------------------------------------------------------------------
 
-std::mutex RawFrameQueue::m_queueMutex;
-bool RawFrameQueue::m_queueFlushing = false;
+std::mutex RawFrameQueue::s_flushMtx;
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -34,7 +33,6 @@ bool RawFrameQueue::m_queueFlushing = false;
 
 RawFrameQueue::RawFrameQueue(udp::Socket* socket, bool debug) :
     m_socket(socket),
-    m_buffers(),
     m_failedReadCnt(0U),
     m_debug(debug)
 {
@@ -43,10 +41,7 @@ RawFrameQueue::RawFrameQueue(udp::Socket* socket, bool debug) :
 
 /* Finalizes a instance of the RawFrameQueue class. */
 
-RawFrameQueue::~RawFrameQueue()
-{
-    deleteBuffers();
-}
+RawFrameQueue::~RawFrameQueue() = default;
 
 /* Read message from the received UDP packet. */
 
@@ -124,8 +119,12 @@ bool RawFrameQueue::write(const uint8_t* message, uint32_t length, sockaddr_stor
 
 /* Cache message to frame queue. */
 
-void RawFrameQueue::enqueueMessage(const uint8_t* message, uint32_t length, sockaddr_storage& addr, uint32_t addrLen)
+void RawFrameQueue::enqueueMessage(udp::BufferQueue* queue, const uint8_t* message, uint32_t length, sockaddr_storage& addr, uint32_t addrLen)
 {
+    if (queue == nullptr) {
+        LogError(LOG_NET, "RawFrameQueue::enqueueMessage(), queue is null");
+        return;
+    }
     if (message == nullptr) {
         LogError(LOG_NET, "RawFrameQueue::enqueueMessage(), message is null");
         return;
@@ -133,13 +132,6 @@ void RawFrameQueue::enqueueMessage(const uint8_t* message, uint32_t length, sock
     if (length == 0U) {
         LogError(LOG_NET, "RawFrameQueue::enqueueMessage(), message length is zero");
         return;
-    }
-
-    // if the queue is flushing -- don't attempt to enqueue any messages
-    if (m_queueFlushing) {
-        LogWarning(LOG_NET, "RawFrameQueue::enqueueMessage() -- queue is flushing, waiting to enqueue message");
-        while (m_queueFlushing)
-            Thread::sleep(2U);
     }
 
     // bryanb: this is really a developer warning not a end-user warning, there's nothing the end-users can do about
@@ -161,69 +153,37 @@ void RawFrameQueue::enqueueMessage(const uint8_t* message, uint32_t length, sock
     dgram->address = addr;
     dgram->addrLen = addrLen;
 
-    m_buffers.push_back(dgram);
+    queue->push(dgram);
 }
 
 /* Flush the message queue. */
 
-bool RawFrameQueue::flushQueue()
+bool RawFrameQueue::flushQueue(udp::BufferQueue* queue)
 {
+    if (queue == nullptr) {
+        LogError(LOG_NET, "RawFrameQueue::flushQueue(), queue is null");
+        return false;
+    }
+
+    std::lock_guard<std::mutex> lock(s_flushMtx);
+
+    if (queue->empty()) {
+        return false;
+    }
+
+    // bryanb: this is the same as above -- but for some assinine reason prevents
+    // weirdness
+    if (queue->size() == 0U) {
+        return false;
+    }
+
+    // LogDebug(LOG_NET, "queue len = %u", queue.size());
+
     bool ret = true;
-
-    // scope is intentional
-    {
-        std::lock_guard<std::mutex> lock(m_queueMutex);
-        m_queueFlushing = true;
-
-        if (m_buffers.empty()) {
-            return false;
-        }
-
-        // bryanb: this is the same as above -- but for some assinine reason prevents
-        // weirdness
-        if (m_buffers.size() == 0U) {
-            return false;
-        }
-
-        // LogDebug(LOG_NET, "m_buffers len = %u", m_buffers.size());
-
-        ret = true;
-        if (!m_socket->write(m_buffers)) {
-            // LogError(LOG_NET, "Failed writing data to the network");
-            ret = false;
-        }
-
-        m_queueFlushing = false;
+    if (!m_socket->write(queue)) {
+        // LogError(LOG_NET, "Failed writing data to the network");
+        ret = false;
     }
 
-    deleteBuffers();
     return ret;
-}
-
-// ---------------------------------------------------------------------------
-//  Private Class Members
-// ---------------------------------------------------------------------------
-
-/* Helper to ensure buffers are deleted. */
-
-void RawFrameQueue::deleteBuffers()
-{
-    std::lock_guard<std::mutex> lock(m_queueMutex);
-    m_queueFlushing = true;
-
-    for (auto& buffer : m_buffers) {
-        if (buffer != nullptr) {
-            // LogDebug(LOG_NET, "deleting buffer, addr %p len %u", buffer->buffer, buffer->length);
-            if (buffer->buffer != nullptr) {
-                delete[] buffer->buffer;
-                buffer->length = 0;
-                buffer->buffer = nullptr;
-            }
-
-            delete buffer;
-            buffer = nullptr;
-        }
-    }
-    m_buffers.clear();
-    m_queueFlushing = false;
 }

@@ -483,8 +483,19 @@ bool Socket::write(const uint8_t* buffer, uint32_t length, const sockaddr_storag
 
 /* Write data to the UDP socket. */
 
-bool Socket::write(BufferVector& buffers, ssize_t* lenWritten) noexcept
+bool Socket::write(BufferQueue* buffers, ssize_t* lenWritten) noexcept
 {
+    if (buffers == nullptr) {
+        if (lenWritten != nullptr) {
+            *lenWritten = -1;
+        }
+
+        LogError(LOG_NET, "tried to write datagram with buffers? this shouldn't happen BUGBUG");
+        return false;
+    }
+
+    size_t currentQueueSize = buffers->size();
+
     bool result = false;
     if (m_fd < 0) {
         if (lenWritten != nullptr) {
@@ -495,7 +506,7 @@ bool Socket::write(BufferVector& buffers, ssize_t* lenWritten) noexcept
         return false;
     }
 
-    if (buffers.empty()) {
+    if (buffers->empty()) {
         if (lenWritten != nullptr) {
             *lenWritten = -1;
         }
@@ -505,7 +516,7 @@ bool Socket::write(BufferVector& buffers, ssize_t* lenWritten) noexcept
 
     // bryanb: this is the same as above -- but for some assinine reason prevents
     // weirdness
-    if (buffers.size() == 0U) {
+    if (currentQueueSize == 0U) {
         if (lenWritten != nullptr) {
             *lenWritten = -1;
         }
@@ -513,19 +524,9 @@ bool Socket::write(BufferVector& buffers, ssize_t* lenWritten) noexcept
         return false;
     }
 
-    // LogDebug(LOG_NET, "buffers len = %u", buffers.size());
-
-    if (buffers.size() > UINT16_MAX) {
-        LogError(LOG_NET, "Trying to send too many buffers?");
-
-        if (lenWritten != nullptr) {
-            *lenWritten = -1;
-        }
-
-        return false;
-    }
-
-    // LogDebug(LOG_NET, "Sending message(s) (to %s:%u) addrLen %u", Socket::address(address).c_str(), Socket::port(address), addrLen);
+    // LogDebugEx(LOG_NET, "Socket::write()", "buffers len = %u", currentQueueSize);
+    if (currentQueueSize > UINT16_MAX)
+        currentQueueSize = UINT16_MAX; // only send up to this many buffers
 
     // are we crypto wrapped?
     if (m_isCryptoWrapped) {
@@ -540,114 +541,111 @@ bool Socket::write(BufferVector& buffers, ssize_t* lenWritten) noexcept
         }
     }
 
-    int sent = 0;
+    int sent = 0, msgs = 0;
+    struct sockaddr_storage* addresses[MAX_BUFFER_COUNT];
     struct mmsghdr headers[MAX_BUFFER_COUNT];
     struct iovec chunks[MAX_BUFFER_COUNT];
 
     // create mmsghdrs from input buffers and send them at once
-    int size = buffers.size();
-    for (size_t i = 0U; i < buffers.size(); ++i) {
-        UDPDatagram* packet = buffers[i];
+    for (size_t i = 0U; i < currentQueueSize; ++i) {
+        UDPDatagram* packet = buffers->front();
+        buffers->pop();
         if (packet == nullptr) {
-            --size;
             continue;
         }
 
         uint32_t length = packet->length;
         if (packet->buffer == nullptr) {
             LogError(LOG_NET, "discarding buffered message with len = %u, but deleted buffer?", length);
-            --size;
+            delete packet;
             continue;
         }
 
-        try {
-            // are we crypto wrapped?
-            if (m_isCryptoWrapped && m_presharedKey != nullptr) {
-                uint32_t cryptedLen = length * sizeof(uint8_t);
-                uint8_t* cryptoBuffer = packet->buffer;
+        if (m_af != packet->address.ss_family) {
+            LogError(LOG_NET, "Socket::write() mismatched network address family? this isn't normal, aborting");
+            if (packet->buffer != nullptr)
+                delete[] packet->buffer;
+            delete packet;
+            continue;
+        }
 
-                // do we need to pad the original buffer to be block aligned?
-                if (cryptedLen % crypto::AES::BLOCK_BYTES_LEN != 0) {
-                    uint32_t alignment = crypto::AES::BLOCK_BYTES_LEN - (cryptedLen % crypto::AES::BLOCK_BYTES_LEN);
-                    cryptedLen += alignment;
+        uint8_t* iov_buffer = new uint8_t[packet->length];
+        size_t iov_length = packet->length;
+        sockaddr_storage address;
+        ::memcpy(&address, &packet->address, sizeof(sockaddr_storage));
+        uint32_t addrLen = packet->addrLen;
 
-                    // reallocate buffer and copy
-                    cryptoBuffer = new uint8_t[cryptedLen];
-                    ::memset(cryptoBuffer, 0x00U, cryptedLen);
-                    ::memcpy(cryptoBuffer, packet->buffer, length);
-                }
+        ::memcpy(iov_buffer, packet->buffer, packet->length);
 
-                // encrypt
-                uint8_t* crypted = m_aes->encryptECB(cryptoBuffer, cryptedLen, m_presharedKey);
-                delete[] cryptoBuffer;
-
-                if (crypted == nullptr) {
-                    --size;
-                    continue;
-                }
-
-                // Utils::dump(1U, "Socket::write(), crypted", crypted, cryptedLen);
-
-                // finalize
-                DECLARE_UINT8_ARRAY(out, cryptedLen + 2U);
-                ::memcpy(out + 2U, crypted, cryptedLen);
-                SET_UINT16(AES_WRAPPED_PCKT_MAGIC, out, 0U);
-
-                // cleanup buffers and replace with new
-                delete[] crypted;
-                //delete packet->buffer;
-
-                // this should never happen...
-                if (packet == nullptr) {
-                    --size;
-                    continue;
-                }
-
-                packet->buffer = new uint8_t[cryptedLen + 2U];
-                ::memcpy(packet->buffer, out, cryptedLen + 2U);
-                packet->length = cryptedLen + 2U;
+        // cleanup buffered packet
+        if (packet != nullptr) {
+            if (packet->buffer != nullptr) {
+                delete[] packet->buffer;
+                packet->length = 0;
             }
 
-            chunks[i].iov_len = packet->length;
-            chunks[i].iov_base = packet->buffer;
-            sent += packet->length;
+            delete packet;
+        }
 
-            headers[i].msg_hdr.msg_name = (void*)&packet->address;
-            headers[i].msg_hdr.msg_namelen = packet->addrLen;
-            headers[i].msg_hdr.msg_iov = &chunks[i];
-            headers[i].msg_hdr.msg_iovlen = 1;
-            headers[i].msg_hdr.msg_control = 0;
-            headers[i].msg_hdr.msg_controllen = 0;
+        // are we crypto wrapped?
+        if (m_isCryptoWrapped && m_presharedKey != nullptr) {
+            uint32_t cryptedLen = length * sizeof(uint8_t);
+            uint8_t *cryptoBuffer = iov_buffer;
+
+            // do we need to pad the original buffer to be block aligned?
+            if (cryptedLen % crypto::AES::BLOCK_BYTES_LEN != 0) {
+                uint32_t alignment = crypto::AES::BLOCK_BYTES_LEN - (cryptedLen % crypto::AES::BLOCK_BYTES_LEN);
+                cryptedLen += alignment;
+
+                // reallocate buffer and copy
+                cryptoBuffer = new uint8_t[cryptedLen];
+                ::memset(cryptoBuffer, 0x00U, cryptedLen);
+                ::memcpy(cryptoBuffer, iov_buffer, length);
+            }
+
+            // encrypt
+            uint8_t* crypted = m_aes->encryptECB(cryptoBuffer, cryptedLen, m_presharedKey);
+            delete[] cryptoBuffer;
+
+            if (crypted == nullptr) {
+                if (iov_buffer != nullptr)
+                    delete[] iov_buffer;
+                continue;
+            }
+
+            // Utils::dump(1U, "Socket::write(), crypted", crypted, cryptedLen);
+
+            // finalize
+            DECLARE_UINT8_ARRAY(out, cryptedLen + 2U);
+            ::memcpy(out + 2U, crypted, cryptedLen);
+            SET_UINT16(AES_WRAPPED_PCKT_MAGIC, out, 0U);
+
+            // cleanup buffers and replace with new
+            delete[] crypted;
+            delete[] iov_buffer;
+            iov_buffer = new uint8_t[cryptedLen + 2U];
+            ::memcpy(iov_buffer, out, cryptedLen + 2U);
+            iov_length = cryptedLen + 2U;
         }
-        catch (...) {
-            --size;
-        }
+
+        addresses[i] = new sockaddr_storage;
+        ::memcpy(addresses[i], &address, sizeof(sockaddr_storage));
+
+        chunks[i].iov_len = iov_length;
+        chunks[i].iov_base = iov_buffer;
+        sent += iov_length;
+
+        headers[i].msg_hdr.msg_name = (void*)addresses[i];
+        headers[i].msg_hdr.msg_namelen = addrLen;
+        headers[i].msg_hdr.msg_iov = &chunks[i];
+        headers[i].msg_hdr.msg_iovlen = 1;
+        headers[i].msg_hdr.msg_control = 0;
+        headers[i].msg_hdr.msg_controllen = 0;
+
+        ++msgs;
     }
 
-    bool skip = false;
-    for (auto& buffer : buffers) {
-        if (buffer == nullptr) {
-            LogError(LOG_NET, "Socket::write() missing network buffer data? this isn't normal, aborting");
-            skip = true;
-            break;
-        }
-
-        if (m_af != buffer->address.ss_family) {
-            LogError(LOG_NET, "Socket::write() mismatched network address family? this isn't normal, aborting");
-            skip = true;
-            break;
-        }
-    }
-
-    if (skip) {
-        if (lenWritten != nullptr) {
-            *lenWritten = -1;
-        }
-
-        return false;
-    }
-
-    if (sendmmsg(m_fd, headers, size, 0) < 0) {
+    if (sendmmsg(m_fd, headers, msgs, 0) < 0) {
 #if defined(_WIN32)
         LogError(LOG_NET, "Error returned from sendmmsg, err: %lu", ::GetLastError());
 #else
@@ -672,6 +670,20 @@ bool Socket::write(BufferVector& buffers, ssize_t* lenWritten) noexcept
         result = true;
         if (lenWritten != nullptr) {
             *lenWritten = sent;
+        }
+    }
+
+    // cleanup buffers
+    for (size_t i = 0U; i < currentQueueSize; i++) {
+        if (addresses[i] != nullptr) {
+            delete addresses[i];
+            addresses[i] = nullptr;
+        }
+
+        if (chunks[i].iov_base != nullptr) {
+            uint8_t* iov_buffer = (uint8_t*)chunks[i].iov_base;
+            delete[] iov_buffer;
+            chunks[i].iov_base = nullptr;
         }
     }
 

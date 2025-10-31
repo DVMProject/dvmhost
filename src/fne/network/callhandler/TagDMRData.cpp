@@ -412,6 +412,8 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
         // repeat traffic to nodes peered to us as master
         if (m_network->m_peers.size() > 0U && !noConnectedPeerRepeat) {
             uint32_t i = 0U;
+            udp::BufferQueue queue = udp::BufferQueue();
+
             m_network->m_peers.shared_lock();
             for (auto peer : m_network->m_peers) {
                 if (peer.second == nullptr)
@@ -453,9 +455,9 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                         continue;
                     }
 
-                    // every 5 peers flush the queue
-                    if (i % 5U == 0U) {
-                        m_network->m_frameQueue->flushQueue();
+                    // every MAX_QUEUED_PEER_MSGS peers flush the queue
+                    if (i % MAX_QUEUED_PEER_MSGS == 0U) {
+                        m_network->m_frameQueue->flushQueue(&queue);
                     }
 
                     DECLARE_UINT8_ARRAY(outboundPeerBuffer, len);
@@ -464,7 +466,7 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                     // perform TGID route rewrites if configured
                     routeRewrite(outboundPeerBuffer, peer.first, dmrData, dataType, dstId, slotNo);
 
-                    m_network->writePeer(peer.first, ssrc, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR }, outboundPeerBuffer, len, pktSeq, streamId, true);
+                    m_network->writePeerQueue(&queue, peer.first, ssrc, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR }, outboundPeerBuffer, len, pktSeq, streamId);
                     if (m_network->m_debug) {
                         LogDebugEx(LOG_DMR, "TagDMRData::processFrame()", "Master, ssrc = %u, srcPeer = %u, dstPeer = %u, seqNo = %u, srcId = %u, dstId = %u, flco = $%02X, slotNo = %u, len = %u, pktSeq = %u, stream = %u, fromUpstream = %u", 
                             ssrc, peerId, peer.first, seqNo, srcId, dstId, flco, slotNo, len, pktSeq, streamId, fromUpstream);
@@ -473,7 +475,7 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                     i++;
                 }
             }
-            m_network->m_frameQueue->flushQueue();
+            m_network->m_frameQueue->flushQueue(&queue);
             m_network->m_peers.shared_unlock();
         }
 
@@ -518,7 +520,7 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
 
                     // are we a replica peer?
                     if (peer.second->isReplica())
-                        peer.second->writeMaster({ NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR }, outboundPeerBuffer, len, pktSeq, streamId, false, false, 0U, ssrc);
+                        peer.second->writeMaster({ NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR }, outboundPeerBuffer, len, pktSeq, streamId, false, 0U, ssrc);
                     else
                         peer.second->writeMaster({ NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR }, outboundPeerBuffer, len, pktSeq, streamId);
                     if (m_network->m_debug) {
@@ -601,7 +603,7 @@ void TagDMRData::playbackParrot()
         m_lastParrotDstId = pkt.dstId;
 
         if (m_network->m_parrotOnlyOriginating) {
-            m_network->writePeer(pkt.peerId, pkt.peerId, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR }, pkt.buffer, pkt.bufferLen, pkt.pktSeq, pkt.streamId, false);
+            m_network->writePeer(pkt.peerId, pkt.peerId, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR }, pkt.buffer, pkt.bufferLen, pkt.pktSeq, pkt.streamId);
             if (m_network->m_debug) {
                 LogDebugEx(LOG_DMR, "TagDMRData::playbackParrot()", "Parrot, dstPeer = %u, len = %u, pktSeq = %u, streamId = %u", 
                     pkt.peerId, pkt.bufferLen, pkt.pktSeq, pkt.streamId);
@@ -609,13 +611,26 @@ void TagDMRData::playbackParrot()
         }
         else {
             // repeat traffic to the connected peers
+            uint32_t i = 0U;
+            udp::BufferQueue queue = udp::BufferQueue();
+
+            m_network->m_peers.shared_lock();
             for (auto peer : m_network->m_peers) {
-                m_network->writePeer(peer.first, pkt.peerId, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR }, pkt.buffer, pkt.bufferLen, pkt.pktSeq, pkt.streamId, false);
+                // every MAX_QUEUED_PEER_MSGS peers flush the queue
+                if (i % MAX_QUEUED_PEER_MSGS == 0U) {
+                    m_network->m_frameQueue->flushQueue(&queue);
+                }
+
+                m_network->writePeerQueue(&queue, peer.first, pkt.peerId, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR }, pkt.buffer, pkt.bufferLen, pkt.pktSeq, pkt.streamId);
                 if (m_network->m_debug) {
                     LogDebugEx(LOG_DMR, "TagDMRData::playbackParrot()", "Parrot, dstPeer = %u, len = %u, pktSeq = %u, streamId = %u", 
                         peer.first, pkt.bufferLen, pkt.pktSeq, pkt.streamId);
                 }
+
+                i++;
             }
+            m_network->m_frameQueue->flushQueue(&queue);
+            m_network->m_peers.shared_unlock();
         }
 
         delete[] pkt.buffer;
@@ -1351,25 +1366,29 @@ void TagDMRData::write_CSBK(uint32_t peerId, uint8_t slot, lc::CSBK* csbk)
     }
 
     if (peerId > 0U) {
-        m_network->writePeer(peerId, m_network->m_peerId, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR }, message.get(), messageLength, RTP_END_OF_CALL_SEQ, streamId, false);
+        m_network->writePeer(peerId, m_network->m_peerId, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR }, message.get(), messageLength, RTP_END_OF_CALL_SEQ, streamId);
     } else {
         // repeat traffic to the connected peers
         if (m_network->m_peers.size() > 0U) {
             uint32_t i = 0U;
+            udp::BufferQueue queue = udp::BufferQueue();
+
+            m_network->m_peers.shared_lock();
             for (auto peer : m_network->m_peers) {
-                // every 5 peers flush the queue
-                if (i % 5U == 0U) {
-                    m_network->m_frameQueue->flushQueue();
+                // every MAX_QUEUED_PEER_MSGS peers flush the queue
+                if (i % MAX_QUEUED_PEER_MSGS == 0U) {
+                    m_network->m_frameQueue->flushQueue(&queue);
                 }
 
-                m_network->writePeer(peer.first, m_network->m_peerId, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR }, message.get(), messageLength, RTP_END_OF_CALL_SEQ, streamId, true);
+                m_network->writePeerQueue(&queue, peer.first, m_network->m_peerId, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR }, message.get(), messageLength, RTP_END_OF_CALL_SEQ, streamId);
                 if (m_network->m_debug) {
                     LogDebugEx(LOG_DMR, "TagDMRData::write_CSBK()", "peer = %u, slotNo = %u, len = %u, stream = %u", 
                         peer.first, slot, messageLength, streamId);
                 }
                 i++;
             }
-            m_network->m_frameQueue->flushQueue();
+            m_network->m_frameQueue->flushQueue(&queue);
+            m_network->m_peers.shared_unlock();
         }
 
         // repeat traffic to neighbor FNE peers

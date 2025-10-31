@@ -133,7 +133,7 @@ bool PeerNetwork::writePeerLinkPeers(json::array* peerList)
         if (pkt.fragments.size() > 0U) {
             for (auto frag : pkt.fragments) {
                 writeMaster({ NET_FUNC::REPL, NET_SUBFUNC::REPL_ACT_PEER_LIST }, 
-                    frag.second->data, FRAG_SIZE, RTP_END_OF_CALL_SEQ, streamId, false, true);
+                    frag.second->data, FRAG_SIZE, RTP_END_OF_CALL_SEQ, streamId, true);
                 Thread::sleep(60U); // pace block transmission
             }
         }
@@ -175,7 +175,7 @@ bool PeerNetwork::writeSpanningTree(SpanningTree* treeRoot)
         if (pkt.fragments.size() > 0U) {
             for (auto frag : pkt.fragments) {
                 writeMaster({ NET_FUNC::NET_TREE, NET_SUBFUNC::NET_TREE_LIST }, 
-                    frag.second->data, FRAG_SIZE, RTP_END_OF_CALL_SEQ, streamId, false, true);
+                    frag.second->data, FRAG_SIZE, RTP_END_OF_CALL_SEQ, streamId, true);
                 Thread::sleep(60U); // pace block transmission
             }
         }
@@ -215,7 +215,7 @@ bool PeerNetwork::writeHAParams(std::vector<HAParameters>& haParams)
 
         // bryanb: this should probably be packet buffered
         writeMaster({ NET_FUNC::REPL, NET_SUBFUNC::REPL_HA_PARAMS }, 
-            buffer, len, RTP_END_OF_CALL_SEQ, createStreamId(), false, true);
+            buffer, len, RTP_END_OF_CALL_SEQ, createStreamId(), true);
 
         return true;
     }

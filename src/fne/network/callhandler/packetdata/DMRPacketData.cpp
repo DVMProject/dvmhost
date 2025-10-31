@@ -282,7 +282,6 @@ void DMRPacketData::dispatchToFNE(uint32_t peerId, dmr::data::NetData& dmrData, 
 
     // repeat traffic to the connected peers
     if (m_network->m_peers.size() > 0U) {
-        uint32_t i = 0U;
         for (auto peer : m_network->m_peers) {
             if (peerId != peer.first) {
                 // is this peer ignored?
@@ -290,21 +289,13 @@ void DMRPacketData::dispatchToFNE(uint32_t peerId, dmr::data::NetData& dmrData, 
                     continue;
                 }
 
-                // every 5 peers flush the queue
-                if (i % 5U == 0U) {
-                    m_network->m_frameQueue->flushQueue();
-                }
-
-                m_network->writePeer(peer.first, peerId, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR }, data, len, pktSeq, streamId, true);
+                m_network->writePeer(peer.first, peerId, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR }, data, len, pktSeq, streamId);
                 if (m_network->m_debug) {
                     LogDebugEx(LOG_DMR, "DMRPacketData::dispatchToFNE()", "Master, srcPeer = %u, dstPeer = %u, seqNo = %u, srcId = %u, dstId = %u, slotNo = %u, len = %u, pktSeq = %u, stream = %u", 
                         peerId, peer.first, seqNo, srcId, dstId, status->slotNo, len, pktSeq, streamId);
                 }
-
-                i++;
             }
         }
-        m_network->m_frameQueue->flushQueue();
     }
 
     /*

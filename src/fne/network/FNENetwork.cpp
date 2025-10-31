@@ -54,7 +54,7 @@ const uint32_t FIXED_HA_UPDATE_INTERVAL = 30U; // 30s
 //  Static Class Members
 // ---------------------------------------------------------------------------
 
-std::timed_mutex FNENetwork::m_keyQueueMutex;
+std::timed_mutex FNENetwork::s_keyQueueMutex;
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -153,7 +153,7 @@ FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port,
 
     m_p25OTARService = new P25OTARService(this, m_tagP25->packetData(), kmfDebug, verbose);
 
-    SpanningTree::m_maxUpdatesBeforeReparent = (uint8_t)host->m_maxMissedPings;
+    SpanningTree::s_maxUpdatesBeforeReparent = (uint8_t)host->m_maxMissedPings;
     m_treeRoot = new SpanningTree(peerId, peerId, nullptr);
     m_treeRoot->identity(identity);
 
@@ -661,7 +661,7 @@ void FNENetwork::close()
         uint32_t streamId = createStreamId();
         for (auto peer : m_peers) {
             writePeer(peer.first, m_peerId, { NET_FUNC::MST_DISC, NET_SUBFUNC::NOP }, buffer, 1U, RTP_END_OF_CALL_SEQ, 
-                streamId, false);
+                streamId);
         }
     }
 
@@ -1541,7 +1541,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                                 modifyKeyRsp.encode(buffer + 11U);
 
                                                 network->writePeer(peerId, network->m_peerId, { NET_FUNC::KEY_RSP, NET_SUBFUNC::NOP }, buffer, modifyKeyRsp.length() + 11U, 
-                                                    RTP_END_OF_CALL_SEQ, network->createStreamId(), false, false, true);
+                                                    RTP_END_OF_CALL_SEQ, network->createStreamId());
                                             } else {
                                                 // attempt to forward KMM key request to replica masters
                                                 if (network->m_host->m_peerNetworks.size() > 0) {
@@ -1551,14 +1551,14 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                                                 LogInfoEx(LOG_PEER, "PEER %u (%s) no local key or container, requesting key from upstream master, algId = $%02X, kID = $%04X", peerId, connection->identWithQualifier().c_str(),
                                                                     modifyKey->getAlgId(), modifyKey->getKId());
 
-                                                                bool locked = network->m_keyQueueMutex.try_lock_for(std::chrono::milliseconds(60));
+                                                                bool locked = network->s_keyQueueMutex.try_lock_for(std::chrono::milliseconds(60));
                                                                 network->m_peerReplicaKeyQueue[peerId] = modifyKey->getKId();
 
                                                                 if (locked)
-                                                                    network->m_keyQueueMutex.unlock();
+                                                                    network->s_keyQueueMutex.unlock();
 
                                                                 peer.second->writeMaster({ NET_FUNC::KEY_REQ, NET_SUBFUNC::NOP }, 
-                                                                    req->buffer, req->length, RTP_END_OF_CALL_SEQ, 0U, false, false);
+                                                                    req->buffer, req->length, RTP_END_OF_CALL_SEQ, 0U, false);
                                                             }
                                                         }
                                                     }
@@ -1613,7 +1613,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                                 if (peer.second != nullptr) {
                                                     if (peer.second->isEnabled() && peer.second->isReplica()) {
                                                         peer.second->writeMaster({ NET_FUNC::ANNOUNCE, NET_SUBFUNC::ANNC_SUBFUNC_GRP_AFFIL }, 
-                                                            req->buffer, req->length, req->rtpHeader.getSequence(), streamId, false, false);
+                                                            req->buffer, req->length, req->rtpHeader.getSequence(), streamId, false);
                                                     }
                                                 }
                                             }
@@ -1650,7 +1650,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                                 if (peer.second != nullptr) {
                                                     if (peer.second->isEnabled() && peer.second->isReplica()) {
                                                         peer.second->writeMaster({ NET_FUNC::ANNOUNCE, NET_SUBFUNC::ANNC_SUBFUNC_UNIT_REG }, 
-                                                            req->buffer, req->length, req->rtpHeader.getSequence(), streamId, false, false, 0U, ssrc);
+                                                            req->buffer, req->length, req->rtpHeader.getSequence(), streamId, false, 0U, ssrc);
                                                     }
                                                 }
                                             }
@@ -1686,7 +1686,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                                 if (peer.second != nullptr) {
                                                     if (peer.second->isEnabled() && peer.second->isReplica()) {
                                                         peer.second->writeMaster({ NET_FUNC::ANNOUNCE, NET_SUBFUNC::ANNC_SUBFUNC_UNIT_DEREG }, 
-                                                            req->buffer, req->length, req->rtpHeader.getSequence(), streamId, false, false);
+                                                            req->buffer, req->length, req->rtpHeader.getSequence(), streamId, false);
                                                     }
                                                 }
                                             }
@@ -1723,7 +1723,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                                 if (peer.second != nullptr) {
                                                     if (peer.second->isEnabled() && peer.second->isReplica()) {
                                                         peer.second->writeMaster({ NET_FUNC::ANNOUNCE, NET_SUBFUNC::ANNC_SUBFUNC_GRP_UNAFFIL }, 
-                                                            req->buffer, req->length, req->rtpHeader.getSequence(), streamId, false, false);
+                                                            req->buffer, req->length, req->rtpHeader.getSequence(), streamId, false);
                                                     }
                                                 }
                                             }
@@ -1773,7 +1773,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                                     if (peer.second != nullptr) {
                                                         if (peer.second->isEnabled() && peer.second->isReplica()) {
                                                             peer.second->writeMaster({ NET_FUNC::ANNOUNCE, NET_SUBFUNC::ANNC_SUBFUNC_AFFILS }, 
-                                                                req->buffer, req->length, req->rtpHeader.getSequence(), streamId, false, false);
+                                                                req->buffer, req->length, req->rtpHeader.getSequence(), streamId, false);
                                                         }
                                                     }
                                                 }
@@ -1822,7 +1822,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                                 if (peer.second != nullptr) {
                                                     if (peer.second->isEnabled() && peer.second->isReplica()) {
                                                         peer.second->writeMaster({ NET_FUNC::ANNOUNCE, NET_SUBFUNC::ANNC_SUBFUNC_SITE_VC }, 
-                                                            req->buffer, req->length, req->rtpHeader.getSequence(), streamId, false, false);
+                                                            req->buffer, req->length, req->rtpHeader.getSequence(), streamId, false);
                                                     }
                                                 }
                                             }
@@ -2211,6 +2211,10 @@ void FNENetwork::taskMetadataUpdate(MetadataUpdateRequest* req)
     }
 }
 
+/*
+** ACL Message Writing
+*/
+
 /* Helper to send the list of whitelisted RIDs to the specified peer. */
 
 void FNENetwork::writeWhitelistRIDs(uint32_t peerId, uint32_t streamId, bool sendReplica)
@@ -2266,7 +2270,7 @@ void FNENetwork::writeWhitelistRIDs(uint32_t peerId, uint32_t streamId, bool sen
             if (pkt.fragments.size() > 0U) {
                 for (auto frag : pkt.fragments) {
                     writePeer(peerId, m_peerId, { NET_FUNC::REPL, NET_SUBFUNC::REPL_RID_LIST }, 
-                        frag.second->data, FRAG_SIZE, 0U, streamId, false, true, true);
+                        frag.second->data, FRAG_SIZE, 0U, streamId);
                     Thread::sleep(60U); // pace block transmission
                 }
             }
@@ -2467,7 +2471,7 @@ void FNENetwork::writeTGIDs(uint32_t peerId, uint32_t streamId, bool sendReplica
             if (pkt.fragments.size() > 0U) {
                 for (auto frag : pkt.fragments) {
                     writePeer(peerId, m_peerId, { NET_FUNC::REPL, NET_SUBFUNC::REPL_TALKGROUP_LIST }, 
-                        frag.second->data, FRAG_SIZE, 0U, streamId, false, true, true);
+                        frag.second->data, FRAG_SIZE, 0U, streamId);
                     Thread::sleep(60U); // pace block transmission
                 }
             }
@@ -2659,7 +2663,7 @@ void FNENetwork::writePeerList(uint32_t peerId, uint32_t streamId)
         if (pkt.fragments.size() > 0U) {
             for (auto frag : pkt.fragments) {
                 writePeer(peerId, m_peerId, { NET_FUNC::REPL, NET_SUBFUNC::REPL_PEER_LIST }, 
-                    frag.second->data, FRAG_SIZE, 0U, streamId, false, true, true);
+                    frag.second->data, FRAG_SIZE, 0U, streamId);
                 Thread::sleep(60U); // pace block transmission
             }
         }
@@ -2704,7 +2708,7 @@ void FNENetwork::writeHAParameters(uint32_t peerId, uint32_t streamId, bool send
         if (connection != nullptr) {
             LogInfoEx(LOG_REPL, "PEER %u (%s) Peer Replication, HA parameters, streamId = %u", peerId, connection->identWithQualifier().c_str(), streamId);
             writePeer(peerId, m_peerId, { NET_FUNC::REPL, NET_SUBFUNC::REPL_HA_PARAMS}, 
-                buffer, len, 0U, streamId, false, true, true);
+                buffer, len, 0U, streamId);
         }
     }
 
@@ -2751,13 +2755,25 @@ bool FNENetwork::writePeerICC(uint32_t peerId, uint32_t streamId, NET_SUBFUNC::E
     SET_UINT24(dstId, buffer, 11U);                                             // Destination ID
     buffer[14U] = slotNo;                                                       // DMR Slot No
 
-    return writePeer(peerId, m_peerId, { NET_FUNC::INCALL_CTRL, subFunc }, buffer, 15U, RTP_END_OF_CALL_SEQ, streamId, false);
+    return writePeer(peerId, m_peerId, { NET_FUNC::INCALL_CTRL, subFunc }, buffer, 15U, RTP_END_OF_CALL_SEQ, streamId);
 }
+
+/*
+** Generic Message Writing
+*/
 
 /* Helper to send a data message to the specified peer with a explicit packet sequence. */
 
 bool FNENetwork::writePeer(uint32_t peerId, uint32_t ssrc, FrameQueue::OpcodePair opcode, const uint8_t* data,
-    uint32_t length, uint16_t pktSeq, uint32_t streamId, bool queueOnly, bool incPktSeq, bool directWrite) const
+    uint32_t length, uint16_t pktSeq, uint32_t streamId, bool incPktSeq) const
+{
+    return writePeerQueue(nullptr, peerId, ssrc, opcode, data, length, pktSeq, streamId, incPktSeq);
+}
+
+/* Helper to queue a data message to the specified peer with a explicit packet sequence. */
+
+bool FNENetwork::writePeerQueue(udp::BufferQueue* buffers, uint32_t peerId, uint32_t ssrc, FrameQueue::OpcodePair opcode, 
+    const uint8_t* data, uint32_t length, uint16_t pktSeq, uint32_t streamId, bool incPktSeq) const
 {
     if (streamId == 0U) {
         LogError(LOG_NET, "BUGBUG: PEER %u, trying to send data with a streamId of 0?", peerId);
@@ -2775,7 +2791,7 @@ bool FNENetwork::writePeer(uint32_t peerId, uint32_t ssrc, FrameQueue::OpcodePai
             }
 #if DEBUG_RTP_MUX
             if (m_debug)
-                LogDebugEx(LOG_NET, "FNENetwork::writePeer()", "PEER %u, streamId = %u, pktSeq = %u", peerId, streamId, pktSeq);
+                LogDebugEx(LOG_NET, "FNENetwork::writePeerQueue()", "PEER %u, streamId = %u, pktSeq = %u", peerId, streamId, pktSeq);
 #endif
             if (m_maskOutboundPeerID)
                 ssrc = m_peerId; // mask the source SSRC to our own peer ID
@@ -2793,13 +2809,11 @@ bool FNENetwork::writePeer(uint32_t peerId, uint32_t ssrc, FrameQueue::OpcodePai
                 }
             }
 
-            if (directWrite)
+            if (buffers == nullptr)
                 return m_frameQueue->write(data, length, streamId, peerId, ssrc, opcode, pktSeq, addr, addrLen);
             else {
-                m_frameQueue->enqueueMessage(data, length, streamId, peerId, ssrc, opcode, pktSeq, addr, addrLen);
-                if (queueOnly)
-                    return true;
-                return m_frameQueue->flushQueue();
+                m_frameQueue->enqueueMessage(buffers, data, length, streamId, peerId, ssrc, opcode, pktSeq, addr, addrLen);
+                return true;
             }
         }
     }
@@ -2823,7 +2837,7 @@ bool FNENetwork::writePeerCommand(uint32_t peerId, FrameQueue::OpcodePair opcode
     }
 
     uint32_t len = length + 6U;
-    return writePeer(peerId, m_peerId, opcode, buffer, len, RTP_END_OF_CALL_SEQ, streamId, false, incPktSeq, true);
+    return writePeer(peerId, m_peerId, opcode, buffer, len, RTP_END_OF_CALL_SEQ, streamId, incPktSeq);
 }
 
 /* Helper to send a ACK response to the specified peer. */
@@ -2840,7 +2854,7 @@ bool FNENetwork::writePeerACK(uint32_t peerId, uint32_t streamId, const uint8_t*
     }
 
     return writePeer(peerId, m_peerId, { NET_FUNC::ACK, NET_SUBFUNC::NOP }, buffer, length + 10U, RTP_END_OF_CALL_SEQ, 
-        streamId, false, false, true);
+        streamId);
 }
 
 /* Helper to log a warning specifying which NAK reason is being sent a peer. */
@@ -2900,7 +2914,7 @@ bool FNENetwork::writePeerNAK(uint32_t peerId, uint32_t streamId, const char* ta
     SET_UINT16((uint16_t)reason, buffer, 10U);                                  // Reason
 
     logPeerNAKReason(peerId, tag, reason);
-    return writePeer(peerId, m_peerId, { NET_FUNC::NAK, NET_SUBFUNC::NOP }, buffer, 12U, RTP_END_OF_CALL_SEQ, streamId, false);
+    return writePeer(peerId, m_peerId, { NET_FUNC::NAK, NET_SUBFUNC::NOP }, buffer, 12U, RTP_END_OF_CALL_SEQ, streamId);
 }
 
 /* Helper to send a NAK response to the specified peer. */
@@ -2924,6 +2938,10 @@ bool FNENetwork::writePeerNAK(uint32_t peerId, const char* tag, NET_CONN_NAK_REA
         { NET_FUNC::NAK, NET_SUBFUNC::NOP }, 0U, addr, addrLen);
 }
 
+/*
+** Internal KMM Callback.
+*/
+
 /* Helper to process a FNE KMM TEK response. */
 
 void FNENetwork::processTEKResponse(p25::kmm::KeyItem* rspKi, uint8_t algId, uint8_t keyLength)
@@ -2936,7 +2954,7 @@ void FNENetwork::processTEKResponse(p25::kmm::KeyItem* rspKi, uint8_t algId, uin
 
     LogInfoEx(LOG_PEER, "upstream master enc. key, algId = $%02X, kID = $%04X", algId, rspKi->kId());
 
-    m_keyQueueMutex.lock();
+    s_keyQueueMutex.lock();
 
     std::vector<uint32_t> peersToRemove;
     for (auto entry : m_peerReplicaKeyQueue) {
@@ -2979,7 +2997,7 @@ void FNENetwork::processTEKResponse(p25::kmm::KeyItem* rspKi, uint8_t algId, uin
             modifyKeyRsp.encode(buffer + 11U);
 
             writePeer(peerId, m_peerId, { NET_FUNC::KEY_RSP, NET_SUBFUNC::NOP }, buffer, modifyKeyRsp.length() + 11U, 
-                RTP_END_OF_CALL_SEQ, createStreamId(), false, false, true);
+                RTP_END_OF_CALL_SEQ, createStreamId());
 
             peersToRemove.push_back(peerId);
         }

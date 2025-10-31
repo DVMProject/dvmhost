@@ -253,7 +253,7 @@ namespace network
                  * @param pduUserData Buffer containing user data to transmit.
                  */
                 void write_PDU_User(uint32_t peerId, uint32_t srcPeerId, network::PeerNetwork* peerNet, p25::data::DataHeader& dataHeader,
-                    bool extendedAddress, uint8_t* pduUserData, bool queueOnly = false);
+                    bool extendedAddress, uint8_t* pduUserData);
 
                 /**
                  * @brief Write data processed to the network.
@@ -268,7 +268,7 @@ namespace network
                  * @param streamId Stream ID.
                  */
                 bool writeNetwork(uint32_t peerId, uint32_t srcPeerId, network::PeerNetwork* peerNet, const p25::data::DataHeader& dataHeader, const uint8_t currentBlock, 
-                    const uint8_t* data, uint32_t len, uint16_t pktSeq, uint32_t streamId, bool queueOnly = false);
+                    const uint8_t* data, uint32_t len, uint16_t pktSeq, uint32_t streamId);
 
                 /**
                  * @brief Helper to determine if the logical link ID has an ARP entry.

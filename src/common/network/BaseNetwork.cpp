@@ -173,7 +173,7 @@ bool BaseNetwork::writeActLog(const char* message)
 #endif 
     
     return writeMaster({ NET_FUNC::TRANSFER, NET_SUBFUNC::TRANSFER_SUBFUNC_ACTIVITY }, (uint8_t*)buffer, (uint32_t)len + 11U,
-        RTP_END_OF_CALL_SEQ, 0U, false, m_useAlternatePortForDiagnostics);
+        RTP_END_OF_CALL_SEQ, 0U, m_useAlternatePortForDiagnostics);
 }
 
 /* Writes the local diagnostics log to the network. */
@@ -201,7 +201,7 @@ bool BaseNetwork::writeDiagLog(const char* message)
 #endif 
 
     return writeMaster({ NET_FUNC::TRANSFER, NET_SUBFUNC::TRANSFER_SUBFUNC_DIAG }, (uint8_t*)buffer, (uint32_t)len + 11U,
-        RTP_END_OF_CALL_SEQ, 0U, false, m_useAlternatePortForDiagnostics);
+        RTP_END_OF_CALL_SEQ, 0U, m_useAlternatePortForDiagnostics);
 }
 
 /* Writes the local status to the network. */
@@ -233,7 +233,7 @@ bool BaseNetwork::writePeerStatus(json::object obj)
 #endif 
 
     return writeMaster({ NET_FUNC::TRANSFER, NET_SUBFUNC::TRANSFER_SUBFUNC_STATUS }, (uint8_t*)buffer, (uint32_t)len + 11U,
-        RTP_END_OF_CALL_SEQ, 0U, false, m_useAlternatePortForDiagnostics);
+        RTP_END_OF_CALL_SEQ, 0U, m_useAlternatePortForDiagnostics);
 }
 
 /* Writes a group affiliation to the network. */
@@ -397,7 +397,7 @@ uint32_t BaseNetwork::getDMRStreamId(uint32_t slotNo) const
 /* Helper to send a data message to the master. */
 
 bool BaseNetwork::writeMaster(FrameQueue::OpcodePair opcode, const uint8_t* data, uint32_t length, uint16_t pktSeq, uint32_t streamId, 
-    bool queueOnly, bool useAlternatePort, uint32_t peerId, uint32_t ssrc)
+    bool useAlternatePort, uint32_t peerId, uint32_t ssrc)
 {
     if (peerId == 0U)
         peerId = m_peerId;
@@ -412,17 +412,11 @@ bool BaseNetwork::writeMaster(FrameQueue::OpcodePair opcode, const uint8_t* data
         uint16_t port = udp::Socket::port(m_addr) + 1U;
 
         if (udp::Socket::lookup(address, port, addr, addrLen) == 0) {
-            if (!queueOnly)
-                return m_frameQueue->write(data, length, streamId, peerId, ssrc, opcode, pktSeq, addr, addrLen);
-            else
-                m_frameQueue->enqueueMessage(data, length, streamId, m_peerId, opcode, pktSeq, addr, addrLen);
+            return m_frameQueue->write(data, length, streamId, peerId, ssrc, opcode, pktSeq, addr, addrLen);
         }
     }
     else {
-        if (!queueOnly)
-            return m_frameQueue->write(data, length, streamId, peerId, ssrc, opcode, pktSeq, m_addr, m_addrLen);
-        else
-            m_frameQueue->enqueueMessage(data, length, streamId, m_peerId, opcode, pktSeq, m_addr, m_addrLen);
+        return m_frameQueue->write(data, length, streamId, peerId, ssrc, opcode, pktSeq, m_addr, m_addrLen);
     }
 
     return true;

@@ -68,6 +68,8 @@ namespace network
     //  Constants
     // ---------------------------------------------------------------------------
 
+    #define MAX_QUEUED_PEER_MSGS 5U
+
     /**
      * @brief DVM states.
      */
@@ -326,7 +328,7 @@ namespace network
         typedef std::pair<const uint32_t, lookups::AffiliationLookup*> PeerAffiliationMapPair;
         concurrent::unordered_map<uint32_t, fne_lookups::AffiliationLookup*> m_peerAffiliations;
         concurrent::unordered_map<uint32_t, std::vector<uint32_t>> m_ccPeerMap;
-        static std::timed_mutex m_keyQueueMutex;
+        static std::timed_mutex s_keyQueueMutex;
         std::unordered_map<uint32_t, uint16_t> m_peerReplicaKeyQueue;
 
         SpanningTree* m_treeRoot;
@@ -477,6 +479,10 @@ namespace network
          * @param req Instance of the MetadataUpdateRequest structure.
          */
         static void taskMetadataUpdate(MetadataUpdateRequest* req);
+
+        /*
+        ** ACL Message Writing
+        */
 
         /**
          * @brief Helper to send the list of whitelisted RIDs to the specified peer.
@@ -647,8 +653,26 @@ namespace network
         bool writePeerICC(uint32_t peerId, uint32_t streamId, NET_SUBFUNC::ENUM subFunc = NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR, 
             NET_ICC::ENUM command = NET_ICC::NOP, uint32_t dstId = 0U, uint8_t slotNo = 0U);
 
+        /*
+        ** Generic Message Writing
+        */
+
         /**
          * @brief Helper to send a data message to the specified peer with a explicit packet sequence.
+         * @param peerId Destination Peer ID.
+         * @param ssrc RTP synchronization source ID.
+         * @param opcode FNE network opcode pair.
+         * @param[in] data Buffer containing message to send to peer.
+         * @param length Length of buffer.
+         * @param pktSeq RTP packet sequence for this message.
+         * @param streamId Stream ID for this message.
+         * @param incPktSeq Flag indicating the message should increment the packet sequence after transmission.
+         */
+        bool writePeer(uint32_t peerId, uint32_t ssrc, FrameQueue::OpcodePair opcode, const uint8_t* data, uint32_t length, 
+            uint16_t pktSeq, uint32_t streamId, bool incPktSeq = false) const;
+        /**
+         * @brief Helper to queue a data message to the specified peer with a explicit packet sequence.
+         * @param[in] buffers Buffer to contain queued messages.
          * @param peerId Destination Peer ID.
          * @param ssrc RTP synchronization source ID.
          * @param opcode FNE network opcode pair.
@@ -660,8 +684,8 @@ namespace network
          * @param incPktSeq Flag indicating the message should increment the packet sequence after transmission.
          * @param directWrite Flag indicating this message should be immediately directly written.
          */
-        bool writePeer(uint32_t peerId, uint32_t ssrc, FrameQueue::OpcodePair opcode, const uint8_t* data, uint32_t length, 
-            uint16_t pktSeq, uint32_t streamId, bool queueOnly, bool incPktSeq = false, bool directWrite = false) const;
+        bool writePeerQueue(udp::BufferQueue* buffers, uint32_t peerId, uint32_t ssrc, FrameQueue::OpcodePair opcode, 
+            const uint8_t* data, uint32_t length, uint16_t pktSeq, uint32_t streamId, bool incPktSeq = false) const;
 
         /**
          * @brief Helper to send a command message to the specified peer.
@@ -708,6 +732,10 @@ namespace network
          * @param addrLen 
          */
         bool writePeerNAK(uint32_t peerId, const char* tag, NET_CONN_NAK_REASON reason, sockaddr_storage& addr, uint32_t addrLen);
+
+        /*
+        ** Internal KMM Callback.
+        */
 
         /**
          * @brief Helper to process a FNE KMM TEK response.
