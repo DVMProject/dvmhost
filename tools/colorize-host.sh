@@ -24,7 +24,7 @@
 #*   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #*/
 EOL_CLEAR="s/$/\x1b[0m/;"
-LOG_COLOR="s#W:#\x1b[1m\x1b[33m&#; s#E:#\x1b[1m\x1b[31m&#; s#M:#\x1b[0m&#; s#I:#\x1b[0m&#; s#D:#\x1b[1m\x1b[34m&\x1b[0m\x1b[1m#;"
+LOG_COLOR="s#W:#\x1b[0m\x1b[1m\x1b[33m&\x1b[0m#; s#E:#\x1b[0m\x1b[1m\x1b[31m&\x1b[0m#; s#M:#\x1b[0m&#; s#I:#\x1b[0m&#; s#D:#\x1b[1m\x1b[34m&\x1b[0m#; s#U:#\x1b[44m\x1b[1m\x1b[33m&#;"
 
 DMR_COLOR="s#VOICE#\x1b[36m&#; s#TERMINATOR_WITH_LC#\x1b[0m\x1b[32m&#; s#CSBK#\x1b[0m\x1b[35m&#"
 P25_COLOR="s#LDU#\x1b[36m&#; s#TDU#\x1b[0m\x1b[32m&#; s#HDU#\x1b[0m\x1b[32m&#; s#TSDU#\x1b[0m\x1b[35m&#"
