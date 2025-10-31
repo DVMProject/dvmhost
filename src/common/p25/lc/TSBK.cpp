@@ -25,15 +25,15 @@ using namespace p25::lc;
 //  Static Class Members
 // ---------------------------------------------------------------------------
 
-bool TSBK::m_verbose = false;
+bool TSBK::s_verbose = false;
 #if FORCE_TSBK_CRC_WARN
-bool TSBK::m_warnCRC = true;
+bool TSBK::s_warnCRC = true;
 #else
-bool TSBK::m_warnCRC = false;
+bool TSBK::s_warnCRC = false;
 #endif
 
-uint8_t* TSBK::m_siteCallsign = nullptr;
-SiteData TSBK::m_siteData = SiteData();
+uint8_t* TSBK::s_siteCallsign = nullptr;
+SiteData TSBK::s_siteData = SiteData();
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -90,9 +90,9 @@ TSBK::TSBK() :
     m_trellis(),
     m_raw(nullptr)
 {
-    if (m_siteCallsign == nullptr) {
-        m_siteCallsign = new uint8_t[MOT_CALLSIGN_LENGTH_BYTES];
-        ::memset(m_siteCallsign, 0x00U, MOT_CALLSIGN_LENGTH_BYTES);
+    if (s_siteCallsign == nullptr) {
+        s_siteCallsign = new uint8_t[MOT_CALLSIGN_LENGTH_BYTES];
+        ::memset(s_siteCallsign, 0x00U, MOT_CALLSIGN_LENGTH_BYTES);
     }
 
 #if FORCE_TSBK_CRC_WARN
@@ -126,19 +126,19 @@ uint8_t* TSBK::getDecodedRaw() const
 
 void TSBK::setCallsign(std::string callsign)
 {
-    if (m_siteCallsign == nullptr) {
-        m_siteCallsign = new uint8_t[MOT_CALLSIGN_LENGTH_BYTES];
-        ::memset(m_siteCallsign, 0x00U, MOT_CALLSIGN_LENGTH_BYTES);
+    if (s_siteCallsign == nullptr) {
+        s_siteCallsign = new uint8_t[MOT_CALLSIGN_LENGTH_BYTES];
+        ::memset(s_siteCallsign, 0x00U, MOT_CALLSIGN_LENGTH_BYTES);
     }
 
     uint32_t idLength = callsign.length();
     if (idLength > 0) {
-        ::memset(m_siteCallsign, 0x20U, MOT_CALLSIGN_LENGTH_BYTES);
+        ::memset(s_siteCallsign, 0x20U, MOT_CALLSIGN_LENGTH_BYTES);
 
         if (idLength > MOT_CALLSIGN_LENGTH_BYTES)
             idLength = MOT_CALLSIGN_LENGTH_BYTES;
         for (uint32_t i = 0; i < idLength; i++)
-            m_siteCallsign[i] = callsign[i];
+            s_siteCallsign[i] = callsign[i];
     }
 }
 
@@ -201,7 +201,7 @@ bool TSBK::decode(const uint8_t* data, uint8_t* payload, bool rawTSBK)
 
         bool ret = edac::CRC::checkCCITT162(tsbk, P25_TSBK_LENGTH_BYTES);
         if (!ret) {
-            if (m_warnCRC) {
+            if (s_warnCRC) {
                 // if we're already warning instead of erroring CRC, don't announce invalid CRC in the 
                 // case where no CRC is defined
                 if ((tsbk[P25_TSBK_LENGTH_BYTES - 2U] != 0x00U) && (tsbk[P25_TSBK_LENGTH_BYTES - 1U] != 0x00U)) {
@@ -228,7 +228,7 @@ bool TSBK::decode(const uint8_t* data, uint8_t* payload, bool rawTSBK)
             if (ret) {
                 ret = edac::CRC::checkCCITT162(tsbk, P25_TSBK_LENGTH_BYTES);
                 if (!ret) {
-                    if (m_warnCRC) {
+                    if (s_warnCRC) {
                         LogWarning(LOG_P25, "TSBK::decode(), failed CRC CCITT-162 check");
                         ret = true; // ignore CRC error
                     }
@@ -247,7 +247,7 @@ bool TSBK::decode(const uint8_t* data, uint8_t* payload, bool rawTSBK)
         }
     }
 
-    if (m_verbose) {
+    if (s_verbose) {
         Utils::dump(2U, "P25, TSBK::decode(), TSBK Value", tsbk, P25_TSBK_LENGTH_BYTES);
     }
 
@@ -282,7 +282,7 @@ void TSBK::encode(uint8_t* data, const uint8_t* payload, bool rawTSBK, bool noTr
     // compute CRC-CCITT 16
     edac::CRC::addCCITT162(tsbk, P25_TSBK_LENGTH_BYTES);
 
-    if (m_verbose) {
+    if (s_verbose) {
         Utils::dump(2U, "P25, TSBK::encode(), TSBK Value", tsbk, P25_TSBK_LENGTH_BYTES);
     }
 

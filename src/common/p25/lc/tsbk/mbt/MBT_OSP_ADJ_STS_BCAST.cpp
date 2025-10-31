@@ -55,13 +55,13 @@ void MBT_OSP_ADJ_STS_BCAST::encodeMBT(data::DataHeader& dataHeader, uint8_t* pdu
 
     if ((m_adjRfssId != 0U) && (m_adjSiteId != 0U) && (m_adjChannelNo != 0U)) {
         if (m_adjSysId == 0U) {
-            m_adjSysId = m_siteData.sysId();
+            m_adjSysId = s_siteData.sysId();
         }
 
         // pack LRA, CFVA and system ID into LLID
-        uint32_t llId = m_siteData.lra();                                           // Location Registration Area
+        uint32_t llId = s_siteData.lra();                                           // Location Registration Area
         llId = (llId << 8) + m_adjCFVA;                                             // CFVA
-        llId = (llId << 4) + m_siteData.siteId();                                   // System ID
+        llId = (llId << 4) + s_siteData.siteId();                                   // System ID
         dataHeader.setLLId(llId);
 
         dataHeader.setAMBTField8(m_adjRfssId);                                      // RF Sub-System ID
@@ -75,9 +75,9 @@ void MBT_OSP_ADJ_STS_BCAST::encodeMBT(data::DataHeader& dataHeader, uint8_t* pdu
             ((m_adjChannelNo >> 8) & 0xFFU);
         pduUserData[3U] = (m_adjChannelNo >> 0) & 0xFFU;                            // Receive Channel Number LSB
         pduUserData[4U] = m_adjServiceClass;                                        // System Service Class
-        pduUserData[5U] = (m_siteData.netId() >> 12) & 0xFFU;                       // Network ID (b19-12)
-        pduUserData[6U] = (m_siteData.netId() >> 4) & 0xFFU;                        // Network ID (b11-b4)
-        pduUserData[7U] = (m_siteData.netId() & 0x0FU) << 4;                        // Network ID (b3-b0)
+        pduUserData[5U] = (s_siteData.netId() >> 12) & 0xFFU;                       // Network ID (b19-12)
+        pduUserData[6U] = (s_siteData.netId() >> 4) & 0xFFU;                        // Network ID (b11-b4)
+        pduUserData[7U] = (s_siteData.netId() & 0x0FU) << 4;                        // Network ID (b3-b0)
     }
     else {
         LogError(LOG_P25, "MBT_OSP_ADJ_STS_BCAST::encodeMBT(), invalid values for OSP_ADJ_STS_BCAST, adjRfssId = $%02X, adjSiteId = $%02X, adjChannelId = %u, adjChannelNo = $%02X, adjSvcClass = $%02X",

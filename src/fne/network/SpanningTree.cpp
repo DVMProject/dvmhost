@@ -17,8 +17,8 @@ using namespace network;
 //  Static Class Members
 // ---------------------------------------------------------------------------
 
-std::unordered_map<uint32_t, SpanningTree*> SpanningTree::m_SpanningTrees = std::unordered_map<uint32_t, SpanningTree*>();
-uint8_t SpanningTree::m_maxUpdatesBeforeReparent = 5U;
+std::unordered_map<uint32_t, SpanningTree*> SpanningTree::s_spanningTrees = std::unordered_map<uint32_t, SpanningTree*>();
+uint8_t SpanningTree::s_maxUpdatesBeforeReparent = 5U;
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -34,7 +34,7 @@ SpanningTree::SpanningTree(uint32_t id, uint32_t masterId, SpanningTree* parent)
     m_masterId(masterId),
     m_updatesBeforeReparent(0U)
 {
-    m_SpanningTrees[id] = this;
+    s_spanningTrees[id] = this;
     if (m_parent != nullptr)
         m_parent->m_children.push_back(this);
 }
@@ -56,8 +56,8 @@ SpanningTree::~SpanningTree()
 
 SpanningTree* SpanningTree::findByPeerID(const uint32_t peerId)
 {
-    auto it = m_SpanningTrees.find(peerId);
-    if (it != m_SpanningTrees.end()) {
+    auto it = s_spanningTrees.find(peerId);
+    if (it != s_spanningTrees.end()) {
         return it->second;
     }
 
@@ -68,7 +68,7 @@ SpanningTree* SpanningTree::findByPeerID(const uint32_t peerId)
 
 SpanningTree* SpanningTree::findByMasterID(const uint32_t masterId)
 {
-    for (auto it : m_SpanningTrees) {
+    for (auto it : s_spanningTrees) {
         SpanningTree* tree = it.second;
         if (tree != nullptr) {
             if (tree->masterId() == masterId) {
@@ -102,8 +102,8 @@ uint32_t SpanningTree::countChildren(SpanningTree* node)
 
 void SpanningTree::erasePeer(const uint32_t peerId)
 {
-    auto it = m_SpanningTrees.find(peerId);
-    if (it != m_SpanningTrees.end()) {
+    auto it = s_spanningTrees.find(peerId);
+    if (it != s_spanningTrees.end()) {
         SpanningTree* tree = it->second;
         if (tree != nullptr) {
             if (tree->m_parent != nullptr) {
@@ -118,7 +118,7 @@ void SpanningTree::erasePeer(const uint32_t peerId)
             delete tree;
         }
 
-        m_SpanningTrees.erase(it);
+        s_spanningTrees.erase(it);
     }
 }
 
@@ -189,7 +189,7 @@ void SpanningTree::deserializeTree(json::array& jsonArray, SpanningTree* parent,
         else {
             // are the parents different? if so, start counting down to reparenting
             if (existingNode->m_parent != parent) {
-                if (existingNode->m_updatesBeforeReparent >= m_maxUpdatesBeforeReparent) {
+                if (existingNode->m_updatesBeforeReparent >= s_maxUpdatesBeforeReparent) {
                     existingNode->m_updatesBeforeReparent = 0U;
 
                     // reparent the node if necessary

@@ -69,8 +69,8 @@ void MESSAGE_TYPE_DCALL_HDR::encode(uint8_t* data, uint32_t length, uint32_t off
     rcch[6U] = (m_dstId >> 0U) & 0xFFU;                                             // ...
 
     rcch[7U] = m_causeRsp;                                                          // Cause (VD)
-    rcch[9U] = (m_siteData.locId() >> 8) & 0xFFU;                                   // Location ID
-    rcch[10U] = (m_siteData.locId() >> 0) & 0xFFU;                                  // ...
+    rcch[9U] = (s_siteData.locId() >> 8) & 0xFFU;                                   // Location ID
+    rcch[10U] = (s_siteData.locId() >> 0) & 0xFFU;                                  // ...
 
     RCCH::encode(data, rcch, length, offset);
 }

@@ -51,16 +51,16 @@ void MESSAGE_TYPE_SITE_INFO::encode(uint8_t* data, uint32_t length, uint32_t off
 {
     assert(data != nullptr);
 
-    uint8_t siteInfo2 = m_siteData.siteInfo2();
+    uint8_t siteInfo2 = s_siteData.siteInfo2();
     if ((siteInfo2 & SiteInformation2::IP_NETWORK) == SiteInformation2::IP_NETWORK)
         siteInfo2 &= ~SiteInformation2::IP_NETWORK; // clear the IP_NETWORK bit -- that will be provided by netActive()
 
     uint8_t rcch[NXDN_RCCH_LC_LENGTH_BYTES + 4U];
     ::memset(rcch, 0x00U, NXDN_RCCH_LC_LENGTH_BYTES + 4U);
 
-    rcch[1U] = (m_siteData.locId() >> 16) & 0xFFU;                                  // Location ID
-    rcch[2U] = (m_siteData.locId() >> 8) & 0xFFU;                                   // ...
-    rcch[3U] = (m_siteData.locId() >> 0) & 0xFFU;                                   // ...
+    rcch[1U] = (s_siteData.locId() >> 16) & 0xFFU;                                  // Location ID
+    rcch[2U] = (s_siteData.locId() >> 8) & 0xFFU;                                   // ...
+    rcch[3U] = (s_siteData.locId() >> 0) & 0xFFU;                                   // ...
     rcch[4U] = ((m_bcchCnt & 0x03U) << 6) +                                         // Channel Structure - Number of BCCH
         ((m_rcchGroupingCnt & 0x07U) << 3) +                                        // ...               - Number of Grouping
         (((m_ccchPagingCnt >> 1) & 0x07U) << 0);                                    // ...               - Number of Paging Frames
@@ -68,8 +68,8 @@ void MESSAGE_TYPE_SITE_INFO::encode(uint8_t* data, uint32_t length, uint32_t off
         ((m_ccchMultiCnt & 0x07U) << 4) +                                           // ...               - Number of Multipurpose Frames
         ((m_rcchIterateCnt & 0x0FU) << 0);                                          // ...               - Number of Iteration
 
-    rcch[6U] = m_siteData.siteInfo1();                                              // Site Information 1
-    rcch[7U] = (m_siteData.netActive() ? SiteInformation2::IP_NETWORK : 0x00U) +    // Site Information 2
+    rcch[6U] = s_siteData.siteInfo1();                                              // Site Information 1
+    rcch[7U] = (s_siteData.netActive() ? SiteInformation2::IP_NETWORK : 0x00U) +    // Site Information 2
         siteInfo2;
 
     // bryanb: this is currently fixed -- maybe dynamic in the future
@@ -84,7 +84,7 @@ void MESSAGE_TYPE_SITE_INFO::encode(uint8_t* data, uint32_t length, uint32_t off
 
     rcch[14U] = 1U;                                                                 // Version
 
-    uint16_t channelNo = m_siteData.channelNo() & 0x3FFU;
+    uint16_t channelNo = s_siteData.channelNo() & 0x3FFU;
     rcch[15U] = (channelNo >> 6) & 0x0FU;                                           // 1st Control Channel
     rcch[16U] = (channelNo & 0x3FU) << 2;                                           // ...
 

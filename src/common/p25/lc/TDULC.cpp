@@ -26,9 +26,9 @@ using namespace p25::lc;
 //  Static Class Members
 // ---------------------------------------------------------------------------
 
-bool TDULC::m_verbose = false;
+bool TDULC::s_verbose = false;
 
-SiteData TDULC::m_siteData = SiteData();
+SiteData TDULC::s_siteData = SiteData();
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -85,7 +85,7 @@ TDULC::TDULC() :
     m_callTimer(0U),
     m_raw(nullptr)
 {
-    m_grpVchNo = m_siteData.channelNo();
+    m_grpVchNo = s_siteData.channelNo();
 }
 
 /* Finalizes a instance of TDULC class. */
@@ -186,7 +186,7 @@ bool TDULC::decode(const uint8_t* data, uint8_t* payload, bool rawTDULC)
             return false;
         }
 
-        if (m_verbose) {
+        if (s_verbose) {
             Utils::dump(2U, "P25, TDULC::decode(), TDULC Value", rs, P25_TDULC_LENGTH_BYTES);
         }
 
@@ -219,7 +219,7 @@ void TDULC::encode(uint8_t* data, const uint8_t* payload, bool rawTDULC)
         if (m_implicit)
             rs[0U] |= 0x40U;                                                            // Implicit Operation
 
-        if (m_verbose) {
+        if (s_verbose) {
             Utils::dump(2U, "P25, TDULC::encode(), TDULC Value", rs, P25_TDULC_LENGTH_BYTES);
         }
 
@@ -249,7 +249,7 @@ void TDULC::encode(uint8_t* data, const uint8_t* payload, bool rawTDULC)
 
 void TDULC::copy(const TDULC& data)
 {
-    m_verbose = data.m_verbose;
+    s_verbose = data.s_verbose;
     m_protect = data.m_protect;
     m_lco = data.m_lco;
     m_mfId = data.m_mfId;
@@ -272,6 +272,6 @@ void TDULC::copy(const TDULC& data)
 
     m_callTimer = data.m_callTimer;
 
-    m_siteData = data.m_siteData;
+    s_siteData = data.s_siteData;
     m_siteIdenEntry = data.m_siteIdenEntry;
 }

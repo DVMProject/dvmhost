@@ -47,12 +47,12 @@ void OSP_NET_STS_BCAST::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 
     ulong64_t tsbkValue = 0U;
 
-    tsbkValue = m_siteData.lra();                                                   // Location Registration Area
-    tsbkValue = (tsbkValue << 20) + m_siteData.netId();                             // Network ID
-    tsbkValue = (tsbkValue << 12) + m_siteData.sysId();                             // System ID
-    tsbkValue = (tsbkValue << 4) + m_siteData.channelId();                          // Channel ID
-    tsbkValue = (tsbkValue << 12) + m_siteData.channelNo();                         // Channel Number
-    tsbkValue = (tsbkValue << 8) + m_siteData.serviceClass();                       // System Service Class
+    tsbkValue = s_siteData.lra();                                                   // Location Registration Area
+    tsbkValue = (tsbkValue << 20) + s_siteData.netId();                             // Network ID
+    tsbkValue = (tsbkValue << 12) + s_siteData.sysId();                             // System ID
+    tsbkValue = (tsbkValue << 4) + s_siteData.channelId();                          // Channel ID
+    tsbkValue = (tsbkValue << 12) + s_siteData.channelNo();                         // Channel Number
+    tsbkValue = (tsbkValue << 8) + s_siteData.serviceClass();                       // System Service Class
 
     std::unique_ptr<uint8_t[]> tsbk = TSBK::fromValue(tsbkValue);
     TSBK::encode(data, tsbk.get(), rawTSBK, noTrellis);

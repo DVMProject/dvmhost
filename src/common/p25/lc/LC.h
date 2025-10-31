@@ -158,12 +158,12 @@ namespace p25
              * @brief Gets the local site data.
              * @returns SiteData Currently set site data for the LC class.
              */
-            static SiteData getSiteData() { return m_siteData; }
+            static SiteData getSiteData() { return s_siteData; }
             /**
              * @brief Sets the local site data.
              * @param siteData Site data to set for the LC class.
              */
-            static void setSiteData(SiteData siteData) { m_siteData = siteData; }
+            static void setSiteData(SiteData siteData) { s_siteData = siteData; }
             /** @} */
 
         public:
@@ -274,7 +274,7 @@ namespace p25
             bool m_gotUserAlias;
 
             // Local Site data
-            static SiteData m_siteData;
+            static SiteData s_siteData;
 
             /**
              * @brief Internal helper to copy the class.

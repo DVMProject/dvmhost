@@ -22,8 +22,8 @@ using namespace lookups;
 //  Static Class Members
 // ---------------------------------------------------------------------------
 
-std::mutex TalkgroupRulesLookup::m_mutex;
-bool TalkgroupRulesLookup::m_locked = false;
+std::mutex TalkgroupRulesLookup::s_mutex;
+bool TalkgroupRulesLookup::s_locked = false;
 
 // ---------------------------------------------------------------------------
 //  Macros
@@ -31,16 +31,16 @@ bool TalkgroupRulesLookup::m_locked = false;
 
 // Lock the table.
 #define __LOCK_TABLE()                          \
-    std::lock_guard<std::mutex> lock(m_mutex);  \
-    m_locked = true;
+    std::lock_guard<std::mutex> lock(s_mutex);  \
+    s_locked = true;
 
 // Unlock the table.
-#define __UNLOCK_TABLE() m_locked = false;
+#define __UNLOCK_TABLE() s_locked = false;
 
 // Spinlock wait for table to be read unlocked.
 #define __SPINLOCK()                            \
-    if (m_locked) {                             \
-        while (m_locked)                        \
+    if (s_locked) {                             \
+        while (s_locked)                        \
             Thread::sleep(2U);                  \
     }
 
@@ -233,7 +233,7 @@ TalkgroupRuleGroupVoice TalkgroupRulesLookup::find(uint32_t id, uint8_t slot)
 
     __SPINLOCK();
 
-    std::lock_guard<std::mutex> lock(m_mutex);
+    std::lock_guard<std::mutex> lock(s_mutex);
     auto it = std::find_if(m_groupVoice.begin(), m_groupVoice.end(),
         [&](TalkgroupRuleGroupVoice& x)
         {
@@ -260,7 +260,7 @@ TalkgroupRuleGroupVoice TalkgroupRulesLookup::findByRewrite(uint32_t peerId, uin
 
     __SPINLOCK();
 
-    std::lock_guard<std::mutex> lock(m_mutex);
+    std::lock_guard<std::mutex> lock(s_mutex);
     auto it = std::find_if(m_groupVoice.begin(), m_groupVoice.end(),
         [&](TalkgroupRuleGroupVoice& x) {
             if (x.config().rewrite().size() == 0)
@@ -336,7 +336,7 @@ bool TalkgroupRulesLookup::load()
 
     if (groupVoiceList.size() == 0U) {
         ::LogError(LOG_HOST, "No group voice rules list defined!");
-        m_locked = false;
+        s_locked = false;
         return false;
     }
 
@@ -390,7 +390,7 @@ bool TalkgroupRulesLookup::save(bool quiet)
         return false;
     }
 
-    std::lock_guard<std::mutex> lock(m_mutex);
+    std::lock_guard<std::mutex> lock(s_mutex);
     
     // New list for our new group voice rules
     yaml::Node groupVoiceList;

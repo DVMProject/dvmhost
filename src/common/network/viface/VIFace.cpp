@@ -49,7 +49,7 @@ using namespace network::viface;
 //  Static Class Members
 // ---------------------------------------------------------------------------
 
-uint32_t VIFace::m_idSeq = 0U;
+uint32_t VIFace::s_idSeq = 0U;
 
 // ---------------------------------------------------------------------------
 //  Global Functions
@@ -336,8 +336,8 @@ VIFace::VIFace(std::string name, bool tap, int id) :
 
     // set id
     if (id < 0) {
-        m_id = m_idSeq;
-        m_idSeq++;
+        m_id = s_idSeq;
+        s_idSeq++;
     } else {
         m_id = id;
     }

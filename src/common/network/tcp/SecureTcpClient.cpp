@@ -18,6 +18,6 @@ using namespace network::tcp;
 //  Static Class Members
 // ---------------------------------------------------------------------------
 
-std::string SecureTcpClient::m_sslHostname = std::string();
+std::string SecureTcpClient::s_sslHostname = std::string();
 
 #endif // ENABLE_SSL

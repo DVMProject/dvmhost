@@ -240,7 +240,7 @@ private:
     bool m_enabled;
     bool m_stop;
 
-    static std::mutex m_mutex;
+    static std::mutex s_mutex;
 
     /**
      * @brief Loads the table from the passed lookup table file.

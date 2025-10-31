@@ -49,8 +49,8 @@ void MESSAGE_TYPE_REG_COMM::encode(uint8_t* data, uint32_t length, uint32_t offs
     uint8_t rcch[NXDN_RCCH_LC_LENGTH_BYTES + 4U];
     ::memset(rcch, 0x00U, NXDN_RCCH_LC_LENGTH_BYTES + 4U);
 
-    rcch[2U] = (m_siteData.locId() >> 8) & 0xFFU;                                   // Location ID
-    rcch[3U] = (m_siteData.locId() >> 0) & 0xFFU;                                   // ...
+    rcch[2U] = (s_siteData.locId() >> 8) & 0xFFU;                                   // Location ID
+    rcch[3U] = (s_siteData.locId() >> 0) & 0xFFU;                                   // ...
     rcch[4U] = (m_dstId >> 8U) & 0xFFU;                                             // Target Radio Address
     rcch[5U] = (m_dstId >> 0U) & 0xFFU;                                             // ...
 

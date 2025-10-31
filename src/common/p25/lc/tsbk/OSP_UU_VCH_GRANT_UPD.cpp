@@ -63,7 +63,7 @@ void OSP_UU_VCH_GRANT_UPD::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
         tsbkValue = m_grpVchId;                                                     // Channel ID
     }
     else {
-        tsbkValue = m_siteData.channelId();                                         // Channel ID
+        tsbkValue = s_siteData.channelId();                                         // Channel ID
     }
     tsbkValue = (tsbkValue << 12) + m_grpVchNo;                                     // Channel Number
     tsbkValue = (tsbkValue << 24) + m_dstId;                                        // Target Address

@@ -44,12 +44,12 @@ using namespace network::rest::http;
 //  Static Class Members
 // ---------------------------------------------------------------------------
 
-bool RESTClient::m_responseAvailable = false;
-HTTPPayload RESTClient::m_response;
+bool RESTClient::s_responseAvailable = false;
+HTTPPayload RESTClient::s_response;
 
-bool RESTClient::m_console = false;
-bool RESTClient::m_enableSSL = false;
-bool RESTClient::m_debug = false;
+bool RESTClient::s_console = false;
+bool RESTClient::s_enableSSL = false;
+bool RESTClient::s_debug = false;
 
 // ---------------------------------------------------------------------------
 //  Global Functions
@@ -94,9 +94,9 @@ RESTClient::RESTClient(const std::string& address, uint32_t port, const std::str
     assert(!address.empty());
     assert(port > 0U);
 
-    m_console = true;
-    m_enableSSL = enableSSL;
-    m_debug = debug;
+    s_console = true;
+    s_enableSSL = enableSSL;
+    s_debug = debug;
 }
 
 /* Finalizes a instance of the RESTClient class. */
@@ -115,7 +115,7 @@ int RESTClient::send(const std::string method, const std::string endpoint, json:
 
 int RESTClient::send(const std::string method, const std::string endpoint, json::object payload, json::object& response)
 {
-    return send(m_address, m_port, m_password, method, endpoint, payload, response, m_enableSSL, m_debug);
+    return send(m_address, m_port, m_password, method, endpoint, payload, response, s_enableSSL, s_debug);
 }
 
 /* Sends remote control command to the specified modem. */
@@ -146,8 +146,8 @@ int RESTClient::send(const std::string& address, uint32_t port, const std::strin
     }
 
     int ret = EXIT_SUCCESS;
-    m_enableSSL = enableSSL;
-    m_debug = debug;
+    s_enableSSL = enableSSL;
+    s_debug = debug;
 
     typedef network::rest::BasicRequestDispatcher<network::rest::http::HTTPPayload, network::rest::http::HTTPPayload> RESTDispatcherType;
     RESTDispatcherType m_dispatcher(RESTClient::responseHandler);
@@ -159,7 +159,7 @@ int RESTClient::send(const std::string& address, uint32_t port, const std::strin
     try {
         // setup HTTP client for authentication payload
 #if defined(ENABLE_SSL)
-        if (m_enableSSL) {
+        if (s_enableSSL) {
             sslClient = new SecureHTTPClient<RESTDispatcherType>(address, port);
             if (!sslClient->open()) {
                 delete sslClient;
@@ -208,7 +208,7 @@ int RESTClient::send(const std::string& address, uint32_t port, const std::strin
         HTTPPayload httpPayload = HTTPPayload::requestPayload(HTTP_PUT, "/auth");
         httpPayload.payload(request);
 #if defined(ENABLE_SSL)
-        if (m_enableSSL) {
+        if (s_enableSSL) {
             sslClient->request(httpPayload);
         } else {
 #endif // ENABLE_SSL
@@ -220,7 +220,7 @@ int RESTClient::send(const std::string& address, uint32_t port, const std::strin
         // wait for response and parse
         if (wait()) {
 #if defined(ENABLE_SSL)
-            if (m_enableSSL) {
+            if (s_enableSSL) {
                 sslClient->close();
                 delete sslClient;
             } else {
@@ -234,7 +234,7 @@ int RESTClient::send(const std::string& address, uint32_t port, const std::strin
         }
 
         json::object rsp = json::object();
-        if (!parseResponseBody(m_response, rsp)) {
+        if (!parseResponseBody(s_response, rsp)) {
             return ERRNO_BAD_API_RESPONSE;
         }
 
@@ -245,7 +245,7 @@ int RESTClient::send(const std::string& address, uint32_t port, const std::strin
         }
         else {
 #if defined(ENABLE_SSL)
-            if (m_enableSSL) {
+            if (s_enableSSL) {
                 sslClient->close();
                 delete sslClient;
             } else {
@@ -259,7 +259,7 @@ int RESTClient::send(const std::string& address, uint32_t port, const std::strin
         }
 
 #if defined(ENABLE_SSL)
-        if (m_enableSSL) {
+        if (s_enableSSL) {
             sslClient->close();
             delete sslClient;
         } else {
@@ -272,7 +272,7 @@ int RESTClient::send(const std::string& address, uint32_t port, const std::strin
 
         // reset the HTTP client and setup for actual payload request
 #if defined(ENABLE_SSL)
-        if (m_enableSSL) {
+        if (s_enableSSL) {
             sslClient = new SecureHTTPClient<RESTDispatcherType>(address, port);
             if (!sslClient->open()) {
                 delete sslClient;
@@ -296,7 +296,7 @@ int RESTClient::send(const std::string& address, uint32_t port, const std::strin
         httpPayload.headers.add("X-DVM-Auth-Token", token);
         httpPayload.payload(payload);
 #if defined(ENABLE_SSL)
-        if (m_enableSSL) {
+        if (s_enableSSL) {
             sslClient->request(httpPayload);
         } else {
 #endif // ENABLE_SSL
@@ -308,7 +308,7 @@ int RESTClient::send(const std::string& address, uint32_t port, const std::strin
         // wait for response and parse
         if (wait()) {
 #if defined(ENABLE_SSL)
-            if (m_enableSSL) {
+            if (s_enableSSL) {
                 sslClient->close();
                 delete sslClient;
             } else {
@@ -322,25 +322,25 @@ int RESTClient::send(const std::string& address, uint32_t port, const std::strin
         }
 
         response = json::object();
-        if (!parseResponseBody(m_response, response)) {
+        if (!parseResponseBody(s_response, response)) {
             return ERRNO_BAD_API_RESPONSE;
         }
 
         ret = response["status"].get<int>();
-        if (m_console) {
-            fprintf(stdout, "%s\r\n", m_response.content.c_str());
+        if (s_console) {
+            fprintf(stdout, "%s\r\n", s_response.content.c_str());
         }
         else {
-            if (m_debug) {
-                if (m_response.content.size() < 4095) {
-                    ::LogDebug(LOG_REST, "REST Response: %s", m_response.content.c_str());
+            if (s_debug) {
+                if (s_response.content.size() < 4095) {
+                    ::LogDebug(LOG_REST, "REST Response: %s", s_response.content.c_str());
                 }
                 // bryanb: this will cause REST responses >4095 characters to simply not print...
             }
         }
 
 #if defined(ENABLE_SSL)
-        if (m_enableSSL) {
+        if (s_enableSSL) {
             sslClient->close();
             delete sslClient;
         } else {
@@ -353,7 +353,7 @@ int RESTClient::send(const std::string& address, uint32_t port, const std::strin
     }
     catch (std::exception&) {
 #if defined(ENABLE_SSL)
-        if (m_enableSSL) {
+        if (s_enableSSL) {
             if (sslClient != nullptr) {
                 delete sslClient;
             }
@@ -379,18 +379,18 @@ int RESTClient::send(const std::string& address, uint32_t port, const std::strin
 
 void RESTClient::responseHandler(const HTTPPayload& request, HTTPPayload& reply)
 {
-    m_responseAvailable = true;
-    m_response = request;
+    s_responseAvailable = true;
+    s_response = request;
 }
 
 /* Helper to wait for a HTTP response. */
 
 bool RESTClient::wait(const int t)
 {
-    m_responseAvailable = false;
+    s_responseAvailable = false;
 
     int timeout = t;
-    while (!m_responseAvailable && timeout > 0) {
+    while (!s_responseAvailable && timeout > 0) {
         timeout--;
         Thread::sleep(1);
     }

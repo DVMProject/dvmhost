@@ -68,7 +68,7 @@ void OSP_GRP_VCH_GRANT_UPD::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
         tsbkValue = m_grpVchId;                                                     // Channel ID (A)
     }
     else {
-        tsbkValue = m_siteData.channelId();                                         // Channel ID (Site)
+        tsbkValue = s_siteData.channelId();                                         // Channel ID (Site)
     }
     tsbkValue = (tsbkValue << 12) + m_grpVchNo;                                     // Channel Number (A)
     tsbkValue = (tsbkValue << 16) + m_dstId;                                        // Talkgroup Address (A)
@@ -77,7 +77,7 @@ void OSP_GRP_VCH_GRANT_UPD::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
         tsbkValue = (tsbkValue << 4) + m_grpVchIdB;                                 // Channel ID (B)
     }
     else {
-        tsbkValue = (tsbkValue << 4) + m_siteData.channelId();                      // Channel ID (Site)
+        tsbkValue = (tsbkValue << 4) + s_siteData.channelId();                      // Channel ID (Site)
     }
     tsbkValue = (tsbkValue << 12) + m_grpVchNoB;                                    // Channel Number (A)
     tsbkValue = (tsbkValue << 16) + m_dstIdB;                                       // Talkgroup Address (B)

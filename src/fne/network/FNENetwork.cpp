@@ -3007,5 +3007,5 @@ void FNENetwork::processTEKResponse(p25::kmm::KeyItem* rspKi, uint8_t algId, uin
     for (auto peerId : peersToRemove)
         m_peerReplicaKeyQueue.erase(peerId);
 
-    m_keyQueueMutex.unlock();
+    s_keyQueueMutex.unlock();
 }

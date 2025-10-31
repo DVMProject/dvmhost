@@ -25,9 +25,9 @@ using namespace p25::lc::tsbk;
 // ---------------------------------------------------------------------------
 
 #if FORCE_TSBK_CRC_WARN
-bool TSBKFactory::m_warnCRC = true;
+bool TSBKFactory::s_warnCRC = true;
 #else
-bool TSBKFactory::m_warnCRC = false;
+bool TSBKFactory::s_warnCRC = false;
 #endif
 
 // ---------------------------------------------------------------------------
@@ -58,7 +58,7 @@ std::unique_ptr<TSBK> TSBKFactory::createTSBK(const uint8_t* data, bool rawTSBK)
 
         bool ret = edac::CRC::checkCCITT162(tsbk, P25_TSBK_LENGTH_BYTES);
         if (!ret) {
-            if (m_warnCRC) {
+            if (s_warnCRC) {
                 // if we're already warning instead of erroring CRC, don't announce invalid CRC in the 
                 // case where no CRC is defined
                 if ((tsbk[P25_TSBK_LENGTH_BYTES - 2U] != 0x00U) && (tsbk[P25_TSBK_LENGTH_BYTES - 1U] != 0x00U)) {
@@ -87,7 +87,7 @@ std::unique_ptr<TSBK> TSBKFactory::createTSBK(const uint8_t* data, bool rawTSBK)
             if (ret) {
                 ret = edac::CRC::checkCCITT162(tsbk, P25_TSBK_LENGTH_BYTES);
                 if (!ret) {
-                    if (m_warnCRC) {
+                    if (s_warnCRC) {
                         LogWarning(LOG_P25, "TSBKFactory::createTSBK(), failed CRC CCITT-162 check");
                         ret = true; // ignore CRC error
                     }

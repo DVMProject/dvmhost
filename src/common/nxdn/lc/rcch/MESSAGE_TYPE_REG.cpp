@@ -60,9 +60,9 @@ void MESSAGE_TYPE_REG::encode(uint8_t* data, uint32_t length, uint32_t offset)
     ::memset(rcch, 0x00U, NXDN_RCCH_LC_LENGTH_BYTES + 4U);
 
     rcch[1U] = (m_regOption << 3) +                                                 // Registration Option
-            ((m_siteData.locId() >> 22U) & 0x03U);                                  // Location ID
+            ((s_siteData.locId() >> 22U) & 0x03U);                                  // Location ID
 
-    uint16_t systemCode = (m_siteData.locId() >> 12U) << 7U;
+    uint16_t systemCode = (s_siteData.locId() >> 12U) << 7U;
     rcch[2U] = (systemCode >> 8U) & 0x03U;                                          // ...
     rcch[3U] = systemCode & 0xFFU;                                                  // ...
 

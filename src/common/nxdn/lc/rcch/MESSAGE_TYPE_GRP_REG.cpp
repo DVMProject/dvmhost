@@ -58,8 +58,8 @@ void MESSAGE_TYPE_GRP_REG::encode(uint8_t* data, uint32_t length, uint32_t offse
     rcch[4U] = (m_dstId >> 8U) & 0xFFU;                                             // Target Radio Address
     rcch[5U] = (m_dstId >> 0U) & 0xFFU;                                             // ...
     rcch[6U] = m_causeRsp;                                                          // Cause (MM)
-    rcch[8U] = (m_siteData.locId() >> 8) & 0xFFU;                                   // Location ID
-    rcch[9U] = (m_siteData.locId() >> 0) & 0xFFU;                                   // ...
+    rcch[8U] = (s_siteData.locId() >> 8) & 0xFFU;                                   // Location ID
+    rcch[9U] = (s_siteData.locId() >> 0) & 0xFFU;                                   // ...
 
     RCCH::encode(data, rcch, length, offset);
 }

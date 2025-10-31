@@ -60,7 +60,7 @@ void MBT_OSP_GRP_VCH_GRANT::encodeMBT(data::DataHeader& dataHeader, uint8_t* pdu
         txFrequency = (txFrequency << 4) + m_grpVchId;                              // Tx Channel ID
     }
     else {
-        txFrequency = (txFrequency << 4) + m_siteData.channelId();                  // Tx Channel ID
+        txFrequency = (txFrequency << 4) + s_siteData.channelId();                  // Tx Channel ID
     }
     txFrequency = (txFrequency << 12) + m_grpVchNo;                                 // Tx Channel Number
 
@@ -70,7 +70,7 @@ void MBT_OSP_GRP_VCH_GRANT::encodeMBT(data::DataHeader& dataHeader, uint8_t* pdu
         rxFrequency = (rxFrequency << 4) + m_rxGrpVchId;                            // Rx Channel ID
     }
     else {
-        rxFrequency = (rxFrequency << 4) + m_siteData.channelId();                  // Rx Channel ID
+        rxFrequency = (rxFrequency << 4) + s_siteData.channelId();                  // Rx Channel ID
     }
     rxFrequency = (rxFrequency << 12) + m_rxGrpVchNo;                               // Rx Channel Number
 

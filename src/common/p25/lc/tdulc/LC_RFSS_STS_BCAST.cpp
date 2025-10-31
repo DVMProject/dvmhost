@@ -49,13 +49,13 @@ void LC_RFSS_STS_BCAST::encode(uint8_t* data)
 
     m_implicit = true;
 
-    rsValue = m_siteData.lra();                                                     // Location Registration Area
-    rsValue = (rsValue << 12) + m_siteData.sysId();                                 // System ID
-    rsValue = (rsValue << 8) + m_siteData.rfssId();                                 // RF Sub-System ID
-    rsValue = (rsValue << 8) + m_siteData.siteId();                                 // Site ID
-    rsValue = (rsValue << 4) + m_siteData.channelId();                              // Channel ID
-    rsValue = (rsValue << 12) + m_siteData.channelNo();                             // Channel Number
-    rsValue = (rsValue << 8) + m_siteData.serviceClass();                           // System Service Class
+    rsValue = s_siteData.lra();                                                     // Location Registration Area
+    rsValue = (rsValue << 12) + s_siteData.sysId();                                 // System ID
+    rsValue = (rsValue << 8) + s_siteData.rfssId();                                 // RF Sub-System ID
+    rsValue = (rsValue << 8) + s_siteData.siteId();                                 // Site ID
+    rsValue = (rsValue << 4) + s_siteData.channelId();                              // Channel ID
+    rsValue = (rsValue << 12) + s_siteData.channelNo();                             // Channel Number
+    rsValue = (rsValue << 8) + s_siteData.serviceClass();                           // System Service Class
 
     std::unique_ptr<uint8_t[]> rs = TDULC::fromValue(rsValue);
     TDULC::encode(data, rs.get());

@@ -45,7 +45,7 @@ void OSP_SYS_SRV_BCAST::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 {
     assert(data != nullptr);
 
-    const uint32_t services = (m_siteData.netActive()) ? SystemService::NET_ACTIVE : 0U | SYS_SRV_DEFAULT;
+    const uint32_t services = (s_siteData.netActive()) ? SystemService::NET_ACTIVE : 0U | SYS_SRV_DEFAULT;
 
     ulong64_t tsbkValue = 0U;
 

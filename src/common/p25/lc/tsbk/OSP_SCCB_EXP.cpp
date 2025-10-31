@@ -49,8 +49,8 @@ void OSP_SCCB_EXP::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 
     ulong64_t tsbkValue = 0U;
 
-    tsbkValue = m_siteData.rfssId();                                                // RF Sub-System ID
-    tsbkValue = (tsbkValue << 8) + m_siteData.siteId();                             // Site ID
+    tsbkValue = s_siteData.rfssId();                                                // RF Sub-System ID
+    tsbkValue = (tsbkValue << 8) + s_siteData.siteId();                             // Site ID
 
     tsbkValue = (tsbkValue << 4) + m_sccbChannelId1;                                // Channel (T) ID
     tsbkValue = (tsbkValue << 12) + m_sccbChannelNo;                                // Channel (T) Number
@@ -58,7 +58,7 @@ void OSP_SCCB_EXP::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
     tsbkValue = (tsbkValue << 12) + m_sccbChannelNo;                                // Channel (R) Number
 
     if (m_sccbChannelId1 > 0) {
-        tsbkValue = (tsbkValue << 8) + m_siteData.serviceClass();                   // System Service Class
+        tsbkValue = (tsbkValue << 8) + s_siteData.serviceClass();                   // System Service Class
     }
     else {
         tsbkValue = (tsbkValue << 8) + (ServiceClass::INVALID);                     // System Service Class

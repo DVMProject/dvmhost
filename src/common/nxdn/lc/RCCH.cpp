@@ -22,10 +22,10 @@ using namespace nxdn::lc;
 //  Static Class Members
 // ---------------------------------------------------------------------------
 
-bool RCCH::m_verbose = false;
+bool RCCH::s_verbose = false;
 
-uint8_t* RCCH::m_siteCallsign = nullptr;
-SiteData RCCH::m_siteData = SiteData();
+uint8_t* RCCH::s_siteCallsign = nullptr;
+SiteData RCCH::s_siteData = SiteData();
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -51,9 +51,9 @@ RCCH::RCCH() :
     m_transmissionMode(TransmissionMode::MODE_4800),
     m_siteIdenEntry()
 {
-    if (m_siteCallsign == nullptr) {
-        m_siteCallsign = new uint8_t[CALLSIGN_LENGTH_BYTES];
-        ::memset(m_siteCallsign, 0x00U, CALLSIGN_LENGTH_BYTES);
+    if (s_siteCallsign == nullptr) {
+        s_siteCallsign = new uint8_t[CALLSIGN_LENGTH_BYTES];
+        ::memset(s_siteCallsign, 0x00U, CALLSIGN_LENGTH_BYTES);
     }
 }
 
@@ -82,19 +82,19 @@ std::string RCCH::toString(bool isp)
 
 void RCCH::setCallsign(std::string callsign)
 {
-    if (m_siteCallsign == nullptr) {
-        m_siteCallsign = new uint8_t[CALLSIGN_LENGTH_BYTES];
-        ::memset(m_siteCallsign, 0x00U, CALLSIGN_LENGTH_BYTES);
+    if (s_siteCallsign == nullptr) {
+        s_siteCallsign = new uint8_t[CALLSIGN_LENGTH_BYTES];
+        ::memset(s_siteCallsign, 0x00U, CALLSIGN_LENGTH_BYTES);
     }
 
     uint32_t idLength = callsign.length();
     if (idLength > 0) {
-        ::memset(m_siteCallsign, 0x20U, CALLSIGN_LENGTH_BYTES);
+        ::memset(s_siteCallsign, 0x20U, CALLSIGN_LENGTH_BYTES);
 
         if (idLength > CALLSIGN_LENGTH_BYTES)
             idLength = CALLSIGN_LENGTH_BYTES;
         for (uint32_t i = 0; i < idLength; i++)
-            m_siteCallsign[i] = callsign[i];
+            s_siteCallsign[i] = callsign[i];
     }
 }
 
@@ -114,7 +114,7 @@ void RCCH::decode(const uint8_t* data, uint8_t* rcch, uint32_t length, uint32_t 
         WRITE_BIT(rcch, i, b);
     }
 
-    if (m_verbose) {
+    if (s_verbose) {
         Utils::dump(2U, "NXDN, RCCH::decode(), Decoded RCCH Data", rcch, NXDN_RCCH_LC_LENGTH_BYTES);
     }
 
@@ -137,7 +137,7 @@ void RCCH::encode(uint8_t* data, const uint8_t* rcch, uint32_t length, uint32_t 
         data[0U] = m_messageType & 0x3FU;                                           // Message Type
     }
 
-    if (m_verbose) {
+    if (s_verbose) {
         Utils::dump(2U, "NXDN, RCCH::encode(), Encoded RCCH Data", data, NXDN_RCCH_LC_LENGTH_BYTES);
     }
 }

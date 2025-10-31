@@ -56,7 +56,7 @@ using namespace network::udp;
 //  Static Class Members
 // ---------------------------------------------------------------------------
 
-std::mutex HostPatch::m_networkMutex;
+std::mutex HostPatch::s_networkMutex;
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -247,12 +247,12 @@ int HostPatch::run()
         // ------------------------------------------------------
 
         if (m_network != nullptr) {
-            std::lock_guard<std::mutex> lock(HostPatch::m_networkMutex);
+            std::lock_guard<std::mutex> lock(HostPatch::s_networkMutex);
             m_network->clock(ms);
         }
 
         if (m_mmdvmP25Reflector) {
-            std::lock_guard<std::mutex> lock(HostPatch::m_networkMutex);
+            std::lock_guard<std::mutex> lock(HostPatch::s_networkMutex);
             m_mmdvmP25Net->clock(ms);
         }
 
@@ -1619,7 +1619,7 @@ void* HostPatch::threadNetworkProcess(void* arg)
             uint32_t length = 0U;
             bool netReadRet = false;
             if (patch->m_digiMode == TX_MODE_DMR) {
-                std::lock_guard<std::mutex> lock(HostPatch::m_networkMutex);
+                std::lock_guard<std::mutex> lock(HostPatch::s_networkMutex);
                 UInt8Array dmrBuffer = patch->m_network->readDMR(netReadRet, length);
                 if (netReadRet) {
                     patch->processDMRNetwork(dmrBuffer.get(), length);
@@ -1627,7 +1627,7 @@ void* HostPatch::threadNetworkProcess(void* arg)
             }
 
             if (patch->m_digiMode == TX_MODE_P25) {
-                std::lock_guard<std::mutex> lock(HostPatch::m_networkMutex);
+                std::lock_guard<std::mutex> lock(HostPatch::s_networkMutex);
                 UInt8Array p25Buffer = patch->m_network->readP25(netReadRet, length);
                 if (netReadRet) {
                     patch->processP25Network(p25Buffer.get(), length);
@@ -1692,7 +1692,7 @@ void* HostPatch::threadMMDVMProcess(void* arg)
             stopWatch.start();
 
             if (patch->m_digiMode == TX_MODE_P25) {
-                std::lock_guard<std::mutex> lock(HostPatch::m_networkMutex);
+                std::lock_guard<std::mutex> lock(HostPatch::s_networkMutex);
 
                 DECLARE_UINT8_ARRAY(buffer, 100U);
                 uint32_t len = patch->m_mmdvmP25Net->read(buffer, 100U);

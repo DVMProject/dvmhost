@@ -53,8 +53,8 @@ void OSP_MOT_GRG_VCH_GRANT::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 
     if (m_patchSuperGroupId != 0U) {
         tsbkValue = 0U;                                                             // Priority
-        tsbkValue = (tsbkValue << 4) + m_siteData.channelId();                      // Channel ID
-        tsbkValue = (tsbkValue << 12) + m_siteData.channelNo();                     // Channel Number
+        tsbkValue = (tsbkValue << 4) + s_siteData.channelId();                      // Channel ID
+        tsbkValue = (tsbkValue << 12) + s_siteData.channelNo();                     // Channel Number
         tsbkValue = (tsbkValue << 16) + m_patchSuperGroupId;                        // Patch Supergroup Address
         tsbkValue = (tsbkValue << 24) + m_srcId;                                    // Source Radio Address
     }

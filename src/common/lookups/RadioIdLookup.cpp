@@ -24,8 +24,8 @@ using namespace lookups;
 //  Static Class Members
 // ---------------------------------------------------------------------------
 
-std::mutex RadioIdLookup::m_mutex;
-bool RadioIdLookup::m_locked = false;
+std::mutex RadioIdLookup::s_mutex;
+bool RadioIdLookup::s_locked = false;
 
 // ---------------------------------------------------------------------------
 //  Macros
@@ -33,16 +33,16 @@ bool RadioIdLookup::m_locked = false;
 
 // Lock the table.
 #define __LOCK_TABLE()                          \
-    std::lock_guard<std::mutex> lock(m_mutex);  \
-    m_locked = true;
+    std::lock_guard<std::mutex> lock(s_mutex);  \
+    s_locked = true;
 
 // Unlock the table.
-#define __UNLOCK_TABLE() m_locked = false;
+#define __UNLOCK_TABLE() s_locked = false;
 
 // Spinlock wait for table to be read unlocked.
 #define __SPINLOCK()                            \
-    if (m_locked) {                             \
-        while (m_locked)                        \
+    if (s_locked) {                             \
+        while (s_locked)                        \
             Thread::sleep(2U);                  \
     }
 
@@ -259,7 +259,7 @@ bool RadioIdLookup::save(bool quiet)
     // Counter for lines written
     unsigned int lines = 0;
 
-    std::lock_guard<std::mutex> lock(m_mutex);
+    std::lock_guard<std::mutex> lock(s_mutex);
 
     // String for writing
     std::string line;

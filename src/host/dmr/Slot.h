@@ -444,39 +444,39 @@ namespace dmr
         bool m_verbose;
         bool m_debug;
 
-        static Control* m_dmr;
+        static Control* s_dmr;
 
-        static bool m_authoritative;
+        static bool s_authoritative;
 
-        static uint32_t m_colorCode;
+        static uint32_t s_colorCode;
 
-        static SiteData m_siteData;
-        static uint32_t m_channelNo;
+        static SiteData s_siteData;
+        static uint32_t s_channelNo;
 
-        static bool m_embeddedLCOnly;
-        static bool m_dumpTAData;
+        static bool s_embeddedLCOnly;
+        static bool s_dumpTAData;
 
-        static modem::Modem* m_modem;
-        static network::Network* m_network;
+        static modem::Modem* s_modem;
+        static network::Network* s_network;
 
-        static bool m_duplex;
+        static bool s_duplex;
 
-        static ::lookups::IdenTableLookup* m_idenTable;
-        static ::lookups::RadioIdLookup* m_ridLookup;
-        static ::lookups::TalkgroupRulesLookup* m_tidLookup;
-        static lookups::DMRAffiliationLookup* m_affiliations;
-        static ::lookups::VoiceChData m_controlChData;
+        static ::lookups::IdenTableLookup* s_idenTable;
+        static ::lookups::RadioIdLookup* s_ridLookup;
+        static ::lookups::TalkgroupRulesLookup* s_tidLookup;
+        static lookups::DMRAffiliationLookup* s_affiliations;
+        static ::lookups::VoiceChData s_controlChData;
 
-        static ::lookups::IdenTable m_idenEntry;
+        static ::lookups::IdenTable s_idenEntry;
 
-        static uint32_t m_hangCount;
+        static uint32_t s_hangCount;
 
-        static ::lookups::RSSIInterpolator* m_rssiMapper;
+        static ::lookups::RSSIInterpolator* s_rssiMapper;
 
-        static uint32_t m_jitterTime;
-        static uint32_t m_jitterSlots;
+        static uint32_t s_jitterTime;
+        static uint32_t s_jitterSlots;
 
-        static uint8_t* m_idle;
+        static uint8_t* s_idle;
 
         /**
          * @brief Short LC Activity Type
@@ -488,18 +488,18 @@ namespace dmr
             CSBK        //!< Slot Activity Type - CSBK
         };
 
-        static defines::FLCO::E m_flco1;
-        static uint8_t m_id1;
-        static SLCO_ACT_TYPE m_actType1;
+        static defines::FLCO::E s_flco1;
+        static uint8_t s_id1;
+        static SLCO_ACT_TYPE s_actType1;
 
-        static defines::FLCO::E m_flco2;
-        static uint8_t m_id2;
-        static SLCO_ACT_TYPE m_actType2;
+        static defines::FLCO::E s_flco2;
+        static uint8_t s_id2;
+        static SLCO_ACT_TYPE s_actType2;
 
-        static bool m_verifyReg;
+        static bool s_verifyReg;
 
-        static uint8_t m_alohaNRandWait;
-        static uint8_t m_alohaBackOff;
+        static uint8_t s_alohaNRandWait;
+        static uint8_t s_alohaBackOff;
 
         /**
          * @brief Add data frame to the data ring buffer.

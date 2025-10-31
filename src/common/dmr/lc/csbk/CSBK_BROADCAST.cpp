@@ -142,11 +142,11 @@ void CSBK_BROADCAST::encode(uint8_t* data)
     break;
     case BroadcastAnncType::SITE_PARMS:
         // Broadcast Params 1
-        csbkValue = (csbkValue << 14) + m_siteData.systemIdentity(true);            // Site Identity (Broadcast Params 1)
+        csbkValue = (csbkValue << 14) + s_siteData.systemIdentity(true);            // Site Identity (Broadcast Params 1)
 
-        csbkValue = (csbkValue << 1) + ((m_siteData.requireReg()) ? 1U : 0U);       // Require Registration
+        csbkValue = (csbkValue << 1) + ((s_siteData.requireReg()) ? 1U : 0U);       // Require Registration
         csbkValue = (csbkValue << 4) + (m_backoffNo & 0x0FU);                       // Backoff Number
-        csbkValue = (csbkValue << 16) + m_siteData.systemIdentity();                // Site Identity
+        csbkValue = (csbkValue << 16) + s_siteData.systemIdentity();                // Site Identity
 
         // Broadcast Params 2
         csbkValue = (csbkValue << 1) + 0U;                                          // Roaming TG Subscription/Attach

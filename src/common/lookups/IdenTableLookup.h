@@ -160,7 +160,7 @@ namespace lookups
         bool save(bool quiet = false) override;
 
     private:
-        static std::mutex m_mutex;
+        static std::mutex s_mutex;
     };
 } // namespace lookups
 

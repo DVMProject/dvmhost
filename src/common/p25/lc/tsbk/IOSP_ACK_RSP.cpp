@@ -63,8 +63,8 @@ void IOSP_ACK_RSP::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
     tsbkValue |= (m_aivFlag) ? 0x80U : 0x00U;                                       // Additional Info. Valid Flag
     tsbkValue |= (m_extendedAddrFlag) ? 0x40U : 0x00U;                              // Extended Addressing Flag
     if (m_aivFlag && m_extendedAddrFlag) {
-        tsbkValue = (tsbkValue << 20) + m_siteData.netId();                         // Network ID
-        tsbkValue = (tsbkValue << 12) + m_siteData.sysId();                         // System ID
+        tsbkValue = (tsbkValue << 20) + s_siteData.netId();                         // Network ID
+        tsbkValue = (tsbkValue << 12) + s_siteData.sysId();                         // System ID
     }
     else {
         tsbkValue = (tsbkValue << 32) + m_dstId;                                    // Target Radio Address

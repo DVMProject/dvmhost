@@ -108,17 +108,17 @@ namespace p25
              * @brief Gets the flag indicating verbose log output.
              * @returns bool True, if the TSBK is verbose logging, otherwise false.
              */
-            static bool getVerbose() { return m_verbose; }
+            static bool getVerbose() { return s_verbose; }
             /**
              * @brief Sets the flag indicating verbose log output.
              * @param verbose Flag indicating verbose log output.
              */
-            static void setVerbose(bool verbose) { m_verbose = verbose; }
+            static void setVerbose(bool verbose) { s_verbose = verbose; }
             /**
              * @brief Sets the flag indicating CRC-errors should be warnings and not errors.
              * @param warnCRC Flag indicating CRC-errors should be treated as warnings.
              */
-            static void setWarnCRC(bool warnCRC) { m_warnCRC = warnCRC; }
+            static void setWarnCRC(bool warnCRC) { s_warnCRC = warnCRC; }
 
             /** @name Local Site data */
             /**
@@ -131,12 +131,12 @@ namespace p25
              * @brief Gets the local site data.
              * @returns SiteData Currently set site data for the TSBK class.
              */
-            static SiteData getSiteData() { return m_siteData; }
+            static SiteData getSiteData() { return s_siteData; }
             /**
              * @brief Sets the local site data.
              * @param siteData Site data to set for the TSBK class.
              */
-            static void setSiteData(SiteData siteData) { m_siteData = siteData; }
+            static void setSiteData(SiteData siteData) { s_siteData = siteData; }
             /** @} */
 
         public:
@@ -237,12 +237,12 @@ namespace p25
             edac::RS634717 m_rs;
             edac::Trellis m_trellis;
 
-            static bool m_verbose;
-            static bool m_warnCRC;
+            static bool s_verbose;
+            static bool s_warnCRC;
 
             // Local Site data
-            static uint8_t* m_siteCallsign;
-            static SiteData m_siteData;
+            static uint8_t* s_siteCallsign;
+            static SiteData s_siteData;
 
             /**
              * @brief Internal helper to convert payload bytes to a 64-bit long value.

@@ -25,9 +25,9 @@ using namespace dmr::lc;
 //  Static Class Members
 // ---------------------------------------------------------------------------
 
-bool CSBK::m_verbose = false;
+bool CSBK::s_verbose = false;
 
-SiteData CSBK::m_siteData = SiteData();
+SiteData CSBK::s_siteData = SiteData();
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -271,7 +271,7 @@ bool CSBK::decode(const uint8_t* data, uint8_t* payload)
             break;
     }
 
-    if (m_verbose) {
+    if (s_verbose) {
         Utils::dump(2U, "CSBK::decode(), Decoded CSBK", csbk, DMR_CSBK_LENGTH_BYTES);
     }
 
@@ -339,7 +339,7 @@ void CSBK::encode(uint8_t* data, const uint8_t* payload)
             break;
     }
 
-    if (m_verbose) {
+    if (s_verbose) {
         Utils::dump(2U, "CSBK::encode(), Encoded CSBK", csbk, DMR_CSBK_LENGTH_BYTES);
     }
 

@@ -672,7 +672,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
                     m_rfLC.setLCO(LCO::RFSS_STS_BCAST);
                 }
                 else {
-                    std::lock_guard<std::mutex> lock(m_p25->m_activeTGLock);
+                    std::lock_guard<std::mutex> lock(m_p25->s_activeTGLock);
                     if (m_p25->m_activeTG.size() > 0) {
                         if (m_grpUpdtCount > m_p25->m_activeTG.size())
                             m_grpUpdtCount = 0U;
@@ -2026,7 +2026,7 @@ void Voice::writeNet_LDU1()
             m_netLC.setLCO(LCO::RFSS_STS_BCAST);
         }
         else {
-            std::lock_guard<std::mutex> lock(m_p25->m_activeTGLock);
+            std::lock_guard<std::mutex> lock(m_p25->s_activeTGLock);
             if (m_p25->m_activeTG.size() > 0) {
                 if (m_grpUpdtCount > m_p25->m_activeTG.size())
                     m_grpUpdtCount = 0U;

@@ -64,11 +64,11 @@ namespace network
         /**
          * @brief Helper to lock the peer status mutex.
          */
-        void lockPeerStatus() { m_peerStatusMutex.lock(); }
+        void lockPeerStatus() { s_peerStatusMutex.lock(); }
         /**
          * @brief Helper to unlock the peer status mutex.
          */
-        void unlockPeerStatus() { m_peerStatusMutex.unlock(); }
+        void unlockPeerStatus() { s_peerStatusMutex.unlock(); }
 
         /**
          * @brief Map of peer status.
@@ -96,7 +96,7 @@ namespace network
         bool writeConfig() override;
 
     private:
-        static std::mutex m_peerStatusMutex;
+        static std::mutex s_peerStatusMutex;
         bool m_peerReplica;
 
         PacketBuffer m_tgidPkt;

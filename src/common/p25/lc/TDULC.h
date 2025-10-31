@@ -90,19 +90,19 @@ namespace p25
              * @brief Sets the flag indicating verbose log output.
              * @param verbose Flag indicating verbose log output.
              */
-            static void setVerbose(bool verbose) { m_verbose = verbose; }
+            static void setVerbose(bool verbose) { s_verbose = verbose; }
 
             /** @name Local Site data */
             /**
              * @brief Gets the local site data.
              * @returns SiteData Currently set site data for the TDULC class.
              */
-            static SiteData getSiteData() { return m_siteData; }
+            static SiteData getSiteData() { return s_siteData; }
             /**
              * @brief Sets the local site data.
              * @param siteData Site data to set for the TDULC class.
              */
-            static void setSiteData(SiteData siteData) { m_siteData = siteData; }
+            static void setSiteData(SiteData siteData) { s_siteData = siteData; }
             /** @} */
 
         public:
@@ -183,10 +183,10 @@ namespace p25
             bool m_implicit;
             uint32_t m_callTimer;
 
-            static bool m_verbose;
+            static bool s_verbose;
 
             // Local Site data
-            static SiteData m_siteData;
+            static SiteData s_siteData;
 
             /**
              * @brief Internal helper to convert payload bytes to a 64-bit long value.

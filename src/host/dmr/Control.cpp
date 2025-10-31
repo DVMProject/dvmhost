@@ -94,7 +94,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, ::lookups::VoiceChDa
 
     m_supervisor = supervisor;
 
-    Slot::m_verifyReg = dmrProtocol["verifyReg"].as<bool>(false);
+    Slot::s_verifyReg = dmrProtocol["verifyReg"].as<bool>(false);
 
     uint8_t nRandWait = (uint8_t)dmrProtocol["nRandWait"].as<uint32_t>(DEFAULT_NRAND_WAIT);
     if (nRandWait > 15U)
@@ -153,8 +153,8 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, ::lookups::VoiceChDa
     m_slot2->setNotifyCC(notifyCC);
 
     bool disableUnitRegTimeout = dmrProtocol["disableUnitRegTimeout"].as<bool>(false);
-    m_slot1->m_affiliations->setDisableUnitRegTimeout(disableUnitRegTimeout);
-    m_slot2->m_affiliations->setDisableUnitRegTimeout(disableUnitRegTimeout);
+    m_slot1->s_affiliations->setDisableUnitRegTimeout(disableUnitRegTimeout);
+    m_slot2->s_affiliations->setDisableUnitRegTimeout(disableUnitRegTimeout);
 
     /*
     ** Voice Silence and Frame Loss Thresholds
@@ -236,7 +236,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, ::lookups::VoiceChDa
         LogInfo("    Silence Threshold: %u (%.1f%%)", silenceThreshold, float(silenceThreshold) / 1.41F);
         LogInfo("    Frame Loss Threshold: %u", frameLossThreshold);
 
-        LogInfo("    Verify Registration: %s", Slot::m_verifyReg ? "yes" : "no");
+        LogInfo("    Verify Registration: %s", Slot::s_verifyReg ? "yes" : "no");
         LogInfo("    Conventional Network Grant Demand: %s", convNetGrantDemand ? "yes" : "no");
     }
 }
@@ -467,9 +467,9 @@ dmr::lookups::DMRAffiliationLookup* Control::affiliations()
 {
     switch (m_tsccSlotNo) {
     case 1U:
-        return m_slot1->m_affiliations;
+        return m_slot1->s_affiliations;
     case 2U:
-        return m_slot2->m_affiliations;
+        return m_slot2->s_affiliations;
     default:
         LogError(LOG_DMR, "DMR, invalid slot, slotNo = %u", m_tsccSlotNo);
         break;
@@ -769,7 +769,7 @@ void Control::processNetwork()
     if (m_enableTSCC) {
         Slot* tscc = getTSCCSlot();
         if (tscc != nullptr) {
-            if (!tscc->m_affiliations->isGranted(dstId)) {
+            if (!tscc->s_affiliations->isGranted(dstId)) {
                 tscc->m_control->writeRF_CSBK_Grant(srcId, dstId, 4U, (flco == FLCO::GROUP) ? true : false, true);
             }
         }

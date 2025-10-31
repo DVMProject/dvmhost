@@ -29,7 +29,7 @@ using namespace p25::lc;
 //  Static Class Members
 // ---------------------------------------------------------------------------
 
-SiteData LC::m_siteData = SiteData();
+SiteData LC::s_siteData = SiteData();
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -673,10 +673,10 @@ void LC::encodeLC(uint8_t* rs)
             break;
         case LCO::GROUP_UPDT:
             rs[0U] |= 0x40U;                                                        // Implicit Operation
-            rsValue = m_siteData.channelId();                                       // Group A - Channel ID
+            rsValue = s_siteData.channelId();                                       // Group A - Channel ID
             rsValue = (rsValue << 12) + m_grpVchNo;                                 // Group A - Channel Number
             rsValue = (rsValue << 16) + m_dstId;                                    // Group A - Talkgroup Address
-            rsValue = (rsValue << 4) + m_siteData.channelId();                      // Group B - Channel ID
+            rsValue = (rsValue << 4) + s_siteData.channelId();                      // Group B - Channel ID
             rsValue = (rsValue << 12) + m_grpVchNoB;                                // Group B - Channel Number
             rsValue = (rsValue << 16) + m_dstIdB;                                   // Group B - Talkgroup Address
             break;
@@ -716,13 +716,13 @@ void LC::encodeLC(uint8_t* rs)
             break;
         case LCO::RFSS_STS_BCAST:
             rs[0U] |= 0x40U;                                                        // Implicit Operation
-            rsValue = m_siteData.lra();                                             // Location Registration Area
-            rsValue = (rsValue << 12) + m_siteData.sysId();                         // System ID
-            rsValue = (rsValue << 8) + m_siteData.rfssId();                         // RF Sub-System ID
-            rsValue = (rsValue << 8) + m_siteData.siteId();                         // Site ID
-            rsValue = (rsValue << 4) + m_siteData.channelId();                      // Channel ID
-            rsValue = (rsValue << 12) + m_siteData.channelNo();                     // Channel Number
-            rsValue = (rsValue << 8) + m_siteData.serviceClass();                   // System Service Class
+            rsValue = s_siteData.lra();                                             // Location Registration Area
+            rsValue = (rsValue << 12) + s_siteData.sysId();                         // System ID
+            rsValue = (rsValue << 8) + s_siteData.rfssId();                         // RF Sub-System ID
+            rsValue = (rsValue << 8) + s_siteData.siteId();                         // Site ID
+            rsValue = (rsValue << 4) + s_siteData.channelId();                      // Channel ID
+            rsValue = (rsValue << 12) + s_siteData.channelNo();                     // Channel Number
+            rsValue = (rsValue << 8) + s_siteData.serviceClass();                   // System Service Class
             break;
         default:
             LogError(LOG_P25, "LC::encodeLC(), unknown LC value, mfId = $%02X, lco = $%02X", m_mfId, m_lco);
@@ -881,7 +881,7 @@ void LC::copy(const LC& data)
         m_gotUserAlias = false;
     }
 
-    m_siteData = data.m_siteData;
+    s_siteData = data.s_siteData;
 }
 
 /* Decode LDU hamming FEC. */

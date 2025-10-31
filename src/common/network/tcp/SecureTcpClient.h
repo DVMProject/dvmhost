@@ -244,11 +244,11 @@ namespace network
              * @brief Sets the hostname for the SSL certificate.
              * @param hostname Hostname.
              */
-            static void setHostname(std::string hostname) { m_sslHostname = hostname; }
+            static void setHostname(std::string hostname) { s_sslHostname = hostname; }
 
         private:
             sockaddr_storage m_sockaddr;
-            static std::string m_sslHostname;
+            static std::string s_sslHostname;
 
             SSL* m_pSSL;
             SSL_CTX* m_pSSLCtx;
@@ -284,7 +284,7 @@ namespace network
                 }
 
                 SSL_set_hostflags(m_pSSL, X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS);
-                if (!SSL_set1_host(m_pSSL, SecureTcpClient::m_sslHostname.c_str())) {
+                if (!SSL_set1_host(m_pSSL, SecureTcpClient::s_sslHostname.c_str())) {
                     LogError(LOG_NET, "Failed to set SSL hostname, %s err: %d", ERR_error_string(ERR_get_error(), NULL), errno);
                     throw std::runtime_error("Failed to set SSL hostname");
                 }

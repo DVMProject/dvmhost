@@ -50,9 +50,9 @@ void MESSAGE_TYPE_DST_ID_INFO::encode(uint8_t* data, uint32_t length, uint32_t o
     ::memset(rcch, 0x00U, NXDN_RCCH_LC_LENGTH_BYTES + 4U);
 
     rcch[1U] = 0xC0U + CALLSIGN_LENGTH_BYTES;                                       // Station ID Option - Start / End / Character Count
-    rcch[2U] = (m_siteCallsign[0]);                                                 // Character 0
+    rcch[2U] = (s_siteCallsign[0]);                                                 // Character 0
     for (uint8_t i = 1; i < CALLSIGN_LENGTH_BYTES; i++) {
-        rcch[i + 2U] = m_siteCallsign[i];                                           // Character 1 - 7
+        rcch[i + 2U] = s_siteCallsign[i];                                           // Character 1 - 7
     }
 
     RCCH::encode(data, rcch, length, offset);

@@ -59,7 +59,7 @@ void IOSP_U_REG::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
     ulong64_t tsbkValue = 0U;
 
     tsbkValue = (tsbkValue << 2) + (m_response & 0x3U);                             // Unit Registration Response
-    tsbkValue = (tsbkValue << 12) + m_siteData.sysId();                             // System ID
+    tsbkValue = (tsbkValue << 12) + s_siteData.sysId();                             // System ID
     tsbkValue = (tsbkValue << 24) + m_dstId;                                        // Source ID
     tsbkValue = (tsbkValue << 24) + m_srcId;                                        // Source Radio Address
 

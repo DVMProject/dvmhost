@@ -59,10 +59,10 @@ void LC_ADJ_STS_BCAST::encode(uint8_t* data)
 
     if ((m_adjRfssId != 0U) && (m_adjSiteId != 0U) && (m_adjChannelNo != 0U)) {
         if (m_adjSysId == 0U) {
-            m_adjSysId = m_siteData.sysId();
+            m_adjSysId = s_siteData.sysId();
         }
 
-        rsValue = m_siteData.lra();                                                 // Location Registration Area
+        rsValue = s_siteData.lra();                                                 // Location Registration Area
         rsValue = (rsValue << 12) + m_adjSysId;                                     // System ID
         rsValue = (rsValue << 8) + m_adjRfssId;                                     // RF Sub-System ID
         rsValue = (rsValue << 8) + m_adjSiteId;                                     // Site ID

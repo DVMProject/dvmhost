@@ -266,7 +266,7 @@ namespace log_stacktrace
         {
             bool success = true;
 
-            m_foreground = foreground;
+            s_foreground = foreground;
 
             const size_t stackSize = 1024 * 1024 * 8;
             m_stackContent.reset(static_cast<char *>(malloc(stackSize)));
@@ -368,7 +368,7 @@ namespace log_stacktrace
             p.color_mode = backward::ColorMode::never;
 
             log_internal::LogInternal(2U, "UNRECOVERABLE FATAL ERROR!");
-            if (m_foreground > 0) {
+            if (s_foreground > 0) {
                 p.print(st, stderr);
             }
 
@@ -407,7 +407,7 @@ namespace log_stacktrace
     private:
         backward::details::handle<char*> m_stackContent;
         bool m_loaded;
-        static bool m_foreground;
+        static bool s_foreground;
 
         /**
          * @brief Internal helper to handle a signal.
@@ -565,7 +565,7 @@ namespace log_stacktrace
         }
 
         std::thread m_reporterThread;
-        static bool m_foreground;
+        static bool s_foreground;
 
         // TODO: how not to hardcode these?
         static const constexpr int signalSkipRecs =
@@ -742,7 +742,7 @@ namespace log_stacktrace
         bool loaded() { return false; }
 
     private:
-        static bool m_foreground;
+        static bool s_foreground;
     };
 #endif // BACKWARD_SYSTEM_UNKNOWN
 #endif // !defined(CATCH2_TEST_COMPILATION)

@@ -301,7 +301,7 @@ namespace nxdn
 
         RingBuffer<uint8_t> m_txImmQueue;
         RingBuffer<uint8_t> m_txQueue;
-        static std::mutex m_queueLock;
+        static std::mutex s_queueLock;
 
         RPT_RF_STATE m_rfState;
         uint32_t m_rfLastDstId;

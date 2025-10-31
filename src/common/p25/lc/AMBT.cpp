@@ -113,7 +113,7 @@ bool AMBT::decode(const data::DataHeader& dataHeader, const data::DataBlock* blo
         dataOffset += P25_PDU_UNCONFIRMED_LENGTH_BYTES;
     }
 
-    if (m_verbose) {
+    if (s_verbose) {
         LogDebugEx(LOG_P25, "AMBT::decode()", "mfId = $%02X, lco = $%02X, ambt8 = $%02X, ambt9 = $%02X", m_mfId, m_lco, dataHeader.getAMBTField8(), dataHeader.getAMBTField9());
         Utils::dump(2U, "P25, AMBT::decode(), pduUserData", pduUserData, P25_PDU_UNCONFIRMED_LENGTH_BYTES * dataHeader.getBlocksToFollow());
     }

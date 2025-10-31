@@ -149,8 +149,8 @@ namespace network
         SpanningTree* m_parent;                   //!< Parent tree node. (i.e. master FNE above this)
         std::vector<SpanningTree*> m_children;    //!< Child tree nodes. (i.e. peer FNEs below this)
 
-        static std::unordered_map<uint32_t, SpanningTree*> m_SpanningTrees; //!< Static map of all trees by peer ID.
-        static uint8_t m_maxUpdatesBeforeReparent; //!< Maximum count of updates before allowing node reparenting.
+        static std::unordered_map<uint32_t, SpanningTree*> s_spanningTrees; //!< Static map of all trees by peer ID.
+        static uint8_t s_maxUpdatesBeforeReparent; //!< Maximum count of updates before allowing node reparenting.
 
         /**
          * @brief Peer Identity.

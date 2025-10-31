@@ -266,8 +266,8 @@ private:
 
     uint32_t m_usrpSeqNo;
 
-    static std::mutex m_audioMutex;
-    static std::mutex m_networkMutex;
+    static std::mutex s_audioMutex;
+    static std::mutex s_networkMutex;
 
 #if defined(_WIN32)
     void* m_decoderState;

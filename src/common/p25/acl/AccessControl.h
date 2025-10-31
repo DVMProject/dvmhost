@@ -67,8 +67,8 @@ namespace p25
             static bool tgidNonPreferred(uint32_t id);
 
         private:
-            static RadioIdLookup* m_ridLookup;
-            static TalkgroupRulesLookup* m_tidLookup;
+            static RadioIdLookup* s_ridLookup;
+            static TalkgroupRulesLookup* s_tidLookup;
         };
     } // namespace acl
 } // namespace p25

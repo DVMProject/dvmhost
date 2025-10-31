@@ -18,15 +18,15 @@ using namespace p25::acl;
 //  Static Class Members
 // ---------------------------------------------------------------------------
 
-RadioIdLookup* AccessControl::m_ridLookup;
-TalkgroupRulesLookup* AccessControl::m_tidLookup;
+RadioIdLookup* AccessControl::s_ridLookup;
+TalkgroupRulesLookup* AccessControl::s_tidLookup;
 
 /* Initializes the P25 access control. */
 
 void AccessControl::init(RadioIdLookup* ridLookup, TalkgroupRulesLookup* tidLookup)
 {
-    m_ridLookup = ridLookup;
-    m_tidLookup = tidLookup;
+    s_ridLookup = ridLookup;
+    s_tidLookup = tidLookup;
 }
 
 /* Helper to validate a source radio ID. */
@@ -34,8 +34,8 @@ void AccessControl::init(RadioIdLookup* ridLookup, TalkgroupRulesLookup* tidLook
 bool AccessControl::validateSrcId(uint32_t id)
 {
     // check if RID ACLs are enabled
-    if (!m_ridLookup->getACL()) {
-        RadioId rid = m_ridLookup->find(id);
+    if (!s_ridLookup->getACL()) {
+        RadioId rid = s_ridLookup->find(id);
         if (!rid.radioDefault() && !rid.radioEnabled()) {
             return false;
         }
@@ -44,7 +44,7 @@ bool AccessControl::validateSrcId(uint32_t id)
     }
 
     // lookup RID and perform test for validity
-    RadioId rid = m_ridLookup->find(id);
+    RadioId rid = s_ridLookup->find(id);
     if (!rid.radioEnabled())
         return false;
 
@@ -64,12 +64,12 @@ bool AccessControl::validateTGId(uint32_t id, bool allowZero)
         return true;
 
     // check if TID ACLs are enabled
-    if (!m_tidLookup->getACL()) {
+    if (!s_tidLookup->getACL()) {
         return true;
     }
 
     // lookup TID and perform test for validity
-    TalkgroupRuleGroupVoice tid = m_tidLookup->find(id);
+    TalkgroupRuleGroupVoice tid = s_tidLookup->find(id);
     if (tid.isInvalid())
         return false;
 
@@ -88,12 +88,12 @@ bool AccessControl::tgidNonPreferred(uint32_t id)
         return false;
 
     // check if TID ACLs are enabled
-    if (!m_tidLookup->getACL()) {
+    if (!s_tidLookup->getACL()) {
         return false;
     }
 
     // lookup TID and perform test for validity
-    TalkgroupRuleGroupVoice tid = m_tidLookup->find(id);
+    TalkgroupRuleGroupVoice tid = s_tidLookup->find(id);
     if (tid.config().nonPreferred())
         return true;
 

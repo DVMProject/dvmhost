@@ -63,7 +63,7 @@ void CSBK_ACK_RSP::encode(uint8_t* data)
         csbkValue = 0U;
     } else {
         csbkValue = (m_GI ? 0x40U : 0x00U) +                                        // Source Type
-            (m_siteData.siteId() & 0x3FU);                                          // Net + Site LSB
+            (s_siteData.siteId() & 0x3FU);                                          // Net + Site LSB
     }
     csbkValue = (csbkValue << 7) + (m_response & 0x7FU);                            // Response Information
     csbkValue = (csbkValue << 8) + (m_reason & 0xFFU);                              // Reason Code

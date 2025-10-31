@@ -237,7 +237,7 @@ namespace network
             uint32_t m_mtu;
 
             uint32_t m_id;
-            static uint32_t m_idSeq;
+            static uint32_t s_idSeq;
 
             /**
              * @brief Internal helper that performs a kernel IOCTL to get the IPv4 address by request.

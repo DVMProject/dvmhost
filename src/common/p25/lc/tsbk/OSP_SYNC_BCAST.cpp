@@ -64,8 +64,8 @@ void OSP_SYNC_BCAST::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 
     // determine LTO and direction (positive or negative)
     bool negativeLTO = false;
-    uint8_t lto = fabs(m_siteData.lto()) * 2U; // this will cause a bug for half-hour timezone intervals...
-    if (m_siteData.lto() < 0)
+    uint8_t lto = fabs(s_siteData.lto()) * 2U; // this will cause a bug for half-hour timezone intervals...
+    if (s_siteData.lto() < 0)
         negativeLTO = true;
 
     // mark the LTO as valid if its non-zero

@@ -122,13 +122,13 @@ private:
     uint32_t m_port;
     std::string m_password;
 
-    static bool m_console;
+    static bool s_console;
 
-    static bool m_responseAvailable;
-    static HTTPPayload m_response;
+    static bool s_responseAvailable;
+    static HTTPPayload s_response;
 
-    static bool m_enableSSL;
-    static bool m_debug;
+    static bool s_enableSSL;
+    static bool s_debug;
 };
 
 #endif // __REMOTE_COMMAND_H__

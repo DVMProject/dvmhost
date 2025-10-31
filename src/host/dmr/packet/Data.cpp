@@ -45,7 +45,7 @@ bool Data::process(uint8_t* data, uint32_t len)
     DataType::E dataType = (DataType::E)(data[1U] & 0x0FU);
 
     SlotType slotType;
-    slotType.setColorCode(m_slot->m_colorCode);
+    slotType.setColorCode(m_slot->s_colorCode);
     slotType.setDataType(dataType);
 
     if (dataType == DataType::TERMINATOR_WITH_LC) {
@@ -60,7 +60,7 @@ bool Data::process(uint8_t* data, uint32_t len)
         slotType.encode(data + 2U);
 
         // Convert the Data Sync to be from the BS or MS as needed
-        Sync::addDMRDataSync(data + 2U, m_slot->m_duplex);
+        Sync::addDMRDataSync(data + 2U, m_slot->s_duplex);
 
         if (!m_slot->m_rfTimeout) {
             data[0U] = modem::TAG_EOT;
@@ -68,8 +68,8 @@ bool Data::process(uint8_t* data, uint32_t len)
 
             m_slot->writeNetwork(data, DataType::TERMINATOR_WITH_LC, 0U);
 
-            if (m_slot->m_duplex) {
-                for (uint32_t i = 0U; i < m_slot->m_hangCount; i++)
+            if (m_slot->s_duplex) {
+                for (uint32_t i = 0U; i < m_slot->s_hangCount; i++)
                     m_slot->addFrame(data);
             }
         }
@@ -79,10 +79,10 @@ bool Data::process(uint8_t* data, uint32_t len)
         }
 
         // release trunked grant (if necessary)
-        Slot *m_tscc = m_slot->m_dmr->getTSCCSlot();
+        Slot *m_tscc = m_slot->s_dmr->getTSCCSlot();
         if (m_tscc != nullptr) {
             if (m_tscc->m_enableTSCC) {
-                m_tscc->m_affiliations->releaseGrant(m_slot->m_rfLC->getDstId(), false);
+                m_tscc->s_affiliations->releaseGrant(m_slot->m_rfLC->getDstId(), false);
                 m_slot->clearTSCCActivated();
             }
         }
@@ -100,7 +100,7 @@ bool Data::process(uint8_t* data, uint32_t len)
         LogInfoEx(LOG_RF, "DMR Slot %u, total frames: %d, total bits: %d, errors: %d, BER: %.4f%%",
             m_slot->m_slotNo, m_slot->m_rfFrames, m_slot->m_rfBits, m_slot->m_rfErrs, float(m_slot->m_rfErrs * 100U) / float(m_slot->m_rfBits));
 
-        m_slot->m_dmr->tsccClearActivatedSlot(m_slot->m_slotNo);
+        m_slot->s_dmr->tsccClearActivatedSlot(m_slot->m_slotNo);
 
         if (m_slot->m_rfTimeout) {
             m_slot->writeEndRF();
@@ -124,7 +124,7 @@ bool Data::process(uint8_t* data, uint32_t len)
         uint32_t srcId = m_rfDataHeader.getSrcId();
         uint32_t dstId = m_rfDataHeader.getDstId();
 
-        if (!m_slot->m_authoritative && m_slot->m_permittedDstId != dstId) {
+        if (!m_slot->s_authoritative && m_slot->m_permittedDstId != dstId) {
             if (!g_disableNonAuthoritativeLogging)
                 LogWarning(LOG_RF, "[NON-AUTHORITATIVE] Ignoring RF traffic, destination not permitted!");
             m_slot->m_rfState = RS_RF_LISTENING;
@@ -139,7 +139,7 @@ bool Data::process(uint8_t* data, uint32_t len)
         }
 
         if (m_slot->m_enableTSCC && dstId == m_slot->m_netLastDstId) {
-            if (m_slot->m_affiliations->isNetGranted(dstId)) {
+            if (m_slot->s_affiliations->isNetGranted(dstId)) {
                 LogWarning(LOG_RF, "DMR Slot %u, Traffic collision detect, preempting new RF traffic to existing granted network traffic (Are we in a voting condition?)", m_slot->m_slotNo);
                 m_slot->m_rfState = RS_RF_LISTENING;
                 return false;
@@ -222,12 +222,12 @@ bool Data::process(uint8_t* data, uint32_t len)
         slotType.encode(data + 2U);
 
         // Convert the Data Sync to be from the BS or MS as needed
-        Sync::addDMRDataSync(data + 2U, m_slot->m_duplex);
+        Sync::addDMRDataSync(data + 2U, m_slot->s_duplex);
 
         data[0U] = m_slot->m_rfFrames == 0U ? modem::TAG_EOT : modem::TAG_DATA;
         data[1U] = 0x00U;
 
-        if (m_slot->m_duplex && m_repeatDataPacket)
+        if (m_slot->s_duplex && m_repeatDataPacket)
             m_slot->addFrame(data);
 
         uint8_t controlByte = 0U;
@@ -319,11 +319,11 @@ bool Data::process(uint8_t* data, uint32_t len)
         slotType.encode(data + 2U);
 
         // convert the Data Sync to be from the BS or MS as needed
-        Sync::addDMRDataSync(data + 2U, m_slot->m_duplex);
+        Sync::addDMRDataSync(data + 2U, m_slot->s_duplex);
 
         m_slot->writeNetwork(data, dataType, 0U);
 
-        if (m_slot->m_duplex && m_repeatDataPacket) {
+        if (m_slot->s_duplex && m_repeatDataPacket) {
             m_slot->addFrame(data);
         }
 
@@ -357,19 +357,19 @@ void Data::processNetwork(const data::NetData& dmrData)
 
         // Regenerate the Slot Type
         SlotType slotType;
-        slotType.setColorCode(m_slot->m_colorCode);
+        slotType.setColorCode(m_slot->s_colorCode);
         slotType.setDataType(DataType::TERMINATOR_WITH_LC);
         slotType.encode(data + 2U);
 
         // Convert the Data Sync to be from the BS or MS as needed
-        Sync::addDMRDataSync(data + 2U, m_slot->m_duplex);
+        Sync::addDMRDataSync(data + 2U, m_slot->s_duplex);
 
         if (!m_slot->m_netTimeout) {
             data[0U] = modem::TAG_EOT;
             data[1U] = 0x00U;
 
-            if (m_slot->m_duplex) {
-                for (uint32_t i = 0U; i < m_slot->m_hangCount; i++)
+            if (m_slot->s_duplex) {
+                for (uint32_t i = 0U; i < m_slot->s_hangCount; i++)
                     m_slot->addFrame(data, true);
             }
             else {
@@ -383,10 +383,10 @@ void Data::processNetwork(const data::NetData& dmrData)
         }
 
         // release trunked grant (if necessary)
-        Slot *m_tscc = m_slot->m_dmr->getTSCCSlot();
+        Slot *m_tscc = m_slot->s_dmr->getTSCCSlot();
         if (m_tscc != nullptr) {
             if (m_tscc->m_enableTSCC) {
-                m_tscc->m_affiliations->releaseGrant(m_slot->m_netLC->getDstId(), false);
+                m_tscc->s_affiliations->releaseGrant(m_slot->m_netLC->getDstId(), false);
                 m_slot->clearTSCCActivated();
             }
         }
@@ -396,7 +396,7 @@ void Data::processNetwork(const data::NetData& dmrData)
         ::ActivityLog("DMR", false, "Slot %u network end of voice transmission, %.1f seconds, %u%% packet loss, BER: %.1f%%",
             m_slot->m_slotNo, float(m_slot->m_netFrames) / 16.667F, (m_slot->m_netLost * 100U) / m_slot->m_netFrames, float(m_slot->m_netErrs * 100U) / float(m_slot->m_netBits));
 
-        m_slot->m_dmr->tsccClearActivatedSlot(m_slot->m_slotNo);
+        m_slot->s_dmr->tsccClearActivatedSlot(m_slot->m_slotNo);
 
         m_slot->writeEndNet();
     }
@@ -415,7 +415,7 @@ void Data::processNetwork(const data::NetData& dmrData)
         uint32_t srcId = m_netDataHeader.getSrcId();
         uint32_t dstId = m_netDataHeader.getDstId();
 
-        if (!m_slot->m_authoritative && m_slot->m_permittedDstId != dstId) {
+        if (!m_slot->s_authoritative && m_slot->m_permittedDstId != dstId) {
             return;
         }
 
@@ -476,19 +476,19 @@ void Data::processNetwork(const data::NetData& dmrData)
 
         // Regenerate the Slot Type
         SlotType slotType;
-        slotType.setColorCode(m_slot->m_colorCode);
+        slotType.setColorCode(m_slot->s_colorCode);
         slotType.setDataType(DataType::DATA_HEADER);
         slotType.encode(data + 2U);
 
         // Convert the Data Sync to be from the BS or MS as needed
-        Sync::addDMRDataSync(data + 2U, m_slot->m_duplex);
+        Sync::addDMRDataSync(data + 2U, m_slot->s_duplex);
 
         data[0U] = m_slot->m_netFrames == 0U ? modem::TAG_EOT : modem::TAG_DATA;
         data[1U] = 0x00U;
 
         // Put a small delay into starting transmission
-        m_slot->addFrame(m_slot->m_idle, true);
-        m_slot->addFrame(m_slot->m_idle, true);
+        m_slot->addFrame(m_slot->s_idle, true);
+        m_slot->addFrame(m_slot->s_idle, true);
 
         m_slot->addFrame(data, true);
 
@@ -577,11 +577,11 @@ void Data::processNetwork(const data::NetData& dmrData)
             // regenerate the Slot Type
             SlotType slotType;
             slotType.decode(data + 2U);
-            slotType.setColorCode(m_slot->m_colorCode);
+            slotType.setColorCode(m_slot->s_colorCode);
             slotType.encode(data + 2U);
 
             // convert the Data Sync to be from the BS or MS as needed
-            Sync::addDMRDataSync(data + 2U, m_slot->m_duplex);
+            Sync::addDMRDataSync(data + 2U, m_slot->s_duplex);
 
             data[0U] = m_slot->m_netFrames == 0U ? modem::TAG_EOT : modem::TAG_DATA;
             data[1U] = 0x00U;
@@ -655,21 +655,21 @@ void Data::writeRF_PDU(DataType::E dataType, const uint8_t* pdu)
     ::memcpy(data, pdu, DMR_FRAME_LENGTH_BYTES);
 
     SlotType slotType;
-    slotType.setColorCode(m_slot->m_colorCode);
+    slotType.setColorCode(m_slot->s_colorCode);
     slotType.setDataType(dataType);
 
     // Regenerate the Slot Type
     slotType.encode(data + 2U);
 
     // Convert the Data Sync to be from the BS or MS as needed
-    Sync::addDMRDataSync(data + 2U, m_slot->m_duplex);
+    Sync::addDMRDataSync(data + 2U, m_slot->s_duplex);
 
     m_slot->m_rfSeqNo = 0U;
 
     data[0U] = modem::TAG_DATA;
     data[1U] = 0x00U;
 
-    if (m_slot->m_duplex)
+    if (m_slot->s_duplex)
         m_slot->addFrame(data);
 }
 

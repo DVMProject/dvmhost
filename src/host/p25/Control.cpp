@@ -41,8 +41,8 @@ const uint32_t MAX_PREAMBLE_TDU_CNT = 64U;
 //  Static Class Members
 // ---------------------------------------------------------------------------
 
-std::mutex Control::m_queueLock;
-std::mutex Control::m_activeTGLock;
+std::mutex Control::s_queueLock;
+std::mutex Control::s_activeTGLock;
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -760,7 +760,7 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
 
 uint32_t Control::peekFrameLength()
 {
-    std::lock_guard<std::mutex> lock(m_queueLock);
+    std::lock_guard<std::mutex> lock(s_queueLock);
 
     if (m_txQueue.isEmpty() && m_txImmQueue.isEmpty())
         return 0U;
@@ -811,7 +811,7 @@ uint32_t Control::getFrame(uint8_t* data)
 {
     assert(data != nullptr);
 
-    std::lock_guard<std::mutex> lock(m_queueLock);
+    std::lock_guard<std::mutex> lock(s_queueLock);
 
     if (m_txQueue.isEmpty() && m_txImmQueue.isEmpty())
         return 0U;
@@ -1316,7 +1316,7 @@ void Control::addFrame(const uint8_t* data, uint32_t length, bool net, bool imm)
 {
     assert(data != nullptr);
 
-    std::lock_guard<std::mutex> lock(m_queueLock);
+    std::lock_guard<std::mutex> lock(s_queueLock);
 
     if (!net) {
         if (m_rfTimeout.isRunning() && m_rfTimeout.hasExpired())
@@ -1998,7 +1998,7 @@ void Control::RPC_activeTG(json::object& req, json::object& reply)
     }
     json::array active = req["active"].get<json::array>();
 
-    std::lock_guard<std::mutex> lock(m_activeTGLock);
+    std::lock_guard<std::mutex> lock(s_activeTGLock);
     m_activeTG.clear();
 
     if (active.size() > 0) {
@@ -2022,7 +2022,7 @@ void Control::RPC_clearActiveTG(json::object& req, json::object& reply)
     g_RPC->defaultResponse(reply, "OK", network::NetRPC::OK);
 
     if (m_activeTG.size() > 0) {
-        std::lock_guard<std::mutex> lock(m_activeTGLock);
+        std::lock_guard<std::mutex> lock(s_activeTGLock);
         m_activeTG.clear();
     }
 }

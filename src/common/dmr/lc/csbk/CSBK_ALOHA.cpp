@@ -55,13 +55,13 @@ void CSBK_ALOHA::encode(uint8_t* data)
     csbkValue = (csbkValue << 1) + ((m_siteTSSync) ? 1U : 0U);                      // Site Time Slot Synchronization
     csbkValue = (csbkValue << 3) + DMR_ALOHA_VER_151;                               // DMR Spec. Version (1.5.1)
     csbkValue = (csbkValue << 1) + ((m_siteOffsetTiming) ? 1U : 0U);                // Site Timing: Aligned or Offset
-    csbkValue = (csbkValue << 1) + ((m_siteData.netActive()) ? 1U : 0U);            // Site Networked
+    csbkValue = (csbkValue << 1) + ((s_siteData.netActive()) ? 1U : 0U);            // Site Networked
     csbkValue = (csbkValue << 5) + (m_alohaMask & 0x1FU);                           // MS Mask
     csbkValue = (csbkValue << 2) + 0U;                                              // Service Function
     csbkValue = (csbkValue << 4) + (m_nRandWait & 0x0FU);                           // Random Access Wait
-    csbkValue = (csbkValue << 1) + ((m_siteData.requireReg()) ? 1U : 0U);           // Require Registration
+    csbkValue = (csbkValue << 1) + ((s_siteData.requireReg()) ? 1U : 0U);           // Require Registration
     csbkValue = (csbkValue << 4) + (m_backoffNo & 0x0FU);                           // Backoff Number
-    csbkValue = (csbkValue << 16) + m_siteData.systemIdentity();                    // Site Identity
+    csbkValue = (csbkValue << 16) + s_siteData.systemIdentity();                    // Site Identity
     csbkValue = (csbkValue << 24) + m_srcId;                                        // Source Radio Address
 
     std::unique_ptr<uint8_t[]> csbk = CSBK::fromValue(csbkValue);

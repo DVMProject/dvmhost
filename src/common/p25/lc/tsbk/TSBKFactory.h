@@ -144,10 +144,10 @@ namespace p25
                  * @brief Sets the flag indicating CRC-errors should be warnings and not errors.
                  * @param warnCRC Flag indicating CRC-errors should be treated as warnings.
                  */
-                static void setWarnCRC(bool warnCRC) { m_warnCRC = warnCRC; }
+                static void setWarnCRC(bool warnCRC) { s_warnCRC = warnCRC; }
 
             private:
-                static bool m_warnCRC;
+                static bool s_warnCRC;
 
                 /**
                  * @brief Decode a TSBK.

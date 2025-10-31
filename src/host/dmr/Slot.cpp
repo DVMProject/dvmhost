@@ -35,51 +35,51 @@ using namespace dmr::packet;
 //  Static Class Members
 // ---------------------------------------------------------------------------
 
-Control* Slot::m_dmr = nullptr;
+Control* Slot::s_dmr = nullptr;
 
-bool Slot::m_authoritative = true;
+bool Slot::s_authoritative = true;
 
-uint32_t Slot::m_colorCode = 0U;
+uint32_t Slot::s_colorCode = 0U;
 
-SiteData Slot::m_siteData = SiteData();
-uint32_t Slot::m_channelNo = 0U;
+SiteData Slot::s_siteData = SiteData();
+uint32_t Slot::s_channelNo = 0U;
 
-bool Slot::m_embeddedLCOnly = false;
-bool Slot::m_dumpTAData = true;
+bool Slot::s_embeddedLCOnly = false;
+bool Slot::s_dumpTAData = true;
 
-modem::Modem* Slot::m_modem = nullptr;
-network::Network* Slot::m_network = nullptr;
+modem::Modem* Slot::s_modem = nullptr;
+network::Network* Slot::s_network = nullptr;
 
-bool Slot::m_duplex = true;
+bool Slot::s_duplex = true;
 
-::lookups::IdenTableLookup* Slot::m_idenTable = nullptr;
-::lookups::RadioIdLookup* Slot::m_ridLookup = nullptr;
-::lookups::TalkgroupRulesLookup* Slot::m_tidLookup = nullptr;
-dmr::lookups::DMRAffiliationLookup *Slot::m_affiliations = nullptr;
-::lookups::VoiceChData Slot::m_controlChData = ::lookups::VoiceChData();
+::lookups::IdenTableLookup* Slot::s_idenTable = nullptr;
+::lookups::RadioIdLookup* Slot::s_ridLookup = nullptr;
+::lookups::TalkgroupRulesLookup* Slot::s_tidLookup = nullptr;
+dmr::lookups::DMRAffiliationLookup *Slot::s_affiliations = nullptr;
+::lookups::VoiceChData Slot::s_controlChData = ::lookups::VoiceChData();
 
-::lookups::IdenTable Slot::m_idenEntry = ::lookups::IdenTable();
+::lookups::IdenTable Slot::s_idenEntry = ::lookups::IdenTable();
 
-uint32_t Slot::m_hangCount = 3U * 17U;
+uint32_t Slot::s_hangCount = 3U * 17U;
 
-::lookups::RSSIInterpolator* Slot::m_rssiMapper = nullptr;
+::lookups::RSSIInterpolator* Slot::s_rssiMapper = nullptr;
 
-uint32_t Slot::m_jitterTime = 360U;
-uint32_t Slot::m_jitterSlots = 6U;
+uint32_t Slot::s_jitterTime = 360U;
+uint32_t Slot::s_jitterSlots = 6U;
 
-uint8_t* Slot::m_idle = nullptr;
+uint8_t* Slot::s_idle = nullptr;
 
-FLCO::E Slot::m_flco1;
-uint8_t Slot::m_id1 = 0U;
-Slot::SLCO_ACT_TYPE Slot::m_actType1 = Slot::SLCO_ACT_TYPE::VOICE;
-FLCO::E Slot::m_flco2;
-uint8_t Slot::m_id2 = 0U;
-Slot::SLCO_ACT_TYPE Slot::m_actType2 = Slot::SLCO_ACT_TYPE::VOICE;
+FLCO::E Slot::s_flco1;
+uint8_t Slot::s_id1 = 0U;
+Slot::SLCO_ACT_TYPE Slot::s_actType1 = Slot::SLCO_ACT_TYPE::VOICE;
+FLCO::E Slot::s_flco2;
+uint8_t Slot::s_id2 = 0U;
+Slot::SLCO_ACT_TYPE Slot::s_actType2 = Slot::SLCO_ACT_TYPE::VOICE;
 
-bool Slot::m_verifyReg = false;
+bool Slot::s_verifyReg = false;
 
-uint8_t Slot::m_alohaNRandWait = DEFAULT_NRAND_WAIT;
-uint8_t Slot::m_alohaBackOff = 1U;
+uint8_t Slot::s_alohaNRandWait = DEFAULT_NRAND_WAIT;
+uint8_t Slot::s_alohaBackOff = 1U;
 
 // ---------------------------------------------------------------------------
 //  Constants
@@ -179,9 +179,9 @@ Slot::Slot(uint32_t slotNo, uint32_t timeout, uint32_t tgHang, uint32_t queueSiz
     m_adjSiteUpdateTimer.setTimeout(m_adjSiteUpdateInterval);
     m_adjSiteUpdateTimer.start();
 
-    m_voice = new Voice(this, m_network, m_embeddedLCOnly, m_dumpTAData, debug, verbose);
-    m_data = new Data(this, m_network, dumpDataPacket, repeatDataPacket, debug, verbose);
-    m_control = new ControlSignaling(this, m_network, dumpCSBKData, debug, verbose);
+    m_voice = new Voice(this, s_network, s_embeddedLCOnly, s_dumpTAData, debug, verbose);
+    m_data = new Data(this, s_network, dumpDataPacket, repeatDataPacket, debug, verbose);
+    m_control = new ControlSignaling(this, s_network, dumpCSBKData, debug, verbose);
 }
 
 /* Finalizes a instance of the Slot class. */
@@ -241,7 +241,7 @@ bool Slot::processFrame(uint8_t *data, uint32_t len)
         raw |= (data[36U] << 0) & 0x00FFU;
 
         // Convert the raw RSSI to dBm
-        int rssi = m_rssiMapper->interpolate(raw);
+        int rssi = s_rssiMapper->interpolate(raw);
         if (m_verbose) {
             LogInfoEx(LOG_RF, "DMR Slot %u, raw RSSI = %u, reported RSSI = %d dBm", m_slotNo, raw, rssi);
         }
@@ -391,7 +391,7 @@ void Slot::processNetwork(const data::NetData& dmrData)
 {
     // don't process network frames if the RF modem isn't in a listening state
     if (m_rfState != RS_RF_LISTENING) {
-        m_network->resetDMR(m_slotNo);
+        s_network->resetDMR(m_slotNo);
         return;
     }
 
@@ -406,7 +406,7 @@ void Slot::processNetwork(const data::NetData& dmrData)
         }
     }
 
-    if (m_authoritative) {
+    if (s_authoritative) {
         // don't process network frames if the destination ID's don't match and the network TG hang timer is running
         if (m_netLastDstId != 0U && dmrData.getDstId() != 0U && m_netState != RS_NET_IDLE) {
             if (m_netLastDstId != dmrData.getDstId() && (m_netTGHang.isRunning() && !m_netTGHang.hasExpired())) {
@@ -420,7 +420,7 @@ void Slot::processNetwork(const data::NetData& dmrData)
     }
 
     // don't process network frames if this modem isn't authoritative
-    if (!m_authoritative && m_permittedDstId != dmrData.getDstId()) {
+    if (!s_authoritative && m_permittedDstId != dmrData.getDstId()) {
         if (!g_disableNonAuthoritativeLogging)
             LogWarning(LOG_NET, "DMR Slot %u, [NON-AUTHORITATIVE] Ignoring network traffic, destination not permitted!", m_slotNo);
         return;
@@ -430,7 +430,7 @@ void Slot::processNetwork(const data::NetData& dmrData)
 
     DataType::E dataType = dmrData.getDataType();
 
-    Slot* tscc = m_dmr->getTSCCSlot();
+    Slot* tscc = s_dmr->getTSCCSlot();
 
     bool enableTSCC = false;
     if (tscc != nullptr)
@@ -493,7 +493,7 @@ void Slot::processNetwork(const data::NetData& dmrData)
             if (dataType != DataType::CSBK)
                 return;
             else {
-                if (m_slotNo != m_dmr->m_tsccSlotNo)
+                if (m_slotNo != s_dmr->m_tsccSlotNo)
                     return;
             }
         }
@@ -530,8 +530,8 @@ void Slot::processInCallCtrl(network::NET_ICC::ENUM command, uint32_t dstId)
         {
             if (m_rfState == RS_RF_AUDIO && m_rfLC->getDstId() == dstId) {
                 LogWarning(LOG_DMR, "Slot %u, network requested in-call traffic reject, dstId = %u", m_slotNo, dstId);
-                if (m_affiliations->isGranted(dstId)) {
-                    m_affiliations->releaseGrant(dstId, false);
+                if (s_affiliations->isGranted(dstId)) {
+                    s_affiliations->releaseGrant(dstId, false);
                     if (!m_enableTSCC) {
                         notifyCC_ReleaseGrant(dstId);
                     }
@@ -559,30 +559,30 @@ void Slot::clock()
     uint32_t ms = m_interval.elapsed();
     m_interval.start();
 
-    if (m_network != nullptr) {
-        if (m_network->getStatus() == network::NET_STAT_RUNNING) {
-            m_siteData.setNetActive(true);
+    if (s_network != nullptr) {
+        if (s_network->getStatus() == network::NET_STAT_RUNNING) {
+            s_siteData.setNetActive(true);
         }
         else {
-            m_siteData.setNetActive(false);
+            s_siteData.setNetActive(false);
         }
 
-        lc::CSBK::setSiteData(m_siteData);
+        lc::CSBK::setSiteData(s_siteData);
     }
 
     // if we have control enabled; do clocking to generate a CC data stream
     if (m_enableTSCC) {
-        m_dmr->m_tsccCntInterval.clock(ms);
-        if (m_dmr->m_tsccCntInterval.isRunning() && m_dmr->m_tsccCntInterval.hasExpired()) {
-            m_dmr->m_tsccCnt++;
-            if (m_dmr->m_tsccCnt == TSCC_MAX_CSC_CNT) {
-                m_dmr->m_tsccCnt = 0U;
+        s_dmr->m_tsccCntInterval.clock(ms);
+        if (s_dmr->m_tsccCntInterval.isRunning() && s_dmr->m_tsccCntInterval.hasExpired()) {
+            s_dmr->m_tsccCnt++;
+            if (s_dmr->m_tsccCnt == TSCC_MAX_CSC_CNT) {
+                s_dmr->m_tsccCnt = 0U;
             }
 
-            m_dmr->m_tsccCntInterval.start();
+            s_dmr->m_tsccCntInterval.start();
         }
 
-        m_modem->setDMRIgnoreCACH_AT(m_slotNo);
+        s_modem->setDMRIgnoreCACH_AT(m_slotNo);
 
         if (m_ccRunning && !m_ccPacketInterval.isRunning()) {
             m_ccPacketInterval.start();
@@ -607,16 +607,16 @@ void Slot::clock()
                         m_ccSeq = 0U;
                     }
 
-                    if (m_dmr->m_tsccPayloadActive) {
-                        if ((m_dmr->m_tsccCnt % 2) == 0) {
-                            setShortLC_Payload(m_siteData, m_dmr->m_tsccCnt);
+                    if (s_dmr->m_tsccPayloadActive) {
+                        if ((s_dmr->m_tsccCnt % 2) == 0) {
+                            setShortLC_Payload(s_siteData, s_dmr->m_tsccCnt);
                         }
                     }
                     else {
-                        setShortLC_TSCC(m_siteData, m_dmr->m_tsccCnt);
+                        setShortLC_TSCC(s_siteData, s_dmr->m_tsccCnt);
                     }
 
-                    writeRF_ControlData(m_dmr->m_tsccCnt, m_ccSeq);
+                    writeRF_ControlData(s_dmr->m_tsccCnt, m_ccSeq);
 
                     m_ccSeq++;
                 }
@@ -632,7 +632,7 @@ void Slot::clock()
     }
 
     // activate payload channel if requested from the TSCC
-    if (m_dmr->m_tsccPayloadActive) {
+    if (s_dmr->m_tsccPayloadActive) {
         if (m_rfState == RS_RF_LISTENING && m_netState == RS_NET_IDLE) {
             if (m_tsccPayloadDstId > 0U) {
                 if (m_tsccPayloadActRetry.isRunning()) {
@@ -644,7 +644,7 @@ void Slot::clock()
                     }
                 }
 
-                if ((m_dmr->m_tsccCnt % 2) > 0) {
+                if ((s_dmr->m_tsccCnt % 2) > 0) {
                     if (m_tsccPayloadVoice)
                         setShortLC(m_slotNo, m_tsccPayloadDstId, m_tsccPayloadGroup ? FLCO::GROUP : FLCO::PRIVATE, SLCO_ACT_TYPE::VOICE);
                     else                        
@@ -689,7 +689,7 @@ void Slot::clock()
             m_rfLastSrcId = 0U;
 
             // reset permitted ID and clear permission state
-            if (!m_authoritative && m_permittedDstId != 0U) {
+            if (!s_authoritative && m_permittedDstId != 0U) {
                 m_permittedDstId = 0U;
             }
         }
@@ -702,7 +702,7 @@ void Slot::clock()
         }
     }
 
-    if (m_authoritative) {
+    if (s_authoritative) {
         if (m_netTGHang.isRunning()) {
             m_netTGHang.clock(ms);
 
@@ -743,9 +743,9 @@ void Slot::clock()
 
         if (m_packetTimer.isRunning() && m_packetTimer.hasExpired()) {
             uint32_t elapsed = m_elapsed.elapsed();
-            if (elapsed >= m_jitterTime) {
+            if (elapsed >= s_jitterTime) {
                 LogWarning(LOG_NET, "DMR Slot %u, lost audio for %ums filling in", m_slotNo, elapsed);
-                m_voice->insertSilence(m_jitterSlots);
+                m_voice->insertSilence(s_jitterSlots);
                 m_elapsed.start();
             }
 
@@ -771,7 +771,7 @@ void Slot::clockSiteData(uint32_t ms)
 {
     if (m_enableTSCC) {
         // clock all the grant timers
-        m_affiliations->clock(ms);
+        s_affiliations->clock(ms);
 
         // do we need to network announce ourselves?
         if (!m_adjSiteUpdateTimer.isRunning()) {
@@ -783,10 +783,10 @@ void Slot::clockSiteData(uint32_t ms)
         if (m_adjSiteUpdateTimer.isRunning() && m_adjSiteUpdateTimer.hasExpired()) {
             if (m_rfState == RS_RF_LISTENING && m_netState == RS_NET_IDLE) {
                 m_control->writeAdjSSNetwork();
-                if (m_network != nullptr) {
-                    if (m_affiliations->grpAffSize() > 0) {
-                        auto affs = m_affiliations->grpAffTable();
-                        m_network->announceAffiliationUpdate(affs);
+                if (s_network != nullptr) {
+                    if (s_affiliations->grpAffSize() > 0) {
+                        auto affs = s_affiliations->grpAffTable();
+                        s_network->announceAffiliationUpdate(affs);
                     }
                 }
                 m_adjSiteUpdateTimer.start();
@@ -823,7 +823,7 @@ void Slot::clockSiteData(uint32_t ms)
 
 void Slot::permittedTG(uint32_t dstId)
 {
-    if (m_authoritative) {
+    if (s_authoritative) {
         return;
     }
 
@@ -864,16 +864,16 @@ void Slot::releaseGrantTG(uint32_t dstId)
         LogInfoEx(LOG_DMR, "DMR Slot %u, VC request, release TG grant, dstId = %u", m_slotNo, dstId);
     }
 
-    if (m_affiliations->isGranted(dstId)) {
-        uint32_t chNo = m_affiliations->getGrantedCh(dstId);
-        uint32_t srcId = m_affiliations->getGrantedSrcId(dstId);
-        ::lookups::VoiceChData voiceCh = m_affiliations->rfCh()->getRFChData(chNo);
+    if (s_affiliations->isGranted(dstId)) {
+        uint32_t chNo = s_affiliations->getGrantedCh(dstId);
+        uint32_t srcId = s_affiliations->getGrantedSrcId(dstId);
+        ::lookups::VoiceChData voiceCh = s_affiliations->rfCh()->getRFChData(chNo);
 
         if (m_verbose) {
             LogInfoEx(LOG_DMR, "DMR Slot %u, VC %s:%u, TG grant released, srcId = %u, dstId = %u, chNo = %u-%u", m_slotNo, voiceCh.address().c_str(), voiceCh.port(), srcId, dstId, voiceCh.chId(), chNo);
         }
     
-        m_affiliations->releaseGrant(dstId, false);
+        s_affiliations->releaseGrant(dstId, false);
     }
 }
 
@@ -885,16 +885,16 @@ void Slot::touchGrantTG(uint32_t dstId)
         return;
     }
 
-    if (m_affiliations->isGranted(dstId)) {
-        uint32_t chNo = m_affiliations->getGrantedCh(dstId);
-        uint32_t srcId = m_affiliations->getGrantedSrcId(dstId);
-        ::lookups::VoiceChData voiceCh = m_affiliations->rfCh()->getRFChData(chNo);
+    if (s_affiliations->isGranted(dstId)) {
+        uint32_t chNo = s_affiliations->getGrantedCh(dstId);
+        uint32_t srcId = s_affiliations->getGrantedSrcId(dstId);
+        ::lookups::VoiceChData voiceCh = s_affiliations->rfCh()->getRFChData(chNo);
 
         if (m_verbose) {
             LogInfoEx(LOG_DMR, "DMR Slot %u, VC %s:%u, call in progress, srcId = %u, dstId = %u, chNo = %u-%u", m_slotNo, voiceCh.address().c_str(), voiceCh.port(), srcId, dstId, voiceCh.chId(), chNo);
         }
 
-        m_affiliations->touchGrant(dstId);
+        s_affiliations->touchGrant(dstId);
     }
 }
 
@@ -914,8 +914,8 @@ void Slot::clearRFReject()
         m_netFrames = 0U;
         m_netLost = 0U;
 
-        if (m_network != nullptr)
-            m_network->resetDMR(m_slotNo);
+        if (s_network != nullptr)
+            s_network->resetDMR(m_slotNo);
 
         m_rfState = RS_RF_LISTENING;
     }
@@ -936,8 +936,8 @@ void Slot::setTSCC(bool enable, bool dedicated)
     m_enableTSCC = enable;
     m_dedicatedTSCC = dedicated;
     if (m_enableTSCC) {
-        m_modem->setDMRIgnoreCACH_AT(m_slotNo);
-        m_affiliations->setSlotForChannelTSCC(m_channelNo, m_slotNo);
+        s_modem->setDMRIgnoreCACH_AT(m_slotNo);
+        s_affiliations->setSlotForChannelTSCC(s_channelNo, m_slotNo);
     }
 }
 
@@ -951,8 +951,8 @@ void Slot::setTSCCActivated(uint32_t dstId, uint32_t srcId, bool group, bool voi
     m_tsccPayloadVoice = voice;
 
     // start payload channel transmit
-    if (!m_modem->hasTX()) {
-        m_modem->writeDMRStart(true);
+    if (!s_modem->hasTX()) {
+        s_modem->writeDMRStart(true);
     }
 
     if (m_tsccPayloadDstId != 0U && !m_tsccPayloadActRetry.isRunning()) {
@@ -1004,37 +1004,37 @@ void Slot::init(Control* dmr, bool authoritative, uint32_t colorCode, SiteData s
     assert(idenTable != nullptr);
     assert(rssiMapper != nullptr);
 
-    m_dmr = dmr;
+    s_dmr = dmr;
 
-    m_authoritative = authoritative;
+    s_authoritative = authoritative;
 
-    m_colorCode = colorCode;
+    s_colorCode = colorCode;
 
-    m_siteData = siteData;
+    s_siteData = siteData;
 
-    m_embeddedLCOnly = embeddedLCOnly;
-    m_dumpTAData = dumpTAData;
+    s_embeddedLCOnly = embeddedLCOnly;
+    s_dumpTAData = dumpTAData;
 
-    m_modem = modem;
-    m_network = network;
+    s_modem = modem;
+    s_network = network;
 
-    m_duplex = duplex;
+    s_duplex = duplex;
 
-    m_idenTable = idenTable;
-    m_ridLookup = ridLookup;
-    m_tidLookup = tidLookup;
-    m_affiliations = new dmr::lookups::DMRAffiliationLookup(chLookup, verbose);
+    s_idenTable = idenTable;
+    s_ridLookup = ridLookup;
+    s_tidLookup = tidLookup;
+    s_affiliations = new dmr::lookups::DMRAffiliationLookup(chLookup, verbose);
 
     // set the grant release callback
-    m_affiliations->setReleaseGrantCallback([=](uint32_t chNo, uint32_t srcId, uint32_t dstId, uint8_t slot) {
-        Slot* tscc = m_dmr->getTSCCSlot();
+    s_affiliations->setReleaseGrantCallback([=](uint32_t chNo, uint32_t srcId, uint32_t dstId, uint8_t slot) {
+        Slot* tscc = s_dmr->getTSCCSlot();
         if (tscc != nullptr) {
-            if (chNo == tscc->m_channelNo) {
-                m_dmr->tsccClearActivatedSlot(slot);
+            if (chNo == tscc->s_channelNo) {
+                s_dmr->tsccClearActivatedSlot(slot);
                 return;
             }
 
-            ::lookups::VoiceChData voiceChData = tscc->m_affiliations->rfCh()->getRFChData(chNo);
+            ::lookups::VoiceChData voiceChData = tscc->s_affiliations->rfCh()->getRFChData(chNo);
             if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0) {
                 json::object req = json::object();
                 req["slot"].set<uint8_t>(slot);
@@ -1048,7 +1048,7 @@ void Slot::init(Control* dmr, bool authoritative, uint32_t colorCode, SiteData s
             }
 
             // callback REST API to clear TG permit for the granted TG on the specified voice channel
-            if (m_authoritative && m_dmr->m_supervisor) {
+            if (s_authoritative && s_dmr->m_supervisor) {
                 if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0) {
                     json::object req = json::object();
                     dstId = 0U; // clear TG value
@@ -1065,56 +1065,56 @@ void Slot::init(Control* dmr, bool authoritative, uint32_t colorCode, SiteData s
     });
 
     // set the unit deregistration callback
-    m_affiliations->setUnitDeregCallback([=](uint32_t srcId, bool automatic) {
-        if (m_network != nullptr)
-            m_network->announceUnitDeregistration(srcId);
+    s_affiliations->setUnitDeregCallback([=](uint32_t srcId, bool automatic) {
+        if (s_network != nullptr)
+            s_network->announceUnitDeregistration(srcId);
     });
 
-    m_hangCount = callHang * 17U;
+    s_hangCount = callHang * 17U;
 
-    m_rssiMapper = rssiMapper;
+    s_rssiMapper = rssiMapper;
 
-    m_jitterTime = jitter;
+    s_jitterTime = jitter;
 
     float jitter_tmp = float(jitter) / 360.0F;
-    m_jitterSlots = (uint32_t)(std::ceil(jitter_tmp) * 6.0F);
+    s_jitterSlots = (uint32_t)(std::ceil(jitter_tmp) * 6.0F);
 
-    m_idle = new uint8_t[DMR_FRAME_LENGTH_BYTES + 2U];
-    ::memcpy(m_idle, IDLE_DATA, DMR_FRAME_LENGTH_BYTES + 2U);
+    s_idle = new uint8_t[DMR_FRAME_LENGTH_BYTES + 2U];
+    ::memcpy(s_idle, IDLE_DATA, DMR_FRAME_LENGTH_BYTES + 2U);
 
     // Generate the Slot Type for the Idle frame
     SlotType slotType;
     slotType.setColorCode(colorCode);
     slotType.setDataType(DataType::IDLE);
-    slotType.encode(m_idle + 2U);
+    slotType.encode(s_idle + 2U);
 }
 
 /* Sets local configured site data. */
 
 void Slot::setSiteData(::lookups::VoiceChData controlChData, uint32_t netId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, bool requireReg)
 {
-    m_siteData = SiteData(SiteModel::SM_SMALL, netId, siteId, 3U, requireReg);
-    m_channelNo = channelNo;
+    s_siteData = SiteData(SiteModel::SM_SMALL, netId, siteId, 3U, requireReg);
+    s_channelNo = channelNo;
 
-    std::vector<::lookups::IdenTable> entries = m_idenTable->list();
+    std::vector<::lookups::IdenTable> entries = s_idenTable->list();
     for (auto entry : entries) {
         if (entry.channelId() == channelId) {
-            m_idenEntry = entry;
+            s_idenEntry = entry;
             break;
         }
     }
 
-    m_controlChData = controlChData;
+    s_controlChData = controlChData;
 
-    lc::CSBK::setSiteData(m_siteData);
+    lc::CSBK::setSiteData(s_siteData);
 }
 
 /* Sets TSCC Aloha configuration. */
 
 void Slot::setAlohaConfig(uint8_t nRandWait, uint8_t backOff)
 {
-    m_alohaNRandWait = nRandWait;
-    m_alohaBackOff = backOff;
+    s_alohaNRandWait = nRandWait;
+    s_alohaBackOff = backOff;
 }
 
 // ---------------------------------------------------------------------------
@@ -1141,9 +1141,9 @@ void Slot::addFrame(const uint8_t *data, bool net, bool imm)
 
     uint32_t fifoSpace = 0U;
     if (m_slotNo == 1U) {
-        fifoSpace = m_modem->getDMRSpace1();
+        fifoSpace = s_modem->getDMRSpace1();
     } else {
-        fifoSpace = m_modem->getDMRSpace2();
+        fifoSpace = s_modem->getDMRSpace2();
     }
 
     //LogDebugEx(LOG_DMR, "Slot::addFrame()", "Slot %u, fifoSpace = %u", m_slotNo, fifoSpace);
@@ -1206,10 +1206,10 @@ void Slot::processFrameLoss()
             m_slotNo, m_rfFrames, m_rfBits, m_rfErrs, float(m_rfErrs * 100U) / float(m_rfBits));
 
         // release trunked grant (if necessary)
-        Slot* tscc = m_dmr->getTSCCSlot();
+        Slot* tscc = s_dmr->getTSCCSlot();
         if (tscc != nullptr) {
             if (tscc->m_enableTSCC && m_rfLC != nullptr) {
-                tscc->m_affiliations->releaseGrant(m_rfLC->getDstId(), false);
+                tscc->s_affiliations->releaseGrant(m_rfLC->getDstId(), false);
             }
             
             clearTSCCActivated();
@@ -1242,11 +1242,11 @@ void Slot::processFrameLoss()
 
 void Slot::notifyCC_ReleaseGrant(uint32_t dstId)
 {
-    if (m_controlChData.address().empty()) {
+    if (s_controlChData.address().empty()) {
         return;
     }
 
-    if (m_controlChData.port() == 0) {
+    if (s_controlChData.port() == 0) {
         return;
     }
 
@@ -1255,7 +1255,7 @@ void Slot::notifyCC_ReleaseGrant(uint32_t dstId)
     }
 
     if (m_verbose) {
-        LogInfoEx(LOG_DMR, "DMR Slot %u, CC %s:%u, notifying CC of call termination, dstId = %u", m_slotNo, m_controlChData.address().c_str(), m_controlChData.port(), dstId);
+        LogInfoEx(LOG_DMR, "DMR Slot %u, CC %s:%u, notifying CC of call termination, dstId = %u", m_slotNo, s_controlChData.address().c_str(), s_controlChData.port(), dstId);
     }
 
     // callback REST API to release the granted TG on the specified control channel
@@ -1266,21 +1266,21 @@ void Slot::notifyCC_ReleaseGrant(uint32_t dstId)
 
     g_RPC->req(RPC_RELEASE_DMR_TG, req, [=](json::object& req, json::object& reply) {
         if (!req["status"].is<int>()) {
-            ::LogError(LOG_DMR, "DMR Slot %u, failed to notify the CC %s:%u of the release of, dstId = %u, invalid RPC response", m_slotNo, m_controlChData.address().c_str(), m_controlChData.port(), dstId);
+            ::LogError(LOG_DMR, "DMR Slot %u, failed to notify the CC %s:%u of the release of, dstId = %u, invalid RPC response", m_slotNo, s_controlChData.address().c_str(), s_controlChData.port(), dstId);
             return;
         }
 
         int status = req["status"].get<int>();
         if (status != network::NetRPC::OK) {
-            ::LogError(LOG_DMR, "DMR Slot %u, failed to notify the CC %s:%u of the release of, dstId = %u", m_slotNo, m_controlChData.address().c_str(), m_controlChData.port(), dstId);
+            ::LogError(LOG_DMR, "DMR Slot %u, failed to notify the CC %s:%u of the release of, dstId = %u", m_slotNo, s_controlChData.address().c_str(), s_controlChData.port(), dstId);
             if (req["message"].is<std::string>()) {
                 std::string retMsg = req["message"].get<std::string>();
                 ::LogError(LOG_DMR, "DMR Slot %u, RPC failed, %s", m_slotNo, retMsg.c_str());
             }
         }
         else
-            ::LogInfoEx(LOG_DMR, "DMR Slot %u, CC %s:%u, released grant, dstId = %u", m_slotNo, m_controlChData.address().c_str(), m_controlChData.port(), dstId);
-    }, m_controlChData.address(), m_controlChData.port());
+            ::LogInfoEx(LOG_DMR, "DMR Slot %u, CC %s:%u, released grant, dstId = %u", m_slotNo, s_controlChData.address().c_str(), s_controlChData.port(), dstId);
+    }, s_controlChData.address(), s_controlChData.port());
 
     m_rfLastDstId = 0U;
     m_rfLastSrcId = 0U;
@@ -1292,11 +1292,11 @@ void Slot::notifyCC_ReleaseGrant(uint32_t dstId)
 
 void Slot::notifyCC_TouchGrant(uint32_t dstId)
 {
-    if (m_controlChData.address().empty()) {
+    if (s_controlChData.address().empty()) {
         return;
     }
 
-    if (m_controlChData.port() == 0) {
+    if (s_controlChData.port() == 0) {
         return;
     }
 
@@ -1313,21 +1313,21 @@ void Slot::notifyCC_TouchGrant(uint32_t dstId)
     g_RPC->req(RPC_TOUCH_DMR_TG, req, [=](json::object& req, json::object& reply) {
         // validate channelNo is a string within the JSON blob
         if (!req["status"].is<int>()) {
-            ::LogError(LOG_DMR, "DMR Slot %u, failed to notify the CC %s:%u of the touch of, dstId = %u, invalid RPC response", m_slotNo, m_controlChData.address().c_str(), m_controlChData.port(), dstId);
+            ::LogError(LOG_DMR, "DMR Slot %u, failed to notify the CC %s:%u of the touch of, dstId = %u, invalid RPC response", m_slotNo, s_controlChData.address().c_str(), s_controlChData.port(), dstId);
             return;
         }
 
         int status = req["status"].get<int>();
         if (status != network::NetRPC::OK) {
-            ::LogError(LOG_DMR, "DMR Slot %u, failed to notify the CC %s:%u of the touch of, dstId = %u", m_slotNo, m_controlChData.address().c_str(), m_controlChData.port(), dstId);
+            ::LogError(LOG_DMR, "DMR Slot %u, failed to notify the CC %s:%u of the touch of, dstId = %u", m_slotNo, s_controlChData.address().c_str(), s_controlChData.port(), dstId);
             if (req["message"].is<std::string>()) {
                 std::string retMsg = req["message"].get<std::string>();
                 ::LogError(LOG_DMR, "DMR Slot %u, RPC failed, %s", m_slotNo, retMsg.c_str());
             }
         }
         else
-            ::LogInfoEx(LOG_DMR, "DMR Slot %u, CC %s:%u, touched grant, dstId = %u", m_slotNo, m_controlChData.address().c_str(), m_controlChData.port(), dstId);
-    }, m_controlChData.address(), m_controlChData.port());
+            ::LogInfoEx(LOG_DMR, "DMR Slot %u, CC %s:%u, touched grant, dstId = %u", m_slotNo, s_controlChData.address().c_str(), s_controlChData.port(), dstId);
+    }, s_controlChData.address(), s_controlChData.port());
 }
 
 /* Write data frame to the network. */
@@ -1350,7 +1350,7 @@ void Slot::writeNetwork(const uint8_t* data, DataType::E dataType, FLCO::E flco,
     if (m_netState != RS_NET_IDLE)
         return;
 
-    if (m_network == nullptr)
+    if (s_network == nullptr)
         return;
 
     data::NetData dmrData;
@@ -1369,7 +1369,7 @@ void Slot::writeNetwork(const uint8_t* data, DataType::E dataType, FLCO::E flco,
 
     dmrData.setData(data + 2U);
 
-    m_network->writeDMR(dmrData, noSequence);
+    s_network->writeDMR(dmrData, noSequence);
 }
 
 /* Helper to write RF end of frame data. */
@@ -1380,38 +1380,38 @@ void Slot::writeEndRF(bool writeEnd)
 
     if (m_netState == RS_NET_IDLE) {
         if (m_enableTSCC)
-            setShortLC_Payload(m_siteData, m_dmr->m_tsccCnt);
+            setShortLC_Payload(s_siteData, s_dmr->m_tsccCnt);
         else
             setShortLC(m_slotNo, 0U);
     }
 
     if (writeEnd) {
-        if (m_netState == RS_NET_IDLE && m_duplex && !m_rfTimeout) {
+        if (m_netState == RS_NET_IDLE && s_duplex && !m_rfTimeout) {
             // Create a dummy start end frame
             uint8_t data[DMR_FRAME_LENGTH_BYTES + 2U];
 
-            Sync::addDMRDataSync(data + 2U, m_duplex);
+            Sync::addDMRDataSync(data + 2U, s_duplex);
 
             lc::FullLC fullLC;
             fullLC.encode(*m_rfLC, data + 2U, DataType::TERMINATOR_WITH_LC);
 
             SlotType slotType;
-            slotType.setColorCode(m_colorCode);
+            slotType.setColorCode(s_colorCode);
             slotType.setDataType(DataType::TERMINATOR_WITH_LC);
             slotType.encode(data + 2U);
 
             data[0U] = modem::TAG_EOT;
             data[1U] = 0x00U;
 
-            for (uint32_t i = 0U; i < m_hangCount; i++)
+            for (uint32_t i = 0U; i < s_hangCount; i++)
                 addFrame(data);
         }
     }
 
     m_data->m_pduDataOffset = 0U;
 
-    if (m_network != nullptr)
-        m_network->resetDMR(m_slotNo);
+    if (s_network != nullptr)
+        s_network->resetDMR(m_slotNo);
 
     m_rfTimeoutTimer.stop();
     m_rfTimeout = false;
@@ -1438,21 +1438,21 @@ void Slot::writeEndNet(bool writeEnd)
         // Create a dummy start end frame
         uint8_t data[DMR_FRAME_LENGTH_BYTES + 2U];
 
-        Sync::addDMRDataSync(data + 2U, m_duplex);
+        Sync::addDMRDataSync(data + 2U, s_duplex);
 
         lc::FullLC fullLC;
         fullLC.encode(*m_netLC, data + 2U, DataType::TERMINATOR_WITH_LC);
 
         SlotType slotType;
-        slotType.setColorCode(m_colorCode);
+        slotType.setColorCode(s_colorCode);
         slotType.setDataType(DataType::TERMINATOR_WITH_LC);
         slotType.encode(data + 2U);
 
         data[0U] = modem::TAG_EOT;
         data[1U] = 0x00U;
 
-        if (m_duplex) {
-            for (uint32_t i = 0U; i < m_hangCount; i++)
+        if (s_duplex) {
+            for (uint32_t i = 0U; i < s_hangCount; i++)
                 addFrame(data, true);
         }
         else {
@@ -1462,10 +1462,10 @@ void Slot::writeEndNet(bool writeEnd)
     }
 
     // release trunked grant (if necessary)
-    Slot* tscc = m_dmr->getTSCCSlot();
+    Slot* tscc = s_dmr->getTSCCSlot();
     if (tscc != nullptr) {
         if (tscc->m_enableTSCC && m_netLC != nullptr) {
-            tscc->m_affiliations->releaseGrant(m_netLC->getDstId(), false);
+            tscc->s_affiliations->releaseGrant(m_netLC->getDstId(), false);
         }
 
         clearTSCCActivated();
@@ -1477,8 +1477,8 @@ void Slot::writeEndNet(bool writeEnd)
 
     m_data->m_pduDataOffset = 0U;
 
-    if (m_network != nullptr)
-        m_network->resetDMR(m_slotNo);
+    if (s_network != nullptr)
+        s_network->resetDMR(m_slotNo);
 
     m_networkWatchdog.stop();
     m_netTimeoutTimer.stop();
@@ -1557,11 +1557,11 @@ void Slot::writeRF_ControlData(uint16_t frameCnt, uint8_t n)
             m_control->writeRF_TSCC_Aloha();
             break;
         case 2:
-            m_control->writeRF_TSCC_Bcast_Ann_Wd(m_channelNo, true, m_siteData.systemIdentity(), m_siteData.requireReg());
+            m_control->writeRF_TSCC_Bcast_Ann_Wd(s_channelNo, true, s_siteData.systemIdentity(), s_siteData.requireReg());
             break;
         case 3:
             {
-                std::unordered_map<uint32_t, uint32_t> grants = m_affiliations->grantTable();
+                std::unordered_map<uint32_t, uint32_t> grants = s_affiliations->grantTable();
                 if (grants.size() > 0) {
                     uint32_t j = 0U;
                     if (m_lastLateEntry > grants.size()) {
@@ -1571,8 +1571,8 @@ void Slot::writeRF_ControlData(uint16_t frameCnt, uint8_t n)
                     for (auto entry : grants) {
                         if (j == m_lastLateEntry) {
                             uint32_t dstId = entry.first;
-                            uint32_t srcId = m_affiliations->getGrantedSrcId(dstId);
-                            bool grp = m_affiliations->isGroup(dstId);
+                            uint32_t srcId = s_affiliations->getGrantedSrcId(dstId);
+                            bool grp = s_affiliations->isGroup(dstId);
 
                             if (m_debug) {
                                 LogDebugEx(LOG_DMR, "Slot::writeRF_ControlData()", "frameCnt = %u, seq = %u, late entry, dstId = %u, srcId = %u", frameCnt, n, dstId, srcId);
@@ -1646,31 +1646,31 @@ void Slot::clearTSCCActivated()
 
 void Slot::setShortLC(uint32_t slotNo, uint32_t id, FLCO::E flco, SLCO_ACT_TYPE actType)
 {
-    assert(m_modem != nullptr);
+    assert(s_modem != nullptr);
 
     switch (slotNo) {
         case 1U:
-            m_id1 = 0U;
-            m_flco1 = flco;
-            m_actType1 = actType;
+            s_id1 = 0U;
+            s_flco1 = flco;
+            s_actType1 = actType;
             if (id != 0U) {
                 uint8_t buffer[3U];
                 buffer[0U] = (id << 16) & 0xFFU;
                 buffer[1U] = (id << 8) & 0xFFU;
                 buffer[2U] = (id << 0) & 0xFFU;
-                m_id1 = edac::CRC::crc8(buffer, 3U);
+                s_id1 = edac::CRC::crc8(buffer, 3U);
             }
             break;
         case 2U:
-            m_id2 = 0U;
-            m_flco2 = flco;
-            m_actType2 = actType;
+            s_id2 = 0U;
+            s_flco2 = flco;
+            s_actType2 = actType;
             if (id != 0U) {
                 uint8_t buffer[3U];
                 buffer[0U] = (id << 16) & 0xFFU;
                 buffer[1U] = (id << 8) & 0xFFU;
                 buffer[2U] = (id << 0) & 0xFFU;
-                m_id2 = edac::CRC::crc8(buffer, 3U);
+                s_id2 = edac::CRC::crc8(buffer, 3U);
             }
             break;
         default:
@@ -1679,7 +1679,7 @@ void Slot::setShortLC(uint32_t slotNo, uint32_t id, FLCO::E flco, SLCO_ACT_TYPE 
     }
 
     // If we have no activity to report, let the modem send the null Short LC when it's ready
-    if (m_id1 == 0U && m_id2 == 0U)
+    if (s_id1 == 0U && s_id2 == 0U)
         return;
 
     uint8_t lc[5U];
@@ -1688,35 +1688,35 @@ void Slot::setShortLC(uint32_t slotNo, uint32_t id, FLCO::E flco, SLCO_ACT_TYPE 
     lc[2U] = 0x00U;
     lc[3U] = 0x00U;
 
-    if (m_id1 != 0U) {
-        lc[2U] = m_id1;
-        if (m_actType1 == SLCO_ACT_TYPE::VOICE && m_flco1 == FLCO::GROUP)
+    if (s_id1 != 0U) {
+        lc[2U] = s_id1;
+        if (s_actType1 == SLCO_ACT_TYPE::VOICE && s_flco1 == FLCO::GROUP)
             lc[1U] |= 0x08U;
-        else if (m_actType1 == SLCO_ACT_TYPE::VOICE && m_flco1 == FLCO::PRIVATE)
+        else if (s_actType1 == SLCO_ACT_TYPE::VOICE && s_flco1 == FLCO::PRIVATE)
             lc[1U] |= 0x09U;
-        else if (m_actType1 == SLCO_ACT_TYPE::DATA && m_flco1 == FLCO::GROUP)
+        else if (s_actType1 == SLCO_ACT_TYPE::DATA && s_flco1 == FLCO::GROUP)
             lc[1U] |= 0x0BU;
-        else if (m_actType1 == SLCO_ACT_TYPE::DATA && m_flco1 == FLCO::PRIVATE)
+        else if (s_actType1 == SLCO_ACT_TYPE::DATA && s_flco1 == FLCO::PRIVATE)
             lc[1U] |= 0x0AU;
-        else if (m_actType1 == SLCO_ACT_TYPE::CSBK && m_flco1 == FLCO::GROUP)
+        else if (s_actType1 == SLCO_ACT_TYPE::CSBK && s_flco1 == FLCO::GROUP)
             lc[1U] |= 0x02U;
-        else if (m_actType1 == SLCO_ACT_TYPE::CSBK && m_flco1 == FLCO::PRIVATE)
+        else if (s_actType1 == SLCO_ACT_TYPE::CSBK && s_flco1 == FLCO::PRIVATE)
             lc[1U] |= 0x03U;
     }
 
-    if (m_id2 != 0U) {
-        lc[3U] = m_id2;
-        if (m_actType2 == SLCO_ACT_TYPE::VOICE && m_flco2 == FLCO::GROUP)
+    if (s_id2 != 0U) {
+        lc[3U] = s_id2;
+        if (s_actType2 == SLCO_ACT_TYPE::VOICE && s_flco2 == FLCO::GROUP)
             lc[1U] |= 0x08U;
-        else if (m_actType2 == SLCO_ACT_TYPE::VOICE && m_flco2 == FLCO::PRIVATE)
+        else if (s_actType2 == SLCO_ACT_TYPE::VOICE && s_flco2 == FLCO::PRIVATE)
             lc[1U] |= 0x09U;
-        else if (m_actType2 == SLCO_ACT_TYPE::DATA && m_flco2 == FLCO::GROUP)
+        else if (s_actType2 == SLCO_ACT_TYPE::DATA && s_flco2 == FLCO::GROUP)
             lc[1U] |= 0x0BU;
-        else if (m_actType2 == SLCO_ACT_TYPE::DATA && m_flco2 == FLCO::PRIVATE)
+        else if (s_actType2 == SLCO_ACT_TYPE::DATA && s_flco2 == FLCO::PRIVATE)
             lc[1U] |= 0x0AU;
-        else if (m_actType2 == SLCO_ACT_TYPE::CSBK && m_flco2 == FLCO::GROUP)
+        else if (s_actType2 == SLCO_ACT_TYPE::CSBK && s_flco2 == FLCO::GROUP)
             lc[1U] |= 0x02U;
-        else if (m_actType2 == SLCO_ACT_TYPE::CSBK && m_flco2 == FLCO::PRIVATE)
+        else if (s_actType2 == SLCO_ACT_TYPE::CSBK && s_flco2 == FLCO::PRIVATE)
             lc[1U] |= 0x03U;
     }
 
@@ -1727,14 +1727,14 @@ void Slot::setShortLC(uint32_t slotNo, uint32_t id, FLCO::E flco, SLCO_ACT_TYPE 
     lc::ShortLC shortLC;
     shortLC.encode(lc, sLC);
 
-    m_modem->writeDMRShortLC(sLC);
+    s_modem->writeDMRShortLC(sLC);
 }
 
 /* Helper to set the DMR short LC for TSCC. */
 
 void Slot::setShortLC_TSCC(SiteData siteData, uint16_t counter)
 {
-    assert(m_modem != nullptr);
+    assert(s_modem != nullptr);
 
     uint8_t lc[5U];
     uint32_t lcValue = 0U;
@@ -1787,14 +1787,14 @@ void Slot::setShortLC_TSCC(SiteData siteData, uint16_t counter)
     lc::ShortLC shortLC;
     shortLC.encode(lc, sLC);
 
-    m_modem->writeDMRShortLC(sLC);
+    s_modem->writeDMRShortLC(sLC);
 }
 
 /* Helper to set the DMR short LC for payload. */
 
 void Slot::setShortLC_Payload(SiteData siteData, uint16_t counter)
 {
-    assert(m_modem != nullptr);
+    assert(s_modem != nullptr);
 
     uint8_t lc[5U];
     uint32_t lcValue = 0U;
@@ -1847,5 +1847,5 @@ void Slot::setShortLC_Payload(SiteData siteData, uint16_t counter)
     lc::ShortLC shortLC;
     shortLC.encode(lc, sLC);
 
-    m_modem->writeDMRShortLC(sLC);
+    s_modem->writeDMRShortLC(sLC);
 }

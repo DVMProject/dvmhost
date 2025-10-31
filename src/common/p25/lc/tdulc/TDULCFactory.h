@@ -69,7 +69,7 @@ namespace p25
                 static std::unique_ptr<TDULC> createTDULC(const uint8_t* data);
 
             private:
-                static edac::RS634717 m_rs;
+                static edac::RS634717 s_rs;
 
                 /**
                  * @brief Decode a TDULC.

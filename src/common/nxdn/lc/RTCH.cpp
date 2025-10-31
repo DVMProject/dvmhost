@@ -24,7 +24,7 @@ using namespace nxdn::lc;
 //  Static Class Members
 // ---------------------------------------------------------------------------
 
-bool RTCH::m_verbose = false;
+bool RTCH::s_verbose = false;
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -113,7 +113,7 @@ void RTCH::decode(const uint8_t* data, uint32_t length, uint32_t offset)
         WRITE_BIT(rtch, i, b);
     }
 
-    if (m_verbose) {
+    if (s_verbose) {
         Utils::dump(2U, "NXDN, RTCH::decode(), Decoded RTCH Data", rtch, NXDN_RTCH_LC_LENGTH_BYTES);
     }
 
@@ -136,7 +136,7 @@ void RTCH::encode(uint8_t* data, uint32_t length, uint32_t offset)
         WRITE_BIT(data, offset, b);
     }
 
-    if (m_verbose) {
+    if (s_verbose) {
         Utils::dump(2U, "NXDN, RTCH::encode(), Encoded RTCH Data", data, length);
     }
 }

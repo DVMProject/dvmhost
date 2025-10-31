@@ -54,7 +54,7 @@ void OSP_SNDCP_CH_ANN::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
     uint32_t calcSpace = (uint32_t)(m_siteIdenEntry.chSpaceKhz() / 0.125);
     float calcTxOffset = m_siteIdenEntry.txOffsetMhz() * 1000000.0;
 
-    uint32_t txFrequency = (uint32_t)((m_siteIdenEntry.baseFrequency() + ((calcSpace * 125) * m_siteData.channelNo())));
+    uint32_t txFrequency = (uint32_t)((m_siteIdenEntry.baseFrequency() + ((calcSpace * 125) * s_siteData.channelNo())));
     uint32_t rxFrequency = (uint32_t)(txFrequency + (int32_t)calcTxOffset);
 
     uint32_t rootFreq = rxFrequency - m_siteIdenEntry.baseFrequency();
@@ -70,14 +70,14 @@ void OSP_SNDCP_CH_ANN::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
     if (m_implicitChannel) {
         tsbkValue = (tsbkValue << 16) + 0xFFFFU;
     } else {
-        tsbkValue = (tsbkValue << 4) + m_siteData.channelId();                      // Channel (T) ID
-        tsbkValue = (tsbkValue << 12) + m_siteData.channelNo();                     // Channel (T) Number
+        tsbkValue = (tsbkValue << 4) + s_siteData.channelId();                      // Channel (T) ID
+        tsbkValue = (tsbkValue << 12) + s_siteData.channelNo();                     // Channel (T) Number
     }
 
     if (m_implicitChannel) {
         tsbkValue = (tsbkValue << 16) + 0xFFFFU;
     } else {
-        tsbkValue = (tsbkValue << 4) + m_siteData.channelId();                      // Channel (R) ID
+        tsbkValue = (tsbkValue << 4) + s_siteData.channelId();                      // Channel (R) ID
         tsbkValue = (tsbkValue << 12) + (rxChNo & 0xFFFU);                          // Channel (R) Number
     }
 

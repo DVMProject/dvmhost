@@ -24,7 +24,7 @@ using namespace p25::lc::tdulc;
 //  Static Class Members
 // ---------------------------------------------------------------------------
 
-::edac::RS634717 TDULCFactory::m_rs = ::edac::RS634717();
+::edac::RS634717 TDULCFactory::s_rs = ::edac::RS634717();
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -58,7 +58,7 @@ std::unique_ptr<TDULC> TDULCFactory::createTDULC(const uint8_t* data)
 
     // decode RS (24,12,13) FEC
     try {
-        bool ret = m_rs.decode241213(rs);
+        bool ret = s_rs.decode241213(rs);
         if (!ret) {
             LogError(LOG_P25, "TDULCFactory::createTDULC(), failed to decode RS (24,12,13) FEC");
             return nullptr;

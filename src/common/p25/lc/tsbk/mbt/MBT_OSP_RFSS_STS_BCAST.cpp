@@ -46,23 +46,23 @@ void MBT_OSP_RFSS_STS_BCAST::encodeMBT(data::DataHeader& dataHeader, uint8_t* pd
     assert(pduUserData != nullptr);
 
     // pack LRA and system ID into LLID
-    uint32_t llId = m_siteData.lra();                                               // Location Registration Area
-    llId = (llId << 12) + m_siteData.siteId();                                      // System ID
-    if (m_siteData.netActive()) {
+    uint32_t llId = s_siteData.lra();                                               // Location Registration Area
+    llId = (llId << 12) + s_siteData.siteId();                                      // System ID
+    if (s_siteData.netActive()) {
         llId |= 0x1000U;                                                            // Network Active Flag
     }
     dataHeader.setLLId(llId);
 
     /** Block 1 */
-    pduUserData[0U] = (m_siteData.rfssId()) & 0xFFU;                                // RF Sub-System ID
-    pduUserData[1U] = (m_siteData.siteId()) & 0xFFU;                                // Site ID
-    pduUserData[2U] = ((m_siteData.channelId() & 0x0FU) << 4) +                     // Transmit Channel ID & Channel Number MSB
-        ((m_siteData.channelNo() >> 8) & 0xFFU);
-    pduUserData[3U] = (m_siteData.channelNo() >> 0) & 0xFFU;                        // Transmit Channel Number LSB
-    pduUserData[4U] = ((m_siteData.channelId() & 0x0FU) << 4) +                     // Receive Channel ID & Channel Number MSB
-        ((m_siteData.channelNo() >> 8) & 0xFFU);
-    pduUserData[5U] = (m_siteData.channelNo() >> 0) & 0xFFU;                        // Receive Channel Number LSB
-    pduUserData[6U] = m_siteData.serviceClass();                                    // System Service Class
+    pduUserData[0U] = (s_siteData.rfssId()) & 0xFFU;                                // RF Sub-System ID
+    pduUserData[1U] = (s_siteData.siteId()) & 0xFFU;                                // Site ID
+    pduUserData[2U] = ((s_siteData.channelId() & 0x0FU) << 4) +                     // Transmit Channel ID & Channel Number MSB
+        ((s_siteData.channelNo() >> 8) & 0xFFU);
+    pduUserData[3U] = (s_siteData.channelNo() >> 0) & 0xFFU;                        // Transmit Channel Number LSB
+    pduUserData[4U] = ((s_siteData.channelId() & 0x0FU) << 4) +                     // Receive Channel ID & Channel Number MSB
+        ((s_siteData.channelNo() >> 8) & 0xFFU);
+    pduUserData[5U] = (s_siteData.channelNo() >> 0) & 0xFFU;                        // Receive Channel Number LSB
+    pduUserData[6U] = s_siteData.serviceClass();                                    // System Service Class
 
     AMBT::encode(dataHeader, pduUserData);
 }

@@ -71,7 +71,7 @@ void IOSP_GRP_VCH::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
         tsbkValue = (tsbkValue << 4) + m_grpVchId;                                  // Channel ID
     }
     else {
-        tsbkValue = (tsbkValue << 4) + m_siteData.channelId();                      // Channel ID
+        tsbkValue = (tsbkValue << 4) + s_siteData.channelId();                      // Channel ID
     }
     tsbkValue = (tsbkValue << 12) + m_grpVchNo;                                     // Channel Number
     tsbkValue = (tsbkValue << 16) + m_dstId;                                        // Talkgroup Address

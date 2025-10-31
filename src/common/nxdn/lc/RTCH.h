@@ -82,7 +82,7 @@ namespace nxdn
              * @brief Sets the flag indicating verbose log output.
              * @param verbose Flag indicating verbose log output.
              */
-            static void setVerbose(bool verbose) { m_verbose = verbose; }
+            static void setVerbose(bool verbose) { s_verbose = verbose; }
 
         public:
             /** @name Common Data */
@@ -177,7 +177,7 @@ namespace nxdn
             DECLARE_PROPERTY(uint8_t, causeRsp, CauseResponse);
 
         private:
-            static bool m_verbose;
+            static bool s_verbose;
 
             // Encryption data
             uint8_t* m_mi;

@@ -38,13 +38,13 @@ const uint32_t LOG_BUFFER_LEN = 4096U;
 //  Global Variables
 // ---------------------------------------------------------------------------
 
-static uint32_t m_fileLevel = 0U;
-static std::string m_filePath;
-static std::string m_fileRoot;
+static uint32_t g_fileLevel = 0U;
+static std::string g_filePath;
+static std::string g_fileRoot;
 
-static network::BaseNetwork* m_network;
+static network::BaseNetwork* g_network;
 
-static FILE* m_fpLog = nullptr;
+static FILE* g_fpLog = nullptr;
 
 uint32_t g_logDisplayLevel = 2U;
 bool g_disableTimeDisplay = false;
@@ -52,11 +52,11 @@ bool g_disableTimeDisplay = false;
 bool g_useSyslog = false;
 bool g_disableNetworkLog = false;
 
-static struct tm m_tm;
+static struct tm g_tm;
 
-static std::ostream m_outStream { std::cerr.rdbuf() };
+static std::ostream g_outStream { std::cerr.rdbuf() };
 
-bool log_stacktrace::SignalHandling::m_foreground = false;
+bool log_stacktrace::SignalHandling::s_foreground = false;
 
 // ---------------------------------------------------------------------------
 //  Global Functions
@@ -64,15 +64,15 @@ bool log_stacktrace::SignalHandling::m_foreground = false;
 
 /* Helper to get the current log file level. */
 
-uint32_t CurrentLogFileLevel() { return m_fileLevel; }
+uint32_t CurrentLogFileLevel() { return g_fileLevel; }
 
 /* Helper to get the current log file path. */
 
-std::string LogGetFilePath() { return m_filePath; }
+std::string LogGetFilePath() { return g_filePath; }
 
 /* Helper to get the current log file root. */
 
-std::string LogGetFileRoot() { return m_fileRoot; }
+std::string LogGetFileRoot() { return g_fileRoot; }
 
 /* Helper to open the detailed log file, file handle. */
 
@@ -81,7 +81,7 @@ static bool LogOpen()
 #if defined(CATCH2_TEST_COMPILATION)
     return true;
 #endif
-    if (m_fileLevel == 0U)
+    if (g_fileLevel == 0U)
         return true;
 
     if (!g_useSyslog) {
@@ -90,26 +90,26 @@ static bool LogOpen()
 
         struct tm* tm = ::localtime(&now);
 
-        if (tm->tm_mday == m_tm.tm_mday && tm->tm_mon == m_tm.tm_mon && tm->tm_year == m_tm.tm_year) {
-            if (m_fpLog != nullptr)
+        if (tm->tm_mday == g_tm.tm_mday && tm->tm_mon == g_tm.tm_mon && tm->tm_year == g_tm.tm_year) {
+            if (g_fpLog != nullptr)
                 return true;
         }
         else {
-            if (m_fpLog != nullptr)
-                ::fclose(m_fpLog);
+            if (g_fpLog != nullptr)
+                ::fclose(g_fpLog);
         }
 
         char filename[200U];
-        ::sprintf(filename, "%s/%s-%04d-%02d-%02d.log", m_filePath.c_str(), m_fileRoot.c_str(), tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday);
+        ::sprintf(filename, "%s/%s-%04d-%02d-%02d.log", g_filePath.c_str(), g_fileRoot.c_str(), tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday);
 
-        m_fpLog = ::fopen(filename, "a+t");
-        m_tm = *tm;
+        g_fpLog = ::fopen(filename, "a+t");
+        g_tm = *tm;
 
-        return m_fpLog != nullptr;
+        return g_fpLog != nullptr;
     }
     else {
 #if !defined(_WIN32)
-        switch (m_fileLevel) {
+        switch (g_fileLevel) {
         case 1U:
             setlogmask(LOG_UPTO(LOG_DEBUG));
             break;
@@ -128,7 +128,7 @@ static bool LogOpen()
             break;
         }
 
-        openlog(m_fileRoot.c_str(), LOG_CONS | LOG_PID | LOG_NDELAY, LOG_DAEMON);
+        openlog(g_fileRoot.c_str(), LOG_CONS | LOG_PID | LOG_NDELAY, LOG_DAEMON);
         return true;
 #else
         return false;
@@ -141,7 +141,7 @@ static bool LogOpen()
 void* LogGetNetwork()
 {
     // NO GOOD, VERY BAD, TERRIBLE HACK
-    return (void*)m_network;
+    return (void*)g_network;
 }
 
 /* Sets the instance of the Network class to transfer the activity log with. */
@@ -153,16 +153,16 @@ void LogSetNetwork(void* network)
 #endif
     // note: The Network class is passed here as a void so we can avoid including the Network.h
     // header in Log.h. This is dirty and probably terrible...
-    m_network = (network::BaseNetwork*)network;
+    g_network = (network::BaseNetwork*)network;
 }
 
 /* Initializes the diagnostics log. */
 
 bool LogInitialise(const std::string& filePath, const std::string& fileRoot, uint32_t fileLevel, uint32_t displayLevel, bool disableTimeDisplay, bool useSyslog)
 {
-    m_filePath = filePath;
-    m_fileRoot = fileRoot;
-    m_fileLevel = fileLevel;
+    g_filePath = filePath;
+    g_fileRoot = fileRoot;
+    g_fileLevel = fileLevel;
     g_logDisplayLevel = displayLevel;
     g_disableTimeDisplay = disableTimeDisplay;
 #if defined(_WIN32)
@@ -181,9 +181,9 @@ void LogFinalise()
 #if defined(CATCH2_TEST_COMPILATION)
     return;
 #endif
-    if (m_fpLog != nullptr) {
-        ::fclose(m_fpLog);
-        m_fpLog = nullptr;
+    if (g_fpLog != nullptr) {
+        ::fclose(g_fpLog);
+        g_fpLog = nullptr;
     }
 #if !defined(_WIN32)
     if (g_useSyslog)
@@ -195,21 +195,21 @@ void LogFinalise()
 
 void log_internal::SetInternalOutputStream(std::ostream& stream)
 {
-    m_outStream.rdbuf(stream.rdbuf());
+    g_outStream.rdbuf(stream.rdbuf());
 }
 
 /* Writes a new entry to the diagnostics log. */
 
 void log_internal::LogInternal(uint32_t level, const std::string& log)
 {
-    if (m_outStream && g_logDisplayLevel == 0U) {
-        m_outStream << log << std::endl;
+    if (g_outStream && g_logDisplayLevel == 0U) {
+        g_outStream << log << std::endl;
     }
 
-    if (m_network != nullptr && !g_disableNetworkLog) {
+    if (g_network != nullptr && !g_disableNetworkLog) {
         // don't transfer debug data...
         if (level > 1U) {
-            m_network->writeDiagLog(log.c_str());
+            g_network->writeDiagLog(log.c_str());
         }
     }
 
@@ -218,15 +218,15 @@ void log_internal::LogInternal(uint32_t level, const std::string& log)
     return;
 #endif
 
-    if (level >= m_fileLevel && m_fileLevel != 0U) {
+    if (level >= g_fileLevel && g_fileLevel != 0U) {
         if (!g_useSyslog) {
             bool ret = ::LogOpen();
             if (!ret)
                 return;
 
-            if (m_fpLog != nullptr) {
-                ::fprintf(m_fpLog, "%s\n", log.c_str());
-                ::fflush(m_fpLog);
+            if (g_fpLog != nullptr) {
+                ::fprintf(g_fpLog, "%s\n", log.c_str());
+                ::fflush(g_fpLog);
             }
         } else {
 #if !defined(_WIN32)
@@ -263,8 +263,8 @@ void log_internal::LogInternal(uint32_t level, const std::string& log)
 
     // fatal error (specially allow any log levels above 9999)
     if (level >= 5U && level < 9999U) {
-        if (m_fpLog != nullptr)
-            ::fclose(m_fpLog);
+        if (g_fpLog != nullptr)
+            ::fclose(g_fpLog);
 #if !defined(_WIN32)
         if (g_useSyslog)
             ::closelog();
@@ -277,19 +277,19 @@ void log_internal::LogInternal(uint32_t level, const std::string& log)
 
 std::string log_internal::GetLogFilePath()
 {
-    return m_filePath;
+    return g_filePath;
 }
 
 /* Internal helper to get the log file root name. */
 
 std::string log_internal::GetLogFileRoot()
 {
-    return m_fileRoot;
+    return g_fileRoot;
 }
 
 /* Internal helper to get the log file handle pointer. */
 
 FILE* log_internal::GetLogFile()
 {
-    return m_fpLog;
+    return g_fpLog;
 }

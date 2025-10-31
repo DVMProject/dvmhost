@@ -133,7 +133,7 @@ int findLastChar(const uint8_t* buffer, uint32_t len, char target)
 //  Static Class Members
 // ---------------------------------------------------------------------------
 
-std::mutex CryptoContainer::m_mutex;
+std::mutex CryptoContainer::s_mutex;
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -220,7 +220,7 @@ bool CryptoContainer::read()
 
 void CryptoContainer::clear()
 {
-    std::lock_guard<std::mutex> lock(m_mutex);
+    std::lock_guard<std::mutex> lock(s_mutex);
     m_keys.clear();
 }
 
@@ -235,7 +235,7 @@ void CryptoContainer::addEntry(KeyItem key)
     uint32_t id = entry.id();
     uint32_t kId = entry.kId();
 
-    std::lock_guard<std::mutex> lock(m_mutex);
+    std::lock_guard<std::mutex> lock(s_mutex);
     auto it = std::find_if(m_keys.begin(), m_keys.end(),
         [&](KeyItem& x)
         {
@@ -253,7 +253,7 @@ void CryptoContainer::addEntry(KeyItem key)
 
 void CryptoContainer::eraseEntry(uint32_t id)
 {
-    std::lock_guard<std::mutex> lock(m_mutex);
+    std::lock_guard<std::mutex> lock(s_mutex);
     auto it = std::find_if(m_keys.begin(), m_keys.end(),
         [&](KeyItem& x) {
             return x.id() == id; 
@@ -269,7 +269,7 @@ KeyItem CryptoContainer::find(uint32_t kId)
 {
     KeyItem entry;
 
-    std::lock_guard<std::mutex> lock(m_mutex);
+    std::lock_guard<std::mutex> lock(s_mutex);
     auto it = std::find_if(m_keys.begin(), m_keys.end(),
         [&](KeyItem& x) {
             return x.kId() == kId;
@@ -498,7 +498,7 @@ bool CryptoContainer::load()
                 // clear table
                 clear();
 
-                std::lock_guard<std::mutex> lock(m_mutex);
+                std::lock_guard<std::mutex> lock(s_mutex);
 
                 // get keys node
                 rapidxml::xml_node<>* keys = innerRoot->first_node("Keys");

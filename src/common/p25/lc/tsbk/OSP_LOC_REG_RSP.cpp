@@ -49,8 +49,8 @@ void OSP_LOC_REG_RSP::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 
     tsbkValue = (tsbkValue << 6) + (m_response & 0x3U);                             // Registration Response
     tsbkValue = (tsbkValue << 16) + (m_dstId & 0xFFFFU);                            // Talkgroup Address
-    tsbkValue = (tsbkValue << 8) + m_siteData.rfssId();                             // RF Sub-System ID
-    tsbkValue = (tsbkValue << 8) + m_siteData.sysId();                              // Site ID
+    tsbkValue = (tsbkValue << 8) + s_siteData.rfssId();                             // RF Sub-System ID
+    tsbkValue = (tsbkValue << 8) + s_siteData.sysId();                              // Site ID
     tsbkValue = (tsbkValue << 24) + m_srcId;                                        // Source Radio Address
 
     std::unique_ptr<uint8_t[]> tsbk = TSBK::fromValue(tsbkValue);

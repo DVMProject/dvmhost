@@ -115,7 +115,7 @@ namespace p25
              * @brief Sets the flag indicating CRC-errors should be warnings and not errors.
              * @param warnCRC Flag indicating CRC-errors should be treated as warnings.
              */
-            static void setWarnCRC(bool warnCRC) { m_warnCRC = warnCRC; }
+            static void setWarnCRC(bool warnCRC) { s_warnCRC = warnCRC; }
 
             /**
              * @brief Helper to determine the pad length for a given packet length.
@@ -232,7 +232,7 @@ namespace p25
             uint8_t* m_data;
             uint8_t* m_extAddrData;
         
-            static bool m_warnCRC;
+            static bool s_warnCRC;
         };
     } // namespace data
 } // namespace p25

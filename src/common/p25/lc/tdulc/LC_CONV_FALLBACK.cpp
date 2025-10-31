@@ -47,12 +47,12 @@ void LC_CONV_FALLBACK::encode(uint8_t* data)
 
     ulong64_t rsValue = 0U;
 
-    rsValue = (rsValue << 48) + m_siteData.channelId();                             // Channel ID 6
-    rsValue = (rsValue << 40) + m_siteData.channelId();                             // Channel ID 5
-    rsValue = (rsValue << 32) + m_siteData.channelId();                             // Channel ID 4
-    rsValue = (rsValue << 24) + m_siteData.channelId();                             // Channel ID 3
-    rsValue = (rsValue << 16) + m_siteData.channelId();                             // Channel ID 2
-    rsValue = (rsValue << 8) + m_siteData.channelId();                              // Channel ID 1
+    rsValue = (rsValue << 48) + s_siteData.channelId();                             // Channel ID 6
+    rsValue = (rsValue << 40) + s_siteData.channelId();                             // Channel ID 5
+    rsValue = (rsValue << 32) + s_siteData.channelId();                             // Channel ID 4
+    rsValue = (rsValue << 24) + s_siteData.channelId();                             // Channel ID 3
+    rsValue = (rsValue << 16) + s_siteData.channelId();                             // Channel ID 2
+    rsValue = (rsValue << 8) + s_siteData.channelId();                              // Channel ID 1
 
     std::unique_ptr<uint8_t[]> rs = TDULC::fromValue(rsValue);
     TDULC::encode(data, rs.get());

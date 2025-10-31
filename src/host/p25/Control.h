@@ -330,7 +330,7 @@ namespace p25
 
         RingBuffer<uint8_t> m_txImmQueue;
         RingBuffer<uint8_t> m_txQueue;
-        static std::mutex m_queueLock;
+        static std::mutex s_queueLock;
 
         RPT_RF_STATE m_rfState;
         uint32_t m_rfLastDstId;
@@ -387,7 +387,7 @@ namespace p25
         uint32_t m_aveRSSI;
         uint32_t m_rssiCount;
 
-        static std::mutex m_activeTGLock;
+        static std::mutex s_activeTGLock;
         bool m_ccNotifyActiveTG;
 
         bool m_disableAdjSiteBroadcast;

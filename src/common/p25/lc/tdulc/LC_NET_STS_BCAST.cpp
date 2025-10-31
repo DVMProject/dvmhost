@@ -49,11 +49,11 @@ void LC_NET_STS_BCAST::encode(uint8_t* data)
 
     m_implicit = true;
 
-    rsValue = (rsValue << 20) + m_siteData.netId();                                 // Network ID
-    rsValue = (rsValue << 12) + m_siteData.sysId();                                 // System ID
-    rsValue = (rsValue << 4) + m_siteData.channelId();                              // Channel ID
-    rsValue = (rsValue << 12) + m_siteData.channelNo();                             // Channel Number
-    rsValue = (rsValue << 8) + m_siteData.serviceClass();                           // System Service Class
+    rsValue = (rsValue << 20) + s_siteData.netId();                                 // Network ID
+    rsValue = (rsValue << 12) + s_siteData.sysId();                                 // System ID
+    rsValue = (rsValue << 4) + s_siteData.channelId();                              // Channel ID
+    rsValue = (rsValue << 12) + s_siteData.channelNo();                             // Channel Number
+    rsValue = (rsValue << 8) + s_siteData.serviceClass();                           // System Service Class
 
     std::unique_ptr<uint8_t[]> rs = TDULC::fromValue(rsValue);
     TDULC::encode(data, rs.get());

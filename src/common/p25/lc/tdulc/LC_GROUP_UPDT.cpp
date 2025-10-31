@@ -49,10 +49,10 @@ void LC_GROUP_UPDT::encode(uint8_t* data)
 
     m_implicit = true;
 
-    rsValue = m_siteData.channelId();                                               // Group A - Channel ID
+    rsValue = s_siteData.channelId();                                               // Group A - Channel ID
     rsValue = (rsValue << 12) + m_grpVchNo;                                         // Group A - Channel Number
     rsValue = (rsValue << 16) + m_dstId;                                            // Group A - Talkgroup Address
-    rsValue = (rsValue << 4) + m_siteData.channelId();                              // Group B - Channel ID
+    rsValue = (rsValue << 4) + s_siteData.channelId();                              // Group B - Channel ID
     rsValue = (rsValue << 12) + m_grpVchNo;                                         // Group B - Channel Number
     rsValue = (rsValue << 16) + m_dstId;                                            // Group B - Talkgroup Address
 

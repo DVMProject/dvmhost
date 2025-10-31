@@ -243,8 +243,8 @@ namespace lookups
         bool save(bool quiet = false) override;
 
     private:
-        static std::mutex m_mutex;  //!< Mutex used for change locking.
-        static bool m_locked;       //!< Flag used for read locking (prevents find lookups), should be used when atomic operations (add/erase/etc) are being used.
+        static std::mutex s_mutex;  //!< Mutex used for change locking.
+        static bool s_locked;       //!< Flag used for read locking (prevents find lookups), should be used when atomic operations (add/erase/etc) are being used.
     };
 } // namespace lookups
 

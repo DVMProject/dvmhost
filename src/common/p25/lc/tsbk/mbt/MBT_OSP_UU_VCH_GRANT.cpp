@@ -56,14 +56,14 @@ void MBT_OSP_UU_VCH_GRANT::encodeMBT(data::DataHeader& dataHeader, uint8_t* pduU
         (m_priority & 0x07U);                                                       // Priority
 
     dataHeader.setAMBTField8(serviceOptions);
-    dataHeader.setAMBTField9((m_siteData.netId() >> 12) & 0xFFU);                   // Target Network ID (b19-12)
+    dataHeader.setAMBTField9((s_siteData.netId() >> 12) & 0xFFU);                   // Target Network ID (b19-12)
 
     uint16_t txFrequency = 0U;
     if ((m_grpVchId != 0U) || m_forceChannelId) {
         txFrequency = (txFrequency << 4) + m_grpVchId;                              // Tx Channel ID
     }
     else {
-        txFrequency = (txFrequency << 4) + m_siteData.channelId();                  // Tx Channel ID
+        txFrequency = (txFrequency << 4) + s_siteData.channelId();                  // Tx Channel ID
     }
     txFrequency = (txFrequency << 12) + m_grpVchNo;                                 // Tx Channel Number
 
@@ -73,26 +73,26 @@ void MBT_OSP_UU_VCH_GRANT::encodeMBT(data::DataHeader& dataHeader, uint8_t* pduU
         rxFrequency = (rxFrequency << 4) + m_rxGrpVchId;                            // Rx Channel ID
     }
     else {
-        rxFrequency = (rxFrequency << 4) + m_siteData.channelId();                  // Rx Channel ID
+        rxFrequency = (rxFrequency << 4) + s_siteData.channelId();                  // Rx Channel ID
     }
     rxFrequency = (rxFrequency << 12) + m_rxGrpVchNo;                               // Rx Channel Number
 
     /** Block 1 */
-    pduUserData[0U] = ((m_siteData.netId() >> 12) & 0xFFU);                         // Source Network ID (b19-12)
-    pduUserData[1U] = ((m_siteData.netId() >> 4) & 0xFFU);                          // Source Network ID (b11-b4)
-    pduUserData[2U] = ((m_siteData.netId() & 0x0FU) << 4) +                         // Source Network ID (b3-b0)
-        ((m_siteData.sysId() >> 8) & 0xFFU);                                        // Source System ID (b11-b8)
-    pduUserData[3U] = (m_siteData.sysId() & 0xFFU);                                 // Source System ID (b7-b0)
+    pduUserData[0U] = ((s_siteData.netId() >> 12) & 0xFFU);                         // Source Network ID (b19-12)
+    pduUserData[1U] = ((s_siteData.netId() >> 4) & 0xFFU);                          // Source Network ID (b11-b4)
+    pduUserData[2U] = ((s_siteData.netId() & 0x0FU) << 4) +                         // Source Network ID (b3-b0)
+        ((s_siteData.sysId() >> 8) & 0xFFU);                                        // Source System ID (b11-b8)
+    pduUserData[3U] = (s_siteData.sysId() & 0xFFU);                                 // Source System ID (b7-b0)
     SET_UINT24(m_srcId, pduUserData, 4U);                                           // Source Radio Address
     SET_UINT24(m_dstId, pduUserData, 7U);                                           // Target Radio Address
     SET_UINT16(txFrequency, pduUserData, 10U);                                      // Transmit Frequency
 
     /** Block 2 */
     SET_UINT16(rxFrequency, pduUserData, 12U);                                      // Receive Frequency
-    pduUserData[14U] = ((m_siteData.netId() >> 4) & 0xFFU);                         // Target Network ID (b11-b4)
-    pduUserData[15U] = ((m_siteData.netId() & 0x0FU) << 4) +                        // Target Network ID (b3-b0)
-        ((m_siteData.sysId() >> 8) & 0xFFU);                                        // Target System ID (b11-b8)
-    pduUserData[16U] = (m_siteData.sysId() & 0xFFU);                                // Target System ID (b7-b0)
+    pduUserData[14U] = ((s_siteData.netId() >> 4) & 0xFFU);                         // Target Network ID (b11-b4)
+    pduUserData[15U] = ((s_siteData.netId() & 0x0FU) << 4) +                        // Target Network ID (b3-b0)
+        ((s_siteData.sysId() >> 8) & 0xFFU);                                        // Target System ID (b11-b8)
+    pduUserData[16U] = (s_siteData.sysId() & 0xFFU);                                // Target System ID (b7-b0)
     SET_UINT24(m_dstId, pduUserData, 17U);                                          // Target Radio Address
 
     AMBT::encode(dataHeader, pduUserData);

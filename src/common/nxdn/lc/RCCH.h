@@ -71,14 +71,14 @@ namespace nxdn
 
             /**
              * @brief Gets the flag indicating verbose log output.
-             * @returns bool True, if the TSBK is verbose logging, otherwise false.
+             * @returns bool True, if the RCCH is verbose logging, otherwise false.
              */
-            static bool getVerbose() { return m_verbose; }
+            static bool getVerbose() { return s_verbose; }
             /**
              * @brief Sets the flag indicating verbose log output.
              * @param verbose Flag indicating verbose log output.
              */
-            static void setVerbose(bool verbose) { m_verbose = verbose; }
+            static void setVerbose(bool verbose) { s_verbose = verbose; }
 
             /** @name Local Site data */
             /**
@@ -91,12 +91,12 @@ namespace nxdn
              * @brief Gets the local site data.
              * @returns SiteData Currently set site data for the RCCH class.
              */
-            static SiteData getSiteData() { return m_siteData; }
+            static SiteData getSiteData() { return s_siteData; }
             /**
              * @brief Sets the local site data.
              * @param siteData Site data to set for the RCCH class.
              */
-            static void setSiteData(SiteData siteData) { m_siteData = siteData; }
+            static void setSiteData(SiteData siteData) { s_siteData = siteData; }
             /** @} */
 
         public:
@@ -183,11 +183,11 @@ namespace nxdn
             /** @} */
 
         protected:
-            static bool m_verbose;
+            static bool s_verbose;
 
             // Local Site data
-            static uint8_t* m_siteCallsign;
-            static SiteData m_siteData;
+            static uint8_t* s_siteCallsign;
+            static SiteData s_siteData;
 
             /**
              * @brief Internal helper to decode a RCCH link control message.

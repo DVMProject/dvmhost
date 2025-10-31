@@ -26,7 +26,7 @@ using namespace network;
 //  Static Class Members
 // ---------------------------------------------------------------------------
 
-std::mutex PeerNetwork::m_peerStatusMutex;
+std::mutex PeerNetwork::s_peerStatusMutex;
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -105,7 +105,7 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
 
             json::object obj = v.get<json::object>();
             uint32_t actualPeerId = obj["peerId"].getDefault<uint32_t>(peerId);
-            std::lock_guard<std::mutex> lock(m_peerStatusMutex);
+            std::lock_guard<std::mutex> lock(s_peerStatusMutex);
             peerStatus[actualPeerId] = obj;
         }
         break;

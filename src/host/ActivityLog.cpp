@@ -33,12 +33,12 @@ const uint32_t ACT_LOG_BUFFER_LEN = 501U;
 //  Global Variables
 // ---------------------------------------------------------------------------
 
-static std::string m_actFilePath;
-static std::string m_actFileRoot;
+static std::string g_actFilePath;
+static std::string g_actFileRoot;
 
-static FILE* m_actFpLog = nullptr;
+static FILE* g_actFpLog = nullptr;
 
-static struct tm m_actTm;
+static struct tm g_actTm;
 
 // ---------------------------------------------------------------------------
 //  Global Functions
@@ -56,22 +56,22 @@ static bool ActivityLogOpen()
 
     struct tm* tm = ::localtime(&now);
 
-    if (tm->tm_mday == m_actTm.tm_mday && tm->tm_mon == m_actTm.tm_mon && tm->tm_year == m_actTm.tm_year) {
-        if (m_actFpLog != nullptr)
+    if (tm->tm_mday == g_actTm.tm_mday && tm->tm_mon == g_actTm.tm_mon && tm->tm_year == g_actTm.tm_year) {
+        if (g_actFpLog != nullptr)
             return true;
     }
     else {
-        if (m_actFpLog != nullptr)
-            ::fclose(m_actFpLog);
+        if (g_actFpLog != nullptr)
+            ::fclose(g_actFpLog);
     }
 
     char filename[200U];
-    ::sprintf(filename, "%s/%s-%04d-%02d-%02d.activity.log", m_actFilePath.c_str(), m_actFileRoot.c_str(), tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday);
+    ::sprintf(filename, "%s/%s-%04d-%02d-%02d.activity.log", g_actFilePath.c_str(), g_actFileRoot.c_str(), tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday);
 
-    m_actFpLog = ::fopen(filename, "a+t");
-    m_actTm = *tm;
+    g_actFpLog = ::fopen(filename, "a+t");
+    g_actTm = *tm;
 
-    return m_actFpLog != nullptr;
+    return g_actFpLog != nullptr;
 }
 
 /* Initializes the activity log. */
@@ -81,8 +81,8 @@ bool ActivityLogInitialise(const std::string& filePath, const std::string& fileR
 #if defined(CATCH2_TEST_COMPILATION)
     return true;
 #endif
-    m_actFilePath = filePath;
-    m_actFileRoot = fileRoot;
+    g_actFilePath = filePath;
+    g_actFileRoot = fileRoot;
 
     return ::ActivityLogOpen();
 }
@@ -94,8 +94,8 @@ void ActivityLogFinalise()
 #if defined(CATCH2_TEST_COMPILATION)
     return;
 #endif
-    if (m_actFpLog != nullptr)
-        ::fclose(m_actFpLog);
+    if (g_actFpLog != nullptr)
+        ::fclose(g_actFpLog);
 }
 
 /* Writes a new entry to the activity log. */
@@ -117,8 +117,8 @@ void log_internal::ActivityLogInternal(const std::string& log)
         network->writeActLog(log.c_str());
     }
 
-    ::fprintf(m_actFpLog, "%s\n", log.c_str());
-    ::fflush(m_actFpLog);
+    ::fprintf(g_actFpLog, "%s\n", log.c_str());
+    ::fflush(g_actFpLog);
 
     if (2U >= g_logDisplayLevel && g_logDisplayLevel != 0U) {
         ::fprintf(stdout, "%s" EOL, log.c_str());
