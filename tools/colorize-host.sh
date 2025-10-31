@@ -23,6 +23,7 @@
 #*   along with this program; if not, write to the Free Software
 #*   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #*/
+EOL_CLEAR="s/$/\x1b[0m/;"
 LOG_COLOR="s#W:#\x1b[1m\x1b[33m&#; s#E:#\x1b[1m\x1b[31m&#; s#M:#\x1b[0m&#; s#I:#\x1b[0m&#; s#D:#\x1b[1m\x1b[34m&\x1b[0m\x1b[1m#;"
 
 DMR_COLOR="s#VOICE#\x1b[36m&#; s#TERMINATOR_WITH_LC#\x1b[0m\x1b[32m&#; s#CSBK#\x1b[0m\x1b[35m&#"
@@ -33,4 +34,4 @@ AFF_COLOR="s#Affiliations#\x1b[1m\x1b[36m&#; s#Affiliation#\x1b[1m\x1b[36m&#;"
 RF_HIGHLIGHT="s#RF#\x1b[1m\x1b[35m&\x1b[0m#;"
 NET_HIGHLIGHT="s#NET#\x1b[1m\x1b[36m&\x1b[0m#;"
 
-sed "${LOG_COLOR}; ${RF_HIGHLIGHT}; ${NET_HIGHLIGHT}; ${DMR_COLOR}; ${P25_COLOR}; ${NXDN_COLOR}; ${AFF_COLOR}"
+sed "${LOG_COLOR}; ${RF_HIGHLIGHT}; ${NET_HIGHLIGHT}; ${DMR_COLOR}; ${P25_COLOR}; ${NXDN_COLOR}; ${AFF_COLOR}; ${EOL_COLOR};"
