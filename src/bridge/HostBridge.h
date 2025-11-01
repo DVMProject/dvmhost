@@ -26,6 +26,7 @@
 #include "common/yaml/Yaml.h"
 #include "common/RingBuffer.h"
 #include "common/Timer.h"
+#include "common/Clock.h"
 #include "vocoder/MBEDecoder.h"
 #include "vocoder/MBEEncoder.h"
 #define MINIAUDIO_IMPLEMENTATION
@@ -260,6 +261,9 @@ private:
     std::string m_rtsPttPort;
     RtsPttController* m_rtsPttController;
     bool m_rtsPttActive;
+    // Timestamp of last audio written to output and hold-off before clearing PTT
+    system_clock::hrc::hrc_t m_lastAudioOut;
+    uint32_t m_rtsPttHoldoffMs;
 
     uint16_t m_rtpSeqNo;
     uint32_t m_rtpTimestamp;

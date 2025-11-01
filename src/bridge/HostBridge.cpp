@@ -6,6 +6,7 @@
  *
  *  Copyright (C) 2024-2025 Bryan Biedenkapp, N2PLL
  *  Copyright (C) 2025 Caleb, K4PHP
+ *  Copyright (C) 2025 Lorenzo L Romero, K2LLR
  *
  */
 #include "Defines.h"
@@ -114,12 +115,9 @@ void audioCallback(ma_device* device, void* output, const void* input, ma_uint32
             pcmIdx += 2;
         }
 
-        // Assert RTS PTT when audio is being sent to output
+        // Assert RTS PTT when audio is being sent to output and record last output time
         bridge->assertRtsPtt();
-    }
-    else {
-        // Deassert RTS PTT when no audio is being sent to output
-        bridge->deassertRtsPtt();
+        bridge->m_lastAudioOut = system_clock::hrc::now();
     }
 }
 
@@ -285,6 +283,10 @@ HostBridge::HostBridge(const std::string& confFile) :
     ::memset(m_netLDU2, 0x00U, 9U * 25U);
 
     m_p25Crypto = new p25::crypto::P25Crypto();
+
+    // initialize RTS PTT timing
+    m_lastAudioOut = system_clock::hrc::now();
+    m_rtsPttHoldoffMs = 250U;
 }
 
 /* Finalizes a instance of the HostBridge class. */
@@ -946,6 +948,7 @@ bool HostBridge::readParams()
     // RTS PTT Configuration
     m_rtsPttEnable = systemConf["rtsPttEnable"].as<bool>(false);
     m_rtsPttPort = systemConf["rtsPttPort"].as<std::string>("/dev/ttyUSB0");
+    m_rtsPttHoldoffMs = (uint32_t)systemConf["rtsPttHoldoffMs"].as<uint32_t>(m_rtsPttHoldoffMs);
 
     std::string txModeStr = "DMR";
     if (m_txMode == TX_MODE_P25)
@@ -975,6 +978,7 @@ bool HostBridge::readParams()
     LogInfo("    RTS PTT Enable: %s", m_rtsPttEnable ? "yes" : "no");
     if (m_rtsPttEnable) {
         LogInfo("    RTS PTT Port: %s", m_rtsPttPort.c_str());
+        LogInfo("    RTS PTT Hold-off: %ums", m_rtsPttHoldoffMs);
     }
 
     if (m_debug) {
@@ -2970,6 +2974,11 @@ void HostBridge::callEnd(uint32_t srcId, uint32_t dstId)
     m_trafficFromUDP = false;
     m_udpFrameCnt = 0U;
 
+    // ensure PTT is dropped at call end
+    if (m_rtsPttEnable) {
+        deassertRtsPtt();
+    }
+
     m_dmrSeqNo = 0U;
     m_dmrN = 0U;
     m_p25SeqNo = 0U;
@@ -3756,6 +3765,14 @@ void* HostBridge::threadCallWatchdog(void* arg)
             else {
                 if (bridge->m_udpDropTime.isRunning())
                     bridge->m_udpDropTime.clock(ms);
+            }
+
+            // Debounce RTS PTT clear using hold-off after last audio output
+            if (bridge->m_rtsPttEnable && bridge->m_rtsPttActive) {
+                uint64_t sinceLastOut = system_clock::hrc::diffNow(bridge->m_lastAudioOut);
+                if (sinceLastOut >= bridge->m_rtsPttHoldoffMs) {
+                    bridge->deassertRtsPtt();
+                }
             }
 
             std::string trafficType = LOCAL_CALL;
