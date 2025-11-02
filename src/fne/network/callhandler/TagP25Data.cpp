@@ -241,12 +241,19 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                         });
                         if (it != m_statusPVCall.end()) {
                             m_statusPVCall[dstId].reset();
-                            LogInfoEx((fromUpstream) ? LOG_PEER : LOG_MASTER, "P25, Private Call End, peer = %u, ssrc = %u, sysId = $%03X, netId = $%05X, srcId = %u, dstId = %u, duration = %u, streamId = %u, fromUpstream = %u",
-                                peerId, ssrc, sysId, netId, srcId, dstId, duration / 1000, streamId, fromUpstream);
+                            #define PRV_CALL_END_LOG "P25, Private Call End, peer = %u, ssrc = %u, sysId = $%03X, netId = $%05X, srcId = %u, dstId = %u, duration = %u, streamId = %u, fromUpstream = %u", peerId, ssrc, sysId, netId, srcId, dstId, duration / 1000, streamId, fromUpstream
+                            if (m_network->m_logUpstreamCallStartEnd && fromUpstream)
+                                LogInfoEx(LOG_PEER, PRV_CALL_END_LOG);
+                            else if (!fromUpstream)
+                                LogInfoEx(LOG_MASTER, PRV_CALL_END_LOG);
                         }
-                        else
-                            LogInfoEx((fromUpstream) ? LOG_PEER : LOG_MASTER, "P25, Call End, peer = %u, ssrc = %u, sysId = $%03X, netId = $%05X, srcId = %u, dstId = %u, duration = %u, streamId = %u, fromUpstream = %u",
-                                peerId, ssrc, sysId, netId, srcId, dstId, duration / 1000, streamId, fromUpstream);
+                        else {
+                            #define CALL_END_LOG "P25, Call End, peer = %u, ssrc = %u, sysId = $%03X, netId = $%05X, srcId = %u, dstId = %u, duration = %u, streamId = %u, fromUpstream = %u", peerId, ssrc, sysId, netId, srcId, dstId, duration / 1000, streamId, fromUpstream
+                            if (m_network->m_logUpstreamCallStartEnd && fromUpstream)
+                                LogInfoEx(LOG_PEER, CALL_END_LOG);
+                            else if (!fromUpstream)
+                                LogInfoEx(LOG_MASTER, CALL_END_LOG);
+                        }
 
                         // report call event to InfluxDB
                         if (m_network->m_enableInfluxDB) {
@@ -368,12 +375,19 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                         m_statusPVCall[dstId].dstPeerId = regSSRC;
                         m_statusPVCall.unlock();
 
-                        LogInfoEx((fromUpstream) ? LOG_PEER : LOG_MASTER, "P25, Private Call Start, peer = %u, ssrc = %u, sysId = $%03X, netId = $%05X, srcId = %u, dstId = %u, streamId = %u, fromUpstream = %u",
-                            peerId, ssrc, sysId, netId, srcId, dstId, streamId, fromUpstream);
+                        #define PRV_CALL_START_LOG "P25, Private Call Start, peer = %u, ssrc = %u, sysId = $%03X, netId = $%05X, srcId = %u, dstId = %u, streamId = %u, fromUpstream = %u", peerId, ssrc, sysId, netId, srcId, dstId, streamId, fromUpstream
+                        if (m_network->m_logUpstreamCallStartEnd && fromUpstream)
+                            LogInfoEx(LOG_PEER, PRV_CALL_START_LOG);
+                        else if (!fromUpstream)
+                            LogInfoEx(LOG_MASTER, PRV_CALL_START_LOG);
                     }
-                    else
-                        LogInfoEx((fromUpstream) ? LOG_PEER : LOG_MASTER, "P25, Call Start, peer = %u, ssrc = %u, sysId = $%03X, netId = $%05X, srcId = %u, dstId = %u, streamId = %u, fromUpstream = %u", 
-                            peerId, ssrc, sysId, netId, srcId, dstId, streamId, fromUpstream);
+                    else {
+                        #define CALL_START_LOG "P25, Call Start, peer = %u, ssrc = %u, sysId = $%03X, netId = $%05X, srcId = %u, dstId = %u, streamId = %u, fromUpstream = %u", peerId, ssrc, sysId, netId, srcId, dstId, streamId, fromUpstream
+                        if (m_network->m_logUpstreamCallStartEnd && fromUpstream)
+                            LogInfoEx(LOG_PEER, CALL_START_LOG);
+                        else if (!fromUpstream)
+                            LogInfoEx(LOG_MASTER, CALL_START_LOG);
+                    }
                 }
             }
         }

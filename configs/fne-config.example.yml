@@ -64,6 +64,8 @@ master:
     # Flag indicating whether or not denied traffic will be logged.
     #   (This is useful for debugging talkgroup rules and other ACL issues, but can be very noisy on a busy system.)
     logDenials: false
+    # Flag indicating whether or not calls start/end events from a upstream peer will be logged.
+    logUpstreamCallStartEnd: true
 
     # Maximum number of concurrent packet processing workers.
     workers: 16

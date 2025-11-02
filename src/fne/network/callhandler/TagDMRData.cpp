@@ -193,12 +193,19 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                 });
                 if (it != m_statusPVCall.end()) {
                     m_statusPVCall[dstId].reset();
-                    LogInfoEx((fromUpstream) ? LOG_PEER : LOG_MASTER, "DMR, Private Call End, peer = %u, ssrc = %u, srcId = %u, dstId = %u, slot = %u, duration = %u, streamId = %u, fromUpstream = %u",
-                        peerId, ssrc, srcId, dstId, slotNo, duration / 1000, streamId, fromUpstream);
+                    #define PRV_CALL_END_LOG "DMR, Private Call End, peer = %u, ssrc = %u, srcId = %u, dstId = %u, slot = %u, duration = %u, streamId = %u, fromUpstream = %u", peerId, ssrc, srcId, dstId, slotNo, duration / 1000, streamId, fromUpstream
+                    if (m_network->m_logUpstreamCallStartEnd && fromUpstream)
+                        LogInfoEx(LOG_PEER, PRV_CALL_END_LOG);
+                    else if (!fromUpstream)
+                        LogInfoEx(LOG_MASTER, PRV_CALL_END_LOG);
                 }
-                else
-                    LogInfoEx((fromUpstream) ? LOG_PEER : LOG_MASTER, "DMR, Call End, peer = %u, ssrc = %u, srcId = %u, dstId = %u, slot = %u, duration = %u, streamId = %u, fromUpstream = %u",
-                                peerId, ssrc, srcId, dstId, slotNo, duration / 1000, streamId, fromUpstream);
+                else {
+                    #define CALL_END_LOG "DMR, Call End, peer = %u, ssrc = %u, srcId = %u, dstId = %u, slot = %u, duration = %u, streamId = %u, fromUpstream = %u", peerId, ssrc, srcId, dstId, slotNo, duration / 1000, streamId, fromUpstream
+                    if (m_network->m_logUpstreamCallStartEnd && fromUpstream)
+                        LogInfoEx(LOG_PEER, CALL_END_LOG);
+                    else if (!fromUpstream)
+                        LogInfoEx(LOG_MASTER, CALL_END_LOG);
+                }
 
                 // report call event to InfluxDB
                 if (m_network->m_enableInfluxDB) {
@@ -323,11 +330,19 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                     m_statusPVCall[dstId].dstPeerId = regSSRC;
                     m_statusPVCall.unlock();
 
-                    LogInfoEx((fromUpstream) ? LOG_PEER : LOG_MASTER, "DMR, Private Call Start, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, fromUpstream = %u",
-                        peerId, ssrc, srcId, dstId, streamId, fromUpstream);
+                    #define PRV_CALL_START_LOG "DMR, Private Call Start, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, fromUpstream = %u", peerId, ssrc, srcId, dstId, streamId, fromUpstream
+                    if (m_network->m_logUpstreamCallStartEnd && fromUpstream)
+                        LogInfoEx(LOG_PEER, PRV_CALL_START_LOG);
+                    else if (!fromUpstream)
+                        LogInfoEx(LOG_MASTER, PRV_CALL_START_LOG);
                 }
-                else
-                    LogInfoEx((fromUpstream) ? LOG_PEER : LOG_MASTER, "DMR, Call Start, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, fromUpstream = %u", peerId, ssrc, srcId, dstId, streamId, fromUpstream);
+                else {
+                    #define CALL_START_LOG "DMR, Call Start, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, fromUpstream = %u", peerId, ssrc, srcId, dstId, streamId, fromUpstream
+                    if (m_network->m_logUpstreamCallStartEnd && fromUpstream)
+                        LogInfoEx(LOG_PEER, CALL_START_LOG);
+                    else if (!fromUpstream)
+                        LogInfoEx(LOG_MASTER, CALL_START_LOG);
+                }
             }
         }
 

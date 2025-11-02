@@ -121,8 +121,11 @@ bool TagAnalogData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
                     }
                 }
 
-                LogInfoEx((fromUpstream) ? LOG_PEER : LOG_MASTER, "Analog, Call End, peer = %u, ssrc = %u, srcId = %u, dstId = %u, duration = %u, streamId = %u, fromUpstream = %u",
-                            peerId, ssrc, srcId, dstId, duration / 1000, streamId, fromUpstream);
+                #define CALL_END_LOG "Analog, Call End, peer = %u, ssrc = %u, srcId = %u, dstId = %u, duration = %u, streamId = %u, fromUpstream = %u", peerId, ssrc, srcId, dstId, duration / 1000, streamId, fromUpstream
+                if (m_network->m_logUpstreamCallStartEnd && fromUpstream)
+                    LogInfoEx(LOG_PEER, CALL_END_LOG);
+                else if (!fromUpstream)
+                    LogInfoEx(LOG_MASTER, CALL_END_LOG);
 
                 // report call event to InfluxDB
                 if (m_network->m_enableInfluxDB) {
@@ -211,7 +214,11 @@ bool TagAnalogData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
                 m_status[dstId].activeCall = true;
                 m_status.unlock();
 
-                LogInfoEx((fromUpstream) ? LOG_PEER : LOG_MASTER, "Analog, Call Start, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, fromUpstream = %u", peerId, ssrc, srcId, dstId, streamId, fromUpstream);
+                #define CALL_START_LOG "Analog, Call Start, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, fromUpstream = %u", peerId, ssrc, srcId, dstId, streamId, fromUpstream
+                if (m_network->m_logUpstreamCallStartEnd && fromUpstream)
+                    LogInfoEx(LOG_PEER, CALL_START_LOG);
+                else if (!fromUpstream)
+                    LogInfoEx(LOG_MASTER, CALL_START_LOG);
             }
         }
 
