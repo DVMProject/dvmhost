@@ -33,6 +33,8 @@
 #include "common/p25/kmm/KMMNoService.h"
 #include "common/p25/kmm/KMMRegistrationCommand.h"
 #include "common/p25/kmm/KMMRegistrationResponse.h"
+#include "common/p25/kmm/KMMRekeyAck.h"
+#include "common/p25/kmm/KMMRekeyCommand.h"
 #include "common/p25/kmm/KMMZeroize.h"
 
 namespace p25

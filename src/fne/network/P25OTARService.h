@@ -137,6 +137,24 @@ namespace network
         UInt8Array processKMM(const uint8_t* data, uint32_t len, uint32_t llId, bool encrypted, uint32_t* payloadSize);
 
         /**
+         * @brief Helper used to return a Registration-Command KMM to the calling SU.
+         * @param llId Logical Link Address.
+         * @param kmmRSI KMM Radio Set Identifier.
+         * @param[out] payloadSize Size of the returned KMM payload.
+         * @returns UInt8Array Buffer containing the processed KMM frame (if any).
+         */
+        UInt8Array write_KMM_Reg_Command(uint32_t llId, uint32_t kmmRSI, uint32_t* payloadSize);
+
+        /**
+         * @brief Helper used to return a Deregistration-Response KMM to the calling SU.
+         * @param llId Logical Link Address.
+         * @param kmmRSI KMM Radio Set Identifier.
+         * @param[out] payloadSize Size of the returned KMM payload.
+         * @returns UInt8Array Buffer containing the processed KMM frame (if any).
+         */
+        UInt8Array write_KMM_Dereg_Response(uint32_t llId, uint32_t kmmRSI, uint32_t* payloadSize);
+
+        /**
          * @brief Helper used to return a No-Service KMM to the calling SU.
          * @param llId Logical Link Address.
          * @param kmmRSI KMM Radio Set Identifier.
@@ -144,6 +162,23 @@ namespace network
          * @returns UInt8Array Buffer containing the processed KMM frame (if any).
          */
         UInt8Array write_KMM_NoService(uint32_t llId, uint32_t kmmRSI, uint32_t* payloadSize);
+
+        /**
+         * @brief Helper used to return a Zeroize KMM to the calling SU.
+         * @param llId Logical Link Address.
+         * @param kmmRSI KMM Radio Set Identifier.
+         * @param[out] payloadSize Size of the returned KMM payload.
+         * @returns UInt8Array Buffer containing the processed KMM frame (if any).
+         */
+        UInt8Array write_KMM_Zeroize(uint32_t llId, uint32_t kmmRSI, uint32_t* payloadSize);
+
+        /**
+         * @brief Helper used to log a KMM response.
+         * @param llId Logical Link Address.
+         * @param kmmString 
+         * @param status Status.
+         */
+        void logResponseStatus(uint32_t llId, std::string kmmString, uint8_t status);
     };
 } // namespace network
 

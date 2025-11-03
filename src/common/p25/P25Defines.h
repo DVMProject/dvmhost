@@ -444,6 +444,9 @@ namespace p25
                 NAK = 0x16U,                            //!< Negative Ack
                 NO_SERVICE = 0x17U,                     //!< No Service
 
+                REKEY_ACK = 0x1DU,                      //!< Rekey Ack
+                REKEY_CMD = 0x1EU,                      //!< Rekey Command
+
                 ZEROIZE_CMD = 0x21U,                    //!< Zeroize Command
                 ZEROIZE_RSP = 0x22U,                    //!< Zeroize Response
 

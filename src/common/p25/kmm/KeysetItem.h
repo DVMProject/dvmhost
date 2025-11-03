@@ -210,6 +210,68 @@ namespace p25
              */
             DECLARE_PROPERTY_PLAIN(std::vector<KeyItem>, keys);
         };
+
+        // ---------------------------------------------------------------------------
+        //  Class Declaration
+        // ---------------------------------------------------------------------------
+
+        /**
+         * @brief Represents a key status within a KMM frame packet.
+         * @ingroup p25_kmm
+         */
+        class HOST_SW_API KeyStatus {
+        public:
+            /**
+             * @brief Initializes a new instance of the KeyStatus class.
+             */
+            KeyStatus() :
+                m_algId(0U),
+                m_kId(0U),
+                m_status(0U)
+            {
+                /* stub */
+            }
+
+            /**
+             * @brief Equals operator. Copies this KeyStatus to another KeyStatus.
+             * @param data Instance of KeyStatus to copy.
+             */
+            virtual KeyStatus& operator= (const KeyStatus& data)
+            {
+                if (this != &data) {
+                    m_algId = data.m_algId;
+                    m_kId = data.m_kId;
+                    m_status = data.m_status;
+                }
+
+                return *this;
+            }
+
+            /**
+             * @brief Gets the byte length of this keyset item.
+             * @return uint32_t Length of keyset item.
+             */
+            uint32_t length() const 
+            {
+                uint32_t len = 3U;
+                return len;
+            }
+
+        public:
+            /**
+             * @brief Encryption algorithm ID.
+             */
+            DECLARE_PROPERTY_PLAIN(uint8_t, algId);
+            /**
+             * @brief Key ID.
+             */
+            DECLARE_PROPERTY_PLAIN(uint16_t, kId);
+
+            /**
+             * @brief Key ID.
+             */
+            DECLARE_PROPERTY_PLAIN(uint8_t, status);
+        };
     } // namespace kmm
 } // namespace p25
 

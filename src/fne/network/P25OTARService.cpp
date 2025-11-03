@@ -359,6 +359,14 @@ UInt8Array P25OTARService::processKMM(const uint8_t* data, uint32_t len, uint32_
             if (m_verbose) {
                 LogInfoEx(LOG_P25, P25_KMM_STR ", %s, llId = %u, flag = $%02X", kmm->toString().c_str(),
                     llId, kmm->getFlag());
+                switch (kmm->getFlag()) {
+                case KMM_HelloFlag::REKEY_REQUEST_UKEK:
+                    LogInfoEx(LOG_P25, P25_KMM_STR ", %s, rekey requested with UKEK, llId = %u", kmm->toString().c_str(), llId);
+                    break;
+                case KMM_HelloFlag::REKEY_REQUEST_NO_UKEK:
+                    LogInfoEx(LOG_P25, P25_KMM_STR ", %s, rekey requested with no UKEK, llId = %u", kmm->toString().c_str(), llId);
+                    break;
+                }
             }
 
             // respond with No-Service if KMF services are disabled
@@ -367,11 +375,109 @@ UInt8Array P25OTARService::processKMM(const uint8_t* data, uint32_t len, uint32_
         }
         break;
 
+        case KMM_MessageType::NAK:
+        {
+            KMMNegativeAck* kmm = static_cast<KMMNegativeAck*>(frame.get());
+            LogInfoEx(LOG_P25, P25_KMM_STR ", %s, llId = %u, messageId = $%02X, messageNo = %u, status = $%02X", kmm->toString().c_str(),
+                llId, kmm->getMessageId(), kmm->getMessageNumber(), kmm->getStatus());
+            logResponseStatus(llId, kmm->toString(), kmm->getStatus());
+        }
+        break;
+
+        case KMM_MessageType::REKEY_ACK:
+        {
+            KMMRekeyAck* kmm = static_cast<KMMRekeyAck*>(frame.get());
+            LogInfoEx(LOG_P25, P25_KMM_STR ", %s, llId = %u, messageId = $%02X, numOfStatus = %u", kmm->toString().c_str(),
+                llId, kmm->getMessageId(), kmm->getNumberOfKeyStatus());
+
+            if (kmm->getNumberOfKeyStatus() > 0U) {
+                for (auto entry : kmm->getKeyStatus()) {
+                    LogInfoEx(LOG_P25, P25_KMM_STR ", %s, llId = %u, algId = $%02X, kId = $%04X, status = $%02X", kmm->toString().c_str(),
+                        llId, entry.algId(), entry.kId(), entry.status());
+                    logResponseStatus(llId, kmm->toString(), entry.status());
+                }
+            }
+        }
+        break;
+
+        case KMM_MessageType::DEREG_CMD:
+        {
+            KMMDeregistrationCommand* kmm = static_cast<KMMDeregistrationCommand*>(frame.get());
+            LogInfoEx(LOG_P25, P25_KMM_STR ", %s, llId = %u", kmm->toString().c_str(),
+                llId);
+
+            // respond with No-Service if KMF services are disabled
+            if (!m_network->m_kmfServicesEnabled)
+                return write_KMM_NoService(llId, kmm->getSrcLLId(), payloadSize);
+            else
+                return write_KMM_Dereg_Response(llId, kmm->getSrcLLId(), payloadSize);
+        }
+        break;
+        case KMM_MessageType::REG_RSP:
+        {
+            KMMRegistrationResponse* kmm = static_cast<KMMRegistrationResponse*>(frame.get());
+            LogInfoEx(LOG_P25, P25_KMM_STR ", %s, llId = %u, status = $%02X", kmm->toString().c_str(),
+                llId, kmm->getStatus());
+            logResponseStatus(llId, kmm->toString(), kmm->getStatus());
+        }
+        break;
+
         default:
         break;
     } // switch (frame->getMessageId())
 
     return nullptr;
+}
+
+/* Helper used to return a Registration-Command KMM to the calling SU. */
+
+UInt8Array P25OTARService::write_KMM_Reg_Command(uint32_t llId, uint32_t kmmRSI, uint32_t* payloadSize)
+{
+    if (payloadSize != nullptr)
+        *payloadSize = KMM_REGISTRATION_CMD_LENGTH;
+
+    UInt8Array kmmFrame = std::make_unique<uint8_t[]>(KMM_REGISTRATION_CMD_LENGTH);
+
+    uint8_t buffer[KMM_REGISTRATION_CMD_LENGTH];
+    KMMRegistrationCommand outKmm = KMMRegistrationCommand();
+    outKmm.setSrcLLId(WUID_FNE);
+    outKmm.setDstLLId(kmmRSI);
+
+    if (m_verbose) {
+        LogInfoEx(LOG_P25, P25_KMM_STR ", %s, llId = %u, RSI = %u", outKmm.toString().c_str(),
+            outKmm.getSrcLLId(), outKmm.getDstLLId());
+    }
+
+    outKmm.encode(buffer);
+
+    ::memcpy(kmmFrame.get(), buffer, KMM_REGISTRATION_CMD_LENGTH);
+    return kmmFrame;
+}
+
+/* Helper used to return a Deregistration-Response KMM to the calling SU. */
+
+UInt8Array P25OTARService::write_KMM_Dereg_Response(uint32_t llId, uint32_t kmmRSI, uint32_t* payloadSize)
+{
+    if (payloadSize != nullptr)
+        *payloadSize = KMM_DEREGISTRATION_RSP_LENGTH;
+
+    UInt8Array kmmFrame = std::make_unique<uint8_t[]>(KMM_DEREGISTRATION_RSP_LENGTH);
+
+    uint8_t buffer[KMM_DEREGISTRATION_RSP_LENGTH];
+    KMMDeregistrationResponse outKmm = KMMDeregistrationResponse();
+    outKmm.setSrcLLId(WUID_FNE);
+    outKmm.setDstLLId(kmmRSI);
+    outKmm.setStatus(KMM_Status::CMD_PERFORMED);
+
+    if (m_verbose) {
+        LogInfoEx(LOG_P25, P25_KMM_STR ", %s, llId = %u, RSI = %u", outKmm.toString().c_str(),
+            outKmm.getSrcLLId(), outKmm.getDstLLId());
+    }
+
+    outKmm.encode(buffer);
+
+    ::memcpy(kmmFrame.get(), buffer, KMM_DEREGISTRATION_RSP_LENGTH);
+    return kmmFrame;
 }
 
 /* Helper used to return a No-Service KMM to the calling SU. */
@@ -397,4 +503,87 @@ UInt8Array P25OTARService::write_KMM_NoService(uint32_t llId, uint32_t kmmRSI, u
 
     ::memcpy(kmmFrame.get(), buffer, KMM_NO_SERVICE_LENGTH);
     return kmmFrame;
+}
+
+/* Helper used to return a Zeroize KMM to the calling SU. */
+
+UInt8Array P25OTARService::write_KMM_Zeroize(uint32_t llId, uint32_t kmmRSI, uint32_t* payloadSize)
+{
+    if (payloadSize != nullptr)
+        *payloadSize = KMM_ZEROIZE_LENGTH;
+
+    UInt8Array kmmFrame = std::make_unique<uint8_t[]>(KMM_ZEROIZE_LENGTH);
+
+    uint8_t buffer[KMM_ZEROIZE_LENGTH];
+    KMMZeroize outKmm = KMMZeroize();
+    outKmm.setSrcLLId(WUID_FNE);
+    outKmm.setDstLLId(kmmRSI);
+
+    if (m_verbose) {
+        LogInfoEx(LOG_P25, P25_KMM_STR ", %s, llId = %u, RSI = %u", outKmm.toString().c_str(),
+            outKmm.getSrcLLId(), outKmm.getDstLLId());
+    }
+
+    outKmm.encode(buffer);
+
+    ::memcpy(kmmFrame.get(), buffer, KMM_ZEROIZE_LENGTH);
+    return kmmFrame;
+}
+
+/* Helper used to log a KMM response. */
+
+void P25OTARService::logResponseStatus(uint32_t llId, std::string kmmString, uint8_t status)
+{
+    switch (status) {
+    case KMM_Status::CMD_PERFORMED:
+        if (m_verbose) {
+            LogInfoEx(LOG_P25, P25_KMM_STR ", %s, command performed, llId = %u", kmmString.c_str(), llId);
+        }
+        break;
+    case KMM_Status::CMD_NOT_PERFORMED:
+        LogWarning(LOG_P25, P25_KMM_STR ", %s, command not performed, llId = %u", kmmString.c_str(), llId);
+        break;
+
+    case KMM_Status::ITEM_NOT_EXIST:
+        LogWarning(LOG_P25, P25_KMM_STR ", %s, item does not exist, llId = %u", kmmString.c_str(), llId);
+        break;
+    case KMM_Status::INVALID_MSG_ID:
+        LogWarning(LOG_P25, P25_KMM_STR ", %s, invalid message ID, llId = %u", kmmString.c_str(), llId);
+        break;
+    case KMM_Status::INVALID_MAC:
+        LogWarning(LOG_P25, P25_KMM_STR ", %s, invalid auth code, llId = %u", kmmString.c_str(), llId);
+        break;
+
+    case KMM_Status::OUT_OF_MEMORY:
+        LogWarning(LOG_P25, P25_KMM_STR ", %s, out of memory, llId = %u", kmmString.c_str(), llId);
+        break;
+    case KMM_Status::FAILED_TO_DECRYPT:
+        LogWarning(LOG_P25, P25_KMM_STR ", %s, failed to decrypt message, llId = %u", kmmString.c_str(), llId);
+        break;
+
+    case KMM_Status::INVALID_MSG_NUMBER:
+        LogWarning(LOG_P25, P25_KMM_STR ", %s, invalid message number, llId = %u", kmmString.c_str(), llId);
+        break;
+    case KMM_Status::INVALID_KID:
+        LogWarning(LOG_P25, P25_KMM_STR ", %s, invalid key ID, llId = %u", kmmString.c_str(), llId);
+        break;
+    case KMM_Status::INVALID_ALGID:
+        LogWarning(LOG_P25, P25_KMM_STR ", %s, invalid algorithm ID, llId = %u", kmmString.c_str(), llId);
+        break;
+    case KMM_Status::INVALID_MFID:
+        LogWarning(LOG_P25, P25_KMM_STR ", %s, invalid manufacturer ID, llId = %u", kmmString.c_str(), llId);
+        break;
+
+    case KMM_Status::MI_ALL_ZERO:
+        LogWarning(LOG_P25, P25_KMM_STR ", %s, message indicator was all zeros, llId = %u", kmmString.c_str(), llId);
+        break;
+    case KMM_Status::KEY_FAIL:
+        LogWarning(LOG_P25, P25_KMM_STR ", %s, key identified by algo/key is erased, llId = %u", kmmString.c_str(), llId);
+        break;
+
+    case KMM_Status::UNKNOWN:
+    default:
+        LogWarning(LOG_P25, P25_KMM_STR ", llId = %u, status = $%02X; unknown status", llId, status);
+        break;
+    }
 }
