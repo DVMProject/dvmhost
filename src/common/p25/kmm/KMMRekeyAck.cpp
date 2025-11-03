@@ -47,7 +47,7 @@ uint32_t KMMRekeyAck::length() const
     return len;
 }
 
-/* Decode a KMM NAK. */
+/* Decode a KMM rekey ack. */
 
 bool KMMRekeyAck::decode(const uint8_t* data)
 {
@@ -76,7 +76,7 @@ bool KMMRekeyAck::decode(const uint8_t* data)
     return true;
 }
 
-/* Encode a KMM NAK. */
+/* Encode a KMM rekey ack. */
 
 void KMMRekeyAck::encode(uint8_t* data)
 {

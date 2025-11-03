@@ -62,7 +62,7 @@ uint32_t KMMRekeyCommand::length() const
     return len;
 }
 
-/* Decode a KMM modify key. */
+/* Decode a KMM rekey command. */
 
 bool KMMRekeyCommand::decode(const uint8_t* data)
 {
@@ -121,7 +121,7 @@ bool KMMRekeyCommand::decode(const uint8_t* data)
     return true;
 }
 
-/* Encode a KMM modify key. */
+/* Encode a KMM rekey command. */
 
 void KMMRekeyCommand::encode(uint8_t* data)
 {

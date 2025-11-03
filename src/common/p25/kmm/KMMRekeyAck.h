@@ -63,13 +63,13 @@ namespace p25
             uint32_t length() const override;
 
             /**
-             * @brief Decode a KMM rekey Ack.
+             * @brief Decode a KMM rekey ack.
              * @param[in] data Buffer containing KMM frame data to decode.
              * @returns bool True, if decoded, otherwise false.
              */
             bool decode(const uint8_t* data) override;
             /**
-             * @brief Encode a KMM rekey Ack.
+             * @brief Encode a KMM rekey ack.
              * @param[out] data Buffer to encode KMM frame data to.
              */
             void encode(uint8_t* data) override;
