@@ -211,6 +211,17 @@ bool RtsPttController::clearPTT()
     return true;
 }
 
+/* Gets the file descriptor for sharing with CTS COR controller. */
+
+int RtsPttController::getFd() const
+{
+#if defined(_WIN32)
+    return (int)(intptr_t)m_fd;
+#else
+    return m_fd;
+#endif // defined(_WIN32)
+}
+
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------

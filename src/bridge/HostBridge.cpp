@@ -249,6 +249,15 @@ HostBridge::HostBridge(const std::string& confFile) :
     m_rtsPttPort(),
     m_rtsPttController(nullptr),
     m_rtsPttActive(false),
+    m_lastAudioOut(),
+    m_rtsPttHoldoffMs(250U),
+    m_ctsCorEnable(false),
+    m_ctsCorPort(),
+    m_ctsCorController(nullptr),
+    m_ctsCorActive(false),
+    m_ctsCorInvert(false),
+    m_ctsPadTimeout(1000U, 0U, 22U),
+    m_ctsCorHoldoffMs(250U),
     m_rtpSeqNo(0U),
     m_rtpTimestamp(INVALID_TS),
     m_usrpSeqNo(0U)
@@ -408,6 +417,11 @@ int HostBridge::run()
 
     // initialize RTS PTT control
     ret = initializeRtsPtt();
+    if (!ret)
+        return EXIT_FAILURE;
+
+    // initialize CTS COR detection
+    ret = initializeCtsCor();
     if (!ret)
         return EXIT_FAILURE;
 
@@ -949,6 +963,20 @@ bool HostBridge::readParams()
     m_rtsPttEnable = systemConf["rtsPttEnable"].as<bool>(false);
     m_rtsPttPort = systemConf["rtsPttPort"].as<std::string>("/dev/ttyUSB0");
     m_rtsPttHoldoffMs = (uint32_t)systemConf["rtsPttHoldoffMs"].as<uint32_t>(m_rtsPttHoldoffMs);
+
+    // CTS COR Configuration
+    m_ctsCorEnable = systemConf["ctsCorEnable"].as<bool>(false);
+    m_ctsCorPort = systemConf["ctsCorPort"].as<std::string>("/dev/ttyUSB0");
+    m_ctsCorInvert = systemConf["ctsCorInvert"].as<bool>(false);
+    m_ctsCorHoldoffMs = (uint32_t)systemConf["ctsCorHoldoffMs"].as<uint32_t>(m_ctsCorHoldoffMs);
+    
+    if (m_ctsCorEnable) {
+        LogInfo("CTS COR Configuration");
+        LogInfo("    Enabled: yes");
+        LogInfo("    Port: %s", m_ctsCorPort.c_str());
+        LogInfo("    Invert: %s (%s triggers)", m_ctsCorInvert ? "yes" : "no", m_ctsCorInvert ? "LOW" : "HIGH");
+        LogInfo("    Holdoff: %u ms", m_ctsCorHoldoffMs);
+    }
 
     std::string txModeStr = "DMR";
     if (m_txMode == TX_MODE_P25)
@@ -3054,7 +3082,23 @@ void* HostBridge::threadAudioProcess(void* arg)
             {
                 std::lock_guard<std::mutex> lock(s_audioMutex);
 
-                if (bridge->m_inputAudio.dataSize() >= AUDIO_SAMPLES_LENGTH) {
+                // When COR is active, we need to send frames continuously when audio data is available
+                // The audio callback should be continuously feeding data, so we should always have data available
+                bool hasAudioData = bridge->m_inputAudio.dataSize() >= AUDIO_SAMPLES_LENGTH;
+                
+                // Process if we have audio data
+                // When COR is active: process whenever we have data (which should be continuous)
+                // When COR is not active: only process when VOX detects audio (normal mode)
+                bool shouldProcess = false;
+                if (bridge->m_ctsCorActive && bridge->m_audioDetect) {
+                    // COR is active: process whenever we have audio data (continuous transmission)
+                    shouldProcess = hasAudioData;
+                } else if (!bridge->m_ctsCorActive && bridge->m_audioDetect) {
+                    // Normal VOX mode: process when we have audio data
+                    shouldProcess = hasAudioData;
+                }
+
+                if (shouldProcess && hasAudioData) {
                     short samples[AUDIO_SAMPLES_LENGTH];
                     bridge->m_inputAudio.get(samples, AUDIO_SAMPLES_LENGTH);
 
@@ -3093,75 +3137,236 @@ void* HostBridge::threadAudioProcess(void* arg)
                         bridge->m_detectedSampleCnt++;
                     }
 
-                    // handle Rx triggered by internal VOX
-                    if (maxSample > sampleLevel) {
-                        bridge->m_audioDetect = true;
-                        if (bridge->m_txStreamId == 0U) {
-                            bridge->m_txStreamId = 1U; // prevent further false starts -- this isn't the right way to handle this...
-                            LogInfoEx(LOG_HOST, "%s, call start, srcId = %u, dstId = %u", trafficType.c_str(), srcId, dstId);
+                    // handle Rx triggered by internal VOX (unless COR is active, which takes precedence)
+                    if (!bridge->m_ctsCorActive) {
+                        if (maxSample > sampleLevel) {
+                            bridge->m_audioDetect = true;
+                            if (bridge->m_txStreamId == 0U) {
+                                bridge->m_txStreamId = 1U;
+                                LogInfoEx(LOG_HOST, "%s, call start, srcId = %u, dstId = %u", trafficType.c_str(), srcId, dstId);
 
-                            if (bridge->m_grantDemand) {
-                                switch (bridge->m_txMode) {
-                                    case TX_MODE_P25:
-                                    {
-                                        p25::lc::LC lc = p25::lc::LC();
-                                        lc.setLCO(P25DEF::LCO::GROUP);
-                                        lc.setDstId(dstId);
-                                        lc.setSrcId(srcId);
+                                if (bridge->m_grantDemand) {
+                                    switch (bridge->m_txMode) {
+                                        case TX_MODE_P25:
+                                        {
+                                            p25::lc::LC lc = p25::lc::LC();
+                                            lc.setLCO(P25DEF::LCO::GROUP);
+                                            lc.setDstId(dstId);
+                                            lc.setSrcId(srcId);
 
-                                        p25::data::LowSpeedData lsd = p25::data::LowSpeedData();
+                                            p25::data::LowSpeedData lsd = p25::data::LowSpeedData();
 
-                                        uint8_t controlByte = network::NET_CTRL_GRANT_DEMAND;
-                                        if (bridge->m_tekAlgoId != P25DEF::ALGO_UNENCRYPT)
-                                            controlByte |= network::NET_CTRL_GRANT_ENCRYPT;
-                                        bridge->m_network->writeP25TDU(lc, lsd, controlByte);
+                                            uint8_t controlByte = network::NET_CTRL_GRANT_DEMAND;
+                                            if (bridge->m_tekAlgoId != P25DEF::ALGO_UNENCRYPT)
+                                                controlByte |= network::NET_CTRL_GRANT_ENCRYPT;
+                                            bridge->m_network->writeP25TDU(lc, lsd, controlByte);
+                                        }
+                                        break;
                                     }
+                                }
+                            }
+
+                            bridge->m_localDropTime.stop();
+                        } else {
+                            // if we've exceeded the audio drop timeout, then really drop the audio
+                            if (bridge->m_localDropTime.isRunning() && bridge->m_localDropTime.hasExpired()) {
+                                if (bridge->m_audioDetect) {
+                                    bridge->callEnd(srcId, dstId);
+                                }
+                            }
+
+                            if (!bridge->m_localDropTime.isRunning())
+                                bridge->m_localDropTime.start();
+                        }
+                    }
+
+                    // Send audio frames: either from actual audio input OR silence frames when COR is active
+                    if (bridge->m_audioDetect && !bridge->m_callInProgress) {
+                        // If COR is active, always send the actual audio from the buffer (even if quiet)
+                        // If COR is not active, only send when VOX detects audio
+                        if (bridge->m_ctsCorActive) {
+                            // COR is active: always encode actual audio from buffer
+                            // The buffer should always have data from audio callback, even if it's quiet
+                            ma_uint32 pcmBytes = AUDIO_SAMPLES_LENGTH * ma_get_bytes_per_frame(bridge->m_maDevice.capture.format, bridge->m_maDevice.capture.channels);
+                            DECLARE_UINT8_ARRAY(pcm, pcmBytes);
+
+                            // Always encode the actual samples, even if they're quiet
+                            // This ensures real audio is passed through, not just silence
+                            int pcmIdx = 0;
+                            for (uint32_t smpIdx = 0; smpIdx < AUDIO_SAMPLES_LENGTH; smpIdx++) {
+                                pcm[pcmIdx + 0] = (uint8_t)(samples[smpIdx] & 0xFF);
+                                pcm[pcmIdx + 1] = (uint8_t)((samples[smpIdx] >> 8) & 0xFF);
+                                pcmIdx += 2;
+                            }
+
+                            switch (bridge->m_txMode)
+                            {
+                            case TX_MODE_DMR:
+                                bridge->encodeDMRAudioFrame(pcm);
+                                break;
+                            case TX_MODE_P25:
+                                bridge->encodeP25AudioFrame(pcm);
+                                break;
+                            case TX_MODE_ANALOG:
+                                bridge->encodeAnalogAudioFrame(pcm);
+                                break;
+                            }
+                        } else {
+                            // COR is not active: normal VOX-based audio processing
+                            if (maxSample > sampleLevel) {
+                                ma_uint32 pcmBytes = AUDIO_SAMPLES_LENGTH * ma_get_bytes_per_frame(bridge->m_maDevice.capture.format, bridge->m_maDevice.capture.channels);
+                                DECLARE_UINT8_ARRAY(pcm, pcmBytes);
+
+                                int pcmIdx = 0;
+                                for (uint32_t smpIdx = 0; smpIdx < AUDIO_SAMPLES_LENGTH; smpIdx++) {
+                                    pcm[pcmIdx + 0] = (uint8_t)(samples[smpIdx] & 0xFF);
+                                    pcm[pcmIdx + 1] = (uint8_t)((samples[smpIdx] >> 8) & 0xFF);
+                                    pcmIdx += 2;
+                                }
+
+                                switch (bridge->m_txMode)
+                                {
+                                case TX_MODE_DMR:
+                                    bridge->encodeDMRAudioFrame(pcm);
+                                    break;
+                                case TX_MODE_P25:
+                                    bridge->encodeP25AudioFrame(pcm);
+                                    break;
+                                case TX_MODE_ANALOG:
+                                    bridge->encodeAnalogAudioFrame(pcm);
                                     break;
                                 }
                             }
-                        }
-
-                        bridge->m_localDropTime.stop();
-                    } else {
-                        // if we've exceeded the audio drop timeout, then really drop the audio
-                        if (bridge->m_localDropTime.isRunning() && bridge->m_localDropTime.hasExpired()) {
-                            if (bridge->m_audioDetect) {
-                                bridge->callEnd(srcId, dstId);
-                            }
-                        }
-
-                        if (!bridge->m_localDropTime.isRunning())
-                            bridge->m_localDropTime.start();
-                    }
-
-                    if (bridge->m_audioDetect && !bridge->m_callInProgress) {
-                        ma_uint32 pcmBytes = AUDIO_SAMPLES_LENGTH * ma_get_bytes_per_frame(bridge->m_maDevice.capture.format, bridge->m_maDevice.capture.channels);
-                        DECLARE_UINT8_ARRAY(pcm, pcmBytes);
-
-                        int pcmIdx = 0;
-                        for (uint32_t smpIdx = 0; smpIdx < AUDIO_SAMPLES_LENGTH; smpIdx++) {
-                            pcm[pcmIdx + 0] = (uint8_t)(samples[smpIdx] & 0xFF);
-                            pcm[pcmIdx + 1] = (uint8_t)((samples[smpIdx] >> 8) & 0xFF);
-                            pcmIdx += 2;
-                        }
-
-                        switch (bridge->m_txMode)
-                        {
-                        case TX_MODE_DMR:
-                            bridge->encodeDMRAudioFrame(pcm);
-                            break;
-                        case TX_MODE_P25:
-                            bridge->encodeP25AudioFrame(pcm);
-                            break;
-                        case TX_MODE_ANALOG:
-                            bridge->encodeAnalogAudioFrame(pcm);
-                            break;
                         }
                     }
                 }
             }
 
+            // When COR is active, we need to process frames continuously
+            // The audio callback should be feeding data, but if buffer is empty and COR is active,
+            // we'll send silence frames. Keep minimal sleep to ensure responsive processing.
             Thread::sleep(1U);
+        }
+
+        LogInfoEx(LOG_HOST, "[STOP] %s", threadName.c_str());
+        delete th;
+    }
+
+    return nullptr;
+}
+
+/* Entry point to CTS COR monitor thread. */
+
+void* HostBridge::threadCtsCorMonitor(void* arg)
+{
+    thread_t* th = (thread_t*)arg;
+    if (th != nullptr) {
+#if defined(_WIN32)
+        ::CloseHandle(th->thread);
+#else
+        ::pthread_detach(th->thread);
+#endif // defined(_WIN32)
+
+        std::string threadName("bridge:cts-cor-monitor");
+        HostBridge* bridge = static_cast<HostBridge*>(th->obj);
+        if (bridge == nullptr) {
+            g_killed = true;
+            LogError(LOG_HOST, "[FAIL] %s", threadName.c_str());
+        }
+
+        if (g_killed) {
+            delete th;
+            return nullptr;
+        }
+
+        LogInfoEx(LOG_HOST, "[ OK ] %s", threadName.c_str());
+#ifdef _GNU_SOURCE
+        ::pthread_setname_np(th->thread, threadName.c_str());
+#endif // _GNU_SOURCE
+
+        // Initialize lastCts to current state to avoid false trigger on startup
+        bool lastCts = false;
+        if (bridge->m_ctsCorEnable && bridge->m_ctsCorController != nullptr) {
+            bool ctsRawInit = bridge->m_ctsCorController->isCtsAsserted();
+            lastCts = bridge->m_ctsCorInvert ? !ctsRawInit : ctsRawInit;
+            bridge->m_ctsCorActive = lastCts;
+            LogInfoEx(LOG_HOST, "CTS COR monitor initialized: initial state = %s (raw: %s)", 
+                lastCts ? "TRIGGER" : "IDLE", ctsRawInit ? "HIGH" : "LOW");
+        }
+        uint32_t pollCount = 0U;
+
+        while (!g_killed) {
+            if (!bridge->m_running) {
+                Thread::sleep(10U);
+                continue;
+            }
+
+            if (!bridge->m_ctsCorEnable) {
+                LogDebug(LOG_HOST, "CTS COR is disabled, waiting...");
+                Thread::sleep(1000U);
+                continue;
+            }
+
+            if (bridge->m_ctsCorController == nullptr) {
+                LogError(LOG_HOST, "CTS COR Controller is null!");
+                Thread::sleep(1000U);
+                continue;
+            }
+
+            bool ctsRaw = bridge->m_ctsCorController->isCtsAsserted();
+            // Apply inversion: if invert is true, LOW triggers (so we invert the raw signal)
+            bool cts = bridge->m_ctsCorInvert ? !ctsRaw : ctsRaw;
+            pollCount++;
+
+            if (cts != lastCts) {
+                LogInfoEx(LOG_HOST, "CTS COR state changed: %s -> %s (raw: %s)", 
+                    lastCts ? "TRIGGER" : "IDLE", cts ? "TRIGGER" : "IDLE", ctsRaw ? "HIGH" : "LOW");
+                lastCts = cts;
+                bridge->m_ctsCorActive = cts;
+                if (cts) {
+                    // Rising edge: force call start, immediately send silence frame, and start padding timer
+                    uint32_t srcId = bridge->m_srcId;
+                    uint32_t dstId = bridge->m_dstId;
+                    if (!bridge->m_audioDetect) {
+                        bridge->m_audioDetect = true;
+                        if (bridge->m_txStreamId == 0U) {
+                            bridge->m_txStreamId = 1U;
+                            LogInfoEx(LOG_HOST, "%s, call start (CTS COR), srcId = %u, dstId = %u", LOCAL_CALL, srcId, dstId);
+                            if (bridge->m_grantDemand) {
+                                switch (bridge->m_txMode) {
+                                case TX_MODE_P25:
+                                {
+                                    p25::lc::LC lc = p25::lc::LC();
+                                    lc.setLCO(P25DEF::LCO::GROUP);
+                                    lc.setDstId(dstId);
+                                    lc.setSrcId(srcId);
+
+                                    p25::data::LowSpeedData lsd = p25::data::LowSpeedData();
+
+                                    uint8_t controlByte = network::NET_CTRL_GRANT_DEMAND;
+                                    if (bridge->m_tekAlgoId != P25DEF::ALGO_UNENCRYPT)
+                                        controlByte |= network::NET_CTRL_GRANT_ENCRYPT;
+                                    bridge->m_network->writeP25TDU(lc, lsd, controlByte);
+                                }
+                                break;
+                                }
+                            }
+                        }
+                    }
+                    // Stop drop timer while COR is activem audio is processing
+                    bridge->m_localDropTime.stop();
+                    // Don't start padding timer
+                }
+                else {
+                    // Falling edge: start hold-off timer before allowing call to end
+                    bridge->m_ctsPadTimeout.stop();
+                    // Start drop timer with hold-off delay
+                    bridge->m_localDropTime = Timer(1000U, 0U, bridge->m_ctsCorHoldoffMs);
+                    bridge->m_localDropTime.start();
+                }
+            }
+
+            Thread::sleep(5U);
         }
 
         LogInfoEx(LOG_HOST, "[STOP] %s", threadName.c_str());
@@ -3291,7 +3496,7 @@ void* HostBridge::threadUDPAudioProcess(void* arg)
                     if ((!bridge->m_audioDetect && !bridge->m_callInProgress) || forceCallStart) {
                         bridge->m_audioDetect = true;
                         if (bridge->m_txStreamId == 0U) {
-                            bridge->m_txStreamId = 1U; // prevent further false starts -- this isn't the right way to handle this...
+                            bridge->m_txStreamId = 1U;
                             if (forceCallStart)
                                 bridge->m_txStreamId = txStreamId;
 
@@ -3775,6 +3980,9 @@ void* HostBridge::threadCallWatchdog(void* arg)
                 }
             }
 
+            // When CTS COR is active, the audio processing thread handles frame transmission
+            // We don't use the watchdog thread for padding to avoid conflicts with actual audio frames
+
             std::string trafficType = LOCAL_CALL;
             if (bridge->m_trafficFromUDP)
                 trafficType = UDP_CALL;
@@ -3797,10 +4005,13 @@ void* HostBridge::threadCallWatchdog(void* arg)
                 }
             }
             else {
-                // if we've exceeded the drop timeout, then really drop the audio
-                if (bridge->m_localDropTime.isRunning() && (bridge->m_localDropTime.getTimer() >= dropTimeout)) {
-                    LogInfoEx(LOG_HOST, "%s, terminating stuck call", trafficType.c_str());
-                    bridge->callEnd(srcId, dstId);
+                // Don't end call due to drop timeout if COR is still active
+                if (!bridge->m_ctsCorActive) {
+                    // if we've exceeded the drop timeout, then really drop the audio
+                    if (bridge->m_localDropTime.isRunning() && (bridge->m_localDropTime.getTimer() >= dropTimeout)) {
+                        LogInfoEx(LOG_HOST, "%s, terminating stuck call", trafficType.c_str());
+                        bridge->callEnd(srcId, dstId);
+                    }
                 }
             }
 
@@ -3835,6 +4046,56 @@ bool HostBridge::initializeRtsPtt()
     }
 
     ::LogInfo(LOG_HOST, "RTS PTT Controller initialized on %s", m_rtsPttPort.c_str());
+    return true;
+}
+
+/* Helper to initialize CTS COR detection. */
+
+bool HostBridge::initializeCtsCor()
+{
+    if (!m_ctsCorEnable)
+        return true;
+
+    if (m_ctsCorPort.empty()) {
+        ::LogError(LOG_HOST, "CTS COR port is not specified");
+        return false;
+    }
+
+    m_ctsCorController = new CtsCorController(m_ctsCorPort);
+    
+    // If RTS PTT and CTS COR are on the same port, reuse the file descriptor
+    // to avoid opening the port twice (which would affect RTS)
+    int reuseFd = -1;
+    if (m_rtsPttEnable && m_rtsPttController != nullptr && 
+        m_rtsPttPort == m_ctsCorPort && m_rtsPttController->getFd() >= 0) {
+        reuseFd = m_rtsPttController->getFd();
+        ::LogInfo(LOG_HOST, "CTS COR reusing RTS PTT file descriptor for %s (same port)", m_ctsCorPort.c_str());
+    }
+    
+    if (!m_ctsCorController->open(reuseFd)) {
+        ::LogError(LOG_HOST, "Failed to open CTS COR port %s", m_ctsCorPort.c_str());
+        delete m_ctsCorController;
+        m_ctsCorController = nullptr;
+        return false;
+    }
+
+    // Start monitor thread
+    thread_t* th = new thread_t();
+    th->obj = this;
+    if (!Thread::runAsThread(this, &HostBridge::threadCtsCorMonitor, th)) {
+        ::LogError(LOG_HOST, "Failed to start CTS COR monitor thread");
+        return false;
+    }
+
+    ::LogInfo(LOG_HOST, "CTS COR initialized on %s", m_ctsCorPort.c_str());
+    
+    // Test read CTS state to verify it's working
+    bool ctsRaw = m_ctsCorController->isCtsAsserted();
+    bool ctsEffective = m_ctsCorInvert ? !ctsRaw : ctsRaw;
+    ::LogInfo(LOG_HOST, "CTS COR initial state: raw=%s, effective=%s (%s)", 
+        ctsRaw ? "HIGH" : "LOW", ctsEffective ? "TRIGGER" : "IDLE", 
+        m_ctsCorInvert ? "inverted" : "normal");
+    
     return true;
 }
 
