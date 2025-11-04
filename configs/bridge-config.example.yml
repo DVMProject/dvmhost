@@ -181,3 +181,13 @@ system:
     rtsPttPort: "/dev/ttyUSB0"
     # Hold-off time (ms) before clearing RTS PTT after last audio output.
     rtsPttHoldoffMs: 250
+
+    # CTS COR Configuration
+    # Flag indicating whether CTS-based COR detection is enabled.
+    ctsCorEnable: false
+    # Serial port device for CTS COR (e.g., /dev/ttyUSB0). Often same as RTS PTT.
+    ctsCorPort: "/dev/ttyUSB0"
+    # Flag indicating whether to invert COR logic (if true, COR LOW triggers instead of HIGH).
+    ctsCorInvert: false
+    # Hold-off time (ms) before ending call after CTS COR deasserts.
+    ctsCorHoldoffMs: 250

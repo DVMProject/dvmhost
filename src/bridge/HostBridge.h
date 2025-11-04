@@ -34,6 +34,7 @@
 #include "mdc/mdc_decode.h"
 #include "network/PeerNetwork.h"
 #include "RtsPttController.h"
+#include "CtsCorController.h"
 
 #include <string>
 #include <mutex>
@@ -264,6 +265,15 @@ private:
     // Timestamp of last audio written to output and hold-off before clearing PTT
     system_clock::hrc::hrc_t m_lastAudioOut;
     uint32_t m_rtsPttHoldoffMs;
+
+    // CTS COR Detection
+    bool m_ctsCorEnable;
+    std::string m_ctsCorPort;
+    CtsCorController* m_ctsCorController;
+    bool m_ctsCorActive;
+    bool m_ctsCorInvert; // if true, COR LOW triggers (instead of HIGH)
+    Timer m_ctsPadTimeout; // drives silence padding while CTS is active
+    uint32_t m_ctsCorHoldoffMs; // hold-off time before clearing COR after it deasserts
 
     uint16_t m_rtpSeqNo;
     uint32_t m_rtpTimestamp;
@@ -524,6 +534,11 @@ private:
      */
     bool initializeRtsPtt();
     /**
+     * @brief Helper to initialize CTS COR detection.
+     * @returns bool True, if CTS COR was initialized successfully, otherwise false.
+     */
+    bool initializeCtsCor();
+    /**
      * @brief Helper to assert RTS PTT (start transmission).
      */
     void assertRtsPtt();
@@ -573,6 +588,12 @@ private:
      * @returns void* (Ignore)
      */
     static void* threadCallWatchdog(void* arg);
+    /**
+     * @brief Entry point to CTS COR monitor thread.
+     * @param arg Instance of the thread_t structure.
+     * @returns void* (Ignore)
+     */
+    static void* threadCtsCorMonitor(void* arg);
 };
 
 #endif // __HOST_BRIDGE_H__

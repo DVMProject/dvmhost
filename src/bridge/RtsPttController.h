@@ -72,6 +72,12 @@ public:
      */
     bool clearPTT();
 
+    /**
+     * @brief Gets the file descriptor for sharing with CTS COR controller.
+     * @returns int File descriptor, or -1 if not open.
+     */
+    int getFd() const;
+
 private:
     std::string m_port;
     bool m_isOpen;
