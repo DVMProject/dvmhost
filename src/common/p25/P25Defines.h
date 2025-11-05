@@ -120,6 +120,9 @@ namespace p25
         const uint8_t   AUTH_KEY_LENGTH_BYTES = 16U;
 
         const uint8_t   MAX_ENC_KEY_LENGTH_BYTES = 32U;
+        const uint8_t   MAX_WRAPPED_ENC_KEY_LENGTH_BYTES = 40U;
+        const uint8_t   KMM_AES_MAC_LENGTH = 8U;
+        const uint8_t   KMM_DES_MAC_LENGTH = 4U;
         /* @} */
 
         /** @name Thresholds */
@@ -454,6 +457,8 @@ namespace p25
                 DEREG_RSP = 0x24U,                      //!< SU Deregistration Response
                 REG_CMD = 0x25U,                        //!< SU Registration Command
                 REG_RSP = 0x26U,                        //!< SU Registration Response
+
+                UNABLE_TO_DECRYPT = 0x27U,              //!< Unable to Decrypt Response
             };
         }
 
@@ -527,11 +532,11 @@ namespace p25
         /** @brief KMM Decryption Instruction - Message Indicator */
         const uint8_t   KMM_DECRYPT_INSTRUCT_MI = 0x40U;
 
-        /** @brief KMM Key Format TEK */
+        /** @brief KMM Body/Key Format - TEK Included */
         const uint8_t   KEY_FORMAT_TEK = 0x80U;
-        /** @brief KMM Key Format TEK */
+        /** @brief KMM Body/Key Format - KEK Exists */
         const uint8_t   KEY_FORMAT_KEK_EXISTS = 0x40U;
-        /** @brief KMM Key Format Delete Key */
+        /** @brief KMM Key Format - Delete Key */
         const uint8_t   KEY_FORMAT_DELETE = 0x20U;
 
         /** @brief SNDCP version 1 */

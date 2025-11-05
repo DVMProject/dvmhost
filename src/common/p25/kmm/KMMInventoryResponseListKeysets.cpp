@@ -40,7 +40,7 @@ KMMInventoryResponseListKeysets::~KMMInventoryResponseListKeysets() = default;
 
 uint32_t KMMInventoryResponseListKeysets::length() const
 {
-    uint32_t len = KMM_INVENTORY_RSP_HDR_LENGTH;
+    uint32_t len = KMMInventoryResponseHeader::length();
     len += m_keysetIds.size();
 
     return len;
@@ -55,7 +55,7 @@ bool KMMInventoryResponseListKeysets::decode(const uint8_t* data)
     KMMInventoryResponseHeader::decodeHeader(data);
 
     for (uint16_t i = 0U; i < m_numberOfItems; i++) {
-        uint8_t keysetId = data[13U + i];
+        uint8_t keysetId = data[13U + (m_bodyOffset + i)];
         m_keysetIds.push_back(keysetId);
     }
 
@@ -67,14 +67,14 @@ bool KMMInventoryResponseListKeysets::decode(const uint8_t* data)
 void KMMInventoryResponseListKeysets::encode(uint8_t* data)
 {
     assert(data != nullptr);
-    m_messageLength = KMM_INVENTORY_RSP_HDR_LENGTH;
+    m_messageLength = length();
     m_numberOfItems = (uint16_t)m_keysetIds.size();
 
     KMMInventoryResponseHeader::encodeHeader(data);
 
     uint16_t offset = 0U;
     for (auto entry : m_keysetIds) {
-        data[13U + offset] = entry;
+        data[13U + (m_bodyOffset + offset)] = entry;
         offset += 1U;
     }
 }

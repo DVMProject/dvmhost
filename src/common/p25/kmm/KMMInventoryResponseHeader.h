@@ -36,10 +36,10 @@ namespace p25
          * @{
          */
 
-         const uint32_t KMM_INVENTORY_RSP_HDR_LENGTH = KMM_FRAME_LENGTH + 3U;
+         const uint32_t KMM_BODY_INV_RSP_HDR_LENGTH = 3U;
 
          /** @} */
- 
+
         // ---------------------------------------------------------------------------
         //  Class Declaration
         // ---------------------------------------------------------------------------
@@ -54,6 +54,12 @@ namespace p25
              * @brief Finalizes a instance of the KMMInventoryResponseHeader class.
              */
             ~KMMInventoryResponseHeader();
+
+            /**
+             * @brief Gets the byte length of this KMMFrame.
+             * @return uint32_t Length of KMMFrame.
+             */
+            uint32_t length() const override;
 
             /**
              * @brief Decode a KMM inventory response header.

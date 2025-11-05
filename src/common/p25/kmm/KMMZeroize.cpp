@@ -50,7 +50,7 @@ bool KMMZeroize::decode(const uint8_t* data)
 void KMMZeroize::encode(uint8_t* data)
 {
     assert(data != nullptr);
-    m_messageLength = KMM_ZEROIZE_LENGTH;
+    m_messageLength = length();
 
     KMMFrame::encodeHeader(data);
 }

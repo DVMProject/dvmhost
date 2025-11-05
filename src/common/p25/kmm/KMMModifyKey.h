@@ -37,7 +37,7 @@ namespace p25
          * @{
          */
 
-         const uint32_t KMM_MODIFY_KEY_LENGTH = KMM_FRAME_LENGTH + 8U;
+         const uint32_t KMM_BODY_MODIFY_KEY_LENGTH = 8U;
 
          /** @} */
  
@@ -105,7 +105,7 @@ namespace p25
             /**
              * @brief Encryption key ID.
              */
-            DECLARE_PROPERTY(uint32_t, kId, KId);
+            DECLARE_PROPERTY(uint16_t, kId, KId);
 
             /**
              * @brief 

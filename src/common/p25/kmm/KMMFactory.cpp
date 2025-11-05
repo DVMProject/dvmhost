@@ -91,6 +91,8 @@ std::unique_ptr<KMMFrame> KMMFactory::create(const uint8_t* data)
         return decode(new KMMRekeyAck(), data);
     case KMM_MessageType::REKEY_CMD:
         return decode(new KMMRekeyCommand(), data);
+    case KMM_MessageType::UNABLE_TO_DECRYPT:
+        return decode(new KMMUnableToDecrypt(), data);
     default:
         LogError(LOG_P25, "KMMFactory::create(), unknown KMM message ID value, messageId = $%02X", messageId);
         break;

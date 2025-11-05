@@ -48,7 +48,7 @@ KMMInventoryResponseListKeyIDs::~KMMInventoryResponseListKeyIDs() = default;
 
 uint32_t KMMInventoryResponseListKeyIDs::length() const
 {
-    uint32_t len = KMM_INVENTORY_RSP_HDR_LENGTH + 3U;
+    uint32_t len = KMMInventoryResponseHeader::length() + KMM_BODY_INV_RSP_LIST_KIDS_LENGTH;
     len += m_keyIds.size() * 2U;
 
     return len;
@@ -62,13 +62,13 @@ bool KMMInventoryResponseListKeyIDs::decode(const uint8_t* data)
 
     KMMInventoryResponseHeader::decodeHeader(data);
 
-    m_keysetId = data[13U];
-    m_algId = data[14U];
-    m_numberOfKeyIDs = data[15U];
+    m_keysetId = data[13U + m_bodyOffset];
+    m_algId = data[14U + m_bodyOffset];
+    m_numberOfKeyIDs = data[15U + m_bodyOffset];
 
     uint16_t offset = 0U;
     for (uint16_t i = 0U; i < m_numberOfKeyIDs; i++) {
-        uint16_t keyId = GET_UINT16(data, 16U + offset);
+        uint16_t keyId = GET_UINT16(data, 16U + (m_bodyOffset + offset));
         m_keyIds.push_back(keyId);
         offset += 2U;
     }
@@ -81,18 +81,18 @@ bool KMMInventoryResponseListKeyIDs::decode(const uint8_t* data)
 void KMMInventoryResponseListKeyIDs::encode(uint8_t* data)
 {
     assert(data != nullptr);
-    m_messageLength = KMM_INVENTORY_RSP_HDR_LENGTH;
+    m_messageLength = length();
     m_numberOfItems = 1U; // this is a naive approach...
 
     KMMInventoryResponseHeader::encodeHeader(data);
 
-    data[13U] = m_keysetId;
-    data[14U] = m_algId;
-    data[15U] = m_numberOfKeyIDs;
+    data[13U + m_bodyOffset] = m_keysetId;
+    data[14U + m_bodyOffset] = m_algId;
+    data[15U + m_bodyOffset] = m_numberOfKeyIDs;
 
     uint16_t offset = 0U;
     for (auto entry : m_keyIds) {
-        SET_UINT16(entry, data, 16U + offset);
+        SET_UINT16(entry, data, 16U + (m_bodyOffset + offset));
         offset += 2U;
     }
 }

@@ -21,6 +21,7 @@
 #define  __P25_KMM__KMM_FRAME_H__
 
 #include "common/Defines.h"
+#include "common/p25/P25Defines.h"
 #include "common/Utils.h"
 
 #include <string>
@@ -70,7 +71,16 @@ namespace p25
              * @brief Gets the byte length of this KMMFrame.
              * @return uint32_t Length of KMMFrame.
              */
-            virtual uint32_t length() const { return KMM_FRAME_LENGTH; }
+            virtual uint32_t length() const
+            {
+                uint32_t len = KMM_FRAME_LENGTH;
+                if (m_messageNumber > 0U)
+                    len += 2U;
+                if (m_macType == P25DEF::KMM_MAC::ENH_MAC)
+                    len += P25DEF::KMM_AES_MAC_LENGTH;
+
+                return len;
+            }
 
             /**
              * @brief Decode a KMM frame.
@@ -83,6 +93,14 @@ namespace p25
              * @param[out] data Buffer to encode KMM frame data to.
              */
             virtual void encode(uint8_t* data) = 0;
+
+            /**
+             * @brief Helper to generate a message authentication code for a KMM frame.
+             * @note DVM only supports generating AES-256 CBC-MAC.
+             * @param algoId Algorithm ID.
+             * @param kId Key ID.
+             */
+            void generateMAC(uint8_t algoId, uint16_t kId);
 
             /**
              * @brief Returns a string that represents the current KMM frame.
@@ -107,6 +125,15 @@ namespace p25
             DECLARE_PROTECTED_PROPERTY(uint8_t, respKind, ResponseKind);
 
             /**
+             * @brief Message Authentication Type.
+             */
+            DECLARE_PROTECTED_PROPERTY(uint8_t, macType, MACType);
+            /**
+             * @brief Message Number.
+             */
+            DECLARE_PROTECTED_PROPERTY(uint16_t, messageNumber, MessageNumber);
+
+            /**
              * @brief Destination Logical link ID.
              */
             DECLARE_PROTECTED_PROPERTY(uint32_t, dstLlId, DstLLId);
@@ -121,8 +148,12 @@ namespace p25
             DECLARE_PROTECTED_PROPERTY(bool, complete, Complete);
 
         protected:
-            uint8_t m_mfMessageNumber;
-            uint8_t m_mfMac;
+            uint16_t m_messageFullLength;   //!< Complete length of entire frame in bytes.
+            uint8_t m_bodyOffset;           //!< Offset to KMM frame body data.
+
+            uint8_t m_macAlgId;
+            uint16_t m_macKId;
+            uint8_t* m_mac;
 
             /**
              * @brief Internal helper to decode a KMM header.

@@ -52,7 +52,7 @@ KMMRekeyCommand::~KMMRekeyCommand()
 
 uint32_t KMMRekeyCommand::length() const
 {
-    uint32_t len = KMM_REKEY_CMD_LENGTH;
+    uint32_t len = KMMFrame::length() + KMM_BODY_REKEY_CMD_LENGTH;
     if (m_miSet)
         len += MI_LENGTH_BYTES;
 
@@ -70,43 +70,48 @@ bool KMMRekeyCommand::decode(const uint8_t* data)
 
     KMMFrame::decodeHeader(data);
 
-    m_decryptInfoFmt = data[10U];                               // Decryption Instruction Format
-    m_algId = data[11U];                                        // Algorithm ID
-    m_kId = GET_UINT16(data, 12U);                              // Key ID
+    m_containsTeks = false;
+
+    m_decryptInfoFmt = data[10U + m_bodyOffset];                // Decryption Instruction Format
+    m_algId = data[11U + m_bodyOffset];                         // Algorithm ID
+    m_kId = GET_UINT16(data, 12U + m_bodyOffset);               // Key ID
 
     uint16_t offset = 0U;
     if (m_decryptInfoFmt == KMM_DECRYPT_INSTRUCT_MI) {
         ::memset(m_mi, 0x00U, MI_LENGTH_BYTES);
-        ::memcpy(m_mi, data + 14U, MI_LENGTH_BYTES);
+        ::memcpy(m_mi, data + (m_bodyOffset + 14U), MI_LENGTH_BYTES);
         offset += 9U;
     }
 
-    uint8_t keysetCount = data[14U + offset];
+    uint8_t keysetCount = data[14U + (m_bodyOffset + offset)];
     for (uint8_t n = 0U; n < keysetCount; n++) {
         KeysetItem keysetItem = KeysetItem();
 
-        keysetItem.keysetId(data[16U + offset]);
-        keysetItem.algId(data[17U + offset]);
-        keysetItem.keyLength(data[18U + offset]);
+        if (!m_containsTeks)
+            m_containsTeks = data[15U + (m_bodyOffset + offset)] & KEY_FORMAT_TEK;
 
-        uint8_t keyCount = data[19U + offset];
+        keysetItem.keysetId(data[16U + (m_bodyOffset + offset)]);
+        keysetItem.algId(data[17U + (m_bodyOffset + offset)]);
+        keysetItem.keyLength(data[18U + (m_bodyOffset + offset)]);
+
+        uint8_t keyCount = data[19U + (m_bodyOffset + offset)];
         for (uint8_t i = 0U; i < keyCount; i++) {
             KeyItem key = KeyItem();
 
             DECLARE_UINT8_ARRAY(keyPayload, keysetItem.keyLength());
 
-            uint8_t keyFormat = data[20U + offset];
+            uint8_t keyFormat = data[20U + (m_bodyOffset + offset)];
             uint8_t keyNameLen = keyFormat & 0x1FU;
 
             key.keyFormat(keyFormat & 0xE0U);
 
-            uint16_t sln = GET_UINT16(data, 21U + offset);
+            uint16_t sln = GET_UINT16(data, 21U + (m_bodyOffset + offset));
             key.sln(sln);
 
-            uint16_t kId = GET_UINT16(data, 23U + offset);
+            uint16_t kId = GET_UINT16(data, 23U + (m_bodyOffset + offset));
             key.kId(kId);
 
-            ::memcpy(keyPayload, data + (25U + offset), keysetItem.keyLength());
+            ::memcpy(keyPayload, data + (25U + (m_bodyOffset + offset)), keysetItem.keyLength());
             key.setKey(keyPayload, keysetItem.keyLength());
 
             keysetItem.push_back(key);
@@ -134,35 +139,38 @@ void KMMRekeyCommand::encode(uint8_t* data)
         m_decryptInfoFmt = KMM_DECRYPT_INSTRUCT_NONE;
     }
 
-    data[10U] = m_decryptInfoFmt;                               // Decryption Instruction Format
-    data[11U] = m_algId;                                        // Algorithm ID
-    SET_UINT16(m_kId, data, 12U);                               // Key ID
+    data[10U + m_bodyOffset] = m_decryptInfoFmt;                // Decryption Instruction Format
+    data[11U + m_bodyOffset] = m_algId;                         // Algorithm ID
+    SET_UINT16(m_kId, data, 12U + m_bodyOffset);                // Key ID
 
     uint16_t offset = 0U;
     if (m_decryptInfoFmt == KMM_DECRYPT_INSTRUCT_MI) {
-        ::memcpy(data + 14U, m_mi, MI_LENGTH_BYTES);
+        ::memcpy(data + (m_bodyOffset + 14U), m_mi, MI_LENGTH_BYTES);
         offset += 9U;
     }
 
     uint8_t keysetCount = m_keysets.size();
-    data[14U + offset] = keysetCount;
+    data[14U + (m_bodyOffset + offset)] = keysetCount;
+
     for (auto keysetItem : m_keysets) {
-        data[16U + offset] = keysetItem.keysetId();
-        data[17U + offset] = keysetItem.algId();
-        data[18U + offset] = keysetItem.keyLength();
+        uint8_t keysetFormat = (m_containsTeks) ? KEY_FORMAT_TEK : 0x00U;
+        data[15U + (m_bodyOffset + offset)] = keysetFormat;
+        data[16U + (m_bodyOffset + offset)] = keysetItem.keysetId();
+        data[17U + (m_bodyOffset + offset)] = keysetItem.algId();
+        data[18U + (m_bodyOffset + offset)] = keysetItem.keyLength();
 
         uint8_t keyCount = keysetItem.keys().size();
-        data[19U + offset] = keyCount;
+        data[19U + (m_bodyOffset + offset)] = keyCount;
         for (auto key : keysetItem.keys()) {
             uint8_t keyNameLen = key.keyFormat() & 0x1FU;
-            data[18U + offset] = key.keyFormat();
-            SET_UINT16(key.sln(), data, 19U + offset);
-            SET_UINT16(key.kId(), data, 21U + offset);
+            data[18U + (m_bodyOffset + offset)] = key.keyFormat();
+            SET_UINT16(key.sln(), data, 19U + (m_bodyOffset + offset));
+            SET_UINT16(key.kId(), data, 21U + (m_bodyOffset + offset));
 
             DECLARE_UINT8_ARRAY(keyPayload, keysetItem.keyLength());
             key.getKey(keyPayload);
 
-            ::memcpy(data + (23U + offset), keyPayload, keysetItem.keyLength());
+            ::memcpy(data + (23U + (m_bodyOffset + offset)), keyPayload, keysetItem.keyLength());
 
             offset += 5U + keyNameLen + keysetItem.keyLength();
         }
@@ -176,6 +184,29 @@ void KMMRekeyCommand::encode(uint8_t* data)
 std::string KMMRekeyCommand::toString()
 {
     return std::string("KMM, REKEY_CMD (Rekey Command)");
+}
+
+/*
+** Encryption data 
+*/
+
+/* Sets the encryption message indicator. */
+
+void KMMRekeyCommand::setMI(const uint8_t* mi)
+{
+    assert(mi != nullptr);
+
+    m_miSet = true;
+    ::memcpy(m_mi, mi, MI_LENGTH_BYTES);
+}
+
+/* Gets the encryption message indicator. */
+
+void KMMRekeyCommand::getMI(uint8_t* mi) const
+{
+    assert(mi != nullptr);
+
+    ::memcpy(mi, m_mi, MI_LENGTH_BYTES);
 }
 
 // ---------------------------------------------------------------------------

@@ -35,16 +35,46 @@ KMMFrame::KMMFrame() :
     m_messageId(KMM_MessageType::NULL_CMD),
     m_messageLength(KMM_FRAME_LENGTH),
     m_respKind(KMM_ResponseKind::NONE),
+    m_macType(KMM_MAC::NO_MAC),
+    m_messageNumber(0U),
+    m_dstLlId(0U),
+    m_srcLlId(0U),
     m_complete(true),
-    m_mfMessageNumber(0U),
-    m_mfMac(KMM_MAC::NO_MAC)
+    m_messageFullLength(0U),
+    m_bodyOffset(0U),
+    m_macAlgId(ALGO_UNENCRYPT),
+    m_macKId(0U),
+    m_mac(nullptr)
 {
-    /* stub */
+    m_mac = new uint8_t[P25DEF::KMM_AES_MAC_LENGTH];
+    ::memset(m_mac, 0x00U, P25DEF::KMM_AES_MAC_LENGTH);
 }
 
 /* Finalizes a instance of the KMMFrame class. */
 
-KMMFrame::~KMMFrame() = default;
+KMMFrame::~KMMFrame()
+{
+    if (m_mac != nullptr)
+        delete[] m_mac;
+}
+
+/* Helper to generate a message authentication code for a KMM frame. */
+
+void KMMFrame::generateMAC(uint8_t algoId, uint16_t kId)
+{
+    m_macAlgId = algoId;
+    m_macKId = kId;
+
+    m_macType = KMM_MAC::ENH_MAC;
+    m_messageLength += P25DEF::KMM_AES_MAC_LENGTH;
+    m_messageFullLength = m_messageLength + 3U;
+
+    ::memset(m_mac, 0x00U, P25DEF::KMM_AES_MAC_LENGTH);
+
+    /*
+    ** TODO - generate actual MAC
+    */
+}
 
 /* Returns a string that represents the current KMM frame. */
 
@@ -65,10 +95,11 @@ bool KMMFrame::decodeHeader(const uint8_t* data)
 
     m_messageId = data[0U];                                                         // Message ID
     m_messageLength = GET_UINT16(data, 1U);                                         // Message Length
+    m_messageFullLength = m_messageLength + 3U; // length including ID and length fields
 
     m_respKind = (data[3U] >> 6U) & 0x03U;                                          // Response Kind
-    m_mfMessageNumber = (data[3U] >> 4U) & 0x03U;                                   // Message Number
-    m_mfMac = (data[3U] >> 2U) & 0x03U;                                             // MAC
+    bool hasMN = ((data[3U] >> 4U) & 0x03U) == 0x02U;                               // Message Number Flag
+    m_macType = (data[3U] >> 2U) & 0x03U;                                           // MAC Type
 
     bool done = (data[3U] & 0x01U) == 0x01U;                                        // Done Flag
     if (!done)
@@ -78,6 +109,44 @@ bool KMMFrame::decodeHeader(const uint8_t* data)
 
     m_dstLlId = GET_UINT24(data, 4U);                                               // Destination RSI
     m_srcLlId = GET_UINT24(data, 7U);                                               // Source RSI
+
+    if (hasMN) {
+        m_bodyOffset = 2U;
+        m_messageNumber = GET_UINT16(data, 10U);                                    // Message Number
+    }
+
+    switch (m_macType) {
+    case KMM_MAC::DES_MAC:
+        {
+            uint8_t macLength = 4U;
+
+            m_macAlgId = data[m_messageFullLength - 4U];
+            m_macKId = GET_UINT16(data, m_messageFullLength - 3U);
+
+            ::memset(m_mac, 0x00U, macLength);
+            ::memcpy(m_mac, data + m_messageFullLength - (macLength + 5U), macLength);
+        }
+        break;
+
+    case KMM_MAC::ENH_MAC:
+        {
+            uint8_t macLength = 8U;
+
+            m_macAlgId = data[m_messageFullLength - 4U];
+            m_macKId = GET_UINT16(data, m_messageFullLength - 3U);
+
+            ::memset(m_mac, 0x00U, macLength);
+            ::memcpy(m_mac, data + m_messageFullLength - (macLength + 5U), macLength);
+        }
+        break;
+
+    case KMM_MAC::NO_MAC:
+        break;
+
+    default:
+        ::LogError(LOG_P25, "KMMFrame::decodeHeader(), unknown KMM MAC inventory type value, macType = $%02X", m_macType);
+        break;
+    }
 
     return true;
 }
@@ -90,14 +159,45 @@ void KMMFrame::encodeHeader(uint8_t* data)
 
     data[0U] = m_messageId;                                                         // Message ID
     SET_UINT16(m_messageLength, data, 1U);                                          // Message Length
+    m_messageFullLength = m_messageLength + 3U;
 
     data[3U] = ((m_respKind & 0x03U) << 6U) +                                       // Response Kind
-        ((m_mfMessageNumber & 0x03U) << 4U) +                                       // Message Number
-        ((m_mfMac & 0x03U) << 2U) +                                                 // MAC
+        ((m_messageNumber > 0U) ? 0x20U : 0x00U) +                                  // Message Number Flag
+        ((m_macType & 0x03U) << 2U) +                                               // MAC Type
         ((!m_complete) ? 0x01U : 0x00U);                                            // Done Flag
 
     SET_UINT24(m_dstLlId, data, 4U);                                                // Destination RSI
     SET_UINT24(m_srcLlId, data, 7U);                                                // Source RSI
+
+    if (m_messageNumber > 0U) {
+        SET_UINT16(m_messageNumber, data, 10U);                                     // Message Number
+        m_bodyOffset = 2U;
+    }
+
+    switch (m_macType) {
+    case KMM_MAC::DES_MAC:
+        ::LogError(LOG_P25, "KMMFrame::decodeHeader(), DES MAC type is not supported, macType = $%02X", m_macType);
+        return;
+
+    case KMM_MAC::ENH_MAC:
+        {
+            uint8_t macLength = 8U;
+
+            m_macAlgId = data[m_messageFullLength - 4U];
+            m_macKId = GET_UINT16(data, m_messageFullLength - 3U);
+
+            ::memset(m_mac, 0x00U, macLength);
+            ::memcpy(m_mac, data + m_messageFullLength - (macLength + 5U), macLength);
+        }
+        break;
+
+    case KMM_MAC::NO_MAC:
+        break;
+
+    default:
+        ::LogError(LOG_P25, "KMMFrame::decodeHeader(), unknown KMM MAC inventory type value, macType = $%02X", m_macType);
+        break;
+    }
 }
 
 /* Internal helper to copy the the class. */
@@ -106,9 +206,10 @@ void KMMFrame::copy(const KMMFrame& data)
 {
     m_messageId = data.m_messageId;
     m_messageLength = data.m_messageLength;
+    m_messageFullLength = data.m_messageFullLength;
     m_respKind = data.m_respKind;
     m_complete = data.m_complete;
 
-    m_mfMessageNumber = data.m_mfMessageNumber;
-    m_mfMac = data.m_mfMac;
+    m_messageNumber = data.m_messageNumber;
+    m_macType = data.m_macType;
 }

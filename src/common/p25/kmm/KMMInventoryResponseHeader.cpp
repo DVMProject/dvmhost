@@ -35,6 +35,13 @@ KMMInventoryResponseHeader::KMMInventoryResponseHeader() : KMMFrame(),
 
 KMMInventoryResponseHeader::~KMMInventoryResponseHeader() = default;
 
+/* Gets the byte length of this KMMInventoryResponseHeader. */
+
+uint32_t KMMInventoryResponseHeader::length() const
+{
+    return KMMFrame::length() + KMM_BODY_INV_RSP_HDR_LENGTH;
+}
+
 /* Decode a KMM inventory response header. */
 
 bool KMMInventoryResponseHeader::decode(const uint8_t* data)
@@ -43,8 +50,8 @@ bool KMMInventoryResponseHeader::decode(const uint8_t* data)
 
     KMMFrame::decodeHeader(data);
 
-    m_inventoryType = data[10U];                                // Inventory Type
-    m_numberOfItems = GET_UINT16(data, 11U);                    // Number of Items
+    m_inventoryType = data[10U + m_bodyOffset];                 // Inventory Type
+    m_numberOfItems = GET_UINT16(data, 11U + m_bodyOffset);     // Number of Items
 
     return true;
 }
@@ -54,12 +61,12 @@ bool KMMInventoryResponseHeader::decode(const uint8_t* data)
 void KMMInventoryResponseHeader::encode(uint8_t* data)
 {
     assert(data != nullptr);
-    m_messageLength = KMM_INVENTORY_RSP_HDR_LENGTH;
+    m_messageLength = length();
 
     KMMFrame::encodeHeader(data);
 
-    data[10U] = m_inventoryType;                                // Inventory Type
-    SET_UINT16(m_numberOfItems, data, 11U);                     // Number of Items
+    data[10U + m_bodyOffset] = m_inventoryType;                 // Inventory Type
+    SET_UINT16(m_numberOfItems, data, 11U + m_bodyOffset);      // Number of Items
 }
 
 /* Returns a string that represents the current KMM frame. */

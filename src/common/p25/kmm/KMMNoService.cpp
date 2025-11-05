@@ -50,7 +50,7 @@ bool KMMNoService::decode(const uint8_t* data)
 void KMMNoService::encode(uint8_t* data)
 {
     assert(data != nullptr);
-    m_messageLength = KMM_NO_SERVICE_LENGTH;
+    m_messageLength = length();
 
     KMMFrame::encodeHeader(data);
 }

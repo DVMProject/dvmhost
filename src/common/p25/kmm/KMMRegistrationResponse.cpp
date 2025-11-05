@@ -35,6 +35,14 @@ KMMRegistrationResponse::KMMRegistrationResponse() : KMMFrame(),
 
 KMMRegistrationResponse::~KMMRegistrationResponse() = default;
 
+/* Gets the byte length of this KMMRegistrationResponse. */
+
+uint32_t KMMRegistrationResponse::length() const
+{
+    uint32_t len = KMMFrame::length() + KMM_BODY_REGISTRATION_RSP_LENGTH;
+    return len;
+}
+
 /* Decode a KMM modify key. */
 
 bool KMMRegistrationResponse::decode(const uint8_t* data)
@@ -43,7 +51,7 @@ bool KMMRegistrationResponse::decode(const uint8_t* data)
 
     KMMFrame::decodeHeader(data);
 
-    m_status = data[10U];                                       // Status
+    m_status = data[10U + m_bodyOffset];                        // Status
 
     return true;
 }
@@ -53,11 +61,11 @@ bool KMMRegistrationResponse::decode(const uint8_t* data)
 void KMMRegistrationResponse::encode(uint8_t* data)
 {
     assert(data != nullptr);
-    m_messageLength = KMM_REGISTRATION_RSP_LENGTH;
+    m_messageLength = length();
 
     KMMFrame::encodeHeader(data);
 
-    data[10U] = m_status;                                       // Status
+    data[10U + m_bodyOffset] = m_status;                        // Status
 }
 
 /* Returns a string that represents the current KMM frame. */

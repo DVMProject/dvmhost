@@ -35,6 +35,13 @@ KMMHello::KMMHello() : KMMFrame(),
 
 KMMHello::~KMMHello() = default;
 
+/* Gets the byte length of this KMMHello. */
+
+uint32_t KMMHello::length() const
+{
+    return KMMFrame::length() + KMM_BODY_HELLO_LENGTH;
+}
+
 /* Decode a KMM modify key. */
 
 bool KMMHello::decode(const uint8_t* data)
@@ -43,7 +50,7 @@ bool KMMHello::decode(const uint8_t* data)
 
     KMMFrame::decodeHeader(data);
 
-    m_flag = data[10U];                                         // Hello Flag
+    m_flag = data[10U + m_bodyOffset];                          // Hello Flag
 
     return true;
 }
@@ -53,11 +60,11 @@ bool KMMHello::decode(const uint8_t* data)
 void KMMHello::encode(uint8_t* data)
 {
     assert(data != nullptr);
-    m_messageLength = KMM_HELLO_LENGTH;
+    m_messageLength = length();
 
     KMMFrame::encodeHeader(data);
 
-    data[10U] = m_flag;                                         // Hello Flag
+    data[10U + m_bodyOffset] = m_flag;                          // Hello Flag
 }
 
 /* Returns a string that represents the current KMM frame. */

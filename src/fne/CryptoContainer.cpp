@@ -226,18 +226,18 @@ void CryptoContainer::clear()
 
 /* Adds a new entry to the lookup table by the specified unique ID. */
 
-void CryptoContainer::addEntry(KeyItem key)
+void CryptoContainer::addEntry(EKCKeyItem key)
 {
     if (key.isInvalid())
         return;
 
-    KeyItem entry = key;
+    EKCKeyItem entry = key;
     uint32_t id = entry.id();
     uint32_t kId = entry.kId();
 
     std::lock_guard<std::mutex> lock(s_mutex);
     auto it = std::find_if(m_keys.begin(), m_keys.end(),
-        [&](KeyItem& x)
+        [&](EKCKeyItem& x)
         {
             return x.id() == id && x.kId() == kId;
         });
@@ -255,7 +255,7 @@ void CryptoContainer::eraseEntry(uint32_t id)
 {
     std::lock_guard<std::mutex> lock(s_mutex);
     auto it = std::find_if(m_keys.begin(), m_keys.end(),
-        [&](KeyItem& x) {
+        [&](EKCKeyItem& x) {
             return x.id() == id; 
         });
     if (it != m_keys.end()) {
@@ -265,20 +265,52 @@ void CryptoContainer::eraseEntry(uint32_t id)
 
 /* Finds a table entry in this lookup table. */
 
-KeyItem CryptoContainer::find(uint32_t kId)
+EKCKeyItem CryptoContainer::find(uint32_t kId)
 {
-    KeyItem entry;
+    EKCKeyItem entry;
 
     std::lock_guard<std::mutex> lock(s_mutex);
     auto it = std::find_if(m_keys.begin(), m_keys.end(),
-        [&](KeyItem& x) {
+        [&](EKCKeyItem& x) {
             return x.kId() == kId;
         });
     if (it != m_keys.end()) {
         entry = *it;
     } else {
-        entry = KeyItem();
+        entry = EKCKeyItem();
     }
+
+    return entry;
+}
+
+/* Finds a table entry in this lookup table. */
+
+EKCKeyItem CryptoContainer::findUKEK(uint32_t rsi)
+{
+    EKCKeyItem entry;
+
+    std::lock_guard<std::mutex> lock(s_mutex);
+
+    /*
+    ** TODO TODO TODO
+    */
+    entry = EKCKeyItem();
+
+    return entry;
+}
+
+/* Finds a table entry in this lookup table. */
+
+EKCKeyItem CryptoContainer::findLLA(uint32_t rsi)
+{
+    EKCKeyItem entry;
+
+    std::lock_guard<std::mutex> lock(s_mutex);
+
+    /*
+    ** TODO TODO TODO
+    */
+    entry = EKCKeyItem();
 
     return entry;
 }
@@ -505,7 +537,7 @@ bool CryptoContainer::load()
                 if (keys != nullptr) {
                     uint32_t i = 0U;
                     for (rapidxml::xml_node<>* keyNode = keys->first_node("KeyItem"); keyNode; keyNode = keyNode->next_sibling()) {
-                        KeyItem key = KeyItem();
+                        EKCKeyItem key = EKCKeyItem();
                         key.id(i);
 
                         // get name

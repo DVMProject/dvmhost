@@ -35,6 +35,13 @@ KMMInventoryCommand::KMMInventoryCommand() : KMMFrame(),
 
 KMMInventoryCommand::~KMMInventoryCommand() = default;
 
+/* Gets the byte length of this KMMInventoryCommand. */
+
+uint32_t KMMInventoryCommand::length() const
+{
+    return KMMFrame::length() + KMM_BODY_INVENTORY_CMD_LENGTH;
+}
+
 /* Decode a KMM inventory command. */
 
 bool KMMInventoryCommand::decode(const uint8_t* data)
@@ -43,7 +50,7 @@ bool KMMInventoryCommand::decode(const uint8_t* data)
 
     KMMFrame::decodeHeader(data);
 
-    m_inventoryType = data[10U];                                // Inventory Type
+    m_inventoryType = data[10U + m_bodyOffset];                 // Inventory Type
 
     return true;
 }
@@ -53,11 +60,11 @@ bool KMMInventoryCommand::decode(const uint8_t* data)
 void KMMInventoryCommand::encode(uint8_t* data)
 {
     assert(data != nullptr);
-    m_messageLength = KMM_INVENTORY_CMD_LENGTH;
+    m_messageLength = length();
 
     KMMFrame::encodeHeader(data);
 
-    data[10U] = m_inventoryType;                                // Inventory Type
+    data[10U + m_bodyOffset] = m_inventoryType;                 // Inventory Type
 }
 
 /* Returns a string that represents the current KMM frame. */

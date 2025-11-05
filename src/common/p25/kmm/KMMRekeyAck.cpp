@@ -29,7 +29,7 @@ KMMRekeyAck::KMMRekeyAck() : KMMFrame(),
     m_numberOfKeyStatus(0U),
     m_keystatus()
 {
-    m_messageId = KMM_MessageType::NAK;
+    m_messageId = KMM_MessageType::REKEY_ACK;
     m_respKind = KMM_ResponseKind::NONE;
 }
 
@@ -41,7 +41,7 @@ KMMRekeyAck::~KMMRekeyAck() = default;
 
 uint32_t KMMRekeyAck::length() const
 {
-    uint32_t len = KMM_REKEY_ACK_LENGTH;
+    uint32_t len = KMMFrame::length() + KMM_BODY_REKEY_ACK_LENGTH;
     len += m_keystatus.size() * 4U;
 
     return len;
@@ -55,19 +55,19 @@ bool KMMRekeyAck::decode(const uint8_t* data)
 
     KMMFrame::decodeHeader(data);
 
-    m_messageId = data[10U];                                    // Message ID
-    m_numberOfKeyStatus = data[11U];                            // Number of Key Status
+    m_messageId = data[10U + m_bodyOffset];                     // Message ID
+    m_numberOfKeyStatus = data[11U + m_bodyOffset];             // Number of Key Status
 
     uint16_t offset = 0U;
     for (uint8_t i = 0U; i < m_numberOfKeyStatus; i++) {
         KeyStatus keyStatus = KeyStatus();
 
-        keyStatus.algId(data[12U + offset]);
+        keyStatus.algId(data[12U + (m_bodyOffset + offset)]);
 
-        uint16_t kId = GET_UINT16(data, 13U + offset);
+        uint16_t kId = GET_UINT16(data, 13U + (m_bodyOffset + offset));
         keyStatus.kId(kId);
 
-        keyStatus.status(data[15U + offset]);
+        keyStatus.status(data[15U + (m_bodyOffset + offset)]);
 
         m_keystatus.push_back(keyStatus);
         offset += 4U;
@@ -85,15 +85,15 @@ void KMMRekeyAck::encode(uint8_t* data)
 
     KMMFrame::encodeHeader(data);
 
-    data[10U] = m_messageId;                                    // Message ID
-    data[11U] = m_numberOfKeyStatus;                            // Number of Key Status
+    data[10U + m_bodyOffset] = m_messageId;                     // Message ID
+    data[11U + m_bodyOffset] = m_numberOfKeyStatus;             // Number of Key Status
 
     uint16_t offset = 0U;
     for (auto keyStatus : m_keystatus) {
-        data[12U + offset] = keyStatus.algId();
-        SET_UINT16(keyStatus.kId(), data, 13U + offset);
+        data[12U + (m_bodyOffset + offset)] = keyStatus.algId();
+        SET_UINT16(keyStatus.kId(), data, 13U + (m_bodyOffset + offset));
 
-        data[15U + offset] = keyStatus.status();
+        data[15U + (m_bodyOffset + offset)] = keyStatus.status();
         offset += 4U;
     }
 }

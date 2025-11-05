@@ -37,7 +37,7 @@ namespace p25
          * @{
          */
 
-         const uint32_t KMM_REKEY_ACK_LENGTH = KMM_FRAME_LENGTH + 2U;
+         const uint32_t KMM_BODY_REKEY_ACK_LENGTH = 2U;
 
          /** @} */
  

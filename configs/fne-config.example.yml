@@ -183,7 +183,7 @@ master:
     crypto_container:
         # Flag indicating whether or not crypto services are enabled.
         enable: false
-        # Full path to the talkgroup rules file.
+        # Full path to the KFDtool crypto container file.
         file: key_container.ekc
         # Container password.
         password: "PASSWORD"

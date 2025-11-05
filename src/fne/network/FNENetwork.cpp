@@ -1504,7 +1504,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                         if (modifyKey->getAlgId() > 0U && modifyKey->getKId() > 0U) {
                                             LogInfoEx(LOG_MASTER, "PEER %u (%s) requested enc. key, algId = $%02X, kID = $%04X", peerId, connection->identWithQualifier().c_str(),
                                                 modifyKey->getAlgId(), modifyKey->getKId());
-                                            ::KeyItem keyItem = network->m_cryptoLookup->find(modifyKey->getKId());
+                                            ::EKCKeyItem keyItem = network->m_cryptoLookup->find(modifyKey->getKId());
                                             if (!keyItem.isInvalid()) {
                                                 uint8_t key[P25DEF::MAX_ENC_KEY_LENGTH_BYTES];
                                                 ::memset(key, 0x00U, P25DEF::MAX_ENC_KEY_LENGTH_BYTES);

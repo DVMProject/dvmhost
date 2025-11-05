@@ -8,13 +8,13 @@
  *
  */
 /**
- * @file KMMRekeyCommand.h
+ * @file KMMUnableToDecrypt.h
  * @ingroup p25_kmm
- * @file KMMRekeyCommand.cpp
+ * @file KMMUnableToDecrypt.cpp
  * @ingroup p25_kmm
  */
-#if !defined(__P25_KMM__KMM_REKEY_COMMAND_H__)
-#define  __P25_KMM__KMM_REKEY_COMMAND_H__
+#if !defined(__P25_KMM__KMM_UNABLE_TO_DECRYPT_H__)
+#define  __P25_KMM__KMM_UNABLE_TO_DECRYPT_H__
 
 #include "common/Defines.h"
 #include "common/p25/kmm/KMMFrame.h"
@@ -37,7 +37,7 @@ namespace p25
          * @{
          */
 
-         const uint32_t KMM_BODY_REKEY_CMD_LENGTH = 5U;
+         const uint32_t KMM_BODY_UNABLE_TO_DECRYPT_LENGTH = 7U;
 
          /** @} */
  
@@ -45,16 +45,16 @@ namespace p25
         //  Class Declaration
         // ---------------------------------------------------------------------------
 
-        class HOST_SW_API KMMRekeyCommand : public KMMFrame {
+        class HOST_SW_API KMMUnableToDecrypt : public KMMFrame {
         public:
             /**
-             * @brief Initializes a new instance of the KMMRekeyCommand class.
+             * @brief Initializes a new instance of the KMMUnableToDecrypt class.
              */
-            KMMRekeyCommand();
+            KMMUnableToDecrypt();
             /**
-             * @brief Finalizes a instance of the KMMRekeyCommand class.
+             * @brief Finalizes a instance of the KMMUnableToDecrypt class.
              */
-            ~KMMRekeyCommand();
+            ~KMMUnableToDecrypt();
 
             /**
              * @brief Gets the byte length of this KMMFrame.
@@ -63,13 +63,13 @@ namespace p25
             uint32_t length() const override;
 
             /**
-             * @brief Decode a KMM rekey command.
+             * @brief Decode a KMM Unable-To-Decrypt.
              * @param[in] data Buffer containing KMM frame data to decode.
              * @returns bool True, if decoded, otherwise false.
              */
             bool decode(const uint8_t* data) override;
             /**
-             * @brief Encode a KMM rekey command.
+             * @brief Encode a KMM Unable-To-Decrypt.
              * @param[out] data Buffer to encode KMM frame data to.
              */
             void encode(uint8_t* data) override;
@@ -97,7 +97,7 @@ namespace p25
             /**
              * @brief 
              */
-            DECLARE_PROPERTY(uint8_t, decryptInfoFmt, DecryptInfoFmt);
+            DECLARE_PROPERTY(uint8_t, bodyFormat, BodyFormat);
             /**
              * @brief Encryption algorithm ID.
              */
@@ -106,18 +106,30 @@ namespace p25
              * @brief Encryption key ID.
              */
             DECLARE_PROPERTY(uint16_t, kId, KId);
+            /**
+             * @brief 
+             */
+            DECLARE_PROPERTY(uint8_t, status, Status);
 
             /**
-             * @brief Flag indicating whether or not this rekey command contains TEKs or KEKs.
+             * @brief 
              */
-            DECLARE_PROPERTY(bool, containsTeks, ContainsTEKs);
+            DECLARE_PROPERTY(uint8_t, decryptInfoFmt, DecryptInfoFmt);
+            /**
+             * @brief Encryption algorithm ID.
+             */
+            DECLARE_PROPERTY(uint8_t, decryptAlgId, DecryptAlgId);
+            /**
+             * @brief Encryption key ID.
+             */
+            DECLARE_PROPERTY(uint16_t, decryptKId, DecryptKId);
 
             /**
-             * @brief List of keysets.
+             * @brief List of keys.
              */
-            DECLARE_PROPERTY(std::vector<KeysetItem>, keysets, Keysets);
+            DECLARE_PROPERTY(KeyItem, key, Key);
 
-            DECLARE_COPY(KMMRekeyCommand);
+            DECLARE_COPY(KMMUnableToDecrypt);
 
         private:
             // Encryption data
@@ -127,4 +139,4 @@ namespace p25
     } // namespace kmm
 } // namespace p25
 
-#endif // __P25_KMM__KMM_REKEY_COMMAND_H__
+#endif // __P25_KMM__KMM_UNABLE_TO_DECRYPT_H__

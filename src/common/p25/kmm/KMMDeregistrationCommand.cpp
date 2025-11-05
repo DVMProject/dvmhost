@@ -36,6 +36,13 @@ KMMDeregistrationCommand::KMMDeregistrationCommand() : KMMFrame(),
 
 KMMDeregistrationCommand::~KMMDeregistrationCommand() = default;
 
+/* Gets the byte length of this KMMDeregistrationCommand. */
+
+uint32_t KMMDeregistrationCommand::length() const
+{
+    return KMMFrame::length() + KMM_BODY_DEREGISTRATION_CMD_LENGTH;
+}
+
 /* Decode a KMM modify key. */
 
 bool KMMDeregistrationCommand::decode(const uint8_t* data)
@@ -44,8 +51,8 @@ bool KMMDeregistrationCommand::decode(const uint8_t* data)
 
     KMMFrame::decodeHeader(data);
 
-    m_bodyFormat = data[10U];                                   // Body Format
-    m_kmfRSI = GET_UINT24(data, 11U);                           // KMF RSI
+    m_bodyFormat = data[10U + m_bodyOffset];                    // Body Format
+    m_kmfRSI = GET_UINT24(data, 11U + m_bodyOffset);            // KMF RSI
 
     return true;
 }
@@ -55,13 +62,13 @@ bool KMMDeregistrationCommand::decode(const uint8_t* data)
 void KMMDeregistrationCommand::encode(uint8_t* data)
 {
     assert(data != nullptr);
-    m_messageLength = KMM_DEREGISTRATION_CMD_LENGTH;
+    m_messageLength = length();
     m_bodyFormat = 0U; // reset this to none -- we don't support warm start right now
 
     KMMFrame::encodeHeader(data);
 
-    data[10U] = m_bodyFormat;                                   // Body Format
-    SET_UINT24(m_kmfRSI, data, 11U);                            // KMF RSI
+    data[10U + m_bodyOffset] = m_bodyFormat;                    // Body Format
+    SET_UINT24(m_kmfRSI, data, 11U + m_bodyOffset);             // KMF RSI
 }
 
 /* Returns a string that represents the current KMM frame. */

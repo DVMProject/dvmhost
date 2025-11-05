@@ -31,15 +31,15 @@
 // ---------------------------------------------------------------------------
 
 /**
- * @brief Represents an key item.
+ * @brief Represents an EKC key item.
  * @ingroup fne
  */
-class HOST_SW_API KeyItem {
+class HOST_SW_API EKCKeyItem {
 public:
     /**
-     * @brief Initializes a new instance of the KeyItem class.
+     * @brief Initializes a new instance of the EKCKeyItem class.
      */
-    KeyItem() :
+    EKCKeyItem() :
         m_id(0U),
         m_name(),
         m_keysetId(0U),
@@ -52,10 +52,10 @@ public:
     }
 
     /**
-     * @brief Equals operator. Copies this KeyItem to another KeyItem.
-     * @param data Instance of KeyItem to copy.
+     * @brief Equals operator. Copies this EKCKeyItem to another EKCKeyItem.
+     * @param data Instance of EKCKeyItem to copy.
      */
-    virtual KeyItem& operator= (const KeyItem& data)
+    virtual EKCKeyItem& operator= (const EKCKeyItem& data)
     {
         if (this != &data) {
             m_id = data.m_id;
@@ -207,7 +207,7 @@ public:
      * @brief Adds a new entry to the lookup table.
      * @param key Key Item.
      */
-    void addEntry(KeyItem key);
+    void addEntry(EKCKeyItem key);
     /**
      * @brief Erases an existing entry from the lookup table by the specified unique ID.
      * @param id Unique ID to erase.
@@ -218,7 +218,20 @@ public:
      * @param kId Unique identifier for table entry.
      * @returns KeyItem Table entry.
      */
-    virtual KeyItem find(uint32_t kId);
+    virtual EKCKeyItem find(uint32_t kId);
+
+    /**
+     * @brief Finds a table entry in this lookup table.
+     * @param rsi Unique radio set identifier (RID/LLID).
+     * @returns KeyItem Table entry.
+     */
+    virtual EKCKeyItem findUKEK(uint32_t rsi);
+    /**
+     * @brief Finds a table entry in this lookup table.
+     * @param rsi Unique radio set identifier (RID/LLID).
+     * @returns KeyItem Table entry.
+     */
+    virtual EKCKeyItem findLLA(uint32_t rsi);
 
     /**
      * @brief Helper to return the flag indicating whether or not the crypto container is enabled.
@@ -252,7 +265,7 @@ public:
     /**
      * @brief List of keys.
      */
-    DECLARE_PROPERTY_PLAIN(std::vector<KeyItem>, keys);
+    DECLARE_PROPERTY_PLAIN(std::vector<EKCKeyItem>, keys);
 };
 
 #endif // __CRYPTO_CONTAINER_H__

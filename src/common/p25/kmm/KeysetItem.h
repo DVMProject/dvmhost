@@ -33,7 +33,7 @@ namespace p25
          * @{
          */
 
-         const uint8_t MAX_ENC_KEY_LENGTH_BYTES = 32U;
+        const uint8_t MAX_ENC_KEY_LENGTH_BYTES = 32U;
 
         /** @} */
 
@@ -80,6 +80,15 @@ namespace p25
                 }
 
                 return *this;
+            }
+
+            /**
+             * @brief Returns the length of this key item in bytes.
+             * @returns uint32_t Length of key item.
+             */
+            uint32_t getLength() const
+            {
+                return 5U + m_keyLength;
             }
 
             /**

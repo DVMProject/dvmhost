@@ -36,7 +36,7 @@ namespace p25
          * @{
          */
 
-         const uint32_t KMM_REGISTRATION_CMD_LENGTH = KMM_FRAME_LENGTH + 4U;
+         const uint32_t KMM_BODY_REGISTRATION_CMD_LENGTH = 4U;
 
          /** @} */
  
@@ -54,6 +54,12 @@ namespace p25
              * @brief Finalizes a instance of the KMMRegistrationCommand class.
              */
             ~KMMRegistrationCommand();
+
+            /**
+             * @brief Gets the byte length of this KMMFrame.
+             * @return uint32_t Length of KMMFrame.
+             */
+            uint32_t length() const override;
 
             /**
              * @brief Decode a KMM deregistration command.

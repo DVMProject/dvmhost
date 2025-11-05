@@ -37,6 +37,14 @@ KMMNegativeAck::KMMNegativeAck() : KMMFrame(),
 
 KMMNegativeAck::~KMMNegativeAck() = default;
 
+/* Gets the byte length of this KMMNegativeAck. */
+
+uint32_t KMMNegativeAck::length() const
+{
+    uint32_t len = KMMFrame::length() + KMM_BODY_NEGATIVE_ACK_LENGTH;
+    return len;
+}
+
 /* Decode a KMM NAK. */
 
 bool KMMNegativeAck::decode(const uint8_t* data)
@@ -45,9 +53,9 @@ bool KMMNegativeAck::decode(const uint8_t* data)
 
     KMMFrame::decodeHeader(data);
 
-    m_messageId = data[10U];                                    // Message ID
-    m_messageNo = GET_UINT16(data, 11U);                        // Message Number
-    m_status = data[13U];                                       // Status
+    m_messageId = data[10U + m_bodyOffset];                     // Message ID
+    m_messageNo = GET_UINT16(data, 11U + m_bodyOffset);         // Message Number
+    m_status = data[13U + m_bodyOffset];                        // Status
 
     return true;
 }
@@ -57,13 +65,13 @@ bool KMMNegativeAck::decode(const uint8_t* data)
 void KMMNegativeAck::encode(uint8_t* data)
 {
     assert(data != nullptr);
-    m_messageLength = KMM_NEGATIVE_ACK_LENGTH;
+    m_messageLength = length();
 
     KMMFrame::encodeHeader(data);
 
-    data[10U] = m_messageId;                                    // Message ID
-    SET_UINT16(m_messageNo, data, 11U);                         // Message Number
-    data[13U] = m_status;
+    data[10U + m_bodyOffset] = m_messageId;                     // Message ID
+    SET_UINT16(m_messageNo, data, 11U + m_bodyOffset);          // Message Number
+    data[13U + m_bodyOffset] = m_status;                        // Status
 }
 
 /* Returns a string that represents the current KMM frame. */
