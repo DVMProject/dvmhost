@@ -24,6 +24,8 @@ TEST_CASE("AES", "[KEK Crypto Test]") {
 
         srand((unsigned int)time(NULL));
 
+        // example data taken from TIA-102.AACA-C-2023 Section 14.3.3
+
         // Encrypted Key Frame
         uint8_t testWrappedKeyFrame[40U] = 
         {

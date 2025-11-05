@@ -27,6 +27,8 @@ TEST_CASE("AES", "[AES256 MAC CMAC Test]") {
 
         srand((unsigned int)time(NULL));
 
+        // example data taken from TIA-102.AACA-C-2023 Section 14.3.5.1
+
         // MAC TEK
         uint8_t macTek[] =
         {
