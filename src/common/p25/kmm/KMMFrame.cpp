@@ -36,14 +36,14 @@ KMMFrame::KMMFrame() :
     m_messageLength(KMM_FRAME_LENGTH),
     m_respKind(KMM_ResponseKind::NONE),
     m_macType(KMM_MAC::NO_MAC),
+    m_macAlgId(ALGO_UNENCRYPT),
+    m_macKId(0U),
     m_messageNumber(0U),
     m_dstLlId(0U),
     m_srcLlId(0U),
     m_complete(true),
     m_messageFullLength(0U),
     m_bodyOffset(0U),
-    m_macAlgId(ALGO_UNENCRYPT),
-    m_macKId(0U),
     m_mac(nullptr)
 {
     m_mac = new uint8_t[P25DEF::KMM_AES_MAC_LENGTH];
@@ -56,24 +56,6 @@ KMMFrame::~KMMFrame()
 {
     if (m_mac != nullptr)
         delete[] m_mac;
-}
-
-/* Helper to generate a message authentication code for a KMM frame. */
-
-void KMMFrame::generateMAC(uint8_t algoId, uint16_t kId)
-{
-    m_macAlgId = algoId;
-    m_macKId = kId;
-
-    m_macType = KMM_MAC::ENH_MAC;
-    m_messageLength += P25DEF::KMM_AES_MAC_LENGTH;
-    m_messageFullLength = m_messageLength + 3U;
-
-    ::memset(m_mac, 0x00U, P25DEF::KMM_AES_MAC_LENGTH);
-
-    /*
-    ** TODO - generate actual MAC
-    */
 }
 
 /* Returns a string that represents the current KMM frame. */
@@ -211,5 +193,7 @@ void KMMFrame::copy(const KMMFrame& data)
     m_complete = data.m_complete;
 
     m_messageNumber = data.m_messageNumber;
+    m_macAlgId = data.m_macAlgId;
+    m_macKId = data.m_macKId;
     m_macType = data.m_macType;
 }

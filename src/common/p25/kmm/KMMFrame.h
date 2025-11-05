@@ -95,14 +95,6 @@ namespace p25
             virtual void encode(uint8_t* data) = 0;
 
             /**
-             * @brief Helper to generate a message authentication code for a KMM frame.
-             * @note DVM only supports generating AES-256 CBC-MAC.
-             * @param algoId Algorithm ID.
-             * @param kId Key ID.
-             */
-            void generateMAC(uint8_t algoId, uint16_t kId);
-
-            /**
              * @brief Returns a string that represents the current KMM frame.
              * @returns std::string String representation of the KMM frame.
              */
@@ -129,6 +121,14 @@ namespace p25
              */
             DECLARE_PROTECTED_PROPERTY(uint8_t, macType, MACType);
             /**
+             * @brief Message Authentication Algorithm ID.
+             */
+            DECLARE_PROTECTED_PROPERTY(uint8_t, macAlgId, MACAlgId);
+            /**
+             * @brief Message Authentication Key ID.
+             */
+            DECLARE_PROTECTED_PROPERTY(uint16_t, macKId, MACKId);
+            /**
              * @brief Message Number.
              */
             DECLARE_PROTECTED_PROPERTY(uint16_t, messageNumber, MessageNumber);
@@ -151,8 +151,6 @@ namespace p25
             uint16_t m_messageFullLength;   //!< Complete length of entire frame in bytes.
             uint8_t m_bodyOffset;           //!< Offset to KMM frame body data.
 
-            uint8_t m_macAlgId;
-            uint16_t m_macKId;
             uint8_t* m_mac;
 
             /**

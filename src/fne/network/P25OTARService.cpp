@@ -542,7 +542,6 @@ UInt8Array P25OTARService::write_KMM_Rekey_Command(uint32_t llId, uint32_t kmmRS
     keysets.push_back(ks);
 
     outKmm.setKeysets(keysets);
-    outKmm.generateMAC(kekAlgId, kekKId); // this isn't right...
 
     if (m_verbose) {
         LogInfoEx(LOG_P25, P25_KMM_STR ", %s, llId = %u, RSI = %u, keyCount = %u", outKmm.toString().c_str(),
