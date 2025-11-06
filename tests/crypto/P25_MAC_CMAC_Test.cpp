@@ -120,7 +120,7 @@ TEST_CASE("AES_MAC_CMAC", "[AES256 MAC CMAC Test]") {
             }
         }
 
-        UInt8Array mac = crypto.cryptAES_KMM_CMAC(expectedCMAC, dataBlock, fullLength);
+        UInt8Array mac = crypto.cryptAES_KMM_CMAC(macKey.get(), dataBlock, fullLength);
         Utils::dump(2U, "P25_MAC_CMAC_Crypto_Test, MAC", mac.get(), 8U);
 
         for (uint32_t i = 0; i < 8U; i++) {

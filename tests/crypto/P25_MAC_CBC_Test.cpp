@@ -55,9 +55,9 @@ TEST_CASE("AES_MAC_CBC", "[AES256 MAC CBC-MAC Test]") {
 
         uint8_t expectedMAC[8U];
 
-        Utils::dump(2U, "P25_MAC_CMAC_Crypto_Test, TEK", macTek, 32U);
+        Utils::dump(2U, "P25_MAC_CBC_Crypto_Test, TEK", macTek, 32U);
         Utils::dump(2U, "P25_MAC_CBC_Crypto_Test, DataBlock", dataBlock, 80U);
-        Utils::dump(2U, "P25_MAC_CMAC_Crypto_Test, Expected CBC-MAC Key", expectedCBC, 32U);
+        Utils::dump(2U, "P25_MAC_CBC_Crypto_Test, Expected CBC-MAC Key", expectedCBC, 32U);
 
         uint16_t fullLength = 0U;
         uint16_t messageLength = GET_UINT16(dataBlock, 1U);
@@ -120,7 +120,7 @@ TEST_CASE("AES_MAC_CBC", "[AES256 MAC CBC-MAC Test]") {
             }
         }
 
-        UInt8Array mac = crypto.cryptAES_KMM_CBC(expectedCBC, dataBlock, fullLength);
+        UInt8Array mac = crypto.cryptAES_KMM_CBC(macKey.get(), dataBlock, fullLength);
         Utils::dump(2U, "P25_MAC_CBC_Crypto_Test, MAC", mac.get(), 8U);
 
         for (uint32_t i = 0; i < 8U; i++) {
