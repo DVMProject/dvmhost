@@ -210,8 +210,8 @@ UInt8Array P25Crypto::cryptAES_TEK(const uint8_t* kek, uint8_t* tek, uint8_t tek
 {
 #if defined(ENABLE_SSL)
     // static IV with $A6 pattern defined in TIA-102.AACA-C-2023 13.3
-    uint8_t iv[] = {
-        0xA6U, 0xA6U, 0xA6U, 0xA6U, 0xA6U, 0xA6U, 0xA6U, 0xA6U, 0xA6U, 0xA6U, 0xA6U, 0xA6U, 0xA6U, 0xA6U, 0xA6U, 0xA6U
+    uint8_t iv[AES_BLOCK_SIZE / 2] = {
+        0xA6U, 0xA6U, 0xA6U, 0xA6U, 0xA6U, 0xA6U, 0xA6U, 0xA6U
     };
 
     int len;
@@ -270,8 +270,8 @@ UInt8Array P25Crypto::decryptAES_TEK(const uint8_t* kek, uint8_t* tek, uint8_t t
 {
 #if defined(ENABLE_SSL)
     // static IV with $A6 pattern defined in TIA-102.AACA-C-2023 13.3
-    uint8_t iv[] = {
-        0xA6U, 0xA6U, 0xA6U, 0xA6U, 0xA6U, 0xA6U, 0xA6U, 0xA6U, 0xA6U, 0xA6U, 0xA6U, 0xA6U, 0xA6U, 0xA6U, 0xA6U, 0xA6U
+    uint8_t iv[AES_BLOCK_SIZE / 2] = {
+        0xA6U, 0xA6U, 0xA6U, 0xA6U, 0xA6U, 0xA6U, 0xA6U, 0xA6U
     };
 
     int len;
@@ -329,16 +329,16 @@ UInt8Array P25Crypto::decryptAES_TEK(const uint8_t* kek, uint8_t* tek, uint8_t t
 UInt8Array P25Crypto::cryptAES_KMM_CBC_KDF(const uint8_t* kek, const uint8_t* msg, uint16_t msgLen)
 {
 #if defined(ENABLE_SSL)
-    uint8_t iv[] = {
-        0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U
+    uint8_t iv[AES_BLOCK_SIZE / 2] = {
+        0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U
     };
 
     uint16_t authLen = msgLen - KMM_AES_MAC_LENGTH;
-    SET_UINT16(authLen, iv, 14U);
+    SET_UINT16(authLen, iv, 6U);
 
     /** DEBUG REMOVEME */
     Utils::dump(2U, "KEK", kek, MAX_ENC_KEY_LENGTH_BYTES);
-    Utils::dump(2U, "IV", iv, 16U);
+    Utils::dump(2U, "IV", iv, AES_BLOCK_SIZE / 2);
     /** DEBUG REMOVEME */
 
     int len;
@@ -401,7 +401,7 @@ UInt8Array P25Crypto::cryptAES_KMM_CBC_KDF(const uint8_t* kek, const uint8_t* ms
 UInt8Array P25Crypto::cryptAES_KMM_CBC(const uint8_t* macKey, const uint8_t* msg, uint16_t msgLen)
 {
 #if defined(ENABLE_SSL)
-    uint8_t iv[] = {
+    uint8_t iv[AES_BLOCK_SIZE] = {
         0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U
     };
 
@@ -514,6 +514,10 @@ UInt8Array P25Crypto::cryptAES_KMM_CMAC_KDF(const uint8_t* kek, const uint8_t* m
         return nullptr;
     }
 
+    EVP_KDF_CTX_free(ctx);
+    EVP_KDF_free(kdf);
+    OSSL_LIB_CTX_free(libCtx);
+
     /** DEBUG REMOVEME */
     Utils::dump(2U, "tempBuf", tempBuf, 128U);
     /** DEBUG REMOVEME */
@@ -537,6 +541,12 @@ UInt8Array P25Crypto::cryptAES_KMM_CMAC(const uint8_t* macKey, const uint8_t* ms
     size_t len;
     uint8_t tempBuf[TEMP_BUFFER_LEN];
     ::memset(tempBuf, 0x00U, TEMP_BUFFER_LEN);
+
+    uint8_t paddedMessage[TEMP_BUFFER_LEN];
+    ::memset(paddedMessage, 0x00U, TEMP_BUFFER_LEN);
+
+    ::memcpy(paddedMessage, msg, msgLen - KMM_AES_MAC_LENGTH - 5U);
+    ::memcpy(paddedMessage + msgLen - KMM_AES_MAC_LENGTH - 5U, msg + msgLen - 5U, 5U);
 
     // create a library context (required for OpenSSL 3.0+)
     OSSL_LIB_CTX* libCtx = OSSL_LIB_CTX_new();
@@ -578,26 +588,35 @@ UInt8Array P25Crypto::cryptAES_KMM_CMAC(const uint8_t* macKey, const uint8_t* ms
     }
 
     // provide the message data to be authenticated
-    if (!EVP_MAC_update(ctx, msg, msgLen)) {
-        LogError(LOG_P25, "EVP_MAC_init(), failed to set message data to authenticate: %s", ERR_error_string(ERR_get_error(), NULL));
+    if (!EVP_MAC_update(ctx, paddedMessage, msgLen - KMM_AES_MAC_LENGTH)) {
+        LogError(LOG_P25, "EVP_MAC_update(), failed to set message data to authenticate: %s", ERR_error_string(ERR_get_error(), NULL));
         EVP_MAC_CTX_free(ctx);
         EVP_MAC_free(hmac);
         OSSL_LIB_CTX_free(libCtx);
         return nullptr;
     }
 
-    // finalize the MAC operation and get the MAC value
-    if (!EVP_MAC_final(ctx, tempBuf, &len, TEMP_BUFFER_LEN)) {
-        LogError(LOG_P25, "EVP_MAC_init(), failed to generate MAC: %s", ERR_error_string(ERR_get_error(), NULL));
+    // get the length of the MAC
+    if (!EVP_MAC_final(ctx, NULL, &len, 0)) {
+        LogError(LOG_P25, "EVP_MAC_final(), failed to get MAC length: %s", ERR_error_string(ERR_get_error(), NULL));
         EVP_MAC_CTX_free(ctx);
         EVP_MAC_free(hmac);
         OSSL_LIB_CTX_free(libCtx);
         return nullptr;
     }
 
-    /** DEBUG REMOVEME */
-    Utils::dump(2U, "tempBuf", tempBuf, len);
-    /** DEBUG REMOVEME */
+    // generate the MAC
+    if (!EVP_MAC_final(ctx, tempBuf, &len, len)) {
+        LogError(LOG_P25, "EVP_MAC_final(), failed to get MAC length: %s", ERR_error_string(ERR_get_error(), NULL));
+        EVP_MAC_CTX_free(ctx);
+        EVP_MAC_free(hmac);
+        OSSL_LIB_CTX_free(libCtx);
+        return nullptr;
+    }
+
+    EVP_MAC_CTX_free(ctx);
+    EVP_MAC_free(hmac);
+    OSSL_LIB_CTX_free(libCtx);
 
     UInt8Array wrappedKey = std::unique_ptr<uint8_t[]>(new uint8_t[len]);
     ::memset(wrappedKey.get(), 0x00U, len);
