@@ -331,7 +331,7 @@ UInt8Array P25Crypto::cryptAES_KMM_CBC_KDF(const uint8_t* kek, const uint8_t* ms
 #if defined(ENABLE_SSL)
 
     /*
-    ** bryanb: some bizarre bullshit requiring a 8-byte IV -- thanks Ilya for helping look at this
+    ** bryanb: some bizarre bullshit requiring a 8-byte IV -- thanks Ilya (https://github.com/ilyacodes) for helping look at this
     */
 
     uint8_t iv[AES_BLOCK_SIZE / 2] = {
