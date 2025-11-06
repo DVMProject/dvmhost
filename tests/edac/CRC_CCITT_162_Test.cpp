@@ -58,7 +58,7 @@ TEST_CASE("CRC", "[16-bit CCITT-162 Test]") {
         }
 
 cleanup:
-        delete random;
+        free(random);
         REQUIRE(failed==false);
     }
 }

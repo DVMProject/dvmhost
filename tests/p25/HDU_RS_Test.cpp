@@ -93,7 +93,7 @@ TEST_CASE("HDU", "[Reed-Soloman 36,20,17 Test]") {
         }
 
 cleanup:
-        delete random;
+        free(random);
         REQUIRE(failed==false);
     }
 }

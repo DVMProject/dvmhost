@@ -29,6 +29,13 @@ TEST_CASE("KMM_ReKey", "[P25 KMM Rekey Command CMAC Test]") {
 
         srand((unsigned int)time(NULL));
 
+        // MAC TEK
+        uint8_t macTek[] =
+        {
+            0x16, 0x85, 0x62, 0x45, 0x3B, 0x3E, 0x7F, 0x61, 0x8D, 0x68, 0xB3, 0x87, 0xE0, 0xB9, 0x97, 0xE1,
+            0xFB, 0x0F, 0x26, 0x4F, 0xA8, 0x3B, 0x74, 0xE4, 0x3B, 0x17, 0x29, 0x17, 0xBD, 0x39, 0x33, 0x9F
+        };
+
         // data block
         uint8_t dataBlock[] = 
         {
@@ -85,6 +92,7 @@ TEST_CASE("KMM_ReKey", "[P25 KMM Rekey Command CMAC Test]") {
 
         UInt8Array kmmFrame = std::make_unique<uint8_t[]>(outKmm.fullLength());
         outKmm.encode(kmmFrame.get());
+        outKmm.generateMAC(macTek, kmmFrame.get());
 
         Utils::dump(2U, "P25_KMM_ReKey_CMAC_Test, GeneratedDataBlock", kmmFrame.get(), outKmm.fullLength());
 

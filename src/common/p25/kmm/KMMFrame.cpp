@@ -9,10 +9,12 @@
  */
 #include "Defines.h"
 #include "p25/P25Defines.h"
+#include "p25/Crypto.h"
 #include "p25/kmm/KMMFrame.h"
 #include "Log.h"
 
 using namespace p25;
+using namespace p25::crypto;
 using namespace p25::defines;
 using namespace p25::kmm;
 
@@ -57,6 +59,80 @@ KMMFrame::~KMMFrame()
 {
     if (m_mac != nullptr)
         delete[] m_mac;
+}
+
+/* Generate a MAC code for the given KMM frame. */
+
+void KMMFrame::generateMAC(uint8_t* kek, uint8_t* data)
+{
+    assert(data != nullptr);
+
+    if (m_macType == KMM_MAC::NO_MAC) {
+        ::LogError(LOG_P25, "KMMFrame::generateMAC(), MAC type is set to no MAC, aborting MAC signing");
+        return;
+    }
+
+    if (m_macAlgId == ALGO_UNENCRYPT) {
+        ::LogError(LOG_P25, "KMMFrame::generateMAC(), MAC algorithm is not set, aborting MAC signing");
+        return;
+    }
+
+    if (m_macKId == 0U) {
+        ::LogError(LOG_P25, "KMMFrame::generateMAC(), MAC key ID is not set, aborting MAC signing");
+        return;
+    }
+
+    switch (m_macType) {
+    case KMM_MAC::DES_MAC:
+        ::LogError(LOG_P25, "KMMFrame::generateMAC(), DES MAC type is not supported, macType = $%02X", m_macType);
+        return;
+
+    case KMM_MAC::ENH_MAC:
+        {
+            uint8_t macLength = P25DEF::KMM_AES_MAC_LENGTH;
+            P25Crypto crypto;
+
+            switch (m_macFormat) {
+            case KMM_MAC_FORMAT_CBC:
+                {
+                    // generate intermediate derived key
+                    UInt8Array macKey = crypto.cryptAES_KMM_CBC_KDF(kek, data, m_messageFullLength);
+
+                    // generate MAC
+                    UInt8Array mac = crypto.cryptAES_KMM_CBC(macKey.get(), data, m_messageFullLength);
+
+                    ::memset(data + m_messageFullLength - (macLength + 5U), 0x00U, macLength);
+                    ::memcpy(data + m_messageFullLength - (macLength + 5U), mac.get(), macLength);
+                }
+                break;
+
+            case KMM_MAC_FORMAT_CMAC:
+                {
+                    // generate intermediate derived key
+                    UInt8Array macKey = crypto.cryptAES_KMM_CMAC_KDF(kek, data, m_messageFullLength, m_messageNumber > 0U);
+
+                    // generate MAC
+                    UInt8Array mac = crypto.cryptAES_KMM_CMAC(macKey.get(), data, m_messageFullLength);
+
+                    ::memset(data + m_messageFullLength - (macLength + 5U), 0x00U, macLength);
+                    ::memcpy(data + m_messageFullLength - (macLength + 5U), mac.get(), macLength);
+                }
+                break;
+
+            default:
+                ::LogError(LOG_P25, "KMMFrame::generateMAC(), unknown KMM MAC format type value, macType = $%02X", m_macType);
+                break;
+            }
+        }
+        break;
+
+    case KMM_MAC::NO_MAC:
+        break;
+
+    default:
+        ::LogError(LOG_P25, "KMMFrame::generateMAC(), unknown KMM MAC inventory type value, macType = $%02X", m_macType);
+        break;
+    }
 }
 
 /* Returns a string that represents the current KMM frame. */
@@ -105,6 +181,7 @@ bool KMMFrame::decodeHeader(const uint8_t* data)
             
             m_macAlgId = data[m_messageFullLength - 4U];
             m_macKId = GET_UINT16(data, m_messageFullLength - 3U);
+            m_macFormat = data[m_messageFullLength - 1U];
 
             ::memset(m_mac, 0x00U, macLength);
             ::memcpy(m_mac, data + m_messageFullLength - (macLength + 5U), macLength);

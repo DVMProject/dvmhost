@@ -106,6 +106,13 @@ namespace p25
             virtual void encode(uint8_t* data) = 0;
 
             /**
+             * @brief Generate a MAC code for the given KMM frame.
+             * @param kek Key Encryption Key
+             * @param[out] data Buffer to encode KMM MAC to.
+             */
+            void generateMAC(uint8_t* kek, uint8_t* data);
+
+            /**
              * @brief Returns a string that represents the current KMM frame.
              * @returns std::string String representation of the KMM frame.
              */

@@ -59,7 +59,7 @@ TEST_CASE("CRC", "[16-bit Test]") {
         }
 
 cleanup:
-        delete random;
+        free(random);
         REQUIRE(failed==false);
     }
 }
