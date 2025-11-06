@@ -131,6 +131,13 @@ namespace p25
             UInt8Array cryptAES_KMM_CMAC(const uint8_t* macKey, const uint8_t* msg, uint16_t msgLen);
 
             /**
+             * @brief Helper to crypt a P25 PDU frame using AES-256.
+             * @param frame Data frame
+             * @param frameLen Data frame Length
+             */
+            void cryptAES_PDU(uint8_t* frame, uint8_t frameLen);
+
+            /**
              * @brief Helper to crypt P25 IMBE audio using AES-256.
              * @param imbe Buffer containing IMBE to crypt.
              * @param duid P25 DUID.

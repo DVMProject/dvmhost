@@ -21,7 +21,7 @@ using namespace p25::kmm;
 #include <stdlib.h>
 #include <time.h>
 
-TEST_CASE("KMM_ReKey", "[P25 KMM Rekey Command CMAC Test]") {
+TEST_CASE("KMM_ReKey_CMAC", "[P25 KMM Rekey Command CMAC Test]") {
     SECTION("P25_KMM_ReKey_CMAC_Test") {
         bool failed = false;
 

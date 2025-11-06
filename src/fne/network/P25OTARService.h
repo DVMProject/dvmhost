@@ -17,6 +17,7 @@
 #define __P25_OTAR_SERVICE_H__
 
 #include "fne/Defines.h"
+#include "common/concurrent/unordered_map.h"
 #include "common/p25/P25Defines.h"
 #include "common/p25/Crypto.h"
 #include "common/network/udp/Socket.h"
@@ -103,6 +104,8 @@ namespace network
 
         FNENetwork* m_network;
         network::callhandler::packetdata::P25PacketData* m_packetData;
+
+        concurrent::unordered_map<uint32_t, uint16_t> m_rsiMessageNumber;
 
         bool m_allowNoUKEKRekey;
 

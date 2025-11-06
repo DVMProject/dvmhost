@@ -71,8 +71,6 @@ bool KMMRekeyCommand::decode(const uint8_t* data)
 
     KMMFrame::decodeHeader(data);
 
-    m_containsTeks = false;
-
     m_decryptInfoFmt = data[10U + m_bodyOffset];                // Decryption Instruction Format
     m_algId = data[11U + m_bodyOffset];                         // Algorithm ID
     m_kId = GET_UINT16(data, 12U + m_bodyOffset);               // Key ID
@@ -87,10 +85,6 @@ bool KMMRekeyCommand::decode(const uint8_t* data)
     uint8_t keysetCount = data[14U + (m_bodyOffset + offset)];
     for (uint8_t n = 0U; n < keysetCount; n++) {
         KeysetItem keysetItem = KeysetItem();
-
-        if (!m_containsTeks)
-            m_containsTeks = data[15U + (m_bodyOffset + offset)] & KEY_FORMAT_TEK;
-
         keysetItem.keysetId(data[16U + (m_bodyOffset + offset)]);
         keysetItem.algId(data[17U + (m_bodyOffset + offset)]);
         keysetItem.keyLength(data[18U + (m_bodyOffset + offset)]);
@@ -154,8 +148,7 @@ void KMMRekeyCommand::encode(uint8_t* data)
     data[14U + (m_bodyOffset + offset)] = keysetCount;
 
     for (auto keysetItem : m_keysets) {
-        uint8_t keysetFormat = (m_containsTeks) ? KEY_FORMAT_TEK : 0x00U;
-        data[15U + (m_bodyOffset + offset)] = keysetFormat;
+        data[15U + (m_bodyOffset + offset)] = 0U; // currently we won't send KEKs
         data[16U + (m_bodyOffset + offset)] = keysetItem.keysetId();
         data[17U + (m_bodyOffset + offset)] = keysetItem.algId();
         data[18U + (m_bodyOffset + offset)] = keysetItem.keyLength();

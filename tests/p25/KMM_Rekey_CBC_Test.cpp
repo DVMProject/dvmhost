@@ -9,11 +9,13 @@
  */
 #include "host/Defines.h"
 #include "common/p25/P25Defines.h"
+#include "common/p25/Crypto.h"
 #include "common/p25/kmm/KMMRekeyCommand.h"
 #include "common/Log.h"
 #include "common/Utils.h"
 
 using namespace p25;
+using namespace p25::crypto;
 using namespace p25::defines;
 using namespace p25::kmm;
 
@@ -21,7 +23,7 @@ using namespace p25::kmm;
 #include <stdlib.h>
 #include <time.h>
 
-TEST_CASE("KMM_ReKey", "[P25 KMM Rekey Command CBC Test]") {
+TEST_CASE("KMM_ReKey_CBC", "[P25 KMM Rekey Command CBC Test]") {
     SECTION("P25_KMM_ReKey_CBC_Test") {
         bool failed = false;
 
@@ -54,7 +56,25 @@ TEST_CASE("KMM_ReKey", "[P25 KMM Rekey Command CBC Test]") {
             0x84, 0x09, 0x45, 0x37, 0x23, 0x72, 0xFB, 0x80
         };
 
+        uint8_t encryptMI[] =
+        {
+            0x70, 0x30, 0xF1, 0xF7, 0x65, 0x69, 0x26, 0x67
+        };
+
+        // final encrypted block
+        uint8_t encryptedBlock[] =
+        {
+            0x67, 0x75, 0xB1, 0xD1, 0x8A, 0xBD, 0xCF, 0x86, 0x08, 0x54, 0xDF, 0x09, 0x8E, 0xA3, 0x41, 0x29,
+            0x13, 0x2A, 0x0E, 0x48, 0x4C, 0xCC, 0x5C, 0xAE, 0x80, 0x08, 0x0B, 0x19, 0xF7, 0x08, 0xAE, 0x8F,
+            0xB8, 0x40, 0xAA, 0x2E, 0x3E, 0x5E, 0xCD, 0x03, 0x73, 0x52, 0x75, 0xFE, 0xE2, 0x88, 0x0E, 0x6D,
+            0xDD, 0x00, 0xC1, 0x11, 0x42, 0x8F, 0xEE, 0x39, 0xC6, 0x2B, 0xF3, 0xC1, 0xD2, 0xEE, 0x3B, 0xEB,
+            0xBB, 0x7C, 0x44, 0xA5, 0xE3, 0xC9, 0x30, 0x8C, 0x5D, 0xE9, 0x17, 0x84, 0x7C, 0x17, 0xAF, 0x23
+        };
+
+        Utils::dump(2U, "P25_KMM_ReKey_CBC_Test, MAC TEK", macTek, 32U);
+        Utils::dump(2U, "P25_KMM_ReKey_CBC_Test, OFB MI", encryptMI, 8U);
         Utils::dump(2U, "P25_KMM_ReKey_CBC_Test, DataBlock", dataBlock, 80U);
+        Utils::dump(2U, "P25_KMM_ReKey_CBC_Test, EncryptedBlock", encryptedBlock, 80U);
 
         KMMRekeyCommand outKmm = KMMRekeyCommand();
 
@@ -98,6 +118,23 @@ TEST_CASE("KMM_ReKey", "[P25 KMM Rekey Command CBC Test]") {
 
         for (uint32_t i = 0; i < outKmm.fullLength(); i++) {
             if (kmmFrame.get()[i] != dataBlock[i]) {
+                ::LogError("T", "P25_KMM_ReKey_CBC_Test, INVALID AT IDX %d", i);
+                failed = true;
+            }
+        }
+
+        P25Crypto crypto;
+        crypto.setMI(encryptMI);
+        crypto.setTEKAlgoId(ALGO_AES_256);
+        crypto.setKey(macTek, 32U);
+        crypto.generateKeystream();
+
+        crypto.cryptAES_PDU(kmmFrame.get(), outKmm.fullLength());
+        
+        Utils::dump(2U, "P25_KMM_ReKey_CBC_Test, EncryptedDataBlock", kmmFrame.get(), outKmm.fullLength());
+
+        for (uint32_t i = 0; i < outKmm.fullLength(); i++) {
+            if (kmmFrame.get()[i] != encryptedBlock[i]) {
                 ::LogError("T", "P25_KMM_ReKey_CBC_Test, INVALID AT IDX %d", i);
                 failed = true;
             }

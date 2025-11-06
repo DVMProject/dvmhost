@@ -634,6 +634,24 @@ UInt8Array P25Crypto::cryptAES_KMM_CMAC(const uint8_t* macKey, const uint8_t* ms
 #endif // ENABLE_SSL
 }
 
+/* Helper to crypt a P25 PDU frame using AES-256. */
+
+void P25Crypto::cryptAES_PDU(uint8_t* frame, uint8_t frameLen)
+{
+    if (m_keystream == nullptr)
+        return;
+
+    uint32_t offset = 16U;
+    for (uint8_t i = 0U; i < frameLen; i++) {
+        if (offset > 240U) {
+            offset = 16U;
+        }
+
+        frame[i] ^= m_keystream[offset];
+        offset++;
+    }
+}
+
 /* Helper to crypt IMBE audio using AES-256. */
 
 void P25Crypto::cryptAES_IMBE(uint8_t* imbe, DUID::E duid)

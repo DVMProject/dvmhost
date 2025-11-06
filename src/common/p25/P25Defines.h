@@ -537,6 +537,9 @@ namespace p25
         /** @brief KMM MAC Format - CMAC */
         const uint8_t   KMM_MAC_FORMAT_CMAC = 0x41U;
 
+        /** @brief KMM Keyset Format - KEKs */
+        const uint8_t  KEYSET_FORMAT_KEK = 0x80U;
+
         /** @brief KMM Body/Key Format - TEK Included */
         const uint8_t   KEY_FORMAT_TEK = 0x80U;
         /** @brief KMM Body/Key Format - KEK Exists */

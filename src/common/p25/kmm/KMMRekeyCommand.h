@@ -108,11 +108,6 @@ namespace p25
             DECLARE_PROPERTY(uint16_t, kId, KId);
 
             /**
-             * @brief Flag indicating whether or not this rekey command contains TEKs or KEKs.
-             */
-            DECLARE_PROPERTY(bool, containsTeks, ContainsTEKs);
-
-            /**
              * @brief List of keysets.
              */
             DECLARE_PROPERTY(std::vector<KeysetItem>, keysets, Keysets);

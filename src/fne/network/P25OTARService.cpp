@@ -57,6 +57,7 @@ P25OTARService::P25OTARService(FNENetwork* network, P25PacketData* packetData, b
     m_threadPool(MAX_THREAD_CNT, "otar"),
     m_network(network),
     m_packetData(packetData),
+    m_rsiMessageNumber(),
     m_allowNoUKEKRekey(false),
     m_debug(debug),
     m_verbose(verbose)
@@ -298,7 +299,7 @@ UInt8Array P25OTARService::cryptKMM(uint8_t algoId, uint16_t kid, uint8_t* mi, c
 
         switch (algoId) {
         case P25DEF::ALGO_AES_256:
-            // TODO: implement handling AES-256 KMM encryption/decryption for data blocks
+            crypto.cryptAES_PDU(outBuffer.get(), len);
             return outBuffer;
         default:
             LogError(LOG_P25, "unsupported KEK algorithm, algoId = $%02X", algoId);
@@ -351,6 +352,17 @@ UInt8Array P25OTARService::processKMM(const uint8_t* data, uint32_t len, uint32_
 
     if (llId == 0U) {
         llId = frame->getSrcLLId();
+    }
+
+    // does this llId have a RSI message number setup?
+    if (m_rsiMessageNumber.find(llId) == m_rsiMessageNumber.end()) {
+        m_rsiMessageNumber[llId] = 0U;
+    } else {
+        // roll message number
+        uint16_t mn = m_rsiMessageNumber[llId];
+        mn++;
+
+        m_rsiMessageNumber[llId] = mn;
     }
 
     switch (frame->getMessageId()) {
@@ -445,6 +457,11 @@ UInt8Array P25OTARService::write_KMM_Rekey_Command(uint32_t llId, uint32_t kmmRS
     uint8_t mi[MI_LENGTH_BYTES];
     ::memset(mi, 0x00U, MI_LENGTH_BYTES);
 
+    uint16_t mn = 0U;
+    if (m_rsiMessageNumber.find(llId) != m_rsiMessageNumber.end()) {
+        mn = m_rsiMessageNumber[llId];
+    }
+
     P25Crypto crypto;
     crypto.generateMI();
     crypto.getMI(mi);
@@ -489,7 +506,12 @@ UInt8Array P25OTARService::write_KMM_Rekey_Command(uint32_t llId, uint32_t kmmRS
     outKmm.setSrcLLId(WUID_FNE);
     outKmm.setDstLLId(kmmRSI);
 
-    outKmm.setMI(mi);
+    outKmm.setMACType(KMM_MAC::ENH_MAC);
+    outKmm.setMACAlgId(kekAlgId);
+    outKmm.setMACKId(kekKId);
+    outKmm.setMACFormat(KMM_MAC_FORMAT_CBC);
+
+    outKmm.setMessageNumber(mn);
 
     outKmm.setAlgId(kekAlgId);
     outKmm.setKId(kekKId);
@@ -553,6 +575,7 @@ UInt8Array P25OTARService::write_KMM_Rekey_Command(uint32_t llId, uint32_t kmmRS
 
     UInt8Array kmmFrame = std::make_unique<uint8_t[]>(outKmm.length());
     outKmm.encode(kmmFrame.get());
+    outKmm.generateMAC(kekKey, kmmFrame.get());
     return kmmFrame;
 }
 
