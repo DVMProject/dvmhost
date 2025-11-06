@@ -61,7 +61,7 @@ TEST_CASE("LDU2", "[Reed-Soloman 24,16,9 Test]") {
         try {
             bool ret = m_rs.decode24169(rs);
             if (!ret) {
-                ::LogDebug("T", "LC::decodeLDU2(), failed to decode RS (24,16,9) FEC\n");
+                ::LogError("T", "LC::decodeLDU2(), failed to decode RS (24,16,9) FEC");
                 failed = true;
                 goto cleanup;
             }
@@ -77,13 +77,13 @@ TEST_CASE("LDU2", "[Reed-Soloman 24,16,9 Test]") {
         for (uint32_t i = 0; i < 12U; i++) {
             if (i == 11U) {
                 if (rs[i] != 0xF0U) {
-                    ::LogDebug("T", "LC::decodeLDU2(), UNCORRECTABLE AT IDX %d\n", i);
+                    ::LogError("T", "LC::decodeLDU2(), UNCORRECTABLE AT IDX %d", i);
                     failed = true;
                 }
             }
             else {
                 if (rs[i] != random[i]) {
-                    ::LogDebug("T", "LC::decodeLDU2(), UNCORRECTABLE AT IDX %d\n", i);
+                    ::LogError("T", "LC::decodeLDU2(), UNCORRECTABLE AT IDX %d", i);
                     failed = true;
                 }
             }

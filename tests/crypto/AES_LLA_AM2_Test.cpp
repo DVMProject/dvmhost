@@ -18,7 +18,7 @@ using namespace crypto;
 #include <stdlib.h>
 #include <time.h>
 
-TEST_CASE("AES", "[LLA AM2 Test]") {
+TEST_CASE("AES_LLA", "[LLA AM2 Test]") {
     SECTION("LLA_AM2_Test") {
         bool failed = false;
 
@@ -72,7 +72,7 @@ TEST_CASE("AES", "[LLA AM2 Test]") {
 
         for (uint32_t i = 0; i < 4U; i++) {
             if (RES1[i] != resultRES1[i]) {
-                ::LogDebug("T", "LLA_AM2_Test, INVALID AT IDX %d\n", i);
+                ::LogError("T", "LLA_AM2_Test, INVALID AT IDX %d", i);
                 failed = true;
             }
         }

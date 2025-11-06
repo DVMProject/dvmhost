@@ -56,7 +56,7 @@ TEST_CASE("AES", "[Crypto Test]") {
 
         for (uint32_t i = 0; i < 48U; i++) {
             if (decrypted[i] != message[i]) {
-                ::LogDebug("T", "AES_Crypto_Test, INVALID AT IDX %d\n", i);
+                ::LogError("T", "AES_Crypto_Test, INVALID AT IDX %d", i);
                 failed = true;
             }
         }

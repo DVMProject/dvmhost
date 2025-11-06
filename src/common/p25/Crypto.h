@@ -92,6 +92,25 @@ namespace p25
              */
             UInt8Array decryptAES_TEK(const uint8_t* kek, uint8_t* tek, uint8_t tekLen);
             /**
+             * @brief Helper to generate a P25 KMM CBC MAC key with the given AES-256 KEK.
+             * @note This assumes AES-256 KEK and will not work with other key types.
+             * @param kek Key Encryption Key
+             * @param msg KMM Message
+             * @param msgLen Message Length
+             * @returns UInt8Array Buffer containing the derived MAC key.
+             */
+            UInt8Array cryptAES_KMM_CBC_KDF(const uint8_t* kek, const uint8_t* msg, uint16_t msgLen);
+            /**
+             * @brief Helper to generate a P25 KMM CBC-MAC with the given AES-256 CBC-MAC key.
+             * @note This assumes AES-256 KEK and will not work with other key types.
+             * @param macKey CBC-MAC Derived Key
+             * @param msg KMM Message
+             * @param msgLen Message Length
+             * @returns UInt8Array Buffer containing the derived MAC key.
+             */
+            UInt8Array cryptAES_KMM_CBC(const uint8_t* macKey, const uint8_t* msg, uint16_t msgLen);
+
+            /**
              * @brief Helper to generate a P25 KMM CMAC MAC key with the given AES-256 KEK.
              * @note This assumes AES-256 KEK and will not work with other key types.
              * @param kek Key Encryption Key
@@ -100,7 +119,7 @@ namespace p25
              * @param hasMN Message has a message number.
              * @returns UInt8Array Buffer containing the derived MAC key.
              */
-            UInt8Array cryptAES_KMM_CMAC_KDF(const uint8_t* kek, const uint8_t* msg, uint8_t msgLen, bool hasMN);
+            UInt8Array cryptAES_KMM_CMAC_KDF(const uint8_t* kek, const uint8_t* msg, uint16_t msgLen, bool hasMN);
             /**
              * @brief Helper to generate a P25 KMM CMAC with the given AES-256 CMAC key.
              * @note This assumes AES-256 KEK and will not work with other key types.
@@ -109,7 +128,7 @@ namespace p25
              * @param msgLen Message Length
              * @returns UInt8Array Buffer containing the derived MAC key.
              */
-            UInt8Array cryptAES_KMM_CMAC(const uint8_t* macKey, const uint8_t* msg, uint8_t msgLen);
+            UInt8Array cryptAES_KMM_CMAC(const uint8_t* macKey, const uint8_t* msg, uint16_t msgLen);
 
             /**
              * @brief Helper to crypt P25 IMBE audio using AES-256.

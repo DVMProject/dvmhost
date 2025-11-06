@@ -37,7 +37,7 @@ TEST_CASE("CRC", "[9-bit Test]") {
         random[1U] = 0;
 
         uint16_t crc = edac::CRC::createCRC9(random, 144U);
-        ::LogDebug("T", "crc = %04X", crc);
+        ::LogInfoEx("T", "crc = %04X", crc);
 
         random[0U] = random[0U] + ((crc >> 8) & 0x01U);
         random[1U] = (crc & 0xFFU);
@@ -49,7 +49,7 @@ TEST_CASE("CRC", "[9-bit Test]") {
 
         uint16_t calculated = edac::CRC::createCRC9(random, 144U);
         if (((crc ^ calculated) == 0)/*|| ((crc ^ calculated) == 0x1FFU)*/) {
-            ::LogDebug("T", "9_Sanity_Test, failed CRC9 error check");
+            ::LogError("T", "9_Sanity_Test, failed CRC9 error check");
             failed = true;
             goto cleanup;
         }

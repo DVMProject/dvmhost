@@ -33,7 +33,7 @@ namespace p25
          * @{
          */
 
-        const uint8_t MAX_ENC_KEY_LENGTH_BYTES = 32U;
+        const uint8_t MAX_ENC_KEY_LENGTH_BYTES = 40U;
 
         /** @} */
 

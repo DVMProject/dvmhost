@@ -38,6 +38,7 @@ KMMFrame::KMMFrame() :
     m_macType(KMM_MAC::NO_MAC),
     m_macAlgId(ALGO_UNENCRYPT),
     m_macKId(0U),
+    m_macFormat(0U),
     m_messageNumber(0U),
     m_dstLlId(0U),
     m_srcLlId(0U),
@@ -100,8 +101,8 @@ bool KMMFrame::decodeHeader(const uint8_t* data)
     switch (m_macType) {
     case KMM_MAC::DES_MAC:
         {
-            uint8_t macLength = 4U;
-
+            uint8_t macLength = P25DEF::KMM_DES_MAC_LENGTH;
+            
             m_macAlgId = data[m_messageFullLength - 4U];
             m_macKId = GET_UINT16(data, m_messageFullLength - 3U);
 
@@ -112,10 +113,11 @@ bool KMMFrame::decodeHeader(const uint8_t* data)
 
     case KMM_MAC::ENH_MAC:
         {
-            uint8_t macLength = 8U;
+            uint8_t macLength = P25DEF::KMM_AES_MAC_LENGTH;
 
             m_macAlgId = data[m_messageFullLength - 4U];
             m_macKId = GET_UINT16(data, m_messageFullLength - 3U);
+            m_macFormat = data[m_messageFullLength - 1U];
 
             ::memset(m_mac, 0x00U, macLength);
             ::memcpy(m_mac, data + m_messageFullLength - (macLength + 5U), macLength);
@@ -163,13 +165,14 @@ void KMMFrame::encodeHeader(uint8_t* data)
 
     case KMM_MAC::ENH_MAC:
         {
-            uint8_t macLength = 8U;
+            uint8_t macLength = P25DEF::KMM_AES_MAC_LENGTH;
 
-            m_macAlgId = data[m_messageFullLength - 4U];
-            m_macKId = GET_UINT16(data, m_messageFullLength - 3U);
+            data[m_messageFullLength - 5U] = macLength;
+            data[m_messageFullLength - 4U] = m_macAlgId;
+            SET_UINT16(m_macKId, data, m_messageFullLength - 3U);
+            data[m_messageFullLength - 1U] = m_macFormat;
 
-            ::memset(m_mac, 0x00U, macLength);
-            ::memcpy(m_mac, data + m_messageFullLength - (macLength + 5U), macLength);
+            ::memcpy(data + m_messageFullLength - (macLength + 5U), m_mac, macLength);
         }
         break;
 

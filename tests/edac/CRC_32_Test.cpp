@@ -36,13 +36,13 @@ TEST_CASE("CRC", "[32-bit Test]") {
         CRC::addCRC32(random, len);
 
         uint32_t inCrc = (random[len - 4U] << 24) | (random[len - 3U] << 16) | (random[len - 2U] << 8) | (random[len - 1U] << 0);
-        ::LogDebug("T", "CRC::checkCRC32(), crc = $%08X", inCrc);
+        ::LogInfoEx("T", "CRC::checkCRC32(), crc = $%08X", inCrc);
 
         Utils::dump(2U, "32_Sanity_Test CRC", random, len);
 
         bool ret = CRC::checkCRC32(random, len);
         if (!ret) {
-            ::LogDebug("T", "32_Sanity_Test, failed CRC32 check");
+            ::LogError("T", "32_Sanity_Test, failed CRC32 check");
             failed = true;
             goto cleanup;
         }
@@ -52,7 +52,7 @@ TEST_CASE("CRC", "[32-bit Test]") {
 
         ret = CRC::checkCRC32(random, len);
         if (ret) {
-            ::LogDebug("T", "32_Sanity_Test, failed CRC32 error check");
+            ::LogError("T", "32_Sanity_Test, failed CRC32 error check");
             failed = true;
             goto cleanup;
         }

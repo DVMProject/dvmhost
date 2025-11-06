@@ -33,6 +33,7 @@ KMMRekeyCommand::KMMRekeyCommand() : KMMFrame(),
     m_mi(nullptr)
 {
     m_messageId = KMM_MessageType::REKEY_CMD;
+    m_respKind = KMM_ResponseKind::IMMEDIATE;
 
     m_mi = new uint8_t[MI_LENGTH_BYTES];
     ::memset(m_mi, 0x00U, MI_LENGTH_BYTES);
@@ -163,14 +164,16 @@ void KMMRekeyCommand::encode(uint8_t* data)
         data[19U + (m_bodyOffset + offset)] = keyCount;
         for (auto key : keysetItem.keys()) {
             uint8_t keyNameLen = key.keyFormat() & 0x1FU;
-            data[18U + (m_bodyOffset + offset)] = key.keyFormat();
-            SET_UINT16(key.sln(), data, 19U + (m_bodyOffset + offset));
-            SET_UINT16(key.kId(), data, 21U + (m_bodyOffset + offset));
+            data[20U + (m_bodyOffset + offset)] = key.keyFormat();
+            SET_UINT16(key.sln(), data, 21U + (m_bodyOffset + offset));
+            SET_UINT16(key.kId(), data, 23U + (m_bodyOffset + offset));
 
             DECLARE_UINT8_ARRAY(keyPayload, keysetItem.keyLength());
             key.getKey(keyPayload);
 
-            ::memcpy(data + (23U + (m_bodyOffset + offset)), keyPayload, keysetItem.keyLength());
+            Utils::dump(2U, "keyPayload", keyPayload, keysetItem.keyLength());
+
+            ::memcpy(data + (25U + (m_bodyOffset + offset)), keyPayload, keysetItem.keyLength());
 
             offset += 5U + keyNameLen + keysetItem.keyLength();
         }

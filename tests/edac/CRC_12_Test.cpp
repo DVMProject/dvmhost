@@ -37,13 +37,13 @@ TEST_CASE("CRC", "[12-bit Test]") {
         CRC::addCRC12(random, lenBits);
 
         uint16_t inCrc = (random[len - 2U] << 8) | (random[len - 1U] << 0);
-        ::LogDebug("T", "CRC::checkCRC12(), crc = $%04X", inCrc);
+        ::LogInfoEx("T", "CRC::checkCRC12(), crc = $%04X", inCrc);
 
         Utils::dump(2U, "12_Sanity_Test CRC", random, len);
 
         bool ret = CRC::checkCRC12(random, lenBits);
         if (!ret) {
-            ::LogDebug("T", "12_Sanity_Test, failed CRC12 check");
+            ::LogError("T", "12_Sanity_Test, failed CRC12 check");
             failed = true;
             goto cleanup;
         }
@@ -53,7 +53,7 @@ TEST_CASE("CRC", "[12-bit Test]") {
 
         ret = CRC::checkCRC12(random, lenBits);
         if (ret) {
-            ::LogDebug("T", "12_Sanity_Test, failed CRC12 error check");
+            ::LogError("T", "12_Sanity_Test, failed CRC12 error check");
             failed = true;
             goto cleanup;
         }

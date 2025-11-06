@@ -77,9 +77,20 @@ namespace p25
                 if (m_messageNumber > 0U)
                     len += 2U;
                 if (m_macType == P25DEF::KMM_MAC::ENH_MAC)
-                    len += P25DEF::KMM_AES_MAC_LENGTH;
+                    len += P25DEF::KMM_AES_MAC_LENGTH + 5U;
 
                 return len;
+            }
+
+            /**
+             * @brief Gets the full byte length of this KMMFrame.
+             * @return uint32_t Full Length of KMMFrame.
+             */
+            uint32_t fullLength()
+            {
+                m_messageLength = length();
+                m_messageFullLength = m_messageLength + 3U;
+                return m_messageFullLength;
             }
 
             /**
@@ -128,6 +139,10 @@ namespace p25
              * @brief Message Authentication Key ID.
              */
             DECLARE_PROTECTED_PROPERTY(uint16_t, macKId, MACKId);
+            /**
+             * @brief Message Authentication Format.
+             */
+            DECLARE_PROTECTED_PROPERTY(uint16_t, macFormat, MACFormat);
             /**
              * @brief Message Number.
              */

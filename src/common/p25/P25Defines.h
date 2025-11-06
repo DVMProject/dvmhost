@@ -532,6 +532,11 @@ namespace p25
         /** @brief KMM Decryption Instruction - Message Indicator */
         const uint8_t   KMM_DECRYPT_INSTRUCT_MI = 0x40U;
 
+        /** @brief KMM MAC Format - CBC-MAC */
+        const uint8_t   KMM_MAC_FORMAT_CBC = 0x40U;
+        /** @brief KMM MAC Format - CMAC */
+        const uint8_t   KMM_MAC_FORMAT_CMAC = 0x41U;
+
         /** @brief KMM Body/Key Format - TEK Included */
         const uint8_t   KEY_FORMAT_TEK = 0x80U;
         /** @brief KMM Body/Key Format - KEK Exists */

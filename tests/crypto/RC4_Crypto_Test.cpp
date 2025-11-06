@@ -54,7 +54,7 @@ TEST_CASE("RC4", "[Crypto Test]") {
 
         for (uint32_t i = 0; i < 48U; i++) {
             if (decrypted[i] != message[i]) {
-                ::LogDebug("T", "RC4_Crypto_Test, INVALID AT IDX %d\n", i);
+                ::LogError("T", "RC4_Crypto_Test, INVALID AT IDX %d", i);
                 failed = true;
             }
         }

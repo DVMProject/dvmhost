@@ -37,13 +37,13 @@ TEST_CASE("CRC", "[6-bit Test]") {
         CRC::addCRC6(random, lenBits);
 
         uint32_t inCrc = (random[len - 1U] << 0);
-        ::LogDebug("T", "CRC::checkCRC6(), crc = $%02X", inCrc);
+        ::LogInfoEx("T", "CRC::checkCRC6(), crc = $%02X", inCrc);
 
         Utils::dump(2U, "6_Sanity_Test CRC", random, len);
 
         bool ret = CRC::checkCRC6(random, lenBits);
         if (!ret) {
-            ::LogDebug("T", "6_Sanity_Test, failed CRC6 check");
+            ::LogError("T", "6_Sanity_Test, failed CRC6 check");
             failed = true;
             goto cleanup;
         }
@@ -53,7 +53,7 @@ TEST_CASE("CRC", "[6-bit Test]") {
 
         ret = CRC::checkCRC6(random, lenBits);
         if (ret) {
-            ::LogDebug("T", "6_Sanity_Test, failed CRC6 error check");
+            ::LogError("T", "6_Sanity_Test, failed CRC6 error check");
             failed = true;
             goto cleanup;
         }

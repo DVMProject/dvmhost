@@ -16,7 +16,7 @@
 #include <stdlib.h>
 #include <time.h>
 
-TEST_CASE("AES", "[KEK Crypto Test]") {
+TEST_CASE("AES_KEK", "[KEK Crypto Test]") {
     SECTION("P25_AES_KEK_Crypto_Test") {
         bool failed = false;
 
@@ -59,7 +59,7 @@ TEST_CASE("AES", "[KEK Crypto Test]") {
 
         for (uint32_t i = 0; i < 40U; i++) {
             if (wrappedKey[i] != testWrappedKeyFrame[i]) {
-                ::LogDebug("T", "P25_AES_KEK_Crypto_Test, WRAPPED INVALID AT IDX %d\n", i);
+                ::LogDebug("T", "P25_AES_KEK_Crypto_Test, WRAPPED INVALID AT IDX %d", i);
                 failed = true;
             }
         }
@@ -70,7 +70,7 @@ TEST_CASE("AES", "[KEK Crypto Test]") {
 
         for (uint32_t i = 0; i < 32U; i++) {
             if (unwrappedKey[i] != message[i]) {
-                ::LogDebug("T", "P25_AES_KEK_Crypto_Test, UNWRAPPED INVALID AT IDX %d\n", i);
+                ::LogError("T", "P25_AES_KEK_Crypto_Test, UNWRAPPED INVALID AT IDX %d", i);
                 failed = true;
             }
         }

@@ -36,13 +36,13 @@ TEST_CASE("CRC", "[16-bit CCITT-162 Test]") {
         CRC::addCCITT162(random, len);
 
         uint16_t inCrc = (random[len - 2U] << 8) | (random[len - 1U] << 0);
-        ::LogDebug("T", "CRC::checkCCITT162(), crc = $%04X", inCrc);
+        ::LogInfoEx("T", "CRC::checkCCITT162(), crc = $%04X", inCrc);
 
         Utils::dump(2U, "CCITT-162_Sanity_Test CRC", random, len);
 
         bool ret = CRC::checkCCITT162(random, len);
         if (!ret) {
-            ::LogDebug("T", "CCITT-162_Sanity_Test, failed CRC CCITT-162 check");
+            ::LogError("T", "CCITT-162_Sanity_Test, failed CRC CCITT-162 check");
             failed = true;
             goto cleanup;
         }
@@ -52,7 +52,7 @@ TEST_CASE("CRC", "[16-bit CCITT-162 Test]") {
 
         ret = CRC::checkCCITT162(random, len);
         if (ret) {
-            ::LogDebug("T", "CCITT-162_Sanity_Test, failed CRC CCITT-162 error check");
+            ::LogError("T", "CCITT-162_Sanity_Test, failed CRC CCITT-162 error check");
             failed = true;
             goto cleanup;
         }

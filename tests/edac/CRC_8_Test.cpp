@@ -34,7 +34,7 @@ TEST_CASE("CRC", "[8-bit Test]") {
         }
 
         uint8_t crc = CRC::crc8(random, len);
-        ::LogDebug("T", "crc = %02X", crc);
+        ::LogInfoEx("T", "crc = %02X", crc);
 
         Utils::dump(2U, "8_Sanity_Test CRC", random, len);
 
@@ -42,9 +42,9 @@ TEST_CASE("CRC", "[8-bit Test]") {
         random[11U] >>= 8;
 
         uint8_t calc = CRC::crc8(random, len);
-        ::LogDebug("T", "calc = %02X", calc);
+        ::LogInfoEx("T", "calc = %02X", calc);
         if (crc == calc) {
-            ::LogDebug("T", "8_Sanity_Test, failed CRC8 error check");
+            ::LogError("T", "8_Sanity_Test, failed CRC8 error check");
             failed = true;
             goto cleanup;
         }
