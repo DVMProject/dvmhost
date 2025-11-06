@@ -327,7 +327,7 @@ void DES::feistel(uint32_t& L, uint32_t& R, uint32_t F)
 
 uint32_t DES::f(uint32_t R, ulong64_t k)
 {
-// applying expansion permutation and returning 48-bit data
+    // applying expansion permutation and returning 48-bit data
     ulong64_t input = 0;
     for (uint8_t i = 0; i < 48; i++) {
         input <<= 1;

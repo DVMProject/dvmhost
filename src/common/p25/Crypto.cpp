@@ -371,11 +371,6 @@ UInt8Array P25Crypto::cryptAES_KMM_CBC_KDF(const uint8_t* kek, const uint8_t* ms
     uint16_t authLen = msgLen - KMM_AES_MAC_LENGTH;
     SET_UINT16(authLen, iv, 6U);
 
-    /** DEBUG REMOVEME */
-    Utils::dump(2U, "KEK", kek, MAX_ENC_KEY_LENGTH_BYTES);
-    Utils::dump(2U, "IV", iv, AES_BLOCK_SIZE / 2);
-    /** DEBUG REMOVEME */
-
     int len;
     uint8_t tempBuf[TEMP_BUFFER_LEN];
     ::memset(tempBuf, 0x00U, TEMP_BUFFER_LEN);
@@ -414,11 +409,6 @@ UInt8Array P25Crypto::cryptAES_KMM_CBC_KDF(const uint8_t* kek, const uint8_t* ms
     len += tempLen;
 
     EVP_CIPHER_CTX_free(ctx);
-
-    /** DEBUG REMOVEME */
-    LogInfoEx("T", "len = %u", len);
-    Utils::dump(2U, "macKey", tempBuf, 128U);
-    /** DEBUG REMOVEME */
 
     UInt8Array wrappedKey = std::unique_ptr<uint8_t[]>(new uint8_t[MAX_ENC_KEY_LENGTH_BYTES]);
     ::memset(wrappedKey.get(), 0x00U, MAX_ENC_KEY_LENGTH_BYTES);
