@@ -364,7 +364,7 @@ UInt8Array P25Crypto::cryptAES_KMM_CBC_KDF(const uint8_t* kek, const uint8_t* ms
 
     // perform the wrapping operation
     if (EVP_EncryptUpdate(ctx, tempBuf, &len, kek, MAX_ENC_KEY_LENGTH_BYTES) != 1) {
-        LogError(LOG_P25, "EVP_EncryptUpdate(), failed to wrap TEK: %s", ERR_error_string(ERR_get_error(), NULL));
+        LogError(LOG_P25, "EVP_EncryptUpdate(), failed to wrap KEK: %s", ERR_error_string(ERR_get_error(), NULL));
         EVP_CIPHER_CTX_free(ctx);
         return nullptr;
     }
@@ -372,7 +372,7 @@ UInt8Array P25Crypto::cryptAES_KMM_CBC_KDF(const uint8_t* kek, const uint8_t* ms
     // finalize the wrapping (no output, just padding)
     int tempLen;
     if (EVP_EncryptFinal_ex(ctx, tempBuf + len, &tempLen) != 1) {
-        LogError(LOG_P25, "EVP_EncryptFinal_ex(), failed to finalize wrapping TEK: %s", ERR_error_string(ERR_get_error(), NULL));
+        LogError(LOG_P25, "EVP_EncryptFinal_ex(), failed to finalize wrapping KEK: %s", ERR_error_string(ERR_get_error(), NULL));
         EVP_CIPHER_CTX_free(ctx);
         return nullptr;
     }
@@ -391,7 +391,7 @@ UInt8Array P25Crypto::cryptAES_KMM_CBC_KDF(const uint8_t* kek, const uint8_t* ms
 
     return wrappedKey;
 #else
-    LogError(LOG_P25, "No OpenSSL, TEK encryption is not supported!");
+    LogError(LOG_P25, "No OpenSSL, CBC-MAC generation is not supported!");
     return nullptr;
 #endif // ENABLE_SSL
 }
@@ -434,7 +434,7 @@ UInt8Array P25Crypto::cryptAES_KMM_CBC(const uint8_t* macKey, const uint8_t* msg
 
     return wrappedKey;
 #else
-    LogError(LOG_P25, "No OpenSSL, TEK encryption is not supported!");
+    LogError(LOG_P25, "No OpenSSL, CBC-MAC generation is not supported!");
     return nullptr;
 #endif // ENABLE_SSL
 }
@@ -505,11 +505,8 @@ UInt8Array P25Crypto::cryptAES_KMM_CMAC_KDF(const uint8_t* kek, const uint8_t* m
         OSSL_PARAM_END
     };
 
-    uint8_t macKey[MAX_ENC_KEY_LENGTH_BYTES];
-    ::memset(macKey, 0x00U, MAX_ENC_KEY_LENGTH_BYTES);
-
     // derive MAC key
-    if (EVP_KDF_derive(ctx, macKey, MAX_ENC_KEY_LENGTH_BYTES, params) <= 0) {
+    if (EVP_KDF_derive(ctx, tempBuf, MAX_ENC_KEY_LENGTH_BYTES, params) <= 0) {
         LogError(LOG_P25, "EVP_KDF_derive(), failed to derive MAC key: %s", ERR_error_string(ERR_get_error(), NULL));
         EVP_KDF_CTX_free(ctx);
         EVP_KDF_free(kdf);
@@ -518,16 +515,16 @@ UInt8Array P25Crypto::cryptAES_KMM_CMAC_KDF(const uint8_t* kek, const uint8_t* m
     }
 
     /** DEBUG REMOVEME */
-    Utils::dump(2U, "macKey", macKey, MAX_ENC_KEY_LENGTH_BYTES);
+    Utils::dump(2U, "tempBuf", tempBuf, 128U);
     /** DEBUG REMOVEME */
 
     UInt8Array wrappedKey = std::unique_ptr<uint8_t[]>(new uint8_t[MAX_ENC_KEY_LENGTH_BYTES]);
     ::memset(wrappedKey.get(), 0x00U, MAX_ENC_KEY_LENGTH_BYTES);
-    ::memcpy(wrappedKey.get(), macKey, MAX_ENC_KEY_LENGTH_BYTES);
+    ::memcpy(wrappedKey.get(), tempBuf, MAX_ENC_KEY_LENGTH_BYTES);
 
     return wrappedKey;
 #else
-    LogError(LOG_P25, "No OpenSSL, TEK encryption is not supported!");
+    LogError(LOG_P25, "No OpenSSL, CMAC generation is not supported!");
     return nullptr;
 #endif // ENABLE_SSL
 }
@@ -608,7 +605,7 @@ UInt8Array P25Crypto::cryptAES_KMM_CMAC(const uint8_t* macKey, const uint8_t* ms
 
     return wrappedKey;
 #else
-    LogError(LOG_P25, "No OpenSSL, TEK encryption is not supported!");
+    LogError(LOG_P25, "No OpenSSL, CMAC generation is not supported!");
     return nullptr;
 #endif // ENABLE_SSL
 }

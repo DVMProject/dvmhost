@@ -53,6 +53,9 @@ TEST_CASE("AES_MAC_CMAC", "[AES256 MAC CMAC Test]") {
             0x72, 0xFB, 0x80, 0x21, 0x85, 0x22, 0x33, 0x41, 0xD9, 0x8A, 0x97, 0x08, 0x84, 0x2F, 0x62, 0x41
         };
 
+        uint8_t expectedMAC[8U];
+
+        Utils::dump(2U, "P25_MAC_CMAC_Crypto_Test, TEK", macTek, 32U);
         Utils::dump(2U, "P25_MAC_CMAC_Crypto_Test, DataBlock", dataBlock, 80U);
         Utils::dump(2U, "P25_MAC_CMAC_Crypto_Test, Expected CMAC Key", expectedCMAC, 32U);
 
@@ -68,34 +71,32 @@ TEST_CASE("AES_MAC_CMAC", "[AES256 MAC CMAC Test]") {
         case KMM_MAC::DES_MAC:
             {
                 uint8_t macLength = 4U;
-                uint8_t mac[macLength];
-                ::memset(mac, 0x00U, macLength);
+                ::memset(expectedMAC, 0x00U, macLength);
 
                 uint8_t macAlgId = dataBlock[fullLength - 4U];
                 uint16_t macKId = GET_UINT16(dataBlock, fullLength - 3U);
                 uint8_t macFormat = dataBlock[fullLength - 1U];
 
-                ::memcpy(mac, dataBlock + fullLength - (macLength + 5U), macLength);
+                ::memcpy(expectedMAC, dataBlock + fullLength - (macLength + 5U), macLength);
 
                 ::LogInfoEx("T", "P25_MAC_CMAC_Crypto_Test, macAlgId = $%02X, macKId = $%04X, macFormat = $%02X", macAlgId, macKId, macFormat);
-                Utils::dump(2U, "P25_MAC_CMAC_Crypto_Test, Expected MAC", mac, macLength);
+                Utils::dump(2U, "P25_MAC_CMAC_Crypto_Test, Expected MAC", expectedMAC, macLength);
             }
             break;
 
         case KMM_MAC::ENH_MAC:
             {
                 uint8_t macLength = 8U;
-                uint8_t mac[macLength];
-                ::memset(mac, 0x00U, macLength);
+                ::memset(expectedMAC, 0x00U, macLength);
 
                 uint8_t macAlgId = dataBlock[fullLength - 4U];
                 uint16_t macKId = GET_UINT16(dataBlock, fullLength - 3U);
                 uint8_t macFormat = dataBlock[fullLength - 1U];
 
-                ::memcpy(mac, dataBlock + fullLength - (macLength + 5U), macLength);
+                ::memcpy(expectedMAC, dataBlock + fullLength - (macLength + 5U), macLength);
 
                 ::LogInfoEx("T", "P25_MAC_CMAC_Crypto_Test, macAlgId = $%02X, macKId = $%04X, macFormat = $%02X", macAlgId, macKId, macFormat);
-                Utils::dump(2U, "P25_MAC_CMAC_Crypto_Test, Expected MAC", mac, macLength);
+                Utils::dump(2U, "P25_MAC_CMAC_Crypto_Test, Expected MAC", expectedMAC, macLength);
             }
             break;
 
@@ -114,6 +115,16 @@ TEST_CASE("AES_MAC_CMAC", "[AES256 MAC CMAC Test]") {
 
         for (uint32_t i = 0; i < 32U; i++) {
             if (macKey[i] != expectedCMAC[i]) {
+                ::LogError("T", "P25_MAC_CMAC_Crypto_Test, INVALID AT IDX %d", i);
+                failed = true;
+            }
+        }
+
+        UInt8Array mac = crypto.cryptAES_KMM_CMAC(expectedCMAC, dataBlock, fullLength);
+        Utils::dump(2U, "P25_MAC_CMAC_Crypto_Test, MAC", mac.get(), 8U);
+
+        for (uint32_t i = 0; i < 8U; i++) {
+            if (mac[i] != expectedMAC[i]) {
                 ::LogError("T", "P25_MAC_CMAC_Crypto_Test, INVALID AT IDX %d", i);
                 failed = true;
             }

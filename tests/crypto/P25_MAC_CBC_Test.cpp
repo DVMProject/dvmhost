@@ -55,6 +55,7 @@ TEST_CASE("AES_MAC_CBC", "[AES256 MAC CBC-MAC Test]") {
 
         uint8_t expectedMAC[8U];
 
+        Utils::dump(2U, "P25_MAC_CMAC_Crypto_Test, TEK", macTek, 32U);
         Utils::dump(2U, "P25_MAC_CBC_Crypto_Test, DataBlock", dataBlock, 80U);
         Utils::dump(2U, "P25_MAC_CMAC_Crypto_Test, Expected CBC-MAC Key", expectedCBC, 32U);
 
