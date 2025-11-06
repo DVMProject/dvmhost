@@ -106,13 +106,6 @@ typedef unsigned long long  ulong64_t;
 //  Constants
 // ---------------------------------------------------------------------------
 
-#ifndef __GIT_VER__
-#define __GIT_VER__ "00000000"
-#endif
-#ifndef __GIT_VER_HASH__
-#define __GIT_VER_HASH__ "00000000"
-#endif
-
 #define __PROG_NAME__ ""
 #define __EXE_NAME__ ""
 
@@ -121,7 +114,7 @@ typedef unsigned long long  ulong64_t;
 #define VERSION_REV         "A"
 
 #define __NETVER__ "DVM_R" VERSION_MAJOR VERSION_REV VERSION_MINOR
-#define __VER__ VERSION_MAJOR "." VERSION_MINOR VERSION_REV " (R" VERSION_MAJOR VERSION_REV VERSION_MINOR " " __GIT_VER__ ")"
+#define __VER__ VERSION_MAJOR "." VERSION_MINOR VERSION_REV " (R" VERSION_MAJOR VERSION_REV VERSION_MINOR ")"
 
 #define __BUILD__ __DATE__ " " __TIME__
 #if !defined(NDEBUG)

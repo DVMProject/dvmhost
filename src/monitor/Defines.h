@@ -20,6 +20,7 @@
 #define __DEFINES_H__
 
 #include "common/Defines.h"
+#include "common/GitHash.h"
 
 // ---------------------------------------------------------------------------
 //  Constants
