@@ -138,6 +138,12 @@ namespace p25
             void cryptAES_PDU(uint8_t* frame, uint8_t frameLen);
 
             /**
+             * @brief Helper to crypt P25 IMBE audio using DES.
+             * @param imbe Buffer containing IMBE to crypt.
+             * @param duid P25 DUID.
+             */
+            void cryptDES_IMBE(uint8_t* imbe, P25DEF::DUID::E duid);
+            /**
              * @brief Helper to crypt P25 IMBE audio using AES-256.
              * @param imbe Buffer containing IMBE to crypt.
              * @param duid P25 DUID.

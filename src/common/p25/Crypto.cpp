@@ -12,6 +12,7 @@
 #include "p25/P25Defines.h"
 #include "p25/Crypto.h"
 #include "AESCrypto.h"
+#include "DESCrypto.h"
 #include "RC4Crypto.h"
 #include "Log.h"
 #include "Utils.h"
@@ -138,6 +139,34 @@ void P25Crypto::generateKeystream()
 
     // generate keystream
     switch (m_tekAlgoId) {
+    case ALGO_DES:
+        {
+            if (m_keystream == nullptr)
+                m_keystream = new uint8_t[224U];
+            ::memset(m_keystream, 0x00U, 224U);
+
+            uint8_t desKey[8U];
+            ::memset(desKey, 0x00U, 8U);
+            uint8_t padLen = (uint8_t)::fmax(8 - m_tekLength, 0);
+            for (uint8_t i = 0U; i < padLen; i++)
+                desKey[i] = 0U;
+            for (uint8_t i = padLen; i < 8U; i++)
+                desKey[i] = m_tek[i - padLen];
+
+            DES des = DES();
+
+            uint8_t input[8U];
+            ::memset(input, 0x00U, 8U);
+            ::memcpy(input, m_mi, 8U);
+
+            for (uint32_t i = 0U; i < (224U / 8U); i++) {
+                uint8_t* output = des.encryptBlock(input, desKey);
+                ::memcpy(m_keystream + (i * 8U), output, 8U);
+                ::memcpy(input, output, 8U);
+                delete[] output;
+            }
+        }
+        break;
     case ALGO_AES_256:
         {
             if (m_keystream == nullptr)
@@ -156,6 +185,7 @@ void P25Crypto::generateKeystream()
                 uint8_t* output = aes.encryptECB(input, 16U, m_tek.get());
                 ::memcpy(m_keystream + (i * 16U), output, 16U);
                 ::memcpy(input, output, 16U);
+                delete[] output;
             }
 
             delete[] iv;
@@ -649,6 +679,26 @@ void P25Crypto::cryptAES_PDU(uint8_t* frame, uint8_t frameLen)
 
         frame[i] ^= m_keystream[offset];
         offset++;
+    }
+}
+
+/* Helper to crypt IMBE audio using DES. */
+
+void P25Crypto::cryptDES_IMBE(uint8_t* imbe, DUID::E duid)
+{
+    if (m_keystream == nullptr)
+        return;
+
+    uint32_t offset = 8U;
+    if (duid == DUID::LDU2) {
+        offset += 101U;
+    }
+
+    offset += (m_keystreamPos * RAW_IMBE_LENGTH_BYTES) + RAW_IMBE_LENGTH_BYTES + ((m_keystreamPos < 8U) ? 0U : 2U);
+    m_keystreamPos = (m_keystreamPos + 1U) % 9U;
+
+    for (uint8_t i = 0U; i < RAW_IMBE_LENGTH_BYTES; i++) {
+        imbe[i] ^= m_keystream[offset + i];
     }
 }
 
