@@ -4,10 +4,6 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- * @package DVM / Common Library
- * @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
- * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
- *
  *  Copyright (C) 2016 Simon Rune, G7RZU
  *  Copyright (C) 2016,2017 Jonathan Naylor, G4KLX
  *  Copyright (C) 2017,2019,2024 Bryan Biedenkapp, N2PLL

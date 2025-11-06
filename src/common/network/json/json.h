@@ -4,10 +4,6 @@
 * GPLv2 Open Source. Use is subject to license terms.
 * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 *
-* @package DVM / Common Library
-* @derivedfrom picojson (https://github.com/kazuho/picojson)
-* @license BSD-2-Clause License (https://opensource.org/licenses/BSD-2-Clause)
-*
 *   Copyright 2009-2010 Cybozu Labs, Inc.
 *   Copyright 2011-2014 Kazuho Oku., All rights reserved.
 *   Copyright (C) 2023,2024 Bryan Biedenkapp, N2PLL
