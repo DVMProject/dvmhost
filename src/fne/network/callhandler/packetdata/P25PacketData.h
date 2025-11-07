@@ -140,6 +140,7 @@ namespace network
                     p25::data::DataHeader header;
                     bool hasRxHeader;
                     bool extendedAddress;
+                    bool auxiliaryES;
                     uint32_t dataOffset;
                     uint8_t dataBlockCnt;
                     uint8_t* netPDU;
@@ -159,6 +160,7 @@ namespace network
                         header(),
                         hasRxHeader(false),
                         extendedAddress(false),
+                        auxiliaryES(false),
                         dataOffset(0U),
                         dataBlockCnt(0U),
                         netPDU(nullptr),
@@ -212,9 +214,10 @@ namespace network
                  * @brief Helper to dispatch PDU user data back to the local FNE network. (Will not transmit to neighbor FNE peers.)
                  * @param dataHeader Instance of a PDU data header.
                  * @param extendedAddress Flag indicating whether or not to extended addressing is in use.
+                 * @param auxiliaryES Flag indicating whether or not an auxiliary ES is included.
                  * @param pduUserData Buffer containing user data to transmit.
                  */
-                void dispatchUserFrameToFNE(p25::data::DataHeader& dataHeader, bool extendedAddress, uint8_t* pduUserData);
+                void dispatchUserFrameToFNE(p25::data::DataHeader& dataHeader, bool extendedAddress, bool auxiliaryES, uint8_t* pduUserData);
 
                 /**
                  * @brief Helper used to process conventional data registration from PDU data.
@@ -250,10 +253,11 @@ namespace network
                  * @param peerNet Instance of PeerNetwork to use to send traffic.
                  * @param dataHeader Instance of a PDU data header.
                  * @param extendedAddress Flag indicating whether or not to extended addressing is in use.
+                 * @param auxiliaryES Flag indicating whether or not an auxiliary ES is included.
                  * @param pduUserData Buffer containing user data to transmit.
                  */
                 void write_PDU_User(uint32_t peerId, uint32_t srcPeerId, network::PeerNetwork* peerNet, p25::data::DataHeader& dataHeader,
-                    bool extendedAddress, uint8_t* pduUserData);
+                    bool extendedAddress, bool auxiliaryES, uint8_t* pduUserData);
 
                 /**
                  * @brief Write data processed to the network.

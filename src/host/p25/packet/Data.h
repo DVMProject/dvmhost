@@ -84,18 +84,20 @@ namespace p25
             /**
              * @brief Helper to write user data as a P25 PDU packet.
              * @param dataHeader Instance of a PDU data header.
-             * @param extendedAddress Flag indicating whether or not to extended addressing is in use.
+             * @param extendedAddress Flag indicating whether or not extended addressing is in use.
+             * @param auxiliaryES Flag indicating whether or not an auxiliary ES is included.
              * @param pduUserData Buffer containing user data to transmit.
              * @param imm Flag indicating the PDU should be written to the immediate queue.
              */
-            void writeRF_PDU_User(data::DataHeader& dataHeader, bool extendedAddress, uint8_t* pduUserData, bool imm = false);
+            void writeRF_PDU_User(data::DataHeader& dataHeader, bool extendedAddress, bool auxiliaryES, uint8_t* pduUserData, bool imm = false);
             /**
              * @brief Helper to write user data as a P25 PDU packet.
              * @param dataHeader Instance of a PDU data header.
              * @param extendedAddress Flag indicating whether or not to extended addressing is in use.
+             * @param auxiliaryES Flag indicating whether or not an auxiliary ES is included.
              * @param pduUserData Buffer containing user data to transmit.
              */
-            void writeNet_PDU_User(data::DataHeader& dataHeader, bool extendedAddress, uint8_t* pduUserData);
+            void writeNet_PDU_User(data::DataHeader& dataHeader, bool extendedAddress, bool auxiliaryES, uint8_t* pduUserData);
 
             /**
              * @brief Updates the processor by the passed number of milliseconds.
@@ -131,6 +133,7 @@ namespace p25
             data::DataBlock* m_rfData;
             data::DataHeader m_rfDataHeader;
             bool m_rfExtendedAddress;
+            bool m_rfAuxiliaryES;
             uint8_t m_rfDataBlockCnt;
             uint8_t* m_rfPDU;
             uint32_t m_rfPDUCount;
@@ -139,6 +142,7 @@ namespace p25
             data::DataBlock* m_netData;
             data::DataHeader m_netDataHeader;
             bool m_netExtendedAddress;
+            bool m_netAuxiliaryES;
             uint32_t m_netDataOffset;
             uint8_t m_netDataBlockCnt;
             uint8_t* m_netPDU;

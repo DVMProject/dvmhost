@@ -61,14 +61,23 @@ DataHeader::DataHeader() :
     m_ambtOpcode(0U),
     m_ambtField8(0U),
     m_ambtField9(0U),
+    m_algId(ALGO_UNENCRYPT),
+    m_kId(0U),
     m_trellis(),
     m_data(nullptr),
-    m_extAddrData(nullptr)
+    m_extAddrData(nullptr),
+    m_auxESData(nullptr),
+    m_mi(nullptr)
 {
     m_data = new uint8_t[P25_PDU_HEADER_LENGTH_BYTES];
     ::memset(m_data, 0x00U, P25_PDU_HEADER_LENGTH_BYTES);
     m_extAddrData = new uint8_t[P25_PDU_HEADER_LENGTH_BYTES];
     ::memset(m_extAddrData, 0x00U, P25_PDU_HEADER_LENGTH_BYTES);
+    m_auxESData = new uint8_t[P25_PDU_CONFIRMED_DATA_LENGTH_BYTES];
+    ::memset(m_auxESData, 0x00U, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
+
+    m_mi = new uint8_t[MI_LENGTH_BYTES];
+    ::memset(m_mi, 0x00U, MI_LENGTH_BYTES);
 }
 
 /* Finalizes a instance of the DataHeader class. */
@@ -77,6 +86,12 @@ DataHeader::~DataHeader()
 {
     delete[] m_data;
     delete[] m_extAddrData;
+    delete[] m_auxESData;
+
+    if (m_mi != nullptr) {
+        delete[] m_mi;
+        m_mi = nullptr;
+    }
 }
 
 /* Decodes P25 PDU data header. */
@@ -346,7 +361,7 @@ void DataHeader::encodeExtAddr(uint8_t* data, bool noTrellis)
         header[2U] = (m_srcLlId >> 0) & 0xFFU;
 
 #if DEBUG_P25_PDU_DATA
-        Utils::dump(1U, "P25, DataHeader::encodeExtAddr(), PDU Header Data", header, P25_PDU_HEADER_LENGTH_BYTES);
+        Utils::dump(1U, "P25, DataHeader::encodeExtAddr(), PDU Extended Address Data", header, P25_PDU_HEADER_LENGTH_BYTES);
 #endif
 
         ::memcpy(data, header, 4U); // only copy the 4 bytes of header data for confirmed
@@ -366,7 +381,154 @@ void DataHeader::encodeExtAddr(uint8_t* data, bool noTrellis)
         edac::CRC::addCCITT162(header, P25_PDU_HEADER_LENGTH_BYTES);
 
 #if DEBUG_P25_PDU_DATA
-        Utils::dump(1U, "P25, DataHeader::encodeExtAddr(), PDU Header Data", header, P25_PDU_HEADER_LENGTH_BYTES);
+        Utils::dump(1U, "P25, DataHeader::encodeExtAddr(), PDU Extended Address Data", header, P25_PDU_HEADER_LENGTH_BYTES);
+#endif
+
+        if (!noTrellis) {
+            // encode 1/2 rate Trellis
+            m_trellis.encode12(header, data);
+        } else {
+            ::memcpy(data, header, P25_PDU_HEADER_LENGTH_BYTES);
+        }
+    }
+}
+
+/* Decodes P25 PDU auxiliary ES header. */
+
+bool DataHeader::decodeAuxES(const uint8_t* data, bool noTrellis)
+{
+    assert(data != nullptr);
+
+    ::memset(m_auxESData, 0x00U, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
+
+    if (m_sap != PDUSAP::ENC_USER_DATA && m_sap != PDUSAP::ENC_KMM)
+        return false;
+
+    if (m_fmt == PDUFormatType::CONFIRMED) {
+        ::memcpy(m_auxESData, data, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
+#if DEBUG_P25_PDU_DATA
+        Utils::dump(1U, "P25, DataHeader::decodeAuxES(), PDU Auxiliary ES Data", m_extAddrData, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
+#endif
+
+        m_algId = m_auxESData[9U];                                              // Algorithm ID
+        if (m_algId != ALGO_UNENCRYPT) {
+            if (m_mi != nullptr)
+                delete[] m_mi;
+            m_mi = new uint8_t[MI_LENGTH_BYTES];
+            ::memset(m_mi, 0x00U, MI_LENGTH_BYTES);
+            ::memcpy(m_mi, m_auxESData, MI_LENGTH_BYTES);                       // Message Indicator
+
+            m_kId = (m_auxESData[10U] << 8) + m_auxESData[11U];                 // Key ID
+        }
+        else {
+            if (m_mi != nullptr)
+                delete[] m_mi;
+            m_mi = new uint8_t[MI_LENGTH_BYTES];
+            ::memset(m_mi, 0x00U, MI_LENGTH_BYTES);
+
+            m_kId = 0x0000U;
+        }
+
+        m_exSap = m_auxESData[12U] & 0x3FU;                                     // Service Access Point
+    } else if (m_fmt == PDUFormatType::UNCONFIRMED) {
+        // decode 1/2 rate Trellis & check CRC-CCITT 16
+        bool valid = true;
+        if (noTrellis) {
+            ::memcpy(m_auxESData, data, P25_PDU_HEADER_LENGTH_BYTES);
+        }
+        else {
+            valid = m_trellis.decode12(data, m_auxESData);
+        }
+
+        if (valid) {
+            valid = edac::CRC::checkCCITT162(m_auxESData, P25_PDU_HEADER_LENGTH_BYTES);
+            if (!valid) {
+                if (s_warnCRC) {
+                    // if we're already warning instead of erroring CRC, don't announce invalid CRC in the 
+                    // case where no CRC is defined
+                    if ((m_auxESData[P25_PDU_HEADER_LENGTH_BYTES - 2U] != 0x00U) && (m_auxESData[P25_PDU_HEADER_LENGTH_BYTES - 1U] != 0x00U)) {
+                        LogWarning(LOG_P25, "DataHeader::decodeExtAddr(), failed CRC CCITT-162 check");
+                    }
+
+                    valid = true; // ignore CRC error
+                }
+                else {
+                    LogError(LOG_P25, "DataHeader::decodeAuxES(), failed CRC CCITT-162 check");
+                }
+            }
+        }
+
+        if (!valid) {
+            return false;
+        }
+
+#if DEBUG_P25_PDU_DATA
+        Utils::dump(1U, "P25, DataHeader::decodeAuxES(), PDU Auxiliary ES Data", m_extAddrData, P25_PDU_HEADER_LENGTH_BYTES);
+#endif
+
+        m_algId = m_auxESData[9U];                                              // Algorithm ID
+        if (m_algId != ALGO_UNENCRYPT) {
+            if (m_mi != nullptr)
+                delete[] m_mi;
+            m_mi = new uint8_t[MI_LENGTH_BYTES];
+            ::memset(m_mi, 0x00U, MI_LENGTH_BYTES);
+            ::memcpy(m_mi, m_auxESData, MI_LENGTH_BYTES);                       // Message Indicator
+
+            m_kId = (m_auxESData[10U] << 8) + m_auxESData[11U];                 // Key ID
+        }
+        else {
+            if (m_mi != nullptr)
+                delete[] m_mi;
+            m_mi = new uint8_t[MI_LENGTH_BYTES];
+            ::memset(m_mi, 0x00U, MI_LENGTH_BYTES);
+
+            m_kId = 0x0000U;
+        }
+    }
+
+    return true;
+}
+
+/* Encodes P25 PDU auxiliary ES header. */
+
+void DataHeader::encodeAuxES(uint8_t* data, bool noTrellis)
+{
+    assert(data != nullptr);
+
+    if (m_sap != PDUSAP::ENC_USER_DATA && m_sap != PDUSAP::ENC_KMM)
+        return;
+
+    uint8_t header[P25_PDU_CONFIRMED_DATA_LENGTH_BYTES];
+    ::memset(header, 0x00U, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
+
+    if (m_fmt == PDUFormatType::CONFIRMED) {
+        for (uint32_t i = 0; i < MI_LENGTH_BYTES; i++)
+            header[i + 2U] = m_mi[i];                                           // Message Indicator
+
+        header[11U] = m_algId;                                                  // Algorithm ID
+        header[12U] = (m_kId >> 8) & 0xFFU;                                     // Key ID
+        header[13U] = (m_kId >> 0) & 0xFFU;                                     // ...
+
+        header[14U] = m_exSap & 0x3FU;                                          // Service Access Point
+
+#if DEBUG_P25_PDU_DATA
+        Utils::dump(1U, "P25, DataHeader::encodeExtAddr(), PDU Auxiliary ES Data", header, P25_PDU_HEADER_LENGTH_BYTES);
+#endif
+
+        ::memcpy(data, header, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
+    } else if (m_fmt == PDUFormatType::UNCONFIRMED) {
+        for (uint32_t i = 0; i < MI_LENGTH_BYTES; i++)
+            header[i] = m_mi[i];                                                        // Message Indicator
+
+        header[9U] = m_algId;                                                           // Algorithm ID
+        header[10U] = (m_kId >> 8) & 0xFFU;                                             // Key ID
+        header[11U] = (m_kId >> 0) & 0xFFU;                                             // ...
+
+        // compute CRC-CCITT 16
+        edac::CRC::addCCITT162(header, P25_PDU_HEADER_LENGTH_BYTES);
+
+#if DEBUG_P25_PDU_DATA
+        Utils::dump(1U, "P25, DataHeader::encodeAuxES(), PDU Auxiliary ES Data", header, P25_PDU_HEADER_LENGTH_BYTES);
 #endif
 
         if (!noTrellis) {
@@ -414,7 +576,17 @@ void DataHeader::reset()
     m_ambtField8 = 0U;
     m_ambtField9 = 0U;
 
+    m_algId = ALGO_UNENCRYPT;
+    m_kId = 0U;
+
     ::memset(m_data, 0x00U, P25_PDU_HEADER_LENGTH_BYTES);
+
+    if (m_mi != nullptr) {
+        ::memset(m_mi, 0x00U, MI_LENGTH_BYTES);
+    } else {
+        m_mi = new uint8_t[MI_LENGTH_BYTES];
+        ::memset(m_mi, 0x00U, MI_LENGTH_BYTES);
+    }
 }
 
 /* Gets the total length in bytes of enclosed packet data. */
@@ -471,6 +643,22 @@ uint32_t DataHeader::getExtAddrData(uint8_t* buffer) const
     return P25_PDU_HEADER_LENGTH_BYTES;
 }
 
+/* Gets the raw auxiliary ES header data. */
+
+uint32_t DataHeader::getAuxiliaryESData(uint8_t* buffer) const
+{
+    assert(buffer != nullptr);
+    assert(m_auxESData != nullptr);
+
+    if (m_fmt == PDUFormatType::CONFIRMED) {
+        ::memcpy(buffer, m_auxESData, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
+        return P25_PDU_CONFIRMED_DATA_LENGTH_BYTES;
+    } else {
+        ::memcpy(buffer, m_auxESData, P25_PDU_HEADER_LENGTH_BYTES);
+        return P25_PDU_HEADER_LENGTH_BYTES;
+    }
+}
+
 /* Helper to calculate the number of blocks to follow and padding length for a PDU. */
 
 void DataHeader::calculateLength(uint32_t packetLength)
@@ -506,4 +694,26 @@ uint32_t DataHeader::calculatePadLength(uint8_t fmt, uint32_t packetLength)
     else {
         return P25_PDU_UNCONFIRMED_LENGTH_BYTES - (len % P25_PDU_UNCONFIRMED_LENGTH_BYTES);
     }
+}
+
+/*
+** Encryption data 
+*/
+
+/* Sets the encryption message indicator. */
+
+void DataHeader::setMI(const uint8_t* mi)
+{
+    assert(mi != nullptr);
+
+    ::memcpy(m_mi, mi, MI_LENGTH_BYTES);
+}
+
+/* Gets the encryption message indicator. */
+
+void DataHeader::getMI(uint8_t* mi) const
+{
+    assert(mi != nullptr);
+
+    ::memcpy(mi, m_mi, MI_LENGTH_BYTES);
 }

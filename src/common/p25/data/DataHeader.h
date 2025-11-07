@@ -77,6 +77,20 @@ namespace p25
             void encodeExtAddr(uint8_t* data, bool noTrellis = false);
 
             /**
+             * @brief Decodes P25 PDU auxiliary ES header.
+             * @param[in] data Buffer containing a PDU data header to decode.
+             * @param noTrellis Flag indicating not to perform Trellis encoding.
+             * @returns bool True, if PDU data header decoded, otherwise false.
+             */
+            bool decodeAuxES(const uint8_t* data, bool noTrellis = false);
+            /**
+             * @brief Encodes P25 PDU auxiliary ES header.
+             * @param noTrellis Flag indicating not to perform Trellis encoding.
+             * @param[out] data Buffer to encode a PDU data header.
+             */
+            void encodeAuxES(uint8_t* data, bool noTrellis = false);
+
+            /**
              * @brief Helper to reset data values to defaults.
              */
             void reset();
@@ -104,6 +118,12 @@ namespace p25
              * @returns uint32_t Length of data copied.
              */
             uint32_t getExtAddrData(uint8_t* buffer) const;
+            /**
+             * @brief Gets the raw auxiliary ES header data.
+             * @param[out] buffer Buffer to copy raw header data to.
+             * @returns uint32_t Length of data copied.
+             */
+            uint32_t getAuxiliaryESData(uint8_t* buffer) const;
 
             /**
              * @brief Helper to calculate the number of blocks to follow and padding length for a PDU.
@@ -124,6 +144,19 @@ namespace p25
              * @returns uint32_t Number of pad bytes.
              */
             static uint32_t calculatePadLength(uint8_t fmt, uint32_t packetLength);
+
+            /** @name Encryption data */
+            /**
+             * @brief Sets the encryption message indicator.
+             * @param[in] mi Buffer containing the 9-byte Message Indicator.
+             */
+            void setMI(const uint8_t* mi);
+            /**
+             * @brief Gets the encryption message indicator.
+             * @param[out] mi Buffer containing the 9-byte Message Indicator.
+             */
+            void getMI(uint8_t* mi) const;
+            /** @} */
 
         public:
             /**
@@ -226,12 +259,27 @@ namespace p25
             DECLARE_PROPERTY(uint8_t, ambtField9, AMBTField9);
             /** @} */
 
+            /** @name Encryption data */
+            /**
+             * @brief Encryption algorithm ID.
+             */
+            DECLARE_PROPERTY(uint8_t, algId, AlgId);
+            /**
+             * @brief Encryption key ID.
+             */
+            DECLARE_PROPERTY(uint32_t, kId, KId);
+            /** @} */
+
         private:
             edac::Trellis m_trellis;
 
             uint8_t* m_data;
             uint8_t* m_extAddrData;
-        
+            uint8_t* m_auxESData;
+
+            // Encryption data
+            uint8_t* m_mi;
+
             static bool s_warnCRC;
         };
     } // namespace data
