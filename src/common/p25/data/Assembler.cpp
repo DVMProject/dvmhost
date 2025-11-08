@@ -417,12 +417,9 @@ UInt8Array Assembler::assemble(data::DataHeader& dataHeader, bool extendedAddres
 #if DEBUG_P25_PDU_DATA
         LogDebugEx(LOG_P25, "Assembler::assemble()", "packetLength = %u, secondHeaderOffset = %u, padLength = %u, pduLength = %u", packetLength, secondHeaderOffset, padLength, pduLength);
 #endif
-        ::memcpy(packetData + secondHeaderOffset, pduUserData, packetLength);
-
         if (dataHeader.getFormat() != PDUFormatType::AMBT) {
+            ::memcpy(packetData + secondHeaderOffset, pduUserData, packetLength);
             edac::CRC::addCRC32(packetData, packetLength + 4U);
-
-            Utils::dump(2U, "packetData", packetData, packetLength + 4U);
 
             if (padLength > 0U) {
                 // move the CRC-32 to the end of the packet data after the padding
@@ -431,6 +428,9 @@ UInt8Array Assembler::assemble(data::DataHeader& dataHeader, bool extendedAddres
                 ::memset(packetData + packetLength, 0x00U, 4U);
                 ::memcpy(packetData + (packetLength + padLength), crcBytes, 4U);
             }
+        } else {
+            // our AMBTs have a pre-calculated CRC-32 -- we don't need to do it ourselves
+            ::memcpy(packetData + secondHeaderOffset, pduUserData, pduLength);
         }
 
 #if DEBUG_P25_PDU_DATA

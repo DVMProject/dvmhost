@@ -244,9 +244,9 @@ namespace p25
         const uint32_t  SYS_SRV_TRUNK   = SYS_SRV_DEFAULT           | SystemService::GROUP_AFF  | SystemService::UNIT_REG   | SystemService::GROUP_AFF_Q;
         /** @} */
 
-        /** @brief Conventional/Failur/Valid/Networked Flags */
+        /** @brief Conventional/Failure/Valid/Networked Flags */
         namespace CFVA {
-            /** @brief Conventional/Failur/Valid/Networked Flags */
+            /** @brief Conventional/Failure/Valid/Networked Flags */
             enum : uint8_t {
                 CONV = 0x08U,                           //!< Conventional
                 FAILURE = 0x04U,                        //!< Failure

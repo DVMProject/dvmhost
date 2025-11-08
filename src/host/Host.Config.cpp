@@ -329,7 +329,7 @@ bool Host::readParams()
         m_p25NAC = (uint32_t)::strtoul(rfssConfig["nac"].as<std::string>("F7E").c_str(), NULL, 16);
         m_p25NAC = p25::P25Utils::nac(m_p25NAC);
 
-        uint32_t p25TxNAC = (uint32_t)::strtoul(rfssConfig["txNAC"].as<std::string>("293").c_str(), NULL, 16);
+        uint32_t p25TxNAC = (uint32_t)::strtoul(rfssConfig["txNAC"].as<std::string>("F7E").c_str(), NULL, 16);
         if (p25TxNAC == m_p25NAC) {
             LogWarning(LOG_HOST, "Only use txNAC when split NAC operations are needed. nac and txNAC should not be the same!");
         }
