@@ -21,6 +21,7 @@
 #include "common/p25/data/DataBlock.h"
 #include "common/p25/data/DataHeader.h"
 #include "common/p25/data/LowSpeedData.h"
+#include "common/p25/data/Assembler.h"
 #include "common/p25/lc/LC.h"
 #include "common/Timer.h"
 #include "p25/Control.h"
@@ -130,23 +131,11 @@ namespace p25
 
             RPT_RF_STATE m_prevRfState;
 
-            data::DataBlock* m_rfData;
-            data::DataHeader m_rfDataHeader;
-            bool m_rfExtendedAddress;
-            bool m_rfAuxiliaryES;
-            uint8_t m_rfDataBlockCnt;
+            data::Assembler* m_rfAssembler;
             uint8_t* m_rfPDU;
             uint32_t m_rfPDUCount;
             uint32_t m_rfPDUBits;
-
-            data::DataBlock* m_netData;
-            data::DataHeader m_netDataHeader;
-            bool m_netExtendedAddress;
-            bool m_netAuxiliaryES;
-            uint32_t m_netDataOffset;
-            uint8_t m_netDataBlockCnt;
-            uint8_t* m_netPDU;
-            uint32_t m_netPDUCount;
+            data::Assembler* m_netAssembler;
 
             uint8_t* m_retryPDUData;
             uint32_t m_retryPDUBitLength;

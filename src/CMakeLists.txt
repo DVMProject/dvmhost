@@ -17,9 +17,9 @@ add_library(common STATIC ${common_SRC} ${common_INCLUDE})
 if (COMPILE_WIN32)
     target_link_libraries(common PRIVATE asio::asio Threads::Threads)
 else ()
-    target_link_libraries(common PRIVATE asio::asio Threads::Threads util)
+    target_link_libraries(common PRIVATE ${OPENSSL_LIBRARIES} ${LIBDW_LIBRARY} asio::asio Threads::Threads util)
 endif (COMPILE_WIN32)
-target_include_directories(common PRIVATE src src/common)
+target_include_directories(common PRIVATE ${OPENSSL_INCLUDE_DIR} ${LIBDW_INCLUDE_DIR} src src/common)
 
 #
 ## vocoder

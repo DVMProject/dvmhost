@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2015,2016,2017 Jonathan Naylor, G4KLX
- *  Copyright (C) 2021,2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2021,2024,2025 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -38,6 +38,11 @@ namespace dmr
          */
         class HOST_SW_API DataHeader {
         public:
+            /**
+             * @brief Initializes a copy instance of the DataHeader class.
+             * @param data Instance of DataHeader class to copy from.
+             */
+            DataHeader(const DataHeader& data);
             /**
              * @brief Initializes a new instance of the DataHeader class.
              */
@@ -194,6 +199,11 @@ namespace dmr
             bool m_SF;
             bool m_PF;
             uint8_t m_UDTO;
+
+            /**
+             * @brief Internal helper to copy the class.
+             */
+            void copy(const DataHeader& data);
         };
     } // namespace data
 } // namespace dmr

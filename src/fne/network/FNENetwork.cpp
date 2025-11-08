@@ -539,6 +539,10 @@ void FNENetwork::clock(uint32_t ms)
             }
         }
 
+        // cleanup possibly stale data calls
+        m_tagDMR->packetData()->cleanupStale();
+        m_tagP25->packetData()->cleanupStale();
+
         m_maintainenceTimer.start();
     }
 

@@ -33,6 +33,13 @@ const uint8_t UDTF_NMEA = 0x05U;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
+/* Initializes a copy instance of the DataHeader class. */
+
+DataHeader::DataHeader(const DataHeader& data) : DataHeader()
+{
+    copy(data);
+}
+
 /* Initializes a new instance of the DataHeader class. */
 
 DataHeader::DataHeader() :
@@ -68,7 +75,10 @@ DataHeader::DataHeader() :
 
 DataHeader::~DataHeader()
 {
-    delete[] m_data;
+    if (m_data != nullptr) {
+        delete[] m_data;
+        m_data = nullptr;
+    }
 }
 
 /* Equals operator. */
@@ -541,5 +551,50 @@ uint32_t DataHeader::calculatePadLength(DPF::E dpf, DataType::E dataType, uint32
         else {
             return DMR_PDU_UNCODED_LENGTH_BYTES - (len % DMR_PDU_UNCODED_LENGTH_BYTES);
         }
+    }
+}
+
+// ---------------------------------------------------------------------------
+//  Private Class Members
+// ---------------------------------------------------------------------------
+
+/* Internal helper to copy the the class. */
+
+void DataHeader::copy(const DataHeader& data)
+{
+    m_GI = data.m_GI;
+    m_A = data.m_A;
+
+    m_DPF = data.m_DPF;
+
+    m_sap = data.m_sap;
+
+    m_fsn = data.m_fsn;
+    m_Ns = data.m_Ns;
+
+    m_blocksToFollow = data.m_blocksToFollow;
+    m_padLength = data.m_padLength;
+
+    m_F = data.m_F;
+    m_S = data.m_S;
+
+    m_dataFormat = data.m_dataFormat;
+
+    m_srcId = data.m_srcId;
+    m_dstId = data.m_dstId;
+
+    m_rspClass = data.m_rspClass;
+    m_rspType = data.m_rspType;
+    m_rspStatus = data.m_rspStatus;
+
+    m_srcPort = data.m_srcPort;
+    m_dstPort = data.m_dstPort;
+
+    m_SF = data.m_SF;
+    m_PF = data.m_PF;
+    m_UDTO = data.m_UDTO;
+
+    if (m_data != nullptr && data.m_data != nullptr) {
+        ::memcpy(m_data, data.m_data, DMR_LC_HEADER_LENGTH_BYTES);
     }
 }

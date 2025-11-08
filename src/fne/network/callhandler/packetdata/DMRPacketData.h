@@ -68,6 +68,11 @@ namespace network
                  */
                 bool processFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint16_t pktSeq, uint32_t streamId, bool fromUpstream = false);
 
+                /**
+                 * @brief Helper to cleanup any call's left in a dangling state without any further updates.
+                 */
+                void cleanupStale();
+
             private:
                 FNENetwork* m_network;
                 TagDMRData *m_tag;
@@ -78,6 +83,7 @@ namespace network
                 class RxStatus {
                 public:
                     system_clock::hrc::hrc_t callStartTime;
+                    system_clock::hrc::hrc_t lastPacket;
                     uint32_t srcId;
                     uint32_t dstId;
                     uint8_t slotNo;
@@ -88,6 +94,8 @@ namespace network
                     bool hasRxHeader;
                     uint8_t dataBlockCnt;
                     uint8_t frames;
+
+                    bool callBusy;
 
                     uint8_t* pduUserData;
                     uint32_t pduDataOffset;
@@ -104,6 +112,8 @@ namespace network
                         header(),
                         hasRxHeader(false),
                         dataBlockCnt(0U),
+                        frames(0U),
+                        callBusy(false),
                         pduUserData(nullptr),
                         pduDataOffset(0U)
                     {

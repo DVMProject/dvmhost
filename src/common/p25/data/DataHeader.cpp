@@ -36,6 +36,13 @@ bool DataHeader::s_warnCRC = false;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
+/* Initializes a copy instance of the DataHeader class. */
+
+DataHeader::DataHeader(const DataHeader& data) : DataHeader()
+{
+    copy(data);
+}
+
 /* Initializes a new instance of the DataHeader class. */
 
 DataHeader::DataHeader() :
@@ -84,9 +91,20 @@ DataHeader::DataHeader() :
 
 DataHeader::~DataHeader()
 {
-    delete[] m_data;
-    delete[] m_extAddrData;
-    delete[] m_auxESData;
+    if (m_data != nullptr) {
+        delete[] m_data;
+        m_data = nullptr;
+    }
+
+    if (m_extAddrData != nullptr) {
+        delete[] m_extAddrData;
+        m_extAddrData = nullptr;
+    }
+
+    if (m_auxESData != nullptr) {
+        delete[] m_auxESData;
+        m_auxESData = nullptr;
+    }
 
     if (m_mi != nullptr) {
         delete[] m_mi;
@@ -279,7 +297,7 @@ void DataHeader::encode(uint8_t* data, bool noTrellis)
 
 /* Decodes P25 PDU extended addressing header. */
 
-bool DataHeader::decodeExtAddr(const uint8_t* data, bool noTrellis)
+bool DataHeader::decodeExtAddr(const uint8_t* data)
 {
     assert(data != nullptr);
 
@@ -297,30 +315,22 @@ bool DataHeader::decodeExtAddr(const uint8_t* data, bool noTrellis)
         m_srcLlId = (m_extAddrData[0U] << 16) + (m_extAddrData[1U] << 8) +      // Source Logical Link ID
             m_extAddrData[2U];        
     } else if (m_fmt == PDUFormatType::UNCONFIRMED) {
-        // decode 1/2 rate Trellis & check CRC-CCITT 16
-        bool valid = true;
-        if (noTrellis) {
-            ::memcpy(m_extAddrData, data, P25_PDU_HEADER_LENGTH_BYTES);
-        }
-        else {
-            valid = m_trellis.decode12(data, m_extAddrData);
-        }
+        ::memcpy(m_extAddrData, data, P25_PDU_HEADER_LENGTH_BYTES);
 
-        if (valid) {
-            valid = edac::CRC::checkCCITT162(m_extAddrData, P25_PDU_HEADER_LENGTH_BYTES);
-            if (!valid) {
-                if (s_warnCRC) {
-                    // if we're already warning instead of erroring CRC, don't announce invalid CRC in the 
-                    // case where no CRC is defined
-                    if ((m_extAddrData[P25_PDU_HEADER_LENGTH_BYTES - 2U] != 0x00U) && (m_extAddrData[P25_PDU_HEADER_LENGTH_BYTES - 1U] != 0x00U)) {
-                        LogWarning(LOG_P25, "DataHeader::decodeExtAddr(), failed CRC CCITT-162 check");
-                    }
+        // check CRC-CCITT 16
+        bool valid = edac::CRC::checkCCITT162(m_extAddrData, P25_PDU_HEADER_LENGTH_BYTES);
+        if (!valid) {
+            if (s_warnCRC) {
+                // if we're already warning instead of erroring CRC, don't announce invalid CRC in the 
+                // case where no CRC is defined
+                if ((m_extAddrData[P25_PDU_HEADER_LENGTH_BYTES - 2U] != 0x00U) && (m_extAddrData[P25_PDU_HEADER_LENGTH_BYTES - 1U] != 0x00U)) {
+                    LogWarning(LOG_P25, "DataHeader::decodeExtAddr(), failed CRC CCITT-162 check");
+                }
 
-                    valid = true; // ignore CRC error
-                }
-                else {
-                    LogError(LOG_P25, "DataHeader::decodeExtAddr(), failed CRC CCITT-162 check");
-                }
+                valid = true; // ignore CRC error
+            }
+            else {
+                LogError(LOG_P25, "DataHeader::decodeExtAddr(), failed CRC CCITT-162 check");
             }
         }
 
@@ -342,7 +352,7 @@ bool DataHeader::decodeExtAddr(const uint8_t* data, bool noTrellis)
 
 /* Encodes P25 PDU extended addressing header. */
 
-void DataHeader::encodeExtAddr(uint8_t* data, bool noTrellis)
+void DataHeader::encodeExtAddr(uint8_t* data)
 {
     assert(data != nullptr);
 
@@ -383,19 +393,13 @@ void DataHeader::encodeExtAddr(uint8_t* data, bool noTrellis)
 #if DEBUG_P25_PDU_DATA
         Utils::dump(1U, "P25, DataHeader::encodeExtAddr(), PDU Extended Address Data", header, P25_PDU_HEADER_LENGTH_BYTES);
 #endif
-
-        if (!noTrellis) {
-            // encode 1/2 rate Trellis
-            m_trellis.encode12(header, data);
-        } else {
-            ::memcpy(data, header, P25_PDU_HEADER_LENGTH_BYTES);
-        }
+        ::memcpy(data, header, P25_PDU_HEADER_LENGTH_BYTES);
     }
 }
 
 /* Decodes P25 PDU auxiliary ES header. */
 
-bool DataHeader::decodeAuxES(const uint8_t* data, bool noTrellis)
+bool DataHeader::decodeAuxES(const uint8_t* data)
 {
     assert(data != nullptr);
 
@@ -407,7 +411,7 @@ bool DataHeader::decodeAuxES(const uint8_t* data, bool noTrellis)
     if (m_fmt == PDUFormatType::CONFIRMED) {
         ::memcpy(m_auxESData, data, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
 #if DEBUG_P25_PDU_DATA
-        Utils::dump(1U, "P25, DataHeader::decodeAuxES(), PDU Auxiliary ES Data", m_extAddrData, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
+        Utils::dump(1U, "P25, DataHeader::decodeAuxES(), PDU Auxiliary ES Data", m_auxESData, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
 #endif
 
         m_algId = m_auxESData[9U];                                              // Algorithm ID
@@ -431,39 +435,10 @@ bool DataHeader::decodeAuxES(const uint8_t* data, bool noTrellis)
 
         m_exSap = m_auxESData[12U] & 0x3FU;                                     // Service Access Point
     } else if (m_fmt == PDUFormatType::UNCONFIRMED) {
-        // decode 1/2 rate Trellis & check CRC-CCITT 16
-        bool valid = true;
-        if (noTrellis) {
-            ::memcpy(m_auxESData, data, P25_PDU_HEADER_LENGTH_BYTES);
-        }
-        else {
-            valid = m_trellis.decode12(data, m_auxESData);
-        }
-
-        if (valid) {
-            valid = edac::CRC::checkCCITT162(m_auxESData, P25_PDU_HEADER_LENGTH_BYTES);
-            if (!valid) {
-                if (s_warnCRC) {
-                    // if we're already warning instead of erroring CRC, don't announce invalid CRC in the 
-                    // case where no CRC is defined
-                    if ((m_auxESData[P25_PDU_HEADER_LENGTH_BYTES - 2U] != 0x00U) && (m_auxESData[P25_PDU_HEADER_LENGTH_BYTES - 1U] != 0x00U)) {
-                        LogWarning(LOG_P25, "DataHeader::decodeExtAddr(), failed CRC CCITT-162 check");
-                    }
-
-                    valid = true; // ignore CRC error
-                }
-                else {
-                    LogError(LOG_P25, "DataHeader::decodeAuxES(), failed CRC CCITT-162 check");
-                }
-            }
-        }
-
-        if (!valid) {
-            return false;
-        }
+        ::memcpy(m_auxESData, data, P25_PDU_HEADER_LENGTH_BYTES);
 
 #if DEBUG_P25_PDU_DATA
-        Utils::dump(1U, "P25, DataHeader::decodeAuxES(), PDU Auxiliary ES Data", m_extAddrData, P25_PDU_HEADER_LENGTH_BYTES);
+        Utils::dump(1U, "P25, DataHeader::decodeAuxES(), PDU Auxiliary ES Data", m_auxESData, P25_PDU_HEADER_LENGTH_BYTES);
 #endif
 
         m_algId = m_auxESData[9U];                                              // Algorithm ID
@@ -491,7 +466,7 @@ bool DataHeader::decodeAuxES(const uint8_t* data, bool noTrellis)
 
 /* Encodes P25 PDU auxiliary ES header. */
 
-void DataHeader::encodeAuxES(uint8_t* data, bool noTrellis)
+void DataHeader::encodeAuxES(uint8_t* data)
 {
     assert(data != nullptr);
 
@@ -503,16 +478,16 @@ void DataHeader::encodeAuxES(uint8_t* data, bool noTrellis)
 
     if (m_fmt == PDUFormatType::CONFIRMED) {
         for (uint32_t i = 0; i < MI_LENGTH_BYTES; i++)
-            header[i + 2U] = m_mi[i];                                           // Message Indicator
+            header[i] = m_mi[i];                                                // Message Indicator
 
-        header[11U] = m_algId;                                                  // Algorithm ID
-        header[12U] = (m_kId >> 8) & 0xFFU;                                     // Key ID
-        header[13U] = (m_kId >> 0) & 0xFFU;                                     // ...
+        header[9U] = m_algId;                                                   // Algorithm ID
+        header[10U] = (m_kId >> 8) & 0xFFU;                                     // Key ID
+        header[11U] = (m_kId >> 0) & 0xFFU;                                     // ...
 
-        header[14U] = m_exSap & 0x3FU;                                          // Service Access Point
+        header[12U] = m_exSap & 0x3FU;                                          // Service Access Point
 
 #if DEBUG_P25_PDU_DATA
-        Utils::dump(1U, "P25, DataHeader::encodeExtAddr(), PDU Auxiliary ES Data", header, P25_PDU_HEADER_LENGTH_BYTES);
+        Utils::dump(1U, "P25, DataHeader::encodeExtAddr(), PDU Auxiliary ES Data", header, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
 #endif
 
         ::memcpy(data, header, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
@@ -524,19 +499,12 @@ void DataHeader::encodeAuxES(uint8_t* data, bool noTrellis)
         header[10U] = (m_kId >> 8) & 0xFFU;                                             // Key ID
         header[11U] = (m_kId >> 0) & 0xFFU;                                             // ...
 
-        // compute CRC-CCITT 16
-        edac::CRC::addCCITT162(header, P25_PDU_HEADER_LENGTH_BYTES);
+        header[12U] = m_exSap & 0x3FU;                                          // Service Access Point
 
 #if DEBUG_P25_PDU_DATA
         Utils::dump(1U, "P25, DataHeader::encodeAuxES(), PDU Auxiliary ES Data", header, P25_PDU_HEADER_LENGTH_BYTES);
 #endif
-
-        if (!noTrellis) {
-            // encode 1/2 rate Trellis
-            m_trellis.encode12(header, data);
-        } else {
-            ::memcpy(data, header, P25_PDU_HEADER_LENGTH_BYTES);
-        }
+        ::memcpy(data, header, P25_PDU_HEADER_LENGTH_BYTES + 1U);
     }
 }
 
@@ -544,6 +512,9 @@ void DataHeader::encodeAuxES(uint8_t* data, bool noTrellis)
 
 void DataHeader::reset()
 {
+    if (m_data == nullptr)
+        return; // bail bail bail
+
     m_ackNeeded = false;
     m_outbound = false;
 
@@ -579,7 +550,8 @@ void DataHeader::reset()
     m_algId = ALGO_UNENCRYPT;
     m_kId = 0U;
 
-    ::memset(m_data, 0x00U, P25_PDU_HEADER_LENGTH_BYTES);
+    if (m_data != nullptr)
+        ::memset(m_data, 0x00U, P25_PDU_HEADER_LENGTH_BYTES);
 
     if (m_mi != nullptr) {
         ::memset(m_mi, 0x00U, MI_LENGTH_BYTES);
@@ -672,6 +644,10 @@ void DataHeader::calculateLength(uint32_t packetLength)
         len += 4U;
     }
 
+    if ((m_sap == PDUSAP::ENC_USER_DATA || m_sap == PDUSAP::ENC_KMM)) {
+        len += 13U;
+    }
+
     uint32_t blockLen = (m_fmt == PDUFormatType::CONFIRMED) ? P25_PDU_CONFIRMED_DATA_LENGTH_BYTES : P25_PDU_UNCONFIRMED_LENGTH_BYTES;
 
     if (len > blockLen) {
@@ -716,4 +692,62 @@ void DataHeader::getMI(uint8_t* mi) const
     assert(mi != nullptr);
 
     ::memcpy(mi, m_mi, MI_LENGTH_BYTES);
+}
+
+// ---------------------------------------------------------------------------
+//  Private Class Members
+// ---------------------------------------------------------------------------
+
+/* Internal helper to copy the the class. */
+
+void DataHeader::copy(const DataHeader& data)
+{
+    m_ackNeeded = data.m_ackNeeded;
+    m_outbound = data.m_outbound;
+
+    m_fmt = data.m_fmt;
+    m_sap = data.m_sap;
+
+    m_mfId = data.m_mfId;
+    m_llId = data.m_llId;
+
+    m_blocksToFollow = data.m_blocksToFollow;
+    m_padLength = data.m_padLength;
+
+    m_F = data.m_F;
+    m_S = data.m_S;
+    m_fsn = data.m_fsn;
+    m_Ns = data.m_Ns;
+    m_lastFragment = data.m_lastFragment;
+    m_headerOffset = data.m_headerOffset;
+
+    m_exSap = data.m_exSap;
+    m_srcLlId = data.m_srcLlId;
+
+    m_rspClass = data.m_rspClass;
+    m_rspType = data.m_rspType;
+    m_rspStatus = data.m_rspStatus;
+
+    m_ambtOpcode = data.m_ambtOpcode;
+    m_ambtField8 = data.m_ambtField8;
+    m_ambtField9 = data.m_ambtField9;
+
+    m_algId = data.m_algId;
+    m_kId = data.m_kId;
+
+    if (m_data != nullptr && data.m_data != nullptr) {
+        ::memcpy(m_data, data.m_data, P25_PDU_HEADER_LENGTH_BYTES);
+    }
+
+    if (m_extAddrData != nullptr && data.m_extAddrData != nullptr) {
+        ::memcpy(m_extAddrData, data.m_extAddrData, P25_PDU_HEADER_LENGTH_BYTES);
+    }
+    
+    if (m_auxESData != nullptr && data.m_auxESData != nullptr) {
+        ::memcpy(m_auxESData, data.m_auxESData, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
+    }
+
+    if (m_mi != nullptr && data.m_mi != nullptr) {
+        ::memcpy(m_mi, data.m_mi, MI_LENGTH_BYTES);
+    }
 }

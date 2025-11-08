@@ -1195,15 +1195,15 @@ bool Network::open()
     m_status = NET_STAT_WAITING_CONNECT;
 
     // are we rotating IPs for HA reconnect?
-    if (m_haIPs.size() > 0 && m_retryCount > 0U && !m_flaggedDuplicateConn &&
+    if ((m_haIPs.size() - 1) > 1 && m_retryCount > 0U && !m_flaggedDuplicateConn &&
         m_maxRetryCount == MAX_RETRY_HA_RECONNECT) {
+
+        if (m_currentHAIP > (m_haIPs.size() - 1)) {
+            m_currentHAIP = 0U;
+        }
 
         PeerHAIPEntry entry = m_haIPs[m_currentHAIP];
         m_currentHAIP++;
-
-        if (m_currentHAIP > m_haIPs.size()) {
-            m_currentHAIP = 0U;
-        }
 
         LogInfoEx(LOG_NET, "PEER %u connection to the master has timed out, %s:%u is non-responsive, trying next HA %s:%u", m_peerId,
             m_address.c_str(), m_port, entry.masterAddress.c_str(), entry.masterPort);

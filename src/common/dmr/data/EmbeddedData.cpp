@@ -44,8 +44,15 @@ EmbeddedData::EmbeddedData() :
 
 EmbeddedData::~EmbeddedData()
 {
-    delete[] m_raw;
-    delete[] m_data;
+    if (m_raw != nullptr) {
+        delete[] m_raw;
+        m_raw = nullptr;
+    }
+
+    if (m_data != nullptr) {
+        delete[] m_data;
+        m_data = nullptr;
+    }
 }
 
 /* Add LC data (which may consist of 4 blocks) to the data store. */

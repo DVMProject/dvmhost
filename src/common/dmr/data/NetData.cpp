@@ -64,7 +64,10 @@ NetData::NetData() :
 
 NetData::~NetData()
 {
-    delete[] m_data;
+    if (m_data != nullptr) {
+        delete[] m_data;
+        m_data = nullptr;
+    }
 }
 
 /* Equals operator. */

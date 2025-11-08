@@ -37,6 +37,11 @@ namespace p25
         class HOST_SW_API DataBlock {
         public:
             /**
+             * @brief Initializes a copy instance of the DataBlock class.
+             * @param data Instance of DataBlock class to copy from.
+             */
+            DataBlock(const DataBlock& data);
+            /**
              * @brief Initializes a new instance of the DataBlock class.
              */
             DataBlock();
@@ -106,6 +111,11 @@ namespace p25
             uint8_t m_headerSap;
 
             uint8_t* m_data;
+
+            /**
+             * @brief Internal helper to copy the class.
+             */
+            void copy(const DataBlock& data);
         };
     } // namespace data
 } // namespace p25

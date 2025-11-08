@@ -39,6 +39,11 @@ namespace dmr
         class HOST_SW_API DataBlock {
         public:
             /**
+             * @brief Initializes a copy instance of the DataBlock class.
+             * @param data Instance of DataBlock class to copy from.
+             */
+            DataBlock(const DataBlock& data);
+            /**
              * @brief Initializes a new instance of the DataBlock class.
              */
             DataBlock();
@@ -117,6 +122,11 @@ namespace dmr
             defines::DPF::E m_DPF;
 
             uint8_t* m_data;
+
+            /**
+             * @brief Internal helper to copy the class.
+             */
+            void copy(const DataBlock& data);
         };
     } // namespace data
 } // namespace dmr

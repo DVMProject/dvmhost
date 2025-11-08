@@ -25,6 +25,13 @@ using namespace p25::data;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
+/* Initializes a copy instance of the DataBlock class. */
+
+DataBlock::DataBlock(const DataBlock& data) : DataBlock()
+{
+    copy(data);
+}
+
 /* Initializes a new instance of the DataBlock class. */
 
 DataBlock::DataBlock() :
@@ -42,8 +49,10 @@ DataBlock::DataBlock() :
 
 DataBlock::~DataBlock()
 {
-    if (m_data != nullptr)
+    if (m_data != nullptr) {
         delete[] m_data;
+        m_data = nullptr;
+    }
 }
 
 /* Decodes P25 PDU data block. */
@@ -106,7 +115,8 @@ bool DataBlock::decode(const uint8_t* data, const DataHeader& header, bool noTre
             // compute CRC-9 for the packet
             uint16_t calculated = edac::CRC::createCRC9(crcBuffer, 135U);
             if ((crc ^ calculated) != 0) {
-                LogWarning(LOG_P25, "PDU, fmt = $%02X, invalid crc = $%04X != $%04X (computed)", m_fmt, crc, calculated);
+                LogError(LOG_P25, "PDU, fmt = $%02X, invalid crc = $%04X != $%04X (computed)", m_fmt, crc, calculated);
+                return false;
             }
 
 #if DEBUG_P25_PDU_DATA
@@ -272,5 +282,24 @@ uint32_t DataBlock::getData(uint8_t* buffer) const
     else {
         LogError(LOG_P25, "unknown FMT value in PDU, fmt = $%02X", m_fmt);
         return 0U;
+    }
+}
+
+// ---------------------------------------------------------------------------
+//  Private Class Members
+// ---------------------------------------------------------------------------
+
+/* Internal helper to copy the the class. */
+
+void DataBlock::copy(const DataBlock& data)
+{
+    m_serialNo = data.m_serialNo;
+    m_lastBlock = data.m_lastBlock;
+
+    m_fmt = data.m_fmt;
+    m_headerSap = data.m_headerSap;
+
+    if (m_data != nullptr && data.m_data != nullptr) {
+        ::memcpy(m_data, data.m_data, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
     }
 }

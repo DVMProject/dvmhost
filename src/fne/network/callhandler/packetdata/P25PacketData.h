@@ -21,8 +21,9 @@
 #include "common/concurrent/deque.h"
 #include "common/concurrent/unordered_map.h"
 #include "common/p25/P25Defines.h"
-#include "common/p25/data/DataBlock.h"
+#include "common/p25/data/Assembler.h"
 #include "common/p25/data/DataHeader.h"
+#include "common/p25/data/DataBlock.h"
 #include "network/FNENetwork.h"
 #include "network/PeerNetwork.h"
 #include "network/callhandler/TagP25Data.h"
@@ -104,9 +105,30 @@ namespace network
                  */
                 void clock(uint32_t ms);
 
+                /**
+                 * @brief Helper to cleanup any call's left in a dangling state without any further updates.
+                 */
+                void cleanupStale();
+
             private:
                 FNENetwork* m_network;
                 TagP25Data* m_tag;
+
+                p25::data::Assembler* m_assembler;
+
+                /**
+                 * @brief Represents the data required for a PDU assembler custom writer context.
+                 * @ingroup fne_network
+                 */
+                struct UserContext {
+                    void* obj;                      //!< Instance of the P25PacketData class.
+                    uint32_t peerId;                //!< Peer ID for this request.
+                    uint32_t srcPeerId;             //!< Source Peer ID for this request.
+                    network::PeerNetwork* peerNet;  //!< Instance of the peer network for an upstream peer.
+                    p25::data::DataHeader* header;  //!< PDU data header.
+                    uint16_t pktSeq;                //!< Packet sequence.
+                    uint32_t streamId;              //!< Stream ID.
+                };
 
                 /**
                  * @brief Represents a queued data frame from the VTUN.
@@ -132,19 +154,15 @@ namespace network
                 class RxStatus {
                 public:
                     system_clock::hrc::hrc_t callStartTime;
+                    system_clock::hrc::hrc_t lastPacket;
                     uint32_t llId;
                     uint32_t streamId;
                     uint32_t peerId;
 
-                    p25::data::DataBlock* blockData;
-                    p25::data::DataHeader header;
+                    p25::data::Assembler assembler;
                     bool hasRxHeader;
-                    bool extendedAddress;
-                    bool auxiliaryES;
-                    uint32_t dataOffset;
-                    uint8_t dataBlockCnt;
-                    uint8_t* netPDU;
-                    uint32_t netPDUCount;
+
+                    bool callBusy;
 
                     uint8_t* pduUserData;
                     uint32_t pduUserDataLength;
@@ -156,23 +174,12 @@ namespace network
                         llId(0U),
                         streamId(0U),
                         peerId(0U),
-                        blockData(nullptr),
-                        header(),
+                        assembler(),
                         hasRxHeader(false),
-                        extendedAddress(false),
-                        auxiliaryES(false),
-                        dataOffset(0U),
-                        dataBlockCnt(0U),
-                        netPDU(nullptr),
-                        netPDUCount(0U),
+                        callBusy(false),
                         pduUserData(nullptr),
                         pduUserDataLength(0U)
                     {
-                        blockData = new p25::data::DataBlock[P25DEF::P25_MAX_PDU_BLOCKS];
-
-                        netPDU = new uint8_t[P25DEF::P25_PDU_FRAME_LENGTH_BYTES + 2U];
-                        ::memset(netPDU, 0x00U, P25DEF::P25_PDU_FRAME_LENGTH_BYTES + 2U);
-
                         pduUserData = new uint8_t[P25DEF::P25_MAX_PDU_BLOCKS * P25DEF::P25_PDU_CONFIRMED_LENGTH_BYTES + 2U];
                         ::memset(pduUserData, 0x00U, P25DEF::P25_MAX_PDU_BLOCKS * P25DEF::P25_PDU_CONFIRMED_LENGTH_BYTES + 2U);
                     }
@@ -181,10 +188,6 @@ namespace network
                      */
                     ~RxStatus()
                     {
-                        if (blockData != nullptr)
-                            delete[] blockData;
-                        if (netPDU != nullptr)
-                            delete[] netPDU;
                         if (pduUserData != nullptr)
                             delete[] pduUserData;
                     }

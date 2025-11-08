@@ -25,6 +25,13 @@ using namespace dmr::data;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
+/* Initializes a copy instance of the DataBlock class. */
+
+DataBlock::DataBlock(const DataBlock& data) : DataBlock()
+{
+    copy(data);
+}
+
 /* Initializes a new instance of the DataBlock class. */
 
 DataBlock::DataBlock() :
@@ -43,7 +50,10 @@ DataBlock::DataBlock() :
 
 DataBlock::~DataBlock()
 {
-    delete[] m_data;
+    if (m_data != nullptr) {
+        delete[] m_data;
+        m_data = nullptr;
+    }
 }
 
 /* Decodes DMR PDU data block. */
@@ -437,5 +447,24 @@ uint32_t DataBlock::getData(uint8_t* buffer) const
             LogError(LOG_DMR, "unknown dataType value in PDU, dataType = $%02X", m_dataType);
             return 0U;
         }
+    }
+}
+
+// ---------------------------------------------------------------------------
+//  Private Class Members
+// ---------------------------------------------------------------------------
+
+/* Internal helper to copy the the class. */
+
+void DataBlock::copy(const DataBlock& data)
+{
+    m_serialNo = data.m_serialNo;
+    m_lastBlock = data.m_lastBlock;
+
+    m_dataType = data.m_dataType;
+    m_DPF = data.m_DPF;
+
+    if (m_data != nullptr && data.m_data != nullptr) {
+        ::memcpy(m_data, data.m_data, DMR_PDU_UNCODED_LENGTH_BYTES);
     }
 }

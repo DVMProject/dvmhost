@@ -109,7 +109,38 @@ bool DMRPacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
         }
 
         RxStatus* status = m_status[peerId];
-        status->streamId = streamId;
+        if ((status->streamId != 0U && streamId != status->streamId) || status->callBusy) {
+            if (m_network->m_callCollisionTimeout > 0U) {
+                uint64_t lastPktDuration = hrc::diff(hrc::now(), status->lastPacket);
+                if ((lastPktDuration / 1000) > m_network->m_callCollisionTimeout) {
+                    LogWarning((fromUpstream) ? LOG_PEER : LOG_MASTER, "DMR, Data Call Collision, lasted more then %us with no further updates, resetting call source", m_network->m_callCollisionTimeout);
+
+                    m_status.lock(false);
+                    status->streamId = streamId;
+                    status->callBusy = false;
+                    m_status.unlock();
+                }
+                else {
+                    LogWarning((fromUpstream) ? LOG_PEER : LOG_MASTER, "DMR, Data Call Collision, peer = %u, slot = %u, streamId = %u, rxPeer = %u, rxStreamId = %u, fromUpstream = %u",
+                        peerId, slotNo, streamId, status->peerId, status->streamId, fromUpstream);
+                    return false;
+                }
+            } else {
+                m_status.lock(false);
+                status->streamId = streamId;
+                m_status.unlock();
+            }
+        }
+
+        if (status->callBusy) {
+            LogWarning((fromUpstream) ? LOG_PEER : LOG_MASTER, "DMR, Data Call Lockout, cannot process data packets while data call in progress, peer = %u, slot = %u, streamId = %u, fromUpstream = %u",
+                peerId, slotNo, streamId, fromUpstream);
+            return false;
+        }
+
+        m_status.lock(false);
+        status->lastPacket = hrc::now();
+        m_status.unlock();
 
         if (dataType == DataType::DATA_HEADER) {
             bool ret = status->header.decode(frame);
@@ -117,8 +148,7 @@ bool DMRPacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
                 LogError(LOG_DMR, "DMR Slot %u, DataType::DATA_HEADER, unable to decode the network data header", status->slotNo);
                 Utils::dump(1U, "DMR, Unfixable PDU Data", frame, DMR_FRAME_LENGTH_BYTES);
 
-                delete status;
-                m_status.erase(peerId);
+                status->streamId = 0U;
                 return false;
             }
 
@@ -137,6 +167,7 @@ bool DMRPacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
             // make sure we don't get a PDU with more blocks then we support
             if (status->header.getBlocksToFollow() >= MAX_PDU_COUNT) {
                 LogError(LOG_DMR, DMR_DT_DATA_HEADER ", too many PDU blocks to process, %u > %u", status->header.getBlocksToFollow(), MAX_PDU_COUNT);
+                status->streamId = 0U;
                 return false;
             }
 
@@ -146,8 +177,7 @@ bool DMRPacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
 
             // a PDU header only with no blocks to follow is usually a response header
             if (status->header.getBlocksToFollow() == 0U) {
-                delete status;
-                m_status.erase(peerId);
+                status->streamId = 0U;
                 return true;
             }
 
@@ -194,11 +224,14 @@ bool DMRPacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
                             .requestAsync(m_network->m_influxServer);
                     }
 
-                    delete status;
                     m_status.erase(peerId);
+                    delete status;
+                    status = nullptr;
                     return false;
                 }
             }
+
+            status->callBusy = true;
 
             dispatch(peerId, dmrData, data, len);
 
@@ -224,12 +257,47 @@ bool DMRPacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
                     .requestAsync(m_network->m_influxServer);
             }
 
-            delete status;
             m_status.erase(peerId);
+            delete status;
+            status = nullptr;
+        } else {
+            status->callBusy = false;
         }
     }
 
     return true;
+}
+
+/* Helper to cleanup any call's left in a dangling state without any further updates. */
+
+void DMRPacketData::cleanupStale()
+{
+    // check to see if any peers have been quiet (no ping) longer than allowed
+    std::vector<uint32_t> peersToRemove = std::vector<uint32_t>();
+    m_status.lock(false);
+    for (auto peerStatus : m_status) {
+        uint32_t id = peerStatus.first;
+        RxStatus* status = peerStatus.second;
+        if (status != nullptr) {
+            uint64_t lastPktDuration = hrc::diff(hrc::now(), status->lastPacket);
+            if ((lastPktDuration / 1000) > 10U) {
+                LogWarning(LOG_DMR, "DMR, Data Call Timeout, lasted more then %us with no further updates", 10U);
+                status->callBusy = true; // force flag the call busy
+                peersToRemove.push_back(id);
+            }
+        }
+    }
+    m_status.unlock();
+
+    // remove any peers
+    for (uint32_t peerId : peersToRemove) {
+        RxStatus* status = m_status[peerId];
+        if (status != nullptr) {
+            m_status.erase(peerId);
+            delete status;
+            status = nullptr;
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------

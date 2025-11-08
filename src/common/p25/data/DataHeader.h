@@ -40,6 +40,11 @@ namespace p25
         class HOST_SW_API DataHeader {
         public:
             /**
+             * @brief Initializes a copy instance of the DataHeader class.
+             * @param data Instance of DataHeader class to copy from.
+             */
+            DataHeader(const DataHeader& data);
+            /**
              * @brief Initializes a new instance of the DataHeader class.
              */
             DataHeader();
@@ -65,30 +70,26 @@ namespace p25
             /**
              * @brief Decodes P25 PDU extended addressing header.
              * @param[in] data Buffer containing a PDU data header to decode.
-             * @param noTrellis Flag indicating not to perform Trellis encoding.
              * @returns bool True, if PDU data header decoded, otherwise false.
              */
-            bool decodeExtAddr(const uint8_t* data, bool noTrellis = false);
+            bool decodeExtAddr(const uint8_t* data);
             /**
              * @brief Encodes P25 PDU extended addressing header.
              * @param[out] data Buffer to encode a PDU data header.
-             * @param noTrellis Flag indicating not to perform Trellis encoding.
              */
-            void encodeExtAddr(uint8_t* data, bool noTrellis = false);
+            void encodeExtAddr(uint8_t* data);
 
             /**
              * @brief Decodes P25 PDU auxiliary ES header.
              * @param[in] data Buffer containing a PDU data header to decode.
-             * @param noTrellis Flag indicating not to perform Trellis encoding.
              * @returns bool True, if PDU data header decoded, otherwise false.
              */
-            bool decodeAuxES(const uint8_t* data, bool noTrellis = false);
+            bool decodeAuxES(const uint8_t* data);
             /**
              * @brief Encodes P25 PDU auxiliary ES header.
-             * @param noTrellis Flag indicating not to perform Trellis encoding.
              * @param[out] data Buffer to encode a PDU data header.
              */
-            void encodeAuxES(uint8_t* data, bool noTrellis = false);
+            void encodeAuxES(uint8_t* data);
 
             /**
              * @brief Helper to reset data values to defaults.
@@ -281,6 +282,11 @@ namespace p25
             uint8_t* m_mi;
 
             static bool s_warnCRC;
+
+            /**
+             * @brief Internal helper to copy the class.
+             */
+            void copy(const DataHeader& data);
         };
     } // namespace data
 } // namespace p25
