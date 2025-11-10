@@ -318,10 +318,50 @@ void NetRPC::close()
     m_socket->close();
 }
 
+/* Helper to register an RPC handler. */
+
+bool NetRPC::registerHandler(uint16_t func, RPCType handler)
+{
+    // 32767 is the maximum possible function
+    if (func > RPC_MAX_FUNC)
+        return false;
+
+    auto it = std::find_if(m_handlers.begin(), m_handlers.end(), [&](RPCHandlerMapPair x) { return x.first == func; });
+    if (it != m_handlers.end()) {
+        LogError(LOG_HOST, "NetRPC::registerHandler() can't register RPC $%04X already registered. BUGBUG.", func);
+        return false; // handler is already registered
+    }
+
+    if (m_debug)
+        LogDebugEx(LOG_HOST, "NetRPC::registerHandler()", "registering RPC $%04X", func);
+
+    m_handlers[func] = handler;
+    return true;
+}
+
+/* Helper to unregister an RPC handler. */
+
+bool NetRPC::unregisterHandler(uint16_t func)
+{
+    // 32767 is the maximum possible function
+    if (func > RPC_MAX_FUNC)
+        return false;
+
+    auto it = std::find_if(m_handlers.begin(), m_handlers.end(), [&](RPCHandlerMapPair x) { return x.first == func; });
+    if (it != m_handlers.end()) {
+        if (m_debug)
+            LogDebugEx(LOG_HOST, "NetRPC::registerHandler()", "unregistering RPC $%04X", func);
+
+        m_handlers.erase(func);
+        return true;
+    }
+
+    return false;
+}
+
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------
-
 
 /* Writes an RPC reply to the network. */
 

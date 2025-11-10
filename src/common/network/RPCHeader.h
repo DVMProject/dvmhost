@@ -24,6 +24,7 @@
 
 #define RPC_HEADER_LENGTH_BYTES 8
 #define RPC_REPLY_FUNC 0x8000U
+#define RPC_MAX_FUNC 0x7FFFU
 
 namespace network
 {
