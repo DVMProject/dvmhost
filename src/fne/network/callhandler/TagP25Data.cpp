@@ -181,6 +181,39 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
             return false;
         }
 
+        // special case: if we've received a TSDU and its an LC_CALL_TERM; lets validate the source peer ID,
+        //  LC_CALL_TERMs should only be sourced from the peer that initiated the call; other peers should not be
+        //  transmitting LC_CALL_TERMs for the call
+        if (duid == DUID::TSDU && tsbk->getLCO() == LCO::CALL_TERM) {
+            if (dstId == 0U) {
+                LogWarning(LOG_NET, "P25, invalid TSDU, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, fromUpstream = %u", peerId, ssrc, srcId, dstId, streamId, fromUpstream);
+                return false;
+            }
+
+            RxStatus status = m_status[dstId];
+
+            auto it = std::find_if(m_status.begin(), m_status.end(), [&](StatusMapPair& x) {
+                if (x.second.dstId == dstId) {
+                    if (x.second.activeCall)
+                        return true;
+                }
+                return false;
+            });
+            if (it != m_status.end()) {
+                if (status.peerId != peerId) {
+                    LogWarning((fromUpstream) ? LOG_PEER : LOG_MASTER, "P25, Illegal Call Termination, peer = %u, ssrc = %u, sysId = $%03X, netId = $%05X, srcId = %u, dstId = %u, streamId = %u, rxPeer = %u, rxSrcId = %u, rxDstId = %u, rxStreamId = %u, fromUpstream = %u",
+                        peerId, ssrc, sysId, netId, srcId, dstId, streamId, status.peerId, status.srcId, status.dstId, status.streamId, fromUpstream);
+                    return false;
+                } else {
+                    #define REQ_CALL_END_LOG "P25, Requested Call End, peer = %u, ssrc = %u, sysId = $%03X, netId = $%05X, srcId = %u, dstId = %u, streamId = %u, fromUpstream = %u", peerId, ssrc, sysId, netId, srcId, dstId, streamId, fromUpstream
+                    if (m_network->m_logUpstreamCallStartEnd && fromUpstream)
+                        LogInfoEx(LOG_PEER, REQ_CALL_END_LOG);
+                    else if (!fromUpstream)
+                        LogInfoEx(LOG_MASTER, REQ_CALL_END_LOG);
+                }
+            }
+        }
+
         // specifically only check the following logic for end of call or voice frames
         if (duid != DUID::TSDU && duid != DUID::PDU) {
             // is this the end of the call stream?
