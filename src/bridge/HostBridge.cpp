@@ -64,6 +64,7 @@ const int NUMBER_OF_BUFFERS = 32;
 #define LOCAL_CALL "Local Traffic"
 #define UDP_CALL "UDP Traffic"
 
+#define TEK_DES "des"
 #define TEK_AES "aes"
 #define TEK_ARC4 "arc4"
 
@@ -1068,6 +1069,8 @@ bool HostBridge::createNetwork()
             m_tekAlgoId = P25DEF::ALGO_AES_256;
         else if (tekAlgo == TEK_ARC4)
             m_tekAlgoId = P25DEF::ALGO_ARC4;
+        else if (tekAlgo == TEK_DES)
+            m_tekAlgoId = P25DEF::ALGO_DES;
         else {
             ::LogError(LOG_HOST, "Invalid TEK algorithm specified, must be \"aes\" or \"adp\".");
             m_tekAlgoId = P25DEF::ALGO_UNENCRYPT;
@@ -2238,6 +2241,9 @@ void HostBridge::decodeP25AudioFrame(uint8_t* ldu, uint32_t srcId, uint32_t dstI
             case P25DEF::ALGO_ARC4:
                 m_p25Crypto->cryptARC4_IMBE(imbe, (p25N == 1U) ? DUID::LDU1 : DUID::LDU2);
                 break;
+            case P25DEF::ALGO_DES:
+                m_p25Crypto->cryptDES_IMBE(imbe, (p25N == 1U) ? DUID::LDU1 : DUID::LDU2);
+                break;
             default:
                 LogError(LOG_HOST, "unsupported TEK algorithm, tekAlgoId = $%02X", m_tekAlgoId);
                 break;
@@ -2422,6 +2428,9 @@ void HostBridge::encodeP25AudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32_
             break;
         case P25DEF::ALGO_ARC4:
             m_p25Crypto->cryptARC4_IMBE(imbe, (m_p25N < 9U) ? DUID::LDU1 : DUID::LDU2);
+            break;
+        case P25DEF::ALGO_DES:
+            m_p25Crypto->cryptDES_IMBE(imbe, (m_p25N < 9U) ? DUID::LDU1 : DUID::LDU2);
             break;
         default:
             LogError(LOG_HOST, "unsupported TEK algorithm, tekAlgoId = $%02X", m_tekAlgoId);

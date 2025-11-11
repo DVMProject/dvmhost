@@ -99,8 +99,10 @@ private:
     uint64_t m_rxStartTime;
     uint32_t m_rxStreamId;
 
+    bool m_tekSrcEnable;
     uint8_t m_tekSrcAlgoId;
     uint16_t m_tekSrcKeyId;
+    bool m_tekDstEnable;
     uint8_t m_tekDstAlgoId;
     uint16_t m_tekDstKeyId;
     bool m_requestedSrcTek;
