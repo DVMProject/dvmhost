@@ -2868,8 +2868,8 @@ void ModemV24::convertFromAirV24(uint8_t* data, uint32_t length)
                     queueP25Frame(endBuf, DFSI_MOT_START_LEN, STT_NON_IMBE_NO_JITTER);
                 }
                 else {
-                    int32_t remainderBlocks = (blocksToFollow - 3U) % DFSI_PDU_BLOCK_CNT;
-                    int32_t baseBlockCnt = (blocksToFollow - 3U) / DFSI_PDU_BLOCK_CNT;
+                    uint32_t remainderBlocks = (blocksToFollow - 3U) % DFSI_PDU_BLOCK_CNT;
+                    uint32_t baseBlockCnt = (blocksToFollow - 3U) / DFSI_PDU_BLOCK_CNT;
                     uint32_t currentBlock = 0U;
 
                     DECLARE_UINT8_ARRAY(pduBuf, ((DFSI_PDU_BLOCK_CNT + 1U) * ((dataHeader.getFormat() == PDUFormatType::CONFIRMED) ? P25_PDU_CONFIRMED_LENGTH_BYTES : P25_PDU_UNCONFIRMED_LENGTH_BYTES)) + 1U);
@@ -2882,7 +2882,7 @@ void ModemV24::convertFromAirV24(uint8_t* data, uint32_t length)
 
                     // assemble the first frame
                     pduBuf[0U] = (dataHeader.getFormat() == PDUFormatType::CONFIRMED) ? DFSIFrameType::MOT_PDU_CONF_HEADER : DFSIFrameType::MOT_PDU_UNCONF_HEADER;
-                    
+
                     dataHeader.encode(pduBuf + 1U, true);
                     for (uint32_t i = 0U; i < DFSI_PDU_BLOCK_CNT - 1U; i++) {
                         dataBlocks[currentBlock].encode(pduBuf + 1U + ((i + 1U) * ((dataHeader.getFormat() == PDUFormatType::CONFIRMED) ? P25_PDU_CONFIRMED_LENGTH_BYTES : P25_PDU_UNCONFIRMED_LENGTH_BYTES)), true);
@@ -2905,7 +2905,7 @@ void ModemV24::convertFromAirV24(uint8_t* data, uint32_t length)
                     queueP25Frame(pduBuf, pduLen, STT_NON_IMBE_NO_JITTER);
 
                     // iterate through the count of full 4 block buffers and send
-                    for (int32_t i = 1; i < baseBlockCnt; i++) {
+                    for (uint32_t i = 1U; i < baseBlockCnt; i++) {
                         // reset buffer and set data
                         ::memset(pduBuf, 0x00U, pduLen);
                         for (uint32_t i = 0U; i < DFSI_PDU_BLOCK_CNT - 1U; i++) {
