@@ -9,16 +9,16 @@
  */
 #include "Defines.h"
 #include "common/edac/SHA256.h"
-#include "common/network/json/json.h"
-#include "common/network/rest/http/HTTPClient.h"
-#include "common/network/rest/http/SecureHTTPClient.h"
-#include "common/network/rest/RequestDispatcher.h"
+#include "common/json/json.h"
+#include "common/restapi/http/HTTPClient.h"
+#include "common/restapi/http/SecureHTTPClient.h"
+#include "common/restapi/RequestDispatcher.h"
 #include "common/Thread.h"
 #include "common/Log.h"
 #include "remote/RESTClient.h"
 
-using namespace network;
-using namespace network::rest::http;
+using namespace restapi;
+using namespace restapi::http;
 
 #include <cstdio>
 #include <cassert>
@@ -149,7 +149,7 @@ int RESTClient::send(const std::string& address, uint32_t port, const std::strin
     s_enableSSL = enableSSL;
     s_debug = debug;
 
-    typedef network::rest::BasicRequestDispatcher<network::rest::http::HTTPPayload, network::rest::http::HTTPPayload> RESTDispatcherType;
+    typedef restapi::BasicRequestDispatcher<restapi::http::HTTPPayload, restapi::http::HTTPPayload> RESTDispatcherType;
     RESTDispatcherType m_dispatcher(RESTClient::responseHandler);
     HTTPClient<RESTDispatcherType>* client = nullptr;
 #if defined(ENABLE_SSL)

@@ -16,7 +16,7 @@
 
 #include "common/lookups/AffiliationLookup.h"
 #include "common/Log.h"
-#include "fne/network/RESTDefines.h"
+#include "fne/restapi/RESTDefines.h"
 #include "remote/RESTClient.h"
 
 #include "FDblDialog.h"
@@ -102,7 +102,7 @@ public:
     
         int ret = RESTClient::send(fneRESTAddress, fneRESTPort, fnePassword,
             HTTP_GET, FNE_GET_PEER_QUERY, req, rsp, fneSSL, g_debug);
-        if (ret != network::rest::http::HTTPPayload::StatusType::OK) {
+        if (ret != restapi::http::HTTPPayload::StatusType::OK) {
             ::LogError(LOG_HOST, "[AFFVIEW] failed to query peers for %s:%u", fneRESTAddress.c_str(), fneRESTPort);
         }
         else {

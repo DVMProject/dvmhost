@@ -10,20 +10,19 @@
  */
 #include "fne/Defines.h"
 #include "common/edac/SHA256.h"
+#include "common/json/json.h"
 #include "common/lookups/AffiliationLookup.h"
-#include "common/network/json/json.h"
 #include "common/Log.h"
 #include "common/Utils.h"
 #include "fne/network/callhandler/TagDMRData.h"
 #include "fne/network/callhandler/TagP25Data.h"
-#include "fne/network/RESTAPI.h"
 #include "fne/network/SpanningTree.h"
+#include "fne/restapi/RESTAPI.h"
 #include "HostFNE.h"
 
 using namespace network;
-using namespace network::rest;
-using namespace network::rest::http;
-
+using namespace restapi;
+using namespace restapi::http;
 using namespace lookups;
 
 #include <cstdio>

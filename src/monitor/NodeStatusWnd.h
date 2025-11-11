@@ -15,7 +15,7 @@
 #define __NODE_STATUS_WND_H__
 
 #include "common/lookups/AffiliationLookup.h"
-#include "host/network/RESTDefines.h"
+#include "host/restapi/RESTDefines.h"
 #include "host/modem/Modem.h"
 #include "remote/RESTClient.h"
 
@@ -376,7 +376,7 @@ private:
                 
                     int ret = RESTClient::send(m_chData.address(), m_chData.port(), m_chData.password(),
                         HTTP_GET, GET_STATUS, req, rsp, m_chData.ssl(), g_debug);
-                    if (ret != network::rest::http::HTTPPayload::StatusType::OK) {
+                    if (ret != restapi::http::HTTPPayload::StatusType::OK) {
                         ::LogError(LOG_HOST, "failed to get status for %s:%u, chNo = %u", m_chData.address().c_str(), m_chData.port(), m_channelNo);
                         ++m_failCnt;
                         if (m_failCnt > NODE_UPDATE_FAIL_CNT) {
@@ -506,7 +506,7 @@ private:
                     json::object req = json::object();
                     int ret = RESTClient::send(m_chData.address(), m_chData.port(), m_chData.password(),
                         HTTP_GET, GET_STATUS, req, m_chData.ssl(), g_debug);
-                    if (ret == network::rest::http::HTTPPayload::StatusType::OK) {
+                    if (ret == restapi::http::HTTPPayload::StatusType::OK) {
                         m_failed = false;
                         m_failCnt = 0U;
                         m_tbText = std::string("UNKNOWN");

@@ -30,7 +30,7 @@
 #include "common/RingBuffer.h"
 #include "common/Timer.h"
 #include "modem/port/IModemPort.h"
-#include "network/RESTAPI.h"
+#include "restapi/RESTAPI.h"
 
 #include <string>
 #include <functional>

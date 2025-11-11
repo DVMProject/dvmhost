@@ -8,9 +8,9 @@
  *
  */
 #include "sysview/Defines.h"
-#include "common/network/json/json.h"
 #include "common/p25/dfsi/DFSIDefines.h"
 #include "common/p25/dfsi/LC.h"
+#include "common/json/json.h"
 #include "common/zlib/zlib.h"
 #include "common/Utils.h"
 #include "network/PeerNetwork.h"

@@ -9,11 +9,11 @@
  *
  */
 #include "Defines.h"
-#include "network/rest/http/HTTPLexer.h"
-#include "network/rest/http/HTTPPayload.h"
+#include "restapi/http/HTTPLexer.h"
+#include "restapi/http/HTTPPayload.h"
 #include "Log.h"
 
-using namespace network::rest::http;
+using namespace restapi::http;
 
 #include <cctype>
 

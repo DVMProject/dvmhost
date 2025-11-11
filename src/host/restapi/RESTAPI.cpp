@@ -10,20 +10,20 @@
 #include "Defines.h"
 #include "common/edac/SHA256.h"
 #include "common/lookups/AffiliationLookup.h"
-#include "common/network/json/json.h"
+#include "common/json/json.h"
 #include "common/Log.h"
 #include "common/Utils.h"
 #include "dmr/Control.h"
 #include "p25/Control.h"
 #include "nxdn/Control.h"
 #include "modem/Modem.h"
-#include "network/RESTAPI.h"
+#include "restapi/RESTAPI.h"
 #include "Host.h"
 #include "HostMain.h"
 
 using namespace network;
-using namespace network::rest;
-using namespace network::rest::http;
+using namespace restapi;
+using namespace restapi::http;
 using namespace modem;
 
 #include <cstdio>

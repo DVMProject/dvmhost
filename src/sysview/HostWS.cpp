@@ -14,7 +14,7 @@
 #include "common/StopWatch.h"
 #include "common/Thread.h"
 #include "common/Utils.h"
-#include "fne/network/RESTDefines.h"
+#include "fne/restapi/RESTDefines.h"
 #include "remote/RESTClient.h"
 #include "network/PeerNetwork.h"
 #include "HostWS.h"
@@ -327,7 +327,7 @@ int HostWS::run()
             
                 int ret = RESTClient::send(fneRESTAddress, fneRESTPort, fnePassword,
                     HTTP_GET, FNE_GET_PEER_QUERY, req, rsp, fneSSL, g_debug);
-                if (ret != network::rest::http::HTTPPayload::StatusType::OK) {
+                if (ret != restapi::http::HTTPPayload::StatusType::OK) {
                     ::LogError(LOG_HOST, "[AFFVIEW] failed to query peers for %s:%u", fneRESTAddress.c_str(), fneRESTPort);
                 }
                 else {
@@ -354,7 +354,7 @@ int HostWS::run()
             
                 int ret = RESTClient::send(fneRESTAddress, fneRESTPort, fnePassword,
                     HTTP_GET, FNE_GET_AFF_LIST, req, rsp, fneSSL, g_debug);
-                if (ret != network::rest::http::HTTPPayload::StatusType::OK) {
+                if (ret != restapi::http::HTTPPayload::StatusType::OK) {
                     ::LogError(LOG_HOST, "[AFFVIEW] failed to query peers for %s:%u", fneRESTAddress.c_str(), fneRESTPort);
                 }
                 else {

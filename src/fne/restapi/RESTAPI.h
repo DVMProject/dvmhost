@@ -17,14 +17,14 @@
 #define __REST_API_H__
 
 #include "fne/Defines.h"
-#include "common/network/rest/RequestDispatcher.h"
-#include "common/network/rest/http/HTTPServer.h"
-#include "common/network/rest/http/SecureHTTPServer.h"
+#include "common/restapi/RequestDispatcher.h"
+#include "common/restapi/http/HTTPServer.h"
+#include "common/restapi/http/SecureHTTPServer.h"
 #include "common/lookups/AdjSiteMapLookup.h"
 #include "common/lookups/RadioIdLookup.h"
 #include "common/lookups/TalkgroupRulesLookup.h"
 #include "common/Thread.h"
-#include "fne/network/RESTDefines.h"
+#include "fne/restapi/RESTDefines.h"
 
 #include <vector>
 #include <string>
@@ -92,12 +92,12 @@ public:
     void close();
 
 private:
-    typedef network::rest::RequestDispatcher<network::rest::http::HTTPPayload, network::rest::http::HTTPPayload> RESTDispatcherType;
-    typedef network::rest::http::HTTPPayload HTTPPayload;
+    typedef restapi::RequestDispatcher<restapi::http::HTTPPayload, restapi::http::HTTPPayload> RESTDispatcherType;
+    typedef restapi::http::HTTPPayload HTTPPayload;
     RESTDispatcherType m_dispatcher;
-    network::rest::http::HTTPServer<RESTDispatcherType> m_restServer;
+    restapi::http::HTTPServer<RESTDispatcherType> m_restServer;
 #if defined(ENABLE_SSL)
-    network::rest::http::SecureHTTPServer<RESTDispatcherType> m_restSecureServer;
+    restapi::http::SecureHTTPServer<RESTDispatcherType> m_restSecureServer;
     bool m_enableSSL;
 #endif // ENABLE_SSL
 
@@ -148,7 +148,7 @@ private:
      * @param reply HTTP reply.
      * @param match HTTP request matcher.
      */
-    void restAPI_PutAuth(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    void restAPI_PutAuth(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
 
     /**
      * @brief REST API endpoint; implements get version request.
@@ -156,14 +156,14 @@ private:
      * @param reply HTTP reply.
      * @param match HTTP request matcher.
      */
-    void restAPI_GetVersion(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    void restAPI_GetVersion(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
     /**
      * @brief REST API endpoint; implements get status request.
      * @param request HTTP request.
      * @param reply HTTP reply.
      * @param match HTTP request matcher.
      */
-    void restAPI_GetStatus(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    void restAPI_GetStatus(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
     
     /**
      * @brief REST API endpoint; implements get peer query request.
@@ -171,28 +171,28 @@ private:
      * @param reply HTTP reply.
      * @param match HTTP request matcher.
      */
-    void restAPI_GetPeerQuery(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    void restAPI_GetPeerQuery(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
     /**
      * @brief REST API endpoint; implements get peer count request.
      * @param request HTTP request.
      * @param reply HTTP reply.
      * @param match HTTP request matcher.
      */
-    void restAPI_GetPeerCount(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    void restAPI_GetPeerCount(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
     /**
      * @brief REST API endpoint; implements get peer reset request.
      * @param request HTTP request.
      * @param reply HTTP reply.
      * @param match HTTP request matcher.
      */
-    void restAPI_PutPeerReset(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    void restAPI_PutPeerReset(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
     /**
      * @brief REST API endpoint; implements put reset upstream peer connection request.
      * @param request HTTP request.
      * @param reply HTTP reply.
      * @param match HTTP request matcher.
      */
-    void restAPI_PutPeerResetConn(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    void restAPI_PutPeerResetConn(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
 
     /**
      * @brief REST API endpoint; implements get radio ID query request.
@@ -200,28 +200,28 @@ private:
      * @param reply HTTP reply.
      * @param match HTTP request matcher.
      */
-    void restAPI_GetRIDQuery(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    void restAPI_GetRIDQuery(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
     /**
      * @brief REST API endpoint; implements put radio ID add request.
      * @param request HTTP request.
      * @param reply HTTP reply.
      * @param match HTTP request matcher.
      */
-    void restAPI_PutRIDAdd(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    void restAPI_PutRIDAdd(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
     /**
      * @brief REST API endpoint; implements put radio ID delete request.
      * @param request HTTP request.
      * @param reply HTTP reply.
      * @param match HTTP request matcher.
      */
-    void restAPI_PutRIDDelete(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    void restAPI_PutRIDDelete(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
     /**
      * @brief REST API endpoint; implements put radio ID commit request.
      * @param request HTTP request.
      * @param reply HTTP reply.
      * @param match HTTP request matcher.
      */
-    void restAPI_GetRIDCommit(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    void restAPI_GetRIDCommit(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
 
     /**
      * @brief REST API endpoint; implements get talkgroup ID query request.
@@ -229,28 +229,28 @@ private:
      * @param reply HTTP reply.
      * @param match HTTP request matcher.
      */
-    void restAPI_GetTGQuery(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    void restAPI_GetTGQuery(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
     /**
      * @brief REST API endpoint; implements put talkgroup ID add request.
      * @param request HTTP request.
      * @param reply HTTP reply.
      * @param match HTTP request matcher.
      */
-    void restAPI_PutTGAdd(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    void restAPI_PutTGAdd(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
     /**
      * @brief REST API endpoint; implements put talkgroup ID delete request.
      * @param request HTTP request.
      * @param reply HTTP reply.
      * @param match HTTP request matcher.
      */
-    void restAPI_PutTGDelete(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    void restAPI_PutTGDelete(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
     /**
      * @brief REST API endpoint; implements put talkgroup ID commit request.
      * @param request HTTP request.
      * @param reply HTTP reply.
      * @param match HTTP request matcher.
      */
-    void restAPI_GetTGCommit(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    void restAPI_GetTGCommit(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
 
     /**
      * @brief REST API endpoint; implements get peer list query request.
@@ -258,28 +258,28 @@ private:
      * @param reply HTTP reply.
      * @param match HTTP request matcher.
      */
-    void restAPI_GetPeerList(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    void restAPI_GetPeerList(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
     /**
      * @brief REST API endpoint; implements put peer add request.
      * @param request HTTP request.
      * @param reply HTTP reply.
      * @param match HTTP request matcher.
      */
-    void restAPI_PutPeerAdd(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    void restAPI_PutPeerAdd(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
     /**
      * @brief REST API endpoint; implements put peer delete request.
      * @param request HTTP request.
      * @param reply HTTP reply.
      * @param match HTTP request matcher.
      */
-    void restAPI_PutPeerDelete(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    void restAPI_PutPeerDelete(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
     /**
      * @brief REST API endpoint; implements put peer list commit request.
      * @param request HTTP request.
      * @param reply HTTP reply.
      * @param match HTTP request matcher.
      */
-    void restAPI_GetPeerCommit(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    void restAPI_GetPeerCommit(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
 
     /**
      * @brief REST API endpoint; implements get adjacent site map list query request.
@@ -287,28 +287,28 @@ private:
      * @param reply HTTP reply.
      * @param match HTTP request matcher.
      */
-    void restAPI_GetAdjMapList(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    void restAPI_GetAdjMapList(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
     /**
      * @brief REST API endpoint; implements put adjacent site map add request.
      * @param request HTTP request.
      * @param reply HTTP reply.
      * @param match HTTP request matcher.
      */
-    void restAPI_PutAdjMapAdd(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    void restAPI_PutAdjMapAdd(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
     /**
      * @brief REST API endpoint; implements put adjacent site map delete request.
      * @param request HTTP request.
      * @param reply HTTP reply.
      * @param match HTTP request matcher.
      */
-    void restAPI_PutAdjMapDelete(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    void restAPI_PutAdjMapDelete(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
     /**
      * @brief REST API endpoint; implements put adjacent site map commit request.
      * @param request HTTP request.
      * @param reply HTTP reply.
      * @param match HTTP request matcher.
      */
-    void restAPI_GetAdjMapCommit(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    void restAPI_GetAdjMapCommit(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
 
     /**
      * @brief 
@@ -316,7 +316,7 @@ private:
      * @param reply HTTP reply.
      * @param match HTTP request matcher.
      */
-    void restAPI_GetForceUpdate(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    void restAPI_GetForceUpdate(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
 
     /**
      * @brief REST API endpoint; implements get reload talkgroup ID list request.
@@ -324,14 +324,14 @@ private:
      * @param reply HTTP reply.
      * @param match HTTP request matcher.
      */
-    void restAPI_GetReloadTGs(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    void restAPI_GetReloadTGs(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
     /**
      * @brief REST API endpoint; implements get reload radio ID list request.
      * @param request HTTP request.
      * @param reply HTTP reply.
      * @param match HTTP request matcher.
      */
-    void restAPI_GetReloadRIDs(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    void restAPI_GetReloadRIDs(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
 
     /**
      * @brief REST API endpoint; implements get affiliation list request.
@@ -339,7 +339,7 @@ private:
      * @param reply HTTP reply.
      * @param match HTTP request matcher.
      */
-    void restAPI_GetAffList(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    void restAPI_GetAffList(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
 
     /**
      * @brief REST API endpoint; implements get spanning tree list request.
@@ -347,7 +347,7 @@ private:
      * @param reply HTTP reply.
      * @param match HTTP request matcher.
      */
-    void restAPI_GetSpanningTree(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    void restAPI_GetSpanningTree(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
 
     /*
     ** Digital Mobile Radio
@@ -359,7 +359,7 @@ private:
      * @param reply HTTP reply.
      * @param match HTTP request matcher.
      */
-    void restAPI_PutDMRRID(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    void restAPI_PutDMRRID(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
 
     /*
     ** Project 25
@@ -371,7 +371,7 @@ private:
      * @param reply HTTP reply.
      * @param match HTTP request matcher.
      */
-    void restAPI_PutP25RID(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    void restAPI_PutP25RID(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
 };
 
 #endif // __REST_API_H__

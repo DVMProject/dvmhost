@@ -8,8 +8,8 @@
  *
  */
 #include "remote/RESTClient.h"
-#include "host/network/RESTDefines.h"
-#include "fne/network/RESTDefines.h"
+#include "host/restapi/RESTDefines.h"
+#include "fne/restapi/RESTDefines.h"
 #include "common/Thread.h"
 #include "common/Log.h"
 

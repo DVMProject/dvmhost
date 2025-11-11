@@ -27,7 +27,7 @@
 #include "network/FNENetwork.h"
 #include "network/DiagNetwork.h"
 #include "network/PeerNetwork.h"
-#include "network/RESTAPI.h"
+#include "restapi/RESTAPI.h"
 #include "CryptoContainer.h"
 
 #include <string>

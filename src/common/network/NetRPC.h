@@ -21,9 +21,9 @@
 #endif // defined(_WIN32)
 
 #include "common/Defines.h"
+#include "common/json/json.h"
 #include "common/network/udp/Socket.h"
 #include "common/network/RawFrameQueue.h"
-#include "common/network/json/json.h"
 
 #include <string>
 #include <cstdint>

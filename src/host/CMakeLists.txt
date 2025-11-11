@@ -50,6 +50,8 @@ file(GLOB dvmhost_SRC
     "src/host/modem/port/specialized/*.cpp"
     "src/host/network/*.h"
     "src/host/network/*.cpp"
+    "src/host/restapi/*.h"
+    "src/host/restapi/*.cpp"
     "src/host/win32/*.h"
 )
 

@@ -17,13 +17,13 @@
 #define __REST_API_H__
 
 #include "Defines.h"
-#include "common/network/rest/RequestDispatcher.h"
-#include "common/network/rest/http/HTTPServer.h"
-#include "common/network/rest/http/SecureHTTPServer.h"
+#include "common/restapi/RequestDispatcher.h"
+#include "common/restapi/http/HTTPServer.h"
+#include "common/restapi/http/SecureHTTPServer.h"
 #include "common/lookups/RadioIdLookup.h"
 #include "common/lookups/TalkgroupRulesLookup.h"
 #include "common/Thread.h"
-#include "network/RESTDefines.h"
+#include "restapi/RESTDefines.h"
 
 #include <vector>
 #include <string>
@@ -92,12 +92,12 @@ public:
     void close();
 
 private:
-    typedef network::rest::RequestDispatcher<network::rest::http::HTTPPayload, network::rest::http::HTTPPayload> RESTDispatcherType;
-    typedef network::rest::http::HTTPPayload HTTPPayload;
+    typedef restapi::RequestDispatcher<restapi::http::HTTPPayload, restapi::http::HTTPPayload> RESTDispatcherType;
+    typedef restapi::http::HTTPPayload HTTPPayload;
     RESTDispatcherType m_dispatcher;
-    network::rest::http::HTTPServer<RESTDispatcherType> m_restServer;
+    restapi::http::HTTPServer<RESTDispatcherType> m_restServer;
 #if defined(ENABLE_SSL)
-    network::rest::http::SecureHTTPServer<RESTDispatcherType> m_restSecureServer;
+    restapi::http::SecureHTTPServer<RESTDispatcherType> m_restSecureServer;
     bool m_enableSSL;
 #endif // ENABLE_SSL
 
@@ -150,7 +150,7 @@ private:
      * @param reply HTTP reply.
      * @param match HTTP request matcher.
      */
-    void restAPI_PutAuth(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    void restAPI_PutAuth(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
 
     /**
      * @brief REST API endpoint; implements get version request.
@@ -158,21 +158,21 @@ private:
      * @param reply HTTP reply.
      * @param match HTTP request matcher.
      */
-    void restAPI_GetVersion(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    void restAPI_GetVersion(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
     /**
      * @brief REST API endpoint; implements get status request.
      * @param request HTTP request.
      * @param reply HTTP reply.
      * @param match HTTP request matcher.
      */
-    void restAPI_GetStatus(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    void restAPI_GetStatus(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
     /**
      * @brief REST API endpoint; implements get voice channels request.
      * @param request HTTP request.
      * @param reply HTTP reply.
      * @param match HTTP request matcher.
      */
-    void restAPI_GetVoiceCh(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    void restAPI_GetVoiceCh(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
 
     /**
      * @brief REST API endpoint; implements put/set modem mode request.
@@ -180,14 +180,14 @@ private:
      * @param reply HTTP reply.
      * @param match HTTP request matcher.
      */
-    void restAPI_PutModemMode(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    void restAPI_PutModemMode(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
     /**
      * @brief REST API endpoint; implements put/request modem kill request.
      * @param request HTTP request.
      * @param reply HTTP reply.
      * @param match HTTP request matcher.
      */
-    void restAPI_PutModemKill(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    void restAPI_PutModemKill(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
 
     /**
      * @brief REST API endpoint; implements set supervisory mode request.
@@ -195,35 +195,35 @@ private:
      * @param reply HTTP reply.
      * @param match HTTP request matcher.
      */
-    void restAPI_PutSetSupervisor(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    void restAPI_PutSetSupervisor(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
     /**
      * @brief REST API endpoint; implements permit TG request.
      * @param request HTTP request.
      * @param reply HTTP reply.
      * @param match HTTP request matcher.
      */
-    void restAPI_PutPermitTG(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    void restAPI_PutPermitTG(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
     /**
      * @brief REST API endpoint; implements grant TG request.
      * @param request HTTP request.
      * @param reply HTTP reply.
      * @param match HTTP request matcher.
      */
-    void restAPI_PutGrantTG(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    void restAPI_PutGrantTG(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
     /**
      * @brief REST API endpoint; implements release grants request.
      * @param request HTTP request.
      * @param reply HTTP reply.
      * @param match HTTP request matcher.
      */
-    void restAPI_GetReleaseGrants(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    void restAPI_GetReleaseGrants(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
     /**
      * @brief REST API endpoint; implements release affiliations request.
      * @param request HTTP request.
      * @param reply HTTP reply.
      * @param match HTTP request matcher.
      */
-    void restAPI_GetReleaseAffs(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    void restAPI_GetReleaseAffs(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
 
     /**
      * @brief REST API endpoint; implements get RID whitelist request.
@@ -231,14 +231,14 @@ private:
      * @param reply HTTP reply.
      * @param match HTTP request matcher.
      */
-    void restAPI_GetRIDWhitelist(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    void restAPI_GetRIDWhitelist(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
     /**
      * @brief REST API endpoint; implements get RID blacklist request.
      * @param request HTTP request.
      * @param reply HTTP reply.
      * @param match HTTP request matcher.
      */
-    void restAPI_GetRIDBlacklist(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    void restAPI_GetRIDBlacklist(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
 
     /*
     ** Digital Mobile Radio
@@ -250,49 +250,49 @@ private:
      * @param reply HTTP reply.
      * @param match HTTP request matcher.
      */
-    void restAPI_GetDMRBeacon(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    void restAPI_GetDMRBeacon(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
     /**
      * @brief REST API endpoint; implements get DMR debug state request.
      * @param request HTTP request.
      * @param reply HTTP reply.
      * @param match HTTP request matcher.
      */
-    void restAPI_GetDMRDebug(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    void restAPI_GetDMRDebug(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
     /**
      * @brief REST API endpoint; implements get DMR dump CSBK state request.
      * @param request HTTP request.
      * @param reply HTTP reply.
      * @param match HTTP request matcher.
      */
-    void restAPI_GetDMRDumpCSBK(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    void restAPI_GetDMRDumpCSBK(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
     /**
      * @brief REST API endpoint; implements DMR RID operations request.
      * @param request HTTP request.
      * @param reply HTTP reply.
      * @param match HTTP request matcher.
      */
-    void restAPI_PutDMRRID(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    void restAPI_PutDMRRID(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
     /**
      * @brief REST API endpoint; implements toggle DMR CC enable request.
      * @param request HTTP request.
      * @param reply HTTP reply.
      * @param match HTTP request matcher.
      */
-    void restAPI_GetDMRCCEnable(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    void restAPI_GetDMRCCEnable(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
     /**
      * @brief REST API endpoint; implements toggle DMR CC broadcast request.
      * @param request HTTP request.
      * @param reply HTTP reply.
      * @param match HTTP request matcher.
      */
-    void restAPI_GetDMRCCBroadcast(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    void restAPI_GetDMRCCBroadcast(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
     /**
      * @brief REST API endpoint; implements get DMR affiliations request.
      * @param request HTTP request.
      * @param reply HTTP reply.
      * @param match HTTP request matcher.
      */
-    void restAPI_GetDMRAffList(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    void restAPI_GetDMRAffList(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
 
     /*
     ** Project 25
@@ -304,56 +304,56 @@ private:
      * @param reply HTTP reply.
      * @param match HTTP request matcher.
      */
-    void restAPI_GetP25CC(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    void restAPI_GetP25CC(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
     /**
      * @brief REST API endpoint; implements P25 debug state request.
      * @param request HTTP request.
      * @param reply HTTP reply.
      * @param match HTTP request matcher.
      */
-    void restAPI_GetP25Debug(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    void restAPI_GetP25Debug(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
     /**
      * @brief REST API endpoint; implements P25 dump TSBK state request.
      * @param request HTTP request.
      * @param reply HTTP reply.
      * @param match HTTP request matcher.
      */
-    void restAPI_GetP25DumpTSBK(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    void restAPI_GetP25DumpTSBK(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
     /**
      * @brief REST API endpoint; implements P25 RID operation request.
      * @param request HTTP request.
      * @param reply HTTP reply.
      * @param match HTTP request matcher.
      */
-    void restAPI_PutP25RID(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    void restAPI_PutP25RID(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
     /**
      * @brief REST API endpoint; implements toggle P25 CC request.
      * @param request HTTP request.
      * @param reply HTTP reply.
      * @param match HTTP request matcher.
      */
-    void restAPI_GetP25CCEnable(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    void restAPI_GetP25CCEnable(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
     /**
      * @brief REST API endpoint; implements toggle P25 broadcast request.
      * @param request HTTP request.
      * @param reply HTTP reply.
      * @param match HTTP request matcher.
      */
-    void restAPI_GetP25CCBroadcast(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    void restAPI_GetP25CCBroadcast(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
     /**
      * @brief REST API endpoint; implements transmitting raw TSBK request.
      * @param request HTTP request.
      * @param reply HTTP reply.
      * @param match HTTP request matcher.
      */
-    void restAPI_PutP25RawTSBK(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    void restAPI_PutP25RawTSBK(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
     /**
      * @brief REST API endpoint; implements get P25 affiliations request.
      * @param request HTTP request.
      * @param reply HTTP reply.
      * @param match HTTP request matcher.
      */
-    void restAPI_GetP25AffList(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    void restAPI_GetP25AffList(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
 
     /*
     ** Next Generation Digital Narrowband
@@ -365,35 +365,35 @@ private:
      * @param reply HTTP reply.
      * @param match HTTP request matcher.
      */
-    void restAPI_GetNXDNCC(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    void restAPI_GetNXDNCC(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
     /**
      * @brief REST API endpoint; implements NXDN debug state request.
      * @param request HTTP request.
      * @param reply HTTP reply.
      * @param match HTTP request matcher.
      */
-    void restAPI_GetNXDNDebug(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    void restAPI_GetNXDNDebug(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
     /**
      * @brief REST API endpoint; implements NXDN dump RCCH state request.
      * @param request HTTP request.
      * @param reply HTTP reply.
      * @param match HTTP request matcher.
      */
-    void restAPI_GetNXDNDumpRCCH(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    void restAPI_GetNXDNDumpRCCH(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
     /**
      * @brief REST API endpoint; implements toggle NXDN CC request.
      * @param request HTTP request.
      * @param reply HTTP reply.
      * @param match HTTP request matcher.
      */
-    void restAPI_GetNXDNCCEnable(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    void restAPI_GetNXDNCCEnable(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
     /**
      * @brief REST API endpoint; implements get NXDN affiliations request.
      * @param request HTTP request.
      * @param reply HTTP reply.
      * @param match HTTP request matcher.
      */
-    void restAPI_GetNXDNAffList(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    void restAPI_GetNXDNAffList(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
 };
 
 #endif // __REST_API_H__

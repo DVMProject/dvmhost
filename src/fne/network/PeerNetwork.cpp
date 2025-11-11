@@ -8,7 +8,7 @@
  *
  */
 #include "fne/Defines.h"
-#include "common/network/json/json.h"
+#include "common/json/json.h"
 #include "common/zlib/Compression.h"
 #include "common/Log.h"
 #include "common/Utils.h"

@@ -11,9 +11,9 @@
 #include "common/dmr/data/EMB.h"
 #include "common/dmr/lc/FullLC.h"
 #include "common/dmr/SlotType.h"
-#include "common/network/json/json.h"
 #include "common/p25/dfsi/DFSIDefines.h"
 #include "common/p25/dfsi/LC.h"
+#include "common/json/json.h"
 #include "common/Utils.h"
 #include "network/PeerNetwork.h"
 

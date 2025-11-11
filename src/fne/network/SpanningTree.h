@@ -17,7 +17,7 @@
 #define __SPANNING_TREE_H__
 
 #include "fne/Defines.h"
-#include "common/network/json/json.h"
+#include "common/json/json.h"
 
 #include <string>
 #include <vector>

@@ -9,10 +9,10 @@
  *
  */
 #include "Defines.h"
-#include "network/rest/http/HTTPRequestHandler.h"
-#include "network/rest/http/HTTPPayload.h"
+#include "restapi/http/HTTPRequestHandler.h"
+#include "restapi/http/HTTPPayload.h"
 
-using namespace network::rest::http;
+using namespace restapi::http;
 
 #include <fstream>
 #include <sstream>

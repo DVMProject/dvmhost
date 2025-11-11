@@ -15,7 +15,7 @@
 #define __TRANSMIT_WND_BASE_H__
 
 #include "common/lookups/AffiliationLookup.h"
-#include "host/network/RESTDefines.h"
+#include "host/restapi/RESTDefines.h"
 #include "host/modem/Modem.h"
 #include "remote/RESTClient.h"
 #include "MonitorMain.h"
@@ -107,7 +107,7 @@ protected:
     
         int ret = RESTClient::send(m_selectedCh.address(), m_selectedCh.port(), m_selectedCh.password(),
             HTTP_GET, GET_STATUS, req, rsp, m_selectedCh.ssl(), g_debug);
-        if (ret != network::rest::http::HTTPPayload::StatusType::OK) {
+        if (ret != restapi::http::HTTPPayload::StatusType::OK) {
             ::LogError(LOG_HOST, "failed to get status for %s:%u", m_selectedCh.address().c_str(), m_selectedCh.port());
         }
 

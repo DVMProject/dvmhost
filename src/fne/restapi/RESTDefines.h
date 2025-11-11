@@ -19,7 +19,7 @@
 #define __FNE_REST_DEFINES_H__
 
 #include "fne/Defines.h"
-#include "host/network/RESTDefines.h"
+#include "host/restapi/RESTDefines.h"
 
 // ---------------------------------------------------------------------------
 //  Constants

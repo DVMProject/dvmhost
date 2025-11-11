@@ -137,7 +137,7 @@ private:
         // callback REST API
         int ret = RESTClient::send(m_selectedCh.address(), m_selectedCh.port(), m_selectedCh.password(),
             HTTP_PUT, method, req, m_selectedCh.ssl(), g_debug);
-        if (ret != network::rest::http::HTTPPayload::StatusType::OK) {
+        if (ret != restapi::http::HTTPPayload::StatusType::OK) {
             ::LogError(LOG_HOST, "failed to send request %s to %s:%u", method.c_str(), m_selectedCh.address().c_str(), m_selectedCh.port());
         }
     }

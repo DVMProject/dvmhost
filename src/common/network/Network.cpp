@@ -9,8 +9,8 @@
  */
 #include "Defines.h"
 #include "common/edac/SHA256.h"
-#include "common/network/json/json.h"
 #include "common/p25/kmm/KMMFactory.h"
+#include "common/json/json.h"
 #include "common/Log.h"
 #include "common/Utils.h"
 #include "network/Network.h"
