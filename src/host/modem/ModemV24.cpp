@@ -1001,6 +1001,14 @@ void ModemV24::convertToAirV24(const uint8_t *data, uint32_t length)
                     pduHeader.getHeaderOffset(), pduHeader.getLLId());
             }
 
+            // make sure we don't get a PDU with more blocks then we support
+            if (pduHeader.getBlocksToFollow() >= P25_MAX_PDU_BLOCKS) {
+                LogError(LOG_MODEM, P25_PDU_STR ", ISP, too many PDU blocks to process, %u > %u", pduHeader.getBlocksToFollow(), P25_MAX_PDU_BLOCKS);
+
+                m_rxCall->resetCallData();
+                break;
+            }
+
             m_rxCall->dataCall = true;
             m_rxCall->dataHeader = pduHeader;
 
@@ -1012,6 +1020,7 @@ void ModemV24::convertToAirV24(const uint8_t *data, uint32_t length)
 
                 ::memcpy(m_rxCall->pduUserData + m_rxCall->pduUserDataOffset, dataBlock, P25_PDU_UNCONFIRMED_LENGTH_BYTES);
                 m_rxCall->pduUserDataOffset += P25_PDU_UNCONFIRMED_LENGTH_BYTES;
+                m_rxCall->pduTotalBlocks++;
             }
         }
         break;
@@ -1021,6 +1030,10 @@ void ModemV24::convertToAirV24(const uint8_t *data, uint32_t length)
         case DFSIFrameType::MOT_PDU_UNCONF_BLOCK_4:
         case DFSIFrameType::MOT_PDU_UNCONF_END:
         {
+            // only process blocks if we've received a header and started a data call
+            if (!m_rxCall->dataCall)
+                break;
+
             // PDU_UNCONF_BLOCK_X and PDU_UNCONF_END only contains 4 blocks each
             for (uint8_t i = 0U; i < 4U; i++) {
                 uint8_t dataBlock[P25_PDU_UNCONFIRMED_LENGTH_BYTES];
@@ -1029,6 +1042,7 @@ void ModemV24::convertToAirV24(const uint8_t *data, uint32_t length)
 
                 ::memcpy(m_rxCall->pduUserData + m_rxCall->pduUserDataOffset, dataBlock, P25_PDU_UNCONFIRMED_LENGTH_BYTES);
                 m_rxCall->pduUserDataOffset += P25_PDU_UNCONFIRMED_LENGTH_BYTES;
+                m_rxCall->pduTotalBlocks++;
             }
 
             if (frameType == DFSIFrameType::MOT_PDU_UNCONF_END) {
@@ -1099,6 +1113,14 @@ void ModemV24::convertToAirV24(const uint8_t *data, uint32_t length)
                     pduHeader.getHeaderOffset(), pduHeader.getLLId());
             }
 
+            // make sure we don't get a PDU with more blocks then we support
+            if (pduHeader.getBlocksToFollow() >= P25_MAX_PDU_BLOCKS) {
+                LogError(LOG_MODEM, P25_PDU_STR ", ISP, too many PDU blocks to process, %u > %u", pduHeader.getBlocksToFollow(), P25_MAX_PDU_BLOCKS);
+
+                m_rxCall->resetCallData();
+                break;
+            }
+
             m_rxCall->dataCall = true;
             m_rxCall->dataHeader = pduHeader;
 
@@ -1110,6 +1132,7 @@ void ModemV24::convertToAirV24(const uint8_t *data, uint32_t length)
 
                 ::memcpy(m_rxCall->pduUserData + m_rxCall->pduUserDataOffset, dataBlock, P25_PDU_CONFIRMED_LENGTH_BYTES);
                 m_rxCall->pduUserDataOffset += P25_PDU_CONFIRMED_LENGTH_BYTES;
+                m_rxCall->pduTotalBlocks++;
             }
         }
         break;
@@ -1119,6 +1142,10 @@ void ModemV24::convertToAirV24(const uint8_t *data, uint32_t length)
         case DFSIFrameType::MOT_PDU_CONF_BLOCK_4:
         case DFSIFrameType::MOT_PDU_CONF_END:
         {
+            // only process blocks if we've received a header and started a data call
+            if (!m_rxCall->dataCall)
+                break;
+
             // PDU_CONF_BLOCK_X only contains 4 blocks each
             for (uint8_t i = 0U; i < 4U; i++) {
                 uint8_t dataBlock[P25_PDU_CONFIRMED_LENGTH_BYTES];
@@ -1127,6 +1154,7 @@ void ModemV24::convertToAirV24(const uint8_t *data, uint32_t length)
 
                 ::memcpy(m_rxCall->pduUserData + m_rxCall->pduUserDataOffset, dataBlock, P25_PDU_CONFIRMED_LENGTH_BYTES);
                 m_rxCall->pduUserDataOffset += P25_PDU_CONFIRMED_LENGTH_BYTES;
+                m_rxCall->pduTotalBlocks++;
             }
 
             if (frameType == DFSIFrameType::MOT_PDU_CONF_END) {

@@ -85,6 +85,7 @@ namespace modem
             dataHeader(),
             dataCall(false),
             pduUserDataOffset(0U),
+            pduTotalBlocks(0U),
             errors(0U)
         {
             MI = new uint8_t[P25DEF::MI_LENGTH_BYTES];
@@ -166,6 +167,7 @@ namespace modem
 
             dataCall = false;
             pduUserDataOffset = 0U;
+            pduTotalBlocks = 0U;
 
             errors = 0U;
         }
@@ -265,6 +267,10 @@ namespace modem
          * @brief Offset index when populating the user data buffer.
          */
         uint32_t pduUserDataOffset;
+        /**
+         * @brief Total count of PDU blocks.
+         */
+        uint32_t pduTotalBlocks;
 
         /**
          * @brief Total errors for a given call sequence.
