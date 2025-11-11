@@ -139,7 +139,7 @@ namespace p25
                     MOT_PDU_UNCONF_END = 0x85U,         //!< Motorola/V.24 PDU (Unconfirmed Block End)
                     MOT_PDU_SINGLE_UNCONF = 0x87U,      //!< Motorola/V.24 PDU (Single Unconfirmed Block)
 
-                    MOD_PDU_CONF_HEADER = 0x88U,        //!< Motorola/V.24 PDU (Confirmed Block Header)
+                    MOT_PDU_CONF_HEADER = 0x88U,        //!< Motorola/V.24 PDU (Confirmed Block Header)
                     MOT_PDU_CONF_BLOCK_1 = 0x89U,       //!< Motorola/V.24 PDU (Confirmed Block 1)
                     MOT_PDU_CONF_BLOCK_2 = 0x8AU,       //!< Motorola/V.24 PDU (Confirmed Block 2)
                     MOT_PDU_CONF_BLOCK_3 = 0x8BU,       //!< Motorola/V.24 PDU (Confirmed Block 3)
