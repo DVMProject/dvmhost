@@ -374,7 +374,7 @@ bool HostPatch::createNetwork()
         m_tekSrcKeyId = 0U;
 
     // destination TEK parameters
-    yaml::Node dstTekConf = networkConf["srcTek"];
+    yaml::Node dstTekConf = networkConf["dstTek"];
     bool tekDstEnable = dstTekConf["enable"].as<bool>(false);
     std::string tekDstAlgo = dstTekConf["tekAlgo"].as<std::string>();
     std::transform(tekDstAlgo.begin(), tekDstAlgo.end(), tekDstAlgo.begin(), ::tolower);
