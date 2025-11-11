@@ -93,9 +93,9 @@ FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port,
     m_adjSiteMapLookup(nullptr),
     m_cryptoLookup(nullptr),
     m_status(NET_STAT_INVALID),
-    m_peers(MAX_HARD_CONN_CAP * sizeof(ulong64_t)),
+    m_peers(),
     m_peerReplicaPeers(),
-    m_peerAffiliations(MAX_HARD_CONN_CAP * sizeof(ulong64_t)),
+    m_peerAffiliations(),
     m_ccPeerMap(),
     m_peerReplicaKeyQueue(),
     m_treeRoot(nullptr),
@@ -146,6 +146,11 @@ FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port,
     assert(!address.empty());
     assert(port > 0U);
     assert(!password.empty());
+
+    m_peers.reserve(MAX_HARD_CONN_CAP);
+    m_peerReplicaPeers.reserve(MAX_HARD_CONN_CAP);
+    m_peerAffiliations.reserve(MAX_HARD_CONN_CAP);
+    m_ccPeerMap.reserve(MAX_HARD_CONN_CAP);
 
     m_tagDMR = new TagDMRData(this, debug);
     m_tagP25 = new TagP25Data(this, debug);

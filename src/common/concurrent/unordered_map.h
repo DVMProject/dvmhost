@@ -368,6 +368,16 @@ namespace concurrent
             return m_map;
         }
 
+        /**
+         *  @brief Prepare the underlying unordered_map for a specified number of
+         *      elements.
+         *  @param n Number of elements required.
+         */
+        void reserve(size_t n)
+        {
+            m_map.reserve(n);
+        }
+
     private:
         std::unordered_map<Key, T> m_map;
     };

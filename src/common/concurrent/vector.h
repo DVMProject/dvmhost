@@ -430,6 +430,16 @@ namespace concurrent
             return m_vector;
         }
 
+        /**
+         *  @brief Prepare the underlying vector for a specified number of
+         *      elements.
+         *  @param n Number of elements required.
+         */
+        void reserve(size_t n)
+        {
+            m_vector.reserve(n);
+        }
+
     private:
         std::vector<T> m_vector;
     };
