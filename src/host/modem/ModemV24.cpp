@@ -2870,6 +2870,8 @@ void ModemV24::convertFromAirV24(uint8_t* data, uint32_t length)
                 else {
                     // TODO: support for more then 3 blocks
                 }
+
+                delete[] dataBlocks;
             }
         }
         break;
