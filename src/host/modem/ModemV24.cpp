@@ -2905,13 +2905,20 @@ void ModemV24::convertFromAirV24(uint8_t* data, uint32_t length)
                     queueP25Frame(pduBuf, pduLen, STT_NON_IMBE_NO_JITTER);
 
                     // iterate through the count of full 4 block buffers and send
+                    uint8_t currentOpcode = (dataHeader.getFormat() == PDUFormatType::CONFIRMED) ? DFSIFrameType::MOT_PDU_CONF_BLOCK_1 : DFSIFrameType::MOT_PDU_UNCONF_BLOCK_1;
                     for (uint32_t i = 1U; i < baseBlockCnt; i++) {
                         // reset buffer and set data
                         ::memset(pduBuf, 0x00U, pduLen);
+                        pduBuf[0U] = currentOpcode;
+
                         for (uint32_t i = 0U; i < DFSI_PDU_BLOCK_CNT - 1U; i++) {
                             dataBlocks[currentBlock].encode(pduBuf + 1U + ((i + 1U) * ((dataHeader.getFormat() == PDUFormatType::CONFIRMED) ? P25_PDU_CONFIRMED_LENGTH_BYTES : P25_PDU_UNCONFIRMED_LENGTH_BYTES)), true);
                             currentBlock++;
                         }
+
+                        currentOpcode++;
+                        if (currentOpcode > (dataHeader.getFormat() == PDUFormatType::CONFIRMED) ? DFSIFrameType::MOT_PDU_CONF_BLOCK_4 : DFSIFrameType::MOT_PDU_UNCONF_BLOCK_4)
+                            currentOpcode = (dataHeader.getFormat() == PDUFormatType::CONFIRMED) ? DFSIFrameType::MOT_PDU_CONF_BLOCK_1 : DFSIFrameType::MOT_PDU_UNCONF_BLOCK_1;
 
                         // create buffer for bytes and encode
                         uint8_t startBuf[DFSI_MOT_START_LEN];
@@ -2933,6 +2940,7 @@ void ModemV24::convertFromAirV24(uint8_t* data, uint32_t length)
                     if (remainderBlocks > 0) {
                         // reset buffer and set data
                         ::memset(pduBuf, 0x00U, pduLen);
+                        pduBuf[0U] = (dataHeader.getFormat() == PDUFormatType::CONFIRMED) ? DFSIFrameType::MOT_PDU_CONF_END : DFSIFrameType::MOT_PDU_UNCONF_END;
                         pduLen = 0U;
                         for (uint32_t i = 0U; i < remainderBlocks; i++) {
                             dataBlocks[currentBlock].encode(pduBuf + 1U + ((i + 1U) * ((dataHeader.getFormat() == PDUFormatType::CONFIRMED) ? P25_PDU_CONFIRMED_LENGTH_BYTES : P25_PDU_UNCONFIRMED_LENGTH_BYTES)), true);
