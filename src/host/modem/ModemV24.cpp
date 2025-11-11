@@ -1034,8 +1034,19 @@ void ModemV24::convertToAirV24(const uint8_t *data, uint32_t length)
             if (!m_rxCall->dataCall)
                 break;
 
+            uint32_t blockCnt = DFSI_PDU_BLOCK_CNT;
+
+            // PDU_UNCONF_END are variable length depending on the message
+            if (frameType == DFSIFrameType::MOT_PDU_UNCONF_END) {
+                blockCnt = m_rxCall->dataHeader.getBlocksToFollow() - m_rxCall->pduTotalBlocks;
+
+                // bryanb: I wonder if there's a chance somehow the calculation will be less then zero...reasonably
+                //  as far as I can tell that should never happen as PDU_UNCONF_BLOCK_X should *always* contain
+                //  4 blocks of user data, and the PDU_UNCONF_END is always variable with at least the last data block
+            }
+
             // PDU_UNCONF_BLOCK_X and PDU_UNCONF_END only contains 4 blocks each
-            for (uint8_t i = 0U; i < 4U; i++) {
+            for (uint8_t i = 0U; i < blockCnt; i++) {
                 uint8_t dataBlock[P25_PDU_UNCONFIRMED_LENGTH_BYTES];
                 ::memset(dataBlock, 0x00U, P25_PDU_UNCONFIRMED_LENGTH_BYTES);
                 ::memcpy(dataBlock, dfsiData + 1U + P25_PDU_HEADER_LENGTH_BYTES + (i * P25_PDU_UNCONFIRMED_LENGTH_BYTES), P25_PDU_UNCONFIRMED_LENGTH_BYTES);
@@ -1146,8 +1157,19 @@ void ModemV24::convertToAirV24(const uint8_t *data, uint32_t length)
             if (!m_rxCall->dataCall)
                 break;
 
+            uint32_t blockCnt = DFSI_PDU_BLOCK_CNT;
+
+            // PDU_CONF_END are variable length depending on the message
+            if (frameType == DFSIFrameType::MOT_PDU_CONF_END) {
+                blockCnt = m_rxCall->dataHeader.getBlocksToFollow() - m_rxCall->pduTotalBlocks;
+
+                // bryanb: I wonder if there's a chance somehow the calculation will be less then zero...reasonably
+                //  as far as I can tell that should never happen as PDU_CONF_BLOCK_X should *always* contain
+                //  4 blocks of user data, and the PDU_CONF_END is always variable with at least the last data block
+            }
+
             // PDU_CONF_BLOCK_X only contains 4 blocks each
-            for (uint8_t i = 0U; i < 4U; i++) {
+            for (uint8_t i = 0U; i < blockCnt; i++) {
                 uint8_t dataBlock[P25_PDU_CONFIRMED_LENGTH_BYTES];
                 ::memset(dataBlock, 0x00U, P25_PDU_CONFIRMED_LENGTH_BYTES);
                 ::memcpy(dataBlock, dfsiData + 1U + P25_PDU_HEADER_LENGTH_BYTES + (i * P25_PDU_CONFIRMED_LENGTH_BYTES), P25_PDU_CONFIRMED_LENGTH_BYTES);

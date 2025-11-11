@@ -49,6 +49,8 @@ namespace p25
             const uint32_t  DFSI_MOT_TSBK_LEN = 24U;
             const uint32_t  DFSI_MOT_TDULC_LEN = 21U;
 
+            const uint32_t  DFSI_PDU_BLOCK_CNT = 4U;
+
             const uint32_t  DFSI_TIA_VHDR_LEN = 22U;
 
             const uint32_t  DFSI_MOT_ICW_LENGTH = 6U;
