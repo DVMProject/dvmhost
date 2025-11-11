@@ -2868,7 +2868,106 @@ void ModemV24::convertFromAirV24(uint8_t* data, uint32_t length)
                     queueP25Frame(endBuf, DFSI_MOT_START_LEN, STT_NON_IMBE_NO_JITTER);
                 }
                 else {
-                    // TODO: support for more then 3 blocks
+                    int32_t remainderBlocks = (blocksToFollow - 3U) % DFSI_PDU_BLOCK_CNT;
+                    int32_t baseBlockCnt = (blocksToFollow - 3U) / DFSI_PDU_BLOCK_CNT;
+                    uint32_t currentBlock = 0U;
+
+                    DECLARE_UINT8_ARRAY(pduBuf, ((DFSI_PDU_BLOCK_CNT + 1U) * ((dataHeader.getFormat() == PDUFormatType::CONFIRMED) ? P25_PDU_CONFIRMED_LENGTH_BYTES : P25_PDU_UNCONFIRMED_LENGTH_BYTES)) + 1U);
+                    uint32_t pduLen = ((DFSI_PDU_BLOCK_CNT + 1U) * ((dataHeader.getFormat() == PDUFormatType::CONFIRMED) ? P25_PDU_CONFIRMED_LENGTH_BYTES : P25_PDU_UNCONFIRMED_LENGTH_BYTES)) + 1U;
+
+                    MotStartOfStream start = MotStartOfStream();
+                    start.setOpcode(m_rtrt ? MotStartStreamOpcode::TRANSMIT : MotStartStreamOpcode::RECEIVE);
+                    start.setParam1(DSFI_MOT_ICW_PARM_PAYLOAD);
+                    start.setArgument1(MotStreamPayload::DATA);
+
+                    // assemble the first frame
+                    pduBuf[0U] = (dataHeader.getFormat() == PDUFormatType::CONFIRMED) ? DFSIFrameType::MOT_PDU_CONF_HEADER : DFSIFrameType::MOT_PDU_UNCONF_HEADER;
+                    
+                    dataHeader.encode(pduBuf + 1U, true);
+                    for (uint32_t i = 0U; i < DFSI_PDU_BLOCK_CNT - 1U; i++) {
+                        dataBlocks[currentBlock].encode(pduBuf + 1U + ((i + 1U) * ((dataHeader.getFormat() == PDUFormatType::CONFIRMED) ? P25_PDU_CONFIRMED_LENGTH_BYTES : P25_PDU_UNCONFIRMED_LENGTH_BYTES)), true);
+                        currentBlock++;
+                    }
+
+                    // create buffer for bytes and encode
+                    uint8_t startBuf[DFSI_MOT_START_LEN];
+                    ::memset(startBuf, 0x00U, DFSI_MOT_START_LEN);
+                    start.encode(startBuf);
+
+                    if (m_trace)
+                        Utils::dump(1U, "ModemV24::convertFromAirV24(), PDU StartOfStream", startBuf, DFSI_MOT_START_LEN);
+
+                    queueP25Frame(startBuf, DFSI_MOT_START_LEN, STT_NON_IMBE_NO_JITTER);
+
+                    if (m_trace)
+                        Utils::dump(1U, "ModemV24::convertFromAirV24(), MotPDUFrame", pduBuf, pduLen);
+
+                    queueP25Frame(pduBuf, pduLen, STT_NON_IMBE_NO_JITTER);
+
+                    // iterate through the count of full 4 block buffers and send
+                    for (int32_t i = 1; i < baseBlockCnt; i++) {
+                        // reset buffer and set data
+                        ::memset(pduBuf, 0x00U, pduLen);
+                        for (uint32_t i = 0U; i < DFSI_PDU_BLOCK_CNT - 1U; i++) {
+                            dataBlocks[currentBlock].encode(pduBuf + 1U + ((i + 1U) * ((dataHeader.getFormat() == PDUFormatType::CONFIRMED) ? P25_PDU_CONFIRMED_LENGTH_BYTES : P25_PDU_UNCONFIRMED_LENGTH_BYTES)), true);
+                            currentBlock++;
+                        }
+
+                        // create buffer for bytes and encode
+                        uint8_t startBuf[DFSI_MOT_START_LEN];
+                        ::memset(startBuf, 0x00U, DFSI_MOT_START_LEN);
+                        start.encode(startBuf);
+
+                        if (m_trace)
+                            Utils::dump(1U, "ModemV24::convertFromAirV24(), PDU StartOfStream", startBuf, DFSI_MOT_START_LEN);
+
+                        queueP25Frame(startBuf, DFSI_MOT_START_LEN, STT_NON_IMBE_NO_JITTER);
+
+                        if (m_trace)
+                            Utils::dump(1U, "ModemV24::convertFromAirV24(), MotPDUFrame", pduBuf, pduLen);
+
+                        queueP25Frame(pduBuf, pduLen, STT_NON_IMBE_NO_JITTER);
+                    }
+
+                    // do we have any remaining blocks?
+                    if (remainderBlocks > 0) {
+                        // reset buffer and set data
+                        ::memset(pduBuf, 0x00U, pduLen);
+                        pduLen = 0U;
+                        for (uint32_t i = 0U; i < remainderBlocks; i++) {
+                            dataBlocks[currentBlock].encode(pduBuf + 1U + ((i + 1U) * ((dataHeader.getFormat() == PDUFormatType::CONFIRMED) ? P25_PDU_CONFIRMED_LENGTH_BYTES : P25_PDU_UNCONFIRMED_LENGTH_BYTES)), true);
+                            pduLen += 1U + (dataHeader.getFormat() == PDUFormatType::CONFIRMED) ? P25_PDU_CONFIRMED_LENGTH_BYTES : P25_PDU_UNCONFIRMED_LENGTH_BYTES;
+                            currentBlock++;
+                        }
+
+                        // create buffer for bytes and encode
+                        uint8_t startBuf[DFSI_MOT_START_LEN];
+                        ::memset(startBuf, 0x00U, DFSI_MOT_START_LEN);
+                        start.encode(startBuf);
+
+                        if (m_trace)
+                            Utils::dump(1U, "ModemV24::convertFromAirV24(), PDU StartOfStream", startBuf, DFSI_MOT_START_LEN);
+
+                        queueP25Frame(startBuf, DFSI_MOT_START_LEN, STT_NON_IMBE_NO_JITTER);
+
+                        if (m_trace)
+                            Utils::dump(1U, "ModemV24::convertFromAirV24(), MotPDUFrame", pduBuf, pduLen);
+
+                        queueP25Frame(pduBuf, pduLen, STT_NON_IMBE_NO_JITTER);
+
+                        MotStartOfStream end = MotStartOfStream();
+                        end.setOpcode(m_rtrt ? MotStartStreamOpcode::TRANSMIT : MotStartStreamOpcode::RECEIVE);
+                        end.setParam1(DFSI_MOT_ICW_PARM_STOP);
+                        end.setArgument1(MotStreamPayload::DATA);
+
+                        // create buffer and encode
+                        uint8_t endBuf[DFSI_MOT_START_LEN];
+                        ::memset(endBuf, 0x00U, DFSI_MOT_START_LEN);
+                        end.encode(endBuf);
+
+                        queueP25Frame(endBuf, DFSI_MOT_START_LEN, STT_NON_IMBE_NO_JITTER);
+                        queueP25Frame(endBuf, DFSI_MOT_START_LEN, STT_NON_IMBE_NO_JITTER);
+                    }
                 }
 
                 delete[] dataBlocks;
