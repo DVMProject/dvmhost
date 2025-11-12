@@ -261,7 +261,26 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                     }
                     else {
                         if (status.srcId != 0U && status.srcId != srcId) {
+                            bool hasCallPriority = false;
+
+                            // determine if the peer trying to transmit has call priority
                             if (m_network->m_callCollisionTimeout > 0U) {
+                                m_network->m_peers.shared_lock();
+                                for (auto peer : m_network->m_peers) {
+                                    if (peerId == peer.first) {
+                                        FNEPeerConnection* conn = peer.second;
+                                        if (conn != nullptr) {
+                                            hasCallPriority = conn->hasCallPriority();
+                                            break;
+                                        }
+                                    }
+                                }
+                                m_network->m_peers.shared_unlock();
+                            }
+
+                            // perform standard call collision if the call collision timeout is set *and*
+                            //  the peer doesn't have call priority
+                            if (m_network->m_callCollisionTimeout > 0U && !hasCallPriority) {
                                 uint64_t lastPktDuration = hrc::diff(hrc::now(), status.lastPacket);
                                 if ((lastPktDuration / 1000) > m_network->m_callCollisionTimeout) {
                                     LogWarning((fromUpstream) ? LOG_PEER : LOG_MASTER, "DMR, Call Collision, lasted more then %us with no further updates, resetting call source", m_network->m_callCollisionTimeout);
@@ -276,6 +295,14 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                                     return false;
                                 }
                             } else {
+                                if (hasCallPriority) {
+                                    LogInfoEx((fromUpstream) ? LOG_PEER : LOG_MASTER, "DMR, Call Source Switched (Priority), peer = %u, ssrc = %u, srcId = %u, dstId = %u, slotNo = %u, streamId = %u, rxPeer = %u, rxSrcId = %u, rxDstId = %u, rxSlotNo = %u, rxStreamId = %u, fromUpstream = %u",
+                                        peerId, ssrc, srcId, dstId, slotNo, streamId, status.peerId, status.srcId, status.dstId, status.slotNo, status.streamId, fromUpstream);
+
+                                    // since we're gonna switch over the stream and interrupt the current call inprogress lets try to ICC the transmitting peer
+                                    m_network->writePeerICC(m_status[dstId].peerId, m_status[dstId].streamId, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR, NET_ICC::REJECT_TRAFFIC, dstId, slotNo, true);
+                                }
+
                                 m_status.lock(false);
                                 m_status[dstId].streamId = streamId;
                                 m_status[dstId].srcId = srcId;

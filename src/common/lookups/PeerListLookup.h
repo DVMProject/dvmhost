@@ -52,6 +52,7 @@ namespace lookups
             m_peerReplica(false),
             m_canRequestKeys(false),
             m_canIssueInhibit(false),
+            m_hasCallPriority(false),
             m_peerDefault(false)
         {
             /* stub */
@@ -71,6 +72,7 @@ namespace lookups
             m_peerReplica(false),
             m_canRequestKeys(false),
             m_canIssueInhibit(false),
+            m_hasCallPriority(false),
             m_peerDefault(peerDefault)
         {
             /* stub */
@@ -89,6 +91,7 @@ namespace lookups
                 m_peerReplica = data.m_peerReplica;
                 m_canRequestKeys = data.m_canRequestKeys;
                 m_canIssueInhibit = data.m_canIssueInhibit;
+                m_hasCallPriority = data.m_hasCallPriority;
                 m_peerDefault = data.m_peerDefault;
             }
 
@@ -117,7 +120,7 @@ namespace lookups
          */
         DECLARE_PROPERTY_PLAIN(uint32_t, peerId);
         /**
-         * @breif Peer Alias
+         * @brief Peer Alias
          */
         DECLARE_PROPERTY_PLAIN(std::string, peerAlias);
         /**
@@ -136,6 +139,10 @@ namespace lookups
          * @brief Flag indicating if the peer can issue inhibit/uninhibit packets.
          */
         DECLARE_PROPERTY_PLAIN(bool, canIssueInhibit);
+        /**
+         * @brief Flag indicating if the peer has call transmit priority.
+         */
+        DECLARE_PROPERTY_PLAIN(bool, hasCallPriority);
         /**
          * @brief Flag indicating if the peer is default.
          */

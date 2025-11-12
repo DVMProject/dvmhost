@@ -118,7 +118,7 @@ FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port,
     m_disallowCallTerm(false),
     m_restrictGrantToAffOnly(false),
     m_restrictPVCallToRegOnly(false),
-    m_enableInCallCtrl(true),
+    m_enableRIDInCallCtrl(true),
     m_rejectUnknownRID(false),
     m_maskOutboundPeerID(false),
     m_maskOutboundPeerIDForNonPL(false),
@@ -193,7 +193,7 @@ void FNENetwork::setOptions(yaml::Node& conf, bool printOptions)
     m_disallowAdjStsBcast = conf["disallowAdjStsBcast"].as<bool>(false);
     m_disallowExtAdjStsBcast = conf["disallowExtAdjStsBcast"].as<bool>(true);
     m_allowConvSiteAffOverride = conf["allowConvSiteAffOverride"].as<bool>(true);
-    m_enableInCallCtrl = conf["enableInCallCtrl"].as<bool>(false);
+    m_enableRIDInCallCtrl = conf["enableRIDInCallCtrl"].as<bool>(false);
     m_rejectUnknownRID = conf["rejectUnknownRID"].as<bool>(false);
     m_maskOutboundPeerID = conf["maskOutboundPeerID"].as<bool>(false);
     m_maskOutboundPeerIDForNonPL = conf["maskOutboundPeerIDForNonPeerLink"].as<bool>(false);
@@ -301,7 +301,7 @@ void FNENetwork::setOptions(yaml::Node& conf, bool printOptions)
         LogInfo("    Disable P25 ADJ_STS_BCAST to neighbor peers: %s", m_disallowExtAdjStsBcast ? "yes" : "no");
         LogInfo("    Disable P25 TDULC call termination broadcasts to any peers: %s", m_disallowCallTerm ? "yes" : "no");
         LogInfo("    Allow conventional sites to override affiliation and receive all traffic: %s", m_allowConvSiteAffOverride ? "yes" : "no");
-        LogInfo("    Enable In-Call Control: %s", m_enableInCallCtrl ? "yes" : "no");
+        LogInfo("    Enable RID In-Call Control: %s", m_enableRIDInCallCtrl ? "yes" : "no");
         LogInfo("    Reject Unknown RIDs: %s", m_rejectUnknownRID ? "yes" : "no");
         LogInfo("    Log Traffic Denials: %s", m_logDenials ? "yes" : "no");
         LogInfo("    Log Upstream Call Start/End Events: %s", m_logUpstreamCallStartEnd ? "yes" : "no");
@@ -1206,6 +1206,13 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                         connection->pingsReceived(0U);
                                         connection->lastPing(now);
                                         connection->missedMetadataUpdates(0U);
+
+                                        lookups::PeerId peerEntry = network->m_peerListLookup->find(peerId);
+                                        if (!peerEntry.peerDefault()) {
+                                            connection->hasCallPriority(peerEntry.hasCallPriority());
+                                            LogInfoEx(LOG_MASTER, "PEER %u >> Has Call Priority", peerId);
+                                        }
+
                                         network->m_peers[peerId] = connection;
 
                                         // attach extra notification data to the RPTC ACK to notify the peer of 
@@ -2769,11 +2776,12 @@ void FNENetwork::writeTreeDisconnect(uint32_t peerId, uint32_t offendingPeerId)
 
 /* Helper to send a In-Call Control command to the specified peer. */
 
-bool FNENetwork::writePeerICC(uint32_t peerId, uint32_t streamId, NET_SUBFUNC::ENUM subFunc, NET_ICC::ENUM command, uint32_t dstId, uint8_t slotNo)
+bool FNENetwork::writePeerICC(uint32_t peerId, uint32_t streamId, NET_SUBFUNC::ENUM subFunc, NET_ICC::ENUM command, uint32_t dstId, uint8_t slotNo,
+    bool systemReq)
 {
     if (peerId == 0)
         return false;
-    if (!m_enableInCallCtrl)
+    if (!m_enableRIDInCallCtrl && !systemReq)
         return false;
     if (dstId == 0U)
         return false;

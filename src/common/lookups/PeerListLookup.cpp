@@ -237,6 +237,11 @@ bool PeerListLookup::load()
             if (parsed.size() >= 6)
                 canIssueInhibit = ::atoi(parsed[5].c_str()) == 1;
 
+            // parse can issue inhibit flag
+            bool hasCallPriority = false;
+            if (parsed.size() >= 7)
+                hasCallPriority = ::atoi(parsed[6].c_str()) == 1;
+
             // parse optional password
             std::string password = "";
             if (parsed.size() >= 2)
@@ -247,16 +252,18 @@ bool PeerListLookup::load()
             entry.peerReplica(peerReplica);
             entry.canRequestKeys(canRequestKeys);
             entry.canIssueInhibit(canIssueInhibit);
+            entry.hasCallPriority(hasCallPriority);
 
             m_table[id] = entry;
 
             // log depending on what was loaded
-            LogInfoEx(LOG_HOST, "Loaded peer ID %u%s into peer ID lookup table, %s%s%s", id,
+            LogInfoEx(LOG_HOST, "Loaded peer ID %u%s into peer ID lookup table, %s%s%s%s", id,
                 (!alias.empty() ? (" (" + alias + ")").c_str() : ""),
                 (!password.empty() ? "using unique peer password" : "using master password"),
                 (peerReplica) ? ", Replication Enabled" : "",
                 (canRequestKeys) ? ", Can Request Keys" : "",
-                (canIssueInhibit) ? ", Can Issue Inhibit" : "");
+                (canIssueInhibit) ? ", Can Issue Inhibit" : "",
+                (hasCallPriority) ? ", Has Call Priority" : "");
         }
     }
 
@@ -338,6 +345,14 @@ bool PeerListLookup::save(bool quiet)
         // add canIssueInhibit flag
         bool canIssueInhibit = entry.second.canIssueInhibit();
         if (canIssueInhibit) {
+            line += "1,";
+        } else {
+            line += "0,";
+        }
+
+        // add hasCallPriority flag
+        bool hasCallPriority = entry.second.hasCallPriority();
+        if (hasCallPriority) {
             line += "1,";
         } else {
             line += "0,";

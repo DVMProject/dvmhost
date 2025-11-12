@@ -54,6 +54,7 @@ namespace network
             m_pingsReceived(0U),
             m_lastPing(0U),
             m_missedMetadataUpdates(0U),
+            m_hasCallPriority(false),
             m_isNeighborFNEPeer(false),
             m_isReplica(false),
             m_isConventionalPeer(false),
@@ -84,6 +85,7 @@ namespace network
             m_pingsReceived(0U),
             m_lastPing(0U),
             m_missedMetadataUpdates(0U),
+            m_hasCallPriority(false),
             m_isNeighborFNEPeer(false),
             m_isReplica(false),
             m_isConventionalPeer(false),
@@ -185,6 +187,11 @@ namespace network
          * @brief Number of missed network metadata updates.
          */
         DECLARE_PROPERTY_PLAIN(uint32_t, missedMetadataUpdates);
+
+        /**
+         * @brief Flag indicating this connection has call priority.
+         */
+        DECLARE_PROPERTY_PLAIN(bool, hasCallPriority);
 
         /**
          * @brief Flag indicating this connection is from an downstream neighbor FNE peer.

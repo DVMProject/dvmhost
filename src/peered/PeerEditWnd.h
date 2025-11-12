@@ -153,6 +153,7 @@ private:
     FCheckBox m_peerReplicaEnabled{"Peer Replica", &m_configGroup};
     FCheckBox m_canReqKeysEnabled{"Request Keys", &m_configGroup};
     FCheckBox m_canInhibitEnabled{"Issue Inhibit", &m_configGroup};
+    FCheckBox m_callPriorityEnabled{"Call Priority", &m_configGroup};
 
     /**
      * @brief Initializes the window layout.
@@ -263,7 +264,7 @@ private:
 
         // configuration
         {
-            m_configGroup.setGeometry(FPoint(39, 5), FSize(23, 5));
+            m_configGroup.setGeometry(FPoint(39, 5), FSize(23, 6));
 
             m_peerReplicaEnabled.setGeometry(FPoint(2, 1), FSize(10, 1));
             m_peerReplicaEnabled.setChecked(m_rule.peerReplica());
@@ -282,6 +283,12 @@ private:
             m_canInhibitEnabled.addCallback("toggled", [&]() {
                 m_rule.canIssueInhibit(m_canInhibitEnabled.isChecked());
             });
+
+            m_callPriorityEnabled.setGeometry(FPoint(2, 4), FSize(10, 1));
+            m_callPriorityEnabled.setChecked(m_rule.hasCallPriority());
+            m_callPriorityEnabled.addCallback("toggled", [&]() {
+                m_rule.hasCallPriority(m_callPriorityEnabled.isChecked());
+            });
         }
 
         CloseWndBase::initControls();
@@ -297,8 +304,9 @@ private:
         bool peerReplica = m_rule.peerReplica();
         bool canRequestKeys = m_rule.canRequestKeys();
         bool canIssueInhibit = m_rule.canIssueInhibit();
+        bool hasCallPriority = m_rule.hasCallPriority();
 
-        ::LogInfoEx(LOG_HOST, "Peer ALIAS: %s PEERID: %u REPLICA: %u CAN REQUEST KEYS: %u CAN ISSUE INHIBIT: %u", peerAlias.c_str(), peerId, peerReplica, canRequestKeys, canIssueInhibit);
+        ::LogInfoEx(LOG_HOST, "Peer ALIAS: %s PEERID: %u REPLICA: %u CAN REQUEST KEYS: %u CAN ISSUE INHIBIT: %u HAS CALL PRIORITY: %u", peerAlias.c_str(), peerId, peerReplica, canRequestKeys, canIssueInhibit, hasCallPriority);
     }
 
     /*
@@ -368,6 +376,7 @@ private:
                     entry.peerReplica(m_rule.peerReplica());
                     entry.canRequestKeys(m_rule.canRequestKeys());
                     entry.canIssueInhibit(m_rule.canIssueInhibit());
+                    entry.hasCallPriority(m_rule.hasCallPriority());
 
                     g_pidLookups->addEntry(m_rule.peerId(), entry);
 
@@ -404,6 +413,7 @@ private:
                 entry.peerReplica(m_rule.peerReplica());
                 entry.canRequestKeys(m_rule.canRequestKeys());
                 entry.canIssueInhibit(m_rule.canIssueInhibit());
+                entry.hasCallPriority(m_rule.hasCallPriority());
 
                 g_pidLookups->addEntry(m_rule.peerId(), entry);
 

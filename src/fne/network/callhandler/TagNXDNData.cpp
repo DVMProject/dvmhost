@@ -299,7 +299,26 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                         }
                         else {
                             if (status.srcId != 0U && status.srcId != srcId) {
+                                bool hasCallPriority = false;
+
+                                // determine if the peer trying to transmit has call priority
                                 if (m_network->m_callCollisionTimeout > 0U) {
+                                    m_network->m_peers.shared_lock();
+                                    for (auto peer : m_network->m_peers) {
+                                        if (peerId == peer.first) {
+                                            FNEPeerConnection* conn = peer.second;
+                                            if (conn != nullptr) {
+                                                hasCallPriority = conn->hasCallPriority();
+                                                break;
+                                            }
+                                        }
+                                    }
+                                    m_network->m_peers.shared_unlock();
+                                }
+
+                                // perform standard call collision if the call collision timeout is set *and*
+                                //  the peer doesn't have call priority
+                                if (m_network->m_callCollisionTimeout > 0U && !hasCallPriority) {
                                     uint64_t lastPktDuration = hrc::diff(hrc::now(), status.lastPacket);
                                     if ((lastPktDuration / 1000) > m_network->m_callCollisionTimeout) {
                                         LogWarning((fromUpstream) ? LOG_PEER : LOG_MASTER, "NXDN, Call Collision, lasted more then %us with no further updates, resetting call source", m_network->m_callCollisionTimeout);
@@ -314,6 +333,14 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                                         return false;
                                     }
                                 } else {
+                                    if (hasCallPriority) {
+                                        LogInfoEx((fromUpstream) ? LOG_PEER : LOG_MASTER, "NXDN, Call Source Switched (Priority), peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, rxPeer = %u, rxSrcId = %u, rxDstId = %u, rxStreamId = %u, fromUpstream = %u",
+                                            peerId, ssrc, srcId, dstId, streamId, status.peerId, status.srcId, status.dstId, status.streamId, fromUpstream);
+
+                                        // since we're gonna switch over the stream and interrupt the current call inprogress lets try to ICC the transmitting peer
+                                        m_network->writePeerICC(m_status[dstId].peerId, m_status[dstId].streamId, NET_SUBFUNC::PROTOCOL_SUBFUNC_NXDN, NET_ICC::REJECT_TRAFFIC, dstId, 0U, true);
+                                    }
+
                                     m_status.lock(false);
                                     m_status[dstId].streamId = streamId;
                                     m_status[dstId].srcId = srcId;

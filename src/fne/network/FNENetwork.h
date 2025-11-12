@@ -357,7 +357,7 @@ namespace network
         bool m_disallowCallTerm;
         bool m_restrictGrantToAffOnly;
         bool m_restrictPVCallToRegOnly;
-        bool m_enableInCallCtrl;
+        bool m_enableRIDInCallCtrl;
         bool m_rejectUnknownRID;
 
         bool m_maskOutboundPeerID;
@@ -650,9 +650,10 @@ namespace network
          * @param command In-Call Control Command.
          * @param dstId Destination ID.
          * @param slotNo DMR slot.
+         * @param systemReq Flag indicating the ICC request is a system generated one not a automatic RID rule generated one.
          */
         bool writePeerICC(uint32_t peerId, uint32_t streamId, NET_SUBFUNC::ENUM subFunc = NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR, 
-            NET_ICC::ENUM command = NET_ICC::NOP, uint32_t dstId = 0U, uint8_t slotNo = 0U);
+            NET_ICC::ENUM command = NET_ICC::NOP, uint32_t dstId = 0U, uint8_t slotNo = 0U, bool systemReq = false);
 
         /*
         ** Generic Message Writing
