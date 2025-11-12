@@ -13,7 +13,7 @@ This project suite generates a few executables:
 ### Core Applications
 
 - `dvmhost` host software that connects to the DVM modems (both air interface for repeater and hotspot or P25 DFSI for commerical P25 hardware) and is the primary data processing application for digital modes. [See configuration](#dvmhost-configuration) to configure and calibrate.
-- `dvmfne` a network "core", this provides a central server for `dvmhost` instances to connect to and be networked with, allowing relay of traffic and other data between `dvmhost` instances and other `dvmfne` instances. [See configuration](#dvmfne-configuration) to configure.
+- `dvmfne` a network core, this provides a central server for `dvmhost` instances (and other instances like consoles or `dvmbridge`s) to connect to and be networked with other instances, allowing switching of traffic and other data between `dvmhost` instances, as well as other peered `dvmfne` instances. [See configuration](#dvmfne-configuration) to configure.
 - `dvmbridge` a analog/PCM audio bridge, this provides the capability for analog or PCM audio resources to be connected to a `dvmfne` instance, allowing realtime vocoding of traffic. [See configuration](#dvmbridge-configuration) to configure.
 - `dvmpatch` a talkgroup patching utility, this provides the capability to manually patch talkgroups of the same digital mode together. [See configuration](#dvmpatch-configuration) to configure.
 - `dvmcmd` a simple command-line utility to send remote control commands to a `dvmhost` or `dvmfne` instance with REST API configured.
@@ -205,6 +205,19 @@ for step 4 to observe frequency error.)
 ## dvmfne Configuration
 
 This source repository contains configuration example files within the configs folder, please review `fne-config.example.yml` for the `dvmfne` for details on various configurable options. When first setting up a FNE instance, it is important to properly configure a `talkgroup_rules.example.yml` file, this file defines all the various rules for valid talkgroups and other settings.
+
+The other configurables on a `dvmfne` instance are within the `fne-config.example.yml`. Some of these are Radio ID (RID) access control listings, Peer ID (PID) access control listings, adjacent site maps for systems with trunked `dvmhost` instances connected, annd many other parameters.
+
+Here is a listing of files in the configs folder in this repo that pertain to FNE configuration:
+- `adj_site_map.example.yml` - This is an example configuration file configuring adjacent site mappings for trunked `dvmhost` instances.
+- `fne-config.example.yml` - This is the main/primary example configuration file for an FNE instance.
+- `peer_list.example.dat` - This is a simple CSV-style file containing access control permissions for peers allowed to connect to the FNE (this includes both downstream peers (like `dvmhost` or `dvmbridge`) and other `dvmfne` instances connecting *to* the FNE instance).
+- `rid_acl.example.dat` - This is a simple CSV-style file containing the access control permissions for radio ID (RID)s allowed to use a configured system/network.
+- `talkgroup_rules.example.yml` - This is the second most important configuration file for an FNE, this file describes all the talkgroups and their related access control and configuration parameters.
+
+There is another file that is attributed to the FNE that an example is not provided for and that is the `key-container.ekc` file. This file provides cryptographic material needed for providing keyloading functionality across a configured system/network.
+
+Most parameters within the `fne-config.example.yml` should be set to reasonable defaults for simply just starting up a FNE, the only parameters in the configuration that *must* be reviewed before starting up an instance are proper file paths for the ACL and other files used by the FNE.
 
 There is no other real configuration for a `dvmfne` instance other then setting the appropriate parameters within the configuration files.
 
