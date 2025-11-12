@@ -1400,6 +1400,25 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                     LogInfoEx(LOG_MASTER, "PEER %u (%s) ping, pingsReceived = %u, lastPing = %u, now = %u", peerId, connection->identWithQualifier().c_str(),
                                         connection->pingsReceived(), lastPing, now);
                                 }
+
+                                // ensure STP sanity, when we receive a ping from a downstream leaf
+                                //  this check ensures a STP entry for a downstream leaf isn't accidentally blown off
+                                //  the tree during a fast reconnect
+                                if (network->m_enableSpanningTree && connection->isNeighborFNEPeer() && !connection->isSysView()) {
+                                    std::lock_guard<std::mutex> guard(network->m_treeLock);
+
+                                    if ((connection->masterId() != peerId) && (connection->masterId() != 0U)) {
+                                        // check if this peer is already connected via another peer
+                                        SpanningTree* tree = SpanningTree::findByMasterID(connection->masterId());
+                                        if (tree == nullptr) {
+                                            LogWarning(LOG_STP, "PEER %u (%s) downstream server not announced in server tree, reinitializing STP entry, this is abnormal, peerId = %u, masterId = %u, connectionState = %u", peerId, connection->identWithQualifier().c_str(),
+                                                peerId, connection->masterId(), connection->connectionState());
+                                            SpanningTree* node = new SpanningTree(peerId, connection->masterId(), network->m_treeRoot);
+                                            node->identity(connection->identity());
+                                            network->logSpanningTree(connection);
+                                        }
+                                    }
+                                }
                             }
                             else {
                                 network->writePeerNAK(peerId, streamId, TAG_REPEATER_PING);
