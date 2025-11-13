@@ -139,6 +139,8 @@ master:
     # Flag indicating whether or not a conventional site can override affiliation rules.
     allowConvSiteAffOverride: true
     # Flag indicating whether or not In-Call Control feedback is enabled.
+    disallowInCallCtrl: false
+    # Flag indicating whether or not RID ACL In-Call Control feedback is enabled.
     #   (This will enforce RID ACLs network wide, regardless of local peer RID ACL setting.)
     enableRIDInCallCtrl: false
     # Flag indicating whether or not unknown/undefined RIDs will be rejected by the FNE.

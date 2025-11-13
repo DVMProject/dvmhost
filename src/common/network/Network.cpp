@@ -312,7 +312,7 @@ void Network::clock(uint32_t ms)
                     break;
                 }
 
-                // process incomfing message subfunction opcodes
+                // process incoming message subfunction opcodes
                 switch (fneHeader.getSubFunction()) {
                 case NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR:                 // Encapsulated DMR data frame
                     {
@@ -679,7 +679,7 @@ void Network::clock(uint32_t ms)
 
         case NET_FUNC::MASTER:                                          // Master
             {
-                // process incomfing message subfunction opcodes
+                // process incoming message subfunction opcodes
                 switch (fneHeader.getSubFunction()) {
                 case NET_SUBFUNC::MASTER_SUBFUNC_WL_RID:                // Radio ID Whitelist
                     {
@@ -867,7 +867,13 @@ void Network::clock(uint32_t ms)
 
         case NET_FUNC::INCALL_CTRL:                                     // In-Call Control
             {
-                // process incomfing message subfunction opcodes
+                uint32_t ssrc = rtpHeader.getSSRC();
+                if (!m_promiscuousPeer && ssrc != peerId) {
+                    LogWarning(LOG_NET, "PEER %u, ignoring in-call control not destined for this peer SSRC %u", m_peerId, ssrc);
+                    break;
+                }
+
+                // process incoming message subfunction opcodes
                 switch (fneHeader.getSubFunction()) {
                 case NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR:                 // DMR In-Call Control
                     {
@@ -878,7 +884,7 @@ void Network::clock(uint32_t ms)
 
                             // fire off DMR in-call callback if we have one
                             if (m_dmrInCallCallback != nullptr) {
-                                m_dmrInCallCallback(command, dstId, slot);
+                                m_dmrInCallCallback(command, dstId, slot, peerId, ssrc, streamId);
                             }
                         }
                     }
@@ -891,7 +897,7 @@ void Network::clock(uint32_t ms)
 
                             // fire off P25 in-call callback if we have one
                             if (m_p25InCallCallback != nullptr) {
-                                m_p25InCallCallback(command, dstId);
+                                m_p25InCallCallback(command, dstId, peerId, ssrc, streamId);
                             }
                         }    
                     }
@@ -904,7 +910,7 @@ void Network::clock(uint32_t ms)
 
                             // fire off NXDN in-call callback if we have one
                             if (m_nxdnInCallCallback != nullptr) {
-                                m_nxdnInCallCallback(command, dstId);
+                                m_nxdnInCallCallback(command, dstId, peerId, ssrc, streamId);
                             }
                         }
                     }
@@ -917,7 +923,7 @@ void Network::clock(uint32_t ms)
 
                             // fire off analog in-call callback if we have one
                             if (m_analogInCallCallback != nullptr) {
-                                m_analogInCallCallback(command, dstId);
+                                m_analogInCallCallback(command, dstId, peerId, ssrc, streamId);
                             }
                         }
                     }

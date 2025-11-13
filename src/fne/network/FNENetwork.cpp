@@ -119,6 +119,7 @@ FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port,
     m_restrictGrantToAffOnly(false),
     m_restrictPVCallToRegOnly(false),
     m_enableRIDInCallCtrl(true),
+    m_disallowInCallCtrl(false),
     m_rejectUnknownRID(false),
     m_maskOutboundPeerID(false),
     m_maskOutboundPeerIDForNonPL(false),
@@ -194,6 +195,7 @@ void FNENetwork::setOptions(yaml::Node& conf, bool printOptions)
     m_disallowExtAdjStsBcast = conf["disallowExtAdjStsBcast"].as<bool>(true);
     m_allowConvSiteAffOverride = conf["allowConvSiteAffOverride"].as<bool>(true);
     m_enableRIDInCallCtrl = conf["enableRIDInCallCtrl"].as<bool>(false);
+    m_disallowInCallCtrl = conf["disallowInCallCtrl"].as<bool>(false);
     m_rejectUnknownRID = conf["rejectUnknownRID"].as<bool>(false);
     m_maskOutboundPeerID = conf["maskOutboundPeerID"].as<bool>(false);
     m_maskOutboundPeerIDForNonPL = conf["maskOutboundPeerIDForNonPeerLink"].as<bool>(false);
@@ -302,6 +304,7 @@ void FNENetwork::setOptions(yaml::Node& conf, bool printOptions)
         LogInfo("    Disable P25 TDULC call termination broadcasts to any peers: %s", m_disallowCallTerm ? "yes" : "no");
         LogInfo("    Allow conventional sites to override affiliation and receive all traffic: %s", m_allowConvSiteAffOverride ? "yes" : "no");
         LogInfo("    Enable RID In-Call Control: %s", m_enableRIDInCallCtrl ? "yes" : "no");
+        LogInfo("    Disallow In-Call Control Requests: %s", m_disallowInCallCtrl ? "yes" : "no");
         LogInfo("    Reject Unknown RIDs: %s", m_rejectUnknownRID ? "yes" : "no");
         LogInfo("    Log Traffic Denials: %s", m_logDenials ? "yes" : "no");
         LogInfo("    Log Upstream Call Start/End Events: %s", m_logUpstreamCallStartEnd ? "yes" : "no");
@@ -447,6 +450,17 @@ void FNENetwork::processNetworkTreeDisconnect(uint32_t peerId, uint32_t offendin
 
         LogError(LOG_STP, "Network Tree Disconnect, upstream master requested disconnect for unknown PEER %u", offendingPeerId);
     }
+}
+
+/* Helper to process an downstream peer In-Call Control message. */
+
+void FNENetwork::processDownstreamInCallCtrl(network::NET_ICC::ENUM command, network::NET_SUBFUNC::ENUM subFunc, uint32_t dstId, 
+    uint8_t slotNo, uint32_t peerId, uint32_t ssrc, uint32_t streamId)
+{
+    if (m_disallowInCallCtrl)
+        return;
+
+    processInCallCtrl(command, subFunc, dstId, slotNo, peerId, ssrc, streamId);
 }
 
 /* Updates the timer by the passed number of milliseconds. */
@@ -1496,8 +1510,27 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
 
             case NET_FUNC::INCALL_CTRL:                                 // In-Call Control
                 {
-                    // FNEs are god-like entities, and we don't recognize the authority of foreign FNEs telling us what
-                    // to do...
+                    if (network->m_disallowInCallCtrl)
+                        break;
+
+                    if (peerId > 0 && (network->m_peers.find(peerId) != network->m_peers.end())) {
+                        FNEPeerConnection* connection = network->m_peers[peerId];
+                        if (connection != nullptr) {
+                            std::string ip = udp::Socket::address(req->address);
+
+                            // validate peer (simple validation really)
+                            if (connection->connected() && connection->address() == ip) {
+                                NET_ICC::ENUM command = (NET_ICC::ENUM)req->buffer[10U];
+                                uint32_t dstId = GET_UINT24(req->buffer, 11U);
+                                uint8_t slot = req->buffer[14U];
+
+                                network->processInCallCtrl(command, req->fneHeader.getSubFunction(), dstId, slot, peerId, ssrc, streamId);
+                            }
+                            else {
+                                network->writePeerNAK(peerId, streamId, TAG_INCALL_CTRL, NET_CONN_NAK_FNE_UNAUTHORIZED);
+                            }
+                        }
+                    }
                 }
                 break;
 
@@ -2046,6 +2079,21 @@ void FNENetwork::erasePeer(uint32_t peerId)
     erasePeerAffiliations(peerId);
 }
 
+/* Helper to determine if the peer is local to this master. */
+
+bool FNENetwork::isPeerLocal(uint32_t peerId)
+{
+    m_peers.shared_lock();
+    auto it = std::find_if(m_peers.begin(), m_peers.end(), [&](PeerMapPair x) { return x.first == peerId; });
+    if (it != m_peers.end()) {
+        m_peers.shared_unlock();
+        return true;
+    }
+    m_peers.shared_unlock();
+
+    return false;
+}
+
 /* Helper to find the unit registration for the given source ID. */
 
 uint32_t FNENetwork::findPeerUnitReg(uint32_t srcId)
@@ -2178,6 +2226,116 @@ void FNENetwork::setupRepeaterLogin(uint32_t peerId, uint32_t streamId, FNEPeerC
 
     writePeerACK(peerId, streamId, salt, 4U);
     LogInfoEx(LOG_MASTER, "PEER %u RPTL ACK, challenge response sent for login", peerId);
+}
+
+/* Helper to process an In-Call Control message. */
+
+void FNENetwork::processInCallCtrl(network::NET_ICC::ENUM command, network::NET_SUBFUNC::ENUM subFunc, uint32_t dstId, 
+    uint8_t slotNo, uint32_t peerId, uint32_t ssrc, uint32_t streamId)
+{
+    if (m_debug)
+        LogDebugEx(LOG_HOST, "FNENetwork::processInCallCtrl()", "peerId = %u, command = $%02X, subFunc = $%02X, dstId = %u, slot = %u, ssrc = %u, streamId = %u", 
+            peerId, command, subFunc, dstId, slotNo, ssrc, streamId);
+
+    if (m_disallowInCallCtrl) {
+        LogWarning(LOG_MASTER, "PEER %u In-Call Control disabled, ignoring ICC request, dstId = %u, slot = %u, ssrc = %u, streamId = %u", 
+            peerId, dstId, slotNo, ssrc, streamId);
+        return;
+    }
+
+    switch (command) {
+    case network::NET_ICC::REJECT_TRAFFIC:
+        {
+            // is this a local peer?
+            if (ssrc > 0 && (m_peers.find(ssrc) != m_peers.end())) {
+                FNEPeerConnection* connection = m_peers[ssrc];
+                if (connection != nullptr) {
+                    // validate peer (simple validation really)
+                    if (connection->connected()) {
+                        LogInfoEx(LOG_MASTER, "PEER %u In-Call Control Request to Local Peer, dstId = %u, slot = %u, ssrc = %u, streamId = %u", peerId, dstId, slotNo, ssrc, streamId);
+
+                        // send ICC request to local peer
+                        writePeerICC(ssrc, streamId, subFunc, command, dstId, slotNo, true);
+
+                        // flag the protocol call handler to allow call takeover on the next audio frame
+                        switch (subFunc) {
+                        case NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR:             // Encapsulated DMR data frame
+                            m_tagDMR->triggerCallTakeover(dstId);
+                            break;
+
+                        case NET_SUBFUNC::PROTOCOL_SUBFUNC_P25:             // Encapsulated P25 data frame
+                            m_tagP25->triggerCallTakeover(dstId);
+                            break;
+
+                        case NET_SUBFUNC::PROTOCOL_SUBFUNC_NXDN:            // Encapsulated NXDN data frame
+                            m_tagNXDN->triggerCallTakeover(dstId);
+                            break;
+
+                        case NET_SUBFUNC::PROTOCOL_SUBFUNC_ANALOG:          // Encapsulated analog data frame
+                            m_tagAnalog->triggerCallTakeover(dstId);
+                            break;
+
+                        default:
+                            break;
+                        }
+                    }
+                }
+            } else {
+                LogInfoEx(LOG_MASTER, "PEER %u In-Call Control Request to Neighbors, dstId = %u, slot = %u, ssrc = %u, streamId = %u", peerId, dstId, slotNo, ssrc, streamId);
+
+                // send ICC request to any peers connected to us that are neighbor FNEs
+                m_peers.shared_lock();
+                for (auto peer : m_peers) {
+                    if (peer.second == nullptr)
+                        continue;
+                    if (peerId != peer.first) {
+                        FNEPeerConnection* conn = peer.second;
+                        if (peerId == peer.first) {
+                            // skip the peer if it is the source peer
+                            continue;
+                        }
+
+                        if (conn->isNeighborFNEPeer()) {
+                            // send ICC request to local peer
+                            writePeerICC(peer.first, streamId, subFunc, command, dstId, slotNo, true, false, ssrc);
+                        }
+                    }
+                }
+                m_peers.shared_unlock();
+
+                // flag the protocol call handler to allow call takeover on the next audio frame
+                switch (subFunc) {
+                case NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR:             // Encapsulated DMR data frame
+                    m_tagDMR->triggerCallTakeover(dstId);
+                    break;
+
+                case NET_SUBFUNC::PROTOCOL_SUBFUNC_P25:             // Encapsulated P25 data frame
+                    m_tagP25->triggerCallTakeover(dstId);
+                    break;
+
+                case NET_SUBFUNC::PROTOCOL_SUBFUNC_NXDN:            // Encapsulated NXDN data frame
+                    m_tagNXDN->triggerCallTakeover(dstId);
+                    break;
+
+                case NET_SUBFUNC::PROTOCOL_SUBFUNC_ANALOG:          // Encapsulated analog data frame
+                    m_tagAnalog->triggerCallTakeover(dstId);
+                    break;
+
+                default:
+                    break;
+                }
+
+                // send further up the network tree
+                if (m_host->m_peerNetworks.size() > 0) {
+                    writePeerICC(peerId, streamId, subFunc, command, dstId, slotNo, true, true, ssrc);
+                }
+            }
+        }
+        break;
+
+    default:
+        break;
+    }
 }
 
 /* Helper to send the network metadata to the specified peer in a separate thread. */
@@ -2777,7 +2935,7 @@ void FNENetwork::writeTreeDisconnect(uint32_t peerId, uint32_t offendingPeerId)
 /* Helper to send a In-Call Control command to the specified peer. */
 
 bool FNENetwork::writePeerICC(uint32_t peerId, uint32_t streamId, NET_SUBFUNC::ENUM subFunc, NET_ICC::ENUM command, uint32_t dstId, uint8_t slotNo,
-    bool systemReq)
+    bool systemReq, bool toUpstream, uint32_t ssrc)
 {
     if (peerId == 0)
         return false;
@@ -2786,15 +2944,41 @@ bool FNENetwork::writePeerICC(uint32_t peerId, uint32_t streamId, NET_SUBFUNC::E
     if (dstId == 0U)
         return false;
 
+    if (systemReq && ssrc == 0U)
+        ssrc = peerId;
+
+    if (m_debug)
+        LogDebugEx(LOG_HOST, "FNENetwork::writePeerICC()", "peerId = %u, command = $%02X, subFunc = $%02X, dstId = %u, slot = %u, ssrc = %u, streamId = %u", 
+            peerId, command, subFunc, dstId, slotNo, ssrc, streamId);
+
     uint8_t buffer[DATA_PACKET_LENGTH];
     ::memset(buffer, 0x00U, DATA_PACKET_LENGTH);
 
-    SET_UINT32(peerId, buffer, 6U);                                             // Peer ID
+    if (systemReq) {
+        SET_UINT32(ssrc, buffer, 6U);                                           // Peer ID
+    } else {
+        SET_UINT32(peerId, buffer, 6U);                                         // Peer ID
+    }
     buffer[10U] = (uint8_t)command;                                             // In-Call Control Command
     SET_UINT24(dstId, buffer, 11U);                                             // Destination ID
     buffer[14U] = slotNo;                                                       // DMR Slot No
 
-    return writePeer(peerId, m_peerId, { NET_FUNC::INCALL_CTRL, subFunc }, buffer, 15U, RTP_END_OF_CALL_SEQ, streamId);
+    // are we sending this ICC request upstream?
+    if (toUpstream && systemReq) {
+        if (m_host->m_peerNetworks.size() > 0U) {
+            for (auto peer : m_host->m_peerNetworks) {
+                if (peer.second != nullptr) {
+                    if (peer.second->isEnabled()) {
+                        peer.second->writeMaster({ NET_FUNC::INCALL_CTRL, subFunc }, buffer, 15U, RTP_END_OF_CALL_SEQ, streamId, false, 0U, ssrc);
+                    }
+                }
+            }
+        }
+
+        return true;
+    }
+    else
+        return writePeer(peerId, ssrc, { NET_FUNC::INCALL_CTRL, subFunc }, buffer, 15U, RTP_END_OF_CALL_SEQ, streamId);
 }
 
 /*

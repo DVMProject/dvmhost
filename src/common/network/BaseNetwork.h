@@ -63,6 +63,8 @@
 #define TAG_REPEATER_GRANT      "RPTG"
 #define TAG_REPEATER_KEY        "RKEY"
 
+#define TAG_INCALL_CTRL         "ICC "
+
 #define TAG_TRANSFER            "TRNS"
 #define TAG_TRANSFER_ACT_LOG    "TRNSLOG"
 #define TAG_TRANSFER_DIAG_LOG   "TRNSDIAG"

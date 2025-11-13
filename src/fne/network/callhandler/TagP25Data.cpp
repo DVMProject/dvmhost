@@ -325,12 +325,29 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                 });
                 if (it != m_status.end()) {
                     RxStatus status = m_status[dstId];
+
+                    // is the call being taken over?
+                    if (status.callTakeover) {
+                        LogInfoEx((fromUpstream) ? LOG_PEER : LOG_MASTER, "P25, Call Source Switched (Takeover), peer = %u, ssrc = %u, sysId = $%03X, netId = $%05X, srcId = %u, dstId = %u, streamId = %u, rxPeer = %u, rxSsrc = %u, rxSrcId = %u, rxDstId = %u, rxStreamId = %u, fromUpstream = %u",
+                            peerId, ssrc, sysId, netId, srcId, dstId, streamId, status.peerId, status.ssrc, status.srcId, status.dstId, status.streamId, fromUpstream);
+
+                        m_status.lock(false);
+                        m_status[dstId].streamId = streamId;
+                        m_status[dstId].srcId = srcId;
+                        m_status[dstId].ssrc = ssrc;
+                        m_status[dstId].callTakeover = false; // reset takeover flag
+                        m_status.unlock();
+
+                        status = m_status[dstId];
+                    }
+
                     if (streamId != status.streamId && ((duid != DUID::TDU) && (duid != DUID::TDULC))) {
                         // perform TG switch over -- this can happen in special conditions where a TG may rapidly switch
                         // from one source to another (primarily from bridge resources)
                         if (switchOver) {
                             m_status.lock(false);
                             m_status[dstId].streamId = streamId;
+                            m_status[dstId].ssrc = ssrc;
                             if (status.srcId == 0U)
                                 m_status[dstId].srcId = srcId;
                             if (status.srcId != srcId) {
@@ -368,6 +385,7 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                                         m_status.lock(false);
                                         m_status[dstId].streamId = streamId;
                                         m_status[dstId].srcId = srcId;
+                                        m_status[dstId].ssrc = ssrc;
                                         m_status.unlock();
                                     }
                                     else {
@@ -376,17 +394,23 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                                         return false;
                                     }
                                 } else {
-                                    if (hasCallPriority) {
-                                        LogInfoEx((fromUpstream) ? LOG_PEER : LOG_MASTER, "P25, Call Source Switched (Priority), peer = %u, ssrc = %u, sysId = $%03X, netId = $%05X, srcId = %u, dstId = %u, streamId = %u, rxPeer = %u, rxSrcId = %u, rxDstId = %u, rxStreamId = %u, fromUpstream = %u",
-                                            peerId, ssrc, sysId, netId, srcId, dstId, streamId, status.peerId, status.srcId, status.dstId, status.streamId, fromUpstream);
+                                    if (hasCallPriority && !m_network->m_disallowInCallCtrl) {
+                                        LogInfoEx((fromUpstream) ? LOG_PEER : LOG_MASTER, "P25, Call Source Switched (Priority), peer = %u, ssrc = %u, sysId = $%03X, netId = $%05X, srcId = %u, dstId = %u, streamId = %u, rxPeer = %u, rxSsrc = %u, rxSrcId = %u, rxDstId = %u, rxStreamId = %u, fromUpstream = %u",
+                                            peerId, ssrc, sysId, netId, srcId, dstId, streamId, status.peerId, status.ssrc, status.srcId, status.dstId, status.streamId, fromUpstream);
 
                                         // since we're gonna switch over the stream and interrupt the current call inprogress lets try to ICC the transmitting peer
-                                        m_network->writePeerICC(m_status[dstId].peerId, m_status[dstId].streamId, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25, NET_ICC::REJECT_TRAFFIC, dstId, 0U, true);
+                                        if (m_network->isPeerLocal(m_status[dstId].ssrc))
+                                            m_network->writePeerICC(m_status[dstId].peerId, m_status[dstId].streamId, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25, NET_ICC::REJECT_TRAFFIC, dstId, 0U, true, false,
+                                                m_status[dstId].ssrc);
+                                        else
+                                            m_network->writePeerICC(m_status[dstId].peerId, m_status[dstId].streamId, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25, NET_ICC::REJECT_TRAFFIC, dstId, 0U, true, true,
+                                                m_status[dstId].ssrc);
                                     }
 
                                     m_status.lock(false);
                                     m_status[dstId].streamId = streamId;
                                     m_status[dstId].srcId = srcId;
+                                    m_status[dstId].ssrc = ssrc;
                                     m_status.unlock();
                                 }
                             }
@@ -417,6 +441,7 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                     m_status[dstId].dstId = dstId;
                     m_status[dstId].streamId = streamId;
                     m_status[dstId].peerId = peerId;
+                    m_status[dstId].ssrc = ssrc;
                     m_status[dstId].activeCall = true;
                     m_status.unlock();
 
@@ -428,6 +453,7 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                         m_statusPVCall[dstId].dstId = dstId;
                         m_statusPVCall[dstId].streamId = streamId;
                         m_statusPVCall[dstId].peerId = peerId;
+                        m_statusPVCall[dstId].ssrc = ssrc;
                         m_statusPVCall[dstId].activeCall = true;
 
                         // find the SSRC of the peer that registered this unit
@@ -723,6 +749,24 @@ bool TagP25Data::processGrantReq(uint32_t srcId, uint32_t dstId, bool unitToUnit
     }
 
     return true;
+}
+
+/* Helper to trigger a call takeover from a In-Call control event. */
+
+void TagP25Data::triggerCallTakeover(uint32_t dstId)
+{
+    auto it = std::find_if(m_status.begin(), m_status.end(), [&](StatusMapPair& x) {
+        if (x.second.dstId == dstId) {
+            if (x.second.activeCall)
+                return true;
+        }
+        return false;
+    });
+    if (it != m_status.end()) {
+        m_status.lock(false);
+        m_status[dstId].callTakeover = true;
+        m_status.unlock();
+    }
 }
 
 /* Helper to playback a parrot frame to the network. */

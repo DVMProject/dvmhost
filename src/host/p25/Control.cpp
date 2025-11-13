@@ -483,7 +483,8 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
 
     // set the In-Call Control function callback
     if (m_network != nullptr) {
-        m_network->setP25ICCCallback([=](network::NET_ICC::ENUM command, uint32_t dstId) { processInCallCtrl(command, dstId); });
+        m_network->setP25ICCCallback([=](network::NET_ICC::ENUM command, uint32_t dstId,
+            uint32_t peerId, uint32_t ssrc, uint32_t streamId) { processInCallCtrl(command, dstId); });
     }
 
     // throw a warning if we are notifying a CC of our presence (this indicates we're a VC) *AND* we have the control

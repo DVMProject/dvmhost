@@ -196,7 +196,8 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, ::lookups::VoiceChDa
 
     // set the In-Call Control function callback
     if (m_network != nullptr) {
-        m_network->setDMRICCCallback([=](network::NET_ICC::ENUM command, uint32_t dstId, uint8_t slotNo) { processInCallCtrl(command, dstId, slotNo); });
+        m_network->setDMRICCCallback([=](network::NET_ICC::ENUM command, uint32_t dstId, 
+            uint8_t slotNo, uint32_t peerId, uint32_t ssrc, uint32_t streamId) { processInCallCtrl(command, dstId, slotNo); });
     }
 
     /*

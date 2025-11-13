@@ -161,6 +161,22 @@ bool TagAnalogData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
             });
             if (it != m_status.end()) {
                 RxStatus status = it->second;
+
+                // is the call being taken over?
+                if (status.callTakeover) {
+                    LogInfoEx((fromUpstream) ? LOG_PEER : LOG_MASTER, "Analog, Call Source Switched (Takeover), peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, rxPeer = %u, rxSrcId = %u, rxDstId = %u, rxStreamId = %u, fromUpstream = %u",
+                        peerId, ssrc, srcId, dstId, streamId, status.peerId, status.srcId, status.dstId, status.streamId, fromUpstream);
+
+                    m_status.lock(false);
+                    m_status[dstId].streamId = streamId;
+                    m_status[dstId].srcId = srcId;
+                    m_status[dstId].ssrc = ssrc;
+                    m_status[dstId].callTakeover = false; // reset takeover flag
+                    m_status.unlock();
+
+                    status = m_status[dstId];
+                }
+
                 if (streamId != status.streamId) {
                     if (status.srcId != 0U && status.srcId != srcId) {
                         bool hasCallPriority = false;
@@ -190,6 +206,7 @@ bool TagAnalogData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
                                 m_status.lock(false);
                                 m_status[dstId].streamId = streamId;
                                 m_status[dstId].srcId = srcId;
+                                m_status[dstId].ssrc = ssrc;
                                 m_status.unlock();
                             }
                             else {
@@ -198,17 +215,23 @@ bool TagAnalogData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
                                 return false;
                             }
                         } else {
-                            if (hasCallPriority) {
+                            if (hasCallPriority && !m_network->m_disallowInCallCtrl) {
                                 LogInfoEx((fromUpstream) ? LOG_PEER : LOG_MASTER, "Analog, Call Source Switched (Priority), peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, rxPeer = %u, rxSrcId = %u, rxDstId = %u, rxStreamId = %u, fromUpstream = %u",
                                     peerId, ssrc, srcId, dstId, streamId, status.peerId, status.srcId, status.dstId, status.streamId, fromUpstream);
 
                                 // since we're gonna switch over the stream and interrupt the current call inprogress lets try to ICC the transmitting peer
-                                m_network->writePeerICC(m_status[dstId].peerId, m_status[dstId].streamId, NET_SUBFUNC::PROTOCOL_SUBFUNC_ANALOG, NET_ICC::REJECT_TRAFFIC, dstId, 0U, true);
+                                if (m_network->isPeerLocal(m_status[dstId].ssrc))
+                                    m_network->writePeerICC(m_status[dstId].peerId, m_status[dstId].streamId, NET_SUBFUNC::PROTOCOL_SUBFUNC_ANALOG, NET_ICC::REJECT_TRAFFIC, dstId, 0U, true, false,
+                                        m_status[dstId].ssrc);
+                                else
+                                    m_network->writePeerICC(m_status[dstId].peerId, m_status[dstId].streamId, NET_SUBFUNC::PROTOCOL_SUBFUNC_ANALOG, NET_ICC::REJECT_TRAFFIC, dstId, 0U, true, true,
+                                        m_status[dstId].ssrc);
                             }
 
                             m_status.lock(false);
                             m_status[dstId].streamId = streamId;
                             m_status[dstId].srcId = srcId;
+                            m_status[dstId].ssrc = ssrc;
                             m_status.unlock();
                         }
                     }
@@ -238,6 +261,7 @@ bool TagAnalogData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
                 m_status[dstId].dstId = dstId;
                 m_status[dstId].streamId = streamId;
                 m_status[dstId].peerId = peerId;
+                m_status[dstId].ssrc = ssrc;
                 m_status[dstId].activeCall = true;
                 m_status.unlock();
 
@@ -375,6 +399,24 @@ bool TagAnalogData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
     }
 
     return false;
+}
+
+/* Helper to trigger a call takeover from a In-Call control event. */
+
+void TagAnalogData::triggerCallTakeover(uint32_t dstId)
+{
+    auto it = std::find_if(m_status.begin(), m_status.end(), [&](StatusMapPair& x) {
+        if (x.second.dstId == dstId) {
+            if (x.second.activeCall)
+                return true;
+        }
+        return false;
+    });
+    if (it != m_status.end()) {
+        m_status.lock(false);
+        m_status[dstId].callTakeover = true;
+        m_status.unlock();
+    }
 }
 
 /* Helper to playback a parrot frame to the network. */

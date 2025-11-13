@@ -244,12 +244,29 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
             });
             if (it != m_status.end()) {
                 RxStatus status = it->second;
+
+                // is the call being taken over?
+                if (status.callTakeover) {
+                    LogInfoEx((fromUpstream) ? LOG_PEER : LOG_MASTER, "DMR, Call Source Switched (Takeover), peer = %u, ssrc = %u, srcId = %u, dstId = %u, slotNo = %u, streamId = %u, rxPeer = %u, rxSrcId = %u, rxDstId = %u, rxSlotNo = %u, rxStreamId = %u, fromUpstream = %u",
+                        peerId, ssrc, srcId, dstId, slotNo, streamId, status.peerId, status.srcId, status.dstId, status.slotNo, status.streamId, fromUpstream);
+
+                    m_status.lock(false);
+                    m_status[dstId].streamId = streamId;
+                    m_status[dstId].srcId = srcId;
+                    m_status[dstId].ssrc = ssrc;
+                    m_status[dstId].callTakeover = false; // reset takeover flag
+                    m_status.unlock();
+
+                    status = m_status[dstId];
+                }
+
                 if (streamId != status.streamId) {
                     // perform TG switch over -- this can happen in special conditions where a TG may rapidly switch
                     // from one source to another (primarily from bridge resources)
                     if (switchOver && status.slotNo == slotNo) {
                         m_status.lock(false);
                         m_status[dstId].streamId = streamId;
+                        m_status[dstId].ssrc = ssrc;
                         if (status.srcId == 0U)
                             m_status[dstId].srcId = srcId;
                         if (status.srcId != srcId) {
@@ -288,6 +305,7 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                                     m_status.lock(false);
                                     m_status[dstId].streamId = streamId;
                                     m_status[dstId].srcId = srcId;
+                                    m_status[dstId].ssrc = ssrc;
                                     m_status.unlock();
                                 } else {
                                     LogWarning((fromUpstream) ? LOG_PEER : LOG_MASTER, "DMR, Call Collision, peer = %u, ssrc = %u, srcId = %u, dstId = %u, slotNo = %u, streamId = %u, rxPeer = %u, rxSrcId = %u, rxDstId = %u, rxSlotNo = %u, rxStreamId = %u, fromUpstream = %u",
@@ -295,17 +313,23 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                                     return false;
                                 }
                             } else {
-                                if (hasCallPriority) {
+                                if (hasCallPriority && !m_network->m_disallowInCallCtrl) {
                                     LogInfoEx((fromUpstream) ? LOG_PEER : LOG_MASTER, "DMR, Call Source Switched (Priority), peer = %u, ssrc = %u, srcId = %u, dstId = %u, slotNo = %u, streamId = %u, rxPeer = %u, rxSrcId = %u, rxDstId = %u, rxSlotNo = %u, rxStreamId = %u, fromUpstream = %u",
                                         peerId, ssrc, srcId, dstId, slotNo, streamId, status.peerId, status.srcId, status.dstId, status.slotNo, status.streamId, fromUpstream);
 
                                     // since we're gonna switch over the stream and interrupt the current call inprogress lets try to ICC the transmitting peer
-                                    m_network->writePeerICC(m_status[dstId].peerId, m_status[dstId].streamId, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR, NET_ICC::REJECT_TRAFFIC, dstId, slotNo, true);
+                                    if (m_network->isPeerLocal(m_status[dstId].ssrc))
+                                        m_network->writePeerICC(m_status[dstId].peerId, m_status[dstId].streamId, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR, NET_ICC::REJECT_TRAFFIC, dstId, 0U, true, false,
+                                            m_status[dstId].ssrc);
+                                    else
+                                        m_network->writePeerICC(m_status[dstId].peerId, m_status[dstId].streamId, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR, NET_ICC::REJECT_TRAFFIC, dstId, 0U, true, true,
+                                            m_status[dstId].ssrc);
                                 }
 
                                 m_status.lock(false);
                                 m_status[dstId].streamId = streamId;
                                 m_status[dstId].srcId = srcId;
+                                m_status[dstId].ssrc = ssrc;
                                 m_status.unlock();
                             }
                         }
@@ -338,6 +362,7 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                 m_status[dstId].slotNo = slotNo;
                 m_status[dstId].streamId = streamId;
                 m_status[dstId].peerId = peerId;
+                m_status[dstId].ssrc = ssrc;
                 m_status[dstId].activeCall = true;
                 m_status.unlock();
 
@@ -350,6 +375,7 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                     m_statusPVCall[dstId].slotNo = slotNo;
                     m_statusPVCall[dstId].streamId = streamId;
                     m_statusPVCall[dstId].peerId = peerId;
+                    m_statusPVCall[dstId].ssrc = ssrc;
                     m_statusPVCall[dstId].activeCall = true;
 
                     // find the SSRC of the peer that registered this unit
@@ -624,6 +650,24 @@ bool TagDMRData::processGrantReq(uint32_t srcId, uint32_t dstId, uint8_t slot, b
     }
 
     return true;
+}
+
+/* Helper to trigger a call takeover from a In-Call control event. */
+
+void TagDMRData::triggerCallTakeover(uint32_t dstId)
+{
+    auto it = std::find_if(m_status.begin(), m_status.end(), [&](StatusMapPair& x) {
+        if (x.second.dstId == dstId) {
+            if (x.second.activeCall)
+                return true;
+        }
+        return false;
+    });
+    if (it != m_status.end()) {
+        m_status.lock(false);
+        m_status[dstId].callTakeover = true;
+        m_status.unlock();
+    }
 }
 
 /* Helper to playback a parrot frame to the network. */

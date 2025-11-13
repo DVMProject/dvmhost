@@ -264,22 +264,22 @@ namespace network
          * @brief Helper to set the DMR In-Call Control callback.
          * @param callback 
          */
-        void setDMRICCCallback(std::function<void(NET_ICC::ENUM, uint32_t, uint8_t)>&& callback) { m_dmrInCallCallback = callback; }
+        void setDMRICCCallback(std::function<void(NET_ICC::ENUM, uint32_t, uint8_t, uint32_t, uint32_t, uint32_t)>&& callback) { m_dmrInCallCallback = callback; }
         /**
          * @brief Helper to set the P25 In-Call Control callback.
          * @param callback 
          */
-        void setP25ICCCallback(std::function<void(NET_ICC::ENUM, uint32_t)>&& callback) { m_p25InCallCallback = callback; }
+        void setP25ICCCallback(std::function<void(NET_ICC::ENUM, uint32_t, uint32_t, uint32_t, uint32_t)>&& callback) { m_p25InCallCallback = callback; }
         /**
          * @brief Helper to set the NXDN In-Call Control callback.
          * @param callback 
          */
-        void setNXDNICCCallback(std::function<void(NET_ICC::ENUM, uint32_t)>&& callback) { m_nxdnInCallCallback = callback; }
+        void setNXDNICCCallback(std::function<void(NET_ICC::ENUM, uint32_t, uint32_t, uint32_t, uint32_t)>&& callback) { m_nxdnInCallCallback = callback; }
         /**
          * @brief Helper to set the analog In-Call Control callback.
          * @param callback 
          */
-        void setAnalogICCCallback(std::function<void(NET_ICC::ENUM, uint32_t)>&& callback) { m_analogInCallCallback = callback; }
+        void setAnalogICCCallback(std::function<void(NET_ICC::ENUM, uint32_t, uint32_t, uint32_t, uint32_t)>&& callback) { m_analogInCallCallback = callback; }
 
         /**
          * @brief Helper to set the enc. key response callback.
@@ -370,22 +370,26 @@ namespace network
          * @brief DMR In-Call Control Function Callback.
          *  (This is called when the master sends a In-Call Control request.)
          */
-        std::function<void(NET_ICC::ENUM command, uint32_t dstId, uint8_t slotNo)> m_dmrInCallCallback;
+        std::function<void(NET_ICC::ENUM command, uint32_t dstId, uint8_t slotNo, 
+            uint32_t peerId, uint32_t ssrc, uint32_t streamId)> m_dmrInCallCallback;
         /**
          * @brief P25 In-Call Control Function Callback.
          *  (This is called once the master sends a In-Call Control request.)
          */
-        std::function<void(NET_ICC::ENUM command, uint32_t dstId)> m_p25InCallCallback;
+        std::function<void(NET_ICC::ENUM command, uint32_t dstId, 
+            uint32_t peerId, uint32_t ssrc, uint32_t streamId)> m_p25InCallCallback;
         /**
          * @brief NXDN In-Call Control Function Callback.
          *  (This is called once the master sends a In-Call Control request.)
          */
-        std::function<void(NET_ICC::ENUM command, uint32_t dstId)> m_nxdnInCallCallback;
+        std::function<void(NET_ICC::ENUM command, uint32_t dstId, 
+            uint32_t peerId, uint32_t ssrc, uint32_t streamId)> m_nxdnInCallCallback;
         /**
          * @brief Analog In-Call Control Function Callback.
          *  (This is called once the master sends a In-Call Control request.)
          */
-        std::function<void(NET_ICC::ENUM command, uint32_t dstId)> m_analogInCallCallback;
+        std::function<void(NET_ICC::ENUM command, uint32_t dstId, 
+            uint32_t peerId, uint32_t ssrc, uint32_t streamId)> m_analogInCallCallback;
 
         /**
          * @brief Encryption Key Response Function Callback.

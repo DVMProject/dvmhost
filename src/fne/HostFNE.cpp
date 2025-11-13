@@ -883,9 +883,17 @@ bool HostFNE::createPeerNetworks()
             }
 
             network->setDMRCallback(std::bind(&HostFNE::processPeerDMR, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, std::placeholders::_6));
+            network->setDMRICCCallback([=](network::NET_ICC::ENUM command, uint32_t dstId, uint8_t slot,
+                uint32_t peerId, uint32_t ssrc, uint32_t streamId) { processPeerDMRInCallCtrl(command, dstId, slot, peerId, ssrc, streamId); });
             network->setP25Callback(std::bind(&HostFNE::processPeerP25, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, std::placeholders::_6));
+            network->setP25ICCCallback([=](network::NET_ICC::ENUM command, uint32_t dstId,
+                uint32_t peerId, uint32_t ssrc, uint32_t streamId) { processPeerP25InCallCtrl(command, dstId, peerId, ssrc, streamId); });
             network->setNXDNCallback(std::bind(&HostFNE::processPeerNXDN, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, std::placeholders::_6));
+            network->setNXDNICCCallback([=](network::NET_ICC::ENUM command, uint32_t dstId,
+                uint32_t peerId, uint32_t ssrc, uint32_t streamId) { processPeerNXDNInCallCtrl(command, dstId, peerId, ssrc, streamId); });
             network->setAnalogCallback(std::bind(&HostFNE::processPeerAnalog, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, std::placeholders::_6));
+            network->setAnalogICCCallback([=](network::NET_ICC::ENUM command, uint32_t dstId,
+                uint32_t peerId, uint32_t ssrc, uint32_t streamId) { processPeerAnalogInCallCtrl(command, dstId, peerId, ssrc, streamId); });
 
             network->setNetTreeDiscCallback(std::bind(&HostFNE::processNetworkTreeDisconnect, this, std::placeholders::_1, std::placeholders::_2));
             network->setNotifyPeerReplicaCallback(std::bind(&HostFNE::processPeerReplicaNotify, this, std::placeholders::_1));
@@ -1041,6 +1049,21 @@ void HostFNE::processPeerDMR(network::PeerNetwork* peerNetwork, const uint8_t* d
     }
 }
 
+/* Helper to process an DMR In-Call Control message. */
+
+void HostFNE::processPeerDMRInCallCtrl(network::NET_ICC::ENUM command, uint32_t dstId, uint8_t slot, 
+    uint32_t peerId, uint32_t ssrc, uint32_t streamId)
+{
+    switch (command) {
+    case network::NET_ICC::REJECT_TRAFFIC:
+        m_network->processDownstreamInCallCtrl(command, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR, dstId, slot, peerId, ssrc, streamId);
+        break;
+
+    default:
+        break;
+    }
+}
+
 /* Processes P25 peer network traffic. */
 
 void HostFNE::processPeerP25(network::PeerNetwork* peerNetwork, const uint8_t* data, uint32_t length, uint32_t streamId, 
@@ -1060,6 +1083,21 @@ void HostFNE::processPeerP25(network::PeerNetwork* peerNetwork, const uint8_t* d
     if (length > 0U) {
         uint32_t peerId = peerNetwork->getPeerId();
         m_network->p25TrafficHandler()->processFrame(data, length, peerId, rtpHeader.getSSRC(), rtpHeader.getSequence(), streamId, true);
+    }
+}
+
+/* Helper to process an P25 In-Call Control message. */
+
+void HostFNE::processPeerP25InCallCtrl(network::NET_ICC::ENUM command, uint32_t dstId,
+    uint32_t peerId, uint32_t ssrc, uint32_t streamId)
+{
+    switch (command) {
+    case network::NET_ICC::REJECT_TRAFFIC:
+        m_network->processDownstreamInCallCtrl(command, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25, dstId, 0U, peerId, ssrc, streamId);
+        break;
+
+    default:
+        break;
     }
 }
 
@@ -1085,6 +1123,21 @@ void HostFNE::processPeerNXDN(network::PeerNetwork* peerNetwork, const uint8_t* 
     }
 }
 
+/* Helper to process an NXDN In-Call Control message. */
+
+void HostFNE::processPeerNXDNInCallCtrl(network::NET_ICC::ENUM command, uint32_t dstId, 
+    uint32_t peerId, uint32_t ssrc, uint32_t streamId)
+{
+    switch (command) {
+    case network::NET_ICC::REJECT_TRAFFIC:
+        m_network->processDownstreamInCallCtrl(command, NET_SUBFUNC::PROTOCOL_SUBFUNC_NXDN, dstId, 0U, peerId, ssrc, streamId);
+        break;
+
+    default:
+        break;
+    }
+}
+
 /* Processes analog peer network traffic. */
 
 void HostFNE::processPeerAnalog(network::PeerNetwork* peerNetwork, const uint8_t* data, uint32_t length, uint32_t streamId, 
@@ -1104,6 +1157,21 @@ void HostFNE::processPeerAnalog(network::PeerNetwork* peerNetwork, const uint8_t
     if (length > 0U) {
         uint32_t peerId = peerNetwork->getPeerId();
         m_network->analogTrafficHandler()->processFrame(data, length, peerId, rtpHeader.getSSRC(), rtpHeader.getSequence(), streamId, true);
+    }
+}
+
+/* Helper to process an analog In-Call Control message. */
+
+void HostFNE::processPeerAnalogInCallCtrl(network::NET_ICC::ENUM command, uint32_t dstId, 
+    uint32_t peerId, uint32_t ssrc, uint32_t streamId)
+{
+    switch (command) {
+    case network::NET_ICC::REJECT_TRAFFIC:
+        m_network->processDownstreamInCallCtrl(command, NET_SUBFUNC::PROTOCOL_SUBFUNC_ANALOG, dstId, 0U, peerId, ssrc, streamId);
+        break;
+
+    default:
+        break;
     }
 }
 

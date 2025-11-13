@@ -81,6 +81,11 @@ namespace network
             bool processGrantReq(uint32_t srcId, uint32_t dstId, bool unitToUnit, uint32_t peerId, uint16_t pktSeq, uint32_t streamId);
 
             /**
+             * @brief Helper to trigger a call takeover from a In-Call control event.
+             */
+            void triggerCallTakeover(uint32_t dstId);
+
+            /**
              * @brief Helper to playback a parrot frame to the network.
              */
             void playbackParrot();
@@ -229,6 +234,10 @@ namespace network
                  */
                 uint32_t peerId;
                 /**
+                 * @brief Synchronization Source.
+                 */
+                uint32_t ssrc;
+                /**
                  * @brief Destination Peer ID.
                  */
                 uint32_t dstPeerId;
@@ -236,6 +245,10 @@ namespace network
                  * @brief Flag indicating this call is active with traffic currently in progress.
                  */
                 bool activeCall;
+                /**
+                 * @brief Flag indicating the metadata for the call on the next frame will be overwritten.
+                 */
+                bool callTakeover;
 
                 /**
                  * @brief Helper to reset call status.
@@ -246,7 +259,9 @@ namespace network
                     dstId = 0U;
                     streamId = 0U;
                     peerId = 0U;
+                    ssrc = 0U;
                     activeCall = false;
+                    callTakeover = false;
                 }
             };
             typedef std::pair<const uint32_t, RxStatus> StatusMapPair;

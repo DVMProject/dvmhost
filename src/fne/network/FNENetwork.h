@@ -238,6 +238,19 @@ namespace network
         void processNetworkTreeDisconnect(uint32_t peerId, uint32_t offendingPeerId);
 
         /**
+         * @brief Helper to process an downstream peer In-Call Control message.
+         * @param command In-Call Control Command.
+         * @param subFunc Network Sub-Function.
+         * @param dstId Destination ID.
+         * @param slotNo Slot Number.
+         * @param peerId Peer ID.
+         * @param ssrc RTP synchronization source ID.
+         * @param streamId Stream ID.
+         */
+        void processDownstreamInCallCtrl(network::NET_ICC::ENUM command, network::NET_SUBFUNC::ENUM subFunc, uint32_t dstId, 
+            uint8_t slotNo, uint32_t peerId, uint32_t ssrc, uint32_t streamId);
+
+        /**
          * @brief Updates the timer by the passed number of milliseconds.
          * @param ms Number of milliseconds.
          */
@@ -358,6 +371,7 @@ namespace network
         bool m_restrictGrantToAffOnly;
         bool m_restrictPVCallToRegOnly;
         bool m_enableRIDInCallCtrl;
+        bool m_disallowInCallCtrl;
         bool m_rejectUnknownRID;
 
         bool m_maskOutboundPeerID;
@@ -447,6 +461,12 @@ namespace network
          * @returns bool True, if peer was deleted, otherwise false.
          */
         void erasePeer(uint32_t peerId);
+        /**
+         * @brief Helper to determine if the peer is local to this master.
+         * @param peerId Peer ID.
+         * @returns bool True, if peer is local, otherwise false.
+         */
+        bool isPeerLocal(uint32_t peerId);
 
         /**
          * @brief Helper to find the unit registration for the given source ID.
@@ -469,6 +489,19 @@ namespace network
          * @param connection Instance of the FNEPeerConnection class.
          */
         void setupRepeaterLogin(uint32_t peerId, uint32_t streamId, FNEPeerConnection* connection);
+
+        /**
+         * @brief Helper to process an In-Call Control message.
+         * @param command In-Call Control Command.
+         * @param subFunc Network Sub-Function.
+         * @param dstId Destination ID.
+         * @param slotNo Slot Number.
+         * @param peerId Peer ID.
+         * @param ssrc RTP synchronization source ID.
+         * @param streamId Stream ID for this message.
+         */
+        void processInCallCtrl(network::NET_ICC::ENUM command, network::NET_SUBFUNC::ENUM subFunc, uint32_t dstId, 
+            uint8_t slotNo, uint32_t peerId, uint32_t ssrc, uint32_t streamId);
 
         /**
          * @brief Helper to send the network metadata to the specified peer in a separate thread.
@@ -651,9 +684,12 @@ namespace network
          * @param dstId Destination ID.
          * @param slotNo DMR slot.
          * @param systemReq Flag indicating the ICC request is a system generated one not a automatic RID rule generated one.
+         * @param toUpstream Flag indicating the ICC request is directed at an upstream peer.
+         * @param ssrc RTP synchronization source ID.
          */
         bool writePeerICC(uint32_t peerId, uint32_t streamId, NET_SUBFUNC::ENUM subFunc = NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR, 
-            NET_ICC::ENUM command = NET_ICC::NOP, uint32_t dstId = 0U, uint8_t slotNo = 0U, bool systemReq = false);
+            NET_ICC::ENUM command = NET_ICC::NOP, uint32_t dstId = 0U, uint8_t slotNo = 0U, bool systemReq = false, bool toUpstream = false,
+            uint32_t ssrc = 0U);
 
         /*
         ** Generic Message Writing
