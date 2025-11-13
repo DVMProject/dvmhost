@@ -217,7 +217,7 @@ if (NOT DISABLE_WEBSOCKETS)
         FetchContent_Declare(
             WEBSOCKETPP
             GIT_REPOSITORY https://github.com/zaphoyd/websocketpp.git
-            GIT_TAG 56123c87598f8b1dd471be83ca841ceae07f95ba # 0.8.2
+            GIT_TAG 4dfe1be74e684acca19ac1cf96cce0df9eac2a2d # 0.8.2 with modified CMake version
         )
         FetchContent_MakeAvailable(WEBSOCKETPP)
         add_subdirectory(${websocketpp_SOURCE_DIR} EXCLUDE_FROM_ALL)
