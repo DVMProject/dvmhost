@@ -31,6 +31,8 @@ This document describes, in high-level, the general concepts and procedures for 
 * DMR: Digital Mobile Radio. (ETSI TS-102)
 * P25: Project 25. (TIA-102)
 * NXDN: Next Generation Digital Narrowband.
+* ANALOG: Analog Audio.
+* STP: Spanning Tree Protocol.
 
 === 2.2 General Concept
 The DVM FNE Network Protocol defines a common and standard communications protocol between the, CFNE server application, and DVM end-point applications.
@@ -166,9 +168,13 @@ The function parameter of the extension header defines the major operation opcod
 |$91
 |This function is used to announce status related to Group Affiliation, Unit Registration and Voice Channel registration.
 
-|Peer-Link
+|Peer Replication
 |$92
 |This function is used from both Master -> Peer and Peer -> Master for linked CFNEs operating as a single network.
+
+|Network Tree
+|$93
+|This function is used from both Master -> Peer and Peer -> Master for linked CFNEs operating as a single network to transfer spanning tree data.
 |=== 
 
 ===== 2.3.1.2.2 Sub-Function
@@ -192,6 +198,11 @@ The sub-function parameter of the extension header defines the minor operation o
 |$02
 |Protocol
 |This sub-function is used for NXDN traffic.
+
+|Analog
+|$0F
+|Protocol
+|This sub-function is used for analog audio traffic.
 
 |Whitelist RIDs
 |$00
@@ -258,25 +269,40 @@ The sub-function parameter of the extension header defines the minor operation o
 |Announce
 |This sub-function is used for a peer to announce its list of registered voice channels to the master.
 
-|Peer-Link Talkgroup Transfer
+|Peer Replication Talkgroup Transfer
 |$00
-|Peer-Link
-|This sub-function is used for a CFNE master to transfer the entire certified talkgroup rules configuration to a CFNE linked peer.
+|Peer Replication
+|This sub-function is used for a CFNE master to transfer the entire certified talkgroup rules configuration to a CFNE peer replica.
 
-|Peer-Link Radio ID Transfer
+|Peer Replication Radio ID Transfer
 |$01
-|Peer-Link
-|This sub-function is used for a CFNE master to transfer the entire certified radio ID lookup configuration to a CFNE linked peer.
+|Peer Replication
+|This sub-function is used for a CFNE master to transfer the entire certified radio ID lookup configuration to a CFNE peer replica.
 
-|Peer-Link Peer ID Transfer
+|Peer Replication Peer ID Transfer
 |$02
-|Peer-Link
-|This sub-function is used for a CFNE master to transfer the entire certified peer ID lookup configuration to a CFNE linked peer.
+|Peer Replication
+|This sub-function is used for a CFNE master to transfer the entire certified peer ID lookup configuration to a CFNE peer replica.
 
-|Peer-Link Active Peer List Transfer
+|Peer Replication Active Peer List Transfer
 |$A2
-|Peer-Link
-|This sub-function is used for a CFNE linked peer to transfer the internal list of active peers to the CFNE master.
+|Peer Replication
+|This sub-function is used for a CFNE peer replica to transfer the internal list of active peers to the CFNE master.
+
+|Peer Replication HA Parameters
+|$A3
+|Peer Replication
+|This sub-function is used for a CFNE peer replica to transfer the configured HA parameters to the CFNE master.
+
+|Network Tree List
+|$00
+|Spanning Tree
+|This sub-function is used for a CFNE peer to transfer the network tree list to/from the CFNE master.
+
+|Network Tree Disconnect
+|$01
+|Spanning Tree
+|This sub-function is used for a CFNE master to command a disconnect of a duplicated CFNE connection.
 |=== 
 
 === 2.3 NACK Types
@@ -321,6 +347,10 @@ This is the basic description of the various packet NACKs that may occur.
 |FNE Max Connections
 |8
 |General failure of the CFNE having reached its maximum allowable connected peers.
+
+|FNE Duplicate Connection
+|9
+|Fatal failure where a downstream CFNE peer is already connected to the network.
 |===
 
 === 2.4 TAG Types
@@ -342,6 +372,10 @@ Some protocol commands (documented in the procedures below) utilize textual mark
 |NXDD
 |Marker for NXDN data packets.
 
+|Analog Audio Data
+|ANOD
+|Marker for analog audio packets.
+
 |Repeater/Peer Login
 |RPTL
 |
@@ -358,8 +392,16 @@ Some protocol commands (documented in the procedures below) utilize textual mark
 |RPTP
 |
 
-|Ping Keep-Alive Response
+|Repeater Grant Request
 |RPTG
+|
+
+|Repeater Key Request
+|RKEY
+|
+
+|ICC
+|In-Call Control Request
 |
 
 |Transfer Message
@@ -380,6 +422,10 @@ Some protocol commands (documented in the procedures below) utilize textual mark
 
 |Announcement
 |ANNC
+|
+
+|Replication
+|REPL
 |
 
 |===
