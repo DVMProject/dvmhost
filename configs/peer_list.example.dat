@@ -21,7 +21,7 @@
 #                                       If this flag is disabled (0), and the connected peer tries to transmit over an on going
 #                                       call, normal call collision rules are applied to the traffic being transmitted.
 #                                       If this flag is enabled (1), and the connected peer tries to transmit over an on going
-                                        call, call collision rules are ignored, and the peer is given priority.
+#                                       call, call collision rules are ignored, and the peer is given priority.
 #
 # Entry Format: "Peer ID,Peer Password,Peer Replication (1 = Enabled / 0 = Disabled),Peer Alias (optional),Can Request Keys (1 = Enabled / 0 = Disabled),Can Issue Inhibit (1 = Enabled / 0 = Disabled),Has Call Priority (1 = Enabled / 0 = Disabled)<newline>"
 # Examples:
