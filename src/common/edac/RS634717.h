@@ -79,49 +79,16 @@ namespace edac
         void encode362017(uint8_t* data);
 
         /**
-         * @brief Decode RS (52,30,23) FEC.
+         * @brief Decode RS (63,35,29) FEC.
          * @param data Reed-Solomon FEC encoded data to decode.
          * @returns bool True, if data was decoded, otherwise false.
          */
-        bool decode523023(uint8_t* data);
+        bool decode633529(uint8_t* data);
         /**
-         * @brief Encode RS (52,30,23) FEC.
+         * @brief Encode RS (63,35,29) FEC.
          * @param data Raw data to encode with Reed-Solomon FEC.
          */
-        void encode523023(uint8_t* data);
-        /**
-         * @brief Decode RS (46,26,21) FEC.
-         * @param data Reed-Solomon FEC encoded data to decode.
-         * @returns bool True, if data was decoded, otherwise false.
-         */
-        bool decode462621(uint8_t* data);
-        /**
-         * @brief Encode RS (46,26,21) FEC.
-         * @param data Raw data to encode with Reed-Solomon FEC.
-         */
-        void encode462621(uint8_t* data);
-        /**
-         * @brief Decode RS (45,26,20) FEC.
-         * @param data Reed-Solomon FEC encoded data to decode.
-         * @returns bool True, if data was decoded, otherwise false.
-         */
-        bool decode452620(uint8_t* data);
-        /**
-         * @brief Encode RS (45,26,20) FEC.
-         * @param data Raw data to encode with Reed-Solomon FEC.
-         */
-        void encode452620(uint8_t* data);
-        /**
-         * @brief Decode RS (44,16,29) FEC.
-         * @param data Reed-Solomon FEC encoded data to decode.
-         * @returns bool True, if data was decoded, otherwise false.
-         */
-        bool decode441629(uint8_t* data);
-        /**
-         * @brief Encode RS (44,16,29) FEC.
-         * @param data Raw data to encode with Reed-Solomon FEC.
-         */
-        void encode441629(uint8_t* data);
+        void encode633529(uint8_t* data);
 
     private:
         /**

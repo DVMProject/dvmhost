@@ -167,40 +167,13 @@ public:
 RS6355 rs24169;     // 8 bit / 4 bit corrections max / 2 bytes total
 
 /**
- * @brief Implements Reed-Solomon (52,30,23)
- */
-class RS6341 : public __RS_63(41) {
-public:
-    RS6341() : __RS_63(41)() { /* stub */ }
-};
-RS6341 rs523023;
-
-/**
- * @brief Implements Reed-Solomon (46,26,21)
- */
-class RS6343 : public __RS_63(43) {
-public:
-    RS6343() : __RS_63(43)() { /* stub */ }
-};
-RS6343 rs462621;
-
-/**
- * @brief Implements Reed-Solomon (45,26,20)
- */
-class RS6344 : public __RS_63(44) {
-public:
-    RS6344() : __RS_63(44)() { /* stub */ }
-};
-RS6344 rs452620;
-
-/**
- * @brief Implements Reed-Solomon (44,16,29)
+ * @brief Implements Reed-Solomon (63,35,29)
  */
 class RS6335 : public __RS_63(35) {
 public:
     RS6335() : __RS_63(35)() { /* stub */ }
 };
-RS6335 rs441629;
+RS6355 rs633529;     // 28 bit / 14 bit corrections max / 4 bytes total
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -364,75 +337,25 @@ void RS634717::encode362017(uint8_t* data)
         Utils::hex2Bin(codeword[i], data, offset);
 }
 
-/* Decode RS (52,30,23) FEC. */
+/* Decode RS (63,35,29) FEC. */
 
-bool RS634717::decode523023(uint8_t* data)
+bool RS634717::decode633529(uint8_t* data)
 {
     assert(data != nullptr);
 
     std::vector<uint8_t> codeword(63, 0);
 
     uint32_t offset = 0U;
-    for (uint32_t i = 0U; i < 52U; i++, offset += 6)
-        codeword[11 + i] = Utils::bin2Hex(data, offset);
+    for (uint32_t i = 0U; i < 63U; i++, offset += 6)
+        codeword[i] = Utils::bin2Hex(data, offset);
 
-    int ec = rs523023.decode(codeword);
+    int ec = rs633529.decode(codeword);
 #if DEBUG_RS
-    LogDebugEx(LOG_HOST, "RS634717::decode523023()", "errors = %d\n", ec);
+    LogDebugEx(LOG_HOST, "RS634717::decode633529()", "errors = %d\n", ec);
 #endif
     offset = 0U;
-    for (uint32_t i = 0U; i < 30U; i++, offset += 6)
-        Utils::hex2Bin(codeword[11 + i], data, offset);
-
-    if ((ec == -1) || (ec >= 8)) {
-        return false;
-    }
-
-    return true;
-}
-
-/* Encode RS (52,30,23) FEC. */
-
-void RS634717::encode523023(uint8_t* data)
-{
-    assert(data != nullptr);
-
-    uint8_t codeword[52U];
-
-    for (uint32_t i = 0U; i < 52U; i++) {
-        codeword[i] = 0x00U;
-
-        uint32_t offset = 0U;
-        for (uint32_t j = 0U; j < 30U; j++, offset += 6U) {
-            uint8_t hexbit = Utils::bin2Hex(data, offset);
-            codeword[i] ^= gf6Mult(hexbit, ENCODE_MATRIX_633529[j][i]);
-        }
-    }
-
-    uint32_t offset = 0U;
-    for (uint32_t i = 0U; i < 52U; i++, offset += 6U)
+    for (uint32_t i = 0U; i < 35U; i++, offset += 6)
         Utils::hex2Bin(codeword[i], data, offset);
-}
-
-/* Decode RS (46,26,21) FEC. */
-
-bool RS634717::decode462621(uint8_t* data)
-{
-    assert(data != nullptr);
-
-    std::vector<uint8_t> codeword(63, 0);
-
-    uint32_t offset = 0U;
-    for (uint32_t i = 0U; i < 46U; i++, offset += 6)
-        codeword[17 + i] = Utils::bin2Hex(data, offset);
-
-    int ec = rs462621.decode(codeword);
-#if DEBUG_RS
-    LogDebugEx(LOG_HOST, "RS634717::decode462621()", "errors = %d\n", ec);
-#endif
-    offset = 0U;
-    for (uint32_t i = 0U; i < 26U; i++, offset += 6)
-        Utils::hex2Bin(codeword[17 + i], data, offset);
 
     if ((ec == -1) || (ec >= 8)) {
         return false;
@@ -441,126 +364,26 @@ bool RS634717::decode462621(uint8_t* data)
     return true;
 }
 
-/* Encode RS (46,26,21) FEC. */
+/* Encode RS (63,35,29) FEC. */
 
-void RS634717::encode462621(uint8_t* data)
+void RS634717::encode633529(uint8_t* data)
 {
     assert(data != nullptr);
 
-    uint8_t codeword[46U];
+    uint8_t codeword[63U];
 
-    for (uint32_t i = 0U; i < 46U; i++) {
+    for (uint32_t i = 0U; i < 63U; i++) {
         codeword[i] = 0x00U;
 
         uint32_t offset = 0U;
-        for (uint32_t j = 0U; j < 26U; j++, offset += 6U) {
+        for (uint32_t j = 0U; j < 35U; j++, offset += 6U) {
             uint8_t hexbit = Utils::bin2Hex(data, offset);
             codeword[i] ^= gf6Mult(hexbit, ENCODE_MATRIX_633529[j][i]);
         }
     }
 
     uint32_t offset = 0U;
-    for (uint32_t i = 0U; i < 46U; i++, offset += 6U)
-        Utils::hex2Bin(codeword[i], data, offset);
-}
-
-/* Decode RS (45,26,20) FEC. */
-
-bool RS634717::decode452620(uint8_t* data)
-{
-    assert(data != nullptr);
-
-    std::vector<uint8_t> codeword(63, 0);
-
-    uint32_t offset = 0U;
-    for (uint32_t i = 0U; i < 45U; i++, offset += 6)
-        codeword[18 + i] = Utils::bin2Hex(data, offset);
-
-    int ec = rs452620.decode(codeword);
-#if DEBUG_RS
-    LogDebugEx(LOG_HOST, "RS634717::decode462620()", "errors = %d\n", ec);
-#endif
-    offset = 0U;
-    for (uint32_t i = 0U; i < 26U; i++, offset += 6)
-        Utils::hex2Bin(codeword[18 + i], data, offset);
-
-    if ((ec == -1) || (ec >= 8)) {
-        return false;
-    }
-
-    return true;
-}
-
-/* Encode RS (45,26,20) FEC. */
-
-void RS634717::encode452620(uint8_t* data)
-{
-    assert(data != nullptr);
-
-    uint8_t codeword[45U];
-
-    for (uint32_t i = 0U; i < 45U; i++) {
-        codeword[i] = 0x00U;
-
-        uint32_t offset = 0U;
-        for (uint32_t j = 0U; j < 26U; j++, offset += 6U) {
-            uint8_t hexbit = Utils::bin2Hex(data, offset);
-            codeword[i] ^= gf6Mult(hexbit, ENCODE_MATRIX_633529[j][i]);
-        }
-    }
-
-    uint32_t offset = 0U;
-    for (uint32_t i = 0U; i < 45U; i++, offset += 6U)
-        Utils::hex2Bin(codeword[i], data, offset);
-}
-
-/* Decode RS (44,16,29) FEC. */
-
-bool RS634717::decode441629(uint8_t* data)
-{
-    assert(data != nullptr);
-
-    std::vector<uint8_t> codeword(63, 0);
-
-    uint32_t offset = 0U;
-    for (uint32_t i = 0U; i < 44U; i++, offset += 6)
-        codeword[19 + i] = Utils::bin2Hex(data, offset);
-
-    int ec = rs452620.decode(codeword);
-#if DEBUG_RS
-    LogDebugEx(LOG_HOST, "RS634717::decode462620()", "errors = %d\n", ec);
-#endif
-    offset = 0U;
-    for (uint32_t i = 0U; i < 16U; i++, offset += 6)
-        Utils::hex2Bin(codeword[19 + i], data, offset);
-
-    if ((ec == -1) || (ec >= 8)) {
-        return false;
-    }
-
-    return true;
-}
-
-/* Encode RS (44,16,29) FEC. */
-
-void RS634717::encode441629(uint8_t* data)
-{
-    assert(data != nullptr);
-
-    uint8_t codeword[44U];
-
-    for (uint32_t i = 0U; i < 44U; i++) {
-        codeword[i] = 0x00U;
-
-        uint32_t offset = 0U;
-        for (uint32_t j = 0U; j < 16U; j++, offset += 6U) {
-            uint8_t hexbit = Utils::bin2Hex(data, offset);
-            codeword[i] ^= gf6Mult(hexbit, ENCODE_MATRIX_633529[j][i]);
-        }
-    }
-
-    uint32_t offset = 0U;
-    for (uint32_t i = 0U; i < 44U; i++, offset += 6U)
+    for (uint32_t i = 0U; i < 63U; i++, offset += 6U)
         Utils::hex2Bin(codeword[i], data, offset);
 }
 
