@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2022,2024,2025 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -97,6 +97,44 @@ namespace p25
              * @param imbe Raw IMBE from LDU2 frame.
              */
             void encodeLDU2(uint8_t* data, const uint8_t* imbe);
+
+            /**
+             * @brief Decode a Phase 2 4Vx voice frame.
+             * @param data Buffer containing the P2 4V frame to decode.
+             * @param ambe1 Raw AMBE from P2 4V frame.
+             * @param ambe2 Raw AMBE from P2 4V frame.
+             * @param ambe3 Raw AMBE from P2 4V frame.
+             * @param ambe4 Raw AMBE from P2 4V frame.
+             * @return bool True, if P2 4V frame decoded, otherwise false.
+             */
+            bool decodeP2_4V(const uint8_t* data, uint8_t* ambe1, uint8_t* ambe2, 
+                uint8_t* ambe3, uint8_t* ambe4);
+            /**
+             * @brief Encode a Phase 2 4Vx voice frame.
+             * @param data Buffer to encode a P2 4V frame.
+             * @param ambe1 Raw AMBE from P2 4V frame.
+             * @param ambe2 Raw AMBE from P2 4V frame.
+             * @param ambe3 Raw AMBE from P2 4V frame.
+             * @param ambe4 Raw AMBE from P2 4V frame.
+             */
+            void encodeP2_4V(uint8_t* data, const uint8_t* ambe1, const uint8_t* ambe2, 
+                const uint8_t* ambe3, const uint8_t* ambe4);
+
+            /**
+             * @brief Decode a Phase 2 2V voice frame.
+             * @param data Buffer containing the P2 2V frame to decode.
+             * @param ambe1 Raw AMBE from P2 2V frame.
+             * @param ambe2 Raw AMBE from P2 2V frame.
+             * @return bool True, if P2 2V frame decoded, otherwise false.
+             */
+            bool decodeP2_2V(const uint8_t* data, uint8_t* ambe1, uint8_t* ambe2);
+            /**
+             * @brief Encode a Phase 2 2V voice frame.
+             * @param data Buffer to encode a P2 2V frame.
+             * @param ambe1 Raw AMBE from P2 2V frame.
+             * @param ambe2 Raw AMBE from P2 2V frame.
+             */
+            void encodeP2_2V(uint8_t* data, const uint8_t* ambe1, const uint8_t* ambe2);
 
         public:
             // Common Data

@@ -75,6 +75,9 @@ namespace p25
             const uint32_t  DFSI_LDU2_VOICE17_FRAME_LENGTH_BYTES = 17U;
             const uint32_t  DFSI_LDU2_VOICE18_FRAME_LENGTH_BYTES = 16U;
 
+            const uint32_t  DFSI_P2_4V_FRAME_LENGTH_BYTES = 39U;
+            const uint32_t  DFSI_P2_2V_FRAME_LENGTH_BYTES = 32U;
+
             /**
              * @addtogroup p25_dfsi
              * @{
@@ -149,7 +152,13 @@ namespace p25
                     MOT_PDU_CONF_END = 0x8DU,           //!< Motorola/V.24 PDU (Confirmed Block End)
                     MOT_PDU_SINGLE_CONF = 0x8FU,        //!< Motorola/V.24 PDU (Single Confirmed Block)
 
-                    MOT_TSBK = 0xA1U                    //!< Motorola/V.24 TSBK (Single Block)
+                    MOT_TSBK = 0xA1U,                   //!< Motorola/V.24 TSBK (Single Block)
+
+                    P2_4VA = 0xF0U,                     //!< AMBE - Inbound/Outbound 4Va (P25 Phase 2)
+                    P2_4VB = 0xF1U,                     //!< AMBE - Inbound/Outbound 4Vb (P25 Phase 2)
+                    P2_4VC = 0xF2U,                     //!< AMBE - Inbound/Outbound 4Vc (P25 Phase 2)
+                    P2_4VD = 0xF3U,                     //!< AMBE - Inbound/Outbound 4Vd (P25 Phase 2)
+                    P2_2V = 0xF4U,                      //!< AMBE - Inbound/Outbound 2V (P25 Phase 2)
                 };
             }
 

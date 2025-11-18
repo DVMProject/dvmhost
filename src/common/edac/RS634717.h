@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2016 Jonathan Naylor, G4KLX
- *  Copyright (C) 2017,2023 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2017,2023,2025 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -27,8 +27,8 @@ namespace edac
 
     /**
      * @brief Implements Reed-Solomon (63,47,17). Which is also used to implement
-     *  Reed-Solomon (24,12,13), (24,16,9) and (36,20,17) forward
-     *  error correction.
+     *  Reed-Solomon (24,12,13), (24,16,9), (36,20,17), (52,30,23), (46,26,21),
+     *  (45,26,20). (44,16,29) forward error correction.
      * @ingroup edac
      */
     class HOST_SW_API RS634717 {
@@ -77,6 +77,51 @@ namespace edac
          * @param data Raw data to encode with Reed-Solomon FEC.
          */
         void encode362017(uint8_t* data);
+
+        /**
+         * @brief Decode RS (52,30,23) FEC.
+         * @param data Reed-Solomon FEC encoded data to decode.
+         * @returns bool True, if data was decoded, otherwise false.
+         */
+        bool decode523023(uint8_t* data);
+        /**
+         * @brief Encode RS (52,30,23) FEC.
+         * @param data Raw data to encode with Reed-Solomon FEC.
+         */
+        void encode523023(uint8_t* data);
+        /**
+         * @brief Decode RS (46,26,21) FEC.
+         * @param data Reed-Solomon FEC encoded data to decode.
+         * @returns bool True, if data was decoded, otherwise false.
+         */
+        bool decode462621(uint8_t* data);
+        /**
+         * @brief Encode RS (46,26,21) FEC.
+         * @param data Raw data to encode with Reed-Solomon FEC.
+         */
+        void encode462621(uint8_t* data);
+        /**
+         * @brief Decode RS (45,26,20) FEC.
+         * @param data Reed-Solomon FEC encoded data to decode.
+         * @returns bool True, if data was decoded, otherwise false.
+         */
+        bool decode452620(uint8_t* data);
+        /**
+         * @brief Encode RS (45,26,20) FEC.
+         * @param data Raw data to encode with Reed-Solomon FEC.
+         */
+        void encode452620(uint8_t* data);
+        /**
+         * @brief Decode RS (44,16,29) FEC.
+         * @param data Reed-Solomon FEC encoded data to decode.
+         * @returns bool True, if data was decoded, otherwise false.
+         */
+        bool decode441629(uint8_t* data);
+        /**
+         * @brief Encode RS (44,16,29) FEC.
+         * @param data Raw data to encode with Reed-Solomon FEC.
+         */
+        void encode441629(uint8_t* data);
 
     private:
         /**

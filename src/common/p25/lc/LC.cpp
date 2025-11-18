@@ -62,6 +62,7 @@ LC::LC() :
     m_group(true),
     m_algId(ALGO_UNENCRYPT),
     m_kId(0U),
+    m_slotNo(0U),
     m_rsValue(0U),
     m_rs(),
     m_encryptOverride(false),
@@ -837,6 +838,8 @@ void LC::copy(const LC& data)
     m_group = data.m_group;
 
     m_callTimer = data.m_callTimer;
+
+    m_slotNo = data.m_slotNo;
 
     m_rsValue = data.m_rsValue;
 

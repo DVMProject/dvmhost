@@ -249,6 +249,13 @@ namespace p25
             DECLARE_PROPERTY(uint32_t, kId, KId);
             /** @} */
 
+            /** @name Phase 2 Data */
+            /**
+             * @brief Slot Number.
+             */
+            DECLARE_PROPERTY(uint8_t, slotNo, SlotNo);
+            /** @} */
+
             /** @name Packed RS Data */
             /**
              * @brief Packed RS Data.

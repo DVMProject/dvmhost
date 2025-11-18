@@ -63,13 +63,44 @@ namespace p25
         const uint32_t  P25_TDULC_FRAME_LENGTH_BYTES = 54U;
         const uint32_t  P25_TDULC_FRAME_LENGTH_BITS = P25_TDULC_FRAME_LENGTH_BYTES * 8U;
 
+        const uint32_t  P25_P2_FRAME_LENGTH_BYTES = 45U;
+        const uint32_t  P25_P2_FRAME_LENGTH_BITS = P25_P2_FRAME_LENGTH_BYTES * 8U;
+
         const uint32_t  P25_NID_LENGTH_BYTES = 8U;
         const uint32_t  P25_NID_LENGTH_BITS = P25_NID_LENGTH_BYTES * 8U;
 
+        // TIA-102.BAAA-B Section 7.3
+        // 5     5      7     5      F     5      F     F      7     7      F     F
+        // 01 01 01 01  01 11 01 01  11 11 01 01  11 11 11 11  01 11 01 11  11 11 11 11
+        // +3 +3 +3 +3  +3 -3 +3 +3  -3 -3 +3 +3  -3 -3 -3 -3  +3 -3 +3 -3  -3 -3 -3 -3
         const uint8_t   P25_SYNC_BYTES[] = { 0x55U, 0x75U, 0xF5U, 0xFFU, 0x77U, 0xFFU };
         const uint32_t  P25_SYNC_LENGTH_BYTES = 6U;
         const uint32_t  P25_SYNC_LENGTH_BITS = P25_SYNC_LENGTH_BYTES * 8U;
         const uint8_t   P25_START_SYNC = 0x5FU;
+
+        // TIA-102.BBAC-A Section 5.1
+        // 5     F      5     7      7     D      5     7      7     F      F
+        // 01 01 11 11  01 01 01 11  01 11 11 01  01 01 01 11  01 11 11 11  11 11
+        // +3 +3 -3 -3  +3 +3 +3 -3  +3 -3 -3 +3  +3 +3 +3 -3  +3 -3 -3 -3  -3 -3
+        const uint8_t  P25_P2_IEMI_SYNC_BYTES[] = { 0x05U, 0xF5U, 0x77U, 0xD5U, 0x77U, 0xFFU };
+        const uint8_t  P25_P2_IEMI_SYNC_LENGTH_BYTES = 6U;
+        const uint8_t  P25_P2_IEMI_SYNC_LENGTH_BITS = 44U;
+
+        // TIA-102.BBAC-A Section 5.1
+        // 3   F     D      5     5      D     D      F     5      F     5
+        // 11  11 11 11 01  01 01 01 01  11 01 11 01  11 11 01 01  11 11 01 01
+        // -3  -3 -3 -3 +3  +3 +3 +3 +3  -3 +3 -3 +3  -3 -3 +3 +3  -3 -3 +3 +3
+        const uint8_t  P25_P2_OEMI_SYNC_BYTES[] = { 0x03U, 0xFDU, 0x55U, 0xDDU, 0xF5U, 0xF5U };
+        const uint8_t  P25_P2_OEMI_SYNC_LENGTH_BYTES = 6U;
+        const uint8_t  P25_P2_OEMI_SYNC_LENGTH_BITS = 42U;
+
+        // TIA-102.BBAC-A Section 5.1
+        // 5     7      5     D      5     7      F     7      F     F 
+        // 01 01 01 11  01 01 11 01  01 01 01 11  11 11 01 11  11 11 11 11 
+        // +3 +3 +3 -3  +3 +3 -3 +3  +3 +3 +3 -3  -3 -3 +3 -3  -3 -3 -3 -3
+        const uint8_t  P25_P2_ISCH_SYNC_BYTES[] = { 0x57U, 0x5DU, 0x57U, 0xF7U, 0xFFU };
+        const uint8_t  P25_P2_ISCH_SYNC_LENGTH_BYTES = 5U;
+        const uint8_t  P25_P2_ISCH_SYNC_LENGTH_BITS = 38U;
 
         const uint32_t  P25_PREAMBLE_LENGTH_BYTES = P25_SYNC_LENGTH_BYTES + P25_NID_LENGTH_BYTES;
         const uint32_t  P25_PREAMBLE_LENGTH_BITS = P25_SYNC_LENGTH_BITS + P25_NID_LENGTH_BITS;
@@ -103,6 +134,7 @@ namespace p25
 
         const uint32_t  MI_LENGTH_BYTES = 9U;
         const uint32_t  RAW_IMBE_LENGTH_BYTES = 11U;
+        const uint32_t  RAW_AMBE_LENGTH_BYTES = 7U;
 
         const uint32_t  P25_SS0_START = 70U;
         const uint32_t  P25_SS1_START = 71U;
@@ -805,6 +837,7 @@ namespace p25
             };
         }
 
+        // TIA-102.BAAC-D Section 2.11
         /** @brief Data Unit ID(s) */
         namespace DUID {
             /** @brief Data Unit ID(s) */
@@ -821,6 +854,19 @@ namespace p25
             };
         }
 
+        /** @brief Phase 2 Data Unit ID(s) */
+        namespace P2_DUID {
+            /** @brief Data Unit ID(s) */
+            enum E : uint8_t {
+                VTCH_4V = 0x00U,                        //!< Inbound/Outbound 4V
+                SACCH_SCRAMBLED = 0x03U,                //!< SACCH Scrambled
+                VTCH_2V = 0x06U,                        //!< Inbound/Outbound 2V
+                FACCH_SCRAMBLED = 0x09U,                //!< FACCH Scrambled
+                SACCH_UNSCRAMBLED = 0x0CU,              //!< SACCH Unscrambled
+                FACCH_UNSCRAMBLED = 0x0FU               //!< FACCH Unscrambled
+            };
+        }
+
         /** @} */
 
     #define P25_HDU_STR     "P25, HDU (Header Data Unit)"
@@ -834,6 +880,13 @@ namespace p25
     #define P25_TDULC_STR   "P25, TDULC (Terminator Data Unit with Link Control)"
 
     #define P25_KMM_STR     "P25, KMM (Key Management Message)"
+
+    #define P25_P2_VTCH_4V_STR "P25 Phase 2, VTCH 4V (Voice Traffic Channel 4Vx)"
+    #define P25_P2_SACCH_SCRAMBLED_STR "P25 Phase 2, SACCH (Slow Associated Control Channel Scrambled)"
+    #define P25_P2_VTCH_2V_STR "P25 Phase 2, VTCH 2V (Voice Traffic Channel 2V)"
+    #define P25_P2_FACCH_SCRAMBLED_STR "P25 Phase 2, FACCH (Fast Associated Control Channel Scrambled)"
+    #define P25_P2_SACCH_UNSCRAMBLED_STR "P25 Phase 2, SACCH (Slow Associated Control Channel Unscrambled)"
+    #define P25_P2_FACCH_UNSCRAMBLED_STR "P25 Phase 2, FACCH (Fast Associated Control Channel Unscrambled)"
     } // namespace defines
 } // namespace p25
 

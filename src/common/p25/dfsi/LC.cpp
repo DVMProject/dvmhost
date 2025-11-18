@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2022,2024,2025 Bryan Biedenkapp, N2PLL
  *
  */
 #include "Defines.h"
@@ -649,6 +649,233 @@ void LC::encodeLDU2(uint8_t* data, const uint8_t* imbe)
 #endif
 
     ::memcpy(data, dfsiFrame, frameLength);
+}
+
+/* Decode a Phase 2 4Vx voice frame. */
+
+bool LC::decodeP2_4V(const uint8_t* data, uint8_t* ambe1, uint8_t* ambe2, 
+    uint8_t* ambe3, uint8_t* ambe4)
+{
+    assert(data != nullptr);
+    assert(ambe1 != nullptr);
+    assert(ambe2 != nullptr);
+    assert(ambe3 != nullptr);
+    assert(ambe4 != nullptr);
+
+    m_frameType = (DFSIFrameType::E)data[0U];                                       // Frame Type
+
+    ::memcpy(ambe1, data + 1U, RAW_AMBE_LENGTH_BYTES);                              // AMBE1
+    ::memcpy(ambe2, data + 8U, RAW_AMBE_LENGTH_BYTES);                              // AMBE2
+    ::memcpy(ambe3, data + 15U, RAW_AMBE_LENGTH_BYTES);                             // AMBE3
+    ::memcpy(ambe4, data + 22U, RAW_AMBE_LENGTH_BYTES);                             // AMBE4
+
+    uint8_t slotNo = data[38U] & 0x0FU;                                             // Slot Number
+    m_control->setSlotNo(slotNo);
+
+    // different frame types mean different things
+    switch (m_frameType)
+    {
+        case DFSIFrameType::P2_4VA:
+            {
+                m_control->setAlgId(data[34U]);                                     // Algorithm ID
+                uint32_t kid = (data[35U] << 8) | (data[36U] << 0);                 // Key ID
+                m_control->setKId(kid);
+            }
+            break;
+        case DFSIFrameType::P2_4VB:
+            {
+                m_mi[0U] = data[34U];                                               // Message Indicator
+                m_mi[1U] = data[35U];
+                m_mi[2U] = data[36U];
+            }
+            break;
+        case DFSIFrameType::P2_4VC:
+            {
+                m_mi[3U] = data[34U];                                               // Message Indicator
+                m_mi[4U] = data[35U];
+                m_mi[5U] = data[36U];
+            }
+            break;
+        case DFSIFrameType::P2_4VD:
+            {
+                m_mi[6U] = data[34U];                                               // Message Indicator
+                m_mi[7U] = data[35U];
+                m_mi[8U] = data[36U];
+                m_control->setMI(m_mi);
+            }
+            break;
+
+        default:
+            {
+                LogError(LOG_P25, "LC::decodeP2_4V(), invalid frame type, frameType = $%02X", m_frameType);
+                return false;
+            }
+            break;
+    }
+
+    return true;
+}
+
+/* Encode a Phase 2 4Vx voice frame. */
+
+void LC::encodeP2_4V(uint8_t* data, const uint8_t* ambe1, const uint8_t* ambe2, const uint8_t* ambe3, const uint8_t* ambe4)
+{
+    assert(data != nullptr);
+    assert(ambe1 != nullptr);
+    assert(ambe2 != nullptr);
+    assert(ambe3 != nullptr);
+    assert(ambe4 != nullptr);
+
+    // generate MI data
+    uint8_t mi[MI_LENGTH_BYTES];
+    ::memset(mi, 0x00U, MI_LENGTH_BYTES);
+    m_control->getMI(mi);
+
+    DECLARE_UINT8_ARRAY(dfsiFrame, DFSI_P2_4V_FRAME_LENGTH_BYTES);
+
+    dfsiFrame[0U] = m_frameType;                                                    // Frame Type
+
+    ::memcpy(dfsiFrame + 1U, ambe1, RAW_AMBE_LENGTH_BYTES);                         // AMBE1
+    ::memcpy(dfsiFrame + 8U, ambe2, RAW_AMBE_LENGTH_BYTES);                         // AMBE2
+    ::memcpy(dfsiFrame + 15U, ambe3, RAW_AMBE_LENGTH_BYTES);                        // AMBE3
+    ::memcpy(dfsiFrame + 22U, ambe4, RAW_AMBE_LENGTH_BYTES);                        // AMBE4
+
+    uint8_t slotNo = m_control->getSlotNo();
+    dfsiFrame[38U] = slotNo & 0x0FU;                                                // Slot Number
+
+    uint8_t rs[P25_LDU_LC_FEC_LENGTH_BYTES];
+    ::memset(rs, 0x00U, P25_LDU_LC_FEC_LENGTH_BYTES);
+
+    for (uint32_t i = 0; i < MI_LENGTH_BYTES; i++)
+        rs[i] = mi[i];                                                              // Message Indicator
+
+    rs[9U] = m_control->getAlgId();                                                 // Algorithm ID
+    rs[10U] = (m_control->getKId() >> 8) & 0xFFU;                                   // Key ID
+    rs[11U] = (m_control->getKId() >> 0) & 0xFFU;                                   // ...
+
+    // different frame types mean different things
+    switch (m_frameType)
+    {
+        case DFSIFrameType::P2_4VA:
+            {
+                dfsiFrame[34U] = rs[9U];                                            // Algorithm ID
+                dfsiFrame[35U] = rs[10U];                                           // Key ID
+                dfsiFrame[36U] = rs[11U];
+            }
+            break;
+        case DFSIFrameType::P2_4VB:
+            {
+                dfsiFrame[34U] = rs[0U];                                            // Message Indicator
+                dfsiFrame[35U] = rs[1U];
+                dfsiFrame[36U] = rs[2U];
+            }
+            break;
+        case DFSIFrameType::P2_4VC:
+            {
+                dfsiFrame[34U] = rs[3U];                                            // Message Indicator
+                dfsiFrame[35U] = rs[4U];
+                dfsiFrame[36U] = rs[5U];
+            }
+            break;
+        case DFSIFrameType::P2_4VD:
+            {
+                dfsiFrame[34U] = rs[6U];                                            // Message Indicator
+                dfsiFrame[35U] = rs[7U];
+                dfsiFrame[36U] = rs[8U];
+            }
+            break;
+
+        default:
+            {
+                LogError(LOG_P25, "LC::encodeP2_4V(), invalid frame type, frameType = $%02X", m_frameType);
+                return;
+            }
+            break;
+    }
+
+#if DEBUG_P25_DFSI
+    LogDebugEx(LOG_P25, "dfsi::LC::encodeP2_4V()", "frameType = $%02X", m_frameType);
+    Utils::dump(2U, "P25, dfsi::LC::encodeP2_4V(), DFSI Phase 2 4Vx Frame", dfsiFrame, DFSI_P2_4V_FRAME_LENGTH_BYTES);
+#endif
+
+    ::memcpy(data, dfsiFrame, DFSI_P2_4V_FRAME_LENGTH_BYTES);
+}
+
+/* Decode a Phase 2 2V voice frame.*/
+
+bool LC::decodeP2_2V(const uint8_t* data, uint8_t* ambe1, uint8_t* ambe2)
+{
+    assert(data != nullptr);
+    assert(ambe1 != nullptr);
+    assert(ambe2 != nullptr);
+
+    m_frameType = (DFSIFrameType::E)data[0U];                                       // Frame Type
+
+    ::memcpy(ambe1, data + 1U, RAW_AMBE_LENGTH_BYTES);                              // AMBE1
+    ::memcpy(ambe2, data + 8U, RAW_AMBE_LENGTH_BYTES);                              // AMBE2
+
+    uint8_t essErrorCnt = data[17U];
+
+    if (essErrorCnt == 0U) {
+        m_control->setAlgId(data[18U]);                                                 // Algorithm ID
+        uint32_t kid = (data[19U] << 8) | (data[20U] << 0);                             // Key ID
+        m_control->setKId(kid);
+
+        ::memcpy(m_mi, data + 21U, MI_LENGTH_BYTES);                                    // Message Indicator
+        m_control->setMI(m_mi);
+    }
+
+    uint8_t slotNo = data[31U] & 0x0FU;                                             // Slot Number
+    m_control->setSlotNo(slotNo);
+
+    return false;
+}
+
+/* Encode a Phase 2 2V voice frame.*/
+
+void LC::encodeP2_2V(uint8_t* data, const uint8_t* ambe1, const uint8_t* ambe2)
+{
+    assert(data != nullptr);
+    assert(ambe1 != nullptr);
+    assert(ambe2 != nullptr);
+
+    // generate MI data
+    uint8_t mi[MI_LENGTH_BYTES];
+    ::memset(mi, 0x00U, MI_LENGTH_BYTES);
+    m_control->getMI(mi);
+
+    DECLARE_UINT8_ARRAY(dfsiFrame, DFSI_P2_2V_FRAME_LENGTH_BYTES);
+
+    dfsiFrame[0U] = m_frameType;                                                    // Frame Type
+
+    ::memcpy(dfsiFrame + 1U, ambe1, RAW_AMBE_LENGTH_BYTES);                         // AMBE1
+    ::memcpy(dfsiFrame + 8U, ambe2, RAW_AMBE_LENGTH_BYTES);                         // AMBE2
+
+    uint8_t slotNo = m_control->getSlotNo();
+    dfsiFrame[31U] = slotNo & 0x0FU;                                                // Slot Number
+
+    uint8_t rs[P25_LDU_LC_FEC_LENGTH_BYTES];
+    ::memset(rs, 0x00U, P25_LDU_LC_FEC_LENGTH_BYTES);
+
+    for (uint32_t i = 0; i < MI_LENGTH_BYTES; i++)
+        rs[i] = mi[i];                                                              // Message Indicator
+
+    rs[9U] = m_control->getAlgId();                                                 // Algorithm ID
+    rs[10U] = (m_control->getKId() >> 8) & 0xFFU;                                   // Key ID
+    rs[11U] = (m_control->getKId() >> 0) & 0xFFU;                                   // ...
+
+    dfsiFrame[18U] = rs[9U];                                                        // Algorithm ID
+    dfsiFrame[19U] = rs[10U];                                                       // Key ID
+    dfsiFrame[20U] = rs[11U];
+
+    ::memcpy(dfsiFrame + 21U, mi, MI_LENGTH_BYTES);                                 // Message Indicator
+
+#if DEBUG_P25_DFSI
+    LogDebugEx(LOG_P25, "dfsi::LC::encodeP2_2V()", "frameType = $%02X", m_frameType);
+    Utils::dump(2U, "P25, dfsi::LC::encodeP2_2V(), DFSI Phase 2 2V Frame", dfsiFrame, DFSI_P2_2V_FRAME_LENGTH_BYTES);
+#endif
+
+    ::memcpy(data, dfsiFrame, DFSI_P2_2V_FRAME_LENGTH_BYTES);
 }
 
 // ---------------------------------------------------------------------------

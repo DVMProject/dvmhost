@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2023,2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2023,2024,2025 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -88,6 +88,7 @@ namespace network
             PROTOCOL_SUBFUNC_DMR = 0x00U,           //!< DMR
             PROTOCOL_SUBFUNC_P25 = 0x01U,           //!< P25
             PROTOCOL_SUBFUNC_NXDN = 0x02U,          //!< NXDN
+            PROTOCOL_SUBFUNC_P25_P2 = 0x03U,        //!< P25 Phase 2
             PROTOCOL_SUBFUNC_ANALOG = 0x0FU,        //!< Analog
 
             MASTER_SUBFUNC_WL_RID = 0x00U,          //!< Whitelist RIDs
