@@ -1263,12 +1263,18 @@ void RESTAPI::restAPI_GetPeerList(const HTTPPayload& request, HTTPPayload& reply
 
                 uint32_t peerId = entry.first;
                 std::string peerAlias = entry.second.peerAlias();
-                bool peerReplica = entry.second.peerReplica();
                 bool peerPassword = !entry.second.peerPassword().empty();   // True if password is not empty, otherwise false
+                bool peerReplica = entry.second.peerReplica();
+                bool canRequestKeys = entry.second.canRequestKeys();
+                bool canIssueInhibit = entry.second.canIssueInhibit();
+                bool hasCallPriority = entry.second.hasCallPriority();
                 peerObj["peerId"].set<uint32_t>(peerId);
                 peerObj["peerAlias"].set<std::string>(peerAlias);
-                peerObj["peerReplica"].set<bool>(peerReplica);
                 peerObj["peerPassword"].set<bool>(peerPassword);
+                peerObj["peerReplica"].set<bool>(peerReplica);
+                peerObj["canRequestKeys"].set<bool>(canRequestKeys);
+                peerObj["canIssueInhibit"].set<bool>(canIssueInhibit);
+                peerObj["hasCallPriority"].set<bool>(hasCallPriority);
                 peers.push_back(json::value(peerObj));
             }
         }
@@ -1313,18 +1319,6 @@ void RESTAPI::restAPI_PutPeerAdd(const HTTPPayload& request, HTTPPayload& reply,
         peerAlias = req["peerAlias"].get<std::string>();
     }
 
-    // Get peer link setting (optional)
-    bool peerReplica = false;
-    if (req.find("peerReplica") != req.end()) {
-        // Validate
-        if (!req["peerReplica"].is<bool>()) {
-            errorPayload(reply, "peerReplica was not a valid boolean");
-            return;
-        }
-        // Get
-        peerReplica = req["peerReplica"].get<bool>();
-    }
-
     // Get peer password (optional)
     std::string peerPassword = "";
     if (req.find("peerPassword") != req.end()) {
@@ -1337,8 +1331,61 @@ void RESTAPI::restAPI_PutPeerAdd(const HTTPPayload& request, HTTPPayload& reply,
         peerPassword = req["peerPassword"].get<std::string>();
     }
 
+    // Get peer link setting (optional)
+    bool peerReplica = false;
+    if (req.find("peerReplica") != req.end()) {
+        // Validate
+        if (!req["peerReplica"].is<bool>()) {
+            errorPayload(reply, "peerReplica was not a valid boolean");
+            return;
+        }
+        // Get
+        peerReplica = req["peerReplica"].get<bool>();
+    }
+
+    // Get canRequestKeys
+    bool canRequestKeys = false;
+    if (req.find("canRequestKeys") != req.end()) {
+        // Validate
+        if (!req["canRequestKeys"].is<bool>()) {
+            errorPayload(reply, "canRequestKeys was not a valid boolean");
+            return;
+        }
+        // Get
+        canRequestKeys = req["canRequestKeys"].get<bool>();
+    }
+
+    // Get canIssueInhibit
+    bool canIssueInhibit = false;
+    if (req.find("canIssueInhibit") != req.end()) {
+        // Validate
+        if (!req["canIssueInhibit"].is<bool>()) {
+            errorPayload(reply, "canIssueInhibit was not a valid boolean");
+            return;
+        }
+        // Get
+        canIssueInhibit = req["canIssueInhibit"].get<bool>();
+    }
+
+    // Get hasCallPriority
+    bool hasCallPriority = false;
+    if (req.find("hasCallPriority") != req.end()) {
+        // Validate
+        if (!req["hasCallPriority"].is<bool>()) {
+            errorPayload(reply, "hasCallPriority was not a valid boolean");
+            return;
+        }
+        // Get
+        hasCallPriority = req["hasCallPriority"].get<bool>();
+    }
+
     PeerId entry = PeerId(peerId, peerAlias, peerPassword, false);
+
+    // Set additional values
     entry.peerReplica(peerReplica);
+    entry.canRequestKeys(canRequestKeys);
+    entry.canIssueInhibit(canIssueInhibit);
+    entry.hasCallPriority(hasCallPriority);
 
     m_peerListLookup->addEntry(peerId, entry);
 }
