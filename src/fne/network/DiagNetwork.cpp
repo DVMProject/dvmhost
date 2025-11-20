@@ -432,6 +432,7 @@ void DiagNetwork::taskNetworkRx(NetPacketRequest* req)
                                 uint32_t decompressedLen = 0U;
                                 uint8_t* decompressed = nullptr;
 
+                                diagNetwork->m_peerReplicaActPkt.lock();
                                 if (pkt.buffer->decode(rawPayload, &decompressed, &decompressedLen)) {
                                     std::string payload(decompressed + 8U, decompressed + decompressedLen);
 
@@ -445,6 +446,7 @@ void DiagNetwork::taskNetworkRx(NetPacketRequest* req)
                                         if (decompressed != nullptr) {
                                             delete[] decompressed;
                                         }
+                                        diagNetwork->m_peerReplicaActPkt.unlock();
                                         diagNetwork->m_peerReplicaActPkt.erase(peerId);
                                         break;
                                     }
@@ -458,6 +460,7 @@ void DiagNetwork::taskNetworkRx(NetPacketRequest* req)
                                             if (decompressed != nullptr) {
                                                 delete[] decompressed;
                                             }
+                                            diagNetwork->m_peerReplicaActPkt.unlock();
                                             diagNetwork->m_peerReplicaActPkt.erase(peerId);
                                             break;
                                         }
@@ -474,6 +477,7 @@ void DiagNetwork::taskNetworkRx(NetPacketRequest* req)
                                     if (decompressed != nullptr) {
                                         delete[] decompressed;
                                     }
+                                    diagNetwork->m_peerReplicaActPkt.unlock();
                                     diagNetwork->m_peerReplicaActPkt.erase(peerId);
                                 } else {
                                     pkt.locked = false;
@@ -617,6 +621,7 @@ void DiagNetwork::taskNetworkRx(NetPacketRequest* req)
                                 uint32_t decompressedLen = 0U;
                                 uint8_t* decompressed = nullptr;
 
+                                diagNetwork->m_peerTreeListPkt.lock();
                                 if (pkt.buffer->decode(rawPayload, &decompressed, &decompressedLen)) {
                                     std::string payload(decompressed + 8U, decompressed + decompressedLen);
 
@@ -630,6 +635,7 @@ void DiagNetwork::taskNetworkRx(NetPacketRequest* req)
                                         if (decompressed != nullptr) {
                                             delete[] decompressed;
                                         }
+                                        diagNetwork->m_peerTreeListPkt.unlock();
                                         diagNetwork->m_peerTreeListPkt.erase(peerId);
                                         break;
                                     }
@@ -643,6 +649,7 @@ void DiagNetwork::taskNetworkRx(NetPacketRequest* req)
                                             if (decompressed != nullptr) {
                                                 delete[] decompressed;
                                             }
+                                            diagNetwork->m_peerTreeListPkt.unlock();
                                             diagNetwork->m_peerTreeListPkt.erase(peerId);
                                             break;
                                         }
@@ -673,6 +680,7 @@ void DiagNetwork::taskNetworkRx(NetPacketRequest* req)
                                     if (decompressed != nullptr) {
                                         delete[] decompressed;
                                     }
+                                    diagNetwork->m_peerTreeListPkt.unlock();
                                     diagNetwork->m_peerTreeListPkt.erase(peerId);
                                 } else {
                                     pkt.locked = false;
