@@ -17,6 +17,7 @@ using namespace network;
 //  Static Class Members
 // ---------------------------------------------------------------------------
 
+std::mutex SpanningTree::s_mutex;
 std::unordered_map<uint32_t, SpanningTree*> SpanningTree::s_spanningTrees = std::unordered_map<uint32_t, SpanningTree*>();
 uint8_t SpanningTree::s_maxUpdatesBeforeReparent = 5U;
 
@@ -102,6 +103,8 @@ uint32_t SpanningTree::countChildren(SpanningTree* node)
 
 void SpanningTree::erasePeer(const uint32_t peerId)
 {
+    std::lock_guard<std::mutex> guard(s_mutex);
+
     auto it = s_spanningTrees.find(peerId);
     if (it != s_spanningTrees.end()) {
         SpanningTree* tree = it->second;
@@ -150,6 +153,57 @@ void SpanningTree::serializeTree(SpanningTree* node, json::array& jsonArray)
 
 void SpanningTree::deserializeTree(json::array& jsonArray, SpanningTree* parent, std::vector<uint32_t>* duplicatePeers)
 {
+    std::lock_guard<std::mutex> guard(s_mutex);
+    internalDeserializeTree(jsonArray, parent, duplicatePeers);
+}
+
+/* Helper to move the tree node to a different parent tree node. */
+
+void SpanningTree::moveParent(SpanningTree* node, SpanningTree* parent)
+{
+    if (node == nullptr)
+        return;
+    if (parent == nullptr)
+        return;
+
+    std::lock_guard<std::mutex> guard(s_mutex);
+    internalMoveParent(node, parent);
+}
+
+/* Debug helper to visualize the tree structure in the log. */
+
+void SpanningTree::visualizeTreeToLog(SpanningTree* node, uint32_t level)
+{
+    if (node == nullptr)
+        return;
+    if (node->m_children.size() == 0) {
+        return;
+    }
+
+    if (level == 0U)
+        LogInfoEx(LOG_STP, "Peer ID: %u, Master Peer ID: %u (%s), Children: %u, IsRoot: %u", 
+            node->id(), node->masterId(), node->identity().c_str(), node->m_children.size(), node->isRoot());
+
+    std::string indent;
+    for (uint32_t i = 0U; i < level; i++) {
+        indent += "  ";
+    }
+
+    for (auto child : node->m_children) {
+        LogInfoEx(LOG_STP, "%s- Peer ID: %u, Master Peer ID: %u (%s), Children: %u, IsRoot: %u", 
+            indent.c_str(), child->id(), child->masterId(), child->identity().c_str(), child->m_children.size(), child->isRoot());
+        visualizeTreeToLog(child, level + 1U);
+    }
+}
+
+// ---------------------------------------------------------------------------
+//  Private Static Class Members
+// ---------------------------------------------------------------------------
+
+/* Helper to recursively deserialize tree node from JSON array. */
+
+void SpanningTree::internalDeserializeTree(json::array& jsonArray, SpanningTree* parent, std::vector<uint32_t>* duplicatePeers)
+{
     for (auto& v : jsonArray) {
         if (!v.is<json::object>())
             continue;
@@ -193,7 +247,7 @@ void SpanningTree::deserializeTree(json::array& jsonArray, SpanningTree* parent,
                     existingNode->m_updatesBeforeReparent = 0U;
 
                     // reparent the node if necessary
-                    moveParent(existingNode, parent);
+                    internalMoveParent(existingNode, parent);
                 } else {
                     existingNode->m_updatesBeforeReparent++;
                 }
@@ -202,10 +256,10 @@ void SpanningTree::deserializeTree(json::array& jsonArray, SpanningTree* parent,
 
         // process children
         json::array childArray = obj["children"].get<json::array>();
-        //LogDebugEx(LOG_STP, "SpanningTree::deserializeTree()", "peerId = %u, masterId = %u, parent = %u, childrenCnt = %u",
+        //LogDebugEx(LOG_STP, "SpanningTree::internalDeserializeTree()", "peerId = %u, masterId = %u, parent = %u, childrenCnt = %u",
         //    existingNode->id(), existingNode->masterId(), parent->id(), childArray.size());
         if (childArray.size() > 0U) {
-            deserializeTree(childArray, existingNode, duplicatePeers);
+            internalDeserializeTree(childArray, existingNode, duplicatePeers);
 
             // does the announced array disagree with our current count of children?
             if (childArray.size() < existingNode->m_children.size()) {
@@ -268,7 +322,7 @@ void SpanningTree::deserializeTree(json::array& jsonArray, SpanningTree* parent,
 
 /* Helper to move the tree node to a different parent tree node. */
 
-void SpanningTree::moveParent(SpanningTree* node, SpanningTree* parent)
+void SpanningTree::internalMoveParent(SpanningTree* node, SpanningTree* parent)
 {
     if (node == nullptr)
         return;
@@ -318,36 +372,6 @@ void SpanningTree::moveParent(SpanningTree* node, SpanningTree* parent)
         }
     }
 }
-
-/* Debug helper to visualize the tree structure in the log. */
-
-void SpanningTree::visualizeTreeToLog(SpanningTree* node, uint32_t level)
-{
-    if (node == nullptr)
-        return;
-    if (node->m_children.size() == 0) {
-        return;
-    }
-
-    if (level == 0U)
-        LogInfoEx(LOG_STP, "Peer ID: %u, Master Peer ID: %u (%s), Children: %u, IsRoot: %u", 
-            node->id(), node->masterId(), node->identity().c_str(), node->m_children.size(), node->isRoot());
-
-    std::string indent;
-    for (uint32_t i = 0U; i < level; i++) {
-        indent += "  ";
-    }
-
-    for (auto child : node->m_children) {
-        LogInfoEx(LOG_STP, "%s- Peer ID: %u, Master Peer ID: %u (%s), Children: %u, IsRoot: %u", 
-            indent.c_str(), child->id(), child->masterId(), child->identity().c_str(), child->m_children.size(), child->isRoot());
-        visualizeTreeToLog(child, level + 1U);
-    }
-}
-
-// ---------------------------------------------------------------------------
-//  Private Static Class Members
-// ---------------------------------------------------------------------------
 
 /* Erase all children of a spanning tree node. */
 

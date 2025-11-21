@@ -20,6 +20,7 @@
 #include "common/json/json.h"
 
 #include <string>
+#include <mutex>
 #include <vector>
 #include <unordered_map>
 
@@ -149,6 +150,7 @@ namespace network
         SpanningTree* m_parent;                   //!< Parent tree node. (i.e. master FNE above this)
         std::vector<SpanningTree*> m_children;    //!< Child tree nodes. (i.e. peer FNEs below this)
 
+        static std::mutex s_mutex;
         static std::unordered_map<uint32_t, SpanningTree*> s_spanningTrees; //!< Static map of all trees by peer ID.
         static uint8_t s_maxUpdatesBeforeReparent; //!< Maximum count of updates before allowing node reparenting.
 
@@ -168,6 +170,19 @@ namespace network
     private:
         uint8_t m_updatesBeforeReparent;
 
+        /**
+         * @brief Helper to recursively deserialize tree node from JSON array.
+         * @param jsonArray JSON array to read node from.
+         * @param parent Pointer to parent SpanningTree node.
+         * @param duplicatePeers Pointer to vector to receive duplicate peer IDs found during deserialization.
+         */
+        static void internalDeserializeTree(json::array& jsonArray, SpanningTree* parent, std::vector<uint32_t>* duplicatePeers);
+        /**
+         * @brief Helper to move the tree node to a different parent tree node.
+         * @param node Pointer to a SpanningTree node.
+         * @param parent Pointer to new parent SpanningTree Node.
+         */
+        static void internalMoveParent(SpanningTree* node, SpanningTree* parent);
         /**
          * @brief Helper to erase all children of a spanning tree node.
          * @param node Pointer to SpanningTree node.
