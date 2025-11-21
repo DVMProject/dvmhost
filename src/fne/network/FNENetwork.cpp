@@ -2170,7 +2170,9 @@ bool FNENetwork::resetPeer(uint32_t peerId)
             LogInfoEx(LOG_MASTER, "PEER %u (%s) resetting peer connection", peerId, connection->identWithQualifier().c_str());
 
             writePeerNAK(peerId, TAG_REPEATER_LOGIN, NET_CONN_NAK_PEER_RESET, addr, addrLen);
+            connection->lock();
             erasePeer(peerId);
+            connection->unlock();
             delete connection;
 
             return true;
