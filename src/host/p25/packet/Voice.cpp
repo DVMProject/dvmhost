@@ -1571,8 +1571,8 @@ bool Voice::checkNetTrafficCollision(uint32_t srcId, uint32_t dstId, defines::DU
         }
     }
 
-    LogDebugEx(LOG_NET, "Voice::checkNetTrafficCollision()", "rfLastDstId = %u, dstId = %u, defaultNetIdleTalkgroup = %u, rfTGHangRunning = %u", m_p25->m_rfLastDstId, dstId,
-        m_p25->m_defaultNetIdleTalkgroup, m_p25->m_rfTGHang.isRunning());
+    //LogDebugEx(LOG_NET, "Voice::checkNetTrafficCollision()", "rfLastDstId = %u, dstId = %u, defaultNetIdleTalkgroup = %u, rfTGHangRunning = %u", m_p25->m_rfLastDstId, dstId,
+    //    m_p25->m_defaultNetIdleTalkgroup, m_p25->m_rfTGHang.isRunning());
 
     // don't process network frames if the RF TG hang timer isn't running, the default net idle talkgroup is set and
     // the destination ID doesn't match the default net idle talkgroup
