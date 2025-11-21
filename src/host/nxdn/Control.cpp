@@ -222,7 +222,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
     m_legacyGroupReg = nxdnProtocol["legacyGroupReg"].as<bool>(false);
 
     yaml::Node rfssConfig = systemConf["config"];
-    m_defaultNetIdleTalkgroup = (uint32_t)::strtoul(rfssConfig["defaultNetIdleTalkgroup"].as<std::string>("0").c_str(), NULL, 16);
+    m_defaultNetIdleTalkgroup = (uint32_t)rfssConfig["defaultNetIdleTalkgroup"].as<uint32_t>(0U);
 
     yaml::Node controlCh = rfssConfig["controlCh"];
     m_notifyCC = controlCh["notifyEnable"].as<bool>(false);
@@ -333,7 +333,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
         }
 
         if (m_defaultNetIdleTalkgroup != 0U) {
-            LogInfo("    Default Network Idle Talkgroup: $%04X", m_defaultNetIdleTalkgroup);
+            LogInfo("    Default Network Idle Talkgroup: %u", m_defaultNetIdleTalkgroup);
         }
 
         LogInfo("    Ignore Affiliation Check: %s", m_ignoreAffiliationCheck ? "yes" : "no");

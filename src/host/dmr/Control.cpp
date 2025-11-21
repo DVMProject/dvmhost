@@ -143,7 +143,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, ::lookups::VoiceChDa
     m_enableTSCC = enableTSCC;
 
     yaml::Node rfssConfig = systemConf["config"];
-    uint32_t defaultNetIdleTalkgroup = (uint32_t)::strtoul(rfssConfig["defaultNetIdleTalkgroup"].as<std::string>("0").c_str(), NULL, 16);
+    uint32_t defaultNetIdleTalkgroup = (uint32_t)rfssConfig["defaultNetIdleTalkgroup"].as<uint32_t>(0U);
     m_slot1->setDefaultNetIdleTG(defaultNetIdleTalkgroup);
     m_slot2->setDefaultNetIdleTG(defaultNetIdleTalkgroup);
 
@@ -228,7 +228,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, ::lookups::VoiceChDa
         }
 
         if (defaultNetIdleTalkgroup != 0U) {
-            LogInfo("    Default Network Idle Talkgroup: $%04X", defaultNetIdleTalkgroup);
+            LogInfo("    Default Network Idle Talkgroup: %u", defaultNetIdleTalkgroup);
         }
 
         LogInfo("    Ignore Affiliation Check: %s", ignoreAffiliationCheck ? "yes" : "no");

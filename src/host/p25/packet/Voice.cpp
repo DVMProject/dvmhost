@@ -1571,20 +1571,32 @@ bool Voice::checkNetTrafficCollision(uint32_t srcId, uint32_t dstId, defines::DU
         }
     }
 
-    // bryanb: possible fix for a "tail ride" condition where network traffic immediately follows RF traffic *while*
-    // the RF TG hangtimer is running
-    if (m_p25->m_rfTGHang.isRunning() && !m_p25->m_rfTGHang.hasExpired()) {
-        m_p25->m_rfTGHang.stop();
-    }
+    LogDebugEx(LOG_NET, "Voice::checkNetTrafficCollision()", "rfLastDstId = %u, dstId = %u, defaultNetIdleTalkgroup = %u, rfTGHangRunning = %u", m_p25->m_rfLastDstId, dstId,
+        m_p25->m_defaultNetIdleTalkgroup, m_p25->m_rfTGHang.isRunning());
 
     // don't process network frames if the RF TG hang timer isn't running, the default net idle talkgroup is set and
     // the destination ID doesn't match the default net idle talkgroup
     if (m_p25->m_defaultNetIdleTalkgroup != 0U && dstId != 0U && !m_p25->m_rfTGHang.isRunning()) {
-        if (m_p25->m_defaultNetIdleTalkgroup != dstId) {
+        if (m_p25->m_defaultNetIdleTalkgroup != dstId && !m_p25->m_affiliations->hasGroupAff(dstId)) {
+            if (!m_p25->m_dedicatedControl) {
+                if (m_p25->m_affiliations->isGranted(dstId)) {
+                    m_p25->m_affiliations->releaseGrant(dstId, false);
+                }
+            }
+
             resetNet();
             if (m_p25->m_network != nullptr)
                 m_p25->m_network->resetP25();
             return true;
+        }
+    }
+
+    // bryanb: only perform tail ride fix if default net idle talkgroup is not set
+    if (m_p25->m_defaultNetIdleTalkgroup == 0U) {
+        // bryanb: possible fix for a "tail ride" condition where network traffic immediately follows RF traffic *while*
+        // the RF TG hangtimer is running
+        if (m_p25->m_rfTGHang.isRunning() && !m_p25->m_rfTGHang.hasExpired()) {
+            m_p25->m_rfTGHang.stop();
         }
     }
 

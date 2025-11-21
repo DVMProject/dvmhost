@@ -248,7 +248,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
     yaml::Node rfssConfig = systemConf["config"];
     m_control->m_patchSuperGroup = (uint32_t)::strtoul(rfssConfig["pSuperGroup"].as<std::string>("FFFE").c_str(), NULL, 16);
     m_control->m_announcementGroup = (uint32_t)::strtoul(rfssConfig["announcementGroup"].as<std::string>("FFFE").c_str(), NULL, 16);
-    m_defaultNetIdleTalkgroup = (uint32_t)::strtoul(rfssConfig["defaultNetIdleTalkgroup"].as<std::string>("0").c_str(), NULL, 16);
+    m_defaultNetIdleTalkgroup = (uint32_t)rfssConfig["defaultNetIdleTalkgroup"].as<uint32_t>(0U);
 
     yaml::Node secureConfig = rfssConfig["secure"];
     std::string key = secureConfig["key"].as<std::string>();
@@ -521,7 +521,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
         LogInfo("    Patch Super Group: $%04X", m_control->m_patchSuperGroup);
         LogInfo("    Announcement Group: $%04X", m_control->m_announcementGroup);
         if (m_defaultNetIdleTalkgroup != 0U) {
-            LogInfo("    Default Network Idle Talkgroup: $%04X", m_defaultNetIdleTalkgroup);
+            LogInfo("    Default Network Idle Talkgroup: %u", m_defaultNetIdleTalkgroup);
         }
 
         LogInfo("    Notify Control: %s", m_notifyCC ? "yes" : "no");
