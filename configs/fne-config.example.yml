@@ -34,6 +34,8 @@ log:
 #
 master:
     # Network Peer ID
+    #   NOTE: This ID is a uniquely identifying number. It *MUST* be a unique number across any networks this FNE
+    #        instance connects to. Failure to use a unique number *WILL* cause network issues.
     peerId: 9000100
     # Hostname/IP address to listen on (blank for all).
     address: 0.0.0.0
