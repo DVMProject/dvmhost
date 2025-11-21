@@ -608,8 +608,10 @@ bool Socket::write(BufferQueue* buffers, ssize_t* lenWritten) noexcept
             delete[] cryptoBuffer;
 
             if (crypted == nullptr) {
-                if (iov_buffer != nullptr)
+                if (iov_buffer != nullptr) {
                     delete[] iov_buffer;
+                    iov_buffer = nullptr;
+                }
                 continue;
             }
 
@@ -622,7 +624,9 @@ bool Socket::write(BufferQueue* buffers, ssize_t* lenWritten) noexcept
 
             // cleanup buffers and replace with new
             delete[] crypted;
+            crypted = nullptr;
             delete[] iov_buffer;
+            iov_buffer = nullptr;
             iov_buffer = new uint8_t[cryptedLen + 2U];
             ::memcpy(iov_buffer, out, cryptedLen + 2U);
             iov_length = cryptedLen + 2U;
