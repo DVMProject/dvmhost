@@ -104,26 +104,7 @@ uint32_t SpanningTree::countChildren(SpanningTree* node)
 void SpanningTree::erasePeer(const uint32_t peerId)
 {
     std::lock_guard<std::mutex> guard(s_mutex);
-
-    auto it = s_spanningTrees.find(peerId);
-    if (it != s_spanningTrees.end()) {
-        SpanningTree* tree = it->second;
-        if (tree != nullptr) {
-            if (tree->m_parent != nullptr) {
-                auto& siblings = tree->m_parent->m_children;
-                siblings.erase(std::remove(siblings.begin(), siblings.end(), tree), siblings.end());
-            }
-
-            if (tree->hasChildren()) {
-                eraseChildren(tree);
-            }
-
-            delete tree;
-            tree = nullptr;
-        }
-
-        s_spanningTrees.erase(it);
-    }
+    internalErasePeer(peerId);
 }
 
 /* Helper to recursively serialize tree node to JSON array. */
@@ -200,6 +181,31 @@ void SpanningTree::visualizeTreeToLog(SpanningTree* node, uint32_t level)
 // ---------------------------------------------------------------------------
 //  Private Static Class Members
 // ---------------------------------------------------------------------------
+
+/* Erase a peer from the tree. */
+
+void SpanningTree::internalErasePeer(const uint32_t peerId)
+{
+    auto it = s_spanningTrees.find(peerId);
+    if (it != s_spanningTrees.end()) {
+        SpanningTree* tree = it->second;
+        if (tree != nullptr) {
+            if (tree->m_parent != nullptr) {
+                auto& siblings = tree->m_parent->m_children;
+                siblings.erase(std::remove(siblings.begin(), siblings.end(), tree), siblings.end());
+            }
+
+            if (tree->hasChildren()) {
+                eraseChildren(tree);
+            }
+
+            delete tree;
+            tree = nullptr;
+        }
+
+        s_spanningTrees.erase(it);
+    }
+}
 
 /* Helper to recursively deserialize tree node from JSON array. */
 
@@ -284,39 +290,43 @@ void SpanningTree::internalDeserializeTree(json::array& jsonArray, SpanningTree*
                 }
 
                 // iterate over the nodes children and remove entries
-                std::vector<SpanningTree*> childrenToErase;
+                std::vector<uint32_t> childrenToErase;
                 for (auto child : existingNode->m_children) {
                     if (child != nullptr) {
                         auto it = std::find(announcedChildren.begin(), announcedChildren.end(), child->id());
                         if (it == announcedChildren.end()) {
-                            childrenToErase.push_back(child);
+                            childrenToErase.push_back(child->id());
                         }
                     }
                 }
 
                 if (childrenToErase.size() > 0) {
                     for (auto child : childrenToErase) {
-                        if (child != nullptr) {
-                            auto it = std::find_if(existingNode->m_children.begin(), existingNode->m_children.end(),
-                                [&](SpanningTree* x) {
-                                    if (x != nullptr) {
-                                        return x->id() == child->id();
-                                    }
-
-                                    return false;
-                                });
-                            if (it != existingNode->m_children.end()) {
-                                existingNode->m_children.erase(it);
-                            }
-                        }
+                        internalErasePeer(child);
                     }
                 }
             }
         }
         else {
-            // did the node report children atsome point and is no longer reporting them?
-            if (childArray.size() == 0U && existingNode->hasChildren())
-                eraseChildren(existingNode);
+            // did the node report children at some point and is no longer reporting them?
+            if (childArray.size() == 0U && existingNode->hasChildren()) {
+                //LogDebugEx(LOG_STP, "SpanningTree::internalDeserializeTree()", "peerId = %u, masterId = %u, parent = %u, childrenCnt = %u, existingChildrenCnt = %u - erasing children",
+                //    existingNode->id(), existingNode->masterId(), parent->id(), childArray.size(), existingNode->m_children.size());
+
+                // iterate over the nodes children and remove entries
+                std::vector<uint32_t> childrenToErase;
+                for (auto child : existingNode->m_children) {
+                    if (child != nullptr) {
+                        childrenToErase.push_back(child->id());
+                    }
+                }
+
+                if (childrenToErase.size() > 0) {
+                    for (auto child : childrenToErase) {
+                        internalErasePeer(child);
+                    }
+                }
+            }
         }
     }
 }

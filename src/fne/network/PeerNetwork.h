@@ -323,6 +323,8 @@ namespace network
 
         ThreadPool m_threadPool;
 
+        uint32_t m_prevSpanningTreeChildren;
+
         /**
          * @brief Entry point to process a given network packet.
          * @param req Instance of the PeerPacketRequest structure.

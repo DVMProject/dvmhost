@@ -54,7 +54,8 @@ PeerNetwork::PeerNetwork(const std::string& address, uint16_t port, uint16_t loc
     m_tgidPkt(true, "Peer Replication, TGID List"),
     m_ridPkt(true, "Peer Replication, RID List"),
     m_pidPkt(true, "Peer Replication, PID List"),
-    m_threadPool(WORKER_CNT, "peer")
+    m_threadPool(WORKER_CNT, "peer"),
+    m_prevSpanningTreeChildren(0U)
 {
     assert(!address.empty());
     assert(port > 0U);
@@ -151,10 +152,10 @@ bool PeerNetwork::writeSpanningTree(SpanningTree* treeRoot)
 {
     if (treeRoot == nullptr)
         return false;
-    if (treeRoot->m_children.size() == 0)
+    if (treeRoot->m_children.size() == 0 && m_prevSpanningTreeChildren == 0U)
         return false;
 
-    if (treeRoot->m_children.size() > 0) {
+    if ((treeRoot->m_children.size() > 0) || (m_prevSpanningTreeChildren > 0U)) {
         json::array jsonArray;
         SpanningTree::serializeTree(treeRoot, jsonArray);
 
@@ -181,9 +182,12 @@ bool PeerNetwork::writeSpanningTree(SpanningTree* treeRoot)
         }
 
         pkt.clear();
+
+        m_prevSpanningTreeChildren = treeRoot->m_children.size();
         return true;
     }
 
+    m_prevSpanningTreeChildren = treeRoot->m_children.size();
     return false;
 }
 
