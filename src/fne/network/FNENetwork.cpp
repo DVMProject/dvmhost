@@ -1223,8 +1223,10 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
 
                                         lookups::PeerId peerEntry = network->m_peerListLookup->find(peerId);
                                         if (!peerEntry.peerDefault()) {
-                                            connection->hasCallPriority(peerEntry.hasCallPriority());
-                                            LogInfoEx(LOG_MASTER, "PEER %u >> Has Call Priority", peerId);
+                                            if (peerEntry.hasCallPriority()) {
+                                                connection->hasCallPriority(peerEntry.hasCallPriority());
+                                                LogInfoEx(LOG_MASTER, "PEER %u >> Has Call Priority", peerId);
+                                            }
                                         }
 
                                         network->m_peers[peerId] = connection;
@@ -1299,7 +1301,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                             }
 
                                             if (network->m_enableSpanningTree && !connection->isSysView()) {
-                                                std::lock_guard<std::mutex> guard(network->m_treeLock);
+                                                network->m_treeLock.lock();
 
                                                 // check if this peer is already connected via another peer
                                                 SpanningTree* tree = SpanningTree::findByMasterID(masterPeerId);
@@ -1320,6 +1322,7 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                                         LogWarning(LOG_STP, "PEER %u (%s) RPTC NAK, server already connected via PEER %u, duplicate connection denied, peerId = %u, masterId = %u, treePeerId = %u, treeMasterId = %u, connectionState = %u", peerId, connection->identWithQualifier().c_str(),
                                                             peerId, masterPeerId, tree->id(), tree->masterId(), tree->id(), connection->connectionState());
                                                         network->writePeerNAK(peerId, TAG_REPEATER_CONFIG, NET_CONN_NAK_FNE_DUPLICATE_CONN, req->address, req->addrLen);
+                                                        network->m_treeLock.unlock();
                                                         network->disconnectPeer(peerId, connection);
                                                         break;
                                                     }
@@ -1328,6 +1331,8 @@ void FNENetwork::taskNetworkRx(NetPacketRequest* req)
                                                     node->identity(identity);
                                                     network->logSpanningTree(connection);
                                                 }
+
+                                                network->m_treeLock.unlock();
                                             }
                                         }
 
@@ -2057,6 +2062,8 @@ void FNENetwork::erasePeer(uint32_t peerId)
     }
 
     if (neighborFNE && m_enableSpanningTree) {
+        std::lock_guard<std::mutex> guard(m_treeLock);
+
         // erase this peer from the master tree
         SpanningTree* tree = SpanningTree::findByPeerID(peerId);
         if (tree != nullptr) {

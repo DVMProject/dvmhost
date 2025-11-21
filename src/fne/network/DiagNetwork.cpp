@@ -432,8 +432,8 @@ void DiagNetwork::taskNetworkRx(NetPacketRequest* req)
                                 uint32_t decompressedLen = 0U;
                                 uint8_t* decompressed = nullptr;
 
-                                diagNetwork->m_peerReplicaActPkt.lock();
                                 if (pkt.buffer->decode(rawPayload, &decompressed, &decompressedLen)) {
+                                    diagNetwork->m_peerReplicaActPkt.lock();
                                     std::string payload(decompressed + 8U, decompressed + decompressedLen);
 
                                     // parse JSON body
@@ -621,8 +621,8 @@ void DiagNetwork::taskNetworkRx(NetPacketRequest* req)
                                 uint32_t decompressedLen = 0U;
                                 uint8_t* decompressed = nullptr;
 
-                                diagNetwork->m_peerTreeListPkt.lock();
                                 if (pkt.buffer->decode(rawPayload, &decompressed, &decompressedLen)) {
+                                    diagNetwork->m_peerTreeListPkt.lock();
                                     std::string payload(decompressed + 8U, decompressed + decompressedLen);
 
                                     // parse JSON body
