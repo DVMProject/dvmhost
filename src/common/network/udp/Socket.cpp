@@ -632,6 +632,11 @@ bool Socket::write(BufferQueue* buffers, ssize_t* lenWritten) noexcept
             iov_length = cryptedLen + 2U;
         }
 
+        // skip if no IOV buffer
+        if (iov_buffer == nullptr) {
+            continue;
+        }
+
         addresses[i] = new sockaddr_storage;
         ::memcpy(addresses[i], &address, sizeof(sockaddr_storage));
 
