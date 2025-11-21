@@ -119,6 +119,7 @@ void SpanningTree::erasePeer(const uint32_t peerId)
             }
 
             delete tree;
+            tree = nullptr;
         }
 
         s_spanningTrees.erase(it);
@@ -384,6 +385,7 @@ void SpanningTree::eraseChildren(SpanningTree* node)
         if (child != nullptr) {
             eraseChildren(child);
             delete child;
+            child = nullptr;
         }
     }
 
