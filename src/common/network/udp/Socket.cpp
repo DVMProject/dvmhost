@@ -590,7 +590,8 @@ bool Socket::write(BufferQueue* buffers, ssize_t* lenWritten) noexcept
         // are we crypto wrapped?
         if (m_isCryptoWrapped && m_presharedKey != nullptr) {
             uint32_t cryptedLen = length * sizeof(uint8_t);
-            uint8_t *cryptoBuffer = iov_buffer;
+            uint8_t* cryptoBuffer = new uint8_t[iov_length];
+            ::memcpy(cryptoBuffer, iov_buffer, iov_length);
 
             // do we need to pad the original buffer to be block aligned?
             if (cryptedLen % crypto::AES::BLOCK_BYTES_LEN != 0) {
