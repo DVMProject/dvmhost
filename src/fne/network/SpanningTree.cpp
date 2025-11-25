@@ -364,7 +364,13 @@ void SpanningTree::internalErasePeer(const uint32_t peerId)
             }
 
             if (tree->hasChildren()) {
-                eraseChildren(tree);
+                for (auto child : tree->m_children) {
+                    if (child != nullptr) {
+                        internalErasePeer(child->id());
+                    }
+                }
+
+                tree->m_children.clear();
             }
 
             delete tree;
@@ -373,20 +379,4 @@ void SpanningTree::internalErasePeer(const uint32_t peerId)
 
         s_spanningTrees.erase(it);
     }
-}
-
-/* Erase all children of a spanning tree node. */
-
-void SpanningTree::eraseChildren(SpanningTree* node)
-{
-    if (node == nullptr)
-        return;
-
-    for (auto child : node->m_children) {
-        if (child != nullptr) {
-            internalErasePeer(child->id());
-        }
-    }
-
-    node->m_children.clear();
 }

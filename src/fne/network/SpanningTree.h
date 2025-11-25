@@ -188,11 +188,6 @@ namespace network
          * @param peerId Peer ID.
          */
         static void internalErasePeer(const uint32_t peerId);
-        /**
-         * @brief Helper to erase all children of a spanning tree node.
-         * @param node Pointer to SpanningTree node.
-         */
-        static void eraseChildren(SpanningTree* node);
     };
 } // namespace network
 
