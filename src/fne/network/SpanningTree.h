@@ -171,11 +171,6 @@ namespace network
         uint8_t m_updatesBeforeReparent;
 
         /**
-         * @brief Erase a peer from the tree.
-         * @param peerId Peer ID.
-         */
-        static void internalErasePeer(const uint32_t peerId);
-        /**
          * @brief Helper to recursively deserialize tree node from JSON array.
          * @param jsonArray JSON array to read node from.
          * @param parent Pointer to parent SpanningTree node.
@@ -188,6 +183,11 @@ namespace network
          * @param parent Pointer to new parent SpanningTree Node.
          */
         static void internalMoveParent(SpanningTree* node, SpanningTree* parent);
+        /**
+         * @brief Erase a peer from the tree.
+         * @param peerId Peer ID.
+         */
+        static void internalErasePeer(const uint32_t peerId);
         /**
          * @brief Helper to erase all children of a spanning tree node.
          * @param node Pointer to SpanningTree node.

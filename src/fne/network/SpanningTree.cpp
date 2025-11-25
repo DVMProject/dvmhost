@@ -42,16 +42,7 @@ SpanningTree::SpanningTree(uint32_t id, uint32_t masterId, SpanningTree* parent)
 
 /* Finalizes a instance of the SpanningTree class. */
 
-SpanningTree::~SpanningTree()
-{
-    for (auto child : m_children) {
-        if (child != nullptr) {
-            delete child;
-            child = nullptr;
-        }
-    }
-    m_children.clear();
-}
+SpanningTree::~SpanningTree() = default;
 
 /* Find a peer tree by peer ID. */
 
@@ -152,7 +143,7 @@ void SpanningTree::moveParent(SpanningTree* node, SpanningTree* parent)
     internalMoveParent(node, parent);
 }
 
-/* Debug helper to visualize the tree structure in the log. */
+/* Helper to visualize the tree structure in the log. */
 
 void SpanningTree::visualizeTreeToLog(SpanningTree* node, uint32_t level)
 {
@@ -181,31 +172,6 @@ void SpanningTree::visualizeTreeToLog(SpanningTree* node, uint32_t level)
 // ---------------------------------------------------------------------------
 //  Private Static Class Members
 // ---------------------------------------------------------------------------
-
-/* Erase a peer from the tree. */
-
-void SpanningTree::internalErasePeer(const uint32_t peerId)
-{
-    auto it = s_spanningTrees.find(peerId);
-    if (it != s_spanningTrees.end()) {
-        SpanningTree* tree = it->second;
-        if (tree != nullptr) {
-            if (tree->m_parent != nullptr) {
-                auto& siblings = tree->m_parent->m_children;
-                siblings.erase(std::remove(siblings.begin(), siblings.end(), tree), siblings.end());
-            }
-
-            if (tree->hasChildren()) {
-                eraseChildren(tree);
-            }
-
-            delete tree;
-            tree = nullptr;
-        }
-
-        s_spanningTrees.erase(it);
-    }
-}
 
 /* Helper to recursively deserialize tree node from JSON array. */
 
@@ -384,6 +350,31 @@ void SpanningTree::internalMoveParent(SpanningTree* node, SpanningTree* parent)
     }
 }
 
+/* Erase a peer from the tree. */
+
+void SpanningTree::internalErasePeer(const uint32_t peerId)
+{
+    auto it = s_spanningTrees.find(peerId);
+    if (it != s_spanningTrees.end()) {
+        SpanningTree* tree = it->second;
+        if (tree != nullptr) {
+            if (tree->m_parent != nullptr) {
+                auto& siblings = tree->m_parent->m_children;
+                siblings.erase(std::remove(siblings.begin(), siblings.end(), tree), siblings.end());
+            }
+
+            if (tree->hasChildren()) {
+                eraseChildren(tree);
+            }
+
+            delete tree;
+            tree = nullptr;
+        }
+
+        s_spanningTrees.erase(it);
+    }
+}
+
 /* Erase all children of a spanning tree node. */
 
 void SpanningTree::eraseChildren(SpanningTree* node)
@@ -393,9 +384,7 @@ void SpanningTree::eraseChildren(SpanningTree* node)
 
     for (auto child : node->m_children) {
         if (child != nullptr) {
-            eraseChildren(child);
-            delete child;
-            child = nullptr;
+            internalErasePeer(child->id());
         }
     }
 
