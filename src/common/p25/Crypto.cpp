@@ -18,7 +18,6 @@
 #include "Utils.h"
 
 #if defined(ENABLE_SSL)
-#include <openssl/aes.h>
 #include <openssl/evp.h>
 #include <openssl/kdf.h>
 #include <openssl/err.h>
@@ -240,7 +239,7 @@ UInt8Array P25Crypto::cryptAES_TEK(const uint8_t* kek, uint8_t* tek, uint8_t tek
 {
 #if defined(ENABLE_SSL)
     // static IV with $A6 pattern defined in TIA-102.AACA-C-2023 13.3
-    uint8_t iv[AES_BLOCK_SIZE / 2] = {
+    uint8_t iv[AES::BLOCK_BYTES_LEN / 2] = {
         0xA6U, 0xA6U, 0xA6U, 0xA6U, 0xA6U, 0xA6U, 0xA6U, 0xA6U
     };
 
@@ -300,7 +299,7 @@ UInt8Array P25Crypto::decryptAES_TEK(const uint8_t* kek, uint8_t* tek, uint8_t t
 {
 #if defined(ENABLE_SSL)
     // static IV with $A6 pattern defined in TIA-102.AACA-C-2023 13.3
-    uint8_t iv[AES_BLOCK_SIZE / 2] = {
+    uint8_t iv[AES::BLOCK_BYTES_LEN / 2] = {
         0xA6U, 0xA6U, 0xA6U, 0xA6U, 0xA6U, 0xA6U, 0xA6U, 0xA6U
     };
 
@@ -364,7 +363,7 @@ UInt8Array P25Crypto::cryptAES_KMM_CBC_KDF(const uint8_t* kek, const uint8_t* ms
     ** bryanb: some bizarre bullshit requiring a 8-byte IV -- thanks Ilya (https://github.com/ilyacodes) for helping look at this
     */
 
-    uint8_t iv[AES_BLOCK_SIZE / 2] = {
+    uint8_t iv[AES::BLOCK_BYTES_LEN / 2] = {
         0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U
     };
 
@@ -425,25 +424,14 @@ UInt8Array P25Crypto::cryptAES_KMM_CBC_KDF(const uint8_t* kek, const uint8_t* ms
 
 UInt8Array P25Crypto::cryptAES_KMM_CBC(const uint8_t* macKey, const uint8_t* msg, uint16_t msgLen)
 {
-#if defined(ENABLE_SSL)
-    uint8_t iv[AES_BLOCK_SIZE] = {
+    uint8_t iv[AES::BLOCK_BYTES_LEN] = {
         0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U
     };
 
-    size_t len;
-    uint8_t tempBuf[TEMP_BUFFER_LEN];
-    ::memset(tempBuf, 0x00U, TEMP_BUFFER_LEN);
-
-    AES_KEY aesKey;
-
-    // set the encryption key
-    if (AES_set_encrypt_key(macKey, 256U, &aesKey) < 0) {
-        LogError(LOG_P25, "AES_set_encrypt_key(), failed to set AES-256 key: %s", ERR_error_string(ERR_get_error(), NULL));
-        return nullptr;
-    }
+    AES aes = AES(AESKeyLength::AES_256);
 
     // pad the message as necessary
-    size_t paddedLen = msgLen + (AES_BLOCK_SIZE - (msgLen % AES_BLOCK_SIZE));
+    size_t paddedLen = msgLen + (AES::BLOCK_BYTES_LEN - (msgLen % AES::BLOCK_BYTES_LEN));
     uint8_t paddedMessage[TEMP_BUFFER_LEN];
     ::memset(paddedMessage, 0x00U, TEMP_BUFFER_LEN);
 
@@ -451,17 +439,14 @@ UInt8Array P25Crypto::cryptAES_KMM_CBC(const uint8_t* macKey, const uint8_t* msg
     ::memcpy(paddedMessage + msgLen - KMM_AES_MAC_LENGTH - 5U, msg + msgLen - 5U, 5U);
 
     // perform AES-CBC encryption
-    AES_cbc_encrypt(paddedMessage, tempBuf, paddedLen, &aesKey, iv, AES_ENCRYPT);
+    uint8_t* tempBuf = aes.encryptCBC(paddedMessage, paddedLen, macKey, iv);
 
     UInt8Array wrappedKey = std::unique_ptr<uint8_t[]>(new uint8_t[8U]);
     ::memset(wrappedKey.get(), 0x00U, 8U);
-    ::memcpy(wrappedKey.get(), tempBuf + (msgLen - AES_BLOCK_SIZE), 8U);
+    ::memcpy(wrappedKey.get(), tempBuf + (msgLen - AES::BLOCK_BYTES_LEN), 8U);
 
+    delete[] tempBuf;
     return wrappedKey;
-#else
-    LogError(LOG_P25, "No OpenSSL, CBC-MAC generation is not supported!");
-    return nullptr;
-#endif // ENABLE_SSL
 }
 
 /* Helper to generate a P25 KMM CMAC MAC key with the given AES-256 KEK. */
