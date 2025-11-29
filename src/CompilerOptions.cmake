@@ -184,6 +184,7 @@ endif (HAVE_SENDMMSG)
 
 # are we enabling SSL support?
 if (NOT COMPILE_WIN32)
+    message(STATUS "OpenSSL root dir: ${OPENSSL_ROOT_DIR}")
     find_package(OpenSSL REQUIRED)
     if (OpenSSL_FOUND)
         message(STATUS "OpenSSL include dir: ${OPENSSL_INCLUDE_DIR}")
