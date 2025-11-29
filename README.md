@@ -92,9 +92,8 @@ sudo apt-get install libdw-dev:arm64
 
 If cross-compiling is required (for either ARM 32bit, 64bit or old Raspberry Pi ARM 32bit), the CMake build system has some options:
 
-- `-DCROSS_COMPILE_ARM=1` - This will cross-compile dvmhost for generic ARM 32bit. (RPi4 running 32-bit distro's can fall into this category [on Debian/Rasbpian anything bullseye or newer])
-- `-DCROSS_COMPILE_AARCH64=1` - This will cross-compile dvmhost for generic ARM 64bit. (RPi4 running 64-bit distro's can fall into this category [on Debian/Rasbpian anything bullseye or newer])
-- `-DCROSS_COMPILE_RPI_ARM=1` - This will cross-compile for old Raspberry Pi ARM 32 bit. (typically this will be the RPi1, 2 and 3 platforms; see build notes, linked below)
+- `-DCROSS_COMPILE_ARM=1` - This will cross-compile dvmhost for generic ARM 32bit. (RPi4+ running 32-bit distro's can fall into this category [on Debian/Rasbpian anything bullseye or newer])
+- `-DCROSS_COMPILE_AARCH64=1` - This will cross-compile dvmhost for generic ARM 64bit. (RPi4+ running 64-bit distro's can fall into this category [on Debian/Rasbpian anything bullseye or newer])
 
 Please note cross-compliation requires you to have the appropriate development packages installed for your system. For ARM 32-bit, on Debian/Ubuntu OS install the "arm-linux-gnueabihf-gcc" and "arm-linux-gnueabihf-g++" packages. For ARM 64-bit, on Debian/Ubuntu OS install the "aarch64-linux-gnu-gcc" and "aarch64-linux-gnu-g++" packages.
 
@@ -102,7 +101,7 @@ Please note cross-compliation requires you to have the appropriate development p
 
 ### Setup TUI (Text-based User Interface)
 
-Since, DVM Host 3.5, the old calibration and setup modes have been deprecated in favor of a ncurses-based TUI. This TUI is optional, and DVM Host can still be compiled without it for systems or devices that cannot utilize it.
+The DVM TUI applications are optional, and dvmhost can still be compiled without it for systems or devices that cannot utilize it.
 
 - `-DENABLE_SETUP_TUI=0` - This will disable the setup/calibration TUI interface.
 - `-DENABLE_TUI_SUPPORT=0` - This will disable TUI support project wide. Any projects that require TUI support will not compile, or will have any TUI components disabled.
@@ -373,14 +372,12 @@ counts of up to 100,000+ calls on a x86_64 Server with 8GB RAM and 8-core proces
 
 - For maximize size reduction before performing a `make install`, `make old_install` or `make tarball` it is recommended to run `make strip` to strip any debug symbols or other unneeded information from the resultant binaries.
 
-- By default when cross-compiling for old RPi 1 using the Debian/Ubuntu OS, the toolchain will attempt to fetch and clone the tools automatically. If you already have a copy of these tools, you can specify the location for them with the `-DWITH_RPI_ARM_TOOLS=/path/to/tools`
-- For old RPi 1, 2 or 3 using Debian/Ubuntu OS install the standard ARM embedded toolchain (typically "arm-none-eabi-gcc" and "arm-none-eabi-g++"). The CMake build system will automatically attempt to clone down the compilation tools, if you already have the RPI_ARM compilation tools installed use the instructions the above bullet to point to them (this will prevent CMake from attempting to clone the compilation tools).
-- The old RPi 1, 2 or 3 builds do not support the TUI when cross compiling. If you require the TUI on these platforms, you have to build the project directly on the target platform vs cross compiling.
-
 - If you have old configuration files, missing comments or new parameters, there is a tool provided in the "tools" directory of the project called `config_annotator.py` this is a Python CLI tool designed to compare an existing configuration file against the example configuration file and recomment and add missing parameters (along with removing illegal/invalid parameters). It is recommended to backup your existing configuration file before running this tool on it. *This tool is only designed for the `dvmhost` configuration file, and no other configuration file!*
 
 - By default Linux may restrict the maximum size of the receive and send buffers used by the kernel for network traffic. Please check the limits with `sudo sysctl net.core.rmem_max` and `sudo sysctl net.core.wmem_max`, these should be at least 512K (524288), while DVM will operate in lower
 limits, you will see startup errors similar to: "Could not resize socket recv buffer, XXXXXX != 524288", or "Could not resize socket send buffer, XXXXXX != 524288". See the documentation for your specific distribution of Linux to adjust these parameters.
+
+- Offically support for cross-compiling for RPi 1/2/3 was removed in DVM R05A02. There is no support for cross-compiling on these platforms. It is recommended *not* to run DVM on these platforms and to use more modern RPi4+.
 
 ## Security Warnings
 
