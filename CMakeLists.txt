@@ -36,6 +36,7 @@ endif (DISABLE_WEBSOCKETS)
 # Cross-compile options
 option(CROSS_COMPILE_ARM "Cross-compile for 32-bit ARM" off)
 option(CROSS_COMPILE_AARCH64 "Cross-compile for 64-bit ARM" off)
+
 option(COMPILE_WIN32 "Compile for Win32" off)
 
 set(ENABLE_LIBDW_SUPPORT ON)
@@ -75,37 +76,35 @@ endif (COMPILE_WIN32)
 
 if (CROSS_COMPILE_ARM)
     set(CMAKE_CROSSCOMPILING TRUE)
+    set(ARCH armhf CACHE STRING "Architecture" FORCE)
+    set(CMAKE_SYSTEM_PROCESSOR armhf CACHE STRING "System Processor" FORCE)
+    set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE armhf CACHE STRING "Package Architecture" FORCE)
+    message(CHECK_START "Target Architecture - ${ARCH}")
+
     set(CMAKE_C_COMPILER /usr/bin/arm-linux-gnueabihf-gcc CACHE STRING "C compiler" FORCE)
     set(CMAKE_CXX_COMPILER /usr/bin/arm-linux-gnueabihf-g++ CACHE STRING "C++ compiler" FORCE)
-    set(ARCH armhf)
-    set(CMAKE_SYSTEM_PROCESSOR armhf)
-    set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE armhf)
+
     set(OPENSSL_ROOT_DIR /usr/lib/arm-linux-gnueabihf)
     set(CMAKE_INCLUDE_PATH /usr/arm-linux-gnueabihf/include)
     set(CMAKE_LIBRARY_PATH /usr/arm-linux-gnueabihf/lib)
-    message(CHECK_START "Target Architecture - ${ARCH}")
+
     message(CHECK_START "Cross compiling for 32-bit ARM - ${CMAKE_C_COMPILER}")
 endif (CROSS_COMPILE_ARM)
 if (CROSS_COMPILE_AARCH64)
     set(CMAKE_CROSSCOMPILING TRUE)
+    set(ARCH aarch64 CACHE STRING "Architecture" FORCE)
+    set(CMAKE_SYSTEM_PROCESSOR aarch64 CACHE STRING "System Processor" FORCE)
+    set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE aarch64 CACHE STRING "Package Architecture" FORCE)
+    message(CHECK_START "Target Architecture - ${ARCH}")
+
     set(CMAKE_C_COMPILER /usr/bin/aarch64-linux-gnu-gcc CACHE STRING "C compiler" FORCE)
     set(CMAKE_CXX_COMPILER /usr/bin/aarch64-linux-gnu-g++ CACHE STRING "C++ compiler" FORCE)
-    set(ARCH aarch64)
-    set(CMAKE_SYSTEM_PROCESSOR aarch64)
-    set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE aarch64)
+
     set(OPENSSL_ROOT_DIR /usr/lib/aarch64-linux-gnu)
-    set(CMAKE_FIND_ROOT_PATH /usr/aarch64-linux-gnu)
     set(CMAKE_INCLUDE_PATH /usr/aarch64-linux-gnu/include)
     set(CMAKE_LIBRARY_PATH /usr/aarch64-linux-gnu/lib)
-    message(CHECK_START "Target Architecture - ${ARCH}")
     message(CHECK_START "Cross compiling for 64-bit ARM - ${CMAKE_C_COMPILER}")
 endif (CROSS_COMPILE_AARCH64)
-
-option(WITH_RPI_ARM_TOOLS "Specifies the location for the RPI ARM tools" off)
-if (WITH_RPI_ARM_TOOLS)
-    set(RPI_ARM_TOOLS ${WITH_RPI_ARM_TOOLS})
-    message(CHECK_START "With RPi 1 Tools: ${RPI_ARM_TOOLS}")
-endif (WITH_RPI_ARM_TOOLS)
 
 # search for programs in the build host directories
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
