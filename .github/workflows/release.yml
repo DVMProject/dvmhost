@@ -30,7 +30,7 @@ jobs:
     needs: [setup]
     strategy:
       matrix:
-        arch: ["amd64", "arm", "aarch64", "armhf"]
+        arch: ["amd64", "arm", "aarch64"]
     runs-on: ubuntu-22.04
     env:
       PACKAGENAME: ${{ needs.setup.outputs.APPNAME }}-${{ needs.setup.outputs.VERSION }}-${{ matrix.arch }}
@@ -77,12 +77,8 @@ jobs:
 
           build_args="$build_args -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS='-s' -DCMAKE_CXX_FLAGS='-s'"
 
-          if [[ "${{ matrix.arch }}" == 'armhf' ]]; then
-            cmake $(echo $build_args) -DCROSS_COMPILE_RPI_ARM=1 .
-          else
-            cmake $(echo $build_args) \
-              -D "CROSS_COMPILE_$(echo '${{ matrix.arch }}' | tr '[:lower:]' '[:upper:]')=1" .
-          fi
+          cmake $(echo $build_args) \
+            -D "CROSS_COMPILE_$(echo '${{ matrix.arch }}' | tr '[:lower:]' '[:upper:]')=1" .
 
           make -j $(nproc)
           make strip
@@ -118,7 +114,7 @@ jobs:
     needs: [setup, build, create-release]
     strategy:
       matrix:
-        arch: ["amd64", "arm", "aarch64", "armhf"]
+        arch: ["amd64", "arm", "aarch64"]
     runs-on: ubuntu-22.04
     env:
       PACKAGENAME: ${{ needs.setup.outputs.APPNAME }}-${{ needs.setup.outputs.VERSION }}-${{ matrix.arch }}

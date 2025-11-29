@@ -32,14 +32,6 @@ aarch64:
 		&& make -j $(nproc)
 	@echo 'Successfully compiled for AARCH64'
 
-armhf:
-	@echo 'Cross-Compiling for ARMHF'
-	mkdir -p "build/$@" && cd "build/$@" \
-		&& cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS="-s" -DCMAKE_CXX_FLAGS="-s" \
-			-DCROSS_COMPILE_RPI_ARM=1 ../.. \
-		&& make -j $(nproc)
-	@echo 'Successfully compiled for ARMHF'
-
 clean:
 	@echo 'Removing all temporary files'
 	git clean -ffxd

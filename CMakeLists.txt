@@ -36,7 +36,6 @@ endif (DISABLE_WEBSOCKETS)
 # Cross-compile options
 option(CROSS_COMPILE_ARM "Cross-compile for 32-bit ARM" off)
 option(CROSS_COMPILE_AARCH64 "Cross-compile for 64-bit ARM" off)
-option(CROSS_COMPILE_RPI_ARM "Cross-compile for (old RPi) 32-bit ARM" off)
 option(COMPILE_WIN32 "Compile for Win32" off)
 
 set(ENABLE_LIBDW_SUPPORT ON)
@@ -101,44 +100,6 @@ if (WITH_RPI_ARM_TOOLS)
     message(CHECK_START "With RPi 1 Tools: ${RPI_ARM_TOOLS}")
 endif (WITH_RPI_ARM_TOOLS)
 
-if (CROSS_COMPILE_RPI_ARM)
-    if (NOT WITH_RPI_ARM_TOOLS)
-        message("-- Cloning legacy Raspberry Pi compilation toolchain")
-        include(FetchContent)
-        FetchContent_Declare(
-            RPiTools
-            GIT_REPOSITORY https://github.com/raspberrypi/tools.git
-        )
-        FetchContent_MakeAvailable(RPiTools)
-        set(CMAKE_C_COMPILER ${CMAKE_CURRENT_BINARY_DIR}/_deps/rpitools-src/arm-bcm2708/arm-rpi-4.9.3-linux-gnueabihf/bin/arm-linux-gnueabihf-gcc CACHE STRING "C compiler" FORCE)
-        set(CMAKE_CXX_COMPILER ${CMAKE_CURRENT_BINARY_DIR}/_deps/rpitools-src/arm-bcm2708/arm-rpi-4.9.3-linux-gnueabihf/bin/arm-linux-gnueabihf-g++ CACHE STRING "C++ compiler" FORCE)
-
-        message(CHECK_START "Apply OpenSSL library binaries for cross compling (old RPi) 32-bit ARM - ${CMAKE_CURRENT_BINARY_DIR}/_deps/rpitools-src")
-        execute_process(COMMAND tar xzf contrib/openssl_cross_patch.RPI_ARM.tar.gz -C ${CMAKE_CURRENT_BINARY_DIR}/_deps/rpitools-src WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR})
-
-        set(OPENSSL_ROOT_DIR ${CMAKE_CURRENT_BINARY_DIR}/_deps/rpitools-src/arm-bcm2708/arm-rpi-4.9.3-linux-gnueabihf/arm-linux-gnueabihf/sysroot/usr/lib)
-    else()
-        set(CMAKE_C_COMPILER ${RPI_ARM_TOOLS}/arm-bcm2708/arm-rpi-4.9.3-linux-gnueabihf/bin/arm-linux-gnueabihf-gcc CACHE STRING "C compiler" FORCE)
-        set(CMAKE_CXX_COMPILER ${RPI_ARM_TOOLS}/arm-bcm2708/arm-rpi-4.9.3-linux-gnueabihf/bin/arm-linux-gnueabihf-g++ CACHE STRING "C++ compiler" FORCE)
-
-        message(CHECK_START "Apply OpenSSL library binaries for cross compling (old RPi) 32-bit ARM - ${RPI_ARM_TOOLS}")
-        execute_process(COMMAND tar xzf contrib/openssl_cross_patch.RPI_ARM.tar.gz -C ${RPI_ARM_TOOLS} WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR})
-
-        set(OPENSSL_ROOT_DIR ${RPI_ARM_TOOLS}/arm-bcm2708/arm-rpi-4.9.3-linux-gnueabihf/arm-linux-gnueabihf/sysroot/usr/lib)
-    endif ()
-
-    set(ARCH armhf)
-    set(CMAKE_SYSTEM_PROCESSOR armhf)
-    set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE armhf)
-    message(CHECK_START "Target Architecture - ${ARCH}")
-    message(CHECK_START "Cross compiling for (old RPi) 32-bit ARM - ${CMAKE_C_COMPILER}")
-
-    # No TUI for this
-    set(ENABLE_TUI_SUPPORT OFF)
-    set(ENABLE_LIBDW_SUPPORT OFF)
-    message(CHECK_START "Enable TUI support - no; for simplicity RPI_ARM cross-compiling does not support TUI.")
-endif (CROSS_COMPILE_RPI_ARM)
-
 # search for programs in the build host directories
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
 
@@ -177,11 +138,6 @@ if (CROSS_COMPILE_ARM)
     set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -Wno-psabi")
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -Wno-psabi")
 endif (CROSS_COMPILE_ARM)
-if (CROSS_COMPILE_RPI_ARM)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-    set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -std=c99")
-endif (CROSS_COMPILE_RPI_ARM)
 if (COMPILE_WIN32)
     set(CMAKE_C_FLAGS "/EHsc /D_WIN32 /D_DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR")
     set(CMAKE_CXX_FLAGS "/EHsc /D_WIN32 /D_DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR")
@@ -374,22 +330,6 @@ if (NOT TARGET strip)
                 COMMAND aarch64-linux-gnu-strip -s dvmbridge
                 COMMAND aarch64-linux-gnu-strip -s dvmpatch)
         endif (ENABLE_TUI_SUPPORT AND (NOT DISABLE_TUI_APPS))
-    elseif (CROSS_COMPILE_RPI_ARM)
-        if (NOT WITH_RPI_ARM_TOOLS)
-            add_custom_target(strip
-                COMMAND ${CMAKE_CURRENT_BINARY_DIR}/_deps/rpitools-src/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-strip -s dvmhost
-                COMMAND ${CMAKE_CURRENT_BINARY_DIR}/_deps/rpitools-src/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-strip -s dvmfne
-                COMMAND ${CMAKE_CURRENT_BINARY_DIR}/_deps/rpitools-src/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-strip -s dvmcmd
-                COMMAND ${CMAKE_CURRENT_BINARY_DIR}/_deps/rpitools-src/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-strip -s dvmbridge
-                COMMAND ${CMAKE_CURRENT_BINARY_DIR}/_deps/rpitools-src/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-strip -s dvmpatch)
-        else()
-            add_custom_target(strip
-                COMMAND ${RPI_ARM_TOOLS}/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-strip -s dvmhost
-                COMMAND ${RPI_ARM_TOOLS}/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-strip -s dvmfne
-                COMMAND ${RPI_ARM_TOOLS}/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-strip -s dvmcmd
-                COMMAND ${RPI_ARM_TOOLS}/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-strip -s dvmbridge
-                COMMAND ${RPI_ARM_TOOLS}/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-strip -s dvmpatch)
-        endif ()
     else()
         if (ENABLE_TUI_SUPPORT AND (NOT DISABLE_TUI_APPS))
             add_custom_target(strip
