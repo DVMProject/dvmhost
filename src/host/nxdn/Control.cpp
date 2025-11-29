@@ -942,7 +942,6 @@ void Control::processNetwork()
 
     // don't process network frames if the RF modem isn't in a listening state
     if (m_rfState != RS_RF_LISTENING && m_netState == RS_NET_IDLE) {
-        m_network->resetNXDN();
         return;
     }
 

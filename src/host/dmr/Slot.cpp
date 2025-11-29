@@ -390,8 +390,7 @@ uint32_t Slot::getFrame(uint8_t* data)
 void Slot::processNetwork(const data::NetData& dmrData)
 {
     // don't process network frames if the RF modem isn't in a listening state
-    if (m_rfState != RS_RF_LISTENING) {
-        s_network->resetDMR(m_slotNo);
+    if (m_rfState != RS_RF_LISTENING && m_netState == RS_NET_IDLE) {
         return;
     }
 
