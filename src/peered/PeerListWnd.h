@@ -98,53 +98,55 @@ public:
         m_selected = PeerId();
         m_selectedPeerId = 0U;
 
-        auto entry = g_pidLookups->tableAsList()[0U];
-        m_selected = entry;
+        if (g_pidLookups->tableAsList().size() > 0U) {
+            auto entry = g_pidLookups->tableAsList()[0U];
+            m_selected = entry;
 
-        // bryanb: HACK -- use HackTheGibson to access the private current listview iterator to get the scroll position
-        /*
-         * This uses the RTTI hack to access private members on FListView; and this code *could* break as a consequence.
-         */
-        int firstScrollLinePos = 0;
-        if (m_listView.getCount() > 0) {
-            firstScrollLinePos = (m_listView.*RTTIResult<PrivateFListViewIteratorFirst>::ptr).getPosition();
+            // bryanb: HACK -- use HackTheGibson to access the private current listview iterator to get the scroll position
+            /*
+            * This uses the RTTI hack to access private members on FListView; and this code *could* break as a consequence.
+            */
+            int firstScrollLinePos = 0;
+            if (m_listView.getCount() > 0) {
+                firstScrollLinePos = (m_listView.*RTTIResult<PrivateFListViewIteratorFirst>::ptr).getPosition();
+            }
+
+            m_listView.clear();
+            for (auto entry : g_pidLookups->tableAsList()) {
+                // pad peer ID properly
+                std::ostringstream oss;
+                oss << std::setw(7) << std::setfill('0') << entry.peerId();
+
+                bool masterPassword = (entry.peerPassword().size() == 0U);
+
+                // build list view entry
+                const std::array<std::string, 7U> columns = {
+                    oss.str(),
+                    (masterPassword) ? "X" : "",
+                    (entry.peerReplica()) ? "X" : "",
+                    (entry.canRequestKeys()) ? "X" : "",
+                    (entry.canIssueInhibit()) ? "X" : "",
+                    (entry.hasCallPriority()) ? "X" : "",
+                    entry.peerAlias()
+                };
+
+                const finalcut::FStringList line(columns.cbegin(), columns.cend());
+                m_listView.insert(line);
+            }
+
+            // bryanb: HACK -- use HackTheGibson to access the private set scroll Y to set the scroll position
+            /*
+            * This uses the RTTI hack to access private members on FListView; and this code *could* break as a consequence.
+            */
+            if ((size_t)firstScrollLinePos > m_listView.getCount())
+                firstScrollLinePos = 0;
+            if (firstScrollLinePos > 0 && m_listView.getCount() > 0) {
+                (m_listView.*RTTIResult<PrivateFListViewScrollToY>::ptr)(firstScrollLinePos);
+                (m_listView.*RTTIResult<PrivateFListViewVBarPtr>::ptr)->setValue(firstScrollLinePos);
+            }
         }
 
-        m_listView.clear();
-        for (auto entry : g_pidLookups->tableAsList()) {
-            // pad peer ID properly
-            std::ostringstream oss;
-            oss << std::setw(7) << std::setfill('0') << entry.peerId();
-
-            bool masterPassword = (entry.peerPassword().size() == 0U);
-
-            // build list view entry
-            const std::array<std::string, 7U> columns = {
-                oss.str(),
-                (masterPassword) ? "X" : "",
-                (entry.peerReplica()) ? "X" : "",
-                (entry.canRequestKeys()) ? "X" : "",
-                (entry.canIssueInhibit()) ? "X" : "",
-                (entry.hasCallPriority()) ? "X" : "",
-                entry.peerAlias()
-            };
-
-            const finalcut::FStringList line(columns.cbegin(), columns.cend());
-            m_listView.insert(line);
-        }
-
-        // bryanb: HACK -- use HackTheGibson to access the private set scroll Y to set the scroll position
-        /*
-         * This uses the RTTI hack to access private members on FListView; and this code *could* break as a consequence.
-         */
-        if ((size_t)firstScrollLinePos > m_listView.getCount())
-            firstScrollLinePos = 0;
-        if (firstScrollLinePos > 0 && m_listView.getCount() > 0) {
-            (m_listView.*RTTIResult<PrivateFListViewScrollToY>::ptr)(firstScrollLinePos);
-            (m_listView.*RTTIResult<PrivateFListViewVBarPtr>::ptr)->setValue(firstScrollLinePos);
-        }
-
-        // generate dialog title        
+        // generate dialog title
         uint32_t len = g_pidLookups->tableAsList().size();
         std::stringstream ss;
         ss << "Peer ID List (" << len << " Peers)";
