@@ -175,7 +175,8 @@ void SpanningTree::visualizeTreeToLog(SpanningTree* node, uint32_t level)
 
 /* Helper to recursively deserialize tree node from JSON array. */
 
-void SpanningTree::internalDeserializeTree(json::array& jsonArray, SpanningTree* parent, std::vector<uint32_t>* duplicatePeers)
+void SpanningTree::internalDeserializeTree(json::array& jsonArray, SpanningTree* parent, 
+    std::vector<uint32_t>* duplicatePeers, bool noReparent)
 {
     for (auto& v : jsonArray) {
         if (!v.is<json::object>())
@@ -214,15 +215,17 @@ void SpanningTree::internalDeserializeTree(json::array& jsonArray, SpanningTree*
             existingNode->identity(identity);
         }
         else {
-            // are the parents different? if so, start counting down to reparenting
-            if (existingNode->m_parent != parent) {
-                if (existingNode->m_updatesBeforeReparent >= s_maxUpdatesBeforeReparent) {
-                    existingNode->m_updatesBeforeReparent = 0U;
+            if (!noReparent) {
+                // are the parents different? if so, start counting down to reparenting
+                if (existingNode->m_parent != parent) {
+                    if (existingNode->m_updatesBeforeReparent >= s_maxUpdatesBeforeReparent) {
+                        existingNode->m_updatesBeforeReparent = 0U;
 
-                    // reparent the node if necessary
-                    internalMoveParent(existingNode, parent);
-                } else {
-                    existingNode->m_updatesBeforeReparent++;
+                        // reparent the node if necessary
+                        internalMoveParent(existingNode, parent);
+                    } else {
+                        existingNode->m_updatesBeforeReparent++;
+                    }
                 }
             }
         }
@@ -232,7 +235,7 @@ void SpanningTree::internalDeserializeTree(json::array& jsonArray, SpanningTree*
         //LogDebugEx(LOG_STP, "SpanningTree::internalDeserializeTree()", "peerId = %u, masterId = %u, parent = %u, childrenCnt = %u",
         //    existingNode->id(), existingNode->masterId(), parent->id(), childArray.size());
         if (childArray.size() > 0U) {
-            internalDeserializeTree(childArray, existingNode, duplicatePeers);
+            internalDeserializeTree(childArray, existingNode, duplicatePeers, true);
 
             // does the announced array disagree with our current count of children?
             if (childArray.size() < existingNode->m_children.size()) {

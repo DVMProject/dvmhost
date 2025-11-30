@@ -175,8 +175,10 @@ namespace network
          * @param jsonArray JSON array to read node from.
          * @param parent Pointer to parent SpanningTree node.
          * @param duplicatePeers Pointer to vector to receive duplicate peer IDs found during deserialization.
+         * @param noReparent If true, disables reparenting during deserialization.
          */
-        static void internalDeserializeTree(json::array& jsonArray, SpanningTree* parent, std::vector<uint32_t>* duplicatePeers);
+        static void internalDeserializeTree(json::array& jsonArray, SpanningTree* parent, 
+            std::vector<uint32_t>* duplicatePeers, bool noReparent = false);
         /**
          * @brief Helper to move the tree node to a different parent tree node.
          * @param node Pointer to a SpanningTree node.
