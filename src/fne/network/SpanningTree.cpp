@@ -221,8 +221,19 @@ void SpanningTree::internalDeserializeTree(json::array& jsonArray, SpanningTree*
                     if (existingNode->m_updatesBeforeReparent >= s_maxUpdatesBeforeReparent) {
                         existingNode->m_updatesBeforeReparent = 0U;
 
-                        // reparent the node if necessary
-                        internalMoveParent(existingNode, parent);
+                        // validate parent is still valid before reparenting
+                        if (parent != nullptr) {
+                            // check if parent still exists in the tree map
+                            auto parentIt = s_spanningTrees.find(parent->id());
+                            if (parentIt != s_spanningTrees.end() && parentIt->second == parent) {
+                                // reparent the node if necessary
+                                internalMoveParent(existingNode, parent);
+                            } else {
+                                LogError(LOG_STP, "PEER %u (%s) cannot be reparented to invalid parent PEER %u, skipping reparent",
+                                    existingNode->id(), existingNode->identity().c_str(), parent->id());
+                                existingNode->m_updatesBeforeReparent = 0U; // reset counter
+                            }
+                        }
                     } else {
                         existingNode->m_updatesBeforeReparent++;
                     }
@@ -308,6 +319,20 @@ void SpanningTree::internalMoveParent(SpanningTree* node, SpanningTree* parent)
         return;
     if (parent == nullptr)
         return;
+
+    // validate that both node and parent exist in the tree map (not dangling pointers)
+    auto nodeIt = s_spanningTrees.find(node->id());
+    if (nodeIt == s_spanningTrees.end() || nodeIt->second != node) {
+        LogError(LOG_STP, "PEER %u is not valid in tree map, cannot move parent. BUGBUG.", node->id());
+        return;
+    }
+
+    auto parentIt = s_spanningTrees.find(parent->id());
+    if (parentIt == s_spanningTrees.end() || parentIt->second != parent) {
+        LogError(LOG_STP, "Parent PEER %u is not valid in tree map, cannot reparent PEER %u. BUGBUG.", 
+            parent->id(), node->id());
+        return;
+    }
 
     // the root node cannot be moved
     if (node->m_parent == nullptr) {
