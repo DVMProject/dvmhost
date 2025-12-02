@@ -789,7 +789,7 @@ void* FNENetwork::threadParrotHandler(void* arg)
 
                     // if the P25 handle is marked as playing back parrot frames, but has no more frames in the queue
                     // clear the playback flag
-                    if (fne->m_tagP25->isParrotPlayback() && !fne->m_tagDMR->hasParrotFrames()) {
+                    if (fne->m_tagP25->isParrotPlayback() && !fne->m_tagP25->hasParrotFrames()) {
                         LogInfoEx(LOG_MASTER, "P25, Parrot Call End, peer = %u, srcId = %u, dstId = %u",
                                    fne->m_tagP25->lastParrotPeerId(), fne->m_tagP25->lastParrotSrcId(), fne->m_tagP25->lastParrotDstId());
                         fne->m_tagP25->clearParrotPlayback();
@@ -797,7 +797,7 @@ void* FNENetwork::threadParrotHandler(void* arg)
 
                     // if the NXDN handle is marked as playing back parrot frames, but has no more frames in the queue
                     // clear the playback flag
-                    if (fne->m_tagNXDN->isParrotPlayback() && !fne->m_tagDMR->hasParrotFrames()) {
+                    if (fne->m_tagNXDN->isParrotPlayback() && !fne->m_tagNXDN->hasParrotFrames()) {
                         LogInfoEx(LOG_MASTER, "NXDN, Parrot Call End, peer = %u, srcId = %u, dstId = %u",
                                    fne->m_tagNXDN->lastParrotPeerId(), fne->m_tagNXDN->lastParrotSrcId(), fne->m_tagNXDN->lastParrotDstId());
                         fne->m_tagNXDN->clearParrotPlayback();
@@ -805,7 +805,7 @@ void* FNENetwork::threadParrotHandler(void* arg)
 
                     // if the analog handle is marked as playing back parrot frames, but has no more frames in the queue
                     // clear the playback flag
-                    if (fne->m_tagAnalog->isParrotPlayback() && !fne->m_tagDMR->hasParrotFrames()) {
+                    if (fne->m_tagAnalog->isParrotPlayback() && !fne->m_tagAnalog->hasParrotFrames()) {
                         LogInfoEx(LOG_MASTER, "Analog, Parrot Call End, peer = %u, srcId = %u, dstId = %u",
                                    fne->m_tagAnalog->lastParrotPeerId(), fne->m_tagAnalog->lastParrotSrcId(), fne->m_tagAnalog->lastParrotDstId());
                         fne->m_tagAnalog->clearParrotPlayback();
