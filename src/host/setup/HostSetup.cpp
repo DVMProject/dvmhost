@@ -780,6 +780,7 @@ bool HostSetup::createModem(bool consoleDisplay)
 
     yaml::Node modemProtocol = modemConf["protocol"];
     std::string portType = modemProtocol["type"].as<std::string>("null");
+    std::string modemMode = modemProtocol["mode"].as<std::string>("air");
 
     yaml::Node uartProtocol = modemProtocol["uart"];
     std::string uartPort = uartProtocol["port"].as<std::string>();
@@ -835,7 +836,12 @@ bool HostSetup::createModem(bool consoleDisplay)
             break;
         }
 
-        modemPort = new port::UARTPort(uartPort, serialSpeed, true);
+        if (modemMode == MODEM_MODE_DFSI) {
+                modemPort = new port::UARTPort(uartPort, serialSpeed, false, true);
+                LogInfo("    RTS/DTR boot flags enabled");
+        } else {
+            modemPort = new port::UARTPort(uartPort, serialSpeed, true, false);
+        }
         LogInfo("    UART Port: %s", uartPort.c_str());
         LogInfo("    UART Speed: %u", uartSpeed);
     }
