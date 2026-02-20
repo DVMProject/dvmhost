@@ -1841,6 +1841,9 @@ bool Modem::getFirmwareVersion()
                     case 2U:
                         LogInfoEx(LOG_MODEM, "ST-Micro ARM, UDID: %02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X", m_buffer[5U], m_buffer[6U], m_buffer[7U], m_buffer[8U], m_buffer[9U], m_buffer[10U], m_buffer[11U], m_buffer[12U], m_buffer[13U], m_buffer[14U], m_buffer[15U], m_buffer[16U]);
                         break;
+                    case 240U:
+                        LogInfoEx(LOG_MODEM, "Software SDR, UDID: %02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X", m_buffer[5U], m_buffer[6U], m_buffer[7U], m_buffer[8U], m_buffer[9U], m_buffer[10U], m_buffer[11U], m_buffer[12U], m_buffer[13U], m_buffer[14U], m_buffer[15U], m_buffer[16U]);
+                        break;
                     case 15U:
                         LogInfoEx(LOG_MODEM, "Null Modem, UDID: N/A");
                         break;
