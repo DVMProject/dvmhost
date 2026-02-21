@@ -39,6 +39,7 @@ from rich import print as rprint
 from config_manager import DVMConfig
 from templates import TEMPLATES, get_template
 from trunking_manager import TrunkingSystem
+from answers_loader import AnswersLoader
 from wizard import run_wizard, generate_random_password
 from version import __BANNER__, __VER__
 from iden_table import IdenTable, calculate_channel_assignment, create_iden_entry_from_preset, BAND_PRESETS
@@ -224,6 +225,18 @@ def cmd_create(args):
             config.set('system.info.location', args.location)
         if args.tx_power is not None:
             config.set('system.info.power', args.tx_power)
+        
+        # Handle logging configuration
+        if args.log_path:
+            config.set('log.filePath', args.log_path)
+        if args.activity_log_path:
+            config.set('log.activityFilePath', args.activity_log_path)
+        if args.log_root:
+            config.set('log.fileRoot', args.log_root)
+        if args.use_syslog is not None:
+            config.set('log.useSysLog', args.use_syslog)
+        if args.disable_non_auth_logging is not None:
+            config.set('log.disableNonAuthoritiveLogging', args.disable_non_auth_logging)
         
         # Handle frequency configuration
         iden_table = None
@@ -535,6 +548,18 @@ def cmd_trunk_create(args):
         if args.talkgroup_id_acl is not None:
             create_kwargs['talkgroup_id_acl'] = args.talkgroup_id_acl
         
+        # Add logging settings
+        if args.log_path:
+            create_kwargs['log_path'] = args.log_path
+        if args.activity_log_path:
+            create_kwargs['activity_log_path'] = args.activity_log_path
+        if args.log_root:
+            create_kwargs['log_root'] = args.log_root
+        if args.use_syslog is not None:
+            create_kwargs['use_syslog'] = args.use_syslog
+        if args.disable_non_auth_logging is not None:
+            create_kwargs['disable_non_auth_logging'] = args.disable_non_auth_logging
+        
         # Add protocol-specific settings
         if args.protocol == 'p25':
             create_kwargs['nac'] = args.nac
@@ -665,8 +690,20 @@ def cmd_list_templates(args):
 
 def cmd_wizard(args):
     """Run interactive wizard"""
+    answers = {}
+    
+    # Load answers from file if provided
+    if hasattr(args, 'answers_file') and args.answers_file:
+        try:
+            answers = AnswersLoader.load_answers(args.answers_file)
+            # Optionally validate answers
+            AnswersLoader.validate_answers(answers, strict=False)
+        except Exception as e:
+            console.print(f"[red]Error loading answers file:[/red] {e}")
+            sys.exit(1)
+    
     wizard_type = args.type if hasattr(args, 'type') else 'auto'
-    result = run_wizard(wizard_type)
+    result = run_wizard(wizard_type, answers)
     if not result:
         sys.exit(1)
 
@@ -784,6 +821,16 @@ DVMHost Configuration Manager"""
     create_parser.add_argument('--tx-freq', type=float, help='Transmit frequency in MHz')
     create_parser.add_argument('--band', choices=list(BAND_PRESETS.keys()),
                               help='Frequency band (required with --tx-freq)')
+    
+    # Logging configuration
+    create_parser.add_argument('--log-path', help='Log file directory path')
+    create_parser.add_argument('--activity-log-path', help='Activity log directory path')
+    create_parser.add_argument('--log-root', help='Log filename prefix and syslog prefix')
+    create_parser.add_argument('--use-syslog', type=lambda x: x.lower() in ('true', '1', 'yes'),
+                              help='Enable syslog output (true/false)')
+    create_parser.add_argument('--disable-non-auth-logging', type=lambda x: x.lower() in ('true', '1', 'yes'),
+                              help='Disable non-authoritative logging (true/false)')
+    
     create_parser.add_argument('--validate', action='store_true', help='Validate after creation')
     create_parser.set_defaults(func=cmd_create)
     
@@ -881,6 +928,16 @@ DVMHost Configuration Manager"""
                                      help='Voice channel TX frequencies (comma-separated, e.g., 851.0125,851.0250)')
     trunk_create_parser.add_argument('--vc-bands',
                                      help='Voice channel bands (comma-separated, e.g., 800mhz,800mhz)')
+    
+    # Logging configuration
+    trunk_create_parser.add_argument('--log-path', help='Log file directory path')
+    trunk_create_parser.add_argument('--activity-log-path', help='Activity log directory path')
+    trunk_create_parser.add_argument('--log-root', help='Log filename prefix and syslog prefix')
+    trunk_create_parser.add_argument('--use-syslog', type=lambda x: x.lower() in ('true', '1', 'yes'),
+                                     help='Enable syslog output (true/false)')
+    trunk_create_parser.add_argument('--disable-non-auth-logging', type=lambda x: x.lower() in ('true', '1', 'yes'),
+                                     help='Disable non-authoritative logging (true/false)')
+    
     trunk_create_parser.set_defaults(func=cmd_trunk_create)
     
     # trunk validate
@@ -905,6 +962,8 @@ DVMHost Configuration Manager"""
     wizard_parser = subparsers.add_parser('wizard', help='Interactive configuration wizard')
     wizard_parser.add_argument('--type', choices=['single', 'trunk', 'auto'], default='auto',
                               help='Wizard type (auto asks user)')
+    wizard_parser.add_argument('--answers-file', '-a', type=Path, 
+                              help='Optional YAML file with wizard answers (uses as defaults)')
     wizard_parser.set_defaults(func=cmd_wizard)
     
     args = parser.parse_args()

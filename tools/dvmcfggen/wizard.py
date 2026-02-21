@@ -43,6 +43,7 @@ from rich import print as rprint
 from config_manager import DVMConfig, ConfigValidator
 from templates import get_template, TEMPLATES
 from trunking_manager import TrunkingSystem
+from answers_loader import AnswersLoader
 from iden_table import (IdenTable, create_default_iden_table, calculate_channel_assignment,
                         BAND_PRESETS, create_iden_entry_from_preset)
 from network_ids import (
@@ -67,7 +68,8 @@ def generate_random_password(length: int = 24) -> str:
 class ConfigWizard:
     """Interactive configuration wizard"""
     
-    def __init__(self):
+    def __init__(self, answers: Optional[Dict[str, Any]] = None):
+        self.answers = answers or {}
         self.config: Optional[DVMConfig] = None
         self.template_name: Optional[str] = None
         self.iden_table: IdenTable = create_default_iden_table()
@@ -75,6 +77,32 @@ class ConfigWizard:
         self.config_dir: str = "."
         self.rpc_password: Optional[str] = None
         self.rest_password: Optional[str] = None
+    
+    def _get_answer(self, key: str, prompt_func, *args, **kwargs) -> Any:
+        """
+        Get answer from answers file or prompt user
+        
+        Args:
+            key: Answer key to look up
+            prompt_func: Function to call if answer not found (e.g., Prompt.ask)
+            *args: Arguments to pass to prompt_func
+            **kwargs: Keyword arguments to pass to prompt_func
+            
+        Returns:
+            Answer value (from file or user prompt)
+        """
+        if key in self.answers:
+            value = self.answers[key]
+            # Display the value that was loaded from answers file
+            if isinstance(value, bool):
+                display_value = "Yes" if value else "No"
+            else:
+                display_value = str(value)
+            console.print(f"[dim]{key}: {display_value}[/dim]")
+            return value
+        
+        # Prompt user for input
+        return prompt_func(*args, **kwargs)
         
     def run(self) -> Optional[Path]:
         """Run the interactive wizard"""
@@ -143,13 +171,17 @@ class ConfigWizard:
         console.print("\n[bold]Step 2: Basic Configuration[/bold]\n")
         
         # Configuration directory
-        self.config_dir = Prompt.ask(
+        self.config_dir = self._get_answer(
+            'config_dir',
+            Prompt.ask,
             "Configuration directory",
             default="."
         )
         
         # System Identity
-        identity = Prompt.ask(
+        identity = self._get_answer(
+            'system_identity',
+            Prompt.ask,
             "System identity (callsign or site name)",
             default="SITE001"
         )
@@ -157,20 +189,80 @@ class ConfigWizard:
         self.config.set('system.cwId.callsign', identity[:8])  # Truncate for CW
         
         # Peer ID
-        peer_id = IntPrompt.ask(
+        peer_id = self._get_answer(
+            'network_peer_id',
+            IntPrompt.ask,
             "Network peer ID",
             default=100000
         )
         self.config.set('network.id', peer_id)
         
-        console.print("\n[bold]Step 3: Modem Configuration[/bold]\n")
+        # Logging Configuration
+        console.print("\n[bold]Step 3: Logging Configuration[/bold]\n")
+        
+        configure_logging = self._get_answer(
+            'configure_logging',
+            Confirm.ask,
+            "Configure logging settings?",
+            default=False
+        )
+        
+        if configure_logging:
+            # Log file path
+            log_path = self._get_answer(
+                'log_path',
+                Prompt.ask,
+                "Log file directory",
+                default="."
+            )
+            self.config.set('log.filePath', log_path)
+            
+            # Activity log file path
+            activity_log_path = self._get_answer(
+                'activity_log_path',
+                Prompt.ask,
+                "Activity log directory",
+                default="."
+            )
+            self.config.set('log.activityFilePath', activity_log_path)
+            
+            # Log file root/prefix
+            log_root = self._get_answer(
+                'log_root',
+                Prompt.ask,
+                "Log filename prefix (used for filenames and syslog)",
+                default="DVM"
+            )
+            self.config.set('log.fileRoot', log_root)
+            
+            # Syslog usage
+            use_syslog = self._get_answer(
+                'use_syslog',
+                Confirm.ask,
+                "Enable syslog output?",
+                default=False
+            )
+            self.config.set('log.useSysLog', use_syslog)
+            
+            # Disable non-authoritive logging
+            disable_non_auth = self._get_answer(
+                'disable_non_auth_logging',
+                Confirm.ask,
+                "Disable non-authoritative logging?",
+                default=False
+            )
+            self.config.set('log.disableNonAuthoritiveLogging', disable_non_auth)
+        
+        console.print("\n[bold]Step 4: Modem Configuration[/bold]\n")
         
         # Modem Type
         console.print("Modem type:")
         console.print("  uart - Serial UART (most common)")
         console.print("  null - Test mode (no hardware)\n")
         
-        modem_type = Prompt.ask(
+        modem_type = self._get_answer(
+            'modem_type',
+            Prompt.ask,
             "Modem type",
             choices=['uart', 'null'],
             default='uart'
@@ -182,7 +274,9 @@ class ConfigWizard:
         console.print("  air - Standard air interface (repeater/hotspot)")
         console.print("  dfsi - DFSI mode for interfacing with V.24 repeaters\n")
         
-        modem_mode = Prompt.ask(
+        modem_mode = self._get_answer(
+            'modem_mode',
+            Prompt.ask,
             "Modem mode",
             choices=['air', 'dfsi'],
             default='air'
@@ -190,20 +284,26 @@ class ConfigWizard:
         self.config.set('system.modem.protocol.mode', modem_mode)
         
         if modem_type == 'uart':
-            serial_port = Prompt.ask(
+            serial_port = self._get_answer(
+                'serial_port',
+                Prompt.ask,
                 "Serial port",
                 default="/dev/ttyUSB0"
             )
             self.config.set('system.modem.protocol.uart.port', serial_port)
             
             console.print("\n[dim]Leave at 50 unless you know specific values[/dim]")
-            rx_level = IntPrompt.ask(
+            rx_level = self._get_answer(
+                'rx_level',
+                IntPrompt.ask,
                 "RX level (0-100)",
                 default=50
             )
             self.config.set('system.modem.rxLevel', rx_level)
             
-            tx_level = IntPrompt.ask(
+            tx_level = self._get_answer(
+                'tx_level',
+                IntPrompt.ask,
                 "TX level (0-100)",
                 default=50
             )
@@ -213,50 +313,69 @@ class ConfigWizard:
         if modem_mode == 'dfsi':
             console.print("\n[bold]Step 3b: DFSI Settings[/bold]\n")
             
-            if Confirm.ask("Configure DFSI settings?", default=False):
-                rtrt = Confirm.ask(
+            if self._get_answer('configure_dfsi', Confirm.ask, "Configure DFSI settings?", default=False):
+                rtrt = self._get_answer(
+                    'dfsi_rtrt',
+                    Confirm.ask,
                     "Enable DFSI RT/RT?",
                     default=True
                 )
                 self.config.set('system.modem.dfsiRtrt', rtrt)
                 
-                jitter = IntPrompt.ask(
+                jitter = self._get_answer(
+                    'dfsi_jitter',
+                    IntPrompt.ask,
                     "DFSI Jitter (ms)",
                     default=200
                 )
                 self.config.set('system.modem.dfsiJitter', jitter)
                 
-                call_timeout = IntPrompt.ask(
+                call_timeout = self._get_answer(
+                    'dfsi_call_timeout',
+                    IntPrompt.ask,
                     "DFSI Call Timeout (seconds)",
                     default=200
                 )
                 self.config.set('system.modem.dfsiCallTimeout', call_timeout)
                 
-                full_duplex = Confirm.ask(
+                full_duplex = self._get_answer(
+                    'dfsi_full_duplex',
+                    Confirm.ask,
                     "Enable DFSI Full Duplex?",
                     default=False
                 )
                 self.config.set('system.modem.dfsiFullDuplex', full_duplex)
         
-        console.print("\n[bold]Step 4: Network Settings[/bold]\n")
+        console.print("\n[bold]Step 5: Network Settings[/bold]\n")
         
         # FNE Settings
-        fne_address = Prompt.ask(
+        fne_address = self._get_answer(
+            'fne_address',
+            Prompt.ask,
             "FNE address",
             default="127.0.0.1"
         )
         while not validator.validate_ip_address(fne_address):
             console.print("[red]Invalid IP address[/red]")
-            fne_address = Prompt.ask("FNE address", default="127.0.0.1")
+            fne_address = self._get_answer(
+                'fne_address',
+                Prompt.ask,
+                "FNE address",
+                default="127.0.0.1"
+            )
         self.config.set('network.address', fne_address)
         
-        fne_port = IntPrompt.ask(
+        fne_port = self._get_answer(
+            'fne_port',
+            IntPrompt.ask,
             "FNE port",
             default=62031
         )
         self.config.set('network.port', fne_port)
         
-        fne_password = Prompt.ask(
+        fne_password = self._get_answer(
+            'fne_password',
+            Prompt.ask,
             "FNE password",
             default="PASSWORD",
             password=True
@@ -264,7 +383,7 @@ class ConfigWizard:
         self.config.set('network.password', fne_password)
         
         # RPC Configuration
-        console.print("\n[bold]Step 4a: RPC & REST API Configuration[/bold]\n")
+        console.print("\n[bold]Step 5a: RPC & REST API Configuration[/bold]\n")
         
         # Generate random RPC password
         rpc_password = generate_random_password()
@@ -275,7 +394,12 @@ class ConfigWizard:
         self.rpc_password = rpc_password
         
         # Ask about REST API
-        if Confirm.ask("Enable REST API?", default=False):
+        if self._get_answer(
+            'rest_enable',
+            Confirm.ask,
+            "Enable REST API?",
+            default=False
+        ):
             self.config.set('network.restEnable', True)
             rest_password = generate_random_password()
             console.print(f"[cyan]Generated REST API password:[/cyan] {rest_password}")
@@ -286,46 +410,81 @@ class ConfigWizard:
             self.rest_password = None
         
         # Network Lookup and Transfer Settings
-        console.print("\n[bold]Step 4b: Network Lookup & Transfer Settings[/bold]\n")
+        console.print("\n[bold]Step 5b: Network Lookup & Transfer Settings[/bold]\n")
         
-        update_lookups = Confirm.ask("Update lookups from network?", default=True)
+        update_lookups = self._get_answer(
+            'update_lookups',
+            Confirm.ask,
+            "Update lookups from network?",
+            default=True
+        )
         self.config.set('network.updateLookups', update_lookups)
         if update_lookups:
             self.config.set('system.radio_id.time', 0)
             self.config.set('system.talkgroup_id.time', 0)
         
-        save_lookups = Confirm.ask("Save lookups from network?", default=False)
+        save_lookups = self._get_answer(
+            'save_lookups',
+            Confirm.ask,
+            "Save lookups from network?",
+            default=False
+        )
         self.config.set('network.saveLookups', save_lookups)
         
-        allow_activity = Confirm.ask("Allow activity transfer to FNE?", default=True)
+        allow_activity = self._get_answer(
+            'allow_activity_transfer',
+            Confirm.ask,
+            "Allow activity transfer to FNE?",
+            default=True
+        )
         self.config.set('network.allowActivityTransfer', allow_activity)
         
-        allow_diagnostic = Confirm.ask("Allow diagnostic transfer to FNE?", default=False)
+        allow_diagnostic = self._get_answer(
+            'allow_diagnostic_transfer',
+            Confirm.ask,
+            "Allow diagnostic transfer to FNE?",
+            default=False
+        )
         self.config.set('network.allowDiagnosticTransfer', allow_diagnostic)
         
-        allow_status = Confirm.ask("Allow status transfer to FNE?", default=True)
+        allow_status = self._get_answer(
+            'allow_status_transfer',
+            Confirm.ask,
+            "Allow status transfer to FNE?",
+            default=True)
         self.config.set('network.allowStatusTransfer', allow_status)
         
         # Radio ID and Talkgroup ID Configuration
-        console.print("\n[bold]Step 4c: Radio ID & Talkgroup ID Configuration[/bold]\n")
+        console.print("\n[bold]Step 5c: Radio ID & Talkgroup ID Configuration[/bold]\n")
         
-        if Confirm.ask("Configure Radio ID and Talkgroup ID settings?", default=False):
+        if self._get_answer(
+            'configure_radio_talkgroup_ids',
+            Confirm.ask,
+            "Configure Radio ID and Talkgroup ID settings?",
+            default=False
+        ):
             # Radio ID Configuration
             console.print("\n[dim]Radio ID Settings:[/dim]")
-            radio_id_file = Prompt.ask(
+            radio_id_file = self._get_answer(
+                'radio_id_file',
+                Prompt.ask,
                 "Radio ID ACL file (path, or leave empty to skip)",
                 default=""
             )
             if radio_id_file:
                 self.config.set('system.radio_id.file', radio_id_file)
             
-            radio_id_time = IntPrompt.ask(
+            radio_id_time = self._get_answer(
+                'radio_id_time',
+                IntPrompt.ask,
                 "Radio ID update time (seconds, 0 = disabled)",
                 default=0
             )
             self.config.set('system.radio_id.time', radio_id_time)
             
-            radio_id_acl = Confirm.ask(
+            radio_id_acl = self._get_answer(
+                'radio_id_acl',
+                Confirm.ask,
                 "Enforce Radio ID ACLs?",
                 default=False
             )
@@ -333,27 +492,33 @@ class ConfigWizard:
             
             # Talkgroup ID Configuration
             console.print("\n[dim]Talkgroup ID Settings:[/dim]")
-            talkgroup_id_file = Prompt.ask(
+            talkgroup_id_file = self._get_answer(
+                'talkgroup_id_file',
+                Prompt.ask,
                 "Talkgroup ID ACL file (path, or leave empty to skip)",
                 default=""
             )
             if talkgroup_id_file:
                 self.config.set('system.talkgroup_id.file', talkgroup_id_file)
             
-            talkgroup_id_time = IntPrompt.ask(
+            talkgroup_id_time = self._get_answer(
+                'talkgroup_id_time',
+                IntPrompt.ask,
                 "Talkgroup ID update time (seconds, 0 = disabled)",
                 default=0
             )
             self.config.set('system.talkgroup_id.time', talkgroup_id_time)
             
-            talkgroup_id_acl = Confirm.ask(
+            talkgroup_id_acl = self._get_answer(
+                'talkgroup_id_acl',
+                Confirm.ask,
                 "Enforce Talkgroup ID ACLs?",
                 default=False
             )
             self.config.set('system.talkgroup_id.acl', talkgroup_id_acl)
         
         # Protocol Selection
-        console.print("\n[bold]Step 5: Protocol Selection[/bold]\n")
+        console.print("\n[bold]Step 6: Protocol Selection[/bold]\n")
         
         console.print("[yellow]⚠ WARNING:[/yellow] Hotspots only support a [bold]single[/bold] digital mode.")
         console.print("[yellow]           Multi-mode is only supported on repeaters.\n[/yellow]")
@@ -363,7 +528,9 @@ class ConfigWizard:
         console.print("  2. DMR")
         console.print("  3. NXDN\n")
         
-        primary_mode = IntPrompt.ask(
+        primary_mode = self._get_answer(
+            'primary_mode',
+            IntPrompt.ask,
             "Primary mode",
             choices=['1', '2', '3'],
             default='1'
@@ -382,22 +549,37 @@ class ConfigWizard:
         console.print("\n[dim]Additional modes (for multi-mode repeaters only):[/dim]")
         
         if not enable_p25:
-            if Confirm.ask("Also enable P25?", default=False):
+            if self._get_answer(
+                'also_enable_p25',
+                Confirm.ask,
+                "Also enable P25?",
+                default=False
+            ):
                 enable_p25 = True
                 self.config.set('protocols.p25.enable', True)
         
         if not enable_dmr:
-            if Confirm.ask("Also enable DMR?", default=False):
+            if self._get_answer(
+                'also_enable_dmr',
+                Confirm.ask,
+                "Also enable DMR?",
+                default=False
+            ):
                 enable_dmr = True
                 self.config.set('protocols.dmr.enable', True)
         
         if not enable_nxdn:
-            if Confirm.ask("Also enable NXDN?", default=False):
+            if self._get_answer(
+                'also_enable_nxdn',
+                Confirm.ask,
+                "Also enable NXDN?",
+                default=False
+            ):
                 enable_nxdn = True
                 self.config.set('protocols.nxdn.enable', True)
         
         # Radio Parameters
-        console.print("\n[bold]Step 6: Network/System ID Configuration[/bold]\n")
+        console.print("\n[bold]Step 7: Network/System ID Configuration[/bold]\n")
         
         # DMR Configuration
         if enable_dmr:
@@ -409,7 +591,12 @@ class ConfigWizard:
             console.print("  2. TINY - Large NetID range (NetID: 1-511, SiteID: 1-7)")
             console.print("  3. LARGE - Large SiteID range (NetID: 1-31, SiteID: 1-127)")
             console.print("  4. HUGE - Very large SiteID (NetID: 1-3, SiteID: 1-1023)")
-            site_model_choice = IntPrompt.ask("Select site model", default=1)
+            site_model_choice = self._get_answer(
+                'dmr_site_model',
+                IntPrompt.ask,
+                "Select site model",
+                default=1
+            )
             site_model_map = {1: 'small', 2: 'tiny', 3: 'large', 4: 'huge'}
             site_model_str = site_model_map.get(site_model_choice, 'small')
             site_model = get_dmr_site_model_from_string(site_model_str)
@@ -417,7 +604,9 @@ class ConfigWizard:
             dmr_info = get_network_id_info('dmr', site_model_str)
             
             # Color Code
-            color_code = IntPrompt.ask(
+            color_code = self._get_answer(
+                'dmr_color_code',
+                IntPrompt.ask,
                 f"DMR Color Code ({dmr_info['colorCode']['min']}-{dmr_info['colorCode']['max']})",
                 default=dmr_info['colorCode']['default']
             )
@@ -430,7 +619,9 @@ class ConfigWizard:
             self.config.set('system.config.colorCode', color_code)
             
             # DMR Network ID
-            dmr_net_id = IntPrompt.ask(
+            dmr_net_id = self._get_answer(
+                'dmr_network_id',
+                IntPrompt.ask,
                 f"DMR Network ID ({dmr_info['dmrNetId']['min']}-{dmr_info['dmrNetId']['max']})",
                 default=dmr_info['dmrNetId']['default']
             )
@@ -443,7 +634,9 @@ class ConfigWizard:
             self.config.set('system.config.dmrNetId', dmr_net_id)
             
             # DMR Site ID
-            dmr_site_id = IntPrompt.ask(
+            dmr_site_id = self._get_answer(
+                'dmr_site_id',
+                IntPrompt.ask,
                 f"DMR Site ID ({dmr_info['siteId']['min']}-{dmr_info['siteId']['max']})",
                 default=dmr_info['siteId']['default']
             )
@@ -461,7 +654,9 @@ class ConfigWizard:
             p25_info = get_network_id_info('p25')
             
             # NAC
-            nac_str = Prompt.ask(
+            nac_str = self._get_answer(
+                'p25_nac',
+                Prompt.ask,
                 f"P25 NAC (hex: 0x000-0x{p25_info['nac']['max']:03X}, decimal: {p25_info['nac']['min']}-{p25_info['nac']['max']})",
                 default=f"0x{p25_info['nac']['default']:03X}"
             )
@@ -479,7 +674,9 @@ class ConfigWizard:
             self.config.set('system.config.nac', nac)
             
             # Network ID (WACN)
-            net_id_str = Prompt.ask(
+            net_id_str = self._get_answer(
+                'p25_network_id',
+                Prompt.ask,
                 f"P25 Network ID/WACN (hex: 0x1-0x{p25_info['netId']['max']:X}, decimal: {p25_info['netId']['min']}-{p25_info['netId']['max']})",
                 default=f"0x{p25_info['netId']['default']:X}"
             )
@@ -497,7 +694,9 @@ class ConfigWizard:
             self.config.set('system.config.netId', net_id)
             
             # System ID
-            sys_id_str = Prompt.ask(
+            sys_id_str = self._get_answer(
+                'p25_system_id',
+                Prompt.ask,
                 f"P25 System ID (hex: 0x1-0x{p25_info['sysId']['max']:X}, decimal: {p25_info['sysId']['min']}-{p25_info['sysId']['max']})",
                 default=f"0x{p25_info['sysId']['default']:03X}"
             )
@@ -515,7 +714,9 @@ class ConfigWizard:
             self.config.set('system.config.sysId', sys_id)
             
             # RFSS ID
-            rfss_id = IntPrompt.ask(
+            rfss_id = self._get_answer(
+                'p25_rfss_id',
+                IntPrompt.ask,
                 f"P25 RFSS ID ({p25_info['rfssId']['min']}-{p25_info['rfssId']['max']})",
                 default=p25_info['rfssId']['default']
             )
@@ -528,7 +729,9 @@ class ConfigWizard:
             self.config.set('system.config.rfssId', rfss_id)
             
             # P25 Site ID
-            p25_site_id = IntPrompt.ask(
+            p25_site_id = self._get_answer(
+                'p25_site_id',
+                IntPrompt.ask,
                 f"P25 Site ID ({p25_info['siteId']['min']}-{p25_info['siteId']['max']})",
                 default=p25_info['siteId']['default']
             )
@@ -548,7 +751,9 @@ class ConfigWizard:
             nxdn_info = get_network_id_info('nxdn')
             
             # RAN
-            ran = IntPrompt.ask(
+            ran = self._get_answer(
+                'nxdn_ran',
+                IntPrompt.ask,
                 f"NXDN RAN ({nxdn_info['ran']['min']}-{nxdn_info['ran']['max']})",
                 default=nxdn_info['ran']['default']
             )
@@ -561,7 +766,9 @@ class ConfigWizard:
             self.config.set('system.config.ran', ran)
             
             # System ID (Location ID)
-            nxdn_sys_id_str = Prompt.ask(
+            nxdn_sys_id_str = self._get_answer(
+                'nxdn_system_id',
+                Prompt.ask,
                 f"NXDN System ID (hex: 0x1-0x{nxdn_info['sysId']['max']:X}, decimal: {nxdn_info['sysId']['min']}-{nxdn_info['sysId']['max']})",
                 default=f"0x{nxdn_info['sysId']['default']:03X}"
             )
@@ -581,7 +788,9 @@ class ConfigWizard:
                 self.config.set('system.config.sysId', nxdn_sys_id)
             
             # NXDN Site ID
-            nxdn_site_id_str = Prompt.ask(
+            nxdn_site_id_str = self._get_answer(
+                'nxdn_site_id',
+                Prompt.ask,
                 f"NXDN Site ID (hex: 0x1-0x{nxdn_info['siteId']['max']:X}, decimal: {nxdn_info['siteId']['min']}-{nxdn_info['siteId']['max']})",
                 default=str(nxdn_info['siteId']['default'])
             )
@@ -602,31 +811,61 @@ class ConfigWizard:
         
         # If no protocols enabled DMR/P25/NXDN individually, still prompt for generic site ID
         if not enable_dmr and not enable_p25 and not enable_nxdn:
-            site_id = IntPrompt.ask("Site ID", default=1)
+            site_id = self._get_answer(
+                'site_id',
+                IntPrompt.ask,
+                "Site ID",
+                default=1
+            )
             self.config.set('system.config.siteId', site_id)
         
         # Frequency Configuration
-        console.print("\n[bold]Step 7: Frequency Configuration[/bold]\n")
+        console.print("\n[bold]Step 8: Frequency Configuration[/bold]\n")
         
         # Always configure frequency for conventional systems
         self._configure_frequency()
         
         # Location (optional)
-        console.print("\n[bold]Step 8: Location Information (optional)[/bold]\n")
+        console.print("\n[bold]Step 9: Location Information (optional)[/bold]\n")
         
-        if Confirm.ask("Configure location information?", default=False):
+        if self._get_answer(
+            'configure_location',
+            Confirm.ask,
+            "Configure location information?",
+            default=False
+        ):
             try:
-                latitude = float(Prompt.ask("Latitude", default="0.0"))
+                latitude = float(self._get_answer(
+                    'latitude',
+                    Prompt.ask,
+                    "Latitude",
+                    default="0.0"
+                ))
                 self.config.set('system.info.latitude', latitude)
                 
-                longitude = float(Prompt.ask("Longitude", default="0.0"))
+                longitude = float(self._get_answer(
+                    'longitude',
+                    Prompt.ask,
+                    "Longitude",
+                    default="0.0"
+                ))
                 self.config.set('system.info.longitude', longitude)
                 
-                location = Prompt.ask("Location description", default="")
+                location = self._get_answer(
+                    'location_description',
+                    Prompt.ask,
+                    "Location description",
+                    default=""
+                )
                 if location:
                     self.config.set('system.info.location', location)
                 
-                power = IntPrompt.ask("TX power (watts)", default=10)
+                power = self._get_answer(
+                    'tx_power',
+                    IntPrompt.ask,
+                    "TX power (watts)",
+                    default=10
+                )
                 self.config.set('system.info.power', power)
             except ValueError:
                 console.print("[yellow]Invalid location data, skipping[/yellow]")
@@ -660,7 +899,9 @@ class ConfigWizard:
         console.print()
         
         # Select band
-        band_choice = IntPrompt.ask(
+        band_choice = self._get_answer(
+            'frequency_band',
+            IntPrompt.ask,
             "Select frequency band",
             choices=[str(i) for i in range(1, len(band_list) + 1)],
             default="3"
@@ -672,7 +913,12 @@ class ConfigWizard:
         
         # Confirm 800MHz selection
         if preset_key == '800mhz':
-            if not Confirm.ask(f"\n[yellow]Are you sure {preset['name']} is the frequency band you want?[/yellow]", default=False):
+            if not self._get_answer(
+                'confirm_800mhz',
+                Confirm.ask,
+                f"\n[yellow]Are you sure {preset['name']} is the frequency band you want?[/yellow]",
+                default=False
+            ):
                 return self._configure_frequency()
         
         # Use band index as channel ID (0-15 range), except 900MHz is always channel ID 15
@@ -686,7 +932,9 @@ class ConfigWizard:
         tx_freq_mhz = None
         while tx_freq_mhz is None:
             try:
-                tx_input = Prompt.ask(
+                tx_input = self._get_answer(
+                    'tx_frequency',
+                    Prompt.ask,
                     "Transmit frequency (MHz)",
                     default=f"{preset['tx_range'][0]:.4f}"
                 )
@@ -839,15 +1087,42 @@ class ConfigWizard:
     
     def _run_trunking_wizard(self) -> Optional[Path]:
         """Run trunking system wizard"""
-        wizard = TrunkingWizard()
+        wizard = TrunkingWizard(self.answers)
         return wizard.run()
 
 
 class TrunkingWizard:
     """Interactive trunking system wizard"""
     
-    def __init__(self):
+    def __init__(self, answers: Optional[Dict[str, Any]] = None):
+        self.answers = answers or {}
         self.iden_table: IdenTable = create_default_iden_table()
+    
+    def _get_answer(self, key: str, prompt_func, *args, **kwargs) -> Any:
+        """
+        Get answer from answers file or prompt user
+        
+        Args:
+            key: Answer key to look up
+            prompt_func: Function to call if answer not found (e.g., Prompt.ask)
+            *args: Arguments to pass to prompt_func
+            **kwargs: Keyword arguments to pass to prompt_func
+            
+        Returns:
+            Answer value (from file or user prompt)
+        """
+        if key in self.answers:
+            value = self.answers[key]
+            # Display the value that was loaded from answers file
+            if isinstance(value, bool):
+                display_value = "Yes" if value else "No"
+            else:
+                display_value = str(value)
+            console.print(f"[dim]{key}: {display_value}[/dim]")
+            return value
+        
+        # Prompt user for input
+        return prompt_func(*args, **kwargs)
     
     def run(self) -> Optional[Path]:
         """Run the trunking wizard"""
@@ -863,72 +1138,174 @@ class TrunkingWizard:
         # System basics
         console.print("[bold]Step 1: System Configuration[/bold]\n")
         
-        system_name = Prompt.ask(
+        system_name = self._get_answer(
+            'system_name',
+            Prompt.ask,
             "System name (for filenames)",
             default="trunked"
         )
         
-        base_dir = Prompt.ask(
+        base_dir = self._get_answer(
+            'base_dir',
+            Prompt.ask,
             "Configuration directory",
             default="."
         )
         
-        identity = Prompt.ask(
+        identity = self._get_answer(
+            'identity',
+            Prompt.ask,
             "System identity prefix",
             default="SITE001"
         )
         
-        protocol = Prompt.ask(
+        protocol = self._get_answer(
+            'protocol',
+            Prompt.ask,
             "Protocol",
             choices=['p25', 'dmr'],
             default='p25'
         )
         
-        vc_count = IntPrompt.ask(
+        vc_count = self._get_answer(
+            'vc_count',
+            IntPrompt.ask,
             "Number of voice channels",
             default=2
         )
         
-        # Network settings
-        console.print("\n[bold]Step 2: Network Settings[/bold]\n")
+        # Logging Configuration
+        console.print("\n[bold]Step 2: Logging Configuration[/bold]\n")
         
-        fne_address = Prompt.ask(
+        log_path = None
+        activity_log_path = None
+        log_root = None
+        use_syslog = False
+        disable_non_auth_logging = False
+        
+        configure_logging = self._get_answer(
+            'configure_logging',
+            Confirm.ask,
+            "Configure logging settings?",
+            default=False
+        )
+        
+        if configure_logging:
+            # Log file path
+            log_path = self._get_answer(
+                'log_path',
+                Prompt.ask,
+                "Log file directory",
+                default="."
+            )
+            
+            # Activity log file path
+            activity_log_path = self._get_answer(
+                'activity_log_path',
+                Prompt.ask,
+                "Activity log directory",
+                default="."
+            )
+            
+            # Log file root/prefix
+            log_root = self._get_answer(
+                'log_root',
+                Prompt.ask,
+                "Log filename prefix (used for filenames and syslog)",
+                default="DVM"
+            )
+            
+            # Syslog usage
+            use_syslog = self._get_answer(
+                'use_syslog',
+                Confirm.ask,
+                "Enable syslog output?",
+                default=False
+            )
+            
+            # Disable non-authoritive logging
+            disable_non_auth_logging = self._get_answer(
+                'disable_non_auth_logging',
+                Confirm.ask,
+                "Disable non-authoritative logging?",
+                default=False
+            )
+        
+        # Network settings
+        console.print("\n[bold]Step 3: Network Settings[/bold]\n")
+        
+        fne_address = self._get_answer(
+            'fne_address',
+            Prompt.ask,
             "FNE address",
             default="127.0.0.1"
         )
         
-        fne_port = IntPrompt.ask(
+        fne_port = self._get_answer(
+            'fne_port',
+            IntPrompt.ask,
             "FNE port",
             default=62031
         )
         
-        fne_password = Prompt.ask(
+        fne_password = self._get_answer(
+            'fne_password',
+            Prompt.ask,
             "FNE password",
             default="PASSWORD",
             password=True
         )
 
-        base_peer_id = IntPrompt.ask(
+        base_peer_id = self._get_answer(
+            'base_peer_id',
+            IntPrompt.ask,
             "Base peer ID (CC will use this, VCs increment)",
             default=100000
         )
         
-        base_rpc_port = IntPrompt.ask(
+        base_rpc_port = self._get_answer(
+            'base_rpc_port',
+            IntPrompt.ask,
             "Base RPC port (CC will use this, VCs increment)",
             default=9890
         )
         
         # Network Lookup and Transfer Settings
-        console.print("\n[bold]Step 2a: Network Lookup & Transfer Settings[/bold]\n")
+        console.print("\n[bold]Step 3a: Network Lookup & Transfer Settings[/bold]\n")
         
-        update_lookups = Confirm.ask("Update lookups from network?", default=True)
-        save_lookups = Confirm.ask("Save lookups from network?", default=False)
-        allow_activity = Confirm.ask("Allow activity transfer to FNE?", default=True)
-        allow_diagnostic = Confirm.ask("Allow diagnostic transfer to FNE?", default=False)
-        allow_status = Confirm.ask("Allow status transfer to FNE?", default=True)
+        update_lookups = self._get_answer(
+            'update_lookups',
+            Confirm.ask,
+            "Update lookups from network?",
+            default=True
+        )
+        save_lookups = self._get_answer(
+            'save_lookups',
+            Confirm.ask,
+            "Save lookups from network?",
+            default=False
+        )
+        allow_activity = self._get_answer(
+            'allow_activity_transfer',
+            Confirm.ask,
+            "Allow activity transfer to FNE?",
+            default=True
+        )
+        allow_diagnostic = self._get_answer(
+            'allow_diagnostic_transfer',
+            Confirm.ask,
+            "Allow diagnostic transfer to FNE?",
+            default=False
+        )
+        allow_status = self._get_answer(
+            'allow_status_transfer',
+            Confirm.ask,
+            "Allow status transfer to FNE?",
+            default=True
+        )
         
         # Radio ID and Talkgroup ID Configuration
-        console.print("\n[bold]Step 2b: Radio ID & Talkgroup ID Configuration[/bold]\n")
+        console.print("\n[bold]Step 3b: Radio ID & Talkgroup ID Configuration[/bold]\n")
         
         radio_id_file = None
         radio_id_time = 0
@@ -937,59 +1314,83 @@ class TrunkingWizard:
         talkgroup_id_time = 0
         talkgroup_id_acl = False
         
-        if Confirm.ask("Configure Radio ID and Talkgroup ID settings?", default=False):
+        if self._get_answer(
+            'configure_radio_talkgroup_ids',
+            Confirm.ask,
+            "Configure Radio ID and Talkgroup ID settings?",
+            default=False
+        ):
             # Radio ID Configuration
             console.print("\n[dim]Radio ID Settings:[/dim]")
-            radio_id_file = Prompt.ask(
+            radio_id_file = self._get_answer(
+                'radio_id_file',
+                Prompt.ask,
                 "Radio ID ACL file (path, or leave empty to skip)",
                 default=""
             )
             if not radio_id_file:
                 radio_id_file = None
             
-            radio_id_time = IntPrompt.ask(
+            radio_id_time = self._get_answer(
+                'radio_id_time',
+                IntPrompt.ask,
                 "Radio ID update time (seconds, 0 = disabled)",
                 default=0
             )
             
-            radio_id_acl = Confirm.ask(
+            radio_id_acl = self._get_answer(
+                'radio_id_acl',
+                Confirm.ask,
                 "Enforce Radio ID ACLs?",
                 default=False
             )
             
             # Talkgroup ID Configuration
             console.print("\n[dim]Talkgroup ID Settings:[/dim]")
-            talkgroup_id_file = Prompt.ask(
+            talkgroup_id_file = self._get_answer(
+                'talkgroup_id_file',
+                Prompt.ask,
                 "Talkgroup ID ACL file (path, or leave empty to skip)",
                 default=""
             )
             if not talkgroup_id_file:
                 talkgroup_id_file = None
             
-            talkgroup_id_time = IntPrompt.ask(
+            talkgroup_id_time = self._get_answer(
+                'talkgroup_id_time',
+                IntPrompt.ask,
                 "Talkgroup ID update time (seconds, 0 = disabled)",
                 default=0
             )
             
-            talkgroup_id_acl = Confirm.ask(
+            talkgroup_id_acl = self._get_answer(
+                'talkgroup_id_acl',
+                Confirm.ask,
                 "Enforce Talkgroup ID ACLs?",
                 default=False
             )
         
         # RPC & REST API Configuration
-        console.print("\n[bold]Step 2c: RPC & REST API Configuration[/bold]\n")
+        console.print("\n[bold]Step 3c: RPC & REST API Configuration[/bold]\n")
         
         # Generate random RPC password
         rpc_password = generate_random_password()
         console.print(f"[cyan]Generated RPC password:[/cyan] {rpc_password}")
         
-        base_rest_port = IntPrompt.ask(
+        base_rest_port = self._get_answer(
+            'base_rest_port',
+            IntPrompt.ask,
             "Base REST API port (CC will use this, VCs increment)",
             default=8080
         )
         
         # Ask about REST API
-        rest_enabled = Confirm.ask("Enable REST API?", default=False)
+        rest_enabled = self._get_answer(
+            'rest_enable',
+            Confirm.ask,
+            "Enable REST API?",
+            default=False
+        )
         if rest_enabled:
             rest_password = generate_random_password()
             console.print(f"[cyan]Generated REST API password:[/cyan] {rest_password}")
@@ -997,7 +1398,7 @@ class TrunkingWizard:
             rest_password = None
         
         # Network/System ID Configuration
-        console.print("\n[bold]Step 3: Network/System ID Configuration[/bold]\n")
+        console.print("\n[bold]Step 4: Network/System ID Configuration[/bold]\n")
         console.print(f"[cyan]Protocol: {protocol.upper()}[/cyan]\n")
         
         # Initialize variables
@@ -1015,7 +1416,9 @@ class TrunkingWizard:
             p25_info = get_network_id_info('p25')
             
             # NAC
-            nac_str = Prompt.ask(
+            nac_str = self._get_answer(
+                'p25_nac',
+                Prompt.ask,
                 f"P25 NAC (hex: 0x000-0x{p25_info['nac']['max']:03X}, decimal: {p25_info['nac']['min']}-{p25_info['nac']['max']})",
                 default=f"0x{p25_info['nac']['default']:03X}"
             )
@@ -1032,7 +1435,9 @@ class TrunkingWizard:
                     nac_str = Prompt.ask("P25 NAC", default="0x293")
             
             # Network ID (WACN)
-            net_id_str = Prompt.ask(
+            net_id_str = self._get_answer(
+                'p25_network_id',
+                Prompt.ask,
                 f"P25 Network ID/WACN (hex: 0x1-0x{p25_info['netId']['max']:X}, decimal: {p25_info['netId']['min']}-{p25_info['netId']['max']})",
                 default=f"0x{p25_info['netId']['default']:X}"
             )
@@ -1049,7 +1454,9 @@ class TrunkingWizard:
                     net_id_str = Prompt.ask("P25 Network ID", default="0xBB800")
             
             # System ID
-            sys_id_str = Prompt.ask(
+            sys_id_str = self._get_answer(
+                'p25_system_id',
+                Prompt.ask,
                 f"P25 System ID (hex: 0x1-0x{p25_info['sysId']['max']:X}, decimal: {p25_info['sysId']['min']}-{p25_info['sysId']['max']})",
                 default=f"0x{p25_info['sysId']['default']:03X}"
             )
@@ -1066,7 +1473,9 @@ class TrunkingWizard:
                     sys_id_str = Prompt.ask("P25 System ID", default="0x001")
             
             # RFSS ID
-            rfss_id = IntPrompt.ask(
+            rfss_id = self._get_answer(
+                'p25_rfss_id',
+                IntPrompt.ask,
                 f"P25 RFSS ID ({p25_info['rfssId']['min']}-{p25_info['rfssId']['max']})",
                 default=p25_info['rfssId']['default']
             )
@@ -1078,7 +1487,9 @@ class TrunkingWizard:
                 rfss_id = IntPrompt.ask("P25 RFSS ID", default=1)
             
             # Site ID
-            site_id = IntPrompt.ask(
+            site_id = self._get_answer(
+                'p25_site_id',
+                IntPrompt.ask,
                 f"P25 Site ID ({p25_info['siteId']['min']}-{p25_info['siteId']['max']})",
                 default=p25_info['siteId']['default']
             )
@@ -1096,7 +1507,12 @@ class TrunkingWizard:
             console.print("  2. TINY - Large NetID range (NetID: 1-511, SiteID: 1-7)")
             console.print("  3. LARGE - Large SiteID range (NetID: 1-31, SiteID: 1-127)")
             console.print("  4. HUGE - Very large SiteID (NetID: 1-3, SiteID: 1-1023)")
-            site_model_choice = IntPrompt.ask("Select site model", default=1)
+            site_model_choice = self._get_answer(
+                'dmr_site_model',
+                IntPrompt.ask,
+                "Select site model",
+                default=1
+            )
             site_model_map = {1: 'small', 2: 'tiny', 3: 'large', 4: 'huge'}
             site_model_str = site_model_map.get(site_model_choice, 'small')
             site_model = get_dmr_site_model_from_string(site_model_str)
@@ -1104,7 +1520,9 @@ class TrunkingWizard:
             dmr_info = get_network_id_info('dmr', site_model_str)
             
             # Color Code
-            color_code = IntPrompt.ask(
+            color_code = self._get_answer(
+                'dmr_color_code',
+                IntPrompt.ask,
                 f"DMR Color Code ({dmr_info['colorCode']['min']}-{dmr_info['colorCode']['max']})",
                 default=dmr_info['colorCode']['default']
             )
@@ -1116,7 +1534,9 @@ class TrunkingWizard:
                 color_code = IntPrompt.ask("DMR Color Code", default=1)
             
             # DMR Network ID
-            dmr_net_id = IntPrompt.ask(
+            dmr_net_id = self._get_answer(
+                'dmr_network_id',
+                IntPrompt.ask,
                 f"DMR Network ID ({dmr_info['dmrNetId']['min']}-{dmr_info['dmrNetId']['max']})",
                 default=dmr_info['dmrNetId']['default']
             )
@@ -1128,7 +1548,9 @@ class TrunkingWizard:
                 dmr_net_id = IntPrompt.ask("DMR Network ID", default=1)
             
             # DMR Site ID
-            site_id = IntPrompt.ask(
+            site_id = self._get_answer(
+                'dmr_site_id',
+                IntPrompt.ask,
                 f"DMR Site ID ({dmr_info['siteId']['min']}-{dmr_info['siteId']['max']})",
                 default=dmr_info['siteId']['default']
             )
@@ -1142,13 +1564,13 @@ class TrunkingWizard:
         console.print(f"\n[dim]These values will be applied consistently across all channels (CC and VCs)[/dim]")
         
         # Frequency configuration for control channel
-        console.print("\n[bold]Step 4: Control Channel Frequency and Modem[/bold]\n")
+        console.print("\n[bold]Step 5: Control Channel Frequency and Modem[/bold]\n")
         
         cc_channel_id, cc_channel_no, cc_band, cc_tx_hz, cc_rx_hz = self._configure_channel_frequency("Control Channel")
         cc_modem_config = self._configure_channel_modem("Control Channel")
         
         # Voice channel frequency and modem configuration
-        console.print("\n[bold]Step 5: Voice Channel Frequencies and Modems[/bold]\n")
+        console.print("\n[bold]Step 6: Voice Channel Frequencies and Modems[/bold]\n")
         
         vc_channels = []
         for i in range(1, vc_count + 1):
@@ -1288,7 +1710,12 @@ class TrunkingWizard:
                 'cc_dfsi_full_duplex': cc_modem_config.get('dfsi_full_duplex'),
                 'cc_channel_id': cc_channel_id,
                 'cc_channel_no': cc_channel_no,
-                'vc_channels': vc_channels
+                'vc_channels': vc_channels,
+                'log_path': log_path,
+                'activity_log_path': activity_log_path,
+                'log_root': log_root,
+                'use_syslog': use_syslog,
+                'disable_non_auth_logging': disable_non_auth_logging
             }
             
             # Add protocol-specific network/system IDs
@@ -1496,12 +1923,13 @@ class TrunkingWizard:
         }
 
 
-def run_wizard(wizard_type: str = 'auto') -> Optional[Path]:
+def run_wizard(wizard_type: str = 'auto', answers: Optional[Dict[str, Any]] = None) -> Optional[Path]:
     """
     Run configuration wizard
     
     Args:
         wizard_type: 'single', 'trunk', or 'auto' (asks user)
+        answers: Optional dictionary of answers to pre-populate prompts
     
     Returns:
         Path to saved configuration or None
@@ -1532,10 +1960,10 @@ def run_wizard(wizard_type: str = 'auto') -> Optional[Path]:
             wizard_type = 'single' if int(choice) == 1 else 'trunk'
 
         if wizard_type == 'single':
-            wizard = ConfigWizard()
+            wizard = ConfigWizard(answers)
             return wizard.run()
         else:
-            wizard = TrunkingWizard()
+            wizard = TrunkingWizard(answers)
             return wizard.run()
     
     except KeyboardInterrupt:

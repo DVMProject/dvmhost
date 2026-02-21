@@ -91,7 +91,12 @@ class TrunkingSystem:
                      sys_id: int = None,
                      rfss_id: int = None,
                      ran: int = None,
-                     vc_channels: List[Dict[str, int]] = None) -> None:
+                     vc_channels: List[Dict[str, int]] = None,
+                     log_path: str = None,
+                     activity_log_path: str = None,
+                     log_root: str = None,
+                     use_syslog: bool = False,
+                     disable_non_auth_logging: bool = False) -> None:
         """
         Create a complete trunked system
         
@@ -134,6 +139,11 @@ class TrunkingSystem:
             rfss_id: P25 RFSS ID (for P25 systems)
             ran: NXDN RAN (for NXDN systems)
             vc_channels: List of voice channel configs with optional DFSI settings [{'channel_id': int, 'channel_no': int, 'dfsi_rtrt': int, ...}, ...]
+            log_path: Log file directory path
+            activity_log_path: Activity log directory path
+            log_root: Log filename prefix and syslog prefix
+            use_syslog: Enable syslog output
+            disable_non_auth_logging: Disable non-authoritative logging
         """
         
         # If no VC channel info provided, use defaults (same ID as CC, sequential numbers)
@@ -198,6 +208,18 @@ class TrunkingSystem:
         if talkgroup_id_file:
             self.cc_config.set('system.talkgroup_id.file', talkgroup_id_file)
         self.cc_config.set('system.talkgroup_id.acl', talkgroup_id_acl)
+        
+        # Logging settings
+        if log_path:
+            self.cc_config.set('log.filePath', log_path)
+        if activity_log_path:
+            self.cc_config.set('log.activityFilePath', activity_log_path)
+        if log_root:
+            self.cc_config.set('log.fileRoot', log_root)
+        if use_syslog:
+            self.cc_config.set('log.useSysLog', use_syslog)
+        if disable_non_auth_logging:
+            self.cc_config.set('log.disableNonAuthoritiveLogging', disable_non_auth_logging)
         
         self.cc_config.set('system.modem.protocol.type', modem_type)
         
@@ -309,6 +331,18 @@ class TrunkingSystem:
             if talkgroup_id_file:
                 vc_config.set('system.talkgroup_id.file', talkgroup_id_file)
             vc_config.set('system.talkgroup_id.acl', talkgroup_id_acl)
+            
+            # Logging settings
+            if log_path:
+                vc_config.set('log.filePath', log_path)
+            if activity_log_path:
+                vc_config.set('log.activityFilePath', activity_log_path)
+            if log_root:
+                vc_config.set('log.fileRoot', log_root)
+            if use_syslog:
+                vc_config.set('log.useSysLog', use_syslog)
+            if disable_non_auth_logging:
+                vc_config.set('log.disableNonAuthoritiveLogging', disable_non_auth_logging)
             
             vc_config.set('system.config.channelId', channel_id)
             vc_config.set('system.config.channelNo', channel_no)
