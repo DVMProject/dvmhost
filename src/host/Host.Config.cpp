@@ -62,7 +62,7 @@ bool Host::readParams()
     bool iAgreeNotToBeStupid = m_conf["iAgreeNotToBeStupid"].as<bool>(false);
     if (!iAgreeNotToBeStupid) {
         LogError(LOG_HOST, HIGHLY_UNNECESSARY_DISCLAIMER_FOR_THE_MENTAL);
-        LogError(LOG_HOST, "You must agree to software license terms, and not to be stupid to use this software.");
+        LogError(LOG_HOST, "You must agree to software license terms, and not to be stupid to use this software. Please set 'iAgreeNotToBeStupid' in the configuration file properly.");
         return false;
     }
 
