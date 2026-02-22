@@ -135,6 +135,10 @@ typedef unsigned long long  ulong64_t;
 "8 8888    ,o88P'        `8.`8' ,8'       `8        `8.`8888.  \r\n" \
 "8 888888888P'            `8.` ,8'         `         `8.`8888. \r\n"
 
+#define HIGHLY_UNECESSARY_DISCLAIMER_FOR_THE_MENTAL "THIS SOFTWARE MUST NEVER BE USED IN PUBLIC SAFETY OR LIFE SAFETY CRITICAL APPLICATIONS! This software project\n" \
+    "is provided solely for personal, non-commercial, hobbyist use; any commercial, professional, governmental,\n" \
+    "or other non-hobbyist use is strictly discouraged, fully unsupported and expressly disclaimed by the authors."
+
 #define HOST_SW_API
 
 /**
