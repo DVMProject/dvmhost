@@ -6,6 +6,19 @@
 daemon: true
 
 #
+# This flag should be set to 'true', it simply means that you acknowledge the license and restrictions of use for this
+# software, at no time should THIS SOFTWARE EVER BE USED IN PUBLIC SAFETY OR LIFE SAFETY CRITICAL APPLICATIONS. This 
+# software project is provided solely for personal, non-commercial, hobbyist use; any commercial, professional, 
+# governmental, or other non-hobbyist use is strictly discouraged, fully unsupported and expressly disclaimed by 
+# the authors.
+#
+# By using this software, you agree to indemnify, defend, and hold harmless the authors, contributors, and affiliated 
+# parties from and against any and all claims, liabilities, damages, losses, or expenses (including reasonable 
+# attorneys’ fees) arising out of or relating to any unlawful, unauthorized, or improper use of the software.
+#
+iAgreeNotToBeStupid: false
+
+#
 # Logging Configuration
 #
 #   Logging Levels:

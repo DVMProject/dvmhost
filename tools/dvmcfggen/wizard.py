@@ -122,6 +122,13 @@ class ConfigWizard:
         
         console.print()
         
+        # Step 1b: Usage Agreement (REQUIRED - not overridable with answers file)
+        if not self._confirm_usage_agreement():
+            console.print("\n[red]Usage agreement not accepted. Configuration wizard cancelled.[/red]")
+            return None
+        
+        console.print()
+        
         # Step 2: Create base config
         self.config = DVMConfig()
         self.config.config = get_template(self.template_name)
@@ -136,6 +143,34 @@ class ConfigWizard:
             return None
         
         return None
+    
+    def _confirm_usage_agreement(self) -> bool:
+        """
+        Display and confirm the usage agreement.
+        This prompt CANNOT be overridden by answers file.
+        """
+        console.print("[bold yellow]Usage Agreement[/bold yellow]\n")
+        console.print(
+            "[yellow]⚠ IMPORTANT NOTICE[/yellow]\n"
+            "This software is provided solely for personal, non-commercial, hobbyist use.\n"
+            "Use in public safety or life safety critical applications is STRICTLY PROHIBITED.\n\n"
+            "[red]DO NOT use this software for:[/red]\n"
+            "  • Emergency services (police, fire, EMS)\n"
+            "  • Life safety critical operations\n"
+            "  • Commercial use without explicit permission\n"
+            "  • Any governmental or professional application\n\n"
+            "[yellow]By continuing, you acknowledge:[/yellow]\n"
+            "  • You understand the restrictions on this software\n"
+            "  • You agree to use it only for hobbyist purposes\n"
+            "  • You indemnify the authors against any misuse\n"
+        )
+        
+        # This is INTENTIONALLY not using _get_answer() 
+        # License agreement must be explicitly confirmed each time
+        return Confirm.ask(
+            "Do you agree to these terms and understand the restrictions?",
+            default=False
+        )
     
     def _choose_template(self) -> Optional[str]:
         """Choose configuration template"""
@@ -1098,6 +1133,34 @@ class TrunkingWizard:
         self.answers = answers or {}
         self.iden_table: IdenTable = create_default_iden_table()
     
+    def _confirm_usage_agreement(self) -> bool:
+        """
+        Display and confirm the usage agreement.
+        This prompt CANNOT be overridden by answers file.
+        """
+        console.print("[bold yellow]Usage Agreement[/bold yellow]\n")
+        console.print(
+            "[yellow]⚠ IMPORTANT NOTICE[/yellow]\n"
+            "This software is provided solely for personal, non-commercial, hobbyist use.\n"
+            "Use in public safety or life safety critical applications is STRICTLY PROHIBITED.\n\n"
+            "[red]DO NOT use this software for:[/red]\n"
+            "  • Emergency services (police, fire, EMS)\n"
+            "  • Life safety critical operations\n"
+            "  • Commercial use without explicit permission\n"
+            "  • Any governmental or professional application\n\n"
+            "[yellow]By continuing, you acknowledge:[/yellow]\n"
+            "  • You understand the restrictions on this software\n"
+            "  • You agree to use it only for hobbyist purposes\n"
+            "  • You indemnify the authors against any misuse\n"
+        )
+        
+        # This is INTENTIONALLY not using _get_answer() 
+        # Usage agreement must be explicitly confirmed each time
+        return Confirm.ask(
+            "Do you agree to these terms and understand the restrictions?",
+            default=False
+        )
+    
     def _get_answer(self, key: str, prompt_func, *args, **kwargs) -> Any:
         """
         Get answer from answers file or prompt user
@@ -1133,6 +1196,13 @@ class TrunkingWizard:
             "Create a trunked system configuration with control and voice channels",
             border_style="cyan"
         ))
+        console.print()
+        
+        # Usage Agreement (REQUIRED - not overridable with answers file)
+        if not self._confirm_usage_agreement():
+            console.print("\n[red]Usage agreement not accepted. Configuration wizard cancelled.[/red]")
+            return None
+        
         console.print()
         
         # System basics

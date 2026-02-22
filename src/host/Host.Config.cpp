@@ -59,6 +59,13 @@ bool Host::readParams()
     m_duplex = systemConf["duplex"].as<bool>(true);
     bool simplexSameFreq = systemConf["simplexSameFrequency"].as<bool>(false);
 
+    bool iAgreeNotToBeStupid = systemConf["iAgreeNotToBeStupid"].as<bool>(false);
+    if (!iAgreeNotToBeStupid) {
+        LogError(LOG_HOST, HIGHLY_UNNECESSARY_DISCLAIMER_FOR_THE_MENTAL);
+        LogError(LOG_HOST, "You must agree to software license terms, and not to be stupid to use this software.");
+        return false;
+    }
+
     m_timeout = systemConf["timeout"].as<uint32_t>(120U);
     m_rfModeHang = systemConf["rfModeHang"].as<uint32_t>(10U);
     m_rfTalkgroupHang = systemConf["rfTalkgroupHang"].as<uint32_t>(10U);

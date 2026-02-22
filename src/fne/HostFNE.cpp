@@ -342,6 +342,13 @@ bool HostFNE::readParams()
     bool sendTalkgroups = systemConf["sendTalkgroups"].as<bool>(true);
     m_peerReplicaSavesACL = systemConf["peerReplicaSaveACL"].as<bool>(false);
 
+    bool iAgreeNotToBeStupid = systemConf["iAgreeNotToBeStupid"].as<bool>(false);
+    if (!iAgreeNotToBeStupid) {
+        LogError(LOG_HOST, HIGHLY_UNNECESSARY_DISCLAIMER_FOR_THE_MENTAL);
+        LogError(LOG_HOST, "You must agree to software license terms, and not to be stupid to use this software.");
+        return false;
+    }
+
     if (m_pingTime == 0U) {
         m_pingTime = 5U;
     }
