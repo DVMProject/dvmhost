@@ -419,3 +419,5 @@ After finishing these steps, reboot.
 This project is licensed under the GPLv2 License - see the [LICENSE](LICENSE) file for details. Use of this project is intended, for amateur and/or educational use ONLY. Any other use is at the risk of user and all commercial purposes is strictly discouraged.
 
 **THIS SOFTWARE MUST NEVER BE USED IN PUBLIC SAFETY OR LIFE SAFETY CRITICAL APPLICATIONS! This software project is provided solely for personal, non-commercial, hobbyist use; any commercial, professional, governmental, or other non-hobbyist use is strictly discouraged, fully unsupported and expressly disclaimed by the authors.**
+
+By using this software, you agree to indemnify, defend, and hold harmless the authors, contributors, and affiliated  parties from and against any and all claims, liabilities, damages, losses, or expenses (including reasonable  attorneys’ fees) arising out of or relating to any unlawful, unauthorized, or improper use of the software.
