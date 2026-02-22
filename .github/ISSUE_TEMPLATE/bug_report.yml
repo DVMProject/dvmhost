@@ -1,0 +1,140 @@
+name: Bug report
+description: Report a reproducible bug in dvmhost or related components
+title: "[BUG] "
+labels: ["bug"]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Issues are for reproducible bugs only.  
+        Feature requests and roadmap suggestions will be closed.**
+
+        Please provide enough detail for us to reproduce the issue.
+        Full logs are strongly preferred over screenshots or partial snippets.
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      description: Select the affected module
+      options:
+        - dvmhost
+        - dvmfne
+        - dvmbridge
+        - dvmpatch
+        - dvmcmd
+        - dvmmon
+        - sysview
+        - tged
+        - peered
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: component_other
+    attributes:
+      label: If "Other", specify component
+      placeholder: "Describe the affected component"
+
+  - type: input
+    id: version
+    attributes:
+      label: Version / Commit
+      description: Provide the exact commit SHA or tag
+      placeholder: "ex: v1.2.3 or a1b2c3d4"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: build_type
+    attributes:
+      label: Build type
+      options:
+        - Built from source (native)
+        - Cross-compiled
+        - Custom packaging
+    validations:
+      required: true
+
+  - type: input
+    id: compiler
+    attributes:
+      label: Compiler version
+      description: Output of `gcc --version` or `clang --version`
+      placeholder: "ex: GCC 13.2.0"
+    validations:
+      required: true
+
+  - type: input
+    id: environment
+    attributes:
+      label: Operating system / architecture
+      placeholder: "ex: Debian 12 x86_64"
+    validations:
+      required: true
+
+  - type: textarea
+    id: build_flags
+    attributes:
+      label: Build flags / CMake options
+      description: Include any special flags used (ex: cross-compile options)
+      placeholder: |
+        Example:
+        -DCROSS_COMPILE_ARM=1
+        -DCMAKE_BUILD_TYPE=Release
+      render: text
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: Brief description of the issue
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: Include exact error messages if applicable
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Full logs
+      description: Paste complete logs or attach files. Redact secrets.
+      render: text
+
+  - type: textarea
+    id: config
+    attributes:
+      label: Relevant config (redacted)
+      description: Include only relevant sections with secrets removed
+      render: text
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional context
