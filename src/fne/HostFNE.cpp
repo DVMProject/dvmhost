@@ -164,7 +164,7 @@ int HostFNE::run()
     ::LogInfo(__BANNER__ "\r\n" __PROG_NAME__ " " __VER__ " (built " __BUILD__ ")\r\n" \
         "Copyright (c) 2017-2026 Bryan Biedenkapp, N2PLL and DVMProject (https://github.com/dvmproject) Authors.\r\n" \
         "Portions Copyright (c) 2015-2021 by Jonathan Naylor, G4KLX and others\r\n" \
-        HIGHLY_UNECESSARY_DISCLAIMER_FOR_THE_MENTAL "\r\n" \
+        HIGHLY_UNNECESSARY_DISCLAIMER_FOR_THE_MENTAL "\r\n" \
         ">> Fixed Network Equipment\r\n");
 
     // read base parameters from configuration
