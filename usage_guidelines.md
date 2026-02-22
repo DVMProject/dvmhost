@@ -24,7 +24,6 @@ This policy formally clarifies the DVMProject stance regarding the use of DVMPro
 
 This policy applies to all users, contributors, integrators, and community members.
 
----
 
 ### 1. Not for Public Safety or Life Safety Use
 
@@ -49,7 +48,6 @@ This does **not** permit operational use, dispatch integration, field communicat
 
 DVMProject remains unsupported and non-endorsed for any public safety or life safety role.
 
----
 
 ### 2. No Warranty of Reliability or Fitness
 
@@ -63,7 +61,6 @@ It:
 
 No representation is made regarding fitness for any specific operational purpose.
 
----
 
 ### 3. Community Enforcement
 
@@ -76,7 +73,6 @@ Use of DVMProject in violation of this policy may result in:
 
 Administrative action may occur without warning.
 
----
 
 ### 4. Open Source Clarification
 
@@ -90,7 +86,6 @@ While we cannot control what individuals do outside official channels, we:
 
 Responsibility for unauthorized use rests solely with the deploying party.
 
----
 
 ### 5. Acknowledgment
 
@@ -98,6 +93,5 @@ By participating in DVMProject communities or utilizing DVMProject software, you
 
 If your intended use case involves public safety, emergency response, or life safety communications, you must pursue solutions specifically engineered, validated, and certified for that purpose.
 
----
 
-**This policy is effective immediately. And subject to change at anytime.**
+**This policy is effective immediately upon publication and is subject to change at anytime.**
