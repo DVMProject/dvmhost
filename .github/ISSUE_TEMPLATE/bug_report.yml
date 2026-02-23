@@ -24,7 +24,6 @@ body:
         - dvmbridge
         - dvmpatch
         - dvmcmd
-        - dvmmon
         - sysview
         - tged
         - peered

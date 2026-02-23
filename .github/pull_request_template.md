@@ -9,7 +9,6 @@ Which part(s) of the project does this affect?
 - [ ] dvmbridge
 - [ ] dvmpatch
 - [ ] dvmcmd
-- [ ] dvmmon
 - [ ] sysview
 - [ ] tged
 - [ ] peered
