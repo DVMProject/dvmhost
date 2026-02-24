@@ -106,6 +106,7 @@ void audioCallback(ma_device* device, void* output, const void* input, ma_uint32
     if (bridge->m_outputAudio.dataSize() >= AUDIO_SAMPLES_LENGTH) {
         short samples[AUDIO_SAMPLES_LENGTH];
         bridge->m_outputAudio.get(samples, AUDIO_SAMPLES_LENGTH);
+
         uint8_t* pcm = (uint8_t*)output;
         int pcmIdx = 0;
         for (uint32_t smpIdx = 0; smpIdx < AUDIO_SAMPLES_LENGTH; smpIdx++) {
@@ -305,6 +306,12 @@ HostBridge::~HostBridge()
         m_rtsPttController->close();
         delete m_rtsPttController;
         m_rtsPttController = nullptr;
+    }
+
+    if (m_ctsCorController != nullptr) {
+        m_ctsCorController->close();
+        delete m_ctsCorController;
+        m_ctsCorController = nullptr;
     }
 
     delete[] m_ambeBuffer;
@@ -1629,6 +1636,10 @@ uint8_t* HostBridge::generateRTPHeaders(uint8_t msgLen, uint16_t& rtpSeq)
     header.setTimestamp(timestamp);
     header.setSequence(rtpSeq);
     header.setSSRC(m_network->getPeerId());
+
+    // set the marker for the start of a stream
+    if (rtpSeq == 0U)
+        header.setMarker(true);
 
     uint8_t* buffer = new uint8_t[RTP_HEADER_LENGTH_BYTES + msgLen];
     ::memset(buffer, 0x00U, RTP_HEADER_LENGTH_BYTES + msgLen);
