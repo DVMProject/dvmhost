@@ -182,6 +182,11 @@ system:
     #   (This allows the sending source to send audio as fast as it wants. This should not be used in combination
     #    with 'udpFrameTiming', and is intended for diagnostic purposes only.)
     udpIgnoreRTPTiming: false
+    # Flag indicating UDP audio RTP sequence numbers should be continuous across packets and only reset to 0
+    #   upon sequence rollover. (DO NOT use this option for back-to-back transcoding with another instance of the bridge, 
+    #   as it may cause issues with RTP sequence number handling, this option is intended for third-party RTP consumers
+    #   who idiotically implement RTP and do not properly adhere to marker bits.)
+    udpRTPContinuousSeq: false
     # Flag indicating UDP audio should be encoded using G.711 uLaw.
     #   NOTE: This flag is only applicable when sending audio via RTP.
     udpUseULaw: false

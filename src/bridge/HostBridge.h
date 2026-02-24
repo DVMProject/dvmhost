@@ -225,6 +225,7 @@ private:
 
     bool m_udpRTPFrames;
     bool m_udpIgnoreRTPTiming;
+    bool m_udpRTPContinuousSeq;
     bool m_udpUseULaw;
     bool m_udpUsrp;
     bool m_udpFrameTiming;
@@ -294,6 +295,7 @@ private:
 
     static bool s_running;
 
+    bool m_rtpInitialFrame;
     uint16_t m_rtpSeqNo;
     uint32_t m_rtpTimestamp;
 

@@ -114,7 +114,10 @@ void HostBridge::processAnalogNetwork(uint8_t* buffer, uint32_t length)
             m_rxStartTime = 0U;
             m_rxStreamId = 0U;
 
-            m_rtpSeqNo = 0U;
+            if (!m_udpRTPContinuousSeq) {
+                m_rtpInitialFrame = false;
+                m_rtpSeqNo = 0U;
+            }
             m_rtpTimestamp = INVALID_TS;
             m_network->resetAnalog();
             return;

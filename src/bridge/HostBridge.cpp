@@ -212,6 +212,7 @@ HostBridge::HostBridge(const std::string& confFile) :
     m_udpReceiveAddress("127.0.0.1"),
     m_udpRTPFrames(false),
     m_udpIgnoreRTPTiming(false),
+    m_udpRTPContinuousSeq(false),
     m_udpUseULaw(false),
     m_udpUsrp(false),
     m_udpFrameTiming(false),
@@ -256,6 +257,7 @@ HostBridge::HostBridge(const std::string& confFile) :
     m_networkWatchdog(1000U, 0U, 1500U),
     m_trace(false),
     m_debug(false),
+    m_rtpInitialFrame(false),
     m_rtpSeqNo(0U),
     m_rtpTimestamp(INVALID_TS),
     m_udpNetPktSeq(0U),
@@ -650,7 +652,10 @@ int HostBridge::run()
                     m_rxStartTime = 0U;
                     m_rxStreamId = 0U;
 
-                    m_rtpSeqNo = 0U;
+                    if (!m_udpRTPContinuousSeq) {
+                        m_rtpInitialFrame = false;
+                        m_rtpSeqNo = 0U;
+                    }
                     m_rtpTimestamp = INVALID_TS;
 
                     m_network->resetDMR(0U);
@@ -1029,6 +1034,7 @@ bool HostBridge::readParams()
 
     m_udpRTPFrames = systemConf["udpRTPFrames"].as<bool>(false);
     m_udpIgnoreRTPTiming = systemConf["udpIgnoreRTPTiming"].as<bool>(false);
+    m_udpRTPContinuousSeq = systemConf["udpRTPContinuousSeq"].as<bool>(false);
     m_udpUseULaw = systemConf["udpUseULaw"].as<bool>(false);
     if (m_udpRTPFrames) {
         m_udpUsrp = false;              // RTP disabled USRP
@@ -1043,6 +1049,8 @@ bool HostBridge::readParams()
 
     if (m_udpIgnoreRTPTiming)
         ::LogWarning(LOG_HOST, "Ignoring RTP timing, audio frames will be processed as they arrive.");
+    if (m_udpRTPContinuousSeq)
+        ::LogWarning(LOG_HOST, "Using continuous RTP sequence numbers, sequence numbers will not reset at the start of a new call.");
 
     yaml::Node tekConf = systemConf["tek"];
     bool tekEnable = tekConf["enable"].as<bool>(false);
@@ -1127,6 +1135,7 @@ bool HostBridge::readParams()
         if (m_udpRTPFrames) {
             LogInfo("    UDP Audio Use uLaw Encoding: %s", m_udpUseULaw ? "yes" : "no");
             LogInfo("    UDP Audio Ignore RTP Timing: %s", m_udpIgnoreRTPTiming ? "yes" : "no");
+            LogInfo("    UDP Audio Use Continuous RTP Sequence Numbers: %s", m_udpRTPContinuousSeq ? "yes" : "no");
         }
         LogInfo("    UDP Audio USRP: %s", m_udpUsrp ? "yes" : "no");
         LogInfo("    UDP Frame Timing: %s", m_udpFrameTiming ? "yes" : "no");
@@ -1473,6 +1482,8 @@ void HostBridge::writeUDPAudio(uint32_t srcId, uint32_t dstId, uint8_t* pcm, uin
 
     // are we sending RTP audio frames?
     if (m_udpRTPFrames) {
+        LogDebug(LOG_HOST, "Generating RTP frame for UDP audio, srcId = %u, dstId = %u, pcmLength = %u, prevRtpSeq = %u", srcId, dstId, pcmLength, m_rtpSeqNo);
+
         uint8_t* rtpFrame = generateRTPHeaders(pcmLength, m_rtpSeqNo);
         if (rtpFrame != nullptr) {
             // are we sending metadata with the RTP frames?
@@ -1638,8 +1649,10 @@ uint8_t* HostBridge::generateRTPHeaders(uint8_t msgLen, uint16_t& rtpSeq)
     header.setSSRC(m_network->getPeerId());
 
     // set the marker for the start of a stream
-    if (rtpSeq == 0U)
+    if (rtpSeq == 0U && !m_rtpInitialFrame) {
+        m_rtpInitialFrame = true;
         header.setMarker(true);
+    }
 
     uint8_t* buffer = new uint8_t[RTP_HEADER_LENGTH_BYTES + msgLen];
     ::memset(buffer, 0x00U, RTP_HEADER_LENGTH_BYTES + msgLen);
@@ -1769,7 +1782,10 @@ void HostBridge::callEnd(uint32_t srcId, uint32_t dstId)
     m_p25N = 0U;
     m_analogN = 0U;
 
-    m_rtpSeqNo = 0U;
+    if (!m_udpRTPContinuousSeq) {
+        m_rtpInitialFrame = false;
+        m_rtpSeqNo = 0U;
+    }
     m_rtpTimestamp = INVALID_TS;
 
     m_p25Crypto->clearMI();
