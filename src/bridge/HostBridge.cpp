@@ -1619,7 +1619,7 @@ uint8_t* HostBridge::generateRTPHeaders(uint8_t msgLen, uint16_t& rtpSeq)
 {
     uint32_t timestamp = m_rtpTimestamp;
     if (timestamp != INVALID_TS) {
-        timestamp += (RTP_GENERIC_CLOCK_RATE / AUDIO_SAMPLES_LENGTH);
+        timestamp += (RTP_GENERIC_CLOCK_RATE / 50);
         if (m_debug)
             LogDebugEx(LOG_NET, "HostBridge::generateRTPHeaders()", "RTP, previous TS = %u, TS = %u, rtpSeq = %u", m_rtpTimestamp, timestamp, rtpSeq);
         m_rtpTimestamp = timestamp;
@@ -2204,7 +2204,7 @@ void* HostBridge::threadUDPAudioProcess(void* arg)
                         }
                         else {
                             // RTP timestamps increment by samples per frame
-                            uint32_t expectedTimestamp = (uint32_t)lastFrameTime + (RTP_GENERIC_CLOCK_RATE / AUDIO_SAMPLES_LENGTH);
+                            uint32_t expectedTimestamp = (uint32_t)lastFrameTime + (RTP_GENERIC_CLOCK_RATE / 50);
                             if (rtpTimestamp < expectedTimestamp) {
                                 // frame is too early, already processed a more recent frame
                                 /*
