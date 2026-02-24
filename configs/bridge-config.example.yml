@@ -57,6 +57,100 @@ network:
     # Flag indicating whether or not verbose debug logging is enabled.
     debug: false
 
+    # Source "Radio ID" for transmitted audio frames.
+    sourceId: 1234567
+    # Flag indicating the source "Radio ID" will be overridden from the detected
+    # MDC1200 pre- PTT ID.
+    overrideSourceIdFromMDC: false
+    # Flag indicating the source "Radio ID" will be overridden from the received
+    # UDP SRC ID.
+    overrideSourceIdFromUDP: false
+    # Flag indicating if the source "Radio ID" is being overriden, and changes mid-call, bridge should
+    # terminate previous call an initiate a new one. (This applies only when both udpMetadata and overrideSourceIdFromUDP is set.)
+    resetCallForSourceIdChange: false
+    # Talkgroup ID for transmitted/received audio frames.
+    destinationId: 1
+    # Slot for received/transmitted audio frames.
+    slot: 1
+
+system:
+    # Textual Name
+    identity: BRIDGE
+
+    # Network ID (WACN).
+    netId: BB800
+    # System ID.
+    sysId: 001
+
+    # Flag indicating whether a network grant demand packet will be sent before audio.
+    grantDemand: false
+
+    # Audio transmit mode (1 - DMR, 2 - P25, 3 - Analog).
+    txMode: 1
+
+    # PCM audio gain for received (from digital network) audio frames.
+    #   - This is used to apply gain to the decoded IMBE/AMBE audio, post-decoding.
+    rxAudioGain: 1.0
+    # Vocoder audio gain for decoded (from digital network) audio frames.
+    #   - This is used to apply gain to the decoded IMBE/AMBE audio in the vocoder.
+    #   - (Not used when utilizing external USB vocoder!)
+    vocoderDecoderAudioGain: 3.0
+    # Flag indicating AGC should be used for frames received/decoded.
+    #   - This is used to apply automatic gain control to decoded IMBE/AMBE audio in the vocoder.
+    #   - (Not used when utilizing external USB vocoder!)
+    vocoderDecoderAutoGain: false
+
+    # PCM audio gain for transmitted (to digital network) audio frames.
+    #   - This is used to apply gain to the encoded IMBE/AMBE audio, pre-encoding.
+    txAudioGain: 1.0
+    # Vocoder audio gain for transmitted/encoded (to digital network) audio frames.
+    #   - This is used to apply gain to the encoded IMBE/AMBE audio in the vocoder.
+    #   - (Not used when utilizing external USB vocoder!)
+    vocoderEncoderAudioGain: 3.0
+
+    # Flag indicating whether or not trace logging is enabled.
+    trace: false
+    # Flag indicating whether or not debug logging is enabled.
+    debug: false
+
+    #
+    # Traffic Encryption Key (TEK) Configuration
+    #
+    tek:
+      # Flag indicating whether or not traffic encryption is enabled.
+      enable: false
+      # Traffic Encryption Key Algorithm
+      #   aes - AES-256 Encryption
+      #   arc4 - ARC4/ADP Encryption
+      tekAlgo: "aes"
+      # Traffic Encryption Key ID (Hex)
+      tekKeyId: 1
+
+    #
+    # Local Audio Transport
+    #
+
+    # Enable local audio over speakers.
+    localAudio: true
+
+    # Relative sample level for VOX to activate.
+    voxSampleLevel: 80.0
+    # Amount of time (ms) from loss of active call (loss of local VOX or end of UDP audio stream) before ending call.
+    dropTimeMs: 180
+
+    # Enables detection of MDC1200 packets on the PCM side of the bridge.
+    #   (This is useful for pre-MDC to set the transmitting source ID.)
+    detectAnalogMDC1200: false
+
+    # Flag indicating whether the analog preamble leader is enabled.
+    #   (This enables a leader control tone before audio frames from the 
+    #    network are sent.)
+    preambleLeaderTone: false
+    # Frequency of preamble tone.
+    preambleTone: 2175
+    # Amount of time (ms) to transmit preamble tone.
+    preambleLength: 200
+
     #
     # UDP Audio Transport Configuration
     #   NOTE: Validate the UDP Audio Configuration section below when using UDP audio. Bridge does *not*
@@ -101,96 +195,9 @@ network:
     udpFrameTiming: false
 
     #
-    # Traffic Encryption Key (TEK) Configuration
-    #
-    tek:
-      # Flag indicating whether or not traffic encryption is enabled.
-      enable: false
-      # Traffic Encryption Key Algorithm
-      #   aes - AES-256 Encryption
-      #   arc4 - ARC4/ADP Encryption
-      tekAlgo: "aes"
-      # Traffic Encryption Key ID (Hex)
-      tekKeyId: 1
-
-    # Source "Radio ID" for transmitted audio frames.
-    sourceId: 1234567
-    # Flag indicating the source "Radio ID" will be overridden from the detected
-    # MDC1200 pre- PTT ID.
-    overrideSourceIdFromMDC: false
-    # Flag indicating the source "Radio ID" will be overridden from the received
-    # UDP SRC ID.
-    overrideSourceIdFromUDP: false
-    # Flag indicating if the source "Radio ID" is being overriden, and changes mid-call, bridge should
-    # terminate previous call an initiate a new one. (This applies only when both udpMetadata and overrideSourceIdFromUDP is set.)
-    resetCallForSourceIdChange: false
-    # Talkgroup ID for transmitted/received audio frames.
-    destinationId: 1
-    # Slot for received/transmitted audio frames.
-    slot: 1
-
-system:
-    # Textual Name
-    identity: BRIDGE
-
-    # Network ID (WACN).
-    netId: BB800
-    # System ID.
-    sysId: 001
-
-    # PCM audio gain for received (from digital network) audio frames.
-    #   - This is used to apply gain to the decoded IMBE/AMBE audio, post-decoding.
-    rxAudioGain: 1.0
-    # Vocoder audio gain for decoded (from digital network) audio frames.
-    #   - This is used to apply gain to the decoded IMBE/AMBE audio in the vocoder.
-    #   - (Not used when utilizing external USB vocoder!)
-    vocoderDecoderAudioGain: 3.0
-    # Flag indicating AGC should be used for frames received/decoded.
-    #   - This is used to apply automatic gain control to decoded IMBE/AMBE audio in the vocoder.
-    #   - (Not used when utilizing external USB vocoder!)
-    vocoderDecoderAutoGain: false
-
-    # PCM audio gain for transmitted (to digital network) audio frames.
-    #   - This is used to apply gain to the encoded IMBE/AMBE audio, pre-encoding.
-    txAudioGain: 1.0
-    # Vocoder audio gain for transmitted/encoded (to digital network) audio frames.
-    #   - This is used to apply gain to the encoded IMBE/AMBE audio in the vocoder.
-    #   - (Not used when utilizing external USB vocoder!)
-    vocoderEncoderAudioGain: 3.0
-
-    # Audio transmit mode (1 - DMR, 2 - P25, 3 - Analog).
-    txMode: 1
-
-    # Relative sample level for VOX to activate.
-    voxSampleLevel: 80.0
-    # Amount of time (ms) from loss of active call (loss of local VOX or end of UDP audio stream) before ending call.
-    dropTimeMs: 180
-
-    # Enables detection of MDC1200 packets on the PCM side of the bridge.
-    #   (This is useful for pre-MDC to set the transmitting source ID.)
-    detectAnalogMDC1200: false
-
-    # Flag indicating whether the analog preamble leader is enabled.
-    #   (This enables a leader control tone before audio frames from the 
-    #    network are sent.)
-    preambleLeaderTone: false
-    # Frequency of preamble tone.
-    preambleTone: 2175
-    # Amount of time (ms) to transmit preamble tone.
-    preambleLength: 200
-
-    # Flag indicating whether a network grant demand packet will be sent before audio.
-    grantDemand: false
-
-    # Enable local audio over speakers.
-    localAudio: true
-
-    # Flag indicating whether or not trace logging is enabled.
-    trace: false
-    # Flag indicating whether or not debug logging is enabled.
-    debug: false
-
     # RTS PTT Configuration
+    #
+
     # Flag indicating whether RTS PTT control is enabled.
     rtsPttEnable: false
     # Serial port device for RTS PTT control (e.g., /dev/ttyUSB0).
@@ -198,7 +205,10 @@ system:
     # Hold-off time (ms) before clearing RTS PTT after last audio output.
     rtsPttHoldoffMs: 250
 
+    #
     # CTS COR Configuration
+    #
+
     # Flag indicating whether CTS-based COR detection is enabled.
     ctsCorEnable: false
     # Serial port device for CTS COR (e.g., /dev/ttyUSB0). Often same as RTS PTT.

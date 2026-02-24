@@ -938,6 +938,8 @@ bool HostBridge::readParams()
     yaml::Node systemConf = m_conf["system"];
 
     m_identity = systemConf["identity"].as<std::string>();
+    m_trace = systemConf["trace"].as<bool>(false);
+    m_debug = systemConf["debug"].as<bool>(false);
 
     m_netId = (uint32_t)::strtoul(systemConf["netId"].as<std::string>("BB800").c_str(), NULL, 16);
     m_netId = p25::P25Utils::netId(m_netId);
@@ -1003,100 +1005,29 @@ bool HostBridge::readParams()
 
     m_localAudio = systemConf["localAudio"].as<bool>(true);
 
-    m_trace = systemConf["trace"].as<bool>(false);
-    m_debug = systemConf["debug"].as<bool>(false);
-
-    // RTS PTT Configuration
-    m_rtsPttEnable = systemConf["rtsPttEnable"].as<bool>(false);
-    m_rtsPttPort = systemConf["rtsPttPort"].as<std::string>("/dev/ttyUSB0");
-    m_rtsPttHoldoffMs = (uint32_t)systemConf["rtsPttHoldoffMs"].as<uint32_t>(m_rtsPttHoldoffMs);
-
-    // CTS COR Configuration
-    m_ctsCorEnable = systemConf["ctsCorEnable"].as<bool>(false);
-    m_ctsCorPort = systemConf["ctsCorPort"].as<std::string>("/dev/ttyUSB0");
-    m_ctsCorInvert = systemConf["ctsCorInvert"].as<bool>(false);
-    m_ctsCorHoldoffMs = (uint32_t)systemConf["ctsCorHoldoffMs"].as<uint32_t>(m_ctsCorHoldoffMs);
-
-    std::string txModeStr = "DMR";
-    if (m_txMode == TX_MODE_P25)
-        txModeStr = "P25";
-    if (m_txMode == TX_MODE_ANALOG)
-        txModeStr = "Analog";
-
-    LogInfo("General Parameters");
-    LogInfo("    System Id: $%03X", m_sysId);
-    LogInfo("    P25 Network Id: $%05X", m_netId);
-    LogInfo("    Rx Audio Gain: %.1f", m_rxAudioGain);
-    LogInfo("    Vocoder Decoder Audio Gain: %.1f", m_vocoderDecoderAudioGain);
-    LogInfo("    Vocoder Decoder Auto Gain: %s", m_vocoderDecoderAutoGain ? "yes" : "no");
-    LogInfo("    Tx Audio Gain: %.1f", m_txAudioGain);
-    LogInfo("    Vocoder Encoder Audio Gain: %.1f", m_vocoderEncoderAudioGain);
-    LogInfo("    Transmit Mode: %s", txModeStr.c_str());
-    LogInfo("    VOX Sample Level: %.1f", m_voxSampleLevel);
-    LogInfo("    Drop Time: %ums", m_dropTimeMS);
-    LogInfo("    Detect Analog MDC1200: %s", m_detectAnalogMDC1200 ? "yes" : "no");
-    LogInfo("    Generate Preamble Tone: %s", m_preambleLeaderTone ? "yes" : "no");
-    LogInfo("    Preamble Tone: %uhz", m_preambleTone);
-    LogInfo("    Preamble Tone Length: %ums", m_preambleLength);
-    LogInfo("    Grant Demands: %s", m_grantDemand ? "yes" : "no");
-    LogInfo("    Local Audio: %s", m_localAudio ? "yes" : "no");
-    LogInfo("    UDP Audio: %s", m_udpAudio ? "yes" : "no");
-    LogInfo("    RTS PTT Enable: %s", m_rtsPttEnable ? "yes" : "no");
-    if (m_rtsPttEnable) {
-        LogInfo("    RTS PTT Port: %s", m_rtsPttPort.c_str());
-        LogInfo("    RTS PTT Hold-off: %ums", m_rtsPttHoldoffMs);
-    }
-    LogInfo("    CTS COR Enable: %s", m_ctsCorEnable ? "yes" : "no");
-    if (m_ctsCorEnable) {
-        LogInfo("    CTS COR Port: %s", m_ctsCorPort.c_str());
-        LogInfo("    CTS COR Invert: %s (%s triggers)", m_ctsCorInvert ? "yes" : "no", m_ctsCorInvert ? "LOW" : "HIGH");
-        LogInfo("    CTS COR Holdoff: %u ms", m_ctsCorHoldoffMs);
-    }
-
-    if (m_debug) {
-        LogInfo("    Debug: yes");
-    }
-
-    return true;
-}
-
-/* Initializes network connectivity. */
-
-bool HostBridge::createNetwork()
-{
-    yaml::Node networkConf = m_conf["network"];
-
-    std::string address = networkConf["address"].as<std::string>();
-    uint16_t port = (uint16_t)networkConf["port"].as<uint32_t>(TRAFFIC_DEFAULT_PORT);
-    uint16_t local = (uint16_t)networkConf["local"].as<uint32_t>(0U);
-    uint32_t id = networkConf["id"].as<uint32_t>(1000U);
-    std::string password = networkConf["password"].as<std::string>();
-    bool allowDiagnosticTransfer = networkConf["allowDiagnosticTransfer"].as<bool>(false);
-    bool packetDump = networkConf["packetDump"].as<bool>(false);
-    bool debug = networkConf["debug"].as<bool>(false);
-
-    m_udpAudio = networkConf["udpAudio"].as<bool>(false);
-    m_udpMetadata = networkConf["udpMetadata"].as<bool>(false);
-    m_udpSendPort = (uint16_t)networkConf["udpSendPort"].as<uint32_t>(34001);
-    m_udpSendAddress = networkConf["udpSendAddress"].as<std::string>();
-    m_udpReceivePort = (uint16_t)networkConf["udpReceivePort"].as<uint32_t>(34001);
-    m_udpReceiveAddress = networkConf["udpReceiveAddress"].as<std::string>();
-    m_udpUsrp = networkConf["udpUsrp"].as<bool>(false);
-    m_udpFrameTiming = networkConf["udpFrameTiming"].as<bool>(false);
+    m_udpAudio = systemConf["udpAudio"].as<bool>(false);
+    m_udpMetadata = systemConf["udpMetadata"].as<bool>(false);
+    m_udpSendPort = (uint16_t)systemConf["udpSendPort"].as<uint32_t>(34001);
+    m_udpSendAddress = systemConf["udpSendAddress"].as<std::string>();
+    m_udpReceivePort = (uint16_t)systemConf["udpReceivePort"].as<uint32_t>(34001);
+    m_udpReceiveAddress = systemConf["udpReceiveAddress"].as<std::string>();
+    m_udpUsrp = systemConf["udpUsrp"].as<bool>(false);
+    m_udpFrameTiming = systemConf["udpFrameTiming"].as<bool>(false);
 
     if (m_udpUsrp) {
         m_udpMetadata = false;          // USRP disables metadata due to USRP always having metadata
         m_udpRTPFrames = false;         // USRP disables RTP
         m_udpUseULaw = false;           // USRP disables ULaw
     }
-    
-    m_udpRTPFrames = networkConf["udpRTPFrames"].as<bool>(false);
-    m_udpIgnoreRTPTiming = networkConf["udpIgnoreRTPTiming"].as<bool>(false);
-    m_udpUseULaw = networkConf["udpUseULaw"].as<bool>(false);
+
+    m_udpRTPFrames = systemConf["udpRTPFrames"].as<bool>(false);
+    m_udpIgnoreRTPTiming = systemConf["udpIgnoreRTPTiming"].as<bool>(false);
+    m_udpUseULaw = systemConf["udpUseULaw"].as<bool>(false);
     if (m_udpRTPFrames) {
         m_udpUsrp = false;              // RTP disabled USRP
         m_udpFrameTiming = false;
-    } else {
+    }
+    else {
         if (m_udpUseULaw) {
             ::LogWarning(LOG_HOST, "uLaw encoding can only be used with RTP frames, disabling.");
             m_udpUseULaw = false;
@@ -1106,7 +1037,7 @@ bool HostBridge::createNetwork()
     if (m_udpIgnoreRTPTiming)
         ::LogWarning(LOG_HOST, "Ignoring RTP timing, audio frames will be processed as they arrive.");
 
-    yaml::Node tekConf = networkConf["tek"];
+    yaml::Node tekConf = systemConf["tek"];
     bool tekEnable = tekConf["enable"].as<bool>(false);
     std::string tekAlgo = tekConf["tekAlgo"].as<std::string>();
     std::transform(tekAlgo.begin(), tekAlgo.end(), tekAlgo.begin(), ::tolower);
@@ -1143,6 +1074,95 @@ bool HostBridge::createNetwork()
         m_tekAlgoId = P25DEF::ALGO_UNENCRYPT;
         m_tekKeyId = 0U;
     }
+
+    // RTS PTT Configuration
+    m_rtsPttEnable = systemConf["rtsPttEnable"].as<bool>(false);
+    m_rtsPttPort = systemConf["rtsPttPort"].as<std::string>("/dev/ttyUSB0");
+    m_rtsPttHoldoffMs = (uint32_t)systemConf["rtsPttHoldoffMs"].as<uint32_t>(m_rtsPttHoldoffMs);
+
+    // CTS COR Configuration
+    m_ctsCorEnable = systemConf["ctsCorEnable"].as<bool>(false);
+    m_ctsCorPort = systemConf["ctsCorPort"].as<std::string>("/dev/ttyUSB0");
+    m_ctsCorInvert = systemConf["ctsCorInvert"].as<bool>(false);
+    m_ctsCorHoldoffMs = (uint32_t)systemConf["ctsCorHoldoffMs"].as<uint32_t>(m_ctsCorHoldoffMs);
+
+    std::string txModeStr = "DMR";
+    if (m_txMode == TX_MODE_P25)
+        txModeStr = "P25";
+    if (m_txMode == TX_MODE_ANALOG)
+        txModeStr = "Analog";
+
+    LogInfo("General Parameters");
+    LogInfo("    System Id: $%03X", m_sysId);
+    LogInfo("    P25 Network Id: $%05X", m_netId);
+    LogInfo("    Rx Audio Gain: %.1f", m_rxAudioGain);
+    LogInfo("    Vocoder Decoder Audio Gain: %.1f", m_vocoderDecoderAudioGain);
+    LogInfo("    Vocoder Decoder Auto Gain: %s", m_vocoderDecoderAutoGain ? "yes" : "no");
+    LogInfo("    Tx Audio Gain: %.1f", m_txAudioGain);
+    LogInfo("    Vocoder Encoder Audio Gain: %.1f", m_vocoderEncoderAudioGain);
+    LogInfo("    Transmit Mode: %s", txModeStr.c_str());
+    LogInfo("    VOX Sample Level: %.1f", m_voxSampleLevel);
+    LogInfo("    Drop Time: %ums", m_dropTimeMS);
+    LogInfo("    Detect Analog MDC1200: %s", m_detectAnalogMDC1200 ? "yes" : "no");
+    LogInfo("    Generate Preamble Tone: %s", m_preambleLeaderTone ? "yes" : "no");
+    LogInfo("    Preamble Tone: %uhz", m_preambleTone);
+    LogInfo("    Preamble Tone Length: %ums", m_preambleLength);
+    LogInfo("    Grant Demands: %s", m_grantDemand ? "yes" : "no");
+    LogInfo("    Local Audio: %s", m_localAudio ? "yes" : "no");
+    LogInfo("    PCM over UDP Audio: %s", m_udpAudio ? "yes" : "no");
+    if (m_udpAudio) {
+        LogInfo("    UDP Audio Metadata: %s", m_udpMetadata ? "yes" : "no");
+        LogInfo("    UDP Audio Send Address: %s", m_udpSendAddress.c_str());
+        LogInfo("    UDP Audio Send Port: %u", m_udpSendPort);
+        LogInfo("    UDP Audio Receive Address: %s", m_udpReceiveAddress.c_str());
+        LogInfo("    UDP Audio Receive Port: %u", m_udpReceivePort);
+        LogInfo("    UDP Audio RTP Framed: %s", m_udpRTPFrames ? "yes" : "no");
+        if (m_udpRTPFrames) {
+            LogInfo("    UDP Audio Use uLaw Encoding: %s", m_udpUseULaw ? "yes" : "no");
+            LogInfo("    UDP Audio Ignore RTP Timing: %s", m_udpIgnoreRTPTiming ? "yes" : "no");
+        }
+        LogInfo("    UDP Audio USRP: %s", m_udpUsrp ? "yes" : "no");
+        LogInfo("    UDP Frame Timing: %s", m_udpFrameTiming ? "yes" : "no");
+    }
+
+    LogInfo("    Traffic Encrypted: %s", tekEnable ? "yes" : "no");
+    if (tekEnable) {
+        LogInfo("    TEK Algorithm: %s", tekAlgo.c_str());
+        LogInfo("    TEK Key ID: $%04X", m_tekKeyId);
+    }
+    LogInfo("    RTS PTT Enable: %s", m_rtsPttEnable ? "yes" : "no");
+    if (m_rtsPttEnable) {
+        LogInfo("    RTS PTT Port: %s", m_rtsPttPort.c_str());
+        LogInfo("    RTS PTT Hold-off: %ums", m_rtsPttHoldoffMs);
+    }
+    LogInfo("    CTS COR Enable: %s", m_ctsCorEnable ? "yes" : "no");
+    if (m_ctsCorEnable) {
+        LogInfo("    CTS COR Port: %s", m_ctsCorPort.c_str());
+        LogInfo("    CTS COR Invert: %s (%s triggers)", m_ctsCorInvert ? "yes" : "no", m_ctsCorInvert ? "LOW" : "HIGH");
+        LogInfo("    CTS COR Holdoff: %u ms", m_ctsCorHoldoffMs);
+    }
+
+    if (m_debug) {
+        LogInfo("    Debug: yes");
+    }
+
+    return true;
+}
+
+/* Initializes network connectivity. */
+
+bool HostBridge::createNetwork()
+{
+    yaml::Node networkConf = m_conf["network"];
+
+    std::string address = networkConf["address"].as<std::string>();
+    uint16_t port = (uint16_t)networkConf["port"].as<uint32_t>(TRAFFIC_DEFAULT_PORT);
+    uint16_t local = (uint16_t)networkConf["local"].as<uint32_t>(0U);
+    uint32_t id = networkConf["id"].as<uint32_t>(1000U);
+    std::string password = networkConf["password"].as<std::string>();
+    bool allowDiagnosticTransfer = networkConf["allowDiagnosticTransfer"].as<bool>(false);
+    bool packetDump = networkConf["packetDump"].as<bool>(false);
+    bool debug = networkConf["debug"].as<bool>(false);
 
     m_srcId = (uint32_t)networkConf["sourceId"].as<uint32_t>(P25DEF::WUID_FNE);
     m_overrideSrcIdFromMDC = networkConf["overrideSourceIdFromMDC"].as<bool>(false);
@@ -1236,29 +1256,6 @@ bool HostBridge::createNetwork()
         LogInfo("    Local: random");
 
     LogInfo("    Encrypted: %s", encrypted ? "yes" : "no");
-
-    LogInfo("    PCM over UDP Audio: %s", m_udpAudio ? "yes" : "no");
-    if (m_udpAudio) {
-        LogInfo("    UDP Audio Metadata: %s", m_udpMetadata ? "yes" : "no");
-        LogInfo("    UDP Audio Send Address: %s", m_udpSendAddress.c_str());
-        LogInfo("    UDP Audio Send Port: %u", m_udpSendPort);
-        LogInfo("    UDP Audio Receive Address: %s", m_udpReceiveAddress.c_str());
-        LogInfo("    UDP Audio Receive Port: %u", m_udpReceivePort);
-        LogInfo("    UDP Audio RTP Framed: %s", m_udpRTPFrames ? "yes" : "no");
-        if (m_udpRTPFrames) {
-            LogInfo("    UDP Audio Use uLaw Encoding: %s", m_udpUseULaw ? "yes" : "no");
-            LogInfo("    UDP Audio Ignore RTP Timing: %s", m_udpIgnoreRTPTiming ? "yes" : "no");
-        }
-        LogInfo("    UDP Audio USRP: %s", m_udpUsrp ? "yes" : "no");
-        LogInfo("    UDP Frame Timing: %s", m_udpFrameTiming ? "yes" : "no");
-    }
-
-    LogInfo("    Traffic Encrypted: %s", tekEnable ? "yes" : "no");
-    if (tekEnable) {
-        LogInfo("    TEK Algorithm: %s", tekAlgo.c_str());
-        LogInfo("    TEK Key ID: $%04X", m_tekKeyId);
-    }
-
     LogInfo("    Source ID: %u", m_srcId);
     LogInfo("    Destination ID: %u", m_dstId);
     LogInfo("    DMR Slot: %u", m_slot);
