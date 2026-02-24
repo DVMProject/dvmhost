@@ -152,27 +152,6 @@ private:
     network::PeerNetwork* m_network;
     network::udp::Socket* m_udpAudioSocket;
 
-    bool m_udpAudio;
-    bool m_udpMetadata;
-    uint16_t m_udpSendPort;
-    std::string m_udpSendAddress;
-    uint16_t m_udpReceivePort;
-    std::string m_udpReceiveAddress;
-
-    bool m_udpRTPFrames;
-    bool m_udpIgnoreRTPTiming;
-    bool m_udpUseULaw;
-    bool m_udpUsrp;
-    bool m_udpFrameTiming;
-    uint32_t m_udpFrameTimeout;
-    uint32_t m_udpFrameCnt;
-
-    uint8_t m_tekAlgoId;
-    uint16_t m_tekKeyId;
-    bool m_requestedTek;
-
-    p25::crypto::P25Crypto* m_p25Crypto;
-
     uint32_t m_srcId;
     uint32_t m_srcIdOverride;
     bool m_overrideSrcIdFromMDC;
@@ -182,13 +161,31 @@ private:
     uint8_t m_slot;
 
     std::string m_identity;
+
+    uint32_t m_netId;
+    uint32_t m_sysId;
+
+    bool m_grantDemand;
+
+    uint8_t m_txMode;
+
     float m_rxAudioGain;
     float m_vocoderDecoderAudioGain;
     bool m_vocoderDecoderAutoGain;
+
     float m_txAudioGain;
     float m_vocoderEncoderAudioGain;
 
-    uint8_t m_txMode;
+    bool m_trace;
+    bool m_debug;
+
+    uint8_t m_tekAlgoId;
+    uint16_t m_tekKeyId;
+    bool m_requestedTek;
+
+    p25::crypto::P25Crypto* m_p25Crypto;
+
+    bool m_localAudio;
 
     float m_voxSampleLevel;
     uint16_t m_dropTimeMS;
@@ -200,10 +197,6 @@ private:
     bool m_preambleLeaderTone;
     uint16_t m_preambleTone;
     uint16_t m_preambleLength;
-
-    bool m_grantDemand;
-
-    bool m_localAudio;
 
     ma_context m_maContext;
     ma_device_info* m_maPlaybackDevices;
@@ -222,6 +215,25 @@ private:
     vocoder::MBEEncoder* m_encoder;
 
     mdc_decoder_t* m_mdcDecoder;
+    
+    bool m_udpAudio;
+    bool m_udpMetadata;
+    uint16_t m_udpSendPort;
+    std::string m_udpSendAddress;
+    uint16_t m_udpReceivePort;
+    std::string m_udpReceiveAddress;
+
+    bool m_udpRTPFrames;
+    bool m_udpIgnoreRTPTiming;
+    bool m_udpUseULaw;
+    bool m_udpUsrp;
+    bool m_udpFrameTiming;
+    uint32_t m_udpFrameTimeout;
+    uint32_t m_udpFrameCnt;
+
+    /*
+    ** Digital Mobile Radio
+    */
 
     dmr::data::EmbeddedData m_dmrEmbeddedData;
     dmr::lc::LC m_rxDMRLC;
@@ -231,35 +243,21 @@ private:
     uint32_t m_dmrSeqNo;
     uint8_t m_dmrN;
 
+    /*
+    ** Project 25
+    */
+
     p25::lc::LC m_rxP25LC;
     uint8_t* m_netLDU1;
     uint8_t* m_netLDU2;
     uint32_t m_p25SeqNo;
     uint8_t m_p25N;
 
-    uint32_t m_netId;
-    uint32_t m_sysId;
+    /*
+    ** Analog
+    */
 
     uint8_t m_analogN;
-
-    bool m_audioDetect;
-    bool m_trafficFromUDP;
-    uint32_t m_udpSrcId;
-    uint32_t m_udpDstId;
-    bool m_callInProgress;
-    bool m_ignoreCall;
-    uint8_t m_callAlgoId;
-    uint64_t m_rxStartTime;
-    uint32_t m_rxStreamId;
-    uint32_t m_txStreamId;
-
-    uint8_t m_detectedSampleCnt;
-
-    Timer m_networkWatchdog;
-
-    static bool s_running;
-    bool m_trace;
-    bool m_debug;
 
     // RTS PTT Control
     bool m_rtsPttEnable;
@@ -278,6 +276,23 @@ private:
     bool m_ctsCorInvert; // if true, COR LOW triggers (instead of HIGH)
     Timer m_ctsPadTimeout; // drives silence padding while CTS is active
     uint32_t m_ctsCorHoldoffMs; // hold-off time before clearing COR after it deasserts
+
+    bool m_audioDetect;
+    bool m_trafficFromUDP;
+    uint32_t m_udpSrcId;
+    uint32_t m_udpDstId;
+    bool m_callInProgress;
+    bool m_ignoreCall;
+    uint8_t m_callAlgoId;
+    uint64_t m_rxStartTime;
+    uint32_t m_rxStreamId;
+    uint32_t m_txStreamId;
+
+    uint8_t m_detectedSampleCnt;
+
+    Timer m_networkWatchdog;
+
+    static bool s_running;
 
     uint16_t m_rtpSeqNo;
     uint32_t m_rtpTimestamp;

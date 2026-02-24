@@ -56,7 +56,7 @@ public:
     void close();
 
     /**
-     * @brief Reads the current CTS signal state.
+     * @brief Return wether the CTS signal is high (asserted CTS) to trigger COR detection.
      * @returns bool True if CTS is asserted (active), otherwise false.
      */
     bool isCtsAsserted();
