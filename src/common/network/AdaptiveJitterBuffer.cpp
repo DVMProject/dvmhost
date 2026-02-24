@@ -81,13 +81,13 @@ bool AdaptiveJitterBuffer::processFrame(uint16_t seq, const uint8_t* data, uint3
         // create frame and add to ready list
         BufferedFrame* frame = new BufferedFrame(seq, data, length);
         readyFrames.push_back(frame);
-        
+
         // advance expected sequence
         m_nextExpectedSeq = (m_nextExpectedSeq + 1) & 0xFFFF;
-        
+
         // flush any subsequent sequential frames from buffer
         flushSequentialFrames(readyFrames);
-        
+
         return true;
     }
 
@@ -97,10 +97,17 @@ bool AdaptiveJitterBuffer::processFrame(uint16_t seq, const uint8_t* data, uint3
     if (diff < 0) {
         // check if it's severely out of order (> 1000 packets behind)
         if (diff < -1000) {
-            // ;ikely a sequence wraparound with new stream - reset
+            // likely a sequence wraparound with new stream - reset
             m_nextExpectedSeq = seq;
+
+            // cleanup any buffered frames, delete and clear list
+            for (auto& pair : m_buffer) {
+                if (pair.second != nullptr) {
+                    delete pair.second;
+                }
+            }
             m_buffer.clear();
-            
+
             BufferedFrame* frame = new BufferedFrame(seq, data, length);
             readyFrames.push_back(frame);
             m_nextExpectedSeq = (m_nextExpectedSeq + 1) & 0xFFFF;
@@ -157,7 +164,7 @@ void AdaptiveJitterBuffer::checkTimeouts(std::vector<BufferedFrame*>& timedOutFr
         BufferedFrame* frame = pair.second;
         if (frame != nullptr) {
             uint64_t age = currentTime - frame->timestamp;
-            
+
             if (age >= m_maxWaitTime) {
                 toRemove.push_back(pair.first);
             }
@@ -177,7 +184,7 @@ void AdaptiveJitterBuffer::checkTimeouts(std::vector<BufferedFrame*>& timedOutFr
                 timedOutFrames.push_back(it->second);
                 m_buffer.erase(it);
                 m_timedOutFrames++;
-                
+
                 // update next expected sequence to skip the gap
                 int32_t diff = seqDiff(seq, m_nextExpectedSeq);
                 if (diff >= 0) {
