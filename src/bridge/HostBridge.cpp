@@ -658,8 +658,8 @@ int HostBridge::run()
                     }
                     m_rtpTimestamp = INVALID_TS;
 
-                    m_network->resetDMR(0U);
                     m_network->resetDMR(1U);
+                    m_network->resetDMR(2U);
 
                     m_network->resetP25();
 
