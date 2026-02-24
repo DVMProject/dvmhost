@@ -1473,12 +1473,12 @@ void HostBridge::writeUDPAudio(uint32_t srcId, uint32_t dstId, uint8_t* pcm, uin
         if (rtpFrame != nullptr) {
             // are we sending metadata with the RTP frames?
             if (!m_udpMetadata) {
-                length += RTP_HEADER_LENGTH_BYTES;
+                length = RTP_HEADER_LENGTH_BYTES + pcmLength;
                 audioData = new uint8_t[length];
                 ::memcpy(audioData, rtpFrame, RTP_HEADER_LENGTH_BYTES);
                 ::memcpy(audioData + RTP_HEADER_LENGTH_BYTES, pcm, pcmLength);
             } else {
-                length += RTP_HEADER_LENGTH_BYTES + 8U; // RTP Header Length + trailing 4 bytes (srcId) + 4 bytes (dstId))
+                length = RTP_HEADER_LENGTH_BYTES + pcmLength + 8U; // RTP Header Length + trailing 4 bytes (srcId) + 4 bytes (dstId))
                 audioData = new uint8_t[length];
                 ::memcpy(audioData, rtpFrame, RTP_HEADER_LENGTH_BYTES);
                 ::memcpy(audioData + RTP_HEADER_LENGTH_BYTES, pcm, pcmLength);
