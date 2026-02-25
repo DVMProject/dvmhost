@@ -77,7 +77,7 @@ V24UDPPort::V24UDPPort(uint32_t peerId, const std::string& address, uint16_t mod
     m_peerId(peerId),
     m_streamId(0U),
     m_timestamp(INVALID_TS),
-    m_pktSeq(0U),
+    m_pktSeq(32U),
     m_fscState(CS_NOT_CONNECTED),
     m_modemState(STATE_P25),
     m_tx(false),
@@ -195,7 +195,7 @@ void V24UDPPort::clock(uint32_t ms)
 
 void V24UDPPort::reset()
 {
-    m_pktSeq = 0U;
+    m_pktSeq = 32U;
     m_timestamp = INVALID_TS;
     m_streamId = createStreamId();
 }
@@ -291,6 +291,10 @@ int V24UDPPort::write(const uint8_t* buffer, uint32_t length)
             bool written = m_socket->write(message, messageLen, m_remoteRTPAddr, m_remoteRTPAddrLen);
             if (written)
                 return length;
+
+            m_pktSeq++;
+            if (m_pktSeq == RTP_END_OF_CALL_SEQ)
+                m_pktSeq = 32U;
         } else {
             writeNAK(CMD_P25_DATA, RSN_INVALID_REQUEST);
             return int(length);
