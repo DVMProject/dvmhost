@@ -1133,7 +1133,7 @@ bool LC::decodeMACPDU(const uint8_t* raw, uint32_t macLength)
         m_dstId = GET_UINT16(raw, 16U);                                             // Talkgroup Address
         break;
     case P2_MAC_HEADER_OPCODE::END_PTT:
-        m_colorCode = ((raw[1U] >> 8U & 0x0FU) << 8U) +                             // Color Code
+        m_colorCode = ((raw[1U] & 0x0FU) << 8U) +                                   // Color Code
             raw[2U];                                                                // ...
         m_srcId = GET_UINT24(raw, 13U);                                             // Source Radio Address
         m_dstId = GET_UINT16(raw, 16U);                                             // Talkgroup Address
