@@ -2230,12 +2230,15 @@ void* HostBridge::threadUDPAudioProcess(void* arg)
                             // RTP timestamps increment by samples per frame
                             uint32_t expectedTimestamp = (uint32_t)lastFrameTime + (RTP_GENERIC_CLOCK_RATE / 50);
                             if (rtpTimestamp < expectedTimestamp) {
-                                // frame is too early, already processed a more recent frame
-                                /*
-                                if (bridge->m_debug)
-                                    LogDebugEx(LOG_HOST, "HostBridge::threadUDPAudioProcess()", "RTP frame too early, rtpTs = %u, expected >= %u, pktSeq = %u",
-                                        rtpTimestamp, expectedTimestamp, pktSeq);
-                                */
+                                // frame is stale (already processed a more recent frame) - discard it
+                                // rather than spinning on it forever at the head of the queue
+                                LogWarning(LOG_NET, "RTP frame stale/out-of-order, discarding; rtpTs = %u, expected >= %u, pktSeq = %u",
+                                    rtpTimestamp, expectedTimestamp, pktSeq);
+                                bridge->m_udpPackets.pop_front();
+                                if (req->pcm != nullptr)
+                                    delete[] req->pcm;
+                                delete req;
+                                req = nullptr;
                                 shouldProcess = false;
                             } else {
                                 // frame is ready to process - update RTP timestamp marker
@@ -2347,8 +2350,7 @@ void* HostBridge::threadUDPAudioProcess(void* arg)
                 bridge->m_udpDstId = bridge->m_dstId;
 
                 // force start a call if one isn't already in progress
-                if ((!bridge->m_audioDetect && !bridge->m_callInProgress) || forceCallStart) {
-                    bridge->m_audioDetect = true;
+                if (!bridge->m_callInProgress || forceCallStart) {
                     if (bridge->m_txStreamId == 0U) {
                         bridge->m_txStreamId = 1U;
                         if (forceCallStart)
@@ -2432,20 +2434,18 @@ void* HostBridge::threadUDPAudioProcess(void* arg)
 
                 // encode and transmit UDP audio if audio detection is active
                 // Note: We encode even if a network call is in progress, since UDP audio takes priority
-                if (bridge->m_audioDetect) {
-                    bridge->m_udpDropTime.start();
+                bridge->m_udpDropTime.start();
 
-                    switch (bridge->m_txMode) {
-                    case TX_MODE_DMR:
-                        bridge->encodeDMRAudioFrame(pcm, bridge->m_udpSrcId);
-                        break;
-                    case TX_MODE_P25:
-                        bridge->encodeP25AudioFrame(pcm, bridge->m_udpSrcId);
-                        break;
-                    case TX_MODE_ANALOG:
-                        bridge->encodeAnalogAudioFrame(pcm, bridge->m_udpSrcId);
-                        break;
-                    }
+                switch (bridge->m_txMode) {
+                case TX_MODE_DMR:
+                    bridge->encodeDMRAudioFrame(pcm, bridge->m_udpSrcId);
+                    break;
+                case TX_MODE_P25:
+                    bridge->encodeP25AudioFrame(pcm, bridge->m_udpSrcId);
+                    break;
+                case TX_MODE_ANALOG:
+                    bridge->encodeAnalogAudioFrame(pcm, bridge->m_udpSrcId);
+                    break;
                 }
 
                 bridge->m_udpFrameCnt++;
