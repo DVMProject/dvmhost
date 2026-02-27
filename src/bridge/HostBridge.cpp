@@ -1482,7 +1482,7 @@ void HostBridge::writeUDPAudio(uint32_t srcId, uint32_t dstId, uint8_t* pcm, uin
 
     // are we sending RTP audio frames?
     if (m_udpRTPFrames) {
-        LogDebug(LOG_HOST, "Generating RTP frame for UDP audio, srcId = %u, dstId = %u, pcmLength = %u, prevRtpSeq = %u", srcId, dstId, pcmLength, m_rtpSeqNo);
+        //LogDebug(LOG_HOST, "Generating RTP frame for UDP audio, srcId = %u, dstId = %u, pcmLength = %u, prevRtpSeq = %u", srcId, dstId, pcmLength, m_rtpSeqNo);
 
         uint8_t* rtpFrame = generateRTPHeaders(pcmLength, m_rtpSeqNo);
         if (rtpFrame != nullptr) {
