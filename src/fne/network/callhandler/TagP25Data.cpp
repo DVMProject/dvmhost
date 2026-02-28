@@ -319,7 +319,7 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                         m_network->eraseStreamPktSeq(peerId, streamId);
                     }
                 } else {
-                    #define NONCALL_TDU_LOG "P25, Non-Call TDU, peer = %u, ssrc = %u, sysId = $%03X, netId = $%05X, srcId = %u, dstId = %u, duration = %u, streamId = %u, fromUpstream = %u", peerId, ssrc, sysId, netId, srcId, dstId, duration / 1000, streamId, fromUpstream
+                    #define NONCALL_TDU_LOG "P25, Non-Call TDU, peer = %u, ssrc = %u, sysId = $%03X, netId = $%05X, srcId = %u, dstId = %u, streamId = %u, fromUpstream = %u", peerId, ssrc, sysId, netId, srcId, dstId, streamId, fromUpstream
                     if (m_network->m_logUpstreamCallStartEnd && fromUpstream)
                         LogInfoEx(LOG_PEER, NONCALL_TDU_LOG);
                     else if (!fromUpstream)
