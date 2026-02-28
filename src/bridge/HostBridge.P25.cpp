@@ -125,17 +125,22 @@ void HostBridge::processP25Network(uint8_t* buffer, uint32_t length)
     lsd.setLSD2(lsd2);
 
     if (control.getLCO() == LCO::GROUP) {
-        if (srcId == 0) {
-            m_network->resetP25();
-            return;
-        }
-
         if ((duid == DUID::TDU) || (duid == DUID::TDULC)) {
+            // ignore TDU/TDULC entirely when local audio detect or
+            //  traffic from UDP is running
+            if (m_audioDetect || m_trafficFromUDP)
+                return;
+
             // ignore TDU's that are grant demands
             if (grantDemand) {
                 m_network->resetP25();
                 return;
             }
+        }
+
+        if (srcId == 0) {
+            m_network->resetP25();
+            return;
         }
 
         // ensure destination ID matches

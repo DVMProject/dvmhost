@@ -652,11 +652,33 @@ int HostBridge::run()
                     m_rxStartTime = 0U;
                     m_rxStreamId = 0U;
 
+                    m_srcIdOverride = 0;
+                    m_txStreamId = 0;
+
+                    m_udpSrcId = 0;
+                    m_udpDstId = 0;
+                    m_trafficFromUDP = false;
+                    m_udpFrameCnt = 0U;
+
+                    // ensure PTT is dropped at call end
+                    if (m_rtsPttEnable) {
+                        deassertRtsPtt();
+                    }
+
+                    m_dmrSeqNo = 0U;
+                    m_dmrN = 0U;
+                    m_p25SeqNo = 0U;
+                    m_p25N = 0U;
+                    m_analogN = 0U;
+
                     if (!m_udpRTPContinuousSeq) {
                         m_rtpInitialFrame = false;
                         m_rtpSeqNo = 0U;
                     }
                     m_rtpTimestamp = INVALID_TS;
+
+                    m_p25Crypto->clearMI();
+                    m_p25Crypto->resetKeystream();
 
                     m_network->resetDMR(1U);
                     m_network->resetDMR(2U);
