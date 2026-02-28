@@ -2249,6 +2249,7 @@ void* HostBridge::threadUDPAudioProcess(void* arg)
                             lastFrameTime = rtpTimestamp;
                         }
                         else {
+/*
                             // RTP timestamps increment by samples per frame
                             uint32_t expectedTimestamp = (uint32_t)lastFrameTime + (RTP_GENERIC_CLOCK_RATE / 50);
                             if (rtpTimestamp < expectedTimestamp) {
@@ -2263,9 +2264,12 @@ void* HostBridge::threadUDPAudioProcess(void* arg)
                                 req = nullptr;
                                 shouldProcess = false;
                             } else {
+*/
                                 // frame is ready to process - update RTP timestamp marker
                                 lastFrameTime = rtpTimestamp;
+/*
                             }
+*/
                         }
                     }
                 } else if (bridge->m_udpFrameTiming) {
