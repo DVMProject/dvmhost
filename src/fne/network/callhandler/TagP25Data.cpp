@@ -324,6 +324,10 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                         LogInfoEx(LOG_PEER, NONCALL_TDU_LOG);
                     else if (!fromUpstream)
                         LogInfoEx(LOG_MASTER, NONCALL_TDU_LOG);
+
+                    m_status.lock(false);
+                    m_status[dstId].callStartTime = pktTime; // because Non-Call TDUs can just happen lets reset the callStartTime to pktTime to prevent insane durations
+                    m_status.unlock();
                 }
             }
 

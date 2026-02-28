@@ -235,6 +235,10 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                     LogInfoEx(LOG_PEER, NONCALL_END_LOG);
                 else if (!fromUpstream)
                     LogInfoEx(LOG_MASTER, NONCALL_END_LOG);
+
+                m_status.lock(false);
+                m_status[dstId].callStartTime = pktTime; // because Non-Call Terminators can just happen lets reset the callStartTime to pktTime to prevent insane durations
+                m_status.unlock();
             }
         }
 
