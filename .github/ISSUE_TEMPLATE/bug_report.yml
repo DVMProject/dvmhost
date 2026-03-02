@@ -78,7 +78,7 @@ body:
     id: build_flags
     attributes:
       label: Build flags / CMake options
-      description: Include any special flags used (ex: cross-compile options)
+      description: "Include any special flags used (ex: cross-compile options)"
       placeholder: |
         Example:
         -DCROSS_COMPILE_ARM=1
